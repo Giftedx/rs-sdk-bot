@@ -42,7 +42,7 @@ export function freshRuneStageWorker(stage:Exclude<FreshRuneStage,'start'>,name:
  // Leave 30s inside the child wall envelope for opening and the owner's logout.
  const cap=Math.floor((timeoutMs-30000)/150);
  if(cap<1)throw Error('no finite tick budget with logout reserve');
- return {label,args:['scripts/rune-supply.ts',name,String(stage==='first-bank'?2:stage==='target'?20:21)],env:{CAP:String(cap)},timeoutMs};
+ return {label,args:['scripts/aio-skiller.ts',name,'runecraft','supply',String(stage==='first-bank'?2:stage==='target'?20:21)],env:{CAP:String(cap)},timeoutMs};
 }
 
 export const sum=(s:Save,id:number,container?:number)=>Object.entries(s.inventories).filter(([key])=>container===undefined||Number(key)===container)
@@ -53,9 +53,9 @@ export const logout=(r:Run)=>(r.log.match(/^LOGOUT logged-out$/gm)??[]).length==
 export const retainedProgress=(before:Save,interrupted:Save)=>interrupted.skills.some((s,i)=>s.xp>(before.skills[i]?.xp??0))||(interrupted.vars[63]??0)>(before.vars[63]??0);
 
 export const hash=(file:string)=>createHash('sha256').update(readFileSync(file)).digest('hex');
-const files=['scripts/rune-supply.ts','scripts/rune-supply.test.ts','scripts/train-chickens.ts','scripts/train-chickens.test.ts',
- 'scripts/generated/quest-runemysteries.ts','scripts/generated/quest-lib.ts','scripts/rune-mysteries-route.ts','scripts/rune-mysteries-route.test.ts',
- 'scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','packages/workers/src/gather/fishing.ts','packages/workers/test/gather.test.ts','scripts/generated/rcair.ts',
+const files=['packages/workers/src/runecraft/supply.ts','packages/workers/src/runecraft/air.ts','packages/workers/src/runecraft/index.ts','packages/workers/test/runecraft.test.ts','scripts/train-chickens.ts','scripts/train-chickens.test.ts',
+ 'scripts/generated/quest-runemysteries.ts','scripts/generated/quest-lib.ts',
+ 'scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','packages/workers/src/gather/fishing.ts','packages/workers/test/gather.test.ts',
  'packages/practice/src/fresh-rune-supply-proof.ts',
  'packages/practice/src/fresh-rune-supply-proof/contracts.ts',
  'packages/practice/src/fresh-rune-supply-proof/stack.ts',

@@ -12,7 +12,7 @@ import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {releaseRevision} from '../../core/src/worker-release';
 import {PRACTICE_STARTUP_GB,FREE_FLOOR_GB} from '../../core/src/memory';
 const root=resolve(import.meta.dir,'../../..');
-const source=()=>releaseRevision(['scripts/rune-bank-craft.ts','packages/practice/src/rune-carrier-stage-proof.ts']);
+const source=()=>releaseRevision(['scripts/aio-skiller.ts','packages/workers/src/runecraft/carrier-stage.ts','packages/practice/src/rune-carrier-stage-proof.ts']);
 const kit:Record<number,number>={1351:1,590:1,303:1,315:1,1925:1,1931:1,2309:1,1265:1,1205:1,1277:1,1171:1,841:1,882:25,556:25,558:15,555:6,557:4,559:2,995:25};
 const assets=(s:ReturnType<typeof readPracticeSave>)=>{const out:Record<number,number>={};for(const i of Object.values(s.inventories).flat())out[i.id]=(out[i.id]??0)+i.count;return out;};
 const amount=(s:ReturnType<typeof readPracticeSave>,id:number,inventory?:number)=>Object.entries(s.inventories).filter(([key])=>inventory===undefined||Number(key)===inventory).flatMap(([,items])=>items).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -61,7 +61,7 @@ async function runCohort(dir:string,baseName:string){
   paths.forEach((p,i)=>copyFileSync(p,join(dir,id+'-before-'+i+'.sav')));
   const ticks=paths.map(p=>readFileSync(p).readInt32BE(24)),started=Date.now();
   // The default purpose must still refuse to spend the supplier's opening reserve.
-  const child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,'--rune-carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'2800',RUNE_STAGE_PURPOSE:id==='existing'?'existing-cohort':'fresh'},windowsHide:true,stdout:Bun.file(join(dir,id+'.log')),stderr:Bun.file(join(dir,id+'.err'))});
+  const child=Bun.spawn(['bun','--smol','scripts/aio-skiller.ts',names[0]!,'runecraft','bank-craft',...names.slice(1),'--rune-carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'2800',RUNE_STAGE_PURPOSE:id==='existing'?'existing-cohort':'fresh'},windowsHide:true,stdout:Bun.file(join(dir,id+'.log')),stderr:Bun.file(join(dir,id+'.err'))});
   let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
   const stop=()=>{termination??=killTree(child.pid);};
   const timer=setTimeout(()=>{timedOut=true;stop();},240000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
@@ -123,8 +123,8 @@ async function run(dir:string){
   const saveMeta=()=>writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));saveMeta();
   for(const id of ['stage','repeat','opening']){
    const active=id==='stage'?[0,1,2,3,4]:id==='repeat'?[1,2,3,4]:[0],base=paths.map(p=>existsSync(p)?readFileSync(p).readInt32BE(24):0),started=Date.now();
-   const args=id==='opening'?[name,'--rune-opening']:[...names,'--rune-carriers'];
-   const child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...args],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'1600',RUNE_STAGE_PURPOSE:'fresh'},windowsHide:true,stdout:Bun.file(join(dir,id+'.log')),stderr:Bun.file(join(dir,id+'.err'))});
+   const args=id==='opening'?[name,'runecraft','bank-craft','--rune-opening']:[names[0]!,'runecraft','bank-craft',...names.slice(1),'--rune-carriers'];
+   const child=Bun.spawn(['bun','--smol','scripts/aio-skiller.ts',...args],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'1600',RUNE_STAGE_PURPOSE:'fresh'},windowsHide:true,stdout:Bun.file(join(dir,id+'.log')),stderr:Bun.file(join(dir,id+'.err'))});
    let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
    const stop=()=>{termination??=killTree(child.pid);};
    const timer=setTimeout(()=>{timedOut=true;stop();},240000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);

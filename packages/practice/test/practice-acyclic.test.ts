@@ -169,8 +169,6 @@ test('packages/practice/src production modules only import explicitly allowliste
         'scripts/firemaking-order.ts',
         'scripts/magic-order.ts',
         'scripts/microbot-glass.ts',
-        'scripts/rune-carrier-trade.ts',
-        'scripts/rune-supply.ts',
         'scripts/swarm.ts',
     ]);
     const { bare, relative: relativeTargets } = collectPracticeImports(practiceFiles);

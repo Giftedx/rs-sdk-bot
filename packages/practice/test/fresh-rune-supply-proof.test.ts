@@ -353,8 +353,8 @@ async function stageModel(work:(dir:string,deps:any,events:string[],current:()=>
    let code=0;
    if(label==='registration')current=p.before;
    else if(label==='interrupted'){current=p.interrupted;r={...summaryForTest(p.first.log),...r,ok:false,stage:'starter-training',stopReason:'tick-cap',ticks:1000};code=1;}
-   else if(label==='first-bank'){expect(args).toEqual(['scripts/rune-supply.ts',binding.name,'2']);current=p.after;r={...r,crafted:40,consumed:40,mined:40,banked:40};}
-   else if(label==='resume'){expect(args).toEqual(['scripts/rune-supply.ts',binding.name,'20']);}
+   else if(label==='first-bank'){expect(args).toEqual(['scripts/aio-skiller.ts',binding.name,'runecraft','supply','2']);current=p.after;r={...r,crafted:40,consumed:40,mined:40,banked:40};}
+   else if(label==='resume'){expect(args).toEqual(['scripts/aio-skiller.ts',binding.name,'runecraft','supply','20']);}
    else if(label==='higher'){
     current=structuredClone(current);current.skills[20]!.xp+=125;current.skills[20]!.rawExperience+=1250;current.skills[20]!.level=21;
     current.skills[14]!.xp+=125;current.skills[14]!.rawExperience+=1250;

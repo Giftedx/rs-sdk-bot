@@ -90,7 +90,7 @@ export function runeBankSaveChecks(before:Save,after:Save,xpRate=XP_RATE){
   assets:[...new Set([...Object.keys(a),...Object.keys(b)])].every(id=>converted.has(Number(id))||(a[Number(id)]??0)===(b[Number(id)]??0)),
   life:after.skills[3]!.level>0};
 }
-const runeProofSource=()=>releaseRevision(['scripts/rune-bank-craft.ts','packages/practice/src/rune-bank-craft-proof.ts']);
+const runeProofSource=()=>releaseRevision(['scripts/aio-skiller.ts','packages/workers/src/runecraft/bank-craft.ts','packages/practice/src/rune-bank-craft-proof.ts']);
 function verify(directory:string){
  const before=readPracticeSave(join(directory,'before.sav')),after=readPracticeSave(join(directory,'after.sav'));
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8')),log=readFileSync(join(directory,'worker.log'),'utf8');
@@ -136,7 +136,7 @@ async function run(directory:string){
   const before=readPracticeSave(path),started=Date.now();
   const worker=async(log:string,err:string)=>{
   if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice memory floor reached before child');
-  const child=Bun.spawn(['bun','scripts/rune-bank-craft.ts',name,'99'],{cwd:resolve(import.meta.dir,'../../..'),
+  const child=Bun.spawn(['bun','scripts/aio-skiller.ts',name,'runecraft','bank-craft','99'],{cwd:resolve(import.meta.dir,'../../..'),
    env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'4000'},
    stdout:Bun.file(join(directory,log)),stderr:Bun.file(join(directory,err)),windowsHide:true});
   let timedOut=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid);},600000);

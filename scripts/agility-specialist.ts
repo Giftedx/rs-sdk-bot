@@ -19,7 +19,7 @@ import { burstTradeHost, fastTradeExternalReceive } from './fast-skills-lib';
 import { openQuest } from './generated/quest-lib';
 import { leaveRuneStarter } from './rune-starter';
 import { countById, exactNameRe } from '../packages/workers/src/logistics';
-import { resumeStep } from './agility-order';
+import { resumeStep } from '../packages/workers/src/agility';
 
 export type AgilityRoute = 'tourist' | 'monkeybars' | 'gnome';
 

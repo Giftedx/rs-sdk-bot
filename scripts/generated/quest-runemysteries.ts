@@ -4,7 +4,7 @@
 // areas/area_varrock/scripts/aubury.rs2.
 import { openQuest } from './quest-lib';
 import type {Session} from '../../packages/core/src/inprocess';
-import {walkRuneMysteries,runeMysteriesStartProblem,exitRuneTower,runeMysteriesDecision,sedridorOutcome,nearestBankTile,RUNE_MYSTERIES_ITEMS} from '../rune-mysteries-route';
+import {walkRuneMysteries,runeMysteriesStartProblem,exitRuneTower,runeMysteriesDecision,sedridorOutcome,nearestBankTile,RUNE_MYSTERIES_ITEMS} from '../../packages/workers/src/runecraft';
 import travel from '../../packages/planner/src/haggis-travel.json';
 import {waitUntil} from '../../packages/core/src/ticks';
 import {questFlags} from '../../packages/core/src/quest-status';

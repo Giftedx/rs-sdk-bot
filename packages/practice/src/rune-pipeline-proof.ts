@@ -1,9 +1,9 @@
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-import {exactCarrierOffer,transfer} from '../../../scripts/rune-carrier-trade';
+import {exactCarrierOffer,transfer} from '../../workers/src/runecraft';
 const root=resolve(import.meta.dir,'../../..'),engine=join(root,'vendor/rs-sdk/server/engine');
-const sourceFiles=['scripts/rune-pipeline.ts','scripts/rune-carrier-trade.ts','packages/practice/src/rune-pipeline-proof.ts',
+const sourceFiles=['packages/workers/src/runecraft/carrier-trade.ts','packages/practice/src/rune-pipeline-proof.ts',
  'vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/engine/src/engine/entity/Player.ts','vendor/rs-sdk/server/engine/src/engine/entity/NetworkPlayer.ts',
  'vendor/rs-sdk/server/engine/src/network/game/client/handler/IfButtonHandler.ts','vendor/rs-sdk/server/engine/src/network/game/client/handler/InvButtonHandler.ts',
  'vendor/rs-sdk/server/engine/src/network/game/client/handler/OpPlayerHandler.ts',

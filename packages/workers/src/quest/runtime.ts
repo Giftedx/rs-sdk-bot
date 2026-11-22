@@ -193,13 +193,13 @@ export async function resolveOwnedLoadoutDeps() {
 
 export async function resolveShiloTransit(s: Session, j: { protectMelee?: boolean }, alive: () => boolean): Promise<ShiloTransitLike> {
     if (runtime.createShiloTransit) return runtime.createShiloTransit(s, j, alive);
-    const mod = await importRepoModule('scripts', 'microbot-rune-trip.ts');
+    const mod = await import('../runecraft/shilo');
     return mod.createShiloTransit(s, j, alive);
 }
 
 export async function resolveCrossStrongholdGate(s: Session, d: GateDepsLike): Promise<unknown> {
     if (runtime.crossStrongholdGate) return runtime.crossStrongholdGate(s, d);
-    const mod = await importRepoModule('scripts', 'agility-order.ts');
+    const mod = await import('../agility/entry');
     return mod.crossStrongholdGate(s, d);
 }
 

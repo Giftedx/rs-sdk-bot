@@ -20,7 +20,7 @@ export const cases=['approach','restart','pit','rerun','wilderness-entry'] as co
 export type Case=typeof cases[number]|'fall'|'food'|'food-restart'|'ardougne-entry'|'region'|'plane';
 export const refusalCases=new Set<Case>(['rerun','wilderness-entry','region','plane']);
 
-const owned=['scripts/agility-order.ts','scripts/agility-order.test.ts','packages/practice/src/agility-order-proof.ts',
+const owned=['scripts/aio-skiller.ts','packages/workers/src/agility/index.ts','packages/workers/src/agility/runner.ts','packages/workers/src/agility/courses.ts','packages/workers/src/agility/entry.ts','packages/workers/test/agility.test.ts','packages/practice/src/agility-order-proof.ts',
  'packages/practice/src/agility-order-proof/contracts.ts',
  'packages/practice/src/agility-order-proof/save-checks.ts',
  'packages/practice/src/agility-order-proof/food-checks.ts',

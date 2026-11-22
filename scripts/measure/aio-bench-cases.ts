@@ -10,7 +10,7 @@ import {firemakingFixture} from '../../packages/practice/src/firemaking-order-pr
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
 import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode, type CloneName } from '../../packages/workers/src/pvp/pk-gang-clone';
-import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
+import {carrierAltar, type CarrierAltarName} from '../../packages/workers/src/runecraft';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 import {SPECIALIST_RANGED_CASES} from './specialist-ranged-cases';
 import {SPECIALIST_AGILITY_CASES} from './specialist-agility-cases';
@@ -432,8 +432,8 @@ const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []
 // LEDGER line of the crafter is the last one, so the case ticks are the crafter's.
 const carrierCase = (altar: CarrierAltarName, from: number, to: number, carriers: number, bank: {id: number; count: number}[] = []): BenchCase => {
   const a = carrierAltar(altar), suffixes = 'bcdefghijklmnopq'.slice(0, carriers).split('');
-  return {key: `extra:rune-carriers-${altar}-${from}-${to}`, script: 'scripts/rune-bank-craft.ts', preset: 'fresh_lumbridge', timeoutMs: 600_000,
-    scriptArgs: [...suffixes.map(s => `{bot:${s}}`), `--staged=${altar}:${to}`], pass: s => ok(s) && Number(/^RUNE_STAGED_RESULT .*?"level":(\d+)/m.exec(s)?.[1] ?? 0) >= to,
+  return {key: `extra:rune-carriers-${altar}-${from}-${to}`, script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', timeoutMs: 600_000,
+    scriptArgs: ['runecraft', 'bank-craft', ...suffixes.map(s => `{bot:${s}}`), `--staged=${altar}:${to}`], pass: s => ok(s) && Number(/^RUNE_STAGED_RESULT .*?"level":(\d+)/m.exec(s)?.[1] ?? 0) >= to,
     presetConfig: {position: {...a.crafter, level: 0}, varps: {63: 6, 281: 1000}, skills: {Runecraft: from}},
     companions: suffixes.map(suffix => ({suffix, preset: 'fresh_lumbridge', presetConfig: {position: {...a.staging, level: 0}, varps: {63: 6, 281: 1000},
       inventory: [{id: a.talisman, count: 1}, ...Array.from({length: 27}, () => ({id: 1436, count: 1}))], bank}}))};

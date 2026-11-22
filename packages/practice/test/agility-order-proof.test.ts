@@ -26,7 +26,7 @@ async function proofCli(mode:string,dir:string,timeout=10000){
  const [status,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
  return{status,stdout,stderr};
 }
-import {COURSES} from '../../../scripts/agility-order';
+import {COURSES} from '../../workers/src/agility';
 
 // Synthetic unit evidence only. These bytes cannot be a native delivery receipt.
 let recoveryTestSource:ReturnType<typeof sources>|undefined;

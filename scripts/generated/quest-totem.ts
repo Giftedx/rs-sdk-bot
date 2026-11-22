@@ -13,7 +13,7 @@ import { loadTravel } from '../../packages/core/src/travel';
 import { walkRoute } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
 import { surplusForSlots } from '../tribal-totem-route';
-import { nearestBankTile } from '../rune-mysteries-route';
+import { nearestBankTile } from '../../packages/workers/src/runecraft';
 import travelData from '../../packages/planner/src/haggis-travel.json';
 
 const KANGAI = { x: 2791, z: 3182 };
