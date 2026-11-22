@@ -24,7 +24,7 @@ if (import.meta.main) {
         // The shop-to-bid lots: optional, so a failure here never loses the price cache.
         let best = 'none';
         try {
-            const [{ PROFILES }, { scanProfiles, lotValue }] = await Promise.all([import('./shop-buyer'), import('./shop-to-bid')]);
+            const { PROFILES, scanProfiles, lotValue } = await import('../packages/workers/src/market');
             const lots = shopLots(items, PROFILES, scanProfiles, lotValue).slice(0, 10), bids = join(root, BIDS_FILE);
             writeFileSync(bids + '.tmp', JSON.stringify({ at: Date.now(), lots }, null, 1));
             renameSync(bids + '.tmp', bids);

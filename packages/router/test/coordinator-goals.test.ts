@@ -167,7 +167,7 @@ test('planner selects matching live local state over its old publication and exc
  const base=mkdtempSync(join(tmpdir(),'planner-observation-')),fleetDir=join(base,'fleet'),statusDir=join(base,'.practice/status'),server='rs-sdk-demo.fly.dev';
  for(const dir of [join(fleetDir,'snapshots'),statusDir])mkdirSync(dir,{recursive:true});
  writeFileSync(join(fleetDir,'owners.json'),JSON.stringify({accounts:{Helper:{side:'cloud',server},Mover:{side:'local',server},Practice:{side:'cloud',server},Wrong:{side:'cloud',server}}}));
- const local={name:'Helper',server,at:200,started:150,sessionAttemptId:'150-10-1',workRevision:'a'.repeat(64),workEntry:'scripts/shop-buyer.ts',tick:20,result:'ok boughtTotal=12',counters:{boughtTotal:12},ledger:{idle:1},bankAt:160};
+ const local={name:'Helper',server,at:200,started:150,sessionAttemptId:'150-10-1',workRevision:'a'.repeat(64),workEntry:'scripts/aio-market.ts',tick:20,result:'ok boughtTotal=12',counters:{boughtTotal:12},ledger:{idle:1},bankAt:160};
  for(const [file,row]of Object.entries({Helper:local,Mover:{name:'Mover',server,at:999},Practice:{name:'Practice',server,at:999,practice:true},Wrong:{name:'Wrong',server:'localhost:8888',at:999},Imposter:{name:'Victim',server,at:999}}))writeFileSync(join(statusDir,file+'.json'),JSON.stringify(row));
  writeFileSync(join(fleetDir,'snapshots/cloud.json'),JSON.stringify({side:'cloud',accounts:[{...local,at:100},{name:'Practice',server,at:100},{name:'Wrong',server,at:100},{name:'Victim',server,at:100}]}));
  const rows=planner.readPlannerStatuses(base,fleetDir,'cloud');
@@ -177,7 +177,7 @@ test('planner selects matching live local state over its old publication and exc
 });
 
 test('planner prompt retains bounded numeric output and source bindings beyond its result excerpt',()=>{
- const status={name:'Helper',server:'rs-sdk-demo.fly.dev',at:500,started:100,sessionAttemptId:'100-10-1',workRevision:'a'.repeat(64),workEntry:'scripts/shop-buyer.ts',tick:400,
+ const status={name:'Helper',server:'rs-sdk-demo.fly.dev',at:500,started:100,sessionAttemptId:'100-10-1',workRevision:'a'.repeat(64),workEntry:'scripts/aio-market.ts',tick:400,
   result:'ok '+'x'.repeat(300)+' bankedTotal=123456789',skills:[],counters:{bankedTotal:123456789,targetMet:1,nested:{banked:999},negative:-1,infinite:Infinity,label:'not numeric'},ledger:{idle:5,move:3,secret:'not numeric'}};
  const compact=planner.plannerStatusSummary(status);
  expect(compact.result!.length).toBeLessThanOrEqual(163);expect(compact.result).not.toContain('bankedTotal');

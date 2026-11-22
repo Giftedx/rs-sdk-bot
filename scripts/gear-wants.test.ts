@@ -3,8 +3,7 @@ import { GEAR_GAIN_FLOOR, GEAR_GE_ID, GEAR_SHOP_PILOT, bonusGain, gearJobFor, ge
 import { KIT_BUY, KIT_BUY_SCRIPT, accountStyle, catalogue, plan, type Acct } from '../packages/planner/src/autopilot';
 import { shopProfileFor } from './gear-wants';
 import { gearWantsOf, kitBuyRunning } from './autopilot';
-import { PROFILES } from './shop-buyer';
-import { DATA_PROFILE, dataProfile, derivedProfile } from './shop-profiles';
+import { DATA_PROFILE, PROFILES, dataProfile, derivedProfile } from '../packages/workers/src/market';
 
 const side = 'claude-cloud';
 const IRON_SCIMITAR = 1323, RUNE_SCIMITAR = 1333, ADAMANT_SCIMITAR = 1331, LEATHER_GLOVES = 1059, LEATHER_COWL = 1167;
@@ -34,8 +33,8 @@ test('a market want of an account that is not on the army roster plans a kit buy
 test('a shop want plans one trip to its shop with the profile of the shop-buyer', () => {
     const a = run(acct(40_000), [shopWant(ADAMANT_SCIMITAR, 'Adamant scimitar', 1329, 1_560, 'zeke'), shopWant(RUNE_SCIMITAR, 'Rune scimitar', 1329, 14_080, 'zeke')]);
     expect(a.template?.id).toBe(gearShopId('zeke'));
-    expect(a.template?.script).toBe('scripts/shop-buyer.ts');
-    expect(a.template?.args?.[0]).toBe('zeke');
+    expect(a.template?.script).toBe('scripts/aio-market.ts');
+    expect(a.template?.args?.slice(0, 2)).toEqual(['shop-buy', 'zeke']);
     expect(a.template?.env?.ITEMS).toBe('Adamant scimitar|Rune scimitar');
     expect(Number(a.template?.env?.MAX_SPEND)).toBeLessThanOrEqual(40_000);
 });

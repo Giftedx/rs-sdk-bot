@@ -30,7 +30,7 @@
     "scripts/generated/quest-fluffs.ts",
     "scripts/generated/quest-scorpion.ts",
     "scripts/generated/quest-barcrawl.ts",
-    "scripts/shop-buyer.test.ts"
+    "packages/workers/test/market-shop.test.ts"
   ],
   "consumer": "run-plague-mmsmk-teleport-bank-entry completes Plague City on ordinary local mmsmk1232 from its observed funded upstairs entry. The sweep reaches a bank through an owned permitted teleport before Stronghold dust acquisition. run-biohazard-mmsmk-teleport-bank-entry then completes Biohazard and opens the Underground Pass route gate. The real worker CLI practice proves the exact entry, useful quest completion, reconciled assets and logout through elena-heckel-dust. Preserve existing Scorpion completion and completed-entry refusal checks and all existing callers.",
   "checks": [

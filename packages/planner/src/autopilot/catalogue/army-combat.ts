@@ -67,7 +67,7 @@ export function armyCombatTemplates(): {
     // UnderMyKilt, 799 ticks, boughtTotal=0 after a 200-tick wait). STALL_TICKS=0: the session's idle guard would end
     // the wait at 900 ticks (packages/core/src/bot.ts); the run's own cap bounds it.
     const staff: Template = {
-        id: 'army-staff-zaff', pilot: true, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'],
+        id: 'army-staff-zaff', pilot: true, family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'zaff', '3000'],
         env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: String(ZAFF_WAIT), STALL_TICKS: '0', FLOAT: '13000', COIN_RESERVE: '500', MAX_SPEND: '12000' },
         role: 'supply', goal: "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: ['shop:zaff'], yields: () => [],
@@ -142,20 +142,20 @@ export function armyCombatTemplates(): {
     };
     const NO_ARROWS: Readonly<Record<string, number>> = Object.fromEntries(ARROWS.map(([arrow]) => [arrow, ARROW_LOW]));
     const arrows: Template = {
-        id: 'army-arrows-ardy', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['ardy', '400'],
+        id: 'army-arrows-ardy', family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'ardy', '400'],
         env: { ITEMS: 'bronze arrow', STOCK_TARGET: String(ARROW_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '5000', COIN_RESERVE: '500', MAX_SPEND: '4000' },
         role: 'supply', goal: 'buy bronze arrows at Aemad in East Ardougne for the Ranged band',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:ardy'], yields: () => [],
         needs: { items: { coins: 5000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
     const arrowsCatherby: Template = {
-        id: 'army-arrows-catherby', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['catherby_arrows', '600'],
+        id: 'army-arrows-catherby', family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'catherby_arrows', '600'],
         env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '21000', COIN_RESERVE: '500', MAX_SPEND: '20000' },
         role: 'supply', goal: "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:catherby_arrows'], yields: () => [],
         needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
-    const guildRun = (items: string, target: number, spend: number) => ['scripts/shop-buyer.ts', 'dargaud', '800', `ITEMS=${items}`, `STOCK_TARGET=${target}`,
+    const guildRun = (items: string, target: number, spend: number) => ['scripts/aio-market.ts', 'shop-buy', 'dargaud', '800', `ITEMS=${items}`, `STOCK_TARGET=${target}`,
         'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
     const arrowsGuild: Template = {
         id: 'army-arrows-guild', family: 'shop-buyer', script: 'scripts/chain.ts',
@@ -165,14 +165,14 @@ export function armyCombatTemplates(): {
         needs: { skills: { Ranged: 40 }, items: { coins: 60000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
     const arrowsLowe: Template = {
-        id: 'army-arrows-lowe', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['lowe', '2500'],
+        id: 'army-arrows-lowe', family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'lowe', '2500'],
         env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '21000', COIN_RESERVE: '500', MAX_SPEND: '20000' },
         role: 'supply', goal: "buy iron and bronze arrows at Lowe's in Varrock for the Ranged band",
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:lowe'], yields: () => [],
         needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
     const zekeShop = (tier: string, item: string, minAtt: number, maxAtt: number, coins: number, better: readonly string[]): Template => ({
-        id: `army-weapon-zeke-${tier}`, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zeke', '1200'],
+        id: `army-weapon-zeke-${tier}`, family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'zeke', '1200'],
         env: { ITEMS: `^${item}$`, STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(coins), COIN_RESERVE: '200', MAX_SPEND: String(Math.max(200, coins - 200)) },
         role: 'supply', goal: `buy ${item} from Zeke in Al Kharid`, tier: 'goal', band: WEAPON_BAND, stock: { item, to: 1 }, repeats: false,
         resources: ['shop:zeke'], yields: () => [],
@@ -182,7 +182,7 @@ export function armyCombatTemplates(): {
     const zekeSteel = zekeShop('steel', 'steel scimitar', 5, 20, 800, ['mithril scimitar', ...WEAPON_HELD]);
     const zekeMithril = zekeShop('mithril', 'mithril scimitar', 20, 30, 2000, [...WEAPON_HELD]);
     const scavvoArmour: Template = {
-        id: 'army-armour-scavvo', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['scavvo', '1500'],
+        id: 'army-armour-scavvo', family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'scavvo', '1500'],
         env: { ITEMS: 'rune platelegs|rune chainbody', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '120000', COIN_RESERVE: '5000', MAX_SPEND: '115000' },
         role: 'supply', goal: "buy rune platelegs and rune chainbody from Scavvo in the Champions' Guild",
         tier: 'goal', band: ARMOUR_BAND, stock: { item: 'rune platelegs', to: 1 }, repeats: false, resources: ['shop:scavvo'], yields: () => [],

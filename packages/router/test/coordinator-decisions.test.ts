@@ -153,12 +153,12 @@ test('the planner prompt gives the new-evidence limit, the retirement rule and t
  expect(prompt).toContain('world.capacity.diskFreeGB');
 });
 test('the planner prompt names the script and run of an ended job without its argument and environment lists',()=>{
- const revision=JSON.stringify(['scripts/buy-owned-ge-item.ts',false,['bigpackage'],[['CAP','1600'],['COORDINATOR_RUN_ID','task-b0490357'],['ORDER_KEY','cannonball1700']]]);
+ const revision=JSON.stringify(['scripts/aio-market.ts',false,['bigpackage'],[['CAP','1600'],['COORDINATOR_RUN_ID','task-b0490357'],['ORDER_KEY','cannonball1700']]]);
  expect(briefEnded({Bigpackage:{at:5,reason:'gave-up after 1 runs',revision},Old:{at:6,reason:'died after 1 runs'},Odd:{at:7,reason:'x',revision:'not json'}})).toEqual({
-  Bigpackage:{at:5,reason:'gave-up after 1 runs',script:'scripts/buy-owned-ge-item.ts',runId:'task-b0490357'},
+  Bigpackage:{at:5,reason:'gave-up after 1 runs',script:'scripts/aio-market.ts',runId:'task-b0490357'},
   Old:{at:6,reason:'died after 1 runs'},Odd:{at:7,reason:'x'}});
  const world:any={scoreboard:null,coverage:{quests:[],scriptCandidates:[]},statuses:[],jobs:[],capabilities:[],ended:{Bigpackage:{at:5,reason:'gave-up after 1 runs',revision}}};
  const prompt=plannerPrompt(initialState(),world);
- expect(prompt).toContain('"script":"scripts/buy-owned-ge-item.ts"');
+ expect(prompt).toContain('"script":"scripts/aio-market.ts"');
  expect(prompt).not.toContain('ORDER_KEY');
 });

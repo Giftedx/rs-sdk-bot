@@ -478,7 +478,7 @@ test('nine ordinary GE memory refusals remain pending with exact admission evide
  for(const task of tasks){
   const runId='memory-'+task.id;startTask(s,task.id,Date.now()-1000,runId);
   beginSessionAttempt({account:task.account,server:'rs-sdk-demo.fly.dev'},{root}).record('ended','logged-out');
-  let wait:any;try{installJob(task,task.account,'scripts/buy-owned-ge-item.ts',runId,'source',{},{base,freeGB:4.75});}catch(error){wait=(error as any).wait;}
+  let wait:any;try{installJob(task,task.account,'scripts/aio-market.ts',runId,'source',{},{base,freeGB:4.75});}catch(error){wait=(error as any).wait;}
   expect(wait).toMatchObject({account:task.account,reason:'memory',capacity:{freeGB:4.75,minFreeGB:4,starting:1,startingReserve:1,pending:0}});
   const run=runDirectory(runId,dir);expect(existsSync(join(run,'assignments-before.json'))).toBe(false);
   atomicJson(join(run,'receipt.json'),{taskId:task.id,runId,ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,liveDeferred:wait}});
@@ -496,7 +496,7 @@ test('ordinary dispatch reserves each unseen child and releases that reservation
  const launched:string[]=[];
  for(let i=0;i<11;i++){const next=chooseTask(s,1001,{liveLimit:25,runHeld:t=>memoryHeld(t)});if(!next)break;launched.push(next.id);startTask(s,next.id,1001,'r-'+next.id);}
  expect(launched).toHaveLength(1);expect(s.tasks.filter(r=>r.status==='pending')).toHaveLength(10);
- const first=s.tasks.find(r=>r.status==='running')!,job={account:first.spec.account,script:'scripts/buy-owned-ge-item.ts',enabled:true,coordinatorOwner:'coordinator',coordinatorTask:first.spec.id,env:{COORDINATOR_RUN_ID:first.runId!}};
+ const first=s.tasks.find(r=>r.status==='running')!,job={account:first.spec.account,script:'scripts/aio-market.ts',enabled:true,coordinatorOwner:'coordinator',coordinatorTask:first.spec.id,env:{COORDINATOR_RUN_ID:first.runId!}};
  const own=emptyCoordinatorJobs();own.jobs.push(job);writeCoordinatorJobs(base,own);
  atomicJson(join(base,'.practice/swarm-runs.json'),[{accounts:[job.account],started:1005,revision:missionSignature(job)}]);
  const pending=s.tasks.find(r=>r.status==='pending')!.spec;

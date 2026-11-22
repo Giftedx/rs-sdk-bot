@@ -72,8 +72,8 @@ export function squadFishingSupplies(): Template[] {
         yields: () => [{ item: 'raw karambwan', perTick: 0.02 }],
     };
     const karambwanVessel: Template = {
-        id: 'squad-karambwan-vessel', family: 'shop-buyer', script: 'scripts/shop-buyer.ts',
-        args: ['tiadeche', '1200'], env: { ITEMS: 'karambwan vessel', STOCK_TARGET: '2', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '25', FLOAT: '500', COIN_RESERVE: '200', MAX_SPEND: '200' },
+        id: 'squad-karambwan-vessel', family: 'shop-buyer', script: 'scripts/aio-market.ts',
+        args: ['shop-buy', 'tiadeche', '1200'], env: { ITEMS: 'karambwan vessel', STOCK_TARGET: '2', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '25', FLOAT: '500', COIN_RESERVE: '200', MAX_SPEND: '200' },
         role: 'bank', goal: 'buy karambwan vessels from Tiadeche for squad karambwan fishing', resources: ['shop:tiadeche'], squadOnly: true, repeats: false,
         needs: { quests: ['Tai Bwo Wannai Trio'], items: { coins: 500 }, holdsUnder: { 'karambwan vessel': 1 }, anyOf: tiadecheDangerGate },
         yields: () => [], provides: { item: 'karambwan vessel', unlocks: ['squad-karambwan-fish'] },

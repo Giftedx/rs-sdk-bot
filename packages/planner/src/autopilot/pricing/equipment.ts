@@ -10,7 +10,7 @@ export const FUND_RESERVE = 50_000;
 export const OBSERVATION_FRESH_MS = 30 * 60_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
 // progress: no stock under the cap) sends the account to the donors instead.
-export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
+export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/aio-market.ts';
 
 // The army's melee weapon. Most army accounts fight with the bronze sword they started with: at Strength 99 it hits 12
 // at most, an adamant scimitar 15 or 16 by style (combat.rs2 combat_maxhit: (effective * (64 + strength bonus) + 320) /

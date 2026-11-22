@@ -5,7 +5,7 @@ import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
-import type {ItemOrder} from '../../../scripts/buy-owned-ge-item';
+import type {ItemOrder} from '../../workers/src/market';
 import {verifyCase} from '../src/ge-bulk-order-proof';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {geProofRuntime,geProofFixtureRecord} from '../src/ge-bulk-order-proof';
@@ -24,7 +24,7 @@ test('actual native GE fixture descriptors reach progression without an unmapped
  expect(()=>geProofFixtureRecord(['--sell','flgesell1','2357','2','0'])).toThrow('finite native GE fixture');
  expect(()=>geProofFixtureRecord(['--snapshot','flgebuy1','extra'])).toThrow('finite native GE fixture');
 });
-test('native GE proof binds the acquired worker closure',()=>{expect(geProofRuntime()).toBe(capabilityRevision(['scripts/buy-owned-ge-item.ts']));},20_000); // Two un-memoized closure hashes exceed bun's 5 s default on loaded Windows
+test('native GE proof binds the acquired worker closure',()=>{expect(geProofRuntime()).toBe(capabilityRevision(['scripts/aio-market.ts']));},20_000); // Two un-memoized closure hashes exceed bun's 5 s default on loaded Windows
 
 const save=(bank:{id:number;count:number}[],pack:{id:number;count:number}[]=[])=>({version:9,position:{x:3185,z:3436,level:0},vars:{},
  skills:Array.from({length:21},(_,i)=>({index:i,level:i===3?10:1,xp:0,rawExperience:0})),

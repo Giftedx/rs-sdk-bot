@@ -7,7 +7,7 @@ import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
-import { selectItems } from './shop-buyer';
+import { selectItems } from '../packages/workers/src/market';
 import {
     assertSupplierAccount,
     chooseDesiredAmmo,
@@ -463,7 +463,7 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
 
     const leatherInvocation = buildLeatherBodyShopInvocation('Moneyshot');
     expect(leatherInvocation).toEqual({
-        args: ['scripts/shop-buyer.ts', 'Moneyshot', 'data:clotheshop', '600'],
+        args: ['scripts/aio-market.ts', 'Moneyshot', 'shop-buy', 'data:clotheshop', '600'],
         env: {
             ITEMS: 'leather body',
             STOCK_TARGET: '1',

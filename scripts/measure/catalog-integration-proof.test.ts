@@ -7,7 +7,7 @@ import {applyPreset} from '../../packages/practice/src/presets';
 import {levelForXp} from '../../packages/planner/src/curve';
 import {readPracticeSave,setPracticeSkills} from './fleet-player-save';
 import {artisanTransition,artisanSourceEntries,artisanSourceRevision,toolsEnv} from './catalog-integration-proof';
-import {PROFILES,selectItems} from '../shop-buyer';
+import {PROFILES,selectItems} from '../../packages/workers/src/market';
 
 test('the actual artisan proof filter selects both Dommik tool patterns',()=>{
  expect(selectItems(PROFILES.dommik!.items,toolsEnv.ITEMS).map(i=>i.re.source)).toEqual(['^ring mould$','^chisel$']);
@@ -69,7 +69,7 @@ test('a successful artisan log cannot qualify short output or the wrong saved XP
 test('retained artisan source pins include dispatcher, planner and save reader dependencies',()=>{
  const base=mkdtempSync(join(tmpdir(),'artisan-release-'));
  const sources:Record<string,string>={'package.json':'{}','bun.lock':'','tsconfig.json':'{}',
-  'scripts/microbot-production.ts':'export const cut=1;','scripts/microbot-jewellery-trip.ts':'export const ring=1;','scripts/shop-buyer.ts':'export const shop=1;',
+  'scripts/microbot-production.ts':'export const cut=1;','scripts/microbot-jewellery-trip.ts':'export const ring=1;','scripts/aio-market.ts':'export const shop=1;',
   'scripts/fleet-inspect.ts':"import '../packages/core/src/inprocess';",'packages/core/src/inprocess.ts':'export const bankObservation=1;',
   'scripts/measure/catalog-integration-proof.ts':"import './fleet-player-save'; import '../../packages/planner/src/autopilot';",
   'scripts/measure/fleet-player-save.ts':'export const reader=1;','packages/planner/src/autopilot.ts':'export const plan=1;',

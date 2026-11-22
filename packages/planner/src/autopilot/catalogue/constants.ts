@@ -110,6 +110,6 @@ export const LOST_CITY_MEAL_ITEMS = LOST_CITY_FOOD;
 
 export const holdsUnderKeys = (items: readonly string[]) => Object.fromEntries(items.map(i => [i, 1]));
 export const shopRun = (profile: string, cap: number, items: string, target: number, spend: number, wait = 25) => [
-    'scripts/shop-buyer.ts', profile, String(cap), `ITEMS=${items}`, `STOCK_TARGET=${target}`,
+    'scripts/aio-market.ts', 'shop-buy', profile, String(cap), `ITEMS=${items}`, `STOCK_TARGET=${target}`,
     'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', `NO_BUY_TICKS=${wait}`, `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`,
 ].join(' ');

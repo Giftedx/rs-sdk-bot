@@ -1,11 +1,11 @@
 {
   "id": "artisan-tool-order",
   "goal": "Buy and bank only missing artisan tools for a finite owned-material production order.",
-  "entry": "scripts/shop-buyer.ts",
-  "files": ["scripts/shop-buyer.ts", "scripts/shop-buyer.test.ts", "scripts/measure/catalog-integration-proof.ts", "scripts/measure/catalog-integration-proof.test.ts", "scripts/measure/aio-bench-cases.ts", "scripts/measure/fleet-player-save.ts"],
+  "entry": "scripts/aio-market.ts",
+  "files": ["scripts/aio-market.ts", "packages/workers/src/market/shop-buy.ts", "packages/workers/test/market-shop.test.ts", "scripts/measure/catalog-integration-proof.ts", "scripts/measure/catalog-integration-proof.test.ts", "scripts/measure/aio-bench-cases.ts", "scripts/measure/fleet-player-save.ts"],
   "consumer": "Woodpecker acquires one chisel and one ring mould from Dommik only when fresh bank and pack observations show them missing. These tools cut owned sapphires and make bounded sapphire rings against the Overall route shortage. Select only those two items, STOCK_TARGET=1, STOP_AT_TARGET=1, MAX_ITEMS=2, MAX_SPEND=20 and a finite CAP. Preserve all gems and unrelated assets. Native acceptance uses the actual shop-buyer CLI from Draynor, reconciles purchase and fare debits, banks both tools and confirms logout.",
   "checks": [
-    {"id": "artisan-tool-regressions", "phase": "regression", "command": ["bun", "test", "scripts/shop-buyer.test.ts", "scripts/measure/catalog-integration-proof.test.ts", "--timeout", "15000"], "timeoutMs": 60000},
+    {"id": "artisan-tool-regressions", "phase": "regression", "command": ["bun", "test", "packages/workers/test/market-shop.test.ts", "scripts/measure/catalog-integration-proof.test.ts", "--timeout", "15000"], "timeoutMs": 60000},
     {"id": "artisan-tool-native", "phase": "practice", "command": ["bun", "run", "bench", "^extra:catalog-dommik-tools$", "--profile", "--budget", "10"], "timeoutMs": 600000},
     {"id": "artisan-tool-saved", "phase": "consumer", "command": ["bun", "scripts/measure/catalog-integration-proof.ts", "--verify", "tools"], "timeoutMs": 30000}
   ]

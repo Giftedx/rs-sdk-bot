@@ -6,7 +6,7 @@ import {resolveAioStep} from './aio';
 import {PROGRESSIVE_TIERS,progressiveSkillerAlternatives,inventoryRecipes,cookingRecipes,jewelleryRecipes,miningProfiles,FISH_PROFILES,stallRecipes,smeltRecipe} from './aio-skiller';
 import {QUEST_NAMES,QUEST_SKILLS} from './quest-chain';
 import {listGeneratedQuestScripts,resolveQuestScript,assessQuestReadiness} from './aio-quester';
-import {PROFILES as SHOP_PROFILES} from './shop-buyer';
+import {PROFILES as SHOP_PROFILES} from '../packages/workers/src/market';
 import {KITS,kitSkills} from './pk-kits';
 import {smithRecipe,HAMMER} from './smith-batch';
 import {RUNE_ALTARS} from './rune-bank-craft';
@@ -303,7 +303,7 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
    const profile=Object.entries(SHOP_PROFILES).find(([,p])=>(s.owners??[]).some((owner:any)=>(owner.tiles??[]).some((t:any)=>(t.level??0)===(p.npcSpot.level??0)&&Math.max(Math.abs(t.x-p.npcSpot.x),Math.abs(t.z-p.npcSpot.z))<=3)));
    if(!profile||!(s.priceAtFullStock>0)||!row.name)continue;
    const [name,p]=profile,spend=Math.ceil(s.priceAtFullStock*1.5),pattern='^'+String(row.name).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$';
-   const method=methodBase(`shop:${name}:${row.id}`,'market:shop-buy',{script:'scripts/shop-buyer.ts',args:[name,'1200'],env:{ITEMS:pattern,STOCK_TARGET:'1',STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',MAX_SPEND:String(spend),FLOAT:String(spend+1000),COIN_RESERVE:'500'}},s.src??'knowledge/item-sources.json');
+   const method=methodBase(`shop:${name}:${row.id}`,'market:shop-buy',{script:'scripts/aio-market.ts',args:['shop-buy',name,'1200'],env:{ITEMS:pattern,STOCK_TARGET:'1',STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',MAX_SPEND:String(spend),FLOAT:String(spend+1000),COIN_RESERVE:'500'}},s.src??'knowledge/item-sources.json');
    method.effects.items={[row.id]:1};method.inputs={995:spend};method.requirements={...p.need?{levels:{[p.need.skill.toLowerCase()]:p.need.level}}:{},facts:{fact:'shop-stock:'+name+':'+row.id}};
    method.execution={stockEnv:['STOCK_TARGET'],spendPerUnit:spend};method.maxBatch=1000;methods.push(method);
   }

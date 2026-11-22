@@ -9,7 +9,7 @@ import {equipmentObserved} from '../packages/core/src/container-observation';
 import {depositObserved} from '../packages/core/src/deposit';
 import {xpForLevel} from '../packages/planner/src/curve';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
-import {openEarthBankObserved,retainedEarthBank} from './earth-shop';
+import {openEarthBankObserved,retainedEarthBank} from '../packages/workers/src/market';
 import {enterAirAltar,craftAirRunes,exitAirAltar,insideAirAltar} from './generated/rcair';
 
 const EARTH=557,ESSENCE=1436,AIR=556;

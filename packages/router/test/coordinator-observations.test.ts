@@ -30,7 +30,7 @@ function bowSupply(){
  const {state,deps}=fixture(['BowBeforeMe']);
  deps.goals.collection.missing=[{id:1637,item:'Sapphire ring',need:12,owned:0,verifyOwned:10,consumer:'main Overall'}];
  deps.statuses=[{...status('BowBeforeMe'),bank:[{id:1637,count:5}]}];
- deps.definition=id=>({id,entry:id==='owned-bank-observation'?'scripts/fleet-inspect.ts':id==='ge'?'scripts/buy-owned-ge-item.ts':id==='cut'?'scripts/microbot-production.ts':'scripts/microbot-jewellery-trip.ts',source:'source-'+id});
+ deps.definition=id=>({id,entry:id==='owned-bank-observation'?'scripts/fleet-inspect.ts':id==='ge'?'scripts/aio-market.ts':id==='cut'?'scripts/microbot-production.ts':'scripts/microbot-jewellery-trip.ts',source:'source-'+id});
  const task=(id:string,kind:CoordTask['kind'],capability:string,dependsOn:string[],accept:CoordTask['accept']={}):CoordTask=>({id,kind,capability,dependsOn,goal:'main24',...(kind==='run'?{account:'BowBeforeMe',launch:'ordinary' as const}:{}),priority:45,estimatedMs:60000,timeoutMs:900000,args:[],env:{LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept,why:'Finite two-ring Overall supply chain'});
  addTasks(state,[task('ge-build','build','ge',[]),task('ge-qualified','qualify','ge',['ge-build']),task('cut-qualified','qualify','cut',[]),task('jewel-qualified','qualify','jewel',[]),
   task('buy-bars','run','ge',['ge-qualified'],{bank:{2357:2}}),task('cut-two','run','cut',['buy-bars','cut-qualified'],{bank:{1607:2}}),

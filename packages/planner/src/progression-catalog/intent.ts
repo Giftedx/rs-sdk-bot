@@ -140,6 +140,47 @@ function catalogEntryIntent(
     accept: CatalogAccept | undefined,
     data: ProgressionCatalog | undefined,
 ): WorkIntent | null | undefined {
+    if (stem === 'aio-market') {
+        const mode = args[0]?.toLowerCase().replace(/^--mode=/, '').replace(/^--type=/, '');
+        if (!mode) return null;
+        const modeArgs: string[] = [];
+        const modeEnv: Record<string, string | undefined> = { ...env };
+        for (const token of args.slice(1)) {
+            const match = token.match(/^([A-Z][A-Z0-9_]*)=([\s\S]*)$/);
+            if (match) modeEnv[match[1]!] = match[2]!;
+            else modeArgs.push(token);
+        }
+        switch (mode) {
+            case 'shop-buy':
+                return shopBuyerIntent(script, modeArgs, modeEnv, consumer, data);
+            case 'earth-shop':
+                return catalogEntryIntent('earth-shop', script, modeArgs, modeEnv, consumer, accept, data);
+            case 'buy-sword':
+                return { kind: 'service', objective: 'buy-owned-sword', units: 1 };
+            case 'shop-trip':
+            case 'shop-sell':
+                return modeArgs[0]?.endsWith('.json')
+                    ? { kind: 'service', objective: `market:${mode}:${modeArgs[0]}`, units: 1 }
+                    : null;
+            case 'ge-buy':
+                return catalogEntryIntent('buy-owned-ge-item', script, modeArgs, modeEnv, consumer, accept, data);
+            case 'ge-sell':
+                return catalogEntryIntent('sell-owned-ge-item', script, modeArgs, modeEnv, consumer, accept, data);
+            case 'ge-trip':
+                return microbotGeTripIntent(modeArgs);
+            case 'bank-seller':
+                return microbotBankSellerIntent(modeArgs);
+            case 'shop-to-bid':
+                return shopToBidIntent(modeArgs, modeEnv);
+            case 'ge-buy-list':
+            case 'ge-plan':
+                return modeArgs[0]?.endsWith('.json')
+                    ? { kind: 'service', objective: `market:${mode}:${modeArgs[0]}`, units: 1 }
+                    : null;
+            default:
+                return null;
+        }
+    }
     if (stem === 'buy-owned-ge-item') {
         const item = Number(setting(env, args, 'ITEM_ID'));
         const quantity = Number(setting(env, args, 'QUANTITY'));

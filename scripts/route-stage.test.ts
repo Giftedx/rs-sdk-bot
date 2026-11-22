@@ -216,7 +216,7 @@ test('an owner stop file, a reservation or a hand job holds an account back from
         { account: 'Mightyrod', script: '', enabled: false },
         { account: 'WeeQuickie', script: 'scripts/firemaking-order.ts', enabled: false },
         { account: 'OreElse', script: 'scripts/goldfarm.ts', enabled: true, autopilot: 'local' },
-        { account: 'Shaftmaker', script: 'scripts/shop-buyer.ts', enabled: false, autopilot: 'local' },
+        { account: 'Shaftmaker', script: 'scripts/aio-market.ts', enabled: false, autopilot: 'local' },
     ];
     expect(heldBack('Mightyrod', jobs, undefined)).toBe('reserved (a job with no script)');
     expect(heldBack('WeeQuickie', jobs, undefined)).toBe('hand job (disabled, not an autopilot job)');

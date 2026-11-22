@@ -155,7 +155,7 @@ export function buildLeatherBodyShopInvocation(account: string, cap = 600): {
     env: Readonly<Record<string, string>>;
 } {
     return {
-        args: ['scripts/shop-buyer.ts', account, 'data:clotheshop', String(cap)],
+        args: ['scripts/aio-market.ts', account, 'shop-buy', 'data:clotheshop', String(cap)],
         env: {
             ITEMS: 'leather body',
             STOCK_TARGET: '1',

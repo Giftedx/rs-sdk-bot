@@ -9,7 +9,7 @@ import {depositObserved} from '../packages/core/src/deposit';
 import {planTripOffThread} from '../packages/core/src/route-plan';
 import {walkRoute} from '../packages/core/src/walk';
 import {routeFares} from '../packages/core/src/world';
-import {buyWithBudget} from './shop-buyer';
+import {buyWithBudget} from '../packages/workers/src/market';
 import {GOD_LOADOUTS, godCapeStaffConflict, type GodName} from './pk-kits';
 import {hasVarrockTeleport} from './pk-roam';
 

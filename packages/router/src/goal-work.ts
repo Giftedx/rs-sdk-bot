@@ -13,8 +13,10 @@ const fresh=(value:unknown,now:number)=>validTime(value,now)&&now-value<300000;
 
 // This worker reads a fresh bank before funding and refuses a changed baseline. Observation support may dispatch
 // that bounded entry without treating unknown stock as an acquired item or relaxing the runtime's admission.
+const isGeBuyEntry=(entry:string|undefined)=>entry==='scripts/aio-market.ts'||entry==='scripts/buy-owned-ge-item.ts';
+
 function boundedGeQuantity(task:CoordTask,entry:string|undefined,id:number,target:number):number|null{
- if(entry!=='scripts/buy-owned-ge-item.ts'||id===995||!Number.isSafeInteger(task.timeoutMs)||!(task.timeoutMs!>0)
+ if(!isGeBuyEntry(entry)||id===995||!Number.isSafeInteger(task.timeoutMs)||!(task.timeoutMs!>0)
   ||Object.keys(task.accept?.bank??{}).length!==1)return null;
  const env=task.env??{},item=Number(env.ITEM_ID),quantity=Number(env.QUANTITY),owned=Number(env.EXPECTED_OWNED??0),price=Number(env.LIMIT_PRICE),reserve=Number(env.CASH_RESERVE),period=Number(env.ORDER_MS);
  if(item!==id||![quantity,price].every(n=>Number.isSafeInteger(n)&&n>0)||!Number.isSafeInteger(owned)||owned<0
@@ -142,7 +144,7 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
     if(unverified>0){
      unknown.push('previously observed '+line.item+' for '+line.consumer+' before replacing that stock');
      // Reserve uncertain holdings. A finite new batch may fill only the shortage beyond that reserve.
-     if(entry==='scripts/buy-owned-ge-item.ts'||available>room)continue;
+     if(isGeBuyEntry(entry)||available>room)continue;
     }
     const gain=Math.min(available,room);
     if(gain>0){credit('supply:'+line.consumer+':'+id+':'+line.need,gain/line.need);available-=gain;effects.push(gain+' '+line.item+' for '+line.consumer);}

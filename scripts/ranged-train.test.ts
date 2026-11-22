@@ -537,8 +537,8 @@ test('Kandarin recovery walks to Ardougne North bank instead of crossing White W
  }finally{go.mockRestore();world.mockRestore();actor.mockRestore();}
 });
 
-import * as shopBuyer from './shop-buyer';
-import * as geBuy from './buy-owned-ge-item';
+import * as shopBuyer from '../packages/workers/src/market';
+import * as geBuy from '../packages/workers/src/market';
 import {isRangedAcquireMethod} from './ranged-train';
 
 test('runAdaptiveRanged acquires starter bow and arrows via shop progression instead of failing on acquire selected=null',async()=>{
@@ -690,7 +690,7 @@ test('Dargaud shop matches Bow and Arrow salesman, cross-region travelSpent reco
         return{ok:true,acquired:req.quantity,spent:req.limit} as any;
     });
     try{
-        const shopDec={state:'execute' as const,selected:'ranged/guild-buy-willow',step:{script:'scripts/shop-buyer.ts',args:['dargaud'],env:{}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'f',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
+        const shopDec={state:'execute' as const,selected:'ranged/guild-buy-willow',step:{script:'scripts/aio-market.ts',args:['shop-buy','dargaud'],env:{}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'f',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
         const shopRes=await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','GuildCross','45','3000']),coinReserve:1000,maxSpend:5000},{decision:shopDec as any});
         expect(openedNpcs.some(re=>re.test('Bow and Arrow salesman')&&!re.test('Dargaud'))).toBe(true);
         expect(shopRes.segments[0]?.ok).toBe(true);
@@ -698,13 +698,13 @@ test('Dargaud shop matches Bow and Arrow salesman, cross-region travelSpent reco
 
         rangedLvl=40;
         writeFileSync(join(dir,'ranged-acquire-888.json'),JSON.stringify({version:1,phase:'settled',previousIds:[],request:{actor:'GuildCross',server:'local',goal:'ranged-acquire-888',item:888,quantity:250,limit:120,reserve:1000,createdAt:1,reviewAt:2,deadline:3}}));
-        const geDec={state:'execute' as const,selected:'ranged/ge-buy-mithril',step:{script:'scripts/buy-owned-ge-item.ts',args:[],env:{ITEM_ID:'888',QUANTITY:'250',LIMIT_PRICE:'120'}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'g',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
+        const geDec={state:'execute' as const,selected:'ranged/ge-buy-mithril',step:{script:'scripts/aio-market.ts',args:['ge-buy'],env:{ITEM_ID:'888',QUANTITY:'250',LIMIT_PRICE:'120'}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'g',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
         await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','GuildCross','45','3000']),coinReserve:1000,maxSpend:35_000},{decision:geDec as any});
         expect(seenReqs[0]?.goal).toBe('ranged-acquire-888-1');
 
         rangedLvl=40;
         writeFileSync(join(dir,'ranged-acquire-853.json'),JSON.stringify({version:1,phase:'open',previousIds:[99],request:{actor:'GuildCross',server:'local',goal:'ranged-acquire-853',item:853,quantity:1,limit:4000,reserve:1000,createdAt:10,reviewAt:20,deadline:30}}));
-        const openDec={state:'execute' as const,selected:'ranged/ge-buy-maple',step:{script:'scripts/buy-owned-ge-item.ts',args:[],env:{ITEM_ID:'853',QUANTITY:'1',LIMIT_PRICE:'4000'}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'h',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
+        const openDec={state:'execute' as const,selected:'ranged/ge-buy-maple',step:{script:'scripts/aio-market.ts',args:['ge-buy'],env:{ITEM_ID:'853',QUANTITY:'1',LIMIT_PRICE:'4000'}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'h',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
         await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','GuildCross','45','3000']),coinReserve:1000,maxSpend:35_000},{decision:openDec as any});
         expect(seenReqs[1]).toMatchObject({goal:'ranged-acquire-853',createdAt:10,reviewAt:20,deadline:30});
     }finally{

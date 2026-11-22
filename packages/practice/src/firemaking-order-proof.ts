@@ -18,7 +18,7 @@ type Save=ReturnType<typeof readPracticeSave>;
 type Child={code:number;timedOut:boolean};
 const root=resolve(import.meta.dir,'../../..');
 const owned=['scripts/firemaking-order.ts','scripts/firemaking-order.test.ts','packages/practice/src/firemaking-order-proof.ts','packages/practice/test/firemaking-order-proof.test.ts'];
-const pinned=['scripts/shop-buyer.ts','packages/core/src/walk.ts','packages/core/src/bot.ts','packages/core/src/deposit.ts','scripts/measure/fleet-player-save.ts',
+const pinned=['packages/workers/src/market/shop-buy.ts','packages/core/src/walk.ts','packages/core/src/bot.ts','packages/core/src/deposit.ts','scripts/measure/fleet-player-save.ts',
  'vendor/rs-sdk/server/content/scripts/skill_firemaking/scripts/firemaking.rs2','vendor/rs-sdk/server/content/scripts/skill_firemaking/configs/firemaking.obj',
  'vendor/rs-sdk/server/content/scripts/areas/area_lumbridge/configs/lumbridge.inv','vendor/rs-sdk/server/content/scripts/areas/area_lumbridge/configs/lumbridge.npc',
  'vendor/rs-sdk/sdk/collision-data.json','vendor/rs-sdk/server/content/maps/m43_53.jm2','vendor/rs-sdk/server/content/maps/m44_53.jm2',

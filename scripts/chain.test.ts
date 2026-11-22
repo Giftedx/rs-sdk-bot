@@ -9,7 +9,7 @@ test('a chain step splits into script, arguments and its own environment', () =>
 
 test.each(['RESULT fail died', 'RESULT fail Courier prerequisite: combat29 required', 'RESULT fail session ended: disconnected', 'RESULT fail no result'])('failed prerequisite ends the chain and preserves %s', async failure => {
     const calls: string[] = [];
-    const result = await runChain([parseStep('scripts/foodcourier.ts'), parseStep('scripts/shop-buyer.ts ardy')], 2, {
+    const result = await runChain([parseStep('scripts/foodcourier.ts'), parseStep('scripts/aio-market.ts shop-buy ardy')], 2, {
         stopped: () => false, log: () => {}, run: async step => { calls.push(step.script); return failure; },
     });
     expect(calls).toEqual(['scripts/foodcourier.ts']);
@@ -18,7 +18,7 @@ test.each(['RESULT fail died', 'RESULT fail Courier prerequisite: combat29 requi
 
 test('a prior successful step never masks a later death or starts another round', async () => {
     let calls = 0;
-    const result = await runChain([parseStep('scripts/walk-to.ts'), parseStep('scripts/foodcourier.ts'), parseStep('scripts/shop-buyer.ts')], 0, {
+    const result = await runChain([parseStep('scripts/walk-to.ts'), parseStep('scripts/foodcourier.ts'), parseStep('scripts/aio-market.ts')], 0, {
         stopped: () => false, log: () => {}, run: async () => ++calls === 1 ? 'RESULT ok staged' : 'RESULT fail died',
     });
     expect(calls).toBe(2);
@@ -36,10 +36,10 @@ test('an owner stop after a successful step prevents the next step', async () =>
 
 test('successful finite rounds keep their ordering and totals', async () => {
     const calls: string[] = [];
-    const result = await runChain([parseStep('scripts/walk-to.ts'), parseStep('scripts/shop-buyer.ts')], 2, {
+    const result = await runChain([parseStep('scripts/walk-to.ts'), parseStep('scripts/aio-market.ts')], 2, {
         stopped: () => false, log: () => {}, run: async step => { calls.push(step.script); return 'RESULT ok product'; },
     });
-    expect(calls).toEqual(['scripts/walk-to.ts', 'scripts/shop-buyer.ts', 'scripts/walk-to.ts', 'scripts/shop-buyer.ts']);
+    expect(calls).toEqual(['scripts/walk-to.ts', 'scripts/aio-market.ts', 'scripts/walk-to.ts', 'scripts/aio-market.ts']);
     expect(result).toBe('RESULT ok chain rounds=2 ok=4 failed=0');
 });
 

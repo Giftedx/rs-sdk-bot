@@ -36,8 +36,10 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
         if (categoryArgs[0]?.toLowerCase().replace(/^--boss=/, '') === 'black-dragon') spec = { script: 'scripts/black-dragon-camp.ts' };
         rest = categoryArgs.slice(1);
     } else if (category === 'market') {
-        if (categoryArgs[0]?.toLowerCase().replace(/^--mode=/, '').replace(/^--type=/, '') === 'shop-buy') spec = { script: 'scripts/shop-buyer.ts' };
-        rest = categoryArgs.slice(1);
+        const mode = categoryArgs[0]?.toLowerCase().replace(/^--mode=/, '').replace(/^--type=/, '');
+        if (!mode) return [];
+        const resolved = resolveRouteStep({ script: 'scripts/aio-market.ts' }, categoryArgs.slice(1));
+        return [{ script: 'scripts/aio-market.ts', args: [mode, ...resolved.args], env: { ...resolved.env, ...env } }];
     } else if (category === 'skiller') {
         const [skillInput, methodInput, ...extra] = categoryArgs, skill = skillInput?.toLowerCase().replace(/^--skill=/, '');
         // Inline profiles are self-contained; resource admission never reads job files.
@@ -102,6 +104,7 @@ export function jobResources(job: ResourceJob): string[] {
             else if (method === 'ranged/troopers' || method === 'ranged/troopers-oak' || method === 'ranged/troopers-willow' || method === 'ranged/troopers-maple' || method === 'ranged/guild-willow-mithril') out.push(TROOPER_FIELD);
             else out.push('pen:3229,3298', TROOPER_FIELD);
         }
+        if (file === 'scripts/aio-market.ts' && args[0] === 'shop-buy') out.push(`shop:${(args[1] ?? env.PROFILE ?? 'catherby').toLowerCase()}`);
         if (file === 'scripts/shop-buyer.ts') out.push(`shop:${(args[0] ?? env.PROFILE ?? 'catherby').toLowerCase()}`);
         if (file === 'scripts/gather-fish.ts' && (args[0] ?? env.METHOD ?? 'cage').toLowerCase() === 'cage') out.push('catherby:lobster');
         if (file === 'scripts/gather-combat.ts') {

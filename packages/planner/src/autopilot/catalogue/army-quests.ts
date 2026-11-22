@@ -113,7 +113,7 @@ export function armyQuestAndHuntTemplates(): { quests: Template[]; hunt: Templat
     };
     const jakut: Template = {
         id: 'army-jakut-swords', pilot: true, family: 'shop-buyer', script: 'scripts/chain.ts', env: { ROUNDS: '1' },
-        args: [['scripts/shop-buyer.ts', 'jukat', String(JAKUT_CAP), 'BLIND_BUY=1', `STOCK_TARGET=${JAKUT_SWORDS}`, 'STOP_AT_TARGET=1', 'BANK_AT=0', `NO_BUY_TICKS=${JAKUT_WAIT}`, 'STALL_TICKS=0',
+        args: [['scripts/aio-market.ts', 'shop-buy', 'jukat', String(JAKUT_CAP), 'BLIND_BUY=1', `STOCK_TARGET=${JAKUT_SWORDS}`, 'STOP_AT_TARGET=1', 'BANK_AT=0', `NO_BUY_TICKS=${JAKUT_WAIT}`, 'STALL_TICKS=0',
             `COIN_RESERVE=${JAKUT_RESERVE}`, `FLOAT=${JAKUT_COINS}`].join(' ')],
         role: 'supply', goal: 'buy dragon longswords from Jakut in the Zanaris market', resources: ['shop:jukat'],
         tier: 'goal', band: HUNT_BAND + 0.05, filler: true, repeats: false, stock: { item: 'dragon longsword', to: 1 }, yields: () => [],

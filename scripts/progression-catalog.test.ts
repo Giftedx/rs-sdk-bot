@@ -71,7 +71,7 @@ test('shipped trainer and quest templates preserve their declared consumer throu
   }
  }
  expect(checked).toBeGreaterThan(30);
- for(const work of [{script:'scripts/shop-buyer.ts',args:['dargaud','1600'],env:{ITEMS:'mithril.arrow|bronze.arrow',STOCK_TARGET:'500'}},
+ for(const work of [{script:'scripts/aio-market.ts',args:['shop-buy','dargaud','1600'],env:{ITEMS:'mithril.arrow|bronze.arrow',STOCK_TARGET:'500'}},
   {script:'scripts/fleet-trade.ts',args:['.practice/fleet-data/fleet/orders/one.json'],env:{}},
   {script:'scripts/microbot-production.ts',args:['cut-sapphire'],env:{MAX_MAKE:'10'}}])expect(intentForEntry(work.script,work.args,work.env,undefined,c)).not.toBeNull();
 });

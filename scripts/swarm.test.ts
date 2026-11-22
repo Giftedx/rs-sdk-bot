@@ -284,7 +284,7 @@ test('new bounded mission starts once after success; same mission and note edits
 test('completed bounded mission identity survives controller restart; only changed work or repeat can start', () => {
     const dir=mkdtempSync(join(tmpdir(),'swarm-success-'));
     try {
-        const job={account:'Buyer',script:'scripts/shop-buyer.ts',enabled:true,repeat:false,env:{PROFILE:'tips',STOCK_TARGET:'20'}};
+        const job={account:'Buyer',script:'scripts/aio-market.ts',enabled:true,repeat:false,env:{PROFILE:'tips',STOCK_TARGET:'20'}};
         const revision=missionSignature(job),file=join(dir,'ends.json');
         persistEnded(file,new Map([['Buyer',{at:100,reason:'done after 1 runs',revision}]]));
         const loaded=loadEnded(file);
@@ -853,7 +853,7 @@ test('the orphan scan finds lifecycle accounts outside the plan and skips the pr
 });
 
 test('two jobs for one account do not queue a resume on every tick', () => {
-    const planned = [parseJob({ account: 'YewFirst', script: 'scripts/session-check.ts', enabled: false } as any), parseJob({ account: 'YewFirst', script: 'scripts/shop-buyer.ts', enabled: true } as any)]
+    const planned = [parseJob({ account: 'YewFirst', script: 'scripts/session-check.ts', enabled: false } as any), parseJob({ account: 'YewFirst', script: 'scripts/aio-market.ts', enabled: true } as any)]
         .filter((p): p is Exclude<typeof p, { error: string }> => !('error' in p));
     const enabled = enabledByAccount(planned);
     expect(enabled.get('yewfirst')).toBe(true);

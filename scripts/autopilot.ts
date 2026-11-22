@@ -735,7 +735,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const log: string[] = [];
     const scripts = new Map(catalogue().map(t => [t.id, t.worker ?? t.script])), hashes = new Map<string, string>();
     const scriptOf = (template: string) => {
-        const file = template.startsWith(KIT_BUY) ? KIT_BUY_SCRIPT : isGearShop(template) ? 'scripts/shop-buyer.ts' : scripts.get(template);
+        const file = template.startsWith(KIT_BUY) ? KIT_BUY_SCRIPT : isGearShop(template) ? 'scripts/aio-market.ts' : scripts.get(template);
         if (file && !hashes.has(file)) try { hashes.set(file, createHash('sha1').update(readFileSync(join(root, file))).digest('hex')); } catch { /* missing: no hash */ }
         return file ? hashes.get(file) : undefined;
     };

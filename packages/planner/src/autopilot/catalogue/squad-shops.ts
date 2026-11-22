@@ -10,9 +10,9 @@ export function squadSupplies(): Template[] {
         const cost = SQUAD_UNIT_COST[item]!, max = SQUAD_RUN_MAX[item]!;
         const sized = (units: number, held = 0) => {
             const spend = Math.ceil(units * cost * 2);
-            return { args: [profile, '1200'], env: { ITEMS: items, STOCK_TARGET: String(held + units), STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '25', FLOAT: String(spend + 200), COIN_RESERVE: '200', MAX_SPEND: String(spend) } };
+            return { args: ['shop-buy', profile, '1200'], env: { ITEMS: items, STOCK_TARGET: String(held + units), STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '25', FLOAT: String(spend + 200), COIN_RESERVE: '200', MAX_SPEND: String(spend) } };
         };
-        return { id, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', ...sized(max), role: 'bank', goal, resources: [`shop:${profile}`], needs, squadOnly: true,
+        return { id, family: 'shop-buyer', script: 'scripts/aio-market.ts', ...sized(max), role: 'bank', goal, resources: [`shop:${profile}`], needs, squadOnly: true,
             yields: () => [{ item, perTick }], spends: () => [{ item: 'coins', perTick: perTick * cost }], repeats: false,
             production: { output: item, outputPerUnit: 1, maximum: max, inputs: {}, resize: sized } };
     };

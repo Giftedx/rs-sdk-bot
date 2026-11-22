@@ -5,8 +5,7 @@ import {gearWants,loadoutFor,marketAsks,questPointsFloor,type GearWant} from './
 import {readSkillLevels,type CombatFocus} from '../packages/planner/src/gear-progression';
 import type {MarketAsks} from '../packages/planner/src/gear-sources';
 import type {GearWantRow} from '../packages/planner/src/gear-want-jobs';
-import {PROFILES} from './shop-buyer';
-import {dataKey,derivedProfile} from './shop-profiles';
+import {PROFILES,dataKey,derivedProfile} from '../packages/workers/src/market';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 

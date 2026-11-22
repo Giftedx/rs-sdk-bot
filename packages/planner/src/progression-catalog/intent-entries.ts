@@ -15,24 +15,34 @@ export function shopBuyerIntent(
     consumer: string,
     data?: ProgressionCatalog,
 ): WorkIntent | null {
-    const count = Number(setting(env, args, 'STOCK_TARGET') ?? setting(env, args, 'MAX_ITEMS'));
-    const pattern = setting(env, args, 'ITEMS') ?? (args[0] === 'jukat' ? '^dragon longsword$' : undefined);
+    const profile = args[0] && !args[0].includes('=') && !/^\d+$/.test(args[0]) ? args[0].toLowerCase() : undefined;
+    const explicitTarget = setting(env, args, 'STOCK_TARGET') ?? setting(env, args, 'MAX_ITEMS');
+    const explicitItems = setting(env, args, 'ITEMS');
+    const bareDefault = (!profile || profile === 'catherby') && !explicitItems && !explicitTarget;
+    const count = bareDefault ? 500 : Number(explicitTarget);
+    const pattern = bareDefault ? 'arrowtips' : (explicitItems ?? (profile === 'jukat' ? '^dragon longsword$' : undefined));
     if (!whole(count) || count < 1 || !pattern) return null;
     let matches: CatalogMethod[] = [];
     try {
         const re = new RegExp(pattern, 'i');
-        matches = (data?.methods ?? []).filter(
-            m => m.step.script === script
-                && m.step.args[0] === args[0]
+        matches = (data?.methods ?? []).filter(m => {
+            const matchesScript = m.step.script === script
+                || (script === 'scripts/shop-buyer.ts' && m.step.script === 'scripts/aio-market.ts')
+                || (script === 'scripts/aio-market.ts' && m.step.script === 'scripts/shop-buyer.ts');
+            const methodProfile = m.step.script === 'scripts/aio-market.ts' && m.step.args[0] === 'shop-buy'
+                ? m.step.args[1]
+                : m.step.args[0];
+            return matchesScript
+                && methodProfile === (profile ?? 'catherby')
                 && m.step.env.ITEMS
-                && re.test(m.step.env.ITEMS.replace(/^\^|\$$/g, '').replace(/\\(.)/g, '$1')),
-        );
+                && re.test(m.step.env.ITEMS.replace(/^\^|\$$/g, '').replace(/\\(.)/g, '$1'));
+        });
     } catch {
         return null;
     }
     const ids = [...new Set(matches.flatMap(m => Object.keys(m.effects.items ?? {})))];
     if (ids.length === 1) return { kind: 'acquire', items: { [Number(ids[0])]: count }, consumer };
-    return { kind: 'service', objective: `finite shop order ${args[0] ?? 'unknown'} ${pattern} stock ${count} for ${consumer}` };
+    return { kind: 'service', objective: `finite shop order ${profile ?? 'catherby'} ${pattern} stock ${count} for ${consumer}` };
 }
 
 export function smeltOrProductionIntent(

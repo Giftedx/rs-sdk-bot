@@ -90,7 +90,7 @@ test('finite new supply uses only demand beyond reserved unverified stock with a
 const geOrder=(patch:Partial<CoordTask>={}):CoordTask=>run('ge-supply',{goal:'main24',capability:'ge-bulk-order',dependsOn:['ge-qualified'],timeoutMs:2700000,
  env:{ITEM_ID:'561',QUANTITY:'60',EXPECTED_OWNED:'0',LIMIT_PRICE:'250',CASH_RESERVE:'1000',ORDER_MS:'900000'},accept:{bank:{561:60}},...patch});
 const geProof:CoordTask={id:'ge-qualified',kind:'qualify',goal:'main24',capability:'ge-bulk-order',dependsOn:[],priority:50,estimatedMs:900000,why:'Qualify the finite supply consumer'};
-const geContext={entryOf:()=> 'scripts/buy-owned-ge-item.ts'};
+const geContext={entryOf:()=> 'scripts/aio-market.ts'};
 
 test('stale bank state can dispatch the bounded GE observation qualifier and its finite consumer without claiming supply progress',()=>{
  const board=goals();board.collection.missing[0]!.verifyOwned=40;
@@ -154,7 +154,7 @@ const ringGoals=()=>{
 };
 const ringInput=(patch:Partial<CoordTask>={}):CoordTask=>geOrder({env:{ITEM_ID:'2357',QUANTITY:'1',EXPECTED_OWNED:'0',LIMIT_PRICE:'3500',CASH_RESERVE:'90000',ORDER_MS:'900000'},accept:{bank:{2357:1}},...patch});
 const ringConsumer=(patch:Partial<CoordTask>={}):CoordTask=>run('ring-consumer',{goal:'main24',capability:'jewellery-trip',dependsOn:['ge-supply'],timeoutMs:900000,accept:{bank:{1637:1}},...patch});
-const ringContext={entryOf:(capability:string)=>capability==='ge-bulk-order'?'scripts/buy-owned-ge-item.ts':'scripts/microbot-jewellery-trip.ts'};
+const ringContext={entryOf:(capability:string)=>capability==='ge-bulk-order'?'scripts/aio-market.ts':'scripts/microbot-jewellery-trip.ts'};
 
 test('a bounded same-account GE input can observe the bank for a finite unknown production consumer',()=>{
  const board=ringGoals(),input=ringInput(),consumer=ringConsumer();

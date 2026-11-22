@@ -229,7 +229,7 @@ export function assignGearPass(s: PlanState): void {
             done.set(a.name, { account: a.name, template, value: 0, resources: [place], reason: `gear: buys ${lines.map(l => l.item).join(', ')} on the market for ${bonus}, at most ${job.cost} coins` });
         } else {
             const items = job.items.map(i => i.name.replace(/[^a-zA-Z0-9 '-]/g, c => `\\${c}`)).join('|');
-            const template: Template = { id: gearShopId(job.profile), family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: [job.profile, '1500'],
+            const template: Template = { id: gearShopId(job.profile), family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', job.profile, '1500'],
                 env: { ITEMS: items, STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(job.spend + 200), COIN_RESERVE: '200', MAX_SPEND: String(job.spend) },
                 role: 'supply', goal: `buy ${job.items.map(i => i.name).join(', ')} from the ${job.shop} to wear better gear`, repeats: false, resources: [place], yields: () => [] };
             done.set(a.name, { account: a.name, template, value: 0, resources: [place], reason: `gear: buys ${job.items.map(i => i.name).join(', ')} at ${job.shop} for ${bonus}, at most ${job.spend} coins` });

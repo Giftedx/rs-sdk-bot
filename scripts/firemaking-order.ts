@@ -18,7 +18,7 @@ import {installDoorPolicy,type Account,type Leg} from '../packages/core/src/worl
 import {loadTravel,travelAllowed,type Travel} from '../packages/core/src/travel';
 import {planTripOffThread} from '../packages/core/src/route-plan';
 import {depositObserved} from '../packages/core/src/deposit';
-import {planShopPurchases,buyWithBudget,maximumUnitCost} from './shop-buyer';
+import {planShopPurchases,buyWithBudget,maximumUnitCost} from '../packages/workers/src/market';
 
 // Native skill_firemaking/configs/firemaking.obj levelrequire; modern log families are absent.
 export const LOGS={normal:{id:1511,name:'Logs',level:1},oak:{id:1521,name:'Oak logs',level:15},willow:{id:1519,name:'Willow logs',level:30},maple:{id:1517,name:'Maple logs',level:45},yew:{id:1515,name:'Yew logs',level:60},magic:{id:1513,name:'Magic logs',level:75}} as const;

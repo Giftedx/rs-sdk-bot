@@ -11,10 +11,10 @@ import {rsSdkRoot,deliveryLockDir,practiceBotsRoot} from './paths';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
 import {capabilityRevision,type ReleaseMemo} from '../../core/src/worker-release';
 // One --verify shares a memo: each fresh closure hash costs seconds under load and four of them overran the 30 s check.
-export const geProofRuntime=(memo:ReleaseMemo=new Map())=>capabilityRevision(['scripts/buy-owned-ge-item.ts'],resolve(import.meta.dir,'../../..'),memo);
+export const geProofRuntime=(memo:ReleaseMemo=new Map())=>capabilityRevision(['scripts/aio-market.ts'],resolve(import.meta.dir,'../../..'),memo);
 import {openBot,finish,serverFromEnv} from '../../core/src/bot';
 import {waitUntil} from '../../core/src/ticks';
-import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
+import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../workers/src/market';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import {runShopSupplyNative,verifyShopSupply} from './shop-supply-order-proof';
 import {geProofEndpoints,selectGeProofEndpoints,assertGeProofAccount,geProofAccountEnv,startGeProofStack,waitFreeMemory,type ProofEndpoints} from './order-proof-shared';
@@ -210,7 +210,7 @@ async function run(directory:string){
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=150000):Promise<Run>=>{
   if(await waitFreeMemory(FREE_FLOOR_GB)<FREE_FLOOR_GB)throw Error('practice free memory below floor');
-  const actor=args[0]==='scripts/buy-owned-ge-item.ts'?args[1]:args[2];
+  const actor=args[0]==='scripts/aio-market.ts'?args[1]:args[2];
   if(!actor||!actors.has(actor))throw Error('owned practice actor required');
   assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',actor,'bot.env'),'utf8'),owned.env);
   const out=join(directory,label+'.log'),err=join(directory,label+'.err');
@@ -238,17 +238,17 @@ async function run(directory:string){
   const sell=await command(['packages/practice/src/ge-bulk-order-proof.ts','--sell',seller,String(order.item),String(order.quantity),String(order.ask)],{},'sell');
   if(sell.code!==0)throw Error('native GE seller failed before buyer; inspect sell.log and sell.err');
   const env={ORDER_KEY:orderKey,ITEM_ID:String(order.item),QUANTITY:String(order.quantity),LIMIT_PRICE:String(order.limit),CASH_RESERVE:String(order.reserve),ORDER_MS:'600000',FILL_WAIT_TICKS:'20'};
-  const buy=await command(['scripts/buy-owned-ge-item.ts',buyer],env,'buy',remote?330000:150000);
+  const buy=await command(['scripts/aio-market.ts',buyer,'ge-buy'],env,'buy',remote?330000:150000);
   const saved=await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);
   copyFileSync(paths[buyer]!,join(directory,'after.sav'));if(!saved.matched)throw Error('exact purchased bank stock not saved');
   const journalPath=orderPaths(serverFromEnv(readFileSync(join(rsSdkRoot(),'bots',buyer,'bot.env'),'utf8')),buyer,orderKey).journal;
   writeFileSync(join(directory,'journal.json'),existsSync(journalPath)?readFileSync(journalPath):'null');
   // The rerun must find the settled journal and leave the GE untouched.
-  const again=await command(['scripts/buy-owned-ge-item.ts',buyer],env,'again');
+  const again=await command(['scripts/aio-market.ts',buyer,'ge-buy'],env,'again');
   const repeated=await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);
   copyFileSync(paths[buyer]!,join(directory,'repeat.sav'));if(!repeated.matched)throw Error('resumed bank stock not saved');
   // A new order key for the same owned item must refuse instead of buying duplicate stock.
-  const refuse=remote?await command(['scripts/buy-owned-ge-item.ts',buyer],{...env,ORDER_KEY:orderKey+'-dup'},'refuse'):undefined;
+  const refuse=remote?await command(['scripts/aio-market.ts',buyer,'ge-buy'],{...env,ORDER_KEY:orderKey+'-dup'},'refuse'):undefined;
   if(refuse){await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);copyFileSync(paths[buyer]!,join(directory,'refused.sav'));}
   writeFileSync(join(directory,'native.json'),JSON.stringify({...metadata,at:Date.now(),source,orderKey,buyer,seller,sellCode:sell.code,buyCode:buy.code,againCode:again.code,refuseCode:refuse?.code},null,2));
   }
@@ -279,20 +279,20 @@ async function run(directory:string){
   if(sellLaw.code||sellEarth.code)throw Error('magic input sellers failed');
   const lawKey='native-law-'+Date.now(),earthKey='native-earth-'+Date.now();
   const lawEnv={RESCUE_MODE:'npc-respawn-once',ORDER_KEY:lawKey,ITEM_ID:'563',QUANTITY:'5',LIMIT_PRICE:'1000',CASH_RESERVE:'10000',ORDER_MS:'900000',FILL_WAIT_TICKS:'50',EXPECTED_OWNED:''};
-  const buy=await command(['scripts/buy-owned-ge-item.ts',buyer],lawEnv,'buy',240000);
+  const buy=await command(['scripts/aio-market.ts',buyer,'ge-buy'],lawEnv,'buy',240000);
   const lawSaved=await waitPracticeSave(buyerPath,s=>held(s,95,id=>id===563)===5);copyFileSync(buyerPath,join(directory,'law.sav'));
   if(buy.code||!lawSaved.matched)throw Error('rescue law acquisition failed; inspect magic/buy.log and buy.err');
   const journal=(key:string)=>orderPaths(owned.server,buyer,key).journal;
   copyFileSync(journal(lawKey),join(directory,'law-journal.json'));
-  const again=await command(['scripts/buy-owned-ge-item.ts',buyer],lawEnv,'again');
+  const again=await command(['scripts/aio-market.ts',buyer,'ge-buy'],lawEnv,'again');
   await waitPracticeSave(buyerPath,s=>held(s,95,id=>id===563)===5);copyFileSync(buyerPath,join(directory,'repeat.sav'));
-  const topup=await command(['scripts/buy-owned-ge-item.ts',buyer],{...lawEnv,RESCUE_MODE:'',ORDER_KEY:earthKey,ITEM_ID:'557',QUANTITY:'1',LIMIT_PRICE:'20',EXPECTED_OWNED:'4',ORDER_MS:'600000'},'topup');
+  const topup=await command(['scripts/aio-market.ts',buyer,'ge-buy'],{...lawEnv,RESCUE_MODE:'',ORDER_KEY:earthKey,ITEM_ID:'557',QUANTITY:'1',LIMIT_PRICE:'20',EXPECTED_OWNED:'4',ORDER_MS:'600000'},'topup');
   const earthSaved=await waitPracticeSave(buyerPath,s=>held(s,95,id=>id===557)===5);copyFileSync(buyerPath,join(directory,'earth.sav'));
   if(topup.code||!earthSaved.matched)throw Error('authorized four-plus-one earth acquisition failed');
   copyFileSync(journal(earthKey),join(directory,'earth-journal.json'));
   const refusePath=await applyPreset(refuser,{...preset,position:MAGIC_CASE.position,inventory:[...MAGIC_CASE.pack,{id:995,count:1}]});
   copyFileSync(refusePath,join(directory,'refuse-before.sav'));
-  const refuse=await command(['scripts/buy-owned-ge-item.ts',refuser],{...lawEnv,ORDER_KEY:lawKey+'-refuse'},'refuse');
+  const refuse=await command(['scripts/aio-market.ts',refuser,'ge-buy'],{...lawEnv,ORDER_KEY:lawKey+'-refuse'},'refuse');
   await waitPracticeSave(refusePath,s=>held(s,93,id=>id===590)===1);copyFileSync(refusePath,join(directory,'refused.sav'));
   writeFileSync(join(directory,'native.json'),JSON.stringify({...metadata,at:Date.now(),source,buyer,lawKey,earthKey,buyCode:buy.code,topupCode:topup.code,againCode:again.code,refuseCode:refuse.code,'sell-lawCode':sellLaw.code,'sell-earthCode':sellEarth.code},null,2));
   return verify(root);

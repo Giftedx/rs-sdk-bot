@@ -16,7 +16,7 @@ if (!bot || !rivalName || !/^(first|last)$/.test(order ?? '') || !/^(blind|look)
 process.env.STALL_TICKS = '0';
 const { openBot } = await import('../../packages/core/src/bot');
 const { waitTicks } = await import('../../packages/core/src/ticks');
-const { PROFILES } = await import('../shop-buyer');
+const { PROFILES } = await import('../../packages/workers/src/market');
 const conf = PROFILES[args[1]!.toLowerCase()];
 if (!conf) { console.log(`RESULT fail unknown shop profile ${args[1]}`); process.exit(2); }
 const root = resolve(import.meta.dir, '..', '..');

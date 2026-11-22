@@ -70,7 +70,7 @@ test('compound cannon target maps must match the selected finite executable boun
 });
 
 test('shared shop profiles and encoded bank recipes keep their exact output identity',()=>{
- const shop={script:'scripts/shop-buyer.ts',args:['dargaud','1600'],env:{ITEMS:'mithril arrow'}};
+ const shop={script:'scripts/aio-market.ts',args:['shop-buy','dargaud','1600'],env:{ITEMS:'mithril arrow'}};
  expect(methodSupportsWork(shop,{script:shop.script,args:shop.args,env:{ITEMS:'willow shortbow'}})).toBe(false);
  const step={script:'scripts/aio-skiller.ts',args:['bank-job','--job='+encodeURIComponent(JSON.stringify({family:'inventory',recipe:'cut-sapphire',target:1}))],env:{}};
  const job=(recipe:string,target:number)=>({script:step.script,args:['bank-job','--job='+encodeURIComponent(JSON.stringify({family:'inventory',recipe,target}))],env:{}});
