@@ -205,7 +205,9 @@ test('submodules never import upward, worker-release keeps import.meta.main only
     expect(violations).toEqual([]);
 
     const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
-    expect(stripComments(readFileSync(join(repoRoot, 'packages/core/src/worker-release.ts'), 'utf8'))).toContain('import.meta.main');
+    const workerReleaseSrc = readFileSync(join(repoRoot, 'packages/core/src/worker-release.ts'), 'utf8');
+    expect(stripComments(workerReleaseSrc)).toContain('import.meta.main');
+    expect(workerReleaseSrc.trimStart().startsWith('//') || workerReleaseSrc.trimStart().startsWith('/*')).toBe(false);
     for (const rel of walkTs(join(repoRoot, 'packages', 'core', 'src', 'worker-release'))) {
         expect(stripComments(readFileSync(join(repoRoot, rel), 'utf8'))).not.toContain('import.meta.main');
     }

@@ -1,4 +1,3 @@
-// Worker release fingerprinting, closure discovery, cached revision checks, and live rollout guards.
 import { capabilityRevision, launchRevision } from './worker-release/revision';
 
 export type { ReleaseMemo } from './worker-release/paths';
