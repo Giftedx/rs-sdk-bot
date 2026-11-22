@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795306606336,
+ "at": 1795306853132,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -394,6 +394,26 @@
    ]
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=841 QUANTITY=1 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit11-841-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Shortbow on the Grand Exchange to fire a shortbow",
+   "role": "supply",
+   "template": "kit-buy:army-weapon-bow",
+   "autopilot": "local",
+   "resources": [
+    "ge:weapon"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -443,26 +463,6 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=841 QUANTITY=1 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit11-841-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Shortbow on the Grand Exchange to fire a shortbow",
-   "role": "supply",
-   "template": "kit-buy:army-weapon-bow",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
    ]
   },
   {
