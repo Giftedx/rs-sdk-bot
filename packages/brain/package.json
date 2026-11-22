@@ -1,0 +1,5 @@
+{
+  "name": "@rsbot/brain",
+  "private": true,
+  "type": "module"
+}

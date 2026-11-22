@@ -9,8 +9,14 @@
         "typescript": "5.8.3",
       },
     },
+    "packages/brain": {
+      "name": "@rsbot/brain",
+    },
     "packages/core": {
       "name": "@rsbot/core",
+    },
+    "packages/fleet": {
+      "name": "@rsbot/fleet",
     },
     "packages/knowledge": {
       "name": "@rsbot/knowledge",
@@ -24,9 +30,16 @@
     "packages/router": {
       "name": "@rsbot/router",
     },
+    "packages/workers": {
+      "name": "@rsbot/workers",
+    },
   },
   "packages": {
+    "@rsbot/brain": ["@rsbot/brain@workspace:packages/brain"],
+
     "@rsbot/core": ["@rsbot/core@workspace:packages/core"],
+
+    "@rsbot/fleet": ["@rsbot/fleet@workspace:packages/fleet"],
 
     "@rsbot/knowledge": ["@rsbot/knowledge@workspace:packages/knowledge"],
 
@@ -35,6 +48,8 @@
     "@rsbot/practice": ["@rsbot/practice@workspace:packages/practice"],
 
     "@rsbot/router": ["@rsbot/router@workspace:packages/router"],
+
+    "@rsbot/workers": ["@rsbot/workers@workspace:packages/workers"],
 
     "@types/bun": ["@types/bun@1.3.6", "", { "dependencies": { "bun-types": "1.3.6" } }, "sha512-uWCv6FO/8LcpREhenN1d1b6fcspAB+cefwD7uti8C8VffIv0Um08TKMn98FynpTiU38+y2dUO55T11NgDt8VAA=="],
 
