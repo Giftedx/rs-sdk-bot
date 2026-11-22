@@ -1,6 +1,6 @@
 import {existsSync, readFileSync, mkdirSync, writeFileSync, renameSync, unlinkSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
-import {createHandoff, reconcileOrder, type OrderSnapshot} from './courier-handoff';
+import {createHandoff, reconcileOrder, type OrderSnapshot} from '../packages/workers/src/logistics';
 
 export const ownerAlive=(pid:number)=>{try{process.kill(pid,0);return true;}catch(e:any){return e.code!=='ESRCH';}};
 
@@ -48,8 +48,8 @@ export function exactOrder(key:string,from:string,to:string,server:string,items:
         const receipt={...entry,token:entry?.token??crypto.randomUUID(),from,to,server,at:Date.now(),state:'prepared',expected,identity,baseline,
             owner:entry?.owner??{pid:process.pid,goal:process.env.BOT_GOAL??'',at:Date.now()},
             definitionBoundary:{entry:'scripts/handoff-inputs.ts',settlement:'saved donor bank+pack debit and receiver bank credit',
-                sharedDependencies:['scripts/banker.ts::preparePayout','packages/core/src/deposit.ts::depositObserved'],
-                excludedExecutors:['scripts/banker.ts::main','scripts/take-from-banker.ts']}};
+                sharedDependencies:['packages/workers/src/logistics/hub-bank.ts::preparePayout','packages/core/src/deposit.ts::depositObserved'],
+                excludedExecutors:['scripts/aio-logistics.ts::banker','scripts/aio-logistics.ts::take-from-banker']}};
         if(reconcileOrder(receipt,baseline)!=='resume')throw Error('invalid initial baseline');
         // Exclusive creation prevents two first writers from replacing the baseline.
         mkdirSync(root,{recursive:true});if(entry)save(receipt);else writeFileSync(file,JSON.stringify(receipt),{flag:'wx'});return receipt;

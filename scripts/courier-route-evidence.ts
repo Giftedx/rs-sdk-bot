@@ -2,8 +2,7 @@ import {createHash} from 'node:crypto';
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {resolve,dirname} from 'node:path';
 import {supplyRoute,type SupplyRouteRequest} from '../packages/planner/src/supply-route';
-import {ARDY_BANK,DRAYNOR_BANK,BOAT_FARES_OUT} from './courier-route';
-import {courierIslandProblem} from './courier-purchase';
+import {ARDY_BANK,DRAYNOR_BANK,BOAT_FARES_OUT,courierIslandProblem} from '../packages/workers/src/logistics';
 
 const SOURCE='.practice/joined-plan/delivery-source.json';
 const PROOF='.practice/joined-plan/delivery-native-proof.json';
@@ -74,7 +73,7 @@ if(import.meta.main){
  const {FLEET}=await import('./fleet');
  const replay=bindCourierReturn(read(SOURCE),read(PROOF),read(FAILED),new Set(FLEET.filter(a=>a.role!=='main').map(a=>a.name.toLowerCase())),Date.now());
  const proof=read(PROOF);
- const code=['scripts/courier-route-evidence.ts','scripts/courier-route.ts','scripts/courier-purchase.ts','scripts/foodcourier.ts','packages/planner/src/supply-route.ts'];
+ const code=['scripts/courier-route-evidence.ts','packages/workers/src/logistics/trade-helpers.ts','packages/workers/src/logistics/trade.ts','scripts/aio-logistics.ts','packages/planner/src/supply-route.ts'];
  const sourceHashes=Object.fromEntries(code.map(p=>[p,createHash('sha256').update(readFileSync(resolve(root,p))).digest('hex')]));
  const out=resolve(root,'.practice/shared-supply/courier-replay.json');
  mkdirSync(dirname(out),{recursive:true});writeFileSync(out,JSON.stringify({...replay,sources,sourceHashes,recordedRuntimeHashes:proof.sha},null,2)+'\n');

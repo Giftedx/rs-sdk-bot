@@ -17,7 +17,7 @@ import {runRuneMysteries} from './generated/quest-runemysteries';
 import {runEssenceGatherer} from './gather-essence';
 import {craftAirRunes,enterAirAltar,exitAirAltar,insideAirAltar} from './generated/rcair';
 import {startQuestSustain} from './quest-sustain';
-import {LUMBRIDGE_TO_DRAYNOR} from './courier-route';
+import {LUMBRIDGE_TO_DRAYNOR} from '../packages/workers/src/logistics';
 
 export function runeSupplyTarget(value=20){
  if(!Number.isSafeInteger(value)||value<2||value>99)throw Error('Runecraft target must be2..99');

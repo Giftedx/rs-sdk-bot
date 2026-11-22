@@ -165,11 +165,9 @@ test('packages/practice/src production modules only import explicitly allowliste
     const allowedPracticeScriptImports = new Set([
         'scripts/blood-chest.ts',
         'scripts/brew-potions.ts',
-        'scripts/coin-courier.ts',
         'scripts/druid-meats.ts',
         'scripts/earth-production.ts',
         'scripts/firemaking-order.ts',
-        'scripts/fleet-trade.ts',
         'scripts/goldfarm-stable.ts',
         'scripts/lava-maze-escorted-ore.ts',
         'scripts/magic-order.ts',
@@ -178,7 +176,6 @@ test('packages/practice/src production modules only import explicitly allowliste
         'scripts/quest-order.ts',
         'scripts/rune-carrier-trade.ts',
         'scripts/rune-supply.ts',
-        'scripts/specialist-supplier.ts',
         'scripts/swarm.ts',
     ]);
     const { bare, relative: relativeTargets } = collectPracticeImports(practiceFiles);

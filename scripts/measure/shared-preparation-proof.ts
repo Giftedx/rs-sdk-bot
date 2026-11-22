@@ -10,7 +10,7 @@ import {takeItems} from '../../packages/core/src/trip';
 import {isLocalServer} from '../../packages/core/src/localserver';
 import {readLogoutProof} from '../../packages/core/src/session-lifecycle';
 import {goTo} from '../../packages/core/src/walk';
-import {performFleetTransfer,watchTradeScreen,type Order} from '../fleet-trade';
+import {performFleetTransfer,watchTradeScreen,type Order} from '../../packages/workers/src/logistics';
 import {runBankJob} from '../microbot-bank-jobs';
 import {runLootTrip} from '../microbot-loot-trip';
 import {BOW_TRIP,SNARE_KIT,pickTrip,restock} from '../pk-hunt';

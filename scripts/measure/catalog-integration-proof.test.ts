@@ -70,7 +70,7 @@ test('retained artisan source pins include dispatcher, planner and save reader d
  const base=mkdtempSync(join(tmpdir(),'artisan-release-'));
  const sources:Record<string,string>={'package.json':'{}','bun.lock':'','tsconfig.json':'{}',
   'scripts/microbot-production.ts':'export const cut=1;','scripts/microbot-jewellery-trip.ts':'export const ring=1;','scripts/aio-market.ts':'export const shop=1;',
-  'scripts/fleet-inspect.ts':"import '../packages/core/src/inprocess';",'packages/core/src/inprocess.ts':'export const bankObservation=1;',
+  'scripts/aio-logistics.ts':"import '../packages/core/src/inprocess';",'packages/core/src/inprocess.ts':'export const bankObservation=1;',
   'scripts/measure/catalog-integration-proof.ts':"import './fleet-player-save'; import '../../packages/planner/src/autopilot';",
   'scripts/measure/fleet-player-save.ts':'export const reader=1;','packages/planner/src/autopilot.ts':'export const plan=1;',
   'scripts/aio.ts':"import './aio-skiller';",'scripts/aio-skiller.ts':'export const dispatch=1;',
@@ -80,7 +80,7 @@ test('retained artisan source pins include dispatcher, planner and save reader d
   for(const [file,text]of Object.entries(sources)){mkdirSync(dirname(join(base,file)),{recursive:true});writeFileSync(join(base,file),text);}
   for(const mode of ['cut','producer','tools','observer'] as const){
    const closure=releaseFiles(artisanSourceEntries(mode),base),pin=artisanSourceRevision(mode,base);
-   const dependencies=['scripts/measure/fleet-player-save.ts','packages/planner/src/autopilot.ts',...(mode==='producer'?['scripts/aio.ts','scripts/aio-skiller.ts']:[]),...(mode==='observer'?['scripts/fleet-inspect.ts','packages/core/src/inprocess.ts']:[])];
+   const dependencies=['scripts/measure/fleet-player-save.ts','packages/planner/src/autopilot.ts',...(mode==='producer'?['scripts/aio.ts','scripts/aio-skiller.ts']:[]),...(mode==='observer'?['scripts/aio-logistics.ts','packages/core/src/inprocess.ts']:[])];
    for(const file of dependencies){
     expect(closure).toContain(file);writeFileSync(join(base,file),sources[file]+'\nexport const edited=true;');
     expect(artisanSourceRevision(mode,base)).not.toBe(pin);writeFileSync(join(base,file),sources[file]!);

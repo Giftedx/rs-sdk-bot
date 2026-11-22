@@ -9,7 +9,7 @@
 import { componentId } from '../../packages/core/src/logout';
 import { lostCityRoute } from '../quest-zanaris-plan';
 import { openQuest, readQuestJournalStage, type JournalQuestReader } from './quest-lib';
-import { walkTargetPersist, ZANARIS_SHED } from '../walk-to';
+import { walkTargetPersist, ZANARIS_SHED } from '../../packages/workers/src/logistics';
 
 const WARRIOR = { x: 3145, z: 3202 };
 const SHAMUS_TREE = { id: 2409, x: 3138, z: 3212 };        // leprechauntree, maps/m49_50.jm2 0 2 12

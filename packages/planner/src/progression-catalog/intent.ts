@@ -243,6 +243,32 @@ function catalogEntryIntent(
             ? { kind: 'service', objective: `chain:${steps.map(s => s.script).join('+')}`, units: steps.length }
             : last;
     }
+    if (stem === 'aio-logistics') {
+        const rawRole = args[0]?.toLowerCase().replace(/^--role=/, '') ?? '';
+        const rest = args.slice(1);
+        if (rawRole === 'charge-glory' || rawRole === 'food-courier' || rawRole === 'supply-bootstrap') {
+            const mapped = rawRole === 'food-courier' ? 'foodcourier' : rawRole;
+            const routes = data ? matchingProgressionRoutes(script, args, env, data) : [];
+            const direct = entryNameServiceIntent(mapped, script, rest, env, consumer, routes);
+            if (direct !== undefined) return direct;
+        }
+        const serviceRoles = new Set([
+            'banker', 'give-to-banker', 'take-from-banker', 'supply-holder',
+            'supply-chain', 'loadout', 'loadout-import', 'bank-sort',
+            'walk-to', 'walk-edge', 'relocate-bank', 'relocate-knight', 'arrive-draynor',
+            'restore-prayer', 'cure-poison', 'recover-trapped', 'food-chain',
+        ]);
+        if (serviceRoles.has(rawRole)) {
+            return { kind: 'service', objective: `logistics:${rawRole}`, units: 1 };
+        }
+        if (['coin-fanout', 'item-fanin', 'note-courier'].includes(rawRole)) {
+            return rest.length > 0 ? { kind: 'service', objective: `logistics:${rawRole}`, units: 1 } : null;
+        }
+        if (!rawRole && env.REQUIRE_BANK === '1') {
+            return { kind: 'observe', objective: 'logistics:inspect', units: 1 };
+        }
+        return null;
+    }
     if (stem === 'fleet-trade' || stem === 'courier-handoff') {
         const file = args.find(a => a.endsWith('.json') && !a.includes('='));
         return file ? { kind: 'service', objective: 'finite owned order ' + file } : null;
@@ -275,6 +301,21 @@ export function intentForEntry(
 ): WorkIntent | null {
     script = scriptPath(script);
     const stem = scriptStem(script);
+    if (stem === 'aio-logistics') {
+        const rawRole = args[0]?.toLowerCase().replace(/^--role=/, '') ?? '';
+        const rest = args.slice(1);
+        if (rawRole === 'coin-courier') return coinTransferIntent(rest, env);
+        if (rawRole === 'wine-stock') return makeWineOrderIntent(rest, accept);
+        if (rawRole === 'specialist-supplier') return { kind: 'service', objective: 'stage or hand off specialist supply kit', units: 1 };
+        if (rawRole === 'gathering-supplier') return { kind: 'service', objective: 'hand off gathering specialist supply kit', units: 1 };
+        if (rawRole === 'inspect') return { kind: 'observe', objective: 'logistics:inspect', units: 1 };
+        if (rawRole === 'fleet-trade') {
+            const file = rest.find(a => !a.includes('=') && !a.startsWith('-'));
+            return file && file.endsWith('.json') && !file.includes('\0')
+                ? { kind: 'service', objective: `finite owned order ${file}` }
+                : null;
+        }
+    }
     if (stem === 'coin-courier') return coinTransferIntent(args, env);
     const consumer = setting(env, args, 'CONSUMER') ?? setting(env, args, 'GOAL') ?? script;
     if (stem === 'make-wine-order') return makeWineOrderIntent(args, accept);

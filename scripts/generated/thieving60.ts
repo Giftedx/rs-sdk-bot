@@ -13,7 +13,7 @@ import { leaveRuneStarter, onStarterIsland } from '../rune-starter';
 import { depositObserved } from '../../packages/core/src/deposit';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../../packages/core/src/walk';
-import { approach } from '../walk-to';
+import { approach } from '../../packages/workers/src/logistics';
 
 const LUMBRIDGE = { x: 3222, z: 3218 };
 const MARKET = { x: 2654, z: 3304 };

@@ -28,7 +28,7 @@ const owned=['scripts/agility-order.ts','scripts/agility-order.test.ts','package
  'packages/practice/src/agility-order-proof/fixtures.ts',
  'packages/practice/src/agility-order-proof/runner.ts',
  'packages/practice/test/agility-order-proof.test.ts',
- 'packages/core/src/boat.ts','packages/core/test/boat.test.ts','scripts/foodcourier.ts'];
+ 'packages/core/src/boat.ts','packages/core/test/boat.test.ts','scripts/aio-logistics.ts','packages/workers/src/logistics/trade.ts'];
 
 export function sources(){return{runtime:workerSourceRevision(),files:Object.fromEntries([...owned,
  'vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/engine/src/engine/entity/NetworkPlayer.ts',

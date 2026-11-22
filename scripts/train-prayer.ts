@@ -6,7 +6,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
 import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/walk';
-import {ferryWalk} from './walk-to';
+import {ferryWalk} from '../packages/workers/src/logistics';
 import {boneXp,objId} from '../packages/core/src/content-facts';
 
 const BONE=526,PRAYER=14;

@@ -2039,7 +2039,7 @@ test('a build with The Fremennik Trials on its route makes headless arrows to Fl
     const templates = all(), band = templates.find(t => t.id === 'army-fletch-25')!, route = ['The Fremennik Trials'];
     expect(band).toMatchObject({ buildOnly: true, pilot: true, route: 'The Fremennik Trials', script: 'scripts/chain.ts', env: { ROUNDS: '1' }, repeats: false, trains: { skill: 'Fletching', to: 25, unlocks: ['army-quest-fremennik'] } });
     expect(band.band!).toBeLessThan(FREMENNIK_BAND);
-    expect(band.args).toEqual([`scripts/walk-to.ts ${ARMY_BANK.x} ${ARMY_BANK.z}`, 'scripts/fletch-arrows.ts 3000 headless MAX_MAKE=210 SHAFT_RESERVE=100 FEATHER_RESERVE=100 BANK_PACK=1']);
+    expect(band.args).toEqual([`scripts/aio-logistics.ts walk-to ${ARMY_BANK.x} ${ARMY_BANK.z}`, 'scripts/fletch-arrows.ts 3000 headless MAX_MAKE=210 SHAFT_RESERVE=100 FEATHER_RESERVE=100 BANK_PACK=1']);
     // 25 XP an arrow at the server's rate reaches level 25 from level 1; the worker makes sets of 15 and keeps 100.
     expect(FLETCH_MAKE * 25).toBeGreaterThanOrEqual(xpForLevel(25));
     expect(FLETCH_MAKE % 15).toBe(0);
@@ -3594,9 +3594,9 @@ describe('continuous mainland supplies, strict 4-dose decanting, quest safety an
         expect(byId.get('squad-strip-swamp-toad')?.production).toMatchObject({ output: "toad's leg", inputs: { 'swamp toad': 1 } });
         expect(byId.get('squad-ring-of-dueling')?.production).toMatchObject({ output: 'ring of dueling(8)', inputs: { 'emerald ring': 1, 'cosmic rune': 1, 'air rune': 3 } });
         expect(byId.get('squad-barbarian-planks')?.script).toBe('scripts/chain.ts');
-        expect(byId.get('squad-barbarian-planks')?.args).toContain('scripts/walk-to.ts 2552 3574');
-        expect(byId.get('squad-white-berries')?.args).toContain('scripts/walk-to.ts 2262 3168');
-        expect(byId.get('squad-gnome-toads')?.args).toContain('scripts/walk-to.ts 2417 3512');
+        expect(byId.get('squad-barbarian-planks')?.args).toContain('scripts/aio-logistics.ts walk-to 2552 3574');
+        expect(byId.get('squad-white-berries')?.args).toContain('scripts/aio-logistics.ts walk-to 2262 3168');
+        expect(byId.get('squad-gnome-toads')?.args).toContain('scripts/aio-logistics.ts walk-to 2417 3512');
     });
 
     test('strictOutput keeps 3-dose potions intact for squad trade unless a 4-dose-only demand exists, while partial 2-dose vials decant cleanly', () => {

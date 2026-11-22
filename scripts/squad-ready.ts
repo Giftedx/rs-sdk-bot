@@ -31,7 +31,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join, resolve } from 'node:path';
 import { wildernessLevel } from '../packages/core/src/prayer-guard';
 import { SQUAD_WAVE_BC } from '../packages/planner/src/squad';
-import { BANK_MEETS } from './coin-courier';
+import { BANK_MEETS } from '../packages/workers/src/logistics';
 import { makeOrder, writeFleetOrder } from './fleet-order';
 import { castableFreeze, defaultSpec, ITEMS } from './pk';
 import { packOf } from './pk-gang';
@@ -421,7 +421,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
         notes.push(...stock.notes);
     }
     const prayerBase = a.levels.prayer ?? 1;
-    if (a.prayerPoints !== undefined && a.prayerPoints < prayerFloor(prayerBase)) reasons.push(`prayer points ${a.prayerPoints} of ${prayerBase}, under the floor of ${prayerFloor(prayerBase)}: bun scripts/pray-at-altar.ts ${a.name} ALTAR=${PRAYER_ALTAR}`);
+    if (a.prayerPoints !== undefined && a.prayerPoints < prayerFloor(prayerBase)) reasons.push(`prayer points ${a.prayerPoints} of ${prayerBase}, under the floor of ${prayerFloor(prayerBase)}: bun scripts/aio-logistics.ts ${a.name} restore-prayer ALTAR=${PRAYER_ALTAR}`);
     if (inWestArdougne(a.pos)) reasons.push('stands inside West Ardougne, which the walker cannot leave');
     const wildLevel = wildernessLevel(a.pos.x, a.pos.z);
     if (wildLevel > 0) reasons.push(`stands in the Wilderness at level ${wildLevel}`);
@@ -636,7 +636,7 @@ export function loadoutOf(pick: Pick, bank: { x: number; z: number }): { bank: {
 // The kit step refuses an account that stands more than 3 tiles from the bank tile of its file (`owned loadout life/state/stop/budget`
 // at tick 0, with no move). The command that brings the account to the tile, or null when it stands within 3 tiles.
 export function walkToKitTile(account: string, at: { x: number; z: number }, bank: { x: number; z: number }): string | null {
-    return Math.max(Math.abs(bank.x - at.x), Math.abs(bank.z - at.z)) <= 3 ? null : `bun scripts/walk-to.ts ${account} ${bank.x} ${bank.z}`;
+    return Math.max(Math.abs(bank.x - at.x), Math.abs(bank.z - at.z)) <= 3 ? null : `bun scripts/aio-logistics.ts ${account} walk-to ${bank.x} ${bank.z}`;
 }
 
 // A status file (packages/core/src/status.ts) as an account. A noted item counts as its plain item.

@@ -12,7 +12,7 @@ test('helper transfer records its exact finite order, participants and roles wit
   writeFileSync(file,JSON.stringify(order));
   for(const account of ['Giver','Taker']){
    const record=fleetTradeCapacityRecord(file,order,account,{PROGRESSION_CONSUMER:'{"skills":{"Ranged":99}}',PROGRESSION_METHOD:'ranged/troopers',PROGRESSION_SOURCE:'unrelated',CAP:'123'});
-   expect(record.script).toBe('scripts/fleet-trade.ts');expect(record.argv).toEqual([account,file]);
+   expect(record.script).toBe('scripts/aio-logistics.ts');expect(record.argv).toEqual([account,'fleet-trade',file]);
    expect(record.env).toMatchObject({COORDINATOR_PARTICIPANTS:'["Giver","Taker"]',CAP:'123'});
    expect(record.env?.PROGRESSION_CONSUMER).toBeUndefined();expect(record.env?.PROGRESSION_METHOD).toBeUndefined();expect(record.env?.PROGRESSION_SOURCE).toBeUndefined();
    expect(intentForEntry(record.script,record.argv.slice(1),record.env)).toEqual({kind:'service',objective:'finite owned order '+file});

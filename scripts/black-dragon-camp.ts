@@ -32,7 +32,7 @@ import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import type { NearbyNpc } from '../vendor/rs-sdk/sdk/types';
 import { giantStyle } from './gather-combat';
 import { BLACK_BANK, blackKit, combatTrip, varrockTeleport } from './microbot-combat-trip';
-import { walkTargetPersist } from './walk-to';
+import { walkTargetPersist } from '../packages/workers/src/logistics';
 import { reconcileLoadout } from './gear-reconcile';
 
 export type Tile = { x: number; z: number };

@@ -12,7 +12,7 @@
     "packages/practice/test/ge-bulk-order-proof.test.ts",
     "packages/core/src/trip.ts",
     "packages/core/test/trip.test.ts",
-    "scripts/courier-route.ts",
+    "packages/workers/src/logistics/trade-helpers.ts",
     "scripts/earth-production.ts",
     "scripts/earth-production.test.ts",
     "packages/practice/src/shop-supply-order-proof.ts",

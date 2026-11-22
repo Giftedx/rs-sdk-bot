@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { validateOwnedKit } from './microbot-owned-loadout';
+import { validateOwnedKit } from '../packages/workers/src/logistics';
 import { accountOf, enduranceHours, loadoutOf, questBlockers, receiptOf, meetNear, orderCommands, pickKit, prayerFloor, report, RULES, shopSource, stagingPlan, TRIBRID_BIS_ITEMS, WILDERNESS_SHOPS, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
 
 const root = join(import.meta.dir, '..');
@@ -99,7 +99,7 @@ describe('pickKit', () => {
         expect(floor).toBe(70);
         const low = pickKit(full('A', { levels: base, prayerPoints: 0 }), gear, rule, NOW);
         expect(low.ready).toBe(false);
-        expect(low.reasons).toEqual(['prayer points 0 of 99, under the floor of 70: bun scripts/pray-at-altar.ts A ALTAR=3253,3486']);
+        expect(low.reasons).toEqual(['prayer points 0 of 99, under the floor of 70: bun scripts/aio-logistics.ts A restore-prayer ALTAR=3253,3486']);
         expect(pickKit(full('A', { levels: base, prayerPoints: 69 }), gear, rule, NOW).reasons).toHaveLength(1);
         expect(pickKit(full('A', { levels: base, prayerPoints: 70 }), gear, rule, NOW).reasons).toEqual([]);
         expect(pickKit(full('A', { levels: base }), gear, rule, NOW).reasons).toEqual([]);
@@ -259,7 +259,7 @@ describe('receiptOf', () => {
 
 test('walkToKitTile names the walk when the account is more than 3 tiles from the bank tile of its loadout file', async () => {
     const { walkToKitTile } = await import('./squad-ready');
-    expect(walkToKitTile('Alpha', { x: 3092, z: 3497 }, { x: 3094, z: 3491 })).toBe('bun scripts/walk-to.ts Alpha 3094 3491');
+    expect(walkToKitTile('Alpha', { x: 3092, z: 3497 }, { x: 3094, z: 3491 })).toBe('bun scripts/aio-logistics.ts Alpha walk-to 3094 3491');
     expect(walkToKitTile('Alpha', { x: 3093, z: 3492 }, { x: 3094, z: 3491 })).toBeNull();
     expect(walkToKitTile('Alpha', { x: 3097, z: 3491 }, { x: 3094, z: 3491 })).toBeNull();
     expect(walkToKitTile('Alpha', { x: 3098, z: 3491 }, { x: 3094, z: 3491 })).not.toBeNull();

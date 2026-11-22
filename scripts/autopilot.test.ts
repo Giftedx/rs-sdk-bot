@@ -588,7 +588,7 @@ test('donor stock keeps unstrung bow names apart from usable and noted gear', ()
 });
 
 import { ARMY_MEET, OFFLINE_STOCK_MAX_AGE_MS, itemOrder, offlineStockFresh, sideStock } from './autopilot';
-import { meetingTiles } from './coin-courier';
+import { meetingTiles } from '../packages/workers/src/logistics';
 import { validOrder } from './fleet-trade-settlement';
 test('a kit item order fits the fleet order format and meets at the army bank', () => {
     const o = itemOrder('TheFullMonty', 'Masterbaiter', 'Mind rune', 20, 'rs-sdk-demo.fly.dev', 1_000_000);
@@ -1032,7 +1032,7 @@ test('autopilot retains same-side and adopted observations while obeying the own
     expect(observedAccount('Unknown', row(400, 1), [adopted], owners, side)).toBeNull();
     expect(observedAccount('Worker', { ...row(400, 1), name: 'Other' }, [], owners, side)).toBeNull();
 });
-import { walkWithFerryFallback } from './walk-to';
+import { walkWithFerryFallback } from '../packages/workers/src/logistics';
 import { loadHunters } from '../packages/core/src/danger';
 import { loadTravel } from '../packages/core/src/travel';
 

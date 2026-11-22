@@ -5,7 +5,7 @@
   "files": [
     "scripts/handoff-inputs.ts",
     "scripts/payout-order.ts",
-    "scripts/courier-handoff.ts",
+    "packages/workers/src/logistics/handoff.ts",
     "scripts/fletch-arrows.ts",
     "scripts/fletch-shafts.ts",
     "scripts/handoff-inputs.test.ts",

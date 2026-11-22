@@ -7,7 +7,7 @@
 import { finish, openBot } from '../../packages/core/src/bot';
 import { finishCombat } from '../../packages/core/src/combat-end';
 import { TROOPER_SITE, runGiants } from '../gather-combat';
-import { walkTargetPersist } from '../walk-to';
+import { walkTargetPersist } from '../../packages/workers/src/logistics';
 
 if (import.meta.main) {
     const [name, capArg] = process.argv.slice(2);

@@ -10,6 +10,7 @@ import {killTree} from '../../core/src/proc';
 import {accountDir} from '../../core/src/session-lifecycle';
 import {jobAccounts,readMergedPlan} from '../../core/src/coordinator-jobs';
 import {readPracticeSave,waitPracticeSave} from '../../practice/src/fleet-player-save';
+import {resolveLogisticsStep} from '../../workers/src/logistics';
 
 const SOURCE=resolve(import.meta.dir,'../../..');
 const MODES=['coin-courier','coin-fanout','item-fanin','note-courier'] as const;
@@ -32,7 +33,9 @@ export function ownedLogisticsEntry(args:readonly string[],envFor:(name:string)=
   return server;
  });
  if(servers.some(server=>server!==servers[0]))throw Error('owned logistics fixture requires one exact loopback endpoint');
- return{mode,names,server:servers[0]!,workerArgs:[mode,...others,...mode==='coin-courier'?['100']:mode==='coin-fanout'?['50']:mode==='item-fanin'?['Feather']:['MAX_DELIVERIES=1','CAP=1000']]};
+ const rest=[...others,...mode==='coin-courier'?['100']:mode==='coin-fanout'?['50']:mode==='item-fanin'?['Feather']:['MAX_DELIVERIES=1','CAP=1000']];
+ const step=resolveLogisticsStep(mode,rest);
+ return{mode,names,server:servers[0]!,workerArgs:[...step.args,...Object.entries(step.env??{}).map(([k,v])=>`${k}=${v}`)]};
 }
 
 export function ownedRegistrationProgram(entry:Entry):string{

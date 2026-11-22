@@ -29,7 +29,7 @@ import { xpForLevel } from '../packages/planner/src/curve';
 import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { COW_NORTH_BANK, atNorthBank } from './cow-stage';
-import { approach, walkTargetPersist } from './walk-to';
+import { approach, walkTargetPersist } from '../packages/workers/src/logistics';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 import { depositObserved } from '../packages/core/src/deposit';
 import { reconcileLoadout } from './gear-reconcile';

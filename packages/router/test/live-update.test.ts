@@ -486,17 +486,17 @@ test('a fleet trade session holds an update that changes a file it loads: its en
         writeFileSync(join(dir, 'swarm.json'), JSON.stringify({ jobs: [] }));
         const row = (name: string, more: object) => writeFileSync(join(status, name + '.json'), JSON.stringify({ name, server: 'live', at: now - 1000, started: now - 60_000, workRevision: 'a'.repeat(64), ...more }));
         // The fleet agent gives its trade workers the absolute path of the script (scripts/fleet-agent.ts tradeEnvironment).
-        row('Giver', { workEntry: join(dir, 'scripts', 'fleet-trade.ts') });
+        row('Giver', { workEntry: join(dir, 'scripts', 'aio-logistics.ts') });
         const asked: string[][] = [];
-        const closure = (entries: string[]) => { asked.push(entries); return entries.includes('scripts/fleet-trade.ts') ? ['scripts/fleet-trade.ts', 'packages/core/src/inprocess.ts'] : []; };
+        const closure = (entries: string[]) => { asked.push(entries); return entries.includes('scripts/aio-logistics.ts') ? ['scripts/aio-logistics.ts', 'packages/core/src/inprocess.ts'] : []; };
         const runs = liveRuns(dir, 'live', closure, now);
-        expect(asked).toEqual([['scripts/fleet-trade.ts']]);
-        expect(runs).toEqual([{ name: 'Giver', files: ['scripts/fleet-trade.ts', 'packages/core/src/inprocess.ts'] }]);
+        expect(asked).toEqual([['scripts/aio-logistics.ts']]);
+        expect(runs).toEqual([{ name: 'Giver', files: ['scripts/aio-logistics.ts', 'packages/core/src/inprocess.ts'] }]);
         expect(planUpdate({ ...base, incoming: ['packages/core/src/inprocess.ts'], liveRuns: runs })).toEqual({ action: 'wait', reason: 'the live run of Giver loads packages/core/src/inprocess.ts' });
         // A trade session ends with its order window. One that still writes its status after TRADE_HOLD_MS holds no update.
-        row('Giver', { workEntry: join(dir, 'scripts', 'fleet-trade.ts'), started: now - TRADE_HOLD_MS + 1000 });
+        row('Giver', { workEntry: join(dir, 'scripts', 'aio-logistics.ts'), started: now - TRADE_HOLD_MS + 1000 });
         expect(liveRuns(dir, 'live', closure, now)).toHaveLength(1);
-        row('Giver', { workEntry: join(dir, 'scripts', 'fleet-trade.ts'), started: now - TRADE_HOLD_MS });
+        row('Giver', { workEntry: join(dir, 'scripts', 'aio-logistics.ts'), started: now - TRADE_HOLD_MS });
         expect(liveRuns(dir, 'live', closure, now)).toEqual([]);
         // The limit is for a trade only: a coordinator run of that age still holds.
         row('Giver', { workEntry: 'scripts/a.ts', coordinatorRunId: 'task-1', started: now - 3 * TRADE_HOLD_MS });
@@ -508,15 +508,15 @@ test('a live trade holds an update that changes a data or task file of its relea
     scratch('rsbot-live-release-', dir => {
         const repo = resolve(import.meta.dir, '../../..'), now = 10_000_000, status = join(dir, '.practice', 'status');
         mkdirSync(status, { recursive: true });
-        writeFileSync(join(status, 'Giver.json'), JSON.stringify({ name: 'Giver', server: 'live', at: now - 1000, started: now - 60_000, workEntry: join(dir, 'scripts', 'fleet-trade.ts') }));
+        writeFileSync(join(status, 'Giver.json'), JSON.stringify({ name: 'Giver', server: 'live', at: now - 1000, started: now - 60_000, workEntry: join(dir, 'scripts', 'aio-logistics.ts') }));
         const runs = liveRuns(dir, 'live', releaseClosure(repo), now);
         expect(runs).toHaveLength(1);
         // The same list as the release id of the worker (worker-release.ts capabilityRevision): the entry and the launchers.
-        expect(runs[0]!.files).toEqual(releaseFiles(['scripts/fleet-trade.ts', ...workerLaunchers], repo));
+        expect(runs[0]!.files).toEqual(releaseFiles(['scripts/aio-logistics.ts', ...workerLaunchers], repo));
         // A data file that the trade release holds and no import reaches: the import closure of the entry lacks it.
         const data = 'packages/planner/data/progression-routes.json';
-        expect(importClosure(['scripts/fleet-trade.ts'], repo)).not.toContain(data);
-        for (const file of [data, 'packages/router/tasks/owned-bank-observation.json', 'scripts/fleet-trade.ts']) {
+        expect(importClosure(['scripts/aio-logistics.ts'], repo)).not.toContain(data);
+        for (const file of [data, 'packages/router/tasks/owned-bank-observation.json', 'scripts/aio-logistics.ts']) {
             expect(runs[0]!.files, file).toContain(file);
             expect(planUpdate({ ...base, incoming: [file], liveRuns: runs }).action, file).toBe('wait');
         }
@@ -616,9 +616,9 @@ test('a fleet trade session does not hold an update when its partner failed pre-
         }));
         writeFileSync(join(status, 'Giver.json'), JSON.stringify({
             name: 'Giver', server: 'live', at: now - 1000, started: now - 60_000,
-            workRevision: 'a'.repeat(64), workEntry: join(dir, 'scripts', 'fleet-trade.ts'),
+            workRevision: 'a'.repeat(64), workEntry: join(dir, 'scripts', 'aio-logistics.ts'),
         }));
-        const closure = (entries: string[]) => entries.includes('scripts/fleet-trade.ts') ? ['scripts/fleet-trade.ts', 'packages/core/src/inprocess.ts'] : [];
+        const closure = (entries: string[]) => entries.includes('scripts/aio-logistics.ts') ? ['scripts/aio-logistics.ts', 'packages/core/src/inprocess.ts'] : [];
         // Healthy local partner (logout check passes): Giver holds the update.
         expect(liveRuns(dir, 'live', closure, now, { fleetDir, side: 'local', checkLogout: () => {} })).toHaveLength(1);
         // Partner fails liveLogoutRef pre-login without writing a failed receipt: Giver no longer holds the update.
@@ -632,7 +632,7 @@ test('a fleet trade session does not hold an update when its partner failed pre-
         // Active partner session (currently trading) keeps the hold even if checkLogout would throw.
         writeFileSync(join(status, 'Taker.json'), JSON.stringify({
             name: 'Taker', server: 'live', at: now - 1000, started: now - 30_000,
-            workRevision: 'a'.repeat(64), workEntry: join(dir, 'scripts', 'fleet-trade.ts'),
+            workRevision: 'a'.repeat(64), workEntry: join(dir, 'scripts', 'aio-logistics.ts'),
         }));
         expect(liveRuns(dir, 'live', closure, now, {
             fleetDir, side: 'local', checkLogout: () => { throw Error('held while active'); },

@@ -27,7 +27,7 @@ import {QUEST_NAMES} from './quest-chain';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
-import {runOwnedLoadout,validateOwnedKit,type OwnedKit} from './microbot-owned-loadout';
+import {runOwnedLoadout,validateOwnedKit,type OwnedKit} from '../packages/workers/src/logistics';
 import {productionStopRequested} from './microbot-c-lifetime';
 import {createShiloTransit,NATURE} from './microbot-rune-trip';
 import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement,dashThroughDoor} from './ghost-basement-exit';

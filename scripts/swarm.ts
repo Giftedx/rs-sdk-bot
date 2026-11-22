@@ -25,8 +25,7 @@ import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear }
 import { ownedAccounts } from '../packages/core/src/tradeguard';
 import {cargoAccountServer} from '../packages/core/src/cargo';
 import {parseStep,tokenizeStep} from '../packages/core/src/chain-step';
-import { courierDeliveryWaiting } from './courier-cargo';
-import { deliveryResume, foodDeficit, selectFoodSource } from './courier-route';
+import { courierDeliveryWaiting, deliveryResume, foodDeficit, selectFoodSource } from '../packages/workers/src/logistics';
 import {assertWorkerRelease,cachedReleaseFor,workerEntries} from '../packages/core/src/worker-release';
 import {withSessionAdmission,missionSignature as sharedMissionSignature,successfulEnd,BOOTSTRAP_STATUS_AGE_MS} from '../packages/core/src/session-admission';
 import {rotateLog} from '../packages/core/src/log-rotate';
@@ -91,7 +90,6 @@ export function ownedPayoutWaiting(statuses: readonly any[], near?: DemandNear,
 function foodCourierRoute(step:{script:string;args?:readonly string[]},depth=0):boolean{
     if(depth>8)return false;
     const script=step.script.replace(/\\/g,'/').replace(/^\.\//,''),args=step.args??[];
-    if(script==='scripts/foodcourier.ts')return true;
     if(script==='scripts/chain.ts')return args.map(parseStep).some(s=>foodCourierRoute(s,depth+1));
     if(script==='scripts/aio-logistics.ts')return args[0]?.toLowerCase().replace(/^--role=/,'')==='food-courier';
     if(script!=='scripts/aio.ts')return false;

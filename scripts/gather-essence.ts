@@ -8,7 +8,7 @@ import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
 import { existsSync } from 'node:fs';
 import { depositObserved } from '../packages/core/src/deposit';
-import { approach, walkTargetPersist } from './walk-to';
+import { approach, walkTargetPersist } from '../packages/workers/src/logistics';
 import {
     MINING_PICKAXES_DESC,
     type ShopRetryGate,

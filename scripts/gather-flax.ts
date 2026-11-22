@@ -6,7 +6,7 @@ import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import { bankCargo, courierWaiting } from '../packages/core/src/cargo';
-import { approach, awayFrom } from './walk-to';
+import { approach, awayFrom } from '../packages/workers/src/logistics';
 
 const FLAX_FIELD = { x: 2744, z: 3445 };
 const SEERS_BANK = { x: 2727, z: 3492 };

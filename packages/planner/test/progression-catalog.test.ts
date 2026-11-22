@@ -3,7 +3,7 @@ import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {validateSmeltOrder} from '../../../scripts/smelt-batch';
-import {parseCoins} from '../../../scripts/coin-courier';
+import {parseCoins} from '../../workers/src/logistics';
 import {accountFromStatus,catalogCoverage,intentForEntry,loadProgressionCatalog,matchingProgressionRoutes,progressionMethods,progressionStep,type ProgressionCatalog} from '../src/progression-catalog';
 import {preflightProgressionWork} from '../../core/src/progression-session';
 import {xpForLevel} from '../src/curve';
@@ -72,19 +72,19 @@ test('coin courier binds both normalized participants to one exact finite transf
  const env={COORDINATOR_PARTICIPANTS:'["Donor","Receiver"]'},options=['--reserve=5000','--bank-x=3185','--bank-z=3436','--timeout-ms=60000'];
  const expected={kind:'service' as const,objective:'finite owned coin transfer Donor -> Receiver: 45000 coins; donor bank reserve 5000'};
  for(const args of [['Receiver','45000',...options],['Donor','Receiver','45000',...options]]){
-  expect(intentForEntry('scripts/coin-courier.ts',args,env)).toEqual(expected);
-  expect(intentForEntry('scripts/coin-courier.ts',args,env,{bank:{995:45000}})).toEqual(expected);
+  expect(intentForEntry('scripts/aio-logistics.ts',['coin-courier',...args],env)).toEqual(expected);
+  expect(intentForEntry('scripts/aio-logistics.ts',['coin-courier',...args],env,{bank:{995:45000}})).toEqual(expected);
  }
- expect(intentForEntry('scripts/coin-courier.ts',['Donor','Receiver','1'],{})).toEqual({kind:'service',objective:'finite owned coin transfer Donor -> Receiver: 1 coins; donor bank reserve 0'});
+ expect(intentForEntry('scripts/aio-logistics.ts',['coin-courier','Donor','Receiver','1'],{})).toEqual({kind:'service',objective:'finite owned coin transfer Donor -> Receiver: 1 coins; donor bank reserve 0'});
  for(const args of [[],['Receiver','45000'],['Other','Receiver','45000'],['Donor','Other','45000'],['Donor','Donor','1'],['Haggis','Receiver','1'],['Donor','Receiver','0'],['Donor','Receiver','2147483648'],['Donor','Receiver','1.5'],['Donor','Receiver','NaN'],['Donor','Receiver','1','--reserve=-1'],['Donor','Receiver','1','--reserve=2147483648'],['Donor','Receiver','1','--reserve=1','--reserve=2'],['Donor','Receiver','1','--unknown=1'],['Donor','Receiver','1','--notes'],['Donor','Receiver','1','--keep=Coins'],['Donor','Receiver','1','--bank-x=16384'],['Donor','Receiver','1','--request-ms=60001'],['Donor','Receiver','1','--request-ms=60000','--timeout-ms=59999'],['Donor','Receiver','1','--timeout-ms=600001'],['Donor','Receiver','1','--grace-ms=0'],['Donor','Receiver','1','--approach-ms=999']]){
-  expect(intentForEntry('scripts/coin-courier.ts',args,args.length===2?{}:env,{bank:{995:1}})).toBeNull();
+  expect(intentForEntry('scripts/aio-logistics.ts',['coin-courier',...args],args.length===2?{}:env,{bank:{995:1}})).toBeNull();
  }
- for(const participants of ['bad','["Donor"]','["Donor","Donor"]','["Donor","Receiver","Other"]'])expect(intentForEntry('scripts/coin-courier.ts',['Receiver','45000'],{COORDINATOR_PARTICIPANTS:participants})).toBeNull();
+ for(const participants of ['bad','["Donor"]','["Donor","Donor"]','["Donor","Receiver","Other"]'])expect(intentForEntry('scripts/aio-logistics.ts',['coin-courier','Receiver','45000'],{COORDINATOR_PARTICIPANTS:participants})).toBeNull();
  for(const amount of ['1','2147483647'])for(const flags of [[],['--reserve=2147483647'],['--bank-x=1','--bank-z=16383','--approach-ms=1800000','--request-ms=60000','--timeout-ms=600000','--grace-ms=1000']]){
   const parsed=parseCoins(['Donor','Receiver',amount,...flags]);
   const expected={kind:'service' as const,objective:`finite owned coin transfer Donor -> Receiver: ${parsed.amount} coins; donor bank reserve ${parsed.reserve}`};
-  expect(intentForEntry('scripts/coin-courier.ts',['Donor','Receiver',amount,...flags],env)).toEqual(expected);
-  expect(intentForEntry('scripts/coin-courier.ts',['Receiver',amount,...flags],env)).toEqual(expected);
+  expect(intentForEntry('scripts/aio-logistics.ts',['coin-courier','Donor','Receiver',amount,...flags],env)).toEqual(expected);
+  expect(intentForEntry('scripts/aio-logistics.ts',['coin-courier','Receiver',amount,...flags],env)).toEqual(expected);
  }
 });
 
@@ -253,7 +253,7 @@ test('finite market and trade jobs preserve their exact consumer before login',(
  expect(intentForEntry('scripts/aio-market.ts',['ge-buy'],{ITEM_ID:'849',QUANTITY:'1',EXPECTED_OWNED:'0'})).toMatchObject({kind:'acquire',items:{849:1}});
  expect(intentForEntry('scripts/aio-market.ts',['shop-buy','dargaud','1600'],{ITEMS:'mithril.arrow|steel.arrow',STOCK_TARGET:'500'})).toMatchObject({kind:'service'});
  expect(intentForEntry('scripts/aio-market.ts',['shop-buy','dargaud','1600'],{ITEMS:'mithril.arrow|steel.arrow'})).toBeNull();
- expect(intentForEntry('scripts/fleet-trade.ts',['.practice/orders/one.json'],{})).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/aio-logistics.ts',['fleet-trade','.practice/orders/one.json'],{})).toMatchObject({kind:'service'});
  expect(intentForEntry('F:/repo/packages/core/src/session-recovery.ts',[],{})).toMatchObject({kind:'service'});
 });
 
@@ -379,8 +379,9 @@ test('an entry with a missing order file, an unknown recipe, a bad count or no s
  for(const target of [-5,0,1.5,undefined])expect(intentForEntry('scripts/aio-skiller.ts',job({family:known.family,recipe:known.recipe,target}),{},undefined,c)).toBeNull();
  expect(intentForEntry('scripts/aio-skiller.ts',job({family:known.family,recipe:known.recipe,target:5}),{},undefined,c)).toMatchObject({kind:'produce'});
  expect(intentForEntry('scripts/microbot-jewellery-trip.ts',['no-such-order.json'],{},undefined,c)).toBeNull();
- for(const entry of ['sell-owned-ge-item','buy-owned-sword','goldfarm-stable','alch-train','splash-train','quest-order','foodcourier'])
+ for(const entry of ['sell-owned-ge-item','buy-owned-sword','goldfarm-stable','alch-train','splash-train','quest-order'])
   expect(intentForEntry(`scripts/${entry}.ts`,[],{},undefined,c),entry).toBeNull();
+ expect(intentForEntry('scripts/aio-logistics.ts',['food-courier'],{},undefined,c)).toBeNull();
  expect(intentForEntry('scripts/fletch-arrows.ts',['0','bronze'],{},undefined,c)).toBeNull();
  expect(intentForEntry('scripts/goldfarm-stable.ts',[],{TICKS:'0'},undefined,c)).toBeNull();
  // A stated bound keeps the entry, and the nine workers with their own default tick cap run bare.

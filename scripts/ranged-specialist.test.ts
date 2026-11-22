@@ -49,7 +49,7 @@ import {
     EDGEVILLE_BANK,
     parseSupplierCliArgs,
     resolveSupplierKitPlan,
-} from './specialist-supplier';
+} from '../packages/workers/src/logistics';
 import {
     buildLeatherBodyShopInvocation,
     LIVE_PREP_IDS,

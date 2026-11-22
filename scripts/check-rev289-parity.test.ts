@@ -121,8 +121,8 @@ test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS ques
     // Negative comments explaining rev-289 absences must remain allowed.
     expect(findScriptParityIssues('scripts/ok.ts', `// No Pure essence (7936) or Teleblock in rev 289\n`, baseline)).toEqual([]);
 
-    // Explicitly detects post-289 bank-sort keywords in microbot-bank-sort.ts.
-    expect(findScriptParityIssues('scripts/microbot-bank-sort.ts', `const p = ['chestplate'];`, baseline).length).toBe(1);
+    // Explicitly detects post-289 bank-sort keywords in packages/workers/src/logistics/stage.ts.
+    expect(findScriptParityIssues('packages/workers/src/logistics/stage.ts', `const p = ['chestplate'];`, baseline).length).toBe(1);
 
     // Catches structured item/npc/loc IDs, OSRS 2^(L/7) XP curves, and Wave 3B banned phrases (e.g. 75-Def dragonfire shield, salve (e)).
     expect(findScriptParityIssues('scripts/bad-dfs.ts', `const shield = [/^dragonfire shield$/i, 75];\nconst ammy = 'salve amulet (e)';\nconst x = { id: 11283, count: 1 };\nconst npc = { npcId: 9999 };\nconst loc = { locId: 9999 };\nconst xp = Math.pow(2, level / 7);\n`, baseline).length).toBe(6);

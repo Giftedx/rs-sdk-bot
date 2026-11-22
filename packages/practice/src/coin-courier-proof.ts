@@ -10,10 +10,10 @@ import { deliveryLockDir, practiceDir, rsSdkRoot } from './paths';
 import { killTree } from '../../core/src/proc';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { readPracticeSave, waitPracticeSave } from './fleet-player-save';
-import { exactCoinDelta } from '../../../scripts/coin-courier';
+import { exactCoinDelta } from '../../workers/src/logistics';
 import {prepareReplayRoot,removeReplayRoot} from './replay-root';
 
-const files = ['scripts/coin-courier.ts', 'scripts/coin-courier.test.ts', 'packages/practice/src/coin-courier-proof.ts', 'packages/practice/src/replay-root.ts'];
+const files = ['scripts/aio-logistics.ts', 'packages/workers/src/logistics/trade.ts', 'packages/workers/src/logistics/trade-helpers.ts', 'packages/workers/src/logistics/admission.ts', 'packages/workers/src/logistics/module.ts', 'packages/workers/test/logistics.test.ts', 'packages/practice/src/coin-courier-proof.ts', 'packages/practice/src/replay-root.ts'];
 const root = resolve(import.meta.dir, '../../..');
 export const coinProofSource = (base=root) => createHash('sha256').update(files.map(p => p + '\0' + readFileSync(join(base, p), 'utf8')).join('\0')).digest('hex');
 const source=coinProofSource;
@@ -229,7 +229,7 @@ writeFileSync(account.envPath,coinProofAccountEnv(readFileSync(account.envPath,'
         // The full donor can afford the amount, but would be one coin below this reserve. Refuse before even
         // banking its talisman for a slot; retain raw saved inventories and every skill for independent verification.
         const priorSaveTimes=saves.map(path=>statSync(path).mtimeMs),reserveStartedAt=Date.now(),reserveOrder='proof-reserve-'+crypto.randomUUID();
-        const reserveRefusalCode=await command(['scripts/coin-courier.ts',...names,String(amount),`--reserve=${reserve+1}`],'reserve-refusal',{COIN_ORDER:reserveOrder});
+        const reserveRefusalCode=await command(['scripts/aio-logistics.ts',names[0]!,'coin-courier',names[1]!,String(amount),`--reserve=${reserve+1}`],'reserve-refusal',{COIN_ORDER:reserveOrder});
         const reserveOutput=readFileSync(join(directory,'reserve-refusal.log'),'utf8')+readFileSync(join(directory,'reserve-refusal.err'),'utf8');
         assertCoinReserveRefusal(reserveRefusalCode,reserveOutput);
         const reserveRefusal={code:reserveRefusalCode,amount,reserve:reserve+1,order:reserveOrder,startedAt:reserveStartedAt,savePublications:[] as {before:number;after:number}[],journalCreated:existsSync(join(workerRoot,'.practice/coin-courier',reserveOrder))};
@@ -240,12 +240,12 @@ writeFileSync(account.envPath,coinProofAccountEnv(readFileSync(account.envPath,'
             reserveRefusal.savePublications.push({before:priorSaveTimes[i]!,after:statSync(path).mtimeMs});
             copyFileSync(path,join(directory,`reserve-refused-${i}.sav`));
         }
-        const code = await command(['scripts/coin-courier.ts', ...names, String(amount),`--reserve=${reserve}`], 'transfer', { COIN_ORDER: 'proof-' + crypto.randomUUID() });
+        const code = await command(['scripts/aio-logistics.ts', names[0]!, 'coin-courier', names[1]!, String(amount),`--reserve=${reserve}`], 'transfer', { COIN_ORDER: 'proof-' + crypto.randomUUID() });
         for (const [i, path] of saves.entries()) {
             await waitPracticeSave(path, s => count(s, 95) === (i ? 500 + amount : 50000 - amount));
             copyFileSync(path, join(directory, `after-${i}.sav`));
         }
-        const refusalCode = await command(['scripts/coin-courier.ts', ...names, '50001'], 'refusal', { COIN_ORDER: 'proof-' + crypto.randomUUID() });
+        const refusalCode = await command(['scripts/aio-logistics.ts', names[0]!, 'coin-courier', names[1]!, '50001'], 'refusal', { COIN_ORDER: 'proof-' + crypto.randomUUID() });
         for (const [i, path] of saves.entries()) copyFileSync(path, join(directory, `refused-${i}.sav`));
         writeFileSync(join(directory, 'native.json'), JSON.stringify({ source: revision,workerSource:coinProofSource(workerRoot), amount,reserve,reserveRefusal, names, code, refusalCode, endpoints: { ports: endpoints.ports, instance: endpoints.instance }, server: endpoints.server }));
         return verify(directory);

@@ -272,7 +272,7 @@ test('value guard: a drop of a valuable stack is refused 3 times, then released;
 });
 
 test('value guard: scripts that sell, alch or trade on purpose are exempt', () => {
-    for (const s of ['scripts/alch-train.ts', 'scripts/aio-market.ts', 'scripts\\microbot-a-shop-sell.ts', 'scripts/coin-courier.ts', 'scripts/item-fanin.ts', 'scripts/fleet-trade.ts', 'scripts/give-to-banker.ts'])
+    for (const s of ['scripts/alch-train.ts', 'scripts/aio-market.ts', 'scripts\\microbot-a-shop-sell.ts', 'scripts/aio-logistics.ts'])
         expect(sellsItems(s)).toBe(true);
     for (const s of ['scripts/wc-loop.ts', 'scripts/aio-skiller.ts', 'scripts/mining-rotation.ts', 'scripts/generated/quest-cook.ts'])
         expect(sellsItems(s)).toBe(false);

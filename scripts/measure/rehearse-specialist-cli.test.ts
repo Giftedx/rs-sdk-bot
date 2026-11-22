@@ -22,7 +22,7 @@ import {
     resolveBaseId,
     THIEVING_SPECIALIST_LIVE_KIT,
     WOODCUTTING_SPECIALIST_LIVE_KIT,
-} from '../specialist-supplier';
+} from '../../packages/workers/src/logistics';
 import {
     aggregateKitBank,
     collectRehearsalSummary,
@@ -118,7 +118,8 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         const sups = resolveSegmentSuppliers(seg);
         expect(sups.length).toBeGreaterThanOrEqual(1);
         for (const sup of sups) {
-            expect(['scripts/specialist-supplier.ts', 'scripts/gathering-supplier.ts']).toContain(sup.script);
+            expect(sup.script).toBe('scripts/aio-logistics.ts');
+            expect(['specialist-supplier', 'gathering-supplier']).toContain(sup.args?.[0] ?? '');
             expect(sup.args).toContain('{ACTOR}');
             expect(() => parseKitArg(sup.args ?? [])).not.toThrow();
             expect(sup.save.inventory!.length).toBeLessThanOrEqual(28);

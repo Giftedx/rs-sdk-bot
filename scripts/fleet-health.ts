@@ -23,7 +23,7 @@ import { inPaterdomusTemple } from './generated/quest-priestperil';
 const require = createRequire(import.meta.url);
 
 export const HEALTH_STOP_PREFIX = 'fleet-health auto-paused:';
-export const RECOVER_SCRIPT = 'scripts/recover-trapped.ts';
+export const RECOVER_SCRIPT = 'scripts/aio-logistics.ts';
 export const RESCUE_COOLDOWN_MS = 30 * 60_000;
 export const LOOP_WINDOW_MS = 2 * 3600_000;
 export const DEFAULT_MAX_RECOVERIES = 2;
@@ -564,7 +564,7 @@ export async function remediateFleetHealth(
     const freeGB = opts.freeMemGB ?? (() => freemem() / 2 ** 30);
     const timeoutMs = opts.recoveryTimeoutMs ?? 180_000;
     const defaultRunRecovery = async (account: string, target?: { x: number; z: number; level: number }) => {
-        const argv = [process.execPath, join(audit.root, RECOVER_SCRIPT), account, '900', ...(target ? [`--target=${target.x},${target.z},${target.level}`] : [])];
+        const argv = [process.execPath, join(audit.root, RECOVER_SCRIPT), account, 'recover-trapped', '900', ...(target ? [`--target=${target.x},${target.z},${target.level}`] : [])];
         const env = recoverEnvironment(audit.root);
         const proc = Bun.spawn(argv, { cwd: audit.root, env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
         let timedOut = false;

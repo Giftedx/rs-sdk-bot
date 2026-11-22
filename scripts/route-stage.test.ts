@@ -3,7 +3,7 @@ import { groupOrders, heldBack, heldCount, orderInWay, parseLine, planStage, sta
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { swarmBusy } from './fleet-trade';
+import { swarmBusy } from '../packages/workers/src/logistics';
 import { sideCard } from './fleet-sync';
 
 test('remote route staging honors published owner holds without discarding the main receiver stock', () => {

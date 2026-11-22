@@ -96,8 +96,8 @@ describe('fleet live-update facade', () => {
 
         const liveTradeWait = planUpdate({
             ...baseInput,
-            incoming: ['scripts/fleet-trade.ts'],
-            liveRuns: [{ name: 'tradebot', files: ['scripts/fleet-trade.ts'] }],
+            incoming: ['scripts/aio-logistics.ts'],
+            liveRuns: [{ name: 'tradebot', files: ['scripts/aio-logistics.ts'] }],
         });
         expect(liveTradeWait.action).toBe('wait');
     });

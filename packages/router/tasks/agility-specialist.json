@@ -5,7 +5,8 @@
   "files": [
     "scripts/agility-specialist.ts",
     "scripts/agility-specialist.test.ts",
-    "scripts/specialist-supplier.ts",
+    "scripts/aio-logistics.ts",
+    "packages/workers/src/logistics/specialist-supply.ts",
     "packages/practice/src/rehearse.ts",
     "packages/practice/test/specialist-rehearsal.test.ts"
   ],

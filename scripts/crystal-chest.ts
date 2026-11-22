@@ -7,7 +7,7 @@ import { depositObserved } from '../packages/core/src/deposit';
 import type { Session } from '../packages/core/src/inprocess';
 import { waitUntil } from '../packages/core/src/ticks';
 import type { Tile } from '../packages/core/src/world';
-import { walkTargetPersist } from './walk-to';
+import { walkTargetPersist } from '../packages/workers/src/logistics';
 
 export const KEY_TOOTH = 985, KEY_LOOP = 987, CRYSTAL_KEY = 989, UNCUT_DRAGONSTONE = 1631;
 export const CHEST_CLOSED = 172, CHEST_OPEN = 173, MIN_FREE_SLOTS = 12;

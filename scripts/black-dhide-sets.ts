@@ -12,7 +12,7 @@
 // thread at Dommik's when the bank has none, and crafts the sets at the bank one piece at a time
 // (scripts/microbot-production.ts runInventoryBank). Hides short of a whole set stay hides.
 import { openQuest } from './generated/quest-lib';
-import { walkTargetPersist } from './walk-to';
+import { walkTargetPersist } from '../packages/workers/src/logistics';
 import { tanInventory, tanningRecipes } from './microbot-c-tanner';
 import { inventoryRecipes, runInventoryBank } from './microbot-production';
 

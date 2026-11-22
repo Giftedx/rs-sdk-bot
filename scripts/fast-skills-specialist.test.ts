@@ -42,7 +42,7 @@ import {
     resolveSupplierKitPlan,
     RUNECRAFT_SPECIALIST_KIT,
     SMITHING_SPECIALIST_KIT,
-} from './specialist-supplier';
+} from '../packages/workers/src/logistics';
 
 const ROOT = resolve(import.meta.dir, '..');
 const ITEMS: { id: number; name: string; tradeable?: boolean }[] = JSON.parse(

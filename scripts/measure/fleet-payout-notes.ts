@@ -1,7 +1,7 @@
 // Native preparation proof; no receiver/trade or new stock is claimed.
 import {openBot,finish} from '../../packages/core/src/bot';
 import {waitTicks,waitUntil} from '../../packages/core/src/ticks';
-import {preparePayout} from '../banker';
+import {preparePayout} from '../../packages/workers/src/logistics';
 const s=await openBot(process.argv[2]!);
 const count=(items:{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 try{

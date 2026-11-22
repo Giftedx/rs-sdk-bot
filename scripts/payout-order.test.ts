@@ -3,7 +3,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {payoutOrder, exactOrder} from './payout-order';
-import {reconcileOrder} from './courier-handoff';
+import {reconcileOrder} from '../packages/workers/src/logistics';
 
 test('claim persists entry before a baseline and compares the originally read owner',()=>{
  const base=mkdtempSync(join(tmpdir(),'claim-cas-'));

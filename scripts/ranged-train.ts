@@ -21,7 +21,7 @@ import {standardBowTiers,standardArrowTiers,gearById,shopCatalog} from '../packa
 import {questFlags} from '../packages/core/src/quest-status';
 import {isLocalServer} from '../packages/core/src/localserver';
 import {runGiants,TROOPER_SITE} from './gather-combat';
-import {ferryWalk} from './walk-to';
+import {ferryWalk} from '../packages/workers/src/logistics';
 type Item={id:number;count:number};
 // Bow and arrow tiers come from knowledge/gear.json through the planner engine (standardBowTiers, standardArrowTiers).
 // player_ranged.rs2 refuses arrows whose levelrequire exceeds the bow's levelrequire. In a level the shortbow is first,

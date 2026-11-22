@@ -45,7 +45,7 @@ import {
     hasExactKit as supplierHasExactKit,
     resolveBaseId,
     resolveSupplierKitPlan,
-} from './specialist-supplier';
+} from '../packages/workers/src/logistics';
 
 const ROOT = resolve(import.meta.dir, '..');
 

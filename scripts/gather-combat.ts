@@ -38,7 +38,7 @@ import {resolve} from 'node:path';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, walkPath, sessionWalker, expandPath, type PathDeps, type PathPoint, type PathTile } from '../packages/core/src/walk';
 import { BOARD_PLANK_IDS, DISEMBARK_PLANK_IDS, disembark, pickDisembarkPlank, type BoatSession } from '../packages/core/src/boat';
-import { approach, ferryWalk, walkTargetPersist } from './walk-to';
+import { approach, ferryWalk, walkTargetPersist } from '../packages/workers/src/logistics';
 import { npcId, objId } from '../packages/core/src/content-facts';
 
 // Local bear spawn clusters from rev289 maps / cow-path-probe.json. Expand by7:
@@ -1237,7 +1237,7 @@ try { await ensureSurfaceGroundEntry(ownedSession, cowStop.stop); }
 catch (e) { await finishCombat(ownedSession, false, String(e)); }
 if(giantTrained){
     // TROOPER_COOK=1: cook banked raw beef into trooper food first, when the account owns too little (scripts/trooper-food.ts).
-    if(TARGET_KEY==='trooper'&&process.env.TROOPER_COOK==='1')try{const {stageTrooperFood}=await import('./trooper-food'),{walkTargetPersist}=await import('./walk-to');
+    if(TARGET_KEY==='trooper'&&process.env.TROOPER_COOK==='1')try{const {stageTrooperFood}=await import('./trooper-food'),{walkTargetPersist}=await import('../packages/workers/src/logistics');
         const r=await stageTrooperFood(ownedSession,{stop:cowStop.stop,walk:async(x,z)=>(await walkTargetPersist(ownedSession,{x,z,level:0})).ok});console.log(`TROOPER_FOOD ${JSON.stringify(r)}`);}
     catch(e){await finishCombat(ownedSession,false,String(e));}
     try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),ammoPickup:process.env.GIANT_AMMO_PICKUP!=='0',bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finishCombat(ownedSession,r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
@@ -1247,7 +1247,7 @@ const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdg
 const cleanupScope=(potionPolicy||maximum!==undefined)&&TARGET_KEY!=='cow'?combatPotionSession(ownedSession,cowStop.stop,CAP):undefined;
 const s=cleanupScope??ownedSession;
 if(TARGET_KEY==='cow'){
-    if(process.env.COW_STAGE==='1')try{const {stageCows}=await import('./cow-stage'),{walkTargetPersist}=await import('./walk-to');
+    if(process.env.COW_STAGE==='1')try{const {stageCows}=await import('./cow-stage'),{walkTargetPersist}=await import('../packages/workers/src/logistics');
         const r=await stageCows(s,{stop:cowStop.stop,walk:async(x,z)=>(await walkTargetPersist(s,{x,z,level:0})).ok});console.log(`COW_STAGE ${JSON.stringify(r)}`);}
         catch(e){await finishCombat(s,false,String(e));}
     try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finishCombat(s,r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}

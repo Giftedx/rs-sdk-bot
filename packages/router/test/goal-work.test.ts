@@ -21,7 +21,7 @@ test('a bounded skills refresh supports its real finite army consumer without re
  const observe=run('observe',{capability:'observe',account:'Fighter',timeoutMs:120000,args:[],env:{REQUIRE_BANK:'0',LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept:{skills:{Hitpoints:1}}});
  const consumer=run('finite',{goal:'skills',account:'Fighter',accept:{skills:{Ranged:43}},dependsOn:['observe']});
  const s=initialState();addTasks(s,[observe,consumer],NOW);
- const value=(at:number)=>goalWork(s,goals(),[status('Fighter',{at,skills:[{name:'Ranged',level:1,xp:0},{name:'Hitpoints',level:10,xp:1000}]})],NOW,{entryOf:cap=>cap==='observe'?'scripts/fleet-inspect.ts':'scripts/ranged-train.ts'});
+ const value=(at:number)=>goalWork(s,goals(),[status('Fighter',{at,skills:[{name:'Ranged',level:1,xp:0},{name:'Hitpoints',level:10,xp:1000}]})],NOW,{entryOf:cap=>cap==='observe'?'scripts/aio-logistics.ts':'scripts/ranged-train.ts'});
  expect(value(NOW-400000).get('observe')?.value).toBe(.01);
  expect(value(NOW).get('observe')?.value).toBe(0);
  expect(value(NOW-400000).get('finite')?.value).toBe(42/98);
@@ -266,7 +266,7 @@ test('GE inputs get no observation credit for covered, ambiguous, unnamed, coin 
 const bankObserver=(patch:Partial<CoordTask>={}):CoordTask=>run('bank-observe',{goal:'main24',capability:'bank-observation',dependsOn:['bank-qualified'],
  timeoutMs:120000,args:[],env:{REQUIRE_BANK:'1'},accept:{counters:{bankObserved:1}},...patch});
 const bankProof:CoordTask={...geProof,id:'bank-qualified',capability:'bank-observation'};
-const bankContext={entryOf:(capability:string)=>capability==='bank-observation'?'scripts/fleet-inspect.ts':ringContext.entryOf(capability)};
+const bankContext={entryOf:(capability:string)=>capability==='bank-observation'?'scripts/aio-logistics.ts':ringContext.entryOf(capability)};
 const observationChain=(observer=bankObserver(),consumer=ringConsumer())=>[bankProof,geProof,observer,
  run('fund-ring',{goal:'main24',capability:'coin-courier',account:undefined,participants:['Donor','Helper'],acceptIndex:1,
   dependsOn:[observer.id],timeoutMs:600000,accept:{bank:{995:111470}}}),

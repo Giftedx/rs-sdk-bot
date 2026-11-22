@@ -23,7 +23,7 @@ export function boundedRecoveryPlan(plan:any,targets:RecoveryTarget[],owned:read
         if(accounts.length!==1||!names.has(key)||seen.has(key)||job.autopilot||job.standing||job.host||job.orchestrate||job.repeat!==false)throw Error('bounded recovery assignment changed');
         seen.add(key);
         if(selected.has(key)){
-            if(job.script!=='scripts/fleet-inspect.ts'||job.maxRestarts!==0||job.standingRetry!==false||job.env?.LOOT_WATCH!=='0'||job.env?.RANDOM_EVENTS!=='0')throw Error('bounded recovery inspector changed');
+            if(job.script!=='scripts/aio-logistics.ts'||job.args?.[0]!=='inspect'||job.maxRestarts!==0||job.standingRetry!==false||job.env?.LOOT_WATCH!=='0'||job.env?.RANDOM_EVENTS!=='0')throw Error('bounded recovery inspector changed');
         }else if(job.enabled!==false||job.script||job.role!=='reserved')throw Error('bounded recovery reservation changed');
     }
     return {...plan,jobs:plan.jobs.map((j:any)=>selected.has(j.account.toLowerCase())?{...j,enabled:false}:j),coordination:{enabled:true,maxActive:1,maxLive:plan.maxBots,preferLive:true,autoExpand:false,boundedRecovery:scope,bootstrap:proposal.tasks}};
@@ -70,7 +70,7 @@ export function assertCompletedInspectionMission(v:{account:string;proof:any;pro
         ||status?.sessionAttemptId!==proof.attemptId||status.workRevision!==source||status.coordinatorRunId!==proof.ownerRun
         ||receipt.owner.script!=='scripts/session-check.ts'||receipt.owner.workerRelease!==source||!successfulEnd(end.reason)
         ||!bound?.taskIds?.includes(prior.spec.id)||!bound.targets?.some((t:RecoveryTarget)=>t.account===account&&t.attemptId===target.attemptId&&t.endedAt===target.endedAt)
-        ||failedScript(end)!=='scripts/session-check.ts'||receipt.updatedAt>end.at||job.script!=='scripts/fleet-inspect.ts')throw Error('bounded inspection completed recovery identity changed');
+        ||failedScript(end)!=='scripts/session-check.ts'||receipt.updatedAt>end.at||job.script!=='scripts/aio-logistics.ts'||job.args?.[0]!=='inspect')throw Error('bounded inspection completed recovery identity changed');
     const revision=missionSignature({...job,env:{...job.env,REQUIRE_BANK:'1'}});
     if(!startable([account],false,new Map([[account,end]]),()=>Infinity,undefined,revision).start.includes(account))throw Error('bounded inspection needs a different completed mission');
 }

@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,writeFileSync,readFileSync,existsSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {createHandoff} from './courier-handoff';
+import {createHandoff} from '../packages/workers/src/logistics';
 import {exactOrder} from './payout-order';
 import {parseHandoff,runExactHandoff} from './handoff-inputs';
 const {receiveHandoff,sendHandoff}=createHandoff([40],join(tmpdir(),'iron-races'));

@@ -11,6 +11,7 @@ export interface SpecialistBenchPlan {
     supplier: string;
     specialistScript: string;
     supplierScript: string;
+    supplierRole: string;
     specialistArgs: string[];
     childEnv: Record<string, string>;
 }
@@ -18,14 +19,19 @@ export interface SpecialistBenchPlan {
 export function parseSpecialistBenchArgs(argv: readonly string[], root = ROOT): SpecialistBenchPlan {
     const [bot, supplier, specialistScript, ...rest] = argv;
     if (!bot || !supplier || !specialistScript) {
-        throw Error('usage: specialist-bench.ts <bot> <supplier> <specialist-script> [--supplier-script=<path>] [KEY=VALUE ...] [args...]');
+        throw Error('usage: specialist-bench.ts <bot> <supplier> <specialist-script> [--supplier-script=<path>] [--supplier-role=<role>] [KEY=VALUE ...] [args...]');
     }
-    let supplierScript = 'scripts/specialist-supplier.ts';
+    let supplierScript = 'scripts/aio-logistics.ts';
+    let supplierRole = 'specialist-supplier';
     const specialistArgs: string[] = [];
     const childEnv: Record<string, string> = {};
     for (const arg of rest) {
         if (arg.startsWith('--supplier-script=')) {
             supplierScript = arg.slice('--supplier-script='.length);
+            continue;
+        }
+        if (arg.startsWith('--supplier-role=')) {
+            supplierRole = arg.slice('--supplier-role='.length);
             continue;
         }
         const eq = arg.indexOf('=');
@@ -42,7 +48,7 @@ export function parseSpecialistBenchArgs(argv: readonly string[], root = ROOT): 
             throw Error(`specialist-bench: missing script ${rel}`);
         }
     }
-    return { bot, supplier, specialistScript, supplierScript, specialistArgs, childEnv };
+    return { bot, supplier, specialistScript, supplierScript, supplierRole, specialistArgs, childEnv };
 }
 
 async function pumpPrefixed(
@@ -90,7 +96,10 @@ async function main(): Promise<void> {
         const roleEnv =
             plan.childEnv.SUPPLIER_ROLE ??
             (suppliers.length > 1 ? (i === 0 ? 'starter' : 'runner') : undefined);
-        const proc = Bun.spawn(['bun', resolve(ROOT, plan.supplierScript), supName, plan.bot, '20000'], {
+        const supplierArgs = plan.supplierScript.endsWith('/aio-logistics.ts') || plan.supplierScript === 'scripts/aio-logistics.ts'
+            ? [plan.supplierRole, plan.bot, '20000']
+            : [plan.bot, '20000'];
+        const proc = Bun.spawn(['bun', resolve(ROOT, plan.supplierScript), supName, ...supplierArgs], {
             cwd: ROOT,
             env: {
                 ...process.env,

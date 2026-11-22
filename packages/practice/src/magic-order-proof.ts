@@ -29,7 +29,7 @@ export function sources(){return{runtime:workerSourceRevision(),files:Object.fro
  'vendor/rs-sdk/server/content/scripts/skill_magic/scripts/spells/teleport.rs2',
  'vendor/rs-sdk/server/content/scripts/skill_magic/scripts/spells/alchemy.rs2',
  'vendor/rs-sdk/server/content/scripts/skill_combat/configs/ranged/bows.obj',
- 'packages/core/src/travel.ts','knowledge/teleports.json','scripts/courier-route.ts',
+ 'packages/core/src/travel.ts','knowledge/teleports.json','packages/workers/src/logistics/trade-helpers.ts',
  'vendor/rs-sdk/server/content/scripts/areas/area_varrock/configs/varrock.inv',
 ].map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))};}
 // Admission uses the shared practice floor and startup reserve.

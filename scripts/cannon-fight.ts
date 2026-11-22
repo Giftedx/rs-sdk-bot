@@ -27,7 +27,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { componentId } from '../packages/core/src/logout';
 import { PRAYER_NAMES, type PrayerName } from '../vendor/rs-sdk/sdk/types';
-import { walkTarget } from './walk-to';
+import { walkTarget } from '../packages/workers/src/logistics';
 import { reconcileLoadout } from './gear-reconcile';
 import { gearById } from '../packages/planner/src/gear-progression';
 

@@ -18,12 +18,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { openBot, finish, randomEventsOf, serverFromEnv, sessionDied } from '../packages/core/src/bot';
-import { walkTargetPersist } from './walk-to';
+import { walkTargetPersist } from '../packages/workers/src/logistics';
 import { depositPack } from '../packages/core/src/deposit';
 import { waitTicks } from '../packages/core/src/ticks';
 import type {Session} from '../packages/core/src/inprocess';
 import {ownedAccounts} from '../packages/core/src/tradeguard';
-import { receiveHandoff } from './courier-handoff';
+import { receiveHandoff } from '../packages/workers/src/logistics';
 import { questFoodDefinitions } from '../packages/core/src/sustain';
 import { stallRecipes, stallSight, stallWatched, type StallRecipe, type StallSight } from './microbot-c-stalls';
 

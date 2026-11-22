@@ -9,7 +9,7 @@
 // The steps are those of Scorpion Catcher's dusty key chain (scripts/generated/quest-scorpion.ts, 3 of 3 on practice,
 // research/quest-plan.md 1o). The fight uses whatever the account wields.
 import { openQuest } from './generated/quest-lib';
-import { walkTargetPersist } from './walk-to';
+import { walkTargetPersist } from '../packages/workers/src/logistics';
 
 const TAV_LADDER = { x: 2884, z: 3397 };                     // ladder_cellar_inside_down (1759), maps/m45_53.jm2
 const LADDER_FOOT = { x: 2884, z: 9797 };                    // ladder_from_cellar (1755)

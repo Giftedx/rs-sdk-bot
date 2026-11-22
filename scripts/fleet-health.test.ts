@@ -6,7 +6,7 @@ import { labelAreas, writeLabels } from '../packages/core/src/components';
 import { pathfindingDataKey } from '../packages/core/src/pathcache';
 import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
 import { auditFleetHealth, classifyLocation, HEALTH_STOP_PREFIX, loadCachedLabels, RECOVER_SCRIPT, recoverEnvironment, remediateFleetHealth } from './fleet-health';
-import { recoverSessionToHub } from './recover-trapped';
+import { recoverSessionToHub } from '../packages/workers/src/logistics';
 
 const dirs: string[] = [];
 function tempWorkspace(): string {

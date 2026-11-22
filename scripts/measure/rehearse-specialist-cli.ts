@@ -24,7 +24,7 @@ import {
     THIEVING_SPECIALIST_LIVE_KIT,
     WOODCUTTING_SPECIALIST_LIVE_KIT,
     type KitSpecItem,
-} from '../specialist-supplier';
+} from '../../packages/workers/src/logistics';
 
 const ROOT = resolve(import.meta.dir, '..', '..');
 const DEFAULT_OUT_BASE = '.practice/hosted-rehearse';
@@ -123,7 +123,7 @@ function smithingRunnerQueueSlice(runnerIdx: number, runnerCount: number): Pick<
 }
 
 interface SpecialistSupplierDef {
-    readonly script: 'scripts/specialist-supplier.ts' | 'scripts/gathering-supplier.ts';
+    readonly script: 'scripts/aio-logistics.ts';
     readonly args: readonly string[];
     readonly save: () => SaveConfig;
 }
@@ -148,8 +148,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/thieving-specialist.ts',
         env: { CAP: '3200', LIVE: '1' },
         supplier: {
-            script: 'scripts/gathering-supplier.ts',
-            args: ['{ACTOR}', '--kit=thieving-live', '3200'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['gathering-supplier', '{ACTOR}', '--kit=thieving-live', '3200'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(THIEVING_SPECIALIST_LIVE_KIT),
@@ -165,8 +165,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/fletching-specialist.ts',
         env: { CAP: '200' },
         supplier: {
-            script: 'scripts/gathering-supplier.ts',
-            args: ['{ACTOR}', '--kit=fletching-live', '400'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['gathering-supplier', '{ACTOR}', '--kit=fletching-live', '400'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(FLETCHING_SPECIALIST_LIVE_KIT),
@@ -182,8 +182,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/cooking-specialist.ts',
         env: { CAP: '100' },
         supplier: {
-            script: 'scripts/gathering-supplier.ts',
-            args: ['{ACTOR}', '--kit=cooking-live', '200'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['gathering-supplier', '{ACTOR}', '--kit=cooking-live', '200'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(COOKING_SPECIALIST_LIVE_KIT),
@@ -199,8 +199,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/firemaking-specialist.ts',
         env: { CAP: '900' },
         suppliers: () => buildFiremakingSupplierConfigs().map((cfg): SpecialistSupplierDef => ({
-            script: 'scripts/specialist-supplier.ts',
-            args: ['{ACTOR}', '--kit=firemaking', `--role=${cfg.role}`, '1200'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['specialist-supplier', '{ACTOR}', '--kit=firemaking', `--role=${cfg.role}`, '1200'],
             save: () => ({
                 position: cfg.position,
                 inventory: cfg.inventory,
@@ -217,8 +217,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/woodcutting-specialist.ts',
         env: { CAP: '3500' },
         supplier: {
-            script: 'scripts/gathering-supplier.ts',
-            args: ['{ACTOR}', '--kit=woodcutting-live', '400'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['gathering-supplier', '{ACTOR}', '--kit=woodcutting-live', '400'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(WOODCUTTING_SPECIALIST_LIVE_KIT),
@@ -234,8 +234,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/ranged-specialist.ts',
         env: { CAP: '5600', VARIANT: 'live' },
         supplier: {
-            script: 'scripts/specialist-supplier.ts',
-            args: ['{ACTOR}', '--kit=ranged-live', '6000'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['specialist-supplier', '{ACTOR}', '--kit=ranged-live', '6000'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(RANGED_SPECIALIST_LIVE_TRADE1),
@@ -253,8 +253,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '2300' },
         suppliers: () => [
             {
-                script: 'scripts/specialist-supplier.ts',
-                args: ['{ACTOR}', '--kit=runecraft', '--role=starter', '3000'],
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=runecraft', '--role=starter', '3000'],
                 save: () => ({
                     position: { x: 3223, z: 3222, level: 0 },
                     inventory: expandKitToSave([
@@ -266,8 +266,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 }),
             },
             ...Array.from({ length: BODY_RUNNER_COUNT }, (): SpecialistSupplierDef => ({
-                script: 'scripts/specialist-supplier.ts',
-                args: ['{ACTOR}', '--kit=runecraft', '--role=runner', '--bank-x=3094', '--bank-z=3491', '3000'],
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=runecraft', '--role=runner', '--bank-x=3094', '--bank-z=3491', '3000'],
                 save: () => ({
                     position: { x: 3050, z: 3442, level: 0 },
                     inventory: expandKitToSave([
@@ -288,8 +288,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/crafting-specialist.ts',
         env: { CAP: '2500' },
         suppliers: () => CRAFTING_BATCHES.map((batch, i): SpecialistSupplierDef => ({
-            script: 'scripts/specialist-supplier.ts',
-            args: ['{ACTOR}', '--kit=crafting', `--batch=${i}`, '3000'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['specialist-supplier', '{ACTOR}', '--kit=crafting', `--batch=${i}`, '3000'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(batch.give),
@@ -306,16 +306,16 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '600' },
         suppliers: () => [
             {
-                script: 'scripts/specialist-supplier.ts',
-                args: ['{ACTOR}', '--kit=herblore', '--batch=0', '1000'],
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=herblore', '--batch=0', '1000'],
                 save: () => ({
                     position: { x: 3223, z: 3222, level: 0 },
                     inventory: expandKitToSave(HERBLORE_STARTER_BATCH.give),
                 }),
             },
             {
-                script: 'scripts/specialist-supplier.ts',
-                args: ['{ACTOR}', '--kit=herblore', '--batch=1', '1000'],
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=herblore', '--batch=1', '1000'],
                 save: () => ({
                     position: { x: 3094, z: 3491, level: 0 },
                     inventory: [],
@@ -333,8 +333,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/magic-specialist.ts',
         env: { CAP: '2500' },
         suppliers: () => MAGIC_BATCHES.map((batch, i): SpecialistSupplierDef => ({
-            script: 'scripts/specialist-supplier.ts',
-            args: ['{ACTOR}', '--kit=magic', `--batch=${i}`, '3000'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['specialist-supplier', '{ACTOR}', '--kit=magic', `--batch=${i}`, '3000'],
             save: () => ({
                 position: i === 0
                     ? { x: 3223, z: 3222, level: 0 }
@@ -352,8 +352,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/prayer-specialist.ts',
         env: { CAP: '1500' },
         suppliers: () => Array.from({ length: PRAYER_RUNNER_COUNT }, (): SpecialistSupplierDef => ({
-            script: 'scripts/specialist-supplier.ts',
-            args: ['{ACTOR}', '--kit=prayer', '2000'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['specialist-supplier', '{ACTOR}', '--kit=prayer', '2000'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave([{ id: ITEM_IDS.dragon_bones, count: 28 }]),
@@ -371,8 +371,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '1500' },
         suppliers: () => [
             {
-                script: 'scripts/specialist-supplier.ts',
-                args: ['{ACTOR}', '--kit=smithing', '--role=starter', '2000'],
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=smithing', '--role=starter', '2000'],
                 save: () => ({
                     position: { x: 3223, z: 3222, level: 0 },
                     inventory: expandKitToSave([
@@ -384,8 +384,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 }),
             },
             ...Array.from({ length: SMITHING_EXTERNAL_RUNNER_COUNT }, (_, i): SpecialistSupplierDef => ({
-                script: 'scripts/specialist-supplier.ts',
-                args: ['{ACTOR}', '--kit=smithing', '--role=runner', `--runner=${i}/${SMITHING_EXTERNAL_RUNNER_COUNT}`, '2000'],
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=smithing', '--role=runner', `--runner=${i}/${SMITHING_EXTERNAL_RUNNER_COUNT}`, '2000'],
                 save: () => ({
                     position: { x: VARROCK_WEST_BANK.x, z: VARROCK_WEST_BANK.z, level: 0 },
                     ...smithingRunnerQueueSlice(i, SMITHING_EXTERNAL_RUNNER_COUNT),
@@ -402,8 +402,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/mining-specialist.ts',
         env: { CAP: '4200', LIVE: '1' },
         supplier: {
-            script: 'scripts/gathering-supplier.ts',
-            args: ['{ACTOR}', '--kit=mining-live', '400'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['gathering-supplier', '{ACTOR}', '--kit=mining-live', '400'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(MINING_SPECIALIST_LIVE_KIT),
@@ -419,8 +419,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/fishing-specialist.ts',
         env: { CAP: '3600' },
         supplier: {
-            script: 'scripts/gathering-supplier.ts',
-            args: ['{ACTOR}', '--kit=fishing', '400'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['gathering-supplier', '{ACTOR}', '--kit=fishing', '400'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(FISHING_SPECIALIST_KIT),
@@ -436,8 +436,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/agility-specialist.ts',
         env: { CAP: '6500', AGI_ROUTE: 'monkeybars', AGI_POTION: '1', AGI_PRAY: '1', AGI_PIPE_ALIGN: '0' },
         supplier: {
-            script: 'scripts/specialist-supplier.ts',
-            args: ['{ACTOR}', '--kit=agility', '6500'],
+            script: 'scripts/aio-logistics.ts',
+            args: ['specialist-supplier', '{ACTOR}', '--kit=agility', '6500'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
                 inventory: expandKitToSave(AGILITY_SPECIALIST_KIT),

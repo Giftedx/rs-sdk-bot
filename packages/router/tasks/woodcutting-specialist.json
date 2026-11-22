@@ -5,7 +5,8 @@
   "files": [
     "scripts/woodcutting-specialist.ts",
     "scripts/gathering-specialist-lib.ts",
-    "scripts/specialist-supplier.ts",
+    "scripts/aio-logistics.ts",
+    "packages/workers/src/logistics/specialist-supply.ts",
     "scripts/measure/specialist-gathering-cases.ts",
     "scripts/measure/rehearse-specialist-cli.ts",
     "scripts/woodcutting-specialist.test.ts",

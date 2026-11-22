@@ -20,7 +20,7 @@ import {
     exactNameRe,
     hasAtLeastKit,
     LUMBRIDGE_HANDOFF,
-} from './specialist-supplier';
+} from '../packages/workers/src/logistics';
 
 const TUTORIAL_KEEP_IDS = new Set([556, 558]); // Tutorial Air and Mind runes stack with the kit.
 const PROTECT_MELEE_INDEX = 14;
