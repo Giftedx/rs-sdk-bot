@@ -28,7 +28,8 @@ const FARE_BANKS: readonly Tile[] = [
 ];
 const COINS = 995;
 const PACK_SLOTS = 28;
-const FERRY_LEG_PLAN_MS = 15_000;
+// Strictly below DEFAULT_TICK_IDLE_MS (15_000) so lockstep route holds never trip partner TickStallError deadlines.
+const FERRY_LEG_PLAN_MS = 10_000;
 
 export function fareSpare(pack: readonly { id: number }[]): { id: number; all: boolean } | null {
     if (pack.length < PACK_SLOTS || pack.some(i => i.id === COINS)) return null;
