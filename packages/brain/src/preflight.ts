@@ -8,7 +8,7 @@ import {
     totalAvailableHeal,
 } from '../../core/src/sustain';
 import type { BankObservation } from '../../core/src/session-types';
-import { routeFares, type Account as WorldAccount, type Tile, type World } from '../../core/src/world/model';
+import { routeFares, type Account as WorldAccount, type Tile, type World } from '../../core/src/world';
 import type { Gear, Skill } from '../../knowledge/src/gear';
 import { canWear, loadGear } from '../../knowledge/src/gear-query';
 import {

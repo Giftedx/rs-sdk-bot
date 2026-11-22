@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { World } from '../../core/src/world/model';
+import type { World } from '../../core/src/world';
 import type { AccountState, WorldSnapshot } from '../src/contracts';
 import {
     activityPreflightFromConfig,
