@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795305510469-dipstick-shaftmaker-naturerune",
+ "account": "Dipstick",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 33,
+ "claim": "43804e7e-3400-45dc-9872-d44a25f5fde8",
+ "count": 0,
+ "ok": false,
+ "at": 1795305647662,
+ "detail": "trade claimed"
+}
