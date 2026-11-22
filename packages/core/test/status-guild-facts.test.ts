@@ -4,7 +4,7 @@ import {resolve} from 'node:path';
 import {startStatus} from '../src/status';
 import {setEquipmentObserved} from '../src/container-observation';
 test('status publishes only observed client guild facts, never private varp defaults',()=>{
- const name=`StatusGuild${process.pid}`,path=resolve(import.meta.dir,'../../../.practice/status',name+'.json');
+ const name=`StatusGuild${process.pid}`,path=resolve(import.meta.dir,'../../../.practice/sim/status',name+'.json');
  const callbacks:(()=>void)[]=[],state={player:{worldX:2903,worldZ:3510,level:0},skills:[],inventory:[],equipment:[]};
  let colour=0xff0000;
  const client:any={ingame:true,var:{101:107,188:15,139:75,82:1},varServ:{},ifType:(id:number)=>({colour:id===7363?colour:0xff0000})};
@@ -23,7 +23,7 @@ test('status publishes only observed client guild facts, never private varp defa
 });
 
 test('status door states use current exact loc witnesses and do not retain earlier openings',()=>{
- const name=`StatusDoors${process.pid}`,path=resolve(import.meta.dir,'../../../.practice/status',name+'.json');
+ const name=`StatusDoors${process.pid}`,path=resolve(import.meta.dir,'../../../.practice/sim/status',name+'.json');
  const callbacks:(()=>void)[]=[],state:any={inGame:true,player:{worldX:2426,worldZ:3088,level:0},skills:[],inventory:[],equipment:[],nearbyLocs:[{id:4423,x:2426,z:3088,level:0}]};
  const client={ingame:true},session:any={name,client,sdk:{getState:()=>state},tick:()=>1,onTick:(cb:()=>void)=>{callbacks.push(cb);return()=>{};}};
  const status=startStatus(session,'localhost:8888'),read=()=>JSON.parse(readFileSync(path,'utf8'));

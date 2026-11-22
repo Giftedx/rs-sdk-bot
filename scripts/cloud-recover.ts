@@ -10,6 +10,8 @@
 // coordinator holds real work in jobs.json and releases its parked jobs itself (coordinator-live.ts
 // releaseFinishedOwnJobs), so this script never stops it.
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
+import { lifecycleRootForRead, liveLifecycleRoot, liveRoot } from '../packages/core/src/practice-paths';
+import { InfraCircuitBreaker } from '../packages/fleet/src/infra-circuit-breaker';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -271,7 +273,7 @@ export function recoveryRecords(root: string, account: string, tasks: readonly a
 }
 
 export function lineageAttempts(root: string, account: string): LineageAttempt[] {
-    return listAttempts(account, LIVE_SERVER, { root: lifecycleRoot(root) }).map(({ attemptId, receipt }) => receipt
+    return listAttempts(account, LIVE_SERVER, { root: lifecycleRootForRead(LIVE_SERVER, root) }).map(({ attemptId, receipt }) => receipt
         ? { attemptId, runId: receipt.owner.coordinatorRunId ?? null, script: receipt.owner.script, role: receipt.owner.role ?? null, confirmed: attemptOutcome(receipt).confirmed }
         : { attemptId, unreadable: true as const });
 }
@@ -360,7 +362,7 @@ export function requestRecoveryPlanning(root: string, problem: RecoveryPlanningP
 
 // The folder that receives the coordinator's parked jobs and stop file after a release.
 // The session-lifecycle root that readLogoutProof reads (packages/core/src/session-lifecycle.ts DEFAULT_LIFECYCLE_ROOT).
-export const lifecycleRoot = (root: string) => join(root, '.practice', 'session-lifecycle');
+export const lifecycleRoot = (root: string) => liveLifecycleRoot(root);
 
 export function archiveDir(root: string, account: string, now: number): string {
     return join(root, '.practice', 'coordinator', 'release-archive', `${stamp(now)}-${account.toLowerCase()}`);
@@ -463,15 +465,24 @@ async function main(root: string, dry: boolean): Promise<number> {
     const waits = waitRefusedRuns(results);
     const accounts = [...loadOwners()].filter(([n, o]) => o.side === side && o.server === LIVE_SERVER && !NEVER_RECOVERED.includes(n.toLowerCase())).map(([n]) => n);
     const targets: Target[] = [];
+    const breaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(root), 'infra-circuit-breaker.json') });
+    const gate = breaker.canProceed('remote_git_claim');
+    if (!gate.allowed) { log(`deferred: infra circuit breaker open (${gate.reason})`); return 0; }
     for (const lower of accounts) {
         const name = [...ended.keys()].find(n => n.toLowerCase() === lower) ?? lower;
-        const proof = readLogoutProof(name, LIVE_SERVER, { root: lifecycleRoot(root) });
+        const proof = readLogoutProof(name, LIVE_SERVER, { root: lifecycleRootForRead(LIVE_SERVER, root) });
         if (proof.state !== 'held') continue;
         // A live worker refreshes its status every few seconds; skip it before reading the claim ref from origin.
         const status = readJson(join(root, '.practice', 'status', `${name}.json`), null);
         if (status && !status.result && Date.now() - status.at < 60_000) continue;
         let claim: ClaimView = null;
-        try { claim = readFleetAccountClaim(root, { account: name, server: LIVE_SERVER }) as ClaimView; } catch (e) { log(`${name}: refused: claim unreadable: ${String(e).slice(0, 120)}`); continue; }
+        try { claim = readFleetAccountClaim(root, { account: name, server: LIVE_SERVER }) as ClaimView; breaker.recordSuccess('remote_git_claim'); }
+        catch (e) {
+            const tripped = breaker.recordFailure(e);
+            log(`${name}: refused: claim unreadable: ${String(e).slice(0, 120)}`);
+            if (tripped.tripped) { log('infra circuit breaker tripped; aborting remaining claim reads'); break; }
+            continue;
+        }
         const stopFile = join(root, '.practice', `stop-${name}`), stopText = existsSync(stopFile) ? readFileSync(stopFile, 'utf8') : undefined;
         const end = ended.get(name);
         const e = eligibility({ proof, claim, end, stopText, pidAlive, host: hostname(), retried: !!end && spentAttempts(before, { account: name, endedAt: end.at }, waits) > 0 });
@@ -522,7 +533,7 @@ async function main(root: string, dry: boolean): Promise<number> {
         }
         const tasks = tasksNow();
         for (const r of runs) {
-            const status = tasks.find((t: any) => t.spec?.id === r.id)?.status, ok = status === 'succeeded', proof = readLogoutProof(r.account, LIVE_SERVER, { root: lifecycleRoot(root) });
+            const status = tasks.find((t: any) => t.spec?.id === r.id)?.status, ok = status === 'succeeded', proof = readLogoutProof(r.account, LIVE_SERVER, { root: lifecycleRootForRead(LIVE_SERVER, root) });
             log(`${r.account}: recovery ${ok ? 'succeeded' : status === 'pending' ? 'not started: a dependency failed' : 'failed'} (${r.id}); logout proof ${proof.state}`);
             if (!ok || proof.state !== 'confirmed') failed = true;
         }
@@ -534,7 +545,7 @@ async function main(root: string, dry: boolean): Promise<number> {
     if (flying.length) return failed ? 1 : 0;
     const jobs = readJson(join(coord, 'jobs.json'), { jobs: [] }).jobs ?? [];
     const owned = new Set((readJson(join(root, 'swarm.json'), { jobs: [] }).jobs ?? []).flatMap(jobAccounts).map((n: string) => n.toLowerCase()));
-    const view: ReleaseView = { ownerJob: a => owned.has(a.toLowerCase()), confirmed: a => readLogoutProof(a, LIVE_SERVER, { root: lifecycleRoot(root) }).state === 'confirmed',
+    const view: ReleaseView = { ownerJob: a => owned.has(a.toLowerCase()), confirmed: a => readLogoutProof(a, LIVE_SERVER, { root: lifecycleRootForRead(LIVE_SERVER, root) }).state === 'confirmed',
         recovering: a => flying.some((t: any) => t.spec.sessionRecovery.account.toLowerCase() === a.toLowerCase()) };
     const { free, keep } = releasePlan(jobs, view), parked = free.flatMap(jobAccounts), blockers = releaseBlockers(jobs, view);
     const named = (js: readonly any[]) => js.map((j: any) => `${jobAccounts(j).join('+')} ${j.script}${j.enabled === false ? '' : ' (enabled)'}`).join(', ');

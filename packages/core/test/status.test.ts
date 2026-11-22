@@ -6,7 +6,7 @@ import {equipmentObserved,setEquipmentObserved} from '../src/container-observati
 import {beginSessionAttempt,accountDir} from '../src/session-lifecycle';
 
 test.each(['confirmed','held','changed','invalidated','empty','unknown'])('saved equipment keeps only an actual matching observation after logout: %s',mode=>{
- const name=`Eq${process.pid}${mode.slice(0,1)}`,server='localhost:8888',file=resolve(import.meta.dir,'../../../.practice/status',name+'.json');
+ const name=`Eq${process.pid}${mode.slice(0,1)}`,server='localhost:8888',file=resolve(import.meta.dir,'../../../.practice/sim/status',name+'.json');
  const attempt=beginSessionAttempt({account:name,server}),client={ingame:true},callbacks:(()=>void)[]=[];
  const state:any={equipment:mode==='empty'||mode==='unknown'?[]:[{slot:3,id:1277,name:'Bronze sword',count:1}],inventory:[],skills:[]};
  setEquipmentObserved(client,mode!=='unknown');
@@ -20,12 +20,12 @@ test.each(['confirmed','held','changed','invalidated','empty','unknown'])('saved
   status.stop();const saved=JSON.parse(readFileSync(file,'utf8'));
   expect(saved.equipmentObserved).toBe(mode==='confirmed'||mode==='empty');
   expect(equipmentObserved(client)).toBe(false);
- }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});const path=accountDir(name,server);expect(path.startsWith(resolve(import.meta.dir,'../../../.practice/session-lifecycle'))).toBe(true);rmSync(path,{recursive:true,force:true});}
+ }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});const path=accountDir(name,server);expect(path.startsWith(resolve(import.meta.dir,'../../../.practice/sim/session-lifecycle'))).toBe(true);rmSync(path,{recursive:true,force:true});}
 });
 
 test('a bank visit between writes keeps an identified snapshot after close', async () => {
     const name = `StatusTest${process.pid}`;
-    const file = resolve(import.meta.dir, '../../../.practice/status', `${name}.json`);
+    const file = resolve(import.meta.dir, '../../../.practice/sim/status', `${name}.json`);
     const state: any = { bank: { isOpen: false, items: [] }, inventory: [], skills: [] };
     const s: any = { name, bankObservation:()=>state.bank.isOpen&&state.bank.items.length?{generation:1,at:Date.now(),items:state.bank.items}:null, sdk: { getState: () => state }, tick: () => 1, onTick: () => () => {}, bot: { closeBank: async () => { state.bank = { isOpen:true,items:[] }; } } };
     const status = startStatus(s, 'localhost:8888');
@@ -41,7 +41,7 @@ test('a bank visit between writes keeps an identified snapshot after close', asy
 
 test('status links its exact lifecycle attempt and keeps every existing field; no attempt stays null', () => {
     const name = `StatusLife${process.pid}`;
-    const file = resolve(import.meta.dir, '../../../.practice/status', `${name}.json`);
+    const file = resolve(import.meta.dir, '../../../.practice/sim/status', `${name}.json`);
     const state: any = { inventory: [], skills: [] };
     const base: any = { name, sdk: { getState: () => state }, tick: () => 1, onTick: () => () => {} };
     try {
@@ -59,7 +59,7 @@ test('status links its exact lifecycle attempt and keeps every existing field; n
 
 test('status keeps bank unknown until ready, accepts a real empty update and retains it through close', async () => {
     const name=`StatusReady${process.pid}`;
-    const file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+    const file=resolve(import.meta.dir,'../../../.practice/sim/status',`${name}.json`);
     const state:any={bank:{isOpen:true,items:[]},inventory:[],skills:[]};
     let observed:any=null;
     const callbacks:(()=>void)[]=[];
@@ -82,7 +82,7 @@ test('status keeps bank unknown until ready, accepts a real empty update and ret
 
 test('restart keeps only prior observed bank data and timestamp; a ready empty update replaces it', () => {
     const name=`StatusPrior${process.pid}`;
-    const folder=resolve(import.meta.dir,'../../../.practice/status');mkdirSync(folder,{recursive:true});
+    const folder=resolve(import.meta.dir,'../../../.practice/sim/status');mkdirSync(folder,{recursive:true});
     const file=resolve(folder,`${name}.json`),at=Date.now()-60_000;
     const bank=[{id:1780,baseId:1779,name:'Flax',count:81}];
     writeFileSync(file,JSON.stringify({name:name.toLowerCase(),server:'localhost:8888',at:at+1,bank,bankAt:at,
@@ -104,7 +104,7 @@ test('restart keeps only prior observed bank data and timestamp; a ready empty u
 
 test.each(['json','name','server','future-bank','future-status','bad-id','bad-count','bad-name'])('prior bank rejects corrupt or foreign evidence: %s', kind => {
     const name=`BadPrior${process.pid}${kind.replace(/-/g,'')}`;
-    const folder=resolve(import.meta.dir,'../../../.practice/status');mkdirSync(folder,{recursive:true});
+    const folder=resolve(import.meta.dir,'../../../.practice/sim/status');mkdirSync(folder,{recursive:true});
     const file=resolve(folder,`${name}.json`),at=Date.now()-60_000;
     const prior:any={name,server:'localhost:8888',at:at+1,bankAt:at,bank:[{id:1779,baseId:1779,name:'Flax',count:81}]};
     if(kind==='name')prior.name='Foreign';if(kind==='server')prior.server='rs-sdk-demo.fly.dev';
@@ -119,7 +119,7 @@ test.each(['json','name','server','future-bank','future-status','bad-id','bad-co
 });
 
 test('equipment retains worn slots and conserves inventory-to-worn assets without leaking item metadata',()=>{
-    const name=`StatusEquip${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+    const name=`StatusEquip${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/sim/status',`${name}.json`);
     const gear=[{id:1277,name:'Bronze sword',count:1,slot:0},{id:1171,name:'Wooden shield',count:1,slot:1}];
     const state:any={inventory:gear.map(i=>({...i})),equipment:[],skills:[],password:'STATUS_TEST_PRIVATE'};
     const callbacks:(()=>void)[]=[];
@@ -139,7 +139,7 @@ test('equipment retains worn slots and conserves inventory-to-worn assets withou
 });
 
 test('inventory status preserves valid SDK positions without changing its item whitelist',()=>{
-    const name=`StatusInvSlots${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+    const name=`StatusInvSlots${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/sim/status',`${name}.json`);
     const inventory=[{slot:27,id:1779,name:'Flax',count:2,password:'PRIVATE_ITEM',optionsWithIndex:[{text:'Use'}]},
         {slot:0,id:1780,name:'Flax (noted)',count:3}, {slot:4,id:995,name:'Coins',count:5}];
     const session:any={name,sdk:{getState:()=>({inventory,skills:[]})},tick:()=>1,onTick:()=>()=>{}};
@@ -153,7 +153,7 @@ test('inventory status preserves valid SDK positions without changing its item w
 });
 
 test('invalid or missing inventory positions do not remove valid item rows or claim a guessed position',()=>{
-    const name=`StatusInvLegacy${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+    const name=`StatusInvLegacy${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/sim/status',`${name}.json`);
     const slots=[undefined,null,-1,28,1.5,'3',NaN,Infinity,0,27];
     const inventory=slots.map((slot,n)=>({slot,id:995,name:'Coins',count:n+1}));
     const session:any={name,sdk:{getState:()=>({inventory,skills:[]})},tick:()=>1,onTick:()=>()=>{}};
@@ -166,7 +166,7 @@ test('invalid or missing inventory positions do not remove valid item rows or cl
     }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});}
 });
 test('missing or malformed equipment is unknown, while an explicit empty SDK array remains empty',()=>{
-    const name=`StatusEquipUnknown${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+    const name=`StatusEquipUnknown${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/sim/status',`${name}.json`);
     const state:any={inventory:[],skills:[]},callbacks:(()=>void)[]=[];
     const session:any={name,sdk:{getState:()=>state},tick:()=>1,onTick:(cb:()=>void)=>{callbacks.push(cb);return()=>{};}};
     const status=startStatus(session,'localhost:8888');
@@ -181,7 +181,7 @@ test('missing or malformed equipment is unknown, while an explicit empty SDK arr
 });
 
 test('long cow RESULT retains late efficiency counters and isolates two hosted actors from global logs',()=>{
-    const a=`StatusLongA${process.pid}`,b=`StatusLongB${process.pid}`,folder=resolve(import.meta.dir,'../../../.practice/status');
+    const a=`StatusLongA${process.pid}`,b=`StatusLongB${process.pid}`,folder=resolve(import.meta.dir,'../../../.practice/sim/status');
     const long='RESULT ok mode=cow ok=true creditedKills=9 banked={"hide":9,"bones":9,"beef":9} trainSkill=Defence targetLevel=null startLevel=76 finalLevel=76 selectedXp=7200 attackXp=0 damageXp=7200 eaten=0 bankTrips=3 hpMin=70 died=false lifeId=1 respawns=0 ticks=417 preserved=true targetMet=true partial=false stop=max-kills failure=- diagnostics=[] bankProfile=north foodMode=banked healthCutoff=false walkTicks=173 walkedTiles=334 detourTiles=211 doorInteractions=2 houseInteractions=0 maxPackSlots=27 bankDistances=[45] walkLegs=[{"detail":"walkTicks=999 houseInteractions=999 maxPackSlots=999"}]';
     expect(long.indexOf('walkTicks=173')).toBeGreaterThan(300);
     const session=(name:string):any=>({name,sdk:{getState:()=>({inventory:[],equipment:[],skills:[]})},tick:()=>1,onTick:()=>()=>{}});
@@ -200,7 +200,7 @@ test('long cow RESULT retains late efficiency counters and isolates two hosted a
 });
 
 test('short standalone result stays unchanged with finite scalar counter shape',()=>{
-    const name=`StatusShort${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+    const name=`StatusShort${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/sim/status',`${name}.json`);
     const session:any={name,sdk:{getState:()=>({})},tick:()=>1,onTick:()=>()=>{}};
     const status=startStatus(session,'localhost:8888');
     try{console.log('RESULT ok ticks=4 eaten=0');status.stop();const doc=JSON.parse(readFileSync(file,'utf8'));expect(doc.result).toBe('ok ticks=4 eaten=0');expect(doc.counters).toEqual({ticks:4,eaten:0});}
@@ -220,7 +220,7 @@ test('counter parsing is capped at16KiB of UTF8 and drops a truncated numeric to
 });
 
 test('status writes passive per-account journal colours without sending actions',()=>{
- const name=`QuestStatus${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+ const name=`QuestStatus${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/sim/status',`${name}.json`);
  const s:any={name,sdk:{getState:()=>({skills:[],inventory:[]})},tick:()=>1,onTick:()=>()=>{},client:{ingame:true,ifType:(id:number)=>({colour:id===7333?0x00f800:0xff0000})}};
  const status=startStatus(s,'localhost:8888');
  try {const doc=JSON.parse(readFileSync(file,'utf8'));expect(doc.quests).toHaveLength(68);expect(doc.quests.filter((q:any)=>q.state==='complete')).toEqual([{id:7333,name:"Cook's Assistant",state:'complete'}]);expect(doc.quests.filter((q:any)=>q.state==='unknown')).toHaveLength(67);}

@@ -3,18 +3,19 @@ import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createBot } from '../src/bots';
 import { applyPreset, PRESETS } from '../src/presets';
-import { practiceDir, rsSdkRoot } from '../src/paths';
+import { practiceBotsRoot, practiceDir } from '../src/paths';
 
 const NAME = 'tenvfix';
 const settings = (env: string) => env.split(/\r?\n/).filter(line => /^(SERVER|GATEWAY_URL|TELEMETRY|SHOW_CHAT)=/.test(line));
 
 afterAll(() => {
-    rmSync(join(rsSdkRoot(), 'bots', NAME), { recursive: true, force: true });
+    rmSync(join(practiceBotsRoot(), NAME), { recursive: true, force: true });
     rmSync(join(practiceDir(), 'lite.json'), { force: true });
 });
 
-test('createBot writes a local env with telemetry and chat off', async () => {
+test('createBot writes a local env with telemetry and chat off under .practice/sim/bots', async () => {
     const { envPath } = await createBot(NAME);
+    expect(envPath.replaceAll('\\', '/')).toContain('/.practice/sim/bots/');
     const env = settings(readFileSync(envPath, 'utf8'));
     expect(env).toContain('SERVER=localhost:8888');
     expect(env).toContain('GATEWAY_URL=ws://localhost:7780');

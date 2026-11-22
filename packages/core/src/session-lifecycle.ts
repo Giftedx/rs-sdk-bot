@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute,relative,join,resolve } from 'node:path';
 import { isLocalServer } from './localserver';
+import { lifecycleReadRoots, lifecycleRootForServer, liveLifecycleRoot, repoRoot, simLifecycleRoot } from './practice-paths';
 
 // Per-account session lifecycle receipts. The in-process session producer (inprocess.ts connectInProcess) writes
 // one attempt file before its network attempt and records only events from that exact session: connect, START,
@@ -12,7 +13,8 @@ import { isLocalServer } from './localserver';
 // Layout: <root>/<domain>/<server key>/<account key>/attempts/<attemptId>.json and .../latest.json
 
 export const LIFECYCLE_SCHEMA = 'session-lifecycle/1';
-export const DEFAULT_LIFECYCLE_ROOT = join(resolve(import.meta.dir, '..', '..', '..'), '.practice', 'session-lifecycle');
+export const DEFAULT_LIFECYCLE_ROOT = liveLifecycleRoot(repoRoot);
+export const SIM_LIFECYCLE_ROOT = simLifecycleRoot(repoRoot);
 export type LifecycleDomain = 'practice' | 'live';
 export type LifecycleEventKind = 'connecting' | 'connected' | 'connect-failed' | 'ready' | 'ready-failed' | 'ended' | 'logout' | 'closed';
 export type LifecycleEvent = { at: number; kind: LifecycleEventKind; detail?: string };
@@ -30,7 +32,7 @@ const SERVER = /^[A-Za-z0-9.:[\]-]{1,253}$/;
 const ATTEMPT = /^\d{13}-\d{1,10}-\d{1,10}$/;
 export const domainOf = (server: string): LifecycleDomain => isLocalServer(server) ? 'practice' : 'live';
 const serverKey = (server: string) => server.trim().toLowerCase().replace(/[^a-z0-9.-]/g, '_');
-export function accountDir(account: string, server: string, root = DEFAULT_LIFECYCLE_ROOT): string {
+export function accountDir(account: string, server: string, root = lifecycleRootForServer(server, repoRoot)): string {
     if (!ACCOUNT.test(account) || !SERVER.test(server)) throw new Error('invalid lifecycle identity');
     return join(root, domainOf(server), serverKey(server), account.toLowerCase().replace(/ /g, '_'));
 }
@@ -106,7 +108,7 @@ export function lifecycleOwner(env: Record<string, string | undefined> = process
 // the latest pointer cannot be written. An attempt file whose pointer failed is removed: no network attempt exists.
 export function beginSessionAttempt(identity: { account: string; server: string; members?: boolean; secret?: string },
     opts: { root?: string; now?: () => number; owner?: LifecycleOwner } = {}): SessionAttempt {
-    const root = opts.root ?? DEFAULT_LIFECYCLE_ROOT, now = opts.now ?? Date.now;
+    const root = opts.root ?? lifecycleRootForServer(identity.server, repoRoot), now = opts.now ?? Date.now;
     const dir = accountDir(identity.account, identity.server, root), attempts = join(dir, 'attempts');
     mkdirSync(attempts, { recursive: true });
     const createdAt = Math.max(now(), lastAt);
@@ -163,9 +165,9 @@ export function attemptOutcome(r: AttemptReceipt): { confirmed: true; at: number
     return { confirmed: false, reason: r.events.some(e => e.kind === 'ready') ? 'session active or outcome unknown' : 'connection attempt before START, outcome unknown' };
 }
 
-export function readLogoutProof(account: string, server: string, opts: { root?: string } = {}): LogoutProof {
+function readLogoutProofAt(account: string, server: string, root?: string): LogoutProof {
     let dir: string;
-    try { dir = accountDir(account, server, opts.root); } catch { return { state: 'invalid', account, server, reason: 'invalid identity' }; }
+    try { dir = accountDir(account, server, root); } catch { return { state: 'invalid', account, server, reason: 'invalid identity' }; }
     const domain = domainOf(server), attempts = join(dir, 'attempts'), same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
     let names: string[] = [];
     try { names = existsSync(attempts) ? readdirSync(attempts).filter(n => n.endsWith('.json')) : []; }
@@ -190,15 +192,33 @@ export function readLogoutProof(account: string, server: string, opts: { root?: 
         ownerRun: receipt.owner.coordinatorRunId ?? null, receiptSha256: createHash('sha256').update(raw).digest('hex') };
 }
 
-// Every recorded attempt for one identity, oldest first. Malformed files are reported, never dropped.
-export function listAttempts(account: string, server: string, opts: { root?: string } = {}): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
-    const attempts = join(accountDir(account, server, opts.root), 'attempts');
+export function readLogoutProof(account: string, server: string, opts: { root?: string } = {}): LogoutProof {
+    if (opts.root || isLocalServer(server)) return readLogoutProofAt(account, server, opts.root);
+    for (const candidate of lifecycleReadRoots(repoRoot)) {
+        const res = readLogoutProofAt(account, server, candidate);
+        if (res.state !== 'none') return res;
+    }
+    return readLogoutProofAt(account, server, liveLifecycleRoot(repoRoot));
+}
+
+function listAttemptsAt(account: string, server: string, root?: string): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
+    const attempts = join(accountDir(account, server, root), 'attempts');
     if (!existsSync(attempts)) return [];
     return readdirSync(attempts).filter(n => n.endsWith('.json')).sort().map(n => {
         try { const raw = readFileSync(join(attempts, n)); const r = JSON.parse(raw.toString('utf8'));
             return { attemptId: n.slice(0, -5), receipt: validReceipt(r) ? r : null, sha256: createHash('sha256').update(raw).digest('hex') }; }
         catch { return { attemptId: n.slice(0, -5), receipt: null, sha256: null }; }
     });
+}
+
+// Every recorded attempt for one identity, oldest first. Malformed files are reported, never dropped.
+export function listAttempts(account: string, server: string, opts: { root?: string } = {}): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
+    if (opts.root || isLocalServer(server)) return listAttemptsAt(account, server, opts.root);
+    for (const candidate of lifecycleReadRoots(repoRoot)) {
+        const res = listAttemptsAt(account, server, candidate);
+        if (res.length) return res;
+    }
+    return [];
 }
 
 // Retained legacy format is diagnostic only: hashes bind bytes, but anonymous START/LOGOUT

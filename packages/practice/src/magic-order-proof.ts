@@ -7,7 +7,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {freemem} from 'node:os';
 import {startStack,type StackOptions} from './stack';
 import {canBind} from './ports';
-import {practiceDir,rsSdkRoot} from './paths';
+import {deliveryLockDir,rsSdkRoot} from './paths';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
@@ -316,7 +316,7 @@ async function child(directory:string,label:string,args:string[],env:Record<stri
  }finally{clearTimeout(timer);clearInterval(memory);if(proc.exitCode===null)await killTree(proc.pid);await termination;}
 }
 async function run(directory:string){
- if(!existsSync(join(practiceDir(),'delivery-native.lock')))throw Error('practice turn required: run through delivery');
+ if(!existsSync(join(deliveryLockDir(),'delivery-native.lock')))throw Error('practice turn required: run through delivery');
  if(freemem()/2**30<ADMISSION.startupGb)throw Error(`insufficient practice startup reserve: ${ADMISSION.startupGb} GiB free required`);
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'magic-order'}));

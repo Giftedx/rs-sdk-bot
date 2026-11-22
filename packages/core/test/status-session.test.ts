@@ -5,7 +5,7 @@ import { noteStatusLine, startStatus } from '../src/status';
 import { assertCompatibleWorkers } from '../src/worker-release';
 
 const server = 'localhost:8888';
-const file = (name: string) => resolve(import.meta.dir, '../../../.practice/status', `${name}.json`);
+const file = (name: string) => resolve(import.meta.dir, '../../../.practice/sim/status', `${name}.json`);
 const read = (name: string) => JSON.parse(readFileSync(file(name), 'utf8'));
 const remove = (name: string) => { rmSync(file(name), { force: true }); rmSync(file(name) + '.tmp', { force: true }); };
 function session(name: string, attemptId: string) {

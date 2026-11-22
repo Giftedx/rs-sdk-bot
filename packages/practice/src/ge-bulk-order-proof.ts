@@ -7,7 +7,7 @@ import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {killTree,commandLine} from '../../core/src/proc';
-import {rsSdkRoot,practiceDir} from './paths';
+import {rsSdkRoot,deliveryLockDir,practiceBotsRoot} from './paths';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
 import {capabilityRevision,type ReleaseMemo} from '../../core/src/worker-release';
 // One --verify shares a memo: each fresh closure hash costs seconds under load and four of them overran the 30 s check.
@@ -192,20 +192,20 @@ function practiceMarket(endpoints:ProofEndpoints){
 }
 
 async function run(directory:string){
- if(!process.env.DELIVERY_DIR||!existsSync(join(practiceDir(),'delivery-native.lock')))throw Error('native turn required: run through delivery');
+ if(!process.env.DELIVERY_DIR||!existsSync(join(deliveryLockDir(),'delivery-native.lock')))throw Error('native turn required: run through delivery');
  for(const path of ['before.sav','north/before.sav','magic/before.sav','magic/before-checkpoint.sav','magic/refuse-before.sav'])
   if(existsSync(join(directory,path)))throw Error(`preserve before snapshot: ${path}`);
  if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${FREE_FLOOR_GB}GiB floor plus ${PRACTICE_RESERVE_GB}GiB startup reserve`);
  const owned=selectGeProofEndpoints(),metadata={server:owned.server,endpoints:{ports:owned.ports,instance:owned.instance}};
  const actors=new Set<string>();
  const createOwnedBot=async(name:string)=>{
-  if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
+  if(existsSync(join(practiceBotsRoot(),name))||existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
   const {envPath}=await createBot(name);
   writeFileSync(envPath,geProofAccountEnv(readFileSync(envPath,'utf8'),owned));
   assertGeProofAccount(readFileSync(envPath,'utf8'),owned.env);
   actors.add(name);
  };
- const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
+ const lock=join(deliveryLockDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'ge-bulk-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=150000):Promise<Run>=>{

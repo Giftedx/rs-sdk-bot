@@ -7,7 +7,7 @@ import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {startStack,PROOF_TICK_MS,type StackOptions} from './stack';
 import {canBind} from './ports';
-import {rsSdkRoot,practiceDir} from './paths';
+import {rsSdkRoot,practiceDir,deliveryLockDir} from './paths';
 import {coordinatorStateFixture} from './coordinator-state-fixture';
 import {killTree} from '../../core/src/proc';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
@@ -122,16 +122,16 @@ function verify(directory:string){
 }
 
 async function run(directory:string){
-    if(!existsSync(join(practiceDir(),'delivery-native.lock')))throw Error('practice turn required: run through delivery');
+    if(!existsSync(join(deliveryLockDir(),'delivery-native.lock')))throw Error('practice turn required: run through delivery');
     if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${FREE_FLOOR_GB}GiB floor plus ${PRACTICE_RESERVE_GB}GiB startup reserve`);
     const requests=join(practiceDir(),'withdraw');
     if(existsSync(requests)&&readdirSync(requests).some(p=>p.endsWith('.json')))throw Error('supply requests pending; preserve their owner');
     const endpoints=selectAmmoProofEndpoints();
-    const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
+    const lock=join(deliveryLockDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
     writeFileSync(fd,JSON.stringify({pid:process.pid,task:'ammo-order',directory,at:Date.now()}));
     let stack:Awaited<ReturnType<typeof startStack>>|undefined;
     // The handoff worker checks the coordinator state for owners of its accounts; a checkout with none (a hosted runner) gets an empty one.
-    const restoreState=coordinatorStateFixture(resolve(practiceDir(),'..'));
+    const restoreState=coordinatorStateFixture(resolve(import.meta.dir,'../../..'));
     const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=180000):Promise<Run>=>{
         const out=join(directory,label+'.log'),err=join(directory,label+'.err');
         const child=Bun.spawn({...ammoChildConfiguration(args,env,endpoints),windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err)});

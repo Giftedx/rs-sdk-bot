@@ -11,7 +11,7 @@ import {renameRetry} from '../../packages/core/src/status';
 export const BUDGET_MIN = 10, BUDGET_EXIT = 3;
 // A case with no recorded time: the median wall time of a case on this PC is under a minute.
 export const UNKNOWN_CASE_MS = 60_000;
-export const ELAPSED_FILE = '.practice/aio-bench/elapsed.json';
+export const ELAPSED_FILE = '.practice/sim/aio-bench/elapsed.json';
 
 export function readElapsed(file = ELAPSED_FILE): Record<string, number> {
     try { const j = JSON.parse(readFileSync(file, 'utf8')); return j && typeof j === 'object' ? j : {}; } catch { return {}; }

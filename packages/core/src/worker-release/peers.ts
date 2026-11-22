@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { isLocalServer } from '../localserver';
+import { lifecycleRootForRead, statusReadDirs } from '../practice-paths';
 import { commandLine } from '../proc';
 import { listAttempts, readLogoutProof, type LogoutProof } from '../session-lifecycle';
 import { root, type ReleaseMemo } from './paths';
@@ -57,13 +58,21 @@ export function assertLiveWorkerRelease(server: string, env: Record<string, stri
     if (env.STANDING === '1') return;
     if (existsSync(join(base, '.practice/coordinator/build-lock.json'))) throw Error('no worker progress: release coordinator build in progress; live starts paused');
     const memo: ReleaseMemo = new Map(), pin = assertWorkerRelease(env, base, memo), statuses: any[] = [];
+    const seenEntries = new Set<string>();
+    let foundStatusDir = false;
     try {
-        for (const entry of readdirSync(join(base, '.practice/status'))) {
-            if (!entry.endsWith('.json')) continue;
-            const file = join(base, '.practice/status', entry), raw = readFileSync(file);
-            if (crashResidue(raw, statSync(file).mtimeMs)) continue;
-            statuses.push(JSON.parse(raw.toString('utf8')));
+        for (const statusDir of statusReadDirs(base)) {
+            if (!existsSync(statusDir)) continue;
+            foundStatusDir = true;
+            for (const entry of readdirSync(statusDir)) {
+                if (!entry.endsWith('.json') || seenEntries.has(entry.toLowerCase())) continue;
+                seenEntries.add(entry.toLowerCase());
+                const file = join(statusDir, entry), raw = readFileSync(file);
+                if (crashResidue(raw, statSync(file).mtimeMs)) continue;
+                statuses.push(JSON.parse(raw.toString('utf8')));
+            }
         }
+        if (!foundStatusDir) throw Error('missing status directories');
     } catch { throw Error('no worker progress: release peer state unknown; unreadable status evidence'); }
     const owners = standingAccounts(base);
     // A peer whose entries are gone or do not resolve has no current release, so it counts as stale.
@@ -72,7 +81,7 @@ export function assertLiveWorkerRelease(server: string, env: Record<string, stri
         if (!releases.has(key)) { let value = ''; try { value = cachedReleaseFor(releaseEntries(key), base); } catch { /* stale */ } releases.set(key, value); }
         return releases.get(key)!;
     };
-    assertCompatibleWorkers(pin, server, statuses, Date.now(), row => closedSessionRow(row, server, { root: join(base, '.practice/session-lifecycle') }), row => standingPeer(row, owners), current);
+    assertCompatibleWorkers(pin, server, statuses, Date.now(), row => closedSessionRow(row, server, { root: lifecycleRootForRead(server, base) }), row => standingPeer(row, owners), current);
 }
 
 // The server drops a session whose client is gone after 200 s.

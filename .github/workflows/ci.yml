@@ -165,9 +165,9 @@ jobs:
           retention-days: 7
           path: |
             .practice/pvp-sweep/**
-            .practice/aio-bench/last.json
-            .practice/aio-bench/output/*.log
-            .practice/logs/engine-aiobench-*.log
+            .practice/sim/aio-bench/last.json
+            .practice/sim/aio-bench/output/*.log
+            .practice/sim/logs/engine-aiobench-*.log
   # `bun scripts/hosted-bench.ts '<pattern> ...' [--seeds 7,8,9] [--args '--profile']` starts these two jobs and prints
   # the result of each case. The plan gives one runner to each pattern and seed.
   bench-plan:
@@ -362,8 +362,8 @@ jobs:
           retention-days: 7
           path: |
             .practice/bench-cases/**
-            .practice/aio-bench/output*/*.log
-            .practice/aio-bench/profile/**
+            .practice/sim/aio-bench/output*/*.log
+            .practice/sim/aio-bench/profile/**
   # The key of the saved walk lengths: a set of real trips planned alone and with shared lengths gives equal plans
   # (scripts/measure/route-key-parity.ts).
   route-key-parity:
@@ -705,9 +705,9 @@ jobs:
           path: |
             .practice/shared-preparation/*.json
             .practice/artisan-native/**
-            .practice/aio-bench/output/*.log
-            .practice/aio-bench/profile/*
-            .practice/logs/engine-aiobench-*.log
+            .practice/sim/aio-bench/output/*.log
+            .practice/sim/aio-bench/profile/*
+            .practice/sim/logs/engine-aiobench-*.log
   native-practice:
     if: inputs.native_practice
     runs-on: ubuntu-latest

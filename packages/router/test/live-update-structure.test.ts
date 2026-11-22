@@ -158,6 +158,7 @@ test('live-update keeps import.meta.main only on the facade and submodules impor
 
     const allowedTargets = (target: string) =>
         target.startsWith('packages/router/src/')
+        || target.startsWith('packages/fleet/src/')
         || target.startsWith('packages/core/src/')
         || target === 'scripts/worktree-setup.ts';
 

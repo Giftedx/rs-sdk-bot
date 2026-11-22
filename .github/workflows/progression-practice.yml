@@ -138,10 +138,10 @@ jobs:
           if-no-files-found: error
           path: |
             .practice/deliveries/**
-            .practice/aio-bench/output/**
-            .practice/aio-bench/profile/**
+            .practice/sim/aio-bench/output/**
+            .practice/sim/aio-bench/profile/**
             .practice/progression-ranged/**
-            .practice/logs/engine-*.log
+            .practice/sim/logs/engine-*.log
   ranged:
     # The three-seed route comparison is for a dispatch, not for each merge.
     if: github.event_name != 'push' && inputs.capabilities == ''
@@ -196,10 +196,10 @@ jobs:
           if-no-files-found: error
           path: |
             .practice/progression-system/*.json
-            .practice/aio-bench/output/**
-            .practice/aio-bench/profile/**
+            .practice/sim/aio-bench/output/**
+            .practice/sim/aio-bench/profile/**
             .practice/progression-ranged/**
-            .practice/logs/engine-aiobench-*.log
+            .practice/sim/logs/engine-aiobench-*.log
   compare:
     if: github.event_name != 'push'
     needs: ranged

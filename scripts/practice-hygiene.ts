@@ -12,9 +12,23 @@
 // order is not archived. fleet-sync commits the move on the fleet-data branch: run --apply with the fleet-sync owner.
 // Usage: bun scripts/practice-hygiene.ts [--root DIR] [--apply --archive-dir D:/rs-sdk-bot-archive]
 //        bun scripts/practice-hygiene.ts --fleet-orders [--keep-days 7] [--apply]
+//        bun scripts/practice-hygiene.ts --phase0 [--root DIR] [--apply] [--json] [--grace-ms MS]
 import {existsSync,lstatSync,mkdirSync,readdirSync,readFileSync,renameSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
+import {
+ applyPhase0Hygiene,
+ scanPhase0Hygiene,
+ isProtectedStopEntry,
+ PROTECTED_STOP_FLAGS,
+ DEFAULT_FIXTURE_GRACE_MS,
+} from '../packages/fleet/src/hygiene';
+export {
+ applyPhase0Hygiene,
+ scanPhase0Hygiene,
+ isProtectedStopEntry,
+ PROTECTED_STOP_FLAGS,
+};
 
 export const GRACE_MS=3600_000;
 export const DEFAULT_ARCHIVE_DIR='D:/rs-sdk-bot-archive';
@@ -124,6 +138,17 @@ export function applyFleetMoves(fleetDir:string,moves:FleetMove[]){
 if(import.meta.main){
  const args=process.argv.slice(2),arg=(k:string)=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
  const root=resolve(arg('--root')??join(import.meta.dir,'..')),apply=args.includes('--apply');
+ if(args.includes('--phase0')){
+  const graceRaw=arg('--grace-ms'),fixtureGraceMs=graceRaw!==undefined&&Number.isFinite(Number(graceRaw))?Number(graceRaw):DEFAULT_FIXTURE_GRACE_MS;
+  const r=applyPhase0Hygiene(root,{dry:!apply,fixtureGraceMs});
+  if(args.includes('--json'))console.log(JSON.stringify(r,null,2));
+  else{
+   console.log(JSON.stringify({root:r.root,dry:r.dry,totalFindings:r.findings.length,counts:r.counts,applied:r.applied,preserved:r.preserved.length,errors:r.errors.length}));
+   console.log(`RESULT ${r.errors.length?'fail':'ok'} practice-hygiene phase0 ${r.dry?'would clear':'cleared'} ${r.dry?r.findings.length:r.applied} items (preserved ${r.preserved.length})`);
+  }
+  if(r.errors.length>0)process.exit(1);
+  process.exit(0);
+ }
  if(args.includes('--fleet-orders')){
   const fleetDir=join(root,'.practice','fleet-data','fleet'),r=scanFleetOrders(fleetDir,Date.now(),Number(arg('--keep-days')??FLEET_KEEP_DAYS));
   const months:Record<string,number>={};for(const m of r.moves)months[m.month]=(months[m.month]??0)+1;
