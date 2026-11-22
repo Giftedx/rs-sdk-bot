@@ -2,7 +2,7 @@
 import { SIDE_NAME } from '../../core/src/fleet';
 import { MAX_ORDER_LINES } from '../../core/src/fleet-trade-settlement';
 import { RESERVED_ACCOUNTS } from '../../core/src/specialist-boards';
-import type { World } from '../../core/src/world/model';
+import type { World } from '../../core/src/world';
 import {
     isTrustTier,
     isWorkerFamily,

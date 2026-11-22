@@ -1,6 +1,6 @@
 // Unified WorkerModule seam, preflight, rate-estimation, and outcome contracts.
 import type { BankObservation, SessionCore } from '../../core/src/session-types';
-import type { World } from '../../core/src/world/model';
+import type { World } from '../../core/src/world';
 
 export type { BankObservation, SessionCore };
 

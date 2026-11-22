@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import ts from 'typescript';
-import type { Session } from '../../core/src/inprocess/types';
+import type { Session } from '../../core/src/inprocess';
 import type { SessionCore } from '../../core/src/session-types';
 import {
     OUTCOME_KINDS,
