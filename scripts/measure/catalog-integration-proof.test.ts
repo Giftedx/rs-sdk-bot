@@ -10,7 +10,7 @@ import {artisanTransition,artisanSourceEntries,artisanSourceRevision,toolsEnv} f
 import {PROFILES,selectItems} from '../shop-buyer';
 
 test('the actual artisan proof filter selects both Dommik tool patterns',()=>{
- expect(selectItems(PROFILES.dommik!.items,toolsEnv.ITEMS)).toEqual(PROFILES.dommik!.items);
+ expect(selectItems(PROFILES.dommik!.items,toolsEnv.ITEMS).map(i=>i.re.source)).toEqual(['^ring mould$','^chisel$']);
 });
 import {runtimeTrees,releaseFiles} from '../../packages/core/src/worker-release';
 

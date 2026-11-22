@@ -61794,6 +61794,118 @@
    "maxBatch": 1000
   },
   {
+   "id": "shop:silver_merchant:2355",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "silver_merchant",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Silver bar$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "225",
+     "FLOAT": "1225",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_ardougne_east/configs/ardougne_east.inv:105",
+   "effects": {
+    "items": {
+     "2355": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 225
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:silver_merchant:2355"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 225
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:silver_merchant:442",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "silver_merchant",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Silver ore$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "113",
+     "FLOAT": "1113",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_ardougne_east/configs/ardougne_east.inv:104",
+   "effects": {
+    "items": {
+     "442": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 113
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:silver_merchant:442"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 113
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "shop:tiadeche:3142",
    "routeId": "market:shop-buy",
    "ladderIds": [],

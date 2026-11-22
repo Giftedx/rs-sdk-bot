@@ -5,7 +5,7 @@ import {scorpionBarcrawlNeeds,scorpionEntryRefusal} from './quest-sweep';
 import {establishBarcrawlGate} from './generated/quest-barcrawl';
 import {clickDialoguePage} from './generated/quest-lib';
 import {catchScorpion} from './generated/quest-scorpion';
-import {questScriptId} from './quest-sweep';
+import {questScriptId,QUEST_KEEP,keepsItem} from './quest-sweep';
 import {resolve} from 'node:path';
 import type {Account} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
@@ -79,6 +79,30 @@ test('Scorpion stages and establishes a missing Barcrawl gate before the outpost
  expect({runs,tries}).toEqual({runs:1,tries:3});
  gate=0;
  await expect(establishBarcrawlGate(tryGate,async()=>{})).rejects.toThrow('Barcrawl gate shut after the Barcrawl');
+});
+
+test('Nature Spirit does without the wolfbane dagger 2952; another quest still needs a preset 2952',()=>{
+ const preset=presetFor('druidspirit');
+ expect((preset.inventory??[]).some(i=>i.id===2952)).toBe(true);
+ const need=needs(preset,false,'druidspirit'),food=needs(preset,true,'druidspirit');
+ expect(need.has(2952)).toBe(false);
+ expect(food.has(2952)).toBe(false);
+ // A bank without the dagger leaves nothing missing for it.
+ const bank=[{id:995,count:100000}];
+ expect(plan(need,[],bank).missing.some(m=>m.id===2952)).toBe(false);
+ // The other preset rows stay: only 2952 leaves the list.
+ const all=needs(preset,false,'');
+ expect(all.get(2952)).toBe(1);
+ expect([...need]).toEqual([...all].filter(([id])=>id!==2952));
+ // The dagger is kept and withdrawn when the bank holds it.
+ expect(QUEST_KEEP.druidspirit).toContain(2952);
+ expect(keepsItem('druidspirit',2952,()=>true)).toBe(true);
+ expect(keepsItem('priest',2952,()=>true)).toBe(false);
+ // Another quest with 2952 in its preset still needs it, and its list is unchanged.
+ const other={...preset,inventory:[...(preset.inventory??[])]};
+ expect(needs(other,false,'priest').get(2952)).toBe(1);
+ expect(plan(needs(other,false,'priest'),[],bank).missing).toContainEqual({id:2952,count:1});
+ expect([...needs(presetFor('scorpion'),false,'scorpion')]).toEqual([...needs(presetFor('scorpion'),false,'')]);
 });
 
 test('a completed Scorpion journal refuses before staging while client varp 76 stays at its untransmitted default',()=>{
@@ -893,6 +917,84 @@ test('Mightyrod fortress box-room entry pushes the secret wall and descends the 
   const stuck=await leaveFortress(s,async()=>({ok:true}));
   expect(stuck).toEqual({ok:false,detail:'fortress secret wall tile 3030,3509,1 unobserved at 3029,3505,1'});
   expect(clicks).toEqual([]);
+ }finally{clearInterval(timer);}
+});
+
+// Mightyrod.log (run-biohazard-mightyrod-proof-exit): START 2555 3324 0 in the Mourner HQ, every bank walk
+// client_rejected at the wall. With no teleport runes the exit is the HQ door and Kilron's ladder; east of the wall nothing.
+test('Mightyrod in the Mourner HQ with no teleport runes leaves West Ardougne by Kilron; east of the wall is a no-op',async()=>{
+ const {leaveWestArdougne}=await import('./quest-sweep');
+ let player={worldX:2555,worldZ:3324,level:0},tick=0,dialog:any={isOpen:false};
+ const clicks:any[]=[],walks:unknown[]=[],talks:any[]=[],answers:string[]=[];
+ const listeners=new Set<()=>void>();
+ const kilron={id:349,name:'Kilron',x:2556,z:3266,distance:2,index:7};
+ const s={sdk:{getState:()=>({player,inventory:[],skills:[{name:'Magic',level:99}],nearbyLocs:[],nearbyNpcs:player.worldZ<3300?[kilron]:[]}),
+   getEquipment:()=>[],getDialog:()=>dialog,
+   clickDialogByText:async(re:RegExp)=>{answers.push(String(re));if(dialog.options?.some((o:any)=>re.test(o.text))){dialog={isOpen:false};player={worldX:2559,worldZ:3267,level:0};}return{success:true};},
+   sendClickDialog:async()=>{dialog={isOpen:false};return{success:true};}},
+  bot:{talkTo:async(n:any)=>{talks.push(n.id);dialog={isOpen:true,isWaiting:false,options:[{text:'Yes I do.'},{text:'No thanks.'}]};return{success:true};}},
+  tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+  direct:async(a:any)=>{clicks.push(a);return{success:true};}} as unknown as Session;
+ const timer=setInterval(()=>{tick++;
+  const last=clicks[clicks.length-1];
+  if(last?.locId===2036&&player.worldX===2551&&player.worldZ===3321)player={worldX:2551,worldZ:3319,level:0};
+  for(const cb of listeners)cb();},1);
+ const approach=async(to:readonly any[])=>{walks.push(to.map(t=>[t.x,t.z,t.level]));const t=to[to.length-1]!;player={worldX:t.x,worldZ:t.z,level:t.level};return{ok:true};};
+ try{
+  const result=await leaveWestArdougne(s,{approach,walled:()=>true});
+  expect(result).toEqual({ok:true});
+  expect(clicks.some(c=>c.type==='clickComponent')).toBe(false);
+  expect(clicks.map(c=>[c.locId,c.x,c.z])).toEqual([[2036,2551,3320]]);
+  expect(walks).toEqual([[[2551,3321,0]],[[2556,3268,0]]]);
+  expect(talks).toEqual([349]);
+  expect(answers).toEqual(['/yes i do/i']);
+  expect(player.worldX).toBeGreaterThanOrEqual(2559);
+  clicks.length=0;walks.length=0;talks.length=0;
+  player={worldX:2662,worldZ:3301,level:0};
+  expect(await leaveWestArdougne(s,{approach,walled:()=>true})).toEqual({ok:true});
+  expect(clicks).toEqual([]);expect(walks).toEqual([]);expect(talks).toEqual([]);
+ }finally{clearInterval(timer);}
+});
+
+// task-db12662c: 'start walk failed to {"level":0,"x":2591,"z":3336}: precondition no route'. The walker has no route
+// through elenadoor2 (loc 2054, 2592,3339), so the sweep opens it and hands over inside.
+const elenaSession=(opens:boolean)=>{
+ const box={player:{worldX:2615,worldZ:3332,level:0},tick:0};
+ const clicks:any[]=[],walks:Tile[]=[];
+ const listeners=new Set<()=>void>();
+ const door={id:2054,x:2592,z:3339,optionsWithIndex:[{text:'Open',opIndex:1}]};
+ const s={sdk:{getState:()=>({player:box.player,nearbyLocs:[door]})},tick:()=>box.tick,
+  onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+  direct:async(a:any)=>{clicks.push(a);return{success:true};}} as unknown as Session;
+ const timer=setInterval(()=>{box.tick++;
+  const last=clicks[clicks.length-1];
+  if(opens&&last?.locId===2054&&box.player.worldZ===3339)box.player={worldX:2592,worldZ:3338,level:0};
+  for(const cb of listeners)cb();},1);
+ const approach=async(to:Tile)=>{walks.push(to);box.player={worldX:to.x,worldZ:to.z,level:to.level};return{ok:true};};
+ return{s,box,clicks,walks,timer,approach};
+};
+test('Biohazard start inside Elena\'s house: approach 2592,3339, open loc 2054 and end inside',async()=>{
+ const {enterElenaHouse,inElenaHouse}=await import('./quest-sweep');
+ const {s,box,clicks,walks,timer,approach}=elenaSession(true);
+ try{
+  expect(await enterElenaHouse(s,{approach})).toEqual({ok:true});
+  expect(walks).toEqual([{x:2592,z:3339,level:0}]);
+  expect(clicks.map(c=>[c.type,c.locId,c.x,c.z,c.optionIndex])).toEqual([['interactLoc',2054,2592,3339,1]]);
+  const p=box.player;
+  expect(p.worldZ).toBeLessThan(3339);
+  expect(inElenaHouse({x:p.worldX,z:p.worldZ,level:p.level})).toBe(true);
+  clicks.length=0;walks.length=0;
+  expect(await enterElenaHouse(s,{approach})).toEqual({ok:true});
+  expect(clicks).toEqual([]);expect(walks).toEqual([]);
+ }finally{clearInterval(timer);}
+});
+test('Biohazard Elena door that never opens refuses after 4 clicks with the observed tile',async()=>{
+ const {enterElenaHouse}=await import('./quest-sweep');
+ const {s,clicks,timer,approach}=elenaSession(false);
+ try{
+  expect(await enterElenaHouse(s,{approach})).toEqual({ok:false,detail:'elena door unobserved at 2592,3339,0'});
+  expect(clicks.length).toBe(4);
+  expect(clicks.every(c=>c.locId===2054)).toBe(true);
  }finally{clearInterval(timer);}
 });
 
@@ -1759,6 +1861,17 @@ test('the way up to an upstairs target is the ground foot of the nearest ascendi
  expect(wayUp(transports,{x:2460,z:3500,level:2})).toEqual({x:2466,z:3495,level:0});
  expect(wayUp([],{x:2448,z:3509,level:1})).toEqual({x:2448,z:3509,level:0});
  expect(wayUp(transports,{x:3000,z:3000,level:0})).toEqual({x:3000,z:3000,level:0});
+});
+
+test('an underground target is approached by a surface tile near the dungeon, a surface target unchanged',async()=>{
+ const {approachOf,UNDERGROUND}=await import('./quest-sweep');
+ const t=(from:{x:number;z:number;level:number},to:{x:number;z:number;level:number})=>({locName:'trapdoor',option:'op1',from,to,exact:false,src:'',toSrc:'',handler:''}) as any;
+ // Drezel under Paterdomus (quest-druidspirit start): the ground walk to 3440,9893 went into the level-56 Wilderness.
+ const drezel={x:3440,z:9893,level:0},above={x:3440,z:3493,level:0};
+ const near=(a:{x:number;z:number;level:number})=>a.z<UNDERGROUND&&a.level===0&&Math.max(Math.abs(a.x-above.x),Math.abs(a.z-above.z))<=80;
+ for(const transports of [[],[t({x:3422,z:3485,level:0},{x:3440,z:9887,level:0})]])expect(near(approachOf(transports,drezel))).toBe(true);
+ expect(approachOf([t({x:3422,z:3485,level:0},{x:3440,z:9887,level:0})],drezel)).toEqual({x:3422,z:3485,level:0});
+ expect(approachOf([],{x:3222,z:3218,level:0})).toEqual({x:3222,z:3218,level:0});
 });
 
 test('a field on the tour of the other sellers and the quest start replaces a purchase; a field off it does not',async()=>{

@@ -19,6 +19,8 @@ export const PRAYER_ALTARS: readonly Altar[] = [
     { id: 411, x: 2932, z: 3513, level: 0, label: 'Goblin Village chaos altar' },
     { id: 411, x: 3259, z: 3381, level: 0, label: 'Varrock south-east chaos altar' },
     { id: 410, x: 2925, z: 3483, level: 0, label: 'Taverley altar of Guthix' },
+    { id: 409, x: 2617, z: 3309, level: 0, label: 'East Ardougne church' },
+    { id: 409, x: 2694, z: 3462, level: 0, label: 'Seers Village church' },
     { id: 409, x: 2853, z: 3348, level: 0, label: 'Entrana church' },
     { id: 409, x: 3243, z: 3205, level: 0, label: 'Lumbridge church' },
     { id: 409, x: 2991, z: 3177, level: 0, label: 'Port Sarim church' },

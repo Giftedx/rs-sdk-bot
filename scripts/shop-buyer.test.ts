@@ -6,7 +6,7 @@ const target = (name: string, buyPerTick: number) => ({ re: new RegExp(`^${name}
 const item = (name: string, count = 100, buyPrice = 1) => ({ name, count, buyPrice });
 
 test('finite artisan tool targets retain one owned tool and buy only the missing other tool', () => {
-    const targets=PROFILES.dommik!.items,bank=new Map([['chisel',1]]),shop=[item('Ring mould',4),item('Chisel',2)];
+    const targets=selectItems(PROFILES.dommik!.items,'ring mould|chisel'),bank=new Map([['chisel',1]]),shop=[item('Ring mould',4),item('Chisel',2)];
     expect(planShopPurchases(targets,shop,[],bank,20,1,2)).toEqual([{name:'Ring mould',amount:1}]);
     expect(shopTargetsMet(targets,[{name:'Ring mould',count:1}],bank,1)).toBe(true);
     expect(shopTargetsMet(targets,[],bank,1)).toBe(false);
@@ -347,9 +347,25 @@ test('a blind run never passes the item cap, the stock target or the reserve, wi
 test('the dommik profile buys a ring mould and a chisel at the Al Kharid crafting store', () => {
     const p = PROFILES.dommik!;
     expect(p.npc.test('Dommik')).toBe(true);
-    expect(p.items.map(i => [i.re.test('Ring mould'), i.re.test('Chisel')])).toEqual([[true, false], [false, true]]);
-    expect(p.items.map(i => i.shelf)).toEqual([4, 2]);
+    expect(p.items.map(i => [i.re.test('Ring mould'), i.re.test('Chisel'), i.re.test('Sickle mould')]))
+        .toEqual([[true, false, false], [false, true, false], [false, false, true]]);
+    expect(p.items.map(i => i.shelf)).toEqual([4, 2, 6]);
     expect(p.bankSpot).toEqual({ x: 3269, z: 3167 });
+    expect(selectItems(p.items, 'sickle mould').map(i => i.re.source)).toEqual(['^sickle mould$']);
+    expect(selectItems(p.items, 'ring mould|chisel').map(i => i.re.source)).toEqual(['^ring mould$', '^chisel$']);
+});
+
+test('the silver_merchant profile buys one silver bar at the Ardougne Silver Stall', () => {
+    const p = PROFILES.silver_merchant!;
+    expect(p.npc.test('Silver merchant')).toBe(true);
+    expect(p.npc.test('Gem merchant')).toBe(false);
+    expect(p.npcSpot).toEqual({ x: 2659, z: 3316 });
+    expect(p.bankSpot).toEqual({ x: 2654, z: 3283 });
+    expect(p.items.map(i => [i.re.test('Silver bar'), i.re.test('Silver ore')])).toEqual([[true, false], [false, true]]);
+    for (const line of p.items) expect(line).toMatchObject({ buyPerTick: 1, shelf: 1 });
+    const bar = selectItems(p.items, 'silver bar');
+    expect(bar.map(i => i.re.source)).toEqual(['^silver bar$']);
+    expect(planShopPurchases(bar, [item('Silver ore', 1), item('Silver bar', 1, 150)], [], new Map(), 500, 1, 1)).toEqual([{ name: 'Silver bar', amount: 1 }]);
 });
 
 test('PK supply profiles cover Jakut dragon daggers, Magic Guild water/earth runes, Brimhaven/TBWT karambwans, Oziach, gem shops, and Tenzing climbing boots', () => {
