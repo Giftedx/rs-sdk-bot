@@ -1,10 +1,12 @@
 {
   "id": "coin-courier",
   "goal": "Move an exact number of coins from one owned account to another by trade at a shared bank: both log in, meet, trade, confirm both banks.",
-  "entry": "scripts/coin-courier.ts",
+  "entry": "scripts/aio-logistics.ts",
   "files": [
-    "scripts/coin-courier.ts",
-    "scripts/coin-courier.test.ts",
+    "scripts/aio-logistics.ts",
+    "packages/workers/src/logistics/trade.ts",
+    "packages/workers/src/logistics/trade-helpers.ts",
+    "packages/workers/test/logistics.test.ts",
     "packages/practice/src/coin-courier-proof.ts",
     "packages/practice/src/replay-root.ts",
     "packages/core/src/leg-cache.ts",
@@ -18,7 +20,7 @@
       "command": [
         "bun",
         "test",
-        "scripts/coin-courier.test.ts",
+        "packages/workers/test/logistics.test.ts",
         "packages/core/test/leg-cache.test.ts",
         "--timeout",
         "10000"

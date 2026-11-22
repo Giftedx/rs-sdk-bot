@@ -44,7 +44,7 @@ import {
     resolveSupplierKitPlan,
     SPECIALIST_KITS,
     type KitSpecItem,
-} from './specialist-supplier';
+} from '../packages/workers/src/logistics';
 
 const ROOT = resolve(import.meta.dir, '..');
 const ITEMS: { id: number; name: string; tradeable?: boolean }[] = JSON.parse(

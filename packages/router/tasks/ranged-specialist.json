@@ -6,7 +6,8 @@
     "scripts/ranged-specialist.ts",
     "scripts/ranged-specialist.test.ts",
     "scripts/measure/specialist-ranged-cases.ts",
-    "scripts/specialist-supplier.ts",
+    "scripts/aio-logistics.ts",
+    "packages/workers/src/logistics/specialist-supply.ts",
     "packages/practice/src/rehearse.ts",
     "packages/practice/test/specialist-rehearsal.test.ts"
   ],

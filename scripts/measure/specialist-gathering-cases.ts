@@ -123,14 +123,14 @@ export const SPECIALIST_GATHERING_CASES: BenchCase[] = [
     },
 ];
 
-// The same routes (plus live-stockable variants) with the kit held by a separate supplier process (scripts/gathering-supplier.ts).
+// The same routes (plus live-stockable variants) with the kit held by a separate supplier process (scripts/aio-logistics.ts gathering-supplier).
 const externalCase = (skill: string, supplies: Readonly<Record<number, number>>, output: RegExp, live = false): BenchCase => ({
     key: `extra:specialist-${skill}${live ? '-live' : ''}`,
     script: 'scripts/measure/specialist-bench.ts',
     preset: 'fresh_lumbridge',
     presetConfig: FRESH_TUTORIAL_START,
     companions: [{ suffix: 's', preset: 'fresh_lumbridge', presetConfig: helperBesideLumbridge(supplies) }],
-    scriptArgs: ['{bot:s}', `scripts/${skill}-specialist.ts`, '--supplier-script=scripts/gathering-supplier.ts', ...(live ? ['LIVE=1'] : [])],
+    scriptArgs: ['{bot:s}', `scripts/${skill}-specialist.ts`, '--supplier-role=gathering-supplier', ...(live ? ['LIVE=1'] : [])],
     pass: specialistPass,
     timeoutMs: 600_000,
     output,

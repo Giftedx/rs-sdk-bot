@@ -32,7 +32,7 @@ const WANTED_SHARE = 10;
 // The value guard (randomevents.ts `guard`): a held stack worth this much is kept from a drop or a sale.
 export const GUARD_VALUE = 10_000;
 // Scripts that sell, alch, trade or hand items over on purpose get no value guard.
-export const sellsItems = (script: string) => /sell|alch|merchant|market|trade|banker|courier|fan(out|in)|shop/i.test(script.split(/[\\/]/).at(-1) ?? '');
+export const sellsItems = (script: string) => /sell|alch|merchant|market|trade|banker|courier|fan(out|in)|shop|aio-logistics/i.test(script.split(/[\\/]/).at(-1) ?? '');
 
 // A record run: the main account, a specialist board account, or any run with HAGGIS_RUN=1.
 export const recordRun = (name: string, env: Record<string, string | undefined> = process.env): boolean =>

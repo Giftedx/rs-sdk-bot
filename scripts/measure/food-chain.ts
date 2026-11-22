@@ -4,9 +4,9 @@
 //   bun scripts/measure/food-chain.ts fish [runs=3] [cooking=1]   fishcook.ts for TICKS (default 1500) from the live
 //                                                                 Mightyrod kit at the Lumbridge river
 //   bun scripts/measure/food-chain.ts handoff                     courier gives 60 noted trout to a food-less farmer
-//                                                                 (give-to-banker.ts GIVE=, goldfarm.ts FOOD_FROM=
+//                                                                 (aio-logistics.ts give-to-banker GIVE=, goldfarm.ts FOOD_FROM=
 //                                                                 FOOD_ONLY_TRADE=1); the farmer banks and eats them
-//   bun scripts/measure/food-chain.ts courier                     foodcourier.ts Ardougne -> Draynor -> Ardougne with a
+//   bun scripts/measure/food-chain.ts courier                     aio-logistics.ts food-courier Ardougne -> Draynor -> Ardougne with a
 //                                                                 fishcook.ts HANDOFF_ONLY partner at Draynor bank
 //   bun scripts/measure/food-chain.ts alone                       FOOD_ONLY_TRADE=1 farmer with no food and no trade:
 //                                                                 it must log out, not steal
@@ -65,7 +65,7 @@ if (mode === 'fish') {
         const fa = run('scripts/goldfarm.ts', farmer, { TICKS: process.env.TICKS ?? '1200', FOOD_FROM: courier, FOOD_ONLY_TRADE: '1' });
         // The farmer walks to the bank spot and starts serving after its first bank visit; give it a few seconds.
         await Bun.sleep(8000);
-        const co = run('scripts/give-to-banker.ts', courier, { GIVE: 'Trout:60' }, [farmer]);
+        const co = run('scripts/aio-logistics.ts', courier, { GIVE: 'Trout:60' }, ['give-to-banker', farmer]);
         const [f, c] = await Promise.all([fa, co]);
         show('courier', c);
         show('farmer', f);
@@ -77,7 +77,7 @@ if (mode === 'fish') {
         await prep(cook, { position: { x: 3092, z: 3243, level: 0 }, skills: { Fishing: 99, Cooking: 50 }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 100 }], bank: [{ id: 333, count: 100 }] });
         await prep(courier, { position: { x: 2655, z: 3283, level: 0 }, coins: 500 });
         const ck = run(process.env.FISH_SCRIPT ?? 'scripts/fishcook.ts', cook, { GIVE_TO: courier, HANDOFF_ONLY: '1', WAIT: '2000' });
-        const co = run('scripts/foodcourier.ts', courier, { FROM: cook, CAP: '2500', FEATHERS: '100' });
+        const co = run('scripts/aio-logistics.ts', courier, { FROM: cook, CAP: '2500', FEATHERS: '100' }, ['food-courier']);
         const [k, c] = await Promise.all([ck, co]);
         show('courier', c);
         show('cook', k);

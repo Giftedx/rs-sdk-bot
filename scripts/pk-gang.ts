@@ -19,7 +19,7 @@ import { escapeCastable, fightPlayer, ITEMS, nextTick, observePlayer, recordKill
 import { BOOST_POTIONS, EDGEVILLE_BANK, FOOD_LIST, healOf, hitByPlayer, restock, TRIBRID_KIT, type TripItem } from './pk-hunt';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
-import { nearestAltar, prayAtAltar } from './pray-at-altar';
+import { nearestAltar, prayAtAltar } from '../packages/workers/src/logistics';
 import { sparOptions } from './pk-spar';
 
 // The attack animations of a dragon dagger (content pack/seq.pack): the lunge, the hack and the special.

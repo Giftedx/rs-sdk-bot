@@ -425,7 +425,7 @@ test('another pending payout never launches children; donor becoming active duri
 });
 test('CLI validates bounds, protected overlap and structured arguments without shell expansion',()=>{
     const c=parseHandoff(['Pocketrocket','Ballspinner','153:Flax','--notes','--keep=knife|bread','--bank-x=2725','--bank-z=3493']);
-    const cmd=handoffCommands(c,'F:/repo');expect(cmd.receiver.slice(-3)).toEqual(['Ballspinner','153:Flax','--banker=Pocketrocket']);expect(cmd.env).toMatchObject({PAYOUT_NOTES:'1',ON_DEMAND:'1',COURIERS:'',KEEP:'knife|bread',BANK_X:'2725'});
+    const cmd=handoffCommands(c,'F:/repo');expect(cmd.receiver.slice(-4)).toEqual(['Ballspinner','take-from-banker','153:Flax','--banker=Pocketrocket']);expect(cmd.env).toMatchObject({PAYOUT_NOTES:'1',ON_DEMAND:'1',COURIERS:'',KEEP:'knife|bread',BANK_X:'2725'});
     for(const args of [['Main','Ballspinner','1:Flax'],['Pocketrocket','Pocketrocket','1:Flax'],['../x','Ballspinner','1:Flax'],['Pocketrocket','Ballspinner','0:Flax'],['Pocketrocket','Ballspinner','1:Flax','--keep=flax'],['Pocketrocket','Ballspinner','1:Flax','--bank-x=NaN'],['Pocketrocket','Ballspinner','1:Flax','--whatever=1']])expect(()=>parseHandoff(args)).toThrow();
     const live=['Masterbaiter','MineYourBiz','100:Lobster','--notes','--bank-x=2615','--bank-z=3332'];
     expect(parseHandoff([...live,'--approach-ms=1800000','--request-ms=60000','--timeout-ms=600000','--grace-ms=45000'])).toMatchObject({approachMs:1800000,requestMs:60000,timeoutMs:600000});

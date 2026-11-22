@@ -60,7 +60,7 @@ test('only a session recovery clears an orphaned end or a held fleet claim', () 
 
 import { EMPTY_REPEATS, emptyLoop } from './loop-watch';
 test('an empty loop is ok runs that did no work, one after the other', () => {
-    const empty = ['CHAIN round=1 scripts/walk-to.ts ok RESULT ok walk-to {"ok":true,"ticks":0} at=3092,3243,0 ticks=2',
+    const empty = ['CHAIN round=1 scripts/aio-logistics.ts walk-to ok RESULT ok walk-to {"ok":true,"ticks":0} at=3092,3243,0 ticks=2',
         '  | RESULT ok chicken-qualification {"ok":true,"combat":45,"ticks":0,"kills":0,"hpMin":54,"preserved":true}',
         'RESULT ok chain rounds=1 ok=2 failed=0', 'SUPERVISE run 1 exit 0: RESULT ok chain rounds=1 ok=2 failed=0', 'SUPERVISE end done after 1 runs'];
     const work = ['LEDGER ticks=9057 xp=2098 inventory=79 move=1501', 'SUPERVISE run 1 exit 0: RESULT ok ticks=9001 picks=2158 coinsGained=103150', 'SUPERVISE end done after 1 runs'];

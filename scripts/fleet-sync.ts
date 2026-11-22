@@ -221,7 +221,7 @@ export function confirmedTradeLogout(base: string, claim: FleetTradeClaim, recei
         const attempt = listAttempts(claim.account, claim.server, options).find(row => row.attemptId === proof.attemptId);
         if (!attempt?.receipt || attempt.sha256 !== proof.receiptSha256) return false;
         return attempt.receipt.owner.pid === pid && attempt.receipt.owner.sharedClaimNonce === claim.nonce
-            && attempt.receipt.owner.script === 'scripts/fleet-trade.ts' && !alive(pid, claim.at);
+            && (attempt.receipt.owner.script === 'scripts/fleet-trade.ts' || attempt.receipt.owner.script === 'scripts/aio-logistics.ts') && !alive(pid, claim.at);
     } catch { return false; }
 }
 

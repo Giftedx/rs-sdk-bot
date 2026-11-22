@@ -15,12 +15,12 @@ import {waitUntil} from '../../core/src/ticks';
 import {readLogoutProof} from '../../core/src/session-lifecycle';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
-import {performFleetTransfer,runOrderWork,watchTradeScreen,type Order} from '../../../scripts/fleet-trade';
+import {performFleetTransfer,runOrderWork,watchTradeScreen,type Order} from '../../workers/src/logistics';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {xpForLevel} from '../../planner/src/curve';
 
 const root=resolve(import.meta.dir,'../../..'),QUANTITY=12,TARGET=72,HOLD_TICKS=25;
-const entries=['scripts/make-wine-order.ts','scripts/cook-wine.ts','packages/practice/src/wine-stock-order-proof.ts'];
+const entries=['scripts/aio-logistics.ts','scripts/cook-wine.ts','packages/practice/src/wine-stock-order-proof.ts'];
 const rules=['vendor/rs-sdk/server/content/scripts/skill_cooking/scripts/cooking_inv/scripts/wine/wine.rs2',
  'vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts','vendor/rs-sdk/server/engine/src/engine/entity/Player.ts',
  'vendor/rs-sdk/server/content/scripts/interface_bank/scripts/bank.rs2','vendor/rs-sdk/server/content/scripts/interface_trade/scripts/trade.rs2'];
@@ -158,7 +158,7 @@ export async function runWineStockNative(directory:string){
     await command(coinRegistrationArgs(name,endpoint),'auth-'+i);
     await snapshot(i,i?'consumerBefore':'makerBefore',s=>s.skills[7]!.level===(i?69:82)&&wineIds.every(id=>count(s,id)===0));
    }
-   await command(['scripts/make-wine-order.ts',names[0]!,'12','1000','2'],'produce');
+   await command(['scripts/aio-logistics.ts',names[0]!,'wine-stock','12','1000','2'],'produce');
    await snapshot(0,'makerProduced',s=>count(s,1996,[93])===QUANTITY&&count(s,1995)===0);
    await command(['packages/practice/src/wine-stock-order-proof.ts','--hold'],'hold');
    await snapshot(0,'makerHeld',s=>count(s,1996,[93])===QUANTITY&&count(s,1995)===0);

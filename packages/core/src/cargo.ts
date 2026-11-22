@@ -5,7 +5,9 @@ import { ownedAccounts } from './tradeguard';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { bindActionScope } from './action-scope';
+import { simBotsDir } from './practice-paths';
 
+const cargoRepoRoot = resolve(import.meta.dir, '../../..');
 export const cargoDir = resolve(import.meta.dir, '../../../.practice/cargo');
 export const exactItem = (name: string) => new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 export interface Cargo { name: string; server?: string; at: number; bank: { x: number; z: number; level: number }; items: { id: number; name: string; count: number }[] }
@@ -16,11 +18,17 @@ export type CargoOptions = { dir?: string; owned?: ReadonlySet<string>; server?:
 // ownership on that endpoint grants a request. A live Session's endpoint wins.
 export function cargoAccountServer(name: string): string {
     if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) throw Error('cargo: invalid account name');
-    const dir=resolve(import.meta.dir, '../../../vendor/rs-sdk/bots');
-    const matches=readdirSync(dir).filter(candidate=>candidate.toLowerCase()===name.toLowerCase());
-    if(matches.length!==1)throw Error('cargo: unique account configuration required for '+name);
-    const env = readFileSync(join(dir, matches[0]!, 'bot.env'), 'utf8');
-    return env.match(/^SERVER=(.*)$/m)?.[1]?.trim() || 'localhost:8888';
+    const lower = name.toLowerCase();
+    for (const dir of [simBotsDir(cargoRepoRoot), resolve(import.meta.dir, '../../../vendor/rs-sdk/bots')]) {
+        if (!existsSync(dir)) continue;
+        const matches = readdirSync(dir).filter(candidate => candidate.toLowerCase() === lower && existsSync(join(dir, candidate, 'bot.env')));
+        if (matches.length > 1) throw Error('cargo: unique account configuration required for ' + name);
+        if (matches.length === 1) {
+            const env = readFileSync(join(dir, matches[0]!, 'bot.env'), 'utf8');
+            return env.match(/^SERVER=(.*)$/m)?.[1]?.trim() || 'localhost:8888';
+        }
+    }
+    throw Error('cargo: unique account configuration required for ' + name);
 }
 function cargoServer(name: string, options: CargoOptions, actual?: string): string | undefined {
     if (actual && options.server && actual.toLowerCase() !== options.server.toLowerCase()) throw Error('cargo: session endpoint mismatch');

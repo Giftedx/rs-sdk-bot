@@ -64,7 +64,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
  try{
   if(!/^flrcvx[a-z0-9]+$/.test(account))throw Error('private swarm actor is not a generated recovery fixture');
   const report=JSON.parse(readFileSync(join(input.observerDelivery,'report.json'),'utf8'));
-  if(report.id!=='owned-bank-observation'||report.ok!==true||report.stage!=='delivered'||report.runtimeRevision!==capabilityRevision(['scripts/fleet-inspect.ts'],sourceRoot))throw Error('private swarm needs current completed observer qualification before the outer native lock');
+  if(report.id!=='owned-bank-observation'||report.ok!==true||report.stage!=='delivered'||report.runtimeRevision!==capabilityRevision(['scripts/aio-logistics.ts'],sourceRoot))throw Error('private swarm needs current completed observer qualification before the outer native lock');
   const verification=Bun.spawnSync([process.execPath,join(sourceRoot,'scripts/measure/catalog-integration-proof.ts'),'--verify','observer'],{cwd:sourceRoot,env:{...process.env,DELIVERY_DIR:input.observerDelivery},stdout:'pipe',stderr:'pipe',windowsHide:true});
   writeFileSync(join(directory,'observer-verifier.log'),verification.stdout);writeFileSync(join(directory,'observer-verifier.err'),verification.stderr);
   if(verification.exitCode!==0)throw Error('private swarm observer saved-proof verification failed');
@@ -103,7 +103,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   const recoveryPlan=readPlan('session-check');
   const checks:any={actualSessionCheckDone:true,sessionCheckLogout:true,actualSessionCheckSwarmShutdown:true,sessionCheckFreshSave:checkedSave.matched,releasedClaimStable:stableClaims(),reservationsPreserved:recoveryPlan.unchanged};
   clearSwarmStop(join(root,'.practice','stop-'+account));
-  const inspect={...job,script:'scripts/fleet-inspect.ts',enabled:false,env:{...flags,REQUIRE_BANK:'1'}};
+  const inspect={...job,script:'scripts/aio-logistics.ts',args:['inspect'],enabled:false,env:{...flags,REQUIRE_BANK:'1'}};
   const next={...plan,jobs:[inspect,...reservations],coordination:{boundedInspection:[account]}};put('.practice/selected-swarm.json',next);
   const second=launch('inspection-swarm');
   await wait(()=>{const s=json('.practice/swarm-state.json');return s?.controllerPid===second.pid&&s.jobs.some((j:any)=>j.account===account&&j.state==='disabled');},'disabled inspector not observed');
@@ -119,7 +119,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   const publication=await waitPracticeSave(save,s=>(s.vars[134]??0)>(checkedSave.save.vars[134]??0),{timeoutMs:15000});
   const after=readPracticeSave(save),totals=(s:any)=>JSON.stringify(s.inventories);
   const items=(rows:any[])=>JSON.stringify(rows.filter(r=>r.count>0&&(r.baseId??r.id)>=0).map(r=>[r.baseId??r.id,r.count]).sort((a,b)=>a[0]-b[0]));
-  Object.assign(checks,{actualNewMission:status.workEntry==='scripts/fleet-inspect.ts',sourcePinned:status.workRevision===capabilityRevision(['scripts/fleet-inspect.ts'],sourceRoot),freshBank:Array.isArray(bank)&&observation?.generation>0&&observation.at>=status.started,
+  Object.assign(checks,{actualNewMission:status.workEntry==='scripts/aio-logistics.ts',sourcePinned:status.workRevision===capabilityRevision(['scripts/aio-logistics.ts'],sourceRoot),freshBank:Array.isArray(bank)&&observation?.generation>0&&observation.at>=status.started,
    exactBank:Array.isArray(bank)&&items(bank)===items(before.inventories[95]??[]),inspectorFreshSave:publication.matched,
    inspectorLogout:proof.state==='confirmed'&&proof.attemptId!==completedProof.attemptId&&observation?.at<=proof.loggedOutAt,assets:totals(before)===totals(after),skills:JSON.stringify(before.skills)===JSON.stringify(after.skills),hp:before.skills[3]!.level===after.skills[3]!.level,position:JSON.stringify(before.position)===JSON.stringify(after.position),otherClaimsPreserved:stableClaims()});
   writeFileSync(join(directory,'swarm-worker.log'),log);writeFileSync(join(directory,'inspector-status.json'),JSON.stringify(status));writeFileSync(join(directory,'inspector-proof.json'),JSON.stringify(proof));

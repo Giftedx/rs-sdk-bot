@@ -5,7 +5,7 @@
 // Env: PEN=x,z chicken pen centre (default Lumbridge 3229,3298; others 3017,3288 3187,3277 3197,3353 from
 // npcs.json); TICKS (default 3000); TARGET feathers in the pack (default 2000).
 import { openBot, finish, countItems, randomEventsOf } from '../packages/core/src/bot';
-import { approach } from './walk-to';
+import { approach } from '../packages/workers/src/logistics';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

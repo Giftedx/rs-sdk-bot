@@ -92,7 +92,7 @@ export function westOakPathAllowed(from:{x:number;z:number},corners:readonly {x:
 const axeShopGates = new WeakMap<object, ShopRetryGate>();
 
 async function walkViaRoute(s: Session, spot: { x: number; z: number; level?: number }, stop: () => boolean): Promise<boolean> {
-    const { approach, walkTargetPersist } = await import('./walk-to');
+    const { approach, walkTargetPersist } = await import('../packages/workers/src/logistics');
     return (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, stop))).ok;
 }
 

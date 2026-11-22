@@ -25,15 +25,17 @@ function boundedGeQuantity(task:CoordTask,entry:string|undefined,id:number,targe
  return quantity;
 }
 
+const isInspectEntry=(task:CoordTask,entry:string|undefined):boolean=>
+ entry==='scripts/aio-logistics.ts'&&(!task.args?.length||(task.args.length===1&&task.args[0]==='inspect'));
 export function boundedBankObserver(task:CoordTask,entry:string|undefined):boolean{
- return entry==='scripts/fleet-inspect.ts'&&task.env?.REQUIRE_BANK==='1'&&!(task.args?.length)
+ return isInspectEntry(task,entry)&&task.env?.REQUIRE_BANK==='1'
   &&Number.isSafeInteger(task.timeoutMs)&&task.timeoutMs!>0&&task.timeoutMs!<=120000
   &&Object.keys(task.accept??{}).length===1&&Object.keys(task.accept?.counters??{}).length===1
   &&task.accept?.counters?.bankObserved===1;
 }
 export function boundedSkillsObserver(task:CoordTask,entry:string|undefined):boolean{
- return entry==='scripts/fleet-inspect.ts'&&task.env?.REQUIRE_BANK==='0'&&task.env.LOOT_WATCH==='0'&&task.env.RANDOM_EVENTS==='0'
-  &&!(task.args?.length)&&Number.isSafeInteger(task.timeoutMs)&&task.timeoutMs!>0&&task.timeoutMs!<=120000
+ return isInspectEntry(task,entry)&&task.env?.REQUIRE_BANK==='0'&&task.env.LOOT_WATCH==='0'&&task.env.RANDOM_EVENTS==='0'
+  &&Number.isSafeInteger(task.timeoutMs)&&task.timeoutMs!>0&&task.timeoutMs!<=120000
   &&Object.keys(task.accept??{}).length===1&&Object.keys(task.accept?.skills??{}).length===1&&task.accept?.skills?.Hitpoints===1;
 }
 
@@ -62,7 +64,7 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
   const names=boundAccounts(task,state),account=names?.[task.acceptIndex??0];
   let entry:string|undefined;try{entry=task.capability&&context.entryOf?.(task.capability);}catch{/* An unreadable entry cannot prove the worker's role. */}
   // An inspection does not produce the stock, levels or quests named by an acceptance condition.
-  if(entry==='scripts/fleet-inspect.ts')return{value:0,reason:'Bank inspection observes existing state. This is not game progress.',consumers:[task.id]};
+  if(isInspectEntry(task,entry))return{value:0,reason:'Bank inspection observes existing state. This is not game progress.',consumers:[task.id]};
   const effects:string[]=[],unknown:string[]=[];
   let value=0;
   const credit=(id:string,gain:number)=>{const prior=terms.get(id)??0;if(gain>prior){terms.set(id,gain);value+=gain-prior;}};

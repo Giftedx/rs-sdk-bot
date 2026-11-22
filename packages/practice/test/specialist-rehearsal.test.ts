@@ -68,7 +68,7 @@ test('specialist start refuses fixtures and partial qualification targets', () =
     expect(() => checkSpecialistSegment({...spec, expect: {skills: {Ranged: 5}}}, 'shaftshooter')).toThrow(/99/);
     expect(() => checkSpecialistSegment({...spec, env: {DEMO_OK: '1'}}, 'shaftshooter')).toThrow(/environment/);
     expect(() => checkSpecialistSegment({...spec, env: {PRACTICE_SUPPLIER: 'spoof'}}, 'shaftshooter')).toThrow(/environment/);
-    const supplier = {save: {position: {x: 3222, z: 3222, level: 0}, inventory: [{id: 1387, count: 1}]}, script: 'scripts/specialist-supplier.ts', args: ['{ACTOR}']};
+    const supplier = {save: {position: {x: 3222, z: 3222, level: 0}, inventory: [{id: 1387, count: 1}]}, script: 'scripts/aio-logistics.ts', args: ['specialist-supplier', '{ACTOR}']};
     const atkSpec: Segment = {...spec, expect: {skills: {Attack: 99}}, supplier};
     expect(checkSpecialistSegment(atkSpec, 'Hiltsdeep')).toBe('Attack');
     expect(() => checkSpecialistSegment({...atkSpec, supplier: {...supplier, script: '../bad.ts'}}, 'Hiltsdeep')).toThrow(/supplier configuration/);
@@ -198,7 +198,7 @@ test('confirmLivingSession verifies multi-segment relog files and concatenated m
 });
 
 test('multi-supplier segments validate 1..32 helpers, reject mixing supplier/suppliers, and expose PRACTICE_SUPPLIER', () => {
-    const sup = {save: {position: {x: 3222, z: 3222, level: 0}, inventory: [{id: 1446, count: 1}]}, script: 'scripts/specialist-supplier.ts', args: ['{ACTOR}']};
+    const sup = {save: {position: {x: 3222, z: 3222, level: 0}, inventory: [{id: 1446, count: 1}]}, script: 'scripts/aio-logistics.ts', args: ['specialist-supplier', '{ACTOR}']};
     const base: Segment = {
         id: 'pouch-rc',
         start: {fresh: true},

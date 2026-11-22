@@ -3,7 +3,7 @@ import {foodSupplyDemand,foodSupplyServer,type Job} from './swarm';
 import {formatStep} from '../packages/core/src/chain-step';
 
 const now=100000,server='127.0.0.1:21000',owned=new Set(['farm','cook','courier','other']);
-const base:Job={account:'Courier',script:'scripts/foodcourier.ts',enabled:true,whenFoodLowFrom:['Farm'],foodSourceAccount:'Cook'};
+const base:Job={account:'Courier',script:'scripts/aio-logistics.ts',args:['food-courier'],enabled:true,whenFoodLowFrom:['Farm'],foodSourceAccount:'Cook'};
 const farm={name:'Farm',server,at:now,bankAt:now-1,bank:[],inventory:[]};
 const cook={name:'Cook',server,at:now,bankAt:now-1,bank:[{id:385,count:100}]};
 const courier=(name='Courier')=>({name,server,at:now-60000,result:'ok retained',pos:{x:2654,z:3283,level:0},inventory:[{id:386,count:115}]});
@@ -26,7 +26,7 @@ test('AIO logistics, master dispatch, generated chains and pipelines share couri
   {script:'scripts/aio-logistics.ts',args:['food-courier','CAP=1200']},
   {script:'scripts/aio-logistics.ts',args:['--role=food-courier']},
   {script:'scripts/aio.ts',args:['--category=logistics','food-courier']},
-  {script:'scripts/chain.ts',args:[formatStep({script:'scripts/foodcourier.ts',args:[],env:{FROM:'Cook'}})]},
+  {script:'scripts/chain.ts',args:[formatStep({script:'scripts/aio-logistics.ts',args:['food-courier'],env:{FROM:'Cook'}})]},
   {script:'scripts/chain.ts',args:[formatStep({script:'scripts/aio.ts',args:['logistics','food-courier'],env:{}})]},
   {script:'scripts/aio.ts',args:['pipeline','logistics:food-courier CAP=1200']},
   {script:'scripts/aio.ts',args:['pipeline','logistics food-courier CAP=1200']},
@@ -35,7 +35,7 @@ test('AIO logistics, master dispatch, generated chains and pipelines share couri
  for(const route of[
   {script:'scripts/aio-logistics.ts',args:['food-chain']},
   {script:'scripts/aio.ts',args:['skiller','food-courier']},
-  {script:'scripts/chain.ts',args:['scripts/foodcourier.ts "unterminated']},
+  {script:'scripts/chain.ts',args:['scripts/aio-logistics.ts "unterminated']},
  ])expect(demand({...base,...route})).toBe(false);
 });
 

@@ -1,10 +1,10 @@
 {
   "id": "wine-stock-order",
   "goal": "Produce an exact owned order of preserved unfermented wine from grapes and jugs of water, reconcile all inputs and outputs, and supply the existing Cooking consumer.",
-  "entry": "scripts/make-wine-order.ts",
+  "entry": "scripts/aio-logistics.ts",
   "files": [
-    "scripts/make-wine-order.ts",
-    "scripts/make-wine-order.test.ts",
+    "packages/workers/src/logistics/hub-bank.ts",
+    "packages/workers/test/logistics.test.ts",
     "packages/practice/src/wine-stock-order-proof.ts",
     "packages/practice/test/wine-stock-order-proof.test.ts",
     "scripts/aio-logistics.ts",
@@ -19,7 +19,7 @@
       "command": [
         "bun",
         "test",
-        "scripts/make-wine-order.test.ts",
+        "packages/workers/test/logistics.test.ts",
         "packages/practice/test/wine-stock-order-proof.test.ts",
         "scripts/cook-wine.test.ts",
         "--timeout",

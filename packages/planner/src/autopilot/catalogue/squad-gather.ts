@@ -191,7 +191,7 @@ export function squadWorldGatherers(): Template[] {
     };
     const whiteBerries: Template = {
         id: 'squad-white-berries', family: 'gather-spawn', script: 'scripts/chain.ts',
-        args: ['scripts/walk-to.ts 2262 3168', 'scripts/gather-spawn.ts 239 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
+        args: ['scripts/aio-logistics.ts walk-to 2262 3168', 'scripts/gather-spawn.ts 239 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
         goal: 'gather white berries in Isafdar (post-Regicide, non-Wilderness) for super defence potions',
         resources: ['squad:isafdar-berries'], squadOnly: true, repeats: false,
         needs: { quests: ['Regicide'] },
@@ -199,14 +199,14 @@ export function squadWorldGatherers(): Template[] {
     };
     const barbarianPlanks: Template = {
         id: 'squad-barbarian-planks', family: 'gather-spawn', script: 'scripts/chain.ts',
-        args: ['scripts/walk-to.ts 2552 3574', 'scripts/gather-spawn.ts 960 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'supply',
+        args: ['scripts/aio-logistics.ts walk-to 2552 3574', 'scripts/gather-spawn.ts 960 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'supply',
         goal: 'gather planks at Barbarian Outpost (non-Wilderness) for quest demand',
         resources: ['squad:barbarian-planks'], squadOnly: true, repeats: false,
         yields: () => [{ item: 'plank', perTick: 0.08 }],
     };
     const gnomeToads: Template = {
         id: 'squad-gnome-toads', family: 'gather-spawn', script: 'scripts/chain.ts',
-        args: ['scripts/walk-to.ts 2417 3512', 'scripts/gather-spawn.ts 2150 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
+        args: ['scripts/aio-logistics.ts walk-to 2417 3512', 'scripts/gather-spawn.ts 2150 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
         goal: 'gather swamp toads in Tree Gnome Stronghold for agility potions',
         resources: ['squad:gnome-toads'], squadOnly: true, repeats: false,
         yields: () => [{ item: 'swamp toad', perTick: 0.12 }],
@@ -223,7 +223,7 @@ export function squadWorldGatherers(): Template[] {
 
 export const squadKaramjaEggs = (): Template => ({
     id: 'squad-karamja-red-spiders-eggs', family: 'gather-spawn', script: 'scripts/chain.ts',
-    args: ['scripts/walk-to.ts 2832 9586', 'scripts/gather-spawn.ts 223 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
+    args: ['scripts/aio-logistics.ts walk-to 2832 9586', 'scripts/gather-spawn.ts 223 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
     goal: "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
     resources: ['squad:karamja-red-spiders-eggs'], squadOnly: true, repeats: false,
     needs: { items: { coins: 120 }, food: 4, anyOf: [{ skills: { Hitpoints: 23 } }, { combat: 34 }, { skills: { Prayer: 43 } }] },

@@ -37,7 +37,7 @@ test('a table entry fails when its file is gone, has a header comment, has a rou
 
 test('the index covers scripts/ in every folder and the command files under packages/', () => {
  const paths = new Set(index.map(l => l.path));
- for (const f of ['scripts/aio.ts', 'scripts/coin-courier.ts', 'scripts/generated/quest-hetty.ts', 'scripts/measure/fleet-cow-path.ts', 'scripts/pk-live/live-pilot.ts',
+ for (const f of ['scripts/aio.ts', 'scripts/aio-logistics.ts', 'scripts/generated/quest-hetty.ts', 'scripts/measure/fleet-cow-path.ts', 'scripts/pk-live/live-pilot.ts',
   'scripts/proven/gather.ts', 'scripts/demo/smoke.ts', 'packages/router/src/coordinator-cli.ts', 'packages/router/src/coverage.ts', 'packages/router/src/live-update.ts', 'packages/dashboard/publish.ts'])
   expect(paths.has(f), f).toBe(true);
  expect([...paths].filter(f => f.endsWith('.test.ts'))).toEqual([]);
@@ -49,8 +49,8 @@ test('the index covers scripts/ in every folder and the command files under pack
 
 test('a script takes the group of its first route, and a route description comes before every other source', () => {
  const line = (path: string) => index.find(l => l.path === path)!;
- expect(line('scripts/coin-courier.ts')).toMatchObject({group: 'logistics', source: 'route'});
- expect(line('scripts/coin-courier.ts').description).toStartWith('logistics coin-courier: ');
+ expect(line('scripts/aio-logistics.ts')).toMatchObject({group: 'logistics', source: 'route'});
+ expect(line('scripts/aio-logistics.ts').description).toStartWith('logistics coin-courier: ');
  expect(line('scripts/gather-fish.ts').description).toContain('; skiller fishing:harpoon: ');
  expect(line('scripts/swarm.ts')).toMatchObject({group: 'tools', source: 'outside', description: OUTSIDE_CATALOG['scripts/swarm.ts']!});
  expect(line('scripts/generated/quest-lib.ts')).toMatchObject({group: 'helpers', source: 'header'});

@@ -20,7 +20,7 @@ import {SPECIALIST_COMBAT_QUESTS_CASES} from './specialist-combat-quests-cases';
 import {SUPPLY_BENCH_CASES} from './supply-bench-cases';
 import {OVERALL_PVP_CASES} from './overall-pvp-cases';
 import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
-import {ATTACK_SPECIALIST_KIT} from '../specialist-supplier';
+import {ATTACK_SPECIALIST_KIT} from '../../packages/workers/src/logistics';
 
 // Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
 // deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
@@ -706,7 +706,7 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'logistics:food-courier', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['food-courier', 'OUTBOUND_ONLY=1', 'FEATHERS=0', 'CAP=1200'], pass: s => ok(s) && s.includes('outboundOnly=true'),
     presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 40}, coins: 20380, inventory: [{id: 315, count: 1}, {id: 2309, count: 1}]}},
   {key: 'logistics:bank-sort', script: 'scripts/aio-logistics.ts', preset: 'bank_gems', scriptArgs: ['bank-sort', '200', '20', 'name'], pass: ok, presetConfig: {...PRESETS.bank_gems!, position: {x: 3092, z: 3242, level: 0}, bank: [{id: 1631, count: 270}, {id: 995, count: 50}, {id: 1511, count: 5}, {id: 314, count: 40}, {id: 2349, count: 3}]}},
-  {key: 'logistics:wine-stock', script: 'scripts/make-wine-order.ts', preset: 'fresh_lumbridge', scriptArgs: ['2', '300', '2'],
+  {key: 'logistics:wine-stock', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['wine-stock', '2', '300', '2'],
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Cooking: 82}, inventory: [{id: 995, count: 777}], bank: [{id: 1987, count: 4}, {id: 1937, count: 4}, {id: 2347, count: 1}]},
     pass: s => /^RESULT ok preservedWine=2 grapesUsed=2 waterUsed=2 assets=1\b/m.test(s) && /WINE_STOCK_RESULT .*"ok":true,"made":2,"noted":2/.test(s) && /^LOGOUT logged-out$/m.test(s),
     output: /preservedWine=(\d+)/},
@@ -716,10 +716,10 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3107, z: 3491, level: 0}, skills: {Hitpoints: 60, Defence: 60}},
     pass: s => ok(s) && /WALK_EDGE \{"ok":true,/.test(s) && /"loggedOut":true/.test(s) && s.includes('LOGOUT logged-out')},
   // The poison cure drinks one antipoison: from the pack at once, or from the bank beside the account.
-  {key: 'logistics:cure-poison', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+  {key: 'logistics:cure-poison', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['cure-poison'],
     presetConfig: {position: {x: 3185, z: 3438, level: 0}, inventory: [{id: 175, count: 1}]},
     pass: s => ok(s) && /cure-poison drank Antipoison\(3\) from the pack/.test(s) && s.includes('LOGOUT logged-out')},
-  {key: 'extra:cure-poison-bank', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+  {key: 'extra:cure-poison-bank', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['cure-poison'],
     presetConfig: {position: {x: 3185, z: 3438, level: 0}, inventory: [], bank: [{id: 175, count: 2}]},
     pass: s => ok(s) && /cure-poison drank Antipoison\(3\) from the bank/.test(s) && s.includes('LOGOUT logged-out')},
   // Hold an ordinary offensive prayer with the guard disabled, then restore the spent points through the AIO
@@ -727,6 +727,14 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'logistics:restore-prayer', script: 'scripts/measure/restore-prayer-entry.ts', preset: 'fresh_lumbridge', scriptArgs: [],
     presetConfig: {position: {x: 3241, z: 3205, level: 0}, skills: {Hitpoints: 60, Prayer: 43}},
     pass: s => ok(s) && /"drained":true/.test(s) && /pray-at-altar prayer 43 at the Lumbridge church/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'logistics:recover-trapped', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['recover-trapped', '600', '--target=3092,3243,0'],
+    presetConfig: {position: {x: 3205, z: 3209, level: 1}},
+    pass: s => ok(s) && /RECOVER_TRAPPED .*"ok":true/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'logistics:inspect', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['inspect', '--require-bank'],
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 995, count: 100}]},
+    pass: s => ok(s) && /INSPECT /.test(s) && /BANK_OBSERVED /.test(s) && s.includes('LOGOUT logged-out')},
   {key: 'fighter:imp', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['imp', 'CAP=1400', 'MAX_KILLS=1'], pass: ok, presetConfig: {position: {x: 2655, z: 3283, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], inventory: [{id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}]}},
   {key: 'fighter:fire-giant', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['fire-giant', 'CAP=1400'], pass: ok, presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Hitpoints: 99, Prayer: 99, Defence: 99}, varps: {65: 10}, bank: [{id: 294, count: 1}, {id: 329, count: 16}]}},
   {key: 'fighter:fire-combat', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['fire-combat', 'CAP=1600'], pass: ok, timeoutMs: 900_000, presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 43}, varps: {65: 10}, bank: [{id: 295, count: 1}, {id: 954, count: 1}, {id: 329, count: 16}, {id: 1331, count: 1}, {id: 1171, count: 1}]}},
@@ -2147,12 +2155,12 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'skiller:woodcutting:loop': 'worker scripts/wc-loop.ts needs the lite runner, not the in-process client',
   'skiller:cooking:ge-cook': 'needs the Grand Exchange service',
   'skiller:firemaking:ge': 'needs the Grand Exchange service',
-  'logistics:give-to-banker': 'needs scripts/banker.ts running for the banker account',
-  'logistics:take-from-banker': 'needs scripts/banker.ts running for the banker account',
+  'logistics:give-to-banker': 'needs scripts/aio-logistics.ts banker running for the banker account',
+  'logistics:take-from-banker': 'needs scripts/aio-logistics.ts banker running for the banker account',
   'logistics:supply-holder': 'serves trades from a specialist and a courier that other processes drive',
   'logistics:gathering-supplier': 'serves trades from a specialist runner that another process drives; covered as companion in extra:specialist-<skill> gathering cases',
   'logistics:specialist-supplier': 'serves trades from a specialist runner that another process drives; covered as companion in extra:specialist-attack',
-  'fighter:attack-specialist': 'needs scripts/specialist-supplier.ts running as a companion process; covered end-to-end in extra:specialist-attack',
+  'fighter:attack-specialist': 'needs scripts/aio-logistics.ts specialist-supplier running as a companion process; covered end-to-end in extra:specialist-attack',
   'quester:mode:hero-owned': 'needs an order file that names two owned accounts',
   'quester:mode:legends-owned': 'needs an order file that names the owned account',
   'logistics:loadout-import': 'offline setup conversion; the CLI and chain adapter are covered by unit tests without a game engine',

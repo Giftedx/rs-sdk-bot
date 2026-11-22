@@ -21,7 +21,7 @@ import {
     kitRequirements,
     kitSlotTotal,
     moveGroundTo,
-} from './specialist-supplier';
+} from '../packages/workers/src/logistics';
 
 const ROOT = resolve(import.meta.dir, '..');
 const ITEMS: { id: number; name: string; tradeable?: boolean }[] = JSON.parse(
@@ -77,7 +77,7 @@ test('progression catalog and live work gate admit attack-specialist across Atta
         objective: 'fresh-clock Attack 99 specialist route',
         units: 1,
     });
-    expect(intentForEntry('scripts/specialist-supplier.ts', ['Moneyshot', 'Hiltsdeep'], {})).toEqual({
+    expect(intentForEntry('scripts/aio-logistics.ts', ['specialist-supplier', 'Moneyshot', 'Hiltsdeep'], {})).toEqual({
         kind: 'service',
         objective: 'stage or hand off specialist supply kit',
         units: 1,
@@ -85,7 +85,7 @@ test('progression catalog and live work gate admit attack-specialist across Atta
 
     const catalog = loadProgressionCatalog();
     expect(() => preflightProgressionWork(work, 'rs-sdk-demo.fly.dev', catalog, 'Hiltsdeep')).not.toThrow();
-    expect(() => preflightProgressionWork({ script: 'scripts/specialist-supplier.ts', args: ['Moneyshot', 'Hiltsdeep'], env: {} }, 'rs-sdk-demo.fly.dev', catalog, 'Moneyshot')).not.toThrow();
+    expect(() => preflightProgressionWork({ script: 'scripts/aio-logistics.ts', args: ['specialist-supplier', 'Moneyshot', 'Hiltsdeep'], env: {} }, 'rs-sdk-demo.fly.dev', catalog, 'Moneyshot')).not.toThrow();
 
     const now = Date.now();
     for (const atkLevel of [1, 60, 94, 98]) {
@@ -209,7 +209,8 @@ test('parseSpecialistBenchArgs splits child env overrides from positional specia
         bot: 'aiobf1',
         supplier: 'aiobf1s',
         specialistScript: 'scripts/attack-specialist.ts',
-        supplierScript: 'scripts/specialist-supplier.ts',
+        supplierScript: 'scripts/aio-logistics.ts',
+        supplierRole: 'specialist-supplier',
         specialistArgs: ['5000'],
         childEnv: { LOOT_WATCH: '0', PRAYER_GUARD: '0', EAT_GUARD: '0' },
     });

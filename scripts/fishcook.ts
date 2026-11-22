@@ -13,7 +13,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, finish, countItems, randomEventsOf, serverFromEnv, sessionDied } from '../packages/core/src/bot';
-import { sendHandoff } from './courier-handoff';
+import { sendHandoff } from '../packages/workers/src/logistics';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { depositObserved } from '../packages/core/src/deposit';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';

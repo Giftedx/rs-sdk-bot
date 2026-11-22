@@ -41,7 +41,7 @@ export function armyQuestAndHuntTemplates(): { quests: Template[]; hunt: Templat
     };
     const fletch: Template = {
         id: 'army-fletch-25', family: 'fletch', script: 'scripts/chain.ts', pilot: true, buildOnly: true, route: 'The Fremennik Trials', role: 'fletching',
-        args: [`scripts/walk-to.ts ${ARMY_BANK.x} ${ARMY_BANK.z}`, `scripts/fletch-arrows.ts 3000 headless MAX_MAKE=${FLETCH_MAKE} SHAFT_RESERVE=${FLETCH_KEEP} FEATHER_RESERVE=${FLETCH_KEEP} BANK_PACK=1`],
+        args: [`scripts/aio-logistics.ts walk-to ${ARMY_BANK.x} ${ARMY_BANK.z}`, `scripts/fletch-arrows.ts 3000 headless MAX_MAKE=${FLETCH_MAKE} SHAFT_RESERVE=${FLETCH_KEEP} FEATHER_RESERVE=${FLETCH_KEEP} BANK_PACK=1`],
         env: { ROUNDS: '1' }, goal: 'make headless arrows to the Fletching 25 that The Fremennik Trials ask', tier: 'goal', band: FREMENNIK_BAND - 0.01, repeats: false,
         trains: { skill: 'Fletching', to: FLETCH_TO, unlocks: [fremennik.id] }, yields: () => [],
         needs: { items: { 'arrow shaft': FLETCH_MAKE + FLETCH_KEEP, feather: FLETCH_MAKE + FLETCH_KEEP } },
@@ -49,7 +49,7 @@ export function armyQuestAndHuntTemplates(): { quests: Template[]; hunt: Templat
     const FLETCH_30_MAKE = 540;
     const questFletch30: Template = {
         id: 'army-quest-fletch-30', family: 'fletch', script: 'scripts/chain.ts', pilot: true, noReserve: true, role: 'fletching',
-        args: [`scripts/walk-to.ts ${ARMY_BANK.x} ${ARMY_BANK.z}`, `scripts/fletch-arrows.ts 3000 headless MAX_MAKE=${FLETCH_30_MAKE} SHAFT_RESERVE=${FLETCH_KEEP} FEATHER_RESERVE=${FLETCH_KEEP} BANK_PACK=1`],
+        args: [`scripts/aio-logistics.ts walk-to ${ARMY_BANK.x} ${ARMY_BANK.z}`, `scripts/fletch-arrows.ts 3000 headless MAX_MAKE=${FLETCH_30_MAKE} SHAFT_RESERVE=${FLETCH_KEEP} FEATHER_RESERVE=${FLETCH_KEEP} BANK_PACK=1`],
         env: { ROUNDS: '1' }, goal: 'make headless arrows to reach Fletching 30 for quest board progression', tier: 'goal', band: QUEST_DEMAND_BAND - 0.02, repeats: false,
         trains: { skill: 'Fletching', to: 30, unlocks: questDemand().map(q => q.id) }, yields: () => [],
         needs: { items: { 'arrow shaft': FLETCH_30_MAKE + FLETCH_KEEP, feather: FLETCH_30_MAKE + FLETCH_KEEP } },

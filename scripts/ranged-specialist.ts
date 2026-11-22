@@ -25,113 +25,37 @@ import {
 import { runDwarfCannon } from './generated/dwarfcannon';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 
-export interface KitSpecItem {
-    readonly id: number;
-    readonly name: string;
-    readonly count: number;
-    readonly stackable: boolean;
-}
+import {
+    EDGEVILLE_SUPPLIER_STAND,
+    LUMBRIDGE_HANDOFF,
+    RANGED_SPECIALIST_KIT,
+    RANGED_SPECIALIST_LIVE_KIT,
+    RANGED_SPECIALIST_LIVE_TRADE1,
+    RANGED_SPECIALIST_LIVE_TRADE2,
+    RANGED_SPECIALIST_MSB_KIT,
+    RANGED_SPECIALIST_MSB_TRADE1,
+    RANGED_SPECIALIST_MSB_TRADE2,
+    RANGED_SPECIALIST_TRADE1,
+    RANGED_SPECIALIST_TRADE2,
+    type KitSpecItem,
+} from '../packages/workers/src/logistics';
+
+export {
+    EDGEVILLE_SUPPLIER_STAND,
+    LUMBRIDGE_HANDOFF,
+    RANGED_SPECIALIST_KIT,
+    RANGED_SPECIALIST_LIVE_KIT,
+    RANGED_SPECIALIST_LIVE_TRADE1,
+    RANGED_SPECIALIST_LIVE_TRADE2,
+    RANGED_SPECIALIST_MSB_KIT,
+    RANGED_SPECIALIST_MSB_TRADE1,
+    RANGED_SPECIALIST_MSB_TRADE2,
+    RANGED_SPECIALIST_TRADE1,
+    RANGED_SPECIALIST_TRADE2,
+    type KitSpecItem,
+};
 
 export type RangedKitVariant = 'knives' | 'msb' | 'live';
-
-// Trade 1 at Lumbridge (28 slots): bones buried immediately (16 free slots left for Dwarf Cannon).
-export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
-    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 6, name: 'Cannon base', count: 1, stackable: false },
-    { id: 8, name: 'Cannon stand', count: 1, stackable: false },
-    { id: 10, name: 'Cannon barrels', count: 1, stackable: false },
-    { id: 12, name: 'Cannon furnace', count: 1, stackable: false },
-    { id: 2, name: 'Cannonball', count: 2000, stackable: true },
-    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
-    { id: 863, name: 'Iron knife', count: 250, stackable: true },
-    { id: 1129, name: 'Leather body', count: 1, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 5, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
-] as const;
-
-// Trade 2 at Edgeville after Dwarf Cannon (19 slots): knives, full 1-def BIS Ranged armor, pots, and 28 Super restore doses.
-export const RANGED_SPECIALIST_TRADE2: readonly KitSpecItem[] = [
-    { id: 868, name: 'Rune knife', count: 2000, stackable: true },
-    { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
-    { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
-    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
-    { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
-    { id: 2448, name: 'Superantipoison(4)', count: 2, stackable: false },
-    { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 7, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 2, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
-] as const;
-
-export const RANGED_SPECIALIST_MSB_TRADE1: readonly KitSpecItem[] = RANGED_SPECIALIST_TRADE1;
-
-// MSB Trade 2 at Edgeville after Dwarf Cannon (20 slots): Magic shortbow + Rune arrows, full BIS armor, pots, and restores.
-export const RANGED_SPECIALIST_MSB_TRADE2: readonly KitSpecItem[] = [
-    { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
-    { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
-    { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
-    { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
-    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
-    { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
-    { id: 2448, name: 'Superantipoison(4)', count: 2, stackable: false },
-    { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 7, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 2, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
-] as const;
-
-// Live-stockable Trade 1 at Lumbridge (24 slots): uses locally stocked cannon/bones/pots/food + Lowe's shortbow/arrows.
-export const RANGED_SPECIALIST_LIVE_TRADE1: readonly KitSpecItem[] = [
-    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 6, name: 'Cannon base', count: 1, stackable: false },
-    { id: 8, name: 'Cannon stand', count: 1, stackable: false },
-    { id: 10, name: 'Cannon barrels', count: 1, stackable: false },
-    { id: 12, name: 'Cannon furnace', count: 1, stackable: false },
-    { id: 2, name: 'Cannonball', count: 1500, stackable: true },
-    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 841, name: 'Shortbow', count: 1, stackable: false },
-    { id: 884, name: 'Iron arrow', count: 300, stackable: true },
-    { id: 1129, name: 'Leather body', count: 1, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
-    { id: 379, name: 'Lobster', count: 3, stackable: false },
-] as const;
-
-// Live-stockable Trade 2 at Edgeville (21 slots): MSB + Rune arrows, black d'hide chaps/vambs, 8 Karamja Antipoison(3), 7 Prayer pots.
-export const RANGED_SPECIALIST_LIVE_TRADE2: readonly KitSpecItem[] = [
-    { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
-    { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
-    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
-    { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
-    { id: 175, name: 'Antipoison(3)', count: 8, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 7, stackable: false },
-    { id: 379, name: 'Lobster', count: 2, stackable: false },
-] as const;
-
-function mergeKitSpecs(a: readonly KitSpecItem[], b: readonly KitSpecItem[]): readonly KitSpecItem[] {
-    const order: KitSpecItem[] = [];
-    const byId = new Map<number, KitSpecItem>();
-    for (const item of [...a, ...b]) {
-        const cur = byId.get(item.id);
-        if (cur) {
-            const merged = { ...cur, count: cur.count + item.count };
-            byId.set(item.id, merged);
-            order[order.findIndex(x => x.id === item.id)] = merged;
-        } else {
-            const copy = { ...item };
-            byId.set(item.id, copy);
-            order.push(copy);
-        }
-    }
-    return order;
-}
-
-export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = mergeKitSpecs(RANGED_SPECIALIST_TRADE1, RANGED_SPECIALIST_TRADE2);
-
-export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = mergeKitSpecs(RANGED_SPECIALIST_MSB_TRADE1, RANGED_SPECIALIST_MSB_TRADE2);
-
-export const RANGED_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = mergeKitSpecs(RANGED_SPECIALIST_LIVE_TRADE1, RANGED_SPECIALIST_LIVE_TRADE2);
 
 export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
     if (variant === 'msb') return { trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 };
@@ -145,10 +69,8 @@ export function variantKit(variant: RangedKitVariant = 'knives'): readonly KitSp
     return RANGED_SPECIALIST_KIT;
 }
 
-export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
 export const SUPPLIER_STAND = { x: 3223, z: 3222, level: 0 } as const;
 export const EDGEVILLE_HANDOFF = { x: 3088, z: 3496, level: 0 } as const;
-export const EDGEVILLE_SUPPLIER_STAND = { x: 3089, z: 3496, level: 0 } as const;
 export const CASTLE_WARS = { x: 2440, z: 3089, level: 0 } as const;
 export const AL_KHARID = { x: 3315, z: 3235, level: 0 } as const;
 export const EDGEVILLE = { x: 3087, z: 3496, level: 0 } as const;

@@ -138,7 +138,7 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
  for(const row of state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&!generatedObservationConsumer(r.spec)&&!r.spec.sessionRecovery&&!dead.has(r.spec.id))){
   const t=row.spec,names=boundAccounts(t,state),skills=Object.keys(t.accept?.skills??{}).length===1,bank=!skills&&Object.keys(t.accept?.bank??{}).length>0;
   if(t.launch&&t.launch!=='ordinary'||names?.length!==1||!eligible(names[0]!)||!skills&&!bank)continue;
-  if(entryOf(t.capability!)==='scripts/fleet-inspect.ts')continue;
+  if(entryOf(t.capability!)==='scripts/aio-logistics.ts'&&(!t.args?.length||t.args[0]==='inspect'))continue;
   observe(t,names[0]!,statusOf(names[0]!),bank);
  }
  return{added,linked:[...new Set(linked)],prepared,invalidated:[...new Set(invalidated)]};

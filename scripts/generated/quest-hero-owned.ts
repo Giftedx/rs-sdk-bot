@@ -7,7 +7,7 @@ import{componentId}from'../../packages/core/src/logout';
 import nativeItems from'../../knowledge/items.json';
 import{parseConfigs}from'../../packages/knowledge/src/config';
 import{questFlags}from'../../packages/core/src/quest-status';import{openQuest}from'./quest-lib';import{productionStopRequested}from'../microbot-c-lifetime';
-import{createHandoff}from'../courier-handoff';import{questFoodDefinitions}from'../quest-sustain';
+import{createHandoff}from'../../packages/workers/src/logistics';import{questFoodDefinitions}from'../quest-sustain';
 import{guardianLoadedSight}from'../microbot-c-clue-guardian-travel';import{nativeNpcSpell,npcCastEffect}from'../microbot-magic-npc';import{elementalRuneCost}from'../microbot-magic-items';
 import{runBankJob,type BankJob}from'../microbot-bank-jobs';import{potionCareRecipe}from'../microbot-potion-care';import{cookingRecipes,nativeHeatSources,runCookingBatch}from'../microbot-b-cooking';
 export type HeroesOrder={blackArm:string;phoenix:string;server:string;goal:string;cap:number;returnTicks:number;xpRate:number;maximumCasts:number;maximumBait:number;coinBudget:number};

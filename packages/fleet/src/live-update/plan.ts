@@ -121,7 +121,7 @@ function tradePartnerBlocked(root: string, server: string, account: string, acti
     try { checkLogout(partner); return false; } catch { return true; }
 }
 
-export const TRADE_ENTRY = 'scripts/fleet-trade.ts', TRADE_HOLD_MS = 45 * 60_000;
+export const TRADE_ENTRY = 'scripts/aio-logistics.ts', TRADE_HOLD_MS = 45 * 60_000;
 export const LIVE_ROW_MS = 200_000, LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 
 export function liveRuns(root: string, server: string, closure: (entries: string[]) => string[], now = Date.now(), options?: LiveRunsOptions): LiveRun[] {

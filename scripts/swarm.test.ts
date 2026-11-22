@@ -117,7 +117,7 @@ test('invalid, stale and repeated repair requests cannot reopen completed work o
 
 test('food courier admission needs owned active low-food farm and dated cooked source bank; default jobs stay unchanged',()=>{
     const now=100000,owned=new Set(['farm','cook']);
-    const job:Job={account:'Courier',script:'scripts/foodcourier.ts',enabled:true,whenFoodLowFrom:['Farm'],foodSourceAccount:'Cook'};
+    const job:Job={account:'Courier',script:'scripts/aio-logistics.ts',args:['food-courier'],enabled:true,whenFoodLowFrom:['Farm'],foodSourceAccount:'Cook'};
     const farm={name:'Farm',server:'rs-sdk-demo.fly.dev',at:now-1000,result:'',bankAt:now-2000,bank:[{id:333,count:50}],inventory:[{id:329,count:25}]};
     const cook={name:'Cook',server:'rs-sdk-demo.fly.dev',at:now,result:'',bankAt:now-5000,bank:[{id:329,count:100}]};
     const demand=(f:any=farm,c:any=cook,j:Job=job,o=owned)=>foodSupplyDemand(j,[f,c],o,now);
@@ -237,7 +237,7 @@ test('coordinator mission handoff clears supply-exhausted blocked ends with conf
   writeFileSync(join(prac,'swarm-runs.json'),'[]');
   const endFile=join(prac,'swarm-deaths.json');
   persistEnded(endFile,new Map([[account,{at:created+30,reason:'blocked after 1 runs',revision:missionSignature(oldJob)}]]));
-  installJob({id:'courier-new',kind:'run',goal:'skills',account} as any,account,'scripts/coin-courier.ts',runId,'source',{},{base,freeGB:64});
+  installJob({id:'courier-new',kind:'run',goal:'skills',account} as any,account,'scripts/aio-logistics.ts',runId,'source',{args:['coin-courier']},{base,freeGB:64});
   const job=readCoordinatorJobs(base).jobs[0] as Job;
   const handoff=(supply:boolean)=>({job,paused:false,active:[] as string[],stopped:()=>false,
    settled:(name:string)=>readLogoutProof(name,'rs-sdk-demo.fly.dev',{root:lifecycle}).state==='confirmed',
@@ -535,7 +535,7 @@ test('payout wake rejects foreign/far/stale/malformed/offline recipients and wor
 
 test('either configured cook and retained courier notes keep a hungry farm supplied',()=>{
     const now=100000,owned=new Set(['farm','first','second','courier']);
-    const job:Job={account:'Courier',script:'scripts/foodcourier.ts',enabled:true,whenFoodLowFrom:['Farm'],foodSourceAccounts:['First','Second'],sourceFoodMinimum:1};
+    const job:Job={account:'Courier',script:'scripts/aio-logistics.ts',args:['food-courier'],enabled:true,whenFoodLowFrom:['Farm'],foodSourceAccounts:['First','Second'],sourceFoodMinimum:1};
     const farm={name:'Farm',server:'rs-sdk-demo.fly.dev',at:now,result:'',bankAt:now-1,bank:[],inventory:[]};
     const second={name:'Second',server:'rs-sdk-demo.fly.dev',at:now,result:'',bankAt:now-1,bank:[{id:333,count:170}]};
     expect(foodSupplyDemand(job,[farm,second],owned,now)).toBe(true);

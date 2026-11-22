@@ -23,7 +23,7 @@ import {PROFILES,buyWithBudget,maximumUnitCost} from '../packages/workers/src/ma
 import {chickenTrainingProfile} from './train-chickens';
 import {startQuestSustain,questFoodDefinitions,selectQuestFood} from './quest-sustain';
 import {loadTravel} from '../packages/core/src/travel';
-import {LUMBRIDGE_TO_DRAYNOR} from './courier-route';
+import {LUMBRIDGE_TO_DRAYNOR} from '../packages/workers/src/logistics';
 
 export const AIR=556,MIND=558,COINS=995;
 export const TELE_RUNE_IDS={air:AIR,mind:MIND,earth:557,water:555,fire:554,law:563} as const;

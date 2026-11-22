@@ -16,11 +16,11 @@ import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {validOrder,type Order} from '../../core/src/fleet-trade-settlement';
 
 const root=resolve(import.meta.dir,'../../..');
-const sourceFiles=['packages/practice/src/fleet-trade-capacity-proof.ts','scripts/fleet-trade.ts','knowledge/items.json',
+const sourceFiles=['packages/practice/src/fleet-trade-capacity-proof.ts','scripts/aio-logistics.ts','packages/workers/src/logistics/trade.ts','knowledge/items.json',
  'packages/core/src/deposit.ts','packages/core/src/bot.ts','packages/core/src/inprocess.ts','vendor/rs-sdk/sdk/actions.ts',
  'vendor/rs-sdk/server/webclient/src/config/ObjType.ts'];
 const digest=(file:string)=>createHash('sha256').update(readFileSync(join(root,file))).digest('hex');
-const entries=['scripts/fleet-trade.ts','packages/practice/src/fleet-trade-capacity-proof.ts'];
+const entries=['scripts/aio-logistics.ts','packages/practice/src/fleet-trade-capacity-proof.ts'];
 const diagnosticFiles=()=>Object.fromEntries(sourceFiles.map(file=>[file,digest(file)]));
 const source=()=>({runtime:cachedReleaseFor(entries,root),files:diagnosticFiles()});
 type Save=ReturnType<typeof readPracticeSave>;
@@ -38,7 +38,7 @@ const totals=(save:Save,containers=[93,94,95])=>{
 export function fleetTradeCapacityRecord(file:string,order:Order,account:string,env:Record<string,string|undefined>=process.env){
  if(!file.endsWith('.json')||file.includes('\0')||!validOrder(order)||![order.from,order.to].some(n=>n.toLowerCase()===account.toLowerCase()))throw Error('finite participant order required');
  if(JSON.stringify(JSON.parse(readFileSync(file,'utf8')))!==JSON.stringify(order))throw Error('native order record differs');
- return{script:'scripts/fleet-trade.ts',argv:[account,file],env:{...env,COORDINATOR_RUN_ID:undefined,
+ return{script:'scripts/aio-logistics.ts',argv:[account,'fleet-trade',file],env:{...env,COORDINATOR_RUN_ID:undefined,
   COORDINATOR_PARTICIPANTS:JSON.stringify([order.from,order.to]),PROGRESSION_CONSUMER:undefined,PROGRESSION_METHOD:undefined,PROGRESSION_SOURCE:undefined}};
 }
 
@@ -121,7 +121,7 @@ export async function runFleetTradeCapacity(directory:string){
 import {openBot,settle} from ${JSON.stringify(moduleUrl('packages/core/src/bot.ts'))};
 import {readLogoutProof} from ${JSON.stringify(moduleUrl('packages/core/src/session-lifecycle.ts'))};
 import {waitTicks} from ${JSON.stringify(moduleUrl('packages/core/src/ticks.ts'))};
-import {performFleetTransfer,runOrderWork,watchTradeScreen} from ${JSON.stringify(moduleUrl('scripts/fleet-trade.ts'))};
+import {performFleetTransfer,runOrderWork,watchTradeScreen} from ${JSON.stringify(moduleUrl('packages/workers/src/logistics/index.ts'))};
 import {fleetTradeCapacityRecord} from ${JSON.stringify(moduleUrl('packages/practice/src/fleet-trade-capacity-proof.ts'))};
 const names=${JSON.stringify(names)},sessions=[],progress=[{uncertain:false,count:0},{uncertain:false,count:0}],off=[];
 let ok=false,error='';const at=Date.now();

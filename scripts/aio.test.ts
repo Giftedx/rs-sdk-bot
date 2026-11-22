@@ -117,8 +117,8 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
    env: { ITEM_ID: '385', QUANTITY: '20' },
   });
   expect(resolveLogisticsStep('coin-courier', ['25000'])).toEqual({
-   script: 'scripts/coin-courier.ts',
-   args: ['25000'],
+   script: 'scripts/aio-logistics.ts',
+   args: ['coin-courier', '25000'],
    env: {},
   });
   expect(resolveAioStep('skiller', ['woodcutting', 'edgeville', 'TARGET_LEVEL=60'])).toEqual({

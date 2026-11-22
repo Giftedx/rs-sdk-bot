@@ -9,16 +9,16 @@ test('a chain step splits into script, arguments and its own environment', () =>
 
 test.each(['RESULT fail died', 'RESULT fail Courier prerequisite: combat29 required', 'RESULT fail session ended: disconnected', 'RESULT fail no result'])('failed prerequisite ends the chain and preserves %s', async failure => {
     const calls: string[] = [];
-    const result = await runChain([parseStep('scripts/foodcourier.ts'), parseStep('scripts/aio-market.ts shop-buy ardy')], 2, {
+    const result = await runChain([parseStep('scripts/aio-logistics.ts food-courier'), parseStep('scripts/aio-market.ts shop-buy ardy')], 2, {
         stopped: () => false, log: () => {}, run: async step => { calls.push(step.script); return failure; },
     });
-    expect(calls).toEqual(['scripts/foodcourier.ts']);
+    expect(calls).toEqual(['scripts/aio-logistics.ts']);
     expect(result).toBe(`${failure} chain rounds=1 ok=0 failed=1`);
 });
 
 test('a prior successful step never masks a later death or starts another round', async () => {
     let calls = 0;
-    const result = await runChain([parseStep('scripts/walk-to.ts'), parseStep('scripts/foodcourier.ts'), parseStep('scripts/aio-market.ts')], 0, {
+    const result = await runChain([parseStep('scripts/aio-logistics.ts walk-to'), parseStep('scripts/aio-logistics.ts food-courier'), parseStep('scripts/aio-market.ts')], 0, {
         stopped: () => false, log: () => {}, run: async () => ++calls === 1 ? 'RESULT ok staged' : 'RESULT fail died',
     });
     expect(calls).toBe(2);
@@ -27,7 +27,7 @@ test('a prior successful step never masks a later death or starts another round'
 
 test('an owner stop after a successful step prevents the next step', async () => {
     let stopped = false, calls = 0;
-    const result = await runChain([parseStep('scripts/walk-to.ts'), parseStep('scripts/foodcourier.ts')], 1, {
+    const result = await runChain([parseStep('scripts/aio-logistics.ts walk-to'), parseStep('scripts/aio-logistics.ts food-courier')], 1, {
         stopped: () => stopped, log: () => {}, run: async () => { calls++; stopped = true; return 'RESULT ok staged'; },
     });
     expect(calls).toBe(1);
@@ -36,16 +36,16 @@ test('an owner stop after a successful step prevents the next step', async () =>
 
 test('successful finite rounds keep their ordering and totals', async () => {
     const calls: string[] = [];
-    const result = await runChain([parseStep('scripts/walk-to.ts'), parseStep('scripts/aio-market.ts')], 2, {
+    const result = await runChain([parseStep('scripts/aio-logistics.ts walk-to'), parseStep('scripts/aio-market.ts')], 2, {
         stopped: () => false, log: () => {}, run: async step => { calls.push(step.script); return 'RESULT ok product'; },
     });
-    expect(calls).toEqual(['scripts/walk-to.ts', 'scripts/aio-market.ts', 'scripts/walk-to.ts', 'scripts/aio-market.ts']);
+    expect(calls).toEqual(['scripts/aio-logistics.ts', 'scripts/aio-market.ts', 'scripts/aio-logistics.ts', 'scripts/aio-market.ts']);
     expect(result).toBe('RESULT ok chain rounds=2 ok=4 failed=0');
 });
 
 test.each([-1, NaN, Infinity, 1.5])('invalid round limit %s is a per-chain refusal before dispatch', async rounds => {
     let calls = 0;
-    const result = await runChain([parseStep('scripts/walk-to.ts')], rounds, {
+    const result = await runChain([parseStep('scripts/aio-logistics.ts walk-to')], rounds, {
         stopped: () => false, log: () => {}, run: async () => { calls++; return 'RESULT ok'; },
     });
     expect(calls).toBe(0);

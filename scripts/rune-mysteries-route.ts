@@ -1,5 +1,5 @@
 import {chickenTrainingProfile} from './train-chickens';
-import {LUMBRIDGE_TO_DRAYNOR} from './courier-route';
+import {LUMBRIDGE_TO_DRAYNOR} from '../packages/workers/src/logistics';
 import type {PathPoint} from '../packages/core/src/walk';
 import type {QuestFlag} from '../packages/core/src/quest-status';
 

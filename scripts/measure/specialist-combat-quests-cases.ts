@@ -344,8 +344,8 @@ export function buildCombatSpecialistRehearsalSegment(
             script: 'scripts/hp-specialist.ts',
             env: { CAP: '12000' },
             supplier: {
-                script: 'scripts/specialist-supplier.ts',
-                args: ['{ACTOR}', '--kit=hp', '12000'],
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=hp', '12000'],
                 env: { ...REHEARSE_GUARD_ENV },
                 save: { position: { x: 3223, z: 3222, level: 0 }, inventory: kitToSaveInventory(HP_SPECIALIST_KIT) },
             },

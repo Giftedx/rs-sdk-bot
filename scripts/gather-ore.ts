@@ -108,7 +108,7 @@ export async function reconcileOrePickaxeAtBank(
     const hooks = sessionToolHooks(s, {
         openBank,
         walkTo: options.walkTo ?? (async spot => {
-            const { approach, walkTargetPersist } = await import('./walk-to');
+            const { approach, walkTargetPersist } = await import('../packages/workers/src/logistics');
             return (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, options.stop))).ok;
         }),
         waitUntil: (pred, timeoutTicks) => waitUntil(s, pred, { timeoutTicks }),

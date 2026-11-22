@@ -641,7 +641,7 @@ export function findScriptParityIssues(
             }
         }
 
-        if (relPath === 'scripts/microbot-bank-sort.ts') {
+        if (relPath === 'packages/workers/src/logistics/stage.ts') {
             for (const term of BANNED_OSRS_BANK_TERMS) {
                 if (line.toLowerCase().includes(term)) {
                     issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 bank-sort keyword "${term}"` });
@@ -682,7 +682,7 @@ export function checkScriptsParity(
 /** Audits packages/core/src/, packages/knowledge/src/, and packages/dashboard/gen-*.ts against Rev 289 parity. */
 export function checkCoreAndKnowledgeCodeParity(repoRoot: string, baseline: Rev289Baseline): ParityIssue[] {
     const issues: ParityIssue[] = [];
-    for (const [sub, scope] of [['core/src', 'core'], ['knowledge/src', 'knowledge']] as const) {
+    for (const [sub, scope] of [['core/src', 'core'], ['knowledge/src', 'knowledge'], ['workers/src/logistics', 'core']] as const) {
         const dir = join(repoRoot, 'packages', sub);
         if (!existsSync(dir)) continue;
         for (const p of walkExt(dir, '.ts')) {

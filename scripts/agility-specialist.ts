@@ -18,7 +18,7 @@ import { fireSpell } from './fire-spells';
 import { burstTradeHost, fastTradeExternalReceive } from './fast-skills-lib';
 import { openQuest } from './generated/quest-lib';
 import { leaveRuneStarter } from './rune-starter';
-import { countById, exactNameRe } from './specialist-supplier';
+import { countById, exactNameRe } from '../packages/workers/src/logistics';
 import { resumeStep } from './agility-order';
 
 export type AgilityRoute = 'tourist' | 'monkeybars' | 'gnome';

@@ -1,4 +1,4 @@
-// Places a cross-machine transfer order in fleet/orders for scripts/fleet-trade.ts. Both accounts must be listed in
+// Places a cross-machine transfer order in fleet/orders for scripts/aio-logistics.ts (fleet-trade). Both accounts must be listed in
 // fleet/owners.json on the same server; the window opens IN minutes from now and lasts MINUTES. The order is written
 // with a FLEET_ORDER_WARN line for each party the sides' published plans (fleet/plans) show in an enabled job, since
 // that side's fleet agent skips such an account until the job is off, and for a coin donor whose published snapshot
@@ -6,15 +6,13 @@
 // Usage: bun scripts/fleet-order.ts <from> <to> <count> <item name...> [--id <itemId>] [--with "<count> <item name>"]... [--with-id <itemId> "<count> <item name>"]...
 // Env: IN (default 15), MINUTES (default 40). Each --with adds a line that moves in the same trade (up to 28 lines).
 // TAKER_WAITS=1 keeps the receiver offline until the giver is at the meet (both accounts on one side).
-// MEET=<bank x>,<bank z> or MEET=<bank name> meets at that bank's tile pair (scripts/coin-courier.ts BANK_MEETS) instead
+// MEET=<bank x>,<bank z> or MEET=<bank name> meets at that bank's tile pair (BANK_MEETS) instead
 // of Varrock West: MEET=2619,3332 is the Ardougne north bank, where the PK army's accounts already stand; MEET=draynor.
 import { closeSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
-import { orderLines, validOrder, type Order } from './fleet-trade';
-import type { OrderLine } from './fleet-trade-settlement';
-import { BANK_MEETS, meetingTiles } from './coin-courier';
+import { BANK_MEETS, meetingTiles, orderLines, validOrder, type Order, type OrderLine } from '../packages/workers/src/logistics';
 
 export function orderMeet(text: string | undefined): Order['meet'] {
     if (text === undefined || text === '') return undefined;

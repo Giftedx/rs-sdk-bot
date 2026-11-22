@@ -10,7 +10,7 @@ import { FLEE_HP } from '../../core/src/death-recovery';
 import type { Session } from '../../core/src/inprocess';
 import { watchRandomEvents } from '../../core/src/randomevents';
 import { ROUTE_BUDGET_MS } from '../../core/src/world';
-import { walkWithFerryFallback } from '../../../scripts/walk-to';
+import { walkWithFerryFallback } from '../src/logistics';
 import {
     ARDOUGNE_NORTH,
     HEAL_FOOD,

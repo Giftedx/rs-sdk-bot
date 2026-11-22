@@ -7,7 +7,7 @@ import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kit
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
 import { wildernessLevel, type FightResult } from './pk';
 import * as hunt from './pk-hunt';
-import * as altars from './pray-at-altar';
+import * as altars from '../packages/workers/src/logistics';
 import { tripRequirements } from './pk-hunt';
 import { nativeRequirementMetadata, resolveItemRequirements } from '../packages/core/src/item-requirements';
 

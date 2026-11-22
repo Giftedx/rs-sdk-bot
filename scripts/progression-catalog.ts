@@ -33,7 +33,8 @@ function intents(category:string,name:string):CatalogIntent[]{
  if(category==='boss')return ['acquire'];
  if(category==='pvp')return name==='monitor'?['observe']:name==='stage-kit'?['acquire']:name==='standby'?['service']:['pvp'];
  if(category==='market')return name==='ge-plan'?['observe']:['acquire'];
- return ['banker','supply-holder','specialist-supplier','gathering-supplier','wine-stock','food-chain','supply-chain','bank-sort','loadout-import','restore-prayer','cure-poison','walk-to','walk-edge','relocate-bank','relocate-knight','arrive-draynor','loadout'].includes(name)?['service']:['acquire'];
+ if (name === 'inspect') return ['observe'];
+ return ['banker','supply-holder','specialist-supplier','gathering-supplier','wine-stock','food-chain','supply-chain','supply-bootstrap','bank-sort','loadout-import','restore-prayer','cure-poison','walk-to','walk-edge','relocate-bank','relocate-knight','arrive-draynor','loadout','recover-trapped'].includes(name)?['service']:['acquire'];
 }
 function knownStep(category:string,name:string,script:string):Step{
  try{return resolveAioStep(category,name.split(':'));}catch{return{script,args:[],env:{}};}
@@ -312,10 +313,8 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
  for(const r of routes){const e=entries.get(r.script)??{script:r.script,intents:[],skills:[],routeIds:[]};e.intents=[...new Set([...e.intents,...r.intents])];e.skills=[...new Set([...e.skills,...r.skills])];e.routeIds.push(r.id);entries.set(r.script,e);}
  for(const category of ['skiller','fighter','boss','pvp','quester','market','logistics'])entries.set('scripts/aio-'+category+'.ts',{script:'scripts/aio-'+category+'.ts',intents:[...new Set(routes.filter(r=>r.category===category).flatMap(r=>r.intents))],skills:[...new Set(routes.filter(r=>r.category===category).flatMap(r=>r.skills))],routeIds:routes.filter(r=>r.category===category).map(r=>r.id)});
  entries.set('scripts/aio.ts',{script:'scripts/aio.ts',intents:['train','quest','produce','acquire','pvp','observe','service'],skills:[...PROGRESSION_SKILLS],routeIds:routes.map(r=>r.id)});
- for(const script of ['scripts/fleet-inspect.ts','scripts/session-check.ts','scripts/where.ts','scripts/goal-readiness.ts','scripts/preparation-report.ts'])entries.set(script,{script,intents:['observe'],skills:[],routeIds:[]});
+ for(const script of ['scripts/session-check.ts','scripts/where.ts','scripts/goal-readiness.ts','scripts/preparation-report.ts'])entries.set(script,{script,intents:['observe'],skills:[],routeIds:[]});
  for(const script of ['scripts/claim-account.ts','packages/core/src/session-recovery.ts'])entries.set(script,{script,intents:['service'],skills:[],routeIds:[]});
- entries.set('scripts/courier-handoff.ts',{script:'scripts/courier-handoff.ts',intents:['service'],skills:[],routeIds:[]});
- entries.set('scripts/recover-trapped.ts',{script:'scripts/recover-trapped.ts',intents:['service'],skills:[],routeIds:[]});
  entries.set('scripts/ranged-live-prep.ts',{script:'scripts/ranged-live-prep.ts',intents:['service'],skills:['herblore'],routeIds:[]});
  entries.set('scripts/pvp-relog-combat.ts',{script:'scripts/pvp-relog-combat.ts',intents:['service'],skills:['attack','strength','defence','ranged'],routeIds:[]});
  entries.set('scripts/handoff-inputs.ts',{script:'scripts/handoff-inputs.ts',intents:['acquire','produce','service'],skills:['fletching'],routeIds:[]});

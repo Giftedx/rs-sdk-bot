@@ -12,12 +12,12 @@ import type { Session } from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {FAR_WALK_TILES} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
-import {preparePayout} from './banker';
+import {preparePayout} from '../packages/workers/src/logistics';
 import {exactOrder,acquireExclusiveLease,ownerAlive} from './payout-order';
-import {reconcileOrder, type OrderSnapshot} from './courier-handoff';
+import {reconcileOrder, type OrderSnapshot} from '../packages/workers/src/logistics';
 import {runShafts} from './fletch-shafts';
 import {runHeadless} from './fletch-arrows';
-import {walkTarget} from './walk-to';
+import {walkTarget} from '../packages/workers/src/logistics';
 import {abortable, executionContext} from '../vendor/rs-sdk/sdk/execution-context';
 import {readMergedPlan} from '../packages/core/src/coordinator-jobs';
 import {finiteProgressionAccept} from '../packages/core/src/progression-session';
@@ -251,8 +251,8 @@ export async function runHandoff(c: Handoff, d: HandoffDeps) {
 
 export function handoffCommands(c: Handoff, root: string) {
     const env = { BANK_X: String(c.x), BANK_Z: String(c.z), KEEP: c.keep ?? '', PAYOUT_NOTES: c.notes ? '1' : '0', ON_DEMAND: '1', COURIERS: '' };
-    return { env, receiver: [process.execPath, join(root,'scripts/take-from-banker.ts'),c.receiver,...c.items.map(i=>`${i.count}:${i.name}`),`--banker=${c.donor}`],
-        donor: [process.execPath,join(root,'scripts/banker.ts'),c.donor] };
+    return { env, receiver: [process.execPath, join(root,'scripts/aio-logistics.ts'),c.receiver,'take-from-banker',...c.items.map(i=>`${i.count}:${i.name}`),`--banker=${c.donor}`],
+        donor: [process.execPath,join(root,'scripts/aio-logistics.ts'),c.donor,'banker'] };
 }
 
 // Shared with GE: read-only coordinator/swarm/pause checks. A matching runId

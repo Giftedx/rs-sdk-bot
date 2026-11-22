@@ -63,26 +63,32 @@ function completionCase(config:Scenario){
   },
   receiveHandoff:async(_receiver,_from,_server,perform)=>perform(),
  });
+ const realBot=await import('./packages/core/src/bot');
+ const realWalk=await import('./packages/core/src/walk');
+ const realTicks=await import('./packages/core/src/ticks');
+ const realCargo=await import('./packages/core/src/cargo');
+ const realAdmission=await import('./packages/workers/src/logistics/admission');
+ const realHandoff=await import('./packages/workers/src/logistics/handoff');
+ const realLocation=await import('./packages/workers/src/logistics/location');
  const modules={
-  './packages/core/src/bot':{openBot,settle,serverFromEnv:()=> '127.0.0.1:21800',assertServerAllowed:()=>{},getWorld:async()=>({}),accountOf:()=>({})},
-  './packages/core/src/walk':{goTo:async()=>({ok:true})},
-  './packages/core/src/ticks':{waitUntil:async(_s,predicate)=>predicate()},
+  './packages/core/src/bot':{...realBot,openBot,settle,serverFromEnv:()=> '127.0.0.1:21800',assertServerAllowed:()=>{},getWorld:async()=>({}),accountOf:()=>({})},
+  './packages/core/src/walk':{...realWalk,goTo:async()=>({ok:true})},
+  './packages/core/src/ticks':{...realTicks,waitUntil:async(_s,predicate)=>predicate()},
   './packages/core/src/deposit':{depositObserved:async(s,item)=>s.deposit(item)},
-  './packages/core/src/cargo':{exactItem:name=>new RegExp('^'+name+'$','i')},
-  './scripts/courier-handoff':{createHandoff},
-  './scripts/handoff-inputs':{parseHandoff:()=>({}),acquireAccountLeases:()=>()=>{released++;}},
-  './scripts/transfer-admission':{checkTransferAccounts:(_root,names)=>{
+  './packages/core/src/cargo':{...realCargo,exactItem:name=>new RegExp('^'+name+'$','i')},
+  './packages/workers/src/logistics/handoff':{...realHandoff,createHandoff},
+  './packages/workers/src/logistics/admission':{...realAdmission,acquireAccountLeases:()=>()=>{released++;},checkTransferAccounts:(_root,names)=>{
    if(config.ownershipLost&&transfers.length>0&&names.includes('Second'))throw Error('fixture ownership changed before Second');
   },transferOrderKey:value=>value},
-  './scripts/coin-courier':{parseCoins,moveCoins,meetingTiles:()=>[{x:3183,z:3440,level:0},{x:3182,z:3440,level:0}]},
+  './packages/workers/src/logistics/location':{...realLocation,meetingTiles:()=>[{x:3183,z:3440,level:0},{x:3182,z:3440,level:0}]},
  };
  for(const [path,module]of Object.entries(modules))mock.module(resolve(path),()=>module);
  console.log=(...args)=>logs.push(args.join(' '));
  let result;
  if(config.mode==='fanout'){
-  const {coinFanoutMain}=await import('./scripts/coin-fanout');result=await coinFanoutMain(['Treasury','First','Second','50']);
+  const {coinFanoutMain}=await import('./packages/workers/src/logistics/trade');result=await coinFanoutMain(['Treasury','First','Second','50'],process.env,{moveCoins});
  }else{
-  const {itemFaninMain}=await import('./scripts/item-fanin');result=await itemFaninMain(['Receiver','First','Second','Feather']);
+  const {itemFaninMain}=await import('./packages/workers/src/logistics/trade');result=await itemFaninMain(['Receiver','First','Second','Feather']);
  }
  process.stdout.write(JSON.stringify({result,exitCode:process.exitCode,opened,settled,transfers,released,logs,
   receiver:sessions.has('Receiver')?{bank:Object.fromEntries(sessions.get('Receiver').bank),inventory:sessions.get('Receiver').inventory}:null}));

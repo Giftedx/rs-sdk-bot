@@ -5,8 +5,8 @@
   "files": [
     "scripts/thieving-specialist.ts",
     "scripts/gathering-specialist-lib.ts",
-    "scripts/gathering-supplier.ts",
-    "scripts/specialist-supplier.ts",
+    "scripts/aio-logistics.ts",
+    "packages/workers/src/logistics/specialist-supply.ts",
     "scripts/measure/specialist-gathering-cases.ts",
     "scripts/gathering-specialists.test.ts",
     "packages/practice/src/rehearse.ts",

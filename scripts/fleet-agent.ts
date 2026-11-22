@@ -10,7 +10,7 @@ import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from './market-cache';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/fleet';
-import { pickOrder, readAgentJobs, swarmBusy, validOrder, type Order, type Receipt } from './fleet-trade';
+import { pickOrder, readAgentJobs, swarmBusy, validOrder, type Order, type Receipt } from '../packages/workers/src/logistics';
 import { lastResult } from '../packages/core/src/run-child';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import {capabilityRevision} from '../packages/core/src/worker-release';
@@ -25,7 +25,7 @@ const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fle
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
 const readJson = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } }) : [];
 
-export { readAgentJobs, swarmBusy } from './fleet-trade';
+export { readAgentJobs, swarmBusy } from '../packages/workers/src/logistics';
 
 // The dashboard also publishes quotes; its refresh cannot keep the shop-to-bid recommendations from being refreshed.
 export const marketStale = (base: string, now = Date.now()): boolean => [MARKET_FILE, BIDS_FILE].some(file => {
@@ -46,7 +46,7 @@ export function dueTrades(orders: readonly Order[], receipts: readonly Receipt[]
     return due;
 }
 
-const TRADE_SCRIPT=resolve(import.meta.dir,'../scripts/fleet-trade.ts');
+const TRADE_SCRIPT=resolve(import.meta.dir,'../scripts/aio-logistics.ts');
 // The trade worker's capability release (packages/core/src/worker-release.ts). STALL_TICKS=0 turns off the session's
 // idle guard (packages/core/src/bot.ts): a trade waits for its partner, and its own order window bounds it. With the
 // guard on, a side that waited 900 ticks was ended, a giver's receipt read `reconcile` with nothing given, and its
@@ -189,7 +189,7 @@ if (import.meta.main) {
             if (stop.held) { console.log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
             running.add(t.account.toLowerCase());
             console.log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
-            const p = Bun.spawn(['bun', TRADE_SCRIPT, t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
+            const p = Bun.spawn(['bun', TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
             void (async () => {
                 const out = await new Response(p.stdout).text();
                 const exitCode = await p.exited;

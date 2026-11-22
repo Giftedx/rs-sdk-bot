@@ -88,7 +88,7 @@ export const FLEET: FleetAccount[] = [
     {
         name: 'Bigpackage', server: 'rs-sdk-demo.fly.dev', role: 'courier',
         goal: 'Collect from either active cook and deliver food on demand to the thieves',
-        script: 'scripts/foodcourier.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-logistics.ts', args: ['food-courier'], enabled: true, repeat: true,
         env: { FROM: 'Masterbaiter,FishAndChips', FEATHERS: '500', FARMERS: THIEVES.join(','), CAP: '9000', FUND_FROM: 'Pocketrocket' },
         whenFoodLowFrom: [...THIEVES], foodLowBelow: 80, foodSourceAccounts: ['Masterbaiter','FishAndChips'],
         sourceFoodMinimum: 1,
@@ -131,7 +131,7 @@ export const FLEET: FleetAccount[] = [
     {
         name: 'Moneyshot', server: 'rs-sdk-demo.fly.dev', role: 'bank',
         goal: 'Receive owned cargo, bank it, then wait offline',
-        script: 'scripts/banker.ts', enabled: false, repeat: false,
+        script: 'scripts/aio-logistics.ts', args: ['banker'], enabled: false, repeat: false,
     },
     {
         name: 'Swordinhand', server: 'rs-sdk-demo.fly.dev', role: 'combat',
@@ -178,6 +178,7 @@ export function toPlan(accounts: readonly FleetAccount[], maxBots = 17, minFreeG
             accounts: list.map(a => a.name), host: true, script: first.script,
             role: first.role, goal: first.goal, enabled: first.enabled,
         };
+        if (first.args) job.args = first.args;
         if (first.repeat !== undefined) job.repeat = first.repeat;
         if (first.env) job.env = first.env;
         if (first.note) job.note = first.note;

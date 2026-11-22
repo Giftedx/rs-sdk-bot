@@ -8,11 +8,11 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
 import { depositObserved } from '../packages/core/src/deposit';
-import { receiveHandoff } from './courier-handoff';
+import { receiveHandoff } from '../packages/workers/src/logistics';
 import { questFoodDefinitions } from '../packages/core/src/sustain';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
 import { courierFoodReady, receiveFoodAtBank } from './goldfarm';
-import {pendingCourierFunding,serviceCourierFunding} from './courier-funding';
+import {pendingCourierFunding,serviceCourierFunding} from '../packages/workers/src/logistics';
 
 export type Tile = { x: number; z: number };
 export const KNIGHT_SPOT: Tile = { x: 2653, z: 3302 };
@@ -223,7 +223,7 @@ export function foodWaitLimit(courier: string, status: any, now: number, service
         && Number.isFinite(status.at) && now - status.at >= 0 && now - status.at < 30_000;
     const scheduled = courier && Number.isFinite(service?.at) && now - service.at >= 0 && now - service.at < 30_000
         && Array.isArray(service.jobs) && service.jobs.some((j: any) => typeof j?.account === 'string'
-            && j.account.toLowerCase() === courier.toLowerCase() && j.script === 'scripts/foodcourier.ts'
+            && j.account.toLowerCase() === courier.toLowerCase() && j.script === 'scripts/aio-logistics.ts' && j.args?.[0] === 'food-courier'
             && j.enabled === true && typeof j.state === 'string' && /^(running|starting|waiting[: ])/.test(j.state));
     return active || scheduled ? 1500 : IDLE_LIMIT;
 }

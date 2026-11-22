@@ -57,7 +57,7 @@ export function squadFletchAndSmithSupplies(): { arrows: Template[]; smiths: Tem
 
 export function squadCraftAndGearSupplies(): { bow: Template; dhideAndChest: Template[]; ringsAndGold: Template[]; dragonstone: Template[] } {
     const bowStep = (recipe: string, n: number) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${n} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`;
-    const bowBankWalk = `scripts/walk-to.ts ${SEERS_BANK.x} ${SEERS_BANK.z}`;
+    const bowBankWalk = `scripts/aio-logistics.ts walk-to ${SEERS_BANK.x} ${SEERS_BANK.z}`;
     const magicShortbow: Template = {
         id: 'squad-magic-shortbow', family: 'fletch', script: 'scripts/chain.ts',
         args: [bowBankWalk, bowStep('cut-bow:unstrung_magic_shortbow', 4), bowStep('bow-string:magic_shortbow', 4)], env: { ROUNDS: '1' },
@@ -91,8 +91,8 @@ export function squadCraftAndGearSupplies(): { bow: Template; dhideAndChest: Tem
         yields: () => [{ item: 'uncut dragonstone', perTick: 0.05 }, { item: 'cosmic rune', perTick: 0.03 }],
     };
     const chargeGlory: Template = {
-        id: 'squad-charge-glory', family: 'charge-glory', script: 'scripts/charge-glory.ts',
-        args: ['2000'], env: { MAX_GLORIES: '28' }, role: 'magic',
+        id: 'squad-charge-glory', family: 'charge-glory', script: 'scripts/aio-logistics.ts',
+        args: ['charge-glory', '2000'], env: { MAX_GLORIES: '28' }, role: 'magic',
         goal: 'recharge uncharged or partial amulets of glory at the Fountain of Heroes for the gang squad',
         resources: ['squad:heroes-fountain'], squadOnly: true, repeats: false,
         needs: {

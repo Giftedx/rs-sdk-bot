@@ -34,7 +34,7 @@ export function assertBoundedInspectionAssignments(accounts: string[], ownerJobs
         if(!key||seen.has(key)||j.accounts||j.host||j.orchestrate||j.autopilot||j.standing||j.repeat!==false)throw Error('bounded inspection assignment changed');
         seen.add(key);
         if(selected.has(key)){
-            if(j.script!=='scripts/fleet-inspect.ts'||j.maxRestarts!==0||j.standingRetry!==false||j.env?.LOOT_WATCH!=='0'||j.env?.RANDOM_EVENTS!=='0'||j.env?.REQUIRE_BANK!=='1')throw Error('bounded inspection inspector changed');
+            if(j.script!=='scripts/aio-logistics.ts'||(j.args?.length&&(j.args.length!==1||j.args[0]!=='inspect'))||j.maxRestarts!==0||j.standingRetry!==false||j.env?.LOOT_WATCH!=='0'||j.env?.RANDOM_EVENTS!=='0'||j.env?.REQUIRE_BANK!=='1')throw Error('bounded inspection inspector changed');
         }else if(j.enabled!==false||j.script||j.role!=='reserved')throw Error('bounded inspection reservation changed');
     }
     if(accounts.some(a=>!seen.has(a.toLowerCase())))throw Error('bounded inspection actor missing');

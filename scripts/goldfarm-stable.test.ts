@@ -341,10 +341,10 @@ test('a real returning courier permits a bounded food wait; stale or wrong evide
 
 test('the courier service may wait between trips for the next cooked pack without stranding a hungry thief', () => {
     const now = 100000;
-    const service = { at: now, jobs: [{ account: 'Bigpackage', script: 'scripts/foodcourier.ts', enabled: true, state: 'waiting offline: no fresh low-food farm or dated source food stock' }] };
+    const service = { at: now, jobs: [{ account: 'Bigpackage', script: 'scripts/aio-logistics.ts', args: ['food-courier'], enabled: true, state: 'waiting offline: no fresh low-food farm or dated source food stock' }] };
     expect(foodWaitLimit('Bigpackage', undefined, now, service)).toBe(1500);
     expect(foodWaitLimit('Bigpackage', undefined, now, { ...service, at: now - 30000 })).toBe(300);
-    for (const patch of [{ enabled: false }, { state: 'ended: died after 1 runs' }, { account: 'Stranger' }, { script: 'scripts/banker.ts' }]) {
+    for (const patch of [{ enabled: false }, { state: 'ended: died after 1 runs' }, { account: 'Stranger' }, { args: ['banker'] }]) {
         expect(foodWaitLimit('Bigpackage', undefined, now, { ...service, jobs: [{ ...service.jobs[0], ...patch }] })).toBe(300);
     }
 });
