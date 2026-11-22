@@ -11,7 +11,7 @@ import {
 import { LUMBRIDGE_SAFE_SPOT, MAGIC_BATCHES } from '../magic-specialist';
 import { PRAYER_RUNNER_COUNT } from '../prayer-specialist';
 import { BODY_RUNNER_COUNT } from '../runecraft-specialist';
-import type { BenchCase } from './aio-bench-cases';
+import type { BenchCase } from './bench-case-types';
 
 const SUFFIXES = 'bcdefghijklmnopqrstuvwxyz0123456789';
 

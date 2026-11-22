@@ -10,5 +10,5 @@ export * from './preflight';
 export * from './acquire';
 export * from './planner';
 export * from './scheduler';
-export * from './script-adapter';
+export * from './worker-routing';
 export * from './shadow-cli';

@@ -4,7 +4,7 @@
 // Usage: bun packages/fleet/src/fleet-sync.ts [--no-push] [--adopt-dry [--capacity N]]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { adaptAccountPlan, defaultActivityCatalog, isFleetState, type FleetState } from '../../brain/src/index';
+import { defaultActivityCatalog, isFleetState, type FleetState } from '../../brain/src/index';
 import { handNamed, ruleRoster } from '../../core/src/army-roster';
 import { FLEET_WORKTREE, loadOwners, mySide, nextLease, readLease, leaseHeldElsewhere, thisHost, type Lease } from '../../core/src/fleet';
 import { describeMoves, planTransfers, type OwnerRow, type SideView } from '../../core/src/fleet-assign';
@@ -19,6 +19,7 @@ import { listAttempts, readLogoutProof } from '../../core/src/session-lifecycle'
 import { savedProcessAlive } from '../../core/src/session-takeover';
 import { loadEnded, swarmWroteStop } from './swarm';
 import { CLAIM_MAX_AGE_MS, claimFor, jobAccounts } from './trade-plan';
+import { dispatchAccountPlan } from './worker-dispatch';
 
 const root = repoRoot;
 const BRANCH = 'fleet-data', HEARTBEAT_MAX_AGE_MS = 60_000;
@@ -145,8 +146,8 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
     const out: any[] = [];
     for (const [acctName, plan] of Object.entries(state.activeChains)) {
         if (existing.has(acctName.toLowerCase()) || !plan.steps.length) continue;
-        const adapted = adaptAccountPlan(plan, { activities });
-        const step = adapted.combinedStep;
+        const dispatched = dispatchAccountPlan(plan, { activities });
+        const step = dispatched.combinedStep;
         if (!step) continue;
         const workStep = plan.steps.find(s => s.stepKind === 'work');
         const spotId = workStep?.stepKind === 'work' ? catalog.get(workStep.activityId)?.spotId : undefined;

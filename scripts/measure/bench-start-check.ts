@@ -14,7 +14,7 @@
 // This file is tooling. No worker imports it, so a change here does not change a worker release.
 import { canBind } from '../../packages/practice/src/ports';
 import { BENCH_CASE_GB, BENCH_ENGINE_GB, BENCH_FLEET_STOP_EXIT, BENCH_START_REFUSED_EXIT, benchStartGB } from '../../packages/core/src/memory';
-import { fleet, floorGB, freeGB, type Fleet } from '../heavy-admission';
+import { fleet, floorGB, freeGB, type Fleet } from '../../packages/core/src/heavy-admission';
 import { FREE_FLOOR_GB } from '../../packages/core/src/memory';
 
 // The jobs that must not run two at a time on one machine (AGENTS.md, "Keep the loop fast").
@@ -132,7 +132,7 @@ export function memoryProblems(f: StartFacts): string[] {
 export function fleetStop(f: Pick<StartFacts, 'freeGB' | 'floorGB' | 'fleet'>): string | null {
     if (!f.fleet) return null;
     const need = f.floorGB + f.fleet.reserveGB;
-    return f.freeGB < need ? `bench: stopped: ${f.freeGB.toFixed(1)} GiB is free beside ${f.fleet.bots} live ${f.fleet.bots === 1 ? 'bot' : 'bots'} and the fleet needs ${need.toFixed(1)} GiB (the floor of ${f.floorGB} GiB${f.fleet.reserveGB ? ` and ${f.fleet.reserveGB.toFixed(1)} GiB for bot starts` : ''}). Run the cases on a hosted runner: bun scripts/hosted-bench.ts '<pattern>'.` : null;
+    return f.freeGB < need ? `bench: stopped: ${f.freeGB.toFixed(1)} GiB is free beside ${f.fleet.bots} live ${f.fleet.bots === 1 ? 'bot' : 'bots'} and the fleet needs ${need.toFixed(1)} GiB (the floor of ${f.floorGB} GiB${f.fleet.reserveGB ? ` and ${f.fleet.reserveGB.toFixed(1)} GiB for bot starts` : ''}). Run the cases on a hosted runner: bun tools/hosted-bench.ts '<pattern>'.` : null;
 }
 // The second signal for a live fleet: the supervisor of each live bot in the process list (packages/practice/src/
 // supervise.ts and supervise-host.ts start a swarm worker). A swarm that hangs or dies can stop writing its state for
@@ -150,7 +150,7 @@ export function fleetFacts(root: string, bots: number, free = freeGB()): Pick<St
 // `bots`: the live bot supervisors seen at the start check of this run (the watch does not read the process list again).
 export const readFleetFacts = (root: string, bots = 0): Pick<StartFacts, 'freeGB' | 'floorGB' | 'fleet'> => fleetFacts(root, bots);
 export const refusalLine = (problems: readonly string[]): string =>
-    `bench: not started: ${problems.join('; ')}. Use --wait <minutes> to wait for a safe start, or --force to skip this check. Beside live bots run the cases on hosted runners: bun scripts/hosted-bench.ts '<pattern>'.`;
+    `bench: not started: ${problems.join('; ')}. Use --wait <minutes> to wait for a safe start, or --force to skip this check. Beside live bots run the cases on hosted runners: bun tools/hosted-bench.ts '<pattern>'.`;
 
 // The lines `pid|parent pid|name|start in Unix ms|command line` and a last line `read`, which proves that the
 // query ran to its end. null when that line is missing.

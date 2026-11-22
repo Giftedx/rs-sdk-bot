@@ -1,5 +1,5 @@
 // Define matched Ranged progression practice cases for the existing AIO bench.
-import type {BenchCase} from './aio-bench-cases';
+import type {BenchCase} from './bench-case-types';
 import {loadRangedComparisonEntry,rangedComparisonPreset,rangedComparisonPass} from '../../packages/practice/src/ranged-progression-case';
 
 export const PROGRESSION_BENCH_CASES:BenchCase[]=[...(['chickens','troopers','adaptive'] as const).map(method=>({

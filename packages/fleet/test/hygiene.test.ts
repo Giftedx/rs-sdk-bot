@@ -7,7 +7,7 @@ import {
     isProtectedStopEntry,
     scanPhase0Hygiene,
 } from '../src/hygiene';
-import { applyPhase0Hygiene as cliExportApply } from '../../../scripts/practice-hygiene';
+import { applyPhase0Hygiene as cliExportApply } from '../../../tools/practice-hygiene';
 
 const dirs: string[] = [];
 const scratch = () => {
@@ -193,7 +193,7 @@ describe('Phase 0 fleet hygiene', () => {
         expect(remainingHolds.map(h => h.account)).toEqual(['worker2', 'specialist-holder', 'hiltsdeep']);
     });
 
-    test('scripts/practice-hygiene.ts re-export and --phase0 CLI flag operate safely in dry-run and apply on scratch root', () => {
+    test('tools/practice-hygiene.ts re-export and --phase0 CLI flag operate safely in dry-run and apply on scratch root', () => {
         const root = scratch();
         const prac = join(root, '.practice');
         mkdirSync(prac, { recursive: true });
@@ -208,7 +208,7 @@ describe('Phase 0 fleet hygiene', () => {
         expect(existsSync(join(prac, 'stop-fltemp01'))).toBe(true);
 
         const out = Bun.spawnSync(
-            ['bun', 'scripts/practice-hygiene.ts', '--phase0', '--root', root, '--apply'],
+            ['bun', 'tools/practice-hygiene.ts', '--phase0', '--root', root, '--apply'],
             { cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe', windowsHide: true },
         );
         expect(out.exitCode).toBe(0);

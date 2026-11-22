@@ -37,7 +37,7 @@ The reference external Overall speedrun route (`rune.fast`) used as an independe
 _Avoid_: baseline, competitor
 
 **Floor**:
-A measured lower-bound tick or resource estimate for a planner row from `scripts/measure/floor-*.ts`.
+A measured lower-bound tick or resource estimate for a planner row from `tools/measure/floor-*.ts`.
 _Avoid_: target, best run
 
 **Bench**:
@@ -97,5 +97,5 @@ The AES-256-GCM encrypted `bot.env` store on the `fleet-data` branch (`fleet/vau
 _Avoid_: secret store, env backup
 
 **Local gate**:
-The `local-gate` commit status posted by `scripts/ci-gate.ts` after running reachable CI checks locally.
+The `local-gate` commit status posted by `tools/ci-gate.ts` after running reachable CI checks locally.
 _Avoid_: local CI, pre-commit

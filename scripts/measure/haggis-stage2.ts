@@ -25,8 +25,8 @@ import {
     waitUntil,
     walkWaypointsSafe,
 } from '../gathering-specialist-lib';
-import { planOf } from './floor-fm-line';
-import { band, dialogOpen, inv, level, meter, send, tick, xp } from './floor-lib';
+import { planOf } from '../../packages/practice/src/floor-fm-line';
+import { band, dialogOpen, inv, level, meter, send, tick, xp } from '../../packages/practice/src/floor-lib';
 
 export const FM_NORTH_ROWS = '3306,3211,3182;3307,3185,3171;3311,3176,3098;3312,3103,3071';
 export const STAGE2_PACK = 26; // tinderbox + Glory(4) + 26 first logs fill all 28 inventory slots

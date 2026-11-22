@@ -18,7 +18,6 @@ import type { TrustTier } from '../../workers/src/contracts';
 import {
     DEFAULT_RETENTION_MARGIN_RATIO,
     OutcomeClassifier,
-    adaptAccountPlan,
     buildFleetState,
     createActivityCatalog,
     createDemandEngine,
@@ -39,7 +38,6 @@ import {
     type AccountRole,
     type ActivityCatalog,
     type ActivityDefinition,
-    type AdaptedAccountPlan,
     type Campaign,
     type DemandEngine,
     type FleetPlan,
@@ -57,6 +55,7 @@ import {
     type WorldSnapshotDiagnostics,
 } from '../../brain/src/index';
 import { InfraCircuitBreaker } from './infra-circuit-breaker';
+import { dispatchAccountPlan, type DispatchedAccountPlan } from './worker-dispatch';
 
 export interface AccountOverrideRecord {
     readonly account: string;
@@ -106,7 +105,7 @@ export interface BrainCycleResult {
     readonly world: WorldSnapshot;
     readonly diagnostics: WorldSnapshotDiagnostics;
     readonly appliedCommands: readonly OperatorCommandApplyResult[];
-    readonly adaptedPlans: Readonly<Record<string, AdaptedAccountPlan>>;
+    readonly dispatchedPlans: Readonly<Record<string, DispatchedAccountPlan>>;
     readonly overrides: Readonly<Record<string, AccountOverrideRecord>>;
 }
 
@@ -625,11 +624,11 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         throw new Error(`Brain cycle produced invalid FleetState: ${stateErrors.join('; ')}`);
     }
 
-    const adaptedPlans: Record<string, AdaptedAccountPlan> = {};
+    const dispatchedPlans: Record<string, DispatchedAccountPlan> = {};
     const activities = catalog.list();
     for (const [acctName, plan] of Object.entries(fleetPlan.accountPlans)) {
         if (plan.steps.length > 0) {
-            adaptedPlans[acctName] = adaptAccountPlan(plan, { activities });
+            dispatchedPlans[acctName] = dispatchAccountPlan(plan, { activities });
         }
     }
 
@@ -643,7 +642,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         world,
         diagnostics,
         appliedCommands,
-        adaptedPlans,
+        dispatchedPlans,
         overrides,
     };
 }

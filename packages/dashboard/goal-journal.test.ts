@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {questProgress} from './goal-details';
-import {goalReadiness} from '../../scripts/goal-readiness';
+import {goalReadiness} from '../../tools/goal-readiness';
 import {questDefinitions} from '../core/src/quest-status';
 const now=1_000_000,b={name:'Worker',at:now-1,quests:[{id:7333,name:"Cook's Assistant",state:'complete'}]};
 test('fresh status does not refresh old journal evidence',()=>{

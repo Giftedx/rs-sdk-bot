@@ -1121,9 +1121,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 const handAccountSet = new Set(
                     plan.jobs.flatMap(j => j.accounts ?? (j.account ? [j.account] : [])).map(a => a.toLowerCase()),
                 );
-                for (const [acctName, adapted] of Object.entries(brainResult.adaptedPlans)) {
+                for (const [acctName, dispatched] of Object.entries(brainResult.dispatchedPlans)) {
                     if (handAccountSet.has(acctName.toLowerCase())) continue;
-                    const step = adapted.combinedStep;
+                    const step = dispatched.combinedStep;
                     if (!step) continue;
                     const acctState = brainResult.world.accounts[acctName.toLowerCase()];
                     const accountSteps = brainResult.fleetPlan.accountPlans[acctName]?.steps ?? [];
@@ -1139,14 +1139,14 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         env: {
                             ...step.env,
                             ...(activityId ? { BRAIN_ACTIVITY_ID: activityId } : {}),
-                            ...(adapted.demandId ? { BRAIN_DEMAND_ID: adapted.demandId } : {}),
+                            ...(dispatched.demandId ? { BRAIN_DEMAND_ID: dispatched.demandId } : {}),
                         },
                         enabled: true,
                         repeat: false,
                         role: acctState?.role,
-                        goal: adapted.demandId ?? activityId,
+                        goal: dispatched.demandId ?? activityId,
                         ...(activityId ? { activityId } : {}),
-                        ...(adapted.demandId ? { demandId: adapted.demandId } : {}),
+                        ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
                     });
                 }
             } catch (error) {

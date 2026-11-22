@@ -28,7 +28,7 @@ import {
 } from '../gathering-specialist-lib';
 import { THIEVING_PIZZAS, runArdougneStunRelogThieving } from '../thieving-specialist';
 import { DRAYNOR_BANK } from './haggis-stage2';
-import { dialogOpen, inv, level, meter, send, tick, xp } from './floor-lib';
+import { dialogOpen, inv, level, meter, send, tick, xp } from '../../packages/practice/src/floor-lib';
 
 export const STAGE3_PIZZA_COUNT = THIEVING_PIZZAS;
 

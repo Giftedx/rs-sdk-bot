@@ -11,6 +11,7 @@ import {agilityFixturePreset} from '../../packages/practice/src/agility-order-pr
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
 import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode, type CloneName } from '../../packages/workers/src/pvp/pk-gang-clone';
 import {carrierAltar, type CarrierAltarName} from '../../packages/workers/src/runecraft';
+import type { BenchCase } from './bench-case-types';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 import {SPECIALIST_RANGED_CASES} from './specialist-ranged-cases';
 import {SPECIALIST_AGILITY_CASES} from './specialist-agility-cases';
@@ -22,29 +23,7 @@ import {OVERALL_PVP_CASES} from './overall-pvp-cases';
 import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
 import {ATTACK_SPECIALIST_KIT} from '../../packages/workers/src/logistics';
 
-// Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
-// deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
-export type BenchCase = {
-  key: string;
-  // Environment for the engine of the case. It takes effect when the case has its own engine (a fresh-engine run).
-  engineEnv?: Record<string, string>;
-  script: string;
-  preset: string;
-  presetConfig?: SaveConfig;
-  scriptArgs: string[];
-  pass: (stdout: string) => boolean;
-  timeoutMs?: number;
-  // Files the worker reads, written before each run: path to JSON value. In a path, in the JSON and in `scriptArgs`,
-  // `{bot}` is the account name of the run, `{bot:b}` the partner with suffix `b`, and `{save}` the account's save file.
-  jobFiles?: Record<string, unknown>;
-  // Partner accounts the worker opens itself, named `<bot><suffix>` (one letter: a bench name has 11 characters).
-  companions?: {suffix: string; preset: string; presetConfig?: SaveConfig}[];
-  // A case that ends at a tick cap shows no speed in its ticks. `output` reads the useful amount from the RESULT
-  // line (coins, items, kills); the bench then compares the amount for each 1,000 ticks.
-  output?: RegExp;
-  // Why the case cannot pass today. A default run skips it and coverage does not count it; BENCH_ALL=1 runs it.
-  known?: string;
-};
+export type { BenchCase };
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
 // True when the worker's result line lists every id in its worn gear (`worn=[...]`, scripts/gather-combat.ts).

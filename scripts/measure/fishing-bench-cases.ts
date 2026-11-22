@@ -1,6 +1,6 @@
 // Fishing bench cases of the knife reset (scripts/microbot-b-fishing.ts FISH_KNIFE_RESET). aio-practice-bench.ts runs
 // them after the cases of aio-bench-cases.ts.
-import type {BenchCase} from './aio-bench-cases';
+import type {BenchCase} from './bench-case-types';
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
 

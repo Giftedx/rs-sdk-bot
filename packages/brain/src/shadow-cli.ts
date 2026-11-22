@@ -1,9 +1,10 @@
 // Full-fleet offline shadow verification CLI (ZERO live logins, read-only over --root).
-// Wires directly to Phase 1A (WorldSnapshot, ActivityCatalog, RateStore, Campaigns, Missions, DemandEngine)
-// and Phase 1B (Preflight, AcquireItem, AccountPlanner, FleetScheduler, ScriptAdapter).
+// Wires directly to Phase 1A (WorldSnapshot, ActivityCatalog, RateStore, Campaigns, Missions, DemandEngine),
+// Phase 1B (Preflight, AcquireItem, AccountPlanner, FleetScheduler), and unified worker-routing contracts.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
+import { WORKER_FAMILIES } from '../../workers/src/contracts';
 import { loadCampaignManifests } from './campaigns';
 import { createActivityCatalog } from './catalog';
 import {
@@ -38,8 +39,12 @@ import { loadMissionManifests } from './missions';
 import { canProtectedAccountLaunch, planAccount } from './planner';
 import { createRateStore, type RateStore } from './rate-store';
 import { buildFleetState, scheduleFleet } from './scheduler';
-import { adaptAccountPlan, type AdaptedAccountPlan } from './script-adapter';
 import { inspectWorldSnapshot, type WorldSnapshotDiagnostics } from './snapshot';
+import {
+    isSupportedWorkerFamily,
+    resolveAccountWorkerPlan,
+    type ResolvedWorkerPlan,
+} from './worker-routing';
 
 const DEFAULT_REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 
@@ -62,7 +67,7 @@ export interface ShadowVerificationSummary {
     readonly recoveryQueueLength: number;
     readonly activeChainsCount: number;
     readonly transferOrdersCount: number;
-    readonly adaptedPlansCount: number;
+    readonly routedPlansCount: number;
     readonly checksPassed: number;
     readonly checksTotal: number;
 }
@@ -77,7 +82,7 @@ export interface ShadowVerificationReport {
     readonly checks: readonly ShadowVerificationCheck[];
     readonly fleetPlan: FleetPlan;
     readonly fleetState: FleetState;
-    readonly adaptedPlans: Readonly<Record<string, AdaptedAccountPlan>>;
+    readonly routedPlans: Readonly<Record<string, ResolvedWorkerPlan>>;
     readonly sampleAssignments: readonly {
         readonly account: string;
         readonly role: AccountRole;
@@ -85,7 +90,7 @@ export interface ShadowVerificationReport {
         readonly steps: number;
         readonly demandId?: string;
         readonly scorePerHour: number;
-        readonly script?: string;
+        readonly route?: string;
         readonly idleReason?: string;
     }[];
 }
@@ -223,11 +228,15 @@ function verifySyntheticScenarioProbes(
             active: true,
         }],
     });
-    const freshAdapted = adaptAccountPlan(freshPlan, { activities });
+    const freshRouted = resolveAccountWorkerPlan(freshPlan, { activities });
     checks.push({
         name: 'fresh_accounts_planned',
-        ok: isAccountPlan(freshPlan) && freshPlan.steps.length >= 1 && freshPlan.steps.length <= 3 && freshAdapted.combinedStep !== null,
-        detail: `ProbeFresh steps=${freshPlan.steps.length} script=${freshAdapted.combinedStep?.script ?? 'none'}`,
+        ok: isAccountPlan(freshPlan)
+            && freshPlan.steps.length >= 1
+            && freshPlan.steps.length <= 3
+            && freshRouted.steps.length === freshPlan.steps.length
+            && freshRouted.steps.every((s) => isSupportedWorkerFamily(s.family)),
+        detail: `ProbeFresh steps=${freshPlan.steps.length} route=${freshRouted.steps[0] ? `${freshRouted.steps[0].family}:${freshRouted.steps[0].routeKey}` : 'none'}`,
     });
 
     // 2. Comparative advantage probe: high-quest veteran vs high-artisan veteran vs maxed tribrid
@@ -483,10 +492,10 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         ...(rateStore ? { rateStats: rateStore.summary() } : {}),
     });
 
-    const adaptedPlans: Record<string, AdaptedAccountPlan> = {};
+    const routedPlans: Record<string, ResolvedWorkerPlan> = {};
     for (const [acctName, plan] of Object.entries(fleetPlan.accountPlans)) {
         if (plan.steps.length > 0) {
-            adaptedPlans[acctName] = adaptAccountPlan(plan, { activities });
+            routedPlans[acctName] = resolveAccountWorkerPlan(plan, { activities });
         }
     }
 
@@ -546,13 +555,15 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         detail: `protected=${protectedAccountsCount}, heldOffline=${protectedAccountsIdle}, launchReady=${protectedLaunchReady}, violations=${protectedSafetyViolations}`,
     });
 
-    const validAdapts = Object.values(adaptedPlans).every(
-        (a) => a.steps.length > 0 && a.combinedStep !== null && /^scripts\/[\w./-]+\.ts$/.test(a.combinedStep.script),
+    const catalogFamilies = new Set(activities.map((a) => a.family));
+    const allFamiliesCovered = WORKER_FAMILIES.every((f) => catalogFamilies.has(f));
+    const validRoutes = Object.values(routedPlans).every(
+        (r) => r.steps.length > 0 && r.steps.every((s) => isSupportedWorkerFamily(s.family) && s.routeKey.length > 0),
     );
     checks.push({
-        name: 'script_adapter_coverage',
-        ok: validAdapts,
-        detail: `adaptedPlans=${Object.keys(adaptedPlans).length}, allValidSteps=${validAdapts}`,
+        name: 'worker_engine_coverage',
+        ok: validRoutes && allFamiliesCovered,
+        detail: `routedPlans=${Object.keys(routedPlans).length}, allFamilies=${allFamiliesCovered}, validRoutes=${validRoutes}`,
     });
 
     const validHubs = fleetPlan.transferOrders.every(
@@ -570,7 +581,8 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         .sort((a, b) => b.steps.length - a.steps.length || b.scorePerHour - a.scorePerHour || a.account.localeCompare(b.account))
         .map((plan) => {
             const acct = findAccountByName(world, plan.account);
-            const adapted = adaptedPlans[plan.account];
+            const routed = routedPlans[plan.account];
+            const routeText = routed?.steps.map((s) => `${s.family}:${s.routeKey}`).join(' -> ');
             return {
                 account: plan.account,
                 role: acct?.role ?? 'auto',
@@ -578,7 +590,7 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
                 steps: plan.steps.length,
                 ...(plan.demandId ? { demandId: plan.demandId } : {}),
                 scorePerHour: Number(plan.scorePerHour.toFixed(2)),
-                ...(adapted?.combinedStep ? { script: `${adapted.combinedStep.script} ${adapted.combinedStep.args.join(' ')}`.trim() } : {}),
+                ...(routeText ? { route: routeText } : {}),
                 ...(plan.idleReason ? { idleReason: plan.idleReason } : {}),
             };
         });
@@ -597,7 +609,7 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         recoveryQueueLength: fleetPlan.recoveryQueue.length,
         activeChainsCount: Object.keys(fleetState.activeChains).length,
         transferOrdersCount: fleetPlan.transferOrders.length,
-        adaptedPlansCount: Object.keys(adaptedPlans).length,
+        routedPlansCount: Object.keys(routedPlans).length,
         checksPassed,
         checksTotal: checks.length,
     };
@@ -612,7 +624,7 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         checks,
         fleetPlan,
         fleetState,
-        adaptedPlans,
+        routedPlans,
         sampleAssignments,
     };
 }
@@ -632,11 +644,11 @@ export function formatShadowSummary(report: ShadowVerificationReport): string {
         ...report.checks.map((c) => `  [${c.ok ? 'PASS' : 'FAIL'}] ${c.name}: ${c.detail}`),
         `Recovery queue sample (${recoverySamples.length} total):`,
         ...recoverySamples.slice(0, 6).map((a) =>
-            `  - ${a.account} (${a.role}/${a.lifecycle}): ${a.steps} step(s), cmd=${a.script ?? '-'}`,
+            `  - ${a.account} (${a.role}/${a.lifecycle}): ${a.steps} step(s), route=${a.route ?? '-'}`,
         ),
         `Active work sample (${workSamples.length} total):`,
         ...workSamples.slice(0, 10).map((a) =>
-            `  - ${a.account} (${a.role}/${a.lifecycle}): ${a.steps} step(s), demand=${a.demandId ?? '-'}, score/hr=${a.scorePerHour}, cmd=${a.script ?? '-'}`,
+            `  - ${a.account} (${a.role}/${a.lifecycle}): ${a.steps} step(s), demand=${a.demandId ?? '-'}, score/hr=${a.scorePerHour}, route=${a.route ?? '-'}`,
         ),
     ];
     return lines.join('\n');

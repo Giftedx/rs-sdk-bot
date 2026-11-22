@@ -89,7 +89,7 @@ describe('cloud side bootstrap', () => {
         expect(failed).toEqual({ ok: false, detail: 'exit=spawn-failed; failed step unknown; inspect retained setup output' });
         expect(retained[0]).toContain('error: module missing');
         expect(cloudSide.worktreeSetupResult({ status: 0, stdout: 'ready', stderr: '' }, line => retained.push(line), {})).toEqual({ ok: true, detail: '' });
-        expect(retained[1]).toBe('$ bun scripts/worktree-setup.ts -> 0');
+        expect(retained[1]).toBe('$ bun tools/worktree-setup.ts -> 0');
     });
 
     test('daemons and restarts', () => {

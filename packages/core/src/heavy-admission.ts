@@ -117,4 +117,4 @@ export function heapThatFits(wantedMB: number, free: number, floor: number): num
 }
 // One line for the log of a tool that took less than it wanted.
 export const sizedNote = (tool: string, got: string, wanted: string, free: number, floor: number): string =>
-    `${tool}: ${got} in place of ${wanted}: ${free.toFixed(1)} GiB is free and the floor is ${floor} GiB (scripts/heavy-admission.ts)`;
+    `${tool}: ${got} in place of ${wanted}: ${free.toFixed(1)} GiB is free and the floor is ${floor} GiB (tools/heavy-admission.ts)`;

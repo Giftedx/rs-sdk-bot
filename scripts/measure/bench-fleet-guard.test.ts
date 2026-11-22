@@ -64,5 +64,5 @@ describe('a fleet whose swarm wrote no fresh state', () => {
 test('the refusal line names the hosted command', () => {
     expect(startProblems(facts({ engines: 2, freeGB: 1 })).length).toBe(1);
     const busy = facts({ engines: 1, freeGB: 5, fleet: live });
-    return admitStart({ root: '.', ports: [], engines: 1 }, 0, { read: async () => busy, log: () => {} }).then(line => expect(line).toMatch(/Beside live bots run the cases on hosted runners: bun scripts\/hosted-bench\.ts '<pattern>'\.$/));
+    return admitStart({ root: '.', ports: [], engines: 1 }, 0, { read: async () => busy, log: () => {} }).then(line => expect(line).toMatch(/Beside live bots run the cases on hosted runners: bun tools\/hosted-bench\.ts '<pattern>'\.$/));
 });

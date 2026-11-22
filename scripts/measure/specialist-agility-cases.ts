@@ -1,5 +1,5 @@
 // Practice bench cases for the Agility specialist levers (scripts/agility-specialist.ts).
-import type { BenchCase } from './aio-bench-cases';
+import type { BenchCase } from './bench-case-types';
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import {
     ITEMS,

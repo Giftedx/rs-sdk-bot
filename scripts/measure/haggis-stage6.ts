@@ -18,7 +18,7 @@ import { ISOLATED, pointBotAt, startIsolatedStack } from '../../packages/practic
 import { playerSavePath } from '../../packages/practice/src/save-library';
 import { FISHING_GLORY_IDS } from '../fishing-specialist';
 import { OBJ_GLORY_4, openBot, rubTeleport, settle } from '../gathering-specialist-lib';
-import { CRAFTING, SMITHING, ladder, objId, odds } from './floor-bands';
+import { CRAFTING, SMITHING, ladder, objId, odds } from '../../packages/practice/src/floor-bands';
 import {
     type Job,
     type Meter,
@@ -37,7 +37,7 @@ import {
     tick,
     withdrawN,
     xp,
-} from './floor-lib';
+} from '../../packages/practice/src/floor-lib';
 
 export const ARDOUGNE_ZOO_START = { x: 2603, z: 3234, level: 0 } as const;
 export const ARDOUGNE_SOUTH_BANK_SPOT = { x: 2655, z: 3283, level: 0 } as const;

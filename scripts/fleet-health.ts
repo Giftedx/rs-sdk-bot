@@ -18,7 +18,7 @@ import { pathfindingDataKey } from '../packages/core/src/pathcache';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { cachedReleaseFor } from '../packages/core/src/worker-release';
 import { SWARM_STOP, swarmWroteStop } from './swarm';
-import { failLoops, readRecentResults, type FailLoop, type ResultRow } from './fail-loops';
+import { failLoops, readRecentResults, type FailLoop, type ResultRow } from '../packages/core/src/fail-loops';
 import { inPaterdomusTemple } from './generated/quest-priestperil';
 
 const require = createRequire(import.meta.url);

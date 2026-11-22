@@ -44,7 +44,7 @@ import {createHash} from 'node:crypto';
 import {dirname, join, resolve} from 'node:path';
 import {FREE_FLOOR_GB} from '../../packages/core/src/memory';
 import {simBenchDir, simBotsDir} from '../../packages/core/src/practice-paths';
-import {fleet, freeGB, unitsThatFit} from '../heavy-admission';
+import {fleet, freeGB, unitsThatFit} from '../../packages/core/src/heavy-admission';
 import {BENCH_CASE_GB, FLEET_STOP_EXIT, LIVE_MAX_ENGINES, START_REFUSED_EXIT, admitStart, fleetStop, liveBotProcs, readFleetFacts} from './bench-start-check';
 import {BUDGET_EXIT, BUDGET_MIN, budgetRefusal, estimateRun, parseAckStats, parseSimStat, readElapsed, readSince, recordElapsed} from './bench-budget';
 import {

@@ -74,7 +74,7 @@ export async function runLiveUpdateCli(
                 const apply = gitIn(join(root, SDK))('apply', join(root, SDK_PATCH));
                 return finish(apply.ok ? `RESULT ok live-update vendor: applied the SDK patch to ${SDK}` : `RESULT fail live-update vendor: ${apply.out.slice(0, 200)}`, apply.ok ? 0 : 1);
             }
-            if (state === 'other') return finish(`RESULT ok live-update vendor: ${SDK} does not hold the SDK patch of this commit; bun scripts/worktree-setup.ts --reset-vendor restores it`);
+            if (state === 'other') return finish(`RESULT ok live-update vendor: ${SDK} does not hold the SDK patch of this commit; bun tools/worktree-setup.ts --reset-vendor restores it`);
         }
         if (plan.action !== 'update') return finish(`RESULT ok live-update ${plan.action}: ${plan.reason}${plan.action === 'wait' ? ` (behind ${checkout.behind})` : ''}`);
         if (dry) return finish(`RESULT ok live-update dry: would move ${checkout.behind} commits, ${checkout.incoming.length} files, adopt ${plan.adopt.length}${patchMoves ? (resets ? `, apply the SDK patch to ${SDK}` : `, keep ${SDK} as it is`) : ''}`);

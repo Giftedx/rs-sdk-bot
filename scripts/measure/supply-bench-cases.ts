@@ -1,5 +1,5 @@
 // Practice bench cases for continuous non-Wilderness PK squad raw-to-finished supply routes.
-import type { BenchCase } from './aio-bench-cases';
+import type { BenchCase } from './bench-case-types';
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
 const loggedOut = (s: string) => ok(s) && s.includes('LOGOUT logged-out');

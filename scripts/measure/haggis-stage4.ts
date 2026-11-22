@@ -28,7 +28,7 @@ import {
 } from '../gathering-specialist-lib';
 import { runSeaSlugQuest } from '../generated/quest-seaslug';
 import { createFishingDriver, runStagedFishing } from '../../packages/workers/src/gather';
-import { dialogOpen, inv, level, meter, send, tick, xp } from './floor-lib';
+import { dialogOpen, inv, level, meter, send, tick, xp } from '../../packages/practice/src/floor-lib';
 
 export const OBJ_SWAMP_PASTE = 1941;
 export const STAGE4_FEATHERS = 1000;
