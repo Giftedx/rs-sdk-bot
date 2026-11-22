@@ -4,7 +4,7 @@ import {isLocalServer} from '../core/src/localserver';
 import {priceItemKey} from './item-prices';
 import {createVaultItems} from './vault-items';
 
-const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+const server=readFileSync(new URL('./server/state/statuses.ts',import.meta.url),'utf8');
 const market=readFileSync(new URL('./server/market.ts',import.meta.url),'utf8');
 const transpile=(code:string)=>new Bun.Transpiler({loader:'ts'}).transformSync(code);
 
@@ -27,7 +27,7 @@ test('the wealth ledger excludes practice banks on IPv4 and IPv6 loopback',()=>{
 });
 
 test('practice alerts and results use the same server domain as the runtime',()=>{
- const start=server.indexOf('const practiceNames ='),end=server.indexOf('function alerts(',start);
+ const start=server.indexOf('const practiceNames ='),end=server.indexOf('\nexport {',start);
  const run=new Function('isLocalServer',`const statusCache=new Map([['p',{doc:{name:'Practice',server:'127.0.0.1:21345'}}],['l',{doc:{name:'Live',server:'rs-sdk-demo.fly.dev'}}]]);${transpile(server.slice(start,end))};return practiceNames;`)(isLocalServer);
  expect([...run()]).toEqual(['Practice']);
 });

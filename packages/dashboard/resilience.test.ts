@@ -1,8 +1,8 @@
 import {expect,test} from 'bun:test';
-import {readFileSync} from 'node:fs';
+import {readdirSync,readFileSync} from 'node:fs';
 import {gameDialAddress} from '../core/src/websocket-proxy';
 const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
-const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+const server=readFileSync(new URL('./server/state/runtime.ts',import.meta.url),'utf8');
 const world=readFileSync(new URL('./server/world.ts',import.meta.url),'utf8');
 
 test('stream loss and collector errors reach the visible title indicator without another render',()=>{
@@ -116,7 +116,8 @@ test('distinct player lookups stay serial through cooldown while a fresh hit byp
 });
 
 test('the state carries no lookups and the server has no background lookup round',()=>{
- for(const src of [server,world,readFileSync(new URL('./server.ts',import.meta.url),'utf8'),readFileSync(new URL('./server/routes.ts',import.meta.url),'utf8')]){expect(src).not.toContain('lookupWanted');expect(src).not.toContain('lookups: looked');}
+ const stateParts=readdirSync(new URL('./server/state/',import.meta.url)).filter(f=>f.endsWith('.ts')).sort().map(f=>readFileSync(new URL('./server/state/'+f,import.meta.url),'utf8'));
+ for(const src of [readFileSync(new URL('./server/state.ts',import.meta.url),'utf8'),...stateParts,world,readFileSync(new URL('./server.ts',import.meta.url),'utf8'),readFileSync(new URL('./server/routes.ts',import.meta.url),'utf8')]){expect(src).not.toContain('lookupWanted');expect(src).not.toContain('lookups: looked');}
 });
 
 test('an upstream 404 remains a cached unranked lookup with the same cooldown',async()=>{

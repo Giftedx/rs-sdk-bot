@@ -1,10 +1,11 @@
 // Read-only views of other players, from public game data only: the world feed's roster (every online player's
 // name, tile and combat level), the demo hiscore board pages and player pages. They feed the page's Rivals view
 // (Hiscores), the World plugin (players at our spots, player lookup) and the minimap's other-player dots.
-export type Seen = { x: number; z: number; level: number; combat: number; seen: number };
+type Seen = { x: number; z: number; level: number; combat: number; seen: number };
 export type BoardRow = { rank: number; name: string; level: number; ticks: number };
 export type HiscoreRow = { board: string; rank: number; level: number; time: string };
-export const ONLINE_MS = 30_000, SPOT_RADIUS = 10, RIVALS_PER_BOARD = 10;
+export const ONLINE_MS = 30_000, RIVALS_PER_BOARD = 10;
+const SPOT_RADIUS = 10;
 const NAME = /^[A-Za-z0-9_ -]{1,12}$/;
 
 // Skill rows of a hiscore player page, as server.ts reads it: "<Board> <rank> <level> <time>" after tags are removed.
@@ -53,7 +54,7 @@ export function rivalsView(tops: ReadonlyMap<string, { at: number; rows: BoardRo
 }
 
 // Canonical ground-floor (or dungeon) coordinates for named resource claims in contentionView.
-export const NAMED_SPOT_TILES: Readonly<Record<string, { x: number; z: number; level?: number }>> = {
+const NAMED_SPOT_TILES: Readonly<Record<string, { x: number; z: number; level?: number }>> = {
     'shop:aubury': { x: 3253, z: 3402 },
     'shop:lowe': { x: 3232, z: 3423 },
     'shop:zaff': { x: 3203, z: 3433 },
@@ -163,8 +164,8 @@ export function farmsView(roster: ReadonlyMap<string, Seen & { name?: string }>,
 // otherwise the goal is one level more, and past 99 there is none, so only a new account under that time passes it
 // (newAccount). Board time stops at 99, so a finished account never gets faster. deadline: the board time we have left
 // for a same-level pass.
-export type FleetSkill = { name: string; level: number; xp: number | null };
-export type FleetAccount = { name: string; skills: FleetSkill[]; ranks: { board: string; rank: number; level: number; time: string }[]; goalSkill?: string | null; xpPerHour?: number | null };
+type FleetSkill = { name: string; level: number; xp: number | null };
+type FleetAccount = { name: string; skills: FleetSkill[]; ranks: { board: string; rank: number; level: number; time: string }[]; goalSkill?: string | null; xpPerHour?: number | null };
 const secondsOf = (t: string) => { let s = 0; for (const [, n, u] of t.matchAll(/(\d+)([hms])/g)) s += Number(n) * (u === 'h' ? 3600 : u === 'm' ? 60 : 1); return s; };
 export function overtakeView(tops: ReadonlyMap<string, { rows: BoardRow[] }>, accounts: FleetAccount[], xpForLevel: (level: number) => number) {
     const out: any[] = [];
@@ -189,10 +190,10 @@ export function overtakeView(tops: ReadonlyMap<string, { rows: BoardRow[] }>, ac
     return out;
 }
 
-export const WILDERNESS_BOUNDS = { xMin: 2944, xMax: 3392, zMin: 3520, zMax: 3968 } as const;
+const WILDERNESS_BOUNDS = { xMin: 2944, xMax: 3392, zMin: 3520, zMax: 3968 } as const;
 
-export type WildernessBandId = 'tele' | 'glory' | 'deep';
-export type WildernessBand = {
+type WildernessBandId = 'tele' | 'glory' | 'deep';
+type WildernessBand = {
     id: WildernessBandId;
     label: string;
     range: string;
@@ -211,7 +212,7 @@ export const WILDERNESS_BANDS: readonly WildernessBand[] = [
     { id: 'deep', label: 'Lvl 31+ (Deep Wild)', range: 'Lvl 31+', minWild: 31, maxWild: 56, zMin: 3760, zMax: 3968, colour: '#e05347', fill: 'rgba(224, 83, 71, 0.14)', note: 'Teleports blocked — run south or lever' },
 ];
 
-export type WildernessHotspot = {
+type WildernessHotspot = {
     id: string;
     label: string;
     x: number;
@@ -279,7 +280,7 @@ export function resolveBotDestination(bot: any): { x: number; z: number; level: 
     return null;
 }
 
-export type BotPathOverlay = {
+type BotPathOverlay = {
     name: string;
     from: { x: number; z: number; level: number };
     to: { x: number; z: number; level: number };

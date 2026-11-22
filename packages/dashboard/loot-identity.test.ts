@@ -5,7 +5,7 @@ import {buildItemPrices,expectedLootPrices,projectItemPrices} from './item-price
 import {MAIN_ACCOUNT,publicView} from './publish-relay';
 
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
-const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+const server=readFileSync(new URL('./server/state/build.ts',import.meta.url),'utf8');
 const market=readFileSync(new URL('./server/market.ts',import.meta.url),'utf8');
 const transpile=(text:string)=>new Bun.Transpiler({loader:'ts'}).transformSync(text);
 

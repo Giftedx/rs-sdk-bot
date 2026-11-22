@@ -32,7 +32,7 @@ test('invalid or unknown raw identities never borrow an examine alias or a certi
 });
 
 test('the actual server projection keeps sibling descriptions regardless of account and list order',()=>{
- const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+ const server=readFileSync(new URL('./server/state/build.ts',import.meta.url),'utf8');
  const line=server.split('\n').find(line=>line.includes('...projectItemExamine('))!;
  expect(line).toBeDefined();
  const code=new Bun.Transpiler({loader:'ts'}).transformSync(`const result={${line}};`);
