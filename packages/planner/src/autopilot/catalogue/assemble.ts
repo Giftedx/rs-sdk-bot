@@ -11,7 +11,7 @@ import { armyQuestAndHuntTemplates } from './army-quests';
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
     const goldfarm = KNIGHT_SPOTS.map((spot): Template => ({
-        id: `goldfarm@${spot}`, family: 'goldfarm', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: spot, TICKS: '9000' }, role: 'thieving',
+        id: `goldfarm@${spot}`, family: 'goldfarm', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: spot, TICKS: '9000' }, role: 'thieving',
         goal: `goldfarm knights at ${spot}`, needs: { skills: { Thieving: 55 }, frail: GOLDFARM_FRAIL }, resources: [`knight:${spot}`],
         yields: a => [{ item: 'coins', perTick: knightCoinsPerTick(a.skills.Thieving ?? 1) }],
     }));
@@ -61,12 +61,12 @@ export function catalogue(): Template[] {
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({
-            id: `feathers@${pen}`, family: 'gather-feathers', script: 'scripts/gather-feathers.ts', env: { PEN: pen, TICKS: '3000', TARGET: String(FEATHER_TARGET) }, role: 'helper',
+            id: `feathers@${pen}`, family: 'gather-feathers', script: 'scripts/aio-skiller.ts', args: ['gather', 'foraging', 'feathers'], env: { PEN: pen, TICKS: '3000', TARGET: String(FEATHER_TARGET) }, role: 'helper',
             goal: `feathers at the chicken pen ${pen}`, resources: [`pen:${pen}`], needs: { holdsUnder: { feather: FEATHER_TARGET }, ...(PEN_QUEST_POINTS[pen] ? { questPoints: PEN_QUEST_POINTS[pen] } : {}) },
             // chicken.rs2: 15 feathers 1/4, 5 feathers 1/4 -> 5 a kill; about one kill and pickup per 16 ticks.
             yields: () => [{ item: 'feather', perTick: 0.3 }],
         })),
-        { id: 'lobster-chain', family: 'gather-fish', script: 'scripts/chain.ts', args: ['scripts/gather-fish.ts cage 3000', 'scripts/cook-food.ts 3000 lobster'], role: 'fishing',
+        { id: 'lobster-chain', family: 'gather-fish', script: 'scripts/chain.ts', args: ['scripts/aio-skiller.ts gather fishing cage cage 3000', 'scripts/cook-food.ts 3000 lobster'], role: 'fishing',
             goal: 'Catherby lobsters, caught and cooked', needs: { skills: { Fishing: 40, Cooking: 40 }, items: { 'lobster pot': 1 } }, resources: ['catherby:lobster'],
             yields: a => [{ item: 'lobster', perTick: 0.04 + 0.001 * Math.min(59, (a.skills.Fishing ?? 1) - 40) }] },
         { id: 'shop-runes', family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'betty'], env: { ITEMS: 'fire rune|air rune|earth rune', STOCK_TARGET: String(SHOP_STOCK), BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',

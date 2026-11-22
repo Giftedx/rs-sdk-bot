@@ -1961,7 +1961,7 @@ const EXTRA_CASES: BenchCase[] = [
   // arrowtips with 30 headless arrows into 30 rune arrows at the Catherby bank, and three sharks fished and cooked at Catherby.
   {key: 'extra:fletch-rune-arrows', script: 'scripts/fletch-arrows.ts', preset: 'fresh_lumbridge', scriptArgs: ['600', 'native-arrows', 'rune'], pass: s => ok(s) && /"made":30,"banked":30,/.test(s),
     presetConfig: {position: {x: 2809, z: 3441, level: 0}, skills: {Fletching: 75}, bank: [{id: 53, count: 230}, {id: 44, count: 35}]}},
-  {key: 'extra:shark-supply', script: 'scripts/shark-supply.ts', preset: 'fresh_lumbridge', scriptArgs: ['3', '3000'], pass: s => ok(s) && /newBankedSharks=3 /.test(s),
+  {key: 'extra:shark-supply', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fishing', 'shark', '3', '3000'], pass: s => ok(s) && /newBankedSharks=3 /.test(s),
     presetConfig: {position: {x: 2809, z: 3441, level: 0}, skills: {Fishing: 99, Cooking: 99, Hitpoints: 99}, inventory: [{id: 311, count: 1}], bank: [{id: 995, count: 1000}, {id: 379, count: 2}]}},
   {key: 'extra:smith-rune-kiteshield', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1201', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
@@ -2152,7 +2152,7 @@ function questCases(): BenchCase[] {
 // Routes that cannot run as one bench case, each with the cause. `noEntry` routes point at a file with no command
 // line: the dispatcher starts it and it prints no RESULT.
 export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
-  'skiller:woodcutting:loop': 'worker scripts/wc-loop.ts needs the lite runner, not the in-process client',
+  'skiller:woodcutting:loop': 'route woodcutting:loop (packages/workers/src/gather/woodcutting.ts) needs the lite runner, not the in-process client',
   'skiller:cooking:ge-cook': 'needs the Grand Exchange service',
   'skiller:firemaking:ge': 'needs the Grand Exchange service',
   'logistics:give-to-banker': 'needs scripts/aio-logistics.ts banker running for the banker account',

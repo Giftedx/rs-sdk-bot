@@ -1,8 +1,7 @@
 import { existsSync } from 'node:fs';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { xpForLevel } from '../packages/planner/src/curve';
-import { miningProfiles, incidentalMiningGems } from './microbot-b-mining';
-import { runRotationMining, siteTiles, MINING_SITES } from './mining-rotation';
+import { miningProfiles, incidentalMiningGems, runRotationMining, siteTiles, MINING_SITES } from '../packages/workers/src/gather';
 import {
     openHelperAndMain,
     skipTutorialFast,

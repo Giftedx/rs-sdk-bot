@@ -2357,8 +2357,10 @@
    "id": "pvp:escort-ore",
    "category": "pvp",
    "name": "escort-ore",
-   "script": "scripts/lava-maze-escorted-ore.ts",
-   "args": [],
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
    "env": {},
    "intents": [
     "pvp"
@@ -4014,8 +4016,11 @@
    "id": "skiller:fishing:cage",
    "category": "skiller",
    "name": "fishing:cage",
-   "script": "scripts/gather-fish.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
+    "gather",
+    "fishing",
+    "cage",
     "cage"
    ],
    "env": {
@@ -4034,8 +4039,12 @@
    "id": "skiller:fishing:fishcook",
    "category": "skiller",
    "name": "fishing:fishcook",
-   "script": "scripts/fishcook.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "fishing",
+    "fishcook"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4066,8 +4075,11 @@
    "id": "skiller:fishing:harpoon",
    "category": "skiller",
    "name": "fishing:harpoon",
-   "script": "scripts/gather-fish.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
+    "gather",
+    "fishing",
+    "harpoon",
     "harpoon"
    ],
    "env": {
@@ -4086,8 +4098,12 @@
    "id": "skiller:fishing:shark",
    "category": "skiller",
    "name": "fishing:shark",
-   "script": "scripts/shark-supply.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "fishing",
+    "shark"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4117,8 +4133,12 @@
    "id": "skiller:fishing:staged",
    "category": "skiller",
    "name": "fishing:staged",
-   "script": "scripts/microbot-b-fishing.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "fishing",
+    "staged"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4133,8 +4153,12 @@
    "id": "skiller:fishing:village",
    "category": "skiller",
    "name": "fishing:village",
-   "script": "scripts/microbot-village-fishing.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "fishing",
+    "village"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4227,8 +4251,12 @@
    "id": "skiller:foraging:crystal-chest",
    "category": "skiller",
    "name": "foraging:crystal-chest",
-   "script": "scripts/crystal-chest.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "foraging",
+    "crystal-chest"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -4240,8 +4268,12 @@
    "id": "skiller:foraging:feathers",
    "category": "skiller",
    "name": "foraging:feathers",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "foraging",
+    "feathers"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -4253,8 +4285,12 @@
    "id": "skiller:foraging:flax",
    "category": "skiller",
    "name": "foraging:flax",
-   "script": "scripts/gather-flax.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "foraging",
+    "flax"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -4266,8 +4302,12 @@
    "id": "skiller:foraging:grapes",
    "category": "skiller",
    "name": "foraging:grapes",
-   "script": "scripts/grapes.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "foraging",
+    "grapes"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -4305,8 +4345,12 @@
    "id": "skiller:foraging:spawn",
    "category": "skiller",
    "name": "foraging:spawn",
-   "script": "scripts/gather-spawn.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "foraging",
+    "spawn"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -4318,8 +4362,12 @@
    "id": "skiller:foraging:wool",
    "category": "skiller",
    "name": "foraging:wool",
-   "script": "scripts/collect-wool.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "foraging",
+    "wool"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -4589,8 +4637,12 @@
    "id": "skiller:mining:at-site",
    "category": "skiller",
    "name": "mining:at-site",
-   "script": "scripts/microbot-b-mining.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "mining",
+    "at-site"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4605,8 +4657,12 @@
    "id": "skiller:mining:drop",
    "category": "skiller",
    "name": "mining:drop",
-   "script": "scripts/microbot-mining-drop.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "mining",
+    "drop"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4621,8 +4677,12 @@
    "id": "skiller:mining:essence",
    "category": "skiller",
    "name": "mining:essence",
-   "script": "scripts/gather-essence.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "mining",
+    "essence"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4637,8 +4697,12 @@
    "id": "skiller:mining:lava-maze",
    "category": "skiller",
    "name": "mining:lava-maze",
-   "script": "scripts/lava-maze-escorted-ore.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "mining",
+    "lava-maze"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4653,8 +4717,12 @@
    "id": "skiller:mining:loot",
    "category": "skiller",
    "name": "mining:loot",
-   "script": "scripts/microbot-b-mining-loot.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "mining",
+    "loot"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4669,8 +4737,12 @@
    "id": "skiller:mining:ore",
    "category": "skiller",
    "name": "mining:ore",
-   "script": "scripts/gather-ore.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "mining",
+    "ore"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4685,8 +4757,12 @@
    "id": "skiller:mining:progressive",
    "category": "skiller",
    "name": "mining:progressive",
-   "script": "scripts/microbot-mining-progressive.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "mining",
+    "progressive"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4907,8 +4983,12 @@
    "id": "skiller:thieving:blood-chest",
    "category": "skiller",
    "name": "thieving:blood-chest",
-   "script": "scripts/blood-chest.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "thieving",
+    "blood-chest"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4939,8 +5019,12 @@
    "id": "skiller:thieving:knights",
    "category": "skiller",
    "name": "thieving:knights",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "thieving",
+    "knights"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4955,8 +5039,12 @@
    "id": "skiller:thieving:knights-stable",
    "category": "skiller",
    "name": "thieving:knights-stable",
-   "script": "scripts/goldfarm-stable.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "thieving",
+    "knights-stable"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4971,8 +5059,12 @@
    "id": "skiller:thieving:nature-chest",
    "category": "skiller",
    "name": "thieving:nature-chest",
-   "script": "scripts/microbot-b-nature-chest.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "thieving",
+    "nature-chest"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -4987,8 +5079,12 @@
    "id": "skiller:thieving:pickpocket",
    "category": "skiller",
    "name": "thieving:pickpocket",
-   "script": "scripts/microbot-pickpocket-trip.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "thieving",
+    "pickpocket"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -5003,8 +5099,12 @@
    "id": "skiller:thieving:pickpocket-at-site",
    "category": "skiller",
    "name": "thieving:pickpocket-at-site",
-   "script": "scripts/microbot-a-pickpocket.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "thieving",
+    "pickpocket-at-site"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -5034,8 +5134,12 @@
    "id": "skiller:thieving:stalls",
    "category": "skiller",
    "name": "thieving:stalls",
-   "script": "scripts/microbot-c-stalls.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "thieving",
+    "stalls"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -5098,8 +5202,12 @@
    "id": "skiller:woodcutting:edgeville",
    "category": "skiller",
    "name": "woodcutting:edgeville",
-   "script": "scripts/edgeville-woodcut-order.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "woodcutting",
+    "edgeville"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -5130,8 +5238,12 @@
    "id": "skiller:woodcutting:loop",
    "category": "skiller",
    "name": "woodcutting:loop",
-   "script": "scripts/wc-loop.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "woodcutting",
+    "loop"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -5161,8 +5273,12 @@
    "id": "skiller:woodcutting:yews",
    "category": "skiller",
    "name": "woodcutting:yews",
-   "script": "scripts/gather-yews.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "gather",
+    "woodcutting",
+    "yews"
+   ],
    "env": {},
    "intents": [
     "train",
@@ -5420,15 +5536,19 @@
    "ladderIds": [
     "crafting/spin-wool"
    ],
-   "sourceEntry": "scripts/collect-wool.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/collect-wool.ts",
-    "args": [],
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "gather",
+     "foraging",
+     "wool"
+    ],
     "env": {
      "CAP": "2200"
     }
    },
-   "source": "scripts/collect-wool.ts; scripts/player/configs/skill_guide.dbrow:312",
+   "source": "packages/workers/src/gather/foraging.ts; scripts/player/configs/skill_guide.dbrow:312",
    "effects": {
     "items": {
      "1759": 1
@@ -5811,16 +5931,19 @@
    "ladderIds": [
     "fishing/catch-shark"
    ],
-   "sourceEntry": "scripts/shark-supply.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/shark-supply.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "fishing",
+     "shark",
      "99",
      "9000"
     ],
     "env": {}
    },
-   "source": "scripts/shark-supply.ts; scripts/player/configs/skill_guide.dbrow:720",
+   "source": "packages/workers/src/gather/fishing.ts; scripts/player/configs/skill_guide.dbrow:720",
    "effects": {
     "items": {
      "383": 1
@@ -15182,16 +15305,19 @@
    "ladderIds": [
     "mining/rune_essence_table"
    ],
-   "sourceEntry": "scripts/gather-essence.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/gather-essence.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "mining",
+     "essence",
      "150",
      "28"
     ],
     "env": {}
    },
-   "source": "scripts/gather-essence.ts; scripts/skill_mining/configs/mine.dbrow:1",
+   "source": "packages/workers/src/gather/mining.ts; scripts/skill_mining/configs/mine.dbrow:1",
    "effects": {
     "items": {
      "1436": 1
@@ -84739,10 +84865,13 @@
    "ladderIds": [
     "thieving/trapped_chest_chest_blood_runes"
    ],
-   "sourceEntry": "scripts/blood-chest.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/blood-chest.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "blood-chest",
      "2500"
     ],
     "env": {
@@ -84750,7 +84879,7 @@
      "CAP": "2500"
     }
    },
-   "source": "scripts/blood-chest.ts; scripts/skill_thieving/configs/chests/trapped_chest.dbrow:35",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/chests/trapped_chest.dbrow:35",
    "effects": {
     "items": {
      "565": 2
@@ -84892,10 +85021,14 @@
    "ladderIds": [
     "thieving/trapped_chest_chest_nature_rune"
    ],
-   "sourceEntry": "scripts/microbot-b-nature-chest.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-b-nature-chest.ts",
-    "args": [],
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "gather",
+     "thieving",
+     "nature-chest"
+    ],
     "env": {
      "CHEST_X": "2671",
      "CHEST_Z": "3301",
@@ -84904,7 +85037,7 @@
      "CAP": "200"
     }
    },
-   "source": "scripts/microbot-b-nature-chest.ts; scripts/skill_thieving/configs/chests/trapped_chest.dbrow:9",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/chests/trapped_chest.dbrow:9",
    "effects": {
     "items": {
      "561": 1
@@ -85046,10 +85179,13 @@
    "ladderIds": [
     "thieving/pickpocket_farmer"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "farmer",
      "1",
      "3",
@@ -85059,7 +85195,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:30",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:30",
    "effects": {
     "xp": {
      "thieving": 362.5
@@ -85192,7 +85328,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -85201,10 +85337,13 @@
    "ladderIds": [
     "thieving/pickpocket_gnome"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "gnome",
      "1",
      "3",
@@ -85214,7 +85353,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:117",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:117",
    "effects": {
     "xp": {
      "thieving": 4957.5
@@ -85347,7 +85486,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -85356,10 +85495,13 @@
    "ladderIds": [
     "thieving/pickpocket_guard"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "guard",
      "1",
      "3",
@@ -85369,7 +85511,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:68",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:68",
    "effects": {
     "xp": {
      "thieving": 1170
@@ -85502,7 +85644,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -85511,10 +85653,13 @@
    "ladderIds": [
     "thieving/pickpocket_hero"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "hero",
      "1",
      "3",
@@ -85524,7 +85669,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:140",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:140",
    "effects": {
     "xp": {
      "thieving": 6832.5
@@ -85657,7 +85802,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -85666,10 +85811,13 @@
    "ladderIds": [
     "thieving/pickpocket_knight_of_ardougne"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "knight_of_ardougne",
      "1",
      "3",
@@ -85679,7 +85827,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:81",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:81",
    "effects": {
     "xp": {
      "thieving": 2107.5
@@ -85812,7 +85960,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -85821,10 +85969,13 @@
    "ladderIds": [
     "thieving/pickpocket_man"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "man",
      "1",
      "3",
@@ -85834,7 +85985,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:1",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:1",
    "effects": {
     "xp": {
      "thieving": 200
@@ -85967,7 +86118,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -85976,10 +86127,13 @@
    "ladderIds": [
     "thieving/pickpocket_paladin"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "paladin",
      "1",
      "3",
@@ -85989,7 +86143,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:105",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:105",
    "effects": {
     "xp": {
      "thieving": 3795.0000000000005
@@ -86122,7 +86276,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -86131,10 +86285,13 @@
    "ladderIds": [
     "thieving/pickpocket_rogue"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "rogue",
      "1",
      "3",
@@ -86144,7 +86301,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:53",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:53",
    "effects": {
     "xp": {
      "thieving": 912.5
@@ -86277,7 +86434,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -86286,10 +86443,13 @@
    "ladderIds": [
     "thieving/pickpocket_viking"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "viking",
      "1",
      "3",
@@ -86299,7 +86459,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:157",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:157",
    "effects": {
     "xp": {
      "thieving": 1625
@@ -86432,7 +86592,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -86441,10 +86601,13 @@
    "ladderIds": [
     "thieving/pickpocket_warrior"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "warrior",
      "1",
      "3",
@@ -86454,7 +86617,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:41",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:41",
    "effects": {
     "xp": {
      "thieving": 650
@@ -86587,7 +86750,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -86596,10 +86759,13 @@
    "ladderIds": [
     "thieving/pickpocket_watchman"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "watchman",
      "1",
      "3",
@@ -86609,7 +86775,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:93",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:93",
    "effects": {
     "xp": {
      "thieving": 3437.5
@@ -86742,7 +86908,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -86751,10 +86917,13 @@
    "ladderIds": [
     "thieving/pickpocket_woman"
    ],
-   "sourceEntry": "scripts/microbot-a-pickpocket.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/microbot-a-pickpocket.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "thieving",
+     "pickpocket-at-site",
      "woman",
      "1",
      "3",
@@ -86764,7 +86933,7 @@
      "MEMBERS": "1"
     }
    },
-   "source": "scripts/microbot-a-pickpocket.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:16",
+   "source": "packages/workers/src/gather/thieving.ts; scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:16",
    "effects": {
     "xp": {
      "thieving": 200
@@ -86897,7 +87066,7 @@
     ]
    },
    "execution": {
-    "unitArg": 1
+    "unitArg": 4
    }
   },
   {
@@ -93896,10 +94065,13 @@
    "ladderIds": [
     "woodcutting/magic_tree_table"
    ],
-   "sourceEntry": "scripts/gather-yews.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/gather-yews.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "woodcutting",
+     "yews",
      "1000",
      "27"
     ],
@@ -93908,7 +94080,7 @@
      "WOOD_GROVE": "native-processing"
     }
    },
-   "source": "scripts/gather-yews.ts; scripts/skill_woodcutting/configs/trees.dbrow:145",
+   "source": "packages/workers/src/gather/woodcutting.ts; scripts/skill_woodcutting/configs/trees.dbrow:145",
    "effects": {
     "xp": {
      "woodcutting": 6250
@@ -94047,10 +94219,13 @@
    "ladderIds": [
     "woodcutting/maple_tree_table"
    ],
-   "sourceEntry": "scripts/gather-yews.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/gather-yews.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "woodcutting",
+     "yews",
      "1000",
      "27"
     ],
@@ -94059,7 +94234,7 @@
      "WOOD_GROVE": "native-processing"
     }
    },
-   "source": "scripts/gather-yews.ts; scripts/skill_woodcutting/configs/trees.dbrow:115",
+   "source": "packages/workers/src/gather/woodcutting.ts; scripts/skill_woodcutting/configs/trees.dbrow:115",
    "effects": {
     "xp": {
      "woodcutting": 2500
@@ -94642,10 +94817,13 @@
    "ladderIds": [
     "woodcutting/yew_tree_table"
    ],
-   "sourceEntry": "scripts/gather-yews.ts",
+   "sourceEntry": "scripts/aio-skiller.ts",
    "step": {
-    "script": "scripts/gather-yews.ts",
+    "script": "scripts/aio-skiller.ts",
     "args": [
+     "gather",
+     "woodcutting",
+     "yews",
      "1000",
      "27"
     ],
@@ -94653,7 +94831,7 @@
      "TREE": "yew"
     }
    },
-   "source": "scripts/gather-yews.ts; scripts/skill_woodcutting/configs/trees.dbrow:130",
+   "source": "packages/workers/src/gather/woodcutting.ts; scripts/skill_woodcutting/configs/trees.dbrow:130",
    "effects": {
     "xp": {
      "woodcutting": 4375
@@ -97107,19 +97285,6 @@
    ]
   },
   {
-   "script": "scripts/blood-chest.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "thieving"
-   ],
-   "routeIds": [
-    "skiller:thieving:blood-chest"
-   ]
-  },
-  {
    "script": "scripts/brew-potions.ts",
    "intents": [
     "train",
@@ -97156,16 +97321,6 @@
    ],
    "skills": [],
    "routeIds": []
-  },
-  {
-   "script": "scripts/collect-wool.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "skiller:foraging:wool"
-   ]
   },
   {
    "script": "scripts/cook-food.ts",
@@ -97244,16 +97399,6 @@
    ]
   },
   {
-   "script": "scripts/crystal-chest.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "skiller:foraging:crystal-chest"
-   ]
-  },
-  {
    "script": "scripts/defence-specialist.ts",
    "intents": [
     "train"
@@ -97302,19 +97447,6 @@
    ]
   },
   {
-   "script": "scripts/edgeville-woodcut-order.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "woodcutting"
-   ],
-   "routeIds": [
-    "skiller:woodcutting:edgeville"
-   ]
-  },
-  {
    "script": "scripts/firemaking-line.ts",
    "intents": [
     "train",
@@ -97350,19 +97482,6 @@
    ],
    "routeIds": [
     "skiller:firemaking:specialist"
-   ]
-  },
-  {
-   "script": "scripts/fishcook.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "fishing"
-   ],
-   "routeIds": [
-    "skiller:fishing:fishcook"
    ]
   },
   {
@@ -97439,29 +97558,6 @@
    ]
   },
   {
-   "script": "scripts/gather-essence.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "mining"
-   ],
-   "routeIds": [
-    "skiller:mining:essence"
-   ]
-  },
-  {
-   "script": "scripts/gather-feathers.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "skiller:foraging:feathers"
-   ]
-  },
-  {
    "script": "scripts/gather-fire-combat.ts",
    "intents": [
     "acquire"
@@ -97494,30 +97590,6 @@
    ]
   },
   {
-   "script": "scripts/gather-fish.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "fishing"
-   ],
-   "routeIds": [
-    "skiller:fishing:cage",
-    "skiller:fishing:harpoon"
-   ]
-  },
-  {
-   "script": "scripts/gather-flax.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "skiller:foraging:flax"
-   ]
-  },
-  {
    "script": "scripts/gather-imps.ts",
    "intents": [
     "acquire"
@@ -97531,19 +97603,6 @@
    ],
    "routeIds": [
     "fighter:imp"
-   ]
-  },
-  {
-   "script": "scripts/gather-ore.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "mining"
-   ],
-   "routeIds": [
-    "skiller:mining:ore"
    ]
   },
   {
@@ -97561,29 +97620,6 @@
    ],
    "routeIds": [
     "fighter:ranged-gather"
-   ]
-  },
-  {
-   "script": "scripts/gather-spawn.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "skiller:foraging:spawn"
-   ]
-  },
-  {
-   "script": "scripts/gather-yews.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "woodcutting"
-   ],
-   "routeIds": [
-    "skiller:woodcutting:yews"
    ]
   },
   {
@@ -98450,42 +98486,6 @@
    "routeIds": []
   },
   {
-   "script": "scripts/goldfarm-stable.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "thieving"
-   ],
-   "routeIds": [
-    "skiller:thieving:knights-stable"
-   ]
-  },
-  {
-   "script": "scripts/goldfarm.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "thieving"
-   ],
-   "routeIds": [
-    "skiller:thieving:knights"
-   ]
-  },
-  {
-   "script": "scripts/grapes.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "skiller:foraging:grapes"
-   ]
-  },
-  {
    "script": "scripts/handoff-inputs.ts",
    "intents": [
     "acquire",
@@ -98519,21 +98519,6 @@
    ],
    "routeIds": [
     "fighter:specialist-hp"
-   ]
-  },
-  {
-   "script": "scripts/lava-maze-escorted-ore.ts",
-   "intents": [
-    "train",
-    "produce",
-    "pvp"
-   ],
-   "skills": [
-    "mining"
-   ],
-   "routeIds": [
-    "skiller:mining:lava-maze",
-    "pvp:escort-ore"
    ]
   },
   {
@@ -99752,19 +99737,6 @@
    ]
   },
   {
-   "script": "scripts/microbot-a-pickpocket.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "thieving"
-   ],
-   "routeIds": [
-    "skiller:thieving:pickpocket-at-site"
-   ]
-  },
-  {
    "script": "scripts/microbot-a-ranged-camp.ts",
    "intents": [
     "train",
@@ -99795,19 +99767,6 @@
    ]
   },
   {
-   "script": "scripts/microbot-b-fishing.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "fishing"
-   ],
-   "routeIds": [
-    "skiller:fishing:staged"
-   ]
-  },
-  {
    "script": "scripts/microbot-b-jewellery.ts",
    "intents": [
     "train",
@@ -99828,45 +99787,6 @@
    "skills": [],
    "routeIds": [
     "boss:kbd"
-   ]
-  },
-  {
-   "script": "scripts/microbot-b-mining-loot.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "mining"
-   ],
-   "routeIds": [
-    "skiller:mining:loot"
-   ]
-  },
-  {
-   "script": "scripts/microbot-b-mining.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "mining"
-   ],
-   "routeIds": [
-    "skiller:mining:at-site"
-   ]
-  },
-  {
-   "script": "scripts/microbot-b-nature-chest.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "thieving"
-   ],
-   "routeIds": [
-    "skiller:thieving:nature-chest"
    ]
   },
   {
@@ -99964,19 +99884,6 @@
    "skills": [],
    "routeIds": [
     "skiller:foraging:qol"
-   ]
-  },
-  {
-   "script": "scripts/microbot-c-stalls.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "thieving"
-   ],
-   "routeIds": [
-    "skiller:thieving:stalls"
    ]
   },
   {
@@ -100129,32 +100036,6 @@
    ]
   },
   {
-   "script": "scripts/microbot-mining-drop.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "mining"
-   ],
-   "routeIds": [
-    "skiller:mining:drop"
-   ]
-  },
-  {
-   "script": "scripts/microbot-mining-progressive.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "mining"
-   ],
-   "routeIds": [
-    "skiller:mining:progressive"
-   ]
-  },
-  {
    "script": "scripts/microbot-misc-coffer.ts",
    "intents": [
     "acquire"
@@ -100162,19 +100043,6 @@
    "skills": [],
    "routeIds": [
     "skiller:foraging:miscellania-coffer"
-   ]
-  },
-  {
-   "script": "scripts/microbot-pickpocket-trip.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "thieving"
-   ],
-   "routeIds": [
-    "skiller:thieving:pickpocket"
    ]
   },
   {
@@ -100273,19 +100141,6 @@
    "skills": [],
    "routeIds": [
     "boss:trawler"
-   ]
-  },
-  {
-   "script": "scripts/microbot-village-fishing.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "fishing"
-   ],
-   "routeIds": [
-    "skiller:fishing:village"
    ]
   },
   {
@@ -100623,19 +100478,6 @@
    "routeIds": []
   },
   {
-   "script": "scripts/shark-supply.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "fishing"
-   ],
-   "routeIds": [
-    "skiller:fishing:shark"
-   ]
-  },
-  {
    "script": "scripts/smelt-bars.ts",
    "intents": [
     "train",
@@ -100753,19 +100595,6 @@
    ],
    "routeIds": [
     "skiller:prayer:bury"
-   ]
-  },
-  {
-   "script": "scripts/wc-loop.ts",
-   "intents": [
-    "train",
-    "produce"
-   ],
-   "skills": [
-    "woodcutting"
-   ],
-   "routeIds": [
-    "skiller:woodcutting:loop"
    ]
   },
   {

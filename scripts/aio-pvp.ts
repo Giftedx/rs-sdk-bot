@@ -25,8 +25,10 @@ import {
  type GodName,type GodLoadoutSpec,type DragonSpecComparison,
 } from './pk-kits';
 import {
- escortInterceptDecision,retreatOrTeleportPlan,selectInboundRecovery,
-} from './lava-maze-escorted-ore';
+ escortInterceptDecision,retreatOrTeleportPlan,selectInboundRecovery,runGatherCli,
+} from '../packages/workers/src/gather';
+import type {FightOptions as PvpFightOptions} from './pk';
+import {kitFrom} from './pk-roam';
 
 export {
  PVP_ITEMS,PVP_SPELLS,PVP_PRAYER,
@@ -64,7 +66,7 @@ export const PVP_MODES: readonly PvpModeSpec[] = [
  {mode:'pilot',script:'scripts/pk-live/live-pilot.ts',defaultArgs:['10','20'],description:'Bounded live Wilderness PK pilot with GE/shop rune restock'},
  {mode:'standby',script:'scripts/pvp-standby.ts',description:'Staged Wilderness standby readiness'},
  {mode:'stage-kit',script:'scripts/pvp-kit-stage.ts',description:'Stage an owned starter PvP kit and two paid cheese at Varrock East bank'},
- {mode:'escort-ore',script:'scripts/lava-maze-escorted-ore.ts',description:'Escorted Wilderness Lava Maze runite mining trip'},
+ {mode:'escort-ore',script:'scripts/aio-pvp.ts',defaultArgs:['__escort-ore'],description:'Escorted Wilderness Lava Maze runite mining trip'},
  {mode:'microbot-pvp',script:'scripts/microbot-pvp.ts',description:'Microbot-adapted PvP combat helper'},
  {mode:'special-swap',script:'scripts/microbot-special-swap.ts',description:'1-tick special-attack weapon swap and restore'},
  {mode:'monitor',script:'scripts/microbot-c-player-monitor.ts',description:'Wilderness nearby-player threat & combat-range monitor'},
@@ -205,6 +207,10 @@ export function resolvePvpStep(modeInput: string, rest: readonly string[] = []):
  if (!spec) {
   throw Error(`aio-pvp: unknown mode "${mode}"; known: ${PVP_MODES.map(m => m.mode).join(', ')}`);
  }
+ if (spec.mode === 'escort-ore') {
+  const resolved = resolveRouteStep({ script: spec.script, defaultEnv: spec.defaultEnv }, rest);
+  return { script: 'scripts/aio-pvp.ts', args: ['__escort-ore', ...resolved.args], env: resolved.env };
+ }
  // pk-roam.ts and pk-army.ts read their KEY=value settings from argv, so they stay arguments.
  if (spec.mode === 'roam' || spec.mode === 'army') return { script: spec.script, args: rest.length ? [...rest] : [...(spec.defaultArgs ?? [])], env: { ...(spec.defaultEnv ?? {}) } };
  return resolveRouteStep(spec, rest);
@@ -214,6 +220,30 @@ export async function runAioPvp(account: string, args: readonly string[], env: R
  if (!account) throw Error('aio-pvp requires account');
  const [mode, ...rest] = args;
  if (!mode) throw Error('aio-pvp requires <mode>');
+ if (mode === '__escort-ore') {
+  const cleanArgs: string[] = [];
+  const mergedEnv: Record<string, string | undefined> = { ...env };
+  for (const token of rest) {
+   const m = token.match(/^([A-Z][A-Z0-9_]*)=([\s\S]*)$/);
+   if (m) mergedEnv[m[1]!] = m[2]!;
+   else cleanArgs.push(token);
+  }
+  const code = await runGatherCli(account, {
+   skill: 'mining',
+   method: 'lava-maze',
+   args: cleanArgs,
+   env: mergedEnv,
+   deps: {
+    attackable,
+    defaultSpec,
+    fightPlayer: (s, targetName, opts) => fightPlayer(s, targetName, (opts ?? {}) as PvpFightOptions),
+    escapeStep,
+    hasVarrockTeleport,
+    kitFrom,
+   },
+  });
+  return code === 0 ? 'RESULT ok' : 'RESULT fail';
+ }
  const step = resolvePvpStep(mode, rest);
  return runDirectChild([step.script, account, ...step.args], { ...env, ...step.env });
 }

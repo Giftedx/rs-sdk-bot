@@ -13023,11 +13023,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/fishcook.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/fishcook.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/fishcook.ts contains \"raw chicken\"",
+    "workerEvidence": "packages/workers/src/gather/fishing.ts contains \"raw chicken\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "cooking/cooking_generic_chicken",
@@ -15665,7 +15665,7 @@
     "workers": [
      "scripts/cook-food.ts",
      "scripts/cook-stock.ts",
-     "scripts/fishcook.ts"
+     "scripts/aio-skiller.ts"
     ],
     "workerEvidence": "scripts/cook-food.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
     "pendingCapability": null,
@@ -16497,7 +16497,7 @@
     "workers": [
      "scripts/cook-food.ts",
      "scripts/cook-stock.ts",
-     "scripts/fishcook.ts"
+     "scripts/aio-skiller.ts"
     ],
     "workerEvidence": "scripts/cook-food.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
     "pendingCapability": null,
@@ -18516,7 +18516,7 @@
      "shark-supply-order",
      "scripts/cook-food.ts"
     ],
-    "workerEvidence": "scripts/shark-supply.ts contains \"shark\"",
+    "workerEvidence": "scripts/aio-skiller.ts contains \"shark\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "cooking/cooking_generic_shark",
@@ -19815,12 +19815,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-yews.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-yews.ts",
-     "scripts/wc-loop.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-yews.ts contains \"'yew'\"",
+    "workerEvidence": "packages/workers/src/gather/woodcutting.ts contains \"'yew'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "woodcutting/normal_tree_table",
@@ -20115,11 +20114,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-yews.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-yews.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-yews.ts contains \"'yew'\"",
+    "workerEvidence": "packages/workers/src/gather/woodcutting.ts contains \"'yew'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "woodcutting/oak_tree_table",
@@ -21141,11 +21140,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-yews.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-yews.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-yews.ts contains \"'yew'\"",
+    "workerEvidence": "packages/workers/src/gather/woodcutting.ts contains \"'yew'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "woodcutting/yew_tree_table",
@@ -26099,11 +26098,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/fishcook.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/fishcook.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/fishcook.ts contains \"Fly fishes trout and salmon\"",
+    "workerEvidence": "packages/workers/src/gather/fishing.ts contains \"export async function runFishcook\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fishing/catch-trout",
@@ -26719,11 +26718,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/fishcook.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/fishcook.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/fishcook.ts contains \"Fly fishes trout and salmon\"",
+    "workerEvidence": "packages/workers/src/gather/fishing.ts contains \"export async function runFishcook\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fishing/catch-salmon",
@@ -26860,11 +26859,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-fish.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-fish.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-fish.ts contains \"Lobsters (Cage) or Swordfish/Tuna (Harpoon)\"",
+    "workerEvidence": "packages/workers/src/gather/fishing.ts contains \"targetOp = isCage ? 'Cage' : 'Harpoon'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fishing/catch-tuna",
@@ -26994,11 +26993,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-fish.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-fish.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-fish.ts contains \"Lobsters (Cage) or Swordfish/Tuna (Harpoon)\"",
+    "workerEvidence": "packages/workers/src/gather/fishing.ts contains \"targetOp = isCage ? 'Cage' : 'Harpoon'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fishing/catch-lobster",
@@ -27251,11 +27250,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-fish.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-fish.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-fish.ts contains \"Lobsters (Cage) or Swordfish/Tuna (Harpoon)\"",
+    "workerEvidence": "packages/workers/src/gather/fishing.ts contains \"targetOp = isCage ? 'Cage' : 'Harpoon'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fishing/catch-swordfish",
@@ -27475,9 +27474,9 @@
     "worker": "shark-supply-order",
     "workers": [
      "shark-supply-order",
-     "scripts/gather-fish.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/shark-supply.ts contains \"shark\"",
+    "workerEvidence": "scripts/aio-skiller.ts contains \"shark\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fishing/catch-shark",
@@ -29077,11 +29076,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/collect-wool.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/collect-wool.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/collect-wool.ts contains \"spin the rest\"",
+    "workerEvidence": "packages/workers/src/gather/foraging.ts contains \"spinning wheel\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/spin-wool",
@@ -49503,11 +49502,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-ore.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-ore.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-ore.ts contains \"copper: [2090\"",
+    "workerEvidence": "packages/workers/src/gather/mining.ts contains \"copper: [2090\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "mining/clay_rock_table",
@@ -49810,11 +49809,11 @@
     },
     "xpPerTick": 26.35,
     "rateMethod": "mine_copper",
-    "worker": "scripts/gather-ore.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-ore.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-ore.ts contains \"copper: [2090\"",
+    "workerEvidence": "packages/workers/src/gather/mining.ts contains \"copper: [2090\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "mining/copper_rock_table",
@@ -50432,7 +50431,7 @@
     "worker": "fresh-rune-supply-order",
     "workers": [
      "fresh-rune-supply-order",
-     "scripts/gather-essence.ts"
+     "scripts/aio-skiller.ts"
     ],
     "workerEvidence": "scripts/rune-supply.ts contains \"gather-essence\"",
     "pendingCapability": null,
@@ -50737,11 +50736,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-ore.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-ore.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-ore.ts contains \"copper: [2090\"",
+    "workerEvidence": "packages/workers/src/gather/mining.ts contains \"copper: [2090\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "mining/tin_rock_table",
@@ -52156,11 +52155,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-ore.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/gather-ore.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/gather-ore.ts contains \"copper: [2090\"",
+    "workerEvidence": "packages/workers/src/gather/mining.ts contains \"copper: [2090\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "mining/iron_rock_table",
@@ -59896,9 +59895,9 @@
     "worker": "goldfarm-order",
     "workers": [
      "goldfarm-order",
-     "scripts/goldfarm.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/goldfarm-stable.ts contains \"pickpocket knights of Ardougne\"",
+    "workerEvidence": "scripts/aio-skiller.ts contains \"Pickpocket Knights of Ardougne\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "thieving/pickpocket_knight_of_ardougne",

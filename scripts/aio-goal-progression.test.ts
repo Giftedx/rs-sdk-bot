@@ -48,15 +48,15 @@ test('overall completion includes Hitpoints and complete accounts have no traini
 
 test('food acquisition hands caught fish to cooking before resuming knights', () => {
  const skills = {...maxed,Thieving:60,Fishing:40};
- expect(recommendNextAioJob(account(skills,{301:1}),'goldfarm').step?.script).toBe('scripts/gather-fish.ts');
+ expect(recommendNextAioJob(account(skills,{301:1}),'goldfarm').step?.script).toBe('scripts/aio-skiller.ts');
  expect(recommendNextAioJob(account(skills),'goldfarm')).toMatchObject({status:'blocked',step:null});
  const cook = recommendNextAioJob(account(skills,{377:20}),'goldfarm');
  expect(cook.step?.script).toBe('scripts/cook-food.ts');
  expect(cook.step?.args).toEqual(['2000','lobster']);
- expect(recommendNextAioJob(account(skills,{379:20}),'goldfarm').step?.script).toBe('scripts/goldfarm.ts');
+ expect(recommendNextAioJob(account(skills,{379:20}),'goldfarm').step?.script).toBe('scripts/aio-skiller.ts');
  expect(recommendNextAioJob(account({...skills,Cooking:1},{377:20}),'goldfarm')).toMatchObject({status:'blocked',step:null});
  expect(recommendNextAioJob(account({...skills,Cooking:15},{377:20,335:20}),'goldfarm').step?.args).toEqual(['2000','trout']);
- for (const food of [1891,1893,1895,1901,2309]) expect(recommendNextAioJob(account({...skills,Cooking:1,Fishing:1},{[food]:20}),'goldfarm').step?.script).toBe('scripts/goldfarm.ts');
+ for (const food of [1891,1893,1895,1901,2309]) expect(recommendNextAioJob(account({...skills,Cooking:1,Fishing:1},{[food]:20}),'goldfarm').step?.script).toBe('scripts/aio-skiller.ts');
 });
 
 test('invalid observations never appear as completed goals', () => {

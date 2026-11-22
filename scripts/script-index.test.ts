@@ -51,7 +51,7 @@ test('a script takes the group of its first route, and a route description comes
  const line = (path: string) => index.find(l => l.path === path)!;
  expect(line('scripts/aio-logistics.ts')).toMatchObject({group: 'logistics', source: 'route'});
  expect(line('scripts/aio-logistics.ts').description).toStartWith('logistics coin-courier: ');
- expect(line('scripts/gather-fish.ts').description).toContain('; skiller fishing:harpoon: ');
+ expect(line('scripts/aio-skiller.ts').description).toContain('; skiller fishing:harpoon: ');
  expect(line('scripts/swarm.ts')).toMatchObject({group: 'tools', source: 'outside', description: OUTSIDE_CATALOG['scripts/swarm.ts']!});
  expect(line('scripts/generated/quest-lib.ts')).toMatchObject({group: 'helpers', source: 'header'});
  expect(line('scripts/generated/quest-cook.ts')).toMatchObject({group: 'quests', source: 'header'});

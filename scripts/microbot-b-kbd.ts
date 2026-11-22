@@ -1,6 +1,6 @@
 // One bank-owned native KBD trip. STAGED=1 runs the lair consumer alone.
 import {campOwnershipConflict} from './microbot-a-ranged-camp';
-import {runVisibleGroundLoot} from './microbot-b-mining-loot';
+import {runVisibleGroundLoot} from '../packages/workers/src/gather';
 import {combatTrip} from './microbot-combat-trip';
 import {existsSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';

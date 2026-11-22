@@ -72,8 +72,22 @@ const presets: Record<string, SaveConfig> = {
 let preset=mode==='cow-diag'?presets.cow:mode==='ore-no-iron'?presets.ore:presets[mode];
 if(mode!=='fresh' && mode!=='entry' && !preset) throw new Error('unknown mode');
 const dir=resolve('.practice/fleet-proof'); mkdirSync(dir,{recursive:true});
-const script=waterfallMode?'generated/waterfall':cowMode?'gather-combat':mode==='smelt-bronze'?'smelt-bars':mode==='payout-notes'?'measure/fleet-payout-notes':mode==='seers-entry'?'measure/fleet-seers-entry':mode==='zeke-entry'?'measure/fleet-al-kharid-entry':mode==='aubury-entry'?'measure/fleet-relocate':headlessMode||steelMode||oakBowsMode?'fletch-arrows':mode==='cook-badpoint'?'cook-stock':mode==='entry'||mode==='outbound'||mode==='homeward'?'aio-logistics':buyerPlan?'aio-market':woolMode?'collect-wool':flaxMode?'spin-bowstrings':mode==='wood'||oakMode?'gather-yews':'gather-ore';
-const logisticsRoleArgs=mode==='entry'?['arrive-draynor']:(mode==='outbound'||mode==='homeward')?['food-courier']:[];
+const [script, ...scriptArgs] = waterfallMode ? ['generated/waterfall']
+ : cowMode ? ['gather-combat']
+ : mode === 'smelt-bronze' ? ['smelt-bars']
+ : mode === 'payout-notes' ? ['measure/fleet-payout-notes']
+ : mode === 'seers-entry' ? ['measure/fleet-seers-entry']
+ : mode === 'zeke-entry' ? ['measure/fleet-al-kharid-entry']
+ : mode === 'aubury-entry' ? ['measure/fleet-relocate']
+ : headlessMode || steelMode || oakBowsMode ? ['fletch-arrows']
+ : mode === 'cook-badpoint' ? ['cook-stock']
+ : mode === 'entry' ? ['aio-logistics', 'arrive-draynor']
+ : (mode === 'outbound' || mode === 'homeward') ? ['aio-logistics', 'food-courier']
+ : buyerPlan ? ['aio-market', 'shop-buy']
+ : woolMode ? ['aio-skiller', 'gather', 'foraging', 'wool']
+ : flaxMode ? ['spin-bowstrings']
+ : mode === 'wood' || oakMode ? ['aio-skiller', 'gather', 'woodcutting', 'yews']
+ : ['aio-skiller', 'gather', 'mining', 'ore'];
 const stack=process.env.REUSE_STACK==='1'?null:await startStack();
 try {
  const report=await proveInProcess({bot:'fl'+mode.slice(0,5),script:resolve('scripts',script+'.ts'),runs,timeoutMs:oakBowsMode?450000:oakMode?600000:mode==='waterfall-hudon'?720000:waterfallMode?360000:woolMode?360000:240000,pass:t=>/^RESULT ok/m.test(t) && (buyerPlan || oakMode || waterfallMode || toolMode || mode==='clay' || cowMode || mode==='smelt-bronze' || mode==='payout-notes' || mode==='ore-regression' || flaxMode || mode==='wool-starter' || mode==='entry' || (mode==='outbound'||mode==='homeward') || mode==='cook-badpoint' || headlessMode || steelMode || oakBowsMode || mode==='aubury-entry' || mode==='zeke-entry' || mode==='seers-entry' ? /PROOF_GATE.*ok=true/.test(t) : mode==='wool' ? /gathered=54 spun=27 rawBanked=27 trips=3 died=false/.test(t) : flaxMode ? /spunTotal=28\b/.test(t) : mode==='wood' ? /banked=2[5-8]\b/.test(t) && /hpMin=11\b/.test(t) : /banked=2[5-8]\b/.test(t))}, {
@@ -91,14 +105,17 @@ try {
   },
   async run(script,bot,timeoutMs){
    if(mode==='ore-no-iron') {
-    const original=readFileSync(script,'utf8');
-    const injected=original.replace('[2092,2093]','[-1,-2]').replaceAll('../packages/',resolve('packages').replaceAll('\\','/')+'/');
+    const miningPath=resolve('packages/workers/src/gather/mining.ts');
+    const original=readFileSync(miningPath,'utf8');
+    const injected=original.replace('iron: [2092, 2093]','iron: [-1, -2]').replaceAll("from '../../../packages/",`from '${resolve('packages').replaceAll('\\','/')}/`).replaceAll("from './",`from '${resolve('packages/workers/src/gather').replaceAll('\\','/')}/`);
     if(injected===original) throw new Error('iron fault injection not applied');
+    const injectedMining=resolve(dir,'ore-no-iron-mining.ts');
+    writeFileSync(injectedMining,injected);
     script=resolve(dir,'ore-no-iron-injected.ts');
-    writeFileSync(script,injected);
+    writeFileSync(script,`import { runMiningOre } from ${JSON.stringify(injectedMining)};\nconst [bot, ...args] = process.argv.slice(2);\nawait runMiningOre(bot!, args);\n`);
    }
-   const cmdArgs=buyerPlan?[bot,'shop-buy']:[bot,...logisticsRoleArgs];
-   const proc=Bun.spawn(buyerPlan || oakMode || waterfallMode || toolMode || mode==='clay' || cowMode || mode==='smelt-bronze' || mode==='payout-notes' || mode==='ore-regression' || flaxMode || mode==='wool-starter' || mode==='entry' || (mode==='outbound'||mode==='homeward') || mode==='cook-badpoint' || headlessMode || steelMode || oakBowsMode || mode==='aubury-entry' || mode==='zeke-entry' || mode==='seers-entry'?['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),script,...cmdArgs]:['bun',script,...cmdArgs],{stdout:'pipe',stderr:'pipe',env:{...process.env,DEMO_OK:'',...(buyerPlan?{PROFILE:profileKey,STOCK_TARGET:String(buyerPlan.target),BANK_AT:'0',FLOAT:String(buyerPlan.float??20000),COIN_RESERVE:'5000',MAX_SPEND:String(buyerPlan.maxSpend??15000),MAX_ITEMS:String(buyerPlan.maxItems),STOP_AT_TARGET:'1',NO_BUY_TICKS:'25'}:{}),...((mode==='outbound'||mode==='homeward')?{OUTBOUND_ONLY:mode==='outbound'?'1':'',HOME_ONLY:mode==='homeward'?'1':'',START:'',FROM:'',FARMERS:'',FEATHERS:'0'}:{}),...(oakBowsMode?{MODE:'oak-bows',MAX_MAKE:'25',LOG_RESERVE:'25',STRING_RESERVE:'500'}:{}),...(steelMode?{MODE:'steel',MAX_MAKE:'15',HEADLESS_RESERVE:'200',TIP_RESERVE:'5',OUTPUT_RESERVE:'15'}:{}),...(headlessMode?{MODE:'headless',MAX_MAKE:'390',SHAFT_RESERVE:'200',FEATHER_RESERVE:'100'}:{}),...(mode==='cook-badpoint'?{COOK_ROUTE:'near',RAW_RESERVE:'50',MAX_COOK:'60',RANDOM_EVENTS:'0'}:{}),...(flaxMode?{MAX_MAKE:'56',RAW_RESERVE:'50'}:{}),...(oakMode?{PROOF_EXPECT_SKILLS:JSON.stringify(bigchopper.skills),REGION:'draynor',TREE:'oak',PREPARE:'1',MAX_MAKE:'25',PROOF_TRACE_PATH:'1',RANDOM_EVENTS:'0'}:{}),...(waterfallMode?{PROOF_EXPECT_SKILLS:JSON.stringify(mighty.skills),WF_RESUME_HUDON:mode==='waterfall-hudon'?'1':undefined,WF_MIGHTY:'1',WF_FOOD:'salmon',WF_EAT_AT:'30',WF_FOOD_COUNT:'16',WF_TRACE:'1'}:{}),...(mode==='clay'?{ORE_PROFILE:'clay',SOFTEN_CLAY:'1',BANK_AT:'20',NO_ORE_TICKS:'120',MAX_MAKE:'20',RAW_RESERVE:'0'}:{}),...(cowMode?{TARGET:'cow',MAX_KILLS:mode==='cow-diag'?'1':'5',TRAIN_SKILL:'Attack',TARGET_LEVEL:undefined}:{}),...(mode==='smelt-bronze'?{BAR_TYPE:'bronze',MAX_MAKE:'8',ORE_RESERVE:'1'}:{}),...(toolMode?{ORE_PROFILE:'mixed',SOFTEN_CLAY:'',BANK_AT:'5',NO_ORE_TICKS:'120'}:{}),...(mode==='ore-regression'?{BANK_AT:'5',NO_ORE_TICKS:'120'}:{}),...(mode==='wood'?{REGION:'draynor',TREE:'normal'}:{}),CAP:oakBowsMode?'1000':oakMode?'1500':mode==='cow-diag'?'600':mode==='clay'?'800':toolMode?'500':headlessMode||steelMode||mode==='ore-regression'||mode==='smelt-bronze'?'500':woolMode?'2200':cowMode||mode==='catherby' || mode==='cook-badpoint'?'1500':buyerPlan || (mode==='outbound'||mode==='homeward')?'1200':'1250',MAX_TRIPS:woolMode?'3':flaxMode?'4':'1'},windowsHide:true});
+   const spawnArgs = mode==='ore-no-iron' ? [] : scriptArgs;
+   const proc=Bun.spawn(buyerPlan || oakMode || waterfallMode || toolMode || mode==='clay' || cowMode || mode==='smelt-bronze' || mode==='payout-notes' || mode==='ore-regression' || flaxMode || mode==='wool-starter' || mode==='entry' || (mode==='outbound'||mode==='homeward') || mode==='cook-badpoint' || headlessMode || steelMode || oakBowsMode || mode==='aubury-entry' || mode==='zeke-entry' || mode==='seers-entry'?['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),script,bot,...spawnArgs]:['bun',script,bot,...spawnArgs],{stdout:'pipe',stderr:'pipe',env:{...process.env,DEMO_OK:'',...(buyerPlan?{PROFILE:profileKey,STOCK_TARGET:String(buyerPlan.target),BANK_AT:'0',FLOAT:String(buyerPlan.float??20000),COIN_RESERVE:'5000',MAX_SPEND:String(buyerPlan.maxSpend??15000),MAX_ITEMS:String(buyerPlan.maxItems),STOP_AT_TARGET:'1',NO_BUY_TICKS:'25'}:{}),...((mode==='outbound'||mode==='homeward')?{OUTBOUND_ONLY:mode==='outbound'?'1':'',HOME_ONLY:mode==='homeward'?'1':'',START:'',FROM:'',FARMERS:'',FEATHERS:'0'}:{}),...(oakBowsMode?{MODE:'oak-bows',MAX_MAKE:'25',LOG_RESERVE:'25',STRING_RESERVE:'500'}:{}),...(steelMode?{MODE:'steel',MAX_MAKE:'15',HEADLESS_RESERVE:'200',TIP_RESERVE:'5',OUTPUT_RESERVE:'15'}:{}),...(headlessMode?{MODE:'headless',MAX_MAKE:'390',SHAFT_RESERVE:'200',FEATHER_RESERVE:'100'}:{}),...(mode==='cook-badpoint'?{COOK_ROUTE:'near',RAW_RESERVE:'50',MAX_COOK:'60',RANDOM_EVENTS:'0'}:{}),...(flaxMode?{MAX_MAKE:'56',RAW_RESERVE:'50'}:{}),...(oakMode?{PROOF_EXPECT_SKILLS:JSON.stringify(bigchopper.skills),REGION:'draynor',TREE:'oak',PREPARE:'1',MAX_MAKE:'25',PROOF_TRACE_PATH:'1',RANDOM_EVENTS:'0'}:{}),...(waterfallMode?{PROOF_EXPECT_SKILLS:JSON.stringify(mighty.skills),WF_RESUME_HUDON:mode==='waterfall-hudon'?'1':undefined,WF_MIGHTY:'1',WF_FOOD:'salmon',WF_EAT_AT:'30',WF_FOOD_COUNT:'16',WF_TRACE:'1'}:{}),...(mode==='clay'?{ORE_PROFILE:'clay',SOFTEN_CLAY:'1',BANK_AT:'20',NO_ORE_TICKS:'120',MAX_MAKE:'20',RAW_RESERVE:'0'}:{}),...(cowMode?{TARGET:'cow',MAX_KILLS:mode==='cow-diag'?'1':'5',TRAIN_SKILL:'Attack',TARGET_LEVEL:undefined}:{}),...(mode==='smelt-bronze'?{BAR_TYPE:'bronze',MAX_MAKE:'8',ORE_RESERVE:'1'}:{}),...(toolMode?{ORE_PROFILE:'mixed',SOFTEN_CLAY:'',BANK_AT:'5',NO_ORE_TICKS:'120'}:{}),...(mode==='ore-regression'?{BANK_AT:'5',NO_ORE_TICKS:'120'}:{}),...(mode==='wood'?{REGION:'draynor',TREE:'normal'}:{}),CAP:oakBowsMode?'1000':oakMode?'1500':mode==='cow-diag'?'600':mode==='clay'?'800':toolMode?'500':headlessMode||steelMode||mode==='ore-regression'||mode==='smelt-bronze'?'500':woolMode?'2200':cowMode||mode==='catherby' || mode==='cook-badpoint'?'1500':buyerPlan || (mode==='outbound'||mode==='homeward')?'1200':'1250',MAX_TRIPS:woolMode?'3':flaxMode?'4':'1'},windowsHide:true});
    let damageStopped=false;const damageWatch=mode==='clay'?setInterval(()=>{try{const st=JSON.parse(readFileSync(resolve('.practice/status',bot+'.json'),'utf8'));if(st.hp?.now>0&&st.hp.now<10&&!damageStopped){damageStopped=true;writeFileSync(resolve('.practice',`stop-${bot}`),'practice fresh-route HP loss');console.log(`PROOF_DAMAGE_STOP bot=${bot} tick=${st.tick} hp=${st.hp.now}`);}}catch{}},100):null;
    const timer=setTimeout(()=>proc.kill(),timeoutMs);
    const read=async(stream:ReadableStream<Uint8Array>,channel:'stdout'|'stderr')=>{const reader=stream.getReader(),decoder=new TextDecoder();let text='',pending='';while(true){const chunk=await reader.read();if(chunk.done)break;const part=decoder.decode(chunk.value,{stream:true});text+=part;pending+=part;const lines=pending.split(/\r?\n/);pending=lines.pop()??'';for(const line of lines)if(/^(PROOF_DAMAGE|PROOF_STALL|PROOF_REPLY|WARN|WALK fail)/.test(line))console.log(line);writeFileSync(resolve(dir,`${mode}-${bot}-${channel}-stream.log`),text);if(channel==='stdout')writeFileSync(resolve(dir,`${mode}-${bot}-stream.log`),text);}return text+decoder.decode();};
@@ -141,7 +158,7 @@ try {
     const raw=count(cargo.items,1737), balls=count(cargo.items,1759), bankCoins=count(bank,995), heldCoins=count(inventory,995);
     const survival=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const ok=/RESULT ok.*gathered=50 spun=25 rawBanked=25 trips=3 died=false/.test(stdout) && raw===25 && balls===25 && bankCoins===5 && heldCoins===0 && kitPreserved && foodsAndShears && survival;
-    const hashes=Object.fromEntries(['scripts/collect-wool.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/foraging.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,raw,balls,bankCoins,heldCoins,kitPreserved,foodsAndShears,survival,cargo,bank,inventory,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=wool-starter raw=${raw} balls=${balls} bankCoins=${bankCoins} heldCoins=${heldCoins} kit=${kitPreserved} foodsAndShears=${foodsAndShears} survival=${survival} ok=${ok}\n`;
    }
@@ -199,7 +216,7 @@ try {
     function countBank(items:{id:number;count:number}[],id:number){return items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);}
     const life=/PROOF_SURVIVAL started=true died=false hpMin=11 finalHp=11/.test(stdout);
     const ok=publication.matched&&oak===25&&preserved&&life&&final.skills[8]!.xp>initial.skills[8].xp&&/LOGOUT logged-out/.test(stdout);
-    const hashes=Object.fromEntries(['scripts/gather-yews.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/woodcutting.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,publication:{matched:publication.matched,reads:publication.reads,lastError:publication.lastError},oak,preserved,life,initial,final,sourceStatusAt:bigchopper.at,actualWorkingFoods:bigchopper.inventory.filter((i:{id:number})=>[315,2309,333,329].includes(i.id)),hashes},null,2));
     stdout+=`\nPROOF_GATE profile=wood-oak oak=${oak} preserved=${preserved} life=${life} ok=${ok}\n`;
    }
@@ -232,7 +249,7 @@ try {
     const preserved=count(inventory,tool)===1&&count(inventory,315)===1&&count(inventory,2309)===1&&count(inventory,995)+count(bank,995)===200;
     const life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const ok=/mined=5 banked=5 held=0/.test(stdout)&&ores.join('/')==='2/2/1'&&mining?.level===31&&xpGain===2625&&preserved&&life;
-    const hashes=Object.fromEntries(['scripts/gather-ore.ts','scripts/soften-clay.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','scripts/soften-clay.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,run:toolIndex,tool,ticks,walkTicks,xpGain,mining,ores,preserved,life,bank,inventory,preset,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=ore-tools run=${toolIndex} tool=${tool} ticks=${ticks} ores=${ores.join('/')} xp=${xpGain} protected=${preserved} survival=${life} ok=${ok}\n`;
    }
@@ -244,7 +261,7 @@ try {
     const life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const preserved=[1265,315,2309].every(id=>count(id)===1)&&count(995)===200&&count(1925)+count(1929)===1;
     const ok=result?.ok&&result.made===20&&result.banked===20&&count(1761)===20&&count(434)===0&&result.targetMet&&preserved&&life&&!damageStopped;
-    const hashes=Object.fromEntries(['scripts/gather-ore.ts','scripts/soften-clay.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','scripts/soften-clay.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,result,preserved,life,damageStopped,bank:status.bank,inventory:status.inventory,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=clay made=${result?.made} banked=${result?.banked} preserved=${preserved} survival=${life} damageStopped=${damageStopped} ok=${ok}\n`;
    }
@@ -288,7 +305,7 @@ try {
     const protectedKit=[1265,315,2309].every(id=>count(inventory,id)===1);
     const life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const ok=/mined=5 banked=10 held=0/.test(stdout)&&/initialOre=5 recovered=10 xpGain=/.test(stdout)&&total===10&&protectedKit&&life;
-    const hashes=Object.fromEntries(['scripts/gather-ore.ts','packages/core/src/walk.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','packages/core/src/walk.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,total,protectedKit,life,bank,inventory,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=ore-regression new=5 recovered=${total} protected=${protectedKit} survival=${life} ok=${ok}\n`;
    }

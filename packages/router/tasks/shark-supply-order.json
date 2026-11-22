@@ -1,11 +1,11 @@
 {
   "id": "shark-supply-order",
   "goal": "Produce a finite banked batch of cooked sharks through an owned high-level fisher, including tool preparation, safe real entry travel, shark-specific fishing, cooking, banking and logout.",
-  "entry": "scripts/shark-supply.ts",
+  "entry": "scripts/aio-skiller.ts",
   "files": [
-    "scripts/shark-supply.ts",
-    "scripts/shark-supply.test.ts",
-    "scripts/gather-fish.ts",
+    "scripts/aio-skiller.ts",
+    "packages/workers/src/gather/fishing.ts",
+    "packages/workers/test/gather.test.ts",
     "scripts/cook-food.ts",
     "packages/practice/src/shark-supply-order-proof.ts",
     "packages/practice/test/shark-supply-order-proof.test.ts"
@@ -18,7 +18,7 @@
       "command": [
         "bun",
         "test",
-        "scripts/shark-supply.test.ts",
+        "packages/workers/test/gather.test.ts",
         "packages/practice/test/shark-supply-order-proof.test.ts",
         "--timeout",
         "10000"

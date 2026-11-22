@@ -1,6 +1,6 @@
 import{test,expect}from'bun:test';
 import{lootTripOutputs,fetchLootQuotes,lootQuoteDefinition,donorLootEligible,type LootTripJob}from'./microbot-loot-trip';
-import{selectGroundLoot}from'./microbot-b-mining-loot';
+import{selectGroundLoot}from'../packages/workers/src/gather';
 const base:LootTripJob['policy']={mode:'list',ids:[563],names:[],minimumValue:100,maximumValue:500,radius:4,idleTicks:40};
 const definition=(id:number)=>id===563?{name:'Law rune',cost:240,stackable:true}:id===556?{name:'Air rune',cost:4,stackable:true}:id===995?{name:'Coins',cost:1,stackable:true}:undefined;
 test('glob pickup stays inside declared bank outputs and ignores win for normal and donor filters',()=>{

@@ -22,7 +22,7 @@ export async function runWoodProcessingCycle(d:WoodRunner,value:WoodProcessingJo
  const call=async(script:string,env:Record<string,string>,args:string[]=[],reserve=0)=>{if(d.stopped()||j.cap-used-reserve<100)throw Error('wood composition stopped or stage budget absent');const result=await d.run(script,{...env,CAP:String(j.cap-used-reserve)},args);if(result.exit!==0||!/^RESULT ok\b/m.test(result.output)||!/^LOGOUT logged-out\s*$/m.test(result.output))throw Error('wood child failed '+script+' '+result.output.slice(-500));return result.output;};
  const credit=(r:any)=>{if(!Number.isSafeInteger(r?.ticks)||r.ticks<0||used+r.ticks>j.cap)throw Error('wood child tick receipt absent or exceeded');used+=r.ticks;receipts.push(r);};
  try{
-  const text=await call('scripts/gather-yews.ts',{REGION:['normal','oak'].includes(j.tree)?'draynor':'seers',TREE:j.tree,...!['normal','oak'].includes(j.tree)?{WOOD_GROVE:'native-processing'}:{},MAX_TRIPS:'1',BANK_AT:String(j.maximum),MAX_MAKE:String(j.maximum)},[],600);
+  const text=await call('scripts/aio-skiller.ts',{REGION:['normal','oak'].includes(j.tree)?'draynor':'seers',TREE:j.tree,...!['normal','oak'].includes(j.tree)?{WOOD_GROVE:'native-processing'}:{},MAX_TRIPS:'1',BANK_AT:String(j.maximum),MAX_MAKE:String(j.maximum)},['gather','woodcutting','yews'],600);
   const line=text.split(/\r?\n/).filter(l=>l.startsWith('RESULT ')).at(-1)??'',n=Number(line.match(/\bbanked=(\d+)/)?.[1]),hp=Number(line.match(/\bhpMin=(\d+)/)?.[1]),ticks=Number(line.match(/\bticks=(\d+)/)?.[1]);
   if(n!==j.maximum||hp<j.minimumHP||!Number.isFinite(hp)||!line.includes('died=false'))throw Error('gathered banked count/HP receipt differs');credit({stage:'gather',ticks,banked:n,hpMin:hp});logsBanked=n;
   if(j.product==='burn'){stage='burn';const text=await call('scripts/firemaking-order.ts',{LOG:j.tree,BURN_ONLY:'1',PROGRESSIVE:'0',TARGET_LEVEL:'99',MAX_LOGS:String(j.maximum),TOOL_BUDGET:'0',CASH_RESERVE:'0'});const r=JSON.parse(text.match(/^FIREMAKING_ORDER_RESULT (.+)$/m)?.[1]??'null');if(!r?.ok||r.logsBurnt!==j.maximum)throw Error('gathered burn receipt incomplete');credit(r);processed=j.maximum;}
@@ -53,12 +53,12 @@ export async function runWoodProductDrop(original:Session,id:number,amount:numbe
  }catch(e){failure=String(e);}
  return{ok:!failure&&!uncertain&&preserved&&dropped===amount,id,dropped,uncertain,preserved,ticks:original.tick()-started,failure};
 }
-export async function runFletchingCycle(d:{run:(script:string,env:Record<string,string>)=>Promise<Run>;stopped:()=>boolean;minimumHP:number}){
+export async function runFletchingCycle(d:{run:(script:string,env:Record<string,string>,args?:readonly string[])=>Promise<Run>;stopped:()=>boolean;minimumHP:number}){
     const failure=(stage:string,detail:string)=>({ok:false,stage:/^RESULT fail (?:session ended:|login(?::| ))/.test(detail)?'disconnected':stage,logsBanked:0,shaftsBanked:0,detail});
     if(!Number.isSafeInteger(d.minimumHP)||d.minimumHP<10)return failure('prerequisite','known HP maximum required');
     if(d.stopped())return failure('stopped','stop file');
     const last=(r:Run)=>r.output.split(/\r?\n/).filter(l=>l.startsWith('RESULT ')).pop()??'no RESULT';
-    const collect=await d.run('scripts/gather-yews.ts',{REGION:'draynor',TREE:'normal',MAX_TRIPS:'1',BANK_AT:'25',CAP:'1800',MAX_MAKE:'25'});
+    const collect=await d.run('scripts/aio-skiller.ts',{REGION:'draynor',TREE:'normal',MAX_TRIPS:'1',BANK_AT:'25',CAP:'1800',MAX_MAKE:'25'},['gather','woodcutting','yews']);
     const summary=last(collect),banked=Number(summary.match(/\bbanked=(\d+)/)?.[1]),hp=Number(summary.match(/\bhpMin=(\d+)/)?.[1]);
     if(collect.exit!==0||!/^RESULT ok\b/.test(summary)||!summary.includes('died=false')||banked!==25||!(hp>=d.minimumHP))
         return failure('gather',summary);
@@ -95,9 +95,9 @@ if(import.meta.main){
         }catch(e){console.log('RESULT fail gathered wood '+String(e));process.exitCode=1;}
     }else try{
         const status=JSON.parse(readFileSync(join(root,`.practice/status/${actor}.json`),'utf8'));
-        const result=await runFletchingCycle({minimumHP:status.hp?.max,stopped,run:async(script,env)=>{
-            const p=Bun.spawn(['bun',script,actor],{cwd:root,env:{...process.env,...env},stdout:'pipe',stderr:'pipe',windowsHide:true});
-            let output='',timedOut=false;const timer=setTimeout(()=>{timedOut=true;p.kill();},script.includes('gather')?800000:280000);
+        const result=await runFletchingCycle({minimumHP:status.hp?.max,stopped,run:async(script,env,args=[])=>{
+            const p=Bun.spawn(['bun',script,actor,...args],{cwd:root,env:{...process.env,...env},stdout:'pipe',stderr:'pipe',windowsHide:true});
+            let output='',timedOut=false;const timer=setTimeout(()=>{timedOut=true;p.kill();},script.includes('gather')||args.includes('gather')?800000:280000);
             const pump=async(stream:ReadableStream<Uint8Array>,error=false)=>{for await(const b of stream){const text=new TextDecoder().decode(b);if(!error)output+=text;(error?process.stderr:process.stdout).write(text);}};
             await Promise.all([pump(p.stdout),pump(p.stderr,true)]);const exit=await p.exited;clearTimeout(timer);
             return{exit:timedOut?1:exit,output:output+(timedOut?'\nRESULT fail no fletching progress: child deadline':'')};

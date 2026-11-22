@@ -129,7 +129,7 @@ export function armyQuestAndHuntTemplates(): { quests: Template[]; hunt: Templat
     };
     const leatherFlax: Template = {
         id: 'army-leather-flax', pilot: true, family: 'aio:skiller:foraging:flax', script: 'scripts/aio.ts', args: ['skiller', 'foraging', 'flax', '1800', '28'],
-        aio: 'skiller:foraging:flax', worker: 'scripts/gather-flax.ts', role: 'crafting', goal: 'pick flax at Seers to spin for the Crafting a black dragonhide body asks',
+        aio: 'skiller:foraging:flax', worker: 'scripts/aio-skiller.ts', role: 'crafting', goal: 'pick flax at Seers to spin for the Crafting a black dragonhide body asks',
         tier: 'goal', band: HUNT_BAND + 0.2, filler: true, repeats: true, trains: leatherTrain, resources: [AIO_PLACES.flax], yields: () => [],
         needs: { skills: leatherNeeds, holdsUnder: { flax: FLAX_SPIN } },
     };

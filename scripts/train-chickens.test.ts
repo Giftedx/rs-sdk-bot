@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {chickenTrainingStyle,chickenTrainingKit,chickenStyleForWeapon,chickenDesiredSkill,chickenTrainingProfile,chickenTrainingThreat,chickenTrainingTarget,chickenStrengthGoal,chickenTrainingHealth,chickenTrainingEntry,chickenCombatUnlockPlan,chickenCombatUnlockStyle,chickenCombatUnlockMode,guardArdougneTrainingWalker,trainChickens} from './train-chickens';
-import {mixedOreCombatProblem} from './gather-ore';
+import {mixedOreCombatProblem} from '../packages/workers/src/gather';
 import {gearById} from '../packages/planner/src/gear-progression';
 import {waitTicks} from '../packages/core/src/ticks';
 

@@ -13,7 +13,7 @@ import { finish, openBot } from '../../packages/core/src/bot';
 import { componentId } from '../../packages/core/src/logout';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { FISH_PROFILES, pickFishSpot, type FishMethod } from '../microbot-b-fishing';
+import { FISH_PROFILES, pickFishSpot, type FishMethod } from '../../packages/workers/src/gather';
 
 const [name, ticks = '300', ...rest] = process.argv.slice(2);
 const option = (key: string) => rest.find(a => a.startsWith(key + '='))?.slice(key.length + 1);

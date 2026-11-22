@@ -1,10 +1,11 @@
 {
   "id": "blood-chest-order",
   "goal": "Loot the Ardougne blood rune chests on an owned Thieving account for a finite number of loots, bank runes and coins, reconcile assets and confirm logout.",
-  "entry": "scripts/blood-chest.ts",
+  "entry": "scripts/aio-skiller.ts",
   "files": [
-    "scripts/blood-chest.ts",
-    "scripts/blood-chest.test.ts",
+    "scripts/aio-skiller.ts",
+    "packages/workers/src/gather/thieving.ts",
+    "packages/workers/test/gather.test.ts",
     "packages/practice/src/blood-chest-proof.ts",
     "packages/practice/test/blood-chest-proof.test.ts"
   ],
@@ -16,7 +17,7 @@
       "command": [
         "bun",
         "test",
-        "scripts/blood-chest.test.ts",
+        "packages/workers/test/gather.test.ts",
         "packages/practice/test/blood-chest-proof.test.ts",
         "--timeout",
         "10000"

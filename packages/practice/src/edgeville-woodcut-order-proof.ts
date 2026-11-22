@@ -13,7 +13,7 @@ import { runBotName } from './prove';
 import { startStack } from './stack';
 
 const ROOT = resolve(import.meta.dir, '../../..');
-const ENTRY = 'scripts/edgeville-woodcut-order.ts';
+const ENTRY = 'scripts/aio-skiller.ts';
 const AXE = 1351, LOGS = 1521, WOOD = 8, HP = 3, BANK = 95, PACK = 93;
 const OAK_XP_TENTHS = 375 * 25;
 type Save = ReturnType<typeof readPracticeSave>;
@@ -92,7 +92,7 @@ async function rehearse(dir: string) {
     const stack = await startIronProofStack(endpoints, opts => startStack({ ...opts, xpRate: 25 }));
     try {
         const log = join(dir, 'edgeville-worker.log');
-        const child = Bun.spawn([process.execPath, ENTRY, name], {
+        const child = Bun.spawn([process.execPath, ENTRY, name, 'gather', 'woodcutting', 'edgeville'], {
             cwd: ROOT, windowsHide: true, stdout: Bun.file(log), stderr: Bun.file(join(dir, 'edgeville-worker.err')),
             env: { ...process.env, ...endpoints.env, DEMO_OK: '', RANDOM_EVENTS: '0', STALL_TICKS: '0' },
         });

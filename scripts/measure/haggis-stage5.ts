@@ -30,8 +30,7 @@ import {
     settle,
     walkWaypointsSafe,
 } from '../gathering-specialist-lib';
-import { incidentalMiningGems, miningProfiles } from '../microbot-b-mining';
-import { MINING_SITES, runRotationMining, siteTiles } from '../mining-rotation';
+import { incidentalMiningGems, miningProfiles, MINING_SITES, runRotationMining, siteTiles } from '../../packages/workers/src/gather';
 import {
     OBJ_CLAY,
     OBJ_COPPER_ORE,

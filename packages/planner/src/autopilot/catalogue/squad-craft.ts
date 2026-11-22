@@ -83,8 +83,8 @@ export function squadCraftAndGearSupplies(): { bow: Template; dhideAndChest: Tem
         yields: () => [{ item: 'black_dragon_vambraces', perTick: 0.02 }],
     };
     const crystalChest: Template = {
-        id: 'squad-crystal-chest', family: 'crystal-chest', script: 'scripts/crystal-chest.ts',
-        args: ['2000'], env: { MAX_KEYS: '4' }, role: 'crafting',
+        id: 'squad-crystal-chest', family: 'crystal-chest', script: 'scripts/aio-skiller.ts',
+        args: ['gather', 'foraging', 'crystal-chest', '2000'], env: { MAX_KEYS: '4' }, role: 'crafting',
         goal: 'open Taverley crystal chests with banked crystal keys or key halves for uncut dragonstones and cosmic runes',
         resources: ['squad:crystal-chest'], squadOnly: true, repeats: false,
         needs: { anyOf: [{ items: { 'crystal key': 1 } }, { items: { keyhalf1: 1, keyhalf2: 1 } }] },

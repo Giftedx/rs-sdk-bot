@@ -14,10 +14,10 @@ import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { releaseRevision } from '../../core/src/worker-release';
 import { readLogoutProof } from '../../core/src/session-lifecycle';
 import { readPracticeSave, waitPracticeSave } from './fleet-player-save';
-import { BANK, STAGE, type RosterPlayer } from '../../../scripts/lava-maze-escorted-ore';
+import { ESCORT_BANK as BANK, ESCORT_STAGE as STAGE, type RosterPlayer } from '../../workers/src/gather';
 
-const root=resolve(import.meta.dir,'../../..'),entry='scripts/lava-maze-escorted-ore.ts';
-const files=[entry,'scripts/lava-maze-escorted-ore.test.ts','scripts/lava-maze-escort-route.json','packages/practice/src/lava-maze-escorted-ore-proof.ts'];
+const root=resolve(import.meta.dir,'../../..'),entry='scripts/aio-pvp.ts';
+const files=[entry,'packages/workers/src/gather/mining.ts','packages/workers/test/gather.test.ts','scripts/lava-maze-escort-route.json','packages/practice/src/lava-maze-escorted-ore-proof.ts'];
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
 const source=()=>({runtime:releaseRevision([entry,'packages/practice/src/lava-maze-escorted-ore-proof.ts'],root),files:Object.fromEntries(files.map(p=>[p,hash(join(root,p))]))});
 const holds=()=>JSON.stringify(['all','swarm','coordinator'].map(n=>{const p=join(root,'.practice/stop-'+n);return existsSync(p)?readFileSync(p,'utf8'):null;}));
@@ -121,7 +121,7 @@ async function runProof(directory:string) {
             const c={id,names,code:null as number|null,timedOut:false,lowMemory:false,publications:[] as any[],logouts:[] as any[],hashes:[] as any[]};meta.cases.push(c);
             const log=join(directory,id+'.log');
             try {
-                const child=Bun.spawn([process.execPath,entry,...names],{cwd:root,windowsHide:true,stdout:Bun.file(log),stderr:Bun.file(log+'.err'),
+                const child=Bun.spawn([process.execPath,entry,names[0]!,'__escort-ore',...names.slice(1)],{cwd:root,windowsHide:true,stdout:Bun.file(log),stderr:Bun.file(log+'.err'),
                     env:{...process.env,...endpoint.env,GATEWAY_URL:endpoint.gateway,DEMO_OK:'',MAX_ORE:'1',CAP:'1800',EXPECTED_BANK_ORE:'57',RANDOM_EVENTS:'0',STALL_TICKS:'0',
                         LAVA_ESCORT_HOLDS:baseline,LAVA_ESCORT_ROSTER_URL:proxy.url}});
                 let termination:Promise<void>|undefined;

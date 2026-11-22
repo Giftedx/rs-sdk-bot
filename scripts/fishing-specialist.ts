@@ -3,7 +3,7 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyNpc } from '../vendor/rs-sdk/sdk/types';
-import { runStagedFishing } from './microbot-b-fishing';
+import { runStagedFishing } from '../packages/workers/src/gather';
 import { runSeaSlugQuest } from './generated/quest-seaslug';
 import { LUMBRIDGE_FM_PATH, FM_LIGHT_OPOBJ, OBJ_TINDERBOX, OBJ_OAK_LOGS } from './firemaking-specialist';
 import {

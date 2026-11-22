@@ -102,7 +102,11 @@ export function matchingProgressionRoutes(
     }
     const wrapper = script.match(AIO_WRAPPER_RE)?.[1];
     if (wrapper) {
-        const name = wrapper === 'skiller' ? args.slice(0, 2).join(':') : args[0];
+        const name = wrapper === 'skiller'
+            ? (args[0] === 'gather' ? args.slice(1, 3) : args.slice(0, 2)).join(':')
+            : args[0] === '__escort-ore'
+                ? 'escort-ore'
+                : args[0];
         return catalog.routes.filter(r => r.category === wrapper && r.name === name);
     }
     return catalog.routes.filter(r => {

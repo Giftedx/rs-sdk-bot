@@ -46,5 +46,5 @@ test('auditTargets and auditStarts cover quest starts, banks, shops, training sp
  expect(sources.has('wilderness:edgeville-ditch')).toBe(true);
  expect(sources.has('wilderness:rogues-castle')).toBe(true);
  expect([...sources].some(s=>s.startsWith('scripts/pk-hunt.ts:'))).toBe(true);
- expect([...sources].some(s=>s.startsWith('scripts/lava-maze-escorted-ore.ts:'))).toBe(true);
+ expect([...sources].some(s=>s.startsWith('packages/workers/src/gather/mining.ts:'))).toBe(true);
 });

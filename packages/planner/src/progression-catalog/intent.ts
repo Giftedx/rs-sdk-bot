@@ -85,6 +85,60 @@ function specialistSkillIntent(
     return { kind: 'service', objective: `specialist:${spec.skill}:${target}`, units: 1 };
 }
 
+const GATHER_ROUTE_STEM: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+    fishing: {
+        shark: 'shark-supply',
+        cage: 'gather-fish',
+        harpoon: 'gather-fish',
+        fishcook: 'fishcook',
+        village: 'microbot-village-fishing',
+        staged: 'microbot-b-fishing',
+    },
+    woodcutting: {
+        edgeville: 'edgeville-woodcut-order',
+        yews: 'gather-yews',
+        loop: 'wc-loop',
+        'woodcut-supply': 'woodcut-supply',
+    },
+    mining: {
+        ore: 'gather-ore',
+        essence: 'gather-essence',
+        'at-site': 'microbot-b-mining',
+        drop: 'microbot-mining-drop',
+        progressive: 'microbot-mining-progressive',
+        loot: 'microbot-b-mining-loot',
+        'lava-maze': 'lava-maze-escorted-ore',
+    },
+    thieving: {
+        knights: 'goldfarm',
+        'knights-stable': 'goldfarm-stable',
+        pickpocket: 'microbot-pickpocket-trip',
+        'pickpocket-at-site': 'microbot-a-pickpocket',
+        stalls: 'microbot-c-stalls',
+        'blood-chest': 'blood-chest',
+        'nature-chest': 'microbot-b-nature-chest',
+    },
+    foraging: {
+        flax: 'gather-flax',
+        wool: 'collect-wool',
+        feathers: 'gather-feathers',
+        spawn: 'gather-spawn',
+        grapes: 'grapes',
+        'crystal-chest': 'crystal-chest',
+    },
+};
+
+function resolveGatherWrapper(stem: string | null, args: readonly string[]): { mappedStem: string; gatherArgs: readonly string[] } | undefined {
+    if (stem === 'aio-skiller' && args[0] === 'gather') {
+        const mappedStem = args[1] && args[2] ? GATHER_ROUTE_STEM[args[1]]?.[args[2]] : undefined;
+        return mappedStem ? { mappedStem, gatherArgs: args.slice(3) } : undefined;
+    }
+    if (stem === 'aio-pvp' && (args[0] === 'escort-ore' || args[0] === '__escort-ore')) {
+        return { mappedStem: 'lava-maze-escorted-ore', gatherArgs: args.slice(1) };
+    }
+    return undefined;
+}
+
 function fixedPreCatalogIntent(
     stem: string | null,
     args: readonly string[],
@@ -315,7 +369,7 @@ function catalogEntryIntent(
         if (bankJob !== undefined) return bankJob;
     }
     const target = Number(setting(env, args, 'TARGET_LEVEL'));
-    if (stem === 'aio-skiller' && args[0] && finiteLevel(target)) {
+    if (stem === 'aio-skiller' && args[0] && args[0] !== 'gather' && finiteLevel(target)) {
         return PROGRESSION_SKILLS.includes(key(args[0]) as typeof PROGRESSION_SKILLS[number])
             ? { kind: 'train', skill: key(args[0]), targetLevel: target }
             : null;
@@ -392,7 +446,8 @@ export function intentForEntry(
         const entry = category && (AIO_CATEGORIES as readonly string[]).includes(category) ? category : args[1];
         if (entry) return intentForEntry('scripts/aio-' + entry + '.ts', args.slice(entry === category ? 1 : 2), env, accept, catalog);
     }
-    const fixed = fixedPreCatalogIntent(stem, args, env, consumer);
+    const gather = resolveGatherWrapper(stem, args);
+    const fixed = fixedPreCatalogIntent(gather?.mappedStem ?? stem, gather?.gatherArgs ?? args, env, consumer);
     if (fixed !== undefined) return fixed;
     const trainingSkill = setting(env, args, 'TRAIN_SKILL');
     let target = Number(setting(env, args, 'TARGET_LEVEL'));
@@ -401,7 +456,7 @@ export function intentForEntry(
     }
     const data = catalog ?? optionalProgressionCatalog();
     if (stem === 'microbot-jewellery-trip') return jewelleryTripIntent(args, env, consumer, data);
-    if (AIO_WRAPPER_RE.test(script) && data) {
+    if (AIO_WRAPPER_RE.test(script) && !gather && data) {
         const matches = matchingProgressionRoutes(script, args, env, data);
         if (matches.length === 1) {
             const route = matches[0]!;
@@ -410,7 +465,30 @@ export function intentForEntry(
             if (route.script !== script) {
                 return intentForEntry(route.script, supplied.args.length ? supplied.args : route.args, { ...env, ...route.env, ...supplied.env }, accept, data);
             }
+            if (route.category === 'skiller' && route.args[0] === 'gather') {
+                const gatherArgs = supplied.args.length ? supplied.args : route.args.slice(3);
+                return intentForEntry(script, ['gather', ...route.args.slice(1, 3), ...gatherArgs], { ...env, ...route.env, ...supplied.env }, accept, data);
+            }
+            if (route.category === 'pvp' && route.args[0] === '__escort-ore') {
+                const gatherArgs = supplied.args.length ? supplied.args : route.args.slice(1);
+                return intentForEntry(script, ['__escort-ore', ...gatherArgs], { ...env, ...route.env, ...supplied.env }, accept, data);
+            }
         }
+    }
+    if (gather) {
+        const gatherRoutes = data ? matchingProgressionRoutes(script, args, env, data) : [];
+        const gatherSkills = [...new Set(gatherRoutes.flatMap(r => r.skills))];
+        const gatherIntents = [...new Set(gatherRoutes.flatMap(r => r.intents))];
+        if (gatherSkills.length === 1 && gatherIntents.includes('train')) {
+            target = Number(setting(env, gather.gatherArgs, 'TARGET_LEVEL') ?? setting(env, gather.gatherArgs, 'TARGET'));
+            if (finiteLevel(target)) return { kind: 'train', skill: gatherSkills[0]!, targetLevel: target };
+        }
+        const service = entryNameServiceIntent(gather.mappedStem, script, gather.gatherArgs, env, consumer, gatherRoutes);
+        if (service !== undefined) return service;
+        if (gatherRoutes.some(r => r.intents.includes('pvp'))) return { kind: 'pvp', objective: gatherRoutes[0]?.id ?? script };
+        if (gatherIntents.length === 1 && gatherIntents[0] === 'observe') return { kind: 'observe', objective: gatherRoutes[0]?.id ?? script };
+        if (gatherIntents.length === 1 && gatherIntents[0] === 'service') return { kind: 'service', objective: gatherRoutes[0]?.id ?? script };
+        return null;
     }
     const matching = data?.entries.find(e => e.script === script);
     const routes = data?.routes.filter(r => r.script === script) ?? [];
