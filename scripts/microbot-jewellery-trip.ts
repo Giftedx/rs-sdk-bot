@@ -3,7 +3,8 @@
 // bun scripts/microbot-jewellery-trip.ts <account> <finite-order.json>
 // With no order file: RECIPE=<name> TARGET=<count> [BATCH CAP RETURN_TICKS RESERVE MEMBERS=1 STRING_AMULET=1].
 import {readFileSync,existsSync} from 'node:fs';
-import {openBot,settle,logoutSession} from '../packages/core/src/bot';
+import {openBot,settle,logoutSession,getWorld,accountOf} from '../packages/core/src/bot';
+import {goTo} from '../packages/core/src/walk';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
@@ -19,7 +20,15 @@ export interface JewellerySnapshot{assets:Record<number,number>;bank:Record<numb
 type Stage={family:'inventory'|'jewellery';recipe:string;target:number;product:number;delta:Record<number,number>};
 type JobReceipt={ok:boolean;completed:number;atBank:boolean;banked:Record<number,number>;failure?:string};
 type JewelleryClient={executeBotAction?:unknown;membersAccount?:number;selfSlot?:number};
-export type JewelleryDeps={audit?:()=>Promise<JewellerySnapshot>;job?:(s:Session,j:BankJob,stop:()=>boolean)=>Promise<JobReceipt>};
+type ApproachResult={ok:boolean;detail?:string};
+export type JewelleryDeps={audit?:()=>Promise<JewellerySnapshot>;job?:(s:Session,j:BankJob,stop:()=>boolean)=>Promise<JobReceipt>;approach?:(s:Session,to:Tile,maxTicks:number,stop:()=>boolean)=>Promise<ApproachResult>};
+// The walk to the order bank of an account that starts away from it. The order stop and the tick bound abort it.
+export async function approachJewelleryBank(s:Session,to:Tile,maxTicks:number,stop:()=>boolean):Promise<ApproachResult>{
+ const start=s.tick(),controller=new AbortController(),bounded=()=>stop()||s.tick()-start>=maxTicks;
+ const off=s.onTick(()=>{if(bounded())controller.abort('jewellery bank approach bound');});
+ try{const r=await goTo(s,await getWorld(),to,accountOf(s),{signal:controller.signal,legTimeoutTicks:Math.max(1,Math.min(120,maxTicks)),maxRetriesPerLeg:1});if(controller.signal.aborted)return{ok:false,detail:'bound '+maxTicks+' ticks or stop'};return r.ok?{ok:true}:{ok:false,detail:r.detail};}
+ finally{off();}
+}
 export function jewelleryCleanup(raw:Session,finalize:typeof settle=settle,logout:(session:Session)=>Promise<string>=logoutSession){
  const owner=actionSessionOwner(raw);
  const sdk=raw.sdk,client=raw.client as JewelleryClient|undefined,direct=raw.direct,close=raw.close,ended=raw.ended,lifecycle=raw.lifecycle,name=raw.name,slot=client?.selfSlot,config=sdk.config,origin=JSON.stringify([config?.gatewayUrl,config?.host,config?.port]),player=sdk.getState()?.player,life=player?.lifeId,respawns=player?.respawnCount??0;
@@ -104,6 +113,12 @@ export async function runJewelleryOrder(raw:Session,o:JewelleryOrder,requested:(
  let initial:JewellerySnapshot|undefined,final:JewellerySnapshot|undefined,expected:Record<number,number>={},product=-1;const receipts:{stage:Stage;result:JobReceipt}[]=[];
  try{
   if(stop()||o.members&&client?.membersAccount!==1)throw Error('jewellery entry stop/member/life unavailable');
+  const away=()=>{const p=raw.sdk.getState()?.player;return !p||p.level!==o.bank.level||Math.max(Math.abs(p.worldX-o.bank.x),Math.abs(p.worldZ-o.bank.z))>3;};
+  if(away()){
+   const bound=o.cap-o.returnTicks-100-(raw.tick()-start);
+   const approached=async():Promise<ApproachResult>=>{if(bound<1)return{ok:false,detail:'no tick budget'};guard();try{const r=await(deps.approach??approachJewelleryBank)(s,o.bank,bound,stop);guard();return r.ok&&away()?{ok:false,detail:'arrival unobserved'}:r;}catch(error){return{ok:false,detail:String(error)};}};
+   const r=await approached();if(!r.ok)throw Error('jewellery bank approach failed: '+(r.detail??'-'));
+  }
   initial=await audit();const plan=planJewelleryOrder(o,initial.assets,raw.sdk.getSkill('Crafting')?.baseLevel??0);product=plan.product;expected={...initial.assets};
   for(const stage of plan.stages){
    if(stop())throw Error('jewellery stopped before next stage');

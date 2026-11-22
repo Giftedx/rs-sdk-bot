@@ -66,6 +66,18 @@ test('owned-stock order composes gem cutting and furnace banking with a complete
  expect(r).toMatchObject({ok:true,made:3,product:1637,preserved:true,uncertain:false,banked:3});expect(f.calls).toEqual(['cut-sapphire','sapphire_ring']);
 });
 
+test('an account away from the order bank walks to it once before the first audit, and a failed walk makes nothing',async()=>{
+ const f=fixture();Object.assign(f.player,{worldX:3185,worldZ:3436});const walks:unknown[][]=[];let audits=0;
+ const audit=async()=>{audits++;expect(walks).toHaveLength(1);return f.audit();};
+ const approach=async(_s:any,to:any,maxTicks:number)=>{walks.push([to,maxTicks]);Object.assign(f.player,{worldX:to.x,worldZ:to.z,level:to.level});return{ok:true};};
+ const r=await runJewelleryOrder(f.s,f.options,f.stop,{audit,job:f.job,approach});
+ expect(r).toMatchObject({ok:true,made:3});expect(walks).toEqual([[f.options.bank,f.options.cap-f.options.returnTicks-100]]);expect(audits).toBeGreaterThan(0);
+ const g=fixture();Object.assign(g.player,{worldX:3185,worldZ:3436});let gAudits=0;
+ const failed=await runJewelleryOrder(g.s,g.options,g.stop,{audit:async()=>{gAudits++;return g.audit();},job:g.job,approach:async()=>({ok:false,detail:'no route to 3269,3167,0'})});
+ expect(failed).toMatchObject({ok:false,made:0});expect(failed.failure).toContain('jewellery bank approach failed: no route to 3269,3167,0');expect(gAudits).toBe(0);expect(g.calls).toHaveLength(0);
+ const h=fixture();let called=0;expect((await runJewelleryOrder(h.s,h.options,h.stop,{audit:h.audit,job:h.job,approach:async()=>{called++;return{ok:true};}})).ok).toBe(true);expect(called).toBe(0);
+});
+
 test('a failed or drifting child parks the order and cannot spend the next stage',async()=>{
  for(const mode of ['failed','drift','life','owner','sdk','direct','slot','endpoint','stop']){
   const f=fixture();const job=async(...args:Parameters<typeof f.job>)=>{const r=await f.job(...args);if(mode==='drift')f.drift();if(mode==='life')f.player.lifeId++;if(mode==='owner')f.client.executeBotAction=()=>{};if(mode==='sdk')f.s.sdk={...f.s.sdk};if(mode==='direct')f.s.direct=async()=>({success:true});if(mode==='slot')f.client.selfSlot++;if(mode==='endpoint')f.s.sdk.config.port++;if(mode==='stop')f.setStop();return{...r,ok:mode!=='failed'};};

@@ -37,6 +37,8 @@ import {crossesSea} from '../packages/core/src/spawn-index';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
 import {holdSessionEater} from '../packages/core/src/sustain';
 import {selectGiantBow,selectGiantArrows} from './gather-combat';
+import {castable} from './teleport-runes';
+import {componentId} from '../packages/core/src/logout';
 
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
@@ -100,9 +102,13 @@ export const QUEST_ITEMS_AMONG_FOOD:Record<string,number[]>={merlin:[2309]};
 // Scorpion chooses an owned antipoison dose after reading the bank, or buys one stocked three-dose bottle.
 // Its preset's four-dose bottle does not require that exact form.
 export const OPTIONAL=new Set([2446]);
+// A quest's preset item that the quest does not need: never reported missing, and kept and withdrawn as QUEST_KEEP.
+// Nature Spirit never checks the wolfbane dagger (quest_druidspirit/), no shop sells it and no spawn holds it. Drezel
+// gives a new one (drezel.rs2:9-16 @reclaim_wolfbane_dagger) when inv, bank and worn hold none.
+export const QUEST_OPTIONAL:Record<string,number[]>={druidspirit:[2952]};
 export function needs(preset:SaveConfig,food=false,quest=''):Map<number,number>{
- const m=new Map<number,number>(),own=new Set(QUEST_ITEMS_AMONG_FOOD[quest]??[]);
- for(const i of preset.inventory??[])if(!OPTIONAL.has(i.id)&&(FOOD.has(i.id)&&!own.has(i.id))===food)m.set(i.id,(m.get(i.id)??0)+i.count);
+ const m=new Map<number,number>(),own=new Set(QUEST_ITEMS_AMONG_FOOD[quest]??[]),optional=new Set(QUEST_OPTIONAL[quest]??[]);
+ for(const i of preset.inventory??[])if(!OPTIONAL.has(i.id)&&!optional.has(i.id)&&(FOOD.has(i.id)&&!own.has(i.id))===food)m.set(i.id,(m.get(i.id)??0)+i.count);
  if(!food&&preset.coins)m.set(COINS,(m.get(COINS)??0)+preset.coins);
  return m;
 }
@@ -211,7 +217,9 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
  murder:[1796,1797,1798,1799,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822],
  sheepherder:[278,279,284,285,280,281,282,283],
  // Pirate's Treasure's rum, chest key and message: a resumed run carries on from whichever the bank holds.
- hunt:[431,432,433]};
+ hunt:[431,432,433],
+ // Nature Spirit's optional wolfbane dagger (QUEST_OPTIONAL): taken from the bank when held, never deposited.
+ druidspirit:[2952]};
 // A preset's protective supply that an account with Hitpoints and Defence at STURDY does without: it rides as food
 // does (taken when the bank holds it, never reported missing). Lost City's two prayer potions keep Protect from
 // Melee up against the tree spirit after the cave ladder drains Prayer (cave_monk.rs2:14); no shop sells them.
@@ -531,6 +539,138 @@ export async function leaveHazeelCave(s:Session,approach:(to:readonly Tile[])=>P
  return up?{ok:true}:{ok:false,detail:`hazeel cave stairs climb unobserved at ${where()}`};
 }
 
+// West Ardougne behind its wall (x 2558, the box of inWestArdougne in scripts/squad-ready.ts): the city doors stay shut
+// until Biohazard is complete, and no walk crosses the wall, so a run that starts there (a Biohazard run stopped in the
+// Mourner HQ) leaves before its bank walk. The Ardougne teleport lands at 2661,3301; with no runes for it, the bot leaves
+// the HQ on foot and Kilron's rope ladder lands at 2559,3267 (outByKilron in scripts/generated/quest-biohazard.ts,
+// kilron.rs2 "Yes I do."). From inside, the key gate opens with no key, the up door passes the worn doctors' gown and
+// the HQ door opens with no condition (quest_biohazard.rs2:134-145, doors.rs2:1-10).
+export const inWestArdougne=(p:{x:number;z:number})=>p.x>=2496&&p.x<=2557&&p.z>=3264&&p.z<=3335;
+export const WEST_ARDOUGNE={hqDoor:{id:2036,x:2551,z:3320},upDoor:{id:2034,x:2547,z:3325},gate:{id:2060,x:2551,z:3325},
+ stairsTop:{id:1740,x:2543,z:3325},stairsDoor:{x:2546,z:3325},kilron:{id:349,x:2556,z:3266},landing:{x:2559,z:3267},
+ teleport:{comp:'magic:ardougne_teleport',x:2661,z:3301}} as const;
+const inMournerHq=(p:{worldX:number;worldZ:number;level:number})=>p.level===0&&p.worldX>=2539&&p.worldX<=2557&&p.worldZ>=3321&&p.worldZ<=3330;
+type ExitPoint=Tile&{tol?:number};
+export type WestArdougneDeps={approach:(to:readonly ExitPoint[])=>Promise<{ok:boolean}>;canTeleport:()=>boolean;walled:()=>boolean};
+export async function leaveWestArdougne(s:Session,deps:Partial<WestArdougneDeps>={}):Promise<{ok:boolean;detail?:string}>{
+ const W=WEST_ARDOUGNE;
+ const st=()=>s.sdk.getState();
+ const pos=()=>st()?.player;
+ const where=()=>{const p=pos();return p?`${p.worldX},${p.worldZ},${p.level}`:'unknown';};
+ const tile=()=>{const p=pos();return p?{x:p.worldX,z:p.worldZ,level:p.level}:null;};
+ const out=()=>(pos()?.worldX??0)>=W.landing.x;
+ const p0=pos();
+ if(!p0||p0.level>1||!inWestArdougne({x:p0.worldX,z:p0.worldZ}))return{ok:true};
+ const approach=deps.approach??(async(to)=>walkPath(await sessionWalker(s),to.map(t=>({x:t.x,z:t.z,tol:t.tol??0})),{maxTicks:150}));
+ const magic=()=>st()?.skills?.find((k:any)=>k.name==='Magic')?.level??1;
+ const held=(id:number)=>(st()?.inventory??[]).filter((i:any)=>i.id===id).reduce((n:number,i:any)=>n+(i.count??1),0);
+ const canTeleport=deps.canTeleport??(()=>castable(W.teleport.comp,held,s.sdk.getEquipment().map(i=>i.id),magic()));
+ const walled=deps.walled??(()=>questFlags(s.client)?.find(f=>f.name==='Biohazard')?.state!=='complete');
+ if(!walled())return{ok:true};
+ const from=tile();
+ const report=(method:string)=>{console.log(`QUEST_SWEEP_WEST_ARDOUGNE_EXIT ${JSON.stringify({from,method,ok:out(),at:tile()})}`);};
+ if(canTeleport()){
+  for(let i=0;i<3&&!out();i++){
+   await s.direct({type:'clickComponent',componentId:componentId(W.teleport.comp),reason:'SDK'});
+   await waitUntil(s,out,{timeoutTicks:12});
+  }
+  if(out()){report('teleport');return{ok:true};}
+ }
+ const fail=(step:string)=>{report('kilron');return{ok:false,detail:`west ardougne exit: ${step} unobserved at ${where()}`};};
+ const openOp=(l:{x:number;z:number;id?:number})=>{
+  const loc=(st()?.nearbyLocs??[]).find((k:any)=>k.x===l.x&&k.z===l.z&&(l.id===undefined||k.id===l.id)&&(k.optionsWithIndex??[]).some((o:any)=>/^open$/i.test(o.text)));
+  return loc?{id:loc.id as number,op:(loc.optionsWithIndex as {text:string;opIndex:number}[]).find(o=>/^open$/i.test(o.text))!.opIndex}:null;
+ };
+ // A door the quest script crosses by its own move: click Open until the far side is observed.
+ const cross=async(d:{id:number;x:number;z:number},through:()=>boolean)=>{
+  for(let i=0;i<4&&!through();i++){
+   const o=openOp(d);
+   await s.direct({type:'interactLoc',x:d.x,z:d.z,locId:o?.id??d.id,optionIndex:o?.op??1,reason:'SDK'});
+   await waitUntil(s,through,{timeoutTicks:12});
+  }
+  return through();
+ };
+ const x=()=>pos()?.worldX??0,z=()=>pos()?.worldZ??0,lvl=()=>pos()?.level??-1;
+ const at=(t:{x:number;z:number},level:number,tol=0)=>{const p=pos();return !!p&&p.level===level&&Math.abs(p.worldX-t.x)<=tol&&Math.abs(p.worldZ-t.z)<=tol;};
+ if(lvl()===1){
+  if(x()>W.gate.x){
+   if(!(await approach([{x:W.gate.x+1,z:W.gate.z,level:1}])).ok||!at({x:W.gate.x+1,z:W.gate.z},1))return fail('hq gate tile');
+   if(!await cross(W.gate,()=>x()<=W.gate.x))return fail('hq gate');
+  }
+  if(!(await approach([{x:W.upDoor.x,z:W.upDoor.z,level:1}])).ok||!at(W.upDoor,1))return fail('hq up door tile');
+  if(!await cross(W.upDoor,()=>x()<W.upDoor.x))return fail('hq up door');
+  for(let i=0;i<4&&lvl()!==0;i++){
+   await s.direct({type:'interactLoc',x:W.stairsTop.x,z:W.stairsTop.z,locId:W.stairsTop.id,optionIndex:1,reason:'SDK'});
+   await waitUntil(s,()=>lvl()===0,{timeoutTicks:15});
+  }
+  if(lvl()!==0)return fail('hq stairs down');
+ }
+ const p1=pos();
+ if(p1&&inMournerHq(p1)){
+  // The stairs room door (loc_1530, east edge of 2546,3325) is an ordinary door: opened, the walk goes through.
+  if(x()<=W.stairsDoor.x){
+   if(!(await approach([{x:W.stairsDoor.x,z:W.stairsDoor.z,level:0}])).ok||!at(W.stairsDoor,0))return fail('stairs door tile');
+   const o=openOp(W.stairsDoor);
+   if(o){
+    await s.direct({type:'interactLoc',x:W.stairsDoor.x,z:W.stairsDoor.z,locId:o.id,optionIndex:o.op,reason:'SDK'});
+    await waitUntil(s,()=>!openOp(W.stairsDoor),{timeoutTicks:8});
+   }
+  }
+  if(!(await approach([{x:W.hqDoor.x,z:W.hqDoor.z+1,level:0}])).ok||!at({x:W.hqDoor.x,z:W.hqDoor.z+1},0))return fail('hq door tile');
+  if(!await cross(W.hqDoor,()=>z()<=W.hqDoor.z))return fail('hq door');
+ }
+ if(!(await approach([{x:W.kilron.x,z:W.kilron.z+2,level:0,tol:2}])).ok||!at({x:W.kilron.x,z:W.kilron.z+2},0,2))return fail('kilron approach');
+ for(let i=0;i<3&&!out();i++){
+  const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===W.kilron.id||/^kilron$/i.test(n.name??'')).sort((a:any,b:any)=>a.distance-b.distance)[0];
+  if(!npc){await waitTicks(s,2);continue;}
+  const t:any=await s.bot.talkTo(npc);
+  if(!t?.success)continue;
+  for(let k=0;k<40&&!out();k++){
+   const dlg:any=s.sdk.getDialog();
+   if(dlg?.isOpen&&!dlg.isWaiting){
+    if((dlg.options??[]).some((o:any)=>/yes i do/i.test(o.text)))await s.sdk.clickDialogByText(/yes i do/i);
+    else await s.sdk.sendClickDialog(0);
+   }
+   await waitTicks(s,1);
+  }
+  await waitUntil(s,out,{timeoutTicks:10});
+ }
+ for(let k=0;k<6&&s.sdk.getDialog()?.isOpen;k++){await s.sdk.sendClickDialog(0);await waitTicks(s,1);}
+ if(!out())return fail('kilron ladder');
+ report('kilron');
+ return{ok:true};
+}
+
+// Elena's house in East Ardougne (Biohazard start, 2591,3336): its only door, elenadoor2 (loc 2054, south edge of
+// 2592,3339), shuts behind the player and the walker has no route through it (doors.rs2:1-5). quest-biohazard.ts talks
+// to Elena inside first, so the sweep hands over inside: stand on the outside tile and click Open until z<3339.
+export const ELENA_HOUSE={door:{id:2054,x:2592,z:3339},outside:{x:2592,z:3339,level:0}} as const;
+export const inElenaHouse=(p:{x:number;z:number;level:number})=>p.level===0&&p.x>=2589&&p.x<=2594&&p.z>=3334&&p.z<=3338;
+export type ElenaDoorDeps={approach:(to:Tile)=>Promise<{ok:boolean}>};
+export async function enterElenaHouse(s:Session,deps:Partial<ElenaDoorDeps>={}):Promise<{ok:boolean;detail?:string}>{
+ const E=ELENA_HOUSE;
+ const pos=()=>s.sdk.getState()?.player;
+ const tile=()=>{const p=pos();return p?{x:p.worldX,z:p.worldZ,level:p.level}:null;};
+ const where=()=>{const t=tile();return t?`${t.x},${t.z},${t.level}`:'unknown';};
+ const inside=()=>{const t=tile();return !!t&&inElenaHouse(t);};
+ if(inside())return{ok:true};
+ const approach=deps.approach??(async(to)=>walkPath(await sessionWalker(s),[{x:to.x,z:to.z,tol:0}],{maxTicks:150}));
+ const from=tile();
+ const report=()=>{console.log(`QUEST_SWEEP_ELENA_DOOR ${JSON.stringify({from,ok:inside(),at:tile()})}`);};
+ const door=()=>{const t=tile();return !!t&&t.level===0&&t.z>=E.outside.z&&Math.max(Math.abs(t.x-E.outside.x),Math.abs(t.z-E.outside.z))<=1;};
+ await approach(E.outside);
+ if(!door()){report();return{ok:false,detail:`elena door tile ${E.outside.x},${E.outside.z},0 unobserved at ${where()}`};}
+ const through=()=>{const t=tile();return !!t&&t.level===0&&t.z<E.door.z;};
+ for(let i=0;i<4&&!through();i++){
+  const loc=(s.sdk.getState()?.nearbyLocs??[]).find((k:any)=>k.x===E.door.x&&k.z===E.door.z&&k.id===E.door.id);
+  const op=(loc?.optionsWithIndex as {text:string;opIndex:number}[]|undefined)?.find(o=>/^open$/i.test(o.text))?.opIndex??1;
+  await s.direct({type:'interactLoc',x:E.door.x,z:E.door.z,locId:E.door.id,optionIndex:op,reason:'SDK'});
+  await waitUntil(s,through,{timeoutTicks:12});
+ }
+ report();
+ return through()?{ok:true}:{ok:false,detail:`elena door unobserved at ${where()}`};
+}
+
 // Ernest the Chicken's fish food has one spawn, upstairs in Draynor Manor (maps/m48_52.jm2:9477, 3108,3356,1).
 // spawn-index.ts lists sources on the player's plane only, so gatherPlan leaves it missing. In by the front door
 // (opens from the south only, quest_haunted.rs2:4-8), spookystairs 3108,3363 up (+4 z) and spookystairstop
@@ -793,8 +933,11 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,
   console.log(`QUEST_SWEEP_SPELL ${JSON.stringify({from:at(s),to,planned:!!plan,spell:spell?.kind==='travel'?(spell.travel as {name?:string}).name??true:false})}`);
   if(spell)return router(to);
  }
+ // A dungeon tile is 6400 tiles north of the surface: the ground walk to Drezel's 3440,9893 from Lumbridge went into
+ // the level-56 Wilderness. Such a goal goes to the router only.
  const ground=async(t:Tile):Promise<Walked>=>{
   if(stopped())return STOPPED;
+  if(t.z>=UNDERGROUND)return router(t);
   const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]],(d,pts)=>walkPath(d,pts,{signal})):{ok:false};
   return r.ok&&(cheb(at(s),t)<=1||await sameArea(at(s),t))?{ok:true}:router(t);
  };
@@ -806,19 +949,20 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,
   console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:at(s),to:down})}`);
   const r=await router(down);if(!r.ok)return r;
  }
- if(eastOfArdougne(at(s),to,acct)){const r=await crossEast(s,world,to,signal);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the foot of its way up;
- // only the last leg, with its stairs, is the world router's.
- const beneath=wayUp(world.navigationGraph?.().transports??[],to);
- for(const hop of at(s).level===0?hopsTo(at(s),beneath):[]){
+ // an underground target (Drezel under Paterdomus) toward the surface entrance of its dungeon. Only the last leg, with
+ // its stairs or trapdoor, is the world router's.
+ const under=to.z>=UNDERGROUND,beneath=approachOf(world.navigationGraph?.().transports??[],to);
+ if(eastOfArdougne(at(s),under?beneath:to,acct)){const r=await crossEast(s,world,under?beneath:to,signal);if(!r.ok)return r;}
+ for(const hop of at(s).level===0&&at(s).z<UNDERGROUND?hopsTo(at(s),beneath):[]){
   console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(s),to:hop})}`);
   const r=await ground(hop);if(!r.ok)return r;
  }
  // A far upstairs target with no hub on the way (Hudo's shop on the Grand Tree's first floor, 226 tiles from the Ardougne
  // bank) is still approached by the ground: asked from Ardougne, the world router took an Ardougne staircase and a
  // 240-tile walk on the first floor, where no floor lies, and the search ran out the plan budget.
- if(to.level!==0&&at(s).level===0&&cheb(at(s),beneath)>MAX_HOP){const r=await ground(beneath);if(!r.ok)return r;}
- return to.level===0&&at(s).level===0&&cheb(at(s),to)>30?ground(to):router(to);
+ if((to.level!==0||under)&&at(s).level===0&&at(s).z<UNDERGROUND&&cheb(at(s),beneath)>(under?30:MAX_HOP)){const r=await ground(beneath);if(!r.ok)return r;}
+ return !under&&to.level===0&&at(s).level===0&&cheb(at(s),to)>30?ground(to):router(to);
 }
 // The landing of the nearest way down from this floor (the Grand Tree ladder, 2466,3495): the tile beneath an upstairs shop
 // is a wall as often as a floor (under Hudo's counter, 2449,3508, the router found no route).
@@ -834,6 +978,14 @@ export function wayUp(transports:readonly Transport[],to:Tile,depth=3):Tile{
  const up=transports.filter(t=>t.to.level===to.level&&t.from.level<to.level&&cheb(t.to,to)<=80).sort((a,b)=>cheb(a.to,to)-cheb(b.to,to))[0];
  if(!up)return{x:to.x,z:to.z,level:0};
  return up.from.level===0?up.from:wayUp(transports,up.from,depth-1);
+}
+// The surface tile a far walk heads for. An underground target (z 6400 and up) takes the surface foot of the nearest way
+// down that lands within 80 tiles of it (the Paterdomus trapdoor, 3422,3485, for Drezel at 3440,9893), else the tile
+// above it. Any other target takes wayUp.
+export function approachOf(transports:readonly Transport[],to:Tile):Tile{
+ if(to.z<UNDERGROUND)return wayUp(transports,to);
+ const down=transports.filter(t=>t.from.level===0&&t.from.z<UNDERGROUND&&t.to.z>=UNDERGROUND&&t.to.level===to.level&&cheb(t.to,to)<=80).sort((a,b)=>cheb(a.to,to)-cheb(b.to,to))[0];
+ return down?{...down.from}:{...surfaceOf(to),level:0};
 }
 // From the Ardougne side (x under 2800, z 3270 and up) to anywhere east of x 2950 the way is the two boats, Brimhaven and
 // Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
@@ -985,6 +1137,14 @@ export async function reachStart(s:Session,world:World,start:Tile,quest?:string,
    &&Math.max(Math.abs(n.x-goal.x),Math.abs(n.z-goal.z))<=4);
   if(!await waitUntil(s,observed,{timeoutTicks:10}))throw Error('Fishing Contest west dwarf unobserved');
   console.log(`QUEST_SWEEP_DWARF ${JSON.stringify({at:deps.pos(),observed:true})}`);
+  return;
+ }
+ if(quest==='biohazard'&&inElenaHouse(start)&&!(p&&inElenaHouse({x:p.worldX,z:p.worldZ,level:p.level}))){
+  const e=await enterElenaHouse(s,{approach:async(to)=>{
+   const w=await walkFar(s,world,to);if(!w.ok)return w;
+   return walkPath(await walker(),[{x:to.x,z:to.z,tol:0}],{maxTicks:40});
+  }});
+  if(!e.ok)throw Error(e.detail);
   return;
  }
  const r=await walkFar(s,world,start);
@@ -1427,6 +1587,8 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  if(!fortress.ok)return fail(fortress.detail!);
  const cave=await leaveHazeelCave(s);
  if(!cave.ok)return fail(cave.detail!);
+ const westArdougne=await leaveWestArdougne(s);
+ if(!westArdougne.ok)return fail(westArdougne.detail!);
  // The world walker plans from the ground floor: an account left upstairs (Hazeel Cult ends there, Ernest the Chicken on
  // Draynor Manor's top floor) takes the nearest way down a floor at a time by the route graph; a Climb-down loc in view is
  // the fallback (the manor's top-floor stairs were out of view and the sweep failed with no way down).

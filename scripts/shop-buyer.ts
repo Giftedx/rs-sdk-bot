@@ -152,8 +152,9 @@ export const PROFILES: Record<string, {
             { re: /pestle and mortar/i, buyPerTick: 1 },
         ],
     },
-    // Dommik's Crafting Store, Al Kharid (dommik.rs2, craftingshop2: chisel 2, ring_mould 4; npc 545 spawn 3322,3194,
-    // the tile black-dhide-sets.ts walks to). The ring chain of the mock Haggis run needs a ring mould and a chisel.
+    // Dommik's Crafting Store, Al Kharid (dommik.rs2, craftingshop2: chisel 2, ring_mould 4, sickle_mould 6; npc 545
+    // spawn 3322,3194, the tile black-dhide-sets.ts walks to). The ring chain of the mock Haggis run needs a ring mould
+    // and a chisel. A silver sickle needs a sickle mould. A run selects its lines with ITEMS.
     dommik: {
         npc: /^dommik$/i,
         npcSpot: { x: 3320, z: 3194 },
@@ -161,7 +162,19 @@ export const PROFILES: Record<string, {
         items: [
             { re: /^ring mould$/i, buyPerTick: 1, shelf: 4 },
             { re: /^chisel$/i, buyPerTick: 1, shelf: 2 },
+            { re: /^sickle mould$/i, buyPerTick: 1, shelf: 6 },
         ],
+    },
+    // The Ardougne Silver Stall (ardougne_east.inv silverstall: silver_bar 1, restock 1000). The silver merchant
+    // (ardougne_east.npc, moverestrict nomove) stands at 2658,3316 (maps/m41_51.jm2 0 34 52), north of the 2x2 stall at
+    // 2657-2658,3314-3315. The sacks at 2657,3316 block his west side, so the run stands on the free tile east of him.
+    silver_merchant: {
+        npc: /^silver merchant$/i,
+        npcSpot: { x: 2659, z: 3316 },
+        bankSpot: { x: 2654, z: 3283 }, // Ardougne south bank (the ardy profile)
+        // The silver ore line lets the generated shop:silver_merchant:442 step pass the profile check. A run selects
+        // its line with ITEMS.
+        items: [{ re: /^silver bar$/i, buyPerTick: 1, shelf: 1 }, { re: /^silver ore$/i, buyPerTick: 1, shelf: 1 }],
     },
     // Dommik's Crafting Store necklace and amulet moulds (craftingshop2: necklace_mould 2, amulet_mould 2) for glory/necklace crafting.
     dommik_moulds: {
