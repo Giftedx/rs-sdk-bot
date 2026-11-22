@@ -115,7 +115,7 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
             'magic:splash-train': 'magic:splash',
         };
         const routeKey = aliases[`${skill}:${method}`] ?? `${skill}:${method}`;
-        const workers: Readonly<Record<string, { script: string; gather?: readonly [string, string]; sub?: readonly [string, string]; combat?: string }>> = {
+        const workers: Readonly<Record<string, { script: string; gather?: readonly [string, string]; sub?: readonly [string, string]; combat?: string; artisan?: readonly [string, string] }>> = {
             'woodcutting:yews': { script: 'scripts/aio-skiller.ts', gather: ['woodcutting', 'yews'] },
             'foraging:flax': { script: 'scripts/aio-skiller.ts', gather: ['foraging', 'flax'] },
             'foraging:feathers': { script: 'scripts/aio-skiller.ts', gather: ['foraging', 'feathers'] },
@@ -125,13 +125,13 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
             'runecraft:bank-craft': { script: 'scripts/aio-skiller.ts', sub: ['runecraft', 'bank-craft'] },
             'thieving:blood-chest': { script: 'scripts/aio-skiller.ts', gather: ['thieving', 'blood-chest'] },
             'thieving:knights': { script: 'scripts/aio-skiller.ts', gather: ['thieving', 'knights'] },
-            'magic:alch-train': { script: 'scripts/alch-train.ts' },
+            'magic:alch-train': { script: 'scripts/aio-skiller.ts', artisan: ['magic', 'alch-train'] },
             'magic:splash': { script: 'scripts/aio-skiller.ts', combat: 'magic-splash' },
             'magic:splash-coop': { script: 'scripts/aio-skiller.ts', combat: 'magic-splash-coop' },
         };
         const route = workers[routeKey]
             ? ([routeKey, workers[routeKey]!] as const)
-            : Object.entries(workers).find(([key, entry]) => !entry.gather && !entry.sub && !entry.combat && key.startsWith(`${skill}:`) && entry.script.endsWith(`${method}.ts`));
+            : Object.entries(workers).find(([key, entry]) => !entry.gather && !entry.sub && !entry.combat && !entry.artisan && key.startsWith(`${skill}:`) && entry.script.endsWith(`${method}.ts`));
         if (route) {
             const entry = route[1];
             if (entry.gather) {
@@ -145,6 +145,10 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
             if (entry.combat) {
                 const parsed = resolveRouteStep({ script: entry.script, ...(route[0] === 'magic:splash-coop' ? { defaultEnv: { SPLASH_SITE: 'coop' } } : {}) }, rest);
                 return [{ script: entry.script, args: ['combat', entry.combat, ...parsed.args], env: { ...env, ...parsed.env } }];
+            }
+            if (entry.artisan) {
+                const parsed = resolveRouteStep({ script: entry.script }, rest);
+                return [{ script: entry.script, args: ['artisan', ...entry.artisan, ...parsed.args], env: { ...env, ...parsed.env } }];
             }
             spec = { script: entry.script };
         }
@@ -254,7 +258,8 @@ export function jobResources(job: ResourceJob): string[] {
         }
         // An unknown account can need Wind Strike before alchemy, even with target99.
         // Qualified planner alchemists carry an explicit empty resource override.
-        if (file === 'scripts/alch-train.ts' && Number(args[0]) >= 2 && Number(args[0]) <= 99) out.push(STRIKE_TILE);
+        if (file === 'scripts/aio-skiller.ts' && ((args[0] === 'artisan' && args[1] === 'magic' && args[2] === 'alch-train' && Number(args[3]) >= 2 && Number(args[3]) <= 99)
+            || (args[0] === 'magic' && args[1] === 'alch-train' && Number(args[2]) >= 2 && Number(args[2]) <= 99))) out.push(STRIKE_TILE);
     }
     const extra = script === 'scripts/ranged-train.ts' && Array.isArray(job.resources)
         ? job.resources.filter(r => typeof r === 'string' && r !== 'pen:3229,3298' && r !== TROOPER_FIELD)

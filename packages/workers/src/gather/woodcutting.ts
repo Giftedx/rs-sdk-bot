@@ -1409,7 +1409,7 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
         await waitTicks(s, 1);
         const after = heldLogs();
         banked += n - after;
-        bankTrips++;
+        if (!forceToolCheck || n > 0) bankTrips++;
         if (!over()) await bankCargo(s, [logRe], 0, { stopped: over });
         if (!over()) {
             const axeWalk = async (target: { x: number; z: number; level?: number }) => {

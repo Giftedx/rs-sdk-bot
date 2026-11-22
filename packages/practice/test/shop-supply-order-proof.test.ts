@@ -7,7 +7,7 @@ import{capabilityRevision}from'../../core/src/worker-release';
 import * as workerRelease from '../../core/src/worker-release';
 import * as coreBot from '../../core/src/bot';
 import * as walking from '../../core/src/walk';
-import {runEarthProduction} from '../../../scripts/earth-production';
+import {runEarthProduction} from '../../workers/src/bank-artisan';
 import {setEquipmentObserved} from '../../core/src/container-observation';
 import {createSaveData} from '../../../vendor/rs-sdk/sdk/test/utils/save-generator';
 import {parsePracticeSave} from '../../../scripts/measure/fleet-player-save';
@@ -97,7 +97,7 @@ test('alternate Betty profile proves its route, useful stock and the same conser
 // File-only fixture exercises the saved verifier without a client, service or live actor.
 function savedShopFixture(directory:string){
  const digest=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
- const files=['scripts/aio-market.ts','packages/workers/src/market/shop-buy.ts','packages/workers/src/market/ge-buy.ts','packages/workers/test/market-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
+ const files=['scripts/aio-market.ts','packages/workers/src/market/shop-buy.ts','packages/workers/src/market/ge-buy.ts','packages/workers/test/market-shop.test.ts','packages/workers/src/bank-artisan/magic.ts','packages/workers/test/bank-artisan.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
  const root=resolve(import.meta.dir,'../../..'),paths:string[]=[];
  const put=(file:string,data:string|Uint8Array)=>{writeFileSync(join(directory,file),data);paths.push(file);};
  const saved=(label:string,earth=3,coins=352288,betty=false,essence=0)=>put(label+'.sav',createSaveData({

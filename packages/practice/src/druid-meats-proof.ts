@@ -12,11 +12,11 @@ import {canBind} from './ports';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
-import {MEATS,nearestMeatBank} from '../../../scripts/druid-meats';
+import {MEATS,nearestMeatBank} from '../../workers/src/bank-artisan';
 
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
-const owned=['scripts/druid-meats.ts','scripts/druid-meats.test.ts','packages/practice/src/druid-meats-proof.ts','packages/practice/test/druid-meats-proof.test.ts'];
+const owned=['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/herblore.ts','packages/workers/test/bank-artisan.test.ts','packages/practice/src/druid-meats-proof.ts','packages/practice/test/druid-meats-proof.test.ts'];
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries(owned.map(p=>[p,hash(join(root,p))]))});
 export const DRUID_FIXTURE:SaveConfig={position:{x:3092,z:3242,level:0},
@@ -86,7 +86,7 @@ async function run(directory:string){
   const path=await applyPreset(name,DRUID_FIXTURE);copyFileSync(path,join(directory,'before.sav'));
   const child=async(label:string,timeoutMs:number)=>{
    druidMemoryGate(freemem()/2**30);
-   const c=Bun.spawn({cmd:['bun','scripts/druid-meats.ts',name],cwd:root,
+   const c=Bun.spawn({cmd:['bun','scripts/aio-skiller.ts',name,'artisan','herblore','meats'],cwd:root,
     env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'4000'},windowsHide:true,
     stdout:Bun.file(join(directory,`${label}.log`)),stderr:Bun.file(join(directory,`${label}.err`))});
    let timedOut=false,termination:Promise<void>|undefined;

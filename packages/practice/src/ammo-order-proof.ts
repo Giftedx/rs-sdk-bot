@@ -159,7 +159,7 @@ async function run(directory:string){
         copyFileSync(paths[0]!,join(directory,'donor.sav'));copyFileSync(paths[1]!,join(directory,'received.sav'));
         const receiptPath=join(practiceDir(),'item-handoffs',order,`${names[0]}-${names[1]}.json`);
         writeFileSync(join(directory,'receipt.json'),existsSync(receiptPath)?readFileSync(receiptPath):'null');
-        const craft=transfer.code===0&&donor.matched&&received.matched?await command(['scripts/fletch-arrows.ts',names[1]!,'400','iron'],{MAX_MAKE:'90',TIP_RESERVE:'0',HEADLESS_RESERVE:'200',PROGRESSION_CONSUMER:JSON.stringify({bank:{884:90}})},'craft'):{code:1,log:''};
+        const craft=transfer.code===0&&donor.matched&&received.matched?await command(['scripts/aio-skiller.ts',names[1]!,'artisan','fletching','arrows','400','iron'],{MAX_MAKE:'90',TIP_RESERVE:'0',HEADLESS_RESERVE:'200',PROGRESSION_CONSUMER:JSON.stringify({bank:{884:90}})},'craft'):{code:1,log:''};
         if(craft.log===''){writeFileSync(join(directory,'craft.log'),'');writeFileSync(join(directory,'craft.err'),'producer failed');}
         await waitPracticeSave(paths[1]!,s=>qty(s,884)===90);copyFileSync(paths[1]!,join(directory,'final.sav'));
         const repeat=await command(args,{HANDOFF_ORDER:order,HANDOFF_ITEM_ID:'40'},'repeat');

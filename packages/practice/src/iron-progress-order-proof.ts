@@ -15,7 +15,7 @@ import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
-const owned=['scripts/smelt-bars.ts','scripts/smelt-bars.test.ts','scripts/smelt-batch.ts','scripts/smelt-batch.test.ts','scripts/smith-batch.ts','scripts/smith-batch.test.ts','packages/planner/src/travel.ts','packages/planner/src/production-batch.ts','packages/practice/src/iron-progress-order-proof.ts','packages/practice/test/iron-progress-order-proof.test.ts'];
+const owned=['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/smithing.ts','packages/workers/test/bank-artisan.test.ts','packages/planner/src/travel.ts','packages/planner/src/production-batch.ts','packages/practice/src/iron-progress-order-proof.ts','packages/practice/test/iron-progress-order-proof.test.ts'];
 const smithing='vendor/rs-sdk/server/content/scripts/skill_smithing/';
 const serverFiles=[smithing+'scripts/smelting/smelting.rs2',smithing+'configs/smelting/smelting.struct','vendor/rs-sdk/server/content/scripts/areas/area_alkharid/scripts/border_gate.rs2',
  smithing+'scripts/smithing/smithing.rs2',smithing+'configs/smithing/smithing.dbrow',smithing+'configs/smithing/smithing.struct',smithing+'configs/smithing/smithing.inv',smithing+'configs/smelting/smelting.obj'];
@@ -137,7 +137,7 @@ const CASES:Record<Case,{preset:SaveConfig;cap:string;env:Record<string,string>;
 };
 export function childConfiguration(name:string,id:Case,inherited:NodeJS.ProcessEnv=process.env,endpoints?:ProofEndpoints){
  const c=CASES[id];
- return{cmd:['bun','scripts/smelt-bars.ts',name,c.cap,'iron'],cwd:root,windowsHide:true,
+ return{cmd:['bun','scripts/aio-skiller.ts',name,'artisan','smithing','smelt',c.cap,'iron'],cwd:root,windowsHide:true,
   env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',...c.env}};
 }
 async function run(directory:string){

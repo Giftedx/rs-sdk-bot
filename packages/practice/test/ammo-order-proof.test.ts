@@ -52,7 +52,7 @@ test('owned ammo endpoints reach the stack, new profiles, registration and every
  expect(registration[1]).toContain(JSON.stringify(`GATEWAY_URL=${p.gateway}`));
  expect(registration[1]).toContain('openBot(');
  expect(registration[1]).toContain('finish([session]');
- for(const args of [registration,['scripts/handoff-inputs.ts','donor','receiver','90:Iron arrowtips'],['scripts/fletch-arrows.ts','fixture','400','iron'],['scripts/handoff-inputs.ts','fixture','--headless-order','135','14']]){
+ for(const args of [registration,['scripts/handoff-inputs.ts','donor','receiver','90:Iron arrowtips'],['scripts/aio-skiller.ts','fixture','artisan','fletching','arrows','400','iron'],['scripts/handoff-inputs.ts','fixture','--headless-order','135','14']]){
   const child=ammoChildConfiguration(args,{CAP:'1600'},p,{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',NODE_PORT:'43594'});
   expect(child.cmd).toEqual(['bun',...args]);
   expect(child.env).toMatchObject({...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'1600'});

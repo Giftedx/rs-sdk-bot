@@ -329,3 +329,5 @@ export {
     type RuneEntryResult,
     type StagedCarriers,
 } from './runecraft';
+export * as bankArtisan from './bank-artisan';
+export { bankArtisanWorker, artisanPreflight, artisanEstimate, toArtisanWorkerOutcome, runArtisan, runArtisanCli } from './bank-artisan';

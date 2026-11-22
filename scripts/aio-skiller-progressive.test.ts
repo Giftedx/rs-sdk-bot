@@ -20,9 +20,10 @@ test('progression hands level targets to the actual worker interfaces',()=>{
  }
  for(const band of planProgressiveSkiller('firemaking',1,99))expect(firemakingOptions(band.step.env).target).toBe(band.toLevel);
  for(const band of planProgressiveSkiller('magic',1,99)){
+  const tail=band.step.args[0]==='artisan'?band.step.args.slice(3):band.step.args;
   if(band.method==='order')expect(magicOptions(band.step.env).target).toBe(band.toLevel);
   else if(band.method==='splash')expect(Number(band.step.args[2])).toBe(band.toLevel);
-  else expect(Number(band.step.args[0])).toBe(band.toLevel);
+  else expect(Number(tail[0])).toBe(band.toLevel);
  }
  for(const band of planProgressiveSkiller('agility',1,99)){
   expect(band.step.script).toBe('scripts/aio-skiller.ts');
@@ -35,7 +36,7 @@ test('progression hands level targets to the actual worker interfaces',()=>{
 test('manufacturing and ore bands carry valid finite jobs with native unlocked recipes',()=>{
  for(const skill of ['cooking','fletching','crafting','mining']){
   for(const band of planProgressiveSkiller(skill,1,99)){
-   if(band.step.script!=='scripts/aio-skiller.ts')continue;
+   if(band.step.script!=='scripts/aio-skiller.ts'||band.step.args[0]!=='bank-job')continue;
    const job=readBankJobArgument(band.step.args[1]!);
    expect(()=>validateBankJob(job)).not.toThrow();
    expect(job.target).toBe(band.unitsNeeded);
@@ -69,7 +70,7 @@ test('bank profiles resolve through AIO, survive chains and reject invalid recip
 test('prayer plans its worker minimum milestone and funds the full bounded burial count',()=>{
  const band=planProgressiveSkiller('prayer',1,15)[0]!;
  expect(band.toLevel).toBe(43);
- const opts=prayerOptions(['bun','worker','Example',...band.step.args],band.step.env);
+ const opts=prayerOptions(['bun','worker','Example',...(band.step.args[0]==='artisan'?band.step.args.slice(3):band.step.args)],band.step.env);
  expect(opts.target).toBe(43);
  expect(opts.maximum).toBe(band.unitsNeeded);
  expect(opts.reserve).toBeGreaterThanOrEqual(6);
@@ -89,13 +90,14 @@ test('stun superheat plan stages bronze then iron superheat casts for Smithing 1
   ['bronze', 1, 15, 12],
   ['iron', 15, 41, 45],
  ]);
- expect(full[0]!.step).toEqual({ script: 'scripts/microbot-magic-items.ts', args: ['superheat:bronze', '-', '12', '200'], env: {} });
+ expect(full[0]!.step).toEqual({ script: 'scripts/aio-skiller.ts', args: ['artisan', 'magic', 'items', 'superheat:bronze', '-', '12', '200'], env: {} });
  expect(planStunSuperheatSmithing(20, 43).map(b => b.metal)).toEqual(['iron']);
  expect(planStunSuperheatSmithing(41, 43)).toEqual([]);
 });
 
 // Item ids: iron ore 440, coal 453, gold ore 444, iron bar 2351, steel bar 2353, hammer 2347.
-const smithBand=(b:ReturnType<typeof planProgressiveSkiller>[number])=>`${b.fromLevel}-${b.toLevel} ${b.method} ${b.step.env.PRODUCT_ID??b.step.args[1]} x${b.unitsNeeded}`;
+const smithTail=(step:{args:readonly string[]})=>step.args[0]==='artisan'?step.args.slice(3):step.args;
+const smithBand=(b:ReturnType<typeof planProgressiveSkiller>[number])=>`${b.fromLevel}-${b.toLevel} ${b.method} ${b.step.env.PRODUCT_ID??smithTail(b.step)[1]} x${b.unitsNeeded}`;
 test('a smithing tier is planned only with inputs that the account owns or that an earlier band of the plan makes',()=>{
  // 40 iron bars and a hammer: the iron platebody is the step. 4 platebodies reach Smithing 48.
  const bars=planProgressiveSkiller('smithing',40,55,25,{2351:40,2347:1});
@@ -123,12 +125,12 @@ test('with no stock known the smithing plan smelts each bar that its anvil bands
  const bar:Record<string,number>={bronze:2349,iron:2351,steel:2353,gold:2357,mithril:2359,adamantite:2361,runite:2363},uses:Record<string,number>={1115:2351,1119:2353,1121:2359,1123:2361};
  for(const b of plan){
   expect(b.unitsNeeded).toBeGreaterThan(0);
-  if(b.method==='smelt')stock.set(bar[b.step.args[1]!]!,(stock.get(bar[b.step.args[1]!]!)??0)+b.unitsNeeded);
+  if(b.method==='smelt')stock.set(bar[smithTail(b.step)[1]!]!,(stock.get(bar[smithTail(b.step)[1]!]!)??0)+b.unitsNeeded);
   else{const id=uses[b.step.env.PRODUCT_ID!]!;stock.set(id,(stock.get(id)??0)-5*b.unitsNeeded);expect(stock.get(id)!,smithBand(b)).toBeGreaterThanOrEqual(0);}
  }
  expect(plan.at(-1)!.toLevel).toBe(99);
  expect(plan.filter(b=>b.method==='anvil').map(b=>b.step.env.PRODUCT_ID)).toEqual(expect.arrayContaining(['1115','1119','1121','1123']));
- expect(plan.some(b=>['gold','runite'].includes(b.step.args[1]!))).toBe(false);
+ expect(plan.some(b=>['gold','runite'].includes(smithTail(b.step)[1]!))).toBe(false);
 });
 test('other skills plan the same bands with and without a stock',()=>{
  for(const skill of ['cooking','mining','magic','prayer','runecraft','thieving'])

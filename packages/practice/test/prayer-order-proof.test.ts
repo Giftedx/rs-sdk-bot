@@ -34,7 +34,7 @@ test('isolated endpoints reach stack, generated account and actual CLI child wit
  await expect(startPrayerProofStack(p,async()=>{throw Error('startup refused');})).rejects.toThrow('startup refused');
  expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
  const child=childConfiguration('flprayx001',{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',NODE_PORT:'43594'},p);
- expect(child.cmd).toEqual(['bun','scripts/train-prayer.ts','flprayx001','60']);
+ expect(child.cmd).toEqual(['bun','scripts/aio-skiller.ts','flprayx001','artisan','prayer','bury','60']);
  expect(child.env).toMatchObject({...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',CAP:'5000',MAX_BURY:'600',BONE_RESERVE:'384'});
  expect(child.env.GE_DATABASE).toBe(`data/market-${p.instance}.sqlite`);
  expect(child.windowsHide).toBe(true);
@@ -64,7 +64,7 @@ test('admission uses shared memory limits and proof has only useful entry and on
  expect(f.bank).toContainEqual({id:526,count:973});expect(f.bank).toContainEqual({id:995,count:454160});
  expect(prayerFixture('short').bank).toContainEqual({id:526,count:972});
  const c=childConfiguration('flprayx001',{PATH:'p',DEMO_OK:'1',TARGET_LEVEL:'99',CAP:'1'});
- expect(c.cmd).toEqual(['bun','scripts/train-prayer.ts','flprayx001','60']);
+ expect(c.cmd).toEqual(['bun','scripts/aio-skiller.ts','flprayx001','artisan','prayer','bury','60']);
  expect(c.env).toMatchObject({PATH:'p',DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'5000',MAX_BURY:'600',BONE_RESERVE:'384',TARGET_LEVEL:'60'});expect(c.windowsHide).toBe(true);
 });
 test('saved raw XP requires589 actual bones,384reserved, all unrelated assets, skills and worn slots',()=>{

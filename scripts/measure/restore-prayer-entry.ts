@@ -5,7 +5,7 @@ import {resolve} from 'node:path';
 import {openBot,releasePrayerGuard,serverFromEnv,settle} from '../../packages/core/src/bot';
 import {isLocalServer} from '../../packages/core/src/localserver';
 import {resolveBotEnvPath} from '../../packages/core/src/practice-paths';
-import {holdPrayer} from '../microbot-c-qol';
+import {holdPrayer} from '../../packages/workers/src/bank-artisan';
 import {runAioLogistics} from '../aio-logistics';
 
 const root=resolve(import.meta.dir,'../..'),name=process.argv[2]??'';

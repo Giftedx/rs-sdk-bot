@@ -94,8 +94,8 @@ export async function loadAltarOps(): Promise<{
 
 export async function loadEnableSpecial(): Promise<NonNullable<PvpRuntimeDeps['enableSpecial']>> {
     if (pvpRuntime.enableSpecial) return pvpRuntime.enableSpecial;
-    const mod = await importRepoModule<{ enableSpecial: NonNullable<PvpRuntimeDeps['enableSpecial']> }>('scripts/microbot-c-qol.ts');
-    return mod.enableSpecial;
+    const mod = await import('../bank-artisan');
+    return mod.enableSpecial as NonNullable<PvpRuntimeDeps['enableSpecial']>;
 }
 
 export async function loadActionSessionHelpers(): Promise<{

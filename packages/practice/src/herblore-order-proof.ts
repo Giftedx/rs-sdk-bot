@@ -12,7 +12,7 @@ import {rsSdkRoot} from './paths';
 import {killTree} from '../../core/src/proc';
 import {selectQuestSweepProofEndpoints,questSweepProofAccountEnv,startQuestSweepProofStack} from './quest-sweep-proof';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
-import {reconcile} from '../../../scripts/brew-potions';
+import {reconcile} from '../../workers/src/bank-artisan';
 const root=resolve(import.meta.dir,'../../..');
 type Save=ReturnType<typeof readPracticeSave>;
 const stock=(s:Save)=>[93,95].flatMap(k=>s.inventories[k]??[]).reduce<Record<number,number>>((a,i)=>{a[i.id]=(a[i.id]??0)+i.count;return a;},{});
@@ -72,7 +72,7 @@ async function run(dir:string){
    const save=await applyPreset(name,{position:{x:3092,z:3243,level:0},skills:{Herblore:46,Hitpoints:50},bank:[{id:995,count:2000},{id:952,count:1},...(id==='missing-herbs'?[]:[{id:199,count:60}])]});
    copyFileSync(save,before);const stamp=statSync(save).mtimeMs;
    const record={id,exit:-1,timedOut:false,saved:false};cases.push(record);retain();
-   const child=Bun.spawn(['bun','scripts/brew-potions.ts',name,'6000'],{cwd:root,windowsHide:true,env:{...process.env,...endpoints.env,GATEWAY_URL:endpoints.gateway,DEMO_OK:'',TARGET_LEVEL:'50',RECIPE:'auto',VIAL_BUDGET:id==='vial-budget'?'0':'1000',SECONDARY_BUDGET:'1000',RANDOM_EVENTS:'0'},stdout:'pipe',stderr:'pipe'});
+   const child=Bun.spawn(['bun','scripts/aio-skiller.ts',name,'artisan','herblore','potions','6000'],{cwd:root,windowsHide:true,env:{...process.env,...endpoints.env,GATEWAY_URL:endpoints.gateway,DEMO_OK:'',TARGET_LEVEL:'50',RECIPE:'auto',VIAL_BUDGET:id==='vial-budget'?'0':'1000',SECONDARY_BUDGET:'1000',RANDOM_EVENTS:'0'},stdout:'pipe',stderr:'pipe'});
    let termination:Promise<void>|undefined;const timer=setTimeout(()=>{record.timedOut=true;termination=killTree(child.pid);},750000);
    try{
     const [out,err]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text()]);record.exit=await child.exited;

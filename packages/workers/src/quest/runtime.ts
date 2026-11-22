@@ -264,13 +264,13 @@ export async function resolveTeleportModule(): Promise<{
     nativeTeleport: NonNullable<QuestRuntimeDeps['nativeTeleport']>;
 }> {
     if (runtime.nativeTeleport) return { nativeTeleport: runtime.nativeTeleport };
-    const mod = await importRepoModule('scripts', 'microbot-magic-teleport.ts');
+    const mod = await import('../bank-artisan');
     return { nativeTeleport: mod.nativeTeleport };
 }
 
 export async function resolveElementalRuneCost(): Promise<NonNullable<QuestRuntimeDeps['elementalRuneCost']>> {
     if (runtime.elementalRuneCost) return runtime.elementalRuneCost;
-    const mod = await importRepoModule('scripts', 'microbot-magic-items.ts');
+    const mod = await import('../bank-artisan');
     return mod.elementalRuneCost;
 }
 

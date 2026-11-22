@@ -17,7 +17,7 @@ import{capabilityRevision,type ReleaseMemo}from'../../core/src/worker-release';
 import{readLogoutProof}from'../../core/src/session-lifecycle';
 import{orderPaths}from'../../workers/src/market';
 import{FREE_FLOOR_GB,PRACTICE_STARTUP_GB}from'../../core/src/memory';
-import{productionConserved}from'../../../scripts/earth-production';
+import{productionConserved}from'../../workers/src/bank-artisan';
 type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;timedOut:boolean;log:string;hpMin:number;logout?:ReturnType<typeof readLogoutProof>};
 const root=resolve(import.meta.dir,'../../..');
@@ -58,7 +58,7 @@ export function refillSupplyChecks(before:Save,after:Save,r:Run){
   result:result?.ok===true&&result?.conserved===true,
  };
 }
-const files=['scripts/aio-market.ts','packages/workers/src/market/shop-buy.ts','packages/workers/src/market/ge-buy.ts','packages/workers/test/market-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
+const files=['scripts/aio-market.ts','packages/workers/src/market/shop-buy.ts','packages/workers/src/market/ge-buy.ts','packages/workers/test/market-shop.test.ts','packages/workers/src/bank-artisan/magic.ts','packages/workers/test/bank-artisan.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
 const artifactPaths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json','betty-before.sav','betty-after.sav','betty.log','betty-empty-ge.log','refill-before.sav','refill-after.sav','refill-repeat.sav','refill.log','refill-repeat.log','refill-empty-ge.log','refill-ledger.json','hunt-before.sav','hunt-after.sav','craft-before.sav','craft-after.sav','owned-hunt.log','owned-craft.log'];
 const ownedTotals=(s:Save)=>{const m=new Map<number,number>();for(const c of [93,94,95])for(const i of s.inventories[c]??[])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};

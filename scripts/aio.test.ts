@@ -239,7 +239,7 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
   expect(pipeline.map(s => s.script)).toEqual([
    'scripts/aio-market.ts',
    'scripts/aio-skiller.ts',
-   'scripts/cook-food.ts',
+   'scripts/aio-skiller.ts',
   ]);
 
   // Swarm chain job generator
@@ -264,7 +264,7 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
     Crafting: 50, Smithing: 50, Mining: 50, Herblore: 50, Agility: 50, Thieving: 50, Runecraft: 50,
    },
    ownedItems: {},
-  }, 'max-overall').step?.script).toBe('scripts/firemaking-order.ts');
+  }, 'max-overall').step?.script).toBe('scripts/aio-skiller.ts');
   // Smithing is the lowest skill: the step needs stock that the account owns.
   const smith=(ownedItems:Record<number,number>)=>recommendNextAioJob({name:'Smith',skills:Object.fromEntries(['Attack','Strength','Defence','Hitpoints','Ranged','Prayer','Magic','Cooking','Woodcutting','Fletching','Fishing','Firemaking','Crafting','Mining','Herblore','Agility','Thieving','Runecraft'].map(k=>[k,60]).concat([['Smithing',40]])),ownedItems},'max-overall');
   expect(smith({2351:40,2347:1}).step?.env.PRODUCT_ID).toBe('1115');

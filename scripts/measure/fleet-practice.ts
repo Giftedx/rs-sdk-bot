@@ -74,18 +74,18 @@ if(mode!=='fresh' && mode!=='entry' && !preset) throw new Error('unknown mode');
 const dir=resolve('.practice/fleet-proof'); mkdirSync(dir,{recursive:true});
 const [script, ...scriptArgs] = waterfallMode ? ['generated/waterfall']
  : cowMode ? ['aio-fighter', 'cow']
- : mode === 'smelt-bronze' ? ['smelt-bars']
+ : mode === 'smelt-bronze' ? ['aio-skiller', 'artisan', 'smithing', 'smelt']
  : mode === 'payout-notes' ? ['measure/fleet-payout-notes']
  : mode === 'seers-entry' ? ['measure/fleet-seers-entry']
  : mode === 'zeke-entry' ? ['measure/fleet-al-kharid-entry']
  : mode === 'aubury-entry' ? ['measure/fleet-relocate']
- : headlessMode || steelMode || oakBowsMode ? ['fletch-arrows']
- : mode === 'cook-badpoint' ? ['cook-stock']
+ : headlessMode || steelMode || oakBowsMode ? ['aio-skiller', 'artisan', 'fletching', 'arrows']
+ : mode === 'cook-badpoint' ? ['aio-skiller', 'artisan', 'cooking', 'stock']
  : mode === 'entry' ? ['aio-logistics', 'arrive-draynor']
  : (mode === 'outbound' || mode === 'homeward') ? ['aio-logistics', 'food-courier']
  : buyerPlan ? ['aio-market', 'shop-buy']
  : woolMode ? ['aio-skiller', 'gather', 'foraging', 'wool']
- : flaxMode ? ['spin-bowstrings']
+ : flaxMode ? ['aio-skiller', 'artisan', 'crafting', 'bowstrings']
  : mode === 'wood' || oakMode ? ['aio-skiller', 'gather', 'woodcutting', 'yews']
  : ['aio-skiller', 'gather', 'mining', 'ore'];
 const stack=process.env.REUSE_STACK==='1'?null:await startStack();
@@ -191,7 +191,7 @@ try {
     const atBank=status.pos.level===0 && Math.max(Math.abs(status.pos.x-3092),Math.abs(status.pos.z-3243))<=4;
     const survival=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const ok=/^RESULT ok route=near.*processed=60 banked=60 burntBanked=0/m.test(stdout) && cooked===60 && rawTrout===50 && rawSalmon===50 && count(bank,2140)===133 && protectedKit && atBank && survival;
-    const hashes=Object.fromEntries(['scripts/cook-stock.ts','packages/core/src/walk.ts','knowledge/doors.json','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/cooking.ts','packages/core/src/walk.ts','knowledge/doors.json','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,cooked,rawTrout,rawSalmon,protectedKit,atBank,survival,cargo,bank,inventory,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=cook-badpoint cooked=${cooked} rawTrout=${rawTrout} rawSalmon=${rawSalmon} kit=${protectedKit} atBank=${atBank} survival=${survival} ok=${ok}\n`;
    }
@@ -200,7 +200,7 @@ try {
     const life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const stockPreserved=(preset!.bank??[]).filter(i=>i.id!==1779&&i.id!==1777).every(i=>result?.bank.filter((j:{id:number})=>j.id===i.id).reduce((n:number,j:{count:number})=>n+j.count,0)===i.count);
     const ok=stockPreserved&&result?.ok && result.made===56 && result.spunTotal===56 && result.rawBank===50 && result.stringsBank===56 && result.xpGain>0 && result.preserved && life && (!mode.endsWith('notes') || /SPIN_NOTES deposited=106 rawBank=106/.test(stdout));
-    const hashes=Object.fromEntries(['scripts/spin-bowstrings.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/crafting.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,result,stockPreserved,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=flax made=${result?.made} raw=${result?.rawBank} preserved=${result?.preserved} survival=${life} ok=${ok}\n`;
    }
@@ -249,7 +249,7 @@ try {
     const preserved=count(inventory,tool)===1&&count(inventory,315)===1&&count(inventory,2309)===1&&count(inventory,995)+count(bank,995)===200;
     const life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const ok=/mined=5 banked=5 held=0/.test(stdout)&&ores.join('/')==='2/2/1'&&mining?.level===31&&xpGain===2625&&preserved&&life;
-    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','scripts/soften-clay.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','packages/workers/src/bank-artisan/crafting-production.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,run:toolIndex,tool,ticks,walkTicks,xpGain,mining,ores,preserved,life,bank,inventory,preset,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=ore-tools run=${toolIndex} tool=${tool} ticks=${ticks} ores=${ores.join('/')} xp=${xpGain} protected=${preserved} survival=${life} ok=${ok}\n`;
    }
@@ -261,7 +261,7 @@ try {
     const life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const preserved=[1265,315,2309].every(id=>count(id)===1)&&count(995)===200&&count(1925)+count(1929)===1;
     const ok=result?.ok&&result.made===20&&result.banked===20&&count(1761)===20&&count(434)===0&&result.targetMet&&preserved&&life&&!damageStopped;
-    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','scripts/soften-clay.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','packages/workers/src/bank-artisan/crafting-production.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,result,preserved,life,damageStopped,bank:status.bank,inventory:status.inventory,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=clay made=${result?.made} banked=${result?.banked} preserved=${preserved} survival=${life} damageStopped=${damageStopped} ok=${ok}\n`;
    }
@@ -286,7 +286,7 @@ try {
     const life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const stockPreserved=(preset!.bank??[]).filter(i=>i.id!==1779&&i.id!==1777).every(i=>result?.bank.filter((j:{id:number})=>j.id===i.id).reduce((n:number,j:{count:number})=>n+j.count,0)===i.count);
     const ok=stockPreserved&&result?.ok&&result.made===8&&result.banked===8&&result.finalCopper===2&&result.finalTin===1&&result.xpGain>0&&result.preserved&&life;
-    const hashes=Object.fromEntries(['scripts/smelt-bars.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/smithing.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,result,stock,life,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=smelt-bronze made=${result?.made} banked=${result?.banked} raw=${result?.finalCopper}/${result?.finalTin} survival=${life} ok=${ok}\n`;
    }
@@ -314,7 +314,7 @@ try {
     const life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const stockPreserved=(preset!.bank??[]).filter(i=>i.id!==1779&&i.id!==1777).every(i=>result?.bank.filter((j:{id:number})=>j.id===i.id).reduce((n:number,j:{count:number})=>n+j.count,0)===i.count);
     const ok=stockPreserved&&result?.ok && result.made===15 && result.banked===15 && result.actions===1 && result.xpGain===1875 && result.reserveMet && result.outputReserveMet && result.preserved && life && (!mode.endsWith('notes') || /SPIN_NOTES deposited=106 rawBank=106/.test(stdout));
-    const hashes=Object.fromEntries(['scripts/fletch-arrows.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/fletching.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,result,stockPreserved,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=steel made=${result?.made} banked=${result?.banked} survival=${life} ok=${ok}\n`;
    }
@@ -331,7 +331,7 @@ try {
     const bank=final.inventories[95]??[],held=final.inventories[93]??[];
     const exactInputs=initial.skills[9].xp===4863&&count(bank,1521)===25&&count(bank,1777)===531&&count(bank,845)===32&&count(held,845)===0&&count(held,56)===0;
     const ok=publication.matched&&result?.ok&&result.made===25&&result.banked===25&&result.shapeXp===15625&&result.stringXp===15625&&conserved&&exactInputs&&life&&/LOGOUT logged-out/.test(stdout);
-    const hashes=Object.fromEntries(['scripts/fletch-arrows.ts','scripts/measure/fleet-player-save.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/fletching.ts','scripts/measure/fleet-player-save.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,result,publication:{matched:publication.matched,reads:publication.reads,lastError:publication.lastError},conserved,exactInputs,life,initial,final,hashes},null,2));
     writeFileSync(resolve(dir,`${mode}-${bot}-first-final-save.json`),JSON.stringify(publication.first,null,2));
     stdout+=`\nPROOF_GATE profile=oak-bows made=${result?.made} banked=${result?.banked} exactInputs=${exactInputs} conserved=${conserved} life=${life} ok=${ok}\n`;
@@ -344,7 +344,7 @@ try {
     const kit=[[946,1],[315,1],[2309,1],[995,200]].every(([id,n])=>count(inventory,id!)===n);
     const survival=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(stdout);
     const ok=result?.ok && result.made===390 && result.banked===390 && result.xpGain>0 && count(bank,53)===390 && count(bank,52)===330 && count(bank,314)===110 && count(inventory,53)===0 && kit && survival;
-    const hashes=Object.fromEntries(['scripts/fletch-arrows.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/fletching.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,result,kit,survival,bank,inventory,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=headless made=${result?.made} banked=${count(bank,53)} shafts=${count(bank,52)} feathers=${count(bank,314)} heldProduct=${count(inventory,53)} xpGain=${result?.xpGain} kit=${kit} survival=${survival} ok=${ok}\n`;
    }

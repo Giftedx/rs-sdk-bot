@@ -28,7 +28,7 @@ import {
     type FighterProfileSpec,
 } from '../packages/workers/src/combat';
 import { stageCows } from './cow-stage';
-import { enableSpecial, holdPrayer, qolDropSelection, refillCannon, type QolDropOrder } from './microbot-c-qol';
+import { enableSpecial, holdPrayer, qolDropSelection, refillCannon, type QolDropOrder } from '../packages/workers/src/bank-artisan';
 import {
     createPotionCareSession,
     potionCareRecipe,

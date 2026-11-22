@@ -27,7 +27,7 @@ test('owned endpoints reach the stack, new fixture and finite CLI child and rest
  await expect(startIronProofStack(p,async()=>{throw Error('startup refused');})).rejects.toThrow('startup refused');
  expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
  const child=childConfiguration('fixture','anvil',{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',NODE_PORT:'43594'},p);
- expect(child.cmd).toEqual(['bun','scripts/smelt-bars.ts','fixture','1600','iron']);
+ expect(child.cmd).toEqual(['bun','scripts/aio-skiller.ts','fixture','artisan','smithing','smelt','1600','iron']);
  expect(child.env).toMatchObject({...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_ACTION:'smith',PRODUCT_ID:'1115',MAX_MAKE:'3',BAR_RESERVE:'334'});
  expect(child.env.GE_DATABASE).toBe(`data/market-${p.instance}.sqlite`);
  expect(child.windowsHide).toBe(true);
@@ -92,7 +92,7 @@ test('anvil proof needs 15 bars debited, three banked platebodies, 9375 XP, the 
 });
 test('a level refusal leaves position, bars, coins, XP and hammer unchanged',()=>{
  const {before}=smithFixture(30),after=structuredClone(before);
- // The worker's level refusal emits no ledger: see the matching scripts/smith-batch.test.ts case.
+ // The worker's level refusal emits no ledger: see the matching packages/workers/test/bank-artisan.test.ts case.
  const result:any={ok:false,action:'smith',product:1115,target:3,reserve:334,made:0,banked:null,finalBars:0,stop:'refused',failure:'smith refused: Smithing 30 is below level 33 for product 1115',
   xpGain:0,coinsSpent:0,initialCoins:0,finalCoins:0,hammerRetained:false,died:false,hpMin:35};
  expect(Object.entries(smithSaveChecks(before,after,result,'refusal')).filter(([,v])=>!v)).toEqual([]);

@@ -3,7 +3,7 @@ import {runNpcMagic,nativeNpcSpell} from '../../packages/workers/src/combat';
 import {readFileSync} from 'node:fs';
 import {describe,test,expect} from 'bun:test';
 import {trioPackEffect,trioAdmission,trioHuntReceipt,trioOwnedHandover,trioStopRequested,TRIO_ITEMS,TRIO_RECIPES,trioLogLoc,trioLogEffect,trioLogMessages,trioLogCrossing,trioLogHealth,trioHuntPoint} from './quest-tbwt-owned';
-import {productionEffect} from '../microbot-production';
+import {productionEffect} from '../../packages/workers/src/bank-artisan';
 import {BotSDK} from '../../vendor/rs-sdk/sdk';
 import {trioOwnedActions,trioMonkeySession,trioMonkeyContinuation,trioRenewMonkeyClaim,trioCompleteScreen,TRIO_TIMFRAKU_TERMINAL,TRIO_TAMAYU_AGILITY_TERMINAL,trioDialogReceipt,trioMonkeyBinding,trioMonkeyXpReceipt,trioOwnContext} from './quest-tbwt-owned';
 

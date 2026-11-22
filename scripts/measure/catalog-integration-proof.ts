@@ -22,7 +22,7 @@ const totals=(save:Save,skip:number[]=[])=>{
  return result;
 };
 type ArtisanMode='cut'|'producer'|'tools'|'observer';
-const entries={cut:'scripts/microbot-production.ts',producer:'scripts/microbot-jewellery-trip.ts',tools:'scripts/aio-market.ts',observer:'scripts/aio-logistics.ts'} as const;
+const entries={cut:'scripts/aio-skiller.ts',producer:'scripts/aio-skiller.ts',tools:'scripts/aio-market.ts',observer:'scripts/aio-logistics.ts'} as const;
 export const toolsEnv={ITEMS:'ring mould|chisel',STOCK_TARGET:'1',STOP_AT_TARGET:'1',MAX_ITEMS:'2',MAX_SPEND:'20',FLOAT:'100',COIN_RESERVE:'0',NO_BUY_TICKS:'25',BANK_PACK:'1'};
 export const artisanSourceEntries=(mode:ArtisanMode):string[]=>[entries[mode],'scripts/measure/catalog-integration-proof.ts',...(mode==='producer'?['scripts/aio-skiller.ts']:[])];
 export const artisanSourceRevision=(mode:ArtisanMode,base=root)=>capabilityRevision(artisanSourceEntries(mode),base);
@@ -97,8 +97,8 @@ export function verifyArtisanEvidence(mode:ArtisanMode){
  const directory=join(artifactRoot(),mode,record.attempt);
  for(const file of files)assert.equal(hash(readFileSync(join(directory,file))),record.files?.[file],'retained artifact hash '+file);
  const execution=JSON.parse(readFileSync(join(directory,'execution.json'),'utf8'));
- assert.equal(execution.exitCode,0);assert.equal(execution.expired,false);assert.equal(execution.script,mode==='producer'?'scripts/aio.ts':entries[mode]);
- if(mode==='cut'){assert.deepEqual(execution.args,['cut-sapphire']);assert.equal(execution.env.MAX_MAKE,'2');assert.equal(execution.env.CAP,'600');}
+ assert.equal(execution.exitCode,0);assert.equal(execution.expired,false);assert.equal(execution.script,entries[mode]);
+ if(mode==='cut'){assert.deepEqual(execution.args,['artisan','crafting','inventory','cut-sapphire']);assert.equal(execution.env.MAX_MAKE,'2');assert.equal(execution.env.CAP,'600');}
  else if(mode==='tools'){assert.deepEqual(execution.args,['shop-buy','dommik','1500']);for(const [key,value]of Object.entries(toolsEnv))assert.equal(execution.env[key],value,'finite shop control '+key);}
  else if(mode==='observer'){
   assert.deepEqual(execution.args,['inspect']);assert.equal(execution.env.REQUIRE_BANK,'1');
@@ -147,7 +147,7 @@ async function prove(name:string,mode:string,savePath:string){
   assert.deepEqual(after.skills[3],before.skills[3]);
  }else if(mode==='cut'){
   assert.equal(amount(before,1623,95),2);assert.equal(amount(before,1755),1);
-  stdout=await worker(name,entries.cut,['cut-sapphire'],{MAX_MAKE:'2',CAP:'600'},0,artifact!.directory);expectedItem=1607;
+  stdout=await worker(name,entries.cut,['artisan','crafting','inventory','cut-sapphire'],{MAX_MAKE:'2',CAP:'600'},0,artifact!.directory);expectedItem=1607;
   const saved=await waitPracticeSave(savePath,save=>amount(save,1607,95)===2);assert.equal(saved.matched,true);
  }else if(mode==='tools'){
   assert.equal(amount(before,1755),0);assert.equal(amount(before,1592),0);

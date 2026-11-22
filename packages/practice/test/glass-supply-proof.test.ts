@@ -14,7 +14,7 @@ test('proof admission uses shared constants and ordinary Magicwanda entry',()=>{
  expect(ADMISSION).toEqual({floorGb:FREE_FLOOR_GB,startupGb:PRACTICE_STARTUP_GB});const p=glassProofPreset('entry');expect(p.skills).toEqual({Crafting:51,Hitpoints:39});expect(p.varps?.[160]).toBe(2);expect([...(p.inventory??[]),...(p.bank??[])].some(i=>[1775,1783,1781,401,1925].includes(i.id))).toBe(false);
 });
 test('native configuration invokes the actual account CLI with explicit supply limits',()=>{
- const c=glassChildConfiguration('fixture','entry',{});expect(c.cmd).toEqual(['bun','scripts/microbot-glass.ts','fixture']);expect(c.windowsHide).toBe(true);expect(c.env).toMatchObject({SUPPLY_MODE:'1',MEMBERS:'1',MAX_MAKE:'1',MAX_SPEND:'0',CAP:'4000'});expect(glassChildConfiguration('fixture','refusal',{}).env.MEMBERS).toBe('0');
+ const c=glassChildConfiguration('fixture','entry',{});expect(c.cmd).toEqual(['bun','scripts/aio-skiller.ts','fixture','artisan','crafting','glass']);expect(c.windowsHide).toBe(true);expect(c.env).toMatchObject({SUPPLY_MODE:'1',MEMBERS:'1',MAX_MAKE:'1',MAX_SPEND:'0',CAP:'4000'});expect(glassChildConfiguration('fixture','refusal',{}).env.MEMBERS).toBe('0');
 });
 test('save verifier reconciles actual bank output, costs, buckets and unrelated gear',()=>{
  expect(failures(glassSaveChecks(before(),after(),result,'entry'))).toEqual([]);expect(glassSaveStock(before())[1205]).toBe(1);
