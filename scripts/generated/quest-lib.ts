@@ -17,7 +17,7 @@ import { castable } from '../teleport-runes';
 import { needs, reservedEdible, walkFar } from '../../packages/workers/src/quest/sweep';
 import { magicKit, type MagicKit } from '../../packages/core/src/gather';
 import { PRESETS } from '../../packages/practice/src/presets';
-import { giantStyle, GIANT_BOWS, GIANT_ARROWS, selectGiantArrows } from '../gather-combat';
+import { giantStyle, GIANT_BOWS, GIANT_ARROWS, selectGiantArrows } from '../../packages/workers/src/combat';
 import { wornWeaponStyle } from '../../packages/core/src/opponent';
 import { parsePack } from '../../packages/knowledge/src/pack';
 import { contentRoot } from '../../packages/knowledge/src/paths';

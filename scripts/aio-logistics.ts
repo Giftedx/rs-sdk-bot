@@ -19,7 +19,7 @@ import {
 import { restockAtBank } from './fast-skills-lib';
 import { FIREMAKING_SPECIALIST_SUPPLIES, serveFiremakingSupplier } from './firemaking-specialist';
 import { startHelperTradeArm } from './gathering-specialist-lib';
-import { trainChickens } from './train-chickens';
+import { trainChickens } from '../packages/workers/src/combat/chickens';
 
 export * from '../packages/workers/src/logistics';
 

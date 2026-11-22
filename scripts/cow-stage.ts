@@ -8,7 +8,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {questFlags} from '../packages/core/src/quest-status';
 import {selectProgressiveLoadout,readSkillLevels,type GearSkillLevels,type QuestInput} from '../packages/planner/src/gear-progression';
-import {COW_FOOD_BITES,COW_FOOD_HP,cowFoodHeal} from './gather-combat';
+import {COW_FOOD_BITES,COW_FOOD_HP,cowFoodHeal} from '../packages/workers/src/combat';
 
 type Item={id:number;count:number};
 export const COW_NORTH_BANK={x:2619,z:3332},COW_KIT:readonly number[]=[1277,1171];

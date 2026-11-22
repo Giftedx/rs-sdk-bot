@@ -238,8 +238,8 @@ function literalText(n: ts.Node): { text: string; regex: boolean; flags: string 
     return null;
 }
 
-/** Callees whose options object holds a `label` that is error text for a log, not a game name (scripts/gear-reconcile.ts reconcileLoadout). */
-export const LABEL_OPTION_CALLEES = new Set(['reconcileLoadout']);
+/** Callees whose options object holds a `label` that is error text for a log, not a game name (scripts/gear-reconcile.ts reconcileLoadout, packages/workers/src/combat/gear.ts reconcileCombatLoadout). */
+export const LABEL_OPTION_CALLEES = new Set(['reconcileLoadout', 'reconcileCombatLoadout']);
 function isLabelOption(n: ts.Node): boolean {
     const p = n.parent, o = p?.parent, c = o?.parent;
     return !!p && ts.isPropertyAssignment(p) && p.initializer === n && ts.isIdentifier(p.name) && p.name.text === 'label'

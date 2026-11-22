@@ -8,7 +8,7 @@ import nativeItems from'../../knowledge/items.json';
 import{parseConfigs}from'../../packages/knowledge/src/config';
 import{questFlags}from'../../packages/core/src/quest-status';import{openQuest}from'./quest-lib';import{productionStopRequested}from'../microbot-c-lifetime';
 import{createHandoff}from'../../packages/workers/src/logistics';import{questFoodDefinitions}from'../quest-sustain';
-import{guardianLoadedSight}from'../../packages/workers/src/quest/clue-guardian-travel';import{nativeNpcSpell,npcCastEffect}from'../microbot-magic-npc';import{elementalRuneCost}from'../microbot-magic-items';
+import{guardianLoadedSight}from'../../packages/workers/src/quest/clue-guardian-travel';import{nativeNpcSpell,npcCastEffect}from'../../packages/workers/src/combat';import{elementalRuneCost}from'../microbot-magic-items';
 import{runBankJob,type BankJob}from'../microbot-bank-jobs';import{potionCareRecipe}from'../microbot-potion-care';import{cookingRecipes,nativeHeatSources,runCookingBatch}from'../microbot-b-cooking';
 export type HeroesOrder={blackArm:string;phoenix:string;server:string;goal:string;cap:number;returnTicks:number;xpRate:number;maximumCasts:number;maximumBait:number;coinBudget:number};
 export const HEROES_ITEMS={iceGloves:1580,slime:1581,oil:1582,feather:1583,oilyRod:1585,miscKey:1586,gripKeys:1588,idPapers:1584,candle:1577,armband:1579,rawEel:2148,eel:2149,harralanderUnf:97,rod:307,bait:313,vial:229,food:379,blackBody:1125,blackLegs:1077,blackHelm:1165}as const;

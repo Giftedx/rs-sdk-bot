@@ -38,7 +38,7 @@ function crossingCase(mode:string){
  const realWorld=await import('./packages/core/src/world'),realTicks=await import('./packages/core/src/ticks');
  mock.module(resolve('packages/core/src/world'),()=>({...realWorld,interactionApproach:async(_sdk,at,q)=>{if(q.shape!==(q.id===1755?10:22)||q.angle!==(q.id===1755?0:2)||q.width!==1||q.height!==1)throw Error('wrong native geometry');return{x:at.x+1,z:at.z,level:0};}}));
  mock.module(resolve('packages/core/src/ticks'),()=>({...realTicks,waitUntil:async(_s,p,o)=>{for(let n=0;n<o.timeoutTicks;n++){tick++;if(p())return true;}return false;},waitTicks:async(_s,n)=>{tick+=n;waits.push(n);}}));
- const {createEdgevilleTravel}=await import('./scripts/microbot-edgeville-travel'),{combatPotionSession}=await import('./scripts/microbot-combat-potions');
+ const {createEdgevilleTravel}=await import('./scripts/microbot-edgeville-travel'),{combatPotionSession}=await import('./packages/workers/src/combat');
  const original=client.executeBotAction,travel=createEdgevilleTravel(s),view=combatPotionSession(s,()=>stopped,500),ground=async(x,z)=>{if((player.worldZ>=9000)!==(z>=9000))throw Error('ordinary walk crossed dungeon boundary');walks.push([x,z]);at(x,z);return true;};let failure='';
  try{await travel.walk(view,'giant',{x:3117,z:9850,level:0},ground,()=>stopped);await travel.walk(view,'giant',{x:3092,z:3496,level:0},ground,()=>stopped);}catch(e){failure=String(e);}finally{travel.close();}
  console.log(JSON.stringify({failure,inputs,walks,waits,position:[player.worldX,player.worldZ],restored:client.executeBotAction===original}));

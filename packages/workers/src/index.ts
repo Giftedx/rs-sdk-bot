@@ -125,6 +125,24 @@ export {
     guardCowWalker,
 } from './logistics/walk-helpers';
 export * from './gather';
+export * as combat from './combat';
+export {
+    COMBAT_MODE_SET,
+    COMBAT_SITES,
+    ORDINARY_COMBAT_MODES,
+    assessBossReadiness,
+    combatEstimate,
+    combatPreflight,
+    combatWorkerModule,
+    runCombatModeCli,
+    runCombatModuleSession,
+    type BossEncounterSpec,
+    type CombatConfig,
+    type CombatMode,
+    type CombatRunnerHooks,
+    type CombatSiteMeta,
+    type FighterProfileSpec,
+} from './combat';
 export * as quest from './quest';
 export {
     QUESTER_MODES,

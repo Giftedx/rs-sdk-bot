@@ -4,7 +4,7 @@ import {mkdtempSync,writeFileSync,readFileSync,unlinkSync,existsSync,rmSync} fro
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {SWORDINHAND,cases,cowFixture,cowEntry,cowResult,cowSaveChecks,cowChildChecks,cowChildConfiguration,cowSequenceChecks,claimCowStop,retainCowStop} from '../src/cow-progress-order-proof';
-import {cowProfile} from '../../../scripts/gather-combat';
+import {cowProfile} from '../../workers/src/combat';
 
 test('proof stop never adopts, deletes or overwrites a user or replacement stop',()=>{
  const dir=mkdtempSync(join(tmpdir(),'cow-stop-'));try{
@@ -50,7 +50,7 @@ test.each(['stat','read','access-failure'] as const)('retention makes no filesys
 test('actual native child configuration pins the finite south/held CLI despite inherited profiles',()=>{
  for(const inherited of [{},{COW_BANK_PROFILE:'',COW_FOOD_MODE:''},{COW_BANK_PROFILE:'north',COW_FOOD_MODE:'banked',MAX_KILLS:'9',TARGET:'giant',TRAIN_SKILL:'Defence',TARGET_LEVEL:'99',DEMO_OK:'1'}]){
   const original={...inherited},child=cowChildConfiguration('fixture',inherited);
-  expect(child.cmd).toEqual(['bun','scripts/gather-combat.ts','fixture','1500','cow']);
+  expect(child.cmd).toEqual(['bun','scripts/aio-fighter.ts','fixture','cow','1500']);
   expect(child.windowsHide).toBe(true);
   expect(child.env).toMatchObject({COW_BANK_PROFILE:'south',COW_FOOD_MODE:'held',MAX_KILLS:'5',TARGET:'cow',TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',DEMO_OK:'',RANDOM_EVENTS:'0'});
   expect(cowProfile(child.env.COW_BANK_PROFILE,child.env.COW_FOOD_MODE,Number(child.env.MAX_KILLS))).toEqual({north:false,foodBanked:false,limit:5,bank:{x:2654,z:3283}});

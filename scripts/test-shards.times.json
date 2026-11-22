@@ -22,7 +22,6 @@
  "scripts/earth-production.test.ts": 9,
  "scripts/fleet-owner-claim.test.ts": 11,
  "scripts/fletch-arrows.test.ts": 6,
- "scripts/gather-combat.test.ts": 16,
  "scripts/generated/quest-hero.test.ts": 4,
  "scripts/handoff-inputs.test.ts": 18,
  "scripts/magic-order.test.ts": 7,

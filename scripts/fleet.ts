@@ -49,7 +49,7 @@ export const FLEET: FleetAccount[] = [
         goal: 'Kill Fire Giants in Waterfall Dungeon, bank loot, and return forever',
         // One credited kill and bank return per batch. The controller repeats it;
         // food, attribution, door, damage and life guards can block a failed batch.
-        script: 'scripts/gather-fire-combat.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-fighter.ts', args: ['fire-combat'], enabled: true, repeat: true,
         env: { CAP: '1600', RANDOM_EVENTS: '0' },
         note: 'One Fire Giant per guarded batch. Native bronze-sword pilot killed1, banked its drops and preserved owned assets on 2026-10-25; the controller repeats from the bank with owned food.',
     },
@@ -136,10 +136,10 @@ export const FLEET: FleetAccount[] = [
     {
         name: 'Swordinhand', server: 'rs-sdk-demo.fly.dev', role: 'combat',
         goal: 'Practice-gated cowhides, bones and beef; then Strength/Defence progression',
-        script: 'scripts/gather-combat.ts', enabled: false, repeat: false,
+        script: 'scripts/aio-fighter.ts', args: ['cow'], enabled: false, repeat: false,
     },
     // Legacy proposed accounts. New names follow AGENTS.md: task-based penis joke, optionally Scottish.
-    { name: 'AFKnight', server: 'rs-sdk-demo.fly.dev', role: 'combat', goal: 'Combat support: cowhides, bones and beef near Lumbridge', script: 'scripts/gather-combat.ts', enabled: false },
+    { name: 'AFKnight', server: 'rs-sdk-demo.fly.dev', role: 'combat', goal: 'Combat support: cowhides, bones and beef near Lumbridge', script: 'scripts/aio-fighter.ts', args: ['cow'], enabled: false },
     { name: 'OreElse', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Gather and bank mixed ores at Varrock East in three-load batches', script: 'scripts/aio-skiller.ts', args: ['gather', 'mining', 'ore'], enabled: true, repeat: true, env: { CAP: '1800', BANK_AT: '25', MAX_TRIPS: '3' }, note: 'Qualified at combat13. Live three-load trial banked75ores in1169ticks, hpMin=16, died=false on 2026-10-25. The mixed-mine entry guard requires combat13; emergency owned-load recovery remains available.' },
     { name: 'FishAndChips', server: 'rs-sdk-demo.fly.dev', role: 'fishing', goal: 'Fish, cook and supply the food courier from Draynor', script: 'scripts/aio-skiller.ts', args: ['gather', 'fishing', 'fishcook'], enabled: true, repeat: true, env: { TICKS: '9000', GIVE_TO: 'Bigpackage', TARGETED_COLLECTION: '1' } },
     { name: 'BowBeforeMe', server: 'rs-sdk-demo.fly.dev', role: 'fletching', goal: 'Gather25 normal logs and bank375 arrow shafts in each production batch', script: 'scripts/fletch-worker.ts', enabled: true, repeat: true, env: { RANDOM_EVENTS: '1',BANK_KNIFE:'1',NORMAL_GROVE:'north' }, note: 'Separate northern normal-tree grove passed the two-client practice trial with full health and preserved kit; live recovery qualification follows before the failed epoch is cleared.' },

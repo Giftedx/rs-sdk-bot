@@ -3,10 +3,10 @@ import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {runBankProfile,validateBankRouteJob,type BankRouteJob,type BankProfile} from './microbot-bank-jobs';
-import {nativeNpcSpell,runNpcMagic} from './microbot-magic-npc';
+import {nativeNpcSpell,runNpcMagic} from '../packages/workers/src/combat';
 import {nativeTeleport,runTeleportMagic,magicStopRequested,teleportReceipt,type NativeTeleport} from './microbot-magic-teleport';
 import {componentId} from '../packages/core/src/logout';
-import {combatTeleportAllowed} from './microbot-combat-trip';
+import {combatTeleportAllowed} from '../packages/workers/src/combat';
 import {elementalRuneCost,itemMagicRecipe,itemSpellCosts} from './microbot-magic-items';
 export type MagicBankJob=BankRouteJob&{family:'magic-npc'|'magic-teleport';npc?:number;splashOnly?:boolean;comboAlch?:'low-alch'|'high-alch';comboTeleport?:string;returnTeleport?:string;protectPrayer?:12|13|14};
 export function validateMagicBankJob(j:MagicBankJob){

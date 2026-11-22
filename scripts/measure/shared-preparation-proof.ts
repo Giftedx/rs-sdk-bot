@@ -12,7 +12,7 @@ import {readLogoutProof} from '../../packages/core/src/session-lifecycle';
 import {goTo} from '../../packages/core/src/walk';
 import {performFleetTransfer,watchTradeScreen,type Order} from '../../packages/workers/src/logistics';
 import {runBankJob} from '../microbot-bank-jobs';
-import {runLootTrip} from '../microbot-loot-trip';
+import {runLootTrip} from '../../packages/workers/src/combat';
 import {BOW_TRIP,SNARE_KIT,pickTrip,restock} from '../../packages/workers/src/pvp/hunt-kits';
 
 const FUND_RESERVE=50_000;

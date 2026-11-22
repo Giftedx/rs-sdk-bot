@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
-import {fireWalkOptions} from './gather-fire-combat';
-import * as fire from './gather-fire-combat';
+import {fireWalkOptions} from '../packages/workers/src/combat';
+import * as fire from '../packages/workers/src/combat/special-mobs';
 import type {Session} from '../packages/core/src/inprocess';
 import {walkPath,type PathDeps,type PathOptions} from '../packages/core/src/walk';
 

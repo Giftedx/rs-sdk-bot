@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CANNON_PRICE, NULODION_DOOR, buyCannon } from './cannon-fight';
+import { CANNON_PRICE, NULODION_DOOR, buyCannon } from '../packages/workers/src/combat';
 
 // A fake Nulodion: the porch door, then his post-quest talk (nulodion.rs2:56-76, 145-160) as pages of options.
 function fixture(coins: number) {

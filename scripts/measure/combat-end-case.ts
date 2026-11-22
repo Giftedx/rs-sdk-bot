@@ -6,7 +6,7 @@
 // Usage: bun scripts/measure/combat-end-case.ts <bot> [CAP ticks, default 260]
 import { finish, openBot } from '../../packages/core/src/bot';
 import { finishCombat } from '../../packages/core/src/combat-end';
-import { TROOPER_SITE, runGiants } from '../gather-combat';
+import { TROOPER_SITE, runGiants } from '../../packages/workers/src/combat';
 import { walkTargetPersist } from '../../packages/workers/src/logistics';
 
 if (import.meta.main) {

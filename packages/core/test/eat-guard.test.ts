@@ -160,8 +160,8 @@ test('a script that eats an item outside the plain food list also turns the guar
 
 test('a script with quest or microbot in its file name gets no guard', () => {
     for (const script of ['scripts/quest-sweep.ts', 'scripts/generated/quest-crest.ts', 'F:\\repo\\scripts\\quest-items-order.ts', 'scripts/aio-quester.ts', 'scripts/Quest-order.ts',
-        'scripts/microbot-c-clue-guardian.ts', 'scripts/microbot-b-kbd.ts']) expect(noGuardScript(script)).toBe(true);
-    for (const script of ['scripts/aio-fighter.ts', 'scripts/gather-combat.ts', 'quests/scripts/fishcook.ts', 'microbot/cook-food.ts', '']) expect(noGuardScript(script)).toBe(false);
+        'scripts/microbot-c-clue-guardian.ts', 'scripts/microbot-special-swap.ts']) expect(noGuardScript(script)).toBe(true);
+    for (const script of ['scripts/aio-fighter.ts', 'scripts/aio-boss.ts', 'quests/scripts/fishcook.ts', 'microbot/cook-food.ts', '']) expect(noGuardScript(script)).toBe(false);
 });
 
 test('damage older than calmTicks no longer counts', () => {

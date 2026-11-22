@@ -207,10 +207,10 @@ export async function resolveGiantCombatHelpers() {
     if (runtime.selectGiantBow && runtime.selectGiantArrows) {
         return { selectGiantBow: runtime.selectGiantBow, selectGiantArrows: runtime.selectGiantArrows };
     }
-    const mod = await importRepoModule('scripts', 'gather-combat.ts');
+    const mod = await import('../combat/gear');
     return {
-        selectGiantBow: mod.selectGiantBow as NonNullable<QuestRuntimeDeps['selectGiantBow']>,
-        selectGiantArrows: mod.selectGiantArrows as NonNullable<QuestRuntimeDeps['selectGiantArrows']>,
+        selectGiantBow: mod.selectGiantBow,
+        selectGiantArrows: mod.selectGiantArrows,
     };
 }
 
@@ -253,8 +253,11 @@ export async function resolveNpcMagicModule(): Promise<{
     if (runtime.nativeNpcSpell && runtime.runNpcMagic) {
         return { nativeNpcSpell: runtime.nativeNpcSpell, runNpcMagic: runtime.runNpcMagic };
     }
-    const mod = await importRepoModule('scripts', 'microbot-magic-npc.ts');
-    return { nativeNpcSpell: mod.nativeNpcSpell, runNpcMagic: mod.runNpcMagic };
+    const mod = await import('../combat/magic');
+    return {
+        nativeNpcSpell: mod.nativeNpcSpell,
+        runNpcMagic: (s, spell, opts) => mod.runNpcMagic(s, spell, opts as unknown as Parameters<typeof mod.runNpcMagic>[2]),
+    };
 }
 
 export async function resolveTeleportModule(): Promise<{

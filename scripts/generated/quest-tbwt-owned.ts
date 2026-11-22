@@ -11,7 +11,7 @@ import {componentId} from '../../packages/core/src/logout';
 import {openQuest} from './quest-lib';
 import {productionEffect,type InventoryRecipe} from '../microbot-production';
 import {cookingRecipes,runCookingBatch} from '../microbot-b-cooking';
-import {nativeNpcSpell,runNpcMagic} from '../microbot-magic-npc';
+import {nativeNpcSpell,runNpcMagic} from '../../packages/workers/src/combat';
 import {runVisibleGroundLoot} from '../../packages/workers/src/gather';
 import {productionStopRequested} from '../microbot-c-lifetime';
 import type {BotWorldState} from '../../vendor/rs-sdk/sdk/types';

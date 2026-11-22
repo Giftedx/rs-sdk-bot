@@ -12,7 +12,7 @@ import { resultCounters } from '../../core/src/status';
 import { loadTravel } from '../../core/src/travel';
 import { isNoProgressFailure, isPrerequisiteFailure } from '../../practice/src/supervise';
 import items from '../../../knowledge/items.json';
-import { guardCowWalker } from '../../../scripts/gather-combat';
+import { guardCowWalker } from '../src/logistics';
 import { ClientProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import {
     approach,

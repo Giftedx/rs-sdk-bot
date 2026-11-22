@@ -133,9 +133,10 @@ export function preparationGear(jobs:GearJob[],statuses:any[],ownedNames:string[
  const kits=assignments.flatMap(job=>{
   const name=job.account.toLowerCase();if(!owned.has(name))return[];
   const snapshot=snapshots.get(name)!;let slots:GearSlot[];
-  if(job.script==='scripts/gather-fire-combat.ts')slots=fireKit(snapshot.skill('Attack'));
-  else if(job.script==='scripts/gather-combat.ts'&&job.env?.TARGET==='cow')slots=[meleeWeaponSlot(snapshot.skill('Attack')),exact('trout',333,2)];
-  else if(job.script==='scripts/gather-ranged.ts'){
+  const combatTarget=job.script==='scripts/aio-fighter.ts'?(job.args?.[0]??job.env?.TARGET):undefined;
+  if(combatTarget==='fire-combat')slots=fireKit(snapshot.skill('Attack'));
+  else if(combatTarget==='cow'||(job.script==='scripts/aio-fighter.ts'&&job.env?.TARGET==='cow'&&!combatTarget))slots=[meleeWeaponSlot(snapshot.skill('Attack')),exact('trout',333,2)];
+  else if(combatTarget==='ranged-gather'){
    const ranged=snapshot.skill('Ranged');slots=[exact('weapon',841,1,ranged===null?null:ranged>=1),exact('ammo',884,Number(job.env?.AMMO??90)),exact('food',Number(job.env?.FOOD_ID??333),Number(job.env?.FOOD??3))];
   }else return[];
   const reserved=[...reservations.filter(r=>r.account.toLowerCase()===name),...(spent.get(name)??[])];

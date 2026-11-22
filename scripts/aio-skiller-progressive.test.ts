@@ -21,6 +21,7 @@ test('progression hands level targets to the actual worker interfaces',()=>{
  for(const band of planProgressiveSkiller('firemaking',1,99))expect(firemakingOptions(band.step.env).target).toBe(band.toLevel);
  for(const band of planProgressiveSkiller('magic',1,99)){
   if(band.method==='order')expect(magicOptions(band.step.env).target).toBe(band.toLevel);
+  else if(band.method==='splash')expect(Number(band.step.args[2])).toBe(band.toLevel);
   else expect(Number(band.step.args[0])).toBe(band.toLevel);
  }
  for(const band of planProgressiveSkiller('agility',1,99)){

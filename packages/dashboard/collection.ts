@@ -76,7 +76,7 @@ export function effectiveJob(status: any, job: any, fresh: boolean) {
 }
 
 const PRODUCTION_SCRIPTS = new Set([
-    'gather-ore.ts', 'gather-yews.ts', 'gather-flax.ts', 'gather-fish.ts', 'gather-combat.ts',
+    'gather-ore.ts', 'gather-yews.ts', 'gather-flax.ts', 'gather-fish.ts', 'aio-fighter.ts', 'aio-boss.ts',
     'collect-wool.ts', 'cook-stock.ts', 'cook-food.ts', 'spin-bowstrings.ts', 'smelt-bars.ts',
     'fletch-arrows.ts', 'craft-jewelry.ts', 'brew-potions.ts', 'shop-buyer.ts', 'aio-market.ts',
     'note-courier.ts', 'supply-holder.ts', 'fishcook.ts', 'foodcourier.ts', 'banker.ts',

@@ -19,7 +19,7 @@ const digest=(file:string)=>createHash('sha256').update(readFileSync(file)).dige
 
 test('fresh preparation uses registered shared stock, full journals and the current swarm assignment',()=>fixture((base,write)=>{
  const fleetDir=join(base,'fleet');
- write('swarm.json',{maxBots:3,jobs:[{account:'Worker',script:'scripts/gather-combat.ts',env:{TARGET:'cow'},role:'combat'},{account:'Haggis',role:'main'}]});
+ write('swarm.json',{maxBots:3,jobs:[{account:'Worker',script:'scripts/aio-fighter.ts',args:['cow'],env:{TARGET:'cow'},role:'combat'},{account:'Haggis',role:'main'}]});
  write('fleet/owners.json',{accounts:{Worker:{side:'cloud',server},Donor:{side:'local',server},Haggis:{side:'local',server},Foreign:{side:'cloud',server:'foreign'}}});
  const worker={name:'Worker',server,at:now-100,bankAt:now-200,questsAt:now-300,questJournal:[{...quest,state:'complete'}],quests:['Rune Mysteries Quest'],
   inventory:[],equipment:[],equipmentObserved:true,skills:[{name:'Attack',level:30}],bank:[{id:1277,name:'Bronze sword',count:1},{id:1171,name:'Wooden shield',count:1},{id:333,name:'Trout',count:2},{id:1267,name:'Iron pickaxe',count:1}]};
@@ -27,7 +27,7 @@ test('fresh preparation uses registered shared stock, full journals and the curr
  write('fleet/snapshots/local.json',{side:'local',at:now,accounts:[{name:'Donor',server,at:now-100,bankAt:now-200,bank:[{id:333,name:'Trout',count:10}]},{name:'Haggis',server,at:now-100,bankAt:now-200,bank:[{id:333,name:'Trout',count:999}]}]});
  const input=readPreparationInputs({base,fleetDir,side:'cloud',planFile:join(base,'swarm.json'),fallbackAccounts:[]});
  expect(input.names.slice().sort()).toEqual(['Donor','Worker']);
- expect(input.plan.jobs.map((j:any)=>j.script)).toEqual(['scripts/gather-combat.ts']);
+ expect(input.plan.jobs.map((j:any)=>j.script)).toEqual(['scripts/aio-fighter.ts']);
  expect(input.issues).toEqual([]);
  const report=reconcilePreparation([{item:'Trout',count:12}],input.statuses,input.names,now);
  expect(report.items[0]).toMatchObject({required:12,recentBanked:12,shortfall:0,state:'covered'});
@@ -80,20 +80,20 @@ test('matching fresher local observations replace old publications without refre
 test('preparation follows the configured cloud plan, binding its actual source',()=>fixture((base,write)=>{
  const fleetDir=join(base,'fleet'),planFile=join(base,'.practice/cloud-handoff/swarm.json'),prior=process.env.SWARM_PLAN;
  write('swarm.json',{maxBots:1,jobs:[{account:'Default',script:'scripts/goldfarm.ts'}]});
- write('.practice/cloud-handoff/swarm.json',{maxBots:2,jobs:[{account:'Worker',script:'scripts/gather-ranged.ts'}]});
+ write('.practice/cloud-handoff/swarm.json',{maxBots:2,jobs:[{account:'Worker',script:'scripts/aio-fighter.ts',args:['ranged-gather']}]});
  write('fleet/owners.json',{accounts:{Worker:{side:'cloud',server}}});
  process.env.SWARM_PLAN=planFile;
  try{
   const input=readPreparationInputs({base,fleetDir,side:'cloud',fallbackAccounts:[]});
   expect(input.names).toEqual(['Worker']);
-  expect(input.plan.jobs.map(j=>j.script)).toEqual(['scripts/gather-ranged.ts']);
+  expect(input.plan.jobs.map(j=>j.script)).toEqual(['scripts/aio-fighter.ts']);
   expect(input.inputSources.ownerPlan).toEqual({path:planFile,sha256:digest(planFile)});
  }finally{if(prior===undefined)delete process.env.SWARM_PLAN;else process.env.SWARM_PLAN=prior;}
 }));
 
 test('actual shared pack projection preserves raw note identity for equipment and carried-route requirements',()=>fixture((base,write)=>{
  const fleetDir=join(base,'fleet'),side='cloud',owners=new Map([['worker',{side,server}]]);
- const job={account:'Worker',script:'scripts/gather-fire-combat.ts'};
+ const job={account:'Worker',script:'scripts/aio-fighter.ts',args:['fire-combat']};
  write('swarm.json',{maxBots:1,jobs:[job]});
  write('fleet/owners.json',{accounts:{Worker:{side,server}}});
  const inventory=(notedWeapon:boolean,notedRope=notedWeapon)=>[{id:notedWeapon?1332:1331,baseId:1331,name:'Adamant scimitar',count:1},{id:1171,baseId:1171,name:'Wooden shield',count:1},
@@ -140,7 +140,7 @@ test('legacy empty packs stay known and local raw packs need no shared schema ma
 }));
 
 test('unregistered legacy jobs belong to local while their observed stock remains visible to every side',()=>fixture((base,write)=>{
- const fleetDir=join(base,'fleet'),job={account:'Legacy',script:'scripts/gather-combat.ts',env:{TARGET:'cow'}};
+ const fleetDir=join(base,'fleet'),job={account:'Legacy',script:'scripts/aio-fighter.ts',args:['cow'],env:{TARGET:'cow'}};
  write('swarm.json',{maxBots:1,jobs:[job]});write('fleet/owners.json',{accounts:{}});
  write('fleet/snapshots/local.json',{side:'local',accounts:[{name:'Legacy',server,at:now-100,bankAt:now-200,bank:[{id:333,name:'Trout',count:2}]}]});
  for(const side of ['local','cloud']){

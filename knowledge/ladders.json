@@ -273,11 +273,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-combat.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/gather-combat.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"genericCombatNpc\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -347,11 +347,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/train-chickens.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/train-chickens.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/train-chickens.ts contains \"Train on Lumbridge chickens\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"chickenTrainingProfile\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -425,7 +425,7 @@
     "workers": [
      "cow-progress-order"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"cowTraining\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"cowProfile\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -567,11 +567,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-combat.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/gather-combat.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"genericCombatNpc\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -1723,11 +1723,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-combat.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/gather-combat.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"genericCombatNpc\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -1797,11 +1797,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/train-chickens.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/train-chickens.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/train-chickens.ts contains \"Train on Lumbridge chickens\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"chickenTrainingProfile\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -1875,7 +1875,7 @@
     "workers": [
      "cow-progress-order"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"cowTraining\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"cowProfile\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -2017,11 +2017,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-combat.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/gather-combat.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"genericCombatNpc\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -3029,11 +3029,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-combat.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/gather-combat.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"genericCombatNpc\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -3103,11 +3103,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/train-chickens.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/train-chickens.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/train-chickens.ts contains \"Train on Lumbridge chickens\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"chickenTrainingProfile\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -3181,7 +3181,7 @@
     "workers": [
      "cow-progress-order"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"cowTraining\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"cowProfile\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -3323,11 +3323,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-combat.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/gather-combat.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"genericCombatNpc\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -4119,11 +4119,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-combat.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/gather-combat.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"genericCombatNpc\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -4196,9 +4196,9 @@
     "worker": "ranged-train",
     "workers": [
      "ranged-train",
-     "scripts/train-chickens.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"PEN={x:3233,z:3297}\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"'ranged/chickens'\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -4272,7 +4272,7 @@
     "workers": [
      "cow-progress-order"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"cowTraining\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"cowProfile\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -4414,11 +4414,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-combat.ts",
+    "worker": "scripts/aio-fighter.ts",
     "workers": [
-     "scripts/gather-combat.ts"
+     "scripts/aio-fighter.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
+    "workerEvidence": "scripts/aio-fighter.ts contains \"genericCombatNpc\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -5146,9 +5146,9 @@
     "worker": "ranged-train",
     "workers": [
      "ranged-train",
-     "scripts/gather-ranged.ts"
+     "scripts/ranged-train.ts"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"export const BOWS=[\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"BOWS\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "ranged/bow-gear-standard-bows",
@@ -5360,9 +5360,9 @@
     "worker": "ranged-train",
     "workers": [
      "ranged-train",
-     "scripts/gather-ranged.ts"
+     "scripts/ranged-train.ts"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"PEN={x:3233,z:3297}\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"'ranged/chickens'\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -6341,7 +6341,7 @@
     "workers": [
      "ranged-train"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"export const BOWS=[\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"BOWS\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "ranged/bow-gear-oak-bows",
@@ -6451,7 +6451,7 @@
     "workers": [
      "ranged-train"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"export const BOWS=[\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"BOWS\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "ranged/bow-gear-willow-bows",
@@ -6525,7 +6525,7 @@
     "workers": [
      "ranged-train"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"export const BOWS=[\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"BOWS\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "ranged/bow-gear-maple-bows",
@@ -6599,7 +6599,7 @@
     "workers": [
      "ranged-train"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"export const BOWS=[\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"BOWS\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "ranged/bow-gear-yew-bows",
@@ -6673,7 +6673,7 @@
     "workers": [
      "ranged-train"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"export const BOWS=[\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"BOWS\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "ranged/bow-gear-magic-bows",
@@ -7847,7 +7847,7 @@
     "workers": [
      "magic-order"
     ],
-    "workerEvidence": "scripts/magic-order.ts contains \"WIND_STRIKE={level:1\"",
+    "workerEvidence": "scripts/magic-order.ts contains \"WIND_STRIKE\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "magic/magic_spell_wind_strike",

@@ -11,7 +11,7 @@ import type {OrbKind,orbRecipes} from './microbot-c-orbs';
 import {walkPath,walkRoute,sessionWalker,applyKnownDoorBlocks} from '../packages/core/src/walk';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
-import {withdrawFireOwned} from './gather-fire-giants';
+import {withdrawFireOwned} from '../packages/workers/src/combat';
 import {withDoorPolicy} from '../packages/core/src/door-policy';
 import {nativeTeleport,runTeleportMagic,teleportReceipt} from './microbot-magic-teleport';
 import{installOrbFloorBridge}from'./microbot-edgeville-travel';

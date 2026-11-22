@@ -62,12 +62,25 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
     let rest: string[] = [];
     if (category === 'fighter') {
         const [target, ...extra] = categoryArgs, key = target?.toLowerCase().replace(/^--target=/, '');
-        if (key === 'cow' || key === 'giant' || key === 'druid' || key === 'trooper') spec = { script: 'scripts/gather-combat.ts', defaultEnv: { TARGET: key } };
-        if (key === 'chicken') spec = { script: 'scripts/train-chickens.ts', defaultEnv: { TRAIN_BANK: 'draynor' } };
         if (key === 'ranged') spec = { script: 'scripts/ranged-train.ts' };
+        else if (key === 'chicken' || key === 'cow' || key === 'giant' || key === 'druid' || key === 'trooper') {
+            const resolved = resolveRouteStep({ script: 'scripts/aio-fighter.ts' }, extra);
+            const defaultEnv: Record<string, string> = key === 'chicken' ? { TRAIN_BANK: 'draynor' } : { TARGET: key };
+            return [{
+                script: 'scripts/aio-fighter.ts',
+                args: [key, ...resolved.args],
+                env: file === 'scripts/aio-fighter.ts' && key === 'chicken'
+                    ? { ...defaultEnv, ...env, ...resolved.env }
+                    : { ...env, ...defaultEnv, ...resolved.env },
+            }];
+        }
         rest = extra;
     } else if (category === 'boss') {
-        if (categoryArgs[0]?.toLowerCase().replace(/^--boss=/, '') === 'black-dragon') spec = { script: 'scripts/black-dragon-camp.ts' };
+        const boss = categoryArgs[0]?.toLowerCase().replace(/^--boss=/, '');
+        if (boss === 'black-dragon') {
+            const resolved = resolveRouteStep({ script: 'scripts/aio-boss.ts' }, categoryArgs.slice(1));
+            return [{ script: 'scripts/aio-boss.ts', args: ['black-dragon', ...resolved.args], env: { ...env, ...resolved.env } }];
+        }
         rest = categoryArgs.slice(1);
     } else if (category === 'market') {
         const mode = categoryArgs[0]?.toLowerCase().replace(/^--mode=/, '').replace(/^--type=/, '');
@@ -82,6 +95,11 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
             const parsed = resolveRouteStep({ script: 'scripts/aio-skiller.ts' }, gRest);
             return [{ script: 'scripts/aio-skiller.ts', args: ['gather', gSkill ?? '', gMethod ?? '', ...parsed.args], env: { ...inherited, ...parsed.env, ...step.env } }];
         }
+        if (skill === 'combat') {
+            const [, cMode, ...cRest] = categoryArgs;
+            const parsed = resolveRouteStep({ script: 'scripts/aio-skiller.ts', ...(cMode === 'magic-splash-coop' ? { defaultEnv: { SPLASH_SITE: 'coop' } } : {}) }, cRest);
+            return [{ script: 'scripts/aio-skiller.ts', args: ['combat', cMode ?? '', ...parsed.args], env: { ...inherited, ...parsed.env, ...step.env } }];
+        }
         const { method, args } = resolveSkillerMethod(skill ?? '', methodInput, extra);
         rest = args;
         const aliases: Readonly<Record<string, string>> = {
@@ -94,9 +112,10 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
             'thieving:goldfarm': 'thieving:knights',
             'runecraft:rcair': 'runecraft:air',
             'runecraft:rune-bank-craft': 'runecraft:bank-craft',
+            'magic:splash-train': 'magic:splash',
         };
         const routeKey = aliases[`${skill}:${method}`] ?? `${skill}:${method}`;
-        const workers: Readonly<Record<string, { script: string; gather?: readonly [string, string]; sub?: readonly [string, string] }>> = {
+        const workers: Readonly<Record<string, { script: string; gather?: readonly [string, string]; sub?: readonly [string, string]; combat?: string }>> = {
             'woodcutting:yews': { script: 'scripts/aio-skiller.ts', gather: ['woodcutting', 'yews'] },
             'foraging:flax': { script: 'scripts/aio-skiller.ts', gather: ['foraging', 'flax'] },
             'foraging:feathers': { script: 'scripts/aio-skiller.ts', gather: ['foraging', 'feathers'] },
@@ -107,12 +126,12 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
             'thieving:blood-chest': { script: 'scripts/aio-skiller.ts', gather: ['thieving', 'blood-chest'] },
             'thieving:knights': { script: 'scripts/aio-skiller.ts', gather: ['thieving', 'knights'] },
             'magic:alch-train': { script: 'scripts/alch-train.ts' },
-            'magic:splash': { script: 'scripts/splash-train.ts' },
-            'magic:splash-coop': { script: 'scripts/splash-train.ts' },
+            'magic:splash': { script: 'scripts/aio-skiller.ts', combat: 'magic-splash' },
+            'magic:splash-coop': { script: 'scripts/aio-skiller.ts', combat: 'magic-splash-coop' },
         };
         const route = workers[routeKey]
             ? ([routeKey, workers[routeKey]!] as const)
-            : Object.entries(workers).find(([key, entry]) => !entry.gather && !entry.sub && key.startsWith(`${skill}:`) && entry.script.endsWith(`${method}.ts`));
+            : Object.entries(workers).find(([key, entry]) => !entry.gather && !entry.sub && !entry.combat && key.startsWith(`${skill}:`) && entry.script.endsWith(`${method}.ts`));
         if (route) {
             const entry = route[1];
             if (entry.gather) {
@@ -123,7 +142,11 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
                 const parsed = resolveRouteStep({ script: entry.script }, rest);
                 return [{ script: entry.script, args: [...entry.sub, ...parsed.args], env: { ...env, ...parsed.env } }];
             }
-            spec = { script: entry.script, ...(route[0] === 'magic:splash-coop' ? { defaultEnv: { SPLASH_SITE: 'coop' } } : {}) };
+            if (entry.combat) {
+                const parsed = resolveRouteStep({ script: entry.script, ...(route[0] === 'magic:splash-coop' ? { defaultEnv: { SPLASH_SITE: 'coop' } } : {}) }, rest);
+                return [{ script: entry.script, args: ['combat', entry.combat, ...parsed.args], env: { ...env, ...parsed.env } }];
+            }
+            spec = { script: entry.script };
         }
         if (skill === 'fishing' && (method === 'cage' || method === 'harpoon' || method === 'gather-fish')) {
             const sub = method === 'gather-fish' ? 'cage' : method;
@@ -208,6 +231,13 @@ export function jobResources(job: ResourceJob): string[] {
         }
         if (file === 'scripts/aio-market.ts' && args[0] === 'shop-buy') out.push(`shop:${(args[1] ?? env.PROFILE ?? 'catherby').toLowerCase()}`);
         if (file === 'scripts/shop-buyer.ts') out.push(`shop:${(args[0] ?? env.PROFILE ?? 'catherby').toLowerCase()}`);
+        if (file === 'scripts/aio-fighter.ts') {
+            const target = ((args[1] && /^\d+$/.test(args[1]) && args[2]) || env.TARGET || args[0] || '').toLowerCase();
+            if (target === 'trooper') out.push(TROOPER_FIELD);
+            if (target === 'cow') out.push(COW_FIELD);
+            if (target === 'chicken') out.push((env.TRAIN_BANK ?? 'varrock') === 'ardougne' ? 'pen:2691,3277' : 'pen:3229,3298');
+        }
+        if (file === 'scripts/aio-boss.ts' && (args[0] ?? '').toLowerCase() === 'black-dragon') out.push(BLACK_CAVE);
         if (file === 'scripts/gather-combat.ts') {
             const target = (args[1] ?? env.TARGET ?? 'druid').toLowerCase();
             if (target === 'trooper') out.push(TROOPER_FIELD);
@@ -219,6 +249,11 @@ export function jobResources(job: ResourceJob): string[] {
             out.push(AIO_PLACES.air);
         }
         if (file === 'scripts/splash-train.ts') out.push((env.SPLASH_SITE ?? 'ardougne') === 'coop' ? 'pen:3229,3298' : SPLASH_FENCE);
+        if (file === 'scripts/aio-skiller.ts' && args[0] === 'combat' && (args[1] === 'magic-splash' || args[1] === 'magic-splash-coop')) {
+            out.push((env.SPLASH_SITE ?? (args[1] === 'magic-splash-coop' ? 'coop' : 'ardougne')) === 'coop' ? 'pen:3229,3298' : SPLASH_FENCE);
+        }
+        // An unknown account can need Wind Strike before alchemy, even with target99.
+        // Qualified planner alchemists carry an explicit empty resource override.
         if (file === 'scripts/alch-train.ts' && Number(args[0]) >= 2 && Number(args[0]) <= 99) out.push(STRIKE_TILE);
     }
     const extra = script === 'scripts/ranged-train.ts' && Array.isArray(job.resources)

@@ -61,7 +61,7 @@ test('observedSupplies normalizes noted trade item IDs to base catalog IDs', () 
 });
 
 test('specialist start refuses fixtures and partial qualification targets', () => {
-    const spec: Segment = {id: 'ranged-full', start: {fresh: true}, script: 'scripts/ranged-starter.ts',
+    const spec: Segment = {id: 'ranged-full', start: {fresh: true}, script: 'scripts/aio-fighter.ts', args: ['ranged-starter'],
         plan: {ticks: 300, source: 'route model'}, expect: {skills: {Ranged: 99}}};
     expect(checkSpecialistSegment(spec, 'Shaftshooter')).toBe('Ranged');
     expect(() => checkSpecialistSegment({...spec, start: {preset: 'starter'}}, 'shaftshooter')).toThrow(/fresh/);

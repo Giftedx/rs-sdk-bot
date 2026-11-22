@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {selectFireTarget} from './gather-fire-combat';
+import {selectFireTarget} from '../packages/workers/src/combat';
 import type {NearbyNpc} from '../vendor/rs-sdk/sdk/types';
 const npc=(p:Partial<NearbyNpc>={})=>({id:110,index:8,x:2566,z:9888,tileX:2565,tileZ:9887,size:2,distance:2,inCombat:false,reachable:true,hp:null,maxHp:null,targetIndex:-1,...p}) as NearbyNpc;
 test('render centre inside cannot admit an outside route tile',()=>{

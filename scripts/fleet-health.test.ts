@@ -90,8 +90,8 @@ test('auditFleetHealth catches trapped/looping accounts while guarding owner hol
 
     const swarmPlan = {
         jobs: [
-            { name: 'u', account: 'Unsheathed', script: 'scripts/gather-combat.ts', args: ['Unsheathed', '6000', 'taverley_druid'], enabled: true },
-            { name: 'g', account: 'GoodGiant', script: 'scripts/gather-combat.ts', args: ['GoodGiant', '6000', 'giant'], enabled: true },
+            { name: 'u', account: 'Unsheathed', script: 'scripts/aio-fighter.ts', args: ['Unsheathed', 'taverley_druid', '6000'], enabled: true },
+            { name: 'g', account: 'GoodGiant', script: 'scripts/aio-fighter.ts', args: ['GoodGiant', 'giant', '6000'], enabled: true },
         ],
     };
 

@@ -6,8 +6,7 @@ import {tmpdir} from 'node:os';
 import {SWORDINHAND,cases,cowFixture,cowEntry,cowResult,cowSaveChecks,refusedCow,cowChildChecks,cowChildConfiguration,cowSequenceChecks,claimCowStop,retainCowStop,
  MIGHTYROD,GIANT_HITPOINTS_XP,xpForLevel,giantFixture,giantEntry,giantSaveChecks,giantChildChecks,giantChildConfiguration,giantResult,
  NABTHEKNOB,trooperCases,trooperFixture,trooperEntry,trooperChildConfiguration,trooperSaveChecks,trooperChildChecks} from '../src/cow-progress-isolated-proof';
-import {giantTraining} from '../../../scripts/gather-combat';
-import {cowProfile} from '../../../scripts/gather-combat';
+import {cowProfile,giantTraining} from '../../workers/src/combat';
 import {ISOLATED,ISOLATED_ENGINE_ENV,pointBotAt} from '../src/rehearse';
 
 test('native combat proof starts a named isolated stack and points its fixtures away from the shared server',()=>{
@@ -74,7 +73,7 @@ test.each(['stat','read','access-failure'] as const)('retention makes no filesys
 test('actual native child configuration pins the finite south/held CLI despite inherited profiles',()=>{
  for(const inherited of [{},{COW_BANK_PROFILE:'',COW_FOOD_MODE:''},{COW_BANK_PROFILE:'north',COW_FOOD_MODE:'banked',MAX_KILLS:'9',TARGET:'giant',TRAIN_SKILL:'Defence',TARGET_LEVEL:'99',DEMO_OK:'1'}]){
   const original={...inherited},child=cowChildConfiguration('fixture',inherited);
-  expect(child.cmd).toEqual(['bun','scripts/gather-combat.ts','fixture','1500','cow']);
+  expect(child.cmd).toEqual(['bun','scripts/aio-fighter.ts','fixture','cow','1500']);
   expect(child.windowsHide).toBe(true);
   expect(child.env).toMatchObject({COW_BANK_PROFILE:'south',COW_FOOD_MODE:'held',MAX_KILLS:'5',TARGET:'cow',TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',DEMO_OK:'',RANDOM_EVENTS:'0'});
   expect(cowProfile(child.env.COW_BANK_PROFILE,child.env.COW_FOOD_MODE,Number(child.env.MAX_KILLS))).toEqual({north:false,foodBanked:false,limit:5,bank:{x:2654,z:3283}});
@@ -210,7 +209,7 @@ test('isolated giant fixture stages banked melee and food away from the bank and
  expect(giantEntry(giantSave())).toBe(true);
  const noWeapon=giantSave();noWeapon.inventories[95]=noWeapon.inventories[95].filter((i:any)=>i.id!==1331);expect(giantEntry(noWeapon)).toBe(false);
  const child=giantChildConfiguration('fixture',{TARGET:'cow',TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',DEMO_OK:'1'});
- expect(child.cmd).toEqual(['bun','scripts/gather-combat.ts','fixture','1500','giant']);expect(child.windowsHide).toBe(true);
+ expect(child.cmd).toEqual(['bun','scripts/aio-fighter.ts','fixture','giant','1500']);expect(child.windowsHide).toBe(true);
  expect(child.env).toMatchObject({TARGET:'giant',TRAIN_SKILL:'Hitpoints',TARGET_LEVEL:'87',GIANT_FOOD:'5',DEMO_OK:'',RANDOM_EVENTS:'0'});
  expect(giantTraining(child.env.TRAIN_SKILL,Number(child.env.TARGET_LEVEL))).toEqual({skill:'Hitpoints',targetLevel:87});
 });
@@ -282,7 +281,7 @@ test('Nab child pins the exact finite trooper CLI and controls despite inherited
  const inherited={SERVER:'localhost:8888',GATEWAY_URL:'ws://localhost:7780',DEMO_OK:'1',TRAIN_SKILL:'Attack',TARGET_LEVEL:'99',
   GIANT_FOOD:'5',GIANT_BURY:'0',TROOPER_COOK:'0',LOOT_WATCH:'1',RANDOM_EVENTS:'1',GIANT_KILLS:'1',MAX_KILLS:'1',COMBAT_POTIONS_FILE:'foreign',COMBAT_ALCH_FILE:'foreign',TELEGRAB_MAX:'1'};
  const original={...inherited},child=trooperChildConfiguration('fixture',inherited);
- expect(child.cmd).toEqual(['bun','scripts/gather-combat.ts','fixture','2500','trooper']);expect(child.windowsHide).toBe(true);
+ expect(child.cmd).toEqual(['bun','scripts/aio-fighter.ts','fixture','trooper','2500']);expect(child.windowsHide).toBe(true);
  expect(child.env).toMatchObject({SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',
   TRAIN_SKILL:'Defence',TARGET_LEVEL:'60',GIANT_FOOD:'20',GIANT_BURY:'1',TROOPER_COOK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'});
  for(const key of ['GIANT_KILLS','MAX_KILLS','COMBAT_POTIONS_FILE','COMBAT_ALCH_FILE','TELEGRAB_MAX'])expect(child.env[key]).toBeUndefined();

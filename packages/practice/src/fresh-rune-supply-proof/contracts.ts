@@ -53,7 +53,7 @@ export const logout=(r:Run)=>(r.log.match(/^LOGOUT logged-out$/gm)??[]).length==
 export const retainedProgress=(before:Save,interrupted:Save)=>interrupted.skills.some((s,i)=>s.xp>(before.skills[i]?.xp??0))||(interrupted.vars[63]??0)>(before.vars[63]??0);
 
 export const hash=(file:string)=>createHash('sha256').update(readFileSync(file)).digest('hex');
-const files=['packages/workers/src/runecraft/supply.ts','packages/workers/src/runecraft/air.ts','packages/workers/src/runecraft/index.ts','packages/workers/test/runecraft.test.ts','scripts/train-chickens.ts','scripts/train-chickens.test.ts',
+const files=['packages/workers/src/runecraft/supply.ts','packages/workers/src/runecraft/air.ts','packages/workers/src/runecraft/index.ts','packages/workers/test/runecraft.test.ts','packages/workers/src/combat/chickens.ts','packages/workers/test/combat.test.ts',
  'scripts/generated/quest-runemysteries.ts','scripts/generated/quest-lib.ts',
  'scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','packages/workers/src/gather/fishing.ts','packages/workers/test/gather.test.ts',
  'packages/practice/src/fresh-rune-supply-proof.ts',
