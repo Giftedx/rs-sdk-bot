@@ -132,7 +132,7 @@ test('a parked owner-job copy stays while a recovery of its account is pending o
 test('logout proofs are read from the session-lifecycle directory under the checkout', () => {
     // readLogoutProof's root is the lifecycle directory, not the checkout; a checkout root reads every proof as none.
     expect(lifecycleRoot(join(import.meta.dir, '..'))).toBe(DEFAULT_LIFECYCLE_ROOT);
-    expect(lifecycleRoot('/r')).toBe(join('/r', '.practice', 'session-lifecycle'));
+    expect(lifecycleRoot('/r')).toBe(join('/r', '.practice', 'live', 'session-lifecycle'));
 });
 
 test('only a cloud side waits for its runs and restarts its coordinator; the local side submits and returns', () => {

@@ -4,7 +4,7 @@ import {resolve} from 'node:path';
 import {startStatus} from '../src/status';
 
 test('status keeps base progress separate from drained or boosted gate stats',()=>{
- const name=`StatusLevels${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',name+'.json');
+ const name=`StatusLevels${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/sim/status',name+'.json');
  const state={skills:[{name:'Agility',level:12,baseLevel:56,experience:1_000_000}],inventory:[],equipment:[]};
  const callbacks:(()=>void)[]=[];
  const session:any={name,sdk:{getState:()=>state},tick:()=>1,onTick:(cb:()=>void)=>{callbacks.push(cb);return()=>{};}};
@@ -20,7 +20,7 @@ test('status keeps base progress separate from drained or boosted gate stats',()
 });
 
 test('status carries the run energy of the player, and null with no player',()=>{
- const name=`StatusRun${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',name+'.json');
+ const name=`StatusRun${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/sim/status',name+'.json');
  const state:any={skills:[],inventory:[],equipment:[]};
  const callbacks:(()=>void)[]=[];
  const session:any={name,sdk:{getState:()=>state},tick:()=>1,onTick:(cb:()=>void)=>{callbacks.push(cb);return()=>{};}};

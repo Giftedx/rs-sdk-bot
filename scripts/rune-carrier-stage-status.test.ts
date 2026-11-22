@@ -6,7 +6,7 @@ test('one staged helper can finish while its peer remains active',()=>{
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:async()=>{}}));
  const{startStatus}=await import('./packages/core/src/status');const{runeStageStatus}=await import('./scripts/rune-carrier-stage-status');
  const names=['StageA'+process.pid,'StageB'+process.pid],log=runeStageStatus(names);
- const file=name=>resolve('.practice/status',name+'.json');
+ const file=name=>resolve('.practice/sim/status',name+'.json');
  const handles=names.map(name=>startStatus({name,sdk:{getState:()=>({inventory:[],equipment:[],skills:[]})},tick:()=>1,onTick:()=>()=>{}},'localhost:8910'));
  try{
   log(names[0],'RESULT ok staged carrier');handles.forEach(h=>h.stop());

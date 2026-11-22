@@ -8,7 +8,7 @@ test('the status row is written on the clock while no game tick arrives, so the 
     const { startStatus } = await import('../src/status');
     const { assertCompatibleWorkers } = await import('../src/worker-release');
     const name = `StatusBeat${process.pid}`;
-    const file = resolve(import.meta.dir, '../../../.practice/status', `${name}.json`);
+    const file = resolve(import.meta.dir, '../../../.practice/sim/status', `${name}.json`);
     const state: any = { inventory: [], skills: [], player: { worldX: 2613, worldZ: 3345, level: 0 } };
     // A session whose tick stream has frozen: onTick never fires, tick stays at 531.
     const s: any = { name, sdk: { getState: () => state }, tick: () => 531, onTick: () => () => {} };

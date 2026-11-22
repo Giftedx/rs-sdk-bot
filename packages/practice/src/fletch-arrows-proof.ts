@@ -5,7 +5,7 @@ import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {startStack} from './stack';
-import {rsSdkRoot,practiceDir} from './paths';
+import {rsSdkRoot,practiceDir,deliveryLockDir} from './paths';
 import {killTree} from '../../core/src/proc';
 import {selectAmmoProofEndpoints,ammoProofAccountEnv,startAmmoProofStack,ammoChildConfiguration,ammoRegistrationArgs} from './ammo-order-proof';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
@@ -56,12 +56,12 @@ function verify(directory:string){
 }
 
 async function run(directory:string){
- if(!existsSync(join(practiceDir(),'delivery-native.lock')))throw Error('practice turn required: run through delivery');
+ if(!existsSync(join(deliveryLockDir(),'delivery-native.lock')))throw Error('practice turn required: run through delivery');
  if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${PRACTICE_STARTUP_GB}GiB free: ${FREE_FLOOR_GB}GiB floor plus startup reserve`);
  const requests=join(practiceDir(),'withdraw');
  if(existsSync(requests)&&readdirSync(requests).some(p=>p.endsWith('.json')))throw Error('supply requests pending; preserve their owner');
  const endpoints=selectAmmoProofEndpoints();
- const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
+ const lock=join(deliveryLockDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'arrow-fletch-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=180000):Promise<Run>=>{

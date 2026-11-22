@@ -6,7 +6,7 @@ import { applyPreset } from './presets';
 import { runBotName } from './prove';
 import { startStack, PROOF_TICK_MS, type StackOptions } from './stack';
 import { canBind } from './ports';
-import { practiceDir, rsSdkRoot } from './paths';
+import { deliveryLockDir, practiceDir, rsSdkRoot } from './paths';
 import { killTree } from '../../core/src/proc';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { readPracticeSave, waitPracticeSave } from './fleet-player-save';
@@ -189,10 +189,10 @@ export function verify(directory: string) {
 }
 
 async function run(directory: string) {
-    if (!existsSync(join(practiceDir(), 'delivery-native.lock'))) throw Error('practice turn required: run through delivery');
+    if (!existsSync(join(deliveryLockDir(), 'delivery-native.lock'))) throw Error('practice turn required: run through delivery');
     if (freemem() / 2 ** 30 < PRACTICE_STARTUP_GB) throw Error('practice startup headroom unavailable');
     const endpoints = selectCoinProofEndpoints();
-    const lock = join(practiceDir(), 'delivery-practice.lock'), fd = openSync(lock, 'wx');
+    const lock = join(deliveryLockDir(), 'delivery-practice.lock'), fd = openSync(lock, 'wx');
     writeFileSync(fd, JSON.stringify({ pid: process.pid, task: 'coin-courier', directory }));
     let stack: Awaited<ReturnType<typeof startStack>> | undefined;
     let workerRoot='';const revision=source();

@@ -147,7 +147,7 @@ test('finite partial CLI banks exactly one kill below Attack20 before its unstop
 });
 
 test('receipt sequence retires the active stop identity and binds restart only to the unstopped partial save',()=>{
- const stopPath=resolve(import.meta.dir,'../../../.practice/stop-flstopped');
+ const stopPath=resolve(import.meta.dir,'../../../.practice/sim/stops/stop-flstopped');
  const receipts=cases.map(id=>({id,name:id==='restarted'?'flpartial':`fl${id}`,before:id==='restarted'?'partial-after':id+'-before',after:id+'-after',
   stopRequested:id==='stopped',stopRetained:id==='stopped'?stopPath:null,retired:id==='stopped',stopFailure:null}));
  expect(Object.values(cowSequenceChecks(receipts)).every(Boolean)).toBe(true);

@@ -1,7 +1,7 @@
 import {test,expect} from 'bun:test';
 import {readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {startStatus} from '../src/status';
-const name=`JournalTest${process.pid}`,file=`.practice/status/${name}.json`,server='localhost:8888';
+const name=`JournalTest${process.pid}`,file=`.practice/sim/status/${name}.json`,server='localhost:8888';
 const flag={id:7333,name:"Cook's Assistant",state:'complete'};
 const read=()=>JSON.parse(readFileSync(file,'utf8'));
 function session(){

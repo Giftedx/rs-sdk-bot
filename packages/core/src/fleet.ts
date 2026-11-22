@@ -9,11 +9,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
+import { resolveFleetDataDir } from './practice-paths';
 
 const root = resolve(import.meta.dir, '..', '..', '..');
-// Fleet data lives on its own branch, fleet-data, checked out at .practice/fleet-data (scripts/fleet-sync.ts), so a sync
-// never rebases the code checkout other sessions edit. fleet/ on master is the seed for a machine without it.
-export const FLEET_WORKTREE = join(root, '.practice', 'fleet-data');
+// Fleet data lives on its own branch, fleet-data, checked out at .practice/live/fleet-data (with fallback to .practice/fleet-data)
+// so a sync never rebases the code checkout other sessions edit. fleet/ on master is the seed for a machine without it.
+export const FLEET_WORKTREE = resolveFleetDataDir(root);
 export const FLEET_DIR = () => resolve(process.env.FLEET_DIR ?? (existsSync(join(FLEET_WORKTREE, 'fleet', 'owners.json')) ? join(FLEET_WORKTREE, 'fleet') : join(root, 'fleet')));
 export type Side = string;
 export type Owner = { side: Side; server: string };

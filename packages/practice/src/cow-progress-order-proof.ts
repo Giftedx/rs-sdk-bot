@@ -1,6 +1,6 @@
 // Harness entry only. Import and --verify never start services or log in.
 import {copyFileSync,readFileSync,writeFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync,statSync} from 'node:fs';
-import {join,resolve} from 'node:path';
+import {dirname,join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {startStack} from './stack';
@@ -8,6 +8,7 @@ import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
+import {simBotsDir, simStopFile} from '../../core/src/practice-paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,setPracticeSkills,waitPracticeSave} from './fleet-player-save';
 import {verifyCompletedRecoveryDelivery} from './session-recovery-proof';
@@ -39,6 +40,7 @@ export function cowChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=pr
 // Acceptance: replacement/access-failure tests make zero retention filesystem calls.
 export type CowStop={path:string;marker:string;ino:bigint;dev:bigint};
 export function claimCowStop(path:string,marker:string):CowStop{
+ mkdirSync(dirname(path),{recursive:true});
  try{writeFileSync(path,marker,{flag:'wx'});}catch(error){if((error as NodeJS.ErrnoException).code==='EEXIST')throw Error('stop path already exists');throw error;}
  const info=statSync(path,{bigint:true});return {path,marker,ino:info.ino,dev:info.dev};
 }
@@ -107,7 +109,7 @@ export function cowSequenceChecks(receipts:any[]){
  return {
   restart:typeof partial?.name==='string'&&restarted?.name===partial.name&&restarted?.before===partial.after&&typeof partial.after==='string',
   retired:typeof stopped?.name==='string'&&receipts.filter(c=>c.name===stopped.name).length===1&&stopped.retired===true&&stopped.stopRequested===true
-   &&stopped.stopRetained===join(root,'.practice',`stop-${stopped.name}`),
+   &&stopped.stopRetained===simStopFile(stopped.name,root),
   unstopped:receipts.filter(c=>c.id!=='stopped').every(c=>c.stopRequested===false&&c.stopRetained===null&&c.retired===false&&c.stopFailure===null),
  };
 }
@@ -148,14 +150,14 @@ async function run(directory:string){
    if(id==='restarted'){if(!partial)throw Error('restart requires the unstopped partial account');({name,path}=partial);}
    else{
     // setPracticeSkills accepts only generated fl* practice saves.
-    name=runBotName('flcow',index+1);const botDir=join(root,'vendor/rs-sdk/bots',name);
-    if(existsSync(botDir))throw Error('isolated practice identity already exists');
-    await createBot(name);
-    if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+    name=runBotName('flcow',index+1);const botDir=join(simBotsDir(root),name);
+    if(existsSync(botDir)||existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('isolated practice identity already exists');
+    const {envPath}=await createBot(name);
+    if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(envPath,'utf8')))throw Error('local fixture required');
     path=await applyPreset(name,cowFixture(id));setPracticeSkills(path,SWORDINHAND.skills);
    }
    copyFileSync(path,join(dir,'before.sav'));
-   const log=join(dir,'worker.log'),stopFile=join(root,'.practice',`stop-${name}`);
+   const log=join(dir,'worker.log'),stopFile=simStopFile(name,root);
    if(existsSync(stopFile))throw Error('stale stop file for practice identity');
    const config=cowChildConfiguration(name,process.env,id);
    const child=Bun.spawn({...config,stdout:Bun.file(log),stderr:Bun.file(join(dir,'worker.err')),windowsHide:true});

@@ -6,7 +6,7 @@ import{createHash}from'node:crypto';
 import{freemem}from'node:os';
 import{createBot}from'./bots';
 import{applyPreset,type SaveConfig}from'./presets';
-import{practiceDir,rsSdkRoot}from'./paths';
+import{deliveryLockDir,rsSdkRoot}from'./paths';
 import{runBotName}from'./prove';
 import{killTree}from'../../core/src/proc';
 import{stopStack}from'./stack';
@@ -94,7 +94,7 @@ export async function runShopSupplyNative(directory:string){
  mkdirSync(directory,{recursive:true});if(existsSync(join(directory,'before.sav')))throw Error('preserve existing native snapshots');
  if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('native shop startup headroom unavailable');
  const endpoint=selectGeProofEndpoints(),pin=source(),actors=new Set<string>();
- const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
+ const lock=join(deliveryLockDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'shop-supply-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startGeProofStack>>|undefined;
  const command=async(name:string,label:string,shop=true,quantity=1136,profile='aubury',extra:Record<string,string>={}):Promise<Run>=>{

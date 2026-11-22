@@ -9,7 +9,7 @@ import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
-import {practiceDir} from './paths';
+import {deliveryLockDir} from './paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {farmStartProblem} from '../../../scripts/goldfarm-stable';
@@ -181,7 +181,7 @@ async function run(delivery:string,door=false){
  mkdirSync(directory,{recursive:true});
  // Exclusive delivery folder: do not overwrite earlier before/ snapshots.
  if(existsSync(join(directory,'native.json'))||list.some(k=>existsSync(join(directory,k.id))))throw Error('goldfarm proof directory already used');
- const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'goldfarm-order',at:Date.now()}));
+ const lock=join(deliveryLockDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'goldfarm-order',at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
   const pin=source(),receipts:any[]=[],accounts:Record<string,{name:string;path:string}>={};

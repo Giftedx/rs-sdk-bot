@@ -40,6 +40,8 @@ import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, readMergedPlan, emptyCoordinatorJobs, ownerPlanPath } from '../packages/core/src/coordinator-jobs';
 import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
 import { acquireFleetLease, FLEET_LEASE_RENEW_MS, FLEET_LEASE_RETRY_MS } from '../packages/core/src/fleet-lease';
+import { hasStopFile, liveRoot } from '../packages/core/src/practice-paths';
+import { InfraCircuitBreaker, classifyInfraFault } from '../packages/fleet/src/infra-circuit-breaker';
 
 export type Job = { autopilot?: string; template?: string; account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; standingRetry?:boolean; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
@@ -764,8 +766,17 @@ export function unadmittedState(job: Job): 'reserved' | 'disabled' | 'existing a
     return job.enabled === false ? 'disabled' : 'existing assignment; awaiting coordinator qualification';
 }
 
+// Records infrastructure outages globally without penalizing individual accounts.
+export function observeSwarmInfraFault(breaker: InfraCircuitBreaker, errorOrText: unknown): boolean {
+    const kind = classifyInfraFault(errorOrText);
+    if (!kind) return false;
+    breaker.recordFailure(errorOrText, kind);
+    return true;
+}
+
 if (import.meta.main) {
     const root = resolve(import.meta.dir, '..');
+    const infraBreaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(root), 'infra-circuit-breaker.json') });
     const planFile = resolve(process.argv[2] ?? join(root, 'swarm.json'));
     // Windows paths compare without case: the drive letter differs between a shell's cwd and import.meta.dir.
     const rootPlan = process.platform === 'win32' ? planFile.toLowerCase() === ownerPlanPath(root).toLowerCase() : planFile === ownerPlanPath(root);
@@ -781,8 +792,8 @@ if (import.meta.main) {
     }
     // Acquire before adopting or writing controller state. A cached fleet-data heartbeat cannot grant admission.
     let lease: ReturnType<typeof acquireFleetLease>;
-    try { lease = acquireFleetLease(root, side); }
-    catch (error) { console.log('SWARM ' + String(error)); process.exit(2); }
+    try { lease = acquireFleetLease(root, side); infraBreaker.recordSuccess('remote_git_claim'); }
+    catch (error) { observeSwarmInfraFault(infraBreaker, error); console.log('SWARM ' + String(error)); process.exit(2); }
     process.env.SWARM_LEASE_HOLDER = lease.holder;
     let renewAt = performance.now() + FLEET_LEASE_RENEW_MS;
     const assertLease = () => { if (!lease.allows()) throw Error('fleet controller lease unavailable'); };
@@ -835,6 +846,7 @@ if (import.meta.main) {
     const follow = (key: string, run: Run, child?: { on(e: 'exit', f: (code: number | null) => void): unknown }) => {
         let tail = '', currentEnd: string | undefined, diedNames: string[] | undefined, exitCode: number | null | undefined, done = false;
         const consume = (line: string) => {
+            observeSwarmInfraFault(infraBreaker, line);
             if (!run.host) { currentEnd = supervisorEndLine(line) ?? currentEnd; diedNames = diedAccountsOf(line) ?? diedNames; return; }
             const m = line.match(/^SUPERVISE-HOST account (.+?) ([\w-]+) after \d+ runs/);
             if (m) { ended.set(m[1]!, { at: Date.now(), reason: m[2]!, revision: run.revision }); console.log(`SWARM end ${m[1]} ${m[2]} (host)`); }
@@ -926,8 +938,8 @@ if (import.meta.main) {
         if (performance.now() >= renewAt && lease.allows()) {
             // A renewal that did not land leaves the lease standing: it is tried again soon, not in three minutes.
             let landed = true;
-            try { lease.renew(); }
-            catch (error) { landed = false; console.log('SWARM ' + String(error)); }
+            try { lease.renew(); infraBreaker.recordSuccess('remote_git_claim'); }
+            catch (error) { landed = false; observeSwarmInfraFault(infraBreaker, error); console.log('SWARM ' + String(error)); }
             renewAt = performance.now() + (landed || !lease.allows() ? FLEET_LEASE_RENEW_MS : FLEET_LEASE_RETRY_MS);
         }
         if (!lease.allows()) {
@@ -950,7 +962,7 @@ if (import.meta.main) {
         // An owner edit of the hold file applies live, like swarm.json.
         try { const m = statSync(holdsFile).mtimeMs; if (m !== holdsMtime) { holds.splice(0, holds.length, ...loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason))); holdsMtime = m; } } catch { /* no hold file yet */ }
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }
-        const stopAll = existsSync(join(prac, 'stop-swarm'));
+        const stopAll = hasStopFile('swarm', root);
         inheritedRecoveries=heldRecoveryOwners(root,recoveryDispatch.active?[recoveryDispatch.active.account]:[]);
         if(stopAll&&recoveryDispatch.active)writeSwarmStop(stopFile(recoveryDispatch.active.account),SWARM_STOP.recovery);
         if(stopAll)for(const held of inheritedRecoveries)writeSwarmStop(stopFile(held.account),SWARM_STOP.inherited);
@@ -1060,7 +1072,7 @@ if (import.meta.main) {
             if(stopAll) for(const a of p.accounts) writeSwarmStop(stopFile(a),SWARM_STOP.all);
             const r = overlappingRun(runs.values(), p.accounts);
             if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearSwarmStop(stopFile(a)),{
-                job,paused:existsSync(join(prac,'stop-coordinator')),active:resumeOwners,
+                job,paused:hasStopFile('coordinator',root),active:resumeOwners,
                 stopped:a=>existsSync(stopFile(a))||existsSync(stopFile(a.toLowerCase())),settled:a=>defaultRepairProofs.readProof(a,LIVE_SERVER).state==='confirmed',
                 supplyExhausted:(a,priorEnv)=>{
                     const s=(statuses as {name?:string;server?:string;result?:string}[]).find(row=>row?.name?.toLowerCase()===a.toLowerCase()&&row?.server===LIVE_SERVER);
@@ -1098,14 +1110,19 @@ if (import.meta.main) {
                     :job.whenCargoFrom&&!courierDeliveryWaiting(job.whenCargoFrom,job.demandNear,plan.jobs)&&!ownedPayoutWaiting(statuses,job.demandNear)?'waiting offline: no nearby owned cargo or payout':null));
                 Object.assign(st, blocked);
                 if (go.length > 0) {
-                    const held = recoverySlotReserve(heldSlot, { recovering: !!recoveryDispatch.active, accounts: p.accounts, now: Date.now() });
-                    const admission = admissionDecision({ running: botsRunning(), external: externalCount(), starting: go.length + held, startingReserve: startReserve(p, go.length),
-                        pending: pendingCount(), freeGB: freemem() / 2 ** 30, minFreeGB: plan.minFreeGB, maxBots: plan.maxBots });
-                    if (!admission.allowed) for (const a of go) st[a] = admission.reason === 'maxBots' ? 'waiting: maxBots'
-                        : `waiting: projected ${admission.projectedFreeGB.toFixed(1)} GB free after ${admission.reserveGB} GB startup reserve < ${admission.floorGB} GB floor`;
-                    else {
-                        try { start(p, go); for (const a of go) st[a] = 'starting'; }
-                        catch(e) { for(const a of go) st[a]=`paused: ${String(e)}`; }
+                    const infraCheck = infraBreaker.canProceed();
+                    if (!infraCheck.allowed) {
+                        for (const a of go) st[a] = `waiting: infra circuit backoff (${infraCheck.kind})`;
+                    } else {
+                        const held = recoverySlotReserve(heldSlot, { recovering: !!recoveryDispatch.active, accounts: p.accounts, now: Date.now() });
+                        const admission = admissionDecision({ running: botsRunning(), external: externalCount(), starting: go.length + held, startingReserve: startReserve(p, go.length),
+                            pending: pendingCount(), freeGB: freemem() / 2 ** 30, minFreeGB: plan.minFreeGB, maxBots: plan.maxBots });
+                        if (!admission.allowed) for (const a of go) st[a] = admission.reason === 'maxBots' ? 'waiting: maxBots'
+                            : `waiting: projected ${admission.projectedFreeGB.toFixed(1)} GB free after ${admission.reserveGB} GB startup reserve < ${admission.floorGB} GB floor`;
+                        else {
+                            try { start(p, go); infraBreaker.recordSuccess('proxy'); infraBreaker.recordSuccess('server_drain'); for (const a of go) st[a] = 'starting'; }
+                            catch(e) { observeSwarmInfraFault(infraBreaker, e); for(const a of go) st[a]=`paused: ${String(e)}`; }
+                        }
                     }
                 }
             }

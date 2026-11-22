@@ -1,7 +1,7 @@
 import { rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createBot } from './bots';
-import { rsSdkRoot } from './paths';
+import { practiceBotsRoot, rsSdkRoot } from './paths';
 import { startLite, stopLite } from './lite';
 import { applyPreset, PRESETS } from './presets';
 import { snapshotPracticeSave, verifyInitialOutcome, verifyOutcome, type OutcomeEvidence, type PracticeOutcome, type SaveSnapshot } from './prove-outcome';
@@ -62,7 +62,7 @@ const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 // (World.ts processLogins). A name that never logged in has no session, so its preset save is what loads.
 export const realDeps: ProveDeps = {
     async prepare(bot, preset) {
-        await createBot(bot);
+        await createBot(bot, { legacyVendorDir: true });
         if (preset) {
             const p = PRESETS[preset];
             if (!p) throw new Error(`unknown preset ${preset}`);
@@ -123,7 +123,7 @@ export const realInProcessDeps: InProcessDeps = {
     },
     run: (script, bot, timeoutMs, args = []) => runBun([resolve(script), bot, ...args], timeoutMs, REPO_ROOT),
     async cleanup(bot) {
-        rmSync(join(rsSdkRoot(), 'bots', bot), { recursive: true, force: true });
+        rmSync(join(practiceBotsRoot(), bot), { recursive: true, force: true });
     },
 };
 

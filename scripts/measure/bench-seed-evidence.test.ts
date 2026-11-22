@@ -7,7 +7,7 @@ test.each([0,1,3])('each seed keeps its worker logs, ACKs, trace and stdout with
  const first=seedArtifacts(7,0,jobs,env),second=seedArtifacts(8,jobs>1?1:0,jobs,env);
  for(const field of ['BENCH_OUTPUT_DIR','BENCH_PROFILE_DIR','BENCH_TRACE'])expect(first.env[field]).not.toBe(second.env[field]);
  expect(first.stdout).not.toBe(second.stdout);
- expect(first.out).toBe(join('.practice/aio-bench','seed-7.json'));
+ expect(first.out).toBe(join('.practice/sim/aio-bench','seed-7.json'));
  expect(first.env.Q_BURST).toBe('0');
  expect(env).toEqual({BENCH_TRACE:'.practice/test-trace',Q_BURST:'0'});
 });

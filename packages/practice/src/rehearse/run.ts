@@ -7,7 +7,7 @@ import { killTree } from '../../../core/src/proc';
 import { missionSignature } from '../../../core/src/session-admission';
 import { capabilityRevision, workerEntries } from '../../../core/src/worker-release';
 import { createBot } from '../bots';
-import { practiceDir, rsSdkRoot } from '../paths';
+import { practiceBotsRoot, practiceDir, rsSdkRoot } from '../paths';
 import { applyPreset, PRESETS } from '../presets';
 import { runBotName } from '../prove';
 import { addEntry, captureSave, loadSnapshot, onlineState, playerSavePath, rsSdkRevision, summarize, type SaveSummary } from '../save-library';
@@ -34,7 +34,7 @@ async function spawnSuppliers(
         let helper = runBotName(helperBase, i + 1);
         while (seenHelpers.has(helper.toLowerCase())) helper = runBotName(helperBase, i + 1);
         seenHelpers.add(helper.toLowerCase());
-        if (existsSync(join(rsSdkRoot(), 'bots', helper))) throw new Error('fresh supplier account required');
+        if (existsSync(join(practiceBotsRoot(), helper)) || existsSync(join(rsSdkRoot(), 'bots', helper))) throw new Error('fresh supplier account required');
         const helperSave = playerSavePath(helper);
         if (existsSync(helperSave)) throw new Error('fresh supplier account already has an engine save');
         const helperState = await onlineState(helper, endpoints.port);
@@ -63,7 +63,7 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
     if (seg.capture?.when) checkExpect({position: {x: 0, z: 0, level: 0}, skills: {}, inventory: {}, worn: {}, bank: {}, varps: 0}, seg.capture.when);
     mkdirSync(opts.out, {recursive: true});
     const account = runBotName('rh' + seg.id.replace(/[^a-z0-9]/gi, '').slice(0, 3), 1);
-    if (existsSync(join(rsSdkRoot(), 'bots', account))) throw new Error('fresh account required');
+    if (existsSync(join(practiceBotsRoot(), account)) || existsSync(join(rsSdkRoot(), 'bots', account))) throw new Error('fresh account required');
     const savePath = playerSavePath(account);
     const fresh = 'fresh' in seg.start;
     if (fresh) {

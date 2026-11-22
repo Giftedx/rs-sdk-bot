@@ -10,6 +10,7 @@ import { shareLocIndex } from '../loc-index-share';
 import { isLocalServer } from '../localserver';
 import { loadPathfinding, pathfindingSnapshotUsable } from '../pathcache';
 import { planLockDir, withPlanWrite } from '../plan-lock';
+import { hasStopFile, lifecycleRootForServer } from '../practice-paths';
 import { getProgressionAdapter, type ProgressionAdapter } from '../progression-adapter';
 import type { WorkDescriptor } from '../progression-policy';
 import { attachProgressionSession, preflightProgressionWork, processWork } from '../progression-session';
@@ -69,13 +70,12 @@ export async function connectInProcess(opts: {
     }
     const cacheDir = join(repoRoot, '.practice', 'cache');
     mkdirSync(cacheDir, { recursive: true });
-    const lifecycle: NonNullable<Parameters<typeof beginSessionAttempt>[1]> = { root: opts.lifecycleRoot };
+    const lifecycle: NonNullable<Parameters<typeof beginSessionAttempt>[1]> = { root: opts.lifecycleRoot ?? lifecycleRootForServer(server, repoRoot) };
     const beforeConnect = () => {
         const currentTicket = assertLoginAllowed(opts.name, Date.now(), process.env, server);
         if (currentTicket !== ticket) throw Error('specialist authorization changed before login');
         if (!isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot)) throw Error('fleet controller lease unavailable');
-        const stopped = (file: string) => existsSync(join(repoRoot, '.practice', file));
-        if (live && (stopped('stop-' + opts.name) || stopped('stop-' + opts.name.toLowerCase()) || swarm && stopped('stop-swarm'))) {
+        if (live && (hasStopFile(opts.name, repoRoot) || (swarm && hasStopFile('swarm', repoRoot)))) {
             throw Error('live admission paused by stop file');
         }
         if (live && opts.recoverSwarm) assertSpentRecoveryConnection(opts.recoverSwarm, opts.name, server, repoRoot);

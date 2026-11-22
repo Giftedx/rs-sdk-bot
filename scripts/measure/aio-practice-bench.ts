@@ -43,6 +43,7 @@ import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, watch} from 
 import {createHash} from 'node:crypto';
 import {dirname, join, resolve} from 'node:path';
 import {FREE_FLOOR_GB} from '../../packages/core/src/memory';
+import {simBenchDir, simBotsDir} from '../../packages/core/src/practice-paths';
 import {fleet, freeGB, unitsThatFit} from '../heavy-admission';
 import {BENCH_CASE_GB, FLEET_STOP_EXIT, LIVE_MAX_ENGINES, START_REFUSED_EXIT, admitStart, fleetStop, liveBotProcs, readFleetFacts} from './bench-start-check';
 import {BUDGET_EXIT, BUDGET_MIN, budgetRefusal, estimateRun, parseAckStats, parseSimStat, readElapsed, readSince, recordElapsed} from './bench-budget';
@@ -64,10 +65,10 @@ const root = resolve(import.meta.dir, '..', '..');
 
 // Multi-seed children keep separate evidence even when only one engine fits.
 export function seedArtifacts(seed: number, job: number, jobs: number, env: Record<string, string | undefined>): {out: string; stdout: string; env: Record<string, string | undefined>} {
-  const out = join(env.BENCH_SEED_OUT ?? '.practice/aio-bench', `seed-${seed}.json`);
+  const out = join(env.BENCH_SEED_OUT ?? '.practice/sim/aio-bench', `seed-${seed}.json`);
   return {out, stdout: join(dirname(out), `seed-${seed}.log`), env: {
     ...env, BENCH_OUT: out,
-    BENCH_OUTPUT_DIR: env.BENCH_OUTPUT_DIR ? join(env.BENCH_OUTPUT_DIR, `seed-${seed}`) : `.practice/aio-bench/output-seed-${seed}`,
+    BENCH_OUTPUT_DIR: env.BENCH_OUTPUT_DIR ? join(env.BENCH_OUTPUT_DIR, `seed-${seed}`) : `.practice/sim/aio-bench/output-seed-${seed}`,
     BENCH_PROFILE_DIR: join(env.BENCH_PROFILE_DIR ?? join(dirname(out), 'profile'), `seed-${seed}`),
     ...(env.BENCH_TRACE ? {BENCH_TRACE: join(env.BENCH_TRACE, `seed-${seed}`)} : {}),
     ...(jobs > 1 ? {BENCH_SLOT_BASE: String(job * 8), BENCH_PARALLEL: '1'} : {}),
@@ -218,7 +219,7 @@ const RUNS = Number(process.env.BENCH_RUNS ?? 1);
 const TIMEOUT = Number(process.env.BENCH_TIMEOUT_MS ?? 600_000);
 const CONCURRENCY = Math.max(1, Number(process.env.BENCH_CONCURRENCY ?? 1));
 const ONLY = process.env.BENCH_ONLY ? new RegExp(process.env.BENCH_ONLY) : undefined;
-const OUT = process.env.BENCH_OUT ?? '.practice/aio-bench/last.json';
+const OUT = process.env.BENCH_OUT ?? '.practice/sim/aio-bench/last.json';
 // BENCH_LOCKSTEP=1 runs the lockstep engine; BENCH_SEED (default 1) seeds its random rolls from each bench login.
 const LOCKSTEP = process.env.BENCH_LOCKSTEP === '1';
 const SEED = Number(process.env.BENCH_SEED ?? 1);
@@ -234,7 +235,7 @@ const SLOT_PORT = Number(process.env.BENCH_PORT_BASE ?? 21000);
 // engine instance and market database (`--seeds ... --seed-jobs n` sets it for each child).
 const SLOT_BASE = Math.max(0, Number(process.env.BENCH_SLOT_BASE ?? 0));
 // BENCH_OUTPUT_DIR: the folder of the whole output of each case (one folder for each child of `--seed-jobs`).
-const OUTPUT_DIR = process.env.BENCH_OUTPUT_DIR ?? '.practice/aio-bench/output';
+const OUTPUT_DIR = process.env.BENCH_OUTPUT_DIR ?? '.practice/sim/aio-bench/output';
 const TRACE_DIR = process.env.BENCH_TRACE;
 
 // Kept results: a lockstep case on a fresh engine with one seed gives the same row each time, so the row is stored
@@ -243,7 +244,7 @@ const TRACE_DIR = process.env.BENCH_TRACE;
 // constants used by pass predicates; a function's text alone does not describe its closure. A data file a worker
 // reads at run time (knowledge/, vendor content) is not in the hash: use BENCH_CACHE=0 after such a change.
 const CACHE = FRESH && LOCKSTEP && process.env.BENCH_CACHE !== '0';
-const CACHE_DIR = '.practice/aio-bench/cache';
+const CACHE_DIR = '.practice/sim/aio-bench/cache';
 function importClosure(entry: string, seen = new Set<string>()): Set<string> {
   const file = resolve(root, entry);
   if (seen.has(file) || !existsSync(file)) return seen;
@@ -401,16 +402,15 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888, ackFile?: s
           const saveDir = preparePresetDirectory();
           const all = [{ name, conf }, ...c.companions!.map(k => ({ name: name + k.suffix, conf: k.presetConfig ?? PRESETS[k.preset]! }))]
             .map(a => ({ ...a, path: join(saveDir, `${a.name.toLowerCase()}.sav`) }));
-          const missing = all.filter(a => !existsSync(join(rsSdkRoot(), 'bots', a.name, 'bot.env')));
-          for (let i = 0; i < missing.length; i += 16) await Promise.all(missing.slice(i, i + 16).map(a =>
-            Bun.spawn(['bun', 'bots/create-bot.ts', a.name, '--local', '--no-chat'], { cwd: rsSdkRoot(), stdout: 'ignore', stderr: 'ignore', windowsHide: true }).exited));
+          const missing = all.filter(a => !existsSync(join(simBotsDir(root), a.name, 'bot.env')));
+          for (let i = 0; i < missing.length; i += 16) await Promise.all(missing.slice(i, i + 16).map(a => createBot(a.name)));
           const code = `import { generateSave } from './sdk/test/utils/save-generator.ts';
 for (const a of JSON.parse(await Bun.file(process.env.BULK_FILE).text())) {
   const path = await generateSave(a.name, a.conf);
   if (path !== a.path || !await Bun.file(a.path).exists()) throw Error('unexpected preset save path: ' + path);
 }
 console.log('SAVES_DONE');`;
-          const bulk = resolve('.practice/aio-bench', `bulk-${name}.json`);
+          const bulk = resolve(simBenchDir(root), `bulk-${name}.json`);
           mkdirSync(dirname(bulk), { recursive: true });
           writeFileSync(bulk, JSON.stringify(all));
           const made = Bun.spawnSync(['bun', '-e', code], { cwd: rsSdkRoot(), env: { ...process.env, BULK_FILE: bulk }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
@@ -444,7 +444,7 @@ console.log('SAVES_DONE');`;
         return { stdout: out + err, exitCode };
       }),
       cleanup: name => timed('cleanupMs', async () => {
-        rmSync(join(rsSdkRoot(), 'bots', name), { recursive: true, force: true });
+        rmSync(join(simBotsDir(root), name), { recursive: true, force: true });
       }),
     },
   );

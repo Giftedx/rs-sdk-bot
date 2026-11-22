@@ -7,12 +7,13 @@ import {guildActorFacts} from './guild-facts';
 import {equipmentObserved} from './container-observation';
 import {readLogoutProof} from './session-lifecycle';
 import {observedDoorStates} from './door-policy';
+import {lifecycleRootForRead, statusDirForServer} from './practice-paths';
 
-// Live status for the dashboard (packages/dashboard): every bot writes .practice/status/<name>.json every few ticks.
+// Live status for the dashboard (packages/dashboard): live bots write .practice/live/status/<name>.json
+// and practice bots write .practice/sim/status/<name>.json every few ticks.
 // Role: env BOT_ROLE, else the names list the account comes from. Goal: env BOT_GOAL, else the script file.
 // Phase: the last "MILESTONE <name>" line the script printed. The bank is kept from the last time it was open.
 
-const dir = join(resolve(import.meta.dir, '..', '..', '..'), '.practice', 'status');
 let baseIds: Map<number, number> | undefined;
 function baseId(id: number): number {
     if (!baseIds) {
@@ -129,12 +130,13 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
     });
 }
 
-export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null; progression?:{decision():any;method?():string|null;binding?():{boundMethod:string|null;source:string|null;consumer:unknown}} }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
+export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null; progression?:{decision():any;method?():string|null;binding?():{boundMethod:string|null;source:string|null;consumer:unknown}} }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string, opts: { dir?: string; lifecycleRoot?: string } = {}) {
     captureMilestones();
     const key = s.name.toLowerCase(), lines = emptyLines(perBot.get(key)?.attributed ?? false);
     perBot.set(key, lines);
-    mkdirSync(dir, { recursive: true });
-    const file = join(dir, `${s.name}.json`);
+    const statusDir = opts.dir ?? statusDirForServer(server);
+    mkdirSync(statusDir, { recursive: true });
+    const file = join(statusDir, `${s.name}.json`);
     let bank: { id: number; baseId: number; name: string; count: number }[] | null = null;
     let bankAt: number | null = null;
     const started = Date.now();
@@ -185,7 +187,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
         if (current) return rows !== null;
         // Logout clears live container readiness. Retain only this session's actual matching saved kit.
         if (inGame !== false || observedEquipment === null || rows === null || JSON.stringify(rows) !== observedEquipment) return false;
-        const proof = readLogoutProof(s.name, server);
+        const proof = readLogoutProof(s.name, server, { root: opts.lifecycleRoot ?? lifecycleRootForRead(server) });
         return proof.state === 'confirmed' && proof.attemptId === (s as {lifecycle?:{attemptId?:unknown}}).lifecycle?.attemptId;
     };
     let lastBankGeneration = 0;

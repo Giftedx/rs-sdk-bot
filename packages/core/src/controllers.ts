@@ -19,6 +19,7 @@
 import { existsSync, linkSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { hasStopFile } from './practice-paths';
 
 // The fleet agent's pass is 10 minutes and its sync can wait for the network. 25 minutes is two passes and a margin.
 export const LEASE_STALE_MS = 25 * 60_000;
@@ -186,7 +187,7 @@ export function controllerState(root: string, c: Controller, deps: LeaseDeps = {
     const lease = join(root, c.lease), pid = leaseHolder(lease, deps), started = readLaunch(join(root, c.launch)) !== null;
     let seenAt = readLease(lease)?.at ?? null;
     if (seenAt === null && started) try { seenAt = statSync(join(root, c.launch)).mtimeMs; } catch { /* removed in this instant */ }
-    const state = pid !== null ? 'running' : existsSync(join(root, c.stop)) ? 'stopped' : started ? 'down' : 'never';
+    const state = pid !== null ? 'running' : (existsSync(join(root, c.stop)) || hasStopFile(c.name, root)) ? 'stopped' : started ? 'down' : 'never';
     return { name: c.name, label: c.label, state, pid, seenAt };
 }
 export const controllerStates = (root: string, deps: LeaseDeps = {}): ControllerState[] => CONTROLLERS.map(c => controllerState(root, c, deps));

@@ -18,6 +18,8 @@ import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { stopClearable } from './autopilot';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
+import { findStopFile, liveRoot, statusReadDirs } from '../packages/core/src/practice-paths';
+import { InfraCircuitBreaker, classifyInfraFault } from '../packages/fleet/src/infra-circuit-breaker';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
@@ -62,18 +64,32 @@ export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=
 // the swarm's while a run of the account is still live: `held` names why.
 export function tradeStop(base: string, account: string, now = Date.now()): { held?: string; cleared: boolean } {
     let cleared = false;
+    const seen = new Set<string>();
     for (const name of new Set([account, account.toLowerCase()])) {
-        const file = join(base, '.practice', `stop-${name}`);
-        if (!existsSync(file)) continue;
+        const file = findStopFile(name, base);
+        if (!file || seen.has(file)) continue;
+        seen.add(file);
         let text: string;
         try { text = readFileSync(file, 'utf8'); } catch { return { held: 'stop file unreadable', cleared }; }
         if (!swarmWroteStop(text)) return { held: 'owner stop file', cleared };
         let status: any = null;
-        try { status = JSON.parse(readFileSync(join(base, '.practice', 'status', `${account}.json`), 'utf8')); } catch { /* No status row: the account is offline. */ }
+        for (const dir of statusReadDirs(base)) {
+            try { status = JSON.parse(readFileSync(join(dir, `${account}.json`), 'utf8')); break; } catch { /* check fallback */ }
+        }
         if (!stopClearable(status, now)) return { held: 'its last run is still ending', cleared };
         if (clearSwarmStop(file)) cleared = true;
     }
     return { cleared };
+}
+
+export function recordAgentInfraResult(breaker: InfraCircuitBreaker, output: string, exitCode: number | null): boolean {
+    const kind = classifyInfraFault(output);
+    if (kind) {
+        breaker.recordFailure(output, kind);
+        return true;
+    }
+    if (exitCode === 0) breaker.recordSuccess('remote_git_claim');
+    return false;
 }
 
 // The sync child's own RESULT line; a child that printed none reports its exit code.
@@ -112,9 +128,12 @@ if (import.meta.main) {
     // The record of a daemon start: the watchdog starts an agent again only from it, with these settings. A --once
     // pass writes none.
     if (!once) saveLaunch(join(root, controllerNamed('fleet-agent').launch), []);
+    const infraBreaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(root), 'infra-circuit-breaker.json') });
     const sync = () => {
         const p = Bun.spawnSync(['bun', 'scripts/fleet-sync.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
-        console.log(`FLEET_AGENT sync ${syncResult(`${p.stdout.toString()}${p.stderr.toString()}`, p.exitCode)} at ${new Date().toISOString()}`);
+        const combined = `${p.stdout.toString()}${p.stderr.toString()}`;
+        recordAgentInfraResult(infraBreaker, combined, p.exitCode);
+        console.log(`FLEET_AGENT sync ${syncResult(combined, p.exitCode)} at ${new Date().toISOString()}`);
     };
     const startedAt = Date.now();
     let marketRefresh: ReturnType<typeof spawn> | null = null;
@@ -127,9 +146,18 @@ if (import.meta.main) {
             await Bun.sleep(60_000);
             continue;
         }
-        // Bring this checkout to current master first (packages/router/src/live-update.ts), so the sync and the trades run merged fixes.
-        const update = Bun.spawnSync(['bun', 'packages/router/src/live-update.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
-        const updateLine = lastResult(update.stdout.toString());
+        const infraGate = infraBreaker.canProceed();
+        if (!infraGate.allowed) {
+            console.log(`FLEET_AGENT infra circuit open (${infraGate.reason}); backing off at ${new Date().toISOString()}`);
+            if (once && !running.size) break;
+            await Bun.sleep(Math.min(CYCLE, Math.max(5_000, infraGate.waitMs)));
+            continue;
+        }
+        // Bring this checkout to current master first (packages/fleet/src/live-update.ts), so the sync and the trades run merged fixes.
+        const update = Bun.spawnSync(['bun', 'packages/fleet/src/live-update.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
+        const updateOut = `${update.stdout.toString()}${update.stderr.toString()}`;
+        const updateLine = lastResult(updateOut);
+        if (update.exitCode !== 0) recordAgentInfraResult(infraBreaker, updateOut, update.exitCode);
         if (!/ live-update (?:none|off|paused)/.test(updateLine)) console.log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
         // The update and the sync are child processes that can wait on the network for longer than the lease time.
         // After each one, this agent goes on only while it still holds the lease. The top of the loop handles a loss.
@@ -164,6 +192,8 @@ if (import.meta.main) {
             const p = Bun.spawn(['bun', TRADE_SCRIPT, t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
             void (async () => {
                 const out = await new Response(p.stdout).text();
+                const exitCode = await p.exited;
+                if (exitCode !== 0) recordAgentInfraResult(infraBreaker, out, exitCode);
                 console.log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);
                 running.delete(t.account.toLowerCase()); sync();
             })();
