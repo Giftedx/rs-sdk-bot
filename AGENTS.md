@@ -2,7 +2,7 @@
 
 Current user instructions win. Read [GLOSSARY.md](GLOSSARY.md) for domain terms, the [plan](docs/plans/joined-plan.md) for priorities and the [script contract](docs/script-contract.md) for acceptance. Carry forward explicit authorization. Verify current state before acting.
 
-Goals (owner): the main account Haggis rank 1 on the Overall board under the current record; specialist accounts rank 1 on each skill board they can win by a priced margin; every quest done; every useful item and best-in-slot gear held; a PK army of maxed tribrids (99 Attack, Strength, Defence, Ranged, Magic, Prayer and Hitpoints) that kills players and holds the Wilderness. Gold is a supply for these goals, never a goal. Helper levels count only when they produce a route supply, an unlock or a specialist win. Rank 1 on all 24 boards at once is not reachable against the specialist records, so it is not a target.
+Goals (owner, detailed in [the plan](docs/plans/joined-plan.md)): Haggis rank 1 Overall under the record; specialist rank 1 on each winnable skill board by a priced margin (not all 24 at once); every quest; useful items and best-in-slot gear; a maxed-tribrid PK army holding the Wilderness. Gold and helper levels count only when they supply a route, unlock, kit, or specialist win.
 
 ## Complete authorized work
 
@@ -26,9 +26,9 @@ Keep the loop fast:
 - Read the pass and fail counts of every test run without filtering out fail lines. Join a commit to its test with `&&` so a failed test stops the commit.
 - Run one heavy job at a time (`now.ts` `heavy` line). `bun run bench` refuses to start beside another gate, bench or test-shard run, on a used port, or below its memory floor; pass `--wait <minutes>` to wait for a safe start. Run an unrelated failing test file alone before debugging it.
 - Start a slow step once and work on another item until it finishes. Collect results with bounded harness waits; never use repeated starts or a `sleep` loop.
-- Use the available shell: prefer Bash with `git -C <path>` and absolute paths (`/mnt/c`, `/mnt/f` in WSL), or Windows Git and Windows Bun with Windows paths for a Windows worktree. Use PowerShell only for Windows cmdlets.
-- Edit files with Write, Edit or `apply_patch` rather than shell text munging. Put scripted loops or long commit messages (`git commit -F <file>`) in `.practice/<task>/`.
-- Never search `.practice` from its root (it holds hundreds of thousands of files); list or search an exact subfolder such as `.practice/coordinator/runs/<task>`. Set `CLAUDE_CODE_GLOB_NO_IGNORE=false` in Claude Code; pass `--hidden` or `--no-ignore` to `rg` only on a named subfolder.
+- Use the shell the session exposes: when Bash is available, prefer Bash with `git -C <path>` and absolute paths (`/mnt/c`, `/mnt/f` in WSL) and use PowerShell only for Windows cmdlets; in `pwsh`-only harnesses (such as Antigravity on Windows), run Windows `git` and `bun` natively with Windows paths.
+- Edit files with the session's file-editing tools rather than shell text munging. Put scripted loops or long commit messages (`git commit -F <file>`) in `.practice/<task>/`.
+- Never search `.practice` from its root (it holds hundreds of thousands of files); list or search an exact subfolder such as `.practice/coordinator/runs/<task>`. Pass `--hidden` or `--no-ignore` to `rg` only on a named subfolder.
 - Do not make reflection or memory writes a completion gate; write memory only when the owner asks.
 - When an action has no effect, read `.practice/aio-bench/output/<case>.log` and `BENCH_TRACE=<dir>` before changing the worker. When a wait repeats across edits, measure and cut the wait first.
 - Practice and bench rules (10-minute `--budget`, `--seeds` parallelism, `--profile` on >1-minute runs to eliminate 2 s capped ticks, lockstep/fine-timer/no-gateway defaults, and `bun scripts/hosted-bench.ts` when live bots run on the PC) live in [the AIO bench](docs/script-contract.md#the-aio-bench).
@@ -41,7 +41,7 @@ On Windows every background subprocess uses `windowsHide:true`. Run only the ser
 
 ## Several agents
 
-Several agents work at once: sessions on this PC (Claude Code, Codex) and cloud sessions (Codex, Claude Code). Each takes work from the lane the [plan](docs/plans/joined-plan.md) Lanes table gives it.
+Several agents work at once: local sessions on this PC (Claude Code, Codex, Antigravity) and cloud sessions (Codex, Claude Code). Each takes work from its lane in [the plan](docs/plans/joined-plan.md) (or coordinates via `gh pr list` and `bun scripts/now.ts` when unassigned).
 
 - One change, one branch `<agent>/<topic>`, one PR to `master`. Check `gh pr list` for file ownership before editing. Open a ready PR at the first push with proof in its body; never leave finished work in draft.
 - Merge authorized changes once applicable checks pass: code needs full `bun run typecheck` and `bun test ./scripts ./packages` via the local gate or Linux CI; docs need document checks. Do not ask for repeated approval on routine merges or deployments.
@@ -71,9 +71,9 @@ Start from the fastest method shown (the record route's method for route steps) 
 - Fill qualified live slots on the PC across skills, quests, combat, resources and route supply. Prefer existing shark stock over new trout or salmon.
 - Expand in batches of up to 4 accounts after two fresh useful live results, prepared demand and measured RAM, CPU and tick headroom. Keep 4 GiB free (`packages/core/src/memory.ts`) and one practice slot; the cap of 17 is not fixed.
 - Create an account only with a proved useful first job; a claimed or blocked account is not progress. First login registers the account and starts its clock.
-- New live names must be 1-12 letters or digits from `packages/core/src/names.ts` (add new ones there to the same standard): a real penis joke where both the RuneScape meaning and double meaning fit the role (`Moneyshot`, `Earlyshooter`, `Porksword`, `YewGotWood`, `MeatNTwoVeg`, `TossTheCaber`), Scottish where fitting, never a rude word bolted onto a skill word. Keep existing accounts.
+- When creating a new live account, pick or add a name following the 1-12 character naming standard and examples at the top of `packages/core/src/names.ts`. Keep existing accounts.
 - Every assignment names one owner, budget, acceptance and next action; a vacant slot names its constraint. `swarm.json` owns live assignments (`scripts/fleet.ts` holds templates; `apply` only creates a missing plan).
-- Each named fleet side (`FLEET_SIDE`: `local`, `cloud`, `claude-cloud`, `claude-cloud-2`) owns its accounts in `fleet/owners.json`; `openBot` refuses other sides, and main and specialist accounts never move (`packages/core/src/fleet-assign.ts`, `scripts/fleet-sync.ts`). Any machine with `FLEET_VAULT_KEY` logs in assigned accounts via the vault (`packages/core/src/fleet-vault.ts`); cross-side transfers use fleet orders (`scripts/fleet-order.ts`, `scripts/fleet-trade.ts`, `scripts/fleet-agent.ts --daemon` on `fleet-data`). Cloud sides run through `scripts/cloud-side.ts` (`scripts/cloud-launch.ts` starts silent cloud sides, at most one Claude Code and one Codex session); a failed bootstrap permits diagnosing its saved log, applying an existing proved repair, and running a focused check before one changed retry while preserving source/vendor edits and credentials. An SDK reset requires fresh classification and a verified recovery copy (retain diagnostics if unresolved). See [README.md](README.md#one-account-pool-across-sides) for vault, adoption, `FLEET_SEED`, cloud launch and `fleet-data` sync procedures.
+- Each named fleet side (`FLEET_SIDE`: `local`, `cloud`, `claude-cloud`, `claude-cloud-2`) owns its accounts in `fleet/owners.json`; `openBot` refuses other sides, and main and specialist accounts never move (`packages/core/src/fleet-assign.ts`, `scripts/fleet-sync.ts`). Cross-side transfers use fleet orders (`scripts/fleet-order.ts`, `scripts/fleet-trade.ts`, `scripts/fleet-agent.ts --daemon`). See [README.md](README.md#one-account-pool-across-sides) for vault (`FLEET_VAULT_KEY`), adoption, `FLEET_SEED`, cloud-side launch/bootstrap (`scripts/cloud-side.ts`, `scripts/cloud-launch.ts`), SDK-reset recovery, and `fleet-data` sync procedures.
 
 ## Game and host limits
 
