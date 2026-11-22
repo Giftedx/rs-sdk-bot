@@ -4,18 +4,54 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { activeAccounts, carriedPrior, ensureWorktree, keepPublished, planView, pullFleetData, reattach, sideCapacity, sideCard, snapshot, worktreeProblem } from './fleet-sync';
 import { SWARM_STOP } from './swarm';
-import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
-import { mergeJobs } from '../packages/core/src/coordinator-jobs';
+import { CLAIM_MAX_AGE_MS } from '../packages/fleet/src/trade-plan';
+import { runBrainCycle } from '../packages/fleet/src/brain-runtime';
+import { brainPlannedJobs } from './fleet-sync';
+import { validateFleetState } from '../packages/brain/src/contracts';
 import { observedStock } from '../packages/planner/src/supply-bill';
 import { canonicalRows } from '../packages/core/src/fleet-snapshots';
 import { remoteBots } from '../packages/dashboard/fleet-view';
 import { publicView } from '../packages/dashboard/publish-relay';
 
-test('a coordinator job takes its account in the view, as the swarm runs it', () => {
-    const owners = new Map([['oreelse', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]) as any;
-    const owner = [{ account: 'OreElse', script: 'scripts/goldfarm.ts', enabled: true }];
-    const coordinator = [{ account: 'OreElse', script: 'scripts/magic-order.ts', enabled: true, goal: 'run-magic' }];
-    expect(planView(mergeJobs(owner, coordinator), 'local', owners, 1).jobs.filter(j => j.enabled)).toEqual([{ account: 'OreElse', script: 'scripts/magic-order.ts', enabled: true, goal: 'run-magic' }]);
+test('a Brain-planned active chain appears in the view without duplicating owner jobs in swarm.json', () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-sync-brain-'));
+    try {
+        const now = 1_700_000_000_000;
+        const owners = new Map([['oreelse', { side: 'local', server: 'rs-sdk-demo.fly.dev' }], ['shaftmaker', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]) as any;
+        const owner = [{ account: 'OreElse', script: 'scripts/goldfarm.ts', enabled: true }];
+        mkdirSync(join(base, 'fleet'), { recursive: true });
+        writeFileSync(join(base, 'fleet', 'owners.json'), JSON.stringify({ accounts: { OreElse: { side: 'local', server: 'rs-sdk-demo.fly.dev' }, Shaftmaker: { side: 'local', server: 'rs-sdk-demo.fly.dev' } } }));
+        writeFileSync(join(base, 'swarm.json'), JSON.stringify({ maxBots: 4, minFreeGB: 4, jobs: owner }));
+        const cycle = runBrainCycle({ root: base, fleetDir: join(base, 'fleet'), now: now - 1000, side: 'local', maxBots: 4, marketQuotes: {} });
+        const state = {
+            ...cycle.fleetState,
+            activeChains: {
+                OreElse: {
+                    account: 'OreElse',
+                    compiledAt: now - 1000,
+                    scorePerHour: 10_000,
+                    totalEstimatedTicks: 100,
+                    steps: [{ stepKind: 'work' as const, activityId: 'skiller:fishing:cage', demandId: 'd-ore', workerId: 'skiller', batchUnits: 1, estimatedTicks: 100, expectedValuePerHour: 10_000, config: { skill: 'fishing', method: 'cage' } }],
+                },
+                Shaftmaker: {
+                    account: 'Shaftmaker',
+                    compiledAt: now - 1000,
+                    scorePerHour: 10_000,
+                    totalEstimatedTicks: 100,
+                    steps: [{ stepKind: 'work' as const, activityId: 'skiller:fishing:cage', demandId: 'd-fish', workerId: 'skiller', batchUnits: 1, estimatedTicks: 100, expectedValuePerHour: 10_000, config: { skill: 'fishing', method: 'cage' } }],
+                },
+            },
+        };
+        expect(validateFleetState(state)).toEqual([]);
+        mkdirSync(join(base, '.practice', 'live'), { recursive: true });
+        writeFileSync(join(base, '.practice', 'live', 'fleet-state.json'), JSON.stringify(state));
+        const combined = [...owner, ...brainPlannedJobs(base, owner, now)];
+        const enabled = planView(combined, 'local', owners, now).jobs.filter(j => j.enabled);
+        expect(enabled.map(j => j.account)).toEqual(['OreElse', 'Shaftmaker']);
+        expect(enabled[0]!.script).toBe('scripts/goldfarm.ts');
+        expect(enabled[1]!.script).toBe('scripts/aio-skiller.ts');
+        expect(enabled[1]!.goal).toBe('d-fish');
+    } finally { rmSync(base, { recursive: true, force: true }); }
 });
 
 test('the plan view holds only this side\'s jobs, never the main account or job notes', () => {

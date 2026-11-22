@@ -14,6 +14,7 @@ import {
 import { basename, join, resolve } from 'node:path';
 import { CONTROLLERS, GATE_STALE_MS, LEASE_STALE_MS, leaseHolder, readLease } from '../../core/src/controllers';
 import {
+    fleetStateFile,
     listStopEntries,
     liveRoot,
     practiceRoot,
@@ -33,7 +34,6 @@ export const DEFAULT_FIXTURE_GRACE_MS = 0;
 export const PROTECTED_STOP_FLAGS: ReadonlySet<string> = new Set([
     'coordinator',
     'swarm',
-    'autopilot',
     'dashboard-publish',
     'pk-squad',
     'runite-radar',
@@ -144,7 +144,7 @@ function loadPlanMetadata(root: string): {
     };
     for (const file of [
         join(root, 'swarm.json'),
-        join(root, '.practice', 'coordinator', 'jobs.json'),
+        fleetStateFile(root),
         join(root, 'fleet', 'owners.json'),
     ]) {
         const parsed = safeReadJson(file);

@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import * as botCore from '../../core/src/bot';
 import * as walking from '../../core/src/walk';
 import { MARKET_MODES, planGeRestockOrders, resolveMarketStep } from '../../../scripts/aio-market';
-import { intentForEntry } from '../../planner/src/progression-catalog';
 import {
     PROFILES,
     SWORD,
@@ -427,21 +426,7 @@ describe('market WorkerModule contract compliance', () => {
     });
 });
 
-describe('market:shop-buy progression intent and scripts/aio-market.ts shim', () => {
-    test('shopBuyerIntent admits bare market:shop-buy (scripts/aio-market.ts shop-buy) matching market:shop-buy bench preset', () => {
-        const intent = intentForEntry('scripts/aio-market.ts', ['shop-buy'], {}, undefined);
-        expect(intent).toEqual({
-            kind: 'service',
-            objective: expect.stringContaining('finite shop order catherby'),
-        });
-        expect(intentForEntry('scripts/aio-market.ts', ['shop-buy', 'catherby'], {}, undefined)).toEqual({
-            kind: 'service',
-            objective: expect.stringContaining('catherby'),
-        });
-        // Explicit custom ITEMS without a bounded STOCK_TARGET/MAX_ITEMS still requires an explicit bound.
-        expect(intentForEntry('scripts/aio-market.ts', ['shop-buy', 'dargaud', '1600'], { ITEMS: 'mithril.arrow|steel.arrow' })).toBeNull();
-    });
-
+describe('scripts/aio-market.ts shim and resolveMarketStep', () => {
     test('all 12 MARKET_MODES resolve via resolveMarketStep to scripts/aio-market.ts with canonical mode arg', () => {
         expect(MARKET_MODES).toHaveLength(12);
         for (const spec of MARKET_MODES) {

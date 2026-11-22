@@ -126,7 +126,7 @@ test('native Ranged proof binds its actual worker closure and owned files',()=>{
  const s=rangedProofSource();expect(s.runtime).toBe(capabilityRevision(['scripts/ranged-train.ts']));
  expect(Object.keys(s.files)).toEqual(['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts',
   'scripts/gather-combat.ts','scripts/gather-combat-giant.test.ts',
-  'packages/planner/src/progression-ranged.ts','packages/planner/test/progression-ranged.test.ts','packages/practice/src/ranged-progression-case.ts','packages/practice/src/ranged-progression-case.test.ts',
+  'packages/practice/src/ranged-progression-case.ts','packages/practice/src/ranged-progression-case.test.ts',
   'packages/practice/src/ranged-progression-entry.json','scripts/measure/progression-bench-cases.ts','scripts/measure/fleet-player-save.ts','scripts/measure/fleet-player-save.test.ts']);
 },30_000); // Two closure hashes take about 3 s on an idle PC; the default 5 s limit fails under load.
 
@@ -541,7 +541,7 @@ import * as shopBuyer from '../packages/workers/src/market';
 import * as geBuy from '../packages/workers/src/market';
 import {isRangedAcquireMethod} from './ranged-train';
 
-test('runAdaptiveRanged acquires starter bow and arrows via shop progression instead of failing on acquire selected=null',async()=>{
+test('runAdaptiveRanged acquires starter bow and arrows via shop purchases then trains cleanly',async()=>{
     expect(isRangedAcquireMethod('ranged/lowe-buy-shortbow')).toBe(true);
     expect(isRangedAcquireMethod('ranged/ge-buy-willow')).toBe(true);
     expect(isRangedAcquireMethod('ranged/chickens')).toBe(false);
@@ -552,9 +552,9 @@ test('runAdaptiveRanged acquires starter bow and arrows via shop progression ins
     const listeners=new Set<()=>void>();
     const ticker=setInterval(()=>{tick++;for(const cb of [...listeners])cb();},2);
     const pack=[{id:995,name:'Coins',count:10_000,slot:0}];
-    const bank:{id:number;name:string;count:number}[]=[];
+    const bank:{id:number;name:string;count:number}[]=[{id:2142,name:'Cooked meat',count:3}];
     const equipment:{id:number;name:string;count:number}[]=[];
-    const skills=[{name:'Ranged',level:1,baseLevel:1,xp:0},{name:'Hitpoints',level:10,baseLevel:10,xp:xpForLevel(10)},{name:'Defence',level:1,baseLevel:1,xp:0}];
+    const skills=[{name:'Ranged',level:1,baseLevel:1,xp:0},{name:'Hitpoints',level:40,baseLevel:40,xp:xpForLevel(40)},{name:'Defence',level:1,baseLevel:1,xp:0}];
     const sdk={
         config:{browserLaunchUrl:'http://localhost:8880'},
         getState:()=>({tick,player:p,inventory:[...pack],equipment:[...equipment],shop:{isOpen:shopOpen,shopItems:shopOpen?[{id:841,name:'Shortbow',count:4},{id:882,name:'Bronze arrow',count:2000}]:[]},bank:{isOpen:bankOpen,items:[...bank]},skills:skills.map(s=>s.name==='Ranged'?{...s,level:rangedLvl,baseLevel:rangedLvl,xp:rangedXp}:s),quests:[]}),
@@ -567,7 +567,6 @@ test('runAdaptiveRanged acquires starter bow and arrows via shop progression ins
     const s={
         name:'StarterBot',client,sdk,tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
         lifecycle:{domain:'live'},
-        progression:{refresh:()=>({decision:{state:'acquire',selected:null,reason:['no proof'],path:[],alternatives:[],constraints:[],fingerprint:'fp'}}),executing:()=>{throw Error('must not call executing during acquire');}},
         bankObservation:()=>({at:Date.now(),generation,items:bank.map(i=>({id:i.id,count:i.count}))}),
         bot:{
             openBank:async()=>{bankOpen=true;shopOpen=false;generation++;tick+=2;return{success:true};},

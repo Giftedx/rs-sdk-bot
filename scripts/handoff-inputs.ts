@@ -19,12 +19,16 @@ import {runShafts} from './fletch-shafts';
 import {runHeadless} from './fletch-arrows';
 import {walkTarget} from '../packages/workers/src/logistics';
 import {abortable, executionContext} from '../vendor/rs-sdk/sdk/execution-context';
-import {readMergedPlan} from '../packages/core/src/coordinator-jobs';
-import {finiteProgressionAccept} from '../packages/core/src/progression-session';
+import { fleetStateFile } from '../packages/core/src/practice-paths';
 
-// The coordinator installs its assignments only in its overlay, so ownership reads the merged plan.
+// Ownership checks read swarm.json directly when present.
 // A missing swarm.json leaves the jobs unknown, and assertAccountOwnership refuses.
-const ownershipJobs=(root:string)=>existsSync(join(root,'swarm.json'))?readMergedPlan(root).jobs:undefined;
+const ownershipJobs = (root: string): any[] | undefined => {
+    try {
+        const parsed = JSON.parse(readFileSync(join(root, 'swarm.json'), 'utf8'));
+        return Array.isArray(parsed?.jobs) ? parsed.jobs : undefined;
+    } catch { return undefined; }
+};
 
 export function parseHeadlessOrder(args:string[],cap=process.env.CAP??'1600') {
     const [account,mode,output,logs]=args;
@@ -81,13 +85,13 @@ async function headlessMain(io:{root?:string;openBot?:typeof openBot;settle?:typ
     const c=parseHeadlessOrder(process.argv.slice(2)),root=io.root??resolve(import.meta.dir,'..'),dir=join(root,'.practice');
     const host=serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',c.account,'bot.env'),'utf8'));assertServerAllowed(host);
     const owned=(io.ownedAccounts??ownedAccounts)(host),sessions:Session[]=[];
-    const runId=process.env.COORDINATOR_RUN_ID??(process.env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1]??'';
+    const runId=process.env.FLEET_RUN_ID??process.env.COORDINATOR_RUN_ID??(process.env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1]??'';
     let cancelled=false,release:(()=>void)|undefined;
     const cancel=()=>{cancelled=true;};
     const read=(p:string,fallback:any)=>existsSync(p)?JSON.parse(readFileSync(p,'utf8')):fallback;
     const check=()=>{
         if(cancelled)throw Error('headless-order cancelled');
-        assertAccountOwnership([c.account],read(join(dir,'coordinator/state.json'),null),ownershipJobs(root) as any,n=>existsSync(join(dir,'stop-'+n)),runId);
+        assertAccountOwnership([c.account],read(fleetStateFile(root),null),ownershipJobs(root) as any,n=>existsSync(join(dir,'stop-'+n)),runId);
         if(!owned.has(c.account.toLowerCase()))throw Error('not authenticated owned: '+c.account);
         if(!sessions.length)assertRecoverableStatus(read(join(dir,'status',c.account+'.json'),null),null,ownerAlive);
     };
@@ -152,21 +156,6 @@ export function ammoOrderRecord(account:string,args:string[],env:Record<string,s
     if(![c.donor,c.receiver].some(n=>n.toLowerCase()===account.toLowerCase()))throw Error('handoff descriptor account mismatch');
     // A receiver target cannot become a donor acquisition goal, including on standalone CLI calls.
     if(account.toLowerCase()===c.donor.toLowerCase())delete workEnv.PROGRESSION_CONSUMER;
-    const runId=env.COORDINATOR_RUN_ID??(env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1];
-    const file=join(base,'.practice/coordinator/state.json');
-    if(runId&&existsSync(file)){
-        const state=JSON.parse(readFileSync(file,'utf8')),tasks=Array.isArray(state?.tasks)?state.tasks:[];
-        const spec=tasks.find((r:any)=>r.runId===runId)?.spec;
-        if(Array.isArray(spec?.participants)){
-            delete workEnv.PROGRESSION_CONSUMER;
-            const names=spec.participants.map((n:string)=>n.startsWith('@')?tasks.find((r:any)=>r.spec?.id===n.slice(1))?.receipt?.output?.account:n);
-            if(names.length===2&&names.every((n:unknown,i:number)=>typeof n==='string'&&n.toLowerCase()===[c.donor,c.receiver][i]!.toLowerCase())
-                &&names[spec.acceptIndex??0]?.toLowerCase()===account.toLowerCase()){
-                const accept=finiteProgressionAccept(spec.accept);
-                if(accept)workEnv.PROGRESSION_CONSUMER=JSON.stringify(accept);
-            }
-        }
-    }
     return{script,argv:[...args],workArgs:[...args],env:workEnv};
 }
 
@@ -255,20 +244,30 @@ export function handoffCommands(c: Handoff, root: string) {
         donor: [process.execPath,join(root,'scripts/aio-logistics.ts'),c.donor,'banker'] };
 }
 
-// Shared with GE: read-only coordinator/swarm/pause checks. A matching runId
+// Shared with GE: read-only fleet/swarm/pause checks. A matching runId
 // permits only its own assignment. Call acquireAccountLeases before openBot too.
 export function assertAccountOwnership(names:string[],state:any,jobs:any[],stopped:(name:string)=>boolean,runId:string) {
     for(const name of ['coordinator','swarm',...names])if(stopped(name))throw Error(`existing stop-${name}; preserve owner pause`);
-    if(!state||state.version!==1||!Array.isArray(state.tasks)||!Array.isArray(jobs))throw Error('coordinator account ownership unavailable');
+    if(!Array.isArray(jobs))throw Error('swarm job ownership unavailable');
     const targets=names;
-    for(const record of state.tasks.filter((r:any)=>r.status==='running')) {
-        const spec=record.spec;
-        if(!spec)throw Error('coordinator task ownership unknown');
-        const bindings=spec.participants??(spec.account?[spec.account]:spec.accountFrom?['@'+spec.accountFrom]:[]);
-        const accounts=bindings.map((n:string)=>n.startsWith('@')?state.tasks.find((r:any)=>r.spec?.id===n.slice(1))?.receipt?.output?.account:n);
-        if(accounts.some((n:unknown)=>typeof n!=='string'))throw Error('coordinator participant ownership unresolved');
-        for(const name of targets)if(accounts.some((n:string)=>n.toLowerCase()===name.toLowerCase())&&(!runId||record.runId!==runId))
-            throw Error(`account lease conflict: ${name}; coordinator ${spec.id} ${record.runId}`);
+    if(state!==null&&state!==undefined){
+        if(state.schemaVersion===1&&typeof state.accounts==='object'&&state.accounts!==null){
+            for(const name of targets){
+                if(state.accounts[name.toLowerCase()]?.paused===true)throw Error(`account paused in fleet state: ${name}`);
+            }
+        }else if(state.version===1&&Array.isArray(state.tasks)){
+            for(const record of state.tasks.filter((r:any)=>r.status==='running')) {
+                const spec=record.spec;
+                if(!spec)throw Error('coordinator task ownership unknown');
+                const bindings=spec.participants??(spec.account?[spec.account]:spec.accountFrom?['@'+spec.accountFrom]:[]);
+                const accounts=bindings.map((n:string)=>n.startsWith('@')?state.tasks.find((r:any)=>r.spec?.id===n.slice(1))?.receipt?.output?.account:n);
+                if(accounts.some((n:unknown)=>typeof n!=='string'))throw Error('coordinator participant ownership unresolved');
+                for(const name of targets)if(accounts.some((n:string)=>n.toLowerCase()===name.toLowerCase())&&(!runId||record.runId!==runId))
+                    throw Error(`account lease conflict: ${name}; coordinator ${spec.id} ${record.runId}`);
+            }
+        }else{
+            throw Error('fleet account ownership unavailable');
+        }
     }
     for(const job of jobs)for(const name of targets)
         // A standing owner job (swarm STANDING=1) is its own assignment: the swarm passes that job's goal as BOT_GOAL.
@@ -454,7 +453,7 @@ export async function main(io:{root?:string;openBot?:typeof openBot;settle?:type
     assertServerAllowed(host);
     const order=exactOrder(key,c.donor,c.receiver,host,c.items,join(dir,'item-handoffs'));
     const owned=(io.ownedAccounts??ownedAccounts)(host),sessions:Session[]=[];
-    const runId=process.env.COORDINATOR_RUN_ID??(process.env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1]??'';
+    const runId=process.env.FLEET_RUN_ID??process.env.COORDINATOR_RUN_ID??(process.env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1]??'';
     const saved=order.read(),recoveryOwner=saved?.owner,recoveryOwners=[recoveryOwner,...(saved?.previousOwners??[])].filter(Boolean);
     const alive=ownerAlive;
     if(recoveryOwner&&recoveryOwner.pid!==process.pid&&alive(recoveryOwner.pid))throw Error('order owner still alive: '+recoveryOwner.pid);
@@ -463,7 +462,7 @@ export async function main(io:{root?:string;openBot?:typeof openBot;settle?:type
     const read=(p:string,fallback:any)=>existsSync(p)?JSON.parse(readFileSync(p,'utf8')):fallback;
     const check=()=>{
         if(cancelled)throw Error('handoff cancelled');
-        assertHandoffOwnership(c,read(join(dir,'coordinator/state.json'),null),ownershipJobs(root) as any,n=>existsSync(join(dir,'stop-'+n)),runId);
+        assertHandoffOwnership(c,read(fleetStateFile(root),null),ownershipJobs(root) as any,n=>existsSync(join(dir,'stop-'+n)),runId);
         for(const name of [c.donor,c.receiver]){
             if(!owned.has(name.toLowerCase()))throw Error('not authenticated owned: '+name);
             if(sessions.some(s=>s.name.toLowerCase()===name.toLowerCase()))continue;

@@ -192,7 +192,7 @@ function editDistance(a: string, b: string, cap: number): number {
 /** The nearest real name within two edits, or a name that holds the text with its words in another order. */
 /**
  * The planner's pinned dialect: a bill or price line may name a real item in the singular or with a stripped plural
- * ("studded chap" for Studded chaps; packages/planner/src/autopilot.ts norm), "mort myre fungus" for Mort myre fungi, and
+ * ("studded chap" for Studded chaps; normalized form), "mort myre fungus" for Mort myre fungi, and
  * "<herb> potion (unf)" for the one item "Unfinished potion" (packages/planner/src/supply-bill.ts idsFor).
  */
 export function isPinnedForm(text: string, sets: NameSets): boolean {

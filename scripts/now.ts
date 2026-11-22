@@ -1,5 +1,5 @@
 // Prints the state of this PC and the fleet on one screen. A session reads it first, so that it starts from the
-// facts: free memory, the heavy jobs, stop files, the controllers, the swarm, the coordinator queue, alerts, the
+// facts: free memory, the heavy jobs, stop files, the controllers, the swarm, Fleet Brain, alerts, the
 // board, the fleet sides, the open pull requests, the fast-fail loops of the main checkout's results
 // (scripts/fail-loops.ts), and this checkout and the main checkout against origin/master.
 // It reads the local dashboard (http://127.0.0.1:<DASH_PORT>/api/state) for the fleet. It reads by itself what must
@@ -13,7 +13,7 @@ import {join,resolve} from 'node:path';
 import {failLoops,loopLines,readRecentResults,LOOP_WINDOW_MS,type FailLoop} from './fail-loops';
 import {LEASE_MAX_AGE_MS,SIDE_NAME} from '../packages/core/src/fleet';
 
-type Task={id:string;kind:string;status:string;agent:string|null;account:string|null;startedAt:number|null;timeoutMs?:number|null};
+type BrainChain = { account: string; goal?: string; step?: string };
 type Bot={name:string;job?:{enabled?:boolean;state?:string}|null};
 // The parts of the dashboard state that this file reads (packages/dashboard/server.ts builds the whole state).
 // A projection with no source file comes as `{available:false}` with no other field.
@@ -22,7 +22,7 @@ export type DashState={
     capacity?:{freeGB:number|null;floorGB:number|null;pendingReserveGB:number|null;headroomGB:number|null}|null;
     swarm?:{at:number;running:number;maxBots:number;pendingStartup:number;jobs:number}|null;
     sys?:{cpu:number}|null;
-    coordination?:{available:boolean;at:number|null;fresh?:boolean;paused?:boolean;counts:Record<string,number>;tasks:Task[]}|null;
+    brain?:{available:boolean;at:number|null;fresh?:boolean;paused?:boolean;activeChains?:number;goals?:number;defects?:number;infraOpen?:boolean;chains?:BrainChain[]}|null;
     bots?:Bot[];
     alerts?:{name:string;kind:string;practice:boolean}[];
     scoreboard?:{available:boolean;at?:number|null;skills99?:number|null;remaining?:string[];goals?:{version:number;main:{rank:number|null;gapTicks:number|null};specialists:{rank1s:unknown[]};quests:{complete:number;total:number};collection:{scopeKnown:boolean};army:{maxed:number;roster:string[]}}|null}|null;
@@ -65,7 +65,7 @@ function tally(rows:{key:string;name:string}[],quiet:string[]=[]):string{
         .map(([key,names])=>`${key} ${names.length}`+(quiet.includes(key)?'':` (${names.slice(0,6).join(', ')}${names.length>6?', ...':''})`)).join(', ');
 }
 // The controllers that the main checkout runs.
-export const CONTROLLERS=['swarm.ts','coordinator-cli.ts','autopilot.ts','fleet-agent.ts'] as const;
+export const CONTROLLERS=['swarm.ts','fleet-agent.ts'] as const;
 // The name that `scriptsOf` gives a test run: `bun test`, with or without file names (`bun test ./scripts ./packages`).
 export const BUN_TEST='bun test';
 // The jobs that must not run two at a time on one PC (AGENTS.md, "Keep the loop fast").
@@ -100,7 +100,7 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
     const procs=local.procs;
     add('heavy',()=>procs===null?'heavy   not known: the process scan failed. Do not start a heavy job on this line.'
         :'heavy   '+HEAVY.map(h=>`${h} ${procs.filter(p=>p.scripts.includes(h)).length}`).join(', '));
-    add('stop',()=>'stop    '+(local.stops.length?local.stops.map(s=>`${s.file}: "${s.text}"`).join('; '):'no stop-coordinator, no stop-swarm')+(state?.coordination?.paused?'; the coordinator is paused':''));
+    add('stop',()=>'stop    '+(local.stops.length?local.stops.map(s=>`${s.file}: "${s.text}"`).join('; '):'no stop-swarm')+(state?.brain?.paused?'; side paused':''));
     add('control',()=>procs===null?'control not known: the process scan failed'
         :'control '+CONTROLLERS.map(name=>{const p=procs.find(x=>x.scripts.includes(name));return p?`${name} up ${age(p.up)}`:`${name} DOWN`;}).join(', '));
     add('leases',()=>{
@@ -119,14 +119,13 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
             const jobs=(state.bots??[]).filter(b=>b.job?.enabled).map(b=>({key:b.job!.state??'no state',name:b.name}));
             return jobs.length?'jobs    '+tally(jobs,['running']):null;
         });
-        add('coord',()=>{
-            const co=state.coordination;
-            if(!co?.available||co.at==null)return 'coord   no state';
-            const lines=[`coord   running ${co.counts.running??0}, pending ${co.counts.pending??0}; state ${age(now-co.at)} old${co.fresh===false?' (not fresh)':''}`];
-            for(const t of co.tasks.filter(t=>t.status==='running'))
-                lines.push(`  run   ${t.id} (${t.kind}, ${t.agent??'no agent'}${t.account?', '+t.account:''}) ${t.startedAt?age(now-t.startedAt):'?'}${t.timeoutMs?' of '+age(t.timeoutMs):''}`);
-            const pending=co.tasks.filter(t=>t.status==='pending');
-            if(pending.length)lines.push('  wait  '+pending.slice(0,5).map(t=>t.id).join(', ')+(pending.length>5?`, and ${pending.length-5} more`:''));
+        add('brain',()=>{
+            const b=state.brain;
+            if(!b?.available||b.at==null)return 'brain   no state';
+            const lines=[`brain   chains ${b.activeChains??0}, goals ${b.goals??0}, defects ${b.defects??0}${b.infraOpen?', infra OPEN':''}; state ${age(now-b.at)} old${b.fresh===false?' (not fresh)':''}`];
+            const chains=Array.isArray(b.chains)?b.chains:[];
+            for(const c of chains.slice(0,5)) lines.push(`  chain ${c.account} (${c.goal??'unknown'}${c.step?', '+c.step:''})`);
+            if(chains.length>5) lines.push(`  wait  ${chains.length-5} more active chains`);
             return lines;
         });
         add('alerts',()=>{
@@ -217,7 +216,7 @@ if(import.meta.main){
     const list=Bun.spawnSync(['git','-C',here,'worktree','list','--porcelain'],{stdout:'pipe',stderr:'ignore',windowsHide:true}).stdout.toString();
     // The first worktree of the list is the main checkout. Only the main checkout runs the fleet and holds the stop files.
     const main=resolve(/^worktree (.+)$/m.exec(list)?.[1]??here);
-    const stops=['stop-coordinator','stop-swarm'].filter(f=>existsSync(join(main,'.practice',f)))
+    const stops=['stop-swarm'].filter(f=>existsSync(join(main,'.practice',f)))
         .map(file=>({file,text:(readFileSync(join(main,'.practice',file),'utf8').split(/\r?\n/)[0]??'').trim().slice(0,120)}));
     const port=Number(process.env.DASH_PORT??3100);
     // 127.0.0.1: the dashboard listens on IPv4 (DASH_HOST default), and localhost can resolve to ::1 first.

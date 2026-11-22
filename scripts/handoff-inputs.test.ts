@@ -5,9 +5,6 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {parseHeadlessOrder,runOwnedHeadless,ammoOrderRecord} from './handoff-inputs';
-import {loadProgressionCatalog} from '../packages/planner/src/progression-catalog';
-import {evaluateProgressionWork,preflightProgressionWork,parentProgressionAccept} from '../packages/core/src/progression-session';
-import {ammoChildConfiguration,selectAmmoProofEndpoints} from '../packages/practice/src/ammo-order-proof';
 import {tickRecorder} from '../packages/core/src/tick-record';
 import {botWork} from '../packages/core/src/bot';
 
@@ -99,8 +96,6 @@ const entryFixture=String.raw`
 import {main} from ENTRY;
 import {readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {evaluateProgressionWork,preflightProgressionWork} from CORE_PROGRESSION;
-import {botWork} from CORE_BOT;
 const root=process.env.FIXTURE_ROOT,stage=process.env.FIXTURE_STAGE;
 const [bankX,bankZ]=(process.env.FIXTURE_BANK??'3253,3421').split(',').map(Number);
 process.argv=['bun','handoff-inputs.ts','Donor','Receiver','90:Iron arrowtips','--bank-x='+bankX,'--bank-z='+bankZ,...(process.env.FIXTURE_ARGS??'').split(' ').filter(Boolean)];
@@ -122,14 +117,7 @@ await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
   if(stage==='approach-slow'){await new Promise(yes=>setTimeout(yes,1500));console.log('IDLE RESET '+s.name+' '+(s.client.idleTimer>0));}
   s.at=to.x;s.az=to.z;return {ok:true};
  }},
- openBot:async (name,options)=>{
-  if(process.env.FIXTURE_PROGRESSION==='1'){
-   const work=botWork(name,options?.record);
-   preflightProgressionWork(work,'rs-sdk-demo.fly.dev',undefined,name);
-   const evaluation=evaluateProgressionWork(work,{name,at:Date.now()},{base:root,requireQualification:true});
-   if(!evaluation.supported)throw Error('finite entry refused: '+evaluation.reason);
-   console.log('WORK '+JSON.stringify({name,script:work.script,args:work.args,intent:evaluation.intent}));
-  }
+ openBot:async (name)=>{
   console.log('LOGIN '+name);
   const status=join(root,'.practice/status',name+'.json');
   writeFileSync(status,JSON.stringify({name,goal:process.env.BOT_GOAL,at:Date.now()}));
@@ -155,15 +143,12 @@ await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
  },settle:async(sessions,ok)=>{for(const s of sessions){writeFileSync(join(root,'.practice/status',s.name+'.json'),JSON.stringify({name:s.name,result:'ended'}));console.log('LOGOUT '+s.name);}return ok;}
 });
 clearTimeout(deadline);
-`.replace('ENTRY',JSON.stringify(resolve(import.meta.dir,'handoff-inputs.ts')))
- .replace('CORE_PROGRESSION',JSON.stringify(resolve(import.meta.dir,'../packages/core/src/progression-session.ts')))
- .replace('CORE_BOT',JSON.stringify(resolve(import.meta.dir,'../packages/core/src/bot.ts')));
+`.replace('ENTRY',JSON.stringify(resolve(import.meta.dir,'handoff-inputs.ts')));
 
 function cliFixture(){
  const root=mkdtempSync(join(tmpdir(),'handoff-main-'));
  for(const name of ['Donor','Receiver']){const dir=join(root,'vendor/rs-sdk/bots',name);mkdirSync(dir,{recursive:true});writeFileSync(join(dir,'bot.env'),'SERVER=localhost:8888\n');}
- mkdirSync(join(root,'.practice/status'),{recursive:true});mkdirSync(join(root,'.practice/coordinator'),{recursive:true});
- writeFileSync(join(root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[]}));
+ mkdirSync(join(root,'.practice/status'),{recursive:true});mkdirSync(join(root,'.practice/live'),{recursive:true});
  writeFileSync(join(root,'swarm.json'),JSON.stringify({jobs:[]}));
  writeFileSync(join(root,'holdings.json'),JSON.stringify({donor:{bank:90,pack:0},receiver:{bank:0,pack:0},sends:0}));
  const children:{p:ReturnType<typeof spawn>;done:Promise<number|null>}[]=[];
@@ -181,53 +166,20 @@ function cliFixture(){
  return {root,start,async cleanup(){for(const {p} of children)if(p.exitCode===null&&p.signalCode===null)p.kill('SIGKILL');await Promise.all(children.map(c=>c.done));rmSync(root,{recursive:true,force:true});}};
 }
 
-test('productive catalog admits finite composed participants and standalone CLI orders without claiming old output',async()=>{
- const catalog=loadProgressionCatalog();
- expect(catalog.entries.find(e=>e.script==='scripts/handoff-inputs.ts')?.intents).toEqual(['acquire','produce','service']);
+test('ammoOrderRecord strips PROGRESSION_CONSUMER from Donor and preserves headless CLI arguments', () => {
  const f=cliFixture(),args=['Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421'];
- const workFor=(name:string,argv:string[],env:Record<string,string>)=>{
-  const record=ammoOrderRecord(name,argv,env,f.root);
-  return botWork(name,record);
- };
  try{
-  const runId='task-ammo-finite',accept={bank:{40:90}};
-  writeFileSync(join(f.root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[{status:'running',runId,spec:{id:'ammo',participants:['Donor','Receiver'],acceptIndex:1,accept}}]}));
-  const env={COORDINATOR_RUN_ID:runId,HANDOFF_ORDER:'cli-order',PROGRESSION_CONSUMER:JSON.stringify({bank:{40:1}})};
-  const donor=workFor('Donor',args,env),receiver=workFor('Receiver',args,env);
-  expect(donor.args).toEqual(args);expect(receiver.args).toEqual(args);
-  expect(parentProgressionAccept(donor,'Donor',f.root)).toBeUndefined();
-  expect(parentProgressionAccept(receiver,'Receiver',f.root)).toEqual(accept);
-  expect(env.PROGRESSION_CONSUMER).toBe(JSON.stringify({bank:{40:1}}));
-  for(const [name,work]of [['Donor',donor],['Receiver',receiver]] as const){
-   expect(()=>preflightProgressionWork(work,'rs-sdk-demo.fly.dev',catalog,name)).not.toThrow();
-   const result=evaluateProgressionWork(work,{name,at:Date.now()},{base:f.root,catalog,requireQualification:true});
-   expect(result.supported).toBe(true);
-   if(name==='Receiver')expect(result.intent).toMatchObject({kind:'acquire',items:{40:90}});
-   else{expect(result.intent).toMatchObject({kind:'service',units:1});expect(JSON.stringify(result.intent)).toContain('cli-order');}
-  }
-  const composed=f.start('',{...env,FIXTURE_PROGRESSION:'1'});
-  expect(await composed.done).toBe(0);
-  const works=composed.output().split(/\r?\n/).filter(l=>l.startsWith('WORK ')).map(l=>JSON.parse(l.slice(5)));
-  expect(works.map(w=>[w.name,w.intent.kind])).toEqual([['Donor','service'],['Receiver','acquire']]);
-  expect(composed.output().match(/LOGOUT /g)).toHaveLength(2);
-  writeFileSync(join(f.root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[]}));
-  writeFileSync(join(f.root,'holdings.json'),JSON.stringify({donor:{bank:90,pack:0},receiver:{bank:0,pack:0},sends:0}));
-  const standalone=f.start('',{COORDINATOR_RUN_ID:'',HANDOFF_ORDER:'standalone-order',PROGRESSION_CONSUMER:'',FIXTURE_PROGRESSION:'1'});
-  expect(await standalone.done).toBe(0);
-  expect(standalone.output().split(/\r?\n/).filter(l=>l.startsWith('WORK ')).map(l=>JSON.parse(l.slice(5)).intent.kind)).toEqual(['service','service']);
-  expect(standalone.output().match(/LOGOUT /g)).toHaveLength(2);
-  const headless=workFor('Bigchopper',['Bigchopper','--headless-order','135','14'],{CAP:'1600'});
-  const at=Date.now(),stocked={name:'Bigchopper',at,bankAt:at,inventory:[],equipment:[],bank:[{id:53,count:435}]};
-  const production=evaluateProgressionWork(headless,stocked,{base:f.root,catalog,requireQualification:true});
-  expect(()=>preflightProgressionWork(headless,'rs-sdk-demo.fly.dev',catalog,'Bigchopper')).not.toThrow();
-  expect(production.supported).toBe(true);expect(production.intent).toMatchObject({kind:'service',units:1});
-  expect(JSON.stringify(production.intent)).toContain('135');expect(JSON.stringify(production.intent)).toContain('53');
-  const p=selectAmmoProofEndpoints(()=>true,()=>0),craft=ammoChildConfiguration(['scripts/fletch-arrows.ts','Receiver','400','iron'],{MAX_MAKE:'90',PROGRESSION_CONSUMER:JSON.stringify({bank:{884:90}})},p,{PROGRESSION_CONSUMER:'{"skills":{"Prayer":99}}'});
-  const craftWork={script:craft.cmd[1]!,args:craft.cmd.slice(3),env:craft.env};
-  expect(evaluateProgressionWork(craftWork,{name:'Receiver',at:Date.now()},{base:f.root,catalog,requireQualification:true}).intent).toMatchObject({kind:'acquire',items:{884:90}});
-  expect(ammoChildConfiguration(['scripts/handoff-inputs.ts','Bigchopper','--headless-order','135','14'],{CAP:'1600'},p,{PROGRESSION_CONSUMER:'{"bank":{"53":435}}'}).env.PROGRESSION_CONSUMER).toBeUndefined();
- }finally{await f.cleanup();}
-},15000);
+  const env={HANDOFF_ORDER:'cli-order',PROGRESSION_CONSUMER:JSON.stringify({bank:{40:1}})};
+  const donorRecord=ammoOrderRecord('Donor',args,env,f.root);
+  const receiverRecord=ammoOrderRecord('Receiver',args,env,f.root);
+  expect(donorRecord.env.PROGRESSION_CONSUMER).toBeUndefined();
+  expect(receiverRecord.env.PROGRESSION_CONSUMER).toBe(env.PROGRESSION_CONSUMER);
+  expect(botWork('Donor',donorRecord).args).toEqual(args);
+  const headlessRecord=ammoOrderRecord('Bigchopper',['Bigchopper','--headless-order','135','14'],{CAP:'1600'},f.root);
+  expect(headlessRecord.argv).toEqual(['Bigchopper','--headless-order','135','14']);
+  expect(botWork('Bigchopper',headlessRecord).args).toEqual(['--headless-order','135','14']);
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
 
 for(const prior of ['fresh','dead-owner'])test('main concurrent '+prior+' starts elect one login owner and refuse the loser before login',async()=>{
  const f=cliFixture();try{
@@ -254,24 +206,20 @@ for(const stage of ['login','bank-entry','after-send'])test('main kill during '+
  }finally{await f.cleanup();}
 },10000);
 
-for(const conflict of ['coordinator','swarm','stop'])test('main refuses '+conflict+' account conflict before login',async()=>{
+for(const conflict of ['fleet-paused','swarm','stop'])test('main refuses '+conflict+' account conflict before login',async()=>{
  const f=cliFixture();try{
-  if(conflict==='coordinator')writeFileSync(join(f.root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[{status:'running',runId:'other',spec:{id:'other',participants:['Receiver']}}]}));
+  if(conflict==='fleet-paused')writeFileSync(join(f.root,'.practice/live/fleet-state.json'),JSON.stringify({schemaVersion:1,accounts:{receiver:{paused:true}}}));
   if(conflict==='swarm')writeFileSync(join(f.root,'swarm.json'),JSON.stringify({jobs:[{enabled:true,account:'Receiver',id:'other'}]}));
   if(conflict==='stop')writeFileSync(join(f.root,'.practice/stop-Receiver'),'');
   const p=f.start();expect(await p.done).toBe(1);expect(p.output()).not.toContain('LOGIN ');
  }finally{await f.cleanup();}
 },10000);
 
-// The coordinator installs its assignment only in .practice/coordinator/jobs.json. The raw swarm.json
-// still names both accounts in enabled owner jobs, which the merged plan shadows.
-for(const overlayRun of ['task-ammo-own','task-ammo-other'])test('main reads the merged plan: overlay '+(overlayRun==='task-ammo-own'?'owns the transfer':'of another run refuses'),async()=>{
+for(const overlayRun of ['task-ammo-own','task-ammo-other'])test('main reads swarm ownership: '+(overlayRun==='task-ammo-own'?'matching standing goal runs':'mismatched goal refuses'),async()=>{
  const f=cliFixture();try{
   const runId='task-ammo-own';
-  writeFileSync(join(f.root,'swarm.json'),JSON.stringify({maxBots:4,jobs:[{id:'owner-donor',enabled:true,account:'Donor',goal:'bank'},{id:'owner-receiver',enabled:true,account:'Receiver',goal:'fish'}]}));
-  writeFileSync(join(f.root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[{status:'running',runId,spec:{id:'ammo',participants:['Donor','Receiver']}}]}));
-  writeFileSync(join(f.root,'.practice/coordinator/jobs.json'),JSON.stringify({coordination:{},jobs:[{coordinatorOwner:'coordinator',coordinatorTask:'ammo',enabled:true,accounts:['Donor','Receiver'],orchestrate:true,goal:'handoff ['+overlayRun+']'}]}));
-  const p=f.start('',{COORDINATOR_RUN_ID:runId});
+  writeFileSync(join(f.root,'swarm.json'),JSON.stringify({maxBots:4,jobs:[{id:'ammo',enabled:true,standing:true,accounts:['Donor','Receiver'],goal:'handoff ['+overlayRun+']'}]}));
+  const p=f.start('',{STANDING:'1',BOT_GOAL:'handoff ['+runId+']',FLEET_RUN_ID:runId});
   const holdings=()=>JSON.parse(readFileSync(join(f.root,'holdings.json'),'utf8'));
   if(overlayRun==='task-ammo-own'){
    expect(await p.done).toBe(0);

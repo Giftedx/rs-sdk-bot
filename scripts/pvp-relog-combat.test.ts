@@ -1,8 +1,5 @@
 import { expect, test } from 'bun:test';
 import { componentId } from '../packages/core/src/logout';
-import { evaluateProgressionWork } from '../packages/core/src/progression-session';
-import { createProgressionMonitor } from '../packages/core/src/progression-policy';
-import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
 import { RANGED_ARMOUR_TIERS, connectWithRetry, parsePvpSkill, rankTanksForSwing, selectMeleeWeapon, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
 
 test('parsePvpSkill normalizes supported combat skills', () => {
@@ -65,24 +62,6 @@ test('rankTanksForSwing round-robins healthy keep tanks and skips dead or bankin
     const lastHit = new Map([['t1', 5], ['t4', 2]]);
     const ranked = rankTanksForSwing(players, ['t1', 't2', 't3', 't4'], { x: 3154, z: 3924 }, lastHit, localState);
     expect(ranked.map(p => p.name)).toEqual(['t4', 't1']);
-});
-
-test('pvp-relog-combat attacker and tank entries pass progression policy without refusing Pull lever actions', () => {
-    const catalog = loadProgressionCatalog();
-    const attackerIntent = intentForEntry('scripts/pvp-relog-combat.ts', ['strength', '99', 'TANKS=t1', '--own-tanks', 'CAP=1200'], {}, undefined, catalog);
-    const tankIntent = intentForEntry('scripts/pvp-relog-combat.ts', ['--companion-tank', 't1', 'atk1', '0', '4000'], {}, undefined, catalog);
-    expect(attackerIntent?.kind).toBe('service');
-    expect(tankIntent?.kind).toBe('service');
-
-    const evalRes = evaluateProgressionWork({ script: 'scripts/pvp-relog-combat.ts', args: ['strength', '99', 'TANKS=t1', '--own-tanks', 'CAP=1200'], env: {} }, { name: 't1', at: Date.now(), skills: [] });
-    expect(evalRes.supported).toBe(true);
-
-    const monitor = createProgressionMonitor({
-        evaluate: () => evalRes,
-        onHandoff: () => {},
-    });
-    monitor.observe({ tick: 0, stateKey: 's1', bankGeneration: 0, inCombat: false });
-    expect(monitor.refusal({ type: 'interactLoc', progressionOption: 'Pull' })).toBeNull();
 });
 
 test('connectWithRetry retries transient already-logged-in errors and aborts on non-transient errors', async () => {

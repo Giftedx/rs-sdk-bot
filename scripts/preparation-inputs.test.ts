@@ -17,10 +17,9 @@ function fixture(run:(base:string,write:(path:string,value:unknown)=>void)=>void
 }
 const digest=(file:string)=>createHash('sha256').update(readFileSync(file)).digest('hex');
 
-test('fresh preparation uses registered shared stock, full journals and the current coordinator assignment',()=>fixture((base,write)=>{
+test('fresh preparation uses registered shared stock, full journals and the current swarm assignment',()=>fixture((base,write)=>{
  const fleetDir=join(base,'fleet');
- write('swarm.json',{maxBots:3,jobs:[{account:'Worker',script:'scripts/goldfarm.ts',role:'thieving'},{account:'Haggis',role:'main'}]});
- write('.practice/coordinator/jobs.json',{jobs:[{account:'Worker',script:'scripts/gather-combat.ts',env:{TARGET:'cow'},coordinatorOwner:'coordinator'}]});
+ write('swarm.json',{maxBots:3,jobs:[{account:'Worker',script:'scripts/gather-combat.ts',env:{TARGET:'cow'},role:'combat'},{account:'Haggis',role:'main'}]});
  write('fleet/owners.json',{accounts:{Worker:{side:'cloud',server},Donor:{side:'local',server},Haggis:{side:'local',server},Foreign:{side:'cloud',server:'foreign'}}});
  const worker={name:'Worker',server,at:now-100,bankAt:now-200,questsAt:now-300,questJournal:[{...quest,state:'complete'}],quests:['Rune Mysteries Quest'],
   inventory:[],equipment:[],equipmentObserved:true,skills:[{name:'Attack',level:30}],bank:[{id:1277,name:'Bronze sword',count:1},{id:1171,name:'Wooden shield',count:1},{id:333,name:'Trout',count:2},{id:1267,name:'Iron pickaxe',count:1}]};
@@ -38,7 +37,7 @@ test('fresh preparation uses registered shared stock, full journals and the curr
  expect(input.sources.Worker).toBe(digest(join(fleetDir,'snapshots/cloud.json')));
  expect(input.observationSources.Worker).toMatchObject({path:join(fleetDir,'snapshots/cloud.json'),kind:'snapshot',side:'cloud',ownerSide:'cloud'});
  expect(input.inputSources.owners).toEqual({path:join(fleetDir,'owners.json'),sha256:digest(join(fleetDir,'owners.json'))});
- expect(input.inputSources.coordinatorJobs).toEqual({path:join(base,'.practice/coordinator/jobs.json'),sha256:digest(join(base,'.practice/coordinator/jobs.json'))});
+ expect(input.inputSources.ownerPlan).toEqual({path:join(base,'swarm.json'),sha256:digest(join(base,'swarm.json'))});
 }));
 
 test('preparation picks current-owner stock and adoption fallback while binding local file identity and server',()=>fixture((base,write)=>{
@@ -78,11 +77,10 @@ test('matching fresher local observations replace old publications without refre
  expect(report.items[0]).toMatchObject({recentBanked:0,state:'unknown'});
 }));
 
-test('preparation follows the configured cloud plan and its coordinator overlay, binding their actual sources',()=>fixture((base,write)=>{
+test('preparation follows the configured cloud plan, binding its actual source',()=>fixture((base,write)=>{
  const fleetDir=join(base,'fleet'),planFile=join(base,'.practice/cloud-handoff/swarm.json'),prior=process.env.SWARM_PLAN;
  write('swarm.json',{maxBots:1,jobs:[{account:'Default',script:'scripts/goldfarm.ts'}]});
- write('.practice/cloud-handoff/swarm.json',{maxBots:2,jobs:[{account:'Worker',script:'scripts/goldfarm.ts'}]});
- write('.practice/coordinator/jobs.json',{jobs:[{account:'Worker',script:'scripts/gather-ranged.ts',coordinatorOwner:'coordinator'}]});
+ write('.practice/cloud-handoff/swarm.json',{maxBots:2,jobs:[{account:'Worker',script:'scripts/gather-ranged.ts'}]});
  write('fleet/owners.json',{accounts:{Worker:{side:'cloud',server}}});
  process.env.SWARM_PLAN=planFile;
  try{

@@ -2,7 +2,9 @@ import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {serverFromEnv} from '../packages/core/src/bot';
 import {assertSideOwns,loadOwners,mySide} from '../packages/core/src/fleet';
-import {jobAccounts,mergedPlan,readCoordinatorJobs} from '../packages/core/src/coordinator-jobs';
+import {jobAccounts} from '../packages/fleet/src/trade-plan';
+import {brainPlannedJobs} from '../packages/fleet/src/fleet-sync';
+import {fleetStateFile} from '../packages/core/src/practice-paths';
 import {liveLogoutRef} from '../packages/core/src/session-admission';
 import {readLogoutProof} from '../packages/core/src/session-lifecycle';
 import {SPECIALIST_BOARDS} from '../packages/core/src/specialist-launch';
@@ -16,10 +18,9 @@ export function assertProvisionCrew(crew:ProvisionCrew,base=root){
  if(!Array.isArray(accounts)||accounts.some(n=>typeof n!=='string'||! /^[A-Za-z0-9_ -]{1,12}$/.test(n))
   ||!Number.isSafeInteger(slots)||slots<=accounts.length||typeof script!=='string'||!script)
   throw Error('invalid first job crew');
- const overlay=readCoordinatorJobs(base);
  const owner=JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')) as {jobs:any[];maxBots:number;coordination?:{maxLive?:number}};
  if(!Array.isArray(owner.jobs)||!Number.isSafeInteger(owner.maxBots))throw Error('owner assignment plan unavailable');
- const plan=mergedPlan(owner,overlay),limit=Math.min(plan.maxBots,plan.coordination?.maxLive??plan.maxBots);
+ const plan={...owner,jobs:[...owner.jobs,...brainPlannedJobs(base,owner.jobs)]},limit=Math.min(plan.maxBots,plan.coordination?.maxLive??plan.maxBots);
  if(!Number.isSafeInteger(limit)||slots>limit)throw Error('first job exceeds the live account limit');
  if(!accounts.length)return;
  const selected=new Set(accounts.map(n=>n.toLowerCase()));
@@ -27,9 +28,11 @@ export function assertProvisionCrew(crew:ProvisionCrew,base=root){
  const stops=new Set(readdirSync(join(base,'.practice')).map(n=>n.toLowerCase()));
  const ends=loadEnded(join(base,'.practice/swarm-deaths.json')),holds=loadHolds(join(base,'.practice/swarm-script-holds.json'));
  const owners=base===root?loadOwners():loadOwners(join(base,'fleet/owners.json'));
+ const stateFile=fleetStateFile(base);
+ const fleetState=existsSync(stateFile)?JSON.parse(readFileSync(stateFile,'utf8')):null;
  for(const account of accounts){
   const name=account.toLowerCase(),matches=(job:any)=>jobAccounts(job).some(n=>n.toLowerCase()===name);
-  if(stops.has('stop-'+name)||overlay.paused?.some(n=>n.toLowerCase()===name))throw Error('participant has an owner or rollout pause: '+account);
+  if(stops.has('stop-'+name)||fleetState?.accounts?.[name]?.paused===true)throw Error('participant has an owner or rollout pause: '+account);
   if(name==='haggis'||Object.hasOwn(SPECIALIST_BOARDS,name)
    ||owner.jobs.some(job=>matches(job)&&(!job.script||/fresh.clock|24 boards|main simultaneous/i.test(job.goal??''))))
    throw Error('participant has a protected reservation: '+account);

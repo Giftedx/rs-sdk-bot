@@ -5,17 +5,15 @@ import {scoreboardView} from '../packages/dashboard/fleet-view';
 
 const NOW=1_000_000_000_000,MIN=60_000;
 const checkout=(over:Partial<Checkout>={}):Checkout=>({path:'x',branch:'master',head:'abc1234',dirty:0,behind:0,ahead:0,fetchedAt:NOW-2*MIN,patch:'applied',...over});
-const procs=()=>[{scripts:['swarm.ts'],up:72*MIN},{scripts:['coordinator-cli.ts'],up:83*MIN},{scripts:['fleet-agent.ts'],up:73*MIN},
+const procs=()=>[{scripts:['swarm.ts'],up:72*MIN},{scripts:['fleet-agent.ts'],up:73*MIN},
     {scripts:['aio-practice-bench.ts'],up:MIN},{scripts:['swarm.test.ts','bun test'],up:MIN},{scripts:['bun test'],up:MIN},{scripts:['tsc'],up:MIN},{scripts:[],up:MIN}];
 const local=(over:Partial<Local>={}):Local=>({uptimeSec:7200,procs:procs(),stops:[],here:checkout(),main:null,...over});
 const state=():DashState=>({now:NOW,
     capacity:{freeGB:6.6,floorGB:4,pendingReserveGB:2,headroomGB:0.6},
     swarm:{at:NOW-2000,running:25,maxBots:25,pendingStartup:2,jobs:33},
     sys:{cpu:58.4},
-    coordination:{available:true,at:NOW-10*MIN,fresh:false,paused:true,counts:{running:1,pending:1},tasks:[
-        {id:'run-a',kind:'run',status:'running',agent:'codex',account:'Balls',startedAt:NOW-30*MIN,timeoutMs:90*MIN},
-        {id:'build-b',kind:'build',status:'pending',agent:null,account:null,startedAt:null},
-        {id:'old',kind:'run',status:'failed',agent:null,account:null,startedAt:NOW-999*MIN}]},
+    brain:{available:true,at:NOW-10*MIN,fresh:false,paused:true,activeChains:2,goals:5,defects:1,infraOpen:false,chains:[
+        {account:'Balls',goal:'quest_board',step:'quest_cooks_assistant'}]},
     bots:[{name:'A',job:{enabled:true,state:'running'}},{name:'B',job:{enabled:true,state:'exit orphaned'}},{name:'C',job:{enabled:false,state:'exit orphaned'}},{name:'D',job:null}],
     alerts:[{name:'A',kind:'stuck',practice:false},{name:'P',kind:'idle',practice:true}],
     scoreboard:{available:true,at:NOW-13*MIN,skills99:19,remaining:['quests 44/68 live']},
@@ -46,19 +44,16 @@ test('procRows reads the scan output of Windows and of ps',()=>{
 });
 
 test('every fact of the state gets a line',()=>{
-    const text=nowLines(state(),local({stops:[{file:'stop-coordinator',text:'owner pause'}]}),NOW).join('\n');
+    const text=nowLines(state(),local({stops:[{file:'stop-swarm',text:'owner pause'}]}),NOW).join('\n');
     expect(text).toContain('free 6.6 GiB = floor 4.0 + pending starts 2.0 + headroom 0.6; cpu 58%; up 2.0 h');
     expect(text).toContain('heavy   ci-gate.ts 0, test-shards.ts 0, aio-practice-bench.ts 1, typecheck-narrow.ts 0, tsc 1, bun test 2');
-    expect(text).toContain('stop    stop-coordinator: "owner pause"; the coordinator is paused');
-    expect(text).toContain('control swarm.ts up 72 min, coordinator-cli.ts up 83 min, autopilot.ts DOWN, fleet-agent.ts up 73 min');
+    expect(text).toContain('stop    stop-swarm: "owner pause"; side paused');
+    expect(text).toContain('control swarm.ts up 72 min, fleet-agent.ts up 73 min');
     expect(text).toContain('swarm   25 of 25 bots, 2 pending starts, 33 jobs; state 2 s old');
     // A job that is not enabled and a bot with no job do not count. A state that is not `running` names its accounts.
     expect(text).toContain('jobs    running 1, exit orphaned 1 (B)');
-    expect(text).toContain('coord   running 1, pending 1; state 10 min old (not fresh)');
-    expect(text).toContain('  run   run-a (run, codex, Balls) 30 min of 1.5 h');
-    expect(text).toContain('  wait  build-b');
-    // A task that ended gets no line.
-    expect(text).not.toMatch(/^ {2}(run|wait) +old\b/m);
+    expect(text).toContain('brain   chains 2, goals 5, defects 1; state 10 min old (not fresh)');
+    expect(text).toContain('  chain Balls (quest_board, quest_cooks_assistant)');
     expect(text).toContain('alerts  stuck 1 (A)');
     expect(text).toContain('board   99s 19; quests 44/68 live; 13 min old');
     expect(text).toContain('sides   snapshots: local 5 min, cloud 5.0 d LATE');
@@ -98,11 +93,11 @@ test('a failed process scan is not read as "no heavy job" or as "controller down
 });
 
 test('the projections that the dashboard gives with no source file print "no state"',()=>{
-    // The real projections: a missing scoreboard.json and a missing coordinator state.json.
-    const s:DashState={...state(),scoreboard:scoreboardView(null) as DashState['scoreboard'],coordination:coordinationView(null,NaN,NOW) as DashState['coordination'],swarm:null,capacity:null};
+    // The real projections: a missing scoreboard.json and a missing fleet-state.json.
+    const s:DashState={...state(),scoreboard:scoreboardView(null) as DashState['scoreboard'],brain:coordinationView(null,NaN,NOW) as DashState['brain'],swarm:null,capacity:null};
     const lines=nowLines(s,local(),NOW);
     expect(lines).toContain('board   no state');
-    expect(lines).toContain('coord   no state');
+    expect(lines).toContain('brain   no state');
     expect(lines).toContain('swarm   no state');
     expect(lines).toContain('host    up 2.0 h');
     expect(lines.at(-1)).toStartWith('here    master @ abc1234');
@@ -123,8 +118,8 @@ test('with no dashboard the local facts still print, and a worktree also shows t
     expect(lines).toEqual([
         'host    up 2.0 h',
         'heavy   ci-gate.ts 0, test-shards.ts 0, aio-practice-bench.ts 1, typecheck-narrow.ts 0, tsc 1, bun test 2',
-        'stop    no stop-coordinator, no stop-swarm',
-        'control swarm.ts up 72 min, coordinator-cli.ts up 83 min, autopilot.ts DOWN, fleet-agent.ts up 73 min',
+        'stop    no stop-swarm',
+        'control swarm.ts up 72 min, fleet-agent.ts up 73 min',
         'dashboard: no answer, so the fleet lines are missing. The other lines come from this PC.',
         'here    claude/t @ abc1234, 0 changed files, origin/master not known (never fetched), SDK patch no vendor/rs-sdk',
         'main    master @ abc1234, 2 changed files, 7 behind, 0 ahead of origin/master (fetched 2 min ago), SDK patch applied']);

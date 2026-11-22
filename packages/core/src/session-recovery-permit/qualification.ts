@@ -43,7 +43,18 @@ export function assertFleetResolved(path: string, account: string, controllerPid
     let raw: string; try { raw = readFileSync(path, 'utf8'); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') refuse('missing'); throw error; }
     let fleet: any; try { fleet = JSON.parse(raw); } catch { refuse('malformed'); }
     const observedAt = clock();
-    if (!fleet || typeof fleet !== 'object' || !Number.isFinite(fleet.at) || !Array.isArray(fleet.jobs) || fleet.jobs.some((j: any) => !j || typeof j !== 'object')) refuse('malformed');
+    if (!fleet || typeof fleet !== 'object' || Array.isArray(fleet)) refuse('malformed');
+    if (fleet.schemaVersion === 1 && Number.isFinite(fleet.emittedAt) && fleet.accounts && typeof fleet.accounts === 'object' && !Array.isArray(fleet.accounts)) {
+        if (fleet.controllerPid !== undefined && fleet.controllerPid !== controllerPid) refuse('controller');
+        if (observedAt - fleet.emittedAt < 0) refuse('future');
+        if (observedAt - fleet.emittedAt > FLEET_HEARTBEAT_MAX_MS) refuse('stale');
+        for (const [k, row] of Object.entries(fleet.accounts as Record<string, any>)) {
+            if (!same(k, account) && !same(row?.account, account)) continue;
+            if (row?.activeJob != null || /^(?:running|starting|stopping)/.test(typeof row?.status === 'string' ? row.status : '')) refuse('account-active');
+        }
+        return;
+    }
+    if (!Number.isFinite(fleet.at) || !Array.isArray(fleet.jobs) || fleet.jobs.some((j: any) => !j || typeof j !== 'object')) refuse('malformed');
     if (fleet.controllerPid !== controllerPid) refuse('controller');
     if (observedAt - fleet.at < 0) refuse('future');
     if (observedAt - fleet.at > FLEET_HEARTBEAT_MAX_MS) refuse('stale');

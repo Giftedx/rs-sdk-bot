@@ -3,11 +3,12 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFile
 import { dirname, join, resolve } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { isLocalServer } from '../localserver';
+import { statusReadDirs } from '../practice-paths';
 import { processMatchesRecent, safeKill } from '../proc';
 import { listAttempts, readLogoutProof } from '../session-lifecycle';
 import { bindRecoveryChild, current, issueRecoveryPermit } from './authority';
 import {
-    RECOVERY_SCRIPT, json, recoveryPermitPaths, repoRoot, same, sha,
+    RECOVERY_SCRIPT, json, recoveryLifecycleRoot, recoveryPermitPaths, repoRoot, same, sha,
     type ControlledRecoveryRequest, type RecoveryPermitChecks,
 } from './request';
 
@@ -30,7 +31,7 @@ export function finishRecoveryPermit(r: ControlledRecoveryRequest, exitCode: num
         || !Number.isFinite(receipt.endedAt) || receipt.endedAt < receipt.startedAt || receipt.endedAt > (options.now ?? Date.now)()
         || receipt.scope?.gameplay !== false || receipt.scope.production !== 0 || receipt.scope.repairsFailure !== false || receipt.scope.qualifiesScript !== false
         || !same(receipt.before?.player?.name, r.account) || !recoveryStatePreserved(receipt.before, receipt.after)) throw Error('recovery child did not confirm preserved cleanup');
-    const root = join(base, '.practice/session-lifecycle'), proof = readLogoutProof(r.account, r.server, { root });
+    const root = recoveryLifecycleRoot(r.server, base), proof = readLogoutProof(r.account, r.server, { root });
     const attempt = listAttempts(r.account, r.server, { root }).find(a => a.attemptId === receipt.attemptId);
     if (proof.state !== 'confirmed' || proof.attemptId !== receipt.attemptId || proof.receiptSha256 !== receipt.lifecycleSha256 || attempt?.sha256 !== proof.receiptSha256
         || !attempt.receipt || attempt.receipt.createdAt < receipt.startedAt || proof.loggedOutAt < receipt.startedAt
@@ -85,7 +86,7 @@ export function launchPermittedRecovery(r: ControlledRecoveryRequest, base: stri
 
 export function recoveredSessionForRun(account: string, server: string, runId: string, source: string, base: string): boolean {
     if (!/^[A-Za-z0-9_ -]{1,12}$/.test(account)) return false;
-    const root = join(base, '.practice/session-lifecycle'), proof = readLogoutProof(account, server, { root });
+    const root = recoveryLifecycleRoot(server, base), proof = readLogoutProof(account, server, { root });
     if (proof.state !== 'confirmed' || proof.ownerRun !== runId) return false;
     const statusFile = join(base, '.practice/status', account + '.json'), status = existsSync(statusFile) ? json(statusFile) : null;
     if (status?.server === server && !status.result && (!Number.isFinite(status.at) || status.at > proof.loggedOutAt)) return false;

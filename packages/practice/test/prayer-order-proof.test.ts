@@ -2,15 +2,13 @@ import {test,expect} from 'bun:test';
 import {prayerFixture,childConfiguration,saveChecks,childChecks,savedBurials,ENTRY,ENTRY_SKILLS,cases,NATIVE_ADMISSION_GB,selectPrayerProofEndpoints,prayerProofAccountEnv,startPrayerProofStack} from '../src/prayer-order-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {levelForXp} from '../../planner/src/curve';
-import {intentForEntry} from '../../planner/src/progression-catalog';
 import type {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 type Save=ReturnType<typeof readPracticeSave>;
-test('native Prayer CLI carries the same skill-plus-retained-bones contract as its live consumer',()=>{
+test('native Prayer CLI strips conflicting inherited progression env overrides',()=>{
  const c=childConfiguration('fixture',{PROGRESSION_CONSUMER:'{"skills":{"Ranged":99}}',BONE_ID:'536',BURY_HELD:'1'});
  const accept=JSON.parse(c.env.PROGRESSION_CONSUMER!);
  expect(accept).toEqual({skills:{Prayer:60},bank:{526:384}});
  expect(c.env.BONE_ID).toBe('526');expect(c.env.BURY_HELD).toBe('0');
- expect(intentForEntry(c.cmd[1]!,c.cmd.slice(3),c.env,accept)).toEqual({kind:'train',skill:'prayer',targetLevel:60});
 });
 test('isolated endpoints reach stack, generated account and actual CLI child without changing the parent',async()=>{
  const checked:number[]=[],samples=[0,0.01];

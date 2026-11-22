@@ -1,4 +1,4 @@
-// Audits knowledge/, packages/dashboard/client-assets/, packages/planner/, packages/router/, packages/practice/, and scripts/
+// Audits knowledge/, packages/dashboard/client-assets/, packages/planner/, packages/practice/, and scripts/
 // for strict RS2 Rev 289 (Lost City, January 17, 2005) parity against vendor/rs-sdk/server/content and PlayerStat.ts,
 // while preserving rs-sdk's built-in engine Market / Grand Exchange.
 // Usage: bun scripts/check-rev289-parity.ts [--strict]
@@ -702,7 +702,7 @@ export function checkCoreAndKnowledgeCodeParity(repoRoot: string, baseline: Rev2
     return issues;
 }
 
-/** Audits packages/planner/, packages/router/, and packages/practice/src/ (.ts and .json) against Rev 289 parity. */
+/** Audits packages/planner/ and packages/practice/src/ (.ts and .json) against Rev 289 parity. */
 export function checkPlannerRouterPracticeParity(repoRoot: string, baseline: Rev289Baseline): ParityIssue[] {
     const issues: ParityIssue[] = [];
     const targets: { dir: string; scope: 'planner' | 'router' | 'practice' }[] = [

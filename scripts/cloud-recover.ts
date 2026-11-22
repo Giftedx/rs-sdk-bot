@@ -1,20 +1,15 @@
-// Recovers this side's held live sessions through the side's running coordinator, so the swarm and the other farmers
-// keep running. A held session is one whose logout the server did not confirm: a logout that timed out, a dropped
+// Recovers this side's held live sessions via standalone bounded recovery in packages/fleet/src/session-recovery.ts.
+// A held session is one whose logout the server did not confirm: a logout that timed out, a dropped
 // socket, a killed worker. Its fleet claim stays held and each later login fails `fleet account claim held by swarm`.
-// The side's watchdog calls this script; it never guesses: an account whose end record is gone, or a side whose
-// coordinator is not running, is refused with a logged reason.
+// The side's watchdog calls this script; it never guesses: an account whose end record is gone or whose safety/circuit
+// checks refuse is skipped with a logged reason.
 // Usage: FLEET_SIDE=<side> bun scripts/cloud-recover.ts [--dry] [--root=<checkout>]   (root defaults to this checkout)
-// A cloud side waits for the recovery runs and then restarts its coordinator to release the parked jobs. That
-// coordinator inherits this process's environment without SWARM_PLAN, so the caller's PATH must carry the model stub
-// (README "Claude Code cloud fleet side"). The local side (packages/router/src/watchdog.ts) submits and returns: its
-// coordinator holds real work in jobs.json and releases its parked jobs itself (coordinator-live.ts
-// releaseFinishedOwnJobs), so this script never stops it.
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { lifecycleRootForRead, liveLifecycleRoot, liveRoot } from '../packages/core/src/practice-paths';
 import { InfraCircuitBreaker } from '../packages/fleet/src/infra-circuit-breaker';
-import { spawn } from 'node:child_process';
+import { runStandaloneRecoveryPass } from '../packages/fleet/src/session-recovery';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
@@ -23,7 +18,7 @@ import { BOOTSTRAP_STATUS_AGE_MS } from '../packages/core/src/session-admission'
 import { readFleetAccountClaim } from '../packages/core/src/fleet-trade-claim';
 import { attemptOutcome, listAttempts, readLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { heldRecoveryOwners, RECOVERY_SCRIPT } from '../packages/core/src/session-recovery-permit';
-import { jobAccounts } from '../packages/core/src/coordinator-jobs';
+import { jobAccounts } from '../packages/fleet/src/trade-plan';
 import { clearSwarmStop, loadEnded, swarmWroteStop, type EndRecord } from './swarm';
 
 export const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
@@ -445,139 +440,12 @@ export function recoveryRequestWaiting(requests: string): boolean {
     });
 }
 
-const pidAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code === 'EPERM'; } };
 const readJson = (file: string, fallback: any) => { try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return fallback; } };
 const log = (line: string) => console.log(`CLOUD_RECOVER ${line}`);
 
 async function main(root: string, dry: boolean): Promise<number> {
-    const side = mySide(), cloud = cloudSide(side), coord = join(root, '.practice', 'coordinator'), stopCoordinator = join(root, '.practice', 'stop-coordinator');
-    const coordinatorRunning = () => { const o = readJson(join(coord, 'owner.json'), null); return !!o && Number.isSafeInteger(o.pid) && pidAlive(o.pid) && !existsSync(stopCoordinator); };
-    if (!coordinatorRunning()) { log('refused: coordinator is not running'); return 1; }
-    const tasksNow = () => readJson(join(coord, 'state.json'), { tasks: [] }).tasks ?? [];
-    let before: any[];
-    try { before = retainedRecoveryTasks(root, tasksNow()); }
-    catch { log('refused: recovery outcome archive unreadable or conflicting'); return 1; }
-    const dead = deadTasks(before), inFlight = recoveriesInFlight(before, dead);
-    if (inFlight.length) { log(`recovery in flight for ${inFlight.map((t: any) => t.spec.sessionRecovery.account).join(', ')}; waiting`); return 0; }
-    if (recoveryRequestWaiting(join(coord, 'requests'))) { log('a submitted recovery waits for the coordinator to take it; waiting'); return 0; }
-    const ended = loadEnded(join(root, '.practice', 'swarm-deaths.json'));
-    let results = ''; try { results = readFileSync(join(root, '.practice', 'swarm-repair.json.results.jsonl'), 'utf8'); } catch { /* no recovery result yet */ }
-    const waits = waitRefusedRuns(results);
-    const accounts = [...loadOwners()].filter(([n, o]) => o.side === side && o.server === LIVE_SERVER && !NEVER_RECOVERED.includes(n.toLowerCase())).map(([n]) => n);
-    const targets: Target[] = [];
-    const breaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(root), 'infra-circuit-breaker.json') });
-    const gate = breaker.canProceed('remote_git_claim');
-    if (!gate.allowed) { log(`deferred: infra circuit breaker open (${gate.reason})`); return 0; }
-    for (const lower of accounts) {
-        const name = [...ended.keys()].find(n => n.toLowerCase() === lower) ?? lower;
-        const proof = readLogoutProof(name, LIVE_SERVER, { root: lifecycleRootForRead(LIVE_SERVER, root) });
-        if (proof.state !== 'held') continue;
-        // A live worker refreshes its status every few seconds; skip it before reading the claim ref from origin.
-        const status = readJson(join(root, '.practice', 'status', `${name}.json`), null);
-        if (status && !status.result && Date.now() - status.at < 60_000) continue;
-        let claim: ClaimView = null;
-        try { claim = readFleetAccountClaim(root, { account: name, server: LIVE_SERVER }) as ClaimView; breaker.recordSuccess('remote_git_claim'); }
-        catch (e) {
-            const tripped = breaker.recordFailure(e);
-            log(`${name}: refused: claim unreadable: ${String(e).slice(0, 120)}`);
-            if (tripped.tripped) { log('infra circuit breaker tripped; aborting remaining claim reads'); break; }
-            continue;
-        }
-        const stopFile = join(root, '.practice', `stop-${name}`), stopText = existsSync(stopFile) ? readFileSync(stopFile, 'utf8') : undefined;
-        const end = ended.get(name);
-        const e = eligibility({ proof, claim, end, stopText, pidAlive, host: hostname(), retried: !!end && spentAttempts(before, { account: name, endedAt: end.at }, waits) > 0 });
-        if (!e.eligible) {
-            if (e.diagnose) {
-                const problem = recoveryPlanningProblem(root, name, end, before, e.reason, waits)!;
-                if (dry) log(`${name}: would request recovery diagnosis through the planner: ${e.reason}`);
-                else if (requestRecoveryPlanning(root, problem)) log(`${name}: requested recovery diagnosis through the planner: ${e.reason}`);
-            } else if (e.log) log(`${name}: refused: ${e.reason}`);
-            continue;
-        }
-        const target = { account: name, endedAt: e.endedAt };
-        const refusal = budgetRefusal(root, name, end!, before, waits);
-        const problem = recoveryPlanningProblem(root, name, end!, before, refusal, waits);
-        if (problem) {
-            if (dry) log(`${name}: would request recovery diagnosis and practice through the planner`);
-            else if (requestRecoveryPlanning(root, problem)) log(`${name}: requested recovery diagnosis and practice through the planner`);
-            continue;
-        }
-        if (!cloud && !endSettled(end!, Date.now())) continue;
-        if (recoveryLeaseState(root, name) === 'held') { log(`${name}: refused: a recovery child still holds the account's lease, or the lease is unreadable`); continue; }
-        targets.push(target);
-    }
-    let failed = false;
-    if (targets.length) {
-        const { now: batch, later } = recoveryBatch(targets);
-        if (later.length) log(`${later.length} more held accounts wait for the next call: ${later.map(t => t.account).join(', ')}`);
-        const proposal = recoveryProposal(side, batch, Date.now()), runs = proposal.tasks.slice(1) as { id: string; account: string }[];
-        log(`submitting ${proposal.tasks.map(t => t.id).join(', ')} (${batch.map(t => `${t.account} endedAt ${t.endedAt}`).join('; ')})`);
-        const stale = batch.map(t => t.account).filter(a => recoveryLeaseState(root, a) === 'stale');
-        if (dry) { if (stale.length) log(`would move aside the stale recovery lease of ${stale.join(', ')}`); return 0; }
-        for (const a of stale) log(`${a}: moved its stale recovery lease to ${archiveStaleLease(root, a, Date.now())}`);
-        const cleared = clearSwarmStops(root, batch.map(t => t.account));
-        if (cleared.length) log(`removed the swarm's own stop file for ${cleared.join(', ')}`);
-        const file = join(root, '.practice', 'cloud-recover', `${proposal.tasks[0]!.id}.json`);
-        mkdirSync(resolve(file, '..'), { recursive: true }); writeFileSync(file, JSON.stringify(proposal, null, 1) + '\n');
-        if (!(await run(root, ['--submit', file]))) { log('submit failed'); return 1; }
-        // The local coordinator runs the tasks and releases the parked jobs itself; the next call sees them in flight.
-        if (!cloud) return 0;
-        // One qualify, then about a minute per recovery run.
-        const deadline = Date.now() + (15 + 2 * runs.length) * 60_000;
-        for (;;) {
-            const tasks = tasksNow(), status = (id: string) => tasks.find((t: any) => t.spec?.id === id)?.status, open = new Set(recoveriesInFlight(tasks).map((t: any) => t.spec.id));
-            if (runs.every(r => status(r.id) && !open.has(r.id))) break;
-            if (submitRejected(join(coord, 'requests'), proposal.tasks[0]!.id)) { log(`submit rejected by the coordinator (queue-submit-failed in its events): ${proposal.tasks[0]!.id}`); return 1; }
-            if (Date.now() > deadline) { log(`recovery timed out (${runs.map(r => `${r.id} ${status(r.id) ?? 'unseen'}`).join(', ')}); no retry`); return 1; }
-            await Bun.sleep(5000);
-        }
-        const tasks = tasksNow();
-        for (const r of runs) {
-            const status = tasks.find((t: any) => t.spec?.id === r.id)?.status, ok = status === 'succeeded', proof = readLogoutProof(r.account, LIVE_SERVER, { root: lifecycleRootForRead(LIVE_SERVER, root) });
-            log(`${r.account}: recovery ${ok ? 'succeeded' : status === 'pending' ? 'not started: a dependency failed' : 'failed'} (${r.id}); logout proof ${proof.state}`);
-            if (!ok || proof.state !== 'confirmed') failed = true;
-        }
-    }
-    if (!cloud) return 0;
-    // A finished recovery leaves a parked coordinator job that keeps the account from its owner job; release them all
-    // once no recovery is still in flight, so each has parked its session check first.
-    const flying = recoveriesInFlight(tasksNow());
-    if (flying.length) return failed ? 1 : 0;
-    const jobs = readJson(join(coord, 'jobs.json'), { jobs: [] }).jobs ?? [];
-    const owned = new Set((readJson(join(root, 'swarm.json'), { jobs: [] }).jobs ?? []).flatMap(jobAccounts).map((n: string) => n.toLowerCase()));
-    const view: ReleaseView = { ownerJob: a => owned.has(a.toLowerCase()), confirmed: a => readLogoutProof(a, LIVE_SERVER, { root: lifecycleRootForRead(LIVE_SERVER, root) }).state === 'confirmed',
-        recovering: a => flying.some((t: any) => t.spec.sessionRecovery.account.toLowerCase() === a.toLowerCase()) };
-    const { free, keep } = releasePlan(jobs, view), parked = free.flatMap(jobAccounts), blockers = releaseBlockers(jobs, view);
-    const named = (js: readonly any[]) => js.map((j: any) => `${jobAccounts(j).join('+')} ${j.script}${j.enabled === false ? '' : ' (enabled)'}`).join(', ');
-    if (!parked.length && blockers.length && blockers.length < jobs.length) log(`release skipped: jobs.json also holds ${named(blockers)}`);
-    if (!parked.length) return failed ? 1 : 0;
-    if (dry) { log(`would release parked jobs for ${parked.join(', ')}${keep.length ? `; would leave ${named(keep)}` : ''}`); return 0; }
-    return (await release(root, parked, keep)) && !failed ? 0 : 1;
-}
-
-async function run(root: string, args: string[]): Promise<boolean> {
-    // This process's own runtime: the PATH of a scheduled caller (the local watchdog task) can hold no `bun`.
-    const p = Bun.spawn([process.execPath, 'packages/router/src/coordinator-cli.ts', ...args], { cwd: root, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
-    return (await p.exited) === 0;
-}
-
-// Stop the coordinator (its swarm and workers are detached and keep running), move its parked jobs and stop file into
-// an archive folder, then start it again; it adopts the running swarm. Jobs in `keep` go back into a new jobs.json.
-async function release(root: string, parked: string[], keep: readonly any[] = []): Promise<boolean> {
-    const coord = join(root, '.practice', 'coordinator'), owner = readJson(join(coord, 'owner.json'), null);
-    if (!(await run(root, ['--stop']))) { log('release: coordinator stop failed'); return false; }
-    const deadline = Date.now() + 120_000;
-    while (owner && pidAlive(owner.pid)) { if (Date.now() > deadline) { log('release: coordinator did not exit; jobs.json left in place'); return false; } await Bun.sleep(2000); }
-    const dir = archiveDir(root, parked[0]!, Date.now()); mkdirSync(dir, { recursive: true });
-    const file = join(coord, 'jobs.json'), whole = readJson(file, { jobs: [] });
-    for (const f of [file, join(root, '.practice', 'stop-coordinator')]) if (existsSync(f)) renameSync(f, join(dir, f.split('/').pop()!));
-    if (keep.length) { writeFileSync(file, JSON.stringify({ ...whole, jobs: keep }, null, 1) + '\n'); log(`release left in jobs.json: ${keep.map((j: any) => `${jobAccounts(j).join('+')} ${j.script}`).join(', ')}`); }
-    const env = { ...process.env }; delete env.SWARM_PLAN;
-    mkdirSync(join(root, '.practice', 'swarm-logs'), { recursive: true });
-    const out = openSync(join(root, '.practice', 'swarm-logs', 'coordinator.log'), 'a');
-    spawn('bun', ['packages/router/src/coordinator-cli.ts', '--run'], { cwd: root, env, detached: true, stdio: ['ignore', out, out], windowsHide: true }).unref();
-    log(`released ${parked.join(', ')}; parked jobs archived in ${dir}; coordinator restarted`);
-    return true;
+    const res = await runStandaloneRecoveryPass({ root, dry, log });
+    return res.ok ? 0 : 1;
 }
 
 if (import.meta.main) {

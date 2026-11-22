@@ -800,7 +800,7 @@ export async function runWildyPvpRelogLoop(
         let rec: ReturnType<typeof createTickRecorder> = null;
         try {
             sess = await connectWithTransientRetry(
-                () => connectInProcess({ name: opts.botName, password: creds.password, server: creds.server, ...(members ? { members } : {}), work }),
+                () => connectInProcess({ name: opts.botName, password: creds.password, server: creds.server, ...(members ? { members } : {}) }),
                 () => opts.shouldStop() || totalTicks >= opts.cap,
             );
             await awaitBotReady(sess, () => {});

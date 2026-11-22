@@ -496,9 +496,6 @@ jobs:
           path: |
             .practice/hosted-rehearse/**
             .practice/specialist-launch/**
-  progression-practice:
-    if: inputs.preparation_practice
-    uses: ./.github/workflows/progression-practice.yml
   # The test files run in parts on several runners at once (scripts/test-shards.ts --part); part 1 also runs the other checks.
   linux:
     if: inputs.bench_pattern == '' && inputs.measure_script == ''
@@ -783,7 +780,11 @@ jobs:
         id: quest
         if: inputs.native_quest
         timeout-minutes: 35
-        run: bun packages/router/src/delivery-cli.ts quest-sweep
+        run: |
+          mkdir -p .practice .practice/deliveries/quest-sweep-ci
+          touch .practice/delivery-native.lock
+          trap 'rm -f .practice/delivery-native.lock' EXIT
+          DELIVERY_DIR=.practice/deliveries/quest-sweep-ci bun packages/practice/src/quest-sweep-proof.ts --case=scorpion-barcrawl --case=scorpion-complete-refusal --case=elena-heckel-dust
       - name: Prove full-pack fleet receiver capacity
         if: ${{ !cancelled() && steps.pack.outcome == 'success' }}
         timeout-minutes: 5
@@ -792,7 +793,8 @@ jobs:
         if: ${{ !cancelled() && steps.pack.outcome == 'success' }}
         timeout-minutes: 10
         run: |
-          bun packages/router/src/delivery-cli.ts coin-courier
+          mkdir -p .practice/deliveries/coin-courier-ci
+          DELIVERY_DIR=.practice/deliveries/coin-courier-ci bun packages/practice/src/coin-courier-proof.ts
       - name: Retain the source-bound practice evidence
         if: always()
         uses: actions/upload-artifact@v4

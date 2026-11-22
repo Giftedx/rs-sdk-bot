@@ -22,7 +22,7 @@ export const FILES = {
     requests: join(root, 'research', 'owner-requests.md'),
     haggisRun: join(root, 'research', 'haggis-run.md'),
     haggisPlan: join(dashboardDir, 'haggis-plan.json'),
-    scoreboard: join(practice, 'coordinator', 'scoreboard.json'),
+    scoreboard: join(practice, 'live', 'scoreboard.json'),
     fleet: join(practice, 'fleet-data', 'fleet'),
 };
 export const PORT = Number(process.env.DASH_PORT ?? 3100);

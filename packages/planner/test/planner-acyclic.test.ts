@@ -90,23 +90,6 @@ test('packages/planner/src production modules have zero circular dependencies', 
     expect(tarjanSccs(plannerFiles)).toEqual([]);
 });
 
-test('packages/planner/src/autopilot submodules never import the autopilot facade', () => {
-    const submoduleFiles = walkTs(join(repoRoot, 'packages', 'planner', 'src', 'autopilot'));
-    expect(submoduleFiles.length).toBeGreaterThanOrEqual(3);
-    const violations: string[] = [];
-    for (const rel of submoduleFiles) {
-        const abs = join(repoRoot, rel);
-        const info = ts.preProcessFile(readFileSync(abs, 'utf8'), true, true);
-        for (const imp of info.importedFiles) {
-            if (!imp.fileName.startsWith('.')) continue;
-            const target = relativeTarget(abs, imp.fileName);
-            if (target === 'packages/planner/src/autopilot.ts') violations.push(`${rel} -> ${target}`);
-        }
-    }
-    expect(violations).toEqual([]);
-    expect(tarjanSccs(submoduleFiles)).toEqual([]);
-});
-
 test('packages/planner/src production modules never import from practice, router, dashboard, or scripts', () => {
     const plannerFiles = walkTs(join(repoRoot, 'packages', 'planner', 'src'));
     const bannedRoots = ['packages/practice/', 'packages/router/', 'packages/dashboard/', 'scripts/'];

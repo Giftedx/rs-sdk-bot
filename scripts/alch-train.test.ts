@@ -33,13 +33,10 @@ test('held casts are the scarcest of natures, items and fire runes', () => {
     expect(castsHeld('high-alch', held, FEATHER, true)).toBe(40);
 });
 
-test('the RESULT line carries progress fields the planner reads', async () => {
+test('the RESULT line carries progress fields', async () => {
     const { alchResultLine } = await import('./alch-train');
-    const { progressed } = await import('../packages/planner/src/autopilot');
     const r = { ok: false, stop: 'failure', failure: 'alch: level-up dialog stayed open', level: 60, gained: 10, magicXp: 35075, casts: { 'low-alch': 18, 'high-alch': 13, strike: 0 }, ticks: 257 };
     expect(alchResultLine(r)).toBe('alch level=60 gained=10 xp=35075 strike=0 low=18 high=13 stop=failure ticks=257 failure=alch: level-up dialog stayed open');
-    expect(progressed(`RESULT fail ${alchResultLine(r)}`)).toBe(true);
-    expect(progressed(`RESULT fail ${alchResultLine({ ...r, gained: 0, magicXp: 0 })}`)).toBe(false);
 });
 
 test('a run that could not pay for one cast ends as no progress, which the supervisor stops instead of retrying', async () => {

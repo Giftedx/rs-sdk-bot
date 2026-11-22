@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import type TS from 'typescript';
 import { runtimeImports } from '../release-digest';
 import {
-    codeFile, hashOnly, kind, posix, progressionEntryMetadata, releaseDataRoots, releaseFile,
+    codeFile, hashOnly, kind, posix, releaseDataRoots, releaseFile,
     releaseRootFiles, repoPath, root, runtimeTrees, skipped, ts, type ReleaseMemo,
 } from './paths';
 
@@ -91,7 +91,6 @@ function fileLinks(base: string, file: string, memo: ReleaseMemo): { files: stri
         else if (spec.startsWith('@rsbot/')) throw Error('no worker progress: release workspace import unsupported: ' + file + ' -> ' + spec);
     }
     if (!hashOnly.has(file)) for (const literal of stringLiterals(file, text)) for (const p of literalPaths(base, file, literal, memo)) {
-        if (progressionEntryMetadata.has(file) && !p.dir && p.path.startsWith('scripts/') && codeFile.test(p.path)) continue;
         (p.dir ? dirs : files).push(p.path);
     }
     const links = { files, dirs }; memo.set(key, links); return links;

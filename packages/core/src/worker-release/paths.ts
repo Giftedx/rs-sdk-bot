@@ -13,9 +13,9 @@ export const ts = new Proxy({} as typeof TS, {
 // One fleet revision includes helpers and both host/single launch paths, not
 // just the entry script. Credentials, mutable receipts and notes are excluded.
 export const workerSourceRoots = ['scripts', 'packages', 'vendor/rs-sdk/sdk', 'vendor/rs-sdk/server/webclient/src', 'vendor/rs-sdk/server/vendor/rsmod-pathfinder'];
-// These packages do not execute workers. A runtime import into either must be
+// These packages do not execute workers. A runtime import into them must be
 // included deliberately instead of silently escaping the release fingerprint.
-export const toolingRoots = ['packages/dashboard', 'packages/router'];
+export const toolingRoots = ['packages/dashboard'];
 
 // A release covers the files one process can run, not the whole tree (docs/script-contract.md, Release scope):
 // its entries and every file they reach through relative imports or through string literals that name a file or
@@ -40,14 +40,6 @@ export const hashOnly = new Set([
     'packages/core/src/worker-release/revision.ts',
     'packages/core/src/worker-release/peers.ts',
     'packages/core/src/launch-evidence.ts',
-]);
-// These modules compare or describe future entry paths; they never load those
-// worker bodies. Their real imports and all data reads still belong to the pin.
-export const progressionEntryMetadata = new Set([
-    'packages/core/src/progression-policy.ts',
-    'packages/core/src/progression-session.ts',
-    'packages/planner/src/progression-catalog.ts',
-    'packages/planner/src/progression-ranged.ts',
 ]);
 // One call's file reads and parses; a check of several peers shares it. Never kept between calls.
 export type ReleaseMemo = Map<string, unknown>;

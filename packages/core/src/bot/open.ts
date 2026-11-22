@@ -116,12 +116,11 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     const lootTables = lootOn ? sharedLootTables() : null;
     if (lootOn) loadDanger();
     const s = await connectInProcess({
-        name, password, server, work: botWork(name, opts.record), ...(trade ? {
+        name, password, server, ...(trade ? {
             trade: { ...trade, check: srv => { assertSideOwns(name); trade.check(srv); } },
         } : {}),
     });
     await awaitBotReady(s, log);
-    s.progression?.onHandoff(detail => { void (opts.onStop ? opts.onStop(s, detail) : finish([s], false, detail)); });
     const p = s.sdk.getState()!.player!;
     // Life fields copied while connected: after a disconnect the state's player is no evidence of a death (a run
     // whose logout timed out ended the next login, and the stale player read as a new life).

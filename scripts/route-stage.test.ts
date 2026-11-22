@@ -33,9 +33,9 @@ test('remote route staging honors published owner holds without discarding the m
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
 
-test('route donor availability follows current enabled jobs and coordinator overlays instead of older published jobs', () => {
+test('route donor availability follows current enabled jobs instead of older published jobs', () => {
     const base = mkdtempSync(join(tmpdir(), 'route-stage-jobs-')), fleetDir = join(base, 'fleet'), side = 'cloud';
-    mkdirSync(join(fleetDir, 'plans'), { recursive: true }); mkdirSync(join(base, '.practice/coordinator'), { recursive: true });
+    mkdirSync(join(fleetDir, 'plans'), { recursive: true });
     const published = [{ account: 'Disabled', script: 'scripts/goldfarm.ts', enabled: true },
         { account: 'Enabled', script: 'scripts/goldfarm.ts', enabled: false, autopilot: side }];
     try {
@@ -43,17 +43,14 @@ test('route donor availability follows current enabled jobs and coordinator over
         writeFileSync(join(base, 'swarm.json'), JSON.stringify({ maxBots: 3, jobs: [
             { account: 'Disabled', script: 'scripts/goldfarm.ts', enabled: false, autopilot: side },
             { account: 'Enabled', script: 'scripts/goldfarm.ts', enabled: true },
-            { account: 'Overlay', script: 'scripts/goldfarm.ts', enabled: true, autopilot: side },
-        ] }));
-        writeFileSync(join(base, '.practice/coordinator/jobs.json'), JSON.stringify({ jobs: [
-            { account: 'Overlay', script: 'scripts/quest-chain.ts', enabled: true, coordinatorOwner: 'coordinator' },
+            { account: 'Running', script: 'scripts/quest-chain.ts', enabled: true },
         ] }));
         const options = { base, fleetDir, localSide: side }, jobs = stageJobs(side, options);
         const busy = swarmBusy(jobs), owned = swarmBusy(jobs.filter(j => typeof j.autopilot === 'string'));
-        expect([...busy].sort()).toEqual(['enabled', 'overlay']); expect([...owned]).toEqual([]);
+        expect([...busy].sort()).toEqual(['enabled', 'running']); expect([...owned]).toEqual([]);
         expect(heldBack('Disabled', jobs, undefined)).toBeUndefined();
-        expect(jobs.find(j => j.account === 'Overlay').script).toBe('scripts/quest-chain.ts');
-        const staged = planStage([{ item: 'oak logs', count: 10 }], () => 0, () => ['Disabled', 'Enabled', 'Overlay']
+        expect(jobs.find(j => j.account === 'Running').script).toBe('scripts/quest-chain.ts');
+        const staged = planStage([{ item: 'oak logs', count: 10 }], () => 0, () => ['Disabled', 'Enabled', 'Running']
             .map(name => ({ name, count: 10, busy: busy.has(name.toLowerCase()), blocked: busy.has(name.toLowerCase()) && !owned.has(name.toLowerCase()) })), true);
         expect(staged.orders).toEqual([{ from: 'Disabled', item: 'oak logs', count: 10, busy: false }]);
         expect(staged.short).toEqual([]);
@@ -61,9 +58,9 @@ test('route donor availability follows current enabled jobs and coordinator over
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
 
-test('route availability retains published holds when the local plan or overlay cannot be read, and refuses unknown availability', () => {
+test('route availability retains published holds when the local plan cannot be read, and refuses unknown availability', () => {
     const base = mkdtempSync(join(tmpdir(), 'route-stage-job-fallback-')), fleetDir = join(base, 'fleet'), side = 'cloud';
-    mkdirSync(join(fleetDir, 'plans'), { recursive: true }); mkdirSync(join(base, '.practice/coordinator'), { recursive: true });
+    mkdirSync(join(fleetDir, 'plans'), { recursive: true });
     const published = [{ account: 'Held', script: '', enabled: false }], options = { base, fleetDir, localSide: side };
     try {
         writeFileSync(join(fleetDir, 'plans/cloud.json'), JSON.stringify({ side, jobs: published }));
@@ -73,32 +70,30 @@ test('route availability retains published holds when the local plan or overlay 
             expect(heldBack('Held', stageJobs(side, options), undefined)).toBe('reserved (a job with no script)');
         }
         writeFileSync(join(base, 'swarm.json'), JSON.stringify({ maxBots: 3, jobs: [] }));
-        writeFileSync(join(base, '.practice/coordinator/jobs.json'), '{');
-        expect(stageJobs(side, options)).toEqual(published);
-        writeFileSync(join(fleetDir, 'plans/cloud.json'), '{');
-        expect(() => stageJobs(side, options)).toThrow('no readable job plan');
-        rmSync(join(base, '.practice/coordinator/jobs.json'));
         expect(stageJobs(side, options)).toEqual([]);
+        writeFileSync(join(fleetDir, 'plans/cloud.json'), '{');
+        expect(stageJobs(side, options)).toEqual([]);
+        writeFileSync(join(base, 'swarm.json'), '{');
+        expect(() => stageJobs(side, options)).toThrow('no readable job plan');
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
 
-test('route availability follows the cloud handoff plan and coordinator overlay selected by SWARM_PLAN or an explicit file', () => {
+test('route availability follows the cloud handoff plan selected by SWARM_PLAN or an explicit file', () => {
     const base = mkdtempSync(join(tmpdir(), 'route-stage-cloud-plan-')), fleetDir = join(base, 'fleet'), side = 'cloud';
     const custom = join(base, '.practice/cloud-handoff/swarm.json'), priorEnv = process.env.SWARM_PLAN;
-    for (const dir of [join(fleetDir, 'plans'), join(base, '.practice/coordinator'), join(base, '.practice/cloud-handoff')]) mkdirSync(dir, { recursive: true });
+    for (const dir of [join(fleetDir, 'plans'), join(base, '.practice/cloud-handoff')]) mkdirSync(dir, { recursive: true });
     const published = [{ account: 'Published', script: 'scripts/goldfarm.ts', enabled: false }];
     const options = { base, fleetDir, localSide: side };
     try {
         writeFileSync(join(fleetDir, 'plans/cloud.json'), JSON.stringify({ side, jobs: published }));
         writeFileSync(join(base, 'swarm.json'), JSON.stringify({ maxBots: 3, jobs: [{ account: 'RootOnly', script: 'scripts/goldfarm.ts', enabled: false }] }));
         writeFileSync(custom, JSON.stringify({ maxBots: 3, jobs: [{ account: 'CloudDonor', script: 'scripts/goldfarm.ts', enabled: true, autopilot: side },
-            { account: 'Overlay', script: 'scripts/goldfarm.ts', enabled: true, autopilot: side }] }));
-        writeFileSync(join(base, '.practice/coordinator/jobs.json'), JSON.stringify({ jobs: [{ account: 'Overlay', script: 'scripts/quest-chain.ts', enabled: true, coordinatorOwner: 'coordinator' }] }));
+            { account: 'Worker', script: 'scripts/quest-chain.ts', enabled: true }] }));
         process.env.SWARM_PLAN = custom;
         const jobs = stageJobs(side, options);
-        expect(jobs.map(j => j.account)).toEqual(['CloudDonor', 'Overlay']);
-        expect(jobs.find(j => j.account === 'Overlay').script).toBe('scripts/quest-chain.ts');
-        expect([...swarmBusy(jobs)].sort()).toEqual(['clouddonor', 'overlay']);
+        expect(jobs.map(j => j.account)).toEqual(['CloudDonor', 'Worker']);
+        expect(jobs.find(j => j.account === 'Worker').script).toBe('scripts/quest-chain.ts');
+        expect([...swarmBusy(jobs)].sort()).toEqual(['clouddonor', 'worker']);
         process.env.SWARM_PLAN = join(base, 'swarm.json');
         expect(stageJobs(side, { ...options, planFile: custom })).toEqual(jobs);
         process.env.SWARM_PLAN = custom;

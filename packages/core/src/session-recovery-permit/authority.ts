@@ -2,7 +2,8 @@
 import { existsSync, linkSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { readMergedPlan } from '../coordinator-jobs';
+import { ownerPlanPath } from '../plan-lock';
+import { fleetStateFile, liveRoot, statusReadDirs } from '../practice-paths';
 import { processMatchesRecent } from '../proc';
 import { listAttempts, readLogoutProof } from '../session-lifecycle';
 import { missionSignature, successfulEnd } from '../session-mission';
@@ -11,17 +12,41 @@ import { cachedLaunchRevision, capabilityRevision } from '../worker-release';
 import { assertFleetResolved, evidence, verifyNativeRecoveryProof } from './qualification';
 import {
     RECOVERY_SCRIPT, assertNativeFixtureRoot, assertNoRecoveryLease, assertRecoveryNotStopped, json,
-    recoveryPermitPaths, same, sha, validateRecoveryRequest,
+    recoveryLifecycleRoot, recoveryPermitPaths, same, sha, validateRecoveryRequest,
     type ControlledRecoveryRequest, type Permit, type ProducerRef, type RecoveryPermitChecks,
 } from './request';
 
-// The current capability release of a delivery task's entry, read as data (runtime core must not import the router).
-function capabilityRelease(capability: unknown, base: string): string | undefined {
+function findAccountStatus(base: string, account: string): any {
+    const fileName = `${account}.json`;
+    for (const dir of statusReadDirs(base)) {
+        const candidate = join(dir, fileName);
+        if (existsSync(candidate)) return json(candidate);
+    }
+    return null;
+}
+
+function readFleetState(base: string): any | null {
+    const file = fleetStateFile(base);
+    if (!existsSync(file)) return null;
     try {
-        if (typeof capability !== 'string' || !/^[a-z0-9-]+$/.test(capability)) return undefined;
-        const definition = json(join(base, 'packages/router/tasks', capability + '.json'));
-        return definition.id === capability && typeof definition.entry === 'string' ? capabilityRevision([definition.entry], base) : undefined;
-    } catch { return undefined; }
+        const parsed = json(file);
+        return parsed?.schemaVersion === 1 && parsed.accounts && typeof parsed.accounts === 'object' ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function findAccountChain(state: any, account: string): any | undefined {
+    const chains = state?.activeChains;
+    if (!chains || typeof chains !== 'object') return undefined;
+    for (const [k, plan] of Object.entries(chains as Record<string, any>)) {
+        if (same(k, account) || same(plan?.account, account)) return plan;
+    }
+    return undefined;
+}
+
+function scriptFromRecoverySpec(spec: any): string | undefined {
+    return typeof spec?.script === 'string' && /^scripts\/[A-Za-z0-9_/-]+\.ts$/.test(spec.script) ? spec.script : undefined;
 }
 
 function authority(r: ControlledRecoveryRequest, base: string, options: RecoveryPermitChecks, issuing = false, ownedChild = false) {
@@ -29,42 +54,55 @@ function authority(r: ControlledRecoveryRequest, base: string, options: Recovery
     if (options.nativeFixture) assertNativeFixtureRoot(base, r.server);
     // Observation of the owners, not kill authorization: the cached lookup is allowed here (see proc.ts).
     const now = (options.now ?? Date.now)(), matches = options.matches ?? processMatchesRecent;
-    const owner = json(join(base, '.practice/coordinator/swarm-owner.json'));
+    const liveDir = liveRoot(base);
+    const owner = json(join(liveDir, 'swarm-owner.json'));
     if (!Number.isSafeInteger(owner.pid) || owner.pid < 1 || typeof owner.nonce !== 'string' || !owner.nonce
         || owner.source !== r.source || !matches(owner.pid, owner.nonce) || (issuing && owner.pid !== process.pid)) throw Error('recovery controller owner changed');
     if ((options.source ?? (() => cachedLaunchRevision(base)))() !== r.source) throw Error('recovery source changed');
     assertRecoveryNotStopped(r.account, base);
-    const record = json(join(base, '.practice/coordinator/state.json')).tasks?.find((t: any) => t.status === 'running' && t.runId === r.runId);
-    const spec = record?.spec, authorization = spec?.sessionRecovery;
-    if (spec?.kind !== 'run' || !same(spec.account, r.account) || !same(authorization?.account, r.account) || authorization?.endedAt !== r.endedAt
+    const runDir = join(liveDir, 'fleet-runs', r.runId);
+    const record = json(join(runDir, 'recovery.json'));
+    const spec = record?.spec ?? record, authorization = spec?.sessionRecovery;
+    if (record?.status !== 'running' || record?.runId !== r.runId
+        || spec?.kind !== 'run' || !same(spec.account, r.account) || !same(authorization?.account, r.account) || authorization?.endedAt !== r.endedAt
         || !spec.repairs?.some((p: any) => same(p.account, r.account) && p.endedAt === r.endedAt)) throw Error('recovery task authorization missing');
-    const taskOwner = json(join(base, '.practice/coordinator/runs', r.runId, 'owner.json'));
+    const taskOwner = json(join(runDir, 'owner.json'));
     if (taskOwner.runId !== r.runId || taskOwner.pid !== record.pid || !matches(taskOwner.pid, r.runId)) throw Error('recovery task owner changed');
     const requestLease = json(join(base, '.practice/swarm-repair.json.lease'));
     if (requestLease.pid !== taskOwner.pid || requestLease.runId !== r.runId || requestLease.nonce !== r.nonce) throw Error('recovery request lease changed');
     const end = Object.entries(json(join(base, '.practice/swarm-deaths.json'))).find(([a]) => same(a, r.account))?.[1] as any;
     const completed = successfulEnd(end?.reason ?? '');
     if (end?.at !== r.endedAt || !completed && !/^(?:blocked|died|gave-up|exit|no-progress|stopped)(?:\b| )/.test(end.reason ?? '')) throw Error('recovery exact failure changed');
-    const assignments = readMergedPlan(base).jobs.filter((j: any) => (j.accounts ?? [j.account]).some((a: any) => same(a, r.account)));
+    const planJobs = (json(ownerPlanPath(base)).jobs ?? []) as any[];
+    const assignments = planJobs.filter((j: any) => (j.accounts ?? [j.account]).some((a: any) => same(a, r.account)));
     if (assignments.some((j: any) => j.enabled || !j.script || /fresh.clock|24 boards|main simultaneous/i.test(j.goal ?? ''))) throw Error('recovery assignment is active or reserved');
+    const brainState = readFleetState(base);
+    if (brainState) {
+        for (const [k, row] of Object.entries(brainState.accounts as Record<string, any>)) {
+            if (!same(k, r.account) && !same(row?.account, r.account)) continue;
+            if (row?.role === 'main' || row?.role === 'specialist' || row?.activeJob != null) throw Error('recovery assignment is active or reserved');
+        }
+    }
     let missionRevision: string | undefined;
     if (completed) {
         // Only an ordinary retired assignment may bootstrap a new mission. Cleanup never clears its successful end.
-        if (assignments.length !== 1 || assignments[0].enabled !== false || assignments[0].host || assignments[0].orchestrate || assignments[0].accounts
-            || spec.participants?.length || spec.launch) throw Error('recovery completed assignment is not ordinary retired work');
+        const retiredInPlan = assignments.length === 1 && assignments[0].enabled === false && !assignments[0].host && !assignments[0].orchestrate && !assignments[0].accounts;
+        const retiredInBrain = assignments.length === 0 && !!brainState && Object.entries(brainState.accounts as Record<string, any>).some(([k, row]) => (same(k, r.account) || same(row?.account, r.account)) && row?.role !== 'main' && row?.role !== 'specialist' && row?.activeJob == null);
+        if ((!retiredInPlan && !retiredInBrain) || spec.participants?.length || spec.launch) throw Error('recovery completed assignment is not ordinary retired work');
         const holdsPath = join(base, '.practice/swarm-script-holds.json'), holds = existsSync(holdsPath) ? json(holdsPath) : [];
         if (!Array.isArray(holds) || holds.some((h: any) => !h || typeof h.account !== 'string' || same(h.account, r.account))) throw Error('recovery completed account has an open hold');
-        if (!/^[a-z0-9-]+$/.test(spec.capability ?? '')) throw Error('recovery completed mission unavailable');
-        // Read the existing definition as data; runtime core must not import the router.
-        const definition = json(join(base, 'packages/router/tasks', spec.capability + '.json'));
-        if (definition.id !== spec.capability || typeof definition.entry !== 'string' || !/^scripts\/[A-Za-z0-9_/-]+\.ts$/.test(definition.entry)) throw Error('recovery completed mission unavailable');
-        missionRevision = missionSignature({ account: r.account, script: definition.entry, args: spec.args ?? [], env: { ...spec.env, CAP: spec.env?.CAP ?? '1600', COORDINATOR_RUN_ID: r.runId } });
-        if (typeof end.revision !== 'string' || !end.revision || end.revision === missionRevision) throw Error('recovery completed work needs a different mission');
+        const entry = scriptFromRecoverySpec(spec);
+        if (!entry) throw Error('recovery completed mission unavailable');
+        const baseEnv = { ...spec.env, CAP: spec.env?.CAP ?? '1600' };
+        missionRevision = missionSignature({ account: r.account, script: entry, args: spec.args ?? [], env: { ...baseEnv, FLEET_RUN_ID: r.runId } });
+        const legacyRevision = missionSignature({ account: r.account, script: entry, args: spec.args ?? [], env: { ...baseEnv, COORDINATOR_RUN_ID: r.runId } });
+        if (typeof end.revision !== 'string' || !end.revision || end.revision === missionRevision || end.revision === legacyRevision) throw Error('recovery completed work needs a different mission');
     }
-    assertFleetResolved(join(base, '.practice/swarm-state.json'), r.account, owner.pid, options.now ?? Date.now);
-    const statusFile = join(base, '.practice/status', r.account + '.json'), status = existsSync(statusFile) ? json(statusFile) : null;
+    const fleetPath = existsSync(fleetStateFile(base)) ? fleetStateFile(base) : join(base, '.practice/swarm-state.json');
+    assertFleetResolved(fleetPath, r.account, owner.pid, options.now ?? Date.now);
+    const status = findAccountStatus(base, r.account);
     if (status && status.server === r.server && !status.result && (!Number.isFinite(status.at) || now - status.at < 30000)) throw Error('recovery account has an active external observation');
-    const lifecycleRoot = join(base, '.practice/session-lifecycle'), latest = readLogoutProof(r.account, r.server, { root: lifecycleRoot });
+    const lifecycleRoot = recoveryLifecycleRoot(r.server, base), latest = readLogoutProof(r.account, r.server, { root: lifecycleRoot });
     if (latest.state === 'invalid') throw Error('recovery lifecycle ownership malformed');
     if (latest.state === 'none' && status?.server === r.server && !status.result) throw Error('recovery orphan owner unknown');
     if (latest.state === 'held') {
@@ -79,8 +117,9 @@ function authority(r: ControlledRecoveryRequest, base: string, options: Recovery
     if (!options.nativeFixture) {
         const delivery = evidence(r.qualification?.delivery, base), proof = evidence(r.qualification?.proof, base);
         const gate = delivery.checks?.find((c: any) => c.id === 'native-session-recovery' && c.phase === 'practice');
-        // The delivery records its capability release (delivery-cli.ts); the native proof and r.source are the launch release.
-        if (delivery.ok !== true || delivery.stage !== 'delivered' || delivery.id !== spec.capability || typeof delivery.runtimeRevision !== 'string' || delivery.runtimeRevision !== (options.capability ?? (c => capabilityRelease(c, base)))(spec.capability)
+        const entry = scriptFromRecoverySpec(spec);
+        const expectedCapabilityRevision = (options.capability ?? (() => entry ? capabilityRevision([entry], base) : undefined))(spec.capability);
+        if (delivery.ok !== true || delivery.stage !== 'delivered' || delivery.id !== spec.capability || typeof delivery.runtimeRevision !== 'string' || delivery.runtimeRevision !== expectedCapabilityRevision
             || !Number.isFinite(delivery.at) || delivery.at <= r.endedAt || delivery.at > now
             || !gate || delivery.checks.some((c: any) => c.exitCode !== 0 || c.timedOut)
             || proof.ok !== true) throw Error('recovery lacks current controller-native qualification');
@@ -101,7 +140,7 @@ export function issueRecoveryPermit(r: ControlledRecoveryRequest, base: string, 
     const checked = authority(r, base, options, true), paths = recoveryPermitPaths(r, base);
     let producerHistory: ProducerRef[] | undefined;
     if (checked.completedEnd) {
-        const attempts = listAttempts(r.account, r.server, { root: join(base, '.practice/session-lifecycle') }), last = attempts.at(-1), a = last?.receipt;
+        const attempts = listAttempts(r.account, r.server, { root: recoveryLifecycleRoot(r.server, base) }), last = attempts.at(-1), a = last?.receipt;
         // A retired producer that reached START but disconnected needs cleanup, not a new owner for its history.
         // authority already checks that its owner is gone. Partial intents and confirmed histories stay refused.
         const held = checked.latest.state === 'held' && checked.latest.attemptId === last?.attemptId && a
@@ -133,7 +172,7 @@ export function current(r: ControlledRecoveryRequest, base: string, options: Rec
     const checked = authority(r, base, options, controller, ownedChild), paths = recoveryPermitPaths(r, base), p = json(paths.permit);
     if (!isDeepStrictEqual(p.completedEnd, checked.completedEnd) || p.missionRevision !== checked.missionRevision) throw Error('recovery completed end or mission changed');
     if (p.completedEnd) {
-        const attempts = listAttempts(r.account, r.server, { root: join(base, '.practice/session-lifecycle') });
+        const attempts = listAttempts(r.account, r.server, { root: recoveryLifecycleRoot(r.server, base) });
         const history: ProducerRef[] = p.producerHistory ?? [], retained = attempts.slice(0, history.length).map(({ attemptId, sha256 }) => ({ attemptId, sha256 }));
         if (!isDeepStrictEqual(history, retained)) throw Error('recovery completed producer ownership changed');
         const fresh = attempts.slice(history.length);

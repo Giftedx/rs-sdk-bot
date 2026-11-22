@@ -79,9 +79,9 @@ test('a different live process at the gate stops a take, and the ticket of an en
         expect(readdirSync(dir).sort()).toEqual(['x.lock', 'x.lock.gate']);
         expect(readdirSync(gate)).toEqual([]);
         // A new checkout has no folder for the lease: the take makes it.
-        const fresh = join(dir, 'new', '.practice', 'autopilot.lock');
+        const fresh = join(dir, 'new', '.practice', 'swarm.lock');
         expect(takeLease(fresh, 13, { now, alive: () => true })).toBe(true);
-        expect(readdirSync(join(dir, 'new', '.practice')).sort()).toEqual(['autopilot.lock', 'autopilot.lock.gate']);
+        expect(readdirSync(join(dir, 'new', '.practice')).sort()).toEqual(['swarm.lock', 'swarm.lock.gate']);
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -139,7 +139,7 @@ test('of eight processes that try in the same millisecond, one takes the lease',
 }, 60_000);
 
 test('the launch record gives back the arguments, and a damaged record gives null', () => {
-    const dir = tmp(), file = join(dir, 'autopilot', 'launch.json');
+    const dir = tmp(), file = join(dir, 'swarm.launch.json');
     try {
         expect(readLaunch(file)).toBeNull();
         // Only the LAUNCH_ENV settings are kept. A secret, an empty value and each other variable stay out of the file.
@@ -153,22 +153,22 @@ test('the launch record gives back the arguments, and a damaged record gives nul
             '{"args":[],"env":[]}', '{"args":[],"env":{"PATH":"x"}}', '{"args":[],"env":{"FLEET_SEED":"x"}}', '{"args":[],"env":{"FLEET_SIDE":7}}', '{"args":[],"env":{"FLEET_SIDE":""}}']) {
             writeFileSync(file, bad); expect(readLaunch(file), bad).toBeNull();
         }
-        expect(controllerNamed('autopilot').launch).toBe('.practice/autopilot/launch.json');
+        expect(controllerNamed('swarm').launch).toBe('.practice/swarm.launch.json');
         expect(controllerNamed('fleet-agent').launch).toBe('.practice/fleet-agent.launch.json');
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('a controller is running, stopped, down or never', () => {
-    const root = tmp(), agent = CONTROLLERS.find(c => c.name === 'fleet-agent')!, pilot = CONTROLLERS.find(c => c.name === 'autopilot')!;
+    const root = tmp(), agent = CONTROLLERS.find(c => c.name === 'fleet-agent')!, swarmCtrl = CONTROLLERS.find(c => c.name === 'swarm')!;
     try {
         mkdirSync(join(root, '.practice'));
-        expect(controllerStates(root, { now }).map(s => [s.name, s.state, s.pid, s.seenAt])).toEqual([['fleet-agent', 'never', null, null], ['autopilot', 'never', null, null]]);
+        expect(controllerStates(root, { now }).map(s => [s.name, s.state, s.pid, s.seenAt])).toEqual([['fleet-agent', 'never', null, null], ['swarm', 'never', null, null]]);
 
         // The traces of a one-shot pass are not a daemon start: a log, a state folder, and a lease with no launch record.
-        writeFileSync(join(root, '.practice/fleet-agent.log'), 'log'); mkdirSync(join(root, '.practice/autopilot'));
-        writeFileSync(join(root, pilot.lease), '55'); setTime(join(root, pilot.lease), now - 3 * 3600_000);
+        writeFileSync(join(root, '.practice/fleet-agent.log'), 'log'); mkdirSync(join(root, '.practice/swarm'));
+        writeFileSync(join(root, swarmCtrl.lease), '55'); setTime(join(root, swarmCtrl.lease), now - 3 * 3600_000);
         expect(controllerStates(root, { now, alive: () => false }).map(s => s.state)).toEqual(['never', 'never']);
-        rmSync(join(root, pilot.lease));
+        rmSync(join(root, swarmCtrl.lease));
         // A record that does not have the exact form is not a daemon start.
         writeFileSync(join(root, agent.launch), '{"args":[]}');
         expect(controllerState(root, agent, { now }).state).toBe('never');
@@ -187,7 +187,7 @@ test('a controller is running, stopped, down or never', () => {
         expect(controllerState(root, agent, { now, alive: () => false }).state).toBe('stopped');
         expect(controllerState(root, agent, { now, alive: () => true }).state).toBe('running');
 
-        saveLaunch(join(root, pilot.launch), [join(root, 'swarm.json')], {});
-        expect(controllerState(root, pilot, { now }).state).toBe('down');
+        saveLaunch(join(root, swarmCtrl.launch), [join(root, 'swarm.json')], {});
+        expect(controllerState(root, swarmCtrl, { now }).state).toBe('down');
     } finally { rmSync(root, { recursive: true, force: true }); }
 });

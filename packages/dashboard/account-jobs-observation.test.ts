@@ -22,28 +22,51 @@ function queueHtml(state:any,selected:string|null=null,filter='all'){
  return new Function(...Object.keys(env),jobButtonSource+jobsSource+';return jobs();')(...Object.values(env)) as string;
 }
 
-function queue(){
- const finished=(id:string,at:number)=>({spec:{id,account:'Worker',kind:'run',goal:'skills',why:id},status:'succeeded',createdAt:1,receipt:{at,output:{evidence:'native'}}});
- const records=[finished('finish-old-one',100),finished('finish-old-two',200),finished('finish-new-z',900),finished('finish-new-a',900),finished('finish-newest',1000),
-  {spec:{id:'waiting-old',account:'Worker',kind:'run',goal:'skills',why:'Waiting for supplies'},status:'pending',createdAt:20},
-  {spec:{id:'running-current',account:'Worker',kind:'run',goal:'skills',why:'Current useful work'},status:'running',createdAt:30,startedAt:1100},
-  {spec:{id:'waiting-new',participants:['Worker'],kind:'run',goal:'skills',why:'Newest shared job'},status:'pending',createdAt:1200},
-  {spec:{id:'unrelated',account:'Other',kind:'run',goal:'skills',why:'Another account'},status:'pending',createdAt:1300}];
- return {now:2000,bots:[{name:'Worker'}],coordination:coordinationView({version:1,tasks:records},2000,2000)};
+const emptyAcct={side:'local',role:'helper',protectedClock:false,lifecycle:'idle',skills:{},quests:{},pos:null,inventory:{},equipment:{},bank:{coins:0,items:{},observedAt:0,trusted:false}};
+function fleetStateFixture(over:Record<string,unknown>={}){
+ return {
+  schemaVersion:1,emittedAt:2000,side:'local',server:'localhost:8888',maxBots:4,
+  accounts:{
+   Worker:{...emptyAcct,name:'Worker',lifecycle:'running',activeJob:{activityId:'skill_fishing_shrimp',demandId:'g-run',startedAt:1100}},
+   Queued:{...emptyAcct,name:'Queued'},
+   Other:{...emptyAcct,name:'Other'},
+  },
+  activeChains:{
+   Queued:{account:'Queued',demandId:'g-wait',scorePerHour:80,steps:[{stepKind:'acquire',source:'own_bank',itemId:303,quantity:1,estimatedTicks:5,estimatedCoinCost:0,coinFloatPreserved:1000}]},
+   Worker:{account:'Worker',demandId:'g-run',scorePerHour:150,steps:[{stepKind:'work',activityId:'skill_fishing_shrimp',demandId:'g-run',workerId:'skiller',batchUnits:10,estimatedTicks:40,expectedValuePerHour:150,config:{}}]},
+   Other:{account:'Other',demandId:'g-other',scorePerHour:90,steps:[{stepKind:'acquire',source:'ge',itemId:995,quantity:1,estimatedTicks:5,estimatedCoinCost:0,coinFloatPreserved:1000}]},
+  },
+  idleReasons:{},
+  goals:[
+   {id:'g-run',goalKind:'specialist_prep',valueScore:100,target:{kind:'skill',account:'Worker',skill:'Fishing',targetLevel:20},fulfilled:0,remaining:1,priorityWeight:1,active:true},
+   {id:'g-wait',goalKind:'coin_fund',valueScore:50,target:{kind:'coins',amount:5000},fulfilled:0,remaining:1,priorityWeight:1,active:true},
+   {id:'g-other',goalKind:'coin_fund',valueScore:40,target:{kind:'coins',amount:5000},fulfilled:0,remaining:1,priorityWeight:1,active:true},
+  ],
+  campaigns:[],missions:[],pendingTransfers:[],
+  quarantinedDefects:[
+   {id:'def-old',activityId:'bank_deposit',faultSignature:'bank closed',outcomeKind:'worker_defect',account:'Worker',observedAt:100,quarantinedAt:200,quarantined:true,logPath:'a.log',detail:'closed',count:1},
+   {id:'def-new',activityId:'ge_buy',faultSignature:'no offer',outcomeKind:'worker_defect',account:'Worker',observedAt:800,quarantinedAt:900,quarantined:true,logPath:'b.log',detail:'missing offer',count:2},
+  ],
+  ...over,
+ };
 }
 
-test('Account linked jobs select the same open-first recent five from native and hosted task order',()=>{
+function queue(){
+ return {now:2000,bots:[{name:'Worker'}],coordination:coordinationView(fleetStateFixture(),2000,2000)};
+}
+
+test('Account linked chains select the same open-first recent entries from native and hosted state order',()=>{
  const native=queue(),original=native.coordination.tasks.map((task:{id:string})=>task.id),hosted=controlView(native,{});
- const expected=['waiting-new','running-current','waiting-old','finish-newest','finish-new-a'];
+ const expected=['chain:Worker:g-run','def-new','def-old'];
  expect(taskIds(accountHtml(native))).toEqual(expected);
  expect(taskIds(accountHtml(hosted))).toEqual(expected);
  expect(taskIds(accountHtml({...native,coordination:{...native.coordination,tasks:[...native.coordination.tasks].reverse()}}))).toEqual(expected);
  expect(native.coordination.tasks.map((task:{id:string})=>task.id)).toEqual(original);
  const publicHtml=accountHtml(hosted,{name:'Worker'},false);
- expect(publicHtml).not.toContain('Linked jobs');expect(taskIds(publicHtml)).toEqual([]);
+ expect(publicHtml).not.toContain('Linked chains');expect(taskIds(publicHtml)).toEqual([]);
 });
 
-test('Jobs distinguish waiting and unavailable observations from an observed empty queue',()=>{
+test('Jobs distinguish waiting and unavailable observations from an observed empty FleetState',()=>{
  for(const state of [null,{}, {coordination:{}}]){
   const html=queueHtml(state);
   expect(html).toContain('Waiting for shared queue data');
@@ -52,21 +75,21 @@ test('Jobs distinguish waiting and unavailable observations from an observed emp
  const unavailable=queueHtml({coordination:coordinationView(null,0,2000)});
  expect(unavailable).toContain('Shared queue data is unavailable');
  expect(unavailable).not.toContain('No jobs in this view.');expect(unavailable).not.toContain('data-op="job-filter"');
- expect(unavailable).toContain('Create a job');
- const empty=queueHtml({coordination:coordinationView({version:1,tasks:[]},2000,2000)});
+ expect(unavailable).toContain('Operator desk');
+ const empty=queueHtml({coordination:coordinationView(fleetStateFixture({accounts:{},activeChains:{},goals:[],quarantinedDefects:[]}),2000,2000)});
  expect(empty).toContain('No jobs in this view.');expect(empty).toContain('All 0');
  expect(empty).not.toContain('Waiting for shared queue data');expect(empty).not.toContain('unavailable');
 });
 
-test('Stale available jobs retain their filter, rows and selected details with a queue warning',()=>{
+test('Stale available FleetState retains its filter, rows and selected details with a warning',()=>{
  const state=queue();state.coordination.fresh=false;
  const rows=queueHtml(state,null,'pending');
  expect(rows).toContain('Shared queue data is out of date');
- expect(taskIds(rows)).toEqual(['unrelated','waiting-new','waiting-old']);
+ expect(taskIds(rows)).toEqual(['chain:Queued:g-wait','chain:Other:g-other']);
  expect(rows).toContain('data-value="pending" class="active"');
- const detail=queueHtml(state,'running-current');
+ const detail=queueHtml(state,'chain:Worker:g-run');
  expect(detail).toContain('Shared queue data is out of date');
- expect(detail).toContain('Current useful work');expect(detail).toContain('data-op="task-back"');
+ expect(detail).toContain('skill_fishing_shrimp');expect(detail).toContain('data-op="task-back"');
  expect(detail).not.toContain('No jobs in this view.');
 });
 

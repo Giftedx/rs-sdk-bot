@@ -1,5 +1,5 @@
 import { test, expect, describe, afterEach } from 'bun:test';
-import { coordinatedAdmission,unadmittedState,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile } from './swarm';
+import { demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile } from './swarm';
 
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
@@ -54,8 +54,6 @@ import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../pac
 import { liveLogoutRef } from '../packages/core/src/session-admission';
 import { createHash } from 'node:crypto';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
-import { installJob } from '../packages/router/src/coordinator-live';
-import { readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 
 const rev=(script:string)=>JSON.stringify([script,false,['x'],[]]);
 const proofRef={server:'rs-sdk-demo.fly.dev',proof:{kind:'producer' as const,attemptId:'A'}};
@@ -171,91 +169,6 @@ test('explicit resume preserves death/no-progress/exhausted retries and does not
         expect(applyResume(['Worker'],false,ended,pending,()=>{clears++;})).toBe(false);
         expect(clears).toBe(0);expect(ended.get('worker')?.reason).toBe(reason);
     }
-});
-
-test('coordinator stopped-mission handoff starts the installed changed mission without an enable edge',()=>{
- const base=mkdtempSync(join(tmpdir(),'swarm-coordinator-resume-')),prac=join(base,'.practice'),account='Rod',runId='task-new-mission';
- try{
-  mkdirSync(join(prac,'status'),{recursive:true});mkdirSync(join(prac,'coordinator/runs',runId),{recursive:true});
-  const oldJob:Job={account,script:'scripts/goldfarm.ts',enabled:false,repeat:true};
-  writeFileSync(join(base,'swarm.json'),JSON.stringify({maxBots:17,minFreeGB:4,jobs:[oldJob]}));
-  writeFileSync(join(prac,'status',account+'.json'),JSON.stringify({name:account,server:'rs-sdk-demo.fly.dev',at:Date.now()-1000,result:'fail stop file'}));
-  const lifecycle=join(prac,'session-lifecycle');beginSessionAttempt({account,server:'rs-sdk-demo.fly.dev'},{root:lifecycle}).record('ended','logged-out');
-  const endFile=join(prac,'swarm-deaths.json');persistEnded(endFile,new Map([[account,{at:100,reason:'stopped after 1 runs',revision:missionSignature(oldJob)}]]));
-  writeFileSync(join(prac,'stop-'+account),'swarm plan removed or stopped');
-  installJob({id:'quest-new',goal:'quests',account} as any,account,'scripts/quest.ts',runId,'source',{},{base,freeGB:64});
-  const job=readCoordinatorJobs(base).jobs[0] as Job,ended=loadEnded(endFile),pending=new Set<string>(),previous=new Map<string,boolean>();
-  observeEnabled([account],true,previous,pending);expect(pending.size).toBe(0);
-  expect(existsSync(join(prac,'stop-'+account))).toBe(false);
-  expect(startable([account],false,ended,()=>Infinity,undefined,missionSignature(job)).start).toEqual([]);
-  const handoff={job,paused:false,active:[] as string[],stopped:(name:string)=>existsSync(join(prac,'stop-'+name)),
-   settled:(name:string)=>readLogoutProof(name,'rs-sdk-demo.fly.dev',{root:lifecycle}).state==='confirmed'};
-  expect(applyResume([account],false,ended,pending,name=>clearSwarmStop(join(prac,'stop-'+name)),handoff)).toBe(true);
-  persistEnded(endFile,ended);
-  expect(loadEnded(endFile).size).toBe(0);
-  expect(startable([account],false,ended,()=>Infinity,undefined,missionSignature(job)).start).toEqual([account]);
-  ended.set(account,{at:200,reason:'stopped after 1 runs',revision:missionSignature(job)});
-  expect(applyResume([account],false,ended,pending,()=>{throw Error('same mission must stay stopped');},handoff)).toBe(false);
-  expect(startable([account],false,ended,()=>Infinity,undefined,missionSignature(job)).start).toEqual([]);
- }finally{rmSync(base,{recursive:true,force:true});}
-});
-
-for(const constraint of ['ordinary job','missing task','missing run','disabled job','repeat job','same mission','missing revision','empty revision','malformed revision','other account revision','owner stop','global stop','active predecessor','external predecessor','unconfirmed logout','lease held',
- 'died','blocked after 1 runs','gave-up after 21 runs','exit unknown','exit 0','done after 1 runs','stopped unexpectedly'])test('coordinator stopped-mission handoff preserves '+constraint,()=>{
- const job:Job & {coordinatorOwner?:string;coordinatorTask?:string}={account:'Rod',script:'scripts/quest.ts',enabled:true,repeat:false,
-  coordinatorOwner:'coordinator',coordinatorTask:'quest-new',env:{COORDINATOR_RUN_ID:'task-new-mission'}};
- if(constraint==='ordinary job')delete job.coordinatorOwner;
- if(constraint==='missing task')delete job.coordinatorTask;
- if(constraint==='missing run')delete job.env!.COORDINATOR_RUN_ID;
- if(constraint==='disabled job')job.enabled=false;
- if(constraint==='repeat job')job.repeat=true;
- const reason=['died','blocked after 1 runs','gave-up after 21 runs','exit unknown','exit 0','done after 1 runs','stopped unexpectedly'].includes(constraint)?constraint:'stopped after 1 runs';
- const revision=constraint==='same mission'?missionSignature(job):constraint==='missing revision'?undefined:constraint==='empty revision'?'':constraint==='malformed revision'?'unknown':
-  missionSignature({account:constraint==='other account revision'?'Partner':'Rod',script:'scripts/goldfarm.ts',enabled:false});
- const ended=new Map([['rod',{at:100,reason,revision}]]),before=[...ended],pending=new Set<string>();let clears=0;
- const handoff={job,paused:constraint==='global stop',active:constraint==='external predecessor'?['rOd']:[],stopped:()=>constraint==='owner stop',
-  settled:()=>{if(constraint==='lease held')throw Error('recovery lease held');return constraint!=='unconfirmed logout';}};
- expect(applyResume(['Rod'],constraint==='active predecessor',ended,pending,()=>{clears++;},handoff)).toBe(false);
- expect([...ended]).toEqual(before);expect(pending.size).toBe(0);expect(clears).toBe(0);
-});
-
-test('coordinator mission handoff clears supply-exhausted blocked ends with confirmed logout while keeping persistent failures held', () => {
- const base=mkdtempSync(join(tmpdir(),'swarm-coordinator-supply-')),prac=join(base,'.practice'),account='Fingerblastr',runId='task-supply-handoff';
- try{
-  mkdirSync(join(prac,'status'),{recursive:true});mkdirSync(join(prac,'coordinator/runs',runId),{recursive:true});
-  const source='a'.repeat(64);
-  const oldJob:Job & {standing?:boolean}={account,script:'scripts/alch-train.ts',args:['99','5000'],env:{ALCH_ITEM:'airrune'},goal:'train Magic to 99',standing:true,autopilot:'local',enabled:true,repeat:false};
-  writeFileSync(join(base,'swarm.json'),JSON.stringify({maxBots:25,minFreeGB:4,jobs:[oldJob]}));
-  const lifecycle=join(prac,'session-lifecycle');
-  let clock=Date.now()-1000;
-  const attempt=beginSessionAttempt({account,server:'rs-sdk-demo.fly.dev'},{root:lifecycle,now:()=>clock,
-   owner:{pid:999999,coordinatorRunId:null,workerRelease:source,script:oldJob.script,role:'combat',participants:null}});
-  const created=Number(attempt.attemptId.split('-')[0]);
-  clock=created+2;attempt.record('ready');clock=created+10;attempt.record('ended','logged-out');attempt.record('closed');
-  writeFileSync(join(prac,'status',account+'.json'),JSON.stringify({name:account,server:'rs-sdk-demo.fly.dev',goal:oldJob.goal,at:created+20,started:created+1,
-   sessionAttemptId:attempt.attemptId,workRevision:source,workEntry:oldJob.script,result:'fail alch level=98 stop=supplies failure=no alch progress'}));
-  writeFileSync(join(prac,'swarm-runs.json'),'[]');
-  const endFile=join(prac,'swarm-deaths.json');
-  persistEnded(endFile,new Map([[account,{at:created+30,reason:'blocked after 1 runs',revision:missionSignature(oldJob)}]]));
-  installJob({id:'courier-new',kind:'run',goal:'skills',account} as any,account,'scripts/aio-logistics.ts',runId,'source',{args:['coin-courier']},{base,freeGB:64});
-  const job=readCoordinatorJobs(base).jobs[0] as Job;
-  const handoff=(supply:boolean)=>({job,paused:false,active:[] as string[],stopped:()=>false,
-   settled:(name:string)=>readLogoutProof(name,'rs-sdk-demo.fly.dev',{root:lifecycle}).state==='confirmed',
-   supplyExhausted:()=>supply});
-  const blocked=loadEnded(endFile),pending=new Set<string>();
-  expect(applyResume([account],false,blocked,pending,()=>{},handoff(false))).toBe(false);
-  expect(blocked.has(account)).toBe(true);
-  expect(applyResume([account],false,blocked,pending,()=>{},handoff(true))).toBe(true);
-  expect(blocked.has(account)).toBe(false);
-  for(const reason of ['died','gave-up after 1 runs']){
-   const kept=new Map([[account,{at:100,reason,revision:missionSignature(oldJob)}]]);
-   expect(applyResume([account],false,kept,new Set(),()=>{},handoff(true))).toBe(false);
-   expect(kept.get(account)?.reason).toBe(reason);
-  }
-  const same=new Map([[account,{at:100,reason:'blocked after 1 runs',revision:missionSignature(job)}]]);
-  expect(applyResume([account],false,same,new Set(),()=>{},handoff(true))).toBe(false);
-  expect(same.has(account)).toBe(true);
- }finally{rmSync(base,{recursive:true,force:true});}
 });
 
 test('mission identity includes actual work and canonical env but excludes display and enable fields', () => {
@@ -545,16 +458,6 @@ test('either configured cook and retained courier notes keep a hungry farm suppl
     for(const patch of [{pos:{x:3222,z:3218,level:0}},{inventory:[{id:333,count:115}]},{server:'localhost:8888'},{at:now+1},{name:'Foreign'}])
         expect(foodSupplyDemand(job,[farm,{...courier,...patch}],owned,now)).toBe(false);
     expect(foodSupplyDemand({...job,foodSourceAccounts:['Second','Foreign']},[farm,second,courier],owned,now)).toBe(false);
-});
-
-test('scoped coordinator starts only its qualified assignments while ordinary swarm preserves existing admission',()=>{
- const old={account:'Existing',script:'scripts/cook-wine.ts',enabled:true} as Job;
- expect(coordinatedAdmission(old,false)).toBe(true);expect(coordinatedAdmission(old,true)).toBe(false);
- expect(coordinatedAdmission({...old,coordinatorOwner:'coordinator'} as Job,true)).toBe(true);
- expect(coordinatedAdmission({...old,standing:true} as Job,true)).toBe(true);
- expect(unadmittedState(old)).toBe('existing assignment; awaiting coordinator qualification');
- expect(unadmittedState({...old,enabled:false} as Job)).toBe('disabled');
- expect(unadmittedState({account:'Reserved',script:'',enabled:false} as Job)).toBe('reserved');
 });
 
 test('the older logout that start admission takes past a dead socket failure is never a repair proof',()=>{
@@ -880,7 +783,7 @@ test('a host job off beside one account on and one off reads each account on its
 test('a run another job of the account started is foreign to a job that is off or changed; its own run is not', () => {
     const ok = (p: ReturnType<typeof parseJob>): p is Exclude<typeof p, { error: string }> => !('error' in p);
     const standing = parseJob({ account: 'Rod', script: 'scripts/goldfarm.ts', enabled: true, standing: true, env: { KNIGHT_SPOT: '1,1' } } as any);
-    const finished = parseJob({ account: 'Rod', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator', env: { CAP: '1600' } } as any);
+    const finished = parseJob({ account: 'Rod', script: 'scripts/session-check.ts', enabled: false, env: { CAP: '1600' } } as any);
     const planned = [standing, finished].filter(ok);
     const run = { revision: missionSignature(planned[0]!.job) };
     expect(foreignRun(planned, planned[1]!, run)).toBe(true);
@@ -968,9 +871,8 @@ test('the controller knows its own stop files, and a standing job retries the en
     expect(standingRetryable('blocked after 1 runs', prayerNotExhausted, true, { BONE_RESERVE: '6' })).toBe(true);
 });
 
-test('a finite standing job keeps admission but opts out of standing retries', () => {
+test('a finite standing job opts out of standing retries', () => {
     const job = {account:'Crafter',script:'scripts/aio.ts',enabled:true,standing:true,standingRetry:false,repeat:false,maxRestarts:0};
-    expect(coordinatedAdmission(job,true)).toBe(true);
     const parsed=parseJob(job);expect(parsed).not.toHaveProperty('error');
     for(const reason of ['gave-up after 1 runs','blocked: unfinished order','exit unknown','stopped after 1 runs']){
         expect(standingRetryable(reason,'RESULT fail unfinished order')).toBe(true);

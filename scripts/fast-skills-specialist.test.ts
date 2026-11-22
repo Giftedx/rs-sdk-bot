@@ -3,9 +3,7 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { validateSupplies, type SupplyRequirement } from '../packages/core/src/launch-evidence';
-import { preflightProgressionWork } from '../packages/core/src/progression-session';
 import { xpForLevel } from '../packages/planner/src/curve';
-import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
 import { resolveSkillerStep } from './aio-skiller';
 import { CRAFTING_SUPPLY_BILL } from './crafting-specialist';
@@ -193,7 +191,7 @@ test('specialist-supplier kits, parseKitArg, and resolveBaseId cert mapping work
     expect(hasAtLeastKit(notedPrayerInv, PRAYER_SPECIALIST_KIT)).toBe(true);
 });
 
-test('bench cases, aio-skiller routes, and progression catalog admit all 6 fast-skill specialists', () => {
+test('bench cases and aio-skiller routes cover all 6 fast-skill specialists', () => {
     expect(SPECIALIST_FAST_SKILLS_CASES.map(c => c.key)).toEqual([
         'skiller:prayer:specialist',
         'skiller:smithing:specialist',
@@ -209,23 +207,6 @@ test('bench cases, aio-skiller routes, and progression catalog admit all 6 fast-
     expect(resolveSkillerStep('crafting', 'specialist', ['CAP=250']).script).toBe('scripts/crafting-specialist.ts');
     expect(resolveSkillerStep('herblore', 'specialist', ['CAP=600']).script).toBe('scripts/herblore-specialist.ts');
     expect(resolveSkillerStep('magic', 'specialist', ['CAP=1300']).script).toBe('scripts/magic-specialist.ts');
-
-    const catalog = loadProgressionCatalog();
-    for (const [script, skill, cap] of [
-        ['scripts/prayer-specialist.ts', 'prayer', '1350'],
-        ['scripts/smithing-specialist.ts', 'smithing', '1350'],
-        ['scripts/runecraft-specialist.ts', 'runecraft', '2300'],
-        ['scripts/crafting-specialist.ts', 'crafting', '250'],
-        ['scripts/herblore-specialist.ts', 'herblore', '600'],
-        ['scripts/magic-specialist.ts', 'magic', '1300'],
-    ] as const) {
-        expect(intentForEntry(script, [], { CAP: cap })).toEqual({
-            kind: 'service',
-            objective: `specialist:${skill}:99`,
-            units: 1,
-        });
-        expect(() => preflightProgressionWork({ script, args: [], env: { CAP: cap, SUPPLIER: 'Moneyshot' } }, 'rs-sdk-demo.fly.dev', catalog, 'SpecBot')).not.toThrow();
-    }
 });
 
 test('multi-supplier runecraft role parsing, cooldown partner selection, and external bench case', () => {

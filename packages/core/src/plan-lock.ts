@@ -1,12 +1,17 @@
-// The account-plan write lock: one writer of swarm.json at a time across the coordinator, its live children and the
-// autopilot (scripts/autopilot.ts). Runtime code may import this file; packages/router is a tooling root that runtime
-// code may not import (packages/core/src/worker-release.ts), so the lock lives here and the coordinator store re-exports it.
+// Shared account-plan write lock and atomic JSON helpers: one writer of swarm.json at a time across controllers and dashboard commands.
 import { existsSync, linkSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { laterProcessHolds, processStartTimes } from './proc';
 
-export const planLockDir = join(resolve(import.meta.dir, '../../..'), '.practice/coordinator');
+export const planLockDir = join(resolve(import.meta.dir, '../../..'), '.practice/live');
+export const ownerPlanPath = (root: string, file = process.env.SWARM_PLAN) => resolve(root, file || 'swarm.json');
+export function atomicJson(file: string, value: unknown): void {
+    mkdirSync(dirname(file), { recursive: true });
+    const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
+    writeFileSync(tmp, JSON.stringify(value, null, 2));
+    renameSync(tmp, file);
+}
 const lockPath = (directory: string) => join(directory, 'plan-write-lock.json');
 const intentPath = (directory: string, nonce: string) => join(directory, `plan-write-${nonce}.intent.json`);
 const archivePath = (directory: string) => join(directory, 'plan-lock-recovery');

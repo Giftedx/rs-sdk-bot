@@ -9,7 +9,7 @@ const procGroups=new Function(procSource+';return procGroups;')();
 const centre=cut(source,' function operations(){',' function jobs(){');
 const helpers=cut(source,' const button=',' const tasks=');
 const summary=cut(source,' const word=',' // One row per cause');
-function command(S:any,meta:any={paused:false,coordinatorRunning:true}){
+function command(S:any,meta:any={paused:false,brainRunning:true}){
  return new Function('S','meta','procGroups',`const window={};const E=s=>String(s).replace(/[<>"&]/g,c=>'&#'+c.charCodeAt(0)+';'),age=()=>'1m',page=x=>x,title=()=>'',safeName=String,KV=/(?:^|\\s)(([A-Za-z]+)=(\\S+))/g,readable=E;
   const tasks=()=>S?.coordination?.tasks||[],bots=()=>S?.bots||[];function issues(){return bots().filter(b=>['blocked','failed','died','active-stale','unobserved'].includes(b.operation));}
   const badge=(s,label=s)=>'<span class="op-badge '+s+'">'+label+'</span>';let metaError='',message='';${helpers}${summary}${centre};return {html:operations(),incidents:incidents()};`)(S,meta,procGroups);
@@ -18,8 +18,8 @@ const fail=(name:string,extra:any={})=>({name,operation:'failed',workEntry:'scri
  result:`fail Error: carrier walk {"p":{"x":3094,"z":3491},"r":{"ok":false,"ticks":33,"detail":"tick stream stalled"},"position":{"name":"${name}"}}`,...extra});
 
 test('host processes group by script, largest total first',()=>{
- const g=procGroups([{pid:1,script:'app.ts',mb:1380},{pid:2,script:'coordinator-cli.ts',mb:217},{pid:3,script:'coordinator-cli.ts',mb:216},{pid:4,script:'coordinator-cli.ts',mb:1000}]);
- expect(g.map((x:any)=>[x.script,x.n,x.mb])).toEqual([['coordinator-cli.ts',3,1433],['app.ts',1,1380]]);
+ const g=procGroups([{pid:1,script:'app.ts',mb:1380},{pid:2,script:'fleet-worker.ts',mb:217},{pid:3,script:'fleet-worker.ts',mb:216},{pid:4,script:'fleet-worker.ts',mb:1000}]);
+ expect(g.map((x:any)=>[x.script,x.n,x.mb])).toEqual([['fleet-worker.ts',3,1433],['app.ts',1,1380]]);
  expect(g[0].pids).toEqual([2,3,4]);
  expect(procGroups(undefined)).toEqual([]);
 });
@@ -38,8 +38,8 @@ test('accounts stopped by one cause are one incident, with their job and open re
 
 test('the start-blocked line names the RAM shortfall and the largest process group, and never acts on the swarm',()=>{
  const cap={fresh:true,active:1,cap:18,queued:2,freeGB:5.5,floorGB:8,pendingReserveGB:1,headroomGB:-3.5};
- const {html}=command({capacity:cap,sys:{procs:[{pid:1,script:'coordinator-cli.ts',mb:1536},{pid:2,script:'coordinator-cli.ts',mb:1536},{pid:3,script:'app.ts',mb:2000}]}});
- expect(html).toContain('2 accounts wait for RAM. 5.5 GiB free, floor 8.0 GiB plus 1.0 GiB startup reserve: 3.5 GiB short. Largest use: coordinator-cli.ts ×2, 3.0 GiB.');
+ const {html}=command({capacity:cap,sys:{procs:[{pid:1,script:'fleet-worker.ts',mb:1536},{pid:2,script:'fleet-worker.ts',mb:1536},{pid:3,script:'app.ts',mb:2000}]}});
+ expect(html).toContain('2 accounts wait for RAM. 5.5 GiB free, floor 8.0 GiB plus 1.0 GiB startup reserve: 3.5 GiB short. Largest use: fleet-worker.ts ×2, 3.0 GiB.');
  expect(html).toMatch(/class="op-block" data-op="open" data-value="machine"/);
  expect(command({capacity:{...cap,headroomGB:0.5}}).html).not.toContain('op-block');
  expect(command({capacity:{...cap,fresh:false}}).html).not.toContain('op-block');

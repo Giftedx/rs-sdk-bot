@@ -3,13 +3,9 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { validateSupplies } from '../packages/core/src/launch-evidence';
 import { componentId } from '../packages/core/src/logout';
-import { evaluateProgressionWork, preflightProgressionWork } from '../packages/core/src/progression-session';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { withoutJewelry, withoutSpells, withoutTeleports } from '../packages/core/src/walk';
-import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
-import { xpForLevel } from '../packages/planner/src/curve';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
-import { validateDelivery } from '../packages/router/src/delivery';
 import { pickCourtyardMagicTarget, RAILING_PROTECT_Z, shouldEnableRailingProtectMelee } from './attack-specialist';
 import { parseSpecialistBenchArgs } from './measure/specialist-bench';
 import {
@@ -65,49 +61,6 @@ test('assertSupplierAccount rejects reserved specialists and accepts ordinary ac
     expect(assertSupplierAccount('Moneyshot')).toBe('Moneyshot');
 });
 
-test('progression catalog and live work gate admit attack-specialist across Attack 1..98 and supplier service', () => {
-    const work = {
-        script: 'scripts/attack-specialist.ts',
-        args: [] as string[],
-        env: { SUPPLIER: 'Moneyshot', CAP: '5000', LOOT_WATCH: '0', PRAYER_GUARD: '0', EAT_GUARD: '0', RANDOM_EVENTS: '1' },
-    };
-    const accept = { skills: { Attack: 99 } };
-    expect(intentForEntry(work.script, work.args, work.env, accept)).toEqual({
-        kind: 'service',
-        objective: 'fresh-clock Attack 99 specialist route',
-        units: 1,
-    });
-    expect(intentForEntry('scripts/aio-logistics.ts', ['specialist-supplier', 'Moneyshot', 'Hiltsdeep'], {})).toEqual({
-        kind: 'service',
-        objective: 'stage or hand off specialist supply kit',
-        units: 1,
-    });
-
-    const catalog = loadProgressionCatalog();
-    expect(() => preflightProgressionWork(work, 'rs-sdk-demo.fly.dev', catalog, 'Hiltsdeep')).not.toThrow();
-    expect(() => preflightProgressionWork({ script: 'scripts/aio-logistics.ts', args: ['specialist-supplier', 'Moneyshot', 'Hiltsdeep'], env: {} }, 'rs-sdk-demo.fly.dev', catalog, 'Moneyshot')).not.toThrow();
-
-    const now = Date.now();
-    for (const atkLevel of [1, 60, 94, 98]) {
-        const status = {
-            name: 'Hiltsdeep',
-            server: 'rs-sdk-demo.fly.dev',
-            at: now,
-            bankAt: now,
-            questsAt: now,
-            equipmentObserved: true,
-            skills: [{ name: 'Attack', level: atkLevel, xp: atkLevel === 1 ? 0 : xpForLevel(atkLevel) }],
-            inventory: [],
-            equipment: [],
-            bank: [],
-            quests: [],
-        };
-        const res = evaluateProgressionWork(work, status, { now, accept, catalog });
-        expect(res.intent).toEqual({ kind: 'service', objective: 'fresh-clock Attack 99 specialist route', units: 1 });
-        expect(res.supported).toBe(true);
-    }
-});
-
 test('observedSupplies and validateSupplies round-trip for ATTACK_SPECIALIST_KIT', () => {
     const ledger = JSON.stringify({
         tick: 100,
@@ -153,8 +106,6 @@ test('observedSupplies and validateSupplies round-trip for ATTACK_SPECIALIST_KIT
         })),
     };
     expect(() => validateSupplies(manifest, context, observed, ITEMS, ['Helper', 'Moneyshot'], now, ref => refs.get(ref.path), 'hiltsdeep')).not.toThrow();
-    const task = JSON.parse(readFileSync(join(ROOT, 'packages', 'router', 'tasks', 'attack-specialist.json'), 'utf8'));
-    expect(() => validateDelivery(task)).not.toThrow();
 });
 
 test('pickCourtyardMagicTarget prioritizes engaged attackers and ignores busy others', () => {

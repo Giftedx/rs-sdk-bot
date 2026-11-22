@@ -2,12 +2,13 @@
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
+import { liveRoot } from '../practice-paths';
 import { commandLine, processMatchesRecent, processStartTimes } from '../proc';
 import { listAttempts, readLogoutProof } from '../session-lifecycle';
 import { savedProcessAlive, type ProcessStarts } from '../session-takeover';
 import {
     RECOVERY_SCHEMA, RECOVERY_SCRIPT, assertNativeFixtureRoot, assertRecoveryNotStopped, json,
-    recoveryPermitPaths, same, sha, validateRecoveryRequest, type ControlledRecoveryRequest,
+    recoveryLifecycleRoot, recoveryPermitPaths, same, sha, validateRecoveryRequest, type ControlledRecoveryRequest,
 } from './request';
 
 // A child that did not confirm preserved cleanup leaves its lease held (finishRecoveryPermit), and assertNoRecoveryLease
@@ -35,7 +36,7 @@ const childRunning = (pid: number, nonce: string) => {
 export function releaseExpiredRecoveryLease(account: string, base: string, options: LeaseReleaseChecks = {}) {
     if (!/^[A-Za-z0-9_ -]{1,12}$/.test(account)) throw Error('invalid recovery lease identity');
     const now = (options.now ?? Date.now)(), matches = options.matches ?? processMatchesRecent, alive = options.childAlive ?? childRunning;
-    const owner = json(join(base, '.practice/coordinator/swarm-owner.json'));
+    const owner = json(join(liveRoot(base), 'swarm-owner.json'));
     if (owner.pid !== process.pid || typeof owner.nonce !== 'string' || !owner.nonce || !matches(owner.pid, owner.nonce)) throw Error('recovery lease release needs the controller');
     const leasePath = join(base, '.practice/coordinator/session-recovery/accounts', account.toLowerCase(), 'lease.json');
     if (!existsSync(leasePath)) throw Error('recovery lease absent');
@@ -50,7 +51,7 @@ export function releaseExpiredRecoveryLease(account: string, base: string, optio
     if (!child || !Number.isSafeInteger(child.pid) || child.pid < 1 || child.nonce !== r.nonce || child.runId !== r.runId
         || !used || used.pid !== child.pid || used.nonce !== r.nonce || used.permitSha256 !== leaseSha256) throw Error('recovery lease child not bound');
     if (alive(child.pid, r.nonce)) throw Error('recovery lease child still alive');
-    const root = join(base, '.practice/session-lifecycle'), proof = readLogoutProof(r.account, r.server, { root });
+    const root = recoveryLifecycleRoot(r.server, base), proof = readLogoutProof(r.account, r.server, { root });
     const attempts = listAttempts(r.account, r.server, { root });
     const receiptPath = join(paths.output, 'receipt.json'), receipt = existsSync(receiptPath) ? json(receiptPath) : null;
     let basis: null | 'superseded' | 'not-connected' | 'connect-failed' | undefined, lifecycleSha256: string;

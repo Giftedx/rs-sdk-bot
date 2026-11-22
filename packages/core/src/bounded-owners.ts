@@ -28,39 +28,28 @@ export function boundedGroupMembers(roots:readonly number[]):number[]|null{
 export function observeBoundedOwners(base:string,binding:BoundedOwnerBinding,launched:Identity[],deps:{alive?:(pid:number)=>boolean;command?:(pid:number)=>string|null;groups?:(roots:readonly number[])=>number[]|null}={}){
     const alive=deps.alive??boundedProcessAlive,command=deps.command??commandLine,active=new Set<number>(),groups=new Set<number>();
     const observed=new Map<string,string>(),read=(file:string)=>{const raw=readFileSync(file,'utf8');observed.set(file,raw);return JSON.parse(raw);};
-    const match=(owner:any,role:'coordinator'|'swarm'|'worker')=>{
+    const match=(owner:any)=>{
         if(!Number.isSafeInteger(owner?.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce)throw Error('bounded owner identity unreadable');
         groups.add(owner.pid);
         if(!alive(owner.pid))return;
-        const line=command(owner.pid),script=role==='swarm'?join(base,'scripts/swarm.ts'):join(base,'packages/router/src/coordinator-cli.ts');
-        if(!line?.includes(script)||!line.includes(owner.nonce)||!line.includes(role==='worker'?'--worker':role==='coordinator'?'--run':'--coordinator='))throw Error('bounded live owner command unknown');
+        const line=command(owner.pid),script=join(base,'scripts/swarm.ts');
+        if(!line?.includes(script)||!line.includes(owner.nonce))throw Error('bounded live owner command unknown');
         active.add(owner.pid);
     };
     try{
-        for(const owner of launched)match(owner,'coordinator');
-        const dir=join(base,'.practice/coordinator'),path=join(dir,'owner.json');
-        if(!existsSync(path))throw Error('bounded coordinator owner unavailable');
-        const owner=read(path);
-        if(owner.watchId!==binding.watchId||owner.plan!==binding.plan||owner.side!==binding.side)throw Error('bounded coordinator owner crossed');
-        match(owner,'coordinator');
-        if(owner.successor)match(owner.successor,'coordinator');
-        const swarmPath=join(dir,'swarm-owner.json');
+        for(const owner of launched)match(owner);
+        const dir=join(base,'.practice/live'),swarmPath=join(dir,'swarm-owner.json');
+        if(!existsSync(swarmPath))throw Error('bounded swarm owner unavailable');
+        const swarm=read(swarmPath);
         let retiredSwarm=false;
-        if(existsSync(swarmPath)){
-            const swarm=read(swarmPath);
-            if(swarm.watchId!==binding.watchId||swarm.plan!==binding.plan||swarm.side!==binding.side){
-                if(!Number.isSafeInteger(swarm.pid)||swarm.pid<1||typeof swarm.nonce!=='string'||!swarm.nonce)throw Error('bounded swarm owner unknown');
-                const members=(deps.groups??boundedGroupMembers)([swarm.pid]);
-                if(alive(swarm.pid)||members===null||members.length)throw Error('bounded swarm owner crossed');
-                retiredSwarm=true;
-            }else match(swarm,'swarm');
-        }
-        const state=read(join(dir,'state.json'));
-        if(state.planner)throw Error('bounded planner owner unexpected');
-        for(const task of state.tasks.filter((t:any)=>t.status==='running')){
-            const child=read(join(dir,'runs',task.runId,'owner.json'));
-            if(task.pid&&child.pid!==task.pid||child.runId!==task.runId)throw Error('bounded child owner crossed');
-            match({pid:child.pid,nonce:task.runId},'worker');
+        if(swarm.watchId!==binding.watchId||swarm.plan!==binding.plan||swarm.side!==binding.side){
+            if(!Number.isSafeInteger(swarm.pid)||swarm.pid<1||typeof swarm.nonce!=='string'||!swarm.nonce)throw Error('bounded swarm owner unknown');
+            const members=(deps.groups??boundedGroupMembers)([swarm.pid]);
+            if(alive(swarm.pid)||members===null||members.length)throw Error('bounded swarm owner crossed');
+            retiredSwarm=true;
+        }else{
+            match(swarm);
+            if(swarm.successor)match(swarm.successor);
         }
         const runsPath=join(base,'.practice/swarm-runs.json');
         if(existsSync(runsPath))for(const run of read(runsPath)){
@@ -73,6 +62,6 @@ export function observeBoundedOwners(base:string,binding:BoundedOwnerBinding,lau
         for(const pid of members)active.add(pid);
         if(!active.size&&['build-lock.json','../swarm-repair.json.lease'].some(file=>existsSync(join(dir,file))))throw Error('bounded authority fence remains unresolved');
         for(const [file,raw] of observed)if(readFileSync(file,'utf8')!==raw)throw Error('bounded owners changed during observation');
-        return {known:true,settled:active.size===0,active:[...active],coordinator:owner.pid,reason:null};
+        return {known:true,settled:active.size===0,active:[...active],coordinator:retiredSwarm?null:swarm.pid,reason:null};
     }catch(error){return {known:false,settled:false,active:[...active],coordinator:null,reason:String(error)};}
 }

@@ -9,8 +9,8 @@ export const MAIN_ACCOUNT='Haggis';
 export const MAIN_MARK='⟦MAIN⟧';
 export const WHY_LIMIT=400,DETAIL_LIMIT=300,FINISHED_KEEP=200;
 
-// Coordinator tasks are the bulk of the state (a review spec can run to kilobytes; hundreds of tasks are finished).
-// The page shows a line per task: texts are capped, and only the newest FINISHED_KEEP finished tasks travel.
+// Planned chains and defects are summarized for the owner; the public keeps only counts and availability.
+// Texts are capped, and only the newest FINISHED_KEEP finished entries travel.
 export function trimState(state:any){
  if(!Array.isArray(state?.coordination?.tasks))return state;
  const all=state.coordination.tasks.map((t:any)=>{
@@ -141,9 +141,9 @@ const PUBLIC_BOT=['name','server','side','remote','practice','reserved','at','st
  'skills','quests','questsDone','questsStarted','questsUnknown','questsAt','equipment','equipmentObserved','inventory','ranks','ranksAt','role','goal','currentGoal','goalSkill','goalLevel',
  'goalNow','goalXp','xpPerTick','xpPerHour','xpLeft','eta','rateSkill','spark','uptime','action','death','seenInFeed','lastSeen','outcome','training','snapshotAt','ground'] as const;
 const PUBLIC_KEYS=['now','questList','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','snapshotAt','liveTopsAt','liveTops'] as const;
-// Goal texts can carry a coordinator task id ("run-x [task-1a2b]") and, after a colon or in brackets, stock counts
+// Goal texts can carry an internal task tag ("run-x [task-1a2b]") and, after a colon or in brackets, stock counts
 // ("Smithing from banked ore: 1630 bronze and 571 iron", "cooked lobsters (607 short)"): the public keeps the headline.
-// A coordinator job id ("run-ranged-<account>-band50") is a file name, not a goal: the public text names its kind.
+// A run id ("run-ranged-<account>-band50") is a file name, not a goal: the public text names its kind.
 const RUN_KIND:Record<string,string>={ranged:'Ranged training',ge:'Grand Exchange trade',handoff:'item hand-off',quest:'quests'};
 const publicGoal=(g:any)=>{
  if(typeof g!=='string')return g;

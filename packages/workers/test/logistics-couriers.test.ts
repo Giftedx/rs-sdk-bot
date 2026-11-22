@@ -5,7 +5,6 @@ import { join, resolve } from 'node:path';
 import { botWork } from '../../core/src/bot';
 import type { Session } from '../../core/src/inprocess';
 import { loadPathfinding } from '../../core/src/pathcache';
-import { intentForEntry } from '../../planner/src/progression-catalog';
 import {
     assertCoinReserveRefusal,
     coinChildConfiguration,
@@ -80,14 +79,12 @@ beforeAll(async () => { await loadPathfinding(); }, 120_000);
 
 // --- Coin Courier & Proof Integration ---
 
-test('the session record of each courier account maps to the finite transfer intent', () => {
+test('the session record of each courier account keeps canonical aio-logistics args', () => {
     const argv = ['Donor', 'Receiver', '45000', '--reserve=5001'], record = courierRecord({ donor: 'Donor', receiver: 'Receiver' }, argv, {});
     for (const name of ['Donor', 'Receiver']) {
         const work = botWork(name, record);
-        expect(intentForEntry(work.script, work.args, work.env)).toEqual({
-            kind: 'service',
-            objective: 'finite owned coin transfer Donor -> Receiver: 45000 coins; donor bank reserve 5001',
-        });
+        expect(work.script).toBe('scripts/aio-logistics.ts');
+        expect(work.args).toEqual(['coin-courier', 'Donor', 'Receiver', '45000', '--reserve=5001']);
     }
 });
 
@@ -262,7 +259,7 @@ test('coin proof isolates real ownership files and profiles while keeping the wo
             'packages/practice/src/replay-root.ts',
         ]) put(path, 'fixture ' + path);
         put('swarm.json', JSON.stringify({ maxBots: 2, jobs: [{ account: 'Donor', enabled: true }] }));
-        put('.practice/coordinator/state.json', JSON.stringify({ version: 1, tasks: [{ status: 'running', runId: 'other', spec: { account: 'Donor' } }] }));
+        put('.practice/live/fleet-state.json', JSON.stringify({ schemaVersion: 1, accounts: { donor: { paused: true } } }));
         put('vendor/rs-sdk/bots/LiveActor/marker', 'private live profile'); put('vendor/rs-sdk/bots/create-bot.ts', 'creator');
         put('vendor/rs-sdk/bots/_template/marker', 'template'); put('vendor/rs-sdk/bots/_template/bot.env', 'PASSWORD={{PASSWORD}}\n'); put('vendor/rs-sdk/sdk/marker', 'sdk');
         put('fleet/owners.json', JSON.stringify({ accounts: { Donor: { side: 'cloud' } } }));
@@ -276,11 +273,11 @@ test('coin proof isolates real ownership files and profiles while keeping the wo
         expect(lstatSync(join(scratch, 'vendor/rs-sdk/bots')).isSymbolicLink()).toBe(false);
         expect(existsSync(join(scratch, 'vendor/rs-sdk/bots/LiveActor'))).toBe(false);
         expect(JSON.parse(readFileSync(join(scratch, 'swarm.json'), 'utf8')).jobs).toEqual([]);
-        expect(JSON.parse(readFileSync(join(scratch, '.practice/coordinator/state.json'), 'utf8'))).toEqual({ version: 1, tasks: [] });
+        expect(JSON.parse(readFileSync(join(scratch, '.practice/live/fleet-state.json'), 'utf8'))).toEqual({ schemaVersion: 1, accounts: {} });
         const io = { owned: () => new Set(['donor']), logoutState: () => 'confirmed' };
         expect(() => checkTransferAccounts(scratch, ['Donor'], '127.0.0.1:21000', [], '', io)).not.toThrow();
-        expect(() => checkTransferAccounts(source, ['Donor'], 'rs-sdk-demo.fly.dev', [], '', io)).toThrow('account lease conflict');
-        rmSync(join(scratch, '.practice/coordinator/state.json'));
+        expect(() => checkTransferAccounts(source, ['Donor'], 'rs-sdk-demo.fly.dev', [], '', io)).toThrow('account paused in fleet state');
+        rmSync(join(scratch, '.practice/live/fleet-state.json'));
         for (const server of ['127.0.0.1:21000', 'rs-sdk-demo.fly.dev']) expect(() => checkTransferAccounts(scratch, ['Donor'], server, [], '', io)).toThrow('ownership unavailable');
         const p = coinProofEndpoints({ engine: 21000, gateway: 21001, management: 21002, tcp: 21003 }, 'coin-fixture');
         const child = coinChildConfiguration(['scripts/aio-logistics.ts', 'Donor', 'coin-courier', 'Receiver', '45000'], {}, p, { SWARM_PLAN: join(source, 'swarm.json'), FLEET_VAULT_KEY: 'inherited-fixture', FLEET_DIR: source, COORDINATOR_RUN_ID: 'live-run' }, scratch);
@@ -289,7 +286,7 @@ test('coin proof isolates real ownership files and profiles while keeping the wo
         expect(child.env.FLEET_VAULT_KEY).toBe(''); expect(child.env.COORDINATOR_RUN_ID).toBe('');
         expect(removeCoinProofRoot(scratch)).toBe(true); scratch = '';
         expect(readFileSync(join(source, 'vendor/rs-sdk/bots/LiveActor/marker'), 'utf8')).toBe('private live profile');
-        expect(JSON.parse(readFileSync(join(source, '.practice/coordinator/state.json'), 'utf8')).tasks).toHaveLength(1);
+        expect(JSON.parse(readFileSync(join(source, '.practice/live/fleet-state.json'), 'utf8')).accounts.donor.paused).toBe(true);
         put('vendor/rs-sdk/bots/_template/bot.env', 'PASSWORD=fixture-not-a-placeholder\n');
         expect(() => prepareCoinProofRoot(source, base)).toThrow('placeholder credentials');
     } finally { if (scratch) removeCoinProofRoot(scratch); }

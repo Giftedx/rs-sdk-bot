@@ -2,8 +2,16 @@
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ownerPlanPath } from '../coordinator-jobs';
+import { ownerPlanPath } from '../plan-lock';
 import { isLocalServer } from '../localserver';
+import { lifecycleRootForRead, simLifecycleRoot } from '../practice-paths';
+
+export function recoveryLifecycleRoot(server: string, base: string): string {
+    if (!isLocalServer(server)) return lifecycleRootForRead(server, base);
+    const sim = simLifecycleRoot(base);
+    const legacy = join(base, '.practice/session-lifecycle');
+    return existsSync(sim) || !existsSync(legacy) ? sim : legacy;
+}
 import type { ProcessStarts } from '../session-takeover';
 import { RESERVED_ACCOUNTS } from '../specialist-boards';
 
@@ -62,10 +70,14 @@ export function assertNativeFixtureRoot(base: string, server: string) {
     try {
         if (!isLocalServer(server)) throw Error('not local');
         const key = (p: string) => { const v = p.replaceAll('\\', '/').replace(/\/+$/, ''); return process.platform === 'win32' ? v.toLowerCase() : v; };
+        const inside = (path: string, dir: string) => path === dir || path.startsWith(dir + '/');
         const repo = key(realpathSync(repoRoot)), actual = key(realpathSync(base));
-        const controlPath = resolve(repoRoot, '.practice/coordinator'), control = key(existsSync(controlPath) ? realpathSync(controlPath) : controlPath);
-        const inside = (p: string, parent: string) => p === parent || p.startsWith(parent + '/');
-        if (actual === repo || inside(actual, control)) throw Error('production root');
+        for (const sub of ['.practice/coordinator', '.practice/live']) {
+            const controlPath = resolve(repoRoot, sub), control = key(existsSync(controlPath) ? realpathSync(controlPath) : controlPath);
+            if (actual === repo || inside(actual, control)) throw Error('production root');
+            const candidate = join(base, sub);
+            if (existsSync(candidate) && inside(key(realpathSync(candidate)), control)) throw Error('production control alias');
+        }
         const privatePath = (path: string) => {
             try {
                 const info = lstatSync(path);
@@ -76,8 +88,6 @@ export function assertNativeFixtureRoot(base: string, server: string) {
             }
         };
         privatePath(join(base, '.practice')); privatePath(join(base, 'swarm.json')); privatePath(ownerPlanPath(base));
-        const candidate = join(base, '.practice/coordinator');
-        if (existsSync(candidate) && inside(key(realpathSync(candidate)), control)) throw Error('production control alias');
     } catch {
         throw Error('native fixture boundary invalid');
     }
@@ -85,7 +95,9 @@ export function assertNativeFixtureRoot(base: string, server: string) {
 
 export function assertRecoveryNotStopped(account: string, base: string, present: (path: string) => boolean = existsSync) {
     for (const root of new Set([resolve(base), repoRoot]))
-        for (const flag of ['stop-coordinator', 'stop-swarm', 'stop-' + account]) if (present(join(root, '.practice', flag))) throw Error('recovery owner stopped');
+        for (const flag of ['stop-coordinator', 'stop-swarm', 'stop-' + account]) {
+            if (present(join(root, '.practice', flag)) || present(join(root, '.practice', 'live', flag))) throw Error('recovery owner stopped');
+        }
 }
 
 export function validateRecoveryRequest(r: any): asserts r is RecoveryRequest {

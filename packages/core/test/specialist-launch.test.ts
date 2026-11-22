@@ -22,25 +22,24 @@ function fixture(start=Date.now()-10_000){
         writeFileSync(target,bytes);
         return{path,sha256:sha(bytes)};
     };
-    const job={account,script,enabled:true,coordinatorOwner:'coordinator',env:{COORDINATOR_RUN_ID:runId}};
+    const job={account,script,enabled:true,env:{FLEET_RUN_ID:runId}};
     const mission=sha(missionSignature(job));
-    file('swarm.json',{maxBots:17,jobs:[]});
-    const jobs=(enabled:boolean)=>file('.practice/coordinator/jobs.json',{jobs:[{...job,enabled}]});
-    jobs(true);
-    const runDir='.practice/coordinator/runs/'+runId;
-    file(runDir+'/owner.json',{runId,pid:process.pid});
+    const savePlan=(enabled:boolean)=>file('swarm.json',{maxBots:17,jobs:[{...job,enabled}]});
+    savePlan(true);
+    const runDir='.practice/live/fleet-runs/'+runId;
+    file(runDir+'/owner.json',{runId,pid:process.pid,mission,source});
     const plan=file('.practice/specialist-launch/shaftshooter.json',{requirements:[]});
     const hiscores=file('.practice/specialist-launch/hiscores.json',{takenAt:start});
     const token={version:2,account:account.toLowerCase(),runId,source,mission,at:start,expiresAt:start+600_000,
         runUntil:start+900_000,bindings:[plan,hiscores]};
     const tokenRef=file(specialistTokenPath(account),token);
-    const env={COORDINATOR_RUN_ID:runId,WORKER_RELEASE:source,SWARM_MISSION_HASH:mission};
+    const env={FLEET_RUN_ID:runId,WORKER_RELEASE:source,SWARM_MISSION_HASH:mission};
     const active=(pid:number,marker:string)=>pid===process.pid&&marker===runId;
     const authorize=(at=Date.now(),overrides:Partial<typeof env>={},alive=active)=>assertSpecialistLogin(base,account,at,{...env,...overrides},server,alive);
     const attempt=(authorization={ticket:tokenRef.sha256,mission})=>
         beginSessionAttempt({account,server},{root:join(base,'.practice/session-lifecycle'),
             owner:{pid:process.pid,coordinatorRunId:runId,workerRelease:source,script,role:'ranged',participants:null,specialistAuthorization:authorization}});
-    return{base,file,jobs,runDir,token,tokenRef,hiscores,authorize,attempt,start};
+    return{base,file,jobs:savePlan,runDir,token,tokenRef,hiscores,authorize,attempt,start};
 }
 
 test('first login expires on schedule, but a proved relog uses the same finite original ticket',()=>withFixture(f=>{
@@ -58,7 +57,7 @@ test('first login expires on schedule, but a proved relog uses the same finite o
     expect(()=>f.authorize(start+900_000)).toThrow('expired');
     expect(()=>f.authorize(start+700_000,{WORKER_RELEASE:'b'.repeat(64)})).toThrow('mismatched');
     expect(()=>f.authorize(start+700_000,{SWARM_MISSION_HASH:'b'.repeat(64)})).toThrow('mismatched');
-    expect(()=>f.authorize(start+700_000,{COORDINATOR_RUN_ID:'other-run'})).toThrow('mismatched');
+    expect(()=>f.authorize(start+700_000,{FLEET_RUN_ID:'other-run'})).toThrow('mismatched');
     expect(()=>f.authorize(start+700_000,{},()=>false)).toThrow('no longer active');
     f.file(f.runDir+'/receipt.json',{runId});
     expect(()=>f.authorize(start+700_000)).toThrow('no longer active');
@@ -104,6 +103,13 @@ test('owner pause, disabled job and terminal result refuse an otherwise valid re
     expect(resume).toThrow('terminal result');
     f.file('.practice/stop-Shaftshooter','owner pause');
     expect(resume).toThrow('owner paused');
+}));
+
+test('active brain fleet-state campaign authorizes specialist login using FLEET_RUN_ID',()=>withFixture(f=>{
+    const runId='task-specialist-proof';
+    f.file('swarm.json',{maxBots:17,jobs:[]});
+    f.file('.practice/live/fleet-state.json',{schemaVersion:1,emittedAt:Date.now(),side:'local',server,maxBots:17,accounts:{},activeChains:{shaftshooter:{account:'Shaftshooter',steps:[]}},idleReasons:{},goals:[],campaigns:[{id:'c1',account:'Shaftshooter',protectedClock:true,board:'Ranged',requiredSupplies:[],stagingHolder:null,rehearsalProof:null,hiscoreMargin:null,state:'running'}],missions:[],pendingTransfers:[],quarantinedDefects:[]});
+    expect(f.authorize(undefined,{FLEET_RUN_ID:runId})).toBe(f.tokenRef.sha256);
 }));
 
 test('a first attempt outside the ten-minute ticket cannot create continuation authority',()=>withFixture(f=>{

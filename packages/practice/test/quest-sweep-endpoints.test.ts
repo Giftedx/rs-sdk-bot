@@ -460,9 +460,6 @@ test('explicit --case selection picks named cases, keeps the full default and re
  expect(()=>selectQuestSweepProofCases(['--case='])).toThrow('unknown quest-sweep proof case (empty)');
  expect(()=>selectQuestSweepProofCases(['--case','scorpion-barcrawl'])).toThrow('must be --case=<id>');
  expect(()=>selectQuestSweepProofCases(['--case=scorpion-barcrawl','--case=scorpion-barcrawl'])).toThrow('repeated');
- const definition=JSON.parse(readFileSync(new URL('../../router/tasks/quest-sweep.json',import.meta.url),'utf8'));
- for(const c of definition.checks.filter((c:any)=>c.command.includes('packages/practice/src/quest-sweep-proof.ts')))
-  expect(selectQuestSweepProofCases(c.command.slice(2))).toEqual(['scorpion-barcrawl','scorpion-ranged-barcrawl','scorpion-complete-refusal','elena-heckel-dust']);
  const source=readFileSync(new URL('../src/quest-sweep-proof.ts',import.meta.url),'utf8');
  expect(source).toContain('.filter(c=>selected.includes(c.id))');
  expect(source).toContain('missing retained evidence');

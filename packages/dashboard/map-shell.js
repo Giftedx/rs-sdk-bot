@@ -47,22 +47,23 @@
   }
   function openInspector(){showInspector=true;app.classList.remove('right-hidden');if(innerWidth<=760)app.classList.remove('mobile-fleet');save('inspector','open');}
   function agentView(c){
-    return '<div class="agent-strip">'+['codex','claude'].map(name=>{const a=c.agents?.find(a=>a.name===name),busy=a&&(a.tasks.length||a.planning),label=!c.fresh?'Queue stale':c.paused?'Paused':busy?(a.planning?'Planning':a.tasks.length+' claimed job'+(a.tasks.length>1?'s':'')):'No active claim';return `<div class="agent-card ${busy&&c.fresh?'busy':''}"><b><i class="agent-dot" style="opacity:${busy&&c.fresh?1:.25}"></i>${name==='codex'?'Codex':'Claude'}</b><small>${E(label)}</small></div>`;}).join('')+'</div>';
+    const planner=c.agents?.find(a=>a.name==='brain')||c.agents?.[0],busy=c.available&&(c.activeChains>0||planner?.planning),label=!c.fresh?'State stale':c.paused?'Paused':c.infraOpen?'Breaker open':busy?`${c.activeChains??planner?.tasks?.length??0} active chains`:'Idle';
+    return '<div class="agent-strip">'+`<div class="agent-card ${busy&&c.fresh?'busy':''}"><b><i class="agent-dot" style="opacity:${busy&&c.fresh?1:.25}"></i>Fleet Brain</b><small>${E(label)}</small></div>`+'</div>';
   }
   function jobsView(){
     const c=S.coordination||{},tasks=c.tasks||[];
     $('#inspect-title').textContent='Agents & jobs';
-    if(!c.available){put('#inspector','<h3>Agents & jobs</h3><p class="subline">No coordinator state is available.</p><p class="next-proof">Game activity and AI job activity are separate observations.</p>');return;}
-    const filters=[['active','Working'],['pending','Waiting'],['failed','Failures'],['all','All']];
+    if(!c.available){put('#inspector','<h3>Agents & jobs</h3><p class="subline">No Fleet Brain state is available.</p><p class="next-proof">Game activity and planned chains are separate observations.</p>');return;}
+    const filters=[['active','Working'],['pending','Waiting'],['failed','Defects'],['all','All']];
     const chosen=selectedJob&&tasks.find(t=>t.id===selectedJob);
     const visible=tasks.filter(t=>jobFilter==='all'||jobFilter==='active'&&t.status==='running'||t.status===jobFilter).sort((a,b)=>(b.finishedAt||b.startedAt||0)-(a.finishedAt||a.startedAt||0));
-    let html=agentView(c)+`<div class="job-counts"><span><b>${c.counts?.running??0}</b> working · <b>${c.counts?.pending??0}</b> waiting</span><span class="${c.fresh?'dm':'warn'}">Queue ${age(c.at)} old</span></div><div class="job-filters">`+filters.map(([id,label])=>`<button data-job-filter="${id}" class="${jobFilter===id?'on':''}">${label}</button>`).join('')+'</div>';
+    let html=agentView(c)+`<div class="job-counts"><span><b>${c.counts?.running??0}</b> running · <b>${c.counts?.pending??0}</b> queued</span><span class="${c.fresh?'dm':'warn'}">State ${age(c.at)} old</span></div><div class="job-filters">`+filters.map(([id,label])=>`<button data-job-filter="${id}" class="${jobFilter===id?'on':''}">${label}</button>`).join('')+'</div>';
     if(chosen){
       const deps=chosen.dependsOn.map(id=>{const d=tasks.find(t=>t.id===id);return `${id}: ${d?.status??'not in current view'}`;});
-      html+=`<div class="job-detail"><button data-job-back>← Job list</button><h4>${E(chosen.id)}</h4><p>${E(chosen.kind)} · ${E(chosen.goal)} · ${E(chosen.agent||'harness')} · ${E(chosen.status)}</p><h4>Outcome & next consumer</h4><p>${E(chosen.why)}</p>${chosen.detail?`<h4>Latest result</h4><p class="${chosen.status==='failed'?'error':''}">${E(chosen.detail)}</p>`:''}${deps.length?'<h4>Dependencies</h4><p>'+deps.map(E).join('<br>')+'</p>':''}<h4>Evidence</h4><p>${E(chosen.evidence||'No completed receipt')} · ${chosen.finishedAt?age(chosen.finishedAt)+' old':'not finished'}</p></div>`;
-    }else html+=visible.map(t=>`<button class="job-card ${E(t.status)}" data-job="${E(t.id)}"><span class="job-top"><span>${E(t.agent||'harness')} / ${E(t.kind)}</span><span>${E(t.goal)}</span></span><strong>${E(t.capability||t.id)}</strong><p>${E(t.status==='failed'?t.detail||'Failed; inspect receipt':t.why)}</p><p>${E(t.status)}${t.startedAt?' · '+age(t.startedAt)+' since claim':''}</p></button>`).join('')||'<p class="dock-empty">No jobs in this view. Inspect Waiting or Failures for dependencies.</p>';
-    html+='<p class="hint">AI tasks are not game progress. Native proof, live output and ranks remain separate.</p>';
-    put('#inspector',html);$('#detail-menu').value='jobs';$('#detail-page').textContent=chosen?'Job detail':'Shared queue';$('#detail-prev').disabled=true;$('#detail-next').disabled=true;
+      html+=`<div class="job-detail"><button data-job-back>← Job list</button><h4>${E(chosen.id)}</h4><p>${E(chosen.kind)} · ${E(chosen.goal)} · ${E(chosen.agent||'brain')} · ${E(chosen.status)}</p><h4>Step / reason</h4><p>${E(chosen.why)}</p>${chosen.detail?`<h4>Latest result</h4><p class="${chosen.status==='failed'?'error':''}">${E(chosen.detail)}</p>`:''}${deps.length?'<h4>Dependencies</h4><p>'+deps.map(E).join('<br>')+'</p>':''}<h4>Observed</h4><p>${chosen.finishedAt?age(chosen.finishedAt)+' old':'active chain'}</p></div>`;
+    }else html+=visible.map(t=>`<button class="job-card ${E(t.status)}" data-job="${E(t.id)}"><span class="job-top"><span>${E(t.agent||'brain')} / ${E(t.kind)}</span><span>${E(t.goal)}</span></span><strong>${E(t.capability||t.id)}</strong><p>${E(t.status==='failed'?t.detail||'Defect quarantined; inspect log':t.why)}</p><p>${E(t.status)}${t.startedAt?' · '+age(t.startedAt)+' since start':''}</p></button>`).join('')||'<p class="dock-empty">No chains or defects in this view.</p>';
+    html+='<p class="hint">Planned chains are not game progress. Native proof, live output and ranks remain separate.</p>';
+    put('#inspector',html);$('#detail-menu').value='jobs';$('#detail-page').textContent=chosen?'Chain detail':'Fleet Brain';$('#detail-prev').disabled=true;$('#detail-next').disabled=true;
   }
   function journal(){
     const c=S.coordination||{},jobs=(c.tasks||[]).filter(t=>t.status==='running'||t.finishedAt).map(t=>({at:t.finishedAt||t.startedAt,name:t.agent||'harness',status:t.status,text:t.id+(t.detail?' · '+t.detail:''),job:t.id}));

@@ -6,7 +6,6 @@ import { settle } from '../../core/src/bot';
 import { setEquipmentObserved } from '../../core/src/container-observation';
 import type { Session } from '../../core/src/inprocess';
 import { walkPath, type PathDeps } from '../../core/src/walk';
-import { GOLDFARM_FOOD, GOLDFARM_FRAIL } from '../../planner/src/autopilot';
 import { isNoProgressFailure } from '../../practice/src/supervise';
 import { classify } from '../../practice/src/supervise-host';
 import { watchProductionLife } from '../../../scripts/microbot-c-lifetime';
@@ -660,12 +659,13 @@ test('a fall in Hitpoints with no pick of its own is a guard hit', () => {
     expect(guardHit(6, 10, false)).toBe(false);
 });
 
-test('the planner keeps a frail thief off the knights by the numbers and the foods of this worker', () => {
-    expect(GOLDFARM_FRAIL.hitpoints).toBe(FRAIL_HP);
-    expect(GOLDFARM_FRAIL.count).toBe(FRAIL_FLOOR);
-    expect(GOLDFARM_FRAIL.of).toBe(GOLDFARM_FOOD);
-    expect(GOLDFARM_FOOD.every(name => FOOD_ORDER.filter(re => re.test(name)).length === 1)).toBe(true);
-    expect(FOOD_ORDER.every(re => GOLDFARM_FOOD.filter(name => re.test(name)).length === 1)).toBe(true);
+test('the frail floor and food regexes match the thieving worker bounds', () => {
+    expect(FRAIL_HP).toBe(20);
+    expect(FRAIL_FLOOR).toBe(2);
+    expect(FRAIL_RESERVE).toBe(6);
+    for (const food of ['Slice of cake', '2/3 cake', 'Cake', 'Chocolate slice', 'Bread', 'Trout', 'Salmon', 'Lobster', 'Shark']) {
+        expect(FOOD_ORDER.filter(re => re.test(food))).toHaveLength(1);
+    }
 });
 
 const courierNow = 100000;

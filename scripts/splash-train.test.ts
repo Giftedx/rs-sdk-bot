@@ -1,7 +1,6 @@
 import { beforeAll, expect, test } from 'bun:test';
 import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SITES, SPLASH_SPELLS, SPLASH_TILE, WATER, bankedSplashSpells, castReaches, freeRunesFromEquipment, packSpell, pickSplashTarget, prepareSplashStaffAtBank, runSplash, splashBatchDone, splashDebuffSpells, splashPlan, splashSite, splashSpell } from './splash-train';
 import { xpForLevel } from '../packages/planner/src/curve';
-import { SPLASH_KIT, SPLASH_TO } from '../packages/planner/src/autopilot';
 import { loadPathfinding } from '../packages/core/src/pathcache';
 import { initPathfinding, isTileWalkable } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
@@ -32,16 +31,6 @@ test('the plan counts casts spell by spell up this server\'s level curve, and th
     // Experience already past a level's start counts: one curse short of the target needs one cast.
     expect(splashPlan(xpForLevel(66) - 725, 66).casts).toBe(1);
     expect(splashPlan(xpForLevel(66), 66)).toEqual({ casts: 0, runes: { [BODY]: 0, [WATER]: 0, [EARTH]: 0, [MIND]: 0, [AIR]: 0 } });
-});
-
-test('the planner\'s kit covers the plan from every level under the target', () => {
-    for (let from = 1; from < SPLASH_TO; from++) for (const past of [0, 100, 300]) {
-        const { runes } = splashPlan(xpForLevel(from) + past, SPLASH_TO);
-        expect(runes[BODY]!).toBeLessThanOrEqual(SPLASH_KIT['body rune']);
-        expect(runes[WATER]!).toBeLessThanOrEqual(SPLASH_KIT['water rune']);
-        expect(runes[EARTH]!).toBeLessThanOrEqual(SPLASH_KIT['earth rune']);
-        expect(runes[MIND]!).toBeLessThanOrEqual(2);
-    }
 });
 
 test('no cow can stand beside the fence tile, and a cast from it reaches the field', () => {

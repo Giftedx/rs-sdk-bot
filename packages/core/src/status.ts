@@ -217,7 +217,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
         const doc = {
             name: s.name, server, role: roleOf(s.name), goal: process.env.BOT_GOAL ?? process.argv[1]?.split(/[\\/]/).pop() ?? '',
             phase: lines.line, result: lines.result, at: Date.now(), started, tick: s.tick(), workRevision: process.env.WORKER_RELEASE ?? null, workEntry: process.env.WORKER_ENTRY || null,
-            coordinatorRunId: process.env.COORDINATOR_RUN_ID ?? null,
+            coordinatorRunId: process.env.FLEET_RUN_ID ?? process.env.COORDINATOR_RUN_ID ?? null,
             // The producer's lifecycle attempt for this exact session (session-lifecycle.ts); null when absent.
             sessionAttemptId: (s as { lifecycle?: { attemptId?: unknown } }).lifecycle?.attemptId ?? null,
             pos: p ? { x: p.worldX, z: p.worldZ, level: p.level } : null,
@@ -251,7 +251,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             progressionContext:{style:st?.combatStyle??null,prayers:st?.prayers?.activePrayers??null},
             env: { target: process.env.TARGET ?? null, cap: process.env.CAP ?? null },
         };
-        // The coordinator reads this file every second during a live run, and on Windows that read can block the
+        // The fleet controller reads this file regularly during a live run, and on Windows that read can block the
         // rename for a moment; the final write carries the RESULT that live acceptance needs.
         try { writeFileSync(`${file}.tmp`, JSON.stringify(doc)); renameRetry(`${file}.tmp`, file); } catch { /* the dashboard is optional */ }
     };

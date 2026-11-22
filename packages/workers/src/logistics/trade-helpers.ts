@@ -5,7 +5,6 @@ import { dirname, join, resolve } from 'node:path';
 import { COOKED_FOOD_BASE_IDS, foodStock, hasDelivery, hasPayout, selectCookedFoodSource, type DemandNear } from '../../../core/src/bank-demand';
 import { countItems, serverFromEnv } from '../../../core/src/bot';
 import { cargoAccountServer, exactItem } from '../../../core/src/cargo';
-import { jobAccounts, mergedPlan, readCoordinatorJobs } from '../../../core/src/coordinator-jobs';
 import { depositObserved } from '../../../core/src/deposit';
 import { FLEET_DIR } from '../../../core/src/fleet';
 import {
@@ -25,6 +24,7 @@ import {
 import type { Session } from '../../../core/src/inprocess';
 import { laterProcessHolds, processStartTimes } from '../../../core/src/proc';
 import { liveLogoutRef } from '../../../core/src/session-admission';
+import { fleetStateFile } from '../../../core/src/practice-paths';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { pidAlive } from '../../../core/src/session-takeover';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
@@ -709,12 +709,14 @@ export function assertTradeAdmission(order: Order, account: string, server: stri
     const stopFiles = new Set(existsSync(practice) ? readdirSync(practice).map(file => file.toLowerCase()) : []);
     if (stopFiles.has('stop-swarm')) throw Error('fleet trade: swarm is paused');
     if (stopFiles.has('stop-' + name)) throw Error('fleet trade: account has an owner stop file');
-    const plan = readTradePlan(planFile), overlay = readCoordinatorJobs(base);
-    if (overlay.paused?.some(n => n.toLowerCase() === name)) throw Error('fleet trade: account is paused for controller rollout');
-    const includesAccount = (job: any) => jobAccounts(job).some(n => n.toLowerCase() === name);
+    const plan = readTradePlan(planFile);
+    const statePath = fleetStateFile(base);
+    const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : null;
+    if (state?.accounts?.[name]?.paused === true) throw Error('fleet trade: account is paused for controller rollout');
+    const includesAccount = (job: any) => [job?.account, ...(Array.isArray(job?.accounts) ? job.accounts : [])].some((n: unknown) => typeof n === 'string' && n.toLowerCase() === name);
     const reservation = (job: any) => (!job.script && job.trades !== true) || /fresh.clock|24 boards|main simultaneous/i.test(job.goal ?? '');
     if (plan.jobs.some((job: any) => includesAccount(job) && reservation(job))) throw Error('fleet trade: reserved account');
-    if (swarmBusy(mergedPlan(plan, overlay).jobs).has(name)) throw Error('fleet trade: account has an enabled swarm job');
+    if (swarmBusy(plan.jobs).has(name) || state?.accounts?.[name]?.activeJob != null) throw Error('fleet trade: account has an enabled swarm job');
     const runsFile = join(practice, 'swarm-runs.json');
     if (existsSync(runsFile)) {
         const runs = JSON.parse(readFileSync(runsFile, 'utf8'));

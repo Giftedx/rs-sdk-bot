@@ -1,22 +1,19 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_WATCH_MINUTES, MAX_RESTARTS_PER_HOUR, daemonCommand, endStopWrites, mayRestart, newPlan, ownerStop, parseOptions, sessionPrompt } from './cloud-side';
-import { SWARM_STOP,clearSwarmStop } from './swarm';
+import { SWARM_STOP, clearSwarmStop } from './swarm';
 import * as cloudSide from './cloud-side';
-import {pauseCoordinator} from '../packages/router/src/coordinator-cli';
-import {loadState} from '../packages/router/src/coordinator-store';
-import {prepareWorkspace} from '../packages/router/src/build-workspace';
-import {existsSync,mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync,unlinkSync} from 'node:fs';
-import {join,dirname,resolve} from 'node:path';
-import {tmpdir} from 'node:os';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { join, dirname, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 
 describe('cloud side bootstrap', () => {
-    test('recovery requires an explicit finite watch and manages only the owning coordinator',()=>{
+    test('recovery requires an explicit finite watch and manages only the owning swarm',()=>{
         expect(()=>parseOptions(['--side','cloud','--recover','scope.json'],{})).toThrow('explicit watch');
         expect(parseOptions(['--side','cloud','--recover','scope.json','--watch-minutes','15','--stop-at-end'],{}).recover).toBe('scope.json');
-        expect(cloudSide.managedCommands(true,'cloud.json')).toEqual({coordinator:['packages/router/src/coordinator-cli.ts','--run']});
+        expect(cloudSide.managedCommands(true,'cloud.json')).toEqual({swarm:['scripts/swarm.ts','cloud.json']});
         expect(cloudSide.managedCommands(false,'cloud.json',true)).toEqual({swarm:['scripts/swarm.ts','cloud.json']});
         expect(()=>parseOptions(['--side','cloud','--inspect','scope.json','--recover','scope.json','--watch-minutes','3','--stop-at-end'],{})).toThrow('one manifest');
-        expect(cloudSide.managedCommands(false,'cloud.json')).toEqual({coordinator:['packages/router/src/coordinator-cli.ts','--run'],'fleet-agent':['scripts/fleet-agent.ts'],autopilot:['scripts/autopilot.ts','cloud.json','--daemon']});
+        expect(cloudSide.managedCommands(false,'cloud.json')).toEqual({swarm:['scripts/swarm.ts','cloud.json'],'fleet-agent':['scripts/fleet-agent.ts']});
     });
     test('bounded shutdown cannot remove its fence while either owning controller is alive',()=>{
         expect(cloudSide.boundedStopSettled(false,false)).toBe(true);
@@ -97,7 +94,6 @@ describe('cloud side bootstrap', () => {
 
     test('daemons and restarts', () => {
         expect(daemonCommand('swarm', 'p.json')).toEqual(['scripts/swarm.ts', 'p.json']);
-        expect(daemonCommand('autopilot', 'p.json')).toEqual(['scripts/autopilot.ts', 'p.json', '--daemon']);
         expect(daemonCommand('fleet-agent', 'p.json')).toEqual(['scripts/fleet-agent.ts']);
         const now = 10 * 60 * 60_000, recent = Array.from({ length: MAX_RESTARTS_PER_HOUR }, (_, i) => now - i * 60_000);
         expect(mayRestart(recent, now)).toBe(false);
@@ -125,25 +121,24 @@ const normalFixture=async(run:(base:string,write:(path:string,value:unknown)=>vo
     const write=(path:string,value:unknown)=>{const file=join(base,path);mkdirSync(dirname(file),{recursive:true});writeFileSync(file,typeof value==='string'?value:JSON.stringify(value));};
     try{await run(base,write);}finally{if(dirname(base)===tmpdir())rmSync(base,{recursive:true,force:true,maxRetries:5});}
 };
-describe('normal cloud coordinator ownership',()=>{
-    test('a new Claude-side plan uses its own available agent family',async()=>{
+describe('normal cloud swarm ownership',()=>{
+    test('new plan setup initializes empty cloud plan under live lock without autopilot/coordinator keys',async()=>{
         await normalFixture(async(base)=>{
             const plan=join(base,'.practice/cloud-handoff/swarm.json');
             await cloudSide.prepareNormalPlan(base,plan,4,'claude-cloud');
             const next=JSON.parse(readFileSync(plan,'utf8'));
-            expect(next.coordination.agents).toEqual(['claude']);
-            expect(next.coordination.enabled).toBe(true);
-            expect(next.maxBots).toBe(4);
+            expect(next).toEqual({maxBots:4,minFreeGB:4,fleetCapacity:4,jobs:[]});
+            expect(existsSync(join(base,'.practice/live/plan-write-lock.json'))).toBe(false);
         });
     });
-    test('locked normal plan setup enables coordination without replacing assignments or owner settings',async()=>{
+    test('locked normal plan setup preserves existing owner jobs without legacy coordinator settings',async()=>{
         await normalFixture(async(base,write)=>{
             const plan=join(base,'.practice/cloud-handoff/swarm.json');
-            const original={maxBots:7,minFreeGB:6,jobs:[{account:'Unsheathed',enabled:false,role:'inspect',repeat:false}],custom:{preserve:true},coordination:{enabled:true,maxActive:1,maxLive:3,plannerIntervalMs:45000,agents:['codex'],directive:'owner goal',bootstrap:[]}};
+            const original={maxBots:7,minFreeGB:6,jobs:[{account:'Unsheathed',enabled:false,role:'inspect',repeat:false}],custom:{preserve:true}};
             write('.practice/cloud-handoff/swarm.json',original);
             await cloudSide.prepareNormalPlan(base,plan,4);
-            expect(JSON.parse(readFileSync(plan,'utf8'))).toEqual({...original,coordination:{...original.coordination,enabled:true}});
-            expect(existsSync(join(base,'.practice/coordinator/plan-write-lock.json'))).toBe(false);
+            expect(JSON.parse(readFileSync(plan,'utf8'))).toEqual(original);
+            expect(existsSync(join(base,'.practice/live/plan-write-lock.json'))).toBe(false);
         });
     });
     test('normal plan setup preserves an owner pause and refuses a bounded-mode plan',async()=>{
@@ -155,87 +150,51 @@ describe('normal cloud coordinator ownership',()=>{
             expect(JSON.parse(readFileSync(plan,'utf8'))).toEqual(original);
         });
         await normalFixture(async(base,write)=>{
-            const plan=join(base,'.practice/cloud-handoff/swarm.json'),original={maxBots:4,minFreeGB:4,jobs:[],coordination:{enabled:false}};
-            write('.practice/cloud-handoff/swarm.json',original);
+            const plan=join(base,'.practice/cloud-handoff/swarm.json'),original={maxBots:4,minFreeGB:4,jobs:[]};
+            write('.practice/cloud-handoff/swarm.json',original);write('.practice/stop-swarm','owner: keep stopped');
             await expect(cloudSide.prepareNormalPlan(base,plan,4)).rejects.toThrow('paused');
             expect(JSON.parse(readFileSync(plan,'utf8'))).toEqual(original);
         });
         await normalFixture(async(base,write)=>{
-            const plan=join(base,'.practice/cloud-handoff/swarm.json'),original={maxBots:4,minFreeGB:4,jobs:[],coordination:{boundedRecovery:{targets:[]}}};
+            const plan=join(base,'.practice/cloud-handoff/swarm.json'),original={maxBots:4,minFreeGB:4,jobs:[],boundedRecovery:{targets:[]}};
             write('.practice/cloud-handoff/swarm.json',original);
             await expect(cloudSide.prepareNormalPlan(base,plan,4)).rejects.toThrow('bounded');
             expect(JSON.parse(readFileSync(plan,'utf8'))).toEqual(original);
         });
     });
-    test('normal watcher adopts an exact live coordinator and its reload successor instead of launching another',async()=>{
+    test('normal watcher adopts an exact live swarm owner and its reload successor instead of launching another',async()=>{
         await normalFixture((base,write)=>{
             const plan=join(base,'.practice/cloud-handoff/swarm.json');
-            write('.practice/coordinator/owner.json',{pid:11,nonce:'old-owner',at:100,plan:resolve(plan),side:'cloud',successor:{pid:12,nonce:'reload-owner'}});
-            write('.practice/coordinator/state.json',{tasks:[]});
-            const view=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {alive:pid=>[11,12].includes(pid),command:pid=>`${join(base,'packages/router/src/coordinator-cli.ts')} --run ${pid===11?'old-owner':'reload-owner'}`,groups:()=>[]});
-            expect(view.known).toBe(true);expect(view.coordinator).toEqual({pid:12,nonce:'reload-owner'});expect(view.settled).toBe(false);
+            write('.practice/live/swarm-owner.json',{pid:11,nonce:'old-owner',at:100,plan:resolve(plan),side:'cloud',successor:{pid:12,nonce:'reload-owner'}});
+            const view=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {alive:pid=>[11,12].includes(pid),command:pid=>`${join(base,'scripts/swarm.ts')} ${plan} --nonce ${pid===11?'old-owner':'reload-owner'}`,groups:()=>[],processes:()=>[11,12]});
+            expect(view.known).toBe(true);expect(view.swarm).toBe(12);expect(view.settled).toBe(false);
         });
     });
     test('a live unowned standalone swarm refuses normal migration without taking it over',async()=>{
         await normalFixture((base,write)=>{
             const plan=join(base,'.practice/cloud-handoff/swarm.json');write('.practice/swarm-state.json',{controllerPid:44});
-            const view=cloudSide.observeNormalOwners(base,plan,'cloud',{swarm:{pid:44,started:1,restarts:[]}},{alive:pid=>pid===44,command:()=>`${join(base,'scripts/swarm.ts')} ${plan}`,groups:()=>[]});
+            const view=cloudSide.observeNormalOwners(base,plan,'cloud',{swarm:{pid:44,started:1,restarts:[]}},{alive:pid=>pid===44,command:()=>`${join(base,'scripts/swarm.ts')} ${plan}`,groups:()=>[],processes:()=>[44]});
             expect(view.known).toBe(false);expect(view.settled).toBe(false);expect(view.reason).toContain('unowned swarm');
         });
     });
-    test('normal drain includes its planner and children and keeps unknown process ownership fenced',async()=>{
+    test('normal drain tracks swarm runs, fleet-agent and child groups while keeping unresolved build locks fenced',async()=>{
         await normalFixture((base,write)=>{
             const plan=join(base,'.practice/cloud-handoff/swarm.json');
-            write('.practice/coordinator/owner.json',{pid:11,nonce:'owner',at:100,plan:resolve(plan),side:'cloud'});
-            write('.practice/coordinator/state.json',{tasks:[],planner:{pid:21,runId:'plan-child'}});
-            write('.practice/coordinator/runs/plan-child/owner.json',{pid:21,runId:'plan-child'});
-            const dependencies={alive:(pid:number)=>pid===21,command:()=>`${join(base,'packages/router/src/coordinator-cli.ts')} --planner plan-child`,groups:()=>[22]};
+            write('.practice/live/swarm-owner.json',{pid:11,nonce:'owner',at:100,plan:resolve(plan),side:'cloud'});
+            write('.practice/swarm-runs.json',[{pid:21,accounts:['Unsheathed']}]);
+            const dependencies={alive:(pid:number)=>pid===21,command:()=>null,groups:()=>[22],processes:()=>[]};
             const live=cloudSide.observeNormalOwners(base,plan,'cloud',{},dependencies);
             expect(live.known).toBe(true);expect(live.settled).toBe(false);expect(live.active).toContain(21);expect(live.active).toContain(22);
-            const drained=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {alive:()=>false,command:()=>null,groups:()=>[]});
+            const drained=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {alive:()=>false,command:()=>null,groups:()=>[],processes:()=>[]});
             expect(drained.known).toBe(true);expect(drained.settled).toBe(true);
-            const unknown=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {...dependencies,command:()=>null});
-            expect(unknown.known).toBe(false);expect(unknown.settled).toBe(false);
-            expect(cloudSide.watchResult({normalOwnershipError:unknown.reason})).toBe('fail');
-            const settledAfterUnknown=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {alive:()=>false,command:()=>null,groups:()=>[]});
-            expect(settledAfterUnknown.known).toBe(true);expect(settledAfterUnknown.settled).toBe(true);
-            expect(cloudSide.watchResult({normalOwnershipError:settledAfterUnknown.reason})).toBe('ok');
-        });
-    });
-    test('normal watch owns an isolated build only through its saved task, workspace and shared authority',async()=>{
-        await normalFixture((parent,write)=>{
-            const base=join(parent,'repo'),plan=join(base,'.practice/cloud-handoff/swarm.json'),runId='task-build-fixture',startedAt=Date.now()-1;
-            const spec={id:'build-fixture',kind:'build',capability:'fixture-build'},record={spec,status:'running',pid:21,runId,startedAt};
-            const put=(path:string,value:unknown)=>write(join('repo',path),value);
-            const owner={pid:11,nonce:'owner',plan:resolve(plan),side:'cloud'};
-            put('packages/router/src/coordinator-cli.ts','fixture');put('.practice/coordinator/owner.json',owner);
-            put('.practice/coordinator/state.json',{tasks:[record]});put(`.practice/coordinator/runs/${runId}/owner.json`,{pid:21,runId});
-            const input={task:spec,runId,startedAt};put(`.practice/coordinator/runs/${runId}/input.json`,input);
-            const workspace=prepareWorkspace(base,spec.capability,[]).root;
-            const dependencies={alive:(pid:number)=>pid===21,command:()=>`${join(workspace,'packages/router/src/coordinator-cli.ts')} --worker ${runId}`,groups:()=>[22]};
-            const live=()=>cloudSide.observeNormalOwners(base,plan,'cloud',{},dependencies);
-            expect(live().known).toBe(true);expect(live().active).toEqual([21,22]);expect(live().settled).toBe(false);
-            const marker=readFileSync(join(workspace,'.workspace.json'),'utf8');
-            unlinkSync(join(workspace,'.workspace.json'));expect(live().known).toBe(false);writeFileSync(join(workspace,'.workspace.json'),marker);
-            writeFileSync(join(workspace,'.workspace.json'),JSON.stringify({capability:'other',created:Date.now(),base:{}}));
-            expect(live().known).toBe(false);writeFileSync(join(workspace,'.workspace.json'),marker);
-            writeFileSync(join(workspace,'.workspace.json'),JSON.stringify({capability:spec.capability,created:startedAt-1,base:{}}));
-            expect(live().known).toBe(false);writeFileSync(join(workspace,'.workspace.json'),marker);
-            put(`.practice/coordinator/runs/${runId}/input.json`,{...input,task:{...spec,id:'crossed-task'}});
-            expect(live().known).toBe(false);put(`.practice/coordinator/runs/${runId}/input.json`,{...input,runId:'crossed-run'});
-            expect(live().known).toBe(false);put(`.practice/coordinator/runs/${runId}/input.json`,input);
-            put('.practice/coordinator/owner.json',{...owner,side:'local'});expect(live().known).toBe(false);
-            put('.practice/coordinator/owner.json',{...owner,plan:join(base,'other.json')});expect(live().known).toBe(false);
-            put('.practice/coordinator/owner.json',owner);
-            expect(cloudSide.observeNormalOwners(base,plan,'cloud',{}, {...dependencies,command:()=>`${join(parent,'arbitrary/packages/router/src/coordinator-cli.ts')} --worker ${runId}`} ).known).toBe(false);
-            expect(cloudSide.observeNormalOwners(base,plan,'cloud',{}, {...dependencies,command:()=>`${join(workspace,'packages/router/src/coordinator-cli.ts')} --worker ${runId}-other`} ).known).toBe(false);
-            expect(cloudSide.observeNormalOwners(base,plan,'cloud',{}, {...dependencies,alive:()=>false,groups:()=>[]}).settled).toBe(true);
-            unlinkSync(join(workspace,'.practice'));mkdirSync(join(workspace,'.practice'));expect(live().known).toBe(false);
+            write('.practice/live/build-lock.json',{holder:'other'});
+            const locked=cloudSide.observeNormalOwners(base,plan,'cloud',{}, {alive:()=>false,command:()=>null,groups:()=>[],processes:()=>[]});
+            expect(locked.known).toBe(false);expect(locked.settled).toBe(false);
+            expect(cloudSide.watchResult({normalOwnershipError:locked.reason})).toBe('fail');
         });
     });
     test('watch shutdown preserves an existing owner fleet pause',async()=>{
         await normalFixture(async(base,write)=>{
-            write('.practice/coordinator/jobs.json',{jobs:[{account:'Unsheathed',enabled:true,coordinatorOwner:'coordinator'},{account:'FullLoad',enabled:true,coordinatorOwner:'coordinator'}],coordination:{}});
             write('.practice/stop-FullLoad','owner: keep this account paused');
             expect(await cloudSide.prepareNormalStop(base)).toBe(true);
             expect(readFileSync(join(base,'.practice/stop-FullLoad'),'utf8')).toBe('owner: keep this account paused');
@@ -245,23 +204,20 @@ describe('normal cloud coordinator ownership',()=>{
             expect(readFileSync(join(base,'.practice/stop-swarm'),'utf8')).toBe('owner: preserve whole fleet pause');
         });
     });
-    test('two system watch drains leave resumable account stops while owner pauses remain owner pauses',async()=>{
+    test('two system watch drains leave resumable stops while owner pauses remain owner pauses',async()=>{
         await normalFixture(async(base,write)=>{
             write('.practice/stop-FullLoad','owner: account stays paused');
             for(let cycle=0;cycle<2;cycle++){
-                write('.practice/coordinator/jobs.json',{jobs:[{account:'Unsheathed',enabled:true,coordinatorOwner:'coordinator',env:{COORDINATOR_RUN_ID:'task-observe'}},{account:'FullLoad',enabled:true,coordinatorOwner:'coordinator',env:{COORDINATOR_RUN_ID:'task-held'}}],coordination:{}});
-                write('.practice/stop-swarm',SWARM_STOP.all);
-                await pauseCoordinator(loadState(join(base,'.practice/coordinator')),base,async()=>true);
-                expect(readFileSync(join(base,'.practice/stop-Unsheathed'),'utf8')).toBe(SWARM_STOP.all);
+                expect(await cloudSide.prepareNormalStop(base)).toBe(true);
+                expect(readFileSync(join(base,'.practice/stop-swarm'),'utf8')).toBe(SWARM_STOP.all);
+                write('.practice/stop-Unsheathed',SWARM_STOP.all);
                 expect(clearSwarmStop(join(base,'.practice/stop-Unsheathed'))).toBe(true);
                 expect(clearSwarmStop(join(base,'.practice/stop-swarm'))).toBe(true);
                 expect(readFileSync(join(base,'.practice/stop-FullLoad'),'utf8')).toBe('owner: account stays paused');
             }
-            write('.practice/coordinator/jobs.json',{jobs:[{account:'Unsheathed',enabled:true,coordinatorOwner:'coordinator',env:{COORDINATOR_RUN_ID:'task-owner-stop'}}],coordination:{}});
-            write('.practice/stop-coordinator','owner: stop coordination');write('.practice/stop-swarm',SWARM_STOP.all);
-            await pauseCoordinator(loadState(join(base,'.practice/coordinator')),base,async()=>true);
-            expect(readFileSync(join(base,'.practice/stop-Unsheathed'),'utf8')).toBe('coordinator owner pause');
+            write('.practice/stop-Unsheathed','owner: hold Unsheathed');
             expect(clearSwarmStop(join(base,'.practice/stop-Unsheathed'))).toBe(false);
+            expect(readFileSync(join(base,'.practice/stop-Unsheathed'),'utf8')).toBe('owner: hold Unsheathed');
         });
     });
 });

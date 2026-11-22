@@ -100,7 +100,7 @@ export function lifecycleOwner(env: Record<string, string | undefined> = process
         }
         script=entry(selected);
     }
-    return { pid: process.pid, coordinatorRunId: env.COORDINATOR_RUN_ID || null, workerRelease: env.WORKER_RELEASE || null,
+    return { pid: process.pid, coordinatorRunId: env.FLEET_RUN_ID || env.COORDINATOR_RUN_ID || null, workerRelease: env.WORKER_RELEASE || null,
         script, role: env.BOT_ROLE || null, participants };
 }
 

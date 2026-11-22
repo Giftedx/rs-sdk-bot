@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 // A PowerShell read that hangs ends after this time. The exit code is then null, and the readers below report "not known":
-// commandLine gives null and processStartTimes gives null. A coordinator loop must not wait on a hung read for good.
+// commandLine gives null and processStartTimes gives null. A controller loop must not wait on a hung read for good.
 export const POWERSHELL_TIMEOUT_MS = 20_000;
 
 export type TimedSpawnSyncOptions<

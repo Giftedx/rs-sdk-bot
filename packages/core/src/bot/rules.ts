@@ -89,7 +89,7 @@ export function watchUnexpectedEnd(
     });
 }
 
-// Recorded argv is the complete CLI. A composed entry can supply its progression arguments separately.
+// Recorded argv is the complete CLI. A composed entry can supply its step arguments separately.
 export function botWork(name: string, record?: BotRecord, argv: readonly string[] = process.argv, env: Record<string, string | undefined> = process.env) {
     const args = record?.argv ?? argv.slice(2);
     return {

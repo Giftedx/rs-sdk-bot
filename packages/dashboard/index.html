@@ -282,7 +282,7 @@ function capacityView(){
 }
 
 function machine(){return S.sys||{}}
-// One row per script: 18 coordinator workers at 200 MB each read as one 3.6 GB line, not 18 rows of 200 MB.
+// One row per script: worker subprocesses sharing the same entry group into one line.
 function procGroups(procs){const g=new Map();for(const p of procs||[]){const k=String(p.script||'?'),v=g.get(k)||{script:k,n:0,mb:0,pids:[]};v.n++;v.mb+=Number(p.mb)||0;v.pids.push(p.pid);g.set(k,v);}return [...g.values()].sort((a,b)=>b.mb-a.mb||a.script.localeCompare(b.script));}
 async function loadMap(){if(MAPI||loadMap.busy||!S.map?.ready)return;loadMap.busy=true;try{const response=await fetch('/api/map');if(!response.ok)return;const buf=new Uint8Array(await response.arrayBuffer()),m=S.map;if(buf.length!==m.w*m.h)return;const c=document.createElement('canvas');c.width=m.w;c.height=m.h;const g=c.getContext('2d'),img=g.createImageData(m.w,m.h);
   const col=[[6,6,5],[38,40,26],[14,30,44],[60,56,40]];for(let i=0;i<buf.length;i++){const px=i%m.w,pz=Math.floor(i/m.w),o=((m.h-1-pz)*m.w+px)*4,[r,gg,bb]=col[buf[i]]||col[0];img.data[o]=r;img.data[o+1]=gg;img.data[o+2]=bb;img.data[o+3]=255}g.putImageData(img,0,0);MAPI=c;drawMap();const art=new Image();art.onload=()=>{MAPI=art;window.atlasMapPx=art.width/(m.w*m.scale);drawMap()};art.src='/worldmap.png'}catch{}finally{loadMap.busy=false}}

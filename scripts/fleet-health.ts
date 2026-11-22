@@ -11,7 +11,8 @@ import { FLEET_DIR, loadOwners, mySide, type Owner } from '../packages/core/src/
 import { fleetStatusRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
 import { readLabels, type Labels } from '../packages/core/src/components';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
-import { jobAccounts, mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { jobAccounts } from '../packages/fleet/src/trade-plan';
+import { brainPlannedJobs } from '../packages/fleet/src/fleet-sync';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { pathfindingDataKey } from '../packages/core/src/pathcache';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
@@ -335,9 +336,10 @@ export function auditFleetHealth(opts: {
     }
 
     const rawSwarm = opts.swarmPlan ?? readJson<any>(join(root, 'swarm.json'), { maxBots: 25, jobs: [] });
+    const rawJobs = Array.isArray(rawSwarm?.jobs) ? rawSwarm.jobs : [];
     const plan = opts.swarmPlan
         ? rawSwarm
-        : mergedPlan(rawSwarm, readCoordinatorJobs(root));
+        : { ...rawSwarm, jobs: [...rawJobs, ...brainPlannedJobs(root, rawJobs, now)] };
     const jobByAccount = new Map<string, { name: string; script?: string; enabled: boolean; template?: string; env?: Record<string, string>; args?: string[] }>();
     for (const j of (plan?.jobs ?? []) as any[]) {
         for (const a of jobAccounts(j)) {

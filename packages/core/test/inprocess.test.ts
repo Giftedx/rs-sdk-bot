@@ -114,18 +114,6 @@ test('the action boundary blocks unowned trades through both queue and direct ca
     shim.stop('stopped');
 });
 
-test('the shared progression boundary covers queued and direct gameplay actions without blocking logout', async()=>{
- const c=fakeClient(),sdk=newSdk(),shim=createShim(c,sdk);
- shim.setProgressionGuard(a=>(a as any).type==='interactNpc'?'progression handoff: faster qualified method':null);
- shim.start();
- const queued=await (sdk as any).sendAction({type:'interactNpc',npcIndex:1,optionIndex:1,reason:'test attack'});
- expect(queued).toMatchObject({success:false,reason:'progression_replan'});
- expect(await shim.direct({type:'interactNpc',npcIndex:2,optionIndex:1})).toMatchObject({success:false,reason:'progression_replan'});
- expect(await shim.direct({type:'clickComponent',componentId:2458})).toMatchObject({success:true});
- expect(c.executed).toHaveLength(1);
- shim.stop('stopped');
-});
-
 function fakeClient() {
     let cb: (() => void) | null = null;
     const executed: any[] = [];

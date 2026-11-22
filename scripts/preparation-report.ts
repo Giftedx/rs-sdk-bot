@@ -12,7 +12,7 @@ import {orderAccounting,validateRequest,type ItemOrder} from '../packages/worker
 import {observedRouteResources,type RouteActor} from './preparation-route-state';
 import {FLEET_DIR,loadOwners,mySide,sideOf} from '../packages/core/src/fleet';
 import {fleetStatusRows,type SnapshotFile} from '../packages/core/src/fleet-snapshots';
-import {coordinatorJobsPath,mergedPlan,readCoordinatorJobs,readMergedPlan} from '../packages/core/src/coordinator-jobs';
+import {brainPlannedJobs} from '../packages/fleet/src/fleet-sync';
 
 type Requirement={item:string;count:number;itemId?:number;consumers?:string[]};
 type Holder={name:string;count:number;at:number;state:'recent'|'stale'};
@@ -43,11 +43,12 @@ export function readPreparationInputs(options:{base?:string;fleetDir?:string;sid
   try{const raw=readFileSync(path);inputSources[key]={path,sha256:hash(raw)};return raw.toString('utf8');}
   catch{inputSources[key]={path,sha256:null};return null;}
  };
- const defaultPlan=join(base,'swarm.json'),ownerPlan=resolve(base,options.planFile??process.env.SWARM_PLAN??defaultPlan),overlay=coordinatorJobsPath(base);
- const planInputs=[['ownerPlan',ownerPlan],['coordinatorJobs',overlay]] as const;
+ const defaultPlan=join(base,'swarm.json'),ownerPlan=resolve(base,options.planFile??process.env.SWARM_PLAN??defaultPlan);
+ const planInputs=[['ownerPlan',ownerPlan]] as const;
  for(const[key,path]of planInputs)read(path,key);
- const merged=ownerPlan===defaultPlan?readMergedPlan(base):mergedPlan(JSON.parse(readFileSync(ownerPlan,'utf8')),readCoordinatorJobs(base));
- if(!Array.isArray(merged.jobs))throw Error('Preparation needs a readable jobs array');
+ const rawPlan=JSON.parse(readFileSync(ownerPlan,'utf8'));
+ const merged={...rawPlan,jobs:[...(Array.isArray(rawPlan?.jobs)?rawPlan.jobs:[]),...brainPlannedJobs(base,Array.isArray(rawPlan?.jobs)?rawPlan.jobs:[])]};
+ if(!Array.isArray(rawPlan?.jobs))throw Error('Preparation needs a readable jobs array');
  for(const[key,path]of planInputs){
   const after=existsSync(path)?hash(readFileSync(path)):null;
   if(after!==inputSources[key]!.sha256)throw Error('Preparation plan changed while reading: '+path);
@@ -253,7 +254,7 @@ if(import.meta.main){
  const requestPath=process.argv[4]?resolve(process.argv[4]):null;
  const request=requestPath?JSON.parse(readFileSync(requestPath,'utf8')):null;
  const route=request?preparationRoute(stock,opts.travel,request.item,request):null;
- const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,observationSources,inputSources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/aio-market.ts','packages/workers/src/market/ge-buy.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','packages/core/src/fleet.ts','packages/core/src/fleet-snapshots.ts','packages/core/src/coordinator-jobs.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
+ const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,observationSources,inputSources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/aio-market.ts','packages/workers/src/market/ge-buy.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','packages/core/src/fleet.ts','packages/core/src/fleet-snapshots.ts','packages/fleet/src/fleet-sync.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
  mkdirSync(resolve(out,'..'),{recursive:true});writeFileSync(out,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({output:out,requirements:report.items.length,coveredByRecentBanks:report.items.filter(i=>i.shortfall===0).length,unknownBanks:report.banks.filter(b=>b.state==='unknown').length,staged:false}));
 }

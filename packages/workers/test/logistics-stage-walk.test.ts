@@ -8,10 +8,8 @@ import * as owner from '../../core/src/bot';
 import { setEquipmentObserved } from '../../core/src/container-observation';
 import type { Session } from '../../core/src/inprocess';
 import { componentId } from '../../core/src/logout';
-import { preflightProgressionWork } from '../../core/src/progression-session';
 import { resultCounters } from '../../core/src/status';
 import { loadTravel } from '../../core/src/travel';
-import { intentForEntry, loadProgressionCatalog } from '../../planner/src/progression-catalog';
 import { isNoProgressFailure, isPrerequisiteFailure } from '../../practice/src/supervise';
 import items from '../../../knowledge/items.json';
 import { guardCowWalker } from '../../../scripts/gather-combat';
@@ -296,16 +294,9 @@ test('invalid wine limits cannot dispatch any production action', async () => {
     try { for (const maximum of [0, 1.5, NaN]) await expect(runPreservedWine(f.session, { maximum, cap: 100 })).rejects.toThrow('invalid preserved wine order'); } finally { f.close(); }
 });
 
-test('the AIO wine-stock route and live admission retain a finite new-notes counter rather than a bank target', () => {
+test('the AIO wine-stock route resolves finite arguments and parses counters', () => {
     const step = resolveLogisticsStep('wine-stock', ['12', '1000', '2']);
     expect(step).toEqual({ script: 'scripts/aio-logistics.ts', args: ['wine-stock', '12', '1000', '2'], env: {} });
-    const accept = { counters: { preservedWine: 12 } }, env = { PROGRESSION_CONSUMER: JSON.stringify(accept) };
-    expect(intentForEntry(step.script, step.args, {}, accept)).toMatchObject({ kind: 'service', units: 1 });
-    expect(() => preflightProgressionWork({ ...step, env }, 'rs-sdk-demo.fly.dev', loadProgressionCatalog())).not.toThrow();
-    expect(intentForEntry(step.script, step.args, {}, { bank: { 1995: 12 } })).toBeNull();
-    expect(intentForEntry(step.script, step.args, {}, { counters: { preservedWine: 11 } })).toBeNull();
-    expect(intentForEntry(step.script, ['wine-stock', '0', '1000'])).toBeNull();
-    expect(intentForEntry(step.script, ['wine-stock', '12', '1000', '0', 'extra'])).toBeNull();
     expect(resultCounters('ok preservedWine=12 grapesUsed=12 waterUsed=12 assets=1')).toMatchObject({ preservedWine: 12, grapesUsed: 12, waterUsed: 12, assets: 1 });
 });
 

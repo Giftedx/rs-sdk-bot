@@ -37,12 +37,11 @@ describe('fleet watchdog', () => {
         ], t0 + STALL_MS + 1_000)?.since).toBe(t0);
 
         expect(restartCommand('fleet-agent', { args: [], env: {} })).toEqual(['scripts/fleet-agent.ts', '--daemon']);
-        expect(restartCommand('autopilot', { args: ['plans/p1.json'], env: {} }, () => true)).toEqual([
-            'scripts/autopilot.ts',
+        expect(restartCommand('swarm', { args: ['plans/p1.json'], env: {} }, () => true)).toEqual([
+            'scripts/swarm.ts',
             'plans/p1.json',
-            '--daemon',
         ]);
-        expect(restartCommand('autopilot', { args: ['plans/missing.json'], env: {} }, () => false)).toContain(
+        expect(restartCommand('swarm', { args: ['plans/missing.json'], env: {} }, () => false)).toContain(
             'its recorded plan is not a file',
         );
 

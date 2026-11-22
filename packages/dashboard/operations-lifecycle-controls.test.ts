@@ -16,7 +16,7 @@ const decode=(value:string)=>value.replaceAll('&quot;','"').replaceAll('&lt;','<
 const attributes=(markup:string)=>Object.fromEntries([...markup.matchAll(/([\w-]+)="([^"]*)"/g)].map(match=>[match[1],decode(match[2]!)]));
 
 function submissions(initialDraft:Record<string,string>={}){
- const savedDraft={kind:'qualify',goal:'skills',capability:'fixture',why:'Useful saved fixture work',priority:'30',timeout:'1',...initialDraft};
+ const savedDraft={kind:'override-account',account:'Worker',activityId:'fixture',durationMin:'30',reason:'Operator focus on fixture',...initialDraft};
  const storage=new Map<string,string>([['atlas.ops.draft',JSON.stringify(savedDraft)]]),toasts:string[]=[],requests:any[]=[],handlers:any={};
  let plugin='dispatch',view:any,api:any,uuid=0;
  const doc:any={body:{tagName:'BODY'},activeElement:null};
@@ -38,8 +38,8 @@ function submissions(initialDraft:Record<string,string>={}){
  const install=(html:string)=>{
   if(view){for(const n of all())n.isConnected=false;}view={html,nodes:[],appended:[]};body.dataset.plugin=plugin;
   if(plugin==='dispatch'){
-   const form=node('FORM',{id:'op-dispatch'}),input=node('TEXTAREA',{name:'why'}),match=html.match(/<button\b([^>]*type="submit"[^>]*)>([^<]*)<\/button>/)!;
-   const submit=node('BUTTON',{type:'submit'});submit.disabled=/\bdisabled\b/.test(match[1]!);submit.textContent=match[2];form.fields={...api.state().draft};input.value=form.fields.why;
+   const form=node('FORM',{id:'op-dispatch'}),input=node('TEXTAREA',{name:'reason'}),match=html.match(/<button\b([^>]*type="submit"[^>]*)>([^<]*)<\/button>/)!;
+   const submit=node('BUTTON',{type:'submit'});submit.disabled=/\bdisabled\b/.test(match[1]!);submit.textContent=match[2];form.fields={...api.state().draft};input.value=form.fields.reason;
    const selects=[...html.matchAll(/<select\b([^>]*)>([\s\S]*?)<\/select>/g)].map(match=>{
     const a=attributes(match[1]!),select=node('SELECT',a),options=[...match[2]!.matchAll(/<option([^>]*)>([^<]*)<\/option>/g)];
     const selected=options.find(option=>/\bselected\b/.test(option[1]!))||options[0];select.name=a.name;select.value=selected?(attributes(selected[1]!).value??decode(selected[2]!)):'';select.closest=(selector:string)=>selector==='#op-dispatch'?form:null;return select;
@@ -59,24 +59,24 @@ function submissions(initialDraft:Record<string,string>={}){
  const env={body,document:{...doc,createElement:(tag:string)=>node(tag.toUpperCase())},$:body.querySelector,localStorage:{getItem:(key:string)=>storage.get(key),setItem:(key:string,value:string)=>storage.set(key,value)},
   FormData:class{constructor(public form:any){}*[Symbol.iterator](){yield* Object.entries({...this.form.fields,...Object.fromEntries(this.form.selects.map((select:any)=>[select.name,select.value]))});}},fetch:fakeFetch,crypto:{randomUUID:()=>String(++uuid).repeat(8)+'-1111-4111-8111-111111111111'},
   toast:(message:string)=>toasts.push(message),loadMeta:async()=>{},renderCurrent:()=>{if(plugin==='dispatch')body.innerHTML=api.html();},api:{selectedPlugin:()=>plugin},
-  page:String,title:()=>'',E:escape,caps:()=>[{id:'fixture'},{id:'other-fixture'}],tasks:()=>[{id:'proof-fixture',capability:'fixture',status:'succeeded',evidence:'native'},{id:'proof-other',capability:'other-fixture',status:'succeeded',evidence:'native'}],bots:()=>[],recentCommands:()=>'',library:()=>'<p id="fixture-library-status" role="status">1 fixture capability</p>'};
+  page:String,title:()=>'',E:escape,caps:()=>[{id:'fixture'},{id:'other-fixture'}],tasks:()=>[],bots:()=>[{name:'Worker',reserved:false,remote:false}],recentCommands:()=>'',library:()=>'<p id="fixture-library-status" role="status">1 fixture capability</p>'};
  Object.defineProperty(env.document,'activeElement',{get:()=>doc.activeElement});
  api=new Function(...Object.keys(env),`${savedSource}\nlet meta={nonce:'fixture',readOnly:false},submitting=false,message='',pendingQueue=saved('pending-queue',null),draft=saved('draft',{});\n${dispatchSource}${commandSource}${draftSource}${changeSource}${submitSource}\nreturn {html:dispatch,state:()=>({draft:{...draft},pendingQueue,submitting,message}),saveDraft:draftFromForm};`)(...Object.values(env));
  install(api.html());
  return {api,doc,requests,toasts,storage,form:()=>view.form,library:()=>all().find((n:any)=>n.id==='fixture-library-status'),stockStatus:()=>all().find((n:any)=>n.id==='stock-count'),appended:()=>view.appended,messages:()=>all().filter((n:any)=>n.attributes.role==='status'&&!['fixture-library-status','stock-count'].includes(n.id)).map((n:any)=>n.textContent),
   submit:()=>handlers.submit({target:view.form,preventDefault(){}}),open:(id:string)=>{plugin=id;install(id==='dispatch'?api.html():'Stock');doc.activeElement=view.form?.input||view.input;},
   select:(name:string)=>view.form.querySelector('[name="'+name+'"]'),change:(name:string,value:string,focused=true)=>{const target=view.form.querySelector('[name="'+name+'"]');target.value=value;if(focused)target.focus();handlers.change({target});},
-  edit:(why:string)=>{view.form.fields.why=why;view.form.input.value=why;api.saveDraft();},
-  succeed:(index:number)=>requests[index].resolve(Response.json({status:'submitted',taskId:'operator-'+requests[index].input.id})),fail:(index:number)=>requests[index].reject(Error('Fixture submission failed'))};
+  edit:(reason:string)=>{view.form.fields.reason=reason;view.form.input.value=reason;api.saveDraft();},
+  succeed:(index:number)=>requests[index].resolve(Response.json({status:'submitted'})),fail:(index:number)=>requests[index].reject(Error('Fixture submission failed'))};
 }
 
 test('Deferred Jobs success leaves a focused Stock view untouched and restores the completed Jobs form on return',async()=>{
  const s=submissions(),pending=s.submit(),id=s.requests[0].input.id;s.open('stock');const status=s.stockStatus(),active=s.doc.activeElement;
  s.succeed(0);await pending;
  expect(status.isConnected).toBe(true);expect(s.appended()).toEqual([]);expect(s.doc.activeElement).toBe(active);expect(active.value).toBe('kept stock draft');
- expect(s.toasts.some(message=>message.includes('Submitted operator-'+id))).toBe(true);expect(s.api.state().pendingQueue).toBeNull();
+ expect(s.toasts.some(message=>message.includes('Submitted '+id))).toBe(true);expect(s.api.state().pendingQueue).toBeNull();
  expect(JSON.parse(s.storage.get('atlas.ops.draft')!)).toEqual(s.api.state().draft);
- s.open('dispatch');expect(s.form().submit.disabled).toBe(false);expect(s.form().submit.textContent).toBe('Submit to shared queue');expect(s.api.html()).toContain('Submitted operator-'+id);
+ s.open('dispatch');expect(s.form().submit.disabled).toBe(false);expect(s.form().submit.textContent).toBe('Send to Fleet Brain');expect(s.api.html()).toContain('Submitted '+id);
 });
 
 test('Deferred Jobs failure preserves the other panel, saved draft and stable pending identity for a retry',async()=>{
@@ -84,7 +84,7 @@ test('Deferred Jobs failure preserves the other panel, saved draft and stable pe
  s.fail(0);await pending;
  expect(status.isConnected).toBe(true);expect(s.appended()).toEqual([]);expect(s.doc.activeElement).toBe(active);expect(s.toasts).toContain('Fixture submission failed');
  expect(s.api.state().draft).toEqual(draft);expect(s.api.state().pendingQueue.id).toBe(id);expect(JSON.parse(s.storage.get('atlas.ops.pending-queue')!).id).toBe(id);
- s.open('dispatch');expect(s.form().submit.disabled).toBe(false);expect(s.form().submit.textContent).toBe('Submit to shared queue');expect(s.api.html()).toContain('Fixture submission failed');
+ s.open('dispatch');expect(s.form().submit.disabled).toBe(false);expect(s.form().submit.textContent).toBe('Send to Fleet Brain');expect(s.api.html()).toContain('Fixture submission failed');
  const retry=s.submit();expect(s.requests[1].input.id).toBe(id);expect(s.requests[1].input).toEqual(s.requests[0].input);s.succeed(1);await retry;
 });
 
@@ -95,34 +95,33 @@ for(const success of [true,false])test('A replacement Jobs form retains its draf
  if(success)s.succeed(0);else s.fail(0);await pending;
  expect(s.form()).toBe(replacement);expect(replacement.input.value).toBe('A different unsent draft in the replacement form');expect(s.doc.activeElement).toBe(active);
  expect(library.isConnected).toBe(true);expect(library.textContent).toBe('1 fixture capability');
- expect(replacement.submit.disabled).toBe(false);expect(replacement.submit.textContent).toBe('Submit to shared queue');expect(s.api.state().message).toContain(success?'Submitted':'Fixture submission failed');
+ expect(replacement.submit.disabled).toBe(false);expect(replacement.submit.textContent).toBe('Send to Fleet Brain');expect(s.api.state().message).toContain(success?'Submitted':'Fixture submission failed');
  expect(s.messages().some((message:string)=>message.includes(success?'Submitted':'Fixture submission failed'))).toBe(true);
- expect(JSON.parse(s.storage.get('atlas.ops.draft')!).why).toBe('A different unsent draft in the replacement form');
+ expect(JSON.parse(s.storage.get('atlas.ops.draft')!).reason).toBe('A different unsent draft in the replacement form');
 });
 
 test('Jobs Work type changes retain the logical selector focus and unsent draft through consecutive rebuilds',()=>{
- const s=submissions({kind:'run',dependency:'proof-fixture',accept:'{"bank":{"995":1}}',extra:'{"args":[]}'}),why=s.api.state().draft.why;
- for(const kind of ['build','review','run']){
+ const s=submissions(),reason=s.api.state().draft.reason;
+ for(const kind of ['clear-defect','override-account']){
   const previous=s.select('kind');s.change('kind',kind);
   expect(s.select('kind')).not.toBe(previous);expect(s.select('kind').value).toBe(kind);expect(s.doc.activeElement).toBe(s.select('kind'));
-  expect(s.api.state().draft).toMatchObject({kind,capability:'fixture',dependency:'proof-fixture',why});
-  expect(JSON.parse(s.storage.get('atlas.ops.draft')!)).toMatchObject({kind,capability:'fixture',why});
+  expect(s.api.state().draft).toMatchObject({kind,activityId:'fixture',reason});
+  expect(JSON.parse(s.storage.get('atlas.ops.draft')!)).toMatchObject({kind,activityId:'fixture',reason});
  }
 });
 
-test('Jobs capability changes retain selector focus and clear only the prior qualification dependency',()=>{
- const s=submissions({kind:'run',dependency:'proof-fixture',accept:'{"bank":{"995":1}}',extra:'{"args":[]}'}),why=s.api.state().draft.why;
- s.change('capability','other-fixture');
- expect(s.doc.activeElement).toBe(s.select('capability'));expect(s.select('capability').value).toBe('other-fixture');expect(s.select('dependency').value).toBe('');
- expect(s.api.state().draft).toMatchObject({kind:'run',capability:'other-fixture',dependency:'',why,accept:'{"bank":{"995":1}}',extra:'{"args":[]}'});
- expect(s.api.html()).toContain('proof-other');expect(s.api.html()).not.toContain('proof-fixture');
- s.change('capability','fixture');expect(s.doc.activeElement).toBe(s.select('capability'));expect(s.select('capability').value).toBe('fixture');expect(s.api.state().draft.dependency).toBe('');
+test('Jobs activityId changes retain selector focus and unsent draft',()=>{
+ const s=submissions(),reason=s.api.state().draft.reason;
+ s.change('activityId','other-fixture');
+ expect(s.doc.activeElement).toBe(s.select('activityId'));expect(s.select('activityId').value).toBe('other-fixture');
+ expect(s.api.state().draft).toMatchObject({kind:'override-account',activityId:'other-fixture',reason});
+ s.change('activityId','fixture');expect(s.doc.activeElement).toBe(s.select('activityId'));expect(s.select('activityId').value).toBe('fixture');
 });
 
 test('Jobs selector changes do not steal outside focus when the changed field did not hold it',()=>{
  const s=submissions(),outside={id:'outside-control'};s.doc.activeElement=outside;
- s.change('kind','build',false);expect(s.api.state().draft.kind).toBe('build');expect(s.doc.activeElement).toBe(outside);
- s.change('capability','other-fixture',false);expect(s.api.state().draft.capability).toBe('other-fixture');expect(s.doc.activeElement).toBe(outside);
+ s.change('kind','clear-defect',false);expect(s.api.state().draft.kind).toBe('clear-defect');expect(s.doc.activeElement).toBe(outside);
+ s.change('activityId','other-fixture',false);expect(s.api.state().draft.activityId).toBe('other-fixture');expect(s.doc.activeElement).toBe(outside);
 });
 
 function preferences(hidden:any){

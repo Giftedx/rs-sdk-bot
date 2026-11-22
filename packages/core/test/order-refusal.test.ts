@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test';
-import { ORDER_COIN_MARGIN, REFUSAL_PATTERNS, STABLE_CAUSES, orderRefusal, unplacedCause, type OrderRefusalInput, type RefusalCause } from '../src/order-refusal';
-import { DRAIN_RESULT } from '../../planner/src/autopilot';
+import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE, REFUSAL_PATTERNS, STABLE_CAUSES, orderRefusal, unplacedCause, type OrderRefusalInput, type RefusalCause } from '../src/order-refusal';
 import { isPrerequisiteFailure } from '../../practice/src/supervise';
+
+const DRAIN_RESULT = new RegExp(`^RESULT fail (?:.*"phase":"unplaced",.*"escrow":0,.*"failure":"Error: (?:${REFUSAL_ANY_SOURCE}))`);
 
 const ok: OrderRefusalInput = { now: 1000, deadline: 5000, over: false, coins: 161000, escrow: 160000, quantity: 16, limit: 10000, reserve: 1000, pack: 10 };
 const result = (failure: string, extra = '') => `RESULT fail {"ok":false,"phase":"unplaced","quantity":16,"acquired":0,"escrow":0${extra},"failure":"Error: ${failure}"}`;

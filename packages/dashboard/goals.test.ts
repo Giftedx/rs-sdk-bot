@@ -1,8 +1,7 @@
 import { test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { goalPlan,goalProgress,questPointObservation,type GoalInputs } from './goals';
+import { goalPlan,goalProgress,questPointObservation,type GoalInputs,type OwnerGoals } from './goals';
 import { healthObservation,remoteBots } from './fleet-view';
-import type {OwnerGoals} from '../router/src/goal-scoreboard';
 test('dashboard goals come from the current plan, not the historical request ledger', () => {
     const text=readFileSync(new URL('../../docs/plans/joined-plan.md',import.meta.url),'utf8');
     const plan=goalPlan(text);
