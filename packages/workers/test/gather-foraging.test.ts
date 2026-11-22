@@ -8,11 +8,11 @@ import type { Session } from '../../core/src/inprocess';
 import { wildernessLevel } from '../../core/src/prayer-guard';
 import { intentForEntry } from '../../planner/src/progression-catalog';
 import { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
+import { FALADOR_WEST_BANK } from '../src/logistics';
 import {
     CHEST_CLOSED,
     CHEST_OPEN,
     CRYSTAL_KEY,
-    FALADOR_WEST_BANK,
     KEY_LOOP,
     KEY_TOOTH,
     MIN_FREE_SLOTS,

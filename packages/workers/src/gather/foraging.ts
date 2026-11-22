@@ -17,6 +17,7 @@ import {
     defaultWalkTargetPersist,
 } from './runtime';
 import type { GatherExternalDeps, GatherOutcome, NormalizedGatherConfig } from './types';
+import { FALADOR_WEST_BANK } from '../logistics/recover';
 
 const ROOT = resolve(import.meta.dir, '../../../..');
 
@@ -773,7 +774,6 @@ export const UNCUT_DRAGONSTONE = 1631;
 export const CHEST_CLOSED = 172;
 export const CHEST_OPEN = 173;
 export const MIN_FREE_SLOTS = 12;
-export const FALADOR_WEST_BANK: Tile = { x: 2946, z: 3368, level: 0 };
 export const TAVERLEY_CHEST_STAND: Tile = { x: 2914, z: 3451, level: 0 };
 export const TAVERLEY_CHEST_TILE: Tile = { x: 2914, z: 3452, level: 0 };
 
