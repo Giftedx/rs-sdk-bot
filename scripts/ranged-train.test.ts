@@ -1,6 +1,6 @@
 import {test,expect,spyOn} from 'bun:test';
 import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryBank,recoveryWalker,recoverRangedStart,openShopWithDoor,runAdaptiveRanged,rangedComparisonMethod} from './ranged-train';
-import * as combat from './gather-combat';
+import * as combat from '../packages/workers/src/combat/melee-gather';
 import * as walking from '../packages/core/src/walk';
 import * as bot from '../packages/core/src/bot';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
@@ -125,7 +125,7 @@ test('stock-only native continuation disables arrow buying without reducing admi
 test('native Ranged proof binds its actual worker closure and owned files',()=>{
  const s=rangedProofSource();expect(s.runtime).toBe(capabilityRevision(['scripts/ranged-train.ts']));
  expect(Object.keys(s.files)).toEqual(['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts',
-  'scripts/gather-combat.ts','scripts/gather-combat-giant.test.ts',
+  'scripts/aio-fighter.ts','packages/workers/src/combat/melee-gather.ts','packages/workers/src/combat/ranged.ts','packages/workers/test/combat.test.ts','packages/workers/test/combat-melee.test.ts',
   'packages/practice/src/ranged-progression-case.ts','packages/practice/src/ranged-progression-case.test.ts',
   'packages/practice/src/ranged-progression-entry.json','scripts/measure/progression-bench-cases.ts','scripts/measure/fleet-player-save.ts','scripts/measure/fleet-player-save.test.ts']);
 },30_000); // Two closure hashes take about 3 s on an idle PC; the default 5 s limit fails under load.

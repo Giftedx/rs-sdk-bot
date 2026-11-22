@@ -476,7 +476,7 @@ test('the older logout that start admission takes past a dead socket failure is 
 test('repair re-reads exact producer proof: new intent, late old callback, unknown cleanup and missing proof refuse',()=>{
     const root=mkdtempSync(join(tmpdir(),'swarm-proof-'));
     try{
-        const proofs=lifecycleProofs(root),fail=()=>new Map([['Rod',{at:100,reason:'died after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]);
+        const proofs=lifecycleProofs(root),fail=()=>new Map([['Rod',{at:100,reason:'died after 1 runs',revision:rev('scripts/aio-fighter.ts')}]]);
         const req=(attemptId:string)=>({account:'Rod',endedAt:100,server:LIVE,proof:{kind:'producer',attemptId}});
         expect(applyEndRepair(req('x'),fail(),[],proofs).reason).toBe('no producer logout proof');
         const old=loggedOut(root,'Rod');
@@ -493,7 +493,7 @@ test('repair re-reads exact producer proof: new intent, late old callback, unkno
         expect(applyEndRepair(req(old.attemptId),fail(),[],proofs).reason).toBe('logout proof superseded by a newer attempt');
         const last=loggedOut(root,'Rod'),ended=fail(),holds:ScriptHold[]=[];
         expect(applyEndRepair(req(last.attemptId),ended,[],proofs,holds)).toEqual({changed:true,reason:`repaired failure cleared (producer ${last.attemptId})`});
-        expect(ended.size).toBe(0);expect(holds.map(h=>[h.account,h.script,h.at])).toEqual([['Rod','scripts/gather-fire-combat.ts',100]]);
+        expect(ended.size).toBe(0);expect(holds.map(h=>[h.account,h.script,h.at])).toEqual([['Rod','scripts/aio-fighter.ts',100]]);
         expect(applyEndRepair({account:'Rod',endedAt:100,server:LIVE},fail(),[],proofs).reason).toBe('missing logout proof');
         expect(applyEndRepair(req(last.attemptId),new Map([['Rod',{at:100,reason:'died'}]]),[],proofs).reason).toBe('failed script unknown; hold cannot be kept');
     }finally{rmSync(root,{recursive:true,force:true});}
@@ -537,7 +537,7 @@ test('old combat stays held after a fishing transition until same-script post-fa
     const root=mkdtempSync(join(tmpdir(),'swarm-hold-'));
     try{
         const proofs=lifecycleProofs(root),holdsFile=join(root,'holds.json');
-        const ended=new Map([['Rod',{at:100,reason:'died after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]),holds:ScriptHold[]=[];
+        const ended=new Map([['Rod',{at:100,reason:'died after 1 runs',revision:rev('scripts/aio-fighter.ts')}]]),holds:ScriptHold[]=[];
         // Before repair the account-level failure blocks every role.
         expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/aio-skiller.ts',holds).start).toEqual([]);
         const first=loggedOut(root,'Rod');
@@ -545,14 +545,14 @@ test('old combat stays held after a fishing transition until same-script post-fa
         persistHolds(holdsFile,holds);const loaded=loadHolds(holdsFile);
         // Valid finite role transfer: fishing may start; the old combat script may not.
         expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/aio-skiller.ts',loaded).start).toEqual(['Rod']);
-        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'./scripts\\gather-fire-combat.ts',loaded).blocked.Rod).toMatch(/^held: failed scripts\/gather-fire-combat.ts/);
+        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'./scripts\\aio-fighter.ts',loaded).blocked.Rod).toMatch(/^held: failed scripts\/aio-fighter.ts/);
         // A later fishing success and account-level end deletion do not unban combat.
         ended.set('Rod',{at:300,reason:'done',revision:rev('scripts/aio-skiller.ts')});ended.delete('Rod');
-        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/gather-fire-combat.ts',loaded).start).toEqual([]);
+        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/aio-fighter.ts',loaded).start).toEqual([]);
         const receiptPath=join(root,'qualify.json'),write=(r:object)=>{writeFileSync(receiptPath,JSON.stringify(r));return createHash('sha256').update(readFileSync(receiptPath)).digest('hex');};
         const latest=()=>{const p=readLogoutProof('Rod',LIVE,{root});return 'attemptId' in p?p.attemptId:'none';};
-        const good=()=>({ok:true,script:'scripts/gather-fire-combat.ts',account:'rod',at:500,attemptId:latest()});
-        const q=(sha:string,at=500)=>({kind:'script-qualified',account:'Rod',script:'scripts/gather-fire-combat.ts',holdAt:100,server:LIVE,
+        const good=()=>({ok:true,script:'scripts/aio-fighter.ts',account:'rod',at:500,attemptId:latest()});
+        const q=(sha:string,at=500)=>({kind:'script-qualified',account:'Rod',script:'scripts/aio-fighter.ts',holdAt:100,server:LIVE,
             proof:{kind:'producer',attemptId:latest()},qualification:{receiptPath,receiptSha256:sha,at}});
         expect(applyScriptQualification(q(write({...good(),script:'scripts/aio-skiller.ts'})),loaded,[],proofs).changed).toBe(false);
         expect(applyScriptQualification(q(write({...good(),at:50}),50),loaded,[],proofs).reason).toBe('qualification is not newer than the failure');
@@ -569,17 +569,17 @@ test('old combat stays held after a fishing transition until same-script post-fa
         expect(applyScriptQualification(q(valid),loaded,[],proofs).reason).toBe('qualification is not bound to the current producer logout');
         expect(applyScriptQualification(q(write(good())),loaded,[],proofs).reason).toBe('script qualification unsupported: caller receipt has no producer-bound work result');
         expect(loaded[0]!.qualified).toBeUndefined();
-        expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/gather-fire-combat.ts',loaded).start).toEqual([]);
+        expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/aio-fighter.ts',loaded).start).toEqual([]);
         for(const bad of ['{','{}','[{"account":"Rod"}]']){writeFileSync(holdsFile,bad);expect(()=>loadHolds(holdsFile)).toThrow();}
     }finally{rmSync(root,{recursive:true,force:true});}
 });
 
 test('persisted unsupported qualification fields never close a failed-script hold',()=>{
  const root=mkdtempSync(join(tmpdir(),'unsupported-hold-')),file=join(root,'holds.json');
- try{for(const script of ['scripts/gather-fire-combat.ts','.\\Scripts\\Gather-Fire-Combat.ts'])for(const qualified of [true,{}, {at:500,receiptPath:'caller.json',receiptSha256:'a'.repeat(64),recordedAt:501}]){
+ try{for(const script of ['scripts/aio-fighter.ts','.\\Scripts\\Aio-Fighter.ts'])for(const qualified of [true,{}, {at:500,receiptPath:'caller.json',receiptSha256:'a'.repeat(64),recordedAt:501}]){
   writeFileSync(file,JSON.stringify([{account:'Rod',script,at:100,reason:'blocked',heldAt:101,qualified}]));
   const holds=loadHolds(file);
-  expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/gather-fire-combat.ts',holds).start).toEqual([]);
+  expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/aio-fighter.ts',holds).start).toEqual([]);
   expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/aio-skiller.ts',holds).start).toEqual(['Rod']);
  }}finally{rmSync(root,{recursive:true,force:true});}
 });
@@ -592,7 +592,7 @@ test('anonymous legacy logs cannot qualify logout even with exact hashes and mat
         const legacyLog='START 1 2 0\nLOGOUT_PROBE_END {}\nLOGOUT logged-out\nRESULT ok x\n';writeFileSync(logPath,legacyLog);
         const sha=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
         const claim={kind:'legacy-logout',account:'Rod',server:LIVE,statusPath,statusSha256:sha(statusPath),statusAt:1793158560221,logPath,logSha256:sha(logPath)};
-        const fail=()=>new Map([['Rod',{at:100,reason:'blocked after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]);
+        const fail=()=>new Map([['Rod',{at:100,reason:'blocked after 1 runs',revision:rev('scripts/aio-fighter.ts')}]]);
         const req=(proof:object)=>({account:'Rod',endedAt:100,server:LIVE,proof});
         expect(applyEndRepair(req(claim),fail(),[],proofs).reason).toBe('legacy proof refused: anonymous legacy log has no independent account/server/session attribution');
         expect(applyEndRepair(req({...claim,account:'Other'}),fail(),[],proofs).reason).toBe('legacy proof identity mismatch');
@@ -1045,7 +1045,7 @@ describe('kit-restored repair', () => {
 
     test('a passing receipt of the fresh snapshot clears the hold of a PvP death, and only that hold', () => {
         const { request, proofs } = setup();
-        const target = hold(), otherAccount = hold({ account: 'Squad4' }), otherScript = hold({ script: 'scripts/gather-fire-combat.ts' }), otherAt = hold({ at: NOW - 7_200_000 });
+        const target = hold(), otherAccount = hold({ account: 'Squad4' }), otherScript = hold({ script: 'scripts/aio-fighter.ts' }), otherAt = hold({ at: NOW - 7_200_000 });
         const holds = [target, otherAccount, otherScript, otherAt];
         const result = applyKitRestored(request, holds, [], proofs);
         expect(result.changed).toBe(true);
@@ -1056,7 +1056,7 @@ describe('kit-restored repair', () => {
         expect(openHold(holds, 'Squad3', 'scripts/aio-pvp.ts')).toBe(otherAt);
         expect(openHold([target], 'Squad3', 'scripts/aio-pvp.ts')).toBeUndefined();
         expect(openHold(holds, 'Squad4', 'scripts/aio-pvp.ts')).toBe(otherAccount);
-        expect(openHold(holds, 'Squad3', 'scripts/gather-fire-combat.ts')).toBe(otherScript);
+        expect(openHold(holds, 'Squad3', 'scripts/aio-fighter.ts')).toBe(otherScript);
         expect(applyKitRestored(request, holds, [], proofs)).toEqual({ changed: false, reason: 'hold already restored' });
     });
 
@@ -1066,9 +1066,9 @@ describe('kit-restored repair', () => {
             return applyKitRestored(request, [h], active, { ...proofs, ...proofsPatch });
         };
         // Not a PvP death: a route script, or a hold of another end kind.
-        expect(run(hold({ script: 'scripts/gather-fire-combat.ts' })).reason).toBe('no matching open hold');
-        const route = setup(); route.request.script = 'scripts/gather-fire-combat.ts';
-        expect(applyKitRestored(route.request, [hold({ script: 'scripts/gather-fire-combat.ts' })], [], route.proofs).reason).toBe('not the hold of a PvP death');
+        expect(run(hold({ script: 'scripts/aio-fighter.ts' })).reason).toBe('no matching open hold');
+        const route = setup(); route.request.script = 'scripts/aio-fighter.ts';
+        expect(applyKitRestored(route.request, [hold({ script: 'scripts/aio-fighter.ts' })], [], route.proofs).reason).toBe('not the hold of a PvP death');
         expect(run(hold({ reason: 'blocked after 1 runs' })).reason).toBe('not the hold of a PvP death');
         expect(run(hold({ account: 'Other' })).reason).toBe('no matching open hold');
         expect(run(hold(), {}, {}, ['squad3']).reason).toBe('account still active');

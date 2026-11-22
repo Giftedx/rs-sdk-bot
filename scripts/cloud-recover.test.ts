@@ -113,7 +113,7 @@ test('a parked owner-job copy stays unless the logout proof is confirmed, and it
     expect(releasePlan([check, pair], { ...settled, confirmed: (a: string) => a === 'A' })).toEqual({ free: [check], keep: [pair] });
     // Live claude-cloud: seven parked session checks and one unsettled copy of Fingersmith's planner job.
     const seven = ['TrouserSnake', 'Kiltlifter', 'PocketPool', 'Quickhandjob', 'UnderMyKilt', 'Deeppockets', 'Knightstick'].map(account => ({ ...check, account }));
-    const stray = { account: 'Fingersmith', script: 'scripts/gather-combat.ts', enabled: false, standing: true, autopilot: 'army-cow-defence-80' };
+    const stray = { account: 'Fingersmith', script: 'scripts/aio-fighter.ts', args: ['cow'], enabled: false, standing: true, autopilot: 'army-cow-defence-80' };
     const plan = releasePlan([...seven, stray], { ...settled, confirmed: (a: string) => a !== 'Fingersmith' });
     expect(plan.free).toEqual(seven); expect(plan.keep).toEqual([stray]);
 });

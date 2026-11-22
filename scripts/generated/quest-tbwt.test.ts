@@ -1,5 +1,5 @@
 import{trioTinsayDoorExit,trioMonkeyApproach}from'./quest-tbwt-owned';
-import {runNpcMagic,nativeNpcSpell} from '../microbot-magic-npc';
+import {runNpcMagic,nativeNpcSpell} from '../../packages/workers/src/combat';
 import {readFileSync} from 'node:fs';
 import {describe,test,expect} from 'bun:test';
 import {trioPackEffect,trioAdmission,trioHuntReceipt,trioOwnedHandover,trioStopRequested,TRIO_ITEMS,TRIO_RECIPES,trioLogLoc,trioLogEffect,trioLogMessages,trioLogCrossing,trioLogHealth,trioHuntPoint} from './quest-tbwt-owned';

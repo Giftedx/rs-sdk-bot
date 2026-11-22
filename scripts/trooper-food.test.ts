@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {stageTrooperFood,stallChoice,trooperCookPlan,RAW_BEEF,COOKED_MEAT,BURNT_MEAT,TROOPER_RANGE,TROOPER_COOK_TILE,TROOPER_COOK_WANT,TROOPER_COOK_PACKS,STALL_SPOT,STALL_FILL,GUARD_SAFE} from './trooper-food';
-import {TROOPER_SITE} from './gather-combat';
+import {TROOPER_SITE} from '../packages/workers/src/combat';
 import type {Session} from '../packages/core/src/inprocess';
 
 test('the cook plan: nothing while owned trooper food covers the want, else packs of the banked raw beef',()=>{

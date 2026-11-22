@@ -73,7 +73,7 @@ let preset=mode==='cow-diag'?presets.cow:mode==='ore-no-iron'?presets.ore:preset
 if(mode!=='fresh' && mode!=='entry' && !preset) throw new Error('unknown mode');
 const dir=resolve('.practice/fleet-proof'); mkdirSync(dir,{recursive:true});
 const [script, ...scriptArgs] = waterfallMode ? ['generated/waterfall']
- : cowMode ? ['gather-combat']
+ : cowMode ? ['aio-fighter', 'cow']
  : mode === 'smelt-bronze' ? ['smelt-bars']
  : mode === 'payout-notes' ? ['measure/fleet-payout-notes']
  : mode === 'seers-entry' ? ['measure/fleet-seers-entry']
@@ -276,7 +276,7 @@ try {
     const food=count(inventory,333)===2&&count(bank,333)===5-eaten;
     const goal=mode==='cow-diag'?1:5;
     const ok=new RegExp(`RESULT ok mode=cow.*creditedKills=${goal}`).test(stdout)&&drops.every(n=>n===goal)&&attackXp>0&&/preserved=true/.test(stdout)&&count(inventory,995)===200&&food&&life&&/LOGOUT logged-out/.test(stdout);
-    const hashes=Object.fromEntries(['scripts/gather-combat.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
+    const hashes=Object.fromEntries(['scripts/aio-fighter.ts','packages/workers/src/combat/melee-gather.ts','packages/core/src/walk.ts','scripts/measure/fleet-observe.ts'].map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex')]));
     writeFileSync(resolve(dir,`${mode}-${bot}-snapshot.json`),JSON.stringify({ok,tickMs:mode==='cow-diag'?400:150,drops,eaten,food,attackXp,minHp,life,bank,inventory,hashes},null,2));
     stdout+=`\nPROOF_GATE profile=cow drops=${drops.join('/')} food=${food} hpMin=${minHp} survival=${life} ok=${ok}\n`;
    }

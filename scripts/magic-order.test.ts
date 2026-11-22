@@ -5,7 +5,7 @@ import {magicXpForLevel,magicOptions,magicPreflight,startRegion,draynorToVarrock
  runeShortfall,affordablePurchase,classifyCast,pickTarget,eatBetweenCasts,logoutQuiet,awaitLogoutQuiet,LOGOUT_QUIET_TICKS,runMagicOrder,
  AIR,MIND,COINS,CAST_SITE,BANKS,TARGET_AREA,HEALTH,CAST} from './magic-order';
 import {TELEPORTS,TELE_RUNE_IDS,selectTeleport,teleportCosts,teleportEffect,teleportShortfall,teleportPurchaseCost,purchaseEffect,type RuneCounts} from './magic-order';
-import {chickenTrainingProfile} from './train-chickens';
+import {chickenTrainingProfile} from '../packages/workers/src/combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
 

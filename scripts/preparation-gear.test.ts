@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {preparationGear} from './preparation-report';
 import type {ItemOrder} from '../packages/workers/src/market';
 const now=1_000_000;
-const job={account:'Mightyrod',script:'scripts/gather-fire-combat.ts',goal:'Restore productive combat'};
+const job={account:'Mightyrod',script:'scripts/aio-fighter.ts',args:['fire-combat'],goal:'Restore productive combat'};
 const snapshot=(name='Mightyrod')=>({name,server:'rs-sdk-demo.fly.dev',at:now-10,bankAt:now-10,skills:[{name:'Attack',level:30}],inventory:[],equipment:[],bank:[{id:1277,count:1},{id:1171,count:1},{id:295,count:1},{id:954,count:1},{id:329,count:16}]});
 
 test('actual Fire contract resolves alternative owned gear without clearing its exact procurement target',()=>{
@@ -45,7 +45,7 @@ test('unbanked noted weapons never equip and dated bank/pack quantities are not 
  expect(preparationGear([job],[half],['Mightyrod'],now).kits[0]?.loadout.state).toBe('missing');
 });
 test('actual host job accounts expand without undefined identities or shared stock',()=>{
- const jobs=[{accounts:['Mightyrod','Other'],script:job.script}];
+ const jobs=[{accounts:['Mightyrod','Other'],script:job.script,args:job.args}];
  const report=preparationGear(jobs,[snapshot()],['Mightyrod','Other'],now);
  expect(report.kits.map(k=>k.account)).toEqual(['Mightyrod','Other']);
  expect(report.kits.map(k=>k.loadout.state)).toEqual(['ready','unknown']);

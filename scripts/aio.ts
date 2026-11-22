@@ -369,8 +369,8 @@ export async function runAio(categoryInput: string, account: string, args: reado
  run: (args: string[], env: Record<string, string | undefined>) => Promise<string> = runDirectChild): Promise<string> {
  const category = categoryInput.toLowerCase().replace(/^--category=/, '');
  if (category === 'pipeline') return runAioPipeline(account, args, Number(env.ROUNDS ?? 1), env);
- if (category === 'fighter') return runAioFighter(account, args, env, undefined, run);
  switch (category as AioCategory) {
+  case 'fighter': return runAioFighter(account, args, env, undefined, run);
   case 'skiller': return runAioSkiller(account, args, env);
   case 'boss': return runAioBoss(account, args, env);
   case 'pvp': return runAioPvp(account, args, env);

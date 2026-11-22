@@ -26,6 +26,8 @@ import {
  supplyPlan as woodSupplyPlan,takeOwnedSupplyKnife,runWoodSupply,
  incomingCookedFood,courierFoodReady,receiveFoodAtBank,
 } from '../packages/workers/src/gather';
+import { runCombatModeCli } from '../packages/workers/src/combat';
+import { runMagicOrderCli } from './magic-order';
 import {approach,awayFrom,walkTargetPersist,leaveTutorial,sendHandoff,receiveHandoff,pendingCourierFunding,serviceCourierFunding} from '../packages/workers/src/logistics';
 import {leaveRuneStarter} from './rune-starter';
 import {walkFar,nearestBanks} from '../packages/workers/src/quest/sweep';
@@ -51,7 +53,7 @@ import {agilityWorker,runAgilityCli,COURSES,agilityOptions,agilityPreflight,onCo
 import {runecraftWorker,runRunecraftCli,RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal,NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob,runRuneSupply,runeSupplyTarget,type RunecraftMode,type RunecraftExternalDeps} from '../packages/workers/src/runecraft';
 import {readPracticeSave} from './measure/fleet-player-save';
 import {runRuneMysteries} from './generated/quest-runemysteries';
-import {trainChickens} from './train-chickens';
+import {trainChickens} from '../packages/workers/src/combat/chickens';
 import {BONE_XP,prayerOptions,planPrayer,prayerBank,runPrayer,type PrayerOptions} from './train-prayer';
 import {boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller} from './brew-potions';
 import {kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta} from './microbot-c-care';
@@ -90,6 +92,7 @@ export {
  boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller,
  incomingCookedFood,courierFoodReady,receiveFoodAtBank,
  kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta,
+ runMagicOrderCli,
 };
 
 export interface SkillerRouteSpec {
@@ -172,9 +175,9 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'runecraft',method:'air',script:'scripts/aio-skiller.ts',defaultArgs:['runecraft','air'],description:'Direct Air altar runecrafting'},
  {skill:'runecraft',method:'specialist',script:'scripts/runecraft-specialist.ts',description:'Fresh-clock 1-to-99 Runecraft via Air altar unlock and Body altar essence runners'},
  // Magic
- {skill:'magic',method:'order',script:'scripts/magic-order.ts',description:'Combat/curse/bolt magic training order'},
+ {skill:'magic',method:'order',script:'scripts/aio-skiller.ts',defaultArgs:['combat','magic-order'],description:'Combat/curse/bolt magic training order'},
  {skill:'magic',method:'items',script:'scripts/microbot-magic-items.ts',description:'High/Low Alchemy, Superheat Item, and Jewellery Enchanting'},
- {skill:'magic',method:'npc',script:'scripts/microbot-magic-npc.ts',description:'Curse/Weakening/Strike/Bolt/Blast spell casting on NPCs'},
+ {skill:'magic',method:'npc',script:'scripts/aio-skiller.ts',defaultArgs:['combat','magic-npc'],description:'Curse/Weakening/Strike/Bolt/Blast spell casting on NPCs'},
  {skill:'magic',method:'teleport',script:'scripts/microbot-magic-teleport.ts',description:'Repeated teleport spell training'},
  {skill:'magic',method:'trip',script:'scripts/microbot-magic-trip.ts',description:'Bank-staged magic training trip'},
  {skill:'magic',method:'orbs',script:'scripts/microbot-c-orbs.ts',defaultEnv:{ORB_TRIP:'1'},description:'Bank trip to an obelisk to charge air/earth/water/fire orbs'},
@@ -182,12 +185,12 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'magic',method:'bones',script:'scripts/microbot-bones.ts',description:'Bones to Bananas conversion'},
  {skill:'magic',method:'earth-production',script:'scripts/earth-production.ts',description:'Earth rune production for magic/superheat'},
  {skill:'magic',method:'alch-train',script:'scripts/alch-train.ts',description:'Alchemy on a cheap stackable item at the Ardougne north bank: Low Alchemy to Magic 55, then High Alchemy to the target level'},
- {skill:'magic',method:'splash',script:'scripts/splash-train.ts',description:'Curse casts over the fence of the Ardougne cow field to the target Magic level'},
- {skill:'magic',method:'splash-coop',script:'scripts/splash-train.ts',defaultEnv:{SPLASH_SITE:'coop'},description:'The record route opening: Wind Strike and Confuse from the starter pack at the Lumbridge coop, no bank'},
+ {skill:'magic',method:'splash',script:'scripts/aio-skiller.ts',defaultArgs:['combat','magic-splash'],description:'Curse casts over the fence of the Ardougne cow field to the target Magic level'},
+ {skill:'magic',method:'splash-coop',script:'scripts/aio-skiller.ts',defaultArgs:['combat','magic-splash-coop'],defaultEnv:{SPLASH_SITE:'coop'},description:'The record route opening: Wind Strike and Confuse from the starter pack at the Lumbridge coop, no bank'},
  {skill:'magic',method:'specialist',script:'scripts/magic-specialist.ts',description:'Fresh-clock 1-to-99 Magic via enchant ladder, Mage Arena, and 5-per-tick Charge'},
  // Prayer
  {skill:'prayer',method:'bury',script:'scripts/train-prayer.ts',description:'Bury bones / big bones / dragon bones to target Prayer level'},
- {skill:'prayer',method:'flick',script:'scripts/microbot-prayer-flick.ts',description:'1-tick prayer flicking upkeep'},
+ {skill:'prayer',method:'flick',script:'scripts/aio-skiller.ts',defaultArgs:['combat','prayer-flick'],description:'1-tick prayer flicking upkeep'},
  {skill:'prayer',method:'specialist',script:'scripts/prayer-specialist.ts',description:'Fresh-clock 1-to-99 Prayer via Draynor Bank dragon-bone runners and Lumbridge burying'},
  // Agility
  {skill:'agility',method:'order',script:'scripts/aio-skiller.ts',defaultArgs:['agility','order'],description:'Gnome Stronghold / Barbarian / Wilderness / Brimhaven agility course order'},
@@ -635,6 +638,8 @@ const LEGACY_GATHER_METHOD_ALIASES: Readonly<Record<string, Readonly<Record<stri
  foraging: { 'gather-flax': 'flax', 'collect-wool': 'wool', 'gather-feathers': 'feathers', 'gather-spawn': 'spawn', grapes: 'grapes', 'crystal-chest': 'crystal-chest' },
  agility: { 'agility-order': 'order' },
  runecraft: { 'rune-bank-craft': 'bank-craft', 'microbot-rune-trip': 'nature', 'rune-supply': 'supply', rcair: 'air' },
+ magic: { 'magic-order': 'order', 'microbot-magic-npc': 'npc', 'splash-train': 'splash' },
+ prayer: { 'microbot-prayer-flick': 'flick' },
 };
 
 const RUNECRAFT_DIRECT_METHODS: Readonly<Record<string, RunecraftMode>> = {
@@ -690,6 +695,10 @@ export function resolveSkillerStep(skillInput: string, methodInput?: string, res
   const resolved = resolveRouteStep({ script: route.script, defaultEnv: route.defaultEnv }, extra);
   return { script: route.script, args: [route.skill, route.method, ...resolved.args], env: resolved.env };
  }
+ if (route.script === 'scripts/aio-skiller.ts' && route.defaultArgs?.[0] === 'combat') {
+  const resolved = resolveRouteStep({ script: route.script, defaultEnv: route.defaultEnv }, extra);
+  return { script: route.script, args: ['combat', route.defaultArgs[1]!, ...resolved.args], env: resolved.env };
+ }
  return resolveRouteStep(route, extra);
 }
 
@@ -729,6 +738,16 @@ export async function runAioSkiller(account: string, args: readonly string[], en
   const code = await runRunecraftCli(rcMode, account, parsed.args, { ...env, ...parsed.env }, buildRunecraftDeps());
   return code === 0 ? 'RESULT ok' : 'RESULT fail';
  }
+ if (first === 'combat') {
+  if (!second) throw Error('aio-skiller combat requires <mode>');
+  process.exitCode = 0;
+  await runCombatModeCli(account, second, rest, env, {
+   leaveStarter: leaveRuneStarter,
+   comboRecipe: itemMagicRecipe,
+   runComboItem: runItemMagic,
+  });
+  return !process.exitCode || Number(process.exitCode) === 0 ? 'RESULT ok' : 'RESULT fail';
+ }
  if (first === 'bank-job') {
   if (!second) throw Error('aio-skiller bank-job requires <job.json>');
   // Several job files run in one login, in order, and stop at the first failed job: each login costs board ticks.
@@ -753,6 +772,9 @@ export async function runAioSkiller(account: string, args: readonly string[], en
   return result;
  }
  const step = resolveSkillerStep(first, second, rest);
+ if (step.script === 'scripts/aio-skiller.ts' && step.args[0] === 'combat') {
+  return runAioSkiller(account, step.args, { ...env, ...step.env });
+ }
  return runDirectChild([step.script, account, ...step.args], { ...env, ...step.env });
 }
 

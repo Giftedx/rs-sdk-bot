@@ -1,7 +1,7 @@
 import {expect,test} from 'bun:test';
 import {recommendNextAioJob,assessTribridReadiness} from './aio';
 import {planAutoFighterBand} from './aio-fighter';
-import {giantTraining,cowTraining} from './gather-combat';
+import {giantTraining,cowTraining} from '../packages/workers/src/combat';
 import {QUEST_NAMES} from '../packages/workers/src/quest/chain';
 
 const maxed = Object.fromEntries(['Attack','Strength','Defence','Hitpoints','Ranged','Magic','Prayer','Cooking','Woodcutting','Fletching','Fishing','Firemaking','Crafting','Smithing','Mining','Herblore','Agility','Thieving','Runecraft'].map(skill => [skill,99]));

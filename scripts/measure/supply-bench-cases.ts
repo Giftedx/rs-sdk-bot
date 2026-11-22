@@ -90,17 +90,17 @@ export const SUPPLY_BENCH_CASES: readonly BenchCase[] = [
     },
     {
         key: 'extra:supply-chaos-wine',
-        script: 'scripts/gather-combat.ts',
+        script: 'scripts/aio-fighter.ts',
         preset: 'fresh_lumbridge',
-        scriptArgs: ['2000', 'chaos_wine', 'MAX_KILLS=1', 'TELEGRAB_MAX=1', 'TELEGRAB_XP_MULTIPLIER=25'],
+        scriptArgs: ['chaos_wine', '2000', 'MAX_KILLS=1', 'TELEGRAB_MAX=1', 'TELEGRAB_XP_MULTIPLIER=25'],
         presetConfig: { position: { x: 2946, z: 3368, level: 0 }, skills: { Magic: 99, Hitpoints: 99 }, inventory: [{ id: 563, count: 15 }, { id: 556, count: 15 }] },
         pass: s => ok(s) && /looted=1 /.test(s) && s.includes('COMBAT_TELEGRAB '),
     },
     {
         key: 'extra:supply-taverley-druid',
-        script: 'scripts/gather-combat.ts',
+        script: 'scripts/aio-fighter.ts',
         preset: 'fresh_lumbridge',
-        scriptArgs: ['2500', 'taverley_druid', 'MAX_KILLS=2'],
+        scriptArgs: ['taverley_druid', '2500', 'MAX_KILLS=2'],
         presetConfig: {
             position: { x: 2946, z: 3368, level: 0 },
             skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99 },
@@ -112,9 +112,9 @@ export const SUPPLY_BENCH_CASES: readonly BenchCase[] = [
     },
     {
         key: 'extra:supply-giant-catherby-travel',
-        script: 'scripts/gather-combat.ts',
+        script: 'scripts/aio-fighter.ts',
         preset: 'fresh_lumbridge',
-        scriptArgs: ['3500', 'giant', 'MAX_KILLS=1'],
+        scriptArgs: ['giant', '3500', 'MAX_KILLS=1'],
         presetConfig: {
             position: { x: 2862, z: 3440, level: 0 },
             skills: { Attack: 50, Strength: 50, Defence: 40, Hitpoints: 50 },
@@ -126,9 +126,9 @@ export const SUPPLY_BENCH_CASES: readonly BenchCase[] = [
     },
     {
         key: 'extra:supply-taverley-scales',
-        script: 'scripts/gather-combat.ts',
+        script: 'scripts/aio-fighter.ts',
         preset: 'fresh_lumbridge',
-        scriptArgs: ['2500', 'taverley_scales', 'MAX_KILLS=2'],
+        scriptArgs: ['taverley_scales', '2500', 'MAX_KILLS=2'],
         presetConfig: {
             position: { x: 2946, z: 3368, level: 0 },
             skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99 },

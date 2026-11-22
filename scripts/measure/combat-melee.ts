@@ -17,7 +17,7 @@
 // 150 ticks; STOP_LEVEL ends the run at that Ranged level; each Ranged level and each 100 ticks print a SAMPLE line.
 import { openBot, finish, countItems, sessionDied } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { setupCannon } from '../cannon-fight';
+import { setupCannon } from '../../packages/workers/src/combat';
 
 const [bot, tArg] = process.argv.slice(2);
 const CAP = Number(tArg ?? process.env.CAP ?? 300);

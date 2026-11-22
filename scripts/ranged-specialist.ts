@@ -21,7 +21,7 @@ import {
     specialDue,
     type PlacedCannon,
     type TargetNpc,
-} from './cannon-fight';
+} from '../packages/workers/src/combat';
 import { runDwarfCannon } from './generated/dwarfcannon';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 

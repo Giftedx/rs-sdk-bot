@@ -6,7 +6,7 @@
 // It banks what it made.
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
-import {TROOPER_SITE} from './gather-combat';
+import {TROOPER_SITE} from '../packages/workers/src/combat';
 
 type Item={id:number;count:number};
 export const RAW_BEEF=2132,COOKED_MEAT=2142,BURNT_MEAT=2146;

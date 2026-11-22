@@ -95,16 +95,16 @@ const RULES: Rule[] = [
     { worker: 'cap:agility-order', evidence: 'Barbarian', methods: /^agility\/course-barbarian-outpost-agility-course$/ },
     { worker: 'cap:agility-order', evidence: 'Wilderness', methods: /^agility\/course-wilderness-course$/ },
     { worker: 'cap:firemaking-order', evidence: 'normal:{id:1511', methods: /^firemaking\/burn-normal-logs$/ },
-    { worker: 'cap:magic-order', evidence: 'WIND_STRIKE={level:1', methods: /^magic\/magic_spell_wind_strike$/ },
+    { worker: 'cap:magic-order', evidence: 'WIND_STRIKE', methods: /^magic\/magic_spell_wind_strike$/ },
     { worker: 'cap:wine-order', evidence: 'wine', methods: /^cooking\/wine-wine$/ },
     { worker: 'cap:rune-bank-craft', evidence: 'air/mind/water/earth/fire/body/cosmic', methods: /^runecraft\/runecraft_air$/ },
     { worker: 'cap:fresh-rune-supply-order', evidence: 'Rune Mysteries + essence + air', methods: /^(runecraft\/runecraft_air|mining\/rune_essence_table)$/ },
     { worker: 'cap:goldfarm-order', evidence: 'Pickpocket Knights of Ardougne', methods: /^thieving\/pickpocket_knight_of_ardougne$/ },
     { worker: 'cap:shark-supply-order', evidence: 'shark', methods: /^(fishing\/catch-shark|cooking\/cooking_generic_shark)$/ },
     { worker: 'cap:iron-progress-order', evidence: "BAR_TYPE: iron", methods: /^smithing\/smelt-iron$/ },
-    { worker: 'cap:cow-progress-order', evidence: 'cowTraining', methods: /^(attack|strength|defence|hitpoints)\/target-cow$/ },
-    { worker: 'cap:ranged-train', evidence: 'export const BOWS=[', methods: /^ranged\/bow-gear-(standard-bows|oak-bows|willow-bows|maple-bows|yew-bows|magic-bows)$/ },
-    { worker: 'cap:ranged-train', evidence: 'PEN={x:3233,z:3297}', methods: /^(ranged|hitpoints)\/target-chicken$/ },
+    { worker: 'cap:cow-progress-order', evidence: 'cowProfile', methods: /^(attack|strength|defence|hitpoints)\/target-cow$/ },
+    { worker: 'cap:ranged-train', evidence: 'BOWS', methods: /^ranged\/bow-gear-(standard-bows|oak-bows|willow-bows|maple-bows|yew-bows|magic-bows)$/ },
+    { worker: 'cap:ranged-train', evidence: "'ranged/chickens'", methods: /^(ranged|hitpoints)\/target-chicken$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/woodcutting.ts', evidence: "'yew'", methods: /^woodcutting\/(normal|oak|yew)_tree_table$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/woodcutting.ts', evidence: 'chopTree(/^tree$/i)', methods: /^woodcutting\/normal_tree_table$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/mining.ts', evidence: 'copper: [2090', methods: /^mining\/(copper|tin|iron|clay)_rock_table$/ },
@@ -125,9 +125,9 @@ const RULES: Rule[] = [
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'export function sharkSpot', methods: /^fishing\/catch-shark$/ },
     { worker: 'scripts/brew-potions.ts', evidence: "'super_def'", methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
     { worker: 'scripts/train-prayer.ts', evidence: 'BONE=526', methods: /^prayer\/bury-bones$/ },
-    { worker: 'scripts/train-chickens.ts', evidence: 'Train on Lumbridge chickens', methods: /^(attack|strength|defence|hitpoints)\/target-chicken$/ },
-    { worker: 'scripts/gather-combat.ts', evidence: "target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')", methods: /^(attack|strength|defence|hitpoints)\/target-(chaos_druid|giant)$/ },
-    { worker: 'scripts/gather-ranged.ts', evidence: 'BOW=841', methods: /^(ranged\/bow-gear-standard-bows|ranged\/target-chicken)$/ },
+    { worker: 'scripts/aio-fighter.ts', evidence: 'chickenTrainingProfile', methods: /^(attack|strength|defence|hitpoints)\/target-chicken$/ },
+    { worker: 'scripts/aio-fighter.ts', evidence: 'genericCombatNpc', methods: /^(attack|strength|defence|hitpoints)\/target-(chaos_druid|giant)$/ },
+    { worker: 'scripts/ranged-train.ts', evidence: 'BOWS', methods: /^(ranged\/bow-gear-standard-bows|ranged\/target-chicken)$/ },
 ];
 
 const round = (v: number | null) => v === null ? null : Math.round(v * 100) / 100;
@@ -458,7 +458,7 @@ const SCRIPT_CAPABILITIES: Capability[] = [
     { id: 'goldfarm-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'shark-supply-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'iron-progress-order', entry: 'scripts/smelt-bars.ts' },
-    { id: 'cow-progress-order', entry: 'scripts/gather-combat.ts' },
+    { id: 'cow-progress-order', entry: 'scripts/aio-fighter.ts' },
     { id: 'ranged-train', entry: 'scripts/ranged-train.ts' },
 ];
 

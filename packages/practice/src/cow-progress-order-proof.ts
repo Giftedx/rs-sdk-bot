@@ -17,7 +17,7 @@ import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../c
 type Save=ReturnType<typeof readPracticeSave>;
 type Kind=typeof cases[number];
 const root=resolve(import.meta.dir,'../../..');
-const owned=['scripts/gather-combat.ts','scripts/gather-combat.test.ts','scripts/quest-sustain.ts','scripts/quest-sustain.test.ts','packages/practice/src/cow-progress-order-proof.ts','packages/practice/test/cow-progress-order-proof.test.ts'];
+const owned=['scripts/aio-fighter.ts','packages/workers/src/combat/melee-gather.ts','packages/workers/test/combat.test.ts','scripts/quest-sustain.ts','scripts/quest-sustain.test.ts','packages/practice/src/cow-progress-order-proof.ts','packages/practice/test/cow-progress-order-proof.test.ts'];
 const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries(owned.map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const DROPS=[1739,526,2132],TROUT=333,SWORD=1277,SHIELD=1171;
@@ -31,7 +31,7 @@ export const SWORDINHAND={position:{x:2655,z:3283,level:0},
 export const cases=['nofood','nokit','entry','stopped','partial','restarted'] as const;
 // The native fixture follows the finite south-bank consumer, regardless of the parent profile.
 export function cowChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env,kind:Kind='entry'){
- return {cmd:['bun','scripts/gather-combat.ts',name,'1500','cow'],cwd:root,
+ return {cmd:['bun','scripts/aio-fighter.ts',name,'cow','1500'],cwd:root,
   env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',TARGET:'cow',MAX_KILLS:kind==='partial'?'1':'5',TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',COW_BANK_PROFILE:'south',COW_FOOD_MODE:'held'},windowsHide:true};
 }
 // Source decision: session-recovery-proof.ts releaseStopArtifact -> cow CLI proof

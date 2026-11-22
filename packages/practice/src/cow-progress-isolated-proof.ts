@@ -18,7 +18,7 @@ import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 type Save=ReturnType<typeof readPracticeSave>;
 type Kind=typeof cases[number];
 const root=resolve(import.meta.dir,'../../..');
-const owned=['scripts/gather-combat.ts','scripts/gather-combat-giant.test.ts','scripts/quest-sustain.ts','scripts/quest-sustain.test.ts','packages/practice/src/cow-progress-isolated-proof.ts','packages/practice/test/cow-progress-isolated-proof.test.ts'];
+const owned=['scripts/aio-fighter.ts','packages/workers/src/combat/melee-gather.ts','packages/workers/test/combat.test.ts','scripts/quest-sustain.ts','scripts/quest-sustain.test.ts','packages/practice/src/cow-progress-isolated-proof.ts','packages/practice/test/cow-progress-isolated-proof.test.ts'];
 const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries(owned.map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const DROPS=[1739,526,2132],TROUT=333,SWORD=1277,SHIELD=1171;
@@ -32,7 +32,7 @@ export const SWORDINHAND={position:{x:2655,z:3283,level:0},
 export const cases=['nofood','nokit','entry','stopped','partial','restarted'] as const;
 // The native fixture follows the finite south-bank consumer, regardless of the parent profile.
 export function cowChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env,kind:Kind='entry'){
- return {cmd:['bun','scripts/gather-combat.ts',name,'1500','cow'],cwd:root,
+ return {cmd:['bun','scripts/aio-fighter.ts',name,'cow','1500'],cwd:root,
   env:{...inherited,SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',RANDOM_EVENTS:'0',TARGET:'cow',MAX_KILLS:kind==='partial'?'1':'5',TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',COW_BANK_PROFILE:'south',COW_FOOD_MODE:'held'},windowsHide:true};
 }
 // Source decision: session-recovery-proof.ts releaseStopArtifact -> cow CLI proof
@@ -114,7 +114,7 @@ export function giantFixture():SaveConfig{
  return {position:MIGHTYROD.position,skills:{Attack:99,Defence:99,Strength:99,Hitpoints:86},inventory:MIGHTYROD.inventory,equipment:MIGHTYROD.equipment,bank:MIGHTYROD.bank};
 }
 export function giantChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
- return {cmd:['bun','scripts/gather-combat.ts',name,'1500','giant'],cwd:root,
+ return {cmd:['bun','scripts/aio-fighter.ts',name,'giant','1500'],cwd:root,
   env:{...inherited,SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',TARGET:'giant',TRAIN_SKILL:'Hitpoints',TARGET_LEVEL:'87',GIANT_FOOD:'5'},windowsHide:true};
 }
 export function giantResult(log:string){try{return JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('GIANT_RESULT ')).at(-1)?.slice(13)??'null');}catch{return null;}}
@@ -167,7 +167,7 @@ export function trooperChildConfiguration(name:string,inherited:NodeJS.ProcessEn
   TRAIN_SKILL:'Defence',TARGET_LEVEL:'60',GIANT_FOOD:'20',GIANT_BURY:'1',TROOPER_COOK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'};
  // These opt-ins change or refuse the finite level order instead of running it.
  for(const key of ['GIANT_KILLS','MAX_KILLS','COMBAT_POTIONS_FILE','COMBAT_ALCH_FILE','TELEGRAB_MAX'])delete env[key];
- return {cmd:['bun','scripts/gather-combat.ts',name,'2500','trooper'],cwd:root,env,windowsHide:true};
+ return {cmd:['bun','scripts/aio-fighter.ts',name,'trooper','2500'],cwd:root,env,windowsHide:true};
 }
 export function trooperEntry(before:Save){
  const expected:Record<number,{id:number;count:number}[]>={93:NABTHEKNOB.inventory,94:NABTHEKNOB.equipment,95:NABTHEKNOB.bank};

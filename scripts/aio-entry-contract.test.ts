@@ -18,7 +18,7 @@ test('travel and prayer recovery workers dispatch through AIO with the worker ar
 });
 
 test('KBD positional limit reaches the fight worker environment and invalid limits fail before login',()=>{
- expect(resolveBossStep('kbd',['500'])).toEqual({script:'scripts/microbot-b-kbd.ts',args:[],env:{CAP:'500'}});
+ expect(resolveBossStep('kbd',['500'])).toEqual({script:'scripts/aio-boss.ts',args:['kbd'],env:{CAP:'500'}});
  expect(resolveBossStep('kbd',['500','CAP=700','TRIP_CAP=5000']).env).toEqual({CAP:'700',TRIP_CAP:'5000'});
  for(const args of [['0'],['1001'],['5000'],['not-a-cap'],['100','200']])expect(()=>resolveBossStep('kbd',args)).toThrow('1..1000');
 });
