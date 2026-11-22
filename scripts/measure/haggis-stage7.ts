@@ -22,7 +22,7 @@ import { playerSavePath } from '../../packages/practice/src/save-library';
 import { GAMES_NECKLACE_IDS, GLORY_IDS } from '../fast-skills-lib';
 import { OBJ_GLORY_4, OBJ_SHARK, openBot, rubTeleport, settle } from '../gathering-specialist-lib';
 import { openQuest } from '../generated/quest-lib';
-import { HERBLORE, MAGIC, ladder, objId } from './floor-bands';
+import { HERBLORE, MAGIC, ladder, objId } from '../../packages/practice/src/floor-bands';
 import {
     type Job,
     type Meter,
@@ -41,7 +41,7 @@ import {
     tick,
     withdrawN,
     xp,
-} from './floor-lib';
+} from '../../packages/practice/src/floor-lib';
 import { VARROCK_WEST_BANK_SPOT } from './haggis-stage6';
 
 export const STAGE7_START_SPOT = VARROCK_WEST_BANK_SPOT;

@@ -38,7 +38,7 @@ import {
     OBJ_RUNE_PICKAXE,
     remainingIronOresTo99,
 } from '../mining-specialist';
-import { dialogOpen, inv, level, meter, send, tick, withdrawN, xp } from './floor-lib';
+import { dialogOpen, inv, level, meter, send, tick, withdrawN, xp } from '../../packages/practice/src/floor-lib';
 
 export const BARBARIAN_FLY_START = { x: 3109, z: 3434, level: 0 } as const;
 export const EDGEVILLE_BANK_SPOT = { x: 3094, z: 3491, level: 0 } as const;

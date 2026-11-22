@@ -1,5 +1,5 @@
 name: CI
-# The local gate proves a change: `bun scripts/ci-gate.ts --post` runs the check steps below on the PC and posts the
+# The local gate proves a change: `bun tools/ci-gate.ts --post` runs the check steps below on the PC and posts the
 # `local-gate` status on HEAD. This hosted workflow uses standard runners, which cost no minutes on a public
 # repository. Dispatch it through the Actions tab or `gh workflow run CI --ref <branch>`.
 on:
@@ -81,7 +81,7 @@ jobs:
           restore-keys: |
             bun-cache-${{ runner.os }}-
       - name: Prepare the pinned practice dependencies
-        run: bun scripts/worktree-setup.ts --bench
+        run: bun tools/worktree-setup.ts --bench
       # The pathfinder snapshot, the area labels and the measured walk lengths (.practice/cache). Each file is bound to
       # the data named in the key and is checked on read. Without them each route search measures every leg again.
       - name: Restore the route caches
@@ -168,7 +168,7 @@ jobs:
             .practice/sim/aio-bench/last.json
             .practice/sim/aio-bench/output/*.log
             .practice/sim/logs/engine-aiobench-*.log
-  # `bun scripts/hosted-bench.ts '<pattern> ...' [--seeds 7,8,9] [--args '--profile']` starts these two jobs and prints
+  # `bun tools/hosted-bench.ts '<pattern> ...' [--seeds 7,8,9] [--args '--profile']` starts these two jobs and prints
   # the result of each case. The plan gives one runner to each pattern and seed.
   bench-plan:
     if: inputs.bench_pattern != ''
@@ -252,7 +252,7 @@ jobs:
           restore-keys: |
             bun-cache-${{ runner.os }}-
       - name: Prepare the pinned practice dependencies
-        run: bun scripts/worktree-setup.ts --bench
+        run: bun tools/worktree-setup.ts --bench
       # The pathfinder snapshot, the area labels and the measured walk lengths (.practice/cache). Restoring read-only
       # avoids redundant cache uploads at the end of every bench job.
       - name: Restore the route caches
@@ -310,7 +310,7 @@ jobs:
           set -o pipefail
           mkdir -p .practice/bench-cases
           # Decode --set-b64 KEY=<base64> into --set KEY=<value> without bash word-splitting on JSON values.
-          # The plan job checked each extra argument (scripts/hosted-bench.ts checkArgs).
+          # The plan job checked each extra argument (tools/hosted-bench.ts checkArgs).
           bun -e '
             const raw = (process.env.BENCH_ARGS ?? "").split(/\s+/).filter(Boolean);
             const matrixSeeds = process.env.MATRIX_SEEDS ?? "";
@@ -386,7 +386,7 @@ jobs:
           restore-keys: |
             bun-cache-${{ runner.os }}-
       - name: Prepare the pinned dependencies
-        run: bun scripts/worktree-setup.ts
+        run: bun tools/worktree-setup.ts
       - name: Restore the route caches
         uses: actions/cache/restore@v4
         with:
@@ -425,7 +425,7 @@ jobs:
           restore-keys: |
             bun-cache-${{ runner.os }}-
       - name: Prepare the pinned dependencies
-        run: bun scripts/worktree-setup.ts --bench
+        run: bun tools/worktree-setup.ts --bench
       - name: Restore the route caches
         uses: actions/cache/restore@v4
         with:
@@ -496,7 +496,7 @@ jobs:
           path: |
             .practice/hosted-rehearse/**
             .practice/specialist-launch/**
-  # The test files run in parts on several runners at once (scripts/test-shards.ts --part); part 1 also runs the other checks.
+  # The test files run in parts on several runners at once (tools/test-shards.ts --part); part 1 also runs the other checks.
   linux:
     if: inputs.bench_pattern == '' && inputs.measure_script == ''
     runs-on: ubuntu-latest
@@ -547,7 +547,7 @@ jobs:
         run: bun run typecheck
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-      - run: bun scripts/test-shards.ts --part $TEST_PART ./scripts ./packages
+      - run: bun tools/test-shards.ts --part $TEST_PART ./scripts ./packages ./tools
         env:
           TEST_PART: ${{ matrix.part }}/2
       # The dashboard tests alone too: in the full run another test's globals (window) can hide a missing stub.
@@ -592,7 +592,7 @@ jobs:
           key: practice-cache-${{ runner.os }}-part${{ matrix.part }}-${{ hashFiles('knowledge/**/*.json', '.gitmodules', 'patches/*.patch') }}
           restore-keys: practice-cache-${{ runner.os }}-part${{ matrix.part }}-
       - name: Full Windows gate, one part of the test files
-        run: bun scripts/ci-gate.ts --full --part ${{ matrix.part }}/6
+        run: bun tools/ci-gate.ts --full --part ${{ matrix.part }}/6
   preparation-practice:
     if: inputs.preparation_practice
     runs-on: ubuntu-latest
@@ -612,7 +612,7 @@ jobs:
           restore-keys: |
             bun-cache-${{ runner.os }}-
       - name: Prepare the pinned practice dependencies
-        run: bun scripts/worktree-setup.ts --bench
+        run: bun tools/worktree-setup.ts --bench
       # The pathfinder snapshot, the area labels and the measured walk lengths (.practice/cache). Each file is bound to
       # the data named in the key and is checked on read. Without them each route search measures every leg again.
       - name: Restore the route caches
@@ -724,7 +724,7 @@ jobs:
           restore-keys: |
             bun-cache-${{ runner.os }}-
       - name: Prepare the pinned practice dependencies
-        run: bun scripts/worktree-setup.ts --bench
+        run: bun tools/worktree-setup.ts --bench
       # The pathfinder snapshot, the area labels and the measured walk lengths (.practice/cache). Each file is bound to
       # the data named in the key and is checked on read. Without them each route search measures every leg again.
       - name: Restore the route caches

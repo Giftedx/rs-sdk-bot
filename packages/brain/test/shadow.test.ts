@@ -118,6 +118,7 @@ test('shadow CLI runs offline read-only across full fleet fixture, verifying pro
         expect(report.summary.protectedAccountsCount).toBeGreaterThanOrEqual(20);
         expect(report.summary.protectedAccountsIdle).toBe(report.summary.protectedAccountsCount);
         expect(report.summary.checksPassed).toBe(report.summary.checksTotal);
+        expect(report.checks.some((c) => c.name === 'worker_engine_coverage' && c.ok)).toBe(true);
         for (const chk of report.checks) {
             expect(chk.ok).toBe(true);
         }

@@ -1,6 +1,6 @@
 // Overall 1-tick PvP relog combat practice cases (Strength, Attack, Defence, Ranged 1->99 at Deserted Keep).
 import type { SaveConfig } from '../../packages/practice/src/presets';
-import type { BenchCase } from './aio-bench-cases';
+import type { BenchCase } from './bench-case-types';
 
 const PVP_TANK_SKILLS: SaveConfig['skills'] = {
     Attack: 78,

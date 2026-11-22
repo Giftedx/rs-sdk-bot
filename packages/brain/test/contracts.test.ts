@@ -758,6 +758,7 @@ test('packages/brain/src obeys acyclic DAG and relative-only import boundaries',
         'packages/router/',
         'packages/dashboard/',
         'scripts/',
+        'tools/',
     ];
     const violations: string[] = [];
 

@@ -1,5 +1,5 @@
 // Bench cases for the fresh-clock gathering specialists, with the helper in process and with an external supplier.
-import type { BenchCase } from './aio-bench-cases';
+import type { BenchCase } from './bench-case-types';
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import { COOKING_SPECIALIST_SUPPLIES } from '../cooking-specialist';
 import { buildFiremakingSupplierConfigs } from '../firemaking-specialist';

@@ -40,7 +40,7 @@ describe('startProblems', () => {
     });
     test('names every cause in one line', () => {
         const line = refusalLine(startProblems(facts({ procs: [...SELF, proc(300, 1, 500, `${BUN} scripts/ci-gate.ts`)], busyPorts: [21000, 21010], freeGB: 3 })));
-        expect(line).toBe("bench: not started: another heavy job runs (pid 300 ci-gate.ts); port 21000, 21010 has a listener; 3.0 GiB is free and the run needs 6.7 GiB (the floor of 4 GiB and 3 engines of 0.9 GiB). Use --wait <minutes> to wait for a safe start, or --force to skip this check. Beside live bots run the cases on hosted runners: bun scripts/hosted-bench.ts '<pattern>'.");
+        expect(line).toBe("bench: not started: another heavy job runs (pid 300 ci-gate.ts); port 21000, 21010 has a listener; 3.0 GiB is free and the run needs 6.7 GiB (the floor of 4 GiB and 3 engines of 0.9 GiB). Use --wait <minutes> to wait for a safe start, or --force to skip this check. Beside live bots run the cases on hosted runners: bun tools/hosted-bench.ts '<pattern>'.");
         expect(line).not.toContain('\n');
     });
     test('a process list that was not read gives no refusal of its own', () => {

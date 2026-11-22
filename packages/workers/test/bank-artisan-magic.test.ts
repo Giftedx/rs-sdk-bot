@@ -4,7 +4,7 @@ import * as coreBot from '../../core/src/bot';
 import { setEquipmentObserved } from '../../core/src/container-observation';
 import { waitTicks } from '../../core/src/ticks';
 import * as walking from '../../core/src/walk';
-import { objId } from '../../../scripts/measure/floor-bands';
+import { objId } from '../../practice/src/floor-bands';
 import { installSpellLocBridge, spellOnNativeLoc } from '../../../scripts/microbot-c-spell-loc';
 import { installOrbFloorBridge } from '../../../scripts/microbot-edgeville-travel';
 import { runNpcMagic } from '../src/combat';

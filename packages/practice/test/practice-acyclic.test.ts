@@ -139,23 +139,23 @@ function collectPracticeImports(files: readonly string[]): {
     return { bare, relative: relativeTargets };
 }
 
-test('packages/practice/src production modules never import promoted shared libraries from scripts', () => {
+test('packages/practice/src production modules never import promoted shared libraries or tools', () => {
     const practiceFiles = walkTs(join(repoRoot, 'packages', 'practice', 'src'));
     const bannedTargets = new Set([
         'scripts/measure/fleet-player-save.ts',
         'scripts/fleet-trade-settlement.ts',
         'scripts/fleet-owner-claim.ts',
-        'scripts/heavy-admission.ts',
-        'scripts/worktree-setup.ts',
-        'scripts/fail-loops.ts',
+        'tools/heavy-admission.ts',
+        'tools/worktree-setup.ts',
+        'tools/fail-loops.ts',
     ]);
     const bannedBare = new Set(
         [...bannedTargets].flatMap(target => [target.slice(0, -3), target]),
     );
     const { bare, relative: relativeTargets } = collectPracticeImports(practiceFiles);
     const violations = [
-        ...bare.filter(({ spec }) => bannedBare.has(spec)).map(({ rel, spec }) => `${rel} -> ${spec}`),
-        ...relativeTargets.filter(({ target }) => bannedTargets.has(target)).map(({ rel, target }) => `${rel} -> ${target}`),
+        ...bare.filter(({ spec }) => bannedBare.has(spec) || spec === 'tools' || spec.startsWith('tools/')).map(({ rel, spec }) => `${rel} -> ${spec}`),
+        ...relativeTargets.filter(({ target }) => bannedTargets.has(target) || target.startsWith('tools/')).map(({ rel, target }) => `${rel} -> ${target}`),
     ];
     expect(violations).toEqual([]);
 });

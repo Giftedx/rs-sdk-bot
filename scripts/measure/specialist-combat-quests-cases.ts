@@ -16,7 +16,7 @@ import {
     runCompanionRole,
     type KitSpecItem,
 } from '../combat-quest-specialists';
-import type { BenchCase } from './aio-bench-cases';
+import type { BenchCase } from './bench-case-types';
 
 const ROOT = resolve(import.meta.dir, '..', '..');
 

@@ -3,7 +3,7 @@
 // A script is reached when a route names it, or when a reached script imports it or names its path in code.
 // OUTSIDE_CATALOG and the reach rule are in scripts/script-index.ts, which also prints them.
 import {test,expect} from 'bun:test';
-import {OUTSIDE_CATALOG,unreachedScripts} from './script-index';
+import {OUTSIDE_CATALOG,unreachedScripts} from '../tools/script-index';
 
 export {OUTSIDE_CATALOG,unreachedScripts};
 

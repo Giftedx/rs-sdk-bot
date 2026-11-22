@@ -83,7 +83,7 @@ export function worktreeSetupResult(
     retain: (output: string) => void,
     env: Readonly<Record<string, string | undefined>> = process.env,
 ): { ok: boolean; detail: string } {
-    const command = `$ bun scripts/worktree-setup.ts -> ${result.status}`;
+    const command = `$ bun tools/worktree-setup.ts -> ${result.status}`;
     if (result.status === 0) { retain(command); return { ok: true, detail: '' }; }
     let output = [result.stdout ?? '', result.stderr ?? '', result.error?.message ?? ''].join('\n').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
     const secrets = Object.entries(env).filter(([name, value]) => /TOKEN|PASSWORD|PASSWD|SECRET|SEED|KEY|COOKIE|AUTH/i.test(name) && value)
@@ -264,7 +264,7 @@ export async function runCloudSideCli(argv: readonly string[] = process.argv.sli
     process.on('exit', unlock);
     const fail = (why: string) => { log(`FAIL ${why}`); console.log(`RESULT fail cloud-side side=${o.side} ${why} (log ${logFile})`); process.exit(1); };
 
-    const setup = worktreeSetupResult(spawnSync('bun', ['scripts/worktree-setup.ts'], { cwd: root, env, encoding: 'utf8', timeout: 1_200_000, windowsHide: true }), log, env);
+    const setup = worktreeSetupResult(spawnSync('bun', ['tools/worktree-setup.ts'], { cwd: root, env, encoding: 'utf8', timeout: 1_200_000, windowsHide: true }), log, env);
     if (!setup.ok) fail('worktree setup failed: ' + setup.detail);
     run(['git', 'config', 'submodule.vendor/rs-sdk.ignore', 'dirty']);
     for (const d of ['cloud-handoff', 'status', 'swarm-logs']) mkdirSync(join(root, '.practice', d), { recursive: true });

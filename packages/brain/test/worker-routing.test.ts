@@ -1,0 +1,210 @@
+import { expect, test } from 'bun:test';
+import { WORKER_FAMILIES, type WorkerFamily } from '../../workers/src/contracts';
+import { createActivityCatalog } from '../src/catalog';
+import type { AccountPlan, ActivityDefinition } from '../src/contracts';
+import {
+    isSupportedWorkerFamily,
+    resolveAccountWorkerPlan,
+    resolveActivityWorkerRoute,
+    resolvePlannedStepWorkerRoute,
+} from '../src/worker-routing';
+
+const CATALOG_SAMPLE: ActivityDefinition[] = [
+    {
+        id: 'gather:fishing-shark',
+        workerId: 'gather',
+        family: 'gather',
+        kind: 'gather',
+        label: 'Catch sharks',
+        skill: 'Fishing',
+        config: { aioCategory: 'skiller', aioRoute: 'fishing:shark', skill: 'fishing', method: 'shark' },
+        baselineRate: { xpPerTick: 100, unitsPerTick: 0.1, gpPerTick: 50, setupTicks: 20, minBatchUnits: 50, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+    {
+        id: 'bank-artisan:cook-shark',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'produce',
+        label: 'Cook sharks',
+        skill: 'Cooking',
+        config: { aioCategory: 'skiller', aioRoute: 'cooking:food', defaultArgs: ['2000', 'shark'] },
+        baselineRate: { xpPerTick: 210, unitsPerTick: 0.25, gpPerTick: 15, setupTicks: 20, minBatchUnits: 50, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+    {
+        id: 'combat:kbd',
+        workerId: 'combat',
+        family: 'combat',
+        kind: 'train',
+        label: 'Kill KBD',
+        config: { aioCategory: 'boss', aioRoute: 'kbd', boss: 'kbd', defaultEnv: { TRIP_CAP: '2000' } },
+        baselineRate: { xpPerTick: 80, unitsPerTick: 0.01, gpPerTick: 400, setupTicks: 40, minBatchUnits: 5, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+    {
+        id: 'agility:gnome',
+        workerId: 'agility',
+        family: 'agility',
+        kind: 'train',
+        label: 'Gnome agility',
+        skill: 'Agility',
+        config: { method: 'gnome' },
+        baselineRate: { xpPerTick: 86, unitsPerTick: 0.05, gpPerTick: 0, setupTicks: 15, minBatchUnits: 10, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+    {
+        id: 'runecraft:air',
+        workerId: 'runecraft',
+        family: 'runecraft',
+        kind: 'produce',
+        label: 'Air runes',
+        skill: 'Runecraft',
+        config: { method: 'bank-craft', defaultEnv: { RUNE_ALTAR: 'air' } },
+        baselineRate: { xpPerTick: 30, unitsPerTick: 0.5, gpPerTick: 10, setupTicks: 20, minBatchUnits: 28, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+    {
+        id: 'quest:cook',
+        workerId: 'quest',
+        family: 'quest',
+        kind: 'quest',
+        label: "Cook's Assistant",
+        questSlug: 'cook',
+        config: { aioCategory: 'quester', aioRoute: 'cook', questSlug: 'cook', mode: 'sweep' },
+        baselineRate: { xpPerTick: 120, unitsPerTick: 0.01, gpPerTick: 0, setupTicks: 15, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+    {
+        id: 'market:ge-buy',
+        workerId: 'market',
+        family: 'market',
+        kind: 'ge_buy',
+        label: 'GE buy',
+        config: { aioCategory: 'market', aioRoute: 'ge-buy', mode: 'ge-buy' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 10, gpPerTick: 0, setupTicks: 30, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+    {
+        id: 'logistics:banker',
+        workerId: 'logistics',
+        family: 'logistics',
+        kind: 'recover',
+        label: 'Stationed banker',
+        config: { aioCategory: 'logistics', aioRoute: 'banker', role: 'banker' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 1, gpPerTick: 0, setupTicks: 10, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+    {
+        id: 'pvp:hunt',
+        workerId: 'pvp',
+        family: 'pvp',
+        kind: 'pk',
+        label: 'Wildy PK hunt',
+        config: { aioCategory: 'pvp', aioRoute: 'hunt', mode: 'hunt' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 0.02, gpPerTick: 250, setupTicks: 25, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    },
+];
+
+test('resolveActivityWorkerRoute maps all 9 unified worker families purely without ScriptAdapter shims', () => {
+    const routed = new Map<WorkerFamily, string>();
+    for (const act of CATALOG_SAMPLE) {
+        const res = resolveActivityWorkerRoute(act);
+        expect(isSupportedWorkerFamily(res.family)).toBe(true);
+        expect(res.routeKey.length).toBeGreaterThan(0);
+        routed.set(res.family, res.routeKey);
+    }
+
+    expect([...routed.keys()].sort()).toEqual([...WORKER_FAMILIES].sort());
+    expect(routed.get('gather')).toBe('fishing:shark');
+    expect(routed.get('bank-artisan')).toBe('cooking:food');
+    expect(routed.get('combat')).toBe('boss:kbd');
+    expect(routed.get('agility')).toBe('agility:gnome');
+    expect(routed.get('runecraft')).toBe('runecraft:bank-craft');
+    expect(routed.get('quest')).toBe('quest:cook');
+    expect(routed.get('market')).toBe('ge-buy');
+    expect(routed.get('logistics')).toBe('banker');
+    expect(routed.get('pvp')).toBe('hunt');
+});
+
+test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover, acquire, gear_upgrade, unlock, and work', () => {
+    const ctx = { activities: CATALOG_SAMPLE };
+
+    const logoutRec = resolvePlannedStepWorkerRoute(
+        'UnloadMe',
+        { stepKind: 'recover', recoveryKind: 'logout', estimatedTicks: 20, reason: 'held proof' },
+        ctx,
+    );
+    expect(logoutRec.executionMode).toBe('session_recovery');
+    expect(logoutRec.family).toBe('logistics');
+    expect(logoutRec.routeKey).toBe('logout');
+
+    const locRec = resolvePlannedStepWorkerRoute(
+        'UnloadMe',
+        { stepKind: 'recover', recoveryKind: 'location', targetHub: 'ardougne', estimatedTicks: 60, reason: 'stranded' },
+        ctx,
+    );
+    expect(locRec.executionMode).toBe('worker');
+    expect(locRec.family).toBe('logistics');
+    expect(locRec.routeKey).toBe('walk-to');
+    expect(locRec.args[0]).toBe('walk-to');
+
+    const plan: AccountPlan = {
+        account: 'Packhorse',
+        demandId: 'd:sharks',
+        scorePerHour: 18,
+        steps: [
+            {
+                stepKind: 'acquire',
+                source: 'ge',
+                itemId: 383,
+                quantity: 100,
+                estimatedTicks: 40,
+                estimatedCoinCost: 40_000,
+                coinFloatPreserved: 1000,
+            },
+            {
+                stepKind: 'gear_upgrade',
+                itemId: 775,
+                slot: 'hands',
+                netXpPerTickGain: 2,
+                remainingBandTicks: 3000,
+                acquisitionTicks: 20,
+                paybackNetTicks: 200,
+                source: 'own_bank',
+            },
+            {
+                stepKind: 'work',
+                activityId: 'bank-artisan:cook-shark',
+                demandId: 'd:sharks',
+                workerId: 'bank-artisan',
+                batchUnits: 100,
+                estimatedTicks: 425,
+                expectedValuePerHour: 18,
+                config: {},
+            },
+        ],
+    };
+
+    const resolved = resolveAccountWorkerPlan(plan, ctx);
+    expect(resolved.steps.length).toBe(3);
+    expect(resolved.steps[0]?.family).toBe('market');
+    expect(resolved.steps[0]?.routeKey).toBe('ge-buy');
+    expect(resolved.steps[1]?.family).toBe('logistics');
+    expect(resolved.steps[1]?.routeKey).toBe('loadout');
+    expect(resolved.steps[2]?.family).toBe('bank-artisan');
+    expect(resolved.steps[2]?.routeKey).toBe('cooking:food');
+    expect(resolved.steps[2]?.env.DEMAND_ID).toBe('d:sharks');
+});
+
+test('catalog covers all 9 worker families with existing standalone scripts only', () => {
+    const catalog = createActivityCatalog();
+    const families = new Set(catalog.list().map((a) => a.family));
+    expect([...families].sort()).toEqual([...WORKER_FAMILIES].sort());
+    for (const act of catalog.list()) {
+        const route = resolveActivityWorkerRoute(act);
+        expect(isSupportedWorkerFamily(route.family)).toBe(true);
+        expect(route.routeKey.length).toBeGreaterThan(0);
+    }
+});

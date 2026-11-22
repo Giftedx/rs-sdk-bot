@@ -72,7 +72,7 @@ export const realDeps: ProveDeps = {
     },
     async checkStart(bot, preset) {
         const p = preset ? PRESETS[preset]?.position : undefined;
-        const r = await runBun([resolve(import.meta.dir, '..', '..', '..', 'scripts', 'where.ts'), bot], 60_000);
+        const r = await runBun([resolve(import.meta.dir, '..', '..', '..', 'tools', 'where.ts'), bot], 60_000);
         const m = r.stdout.match(/POS (\d+) (\d+) (\d+)/);
         if (!m) return { ok: false, detail: `no position: ${r.stdout.slice(-300)}` };
         const pos = `POS ${m[1]} ${m[2]} ${m[3]}`;

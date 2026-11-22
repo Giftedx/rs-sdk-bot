@@ -1,5 +1,5 @@
 // Bench cases for the fresh-clock Ranged 99 specialist route and weapon A/B comparisons.
-import type { BenchCase } from './aio-bench-cases';
+import type { BenchCase } from './bench-case-types';
 import { PRESETS } from '../../packages/practice/src/presets';
 import { COOK_JOB_NATIVE_NULL_VARPS } from '../../packages/practice/src/quest-items-order-proof';
 import {

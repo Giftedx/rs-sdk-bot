@@ -6,10 +6,10 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "bun test ./scripts ./packages",
+    "test": "bun test ./scripts ./packages ./tools",
     "typecheck": "tsc --noEmit",
     "bench": "bun scripts/measure/aio-practice-bench.ts",
-    "check-pin": "bun scripts/check-pin.ts"
+    "check-pin": "bun tools/check-pin.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.6",
