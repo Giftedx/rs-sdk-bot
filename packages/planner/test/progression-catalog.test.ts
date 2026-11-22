@@ -105,9 +105,9 @@ test('the finite Prayer trainer keeps its matching skill goal above retained bon
 });
 
 test('bounded earth shop refill and splash training preserve finite intents',()=>{
- expect(intentForEntry('scripts/earth-shop.ts',['betty','16000','2000'],{STOCK_TARGET:'53',MAX_ITEMS:'50',MAX_SPEND:'2000',COIN_RESERVE:'30000',EARTH_SEED_USED:'0'})).toMatchObject({kind:'acquire',items:{557:53}});
+ expect(intentForEntry('scripts/aio-market.ts',['earth-shop','betty','16000','2000'],{STOCK_TARGET:'53',MAX_ITEMS:'50',MAX_SPEND:'2000',COIN_RESERVE:'30000',EARTH_SEED_USED:'0'})).toMatchObject({kind:'acquire',items:{557:53}});
  expect(intentForEntry('scripts/aio-market.ts',['earth-shop','aubury','1600','STOCK_TARGET=53','MAX_ITEMS=50','MAX_SPEND=2000','COIN_RESERVE=30000'],{})).toMatchObject({kind:'acquire',items:{557:53}});
- expect(intentForEntry('scripts/earth-shop.ts',['catherby','1600'],{STOCK_TARGET:'53',MAX_ITEMS:'50',MAX_SPEND:'2000',COIN_RESERVE:'30000'})).toBeNull();
+ expect(intentForEntry('scripts/aio-market.ts',['earth-shop','catherby','1600'],{STOCK_TARGET:'53',MAX_ITEMS:'50',MAX_SPEND:'2000',COIN_RESERVE:'30000'})).toBeNull();
  expect(intentForEntry('scripts/splash-train.ts',['66','6000'],{})).toEqual({kind:'train',skill:'magic',targetLevel:66});
 });
 
@@ -223,7 +223,7 @@ test('the training kit producer remains the same bounded method during acquisiti
  const a=accountFromStatus('Example',status,now),intent={kind:'acquire' as const,items:{888:20},consumer:'Ranged band'};
  const m=progressionMethods(intent,a).methods.find(m=>m.id==='ranged/guild-buy-mithril');
  expect(m?.effects.items).toEqual({888:20});
- expect(m?.step.script).toBe('scripts/shop-buyer.ts');
+ expect(m?.step.script).toBe('scripts/aio-market.ts');
  expect(m?.step.env.MAX_ITEMS).toBe('20');
  expect(m?.step.env.STOCK_TARGET).toBe('20');
  expect(m?.effects.xp).toBeUndefined();
@@ -250,9 +250,9 @@ test('noted inventory retains its native identity and qualification binds the cu
 });
 
 test('finite market and trade jobs preserve their exact consumer before login',()=>{
- expect(intentForEntry('scripts/buy-owned-ge-item.ts',[],{ITEM_ID:'849',QUANTITY:'1',EXPECTED_OWNED:'0'})).toMatchObject({kind:'acquire',items:{849:1}});
- expect(intentForEntry('scripts/shop-buyer.ts',['dargaud','1600'],{ITEMS:'mithril.arrow|steel.arrow',STOCK_TARGET:'500'})).toMatchObject({kind:'service'});
- expect(intentForEntry('scripts/shop-buyer.ts',['dargaud','1600'],{ITEMS:'mithril.arrow|steel.arrow'})).toBeNull();
+ expect(intentForEntry('scripts/aio-market.ts',['ge-buy'],{ITEM_ID:'849',QUANTITY:'1',EXPECTED_OWNED:'0'})).toMatchObject({kind:'acquire',items:{849:1}});
+ expect(intentForEntry('scripts/aio-market.ts',['shop-buy','dargaud','1600'],{ITEMS:'mithril.arrow|steel.arrow',STOCK_TARGET:'500'})).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/aio-market.ts',['shop-buy','dargaud','1600'],{ITEMS:'mithril.arrow|steel.arrow'})).toBeNull();
  expect(intentForEntry('scripts/fleet-trade.ts',['.practice/orders/one.json'],{})).toMatchObject({kind:'service'});
  expect(intentForEntry('F:/repo/packages/core/src/session-recovery.ts',[],{})).toMatchObject({kind:'service'});
 });
@@ -407,22 +407,22 @@ test('a time limit in a flag is a stated bound: quest-order with --timeout-ms ha
 
 test('bounded bank-to-GE and shop-to-bid market routes admit valid finite requests and reject malformed inputs',()=>{
  const c=loadProgressionCatalog();
- expect(intentForEntry('scripts/sell-owned-ge-item.ts',[],{FROM_BANK:'1',ITEM_ID:'861',QUANTITY:'17',SELL_PRICE:'95000',FLOOR_PRICE:'95000',ORDER_MS:'60000'},undefined,c)).toEqual({kind:'service',objective:'sell-owned-ge-item:861:17:95000',units:1});
- expect(intentForEntry('scripts/sell-owned-ge-item.ts',[],{ITEM_ID:'995',QUANTITY:'17',SELL_PRICE:'1',FLOOR_PRICE:'1'},undefined,c)).toBeNull();
- expect(intentForEntry('scripts/sell-owned-ge-item.ts',[],{ITEM_ID:'861',QUANTITY:'17',SELL_PRICE:'90000',FLOOR_PRICE:'95000'},undefined,c)).toBeNull();
- expect(intentForEntry('scripts/shop-to-bid.ts',['sarim','313'],{LOTS:'1',UNITS:'5000',MIN_NET:'50'},undefined,c)).toEqual({kind:'service',objective:'shop-to-bid:sarim:313',units:1});
- expect(intentForEntry('scripts/shop-to-bid.ts',['--scan'],{},undefined,c)).toBeNull();
- expect(intentForEntry('scripts/shop-to-bid.ts',['sarim','0'],{},undefined,c)).toBeNull();
- expect(intentForEntry('scripts/shop-to-bid.ts',['sarim','313'],{LOTS:'0'},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-market.ts',['ge-sell'],{FROM_BANK:'1',ITEM_ID:'861',QUANTITY:'17',SELL_PRICE:'95000',FLOOR_PRICE:'95000',ORDER_MS:'60000'},undefined,c)).toEqual({kind:'service',objective:'sell-owned-ge-item:861:17:95000',units:1});
+ expect(intentForEntry('scripts/aio-market.ts',['ge-sell'],{ITEM_ID:'995',QUANTITY:'17',SELL_PRICE:'1',FLOOR_PRICE:'1'},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-market.ts',['ge-sell'],{ITEM_ID:'861',QUANTITY:'17',SELL_PRICE:'90000',FLOOR_PRICE:'95000'},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-market.ts',['shop-to-bid','sarim','313'],{LOTS:'1',UNITS:'5000',MIN_NET:'50'},undefined,c)).toEqual({kind:'service',objective:'shop-to-bid:sarim:313',units:1});
+ expect(intentForEntry('scripts/aio-market.ts',['shop-to-bid','--scan'],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-market.ts',['shop-to-bid','sarim','0'],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-market.ts',['shop-to-bid','sarim','313'],{LOTS:'0'},undefined,c)).toBeNull();
  const dir=mkdtempSync(join(tmpdir(),'ge-cat-'));
  try{
   const tripFile=join(dir,'trip.json'),sellerFile=join(dir,'seller.json');
   writeFileSync(tripFile,JSON.stringify({actor:'YewFirst',server:'rs-sdk-demo.fly.dev',goal:'bid-861',item:861,quantity:17,price:95000,floor:95000,reserve:0,deadline:Date.now()+60000,fillWait:40,cap:1200}));
   writeFileSync(sellerFile,JSON.stringify({actor:'Ballspinner',server:'rs-sdk-demo.fly.dev',goal:'flax-bid',allTradeable:true,protect:[],reserves:{},maxItems:1,maxUnits:24,perItem:24,discount:0,floor:1,unitCap:100,fillWait:40,deadline:Date.now()+60000,cap:1500,childCap:1200}));
-  expect(intentForEntry('scripts/microbot-ge-trip.ts',[tripFile],{},undefined,c)).toEqual({kind:'service',objective:'ge-trip:861:17:95000',units:1});
-  expect(intentForEntry('scripts/microbot-ge-trip.ts',[join(dir,'missing.json')],{},undefined,c)).toBeNull();
-  expect(intentForEntry('scripts/microbot-bank-seller.ts',[sellerFile],{},undefined,c)).toEqual({kind:'service',objective:'bank-seller:flax-bid:1:24',units:1});
+  expect(intentForEntry('scripts/aio-market.ts',['ge-trip',tripFile],{},undefined,c)).toEqual({kind:'service',objective:'ge-trip:861:17:95000',units:1});
+  expect(intentForEntry('scripts/aio-market.ts',['ge-trip',join(dir,'missing.json')],{},undefined,c)).toBeNull();
+  expect(intentForEntry('scripts/aio-market.ts',['bank-seller',sellerFile],{},undefined,c)).toEqual({kind:'service',objective:'bank-seller:flax-bid:1:24',units:1});
   writeFileSync(sellerFile,JSON.stringify({actor:'Ballspinner',server:'rs-sdk-demo.fly.dev',goal:'bad',allTradeable:false}));
-  expect(intentForEntry('scripts/microbot-bank-seller.ts',[sellerFile],{},undefined,c)).toBeNull();
+  expect(intentForEntry('scripts/aio-market.ts',['bank-seller',sellerFile],{},undefined,c)).toBeNull();
  }finally{rmSync(dir,{recursive:true,force:true});}
 });

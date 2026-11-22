@@ -540,7 +540,7 @@ test('supply-exhausted autopilot jobs yield cleanly while non-supply blocked and
  const fPray=supplyState('Hocuspokeus',hocusJob,'stopped after 1 runs',truncatedPrayer);
  const buyTask:any={id:'buy-test',kind:'run',goal:'skills',account:'Hocuspokeus'};
  expect(liveAccountWait(buyTask,['Hocuspokeus'],fPray.base,()=>false)).toBeNull();
- expect(()=>installJob(buyTask,'Hocuspokeus','scripts/buy-owned-ge-item.ts','task-buy','source',{},{base:fPray.base,preflight:true,freeGB:64})).not.toThrow();
+ expect(()=>installJob(buyTask,'Hocuspokeus','scripts/aio-market.ts','task-buy','source',{},{base:fPray.base,preflight:true,freeGB:64})).not.toThrow();
 
  // A supply-exhausted second participant also yields for a composed ordinary run.
  fAlch.attempt('Partner').record('ended','logged-out');

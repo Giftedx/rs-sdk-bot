@@ -5,7 +5,7 @@ import { jobResources, norm, type Acct, type Assignment, type Template } from '.
 import { BOW_IDS, bowStockNames } from './pricing';
 
 // The pseudo template of an item order that restocks a gang squad member (the order is the whole job).
-export const SQUAD_RESTOCK: Template = { id: 'squad-restock', family: 'kit-buy', script: 'scripts/buy-owned-ge-item.ts', role: 'supply', goal: 'restock the gang squad', yields: () => [] };
+export const SQUAD_RESTOCK: Template = { id: 'squad-restock', family: 'kit-buy', script: 'scripts/aio-market.ts', role: 'supply', goal: 'restock the gang squad', yields: () => [] };
 
 // The freshest of an account's observations by `at`: its status file and its row in the side's fleet snapshot. A fresh
 // cloud container has no status files, so without the snapshot every account would plan as a level-1 start.

@@ -1,10 +1,11 @@
 {
   "id": "rune-shop-order",
   "goal": "Buy an exact finite rune order at an owned-account-reachable shop (the Magic Guild store in Yanille for blood, death and law runes) with the existing shop-buyer CLI, bank it, reconcile coins and assets, and confirm logout.",
-  "entry": "scripts/shop-buyer.ts",
+  "entry": "scripts/aio-market.ts",
   "files": [
-    "scripts/shop-buyer.ts",
-    "scripts/shop-buyer.test.ts",
+    "scripts/aio-market.ts",
+    "packages/workers/src/market/shop-buy.ts",
+    "packages/workers/test/market-shop.test.ts",
     "packages/practice/src/rune-shop-order-proof.ts",
     "packages/practice/test/rune-shop-order-proof.test.ts"
   ],
@@ -16,7 +17,7 @@
       "command": [
         "bun",
         "test",
-        "scripts/shop-buyer.test.ts",
+        "packages/workers/test/market-shop.test.ts",
         "packages/practice/test/rune-shop-order-proof.test.ts",
         "--timeout",
         "10000"

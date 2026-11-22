@@ -22,7 +22,7 @@ const totals=(save:Save,skip:number[]=[])=>{
  return result;
 };
 type ArtisanMode='cut'|'producer'|'tools'|'observer';
-const entries={cut:'scripts/microbot-production.ts',producer:'scripts/microbot-jewellery-trip.ts',tools:'scripts/shop-buyer.ts',observer:'scripts/fleet-inspect.ts'} as const;
+const entries={cut:'scripts/microbot-production.ts',producer:'scripts/microbot-jewellery-trip.ts',tools:'scripts/aio-market.ts',observer:'scripts/fleet-inspect.ts'} as const;
 export const toolsEnv={ITEMS:'ring mould|chisel',STOCK_TARGET:'1',STOP_AT_TARGET:'1',MAX_ITEMS:'2',MAX_SPEND:'20',FLOAT:'100',COIN_RESERVE:'0',NO_BUY_TICKS:'25',BANK_PACK:'1'};
 export const artisanSourceEntries=(mode:ArtisanMode):string[]=>[entries[mode],'scripts/measure/catalog-integration-proof.ts',...(mode==='producer'?['scripts/aio.ts']:[])];
 export const artisanSourceRevision=(mode:ArtisanMode,base=root)=>capabilityRevision(artisanSourceEntries(mode),base);
@@ -99,7 +99,7 @@ export function verifyArtisanEvidence(mode:ArtisanMode){
  const execution=JSON.parse(readFileSync(join(directory,'execution.json'),'utf8'));
  assert.equal(execution.exitCode,0);assert.equal(execution.expired,false);assert.equal(execution.script,mode==='producer'?'scripts/aio.ts':entries[mode]);
  if(mode==='cut'){assert.deepEqual(execution.args,['cut-sapphire']);assert.equal(execution.env.MAX_MAKE,'2');assert.equal(execution.env.CAP,'600');}
- else if(mode==='tools'){assert.deepEqual(execution.args,['dommik','1500']);for(const [key,value]of Object.entries(toolsEnv))assert.equal(execution.env[key],value,'finite shop control '+key);}
+ else if(mode==='tools'){assert.deepEqual(execution.args,['shop-buy','dommik','1500']);for(const [key,value]of Object.entries(toolsEnv))assert.equal(execution.env[key],value,'finite shop control '+key);}
  else if(mode==='observer'){
   assert.deepEqual(execution.args,[]);assert.equal(execution.env.REQUIRE_BANK,'1');
   assert.ok(Number.isFinite(execution.save?.beforeMtimeMs)&&execution.save.afterMtimeMs>execution.save.beforeMtimeMs,'same-attempt saved observation');
@@ -155,7 +155,7 @@ async function prove(name:string,mode:string,savePath:string){
   const saved=await waitPracticeSave(savePath,save=>amount(save,1607,95)===2);assert.equal(saved.matched,true);
  }else if(mode==='tools'){
   assert.equal(amount(before,1755),0);assert.equal(amount(before,1592),0);
-  stdout=await worker(name,entries.tools,['dommik','1500'],toolsEnv,0,artifact!.directory);expectedItem=1755;
+  stdout=await worker(name,entries.tools,['shop-buy','dommik','1500'],toolsEnv,0,artifact!.directory);expectedItem=1755;
   const saved=await waitPracticeSave(savePath,save=>amount(save,1755,95)===1&&amount(save,1592,95)===1);assert.equal(saved.matched,true);
  }else if(mode==='observer'){
   stdout=await worker(name,entries.observer,[],{REQUIRE_BANK:'1'},0,artifact!.directory);expectedItem=995;

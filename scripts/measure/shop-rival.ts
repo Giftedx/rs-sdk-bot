@@ -16,7 +16,7 @@ if (!bot || !rivalName || !/^(first|last)$/.test(order ?? '') || !/^(blind|look)
 process.env.STALL_TICKS = '0';
 const { openBot } = await import('../../packages/core/src/bot');
 const { waitTicks } = await import('../../packages/core/src/ticks');
-const { PROFILES } = await import('../shop-buyer');
+const { PROFILES } = await import('../../packages/workers/src/market');
 const conf = PROFILES[args[1]!.toLowerCase()];
 if (!conf) { console.log(`RESULT fail unknown shop profile ${args[1]}`); process.exit(2); }
 const root = resolve(import.meta.dir, '..', '..');
@@ -50,11 +50,13 @@ const held = () => rival.sdk.getInventory().filter(i => wanted.test(i.name)).red
 // `seen` is the highest count read: a pack read can miss items for a tick.
 let seen = held(), bought = 0, requests = 0, ended = false;
 void rival.ended.then(() => { ended = true; });
+// Exceed lockstep ROUTE_HOLD_MS (45 s) so off-thread planning in the spawned worker does not trip TickStallError here.
+const RIVAL_TICK_IDLE_MS = 50_000;
 while (!workerDone && !ended) {
     const shop = rival.sdk.getState()?.shop;
     if (!shop?.isOpen) {
         const opened = await rival.bot.openShop(conf.npc);
-        if (!opened.success) await waitTicks(rival, 2);
+        if (!opened.success) await waitTicks(rival, 2, { idleMs: RIVAL_TICK_IDLE_MS });
         continue;
     }
     const now = held();
@@ -65,7 +67,7 @@ while (!workerDone && !ended) {
         const sent = await rival.direct({ type: 'shopBuy', slot: item.slot, amount: 1, reason: 'SDK' }) as { success?: boolean } | null;
         if (sent?.success) requests++;
     }
-    await waitTicks(rival, 1);
+    await waitTicks(rival, 1, { idleMs: RIVAL_TICK_IDLE_MS });
 }
 const code = await worker;
 console.log(`MILESTONE rival end order=${order} mode=${mode} bought=${bought} requests=${requests}`);

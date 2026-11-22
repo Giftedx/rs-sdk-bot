@@ -8,7 +8,7 @@ import {FLEET} from './fleet';
 import {goalReadiness} from './goal-readiness';
 import {ownedLoadout,type GearSlot,type GearCount} from '../packages/planner/src/owned-loadout';
 import {fireKit,meleeWeaponSlot} from '../packages/planner/src/gear-progression';
-import {orderAccounting,validateRequest,type ItemOrder} from './buy-owned-ge-item';
+import {orderAccounting,validateRequest,type ItemOrder} from '../packages/workers/src/market';
 import {observedRouteResources,type RouteActor} from './preparation-route-state';
 import {FLEET_DIR,loadOwners,mySide,sideOf} from '../packages/core/src/fleet';
 import {fleetStatusRows,type SnapshotFile} from '../packages/core/src/fleet-snapshots';
@@ -22,7 +22,8 @@ const aliases:Record<string,string>={'feathers':'feather','headless arrows':'hea
 const key=(s:string)=>{const name=s.trim().replace(/\s*\(noted\)$/i,'').toLowerCase();return aliases[name]??name;};
 const integer=(n:unknown)=>Number.isSafeInteger(n)&&Number(n)>=0;
 
-type GearJob={account?:string;accounts?:string[];script:string;goal?:string;role?:string;env?:Record<string,string>};
+type GearJob={account?:string;accounts?:string[];script:string;args?:readonly string[];goal?:string;role?:string;env?:Record<string,string>};
+const isGeBuyJob=(j:GearJob)=>j.script==='scripts/buy-owned-ge-item.ts'||(j.script==='scripts/aio-market.ts'&&j.args?.[0]==='ge-buy');
 type GearReservation=GearCount&{account:string};
 function gearJobAccounts(job:GearJob):string[]{
  const names=job.accounts??(job.account?[job.account]:[]);
@@ -145,7 +146,7 @@ export function preparationGear(jobs:GearJob[],statuses:any[],ownedNames:string[
   });
   return[{account:job.account,script:job.script,goal:job.goal??'',at:snapshot.at,bankAt:snapshot.bankAt,loadout,foreignStock,staged:false as const,scope:'Worker input stock only. Does not settle procurement, prove delivery/equip, qualify a route or clear a hold.'}];
  });
- const procurement=assignments.filter(j=>owned.has(j.account.toLowerCase())&&j.script==='scripts/buy-owned-ge-item.ts').map(j=>{
+const procurement=assignments.filter(j=>owned.has(j.account.toLowerCase())&&isGeBuyJob(j)).map(j=>{
   const itemId=Number(j.env?.ITEM_ID??1331),journal=orderJournals[j.account.toLowerCase()];
   let order:{state:string;at:number|null;age:number|null;accounting:ReturnType<typeof orderAccounting>|null;costBasis:{units:number;coins:number}|null;reason:string}={state:'unknown',at:null,age:null,accounting:null,costBasis:null,reason:'No matching dated private order journal'};
   if(journal)try{
@@ -241,7 +242,7 @@ if(import.meta.main){
  const hash=(f:string)=>createHash('sha256').update(readFileSync(f)).digest('hex');
  const stock=reconcilePreparation(requirements,statuses,names);
  const orderJournals:Record<string,ItemOrder>={},orderSources:Record<string,{path:string;sha256:string}>={};
- for(const job of plan.jobs.filter(j=>j.script==='scripts/buy-owned-ge-item.ts'))for(const account of gearJobAccounts(job)){
+ for(const job of plan.jobs.filter(isGeBuyJob))for(const account of gearJobAccounts(job)){
   const key=job.env?.ORDER_KEY??'combat-sword';
   if(!/^[a-z0-9]{1,12}$/i.test(account)||!/^[a-z0-9_-]{1,64}$/i.test(key)){issues.push('Invalid procurement journal identity');continue;}
   const file=join(root,'.practice/market-orders',createHash('sha256').update('rs-sdk-demo.fly.dev').digest('hex').slice(0,12),account.toLowerCase()+'-'+key+'.json');
@@ -252,7 +253,7 @@ if(import.meta.main){
  const requestPath=process.argv[4]?resolve(process.argv[4]):null;
  const request=requestPath?JSON.parse(readFileSync(requestPath,'utf8')):null;
  const route=request?preparationRoute(stock,opts.travel,request.item,request):null;
- const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,observationSources,inputSources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/buy-owned-ge-item.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','packages/core/src/fleet.ts','packages/core/src/fleet-snapshots.ts','packages/core/src/coordinator-jobs.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
+ const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,observationSources,inputSources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/aio-market.ts','packages/workers/src/market/ge-buy.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','packages/core/src/fleet.ts','packages/core/src/fleet-snapshots.ts','packages/core/src/coordinator-jobs.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
  mkdirSync(resolve(out,'..'),{recursive:true});writeFileSync(out,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({output:out,requirements:report.items.length,coveredByRecentBanks:report.items.filter(i=>i.shortfall===0).length,unknownBanks:report.banks.filter(b=>b.state==='unknown').length,staged:false}));
 }

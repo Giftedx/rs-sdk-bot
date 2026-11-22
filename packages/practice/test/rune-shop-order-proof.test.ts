@@ -30,7 +30,7 @@ test('fixtures are ordinary saves at Varrock West bank with 150000 coins banked 
 test('the child runs the real CLI with the bounded blood order on owned endpoints',()=>{
  const p=bloodProofEndpoints({engine:20400,gateway:20401,management:20402,tcp:20403},'blood-runeshoptest');
  const c=childConfiguration('flrunex1','buy',{PATH:'x',ITEMS:'fire rune'},p);
- expect(c.cmd).toEqual(['bun','scripts/shop-buyer.ts','flrunex1','magic_guild','12000']);
+ expect(c.cmd).toEqual(['bun','scripts/aio-market.ts','flrunex1','shop-buy','magic_guild','12000']);
  expect(c.windowsHide).toBe(true);
  expect(c.env).toMatchObject({ITEMS:'blood rune',STOP_AT_TARGET:'1',STOCK_TARGET:'100',MAX_ITEMS:'100',MAX_SPEND:'30000',COIN_RESERVE:'2000',NO_BUY_TICKS:'25',BANK_PACK:'1',DEMO_OK:'',RANDOM_EVENTS:'0',PATH:'x',GATEWAY_URL:p.gateway,AGENT_PORT:'20401'});
  expect(ORDER).toEqual({target:100,maxSpend:30000,reserve:2000,coins:150000});
@@ -75,6 +75,6 @@ test('the refusal case needs the clear refusal, a logout and an untouched save b
 });
 test('the source pin binds the owned files and the guild shop content',()=>{
  const files=Object.keys(runeShopSource().files);
- for(const f of ['scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/rune-shop-order-proof.ts','packages/practice/test/rune-shop-order-proof.test.ts',
+ for(const f of ['scripts/aio-market.ts','packages/workers/src/market/shop-buy.ts','packages/workers/test/market-shop.test.ts','packages/practice/src/rune-shop-order-proof.ts','packages/practice/test/rune-shop-order-proof.test.ts',
   'vendor/rs-sdk/server/content/scripts/areas/area_yanille/configs/magic_guild/magic_guild.inv','vendor/rs-sdk/server/content/scripts/areas/area_yanille/scripts/magic_guild.rs2'])expect(files).toContain(f);
 });

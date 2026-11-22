@@ -58,7 +58,7 @@ test('AP retains modeled or unqualified rivals as evidence work and honors build
  for(const hold of ['busy','paused','protected']){const p=setup([slow,fast],{[hold]:new Set(['archer'])}).planner,b=assignment();expect(p.refine([b]).assignments[0]).toBe(b);}
 });
 test('AP preserves an item supply consumer despite a training stop condition on its template',()=>{
- const supply={...template('scripts/buy-owned-ge-item.ts'),trains:{skill:'Ranged',to:99,unlocks:[]},stock:{item:'dragon bones',to:20},env:{ITEM_ID:'536',QUANTITY:'20',EXPECTED_OWNED:'0'}};
+ const supply={...template('scripts/aio-market.ts'),args:['ge-buy'],trains:{skill:'Ranged',to:99,unlocks:[]},stock:{item:'dragon bones',to:20},env:{ITEM_ID:'536',QUANTITY:'20',EXPECTED_OWNED:'0'}};
  const bones=method('bones',1,{effects:{items:{536:1}},step:{script:supply.script,args:['50'],env:supply.env}});
  const {planner,calls}=setup([bones,fast]),r=planner.refine([assignment(supply)]);
  expect(calls[0]?.accept).toEqual({bank:{536:20}});expect(planner.decisions()[0]?.intent?.kind).toBe('acquire');

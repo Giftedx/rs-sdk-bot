@@ -221,9 +221,9 @@ export async function runLivePilot(name: string, minutes = '10', maxWild = '30')
                 const steps: { step: unknown; code: number | null }[] = [];
                 for (const step of plan) {
                     const [cmd, env] = step.kind === 'ge'
-                        ? [['scripts/buy-owned-ge-item.ts', name], { ITEM_ID: String(step.item), QUANTITY: String(step.quantity), LIMIT_PRICE: String(step.limit),
+                        ? [['scripts/aio-market.ts', name, 'ge-buy'], { ITEM_ID: String(step.item), QUANTITY: String(step.quantity), LIMIT_PRICE: String(step.limit),
                             CASH_RESERVE: '1000', EXPECTED_OWNED: String(step.owned), ORDER_KEY: `${name.toLowerCase()}-pk-${step.item}-${Date.now()}` }]
-                        : [['scripts/shop-buyer.ts', name, step.profile, '3000'], { MAX_SPEND: String(step.maxSpend), COIN_RESERVE: '1000', NO_BUY_TICKS: '25' }];
+                        : [['scripts/aio-market.ts', name, 'shop-buy', step.profile, '3000'], { MAX_SPEND: String(step.maxSpend), COIN_RESERVE: '1000', NO_BUY_TICKS: '25' }];
                     const child = Bun.spawn([process.execPath, ...cmd], { env: { ...process.env, ...env }, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
                     const code = await child.exited;
                     steps.push({ step, code });

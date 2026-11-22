@@ -68,7 +68,7 @@ test('Bailey approach matches the pinned NPC spawn', () => {
 });
 
 import { takeSeaSlugPaste } from './generated/quest-seaslug';
-import { PROFILES, planShopPurchases, maximumUnitCost } from './shop-buyer';
+import { PROFILES, planShopPurchases, maximumUnitCost } from '../packages/workers/src/market';
 function pasteFixture() {
     let pack = 0, bank = 1, generation = 0, open = false, near = true, stop = false, receipt = true, fresh = true, accepts = true;
     const calls: string[] = [];

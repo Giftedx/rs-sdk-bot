@@ -8,19 +8,19 @@ import { GEM_RINGS, STEW_BATCH } from './constants';
 const RING_MOULD_COINS = 100;
 export function makerShopSteps(): Template[] {
     return [{
-        id: 'shop-ring-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik', '600'],
+        id: 'shop-ring-mould', family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'dommik', '600'],
         env: { ITEMS: 'ring mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
         role: 'supply', goal: "buy a ring mould from Dommik's Crafting Store in Al Kharid for the ring makers", repeats: false,
         resources: ['shop:dommik'], yields: () => [], provides: { item: 'ring mould', unlocks: [...GEM_RINGS.map(([gem]) => `aio-${gem}-rings`), 'squad-sapphire-ring', 'squad-emerald-ring', 'squad-dragonstone-ring'] },
         needs: { items: { coins: RING_MOULD_COINS }, holdsUnder: { 'ring mould': 1 } },
     }, {
-        id: 'shop-necklace-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik_moulds', '600'],
+        id: 'shop-necklace-mould', family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'dommik_moulds', '600'],
         env: { ITEMS: 'necklace mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
         role: 'supply', goal: "buy a necklace mould from Dommik's Crafting Store in Al Kharid for necklace makers", repeats: false,
         resources: ['shop:dommik_moulds'], yields: () => [], provides: { item: 'necklace mould', unlocks: ['squad-dragon-necklace'] },
         needs: { items: { coins: RING_MOULD_COINS }, holdsUnder: { 'necklace mould': 1 } },
     }, {
-        id: 'shop-amulet-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik_moulds', '600'],
+        id: 'shop-amulet-mould', family: 'shop-buyer', script: 'scripts/aio-market.ts', args: ['shop-buy', 'dommik_moulds', '600'],
         env: { ITEMS: 'amulet mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
         role: 'supply', goal: "buy an amulet mould from Dommik's Crafting Store in Al Kharid for amulet makers", repeats: false,
         resources: ['shop:dommik_moulds'], yields: () => [], provides: { item: 'amulet mould', unlocks: ['squad-dragonstone-amulet'] },

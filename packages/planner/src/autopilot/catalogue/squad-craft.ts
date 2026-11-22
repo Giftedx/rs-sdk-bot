@@ -10,7 +10,7 @@ const SQUAD_RUNE_SETS = 20;
 export function squadFletchAndSmithSupplies(): { arrows: Template[]; smiths: Template[] } {
     const runeSteps = (sets: number) => {
         const tips = sets * 15, spend = tips * SQUAD_UNIT_COST['rune arrowtips']! * 2;
-        return [`scripts/shop-buyer.ts catherby 1200 ITEMS=rune.arrowtips STOCK_TARGET=${tips} STOP_AT_TARGET=1 BANK_PACK=1 NO_BUY_TICKS=25 FLOAT=${spend + 200} COIN_RESERVE=200 MAX_SPEND=${spend}`,
+        return [`scripts/aio-market.ts shop-buy catherby 1200 ITEMS=rune.arrowtips STOCK_TARGET=${tips} STOP_AT_TARGET=1 BANK_PACK=1 NO_BUY_TICKS=25 FLOAT=${spend + 200} COIN_RESERVE=200 MAX_SPEND=${spend}`,
             `scripts/fletch-arrows.ts 3000 native-arrows rune MAX_MAKE=${tips} HEADLESS_RESERVE=0 TIP_RESERVE=0`];
     };
     const runeArrows: Template = { id: 'squad-rune-arrows', family: 'fletch', script: 'scripts/chain.ts', args: runeSteps(SQUAD_RUNE_SETS), env: { ROUNDS: '1' },

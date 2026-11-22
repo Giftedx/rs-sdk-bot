@@ -4,7 +4,7 @@ import {formatStep} from '../../core/src/chain-step';
 
 test('generated literal argument chains reserve the same shops, pens and fishing spots as their workers',()=>{
  const args=[
-  formatStep({script:'scripts/shop-buyer.ts',args:['harry','300'],env:{CAP:'300'}}),
+  formatStep({script:'scripts/aio-market.ts',args:['shop-buy','harry','300'],env:{CAP:'300'}}),
   formatStep({script:'scripts/gather-fish.ts',args:['cage'],env:{CAP:'500'}}),
   formatStep({script:'scripts/gather-feathers.ts',args:[],env:{PEN:'3017,3288'}}),
  ];
@@ -19,7 +19,7 @@ test('a literal argv assignment cannot override the chain environment in resourc
 });
 
 test('quoted legacy chain arguments are decoded before resource selection',()=>{
- expect(jobResources({script:'scripts/chain.ts',args:['scripts/shop-buyer.ts "harry" 300']})).toEqual(['shop:harry']);
+ expect(jobResources({script:'scripts/chain.ts',args:['scripts/aio-market.ts "shop-buy" "harry" 300']})).toEqual(['shop:harry']);
  expect(jobResources({script:'scripts/chain.ts',args:['scripts/gather-fish.ts "cage" 3000']})).toEqual(['catherby:lobster']);
  expect(jobResources({script:'scripts/gather-fish.ts',args:['cage','3000']})).toEqual(['catherby:lobster']);
 });

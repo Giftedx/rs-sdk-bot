@@ -24,7 +24,7 @@ export function proportionalLines(full: readonly KitLine[], start: readonly KitL
 // continues its order, and a later top-up from the same holding is a new order. Not a trainer: it does not repeat, and
 // the account takes the band on the pass after its RESULT.
 export function kitBuyTemplate(band: Template, account: string, lines: readonly KitLine[], seq = 0, cashReserve = KIT_CASH_RESERVE): Template {
-    const step = (l: KitLine) => [KIT_BUY_SCRIPT, `ITEM_ID=${l.id}`, `QUANTITY=${l.quantity}`, ...(l.held > 0 ? [`EXPECTED_OWNED=${l.held}`] : []), `LIMIT_PRICE=${l.limit}`,
+    const step = (l: KitLine) => [KIT_BUY_SCRIPT, 'ge-buy', `ITEM_ID=${l.id}`, `QUANTITY=${l.quantity}`, ...(l.held > 0 ? [`EXPECTED_OWNED=${l.held}`] : []), `LIMIT_PRICE=${l.limit}`,
         `CASH_RESERVE=${cashReserve}`, `ORDER_KEY=${account.toLowerCase()}-kit${seq}-${l.id}-${l.held}to${l.held + l.quantity}`, 'ORDER_MS=900000', 'FILL_WAIT_TICKS=200'].join(' ');
     return { id: KIT_BUY + band.id, family: 'kit-buy', script: 'scripts/chain.ts', args: lines.map(step), env: { ROUNDS: '1' }, role: 'supply',
         goal: `buy ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} on the Grand Exchange to ${band.goal}`, repeats: false, yields: () => [] };

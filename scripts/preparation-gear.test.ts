@@ -1,12 +1,12 @@
 import {expect,test} from 'bun:test';
 import {preparationGear} from './preparation-report';
-import type {ItemOrder} from './buy-owned-ge-item';
+import type {ItemOrder} from '../packages/workers/src/market';
 const now=1_000_000;
 const job={account:'Mightyrod',script:'scripts/gather-fire-combat.ts',goal:'Restore productive combat'};
 const snapshot=(name='Mightyrod')=>({name,server:'rs-sdk-demo.fly.dev',at:now-10,bankAt:now-10,skills:[{name:'Attack',level:30}],inventory:[],equipment:[],bank:[{id:1277,count:1},{id:1171,count:1},{id:295,count:1},{id:954,count:1},{id:329,count:16}]});
 
 test('actual Fire contract resolves alternative owned gear without clearing its exact procurement target',()=>{
- const jobs=[job,{account:'Buyer',script:'scripts/buy-owned-ge-item.ts',env:{ITEM_ID:'1331'},goal:'Deliver upgrade'}];
+ const jobs=[job,{account:'Buyer',script:'scripts/aio-market.ts',args:['ge-buy'],env:{ITEM_ID:'1331'},goal:'Deliver upgrade'}];
  const report=preparationGear(jobs,[snapshot()],['Mightyrod','Buyer'],now);
  expect(report.kits[0]?.loadout.state).toBe('ready');expect(report.kits[0]?.loadout.selected[0]?.id).toBe(1277);
  expect(report.kits[0]?.staged).toBe(false);expect(report.procurement[0]).toMatchObject({itemId:1331,accepted:false});
@@ -51,7 +51,7 @@ test('actual host job accounts expand without undefined identities or shared sto
  expect(report.kits.map(k=>k.loadout.state)).toEqual(['ready','unknown']);
 });
 test('dated canceled procurement shows its refund, while stale open or foreign orders stay unknown',()=>{
- const buyer={account:'Buyer',script:'scripts/buy-owned-ge-item.ts',env:{ITEM_ID:'1331',ORDER_KEY:'gear'}};
+ const buyer={account:'Buyer',script:'scripts/aio-market.ts',args:['ge-buy'],env:{ITEM_ID:'1331',ORDER_KEY:'gear'}};
  const journal:ItemOrder={version:1,request:{actor:'Buyer',server:'rs-sdk-demo.fly.dev',goal:'gear',item:1331,limit:45000,reserve:5000,createdAt:1,reviewAt:2,deadline:3},phase:'settled',coinsBefore:50000,itemsBefore:0,previousIds:[],offerId:9,acquired:0,refund:45000,at:now-400000};
  const result=(j:ItemOrder)=>preparationGear([buyer],[],['Buyer'],now,[],{buyer:j}).procurement[0]!;
  expect(result(journal).order).toMatchObject({state:'historical-settled',accounting:{acquired:0,refund:45000,spent:0,escrow:0},costBasis:{units:0,coins:0}});

@@ -112,8 +112,8 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
   });
   expect(resolveQuestScript('romeojuliet')).toBe('scripts/generated/quest-rj.ts');
   expect(resolveMarketStep('ge-buy', ['ITEM_ID=385', 'QUANTITY=20'])).toEqual({
-   script: 'scripts/buy-owned-ge-item.ts',
-   args: [],
+   script: 'scripts/aio-market.ts',
+   args: ['ge-buy'],
    env: { ITEM_ID: '385', QUANTITY: '20' },
   });
   expect(resolveLogisticsStep('coin-courier', ['25000'])).toEqual({
@@ -237,7 +237,7 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
    'skiller:cooking food 1500 lobster',
   ]);
   expect(pipeline.map(s => s.script)).toEqual([
-   'scripts/shop-buyer.ts',
+   'scripts/aio-market.ts',
    'scripts/gather-fish.ts',
    'scripts/cook-food.ts',
   ]);

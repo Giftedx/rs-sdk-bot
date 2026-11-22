@@ -48,7 +48,7 @@ import { inventoryRecipes } from './microbot-production';
 import { jewelleryOrderFromEnv, planJewelleryOrder, validateJewelleryOrder } from './microbot-jewellery-trip';
 import { smithRecipe } from './smith-batch';
 import { parseStep } from '../packages/core/src/chain-step';
-import { PROFILES, maximumUnitCost, selectItems } from './shop-buyer';
+import { PROFILES, maximumUnitCost, selectItems } from '../packages/workers/src/market';
 
 test('settled finite makers wake the existing planner on success or failure without matching another job',()=>{
     const t=aioTemplates().find(t=>t.id==='aio-sapphire-rings')!,side='local';
@@ -94,7 +94,7 @@ test('held Prayer batches stop repeating and rearm only after a matching settled
 });
 
 test('a finished repeating job that a hold keeps stops repeating; every other job stays as it is',()=>{
-    const side='local',job=(account:string,extra:Record<string,unknown>={})=>({account,script:'scripts/shop-buyer.ts',args:['zaff','3000'],env:{},role:'supply',enabled:true,repeat:true,standing:true,autopilot:side,template:'army-staff-zaff',...extra});
+    const side='local',job=(account:string,extra:Record<string,unknown>={})=>({account,script:'scripts/aio-market.ts',args:['shop-buy','zaff','3000'],env:{},role:'supply',enabled:true,repeat:true,standing:true,autopilot:side,template:'army-staff-zaff',...extra});
     const keep=new Set(['held','open','paused']),finished=new Set(['held','free','paused']);
     const out=mergeJobs([job('Held'),job('Open'),job('Free'),job('Paused',{enabled:false}),job('Other',{autopilot:'cloud'})],side,[],keep,finished).jobs;
     // Held and finished: it stops repeating. Held and not finished: unchanged. Not held: this pass replaces it (here by nothing). Owner pause: unchanged.
@@ -930,7 +930,7 @@ test('each step of a two-recipe maker dispatches to the bank-standing worker wit
 test('the rune arrow run names a line of the Ranging Guild profile, and its spend covers a top-up off a full shelf', () => {
     const t = catalogue().find(t => t.id === 'shop-rune-arrows')!;
     expect(t.pilot).toBe(true);
-    expect(selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^rune arrow$']);
+    expect(selectItems(PROFILES[t.args![1]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^rune arrow$']);
     // ranging.inv: 400 in stock at a base cost of 400; ranging.npc: sell multiplier 1000 and shop_delta 10.
     const content = resolve(import.meta.dir, '../vendor/rs-sdk/server/content/scripts/minigames/game_ranging/configs');
     expect(readFileSync(resolve(content, 'ranging.inv'), 'utf8')).toMatch(/^stock13=rune_arrow,400,130\r?$/m);
@@ -1285,8 +1285,8 @@ test('every shop template of the catalogue selects at least one line of its prof
     const empty: string[] = [];
     for (const t of catalogue()) {
         const steps: { profile: string; items?: string }[] = [];
-        if (t.script === 'scripts/shop-buyer.ts') steps.push({ profile: t.args?.[0] ?? '', items: t.env?.ITEMS });
-        if (t.script === 'scripts/chain.ts') for (const a of t.args ?? []) { const m = a.match(/shop-buyer\.ts\s+(\S+)/); if (m) steps.push({ profile: m[1]!, items: a.match(/ITEMS=(\S+)/)?.[1] }); }
+        if (t.script === 'scripts/aio-market.ts' && t.args?.[0] === 'shop-buy') steps.push({ profile: t.args?.[1] ?? '', items: t.env?.ITEMS });
+        if (t.script === 'scripts/chain.ts') for (const a of t.args ?? []) { const m = a.match(/aio-market\.ts\s+shop-buy\s+(\S+)/); if (m) steps.push({ profile: m[1]!, items: a.match(/ITEMS=(\S+)/)?.[1] }); }
         for (const s of steps) if (PROFILES[s.profile] && s.items && selectItems(PROFILES[s.profile]!.items, s.items).length === 0) empty.push(`${t.id} ${s.profile} ITEMS=${s.items}`);
     }
     expect(empty).toEqual([]);
@@ -1295,7 +1295,7 @@ test('every shop template of the catalogue selects at least one line of its prof
 
 test('the squad shop templates select their profile line with the real selectItems', () => {
     for (const t of catalogue().filter(x => x.squadOnly && x.family === 'shop-buyer')) {
-        const lines = selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source);
+        const lines = selectItems(PROFILES[t.args![1]!]!.items, t.env!.ITEMS).map(i => i.re.source);
         expect([t.id, lines.length]).toEqual([t.id, 1]);
     }
     // The water-rune craft reaches the runecraft worker at the water altar, and its resize keeps the altar.
@@ -1311,7 +1311,7 @@ test('the squad shop templates select their profile line with the real selectIte
     // The rune arrows: the tip step buys 15 rune arrowtips a set at Catherby (a line of the real profile), and the fletch step
     // makes 15 rune arrows a set. The sharks: a finite order of the shark worker.
     const arrows = catalogue().find(t => t.id === 'squad-rune-arrows')!, [buy, fletch] = arrows.production!.resize(2).args!;
-    expect(buy).toContain('scripts/shop-buyer.ts catherby 1200 ITEMS=rune.arrowtips STOCK_TARGET=30 ');
+    expect(buy).toContain('scripts/aio-market.ts shop-buy catherby 1200 ITEMS=rune.arrowtips STOCK_TARGET=30 ');
     expect(selectItems(PROFILES.catherby!.items, 'rune.arrowtips').map(i => i.re.source)).toEqual([/rune arrowtips/i.source]);
     expect(fletch).toContain('fletch-arrows.ts 3000 native-arrows rune MAX_MAKE=30 ');
     const sharks = catalogue().find(t => t.id === 'squad-sharks')!;
@@ -1533,7 +1533,7 @@ test('unobservedAccounts reads the observation time alone', () => {
 
 test('the ring mould shop step selects the Dommik mould line with the real selectItems', () => {
     const t = catalogue().find(x => x.id === 'shop-ring-mould')!;
-    expect(selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^ring mould$']);
+    expect(selectItems(PROFILES[t.args![1]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^ring mould$']);
 });
 
 import { QUEST_DEMAND_ROWS, questDemand } from '../packages/planner/src/autopilot';

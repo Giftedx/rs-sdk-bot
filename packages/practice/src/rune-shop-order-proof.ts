@@ -14,13 +14,13 @@ import {bloodProofEndpoints,selectBloodProofEndpoints,bloodProofAccountEnv,start
 import {capabilityRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
-import {PROFILES} from '../../../scripts/shop-buyer';
+import {PROFILES} from '../../workers/src/market';
 
 type Save=ReturnType<typeof readPracticeSave>;
 type Endpoints=ReturnType<typeof bloodProofEndpoints>;
 const root=resolve(import.meta.dir,'../../..');
-const workerEntry='scripts/shop-buyer.ts',proofEntry='packages/practice/src/rune-shop-order-proof.ts';
-const owned=[workerEntry,'scripts/shop-buyer.test.ts',proofEntry,'packages/practice/test/rune-shop-order-proof.test.ts'];
+const workerEntry='scripts/aio-market.ts',proofEntry='packages/practice/src/rune-shop-order-proof.ts';
+const owned=[workerEntry,'packages/workers/src/market/shop-buy.ts','packages/workers/test/market-shop.test.ts',proofEntry,'packages/practice/test/rune-shop-order-proof.test.ts'];
 const guild='vendor/rs-sdk/server/content/scripts/areas/area_yanille/';
 const pinned=['packages/practice/src/blood-chest-proof.ts',guild+'configs/magic_guild/magic_guild.inv',guild+'configs/magic_guild/magic_guild.npc',guild+'scripts/magic_guild.rs2',
  'vendor/rs-sdk/server/content/scripts/skill_magic/configs/runes.obj','knowledge/npc-travel.json','knowledge/doors.json','knowledge/transports.json'];
@@ -46,7 +46,7 @@ const LIMITS:Record<Case,{cap:string;timeoutMs:number}>={
  refuse:{cap:'12000',timeoutMs:90000},
 };
 export function childConfiguration(name:string,id:Case,inherited:NodeJS.ProcessEnv=process.env,endpoints?:Endpoints){
- return{cmd:['bun',workerEntry,name,'magic_guild',LIMITS[id].cap],cwd:root,windowsHide:true,
+ return{cmd:['bun',workerEntry,name,'shop-buy','magic_guild',LIMITS[id].cap],cwd:root,windowsHide:true,
   env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',
    ITEMS:'blood rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(ORDER.target),MAX_ITEMS:String(ORDER.target),MAX_SPEND:String(ORDER.maxSpend),
    COIN_RESERVE:String(ORDER.reserve),NO_BUY_TICKS:'25',BANK_PACK:'1'}};

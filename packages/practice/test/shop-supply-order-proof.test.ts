@@ -97,7 +97,7 @@ test('alternate Betty profile proves its route, useful stock and the same conser
 // File-only fixture exercises the saved verifier without a client, service or live actor.
 function savedShopFixture(directory:string){
  const digest=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
- const files=['scripts/buy-owned-ge-item.ts','scripts/earth-shop.ts','scripts/earth-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
+ const files=['scripts/aio-market.ts','packages/workers/src/market/shop-buy.ts','packages/workers/src/market/ge-buy.ts','packages/workers/test/market-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
  const root=resolve(import.meta.dir,'../../..'),paths:string[]=[];
  const put=(file:string,data:string|Uint8Array)=>{writeFileSync(join(directory,file),data);paths.push(file);};
  const saved=(label:string,earth=3,coins=352288,betty=false,essence=0)=>put(label+'.sav',createSaveData({
@@ -120,7 +120,7 @@ function savedShopFixture(directory:string){
  put('original-ge-journal.json','{}');put('original-ge-journal-after.json','{}');
  put('fallback-spend.json',JSON.stringify({phase:'settled',request:{item:557,quantity:1136,expectedOwned:3},spent:6816}));
  put('refill-ledger.json',JSON.stringify({phase:'settled',seeded:1,spent:401}));
- const meta={at:Date.now(),directory:resolve(directory),source:{runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root),files:Object.fromEntries(files.map(f=>[f,digest(join(root,f))]))},runs,hashes:Object.fromEntries(paths.map(f=>[f,digest(join(directory,f))]))};
+ const meta={at:Date.now(),directory:resolve(directory),source:{runtime:capabilityRevision(['scripts/aio-market.ts'],root),files:Object.fromEntries(files.map(f=>[f,digest(join(root,f))]))},runs,hashes:Object.fromEntries(paths.map(f=>[f,digest(join(directory,f))]))};
  const write=()=>writeFileSync(join(directory,'native.json'),JSON.stringify(meta));write();return{meta,write};
 }
 
@@ -167,7 +167,7 @@ test('saved shop proof rejects changed bytes, missing receipts, wrong source and
   const runDirectory=meta.directory;(meta as any).directory=undefined;write();
   expect(verifyShopSupply(directory).checks.nativeRun).toBe(false);meta.directory=runDirectory;
   meta.source.runtime='wrong-source';write();expect(verifyShopSupply(directory).checks.source).toBe(false);
-  meta.source.runtime='shop-saved-test-runtime';meta.source.files['scripts/earth-shop.ts']='wrong-bytes';write();
+  meta.source.runtime='shop-saved-test-runtime';meta.source.files['packages/workers/src/market/shop-buy.ts']='wrong-bytes';write();
   expect(verifyShopSupply(directory).checks.source).toBe(false);
   savedShopFixture(directory);cpSync(directory,copy,{recursive:true});
   expect(verifyShopSupply(copy).ok).toBe(false);

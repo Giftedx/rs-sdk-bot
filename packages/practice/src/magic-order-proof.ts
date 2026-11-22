@@ -21,7 +21,7 @@ type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
 const OWNED=['scripts/magic-order.ts','scripts/magic-order.test.ts','packages/practice/src/magic-order-proof.ts','packages/practice/test/magic-order-proof.test.ts'];
 export function sources(){return{runtime:workerSourceRevision(),files:Object.fromEntries([...OWNED,
- 'scripts/shop-buyer.ts','scripts/train-chickens.ts','scripts/quest-sustain.ts','packages/core/src/walk.ts','packages/core/src/deposit.ts',
+ 'packages/workers/src/market/shop-buy.ts','scripts/train-chickens.ts','scripts/quest-sustain.ts','packages/core/src/walk.ts','packages/core/src/deposit.ts',
  'vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/player_magic.rs2',
  'vendor/rs-sdk/server/content/scripts/skill_combat/configs/magic/magic_combat_spells.dbrow',
  'vendor/rs-sdk/server/content/scripts/skill_magic/configs/magic_spells.dbrow',

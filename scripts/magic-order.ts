@@ -19,7 +19,7 @@ import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/w
 import {depositObserved} from '../packages/core/src/deposit';
 import {componentId} from '../packages/core/src/logout';
 import {equipmentObserved} from '../packages/core/src/container-observation';
-import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
+import {PROFILES,buyWithBudget,maximumUnitCost} from '../packages/workers/src/market';
 import {chickenTrainingProfile} from './train-chickens';
 import {startQuestSustain,questFoodDefinitions,selectQuestFood} from './quest-sustain';
 import {loadTravel} from '../packages/core/src/travel';

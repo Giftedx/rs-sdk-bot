@@ -177,7 +177,7 @@ test('fresh dashboard quotes cannot hide missing or stale shop-to-bid recommenda
 
 test('shopLots lists the shops whose open bids make a lot worth a walk, the largest first', async () => {
     const { shopLots, marketRows } = await import('./market-cache');
-    const { scanProfiles, lotValue } = await import('./shop-to-bid');
+    const { scanProfiles, lotValue } = await import('../packages/workers/src/market');
     const items = marketRows([
         { id: 313, name: 'Fishing bait', basePrice: 3, bid: 218, buyQuantity: 38_334, trades: 200, vwap: 230 },
         { id: 560, name: 'Death rune', basePrice: 30, bid: 250, buyQuantity: 40, trades: 9, vwap: 260 },

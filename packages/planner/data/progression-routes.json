@@ -2083,8 +2083,10 @@
    "id": "market:bank-seller",
    "category": "market",
    "name": "bank-seller",
-   "script": "scripts/microbot-bank-seller.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "bank-seller"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2096,8 +2098,10 @@
    "id": "market:buy-sword",
    "category": "market",
    "name": "buy-sword",
-   "script": "scripts/buy-owned-sword.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "buy-sword"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2109,8 +2113,10 @@
    "id": "market:earth-shop",
    "category": "market",
    "name": "earth-shop",
-   "script": "scripts/earth-shop.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "earth-shop"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2122,8 +2128,10 @@
    "id": "market:ge-buy",
    "category": "market",
    "name": "ge-buy",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2135,8 +2143,10 @@
    "id": "market:ge-buy-list",
    "category": "market",
    "name": "ge-buy-list",
-   "script": "scripts/microbot-ge-buy-list.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy-list"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2148,8 +2158,10 @@
    "id": "market:ge-plan",
    "category": "market",
    "name": "ge-plan",
-   "script": "scripts/microbot-ge-plan.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-plan"
+   ],
    "env": {},
    "intents": [
     "observe"
@@ -2161,8 +2173,10 @@
    "id": "market:ge-sell",
    "category": "market",
    "name": "ge-sell",
-   "script": "scripts/sell-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-sell"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2174,8 +2188,10 @@
    "id": "market:ge-trip",
    "category": "market",
    "name": "ge-trip",
-   "script": "scripts/microbot-ge-trip.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-trip"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2187,8 +2203,10 @@
    "id": "market:shop-buy",
    "category": "market",
    "name": "shop-buy",
-   "script": "scripts/shop-buyer.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2200,8 +2218,10 @@
    "id": "market:shop-sell",
    "category": "market",
    "name": "shop-sell",
-   "script": "scripts/microbot-shop-trip.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-sell"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2213,8 +2233,10 @@
    "id": "market:shop-to-bid",
    "category": "market",
    "name": "shop-to-bid",
-   "script": "scripts/shop-to-bid.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-to-bid"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2226,8 +2248,10 @@
    "id": "market:shop-trip",
    "category": "market",
    "name": "shop-trip",
-   "script": "scripts/microbot-shop-trip.ts",
-   "args": [],
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-trip"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -55822,10 +55846,11 @@
    "id": "shop:ardy:1265",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "ardy",
      "1200"
     ],
@@ -55878,10 +55903,11 @@
    "id": "shop:ardy:2142",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "ardy",
      "1200"
     ],
@@ -55934,10 +55960,11 @@
    "id": "shop:ardy:590",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "ardy",
      "1200"
     ],
@@ -55990,10 +56017,11 @@
    "id": "shop:aubury:554",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "aubury",
      "1200"
     ],
@@ -56046,10 +56074,11 @@
    "id": "shop:aubury:555",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "aubury",
      "1200"
     ],
@@ -56102,10 +56131,11 @@
    "id": "shop:aubury:556",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "aubury",
      "1200"
     ],
@@ -56158,10 +56188,11 @@
    "id": "shop:aubury:557",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "aubury",
      "1200"
     ],
@@ -56214,10 +56245,11 @@
    "id": "shop:aubury:558",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "aubury",
      "1200"
     ],
@@ -56270,10 +56302,11 @@
    "id": "shop:aubury:559",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "aubury",
      "1200"
     ],
@@ -56326,10 +56359,11 @@
    "id": "shop:aubury:560",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "aubury",
      "1200"
     ],
@@ -56382,10 +56416,11 @@
    "id": "shop:aubury:562",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "aubury",
      "1200"
     ],
@@ -56438,10 +56473,11 @@
    "id": "shop:baker:1891",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "baker",
      "1200"
     ],
@@ -56494,10 +56530,11 @@
    "id": "shop:baker:2309",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "baker",
      "1200"
     ],
@@ -56550,10 +56587,11 @@
    "id": "shop:betty:221",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -56606,10 +56644,11 @@
    "id": "shop:betty:554",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -56662,10 +56701,11 @@
    "id": "shop:betty:555",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -56718,10 +56758,11 @@
    "id": "shop:betty:556",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -56774,10 +56815,11 @@
    "id": "shop:betty:557",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -56830,10 +56872,11 @@
    "id": "shop:betty:558",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -56886,10 +56929,11 @@
    "id": "shop:betty:559",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -56942,10 +56986,11 @@
    "id": "shop:betty:560",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -56998,10 +57043,11 @@
    "id": "shop:betty:562",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "betty",
      "1200"
     ],
@@ -57054,10 +57100,11 @@
    "id": "shop:bob:1265",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "bob",
      "1200"
     ],
@@ -57110,10 +57157,11 @@
    "id": "shop:bob:1351",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "bob",
      "1200"
     ],
@@ -57166,10 +57214,11 @@
    "id": "shop:catherby:39",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "catherby",
      "1200"
     ],
@@ -57222,10 +57271,11 @@
    "id": "shop:catherby:40",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "catherby",
      "1200"
     ],
@@ -57278,10 +57328,11 @@
    "id": "shop:catherby:41",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "catherby",
      "1200"
     ],
@@ -57334,10 +57385,11 @@
    "id": "shop:catherby:42",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "catherby",
      "1200"
     ],
@@ -57390,10 +57442,11 @@
    "id": "shop:catherby:43",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "catherby",
      "1200"
     ],
@@ -57446,10 +57499,11 @@
    "id": "shop:catherby:44",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "catherby",
      "1200"
     ],
@@ -57502,10 +57556,11 @@
    "id": "shop:dargaud:39",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dargaud",
      "1200"
     ],
@@ -57558,10 +57613,11 @@
    "id": "shop:dargaud:40",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dargaud",
      "1200"
     ],
@@ -57614,10 +57670,11 @@
    "id": "shop:dargaud:41",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dargaud",
      "1200"
     ],
@@ -57670,10 +57727,11 @@
    "id": "shop:dargaud:42",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dargaud",
      "1200"
     ],
@@ -57726,10 +57784,11 @@
    "id": "shop:dargaud:43",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dargaud",
      "1200"
     ],
@@ -57782,10 +57841,11 @@
    "id": "shop:dargaud:44",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dargaud",
      "1200"
     ],
@@ -57838,10 +57898,11 @@
    "id": "shop:dommik:1592",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -57894,10 +57955,11 @@
    "id": "shop:dommik:1592",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -57950,10 +58012,11 @@
    "id": "shop:dommik:1595",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58006,10 +58069,11 @@
    "id": "shop:dommik:1595",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58062,10 +58126,11 @@
    "id": "shop:dommik:1597",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58118,10 +58183,11 @@
    "id": "shop:dommik:1597",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58174,10 +58240,11 @@
    "id": "shop:dommik:1599",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58230,10 +58297,11 @@
    "id": "shop:dommik:1599",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58286,10 +58354,11 @@
    "id": "shop:dommik:1733",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58342,10 +58411,11 @@
    "id": "shop:dommik:1733",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58398,10 +58468,11 @@
    "id": "shop:dommik:1734",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58454,10 +58525,11 @@
    "id": "shop:dommik:1734",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58510,10 +58582,11 @@
    "id": "shop:dommik:1755",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58566,10 +58639,11 @@
    "id": "shop:dommik:1755",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "dommik",
      "1200"
     ],
@@ -58622,10 +58696,11 @@
    "id": "shop:gem_trader:1605",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "gem_trader",
      "1200"
     ],
@@ -58678,10 +58753,11 @@
    "id": "shop:gem_trader:1607",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "gem_trader",
      "1200"
     ],
@@ -58734,10 +58810,11 @@
    "id": "shop:gem_trader:1621",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "gem_trader",
      "1200"
     ],
@@ -58790,10 +58867,11 @@
    "id": "shop:gem_trader:1623",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "gem_trader",
      "1200"
     ],
@@ -58846,10 +58924,11 @@
    "id": "shop:general_sarim:2132",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "general_sarim",
      "1200"
     ],
@@ -58902,10 +58981,11 @@
    "id": "shop:general_sarim:2138",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "general_sarim",
      "1200"
     ],
@@ -58958,10 +59038,11 @@
    "id": "shop:harry:301",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "harry",
      "1200"
     ],
@@ -59014,10 +59095,11 @@
    "id": "shop:harry:303",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "harry",
      "1200"
     ],
@@ -59070,10 +59152,11 @@
    "id": "shop:harry:305",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "harry",
      "1200"
     ],
@@ -59126,10 +59209,11 @@
    "id": "shop:harry:307",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "harry",
      "1200"
     ],
@@ -59182,10 +59266,11 @@
    "id": "shop:harry:311",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "harry",
      "1200"
     ],
@@ -59238,10 +59323,11 @@
    "id": "shop:harry:313",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "harry",
      "1200"
     ],
@@ -59294,10 +59380,11 @@
    "id": "shop:herquin:1607",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "herquin",
      "1200"
     ],
@@ -59350,10 +59437,11 @@
    "id": "shop:herquin:1623",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "herquin",
      "1200"
     ],
@@ -59406,10 +59494,11 @@
    "id": "shop:jiminua:1265",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59462,10 +59551,11 @@
    "id": "shop:jiminua:1351",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59518,10 +59608,11 @@
    "id": "shop:jiminua:1755",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59574,10 +59665,11 @@
    "id": "shop:jiminua:2142",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59630,10 +59722,11 @@
    "id": "shop:jiminua:2309",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59686,10 +59779,11 @@
    "id": "shop:jiminua:233",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59742,10 +59836,11 @@
    "id": "shop:jiminua:2347",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59798,10 +59893,11 @@
    "id": "shop:jiminua:2349",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59854,10 +59950,11 @@
    "id": "shop:jiminua:590",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59910,10 +60007,11 @@
    "id": "shop:jiminua:946",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "jiminua",
      "1200"
     ],
@@ -59966,10 +60064,11 @@
    "id": "shop:khazard_paste:1265",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "khazard_paste",
      "1200"
     ],
@@ -60022,10 +60121,11 @@
    "id": "shop:khazard_paste:1755",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "khazard_paste",
      "1200"
     ],
@@ -60078,10 +60178,11 @@
    "id": "shop:khazard_paste:2347",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "khazard_paste",
      "1200"
     ],
@@ -60134,10 +60235,11 @@
    "id": "shop:khazard_paste:590",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "khazard_paste",
      "1200"
     ],
@@ -60190,10 +60292,11 @@
    "id": "shop:magic_guild:1391",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60249,10 +60352,11 @@
    "id": "shop:magic_guild:554",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60308,10 +60412,11 @@
    "id": "shop:magic_guild:555",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60367,10 +60472,11 @@
    "id": "shop:magic_guild:556",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60426,10 +60532,11 @@
    "id": "shop:magic_guild:557",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60485,10 +60592,11 @@
    "id": "shop:magic_guild:558",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60544,10 +60652,11 @@
    "id": "shop:magic_guild:559",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60603,10 +60712,11 @@
    "id": "shop:magic_guild:560",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60662,10 +60772,11 @@
    "id": "shop:magic_guild:561",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60721,10 +60832,11 @@
    "id": "shop:magic_guild:562",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60780,10 +60892,11 @@
    "id": "shop:magic_guild:563",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60839,10 +60952,11 @@
    "id": "shop:magic_guild:565",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60898,10 +61012,11 @@
    "id": "shop:magic_guild:566",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "magic_guild",
      "1200"
     ],
@@ -60957,10 +61072,11 @@
    "id": "shop:nurmof:1265",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "nurmof",
      "1200"
     ],
@@ -61013,10 +61129,11 @@
    "id": "shop:nurmof:1275",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "nurmof",
      "1200"
     ],
@@ -61069,10 +61186,11 @@
    "id": "shop:sarim:301",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "sarim",
      "1200"
     ],
@@ -61125,10 +61243,11 @@
    "id": "shop:sarim:303",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "sarim",
      "1200"
     ],
@@ -61181,10 +61300,11 @@
    "id": "shop:sarim:307",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "sarim",
      "1200"
     ],
@@ -61237,10 +61357,11 @@
    "id": "shop:sarim:309",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "sarim",
      "1200"
     ],
@@ -61293,10 +61414,11 @@
    "id": "shop:sarim:311",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "sarim",
      "1200"
     ],
@@ -61349,10 +61471,11 @@
    "id": "shop:sarim:313",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "sarim",
      "1200"
     ],
@@ -61405,10 +61528,11 @@
    "id": "shop:sarim:314",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "sarim",
      "1200"
     ],
@@ -61461,10 +61585,11 @@
    "id": "shop:sarim:327",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "sarim",
      "1200"
     ],
@@ -61517,10 +61642,11 @@
    "id": "shop:shantay:1937",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "shantay",
      "1200"
     ],
@@ -61573,10 +61699,11 @@
    "id": "shop:shantay:2347",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "shantay",
      "1200"
     ],
@@ -61629,10 +61756,11 @@
    "id": "shop:shantay:2349",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "shantay",
      "1200"
     ],
@@ -61685,10 +61813,11 @@
    "id": "shop:shantay:314",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "shantay",
      "1200"
     ],
@@ -61741,10 +61870,11 @@
    "id": "shop:shantay:946",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "shantay",
      "1200"
     ],
@@ -61797,10 +61927,11 @@
    "id": "shop:silver_merchant:2355",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "silver_merchant",
      "1200"
     ],
@@ -61853,10 +61984,11 @@
    "id": "shop:silver_merchant:442",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "silver_merchant",
      "1200"
     ],
@@ -61909,10 +62041,11 @@
    "id": "shop:tiadeche:3142",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "tiadeche",
      "1200"
     ],
@@ -61965,10 +62098,11 @@
    "id": "shop:zaff:1391",
    "routeId": "market:shop-buy",
    "ladderIds": [],
-   "sourceEntry": "scripts/shop-buyer.ts",
+   "sourceEntry": "scripts/aio-market.ts",
    "step": {
-    "script": "scripts/shop-buyer.ts",
+    "script": "scripts/aio-market.ts",
     "args": [
+     "shop-buy",
      "zaff",
      "1200"
     ],
@@ -96933,26 +97067,6 @@
    ]
   },
   {
-   "script": "scripts/buy-owned-ge-item.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:ge-buy"
-   ]
-  },
-  {
-   "script": "scripts/buy-owned-sword.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:buy-sword"
-   ]
-  },
-  {
    "script": "scripts/cannon-fight.ts",
    "intents": [
     "train",
@@ -97167,16 +97281,6 @@
    ],
    "routeIds": [
     "skiller:magic:earth-production"
-   ]
-  },
-  {
-   "script": "scripts/earth-shop.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:earth-shop"
    ]
   },
   {
@@ -99836,16 +99940,6 @@
    ]
   },
   {
-   "script": "scripts/microbot-bank-seller.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:bank-seller"
-   ]
-  },
-  {
    "script": "scripts/microbot-bank-sort.ts",
    "intents": [
     "service"
@@ -99985,16 +100079,6 @@
    ]
   },
   {
-   "script": "scripts/microbot-ge-buy-list.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:ge-buy-list"
-   ]
-  },
-  {
    "script": "scripts/microbot-ge-cooking.ts",
    "intents": [
     "train",
@@ -100018,26 +100102,6 @@
    ],
    "routeIds": [
     "skiller:firemaking:ge"
-   ]
-  },
-  {
-   "script": "scripts/microbot-ge-plan.ts",
-   "intents": [
-    "observe"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:ge-plan"
-   ]
-  },
-  {
-   "script": "scripts/microbot-ge-trip.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:ge-trip"
    ]
   },
   {
@@ -100279,17 +100343,6 @@
    ],
    "routeIds": [
     "fighter:shade"
-   ]
-  },
-  {
-   "script": "scripts/microbot-shop-trip.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:shop-trip",
-    "market:shop-sell"
    ]
   },
   {
@@ -100710,16 +100763,6 @@
    ]
   },
   {
-   "script": "scripts/sell-owned-ge-item.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:ge-sell"
-   ]
-  },
-  {
    "script": "scripts/session-check.ts",
    "intents": [
     "observe"
@@ -100738,26 +100781,6 @@
    ],
    "routeIds": [
     "skiller:fishing:shark"
-   ]
-  },
-  {
-   "script": "scripts/shop-buyer.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:shop-buy"
-   ]
-  },
-  {
-   "script": "scripts/shop-to-bid.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "market:shop-to-bid"
    ]
   },
   {

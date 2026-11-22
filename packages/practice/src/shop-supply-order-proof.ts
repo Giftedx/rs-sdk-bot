@@ -15,7 +15,7 @@ export{HEADROOM_WAIT_MS,waitFreeMemory};
 import{readPracticeSave,waitPracticeSave}from'./fleet-player-save';
 import{capabilityRevision,type ReleaseMemo}from'../../core/src/worker-release';
 import{readLogoutProof}from'../../core/src/session-lifecycle';
-import{orderPaths}from'../../../scripts/buy-owned-ge-item';
+import{orderPaths}from'../../workers/src/market';
 import{FREE_FLOOR_GB,PRACTICE_STARTUP_GB}from'../../core/src/memory';
 import{productionConserved}from'../../../scripts/earth-production';
 type Save=ReturnType<typeof readPracticeSave>;
@@ -58,12 +58,12 @@ export function refillSupplyChecks(before:Save,after:Save,r:Run){
   result:result?.ok===true&&result?.conserved===true,
  };
 }
-const files=['scripts/buy-owned-ge-item.ts','scripts/earth-shop.ts','scripts/earth-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
+const files=['scripts/aio-market.ts','packages/workers/src/market/shop-buy.ts','packages/workers/src/market/ge-buy.ts','packages/workers/test/market-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
 const artifactPaths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json','betty-before.sav','betty-after.sav','betty.log','betty-empty-ge.log','refill-before.sav','refill-after.sav','refill-repeat.sav','refill.log','refill-repeat.log','refill-empty-ge.log','refill-ledger.json','hunt-before.sav','hunt-after.sav','craft-before.sav','craft-after.sav','owned-hunt.log','owned-craft.log'];
 const ownedTotals=(s:Save)=>{const m=new Map<number,number>();for(const c of [93,94,95])for(const i of s.inventories[c]??[])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
 const productionSaved=(before:Save,after:Save,v:any)=>productionConserved(ownedTotals(before),ownedTotals(after),{consumed:v.consumed,crafted:v.crafted,air:v.air,eaten:v.eaten,found:v.found})&&JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]);
-const source=(memo:ReleaseMemo=new Map())=>({runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root,memo),files:Object.fromEntries(files.map(f=>[f,hash(join(root,f))]))});
+const source=(memo:ReleaseMemo=new Map())=>({runtime:capabilityRevision(['scripts/aio-market.ts'],root,memo),files:Object.fromEntries(files.map(f=>[f,hash(join(root,f))]))});
 export function verifyShopSupply(directory:string,memo:ReleaseMemo=new Map()){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
  const now=Date.now(),ageMs=now-meta.at;
@@ -102,7 +102,7 @@ export async function runShopSupplyNative(directory:string){
   const free=await waitFreeMemory(FREE_FLOOR_GB);
   if(free<FREE_FLOOR_GB)throw Error(`native memory boundary: ${free.toFixed(2)}GiB free below ${FREE_FLOOR_GB}GiB floor after ${HEADROOM_WAIT_MS}ms`);
   const started=Date.now(),out=join(directory,label+'.log'),err=join(directory,label+'.err');
-  const child=Bun.spawn(['bun','scripts/buy-owned-ge-item.ts',name],{cwd:root,windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err),env:{...process.env,...endpoint.env,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_KEY:'native-earth-shop',ITEM_ID:'557',QUANTITY:String(quantity),EXPECTED_OWNED:'3',LIMIT_PRICE:'40',CASH_RESERVE:'30000',ORDER_MS:'900000',FILL_WAIT_TICKS:'0',CAP:profile.startsWith('owned-')?'20000':profile.endsWith('-refill')?'16000':profile==='betty'?'3000':'1600',SHOP_PROFILE:shop?profile:'',...extra}});
+  const child=Bun.spawn(['bun','scripts/aio-market.ts',name,'ge-buy'],{cwd:root,windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err),env:{...process.env,...endpoint.env,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_KEY:'native-earth-shop',ITEM_ID:'557',QUANTITY:String(quantity),EXPECTED_OWNED:'3',LIMIT_PRICE:'40',CASH_RESERVE:'30000',ORDER_MS:'900000',FILL_WAIT_TICKS:'0',CAP:profile.startsWith('owned-')?'20000':profile.endsWith('-refill')?'16000':profile==='betty'?'3000':'1600',SHOP_PROFILE:shop?profile:'',...extra}});
   let hpMin=Infinity,ready=false,timedOut=false,termination:Promise<void>|undefined;
   const observe=()=>{try{const s=JSON.parse(readFileSync(join(root,'.practice/status',name+'.json'),'utf8'));if(s.started>=started-2000&&s.name===name&&Number.isFinite(s.hp?.now)){if(s.hp.now>0)ready=true;if(ready)hpMin=Math.min(hpMin,s.hp.now);}}catch{}};
   const monitor=setInterval(observe,100),timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid);},240000);

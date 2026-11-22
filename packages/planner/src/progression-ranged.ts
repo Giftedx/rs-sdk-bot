@@ -105,8 +105,8 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
   model(rangedModelRate(Math.max(1,level),willow,22,12),'Model of the owned willow/mithril trooper route. Missing kit is supplied by the existing Dargaud shop jobs; observe shelf, price and complete bank credit before training.'),travel(2619,3332));
  guild.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(guild));
  const shop=(id:string,item:number,count:number,pattern:string,budget:number):ProgressionMethod=>({
-  id,source:'scripts/shop-buyer.ts dargaud; vendor/rs-sdk/server/content/scripts/minigames/game_ranging/configs/ranging.inv',
-  step:{script:'scripts/shop-buyer.ts',args:['dargaud','1600'],env:{ITEMS:pattern,STOCK_TARGET:String((physical[item]??0)+Math.max(0,count-(owned[item]??0))),MAX_ITEMS:String(Math.max(0,count-(owned[item]??0))),STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',NO_BUY_TICKS:'25',MAX_SPEND:String(budget),FLOAT:String(budget+1000),COIN_RESERVE:'500'}},
+  id,source:'scripts/aio-market.ts dargaud; vendor/rs-sdk/server/content/scripts/minigames/game_ranging/configs/ranging.inv',
+  step:{script:'scripts/aio-market.ts',args:['shop-buy','dargaud','1600'],env:{ITEMS:pattern,STOCK_TARGET:String((physical[item]??0)+Math.max(0,count-(owned[item]??0))),MAX_ITEMS:String(Math.max(0,count-(owned[item]??0))),STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',NO_BUY_TICKS:'25',MAX_SPEND:String(budget),FLOAT:String(budget+1000),COIN_RESERVE:'500'}},
   effects:{items:{[item]:Math.max(0,count-(owned[item]??0))}},inputs:{995:budget},requirements:{levels:{Ranged:40}},
   rate:model(1/600,'Model: one finite Dargaud shop order including banked credit; observe shelf/price and measure the actual approach.'),
   costs:{setupTicks:0,travelTicks:travel(2673,3434),acquisitionTicks:0,unlockTicks:0},maxUnits:1,repeatable:false,
@@ -119,8 +119,8 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
   costs:{setupTicks:0,travelTicks:travel(3232,3423),acquisitionTicks:0,unlockTicks:0},maxUnits:1,repeatable:false,
  });
  const loweArrow=(id:string,item:number,count:number,pattern:string,reqLevel:number,budget:number):ProgressionMethod=>({
-  id,source:'scripts/shop-buyer.ts lowe; vendor/rs-sdk/server/content/scripts/areas/area_varrock/configs/varrock.inv archeryshop',
-  step:{script:'scripts/shop-buyer.ts',args:['lowe','1200'],env:{ITEMS:pattern,STOCK_TARGET:String((physical[item]??0)+Math.max(0,count-(owned[item]??0))),MAX_ITEMS:String(Math.max(0,count-(owned[item]??0))),STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',NO_BUY_TICKS:'25',MAX_SPEND:String(budget),FLOAT:String(budget+1000),COIN_RESERVE:'500'}},
+  id,source:'scripts/aio-market.ts lowe; vendor/rs-sdk/server/content/scripts/areas/area_varrock/configs/varrock.inv archeryshop',
+  step:{script:'scripts/aio-market.ts',args:['shop-buy','lowe','1200'],env:{ITEMS:pattern,STOCK_TARGET:String((physical[item]??0)+Math.max(0,count-(owned[item]??0))),MAX_ITEMS:String(Math.max(0,count-(owned[item]??0))),STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',NO_BUY_TICKS:'25',MAX_SPEND:String(budget),FLOAT:String(budget+1000),COIN_RESERVE:'500'}},
   effects:{items:{[item]:Math.max(0,count-(owned[item]??0))}},inputs:{995:budget},requirements:{levels:{Ranged:reqLevel}},
   rate:model(Math.max(1,count)/180,'Model: one Lowe Archery Emporium (archeryshop) arrow purchase.'),
   costs:{setupTicks:0,travelTicks:travel(3232,3423),acquisitionTicks:0,unlockTicks:0},maxUnits:1,repeatable:false,
@@ -128,8 +128,8 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
  const geAcquire=(id:string,item:number,count:number,limitPrice:number,reqLevel:number,note:string):ProgressionMethod=>{
   const missing=Math.max(0,count-(owned[item]??0)),ownedQty=physical[item]??0;
   return{
-   id,source:'scripts/buy-owned-ge-item.ts; knowledge/gear.json',
-   step:{script:'scripts/buy-owned-ge-item.ts',args:[],env:{ITEM_ID:String(item),QUANTITY:String(missing),...(ownedQty>0?{EXPECTED_OWNED:String(ownedQty)}:{}),LIMIT_PRICE:String(limitPrice),CASH_RESERVE:String(GE_CASH_RESERVE),ORDER_MS:'900000',FILL_WAIT_TICKS:'200'}},
+   id,source:'scripts/aio-market.ts; knowledge/gear.json',
+   step:{script:'scripts/aio-market.ts',args:['ge-buy'],env:{ITEM_ID:String(item),QUANTITY:String(missing),...(ownedQty>0?{EXPECTED_OWNED:String(ownedQty)}:{}),LIMIT_PRICE:String(limitPrice),CASH_RESERVE:String(GE_CASH_RESERVE),ORDER_MS:'900000',FILL_WAIT_TICKS:'200'}},
    // The buy script refuses a round whose escrow and reserve pass the coins it finds (order-refusal.ts), and the holdings are minutes old.
    effects:{items:{[item]:missing}},inputs:{995:limitPrice*missing+GE_CASH_RESERVE+ORDER_COIN_MARGIN},requirements:{levels:{Ranged:reqLevel}},
    rate:model(Math.max(1,missing)/180,note),

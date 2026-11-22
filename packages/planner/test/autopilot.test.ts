@@ -280,7 +280,7 @@ test('a training job does not repeat, and its ok RESULT names the account for an
 test('existing jobs hold their resources, chain steps included', () => {
     expect(jobResources({ script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2670,3306' } })).toEqual(['knight:2671,3313']);
     expect(jobResources({ script: 'scripts/goldfarm.ts' })).toEqual(['knight:2653,3300']);
-    expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/shop-buyer.ts harry 300', 'scripts/goldfarm.ts KNIGHT_SPOT=2582,3297'] })).toEqual(['shop:harry', 'knight:2582,3297']);
+    expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/aio-market.ts shop-buy harry 300', 'scripts/goldfarm.ts KNIGHT_SPOT=2582,3297'] })).toEqual(['shop:harry', 'knight:2582,3297']);
     expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/gather-fish.ts cage 3000', 'scripts/cook-food.ts 3000 lobster'] })).toEqual(['catherby:lobster']);
     expect(jobResources({ script: 'scripts/gather-fish.ts', args: ['harpoon'] })).toEqual([]);
     // An adaptive entry without a bound route claims both possible fields until its fresh choice is known.
@@ -360,7 +360,7 @@ test('the planner gets handed-over and unnamed accounts; enabled jobs, reservati
         { account: 'Haggis', script: '', enabled: false },
         { account: 'Woodpecker', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side },
         { account: 'YewFirst', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator' },
-        { account: 'YewFirst', script: 'scripts/shop-buyer.ts', enabled: true, autopilot: side },
+        { account: 'YewFirst', script: 'scripts/aio-market.ts', enabled: true, autopilot: side },
         { account: 'Shaftmaker', script: 'scripts/firemaking-order.ts', enabled: false, coordinatorOwner: 'coordinator' },
         { account: 'Moneyshot', script: 'scripts/quest-cook-job.ts', enabled: true, coordinatorOwner: 'coordinator' },
         { account: 'Hocuspokeus', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side },
@@ -747,8 +747,8 @@ test('a rich army account buys its missing kit with its own coins in one login, 
     expect(x!.template!.id).toBe(KIT_BUY + 'army-strike-magic-21');
     expect(x!.template!.script).toBe('scripts/chain.ts');
     expect(x!.template!.args).toEqual([
-        'scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200',
-        'scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
+        'scripts/aio-market.ts ge-buy ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200',
+        'scripts/aio-market.ts ge-buy ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
     expect(jobFor(x!, side)).toMatchObject({ repeat: false, standing: true, template: KIT_BUY + 'army-strike-magic-21', env: { ROUNDS: '1' } });
     // With the kit held it takes the band.
     expect(ids(plan(inputs([mage('Rich', { coin: 5_000_000, 'mind rune': 35, 'air rune': 35 })], { templates: strike(), army, market })))).toEqual({ Rich: 'army-strike-magic-21' });
@@ -763,7 +763,7 @@ const ALCH30 = alchSupplies(30);
 test('a kit buy brings the batch, not one start: the nature runes for the casts left to Magic 99', () => {
     const alch = catalogue().filter(t => t.id === 'army-alch-magic-99'), army = new Set(['rich']);
     const [x] = plan(inputs([mage('Rich', { coin: 5_000_000, 'nature rune': 10, feather: 500, 'staff of fire': 1 }, { Magic: 30 })], { templates: alch, army, market }));
-    expect(x!.template!.args).toEqual([`scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=${ALCH30.nature - 10} EXPECTED_OWNED=10 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-561-10to${ALCH30.nature} ORDER_MS=900000 FILL_WAIT_TICKS=200`]);
+    expect(x!.template!.args).toEqual([`scripts/aio-market.ts ge-buy ITEM_ID=561 QUANTITY=${ALCH30.nature - 10} EXPECTED_OWNED=10 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-561-10to${ALCH30.nature} ORDER_MS=900000 FILL_WAIT_TICKS=200`]);
     expect(x!.reason).toContain(`at most ${(ALCH30.nature - 10) * 800} coins`);
 });
 
@@ -1086,7 +1086,7 @@ test('the alchemy band gets its feathers at Port Sarim, its fire runes at Aubury
     const pick = (s: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) =>
         plan(inputs([acct('Mage', { ...skills, ...s }, { ...base, ...items })], { army, market, capacity: CAPACITY, ...extra }))[0]!;
     const step = (profile: string, cap: number, items: string, target: number, spend: number) =>
-        `scripts/shop-buyer.ts ${profile} ${cap} ITEMS=${items} STOCK_TARGET=${target} STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=${spend + 1000} COIN_RESERVE=500 MAX_SPEND=${spend}`;
+        `scripts/aio-market.ts shop-buy ${profile} ${cap} ITEMS=${items} STOCK_TARGET=${target} STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=${spend + 1000} COIN_RESERVE=500 MAX_SPEND=${spend}`;
     // No feathers: Port Sarim first.
     const feathers = pick({}, {});
     expect(feathers.template!.id).toBe('army-feathers-sarim');
@@ -1141,7 +1141,7 @@ test('an army account with no better blade buys one adamant scimitar before its 
         plan(inputs([acct('Blade', { ...skills, ...s }, items)], { army, market: sold, capacity: CAPACITY, ...extra }))[0]!;
     const buy = pick({}, kit);
     expect(buy.template!.id).toBe(KIT_BUY + WEAPON.id);
-    expect(buy.template!.args).toEqual([`scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=${KIT_PRICE_CAPS['adamant scimitar']} CASH_RESERVE=1000 ORDER_KEY=blade-kit0-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200`]);
+    expect(buy.template!.args).toEqual([`scripts/aio-market.ts ge-buy ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=${KIT_PRICE_CAPS['adamant scimitar']} CASH_RESERVE=1000 ORDER_KEY=blade-kit0-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200`]);
     expect(jobFor(buy, side)).toMatchObject({ script: 'scripts/chain.ts', repeat: false, resources: [WEAPON_MARKET] });
     // A later buy takes the account's next order key.
     expect(pick({}, kit, { kitSeq: new Map([['blade', 2]]) }).template!.args![0]).toContain('ORDER_KEY=blade-kit2-1331-0to1');
@@ -1201,7 +1201,7 @@ test('with no fire on the market the alchemy kit buys its other lines, then the 
     const held = { coin: 4_000_000, feather: 500, 'nature rune': 1000 };
     const shop = pick(held)!;
     expect(shop.template!.id).toBe('army-staff-zaff');
-    expect(jobFor(shop, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'], repeat: true, resources: ['shop:zaff'],
+    expect(jobFor(shop, side)).toMatchObject({ script: 'scripts/aio-market.ts', args: ['shop-buy', 'zaff', '3000'], repeat: true, resources: ['shop:zaff'],
         env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '1100' } });
     expect(pick({ ...held, 'fire rune': 249 })!.template!.id).toBe('army-staff-zaff');
     expect(pick({ ...held, 'staff of fire': 1 })!.template!.id).toBe('army-alch-magic-99');
@@ -1361,7 +1361,7 @@ test('an account under a top-up of rune arrows buys them at the Ranging Guild sh
     // Only the 38 needed arrows count over the 1,000-tick planning window; spend scales with that useful work.
     expect(RUNE_ARROW_COST).toBe(Array.from({ length: ARROW_LOW }, (_, k) => 400 + 4 * k).reduce((a, b) => a + b, 0));
     expect(x!.value).toBeCloseTo((ARROW_LOW / 800 * 400 * 2 - RUNE_ARROW_COST / 800) * 38 / (ARROW_LOW / 800 * 1000));
-    expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['dargaud', '800'], resources: ['shop:dargaud'],
+    expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/aio-market.ts', args: ['shop-buy', 'dargaud', '800'], resources: ['shop:dargaud'],
         env: { ITEMS: 'rune arrow', STOCK_TARGET: String(ARROW_LOW), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', MAX_SPEND: String(RUNE_ARROW_SPEND), COIN_RESERVE: '500' } });
     // Not admitted, under the level of the guild door, with the top-up held, or with the line met and coins at full worth: no run.
     expect(ids(run([buyer('A', 40, {})], { pilots: new Set() }))).toEqual({ A: 'vacant' });
@@ -1518,7 +1518,7 @@ test('an army account whose bow is short of arrows buys bronze arrows at the Ard
     // The shop comes at the Ranged band, before the Defence troopers, with no market and no donor.
     const shop = pick({}, kit);
     expect(shop.template!.id).toBe('army-arrows-ardy');
-    expect(jobFor(shop, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['ardy', '400'], repeat: true, resources: ['shop:ardy'],
+    expect(jobFor(shop, side)).toMatchObject({ script: 'scripts/aio-market.ts', args: ['shop-buy', 'ardy', '400'], repeat: true, resources: ['shop:ardy'],
         env: { ITEMS: 'bronze arrow', STOCK_TARGET: String(ARROW_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', COIN_RESERVE: '500', MAX_SPEND: '4000', FLOAT: '5000' } });
     // With ARROW_LOW arrows the bow fires, the account trains Ranged; iron arrows count as bronze do.
     expect(pick({}, { ...kit, 'bronze arrow': ARROW_LOW }).template!.id).toBe('army-trooper-ranged-99');
@@ -1533,7 +1533,7 @@ test('an army account whose bow is short of arrows buys bronze arrows at the Ard
     const four = ids(plan(inputs(names.map(n => acct(n, skills, kit)), { army: new Set(names.map(n => n.toLowerCase())), capacity: CAPACITY })));
     expect(Object.values(four).sort()).toEqual(['army-arrows-ardy', 'army-arrows-catherby', 'army-arrows-lowe', 'army-trooper-defence-99']);
     const hickton = plan(inputs([acct('Archer', skills, kit)], { army, capacity: { ...CAPACITY, 'shop:ardy': 0 } }))[0]!;
-    expect(jobFor(hickton, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['catherby_arrows', '600'], repeat: true, resources: ['shop:catherby_arrows'],
+    expect(jobFor(hickton, side)).toMatchObject({ script: 'scripts/aio-market.ts', args: ['shop-buy', 'catherby_arrows', '600'], repeat: true, resources: ['shop:catherby_arrows'],
         env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0' } });
     // Arrows of any kind end the shop runs: steel arrows a shortbow cannot fire are a kit matter, not a reason to shop again.
     expect(pick({}, { ...kit, 'steel arrow': ARROW_LOW }).template!.id).toBe('army-trooper-defence-99');
@@ -1543,14 +1543,14 @@ test('an army account whose bow is short of arrows buys bronze arrows at the Ard
     expect(guild.template!.id).toBe('army-arrows-guild');
     expect(jobFor(guild, side)).toMatchObject({ script: 'scripts/chain.ts', env: { ROUNDS: '1' }, repeat: true, resources: ['shop:dargaud'] });
     expect(jobFor(guild, side).args).toEqual([
-        'scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000',
-        `scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=${ARROW_STOCK} STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000`]);
+        'scripts/aio-market.ts shop-buy dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000',
+        `scripts/aio-market.ts shop-buy dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=${ARROW_STOCK} STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000`]);
     expect(pick({ Ranged: 39 }, kit).template!.id).toBe('army-arrows-ardy');
     expect(pick({ Ranged: 40 }, { ...kit, 'bronze arrow': 500 }).template!.id).toBe('army-trooper-ranged-99');
     expect(pick({ Ranged: 40 }, { ...kit, 'willow shortbow': 1, 'mithril arrow': 500 }).template!.id).toBe('army-trooper-ranged-99');
     expect(pick({ Ranged: 40 }, { ...kit, coin: 59_000 }).template!.id).toBe('army-arrows-ardy');
     const lowe = plan(inputs([acct('Archer', skills, kit)], { army, capacity: { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0 } }))[0]!;
-    expect(jobFor(lowe, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['lowe', '2500'], repeat: true, resources: ['shop:lowe'],
+    expect(jobFor(lowe, side)).toMatchObject({ script: 'scripts/aio-market.ts', args: ['shop-buy', 'lowe', '2500'], repeat: true, resources: ['shop:lowe'],
         env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0' } });
     // Lowe's trip needs more coins than Aemad's.
     expect(plan(inputs([acct('Archer', skills, { ...kit, coin: 24_000 })], { army, capacity: { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0 } }))[0]!.template!.id).toBe('army-trooper-defence-99');
@@ -1665,19 +1665,19 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     const [shop] = run([soldier('Kilt', { ...stocked, 'water rune': 6 })]);
     expect(shop!.template!.id).toBe('army-water-aubury');
     expect(jobFor(shop!, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:aubury'] });
-    expect(shop!.template!.args![0]).toContain(`scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
+    expect(shop!.template!.args![0]).toContain(`scripts/aio-market.ts shop-buy aubury 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
     // A second account short of water, or the first with Aubury's shop taken, goes to Betty's in Port Sarim.
     const two = run(['A', 'B'].map(n => soldier(n, { ...stocked, 'water rune': 6 })), { pilots: new Set([...pilots, 'army-water-betty']) });
     expect(two.map(a => a.template!.id).sort()).toEqual(['army-water-aubury', 'army-water-betty']);
     const betty = run([soldier('Kilt', { ...stocked, 'water rune': 6 })], { pilots: new Set([...pilots, 'army-water-betty']), capacity: { ...CAPACITY, 'shop:aubury': 0 } })[0]!;
     expect(jobFor(betty, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:betty'] });
-    expect(betty.template!.args![0]).toContain(`scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
+    expect(betty.template!.args![0]).toContain(`scripts/aio-market.ts shop-buy betty 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
     // With earth and water runes held and body runes short (absent from market or buy retired): Aubury's body-rune shop run.
     const noBody = run([soldier('Kilt', { 'earth rune': SPLASH_KIT['earth rune'], 'water rune': SPLASH_KIT['water rune'], 'body rune': 6 })],
         { pilots: new Set([...pilots, 'army-body-aubury']), market: { 'earth rune': runes['earth rune']! } })[0]!;
     expect(noBody.template!.id).toBe('army-body-aubury');
     expect(jobFor(noBody, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:aubury'] });
-    expect(noBody.template!.args![0]).toContain(`scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=${SPLASH_KIT['body rune']} `);
+    expect(noBody.template!.args![0]).toContain(`scripts/aio-market.ts shop-buy aubury 3000 ITEMS=body.rune STOCK_TARGET=${SPLASH_KIT['body rune']} `);
     // With the whole kit: the band, to the Magic Guild's level, on the fence tile.
     const full = { ...stocked, 'water rune': SPLASH_KIT['water rune'] };
     const [cast] = run([soldier('Kilt', full)]);
@@ -1797,8 +1797,8 @@ test('a maxed army account hunts black dragons for hides: the key first, the kit
     expect(shop!.template!.id).toBe('army-hunt-supply');
     const job = jobFor(shop!, side);
     expect(job).toMatchObject({ script: 'scripts/chain.ts', env: { ROUNDS: '1' }, repeat: true, resources: ['shop:lowe', 'shop:aubury'] });
-    expect(job.args![0]).toContain(`scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=${HUNT_ARROW_STOCK} `);
-    expect(job.args![1]).toContain(`scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=${HUNT_RUNE_STOCK} `);
+    expect(job.args![0]).toContain(`scripts/aio-market.ts shop-buy lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=${HUNT_ARROW_STOCK} `);
+    expect(job.args![1]).toContain(`scripts/aio-market.ts shop-buy aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=${HUNT_RUNE_STOCK} `);
     // Each step leaves a shelf it has emptied: its wait is under the shelves' restock intervals (10 ticks the least).
     expect(job.args!.map(a => Number(a.match(/NO_BUY_TICKS=(\d+)/)![1]))).toEqual([8, 8]);
     // With a trip's bronze arrows and too few iron: the same trip on bronze, before another shop run. Iron first
@@ -1888,7 +1888,7 @@ test('an account with Lost City buys its dragon longswords from Jakut: the diamo
     expect(visit.template!.id).toBe('army-jakut-swords');
     expect(visit.reason).toBe(`army band ${HUNT_BAND + 0.05}: 1 dragon longsword`);
     expect(jobFor(visit, side)).toMatchObject({ script: 'scripts/chain.ts', repeat: false, resources: ['shop:jukat'],
-        args: [`scripts/shop-buyer.ts jukat ${JAKUT_CAP} BLIND_BUY=1 STOCK_TARGET=${JAKUT_SWORDS} STOP_AT_TARGET=1 BANK_AT=0 NO_BUY_TICKS=${JAKUT_WAIT} STALL_TICKS=0 COIN_RESERVE=${JAKUT_RESERVE} FLOAT=${JAKUT_COINS}`] });
+        args: [`scripts/aio-market.ts shop-buy jukat ${JAKUT_CAP} BLIND_BUY=1 STOCK_TARGET=${JAKUT_SWORDS} STOP_AT_TARGET=1 BANK_AT=0 NO_BUY_TICKS=${JAKUT_WAIT} STALL_TICKS=0 COIN_RESERVE=${JAKUT_RESERVE} FLOAT=${JAKUT_COINS}`] });
     expect(catalogue().find(t => t.id === 'army-jakut-swords')!.needs!.items!.coins).toBe(JAKUT_COINS);
     expect(JAKUT_COINS - JAKUT_RESERVE).toBeGreaterThanOrEqual(JAKUT_SWORDS * 101_000);
     expect(JAKUT_WAIT).toBeGreaterThan(500);
@@ -3144,7 +3144,7 @@ test('a ring maker that lacks only the mould gets the Dommik shop trip first, be
         const out = run(acct(name, { Attack: 99, Strength: 99, Defence: 99, ...diamond }, kit));
         expect(`${name} ${out.template?.id} ${out.reason}`).toBe(`${name} shop-ring-mould buys a ring mould for aio-diamond-rings`);
         expect(out.resources).toEqual(['shop:dommik']);
-        expect(jobFor(out, side).args).toEqual(['dommik', '600']);
+        expect(jobFor(out, side)).toMatchObject({ script: 'scripts/aio-market.ts', args: ['shop-buy', 'dommik', '600'] });
     }
     // Holding the mould, the maker itself runs and the shop is skipped.
     expect(run(acct('A', diamond, { ...kit, 'ring mould': 1 })).template?.id).toBe('aio-diamond-rings');

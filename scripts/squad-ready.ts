@@ -39,7 +39,7 @@ import { FOOD_LIST } from './pk-hunt';
 import { kitItems } from './pk-kits';
 import { kitFrom } from './pk-roam';
 import { SQUAD_OPTS, SQUAD_POST, squadEscapeSpell, squadStartFood } from './pk-squad';
-import { PROFILES } from './shop-buyer';
+import { PROFILES } from '../packages/workers/src/market';
 
 export type Item = { id: number; name: string; count: number };
 export type Worn = Item & { slot: number };

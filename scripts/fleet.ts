@@ -23,6 +23,7 @@ export interface FleetAccount {
     role: Role;
     goal: string;
     script: string;
+    args?: string[];
     enabled: boolean;
     repeat?: boolean;
     env?: Record<string, string>;
@@ -125,7 +126,7 @@ export const FLEET: FleetAccount[] = [
     {
         name: 'Abracadickra', server: 'rs-sdk-demo.fly.dev', role: 'magic',
         goal: 'Bounded magic and potion supplies:40each owned target',
-        script: 'scripts/shop-buyer.ts', enabled: false, repeat: false,
+        script: 'scripts/aio-market.ts', args: ['shop-buy'], enabled: false, repeat: false,
     },
     {
         name: 'Moneyshot', server: 'rs-sdk-demo.fly.dev', role: 'bank',
@@ -160,6 +161,7 @@ export function toPlan(accounts: readonly FleetAccount[], maxBots = 17, minFreeG
     for (const a of accounts) {
         if (a.hostGroup) continue;
         const base: Job = { account: a.name, script: a.script, role: a.role, goal: a.goal, enabled: a.enabled };
+        if (a.args) base.args = a.args;
         if (a.repeat !== undefined) base.repeat = a.repeat;
         if (a.env) base.env = a.env;
         if (a.note) base.note = a.note;
