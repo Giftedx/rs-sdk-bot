@@ -118,32 +118,88 @@ test('packages/practice/src production modules have zero circular dependencies',
     expect(tarjanSccs(practiceFiles)).toEqual([]);
 });
 
-test('packages/practice/src production modules never import promoted shared libraries from scripts', () => {
-    const practiceFiles = walkTs(join(repoRoot, 'packages', 'practice', 'src'));
-    const bannedTargets = new Set(['scripts/measure/fleet-player-save.ts', 'scripts/fleet-trade-settlement.ts']);
-    const bannedBare = new Set([
-        'scripts/measure/fleet-player-save',
-        'scripts/measure/fleet-player-save.ts',
-        'scripts/fleet-trade-settlement',
-        'scripts/fleet-trade-settlement.ts',
-    ]);
-    const violations: string[] = [];
-
-    for (const rel of practiceFiles) {
+function collectPracticeImports(files: readonly string[]): {
+    bare: Array<{ rel: string; spec: string }>;
+    relative: Array<{ rel: string; target: string }>;
+} {
+    const bare: Array<{ rel: string; spec: string }> = [];
+    const relativeTargets: Array<{ rel: string; target: string }> = [];
+    for (const rel of files) {
         const abs = join(repoRoot, rel);
         const info = ts.preProcessFile(readFileSync(abs, 'utf8'), true, true);
         for (const imp of info.importedFiles) {
             const spec = imp.fileName;
-            if (bannedBare.has(spec)) {
-                violations.push(`${rel} -> ${spec}`);
+            if (!spec.startsWith('.')) {
+                bare.push({ rel, spec });
                 continue;
             }
-            if (!spec.startsWith('.')) continue;
-            const target = resolveImportTarget(abs, spec);
-            if (bannedTargets.has(target)) {
-                violations.push(`${rel} -> ${target}`);
-            }
+            relativeTargets.push({ rel, target: resolveImportTarget(abs, spec) });
         }
     }
+    return { bare, relative: relativeTargets };
+}
+
+test('packages/practice/src production modules never import promoted shared libraries from scripts', () => {
+    const practiceFiles = walkTs(join(repoRoot, 'packages', 'practice', 'src'));
+    const bannedTargets = new Set([
+        'scripts/measure/fleet-player-save.ts',
+        'scripts/fleet-trade-settlement.ts',
+        'scripts/fleet-owner-claim.ts',
+        'scripts/heavy-admission.ts',
+        'scripts/worktree-setup.ts',
+        'scripts/fail-loops.ts',
+    ]);
+    const bannedBare = new Set(
+        [...bannedTargets].flatMap(target => [target.slice(0, -3), target]),
+    );
+    const { bare, relative: relativeTargets } = collectPracticeImports(practiceFiles);
+    const violations = [
+        ...bare.filter(({ spec }) => bannedBare.has(spec)).map(({ rel, spec }) => `${rel} -> ${spec}`),
+        ...relativeTargets.filter(({ target }) => bannedTargets.has(target)).map(({ rel, target }) => `${rel} -> ${target}`),
+    ];
     expect(violations).toEqual([]);
+});
+
+test('packages/practice/src production modules only import explicitly allowlisted scripts targets', () => {
+    const practiceFiles = walkTs(join(repoRoot, 'packages', 'practice', 'src'));
+    const allowedPracticeScriptImports = new Set([
+        'scripts/blood-chest.ts',
+        'scripts/brew-potions.ts',
+        'scripts/buy-owned-ge-item.ts',
+        'scripts/coin-courier.ts',
+        'scripts/druid-meats.ts',
+        'scripts/earth-production.ts',
+        'scripts/firemaking-order.ts',
+        'scripts/fleet-trade.ts',
+        'scripts/goldfarm-stable.ts',
+        'scripts/lava-maze-escorted-ore.ts',
+        'scripts/magic-order.ts',
+        'scripts/microbot-glass.ts',
+        'scripts/quest-items-order.ts',
+        'scripts/quest-order.ts',
+        'scripts/rune-carrier-trade.ts',
+        'scripts/rune-supply.ts',
+        'scripts/shop-buyer.ts',
+        'scripts/specialist-supplier.ts',
+        'scripts/swarm.ts',
+    ]);
+    const { bare, relative: relativeTargets } = collectPracticeImports(practiceFiles);
+    const violations: string[] = [];
+    const observedTargets = new Set<string>();
+
+    for (const { rel, spec } of bare) {
+        if (spec === 'scripts' || spec.startsWith('scripts/')) {
+            violations.push(`${rel} -> ${spec}`);
+        }
+    }
+    for (const { rel, target } of relativeTargets) {
+        if (target !== 'scripts' && target !== 'scripts.ts' && !target.startsWith('scripts/')) continue;
+        observedTargets.add(target);
+        if (!allowedPracticeScriptImports.has(target)) {
+            violations.push(`${rel} -> ${target}`);
+        }
+    }
+
+    expect(violations).toEqual([]);
+    expect([...observedTargets].sort()).toEqual([...allowedPracticeScriptImports].sort());
 });
