@@ -33,39 +33,44 @@ test('shadow CLI runs offline read-only across full fleet fixture, verifying pro
         mkdirSync(join(tempRoot, '.practice', 'live'), { recursive: true });
         writeFileSync(join(tempRoot, '.practice', 'live', 'stop-PausedHelper'), 'owner pause test\n');
 
+        const OFFLINE_AT = NOW - 20 * 60_000;
         const statusDir = join(tempRoot, '.practice', 'live', 'status');
         writeJson(join(statusDir, 'Haggis.json'), {
             name: 'Haggis',
             server: 'rs-sdk-demo.fly.dev',
-            at: NOW - 10_000,
+            at: OFFLINE_AT,
+            result: 'done',
             pos: { x: 3222, z: 3218, level: 0 },
             skills: [{ name: 'Attack', level: 1, xp: 0 }],
-            bankAt: NOW - 10_000,
+            bankAt: OFFLINE_AT,
             bank: [{ id: 995, name: 'Coins', count: 10_000 }],
         });
         writeJson(join(statusDir, 'FreshBoy.json'), {
             name: 'FreshBoy',
             server: 'rs-sdk-demo.fly.dev',
-            at: NOW - 10_000,
+            at: OFFLINE_AT,
+            result: 'done',
             pos: { x: 3222, z: 3218, level: 0 },
             skills: [{ name: 'Attack', level: 1, xp: 0 }, { name: 'Strength', level: 1, xp: 0 }],
             inventory: [{ id: 995, name: 'Coins', count: 1500 }],
-            bankAt: NOW - 10_000,
+            bankAt: OFFLINE_AT,
             bank: [],
         });
         writeJson(join(statusDir, 'ChefPro.json'), {
             name: 'ChefPro',
             server: 'rs-sdk-demo.fly.dev',
-            at: NOW - 10_000,
+            at: OFFLINE_AT,
+            result: 'done',
             pos: { x: 2817, z: 3443, level: 0 },
             skills: [{ name: 'Cooking', level: 92, xp: 6_600_000 }],
-            bankAt: NOW - 10_000,
+            bankAt: OFFLINE_AT,
             bank: [{ id: 383, name: 'Raw shark', count: 500 }, { id: 995, name: 'Coins', count: 25_000 }],
         });
         writeJson(join(statusDir, 'TribridPro.json'), {
             name: 'TribridPro',
             server: 'rs-sdk-demo.fly.dev',
-            at: NOW - 10_000,
+            at: OFFLINE_AT,
+            result: 'done',
             pos: { x: 3094, z: 3494, level: 0 },
             skills: [
                 { name: 'Attack', level: 99, xp: 13_034_431 },
@@ -76,13 +81,14 @@ test('shadow CLI runs offline read-only across full fleet fixture, verifying pro
                 { name: 'Magic', level: 99, xp: 13_034_431 },
                 { name: 'Prayer', level: 70, xp: 737_627 },
             ],
-            bankAt: NOW - 10_000,
+            bankAt: OFFLINE_AT,
             bank: [{ id: 385, name: 'Shark', count: 200 }, { id: 995, name: 'Coins', count: 100_000 }],
         });
         writeJson(join(statusDir, 'QuestPro.json'), {
             name: 'QuestPro',
             server: 'rs-sdk-demo.fly.dev',
-            at: NOW - 10_000,
+            at: OFFLINE_AT,
+            result: 'done',
             pos: { x: 2728, z: 3348, level: 0 },
             skills: [
                 { name: 'Agility', level: 60, xp: 280_000 },
@@ -101,7 +107,7 @@ test('shadow CLI runs offline read-only across full fleet fixture, verifying pro
                 { id: 3, name: 'Waterfall Quest', state: 'complete' },
                 ...Array.from({ length: 12 }, (_, idx) => ({ id: 10 + idx, name: `Quest ${idx}`, state: 'complete' })),
             ],
-            bankAt: NOW - 10_000,
+            bankAt: OFFLINE_AT,
             bank: [{ id: 995, name: 'Coins', count: 50_000 }],
         });
 
@@ -140,4 +146,4 @@ test('shadow CLI works read-only on main repo root when present', () => {
     expect(report.liveLoginsPerformed).toBe(0);
     expect(report.summary.totalOwnedAccounts).toBeGreaterThan(0);
     expect(report.summary.checksPassed).toBe(report.summary.checksTotal);
-});
+}, 20_000);

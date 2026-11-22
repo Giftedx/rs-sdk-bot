@@ -3,8 +3,9 @@
 // applies comparative advantage across account profiles, and enforces protectedClock isolation.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Gear } from '../../knowledge/src/gear';
-import type { RateEstimate, TrustTier } from '../../workers/src/contracts';
+import type { Gear, Skill } from '../../knowledge/src/gear';
+import { canWear } from '../../knowledge/src/gear-query';
+import type { PreflightResult, RateEstimate, TrustTier } from '../../workers/src/contracts';
 import { trustMeetsMinimum } from '../../workers/src/contracts';
 import {
     DEFAULT_OPERATING_COIN_FLOAT,
@@ -30,14 +31,18 @@ import {
 import {
     resolveAcquireItem,
     type AcquireContext,
+    type AcquireRequest,
+    type AcquireResolution,
     type MarketQuotesMap,
 } from './acquire';
+import { TICKS_PER_HOUR } from './demand';
 import {
     STANDARD_FOOD_IDS,
     accountSkillLevel,
     activityPreflightFromConfig,
     availableStockAfterReserves,
     canWearItem,
+    completedQuestSet,
     hasCompletedQuest,
     loadGearMap,
     loadItemsMap,
@@ -46,7 +51,6 @@ import {
 } from './preflight';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
-export const TICKS_PER_HOUR = 9000; // 400 ms live server tick (rs-sdk-demo.fly.dev)
 
 const WOODCUTTING_AXES_DESC = [1359, 1357, 1355, 1361, 1353, 1349, 1351] as const;
 const MINING_PICKAXES_DESC = [1275, 1271, 1273, 1269, 1267, 1265] as const;
@@ -83,6 +87,7 @@ interface SkillToolRow {
 }
 
 let cachedSkillTools: { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } | undefined;
+let cachedTradeableRighthand: Gear[] | undefined;
 
 function loadSkillTools(): { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } {
     if (cachedSkillTools) return cachedSkillTools;
@@ -90,6 +95,69 @@ function loadSkillTools(): { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } {
         readFileSync(resolve(REPO_ROOT, 'knowledge', 'skill-tools.json'), 'utf8'),
     ) as { axes: SkillToolRow[]; pickaxes: SkillToolRow[] };
     return cachedSkillTools;
+}
+
+function getTradeableRighthandGear(): readonly Gear[] {
+    if (cachedTradeableRighthand) return cachedTradeableRighthand;
+    cachedTradeableRighthand = [...loadGearMap().values()].filter((g) => g.slot === 'righthand' && g.tradeable);
+    return cachedTradeableRighthand;
+}
+
+type WeaponStyle = 'melee' | 'ranged' | 'magic';
+interface PrecomputedWeaponInfo {
+    readonly wearableRighthand: readonly Gear[];
+    readonly byStyle: Readonly<Record<WeaponStyle, {
+        readonly bestOwnedScore: number;
+        readonly candidates: readonly { readonly gear: Gear; readonly score: number }[];
+    }>>;
+}
+
+function buildWearLevels(acct: AccountState): Partial<Record<Skill, number>> {
+    return {
+        attack: accountSkillLevel(acct, 'Attack'),
+        strength: accountSkillLevel(acct, 'Strength'),
+        defence: accountSkillLevel(acct, 'Defence'),
+        ranged: accountSkillLevel(acct, 'Ranged'),
+        magic: accountSkillLevel(acct, 'Magic'),
+    };
+}
+
+function precomputeWearableWeapons(acct: AccountState): PrecomputedWeaponInfo {
+    const gearMap = loadGearMap();
+    const levels = buildWearLevels(acct);
+    const doneSet = completedQuestSet(acct);
+    const wearableRighthand = getTradeableRighthandGear().filter((g) => canWear(g, levels, doneSet));
+
+    const ownedRighthand: Gear[] = [];
+    for (const [idStr, cnt] of [
+        ...Object.entries(acct.equipment),
+        ...Object.entries(acct.inventory),
+        ...(acct.bank.trusted ? Object.entries(acct.bank.items) : []),
+    ]) {
+        if (cnt <= 0) continue;
+        const g = gearMap.get(Number(idStr));
+        if (!g || g.slot !== 'righthand') continue;
+        if (!canWear(g, levels, doneSet)) continue;
+        ownedRighthand.push(g);
+    }
+
+    const styles: WeaponStyle[] = ['melee', 'ranged', 'magic'];
+    const byStyle = {} as Record<WeaponStyle, { bestOwnedScore: number; candidates: { gear: Gear; score: number }[] }>;
+    for (const style of styles) {
+        let bestOwnedScore = 50;
+        for (const g of ownedRighthand) {
+            const sc = scoreCombatWeapon(g, style);
+            if (sc > bestOwnedScore) bestOwnedScore = sc;
+        }
+        const candidates = wearableRighthand
+            .map((g) => ({ gear: g, score: scoreCombatWeapon(g, style) }))
+            .filter((x) => x.score > bestOwnedScore * 1.05)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 6);
+        byStyle[style] = { bestOwnedScore, candidates };
+    }
+
+    return { wearableRighthand, byStyle };
 }
 
 export interface RateEstimator {
@@ -276,6 +344,8 @@ export function evaluateBestGearUpgrade(params: {
     readonly rate: RateEstimate;
     readonly remainingXp: number;
     readonly acquireCtx: AcquireContext;
+    readonly precomputedWeapons?: PrecomputedWeaponInfo;
+    readonly resolveAcquire?: (req: AcquireRequest) => AcquireResolution;
 }): GearUpgradeCandidateResult | null {
     const { acct, activity, rate, remainingXp, acquireCtx } = params;
     if (rate.xpPerTick <= 0 || !Number.isFinite(remainingXp) || remainingXp <= 0) return null;
@@ -293,6 +363,8 @@ export function evaluateBestGearUpgrade(params: {
     let best: GearUpgradeCandidateResult | null = null;
     const gearMap = loadGearMap();
     const itemsMap = loadItemsMap();
+    const doAcquire = params.resolveAcquire
+        ?? ((req: AcquireRequest) => resolveAcquireItem(acct, req, acquireCtx));
 
     const tryCandidate = (itemId: number, slot: string, multiplier: number): GearUpgradeCandidateResult | null => {
         if (multiplier <= 1.02) return null;
@@ -302,16 +374,12 @@ export function evaluateBestGearUpgrade(params: {
         }).available;
         if (owned > 0) return null;
 
-        const acq = resolveAcquireItem(
-            acct,
-            {
-                itemId,
-                itemName: itemsMap.get(itemId)?.name ?? gearMap.get(itemId)?.name,
-                quantity: 1,
-                allowOwnBank: true,
-            },
-            acquireCtx,
-        );
+        const acq = doAcquire({
+            itemId,
+            itemName: itemsMap.get(itemId)?.name ?? gearMap.get(itemId)?.name,
+            quantity: 1,
+            allowOwnBank: true,
+        });
         if (!acq.ok || !acq.step) return null;
 
         const improvedXpPerTick = rate.xpPerTick * multiplier;
@@ -377,28 +445,9 @@ export function evaluateBestGearUpgrade(params: {
     }
 
     // Combat weapon upgrade check.
-    const style: 'melee' | 'ranged' | 'magic' = skill === 'ranged' ? 'ranged' : skill === 'magic' ? 'magic' : 'melee';
-    let bestOwnedWeaponScore = 50; // unarmed baseline
-    for (const [idStr, cnt] of [
-        ...Object.entries(acct.equipment),
-        ...Object.entries(acct.inventory),
-        ...(acct.bank.trusted ? Object.entries(acct.bank.items) : []),
-    ]) {
-        if (cnt <= 0) continue;
-        const g = gearMap.get(Number(idStr));
-        if (!g || g.slot !== 'righthand') continue;
-        if (!canWearItem(acct, g.id).ok) continue;
-        const sc = scoreCombatWeapon(g, style);
-        if (sc > bestOwnedWeaponScore) bestOwnedWeaponScore = sc;
-    }
-
-    // Evaluate top wearable weapons from gear catalog.
-    const weaponCandidates = [...gearMap.values()]
-        .filter((g) => g.slot === 'righthand' && g.tradeable && canWearItem(acct, g.id).ok)
-        .map((g) => ({ gear: g, score: scoreCombatWeapon(g, style) }))
-        .filter((x) => x.score > bestOwnedWeaponScore * 1.05)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 6);
+    const style: WeaponStyle = skill === 'ranged' ? 'ranged' : skill === 'magic' ? 'magic' : 'melee';
+    const precomputed = params.precomputedWeapons ?? precomputeWearableWeapons(acct);
+    const { bestOwnedScore: bestOwnedWeaponScore, candidates: weaponCandidates } = precomputed.byStyle[style];
 
     for (const cand of weaponCandidates) {
         // Bound DPS ratio conservatively to avoid exaggerating upgrades on low-HP mobs.
@@ -665,16 +714,6 @@ export function planAccount(
 
     const minTrust: TrustTier = input.minTrust ?? 'practice_passed';
     const profile = summarizeAccountProfile(acct);
-    const acquireCtx: AcquireContext = {
-        world,
-        activities: input.activities,
-        marketQuotes: input.marketQuotes,
-        requireMarketQuote: input.requireMarketQuote,
-        donorDemandItemIds: input.donorDemandItemIds,
-        recentReceivedAt: input.recentReceivedAt,
-        confirmedLogoutAt: input.confirmedLogoutAt,
-        requireConfirmedLogoutForTransfer: input.requireConfirmedLogoutForTransfer,
-    };
 
     const candidateActivities = input.activities.filter((act) => {
         if (input.excludedActivityIds?.has(act.id)) return false;
@@ -693,32 +732,182 @@ export function planAccount(
         ? candidateActivities.filter((a) => trustMeetsMinimum(a.trust, minTrust))
         : candidateActivities;
 
+    // Pre-index activities and per-account caches so O(D * A) collapses to O(D * matching).
+    const nonExpByOutputItem = new Map<number, ActivityDefinition[]>();
+    for (const act of input.activities) {
+        if (act.trust === 'experimental') continue;
+        const seenOut = new Set<number>();
+        for (const o of act.outputs ?? []) {
+            if (o.countPerUnit > 0) seenOut.add(o.itemId);
+        }
+        for (const [idStr, cnt] of Object.entries(act.baselineRate.outputsPerUnit ?? {})) {
+            if (cnt > 0) seenOut.add(Number(idStr));
+        }
+        for (const itemId of seenOut) {
+            const list = nonExpByOutputItem.get(itemId);
+            if (list) list.push(act);
+            else nonExpByOutputItem.set(itemId, [act]);
+        }
+    }
+    const sortedIdleDonors = Object.values(world.accounts)
+        .filter((d) => d.lifecycle === 'idle' && d.bank.trusted && !d.protectedClock && !isProtectedAccountName(d.name))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    const acquireCtx: AcquireContext = {
+        world,
+        activities: input.activities,
+        marketQuotes: input.marketQuotes,
+        requireMarketQuote: input.requireMarketQuote,
+        donorDemandItemIds: input.donorDemandItemIds,
+        recentReceivedAt: input.recentReceivedAt,
+        confirmedLogoutAt: input.confirmedLogoutAt,
+        requireConfirmedLogoutForTransfer: input.requireConfirmedLogoutForTransfer,
+        _cachedByOutputItem: nonExpByOutputItem,
+        _sortedIdleDonors: sortedIdleDonors,
+    };
+
+    const byOutputItem = new Map<number, ActivityDefinition[]>();
+    const bySkill = new Map<string, ActivityDefinition[]>();
+    const questsBySlug = new Map<string, ActivityDefinition[]>();
+    const gpActivities: ActivityDefinition[] = [];
+    const combatOrPvpActivities: ActivityDefinition[] = [];
+    const pushMap = <K, V>(map: Map<K, V[]>, key: K, val: V) => {
+        const list = map.get(key);
+        if (list) {
+            if (!list.includes(val)) list.push(val);
+        } else {
+            map.set(key, [val]);
+        }
+    };
+
+    for (const act of eligibleActivities) {
+        for (const o of act.outputs ?? []) {
+            if (o.countPerUnit > 0) pushMap(byOutputItem, o.itemId, act);
+        }
+        for (const [idStr, cnt] of Object.entries(act.baselineRate.outputsPerUnit ?? {})) {
+            if (cnt > 0) pushMap(byOutputItem, Number(idStr), act);
+        }
+        if (act.family === 'market' && Number.isFinite(Number(act.config?.itemId))) {
+            pushMap(byOutputItem, Number(act.config.itemId), act);
+        }
+        if (act.skill) pushMap(bySkill, act.skill.toLowerCase(), act);
+        for (const sk of act.skills ?? []) pushMap(bySkill, sk.toLowerCase(), act);
+        for (const [sk, xp] of Object.entries(act.baselineRate.skillXpPerTick ?? {})) {
+            if (xp > 0) pushMap(bySkill, sk.toLowerCase(), act);
+        }
+        if (act.family === 'quest' && act.questSlug) {
+            pushMap(questsBySlug, act.questSlug.toLowerCase(), act);
+        }
+        if (act.baselineRate.gpPerTick > 0) gpActivities.push(act);
+        if (act.family === 'pvp' || act.family === 'combat') combatOrPvpActivities.push(act);
+    }
+
+    const candidateListForDemand = (demand: GoalDemand): readonly ActivityDefinition[] => {
+        if (demand.assignedAccount && demand.assignedAccount.toLowerCase() !== acct.name.toLowerCase()) {
+            return [];
+        }
+        const t = demand.target;
+        switch (t.kind) {
+            case 'item':
+                return byOutputItem.get(t.itemId) ?? [];
+            case 'quest':
+                if (t.account && t.account.toLowerCase() !== acct.name.toLowerCase()) return [];
+                if (hasCompletedQuest(acct, t.questSlug)) return [];
+                return questsBySlug.get(t.questSlug.toLowerCase()) ?? [];
+            case 'skill': {
+                if (t.account.toLowerCase() !== acct.name.toLowerCase()) return [];
+                if (accountSkillLevel(acct, t.skill) >= t.targetLevel) return [];
+                return bySkill.get(t.skill.toLowerCase()) ?? [];
+            }
+            case 'coins':
+                if (t.account && t.account.toLowerCase() !== acct.name.toLowerCase()) return [];
+                return gpActivities;
+            case 'combat_readiness': {
+                if (t.account.toLowerCase() !== acct.name.toLowerCase()) return [];
+                const set = new Set<ActivityDefinition>();
+                let allMet = true;
+                for (const [sk, targetLvl] of Object.entries(t.targets)) {
+                    if (accountSkillLevel(acct, sk) < targetLvl) {
+                        allMet = false;
+                        for (const act of bySkill.get(sk.toLowerCase()) ?? []) set.add(act);
+                    }
+                }
+                if (allMet) {
+                    for (const act of combatOrPvpActivities) set.add(act);
+                }
+                return [...set];
+            }
+        }
+    };
+
+    const acctProtectedAllowed = protection.allowed;
+    const rateCache = new Map<string, RateEstimate>();
+    const getRate = (activity: ActivityDefinition): RateEstimate => {
+        let r = rateCache.get(activity.id);
+        if (!r) {
+            r = input.rateStore
+                ? input.rateStore.estimate(activity.id, acct, world)
+                : input.rateEstimator
+                    ? input.rateEstimator.estimate(activity, acct, world)
+                    : activity.baselineRate;
+            rateCache.set(activity.id, r);
+        }
+        return r;
+    };
+
+    const preflightCache = new Map<string, PreflightResult>();
+    const getPreflight = (activity: ActivityDefinition, batchUnits: number): PreflightResult => {
+        const key = `${activity.id}:${batchUnits}`;
+        let p = preflightCache.get(key);
+        if (!p) {
+            p = activityPreflightFromConfig(
+                acct,
+                {
+                    ...activity,
+                    protectedAllowed: acctProtectedAllowed && (activity.protectedAllowed || !acct.protectedClock),
+                },
+                world,
+                batchUnits,
+            );
+            preflightCache.set(key, p);
+        }
+        return p;
+    };
+
+    const acquireCache = new Map<string, AcquireResolution>();
+    const resolveAcquireCached = (req: AcquireRequest): AcquireResolution => {
+        const key = `${req.itemId}:${req.quantity}:${req.allowOwnBank ?? true}:${req.includeInventoryInOwned ?? true}`;
+        let res = acquireCache.get(key);
+        if (!res) {
+            res = resolveAcquireItem(acct, req, acquireCtx);
+            acquireCache.set(key, res);
+        }
+        return res;
+    };
+
+    let precomputedWeapons: PrecomputedWeaponInfo | undefined;
+    const getPrecomputedWeapons = (): PrecomputedWeaponInfo => {
+        if (!precomputedWeapons) precomputedWeapons = precomputeWearableWeapons(acct);
+        return precomputedWeapons;
+    };
+    const upgradeCache = new Map<string, GearUpgradeCandidateResult | null>();
+    const skillUnlockCache = new Map<string, { activity: ActivityDefinition; rate: RateEstimate } | null>();
+    const questRows = loadQuestRows();
+
     let bestPlan: AccountPlan | null = null;
     let lastBlockerReason = 'no_matching_demand_or_activity';
 
     for (const demand of input.demands) {
         if (!demand.active || demand.remaining <= 0) continue;
 
-        for (const activity of eligibleActivities) {
+        for (const activity of candidateListForDemand(demand)) {
             if (!activityMatchesDemand(acct, demand, activity)) continue;
             const advMult = comparativeAdvantageMultiplier(acct, demand, activity, profile);
             if (advMult <= 0) continue;
 
-            const rate = input.rateStore
-                ? input.rateStore.estimate(activity.id, acct, world)
-                : input.rateEstimator
-                    ? input.rateEstimator.estimate(activity, acct, world)
-                    : activity.baselineRate;
+            const rate = getRate(activity);
             const batchUnits = resolveBatchUnits(acct, demand, activity, rate, xpRate);
-            const preflight = activityPreflightFromConfig(
-                acct,
-                {
-                    ...activity,
-                    protectedAllowed: protection.allowed && (activity.protectedAllowed || !acct.protectedClock),
-                },
-                world,
-                batchUnits,
-            );
+            const preflight = getPreflight(activity, batchUnits);
 
             const prepSteps: PlannedStep[] = [];
             let chainFeasible = true;
@@ -731,7 +920,6 @@ export function planAccount(
                     return rank(a.kind) - rank(b.kind);
                 });
                 const grantedQuestXp: Record<string, number> = {};
-                const questRows = loadQuestRows();
                 for (const blocker of orderedBlockers) {
                     if (
                         blocker.kind === 'protected_clock'
@@ -760,15 +948,13 @@ export function planAccount(
                     }
 
                     if (blocker.kind === 'quest_incomplete') {
-                        const unlockAct = eligibleActivities.find(
-                            (a) => a.family === 'quest' && a.questSlug?.toLowerCase() === blocker.quest.toLowerCase(),
-                        );
+                        const unlockAct = (questsBySlug.get(blocker.quest.toLowerCase()) ?? [])[0];
                         if (!unlockAct) {
                             lastBlockerReason = `missing_quest_unlock:${blocker.quest}`;
                             chainFeasible = false;
                             break;
                         }
-                        const unlockPre = activityPreflightFromConfig(acct, unlockAct, world, 1);
+                        const unlockPre = getPreflight(unlockAct, 1);
                         if (!unlockPre.ok) {
                             lastBlockerReason = `quest_unlock_blocked:${blocker.quest}`;
                             chainFeasible = false;
@@ -796,20 +982,23 @@ export function planAccount(
                         };
                         prepSteps.push(unlockStep);
                     } else if (blocker.kind === 'skill_level') {
-                        const trainAct = eligibleActivities.find(
-                            (a) => a.skill?.toLowerCase() === blocker.skill.toLowerCase()
-                                && activityPreflightFromConfig(acct, a, world, 1).ok,
-                        );
-                        if (!trainAct) {
+                        const skLower = blocker.skill.toLowerCase();
+                        let unlockEntry = skillUnlockCache.get(skLower);
+                        if (unlockEntry === undefined) {
+                            const candidates = bySkill.get(skLower) ?? [];
+                            const found = candidates.find(
+                                (a) => a.skill?.toLowerCase() === skLower && getPreflight(a, 1).ok,
+                            );
+                            unlockEntry = found ? { activity: found, rate: getRate(found) } : null;
+                            skillUnlockCache.set(skLower, unlockEntry);
+                        }
+                        if (!unlockEntry) {
                             lastBlockerReason = `missing_skill_unlock:${blocker.skill}`;
                             chainFeasible = false;
                             break;
                         }
-                        const trainRate = input.rateStore
-                            ? input.rateStore.estimate(trainAct.id, acct, world)
-                            : input.rateEstimator
-                                ? input.rateEstimator.estimate(trainAct, acct, world)
-                                : trainAct.baselineRate;
+                        const trainAct = unlockEntry.activity;
+                        const trainRate = unlockEntry.rate;
                         const curXp = acct.skills[blocker.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, blocker.skill));
                         const needXp = Math.max(1, xpForLevel(blocker.required) - curXp);
                         const trainTicks = Math.max(
@@ -827,16 +1016,12 @@ export function planAccount(
                         prepSteps.push(unlockStep);
                     } else if (blocker.kind === 'missing_supply') {
                         const shortfall = Math.max(1, blocker.required - blocker.available);
-                        const acq = resolveAcquireItem(
-                            acct,
-                            {
-                                itemId: blocker.itemId,
-                                itemName: blocker.itemName,
-                                quantity: shortfall,
-                                operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
-                            },
-                            acquireCtx,
-                        );
+                        const acq = resolveAcquireCached({
+                            itemId: blocker.itemId,
+                            itemName: blocker.itemName,
+                            quantity: shortfall,
+                            operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                        });
                         if (!acq.ok || !acq.step) {
                             lastBlockerReason = `unresolvable_supply:${blocker.itemId}`;
                             chainFeasible = false;
@@ -845,17 +1030,13 @@ export function planAccount(
                         prepSteps.push(acq.step);
                     } else if (blocker.kind === 'missing_coins') {
                         const shortfall = Math.max(1, blocker.required - blocker.available);
-                        const acq = resolveAcquireItem(
-                            acct,
-                            {
-                                itemId: 995,
-                                itemName: 'Coins',
-                                quantity: shortfall,
-                                allowOwnBank: false,
-                                operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
-                            },
-                            acquireCtx,
-                        );
+                        const acq = resolveAcquireCached({
+                            itemId: 995,
+                            itemName: 'Coins',
+                            quantity: shortfall,
+                            allowOwnBank: false,
+                            operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                        });
                         if (!acq.ok || !acq.step) {
                             lastBlockerReason = `missing_coins:${shortfall}`;
                             chainFeasible = false;
@@ -868,11 +1049,11 @@ export function planAccount(
                             const countNeed = Math.max(10, floor?.minFoodCount ?? 15);
                             let foodStep: PlannedStep | null = null;
                             for (const fid of floor?.foodIds ?? STANDARD_FOOD_IDS) {
-                                const acq = resolveAcquireItem(
-                                    acct,
-                                    { itemId: fid, quantity: countNeed, operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT },
-                                    acquireCtx,
-                                );
+                                const acq = resolveAcquireCached({
+                                    itemId: fid,
+                                    quantity: countNeed,
+                                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                                });
                                 if (acq.ok && acq.step) {
                                     foodStep = acq.step;
                                     break;
@@ -912,21 +1093,30 @@ export function planAccount(
 
             // Evaluate optional net XP/tick payback gear upgrade if step budget permits.
             let effectiveRate = rate;
-            if (prepSteps.length < MAX_ACCOUNT_PLAN_STEPS - 1) {
+            if (prepSteps.length < MAX_ACCOUNT_PLAN_STEPS - 1 && rate.xpPerTick > 0) {
                 const remXp = estimateRemainingBandXp(acct, demand, activity);
-                const upgrade = evaluateBestGearUpgrade({
-                    acct,
-                    activity,
-                    rate,
-                    remainingXp: remXp,
-                    acquireCtx,
-                });
-                if (upgrade) {
-                    prepSteps.push(upgrade.step);
-                    effectiveRate = {
-                        ...rate,
-                        xpPerTick: upgrade.improvedXpPerTick,
-                    };
+                if (remXp > 0) {
+                    const upgKey = `${activity.family}:${activity.skill ?? ''}:${rate.xpPerTick}:${Math.round(remXp)}`;
+                    let upgrade = upgradeCache.get(upgKey);
+                    if (upgrade === undefined) {
+                        upgrade = evaluateBestGearUpgrade({
+                            acct,
+                            activity,
+                            rate,
+                            remainingXp: remXp,
+                            acquireCtx,
+                            precomputedWeapons: getPrecomputedWeapons(),
+                            resolveAcquire: resolveAcquireCached,
+                        });
+                        upgradeCache.set(upgKey, upgrade);
+                    }
+                    if (upgrade) {
+                        prepSteps.push(upgrade.step);
+                        effectiveRate = {
+                            ...rate,
+                            xpPerTick: upgrade.improvedXpPerTick,
+                        };
+                    }
                 }
             }
 

@@ -83,6 +83,8 @@ export interface AcquireContext {
     readonly confirmedLogoutAt?: ReadonlyMap<string, number>;
     readonly requireConfirmedLogoutForTransfer?: boolean;
     readonly stationedHubBankers?: Readonly<Partial<Record<HubBankId, string>>>;
+    readonly _cachedByOutputItem?: ReadonlyMap<number, readonly ActivityDefinition[]>;
+    readonly _sortedIdleDonors?: readonly AccountState[];
 }
 
 export interface AcquireCandidate {
@@ -442,12 +444,18 @@ export function resolveAcquireItem(
                 continue;
             }
             const antiWindow = ctx.antiPingPongWindowMs ?? DEFAULT_ANTI_PING_PONG_MS;
+            const acctLower = acct.name.toLowerCase();
+            if (ctx.requireConfirmedLogoutForTransfer && (ctx.confirmedLogoutAt?.get(acctLower) ?? 0) <= 0) {
+                skippedReasons.push({ source, reason: 'both parties require confirmed logout proof' });
+                continue;
+            }
             let bestDonorStep: AcquireStep | null = null;
             let rejectReason = 'no eligible idle donor with surplus stock';
-            const donors = Object.values(world.accounts).sort((a, b) => a.name.localeCompare(b.name));
+            const donors = ctx._sortedIdleDonors ?? Object.values(world.accounts).sort((a, b) => a.name.localeCompare(b.name));
+            const reachRecipByHub = new Map<HubBankId, ReturnType<typeof evaluateTileReachability>>();
             for (const donor of donors) {
                 const donorLower = donor.name.toLowerCase();
-                if (donorLower === acct.name.toLowerCase()) continue;
+                if (donorLower === acctLower) continue;
                 if (donor.protectedClock || isProtectedAccountName(donor.name)) continue;
                 if (donor.lifecycle !== 'idle') {
                     rejectReason = `donor ${donor.name} lifecycle=${donor.lifecycle}`;
@@ -458,9 +466,8 @@ export function resolveAcquireItem(
                     continue;
                 }
                 if (ctx.requireConfirmedLogoutForTransfer) {
-                    const recipLogout = ctx.confirmedLogoutAt?.get(acct.name.toLowerCase()) ?? 0;
                     const donorLogout = ctx.confirmedLogoutAt?.get(donorLower) ?? 0;
-                    if (recipLogout <= 0 || donorLogout <= 0) {
+                    if (donorLogout <= 0) {
                         rejectReason = 'both parties require confirmed logout proof';
                         continue;
                     }
@@ -491,10 +498,14 @@ export function resolveAcquireItem(
                     continue;
                 }
                 const hubTile = HUB_BANKER_LOCATIONS[hub].bankTile;
-                const reachRecip = evaluateTileReachability(acct, hubTile, world, {
-                    spendableCoins: coinBalance.totalUnreserved,
-                    allowUnknownPos: true,
-                });
+                let reachRecip = reachRecipByHub.get(hub);
+                if (!reachRecip) {
+                    reachRecip = evaluateTileReachability(acct, hubTile, world, {
+                        spendableCoins: coinBalance.totalUnreserved,
+                        allowUnknownPos: true,
+                    });
+                    reachRecipByHub.set(hub, reachRecip);
+                }
                 if (!reachRecip.reachable) {
                     rejectReason = reachRecip.message ?? `recipient cannot reach ${hub}`;
                     continue;
@@ -536,13 +547,14 @@ export function resolveAcquireItem(
                 skippedReasons.push({ source, reason: 'craft_gather cooldown active' });
                 continue;
             }
-            const activities = ctx.activities ?? [];
-            const matching = activities.filter((act) => {
-                if (act.trust === 'experimental') return false;
-                if (act.outputs?.some((o) => o.itemId === req.itemId && o.countPerUnit > 0)) return true;
-                const outPerUnit = act.baselineRate.outputsPerUnit?.[req.itemId] ?? 0;
-                return outPerUnit > 0;
-            });
+            const matching = ctx._cachedByOutputItem
+                ? (ctx._cachedByOutputItem.get(req.itemId) ?? []).filter((act) => act.trust !== 'experimental')
+                : (ctx.activities ?? []).filter((act) => {
+                    if (act.trust === 'experimental') return false;
+                    if (act.outputs?.some((o) => o.itemId === req.itemId && o.countPerUnit > 0)) return true;
+                    const outPerUnit = act.baselineRate.outputsPerUnit?.[req.itemId] ?? 0;
+                    return outPerUnit > 0;
+                });
             if (matching.length === 0) {
                 skippedReasons.push({ source, reason: 'no non-experimental catalog activity produces item' });
                 continue;

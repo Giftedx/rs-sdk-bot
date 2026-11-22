@@ -123,8 +123,12 @@ export function adaptActivityToStep(
         if (aioCategory === 'skiller') {
             const [skillPart, methodPart] = aioRoute.split(':');
             const skill = (typeof cfg.skill === 'string' ? cfg.skill : skillPart ?? activity.skill ?? 'mining').toLowerCase();
-            const method = typeof cfg.method === 'string' ? cfg.method : methodPart;
-            const args = [skill, ...(method ? [method] : []), ...(explicitArgs ?? [])];
+            const rawMethod = typeof cfg.method === 'string'
+                ? cfg.method
+                : methodPart && methodPart !== 'skill-action'
+                    ? methodPart
+                    : undefined;
+            const args = [skill, ...(rawMethod ? [rawMethod] : []), ...(explicitArgs ?? [])];
             return { step: { script: 'scripts/aio-skiller.ts', args, env: baseEnv }, warnings };
         }
         if (aioCategory === 'fighter') {
@@ -140,8 +144,12 @@ export function adaptActivityToStep(
             return { step: { script: 'scripts/aio-pvp.ts', args: [mode, ...(explicitArgs ?? [])], env: baseEnv }, warnings };
         }
         if (aioCategory === 'quester') {
-            const slug = typeof cfg.questSlug === 'string' ? cfg.questSlug : activity.questSlug ?? aioRoute;
+            const explicitSlug = typeof cfg.questSlug === 'string' ? cfg.questSlug : activity.questSlug;
             const mode = typeof cfg.mode === 'string' ? cfg.mode : 'sweep';
+            if (!explicitSlug && aioRoute.startsWith('mode:')) {
+                return { step: { script: 'scripts/aio-quester.ts', args: [mode, ...(explicitArgs ?? [])], env: baseEnv }, warnings };
+            }
+            const slug = explicitSlug ?? aioRoute;
             const args = mode === 'sweep' ? ['sweep', slug, ...(explicitArgs ?? [])] : [slug, ...(explicitArgs ?? [])];
             return { step: { script: 'scripts/aio-quester.ts', args, env: baseEnv }, warnings };
         }
