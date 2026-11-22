@@ -87,14 +87,14 @@ const TARGET_SKILLS: SkillName[] = [...MELEE, 'ranged'];
 // Native monsters bound by a combat worker; added as target rungs next to the band representatives.
 const WORKER_TARGETS = ['chicken', 'cow', 'chaos_druid', 'giant'];
 
-// Worker rules. A rule applies only when `evidence` is a literal substring of the worker's file (the capability entry,
-// or the capability JSON for a pending one). Capabilities come first: they carry acceptance.
+// Worker rules. A rule applies only when `evidence` is a literal substring of the worker's file (the script entry).
+// Order rules come first.
 interface Rule { worker: string; source?: string; evidence: string; methods: RegExp }
 const RULES: Rule[] = [
     { worker: 'cap:agility-order', evidence: 'gnome:{', methods: /^agility\/course-gnome-stronghold-agility-course$/ },
     { worker: 'cap:agility-order', evidence: "'barbarian'", methods: /^agility\/course-barbarian-outpost-agility-course$/ },
     { worker: 'cap:agility-order', evidence: "'wilderness'", methods: /^agility\/course-wilderness-course$/ },
-    { worker: 'cap:firemaking-order', evidence: 'banked normal logs', methods: /^firemaking\/burn-normal-logs$/ },
+    { worker: 'cap:firemaking-order', evidence: 'normal:{id:1511', methods: /^firemaking\/burn-normal-logs$/ },
     { worker: 'cap:magic-order', evidence: 'WIND_STRIKE={level:1', methods: /^magic\/magic_spell_wind_strike$/ },
     { worker: 'cap:wine-order', evidence: 'wine', methods: /^cooking\/wine-wine$/ },
     { worker: 'cap:rune-bank-craft', evidence: 'AIR=556', methods: /^runecraft\/runecraft_air$/ },
@@ -448,15 +448,28 @@ export function gapsMarkdown(out: ReturnType<typeof buildLadders>): string {
     return lines.join('\n');
 }
 
+const SCRIPT_CAPABILITIES: Capability[] = [
+    { id: 'agility-order', entry: 'scripts/agility-order.ts' },
+    { id: 'firemaking-order', entry: 'scripts/firemaking-order.ts' },
+    { id: 'magic-order', entry: 'scripts/magic-order.ts' },
+    { id: 'wine-order', entry: 'scripts/cook-wine.ts' },
+    { id: 'rune-bank-craft', entry: 'scripts/rune-bank-craft.ts' },
+    { id: 'fresh-rune-supply-order', entry: 'scripts/rune-supply.ts' },
+    { id: 'goldfarm-order', entry: 'scripts/aio-skiller.ts' },
+    { id: 'shark-supply-order', entry: 'scripts/aio-skiller.ts' },
+    { id: 'iron-progress-order', entry: 'scripts/smelt-bars.ts' },
+    { id: 'cow-progress-order', entry: 'scripts/gather-combat.ts' },
+    { id: 'ranged-train', entry: 'scripts/ranged-train.ts' },
+];
+
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 export function loadData(): Data {
     const k = (f: string) => JSON.parse(readFileSync(join(knowledgeDir(), f), 'utf8'));
-    const tasksDir = join(repoRoot, 'packages', 'router', 'tasks');
-    const capabilities = (require('node:fs').readdirSync(tasksDir) as string[]).filter(f => f.endsWith('.json'))
-        .map(f => JSON.parse(readFileSync(join(tasksDir, f), 'utf8')) as Capability);
     return {
         skills: k('skills.json'), items: k('items.json'), npcs: k('npcs.json'), shops: k('shops.json'), dbtables: k('dbtables.json'),
-        quests: k('quests.json'), rates: k('rates.json'), drops: k('drops.json'), capabilities, content: loadContent(),
+        quests: k('quests.json'), rates: k('rates.json'), drops: k('drops.json'),
+        capabilities: SCRIPT_CAPABILITIES.map(c => ({ ...c })),
+        content: loadContent(),
         readFile: p => { const f = join(repoRoot, p); return existsSync(f) ? readFileSync(f, 'utf8') : null; },
     };
 }

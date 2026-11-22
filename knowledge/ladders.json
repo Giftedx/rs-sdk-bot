@@ -27749,7 +27749,7 @@
     "workers": [
      "firemaking-order"
     ],
-    "workerEvidence": "scripts/firemaking-order.ts contains \"banked normal logs\"",
+    "workerEvidence": "scripts/firemaking-order.ts contains \"normal:{id:1511\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "firemaking/burn-normal-logs",
