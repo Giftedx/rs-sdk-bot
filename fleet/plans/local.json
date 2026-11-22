@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795305676033,
+ "at": 1795305852678,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -520,21 +520,23 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "taverley_black_knight"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "repeat": false,
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "role": "combat",
+   "template": "squad-taverley-black-knights",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "squad:taverley-black-knights"
    ]
   },
   {
