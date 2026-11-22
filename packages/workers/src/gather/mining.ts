@@ -10,6 +10,7 @@ import type { Session } from '../../../core/src/inprocess';
 import { type LootPolicy } from '../../../core/src/loot-policy';
 import { componentId } from '../../../core/src/logout';
 import { RosterFeed } from '../../../core/src/roster-feed';
+import { resolveBotEnvPath } from '../../../core/src/practice-paths';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { type TickSource, waitTicks, waitUntil } from '../../../core/src/ticks';
 import { type PathDeps, goTo, sessionWalker, walkPath } from '../../../core/src/walk';
@@ -2101,7 +2102,7 @@ export async function runEscortedOre(
         'Two distinct owned accounts required',
     );
     requireEscort(Number.isSafeInteger(cap) && cap >= 1 && cap <= 6000 && Number(process.env.MAX_ORE ?? 1) === 1, 'One ore and a finite tick cap required');
-    const servers = names.map(n => serverFromEnv(readFileSync(resolve(ROOT, 'vendor/rs-sdk/bots', n, 'bot.env'), 'utf8')));
+    const servers = names.map(n => serverFromEnv(readFileSync(resolveBotEnvPath(n, ROOT), 'utf8')));
     requireEscort(servers[0] === servers[1], 'Participant servers differ');
     const local = /^127\.0\.0\.1:\d+$/.test(servers[0]!);
     if (!local) {

@@ -8,6 +8,7 @@ import { equipmentObserved } from '../../../core/src/container-observation';
 import { depositObserved, depositPack } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
 import { questFlags } from '../../../core/src/quest-status';
+import { resolveBotEnvPath } from '../../../core/src/practice-paths';
 import { objIdByDebugName, questFoodDefinitions } from '../../../core/src/sustain';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { ownedAccounts } from '../../../core/src/tradeguard';
@@ -1975,7 +1976,7 @@ export async function runGoldfarmKnights(s: Session, cfg: NormalizedGatherConfig
     const STALL_SIGHT = resolveSetting(cfg, 'STALL_SIGHT') !== '0';
     const PICK_TICKS = Number(resolveSetting(cfg, 'PICK_TICKS') ?? 2);
     const foodWake = resolveSetting(cfg, 'CURIER_FOOD_WAKE') === '1';
-    const farmServer = FOOD_FROM ? serverFromEnv(readFileSync(join(ROOT, 'vendor/rs-sdk/bots', s.name, 'bot.env'), 'utf8')) : '';
+    const farmServer = FOOD_FROM ? serverFromEnv(readFileSync(resolveBotEnvPath(s.name, ROOT), 'utf8')) : '';
 
     console.log(`KNIGHT_SPOT ${knightSpot.x},${knightSpot.z}`);
     await waitTicks(s, 5);
@@ -2570,7 +2571,7 @@ export async function runGoldfarmStableSession(
     const BANK_AT = Number(resolveSetting(cfg, 'BANK_AT') ?? 25000);
     const FOOD_FROM = resolveSetting(cfg, 'FOOD_FROM')?.trim() || '';
     const FUND_COURIER = resolveSetting(cfg, 'FUND_COURIER')?.trim() || '';
-    const farmServer = serverFromEnv(readFileSync(join(ROOT, 'vendor/rs-sdk/bots', s.name, 'bot.env'), 'utf8'));
+    const farmServer = serverFromEnv(readFileSync(resolveBotEnvPath(s.name, ROOT), 'utf8'));
 
     if (!(await waitUntil(s, () => !!s.sdk.getState()?.player && (s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0, { timeoutTicks: 40 }))) {
         throw Error('no goldfarm progress: entry state deadline');

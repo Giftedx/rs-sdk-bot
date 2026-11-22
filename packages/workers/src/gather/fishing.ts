@@ -16,6 +16,7 @@ import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
 import { componentId } from '../../../core/src/logout';
 import { claimOrderJournal, settleOrderJournal } from '../../../core/src/order-journal';
+import { resolveBotEnvPath } from '../../../core/src/practice-paths';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { type PathDeps, type PathPoint, type PathTile, goTo, sessionWalker, walkPath } from '../../../core/src/walk';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
@@ -2711,7 +2712,7 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
                 return;
             }
             if (!cfg.deps?.sendHandoff) throw Error('fishcook GIVE_TO requires deps.sendHandoff');
-            const server = serverFromEnv(readFileSync(join(ROOT, 'vendor/rs-sdk/bots', s.name, 'bot.env'), 'utf8'));
+            const server = serverFromEnv(readFileSync(resolveBotEnvPath(s.name, ROOT), 'utf8'));
             const delivered = await cfg.deps.sendHandoff(
                 s,
                 GIVE_TO,

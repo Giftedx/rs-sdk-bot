@@ -3,8 +3,7 @@ import { existsSync } from 'node:fs';
 import { accountOf, getWorld } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
 import type { Outcome } from '../../../core/src/act';
-import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
-import type { PathResult } from '../../../core/src/walk/path';
+import { goTo, sessionWalker, walkPath, type PathResult } from '../../../core/src/walk';
 import type { Tile } from '../../../core/src/world';
 import type { GatherExternalDeps } from './types';
 
