@@ -81,6 +81,14 @@ export function findStopFile(flag: string, base = repoRoot): string | null {
     for (const candidate of stopFilePaths(flag, base)) {
         if (existsSync(candidate)) return candidate;
     }
+    const targetLower = `stop-${flag.toLowerCase()}`;
+    for (const dir of [liveRoot(base), practiceRoot(base)]) {
+        if (!existsSync(dir)) continue;
+        try {
+            const match = readdirSync(dir).find(name => name.toLowerCase() === targetLower);
+            if (match) return join(dir, match);
+        } catch { /* unreadable dir */ }
+    }
     return null;
 }
 

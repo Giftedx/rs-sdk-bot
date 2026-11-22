@@ -25,7 +25,7 @@ function progressImproved(before: WatchdogProgress, after: WatchdogProgress): bo
         && Number.isFinite(before.goalMetrics?.[key]) && value > before.goalMetrics![key]!);
 }
 
-export function stalled<T extends WatchdogProgress>(history: { at: number; progress: T }[], now: number, stallMs = STALL_MS): { since: number; last: T } | null {
+export function stalled(history: readonly { at: number; progress: WatchdogProgress }[], now: number, stallMs = STALL_MS): { since: number; last: WatchdogProgress } | null {
     history = history.filter(row => row.progress.goalVersion === 1);
     if (!history.length || now - history[0]!.at < stallMs) return null;
     let lastGain = history[0]!.at;
