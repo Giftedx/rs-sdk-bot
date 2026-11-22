@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795308163852-billionaire-shaftmaker-naturerune",
  "account": "Billionaire",
  "partner": "Shaftmaker",
@@ -12,6 +12,16 @@
  "claim": "0d7a7113-312f-4447-b80e-616c304ad72f",
  "count": 0,
  "ok": false,
- "at": 1795308615643,
- "detail": "trade claimed"
+ "at": 1795308644010,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 37,
+  "at": 1795308642534
+ },
+ "logout": {
+  "attemptId": "1795308615669-0000006776-0000000001",
+  "at": 1795308643997,
+  "sha256": "87a8251df5ed293dc9bde4737c131e68e53d06036fc9f516bfe91fd9314a1c5a"
+ },
+ "screen": false
 }
