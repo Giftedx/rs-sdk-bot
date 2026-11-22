@@ -1,0 +1,5 @@
+{
+  "name": "@rsbot/workers",
+  "private": true,
+  "type": "module"
+}

@@ -1,0 +1,5 @@
+{
+  "name": "@rsbot/fleet",
+  "private": true,
+  "type": "module"
+}
