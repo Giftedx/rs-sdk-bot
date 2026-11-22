@@ -2314,13 +2314,20 @@ export async function runEscortedOre(
 
     try {
         requireEscort(!stop(), 'Owner hold present');
+        const viaCli = process.argv[2]?.toLowerCase() === names[0]!.toLowerCase();
+        const workRecord = {
+            script: viaCli && process.argv[1] ? process.argv[1] : 'scripts/aio-skiller.ts',
+            argv: viaCli ? process.argv.slice(2) : [names[0]!, 'gather', 'mining', 'lava-maze', ...names.slice(1), `CAP=${cap}`],
+            workArgs: viaCli ? process.argv.slice(3) : ['gather', 'mining', 'lava-maze', ...names.slice(1), `CAP=${cap}`],
+            env: { ...process.env },
+        };
         for (const name of names) {
             requireEscort(!stop(), 'Owner hold before login');
             const fault = async (s: Session, d: string) => {
                 faults.set(s, d);
                 abort ??= name + ': ' + d;
             };
-            const s = await openBot(name, { onStop: fault, onSessionEnd: fault });
+            const s = await openBot(name, { onStop: fault, onSessionEnd: fault, record: workRecord });
             sessions.push(s);
             starts.set(s, { tick: s.tick(), wall: Date.now(), hp: hp(s), min: hp(s), prayer: prayer(s), food: held(s, ESCORT_FOOD), inventory: {}, equipment: '' });
             lastTicks.set(s, Date.now());
