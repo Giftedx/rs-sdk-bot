@@ -962,7 +962,7 @@ test('each special bar that pk.ts names exists in the interface pack of the serv
     const { resolve } = await import('node:path');
     const pack = readFileSync(resolve(import.meta.dir, '../vendor/rs-sdk/server/content/pack/interface.pack'), 'utf8');
     const known = new Set(pack.split(/\r?\n/).map(line => line.slice(line.indexOf('=') + 1)).filter(name => name.endsWith(':specbar')));
-    const used = new Set([...readFileSync(resolve(import.meta.dir, 'pk.ts'), 'utf8').matchAll(/'(combat_[a-z0-9_]+:specbar)'/g)].map(match => match[1]!));
+    const used = new Set([...readFileSync(resolve(import.meta.dir, '../packages/workers/src/pvp/fight.ts'), 'utf8').matchAll(/'(combat_[a-z0-9_]+:specbar)'/g)].map(match => match[1]!));
     expect(known.size).toBeGreaterThan(10);
     expect(used.size).toBeGreaterThan(5);
     // A name that the pack does not hold throws "no interface component" at the first special of that weapon.

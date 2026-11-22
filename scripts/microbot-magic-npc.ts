@@ -12,24 +12,8 @@ import {componentId} from '../packages/core/src/logout';
 import {objId} from './measure/floor-bands';
 import {nativeTeleport,runTeleportMagic,magicStopRequested} from './microbot-magic-teleport';
 import {elementalRuneCost,itemMagicRecipe,runItemMagic,type Recipe} from './microbot-magic-items';
-export interface NpcSpell{name:string;component:string;level:number;runes:Record<number,number>;debuff:boolean;members:boolean;requiredWorn?:number}
-export function nativeNpcSpell(name:string):NpcSpell{
- if(!/^(?:(?:wind|water|earth|fire)_(?:strike|bolt|blast|wave)|confuse|weaken|curse|vulnerability|enfeeble|stun|bind|snare|entangle|crumble_undead|saradomin_strike|claws_of_guthix|flames_of_zamorak|iban_blast)$/.test(name))throw Error('unsupported standard NPC spell');
- const text=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_combat/configs/magic/magic_combat_spells.dbrow'),'utf8');
- const body=text.split('[magic_spell_'+name+']')[1]?.split('\n[')[0];if(!body)throw Error('native NPC spell missing');
- const field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim();
- const runes=field('runesrequired')!.split(','),costs:Record<number,number>={};for(let i=0;i<runes.length;i+=2)if(runes[i]!=='null')costs[objId(runes[i]!)]=Number(runes[i+1]);
- const worn=field('wornrequired');return{name,component:field('spellcom')!,level:Number(field('levelrequired')),runes:costs,debuff:/stat_change|freeze_time/.test(body),members:field('members')==='true',...(worn&&worn!=='null'?{requiredWorn:objId(worn)}:{})};
-}
-export function selectMagicTarget(npcs:readonly NearbyNpc[],id:number,avoid:ReadonlySet<number>,own:number,ownedPassiveTarget?:(target:NearbyNpc)=>boolean){
- return npcs.filter(n=>n.id===id&&!avoid.has(n.index)&&(n.hp===null||n.hp>0)&&n.reachable!==false&&(!n.inCombat||n.targetIndex===32768+own||n.targetIndex===-1&&ownedPassiveTarget?.(n)===true)&&n.optionsWithIndex.some(o=>/^attack$/i.test(o.text))).sort((a,b)=>a.distance-b.distance)[0];
-}
-export function npcCastEffect(costs:Record<number,number>,before:Record<number,number>,after:Record<number,number>,xp0:number,xp1:number,environment:Readonly<Record<number,number>>={}){
- if(Object.entries(environment).some(([id,n])=>!Number.isSafeInteger(+id)||+id<0||!Number.isSafeInteger(n)||n!==0&&Object.hasOwn(costs,id)))return 'invalid';
- const keys=new Set([...Object.keys(before),...Object.keys(after),...Object.keys(costs),...Object.keys(environment)]);
- if([...keys].every(k=>(before[Number(k)]??0)===(after[Number(k)]??0)-(environment[Number(k)]??0))&&xp0===xp1)return 'none';
- return xp1>xp0&&[...keys].every(k=>(before[Number(k)]??0)-(after[Number(k)]??0)===(costs[Number(k)]??0)-(environment[Number(k)]??0))?'cast':'invalid';
-}
+import {nativeNpcSpell,npcCastEffect,selectMagicTarget,type NpcSpell} from '../packages/core/src/magic-data';
+export {nativeNpcSpell,npcCastEffect,selectMagicTarget,type NpcSpell} from '../packages/core/src/magic-data';
 export async function runNpcMagic(s:Session,spell:NpcSpell,o:{npc:number;casts:number;cap:number;splashOnly?:boolean;combo?:Recipe;teleport?:string;members?:boolean;hpFloor?:number;stop?:()=>boolean;environmentDelta?:()=>Readonly<Record<number,number>>;ownedPassiveTarget?:(target:NearbyNpc)=>boolean}){
  if(![o.npc,o.casts,o.cap].every(Number.isSafeInteger)||o.npc<0||o.casts<1||o.casts>1000||o.cap<1||o.cap>100000)throw Error('invalid finite NPC magic limits');
  const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),xp=()=>s.sdk.getSkillXp('Magic')??0,hpxp=()=>s.sdk.getSkillXp('Hitpoints')??0,hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;

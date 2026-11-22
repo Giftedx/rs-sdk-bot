@@ -28,14 +28,14 @@ import {
 } from '../packages/workers/src/gather';
 import {approach,awayFrom,walkTargetPersist,leaveTutorial,sendHandoff,receiveHandoff,pendingCourierFunding,serviceCourierFunding} from '../packages/workers/src/logistics';
 import {leaveRuneStarter} from './rune-starter';
-import {walkFar,nearestBanks} from './quest-sweep';
+import {walkFar,nearestBanks} from '../packages/workers/src/quest/sweep';
 import {cookSharks} from './cook-food';
 import {cookingRecipes,runCookingBatch,nativeHeatSources} from './microbot-b-cooking';
 import {jewelleryRecipes,runJewellery} from './microbot-b-jewellery';
 import {runSoftenClay} from './soften-clay';
 import {runShafts} from './fletch-shafts';
 import {attackable,defaultSpec,fightPlayer,type FightOptions} from './pk';
-import {escapeStep,hasVarrockTeleport,kitFrom} from './pk-roam';
+import {escapeStep,hasVarrockTeleport,kitFrom} from '../packages/workers/src/pvp/wild-rules';
 import {inventoryRecipes,runInventoryBank} from './microbot-production';
 import {tanningRecipes,tanInventory,type TanKind} from './microbot-c-tanner';
 import {furnaceGlassRecipe,runFurnaceGlass} from './microbot-glass';

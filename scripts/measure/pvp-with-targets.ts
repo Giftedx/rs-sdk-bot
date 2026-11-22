@@ -31,8 +31,8 @@ let done = false;
 const targetProfile = process.env.TARGET_PROFILE;
 const defend = targetProfile ? await (async () => {
     const { fightPlayer } = await import('../pk');
-    const { kitFrom } = await import('../pk-roam');
-    const { sparOptions } = await import('../pk-spar');
+    const { kitFrom } = await import('../../packages/workers/src/pvp/wild-rules');
+    const { sparOptions } = await import('../../packages/workers/src/pvp/pk-spar');
     const sawAt = new Map<typeof targets[number], number>();
     return async (t: typeof targets[number]) => {
         const st = t.sdk.getState();

@@ -5,7 +5,7 @@ import { matrix, readList } from './measure/pk-spar-matrix';
 import { mayRun } from './measure/pk-spar-wait';
 import { rankKits } from './measure/pk-build-rank';
 import { benchCases, BUILD_BRACKETS, BUILD_BRACKETS_2, BUILD_PAIRS, BUILD_PAIRS_2, questKeepsBuild } from './measure/aio-bench-cases';
-import { flipped, netRate, sparScore } from './pk-spar';
+import { flipped, netRate, sparScore } from '../packages/workers/src/pvp/pk-spar';
 import type { FightResult } from './pk';
 
 test('every kit names real items, wears its first weapon, carries its other switches and leaves a free slot', () => {

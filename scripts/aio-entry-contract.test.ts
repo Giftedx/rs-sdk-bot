@@ -57,10 +57,10 @@ test('catalog route identifiers and literal worker options survive generated hos
  const specs=['skiller:fishing:harpoon CAP=500','pvp:roam LOOPS=3 ARMY_OPTS={"pace":2}','quester:mode:sweep cook'];
  const steps=planAioPipeline(specs);
  expect(steps[0]!.args).toEqual(['gather','fishing','harpoon','harpoon']);
- expect(steps[1]!.args).toEqual(['LOOPS=3','ARMY_OPTS={"pace":2}']);
- expect(steps[2]!.args).toEqual(['cook']);
+ expect(steps[1]!.args).toEqual(['roam','LOOPS=3','ARMY_OPTS={"pace":2}']);
+ expect(steps[2]!.args).toEqual(['sweep','cook']);
  const job=toSwarmChainJob('Example','mixed','Use exact routes',steps);
  expect(job.args.map(parseStep)).toEqual(steps);
- expect(workerEntries(job.script,job.args)).toEqual(expect.arrayContaining(['scripts/pk-roam.ts','scripts/aio-skiller.ts','scripts/quest-sweep.ts']));
+ expect(workerEntries(job.script,job.args)).toEqual(expect.arrayContaining(['scripts/aio-pvp.ts','scripts/aio-skiller.ts','scripts/aio-quester.ts']));
  expect(()=>planAioPipeline([' '])).toThrow('requires');
 });

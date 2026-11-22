@@ -13,7 +13,7 @@ import {goTo} from '../../packages/core/src/walk';
 import {performFleetTransfer,watchTradeScreen,type Order} from '../../packages/workers/src/logistics';
 import {runBankJob} from '../microbot-bank-jobs';
 import {runLootTrip} from '../microbot-loot-trip';
-import {BOW_TRIP,SNARE_KIT,pickTrip,restock} from '../pk-hunt';
+import {BOW_TRIP,SNARE_KIT,pickTrip,restock} from '../../packages/workers/src/pvp/hunt-kits';
 
 const FUND_RESERVE=50_000;
 const ARMY_BANK={x:2615,z:3332} as const;

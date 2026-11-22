@@ -6,7 +6,7 @@
 // Server truth: areas/area_varrock/scripts/gertrude.rs2, shilop.rs2, quests/quest_fluffs/scripts/quest_fluffs.rs2.
 import { openQuest } from './quest-lib';
 import { questFlags } from '../../packages/core/src/quest-status';
-import { FLUFFS_FENCE, fluffsExit, fluffsKittenGiven } from '../quest-sweep';
+import { FLUFFS_FENCE, fluffsExit, fluffsKittenGiven } from '../../packages/workers/src/quest/sweep';
 
 const GERTRUDE = { x: 3151, z: 3410 };
 const SHILOP = { x: 3221, z: 3434 };

@@ -7,6 +7,11 @@ import { findStopFile, liveRoot, practiceRoot, repoRoot } from '../../core/src/p
 import { SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
 import { accountOwnedItemCount } from '../../workers/src/contracts';
 import {
+    RETIRED_SPECIALIST_CAMPAIGN_SPECS,
+    getSpecialistCampaignSpec,
+} from './campaigns/specialists';
+export * from './campaigns/specialists';
+import {
     isCampaignLaunchReady,
     validateCampaign,
     validateGoalDemand,
@@ -24,6 +29,7 @@ export interface LoadCampaignsOptions {
     readonly now?: number;
     readonly includeHaggis?: boolean;
     readonly includeSpecialists?: boolean;
+    readonly includeRetiredSpecialists?: boolean;
     readonly overridePath?: string;
 }
 
@@ -364,6 +370,7 @@ function buildSpecialistCampaign(
     now: number,
 ): Campaign {
     const lower = account.toLowerCase();
+    const declarative = getSpecialistCampaignSpec(lower);
     const manifestPath = existsSync(join(liveRoot(root), 'specialist-launch', `${lower}.json`))
         ? join(liveRoot(root), 'specialist-launch', `${lower}.json`)
         : join(practiceRoot(root), 'specialist-launch', `${lower}.json`);
@@ -373,9 +380,9 @@ function buildSpecialistCampaign(
 
     const manifest = readJsonSafe(manifestPath);
     const rawSupplies: CampaignSupplyRequirement[] = [];
-    let planTicks: number | undefined;
+    let planTicks: number | undefined = declarative?.planTicks;
     let rehearsalProof: RehearsalProofSummary | null = null;
-    let stagingHolder: string | null = null;
+    let stagingHolder: string | null = declarative?.defaultStagingHolder ?? null;
 
     if (isPlainRecord(manifest)) {
         if (typeof manifest.planTicks === 'number' && Number.isSafeInteger(manifest.planTicks) && manifest.planTicks > 0) {
@@ -430,6 +437,35 @@ function buildSpecialistCampaign(
                 }
             }
         }
+    } else if (declarative?.defaultRehearsalReportPath) {
+        const rPath = resolve(root, declarative.defaultRehearsalReportPath);
+        const rJson = readJsonSafe(rPath);
+        if (isPlainRecord(rJson)) {
+            const ok = rJson.ok === true && rJson.died === false && rJson.logout === 'logged-out';
+            const boardTicks =
+                isPlainRecord(rJson.boardTicks) && typeof rJson.boardTicks[board.name] === 'number'
+                    ? (rJson.boardTicks[board.name] as number)
+                    : undefined;
+            rehearsalProof = {
+                verified: ok,
+                ...(typeof boardTicks === 'number' ? { ticks: boardTicks } : {}),
+                ...(typeof rJson.context === 'string' ? { contextSha256: rJson.context } : {}),
+                ...(typeof rJson.at === 'number' ? { verifiedAt: rJson.at } : {}),
+                reportPath: declarative.defaultRehearsalReportPath,
+            };
+        }
+    }
+
+    if (rawSupplies.length === 0 && declarative) {
+        for (const req of declarative.requiredSupplies) {
+            const resolved = lookup.resolve(req.itemId, req.itemName);
+            rawSupplies.push({
+                itemId: resolved?.itemId ?? req.itemId,
+                ...(resolved?.itemName ?? req.itemName ? { itemName: resolved?.itemName ?? req.itemName } : {}),
+                count: req.count,
+                stage: req.stage ?? board.name,
+            });
+        }
     }
 
     const hiscoreHit = findHiscoreBoard(snapshots, board.name, board.category);
@@ -457,7 +493,7 @@ function buildSpecialistCampaign(
         rehearsalProof,
         hiscoreMargin,
         state,
-        weight: 1.0,
+        weight: declarative?.weight ?? 1.0,
     };
 }
 
@@ -501,6 +537,15 @@ export function loadCampaignManifests(opts: LoadCampaignsOptions = {}): Campaign
             const c = buildSpecialistCampaign(root, account, board, lookup, snapshots, now);
             const errors = validateCampaign(c);
             if (errors.length > 0) throw new Error(`Invalid specialist campaign (${account}): ${errors.join('; ')}`);
+            byId.set(c.id, c);
+        }
+    }
+
+    if (opts.includeRetiredSpecialists === true) {
+        for (const spec of RETIRED_SPECIALIST_CAMPAIGN_SPECS) {
+            const c = buildSpecialistCampaign(root, spec.account, { name: spec.board, category: spec.category }, lookup, snapshots, now);
+            const errors = validateCampaign(c);
+            if (errors.length > 0) throw new Error(`Invalid retired specialist campaign (${spec.account}): ${errors.join('; ')}`);
             byId.set(c.id, c);
         }
     }

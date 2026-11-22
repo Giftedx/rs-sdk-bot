@@ -1,7 +1,7 @@
 import{readFileSync}from'node:fs';
 import{BotActions}from'../vendor/rs-sdk/sdk/actions';
 import{installSpellLocBridge}from'./microbot-c-spell-loc';
-import{monitorWildernessLevel}from'./microbot-c-player-monitor';
+import{monitorWildernessLevel}from'../packages/workers/src/pvp/monitor';
 import type{NearbyPlayer}from'../vendor/rs-sdk/sdk/types';
 import{loadTravel}from'../packages/core/src/travel';
 import{elementalRuneCost}from'./microbot-magic-items';

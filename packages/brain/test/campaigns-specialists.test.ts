@@ -1,0 +1,262 @@
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { RESERVED_ACCOUNTS, SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
+import {
+    ALL_SPECIALIST_CAMPAIGN_SPECS,
+    RETIRED_SPECIALIST_CAMPAIGN_SPECS,
+    SPECIALIST_CAMPAIGN_BY_ACCOUNT,
+    SPECIALIST_CAMPAIGN_SPECS,
+    campaignShortfalls,
+    getSpecialistCampaignSpec,
+    isReservedSpecialistAccount,
+    loadCampaignManifests,
+    toDefaultSpecialistCampaign,
+    validateCampaign,
+    type AccountState,
+    type WorldSnapshot,
+} from '../src/index';
+
+const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
+const NOW = 1_800_000_000_000;
+let tempRoot = '';
+
+function writeJson(filePath: string, data: unknown): void {
+    mkdirSync(resolve(filePath, '..'), { recursive: true });
+    writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function makeAccount(name: string, items: Readonly<Record<number, number>> = {}): AccountState {
+    return {
+        name,
+        side: 'local',
+        role: 'helper',
+        protectedClock: false,
+        lifecycle: 'idle',
+        skills: { Attack: { level: 50, xp: 101_333 } },
+        quests: {},
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: {},
+        equipment: {},
+        bank: { items, observedAt: NOW - 1000, trusted: true },
+    };
+}
+
+function makeWorld(
+    accounts: Readonly<Record<string, AccountState>>,
+    reserves: WorldSnapshot['reserves'] = {},
+): WorldSnapshot {
+    return {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts,
+        reserves,
+    };
+}
+
+beforeEach(() => {
+    tempRoot = mkdtempSync(join(tmpdir(), 'brain-specialists-'));
+});
+
+afterEach(() => {
+    if (tempRoot) {
+        rmSync(tempRoot, { recursive: true, force: true });
+        tempRoot = '';
+    }
+});
+
+describe('Declarative specialist Campaign specs & manifest loading', () => {
+    test('covers every reserved account in SPECIALIST_BOARDS and all 4 retired launch accounts with protectedClock=true', () => {
+        const boardKeys = Object.keys(SPECIALIST_BOARDS).sort();
+        const specKeys = SPECIALIST_CAMPAIGN_SPECS.map((s) => s.account).sort();
+        expect(specKeys).toEqual(boardKeys);
+        expect(SPECIALIST_CAMPAIGN_SPECS).toHaveLength(19);
+        expect(RETIRED_SPECIALIST_CAMPAIGN_SPECS).toHaveLength(4);
+        expect(ALL_SPECIALIST_CAMPAIGN_SPECS).toHaveLength(23);
+
+        for (const name of RESERVED_ACCOUNTS) {
+            expect(isReservedSpecialistAccount(name)).toBe(true);
+            if (name !== 'haggis') {
+                expect(getSpecialistCampaignSpec(name)).toBeDefined();
+            }
+        }
+
+        for (const spec of ALL_SPECIALIST_CAMPAIGN_SPECS) {
+            expect(spec.protectedClock).toBe(true);
+            expect(existsSync(join(REPO_ROOT, spec.script))).toBe(true);
+            expect(spec.requiredSupplies.length).toBeGreaterThan(0);
+
+            const seenIds = new Set<number>();
+            for (const req of spec.requiredSupplies) {
+                expect(Number.isSafeInteger(req.itemId)).toBe(true);
+                expect(req.itemId).toBeGreaterThan(0);
+                expect(Number.isSafeInteger(req.count)).toBe(true);
+                expect(req.count).toBeGreaterThan(0);
+                expect(seenIds.has(req.itemId)).toBe(false);
+                seenIds.add(req.itemId);
+            }
+
+            const defaultCampaign = toDefaultSpecialistCampaign(spec);
+            expect(validateCampaign(defaultCampaign)).toEqual([]);
+            expect(defaultCampaign.protectedClock).toBe(true);
+            expect(defaultCampaign.board).toBe(spec.board);
+            expect(defaultCampaign.stagingHolder).toBe(spec.defaultStagingHolder);
+            expect(defaultCampaign.rehearsalProof).toBeNull();
+        }
+    });
+
+    test('matches exact authoritative supply bills & staging holders converted from .practice/specialist-launch/', () => {
+        const hiltsdeep = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('hiltsdeep')!;
+        expect(hiltsdeep.planTicks).toBe(3815);
+        expect(hiltsdeep.defaultStagingHolder).toBe('Quickhandjob');
+        expect(hiltsdeep.requiredSupplies.find((s) => s.itemId === 536)?.count).toBe(11);
+        expect(hiltsdeep.requiredSupplies.find((s) => s.itemId === 556)?.count).toBe(1300);
+
+        const shaftshooter = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('shaftshooter')!;
+        expect(shaftshooter.planTicks).toBe(4660);
+        expect(shaftshooter.defaultStagingHolder).toBe('Shaftsinker');
+        expect(shaftshooter.requiredSupplies.find((s) => s.itemId === 2)?.count).toBe(1500);
+        expect(shaftshooter.requiredSupplies.find((s) => s.itemId === 892)?.count).toBe(1000);
+
+        const fullblooded = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('fullblooded')!;
+        expect(fullblooded.planTicks).toBe(8900);
+        expect(fullblooded.defaultStagingHolder).toBe('Woodenstaff');
+        expect(fullblooded.requiredSupplies.find((s) => s.itemId === 2435)?.count).toBe(18);
+
+        const lochnessrod = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('lochnessrod')!;
+        expect(lochnessrod.planTicks).toBe(2915);
+        expect(lochnessrod.defaultStagingHolder).toBe('Moneyshot');
+        expect(lochnessrod.requiredSupplies.find((s) => s.itemId === 314)?.count).toBe(1500);
+
+        const mineshafted = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('mineshafted')!;
+        expect(mineshafted.planTicks).toBe(3830);
+        expect(mineshafted.defaultStagingHolder).toBe('Moneyshot');
+        expect(mineshafted.requiredSupplies.find((s) => s.itemId === 1275)?.count).toBe(1);
+
+        const bigboner = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('bigboner')!;
+        expect(bigboner.requiredSupplies).toEqual([{ itemId: 536, itemName: 'Dragon bones', count: 555, stage: 'Prayer' }]);
+
+        const pouchstuffed = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('pouchstuffed')!;
+        expect(pouchstuffed.requiredSupplies.find((s) => s.itemId === 1436)?.count).toBe(5355);
+
+        const lightmylog = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('lightmylog')!;
+        const fmCounts = new Map(lightmylog.requiredSupplies.map((r) => [r.itemId, r.count]));
+        expect(fmCounts.get(1511)).toBe(2);
+        expect(fmCounts.get(1521)).toBe(4);
+        expect(fmCounts.get(1519)).toBe(7);
+        expect(fmCounts.get(1517)).toBe(13);
+        expect(fmCounts.get(1515)).toBe(24);
+        expect(fmCounts.get(1513)).toBeGreaterThanOrEqual(107);
+
+        const retiredFletch = getSpecialistCampaignSpec('justthetip')!;
+        expect(retiredFletch.status).toBe('retired');
+        expect(retiredFletch.requiredSupplies.find((s) => s.itemId === 53)?.count).toBe(3720);
+    });
+
+    test('loads all campaigns with declarative supplies even on a clean checkout without .practice files', () => {
+        const manifests = loadCampaignManifests({ root: tempRoot, now: NOW });
+        expect(manifests).toHaveLength(20);
+
+        const hilts = manifests.find((c) => c.account === 'hiltsdeep')!;
+        expect(hilts.protectedClock).toBe(true);
+        expect(hilts.stagingHolder).toBe('Quickhandjob');
+        expect(hilts.requiredSupplies.length).toBeGreaterThanOrEqual(10);
+        expect(hilts.rehearsalProof).toBeNull();
+        expect(hilts.state).toBe('staging');
+
+        const withRetired = loadCampaignManifests({ root: tempRoot, now: NOW, includeRetiredSpecialists: true });
+        expect(withRetired).toHaveLength(24);
+        expect(withRetired.some((c) => c.account === 'justthetip' && c.protectedClock)).toBe(true);
+        expect(withRetired.some((c) => c.account === 'nockandload' && c.stagingHolder === 'NabTheKnob')).toBe(true);
+    });
+
+    test('evaluates practice overlay manifests, staging holders, rehearsal proofs, hiscore 2% margin, stops, and rank-1 completion', () => {
+        const launchDir = join(tempRoot, '.practice', 'specialist-launch');
+        writeJson(join(launchDir, 'hiscores.json'), {
+            takenAt: new Date(NOW - 60_000).toISOString(),
+            boards: [
+                {
+                    board: 'Attack',
+                    category: 1,
+                    rows: [{ rank: 1, name: 'RivalAtk', level: 99, ticks: 4000 }],
+                },
+                {
+                    board: 'Fishing',
+                    category: 11,
+                    rows: [{ rank: 1, name: 'RivalFish', level: 99, ticks: 2950 }],
+                },
+                {
+                    board: 'Mining',
+                    category: 15,
+                    rows: [{ rank: 1, name: 'mineshafted', level: 99, ticks: 3800 }],
+                },
+            ],
+        });
+
+        writeJson(join(launchDir, 'rehearsal-live-3', 'hiltsdeep-attack-99.receipt.json'), {
+            ok: true,
+            died: false,
+            logout: 'logged-out',
+            at: NOW - 30_000,
+            context: 'abc123',
+            boardTicks: { Attack: 3815 },
+        });
+        writeJson(join(launchDir, 'staging.json'), {
+            allocations: [{ recipient: 'hiltsdeep', holder: 'StageAlt', itemId: 536, count: 11 }],
+        });
+        writeJson(join(launchDir, 'hiltsdeep.json'), {
+            version: 1,
+            account: 'hiltsdeep',
+            board: 'Attack',
+            planTicks: 3815,
+            requirements: [{ itemId: 536, item: 'Dragon bones', count: 11 }],
+            rehearsal: { path: '.practice/specialist-launch/rehearsal-live-3/hiltsdeep-attack-99.receipt.json' },
+            staging: { path: '.practice/specialist-launch/staging.json' },
+        });
+        writeJson(join(launchDir, 'hiltsdeep.go.json'), { version: 2, account: 'hiltsdeep' });
+
+        // lochnessrod planTicks=2915 vs rival=2950 fails 2% margin (ceil(2950*0.02)=59, diff=35 < 59)
+        writeJson(join(launchDir, 'rehearsal-fishing', 'lochnessrod-fishing-99.receipt.json'), {
+            ok: true,
+            died: false,
+            logout: 'logged-out',
+            at: NOW - 20_000,
+            boardTicks: { Fishing: 2915 },
+        });
+
+        // rocksolid paused via owner stop file
+        mkdirSync(join(tempRoot, '.practice'), { recursive: true });
+        writeFileSync(join(tempRoot, '.practice', 'stop-rocksolid'), 'manual owner hold', 'utf8');
+
+        const manifests = loadCampaignManifests({ root: tempRoot, now: NOW });
+        const hilts = manifests.find((c) => c.account === 'hiltsdeep')!;
+        expect(hilts.state).toBe('running');
+        expect(hilts.stagingHolder).toBe('StageAlt');
+        expect(hilts.rehearsalProof).toMatchObject({ verified: true, ticks: 3815 });
+        expect(hilts.hiscoreMargin).toMatchObject({
+            board: 'Attack',
+            rivalTicks: 4000,
+            ourTicks: 3815,
+            marginTicks: 185,
+            meetsMargin: true,
+        });
+
+        const evalHilts = campaignShortfalls(hilts, makeWorld({ StageAlt: makeAccount('StageAlt', { 536: 7 }) }, { StageAlt: { 536: 2 } }));
+        expect(evalHilts.launchReady).toBe(true);
+        expect(evalHilts.shortfalls).toHaveLength(1);
+        expect(evalHilts.shortfalls[0]).toMatchObject({ remaining: 6, fulfilled: 5, assignedAccount: 'StageAlt' });
+
+        const loch = manifests.find((c) => c.account === 'lochnessrod')!;
+        expect(loch.hiscoreMargin?.meetsMargin).toBe(false);
+        expect(loch.state).toBe('staging');
+
+        const rock = manifests.find((c) => c.account === 'rocksolid')!;
+        expect(rock.state).toBe('paused');
+
+        const mine = manifests.find((c) => c.account === 'mineshafted')!;
+        expect(mine.state).toBe('completed');
+    });
+});

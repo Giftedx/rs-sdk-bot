@@ -74,7 +74,7 @@ test('each quest script in scripts/generated opens with the quest library or hol
         if (!/\bopenBot\(|\bopenQuest\(/.test(text)) continue;
         if (/^quest-/.test(f)) expect(/\bopenQuest\(|holdSessionEater\(/.test(text), f).toBe(true);
     }
-    for (const f of ['scripts/generated/waterfall.ts', 'scripts/generated/dwarfcannon.ts', 'scripts/quest-sweep.ts', 'scripts/quest-order.ts', 'scripts/quest-items-order.ts', 'scripts/quest-cook-job.ts']) {
+    for (const f of ['scripts/generated/waterfall.ts', 'scripts/generated/dwarfcannon.ts', 'packages/workers/src/quest/sweep.ts', 'packages/workers/src/quest/order.ts', 'packages/workers/src/quest/items-order.ts', 'packages/workers/src/quest/cook-job.ts']) {
         expect(readFileSync(join(root, f), 'utf8'), f).toMatch(/holdSessionEater\(s\.sdk\)/);
     }
 });

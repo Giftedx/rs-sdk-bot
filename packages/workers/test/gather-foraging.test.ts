@@ -665,7 +665,7 @@ const session={name:'fixture',tick:()=>tick,onTick:()=>()=>{},ended:new Promise(
  sdk:{getState:state,getInventory:()=>pack},bankObservation:()=>generation?{generation,items:bank?[{id:1573,name:'Doogle leaves',count:bank}]:[]}:null,
  bot:{openBank:async()=>{opened=true;generation++;return{success:true};},closeBank:async()=>{opened=false;if(mode==='close-error')throw Error('bank close after credit failed');if(mode==='partial')tick=1000;},
  depositItem:async()=>{const n=pack.reduce((total,item)=>total+item.count,0);pack=[];if(mode!=='missing-credit')bank+=n;generation++;return{success:true};}}};
-const botMod=${JSON.stringify(resolve(root, 'packages/core/src/bot.ts'))},gatherMod=${JSON.stringify(resolve(root, 'packages/core/src/gather.ts'))},walkMod=${JSON.stringify(resolve(root, 'packages/core/src/walk.ts'))},ticksMod=${JSON.stringify(resolve(root, 'packages/core/src/ticks.ts'))},qsMod=${JSON.stringify(resolve(root, 'scripts/quest-sweep.ts'))};
+const botMod=${JSON.stringify(resolve(root, 'packages/core/src/bot.ts'))},gatherMod=${JSON.stringify(resolve(root, 'packages/core/src/gather.ts'))},walkMod=${JSON.stringify(resolve(root, 'packages/core/src/walk.ts'))},ticksMod=${JSON.stringify(resolve(root, 'packages/core/src/ticks.ts'))},qsMod=${JSON.stringify(resolve(root, 'packages/workers/src/quest/sweep.ts'))};
 const [realBot,realGather,realWalk,realTicks,realQs]=await Promise.all([import(botMod),import(gatherMod),import(walkMod),import(ticksMod),import(qsMod)]);
 mock.module(botMod,()=>({...realBot,openBot:async()=>session,getWorld:async()=>{if(mode==='world-error')throw Error('world unavailable');return{};},accountOf:()=>({}),countItems:()=>0,
  finish:async(_sessions,ok,detail)=>{console.log('TEST_FINAL '+JSON.stringify({ok,detail,bank,calls}));process.exitCode=ok?0:1;}}));
@@ -782,7 +782,7 @@ const state=()=>({player:{worldX:${start.x},worldZ:${start.z},level:${start.leve
 const session={name:'fixture',tick:()=>0,onTick:()=>()=>{},ended:new Promise(()=>{}),client:{objType:()=>({stackable:false})},
  sdk:{getState:state,getInventory:()=>[]},bankObservation:()=>null,
  bot:{openBank:async()=>({success:true}),closeBank:async()=>({success:true})}};
-const botMod=${JSON.stringify(resolve(root, 'packages/core/src/bot.ts'))},walkMod=${JSON.stringify(resolve(root, 'packages/core/src/walk.ts'))},ticksMod=${JSON.stringify(resolve(root, 'packages/core/src/ticks.ts'))},qsMod=${JSON.stringify(resolve(root, 'scripts/quest-sweep.ts'))};
+const botMod=${JSON.stringify(resolve(root, 'packages/core/src/bot.ts'))},walkMod=${JSON.stringify(resolve(root, 'packages/core/src/walk.ts'))},ticksMod=${JSON.stringify(resolve(root, 'packages/core/src/ticks.ts'))},qsMod=${JSON.stringify(resolve(root, 'packages/workers/src/quest/sweep.ts'))};
 const [realBot,realWalk,realTicks,realQs]=await Promise.all([import(botMod),import(walkMod),import(ticksMod),import(qsMod)]);
 mock.module(botMod,()=>({...realBot,openBot:async()=>session,getWorld:async()=>({}),accountOf:()=>({skills:{},varps:{},items:[]}),countItems:()=>0,
  finish:async(_sessions,ok,detail)=>{console.log('TEST_WILD_GUARD '+JSON.stringify({ok,detail,walked}));process.exitCode=ok?0:1;}}));

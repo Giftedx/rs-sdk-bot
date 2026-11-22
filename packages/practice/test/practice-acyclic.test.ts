@@ -169,8 +169,6 @@ test('packages/practice/src production modules only import explicitly allowliste
         'scripts/firemaking-order.ts',
         'scripts/magic-order.ts',
         'scripts/microbot-glass.ts',
-        'scripts/quest-items-order.ts',
-        'scripts/quest-order.ts',
         'scripts/rune-carrier-trade.ts',
         'scripts/rune-supply.ts',
         'scripts/swarm.ts',

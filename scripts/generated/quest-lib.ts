@@ -14,7 +14,7 @@ import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientPr
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { castable } from '../teleport-runes';
-import { needs, reservedEdible, walkFar } from '../quest-sweep';
+import { needs, reservedEdible, walkFar } from '../../packages/workers/src/quest/sweep';
 import { magicKit, type MagicKit } from '../../packages/core/src/gather';
 import { PRESETS } from '../../packages/practice/src/presets';
 import { giantStyle, GIANT_BOWS, GIANT_ARROWS, selectGiantArrows } from '../gather-combat';

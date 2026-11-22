@@ -14,7 +14,7 @@
 // ports from 21600 (BENCH_PORT_BASE), apart from the bench's own 21000, so a bench of another session can run beside.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Profile } from '../pk-spar';
+import type { Profile } from '../../packages/workers/src/pvp/pk-spar';
 import { waitForMemory } from './pk-spar-wait';
 
 export type Knob = { name: string; candidates: Profile[] };

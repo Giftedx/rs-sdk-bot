@@ -10,8 +10,8 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { eatBetweenCasts } from './magic-order';
 import { attackable, ITEMS, wildernessLevel } from './pk';
-import { EDGEVILLE_BANK, fleetNames } from './pk-hunt';
-import { hasVarrockTeleport, planWildernessEscape } from './pk-roam';
+import { EDGEVILLE_BANK, fleetNames } from '../packages/workers/src/pvp/hunt-kits';
+import { hasVarrockTeleport, planWildernessEscape } from '../packages/workers/src/pvp/wild-rules';
 import { componentId } from '../packages/core/src/logout';
 import type { BotWorldState, NearbyNpc, NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 

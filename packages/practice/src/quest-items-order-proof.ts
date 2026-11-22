@@ -9,8 +9,8 @@ import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
-import {questSpec,questSavedChecks} from '../../../scripts/quest-order';
-import {itemSaveChecks,hettyTravelChecks,type HettyTravelDebit} from '../../../scripts/quest-items-order';
+import {questSpec,questSavedChecks} from '../../workers/src/quest/order';
+import {itemSaveChecks,hettyTravelChecks,type HettyTravelDebit} from '../../workers/src/quest/items-order';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import {applyPreset,type SaveConfig} from './presets';
 import {PRACTICE_IPV4} from './register-proof-account';
@@ -236,12 +236,12 @@ async function run(dir:string){
   const entry=await waitPracticeSave(path,hettyCarriedEntry,{timeoutMs:15000});
   copyFileSync(path,join(dir,'before.sav'));copyFileSync(path,join(dir,'carried-entry.sav'));
   if(!entry.matched)throw Error('matched entry failed; retain evidence; no retry or provision');
-  await command(['scripts/quest-cook-job.ts',name,'hetty'],'job');
+  await command(['scripts/aio-quester.ts',name,'cook-job','hetty'],'job');
   const worker={code:codes.job!,log:readFileSync(join(dir,'job.log'),'utf8')+readFileSync(join(dir,'job.err'),'utf8')};
   const saved=await waitPracticeSave(path,s=>Object.values(hettyLiveJobSavedChecks(entry.save,s,worker)).every(Boolean),{timeoutMs:15000});
   copyFileSync(path,join(dir,'after.sav'));
   if(codes.job!==0||!saved.matched)throw Error('Hetty CLI failed; retain logs/after.sav; no retry or provision');
-  await command(['scripts/quest-cook-job.ts',name,'hetty'],'refusal');
+  await command(['scripts/aio-quester.ts',name,'cook-job','hetty'],'refusal');
   const flushed=await waitPracticeSave(path,s=>(s.vars[134]??0)>(saved.save.vars[134]??0),{timeoutMs:15000});copyFileSync(path,join(dir,'refusal-after.sav'));
   if(!flushed.matched)throw Error('refusal post-logout save unobserved');
   writeFileSync(join(dir,'native.json'),JSON.stringify({at:Date.now(),source,name,codes,saveAbsent,credentialsAbsent,endpoint:PRACTICE_IPV4,

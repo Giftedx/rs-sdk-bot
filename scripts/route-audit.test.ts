@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {AUDIT_PROFILES,auditOne,auditStarts,auditTargets,fixedTiles,unreachableFirst,type AuditRow} from './route-audit';
-import {HUNT_PRESETS} from './pk-hunt';
+import {HUNT_PRESETS} from '../packages/workers/src/pvp/hunt-kits';
 import {QUEST_NAMES} from './aio-quester';
 import type {World} from '../packages/core/src/world';
 test('audit profiles retain their separate combat and fare budgets',()=>{
@@ -45,6 +45,6 @@ test('auditTargets and auditStarts cover quest starts, banks, shops, training sp
  }
  expect(sources.has('wilderness:edgeville-ditch')).toBe(true);
  expect(sources.has('wilderness:rogues-castle')).toBe(true);
- expect([...sources].some(s=>s.startsWith('scripts/pk-hunt.ts:'))).toBe(true);
+ expect([...sources].some(s=>s.startsWith('packages/workers/src/pvp/hunt-kits.ts:'))).toBe(true);
  expect([...sources].some(s=>s.startsWith('packages/workers/src/gather/mining.ts:'))).toBe(true);
 });

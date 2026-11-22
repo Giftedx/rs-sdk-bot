@@ -255,7 +255,7 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
   expect(recommendNextAioJob({ name: 'Fresh', skills: { Thieving: 1 }, ownedItems: {} }, 'goldfarm').step?.script).toBe('scripts/generated/thieving60.ts');
   expect(recommendNextAioJob({ name: 'Knight', skills: { Thieving: 60 }, ownedItems: { 379: 25 } }, 'goldfarm').step?.script).toBe('scripts/aio-skiller.ts');
   expect(recommendNextAioJob({ name: 'Trainee', skills: { Attack: 20, Strength: 20, Defence: 20, Hitpoints: 25 }, ownedItems: {} }, 'pk-tribrid').step?.script).toBe('scripts/gather-combat.ts');
-  expect(recommendNextAioJob({ name: 'Quester', skills: {}, ownedItems: { 1944: 1, 1927: 1, 1933: 1 } }, 'quest-sweep').step?.script).toBe('scripts/quest-sweep.ts');
+  expect(recommendNextAioJob({ name: 'Quester', skills: {}, ownedItems: { 1944: 1, 1927: 1, 1933: 1 } }, 'quest-sweep').step?.script).toBe('scripts/aio-quester.ts');
   expect(recommendNextAioJob({
    name: 'AllRounder',
    skills: {

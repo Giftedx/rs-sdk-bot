@@ -6,7 +6,7 @@ import{readFileSync,existsSync}from'node:fs';import{BotActions}from'../vendor/rs
 import{openBot,settle}from'../packages/core/src/bot';import type{Session}from'../packages/core/src/inprocess';import{waitUntil,waitTicks}from'../packages/core/src/ticks';
 import{sessionWalker,walkPath,applyKnownDoorBlocks,type PathDeps}from'../packages/core/src/walk';import{withDoorPolicy}from'../packages/core/src/door-policy';
 import{runBankProfile,validateBankRouteJob,type BankRouteJob,type BankProfile}from'./microbot-bank-jobs';import{runOwnedLoadout,validateOwnedKit,type OwnedKit}from'../packages/workers/src/logistics';
-import{runVisibleGroundLoot}from'../packages/workers/src/gather';import{createPotionCareSession,potionCareRecipe}from'./microbot-potion-care';import{combatPrayerLoss}from'./microbot-combat-potions';import{guardianSwampPoint,guardianFoodRotEffect}from'./microbot-c-clue-guardian';
+import{runVisibleGroundLoot}from'../packages/workers/src/gather';import{createPotionCareSession,potionCareRecipe}from'./microbot-potion-care';import{combatPrayerLoss}from'./microbot-combat-potions';import{guardianSwampPoint,guardianFoodRotEffect}from'../packages/workers/src/quest/clue-guardian';
 // A shade that attacks sets a lock on the player for 100 ticks (mortton_shades.rs2, shadeattack_reset). A shadow by the
 // entrance door can set it on the way in, and no shadow in the hunt room attacks until it clears.
 export const SHADE_INCOMING_TICKS=125;
