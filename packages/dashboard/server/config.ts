@@ -12,7 +12,7 @@ export const sourceRoot = resolve(import.meta.dir, '..', '..', '..'), startedAt 
 export const root = resolve(process.env.DASH_ROOT ?? sourceRoot);
 export const practice = join(root, '.practice');
 export const statusDir = join(practice, 'status');
-export const botsDir = join(root, 'vendor', 'rs-sdk', 'bots');
+const botsDir = join(root, 'vendor', 'rs-sdk', 'bots');
 export const FILES = {
     events: join(practice, 'events.jsonl'),
     results: join(practice, 'results.jsonl'),
@@ -140,7 +140,7 @@ export function snapshotFiles() { return canonicalSnapshots(fleetList(join(FILES
 export function remoteNames(): string[] { return snapshotFiles().flatMap(s => (s?.accounts ?? []).map((a: any) => String(a?.name ?? ''))).filter(n => /^[A-Za-z0-9]{1,12}$/.test(n)); }
 
 // Named places on the food-chain route (scripts/foodcourier.ts), by box; null elsewhere.
-export const PLACES: [string, number, number, number, number][] = [
+const PLACES: [string, number, number, number, number][] = [
     ['Ardougne', 2560, 3200, 2720, 3340], ['Brimhaven', 2740, 3140, 2960, 3240], ['Port Sarim', 2990, 3140, 3070, 3270],
     ['Draynor', 3071, 3200, 3130, 3300], ['Lumbridge', 3130, 3140, 3280, 3300], ['at sea', 2700, 3100, 3000, 3290],
 ];

@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,writeFileSync,rmSync,readFileSync,appendFileSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,rmSync,readFileSync,readdirSync,appendFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {packQuests,expandQuests} from './quest-pack';
@@ -71,7 +71,8 @@ test('a push waits while only clocks change, and goes after the heartbeat',()=>{
 });
 
 test("the collector reads logs from their tail, keeps 5000 results, caches the vault tail and the proof scan",()=>{
- const server=['server.ts','server/config.ts','server/market.ts','server/world.ts','server/state.ts','server/routes.ts'].map(f=>readFileSync(join(import.meta.dir,f),'utf8')).join('\n');
+ const stateFiles=readdirSync(join(import.meta.dir,'server','state')).filter(f=>f.endsWith('.ts')).sort().map(f=>join('server','state',f));
+ const server=['server.ts','server/config.ts','server/market.ts','server/world.ts','server/state.ts','server/routes.ts',...stateFiles].map(f=>readFileSync(join(import.meta.dir,f),'utf8')).join('\n');
  expect(server).toContain("tailJsonlFile<T>(file, n)");
  expect(server).toContain("const RESULT_KEEP = 5000;");
  expect(server).toContain("cachedTail<any>(FILES.vault, 100_000)");

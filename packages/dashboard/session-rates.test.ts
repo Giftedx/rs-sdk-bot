@@ -1,7 +1,7 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 
-const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+const server=readFileSync(new URL('./server/state/statuses.ts',import.meta.url),'utf8');
 test('a new worker session resets XP, coin and food rate samples',()=>{
  const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('const runStartCoins ='),server.indexOf('function goalSkillOf(')));
  const run=new Function(`const FILES={},NL=String.fromCharCode(10),tailJsonl=()=>[],coinsOf=s=>s.coins,foodOf=l=>l?.length??0,goalSkillOf=()=>null,append=()=>{},trackResult=()=>{},trackFlow=()=>{},flows=new Map();${code};return{track,rate,flowRate,spark};`)();
