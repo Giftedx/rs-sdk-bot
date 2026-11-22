@@ -1,8 +1,7 @@
 // Owned-transfer admission, account/order leases, and handoff argument parsing.
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { readMergedPlan } from '../../../core/src/coordinator-jobs';
-import { simStatusDir } from '../../../core/src/practice-paths';
+import { fleetStateFile, simStatusDir } from '../../../core/src/practice-paths';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { ownedAccounts } from '../../../core/src/tradeguard';
 import { createHandoff, reconcileOrder, type OrderSnapshot } from './handoff';
@@ -101,17 +100,27 @@ export function parseHandoff(args: string[]): Handoff {
 
 export function assertAccountOwnership(names: string[], state: any, jobs: any[], stopped: (name: string) => boolean, runId: string) {
     for (const name of ['coordinator', 'swarm', ...names]) if (stopped(name)) throw Error(`existing stop-${name}; preserve owner pause`);
-    if (!state || state.version !== 1 || !Array.isArray(state.tasks) || !Array.isArray(jobs)) throw Error('coordinator account ownership unavailable');
-    for (const record of state.tasks.filter((r: any) => r.status === 'running')) {
-        const spec = record.spec;
-        if (!spec) throw Error('coordinator task ownership unknown');
-        const bindings = spec.participants ?? (spec.account ? [spec.account] : spec.accountFrom ? ['@' + spec.accountFrom] : []);
-        const accounts = bindings.map((n: string) => n.startsWith('@') ? state.tasks.find((r: any) => r.spec?.id === n.slice(1))?.receipt?.output?.account : n);
-        if (accounts.some((n: unknown) => typeof n !== 'string')) throw Error('coordinator participant ownership unresolved');
-        for (const name of names) {
-            if (accounts.some((n: string) => n.toLowerCase() === name.toLowerCase()) && (!runId || record.runId !== runId)) {
-                throw Error(`account lease conflict: ${name}; coordinator ${spec.id} ${record.runId}`);
+    if (!Array.isArray(jobs)) throw Error('swarm job ownership unavailable');
+    if (state !== null && state !== undefined) {
+        if (state.schemaVersion === 1 && typeof state.accounts === 'object' && state.accounts !== null) {
+            for (const name of names) {
+                if (state.accounts[name.toLowerCase()]?.paused === true) throw Error(`account paused in fleet state: ${name}`);
             }
+        } else if (state.version === 1 && Array.isArray(state.tasks)) {
+            for (const record of state.tasks.filter((r: any) => r.status === 'running')) {
+                const spec = record.spec;
+                if (!spec) throw Error('coordinator task ownership unknown');
+                const bindings = spec.participants ?? (spec.account ? [spec.account] : spec.accountFrom ? ['@' + spec.accountFrom] : []);
+                const accounts = bindings.map((n: string) => n.startsWith('@') ? state.tasks.find((r: any) => r.spec?.id === n.slice(1))?.receipt?.output?.account : n);
+                if (accounts.some((n: unknown) => typeof n !== 'string')) throw Error('coordinator participant ownership unresolved');
+                for (const name of names) {
+                    if (accounts.some((n: string) => n.toLowerCase() === name.toLowerCase()) && (!runId || record.runId !== runId)) {
+                        throw Error(`account lease conflict: ${name}; coordinator ${spec.id} ${record.runId}`);
+                    }
+                }
+            }
+        } else {
+            throw Error('fleet account ownership unavailable');
         }
     }
     for (const job of jobs) {
@@ -163,8 +172,10 @@ export function checkTransferAccounts(
     io: { owned?: (server: string) => ReadonlySet<string>; logoutState?: (name: string, server: string) => string } = {},
 ) {
     const dir = join(root, '.practice'), read = (file: string) => existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
-    const jobs = existsSync(join(root, 'swarm.json')) ? readMergedPlan(root).jobs : undefined;
-    assertAccountOwnership([...names], read(join(dir, 'coordinator/state.json')), jobs, n => existsSync(join(dir, 'stop-' + n)), runId);
+    const state = read(fleetStateFile(root));
+    if (!state) throw Error('fleet account ownership unavailable');
+    const jobs = existsSync(join(root, 'swarm.json')) ? JSON.parse(readFileSync(join(root, 'swarm.json'), 'utf8')).jobs : undefined;
+    assertAccountOwnership([...names], state, jobs, n => existsSync(join(dir, 'stop-' + n)), runId);
     const owned = (io.owned ?? ownedAccounts)(server), logoutState = io.logoutState ?? ((name, host) => readLogoutProof(name, host).state);
     for (const name of names) {
         if (!owned.has(name.toLowerCase())) throw Error('not authenticated owned: ' + name);

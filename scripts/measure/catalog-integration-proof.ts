@@ -7,7 +7,7 @@ import {serverFromEnv} from '../../packages/core/src/bot';
 import {isLocalServer} from '../../packages/core/src/localserver';
 import {readLogoutProof} from '../../packages/core/src/session-lifecycle';
 import {killTree} from '../../packages/core/src/proc';
-import {plan,aioTemplates,jobFor} from '../../packages/planner/src/autopilot';
+import {resolveSkillerStep} from '../aio-skiller';
 import {capabilityRevision} from '../../packages/core/src/worker-release';
 import {levelForXp} from '../../packages/planner/src/curve';
 import {readPracticeSave,parsePracticeSave,waitPracticeSave} from './fleet-player-save';
@@ -24,7 +24,7 @@ const totals=(save:Save,skip:number[]=[])=>{
 type ArtisanMode='cut'|'producer'|'tools'|'observer';
 const entries={cut:'scripts/microbot-production.ts',producer:'scripts/microbot-jewellery-trip.ts',tools:'scripts/aio-market.ts',observer:'scripts/aio-logistics.ts'} as const;
 export const toolsEnv={ITEMS:'ring mould|chisel',STOCK_TARGET:'1',STOP_AT_TARGET:'1',MAX_ITEMS:'2',MAX_SPEND:'20',FLOAT:'100',COIN_RESERVE:'0',NO_BUY_TICKS:'25',BANK_PACK:'1'};
-export const artisanSourceEntries=(mode:ArtisanMode):string[]=>[entries[mode],'scripts/measure/catalog-integration-proof.ts',...(mode==='producer'?['scripts/aio.ts']:[])];
+export const artisanSourceEntries=(mode:ArtisanMode):string[]=>[entries[mode],'scripts/measure/catalog-integration-proof.ts',...(mode==='producer'?['scripts/aio-skiller.ts']:[])];
 export const artisanSourceRevision=(mode:ArtisanMode,base=root)=>capabilityRevision(artisanSourceEntries(mode),base);
 const files=['before.sav','after.sav','stdout.log','stderr.log','execution.json','logout.json'] as const;
 const hash=(value:Uint8Array|string)=>createHash('sha256').update(value).digest('hex');
@@ -136,13 +136,9 @@ async function prove(name:string,mode:string,savePath:string){
  let stdout:string,expectedItem:number;
  if(mode==='producer'){
   assert.equal(amount(before,1607,95),13);assert.equal(amount(before,2357,95),13);assert.equal(amount(before,1592,95),1);
-  const template=aioTemplates().find(row=>row.id==='aio-sapphire-rings');assert.ok(template);
-  const assignment=plan({side:'local',accounts:[{name,side:'local',skills:{Crafting:20,Hitpoints:40},items:{sapphire:13,'gold bar':13,'ring mould':1}}],
-   owners:new Map([[name.toLowerCase(),{side:'local'}]]),templates:[template],pilots:new Set([template.id]),prices:{'sapphire ring':100},
-   bill:[{item:'sapphire ring',need:1,owned:0,short:1,ids:[1637],holders:[]}]}).find(row=>row.account===name);
-  assert.ok(assignment?.template,'finite producer assignment');const job=jobFor(assignment,'local');
-  assert.equal(job.repeat,false,'finite production does not repeat');
-  stdout=await worker(name,job.script,job.args,job.env,0,artifact!.directory);assert.match(stdout,/^RESULT ok\b/m);expectedItem=1637;
+  const step=resolveSkillerStep('crafting','jewellery-trip',['RECIPE=sapphire_ring','TARGET=1','BATCH=1','CAP=1500']);
+  assert.equal(step.script,entries.producer);
+  stdout=await worker(name,step.script,step.args,step.env,0,artifact!.directory);assert.match(stdout,/^RESULT ok\b/m);expectedItem=1637;
   const saved=await waitPracticeSave(savePath,save=>amount(save,1637,95)===1);assert.equal(saved.matched,true);
   const after=readPracticeSave(savePath);
   assert.equal(amount(after,1637,95),1);assert.equal(amount(after,1607,95),12);assert.equal(amount(after,2357,95),12);

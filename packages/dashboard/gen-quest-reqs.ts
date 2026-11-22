@@ -1,5 +1,5 @@
 // Writes client-assets/quest-reqs.json for the Quest Journal: what each quest needs before an account can finish it,
-// by its journal name (questJournalNames in packages/router/src/coverage.ts), as {s: [[skill, level, src]],
+// by its journal name (questJournalNames in packages/core/src/quest-status.ts), as {s: [[skill, level, src]],
 // qp: [points, src], q: [[quest, src]], i: [[item, count, src]]}.
 //
 // A skill, quest point or quest row comes only from the content (vendor/rs-sdk/server/content/scripts):
@@ -14,7 +14,7 @@
 // Run: bun packages/dashboard/gen-quest-reqs.ts
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { VARP_FOLDER, questJournalNames } from '../router/src/coverage';
+import { VARP_FOLDER, questJournalNames } from '../core/src/quest-status';
 
 export type Reqs = { s: [string, number, 1 | 2][]; qp?: [number, 1 | 2]; q: [string, 1 | 2][]; i?: [string, number, 0 | 1][] };
 

@@ -15,8 +15,6 @@ import {startQuestSustain} from './quest-sustain';
 import {buyWithBudget,orderPaths,runOwnedItem,type ItemRequest} from '../packages/workers/src/market';
 import {planTripOffThread} from '../packages/core/src/route-plan';
 import {routeFares,type Account} from '../packages/core/src/world';
-import {chooseProgression,type ObservedAccount,type ProgressionDecision} from '../packages/planner/src/progression';
-import {rangedProgressionMethods,rangedKit,rangedBandTarget} from '../packages/planner/src/progression-ranged';
 import {standardBowTiers,standardArrowTiers,gearById,shopCatalog} from '../packages/planner/src/gear-progression';
 import {questFlags} from '../packages/core/src/quest-status';
 import {isLocalServer} from '../packages/core/src/localserver';
@@ -344,6 +342,90 @@ export function rangedComparisonMethod(value:string|undefined,server:string):'ch
  return value;
 }
 // Every decision starts from this session's observed containers, never a fleet bank snapshot.
+type TimedMap<T>={at:number;value:T};
+export interface ObservedAccount{
+ account:string;at:number;
+ skills:Record<string,{level:number;xp:number}>;
+ inventory:TimedMap<Record<number,number>>|null;
+ equipment:TimedMap<Record<number,number>>|null;
+ bank:(TimedMap<Record<number,number>>&{generation?:number})|null;
+ quests:TimedMap<Record<string,boolean|null>>|null;
+ position:TimedMap<{x:number;z:number;level:number}>|null;
+ currentHP?:number;reservations?:Record<number,number>;
+}
+export interface ProgressionStep{script:string;args:string[];env:Record<string,string>;alsoRuns?:ProgressionStep[]}
+export interface ProgressionDecision{
+ state:'complete'|'execute'|'acquire'|'qualify'|'observe'|'measure'|'blocked';
+ selected:string|null;step:ProgressionStep|null;
+ path:{method:string;step:ProgressionStep;units:number;ticks:number}[];
+ expectedTicks:number|null;basis:'model'|'unknown';reason:string;
+}
+const RANGED_FOODS=[385,373,379,333,2142,2309,1901,1895,1893,1891] as const;
+const TIER_UPGRADES:Record<number,{bow:number;arrow:number;minCoins:number}>={
+ 5:{bow:843,arrow:886,minCoins:100},20:{bow:849,arrow:888,minCoins:2500},
+ 30:{bow:853,arrow:888,minCoins:5000},40:{bow:857,arrow:892,minCoins:3000},
+};
+const rangedStock=(a:ObservedAccount)=>{
+ const out:Record<number,number>={};
+ for(const obs of [a.inventory,a.equipment,a.bank])for(const [id,n] of Object.entries(obs?.value??{}))out[Number(id)]=(out[Number(id)]??0)+n;
+ for(const [id,n] of Object.entries(a.reservations??{}))out[Number(id)]=Math.max(0,(out[Number(id)]??0)-n);
+ return out;
+};
+const rangedLevel=(a:ObservedAccount)=>Object.entries(a.skills).find(([k])=>k.toLowerCase()==='ranged')?.[1].level??0;
+function rangedModelRate(level:number,kit:{bow:number;arrow:number;attack:number;strength:number;interval:number},hp:number,defence:number,extraTicks=8){
+ const max=Math.max(1,Math.floor(.5+(level+8)*(kit.strength+64)/640));
+ const attack=(level+8)*(kit.attack+64),def=(defence+9)*64;
+ const chance=attack>def?1-(def+2)/(2*(attack+1)):attack/(2*(def+1));
+ const hit=chance/(max+1),zero=1-chance+hit,shots=[0];
+ for(let h=1;h<=hp;h++)shots[h]=(1+Array.from({length:max},(_,i)=>hit*shots[Math.max(0,h-i-1)]!).reduce((n,v)=>n+v,0))/(1-zero);
+ return hp*100/(shots[hp]!*kit.interval+extraTicks);
+}
+export function rangedKit(a:ObservedAccount){
+ if(!a.bank||!a.inventory||!a.equipment)return null;
+ const owned=rangedStock(a),level=rangedLevel(a);
+ const armour=Object.keys(a.equipment.value).map(Number).map(id=>gearById(id)).filter((g):g is NonNullable<ReturnType<typeof gearById>>=>!!g&&!['righthand','lefthand','quiver'].includes(g.slot));
+ const atk=armour.reduce((n,g)=>n+g.bonuses.rangeAttack,0),str=armour.reduce((n,g)=>n+g.bonuses.rangeStrength,0);
+ const options=BOWS.filter(b=>b.req<=level&&(owned[b.id]??0)>0).flatMap(b=>ARROWS.filter(q=>q.req<=b.req&&q.req<=level&&(owned[q.id]??0)>=3).map(q=>({
+  bow:b.id,arrow:q.id,bowLevel:b.req,arrows:owned[q.id]!,attack:atk+(gearById(b.id)?.bonuses.rangeAttack??0),
+  strength:str+(gearById(q.id)?.bonuses.rangeStrength??0),interval:Math.max(1,(gearById(b.id)?.attackRate??4)-1),
+ })));
+ return options.sort((x,y)=>rangedModelRate(level,y,22,12)-rangedModelRate(level,x,22,12)||y.strength-x.strength||x.bow-y.bow||x.arrow-y.arrow)[0]??null;
+}
+export function rangedBandTarget(a:ObservedAccount,target:number){
+ const current=rangedKit(a),level=rangedLevel(a),skill=Object.keys(a.skills).find(k=>k.toLowerCase()==='ranged')!;
+ const heldCoins=Math.max(0,[a.inventory,a.bank,a.equipment].reduce((n,b)=>n+(b?.value[COINS]??0),0)-(a.reservations?.[COINS]??0));
+ const owned=rangedStock(a);
+ const hasSourced=(id:number,need:number,boundary:number)=>(owned[id]??0)>=need||(boundary<=40&&id in TIER_UPGRADES)||(id===843||id===886?boundary>=5:id===849||id===888?boundary>=20:id===853?boundary>=30:id===857||id===892?boundary>=40:false);
+ for(const boundary of [...new Set(BOWS.map(b=>b.req))].filter(n=>n>level&&n<target).sort((x,y)=>x-y)){
+  if(current){
+   const next=rangedKit({...a,skills:{...a.skills,[skill]:{...a.skills[skill]!,level:boundary}}});
+   if(next&&(next.bow!==current.bow||next.arrow!==current.arrow))return boundary;
+  }
+  const up=TIER_UPGRADES[boundary];
+  if(up&&heldCoins>=up.minCoins&&hasSourced(up.bow,1,boundary)&&hasSourced(up.arrow,3,boundary)&&(!current||current.bowLevel<boundary||(boundary===5&&current.arrow===882)))return boundary;
+ }
+ return target;
+}
+function chooseRangedDecision(account:ObservedAccount,target:number):ProgressionDecision{
+ const level=rangedLevel(account);
+ if(level>=target)return{state:'complete',selected:null,step:null,path:[],expectedTicks:0,basis:'model',reason:'Observed account state already meets the finite goal.'};
+ const step:ProgressionStep={script:'scripts/ranged-train.ts',args:[String(target)],env:{TARGET_LEVEL:String(target)}};
+ const owned=rangedStock(account),hp=Object.entries(account.skills).find(([k])=>k.toLowerCase()==='hitpoints')?.[1].level??10;
+ const kit=rangedKit(account);
+ if(!kit){
+  const hasBow=BOWS.some(b=>b.req<=level&&(owned[b.id]??0)>0),hasArrow=ARROWS.some(q=>q.req<=level&&(owned[q.id]??0)>=3);
+  const method=!hasArrow?'ranged/lowe-buy-bronze':!hasBow?'ranged/lowe-buy-shortbow':null;
+  if(method){
+   const acqStep:ProgressionStep={script:'scripts/ranged-train.ts',args:[String(Math.min(target,5)),'1500'],env:{TARGET_LEVEL:String(Math.min(target,5))}};
+   return{state:'acquire',selected:method,step:acqStep,path:[{method,step:acqStep,units:1,ticks:80}],expectedTicks:80,basis:'model',reason:`Acquiring starter kit via ${method}.`};
+  }
+  return{state:'acquire',selected:null,step:null,path:[],expectedTicks:null,basis:'unknown',reason:'Missing usable bow and 3+ arrows for Ranged training.'};
+ }
+ const hasFood=RANGED_FOODS.some(id=>(owned[id]??0)>=3);
+ const method=hp>=40&&hasFood?'ranged/troopers':'ranged/chickens';
+ const rate=method==='ranged/troopers'?rangedModelRate(level,kit,22,12):rangedModelRate(level,kit,3,1,8+210/8);
+ return{state:'execute',selected:method,step,path:[{method,step,units:1,ticks:Math.max(1,Math.ceil(100/Math.max(0.01,rate)))}],expectedTicks:Math.max(1,Math.ceil(100/Math.max(0.01,rate))),basis:'model',reason:`Selected ${method} from observed gear and levels.`};
+}
 export function rangedAccountObservation(s:Session,reserve=0,now=Date.now()):ObservedAccount{
  const counts=(rows:readonly {id:number;count:number}[])=>rows.reduce<Record<number,number>>((all,i)=>(all[i.id]=(all[i.id]??0)+i.count,all),{});
  const bank=s.bankObservation?.(),p=s.sdk.getState()?.player,quests=questFlags(s.client);
@@ -484,25 +566,15 @@ async function runAdaptiveRangedBand(s:Session,o:RangedTrainOptions,options:{com
  if(s.sdk.getState()?.bank?.isOpen)await s.bot.closeBank();
  if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:20}))
   throw Error('adaptive Ranged needs a fresh bank observation');
- const account=rangedAccountObservation(s,o.coinReserve),methods=rangedProgressionMethods(account,o.target);
+ const account=rangedAccountObservation(s,o.coinReserve);
  const coins=Object.values([account.bank,account.inventory,account.equipment]).reduce((n,b)=>n+(b?.value[COINS]??0),0);
  if(coins<o.coinReserve)throw Error('ranged-train prerequisite: coin reserve short');
- const localDecision=options.decision??chooseProgression({kind:'train',skill:'Ranged',targetLevel:o.target},account,methods,{now:Date.now()});
- let decision=localDecision;
- if(!options.decision&&s.lifecycle?.domain==='live'){
-  const live=s.progression?.refresh('Ranged fresh bank');
-  if(!live?.decision)throw Error('adaptive Ranged live progression decision unavailable');
-  decision=live.decision;
- }
+ const decision=options.decision??chooseRangedDecision(account,o.target);
  console.log('RANGED_PROGRESSION '+JSON.stringify(decision));
  const method=options.comparison?'ranged/'+options.comparison:decision.path[0]?.method??decision.selected;
  const step=decision.path[0]?.step??decision.step;
  if(!options.comparison&&isRangedAcquireMethod(method)&&(decision.state==='acquire'||decision.state==='execute'))
   return executeRangedAcquireStep(s,o,account,method,step,decision,start);
- if(!options.comparison&&(decision.state==='acquire'||decision.state==='qualify')&&!method&&!rangedKit(account)){
-  const starterMethod=localDecision.path[0]?.method??localDecision.selected;
-  if(isRangedAcquireMethod(starterMethod))return executeRangedAcquireStep(s,o,account,starterMethod,localDecision.path[0]?.step??localDecision.step,decision,start);
- }
  await s.bot.closeBank();
  if(!await waitUntil(s,()=>!s.sdk.getState()?.bank?.isOpen,{timeoutTicks:5}))throw Error('adaptive Ranged bank close unobserved');
  if(decision.state==='complete')return{ok:true,targetMet:true,stop:'target-level',targetLevel:o.target,finalLevel:account.skills.Ranged!.level,xpGain:0,ticks:s.tick()-start,method:null,decision};
@@ -513,7 +585,6 @@ async function runAdaptiveRangedBand(s:Session,o:RangedTrainOptions,options:{com
  const policyStep=decision.path[0]?.step??decision.step,declaredTarget=Number(policyStep?.env.TARGET_LEVEL??policyStep?.args[0]??o.target);
  if(!Number.isSafeInteger(declaredTarget)||declaredTarget<1||declaredTarget>99)throw Error('adaptive Ranged policy target unknown');
  const bandTarget=Math.min(rangedBandTarget(account,o.target),declaredTarget);
- s.progression?.executing(method!);
  if(method==='ranged/chickens'||method==='ranged/chickens-oak'){
   const r=await runRangedTrain(s,{...o,target:bandTarget,cap:remaining,kit});
   return{...r,ticks:s.tick()-start,method,decision,bandTarget};

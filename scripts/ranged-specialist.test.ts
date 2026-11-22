@@ -2,9 +2,7 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { validateSupplies } from '../packages/core/src/launch-evidence';
-import { evaluateProgressionWork, preflightProgressionWork } from '../packages/core/src/progression-session';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
-import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
 import { selectItems } from '../packages/workers/src/market';
@@ -262,74 +260,6 @@ test('specialist-supplier resolves attack and 2-trade ranged kits and parses CLI
         bankX: 3094,
         bankZ: 3491,
         positional: ['Donor', 'Holder'],
-    });
-});
-
-test('progression catalog and live work gate admit ranged-specialist across Ranged 1..98', () => {
-    const work = {
-        script: 'scripts/ranged-specialist.ts',
-        args: [] as string[],
-        env: { SUPPLIER: 'Moneyshot', CAP: '5000', LOOT_WATCH: '0', PRAYER_GUARD: '0', EAT_GUARD: '0', RANDOM_EVENTS: '1' },
-    };
-    const accept = { skills: { Ranged: 99 } };
-    expect(intentForEntry(work.script, work.args, work.env, accept)).toEqual({
-        kind: 'service',
-        objective: 'fresh-clock Ranged 99 specialist route',
-        units: 1,
-    });
-
-    const catalog = loadProgressionCatalog();
-    expect(() => preflightProgressionWork(work, 'rs-sdk-demo.fly.dev', catalog, 'Shaftshooter')).not.toThrow();
-
-    const now = Date.now();
-    for (const rangedLevel of [1, 40, 70, 98]) {
-        const status = {
-            name: 'Shaftshooter',
-            server: 'rs-sdk-demo.fly.dev',
-            at: now,
-            bankAt: now,
-            questsAt: now,
-            equipmentObserved: true,
-            skills: [{ name: 'Ranged', level: rangedLevel, xp: rangedLevel === 1 ? 0 : xpForLevel(rangedLevel) }],
-            inventory: [],
-            equipment: [],
-            bank: [],
-            quests: [],
-        };
-        const res = evaluateProgressionWork(work, status, { now, accept, catalog });
-        expect(res.intent).toEqual({ kind: 'service', objective: 'fresh-clock Ranged 99 specialist route', units: 1 });
-        expect(res.supported).toBe(true);
-    }
-});
-
-test('progression catalog and live work gate admit ranged-live-prep valid modes and reject invalid mode or cap', () => {
-    const catalog = loadProgressionCatalog();
-    const okWork = {
-        script: 'scripts/ranged-live-prep.ts',
-        args: ['UnderMyKilt', '--mode=decant'],
-        env: {},
-    };
-    expect(intentForEntry(okWork.script, okWork.args, okWork.env)).toEqual({
-        kind: 'service',
-        objective: 'ranged-live-prep:decant',
-        units: 1,
-    });
-    expect(() => preflightProgressionWork(okWork, 'rs-sdk-demo.fly.dev', catalog, 'UnderMyKilt')).not.toThrow();
-
-    const bogusWork = {
-        script: 'scripts/ranged-live-prep.ts',
-        args: ['UnderMyKilt', '--mode=bogus'],
-        env: {},
-    };
-    expect(intentForEntry(bogusWork.script, bogusWork.args, bogusWork.env)).toBeNull();
-    expect(() => preflightProgressionWork(bogusWork, 'rs-sdk-demo.fly.dev', catalog, 'UnderMyKilt')).toThrow('requires a finite goal');
-
-    expect(intentForEntry('scripts/ranged-live-prep.ts', ['--mode=brew'], { CAP: '99' })).toBeNull();
-    expect(intentForEntry('scripts/ranged-live-prep.ts', ['--mode=all'], { CAP: '20001' })).toBeNull();
-    expect(intentForEntry('scripts/ranged-live-prep.ts', ['--mode=leather'], { CAP: '1500' })).toEqual({
-        kind: 'service',
-        objective: 'ranged-live-prep:leather',
-        units: 1,
     });
 });
 

@@ -192,7 +192,7 @@ test('host STOP proof refuses failed first case, mismatched actors, live results
 });
 
 import {accountJobRows} from './collection';
-test('grouped coordinator assignments reach each account without undefined identities',()=>{
+test('grouped swarm assignments reach each account without undefined identities',()=>{
  const rows=accountJobRows([{accounts:['Worker','worker','Courier'],enabled:true,state:'waiting: maxBots',script:'scripts/order.ts'},null,{accounts:[undefined,4,'../secret']},{account:'Solo',accounts:['Solo','Other']}]);
  expect(rows.map(r=>r.account)).toEqual(['Worker','Courier','Solo','Other']);expect(rows[0].script).toBe('scripts/order.ts');
  expect(capacityState({at:1000,jobs:[{accounts:['Worker','Courier'],enabled:true,state:'waiting: maxBots'}]},12,2000).queued).toBe(2);

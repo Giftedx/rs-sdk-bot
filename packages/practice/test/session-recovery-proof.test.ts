@@ -16,7 +16,7 @@ import {accountDir,beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout,serveAnyHost,worldHost} from '../src/session-recovery-proof';
 import {recoveryCloseModal} from '../../core/src/session-recovery';
 import type {Session} from '../../core/src/inprocess';
-import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,recoveryMemoryGate,RECOVERY_MEMORY_WAIT_MS,type RecoveryBoundary} from '../src/session-recovery-proof';
+import {recoveryCapability,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,recoveryMemoryGate,RECOVERY_MEMORY_WAIT_MS,type RecoveryBoundary} from '../src/session-recovery-proof';
 import {FLEET_HEARTBEAT_MAX_MS,NATIVE_RECOVERY_CHECKS,RECOVERY_BINDING_MS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
@@ -277,10 +277,10 @@ test('native pre-child observation separates actual memory, capacity, release an
   const base=mkdtempSync(join(tmpdir(),'recovery-boundary-')),events:RecoveryBoundary[]=[];
   const r:ControlledRecoveryRequest={schema:'session-recovery/1',kind:'session-recovery',account:'Rod',server:'localhost:8890',runId:'native-boundary',nonce:'one',endedAt:100,source:'a'.repeat(64),
    qualification:{delivery:{path:'unit-only',sha256:'0'.repeat(64)},proof:{path:'unit-only',sha256:'0'.repeat(64)}}};
-  const coordinator=join(base,'.practice/coordinator'),channel=join(base,'.practice/swarm-repair.json'),pin=process.env.WORKER_RELEASE;
-  mkdirSync(coordinator,{recursive:true});
+  const liveDir=join(base,'.practice/live'),coordinator=join(base,'.practice/coordinator'),channel=join(base,'.practice/swarm-repair.json'),pin=process.env.WORKER_RELEASE;
+  mkdirSync(liveDir,{recursive:true});mkdirSync(coordinator,{recursive:true});
   // The actual launcher must refuse this invalid controller before source/task checks or child issuance.
-  writeFileSync(join(coordinator,'swarm-owner.json'),JSON.stringify({pid:0,nonce:'invalid-owner',source:r.source}));
+  writeFileSync(join(liveDir,'swarm-owner.json'),JSON.stringify({pid:0,nonce:'invalid-owner',source:r.source}));
   const input={account:r.account,active:[],running:fault==='maxBots'?17:0,external:0,pending:0,freeGB:fault==='memory'?FREE_FLOOR_GB:PRACTICE_STARTUP_GB+32,minFreeGB:FREE_FLOOR_GB,maxBots:17};
   let launches=0;
   try{
@@ -338,10 +338,10 @@ test('boundary wrapper preserves exact return and thrown objects, redacts unknow
 });
 
 test('native authority samples retain owner inputs without copying environment secrets or mutating files',()=>{
- const base=mkdtempSync(join(tmpdir(),'recovery-authority-inputs-')),dir=join(base,'.practice/coordinator');
- mkdirSync(dir,{recursive:true});const path=join(dir,'state.json');
+ const base=mkdtempSync(join(tmpdir(),'recovery-authority-inputs-')),dir=join(base,'.practice/live/fleet-runs/native-boundary');
+ mkdirSync(dir,{recursive:true});const path=join(dir,'recovery.json');
  const r={account:'Rod',server:'localhost:8890',runId:'native-boundary',nonce:'one',endedAt:100,source:'a'.repeat(64)} as ControlledRecoveryRequest;
- const raw=JSON.stringify({tasks:[{status:'running',pid:123,runId:r.runId,spec:{kind:'run',account:'Rod',sessionRecovery:{account:'Rod',endedAt:100},env:{PASSWORD:'secret'}}}]});
+ const raw=JSON.stringify({status:'running',pid:123,runId:r.runId,spec:{kind:'run',account:'Rod',sessionRecovery:{account:'Rod',endedAt:100},env:{PASSWORD:'secret'}}});
  writeFileSync(path,raw);
  try{
   const sample=recoveryAuthorityInputs(base,r);
@@ -947,35 +947,6 @@ test('native recovery uses the current delivery identity with the shark default'
  expect(()=>recoveryCapability('../cow')).toThrow();expect(()=>recoveryCapability('')).toThrow();
  const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');expect(text).toContain('process.env.DELIVERY_ID??deliveryTask?.id');
  expect(CHECK_CASES.completed).toEqual(['completed','completed-held-producer','completed-refusals']);
-});
-test('completed router pins capture both current integration files without a saved report',()=>{
- const base=mkdtempSync(join(tmpdir(),'completed-router-pins-'));
- const files=['packages/router/src/coordinator-live.ts','packages/router/test/coordinator-recovery.test.ts'];
- try{
-  for(const path of files){mkdirSync(join(base,path,'..'),{recursive:true});writeFileSync(join(base,path),'pinned '+path);}
-  const pins=files.map(path=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')}));
-  expect(verifyCompletedRouterPins(base)).toEqual(pins);
-  rmSync(join(base,files[0]!));
-  expect(()=>verifyCompletedRouterPins(base)).toThrow();
- }finally{rmSync(base,{recursive:true,force:true});}
-});
-
-test('changed router files do not fail at proof start against a stale saved report',()=>{
- const base=mkdtempSync(join(tmpdir(),'completed-router-start-'));
- const files=['packages/router/src/coordinator-live.ts','packages/router/test/coordinator-recovery.test.ts'];
- try{
-  for(const path of files){mkdirSync(join(base,path,'..'),{recursive:true});writeFileSync(join(base,path),'pinned '+path);}
-  const pins=files.map(path=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')}));
-  mkdirSync(join(base,'.practice/supervision-session-admission-20261029'),{recursive:true});
-  writeFileSync(join(base,'.practice/supervision-session-admission-20261029/result.json'),JSON.stringify({routerCompletedAccountIntegration:{files:pins}}));
-  for(const path of files){
-   const before=readFileSync(join(base,path));writeFileSync(join(base,path),'changed '+path);
-   const current=verifyCompletedRouterPins(base);
-   expect(current).toEqual(files.map(path=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')})));
-   expect(current).not.toEqual(pins);
-   writeFileSync(join(base,path),before);
-  }
- }finally{rmSync(base,{recursive:true,force:true});}
 });
 test('a timer-only fleet snapshot stays stale at a late handoff; a fresh owned handoff resolves without hiding real ownership',()=>{
  const dir=mkdtempSync(join(tmpdir(),'fleet-handoff-')),path=join(dir,'swarm-state.json'),account='flrcvxgwj01';

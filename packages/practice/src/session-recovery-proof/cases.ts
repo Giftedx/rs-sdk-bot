@@ -42,6 +42,8 @@ export type ProofCaseContext={
  sessionCheckCli:(f:Fixture,dir:string,before:Save)=>ReturnType<typeof runSessionCheckCase>;
 };
 
+const CAPABILITY_ENTRIES:Record<string,string>={'cow-progress-order':'scripts/gather-combat.ts','shark-supply-order':'scripts/shark-supply.ts'};
+
 export async function runCompletedSuite(ctx:ProofCaseContext){
  const {base,lifeRoot,capability,source,HOST,preset,d8890,tasks,ends,jobs,ownedStops,absenceGuards,children,put,writeState,loginLog,deathBytes,caseDir,fixture,fixtureFiles,record,positive,held,sessionCheckCli}=ctx;
  // Retired successful ordinary account with no producer history: actual controller -> installed core CLI.
@@ -49,7 +51,7 @@ export async function runCompletedSuite(ctx:ProofCaseContext){
   const C=await fixture(HOST,preset,true),dir=caseDir('completed');
   const holds=readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8'),assignments=readFileSync(join(base,'handoff/swarm.json'),'utf8');
   const beforeProof=readLogoutProof(C.name,C.server,{root:lifeRoot});
-  const out=await positive('completed',C),end=ends[C.name],entry=JSON.parse(readFileSync(join(base,'packages/router/tasks',capability+'.json'),'utf8')).entry;
+  const out=await positive('completed',C),end=ends[C.name],entry=CAPABILITY_ENTRIES[capability]??'scripts/gather-combat.ts';
   const revision=missionSignature({account:C.name,script:entry,env:{TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',CAP:'1500',COORDINATOR_RUN_ID:out.runId}});
   const retained=new Map(Object.entries(ends)),proof=readLogoutProof(C.name,C.server,{root:lifeRoot});
   const repair=applyEndRepair({account:C.name,endedAt:C.endedAt,server:C.server,proof:{kind:'producer',attemptId:out.receipt?.attemptId}},retained,[],{
@@ -91,7 +93,7 @@ export async function runCompletedSuite(ctx:ProofCaseContext){
    const C=await fixture(HOST,preset,true),id='completed-refusal-'+fault;
    const h=await held(id,C,d8890,async r=>{
     const spec=tasks.get(r.runId).spec;
-    if(fault==='same-revision')ends[C.name].revision=missionSignature({account:C.name,script:JSON.parse(readFileSync(join(base,'packages/router/tasks',capability+'.json'),'utf8')).entry,
+    if(fault==='same-revision')ends[C.name].revision=missionSignature({account:C.name,script:CAPABILITY_ENTRIES[capability]??'scripts/gather-combat.ts',
      env:{...spec.env,COORDINATOR_RUN_ID:r.runId}});
     if(fault==='open-hold')put('.practice/swarm-script-holds.json',[{account:C.name,script:'scripts/retired-fixture.ts',at:C.endedAt,heldAt:C.endedAt,reason:'retained'}]);
     if(fault==='changed-end')ends[C.name].at++;
@@ -101,7 +103,7 @@ export async function runCompletedSuite(ctx:ProofCaseContext){
     if(fault==='orphan'||fault==='partial-intent'){
      const a=beginSessionAttempt({account:C.name,server:C.server},{root:lifeRoot});if(fault==='orphan')a.record('connected');
     }
-    if(fault==='competing-owner')put('.practice/coordinator/runs/'+r.runId+'/owner.json',{pid:process.pid,runId:r.runId});
+    if(fault==='competing-owner')put('.practice/live/fleet-runs/'+r.runId+'/owner.json',{pid:process.pid,runId:r.runId});
     if(fault==='wrong-identity')spec.sessionRecovery.account='Other';
     if(fault==='wrong-source')r.source='f'.repeat(64);
     writeState();
@@ -279,9 +281,8 @@ export async function runStockAndFinalizeGuards(ctx:ProofCaseContext,env:{
   retainRequiredRecoveryCase(row,()=>progress());
  }
  const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','packages/core/src/route-plan.ts','packages/core/src/fleet-trade-claim.ts','packages/core/src/fleet-lease.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
-  'packages/core/src/coordinator-jobs.ts','packages/core/src/bounded-recovery.ts','packages/core/src/bounded-owners.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
-  'packages/practice/src/swarm-recovery-chain.ts','packages/router/src/bank-observer-qualification.ts',
-  'packages/router/src/coordinator-cli.ts','packages/router/src/coordinator-live.ts','packages/router/tasks/session-recovery-only.json',
+  'packages/core/src/bounded-recovery.ts','packages/core/src/bounded-owners.ts','scripts/cloud-side.ts','scripts/cloud-recovery.ts',
+  'packages/practice/src/swarm-recovery-chain.ts','packages/fleet/src/session-recovery.ts','packages/fleet/src/swarm.ts','packages/fleet/src/cloud-side.ts','packages/fleet/src/fleet-agent.ts',
   'vendor/rs-sdk/server/webclient/tsconfig.json','vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
  return bindings;
 }

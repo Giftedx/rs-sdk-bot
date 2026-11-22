@@ -2,28 +2,31 @@
 // bun scripts/measure/same-job-bench.ts <case key> <seed>     one case, one practice engine, ports 21800 to 21803
 // bun scripts/measure/same-job-bench.ts --check               the room check alone
 // The script reads the room once, immediately before the case, and does not wait: exit 3 means no room. Room is
-// freeGB above 8 in .practice/swarm-state.json of the main checkout, and no task with spec.capability
-// "session-recovery-only" and status pending or running in its .practice/coordinator/state.json. A file that does
-// not parse, or a state with no spec.capability on any task, is no room. Run one case, then check again: a
+// freeGB above 8 in .practice/swarm-state.json of the main checkout, and no account with lifecycle
+// "needs_logout_recovery" or active recovery job in .practice/live/fleet-state.json. A file that does not parse,
+// or a fleet state without schemaVersion=1 / accounts object, is no room. Run one case, then check again: a
 // practice engine and its worker hold 1 to 2 GB, and a live recovery that finds no memory is refused.
 // The output of the run goes to .practice/same-job/<case>-s<seed>.log, and the worker output to logs/ beside it.
 // A case marked `known` runs too: the key names it. A run that prints no result row for the case ends with exit 4.
 import {readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync} from 'node:fs';
 import {freemem} from 'node:os';
 import {dirname, resolve} from 'node:path';
+import {fleetStateFile} from '../../packages/core/src/practice-paths';
 
 const root = resolve(import.meta.dir, '..', '..');
-type Task = {status?: string; spec?: {id?: string; capability?: string}};
 export type Room = {ok: boolean; freeGB?: number; osFreeGB?: number; recoveries?: string[]; error?: string};
 
-// `main` is the checkout that runs the swarm and the coordinator.
+// `main` is the checkout that runs the swarm and the Fleet Brain controller.
 export function room(main: string, osFreeGB = freemem() / 2 ** 30, read: (path: string) => string = p => readFileSync(p, 'utf8')): Room {
   try {
     const swarm = JSON.parse(read(resolve(main, '.practice/swarm-state.json'))) as {freeGB?: unknown};
-    const state = JSON.parse(read(resolve(main, '.practice/coordinator/state.json'))) as {tasks?: unknown};
-    const tasks: Task[] = Array.isArray(state.tasks) ? state.tasks : [];
-    if (typeof swarm.freeGB !== 'number' || !tasks.some(t => typeof t.spec?.capability === 'string')) return {ok: false, error: 'state shape unknown'};
-    const recoveries = tasks.filter(t => t.spec?.capability === 'session-recovery-only' && (t.status === 'pending' || t.status === 'running')).map(t => `${t.status}:${t.spec?.id}`);
+    const state = JSON.parse(read(fleetStateFile(main))) as {schemaVersion?: unknown; accounts?: unknown};
+    if (typeof swarm.freeGB !== 'number' || state.schemaVersion !== 1 || !state.accounts || typeof state.accounts !== 'object' || Array.isArray(state.accounts)) {
+      return {ok: false, error: 'state shape unknown'};
+    }
+    const recoveries = Object.entries(state.accounts as Record<string, any>)
+      .filter(([, row]) => row?.lifecycle === 'needs_logout_recovery' || row?.activeJob?.activityId === 'recovery:session')
+      .map(([name, row]) => `${row?.activeJob ? 'running' : 'pending'}:${name}`);
     return {ok: swarm.freeGB > 8 && osFreeGB > 8 && recoveries.length === 0, freeGB: Number(swarm.freeGB.toFixed(2)), osFreeGB: Number(osFreeGB.toFixed(2)), recoveries};
   } catch (e) { return {ok: false, error: String(e)}; }
 }

@@ -15,6 +15,7 @@ import { contentionView, farmsView, overtakeView, rivalsView, rosterView, wilder
 import { xpForLevel } from '../../../planner/src/curve';
 import { ownerOfIn } from '../../../core/src/fleet-snapshots';
 import { isLocalServer } from '../../../core/src/localserver';
+import { findStopFile, fleetStateFile } from '../../../core/src/practice-paths';
 import { cached, dashboardDir, every, FILES, fleetList, getMapBytes, liveAccounts, MAIN, MAP, NL, OBJS, PAGE_FILE, practice, remoteNames, ROLE_SKILL, root, SCRIPT_ROLE, shortPhase, snapshotFiles, type Status } from '../config';
 import { getItemPrices, getPricesAt, icons, itemExamines, keySupplyIds, marketById, npcLootPrices, vault } from '../market';
 import { boardTops, EXTRA, extraBoards, firstSeen, fmtTicks, inferRole, liveTop, NO_ROLE, parseTime, rankDelta, ranks, roster, serverTick, SKILL_BOARDS, snapshot, topOf, valueRanks, world } from '../world';
@@ -170,9 +171,22 @@ function buildState() {
     const progress=goalProgress({now,bots,boards,collection,objectives,race:currentRace,gates:currentGates,scoreboard:currentScoreboard},goalInputs);
     // The quest journals travel as one list and each bot's finished and started ids (quest-pack.ts); the page expands them.
     const packedQuests = packQuests(bots as any[]);
+    const brainState = (() => {
+        const file = fleetStateFile(root);
+        const paused = Boolean(findStopFile('swarm', root));
+        try {
+            const parsed = cached<any>(file, JSON.parse, null);
+            const mtime = statSync(file).mtimeMs;
+            const at = typeof parsed?.emittedAt === 'number' && Number.isFinite(parsed.emittedAt) ? parsed.emittedAt : mtime;
+            return coordinationView(parsed, at, now, paused);
+        } catch {
+            return coordinationView(null, 0, now, paused);
+        }
+    })();
     return {
         now, objectives:{...objectives,progress}, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots: packedQuests.bots, questList: packedQuests.questList, boards,
-        coordination:(()=>{const file=join(practice,'coordinator/state.json');try{return coordinationView(cached(file,JSON.parse,null),statSync(file).mtimeMs,now,existsSync(join(practice,'stop-coordinator'))||existsSync(join(practice,'stop-swarm')));}catch{return coordinationView(null,0,now);}})(),
+        coordination: brainState,
+        brain: brainState,
         events: events.slice(0, 160).map(e => ({ ...e, text: shortPhase(e.text), full: e.text, practice: prac.has(e.name) })),
         results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name),nativeProof:resultProof(r,proofs) })), scripts: scripts(proofs), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
         capacity: capacityState(sw,sys.freeGB,now),

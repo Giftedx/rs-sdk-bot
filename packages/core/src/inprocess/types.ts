@@ -1,6 +1,5 @@
 import type { BotSDK } from '../../../../vendor/rs-sdk/sdk/index';
 import type { FleetTradeClaim } from '../fleet-trade-claim';
-import type { ProgressionSession } from '../progression-session';
 import type { BankObservation, SessionCore } from '../session-types';
 import type { TickRecorder } from '../tick-record';
 
@@ -31,12 +30,9 @@ export interface Shim {
     direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
     // Starts the per-tick run record (tick-record.ts) from the next publication; null stops it.
     record(recorder: TickRecorder | null): void;
-    setProgressionGuard(guard: (action: unknown) => string | null): void;
 }
 
-export interface Session extends SessionCore {
-    progression?: ProgressionSession;
-}
+export type Session = SessionCore;
 
 export type FetchRow = { url: string | null; status?: number; length?: string | null; error?: string; ms: number };
 

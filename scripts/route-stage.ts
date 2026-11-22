@@ -24,7 +24,7 @@ import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
-import { mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { brainPlannedJobs } from '../packages/fleet/src/fleet-sync';
 import { BANK_MEETS, pickOrder, swarmBusy, validOrder, type Order } from '../packages/workers/src/logistics';
 import { makeOrder, orderMeet } from './fleet-order';
 import { MAX_ORDER_LINES } from './fleet-trade-settlement';
@@ -109,8 +109,7 @@ export function stageJobs(side: string, options: { base?: string; fleetDir?: str
     if (side === (options.localSide ?? mySide())) {
         const owner = readJson(resolve(options.planFile ?? process.env.SWARM_PLAN ?? join(base, 'swarm.json')));
         if (Array.isArray(owner?.jobs)) try {
-            const plan = mergedPlan(owner, readCoordinatorJobs(base));
-            if (Array.isArray(plan.jobs)) return plan.jobs;
+            return [...owner.jobs, ...brainPlannedJobs(base, owner.jobs)];
         } catch { /* published holds remain */ }
     }
     const published = readJson(join(fleetDir, 'plans', `${side}.json`));

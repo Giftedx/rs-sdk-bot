@@ -1,10 +1,13 @@
 import {existsSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
+import {ownerPlanPath} from './plan-lock';
+import {fleetStateFile, hasStopFile, lifecycleRootForRead, liveRoot, statusReadDirs} from './practice-paths';
 import {processMatches} from './proc';
-import {jobAccounts, readMergedPlan} from './coordinator-jobs';
 import {fresh, localFile, MAX_LOGOUT_DRAIN_TICKS, readBound, sha, validateRehearsals, validateSupplies, type Binding, type SupplyRequirement} from './launch-evidence';
 import {missionSignature} from './session-admission';
 import {listAttempts, readLogoutProof, type AttemptReceipt} from './session-lifecycle';
+
+const jobAccounts = (job: any): string[] => (job?.accounts ?? [job?.account]).filter((n: unknown): n is string => typeof n === 'string');
 
 import {SPECIALIST_BOARDS} from './specialist-boards';
 export {SPECIALIST_BOARDS};
@@ -71,8 +74,9 @@ export function assertSpecialistLogin(root:string, name:string, now:number, env:
     try{
         const bytes=readFileSync(join(root,specialistTokenPath(account))), ticket=sha(bytes);
         const token=JSON.parse(bytes.toString());
+        const envRunId=env.FLEET_RUN_ID||env.COORDINATOR_RUN_ID;
         if(server!==LIVE_SERVER || token?.version!==2 || token.account!==account
-            || typeof token.runId!=='string' || !/^[a-z0-9-]{1,96}$/.test(token.runId) || token.runId!==env.COORDINATOR_RUN_ID
+            || typeof token.runId!=='string' || !/^[a-z0-9-]{1,96}$/.test(token.runId) || token.runId!==envRunId
             || !/^[a-f0-9]{64}$/.test(token.source) || token.source!==env.WORKER_RELEASE
             || !/^[a-f0-9]{64}$/.test(token.mission) || token.mission!==env.SWARM_MISSION_HASH
             || !Number.isSafeInteger(token.at) || !fresh(token.at,now,MAX_SPECIALIST_RUN_MS) || !Number.isSafeInteger(token.expiresAt)
@@ -81,19 +85,34 @@ export function assertSpecialistLogin(root:string, name:string, now:number, env:
             || token.runUntil>token.at+MAX_SPECIALIST_RUN_MS || now>=token.runUntil || !Array.isArray(token.bindings)
             || ![evidencePath(account),SNAPSHOT].every(path=>token.bindings.some((b:Binding)=>b?.path===path)))
             throw Error('missing, expired or mismatched authorization');
-        const jobs=readMergedPlan(root).jobs.filter((job:any)=>jobAccounts(job).some(n=>n.toLowerCase()===account));
+        const planPath=ownerPlanPath(root);
+        const plan=existsSync(planPath)?JSON.parse(readFileSync(planPath,'utf8')):{jobs:[]};
+        const jobs=(Array.isArray(plan?.jobs)?plan.jobs:[]).filter((job:any)=>jobAccounts(job).some(n=>n.toLowerCase()===account));
         const job=jobs[0];
-        if(jobs.length!==1 || job.enabled!==true || job.coordinatorOwner!=='coordinator'
-            || jobAccounts(job).length!==1 || job.env?.COORDINATOR_RUN_ID!==token.runId || sha(missionSignature(job))!==token.mission)
-            throw Error('specialist mission is no longer active');
-        if(['stop-coordinator','stop-swarm','stop-'+name,'stop-'+account,'stop-'+jobAccounts(job)[0]].some(file=>existsSync(join(root,'.practice',file))))
-            throw Error('specialist owner paused the run');
-        const runDir=join(root,'.practice','coordinator','runs',token.runId);
+        const planJobActive=jobs.length===1 && job.enabled===true && jobAccounts(job).length===1
+            && (job.env?.FLEET_RUN_ID||job.env?.COORDINATOR_RUN_ID)===token.runId
+            && sha(missionSignature(job))===token.mission;
+        const fleetFile=fleetStateFile(root);
+        let brainActive=false;
+        const runDir=join(liveRoot(root),'fleet-runs',token.runId);
         const owner=JSON.parse(readFileSync(join(runDir,'owner.json'),'utf8'));
+        if(!planJobActive && jobs.length===0 && existsSync(fleetFile)){
+            const fleet=JSON.parse(readFileSync(fleetFile,'utf8'));
+            const campaignRunning=Array.isArray(fleet?.campaigns)&&fleet.campaigns.some((c:any)=>c?.account?.toLowerCase()===account&&c.state==='running');
+            const chainEntry=fleet?.activeChains&&typeof fleet.activeChains==='object'
+                ?Object.entries(fleet.activeChains as Record<string,any>).find(([k,v])=>k.toLowerCase()===account||v?.account?.toLowerCase()===account)?.[1]
+                :null;
+            brainActive=campaignRunning && !!chainEntry && owner.mission===token.mission && owner.source===token.source;
+        }
+        if(!planJobActive && !brainActive)
+            throw Error('specialist mission is no longer active');
+        const jobAccount=job?jobAccounts(job)[0]:account;
+        if(['coordinator','swarm',name,account,jobAccount].some(flag=>hasStopFile(flag,root)||existsSync(join(root,'.practice','stop-'+flag))))
+            throw Error('specialist owner paused the run');
         if(existsSync(join(runDir,'receipt.json')) || owner.runId!==token.runId
             || !Number.isSafeInteger(owner.pid) || owner.pid<=0 || !ownerMatches(owner.pid,token.runId))
-            throw Error('specialist coordinator run is no longer active');
-        const options={root:join(root,'.practice','session-lifecycle')}, proof=readLogoutProof(account,server,options);
+            throw Error('specialist controller run is no longer active');
+        const options={root:lifecycleRootForRead(server,root)}, proof=readLogoutProof(account,server,options);
         if(proof.state==='none'){
             if(now>=token.expiresAt)throw Error('first-login authorization expired');
             for(const ref of token.bindings)readBound(root,ref,[],false);
@@ -112,8 +131,10 @@ export function assertSpecialistLogin(root:string, name:string, now:number, env:
             || !sameTicket(receipt) || receipt.createdAt<first.createdAt || ended<1
             || !receipt.events.slice(0,ended).some(e=>e.kind==='ready' && e.at>=receipt.createdAt && e.at<=proof.loggedOutAt))
             throw Error('specialist continuation proof is for another attempt or mission');
-        const statusFile=join(root,'.practice','status',jobAccounts(job)[0]+'.json');
-        if(existsSync(statusFile)){
+        const statusName=`${jobAccount}.json`;
+        for(const dir of statusReadDirs(root)){
+            const statusFile=join(dir,statusName);
+            if(!existsSync(statusFile))continue;
             const status=JSON.parse(readFileSync(statusFile,'utf8'));
             if(status?.server===server && status.coordinatorRunId===token.runId && status.result)
                 throw Error('specialist run already published a terminal result');

@@ -63,7 +63,7 @@ export function createRecoveryDispatch(options:DispatchOptions){
    if(options.nativeFixture)assertNativeFixtureRoot(base,server);
    // Claim the exact bytes before any admission decision. An ambiguous crash or lost result
    // then needs an explicit replacement request, including when no account permit was issued.
-   const digest=createHash('sha256').update(raw).digest('hex'),handled=join(base,'.practice/coordinator/session-recovery/dispatch',digest+'.json');
+   const digest=createHash('sha256').update(raw).digest('hex'),handled=join(base,'.practice/live/session-recovery/dispatch',digest+'.json');
    mkdirSync(dirname(handled),{recursive:true});
    try{writeFileSync(handled,JSON.stringify({schema:'session-recovery-dispatch/1',at:now(),pid:process.pid,requestSha256:digest}),{flag:'wx'});seen.add(raw);}
    catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;seen.add(raw);emit(raw,{changed:false,sessionRecovered:false,reason:'recovery request already handled or interrupted; inspect retained account lease and child output; no retry'});return true;}
@@ -80,7 +80,7 @@ export function createRecoveryDispatch(options:DispatchOptions){
    }
    let phase='source-owner';
    try{
-    if(existsSync(join(base,'.practice/coordinator/build-lock.json')))throw Error('recovery waits for runtime source owner');
+    if(existsSync(join(base,'.practice/live/build-lock.json')))throw Error('recovery waits for runtime source owner');
     phase='stop';
     assertRecoveryNotStopped(request.account,base);
     phase='admission';

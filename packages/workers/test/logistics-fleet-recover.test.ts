@@ -7,9 +7,7 @@ import { labelAreas, writeLabels, type Labels } from '../../core/src/components'
 import type { Session } from '../../core/src/inprocess';
 import { logout as logoutAction } from '../../core/src/logout';
 import { pathfindingDataKey } from '../../core/src/pathcache';
-import { preflightProgressionWork } from '../../core/src/progression-session';
 import { beginSessionAttempt, readLogoutProof } from '../../core/src/session-lifecycle';
-import { intentForEntry, loadProgressionCatalog } from '../../planner/src/progression-catalog';
 import { dueTrades, swarmBusy } from '../../../scripts/fleet-agent';
 import { makeOrder } from '../../../scripts/fleet-order';
 import {
@@ -633,10 +631,10 @@ test('each side picks its own open order once, in or near its window', () => {
 
 test('trade admission rereads pauses, assignments and producer ownership after the order wait', () => {
     const base = makeTempDir('fleet-trade-admission-');
-    const practice = join(base, '.practice'), coordinator = join(practice, 'coordinator');
-    const planFile = join(practice, 'cloud.json'), overlay = join(coordinator, 'jobs.json'), receipts = join(base, 'receipts');
+    const practice = join(base, '.practice'), liveDir = join(practice, 'live');
+    const planFile = join(practice, 'cloud.json'), stateFile = join(liveDir, 'fleet-state.json'), receipts = join(base, 'receipts');
     const live = 'rs-sdk-demo.fly.dev', trade = order({ server: live });
-    mkdirSync(coordinator, { recursive: true });
+    mkdirSync(liveDir, { recursive: true });
     writeFileSync(planFile, '{"jobs":[]}');
     const admit = (now = 2000, server = live) => assertTradeAdmission(trade, 'Giver', server, { base, planFile, receipts, now, starts: () => null });
     expect(() => admit(999)).toThrow('order window');
@@ -651,13 +649,14 @@ test('trade admission rereads pauses, assignments and producer ownership after t
     unlinkSync(stopAll);
     writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"worker.ts","enabled":true}]}');
     expect(admit).toThrow('enabled swarm job');
-    writeFileSync(overlay, '{"jobs":[{"account":"Giver","script":"worker.ts","enabled":false}]}');
+    writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"worker.ts","enabled":false}]}');
     expect(admit).not.toThrow();
-    writeFileSync(overlay, '{"jobs":[{"accounts":["Other","Giver"],"script":"worker.ts","enabled":true}]}');
+    writeFileSync(planFile, '{"jobs":[{"accounts":["Other","Giver"],"script":"worker.ts","enabled":true}]}');
     expect(admit).toThrow('enabled swarm job');
-    writeFileSync(overlay, '{"jobs":[],"paused":["Giver"]}');
+    writeFileSync(planFile, '{"jobs":[]}');
+    writeFileSync(stateFile, JSON.stringify({ schemaVersion: 1, accounts: { giver: { paused: true } } }));
     expect(admit).toThrow('paused for controller rollout');
-    writeFileSync(overlay, '{"jobs":[]}');
+    writeFileSync(stateFile, JSON.stringify({ schemaVersion: 1, accounts: {} }));
     writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"","goal":"Fresh-clock specialist","enabled":false}]}');
     expect(admit).toThrow('reserved account');
     writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"","role":"pvp","goal":"reserved: gang squad (Goondelf, Ligma, Sugma), staged at Edgeville","enabled":false,"trades":true}]}');
@@ -690,7 +689,7 @@ test('trade admission passes a swarm run whose pid a later process holds', () =>
     const base = makeTempDir('fleet-trade-pid-');
     const practice = join(base, '.practice'), planFile = join(practice, 'cloud.json'), receipts = join(base, 'receipts');
     const live = 'rs-sdk-demo.fly.dev', trade = order({ server: live }), started = 1_000_000;
-    mkdirSync(join(practice, 'coordinator'), { recursive: true });
+    mkdirSync(practice, { recursive: true });
     writeFileSync(planFile, '{"jobs":[]}');
     writeFileSync(join(practice, 'swarm-runs.json'), JSON.stringify([{ accounts: ['Other'], pid: process.pid, started: 5 }, { accounts: ['Giver'], pid: process.pid, started }]));
     const reads: number[][] = [];
@@ -914,7 +913,7 @@ test('a trade session ends its wait once its own release moves, checking at most
     expect(releaseWatch(() => { throw Error('missing'); }, 'a')()).toBe(false);
 });
 
-test('the live trade record maps each participant to the finite order, and the bare order id does not', () => {
+test('the live trade record maps each participant to the finite order', () => {
     const dir = makeTempDir('fleet-trade-record-');
     const o = order({ id: '1794000000000-giver-taker' });
     mkdirSync(join(dir, 'orders'), { recursive: true });
@@ -924,10 +923,6 @@ test('the live trade record maps each participant to the finite order, and the b
         const work = botWork(account, record);
         expect(record.argv).toEqual(['fleet-trade', account, o.id]);
         expect(work.args).toEqual(['fleet-trade', join(dir, 'orders', o.id + '.json')]);
-        expect(intentForEntry(work.script, work.args, work.env)).toMatchObject({ kind: 'service' });
-        expect(() => preflightProgressionWork(work, 'rs-sdk-demo.fly.dev', loadProgressionCatalog(), account)).not.toThrow();
-        expect(() => preflightProgressionWork({ ...work, args: ['fleet-trade', o.id] }, 'rs-sdk-demo.fly.dev', loadProgressionCatalog(), account)).toThrow('requires a finite goal');
-        expect(intentForEntry('scripts/aio-logistics.ts', ['fleet-trade', ...botWork(account, { script: 'scripts/aio-logistics.ts', argv }).args], {})).toBeNull();
     }
     expect(() => fleetTradeRecord(dir, o, 'Stranger', ['Stranger', o.id], {})).toThrow('is not in order');
     expect(() => fleetTradeRecord(dir, order({ id: 'no-such-order' }), 'Giver', ['Giver', 'no-such-order'], {})).toThrow('no order file');
@@ -1164,21 +1159,6 @@ test('runChargeGlory withdraws uncharged/partial glories, dips at fountain, clea
     } finally {
         clearInterval(timer);
     }
-});
-
-test('progression catalog admits bounded charge-glory routes and rejects unbounded calls', () => {
-    expect(intentForEntry('scripts/aio-logistics.ts', ['charge-glory', '2000'], { MAX_GLORIES: '28' })).toEqual({
-        kind: 'service',
-        objective: 'charge-glory:logistics:charge-glory',
-        units: 1,
-    });
-    expect(intentForEntry('scripts/aio.ts', ['logistics', 'charge-glory', '1500', 'MAX_GLORIES=2'])).toEqual({
-        kind: 'service',
-        objective: 'charge-glory:logistics:charge-glory',
-        units: 1,
-    });
-    expect(intentForEntry('scripts/aio-logistics.ts', ['charge-glory'])).toBeNull();
-    expect(intentForEntry('scripts/aio-logistics.ts', ['charge-glory', '0'])).toBeNull();
 });
 
 test('antipoison family doses, pack/bank ordering and nearest bank', () => {

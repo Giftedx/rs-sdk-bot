@@ -77,7 +77,6 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     let waitDone: (() => void) | null = null;
     const queue: Queued[] = [];
     let recorder: TickRecorder | null = null;
-    let progressionGuard: ((action: unknown) => string | null) | undefined;
     let commands = 0;
     const indexes = new Map<string, number>();
     const listeners = new Set<() => void>();
@@ -93,8 +92,6 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         assertActionScope(action);
         const refusal = guard?.(action);
         if (refusal) return { success: false, reason: 'unowned_partner', message: refusal };
-        const progression = progressionGuard?.(action);
-        if (progression) return { success: false, reason: 'progression_replan', message: progression };
         const dispatched = (result: unknown) => {
             const reply = result as { success?: unknown; phase?: unknown } | null;
             // Protocol actions append bytes synchronously. Send them before a
@@ -255,6 +252,5 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             recorder = stopped ? null : next;
             if (recorder) recorder.publish(tick, client.collectBotState(tick), 'p');
         },
-        setProgressionGuard(next) { progressionGuard = next; },
     };
 }

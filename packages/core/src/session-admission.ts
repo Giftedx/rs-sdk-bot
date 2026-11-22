@@ -83,7 +83,9 @@ export function liveLogoutRef(account:string,base:string,required=false,now=Date
   }
  }
  if(proof.state!=='none')throw Error('account logout is not confirmed: '+account+' '+proof.reason);
- const claimPath=join(base,'.practice/coordinator/session-proofs',account.toLowerCase()+'.json');
+ const liveClaim=join(base,'.practice/live/session-proofs',account.toLowerCase()+'.json');
+ const legacyClaim=join(base,'.practice/coordinator/session-proofs',account.toLowerCase()+'.json');
+ const claimPath=existsSync(liveClaim)?liveClaim:legacyClaim;
  if(existsSync(claimPath)){
   const claim=JSON.parse(readFileSync(claimPath,'utf8'));
   if(claim.account?.toLowerCase()!==account.toLowerCase()||claim.server!==LIVE_SERVER||claim.statusPath!==statusPath)throw Error('legacy logout claim identity mismatch: '+account);
@@ -97,7 +99,7 @@ export function liveLogoutRef(account:string,base:string,required=false,now=Date
 }
 
 // Re-read every selected participant in the same synchronous turn as the launch.
-// This blocks stale router admission and partial hosted/orchestrated connection attempts.
+// This blocks stale controller admission and partial hosted/orchestrated connection attempts.
 export function withSessionAdmission<T>(accounts:readonly string[],base:string,launch:()=>T):T {
  for(const account of accounts)liveLogoutRef(account,base);
  return launch();

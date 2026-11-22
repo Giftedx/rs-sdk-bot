@@ -12,9 +12,8 @@ export const SOURCE_STARTUP_GB = FREE_FLOOR_GB + 2;
 export const BENCH_ENGINE_GB = 0.9;
 export const BENCH_CASE_GB = 1.5;
 // The free memory that the start of a bench needs: the floor, the reserve that a swarm holds back for the bots that it
-// starts now, and the engines. The bench (scripts/measure/bench-start-check.ts) refuses a start under this, and a
-// delivery check that runs the bench (packages/router/src/delivery-cli.ts) admits its native start only at or over it,
-// so the admission never passes a start that the bench then refuses.
+// starts now, and the engines. The bench (scripts/measure/bench-start-check.ts) refuses a start under this, and hosted
+// checks admit a native start only at or over it, so admission never passes a start that the bench then refuses.
 export function benchStartGB(o: { floorGB: number; reserveGB?: number; engines: number; fleet: boolean }): number {
     return o.floorGB + (o.reserveGB ?? 0) + o.engines * (o.fleet ? BENCH_CASE_GB : BENCH_ENGINE_GB);
 }

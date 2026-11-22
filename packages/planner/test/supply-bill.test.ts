@@ -2,7 +2,6 @@ import { test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { boardSupplyDemand, idsFor, supplyBill, liveHelperStatuses, specialBoardSupplyDemand } from '../src/supply-bill';
-import {unitValue} from '../src/autopilot';
 
 const items = [{ id: 536, name: 'Dragon bones' }, { id: 99, name: 'Unfinished potion', debugname: 'ranarrvial' }, { id: 109, name: 'Unfinished potion', debugname: 'dwarfweedvial' }, { id: 2970, name: 'Mort myre fungi' }];
 
@@ -53,10 +52,10 @@ test('overlapping name matches require exact IDs before stock can cover either d
     expect(rows.map(r=>[r.owned,r.short,r.ids])).toEqual([[0,1,[]],[0,1,[]]]);
 });
 
-test('the shortfall premium still applies to a merged item alias', () => {
+test('the shortfall merges item aliases into a single supply row', () => {
     const rows=supplyBill([{item:'mort myre fungus',count:1},{item:'mort myre fungi',count:1}],items,[]);
     expect(rows).toHaveLength(1);
-    expect(unitValue('mort myre fungi',rows,{'mort myre fungi':10})).toBe(20);
+    expect(rows[0]).toMatchObject({ item: 'mort myre fungus', aliases: ['mort myre fungi'], need: 2, short: 2 });
 });
 
 test('the bill counts shared snapshots and keeps a local observation on an undated tie', async () => {

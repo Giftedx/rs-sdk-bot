@@ -12,6 +12,7 @@ import {fleetGitWindow} from '../../core/src/fleet-lease';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {killTree} from '../../core/src/proc';
 import {SWARM_STOP,clearSwarmStop} from '../../../scripts/swarm';
+import {liveRoot} from '../../core/src/practice-paths';
 import {withPlanWrite} from '../../core/src/plan-lock';
 
 // The part of vendor/rs-sdk/server/content that a runtime copy holds. The whole tree is over 10,000 files and is most
@@ -104,10 +105,10 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   const checks:any={actualSessionCheckDone:true,sessionCheckLogout:true,actualSessionCheckSwarmShutdown:true,sessionCheckFreshSave:checkedSave.matched,releasedClaimStable:stableClaims(),reservationsPreserved:recoveryPlan.unchanged};
   clearSwarmStop(join(root,'.practice','stop-'+account));
   const inspect={...job,script:'scripts/aio-logistics.ts',args:['inspect'],enabled:false,env:{...flags,REQUIRE_BANK:'1'}};
-  const next={...plan,jobs:[inspect,...reservations],coordination:{boundedInspection:[account]}};put('.practice/selected-swarm.json',next);
+  const next={...plan,jobs:[inspect,...reservations],boundedInspection:[account]};put('.practice/selected-swarm.json',next);
   const second=launch('inspection-swarm');
   await wait(()=>{const s=json('.practice/swarm-state.json');return s?.controllerPid===second.pid&&s.jobs.some((j:any)=>j.account===account&&j.state==='disabled');},'disabled inspector not observed');
-  await withPlanWrite(()=>{inspect.enabled=true;put('.practice/selected-swarm.json',next);},join(root,'.practice/coordinator'));
+  await withPlanWrite(()=>{inspect.enabled=true;put('.practice/selected-swarm.json',next);},liveRoot(root));
   checks.completedEndRetainedOnEnable=readFileSync(join(root,'.practice/swarm-deaths.json'),'utf8')===completed;
   await wait(()=>json('.practice/status/'+account+'.json')?.result?.includes('bankObserved=1'),'new finite inspector did not observe bank',120000);
   await wait(()=>/^done after 1 runs$/.test(json('.practice/swarm-deaths.json')?.[account]?.reason??'')&&readFileSync(join(root,'.practice/swarm-deaths.json'),'utf8')!==completed,'inspector end not owned by swarm');
@@ -125,7 +126,7 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   writeFileSync(join(directory,'swarm-worker.log'),log);writeFileSync(join(directory,'inspector-status.json'),JSON.stringify(status));writeFileSync(join(directory,'inspector-proof.json'),JSON.stringify(proof));
   cpSync(accountDir(account,server,join(root,'.practice/session-lifecycle')),join(directory,'swarm-lifecycle'),{recursive:true});
   copyFileSync(save,join(directory,'swarm-after.sav'));
-  writeFileSync(join(directory,'swarm-chain-checks.json'),JSON.stringify({checks,evidenceScope:'native Swarm components; no cloud-side/coordinator full E2E/live',source:hash(join(sourceRoot,'scripts/swarm.ts')),privateSource:hash(join(root,'scripts/swarm.ts')),plans:{recovery:recoveryPlan.sha256,inspection:inspectionPlan.sha256},authority:'private bare Git and loopback world; local sessions do not acquire shared gameplay claims'},null,2));
+  writeFileSync(join(directory,'swarm-chain-checks.json'),JSON.stringify({checks,evidenceScope:'native Swarm components; no cloud-side full E2E/live',source:hash(join(sourceRoot,'scripts/swarm.ts')),privateSource:hash(join(root,'scripts/swarm.ts')),plans:{recovery:recoveryPlan.sha256,inspection:inspectionPlan.sha256},authority:'private bare Git and loopback world; local sessions do not acquire shared gameplay claims'},null,2));
   if(!Object.values(checks).every(v=>v===true))throw Error('actual swarm continuation checks failed');
   passed=true;return checks as Record<string,boolean>;
  }finally{

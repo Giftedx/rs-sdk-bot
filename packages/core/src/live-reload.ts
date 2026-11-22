@@ -1,4 +1,4 @@
-// A long-lived daemon loads its code once. packages/router/src/live-update.ts writes .practice/live-update.json when it moves the
+// A long-lived daemon loads its code once. packages/fleet/src/live-update.ts writes .practice/live-update.json when it moves the
 // checkout to a newer master, with each daemon's latest code-change time. A daemon reads that file on each pass
 // and starts a copy of itself when its code changed after its own start. Later unrelated updates retain that request.
 import { closeSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';

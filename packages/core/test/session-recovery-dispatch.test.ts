@@ -39,7 +39,7 @@ test('busy child stays owned and its completion cannot remove a newer processing
 });
 test('source/stop/admission refusals occur before launch; post-issuance failure reports the retained lease',()=>{
  for(const fault of ['build','stop','admission','issued']){
-  const f=fixture();if(fault==='build')writeFileSync(join(f.base,'.practice/coordinator/build-lock.json'),'source owner');
+  const f=fixture();if(fault==='build'){mkdirSync(join(f.base,'.practice/live'),{recursive:true});writeFileSync(join(f.base,'.practice/live/build-lock.json'),'source owner');}
   if(fault==='stop')writeFileSync(join(f.base,'.practice/stop-swarm'),'owner stop');
   if(fault==='admission')f.options.admit=()=>{throw Error('recovery admission waiting: maxBots');};
   if(fault==='issued')f.options.launch=()=>{const p=join(f.base,'.practice/coordinator/session-recovery/accounts/rod/lease.json');mkdirSync(dirname(p),{recursive:true});writeFileSync(p,'issued');throw Error('spawn failed');};
@@ -88,7 +88,7 @@ test('a refused processing request cannot launch after a dispatcher restart',()=
 });
 
 test('marker persistence failure makes no admission decision and does not claim a handled request',()=>{
- const f=fixture(),blocker=join(f.base,'.practice/coordinator/session-recovery');f.claim();writeFileSync(blocker,'blocked directory');
+ const f=fixture(),blocker=join(f.base,'.practice/live/session-recovery');mkdirSync(join(f.base,'.practice/live'),{recursive:true});f.claim();writeFileSync(blocker,'blocked directory');
  expect(()=>f.controller.handle(f.raw)).toThrow();expect(f.calls()).toBe(0);expect(f.admitted()).toBe(0);expect(f.results()).toEqual([]);
  unlinkSync(blocker);f.controller.handle(f.raw);expect(f.calls()).toBe(1);expect(f.admitted()).toBe(1);
 });

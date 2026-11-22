@@ -76,7 +76,6 @@ describe('Phase 0 fleet hygiene', () => {
         const protectedPaths = [
             join(prac, 'stop-coordinator'),
             join(prac, 'stop-swarm'),
-            join(prac, 'stop-autopilot'),
             join(prac, 'stop-dashboard-publish'),
             join(prac, 'stop-pk-squad'),
             join(prac, 'stop-runite-radar'),
@@ -94,9 +93,8 @@ describe('Phase 0 fleet hygiene', () => {
         writeFileSync(protectedPaths[5]!, '');
         writeFileSync(protectedPaths[6]!, '');
         writeFileSync(protectedPaths[7]!, '');
-        writeFileSync(protectedPaths[8]!, '');
-        writeFileSync(protectedPaths[9]!, 'Owner pause prevents deletion even with fl prefix');
-        writeFileSync(protectedPaths[10]!, 'manual lock before trade');
+        writeFileSync(protectedPaths[8]!, 'Owner pause prevents deletion even with fl prefix');
+        writeFileSync(protectedPaths[9]!, 'manual lock before trade');
 
         // 4. Expired and preserved holds.
         const holdsFile = join(prac, 'swarm-script-holds.json');
@@ -116,7 +114,7 @@ describe('Phase 0 fleet hygiene', () => {
         // 5. Expired leases, obsolete disabled job locks, and live active leases.
         const deadFleetLease = join(prac, 'fleet-agent.lock');
         const deadPubLock = join(prac, 'dashboard-publish.lock');
-        const liveAutopilotLease = join(prac, 'autopilot.lock');
+        const liveSwarmLease = join(prac, 'swarm.lock');
         const staleGateTicket = join(gateDir, '999991.ticket-1');
         const disabledJobLock = join(jobLocks, 'disabled-woodcut.lock');
         const activeJobLock = join(jobLocks, 'active-cook.lock');
@@ -127,8 +125,8 @@ describe('Phase 0 fleet hygiene', () => {
         writeFileSync(deadFleetLease, '999991');
         utimesSync(deadFleetLease, new Date(now - 60_000), new Date(now - 60_000));
         writeFileSync(deadPubLock, JSON.stringify({ pid: 999992 }));
-        writeFileSync(liveAutopilotLease, String(process.pid));
-        utimesSync(liveAutopilotLease, new Date(now - 5_000), new Date(now - 5_000));
+        writeFileSync(liveSwarmLease, String(process.pid));
+        utimesSync(liveSwarmLease, new Date(now - 5_000), new Date(now - 5_000));
         writeFileSync(staleGateTicket, '');
         utimesSync(staleGateTicket, new Date(now - 120_000), new Date(now - 120_000));
         writeFileSync(disabledJobLock, JSON.stringify({ job: 'disabled-woodcut', pid: 999993 }));
@@ -184,7 +182,7 @@ describe('Phase 0 fleet hygiene', () => {
         for (const kept of [
             ...protectedPaths,
             activeHoldJson,
-            liveAutopilotLease,
+            liveSwarmLease,
             activeJobLock,
             liveRecoveryLease,
         ]) {

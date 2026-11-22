@@ -54,22 +54,21 @@ const ownedFiles = (workspace: string): string[] => {
     try { return Object.keys(JSON.parse(readFileSync(join(workspace, '.workspace.json'), 'utf8')).base ?? {}); } catch { return []; }
 };
 
-export function coordinatorHolds(root: string, workspace: (capability: string) => string): { holds: string[]; heldFiles: string[]; qualifications: string[] } {
-    const dir = join(root, '.practice', 'coordinator'), holds: string[] = [], heldFiles: string[] = [], qualifications: string[] = [];
+export function coordinatorHolds(root: string, _workspace: (capability: string) => string): { holds: string[]; heldFiles: string[]; qualifications: string[] } {
+    const dir = join(root, '.practice', 'live'), holds: string[] = [], heldFiles: string[] = [], qualifications: string[] = [];
     if (existsSync(join(dir, 'build-lock.json'))) holds.push('the runtime build lock is held');
     if (existsSync(join(dir, 'publish-request.json'))) holds.push('a build waits to publish');
-    const file = join(dir, 'state.json');
-    if (existsSync(file)) {
-        let tasks: any[];
-        try { tasks = JSON.parse(readFileSync(file, 'utf8')).tasks ?? []; } catch { return { holds: [...holds, 'coordinator state is not readable'], heldFiles, qualifications }; }
-        for (const t of tasks) {
-            if (t?.status !== 'running') continue;
-            if (t.spec?.kind === 'qualify') qualifications.push(`qualification ${t.spec.id} runs`);
-            if (t.spec?.kind === 'build' && typeof t.spec.capability === 'string') heldFiles.push(...ownedFiles(workspace(t.spec.capability)));
-            if (t.spec?.launch === 'specialist' || t.spec?.launch === 'main') {
-                const who = typeof t.spec.account === 'string' && t.spec.account ? t.spec.account : typeof t.spec.id === 'string' && t.spec.id ? t.spec.id : 'launch';
-                holds.push(`${t.spec.launch} launch ${who} runs`);
+    const stateFile = join(dir, 'fleet-state.json');
+    if (existsSync(stateFile)) {
+        try {
+            const parsed = JSON.parse(readFileSync(stateFile, 'utf8')) as { campaigns?: Array<{ id?: string; account?: string; state?: string }> };
+            for (const c of parsed?.campaigns ?? []) {
+                if (c?.state === 'running') {
+                    holds.push(`campaign ${c.account || c.id || 'launch'} runs`);
+                }
             }
+        } catch {
+            return { holds: [...holds, 'fleet state is not readable'], heldFiles, qualifications };
         }
     }
     return { holds, heldFiles, qualifications };

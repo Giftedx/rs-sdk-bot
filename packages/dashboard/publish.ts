@@ -27,7 +27,7 @@ const DIR=resolve(process.env.FLEET_COMMAND_DIR??join(prac,'fleet-command'));
 const CYCLE_MS=Math.max(15,Number(process.env.CYCLE_S)||60)*1000,PUBLIC_MS=Math.max(60,Number(process.env.PUBLIC_EVERY_S)||600)*1000;
 const DASH=`http://127.0.0.1:${Number(process.env.DASH_PORT??3100)}`;
 // The local console accepts these from its own page; the hosted page sends the same envelopes.
-const CONSOLE_ACTIONS=new Set(['plan','pause','resume','queue','account-pause','account-release']);
+const CONSOLE_ACTIONS=new Set(['pause','resume','account-pause','account-release','override-account','clear-defect','set-campaign-state','set-mission-state']);
 
 const alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
 const writeAtomic=(f:string,data:string|Uint8Array)=>{mkdirSync(resolve(f,'..'),{recursive:true});writeFileSync(f+'.tmp',data);renameSync(f+'.tmp',f);};

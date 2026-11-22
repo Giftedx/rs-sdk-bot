@@ -43,7 +43,7 @@ describe('fleet live-update facade', () => {
     test('detects preloads, patch sections, collisions, reloads, and fast-forward update plans', () => {
         expect(SDK).toBe('vendor/rs-sdk');
         expect(SDK_PATCH).toBe('patches/rs-sdk-working.patch');
-        expect(Object.keys(DAEMONS)).toContain('autopilot');
+        expect(Object.keys(DAEMONS)).toContain('swarm');
         expect(Object.keys(DAEMONS)).toContain('fleet-agent');
 
         expect(addedPreloads('[install]\npreload = ["a.ts"]', '[install]\npreload = ["a.ts", "b.ts"]')).toEqual(['b.ts']);
@@ -77,7 +77,7 @@ describe('fleet live-update facade', () => {
 
         const closures = {
             'fleet-agent': ['scripts/fleet-agent.ts'],
-            autopilot: ['scripts/autopilot.ts'],
+            swarm: ['scripts/swarm.ts'],
         };
         expect(reloadsFor(['scripts/fleet-agent.ts'], closures)).toEqual(['fleet-agent']);
         expect(reloadsFor(['packages/fleet/src/live-update/reload.ts'], closures)).toEqual([]);

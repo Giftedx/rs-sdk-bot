@@ -2,7 +2,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { isLocalServer } from '../localserver';
-import { lifecycleRootForRead, statusReadDirs } from '../practice-paths';
+import { lifecycleRootForRead, liveRoot, statusReadDirs } from '../practice-paths';
 import { commandLine } from '../proc';
 import { listAttempts, readLogoutProof, type LogoutProof } from '../session-lifecycle';
 import { root, type ReleaseMemo } from './paths';
@@ -17,8 +17,8 @@ export function assertWorkerRelease(env: Record<string, string | undefined> = pr
 }
 
 // A standing peer runs the source its swarm pinned at start and is exempt from release equality, like its own start
-// (assertLiveWorkerRelease). It must be an account a standing job in swarm.json names, carry a revision, and no
-// coordinator run. Any other unfinished peer on another release (a manual session, a coordinator run) is incompatible.
+// (assertLiveWorkerRelease). It must be an account a standing job in swarm.json names, carry a revision, and have no
+// run id. Any other unfinished peer on another release (a manual session, a managed run) is incompatible.
 export function standingPeer(row: any, standingAccounts: ReadonlySet<string>): boolean {
     return typeof row?.name === 'string' && standingAccounts.has(row.name.toLowerCase()) && row.coordinatorRunId == null
         && typeof row.workRevision === 'string' && /^[a-f0-9]{64}$/.test(row.workRevision);
@@ -41,7 +41,7 @@ export function standingAccounts(base = root): Set<string> {
 }
 
 export function isWorkerReleaseHold(result: string): boolean {
-    return /^RESULT fail (?:Error: )?no worker progress: (?:release (?:pin missing|source changed|peer state unknown|coordinator build in progress)|active legacy\/different release)/.test(result);
+    return /^RESULT fail (?:Error: )?no worker progress: (?:release (?:pin missing|source changed|peer state unknown|build in progress)|active legacy\/different release)/.test(result);
 }
 
 // Recheck before the network boundary, including workers launched by an old
@@ -53,10 +53,9 @@ export function isWorkerReleaseHold(result: string): boolean {
 export const crashResidue = (raw: Uint8Array, writtenAt: number, now = Date.now()) => raw.every(b => b === 0) && Number.isFinite(writtenAt) && now - writtenAt >= LOST_SESSION_DROP_MS;
 export function assertLiveWorkerRelease(server: string, env: Record<string, string | undefined> = process.env, base = root): void {
     if (isLocalServer(server)) return;
-    // A standing owner job (swarm STANDING=1) has no coordinator acceptance and runs the current source, so neither
-    // a publish lock nor the release pin holds it.
+    // A standing owner job (swarm STANDING=1) runs the current source, so neither a publish lock nor release pin holds it.
     if (env.STANDING === '1') return;
-    if (existsSync(join(base, '.practice/coordinator/build-lock.json'))) throw Error('no worker progress: release coordinator build in progress; live starts paused');
+    if (existsSync(join(liveRoot(base), 'build-lock.json'))) throw Error('no worker progress: release build in progress; live starts paused');
     const memo: ReleaseMemo = new Map(), pin = assertWorkerRelease(env, base, memo), statuses: any[] = [];
     const seenEntries = new Set<string>();
     let foundStatusDir = false;

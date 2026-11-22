@@ -1,7 +1,6 @@
 import {test,expect} from 'bun:test';
 import {ammoOrderChecks,headlessOrderChecks,plannedEntryChecks,PLANNED_ENTRY,PLANNED_BANK,selectAmmoProofEndpoints,ammoProofAccountEnv,startAmmoProofStack,ammoChildConfiguration,ammoRegistrationArgs} from '../src/ammo-order-proof';
 import type {openBot} from '../../core/src/bot';
-import {evaluateProgressionWork} from '../../core/src/progression-session';
 
 test('generated registration supplies supported session-check metadata only after both owned endpoints match',async()=>{
  const name='fixture',p=selectAmmoProofEndpoints(()=>true,()=>0),session={name};
@@ -17,9 +16,6 @@ test('generated registration supplies supported session-check metadata only afte
  expect(opened).toHaveLength(1);expect(opened[0]!.name).toBe(name);
  const record=opened[0]!.options?.record;
  expect(record).toMatchObject({script:'scripts/session-check.ts',argv:[name]});
- const evaluation=evaluateProgressionWork({script:record!.script,args:record!.argv.slice(1),env:record!.env??{}},{name,at:Date.now()},{requireQualification:true});
- expect(evaluation.intent).toEqual({kind:'observe',objective:'scripts/session-check.ts'});
- expect(evaluation.supported).toBe(true);
  expect(waits).toEqual([[session,3]]);expect(finishes).toEqual([[[session],true,'practice ownership registered']]);
  for(const invalid of [profile.replace(p.server,'localhost:8888'),profile.replace(p.gateway,'ws://localhost:7780')])
   await expect(run(invalid)).rejects.toThrow('owned practice account required');

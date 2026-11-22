@@ -1,7 +1,6 @@
 // One step of a script chain: a scripts/*.ts path, its arguments and its own environment. scripts/chain.ts runs
 // the steps as child processes; packages/core/src/host.ts runs the same step texts inside one host process.
-// alsoRuns: other workers that do the same work as this step. A method of the progression layer names the steps whose
-// runs it also covers (methodSupportsWork), e.g. Ranged on the troopers by scripts/gather-combat.ts.
+// alsoRuns: other workers that perform equivalent work for this step.
 export type Step = { script: string; args: string[]; env: Record<string, string>; alsoRuns?: Step[] };
 
 // Step text is data, never a shell command. Single quotes keep their contents

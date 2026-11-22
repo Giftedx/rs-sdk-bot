@@ -6,7 +6,6 @@ import { expect, test } from 'bun:test';
 import { bankCargo } from '../../core/src/cargo';
 import type { Session } from '../../core/src/inprocess';
 import { wildernessLevel } from '../../core/src/prayer-guard';
-import { intentForEntry } from '../../planner/src/progression-catalog';
 import { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import { FALADOR_WEST_BANK } from '../src/logistics';
 import {
@@ -168,21 +167,6 @@ test('runCrystalChest combines key halves, opens chest, and deposits uncut drago
     } finally {
         clearInterval(timer);
     }
-});
-
-test('progression catalog admits bounded crystal-chest routes and rejects unbounded calls', () => {
-    expect(intentForEntry('scripts/aio-skiller.ts', ['gather', 'foraging', 'crystal-chest', '2000'], { MAX_KEYS: '4' })).toEqual({
-        kind: 'service',
-        objective: 'crystal-chest:skiller:foraging:crystal-chest',
-        units: 1,
-    });
-    expect(intentForEntry('scripts/aio.ts', ['skiller', 'foraging', 'crystal-chest', '1500', 'MAX_KEYS=1'])).toEqual({
-        kind: 'service',
-        objective: 'crystal-chest:skiller:foraging:crystal-chest',
-        units: 1,
-    });
-    expect(intentForEntry('scripts/aio-skiller.ts', ['gather', 'foraging', 'crystal-chest'])).toBeNull();
-    expect(intentForEntry('scripts/aio-skiller.ts', ['gather', 'foraging', 'crystal-chest', '0'])).toBeNull();
 });
 
 // --- Chicken pen feathers (formerly gather-feathers.test.ts) ---

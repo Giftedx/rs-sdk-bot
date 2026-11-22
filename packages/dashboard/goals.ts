@@ -2,7 +2,24 @@ import { COST_RECEIPTS,netCosts } from './net-costs';
 import { gearProgress,questProgress,batchCosts } from './goal-details';
 import { SKILLS } from '../planner/src/haggis';
 import { xpForLevel } from '../planner/src/curve';
-import {COMBAT_SKILLS,type OwnerGoals,type GoalEvidence} from '../router/src/goal-scoreboard';
+
+export const COMBAT_SKILLS = ['Attack', 'Strength', 'Defence', 'Ranged', 'Magic', 'Prayer', 'Hitpoints'] as const;
+export type CombatSkill = typeof COMBAT_SKILLS[number];
+export type GoalEvidence = { source: string; at: number | null; ageMs: number | null; gap?: string };
+export type GoalRank = { account: string; board: string; rank: number; at: number; source: string };
+export type SpecialistGoal = { account: string; board: string; planTicks: number | null; recordTicks: number | null; rehearsalTicks: number | null; marginTicks: number | null; rank: number | null; rankAt: number | null; rank1: boolean | null; evidence: GoalEvidence[] };
+export type CollectionNeed = { item: string; id?: number; need: number; owned: number; consumer: string; verifyOwned?: number };
+export type ArmyKill = { account: string; victim: string; at: number; wilderness: number; multi: boolean; feedMatched: boolean | null; receipt: string };
+export type ArmyAccount = { account: string; levels: Record<CombatSkill, number | null>; missingLevels: number; maxed: boolean; at: number | null };
+export type OwnerGoals = {
+    version: 1; at: number;
+    main: { modelTicks: number | null; recordTicks: number | null; launchTargetTicks: number | null; gapTicks: number | null; rank: number | null; rankAt: number | null; rank1: boolean | null; evidence: GoalEvidence[] };
+    specialists: { targets: SpecialistGoal[]; rank1s: (GoalRank & { rank: 1 })[]; scopeKnown: boolean; evidence: GoalEvidence[] };
+    quests: { complete: number; total: number; remaining: string[]; observedAccounts: number; evidence: GoalEvidence[] };
+    collection: { targets: number; held: number; missing: CollectionNeed[]; scopeKnown: boolean; evidence: GoalEvidence[] };
+    army: { roster: string[]; accounts: ArmyAccount[]; maxed: number; missingLevels: number; creditedKills: number | null; kills?: ArmyKill[]; wildernessControl: null; evidence: GoalEvidence[] };
+    metrics: Record<string, number>; remaining: string[]; done: boolean;
+};
 
 // The joined plan owns goal wording and pause state. Metrics remain separate observations.
 export function goalPlan(text: string) {
@@ -67,7 +84,7 @@ function ownerGoalCards(state:any):Lane[]|null{
  const row=(label:string,value:unknown,source:string,at?:number|null,tone:GoalRow['tone']='dm'):GoalRow=>({label,value:String(value),source,...(validAt(at,now)?{at:at!}:{}),tone});
  const source=(e:GoalEvidence[]|undefined)=>{
   const list=[...new Set((e??[]).map(x=>x.source).filter(Boolean))];
-  if(!list.length)return '.practice/coordinator/scoreboard.json';
+  if(!list.length)return '.practice/live/fleet-state.json';
   return list.length>6?`${list.slice(0,4).join('; ')}; +${list.length-4} more`:list.join('; ');
  };
  const at=(e:GoalEvidence[]|undefined)=>(e??[]).find(e=>validAt(e.at,now))?.at;

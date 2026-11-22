@@ -70,6 +70,7 @@ function replaceFile(from: string, to: string): void {
 }
 let sequence = 0;
 let lastAt = 0;
+const lastAtByRoot = new Map<string, number>();
 
 // Diagnostic text from errors. The password never enters a receipt, even inside an error message.
 function clean(detail: string | undefined, secret: string | undefined): string | undefined {
@@ -100,7 +101,7 @@ export function lifecycleOwner(env: Record<string, string | undefined> = process
         }
         script=entry(selected);
     }
-    return { pid: process.pid, coordinatorRunId: env.COORDINATOR_RUN_ID || null, workerRelease: env.WORKER_RELEASE || null,
+    return { pid: process.pid, coordinatorRunId: env.FLEET_RUN_ID || env.COORDINATOR_RUN_ID || null, workerRelease: env.WORKER_RELEASE || null,
         script, role: env.BOT_ROLE || null, participants };
 }
 
@@ -109,10 +110,15 @@ export function lifecycleOwner(env: Record<string, string | undefined> = process
 export function beginSessionAttempt(identity: { account: string; server: string; members?: boolean; secret?: string },
     opts: { root?: string; now?: () => number; owner?: LifecycleOwner } = {}): SessionAttempt {
     const root = opts.root ?? lifecycleRootForServer(identity.server, repoRoot), now = opts.now ?? Date.now;
+    const rootKey = resolve(root);
+    const usesWallClock = !opts.now || opts.now === Date.now;
     const dir = accountDir(identity.account, identity.server, root), attempts = join(dir, 'attempts');
     mkdirSync(attempts, { recursive: true });
-    const createdAt = Math.max(now(), lastAt);
-    lastAt = createdAt;
+    // Only wall-clock callers share the process-wide monotonic floor so custom test clocks never shift later wall-clock attempts.
+    const floor = Math.max(usesWallClock ? lastAt : 0, lastAtByRoot.get(rootKey) ?? 0);
+    const createdAt = Math.max(now(), floor);
+    if (usesWallClock) lastAt = createdAt;
+    lastAtByRoot.set(rootKey, createdAt);
     // Fixed-width parts: file-name order is (time, pid, sequence) order.
     const attemptId = `${String(createdAt).padStart(13, '0')}-${String(process.pid).padStart(10, '0')}-${String(++sequence).padStart(10, '0')}`;
     const receipt: AttemptReceipt = { schema: LIFECYCLE_SCHEMA, attemptId, account: identity.account, server: identity.server, domain: domainOf(identity.server),

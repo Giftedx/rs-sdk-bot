@@ -2,8 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { xpForLevel } from '../packages/planner/src/curve';
-import { intentForEntry } from '../packages/planner/src/progression-catalog';
-import { validateDelivery, type DeliveryTask } from '../packages/router/src/delivery';
 import type { Session } from '../packages/core/src/inprocess';
 import { COOKING_SPECIALIST_SUPPLIES } from './cooking-specialist';
 import { FIREMAKING_SPECIALIST_SUPPLIES } from './firemaking-specialist';
@@ -244,33 +242,6 @@ describe('bench registration and catalog integration', () => {
 
         const duplicateGlory = [...withoutGlory, { id: 1712, count: 1 }, { id: 1710, count: 1 }];
         expect(hasExactKit(duplicateGlory, fishingKit)).toBe(false);
-    });
-
-    test('planner catalog treats specialist routes as bounded service intents even with skill accept targets', () => {
-        for (const [script, skill] of [
-            ['scripts/fletching-specialist.ts', 'fletching'],
-            ['scripts/fishing-specialist.ts', 'fishing'],
-            ['scripts/mining-specialist.ts', 'mining'],
-            ['scripts/thieving-specialist.ts', 'thieving'],
-            ['scripts/cooking-specialist.ts', 'cooking'],
-            ['scripts/firemaking-specialist.ts', 'firemaking'],
-            ['scripts/woodcutting-specialist.ts', 'woodcutting'],
-        ] as const) {
-            const intent = intentForEntry(script, ['botb'], {}, { skills: { [skill]: 99 } });
-            expect(intent).toEqual({ kind: 'service', objective: `fresh-clock ${skill} 99 specialist`, units: 1 });
-        }
-    });
-
-    test('router task definitions for mining and thieving validate cleanly and test -live variants', () => {
-        for (const [id, liveCase] of [
-            ['mining-specialist', 'extra:specialist-mining-live'],
-            ['thieving-specialist', 'extra:specialist-thieving-live'],
-        ] as const) {
-            const task = JSON.parse(readFileSync(join(ROOT, 'packages', 'router', 'tasks', `${id}.json`), 'utf8')) as DeliveryTask;
-            validateDelivery(task);
-            expect(task.files).toContain('scripts/measure/specialist-gathering-cases.ts');
-            expect(task.checks.some(c => c.phase === 'practice' && c.command.includes(liveCase))).toBe(true);
-        }
     });
 
     test('pipelined trade handoff finishes 7-slot fletching and 2-slot thieving-live in <= 4 ticks without OPPLAYER4 collisions', async () => {

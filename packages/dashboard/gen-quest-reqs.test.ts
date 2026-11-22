@@ -18,8 +18,9 @@ test('a journal script states the start conditions: any completion test there is
     expect(serverPrereqs(['if(%upass = ^upass_complete) {'], varps, 'quest_regicide')).toEqual(new Set());
 });
 
-test('the asset holds every quest prerequisite that the planner enforces (autopilot.ts ROUTE_BEFORE)', async () => {
-    const { ROUTE_BEFORE } = await import('../planner/src/autopilot');
+const ROUTE_BEFORE: Readonly<Record<string, readonly string[]>> = { Regicide: ['Underground Pass'] };
+
+test('the asset holds every quest prerequisite that PK route rules enforce (ROUTE_BEFORE)', () => {
     const asset = JSON.parse(readFileSync(new URL('./client-assets/quest-reqs.json', import.meta.url), 'utf8')) as Record<string, Reqs>;
     for (const [quest, before] of Object.entries(ROUTE_BEFORE)) expect(asset[quest]?.q.map(([n]) => n)).toEqual(expect.arrayContaining([...before]));
 });

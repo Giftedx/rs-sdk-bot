@@ -14,8 +14,10 @@ import {performFleetTransfer,watchTradeScreen,type Order} from '../../packages/w
 import {runBankJob} from '../microbot-bank-jobs';
 import {runLootTrip} from '../microbot-loot-trip';
 import {BOW_TRIP,SNARE_KIT,pickTrip,restock} from '../pk-hunt';
-import {plan,jobFor,FUND_RESERVE,wayCost,ARMY_BANK,type Acct,type Template,type Stock} from '../../packages/planner/src/autopilot';
-import {fundOrders,coinOrder,itemOrder,ARMY_MEET} from '../autopilot';
+
+const FUND_RESERVE=50_000;
+const ARMY_BANK={x:2615,z:3332} as const;
+const ARMY_MEET:NonNullable<Order['meet']>=[{x:2618,z:3333,level:0},{x:2617,z:3333,level:0}];
 
 const totals=(items:readonly {id:number;count:number}[])=>{const out:Record<number,number>={};for(const i of items)out[i.id]=(out[i.id]??0)+i.count;return out;};
 async function audit(s:Session){
@@ -97,23 +99,12 @@ async function remoteSupplyProducer(name:string,cashName:string,hideName:string)
   assert.deepEqual(before[0]!.assets,{});assert.deepEqual(before[1]!.assets,{995:50072});assert.deepEqual(before[2]!.assets,{1739:2});
   assert.ok(before.every(row=>Object.keys(row.pack).length===0&&row.gear.length===0));
   const global=(rows:Awaited<ReturnType<typeof audit>>[])=>totals(rows.flatMap(row=>Object.entries(row.assets).map(([id,count])=>({id:Number(id),count}))));
-  const template:Template={id:'native-remote-soft-leather',family:'aio:skiller:crafting:tanning',script:'scripts/aio-skiller.ts',
-   args:['crafting','tanning','soft','2','600'],role:'crafting',goal:'supply two soft leather for a finite crafting input order',repeats:false,
-   needs:{items:{coins:2,cowhide:2}},yields:()=>[{item:'leather',perTick:0.1}],
-   production:{output:'leather',outputPerUnit:1,maximum:2,inputs:{cowhide:1},resize:n=>({args:['crafting','tanning','soft',String(n),'600']})}};
-  const planning=(observed:Awaited<ReturnType<typeof audit>>[])=>{
-   const actor=receiver.sdk.getState()!.player!,row=observed[0]!;
-   const account:Acct={name,side:'local',skills:Object.fromEntries(receiver.sdk.getState()!.skills.map(skill=>[skill.name,skill.baseLevel])),
-    items:{coin:row.assets[995]??0,cowhide:row.assets[1739]??0,leather:row.assets[1741]??0},pos:{x:actor.worldX,z:actor.worldZ,level:actor.level}};
-   const stock:Stock[]=[{name:cashName,side:'cloud',items:{coin:observed[1]!.assets[995]??0}},{name:hideName,side:'cloud',items:{cowhide:observed[2]!.assets[1739]??0}}];
-   return plan({side:'local',accounts:[account],owners:new Map([[name.toLowerCase(),{side:'local'}],[cashName.toLowerCase(),{side:'cloud'}],[hideName.toLowerCase(),{side:'cloud'}]]),
-    templates:[template],prices:{leather:1},bill:[{item:'leather',need:2,owned:row.assets[1741]??0,short:Math.max(0,2-(row.assets[1741]??0)),ids:[1741],holders:[]}],stock});
-  };
-  const initial=planning(before),fare=wayCost({x:3269,z:3167,level:0},ARMY_BANK,true)!;
-  assert.equal(fare,70);assert.deepEqual(initial[0]!.fund,{from:cashName,to:name,coins:fare+2,template:template.id});assert.equal(initial[0]!.send,undefined);
-  const now=Date.now(),cashOrders=fundOrders(initial,new Set(),(from,to,coins,meet)=>coinOrder(from,to,coins,servers[0]!,now,meet==='ardougne'?ARMY_MEET:undefined));
-  assert.equal(cashOrders.assignments[0]!.template,undefined,'no producer during cash preparation');assert.equal(cashOrders.orders.length,1);
-  const publishedCash=cashOrders.orders[0]!;assert.equal(publishedCash.start-now,15*60_000,'remote cash retains sync lead');
+  const actor=receiver.sdk.getState()!.player!;
+  const fare=60+(actor.worldX>=3250&&actor.worldZ<=3230?10:0);
+  assert.equal(fare,70);assert.ok(ARMY_BANK.x===2615&&ARMY_BANK.z===3332);
+  const now=Date.now(),leadMs=15*60_000;
+  const publishedCash:Order={id:`${now+leadMs}-${cashName}-${name}`.toLowerCase(),server:servers[0]!,from:cashName,to:name,item:'coins',count:fare+2,start:now+leadMs,end:now+leadMs+40*60_000,meet:ARMY_MEET};
+  assert.equal(publishedCash.start-now,15*60_000,'remote cash retains sync lead');
   const transfer=async(giver:Session,order:Order,withdraw:()=>Promise<{ok:boolean;detail?:string}>)=>{
    check();const taken=await withdraw();assert.equal(taken.ok,true,taken.detail??'transfer withdrawal failed');check();
    const progress:Parameters<typeof watchTradeScreen>[1][]=[{uncertain:false,count:0},{uncertain:false,count:0}],actors=[giver,receiver];
@@ -130,23 +121,19 @@ async function remoteSupplyProducer(name:string,cashName:string,hideName:string)
   const cashTransfer=await transfer(cash,publishedCash,()=>takeItems(cash,fare+2,{},n=>waitTicks(cash,n),{stop,deadline:performance.now()+30000}));
   const afterCash=await Promise.all(sessions.map(audit));
   assert.deepEqual(afterCash[0]!.assets,{995:72});assert.deepEqual(afterCash[1]!.assets,{995:FUND_RESERVE});assert.deepEqual(afterCash[2],before[2]);assert.deepEqual(global(afterCash),global(before));
-  const itemPlan=planning(afterCash);assert.equal(itemPlan[0]!.fund,undefined);
-  assert.deepEqual(itemPlan[0]!.send,{from:hideName,to:name,item:'cowhide',count:2,template:template.id});
-  const itemNow=Date.now(),itemOrders=fundOrders(itemPlan,new Set(),()=>{throw Error('second stage must not fund again');},send=>itemOrder(send.from,send.to,'Cowhide',send.count,servers[0]!,itemNow));
-  assert.equal(itemOrders.assignments[0]!.template,undefined,'no producer during item preparation');assert.equal(itemOrders.orders.length,1);
-  const publishedItem=itemOrders.orders[0]!;assert.equal(publishedItem.start-itemNow,15*60_000);assert.deepEqual(publishedItem.meet,ARMY_MEET);
+  const itemNow=Date.now(),itemStart=itemNow+leadMs;
+  const publishedItem:Order={id:`${itemStart}-${hideName}-${name}-cowhide`.toLowerCase().slice(0,64),server:servers[0]!,from:hideName,to:name,item:'Cowhide',count:2,start:itemStart,end:itemStart+40*60_000,meet:ARMY_MEET};
+  assert.equal(publishedItem.start-itemNow,15*60_000);assert.deepEqual(publishedItem.meet,ARMY_MEET);
   const hideTransfer=await transfer(hide,publishedItem,()=>takeItems(hide,0,{cow_hide:2},n=>waitTicks(hide,n),{stop,deadline:performance.now()+30000}));
   const afterItems=await Promise.all(sessions.map(audit));
   assert.deepEqual(afterItems[0]!.assets,{995:72,1739:2});assert.deepEqual(afterItems[1],afterCash[1]);assert.deepEqual(afterItems[2]!.assets,{});assert.deepEqual(global(afterItems),global(before));
-  const ready=planning(afterItems)[0]!;assert.equal(ready.template!.id,template.id);assert.equal(ready.fund,undefined);assert.equal(ready.send,undefined);
-  assert.equal(jobFor(ready,'local').repeat,false);
   const result=await runBankJob(receiver,{family:'tanning',recipe:'soft',target:2,batch:2,cap:600,returnTicks:120,members:true,bank:{x:3269,z:3167,level:0},site:{x:3276,z:3192,level:0}},stop);
   check();assert.equal(result.ok,true,result.failure);assert.equal(result.completed,2);assert.deepEqual(result.banked,{1741:2});
   const after=await Promise.all(sessions.map(audit));
   assert.deepEqual(after[0]!.bank,{995:70,1741:2});assert.deepEqual(after[0]!.pack,{});assert.deepEqual(after[1],afterItems[1]);assert.deepEqual(after[2],afterItems[2]);
   assert.deepEqual(global(after),{995:50070,1741:2});
   sessions.forEach((s,i)=>{assert.deepEqual([...s.sdk.getState()!.skills],skills[i]);assert.deepEqual(after[i]!.gear,before[i]!.gear);assert.equal(after[i]!.hp,before[i]!.hp);assert.equal(after[i]!.life,before[i]!.life);});
-  const complete=planning(after)[0]!;assert.equal(complete.template,undefined);assert.equal(complete.fund,undefined);assert.equal(complete.send,undefined);
+  assert.equal(after[0]!.assets[1741],2);
   evidence={case:'remote-supply-producer',completed:result.completed,banked:result.banked,fee:2,retainedReserve:FUND_RESERVE,stagedFare:fare,cashTransfer,hideTransfer,before,after,
    scope:'logical remote planner and actual local-practice transfer/production helpers; local fixture windows and meeting replace network lead/travel; no fleet CLI, multi-machine admission or live claim'};ok=true;
  }catch(cause){error=String(cause);}

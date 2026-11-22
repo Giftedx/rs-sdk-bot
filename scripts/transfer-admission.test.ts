@@ -2,13 +2,14 @@ import {expect,test} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
+import {fleetStateFile} from '../packages/core/src/practice-paths';
 import {checkTransferAccounts,transferOrderKey} from './transfer-admission';
 
 function fixture(){
  const root=mkdtempSync(join(tmpdir(),'transfer-admission-'));
- mkdirSync(join(root,'.practice/coordinator'),{recursive:true});mkdirSync(join(root,'.practice/status'));
+ mkdirSync(join(root,'.practice/live'),{recursive:true});mkdirSync(join(root,'.practice/status'));
  writeFileSync(join(root,'swarm.json'),JSON.stringify({maxBots:4,jobs:[]}));
- writeFileSync(join(root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[]}));
+ writeFileSync(fleetStateFile(root),JSON.stringify({schemaVersion:1,accounts:{}}));
  writeFileSync(join(root,'.practice/status/Donor.json'),JSON.stringify({name:'Donor',goal:'host job',at:Date.now()}));
  const servers:string[]=[],io={owned:(server:string)=>{servers.push(server);return new Set(['donor','receiver']);},logoutState:()=> 'confirmed'};
  return{root,io,servers,clear:()=>rmSync(root,{recursive:true,force:true})};
@@ -24,9 +25,9 @@ test('confirmed endpoint logout admits hosted producers without a status RESULT 
  }finally{f.clear();}
 });
 
-test('coordinator overlay assignments and owner pauses remain authoritative before transfer login',()=>{
+test('swarm assignments and owner pauses remain authoritative before transfer login',()=>{
  const f=fixture();try{
-  writeFileSync(join(f.root,'.practice/coordinator/jobs.json'),JSON.stringify({jobs:[{account:'Donor',enabled:true,goal:'other [run-other]'}]}));
+  writeFileSync(join(f.root,'swarm.json'),JSON.stringify({maxBots:4,jobs:[{account:'Donor',enabled:true,goal:'other [run-other]'}]}));
   expect(()=>checkTransferAccounts(f.root,['Donor'],'localhost:8888',[],'run-mine',f.io)).toThrow('account lease conflict');
   expect(()=>checkTransferAccounts(f.root,['Donor'],'localhost:8888',[],'run-other',f.io)).not.toThrow();
   const stop=join(f.root,'.practice/stop-swarm');writeFileSync(stop,'owner pause');
@@ -35,11 +36,11 @@ test('coordinator overlay assignments and owner pauses remain authoritative befo
  }finally{f.clear();}
 });
 
-test('missing coordinator or swarm metadata refuses instead of assuming no assignments',()=>{
+test('missing fleet state or swarm metadata refuses instead of assuming no assignments',()=>{
  const f=fixture();try{
-  rmSync(join(f.root,'.practice/coordinator/state.json'));
+  rmSync(fleetStateFile(f.root));
   expect(()=>checkTransferAccounts(f.root,['Donor'],'localhost:8888',[],'',f.io)).toThrow('ownership unavailable');
-  writeFileSync(join(f.root,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[]}));
+  writeFileSync(fleetStateFile(f.root),JSON.stringify({schemaVersion:1,accounts:{}}));
   rmSync(join(f.root,'swarm.json'));
   expect(()=>checkTransferAccounts(f.root,['Donor'],'localhost:8888',[],'',f.io)).toThrow('ownership unavailable');
  }finally{f.clear();}

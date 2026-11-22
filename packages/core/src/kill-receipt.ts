@@ -81,7 +81,7 @@ export function writeKillReceipt(input: KillInput, opts: { root?: string; now?: 
         schema: KILL_SCHEMA, id, account: body.account, victim: body.victim, server, domain, practice: domain !== 'live', at, tick: body.tick,
         attemptId: session?.attemptId ?? null, tile: body.tile, wilderness: body.wilderness, multi: body.multi, message: body.message,
         victimCombat: body.victimCombat, victimTile: body.victimTile, kit: body.kit, fight: body.fight, loot: null, lootAt: null, feed: null,
-        owner: { pid: process.pid, script: opts.script ?? null, coordinatorRunId: env.COORDINATOR_RUN_ID || null, workerRelease: env.WORKER_RELEASE || null },
+        owner: { pid: process.pid, script: opts.script ?? null, coordinatorRunId: env.FLEET_RUN_ID || env.COORDINATOR_RUN_ID || null, workerRelease: env.WORKER_RELEASE || null },
     };
     const dir = join(opts.root ?? DEFAULT_KILL_ROOT, domain, serverKey(server), accountKey(body.account));
     mkdirSync(dir, { recursive: true });

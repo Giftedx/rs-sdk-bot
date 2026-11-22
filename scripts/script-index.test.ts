@@ -38,7 +38,7 @@ test('a table entry fails when its file is gone, has a header comment, has a rou
 test('the index covers scripts/ in every folder and the command files under packages/', () => {
  const paths = new Set(index.map(l => l.path));
  for (const f of ['scripts/aio.ts', 'scripts/aio-logistics.ts', 'scripts/generated/quest-hetty.ts', 'scripts/measure/fleet-cow-path.ts', 'scripts/pk-live/live-pilot.ts',
-  'scripts/proven/gather.ts', 'scripts/demo/smoke.ts', 'packages/router/src/coordinator-cli.ts', 'packages/router/src/coverage.ts', 'packages/router/src/live-update.ts', 'packages/dashboard/publish.ts'])
+  'scripts/proven/gather.ts', 'scripts/demo/smoke.ts', 'packages/core/src/session-recovery.ts', 'packages/fleet/src/live-update.ts', 'packages/dashboard/publish.ts'])
   expect(paths.has(f), f).toBe(true);
  expect([...paths].filter(f => f.endsWith('.test.ts'))).toEqual([]);
  for (const f of packageCommands()) expect(index.find(l => l.path === f)!.group).toBe('packages');

@@ -1,7 +1,7 @@
 // Size cap for a log that a supervisor appends to across runs (.practice/swarm-logs/<account>.log).
 // The swarm calls rotateLog before it opens the log for a new run. A log over the cap moves to <log>.1 and replaces the
 // earlier .1, so one account keeps at most two parts, the newest part is the .log file and a run starts on a file it owns.
-// A rotated log is smaller than an offset that a reader took on the old file: neverStarted (scripts/autopilot.ts) tests
+// A rotated log is smaller than an offset that a reader took on the old file: readers that detect an empty start test
 // for an equal size, and readJobResultLines starts at 0 for an offset past the end.
 import {existsSync,renameSync,rmSync,statSync} from 'node:fs';
 

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { QUEST_NAMES, questsLeft, questShortfall, runQuestChain } from './quest-chain';
-import { questJournalNames, questScript } from '../packages/router/src/coverage';
+import { questJournalNames, questScript } from '../packages/core/src/quest-status';
 
 test('every quest script has its journal name, so a finished quest is skipped', () => {
     const root = resolve(import.meta.dir, '..'), journal = questJournalNames(root);

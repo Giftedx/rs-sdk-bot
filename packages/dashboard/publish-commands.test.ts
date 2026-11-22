@@ -50,7 +50,7 @@ describe('authorizeCommand',()=>{
 
 describe('applyCommand',()=>{
  let root:string;
- beforeEach(()=>{root=mkdtempSync(join(tmpdir(),'fleet-cmd-'));mkdirSync(join(root,'.practice','coordinator'),{recursive:true});
+ beforeEach(()=>{root=mkdtempSync(join(tmpdir(),'fleet-cmd-'));mkdirSync(join(root,'.practice','live'),{recursive:true});
   writeFileSync(join(root,'swarm.json'),JSON.stringify({maxBots:17,jobs:[{account:'CoinCock',script:'scripts/goldfarm.ts',enabled:true},{account:'Haggis',script:'',enabled:false},{account:'Moneyshot',script:'scripts/banker.ts',enabled:false}]},null,2)+'\n');});
  afterEach(()=>rmSync(root,{recursive:true,force:true}));
  const stop=(n:string)=>join(root,'.practice','stop-'+n);
@@ -78,10 +78,13 @@ describe('applyCommand',()=>{
   expect((await applyCommand(cmd({action:'swarm-resume',account:undefined}),{root})).status).toBe('refused');
   expect(existsSync(stop('swarm'))).toBe(true);
  });
- test('coordinator-pause writes the pause file the coordinator honours',async()=>{
-  expect((await applyCommand(cmd({action:'coordinator-pause',account:undefined}),{root,now:NOW})).status).toBe('stop-requested');
-  expect(readFileSync(stop('coordinator'),'utf8')).toContain(ID);
-  expect((await applyCommand(cmd({action:'coordinator-pause',account:undefined}),{root})).status).toBe('already-paused');
+ test('side-pause and account-pause enqueue validated Brain OperatorCommands',async()=>{
+  expect((await applyCommand(cmd({action:'side-pause',account:undefined}),{root,now:NOW})).status).toBe('stop-requested');
+  expect(readFileSync(stop('swarm'),'utf8')).toContain(ID);
+  const queued=JSON.parse(readFileSync(join(root,'.practice','live','operator-commands',`${ID}.json`),'utf8'));
+  expect(queued.kind).toBe('pause_side');
+  expect((await applyCommand(cmd({action:'side-pause',account:undefined}),{root})).status).toBe('already-stopped');
+  expect((await applyCommand(cmd({action:'side-resume',account:undefined}),{root,now:NOW+1000})).status).toBe('stop-cleared');
  });
  test('job-disable and job-enable flip only that account under the plan-write lock',async()=>{
   let locked=0;const pw=<T,>(a:()=>T|Promise<T>)=>{locked++;return Promise.resolve(a());};
@@ -96,7 +99,7 @@ describe('applyCommand',()=>{
  });
  test('the real plan-write lock is taken and released',async()=>{
   expect((await applyCommand(cmd({action:'job-disable'}),{root})).status).toBe('job-disabled');
-  expect(existsSync(join(root,'.practice','coordinator','plan-write-lock.json'))).toBe(false);
+  expect(existsSync(join(root,'.practice','live','plan-write-lock.json'))).toBe(false);
   void planWrite;
  });
  test('receipts round-trip through the shared ledger',()=>{

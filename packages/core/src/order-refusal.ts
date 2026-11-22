@@ -1,7 +1,7 @@
 // The refusals of a Grand Exchange buy round that may not start (scripts/buy-owned-ge-item.ts), in one place: the text each cause
 // prints, its pattern, and what the callers do with a result that ends on one. The buy script prints the text, the supervisor
-// (packages/practice/src/supervise.ts) ends the job after one login, the planner (scripts/autopilot.ts, packages/planner) reads it
-// as a drain and holds the pair back, and the shop proof reads it. A cause that nothing prints is not listed.
+// (packages/practice/src/supervise.ts) ends the job after one login, the brain/outcome classifier reads unplaced causes cleanly,
+// and the shop proof reads it. A cause that nothing prints is not listed.
 //
 // A result is a refusal when its JSON says the order never reached the Grand Exchange: `"phase":"unplaced"`, nothing acquired and
 // nothing escrowed.

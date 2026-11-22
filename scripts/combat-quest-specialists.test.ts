@@ -3,9 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { validateSupplies } from '../packages/core/src/launch-evidence';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
-import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
-import { validateDelivery } from '../packages/router/src/delivery';
 import { FIGHTER_PROFILES } from './aio-fighter';
 import {
     DEFENCE_SPECIALIST_KIT,
@@ -221,9 +219,6 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
             expect(bench?.presetConfig).toEqual({});
         }
         expect(SPECIALIST_COMBAT_QUESTS_CASES.length).toBe(3);
-        expect(intentForEntry('scripts/hp-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'hitpoints', targetLevel: 99 });
-        expect(intentForEntry('scripts/strength-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'strength', targetLevel: 99 });
-        expect(intentForEntry('scripts/defence-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'defence', targetLevel: 99 });
 
         for (const [acc, board, minSup] of [
             ['FullBlooded', 'Hitpoints', 1],
@@ -236,16 +231,16 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         }
     });
 
-    test('observedSupplies, validateSupplies, and validateDelivery round-trip for combat specialist kits and tasks', () => {
+    test('observedSupplies and validateSupplies round-trip for combat specialist kits', () => {
         const root = resolve(import.meta.dir, '..');
         const items: { id: number; name: string }[] = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'));
         const cases = [
-            { recipient: 'fullblooded', kit: HP_SPECIALIST_KIT, taskFile: 'hp-specialist.json' },
-            { recipient: 'bigswinger', kit: STRENGTH_SPECIALIST_KIT, taskFile: 'strength-specialist.json' },
-            { recipient: 'rocksolid', kit: DEFENCE_SPECIALIST_KIT, taskFile: 'defence-specialist.json' },
+            { recipient: 'fullblooded', kit: HP_SPECIALIST_KIT },
+            { recipient: 'bigswinger', kit: STRENGTH_SPECIALIST_KIT },
+            { recipient: 'rocksolid', kit: DEFENCE_SPECIALIST_KIT },
         ] as const;
 
-        for (const { recipient, kit, taskFile } of cases) {
+        for (const { recipient, kit } of cases) {
             const ledger = JSON.stringify({
                 tick: 100,
                 from: 'Moneyshot',
@@ -294,8 +289,6 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
                 })),
             };
             expect(() => validateSupplies(manifest, context, observed, items, ['Helper', 'Moneyshot'], now, ref => refs.get(ref.path), recipient)).not.toThrow();
-            const task = JSON.parse(readFileSync(join(root, 'packages', 'router', 'tasks', taskFile), 'utf8'));
-            expect(() => validateDelivery(task)).not.toThrow();
         }
     });
 

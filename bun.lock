@@ -27,9 +27,6 @@
     "packages/practice": {
       "name": "@rsbot/practice",
     },
-    "packages/router": {
-      "name": "@rsbot/router",
-    },
     "packages/workers": {
       "name": "@rsbot/workers",
     },
@@ -46,8 +43,6 @@
     "@rsbot/planner": ["@rsbot/planner@workspace:packages/planner"],
 
     "@rsbot/practice": ["@rsbot/practice@workspace:packages/practice"],
-
-    "@rsbot/router": ["@rsbot/router@workspace:packages/router"],
 
     "@rsbot/workers": ["@rsbot/workers@workspace:packages/workers"],
 

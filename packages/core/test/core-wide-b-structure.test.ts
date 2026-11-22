@@ -247,7 +247,7 @@ test('facades preserve every external/test export and keep internal-only helpers
     for (const name of [...expectedReleaseRuntime, 'ReleaseMemo']) {
         expect(releaseExports.has(name)).toBe(true);
     }
-    for (const internal of ['typescriptLoaded', 'launchEntries', 'releaseFor', 'toolingRoots', 'releaseRootFiles', 'releaseDataRoots', 'hashOnly', 'progressionEntryMetadata', 'revisionOf', 'bunfigPreloads', 'pidAlive']) {
+    for (const internal of ['typescriptLoaded', 'launchEntries', 'releaseFor', 'toolingRoots', 'releaseRootFiles', 'releaseDataRoots', 'hashOnly', 'revisionOf', 'bunfigPreloads', 'pidAlive']) {
         expect(releaseExports.has(internal)).toBe(false);
     }
     expect(Object.keys(workerReleaseFacade).sort()).toEqual([...expectedReleaseRuntime].sort());

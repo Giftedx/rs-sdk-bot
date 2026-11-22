@@ -22,8 +22,6 @@ import {PVP_MODES,resolvePvpStep,runAioPvp,pvpCombatBracket,assessTribridReadine
 import {QUESTER_MODES,listGeneratedQuestScripts,resolveQuesterStep,runAioQuester,assessQuestReadiness,prioritizeQuestsForAccount} from './aio-quester';
 import {MARKET_MODES,resolveMarketStep,runAioMarket,planGeRestockOrders} from './aio-market';
 import {LOGISTICS_ROLES,resolveLogisticsStep,runAioLogistics,planFleetDistribution} from './aio-logistics';
-import {selectAioProgression,type AioProgressionContext} from './aio-progression';
-import type {ProgressionDecision} from '../packages/planner/src/progression';
 
 export {
  planProgressiveSkiller,
@@ -179,7 +177,6 @@ export type AioRecommendation = {
  reason: string;
  step: Step | null;
  status?: 'complete' | 'blocked';
- progression?:ProgressionDecision|null;
 };
 
 // Deterministic account state router: given an account's observed skills, items (bank + pack + equipment), and completed quests,
@@ -347,13 +344,8 @@ function recommendAuthoredAioJob(
  };
 }
 
-export function recommendNextAioJob(account:Parameters<typeof recommendAuthoredAioJob>[0],goal:AccountRecommendationGoal,progression?:AioProgressionContext):AioRecommendation{
- const authored=recommendAuthoredAioJob(account,goal);if(!authored.step)return authored;
- const choice=selectAioProgression(account.name,authored.step,{},progression?{...progression,...(goal==='pk-tribrid'||goal==='max-overall'?{intentTarget:99}:{})}:{},false);
- if(!choice.step)return{category:null,step:null,status:choice.blocked?'blocked':'complete',reason:choice.reason,progression:choice.decision};
- const selectedCategory=progression?.catalog?.routes.find(r=>r.script===choice.step!.script)?.category??progression?.catalog?.methods.find(m=>m.id===choice.decision?.selected)?.routeId.split(':')[0];
- const category=choice.changed&&AIO_CATEGORIES.includes(selectedCategory as AioCategory)?selectedCategory as AioCategory:undefined;
- return{...authored,category:category??authored.category,step:choice.step,reason:authored.reason+'. '+choice.reason,progression:choice.decision};
+export function recommendNextAioJob(account: Parameters<typeof recommendAuthoredAioJob>[0], goal: AccountRecommendationGoal): AioRecommendation {
+ return recommendAuthoredAioJob(account, goal);
 }
 
 export async function runAioPipeline(
@@ -369,18 +361,15 @@ export async function runAioPipeline(
  return runChainSteps(steps, rounds, {
   stopped,
   log: console.log,
-  run: st => {const choice=selectAioProgression(account,st,env);return choice.step?runChild([choice.step.script,account,...choice.step.args],{...env,...choice.step.env}):Promise.resolve(`RESULT ${choice.blocked?'fail':'ok'} ${choice.reason}`);},
+  run: st => runChild([st.script, account, ...st.args], { ...env, ...st.env }),
  });
 }
 
-export async function runAio(categoryInput: string, account: string, args: readonly string[], env: Record<string, string | undefined> = process.env,progression?:AioProgressionContext,
- run:(args:string[],env:Record<string,string|undefined>)=>Promise<string>=runDirectChild): Promise<string> {
+export async function runAio(categoryInput: string, account: string, args: readonly string[], env: Record<string, string | undefined> = process.env,
+ run: (args: string[], env: Record<string, string | undefined>) => Promise<string> = runDirectChild): Promise<string> {
  const category = categoryInput.toLowerCase().replace(/^--category=/, '');
  if (category === 'pipeline') return runAioPipeline(account, args, Number(env.ROUNDS ?? 1), env);
- if(category==='fighter')return runAioFighter(account,args,env,progression,run);
- const authored=resolveAioStep(category,args),choice=selectAioProgression(account,authored,env,progression);
- if(!choice.step){const result=`RESULT ${choice.blocked?'fail':'ok'} ${choice.reason}`;console.log(result);return result;}
- if(choice.changed){console.log('AIO_PROGRESSION '+JSON.stringify({account,state:choice.decision?.state,selected:choice.decision?.selected,basis:choice.decision?.basis}));return run([choice.step.script,account,...choice.step.args],{...env,...choice.step.env});}
+ if (category === 'fighter') return runAioFighter(account, args, env, undefined, run);
  switch (category as AioCategory) {
   case 'skiller': return runAioSkiller(account, args, env);
   case 'boss': return runAioBoss(account, args, env);

@@ -19,7 +19,6 @@ import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../c
 import {runShopSupplyNative,verifyShopSupply} from './shop-supply-order-proof';
 import {geProofEndpoints,selectGeProofEndpoints,assertGeProofAccount,geProofAccountEnv,startGeProofStack,waitFreeMemory,type ProofEndpoints} from './order-proof-shared';
 export {geProofEndpoints,selectGeProofEndpoints,assertGeProofAccount,geProofAccountEnv,startGeProofStack,type ProofEndpoints};
-import {intentForEntry} from '../../planner/src/progression-catalog';
 
 // Native bulk GE order: an owned seller lists noted grapes, then the actual worker buys the exact
 // quantity, banks it and reruns the same order key. The consumer stage reads the saved bank.
@@ -303,7 +302,10 @@ async function run(directory:string){
 
 export function geProofFixtureRecord(argv:readonly string[]){
  const script='packages/practice/src/ge-bulk-order-proof.ts';
- if(!intentForEntry(script,argv,{}))throw Error('finite native GE fixture arguments required');
+ const pos=(v:string|undefined)=>!!v&&/^[1-9]\d*$/.test(v);
+ const valid=(argv[0]==='--snapshot'&&argv.length===2&&Boolean(argv[1]))
+  ||(argv[0]==='--sell'&&argv.length===5&&Boolean(argv[1])&&pos(argv[2])&&pos(argv[3])&&pos(argv[4]));
+ if(!valid)throw Error('finite native GE fixture arguments required');
  return{script,argv:[...argv]};
 }
 

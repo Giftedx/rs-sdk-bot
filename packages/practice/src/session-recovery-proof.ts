@@ -14,7 +14,6 @@ import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {recoveryDiagnosticFromLog} from '../../core/src/session-recovery';
 import {accountDir,readLogoutProof,listAttempts} from '../../core/src/session-lifecycle';
 import {launchRevision,cachedLaunchRevision} from '../../core/src/worker-release';
-import {readMergedPlan} from '../../core/src/coordinator-jobs';
 import {proveSwarmRecoveryContinuation} from './swarm-recovery-chain';
 import {admitRecovery} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
@@ -26,13 +25,13 @@ import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {TAKEOVER_WINDOW_MS,authReplies,loginAfterTakeoverWindow,noRecoveryLogin,orphanRecoveryReadyAt,orphanServerEnd,recoverySessionAuth,type AttributedAuthReply} from './session-recovery-proof/auth';
-import {CONTROLLER_MARKER,claimStopArtifact,evidenceFiles,fleetHandoff,hash,observeRecoveryBoundary,publishControlFile,recoveryArtifactPresence,recoveryAuthorityInputs,recoveryCapability,recoveryMemoryGate,releaseStopArtifact,retainRequiredRecoveryCase,root,runner,serveAnyHost,sha,verifyCompletedRouterPins,worldHost,type ControlWriteOps,type OwnedStop,type RecoveryBoundary} from './session-recovery-proof/boundary';
+import {CONTROLLER_MARKER,claimStopArtifact,evidenceFiles,fleetHandoff,hash,observeRecoveryBoundary,publishControlFile,recoveryArtifactPresence,recoveryAuthorityInputs,recoveryCapability,recoveryMemoryGate,releaseStopArtifact,retainRequiredRecoveryCase,root,runner,serveAnyHost,sha,worldHost,type ControlWriteOps,type OwnedStop,type RecoveryBoundary} from './session-recovery-proof/boundary';
 import {CHECK_CASES,afterStalledConnection,deriveChecks,observePartialOwner,reconcileSaves,type Save} from './session-recovery-proof/reconcile';
 import {createFixtureOwner,runSessionCheckCase,startPrivateEnvironment} from './session-recovery-proof/servers';
 import {runAuthAndSingleUseSuite,runCompletedSuite,runModalAndTimeoutSuite,runOwnershipAndCooldownSuite,runStockAndFinalizeGuards,type Fixture,type ProofCaseContext} from './session-recovery-proof/cases';
 
 export {TAKEOVER_WINDOW_MS,authReplies,classifyCooldownWindow,latestOwnerLoginBefore,loginAfterTakeoverWindow,noRecoveryLogin,observeAuth,orphanRecoveryReadyAt,orphanServerEnd,ownerSessionEvidence,recoverySessionAuth,waitOwnerAuthLogout,waitRecoveryRuntime,type AttributedAuthReply} from './session-recovery-proof/auth';
-export {RECOVERY_MEMORY_WAIT_MS,claimStopArtifact,evidenceFiles,fleetHandoff,observeRecoveryBoundary,publishControlFile,recoveryArtifactPresence,recoveryAuthorityInputs,recoveryCapability,recoveryConsumptionBytes,recoveryMemoryGate,releaseStopArtifact,requireRecoveryRegistration,retainRequiredRecoveryCase,serveAnyHost,verifyCompletedRecoveryDelivery,verifyCompletedRouterPins,worldHost,type ControlWriteOps,type OwnedStop,type RecoveryBoundary} from './session-recovery-proof/boundary';
+export {RECOVERY_MEMORY_WAIT_MS,claimStopArtifact,evidenceFiles,fleetHandoff,observeRecoveryBoundary,publishControlFile,recoveryArtifactPresence,recoveryAuthorityInputs,recoveryCapability,recoveryConsumptionBytes,recoveryMemoryGate,releaseStopArtifact,requireRecoveryRegistration,retainRequiredRecoveryCase,serveAnyHost,verifyCompletedRecoveryDelivery,worldHost,type ControlWriteOps,type OwnedStop,type RecoveryBoundary} from './session-recovery-proof/boundary';
 export {buttonTraceFor,installAuthObserver,installButtonObserver,installLocObserver} from './session-recovery-proof/observers';
 export {CHECK_CASES,afterStalledConnection,deriveChecks,observePartialOwner,reconcileNegativeControls,reconcileSaves,stockOf} from './session-recovery-proof/reconcile';
 
@@ -61,7 +60,7 @@ function startRelay(port:number,target:number){
 
 async function run(directory:string){
  const taskPath=join(directory,'task.json'),deliveryTask=existsSync(taskPath)?JSON.parse(readFileSync(taskPath,'utf8')):null;
- const capability=recoveryCapability(process.env.DELIVERY_ID??deliveryTask?.id),routerPins=capability==='cow-progress-order'?verifyCompletedRouterPins():null;
+ const capability=recoveryCapability(process.env.DELIVERY_ID??deliveryTask?.id);
  if(deliveryTask&&deliveryTask.id!==capability)throw Error('recovery delivery identity mismatch');
  const startedAt=Date.now(),startFreeGiB=freemem()/2**30;
  if(startFreeGiB<PRACTICE_STARTUP_GB)throw Error(`native recovery needs${PRACTICE_STARTUP_GB}GiB startup reserve; observed `+startFreeGiB.toFixed(2));
@@ -87,13 +86,15 @@ async function run(directory:string){
 
   // Private control tree: the controller is this process; each case has a real task owner process.
   put(RECOVERY_SCRIPT,null);copyFileSync(runner,join(base,RECOVERY_SCRIPT));
-  put('packages/router/tasks/'+capability+'.json',JSON.parse(readFileSync(join(root,'packages/router/tasks',capability+'.json'),'utf8')));
   put('.practice/swarm-script-holds.json',[]);
-  put('.practice/coordinator/swarm-owner.json',{pid:process.pid,nonce:CONTROLLER_MARKER,source});
+  put('.practice/live/swarm-owner.json',{pid:process.pid,nonce:CONTROLLER_MARKER,source});
   // A decoy root plan must never grant or block a handoff plan's recovery authority.
   put('swarm.json',{maxBots:1,minFreeGB:1000,jobs:[{account:'NotOurActor',enabled:true,script:'scripts/session-check.ts'}]});
   process.env.SWARM_PLAN=join(base,'handoff/swarm.json');
-  const writeState=()=>{put('.practice/coordinator/state.json',{tasks:[...tasks.values()]});put('.practice/swarm-deaths.json',ends);put('handoff/swarm.json',{maxBots:17,minFreeGB:FREE_FLOOR_GB,jobs});};
+  const writeState=()=>{
+   for(const t of tasks.values())put('.practice/live/fleet-runs/'+t.runId+'/recovery.json',t);
+   put('.practice/swarm-deaths.json',ends);put('handoff/swarm.json',{maxBots:17,minFreeGB:FREE_FLOOR_GB,jobs});
+  };
   const beat=()=>put('.practice/swarm-state.json',{at:Date.now(),controllerPid:process.pid,jobs:jobs.map(j=>({account:j.account,state:'disabled'}))});
   // A failed timer publish keeps the previous complete view; the strict reader refuses it as stale, never malformed.
   writeState();beat();pulse=setInterval(()=>{try{beat();}catch{}},1000);
@@ -130,7 +131,7 @@ async function run(directory:string){
    const runId=`native-rcv-${id}-${stamp}`;
    const owner=Bun.spawn(sleeperCommand(runId),{cwd:root,stdout:'ignore',stderr:'ignore',windowsHide:true});children.push(owner);
    tasks.set(runId,{status:'running',runId,pid:owner.pid,spec:{kind:'run',capability,account:f.name,...(f.completed?{env:{TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',CAP:'1500'}}:{}),repairs:[{account:f.name,endedAt:f.endedAt}],sessionRecovery:{account:f.name,endedAt:f.endedAt}}});
-   put('.practice/coordinator/runs/'+runId+'/owner.json',{pid:owner.pid,runId});writeState();
+   put('.practice/live/fleet-runs/'+runId+'/owner.json',{pid:owner.pid,runId});writeState();
    return {runId,owner};
   };
   const requestFor=(f:Fixture,runId:string,nonce:string):ControlledRecoveryRequest=>({schema:'session-recovery/1',kind:'session-recovery',account:f.name,server:f.server,runId,nonce,endedAt:f.endedAt,source,
@@ -169,9 +170,10 @@ async function run(directory:string){
   };
   const caseDir=(id:string)=>{const d=join(directory,'cases',id);mkdirSync(d,{recursive:true});return d;};
   const deathBytes=()=>readFileSync(join(base,'.practice/swarm-deaths.json'),'utf8');
+  const selectedPlan=JSON.parse(readFileSync(process.env.SWARM_PLAN??join(base,'handoff/swarm.json'),'utf8'));
   record('selected-plan','native-actual-controller-selection',{
-   handoffLimits:readMergedPlan(base).maxBots===17&&readMergedPlan(base).minFreeGB===FREE_FLOOR_GB,
-   excludesRootJobs:!readMergedPlan(base).jobs.some((j:any)=>j.account==='NotOurActor'),
+   handoffLimits:selectedPlan.maxBots===17&&selectedPlan.minFreeGB===FREE_FLOOR_GB,
+   excludesRootJobs:!selectedPlan.jobs.some((j:any)=>j.account==='NotOurActor'),
    rootPlanRetained:JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).maxBots===1,
   });
   const owner=(f:Fixture,dir:string,mode:'hold'|'warm'|'orphan'|'partial',lifecycle:string)=>createFixtureOwner({publishControlModule:import.meta.path,f,dir,mode,lifecycle,source,children});
@@ -281,13 +283,12 @@ async function run(directory:string){
   }
   const bindings=await runStockAndFinalizeGuards(ctx,{world,login,sealRequest,sealAck,authTrace},offline);
   const checks=deriveChecks(cases);
-  if(routerPins&&!isDeepStrictEqual(routerPins,verifyCompletedRouterPins()))throw Error('completed router integration changed during proof');
   const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===launchRevision()&&runnerSha256===hash(runner),
    level:'native-controller-recovery',at:Date.now(),runtimeRevision:source,runnerSha256,bindings,
    server:{host:HOST,relay:RELAY,loginPort:LOGIN_PORT,tickMs:150,takeoverWindowMs:TAKEOVER_WINDOW_MS,world:sha(JSON.stringify(worldConfig)),observer:hash(observer)},
    starting:{at:startedAt,freeGiB:startFreeGiB,fenceSha256:null},controller:{pid:process.pid,marker:CONTROLLER_MARKER,argv:process.argv.slice(1)},
    scope:'Private native practice world only. Session cleanup is not game production, does not repair an account end and does not qualify any gameplay script. No live login.',
-   capability,routerPins,cases,checks};
+   capability,cases,checks};
   const proofPath=join(directory,'proof.json');writeFileSync(proofPath,JSON.stringify(proof,null,2));
   if(!proof.ok)throw Error('native recovery cases failed: '+cases.filter(c=>!c.ok).map(c=>c.id+':'+Object.entries(c.checks).filter(([,v])=>v!==true).map(([k])=>k).join('/')).join(', '));
   verifyNativeRecoveryProof(proof,directory,{runtimeRevision:source,runnerSha256});

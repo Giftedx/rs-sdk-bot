@@ -49,7 +49,7 @@ export function launchRevision(base = root, memo: ReleaseMemo = new Map()): stri
 export function releaseEntries(value: unknown): string[] { return typeof value === 'string' ? value.split(',').filter(Boolean) : []; }
 
 // Each release file's size and modification time and each of their folders' modification time (an added file
-// changes it), with no file read: a coordinator loop checks this and hashes the files only when it changes.
+// changes it), with no file read: a controller loop checks this and hashes the files only when it changes.
 function releaseStamp(base: string, files: readonly string[]): string {
     const hash = createHash('sha256');
     for (const p of [...files, ...new Set(files.map(f => dirname(f)))]) { const s = statSync(join(base, p)); hash.update(p + '\0' + s.size + '\0' + s.mtimeMs + '\0' + s.ctimeMs + '\0'); }

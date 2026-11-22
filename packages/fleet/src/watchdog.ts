@@ -60,7 +60,7 @@ export function restartCommand(name: Controller['name'], launch: Launch, exists:
     if (name === 'fleet-agent') return ['scripts/fleet-agent.ts', '--daemon'];
     const plan = launch.args[0];
     if (launch.args.length !== 1 || plan === undefined || plan.startsWith('--') || !exists(plan)) return `its recorded plan is not a file: ${launch.args.join(' ').slice(0, 160)}`;
-    return ['scripts/autopilot.ts', plan, '--daemon'];
+    return ['scripts/swarm.ts', plan];
 }
 
 export function recoveryLog(stdout: string, stderr: string, exitCode: number | null): string[] {
@@ -139,9 +139,9 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
             const r = Bun.spawnSync([process.execPath, ...start], { cwd: base, env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
             log(`fleet-agent restarted: ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
         } else {
-            mkdirSync(join(prac, 'autopilot'), { recursive: true });
-            const pid = spawnDetached([process.execPath, ...start], base, join(prac, 'autopilot', `daemon-${now}.out.log`), join(prac, 'autopilot', `daemon-${now}.err.log`), env);
-            log(`autopilot restarted pid=${pid} plan=${start[1]}`);
+            mkdirSync(join(prac, 'swarm-logs'), { recursive: true });
+            const pid = spawnDetached([process.execPath, ...start], base, join(prac, 'swarm-logs', `daemon-${now}.out.log`), join(prac, 'swarm-logs', `daemon-${now}.err.log`), env);
+            log(`swarm restarted pid=${pid} plan=${start[1]}`);
         }
     }
 

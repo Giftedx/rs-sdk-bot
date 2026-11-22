@@ -1,6 +1,6 @@
 // The long-lived controllers that a person starts by hand, in one table, and the lease that says one of them runs.
-// The watchdog (packages/router/src/watchdog.ts) starts a controller whose lease no live process holds, and the
-// dashboard (packages/dashboard) shows the same state. The coordinator and the swarm have their own owner files.
+// The watchdog (packages/fleet/src/watchdog.ts) starts a controller whose lease no live process holds, and the
+// dashboard (packages/dashboard) shows the same state. The swarm has its own owner lease and launch files.
 //
 // A lease is a file that holds a process id. Its holder sets the file time again on each pass, so the file time is a
 // heartbeat. The lease is held while that process is alive and the file is newer than LEASE_STALE_MS. Windows gives
@@ -168,14 +168,14 @@ export function readLaunch(file: string): Launch | null {
 }
 
 export type Controller = {
-    name: 'fleet-agent' | 'autopilot'; label: string;
+    name: 'fleet-agent' | 'swarm'; label: string;
     lease: string;   // the lease file, under the repository root
     launch: string;  // the launch record, under the repository root
     stop: string;    // the stop file that keeps the watchdog from starting it
 };
 export const CONTROLLERS: readonly Controller[] = [
     { name: 'fleet-agent', label: 'Fleet agent', lease: '.practice/fleet-agent.lock', launch: '.practice/fleet-agent.launch.json', stop: '.practice/stop-fleet-agent' },
-    { name: 'autopilot', label: 'Autopilot', lease: '.practice/autopilot.lock', launch: '.practice/autopilot/launch.json', stop: '.practice/stop-autopilot' },
+    { name: 'swarm', label: 'Swarm', lease: '.practice/swarm.lock', launch: '.practice/swarm.launch.json', stop: '.practice/stop-swarm' },
 ];
 export const controllerNamed = (name: Controller['name']): Controller => CONTROLLERS.find(c => c.name === name)!;
 

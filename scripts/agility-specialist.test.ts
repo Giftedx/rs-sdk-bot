@@ -22,7 +22,6 @@ import {
 } from './agility-specialist';
 import { SPECIALIST_AGILITY_CASES, FRESH_TUTORIAL_START } from './measure/specialist-agility-cases';
 import { benchCoverage } from './measure/aio-bench-cases';
-import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import { xpForLevel } from '../packages/planner/src/curve';
 import {
     AGILITY_SPECIALIST_KIT,
@@ -167,17 +166,7 @@ describe('Route config, AIO catalog, and bench coverage', () => {
         });
     });
 
-    test('registers skiller:agility:specialist across catalog, intentForEntry, and bench coverage', () => {
-        expect(intentForEntry('scripts/agility-specialist.ts', [], {})).toEqual({
-            kind: 'service',
-            objective: 'skiller:agility:specialist',
-            units: 1,
-        });
-        expect(intentForEntry('scripts/agility-specialist.ts', [], {}, { skills: { Agility: 99 } })).toEqual({
-            kind: 'service',
-            objective: 'skiller:agility:specialist',
-            units: 1,
-        });
+    test('registers skiller:agility:specialist in bench coverage', () => {
         expect(benchCoverage().gaps).toEqual([]);
         const mainCase = SPECIALIST_AGILITY_CASES.find(c => c.key === 'skiller:agility:specialist')!;
         expect(mainCase.pass('LOGOUT logged-out\nRESULT ok route=tourist agility=1->99 ticks=5100')).toBe(true);
@@ -210,11 +199,5 @@ describe('Route config, AIO catalog, and bench coverage', () => {
         expect(plan.name).toBe('agility');
         expect(plan.combined).toEqual(AGILITY_SPECIALIST_KIT);
         expect(plan.legs.length).toBe(1);
-    });
-
-    test('agility-specialist task consumer threshold is tightened to 6,031 ticks', () => {
-        const taskPath = join(ROOT, 'packages/router/tasks/agility-specialist.json');
-        const task = JSON.parse(readFileSync(taskPath, 'utf8'));
-        expect(task.consumer).toContain('within 6,031 ticks');
     });
 });

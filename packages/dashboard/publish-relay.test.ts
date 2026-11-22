@@ -80,7 +80,7 @@ describe('hosted views',()=>{
    const p=publicView(s);expect(p).not.toHaveProperty('stateError');expect(p.now).toBe(s.now);
   }
  });
- test('public bots keep game-visible fields and lose run counters, banks and coordinator internals',()=>{
+ test('public bots keep game-visible fields and lose run counters, banks and internal runtime fields',()=>{
   const b={name:'CoinCock',pos:{x:1,z:2},skills:[{name:'Attack',level:5,xp:400}],inventory:[{name:'Coins',count:9}],equipment:[],ranks:[],goal:'coins [task-1a2b] buy (607 short): 1630 bronze in the bank',currentGoal:'run-ranged-coincock-owned-band50',
    phase:'banked=15000 packCoins=5100',phaseShort:'banked 15.0K',result:'ok banked=15000',lastRes:{text:'ok banked=15000'},ledger:{coins:1},counters:{banked:15000},job:{script:'x'},planJob:{next:'y'},nativeProof:{ok:true},timeline:'xxi',role4:{coinsPerTick:3},bank:[{name:'Coins',count:1}],bankAt:1,env:{a:1}};
   const p=publicView({bots:[b],results:[{at:1,name:'CoinCock',ok:true,goal:'coins [task-9]',text:'ok banked=15000 packCoins=5100',counters:{banked:15000}}],events:[{at:1,name:'CoinCock',text:'banked 15.0K',full:'banked=15000'}]});

@@ -1,13 +1,13 @@
 // Writes client-assets/quest-rewards.json for the Quest Journal: each quest by its journal name (questJournalNames in
-// packages/router/src/coverage.ts) as [quest points, [[skill, xp], ...]]. The quest list is the content's quest folders
-// (68; knowledge/quests.json lacks some, and some of its rows have no folder), as coverage.ts takes it: a row's folder
+// packages/core/src/quest-status.ts) as [quest points, [[skill, xp], ...]]. The quest list is the content's quest folders
+// (68; knowledge/quests.json lacks some, and some of its rows have no folder), as quest-status.ts takes it: a row's folder
 // is its folder, else VARP_FOLDER of its varp; a folder with no row takes QP_FALLBACK. The XP is what the server gives:
 // the base XP times the server's XP rate (XP_RATE, 25), as stat_advance applies it.
 // Run: bun packages/dashboard/gen-quest-rewards.ts
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { XP_RATE } from '../knowledge/src/method-model';
-import { QP_FALLBACK, VARP_FOLDER, questJournalNames } from '../router/src/coverage';
+import { QP_FALLBACK, VARP_FOLDER, questJournalNames } from '../core/src/quest-status';
 
 // [quest points, XP the quest always gives, XP that is one of several outcomes (Observatory Quest's random sign)].
 export type Reward = [number, [string, number][], [string, number][]];

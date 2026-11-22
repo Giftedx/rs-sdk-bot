@@ -146,8 +146,8 @@ test('host resources keep missing capacity and RAM headroom unknown',()=>{
  const rows=run({capacity:{active:null,cap:null,fresh:false,headroomGB:null},sys:{freeGB:8,totalGB:32}});
  expect(rows.find((r:any)=>r.label==='Bots running').value).toBe('? / ?');
  expect(rows.find((r:any)=>r.label==='RAM headroom')).toEqual({label:'RAM headroom',value:'?',tone:'warn'});
- const procs=run({capacity:null,sys:{freeGB:8,totalGB:32,procs:[{pid:7,script:'app.ts',mb:1380},{pid:8,script:'coordinator-cli.ts',mb:1000},{pid:9,script:'coordinator-cli.ts',mb:1048}]}}).slice(-2);
- expect(procs.map((r:any)=>[r.label,r.value])).toEqual([['coordinator-cli.ts ×2','2,048 MB · 6.3%'],['app.ts','1,380 MB · 4.2% · 7']]);
+ const procs=run({capacity:null,sys:{freeGB:8,totalGB:32,procs:[{pid:7,script:'app.ts',mb:1380},{pid:8,script:'fleet-worker.ts',mb:1000},{pid:9,script:'fleet-worker.ts',mb:1048}]}}).slice(-2);
+ expect(procs.map((r:any)=>[r.label,r.value])).toEqual([['fleet-worker.ts ×2','2,048 MB · 6.3%'],['app.ts','1,380 MB · 4.2% · 7']]);
 });
 
 test('dashboard inline JavaScript parses without running browser or making requests',()=>{

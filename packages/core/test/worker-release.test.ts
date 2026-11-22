@@ -125,11 +125,11 @@ test('release pin covers its closure; notes, receipts and edits elsewhere do not
   const pin=capabilityRevision(['scripts/worker.ts'],root),env={WORKER_RELEASE:pin,WORKER_ENTRY:'scripts/worker.ts'};
   expect(assertWorkerRelease(env,root)).toBe(pin);
   expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).not.toThrow();
-  mkdirSync(join(root,'.practice/coordinator'),{recursive:true});writeFileSync(join(root,'.practice/coordinator/build-lock.json'),'{}');
-  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('coordinator build in progress');
+  mkdirSync(join(root,'.practice/live'),{recursive:true});writeFileSync(join(root,'.practice/live/build-lock.json'),'{}');
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('build in progress');
   expect(()=>assertLiveWorkerRelease('localhost:8888',{},root)).not.toThrow();
-  rmSync(join(root,'.practice/coordinator/build-lock.json'));
-  // A standing peer on another release does not hold a live start; a coordinator peer on another release does.
+  rmSync(join(root,'.practice/live/build-lock.json'));
+  // A standing peer on another release does not hold a live start; a managed run peer on another release does.
   writeFileSync(join(root,'swarm.json'),JSON.stringify({jobs:[{account:'Fish',script:'scripts/x.ts',standing:true,enabled:true}]}));
   writeFileSync(join(root,'.practice/status/legacy.json'),JSON.stringify({name:'Fish',server:'rs-sdk-demo.fly.dev',at:Date.now(),result:'',workRevision:'b'.repeat(64)}));
   expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).not.toThrow();
@@ -171,22 +171,6 @@ test('an import added to the closure changes the release, and then the imported 
   expect(releaseFiles(['scripts/worker.ts'],root)).toContain('scripts/other.ts');
   writeFileSync(join(root,'scripts/other.ts'),'export const other=3;\n');
   expect(capabilityRevision(['scripts/worker.ts'],root)).not.toBe(added);
- }finally{rmSync(root,{recursive:true,force:true});}
-});
-
-test('progression entry metadata keeps its planner and data pinned without importing future worker bodies',()=>{
- const root=fixture();
- try{
-  mkdirSync(join(root,'packages/planner/src'),{recursive:true});
-  const planner='packages/planner/src/progression-catalog.ts';
-  writeFileSync(join(root,planner),"export const next='scripts/other.ts';export const data='knowledge/npcs.json';export const stable=1;");
-  writeFileSync(join(root,'scripts/worker.ts'),"import '../packages/planner/src/progression-catalog';");
-  const first=capabilityRevision(['scripts/worker.ts'],root),files=releaseFiles(['scripts/worker.ts'],root);
-  expect(files).toContain(planner);expect(files).toContain('knowledge/npcs.json');expect(files).not.toContain('scripts/other.ts');
-  writeFileSync(join(root,'scripts/other.ts'),'export const other=2;');expect(capabilityRevision(['scripts/worker.ts'],root)).toBe(first);
-  writeFileSync(join(root,'knowledge/npcs.json'),'[1]');expect(capabilityRevision(['scripts/worker.ts'],root)).not.toBe(first);
-  writeFileSync(join(root,planner),readFileSync(join(root,planner),'utf8')+"\nimport '../../../scripts/other';");
-  expect(releaseFiles(['scripts/worker.ts'],root)).toContain('scripts/other.ts');
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 
@@ -268,14 +252,13 @@ test('missing, future or stale heartbeats cannot prove an unfinished peer has le
  expect(()=>assertCompatibleWorkers(pin,'live',[{server:'live',at:1,result:'ok',workRevision:pin}],31001)).not.toThrow();
 });
 
-test('dashboard and authoring edits do not change the whole-tree proof revision',()=>{
+test('dashboard edits do not change the whole-tree proof revision',()=>{
  const root=mkdtempSync(join(tmpdir(),'worker-release-'));
  try{
-  for(const dir of [...workerSourceRoots,'packages/dashboard','packages/router/src'])mkdirSync(join(root,dir),{recursive:true});
+  for(const dir of [...workerSourceRoots,'packages/dashboard'])mkdirSync(join(root,dir),{recursive:true});
   for(const f of ['package.json','bun.lock','tsconfig.json','scripts/worker.ts'])writeFileSync(join(root,f),'original');
   const pin=workerSourceRevision(root);
   writeFileSync(join(root,'packages/dashboard/server.ts'),'dashboard edit');
-  writeFileSync(join(root,'packages/router/src/author.ts'),'authoring edit');
   expect(workerSourceRevision(root)).toBe(pin);
   writeFileSync(join(root,'scripts/worker.ts'),"import '../packages/dashboard/server';");
   expect(()=>workerSourceRevision(root)).toThrow('runtime imports non-runtime');
@@ -413,20 +396,20 @@ test('bunfig top-level preloads pin the preloaded module closure without putting
   mkdirSync(join(root,'packages/planner/src'),{recursive:true});
   mkdirSync(join(root,'packages/planner/data'),{recursive:true});
   writeFileSync(join(root,'packages/planner/data/routes.json'),'{"routes":1}');
-  writeFileSync(join(root,'packages/planner/src/progression-catalog.ts'),"export const data='packages/planner/data/routes.json';\n");
-  writeFileSync(join(root,'packages/planner/src/progression-adapter.ts'),"export function load(){return require('./progression-catalog');}\n");
+  writeFileSync(join(root,'packages/planner/src/catalog.ts'),"export const data='packages/planner/data/routes.json';\n");
+  writeFileSync(join(root,'packages/planner/src/preload-sample.ts'),"export function load(){return require('./catalog');}\n");
   writeFileSync(join(root,'packages/planner/src/test-only-preload.ts'),'export const onlyForTest=1;\n');
-  expect(releaseFiles(['scripts/worker.ts'],root)).not.toContain('packages/planner/src/progression-adapter.ts');
+  expect(releaseFiles(['scripts/worker.ts'],root)).not.toContain('packages/planner/src/preload-sample.ts');
   writeFileSync(join(root,'bunfig.toml'),[
-   'preload = ["./packages/planner/src/progression-adapter.ts"]',
+   'preload = ["./packages/planner/src/preload-sample.ts"]',
    '',
    '[test]',
-   'preload = ["./packages/planner/src/progression-adapter.ts", "./packages/planner/src/test-only-preload.ts"]',
+   'preload = ["./packages/planner/src/preload-sample.ts", "./packages/planner/src/test-only-preload.ts"]',
    '',
   ].join('\n'));
   const files=releaseFiles(['scripts/worker.ts'],root);
-  expect(files).toContain('packages/planner/src/progression-adapter.ts');
-  expect(files).toContain('packages/planner/src/progression-catalog.ts');
+  expect(files).toContain('packages/planner/src/preload-sample.ts');
+  expect(files).toContain('packages/planner/src/catalog.ts');
   expect(files).toContain('packages/planner/data/routes.json');
   expect(files).not.toContain('packages/planner/src/test-only-preload.ts');
   expect(files).not.toContain('bunfig.toml');
@@ -434,7 +417,7 @@ test('bunfig top-level preloads pin the preloaded module closure without putting
   writeFileSync(join(root,'packages/planner/data/routes.json'),'{"routes":2}');
   const afterData=cachedReleaseFor(['scripts/worker.ts'],root);
   expect(afterData).not.toBe(pin);
-  writeFileSync(join(root,'bunfig.toml'),'preload = ["./packages/planner/src/progression-adapter.ts", "./packages/planner/src/test-only-preload.ts"]\n');
+  writeFileSync(join(root,'bunfig.toml'),'preload = ["./packages/planner/src/preload-sample.ts", "./packages/planner/src/test-only-preload.ts"]\n');
   expect(releaseFiles(['scripts/worker.ts'],root)).toContain('packages/planner/src/test-only-preload.ts');
   expect(cachedReleaseFor(['scripts/worker.ts'],root)).not.toBe(afterData);
   writeFileSync(join(root,'bunfig.toml'),'preload = ["./packages/planner/src/missing.ts"]\n');
@@ -443,7 +426,5 @@ test('bunfig top-level preloads pin the preloaded module closure without putting
 
  const repo=resolve(import.meta.dir,'../../..');
  const repoFiles=releaseFiles(['packages/core/src/host.ts'],repo);
- expect(repoFiles).toContain('packages/planner/src/progression-adapter.ts');
- expect(repoFiles).toContain('packages/planner/src/progression-catalog.ts');
- expect(repoFiles).toContain('packages/planner/data/progression-routes.json');
+ expect(repoFiles).toContain('packages/core/src/host.ts');
 });

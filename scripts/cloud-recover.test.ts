@@ -8,7 +8,6 @@ import { accountDir, DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session
 import { RECOVERY_SCRIPT } from '../packages/core/src/session-recovery-permit';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 import { recoveryPlanningProblem, requestRecoveryPlanning, type RecoveryPlanningProblem } from './cloud-recover';
-import { readRecoveryProblems } from '../packages/router/src/coordinator-planner';
 
 const held: LogoutProof = { state: 'held', account: 'kiltlifter', server: 'rs-sdk-demo.fly.dev', domain: 'live', attemptId: 'a', reason: 'disconnected' };
 const claim: ClaimView = { phase: 'held', kind: 'swarm', pid: 41, host: 'box' };
@@ -308,13 +307,13 @@ test('a new settled recovery failure remains visible after qualification hides t
     try {
         const oldProblem = recoveryPlanningProblem(root, account, end, [first])!;
         expect(requestRecoveryPlanning(root, oldProblem)).toBe(true);
-        expect(readRecoveryProblems(root, { [account]: end }, [first] as any)[0]?.failures[0]?.taskId).toBe('first-recovery');
-        expect(readRecoveryProblems(root, { [account]: end }, [first, qualified] as any)).toEqual([]);
+        expect(oldProblem.failures[0]?.taskId).toBe('first-recovery');
+        expect(recoveryPlanningProblem(root, account, end, [first, qualified] as any)).toBeUndefined();
         rmSync(signal);
         const freshProblem = recoveryPlanningProblem(root, account, end, [first, qualified, next])!;
         expect(requestRecoveryPlanning(root, freshProblem)).toBe(true);
         expect(freshProblem.failures[0]).toMatchObject({ taskId: 'next-recovery', settledAt: endedAt + 300 });
-        expect(readRecoveryProblems(root, { [account]: end }, [first, qualified, next] as any)[0]?.failures[0]?.taskId).toBe('next-recovery');
+        expect(recoveryPlanningProblem(root, account, end, [first, qualified, next])?.failures[0]?.taskId).toBe('next-recovery');
         rmSync(signal);
         expect(requestRecoveryPlanning(root, recoveryPlanningProblem(root, account, end, [first, qualified, next])!)).toBe(false);
         expect(existsSync(signal)).toBe(false);

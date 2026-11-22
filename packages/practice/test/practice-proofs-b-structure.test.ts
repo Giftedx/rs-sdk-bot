@@ -255,7 +255,6 @@ test('session-recovery-proof facade preserves all 42 runtime exports', () => {
         'serveAnyHost',
         'stockOf',
         'verifyCompletedRecoveryDelivery',
-        'verifyCompletedRouterPins',
         'waitOwnerAuthLogout',
         'waitRecoveryRuntime',
         'worldHost',

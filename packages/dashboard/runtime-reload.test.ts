@@ -1,8 +1,7 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {DAEMONS,reloadsFor} from '../router/src/live-update';
-import {importClosure} from '../router/src/delivery-cli';
+import { DAEMONS, importClosure, reloadsFor } from '../fleet/src/live-update';
 
 const root=resolve(import.meta.dir,'../..');
 

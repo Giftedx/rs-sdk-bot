@@ -68,9 +68,9 @@ export function recoveryMemoryGate(budgetMs=RECOVERY_MEMORY_WAIT_MS,pollMs=1000)
 // Samples of the actual private authority files, not substituted authority or credentials.
 export function recoveryAuthorityInputs(base:string,r:ControlledRecoveryRequest){
  const read=(path:string):any=>{try{return JSON.parse(readFileSync(join(base,path),'utf8'));}catch{return null;}};
- const owner=read('.practice/coordinator/swarm-owner.json'),state=read('.practice/coordinator/state.json');
- const task=Array.isArray(state?.tasks)?state.tasks.find((t:any)=>t?.status==='running'&&t.runId===r.runId):null;
- const taskOwner=read('.practice/coordinator/runs/'+r.runId+'/owner.json'),lease=read('.practice/swarm-repair.json.lease');
+ const owner=read('.practice/live/swarm-owner.json'),recovery=read('.practice/live/fleet-runs/'+r.runId+'/recovery.json');
+ const task=recovery?.status==='running'&&recovery.runId===r.runId?recovery:null;
+ const taskOwner=read('.practice/live/fleet-runs/'+r.runId+'/owner.json'),lease=read('.practice/swarm-repair.json.lease');
  const fleet=read('.practice/swarm-state.json'),end=read('.practice/swarm-deaths.json')?.[r.account];
  return {sampledAt:Date.now(),request:{account:r.account,server:r.server,runId:r.runId,nonce:r.nonce,source:r.source,endedAt:r.endedAt},
   controller:owner?{pid:owner.pid,nonce:owner.nonce,source:owner.source}:null,processPid:process.pid,
@@ -85,13 +85,9 @@ export function recoveryAuthorityInputs(base:string,r:ControlledRecoveryRequest)
 export function recoveryCapability(id=process.env.DELIVERY_ID??'shark-supply-order'){
  if(!/^[a-z0-9-]+$/.test(id))throw Error('invalid recovery delivery capability');return id;
 }
-export function verifyCompletedRouterPins(base=root){
- const paths=['packages/router/src/coordinator-live.ts','packages/router/test/coordinator-recovery.test.ts'];
- return paths.map(path=>({path,sha256:hash(join(base,path))}));
-}
 export function verifyCompletedRecoveryDelivery(directory:string){
  const proof=JSON.parse(readFileSync(join(directory,'proof.json'),'utf8'));
- if(proof.capability!=='cow-progress-order'||!isDeepStrictEqual(proof.routerPins,verifyCompletedRouterPins()))throw Error('completed recovery delivery integration changed');
+ if(proof.capability!=='cow-progress-order')throw Error('completed recovery delivery integration changed');
  verifyNativeRecoveryProof(proof,directory,{runtimeRevision:launchRevision(),runnerSha256:hash(runner)});
  return true;
 }

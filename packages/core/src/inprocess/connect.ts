@@ -11,9 +11,6 @@ import { isLocalServer } from '../localserver';
 import { loadPathfinding, pathfindingSnapshotUsable } from '../pathcache';
 import { planLockDir, withPlanWrite } from '../plan-lock';
 import { hasStopFile, lifecycleRootForServer } from '../practice-paths';
-import { getProgressionAdapter, type ProgressionAdapter } from '../progression-adapter';
-import type { WorkDescriptor } from '../progression-policy';
-import { attachProgressionSession, preflightProgressionWork, processWork } from '../progression-session';
 import { beginSessionAttempt, lifecycleOwner, type SessionAttempt } from '../session-lifecycle';
 import { assertSpentRecoveryConnection, type RecoveryConnectionAdmission } from '../session-recovery-permit';
 import { recordOwnedAccount, tradePartners, tradeRefusal } from '../tradeguard';
@@ -45,8 +42,6 @@ export async function connectInProcess(opts: {
     lockPlan?: boolean;
     recoverSwarm?: RecoveryConnectionAdmission;
     trade?: TradeAdmission;
-    work?: WorkDescriptor;
-    progression?: ProgressionAdapter;
 }): Promise<Session> {
     if (opts.lifecycleRoot && !isLocalServer(opts.server ?? 'localhost:8888')) throw Error('lifecycle root override is local-only');
     const server = opts.server ?? 'localhost:8888';
@@ -85,7 +80,6 @@ export async function connectInProcess(opts: {
             lifecycle.owner = { ...lifecycleOwner(), specialistAuthorization: { ticket: currentTicket, mission: process.env.SWARM_MISSION_HASH! } };
         }
         opts.trade?.check(server);
-        preflightProgressionWork(opts.work ?? processWork(), server, undefined, opts.name, opts.progression ?? getProgressionAdapter());
     };
     return startInProcessSession(opts, {
         startSession,
@@ -96,14 +90,13 @@ export async function connectInProcess(opts: {
         planLock: opts.lockPlan || ticket || opts.trade ? planLockDir : undefined,
         lifecycle,
         sharedAccount: live ? { root: repoRoot, side: mySide(), recover: !!opts.recoverSwarm, admission: opts.recoverSwarm, trade: opts.trade } : undefined,
-        progression: opts.progression,
     });
 }
 
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(
-    opts: { name: string; password: string; server?: string; members?: boolean; work?: WorkDescriptor; progression?: ProgressionAdapter },
+    opts: { name: string; password: string; server?: string; members?: boolean },
     deps: {
         startSession: StartSession;
         sdk: BotSDK;
@@ -117,7 +110,6 @@ export async function startInProcessSession(
         claimSwarm?: typeof acquireFleetSwarmClaim;
         soloProcess?: boolean;
         countBots?: () => number;
-        progression?: ProgressionAdapter;
     },
 ): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
@@ -244,7 +236,5 @@ export async function startInProcessSession(
             releaseConfirmed();
         },
     };
-    const progression = attachProgressionSession(result, opts.work ?? processWork(), host, { adapter: deps.progression ?? opts.progression ?? getProgressionAdapter() });
-    sh.setProgressionGuard(action => progression.refusal(action));
     return result;
 }

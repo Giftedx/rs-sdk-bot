@@ -10,8 +10,6 @@ import {acquireFleetSwarmClaim,readFleetAccountClaim} from '../src/fleet-trade-c
 import {fleetCheckoutId,fleetGitWindow,commitFleetGitRecord,pushFleetGitRecord,acquireFleetLease,FLEET_LEASE_TTL_MS} from '../src/fleet-lease';
 import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,cachedProcessStarts,releaseExpiredRecoveryLease,releaseExpiredRecoveryLeases,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir,lifecycleOwner} from '../src/session-lifecycle';
-import {installJob} from '../../router/src/coordinator-live';
-import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
 import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
 import {recoveryHeldDiagnostic,recoveryBoundary,recoveryDiagnosticFromLog} from '../src/session-recovery';
 import {missionSignature,liveLogoutRef} from '../src/session-admission';
@@ -38,7 +36,8 @@ if(process.env.HOST_RECOVERY_FIXTURE==='1')test('qualified cross-host fixture bo
   const oldLease={side:'cloud',host:claim.host,holder:claim.checkout,epoch:randomUUID(),pid:process.pid,at:at-1};append('refs/heads/fleet-lease/cloud',oldLease);
   const lease=acquireFleetLease(f.base,'cloud',()=>clock);expect(lease.allows()).toBe(true);
   f.request.server=claim.server;f.request.endedAt=receipt.updatedAt+5;
-  const state=JSON.parse(readFileSync(join(f.base,'.practice/coordinator/state.json'),'utf8'));state.tasks[0].spec.repairs[0].endedAt=f.request.endedAt;state.tasks[0].spec.sessionRecovery.endedAt=f.request.endedAt;f.put('.practice/coordinator/state.json',state);
+  const recoveryPath='.practice/live/fleet-runs/task-run/recovery.json';
+  const rec=JSON.parse(readFileSync(join(f.base,recoveryPath),'utf8'));rec.spec.repairs[0].endedAt=f.request.endedAt;rec.spec.sessionRecovery.endedAt=f.request.endedAt;f.put(recoveryPath,rec);
   f.put('.practice/swarm-deaths.json',{Rod:{at:f.request.endedAt,reason:'blocked'}});f.put('.practice/swarm-state.json',{at:clock,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
   const reportPath=join(f.base,'.practice/deliveries/fixture/report.json'),report=JSON.parse(readFileSync(reportPath,'utf8'));report.at=clock-1;writeFileSync(reportPath,JSON.stringify(report));f.request.qualification.delivery.sha256=createHash('sha256').update(readFileSync(reportPath)).digest('hex');
   const options={...f.options,now:()=>clock,pidAlive:()=>false};
@@ -166,12 +165,12 @@ function fixture(){
  const ref=(path:string)=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')});
  put(RECOVERY_SCRIPT,'fixture runner');
  const runnerHash=createHash('sha256').update(readFileSync(join(base,RECOVERY_SCRIPT))).digest('hex');
- put('.practice/coordinator/swarm-owner.json',{pid:process.pid,nonce:'controller',source});
- put('.practice/coordinator/state.json',{tasks:[{status:'running',runId:'task-run',pid:10,spec:{kind:'run',capability:'shark-supply-order',account:'Rod',sessionRecovery:{account:'Rod',endedAt:100},repairs:[{account:'Rod',endedAt:100}]}}]});
- put('.practice/coordinator/runs/task-run/owner.json',{pid:10,runId:'task-run'});
+ put('.practice/live/swarm-owner.json',{pid:process.pid,nonce:'controller',source});
+ put('.practice/live/fleet-runs/task-run/recovery.json',{status:'running',runId:'task-run',pid:10,spec:{kind:'run',capability:'shark-supply-order',script:'scripts/new.ts',account:'Rod',sessionRecovery:{account:'Rod',endedAt:100},repairs:[{account:'Rod',endedAt:100}]}});
+ put('.practice/live/fleet-runs/task-run/owner.json',{pid:10,runId:'task-run'});
  put('.practice/swarm-repair.json.lease',{pid:10,runId:'task-run',nonce:'one'});
  put('.practice/swarm-deaths.json',{Rod:{at:100,reason:'blocked',revision:JSON.stringify(['scripts/old.ts',false,['rod'],[]])}});
- put('swarm.json',{maxBots:17,minFreeGB:0,jobs:[{account:'Rod',script:'scripts/old.ts',enabled:false,coordinatorOwner:'coordinator'}]});
+ put('swarm.json',{maxBots:17,minFreeGB:0,jobs:[{account:'Rod',script:'scripts/old.ts',enabled:false}]});
  put('.practice/swarm-state.json',{at:now,controllerPid:process.pid,jobs:[{account:'Rod',state:'disabled'}]});
  put('.practice/deliveries/fixture/cases/raw.log',{observed:'unit fixture bytes, not native evidence'});
  const raw={path:'cases/raw.log',sha256:createHash('sha256').update(readFileSync(join(base,'.practice/deliveries/fixture/cases/raw.log'))).digest('hex')};
@@ -190,11 +189,10 @@ function fixture(){
 
 function completedFixture(){
  const f=fixture();
- const state=JSON.parse(readFileSync(join(f.base,'.practice/coordinator/state.json'),'utf8'));
- state.tasks[0].spec.env={TRAIN_SKILL:'Attack',TARGET_LEVEL:'20'};
- f.put('.practice/coordinator/state.json',state);
- f.put('packages/router/tasks/shark-supply-order.json',{id:'shark-supply-order',entry:'scripts/new.ts'});
- const revision=missionSignature({account:'Rod',script:'scripts/new.ts',env:{...state.tasks[0].spec.env,CAP:'1600',COORDINATOR_RUN_ID:f.request.runId}});
+ const rec=JSON.parse(readFileSync(join(f.base,'.practice/live/fleet-runs/task-run/recovery.json'),'utf8'));
+ rec.spec.env={TRAIN_SKILL:'Attack',TARGET_LEVEL:'20'};
+ f.put('.practice/live/fleet-runs/task-run/recovery.json',rec);
+ const revision=missionSignature({account:'Rod',script:'scripts/new.ts',env:{...rec.spec.env,CAP:'1600',FLEET_RUN_ID:f.request.runId}});
  f.put('.practice/swarm-deaths.json',{Rod:{at:100,reason:'done after 1 runs',revision:'retired-strength20'}});
  f.put('.practice/swarm-script-holds.json',[]);
  f.put('.practice/status/Rod.json',{name:'Rod',server:f.request.server,at:now-100000,result:'ok Strength20'});
@@ -210,7 +208,7 @@ test('successful retired cleanup requires a new actual mission, no hold, no prod
   if(fault==='reserved')f.put('swarm.json',{jobs:[{account:'Rod',script:'scripts/old.ts',enabled:false,goal:'fresh clock'}]});
   if(fault==='missing-assignment')f.put('swarm.json',{jobs:[]});
   if(fault==='composed')f.put('swarm.json',{jobs:[{accounts:['Rod'],script:'scripts/old.ts',enabled:false}]});
-  if(fault==='authorization')f.put('.practice/coordinator/state.json',{tasks:[]});
+  if(fault==='authorization')f.put('.practice/live/fleet-runs/task-run/recovery.json',{tasks:[]});
   if(fault==='source')f.options.source=()=>runner;
   if(fault==='end')f.put('.practice/swarm-deaths.json',{Rod:{at:101,reason:'done',revision:'old'}});
   if(fault==='unknown')f.put('.practice/status/Rod.json',{server:f.request.server,at:now-100000});
@@ -225,7 +223,7 @@ test('completed permit pins the exact successful end and actual mission through 
   const f=completedFixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);
   const paths=recoveryPermitPaths(f.request,f.base),lease=readFileSync(paths.lease,'utf8');
   if(fault==='reason'||fault==='revision')f.put('.practice/swarm-deaths.json',{Rod:{at:100,reason:fault==='reason'?'done':'done after 1 runs',revision:fault==='revision'?'changed':'retired-strength20'}});
-  if(fault==='mission')f.put('packages/router/tasks/shark-supply-order.json',{id:'shark-supply-order',entry:'scripts/changed.ts'});
+  if(fault==='mission'){const rPath='.practice/live/fleet-runs/task-run/recovery.json';const rec=JSON.parse(readFileSync(join(f.base,rPath),'utf8'));rec.spec.script='scripts/changed.ts';f.put(rPath,rec);}
   if(fault==='hold')f.put('.practice/swarm-script-holds.json',[{account:'Rod'}]);
   if(fault==='producer')beginSessionAttempt({account:'Rod',server:f.request.server},{root:join(f.base,'.practice/session-lifecycle')}).record('ended','logged-out');
   if(fault==='stop')f.put('.practice/stop-Rod','stop');
@@ -297,9 +295,9 @@ test('only the controller may issue one account lease; child consumes one nonce 
 test('refusals happen before a lease is issued and keep exact failure bytes',()=>{
  for(const fault of ['controller','task','authorization','end','assignment','stop','qualification','source','protected']){
   const f=fixture(),before=readFileSync(join(f.base,'.practice/swarm-deaths.json'),'utf8');
-  if(fault==='controller')f.put('.practice/coordinator/swarm-owner.json',{pid:999,nonce:'other',source});
+  if(fault==='controller')f.put('.practice/live/swarm-owner.json',{pid:999,nonce:'other',source});
   if(fault==='task')f.options.matches=(pid:number)=>pid===process.pid;
-  if(fault==='authorization')f.put('.practice/coordinator/state.json',{tasks:[]});
+  if(fault==='authorization')f.put('.practice/live/fleet-runs/task-run/recovery.json',{tasks:[]});
   if(fault==='end')f.put('.practice/swarm-deaths.json',{Rod:{at:101,reason:'blocked'}});
   if(fault==='assignment')f.put('swarm.json',{jobs:[{account:'Rod',script:'scripts/live.ts',enabled:true}]});
   if(fault==='stop')f.put('.practice/stop-Rod',{stop:true});
@@ -316,7 +314,7 @@ test('the child guard rechecks task, source, exact end and runner after nonce co
  for(const fault of ['task','source','end','runner','deadline']){
   const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);
   const guard=consumeRecoveryPermit(f.request,f.base,f.options);
-  if(fault==='task')f.put('.practice/coordinator/state.json',{tasks:[]});
+  if(fault==='task')f.put('.practice/live/fleet-runs/task-run/recovery.json',{tasks:[]});
   if(fault==='source')f.options.source=()=>runner;
   if(fault==='end')f.put('.practice/swarm-deaths.json',{Rod:{at:101,reason:'blocked'}});
   if(fault==='runner')f.put(RECOVERY_SCRIPT,'changed');
@@ -358,18 +356,11 @@ test('completion indexes only the exact child/producer, releases its lease, and 
    // This is a filesystem/producer integration fixture, not a network or native qualification.
    // An old status without RESULT must be covered by the exact indexed recovery before the old end clears.
    f.put('.practice/status/Rod.json',{name:'Rod',server:f.request.server,started:1,at:1,result:''});
-   const task:any={id:'pilot',goal:'gear',kind:'run',capability:'shark-supply-order',account:'Rod',sessionRecovery:{account:'Rod',endedAt:100},repairs:[{account:'Rod',endedAt:100}]};
-   expect(()=>installJob(task,'Rod','scripts/new.ts',f.request.runId,source,{}, {base:f.base,preflight:true,freeGB:20})).not.toThrow();
    const ended=new Map(Object.entries(JSON.parse(ends))) as Map<string,any>,holds:ScriptHold[]=[];
    const repaired=applyEndRepair({account:'Rod',endedAt:100,server:f.request.server,proof:{kind:'producer',attemptId:attempt.attemptId}},ended,[],{
     readProof:(a,s)=>readLogoutProof(a,s,{root}),verifyLegacy:()=>({state:'refused',reason:'not used'})},holds);
    expect(repaired.changed).toBe(true);expect(holds).toEqual([]);
    f.put('.practice/swarm-deaths.json',Object.fromEntries(ended));f.put('.practice/swarm-script-holds.json',holds);
-   const owner=readFileSync(join(f.base,'swarm.json'),'utf8');
-   expect(()=>installJob(task,'Rod','scripts/new.ts',f.request.runId,source,{}, {base:f.base,freeGB:20})).not.toThrow();
-   // The installed job is the coordinator's file's; it shadows the retired swarm.json job, whose bytes stay.
-   const jobs=readMergedPlan(f.base).jobs;expect(jobs).toHaveLength(1);expect(jobs[0]).toMatchObject({account:'Rod',script:'scripts/new.ts',enabled:true,coordinatorOwner:'coordinator'});
-   expect(readFileSync(join(f.base,'swarm.json'),'utf8')).toBe(owner);expect(JSON.parse(readFileSync(coordinatorJobsPath(f.base),'utf8')).jobs).toHaveLength(1);
   }
  }
 });
@@ -526,7 +517,7 @@ test('the controller releases only an exact expired held lease with a dead bound
   if(fault==='newer-attempt')beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:{...owner,pid:4321},now:()=>now+30}).record('ended','logged-out');
   if(fault==='unbound')rmSync(paths.used);
   if(fault==='stopped')f.put('.practice/stop-Rod',{});
-  if(fault==='controller')f.put('.practice/coordinator/swarm-owner.json',{pid:999,nonce:'other',source});
+  if(fault==='controller')f.put('.practice/live/swarm-owner.json',{pid:999,nonce:'other',source});
   const checks={now:()=>fault==='not-expired'?now+149999:now+150000,matches:()=>true,childAlive:()=>fault==='live-child'};
   const kept=Object.fromEntries([paths.permit,paths.child,paths.used,join(paths.output,'receipt.json'),join(f.base,'.practice/swarm-deaths.json'),join(f.base,'swarm.json')]
    .filter(p=>existsSync(p)).map(p=>[p,readFileSync(p,'utf8')]));
@@ -544,7 +535,7 @@ test('the controller releases only an exact expired held lease with a dead bound
   const markerRaw=existsSync(marker)?readFileSync(marker,'utf8'):null;
   if(fault==='interrupted'){
    // A restarted controller has a new nonce and a later clock. It removes the lease and returns the first marker.
-   f.put('.practice/coordinator/swarm-owner.json',{pid:process.pid,nonce:'restarted',source});
+   f.put('.practice/live/swarm-owner.json',{pid:process.pid,nonce:'restarted',source});
    expect(releaseExpiredRecoveryLease('Rod',f.base,{...checks,now:()=>now+200000})).toEqual(first);
    expect(existsSync(paths.lease)).toBe(false);expect(()=>assertNoRecoveryLease('Rod',f.base)).not.toThrow();
    expect(readFileSync(marker,'utf8')).toBe(markerRaw!);expect(existsSync(paths.completed)).toBe(false);
@@ -749,5 +740,21 @@ test('a held retired producer gets a permit only from a delivery at its capabili
   const permit=issueRecoveryPermit(f.request,f.base,{...f.options,capability:()=>capability});
   expect(permit.producerHistory).toEqual(listAttempts('Rod',f.request.server,{root}).map(({attemptId,sha256})=>({attemptId,sha256})));
   expect(permit.producerHistory?.map(p=>p.attemptId)).toEqual([id]);
+ }finally{rmSync(f.base,{recursive:true,force:true});}
+});
+
+test('brain fleet-state heartbeat authorizes idle accounts and rejects stale or active ones',()=>{
+ const f=fixture();
+ try{
+  const liveFile='.practice/live/fleet-state.json';
+  const baseState={schemaVersion:1,emittedAt:now,side:'local',server:f.request.server,maxBots:17,accounts:{rod:{account:'Rod',status:'idle',lifecycle:'held_logout',activeJob:null}},activeChains:{},idleReasons:{},goals:[],campaigns:[],missions:[],pendingTransfers:[],quarantinedDefects:[]};
+  f.put(liveFile,baseState);
+  expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).not.toThrow();
+  rmSync(recoveryPermitPaths(f.request,f.base).lease);
+  rmSync(recoveryPermitPaths(f.request,f.base).permit);
+  f.put(liveFile,{...baseState,emittedAt:now-FLEET_HEARTBEAT_MAX_MS-1});
+  expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow('recovery fleet ownership unresolved: stale');
+  f.put(liveFile,{...baseState,accounts:{rod:{account:'Rod',status:'running',lifecycle:'running',activeJob:{script:'scripts/x.ts'}}}});
+  expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow('recovery assignment is active or reserved');
  }finally{rmSync(f.base,{recursive:true,force:true});}
 });

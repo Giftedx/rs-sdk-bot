@@ -18,7 +18,7 @@ type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
 const owned=['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts',
  'scripts/gather-combat.ts','scripts/gather-combat-giant.test.ts',
- 'packages/planner/src/progression-ranged.ts','packages/planner/test/progression-ranged.test.ts','packages/practice/src/ranged-progression-case.ts','packages/practice/src/ranged-progression-case.test.ts',
+ 'packages/practice/src/ranged-progression-case.ts','packages/practice/src/ranged-progression-case.test.ts',
  'packages/practice/src/ranged-progression-entry.json','scripts/measure/progression-bench-cases.ts','scripts/measure/fleet-player-save.ts','scripts/measure/fleet-player-save.test.ts'];
 export const rangedProofSource=()=>({runtime:capabilityRevision(['scripts/ranged-train.ts'],root),files:Object.fromEntries(owned.map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
 const source=rangedProofSource;

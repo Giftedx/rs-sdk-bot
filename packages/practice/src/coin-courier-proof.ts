@@ -37,8 +37,8 @@ export function prepareCoinProofRoot(sourceRoot:string,parent:string):string{
         cpSync(template,join(privateSdk,'bots/_template'),{recursive:true});
         const plan=JSON.parse(readFileSync(join(scratch,'swarm.json'),'utf8'));
         writeFileSync(join(scratch,'swarm.json'),JSON.stringify({...plan,jobs:[]}));
-        mkdirSync(join(scratch,'.practice/coordinator'),{recursive:true});
-        writeFileSync(join(scratch,'.practice/coordinator/state.json'),JSON.stringify({version:1,tasks:[]}));
+        mkdirSync(join(scratch,'.practice/live'),{recursive:true});
+        writeFileSync(join(scratch,'.practice/live/fleet-state.json'),JSON.stringify({schemaVersion:1,accounts:{}}));
         mkdirSync(join(scratch,'fleet'),{recursive:true});writeFileSync(join(scratch,'fleet/owners.json'),JSON.stringify({accounts:{}}));
         if(coinProofSource(scratch)!==coinProofSource(sourceRoot))throw Error('coin proof source copy differs');
         return scratch;

@@ -10,8 +10,7 @@ import { few } from './inspect';
 import { patchCollisions, resetVendor, SDK, SDK_PATCH, vendorExact, vendorReleaseFiles, vendorState } from './vendor';
 
 export const DAEMONS: Record<string, string[]> = {
-    coordinator: ['packages/router/src/coordinator-cli.ts'],
-    autopilot: ['scripts/autopilot.ts'],
+    swarm: ['scripts/swarm.ts'],
     'fleet-agent': ['scripts/fleet-agent.ts'],
     dashboard: ['packages/dashboard/server.ts'],
     'dashboard-publish': ['packages/dashboard/publish.ts'],
@@ -97,11 +96,6 @@ export async function runLiveUpdateCli(
         const reload = reloadsFor(checkout.incoming, closures), to = git('rev-parse', '--short', 'HEAD').out;
         const mark: LiveUpdateMark = { at: Date.now(), from, to, files: checkout.incoming.length, reload };
         writeLiveUpdate(root, mark);
-        if (reload.includes('coordinator')) {
-            let pid = 0; try { pid = JSON.parse(readFileSync(join(root, '.practice', 'coordinator', 'owner.json'), 'utf8')).pid; } catch { /* no coordinator ran here */ }
-            let alive = false; try { if (pid) { process.kill(pid, 0); alive = true; } } catch { /* gone */ }
-            if (alive) Bun.spawnSync([process.execPath, 'packages/router/src/coordinator-cli.ts', '--restart'], { cwd: root, windowsHide: true, stdout: 'ignore', stderr: 'ignore' });
-        }
         const vendor = !patchMoves || sdk === null ? null : resets ? resetVendor(root, oldPatch)
             : { ok: true, detail: inTheWay.length ? `kept: ${few(inTheWay)} in ${SDK} is in the way of the new SDK patch` : `kept: ${SDK} has edits that are not the SDK patch` };
         const note = !vendor ? '' : !vendor.ok ? ` vendor=FAILED ${vendor.detail}` : ` vendor=${vendor.detail || 'patched'}`;

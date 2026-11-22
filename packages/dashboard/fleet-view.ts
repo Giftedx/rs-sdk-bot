@@ -1,5 +1,5 @@
-// Read-only projections of two files the coordinator and the fleet agent write, for the page's board progress and
-// fleet sides plugins: .practice/coordinator/scoreboard.json (coverage per skill, quests and items, with the list of
+// Read-only projections of files the Brain runtime and the fleet agent write, for the page's board progress and
+// fleet sides plugins: .practice/live/scoreboard.json (coverage per skill, quests and items, with the list of
 // what remains) and the fleet-data branch's fleet/snapshots/<side>.json, fleet/orders/*.json and fleet/receipts/*.json
 // (each side's last sync and the cross-side orders not yet done; scripts/fleet-trade.ts keeps an order file after it is done).
 import {terminalTradeReceipt,tradeSettlement,validOrder} from '../core/src/fleet-trade-settlement';
