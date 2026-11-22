@@ -1,10 +1,11 @@
 // Qualifies finite owned transfers on fresh loopback bench actors. Authentication,
 // coordinator state, receipts and session proofs belong to a private copied source root.
-import {existsSync,lstatSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {copyFileSync,existsSync,lstatSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {basename,dirname,join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {serverFromEnv} from '../../core/src/bot';
 import {isLocalServer} from '../../core/src/localserver';
+import {lifecycleRootForServer,resolveBotEnvPath,simBotsDir,simStatusDir} from '../../core/src/practice-paths';
 import {prepareReplayRoot,removeReplayRoot} from './build-workspace';
 import {killTree} from '../../core/src/proc';
 import {accountDir} from '../../core/src/session-lifecycle';
@@ -41,11 +42,12 @@ export function ownedLogisticsEntry(args:readonly string[],envFor:(name:string)=
 export function ownedRegistrationProgram(entry:Entry):string{
  return `import {readFileSync} from 'node:fs';
 import {openBot,serverFromEnv,settle} from './packages/core/src/bot';
+import {resolveBotEnvPath} from './packages/core/src/practice-paths';
 import {waitTicks} from './packages/core/src/ticks';
 import {ownedAccounts} from './packages/core/src/tradeguard';
 import {readLogoutProof} from './packages/core/src/session-lifecycle';
 const names=${JSON.stringify(entry.names)},server=${JSON.stringify(entry.server)};
-for(const name of names)if(serverFromEnv(readFileSync('vendor/rs-sdk/bots/'+name+'/bot.env','utf8'))!==server)throw Error('practice endpoint changed before authentication');
+for(const name of names)if(serverFromEnv(readFileSync(resolveBotEnvPath(name),'utf8'))!==server)throw Error('practice endpoint changed before authentication');
 for(const name of names){
  let session,ok=false;
  try{session=await openBot(name);await waitTicks(session,3);ok=true;}
@@ -61,7 +63,10 @@ export function assertFreshOwnedActors(source:string,entry:Pick<Entry,'names'|'s
  for(const name of entry.names){
   const lower=name.toLowerCase(),paths=[
    join(source,'.practice/status',name+'.json'),join(source,'.practice/status',lower+'.json'),
-   join(source,'.practice/account-leases',lower+'.lock'),accountDir(name,entry.server,join(source,'.practice/session-lifecycle')),
+   join(simStatusDir(source),name+'.json'),join(simStatusDir(source),lower+'.json'),
+   join(source,'.practice/account-leases',lower+'.lock'),
+   accountDir(name,entry.server,join(source,'.practice/session-lifecycle')),
+   accountDir(name,entry.server,lifecycleRootForServer(entry.server,source)),
   ];
   if(paths.some(path=>existsSync(path)))throw Error('owned logistics fixture requires fresh source actors: '+name);
  }
@@ -174,7 +179,7 @@ const resultLine=(text:string)=>text.split(/\r?\n/).filter(line=>/^RESULT\b/.tes
 const hiddenOutput=(child:ChildResult)=>{process.stdout.write(child.stdout.replace(/^(?=.)/gm,'  | '));if(child.stderr)process.stderr.write(child.stderr.replace(/^(?=.)/gm,'  | '));};
 export async function qualifyOwnedLogistics(args:readonly string[],options:EntryOptions={}){
  const source=resolve(options.sourceRoot??SOURCE);
- const entry=ownedLogisticsEntry(args,name=>readFileSync(join(source,'vendor/rs-sdk/bots',name,'bot.env'),'utf8'));
+ const entry=ownedLogisticsEntry(args,name=>readFileSync(resolveBotEnvPath(name,source),'utf8'));
  assertFreshOwnedActors(source,entry);
  const paused=()=>['all','coordinator','swarm',...entry.names].some(name=>existsSync(join(source,'.practice','stop-'+name)));
  if(paused())throw Error('owned logistics fixture preserves source stop files');
@@ -185,6 +190,14 @@ export async function qualifyOwnedLogistics(args:readonly string[],options:Entry
   throw Error('owned logistics fixture refuses unowned scratch root');
  try{
   if(resolve(scratch)===source||lstatSync(join(scratch,'.practice')).isSymbolicLink())throw Error('owned logistics fixture needs private state');
+  for(const name of entry.names){
+   const simEnv=join(simBotsDir(source),name,'bot.env');
+   if(existsSync(simEnv)){
+    const dstDir=join(simBotsDir(scratch),name);
+    mkdirSync(dstDir,{recursive:true});
+    copyFileSync(simEnv,join(dstDir,'bot.env'));
+   }
+  }
   const plan=JSON.parse(readFileSync(join(scratch,'swarm.json'),'utf8'));
   writeFileSync(join(scratch,'swarm.json'),JSON.stringify({...plan,jobs:[]}));
   mkdirSync(join(scratch,'.practice/coordinator'),{recursive:true});

@@ -1,9 +1,10 @@
 import {expect,test} from 'bun:test';
-import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {mkdirSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {basename,join,resolve} from 'node:path';
 import {bankCargo,cargoAccountServer,courierWaiting,validCargoRequest} from '../src/cargo';
 import type {Session} from '../src/inprocess';
+import {simBotsDir} from '../src/practice-paths';
 
 test('partner configuration lookup retains case-insensitive account names',()=>{
  const dir=mkdtempSync(join(resolve(import.meta.dir,'../../../vendor/rs-sdk/bots'),'cargoe'));
@@ -11,6 +12,15 @@ test('partner configuration lookup retains case-insensitive account names',()=>{
   writeFileSync(join(dir,'bot.env'),'SERVER=127.0.0.1:21000\nPASSWORD=fixture-never-authenticate\n');
   expect(cargoAccountServer(basename(dir).toLowerCase())).toBe('127.0.0.1:21000');
   expect(cargoAccountServer(basename(dir).toUpperCase())).toBe('127.0.0.1:21000');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('partner configuration lookup resolves simBotsDir credentials when vendor bots lacks the actor',()=>{
+ const simRoot=simBotsDir();mkdirSync(simRoot,{recursive:true});
+ const dir=mkdtempSync(join(simRoot,'csim'));
+ try{
+  writeFileSync(join(dir,'bot.env'),'SERVER=127.0.0.1:21005\nPASSWORD=fixture-never-authenticate\n');
+  expect(cargoAccountServer(basename(dir).toLowerCase())).toBe('127.0.0.1:21005');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 

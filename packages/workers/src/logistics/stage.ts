@@ -8,6 +8,7 @@ import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
 import { isLocalServer } from '../../../core/src/localserver';
 import { componentId } from '../../../core/src/logout';
+import { resolveBotEnvPath } from '../../../core/src/practice-paths';
 import { resultCounters } from '../../../core/src/status';
 import { questFoodDefinitions } from '../../../core/src/sustain';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
@@ -791,7 +792,7 @@ export async function runSupplyChain(o: SupplyChainOptions) {
     const owned = ownedAccounts(o.server);
     for (const n of names) {
         needSupply(owned.has(n.toLowerCase()), 'actor ownership unavailable');
-        const env = readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/bots', n, 'bot.env'), 'utf8');
+        const env = readFileSync(resolveBotEnvPath(n, REPO_ROOT), 'utf8');
         needSupply(serverFromEnv(env) === o.server, 'actor endpoint mismatch');
     }
     needSupply(isLocalServer(o.server), 'local qualification required before live release');
@@ -957,7 +958,7 @@ export function bootstrapPracticeServer(env: string): string {
 
 export function bootstrapAccountServer(name: string): string {
     requireThat(/^[A-Za-z0-9]{1,12}$/.test(name), 'valid practice account required');
-    return bootstrapPracticeServer(readFileSync(resolve(REPO_ROOT, 'vendor/rs-sdk/bots', name, 'bot.env'), 'utf8'));
+    return bootstrapPracticeServer(readFileSync(resolveBotEnvPath(name, REPO_ROOT), 'utf8'));
 }
 
 export async function bootstrapSupplyActor(

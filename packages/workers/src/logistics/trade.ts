@@ -12,6 +12,7 @@ export type { OrderLine };
 import type { Outcome } from '../../../core/src/act';
 import type { Session } from '../../../core/src/inprocess';
 import { isLocalServer } from '../../../core/src/localserver';
+import { resolveBotEnvPath } from '../../../core/src/practice-paths';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { ownedAccounts, tradePartners } from '../../../core/src/tradeguard';
@@ -140,7 +141,7 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
 
 export async function runCoinCourier(args: string[], env: Record<string, string | undefined> = process.env): Promise<{ ok: boolean; detail: string }> {
     const c = parseCoins(args), dir = join(REPO_ROOT, '.practice');
-    const host = (name: string) => serverFromEnv(readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/bots', name, 'bot.env'), 'utf8'));
+    const host = (name: string) => serverFromEnv(readFileSync(resolveBotEnvPath(name, REPO_ROOT), 'utf8'));
     const server = host(c.donor);
     if (host(c.receiver) !== server) throw Error('coin accounts must use the same server');
     assertServerAllowed(server);
@@ -189,7 +190,7 @@ export async function coinFanoutMain(
 ) {
     const f = parseFanout(argv), dir = join(REPO_ROOT, '.practice');
     const all = [f.donor, ...f.receivers];
-    const host = (name: string) => serverFromEnv(readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/bots', name, 'bot.env'), 'utf8'));
+    const host = (name: string) => serverFromEnv(readFileSync(resolveBotEnvPath(name, REPO_ROOT), 'utf8'));
     const server = host(f.donor);
     if (all.some(n => host(n) !== server)) throw Error('coin accounts must use the same server');
     assertServerAllowed(server);
@@ -246,7 +247,7 @@ export async function coinFanoutMain(
 export async function itemFaninMain(args: string[], env: Record<string, string | undefined> = process.env) {
     const f = parseFanin(args), dir = join(REPO_ROOT, '.practice'), BANK = { x: 3185, z: 3436 };
     const all = [f.receiver, ...f.donors];
-    const host = (name: string) => serverFromEnv(readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/bots', name, 'bot.env'), 'utf8'));
+    const host = (name: string) => serverFromEnv(readFileSync(resolveBotEnvPath(name, REPO_ROOT), 'utf8'));
     const server = host(f.receiver);
     if (all.some(n => host(n) !== server)) throw Error('fan-in accounts must use the same server');
     assertServerAllowed(server);
@@ -553,7 +554,7 @@ export async function runFoodCourier(account: string, env: Record<string, string
     const handoffHelper = createHandoff([330, 334, 380], join(REPO_ROOT, '.practice/courier-handoffs'));
     const s = await openBot(account).catch(e => finish([], false, `login: ${String(e)}`));
     try {
-        const courierServer = s.lifecycle?.server ?? serverFromEnv(readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/bots', s.name, 'bot.env'), 'utf8'));
+        const courierServer = s.lifecycle?.server ?? serverFromEnv(readFileSync(resolveBotEnvPath(s.name, REPO_ROOT), 'utf8'));
         const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
         const pos = () => s.sdk.getState()?.player;
         const cheb = (a: { x: number; z: number }, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));

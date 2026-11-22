@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { listedAccounts } from './fleet';
+import { liveStatusDir, simBotsDir, simStatusDir } from './practice-paths';
 
 const root = resolve(import.meta.dir, '../../..');
 const verifiedFile = join(root, '.practice/owned-accounts.json');
@@ -9,7 +10,9 @@ const OWNED_CACHE_MS = 5 * 60_000;
 type BotScanCache = {
     at: number;
     dir: string;
+    simDir: string;
     dirMtime: number;
+    simDirMtime: number;
     servers: Map<string, string>;
     statusVerified: Map<string, string>;
 };
@@ -24,27 +27,36 @@ function readBotServer(dir: string, name: string): string | null {
     } catch { return null; }
 }
 
-function getBotScan(dir: string, force = false): BotScanCache {
+function getBotScan(dir: string, simDir: string, force = false): BotScanCache {
     const now = Date.now();
-    if (!force && botScan && botScan.dir === dir && now - botScan.at < OWNED_CACHE_MS) return botScan;
+    if (!force && botScan && botScan.dir === dir && botScan.simDir === simDir && now - botScan.at < OWNED_CACHE_MS) return botScan;
     let dirMtime = 0;
     try { dirMtime = statSync(dir).mtimeMs; } catch { /* missing bots dir */ }
+    let simDirMtime = 0;
+    try { simDirMtime = statSync(simDir).mtimeMs; } catch { /* missing sim bots dir */ }
     const servers = new Map<string, string>();
     const statusVerified = new Map<string, string>();
-    for (const name of readdirSync(dir)) {
-        if (name.startsWith('_')) continue;
-        const host = readBotServer(dir, name);
-        if (!host) continue;
-        const lower = name.toLowerCase();
-        servers.set(lower, host);
-        try {
-            const status = JSON.parse(readFileSync(join(root, '.practice/status', `${name}.json`), 'utf8'));
-            if (status.name?.toLowerCase() === lower && status.server?.toLowerCase() === host && !!status.pos && (status.skills?.length ?? 0) > 0) {
-                statusVerified.set(lower, host);
+    const statusDirs = [join(root, '.practice/status'), simStatusDir(root), liveStatusDir(root)];
+    for (const botDir of [dir, simDir]) {
+        if (!existsSync(botDir)) continue;
+        for (const name of readdirSync(botDir)) {
+            if (name.startsWith('_')) continue;
+            const host = readBotServer(botDir, name);
+            if (!host) continue;
+            const lower = name.toLowerCase();
+            servers.set(lower, host);
+            for (const sDir of statusDirs) {
+                try {
+                    const status = JSON.parse(readFileSync(join(sDir, `${name}.json`), 'utf8'));
+                    if (status.name?.toLowerCase() === lower && status.server?.toLowerCase() === host && !!status.pos && (status.skills?.length ?? 0) > 0) {
+                        statusVerified.set(lower, host);
+                        break;
+                    }
+                } catch { /* credentials alone are not proof */ }
             }
-        } catch { /* credentials alone are not proof */ }
+        }
     }
-    botScan = { at: now, dir, dirMtime, servers, statusVerified };
+    botScan = { at: now, dir, simDir, dirMtime, simDirMtime, servers, statusVerified };
     return botScan;
 }
 
@@ -74,7 +86,8 @@ export function recordOwnedAccount(name: string, server: string): void {
 export function ownedAccounts(server: string): Set<string> {
     const targetServer = server.toLowerCase();
     const dir = resolve(import.meta.dir, '../../../vendor/rs-sdk/bots');
-    let scan = getBotScan(dir);
+    const simDir = simBotsDir(root);
+    let scan = getBotScan(dir, simDir);
     const verified = readVerifiedEntries();
     const names = new Set<string>();
     for (const [lower, host] of scan.statusVerified) {
@@ -86,7 +99,7 @@ export function ownedAccounts(server: string): Set<string> {
         const lower = key.toLowerCase();
         let botServer = scan.servers.get(lower);
         if (botServer === undefined) {
-            const found = readBotServer(dir, key) ?? readBotServer(dir, lower);
+            const found = readBotServer(simDir, key) ?? readBotServer(simDir, lower) ?? readBotServer(dir, key) ?? readBotServer(dir, lower);
             if (found) {
                 scan.servers.set(lower, found);
                 botServer = found;
@@ -94,8 +107,10 @@ export function ownedAccounts(server: string): Set<string> {
                 dirChecked = true;
                 let mtime = 0;
                 try { mtime = statSync(dir).mtimeMs; } catch { /* ignore */ }
-                if (mtime !== scan.dirMtime) {
-                    scan = getBotScan(dir, true);
+                let simMtime = 0;
+                try { simMtime = statSync(simDir).mtimeMs; } catch { /* ignore */ }
+                if (mtime !== scan.dirMtime || simMtime !== scan.simDirMtime) {
+                    scan = getBotScan(dir, simDir, true);
                     botServer = scan.servers.get(lower);
                 }
             }

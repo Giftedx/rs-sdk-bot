@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { readMergedPlan } from '../../../core/src/coordinator-jobs';
+import { simStatusDir } from '../../../core/src/practice-paths';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { ownedAccounts } from '../../../core/src/tradeguard';
 import { createHandoff, reconcileOrder, type OrderSnapshot } from './handoff';
@@ -171,7 +172,7 @@ export function checkTransferAccounts(
             const state = logoutState(name, server);
             if (state === 'confirmed') continue;
             if (state !== 'none') throw Error('account session ownership unsettled: ' + name + ' (' + state + ')');
-            assertRecoverableStatus(read(join(dir, 'status', name + '.json')), null, () => true);
+            assertRecoverableStatus(read(join(simStatusDir(root), name + '.json')) ?? read(join(dir, 'status', name + '.json')), null, () => true);
         }
     }
 }

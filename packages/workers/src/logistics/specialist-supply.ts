@@ -4,6 +4,7 @@ import { join, relative, resolve } from 'node:path';
 import { accountOf, finish, getWorld, openBot } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
 import { isLocalServer } from '../../../core/src/localserver';
+import { resolveBotEnvPath } from '../../../core/src/practice-paths';
 import { planTripOffThread } from '../../../core/src/route-plan';
 import { RESERVED_ACCOUNTS } from '../../../core/src/specialist-boards';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
@@ -1129,7 +1130,7 @@ export async function runSpecialistServe(args: readonly string[], env: Record<st
     const plan = resolveSupplierKitPlan(parsed.kitArg ?? env.SUPPLIER_KIT);
     const CAP = Number(parsed.cap ?? env.CAP ?? (plan.legs.length > 1 ? 6000 : 4000));
     if (!Number.isSafeInteger(CAP) || CAP < 50 || CAP > 50000) throw Error(`invalid CAP: ${CAP}`);
-    const serverHost = (readFileSync(join(REPO_ROOT, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+    const serverHost = (readFileSync(resolveBotEnvPath(holder, REPO_ROOT), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
     if (!serverHost) throw Error(`missing SERVER in bot.env for ${holder}`);
     const stopFile = () => existsSync(join(REPO_ROOT, '.practice', `stop-${holder}`)) || (!isLocalServer(serverHost) && existsSync(join(REPO_ROOT, '.practice', 'stop-swarm')));
     const bankTile = { x: parsed.bankX ?? DEFAULT_STAGE_BANK.x, z: parsed.bankZ ?? DEFAULT_STAGE_BANK.z, level: 0 };
@@ -1412,7 +1413,7 @@ export async function runSpecialistStage(args: readonly string[], env: Record<st
     mkdirSync(outDir, { recursive: true });
 
     const bankTile = { x: bx, z: bz, level: 0 };
-    const server = (readFileSync(join(REPO_ROOT, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+    const server = (readFileSync(resolveBotEnvPath(holder, REPO_ROOT), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
     const donorSession = await openBot(donor), holderSession = await openBot(holder);
     const stop = () => existsSync(join(REPO_ROOT, '.practice', `stop-${donor}`)) || existsSync(join(REPO_ROOT, '.practice', `stop-${holder}`)) || (!isLocalServer(server) && existsSync(join(REPO_ROOT, '.practice', 'stop-swarm')));
     try {
@@ -1493,7 +1494,7 @@ export async function runGatheringSupplierServe(args: readonly string[], env: Re
     const capArg = positional.slice(2).find(a => /^\d+$/.test(a));
     const CAP = Number(capArg ?? env.CAP ?? (kitSpec ? 1500 : 600));
     if (!Number.isSafeInteger(CAP) || CAP < 50 || CAP > 50000) throw Error(`invalid CAP: ${CAP}`);
-    const serverHost = (readFileSync(join(REPO_ROOT, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+    const serverHost = (readFileSync(resolveBotEnvPath(holder, REPO_ROOT), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
     if (!serverHost) throw Error(`missing SERVER in bot.env for ${holder}`);
     const stopFile = () => existsSync(join(REPO_ROOT, '.practice', `stop-${holder}`)) || (!isLocalServer(serverHost) && existsSync(join(REPO_ROOT, '.practice', 'stop-swarm')));
 

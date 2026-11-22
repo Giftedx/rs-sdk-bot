@@ -4,12 +4,13 @@ import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {openBot,releasePrayerGuard,serverFromEnv,settle} from '../../packages/core/src/bot';
 import {isLocalServer} from '../../packages/core/src/localserver';
+import {resolveBotEnvPath} from '../../packages/core/src/practice-paths';
 import {holdPrayer} from '../microbot-c-qol';
 import {runAioLogistics} from '../aio-logistics';
 
 const root=resolve(import.meta.dir,'../..'),name=process.argv[2]??'';
 if(!/^[A-Za-z0-9]{1,12}$/.test(name))throw Error('practice prayer fixture requires an account');
-const server=serverFromEnv(readFileSync(resolve(root,'vendor/rs-sdk/bots',name,'bot.env'),'utf8'));
+const server=serverFromEnv(readFileSync(resolveBotEnvPath(name,root),'utf8'));
 if(!isLocalServer(server))throw Error('prayer entry fixture refuses a live endpoint');
 let cancelled=false;
 const cancel=()=>{cancelled=true;};

@@ -1,8 +1,9 @@
 import {expect,test} from 'bun:test';
-import {existsSync,mkdtempSync,mkdirSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+ import {existsSync,mkdtempSync,mkdirSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {ownedLogisticsEntry,ownedRegistrationProgram,assertFreshOwnedActors,noteCourierSaveReceipt,qualifyOwnedLogistics,runOwnedChild} from '../src/owned-logistics-entry';
+import {simBotsDir} from '../../core/src/practice-paths';
 import {accountDir} from '../../core/src/session-lifecycle';
 
 const names=['aiobfixture','aiobfixtureb','aiobfixturec'],server='127.0.0.1:21000';
@@ -180,3 +181,18 @@ process.on('SIGTERM',()=>{});console.log('RESULT ok stale');setInterval(()=>{},1
  const started=performance.now(),result=await runOwnedChild(['--eval',code],{cwd:process.cwd(),env:process.env,timeoutMs:250,graceMs:50});
  expect(result.code).toBe(1);expect(result.failure).toBe('practice child deadline');expect(performance.now()-started).toBeLessThan(5000);
 },10000);
+
+test('simBotsDir credentials resolve on source and copy into scratch .practice/sim/bots',async()=>{
+ const f=fixture();
+ try{
+  rmSync(join(f.sourceRoot,'vendor'),{recursive:true,force:true});
+  for(const name of names){mkdirSync(join(simBotsDir(f.sourceRoot),name),{recursive:true});writeFileSync(join(simBotsDir(f.sourceRoot),name,'bot.env'),env());}
+  let calls=0;
+  const result=await qualifyOwnedLogistics([names[0]!,'coin-courier',names[1]!],{...f,run:async(_args,options)=>{
+   calls++;
+   for(const name of names.slice(0,2))expect(existsSync(join(simBotsDir(options.cwd),name,'bot.env'))).toBe(true);
+   return calls===1?{code:0,stdout:auth(names.slice(0,2))}:{code:0,stdout:'RESULT ok transferred 100 coins\n'};
+  }});
+  expect(result).toMatchObject({ok:true,authenticated:2,mode:'coin-courier',server});f.unchanged();
+ }finally{f.cleanup();}
+});

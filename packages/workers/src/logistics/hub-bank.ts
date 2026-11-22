@@ -5,6 +5,7 @@ import { countItems, serverFromEnv } from '../../../core/src/bot';
 import { exactItem } from '../../../core/src/cargo';
 import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
+import { resolveBotEnvPath } from '../../../core/src/practice-paths';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { payoutOrder } from './admission';
@@ -40,7 +41,7 @@ export async function runBanker(
     const logFile = join(rootDir, '.practice', 'vault-log.jsonl');
     const demandMode = env.ON_DEMAND === '1';
     const couriers = (env.COURIERS ?? 'Bigpackage').split(',').filter(Boolean);
-    const server = serverFromEnv(readFileSync(join(rootDir, 'vendor', 'rs-sdk', 'bots', s.name, 'bot.env'), 'utf8'));
+    const server = serverFromEnv(readFileSync(resolveBotEnvPath(s.name, rootDir), 'utf8'));
     const accounts = () => ourAccounts(server);
     const order = payoutOrder(env, join(rootDir, '.practice', 'item-handoffs'));
 
@@ -250,7 +251,7 @@ export async function runTakeFromBanker(
     const file = join(dir, `${s.name}.json`);
     const order = payoutOrder(env, join(rootDir, '.practice', 'item-handoffs'));
     order?.preflight(banker, s.name);
-    const server = serverFromEnv(readFileSync(join(rootDir, 'vendor/rs-sdk/bots', s.name, 'bot.env'), 'utf8'));
+    const server = serverFromEnv(readFileSync(resolveBotEnvPath(s.name, rootDir), 'utf8'));
 
     try {
         mkdirSync(dir, { recursive: true });
