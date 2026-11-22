@@ -42,7 +42,8 @@ export const F = {
 
 export const SAIL_PROCS = new Set(['~set_sail(', '~set_sail_cairn(', '~misc_longship_sail(']);
 
+const absent = ['charter', 'carpet', 'balloon (transport)', 'canoe', 'Pest Control', "Mos Le'Harmless", 'Lunar Isle', 'Port Phasmatys', 'Abyss (Mage of Zamorak)'];
 export const ABSENT_TRAVEL = {
-    kinds: ['charter', 'carpet', 'balloon (transport)', 'canoe', 'Pest Control', "Mos Le'Harmless", 'Lunar Isle', 'Port Phasmatys', 'Abyss (Mage of Zamorak)'],
+    kinds: absent,
     evidence: 'No .npc or .loc config name or debugname in content matches these travel methods; party room balloons are not transport.',
 };
