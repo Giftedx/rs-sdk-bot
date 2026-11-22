@@ -1728,8 +1728,10 @@
    "id": "logistics:arrive-draynor",
    "category": "logistics",
    "name": "arrive-draynor",
-   "script": "scripts/arrive-draynor.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "arrive-draynor"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1741,8 +1743,10 @@
    "id": "logistics:bank-sort",
    "category": "logistics",
    "name": "bank-sort",
-   "script": "scripts/microbot-bank-sort.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "bank-sort"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1754,8 +1758,10 @@
    "id": "logistics:banker",
    "category": "logistics",
    "name": "banker",
-   "script": "scripts/banker.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "banker"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1767,8 +1773,10 @@
    "id": "logistics:charge-glory",
    "category": "logistics",
    "name": "charge-glory",
-   "script": "scripts/charge-glory.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "charge-glory"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -1780,8 +1788,10 @@
    "id": "logistics:coin-courier",
    "category": "logistics",
    "name": "coin-courier",
-   "script": "scripts/coin-courier.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "coin-courier"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -1793,8 +1803,10 @@
    "id": "logistics:coin-fanout",
    "category": "logistics",
    "name": "coin-fanout",
-   "script": "scripts/coin-fanout.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "coin-fanout"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -1806,8 +1818,10 @@
    "id": "logistics:cure-poison",
    "category": "logistics",
    "name": "cure-poison",
-   "script": "scripts/cure-poison.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "cure-poison"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1819,8 +1833,10 @@
    "id": "logistics:fleet-trade",
    "category": "logistics",
    "name": "fleet-trade",
-   "script": "scripts/fleet-trade.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "fleet-trade"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -1832,8 +1848,10 @@
    "id": "logistics:food-chain",
    "category": "logistics",
    "name": "food-chain",
-   "script": "scripts/foodchain.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "food-chain"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1845,8 +1863,10 @@
    "id": "logistics:food-courier",
    "category": "logistics",
    "name": "food-courier",
-   "script": "scripts/foodcourier.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "food-courier"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -1858,8 +1878,10 @@
    "id": "logistics:gathering-supplier",
    "category": "logistics",
    "name": "gathering-supplier",
-   "script": "scripts/gathering-supplier.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "gathering-supplier"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1871,8 +1893,10 @@
    "id": "logistics:give-to-banker",
    "category": "logistics",
    "name": "give-to-banker",
-   "script": "scripts/give-to-banker.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "give-to-banker"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -1881,11 +1905,28 @@
    "description": "Trade produced items to a standing banker account"
   },
   {
+   "id": "logistics:inspect",
+   "category": "logistics",
+   "name": "inspect",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "inspect"
+   ],
+   "env": {},
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "description": "Observe bank, pack, gear, skills, and location for fleet state inspection"
+  },
+  {
    "id": "logistics:item-fanin",
    "category": "logistics",
    "name": "item-fanin",
-   "script": "scripts/item-fanin.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "item-fanin"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -1897,8 +1938,10 @@
    "id": "logistics:loadout",
    "category": "logistics",
    "name": "loadout",
-   "script": "scripts/microbot-owned-loadout.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "loadout"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1910,7 +1953,7 @@
    "id": "logistics:loadout-import",
    "category": "logistics",
    "name": "loadout-import",
-   "script": "scripts/microbot-loadout-import.ts",
+   "script": "scripts/aio-logistics.ts",
    "args": [],
    "env": {},
    "intents": [
@@ -1923,8 +1966,10 @@
    "id": "logistics:note-courier",
    "category": "logistics",
    "name": "note-courier",
-   "script": "scripts/note-courier.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "note-courier"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -1933,11 +1978,28 @@
    "description": "Deliver noted supplies between owned accounts at bank"
   },
   {
+   "id": "logistics:recover-trapped",
+   "category": "logistics",
+   "name": "recover-trapped",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "recover-trapped"
+   ],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "description": "Extract stranded offline account to a ground mainland hub bank"
+  },
+  {
    "id": "logistics:relocate-bank",
    "category": "logistics",
    "name": "relocate-bank",
-   "script": "scripts/relocate-bank.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "relocate-bank"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1949,8 +2011,10 @@
    "id": "logistics:relocate-knight",
    "category": "logistics",
    "name": "relocate-knight",
-   "script": "scripts/relocate-knight.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "relocate-knight"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1962,8 +2026,10 @@
    "id": "logistics:restore-prayer",
    "category": "logistics",
    "name": "restore-prayer",
-   "script": "scripts/pray-at-altar.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "restore-prayer"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1975,8 +2041,10 @@
    "id": "logistics:specialist-supplier",
    "category": "logistics",
    "name": "specialist-supplier",
-   "script": "scripts/specialist-supplier.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "specialist-supplier"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -1988,11 +2056,13 @@
    "id": "logistics:supply-bootstrap",
    "category": "logistics",
    "name": "supply-bootstrap",
-   "script": "scripts/supply-bootstrap.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "supply-bootstrap"
+   ],
    "env": {},
    "intents": [
-    "acquire"
+    "service"
    ],
    "skills": [],
    "description": "Practice-only zero-resource qualification: discard tutorial gifts before earning initial route supplies"
@@ -2001,8 +2071,10 @@
    "id": "logistics:supply-chain",
    "category": "logistics",
    "name": "supply-chain",
-   "script": "scripts/supply-chain.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "supply-chain"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -2014,8 +2086,10 @@
    "id": "logistics:supply-holder",
    "category": "logistics",
    "name": "supply-holder",
-   "script": "scripts/supply-holder.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "supply-holder"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -2027,8 +2101,10 @@
    "id": "logistics:take-from-banker",
    "category": "logistics",
    "name": "take-from-banker",
-   "script": "scripts/take-from-banker.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "take-from-banker"
+   ],
    "env": {},
    "intents": [
     "acquire"
@@ -2040,8 +2116,10 @@
    "id": "logistics:walk-edge",
    "category": "logistics",
    "name": "walk-edge",
-   "script": "scripts/pk-live/walk-edge.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-edge"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -2053,8 +2131,10 @@
    "id": "logistics:walk-to",
    "category": "logistics",
    "name": "walk-to",
-   "script": "scripts/walk-to.ts",
-   "args": [],
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to"
+   ],
    "env": {},
    "intents": [
     "service"
@@ -2066,8 +2146,9 @@
    "id": "logistics:wine-stock",
    "category": "logistics",
    "name": "wine-stock",
-   "script": "scripts/make-wine-order.ts",
+   "script": "scripts/aio-logistics.ts",
    "args": [
+    "wine-stock",
     "12",
     "1000",
     "0"
@@ -96366,7 +96447,8 @@
    "script": "scripts/aio-logistics.ts",
    "intents": [
     "acquire",
-    "service"
+    "service",
+    "observe"
    ],
    "skills": [],
    "routeIds": [
@@ -96376,27 +96458,29 @@
     "logistics:note-courier",
     "logistics:food-courier",
     "logistics:food-chain",
+    "logistics:specialist-supplier",
+    "logistics:gathering-supplier",
+    "logistics:fleet-trade",
     "logistics:banker",
     "logistics:give-to-banker",
     "logistics:take-from-banker",
-    "logistics:supply-chain",
     "logistics:supply-holder",
-    "logistics:specialist-supplier",
-    "logistics:gathering-supplier",
     "logistics:wine-stock",
+    "logistics:supply-chain",
     "logistics:supply-bootstrap",
-    "logistics:fleet-trade",
     "logistics:loadout",
     "logistics:loadout-import",
     "logistics:bank-sort",
     "logistics:walk-to",
     "logistics:walk-edge",
+    "logistics:relocate-bank",
+    "logistics:relocate-knight",
+    "logistics:arrive-draynor",
     "logistics:restore-prayer",
     "logistics:cure-poison",
     "logistics:charge-glory",
-    "logistics:relocate-bank",
-    "logistics:relocate-knight",
-    "logistics:arrive-draynor"
+    "logistics:recover-trapped",
+    "logistics:inspect"
    ]
   },
   {
@@ -96875,27 +96959,29 @@
     "logistics:note-courier",
     "logistics:food-courier",
     "logistics:food-chain",
+    "logistics:specialist-supplier",
+    "logistics:gathering-supplier",
+    "logistics:fleet-trade",
     "logistics:banker",
     "logistics:give-to-banker",
     "logistics:take-from-banker",
-    "logistics:supply-chain",
     "logistics:supply-holder",
-    "logistics:specialist-supplier",
-    "logistics:gathering-supplier",
     "logistics:wine-stock",
+    "logistics:supply-chain",
     "logistics:supply-bootstrap",
-    "logistics:fleet-trade",
     "logistics:loadout",
     "logistics:loadout-import",
     "logistics:bank-sort",
     "logistics:walk-to",
     "logistics:walk-edge",
-    "logistics:restore-prayer",
-    "logistics:cure-poison",
-    "logistics:charge-glory",
     "logistics:relocate-bank",
     "logistics:relocate-knight",
     "logistics:arrive-draynor",
+    "logistics:restore-prayer",
+    "logistics:cure-poison",
+    "logistics:charge-glory",
+    "logistics:recover-trapped",
+    "logistics:inspect",
     "quester:quest:dwarfcannon",
     "quester:quest:arena",
     "quester:quest:arrav",
@@ -96982,16 +97068,6 @@
    ]
   },
   {
-   "script": "scripts/arrive-draynor.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:arrive-draynor"
-   ]
-  },
-  {
    "script": "scripts/attack-specialist.ts",
    "intents": [
     "service"
@@ -97005,16 +97081,6 @@
    ],
    "routeIds": [
     "fighter:attack-specialist"
-   ]
-  },
-  {
-   "script": "scripts/banker.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:banker"
    ]
   },
   {
@@ -97084,42 +97150,12 @@
    ]
   },
   {
-   "script": "scripts/charge-glory.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:charge-glory"
-   ]
-  },
-  {
    "script": "scripts/claim-account.ts",
    "intents": [
     "service"
    ],
    "skills": [],
    "routeIds": []
-  },
-  {
-   "script": "scripts/coin-courier.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:coin-courier"
-   ]
-  },
-  {
-   "script": "scripts/coin-fanout.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:coin-fanout"
-   ]
   },
   {
    "script": "scripts/collect-wool.ts",
@@ -97183,14 +97219,6 @@
    ]
   },
   {
-   "script": "scripts/courier-handoff.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": []
-  },
-  {
    "script": "scripts/craft-jewelry.ts",
    "intents": [
     "train",
@@ -97223,16 +97251,6 @@
    "skills": [],
    "routeIds": [
     "skiller:foraging:crystal-chest"
-   ]
-  },
-  {
-   "script": "scripts/cure-poison.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:cure-poison"
    ]
   },
   {
@@ -97360,24 +97378,6 @@
    ]
   },
   {
-   "script": "scripts/fleet-inspect.ts",
-   "intents": [
-    "observe"
-   ],
-   "skills": [],
-   "routeIds": []
-  },
-  {
-   "script": "scripts/fleet-trade.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:fleet-trade"
-   ]
-  },
-  {
    "script": "scripts/fletch-arrows.ts",
    "intents": [
     "train",
@@ -97414,26 +97414,6 @@
    ],
    "routeIds": [
     "skiller:fletching:specialist"
-   ]
-  },
-  {
-   "script": "scripts/foodchain.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:food-chain"
-   ]
-  },
-  {
-   "script": "scripts/foodcourier.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:food-courier"
    ]
   },
   {
@@ -97604,16 +97584,6 @@
    ],
    "routeIds": [
     "skiller:woodcutting:yews"
-   ]
-  },
-  {
-   "script": "scripts/gathering-supplier.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:gathering-supplier"
    ]
   },
   {
@@ -98472,16 +98442,6 @@
    ]
   },
   {
-   "script": "scripts/give-to-banker.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:give-to-banker"
-   ]
-  },
-  {
    "script": "scripts/goal-readiness.ts",
    "intents": [
     "observe"
@@ -98562,16 +98522,6 @@
    ]
   },
   {
-   "script": "scripts/item-fanin.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:item-fanin"
-   ]
-  },
-  {
    "script": "scripts/lava-maze-escorted-ore.ts",
    "intents": [
     "train",
@@ -98609,16 +98559,6 @@
    ],
    "routeIds": [
     "skiller:magic:specialist"
-   ]
-  },
-  {
-   "script": "scripts/make-wine-order.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:wine-stock"
    ]
   },
   {
@@ -99940,16 +99880,6 @@
    ]
   },
   {
-   "script": "scripts/microbot-bank-sort.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:bank-sort"
-   ]
-  },
-  {
    "script": "scripts/microbot-bones.ts",
    "intents": [
     "train",
@@ -100131,16 +100061,6 @@
    ]
   },
   {
-   "script": "scripts/microbot-loadout-import.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:loadout-import"
-   ]
-  },
-  {
    "script": "scripts/microbot-loot-trip.ts",
    "intents": [
     "acquire"
@@ -100242,16 +100162,6 @@
    "skills": [],
    "routeIds": [
     "skiller:foraging:miscellania-coffer"
-   ]
-  },
-  {
-   "script": "scripts/microbot-owned-loadout.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:loadout"
    ]
   },
   {
@@ -100404,16 +100314,6 @@
    ]
   },
   {
-   "script": "scripts/note-courier.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:note-courier"
-   ]
-  },
-  {
    "script": "scripts/pk-army.ts",
    "intents": [
     "pvp"
@@ -100451,16 +100351,6 @@
    "skills": [],
    "routeIds": [
     "pvp:pilot"
-   ]
-  },
-  {
-   "script": "scripts/pk-live/walk-edge.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:walk-edge"
    ]
   },
   {
@@ -100511,16 +100401,6 @@
    "skills": [],
    "routeIds": [
     "pvp:fight"
-   ]
-  },
-  {
-   "script": "scripts/pray-at-altar.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:restore-prayer"
    ]
   },
   {
@@ -100687,34 +100567,6 @@
    ]
   },
   {
-   "script": "scripts/recover-trapped.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": []
-  },
-  {
-   "script": "scripts/relocate-bank.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:relocate-bank"
-   ]
-  },
-  {
-   "script": "scripts/relocate-knight.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:relocate-knight"
-   ]
-  },
-  {
    "script": "scripts/rune-bank-craft.ts",
    "intents": [
     "train",
@@ -100823,16 +100675,6 @@
    ]
   },
   {
-   "script": "scripts/specialist-supplier.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:specialist-supplier"
-   ]
-  },
-  {
    "script": "scripts/spin-bowstrings.ts",
    "intents": [
     "train",
@@ -100869,46 +100711,6 @@
    ],
    "routeIds": [
     "fighter:specialist-strength"
-   ]
-  },
-  {
-   "script": "scripts/supply-bootstrap.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:supply-bootstrap"
-   ]
-  },
-  {
-   "script": "scripts/supply-chain.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:supply-chain"
-   ]
-  },
-  {
-   "script": "scripts/supply-holder.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:supply-holder"
-   ]
-  },
-  {
-   "script": "scripts/take-from-banker.ts",
-   "intents": [
-    "acquire"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:take-from-banker"
    ]
   },
   {
@@ -100951,16 +100753,6 @@
    ],
    "routeIds": [
     "skiller:prayer:bury"
-   ]
-  },
-  {
-   "script": "scripts/walk-to.ts",
-   "intents": [
-    "service"
-   ],
-   "skills": [],
-   "routeIds": [
-    "logistics:walk-to"
    ]
   },
   {

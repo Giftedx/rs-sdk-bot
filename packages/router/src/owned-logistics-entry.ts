@@ -50,7 +50,7 @@ const names=${JSON.stringify(entry.names)},server=${JSON.stringify(entry.server)
 for(const name of names)if(serverFromEnv(readFileSync(resolveBotEnvPath(name),'utf8'))!==server)throw Error('practice endpoint changed before authentication');
 for(const name of names){
  let session,ok=false;
- try{session=await openBot(name);await waitTicks(session,3);ok=true;}
+ try{session=await openBot(name,{record:{script:'packages/router/src/owned-logistics-entry.ts',argv:[name,'CAP=120']}});await waitTicks(session,3);ok=true;}
  finally{if(session)ok=await settle([session],ok,'practice transfer authentication');}
  if(!ok||readLogoutProof(name,server).state!=='confirmed'||!ownedAccounts(server).has(name.toLowerCase()))throw Error('practice authenticated logout unproved: '+name);
  console.log('OWNED_LOGISTICS_AUTH '+JSON.stringify({name,server,loggedOut:true}));
@@ -114,7 +114,7 @@ let session,ok=false,receipt={},failure='',cancelled=false;
 const cancel=()=>{cancelled=true;if(session)void settle([session],false,'practice banker cancelled');};
 process.once('SIGINT',cancel);process.once('SIGTERM',cancel);
 try{
- session=await openBot(banker);if(cancelled)throw Error('practice banker cancelled');await waitTicks(session,3);
+ session=await openBot(banker,{record:{script:'packages/router/src/owned-logistics-entry.ts',argv:[banker,'CAP=600']}});if(cancelled)throw Error('practice banker cancelled');await waitTicks(session,3);
  const state=()=>session.sdk.getState(),pack=()=>session.sdk.getInventory(),qty=(items,id)=>items.filter(item=>item.id===id).reduce((n,item)=>n+item.count,0);
  const player=state().player,life=player.lifeId,respawns=player.respawnCount??0,hp=session.sdk.getSkill('Hitpoints').level;
  const alive=()=>!cancelled&&!state().player.isDead&&state().player.lifeId===life&&(state().player.respawnCount??0)===respawns&&session.sdk.getSkill('Hitpoints').level>=hp;

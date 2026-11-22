@@ -210,14 +210,15 @@ export async function coinFanoutMain(
         release = acquireAccountLeases(all, runId);
         process.on('SIGINT', cancel);
         process.on('SIGTERM', cancel);
-        donor = await openBot(f.donor, { onStop: async () => cancel(), onSessionEnd: sessionEnd(f.donor) });
+        const record = { script: 'scripts/aio-logistics.ts', argv: ['coin-fanout', ...argv], env };
+        donor = await openBot(f.donor, { record, onStop: async () => cancel(), onSessionEnd: sessionEnd(f.donor) });
         for (const c of f.pairs) {
             if (cancelled) break;
             const open: Session[] = [donor];
             let ok = false, detail = '';
             try {
                 check([f.donor, c.receiver], open)();
-                open.push(await openBot(c.receiver, { onStop: async () => cancel(), onSessionEnd: sessionEnd(c.receiver) }));
+                open.push(await openBot(c.receiver, { record, onStop: async () => cancel(), onSessionEnd: sessionEnd(c.receiver) }));
                 await (deps.moveCoins ?? moveCoins)(c, open, join(dir, 'coin-courier', `${order}-${c.receiver}`), server, check([f.donor, c.receiver], open));
                 ok = true;
                 detail = `transferred ${c.amount} coins ${f.donor} -> ${c.receiver}`;
@@ -263,12 +264,13 @@ export async function itemFaninMain(args: string[], env: Record<string, string |
     const meet = meetingTiles(BANK)!;
     const results: { from: string; ok: boolean; count: number; detail: string }[] = [];
     let receiver: Session | undefined, release: (() => void) | undefined, banked = false;
+    const record = { script: 'scripts/aio-logistics.ts', argv: ['item-fanin', ...args], env };
     try {
         check(all, []);
         release = acquireAccountLeases(all, runId);
         process.on('SIGINT', cancel);
         process.on('SIGTERM', cancel);
-        receiver = await openBot(f.receiver, { onStop: async () => cancel(), onSessionEnd: sessionEnd(f.receiver) });
+        receiver = await openBot(f.receiver, { record, onStop: async () => cancel(), onSessionEnd: sessionEnd(f.receiver) });
         const world = await getWorld();
         const to = async (s: Session, tile: typeof meet[0]) => {
             const r = await goTo(s, world, tile, accountOf(s), { maxRetriesPerLeg: 2, legTimeoutTicks: 100 });
@@ -302,7 +304,7 @@ export async function itemFaninMain(args: string[], env: Record<string, string |
             let donor: Session | undefined, ok = false, count = 0, detail = '';
             try {
                 check([f.receiver, name], [receiver]);
-                donor = await openBot(name, { onStop: async () => cancel(), onSessionEnd: sessionEnd(name) });
+                donor = await openBot(name, { record, onStop: async () => cancel(), onSessionEnd: sessionEnd(name) });
                 await to(donor, meet[0]);
                 const bank = await openBank(donor), row = bank.items.find(i => exactItem(f.item).test(i.name));
                 if (row) {
@@ -369,7 +371,8 @@ export async function itemFaninMain(args: string[], env: Record<string, string |
 
 export async function noteCourierMain(argv: readonly string[], env: Record<string, string | undefined> = process.env) {
     const { courierName, bankerName, cap: CAP, maxDeliveries, reserve, server } = noteCourierPreflight(argv, env);
-    const s = await openBot(courierName).catch(e => finish([], false, `login: ${String(e)}`));
+    const record = { script: 'scripts/aio-logistics.ts', argv: ['note-courier', ...argv], env };
+    const s = await openBot(courierName, { record }).catch(e => finish([], false, `login: ${String(e)}`));
     try {
         const currentOwned = () => noteCourierOwned(courierName, bankerName, server, s.lifecycle?.server);
         currentOwned();

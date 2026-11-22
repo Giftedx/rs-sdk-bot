@@ -131,6 +131,40 @@ function fixedPreCatalogIntent(
     return undefined;
 }
 
+const LOGISTICS_ALIASES: Readonly<Record<string, string>> = {
+    'pray-at-altar': 'restore-prayer',
+    foodcourier: 'food-courier',
+    foodchain: 'food-chain',
+    'make-wine-order': 'wine-stock',
+    'fleet-inspect': 'inspect',
+    'microbot-owned-loadout': 'loadout',
+    'microbot-loadout-import': 'loadout-import',
+    'microbot-bank-sort': 'bank-sort',
+    'pk-live/walk-edge': 'walk-edge',
+};
+
+const LOGISTICS_ROLE_TOKENS = new Set([
+    'coin-courier', 'coin-fanout', 'item-fanin', 'note-courier', 'food-courier', 'food-chain',
+    'specialist-supplier', 'gathering-supplier', 'fleet-trade', 'banker', 'give-to-banker',
+    'take-from-banker', 'supply-holder', 'wine-stock', 'supply-chain', 'supply-bootstrap',
+    'loadout', 'loadout-import', 'bank-sort', 'walk-to', 'walk-edge', 'relocate-bank',
+    'relocate-knight', 'arrive-draynor', 'restore-prayer', 'cure-poison', 'charge-glory',
+    'recover-trapped', 'inspect',
+    ...Object.keys(LOGISTICS_ALIASES),
+]);
+
+function normalizeLogisticsArgs(args: readonly string[]): { rawRole: string; rest: readonly string[]; account?: string } {
+    const norm = (token: string | undefined) => {
+        const clean = (token ?? '').trim().toLowerCase().replace(/^--role=/, '').replace(/\.ts$/, '');
+        return LOGISTICS_ALIASES[clean] ?? clean;
+    };
+    const first = norm(args[0]);
+    if (LOGISTICS_ROLE_TOKENS.has(first)) return { rawRole: first, rest: args.slice(1) };
+    const second = norm(args[1]);
+    if (args[0] && LOGISTICS_ROLE_TOKENS.has(second)) return { rawRole: second, rest: args.slice(2), account: args[0] };
+    return { rawRole: first, rest: args.slice(1) };
+}
+
 function catalogEntryIntent(
     stem: string | null,
     script: string,
@@ -244,9 +278,8 @@ function catalogEntryIntent(
             : last;
     }
     if (stem === 'aio-logistics') {
-        const rawRole = args[0]?.toLowerCase().replace(/^--role=/, '') ?? '';
-        const rest = args.slice(1);
-        if (rawRole === 'charge-glory' || rawRole === 'food-courier' || rawRole === 'supply-bootstrap') {
+        const { rawRole, rest } = normalizeLogisticsArgs(args);
+        if (rawRole === 'charge-glory' || rawRole === 'food-courier') {
             const mapped = rawRole === 'food-courier' ? 'foodcourier' : rawRole;
             const routes = data ? matchingProgressionRoutes(script, args, env, data) : [];
             const direct = entryNameServiceIntent(mapped, script, rest, env, consumer, routes);
@@ -254,7 +287,7 @@ function catalogEntryIntent(
         }
         const serviceRoles = new Set([
             'banker', 'give-to-banker', 'take-from-banker', 'supply-holder',
-            'supply-chain', 'loadout', 'loadout-import', 'bank-sort',
+            'supply-chain', 'supply-bootstrap', 'loadout', 'loadout-import', 'bank-sort',
             'walk-to', 'walk-edge', 'relocate-bank', 'relocate-knight', 'arrive-draynor',
             'restore-prayer', 'cure-poison', 'recover-trapped', 'food-chain',
         ]);
@@ -302,9 +335,13 @@ export function intentForEntry(
     script = scriptPath(script);
     const stem = scriptStem(script);
     if (stem === 'aio-logistics') {
-        const rawRole = args[0]?.toLowerCase().replace(/^--role=/, '') ?? '';
-        const rest = args.slice(1);
-        if (rawRole === 'coin-courier') return coinTransferIntent(rest, env);
+        const { rawRole, rest, account } = normalizeLogisticsArgs(args);
+        if (rawRole === 'coin-courier') {
+            const coinArgs = account && rest.length >= 2 && !/^\d+$/.test(rest[0]!) && /^\d+$/.test(rest[1]!)
+                ? [account, ...rest]
+                : rest;
+            return coinTransferIntent(coinArgs, env);
+        }
         if (rawRole === 'wine-stock') return makeWineOrderIntent(rest, accept);
         if (rawRole === 'specialist-supplier') return { kind: 'service', objective: 'stage or hand off specialist supply kit', units: 1 };
         if (rawRole === 'gathering-supplier') return { kind: 'service', objective: 'hand off gathering specialist supply kit', units: 1 };
