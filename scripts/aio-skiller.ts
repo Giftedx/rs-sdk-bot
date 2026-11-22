@@ -593,6 +593,7 @@ function parseGatherTokens(tokens: readonly string[]): { args: string[]; env: Re
 
 function buildGatherDeps(): GatherExternalDeps {
  return {
+  workScript: 'scripts/aio-skiller.ts',
   approach,
   awayFrom,
   walkTargetPersist,

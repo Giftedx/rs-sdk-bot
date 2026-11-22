@@ -234,6 +234,7 @@ export async function runAioPvp(account: string, args: readonly string[], env: R
    args: cleanArgs,
    env: mergedEnv,
    deps: {
+    workScript: 'scripts/aio-pvp.ts',
     attackable,
     defaultSpec,
     fightPlayer: (s, targetName, opts) => fightPlayer(s, targetName, (opts ?? {}) as PvpFightOptions),

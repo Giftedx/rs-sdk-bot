@@ -86,6 +86,7 @@ export interface GatherExternalDeps {
     escapeStep?: (level: number, has: { glory: boolean; teleport: boolean }) => 'glory' | 'teleport' | 'run' | 'out';
     hasVarrockTeleport?: (magic: number, inventory: readonly { name: string; count?: number }[], equipment: readonly { name: string }[]) => boolean;
     kitFrom?: (worn: readonly any[], carried: readonly any[], ranged?: RegExp) => any;
+    workScript?: string;
 }
 
 export interface GatherConfig {
