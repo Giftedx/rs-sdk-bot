@@ -20,7 +20,7 @@ export function questDemand(): Template[] {
 export function aioTemplates(): Template[] {
     const aio = (id: string, key: string, worker: string, args: string[], rest: Omit<Template, 'id' | 'family' | 'script' | 'args' | 'aio' | 'worker' | 'pilot'>): Template =>
         ({ id, family: `aio:${key}`, script: 'scripts/aio.ts', args: [key.split(':')[0]!, ...args], aio: key, worker, pilot: true, ...rest });
-    const essence = aio('aio-essence', 'skiller:mining:essence', 'scripts/gather-essence.ts', ['mining', 'essence', 'CAP=1800', 'BANK_AT=28'], {
+    const essence = aio('aio-essence', 'skiller:mining:essence', 'scripts/aio-skiller.ts', ['mining', 'essence', 'CAP=1800', 'BANK_AT=28'], {
         role: 'mining', goal: 'mine rune essence through Aubury and bank it at Varrock East', resources: [AIO_PLACES.essence],
         needs: { quests: ['Rune Mysteries Quest'], pieces: { of: PICKAXES, count: 1 } }, yields: () => [{ item: 'rune essence', perTick: 0.03 }] });
     // `load`: the bars of one pack load, which `needs` asks the ore and the coal for.
@@ -46,20 +46,20 @@ export function aioTemplates(): Template[] {
             needs: { skills: { Crafting: level }, items: { 'ring mould': 1, 'gold bar': RING_BATCH, [gem]: RING_BATCH } },
             yields: () => [{ item: `${gem} ring`, perTick: 0.05 }] }));
     return [
-        aio('aio-flax', 'skiller:foraging:flax', 'scripts/gather-flax.ts', ['foraging', 'flax', '1800', '28'], {
+        aio('aio-flax', 'skiller:foraging:flax', 'scripts/aio-skiller.ts', ['foraging', 'flax', '1800', '28'], {
             role: 'crafting', goal: 'pick flax at Seers and bank it', resources: [AIO_PLACES.flax], yields: () => [{ item: 'flax', perTick: 0.18 }] }),
         aio('aio-bowstrings', 'skiller:crafting:bowstrings', 'scripts/spin-bowstrings.ts', ['crafting', 'bowstrings', '1250', `MAX_MAKE=${BOWSTRING_BATCH}`, 'RAW_RESERVE=0', 'MAX_TRIPS=4'], {
             role: 'crafting', goal: `spin ${BOWSTRING_BATCH} banked flax into bow strings at Seers`, needs: { skills: { Crafting: 10 }, items: { flax: BOWSTRING_BATCH } },
             repeats: false, production: { output: 'bow string', outputPerUnit: 1, maximum: BOWSTRING_BATCH, inputs: { flax: 1 }, resize: n => ({ args: ['skiller', 'crafting', 'bowstrings', '1250', `MAX_MAKE=${n}`, 'RAW_RESERVE=0', 'MAX_TRIPS=4'] }) },
             yields: () => [{ item: 'bow string', perTick: 0.12 }] }),
-        aio('aio-yews', 'skiller:woodcutting:yews', 'scripts/gather-yews.ts', ['woodcutting', 'yews', '1800', '27', 'MAX_TRIPS=4'], {
+        aio('aio-yews', 'skiller:woodcutting:yews', 'scripts/aio-skiller.ts', ['woodcutting', 'yews', '1800', '27', 'MAX_TRIPS=4'], {
             role: 'woodcutting', goal: 'cut yew logs at Seers and bank them', resources: [AIO_PLACES.yews],
             needs: { skills: { Woodcutting: 60 }, pieces: { of: AXES, count: 1 } }, yields: () => [{ item: 'yew logs', perTick: 0.018 }] }),
         aio('aio-shafts', 'skiller:fletching:shafts', 'scripts/fletch-arrows.ts', ['fletching', 'shafts', '600', `MAX_MAKE=${SHAFT_LOGS}`, 'LOG_RESERVE=0'], {
             role: 'fletching', goal: `cut ${SHAFT_LOGS} banked logs into arrow shafts`, needs: { items: { knife: 1, logs: SHAFT_LOGS } },
             repeats: false, production: { output: 'arrow shaft', outputPerUnit: 15, maximum: SHAFT_LOGS, inputs: { logs: 1 }, resize: n => ({ args: ['skiller', 'fletching', 'shafts', '600', `MAX_MAKE=${n}`, 'LOG_RESERVE=0'] }) },
             yields: () => [{ item: 'arrow shaft', perTick: 1 }] }),
-        aio('aio-ore', 'skiller:mining:ore', 'scripts/gather-ore.ts', ['mining', 'ore', '1800', '25', 'MAX_TRIPS=3'], {
+        aio('aio-ore', 'skiller:mining:ore', 'scripts/aio-skiller.ts', ['mining', 'ore', '1800', '25', 'MAX_TRIPS=3'], {
             role: 'mining', goal: 'mine ore at Varrock East and bank three loads', resources: [AIO_PLACES.ore],
             needs: { combat: 13, pieces: { of: PICKAXES, count: 1 } },
             // Iron from Mining 15; copper and tin before it.
@@ -89,7 +89,7 @@ export function aioTemplates(): Template[] {
         dust('aio-unicorn-horn-dust', 'unicorn horn', 'unicorn horn dust'),
         dust('aio-dragon-scale-dust', 'blue dragon scale', 'dragon scale dust'),
         ...rings,
-        aio('aio-blood-chest', 'skiller:thieving:blood-chest', 'scripts/blood-chest.ts', ['thieving', 'blood-chest', '4000', `MAX_LOOTS=${BLOOD_LOOTS}`, 'CAP=4000'], {
+        aio('aio-blood-chest', 'skiller:thieving:blood-chest', 'scripts/aio-skiller.ts', ['thieving', 'blood-chest', '4000', `MAX_LOOTS=${BLOOD_LOOTS}`, 'CAP=4000'], {
             role: 'thieving', goal: `loot the Ardougne blood rune chests ${BLOOD_LOOTS} times and bank the runes`, resources: [AIO_PLACES.blood],
             needs: { skills: { Thieving: 59 }, pieces: { of: BLOOD_FOOD, count: BLOOD_MEALS } },
             yields: () => [{ item: 'blood rune', perTick: 0.01 }, { item: 'coins', perTick: 2.5 }] }),

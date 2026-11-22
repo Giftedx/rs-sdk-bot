@@ -238,13 +238,13 @@ test('tick waste discounts a family', () => {
 test('planner jobs carry the marker, repeat and standing, and the merge keeps unmarked and unchanged jobs', () => {
     const [x] = plan(inputs([acct('ThiefA', { Thieving: 80 })]));
     const job = jobFor(x!, side);
-    expect(job).toMatchObject({ account: 'ThiefA', script: 'scripts/goldfarm.ts', enabled: true, repeat: true, standing: true, autopilot: side, template: x!.template!.id });
+    expect(job).toMatchObject({ account: 'ThiefA', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], enabled: true, repeat: true, standing: true, autopilot: side, template: x!.template!.id });
     // A training job runs once: its ok RESULT is the target met, so a repeat would be a no-op login.
     const [fresh] = plan(inputs([acct('Fresh')]));
     expect(fresh!.template!.id).toBe('thieving55');
     expect(jobFor(fresh!, side)).toMatchObject({ script: 'scripts/generated/thieving60.ts', repeat: false, standing: true });
-    const human = { account: 'Other', script: 'scripts/goldfarm.ts', enabled: true }, theirs = { account: 'Far', script: 'x', enabled: true, autopilot: 'cloud' };
-    const stale = { account: 'Gone', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side, template: 'feathers@3229,3298' };
+    const human = { account: 'Other', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], enabled: true }, theirs = { account: 'Far', script: 'x', enabled: true, autopilot: 'cloud' };
+    const stale = { account: 'Gone', script: 'scripts/aio-skiller.ts', args: ['gather', 'foraging', 'feathers'], enabled: true, autopilot: side, template: 'feathers@3229,3298' };
     const kept = { ...job, note: 'kept as is' };
     const merged = mergeJobs([human, theirs, stale, kept], side, [x!]);
     expect(merged.jobs).toEqual([human, theirs, kept]);
@@ -278,15 +278,15 @@ test('a training job does not repeat, and its ok RESULT names the account for an
 });
 
 test('existing jobs hold their resources, chain steps included', () => {
-    expect(jobResources({ script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2670,3306' } })).toEqual(['knight:2671,3313']);
-    expect(jobResources({ script: 'scripts/goldfarm.ts' })).toEqual(['knight:2653,3300']);
-    expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/aio-market.ts shop-buy harry 300', 'scripts/goldfarm.ts KNIGHT_SPOT=2582,3297'] })).toEqual(['shop:harry', 'knight:2582,3297']);
-    expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/gather-fish.ts cage 3000', 'scripts/cook-food.ts 3000 lobster'] })).toEqual(['catherby:lobster']);
-    expect(jobResources({ script: 'scripts/gather-fish.ts', args: ['harpoon'] })).toEqual([]);
+    expect(jobResources({ script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2670,3306' } })).toEqual(['knight:2671,3313']);
+    expect(jobResources({ script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'] })).toEqual(['knight:2653,3300']);
+    expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/aio-market.ts shop-buy harry 300', 'scripts/aio-skiller.ts gather thieving knights KNIGHT_SPOT=2582,3297'] })).toEqual(['shop:harry', 'knight:2582,3297']);
+    expect(jobResources({ script: 'scripts/chain.ts', args: ['scripts/aio-skiller.ts gather fishing cage cage 3000', 'scripts/cook-food.ts 3000 lobster'] })).toEqual(['catherby:lobster']);
+    expect(jobResources({ script: 'scripts/aio-skiller.ts', args: ['gather', 'fishing', 'harpoon', 'harpoon'] })).toEqual([]);
     // An adaptive entry without a bound route claims both possible fields until its fresh choice is known.
     expect(jobResources({ script: 'scripts/ranged-train.ts', args: ['97', '30000'], env: { FOOD: '2' } })).toEqual(['pen:3229,3298','trooper:battlefield']);
     expect(jobResources({ script: 'scripts/ranged-train.ts', resources:['pen:3229,3298','shop:lowe'],env:{PROGRESSION_METHOD:'ranged/troopers'} })).toEqual(['trooper:battlefield','shop:lowe']);
-    expect(jobResources({ script: 'scripts/gather-feathers.ts', env: { PEN: '3017,3288' } })).toEqual(['pen:3017,3288']);
+    expect(jobResources({ script: 'scripts/aio-skiller.ts', args: ['gather', 'foraging', 'feathers'], env: { PEN: '3017,3288' } })).toEqual(['pen:3017,3288']);
     expect(jobResources({ script: 'x', resources: ['shop:betty'] })).toEqual(['shop:betty']);
 });
 
@@ -385,22 +385,22 @@ test('a paused handed-over job stays in the merge with its own settings', () => 
 
 test('a paused handed-over job keeps its pen reserved', () => {
     const jobs = [
-        { account: 'Hocuspokeus', script: 'scripts/gather-feathers.ts', env: { PEN: '3017,3288' }, enabled: true, autopilot: side },
-        { account: 'Woodpecker', script: 'scripts/gather-feathers.ts', env: { PEN: '3229,3298' }, enabled: true, autopilot: side },
-        { account: 'CoinCock', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2670,3306' }, enabled: true },
-        { account: 'OreElse', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2671,3313' }, enabled: false },
+        { account: 'Hocuspokeus', script: 'scripts/aio-skiller.ts', args: ['gather', 'foraging', 'feathers'], env: { PEN: '3017,3288' }, enabled: true, autopilot: side },
+        { account: 'Woodpecker', script: 'scripts/aio-skiller.ts', args: ['gather', 'foraging', 'feathers'], env: { PEN: '3229,3298' }, enabled: true, autopilot: side },
+        { account: 'CoinCock', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2670,3306' }, enabled: true },
+        { account: 'OreElse', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2671,3313' }, enabled: false },
     ];
     expect(Object.keys(reservedResources(jobs, side, new Set(['hocuspokeus']))).sort()).toEqual(['knight:2671,3313', 'pen:3017,3288']);
 });
 
 test('the claim lists every spot, pen and shop the enabled jobs of this side hold, planner-made or not, once per job', () => {
     const jobs = [
-        { account: 'Pocketpython', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2582,3297' }, enabled: true },
-        { account: 'Shaftsinker', script: 'scripts/chain.ts', args: ['scripts/goldfarm.ts KNIGHT_SPOT=2653,3300'], env: { ROUNDS: '1', RUN: '2' }, enabled: true },
-        { account: 'PickpockDick', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2653,3302' }, enabled: true },
-        { account: 'Hocuspokeus', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side, template: 'feathers@3017,3288', resources: ['pen:3017,3288'] },
-        { account: 'Woodpecker', script: 'scripts/chain.ts', args: ['scripts/generated/thieving60.ts TARGET=55 CAP=3000', 'scripts/goldfarm.ts KNIGHT_SPOT=2669,3298'], enabled: false },
-        { account: 'Quickhandjob', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2652,3318' }, enabled: true },
+        { account: 'Pocketpython', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2582,3297' }, enabled: true },
+        { account: 'Shaftsinker', script: 'scripts/chain.ts', args: ['scripts/aio-skiller.ts gather thieving knights KNIGHT_SPOT=2653,3300'], env: { ROUNDS: '1', RUN: '2' }, enabled: true },
+        { account: 'PickpockDick', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2653,3302' }, enabled: true },
+        { account: 'Hocuspokeus', script: 'scripts/aio-skiller.ts', args: ['gather', 'foraging', 'feathers'], enabled: true, autopilot: side, template: 'feathers@3017,3288', resources: ['pen:3017,3288'] },
+        { account: 'Woodpecker', script: 'scripts/chain.ts', args: ['scripts/generated/thieving60.ts TARGET=55 CAP=3000', 'scripts/aio-skiller.ts gather thieving knights KNIGHT_SPOT=2669,3298'], enabled: false },
+        { account: 'Quickhandjob', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2652,3318' }, enabled: true },
         { accounts: ['NabTheKnob', 'Swordinhand'], host: true, script: 'scripts/quest-chain.ts', enabled: true },
         { account: 'Haggis', script: '', enabled: false },
     ];
@@ -414,9 +414,9 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
 
 test('an account the coordinator is recovering keeps its own job in the claim; other coordinator work does not', () => {
     const own = [
-        { account: 'Kiltlifter', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2671,3313' }, enabled: true, autopilot: side, resources: ['knight:2671,3313'] },
-        { account: 'SporranDip', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2652,3318' }, enabled: true, autopilot: side, resources: ['knight:2652,3318'] },
-        { account: 'Knightstick', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2669,3298' }, enabled: true, autopilot: side, resources: ['knight:2669,3298'] },
+        { account: 'Kiltlifter', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2671,3313' }, enabled: true, autopilot: side, resources: ['knight:2671,3313'] },
+        { account: 'SporranDip', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2652,3318' }, enabled: true, autopilot: side, resources: ['knight:2652,3318'] },
+        { account: 'Knightstick', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], env: { KNIGHT_SPOT: '2669,3298' }, enabled: true, autopilot: side, resources: ['knight:2669,3298'] },
     ];
     const coord = [
         { account: 'Kiltlifter', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator' },
@@ -433,8 +433,8 @@ test('an account the coordinator is recovering keeps its own job in the claim; o
 test('a marked reservation opts its account in, and planning replaces it with an enabled job', () => {
     const jobs = [
         { account: 'Magicwanda', script: '', enabled: true, autopilot: 'local' },
-        { account: 'Pocketpython', script: 'scripts/goldfarm.ts', enabled: false, env: { KNIGHT_SPOT: '2582,3297' } },
-        { account: 'Moneyshot', script: 'scripts/goldfarm.ts', enabled: true, env: { KNIGHT_SPOT: '2652,3318' } },
+        { account: 'Pocketpython', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], enabled: false, env: { KNIGHT_SPOT: '2582,3297' } },
+        { account: 'Moneyshot', script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights'], enabled: true, env: { KNIGHT_SPOT: '2652,3318' } },
     ];
     expect(plannableAccounts(jobs, 'local', ['Magicwanda', 'Pocketpython', 'Moneyshot', 'Wandwaver'], new Set())).toEqual(['Magicwanda', 'Wandwaver']);
     expect(reservedResources(jobs, 'local', new Set())).toEqual({ 'knight:2652,3318': 1 });
@@ -442,7 +442,7 @@ test('a marked reservation opts its account in, and planning replaces it with an
     const { jobs: next, fresh } = mergeJobs(jobs, 'local', [{ account: 'Magicwanda', template: t, value: 10, resources: ['knight:2669,3298'], reason: 'best' }]);
     expect(fresh).toEqual(['Magicwanda']);
     const made = next.find(j => j.account === 'Magicwanda')!;
-    expect(made.enabled).toBe(true); expect(made.script).toBe('scripts/goldfarm.ts'); expect(made.env.KNIGHT_SPOT).toBe('2669,3298');
+    expect(made.enabled).toBe(true); expect(made.script).toBe('scripts/aio-skiller.ts'); expect(made.args).toEqual(['gather', 'thieving', 'knights']); expect(made.env.KNIGHT_SPOT).toBe('2669,3298');
     expect(next.filter(j => j.account === 'Magicwanda')).toHaveLength(1);
 });
 
@@ -1177,7 +1177,7 @@ test('a kit buy takes only a pickaxe or an axe that the account can use', () => 
     expect(usableTool({ skills: { Mining: 40 } }, 'rune pickaxe')).toBe(false);
     expect(usableTool({ skills: { Woodcutting: 41 } }, 'rune axe')).toBe(true);
     expect(usableTool({ skills: {} }, 'adamant scimitar')).toBe(true);
-    const dig: Template = { id: 'army-test-dig', family: 'mine', script: 'scripts/gather-ore.ts', role: 'mining', goal: 'mine', tier: 'goal', band: 1,
+    const dig: Template = { id: 'army-test-dig', family: 'mine', script: 'scripts/aio-skiller.ts', args: ['gather', 'mining', 'ore'], role: 'mining', goal: 'mine', tier: 'goal', band: 1,
         trains: { skill: 'Mining', to: 60, unlocks: [] }, yields: () => [], needs: { pieces: { of: ['adamant pickaxe', 'rune pickaxe'], count: 1 } } };
     const picks: Market = { 'adamant pickaxe': { id: 1271, name: 'Adamant pickaxe', limit: 6_000 }, 'rune pickaxe': { id: 1275, name: 'Rune pickaxe', limit: 40_000 } };
     const pick = (mining: number) => plan(inputs([acct('Digger', { Mining: mining }, { coin: 500_000 })], { templates: [dig], army: new Set(['digger']), market: picks, capacity: CAPACITY }))[0]!;
@@ -2919,7 +2919,7 @@ test('accounts above ground level are excluded from surface combat gather dispat
     const upstairsCow = at(acct('Train', { Strength: 10, Hitpoints: 30 }, { 'bronze sword': 1, 'wooden shield': 1, trout: 20, coin: 1000 }), { x: 2686, z: 3268, level: 1 });
     expect(plan(inputs([upstairsCow], { templates: cow, army: new Set(['train']) }))[0]!.template).toBeUndefined();
     expect(plan(inputs([at(upstairsCow, { x: 2686, z: 3268, level: 0 })], { templates: cow, army: new Set(['train']) }))[0]!.template?.id).toBe('army-cow-strength-45');
-    const goldfarm = catalogue().filter(t => t.script === 'scripts/goldfarm.ts');
+    const goldfarm = catalogue().filter(t => t.family === 'goldfarm');
     if (goldfarm.length) {
         const upstairsThief = at(acct('Toss', { Thieving: 99, Hitpoints: 30 }, { lobster: 20, coin: 1000 }), { x: 2678, z: 3268, level: 1 });
         expect(plan(inputs([upstairsThief], { templates: goldfarm }))[0]!.template).toBeUndefined();

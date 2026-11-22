@@ -56,11 +56,11 @@ test('offline loadout importer works through direct AIO, pipelines and generated
 test('catalog route identifiers and literal worker options survive generated host and swarm chains',()=>{
  const specs=['skiller:fishing:harpoon CAP=500','pvp:roam LOOPS=3 ARMY_OPTS={"pace":2}','quester:mode:sweep cook'];
  const steps=planAioPipeline(specs);
- expect(steps[0]!.args).toEqual(['harpoon']);
+ expect(steps[0]!.args).toEqual(['gather','fishing','harpoon','harpoon']);
  expect(steps[1]!.args).toEqual(['LOOPS=3','ARMY_OPTS={"pace":2}']);
  expect(steps[2]!.args).toEqual(['cook']);
  const job=toSwarmChainJob('Example','mixed','Use exact routes',steps);
  expect(job.args.map(parseStep)).toEqual(steps);
- expect(workerEntries(job.script,job.args)).toEqual(expect.arrayContaining(['scripts/pk-roam.ts','scripts/gather-fish.ts','scripts/quest-sweep.ts']));
+ expect(workerEntries(job.script,job.args)).toEqual(expect.arrayContaining(['scripts/pk-roam.ts','scripts/aio-skiller.ts','scripts/quest-sweep.ts']));
  expect(()=>planAioPipeline([' '])).toThrow('requires');
 });

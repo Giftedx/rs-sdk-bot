@@ -293,10 +293,10 @@ test('authored starter and inside-altar workers retain their actual finite defau
 });
 
 test('spawn acquisition follows positional item and quantity defaults with a finite tick cap',()=>{
- expect(intentForEntry('scripts/gather-spawn.ts',['554'],{})).toMatchObject({kind:'acquire',items:{554:27}});
- expect(intentForEntry('scripts/gather-spawn.ts',['554','3'],{TARGET:'99',ITEM_ID:'557',TICKS:'100'})).toMatchObject({kind:'acquire',items:{554:3}});
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','foraging','spawn','554'],{})).toMatchObject({kind:'acquire',items:{554:27}});
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','foraging','spawn','554','3'],{TARGET:'99',ITEM_ID:'557',TICKS:'100'})).toMatchObject({kind:'acquire',items:{554:3}});
  for(const [args,env]of [[[],{}],[['0'],{}],[['NaN'],{}],[['554','0'],{}],[['554','Infinity'],{}],[['554'],{TICKS:'Infinity'}],[['554'],{TICKS:'0'}]] as const)
-  expect(intentForEntry('scripts/gather-spawn.ts',args,env)).toBeNull();
+  expect(intentForEntry('scripts/aio-skiller.ts',['gather','foraging','spawn',...args],env)).toBeNull();
 });
 
 test('jewellery TARGET is an item count and never the current Crafting level',()=>{
@@ -355,15 +355,15 @@ test('owned earth production retains its finite acquisition intent and bounds',(
 });
 
 test('edgeville woodcutting, magic-items, smelt-bars, staged runes and bounded service scripts enforce finite bounds',()=>{
- expect(intentForEntry('scripts/edgeville-woodcut-order.ts',['3000'],{STALL_TICKS:'0'})).toEqual({kind:'train',skill:'woodcutting',targetLevel:36});
- for(const stall of ['-1','1.5','NaN','Infinity'])expect(intentForEntry('scripts/edgeville-woodcut-order.ts',['3000'],{STALL_TICKS:stall})).toBeNull();
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','woodcutting','edgeville','3000'],{STALL_TICKS:'0'})).toEqual({kind:'train',skill:'woodcutting',targetLevel:36});
+ for(const stall of ['-1','1.5','NaN','Infinity'])expect(intentForEntry('scripts/aio-skiller.ts',['gather','woodcutting','edgeville','3000'],{STALL_TICKS:stall})).toBeNull();
  expect(intentForEntry('scripts/microbot-magic-items.ts',['enchant:sapphire_ring','-','3','200'],{})).toEqual({kind:'service',objective:'magic-items:enchant:sapphire_ring:3',units:1});
  expect(intentForEntry('scripts/microbot-magic-items.ts',['superheat:mithril','-','10','400'],{})).toEqual({kind:'service',objective:'magic-items:superheat:mithril:10',units:1});
  for(const args of [['bad-mode','-','3','200'],['high-alch','-','0','200'],['high-alch','-','10001','200'],['high-alch','-','1','0'],['high-alch','-','1','100001']])
   expect(intentForEntry('scripts/microbot-magic-items.ts',args,{})).toBeNull();
  expect(intentForEntry('scripts/smelt-bars.ts',[],{ORDER_ACTION:'smith',PRODUCT_ID:'1119',MAX_MAKE:'1'})).toMatchObject({kind:'service'});
  expect(intentForEntry('scripts/rune-bank-craft.ts',['--staged=/tmp/run.json'],{})).toEqual({kind:'service',objective:'rune-carriers',units:1});
- expect(intentForEntry('scripts/microbot-mining-progressive.ts',['job.json'],{})).toEqual({kind:'service',objective:'scripts/microbot-mining-progressive.ts:job.json',units:1});
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','mining','progressive','job.json'],{})).toEqual({kind:'service',objective:'scripts/aio-skiller.ts:job.json',units:1});
  expect(intentForEntry('scripts/gather-combat.ts',['1500','giant'],{})).toEqual({kind:'service',objective:'gather-combat:giant',units:1});
  expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{})).toBeNull();
  expect(intentForEntry('scripts/fletch-arrows.ts',['bronze','10'],{CAP:'600'})).toEqual({kind:'service',objective:'fletch-arrows:bronze',units:1});
@@ -379,15 +379,16 @@ test('an entry with a missing order file, an unknown recipe, a bad count or no s
  for(const target of [-5,0,1.5,undefined])expect(intentForEntry('scripts/aio-skiller.ts',job({family:known.family,recipe:known.recipe,target}),{},undefined,c)).toBeNull();
  expect(intentForEntry('scripts/aio-skiller.ts',job({family:known.family,recipe:known.recipe,target:5}),{},undefined,c)).toMatchObject({kind:'produce'});
  expect(intentForEntry('scripts/microbot-jewellery-trip.ts',['no-such-order.json'],{},undefined,c)).toBeNull();
- for(const entry of ['sell-owned-ge-item','buy-owned-sword','goldfarm-stable','alch-train','splash-train','quest-order'])
+ for(const entry of ['sell-owned-ge-item','buy-owned-sword','alch-train','splash-train','quest-order'])
   expect(intentForEntry(`scripts/${entry}.ts`,[],{},undefined,c),entry).toBeNull();
  expect(intentForEntry('scripts/aio-logistics.ts',['food-courier'],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','thieving','knights-stable'],{},undefined,c),'goldfarm-stable').toBeNull();
  expect(intentForEntry('scripts/fletch-arrows.ts',['0','bronze'],{},undefined,c)).toBeNull();
- expect(intentForEntry('scripts/goldfarm-stable.ts',[],{TICKS:'0'},undefined,c)).toBeNull();
- // A stated bound keeps the entry, and the nine workers with their own default tick cap run bare.
- expect(intentForEntry('scripts/goldfarm-stable.ts',[],{TICKS:'9000'},undefined,c)).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','thieving','knights-stable'],{TICKS:'0'},undefined,c)).toBeNull();
+ // A stated bound keeps the entry, and the workers with their own default tick cap run bare.
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','thieving','knights-stable'],{TICKS:'9000'},undefined,c)).toMatchObject({kind:'service'});
  expect(intentForEntry('scripts/fletch-arrows.ts',['600','shafts'],{MAX_MAKE:'1'},undefined,c)).toMatchObject({kind:'service'});
- expect(intentForEntry('scripts/gather-ore.ts',[],{},undefined,c)).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','mining','ore'],{},undefined,c)).toMatchObject({kind:'service'});
 });
 
 test('a smelt order with a bar count keeps its produce intent; a smelt order with only a tick cap is a service',()=>{
@@ -402,8 +403,8 @@ test('a time limit in a flag is a stated bound: quest-order with --timeout-ms ha
  expect(order('--save=out.sav','--timeout-ms=300000')).toEqual({kind:'service',objective:'quest-order:cook',units:1});
  for(const bad of [[],['--save=out.sav'],['--timeout-ms=0'],['--timeout-ms=-5'],['--timeout-ms=1.5'],['--timeout-ms='],['--timeout-ms=abc']])expect(order(...bad),bad.join(' ')).toBeNull();
  // The flag states a bound for the entries that need one and changes none that did not.
- expect(intentForEntry('scripts/goldfarm-stable.ts',[],{},undefined,c)).toBeNull();
- expect(intentForEntry('scripts/goldfarm-stable.ts',['--timeout-ms=1000'],{},undefined,c)).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','thieving','knights-stable'],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-skiller.ts',['gather','thieving','knights-stable','--timeout-ms=1000'],{},undefined,c)).toMatchObject({kind:'service'});
 });
 
 test('bounded bank-to-GE and shop-to-bid market routes admit valid finite requests and reject malformed inputs',()=>{
@@ -426,4 +427,10 @@ test('bounded bank-to-GE and shop-to-bid market routes admit valid finite reques
   writeFileSync(sellerFile,JSON.stringify({actor:'Ballspinner',server:'rs-sdk-demo.fly.dev',goal:'bad',allTradeable:false}));
   expect(intentForEntry('scripts/aio-market.ts',['bank-seller',sellerFile],{},undefined,c)).toBeNull();
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('unified skiller gather routes retain escorted lava-maze pvp intent and bare grapes default cap',()=>{
+ const c=loadProgressionCatalog();
+ expect(intentForEntry('scripts/aio-skiller.ts',['mining','lava-maze','Buddy','CAP=1800','MAX_ORE=1','EXPECTED_BANK_ORE=0'],{},undefined,c)).toEqual({kind:'pvp',objective:'skiller:mining:lava-maze'});
+ expect(intentForEntry('scripts/aio-skiller.ts',['foraging','grapes'],{},undefined,c)).toEqual({kind:'service',objective:'grapes:skiller:foraging:grapes',units:1});
 });

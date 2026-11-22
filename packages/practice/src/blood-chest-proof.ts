@@ -12,13 +12,13 @@ import {killTree} from '../../core/src/proc';
 import {capabilityRevision,workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,setPracticeSkills,waitPracticeSave} from './fleet-player-save';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
-import {ARRIVAL,BANK,BLOOD_RUNE,COINS,EXIT_TICKS,STAGE} from '../../../scripts/blood-chest';
+import {BLOOD_ARRIVAL as ARRIVAL,BLOOD_BANK as BANK,BLOOD_RUNE,COINS,EXIT_TICKS,BLOOD_STAGE as STAGE} from '../../workers/src/gather';
 
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
 const thieving='vendor/rs-sdk/server/content/scripts/skill_thieving/';
-const workerEntry='scripts/blood-chest.ts',proofEntry='packages/practice/src/blood-chest-proof.ts';
-const owned=[workerEntry,'scripts/blood-chest.test.ts',proofEntry,'packages/practice/test/blood-chest-proof.test.ts'];
+const workerEntry='scripts/aio-skiller.ts',proofEntry='packages/practice/src/blood-chest-proof.ts';
+const owned=[workerEntry,'packages/workers/src/gather/thieving.ts','packages/workers/test/gather.test.ts',proofEntry,'packages/practice/test/blood-chest-proof.test.ts'];
 const serverFiles=[thieving+'scripts/thieving.rs2',thieving+'scripts/chest/trapped_chest.rs2',thieving+'scripts/doors/locked_door.rs2',thieving+'configs/chests/trapped_chest.dbrow',thieving+'configs/doors/locked_door.dbrow'];
 // Delivery takes the practice turn and admits native startup at startupGb; this proof keeps the floor per child.
 export const ADMISSION={floorGb:FREE_FLOOR_GB,startupGb:PRACTICE_STARTUP_GB};
@@ -142,7 +142,7 @@ const CASES:Record<Case,{cap:string;maxLoots:string;timeoutMs:number}>={
 };
 export function childConfiguration(name:string,id:Case,inherited:NodeJS.ProcessEnv=process.env,endpoints?:ProofEndpoints){
  const c=CASES[id];
- return{cmd:['bun',workerEntry,name,c.cap],cwd:root,windowsHide:true,
+ return{cmd:['bun',workerEntry,name,'gather','thieving','blood-chest',c.cap],cwd:root,windowsHide:true,
   env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',MAX_LOOTS:c.maxLoots,CAP:c.cap}};
 }
 async function run(directory:string){

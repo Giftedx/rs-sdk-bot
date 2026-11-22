@@ -7,7 +7,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {productionStopRequested} from './microbot-c-lifetime';
-import {lootCapacity} from './microbot-b-mining-loot';
+import {lootCapacity} from '../packages/workers/src/gather';
 export type GraphEffect={kind:'inventory';id:number;delta:number}|{kind:'xp';skill:string;minimum:number}|{kind:'position';x:number;z:number;level:number;tolerance:number};
 export type GraphAction={kind:'npc';id:number;option:string}|{kind:'loc';id:number;option:string}|{kind:'item';id:number;optionIndex:number}|{kind:'item-on-item';id:number;target:number}|{kind:'item-on-npc';id:number;target:number}|{kind:'item-on-loc';id:number;target:number}|{kind:'ground-item';id:number;x:number;z:number;level:number;count:number}|{kind:'walk';x:number;z:number};
 export type GraphCondition={kind:'stat';skill:'Hitpoints'|'Prayer';comparator:'above'|'below';threshold:number}|{kind:'inventory';id:number;minimum:number;present:boolean}|{kind:'npc'|'loc';id:number;radius:number;present:boolean};

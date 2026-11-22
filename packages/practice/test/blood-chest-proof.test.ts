@@ -5,7 +5,7 @@ import {dirname,join} from 'node:path';
 import {ADMISSION,ATTACK_DAMAGE_RAW_XP,HITPOINTS_DAMAGE_RAW_XP,STRANDED,bloodChildChecks,bloodObservations,bloodProofAccountEnv,bloodProofPreset,bloodProofSource,bloodResult,bloodSaveChecks,childConfiguration,selectBloodProofEndpoints,startBloodProofStack,thievingRawXp} from '../src/blood-chest-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {runtimeTrees,workerLaunchers} from '../../core/src/worker-release';
-import {ARRIVAL,BANK,EXIT_TICKS,STAGE} from '../../../scripts/blood-chest';
+import {BLOOD_ARRIVAL as ARRIVAL,BLOOD_BANK as BANK,EXIT_TICKS,BLOOD_STAGE as STAGE} from '../../workers/src/gather';
 import type {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 
 type Save=ReturnType<typeof readPracticeSave>;
@@ -27,7 +27,7 @@ test('the Blood proof source ignores unrelated code and binds its worker, harnes
  const put=(path:string,text='')=>{const file=join(base,path);mkdirSync(dirname(file),{recursive:true});writeFileSync(file,text);};
  for(const path of runtimeTrees)mkdirSync(join(base,path),{recursive:true});
  for(const path of [...Object.keys(bloodProofSource().files),...workerLaunchers,'package.json','bun.lock','tsconfig.json'])put(path);
- put('scripts/blood-chest.ts',"import './blood-fixture';");
+ put('scripts/aio-skiller.ts',"import './blood-fixture';");
  put('scripts/blood-fixture.ts');
  put('packages/practice/src/blood-chest-proof.ts',"import './blood-fixture';");
  put('packages/practice/src/blood-fixture.ts');
@@ -63,7 +63,7 @@ test('owned endpoints reach the stack, new fixture and finite CLI child and rest
  expect(stack).toBe(owned);
  expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
  const child=childConfiguration('fixture','entry',{GATEWAY_URL:'ws://localhost:7780'},p);
- expect(child.cmd).toEqual(['bun','scripts/blood-chest.ts','fixture','2500']);
+ expect(child.cmd).toEqual(['bun','scripts/aio-skiller.ts','fixture','gather','thieving','blood-chest','2500']);
  expect(child.env).toMatchObject({GATEWAY_URL:p.gateway,MAX_LOOTS:'2',CAP:'2500',RANDOM_EVENTS:'0',DEMO_OK:''});
  expect(childConfiguration('fixture','exit',{},p).cmd.at(-1)).toBe(String(EXIT_TICKS));
 });
@@ -133,7 +133,7 @@ test('stranded entry retains six carried runes and twelve banked runes with the 
  const lostFood=structuredClone(end);lostFood.inventories[93]![0]!.count=25;
  expect(pass(bloodSaveChecks(start,lostFood,result,'stranded'))).toContain('assets');
  expect(pass(bloodSaveChecks(start,lostFood,{...result,meals:1},'stranded'))).toEqual([]);
- expect(childConfiguration('fixture','stranded',{}).cmd).toEqual(['bun','scripts/blood-chest.ts','fixture','2500']);
+ expect(childConfiguration('fixture','stranded',{}).cmd).toEqual(['bun','scripts/aio-skiller.ts','fixture','gather','thieving','blood-chest','2500']);
 });
 test('the refusal case moves nothing and names the level',()=>{
  const result={ok:false,stop:'refused',failure:'Error: blood chest refused: Thieving 58 is below level 59'};

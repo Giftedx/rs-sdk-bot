@@ -16,7 +16,7 @@ import {nativeNpcSpell} from './microbot-magic-npc';
 import {orbRecipes} from './microbot-c-orbs';
 import {nativeTeleport} from './microbot-magic-teleport';
 import {nativeArrowProfile} from './fletch-arrows';
-import {pickpocketProfiles} from './microbot-a-pickpocket';
+import {pickpocketProfiles} from '../packages/workers/src/gather';
 import {modelXpPerTickAt} from '../packages/knowledge/src/method-model';
 import type {Method as Rung} from '../packages/knowledge/src/ladders';
 import {PROGRESSION_SKILLS,catalogCoverage,type CatalogIntent,type CatalogRoute,type CatalogMethod,type CatalogQuest,type ProgressionCatalog} from '../packages/planner/src/progression-catalog';
@@ -140,7 +140,7 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
   methods.push(method);
  }
  {
-  const ess=methodBase('mining/rune-essence','skiller:mining:essence',{script:'scripts/gather-essence.ts',args:['150','28'],env:{}},'scripts/gather-essence.ts');
+  const ess=methodBase('mining/rune-essence','skiller:mining:essence',{script:'scripts/aio-skiller.ts',args:['gather','mining','essence','150','28'],env:{}},'packages/workers/src/gather/mining.ts');
   ess.effects.items={1436:1};ess.requirements={levels:{mining:1},items:{1265:1}};
   fromRung(ess,rungs.find(r=>r.id==='mining/rune_essence_table'));
   methods.push(ess);
@@ -154,7 +154,7 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
   method.rate={unitsPerTick:null,basis:'unknown',evidence:'Fishing mixed catches, tools and bank trips require a matched measurement'};delete method.modelRates;methods.push(method);
  }
  {
-  const shark=methodBase('fishing/shark-supply','skiller:fishing:shark',{script:'scripts/shark-supply.ts',args:['99','9000'],env:{}},'scripts/shark-supply.ts');
+  const shark=methodBase('fishing/shark-supply','skiller:fishing:shark',{script:'scripts/aio-skiller.ts',args:['gather','fishing','shark','99','9000'],env:{}},'packages/workers/src/gather/fishing.ts');
   shark.effects.items={383:1};shark.requirements={levels:{fishing:76},items:{311:1},facts:{fact:'members'}};
   fromRung(shark,rungs.find(r=>r.id==='fishing/catch-shark'));methods.push(shark);
  }
@@ -249,26 +249,27 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
   fromRung(method,rungs.find(r=>r.id===`fletching/fletching_${metal}_arrow`));method.execution={unitEnv:['MAX_MAKE']};methods.push(method);
  }
  for(const tree of ['normal','oak','willow','maple','yew','magic'] as const){
-  const script=tree==='yew'?'scripts/gather-yews.ts':['maple','magic'].includes(tree)?'scripts/gather-yews.ts':'scripts/generated/woodcutting.ts';
-  const method=methodBase(`woodcutting/${tree}`,script==='scripts/gather-yews.ts'?'skiller:woodcutting:yews':'skiller:woodcutting:fresh45',{script,args:script==='scripts/gather-yews.ts'?['1000','27']:[],env:script==='scripts/gather-yews.ts'?{TREE:tree,...['maple','magic'].includes(tree)?{WOOD_GROVE:'native-processing'}:{}}:{TARGET:'99',CAP:'3000'}},script);
+  const isYewRoute=tree==='yew'||['maple','magic'].includes(tree);
+  const script=isYewRoute?'scripts/aio-skiller.ts':'scripts/generated/woodcutting.ts';
+  const method=methodBase(`woodcutting/${tree}`,isYewRoute?'skiller:woodcutting:yews':'skiller:woodcutting:fresh45',{script,args:isYewRoute?['gather','woodcutting','yews','1000','27']:[],env:isYewRoute?{TREE:tree,...['maple','magic'].includes(tree)?{WOOD_GROVE:'native-processing'}:{}}:{TARGET:'99',CAP:'3000'}},isYewRoute?'packages/workers/src/gather/woodcutting.ts':script);
   method.requirements={levels:{woodcutting:{normal:1,oak:15,willow:30,maple:45,yew:60,magic:75}[tree]},items:{1351:1}};
   fromRung(method,rungs.find(r=>r.id===`woodcutting/${tree}_tree_table`));methods.push(method);
  }
  {
-  const wool=methodBase('crafting/spin-wool','skiller:foraging:wool',{script:'scripts/collect-wool.ts',args:[],env:{CAP:'2200'}},'scripts/collect-wool.ts');
+  const wool=methodBase('crafting/spin-wool','skiller:foraging:wool',{script:'scripts/aio-skiller.ts',args:['gather','foraging','wool'],env:{CAP:'2200'}},'packages/workers/src/gather/foraging.ts');
   wool.effects.items={1759:1};wool.requirements={levels:{crafting:1},items:{1735:1}};
   fromRung(wool,rungs.find(r=>r.id==='crafting/spin-wool'));methods.push(wool);
  }
  for(const p of pickpocketProfiles()){
-  const method=methodBase(`thieving/pickpocket-${slug(p.name)}`,'skiller:thieving:pickpocket-at-site',{script:'scripts/microbot-a-pickpocket.ts',args:[p.name,'1','3','300'],env:{MEMBERS:'1'}},'scripts/microbot-a-pickpocket.ts');
+  const method=methodBase(`thieving/pickpocket-${slug(p.name)}`,'skiller:thieving:pickpocket-at-site',{script:'scripts/aio-skiller.ts',args:['gather','thieving','pickpocket-at-site',p.name,'1','3','300'],env:{MEMBERS:'1'}},'packages/workers/src/gather/thieving.ts');
   method.requirements={levels:{thieving:p.level},facts:{fact:'members'}};
-  fromRung(method,rungs.find(r=>r.id==='thieving/pickpocket_'+p.name));method.execution={unitArg:1};methods.push(method);
+  fromRung(method,rungs.find(r=>r.id==='thieving/pickpocket_'+p.name));method.execution={unitArg:4};methods.push(method);
  }
  {
-  const bc=methodBase('thieving/blood-chest','skiller:thieving:blood-chest',{script:'scripts/blood-chest.ts',args:['2500'],env:{MAX_LOOTS:'1',CAP:'2500'}},'scripts/blood-chest.ts');
+  const bc=methodBase('thieving/blood-chest','skiller:thieving:blood-chest',{script:'scripts/aio-skiller.ts',args:['gather','thieving','blood-chest','2500'],env:{MAX_LOOTS:'1',CAP:'2500'}},'packages/workers/src/gather/thieving.ts');
   bc.effects.items={565:2};bc.requirements={levels:{thieving:59},facts:{fact:'members'}};
   fromRung(bc,rungs.find(r=>r.id==='thieving/trapped_chest_chest_blood_runes'));methods.push(bc);
-  const nc=methodBase('thieving/nature-chest','skiller:thieving:nature-chest',{script:'scripts/microbot-b-nature-chest.ts',args:[],env:{CHEST_X:'2671',CHEST_Z:'3301',CHEST_LEVEL:'1',MAX_LOOTS:'1',CAP:'200'}},'scripts/microbot-b-nature-chest.ts');
+  const nc=methodBase('thieving/nature-chest','skiller:thieving:nature-chest',{script:'scripts/aio-skiller.ts',args:['gather','thieving','nature-chest'],env:{CHEST_X:'2671',CHEST_Z:'3301',CHEST_LEVEL:'1',MAX_LOOTS:'1',CAP:'200'}},'packages/workers/src/gather/thieving.ts');
   nc.effects.items={561:1};nc.requirements={levels:{thieving:28},facts:{fact:'members'}};
   fromRung(nc,rungs.find(r=>r.id==='thieving/trapped_chest_chest_nature_rune'));methods.push(nc);
  }

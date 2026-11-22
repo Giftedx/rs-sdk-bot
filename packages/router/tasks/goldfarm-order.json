@@ -1,12 +1,11 @@
 {
   "id": "goldfarm-order",
   "goal": "Run a finite funded Ardougne earning batch on an owned account with fresh food, bank only newly earned coins, preserve unrelated assets and health, and confirm logout; stop cleanly on exhausted supply.",
-  "entry": "scripts/goldfarm-stable.ts",
+  "entry": "scripts/aio-skiller.ts",
   "files": [
-    "scripts/goldfarm-stable.ts",
-    "scripts/goldfarm-stable.test.ts",
-    "scripts/goldfarm.ts",
-    "scripts/goldfarm.test.ts",
+    "scripts/aio-skiller.ts",
+    "packages/workers/src/gather/thieving.ts",
+    "packages/workers/test/gather.test.ts",
     "packages/core/src/bot.ts",
     "packages/core/src/deposit.ts",
     "packages/practice/src/goldfarm-order-proof.ts",
@@ -23,8 +22,7 @@
       "command": [
         "bun",
         "test",
-        "scripts/goldfarm-stable.test.ts",
-        "scripts/goldfarm.test.ts",
+        "packages/workers/test/gather.test.ts",
         "packages/practice/test/goldfarm-order-proof.test.ts",
         "packages/core/test/walkpath.test.ts",
         "packages/core/test/bot.test.ts",

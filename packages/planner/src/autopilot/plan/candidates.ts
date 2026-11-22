@@ -25,7 +25,7 @@ export function collectCandidates(s: PlanState): Set<string> {
         const selected = inp.templateFor?.(finite, a) ?? finite;
         const place = placeOf(selected);
         // Surface combat and goldfarm workers only walk/route from ground level (level 0); upstairs accounts wait until recovered.
-        if ((selected.script === 'scripts/gather-combat.ts' || selected.script === 'scripts/goldfarm.ts') && (place?.level ?? 0) === 0 && a.pos && a.pos.level !== 0) {
+        if ((selected.script === 'scripts/gather-combat.ts' || (selected.script === 'scripts/aio-skiller.ts' && selected.args?.[0] === 'gather' && selected.args?.[1] === 'thieving' && selected.args?.[2] === 'knights')) && (place?.level ?? 0) === 0 && a.pos && a.pos.level !== 0) {
             miss(a, selected, 'reach');
             continue;
         }

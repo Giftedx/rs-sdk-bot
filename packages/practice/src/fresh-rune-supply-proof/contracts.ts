@@ -55,7 +55,7 @@ export const retainedProgress=(before:Save,interrupted:Save)=>interrupted.skills
 export const hash=(file:string)=>createHash('sha256').update(readFileSync(file)).digest('hex');
 const files=['scripts/rune-supply.ts','scripts/rune-supply.test.ts','scripts/train-chickens.ts','scripts/train-chickens.test.ts',
  'scripts/generated/quest-runemysteries.ts','scripts/generated/quest-lib.ts','scripts/rune-mysteries-route.ts','scripts/rune-mysteries-route.test.ts',
- 'scripts/gather-essence.ts','scripts/gather-essence.test.ts','scripts/generated/rcair.ts','scripts/fishcook.ts','scripts/fishcook.test.ts',
+ 'scripts/aio-skiller.ts','packages/workers/src/gather/mining.ts','packages/workers/src/gather/fishing.ts','packages/workers/test/gather.test.ts','scripts/generated/rcair.ts',
  'packages/practice/src/fresh-rune-supply-proof.ts',
  'packages/practice/src/fresh-rune-supply-proof/contracts.ts',
  'packages/practice/src/fresh-rune-supply-proof/stack.ts',

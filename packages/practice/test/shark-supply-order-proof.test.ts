@@ -93,7 +93,7 @@ let fixtureTemplate:string|undefined;
 // Test-owned scratch, removed after the file's tests.
 const parent=mkdtempSync(join(tmpdir(),'shark-proof-'));
 afterAll(()=>rmSync(parent,{recursive:true,force:true}));
-const lifeOwner={...lifecycleOwner({},['bun',join(root,'scripts/shark-supply.ts')]),pid:1};
+const lifeOwner={...lifecycleOwner({},['bun',join(root,'scripts/aio-skiller.ts')]),pid:1};
 // One producer attempt as the installed CLI leaves it after a confirmed logout.
 function lifecycle(dir:string,name:string,copyFrom?:string){
     const life=join(dir,'lifecycle');if(copyFrom)cpSync(copyFrom,life,{recursive:true});

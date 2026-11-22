@@ -67,8 +67,8 @@ test('dispatch defaults and explicit options preserve worker precedence without 
  const pipeline=['fighter:trooper TARGET_LEVEL=70','skiller:foraging:feathers PEN=3017,3288','market:shop-buy "harry" CAP=500'];
  expect(jobResources({script:'scripts/aio.ts',args:['pipeline',...pipeline]})).toEqual([TROOPER_FIELD,'pen:3017,3288','shop:harry']);
  expect(jobResources({script:'scripts/black-dragon-camp.ts',resources:[]})).toEqual([]);
- expect(jobResources({script:'scripts/gather-fish.ts',env:{METHOD:'harpoon'}})).toEqual([]);
- expect(jobResources({script:'scripts/gather-fish.ts',args:['CAGE']})).toEqual(['catherby:lobster']);
+ expect(jobResources({script:'scripts/aio-skiller.ts',args:['gather','fishing','harpoon'],env:{METHOD:'harpoon'}})).toEqual([]);
+ expect(jobResources({script:'scripts/aio-skiller.ts',args:['gather','fishing','cage','CAGE']})).toEqual(['catherby:lobster']);
 });
 
 test('named selectors, default positional arguments and worker aliases match the actual dispatcher',()=>{
@@ -100,7 +100,7 @@ test('named selectors, default positional arguments and worker aliases match the
   expect(jobResources({script:'scripts/chain.ts',args:[formatStep({script:'scripts/aio.ts',args:[category,...args],env:{}})]})).toEqual(expected);
  }
  const explicit=resolveAioStep('skiller',['--skill=foraging','--method=feathers','PEN=3017,3288']);
- expect(explicit).toEqual({script:'scripts/gather-feathers.ts',args:[],env:{PEN:'3017,3288'}});
+ expect(explicit).toEqual({script:'scripts/aio-skiller.ts',args:['gather','foraging','feathers'],env:{PEN:'3017,3288'}});
 });
 
 test('hosted workers reserve and publish each account with its own environment and active state',()=>{

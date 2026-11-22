@@ -23,7 +23,7 @@ import { existsSync } from 'node:fs';
 import { resolveAioStep } from './aio';
 import { benchCases } from './measure/aio-bench-cases';
 import { MEALS, presetFor } from './quest-sweep';
-import { BANK_FOOD } from './blood-chest';
+import { BANK_FOOD } from '../packages/workers/src/gather';
 import { smeltRecipe } from './smelt-batch';
 import {addTasks,initialState} from '../packages/router/src/coordinator';
 test('pending dynamic participant ownership follows the shared binding without inventing unresolved names',()=>{
@@ -1143,8 +1143,8 @@ test('the place of each shop job is the bank of its shop profile, and the reach 
     const hasPlace = (t: { resources?: string[] }) => (t.resources ?? []).some(r => r.startsWith('knight:') || /^pen:\d+,\d+$/.test(r) || r in PLACES);
     expect(catalogue().filter(t => placeOf(t)).map(t => t.id)).toEqual(catalogue().filter(hasPlace).map(t => t.id));
     // The knight job's first walk from far away is to the bank that the planner names for each knight spot.
-    const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
-    expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);
+    const goldfarm = readFileSync(resolve(import.meta.dir, '../packages/workers/src/gather/thieving.ts'), 'utf8');
+    expect(goldfarm).toContain(`defaultWalkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 }`);
 });
 
 test('an account whose logout is not confirmed is stranded and gives nothing', async () => {
@@ -1315,7 +1315,7 @@ test('the squad shop templates select their profile line with the real selectIte
     expect(selectItems(PROFILES.catherby!.items, 'rune.arrowtips').map(i => i.re.source)).toEqual([/rune arrowtips/i.source]);
     expect(fletch).toContain('fletch-arrows.ts 3000 native-arrows rune MAX_MAKE=30 ');
     const sharks = catalogue().find(t => t.id === 'squad-sharks')!;
-    expect([sharks.script, sharks.production!.resize(7).args]).toEqual(['scripts/shark-supply.ts', ['7', '9000']]);
+    expect([sharks.script, sharks.production!.resize(7).args]).toEqual(['scripts/aio-skiller.ts', ['gather', 'fishing', 'shark', '7', '9000']]);
     const potion = catalogue().find(t => t.id === 'squad-antipoison-jiminua')!;
     expect(selectItems(PROFILES.jiminua!.items, potion.env!.ITEMS).map(i => i.re.source)).toEqual([/^antipoison\(3\)$/i.source]);
 });

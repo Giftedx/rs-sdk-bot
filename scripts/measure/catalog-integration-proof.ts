@@ -164,7 +164,7 @@ async function prove(name:string,mode:string,savePath:string){
   execution.save={beforeMtimeMs,afterMtimeMs:statSync(savePath).mtimeMs};writeFileSync(executionPath,JSON.stringify(execution,null,2));
  }else{
   assert.equal(mode,'gather-short');assert.equal((before.inventories[93]??[]).length,28);assert.equal(amount(before,1059,93),1);
-  stdout=await worker(name,'scripts/gather-spawn.ts',['1059','2'],{TICKS:'1'},1);
+  stdout=await worker(name,'scripts/aio-skiller.ts',['gather','foraging','spawn','1059','2'],{TICKS:'1'},1);
   assert.match(stdout,/^RESULT fail .*banked=1 .*targetMet=false remaining=1\b/m);expectedItem=1059;
   const saved=await waitPracticeSave(savePath,save=>amount(save,1059,95)===1);assert.equal(saved.matched,true);
   const after=readPracticeSave(savePath);assert.equal(amount(after,1059,95),1);assert.equal(amount(after,1059,93),0);

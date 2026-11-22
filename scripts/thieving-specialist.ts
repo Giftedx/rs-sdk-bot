@@ -76,7 +76,7 @@ async function stealEmergencyStallFood(main: Session, stop: () => boolean, targe
         const { loadPathfinding } = await import('../packages/core/src/pathcache');
         await loadPathfinding();
     }
-    const { stallRecipes, stallSight, stallWatched } = await import('./microbot-c-stalls');
+    const { stallRecipes, stallSight, stallWatched } = await import('../packages/workers/src/gather');
     const bakeryRecipe = stallRecipes().find(r => r.name === 'stealing_bakery_stall');
     const sight = bakeryRecipe ? await stallSight(main, bakeryRecipe) : undefined;
     const blockedTiles = new Set<string>();

@@ -163,13 +163,10 @@ test('packages/practice/src production modules never import promoted shared libr
 test('packages/practice/src production modules only import explicitly allowlisted scripts targets', () => {
     const practiceFiles = walkTs(join(repoRoot, 'packages', 'practice', 'src'));
     const allowedPracticeScriptImports = new Set([
-        'scripts/blood-chest.ts',
         'scripts/brew-potions.ts',
         'scripts/druid-meats.ts',
         'scripts/earth-production.ts',
         'scripts/firemaking-order.ts',
-        'scripts/goldfarm-stable.ts',
-        'scripts/lava-maze-escorted-ore.ts',
         'scripts/magic-order.ts',
         'scripts/microbot-glass.ts',
         'scripts/quest-items-order.ts',

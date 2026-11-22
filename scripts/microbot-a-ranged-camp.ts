@@ -1,7 +1,7 @@
 // Behaviour source: pinned Microbot-Hub; BSD notice: research/microbot-ports-LICENSE.txt.
 // Finite bank-owned ranged trip: bun scripts/microbot-a-ranged-camp.ts <account> [cap=5000].
 // STAGED=1 admits an equipped Taverley safespot consumer without bank travel.
-import {runVisibleGroundLoot} from './microbot-b-mining-loot';
+import {runVisibleGroundLoot} from '../packages/workers/src/gather';
 import {combatTrip} from './microbot-combat-trip';
 import {existsSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';

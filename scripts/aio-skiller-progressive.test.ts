@@ -7,7 +7,7 @@ import {resolveRouteStep} from './aio-route-step';
 
 test('environment overrides retain route identity and explicit positionals replace defaults',()=>{
  const harpoon=resolveSkillerStep('fishing','harpoon',['CAP=500']);
- expect(harpoon.args).toEqual(['harpoon']);
+ expect(harpoon.args).toEqual(['gather','fishing','harpoon','harpoon']);
  expect(harpoon.env.CAP).toBe('500');
  expect(resolvePvpStep('pilot',['CAP=100']).args).toEqual(['10','20']);
  expect(resolvePvpStep('pilot',['3','10']).args).toEqual(['3','10']);

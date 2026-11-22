@@ -27,7 +27,7 @@ import {
     walkWaypointsSafe,
 } from '../gathering-specialist-lib';
 import { runSeaSlugQuest } from '../generated/quest-seaslug';
-import { createFishingDriver, runStagedFishing } from '../microbot-b-fishing';
+import { createFishingDriver, runStagedFishing } from '../../packages/workers/src/gather';
 import { dialogOpen, inv, level, meter, send, tick, xp } from './floor-lib';
 
 export const OBJ_SWAMP_PASTE = 1941;

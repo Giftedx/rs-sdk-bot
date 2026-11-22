@@ -12,7 +12,7 @@ import {killTree} from '../../core/src/proc';
 import {deliveryLockDir} from './paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
-import {farmStartProblem} from '../../../scripts/goldfarm-stable';
+import {farmStartProblem} from '../../workers/src/gather';
 // The tick of this proof: 75 ms. At 75 ms the game outcome equals the one at 150 ms (hosted rounds 44446240837, 44447190266 and 44447293486: same results, items and XP; only wall seconds differ), at half the wall time.
 const TICK_MS=75;
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
@@ -20,7 +20,7 @@ import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../c
 type Save=ReturnType<typeof readPracticeSave>;
 type Kind='earn'|'exhausted'|'refuse'|'error'|'unbanked';
 const root=resolve(import.meta.dir,'../../..');
-const owned=['scripts/goldfarm-stable.ts','scripts/goldfarm-stable.test.ts','scripts/goldfarm.ts','scripts/goldfarm.test.ts','packages/core/src/bot.ts','packages/core/src/deposit.ts','packages/practice/src/goldfarm-order-proof.ts','packages/practice/test/goldfarm-order-proof.test.ts','packages/core/src/walk.ts','packages/core/test/walkpath.test.ts'];
+const owned=['scripts/aio-skiller.ts','packages/workers/src/gather/thieving.ts','packages/workers/test/gather.test.ts','packages/core/src/bot.ts','packages/core/src/deposit.ts','packages/practice/src/goldfarm-order-proof.ts','packages/practice/test/goldfarm-order-proof.test.ts','packages/core/src/walk.ts','packages/core/test/walkpath.test.ts'];
 const serverFiles=['vendor/rs-sdk/server/content/scripts/player/configs/consumption/consume_normal.dbrow'];
 const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries([...owned,...serverFiles].map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
@@ -206,7 +206,7 @@ async function run(delivery:string,door=false){
     writeFileSync(path,goldfarmFaultPreload(module,k.kind==='unbanked'));
     preload.push('--preload',path);
    }
-   const child=Bun.spawn(['bun',...preload,'scripts/goldfarm-stable.ts',account.name],{cwd:root,env:{...process.env,DEMO_OK:'',...env},stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err')),windowsHide:true});
+   const child=Bun.spawn(['bun',...preload,'scripts/aio-skiller.ts',account.name,'gather','thieving','knights-stable'],{cwd:root,env:{...process.env,DEMO_OK:'',...env},stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err')),windowsHide:true});
    let timedOut=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid);},200000);
    const code=await child.exited;clearTimeout(timer);await termination;
    const before=readPracticeSave(join(dir,'before.sav'));

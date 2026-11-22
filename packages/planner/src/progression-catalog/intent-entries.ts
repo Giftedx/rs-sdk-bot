@@ -120,9 +120,9 @@ const PROGRESSIVE_TRIP_ENTRIES = new Set([
     'fletch-worker',
 ]);
 
-// These nine workers run to their own default tick cap, so a bare entry is finite.
+// These workers run to their own default tick cap, so a bare entry is finite.
 const DEFAULT_CAP_SERVICE_ENTRIES = [
-    'gather-flax', 'spin-bowstrings', 'fletch-arrows', 'gather-fish', 'cook-food', 'gather-yews', 'gather-ore', 'gather-essence', 'blood-chest',
+    'gather-flax', 'spin-bowstrings', 'fletch-arrows', 'gather-fish', 'cook-food', 'gather-yews', 'gather-ore', 'gather-essence', 'blood-chest', 'grapes',
 ] as const;
 
 const DEFAULT_CAP_ENTRIES = new Set<string>(DEFAULT_CAP_SERVICE_ENTRIES);

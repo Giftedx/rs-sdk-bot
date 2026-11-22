@@ -236,9 +236,9 @@ export const SUPPLY_BENCH_CASES: readonly BenchCase[] = [
     },
     {
         key: 'extra:supply-red-spiders-eggs',
-        script: 'scripts/gather-spawn.ts',
+        script: 'scripts/aio-skiller.ts',
         preset: 'fresh_lumbridge',
-        scriptArgs: ['223', '2'],
+        scriptArgs: ['foraging', 'spawn', '223', '2'],
         presetConfig: {
             position: { x: 2856, z: 9568, level: 0 },
             skills: { Attack: 40, Strength: 40, Defence: 40, Hitpoints: 40 },

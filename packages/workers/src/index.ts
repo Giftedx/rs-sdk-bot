@@ -124,3 +124,4 @@ export {
     COW_BEAR_BOXES,
     guardCowWalker,
 } from './logistics/walk-helpers';
+export * from './gather';

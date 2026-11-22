@@ -89,7 +89,7 @@ const WORKER_TARGETS = ['chicken', 'cow', 'chaos_druid', 'giant'];
 
 // Worker rules. A rule applies only when `evidence` is a literal substring of the worker's file (the capability entry,
 // or the capability JSON for a pending one). Capabilities come first: they carry acceptance.
-interface Rule { worker: string; evidence: string; methods: RegExp }
+interface Rule { worker: string; source?: string; evidence: string; methods: RegExp }
 const RULES: Rule[] = [
     { worker: 'cap:agility-order', evidence: 'gnome:{', methods: /^agility\/course-gnome-stronghold-agility-course$/ },
     { worker: 'cap:agility-order', evidence: "'barbarian'", methods: /^agility\/course-barbarian-outpost-agility-course$/ },
@@ -99,30 +99,30 @@ const RULES: Rule[] = [
     { worker: 'cap:wine-order', evidence: 'wine', methods: /^cooking\/wine-wine$/ },
     { worker: 'cap:rune-bank-craft', evidence: 'AIR=556', methods: /^runecraft\/runecraft_air$/ },
     { worker: 'cap:fresh-rune-supply-order', evidence: 'gather-essence', methods: /^(runecraft\/runecraft_air|mining\/rune_essence_table)$/ },
-    { worker: 'cap:goldfarm-order', evidence: 'pickpocket knights of Ardougne', methods: /^thieving\/pickpocket_knight_of_ardougne$/ },
+    { worker: 'cap:goldfarm-order', evidence: 'Pickpocket Knights of Ardougne', methods: /^thieving\/pickpocket_knight_of_ardougne$/ },
     { worker: 'cap:shark-supply-order', evidence: 'shark', methods: /^(fishing\/catch-shark|cooking\/cooking_generic_shark)$/ },
     { worker: 'cap:iron-progress-order', evidence: "BAR_TYPE: iron", methods: /^smithing\/smelt-iron$/ },
     { worker: 'cap:cow-progress-order', evidence: 'cowTraining', methods: /^(attack|strength|defence|hitpoints)\/target-cow$/ },
     { worker: 'cap:ranged-train', evidence: 'export const BOWS=[', methods: /^ranged\/bow-gear-(standard-bows|oak-bows|willow-bows|maple-bows|yew-bows|magic-bows)$/ },
     { worker: 'cap:ranged-train', evidence: 'PEN={x:3233,z:3297}', methods: /^(ranged|hitpoints)\/target-chicken$/ },
-    { worker: 'scripts/gather-yews.ts', evidence: "'yew'", methods: /^woodcutting\/(normal|oak|yew)_tree_table$/ },
-    { worker: 'scripts/wc-loop.ts', evidence: 'chopTree(/^tree$/i)', methods: /^woodcutting\/normal_tree_table$/ },
-    { worker: 'scripts/gather-ore.ts', evidence: "copper: [2090", methods: /^mining\/(copper|tin|iron|clay)_rock_table$/ },
-    { worker: 'scripts/gather-essence.ts', evidence: 'RUNE_ESSENCE = 1436', methods: /^mining\/rune_essence_table$/ },
-    { worker: 'scripts/goldfarm.ts', evidence: 'pickpocket knights of Ardougne', methods: /^thieving\/pickpocket_knight_of_ardougne$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/woodcutting.ts', evidence: "'yew'", methods: /^woodcutting\/(normal|oak|yew)_tree_table$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/woodcutting.ts', evidence: 'chopTree(/^tree$/i)', methods: /^woodcutting\/normal_tree_table$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/mining.ts', evidence: 'copper: [2090', methods: /^mining\/(copper|tin|iron|clay)_rock_table$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/mining.ts', evidence: 'RUNE_ESSENCE = 1436', methods: /^mining\/rune_essence_table$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/thieving.ts', evidence: 'runGoldfarmKnights', methods: /^thieving\/pickpocket_knight_of_ardougne$/ },
     { worker: 'scripts/craft-jewelry.ts', evidence: 'TIER: sapphire | emerald | ruby | diamond | dragonstone', methods: /^(crafting\/(sapphire|emerald|ruby|diamond|dragonstone)_cutting|crafting\/jewellery-(sapphire|emerald|ruby|diamond|dragonstone)-ring|magic\/magic_spell_enchant_level[1-5])$/ },
     { worker: 'scripts/spin-bowstrings.ts', evidence: 'spins flax into bow strings', methods: /^crafting\/spin-flax-into-bow-strings$/ },
-    { worker: 'scripts/collect-wool.ts', evidence: 'spin the rest', methods: /^crafting\/spin-wool$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/foraging.ts', evidence: 'spinning wheel', methods: /^crafting\/spin-wool$/ },
     { worker: 'scripts/fletch-arrows.ts', evidence: 'TIP_TYPE: rune | adamant | mithril | steel', methods: /^fletching\/fletching_(steel|mithril|adamant|rune)_arrow$/ },
     { worker: 'scripts/fletch-arrows.ts', evidence: 'OAK_BOW = 845', methods: /^fletching\/stringing_oak_longbow$/ },
     { worker: 'scripts/smelt-bars.ts', evidence: 'BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite', methods: /^smithing\/smelt-(bronze|iron|silver|steel|gold|mithril|adamant|runite)$/ },
     { worker: 'scripts/smelt-batch.ts', evidence: "['bronze','iron','silver','steel','gold','mithril','adamantite','runite']", methods: /^smithing\/smelt-(bronze|iron|silver|steel|gold|mithril|adamant|runite)$/ },
     { worker: 'scripts/cook-food.ts', evidence: 'FOOD_TYPE: lobster | swordfish | trout | salmon | shark', methods: /^cooking\/cooking_generic_(lobster|swordfish|trout|salmon|shark)$/ },
     { worker: 'scripts/cook-stock.ts', evidence: 'Cook banked trout/salmon', methods: /^cooking\/cooking_generic_(trout|salmon)$/ },
-    { worker: 'scripts/fishcook.ts', evidence: 'Fly fishes trout and salmon', methods: /^(fishing\/catch-(trout|salmon)|cooking\/cooking_generic_(trout|salmon))$/ },
-    { worker: 'scripts/fishcook.ts', evidence: 'raw chicken', methods: /^cooking\/cooking_generic_chicken$/ },
-    { worker: 'scripts/gather-fish.ts', evidence: 'Lobsters (Cage) or Swordfish/Tuna (Harpoon)', methods: /^fishing\/catch-(lobster|swordfish|tuna)$/ },
-    { worker: 'scripts/gather-fish.ts', evidence: 'export function sharkSpot', methods: /^fishing\/catch-shark$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'export async function runFishcook', methods: /^(fishing\/catch-(trout|salmon)|cooking\/cooking_generic_(trout|salmon))$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'raw chicken', methods: /^cooking\/cooking_generic_chicken$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: "targetOp = isCage ? 'Cage' : 'Harpoon'", methods: /^fishing\/catch-(lobster|swordfish|tuna)$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'export function sharkSpot', methods: /^fishing\/catch-shark$/ },
     { worker: 'scripts/brew-potions.ts', evidence: "'super_def'", methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
     { worker: 'scripts/train-prayer.ts', evidence: 'BONE=526', methods: /^prayer\/bury-bones$/ },
     { worker: 'scripts/train-chickens.ts', evidence: 'Train on Lumbridge chickens', methods: /^(attack|strength|defence|hitpoints)\/target-chicken$/ },
@@ -390,14 +390,14 @@ export function buildLadders(d: Data) {
             const entry = d.readFile(c.entry);
             if (entry === null) { pending = c.id; worker = null; file = JSON.stringify(c); }
             else { worker = c.id; file = entry + '\n' + JSON.stringify(c); }
-        } else file = d.readFile(rule.worker);
+        } else file = d.readFile(rule.source ?? rule.worker);
         if (file === null || !file.includes(rule.evidence)) { unused.push(`${rule.worker}: evidence ${JSON.stringify(rule.evidence)} not found`); continue; }
         const hits = methods.filter(m => rule.methods.test(m.id));
         if (!hits.length) unused.push(`${rule.worker}: pattern ${rule.methods} matched no method`);
         for (const m of hits) {
             if (pending) { m.pendingCapability ??= pending; continue; }
             if (!m.workers.includes(worker!)) m.workers.push(worker!);
-            if (!m.worker) { m.worker = worker; m.workerEvidence = `${rule.worker.startsWith('cap:') ? caps.get(worker!)!.entry : rule.worker} contains ${JSON.stringify(rule.evidence)}`; }
+            if (!m.worker) { m.worker = worker; m.workerEvidence = `${rule.worker.startsWith('cap:') ? caps.get(worker!)!.entry : (rule.source ?? rule.worker)} contains ${JSON.stringify(rule.evidence)}`; }
         }
     }
     for (const u of unused) notes.push(`worker rule unused: ${u}`);

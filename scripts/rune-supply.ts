@@ -12,9 +12,8 @@ import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/w
 import {depositObserved} from '../packages/core/src/deposit';
 import {questFlags} from '../packages/core/src/quest-status';
 import {trainChickens,chickenTrainingProfile} from './train-chickens';
-import {cookStarterChickens,cookStarterChicken,starterCookingStock,StarterCookingUnresolved} from './fishcook';
+import {cookStarterChickens,cookStarterChicken,starterCookingStock,StarterCookingUnresolved,runEssenceGatherer} from '../packages/workers/src/gather';
 import {runRuneMysteries} from './generated/quest-runemysteries';
-import {runEssenceGatherer} from './gather-essence';
 import {craftAirRunes,enterAirAltar,exitAirAltar,insideAirAltar} from './generated/rcair';
 import {startQuestSustain} from './quest-sustain';
 import {LUMBRIDGE_TO_DRAYNOR} from '../packages/workers/src/logistics';
@@ -139,13 +138,13 @@ export async function runRuneSupply(s:Session,target=20,options:{cap?:number;sto
    if((pos()?.worldZ??0)<3330){await draynor();await walk(DRAYNOR_TO_VARROCK);}else await walk([BANK]);
   }
   stage='bank-entry';
-  if((pos()?.worldZ??0)>4000){const r=await action('gather-resume',()=>runEssenceGatherer(s,{cap:1000,bankAt:28,maxTrips:1,stop}));stages.mineResume=r;mined+=r.totalMined;if(!r.ok)throw Error(r.failure);}
+  if((pos()?.worldZ??0)>4000){const r=await action('gather-resume',()=>runEssenceGatherer(s,{cap:1000,bankAt:28,maxTrips:1,stop,deps:{leaveRuneStarter}}));stages.mineResume=r;mined+=r.totalMined;if(!r.ok)throw Error(r.failure);}
   await open();before??=total();const startBankAir=bankCount(556);await secure();await action('close-bank',()=>s.bot.closeBank());
   let batches=0;
   while(level()<target){
    check();stage='mine';await open();const storedEssence=bankCount(1436);await action('close-bank',()=>s.bot.closeBank());
    if(storedEssence===0){
-    const r=await action('gather-one-trip',()=>runEssenceGatherer(s,{cap:Math.min(1800,cap-(s.tick()-start)),bankAt:28,maxTrips:1,stop}));stages.mine=r;mined+=r.totalMined;
+    const r=await action('gather-one-trip',()=>runEssenceGatherer(s,{cap:Math.min(1800,cap-(s.tick()-start)),bankAt:28,maxTrips:1,stop,deps:{leaveRuneStarter}}));stages.mine=r;mined+=r.totalMined;
     if(!r.ok||r.totalMined<=0||r.totalBanked<=0)throw Error('next acquisition: Aubury essence batch failed '+JSON.stringify(r));
    }
    stage='load';await open();await secure();await withdraw(1438,1);

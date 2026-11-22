@@ -46,8 +46,8 @@ export function squadFishingSupplies(): Template[] {
     // Sharks fished and cooked at Catherby (scripts/shark-supply.ts: Fishing 76, Cooking 80; it buys a harpoon when it has none,
     // and it carries two banked trout, salmon or lobsters for the way back). Bench case extra:shark-supply: 3 sharks in 182, 250 and
     // 348 ticks (hosted run 44470543603, seeds 1 to 3); the rate is from those runs.
-    const sharkSteps = (n: number) => ({ args: [String(n), '9000'], env: { SHARK_CONSUMER: 'gang squad' } });
-    const sharks: Template = { id: 'squad-sharks', family: 'shark-supply', script: 'scripts/shark-supply.ts', ...sharkSteps(SQUAD_SHARK_RUN),
+    const sharkSteps = (n: number) => ({ args: ['gather', 'fishing', 'shark', String(n), '9000'], env: { SHARK_CONSUMER: 'gang squad' } });
+    const sharks: Template = { id: 'squad-sharks', family: 'shark-supply', script: 'scripts/aio-skiller.ts', ...sharkSteps(SQUAD_SHARK_RUN),
         role: 'fishing', goal: 'fish and cook sharks at Catherby for the gang squad', resources: ['squad:catherby-sharks'], squadOnly: true, repeats: false,
         needs: { skills: { Fishing: 76, Cooking: 80 }, items: { lobster: 2 } },
         production: { output: 'shark', outputPerUnit: 1, maximum: SQUAD_SHARK_RUN, inputs: {}, resize: n => sharkSteps(n) },
@@ -167,8 +167,8 @@ export function squadWorldGatherers(): Template[] {
         yields: () => [{ item: 'unicorn horn', perTick: 0.06 }],
     };
     const snapeGrass: Template = {
-        id: 'squad-snape-grass', family: 'gather-spawn', script: 'scripts/gather-spawn.ts',
-        args: ['231', '27'], env: { TICKS: '3000' }, role: 'herblore',
+        id: 'squad-snape-grass', family: 'gather-spawn', script: 'scripts/aio-skiller.ts',
+        args: ['gather', 'foraging', 'spawn', '231', '27'], env: { TICKS: '3000' }, role: 'herblore',
         goal: 'gather snape grass at Hobgoblin peninsula (non-Wilderness) for prayer potions',
         resources: ['squad:hobgoblin-snape'], squadOnly: true, repeats: false,
         yields: () => [{ item: 'snape grass', perTick: 0.08 }],
@@ -191,7 +191,7 @@ export function squadWorldGatherers(): Template[] {
     };
     const whiteBerries: Template = {
         id: 'squad-white-berries', family: 'gather-spawn', script: 'scripts/chain.ts',
-        args: ['scripts/aio-logistics.ts walk-to 2262 3168', 'scripts/gather-spawn.ts 239 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
+        args: ['scripts/aio-logistics.ts walk-to 2262 3168', 'scripts/aio-skiller.ts gather foraging spawn 239 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
         goal: 'gather white berries in Isafdar (post-Regicide, non-Wilderness) for super defence potions',
         resources: ['squad:isafdar-berries'], squadOnly: true, repeats: false,
         needs: { quests: ['Regicide'] },
@@ -199,21 +199,21 @@ export function squadWorldGatherers(): Template[] {
     };
     const barbarianPlanks: Template = {
         id: 'squad-barbarian-planks', family: 'gather-spawn', script: 'scripts/chain.ts',
-        args: ['scripts/aio-logistics.ts walk-to 2552 3574', 'scripts/gather-spawn.ts 960 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'supply',
+        args: ['scripts/aio-logistics.ts walk-to 2552 3574', 'scripts/aio-skiller.ts gather foraging spawn 960 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'supply',
         goal: 'gather planks at Barbarian Outpost (non-Wilderness) for quest demand',
         resources: ['squad:barbarian-planks'], squadOnly: true, repeats: false,
         yields: () => [{ item: 'plank', perTick: 0.08 }],
     };
     const gnomeToads: Template = {
         id: 'squad-gnome-toads', family: 'gather-spawn', script: 'scripts/chain.ts',
-        args: ['scripts/aio-logistics.ts walk-to 2417 3512', 'scripts/gather-spawn.ts 2150 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
+        args: ['scripts/aio-logistics.ts walk-to 2417 3512', 'scripts/aio-skiller.ts gather foraging spawn 2150 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
         goal: 'gather swamp toads in Tree Gnome Stronghold for agility potions',
         resources: ['squad:gnome-toads'], squadOnly: true, repeats: false,
         yields: () => [{ item: 'swamp toad', perTick: 0.12 }],
     };
     const bloodChest: Template = {
-        id: 'squad-blood-chest', family: 'aio:skiller:thieving:blood-chest', script: 'scripts/blood-chest.ts',
-        args: [], role: 'thieving', goal: 'loot the Ardougne Castle blood rune chests for the gang squad',
+        id: 'squad-blood-chest', family: 'aio:skiller:thieving:blood-chest', script: 'scripts/aio-skiller.ts',
+        args: ['gather', 'thieving', 'blood-chest'], role: 'thieving', goal: 'loot the Ardougne Castle blood rune chests for the gang squad',
         resources: ['squad:ardougne-blood-chest'], squadOnly: true, repeats: false,
         needs: { skills: { Thieving: 59 }, pieces: { of: BLOOD_FOOD, count: BLOOD_MEALS } },
         yields: () => [{ item: 'blood rune', perTick: 0.01 }, { item: 'coins', perTick: 2.5 }],
@@ -223,7 +223,7 @@ export function squadWorldGatherers(): Template[] {
 
 export const squadKaramjaEggs = (): Template => ({
     id: 'squad-karamja-red-spiders-eggs', family: 'gather-spawn', script: 'scripts/chain.ts',
-    args: ['scripts/aio-logistics.ts walk-to 2832 9586', 'scripts/gather-spawn.ts 223 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
+    args: ['scripts/aio-logistics.ts walk-to 2832 9586', 'scripts/aio-skiller.ts gather foraging spawn 223 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
     goal: "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
     resources: ['squad:karamja-red-spiders-eggs'], squadOnly: true, repeats: false,
     needs: { items: { coins: 120 }, food: 4, anyOf: [{ skills: { Hitpoints: 23 } }, { combat: 34 }, { skills: { Prayer: 43 } }] },

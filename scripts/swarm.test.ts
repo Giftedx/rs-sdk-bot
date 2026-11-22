@@ -636,22 +636,22 @@ test('old combat stays held after a fishing transition until same-script post-fa
         const proofs=lifecycleProofs(root),holdsFile=join(root,'holds.json');
         const ended=new Map([['Rod',{at:100,reason:'died after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]),holds:ScriptHold[]=[];
         // Before repair the account-level failure blocks every role.
-        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/shark-supply.ts',holds).start).toEqual([]);
+        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/aio-skiller.ts',holds).start).toEqual([]);
         const first=loggedOut(root,'Rod');
         expect(applyEndRepair({account:'Rod',endedAt:100,server:LIVE,proof:{kind:'producer',attemptId:first.attemptId}},ended,[],proofs,holds).changed).toBe(true);
         persistHolds(holdsFile,holds);const loaded=loadHolds(holdsFile);
         // Valid finite role transfer: fishing may start; the old combat script may not.
-        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/shark-supply.ts',loaded).start).toEqual(['Rod']);
+        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/aio-skiller.ts',loaded).start).toEqual(['Rod']);
         expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'./scripts\\gather-fire-combat.ts',loaded).blocked.Rod).toMatch(/^held: failed scripts\/gather-fire-combat.ts/);
         // A later fishing success and account-level end deletion do not unban combat.
-        ended.set('Rod',{at:300,reason:'done',revision:rev('scripts/shark-supply.ts')});ended.delete('Rod');
+        ended.set('Rod',{at:300,reason:'done',revision:rev('scripts/aio-skiller.ts')});ended.delete('Rod');
         expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/gather-fire-combat.ts',loaded).start).toEqual([]);
         const receiptPath=join(root,'qualify.json'),write=(r:object)=>{writeFileSync(receiptPath,JSON.stringify(r));return createHash('sha256').update(readFileSync(receiptPath)).digest('hex');};
         const latest=()=>{const p=readLogoutProof('Rod',LIVE,{root});return 'attemptId' in p?p.attemptId:'none';};
         const good=()=>({ok:true,script:'scripts/gather-fire-combat.ts',account:'rod',at:500,attemptId:latest()});
         const q=(sha:string,at=500)=>({kind:'script-qualified',account:'Rod',script:'scripts/gather-fire-combat.ts',holdAt:100,server:LIVE,
             proof:{kind:'producer',attemptId:latest()},qualification:{receiptPath,receiptSha256:sha,at}});
-        expect(applyScriptQualification(q(write({...good(),script:'scripts/shark-supply.ts'})),loaded,[],proofs).changed).toBe(false);
+        expect(applyScriptQualification(q(write({...good(),script:'scripts/aio-skiller.ts'})),loaded,[],proofs).changed).toBe(false);
         expect(applyScriptQualification(q(write({...good(),at:50}),50),loaded,[],proofs).reason).toBe('qualification is not newer than the failure');
         expect(applyScriptQualification(q(write({...good(),ok:false})),loaded,[],proofs).changed).toBe(false);
         // A practice or other-session success is not bound to the live producer logout.
@@ -677,7 +677,7 @@ test('persisted unsupported qualification fields never close a failed-script hol
   writeFileSync(file,JSON.stringify([{account:'Rod',script,at:100,reason:'blocked',heldAt:101,qualified}]));
   const holds=loadHolds(file);
   expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/gather-fire-combat.ts',holds).start).toEqual([]);
-  expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/shark-supply.ts',holds).start).toEqual(['Rod']);
+  expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/aio-skiller.ts',holds).start).toEqual(['Rod']);
  }}finally{rmSync(root,{recursive:true,force:true});}
 });
 

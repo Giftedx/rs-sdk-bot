@@ -77,7 +77,7 @@ export function auditTargets(base=root):AuditTarget[]{
  for(const [name,spots]of Object.entries(HUNT_PRESETS))for(const sp of spots)add({x:sp.x,z:sp.z,level:0},'hunt-preset:'+name);
  add({x:3094,z:3520,level:0},'wilderness:edgeville-ditch');
  add({x:3286,z:3936,level:0},'wilderness:rogues-castle');
- for(const file of ['scripts/goldfarm.ts','scripts/smelt-batch.ts','packages/workers/src/market/shop-buy.ts','scripts/gather-fish.ts','scripts/cook-food.ts','scripts/gather-feathers.ts','scripts/gather-ore.ts','scripts/gather-ranged.ts','scripts/train-chickens.ts','scripts/train-prayer.ts','scripts/agility-order.ts','scripts/rune-bank-craft.ts','scripts/firemaking-order.ts','scripts/fishcook.ts','scripts/lava-maze-escorted-ore.ts','scripts/pk-hunt.ts'])
+ for(const file of ['scripts/smelt-batch.ts','packages/workers/src/market/shop-buy.ts','scripts/cook-food.ts','scripts/gather-ranged.ts','scripts/train-chickens.ts','scripts/train-prayer.ts','scripts/agility-order.ts','scripts/rune-bank-craft.ts','scripts/firemaking-order.ts','scripts/pk-hunt.ts','packages/workers/src/gather/thieving.ts','packages/workers/src/gather/fishing.ts','packages/workers/src/gather/foraging.ts','packages/workers/src/gather/mining.ts'])
   for(const t of fixedTiles(readFileSync(join(base,file),'utf8'),file))for(const s of t.sources)add(t,s);
  return [...targets.values()].sort((a,b)=>a.level-b.level||a.x-b.x||a.z-b.z);
 }

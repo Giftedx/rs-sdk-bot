@@ -17,7 +17,7 @@ import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../c
 
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
-const files=['scripts/shark-supply.ts','scripts/shark-supply.test.ts','scripts/gather-fish.ts','scripts/cook-food.ts','scripts/goldfarm-stable.ts','scripts/goldfarm-stable.test.ts','scripts/goldfarm.ts','scripts/goldfarm.test.ts','scripts/aio-logistics.ts','packages/workers/src/logistics/trade.ts','packages/core/src/bank-demand.ts','packages/core/test/bank-demand.test.ts','packages/practice/src/shark-supply-order-proof.ts','packages/practice/test/shark-supply-order-proof.test.ts',
+const files=['scripts/aio-skiller.ts','packages/workers/src/gather/fishing.ts','packages/workers/src/gather/thieving.ts','packages/workers/test/gather.test.ts','scripts/cook-food.ts','scripts/aio-logistics.ts','packages/workers/src/logistics/trade.ts','packages/core/src/bank-demand.ts','packages/core/test/bank-demand.test.ts','packages/practice/src/shark-supply-order-proof.ts','packages/practice/test/shark-supply-order-proof.test.ts',
  'packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','packages/core/src/bot.ts','packages/core/src/status.ts',
  'vendor/rs-sdk/server/content/scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2','vendor/rs-sdk/server/content/scripts/skill_fishing/configs/fishing.npc','vendor/rs-sdk/server/content/scripts/skill_fishing/configs/fishing_movement.enum','vendor/rs-sdk/server/content/scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow','vendor/rs-sdk/server/content/scripts/player/configs/consumption/consume_normal.dbrow','vendor/rs-sdk/server/content/scripts/areas/area_catherby/configs/catherby.inv','vendor/rs-sdk/server/engine/src/engine/World.ts'];
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
@@ -113,7 +113,7 @@ export function sharkLifecycleChecks(dir:string,name:string,c:any,expectedAttemp
     return {
         lifecycleIdentity:proof.state==='confirmed'&&proof.domain==='practice'&&proof.account===name&&proof.server===PRACTICE_SERVER&&latest?.attemptId===proof.attemptId,
         lifecycleLogout:proof.state==='confirmed'&&count('ended')===1&&count('ended','logged-out')===1&&count('logout')===1&&count('logout','logged-out')===1&&count('ready')===1&&count('connect-failed')===0,
-        lifecycleOwner:latest?.owner?.script==='scripts/shark-supply.ts'&&!JSON.stringify(attempts).toLowerCase().includes('password'),
+        lifecycleOwner:latest?.owner?.script==='scripts/aio-skiller.ts'&&!JSON.stringify(attempts).toLowerCase().includes('password'),
         lifecycleAttempts:attempts.length===expectedAttempts&&attempts.every(a=>!!a.receipt),
         lifecycleStatus:!!status&&status.name===name&&status.server===PRACTICE_SERVER&&!!latest&&status.sessionAttemptId===latest.attemptId,
         lifecycleHash:!!c?.lifecycle&&isDeepStrictEqual(c.lifecycle,treeHashes(root))&&c.status===(existsSync(join(dir,'status.json'))?hash(join(dir,'status.json')):null),
@@ -157,7 +157,7 @@ export function verifySharks(directory:string){
     return {...report,ok:report.ok&&publication,publication};
 }
 async function child(directory:string,name:string,target:number,cap:number){
-    const p=Bun.spawn(['bun','scripts/shark-supply.ts',name,String(target),String(cap)],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',SHARK_CONSUMER:'high-HP endgame combat staging'},stdout:Bun.file(join(directory,'worker.log')),stderr:Bun.file(join(directory,'worker.err')),windowsHide:true});
+    const p=Bun.spawn(['bun','scripts/aio-skiller.ts',name,'gather','fishing','shark',String(target),String(cap)],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',SHARK_CONSUMER:'high-HP endgame combat staging'},stdout:Bun.file(join(directory,'worker.log')),stderr:Bun.file(join(directory,'worker.err')),windowsHide:true});
     let timedOut=false,termination:Promise<void>|undefined;
     const timer=setTimeout(()=>{timedOut=true;termination=killTree(p.pid);},360000);
     try{return {code:await p.exited,timedOut};}finally{clearTimeout(timer);if(p.exitCode===null)await killTree(p.pid);await termination;}

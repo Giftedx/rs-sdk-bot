@@ -52,7 +52,8 @@ if (mode === 'fish') {
             // The live Mightyrod kit (status file): rod, knife, 2 logs; 300 feathers instead of 27.
             await prep(bot, { position: fly, skills: { Fishing: 99, Cooking: cooking, Attack: 5, Thieving: 51, Fletching: 18 },
                 inventory: [{ id: 309, count: 1 }, { id: 314, count: 300 }, { id: 946, count: 1 }, ...logs(2)] });
-            const out = await run(process.env.FISH_SCRIPT ?? 'scripts/fishcook.ts', bot, { TICKS: process.env.TICKS ?? '1500' });
+            const script = process.env.FISH_SCRIPT ?? 'scripts/aio-skiller.ts';
+            const out = await run(script, bot, { TICKS: process.env.TICKS ?? '1500' }, script === 'scripts/aio-skiller.ts' ? ['gather', 'fishing', 'fishcook'] : []);
             show(`run ${i}`, out);
         } finally { cleanup(bot); }
     }
@@ -62,7 +63,7 @@ if (mode === 'fish') {
         await prep(farmer, { position: ardyBank, skills: { Thieving: 99 } });
         // 60 noted trout (cert_trout 334) and the coins for boat fares.
         await prep(courier, { position: { x: 2655, z: 3283, level: 0 }, inventory: [{ id: 334, count: 60 }], coins: 200 });
-        const fa = run('scripts/goldfarm.ts', farmer, { TICKS: process.env.TICKS ?? '1200', FOOD_FROM: courier, FOOD_ONLY_TRADE: '1' });
+        const fa = run('scripts/aio-skiller.ts', farmer, { TICKS: process.env.TICKS ?? '1200', FOOD_FROM: courier, FOOD_ONLY_TRADE: '1' }, ['gather', 'thieving', 'knights']);
         // The farmer walks to the bank spot and starts serving after its first bank visit; give it a few seconds.
         await Bun.sleep(8000);
         const co = run('scripts/aio-logistics.ts', courier, { GIVE: 'Trout:60' }, ['give-to-banker', farmer]);
@@ -76,7 +77,8 @@ if (mode === 'fish') {
         // Mightyrod after some packs: 100 cooked trout in the Draynor bank.
         await prep(cook, { position: { x: 3092, z: 3243, level: 0 }, skills: { Fishing: 99, Cooking: 50 }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 100 }], bank: [{ id: 333, count: 100 }] });
         await prep(courier, { position: { x: 2655, z: 3283, level: 0 }, coins: 500 });
-        const ck = run(process.env.FISH_SCRIPT ?? 'scripts/fishcook.ts', cook, { GIVE_TO: courier, HANDOFF_ONLY: '1', WAIT: '2000' });
+        const script = process.env.FISH_SCRIPT ?? 'scripts/aio-skiller.ts';
+        const ck = run(script, cook, { GIVE_TO: courier, HANDOFF_ONLY: '1', WAIT: '2000' }, script === 'scripts/aio-skiller.ts' ? ['gather', 'fishing', 'fishcook'] : []);
         const co = run('scripts/aio-logistics.ts', courier, { FROM: cook, CAP: '2500', FEATHERS: '100' }, ['food-courier']);
         const [k, c] = await Promise.all([ck, co]);
         show('courier', c);
@@ -87,7 +89,7 @@ if (mode === 'fish') {
     const farmer = runBotName('farm', 1);
     try {
         await prep(farmer, { position: ardyBank, skills: { Thieving: 99 }, coins: 300 });
-        show('farmer', await run('scripts/goldfarm.ts', farmer, { TICKS: '3000', FOOD_FROM: 'nobodyhere', FOOD_ONLY_TRADE: '1' }));
+        show('farmer', await run('scripts/aio-skiller.ts', farmer, { TICKS: '3000', FOOD_FROM: 'nobodyhere', FOOD_ONLY_TRADE: '1' }, ['gather', 'thieving', 'knights']));
     } finally { cleanup(farmer); }
 } else {
     console.log('usage: food-chain.ts fish [runs] [cooking] | handoff | courier | alone');

@@ -111,7 +111,11 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
   },new Map<number,number>());
   const held=bankKnown(account)?holdings(own.bank):null;
   const runiteTarget=Number(task.accept?.bank?.[451]??task.accept?.bank?.['451']);
-  if(entry==='scripts/lava-maze-escorted-ore.ts'&&names?.length===2
+  const isEscortOre =
+   entry==='scripts/aio-pvp.ts'&&(task.args?.[0]==='escort-ore'||task.args?.[0]==='__escort-ore')
+   ||entry==='scripts/aio-skiller.ts'&&(task.args?.[0]==='gather'?task.args[1]==='mining'&&task.args[2]==='lava-maze':task.args?.[0]==='mining'&&task.args?.[1]==='lava-maze')
+   ||entry==='scripts/lava-maze-escorted-ore.ts';
+  if(isEscortOre&&names?.length===2
    &&task.timeoutMs!==undefined&&Number.isSafeInteger(task.timeoutMs)&&task.timeoutMs>0&&task.timeoutMs<=1800000
    &&Number.isSafeInteger(runiteTarget)&&runiteTarget>0&&(task.env?.MAX_ORE===undefined||Number(task.env.MAX_ORE)===1)){
    const rawExpected=task.env?.EXPECTED_BANK_ORE;

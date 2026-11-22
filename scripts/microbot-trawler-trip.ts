@@ -5,7 +5,7 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {insideLegacyTrawler,trawlerEffect,trawlerInterruption,trawlerNetWindow} from './microbot-trawler-trip-effects';
-import {runVisibleGroundLoot} from './microbot-b-mining-loot';
+import {runVisibleGroundLoot} from '../packages/workers/src/gather';
 export function trawlerCatchRows(component:{linkObjType:ArrayLike<number>|null;linkObjNumber:ArrayLike<number>|null}|undefined){
  if(!component?.linkObjType||!component.linkObjNumber)throw Error('owned trawler reward inventory unavailable');
  return Array.from(component.linkObjType,(id,slot)=>({id:id-1,slot,count:component.linkObjNumber![slot]??0})).filter(i=>i.id>=0&&i.count>0);

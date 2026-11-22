@@ -1,9 +1,10 @@
 {
   "id": "edgeville-woodcut-order",
   "goal": "skills",
-  "entry": "scripts/edgeville-woodcut-order.ts",
+  "entry": "scripts/aio-skiller.ts",
   "files": [
-    "scripts/edgeville-woodcut-order.ts",
+    "scripts/aio-skiller.ts",
+    "packages/workers/src/gather/woodcutting.ts",
     "packages/practice/src/edgeville-woodcut-order-proof.ts",
     "packages/practice/test/edgeville-woodcut-order-proof.test.ts"
   ],

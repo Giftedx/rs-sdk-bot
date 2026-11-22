@@ -8,7 +8,7 @@ import {questFlags} from '../packages/core/src/quest-status';
 import {runBankProfile,validateBankRouteJob,type BankProfile,type BankRouteJob} from './microbot-bank-jobs';
 import {CHOMPY,bellowsCharges,runChompy} from './microbot-a-chompy';
 import {ORB_ENERGY,drinkOrbEnergy,orbPackEffect} from './microbot-orb-trip';
-import {runVisibleGroundLoot} from './microbot-b-mining-loot';
+import {runVisibleGroundLoot} from '../packages/workers/src/gather';
 export const CHOMPY_TRIP={bank:{x:2614,z:3093,level:0},site:{x:2594,z:2966,level:0},raw:2876,arrowsPerKill:32,bellows:[2871,2872,2873,2874]} as const;
 export type ChompyTripJob={kills:number;perTrip:number;cap:number;returnTicks:number;protectMelee?:boolean;prayerPotions?:number;energy?:{id:number;maximumUses:number;below:number}};
 export function chompyRouteJob(o:ChompyTripJob):BankRouteJob{

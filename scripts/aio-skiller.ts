@@ -11,14 +11,31 @@ import {DEFAULT_METHOD,resolveRouteStep,resolveSkillerMethod} from './aio-route-
 import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
 import {planBankTripSchedule} from '../packages/core/src/bank-trip';
 import {runBankJob,runBankProfile,validateBankJob,type BankJob} from './microbot-bank-jobs';
-import {FISH_PROFILES,runStagedFishing,pickFishSpot,fishSpotIds,searchNativeCatherbyFishing,type FishMethod} from './microbot-b-fishing';
-import {sharkSpot,catchSharks,SHARK_HARPOON_ANIM,SHARK_IDLE_TICKS,SHARK_PROGRESS_TICKS} from './gather-fish';
-import {supplySharks,sharkOrderConfig,SHARK_BANK,WEST_BANK} from './shark-supply';
-import {cookStarterChicken,starterCookingStock} from './fishcook';
+import {
+ gatherWorker,
+ runGatherCli,
+ VALID_GATHER_SKILLS,
+ type GatherSkill,
+ type GatherExternalDeps,
+ FISH_PROFILES,runStagedFishing,pickFishSpot,fishSpotIds,searchNativeCatherbyFishing,type FishMethod,
+ sharkSpot,catchSharks,SHARK_HARPOON_ANIM,SHARK_IDLE_TICKS,SHARK_PROGRESS_TICKS,
+ supplySharks,sharkOrderConfig,SHARK_BANK,WEST_BANK,
+ cookStarterChicken,starterCookingStock,
+ miningProfiles,runAtSiteMining,incidentalMiningGems,
+ stallRecipes,stealStall,
+ supplyPlan as woodSupplyPlan,takeOwnedSupplyKnife,runWoodSupply,
+ incomingCookedFood,courierFoodReady,receiveFoodAtBank,
+} from '../packages/workers/src/gather';
+import {approach,awayFrom,walkTargetPersist,leaveTutorial,sendHandoff,receiveHandoff,pendingCourierFunding,serviceCourierFunding} from '../packages/workers/src/logistics';
+import {leaveRuneStarter} from './rune-starter';
+import {walkFar,nearestBanks} from './quest-sweep';
+import {cookSharks} from './cook-food';
 import {cookingRecipes,runCookingBatch,nativeHeatSources} from './microbot-b-cooking';
 import {jewelleryRecipes,runJewellery} from './microbot-b-jewellery';
-import {miningProfiles,runAtSiteMining,incidentalMiningGems} from './microbot-b-mining';
-import {stallRecipes,stealStall} from './microbot-c-stalls';
+import {runSoftenClay} from './soften-clay';
+import {runShafts} from './fletch-shafts';
+import {attackable,defaultSpec,fightPlayer,type FightOptions} from './pk';
+import {escapeStep,hasVarrockTeleport,kitFrom} from './pk-roam';
 import {inventoryRecipes,runInventoryBank} from './microbot-production';
 import {tanningRecipes,tanInventory,type TanKind} from './microbot-c-tanner';
 import {furnaceGlassRecipe,runFurnaceGlass} from './microbot-glass';
@@ -29,7 +46,6 @@ import {smeltRecipe,planSmeltLoad,smeltEffect,validateSmeltOrder,validateSmeltRo
 import {smithRecipe,planSmithLoad,smithEffect,runSmithBatch,HAMMER,SMITHING_INTERFACE,type SmithRecipe} from './smith-batch';
 import {planHeadless,runHeadless,type HeadlessOptions} from './fletch-arrows';
 import {validateWoodProcessingJob,runWoodProcessingCycle,runWoodProductDrop,runFletchingCycle,type WoodProcessingJob} from './fletch-worker';
-import {supplyPlan as woodSupplyPlan,takeOwnedSupplyKnife,runWoodSupply} from './woodcut-supply';
 import {LOGS,BURN_ROWS,DRAYNOR_SITE,CATHERBY_SITE,firemakingSite,progressiveFiremakingLog,firemakingOptions,firemakingPreflight,lineTiles,nextFreeTile,packWant,type LogKind,type FiremakingOptions} from './firemaking-order';
 import {COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions} from './agility-order';
 import {RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal} from './rune-bank-craft';
@@ -37,10 +53,10 @@ import {NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob} f
 import {runRuneSupply,runeSupplyTarget} from './rune-supply';
 import {BONE_XP,prayerOptions,planPrayer,prayerBank,runPrayer,type PrayerOptions} from './train-prayer';
 import {boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller} from './brew-potions';
-import {incomingCookedFood,courierFoodReady,receiveFoodAtBank} from './goldfarm';
 import {kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta} from './microbot-c-care';
 
 export {
+ gatherWorker,
  // Bank-profile engine & recipes
  runBankJob,runBankProfile,validateBankJob,type BankJob,
  FISH_PROFILES,runStagedFishing,pickFishSpot,fishSpotIds,searchNativeCatherbyFishing,type FishMethod,
@@ -86,12 +102,12 @@ export interface SkillerRouteSpec {
 
 export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  // Fishing
- {skill:'fishing',method:'shark',script:'scripts/shark-supply.ts',description:'Catherby shark harpoon + cook + bank order'},
- {skill:'fishing',method:'cage',script:'scripts/gather-fish.ts',defaultArgs:['cage'],defaultEnv:{CAP:'3000'},description:'Catherby lobster cage + bank'},
- {skill:'fishing',method:'harpoon',script:'scripts/gather-fish.ts',defaultArgs:['harpoon'],defaultEnv:{CAP:'3000'},description:'Catherby tuna/swordfish harpoon + bank'},
- {skill:'fishing',method:'fishcook',script:'scripts/fishcook.ts',description:'Lumbridge 3-tick fly fishing + general store fireplace cooking + Draynor bank'},
- {skill:'fishing',method:'village',script:'scripts/microbot-village-fishing.ts',description:'Barbarian Village fly/bait fishing with drop/cook/bank modes'},
- {skill:'fishing',method:'staged',script:'scripts/microbot-b-fishing.ts',description:'Staged native fishing across all 10 FISH_PROFILES methods'},
+ {skill:'fishing',method:'shark',script:'scripts/aio-skiller.ts',defaultArgs:['gather','fishing','shark'],description:'Catherby shark harpoon + cook + bank order'},
+ {skill:'fishing',method:'cage',script:'scripts/aio-skiller.ts',defaultArgs:['gather','fishing','cage','cage'],defaultEnv:{CAP:'3000'},description:'Catherby lobster cage + bank'},
+ {skill:'fishing',method:'harpoon',script:'scripts/aio-skiller.ts',defaultArgs:['gather','fishing','harpoon','harpoon'],defaultEnv:{CAP:'3000'},description:'Catherby tuna/swordfish harpoon + bank'},
+ {skill:'fishing',method:'fishcook',script:'scripts/aio-skiller.ts',defaultArgs:['gather','fishing','fishcook'],description:'Lumbridge 3-tick fly fishing + general store fireplace cooking + Draynor bank'},
+ {skill:'fishing',method:'village',script:'scripts/aio-skiller.ts',defaultArgs:['gather','fishing','village'],description:'Barbarian Village fly/bait fishing with drop/cook/bank modes'},
+ {skill:'fishing',method:'staged',script:'scripts/aio-skiller.ts',defaultArgs:['gather','fishing','staged'],description:'Staged native fishing across all 10 FISH_PROFILES methods'},
  {skill:'fishing',method:'fly30',script:'scripts/generated/fishing30.ts',description:'Fresh-account fly fishing to level 30'},
  {skill:'fishing',method:'specialist',script:'scripts/fishing-specialist.ts',description:'Fresh-clock specialist Fishing 1 to 99 with tutorial skip, helper trade, and 3-tick net/bait/fly fishing'},
  // Cooking
@@ -103,10 +119,10 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'cooking',method:'ge-cook',script:'scripts/microbot-ge-cooking.ts',description:'GE-restocked cooking batch'},
  {skill:'cooking',method:'specialist',script:'scripts/cooking-specialist.ts',description:'Fresh-clock specialist Cooking 1 to 99 via noted wine fermentation and 4 Fruit Blasts'},
  // Woodcutting
- {skill:'woodcutting',method:'edgeville',script:'scripts/edgeville-woodcut-order.ts',description:'Edgeville tree/oak/yew woodcutting order'},
- {skill:'woodcutting',method:'yews',script:'scripts/gather-yews.ts',description:'Chop and bank yew logs'},
+ {skill:'woodcutting',method:'edgeville',script:'scripts/aio-skiller.ts',defaultArgs:['gather','woodcutting','edgeville'],description:'Edgeville tree/oak/yew woodcutting order'},
+ {skill:'woodcutting',method:'yews',script:'scripts/aio-skiller.ts',defaultArgs:['gather','woodcutting','yews'],description:'Chop and bank yew logs'},
  {skill:'woodcutting',method:'fresh45',script:'scripts/generated/woodcutting.ts',description:'Fresh account to Woodcutting 45 with the knife reset (axe from Bob, trees then willows)'},
- {skill:'woodcutting',method:'loop',script:'scripts/wc-loop.ts',description:'Continuous woodcutting loop'},
+ {skill:'woodcutting',method:'loop',script:'scripts/aio-skiller.ts',defaultArgs:['gather','woodcutting','loop'],description:'Continuous woodcutting loop'},
  {skill:'woodcutting',method:'specialist',script:'scripts/woodcutting-specialist.ts',description:'Fresh-clock specialist Woodcutting 1 to 99 with 2-tick goblin flinch / 3-tick knife-reset Oaks'},
  // Firemaking
  {skill:'firemaking',method:'order',script:'scripts/firemaking-order.ts',description:'Line firemaking order from banked logs (normal/oak/willow/maple/yew/magic)'},
@@ -119,13 +135,13 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'fletching',method:'worker',script:'scripts/fletch-worker.ts',description:'Fletch unstrung/strung shortbows and longbows from banked logs'},
  {skill:'fletching',method:'specialist',script:'scripts/fletching-specialist.ts',description:'Fresh-clock specialist Fletching 1 to 99 with tutorial skip, helper trade, and 5-action/tick arrow fletching'},
  // Mining
- {skill:'mining',method:'ore',script:'scripts/gather-ore.ts',description:'Mine and bank copper/tin/iron/coal/gold/mithril/adamant'},
- {skill:'mining',method:'essence',script:'scripts/gather-essence.ts',description:'Mine and bank Rune essence at Varrock/Aubury'},
- {skill:'mining',method:'at-site',script:'scripts/microbot-b-mining.ts',description:'Staged at-site rock mining across all native rock profiles'},
- {skill:'mining',method:'drop',script:'scripts/microbot-mining-drop.ts',description:'Power-mine and drop ore'},
- {skill:'mining',method:'progressive',script:'scripts/microbot-mining-progressive.ts',description:'Progressive level-unlocked mining'},
- {skill:'mining',method:'loot',script:'scripts/microbot-b-mining-loot.ts',description:'Mine and bank with gem/loot retention'},
- {skill:'mining',method:'lava-maze',script:'scripts/lava-maze-escorted-ore.ts',description:'Wilderness Lava Maze runite ore mining'},
+ {skill:'mining',method:'ore',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','ore'],description:'Mine and bank copper/tin/iron/coal/gold/mithril/adamant'},
+ {skill:'mining',method:'essence',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','essence'],description:'Mine and bank Rune essence at Varrock/Aubury'},
+ {skill:'mining',method:'at-site',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','at-site'],description:'Staged at-site rock mining across all native rock profiles'},
+ {skill:'mining',method:'drop',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','drop'],description:'Power-mine and drop ore'},
+ {skill:'mining',method:'progressive',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','progressive'],description:'Progressive level-unlocked mining'},
+ {skill:'mining',method:'loot',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','loot'],description:'Mine and bank with gem/loot retention'},
+ {skill:'mining',method:'lava-maze',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','lava-maze'],description:'Wilderness Lava Maze runite ore mining'},
  {skill:'mining',method:'specialist',script:'scripts/mining-specialist.ts',description:'Fresh-clock specialist Mining 1 to 99 via Doric Quest and 3-tick Ardougne Zoo iron rotation'},
  // Smithing
  {skill:'smithing',method:'smelt',script:'scripts/smelt-bars.ts',description:'Smelt bronze/iron/steel/gold/mithril/adamant/runite bars at furnace'},
@@ -176,30 +192,30 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'agility',method:'order',script:'scripts/agility-order.ts',description:'Gnome Stronghold / Barbarian / Wilderness agility course order'},
  {skill:'agility',method:'specialist',script:'scripts/agility-specialist.ts',description:'Fresh-clock 1 to 99 Agility specialist route (Tourist Trap + boosted Wilderness course)'},
  // Thieving
- {skill:'thieving',method:'knights',script:'scripts/goldfarm.ts',description:'Pickpocket Knights of Ardougne with bank food refill and Baker stall fallback'},
- {skill:'thieving',method:'knights-stable',script:'scripts/goldfarm-stable.ts',description:'Bounded Ardougne knight pickpocketing batch'},
+ {skill:'thieving',method:'knights',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','knights'],description:'Pickpocket Knights of Ardougne with bank food refill and Baker stall fallback'},
+ {skill:'thieving',method:'knights-stable',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','knights-stable'],description:'Bounded Ardougne knight pickpocketing batch'},
  {skill:'thieving',method:'stun-base',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with no action inside a stun (MODE=base)'},
  {skill:'thieving',method:'stun-bury',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with a bone buried inside each stun (MODE=bury)'},
  {skill:'thieving',method:'stun-enchant',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with an enchant cast inside each stun (MODE=enchant)'},
  // Superheat Smithing 1-41 during Ardougne knight stuns: Magic 43+ casts superheat:bronze (1-15, 12 casts) and
  // superheat:iron (15-41, 45 casts) via scripts/microbot-magic-items.ts + fire staff during 8-tick stuns.
  {skill:'thieving',method:'bootstrap55',script:'scripts/generated/thieving60.ts',description:'Fresh-account Men -> Cake stall -> Guards -> Knights to 55/60 Thieving'},
- {skill:'thieving',method:'pickpocket',script:'scripts/microbot-pickpocket-trip.ts',description:'Bank-staged pickpocket trip for any native NPC profile'},
- {skill:'thieving',method:'pickpocket-at-site',script:'scripts/microbot-a-pickpocket.ts',description:'At-site NPC pickpocketing'},
- {skill:'thieving',method:'stalls',script:'scripts/microbot-c-stalls.ts',description:'Steal from Baker/Silk/Fur/Silver/Spice/Gem stalls'},
- {skill:'thieving',method:'blood-chest',script:'scripts/blood-chest.ts',description:'Chaos Druid Tower blood rune chest thieving'},
- {skill:'thieving',method:'nature-chest',script:'scripts/microbot-b-nature-chest.ts',description:'East Ardougne nature rune chest thieving'},
+ {skill:'thieving',method:'pickpocket',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','pickpocket'],description:'Bank-staged pickpocket trip for any native NPC profile'},
+ {skill:'thieving',method:'pickpocket-at-site',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','pickpocket-at-site'],description:'At-site NPC pickpocketing'},
+ {skill:'thieving',method:'stalls',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','stalls'],description:'Steal from Baker/Silk/Fur/Silver/Spice/Gem stalls'},
+ {skill:'thieving',method:'blood-chest',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','blood-chest'],description:'Chaos Druid Tower blood rune chest thieving'},
+ {skill:'thieving',method:'nature-chest',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','nature-chest'],description:'East Ardougne nature rune chest thieving'},
  {skill:'thieving',method:'specialist',script:'scripts/thieving-specialist.ts',description:'Fresh-clock specialist Thieving 1 to 99 prototype using relog-on-stun at East Ardougne'},
  // Foraging / Gathering / Care
- {skill:'foraging',method:'flax',script:'scripts/gather-flax.ts',description:'Pick and bank flax at Seers Village'},
- {skill:'foraging',method:'wool',script:'scripts/collect-wool.ts',description:'Shear sheep and spin wool at Lumbridge'},
- {skill:'foraging',method:'feathers',script:'scripts/gather-feathers.ts',description:'Collect feathers at chicken pens'},
- {skill:'foraging',method:'spawn',script:'scripts/gather-spawn.ts',description:'Collect ground spawns and bank'},
- {skill:'foraging',method:'grapes',script:'scripts/grapes.ts',description:'Collect grapes for wine making'},
+ {skill:'foraging',method:'flax',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','flax'],description:'Pick and bank flax at Seers Village'},
+ {skill:'foraging',method:'wool',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','wool'],description:'Shear sheep and spin wool at Lumbridge'},
+ {skill:'foraging',method:'feathers',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','feathers'],description:'Collect feathers at chicken pens'},
+ {skill:'foraging',method:'spawn',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','spawn'],description:'Collect ground spawns and bank'},
+ {skill:'foraging',method:'grapes',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','grapes'],description:'Collect grapes for wine making'},
  {skill:'foraging',method:'care',script:'scripts/microbot-c-care.ts',description:'Kitten care (feed/wool/stroke), Miscellania weeding, and Druid pouch filling'},
  {skill:'foraging',method:'miscellania-coffer',script:'scripts/microbot-misc-coffer.ts',description:'Manage Kingdom of Miscellania coffer and approval'},
  {skill:'foraging',method:'qol',script:'scripts/microbot-c-qol.ts',description:'Auto Cannon refill, prayer hold, special bar enable, and inventory drop patterns'},
- {skill:'foraging',method:'crystal-chest',script:'scripts/crystal-chest.ts',description:'Combine key halves and open Taverley crystal chests from Falador West Bank for uncut dragonstones'},
+ {skill:'foraging',method:'crystal-chest',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','crystal-chest'],description:'Combine key halves and open Taverley crystal chests from Falador West Bank for uncut dragonstones'},
 ];
 
 export {DEFAULT_METHOD};
@@ -565,6 +581,59 @@ export function planStunSuperheatSmithing(currentSmithing: number, currentMagic:
 
 export { planBankTripSchedule };
 
+function parseGatherTokens(tokens: readonly string[]): { args: string[]; env: Record<string, string> } {
+ const args: string[] = [], env: Record<string, string> = {};
+ for (const token of tokens) {
+  const setting = token.match(/^([A-Z][A-Z0-9_]*)=([\s\S]*)$/);
+  if (setting) env[setting[1]!] = setting[2]!;
+  else args.push(token);
+ }
+ return { args, env };
+}
+
+function buildGatherDeps(): GatherExternalDeps {
+ return {
+  workScript: 'scripts/aio-skiller.ts',
+  approach,
+  awayFrom,
+  walkTargetPersist,
+  leaveTutorial,
+  leaveRuneStarter,
+  walkFar: async (s, world, to, legTimeoutTicks, opts) =>
+   (await walkFar(s, world as Parameters<typeof walkFar>[1], to, legTimeoutTicks, opts)) as Awaited<
+    ReturnType<NonNullable<GatherExternalDeps['walkFar']>>
+   >,
+  nearestBanks: from => nearestBanks({ x: from.x, z: from.z, level: from.level ?? 0 }),
+  sendHandoff,
+  receiveHandoff,
+  pendingCourierFunding,
+  serviceCourierFunding,
+  cookSharks,
+  cookingRecipes,
+  nativeHeatSources,
+  runCookingBatch: (d, r, o) => runCookingBatch(d as Parameters<typeof runCookingBatch>[0], r, o),
+  runSoftenClay,
+  runShafts: (s, opts) => runShafts(s, { ...opts, reserve: opts.reserve ?? 0 }),
+  runHeadless: (s, opts) => runHeadless(s, { ...opts, shaftReserve: opts.shaftReserve ?? 0, featherReserve: opts.featherReserve ?? 0 }),
+  runBankProfile,
+  runBankJob: (s, job, stop) => runBankJob(s, job as BankJob, stop),
+  attackable,
+  defaultSpec,
+  fightPlayer: (s, targetName, opts) => fightPlayer(s, targetName, (opts ?? {}) as FightOptions),
+  escapeStep,
+  hasVarrockTeleport,
+  kitFrom,
+ };
+}
+
+const LEGACY_GATHER_METHOD_ALIASES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+ fishing: { 'shark-supply': 'shark', 'gather-fish': 'cage', fishcook: 'fishcook', 'microbot-village-fishing': 'village', 'microbot-b-fishing': 'staged' },
+ woodcutting: { 'edgeville-woodcut-order': 'edgeville', 'gather-yews': 'yews', 'wc-loop': 'loop', 'woodcut-supply': 'woodcut-supply' },
+ mining: { 'gather-ore': 'ore', 'gather-essence': 'essence', 'microbot-b-mining': 'at-site', 'microbot-mining-drop': 'drop', 'microbot-mining-progressive': 'progressive', 'microbot-b-mining-loot': 'loot', 'lava-maze-escorted-ore': 'lava-maze' },
+ thieving: { goldfarm: 'knights', 'goldfarm-stable': 'knights-stable', 'microbot-pickpocket-trip': 'pickpocket', 'microbot-a-pickpocket': 'pickpocket-at-site', 'microbot-c-stalls': 'stalls', 'blood-chest': 'blood-chest', 'microbot-b-nature-chest': 'nature-chest' },
+ foraging: { 'gather-flax': 'flax', 'collect-wool': 'wool', 'gather-feathers': 'feathers', 'gather-spawn': 'spawn', grapes: 'grapes', 'crystal-chest': 'crystal-chest' },
+};
+
 export function resolveSkillerStep(skillInput: string, methodInput?: string, rest: readonly string[] = []): Step {
  const skill = skillInput.toLowerCase().replace(/^--skill=/, '');
  if(skill==='bank-job'){
@@ -572,12 +641,22 @@ export function resolveSkillerStep(skillInput: string, methodInput?: string, res
   if(!jobs.length)throw Error('aio-skiller bank-job requires <job.json>');
   return{script:'scripts/aio-skiller.ts',args:['bank-job',...jobs],env:{}};
  }
+ if(skill==='gather'){
+  const parsed = parseGatherTokens([methodInput ?? '', ...rest].filter(Boolean));
+  return { script: 'scripts/aio-skiller.ts', args: ['gather', ...parsed.args], env: parsed.env };
+ }
  const {method,args:extra} = resolveSkillerMethod(skill, methodInput, rest);
- const route = SKILLER_ROUTES.find(r => r.skill === skill && r.method === method)
+ const aliased = LEGACY_GATHER_METHOD_ALIASES[skill]?.[method] ?? method;
+ const route = SKILLER_ROUTES.find(r => r.skill === skill && r.method === aliased)
   ?? SKILLER_ROUTES.find(r => r.skill === skill && r.script.endsWith(`${method}.ts`));
  if (!route) {
   const known = SKILLER_ROUTES.filter(r => r.skill === skill).map(r => r.method);
   throw Error(known.length ? `aio-skiller: unknown ${skill} method "${method}"; known: ${known.join(', ')}` : `aio-skiller: unknown skill "${skill}"; known: ${Object.keys(DEFAULT_METHOD).join(', ')}`);
+ }
+ if (route.script === 'scripts/aio-skiller.ts' && route.defaultArgs?.[0] === 'gather') {
+  const resolved = resolveRouteStep({ script: route.script, defaultEnv: route.defaultEnv }, extra);
+  const tail = resolved.args.length ? resolved.args : route.defaultArgs.slice(3);
+  return { script: route.script, args: ['gather', route.skill, route.method, ...tail], env: resolved.env };
  }
  return resolveRouteStep(route, extra);
 }
@@ -586,6 +665,21 @@ export async function runAioSkiller(account: string, args: readonly string[], en
  if (!account) throw Error('aio-skiller requires account');
  const [first, second, ...rest] = args;
  if (!first) throw Error('aio-skiller requires <skill|bank-job>');
+ if (first === 'gather') {
+  if (!second || !VALID_GATHER_SKILLS.includes(second as GatherSkill)) {
+   throw Error(`aio-skiller gather requires <skill> (${VALID_GATHER_SKILLS.join('|')})`);
+  }
+  const [method = DEFAULT_METHOD[second] ?? '', ...tail] = rest;
+  const parsed = parseGatherTokens(tail);
+  const code = await runGatherCli(account, {
+   skill: second as GatherSkill,
+   method,
+   args: parsed.args,
+   env: { ...env, ...parsed.env },
+   deps: buildGatherDeps(),
+  });
+  return code === 0 ? 'RESULT ok' : 'RESULT fail';
+ }
  if (first === 'bank-job') {
   if (!second) throw Error('aio-skiller bank-job requires <job.json>');
   // Several job files run in one login, in order, and stop at the first failed job: each login costs board ticks.

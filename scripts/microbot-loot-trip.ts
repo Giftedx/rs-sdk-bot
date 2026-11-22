@@ -5,7 +5,7 @@ import{inProcessSdkConfig,type Session}from'../packages/core/src/inprocess';
 import{MarketClient}from'../vendor/rs-sdk/sdk/market';
 import{waitUntil,waitTicks}from'../packages/core/src/ticks';
 import{runBankProfile,validateBankRouteJob,type BankRouteJob}from'./microbot-bank-jobs';
-import{runVisibleGroundLoot,type LootPolicy}from'./microbot-b-mining-loot';
+import{runVisibleGroundLoot,type LootPolicy}from'../packages/workers/src/gather';
 import{lootListed,lootMatches,lootNameMatches,validLootFilters}from'../packages/core/src/loot-policy';
 
 export interface LootTripJob{target:number;batch:number;cap:number;returnTicks:number;members:boolean;bank:{x:number;z:number;level:number};site:{x:number;z:number;level:number};policy:Omit<LootPolicy,'maximumUnits'|'cap'>;valuation?:{source:'native-ge-last-trade';ids:number[];thresholds?:'donor'}}

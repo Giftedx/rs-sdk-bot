@@ -64,7 +64,7 @@ export const FLEET: FleetAccount[] = [
         return {
         name, server: 'rs-sdk-demo.fly.dev', role: 'thieving' as const,
         goal: 'Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food',
-        script: 'scripts/goldfarm-stable.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-skiller.ts', args: ['gather', 'thieving', 'knights-stable'], enabled: true, repeat: true,
         env,
         hostGroup: name==='Pocketrocket'?undefined:'knights',
         note: name==='Pocketrocket'
@@ -74,14 +74,14 @@ export const FLEET: FleetAccount[] = [
     {
         name: 'Masterbaiter', server: 'rs-sdk-demo.fly.dev', role: 'fishing',
         goal: 'Fly fish and cook best food (trout & salmon) forever, bank and supply courier',
-        script: 'scripts/fishcook.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-skiller.ts', args: ['gather', 'fishing', 'fishcook'], enabled: true, repeat: true,
         env: { TICKS: '9000', GIVE_TO: 'Bigpackage', TARGETED_COLLECTION: '1' },
         note: 'Continuous 3-tick fly fishing trout/salmon (~51 cooked food/1000 ticks, ~465/hr) at Lumbridge river, cooked at general store fireplace, banked at Draynor, and traded to courier.',
     },
     {
         name: 'Shaftsinker', server: 'rs-sdk-demo.fly.dev', role: 'mining',
         goal: 'Mine rune essence via Aubury, bank at Varrock East forever',
-        script: 'scripts/gather-essence.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-skiller.ts', args: ['gather', 'mining', 'essence'], enabled: true, repeat: true,
         env: { CAP: '15000', BANK_AT: '28' },
         note: 'Mine rune essence in the Rune Essence Mine via Aubury teleport, bank at Varrock East bank, and loop forever.',
     },
@@ -97,26 +97,26 @@ export const FLEET: FleetAccount[] = [
     {
         name: 'Shaftmaker', server: 'rs-sdk-demo.fly.dev', role: 'fletching',
         goal: 'Gather and bank normal logs at Seers for arrow-shaft production',
-        script: 'scripts/gather-yews.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-skiller.ts', args: ['gather', 'woodcutting', 'yews'], enabled: true, repeat: true,
         env: { TREE: 'normal', MAX_TRIPS: '1', BANK_AT: '25', CAP: '1200' },
     },
     {
         name: 'Bigchopper', server: 'rs-sdk-demo.fly.dev', role: 'woodcutting',
         goal: 'Collect and bank oak logs for the fletching supply chain',
-        script: 'scripts/gather-yews.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-skiller.ts', args: ['gather', 'woodcutting', 'yews'], enabled: true, repeat: true,
         env: { REGION: 'draynor', TREE: 'oak', MAX_MAKE: '25', CAP: '1800' },
     },
     {
         name: 'Woodpecker', server: 'rs-sdk-demo.fly.dev', role: 'mining',
         goal: 'Gather and bank mixed ores at Varrock East in three-load batches',
-        script: 'scripts/gather-ore.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-skiller.ts', args: ['gather', 'mining', 'ore'], enabled: true, repeat: true,
         env: { CAP: '1800', BANK_AT: '25', MAX_TRIPS: '3' },
         note: 'Requires combat13. Exact owned-pickaxe practice qualified without damage and banked75ores in3loads on 2026-10-25; live admission follows the bounded qualification and mining pilot.',
     },
     {
         name: 'Ballspinner', server: 'rs-sdk-demo.fly.dev', role: 'crafting',
         goal: 'Restock and bank flax at Seers for the next bow-string batch',
-        script: 'scripts/gather-flax.ts', enabled: true, repeat: true,
+        script: 'scripts/aio-skiller.ts', args: ['gather', 'foraging', 'flax'], enabled: true, repeat: true,
         env: { CAP: '1800', BANK_AT: '28' },
     },
     {
@@ -140,11 +140,11 @@ export const FLEET: FleetAccount[] = [
     },
     // Legacy proposed accounts. New names follow AGENTS.md: task-based penis joke, optionally Scottish.
     { name: 'AFKnight', server: 'rs-sdk-demo.fly.dev', role: 'combat', goal: 'Combat support: cowhides, bones and beef near Lumbridge', script: 'scripts/gather-combat.ts', enabled: false },
-    { name: 'OreElse', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Gather and bank mixed ores at Varrock East in three-load batches', script: 'scripts/gather-ore.ts', enabled: true, repeat: true, env: { CAP: '1800', BANK_AT: '25', MAX_TRIPS: '3' }, note: 'Qualified at combat13. Live three-load trial banked75ores in1169ticks, hpMin=16, died=false on 2026-10-25. The mixed-mine entry guard requires combat13; emergency owned-load recovery remains available.' },
-    { name: 'FishAndChips', server: 'rs-sdk-demo.fly.dev', role: 'fishing', goal: 'Fish, cook and supply the food courier from Draynor', script: 'scripts/fishcook.ts', enabled: true, repeat: true, env: { TICKS: '9000', GIVE_TO: 'Bigpackage', TARGETED_COLLECTION: '1' } },
+    { name: 'OreElse', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Gather and bank mixed ores at Varrock East in three-load batches', script: 'scripts/aio-skiller.ts', args: ['gather', 'mining', 'ore'], enabled: true, repeat: true, env: { CAP: '1800', BANK_AT: '25', MAX_TRIPS: '3' }, note: 'Qualified at combat13. Live three-load trial banked75ores in1169ticks, hpMin=16, died=false on 2026-10-25. The mixed-mine entry guard requires combat13; emergency owned-load recovery remains available.' },
+    { name: 'FishAndChips', server: 'rs-sdk-demo.fly.dev', role: 'fishing', goal: 'Fish, cook and supply the food courier from Draynor', script: 'scripts/aio-skiller.ts', args: ['gather', 'fishing', 'fishcook'], enabled: true, repeat: true, env: { TICKS: '9000', GIVE_TO: 'Bigpackage', TARGETED_COLLECTION: '1' } },
     { name: 'BowBeforeMe', server: 'rs-sdk-demo.fly.dev', role: 'fletching', goal: 'Gather25 normal logs and bank375 arrow shafts in each production batch', script: 'scripts/fletch-worker.ts', enabled: true, repeat: true, env: { RANDOM_EVENTS: '1',BANK_KNIFE:'1',NORMAL_GROVE:'north' }, note: 'Separate northern normal-tree grove passed the two-client practice trial with full health and preserved kit; live recovery qualification follows before the failed epoch is cleared.' },
-    { name: 'MineYourBiz', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Essence supply: mine rune essence via Aubury', script: 'scripts/gather-essence.ts', enabled: false },
-    { name: 'YewFirst', server: 'rs-sdk-demo.fly.dev', role: 'woodcutting', goal: 'Gather and bank normal logs at Draynor in two-load batches', script: 'scripts/gather-yews.ts', enabled: true, repeat: true, env: { REGION: 'draynor', TREE: 'normal', MAX_TRIPS: '2', BANK_AT: '25', CAP: '1800' }, note: 'Live pilot banked 50 logs in 1144 ticks, hpMin=10, died=false on 2026-10-25.' },
+    { name: 'MineYourBiz', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Essence supply: mine rune essence via Aubury', script: 'scripts/aio-skiller.ts', args: ['gather', 'mining', 'essence'], enabled: false },
+    { name: 'YewFirst', server: 'rs-sdk-demo.fly.dev', role: 'woodcutting', goal: 'Gather and bank normal logs at Draynor in two-load batches', script: 'scripts/aio-skiller.ts', args: ['gather', 'woodcutting', 'yews'], enabled: true, repeat: true, env: { REGION: 'draynor', TREE: 'normal', MAX_TRIPS: '2', BANK_AT: '25', CAP: '1800' }, note: 'Live pilot banked 50 logs in 1144 ticks, hpMin=10, died=false on 2026-10-25.' },
 ];
 
 // A host group runs all its accounts in one process; singles run one account per job. Conditions come from the group's first row.
