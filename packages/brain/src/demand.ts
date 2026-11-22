@@ -106,21 +106,17 @@ interface RawGearEntry {
 }
 
 const KEY_UNLOCK_QUESTS = new Set([
-    'waterfall_quest',
-    'heroes_quest',
-    'legends_quest',
-    'lost_city',
-    'monkey_madness',
-    'underground_pass',
-    'desert_treasure',
-    'priest_in_peril',
-    'family_crest',
-    'druidic_ritual',
-    'grand_tree',
-    'tree_gnome_village',
-    'fight_arena',
-    'cooks_assistant',
-    'restless_ghost',
+    'waterfall',
+    'hero',
+    'legends',
+    'zanaris',
+    'crest',
+    'druid',
+    'grandtree',
+    'tree',
+    'dragon',
+    'dwarfcannon',
+    'cook',
 ]);
 
 function isPlainRecord(v: unknown): v is Record<string, unknown> {

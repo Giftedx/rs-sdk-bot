@@ -209,7 +209,7 @@ function inferMissingItems(text: string): RunOutcomeMissingItem[] {
     if (/\b(?:coins|gp|gold)\b/i.test(text)) {
         return [{ itemId: 995, required, available: 0, itemName: 'Coins' }];
     }
-    return [{ itemId: 995, required, available: 0, itemName: 'supply' }];
+    return [{ itemId: 995, required, available: 0 }];
 }
 
 function inferMarketDetails(input: RawWorkerExitInput, text: string): { itemId: number; venue: string } {
