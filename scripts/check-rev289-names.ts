@@ -66,7 +66,7 @@ export const NAME_ALLOW: ReadonlyArray<{ file: string; text: string; reason: str
     { file: 'packages/dashboard/goal-details.ts', text: 'Legends Guild shop', reason: 'prose label of the shop inventory generallegends' },
     { file: 'packages/dashboard/server/world.ts', text: 'Quest Points', reason: 'a board name of the hiscores, not a game object' },
     { file: 'packages/planner/src/haggis.ts', text: 'Quest Points', reason: 'a board name of the hiscores, not a game object' },
-    { file: 'packages/knowledge/src/method-model.ts', text: 'Glass orb', reason: 'the label of the skill guide row (skill_guide.dbrow:331), not an item name' },
+    { file: 'packages/knowledge/src/method-model/production.ts', text: 'Glass orb', reason: 'the label of the skill guide row (skill_guide.dbrow:331), not an item name' },
     { file: 'packages/planner/src/gear-progression/model.ts', text: "heroes' quest", reason: 'alias key: an input spelling that maps to the journal name' },
     { file: 'packages/planner/src/gear-progression/model.ts', text: 'heroes quest', reason: 'alias key: an input spelling that maps to the journal name' },
     { file: 'packages/planner/src/gear-progression/model.ts', text: 'hero quest', reason: 'alias key: an input spelling that maps to the journal name' },
