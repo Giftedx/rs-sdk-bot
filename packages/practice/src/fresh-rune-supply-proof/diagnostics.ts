@@ -24,7 +24,7 @@ export async function diagnoseFreshRuneEssence(directory:string,name:string,reta
   const {save,before}=freshRuneEssenceDiagnosticInput(name,retained);
   copyFileSync(save,join(directory,'essence-before.sav'));
   const startedAt=Date.now();
-  const code=await freshRuneCommand(directory,budget,'essence-diagnostic',['scripts/rune-supply.ts',name,'2'],save,{CAP:'3000'});
+  const code=await freshRuneCommand(directory,budget,'essence-diagnostic',['scripts/aio-skiller.ts',name,'runecraft','supply','2'],save,{CAP:'3000'});
   const elapsedMs=Date.now()-startedAt;
   // A supported failure also retains the first saved boundary. Never replay it.
   const publication=await waitPracticeSave(save,s=>code!==0||s.skills[20]!.xp>before.skills[20]!.xp);
@@ -51,7 +51,7 @@ export async function diagnoseFreshRuneCooking(directory:string,name:string,reta
   // Recheck after admission. Failed delivery saves remain read-only evidence.
   const {save,before}=freshRuneCookingDiagnosticInput(name,retained);
   copyFileSync(save,join(directory,'cooking-before.sav'));
-  const code=await freshRuneCommand(directory,budget,'cooking',['scripts/rune-supply.ts',name,'20'],save,{RUNE_COOK_DIAGNOSTIC:'1'});
+  const code=await freshRuneCommand(directory,budget,'cooking',['scripts/aio-skiller.ts',name,'runecraft','supply','20'],save,{RUNE_COOK_DIAGNOSTIC:'1'});
   await waitPracticeSave(save,s=>code!==0||sum(s,2138,93)===sum(before,2138,93)-1);copyFileSync(save,join(directory,'cooking-after.sav'));
   const after=readPracticeSave(save),log=readFileSync(join(directory,'cooking.log'),'utf8')+readFileSync(join(directory,'cooking.err'),'utf8');
   const cooked=sum(after,2140)-sum(before,2140),burnt=sum(after,2144)-sum(before,2144),debit=sum(before,2138)-sum(after,2138);
@@ -92,7 +92,7 @@ export async function proveFreshRuneAirRecovery(parent:string){
      const codes:Record<string,number>={};let higherInputHash:string|undefined;
      const command=async(label:string,target:number,env:Record<string,string>={})=>{
       const mode=env.RUNE_AIR_EXIT_DIAGNOSTIC,clockBefore=mode?await freshRuneRecoveryClock(tickMs):undefined;
-      codes[label]=await freshRuneCommand(dir,budget,label,['scripts/rune-supply.ts',name,String(target)],save,{CAP:'4000',...env});
+      codes[label]=await freshRuneCommand(dir,budget,label,['scripts/aio-skiller.ts',name,'runecraft','supply',String(target)],save,{CAP:'4000',...env});
       if(mode)writeFileSync(join(dir,label+'-session.json'),JSON.stringify({mode,clockBefore,clockAfter:await freshRuneRecoveryClock(tickMs)}),{flag:'wx'});
       copyFileSync(save,join(dir,label+'-observed.sav'));
       if(codes[label]!==0)throw Error('air recovery first boundary: '+label+'; retain action reply/messages/save; no full replay');

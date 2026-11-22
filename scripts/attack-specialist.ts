@@ -9,7 +9,7 @@ import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, sessionWalker, walkPath } from '../packages/core/src/walk';
-import { agilityOptions, runAgility } from './agility-order';
+import { agilityOptions, runAgility } from '../packages/workers/src/agility';
 import { runQuestArena } from './generated/quest-arena';
 import { runQuestGrandTree } from './generated/quest-grandtree';
 import { runQuestTree } from './generated/quest-tree';

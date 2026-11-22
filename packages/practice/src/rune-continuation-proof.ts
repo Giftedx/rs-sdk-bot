@@ -19,7 +19,7 @@ export const runeContinuationHelpers=[
  [3092,3495,0,135],[3084,3464,0,135],[3077,3452,0,135],[3069,3431,0,135],
  [3058,3429,0,135],[2523,4833,27,135],[2523,4833,27,135],[2523,4833,27,135],
 ] as const;
-const files=['scripts/rune-pipeline.ts','scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','scripts/rune-carrier-altar.ts','packages/practice/src/rune-continuation-proof.ts'];
+const files=['scripts/aio-skiller.ts','packages/workers/src/runecraft/index.ts','packages/workers/src/runecraft/altars.ts','packages/workers/src/runecraft/bank-craft.ts','packages/workers/src/runecraft/carrier-roster.ts','packages/workers/src/runecraft/carrier-bank.ts','packages/workers/src/runecraft/carrier-trade.ts','packages/workers/src/runecraft/carriers.ts','packages/practice/src/rune-continuation-proof.ts'];
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 const total=(s:ReturnType<typeof readPracticeSave>,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const pack=(s:ReturnType<typeof readPracticeSave>,id?:number)=>(s.inventories[93]??[]).filter(i=>id===undefined||i.id===id).reduce((n,i)=>n+i.count,0);
@@ -79,7 +79,7 @@ export function verifyRuneContinuation(dir:string){
    &&a.skills.every((s:any,j:number)=>i===0&&j===20||s.rawExperience===b.skills[j]!.rawExperience)
    &&a.skills[3].level>=b.skills[3].level&&varpDifferences[i]!.differences.length===0;
  });
- const checks={source:JSON.stringify(hashes())===JSON.stringify(meta.source)&&meta.runtimeRevision===releaseRevision(['scripts/rune-bank-craft.ts'],root),exit:meta.code===0&&!meta.timedOut&&!meta.lowMemory,
+ const checks={source:JSON.stringify(hashes())===JSON.stringify(meta.source)&&meta.runtimeRevision===releaseRevision(['scripts/aio-skiller.ts','packages/workers/src/runecraft/carriers.ts'],root),exit:meta.code===0&&!meta.timedOut&&!meta.lowMemory,
   entry:before[0].skills[20].xp===793125&&pack(before[0],559)===9234&&pack(before[0],1436)===0&&pack(before[0],1446)===0,
   stock:before.slice(1).reduce((n:number,s:any)=>n+total(s,1436),0)===8628&&(before[1].inventories[95]??[]).find((i:any)=>i.id===1436)?.count===6495,
   xp:after[0].skills[20].rawExperience===(793125+consumed*187.5)*10&&after[0].skills[20].level===99,
@@ -121,7 +121,7 @@ async function run(dir:string){
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,task:'rune-continuation',directory:dir}));closeSync(fd);
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
-  const source=hashes(),runtimeRevision=releaseRevision(['scripts/rune-bank-craft.ts'],root);for(const f of files)copyFileSync(join(root,f),join(dir,basename(f)));
+  const source=hashes(),runtimeRevision=releaseRevision(['scripts/aio-skiller.ts','packages/workers/src/runecraft/carriers.ts'],root);for(const f of files)copyFileSync(join(root,f),join(dir,basename(f)));
   stack=await startStack({tickMs:TICK_MS,xpRate:25,readyTimeoutMs:60000,ports:ISOLATED,instance:'rune-continuation',enginePreload:{module:join(root,'packages/practice/src/save-endpoint.ts'),env:{...ISOLATED_ENGINE_ENV,BUILD_LIVE_RELOAD:'false',BUILD_STARTUP:'false',NODE_INFINITE_RUN:'true'}}});
   const name=runBotName('flbc',0),names=[name,...Array.from({length:16},(_,i)=>name+String.fromCharCode(98+i))],paths=names.map(n=>join(root,'vendor/rs-sdk/server/engine/data/players/main',n+'.sav'));
   if(paths.some(existsSync))throw Error('continuation fixture names already exist');
@@ -137,7 +137,7 @@ async function run(dir:string){
    copyFileSync(paths[i]!,join(dir,i+'-before.sav'));
   }
   const launch=async(prefix:string,mode='--body-continuation',craftAfter='inventory')=>{
-   const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CONFIRM_AFTER:'causal',RUNE_CRAFT_AFTER:craftAfter,RUNE_HANDOFF_PIPELINE:'0',RUNE_OPEN_AFTER:craftAfter==='trade-message'?'helper-ack':'incoming'},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
+   const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/aio-skiller.ts',names[0]!,'runecraft','bank-craft',...names.slice(1),mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CONFIRM_AFTER:'causal',RUNE_CRAFT_AFTER:craftAfter,RUNE_HANDOFF_PIPELINE:'0',RUNE_OPEN_AFTER:craftAfter==='trade-message'?'helper-ack':'incoming'},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
    let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
    const stop=()=>{termination??=killTree(child.pid);};
    const timer=setTimeout(()=>{timedOut=true;stop();},CAP*TICK_MS+60000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);

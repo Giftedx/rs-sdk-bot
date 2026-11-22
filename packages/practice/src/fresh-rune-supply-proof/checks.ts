@@ -1,6 +1,6 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {runeSupplyPreserved} from '../../../../scripts/rune-supply';
+import {runeSupplyPreserved} from '../../../workers/src/runecraft';
 import {readPracticeSave} from '../fleet-player-save';
 import {airRecoveryPositions,assets,hash,logout,POSTCRAFT_XP,type RecoverySession,repoRoot,retainedProgress,type Run,same,type Save,sum,summary} from './contracts';
 

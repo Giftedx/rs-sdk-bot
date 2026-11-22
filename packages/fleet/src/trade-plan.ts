@@ -92,16 +92,18 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
             'mining:gather-essence': 'mining:essence',
             'thieving:blood-chest': 'thieving:blood-chest',
             'thieving:goldfarm': 'thieving:knights',
+            'runecraft:rcair': 'runecraft:air',
+            'runecraft:rune-bank-craft': 'runecraft:bank-craft',
         };
         const routeKey = aliases[`${skill}:${method}`] ?? `${skill}:${method}`;
-        const workers: Readonly<Record<string, { script: string; gather?: readonly [string, string] }>> = {
+        const workers: Readonly<Record<string, { script: string; gather?: readonly [string, string]; sub?: readonly [string, string] }>> = {
             'woodcutting:yews': { script: 'scripts/aio-skiller.ts', gather: ['woodcutting', 'yews'] },
             'foraging:flax': { script: 'scripts/aio-skiller.ts', gather: ['foraging', 'flax'] },
             'foraging:feathers': { script: 'scripts/aio-skiller.ts', gather: ['foraging', 'feathers'] },
             'mining:ore': { script: 'scripts/aio-skiller.ts', gather: ['mining', 'ore'] },
             'mining:essence': { script: 'scripts/aio-skiller.ts', gather: ['mining', 'essence'] },
-            'runecraft:air': { script: 'scripts/generated/rcair.ts' },
-            'runecraft:bank-craft': { script: 'scripts/rune-bank-craft.ts' },
+            'runecraft:air': { script: 'scripts/aio-skiller.ts', sub: ['runecraft', 'air'] },
+            'runecraft:bank-craft': { script: 'scripts/aio-skiller.ts', sub: ['runecraft', 'bank-craft'] },
             'thieving:blood-chest': { script: 'scripts/aio-skiller.ts', gather: ['thieving', 'blood-chest'] },
             'thieving:knights': { script: 'scripts/aio-skiller.ts', gather: ['thieving', 'knights'] },
             'magic:alch-train': { script: 'scripts/alch-train.ts' },
@@ -110,12 +112,16 @@ function resourceSteps(step: Step, inherited: Record<string, string>, depth = 0)
         };
         const route = workers[routeKey]
             ? ([routeKey, workers[routeKey]!] as const)
-            : Object.entries(workers).find(([key, entry]) => !entry.gather && key.startsWith(`${skill}:`) && entry.script.endsWith(`${method}.ts`));
+            : Object.entries(workers).find(([key, entry]) => !entry.gather && !entry.sub && key.startsWith(`${skill}:`) && entry.script.endsWith(`${method}.ts`));
         if (route) {
             const entry = route[1];
             if (entry.gather) {
                 const parsed = resolveRouteStep({ script: entry.script }, rest);
                 return [{ script: entry.script, args: ['gather', ...entry.gather, ...parsed.args], env: { ...env, ...parsed.env } }];
+            }
+            if (entry.sub) {
+                const parsed = resolveRouteStep({ script: entry.script }, rest);
+                return [{ script: entry.script, args: [...entry.sub, ...parsed.args], env: { ...env, ...parsed.env } }];
             }
             spec = { script: entry.script, ...(route[0] === 'magic:splash-coop' ? { defaultEnv: { SPLASH_SITE: 'coop' } } : {}) };
         }
@@ -209,8 +215,9 @@ export function jobResources(job: ResourceJob): string[] {
         }
         if (file === 'scripts/train-chickens.ts') out.push((env.TRAIN_BANK ?? 'varrock') === 'ardougne' ? 'pen:2691,3277' : 'pen:3229,3298');
         if (file === 'scripts/black-dragon-camp.ts') out.push(BLACK_CAVE);
-        if (file === 'scripts/generated/rcair.ts') out.push(AIO_PLACES.air);
-        if (file === 'scripts/rune-bank-craft.ts' && env.RUNE_ALTAR === 'air') out.push(AIO_PLACES.air);
+        if (file === 'scripts/aio-skiller.ts' && args[0] === 'runecraft' && (args[1] === 'air' || (args[1] === 'bank-craft' && env.RUNE_ALTAR === 'air'))) {
+            out.push(AIO_PLACES.air);
+        }
         if (file === 'scripts/splash-train.ts') out.push((env.SPLASH_SITE ?? 'ardougne') === 'coop' ? 'pen:3229,3298' : SPLASH_FENCE);
         if (file === 'scripts/alch-train.ts' && Number(args[0]) >= 2 && Number(args[0]) <= 99) out.push(STRIKE_TILE);
     }

@@ -621,7 +621,7 @@ test('a refused job starts again only when it changes; a gave-up job stays held'
 test('an end from before producer receipts clears with a settled live status, not a fresh or unfinished one', async () => {
     const { applyEndRepair } = await import('./swarm');
     const LIVE_SRV = 'rs-sdk-demo.fly.dev', now = 10_000_000;
-    const ended = () => new Map([['Thief', { at: 100, reason: 'gave-up after 1 runs', revision: '["scripts/agility-order.ts"]' }]]);
+    const ended = () => new Map([['Thief', { at: 100, reason: 'gave-up after 1 runs', revision: '["scripts/aio-skiller.ts"]' }]]);
     const proofs = (st: any) => ({ readProof: () => ({ state: 'none' }) as any, verifyLegacy: () => ({ state: 'refused', reason: 'x' }) as any, now: () => now, status: () => st });
     const req = { account: 'Thief', endedAt: 100, server: LIVE_SRV, proof: { kind: 'settled-status' } };
     expect(applyEndRepair(req, ended(), [], proofs({ server: LIVE_SRV, result: 'fail gate', at: now - 16 * 60_000 })).changed).toBe(true);
@@ -632,9 +632,9 @@ test('an end from before producer receipts clears with a settled live status, no
 test('a host job passes its script arguments to every hosted bot', async () => {
     const { supervisorCommand } = await import('./swarm');
     const { parseHostArgs } = await import('../packages/core/src/host');
-    const cmd = supervisorCommand({ key: 'host:A+B', accounts: ['A', 'B'], host: true, job: { accounts: ['A', 'B'], script: 'scripts/agility-order.ts', args: ['gnome', '40'], host: true } as any }, ['A', 'B']);
-    expect(cmd.slice(-4)).toEqual(['--arg', 'gnome', '--arg', '40']);
-    expect(parseHostArgs(['scripts/agility-order.ts', 'A', 'B', '--stagger-ms', '2000', '--arg', 'gnome', '--arg', '40'])).toMatchObject({ names: ['A', 'B'], args: ['gnome', '40'], stagger: 2000 });
+    const cmd = supervisorCommand({ key: 'host:A+B', accounts: ['A', 'B'], host: true, job: { accounts: ['A', 'B'], script: 'scripts/aio-skiller.ts', args: ['agility', 'order', 'gnome', '40'], host: true } as any }, ['A', 'B']);
+    expect(cmd.slice(-8)).toEqual(['--arg', 'agility', '--arg', 'order', '--arg', 'gnome', '--arg', '40']);
+    expect(parseHostArgs(['scripts/aio-skiller.ts', 'A', 'B', '--stagger-ms', '2000', '--arg', 'agility', '--arg', 'order', '--arg', 'gnome', '--arg', '40'])).toMatchObject({ names: ['A', 'B'], args: ['agility', 'order', 'gnome', '40'], stagger: 2000 });
 });
 
 test('a host job gives each account its own env, for the accounts it starts', async () => {

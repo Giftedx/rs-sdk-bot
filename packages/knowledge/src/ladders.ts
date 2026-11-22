@@ -91,14 +91,14 @@ const WORKER_TARGETS = ['chicken', 'cow', 'chaos_druid', 'giant'];
 // Order rules come first.
 interface Rule { worker: string; source?: string; evidence: string; methods: RegExp }
 const RULES: Rule[] = [
-    { worker: 'cap:agility-order', evidence: 'gnome:{', methods: /^agility\/course-gnome-stronghold-agility-course$/ },
-    { worker: 'cap:agility-order', evidence: "'barbarian'", methods: /^agility\/course-barbarian-outpost-agility-course$/ },
-    { worker: 'cap:agility-order', evidence: "'wilderness'", methods: /^agility\/course-wilderness-course$/ },
+    { worker: 'cap:agility-order', evidence: 'Gnome Stronghold', methods: /^agility\/course-gnome-stronghold-agility-course$/ },
+    { worker: 'cap:agility-order', evidence: 'Barbarian', methods: /^agility\/course-barbarian-outpost-agility-course$/ },
+    { worker: 'cap:agility-order', evidence: 'Wilderness', methods: /^agility\/course-wilderness-course$/ },
     { worker: 'cap:firemaking-order', evidence: 'normal:{id:1511', methods: /^firemaking\/burn-normal-logs$/ },
     { worker: 'cap:magic-order', evidence: 'WIND_STRIKE={level:1', methods: /^magic\/magic_spell_wind_strike$/ },
     { worker: 'cap:wine-order', evidence: 'wine', methods: /^cooking\/wine-wine$/ },
-    { worker: 'cap:rune-bank-craft', evidence: 'AIR=556', methods: /^runecraft\/runecraft_air$/ },
-    { worker: 'cap:fresh-rune-supply-order', evidence: 'gather-essence', methods: /^(runecraft\/runecraft_air|mining\/rune_essence_table)$/ },
+    { worker: 'cap:rune-bank-craft', evidence: 'air/mind/water/earth/fire/body/cosmic', methods: /^runecraft\/runecraft_air$/ },
+    { worker: 'cap:fresh-rune-supply-order', evidence: 'Rune Mysteries + essence + air', methods: /^(runecraft\/runecraft_air|mining\/rune_essence_table)$/ },
     { worker: 'cap:goldfarm-order', evidence: 'Pickpocket Knights of Ardougne', methods: /^thieving\/pickpocket_knight_of_ardougne$/ },
     { worker: 'cap:shark-supply-order', evidence: 'shark', methods: /^(fishing\/catch-shark|cooking\/cooking_generic_shark)$/ },
     { worker: 'cap:iron-progress-order', evidence: "BAR_TYPE: iron", methods: /^smithing\/smelt-iron$/ },
@@ -449,12 +449,12 @@ export function gapsMarkdown(out: ReturnType<typeof buildLadders>): string {
 }
 
 const SCRIPT_CAPABILITIES: Capability[] = [
-    { id: 'agility-order', entry: 'scripts/agility-order.ts' },
+    { id: 'agility-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'firemaking-order', entry: 'scripts/firemaking-order.ts' },
     { id: 'magic-order', entry: 'scripts/magic-order.ts' },
     { id: 'wine-order', entry: 'scripts/cook-wine.ts' },
-    { id: 'rune-bank-craft', entry: 'scripts/rune-bank-craft.ts' },
-    { id: 'fresh-rune-supply-order', entry: 'scripts/rune-supply.ts' },
+    { id: 'rune-bank-craft', entry: 'scripts/aio-skiller.ts' },
+    { id: 'fresh-rune-supply-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'goldfarm-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'shark-supply-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'iron-progress-order', entry: 'scripts/smelt-bars.ts' },

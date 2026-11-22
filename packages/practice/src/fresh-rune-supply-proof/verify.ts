@@ -1,6 +1,6 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {runeSupplyPreserved} from '../../../../scripts/rune-supply';
+import {runeSupplyPreserved} from '../../../workers/src/runecraft';
 import {workerSourceRevision} from '../../../core/src/worker-release';
 import {readPracticeSave} from '../fleet-player-save';
 import {

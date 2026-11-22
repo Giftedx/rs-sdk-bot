@@ -44,7 +44,7 @@ export async function proveFreshRuneStage(directory:string,stage:FreshRuneStage,
    if(await command('registration',['packages/practice/src/register-proof-account.ts',binding!.name])!==0)throw Error('default registration failed');
    const observed=await deps.wait(save,s=>freshRuneDefaultSkills(s)&&(s.vars[63]??0)===0&&(s.vars[101]??0)===0&&sum(s,1436)===0);
    copyFileSync(save,join(directory,'before.sav'));if(!observed.matched)throw Error('default registration save unobserved');
-   await command('interrupted',['scripts/rune-supply.ts',binding!.name,'20'],{CAP:'1000'});
+   await command('interrupted',['scripts/aio-skiller.ts',binding!.name,'runecraft','supply','20'],{CAP:'1000'});
   }else{
    const worker=freshRuneStageWorker(stage,binding!.name,budget.deadline);
    if(await command(worker.label,worker.args,worker.env)!==0){copyFileSync(save,join(directory,worker.label+'-failed.sav'));throw Error('stage worker failed; retain first boundary');}
@@ -99,16 +99,16 @@ export async function proveFreshRuneSupply(directory:string){
   await waitPracticeSave(save,()=>true);copyFileSync(save,join(directory,'before.sav'));
   const before=readPracticeSave(save);
   if(!freshRuneDefaultSkills(before)||(before.vars[63]??0)!==0||(before.vars[101]??0)!==0||sum(before,1436)>0)throw Error('registration was not default; do not seed a replacement');
-  const interruptedCode=await command('interrupted',['scripts/rune-supply.ts',name,'20'],{CAP:'1000'});
+  const interruptedCode=await command('interrupted',['scripts/aio-skiller.ts',name,'runecraft','supply','20'],{CAP:'1000'});
   await waitPracticeSave(save,()=>true);copyFileSync(save,join(directory,'interrupted.sav'));
   const interrupted={code:interruptedCode,log:readFileSync(join(directory,'interrupted.log'),'utf8')+readFileSync(join(directory,'interrupted.err'),'utf8')};
   if(!freshRuneSupportedInterruption(interrupted)||!retainedProgress(before,readPracticeSave(join(directory,'interrupted.sav')))||!logout(interrupted))
    throw Error('unexpected interruption boundary; retain interrupted save and logs, no resume');
-  const resumeCode=await command('resume',['scripts/rune-supply.ts',name,'20'],{CAP:'30000'});
+  const resumeCode=await command('resume',['scripts/aio-skiller.ts',name,'runecraft','supply','20'],{CAP:'30000'});
   if(resumeCode!==0){copyFileSync(save,join(directory,'resume-failed.sav'));throw Error('fresh rune resume failed; inspect resume.log and resume.err before any further run');}
   const resumed=await waitPracticeSave(save,s=>(s.skills[20]?.level??0)>=20);copyFileSync(save,join(directory,'after.sav'));
   if(!resumed.matched)throw Error('resume target save not observed; retain after.sav, no higher run');
-  const higherCode=await command('higher',['scripts/rune-supply.ts',name,'21'],{CAP:'10000'});
+  const higherCode=await command('higher',['scripts/aio-skiller.ts',name,'runecraft','supply','21'],{CAP:'10000'});
   if(higherCode!==0){copyFileSync(save,join(directory,'higher-failed.sav'));throw Error('fresh rune higher target failed; retain first boundary');}
   const higher=await waitPracticeSave(save,s=>(s.skills[20]?.level??0)>=21);copyFileSync(save,join(directory,'higher.sav'));
   if(!higher.matched)throw Error('higher target save not observed; retain higher.sav');

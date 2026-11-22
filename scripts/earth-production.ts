@@ -10,7 +10,7 @@ import {depositObserved} from '../packages/core/src/deposit';
 import {xpForLevel} from '../packages/planner/src/curve';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
 import {openEarthBankObserved,retainedEarthBank} from '../packages/workers/src/market';
-import {enterAirAltar,craftAirRunes,exitAirAltar,insideAirAltar} from './generated/rcair';
+import {enterAirAltar,craftAirRunes,exitAirAltar,insideAirAltar} from '../packages/workers/src/runecraft';
 
 const EARTH=557,ESSENCE=1436,AIR=556;
 const WEST={x:3185,z:3436},EAST={x:3253,z:3420},DRAYNOR={x:3092,z:3243};

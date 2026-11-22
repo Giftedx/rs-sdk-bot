@@ -5,7 +5,7 @@ import { finish, openBot } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { agilityOptions, runAgility } from './agility-order';
+import { agilityOptions, runAgility } from '../packages/workers/src/agility';
 import {
     BURY_KEEP_IDS_HP,
     HP_ANTIPOISON_ACCEPT_IDS,

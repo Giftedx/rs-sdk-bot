@@ -18,7 +18,7 @@ import {agilitySaveDifferences,initializationEvidenceChecks,retainedApproachChec
 export async function child(directory:string,label:string,name:string,course:string,target:number,interrupt=false,budget:{entryTicks?:number;maxTicks?:number;timeoutMs?:number}={}):Promise<Child>{
  if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice memory floor reached before child');
  const log=join(directory,label+'.log');writeFileSync(log,'');
- const proc=Bun.spawn(['bun','scripts/agility-order.ts',name,course,String(target)],{cwd:repoRoot,env:{...process.env,DEMO_OK:'',...INITIALIZATION_CONFIGURATION.env,AGI_MAX_TICKS:String(budget.maxTicks??2500),AGI_ENTRY_TICKS:String(budget.entryTicks??400)},stdout:Bun.file(log),stderr:Bun.file(join(directory,label+'.err')),windowsHide:true});
+ const proc=Bun.spawn(['bun','scripts/aio-skiller.ts',name,'agility','order',course,String(target)],{cwd:repoRoot,env:{...process.env,DEMO_OK:'',...INITIALIZATION_CONFIGURATION.env,AGI_MAX_TICKS:String(budget.maxTicks??2500),AGI_ENTRY_TICKS:String(budget.entryTicks??400)},stdout:Bun.file(log),stderr:Bun.file(join(directory,label+'.err')),windowsHide:true});
  let timedOut=false,interrupted=false,termination:Promise<void>|undefined;
  const timer=setTimeout(()=>{timedOut=true;termination=killTree(proc.pid);},budget.timeoutMs??CHILD_TIMEOUT_MS);
  const memory=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB&&!termination){timedOut=true;termination=killTree(proc.pid);}},1000);

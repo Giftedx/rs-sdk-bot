@@ -23,8 +23,12 @@ test('progression hands level targets to the actual worker interfaces',()=>{
   if(band.method==='order')expect(magicOptions(band.step.env).target).toBe(band.toLevel);
   else expect(Number(band.step.args[0])).toBe(band.toLevel);
  }
- for(const band of planProgressiveSkiller('agility',1,99))expect(agilityOptions(band.step.args[0]!,band.step.args[1]!,band.step.env).target).toBe(band.toLevel);
- expect(planProgressiveSkiller('runecraft',44,99)[0]!.step.args).toEqual(['99']);
+ for(const band of planProgressiveSkiller('agility',1,99)){
+  expect(band.step.script).toBe('scripts/aio-skiller.ts');
+  expect(band.step.args.slice(0,2)).toEqual(['agility','order']);
+  expect(agilityOptions(band.step.args[2]!,band.step.args[3]!,band.step.env).target).toBe(band.toLevel);
+ }
+ expect(planProgressiveSkiller('runecraft',44,99)[0]!.step.args).toEqual(['runecraft','bank-craft','99']);
 });
 
 test('manufacturing and ore bands carry valid finite jobs with native unlocked recipes',()=>{

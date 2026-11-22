@@ -50433,7 +50433,7 @@
      "fresh-rune-supply-order",
      "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/rune-supply.ts contains \"gather-essence\"",
+    "workerEvidence": "scripts/aio-skiller.ts contains \"Rune Mysteries + essence + air\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "mining/rune_essence_table",
@@ -56724,7 +56724,7 @@
     "workers": [
      "agility-order"
     ],
-    "workerEvidence": "scripts/agility-order.ts contains \"gnome:{\"",
+    "workerEvidence": "scripts/aio-skiller.ts contains \"Gnome Stronghold\"",
     "pendingCapability": null,
     "gaps": [
      "lap ticks unknown: each obstacle moves the player with forcemove and walk steps that the generator does not sum"
@@ -56878,7 +56878,7 @@
     "workers": [
      "agility-order"
     ],
-    "workerEvidence": "scripts/agility-order.ts contains \"'barbarian'\"",
+    "workerEvidence": "scripts/aio-skiller.ts contains \"Barbarian\"",
     "pendingCapability": null,
     "gaps": [
      "lap ticks unknown: each obstacle moves the player with forcemove and walk steps that the generator does not sum"
@@ -56956,7 +56956,7 @@
     "workers": [
      "agility-order"
     ],
-    "workerEvidence": "scripts/agility-order.ts contains \"'wilderness'\"",
+    "workerEvidence": "scripts/aio-skiller.ts contains \"Wilderness\"",
     "pendingCapability": null,
     "gaps": [
      "lap ticks unknown: each obstacle moves the player with forcemove and walk steps that the generator does not sum"
@@ -61200,7 +61200,7 @@
      "rune-bank-craft",
      "fresh-rune-supply-order"
     ],
-    "workerEvidence": "scripts/rune-bank-craft.ts contains \"AIR=556\"",
+    "workerEvidence": "scripts/aio-skiller.ts contains \"air/mind/water/earth/fire/body/cosmic\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "runecraft/runecraft_air",

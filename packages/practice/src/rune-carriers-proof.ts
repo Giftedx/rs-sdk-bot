@@ -16,7 +16,7 @@ import {runRunePipeline,verifyRunePipeline} from './rune-pipeline-proof';
 const root=resolve(import.meta.dir,'../../..'),helpers=16;
 // 100 ms (400 ms before): hosted runs give the same results, items and XP and game ticks within the noise of two runs at the old tick (see the pull request).
 const TICK_MS=100,WORKER_CAP=2800,WORKER_TIMEOUT_MS=WORKER_CAP*TICK_MS+60000;
-const files=['scripts/rune-pipeline.ts','scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','scripts/rune-carrier-altar.ts','packages/practice/src/rune-carriers-proof.ts'];
+const files=['scripts/aio-skiller.ts','packages/workers/src/runecraft/index.ts','packages/workers/src/runecraft/altars.ts','packages/workers/src/runecraft/bank-craft.ts','packages/workers/src/runecraft/carrier-roster.ts','packages/workers/src/runecraft/carrier-bank.ts','packages/workers/src/runecraft/carrier-trade.ts','packages/workers/src/runecraft/carriers.ts','packages/practice/src/rune-carriers-proof.ts'];
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 
 function verify(dir:string){
@@ -55,7 +55,7 @@ async function run(dir:string){
    copyFileSync(paths[i]!,join(dir,i+'-before.sav'));
   }
   const freshAbsent=!existsSync(paths[0]!);if(!freshAbsent)throw Error('master save exists before first login');
-  const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,'--carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(WORKER_CAP),RUNE_CRAFT_AFTER:'trade-message',RUNE_HANDOFF_PIPELINE:'0',RUNE_OPEN_AFTER:'helper-ack',RUNE_CONFIRM_AFTER:'causal',BODY_XP_RATE:'25'},windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
+  const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/aio-skiller.ts',names[0]!,'runecraft','bank-craft',...names.slice(1),'--carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(WORKER_CAP),RUNE_CRAFT_AFTER:'trade-message',RUNE_HANDOFF_PIPELINE:'0',RUNE_OPEN_AFTER:'helper-ack',RUNE_CONFIRM_AFTER:'causal',BODY_XP_RATE:'25'},windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
   let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
   const stop=()=>{termination??=killTree(child.pid);};
   const timer=setTimeout(()=>{timedOut=true;stop();},WORKER_TIMEOUT_MS),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);

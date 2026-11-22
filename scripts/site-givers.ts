@@ -6,7 +6,7 @@
 // giver holds exactly the pack it gives.
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
-import {ownedSwap} from './rune-carrier-trade';
+import {ownedSwap} from '../packages/workers/src/runecraft';
 
 type Pt = {x: number; z: number};
 export type GiverSite = {

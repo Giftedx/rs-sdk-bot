@@ -47,10 +47,11 @@ import {smithRecipe,planSmithLoad,smithEffect,runSmithBatch,HAMMER,SMITHING_INTE
 import {planHeadless,runHeadless,type HeadlessOptions} from './fletch-arrows';
 import {validateWoodProcessingJob,runWoodProcessingCycle,runWoodProductDrop,runFletchingCycle,type WoodProcessingJob} from './fletch-worker';
 import {LOGS,BURN_ROWS,DRAYNOR_SITE,CATHERBY_SITE,firemakingSite,progressiveFiremakingLog,firemakingOptions,firemakingPreflight,lineTiles,nextFreeTile,packWant,type LogKind,type FiremakingOptions} from './firemaking-order';
-import {COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions} from './agility-order';
-import {RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal} from './rune-bank-craft';
-import {NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob} from './microbot-rune-trip';
-import {runRuneSupply,runeSupplyTarget} from './rune-supply';
+import {agilityWorker,runAgilityCli,COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions} from '../packages/workers/src/agility';
+import {runecraftWorker,runRunecraftCli,RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal,NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob,runRuneSupply,runeSupplyTarget,type RunecraftMode,type RunecraftExternalDeps} from '../packages/workers/src/runecraft';
+import {readPracticeSave} from './measure/fleet-player-save';
+import {runRuneMysteries} from './generated/quest-runemysteries';
+import {trainChickens} from './train-chickens';
 import {BONE_XP,prayerOptions,planPrayer,prayerBank,runPrayer,type PrayerOptions} from './train-prayer';
 import {boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller} from './brew-potions';
 import {kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta} from './microbot-c-care';
@@ -81,8 +82,8 @@ export {
  woodSupplyPlan,takeOwnedSupplyKnife,runWoodSupply,
  LOGS,BURN_ROWS,DRAYNOR_SITE,CATHERBY_SITE,firemakingSite,progressiveFiremakingLog,firemakingOptions,firemakingPreflight,lineTiles,nextFreeTile,packWant,type LogKind,type FiremakingOptions,
  // Agility, Runecraft, Prayer, Herblore, Thieving & Care
- COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions,
- RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal,
+ agilityWorker,runAgilityCli,COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions,
+ runecraftWorker,runRunecraftCli,RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal,
  NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob,
  runRuneSupply,runeSupplyTarget,
  BONE_XP,prayerOptions,planPrayer,prayerBank,runPrayer,type PrayerOptions,
@@ -165,10 +166,10 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'herblore',method:'meats',script:'scripts/druid-meats.ts',description:'Gather/prepare meats for Druidic Ritual Herblore unlock'},
  {skill:'herblore',method:'specialist',script:'scripts/herblore-specialist.ts',description:'Fresh-clock 1-to-99 Herblore via Games necklace Druidic Ritual and Edgeville 10-potion bank cycles'},
  // Runecraft
- {skill:'runecraft',method:'bank-craft',script:'scripts/rune-bank-craft.ts',description:'Craft banked essence at best unlocked altar (air/mind/water/earth/fire/body/cosmic)'},
- {skill:'runecraft',method:'nature',script:'scripts/microbot-rune-trip.ts',description:'Shilo Village Nature altar runecrafting trips'},
- {skill:'runecraft',method:'supply',script:'scripts/rune-supply.ts',description:'Full fresh-account Rune Mysteries + essence + air runecraft chain'},
- {skill:'runecraft',method:'air',script:'scripts/generated/rcair.ts',description:'Direct Air altar runecrafting'},
+ {skill:'runecraft',method:'bank-craft',script:'scripts/aio-skiller.ts',defaultArgs:['runecraft','bank-craft'],description:'Craft banked essence at best unlocked altar (air/mind/water/earth/fire/body/cosmic)'},
+ {skill:'runecraft',method:'nature',script:'scripts/aio-skiller.ts',defaultArgs:['runecraft','nature'],description:'Shilo Village Nature altar runecrafting trips'},
+ {skill:'runecraft',method:'supply',script:'scripts/aio-skiller.ts',defaultArgs:['runecraft','supply'],description:'Full fresh-account Rune Mysteries + essence + air runecraft chain'},
+ {skill:'runecraft',method:'air',script:'scripts/aio-skiller.ts',defaultArgs:['runecraft','air'],description:'Direct Air altar runecrafting'},
  {skill:'runecraft',method:'specialist',script:'scripts/runecraft-specialist.ts',description:'Fresh-clock 1-to-99 Runecraft via Air altar unlock and Body altar essence runners'},
  // Magic
  {skill:'magic',method:'order',script:'scripts/magic-order.ts',description:'Combat/curse/bolt magic training order'},
@@ -189,7 +190,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'prayer',method:'flick',script:'scripts/microbot-prayer-flick.ts',description:'1-tick prayer flicking upkeep'},
  {skill:'prayer',method:'specialist',script:'scripts/prayer-specialist.ts',description:'Fresh-clock 1-to-99 Prayer via Draynor Bank dragon-bone runners and Lumbridge burying'},
  // Agility
- {skill:'agility',method:'order',script:'scripts/agility-order.ts',description:'Gnome Stronghold / Barbarian / Wilderness agility course order'},
+ {skill:'agility',method:'order',script:'scripts/aio-skiller.ts',defaultArgs:['agility','order'],description:'Gnome Stronghold / Barbarian / Wilderness / Brimhaven agility course order'},
  {skill:'agility',method:'specialist',script:'scripts/agility-specialist.ts',description:'Fresh-clock 1 to 99 Agility specialist route (Tourist Trap + boosted Wilderness course)'},
  // Thieving
  {skill:'thieving',method:'knights',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','knights'],description:'Pickpocket Knights of Ardougne with bank food refill and Baker stall fallback'},
@@ -632,7 +633,34 @@ const LEGACY_GATHER_METHOD_ALIASES: Readonly<Record<string, Readonly<Record<stri
  mining: { 'gather-ore': 'ore', 'gather-essence': 'essence', 'microbot-b-mining': 'at-site', 'microbot-mining-drop': 'drop', 'microbot-mining-progressive': 'progressive', 'microbot-b-mining-loot': 'loot', 'lava-maze-escorted-ore': 'lava-maze' },
  thieving: { goldfarm: 'knights', 'goldfarm-stable': 'knights-stable', 'microbot-pickpocket-trip': 'pickpocket', 'microbot-a-pickpocket': 'pickpocket-at-site', 'microbot-c-stalls': 'stalls', 'blood-chest': 'blood-chest', 'microbot-b-nature-chest': 'nature-chest' },
  foraging: { 'gather-flax': 'flax', 'collect-wool': 'wool', 'gather-feathers': 'feathers', 'gather-spawn': 'spawn', grapes: 'grapes', 'crystal-chest': 'crystal-chest' },
+ agility: { 'agility-order': 'order' },
+ runecraft: { 'rune-bank-craft': 'bank-craft', 'microbot-rune-trip': 'nature', 'rune-supply': 'supply', rcair: 'air' },
 };
+
+const RUNECRAFT_DIRECT_METHODS: Readonly<Record<string, RunecraftMode>> = {
+ 'bank-craft': 'bank-craft',
+ 'rune-bank-craft': 'bank-craft',
+ nature: 'nature',
+ 'microbot-rune-trip': 'nature',
+ supply: 'supply',
+ 'rune-supply': 'supply',
+ air: 'air',
+ rcair: 'air',
+ carriers: 'carriers',
+ staged: 'staged',
+ 'body-continuation': 'body-continuation',
+ 'body-measure': 'body-measure',
+ 'stage-carriers': 'stage-carriers',
+ 'stage-opening': 'stage-opening',
+};
+
+function buildRunecraftDeps(): RunecraftExternalDeps {
+ return {
+  runBankProfile,
+  runRuneMysteries,
+  trainChickens,
+ };
+}
 
 export function resolveSkillerStep(skillInput: string, methodInput?: string, rest: readonly string[] = []): Step {
  const skill = skillInput.toLowerCase().replace(/^--skill=/, '');
@@ -658,6 +686,10 @@ export function resolveSkillerStep(skillInput: string, methodInput?: string, res
   const tail = resolved.args.length ? resolved.args : route.defaultArgs.slice(3);
   return { script: route.script, args: ['gather', route.skill, route.method, ...tail], env: resolved.env };
  }
+ if (route.script === 'scripts/aio-skiller.ts' && (route.defaultArgs?.[0] === 'agility' || route.defaultArgs?.[0] === 'runecraft')) {
+  const resolved = resolveRouteStep({ script: route.script, defaultEnv: route.defaultEnv }, extra);
+  return { script: route.script, args: [route.skill, route.method, ...resolved.args], env: resolved.env };
+ }
  return resolveRouteStep(route, extra);
 }
 
@@ -678,6 +710,23 @@ export async function runAioSkiller(account: string, args: readonly string[], en
    env: { ...env, ...parsed.env },
    deps: buildGatherDeps(),
   });
+  return code === 0 ? 'RESULT ok' : 'RESULT fail';
+ }
+ const normalizedSkill = first.toLowerCase().replace(/^--skill=/, '');
+ if (normalizedSkill === 'agility' && second?.toLowerCase() !== 'specialist') {
+  const explicitOrder = ['order', 'agility-order', '--method=order'].includes((second ?? '').toLowerCase());
+  const rawTokens = explicitOrder ? rest : [second ?? '', ...rest].filter(Boolean);
+  const parsed = parseGatherTokens(rawTokens);
+  const code = await runAgilityCli([account, ...parsed.args], { ...env, ...parsed.env }, { readSave: readPracticeSave });
+  return code === 0 ? 'RESULT ok' : 'RESULT fail';
+ }
+ if (normalizedSkill === 'runecraft' && second?.toLowerCase() !== 'specialist') {
+  const normalizedMethod = (second ?? '').toLowerCase().replace(/^--method=/, '');
+  const matchedMode = RUNECRAFT_DIRECT_METHODS[normalizedMethod];
+  const rcMode: RunecraftMode = matchedMode ?? 'bank-craft';
+  const rawTokens = matchedMode ? rest : [second ?? '', ...rest].filter(Boolean);
+  const parsed = parseGatherTokens(rawTokens);
+  const code = await runRunecraftCli(rcMode, account, parsed.args, { ...env, ...parsed.env }, buildRunecraftDeps());
   return code === 0 ? 'RESULT ok' : 'RESULT fail';
  }
  if (first === 'bank-job') {
