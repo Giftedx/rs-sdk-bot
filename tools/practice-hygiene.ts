@@ -10,9 +10,9 @@
 // window ended more than FLEET_KEEP_DAYS ago, with its receipts (<id>.from.json, <id>.to.json), moves to
 // fleet/archive/<YYYY-MM>/{orders,receipts}. An order that is open or ended more recently stays, and so does a receipt whose
 // order is not archived. fleet-sync commits the move on the fleet-data branch: run --apply with the fleet-sync owner.
-// Usage: bun scripts/practice-hygiene.ts [--root DIR] [--apply --archive-dir D:/rs-sdk-bot-archive]
-//        bun scripts/practice-hygiene.ts --fleet-orders [--keep-days 7] [--apply]
-//        bun scripts/practice-hygiene.ts --phase0 [--root DIR] [--apply] [--json] [--grace-ms MS]
+// Usage: bun tools/practice-hygiene.ts [--root DIR] [--apply --archive-dir D:/rs-sdk-bot-archive]
+//        bun tools/practice-hygiene.ts --fleet-orders [--keep-days 7] [--apply]
+//        bun tools/practice-hygiene.ts --phase0 [--root DIR] [--apply] [--json] [--grace-ms MS]
 import {existsSync,lstatSync,mkdirSync,readdirSync,readFileSync,renameSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';

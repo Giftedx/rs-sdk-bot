@@ -1,4 +1,4 @@
-// Multi-candidate A/B sweep runner for scripts/pk-squad.ts via GitHub Actions (scripts/hosted-bench.ts).
+// Multi-candidate A/B sweep runner for scripts/pk-squad.ts via GitHub Actions (tools/hosted-bench.ts).
 // Dispatches all candidates concurrently with automatic runner batching + multi-seed fan-out, encodes JSON env overrides
 // with --set-b64, collects .practice/hosted-bench/<runId>/ artifacts, and prints a ranked comparison + delta summary.
 //

@@ -1,5 +1,7 @@
+import {existsSync} from 'node:fs';
+import {join,resolve} from 'node:path';
 import {expect,test} from 'bun:test';
-import {preparationRoute,reconcilePreparation} from './preparation-report';
+import {SOURCE_HASH_PATHS,preparationRoute,reconcilePreparation} from './preparation-report';
 import {questDefinitions} from '../packages/core/src/quest-status';
 const now=1_000_000;
 const bank=(name:string,items:any[],age=100)=>({name,server:'rs-sdk-demo.fly.dev',bankAt:now-age,bank:items});
@@ -65,4 +67,9 @@ test('unknown and conflicting item IDs remain unresolved, not spendable stock',(
 test('newest holder snapshot wins, malformed banks and future observations stay unknown',()=>{
  const r=reconcilePreparation([{item:'Coins',count:10}], [bank('A',[{id:995,name:'Coins',count:50}],200),bank('a',[{id:995,name:'Coins',count:3}],100),bank('B',[{id:995,name:'Coins',count:-1}])],['A','B'],now);
  expect(r.items[0]!.recentBanked).toBe(3);expect(r.items[0]!.shortfall).toBe(7);expect(r.banks.find(b=>b.name==='B')?.state).toBe('unknown');
+});
+test('SOURCE_HASH_PATHS entries all exist on disk',()=>{
+ const root=resolve(import.meta.dir,'..');
+ const missing=SOURCE_HASH_PATHS.filter(p=>!existsSync(join(root,p)));
+ expect(missing).toEqual([]);
 });

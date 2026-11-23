@@ -1,7 +1,7 @@
 // Makes a new git worktree of this repository ready for tests, the type check and the local gate, as the CI setup
 // steps do (.github/workflows/ci.yml): the SDK submodule, the SDK patch and the installs. It also carries the owner's
 // hook switch (disableAllHooks) of the main checkout's local settings into the worktree.
-// Usage: bun scripts/worktree-setup.ts [--bench] [--reset-vendor] [--check]
+// Usage: bun tools/worktree-setup.ts [--bench] [--reset-vendor] [--check]
 //   --bench         also install the engine packages, which a practice bench needs, and copy the route caches of the
 //                   main checkout that this worktree does not hold
 //   --reset-vendor  when vendor/rs-sdk has the patch of a different commit, restore its tracked files and apply the
