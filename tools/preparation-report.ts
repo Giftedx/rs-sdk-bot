@@ -233,6 +233,31 @@ export function preparationRoute(report:ReturnType<typeof reconcilePreparation>,
  return{...supplyRoute(model,{...bound,stops,budget,resources,...(bound.context?{context:{...bound.context,at:report.at}}:{})}),resourceEvidence:observed.evidence};
 }
 
+export const SOURCE_HASH_PATHS=[
+ 'tools/preparation-report.ts',
+ 'tools/preparation-route-state.ts',
+ 'tools/goal-readiness.ts',
+ 'scripts/aio-market.ts',
+ 'packages/workers/src/market/ge-buy.ts',
+ 'knowledge/items.json',
+ 'packages/planner/src/requirements.ts',
+ 'packages/planner/src/owned-loadout.ts',
+ 'packages/planner/src/market-progress.ts',
+ 'packages/planner/src/transport-requirements.ts',
+ 'packages/core/src/status.ts',
+ 'packages/core/src/quest-status.ts',
+ 'packages/core/src/fleet.ts',
+ 'packages/core/src/fleet-snapshots.ts',
+ 'packages/fleet/src/fleet-sync.ts',
+ 'scripts/fleet.ts',
+ 'swarm.json',
+ 'packages/planner/src/haggis.ts',
+ 'packages/planner/src/supply-route.ts',
+ 'packages/planner/src/travel.ts',
+ 'packages/planner/src/haggis-boards.json',
+ 'packages/planner/src/haggis-travel.json',
+] as const;
+
 if(import.meta.main){
  const root=resolve(import.meta.dir,'..'),snapshot=resolve(process.argv[2]??join(root,'research/hiscores-live.json'));
  const out=resolve(process.argv[3]??join(root,'.practice/joined-plan/preparation.json'));
@@ -256,7 +281,7 @@ if(import.meta.main){
  const requestPath=process.argv[4]?resolve(process.argv[4]):null;
  const request=requestPath?JSON.parse(readFileSync(requestPath,'utf8')):null;
  const route=request?preparationRoute(stock,opts.travel,request.item,request):null;
- const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,observationSources,inputSources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/aio-market.ts','packages/workers/src/market/ge-buy.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','packages/core/src/fleet.ts','packages/core/src/fleet-snapshots.ts','packages/fleet/src/fleet-sync.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
+ const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,observationSources,inputSources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(SOURCE_HASH_PATHS.map(p=>[p,hash(join(root,p))]))};
  mkdirSync(resolve(out,'..'),{recursive:true});writeFileSync(out,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({output:out,requirements:report.items.length,coveredByRecentBanks:report.items.filter(i=>i.shortfall===0).length,unknownBanks:report.banks.filter(b=>b.state==='unknown').length,staged:false}));
 }

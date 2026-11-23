@@ -1,5 +1,5 @@
 // Offline navigation audit. No credentials, game connection or account mutation.
-// Usage: bun scripts/route-audit.ts [--list] [--limit=N] [--offset=N] [--output=directory]
+// Usage: bun tools/route-audit.ts [--list] [--limit=N] [--offset=N] [--output=directory]
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import ts from 'typescript';

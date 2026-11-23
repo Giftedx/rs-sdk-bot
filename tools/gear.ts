@@ -2,15 +2,15 @@
 // the item configs, levelrequire/scripts/tier*.rs2 and pvp_special_attack.rs2). Look here before naming the best
 // item for a slot or saying an item does not exist.
 // Usage:
-//   bun scripts/gear.ts show <name|debugname ...>        every field of each item
-//   bun scripts/gear.ts find <regex>                      items whose name or debugname match, with slot and id
-//   bun scripts/gear.ts slots                             how many items each slot has
-//   bun scripts/gear.ts best <slot> [--weights rangeAttack:1,magicDefence:0.5] [--levels attack=99,defence=40]
+//   bun tools/gear.ts show <name|debugname ...>        every field of each item
+//   bun tools/gear.ts find <regex>                      items whose name or debugname match, with slot and id
+//   bun tools/gear.ts slots                             how many items each slot has
+//   bun tools/gear.ts best <slot> [--weights rangeAttack:1,magicDefence:0.5] [--levels attack=99,defence=40]
 //                            [--quests "Dragon Slayer,Lost City"] [--top 10] [--all]
 //        the slot's items ranked by the weighted sum of their bonuses; --levels and --quests drop what the account
 //        cannot wear (default: all 99, every quest), and staff-only items are left out; --all keeps them
-//   bun scripts/gear.ts compare <a> <b ...>               the bonuses side by side
-//   bun scripts/gear.ts kit <kit ...>                     the summed bonuses of a scripts/pk-kits.ts kit's worn items
+//   bun tools/gear.ts compare <a> <b ...>               the bonuses side by side
+//   bun tools/gear.ts kit <kit ...>                     the summed bonuses of a scripts/pk-kits.ts kit's worn items
 import type { Bonus, Gear } from '../packages/knowledge/src/gear';
 import { BONUSES } from '../packages/knowledge/src/gear';
 import { best, canWear, loadGear, MAXED, score, sumBonuses } from '../packages/knowledge/src/gear-query';
@@ -31,7 +31,7 @@ if (import.meta.main) {
     else if (cmd === 'slots') { const n = new Map<string, number>(); for (const g of gear) n.set(g.slot, (n.get(g.slot) ?? 0) + 1); console.log([...n].sort((a, b) => b[1] - a[1]).map(([s, c]) => `${s} ${c}`).join('\n')); }
     else if (cmd === 'best') {
         const slot = words[0];
-        if (!slot) { console.log('usage: bun scripts/gear.ts best <slot> [--weights b:w,...]'); process.exit(2); }
+        if (!slot) { console.log('usage: bun tools/gear.ts best <slot> [--weights b:w,...]'); process.exit(2); }
         const weights = Object.fromEntries((flag('--weights') ?? 'stabDefence:1,slashDefence:1,crushDefence:1,magicDefence:1,rangeDefence:1').split(',').map(p => { const [k, w] = p.split(':'); return [k, Number(w ?? 1)]; })) as Partial<Record<Bonus, number>>;
         for (const k of Object.keys(weights)) if (!(BONUSES as string[]).includes(k)) { console.log(`unknown bonus ${k}; bonuses: ${BONUSES.join(' ')}`); process.exit(2); }
         const levels = flag('--levels') ? { attack: 1, strength: 1, defence: 1, ranged: 1, magic: 1, ...Object.fromEntries(flag('--levels')!.split(',').map(p => { const [k, v] = p.split('='); return [k, Number(v)]; })) } : MAXED;
@@ -50,5 +50,5 @@ if (import.meta.main) {
             const worn = kitItems(k).equipment.map(e => gear.find(g => g.id === e.id)).filter((g): g is Gear => !!g);
             console.log(`${k}: ${worn.map(g => g.debugname).join(' ')}\n  ${short(sumBonuses(worn))}`);
         }
-    } else { console.log('usage: bun scripts/gear.ts show|find|slots|best|compare|kit ...'); process.exit(2); }
+    } else { console.log('usage: bun tools/gear.ts show|find|slots|best|compare|kit ...'); process.exit(2); }
 }
