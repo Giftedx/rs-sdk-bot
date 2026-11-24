@@ -45,21 +45,74 @@ export function nativeKitItem(id: number) {
     return item;
 }
 
+type NativeKitMeta = { id: number; name: string; debugname: string; src: string; members: boolean };
+let objPackById: Map<number, string> | undefined;
+let itemsById: Map<number, NativeKitMeta> | undefined;
+let itemsByDebug: Map<string, NativeKitMeta> | undefined;
+let styleTabByCategory: Map<string, string> | undefined;
+let styleIndicesByTab: Map<string, number[]> | undefined;
+const objSourceFiles = new Map<string, string>();
+
+function ensureNativeKitTables() {
+    if (!objPackById) {
+        const text = readFileSync(contentDir + 'pack/obj.pack', 'utf8');
+        objPackById = new Map();
+        let pos = 0;
+        while (pos < text.length) {
+            let end = text.indexOf('\n', pos);
+            if (end < 0) end = text.length;
+            const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+            const eq = text.indexOf('=', pos);
+            if (eq > pos && eq < lineEnd) {
+                const parsedId = Number(text.slice(pos, eq));
+                if (Number.isInteger(parsedId) && parsedId >= 0) objPackById.set(parsedId, text.slice(eq + 1, lineEnd));
+            }
+            pos = end + 1;
+        }
+    }
+    if (!itemsById || !itemsByDebug) {
+        itemsById = new Map();
+        itemsByDebug = new Map();
+        for (const it of nativeItems as NativeKitMeta[]) {
+            itemsById.set(it.id, it);
+            itemsByDebug.set(it.debugname, it);
+        }
+    }
+    if (!styleTabByCategory || !styleIndicesByTab) {
+        const styles = readFileSync(contentDir + 'scripts/skill_combat/scripts/player/player_attackstyles.rs2', 'utf8');
+        styleTabByCategory = new Map();
+        for (const m of styles.matchAll(/case ([\w, ]+) : ~weapon_category_tab_attack\((combat_\w+):preview/g)) {
+            for (const cat of m[1]!.split(/,\s*/)) if (cat) styleTabByCategory.set(cat, m[2]!);
+        }
+        styleIndicesByTab = new Map();
+        for (const m of styles.matchAll(/\[if_button,(combat_\w+):[^\]]+\]\s*~set_attackstyle\((\d+)\);/g)) {
+            let list = styleIndicesByTab.get(m[1]!);
+            if (!list) { list = []; styleIndicesByTab.set(m[1]!, list); }
+            list.push(Number(m[2]));
+        }
+    }
+}
+
 function readNativeKitItem(id: number) {
-    const items = nativeItems as { id: number; name: string; debugname: string; src: string; members: boolean }[];
-    const packed = readFileSync(contentDir + 'pack/obj.pack', 'utf8').split(/\r?\n/).find(l => l.startsWith(id + '='))?.split('=')[1];
+    ensureNativeKitTables();
+    const packed = objPackById!.get(id);
     const noted = !!packed?.startsWith('cert_');
-    const item = items.find(i => noted ? i.debugname === packed!.slice(5) : i.id === id);
+    const item = noted ? itemsByDebug!.get(packed!.slice(5)) : itemsById!.get(id);
     if (!item || !whole(id)) throw Error('unknown native kit item ' + id);
-    const block = readFileSync(contentDir + item.src.replace(/:\d+$/, ''), 'utf8').split('[' + item.debugname + ']')[1]?.split('\n[')[0];
+    const relPath = item.src.replace(/:\d+$/, '');
+    let fileText = objSourceFiles.get(relPath);
+    if (fileText === undefined) {
+        fileText = readFileSync(contentDir + relPath, 'utf8');
+        objSourceFiles.set(relPath, fileText);
+    }
+    const block = fileText.split('[' + item.debugname + ']')[1]?.split('\n[')[0];
     if (!block) throw Error('native item definition absent ' + id);
     const fields = (key: string) => block.match(new RegExp('^' + key + '=([^\\r\\n]+)', 'm'))?.[1];
     const slots: Record<string, number> = { hat: 0, back: 1, front: 2, righthand: 3, torso: 4, lefthand: 5, arms: 6, legs: 7, head: 8, hands: 9, feet: 10, jaw: 11, ring: 12, quiver: 13 };
     const slot = fields('wearpos'), extra = [fields('wearpos2'), fields('wearpos3')].filter((x): x is string => !!x);
-    const styles = readFileSync(contentDir + 'scripts/skill_combat/scripts/player/player_attackstyles.rs2', 'utf8');
     const category = fields('category');
-    const tab = [...styles.matchAll(/case ([\w, ]+) : ~weapon_category_tab_attack\((combat_\w+):preview/g)].find(m => m[1]!.split(/,\s*/).includes(category ?? ''))?.[2] ?? 'combat_unarmed';
-    const styleIndices = [...styles.matchAll(new RegExp('\\[if_button,' + tab + ':[^\\]]+\\] ~set_attackstyle\\((\\d+)\\);', 'g'))].map(m => Number(m[1]));
+    const tab = (category ? styleTabByCategory!.get(category) : undefined) ?? 'combat_unarmed';
+    const styleIndices = styleIndicesByTab!.get(tab) ?? [];
     return {
         ...item,
         id,

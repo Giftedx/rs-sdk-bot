@@ -1,10 +1,7 @@
 // High-level goTo orchestration: guild preflight, ship-deck exit, trip planning, spell-fallback replan, and bank stops.
 import type { Outcome } from '../act';
 import { accountForSdk } from '../door-policy';
-import { refreshGuildEvidence } from '../guild-observation';
-import { planTripOffThread } from '../route-plan';
-import { waitTicks } from '../ticks';
-import { bankStock, planTrip, takeItems, type TripPlan } from '../trip';
+import type { TripPlan } from '../trip';
 import type { WalkOptions, Walker } from '../walk-leg';
 import { installDoorPolicy, ROUTE_BUDGET_MS, type Account, type Tile, type World } from '../world';
 import { walkRoute } from './legs';
@@ -37,6 +34,7 @@ async function preflightGuildEvidence(
         if (before && legendsTarget && Math.abs(before.worldX - 2728) <= 30 && Math.abs(before.worldZ - 3373) <= 30) requests.push('legendsquest');
         if (before && legendsTarget && before.level === 0 && before.worldX >= 2725 && before.worldX <= 2732 && before.worldZ >= 3344 && before.worldZ <= 3349) requests.push('legends-entry');
         if (requests.length) {
+            const { refreshGuildEvidence } = await import('../guild-observation');
             const fresh = await refreshGuildEvidence(s as any, requests as any);
             if (requests.includes('legends-entry')) legendsEntry = fresh.admission?.legendsEntry ?? 'unknown';
         }
@@ -75,13 +73,18 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     if (!observedInside && legendsEntry === 'refused') return { ok: false, reason: 'precondition', detail: 'Legends Guild guard refused first entry', ticks: s.tick() - started };
     if (!observedInside && legendsEntry === 'unknown' && (acct.questStages?.legendsquest ?? 0) < 1) return { ok: false, reason: 'precondition', detail: 'Legends Guild first entry was not observed', ticks: s.tick() - started };
     // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
-    const name = (s as { name?: string }).name, banker = s as unknown as Parameters<typeof takeItems>[0];
+    const name = (s as { name?: string }).name, banker = s as unknown as Parameters<typeof import('../trip').takeItems>[0];
     if (opts.noJewelry) acct = withoutJewelry(acct);
-    const rawStock = name && typeof (banker.bot as { openBank?: unknown }).openBank === 'function' ? bankStock(name, { server: walkerServer(s) }) : undefined;
+    const hasBank = Boolean(name && typeof (banker.bot as { openBank?: unknown }).openBank === 'function');
+    const [{ bankStock, planTrip, takeItems }, routePlanMod] = await Promise.all([
+        import('../trip'),
+        world.offThread ? import('../route-plan') : Promise.resolve(null),
+    ]);
+    const rawStock = hasBank ? bankStock(name!, { server: walkerServer(s) }) : undefined;
     const stock = opts.noJewelry && rawStock ? { coins: rawStock.coins, items: Object.fromEntries(Object.entries(rawStock.items ?? {}).filter(([k]) => !TELEPORT_JEWELRY_RE.test(k))) } : rawStock;
     const budgetMs = opts.planBudgetMs ?? ROUTE_BUDGET_MS, planStart = performance.now(), deadline = planStart + budgetMs;
     let why = '';
-    const r = world.offThread ? await planTripOffThread(from, to, acct, stock, budgetMs)
+    const r: TripPlan | null = routePlanMod ? await routePlanMod.planTripOffThread(from, to, acct, stock, budgetMs)
         : stock ? planTrip(world, from, to, acct, stock, undefined, undefined, { deadline })
         : (() => { const d = world.route(from, to, acct, { deadline }); if (!d.ok) why = d.reason; return d.ok ? { cost: d.cost, legs: d.legs } as TripPlan : null; })();
     if (!r) {
@@ -97,12 +100,13 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     if (!first.ok && first.reason !== 'aborted' && r.legs.some(l => l.kind === 'travel' && l.travel.kind === 'spell')) {
         // A trip with a bank stop ends its first legs at the bank, so the replan heads there and the stop still follows.
         const q = s.sdk.getState()?.player, at = q ? { x: q.worldX, z: q.worldZ, level: q.level } : from, goal = r.bank?.at ?? to, grounded = withoutSpells(acct);
-        const d = world.offThread ? await planTripOffThread(at, goal, grounded, undefined, budgetMs)
+        const d: TripPlan | null = routePlanMod ? await routePlanMod.planTripOffThread(at, goal, grounded, undefined, budgetMs)
             : (() => { const x = world.route(at, goal, grounded, { deadline: performance.now() + budgetMs }); return x.ok ? { cost: x.cost, legs: x.legs } as TripPlan : null; })();
         console.log(`WALK_REPLAN_NO_SPELLS ${JSON.stringify({ from: at, to: goal, failed: first.detail, ok: !!d })}`);
         if (d) first = await walkRoute(s, d.legs, opts);
     }
     if (!first.ok || !r.bank) return first;
+    const { waitTicks } = await import('../ticks');
     const took = await takeItems(banker, r.bank.coins, r.bank.items, n => waitTicks(s, n),
         { stop: () => opts.signal?.aborted === true, deadline: performance.now() + 30_000 });
     if (!took.ok) return { ok: false, reason: 'precondition', detail: `bank stop at ${r.bank.at.x},${r.bank.at.z}: ${took.detail}`, ticks: s.tick() - started };

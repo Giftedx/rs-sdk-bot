@@ -17,13 +17,15 @@ let active: { key: string; kept: ReadonlySet<string> } | null = null;
 // (leg-cache.ts). With every keep tile in `kept`, each new start or end tile of a trip measured every leg again.
 export const activeDanger = () => active;
 export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[] | Int32Array, keep: readonly Tile[], query: () => T, key = '?'): T {
-    const kept = new Set<string>(), open = new Set(keep.map(t => pack(t.level, t.x, t.z))), outer = active;
+    const kept = new Set<string>(), open = new Set<number>(), outer = active;
+    for (let i = 0; i < keep.length; i++) { const t = keep[i]!; open.add(pack(t.level, t.x, t.z)); }
     const packed = tiles instanceof Int32Array ? tiles : Int32Array.from(tiles, t => pack(t.level, t.x, t.z));
     const added = new Int32Array(packed.length);
     let n = 0;
     active = { key, kept };
     try {
-        for (const k of packed) {
+        for (let i = 0; i < packed.length; i++) {
+            const k = packed[i]!;
             const x = (k >>> 14) & 0x3fff, z = k & 0x3fff, level = k >>> 28;
             if (open.has(k)) kept.add(`${level},${x},${z}`);
             else if (!grid.isFlagged(x, z, level, FLOOR)) { grid.changeFloor(x, z, level, true); added[n++] = k; }

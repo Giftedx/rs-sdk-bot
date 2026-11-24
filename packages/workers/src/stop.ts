@@ -6,18 +6,16 @@ import type { SessionCore } from './contracts';
 
 export const STOP_REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
-function stopFileCandidates(account: string | undefined, extraFiles: readonly string[] = [], role: string | undefined = process.env.STOP_FILE): string[] {
-    const names = new Set<string>(['.practice/stop-all']);
-    const trimmed = account?.trim();
-    if (trimmed) {
-        names.add(`.practice/stop-${trimmed}`);
-        names.add(`.practice/stop-${trimmed.toLowerCase()}`);
+function checkCandidate(
+    rel: string,
+    exists: (path: string) => boolean,
+    checkRepoRoot: boolean,
+): boolean {
+    if (exists(rel)) return true;
+    if (checkRepoRoot && !rel.startsWith('/') && !(rel.length >= 3 && rel.charCodeAt(1) === 58 && (rel.charCodeAt(2) === 92 || rel.charCodeAt(2) === 47))) {
+        if (exists(join(STOP_REPO_ROOT, rel))) return true;
     }
-    for (const extra of extraFiles) {
-        if (extra) names.add(extra);
-    }
-    if (role) names.add(role);
-    return [...names];
+    return false;
 }
 
 /**
@@ -30,14 +28,19 @@ export function isStopFilePresent(
     exists: (path: string) => boolean = existsSync,
     role: string | undefined = process.env.STOP_FILE,
 ): boolean {
-    const candidates = stopFileCandidates(account, extraFiles, role);
-    const checkRepoRoot = exists === existsSync;
-    for (const rel of candidates) {
-        if (exists(rel)) return true;
-        if (checkRepoRoot && !rel.startsWith('/') && !/^[a-zA-Z]:[\\/]/.test(rel)) {
-            if (exists(join(STOP_REPO_ROOT, rel))) return true;
-        }
+    const checkRepoRoot = exists === existsSync && resolve('.') !== STOP_REPO_ROOT;
+    if (checkCandidate('.practice/stop-all', exists, checkRepoRoot)) return true;
+    const trimmed = account?.trim();
+    if (trimmed) {
+        if (checkCandidate(`.practice/stop-${trimmed}`, exists, checkRepoRoot)) return true;
+        const lower = trimmed.toLowerCase();
+        if (lower !== trimmed && checkCandidate(`.practice/stop-${lower}`, exists, checkRepoRoot)) return true;
     }
+    for (let i = 0; i < extraFiles.length; i++) {
+        const extra = extraFiles[i];
+        if (extra && checkCandidate(extra, exists, checkRepoRoot)) return true;
+    }
+    if (role && checkCandidate(role, exists, checkRepoRoot)) return true;
     return false;
 }
 

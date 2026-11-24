@@ -77,14 +77,20 @@ export function isDyingAttackClick(a: Action, st: any): boolean {
 
 export function createFishingSync() {
     // The tick of the click that started the fishing cycle in progress: a click of the script or of the guard.
-    let fishAt = -Infinity, fishXp = -1, fishDry = 0, fishShift = false, fishSeen = -1, fishSynced = false, fishExtra = -1;
+    let fishAt = -Infinity, fishXp = -1, fishDry = 0, fishShift = false, fishSeen = -1, fishSynced = false, fishExtra = -1, fishIdx = -1;
 
     const markStart = (now: number) => { fishAt = now; };
     const isSecondTick = (now: number) => now - fishAt === 1;
 
     // True on the tick the state shows more Fishing experience than on the tick before.
     const fishCaught = (st: any): boolean => {
-        const xp = (st.skills ?? []).find((k: any) => k.name === 'Fishing')?.experience ?? -1, more = fishXp >= 0 && xp > fishXp;
+        const skills = st.skills;
+        let k = fishIdx >= 0 ? skills?.[fishIdx] : undefined;
+        if (k?.name !== 'Fishing') {
+            k = undefined;
+            if (skills) for (let i = 0; i < skills.length; i++) if (skills[i]?.name === 'Fishing') { fishIdx = i; k = skills[i]; break; }
+        }
+        const xp = k?.experience ?? -1, more = fishXp >= 0 && xp > fishXp;
         fishXp = xp;
         if (more) fishDry = 0;
         return more;
@@ -93,8 +99,14 @@ export function createFishingSync() {
     const observeTick = (st: any, now: number, isFishing: boolean): boolean => {
         const caught = fishCaught(st);
         let cast = false;
-        for (const m of st.gameMessages ?? []) if ((m.tick ?? -1) > fishSeen && FISH_START.test(m.text ?? '')) cast = true;
-        for (const m of st.gameMessages ?? []) fishSeen = Math.max(fishSeen, m.tick ?? -1);
+        const msgs = st.gameMessages;
+        if (msgs?.length) {
+            for (let i = 0; i < msgs.length; i++) {
+                const m = msgs[i], t = m.tick ?? -1;
+                if (isFishing && !cast && t > fishSeen && FISH_START.test(m.text ?? '')) cast = true;
+                if (t > fishSeen) fishSeen = t;
+            }
+        }
         if (cast && isFishing) {
             // A start that moves later leaves 5 ticks from the last flick to the next cycle. One more flick and click
             // on tick 3 fills that gap; on a sea spot it costs the roll of this cycle.

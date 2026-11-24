@@ -14,11 +14,19 @@ export type BankBatchPreparation =
 let nativeItemIds: Set<number> | undefined;
 function loadNativeItemIds(): Set<number> {
     if (nativeItemIds) return nativeItemIds;
-    const rows = readFileSync(resolve(import.meta.dir, '../../../../vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8').split(/\r?\n/);
-    nativeItemIds = new Set(rows.flatMap(row => {
-        const m = row.match(/^(\d+)=/);
-        return m ? [Number(m[1])] : [];
-    }));
+    const text = readFileSync(resolve(import.meta.dir, '../../../../vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8');
+    nativeItemIds = new Set<number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < end) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) nativeItemIds.add(id);
+        }
+        pos = end + 1;
+    }
     return nativeItemIds;
 }
 

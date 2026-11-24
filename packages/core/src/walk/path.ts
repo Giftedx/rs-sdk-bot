@@ -44,10 +44,13 @@ interface HunterSquare { x: number; z: number; r: number }
 
 const DETOUR = 15, HOLD = 50, SHORT = 4;
 const d8 = (a: PathTile, b: PathTile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+const tileKey = (x: number, z: number) => (x + 131072) * 262144 + (z + 131072);
 // Open chests and cupboards are not route edges. Legacy path adapters omit names;
 // live SDK locations supply them. Preserve unnamed adapters' door contract.
-const openOp = (l: PathLoc) => l.name && !/\b(?:doors?|gates?)\b/i.test(l.name)
-    ? undefined : (l.optionsWithIndex ?? []).find(o => /^open$/i.test(o.text));
+const DOOR_OR_GATE_RE = /\b(?:doors?|gates?)\b/i;
+const OPEN_OPT_RE = /^open$/i;
+const openOp = (l: PathLoc) => l.name && !DOOR_OR_GATE_RE.test(l.name)
+    ? undefined : (l.optionsWithIndex ?? []).find(o => OPEN_OPT_RE.test(o.text));
 const messageKey = (m: { text: string; tick: number; observationId?: number }) => `${m.observationId ?? m.tick}:${m.text}`;
 
 // Corners to single tiles. rs-sdk path segments are straight or diagonal, so a step by sign is exact for them.
@@ -77,10 +80,14 @@ function collectHunterSquares(hunters: readonly HunterSquare[] | undefined, p: P
 }
 
 function expandClosedSquares(squares: readonly HunterSquare[]): PathTile[] {
-    return squares.flatMap(h => Array.from({ length: (2 * h.r + 1) ** 2 }, (_, i) => ({
-        x: h.x - h.r + (i % (2 * h.r + 1)),
-        z: h.z - h.r + Math.floor(i / (2 * h.r + 1)),
-    })));
+    const out: PathTile[] = [];
+    for (let s = 0; s < squares.length; s++) {
+        const h = squares[s]!;
+        for (let x = h.x - h.r; x <= h.x + h.r; x++) {
+            for (let z = h.z - h.r; z <= h.z + h.r; z++) out.push({ x, z });
+        }
+    }
+    return out;
 }
 
 function buildSegmentedPath(
@@ -118,8 +125,17 @@ function findShutDoorAt(
     to: number,
     blockedDoor: (loc: PathTile) => boolean,
 ): { l: PathLoc; i: number } | null {
-    const ahead = new Map<string, number>();
-    for (let i = Math.max(0, from); i <= Math.min(tiles.length - 1, to); i++) ahead.set(`${tiles[i]!.x},${tiles[i]!.z}`, i);
+    const startIdx = Math.max(0, from), endIdx = Math.min(tiles.length - 1, to);
+    const ahead = new Map<number, number>();
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (let i = startIdx; i <= endIdx; i++) {
+        const t = tiles[i]!;
+        if (t.x < minX) minX = t.x;
+        if (t.x > maxX) maxX = t.x;
+        if (t.z < minZ) minZ = t.z;
+        if (t.z > maxZ) maxZ = t.z;
+        ahead.set(tileKey(t.x, t.z), i);
+    }
     // A shut door on the tile the bot stands on blocks it as well, and the path's tiles leave that tile out. Live:
     // Doric's Quest ends on his doorway (door 1530 at 2952,3453), and every walk click out was refused.
     // It counts only when the client cannot reach the next path tile: the wall of a door is on one edge of its
@@ -127,20 +143,35 @@ function findShutDoorAt(
     // player on the gate tile, inside the yard; an Open from there moves the player out again
     // (quest_grandtree.rs2 open_shipyard_gate), away from the foreman.
     const here = deps.pos();
-    const hereKey = here && here.level === level && !ahead.has(`${here.x},${here.z}`) ? `${here.x},${here.z}` : null;
-    if (hereKey) ahead.set(hereKey, Math.max(0, from));
+    let hereKey = -1;
+    if (here && here.level === level) {
+        const hk = tileKey(here.x, here.z);
+        if (!ahead.has(hk)) {
+            hereKey = hk;
+            ahead.set(hk, startIdx);
+            if (here.x < minX) minX = here.x;
+            if (here.x > maxX) maxX = here.x;
+            if (here.z < minZ) minZ = here.z;
+            if (here.z > maxZ) maxZ = here.z;
+        }
+    }
+    if (ahead.size === 0) return null;
     let hereBlocks: boolean | undefined;
     const blocksHere = (): boolean => {
         if (hereBlocks === undefined) {
-            const next = tiles[Math.max(0, from)];
+            const next = tiles[startIdx];
             hereBlocks = !next || deps.reach?.({ x: next.x, z: next.z, level }) !== true;
         }
         return hereBlocks;
     };
     let best: { l: PathLoc; i: number } | null = null;
-    for (const l of deps.locs()) {
-        const i = ahead.get(`${l.x},${l.z}`);
-        if (i !== undefined && openOp(l) && !blockedDoor(l) && (!best || i < best.i) && (`${l.x},${l.z}` !== hereKey || blocksHere())) best = { l, i };
+    const locs = deps.locs();
+    for (let k = 0; k < locs.length; k++) {
+        const l = locs[k]!;
+        if (l.x < minX || l.x > maxX || l.z < minZ || l.z > maxZ) continue;
+        const lk = tileKey(l.x, l.z);
+        const i = ahead.get(lk);
+        if (i !== undefined && (!best || i < best.i) && openOp(l) && !blockedDoor(l) && (lk !== hereKey || blocksHere())) best = { l, i };
     }
     return best;
 }
@@ -276,7 +307,7 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     let dodged = '', dodges = 0;
     let bestGoalDist = d8(start, points[0] ?? goal), maxSeg = 0, progressTick = 0, progressDoors = 0;
     let boxMinX = start.x, boxMaxX = start.x, boxMinZ = start.z, boxMaxZ = start.z, boxRepaths = 0;
-    const boxVisited = new Set<string>([`${start.x},${start.z}`]);
+    const boxVisited = new Set<number>([tileKey(start.x, start.z)]);
     let walkReply: (reply: unknown, from: { x: number; z: number; level: number }, to: PathTile, epoch: number) => void = () => {};
 
     const shutDoorAt = (from: number, to: number) => findShutDoorAt(deps, level, tiles, from, to, blockedDoor);
@@ -393,11 +424,11 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
                 boxMinZ = boxMaxZ = p.z;
                 boxRepaths = 0;
                 boxVisited.clear();
-                boxVisited.add(`${p.x},${p.z}`);
+                boxVisited.add(tileKey(p.x, p.z));
             } else {
                 boxMinX = Math.min(boxMinX, p.x); boxMaxX = Math.max(boxMaxX, p.x);
                 boxMinZ = Math.min(boxMinZ, p.z); boxMaxZ = Math.max(boxMaxZ, p.z);
-                if (boxVisited.size < 32) boxVisited.add(`${p.x},${p.z}`);
+                if (boxVisited.size < 32) boxVisited.add(tileKey(p.x, p.z));
                 // Require at least two visited tiles so a pure stationary stall still hits its tick budget.
                 if (ticks - progressTick >= 120 && boxVisited.size >= 2 && Math.max(boxMaxX - boxMinX, boxMaxZ - boxMinZ) <= 28 && boxRepaths >= 8) {
                     return finish(false, `no progress: walk oscillating near ${p.x},${p.z} target=${goal.x},${goal.z}`);
@@ -407,14 +438,22 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             // A live hunter's square reaches the next lookahead of path: plan round it, once for each set of squares.
             if (deps.hunters) {
                 seen(p);
-                const hi = Math.min(tiles.length - 1, Math.max(0, idx) + look);
-                const hit = squares.filter(h => { for (let i = Math.max(0, idx); i <= hi; i++) if (d8(tiles[i]!, h) <= h.r) return true; return false; });
-                const key = hit.map(h => `${h.x},${h.z},${h.r}`).join(' ');
-                if (key && key !== dodged && dodges < 60 && !door) {
-                    dodged = key; dodges++;
-                    if (!replan(p, `hunter at ${key}`)) return finish(false, `no path from ${p.x},${p.z}`);
-                    clickAhead(look);
-                    return;
+                if (squares.length) {
+                    const lo = Math.max(0, idx), hi = Math.min(tiles.length - 1, lo + look);
+                    const hit: HunterSquare[] = [];
+                    for (let s = 0; s < squares.length; s++) {
+                        const h = squares[s]!;
+                        for (let i = lo; i <= hi; i++) if (d8(tiles[i]!, h) <= h.r) { hit.push(h); break; }
+                    }
+                    if (hit.length) {
+                        const key = hit.map(h => `${h.x},${h.z},${h.r}`).join(' ');
+                        if (key !== dodged && dodges < 60 && !door) {
+                            dodged = key; dodges++;
+                            if (!replan(p, `hunter at ${key}`)) return finish(false, `no path from ${p.x},${p.z}`);
+                            clickAhead(look);
+                            return;
+                        }
+                    }
                 }
             }
 

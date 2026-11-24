@@ -78,14 +78,14 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     let stopped = false, flickAt = -Infinity, threatAt = -Infinity, threatNow = false;
     let scriptPrayerAt = -Infinity, scriptPrayers: number[] = [], inputTick = -1, inputs = 0;
     let pending: Pending = { kind: 'none' };
-    let expect: number[] | null = null, expectAt = 0, wasActive = false, lastTile = '';
+    let expect: number[] | null = null, expectAt = 0, wasActive = false, lastX = NaN, lastZ = NaN, lastLevel = NaN;
     // Prayers of a flick that come back on in its second tick.
     let resume: number[] = [];
     let pointsFirst: number | undefined, pointsLast: number | undefined, taken = 0, lastEvent = -Infinity;
     // The fight the game started by auto-retaliate, with no attack input from the script: the attack on that NPC and
     // the tick the state last showed the fight. A prayer button clears the fight like each interaction, and the game
     // starts it again only at the NPC's next hit. The guard sends this attack after its prayer inputs.
-    let retaliate: { action: Action; at: number } | null = null, walkAt = -Infinity, stillSince = 0;
+    let retaliate: { action: Action; at: number } | null = null, walkAt = -Infinity;
     const fish = createFishingSync();
     const fishing = (st: any): boolean => pending.kind === 'attack' && pending.action.type === 'interactNpc' && skillTarget(pending.action, st);
     // Outside a multi-combat area the engine refuses an attack on an NPC while another NPC has hit the player in the
@@ -244,18 +244,24 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const caught = fish.observeTick(st, now, fishing(st));
 
         // An interaction that is not an attack ends when the player has stood idle for its number of ticks.
-        const tile = `${p.worldX},${p.worldZ},${p.level}`;
         if (pending.kind === 'other') {
-            pending.still = tile === lastTile && (p.animId ?? -1) === -1 ? pending.still + 1 : 0;
+            pending.still = p.worldX === lastX && p.worldZ === lastZ && p.level === lastLevel && (p.animId ?? -1) === -1 ? pending.still + 1 : 0;
             if (pending.still >= pending.need || (pending.item !== undefined && held(st, pending.item) > pending.had!)) pending = { kind: 'none' };
         }
-        stillSince = tile === lastTile ? stillSince : now;
-        lastTile = tile;
+        lastX = p.worldX; lastZ = p.worldZ; lastLevel = p.level;
 
         // The NPC that attacks the player, and the game's refusal of an attack on another NPC.
         let refused = false;
-        for (const m of st.gameMessages ?? []) if ((m.tick ?? -1) > refusedSeen && /^I'm already under attack/.test(m.text ?? '')) refused = true;
-        for (const m of st.gameMessages ?? []) refusedSeen = Math.max(refusedSeen, m.tick ?? -1);
+        const msgs = st.gameMessages;
+        if (msgs?.length) {
+            for (let i = 0; i < msgs.length; i++) {
+                const m = msgs[i], t = m.tick ?? -1;
+                if (t > refusedSeen) {
+                    if (!refused && /^I'm already under attack/.test(m.text ?? '')) refused = true;
+                    refusedSeen = t;
+                }
+            }
+        }
         if (pending.kind === 'attack' && pending.action.type === 'interactNpc') {
             if (refused && attackerIndex === null) {
                 const scriptTarget = pending.action.npcIndex;

@@ -20,9 +20,26 @@ let baseIds: Map<number, number> | undefined;
 function baseId(id: number): number {
     if (!baseIds) {
         baseIds = new Map();
-        const rows = readFileSync(join(resolve(import.meta.dir, '../../..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8').split(/\r?\n/).flatMap(l=>{ const m=l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; });
-        const names = new Map(rows.map(([id,name])=>[name,id]));
-        for (const [id,name] of rows) baseIds.set(id,name.startsWith('cert_') ? names.get(name.slice(5)) ?? id : id);
+        const text = readFileSync(join(resolve(import.meta.dir, '../../..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8');
+        const rows: [number, string][] = [];
+        const names = new Map<string, number>();
+        let pos = 0;
+        while (pos < text.length) {
+            let end = text.indexOf('\n', pos);
+            if (end < 0) end = text.length;
+            const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+            const eq = text.indexOf('=', pos);
+            if (eq > pos && eq < lineEnd) {
+                const parsedId = Number(text.slice(pos, eq));
+                if (Number.isInteger(parsedId) && parsedId >= 0) {
+                    const name = text.slice(eq + 1, lineEnd);
+                    rows.push([parsedId, name]);
+                    names.set(name, parsedId);
+                }
+            }
+            pos = end + 1;
+        }
+        for (const [rowId, name] of rows) baseIds.set(rowId, name.startsWith('cert_') ? names.get(name.slice(5)) ?? rowId : rowId);
     }
     return baseIds.get(id) ?? id;
 }
@@ -30,16 +47,26 @@ function baseId(id: number): number {
 // This is the current SDK observation, never a reconstruction from bank stock
 // or a prior session. Missing/invalid data is unknown; an explicit [] stays [].
 function equipmentStatus(raw: unknown) {
-    if (!Array.isArray(raw) || !raw.every(i => i && Number.isSafeInteger(i.slot) && i.slot >= 0
-        && Number.isSafeInteger(i.id) && i.id >= 0 && typeof i.name === 'string' && i.name.trim().length > 0
-        && Number.isSafeInteger(i.count) && i.count > 0)) return null;
-    return raw.map(i => ({ slot:i.slot, id:i.id, baseId:baseId(i.id), name:i.name, count:i.count }));
+    if (!Array.isArray(raw)) return null;
+    for (let k = 0; k < raw.length; k++) {
+        const i = raw[k];
+        if (!i || !Number.isSafeInteger(i.slot) || i.slot < 0
+            || !Number.isSafeInteger(i.id) || i.id < 0 || typeof i.name !== 'string' || i.name.trim().length === 0
+            || !Number.isSafeInteger(i.count) || i.count <= 0) return null;
+    }
+    return raw.map(i => ({ slot: i.slot, id: i.id, baseId: baseId(i.id), name: i.name, count: i.count }));
 }
 
+let roleMap: Map<string, string> | undefined;
 export function roleOf(name: string): string {
     if (process.env.BOT_ROLE) return process.env.BOT_ROLE;
-    for (const [role, list] of Object.entries(NAMES)) if ((list as readonly string[]).some(n => n.toLowerCase() === name.toLowerCase())) return role;
-    return 'test';
+    if (!roleMap) {
+        roleMap = new Map();
+        for (const [role, list] of Object.entries(NAMES)) {
+            for (const n of list as readonly string[]) roleMap.set(n.toLowerCase(), role);
+        }
+    }
+    return roleMap.get(name.toLowerCase()) ?? 'test';
 }
 
 let patched = false;
@@ -109,7 +136,13 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
         sendWrapper = (msg: { type: string; action?: { type: string } }) => { if (msg?.type === 'sdk_action') note(msg.action?.type); return bound(msg); };
         sdk.send = sendWrapper;
     }
-    const xpNow = () => (s.sdk.getState()?.skills ?? []).reduce((n: number, k: any) => n + (k.experience ?? 0), 0);
+    const xpNow = () => {
+        const skills = s.sdk.getState()?.skills;
+        if (!skills) return 0;
+        let total = 0;
+        for (let i = 0; i < skills.length; i++) total += skills[i]?.experience ?? 0;
+        return total;
+    };
     let lastXp = xpNow();
     let pending = '';
     let strip = '';
@@ -120,7 +153,10 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
         lastXp = xp;
         strip = (strip + String(Math.min(9, sent.length))).slice(-300);
         // The action set sent during the tick that just ended; its XP shows up on the next tick.
-        pending = sent.length ? [...new Set(sent)].sort().join('+') : 'none';
+        if (sent.length === 0) pending = 'none';
+        else if (sent.length === 1) pending = sent[0]!;
+        else if (sent.length === 2) pending = sent[0] === sent[1] ? sent[0]! : sent[0]! < sent[1]! ? `${sent[0]}+${sent[1]}` : `${sent[1]}+${sent[0]}`;
+        else pending = [...new Set(sent)].sort().join('+');
         const c = combos.get(pending) ?? { n: 0, xp: 0 };
         c.n++; combos.set(pending, c);
         sent.length = 0;
@@ -185,14 +221,44 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     } catch { /* missing or invalid prior observation remains unknown */ }
     const inputs = recordInputs(s);
     let observedEquipment: string | null = null;
+    let lastEquipRows: { slot: number; id: number; baseId: number; name: string; count: number }[] | null = null;
+    let lastEquipValid = false;
+    const sameRawEquipment = (prev: readonly { slot: number; id: number; name: string; count: number }[] | null, raw: unknown): boolean => {
+        if (!prev || !Array.isArray(raw) || prev.length !== raw.length) return false;
+        for (let k = 0; k < prev.length; k++) {
+            const a = prev[k]!, b = raw[k];
+            if (!b || a.slot !== b.slot || a.id !== b.id || a.count !== b.count || a.name !== b.name) return false;
+        }
+        return true;
+    };
+    const trackInGameEquipment = (raw: unknown) => {
+        const current = !!s.client && typeof s.client === 'object' && equipmentObserved(s.client);
+        const inGame = (s.client as { ingame?: unknown } | undefined)?.ingame;
+        if (inGame !== true) return;
+        if (!current) {
+            lastEquipRows = null;
+            lastEquipValid = false;
+            observedEquipment = null;
+            return;
+        }
+        if (lastEquipValid && sameRawEquipment(lastEquipRows, raw)) return;
+        lastEquipRows = equipmentStatus(raw);
+        lastEquipValid = lastEquipRows !== null;
+        observedEquipment = null;
+    };
     const savedEquipmentReady = (raw: unknown) => {
         const rows = equipmentStatus(raw), current = !!s.client && typeof s.client === 'object' && equipmentObserved(s.client);
         const inGame = (s.client as {ingame?:unknown}|undefined)?.ingame;
         if (inGame === true) {
-            observedEquipment = current && rows !== null ? JSON.stringify(rows) : null;
-            return current && rows !== null;
+            lastEquipRows = rows;
+            lastEquipValid = current && rows !== null;
+            observedEquipment = lastEquipValid ? JSON.stringify(rows) : null;
+            return lastEquipValid;
         }
         if (current) return rows !== null;
+        if (observedEquipment === null && lastEquipValid && lastEquipRows !== null) {
+            observedEquipment = JSON.stringify(lastEquipRows);
+        }
         // Logout clears live container readiness. Retain only this session's actual matching saved kit.
         if (inGame !== false || observedEquipment === null || rows === null || JSON.stringify(rows) !== observedEquipment) return false;
         const proof = readLogoutProof(s.name, server, { root: opts.lifecycleRoot ?? lifecycleRootForRead(server) });
@@ -272,7 +338,13 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     // A lockstep practice world runs ticks as fast as its bots answer, and no dashboard follows a bench account tick
     // by tick: there the file is written every 100 ticks, not every 5 (the write was 10% of a 16-account bench run).
     const every = process.env.SIM_LOCKSTEP === '1' ? 100 : 5;
-    const off = s.onTick(() => { observeBank(); observeQuests(); savedEquipmentReady(s.sdk.getState()?.equipment); if (++n % every === 0) write(); });
+    const questEvery = Math.min(every, 20);
+    const off = s.onTick(() => {
+        observeBank();
+        trackInGameEquipment(s.sdk.getState()?.equipment);
+        if (++n % questEvery === 0 || !quests) observeQuests();
+        if (n % every === 0) write();
+    });
     // The row is also written on the clock, for the session's whole life: a session whose tick stream has frozen (a
     // hung quest script, a stalled client) otherwise stops refreshing `at`, and the release gate (worker-release.ts
     // assertCompatibleWorkers) then reads an unfinished row older than 30 s as an unknown peer and refuses every other
@@ -286,10 +358,14 @@ export const GROUND_STATUS_MAX = 50;
 export function groundStatus(items: unknown, level: unknown): [number, number, number, number, number][] {
     if (!Array.isArray(items) || !Number.isInteger(level)) return [];
     const out: [number, number, number, number, number][] = [];
-    for (const i of items as any[]) {
+    for (let k = 0; k < items.length; k++) {
         if (out.length >= GROUND_STATUS_MAX) break;
-        const row: [number, number, number, number, number] = [i?.x, i?.z, level as number, i?.id, i?.count];
-        if (row.every(Number.isSafeInteger) && i.id >= 0 && i.count >= 1) out.push(row);
+        const i = items[k] as any;
+        if (!i) continue;
+        const x = i.x, z = i.z, id = i.id, count = i.count;
+        if (Number.isSafeInteger(x) && Number.isSafeInteger(z) && Number.isSafeInteger(id) && id >= 0 && Number.isSafeInteger(count) && count >= 1) {
+            out.push([x, z, level as number, id, count]);
+        }
     }
     return out;
 }

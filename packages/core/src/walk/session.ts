@@ -1,8 +1,6 @@
 // Session-bound PathDeps adapter and door-policy masking for in-process bot walks.
 import { blockedDoorsNear, installDoorPolicy, type Account, type Door, type DoorBlock } from '../world';
 import { accountForSdk, withDoorPolicy } from '../door-policy';
-import { guardWalk, liveHunters, protectedFromMelee, withDanger } from '../danger';
-import { clientReach } from '../reach';
 import type { PathDeps, PathTile } from './path';
 
 export function applyKnownDoorBlocks(sdk: any, level: number, from: PathTile, to: PathTile, doors?: readonly Door[]): DoorBlock[] {
@@ -19,8 +17,12 @@ export async function sessionWalker(s: {
     direct(a: { type: string; [k: string]: unknown }): Promise<unknown>;
     ended?: Promise<unknown>;
 }): Promise<PathDeps> {
-    const pf: any = await import('../../../../vendor/rs-sdk/sdk/pathfinding');
-    const grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+    const [pf, grid, { guardWalk, liveHunters, protectedFromMelee, withDanger }, { clientReach }] = await Promise.all([
+        import('../../../../vendor/rs-sdk/sdk/pathfinding') as Promise<any>,
+        import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'),
+        import('../danger'),
+        import('../reach'),
+    ]);
     await installDoorPolicy(s.sdk, s.client);
     const pos = () => { const p = s.sdk.getState()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
     const reach = clientReach(s.client, pos);

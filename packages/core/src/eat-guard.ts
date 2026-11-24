@@ -37,7 +37,7 @@
 
 import { basename } from 'node:path';
 import { attackTarget, IDLE_TICKS, NEUTRAL } from './prayer-guard';
-import { defaultEatAt, expandFoodStages, questFoodDefinitions, registerSessionEater, selectQuestFood } from './sustain';
+import { allFoodIds, defaultEatAt, registerSessionEater, selectQuestFood } from './sustain';
 
 export interface EatGuardSession {
     sdk: { getState(): any };
@@ -109,17 +109,24 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
     // The food table is read here, at login: the read must not run inside a tick.
     const food = o.food ?? PLAIN_FOOD;
     // A script eats what it chooses: each item that heals counts as the food of a script's own eat input.
-    const edible = expandFoodStages([...questFoodDefinitions().keys()]);
+    const edible = allFoodIds();
     const stats: EatGuardStats = { eats: 0, urgent: 0, holds: 0, waits: 0, refused: 0, resends: 0, late: 0, healed: 0, yielded: false };
     const own = new WeakSet<object>();
     const fightOnly = o.fightOnly ?? true;
     let stopped = false, fought = false, holders = 0, ateAt = -Infinity, damageAt = -Infinity, inputsAt = -Infinity, inputs = 0;
     let pending: Pending = { kind: 'none' };
-    let lastHp: number | undefined, hpFirst: number | undefined, hpMin: number | undefined, lastTile = '';
+    let lastHp: number | undefined, hpFirst: number | undefined, hpMin: number | undefined;
+    let lastX = NaN, lastZ = NaN, lastLevel = NaN, hpIdx = -1;
     let sent: { id: number; before: number; hp: number; at: number } | null = null;
     let lateEat: { action: Action; id: number } | null = null;
 
-    const count = (st: any, id: number): number => (st?.inventory ?? []).filter((i: any) => i.id === id).reduce((n: number, i: any) => n + i.count, 0);
+    const count = (st: any, id: number): number => {
+        const inv = st?.inventory;
+        if (!inv) return 0;
+        let n = 0;
+        for (let i = 0; i < inv.length; i++) if (inv[i].id === id) n += inv[i].count;
+        return n;
+    };
     const level = (v: Level, max: number): number => typeof v === 'function' ? v(max) : v;
 
     const slotItem = (slot: unknown): any => (s.sdk.getState()?.inventory ?? []).find((i: any) => i.slot === slot);
@@ -174,16 +181,20 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
         if (lateEat && now - ateAt >= EAT_TICKS) { if (slotItem(lateEat.action.slot)?.id === lateEat.id) send(lateEat.action); lateEat = null; }
         const st = s.sdk.getState(), p = st?.player;
         if (!p || p.isDead) return;
-        const skill = (st.skills ?? []).find((k: any) => k.name === 'Hitpoints'), hp = skill?.level, max = skill?.baseLevel;
+        const skills = st.skills;
+        let skill = hpIdx >= 0 && skills?.[hpIdx]?.name === 'Hitpoints' ? skills[hpIdx] : undefined;
+        if (!skill && skills) {
+            for (let i = 0; i < skills.length; i++) if (skills[i]?.name === 'Hitpoints') { hpIdx = i; skill = skills[i]; break; }
+        }
+        const hp = skill?.level, max = skill?.baseLevel;
         if (!Number.isFinite(hp) || !Number.isFinite(max) || hp <= 0 || max <= 0) return;
 
         // An interaction that is not an attack ends when the player has stood idle for IDLE_TICKS ticks.
-        const tile = `${p.worldX},${p.worldZ},${p.level}`;
         if (pending.kind === 'other') {
-            pending.still = tile === lastTile && (p.animId ?? -1) === -1 ? pending.still + 1 : 0;
+            pending.still = p.worldX === lastX && p.worldZ === lastZ && p.level === lastLevel && (p.animId ?? -1) === -1 ? pending.still + 1 : 0;
             if (pending.still >= IDLE_TICKS) pending = { kind: 'none' };
         }
-        lastTile = tile;
+        lastX = p.worldX; lastZ = p.worldZ; lastLevel = p.level;
 
         if (lastHp !== undefined && hp < lastHp) damageAt = now;
         lastHp = hp; hpFirst ??= hp; hpMin = Math.min(hpMin ?? hp, hp);
