@@ -167,3 +167,21 @@ test('pushSingleCommit refreshes the author timestamp when amending an older com
   expect(await git(data,'rev-list','--count','HEAD')).toBe('1');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('verifyStaticBundle flags secret account leaks in secondary static scripts and stylesheets',()=>{
+ const dashDir=fileURLToPath(new URL('.',import.meta.url));
+ const dir=mkdtempSync(join(tmpdir(),'dash-leak-'));
+ try{
+  const bundle=join(dir,'site');
+  mkdirSync(bundle);
+  for(const f of ['index.html','client-shell.js','client-shell.css','operations.js','operations.css','map-shell.js','map-shell.css','client-viewer.css','xp-tracker.js','items.png','worldmap.png']){
+   if(existsSync(join(dashDir,f)))cpSync(join(dashDir,f),join(bundle,f));
+  }
+  cpSync(join(dashDir,'client-assets'),join(bundle,'client-assets'),{recursive:true});
+  writeFileSync(join(bundle,'public.json'),JSON.stringify({bots:[],roster:[]}));
+  writeFileSync(join(bundle,'map-shell.js'),readFileSync(join(bundle,'map-shell.js'),'utf8')+'\n// Haggis\n');
+  const leak=verifyStaticBundle(bundle,'Haggis');
+  expect(leak.ok).toBe(false);
+  expect(leak.leaks).toContain('map-shell.js');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});

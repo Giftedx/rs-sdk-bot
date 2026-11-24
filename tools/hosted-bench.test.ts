@@ -97,6 +97,16 @@ test('expandMultiSeedArtifacts fans out multi-seed runner downloads into bench-p
         const s2Cases = JSON.parse(readFileSync(join(dir, 'bench-p1-s2-0123456789abcdef0123456789abcdef01234567', 'bench-cases', 'cases.json'), 'utf8'));
         expect(s1Out).toBe('RESULT ok s1\n');
         expect(s2Cases.rows[0].ledgerTicks).toEqual([210]);
+
+        const simDir = join(dir, 'bench-m2-abcdef0123456789abcdef0123456789abcdef01');
+        mkdirSync(join(simDir, 'bench-cases'), {recursive: true});
+        mkdirSync(join(simDir, 'sim', 'aio-bench', 'output-seed-3'), {recursive: true});
+        writeFileSync(join(simDir, 'bench-cases', 'cases.json'), JSON.stringify({rows: [{case: 'extra:b', ok: true, seed: 3}]}));
+        writeFileSync(join(simDir, 'bench-cases', 'seed-3.json'), JSON.stringify({rows: [{case: 'extra:b', ok: true, elapsedMs: 1200, ledgerTicks: [99]}]}));
+        writeFileSync(join(simDir, 'sim', 'aio-bench', 'output-seed-3', 'extra_b.log'), 'RESULT ok s3\n');
+        const expandedSim = expandMultiSeedArtifacts(dir);
+        expect(expandedSim.has('bench-m2-abcdef0123456789abcdef0123456789abcdef01')).toBe(true);
+        expect(readFileSync(join(dir, 'bench-p2-s3-abcdef0123456789abcdef0123456789abcdef01', 'aio-bench', 'output', 'extra_b.log'), 'utf8')).toBe('RESULT ok s3\n');
     } finally {
         rmSync(dir, {recursive: true, force: true});
     }

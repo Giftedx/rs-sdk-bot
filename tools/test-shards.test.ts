@@ -105,12 +105,17 @@ test('a change selects the tests that reach it by import, by a quoted path, or b
         write('scripts/reads-knowledge.test.ts', "const gear = 'knowledge/gear.json';");
         write('scripts/scans.test.ts', "import { readdirSync } from 'node:fs';\nreaddirSync('scripts');");
         write('scripts/apart.test.ts', "import { other } from './other';");
-        const tests = ['scripts/imports.test.ts', 'scripts/spawns.test.ts', 'scripts/reads.test.ts', 'scripts/reads-knowledge.test.ts', 'scripts/scans.test.ts', 'scripts/apart.test.ts'];
+        write('packages/dashboard/panel.js', 'export const panel = 1;');
+        write('packages/dashboard/index.html', '<html></html>');
+        write('packages/dashboard/panel.test.ts', "import { readFileSync } from 'node:fs';\nconst js = readFileSync(new URL('./panel.js', import.meta.url), 'utf8');\nconst html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');");
+        const tests = ['scripts/imports.test.ts', 'scripts/spawns.test.ts', 'scripts/reads.test.ts', 'scripts/reads-knowledge.test.ts', 'scripts/scans.test.ts', 'scripts/apart.test.ts', 'packages/dashboard/panel.test.ts'];
         expect(affectedTests(tests, ['scripts/worker.ts'], base)).toEqual(['scripts/imports.test.ts', 'scripts/spawns.test.ts', 'scripts/scans.test.ts']);
         expect(affectedTests(tests, ['scripts/data.json'], base)).toEqual(['scripts/reads.test.ts', 'scripts/scans.test.ts']);
         expect(affectedTests(tests, ['knowledge/gear.json'], base)).toEqual(['scripts/reads-knowledge.test.ts', 'scripts/scans.test.ts']);
         expect(affectedTests(tests, ['scripts/apart.test.ts'], base)).toEqual(['scripts/scans.test.ts', 'scripts/apart.test.ts']);
         expect(affectedTests(tests, ['research/note.md'], base)).toEqual(['scripts/scans.test.ts']);
+        expect(affectedTests(tests, ['packages/dashboard/panel.js'], base)).toEqual(['scripts/scans.test.ts', 'packages/dashboard/panel.test.ts']);
+        expect(affectedTests(tests, ['packages/dashboard/index.html'], base)).toEqual(['scripts/scans.test.ts', 'packages/dashboard/panel.test.ts']);
         expect(affectedTests(tests, ['package.json'], base)).toBeNull();
         expect(affectedTests(tests, ['patches/rs-sdk-working.patch'], base)).toBeNull();
     } finally { rmSync(base, { recursive: true, force: true }); }

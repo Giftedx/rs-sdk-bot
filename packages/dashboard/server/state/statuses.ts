@@ -37,17 +37,18 @@ function readStatuses(): Map<string, Status> {
     for (const [path, entry] of statusCache.entries()) {
         const s = entry.doc;
         if (isLocalServer(s.server) && now - s.at > 30 * 60_000) continue; // stale practice bots
-        const other = winners.get(s.name);
-        if (!other || s.at > other.doc.at) winners.set(s.name, { path, mtime: entry.mtime, doc: s });
+        const key = s.name.toLowerCase();
+        const other = winners.get(key);
+        if (!other || s.at > other.doc.at) winners.set(key, { path, mtime: entry.mtime, doc: s });
     }
     const out = new Map<string, Status>();
-    for (const [name, winner] of winners) {
+    for (const [key, winner] of winners) {
         const version = `${winner.path}:${winner.mtime}`;
-        if (trackedVersions.get(name) !== version) {
+        if (trackedVersions.get(key) !== version) {
             track(winner.doc);
-            trackedVersions.set(name, version);
+            trackedVersions.set(key, version);
         }
-        out.set(name, winner.doc);
+        out.set(winner.doc.name, winner.doc);
     }
     return out;
 }
@@ -130,7 +131,7 @@ function flowRate(name: string, key: 'coins' | 'food') {
 function goalSkillOf(s: Status): string | null {
     const known = SCRIPT_ROLE[String(s.goal ?? '')]?.skill ?? ROLE_SKILL[s.role];
     if (known) return known;
-    if (NO_ROLE.has(s.role) && s.name !== MAIN) return inferRole(s, ranks.get(s.name)?.rows ?? []);
+    if (NO_ROLE.has(s.role) && s.name.toLowerCase() !== MAIN.toLowerCase()) return inferRole(s, ranks.get(s.name)?.rows ?? []);
     return null;
 }
 

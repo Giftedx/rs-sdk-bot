@@ -98,3 +98,14 @@ test('a malformed status cannot poison the cache and freeze later state builds',
   expect([...run().keys()]).toEqual(['Healthy']);
  }
 });
+
+test('readStatuses deduplicates account status winners case-insensitively',()=>{
+ const now=Date.now(),tracked:string[]=[];
+ const run=buildReadStatuses([
+  {dir:'.practice/live/status',file:'worker.json',doc:{name:'worker',server:'rs-sdk-demo.fly.dev',at:now-500,phase:'old'},mtime:10},
+  {dir:'.practice/status',file:'Worker.json',doc:{name:'Worker',server:'rs-sdk-demo.fly.dev',at:now-100,phase:'new'},mtime:20},
+ ],doc=>tracked.push(doc.phase));
+ const out=run();
+ expect([...out.entries()].map(([k,v])=>[k,v.phase])).toEqual([['Worker','new']]);
+ expect(tracked).toEqual(['new']);
+});

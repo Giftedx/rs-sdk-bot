@@ -57,11 +57,12 @@ export function references(file: string, base = root): string[] {
     const text = readFileSync(resolve(base, file), 'utf8'), out = new Set<string>();
     const add = (path: string) => {
         for (const candidate of [path, `${path}.ts`, `${path}.tsx`, join(path, 'index.ts')]) {
-            if (/\.(tsx?|js|json|md)$/.test(candidate) && existsSync(resolve(base, candidate))) { out.add(candidate.replaceAll('\\', '/')); return; }
+            if (/\.(tsx?|js|json|md|html|css)$/.test(candidate) && existsSync(resolve(base, candidate))) { out.add(candidate.replaceAll('\\', '/')); return; }
         }
     };
     for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g)) add(join(dirname(file), m[1]!).replaceAll('\\', '/'));
-    for (const m of text.matchAll(/['"`]((?:\.\/)?(?:scripts|packages|tools|knowledge|docs|research|fleet|patches)\/[\w\-./]+\.(?:tsx?|json|md))['"`]/g)) add(m[1]!.replace(/^\.\//, ''));
+    for (const m of text.matchAll(/new\s+URL\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*,\s*import\.meta\.url\s*\)/g)) add(join(dirname(file), m[1]!).replaceAll('\\', '/'));
+    for (const m of text.matchAll(/['"`]((?:\.\/)?(?:scripts|packages|tools|knowledge|docs|research|fleet|patches)\/[\w\-./]+\.(?:tsx?|js|json|md|html|css))['"`]/g)) add(m[1]!.replace(/^\.\//, ''));
     return [...out];
 }
 

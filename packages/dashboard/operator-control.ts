@@ -3,31 +3,15 @@
 import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { ACCOUNT_ROLES, GOAL_KINDS, validateOperatorCommand, type AccountRole, type OperatorCommand, type CampaignState, type MissionState } from '../brain/src/contracts';
+import { ACCOUNT_ROLES, GOAL_KINDS, type AccountRole, type OperatorCommand, type CampaignState, type MissionState } from '../brain/src/contracts';
 import { defaultActivityCatalog } from '../brain/src/catalog';
 import { controllerStates } from '../core/src/controllers';
 import { atomicJson } from '../core/src/plan-lock';
-import { findStopFile, listStopEntries, liveRoot, operatorCommandsDir, practiceRoot, stopFilePaths } from '../core/src/practice-paths';
-import { appendOwnerRequest, applyCommand, validateCommand, REQUEST_MAX, HOLD_PREFIX } from './publish-commands';
+import { findStopFile, listStopEntries, liveRoot, operatorCommandsDir, practiceRoot } from '../core/src/practice-paths';
+import { appendOwnerRequest, applyCommand, enqueueBrainCommand, existingStopFiles, validateCommand, REQUEST_MAX, HOLD_PREFIX } from './publish-commands';
+import { MAIN_ACCOUNT } from './publish-relay';
 
 const OVERRIDE_ROLES = ACCOUNT_ROLES.filter((role): role is Exclude<AccountRole, 'main'> => role !== 'main');
-
-function canonicalJson(value: unknown): string {
- if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
- if (value && typeof value === 'object') {
-  const entries = Object.entries(value as Record<string, unknown>)
-   .filter(([, v]) => v !== undefined)
-   .sort(([a], [b]) => a.localeCompare(b));
-  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
- }
- return JSON.stringify(value);
-}
-
-function stripReceiptMeta(value: unknown): unknown {
- if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
- const { appliedAt: _appliedAt, applied: _applied, ...rest } = value as Record<string, unknown>;
- return rest;
-}
 
 export function createOperatorControl(options: { root: string; readOnly?: boolean; nonce?: string; alive?: (pid: number) => boolean }) {
  const { root } = options, nonce = options.nonce ?? randomUUID();
@@ -35,17 +19,12 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
  const alive = options.alive ?? ((pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } });
  const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
  const owned = () => { const path = join(root, 'vendor/rs-sdk/bots'); return existsSync(path) ? readdirSync(path, { withFileTypes: true }).filter(n => n.isDirectory() && /^[A-Za-z0-9]{1,12}$/.test(n.name)).map(n => n.name) : []; };
- const stopFilesFor = (account: string): string[] => {
-  const seen = new Set<string>(), out: string[] = [];
-  const push = (p: string) => {
-   const key = process.platform === 'win32' ? p.toLowerCase() : p;
-   if (!seen.has(key) && existsSync(p)) { seen.add(key); out.push(p); }
-  };
-  for (const p of stopFilePaths(account, root)) push(p);
-  for (const e of listStopEntries(root)) {
-   if (e.location !== 'sim' && e.flag.toLowerCase() === account.toLowerCase()) push(e.path);
-  }
-  return out;
+ const resolveOwned = (rawAccount: unknown): string => {
+  if (typeof rawAccount !== 'string' || !/^[A-Za-z0-9]{1,12}$/.test(rawAccount)) throw Error('Choose an owned account');
+  if (rawAccount.toLowerCase() === MAIN_ACCOUNT.toLowerCase()) throw Error('The main account is not controlled from the dashboard');
+  const match = owned().find(n => n.toLowerCase() === rawAccount.toLowerCase());
+  if (!match) throw Error('Choose an owned account');
+  return match;
  };
  const accountHolds = () => {
   const ownedByLower = new Map(owned().map(name => [name.toLowerCase(), name]));
@@ -76,21 +55,8 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
  }
 
  function enqueueCommand(cmd: OperatorCommand) {
-  const errors = validateOperatorCommand(cmd);
-  if (errors.length > 0) throw Error(errors.join('; '));
-  const pendingFile = join(commandsDir, `${cmd.id}.json`);
-  const appliedFile = join(commandsDir, 'applied', `${cmd.id}.json`);
-  const rejectedFile = join(commandsDir, 'rejected', `${cmd.id}.json`);
-  const cmdKey = canonicalJson(cmd);
-  for (const candidate of [pendingFile, appliedFile]) {
-   if (existsSync(candidate) && canonicalJson(stripReceiptMeta(read(candidate))) !== cmdKey) {
-    throw Error('Command identity conflicts with existing operator command');
-   }
-  }
-  if (!existsSync(pendingFile) && !existsSync(appliedFile) && !existsSync(rejectedFile)) {
-   mkdirSync(commandsDir, { recursive: true });
-   atomicJson(pendingFile, cmd);
-  }
+  const err = enqueueBrainCommand(root, cmd);
+  if (err) throw Error(err === 'command identity conflicts with existing operator command' ? 'Command identity conflicts with existing operator command' : err);
  }
 
  function metadata() {
@@ -122,6 +88,7 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
       'swarm-pause', 'swarm-resume', 'account-pause', 'account-release',
      ].includes(r.action);
      let status = r.status;
+     let rawNote = typeof r.note === 'string' ? r.note : '';
      if (isCommandAction && !terminalFailure) {
       const appliedPath = join(commandsDir, 'applied', `${r.id}.json`);
       const rejectedPath = join(commandsDir, 'rejected', `${r.id}.json`);
@@ -135,11 +102,18 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
        }
       } else if (existsSync(rejectedPath)) {
        status = 'rejected';
+       if (!rawNote) {
+        try {
+         const rejectedDoc = read(rejectedPath);
+         if (typeof rejectedDoc?.error === 'string' && rejectedDoc.error.trim()) rawNote = rejectedDoc.error;
+         else if (Array.isArray(rejectedDoc?.errors) && rejectedDoc.errors.length) rawNote = rejectedDoc.errors.map(String).join('; ');
+        } catch { /* ignore unreadable rejection payload */ }
+       }
       } else if (existsSync(pendingPath)) {
        status = 'submitted';
       }
      }
-     const note = typeof r.note === 'string' ? r.note.replace(/\s+/g, ' ').trim().slice(0, 200) : '';
+     const note = rawNote.replace(/\s+/g, ' ').trim().slice(0, 200);
      return { id: r.id, action: r.action, at: r.at, taskId: r.taskId ?? null, status, ...(note ? { note } : {}) };
     } catch { return null; }
    }).filter(r => r !== null).sort((a, b) => b.at - a.at).slice(0, 30) : [],
@@ -175,35 +149,35 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
    const now = Date.now();
    let status: string | undefined;
    if (action === 'account-pause' || action === 'account-release') {
-    if (typeof input.account !== 'string' || !/^[A-Za-z0-9]{1,12}$/.test(input.account) || !owned().includes(input.account)) {
-     throw Error('Choose an owned account');
-    }
-    const file = join(practiceRoot(root), 'stop-' + input.account);
+    const account = resolveOwned(input.account);
+    const file = join(practiceRoot(root), 'stop-' + account);
     if (action === 'account-pause') {
-     mkdirSync(practiceRoot(root), { recursive: true });
-     if (!findStopFile(input.account, root)) writeFileSync(file, HOLD_PREFIX + id, { flag: 'wx' });
-     enqueueCommand({ schemaVersion: 1, id, issuedAt: now, issuedBy: 'dashboard', kind: 'pause_account', account: input.account, reason: HOLD_PREFIX + id });
-     status = 'stop-requested';
+     if (findStopFile(account, root)) {
+      status = 'already-held';
+     } else {
+      enqueueCommand({ schemaVersion: 1, id, issuedAt: now, issuedBy: 'dashboard', kind: 'pause_account', account, reason: HOLD_PREFIX + id });
+      mkdirSync(practiceRoot(root), { recursive: true });
+      writeFileSync(file, HOLD_PREFIX + id, { flag: 'wx' });
+      status = 'stop-requested';
+     }
     } else {
-     const existing = stopFilesFor(input.account);
+     const existing = existingStopFiles(root, account);
      if (!existing.length || existing.some(p => !readFileSync(p, 'utf8').startsWith(HOLD_PREFIX))) {
       throw Error('This hold belongs elsewhere; inspect it before changing it');
      }
+     enqueueCommand({ schemaVersion: 1, id, issuedAt: now, issuedBy: 'dashboard', kind: 'resume_account', account, ...(input.clearDead === true ? { clearDead: true } : {}) });
      for (const p of existing) unlinkSync(p);
-     enqueueCommand({ schemaVersion: 1, id, issuedAt: now, issuedBy: 'dashboard', kind: 'resume_account', account: input.account, ...(input.clearDead === true ? { clearDead: true } : {}) });
      status = 'dashboard-hold-released';
     }
    } else if (action === 'pause' || action === 'resume' || ['swarm-pause', 'swarm-resume', 'side-pause', 'side-resume', 'job-disable', 'job-enable'].includes(action)) {
     const mapped = action === 'pause' ? 'side-pause' : action === 'resume' ? 'side-resume' : action;
-    const cmd = validateCommand({ id, action: mapped, at: now, account: input.account });
-    if (cmd.account && !owned().includes(cmd.account)) throw Error('Choose an owned account');
+    const account = input.account != null ? resolveOwned(input.account) : undefined;
+    const cmd = validateCommand({ id, action: mapped, at: now, ...(account !== undefined ? { account } : {}) });
     const out = await applyCommand(cmd, { root, now });
     if (out.status === 'refused') throw Error(out.note ?? 'Refused');
     status = out.status;
    } else if (action === 'override-account') {
-    if (typeof input.account !== 'string' || !/^[A-Za-z0-9]{1,12}$/.test(input.account) || !owned().includes(input.account)) {
-     throw Error('Choose an owned account');
-    }
+    const account = resolveOwned(input.account);
     const activityId = input.activityId;
     if (activityId !== undefined && activityId !== null) {
      if (typeof activityId !== 'string' || !activityId.trim()) throw Error('Invalid activityId');
@@ -223,7 +197,7 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
      issuedAt: now,
      issuedBy: 'dashboard',
      kind: 'override_account',
-     account: input.account,
+     account,
      ...(activityId !== undefined ? { activityId } : {}),
      ...(role ? { role } : {}),
      expiresAt: now + mins * 60_000,

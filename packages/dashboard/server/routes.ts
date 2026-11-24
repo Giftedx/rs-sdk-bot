@@ -92,7 +92,7 @@ export function createFetchHandler() {
         // Death recap: the newest death in the account's tick records, read when the page asks, kept for 30 s.
         if (url.pathname === '/api/death-recap') {
             const name = url.searchParams.get('name') ?? '';
-            if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name) || name.toLowerCase() === MAIN.toLowerCase()) return Response.json({ error: 'not available' }, { status: 404 });
+            if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name) || name.replace(/[ _-]/g, '').toLowerCase().includes(MAIN.toLowerCase())) return Response.json({ error: 'not available' }, { status: 404 });
             const key = name.toLowerCase(), hit = recapCache.get(key);
             if (hit && Date.now() - hit.at < 30_000) return Response.json({ recap: hit.recap });
             const recap = deathRecap(root, name, 8, srv => isLocalServer(srv) ? null : world.tickMs);

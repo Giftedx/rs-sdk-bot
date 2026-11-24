@@ -90,7 +90,7 @@ function stripReceiptMeta(value:unknown):unknown{
  const {appliedAt:_appliedAt,applied:_applied,...rest}=value as Record<string,unknown>;
  return rest;
 }
-function enqueueBrainCommand(root:string,cmd:OperatorCommand):string|null{
+export function enqueueBrainCommand(root:string,cmd:OperatorCommand):string|null{
  const errs=validateOperatorCommand(cmd);
  if(errs.length)return errs.join('; ');
  const dir=operatorCommandsDir(root);
@@ -112,7 +112,7 @@ function enqueueBrainCommand(root:string,cmd:OperatorCommand):string|null{
  }
  return null;
 }
-function existingStopFiles(root:string,flag:string):string[]{
+export function existingStopFiles(root:string,flag:string):string[]{
  const seen=new Set<string>(),out:string[]=[];
  const push=(p:string)=>{
   const key=process.platform==='win32'?p.toLowerCase():p;

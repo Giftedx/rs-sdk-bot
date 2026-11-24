@@ -148,7 +148,8 @@ export function expandMultiSeedArtifacts(dir: string): Set<string> {
             copyFileSync(join(srcCases, f), join(targetCases, 'cases.json'));
             const seedLog = join(srcCases, `seed-${seed}.log`);
             if (existsSync(seedLog)) copyFileSync(seedLog, join(targetCases, 'bench.log'));
-            const srcOut = join(src, 'aio-bench', `output-seed-${seed}`);
+            const simOut = join(src, 'sim', 'aio-bench', `output-seed-${seed}`);
+            const srcOut = existsSync(simOut) ? simOut : join(src, 'aio-bench', `output-seed-${seed}`);
             if (existsSync(srcOut)) {
                 for (const lf of readdirSync(srcOut).filter(x => x.endsWith('.log'))) copyFileSync(join(srcOut, lf), join(targetOut, lf));
             }

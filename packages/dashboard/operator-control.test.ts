@@ -245,3 +245,47 @@ test('Brain receipt reconciliation distinguishes applied:false, tracks account/s
   f.close();
  }
 });
+
+test('main account commands are refused, stop files stay unchanged on enqueue conflicts, and rejection notes surface', async () => {
+ const f = fixture();
+ try {
+  mkdirSync(join(f.root, 'vendor/rs-sdk/bots/Haggis'), { recursive: true });
+  mkdirSync(join(f.root, 'vendor/rs-sdk/bots/Worker'), { recursive: true });
+  writeFileSync(join(f.root, 'swarm.json'), JSON.stringify({ maxBots: 4, jobs: [{ account: 'Haggis', script: 'scripts/aio.ts', enabled: false }] }));
+
+  for (const payload of [
+   { id: randomUUID(), action: 'account-pause', account: 'Haggis' },
+   { id: randomUUID(), action: 'account-release', account: 'haggis' },
+   { id: randomUUID(), action: 'override-account', account: 'Haggis', role: 'army' },
+   { id: randomUUID(), action: 'job-enable', account: 'Haggis' },
+  ]) {
+   const res = await f.send(payload);
+   expect(res.status).toBe(400);
+  }
+  expect(existsSync(join(f.root, '.practice/stop-Haggis'))).toBe(false);
+
+  const cmdDir = join(f.liveDir, 'operator-commands');
+  mkdirSync(join(cmdDir, 'rejected'), { recursive: true });
+  const conflictId = randomUUID();
+  writeFileSync(join(cmdDir, `${conflictId}.json`), JSON.stringify({ schemaVersion: 1, id: conflictId, issuedAt: 1, issuedBy: 'dashboard', kind: 'clear_defect', activityId: 'other' }));
+  expect((await f.send({ id: conflictId, action: 'account-pause', account: 'Worker' })).status).toBe(400);
+  expect(existsSync(join(f.root, '.practice/stop-Worker'))).toBe(false);
+
+  writeFileSync(join(f.root, '.practice/stop-Worker'), 'dashboard-stop:old');
+  expect((await f.send({ id: conflictId, action: 'account-release', account: 'Worker' })).status).toBe(400);
+  expect(existsSync(join(f.root, '.practice/stop-Worker'))).toBe(true);
+
+  const pauseRes = await f.send({ id: randomUUID(), action: 'account-pause', account: 'Worker' });
+  expect((await pauseRes.json() as any).status).toBe('already-held');
+
+  const rejId = randomUUID();
+  const activity = defaultActivityCatalog(f.root).list()[0]!;
+  expect((await f.send({ id: rejId, action: 'clear-defect', activityId: activity.id })).status).toBe(200);
+  rmSync(join(cmdDir, `${rejId}.json`));
+  writeFileSync(join(cmdDir, 'rejected', `${rejId}.json`), JSON.stringify({ file: `${rejId}.json`, errors: ['defect not found'], rejectedAt: 2 }));
+  const meta = (await (await f.handler(new Request('http://127.0.0.1:3100/api/control'), '127.0.0.1')).json()) as any;
+  expect(meta.requests.find((r: any) => r.id === rejId)).toMatchObject({ status: 'rejected', note: 'defect not found' });
+ } finally {
+  f.close();
+ }
+});

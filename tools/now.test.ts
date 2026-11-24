@@ -156,3 +156,8 @@ test('readSwarmStops and resolveSyncedLeasesDir prefer .practice/live/ and fall 
         rmSync(base, { recursive: true, force: true });
     }
 });
+
+test('procRows ignores malformed Windows WMI lines with invalid PID or creation time', () => {
+    const rows = procRows('bad|not-a-date|bun.exe\r\n0|2001-09-09T01:45:40.0000000+00:00|bun.exe\r\n105|2001-09-09T01:45:40.0000000+00:00|bun.exe scripts/swarm.ts\r\n', true, NOW);
+    expect(rows).toEqual([{ pid: 105, scripts: ['swarm.ts'], up: 60_000 }]);
+});
