@@ -46,7 +46,6 @@ export const BLOCKED_AIO_KEYS: ReadonlySet<string> = new Set([
 
 // Known non-passing AIO route keys marked experimental until fixed.
 export const EXPERIMENTAL_AIO_KEYS: ReadonlySet<string> = new Set([
-    'market:shop-buy',
     'skiller:foraging:crystal-chest',
 ]);
 

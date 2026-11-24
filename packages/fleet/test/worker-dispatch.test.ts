@@ -156,6 +156,7 @@ test('dispatchPlannedStep and dispatchAccountPlan compile recover, acquire, gear
     );
     expect(logoutRec.executionMode).toBe('session_recovery');
     expect(logoutRec.step.script).toBe('scripts/cloud-recover.ts');
+    expect(logoutRec.step.args).toEqual(['--account=UnloadMe']);
 
     const locRec = dispatchPlannedStep(
         'UnloadMe',

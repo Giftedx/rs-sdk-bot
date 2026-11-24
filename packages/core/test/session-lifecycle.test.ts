@@ -5,7 +5,7 @@ import { join,resolve } from 'node:path';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { startInProcessSession, connectInProcess, type Session } from '../src/inprocess';
 import { watchUnexpectedEnd, logoutSession, awaitBotReady, settle } from '../src/bot';
-import { beginSessionAttempt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT,lifecycleOwner } from '../src/session-lifecycle';
+import { beginSessionAttempt, readLatestAttemptReceipt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT,lifecycleOwner } from '../src/session-lifecycle';
 import { withPlanWrite } from '../src/plan-lock';
 import { acquireFleetTradeClaim, readFleetAccountClaim } from '../src/fleet-trade-claim';
 import { fleetGitWindow } from '../src/fleet-lease';
@@ -316,4 +316,26 @@ test('custom settlement owns original raw bookkeeping before logout ends the ses
 test('rejected guarded logout never falls back to raw logout or close',async()=>{
  let closes=0,inputs=0;const s={name:'guard-reject',close:async()=>{closes++;},direct:async()=>{inputs++;return{success:true};},tick:()=>0}as unknown as Session;
  await expect(settle([s],true,'foreign',{log:()=>{},logout:async()=>{throw Error('owner replaced');}})).rejects.toThrow('owner replaced');expect(inputs).toBe(0);expect(closes).toBe(0);
+});
+
+test('readLatestAttemptReceipt matches listAttempts().at(-1) in O(1) without scanning history', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'lifecycle-latest-'));
+    try {
+        expect(readLatestAttemptReceipt('Ana', 'localhost:8888', { root })).toBeNull();
+        const first = await open(root, 'Ana');
+        await ready(first);
+        await settle([first], true, 'first', { log: () => {} });
+        const second = await open(root, 'Ana');
+        await ready(second);
+        await settle([second], true, 'second', { log: () => {} });
+
+        const expected = listAttempts('Ana', 'localhost:8888', { root }).at(-1)!;
+        const fast = readLatestAttemptReceipt('Ana', 'localhost:8888', { root });
+        expect(fast).not.toBeNull();
+        expect(fast!.attemptId).toBe(expected.attemptId);
+        expect(fast!.sha256).toBe(expected.sha256!);
+        expect(fast!.receipt).toEqual(expected.receipt!);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
 });

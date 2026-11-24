@@ -225,6 +225,19 @@ function computeHiscoreMargin(
     };
 }
 
+function hasActiveGoToken(goPath: string, now: number): boolean {
+    if (!existsSync(goPath)) return false;
+    const parsed = readJsonSafe(goPath);
+    if (!isPlainRecord(parsed)) return false;
+    if (typeof parsed.runUntil === 'number' && Number.isFinite(parsed.runUntil)) {
+        return now < parsed.runUntil;
+    }
+    if (typeof parsed.expiresAt === 'number' && Number.isFinite(parsed.expiresAt)) {
+        return now < parsed.expiresAt;
+    }
+    return true;
+}
+
 function isOwnerStoppedAccount(account: string, root: string): boolean {
     const file = findStopFile(account, root) ?? findStopFile(account.toLowerCase(), root);
     if (!file) return false;
@@ -474,7 +487,7 @@ function buildSpecialistCampaign(
     );
     const hiscoreMargin = computeHiscoreMargin(board.name, board.category, planTicks, snapshots, now, true);
     const stopped = isOwnerStoppedAccount(lower, root);
-    const hasGoToken = existsSync(goPath);
+    const hasGoToken = hasActiveGoToken(goPath, now);
 
     let state: CampaignState = 'staging';
     if (alreadyRank1) state = 'completed';

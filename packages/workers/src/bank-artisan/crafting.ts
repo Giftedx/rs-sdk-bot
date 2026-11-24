@@ -1219,7 +1219,7 @@ export async function runLegacyCraftJewelryCli(
     const waitUntilFn = io?.waitUntil ?? waitUntil;
     const walkPathFn = io?.walkPath ?? walkPath;
     const sessionWalkerFn = io?.sessionWalker ?? sessionWalker;
-    const FURNACE_SPOT = { x: 3274, z: 3186 };
+    const FURNACE_SPOT = { x: 3275, z: 3186 };
     const BANK_SPOT = { x: 3269, z: 3167 };
     const CAP = Number(restArgs[0] ?? env.CAP ?? 15000);
     const ACTION = (restArgs[1] ?? env.ACTION ?? 'cut').toLowerCase();
@@ -1281,6 +1281,7 @@ export async function runLegacyCraftJewelryCli(
             await waitTicksFn(s, 1);
         };
         console.log(`START jewelry crafter ${botName} action=${ACTION} tier=${TIER}`);
+        let walkFails = 0;
         while (!over()) {
             if (ACTION === 'cut') {
                 const chisel = findItem(/^chisel$/i);
@@ -1311,10 +1312,18 @@ export async function runLegacyCraftJewelryCli(
                         continue;
                     }
                 }
-                if (Math.max(Math.abs((pos()?.worldX ?? 0) - FURNACE_SPOT.x), Math.abs((pos()?.worldZ ?? 0) - FURNACE_SPOT.z)) > 3) {
-                    await walk(FURNACE_SPOT.x, FURNACE_SPOT.z, 2);
+                const cur = pos();
+                if (!cur || Math.max(Math.abs(cur.worldX - FURNACE_SPOT.x), Math.abs(cur.worldZ - FURNACE_SPOT.z)) > 3) {
+                    const arrived = await walk(FURNACE_SPOT.x, FURNACE_SPOT.z, 2);
+                    if (!arrived) {
+                        if (++walkFails >= 5) break;
+                        await waitTicksFn(s, 2);
+                    } else {
+                        walkFails = 0;
+                    }
                     continue;
                 }
+                walkFails = 0;
                 const before = countRe(/ring|amulet/i);
                 await s.bot.craftJewelry({ product: 'ring', gem: TIER });
                 const made = countRe(/ring|amulet/i) - before;

@@ -202,6 +202,11 @@ describe('Phase 0 fleet hygiene', () => {
 
         expect(isProtectedStopEntry('BraveHardon', '').protected).toBe(true);
         expect(isProtectedStopEntry('pk-squad', 'fleet-health auto-paused: test').protected).toBe(true);
+        expect(isProtectedStopEntry('Abracadickra', 'fleet-health auto-paused: fail Error: combat travel original owner/life/stop endTicks=24').protected).toBe(false);
+        expect(isProtectedStopEntry('DipYourWick', 'swarm stopped').protected).toBe(true);
+        expect(isProtectedStopEntry('MeatNTwoVeg', 'swarm stopped').protected).toBe(false);
+        expect(isProtectedStopEntry('UnloadMe', 'owner pause').protected).toBe(true);
+        expect(isProtectedStopEntry('Worker9', 'owner pause 2026-11-22').protected).toBe(true);
 
         const dry = cliExportApply(root, { dry: true });
         expect(dry.counts['fixture-stop']).toBe(1);

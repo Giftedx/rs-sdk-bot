@@ -1,14 +1,20 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { NATIVE_RECOVERY_CHECKS, RECOVERY_SCHEMA, RECOVERY_SCRIPT } from '../../core/src/session-recovery-permit';
+import { cachedLaunchRevision, capabilityRevision } from '../../core/src/worker-release';
 import { InfraCircuitBreaker } from '../src/infra-circuit-breaker';
 import {
     END_SETTLE_MS,
     assessRecoveryEligibility,
     clearSwarmStops,
+    executeControlledLiveRecovery,
+    findCurrentNativeRecoveryQualification,
     readStandaloneHistory,
     recoveryLeaseState,
+    runControlledDispatchOne,
     runLocalRecoveryDirect,
     runStandaloneRecoveryPass,
     spentStandaloneAttempts,
@@ -228,4 +234,147 @@ describe('fleet standalone session recovery', () => {
         expect(clearSwarmStops(root, ['worker1'])).toEqual([]);
         expect(existsSync(join(root, '.practice', 'stop-worker1'))).toBe(true);
     });
+
+    test('filters by single account, defers without burning budget when swarm controller is down, and locates current native qualification', async () => {
+        const root = scratch();
+        const server = 'rs-sdk-demo.fly.dev';
+        const lRoot = join(liveRoot(root), 'session-lifecycle');
+        const owners = new Map([
+            ['worker1', { side: 'local', server }],
+            ['worker2', { side: 'local', server }],
+        ]);
+        const endedAt = Date.now() - END_SETTLE_MS - 10_000;
+        for (const acct of ['worker1', 'worker2']) {
+            const a = beginSessionAttempt({ account: acct, server }, { root: lRoot, now: () => endedAt - 2_000 });
+            a.record('ready');
+        }
+        writeFileSync(join(root, '.practice', 'swarm-deaths.json'), JSON.stringify({
+            worker1: { at: endedAt, reason: 'blocked' },
+            worker2: { at: endedAt, reason: 'blocked' },
+        }));
+
+        // Account filter picks only worker2
+        const filteredDry = await runStandaloneRecoveryPass({
+            root,
+            side: 'local',
+            server,
+            account: 'worker2',
+            dry: true,
+            pidAlive: () => false,
+            owners,
+            readClaim: () => ({ phase: 'held', kind: 'swarm', host: 'box-a', pid: 999991 }),
+            log: () => {},
+        });
+        expect(filteredDry.targets).toEqual([{ account: 'worker2', endedAt }]);
+
+        // Missing swarm controller defers without burning attempt budget or tripping circuit breaker
+        const deferred = await runStandaloneRecoveryPass({
+            root,
+            side: 'local',
+            server,
+            account: 'worker1',
+            dry: false,
+            pidAlive: () => false,
+            owners,
+            readClaim: () => ({ phase: 'held', kind: 'swarm', host: 'box-a', pid: 999991 }),
+            log: () => {},
+        });
+        expect(deferred.failed).toEqual([]);
+        expect(deferred.skipped[0]?.reason).toContain('swarm controller unavailable');
+        expect(spentStandaloneAttempts(readStandaloneHistory(root), 'worker1', endedAt)).toBe(0);
+
+        // executeControlledLiveRecovery defers when controller missing
+        const directDefer = await executeControlledLiveRecovery(
+            { account: 'worker1', endedAt, server },
+            { root, pidAlive: () => false },
+        );
+        expect(directDefer.ok).toBe(false);
+        expect(directDefer.deferred).toBe(true);
+
+        // Qualification scanner returns null when absent, and validates a complete delivery + proof bundle
+        expect(findCurrentNativeRecoveryQualification(root)).toBeNull();
+
+        const repo = join(import.meta.dir, '..', '..', '..');
+        const source = cachedLaunchRevision(repo);
+        const capRev = capabilityRevision(['scripts/session-check.ts'], repo);
+        const delivDir = join(root, '.practice', 'deliveries', 'rec-proof');
+        mkdirSync(delivDir, { recursive: true });
+        // Copy real runner file so findCurrentNativeRecoveryQualification hashes RECOVERY_SCRIPT under root
+        const runnerDst = join(root, RECOVERY_SCRIPT);
+        mkdirSync(join(runnerDst, '..'), { recursive: true });
+        const runnerBytes = await Bun.file(join(repo, RECOVERY_SCRIPT)).bytes();
+        writeFileSync(runnerDst, runnerBytes);
+        // Copy scripts/session-check.ts and its transitive capability deps? Pass explicit root=repo?
+        // Easier: place a minimal delivery in a scratch root only when capabilityRevision matches; or test findCurrentNativeRecoveryQualification on a temp root with runner + matching capabilityRevision.
+        const runnerSha = createHash('sha256').update(runnerBytes).digest('hex');
+        const evPath = join(delivDir, 'ev.txt');
+        writeFileSync(evPath, 'ok');
+        const evSha = createHash('sha256').update('ok').digest('hex');
+        const checks = Object.fromEntries(NATIVE_RECOVERY_CHECKS.map(k => [k, { ok: true, level: 'native-test', cases: ['c1'], evidence: [{ path: 'ev.txt', sha256: evSha }] }]));
+        const proofPath = join(delivDir, 'proof.json');
+        writeFileSync(proofPath, JSON.stringify({
+            ok: true,
+            level: 'native-controller-recovery',
+            runtimeRevision: source,
+            runnerSha256: runnerSha,
+            cases: [{ id: 'c1', ok: true, level: 'native-test', evidence: [{ path: 'ev.txt', sha256: evSha }] }],
+            checks,
+        }));
+        const proofSha = createHash('sha256').update(await Bun.file(proofPath).bytes()).digest('hex');
+        const gateLog = join(delivDir, 'gate.out.log');
+        writeFileSync(gateLog, `RECOVERY_NATIVE_PROOF ${JSON.stringify({ path: '.practice/deliveries/rec-proof/proof.json', sha256: proofSha })}\n`);
+        writeFileSync(join(delivDir, 'report.json'), JSON.stringify({
+            ok: true,
+            stage: 'delivered',
+            id: 'session-recovery-only',
+            at: endedAt + 1000,
+            runtimeRevision: capRev,
+            checks: [{ id: 'native-session-recovery', phase: 'practice', exitCode: 0, timedOut: false, detail: JSON.stringify({ stdout: '.practice/deliveries/rec-proof/gate.out.log' }) }],
+        }));
+
+        // Validate findCurrentNativeRecoveryQualification positive path (matching report + proof + marker)
+        const foundQual = findCurrentNativeRecoveryQualification(root, source, endedAt, endedAt + 5_000, capRev);
+        expect(foundQual).not.toBeNull();
+        expect(foundQual!.proof.path).toBe('.practice/deliveries/rec-proof/proof.json');
+        expect(foundQual!.proof.sha256).toBe(proofSha);
+        expect(findCurrentNativeRecoveryQualification(root, source, endedAt + 2_000, endedAt + 5_000, capRev)).toBeNull();
+
+        const qual = foundQual!;
+        const runId = 'fleet-recovery-test-1';
+        const nonce = 'nonce-test-1';
+        const okAttempt = beginSessionAttempt({ account: 'worker1', server }, { root: lRoot });
+        okAttempt.record('ready');
+        okAttempt.record('ended', 'logged-out');
+
+        const resultsFile = join(root, '.practice', 'swarm-repair.json.results.jsonl');
+        setTimeout(() => {
+            const raw = JSON.stringify({
+                schema: RECOVERY_SCHEMA,
+                kind: 'session-recovery',
+                account: 'worker1',
+                server,
+                runId,
+                nonce,
+                endedAt,
+                source,
+                qualification: qual,
+            });
+            writeFileSync(resultsFile, JSON.stringify({ at: Date.now(), raw, result: { changed: false, sessionRecovered: true, reason: 'confirmed' } }) + '\n');
+        }, 50);
+
+        const dispatchRes = await runControlledDispatchOne({
+            root,
+            account: 'worker1',
+            endedAt,
+            server,
+            runId,
+            nonce,
+            source,
+            qualification: qual,
+            timeoutMs: 2_000,
+            pollMs: 20,
+        });
+        expect(dispatchRes.ok).toBe(true);
+        expect(existsSync(join(root, '.practice', 'swarm-repair.json.lease'))).toBe(false);
+    }, 30_000);
 });

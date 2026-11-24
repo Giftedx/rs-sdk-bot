@@ -310,4 +310,99 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
         expect(validateWorldSnapshot(snapshot)).toEqual([]);
         expect(snapshot.accounts.tradera!.bank.trusted).toBe(false);
     });
+
+    test('orders/receipts cache invalidates immediately when a new order or receipt file is written (>100 files)', () => {
+        const fleetDir = join(tempRoot, '.practice', 'live', 'fleet-data', 'fleet');
+        writeJson(join(fleetDir, 'owners.json'), {
+            accounts: {
+                TraderA: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                TraderB: { side: 'local', server: DEFAULT_LIVE_SERVER },
+            },
+        });
+        for (let i = 0; i < 105; i++) {
+            writeJson(join(fleetDir, 'orders', `expired-${i}.json`), {
+                id: `expired-${i}`,
+                server: DEFAULT_LIVE_SERVER,
+                from: 'TraderA',
+                to: 'TraderB',
+                item: 'Shark',
+                itemId: 385,
+                count: 10,
+                start: NOW - 20_000,
+                end: NOW - 10_000,
+            });
+        }
+
+        const before = loadWorldSnapshot({ root: tempRoot, now: NOW });
+        expect(before.accounts.tradera!.lifecycle).toBe('idle');
+        expect(before.accounts.traderb!.lifecycle).toBe('idle');
+
+        // Add a fresh active order + prepared receipt after caching has populated.
+        writeJson(join(fleetDir, 'orders', 'active-1.json'), {
+            id: 'active-1',
+            server: DEFAULT_LIVE_SERVER,
+            from: 'TraderA',
+            to: 'TraderB',
+            item: 'Shark',
+            itemId: 385,
+            count: 10,
+            start: NOW - 1_000,
+            end: NOW + 60_000,
+        });
+        writeJson(join(fleetDir, 'receipts', 'active-1.from.json'), {
+            version: 2,
+            id: 'active-1',
+            account: 'TraderA',
+            role: 'from',
+            server: DEFAULT_LIVE_SERVER,
+            state: 'prepared',
+            at: NOW,
+        });
+
+        const during = loadWorldSnapshot({ root: tempRoot, now: NOW });
+        expect(during.accounts.tradera!.lifecycle).toBe('in_trade');
+        expect(during.accounts.traderb!.lifecycle).toBe('in_trade');
+        expect(during.activeTransfers?.map((t) => t.id)).toEqual(['active-1']);
+
+        // Settle the order with valid terminal v2 receipts and confirm cache invalidates.
+        writeJson(join(fleetDir, 'receipts', 'active-1.from.json'), {
+            version: 2,
+            id: 'active-1',
+            account: 'TraderA',
+            partner: 'TraderB',
+            role: 'from',
+            server: DEFAULT_LIVE_SERVER,
+            claim: '00000000-0000-4000-8000-000000000001',
+            state: 'settled',
+            ok: true,
+            item: 'Shark',
+            requested: 10,
+            count: 10,
+            inventory: { before: 10, after: 0 },
+            logout: { attemptId: '1790000000000-1-1', sha256: 'a'.repeat(64), at: NOW },
+            at: NOW,
+        });
+        writeJson(join(fleetDir, 'receipts', 'active-1.to.json'), {
+            version: 2,
+            id: 'active-1',
+            account: 'TraderB',
+            partner: 'TraderA',
+            role: 'to',
+            server: DEFAULT_LIVE_SERVER,
+            claim: '00000000-0000-4000-8000-000000000002',
+            state: 'settled',
+            ok: true,
+            item: 'Shark',
+            requested: 10,
+            count: 10,
+            inventory: { before: 0, after: 10 },
+            bank: { count: 10, at: NOW },
+            logout: { attemptId: '1790000000000-2-1', sha256: 'b'.repeat(64), at: NOW },
+            at: NOW,
+        });
+
+        const after = loadWorldSnapshot({ root: tempRoot, now: NOW + 1_000 });
+        expect(after.accounts.tradera!.lifecycle).toBe('idle');
+        expect(after.accounts.traderb!.lifecycle).toBe('idle');
+    });
 });

@@ -52,15 +52,19 @@ describe('ActivityCatalog & RateStore', () => {
     });
 
     test('supports benchPassedIds / liveProvenIds / launchQualifiedIds overrides and output/skill/quest lookups', () => {
+        const baselineCatalog = createActivityCatalog();
+        expect(baselineCatalog.require('market:shop-buy').trust).toBe('practice_passed');
+        expect(baselineCatalog.require('gather:foraging-crystal-chest').trust).toBe('experimental');
+
         const catalog = createActivityCatalog({
-            benchPassedIds: new Set(['market:shop-buy']),
+            benchPassedIds: new Set(['gather:foraging-crystal-chest']),
             liveProvenIds: new Set(['gather:woodcutting-fresh45']),
             launchQualifiedIds: new Set(['gather:woodcutting-fresh45']),
         });
 
-        const shopBuy = catalog.require('market:shop-buy');
-        expect(shopBuy.trust).toBe('practice_passed');
-        expect(shopBuy.protectedAllowed).toBe(false);
+        const crystalChest = catalog.require('gather:foraging-crystal-chest');
+        expect(crystalChest.trust).toBe('practice_passed');
+        expect(crystalChest.protectedAllowed).toBe(false);
 
         const willow = catalog.require('gather:woodcutting-fresh45');
         expect(willow.trust).toBe('live_proven');

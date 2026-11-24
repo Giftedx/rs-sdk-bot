@@ -443,12 +443,13 @@ export function recoveryRequestWaiting(requests: string): boolean {
 const readJson = (file: string, fallback: any) => { try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return fallback; } };
 const log = (line: string) => console.log(`CLOUD_RECOVER ${line}`);
 
-async function main(root: string, dry: boolean): Promise<number> {
-    const res = await runStandaloneRecoveryPass({ root, dry, log });
+async function main(root: string, dry: boolean, account?: string): Promise<number> {
+    const res = await runStandaloneRecoveryPass({ root, dry, ...(account ? { account } : {}), log });
     return res.ok ? 0 : 1;
 }
 
 if (import.meta.main) {
     const rootArg = process.argv.find(a => a.startsWith('--root='))?.slice(7);
-    process.exit(await main(resolve(rootArg ?? join(import.meta.dir, '..')), process.argv.includes('--dry')));
+    const accountArg = process.argv.find(a => a.startsWith('--account='))?.slice(10);
+    process.exit(await main(resolve(rootArg ?? join(import.meta.dir, '..')), process.argv.includes('--dry'), accountArg));
 }

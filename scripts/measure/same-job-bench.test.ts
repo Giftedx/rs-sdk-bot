@@ -20,10 +20,10 @@ test('a state the check cannot read is no room', () => {
 });
 
 test('the bench command of a case runs it also when the case is marked known', () => {
-  const command = benchCommand('extra:same-jewel-legacy', '2');
-  expect(command).toEqual(['bun', 'scripts/measure/aio-practice-bench.ts', '^extra:same-jewel-legacy$', '--all', '--seed', '2', '--parallel', '1']);
+  const command = benchCommand('extra:upass-pure-iban', '2');
+  expect(command).toEqual(['bun', 'scripts/measure/aio-practice-bench.ts', '^extra:upass-pure-iban$', '--all', '--seed', '2', '--parallel', '1']);
   // The case this guards: it is marked known, and the bench leaves such a case out with no `--all`.
-  expect(benchCases().find(c => c.key === 'extra:same-jewel-legacy')?.known).toBeTruthy();
+  expect(benchCases().find(c => c.key === 'extra:upass-pure-iban')?.known).toBeTruthy();
 });
 
 test('only a result row of the selected case counts as a run', () => {
