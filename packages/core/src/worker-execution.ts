@@ -1,5 +1,18 @@
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
-import type { Session } from './inprocess';
+import type { SessionCore as Session } from './session-types';
+
+const RAW_TARGET = Symbol.for('rsbot.workerExecution.rawTarget');
+
+/** Unwraps a `workerExecution` guard proxy so WeakMap/WeakSet registries share the underlying object identity. */
+export function unwrapGuarded<T extends object>(value: T): T {
+    let current: unknown = value;
+    while (current && typeof current === 'object') {
+        const inner = (current as Record<symbol, unknown>)[RAW_TARGET];
+        if (!inner || typeof inner !== 'object' || inner === current) break;
+        current = inner;
+    }
+    return current as T;
+}
 
 // Adapt the SDK runner/MCP execution lifetime to hosted workers. Cleanup is run
 // outside the cancelled work scope so logout and retained-stock settlement work.
@@ -8,8 +21,9 @@ export function workerExecution(log: (level: 'log' | 'warn' | 'error', args: unk
     const controller = new AbortController();
     const context = { signal: controller.signal, log };
     const cancelled = () => { const caller = executionContext.getStore(); return !!caller && (controller.signal.aborted || caller.signal.aborted); };
-    const guarded = <T extends object>(object: T): T => new Proxy(object, {
+    const guarded = <T extends object>(object: T): T => new Proxy(unwrapGuarded(object), {
         get(target, property) {
+            if (property === RAW_TARGET) return target;
             const value = Reflect.get(target, property, target);
             if (typeof value !== 'function') return value;
             return (...args: unknown[]) => {

@@ -121,11 +121,14 @@ export function restoreCredential(name: string, opts: { botsDir?: string; dir?: 
 
 // Whether this machine can log `name` in: a bot.env here, or a vault entry it holds the key for.
 export function hasCredential(name: string, opts: { botsDir?: string; dir?: string; key?: Buffer | null } = {}): boolean {
-    if (!NAME.test(name) || name.toLowerCase() === MAIN_ACCOUNT) return existsSync(join(opts.botsDir ?? BOTS_DIR, name, 'bot.env'));
-    if (existsSync(join(opts.botsDir ?? BOTS_DIR, name, 'bot.env'))) return true;
+    if (!NAME.test(name)) return false;
+    const botsDir = opts.botsDir ?? BOTS_DIR;
+    if (name.toLowerCase() === MAIN_ACCOUNT) return existsSync(join(botsDir, name, 'bot.env'));
+    if (existsSync(join(botsDir, name, 'bot.env'))) return true;
     let key: Buffer | null;
     try { key = opts.key === undefined ? vaultKey() : opts.key; } catch { return false; }
-    const entry = readEntry(name, opts.dir ?? vaultDir());
+    let entry: VaultEntry | null;
+    try { entry = readEntry(name, opts.dir ?? vaultDir()); } catch { return false; }
     return !!entry && !!key && entry.kid === keyId(key);
 }
 

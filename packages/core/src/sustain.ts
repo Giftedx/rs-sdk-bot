@@ -2,6 +2,7 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {parseConfigs} from '../../knowledge/src/config';
 import {waitUntil,type TickSource} from './ticks';
+import {unwrapGuarded} from './worker-execution';
 
 // Policy/form selection adapted from rs2b2t/rs2b0t@6e747f8bda494d9f75365b5533cf758d353dcc3b,
 // AIOQuesterLogic.selectSustainConsumable/resolveSustainPolicy and AIOQuester.eatOnce.
@@ -159,8 +160,8 @@ export function selectQuestFood(state:any,policy:FoodPolicy){
 // of that eat ends 3 ticks later.
 type EaterHold=()=>{ateAt:number;release():void};
 const sessionEaters=new WeakMap<object,EaterHold>();
-export const registerSessionEater=(sdk:object,hold:EaterHold):void=>{sessionEaters.set(sdk,hold);};
-export const holdSessionEater=(sdk:object):{ateAt:number;release():void}=>sessionEaters.get(sdk)?.()??{ateAt:-Infinity,release(){}};
+export const registerSessionEater=(sdk:object,hold:EaterHold):void=>{sessionEaters.set(unwrapGuarded(sdk),hold);};
+export const holdSessionEater=(sdk:object):{ateAt:number;release():void}=>sessionEaters.get(unwrapGuarded(sdk))?.()??{ateAt:-Infinity,release(){}};
 
 export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{success:boolean;message?:string}>},options:Omit<FoodPolicy,'reserved'>&{reserved?:Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>);timeoutTicks?:number;dropRetries?:number;onConsumed?:(effect:{id:number;hpBefore:number;hpAfter:number})=>void}){
  // `dropRetries`: how many times in a row an eat with no effect at all (the food count and the next item unchanged) is
