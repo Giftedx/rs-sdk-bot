@@ -325,7 +325,10 @@ test('artisanEstimate returns valid RateEstimate shapes across artisan skills', 
     expect(artisanEstimate(lowMagic, { skill: 'magic', method: 'alch-train' }, world).xpPerTick).toBeLessThan(
         artisanEstimate(acct, { skill: 'magic', method: 'alch-train' }, world).xpPerTick,
     );
-    expect(artisanEstimate(acct, { skill: 'firemaking', method: 'order', args: ['500', 'magic'] }, world).xpPerTick).toBe(75.0);
+    expect(artisanEstimate(acct, { skill: 'firemaking', method: 'order', args: ['500', 'magic'] }, world).xpPerTick).toBe(1875);
+    expect(artisanEstimate(acct, { skill: 'firemaking', method: 'order', args: ['500', 'magic'], env: { XP_RATE: '1' } }, world).xpPerTick).toBe(75);
+    expect(artisanEstimate(acct, { skill: 'cooking', method: 'food', args: ['500', 'mysteryfood'], env: { XP_RATE: '1' } }, world).xpPerTick).toBe(17.5);
+    expect(artisanEstimate(acct, { skill: 'cooking', method: 'food', args: ['500', 'mysteryfood'] }, world).xpPerTick).toBe(437.5);
 });
 
 test('toArtisanWorkerOutcome classifies target_met, death, missing_supply, location_stranded, and worker_defect', () => {
@@ -394,4 +397,61 @@ test('runArtisan, runArtisanCli, and bankArtisanWorker.run handle invalid config
     } finally {
         if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
     }
+});
+
+test('artisanPreflight validates Prayer BONE_ID/reserve/target, malformed numeric env, globalReserves, and in-session dispatch/CLI throws', async () => {
+    const acct = makeAccount({ bank: { items: { 526: 10, 536: 10, 1987: 50, 1937: 50 }, observedAt: 1, trusted: true } });
+    const world = makeWorld(acct);
+
+    expect(artisanPreflight(acct, { skill: 'prayer', method: 'bury', env: { BONE_ID: '536', BONE_RESERVE: '6', TARGET_LEVEL: '43' } }, world).ok).toBe(true);
+    expect(artisanPreflight(acct, { skill: 'prayer', method: 'bury', env: { BONE_ID: '999999' } }, world).blockers[0]?.kind).toBe('invalid_config');
+    expect(artisanPreflight(acct, { skill: 'prayer', method: 'bury', env: { BONE_RESERVE: '5' } }, world).blockers[0]?.kind).toBe('invalid_config');
+    expect(artisanPreflight(acct, { skill: 'prayer', method: 'bury', env: { TARGET_LEVEL: '42' } }, world).blockers[0]?.kind).toBe('invalid_config');
+
+    const badNums = [
+        artisanPreflight(acct, { skill: 'cooking', method: 'wine', env: { RAW_RESERVE: 'abc' } }, world),
+        artisanPreflight(acct, { skill: 'cooking', method: 'wine', env: { MAX_MAKE: '1.5' } }, world),
+        artisanPreflight(acct, { skill: 'crafting', method: 'bowstrings', env: { RAW_RESERVE: '-2' } }, world),
+    ];
+    for (const res of badNums) {
+        expect(isPreflightResult(res)).toBe(true);
+        expect(res.ok).toBe(false);
+        expect(res.blockers.some(b => b.kind === 'invalid_config')).toBe(true);
+    }
+
+    const globalResWorld = { ...world, globalReserves: { 526: 5 } };
+    expect(artisanPreflight(acct, { skill: 'prayer', method: 'bury', env: { BONE_ID: '526', BONE_RESERVE: '6' } }, globalResWorld).ok).toBe(false);
+
+    const wineSession: any = {
+        name: 'WineTester',
+        tick: () => 5,
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({ player: { lifeId: 1 }, bank: { isOpen: false } }),
+            getSkill: () => ({ baseLevel: 50, level: 50 }),
+            getSkillXp: () => 101_333,
+            getInventory: () => [],
+        },
+        bot: {},
+    };
+    const wineOut = await runArtisan(wineSession, { skill: 'cooking', method: 'wine', args: ['35', '100'] });
+    expect(wineOut.ok).toBe(true);
+
+    const dhideOut = await runArtisan(wineSession, { skill: 'crafting', method: 'black-dhide-sets', env: { PIECE: 'invalid_piece' } });
+    expect(dhideOut.ok).toBe(false);
+    expect(dhideOut.failure).toContain('unknown PIECE=invalid_piece');
+
+    const legacyOut = await runArtisan(wineSession, { skill: 'crafting', method: 'legacy-jewelry', args: ['0', 'cut', 'sapphire'] });
+    expect(legacyOut.ok).toBe(false);
+    expect(legacyOut.failure).toContain('legacy-jewelry crafted 0');
+
+    const bowOut = await runArtisan(wineSession, { skill: 'crafting', method: 'bowstrings', env: { MAX_MAKE: '0' } });
+    expect(bowOut.ok).toBe(false);
+    expect(bowOut.failure).toContain('invalid finite spinning limits');
+
+    const { runSmeltBarsCli, runFletchArrowsCli, runLegacyCraftJewelryCli, runHerbloreCli } = await import('../src/bank-artisan');
+    await expect(runSmeltBarsCli('', [])).rejects.toThrow('Usage:');
+    await expect(runFletchArrowsCli('', [])).rejects.toThrow('Usage:');
+    await expect(runLegacyCraftJewelryCli('', [])).rejects.toThrow('Usage:');
+    await expect(runHerbloreCli('meats', '', [])).rejects.toThrow('Usage:');
 });

@@ -325,9 +325,12 @@ describe('pvp WorkerModule contract & mode routing', () => {
             expect(fightOk.kind).toBe('target_met');
             expect(seenFight).toEqual([['Alpha', 'Beta', '120']]);
 
-            const squadFail = await pvpModule.run(makeSession({ name: 'Alpha' }), { mode: 'squad' });
-            expect(validateRunOutcome(squadFail)).toEqual([]);
-            expect(squadFail).toMatchObject({ kind: 'worker_defect', faultSignature: 'pvp:squad:exit_2' });
+            const squadRefused = await pvpModule.run(makeSession({ name: 'Alpha' }), { mode: 'squad' });
+            expect(validateRunOutcome(squadRefused)).toEqual([]);
+            expect(squadRefused).toMatchObject({ kind: 'worker_defect', faultSignature: 'pvp:squad:requires_cli_orchestrator' });
+
+            const squadCliCode = await dispatchPvpCli('Alpha', 'squad', []);
+            expect(squadCliCode).toBe(2);
 
             const pilotOk = await dispatchPvpCli('Alpha', 'pilot', ['5', '10']);
             expect(pilotOk).toBe(0);

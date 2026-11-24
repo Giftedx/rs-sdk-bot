@@ -10,7 +10,9 @@ import {
     TRUST_TIERS,
     WORKER_FAMILIES,
     WORKER_KINDS,
+    accountEscrowCoins,
     accountOwnedItemCount,
+    accountReserveFor,
     availableCoinsAfterReserves,
     createWorkerRegistry,
     effectiveTicksForBatch,
@@ -212,6 +214,17 @@ test('preflight helpers enforce blocker consistency and reserve math', () => {
     });
     expect(accountOwnedItemCount(untrustedAcct, 995)).toBe(5000);
     expect(accountOwnedItemCount(untrustedAcct, 995, { requireTrustedBank: false })).toBe(25_000);
+
+    const mixedCaseAcct = sampleAccount({ name: 'PackHorse', reserves: { 995: 800, 385: 5 } });
+    const reserveWorld: WorkerWorldView = {
+        ...sampleWorld(mixedCaseAcct),
+        reserves: { packhorse: { 995: 1200, 385: 2 } },
+        globalReserves: { 995: 500, 385: 3 },
+        geEscrowCoins: { packhorse: 3400 },
+    };
+    expect(accountReserveFor(mixedCaseAcct, reserveWorld, 995)).toBe(1700);
+    expect(accountReserveFor(mixedCaseAcct, reserveWorld, 385)).toBe(8);
+    expect(accountEscrowCoins(mixedCaseAcct, reserveWorld)).toBe(3400);
 });
 
 test('RateEstimate validates setupTicks, minBatchUnits, riskPerHour, and batch ticks', () => {

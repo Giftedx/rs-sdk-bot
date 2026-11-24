@@ -35,6 +35,11 @@ export const BOSS_ENCOUNTERS: readonly BossEncounterSpec[] = [
         description: 'Taverley black dragons from the corridor south of their cave: BLACK_KIT withdraw, dusty key gate, ranged camp that takes no melee, hides and bones banked',
     },
     {
+        boss: 'blue-dragon',
+        script: 'scripts/aio-boss.ts',
+        description: 'Taverley blue dragons ranged safespot trip: Anti-dragon shield, dusty key gate, bones and hides banked',
+    },
+    {
         boss: 'green-dragon',
         script: 'scripts/aio-boss.ts',
         description: 'Wilderness Green Dragons (rev 289): Dragonfire shield preflight, bone/dhide loot, PKer threat retreat, and Edgeville bank',
@@ -116,7 +121,7 @@ if (import.meta.main) {
         process.exit(0);
     }
     if (!account || !rest.length) {
-        console.log('RESULT fail usage: bun scripts/aio-boss.ts <account> <kbd|black-dragon|green-dragon|trawler|trawler-at-site> [args...]');
+        console.log('RESULT fail usage: bun scripts/aio-boss.ts <account> <kbd|black-dragon|blue-dragon|green-dragon|trawler|trawler-at-site> [args...]');
         process.exit(2);
     }
     const [boss, ...args] = rest;

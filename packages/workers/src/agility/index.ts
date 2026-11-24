@@ -37,7 +37,12 @@ export const agilityWorker: WorkerModule<AgilityConfig, WorkerAccountView, Worke
         const s = session as Session;
         const norm = normalizeAgilityConfig(cfg);
         const startTick = s.tick?.() ?? 0;
-        const outcome = await runAgilitySession(s, norm);
+        let ended = false;
+        void s.ended?.then(() => { ended = true; });
+        const outcome = await runAgilitySession(s, {
+            ...norm,
+            stop: () => ended || Boolean(norm.stop?.()),
+        });
         const elapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
         return toAgilityWorkerOutcome(outcome, s.name ?? 'unknown', norm, elapsed);
     },
@@ -69,9 +74,10 @@ export async function runAgilityCli(
     const open = deps.openBot ?? defaultOpenBot;
     const fin = deps.finish ?? defaultFinish;
     let s: Session | undefined;
+    let stopped = false;
     try {
-        s = await open(name);
-        const result = await runAgility(s, o);
+        s = await open(name, { onStop: async () => { stopped = true; } });
+        const result = await runAgility(s, { ...o, stop: () => stopped });
         console.log('AGILITY_ORDER_RESULT ' + JSON.stringify(result));
         await fin([s], true, `agility-order ${result.course} level=${result.level} target=${result.target} xp=${result.xpGained}`);
         return 0;

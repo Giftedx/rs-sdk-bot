@@ -669,6 +669,51 @@ const playWineStage: WineStage = async (name, options, phase) => {
     return result;
 };
 
+export async function runWineSession(s: Session, options: WineOrderOptions): Promise<WineStageResult> {
+    if (!Number.isSafeInteger(options.target) || options.target < 1 || options.target > 99 || !Number.isSafeInteger(options.cap) || options.cap < 1) {
+        throw Error('invalid wine order');
+    }
+    const start = s.tick();
+    const level = () => s.sdk.getSkill('Cooking')?.baseLevel ?? 0;
+    const xp = () => s.sdk.getSkillXp('Cooking') ?? 0;
+    let banked = 0;
+    let detail = '';
+    let ok = false;
+    try {
+        if (level() < options.target) {
+            const xp0 = xp();
+            if (!await waitUntil(s, () => level() >= options.target || xp() > xp0, { timeoutTicks: Math.min(options.cap, 25) })) {
+                if (!(await s.bot.openBank()).success) throw Error('starter outcome bank refused');
+                if (!await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 10 })) throw Error('starter outcome unknown');
+                const bank = s.bankObservation?.();
+                const bankRaw = bank?.items.filter(i => i.id === 1995).reduce((n, i) => n + i.count, 0) ?? NaN;
+                const heldRaw = s.sdk.getInventory().filter(i => i.id === 1995).reduce((n, i) => n + i.count, 0);
+                if (!starterConsumed(bank ? { bankRaw, heldRaw } : null)) throw Error('starter wine has not settled');
+            }
+            if (level() < options.target) {
+                const notes = s.sdk.getInventory().find(i => i.id === 1996);
+                if (notes && notes.count >= 1) {
+                    const amount = notes.count;
+                    if (!s.sdk.getState()?.bank.isOpen && !(await s.bot.openBank()).success) throw Error('wine bulk bank refused');
+                    banked = await depositObserved(s, notes);
+                    if (banked !== amount) throw Error('wine bulk credit mismatch');
+                }
+            }
+            if (level() < options.target) {
+                const remaining = Math.max(1, options.cap - (s.tick() - start));
+                if (!await waitUntil(s, () => level() >= options.target, { timeoutTicks: remaining })) {
+                    throw Error('wine order short of target; acquire more stock');
+                }
+            }
+        }
+        ok = level() >= options.target;
+        detail = `phase=session level=${level()} target=${options.target} banked=${banked} ticks=${s.tick() - start}`;
+    } catch (error) {
+        detail = String(error);
+    }
+    return { ok, targetMet: level() >= options.target, level: level(), ticks: s.tick() - start, banked, detail };
+}
+
 export async function runWineOrder(name: string, options: WineOrderOptions, stage: WineStage = playWineStage) {
     if (!name || !Number.isSafeInteger(options.target) || options.target < 1 || options.target > 99 || !Number.isSafeInteger(options.cap) || options.cap < 1) {
         throw Error('invalid wine order');

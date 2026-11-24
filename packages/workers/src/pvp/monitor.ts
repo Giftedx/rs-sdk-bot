@@ -120,13 +120,19 @@ export async function settleMonitorSession(owner:ActionSessionOwnerLike,ok:boole
  const end=await Promise.race([owner.raw.ended,Promise.resolve({reason:''})]);if(end.reason==='logged-out'){owner.settled();if(owner.identity()&&owner.sameLife())return settler([owner.raw],ok,detail);}
  return finishActionSession(owner,false,detail,settler,logout);
 }
-export async function runMonitorCli(args: readonly string[]): Promise<number> {
+export async function runMonitorCli(args: readonly string[], existingSession?: Session): Promise<number> {
  const name=args[0]??'',cap=Number(args[1]??100),radius=Number(args[2]??12),action=args[3]??'logout';
  if(!name||!Number.isSafeInteger(cap)||cap<1||!Number.isFinite(radius)||radius<0||!['stop','logout','item'].includes(action))throw Error('Usage: bun scripts/microbot-c-player-monitor.ts <account> [ticks] [radius] [stop|logout|item] [item-action JSON] [wilderness-only true|false]');
  const itemAction=action==='item'?JSON.parse(args[4]??'null') as MonitorItemAction:undefined;
  const wilderness=args[5]??'false';if(!['true','false'].includes(wilderness))throw Error('wilderness-only must be true or false');
  const policy:MonitorPolicy={radius,ignore:[name],onlyNew:false,action:action as MonitorPolicy['action'],itemAction,wildernessOnly:wilderness==='true'};validateMonitorPolicy(policy,cap);
- let stopped=false;process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});
+ let stopped=false;
+ if(existingSession){
+  const r=await monitorPlayers(existingSession,policy,cap,()=>stopped);
+  console.log('PLAYER_MONITOR_RESULT '+JSON.stringify(r));
+  return r.ok?0:1;
+ }
+ process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});
  const {actionSessionOwner}=await loadActionSessionHelpers();
  const s=await openBot(name,{onStop:async()=>{stopped=true;}}),owner=actionSessionOwner(s,()=>stopped,existsSync,{allowDamage:policy.action==='item'&&!!policy.itemAction?.teleport});let ok=false;
  try{const r=await monitorPlayers(s,policy,cap,()=>stopped);console.log('PLAYER_MONITOR_RESULT '+JSON.stringify(r));ok=r.ok;}

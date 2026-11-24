@@ -7,7 +7,9 @@ import {
     type RunOutcome,
     type WorkerAccountView,
     type WorkerWorldView,
+    accountEscrowCoins,
     accountOwnedItemCount,
+    accountReserveFor,
     availableCoinsAfterReserves,
     preflightFail,
     preflightOk,
@@ -36,19 +38,17 @@ function barcrawlState(acct: WorkerAccountView): number {
 
 function ownedFoodCount(acct: WorkerAccountView, world: WorkerWorldView): number {
     let total = 0;
-    const reserves = world.reserves?.[acct.name] ?? acct.reserves ?? {};
     for (const id of KNOWN_AGILITY_FOOD_IDS) {
         const owned = accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: false });
-        total += reserveAdjustedStock(owned, reserves[id] ?? 0);
+        total += reserveAdjustedStock(owned, accountReserveFor(acct, world, id));
     }
     return total;
 }
 
 function hasAgilityPotion(acct: WorkerAccountView, world: WorkerWorldView): boolean {
-    const reserves = world.reserves?.[acct.name] ?? acct.reserves ?? {};
     for (const id of AGILITY_POTION_IDS) {
         const owned = accountOwnedItemCount(acct, id, { includeBank: true, requireTrustedBank: false });
-        if (reserveAdjustedStock(owned, reserves[id] ?? 0) > 0) return true;
+        if (reserveAdjustedStock(owned, accountReserveFor(acct, world, id)) > 0) return true;
     }
     return false;
 }
@@ -102,8 +102,8 @@ export function evaluateAgilityPreflight(
     }
 
     const totalCoins = accountOwnedItemCount(acct, 995, { includeBank: true, requireTrustedBank: false });
-    const reservedCoins = world.reserves?.[acct.name]?.[995] ?? acct.reserves?.[995] ?? 0;
-    const escrowCoins = world.geEscrowCoins?.[acct.name] ?? 0;
+    const reservedCoins = accountReserveFor(acct, world, 995);
+    const escrowCoins = accountEscrowCoins(acct, world);
     const spendableCoins = availableCoinsAfterReserves(totalCoins, reservedCoins, escrowCoins, 0);
 
     let travelCoins = 0;

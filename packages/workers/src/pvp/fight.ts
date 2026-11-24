@@ -1740,14 +1740,19 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     }
 }
 
-export async function runPkFightCli(args: readonly string[]): Promise<number> {
+export async function runPkFightCli(args: readonly string[], existingSession?: Session): Promise<number> {
     const [bot, target, cap] = args;
     if (!bot || !target) { console.log('usage: bun scripts/pk.ts <bot> <target> [CAP ticks]'); return 2; }
-    const { openBot, finish } = await import('../../../core/src/bot');
-    const s = await openBot(bot);
     const kit: Kit = {
         magic: [1401], ranged: [861, 892], melee: [1231, 1201],
     };
+    if (existingSession) {
+        const r = await fightPlayer(existingSession, target, { kit, spec: defaultSpec(kit), cap: Number(cap ?? 600) });
+        await settleKillFeed();
+        return r.outcome === 'kill' ? 0 : 1;
+    }
+    const { openBot, finish } = await import('../../../core/src/bot');
+    const s = await openBot(bot);
     const r = await fightPlayer(s, target, { kit, spec: defaultSpec(kit), cap: Number(cap ?? 600) });
     await settleKillFeed();
     await finish([s], r.outcome === 'kill', `${r.outcome} ${killReceiptProof(r.receipt ? [r.receipt] : [])} ${JSON.stringify(r)}`);

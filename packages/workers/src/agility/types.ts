@@ -38,6 +38,7 @@ export interface AgilityOptions {
     potion: boolean;
     barcrawl?: number;
     tradeTickets?: boolean;
+    stop?: () => boolean;
 }
 
 export interface AgilityEntrySummary {
@@ -103,6 +104,7 @@ export interface AgilityConfig {
     saveName?: string;
     args?: readonly string[];
     env?: Readonly<Record<string, string | undefined>>;
+    stop?: () => boolean;
     deps?: AgilityExternalDeps;
 }
 

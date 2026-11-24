@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { SessionCore } from '../../core/src/session-types';
 import {
     createWorkerRegistry,
@@ -10,13 +10,16 @@ import {
     type WorkerWorldView,
 } from '../src/contracts';
 import {
+    FOOD_CHAIN_SCRIPTS,
     LOGISTICS_OPERATIONS,
     LOGISTICS_ROLES,
+    SUPPLY_CHAIN_SCRIPTS,
     findLogisticsRole,
     importAioLoadout,
     logisticsWorker,
     planFleetDistribution,
     resolveLogisticsStep,
+    runFoodChain,
     type LogisticsConfig,
 } from '../src/logistics';
 
@@ -369,5 +372,34 @@ describe('WorkerModule logistics contract and dispatch', () => {
         } finally {
             stageSess.dispose();
         }
+    });
+
+    test('supply/food chain script maps point to existing aio entrypoints, WorkerModule.run refuses CLI-only trade/supply-chain, and runFoodChain throws without process.exit', async () => {
+        const repoRoot = resolve(import.meta.dir, '..', '..', '..');
+        for (const entry of [...Object.values(SUPPLY_CHAIN_SCRIPTS), ...Object.values(FOOD_CHAIN_SCRIPTS)]) {
+            expect(existsSync(join(repoRoot, entry.script)), entry.script).toBe(true);
+        }
+        expect(SUPPLY_CHAIN_SCRIPTS.consumer).toEqual({ script: 'scripts/aio-skiller.ts', extraArgs: ['gather', 'thieving', 'knights-stable'] });
+        expect(SUPPLY_CHAIN_SCRIPTS.producer).toEqual({ script: 'scripts/aio-skiller.ts', extraArgs: ['gather', 'fishing', 'fishcook'] });
+        expect(FOOD_CHAIN_SCRIPTS.cook).toEqual({ script: 'scripts/aio-skiller.ts', extraArgs: ['gather', 'fishing', 'fishcook'] });
+        expect(FOOD_CHAIN_SCRIPTS.farmer).toEqual({ script: 'scripts/aio-skiller.ts', extraArgs: ['gather', 'thieving', 'knights'] });
+
+        const sess = makeFakeSessionCore();
+        try {
+            const tradeRefused = await logisticsWorker.run(sess.core, { operation: 'trade', role: 'coin-courier' });
+            expect(tradeRefused).toMatchObject({ kind: 'worker_defect', faultSignature: 'logistics:coin-courier:requires_cli_orchestrator' });
+            const chainRefused = await logisticsWorker.run(sess.core, { operation: 'stage', role: 'supply-chain' });
+            expect(chainRefused).toMatchObject({ kind: 'worker_defect', faultSignature: 'logistics:supply-chain:requires_cli_orchestrator' });
+        } finally {
+            sess.dispose();
+        }
+
+        await expect(runFoodChain(['Cook', 'Courier', 'Farmer'], {})).rejects.toThrow('DEMO_OK=1');
+        await expect(runFoodChain(['Haggis', 'Courier', 'Farmer'], { DEMO_OK: '1' })).rejects.toThrow('main account');
+
+        const acct = baseAccount({ reserves: { 995: 30_000 } });
+        const world = baseWorld({ globalReserves: { 995: 25_000 } });
+        const res = logisticsWorker.preflight(acct, { operation: 'trade', role: 'coin-courier', coins: 50_000 }, world);
+        expect(res).toMatchObject({ ok: false, blockers: [{ kind: 'missing_coins', required: 50_000, reserved: 55_000 }] });
     });
 });

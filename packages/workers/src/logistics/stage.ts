@@ -785,6 +785,13 @@ export function supplyRestock(feathers: number, target = 1000): number {
     return Math.max(0, target - feathers);
 }
 
+export const SUPPLY_CHAIN_SCRIPTS = {
+    inspect: { script: 'scripts/aio-logistics.ts', extraArgs: ['inspect'] },
+    foodCourier: { script: 'scripts/aio-logistics.ts', extraArgs: ['food-courier'] },
+    consumer: { script: 'scripts/aio-skiller.ts', extraArgs: ['gather', 'thieving', 'knights-stable'] },
+    producer: { script: 'scripts/aio-skiller.ts', extraArgs: ['gather', 'fishing', 'fishcook'] },
+} as const;
+
 export async function runSupplyChain(o: SupplyChainOptions) {
     needSupply(Number.isSafeInteger(o.cycles) && o.cycles >= 1 && o.cycles <= 20, 'cycles must be1..20');
     const roles = ['producer', 'courier', 'consumer'] as const, names = roles.map(r => o.actors[r]);
@@ -860,15 +867,15 @@ export async function runSupplyChain(o: SupplyChainOptions) {
         };
     };
     const checkpoint = async (label: string, active: readonly SupplyRole[]) => { source(); write(label + '-observed.json', stock); await o.checkpoint?.(label, [...active]); };
-    for (const role of roles) { capacity(); await start(role, 'scripts/aio-logistics.ts', { REQUIRE_BANK: '1' }, 'inspect-' + role, ['inspect']).result; }
+    for (const role of roles) { capacity(); await start(role, SUPPLY_CHAIN_SCRIPTS.inspect.script, { REQUIRE_BANK: '1' }, 'inspect-' + role, SUPPLY_CHAIN_SCRIPTS.inspect.extraArgs).result; }
     needSupply(supplyCount(stock.producer, foodIds) === 0, 'opening producer food must be empty');
     await checkpoint('opening', roles);
     const held = supplyCount(stock.courier, foodIds, false);
     if (held > 0) {
         capacity(true);
-        const farmer = start('consumer', 'scripts/goldfarm-stable.ts', { FOOD_FROM: o.actors.courier, TICKS: '1000', BANK_AT: '2000' }, 'recovery-consumer');
+        const farmer = start('consumer', SUPPLY_CHAIN_SCRIPTS.consumer.script, { FOOD_FROM: o.actors.courier, TICKS: '1000', BANK_AT: '2000' }, 'recovery-consumer', SUPPLY_CHAIN_SCRIPTS.consumer.extraArgs);
         await farmer.waitFor(/^GOLDFARM /m, 30000);
-        const delivered = await start('courier', 'scripts/aio-logistics.ts', { FROM: o.actors.producer, FARMERS: o.actors.consumer, TOTAL_PER: String(held), CAP: '600' }, 'recovery-delivery', ['food-courier']).result;
+        const delivered = await start('courier', SUPPLY_CHAIN_SCRIPTS.foodCourier.script, { FROM: o.actors.producer, FARMERS: o.actors.consumer, TOTAL_PER: String(held), CAP: '600' }, 'recovery-delivery', SUPPLY_CHAIN_SCRIPTS.foodCourier.extraArgs).result;
         await farmer.result;
         needSupply(delivered.counters.handed === held && supplyCount(stock.courier, foodIds, false) === 0, 'held cargo recovery incomplete');
         await checkpoint('recovery-delivered', ['consumer', 'courier']);
@@ -882,43 +889,43 @@ export async function runSupplyChain(o: SupplyChainOptions) {
             if (decision === 'cycle') break;
             needSupply(attempt < 24, 'consumer admission budget exhausted');
             const beforeFood = supplyCount(stock.consumer, foodIds), beforeCash = supplyCount(stock.consumer, [995]);
-            await start('consumer', 'scripts/goldfarm-stable.ts', { TICKS: '1000', BANK_AT: '2000' }, p + '-' + decision + '-' + attempt).result;
+            await start('consumer', SUPPLY_CHAIN_SCRIPTS.consumer.script, { TICKS: '1000', BANK_AT: '2000' }, p + '-' + decision + '-' + attempt, SUPPLY_CHAIN_SCRIPTS.consumer.extraArgs).result;
             needSupply(supplyCount(stock.consumer, [995]) > beforeCash && (decision !== 'drain-food' || supplyCount(stock.consumer, foodIds) < beforeFood), 'consumer admission made no useful progress');
             await checkpoint(p + '-admission-' + attempt, ['consumer']);
         }
         capacity(true);
-        const funder = start('consumer', 'scripts/goldfarm-stable.ts', { TICKS: '200', BANK_AT: '2000', FUND_COURIER: o.actors.courier }, p + '-funder');
+        const funder = start('consumer', SUPPLY_CHAIN_SCRIPTS.consumer.script, { TICKS: '200', BANK_AT: '2000', FUND_COURIER: o.actors.courier }, p + '-funder', SUPPLY_CHAIN_SCRIPTS.consumer.extraArgs);
         await funder.waitFor(/^GOLDFARM /m, 30000);
-        const fund = await start('courier', 'scripts/aio-logistics.ts', { FUND_ONLY: '1', FUND_FROM: o.actors.consumer, RESERVE_OPENING_CASH: cycle === 1 && o.reserveOpeningCash !== false ? '1' : '0', CAP: '400' }, p + '-funding', ['food-courier']).result;
+        const fund = await start('courier', SUPPLY_CHAIN_SCRIPTS.foodCourier.script, { FUND_ONLY: '1', FUND_FROM: o.actors.consumer, RESERVE_OPENING_CASH: cycle === 1 && o.reserveOpeningCash !== false ? '1' : '0', CAP: '400' }, p + '-funding', SUPPLY_CHAIN_SCRIPTS.foodCourier.extraArgs).result;
         const earning = await funder.result;
         await checkpoint(p + '-funded', ['consumer', 'courier']);
         for (let attempt = 0; supplyCount(stock.consumer, foodIds) >= 80; attempt++) {
             needSupply(attempt < 24, 'food demand budget exhausted');
             capacity();
-            await start('consumer', 'scripts/goldfarm-stable.ts', { TICKS: '1000', BANK_AT: '2000' }, p + '-drain-' + attempt).result;
+            await start('consumer', SUPPLY_CHAIN_SCRIPTS.consumer.script, { TICKS: '1000', BANK_AT: '2000' }, p + '-drain-' + attempt, SUPPLY_CHAIN_SCRIPTS.consumer.extraArgs).result;
             await checkpoint(p + '-drained-' + attempt, ['consumer']);
         }
         capacity();
         needSupply(supplyCount(stock.producer, foodIds) === 0, 'retained upstream cargo must settle before new production');
-        await start('producer', 'scripts/fishcook.ts', { TICKS: '650', MAX_CATCHES: String(Math.max(1, 80 - supplyCount(stock.consumer, foodIds))), TICK3: '0', FEATHER_MIN: '1', FEATHER_FILL: '60', EXTERNAL_REFILL: '1' }, p + '-produce').result;
+        await start('producer', SUPPLY_CHAIN_SCRIPTS.producer.script, { TICKS: '650', MAX_CATCHES: String(Math.max(1, 80 - supplyCount(stock.consumer, foodIds))), TICK3: '0', FEATHER_MIN: '1', FEATHER_FILL: '60', EXTERNAL_REFILL: '1' }, p + '-produce', SUPPLY_CHAIN_SCRIPTS.producer.extraArgs).result;
         const amount = supplyCount(stock.producer, foodIds), feathersBefore = supplyCount(stock.producer, [314]);
         needSupply(amount > 0 && amount <= 80, 'new bounded food lot missing');
         await checkpoint(p + '-produced', ['producer']);
         const wanted = supplyRestock(feathersBefore);
         capacity(true);
-        const carrier = start('courier', 'scripts/aio-logistics.ts', { FROM: o.actors.producer, FEATHERS: String(wanted), WAIT: '600', CAP: '2000' }, p + '-collection', ['food-courier']);
+        const carrier = start('courier', SUPPLY_CHAIN_SCRIPTS.foodCourier.script, { FROM: o.actors.producer, FEATHERS: String(wanted), WAIT: '600', CAP: '2000' }, p + '-collection', SUPPLY_CHAIN_SCRIPTS.foodCourier.extraArgs);
         await carrier.waitFor(/^MILESTONE collecting /m);
         await Bun.sleep(300);
-        await start('producer', 'scripts/fishcook.ts', { GIVE_TO: o.actors.courier, HANDOFF_ONLY: '1', WAIT: '900', TICKS: '1200' }, p + '-supplier').result;
+        await start('producer', SUPPLY_CHAIN_SCRIPTS.producer.script, { GIVE_TO: o.actors.courier, HANDOFF_ONLY: '1', WAIT: '900', TICKS: '1200' }, p + '-supplier', SUPPLY_CHAIN_SCRIPTS.producer.extraArgs).result;
         const collect = await carrier.result;
         needSupply(supplyCount(stock.producer, foodIds) === 0 && supplyCount(stock.courier, foodIds, false) === amount, 'collection stock mismatch');
         const purchased = collect.counters.feathersBought ?? NaN;
         needSupply(Number.isSafeInteger(purchased) && purchased >= 0 && (wanted === 0 || purchased > 0) && supplyCount(stock.producer, [314]) === feathersBefore + purchased, 'consumer-funded feather restock unconfirmed');
         await checkpoint(p + '-collected', ['producer', 'courier']);
         capacity(true);
-        const farmer = start('consumer', 'scripts/goldfarm-stable.ts', { FOOD_FROM: o.actors.courier, TICKS: '1000', BANK_AT: '2000' }, p + '-consumer');
+        const farmer = start('consumer', SUPPLY_CHAIN_SCRIPTS.consumer.script, { FOOD_FROM: o.actors.courier, TICKS: '1000', BANK_AT: '2000' }, p + '-consumer', SUPPLY_CHAIN_SCRIPTS.consumer.extraArgs);
         await farmer.waitFor(/^GOLDFARM /m, 30000);
-        const deliver = await start('courier', 'scripts/aio-logistics.ts', { FROM: o.actors.producer, FARMERS: o.actors.consumer, TOTAL_PER: String(amount), CAP: '600' }, p + '-delivery', ['food-courier']).result;
+        const deliver = await start('courier', SUPPLY_CHAIN_SCRIPTS.foodCourier.script, { FROM: o.actors.producer, FARMERS: o.actors.consumer, TOTAL_PER: String(amount), CAP: '600' }, p + '-delivery', SUPPLY_CHAIN_SCRIPTS.foodCourier.extraArgs).result;
         const use = await farmer.result;
         needSupply(deliver.counters.handed === amount && supplyCount(stock.courier, foodIds, false) === 0 && use.counters.eaten! > 0 && use.counters.coinsGained! > 0, 'delivery/use/output unconfirmed');
         await checkpoint(p + '-completed', ['consumer', 'courier']);

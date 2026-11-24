@@ -1,3 +1,4 @@
+import type { Session } from '../../../core/src/inprocess';
 import type { PathOptions, PathPoint, PathResult } from '../../../core/src/walk';
 import { resolveExitRuneTower, resolveOpenQuest, resolveWalkTargetPersist } from './runtime';
 
@@ -209,12 +210,17 @@ export const DUSTY_KEY = 1590;
 export const JAIL_KEY = 1591;
 
 // Brings an account that Sea Slug left on the fishing platform or the island back to the Witchaven shore.
-export async function runSeaslugLeave(cap = 600, account?: string): Promise<void> {
+export async function runSeaslugLeave(cap = 600, account?: string, existingSession?: Session): Promise<void> {
     const PLATFORM = { x: 2782, z: 3273 };
     const ISLAND = { x: 2800, z: 3320 };
     const SHORE = { x: 2722, z: 3305 };
     const openQuest = await resolveOpenQuest();
-    const q = await openQuest({ cap, eatAt: 40, ...(account ? { name: account } : {}) });
+    const q = await openQuest({
+        cap,
+        eatAt: 40,
+        ...(account ? { name: account } : {}),
+        ...(existingSession ? { session: existingSession } : {}),
+    });
     try {
         for (let i = 0; i < 3 && !q.near(SHORE.x, SHORE.z, 12); i++) {
             if (q.near(ISLAND.x, ISLAND.z, 20)) {
@@ -243,14 +249,19 @@ export async function runSeaslugLeave(cap = 600, account?: string): Promise<void
                 break;
             }
         }
-        await q.end(q.near(SHORE.x, SHORE.z, 12), 'seaslug-leave');
+        if (existingSession) {
+            if (!q.near(SHORE.x, SHORE.z, 12)) throw Error('seaslug-leave: did not reach Witchaven shore');
+        } else {
+            await q.end(q.near(SHORE.x, SHORE.z, 12), 'seaslug-leave');
+        }
     } catch (e) {
+        if (existingSession) throw e;
         await q.fail(String(e));
     }
 }
 
 // Acquires the untradeable Dusty Key from Taverley Dungeon (Jailer -> Jail key -> Velrak -> Dusty key -> surface).
-export async function runDustyKey(cap = 3000, account?: string): Promise<void> {
+export async function runDustyKey(cap = 3000, account?: string, existingSession?: Session): Promise<void> {
     const TAV_LADDER = { x: 2884, z: 3397 };
     const LADDER_FOOT = { x: 2884, z: 9797 };
     const JAILER = { id: 201, x: 2933, z: 9693 };
@@ -260,7 +271,18 @@ export async function runDustyKey(cap = 3000, account?: string): Promise<void> {
 
     const openQuest = await resolveOpenQuest();
     const walkTargetPersist = await resolveWalkTargetPersist();
-    const q = await openQuest({ cap, eatAt: 50, lumbridgeOk: false, ...(account ? { name: account } : {}) });
+    const q = await openQuest({
+        cap,
+        eatAt: 50,
+        lumbridgeOk: false,
+        ...(account ? { name: account } : {}),
+        ...(existingSession ? { session: existingSession } : {}),
+    });
+    const failOrThrow = async (msg: string): Promise<never> => {
+        if (existingSession) throw Error(msg);
+        await q.fail(msg);
+        throw Error(msg);
+    };
     try {
         const z = () => q.pos()?.worldZ ?? 0;
         const inDungeon = () => {
@@ -283,10 +305,13 @@ export async function runDustyKey(cap = 3000, account?: string): Promise<void> {
                 .filter((g: any) => g.id === id)
                 .sort((a: any, b: any) => a.distance - b.distance)[0];
 
-        if (q.has(DUSTY_KEY)) await q.end(true, 'dusty key held');
+        if (q.has(DUSTY_KEY)) {
+            if (existingSession) return;
+            await q.end(true, 'dusty key held');
+        }
         if (!inDungeon()) {
             const there = await walkTargetPersist(q.s, { x: TAV_LADDER.x, z: TAV_LADDER.z + 1, level: 0 });
-            if (!there.ok) await q.fail(`route to the Taverley ladder: ${there.reason ?? ''} ${there.detail ?? ''}`);
+            if (!there.ok) await failOrThrow(`route to the Taverley ladder: ${there.reason ?? ''} ${there.detail ?? ''}`);
             await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, inDungeon);
         }
         q.milestone('dungeon');
@@ -303,7 +328,7 @@ export async function runDustyKey(cap = 3000, account?: string): Promise<void> {
             }
             await q.waitTicks(1);
         }
-        if (!q.has(JAIL_KEY)) await q.fail('jail key');
+        if (!q.has(JAIL_KEY)) await failOrThrow('jail key');
         q.milestone('jail key');
         const inCell = () => z() < JAIL_DOOR.z;
         await q.step('cell door', () => q.useOnLoc(JAIL_KEY, JAIL_DOOR), inCell, 15, 4);
@@ -320,8 +345,13 @@ export async function runDustyKey(cap = 3000, account?: string): Promise<void> {
         await q.walk('to ladder', [{ x: LADDER_FOOT.x, z: LADDER_FOOT.z + 1, tol: 1 }]);
         await q.climb('ladder up', ladderAt(LADDER_FOOT, /climb-up/i), /climb-up/i, () => z() < 9000);
         q.milestone('surface');
-        await q.end(q.has(DUSTY_KEY), `dustyKey=${q.has(DUSTY_KEY) ? 1 : 0}`);
+        if (existingSession) {
+            if (!q.has(DUSTY_KEY)) throw Error('dustyKey=0');
+        } else {
+            await q.end(q.has(DUSTY_KEY), `dustyKey=${q.has(DUSTY_KEY) ? 1 : 0}`);
+        }
     } catch (e) {
+        if (existingSession) throw e;
         await q.fail(String(e));
     }
 }

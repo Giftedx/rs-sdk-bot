@@ -1999,26 +1999,19 @@ export async function runSmeltBarsCli(
     const BAR_TYPE = (restArgs[1] ?? env.BAR_TYPE ?? 'iron').toLowerCase();
     const ACTION = (env.ORDER_ACTION ?? 'smelt').toLowerCase();
     if (!botName) {
-        console.error('Usage: bun scripts/aio-skiller.ts <botName> artisan smithing smelt [CAP] [BAR_TYPE]');
-        process.exit(1);
+        throw Error('Usage: bun scripts/aio-skiller.ts <botName> artisan smithing smelt [CAP] [BAR_TYPE]');
     }
     let smith: { product: number; maximum: number; reserve: number } | undefined;
     let smelt: SmeltOrder | undefined;
     if (ACTION === 'smith') {
         const readNum = (k: string) => (env[k] === undefined || env[k] === '' ? NaN : Number(env[k]));
         smith = { product: readNum('PRODUCT_ID'), maximum: readNum('MAX_MAKE'), reserve: readNum('BAR_RESERVE') };
-        try {
-            if (![CAP, smith.product, smith.maximum, smith.reserve].every(Number.isSafeInteger) || CAP < 1 || smith.maximum < 1 || smith.reserve < 0) {
-                throw Error('smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required');
-            }
-            smithRecipe(smith.product);
-        } catch (e) {
-            console.error(String(e));
-            process.exit(1);
+        if (![CAP, smith.product, smith.maximum, smith.reserve].every(Number.isSafeInteger) || CAP < 1 || smith.maximum < 1 || smith.reserve < 0) {
+            throw Error('smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required');
         }
+        smithRecipe(smith.product);
     } else if (ACTION !== 'smelt') {
-        console.error('ORDER_ACTION must be smelt or smith');
-        process.exit(1);
+        throw Error('ORDER_ACTION must be smelt or smith');
     } else {
         smelt = {
             bar: BAR_TYPE,
@@ -2027,15 +2020,10 @@ export async function runSmeltBarsCli(
             reserve: Number(env.ORE_RESERVE ?? 1),
             mode: (BAR_TYPE === 'bronze' ? 'exact' : env.ORDER_MODE ?? 'best-effort') as SmeltOrder['mode'],
         };
-        try {
-            smelt.bonusGear = smeltBonusFromEnv(env);
-            smelt.route = smeltRouteFromEnv(env);
-            smelt.nearest = env.SMELT_NEAREST === '1';
-            validateSmeltOrder(smelt);
-        } catch (error) {
-            console.error(String(error));
-            process.exit(1);
-        }
+        smelt.bonusGear = smeltBonusFromEnv(env);
+        smelt.route = smeltRouteFromEnv(env);
+        smelt.nearest = env.SMELT_NEAREST === '1';
+        validateSmeltOrder(smelt);
     }
     let stopped = false;
     const s = await openBot(botName, { onStop: async () => { stopped = true; } }).catch(e => finish([], false, `login: ${String(e)}`));

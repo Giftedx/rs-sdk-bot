@@ -122,9 +122,9 @@ export async function runSpecialSwap(s:Session,o:SpecialSwapOrder,stop:()=>boole
  if(hp()!==initialHp)detail||='special incoming HP changed during settlement';
  return{ok:!detail&&consumed&&restored,weapon:recipe.id,attempted,consumed,energyBefore:energy,energyAfter:c.var?.[300],nativeCost:recipe.energy,maximumHits,chainTargets:o.chainTargets??[],restored,preserved:conserved(),itemCosts:Object.fromEntries(Object.entries(initial).map(([id,n])=>[id,n-(totals()[Number(id)]??0)]).filter(([,n])=>Number(n)>0)),hpBefore:initialHp,hpAfter:hp(),ticks:s.tick()-start,detail};
 }
-export async function runSpecialSwapCli(args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<number> {
+export async function runSpecialSwapCli(args: readonly string[], env: Record<string, string | undefined> = process.env, existingSession?: Session): Promise<number> {
  const name=args[0]??'',weapon=Number(args[1]),minimumEnergy=Number(args[2]??1000),cap=Number(args[3]??(env.SPECIAL_TARGET===undefined?60:180));if(!name)throw Error('Usage: bun scripts/microbot-special-swap.ts <account> <owned-weapon-id> [minimum-energy] [cap]');
- let stopped=false;process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});const s=await openBot(name);let ok=false;
+ let stopped=false;if(!existingSession){process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});}const s=existingSession??(await openBot(name));let ok=false;
  try{
   const wanted=env.SPECIAL_TARGET===undefined?undefined:Number(env.SPECIAL_TARGET),types=env.SPECIAL_CHAIN_TYPES?.split(',').map(Number)??[];
   const exit=wanted===undefined?undefined:specialExit(env.SPECIAL_EXIT),deadline=s.tick()+cap,attackCap=specialAttackBudget(cap,wanted!==undefined);
@@ -138,6 +138,6 @@ export async function runSpecialSwapCli(args: readonly string[], env: Record<str
   const r=await runSpecialSwap(s,{weapon,minimumEnergy,cap:attackCap,costs,chainTargets,maximumHits:Number(env.SPECIAL_MAX_HITS??1),...target?{target:{id:target.id,index:target.index}}:{}},()=>stopped);
   const escaped=exit&&r.attempted&&r.restored&&r.preserved?await finishSpecialExit(s,exit,deadline,()=>stopped,original):undefined;
   console.log('SPECIAL_SWAP_RESULT '+JSON.stringify({...r,escaped}));ok=r.ok;
- }finally{ok=await settle([s],ok,'finite owned special weapon swap and restoration');}
+ }finally{if(!existingSession)ok=await settle([s],ok,'finite owned special weapon swap and restoration');}
  return ok?0:1;
 }

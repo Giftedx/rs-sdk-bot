@@ -181,10 +181,16 @@ describe('quest WorkerModule contract & mode routing', () => {
         }
     });
 
-    test('run returns structured worker_defect on unsupported operations without touching live sessions', async () => {
+    test('run returns structured worker_defect on unsupported and CLI-only orchestrator operations without touching live sessions', async () => {
         const session = { name: 'QuesterBot', tick: () => 42 } as unknown as SessionCore;
         const out = await questModule.run(session, { operation: 'nope' as QuestConfig['operation'] });
         expect(validateRunOutcome(out)).toEqual([]);
         expect(out.kind).toBe('worker_defect');
+
+        for (const op of ['order', 'chain', 'hero-owned', 'legends-owned'] as const) {
+            const refused = await questModule.run(session, { operation: op, quest: 'cook', quests: ['cook'] });
+            expect(validateRunOutcome(refused)).toEqual([]);
+            expect(refused).toMatchObject({ kind: 'worker_defect', faultSignature: `quest:${op}:requires_cli_orchestrator` });
+        }
     });
 });

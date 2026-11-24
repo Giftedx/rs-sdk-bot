@@ -1001,8 +1001,7 @@ export async function runWildDragons(s: CombatSession, o: WildDragonOptions) {
 export async function runWildDragonsCli(args: readonly string[], env: Record<string, string | undefined> = process.env) {
     const [bot, capArg] = args;
     if (!bot) {
-        console.log('usage: bun scripts/aio-boss.ts green-dragon <bot> [CAP ticks]');
-        process.exit(2);
+        throw Error('usage: bun scripts/aio-boss.ts green-dragon <bot> [CAP ticks]');
     }
     const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-wild-dragons');
     const s = await openBot(bot);

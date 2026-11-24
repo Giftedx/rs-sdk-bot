@@ -759,6 +759,25 @@ export function resolveSkillerStep(skillInput: string, methodInput?: string, res
  return resolveRouteStep(route, extra);
 }
 
+export function mergeSkillerEnv(
+ stepEnv: Record<string, string>,
+ baseEnv: Record<string, string | undefined>,
+ rawTokens: readonly string[],
+): Record<string, string | undefined> {
+ const cliOverrides: Record<string, string> = {};
+ for (const token of rawTokens) {
+  const eq = token.indexOf('=');
+  if (eq > 0 && /^[A-Z_][A-Z0-9_]*$/.test(token.slice(0, eq))) {
+   cliOverrides[token.slice(0, eq)] = token.slice(eq + 1);
+  }
+ }
+ const definedBase: Record<string, string | undefined> = {};
+ for (const [k, v] of Object.entries(baseEnv)) {
+  if (v !== undefined) definedBase[k] = v;
+ }
+ return { ...stepEnv, ...definedBase, ...cliOverrides };
+}
+
 export async function runAioSkiller(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {
  if (!account) throw Error('aio-skiller requires account');
  const [first, second, ...rest] = args;
@@ -847,10 +866,11 @@ export async function runAioSkiller(account: string, args: readonly string[], en
   return result;
  }
  const step = resolveSkillerStep(first, second, rest);
- if (step.script === 'scripts/aio-skiller.ts' && (step.args[0] === 'combat' || step.args[0] === 'artisan')) {
-  return runAioSkiller(account, step.args, { ...env, ...step.env });
+ const mergedEnv = mergeSkillerEnv(step.env, env, [second ?? '', ...rest].filter(Boolean));
+ if (step.script === 'scripts/aio-skiller.ts' && (step.args[0] === 'gather' || step.args[0] === 'combat' || step.args[0] === 'artisan')) {
+  return runAioSkiller(account, step.args, mergedEnv);
  }
- return runDirectChild([step.script, account, ...step.args], { ...env, ...step.env });
+ return runDirectChild([step.script, account, ...step.args], mergedEnv);
 }
 
 if (import.meta.main) {

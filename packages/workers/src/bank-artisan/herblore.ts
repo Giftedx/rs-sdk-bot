@@ -847,8 +847,7 @@ export async function runHerbloreCli(
 ) {
     if (method === 'meats') {
         if (!botName) {
-            console.error('Usage: bun scripts/aio-skiller.ts <account> artisan herblore meats');
-            process.exit(1);
+            throw Error('Usage: bun scripts/aio-skiller.ts <account> artisan herblore meats');
         }
         const s = await openBot(botName).catch(e => finish([], false, `login: ${String(e)}`));
         try {

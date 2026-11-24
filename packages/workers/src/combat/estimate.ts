@@ -53,6 +53,16 @@ const BASE_RATES: Readonly<Record<CombatMode, BaseRateSpec>> = {
     'prayer-flick': { xpPerTick: 90, skill: 'Attack', unitsPerTick: 0.04, gpPerTick: 2, minBatchUnits: 1 },
 };
 
+const NON_DAMAGE_COMBAT_MODES = new Set<CombatMode>([
+    'chaos_wine',
+    'loot-trip',
+    'trawler',
+    'trawler-at-site',
+    'magic-splash',
+    'magic-splash-coop',
+    'taverley_scales',
+]);
+
 export function combatEstimate(acct: WorkerAccountView, cfg: CombatConfig, _world: WorkerWorldView): RateEstimate {
     const mode: CombatMode = COMBAT_MODE_SET.has(cfg.mode) ? cfg.mode : 'cow';
     const site = COMBAT_SITES[mode];
@@ -63,10 +73,15 @@ export function combatEstimate(acct: WorkerAccountView, cfg: CombatConfig, _worl
     const xpPerTick = Math.round(spec.xpPerTick * scale);
     const unitsPerTick = Number((spec.unitsPerTick * (0.6 + 0.4 * scale)).toFixed(4));
     const setupTicks = estimateSetupTicks(acct, site);
+    const skillXpPerTick = xpPerTick > 0
+        ? trainSkill === 'Hitpoints' || NON_DAMAGE_COMBAT_MODES.has(mode)
+            ? { [trainSkill]: xpPerTick }
+            : { [trainSkill]: xpPerTick, Hitpoints: Math.round(xpPerTick * 0.33) }
+        : undefined;
 
     return {
         xpPerTick,
-        skillXpPerTick: xpPerTick > 0 ? { [trainSkill]: xpPerTick, Hitpoints: Math.round(xpPerTick * 0.33) } : undefined,
+        skillXpPerTick,
         unitsPerTick,
         gpPerTick: spec.gpPerTick,
         setupTicks,

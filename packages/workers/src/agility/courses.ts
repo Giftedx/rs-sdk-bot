@@ -97,8 +97,8 @@ export function agilityOptions(
     return {
         course: normalized as AgilityCourseId,
         target: integer(target, 0, 99),
-        maxLaps: integer(env.AGI_MAX_LAPS, 1000, 100000),
-        maxTicks: integer(env.AGI_MAX_TICKS, 10000, 1000000),
+        maxLaps: integer(env.AGI_MAX_LAPS ?? env.MAX_LAPS, 1000, 100000),
+        maxTicks: integer(env.AGI_MAX_TICKS ?? env.CAP, 10000, 1000000),
         progressTicks: integer(env.AGI_PROGRESS_TICKS, 150, 10000),
         entryTicks: integer(env.AGI_ENTRY_TICKS, 2000, 100000),
         potion: env.AGI_POTION === '1',

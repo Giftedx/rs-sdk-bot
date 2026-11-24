@@ -65,7 +65,7 @@ export async function runAgility(s: Session, o: AgilityOptions): Promise<Agility
     const base = () => s.sdk.getSkill('Agility')!.baseLevel;
     const hp = () => s.sdk.getSkill('Hitpoints')!.level;
     const live = () => {
-        if (ended) throw Error('session interrupted');
+        if (ended || o.stop?.()) throw Error('session interrupted');
         if (s.tick() >= end) throw Error('agility tick budget exhausted');
         if (hp() <= 0) throw Error('died');
     };
@@ -833,6 +833,7 @@ export async function runAgilitySession(
         if (cfg.usePotion !== undefined) opts.potion = cfg.usePotion;
         if (cfg.barcrawl !== undefined) opts.barcrawl = cfg.barcrawl;
         if (cfg.tradeTickets !== undefined) opts.tradeTickets = cfg.tradeTickets;
+        if (cfg.stop !== undefined) opts.stop = cfg.stop;
 
         const result = await runAgility(s, opts);
         return {

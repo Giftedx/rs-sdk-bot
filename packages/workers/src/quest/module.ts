@@ -14,7 +14,7 @@ import {
 } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
 import { nativeNpcSpell, nativeTeleport } from '../../../core/src/magic-data';
-import { QUEST_NAMES, questShortfall, runQuestChainFromAccount } from './chain';
+import { QUEST_NAMES, questShortfall } from './chain';
 import { nativeGuardianClue, runGuardianClue } from './clue-guardian';
 import { nativePuzzleRecipe, solveNativeCluePuzzle } from './clue-puzzle';
 import { nativeClueSteps, runNativeClueStep } from './clues';
@@ -22,8 +22,7 @@ import { parseCookJobArgs, runQuestCookJob, runQuestHettyJob } from './cook-job'
 import { runDustyKey, runSeaslugLeave } from './helpers';
 import { QUEST_ITEM_RECIPES, runQuestItemsOrder } from './items-order';
 import { assessQuestReadiness, listGeneratedQuestScripts, resolveQuestScript } from './modes';
-import { QUEST_ORDERS, runQuestOrder } from './order';
-import { resolveOpenQuest } from './runtime';
+import { QUEST_ORDERS } from './order';
 import { handOver, presetFor, sweep } from './sweep';
 
 import type { QuestConfig } from './types';
@@ -339,36 +338,36 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
                 return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 };
             }
             case 'seaslug-leave': {
-                const openQuest = await resolveOpenQuest();
-                void openQuest;
-                await runSeaslugLeave(cfg.cap ?? 600, sessionCore.name);
+                await runSeaslugLeave(cfg.cap ?? 600, sessionCore.name, session);
                 return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 };
             }
             case 'dusty-key': {
-                await runDustyKey(cfg.cap ?? 3000, sessionCore.name);
+                await runDustyKey(cfg.cap ?? 3000, sessionCore.name, session);
                 return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 };
             }
             case 'sweep':
             case 'tbwt-owned':
             case 'watchtower-owned': {
                 const questSlug = cfg.operation === 'tbwt-owned' ? 'tbwt' : cfg.operation === 'watchtower-owned' ? 'itwatchtower' : (cfg.quest ?? '');
-                await sweep(sessionCore.name, questSlug, cfg.fresh, cfg.apiOptions);
+                await sweep(sessionCore.name, questSlug, cfg.fresh, cfg.apiOptions, {}, session);
                 return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 };
             }
-            case 'order': {
-                const r = await runQuestOrder(sessionCore.name, cfg.quest ?? '', { save: cfg.savePath, timeoutMs: cfg.timeoutMs ?? 300_000 });
-                return r.ok
-                    ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 }
-                    : failOutcome(activityId, sessionCore.name, elapsed(), ms(), String((r as { refused?: string; failed?: string }).refused ?? (r as { failed?: string }).failed ?? 'quest order failed'));
-            }
-            case 'chain': {
-                const r = await runQuestChainFromAccount(sessionCore.name, [...(cfg.quests ?? [])]);
-                return r.ok
-                    ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: cfg.quests?.length ?? 0, summary: r.result }
-                    : failOutcome(activityId, sessionCore.name, elapsed(), ms(), r.result);
+            case 'order':
+            case 'chain':
+            case 'hero-owned':
+            case 'legends-owned': {
+                return {
+                    kind: 'worker_defect',
+                    activityId,
+                    account: sessionCore.name,
+                    ticksElapsed: elapsed(),
+                    durationMs: ms(),
+                    faultSignature: `quest:${cfg.operation}:requires_cli_orchestrator`,
+                    detail: `multi-login/orchestrator quest operation ${cfg.operation} must run via CLI (scripts/aio-quester.ts)`,
+                };
             }
             case 'items': {
-                const r = await runQuestItemsOrder(sessionCore.name, cfg.quest ?? 'cook', { save: cfg.savePath, cap: cfg.cap ?? 2400 });
+                const r = await runQuestItemsOrder(sessionCore.name, cfg.quest ?? 'cook', { save: cfg.savePath, cap: cfg.cap ?? 2400, session });
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 }
                     : failOutcome(activityId, sessionCore.name, elapsed(), ms(), String((r as { refused?: string; detail?: string }).refused ?? (r as { detail?: string }).detail ?? 'quest items failed'));
@@ -376,7 +375,9 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
             case 'cook-job': {
                 const q = cfg.quest === 'hetty' ? 'hetty' : 'cook';
                 const parsed = parseCookJobArgs(q === 'hetty' ? [sessionCore.name, 'hetty'] : [sessionCore.name], String(cfg.cap ?? (q === 'hetty' ? 6000 : 2400)));
-                const r = 'quest' in parsed ? await runQuestHettyJob(parsed.name, parsed.cap) : await runQuestCookJob(parsed.name, parsed.cap);
+                const r = 'quest' in parsed
+                    ? await runQuestHettyJob(parsed.name, parsed.cap, session)
+                    : await runQuestCookJob(parsed.name, parsed.cap, session);
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: r.ticks, durationMs: ms(), unitsCompleted: 1, summary: r.detail }
                     : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail);

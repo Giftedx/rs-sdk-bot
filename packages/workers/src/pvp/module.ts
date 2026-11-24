@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs';
 import {
+    accountEscrowCoins,
     accountOwnedItemCount,
+    accountReserveFor,
     availableCoinsAfterReserves,
     preflightFail,
     preflightOk,
@@ -16,7 +18,7 @@ import {
 import type { Session } from '../../../core/src/inprocess';
 import { ITEMS } from './fight';
 import { TRIBRID_KIT, TRIP as TRIBRID_TRIP } from './hunt-kits';
-import { assessTribridReadiness, dispatchPvpCli, isPvpMode, PVP_MODES, pvpCombatBracket } from './modes';
+import { assessTribridReadiness, CLI_ONLY_PVP_MODES, dispatchPvpCli, isPvpMode, PVP_MODES, pvpCombatBracket } from './modes';
 import type { PvpConfig, PvpMode } from './types';
 
 const MODE_RISK: Record<PvpMode, number> = {
@@ -78,9 +80,8 @@ function preflightPvp(acct: WorkerAccountView, cfg: PvpConfig, world: WorkerWorl
         blockers.push({ kind: 'skill_level', skill: 'Hitpoints', required: minHp, current: hpLevel });
     }
 
-    const key = acct.name.toLowerCase();
-    const reserveCoins = world.reserves?.[key]?.[995] ?? 0;
-    const escrow = world.geEscrowCoins?.[key] ?? 0;
+    const reserveCoins = accountReserveFor(acct, world, 995);
+    const escrow = accountEscrowCoins(acct, world);
     const availCoins = availableCoinsAfterReserves(accountOwnedItemCount(acct, 995), reserveCoins, escrow, 0);
     if (cfg.minCoins !== undefined && availCoins < cfg.minCoins) {
         blockers.push({
@@ -93,7 +94,7 @@ function preflightPvp(acct: WorkerAccountView, cfg: PvpConfig, world: WorkerWorl
     }
 
     for (const req of cfg.requiredItems ?? []) {
-        const res = world.reserves?.[key]?.[req.id] ?? 0;
+        const res = accountReserveFor(acct, world, req.id);
         const have = Math.max(0, accountOwnedItemCount(acct, req.id) - res);
         if (have < req.count) {
             blockers.push({
@@ -230,6 +231,17 @@ async function runPvp(session: SessionCore, cfg: PvpConfig): Promise<RunOutcome>
         };
     }
 
+    if (CLI_ONLY_PVP_MODES.has(cfg.mode)) {
+        return {
+            kind: 'worker_defect',
+            activityId,
+            account: session.name,
+            ticksElapsed: Math.max(0, (session.tick?.() ?? startTick) - startTick),
+            faultSignature: `pvp:${cfg.mode}:requires_cli_orchestrator`,
+            detail: `multi-account/orchestrator PvP mode ${cfg.mode} must run via dispatchPvpCli / scripts/aio-pvp.ts`,
+        };
+    }
+
     const cliArgs: string[] = [...(cfg.args ?? [])];
     if (cfg.mode === 'fight' && cfg.target && !cliArgs.includes(cfg.target)) {
         cliArgs.unshift(cfg.target);
@@ -239,7 +251,7 @@ async function runPvp(session: SessionCore, cfg: PvpConfig): Promise<RunOutcome>
     }
 
     try {
-        const code = await dispatchPvpCli(session.name, cfg.mode, cliArgs, cfg.env);
+        const code = await dispatchPvpCli(session.name, cfg.mode, cliArgs, cfg.env, session as unknown as Session);
         const ticksElapsed = Math.max(0, (session.tick?.() ?? startTick) - startTick);
         if (code === 0) {
             return {

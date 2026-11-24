@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Step } from '../../../core/src/chain-step';
 import { GOD_LOADOUTS, buildGodSpellKit, compareDragonSpecs, godCapeStaffConflict, type DragonSpecComparison, type GodLoadoutSpec, type GodName } from '../../../core/src/pk-kits/god-specs';
+import type { Session } from '../../../core/src/inprocess';
 import { resolveRouteStep } from '../../../core/src/route-step';
 import {
     ITEMS as PVP_ITEMS,
@@ -327,12 +328,24 @@ async function runEscortOreCli(
     });
 }
 
+export const CLI_ONLY_PVP_MODES: ReadonlySet<PvpMode> = new Set<PvpMode>([
+    'spar',
+    'gang',
+    'army',
+    'squad',
+    'team',
+    'pilot',
+    'escort-ore',
+    'microbot-pvp',
+]);
+
 /** Executes an in-process PvP CLI mode when consolidated under `scripts/aio-pvp.ts`. */
 export async function dispatchPvpCli(
     account: string,
     modeInput: string,
     rest: readonly string[],
     env: Record<string, string | undefined> = process.env,
+    existingSession?: Session,
 ): Promise<number> {
     if (!account) throw Error('aio-pvp requires account');
     const normalized = modeInput.toLowerCase().replace(/^--mode=/, '');
@@ -367,7 +380,7 @@ export async function dispatchPvpCli(
     try {
         switch (mode) {
             case 'fight':
-                return await (pvpRuntime.runPkFightCli ?? ((args) => runPkFightCli(args)))([account, ...positional], mergedEnv);
+                return await (pvpRuntime.runPkFightCli ?? ((args) => runPkFightCli(args, existingSession)))([account, ...positional], mergedEnv);
             case 'spar':
                 return await runPkSparCli([account, ...positional], mergedEnv);
             case 'gang':
@@ -375,23 +388,23 @@ export async function dispatchPvpCli(
             case 'team':
                 return await runPkTeamCli([account, ...positional], mergedEnv);
             case 'hunt':
-                return await runPkHuntCli([account, ...positional], mergedEnv);
+                return await runPkHuntCli([account, ...positional], mergedEnv, existingSession);
             case 'roam':
-                return await runPkRoamCli([account, ...rest]);
+                return await runPkRoamCli([account, ...rest], existingSession);
             case 'army':
                 return await runPkArmyCli([account, ...rest]);
             case 'squad':
                 return await (pvpRuntime.runPkSquadCli ?? runPkSquadCli)([account, ...rest], mergedEnv);
             case 'standby':
-                return await runStandbyCli([account, ...positional]);
+                return await runStandbyCli([account, ...positional], existingSession);
             case 'stage-kit':
-                return await runStageKitCli([account, ...positional]);
+                return await runStageKitCli([account, ...positional], existingSession);
             case 'microbot-pvp':
                 return await runMicrobotPvpCli([account, ...positional]);
             case 'special-swap':
-                return await runSpecialSwapCli([account, ...positional], mergedEnv);
+                return await runSpecialSwapCli([account, ...positional], mergedEnv, existingSession);
             case 'monitor':
-                return await runMonitorCli([account, ...positional]);
+                return await runMonitorCli([account, ...positional], existingSession);
             case 'escort-ore':
                 if (pvpRuntime.runDirectChild) {
                     const step = resolvePvpStep(mode, rest);

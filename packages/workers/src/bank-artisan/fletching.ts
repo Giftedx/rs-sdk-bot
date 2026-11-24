@@ -1490,8 +1490,7 @@ export async function runFletchArrowsCli(
     const MODE = (restArgs[1] ?? env.MODE ?? 'arrows').toLowerCase();
     const TIP_TYPE = (restArgs[2] ?? env.TIP_TYPE ?? 'rune').toLowerCase();
     if (!botName) {
-        console.error('Usage: bun scripts/aio-skiller.ts <botName> artisan fletching arrows [CAP] [MODE] [TIP_TYPE]');
-        process.exit(1);
+        throw Error('Usage: bun scripts/aio-skiller.ts <botName> artisan fletching arrows [CAP] [MODE] [TIP_TYPE]');
     }
     if (MODE === 'native-arrows') nativeArrowProfile(TIP_TYPE as ArrowMetal);
     let stopped = false;

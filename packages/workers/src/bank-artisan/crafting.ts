@@ -196,22 +196,32 @@ export async function runSpinBowstrings(
     botName: string,
     restArgs: readonly string[],
     env: Record<string, string | undefined> = process.env,
-    io: { open?: typeof openBot; ready?: (s: Session) => Promise<boolean>; finalize?: Parameters<typeof finishActionSession>[3] } = {},
-) {
+    io: {
+        open?: typeof openBot;
+        ready?: (s: Session) => Promise<boolean>;
+        finalize?: Parameters<typeof finishActionSession>[3];
+        session?: Session;
+        stop?: () => boolean;
+    } = {},
+): Promise<{ ok: boolean; made: number; spunTotal: number; ticks: number; summary: string; failure?: string }> {
     const MAX_MAKE = Number(env.MAX_MAKE ?? 56);
     const RAW_RESERVE = Number(env.RAW_RESERVE ?? 50);
     const CAP = Number(restArgs[0] ?? env.CAP ?? 15000);
     const MAX_TRIPS = Number(env.MAX_TRIPS ?? MAX_MAKE + 2);
     spinLimits(MAX_MAKE, RAW_RESERVE, CAP, MAX_TRIPS);
+    const externalSession = io.session;
     let requested = false;
-    const raw = await (io.open ?? openBot)(botName, { onStop: async () => { requested = true; } }).catch(e => finish([], false, `login: ${String(e)}`));
+    const stopRequested = () => requested || !!io.stop?.();
+    const raw = externalSession
+        ?? (await (io.open ?? openBot)(botName, { onStop: async () => { requested = true; } }).catch(e => finish([], false, `login: ${String(e)}`)));
     const entryTick = raw.tick();
-    const owner = actionSessionOwner(raw, () => requested);
-    const owned = spinOwnedSession(raw, () => requested, () => raw.tick() - entryTick < CAP, env.STOP_FILE);
+    const owner = externalSession ? undefined : actionSessionOwner(raw, stopRequested);
+    const owned = spinOwnedSession(raw, stopRequested, () => raw.tick() - entryTick < CAP, env.STOP_FILE);
     let unwatch: (() => void) | undefined;
     let recovery: (() => Promise<void>) | undefined;
     let cleaning = false;
     const complete = async (ok: boolean, detail: string) => {
+        if (externalSession || !owner) return;
         if (!owned.owns()) {
             console.log('RESULT fail spinning original session replaced; cleanup refused');
             process.exitCode = 1;
@@ -454,7 +464,9 @@ export async function runSpinBowstrings(
         console.log('SPIN_BANK ' + JSON.stringify({ ok, made, spunTotal, rawBank, stringsBank, reconciled, preserved, xpGain, hpMin, died, targetMet: ok, stop, inventory: s.sdk.getInventory(), bank: bankItems }));
         await s.bot.closeBank();
         off();
-        await complete(ok, `${inputFailure ? inputFailure + ' ' : ''}ticks=${used()} made=${made} spunTotal=${spunTotal} rawBank=${rawBank} xpGain=${xpGain} preserved=${preserved} hpMin=${hpMin} died=${died} targetMet=${ok ? 1 : 0} stop=${stop}`);
+        const detail = `${inputFailure ? inputFailure + ' ' : ''}ticks=${used()} made=${made} spunTotal=${spunTotal} rawBank=${rawBank} xpGain=${xpGain} preserved=${preserved} hpMin=${hpMin} died=${died} targetMet=${ok ? 1 : 0} stop=${stop}`;
+        await complete(ok, detail);
+        return { ok, made, spunTotal, ticks: used(), summary: detail, failure: ok ? undefined : detail };
     } catch (e) {
         let detail = String(e);
         try {
@@ -464,6 +476,7 @@ export async function runSpinBowstrings(
         }
         unwatch?.();
         await complete(false, detail);
+        return { ok: false, made: 0, spunTotal: 0, ticks: raw.tick() - entryTick, summary: detail, failure: detail };
     }
 }
 export const spinMain = (
@@ -1210,8 +1223,10 @@ export async function runLegacyCraftJewelryCli(
         waitUntil?: typeof waitUntil;
         walkPath?: typeof walkPath;
         sessionWalker?: typeof sessionWalker;
+        session?: Session;
+        stop?: () => boolean;
     },
-) {
+): Promise<{ ok: boolean; crafted: number; ticks: number; summary: string; failure?: string }> {
     const openBotFn = io?.openBot ?? openBot;
     const finishFn = io?.finish ?? finish;
     const countItemsFn = io?.countItems ?? countItems;
@@ -1225,16 +1240,16 @@ export async function runLegacyCraftJewelryCli(
     const ACTION = (restArgs[1] ?? env.ACTION ?? 'cut').toLowerCase();
     const TIER = (restArgs[2] ?? env.TIER ?? 'sapphire').toLowerCase();
     if (!botName) {
-        console.error('Usage: bun scripts/aio-skiller.ts <botName> artisan crafting legacy-jewelry [CAP] [ACTION: cut | smelt | enchant] [TIER]');
-        process.exit(1);
+        throw Error('Usage: bun scripts/aio-skiller.ts <botName> artisan crafting legacy-jewelry [CAP] [ACTION: cut | smelt | enchant] [TIER]');
     }
-    const s = await openBotFn(botName).catch(e => finishFn([], false, `login: ${String(e)}`));
+    const externalSession = io?.session;
+    const s = externalSession ?? (await openBotFn(botName).catch(e => finishFn([], false, `login: ${String(e)}`)));
+    const t0 = s.tick();
+    const used = () => s.tick() - t0;
     try {
         const inv = () => s.sdk.getInventory();
         const pos = () => s.sdk.getState()?.player;
-        const t0 = s.tick();
-        const used = () => s.tick() - t0;
-        const over = () => used() >= CAP;
+        const over = () => used() >= CAP || !!io?.stop?.();
         let crafted = 0;
         let bankTrips = 0;
         let walkTicks = 0;
@@ -1332,9 +1347,13 @@ export async function runLegacyCraftJewelryCli(
             }
         }
         const perK = ((crafted * 1000) / Math.max(1, used())).toFixed(2);
-        await finishFn([s], crafted > 0, `ticks=${used()} crafted=${crafted} action=${ACTION} tier=${TIER} bankTrips=${bankTrips} craftPer1kTicks=${perK}`);
+        const summary = `ticks=${used()} crafted=${crafted} action=${ACTION} tier=${TIER} bankTrips=${bankTrips} craftPer1kTicks=${perK}`;
+        if (!externalSession) await finishFn([s], crafted > 0, summary);
+        return { ok: crafted > 0, crafted, ticks: used(), summary, failure: crafted > 0 ? undefined : 'legacy-jewelry crafted 0' };
     } catch (e) {
-        await finishFn([s], false, String(e));
+        const msg = String(e);
+        if (!externalSession) await finishFn([s], false, msg);
+        return { ok: false, crafted: 0, ticks: used(), summary: msg, failure: msg };
     }
 }
 

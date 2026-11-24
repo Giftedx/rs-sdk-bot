@@ -805,15 +805,22 @@ export async function runFoodCourier(account: string, env: Record<string, string
     }
 }
 
-export async function runFoodChain(args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<never> {
+export const FOOD_CHAIN_SCRIPTS = {
+    cook: { script: 'scripts/aio-skiller.ts', extraArgs: ['gather', 'fishing', 'fishcook'] },
+    farmer: { script: 'scripts/aio-skiller.ts', extraArgs: ['gather', 'thieving', 'knights'] },
+    foodCourier: { script: 'scripts/aio-logistics.ts', extraArgs: ['food-courier'] },
+    banker: { script: 'scripts/aio-logistics.ts', extraArgs: ['banker'] },
+} as const;
+
+export async function runFoodChain(args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<void> {
     const prac = join(REPO_ROOT, '.practice'), logDir = join(prac, 'foodchain-logs');
     const COOK = args[0] ?? 'Mightyrod';
     const COURIER = args[1] ?? 'Bigpackage';
     let FARMERS = (args[2] ?? 'Pocketrocket,mmtha0205').split(',').map(x => x.trim()).filter(Boolean);
     const CONF = join(REPO_ROOT, '.practice', 'foodchain.json');
     const MIN_FISH = Number(env.MIN_FISH ?? 100), LOW = Number(env.LOW ?? 40), MIN_GIVE = Number(env.MIN_GIVE ?? 8);
-    if (env.DEMO_OK !== '1') { console.log('foodchain: set DEMO_OK=1 (live server)'); process.exit(2); }
-    if ([COOK, COURIER, ...FARMERS].some(a => /^haggis$/i.test(a))) { console.log('foodchain: the main account is never part of the chain'); process.exit(2); }
+    if (env.DEMO_OK !== '1') throw Error('foodchain: set DEMO_OK=1 (live server)');
+    if ([COOK, COURIER, ...FARMERS].some(a => /^haggis$/i.test(a))) throw Error('foodchain: the main account is never part of the chain');
     const FOOD = /^(trout|salmon|lobster|swordfish|shark|tuna|bread|cake|meat|cooked chicken)$/i;
     type Status = { name: string; at: number; result?: string; phase?: string; inventory?: any[]; bank?: any[] | null; pos?: { x: number; z: number } };
     const status = (a: string): Status | null => { try { return JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { return null; } };
@@ -902,13 +909,17 @@ export async function runFoodChain(args: readonly string[], env: Record<string, 
             if (running.size === 0) { say('stopped (stop-foodchain)'); return false; }
             return true;
         }
-        if (!running.has(COOK) && !external(COOK) && !dead.has(COOK)) start(COOK, 'scripts/fishcook.ts', { TICKS: '9000', GIVE_TO: COURIER });
+        if (!running.has(COOK) && !external(COOK) && !dead.has(COOK)) {
+            start(COOK, FOOD_CHAIN_SCRIPTS.cook.script, { TICKS: '9000', GIVE_TO: COURIER }, 'fishcook', FOOD_CHAIN_SCRIPTS.cook.extraArgs);
+        }
         if (courierBusy) return true;
         const w = waitingFarmer();
         if (w && courierFish() >= MIN_GIVE && !running.has(COURIER)) { void giveFish(w); return true; }
         for (const f of FARMERS) {
             if (running.has(f) || external(f) || dead.has(f)) continue;
-            if (farmerFood(f) >= 5 || courierFish() >= MIN_GIVE) start(f, 'scripts/goldfarm.ts', { FOOD_FROM: COURIER, FOOD_ONLY_TRADE: '1' });
+            if (farmerFood(f) >= 5 || courierFish() >= MIN_GIVE) {
+                start(f, FOOD_CHAIN_SCRIPTS.farmer.script, { FOOD_FROM: COURIER, FOOD_ONLY_TRADE: '1' }, 'goldfarm', FOOD_CHAIN_SCRIPTS.farmer.extraArgs);
+            }
         }
         if (running.has(COURIER) || external(COURIER) || dead.has(COURIER) || courierFish() >= MIN_GIVE) return true;
         const ready = count(status(COOK)?.bank, /^(trout|salmon)$/i);
@@ -916,11 +927,11 @@ export async function runFoodChain(args: readonly string[], env: Record<string, 
         if (ready < MIN_FISH || !low) return true;
         if (courierCoins() < 120) { if (!(await topUpFares())) return true; }
         courierBusy = true;
-        void runOnce(COURIER, 'scripts/aio-logistics.ts', { FROM: COOK, FEATHERS: '0', WAIT: '1500' }, 3_600_000, ['food-courier']).finally(() => { courierBusy = false; });
+        void runOnce(COURIER, FOOD_CHAIN_SCRIPTS.foodCourier.script, { FROM: COOK, FEATHERS: '0', WAIT: '1500' }, 3_600_000, FOOD_CHAIN_SCRIPTS.foodCourier.extraArgs).finally(() => { courierBusy = false; });
         return true;
     };
     while (true) {
-        try { if (!await loop()) process.exit(0); } catch (e) { say(`error ${String(e)}`); }
+        try { if (!await loop()) return; } catch (e) { say(`error ${String(e)}`); }
         await Bun.sleep(15_000);
     }
 }
