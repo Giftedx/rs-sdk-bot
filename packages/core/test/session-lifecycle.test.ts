@@ -5,7 +5,7 @@ import { join,resolve } from 'node:path';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { startInProcessSession, connectInProcess, type Session } from '../src/inprocess';
 import { watchUnexpectedEnd, logoutSession, awaitBotReady, settle } from '../src/bot';
-import { beginSessionAttempt, readLatestAttemptReceipt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT,lifecycleOwner } from '../src/session-lifecycle';
+import { beginSessionAttempt, listAttemptsSince, readAttemptReceiptById, readLatestAttemptReceipt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT, lifecycleOwner, scanAttemptsNewestFirst } from '../src/session-lifecycle';
 import { withPlanWrite } from '../src/plan-lock';
 import { acquireFleetTradeClaim, readFleetAccountClaim } from '../src/fleet-trade-claim';
 import { fleetGitWindow } from '../src/fleet-lease';
@@ -335,6 +335,41 @@ test('readLatestAttemptReceipt matches listAttempts().at(-1) in O(1) without sca
         expect(fast!.attemptId).toBe(expected.attemptId);
         expect(fast!.sha256).toBe(expected.sha256!);
         expect(fast!.receipt).toEqual(expected.receipt!);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test('readAttemptReceiptById, listAttemptsSince, and scanAttemptsNewestFirst match listAttempts without scanning full history', () => {
+    const root = mkdtempSync(join(tmpdir(), 'lifecycle-targeted-'));
+    try {
+        let clock = 1_700_000_000_000;
+        const a1 = beginSessionAttempt({ account: 'Ana', server: 'localhost:8888' }, { root, now: () => clock });
+        a1.record('ended', 'logged-out');
+        clock += 10_000;
+        const a2 = beginSessionAttempt({ account: 'Ana', server: 'localhost:8888' }, { root, now: () => clock });
+        a2.record('ended', 'disconnected');
+        clock += 10_000;
+        const a3 = beginSessionAttempt({ account: 'Ana', server: 'localhost:8888' }, { root, now: () => clock });
+        a3.record('ended', 'logged-out');
+
+        const all = listAttempts('Ana', 'localhost:8888', { root });
+        expect(readAttemptReceiptById('Ana', 'localhost:8888', a2.attemptId, { root })).toEqual({
+            attemptId: all[1]!.attemptId,
+            receipt: all[1]!.receipt!,
+            sha256: all[1]!.sha256!,
+        });
+        expect(readAttemptReceiptById('Ana', 'localhost:8888', 'not-an-id', { root })).toBeNull();
+        expect(readAttemptReceiptById('Ana', 'localhost:8888', '1700000000000-0000000001-0000000099', { root })).toBeNull();
+
+        expect(listAttemptsSince('Ana', 'localhost:8888', 1_700_000_010_000, { root }).map(a => a.attemptId)).toEqual([a2.attemptId, a3.attemptId]);
+
+        const visited: string[] = [];
+        scanAttemptsNewestFirst('Ana', 'localhost:8888', entry => {
+            visited.push(entry.attemptId);
+            return entry.attemptId !== a2.attemptId;
+        }, { root });
+        expect(visited).toEqual([a3.attemptId, a2.attemptId]);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

@@ -5,7 +5,7 @@ import {connectInProcess,clientTransportState,observeClientTransport,inProcessRu
 import {logoutSession,closeWithin,serverFromEnv} from './bot';
 import {isLocalServer} from './localserver';
 import {lifecycleRootForServer} from './practice-paths';
-import {readLogoutProof,listAttempts} from './session-lifecycle';
+import {readLogoutProof,listAttemptsSince} from './session-lifecycle';
 import {cachedLaunchRevision} from './worker-release';
 import {waitUntil} from './ticks';
 
@@ -55,11 +55,11 @@ export function recoveryHeldDiagnostic(error:unknown){
  return {schema:'session-recovery-diagnostic/1',state:'held',phase:error instanceof RecoveryBoundaryError?error.phase:'arguments',
   reason:error instanceof RecoveryBoundaryError?error.reason:'unresolved',authorizesConnection:false,producerReceipt:false};
 }
+const diagnosticReasons=new Set([...setupReasons.values(),'unresolved','io-enoent','io-eexist','io-eacces','io-eperm','outer-deadline']);
 export function recoveryDiagnosticFromLog(log:string){
- const reasons=new Set([...setupReasons.values(),'unresolved','io-enoent','io-eexist','io-eacces','io-eperm','outer-deadline']);
  for(const line of log.split(/\r?\n/))if(line.startsWith('RECOVERY_HELD ')&&line.length<1024){
   try{const d=JSON.parse(line.slice('RECOVERY_HELD '.length));
-   if(d?.schema==='session-recovery-diagnostic/1'&&d.state==='held'&&RECOVERY_SETUP_PHASES.includes(d.phase)&&reasons.has(d.reason)
+   if(d?.schema==='session-recovery-diagnostic/1'&&d.state==='held'&&RECOVERY_SETUP_PHASES.includes(d.phase)&&diagnosticReasons.has(d.reason)
     &&d.authorizesConnection===false&&d.producerReceipt===false)return {phase:d.phase as SetupPhase,reason:d.reason as string};
   }catch{/* Legacy or malformed diagnostics remain unknown; never copy arbitrary text. */}
  }
@@ -238,7 +238,7 @@ export async function recoverSession(request:RecoveryRequest,deps:RecoveryDeps){
   }
  }
  const proof=readLogoutProof(request.account,request.server,{root:deps.root});
- const attempts=listAttempts(request.account,request.server,{root:deps.root}).filter(a=>a.receipt?.owner.coordinatorRunId===request.runId&&a.receipt.createdAt>=startedAt);
+ const attempts=listAttemptsSince(request.account,request.server,startedAt,{root:deps.root}).filter(a=>a.receipt?.owner.coordinatorRunId===request.runId&&a.receipt.createdAt>=startedAt);
  const attempt=attempts.length===1?attempts[0]:undefined;
  const bound=attempt?.receipt&&attempt.receipt.owner.script===RECOVERY_SCRIPT&&attempt.receipt.owner.workerRelease===request.source
   &&attempt.receipt.owner.pid===process.pid&&attempt.receipt.account.toLowerCase()===request.account.toLowerCase()

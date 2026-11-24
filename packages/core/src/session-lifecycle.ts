@@ -190,8 +190,12 @@ function readLogoutProofAt(account: string, server: string, root?: string): Logo
     if (!validReceipt(receipt) || receipt.attemptId !== pointer.attemptId || !same(receipt.account, account) || receipt.server !== server || receipt.domain !== domain)
         return { state: 'invalid', account, server, reason: 'latest attempt identity mismatch' };
     // A newer attempt file than the pointer means an unrecorded owner; it can never be older proof.
-    const newer = names.map(n => n.slice(0, -5)).filter(id => ATTEMPT.test(id) && id > receipt.attemptId);
-    if (newer.length) return { state: 'held', account, server, domain, attemptId: receipt.attemptId, reason: `newer attempt ${newer.sort().at(-1)} is not the latest pointer` };
+    let newest = '';
+    for (let i = 0; i < names.length; i++) {
+        const id = names[i]!.slice(0, -5);
+        if (ATTEMPT.test(id) && id > receipt.attemptId && id > newest) newest = id;
+    }
+    if (newest) return { state: 'held', account, server, domain, attemptId: receipt.attemptId, reason: `newer attempt ${newest} is not the latest pointer` };
     const outcome = attemptOutcome(receipt);
     if (!outcome.confirmed) return { state: 'held', account, server, domain, attemptId: receipt.attemptId, reason: outcome.reason };
     return { state: 'confirmed', account, server, domain, attemptId: receipt.attemptId, loggedOutAt: outcome.at,
@@ -280,14 +284,99 @@ export function readLatestAttemptReceipt(
     return readLatestAttemptReceiptAt(account, server, candidates[0]!);
 }
 
+function readAttemptEntry(attemptsDir: string, fileName: string): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null } {
+    const attemptId = fileName.slice(0, -5);
+    try {
+        const raw = readFileSync(join(attemptsDir, fileName));
+        const r = JSON.parse(raw.toString('utf8'));
+        return { attemptId, receipt: validReceipt(r) ? r : null, sha256: createHash('sha256').update(raw).digest('hex') };
+    } catch {
+        return { attemptId, receipt: null, sha256: null };
+    }
+}
+
+export function readAttemptReceiptById(
+    account: string,
+    server: string,
+    attemptId: string,
+    opts: { root?: string; base?: string } = {},
+): { attemptId: string; receipt: AttemptReceipt; sha256: string } | null {
+    if (!ATTEMPT.test(attemptId)) return null;
+    const readAt = (root?: string) => {
+        let dir: string;
+        try { dir = accountDir(account, server, root); } catch { return null; }
+        const file = join(dir, 'attempts', `${attemptId}.json`);
+        if (!existsSync(file)) return null;
+        const entry = readAttemptEntry(join(dir, 'attempts'), `${attemptId}.json`);
+        if (!entry.receipt || !entry.sha256) return null;
+        return { attemptId: entry.attemptId, receipt: entry.receipt, sha256: entry.sha256 };
+    };
+    if (opts.root) return readAt(opts.root);
+    if (isLocalServer(server) && !opts.base) return readAt();
+    const base = opts.base ?? repoRoot;
+    const candidates = candidateLifecycleRoots(server, base);
+    for (const candidate of candidates) {
+        const res = readAt(candidate);
+        if (res) return res;
+    }
+    return null;
+}
+
+export function scanAttemptsNewestFirst(
+    account: string,
+    server: string,
+    visit: (entry: { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }) => boolean,
+    opts: { root?: string; base?: string } = {},
+): void {
+    const scanAt = (root?: string) => {
+        const attempts = join(accountDir(account, server, root), 'attempts');
+        if (!existsSync(attempts)) return false;
+        const names = readdirSync(attempts).filter(n => n.endsWith('.json')).sort();
+        if (!names.length) return false;
+        for (let i = names.length - 1; i >= 0; i--) {
+            if (!visit(readAttemptEntry(attempts, names[i]!))) break;
+        }
+        return true;
+    };
+    if (opts.root) { scanAt(opts.root); return; }
+    if (isLocalServer(server) && !opts.base) { scanAt(); return; }
+    const base = opts.base ?? repoRoot;
+    for (const candidate of candidateLifecycleRoots(server, base)) {
+        if (scanAt(candidate)) return;
+    }
+}
+
+export function listAttemptsSince(
+    account: string,
+    server: string,
+    minCreatedAt: number,
+    opts: { root?: string; base?: string } = {},
+): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
+    const prefix = String(Math.max(0, Math.floor(minCreatedAt))).padStart(13, '0');
+    const listAt = (root?: string) => {
+        const attempts = join(accountDir(account, server, root), 'attempts');
+        if (!existsSync(attempts)) return [];
+        const names = readdirSync(attempts).filter(n => {
+            if (!n.endsWith('.json')) return false;
+            const id = n.slice(0, -5);
+            return !ATTEMPT.test(id) || id.slice(0, 13) >= prefix;
+        }).sort();
+        return names.map(n => readAttemptEntry(attempts, n));
+    };
+    if (opts.root) return listAt(opts.root);
+    if (isLocalServer(server) && !opts.base) return listAt();
+    const base = opts.base ?? repoRoot;
+    for (const candidate of candidateLifecycleRoots(server, base)) {
+        const attemptsDir = join(accountDir(account, server, candidate), 'attempts');
+        if (existsSync(attemptsDir) && readdirSync(attemptsDir).some(n => n.endsWith('.json'))) return listAt(candidate);
+    }
+    return [];
+}
+
 function listAttemptsAt(account: string, server: string, root?: string): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
     const attempts = join(accountDir(account, server, root), 'attempts');
     if (!existsSync(attempts)) return [];
-    return readdirSync(attempts).filter(n => n.endsWith('.json')).sort().map(n => {
-        try { const raw = readFileSync(join(attempts, n)); const r = JSON.parse(raw.toString('utf8'));
-            return { attemptId: n.slice(0, -5), receipt: validReceipt(r) ? r : null, sha256: createHash('sha256').update(raw).digest('hex') }; }
-        catch { return { attemptId: n.slice(0, -5), receipt: null, sha256: null }; }
-    });
+    return readdirSync(attempts).filter(n => n.endsWith('.json')).sort().map(n => readAttemptEntry(attempts, n));
 }
 
 // Every recorded attempt for one identity, oldest first. Malformed files are reported, never dropped.

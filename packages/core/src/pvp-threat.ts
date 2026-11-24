@@ -90,12 +90,23 @@ export class ThreatBook {
 
     observe(tick: number, members: readonly Member[], sightings: readonly Sighting[]): ThreatRecord[] {
         const out: ThreatRecord[] = [];
-        const ours = new Set(members.map(m => m.name.toLowerCase()));
+        if (!members.length) {
+            for (const [key, v] of this.seen) if (tick - v.tick > 200) this.seen.delete(key);
+            return out;
+        }
+        const ours = new Set<string>();
+        for (let i = 0; i < members.length; i++) ours.add(members[i]!.name.toLowerCase());
         for (const s of sightings) {
             const key = s.name.toLowerCase();
-            if (ours.has(key) || this.o.friends.has(key) || !members.length) continue;
+            if (ours.has(key) || this.o.friends.has(key)) continue;
             const old = this.seen.get(key) ?? { x: s.x, z: s.z, tick, dist: Infinity, styles: new Map<CombatStyle, number>(), last: null };
-            const near = members.map(m => ({ member: m.name, dist: cheb(m, s) })).sort((a, b) => a.dist - b.dist)[0]!;
+            let nearMember = members[0]!.name, nearDist = cheb(members[0]!, s);
+            for (let i = 1; i < members.length; i++) {
+                const m = members[i]!;
+                const d = cheb(m, s);
+                if (d < nearDist) { nearDist = d; nearMember = m.name; }
+            }
+            const near = { member: nearMember, dist: nearDist };
             const dt = tick - old.tick;
             const speed = dt > 0 && Number.isFinite(old.dist) ? (old.dist - near.dist) / dt : 0;
             const style = s.anim !== undefined && s.anim >= 0 ? this.o.attackStyle(s.anim, s.spot ?? -1) : null;
@@ -197,7 +208,8 @@ export function decideAdapt(classes: readonly ThreatClass[], members: readonly M
     const danger = classes.filter(c => c.dangerous), actions: Adapt[] = [];
     if (!danger.length || !members.length) return actions;
     const team = o.teamSize ?? 3;
-    const strongest = [...members].sort((a, b) => b.combat - a.combat)[0]!;
+    let strongest = members[0]!;
+    for (let i = 1; i < members.length; i++) if (members[i]!.combat > strongest.combat) strongest = members[i]!;
     const unexpected = danger.filter(c => !o.expected?.has(c.record.name.toLowerCase()));
     const outclassing = unexpected.find(c => o.outclasses(strongest, c.record));
     const outnumbered = unexpected.length >= Math.max(team, members.length + (o.outnumberedBy ?? 1));
@@ -232,11 +244,16 @@ export function decideAdapt(classes: readonly ThreatClass[], members: readonly M
         actions.push(to ? { kind: 'single-way', to, reason: `team of ${unexpected.length}: ${names(unexpected)}` } : { kind: 'retreat', reason: `team of ${unexpected.length}: ${names(unexpected)}, no single-way tile known` });
     }
     for (const m of members) {
-        const away = (c: ThreatClass) => cheb(m, c.record);
-        const mine = danger.filter(c => c.canHit.includes(m.name)).sort((a, b) => away(a) - away(b));
-        const first = mine.find(c => c.cover !== null);
+        let first: ThreatClass | undefined;
+        let firstDist = Infinity;
+        for (let i = 0; i < danger.length; i++) {
+            const c = danger[i]!;
+            if (c.cover === null || !c.canHit.includes(m.name)) continue;
+            const d = cheb(m, c.record);
+            if (d < firstDist) { firstDist = d; first = c; }
+        }
         if (!first) continue;
-        actions.push({ kind: 'protect', member: m.name, style: first.cover!, reason: `${first.record.name} ${first.style} by ${first.by}, ${away(first)} tiles` });
+        actions.push({ kind: 'protect', member: m.name, style: first.cover!, reason: `${first.record.name} ${first.style} by ${first.by}, ${firstDist} tiles` });
         const swap = o.counterFor?.(m.name, first.cover!);
         if (swap && swap.wear.length) actions.push({ kind: 'kit', member: m.name, style: first.cover!, wear: swap.wear, gain: swap.gain, reason: `${first.record.name} ${first.style}: wear ${swap.wear.join('+')} (+${swap.gain})` });
     }

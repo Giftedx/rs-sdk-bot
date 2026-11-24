@@ -33,3 +33,16 @@ test('the client probe reads the scene at the build base and refuses tiles outsi
     expect(reach({ x: 3003, z: 3001, level: 1 })).toBeNull();
     expect(clientReach({}, () => null)).toBeNull();
 });
+
+test('stamp-reused BFS and out-of-scene slow fallback match exact reachability across repeated queries', () => {
+    const blocked = scene(null);
+    const open = scene(7);
+    for (let i = 0; i < 5; i++) {
+        expect(canReachLocal(blocked, { lx: 1, lz: 1 }, { lx: 8, lz: 1 })).toBe(false);
+        expect(canReachLocal(open, { lx: 1, lz: 1 }, { lx: 8, lz: 1 })).toBe(true);
+    }
+    const wide = (lx: number, lz: number) => (lx >= -4 && lx <= 108 && lz >= -4 && lz <= 108 ? 0 : null);
+    expect(canReachLocal(wide, { lx: -2, lz: 2 }, { lx: 3, lz: 2 })).toBe(true);
+    expect(canReachLocal(wide, { lx: 1, lz: 2 }, { lx: -2, lz: 2 })).toBe(true);
+    expect(canReachLocal(wide, { lx: 0, lz: 2 }, { lx: 105, lz: 2 }, { maxSteps: 20 })).toBe(false);
+});

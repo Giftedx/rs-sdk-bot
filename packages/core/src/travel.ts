@@ -5,8 +5,9 @@
 // walker runs it. Left out: Entrana boats (no weapon or armour may be carried), moves into the Wilderness,
 // jails and random-tile teleports (essence mine), runecraft ruins and portals; shortcuts with a failure roll (a
 // fall hurts a low-level account), a use-item, a first step (via) or a held-item check.
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { writeAtomicFile } from './atomic-file';
 import type { Account, Tile } from './world-types';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
@@ -164,14 +165,59 @@ export function loadCrossings(): CrossingRecord[] {
     return (JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'special-crossings.json'), 'utf8')) as { crossings: CrossingRecord[] }).crossings;
 }
 
+const TRAVEL_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'travel-v1.json');
+type TravelCache = { v: 1; stamps: [string, string][]; staffs: { rune: string; staffs: string[] }[]; travel: Travel[] };
+const fileStamp = (file: string): string => {
+    try { const st = statSync(file); return `${st.size}:${st.mtimeMs}`; } catch { return 'missing'; }
+};
 let all: Travel[] | undefined;
-export function loadTravel(): Travel[] {
-    if (all) return all;
-    const npc = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'npc-travel.json'), 'utf8')) as { records: NpcRecord[] };
-    const tele = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'teleports.json'), 'utf8')) as { teleports: TeleRecord[]; staffs: { rune: string; staffs: string[] }[] };
+export function loadTravel(cacheFile = TRAVEL_CACHE_FILE): Travel[] {
+    if (all && cacheFile === TRAVEL_CACHE_FILE) return all;
+    const isDefault = cacheFile === TRAVEL_CACHE_FILE;
+    const npcFile = join(repoRoot, 'knowledge', 'npc-travel.json');
+    const teleFile = join(repoRoot, 'knowledge', 'teleports.json');
+    const cutsFile = join(repoRoot, 'knowledge', 'shortcuts.json');
+    const npcStamp = fileStamp(npcFile), teleStamp = fileStamp(teleFile), cutsStamp = fileStamp(cutsFile);
+    if (cacheFile) {
+        try {
+            const parsed = JSON.parse(readFileSync(cacheFile, 'utf8')) as TravelCache;
+            if (parsed?.v === 1 && Array.isArray(parsed.stamps) && Array.isArray(parsed.travel) && Array.isArray(parsed.staffs)
+                && parsed.stamps.length >= 3
+                && parsed.stamps[0]![0] === 'npc' && parsed.stamps[0]![1] === npcStamp
+                && parsed.stamps[1]![0] === 'tele' && parsed.stamps[1]![1] === teleStamp
+                && parsed.stamps[2]![0] === 'cuts' && parsed.stamps[2]![1] === cutsStamp) {
+                let fresh = true;
+                for (let i = 3; i < parsed.stamps.length; i++) {
+                    const [rel, stamp] = parsed.stamps[i]!;
+                    if (fileStamp(join(content, rel)) !== stamp) { fresh = false; break; }
+                }
+                if (fresh) {
+                    staffs = parsed.staffs;
+                    if (isDefault) all = parsed.travel;
+                    return parsed.travel;
+                }
+            }
+        } catch { /* cache miss */ }
+    }
+    const npc = JSON.parse(readFileSync(npcFile, 'utf8')) as { records: NpcRecord[] };
+    const tele = JSON.parse(readFileSync(teleFile, 'utf8')) as { teleports: TeleRecord[]; staffs: { rune: string; staffs: string[] }[] };
     staffs = tele.staffs;
-    const cuts = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'shortcuts.json'), 'utf8')) as { edges: ShortcutRecord[] };
-    return all = [...npcTravel(npc.records), ...teleportTravel(tele.teleports), ...shortcutTravel(cuts.edges)];
+    const cuts = JSON.parse(readFileSync(cutsFile, 'utf8')) as { edges: ShortcutRecord[] };
+    const built = [...npcTravel(npc.records), ...teleportTravel(tele.teleports), ...shortcutTravel(cuts.edges)];
+    if (cacheFile) {
+        const stamps: [string, string][] = [['npc', npcStamp], ['tele', teleStamp], ['cuts', cutsStamp]];
+        const seenMap = new Set<string>();
+        for (const r of npc.records) {
+            const src = r.deck?.gangplank?.src;
+            const m = src?.match(/^(.*):(\d+)$/);
+            const rel = m?.[1];
+            if (rel && !seenMap.has(rel)) { seenMap.add(rel); stamps.push([rel, fileStamp(join(content, rel))]); }
+        }
+        try { writeAtomicFile(cacheFile, JSON.stringify({ v: 1, stamps, staffs, travel: built }), { ensureDir: true }); }
+        catch { /* optional cache */ }
+    }
+    if (isDefault) all = built;
+    return built;
 }
 let staffs: { rune: string; staffs: string[] }[] = [];
 

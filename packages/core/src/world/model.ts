@@ -37,6 +37,7 @@ export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: numb
     withDanger?<T>(acct: Account, from: Tile, to: Tile, query: () => T): T;
     walkable?(t: Tile): boolean;
     areaOf?(t: Tile): number;
+    measurePrechecked?(from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null;
 };
 
 export interface World {

@@ -26,11 +26,17 @@ export function spawnSyncTimed<
     return first;
 }
 
+const pidAlive = (pid: number): boolean => {
+    try { process.kill(pid, 0); return true; }
+    catch (e) { return (e as NodeJS.ErrnoException)?.code !== 'ESRCH'; }
+};
+
 // The command line of a live process, or null. Used to check that a saved PID is still our process:
 // Windows reuses PIDs, so a stale pids.json could otherwise point at an unrelated program.
 export function commandLine(pid: number): string | null {
     if (!Number.isInteger(pid) || pid <= 0) return null;
     if (process.platform === 'win32') {
+        if (!pidAlive(pid)) return null;
         const r = spawnSyncTimed(['powershell', '-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`], { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: POWERSHELL_TIMEOUT_MS });
         const out = r.stdout.toString().trim();
         return out.length > 0 ? out : null;
@@ -57,7 +63,12 @@ export const PROCESS_MATCH_CACHE_MS = 3000;
 export function processMatchesRecent(pid: number, marker: string, now = Date.now()): boolean {
     const hit = recentCommandLines.get(pid);
     const line = hit && now - hit.at < PROCESS_MATCH_CACHE_MS ? hit.line : commandLine(pid);
-    if (!hit || now - hit.at >= PROCESS_MATCH_CACHE_MS) recentCommandLines.set(pid, { at: now, line });
+    if (!hit || now - hit.at >= PROCESS_MATCH_CACHE_MS) {
+        if (recentCommandLines.size > 256) {
+            for (const [k, v] of recentCommandLines) if (now - v.at >= PROCESS_MATCH_CACHE_MS) recentCommandLines.delete(k);
+        }
+        recentCommandLines.set(pid, { at: now, line });
+    }
     return line?.includes(marker) ?? false;
 }
 
@@ -68,8 +79,10 @@ export function processStartTimes(pids: readonly number[]): Map<number, number> 
     const ids = [...new Set(pids.filter(p => Number.isSafeInteger(p) && p > 0))], out = new Map<number, number>();
     if (!ids.length) return out;
     if (process.platform !== 'win32') return null;
+    const liveIds = ids.filter(pidAlive);
+    if (!liveIds.length) return out;
     // The last line proves that the query ran to its end: a failed query stops the script before it.
-    const script = `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter "${ids.map(p => `ProcessId=${p}`).join(' OR ')}" | ForEach-Object { if ($_.CreationDate) { '{0}|{1}' -f $_.ProcessId, ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } }; 'read'`;
+    const script = `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter "${liveIds.map(p => `ProcessId=${p}`).join(' OR ')}" | ForEach-Object { if ($_.CreationDate) { '{0}|{1}' -f $_.ProcessId, ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } }; 'read'`;
     const r = spawnSyncTimed(['powershell', '-NoProfile', '-Command', script], { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: POWERSHELL_TIMEOUT_MS });
     const lines = r.stdout.toString().trim().split(/\r?\n/);
     if (r.exitCode !== 0 || lines.pop() !== 'read') return null;

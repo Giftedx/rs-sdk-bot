@@ -118,12 +118,13 @@ export function routeOnGraph(
         const numCache = new Map<number, number | null>();
         const strCache = new Map<string, number | null>();
         const fastWalkKeyOk = totalNodes < 16384 && transports.length < 16384;
+        const walkFn = (hasAreaOf && opts.pathLength.measurePrechecked) ? opts.pathLength.measurePrechecked : opts.pathLength;
         const walk = (aIdx: number, aTile: Tile, bIdx: number, bTile: Tile, tol: number, interaction?: InteractionTarget, qId = -1) => {
             if (fastWalkKeyOk && tol >= 0 && tol < 64 && qId >= -1 && qId < 16383) {
                 const k = ((aIdx * 16384 + bIdx) * 64 + tol) * 16384 + (qId + 1);
                 let v = numCache.get(k);
                 if (v === undefined) {
-                    v = opts.pathLength(aTile, bTile, blocked, tol, interaction);
+                    v = (tol <= 1 || interaction ? walkFn : opts.pathLength)(aTile, bTile, blocked, tol, interaction);
                     numCache.set(k, v);
                 }
                 return v;
@@ -131,7 +132,7 @@ export function routeOnGraph(
             const k = `${aIdx}>${bIdx}:${tol}:${qId >= 0 ? qId : interaction ? JSON.stringify(interaction) : ''}`;
             let v = strCache.get(k);
             if (v === undefined) {
-                v = opts.pathLength(aTile, bTile, blocked, tol, interaction);
+                v = (tol <= 1 || interaction ? walkFn : opts.pathLength)(aTile, bTile, blocked, tol, interaction);
                 strCache.set(k, v);
             }
             return v;
@@ -402,9 +403,10 @@ export function routeOnGraph(
         }
 
         const forward = run(false), backward = run(true);
+        let steps = 0;
         try {
             for (;;) {
-                if (performance.now() > deadline) return { ok: false, reason: 'budget' };
+                if (deadline !== Infinity && (steps++ & 31) === 0 && performance.now() > deadline) return { ok: false, reason: 'budget' };
                 const a = forward.next();
                 if (a.done) return a.value;
                 const b = backward.next();
