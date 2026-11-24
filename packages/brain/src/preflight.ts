@@ -136,6 +136,17 @@ const QUEST_ALIASES: Readonly<Record<string, readonly string[]>> = {
     arena: ['arena', 'fight arena'],
     merlin: ['merlin', 'arthur', "merlin's crystal", 'merlins crystal'],
     arrav: ['arrav', 'blackarmgang', 'phoenixgang', 'shield of arrav'],
+    elena: ['elena', 'plague city', 'elenaquest', 'quest_elena'],
+    death: ['death', 'death plateau', 'death_plateau', 'quest_death'],
+    junglepotion: ['junglepotion', 'jungle potion', 'quest_junglepotion'],
+    troll: ['troll', 'troll stronghold', 'quest_troll'],
+    druidspirit: ['druidspirit', 'nature spirit', 'quest_druidspirit'],
+    crest: ['crest', 'family crest', 'quest_crest'],
+    barcrawl: ['barcrawl', "alfred grimhand's barcrawl", 'alfred grimhands barcrawl', 'quest_barcrawl'],
+    magearena: ['magearena', 'mage arena', 'quest_magearena'],
+    itwatchtower: ['itwatchtower', 'watch tower', 'watchtower', 'quest_itwatchtower'],
+    horror: ['horror', 'horror from the deep', 'horrorquest', 'quest_horror'],
+    imp: ['imp', 'imp catcher', 'impquest', 'quest_imp'],
 };
 
 let cachedGearById: Map<number, Gear> | undefined;

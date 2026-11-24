@@ -9,7 +9,7 @@ import { knownBanks } from '../../../core/src/trip';
 import { expandPath, goTo, leaveDeck, sessionWalker, walkPath, type Walker } from '../../../core/src/walk';
 import type { ShopConfig, ShopItem as SdkShopItem } from '../../../../vendor/rs-sdk/sdk/types';
 import { contentUnitBound, shopRules } from './shop-price';
-import { dataProfile } from './shop-profiles';
+import { dataProfile, derivedProfile } from './shop-profiles';
 import type { BuySwordConfig, EarthShopConfig, ShopBuyConfig, ShopProfile, ShopPurchaseTarget, ShopRule, ShopStock } from './types';
 import { walkTargetPersist } from './walk';
 
@@ -765,7 +765,7 @@ export async function runDialogBuyStep(
 
 export function resolveShopProfile(profileKey: string): ShopProfile | undefined {
     const key = profileKey.toLowerCase();
-    return PROFILES[key] ?? dataProfile(key);
+    return PROFILES[key] ?? dataProfile(key) ?? derivedProfile(key);
 }
 
 export type ShopBuyRunResult = {

@@ -75,4 +75,35 @@ describe('catalog-worker parity', () => {
         expect(route.family).toBe('bank-artisan');
         expect(route.args.slice(0, 3)).toEqual(['magic', 'earth-production', 'craft']);
     });
+
+    test('quest prerequisites, multi-account quest blocks, specialist isolation, and combat survivability gates', () => {
+        const catalog = createActivityCatalog();
+        const world: WorldSnapshot = {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: {},
+        };
+        const fresh = makeTestAccount({
+            skills: { Hitpoints: { level: 10, xp: 1154 }, Magic: { level: 1, xp: 0 }, Prayer: { level: 1, xp: 0 } },
+        });
+
+        for (const qId of ['quest:viking', 'quest:itwatchtower', 'quest:horror', 'quest:druidspirit', 'quest:magearena']) {
+            const act = catalog.require(qId);
+            const pre = activityPreflightFromConfig(fresh, act, world, 1);
+            expect(pre.ok).toBe(false);
+            expect(pre.blockers.some((b) => b.kind === 'skill_level' || b.kind === 'quest_incomplete')).toBe(true);
+        }
+
+        for (const blockedId of ['quest:arrav', 'quest:hero', 'quest:legends', 'gather:fishing-specialist', 'combat:ranged-specialist']) {
+            expect(catalog.require(blockedId).trust).toBe('experimental');
+        }
+
+        for (const combatId of ['combat:boss-kbd', 'combat:fire-giant', 'combat:boss-green-dragon']) {
+            const pre = activityPreflightFromConfig(fresh, catalog.require(combatId), world, 1);
+            expect(pre.ok).toBe(false);
+            expect(pre.blockers.some((b) => b.kind === 'combat_survivability' || b.kind === 'quest_incomplete')).toBe(true);
+        }
+    });
 });

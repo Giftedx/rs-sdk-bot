@@ -196,6 +196,41 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(resolved.steps[2]?.family).toBe('bank-artisan');
     expect(resolved.steps[2]?.routeKey).toBe('cooking:food');
     expect(resolved.steps[2]?.env.DEMAND_ID).toBe('d:sharks');
+    expect(resolved.steps[0]?.env.ORDER_KEY).toBe('brain-383-100');
+    expect(resolved.steps[0]?.env.CASH_RESERVE).toBe('1000');
+    expect(resolved.steps[0]?.env.LIMIT_PRICE).toBe('460');
+    expect(resolved.steps[1]?.env.EQUIP).toBe('1');
+
+    const shopAcquire = resolvePlannedStepWorkerRoute('Shopper', {
+        stepKind: 'acquire',
+        source: 'npc_shop',
+        itemId: 1351,
+        itemName: 'Bronze axe',
+        quantity: 1,
+        estimatedTicks: 30,
+        estimatedCoinCost: 16,
+        coinFloatPreserved: 1000,
+        shopId: 'axeshop',
+    });
+    expect(shopAcquire.env.ITEMS).toBe('Bronze axe');
+    expect(Number(shopAcquire.env.FLOAT)).toBeGreaterThan(Number(shopAcquire.env.COIN_RESERVE));
+    expect(shopAcquire.env.STOP_AT_TARGET).toBe('1');
+
+    const upgradeHub = resolvePlannedStepWorkerRoute('Miner', {
+        stepKind: 'gear_upgrade',
+        itemId: 1275,
+        slot: 'weapon',
+        netXpPerTickGain: 15,
+        remainingBandTicks: 2000,
+        acquisitionTicks: 60,
+        paybackNetTicks: 500,
+        source: 'hub_banker',
+        donorAccount: 'Donor',
+        hub: 'varrock_west',
+        transferOrderId: 'xfer-123',
+    });
+    expect(upgradeHub.executionMode).toBe('fleet_trade');
+    expect(upgradeHub.args).toEqual(['fleet-trade', 'xfer-123']);
 });
 
 test('catalog covers all 9 worker families with existing standalone scripts only', () => {

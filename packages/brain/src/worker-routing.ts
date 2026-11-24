@@ -8,6 +8,7 @@ import {
     type ActivityDefinition,
     type PlannedStep,
 } from './contracts';
+import { loadItemsMap } from './preflight';
 
 export interface WorkerRoutingContext {
     readonly activities?: readonly ActivityDefinition[];
@@ -389,15 +390,19 @@ function resolveAcquireOrGearSource(
     params: {
         source: AcquireSourceKind;
         itemId: number;
+        itemName?: string;
         quantity: number;
         shopId?: string;
         transferOrderId?: string;
         activityId?: string;
+        estimatedCoinCost?: number;
         coinFloatPreserved?: number;
     },
     ctx?: WorkerRoutingContext,
 ): WorkerRouteStep {
-    const reserve = String(params.coinFloatPreserved ?? DEFAULT_OPERATING_COIN_FLOAT);
+    const reserveNum = Math.max(0, Math.floor(params.coinFloatPreserved ?? DEFAULT_OPERATING_COIN_FLOAT));
+    const reserve = String(reserveNum);
+    const resolvedItemName = params.itemName ?? loadItemsMap().get(params.itemId)?.name;
     switch (params.source) {
         case 'own_bank':
             return {
@@ -408,11 +413,17 @@ function resolveAcquireOrGearSource(
                 workerId: 'logistics',
                 routeKey: 'loadout',
                 args: ['loadout'],
-                env: { ITEM_ID: String(params.itemId), QUANTITY: String(params.quantity) },
+                env: {
+                    ITEM_ID: String(params.itemId),
+                    QUANTITY: String(params.quantity),
+                    ...(resolvedItemName ? { ITEM_NAME: resolvedItemName } : {}),
+                    ...(stepKind === 'gear_upgrade' ? { EQUIP: '1' } : {}),
+                },
                 config: { role: 'loadout', itemId: params.itemId, quantity: params.quantity },
                 warnings: [],
             };
-        case 'npc_shop':
+        case 'npc_shop': {
+            const floatAmount = Math.max(20_000, reserveNum + Math.max(0, Math.ceil(params.estimatedCoinCost ?? 0)) + 1_000);
             return {
                 account,
                 stepKind,
@@ -423,9 +434,13 @@ function resolveAcquireOrGearSource(
                 args: ['shop-buy', params.shopId ?? 'ardy', '3000'],
                 env: {
                     ITEM_ID: String(params.itemId),
+                    ...(resolvedItemName ? { ITEMS: resolvedItemName } : {}),
                     MAX_ITEMS: String(params.quantity),
                     COIN_RESERVE: reserve,
+                    FLOAT: String(floatAmount),
                     NO_BUY_TICKS: '25',
+                    STOP_AT_TARGET: '1',
+                    BANK_PACK: '1',
                 },
                 config: {
                     mode: 'shop-buy',
@@ -435,7 +450,12 @@ function resolveAcquireOrGearSource(
                 },
                 warnings: [],
             };
-        case 'ge':
+        }
+        case 'ge': {
+            const orderKey = `brain-${params.itemId}-${params.quantity}`;
+            const unitLimit = params.estimatedCoinCost && params.estimatedCoinCost > 0
+                ? Math.max(1, Math.ceil((params.estimatedCoinCost / Math.max(1, params.quantity)) * 1.15))
+                : undefined;
             return {
                 account,
                 stepKind,
@@ -445,13 +465,17 @@ function resolveAcquireOrGearSource(
                 routeKey: 'ge-buy',
                 args: ['ge-buy'],
                 env: {
+                    ORDER_KEY: orderKey,
                     ITEM_ID: String(params.itemId),
                     QUANTITY: String(params.quantity),
+                    CASH_RESERVE: reserve,
                     COIN_RESERVE: reserve,
+                    ...(unitLimit ? { LIMIT_PRICE: String(unitLimit) } : {}),
                 },
                 config: { mode: 'ge-buy', itemId: params.itemId, quantity: params.quantity },
                 warnings: [],
             };
+        }
         case 'hub_banker':
             return {
                 account,
@@ -554,7 +578,17 @@ export function resolvePlannedStepWorkerRoute(
             return resolveAcquireOrGearSource(
                 account,
                 'gear_upgrade',
-                { source: planned.source, itemId: planned.itemId, quantity: 1 },
+                {
+                    source: planned.source,
+                    itemId: planned.itemId,
+                    itemName: planned.itemName,
+                    quantity: 1,
+                    shopId: planned.shopId,
+                    transferOrderId: planned.transferOrderId,
+                    activityId: planned.activityId,
+                    estimatedCoinCost: planned.estimatedCoinCost,
+                    coinFloatPreserved: planned.coinFloatPreserved,
+                },
                 ctx,
             );
         case 'unlock': {

@@ -1,11 +1,13 @@
 // Unified WorkerModule implementation and role dispatcher for fleet logistics operations.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { openBot, sessionDied, settle } from '../../../core/src/bot';
+import { accountOf, getWorld, openBot, sessionDied, settle } from '../../../core/src/bot';
 import type { Outcome } from '../../../core/src/act';
 import type { Session } from '../../../core/src/inprocess';
 import type { SessionCore } from '../../../core/src/session-types';
 import { waitUntil } from '../../../core/src/ticks';
+import { knownBanks } from '../../../core/src/trip';
+import { goTo } from '../../../core/src/walk';
 import {
     accountOwnedItemCount,
     availableCoinsAfterReserves,
@@ -539,12 +541,68 @@ export async function runLogisticsRole(
             }
             case 'loadout': {
                 const kitPath = args[0] ?? mergedEnv.LOADOUT_FILE;
-                if (!kitPath) throw Error('usage: aio-logistics <account> loadout <kit.json>');
-                const kit = validateOwnedKit(readJsonArg(kitPath));
-                const r = await runOwnedLoadout(s, kit, isStopped(account));
-                console.log('LOADOUT ' + JSON.stringify(r));
-                ok = r.ok;
-                detail = `loadout ${r.ok ? 'exact' : r.failure} moves=${r.moves} ticks=${r.ticks}`;
+                if (kitPath) {
+                    const kit = validateOwnedKit(readJsonArg(kitPath));
+                    const r = await runOwnedLoadout(s, kit, isStopped(account));
+                    console.log('LOADOUT ' + JSON.stringify(r));
+                    ok = r.ok;
+                    detail = `loadout ${r.ok ? 'exact' : r.failure} moves=${r.moves} ticks=${r.ticks}`;
+                    break;
+                }
+                if (!mergedEnv.ITEM_ID) throw Error('usage: aio-logistics <account> loadout <kit.json>');
+                const itemId = Number(mergedEnv.ITEM_ID);
+                const quantity = Math.max(1, Number(mergedEnv.QUANTITY ?? 1));
+                const equip = mergedEnv.EQUIP === '1';
+                if (!Number.isSafeInteger(itemId) || itemId < 0 || !Number.isSafeInteger(quantity) || quantity < 1) {
+                    throw Error(`invalid loadout ITEM_ID=${mergedEnv.ITEM_ID} QUANTITY=${mergedEnv.QUANTITY}`);
+                }
+                await waitUntil(s, () => !!s.sdk.getState()?.player, { timeoutTicks: 20 });
+                const heldCount = () => s.sdk.getInventory().filter(i => i.id === itemId).reduce((sum, i) => sum + i.count, 0);
+                const wornCount = () => s.sdk.getEquipment().filter(i => i.id === itemId).reduce((sum, i) => sum + i.count, 0);
+                let haveTotal = heldCount() + (equip ? wornCount() : 0);
+                if (haveTotal < quantity) {
+                    const pos = s.sdk.getState()?.player;
+                    if (!pos) throw Error('loadout player state unavailable');
+                    const nearestBank = [...knownBanks()]
+                        .filter(b => b.level === pos.level)
+                        .sort((a, b) => Math.max(Math.abs(a.x - pos.worldX), Math.abs(a.z - pos.worldZ)) - Math.max(Math.abs(b.x - pos.worldX), Math.abs(b.z - pos.worldZ)))[0]
+                        ?? HUB_BANKS.varrockWest;
+                    const dist = Math.max(Math.abs(pos.worldX - nearestBank.x), Math.abs(pos.worldZ - nearestBank.z));
+                    if (dist > 4) {
+                        const world = await getWorld();
+                        const walked = await goTo(s, world, nearestBank, accountOf(s), { legTimeoutTicks: 120 });
+                        if (!walked.ok) throw Error(`loadout bank walk failed: ${walked.reason}`);
+                    }
+                    const gen = s.bankObservation?.()?.generation ?? 0;
+                    if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen && (s.bankObservation?.()?.generation ?? 0) > gen, { timeoutTicks: 15 })) {
+                        throw Error('loadout bank open failed');
+                    }
+                    const need = quantity - haveTotal;
+                    const bankItem = s.sdk.getState()?.bank?.items.find(i => i.id === itemId);
+                    if (!bankItem || bankItem.count < need) {
+                        await s.bot.closeBank();
+                        throw Error(`loadout bank missing itemId=${itemId} need=${need} have=${bankItem?.count ?? 0}`);
+                    }
+                    const beforeInv = heldCount();
+                    const w = await s.bot.withdrawItem(bankItem, need, { asNote: false });
+                    if (!w.success || !await waitUntil(s, () => heldCount() >= beforeInv + need, { timeoutTicks: 10 })) {
+                        await s.bot.closeBank();
+                        throw Error(`loadout withdraw failed itemId=${itemId} need=${need}`);
+                    }
+                    await s.sdk.sendCloseModal();
+                    await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+                }
+                if (equip && wornCount() < 1) {
+                    const invItem = s.sdk.getInventory().find(i => i.id === itemId);
+                    if (!invItem) throw Error(`loadout equip missing inv itemId=${itemId}`);
+                    const eq = await s.bot.equipItem(invItem);
+                    if (!eq.success || !await waitUntil(s, () => wornCount() >= 1, { timeoutTicks: 8 })) {
+                        throw Error(`loadout equip failed itemId=${itemId}`);
+                    }
+                }
+                haveTotal = heldCount() + (equip ? wornCount() : 0);
+                ok = haveTotal >= quantity && (!equip || wornCount() >= 1);
+                detail = `loadout itemId=${itemId} qty=${haveTotal}/${quantity} equip=${equip ? 1 : 0}`;
                 break;
             }
             case 'bank-sort': {

@@ -14,12 +14,14 @@ import {
     isProtectedAccountName,
     type AccountPlan,
     type AccountState,
+    type AcquireSourceKind,
     type ActivityDefinition,
     type AcquireStep,
     type Campaign,
     type DefectRecord,
     type FleetPlan,
     type FleetState,
+    type GearUpgradePlannedStep,
     type GoalDemand,
     type HubBankId,
     type InfraCircuitBreakerState,
@@ -410,6 +412,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             activeTransferParties.add(existing.to.toLowerCase());
         }
     }
+    const busyAccounts = new Set<string>(activeTransferParties);
 
     const spotHasCapacity = (spotId: string | undefined, maxConcurrent: number | undefined): boolean => {
         if (!spotId || maxConcurrent === undefined) return true;
@@ -523,12 +526,14 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             reserveSpot(acct.name, altAct?.spotId);
             consumeDemandAllocation(rerouted);
             accountPlans[acct.name] = rerouted;
+            busyAccounts.add(acct.name.toLowerCase());
             remainingSlots -= 1;
             continue;
         }
         reserveSpot(acct.name, workAct?.spotId);
         consumeDemandAllocation(plan);
         accountPlans[acct.name] = plan;
+        busyAccounts.add(acct.name.toLowerCase());
         remainingSlots -= 1;
     }
 
@@ -563,14 +568,23 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             };
             continue;
         }
-        accountPlans[acct.name] = planAccount(acct, basePlannerOpts);
+        const recPlan = planAccount(acct, basePlannerOpts);
+        accountPlans[acct.name] = recPlan;
+        if (recPlan.steps.length > 0) busyAccounts.add(acct.name.toLowerCase());
         remainingSlots -= 1;
     }
 
     // 3. Plan idle (and launch-ready reserved) accounts ordered by value/hour descending.
     const initialUnallocated = currentUnallocatedDemands();
     const idleEvaluations = idleAccounts
-        .map((acct) => ({ acct, plan: planAccount(acct, { ...basePlannerOpts, demands: initialUnallocated }) }))
+        .map((acct) => ({
+            acct,
+            plan: planAccount(acct, {
+                ...basePlannerOpts,
+                demands: initialUnallocated,
+                excludedDonorAccounts: busyAccounts,
+            }),
+        }))
         .sort((a, b) => b.plan.scorePerHour - a.plan.scorePerHour || a.acct.name.localeCompare(b.acct.name));
 
     const assignedIdleDonors = new Set<string>();
@@ -627,11 +641,15 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             ...basePlannerOpts,
             demands: availableDemands,
             excludedSpotIds: excludedSpots,
+            excludedDonorAccounts: busyAccounts,
         });
 
-        // Validate and materialize any hub_banker AcquireSteps as safe TransferOrders.
+        // Validate and materialize any hub_banker AcquireSteps or GearUpgradePlannedSteps as safe TransferOrders.
         if (plan.steps.length > 0) {
-            const hubSteps = plan.steps.filter((s): s is AcquireStep => s.stepKind === 'acquire' && s.source === 'hub_banker');
+            const hubSteps = plan.steps.filter(
+                (s): s is AcquireStep | GearUpgradePlannedStep =>
+                    (s.stepKind === 'acquire' || s.stepKind === 'gear_upgrade') && s.source === 'hub_banker',
+            );
             if (hubSteps.length > 0) {
                 let transfersOk = true;
                 const stagedOrders: TransferOrder[] = [];
@@ -639,13 +657,19 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
 
                 for (let i = 0; i < updatedSteps.length; i++) {
                     const step = updatedSteps[i]!;
-                    if (step.stepKind !== 'acquire' || step.source !== 'hub_banker') continue;
+                    if ((step.stepKind !== 'acquire' && step.stepKind !== 'gear_upgrade') || step.source !== 'hub_banker') continue;
+                    const quantity = step.stepKind === 'acquire' ? step.quantity : 1;
                     const donorName = step.donorAccount;
                     const hub: HubBankId = step.hub ?? 'varrock_west';
                     const donor = donorName
                         ? Object.values(world.accounts).find((a) => a.name.toLowerCase() === donorName.toLowerCase())
                         : undefined;
-                    if (!donor || assignedIdleDonors.has(donor.name.toLowerCase()) || activeTransferParties.has(donor.name.toLowerCase())) {
+                    if (
+                        !donor
+                        || busyAccounts.has(donor.name.toLowerCase())
+                        || assignedIdleDonors.has(donor.name.toLowerCase())
+                        || activeTransferParties.has(donor.name.toLowerCase())
+                    ) {
                         transfersOk = false;
                         break;
                     }
@@ -671,10 +695,10 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                         items: [{
                             itemId: step.itemId,
                             ...(step.itemName ? { itemName: step.itemName } : {}),
-                            count: step.quantity,
+                            count: quantity,
                         }],
                         demandId: plan.demandId ?? `demand:${acct.name}:${step.itemId}`,
-                        reason: `supply ${step.quantity}x ${step.itemName ?? step.itemId} for ${acct.name}`,
+                        reason: `supply ${quantity}x ${step.itemName ?? step.itemId} for ${acct.name}`,
                         createdAt: now,
                         expiresAt: now + transferOrderTtlMs,
                         state: 'planned',
@@ -704,18 +728,29 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
 
                 if (!transfersOk) {
                     // Re-plan forbidding hub_banker transfers when a safe transfer check fails.
-                    plan = {
-                        account: acct.name,
-                        steps: [],
-                        scorePerHour: 0,
-                        idleReason: 'transfer_safety_gate_unmet',
-                    };
+                    const replan = planAccount(acct, {
+                        ...basePlannerOpts,
+                        demands: availableDemands,
+                        excludedSpotIds: excludedSpots,
+                        excludedDonorAccounts: busyAccounts,
+                        excludedAcquireSources: new Set<AcquireSourceKind>(['hub_banker']),
+                    });
+                    plan = replan.steps.length > 0
+                        ? replan
+                        : {
+                              account: acct.name,
+                              steps: [],
+                              scorePerHour: 0,
+                              idleReason: 'transfer_safety_gate_unmet',
+                          };
                 } else {
                     for (const ord of stagedOrders) {
                         transferOrders.push(ord);
                         assignedIdleDonors.add(ord.from.toLowerCase());
                         activeTransferParties.add(ord.from.toLowerCase());
                         activeTransferParties.add(ord.to.toLowerCase());
+                        busyAccounts.add(ord.from.toLowerCase());
+                        busyAccounts.add(ord.to.toLowerCase());
                     }
                     plan = { ...plan, steps: updatedSteps };
                 }
@@ -732,6 +767,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         reserveSpot(acct.name, workAct?.spotId);
         consumeDemandAllocation(plan);
         accountPlans[acct.name] = plan;
+        busyAccounts.add(acct.name.toLowerCase());
         remainingSlots -= 1;
     }
 

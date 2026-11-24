@@ -4,6 +4,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { repoRoot } from '../../core/src/practice-paths';
 import { questDefinitions } from '../../core/src/quest-status';
+import { QUEST_SKILLS } from '../../workers/src/quest/chain';
+import { QUEST_PREREQUISITES } from '../../workers/src/quest/modes';
 import {
     TRUST_TIER_RANK,
     trustMeetsMinimum,
@@ -13,22 +15,44 @@ import {
     type WorkerTile,
 } from '../../workers/src/contracts';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
+import type { CombatSurvivabilityFloor } from './preflight';
 
 const XP_MULTIPLIER = 25;
 
-// Blocked AIO route keys that require external multi-process partners or live GE service (from aio-bench-cases.ts).
+// Blocked AIO route keys that require external multi-process partners, reserved specialist clocks, or live GE service.
 export const BLOCKED_AIO_KEYS: ReadonlySet<string> = new Set([
     'skiller:woodcutting:loop',
     'skiller:cooking:ge-cook',
     'skiller:firemaking:ge',
+    'skiller:fishing:specialist',
+    'skiller:cooking:specialist',
+    'skiller:woodcutting:specialist',
+    'skiller:firemaking:specialist',
+    'skiller:fletching:specialist',
+    'skiller:mining:specialist',
+    'skiller:smithing:specialist',
+    'skiller:crafting:specialist',
+    'skiller:herblore:specialist',
+    'skiller:runecraft:specialist',
+    'skiller:magic:specialist',
+    'skiller:prayer:specialist',
+    'skiller:agility:specialist',
+    'skiller:thieving:specialist',
     'logistics:give-to-banker',
     'logistics:take-from-banker',
     'logistics:supply-holder',
     'logistics:gathering-supplier',
     'logistics:specialist-supplier',
     'fighter:attack-specialist',
+    'fighter:ranged-specialist',
+    'fighter:specialist-hp',
+    'fighter:specialist-strength',
+    'fighter:specialist-defence',
     'quester:mode:hero-owned',
     'quester:mode:legends-owned',
+    'quester:quest:arrav',
+    'quester:quest:hero',
+    'quester:quest:legends',
     'logistics:loadout-import',
     'pvp:pilot',
     'logistics:banker',
@@ -372,7 +396,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     // Smithing
     { skill: 'smithing', method: 'smelt', script: 'scripts/aio-skiller.ts', label: 'Smelt bars at Al Kharid furnace', location: HUB_TILES.alkharid, xpPerTick: 120, unitsPerTick: 0.16, gpPerTick: 2, minBatchUnits: 14, requiredLevel: 1, outputs: [{ itemId: 2353, countPerUnit: 1 }], inputs: [{ itemId: 440, countPerUnit: 1 }, { itemId: 453, countPerUnit: 2 }] },
     { skill: 'smithing', method: 'anvil', script: 'scripts/aio-skiller.ts', label: 'Smith bars on Varrock West anvil', location: HUB_TILES.varrock_west, xpPerTick: 350, unitsPerTick: 0.2, gpPerTick: 1, minBatchUnits: 25, requiredLevel: 1, inputs: [{ itemId: 2351, countPerUnit: 1 }], defaultEnv: { ORDER_ACTION: 'smith' } },
-    { skill: 'smithing', method: 'cannonballs', script: 'scripts/aio-skiller.ts', label: 'Smelt steel bars into cannonballs', location: HUB_TILES.alkharid, xpPerTick: 75, unitsPerTick: 0.4, gpPerTick: 4, minBatchUnits: 27, requiredLevel: 35, outputs: [{ itemId: 2, countPerUnit: 4 }], inputs: [{ itemId: 2353, countPerUnit: 1 }] },
+    { skill: 'smithing', method: 'cannonballs', script: 'scripts/aio-skiller.ts', label: 'Smelt steel bars into cannonballs', location: HUB_TILES.alkharid, xpPerTick: 75, unitsPerTick: 0.4, gpPerTick: 4, minBatchUnits: 27, requiredLevel: 35, requiredQuests: ['dwarfcannon'], outputs: [{ itemId: 2, countPerUnit: 4 }], inputs: [{ itemId: 2353, countPerUnit: 1 }] },
     { skill: 'smithing', method: 'specialist', script: 'scripts/smithing-specialist.ts', label: 'Smithing 1-99 specialist route', location: HUB_TILES.varrock_west, xpPerTick: 950, unitsPerTick: 0.28, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
     // Crafting
     { skill: 'crafting', method: 'bowstrings', script: 'scripts/aio-skiller.ts', label: 'Spin flax into bowstrings at Seers wheel', location: HUB_TILES.seers, xpPerTick: 65, unitsPerTick: 0.18, gpPerTick: 4, minBatchUnits: 28, requiredLevel: 10, outputs: [{ itemId: 1777, countPerUnit: 1 }], inputs: [{ itemId: 1779, countPerUnit: 1 }] },
@@ -392,7 +416,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'herblore', method: 'specialist', script: 'scripts/herblore-specialist.ts', label: 'Herblore 1-99 specialist route', location: HUB_TILES.edgeville, xpPerTick: 1500, unitsPerTick: 0.5, gpPerTick: 0, minBatchUnits: 14, requiredLevel: 1 },
     // Runecraft
     { skill: 'runecraft', method: 'bank-craft', script: 'scripts/aio-skiller.ts', label: 'Craft banked essence at best unlocked altar', location: HUB_TILES.falador_east, xpPerTick: 48, unitsPerTick: 0.16, gpPerTick: 4, minBatchUnits: 27, requiredLevel: 1, inputs: [{ itemId: 1436, countPerUnit: 1 }] },
-    { skill: 'runecraft', method: 'nature', script: 'scripts/aio-skiller.ts', label: 'Shilo Village Nature altar trips', location: { x: 2852, z: 2955, level: 0 }, xpPerTick: 55, unitsPerTick: 0.12, gpPerTick: 12, minBatchUnits: 27, requiredLevel: 44, outputs: [{ itemId: 561, countPerUnit: 1 }], inputs: [{ itemId: 1436, countPerUnit: 1 }] },
+    { skill: 'runecraft', method: 'nature', script: 'scripts/aio-skiller.ts', label: 'Shilo Village Nature altar trips', location: { x: 2852, z: 2955, level: 0 }, xpPerTick: 55, unitsPerTick: 0.12, gpPerTick: 12, minBatchUnits: 27, requiredLevel: 44, requiredQuests: ['runemysteries', 'zombiequeen'], outputs: [{ itemId: 561, countPerUnit: 1 }], inputs: [{ itemId: 1436, countPerUnit: 1 }] },
     { skill: 'runecraft', method: 'supply', script: 'scripts/aio-skiller.ts', label: 'Fresh Rune Mysteries + essence + air craft', location: HUB_TILES.varrock_east, xpPerTick: 30, unitsPerTick: 0.15, gpPerTick: 3, minBatchUnits: 27, requiredLevel: 1, outputs: [{ itemId: 556, countPerUnit: 1 }] },
     { skill: 'runecraft', method: 'air', script: 'scripts/aio-skiller.ts', label: 'Direct Air altar runecrafting', location: { x: 2983, z: 3291, level: 0 }, xpPerTick: 177.6, unitsPerTick: 1.4, gpPerTick: 5, minBatchUnits: 27, requiredLevel: 1, outputs: [{ itemId: 556, countPerUnit: 1 }], inputs: [{ itemId: 1436, countPerUnit: 1 }] },
     { skill: 'runecraft', method: 'specialist', script: 'scripts/runecraft-specialist.ts', label: 'Runecraft 1-99 specialist route', location: HUB_TILES.falador_east, xpPerTick: 900, unitsPerTick: 4.5, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
@@ -456,6 +480,9 @@ interface FighterSeed {
     readonly gpPerTick: number;
     readonly minBatchUnits: number;
     readonly riskPerHour?: number;
+    readonly requiredSkills?: Readonly<Record<string, number>>;
+    readonly requiredQuests?: readonly string[];
+    readonly combatSurvivability?: CombatSurvivabilityFloor;
     readonly outputs?: readonly { itemId: number; countPerUnit: number }[];
     readonly defaultEnv?: Readonly<Record<string, string>>;
 }
@@ -463,22 +490,22 @@ interface FighterSeed {
 const FIGHTER_SPECS: readonly FighterSeed[] = [
     { target: 'chicken', script: 'scripts/aio-fighter.ts', label: 'Train melee on Lumbridge/Ardougne chickens', location: HUB_TILES.draynor, spotId: 'chickens', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 38, unitsPerTick: 0.14, gpPerTick: 0.5, minBatchUnits: 20, outputs: [{ itemId: 314, countPerUnit: 10 }, { itemId: 526, countPerUnit: 1 }] },
     { target: 'cow', script: 'scripts/aio-fighter.ts', label: 'Fight Ardougne cows for melee XP and cowhides', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 52, unitsPerTick: 0.12, gpPerTick: 2.5, minBatchUnits: 25, outputs: [{ itemId: 1739, countPerUnit: 1 }, { itemId: 2132, countPerUnit: 1 }, { itemId: 526, countPerUnit: 1 }] },
-    { target: 'druid', script: 'scripts/aio-fighter.ts', label: 'Fight Chaos Druids for herbs, runes, and vials', location: HUB_TILES.edgeville, spotId: 'chaos-druids', maxConcurrentAccounts: 4, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 68, unitsPerTick: 0.08, gpPerTick: 7, minBatchUnits: 20, riskPerHour: 0.05, outputs: [{ itemId: 207, countPerUnit: 1 }, { itemId: 563, countPerUnit: 2 }, { itemId: 561, countPerUnit: 1 }] },
+    { target: 'druid', script: 'scripts/aio-fighter.ts', label: 'Fight Chaos Druids for herbs, runes, and vials', location: HUB_TILES.edgeville, spotId: 'chaos-druids', maxConcurrentAccounts: 4, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 68, unitsPerTick: 0.08, gpPerTick: 7, minBatchUnits: 20, riskPerHour: 0.05, combatSurvivability: { minHitpoints: 20, minFoodCount: 5 }, outputs: [{ itemId: 207, countPerUnit: 1 }, { itemId: 563, countPerUnit: 2 }, { itemId: 561, countPerUnit: 1 }] },
     { target: 'unicorn', script: 'scripts/aio-fighter.ts', label: 'Kill Edgeville unicorns for unicorn horns', location: HUB_TILES.edgeville, spotId: 'edgeville-unicorns', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 45, unitsPerTick: 0.06, gpPerTick: 3, minBatchUnits: 10, outputs: [{ itemId: 237, countPerUnit: 1 }] },
     { target: 'wizard', script: 'scripts/aio-fighter.ts', label: 'Kill Wizards Tower wizards for water talismans', location: HUB_TILES.wizards_tower, spotId: 'wizards-tower', maxConcurrentAccounts: 3, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 55, unitsPerTick: 0.09, gpPerTick: 2, minBatchUnits: 15, outputs: [{ itemId: 1444, countPerUnit: 0.05 }] },
-    { target: 'giant', script: 'scripts/aio-fighter.ts', label: 'Fight Hill Giants for big bones, limpwurts, and runes', location: HUB_TILES.edgeville, spotId: 'hill-giants', maxConcurrentAccounts: 4, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 95, unitsPerTick: 0.06, gpPerTick: 6, minBatchUnits: 20, outputs: [{ itemId: 532, countPerUnit: 1 }, { itemId: 225, countPerUnit: 0.3 }, { itemId: 561, countPerUnit: 0.5 }, { itemId: 564, countPerUnit: 0.3 }] },
-    { target: 'trooper', script: 'scripts/aio-fighter.ts', label: 'Train melee/Ranged/HP/Prayer on Khazard troopers', location: HUB_TILES.khazard_field, spotId: 'khazard-troopers', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer'], xpPerTick: 165, unitsPerTick: 0.05, gpPerTick: 1, minBatchUnits: 20 },
-    { target: 'fire-giant', script: 'scripts/aio-fighter.ts', label: 'Fight Fire Giants in Waterfall Dungeon', location: HUB_TILES.ardougne_north, spotId: 'fire-giants', maxConcurrentAccounts: 3, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 210, unitsPerTick: 0.03, gpPerTick: 12, minBatchUnits: 15, riskPerHour: 0.08, outputs: [{ itemId: 532, countPerUnit: 1 }, { itemId: 1333, countPerUnit: 0.02 }] },
-    { target: 'fire-combat', script: 'scripts/aio-fighter.ts', label: 'Fire Giant safespot/melee trip', location: HUB_TILES.ardougne_north, spotId: 'fire-giants', maxConcurrentAccounts: 3, skill: 'Ranged', skills: ['Ranged', 'Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 190, unitsPerTick: 0.03, gpPerTick: 10, minBatchUnits: 15, riskPerHour: 0.05 },
+    { target: 'giant', script: 'scripts/aio-fighter.ts', label: 'Fight Hill Giants for big bones, limpwurts, and runes', location: HUB_TILES.edgeville, spotId: 'hill-giants', maxConcurrentAccounts: 4, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 95, unitsPerTick: 0.06, gpPerTick: 6, minBatchUnits: 20, combatSurvivability: { minHitpoints: 25, minFoodCount: 8 }, outputs: [{ itemId: 532, countPerUnit: 1 }, { itemId: 225, countPerUnit: 0.3 }, { itemId: 561, countPerUnit: 0.5 }, { itemId: 564, countPerUnit: 0.3 }] },
+    { target: 'trooper', script: 'scripts/aio-fighter.ts', label: 'Train melee/Ranged/HP/Prayer on Khazard troopers', location: HUB_TILES.khazard_field, spotId: 'khazard-troopers', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer'], xpPerTick: 165, unitsPerTick: 0.05, gpPerTick: 1, minBatchUnits: 20, combatSurvivability: { minHitpoints: 35, minDefence: 20, minFoodCount: 10 } },
+    { target: 'fire-giant', script: 'scripts/aio-fighter.ts', label: 'Fight Fire Giants in Waterfall Dungeon', location: HUB_TILES.ardougne_north, spotId: 'fire-giants', maxConcurrentAccounts: 3, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 210, unitsPerTick: 0.03, gpPerTick: 12, minBatchUnits: 15, riskPerHour: 0.08, requiredQuests: ['waterfall'], combatSurvivability: { minHitpoints: 50, minDefence: 40, minFoodCount: 12 }, outputs: [{ itemId: 532, countPerUnit: 1 }, { itemId: 1333, countPerUnit: 0.02 }] },
+    { target: 'fire-combat', script: 'scripts/aio-fighter.ts', label: 'Fire Giant safespot/melee trip', location: HUB_TILES.ardougne_north, spotId: 'fire-giants', maxConcurrentAccounts: 3, skill: 'Ranged', skills: ['Ranged', 'Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 190, unitsPerTick: 0.03, gpPerTick: 10, minBatchUnits: 15, riskPerHour: 0.05, requiredQuests: ['waterfall'], combatSurvivability: { minHitpoints: 50, minDefence: 40, minFoodCount: 12 } },
     { target: 'imp', script: 'scripts/aio-fighter.ts', label: 'Hunt imps for Imp Catcher beads', location: HUB_TILES.ardougne_south, spotId: 'ardougne-imps', maxConcurrentAccounts: 3, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 25, unitsPerTick: 0.08, gpPerTick: 1, minBatchUnits: 10, outputs: [{ itemId: 1470, countPerUnit: 0.08 }, { itemId: 1472, countPerUnit: 0.08 }, { itemId: 1474, countPerUnit: 0.08 }, { itemId: 1476, countPerUnit: 0.08 }] },
-    { target: 'shade', script: 'scripts/aio-fighter.ts', label: 'Fight shades in Mortton for shade remains', location: { x: 3510, z: 3480, level: 0 }, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 120, unitsPerTick: 0.04, gpPerTick: 8, minBatchUnits: 10, riskPerHour: 0.06 },
+    { target: 'shade', script: 'scripts/aio-fighter.ts', label: 'Fight shades in Mortton for shade remains', location: { x: 3510, z: 3480, level: 0 }, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 120, unitsPerTick: 0.04, gpPerTick: 8, minBatchUnits: 10, riskPerHour: 0.06, requiredQuests: ['priestperil'], combatSurvivability: { minHitpoints: 40, minDefence: 30, minFoodCount: 10 } },
     { target: 'chompy', script: 'scripts/aio-fighter.ts', label: 'Chompy bird hunting trip', location: { x: 2614, z: 3093, level: 0 }, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 85, unitsPerTick: 0.03, gpPerTick: 0, minBatchUnits: 5 },
     { target: 'chompy-at-site', script: 'scripts/aio-fighter.ts', label: 'At-site Chompy bird hunting', location: { x: 2547, z: 2982, level: 0 }, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 95, unitsPerTick: 0.035, gpPerTick: 0, minBatchUnits: 5 },
     { target: 'ranged', script: 'scripts/ranged-train.ts', label: 'Progressive Ranged bow/arrow training', location: HUB_TILES.varrock_east, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 140, unitsPerTick: 0.09, gpPerTick: -1, minBatchUnits: 30 },
     { target: 'ranged-starter', script: 'scripts/aio-fighter.ts', label: 'Fresh Ranged starter bootstrap', location: HUB_TILES.lumbridge, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 65, unitsPerTick: 0.12, gpPerTick: 0, minBatchUnits: 20 },
     { target: 'ranged-gather', script: 'scripts/aio-fighter.ts', label: 'Safespot Ranged monster farm with arrow pickup', location: HUB_TILES.varrock_east, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 125, unitsPerTick: 0.08, gpPerTick: 2, minBatchUnits: 25 },
     { target: 'ranged-camp', script: 'scripts/aio-fighter.ts', label: 'Safespot Ranged camp', location: HUB_TILES.falador_west, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 155, unitsPerTick: 0.05, gpPerTick: 5, minBatchUnits: 20 },
-    { target: 'cannon', script: 'scripts/aio-fighter.ts', label: 'Dwarf multicannon Ranged training', location: HUB_TILES.edgeville, spotId: 'cannon-spiders', maxConcurrentAccounts: 2, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 480, unitsPerTick: 0.15, gpPerTick: -25, minBatchUnits: 50, riskPerHour: 0.15, defaultEnv: { SPOT: 'spiders' } },
+    { target: 'cannon', script: 'scripts/aio-fighter.ts', label: 'Dwarf multicannon Ranged training', location: HUB_TILES.edgeville, spotId: 'cannon-spiders', maxConcurrentAccounts: 2, skill: 'Ranged', skills: ['Ranged', 'Hitpoints'], xpPerTick: 480, unitsPerTick: 0.15, gpPerTick: -25, minBatchUnits: 50, riskPerHour: 0.15, requiredQuests: ['dwarfcannon'], combatSurvivability: { minHitpoints: 40, minFoodCount: 10 }, defaultEnv: { SPOT: 'spiders' } },
     { target: 'ranged-specialist', script: 'scripts/ranged-specialist.ts', label: 'Ranged 1-99 specialist route', location: HUB_TILES.lumbridge, skill: 'Ranged', skills: ['Ranged'], xpPerTick: 420, unitsPerTick: 0.12, gpPerTick: 0, minBatchUnits: 50 },
     { target: 'loot-trip', script: 'scripts/aio-fighter.ts', label: 'Dedicated ground-item loot and bank trip', location: HUB_TILES.varrock_west, skill: 'Hitpoints', skills: ['Hitpoints'], xpPerTick: 0, unitsPerTick: 0.15, gpPerTick: 8, minBatchUnits: 10 },
     { target: 'attack-specialist', script: 'scripts/attack-specialist.ts', label: 'Attack 1-99 specialist route', location: HUB_TILES.lumbridge, skill: 'Attack', skills: ['Attack'], xpPerTick: 280, unitsPerTick: 0.05, gpPerTick: 0, minBatchUnits: 20 },
@@ -501,11 +528,14 @@ const BOSS_SPECS: readonly {
     gpPerTick: number;
     minBatchUnits: number;
     riskPerHour: number;
+    requiredSkills?: Readonly<Record<string, number>>;
+    requiredQuests?: readonly string[];
+    combatSurvivability?: CombatSurvivabilityFloor;
     outputs?: readonly { itemId: number; countPerUnit: number }[];
 }[] = [
-    { boss: 'kbd', script: 'scripts/aio-boss.ts', label: 'King Black Dragon boss trip', location: HUB_TILES.edgeville, spotId: 'kbd-lair', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Prayer'], xpPerTick: 240, unitsPerTick: 0.015, gpPerTick: 35, minBatchUnits: 1, riskPerHour: 0.12, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 2 }] },
-    { boss: 'black-dragon', script: 'scripts/aio-boss.ts', label: 'Taverley Black Dragons safespot camp', location: HUB_TILES.falador_west, spotId: 'taverley-black-dragons', maxConcurrentAccounts: 2, skill: 'Ranged', skills: ['Ranged', 'Hitpoints', 'Defence'], xpPerTick: 210, unitsPerTick: 0.018, gpPerTick: 30, minBatchUnits: 1, riskPerHour: 0.04, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 1 }] },
-    { boss: 'green-dragon', script: 'scripts/aio-boss.ts', label: 'Wilderness Green Dragons bones & hides trip', location: HUB_TILES.edgeville, spotId: 'wild-green-dragons', maxConcurrentAccounts: 3, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 185, unitsPerTick: 0.03, gpPerTick: 28, minBatchUnits: 5, riskPerHour: 0.18, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1753, countPerUnit: 1 }] },
+    { boss: 'kbd', script: 'scripts/aio-boss.ts', label: 'King Black Dragon boss trip', location: HUB_TILES.edgeville, spotId: 'kbd-lair', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Prayer'], xpPerTick: 240, unitsPerTick: 0.015, gpPerTick: 35, minBatchUnits: 1, riskPerHour: 0.12, combatSurvivability: { minHitpoints: 70, minDefence: 60, requireProtectionPrayer: true, requireAntiDragonShield: true, requireAntipoison: true, minFoodCount: 12 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 2 }] },
+    { boss: 'black-dragon', script: 'scripts/aio-boss.ts', label: 'Taverley Black Dragons safespot camp', location: HUB_TILES.falador_west, spotId: 'taverley-black-dragons', maxConcurrentAccounts: 2, skill: 'Ranged', skills: ['Ranged', 'Hitpoints', 'Defence'], xpPerTick: 210, unitsPerTick: 0.018, gpPerTick: 30, minBatchUnits: 1, riskPerHour: 0.04, combatSurvivability: { minHitpoints: 60, requireAntiDragonShield: true, minFoodCount: 10 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 1 }] },
+    { boss: 'green-dragon', script: 'scripts/aio-boss.ts', label: 'Wilderness Green Dragons bones & hides trip', location: HUB_TILES.edgeville, spotId: 'wild-green-dragons', maxConcurrentAccounts: 3, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 185, unitsPerTick: 0.03, gpPerTick: 28, minBatchUnits: 5, riskPerHour: 0.18, combatSurvivability: { minHitpoints: 55, minDefence: 40, requireAntiDragonShield: true, minFoodCount: 10 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1753, countPerUnit: 1 }] },
     { boss: 'trawler', script: 'scripts/aio-boss.ts', label: 'Port Khazard Fishing Trawler trip', location: { x: 2675, z: 3170, level: 0 }, skill: 'Fishing', skills: ['Fishing', 'Crafting'], xpPerTick: 65, unitsPerTick: 0.004, gpPerTick: 5, minBatchUnits: 1, riskPerHour: 0.02 },
     { boss: 'trawler-at-site', script: 'scripts/aio-boss.ts', label: 'At-dock Fishing Trawler loop', location: { x: 2675, z: 3170, level: 0 }, skill: 'Fishing', skills: ['Fishing', 'Crafting'], xpPerTick: 65, unitsPerTick: 0.004, gpPerTick: 5, minBatchUnits: 1, riskPerHour: 0.02 },
 ];
@@ -760,6 +790,9 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 aioRoute: spec.target,
                 target: spec.target,
                 script: spec.script,
+                ...(spec.requiredSkills ? { requiredSkills: spec.requiredSkills } : {}),
+                ...(spec.requiredQuests ? { requiredQuests: spec.requiredQuests } : {}),
+                ...(spec.combatSurvivability ? { combatSurvivability: spec.combatSurvivability } : {}),
                 ...(spec.defaultEnv ? { defaultEnv: spec.defaultEnv } : {}),
             },
             baselineRate: {
@@ -804,6 +837,9 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 aioRoute: spec.boss,
                 boss: spec.boss,
                 script: spec.script,
+                ...(spec.requiredSkills ? { requiredSkills: spec.requiredSkills } : {}),
+                ...(spec.requiredQuests ? { requiredQuests: spec.requiredQuests } : {}),
+                ...(spec.combatSurvivability ? { combatSurvivability: spec.combatSurvivability } : {}),
             },
             baselineRate: {
                 xpPerTick: spec.xpPerTick,
@@ -891,12 +927,30 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         } catch { /* unreadable scripts/generated */ }
     }
 
+    const EXTRA_QUEST_SKILLS: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+        magearena: { Magic: 60 },
+        hero: { Cooking: 53, Fishing: 53, Herblore: 25, Mining: 50 },
+        legends: { Agility: 50, Crafting: 50, Herblore: 45, Mining: 52, Prayer: 42, Smithing: 50, Strength: 50, Thieving: 50, Woodcutting: 50 },
+        mm: { Agility: 30, Prayer: 43 },
+    };
+    const EXTRA_QUEST_PREREQS: Readonly<Record<string, readonly string[]>> = {
+        biohazard: ['elena'],
+    };
+
     for (const [slug, meta] of [...questBySlug.entries()].sort(([a], [b]) => a.localeCompare(b))) {
         const aioKey = `quester:quest:${slug}`;
         const id = `quest:${slug}`;
         const estTicks = QUEST_ESTIMATE_TICKS[slug] ?? 450;
         const xpPerTick = Math.round((meta.xpTotal / estTicks) * 100) / 100;
         const unitsPerTick = Math.round((1 / estTicks) * 100000) / 100000;
+        const requiredSkills: Record<string, number> = {};
+        for (const [sk, lvl] of Object.entries(QUEST_SKILLS[slug] ?? {})) {
+            requiredSkills[titleCase(sk)] = lvl;
+        }
+        for (const [sk, lvl] of Object.entries(EXTRA_QUEST_SKILLS[slug] ?? {})) {
+            requiredSkills[sk] = Math.max(requiredSkills[sk] ?? 1, lvl);
+        }
+        const requiredQuests = [...new Set([...(QUEST_PREREQUISITES[slug] ?? []), ...(EXTRA_QUEST_PREREQS[slug] ?? [])])];
         register({
             id,
             workerId: 'quest',
@@ -911,6 +965,8 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 questSlug: slug,
                 questName: meta.label,
                 questPoints: meta.qp,
+                ...(Object.keys(requiredSkills).length > 0 ? { requiredSkills } : {}),
+                ...(requiredQuests.length > 0 ? { requiredQuests } : {}),
                 script: `scripts/generated/${meta.folder === 'quest_mcannon' ? 'dwarfcannon.ts' : meta.folder === 'quest_waterfall' ? 'waterfall.ts' : `quest-${slug}.ts`}`,
             },
             baselineRate: {

@@ -490,4 +490,32 @@ test('scoring rewards positive-payback gear upgrades, prefers faster candidate a
     expect(multiPlan.steps.at(-1)?.stepKind === 'work' && multiPlan.steps.at(-1)).toMatchObject({
         activityId: 'gather:mining-fast',
     });
+
+    // GearUpgradePlannedStep preserves source metadata (donorAccount/hub for hub_banker, estimatedCoinCost for GE).
+    const upgradeStep = planWithUpgrade.steps[0];
+    expect(upgradeStep?.stepKind).toBe('gear_upgrade');
+    if (upgradeStep?.stepKind === 'gear_upgrade') {
+        expect(upgradeStep.source).toBe('ge');
+        expect(upgradeStep.estimatedCoinCost).toBe(32_000);
+        expect(upgradeStep.coinFloatPreserved).toBe(1000);
+    }
+
+    const donorMiner = makeAcct({
+        name: 'DonorMiner',
+        pos: { x: 3185, z: 3436, level: 0 },
+        bank: { items: { 1275: 1, 995: 5000 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const hubUpgradePlan = planAccount(minerNoCoins, {
+        world: { ...world, accounts: { UpgradeMiner: minerNoCoins, DonorMiner: donorMiner } },
+        activities: [ACTIVITIES[0]!],
+        demands: [skillDemand],
+        requireMarketQuote: true,
+        marketQuotes: {},
+    });
+    expect(hubUpgradePlan.steps[0]?.stepKind).toBe('gear_upgrade');
+    if (hubUpgradePlan.steps[0]?.stepKind === 'gear_upgrade') {
+        expect(hubUpgradePlan.steps[0].source).toBe('hub_banker');
+        expect(hubUpgradePlan.steps[0].donorAccount).toBe('DonorMiner');
+        expect(hubUpgradePlan.steps[0].hub).toBe('varrock_west');
+    }
 });
