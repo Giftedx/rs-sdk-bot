@@ -962,3 +962,78 @@ test('scheduleFleet caps market:shop-buy and market:ge-buy to 1 concurrent buyer
     expect(geBuyersWithGe).toHaveLength(1);
     expect(thieversWithGe).toHaveLength(4);
 });
+
+test('scheduleFleet materializes TransferOrder for stagingHolder consolidation and prevents non-holder over-buying', () => {
+    const holder = makeAcct({
+        name: 'StageHolder',
+        role: 'helper',
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: {},
+        bank: { items: { 995: 2_000 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const donor = makeAcct({
+        name: 'DonorAlt',
+        role: 'helper',
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: {},
+        bank: { items: { 385: 120, 995: 2_000 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const buyer = makeAcct({
+        name: 'RichBuyer',
+        role: 'helper',
+        pos: { x: 3164, z: 3487, level: 0 },
+        inventory: { 995: 200_000 },
+        bank: { items: { 995: 200_000 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { StageHolder: holder, DonorAlt: donor, RichBuyer: buyer },
+    };
+    const geAct: ActivityDefinition = {
+        id: 'market:ge-buy',
+        workerId: 'market',
+        family: 'market',
+        kind: 'ge_buy',
+        label: 'Buy on GE',
+        config: { mode: 'ge-buy' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 4, gpPerTick: 0, setupTicks: 30, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const demands: GoalDemand[] = [
+        {
+            id: 'campaign:haggis:item:385',
+            goalKind: 'main_supply',
+            valueScore: 600,
+            valuePerHour: 6000,
+            target: { kind: 'item', itemId: 385, itemName: 'Shark', count: 120, holder: 'StageHolder' },
+            fulfilled: 0,
+            remaining: 120,
+            priorityWeight: 1,
+            active: true,
+        },
+    ];
+    const proofs = new Map<string, LogoutProof>([
+        ['stageholder', confirmedProof('StageHolder')],
+        ['donoralt', confirmedProof('DonorAlt')],
+        ['richbuyer', confirmedProof('RichBuyer')],
+    ]);
+
+    const plan = scheduleFleet({
+        world,
+        activities: [...ACTIVITIES, geAct],
+        demands,
+        logoutProofs: proofs,
+        marketQuotes: { 385: { ask: 400, sell: 350, trades: 20 } },
+        maxBots: 5,
+    });
+    expect(isFleetPlan(plan)).toBe(true);
+    expect(plan.transferOrders).toHaveLength(1);
+    expect(plan.transferOrders[0]?.from).toBe('DonorAlt');
+    expect(plan.transferOrders[0]?.to).toBe('StageHolder');
+    expect(plan.transferOrders[0]?.items).toEqual([{ itemId: 385, itemName: 'Shark', count: 120 }]);
+    expect(plan.accountPlans.DonorAlt?.idleReason).toBe('reserved_for_transfer');
+    expect(plan.accountPlans.RichBuyer?.steps).toHaveLength(0);
+});

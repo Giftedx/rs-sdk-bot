@@ -220,6 +220,25 @@ function ownedByMissionParticipants(
     return total;
 }
 
+function selectMissionStagingHolder(
+    activeParticipants: readonly AccountState[],
+    itemId: number,
+    snapshot: WorldSnapshot,
+): string | undefined {
+    let bestName: string | undefined;
+    let bestAvailable = Infinity;
+    for (const acct of activeParticipants) {
+        const owned = accountOwnedItemCount(acct, itemId);
+        const reserved = effectiveItemReserve(acct, snapshot, itemId);
+        const avail = Math.max(0, owned - reserved);
+        if (bestName === undefined || avail < bestAvailable) {
+            bestName = acct.name;
+            bestAvailable = avail;
+        }
+    }
+    return bestName;
+}
+
 export function missionShortfalls(
     mission: Mission,
     snapshot: WorldSnapshot,
@@ -264,6 +283,7 @@ export function missionShortfalls(
             continue;
         }
 
+        const stagingHolder = selectMissionStagingHolder(activeParticipants, req.itemId, snapshot);
         const unitGp = opts.itemValuesGp?.[req.itemId] ?? 500;
         const valueScore = Math.max(40, Math.min(4000, Math.sqrt(Math.max(1, remaining * unitGp)) * 4)) * effectiveWeight;
         const demand: GoalDemand = {
@@ -276,6 +296,7 @@ export function missionShortfalls(
                 itemId: req.itemId,
                 ...(req.itemName ? { itemName: req.itemName } : {}),
                 count: totalNeeded,
+                ...(stagingHolder ? { holder: stagingHolder } : {}),
             },
             fulfilled,
             remaining,

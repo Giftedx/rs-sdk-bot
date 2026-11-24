@@ -93,6 +93,7 @@ export interface AcquireRequest {
     readonly includeInventoryInOwned?: boolean;
     readonly allowedSources?: readonly AcquireSourceKind[];
     readonly maxUnitPrice?: number;
+    readonly allowPartial?: boolean;
 }
 
 export interface AcquireContext {
@@ -585,7 +586,10 @@ export function resolveAcquireItem(
                 const donorSurplus = req.itemId === COINS_ITEM_ID
                     ? availableSpendableCoins(donor, world, operatingFloat, { includeBank: true, requireTrustedBank: true }).spendable
                     : stock.available;
-                if (donorSurplus < req.quantity) {
+                const transferQty = req.allowPartial === true
+                    ? Math.min(req.quantity, Math.floor(donorSurplus))
+                    : req.quantity;
+                if (transferQty <= 0 || (!req.allowPartial && donorSurplus < req.quantity)) {
                     continue;
                 }
                 const hub = nearestHub(acct.pos, donor.pos ? nearestHub(donor.pos) : 'varrock_west');
@@ -621,13 +625,18 @@ export function resolveAcquireItem(
                 }
                 const sameSideBonus = donor.side === acct.side ? 0 : 120;
                 const ticks = Math.max(45, reachRecip.travelTicks + reachDonor.travelTicks + 35 + sameSideBonus);
-                if (!bestDonorStep || ticks < bestDonorStep.estimatedTicks) {
+                const betterDonor = !bestDonorStep
+                    || (req.allowPartial === true
+                        ? transferQty > bestDonorStep.quantity
+                            || (transferQty === bestDonorStep.quantity && ticks < bestDonorStep.estimatedTicks)
+                        : ticks < bestDonorStep.estimatedTicks);
+                if (betterDonor) {
                     bestDonorStep = {
                         stepKind: 'acquire',
                         source: 'hub_banker',
                         itemId: req.itemId,
                         ...(itemName ? { itemName } : {}),
-                        quantity: req.quantity,
+                        quantity: transferQty,
                         estimatedTicks: ticks,
                         estimatedCoinCost: 0,
                         coinFloatPreserved,

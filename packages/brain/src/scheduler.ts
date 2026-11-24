@@ -229,7 +229,20 @@ function estimateDemandContribution(
     activityById: ReadonlyMap<string, ActivityDefinition>,
 ): number {
     const workStep = plan.steps.find((s): s is TargetWorkPlannedStep => s.stepKind === 'work');
-    if (!workStep || workStep.demandId !== demand.id) return 0;
+    if (!workStep) {
+        if (plan.demandId === demand.id && demand.target.kind === 'item') {
+            const targetItemId = demand.target.itemId;
+            let consolidated = 0;
+            for (const st of plan.steps) {
+                if (st.stepKind === 'acquire' && st.source === 'hub_banker' && st.itemId === targetItemId) {
+                    consolidated += st.quantity;
+                }
+            }
+            return consolidated;
+        }
+        return 0;
+    }
+    if (workStep.demandId !== demand.id) return 0;
     const act = activityById.get(workStep.activityId);
     switch (demand.target.kind) {
         case 'quest':

@@ -55,6 +55,7 @@ import {
     canWearItem,
     completedQuestSet,
     createAccountLookupCache,
+    effectiveItemReserve,
     hasCompletedQuest,
     loadGearMap,
     loadItemsMap,
@@ -70,6 +71,17 @@ const SERVER_XP_MULTIPLIER = 25;
 
 const WOODCUTTING_AXES_DESC = [1359, 1357, 1355, 1361, 1353, 1349, 1351] as const;
 const MINING_PICKAXES_DESC = [1275, 1271, 1273, 1269, 1267, 1265] as const;
+
+const HUB_CONSOLIDATION_ACTIVITY: ActivityDefinition = {
+    id: 'logistics:fleet-trade',
+    workerId: 'logistics',
+    family: 'logistics',
+    kind: 'recover',
+    label: 'Consolidate fleet surplus via hub banker',
+    config: { role: 'fleet-trade' },
+    baselineRate: { xpPerTick: 0, unitsPerTick: 1, gpPerTick: 0, setupTicks: 45, minBatchUnits: 1, confidence: 'practice' },
+    trust: 'practice_passed',
+};
 
 function stepCommittedCoinCost(step: PlannedStep): number {
     if (step.stepKind === 'acquire') {
@@ -1335,13 +1347,35 @@ function planAccountCore(
 
     const acquireCache = new Map<string, AcquireResolution>();
     const resolveAcquireCached = (req: AcquireRequest): AcquireResolution => {
-        const key = `${req.itemId}:${req.itemName ?? ''}:${req.quantity}:${req.allowOwnBank ?? true}:${req.includeInventoryInOwned ?? true}:${req.operatingCoinFloat ?? DEFAULT_OPERATING_COIN_FLOAT}:${req.committedCoinSpend ?? 0}:${req.allowedSources?.join(',') ?? ''}:${req.maxUnitPrice ?? ''}:${req.questPoints ?? 0}`;
+        const key = `${req.itemId}:${req.itemName ?? ''}:${req.quantity}:${req.allowOwnBank ?? true}:${req.includeInventoryInOwned ?? true}:${req.operatingCoinFloat ?? DEFAULT_OPERATING_COIN_FLOAT}:${req.committedCoinSpend ?? 0}:${req.allowedSources?.join(',') ?? ''}:${req.maxUnitPrice ?? ''}:${req.questPoints ?? 0}:${req.allowPartial ?? false}`;
         let res = acquireCache.get(key);
         if (!res) {
             res = resolveAcquireItem(acct, req, acquireCtx);
             acquireCache.set(key, res);
         }
         return res;
+    };
+
+    const nonHolderSurplusCache = new Map<string, number>();
+    const getFleetNonHolderSurplus = (itemId: number, holderLower: string): number => {
+        const key = `${itemId}:${holderLower}`;
+        const hit = nonHolderSurplusCache.get(key);
+        if (hit !== undefined) return hit;
+        let total = 0;
+        for (const a of Object.values(world.accounts)) {
+            if (a.protectedClock || isProtectedAccountName(a.name)) continue;
+            if (a.lifecycle === 'paused_owner' || a.lifecycle === 'dead') continue;
+            const aLower = a.name.toLowerCase();
+            if (aLower === holderLower) continue;
+            const owned = accountOwnedItemCount(a, itemId, { includeBank: true, requireTrustedBank: true });
+            if (owned <= 0) continue;
+            const reserved = aLower === acctLower
+                ? cachedEffectiveItemReserve(acct, world, itemId, acctCache)
+                : effectiveItemReserve(a, world, itemId);
+            if (owned > reserved) total += owned - reserved;
+        }
+        nonHolderSurplusCache.set(key, total);
+        return total;
     };
 
     let localWeapons: PrecomputedWeaponInfo | undefined;
@@ -1369,27 +1403,77 @@ function planAccountCore(
         if (!demand.active || demand.remaining <= 0) continue;
         if (demand.assignedAccount && demand.assignedAccount.toLowerCase() !== acctLower) continue;
 
-        const rawCandidates = candidateListForDemand(demand);
-        const needsMatchCheck = demand.target.kind === 'skill' || demand.target.kind === 'combat_readiness';
+        let effectiveDemand = demand;
+        let consolidateCandidate: AccountPlan | null = null;
+        if (demand.target.kind === 'item' && demand.target.holder) {
+            const holderLower = demand.target.holder.toLowerCase();
+            const targetItemId = demand.target.itemId;
+            if (acctLower !== holderLower) {
+                const fleetNonHolderSurplus = getFleetNonHolderSurplus(targetItemId, holderLower);
+                const unownedShortfall = Math.max(0, demand.remaining - fleetNonHolderSurplus);
+                if (unownedShortfall <= 0) {
+                    continue;
+                }
+                if (unownedShortfall < demand.remaining) {
+                    effectiveDemand = { ...demand, remaining: unownedShortfall };
+                }
+            } else if (
+                !input.excludedAcquireSources?.has('hub_banker')
+                && !acct.protectedClock
+                && !isProtectedAccountName(acct.name)
+            ) {
+                const hubAcq = resolveAcquireCached({
+                    itemId: targetItemId,
+                    itemName: demand.target.itemName,
+                    quantity: Math.max(1, Math.round(demand.remaining)),
+                    allowOwnBank: false,
+                    allowedSources: ['hub_banker'],
+                    allowPartial: true,
+                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                });
+                if (hubAcq.ok && hubAcq.step && hubAcq.step.source === 'hub_banker') {
+                    const hubStep = hubAcq.step;
+                    const advMult = comparativeAdvantageMultiplier(acct, demand, HUB_CONSOLIDATION_ACTIVITY, profile, acctCache);
+                    if (advMult > 0) {
+                        const baseVph = demand.valuePerHour ?? (demand.valueScore * demand.priorityWeight);
+                        const baselineMarketTicks = Math.max(120, Math.min(3_000, hubStep.quantity * 0.25 + 120));
+                        const speedEff = Math.min(1.25, baselineMarketTicks / Math.max(60, hubStep.estimatedTicks));
+                        const scorePerHour = Math.max(0, baseVph * advMult * speedEff * 1.25);
+                        consolidateCandidate = {
+                            account: acct.name,
+                            demandId: demand.id,
+                            steps: [hubStep],
+                            scorePerHour,
+                        };
+                    }
+                }
+            }
+        }
+
+        const rawCandidates = candidateListForDemand(effectiveDemand);
+        const needsMatchCheck = effectiveDemand.target.kind === 'skill' || effectiveDemand.target.kind === 'combat_readiness';
         const needFilter = (shared && hasActExclusions) || needsMatchCheck;
         const matching = needFilter
             ? rawCandidates.filter(
                   (a) => (!shared || !hasActExclusions || isActAllowed(a))
-                      && (!needsMatchCheck || activityMatchesDemand(acct, demand, a, acctCache)),
+                      && (!needsMatchCheck || activityMatchesDemand(acct, effectiveDemand, a, acctCache)),
               )
             : rawCandidates;
-        const canMarketBuy = demand.target.kind === 'item'
+        const canMarketBuy = effectiveDemand.target.kind === 'item'
             && defaultSpendableCoins > 0
             && Boolean(shopBuyActivity || directGeBuyActivity);
-        if (matching.length === 0 && !canMarketBuy) continue;
+        if (matching.length === 0 && !canMarketBuy && !consolidateCandidate) continue;
 
         let bestThroughput = 0;
         for (const act of matching) {
-            const tp = activityDemandThroughput(act, demand, getRate(act));
+            const tp = activityDemandThroughput(act, effectiveDemand, getRate(act));
             if (tp > bestThroughput) bestThroughput = tp;
         }
 
-        let demandBest: AccountPlan | null = null;
+        let demandBest: AccountPlan | null = consolidateCandidate;
+        if (consolidateCandidate && (!bestPlan || consolidateCandidate.scorePerHour > bestPlan.scorePerHour)) {
+            bestPlan = consolidateCandidate;
+        }
 
         const marketCandidates: {
             readonly marketAct: ActivityDefinition;
@@ -1405,11 +1489,11 @@ function planAccountCore(
         }[] = [];
 
         if (
-            demand.target.kind === 'item'
+            effectiveDemand.target.kind === 'item'
             && defaultSpendableCoins > 0
             && (shopBuyActivity || directGeBuyActivity)
         ) {
-            const targetItemId = demand.target.itemId;
+            const targetItemId = effectiveDemand.target.itemId;
             const hasShop = Boolean(shopBuyActivity && (shopCatalog.has(targetItemId) || acquireCtx.customShops?.some((s) => s.itemId === targetItemId)));
             const itemMetaForGe = directGeBuyActivity ? itemsMap.get(targetItemId) : undefined;
             const hasGe = Boolean(
@@ -1421,10 +1505,10 @@ function planAccountCore(
                 const allowedExternal: AcquireSourceKind[] = [];
                 if (shopBuyActivity) allowedExternal.push('npc_shop');
                 if (directGeBuyActivity) allowedExternal.push('ge');
-                const maxQty = Math.max(1, Math.min(Math.round(demand.remaining), 250));
+                const maxQty = Math.max(1, Math.min(Math.round(effectiveDemand.remaining), 2000));
                 let acq = resolveAcquireCached({
                     itemId: targetItemId,
-                    itemName: demand.target.itemName,
+                    itemName: effectiveDemand.target.itemName,
                     quantity: maxQty,
                     allowOwnBank: false,
                     allowedSources: allowedExternal,
@@ -1456,7 +1540,7 @@ function planAccountCore(
                             if (affordableQty >= 1 && affordableQty < maxQty) {
                                 acq = resolveAcquireCached({
                                     itemId: targetItemId,
-                                    itemName: demand.target.itemName,
+                                    itemName: effectiveDemand.target.itemName,
                                     quantity: affordableQty,
                                     allowOwnBank: false,
                                     allowedSources: allowedExternal,
@@ -1470,7 +1554,7 @@ function planAccountCore(
                     if (cand.source !== 'npc_shop' && cand.source !== 'ge') continue;
                     const marketAct = cand.source === 'npc_shop' ? shopBuyActivity : directGeBuyActivity;
                     if (!marketAct) continue;
-                    const advMult = comparativeAdvantageMultiplier(acct, demand, marketAct, profile, acctCache);
+                    const advMult = comparativeAdvantageMultiplier(acct, effectiveDemand, marketAct, profile, acctCache);
                     if (advMult <= 0) continue;
                     const workTicks = Math.max(1, Math.ceil(cand.step.estimatedTicks));
                     const throughput = cand.step.quantity / workTicks;
@@ -1492,17 +1576,22 @@ function planAccountCore(
         }
 
         for (const mc of marketCandidates) {
-            const baseVph = demand.valuePerHour ?? (demand.valueScore * demand.priorityWeight);
+            const baseVph = effectiveDemand.valuePerHour ?? (effectiveDemand.valueScore * effectiveDemand.priorityWeight);
             const throughputRatio = bestThroughput > 0
                 ? Math.max(0.25, Math.min(1.0, mc.throughput / bestThroughput))
                 : 1.0;
-            const scorePerHour = Math.max(0, baseVph * mc.advMult * throughputRatio);
+            const baselineMarketTicks = Math.max(120, Math.min(3_000, mc.quantity * 0.25 + 120));
+            const speedEfficiency = Math.min(1.25, baselineMarketTicks / Math.max(60, mc.workTicks));
+            const coverageFactor = effectiveDemand.remaining > 0
+                ? Math.max(0.25, Math.min(1.0, mc.quantity / Math.min(effectiveDemand.remaining, 250)))
+                : 1.0;
+            const scorePerHour = Math.max(0, baseVph * mc.advMult * speedEfficiency * throughputRatio * coverageFactor);
             if (demandBest && scorePerHour <= demandBest.scorePerHour) continue;
-            const targetItemId = (demand.target as { kind: 'item'; itemId: number }).itemId;
+            const targetItemId = (effectiveDemand.target as { kind: 'item'; itemId: number }).itemId;
             const workStep: TargetWorkPlannedStep = {
                 stepKind: 'work',
                 activityId: mc.marketAct.id,
-                demandId: demand.id,
+                demandId: effectiveDemand.id,
                 workerId: mc.marketAct.workerId,
                 batchUnits: mc.quantity,
                 estimatedTicks: mc.workTicks,
@@ -1521,7 +1610,7 @@ function planAccountCore(
             };
             const candidatePlan: AccountPlan = {
                 account: acct.name,
-                demandId: demand.id,
+                demandId: effectiveDemand.id,
                 steps: [workStep],
                 scorePerHour,
             };
@@ -1534,11 +1623,11 @@ function planAccountCore(
         }
 
         for (const activity of matching) {
-            const advMult = comparativeAdvantageMultiplier(acct, demand, activity, profile, acctCache);
+            const advMult = comparativeAdvantageMultiplier(acct, effectiveDemand, activity, profile, acctCache);
             if (advMult <= 0) continue;
 
             const rate = getRate(activity);
-            const batchUnits = resolveBatchUnits(acct, demand, activity, rate, xpRate, acctCache);
+            const batchUnits = resolveBatchUnits(acct, effectiveDemand, activity, rate, xpRate, acctCache);
             const preflight = getPreflight(activity, batchUnits);
 
             const prepSteps: PlannedStep[] = [];
@@ -1781,9 +1870,9 @@ function planAccountCore(
             // Evaluate optional net XP/tick payback gear upgrade if step budget permits.
             let effectiveRate = rate;
             let upgrade: GearUpgradeCandidateResult | null | undefined;
-            const preTrainTarget = selectWorkTrainingTarget(acct, demand, activity, rate, acctCache);
+            const preTrainTarget = selectWorkTrainingTarget(acct, effectiveDemand, activity, rate, acctCache);
             if (prepSteps.length < MAX_ACCOUNT_PLAN_STEPS - 1 && rate.xpPerTick > 0) {
-                const remXp = estimateRemainingBandXp(acct, demand, activity, preTrainTarget.trainSkill, preTrainTarget.targetLevel, acctCache);
+                const remXp = estimateRemainingBandXp(acct, effectiveDemand, activity, preTrainTarget.trainSkill, preTrainTarget.targetLevel, acctCache);
                 if (remXp > 0) {
                     const evalSkill = preTrainTarget.trainSkill ?? activity.skill ?? '';
                     const upgKey = `${activity.family}:${evalSkill}:${rate.xpPerTick}:${Math.round(remXp)}:${committedCoins}`;
@@ -1852,9 +1941,9 @@ function planAccountCore(
                 prepTicks += st.stepKind === 'gear_upgrade' ? st.acquisitionTicks : st.estimatedTicks;
             }
             const totalTicks = workTicks + prepTicks;
-            const baseVph = demand.valuePerHour ?? (demand.valueScore * demand.priorityWeight);
+            const baseVph = effectiveDemand.valuePerHour ?? (effectiveDemand.valueScore * effectiveDemand.priorityWeight);
             const speedEfficiency = baseWorkTicks / Math.max(1, totalTicks);
-            const actThroughput = activityDemandThroughput(activity, demand, effectiveRate);
+            const actThroughput = activityDemandThroughput(activity, effectiveDemand, effectiveRate);
             const throughputRatio = bestThroughput > 0
                 ? Math.max(0.25, Math.min(1.0, actThroughput / bestThroughput))
                 : 1.0;
@@ -1864,12 +1953,12 @@ function planAccountCore(
             }
 
             const trainTarget = upgrade
-                ? selectWorkTrainingTarget(acct, demand, activity, effectiveRate, acctCache)
+                ? selectWorkTrainingTarget(acct, effectiveDemand, activity, effectiveRate, acctCache)
                 : preTrainTarget;
             const workStep: TargetWorkPlannedStep = {
                 stepKind: 'work',
                 activityId: activity.id,
-                demandId: demand.id,
+                demandId: effectiveDemand.id,
                 workerId: activity.workerId,
                 batchUnits,
                 estimatedTicks: workTicks,

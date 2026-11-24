@@ -325,4 +325,68 @@ describe('OutcomeClassifier & classifyRawWorkerExit', () => {
         const diskSnap = loadWorldSnapshot({ root: tempRoot, now: NOW + 45_000 });
         expect(validateWorldSnapshot(diskSnap)).toEqual([]);
     });
+
+    test('classifies shop-buy boughtTotal=0 stop=stock-wait as market_unavailable and honors skipRateSample', () => {
+        const catalog = defaultActivityCatalog();
+        const rateStore = createRateStore({
+            catalog,
+            root: tempRoot,
+            minSamplesToOverride: 1,
+            minTicksToOverride: 10,
+        });
+        const classifier = new OutcomeClassifier({ rateStore, root: tempRoot });
+        const actId = catalog.byFamily('gather')[0]!.id;
+
+        const shopOut = classifier.classifyAndApplyRaw(
+            {
+                activityId: 'market:shop-buy',
+                account: 'HelperA',
+                exitCode: 1,
+                status: 'fail',
+                marketItemId: 1317,
+                marketVenue: 'shop:taverley2hand',
+                stdout: 'RESULT fail ticks=40 boughtTotal=0 stop=stock-wait targetMet=0',
+                ticksElapsed: 40,
+            },
+            { now: NOW },
+        );
+        expect(shopOut.outcome.kind).toBe('market_unavailable');
+        expect(shopOut.addedCooldownKey).toBe('1317:shop:taverley2hand');
+        expect(classifier.activeMarketCooldowns(NOW + 1_000)['1317:shop:taverley2hand']).toBeGreaterThan(NOW);
+
+        // Multi-step chain outcome with skipRateSample=true must NOT pollute RateStore on target_met or death.
+        const chainOk = classifier.classifyAndApplyRaw(
+            {
+                activityId: actId,
+                account: 'HelperA',
+                exitCode: 0,
+                status: 'ok',
+                ticksElapsed: 120,
+                unitsCompleted: 30,
+                xpGained: { Woodcutting: 1500 },
+                skipRateSample: true,
+            },
+            { now: NOW + 2_000 },
+        );
+        expect(chainOk.outcome.kind).toBe('target_met');
+        expect(chainOk.recordedRateSample).toBeUndefined();
+        expect(rateStore.hasOverride(actId)).toBe(false);
+
+        const chainDeath = classifier.classifyAndApplyRaw(
+            {
+                activityId: actId,
+                account: 'HelperB',
+                exitCode: 1,
+                died: true,
+                reason: 'died after 1 runs',
+                ticksElapsed: 50,
+                skipRateSample: true,
+            },
+            { now: NOW + 3_000 },
+        );
+        expect(chainDeath.outcome.kind).toBe('death');
+        expect(chainDeath.accountLifecycle).toBe('dead');
+        expect(chainDeath.recordedRateSample).toBeUndefined();
+        expect(rateStore.hasOverride(actId)).toBe(false);
+    });
 });

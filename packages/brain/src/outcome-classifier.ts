@@ -78,6 +78,7 @@ export interface RawWorkerExitInput {
     readonly tickRecordPath?: string;
     readonly died?: boolean;
     readonly outcome?: RunOutcome;
+    readonly skipRateSample?: boolean;
 }
 
 export interface OutcomeClassifierOptions {
@@ -189,6 +190,7 @@ const DEATH_TEXT_RE = /\bdied\b|\bdeath\b|you are dead|oh dear/i;
 const SESSION_UNSETTLED_RE = /session.?unsettled|logout.?proof|still.?logged.?in|already logged in|session.?held|world.?switch.?failed|not logged out/i;
 const LOCATION_STRANDED_RE = /location.?stranded|stranded|no path to|cannot reach|unreachable bank|stuck.*(?:upstairs|basement|dungeon|island)/i;
 const MARKET_UNAVAILABLE_RE = /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here/i;
+const SHOP_STOCK_WAIT_RE = /\bboughtTotal=0\b[\s\S]*\bstop=stock-wait\b|\bstop=stock-wait\b[\s\S]*\bboughtTotal=0\b/i;
 const MISSING_SUPPLY_RE = /missing.?supply|insufficient.*(?:coins|gp|supply|supplies|food|runes|logs|ore|bars|arrows|tools|item)|out of supplies|no .* in bank/i;
 const FAILURE_MARKER_RE = /\b(?:fail|failed|error|exception|crash|abort|defect|timeout|timed out)\b/i;
 const SUCCESS_MARKER_RE = /\b(?:target.?met|completed?|done)\b/i;
@@ -324,7 +326,8 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
     if (
         input.marketItemId !== undefined ||
         input.marketVenue !== undefined ||
-        MARKET_UNAVAILABLE_RE.test(text)
+        MARKET_UNAVAILABLE_RE.test(text) ||
+        SHOP_STOCK_WAIT_RE.test(text)
     ) {
         const market = inferMarketDetails(input, text);
         const out: MarketUnavailableOutcome = {
@@ -610,10 +613,14 @@ export class OutcomeClassifier {
             readonly domain?: 'practice' | 'live';
             readonly accountState?: AccountState;
             readonly workerRelease?: string;
+            readonly skipRateSample?: boolean;
         },
     ): OutcomeClassificationResult {
         const outcome = classifyRawWorkerExit(input);
-        return this.applyOutcome(outcome, ctx);
+        return this.applyOutcome(outcome, {
+            ...ctx,
+            ...(input.skipRateSample || ctx?.skipRateSample ? { skipRateSample: true } : {}),
+        });
     }
 
     applyOutcome(
@@ -623,6 +630,7 @@ export class OutcomeClassifier {
             readonly domain?: 'practice' | 'live';
             readonly accountState?: AccountState;
             readonly workerRelease?: string;
+            readonly skipRateSample?: boolean;
         },
     ): OutcomeClassificationResult {
         const errors = validateRunOutcome(outcome);
@@ -653,7 +661,7 @@ export class OutcomeClassifier {
                 }
 
                 let recordedRateSample: RateSample | undefined;
-                if (this.rateStore) {
+                if (this.rateStore && ctx?.skipRateSample !== true) {
                     const candidate = this.buildRateSample(outcome, now, domain, false);
                     if (candidate) {
                         recordedRateSample = this.rateStore.recordSample(candidate);
@@ -863,7 +871,7 @@ export class OutcomeClassifier {
                 });
 
                 let recordedRateSample: RateSample | undefined;
-                if (this.rateStore) {
+                if (this.rateStore && ctx?.skipRateSample !== true) {
                     const candidate = this.buildRateSample(outcome, now, domain, true);
                     if (candidate) {
                         recordedRateSample = this.rateStore.recordSample(candidate);

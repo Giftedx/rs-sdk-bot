@@ -14,6 +14,7 @@ import {
     readAccountStatus,
     readAllStatuses,
     recoveryLeaseHeld,
+    selectBrainDispatchStep,
     shouldSwarmReload,
     startable,
     SWARM_STOP,
@@ -21,6 +22,7 @@ import {
     syncDeathHolds,
     type ScriptHold,
 } from '../src/swarm';
+import { dispatchAccountPlan } from '../src/worker-dispatch';
 
 const dirs: string[] = [];
 const scratch = () => {
@@ -397,5 +399,51 @@ describe('fleet runtime live-path, Brain dispatch, reload, and lease fixes', () 
             now,
         );
         expect(dropped.map(c => c.orderId)).toEqual(['ord-drop']);
+    });
+
+    test('selectBrainDispatchStep extracts marketItemId and marketVenue for shop-buy and ge-buy routes', () => {
+        const shopPlan = {
+            account: 'ShopBot',
+            demandId: 'd:sword',
+            scorePerHour: 200,
+            steps: [{
+                stepKind: 'work' as const,
+                activityId: 'market:shop-buy',
+                demandId: 'd:sword',
+                workerId: 'market',
+                batchUnits: 1,
+                estimatedTicks: 60,
+                expectedValuePerHour: 200,
+                config: { mode: 'shop-buy', itemId: 1317, quantity: 1, shopId: 'taverley2hand' },
+            }],
+        };
+        const shopSel = selectBrainDispatchStep(dispatchAccountPlan(shopPlan), shopPlan.steps);
+        expect(shopSel.mode).toBe('worker');
+        if (shopSel.mode === 'worker') {
+            expect(shopSel.marketItemId).toBe(1317);
+            expect(shopSel.marketVenue).toBe('shop:taverley2hand');
+        }
+
+        const gePlan = {
+            account: 'GeBot',
+            demandId: 'd:arrow',
+            scorePerHour: 200,
+            steps: [{
+                stepKind: 'work' as const,
+                activityId: 'market:ge-buy',
+                demandId: 'd:arrow',
+                workerId: 'market',
+                batchUnits: 250,
+                estimatedTicks: 60,
+                expectedValuePerHour: 200,
+                config: { mode: 'ge-buy', itemId: 892, quantity: 250, estimatedCoinCost: 50_000 },
+            }],
+        };
+        const geSel = selectBrainDispatchStep(dispatchAccountPlan(gePlan), gePlan.steps);
+        expect(geSel.mode).toBe('worker');
+        if (geSel.mode === 'worker') {
+            expect(geSel.marketItemId).toBe(892);
+            expect(geSel.marketVenue).toBe('ge');
+        }
     });
 });
