@@ -5,6 +5,6 @@
  "account": "Dipstick",
  "partner": "KnightRider",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795563993804,
+ "at": 1795564250594,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }

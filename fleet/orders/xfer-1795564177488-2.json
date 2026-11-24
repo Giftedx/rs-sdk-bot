@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795564177488-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "TheFullMonty",
+  "item": "Earth talisman",
+  "count": 1,
+  "itemId": 1440,
+  "start": 1795564177488,
+  "end": 1795565077488,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
