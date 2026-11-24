@@ -10,6 +10,7 @@ import {
     LOWE_ARROWS,
     bestBow,
     bestElementalStaffForRunes,
+    canWearGear,
     chooseArrow,
     crossedTierBoundary,
     gearById,
@@ -18,6 +19,7 @@ import {
     selectGiantArmour,
     usableArrows,
 } from '../src/combat/gear';
+import { loadGear } from '../../knowledge/src/gear-query';
 import { chickenCombatUnlockPlan, chickenDesiredSkill } from '../src/combat/chickens';
 import { levelsMet, parseLevels, parsePhases, pickTarget } from '../src/combat/cannon';
 import { trawlerAssetsReconcile, trawlerCatchRows } from '../src/combat/boss-minigame';
@@ -215,6 +217,19 @@ describe('skills perf pass 4 parity and lazy-loading', () => {
         expect(gearById(1333)?.name).toBe('Rune scimitar');
         expect(crossedTierBoundary({ Attack: 39, Defence: 39 }, { Attack: 40, Defence: 39 }, ['attack', 'defence'], 'melee')).toBe(true);
         expect(crossedTierBoundary({ Attack: 40, Defence: 40 }, { Attack: 41, Defence: 40 }, ['attack', 'defence'], 'melee')).toBe(false);
+
+        const excluded = loadGear().filter(
+            g => g.staffOnly || /^macro_|^death_spikedboots$|^ikov_bootsoflightnessworn$|^flowers_waterfall$/.test(g.debugname),
+        );
+        expect(excluded.length).toBeGreaterThan(0);
+        expect(canWearGear(excluded[0]!, { Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99 }, quests)).toBe(false);
+        const excludedLoadout = selectCombatLoadout(
+            'melee',
+            excluded.map(g => ({ id: g.id, count: 1 })),
+            { Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99 },
+            quests,
+        );
+        expect(excludedLoadout.items).toEqual([]);
     });
 
     test('chickenCombatUnlockPlan matches brute-force oracle across multiple level states', () => {
@@ -292,6 +307,9 @@ describe('skills perf pass 4 parity and lazy-loading', () => {
 
         expect(crossedGatherTierBoundary({ Woodcutting: 40 }, { Woodcutting: 41 }, ['woodcutting'], 'woodcutting-axe')).toBe(true);
         expect(crossedGatherTierBoundary({ Woodcutting: 41 }, { Woodcutting: 42 }, ['woodcutting'], 'woodcutting-axe')).toBe(false);
+        expect(crossedGatherTierBoundary({}, { Hitpoints: 10 }, ['hitpoints'], [10])).toBe(true);
+        expect(crossedGatherTierBoundary({ Hitpoints: 10 }, {}, ['hitpoints'], [10])).toBe(false);
+        expect(crossedGatherTierBoundary({ Woodcutting: 40 }, { Woodcutting: 100 }, ['woodcutting'], 'woodcutting-axe')).toBe(false);
         expect(planToolShopUpgrade('woodcutting-axe', [{ id: 1351, count: 1 }], 50_000, { Woodcutting: 45 })?.target.id).toBe(1353);
     });
 

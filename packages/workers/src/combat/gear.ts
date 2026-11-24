@@ -339,6 +339,10 @@ export function readSkillLevels(
     return out;
 }
 
+function canWearPrepared(item: Gear, levels: Partial<Record<Skill, number>>, quests: ReadonlySet<string>): boolean {
+    return !item.staffOnly && !EXCLUDED_DEBUG_RE.test(item.debugname) && canWear(item, levels, quests);
+}
+
 export function canWearGear(item: Gear, levels?: GearSkillLevels, quests?: QuestInput): boolean {
     if (item.staffOnly || EXCLUDED_DEBUG_RE.test(item.debugname)) return false;
     return canWear(item, normalizeSkills(levels) as Partial<Record<Skill, number>>, normalizeCompletedQuests(quests));
@@ -525,7 +529,7 @@ export function selectCombatLoadout(
     for (const [id, count] of avail) {
         if (count <= 0) continue;
         const g = byId.get(id);
-        if (!g) continue;
+        if (!g || g.staffOnly || EXCLUDED_DEBUG_RE.test(g.debugname)) continue;
         if (g.slot === 'quiver') {
             if (style === 'ranged' && (g.tier ?? 1) <= rangedSkill) {
                 ownedQuivers.push({ arrow: g, count, score: scoreGearForStyle(g, 'ranged') });
@@ -717,7 +721,7 @@ function rankedElementalStaves(
     const scored: { gear: Gear; runeScore: number; styleScore: number }[] = [];
     for (let i = 0; i < staves.length; i++) {
         const g = staves[i]!;
-        if ((!members && g.members) || !canWear(g, skillMap, done)) continue;
+        if ((!members && g.members) || !canWearPrepared(g, skillMap, done)) continue;
         const provided = ELEMENTAL_STAFF_RUNES[g.id]!;
         let runeScore = 0;
         if (runeIds.length === 0) {

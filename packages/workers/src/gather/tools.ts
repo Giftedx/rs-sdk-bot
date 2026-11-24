@@ -372,21 +372,21 @@ function skillToolTierLevels(kind: 'woodcutting-axe' | 'mining-pickaxe'): readon
 }
 
 function readNormalizedSkill(levels: GearSkillLevels, lowerKey: string): number {
-    if (!levels) return lowerKey === 'hitpoints' ? 10 : 1;
+    if (!levels) return 1;
     const direct = levels[lowerKey];
     if (direct !== undefined) {
         const val = typeof direct === 'number' ? direct : direct && typeof direct === 'object' ? (direct.baseLevel ?? direct.level) : undefined;
-        if (typeof val === 'number' && Number.isSafeInteger(val) && val >= 1) return val;
+        if (typeof val === 'number' && Number.isSafeInteger(val) && val >= 1 && val <= 99) return val;
     }
+    let result = 1;
     for (const k in levels) {
         if (k.toLowerCase() === lowerKey) {
             const v = levels[k];
             const val = typeof v === 'number' ? v : v && typeof v === 'object' ? (v.baseLevel ?? v.level) : undefined;
-            if (typeof val === 'number' && Number.isSafeInteger(val) && val >= 1) return val;
-            break;
+            if (typeof val === 'number' && Number.isSafeInteger(val) && val >= 1 && val <= 99) result = val;
         }
     }
-    return lowerKey === 'hitpoints' ? 10 : 1;
+    return result;
 }
 
 export function crossedTierBoundary(
