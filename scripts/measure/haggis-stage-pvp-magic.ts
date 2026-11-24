@@ -8,6 +8,7 @@ import { closeWithin, finish, logoutSession, openBot } from '../../packages/core
 import type { Session } from '../../packages/core/src/inprocess';
 import { componentId } from '../../packages/core/src/logout';
 import { PRACTICE_STARTUP_GB } from '../../packages/core/src/memory';
+import { waitTicks } from '../../packages/core/src/ticks';
 import { xpForLevel } from '../../packages/planner/src/curve';
 import { createBot } from '../../packages/practice/src/bots';
 import { rsSdkRoot } from '../../packages/practice/src/paths';
@@ -119,20 +120,32 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
         try {
             for (let iter = 0; iter < 350 && (level(mage, 'Magic') < 80 || xp(mage, 'Magic') < targetXp); iter++) {
                 for (let w = 0; w < 4 && !(mage.sdk.getState()?.nearbyPlayers ?? []).length; w++) {
-                    await tick(mage);
+                    await waitTicks(mage, 1);
                 }
                 const nearby = mage.sdk.getState()?.nearbyPlayers ?? [];
                 const target = nearby.find((p: any) => tankNames.some(tn => tn.toLowerCase() === (p.name ?? '').toLowerCase())) ?? nearby[0];
                 if (!target) break;
                 const spell = spellForMagicLevel(level(mage, 'Magic'), mode);
+                const preXp = xp(mage, 'Magic');
                 intentionalRelog = true;
                 const [castRes] = await Promise.all([
                     mage.direct({ type: 'spellOnPlayer', playerIndex: target.index, spellComponent: spell, reason: 'SDK' }),
                     mage.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' }),
                 ]);
                 if (castRes && (castRes as any).success !== false) casts++;
-                await tick(mage);
-                await logoutSession(mage).catch(() => {});
+                const endReason = await Promise.race([
+                    mage.ended.then(e => e.reason),
+                    waitTicks(mage, 3).then(() => 'timeout'),
+                ]);
+                if (endReason === 'timeout') {
+                    await logoutSession(mage).catch(() => {});
+                } else if (endReason !== 'logged-out' && endReason !== 'disconnected') {
+                    throw Error(`unexpected mage relog end: ${endReason}`);
+                }
+                const postXp = xp(mage, 'Magic');
+                if (iter < 3) {
+                    console.log(`DBG_PVP_MAGIC mode=${mode} iter=${iter} end=${endReason} xp=${preXp}->${postXp} casts=${casts}`);
+                }
                 await closeWithin([mage], 5000).catch(() => {});
                 intentionalRelog = false;
                 relogs++;
