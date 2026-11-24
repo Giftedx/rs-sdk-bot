@@ -78,7 +78,18 @@ export function skillRow(account: string, status: any, skill: string, level: num
     own: Map<string, Map<string, number>>, shopsFor: (item: string) => string[], obtainable: (item: string) => boolean = () => true,
     geSells: (item: string) => boolean = () => true, makers: (item: string) => string[] = () => []): SkillRow {
     const mine = own.get(account) ?? new Map<string, number>();
-    const elsewhere = (item: string) => [...own].filter(([a, m]) => a !== account && (m.get(item) ?? 0) > 0).map(([a, m]) => `${a} ${m.get(item)}`).slice(0, 3);
+    const elsewhere = (item: string) => {
+        const out: string[] = [];
+        for (const [a, m] of own) {
+            if (a === account) continue;
+            const cnt = m.get(item) ?? 0;
+            if (cnt > 0) {
+                out.push(`${a} ${cnt}`);
+                if (out.length === 3) break;
+            }
+        }
+        return out;
+    };
     const sources = (item: string) => [...((mine.get(item) ?? 0) > 0 ? ['own bank'] : []), ...elsewhere(item), ...shopsFor(item).map(s => `shop ${s}`), ...(geSells(item) ? ['GE'] : []), ...makers(item)];
     const usable = rungs.filter(r => r.level <= level && [...r.inputs, ...r.requires].every(i => obtainable(i.debugname))).sort((a, b) => score(b) - score(a));
     const best = usable[0] ?? null, blockers: Blocker[] = [];
@@ -89,7 +100,12 @@ export function skillRow(account: string, status: any, skill: string, level: num
         const fits = tools.filter(t => t.skill === skill && t.level <= level && (t.rung === best.id || t.kind === best.kind || (!t.rung && !t.kind)));
         // Each tool group needs one item held; for tiered tools the best tier the level allows is the target.
         const groups = new Map<string, Tool[]>();
-        for (const t of fits) { const k = t.rank !== undefined && (t.skill === 'woodcutting' || t.skill === 'mining') ? `tier:${t.skill}` : t.items.join('|'); groups.set(k, [...(groups.get(k) ?? []), t]); }
+        for (const t of fits) {
+            const k = t.rank !== undefined && (t.skill === 'woodcutting' || t.skill === 'mining') ? `tier:${t.skill}` : t.items.join('|');
+            let list = groups.get(k);
+            if (!list) { list = []; groups.set(k, list); }
+            list.push(t);
+        }
         for (const [k, g] of groups) {
             const top = g.sort((a, b) => (a.rank ?? 1) - (b.rank ?? 1) || b.level - a.level)[0]!;
             if (k.startsWith('tier:') ? top.items.some(i => (mine.get(i) ?? 0) > 0) : g.some(t => t.items.some(i => (mine.get(i) ?? 0) > 0))) continue;
@@ -126,15 +142,25 @@ export function buildUnlockBill(statuses: readonly any[], base = root, prices: P
     const shops = JSON.parse(readFileSync(join(base, 'knowledge/shops.json'), 'utf8')) as { inv: string; stock: { item: string }[] }[];
     const shopIndex = new Map<string, string[]>();
     // Skill-guide lists and quest-only stores are not shops a bot can buy from.
-    for (const s of shops) if (!/^skill_guide|^tbwt|quest/i.test(s.inv)) for (const st of s.stock) shopIndex.set(st.item, [...(shopIndex.get(st.item) ?? []), s.inv]);
+    for (const s of shops) if (!/^skill_guide|^tbwt|quest/i.test(s.inv)) for (const st of s.stock) {
+        let list = shopIndex.get(st.item);
+        if (!list) { list = []; shopIndex.set(st.item, list); }
+        list.push(s.inv);
+    }
     const own = holdings(statuses, idToName), rows: SkillRow[] = [];
-    const held = (item: string) => [...own.values()].some(m => (m.get(item) ?? 0) > 0);
+    const heldItems = new Set<string>();
+    for (const m of own.values()) for (const [item, count] of m) if (count > 0) heldItems.add(item);
+    const held = (item: string) => heldItems.has(item);
     const geSells = (item: string) => (prices[item]?.sell ?? 0) > 0;
     // Fleet best level per skill: a rung makes its outputs when some owned account has its level.
     const top = new Map<string, number>();
     for (const s of statuses) for (const k of s.skills ?? []) { const n = String(k.name).toLowerCase(); top.set(n, Math.max(top.get(n) ?? 0, k.level ?? 0)); }
     const makes = new Map<string, Rung[]>();
-    for (const list of Object.values(ladders)) for (const r of list) for (const o of (r as any).outputs ?? []) if (o?.debugname) makes.set(o.debugname, [...(makes.get(o.debugname) ?? []), r]);
+    for (const list of Object.values(ladders)) for (const r of list) for (const o of (r as any).outputs ?? []) if (o?.debugname) {
+        let mList = makes.get(o.debugname);
+        if (!mList) { mList = []; makes.set(o.debugname, mList); }
+        mList.push(r);
+    }
     const memo = new Map<string, boolean>();
     const obtainable = (item: string, depth = 0): boolean => {
         if (memo.has(item)) return memo.get(item)!;
@@ -188,8 +214,9 @@ export async function marketPrices(base = root, now = Date.now(), get: (url: str
     const ladders = (JSON.parse(readFileSync(join(base, 'knowledge/ladders.json'), 'utf8')) as { ladders: Record<string, Rung[]> }).ladders;
     const names = new Set<string>();
     for (const list of Object.values(ladders)) for (const r of list) for (const i of [...r.inputs, ...r.requires]) names.add(i.debugname);
+    const idByDebug = new Map(items.map(i => [i.debugname, i.id]));
     for (const n of names) {
-        const id = items.find(i => i.debugname === n)?.id;
+        const id = idByDebug.get(n);
         if (id === undefined) continue;
         const quote = shared[id];
         if (quote && !(saved[n] && saved[n]!.at >= quote.at && saved[n]!.at <= now)) saved[n] = quote;

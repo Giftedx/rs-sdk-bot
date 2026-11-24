@@ -171,9 +171,11 @@ export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
     { id: 'c', label: 'All tricks optional (login wine, stun relog, sacred oil)', tricks: TRICKS },
 ];
 
+const RETIRED_LEVERS = new Set(LEVERS.filter(l => l.retired).map(l => l.id));
+
 // A retired lever was measured and loses ticks; it stays off unless named in opts.owner (to show its size).
 const isOn = (id: string, _owner: boolean | undefined, opts: Pick<ScheduleOptions, 'disable' | 'owner'>) =>
-    LEVERS.some(l => l.id === id && l.retired) ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
+    RETIRED_LEVERS.has(id) ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
 
 function leverOn(a: Activity, opts: Pick<ScheduleOptions, 'disable' | 'owner'>): boolean {
     if (!a.lever) return true;
@@ -216,9 +218,11 @@ export function variantGroups(activities: Activity[], opts: ScheduleOptions): Ma
         if (a.variant.trick && !opts.tricks.has(a.variant.trick)) continue;
         const forced = opts.force?.[a.variant.group];
         if (forced !== undefined && forced !== a.variant.option) continue;
-        const g = groups.get(a.variant.group) ?? new Map<string, Activity[]>();
-        g.set(a.variant.option, [...(g.get(a.variant.option) ?? []), a]);
-        groups.set(a.variant.group, g);
+        let g = groups.get(a.variant.group);
+        if (!g) { g = new Map<string, Activity[]>(); groups.set(a.variant.group, g); }
+        let list = g.get(a.variant.option);
+        if (!list) { list = []; g.set(a.variant.option, list); }
+        list.push(a);
     }
     return groups;
 }

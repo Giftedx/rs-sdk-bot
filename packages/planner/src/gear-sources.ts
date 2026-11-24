@@ -61,8 +61,11 @@ type DropRoll = { chance: number; item?: string; items?: { item: string; chance:
 type DropTable = { trigger: string; always: { item: string }[]; rolls: DropRoll[] };
 let tables: {
     sources: GearSources;
+    npcById: Map<number, GearSources['npc'][number][]>;
+    questById: Map<number, GearSources['quest'][number]>;
+    clueById: Map<number, GearSources['clue'][number]>;
     craft: Map<string, SkillRow[]>;
-    drops: Map<string, { npc: string; chance: number }[]>;
+    bestDrop: Map<string, { npc: string; chance: number }>;
     shopTiles: Map<string, Tile[]>;
 } | undefined;
 
@@ -70,10 +73,27 @@ function load() {
     if (tables) return tables;
     const read = <T>(f: string) => JSON.parse(readFileSync(resolve(ROOT, 'knowledge', f), 'utf8')) as T;
     const sources = read<GearSources>('gear-sources.json');
+    const npcById = new Map<number, GearSources['npc'][number][]>();
+    for (const n of sources.npc) {
+        let list = npcById.get(n.id);
+        if (!list) { list = []; npcById.set(n.id, list); }
+        list.push(n);
+    }
+    const questById = new Map<number, GearSources['quest'][number]>();
+    for (const q of sources.quest) if (!questById.has(q.id)) questById.set(q.id, q);
+    const clueById = new Map<number, GearSources['clue'][number]>();
+    for (const c of sources.clue) if (!clueById.has(c.id)) clueById.set(c.id, c);
     const craft = new Map<string, SkillRow[]>();
-    for (const r of read<SkillRow[]>('skills.json')) for (const o of r.outputs) craft.set(o, [...(craft.get(o) ?? []), r]);
-    const drops = new Map<string, { npc: string; chance: number }[]>();
-    const add = (item: string, npc: string, chance: number) => drops.set(item, [...(drops.get(item) ?? []), { npc, chance }]);
+    for (const r of read<SkillRow[]>('skills.json')) for (const o of r.outputs) {
+        let list = craft.get(o);
+        if (!list) { list = []; craft.set(o, list); }
+        list.push(r);
+    }
+    const bestDrop = new Map<string, { npc: string; chance: number }>();
+    const add = (item: string, npc: string, chance: number) => {
+        const cur = bestDrop.get(item);
+        if (!cur || chance > cur.chance) bestDrop.set(item, { npc, chance });
+    };
     for (const t of read<DropTable[]>('drops.json')) {
         for (const a of t.always) add(a.item, t.trigger, 1);
         for (const r of t.rolls) {
@@ -82,8 +102,12 @@ function load() {
         }
     }
     const shopTiles = new Map<string, Tile[]>();
-    for (const n of sources.shopNpcs) shopTiles.set(n.shop, [...(shopTiles.get(n.shop) ?? []), ...n.spawns]);
-    return tables = { sources, craft, drops, shopTiles };
+    for (const n of sources.shopNpcs) {
+        let list = shopTiles.get(n.shop);
+        if (!list) { list = []; shopTiles.set(n.shop, list); }
+        list.push(...n.spawns);
+    }
+    return tables = { sources, npcById, questById, clueById, craft, bestDrop, shopTiles };
 }
 
 const distance = (from: { x: number; z: number } | null | undefined, tiles: readonly Tile[] | undefined): { tile: Tile; distance: number } | undefined => {
@@ -128,12 +152,12 @@ export function gearSources(item: Gear, ctx: SourceContext): GearSource[] {
         return { kind: 'shop', shop: sh.shop, cost: sh.cost, ...(near ? { tile: near.tile, distance: near.distance } : {}) } as GearSource & { kind: 'shop' };
     }).sort((a, b) => ctx.position ? (a.distance ?? Infinity) - (b.distance ?? Infinity) || a.cost - b.cost : a.cost - b.cost || a.shop.localeCompare(b.shop));
     if (shops[0]) out.push(shops[0]);
-    for (const n of t.sources.npc) {
-        if (n.id !== item.id || (n.gate && !(n.gate.quest && ctx.done.has(n.gate.quest)))) continue;
+    for (const n of t.npcById.get(item.id) ?? []) {
+        if (n.gate && !(n.gate.quest && ctx.done.has(n.gate.quest))) continue;
         const spawn = distance(ctx.position, n.at?.map(a => ({ ...a })));
         out.push({ kind: 'npc', npc: n.npc, cost: n.cost, ...(n.gate ? { gate: n.gate } : {}), src: n.src, ...(spawn ? { tile: spawn.tile } : {}) });
     }
-    const quest = t.sources.quest.find(q => q.id === item.id);
+    const quest = t.questById.get(item.id);
     if (quest) out.push({ kind: 'quest', quest: quest.quest, src: quest.src });
     for (const r of t.craft.get(item.debugname) ?? []) {
         const have = ctx.skills[r.skill];
@@ -141,9 +165,9 @@ export function gearSources(item: Gear, ctx: SourceContext): GearSource[] {
         out.push({ kind: 'craft', skill: r.skill, level: r.level, inputs: r.inputs });
         break;
     }
-    const drop = [...(t.drops.get(item.debugname) ?? [])].sort((a, b) => b.chance - a.chance)[0];
+    const drop = t.bestDrop.get(item.debugname);
     if (drop) out.push({ kind: 'drop', npc: drop.npc.replace(/^_/, ''), chance: drop.chance });
-    const clue = t.sources.clue.find(c => c.id === item.id);
+    const clue = t.clueById.get(item.id);
     if (clue) out.push({ kind: 'clue', tier: clue.tier, src: clue.src });
     const q = ctx.market?.[item.id], ask = obtainableAsk(item, q);
     if (ask !== null) out.push({ kind: 'ge', ask, sell: q!.sell });

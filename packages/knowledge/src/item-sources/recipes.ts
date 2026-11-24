@@ -39,7 +39,11 @@ export function loadNpcAndShopData(
 
     for (const b of npcBlocks) {
         const cat = b.props.category?.[0];
-        if (cat) npcsInCategory.set(cat, [...(npcsInCategory.get(cat) ?? []), b.name]);
+        if (cat) {
+            let list = npcsInCategory.get(cat);
+            if (!list) { list = []; npcsInCategory.set(cat, list); }
+            list.push(b.name);
+        }
         const params = new Map<string, { v: string; line: number }>();
         (b.props.param ?? []).forEach((p, i) => {
             const [k, ...v] = p.split(',');
@@ -51,12 +55,14 @@ export function loadNpcAndShopData(
         const inv = params.get('owned_shop');
         if (!inv) continue;
         const sell = params.get('shop_sell_multiplier'), delta = params.get('shop_delta');
-        shopOwners.set(inv.v, [...(shopOwners.get(inv.v) ?? []), {
+        let owners = shopOwners.get(inv.v);
+        if (!owners) { owners = []; shopOwners.set(inv.v, owners); }
+        owners.push({
             npc: b.name,
             sell: sell ? Number(sell.v) : SELL_DEFAULT.v,
             sellSrc: sell ? `${b.file}:${sell.line}` : SELL_DEFAULT.src,
             delta: delta ? Number(delta.v) : DELTA_DEFAULT,
-        }]);
+        });
     }
 
     // ~openshop(inv, buy, sell, delta, title) calls: the shop's NPC is the opnpc trigger around the call, or the
@@ -64,19 +70,38 @@ export function loadNpcAndShopData(
     const procCallers = new Map<string, string[]>();
     const openshopCalls: { inv: string; sell: number; delta: number; src: string; trigger: string; subject: string }[] = [];
     for (const f of rs2) {
-        if (!readCached(f).includes('~')) continue;
+        const text = readCached(f);
+        if (!text.includes('~')) continue;
+        const hasOpenshop = text.includes('~openshop(');
+        const hasOpnpc = text.includes('[opnpc');
+        if (!hasOpenshop && !hasOpnpc) continue;
         let trig = '', subj = '';
-        linesOf(f).forEach((line, i) => {
-            const h = line.match(/^\[(\w+),([^\]]+)\]/);
-            if (h) { trig = h[1]!; subj = h[2]!; }
-            const m = line.match(/~openshop\((\w+),\s*(\d+),\s*(\d+),\s*(\d+)/);
-            if (m) openshopCalls.push({ inv: m[1]!, sell: Number(m[3]), delta: Number(m[4]), src: `${f}:${i + 1}`, trigger: trig, subject: subj });
-            for (const c of line.matchAll(/~(\w+)/g)) if (trig.startsWith('opnpc')) procCallers.set(c[1]!, [...(procCallers.get(c[1]!) ?? []), subj]);
-        });
+        const lines = linesOf(f);
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i]!;
+            if (line.charCodeAt(0) === 91 /* '[' */) {
+                const h = line.match(/^\[(\w+),([^\]]+)\]/);
+                if (h) { trig = h[1]!; subj = h[2]!; }
+            }
+            if (!line.includes('~')) continue;
+            if (hasOpenshop && line.includes('~openshop(')) {
+                const m = line.match(/~openshop\((\w+),\s*(\d+),\s*(\d+),\s*(\d+)/);
+                if (m) openshopCalls.push({ inv: m[1]!, sell: Number(m[3]), delta: Number(m[4]), src: `${f}:${i + 1}`, trigger: trig, subject: subj });
+            }
+            if (trig.startsWith('opnpc')) {
+                for (const c of line.matchAll(/~(\w+)/g)) {
+                    let list = procCallers.get(c[1]!);
+                    if (!list) { list = []; procCallers.set(c[1]!, list); }
+                    list.push(subj);
+                }
+            }
+        }
     }
     for (const c of openshopCalls) {
         const list = c.trigger.startsWith('opnpc') ? [c.subject] : c.trigger === 'proc' ? (procCallers.get(c.subject) ?? []) : [];
-        for (const n of new Set(list)) shopOwners.set(c.inv, [...(shopOwners.get(c.inv) ?? []), { npc: n, sell: c.sell, sellSrc: c.src, delta: c.delta }]);
+        let owners = shopOwners.get(c.inv);
+        if (!owners && list.length) { owners = []; shopOwners.set(c.inv, owners); }
+        for (const n of new Set(list)) owners!.push({ npc: n, sell: c.sell, sellSrc: c.src, delta: c.delta });
     }
 
     return { npcsInCategory, shopOwners, deathDrop, attackable };
@@ -131,11 +156,13 @@ export function loadBowMakes(
         for (const col of ['shortbow', 'longbow']) {
             const v = row.data[col]?.[0];
             if (!v || !log) continue;
-            bowMakes.set(v[0]!, [...(bowMakes.get(v[0]!) ?? []), {
+            let list = bowMakes.get(v[0]!);
+            if (!list) { list = []; bowMakes.set(v[0]!, list); }
+            list.push({
                 kind: 'make', rung: null, skill: 'fletching', level: Number(v[1]), inputs: [{ item: log, count: 1 }], outputs: [v[0]!], tools: knife,
                 src: row.src[col]![0]!, gate: null, blocked: null,
                 cost: cost({ ticksNote: 'no measured rate; not a ladders.json rung', coinsNote: 'the cost of one log; see that item', risk: 0, riskBasis: 'content', riskNote: 'no combat' }),
-            }]);
+            });
         }
     }
     return bowMakes;

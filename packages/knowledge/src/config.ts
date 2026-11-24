@@ -14,20 +14,35 @@ export interface ConfigBlock {
 export function parseConfigs(text: string, file: string): ConfigBlock[] {
     const out: ConfigBlock[] = [];
     let cur: ConfigBlock | null = null;
-    cleanLines(text).forEach((line, i) => {
-        if (!line) return;
-        if (line.startsWith('[') && line.endsWith(']')) {
-            cur = { name: line.slice(1, -1), props: {}, propLines: {}, file, line: i + 1 };
-            out.push(cur);
-            return;
+    let lineNo = 0;
+    let pos = 0;
+    const total = text.length;
+    while (pos <= total) {
+        const nl = text.indexOf('\n', pos);
+        let end = nl === -1 ? total : nl;
+        lineNo++;
+        if (end > pos && text.charCodeAt(end - 1) === 13) end--;
+        const comment = text.indexOf('//', pos);
+        if (comment >= 0 && comment < end) end = comment;
+        let s = pos;
+        while (s < end && text.charCodeAt(s) <= 32) s++;
+        while (end > s && text.charCodeAt(end - 1) <= 32) end--;
+        if (end > s) {
+            if (text.charCodeAt(s) === 91 /* '[' */ && text.charCodeAt(end - 1) === 93 /* ']' */) {
+                cur = { name: text.slice(s + 1, end - 1), props: {}, propLines: {}, file, line: lineNo };
+                out.push(cur);
+            } else if (cur) {
+                const eq = text.indexOf('=', s);
+                if (eq > s && eq < end) {
+                    const key = text.slice(s, eq);
+                    (cur.props[key] ??= []).push(text.slice(eq + 1, end));
+                    (cur.propLines[key] ??= []).push(lineNo);
+                }
+            }
         }
-        const eq = line.indexOf('=');
-        if (cur && eq > 0) {
-            const key = line.slice(0, eq);
-            (cur.props[key] ??= []).push(line.slice(eq + 1));
-            (cur.propLines[key] ??= []).push(i + 1);
-        }
-    });
+        if (nl === -1) break;
+        pos = nl + 1;
+    }
     return out;
 }
 

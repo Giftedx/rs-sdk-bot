@@ -35,12 +35,24 @@ const SPIRIT_TREE_TICKS = 8;
 const GLIDER_OUTPOSTS = ['glider-digsite', 'glider-al-kharid', 'glider-karamja'] as const;
 const GLIDER_TICKS = 6;
 const HAGGIS_TRAVEL_MODELS = new WeakSet<TravelModel>();
+const HAGGIS_LEG_CACHES = new WeakMap<TravelModel, HaggisLegCache>();
 const inDeepWilderness = (p: Place | undefined) => !!p && p.x >= 2944 && p.x <= 3391 && p.z >= 3680 && p.z <= 3967;
 
 export type HaggisLegCache = Array<Map<string, Map<string, { ticks: number; method: string }>> | undefined>;
 
 export function createHaggisLegCache(): HaggisLegCache {
     return new Array(512);
+}
+
+/** Shared leg cache bound to a TravelModel returned by haggisTravel(). */
+export function legCacheFor(m: TravelModel | undefined): HaggisLegCache | undefined {
+    if (!m || !HAGGIS_TRAVEL_MODELS.has(m)) return undefined;
+    let cache = HAGGIS_LEG_CACHES.get(m);
+    if (!cache) {
+        cache = createHaggisLegCache();
+        HAGGIS_LEG_CACHES.set(m, cache);
+    }
+    return cache;
 }
 
 // Places of haggis-boards.json and the leg cache haggis-travel.json. The run starts where the tutorial skip lands.
