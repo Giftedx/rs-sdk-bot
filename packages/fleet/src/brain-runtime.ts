@@ -511,7 +511,7 @@ function applyAccountOverridesToWorld(
     return { ...world, accounts: nextAccounts };
 }
 
-function applyActivityOverridesToPlan(
+export function applyActivityOverridesToPlan(
     plan: FleetPlan,
     input: {
         readonly world: WorldSnapshot;
@@ -566,7 +566,32 @@ function applyActivityOverridesToPlan(
         nextSpotAllocations[act.spotId] = list;
     };
 
-    let usedSlots = Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
+    const inTradeAccounts = new Set(
+        Object.values(input.world.accounts)
+            .filter(
+                (a) =>
+                    a.side === input.world.side
+                    && a.lifecycle === 'in_trade'
+                    && canProtectedAccountLaunch(a, input.campaigns, input.world).allowed,
+            )
+            .map((a) => a.name.toLowerCase()),
+    );
+    const assignedIdleDonors = new Set<string>();
+    for (const ord of plan.transferOrders) {
+        const lower = ord.from.toLowerCase();
+        const donorAcct = Object.values(input.world.accounts).find(
+            (a) => a.name.toLowerCase() === lower && a.side === input.world.side,
+        );
+        if (
+            donorAcct
+            && !inTradeAccounts.has(lower)
+            && (nextAccountPlans[donorAcct.name]?.steps.length ?? 0) === 0
+        ) {
+            assignedIdleDonors.add(lower);
+        }
+    }
+    const reservedSlotCount = inTradeAccounts.size + assignedIdleDonors.size;
+    let usedSlots = reservedSlotCount + Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
     let changed = false;
 
     for (const [, acct] of Object.entries(input.world.accounts)) {
@@ -578,6 +603,7 @@ function applyActivityOverridesToPlan(
             || acct.lifecycle === 'reserved'
             || acct.lifecycle === 'dead'
             || acct.lifecycle === 'in_trade'
+            || assignedIdleDonors.has(acct.name.toLowerCase())
         ) continue;
         if (acct.lifecycle === 'needs_logout_recovery' || acct.lifecycle === 'needs_location_recovery') continue;
         if (!canProtectedAccountLaunch(acct, input.campaigns, input.world).allowed) continue;
@@ -647,7 +673,7 @@ function applyActivityOverridesToPlan(
         ...plan,
         accountPlans: nextAccountPlans,
         spotAllocations: nextSpotAllocations,
-        selectedSlots: Math.min(plan.maxBots, plansWithSteps),
+        selectedSlots: Math.min(plan.maxBots, reservedSlotCount + plansWithSteps),
     };
 }
 
@@ -698,7 +724,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     const demands = demandEngine.activeDemands(world);
     const defects = classifier.quarantinedDefects(now);
     const infraState = combineInfraState(classifier, infraBreaker, now);
-    const marketQuotes = opts.marketQuotes ?? loadMarketQuotesFromRoot(root);
+    const marketQuotes = opts.marketQuotes ?? loadMarketQuotesFromRoot(root, now);
     const logoutProofs = loadConfirmedLogoutProofs(diagnostics);
     const maxBots = resolveSwarmMaxBots(root, opts.maxBots);
     const minTrust: TrustTier = opts.minTrust ?? 'practice_passed';

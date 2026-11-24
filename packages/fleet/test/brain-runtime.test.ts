@@ -2,13 +2,23 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { HUB_BANKER_LOCATIONS, validateFleetState, type ActivityDefinition, type TransferOrder, type WorldSnapshot } from '../../brain/src/contracts';
+import {
+    HUB_BANKER_LOCATIONS,
+    validateFleetPlan,
+    validateFleetState,
+    type ActivityDefinition,
+    type FleetPlan,
+    type TransferOrder,
+    type WorldSnapshot,
+} from '../../brain/src/contracts';
 import { createActivityCatalog, defaultActivityCatalog, type ActivityCatalog } from '../../brain/src/catalog';
 import { createRateStore } from '../../brain/src/rate-store';
 import { OutcomeClassifier } from '../../brain/src/outcome-classifier';
 import { validOrder } from '../../core/src/fleet-trade-settlement';
+import { MARKET_CACHE_MS, writeMarketCache } from '../../core/src/market-cache';
 import { fleetStateFile, liveRoot, liveStatusDir, operatorCommandsDir, practiceRoot } from '../../core/src/practice-paths';
 import {
+    applyActivityOverridesToPlan,
     captureRunBaseline,
     extractWorkerOutcomeInput,
     isSafeOperatorCommandId,
@@ -730,5 +740,233 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(cycle.fleetPlan.spotAllocations['spot:single']?.length ?? 0).toBeLessThanOrEqual(1);
         const assignedToSpot = Object.values(cycle.fleetPlan.accountPlans).filter(p => p.steps.length > 0);
         expect(assignedToSpot.length).toBe(1);
+    });
+
+    test('applyActivityOverridesToPlan counts in_trade accounts and assignedIdleDonors toward slot caps and skips reserved donors', () => {
+        const root = makeTempRoot();
+        const now = 1_700_001_100_000;
+        const catalog = createActivityCatalog();
+        const rateStore = createRateStore({ catalog, root, persist: false });
+        const act = catalog.get('gather:woodcutting-loop')!;
+        const emptyAcct = (name: string, lifecycle: 'idle' | 'in_trade') => ({
+            name,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            role: 'helper' as const,
+            lifecycle,
+            protectedClock: false,
+            skills: {},
+            quests: {},
+            combatLevel: 3,
+            questPoints: 0,
+            totalLevel: 32,
+            totalXp: 1000,
+            pos: { x: 3185, z: 3436, level: 0 },
+            coins: 1000,
+            inventory: {},
+            equipment: {},
+            bank: { items: {}, observedAt: now - 1000, trusted: true },
+            holds: [],
+            cooldowns: {},
+            recentLossCount: 0,
+        });
+        const world: WorldSnapshot = {
+            schemaVersion: 1,
+            at: now,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: {
+                traderbot: emptyAcct('TraderBot', 'in_trade'),
+                donorbot: emptyAcct('DonorBot', 'idle'),
+                recipbot: emptyAcct('RecipBot', 'idle'),
+                extrabot: emptyAcct('ExtraBot', 'idle'),
+            },
+            fleetSides: { local: { side: 'local', seenAt: now, capacity: 3, stopped: false } },
+            activeTransfers: [],
+            marketCooldowns: {},
+            spotOccupancy: {},
+        };
+
+        const basePlan: FleetPlan = {
+            schemaVersion: 1,
+            plannedAt: now,
+            side: 'local',
+            maxBots: 3,
+            retentionMarginRatio: 0.15,
+            recoveryQueue: [],
+            accountPlans: {
+                TraderBot: { account: 'TraderBot', steps: [], scorePerHour: 0, idleReason: 'in_trade' },
+                DonorBot: { account: 'DonorBot', steps: [], scorePerHour: 0, idleReason: 'reserved_for_transfer' },
+                RecipBot: {
+                    account: 'RecipBot',
+                    demandId: 'd1',
+                    steps: [
+                        {
+                            stepKind: 'work',
+                            activityId: act.id,
+                            demandId: 'd1',
+                            workerId: act.workerId,
+                            batchUnits: 1,
+                            estimatedTicks: 10,
+                            expectedValuePerHour: 100,
+                            config: act.config,
+                        },
+                    ],
+                    scorePerHour: 100,
+                },
+                ExtraBot: { account: 'ExtraBot', steps: [], scorePerHour: 0, idleReason: 'max_bots_limit' },
+            },
+            transferOrders: [
+                {
+                    id: 'xfer-1',
+                    server: 'rs-sdk-demo.fly.dev',
+                    from: 'DonorBot',
+                    to: 'RecipBot',
+                    hub: 'varrock_west',
+                    items: [{ itemId: 995, count: 500 }],
+                    demandId: 'd1',
+                    reason: 'fund',
+                    createdAt: now - 1000,
+                    expiresAt: now + 60_000,
+                    state: 'planned',
+                    bothIdleVerified: true,
+                    donorLogoutConfirmedAt: now - 5_000,
+                    recipientLogoutConfirmedAt: now - 5_000,
+                    antiPingPong: { donorHoldsDemandForItems: false, cooldownWindowMs: 600_000 },
+                },
+            ],
+            spotAllocations: {},
+            selectedSlots: 2,
+        };
+
+        // 1 in_trade + 1 assignedIdleDonor + 1 planned = 3 === maxBots -> neither DonorBot nor ExtraBot can be added.
+        const blocked = applyActivityOverridesToPlan(basePlan, {
+            world,
+            overrides: {
+                donorbot: { account: 'DonorBot', activityId: act.id, issuedAt: now - 50, expiresAt: now + 60_000 },
+                extrabot: { account: 'ExtraBot', activityId: act.id, issuedAt: now - 50, expiresAt: now + 60_000 },
+            },
+            catalog,
+            demands: [],
+            campaigns: [],
+            defects: [],
+            rateStore,
+            marketQuotes: {},
+            minTrust: 'experimental',
+            allowExperimentalFallback: true,
+        });
+        expect(blocked.accountPlans.DonorBot?.steps).toEqual([]);
+        expect(blocked.accountPlans.ExtraBot?.steps).toEqual([]);
+        expect(blocked.selectedSlots).toBe(2);
+
+        // With maxBots = 4, ExtraBot can launch while DonorBot stays skipped; selectedSlots counts all 4 reserved/planned slots.
+        const expanded = applyActivityOverridesToPlan(
+            { ...basePlan, maxBots: 4 },
+            {
+                world: { ...world, fleetSides: { local: { side: 'local', seenAt: now, capacity: 4, stopped: false } } },
+                overrides: {
+                    donorbot: { account: 'DonorBot', activityId: act.id, issuedAt: now - 50, expiresAt: now + 60_000 },
+                    extrabot: { account: 'ExtraBot', activityId: act.id, issuedAt: now - 50, expiresAt: now + 60_000 },
+                },
+                catalog,
+                demands: [],
+                campaigns: [],
+                defects: [],
+                rateStore,
+                marketQuotes: {},
+                minTrust: 'experimental',
+                allowExperimentalFallback: true,
+            },
+        );
+        expect(expanded.accountPlans.DonorBot?.steps).toEqual([]);
+        expect(expanded.accountPlans.ExtraBot?.steps.length).toBeGreaterThan(0);
+        expect(expanded.selectedSlots).toBe(4);
+        expect(validateFleetPlan(expanded)).toEqual([]);
+    });
+
+    test('runBrainCycle forwards simulated now to loadMarketQuotesFromRoot so market-all.json freshness uses opts.now', () => {
+        const root = makeTempRoot();
+        const now = 1_700_001_200_000;
+        const statusDir = liveStatusDir(root);
+        mkdirSync(statusDir, { recursive: true });
+        writeFileSync(
+            join(statusDir, 'AlphaBot.json'),
+            JSON.stringify({
+                name: 'AlphaBot',
+                server: 'rs-sdk-demo.fly.dev',
+                at: now - 1_200_000,
+                pos: { x: 3185, z: 3436, level: 0 },
+                skills: [{ name: 'Prayer', level: 1, xp: 0 }],
+                inventory: [{ id: 995, count: 50_000 }],
+                bank: [],
+                bankAt: now - 1_200_000,
+                result: 'ok done',
+            }),
+        );
+        // Historical market cache valid at `now` (2023), expired relative to Date.now().
+        writeMarketCache(
+            root,
+            { 1511: { name: 'Logs', price: 4, bid: 4, ask: 4, trades: 10, sell: 100 } },
+            now - 60_000,
+        );
+
+        const baseAct = defaultActivityCatalog().get('bank-artisan:prayer-bury')!;
+        const geCraftAct: ActivityDefinition = {
+            ...baseAct,
+            id: 'craft:test-logs-ge',
+            inputs: [{ itemId: 1511, countPerUnit: 1 }],
+            baselineRate: {
+                ...baseAct.baselineRate,
+                gpPerTick: 10,
+            },
+        };
+        const geCatalog: ActivityCatalog = {
+            get: id => (id === geCraftAct.id ? geCraftAct : undefined),
+            require: id => {
+                if (id === geCraftAct.id) return geCraftAct;
+                throw new Error(`Missing ${id}`);
+            },
+            has: id => id === geCraftAct.id,
+            list: () => [geCraftAct],
+            byFamily: f => (geCraftAct.family === f ? [geCraftAct] : []),
+            byWorkerKind: k => (geCraftAct.kind === k ? [geCraftAct] : []),
+            findByOutputItem: () => [],
+            findBySkill: s => (geCraftAct.skill?.toLowerCase() === s.toLowerCase() ? [geCraftAct] : []),
+            findByQuest: () => [],
+            size: () => 1,
+        };
+
+        const freshRun = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now,
+            side: 'local',
+            maxBots: 2,
+            catalog: geCatalog,
+            minTrust: 'experimental',
+            allowExperimentalFallback: true,
+        });
+        const freshPlan = freshRun.fleetPlan.accountPlans.AlphaBot;
+        expect(freshPlan).toEqual(
+            expect.objectContaining({
+                steps: expect.arrayContaining([
+                    expect.objectContaining({ stepKind: 'acquire', source: 'ge' }),
+                ]),
+            }),
+        );
+
+        // Once simulated `now` passes MARKET_CACHE_MS, the same cache expires and GE acquire stops planning.
+        const staleRun = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + MARKET_CACHE_MS + 60_000,
+            side: 'local',
+            maxBots: 2,
+            catalog: geCatalog,
+            minTrust: 'experimental',
+            allowExperimentalFallback: true,
+        });
+        const stalePlan = staleRun.fleetPlan.accountPlans.AlphaBot;
+        expect(stalePlan?.steps.some(s => s.stepKind === 'acquire' && s.source === 'ge')).toBe(false);
     });
 });
