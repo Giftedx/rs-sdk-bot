@@ -465,8 +465,8 @@ async function teleportVarrockTo45(s: Session, stop: StopFn): Promise<void> {
         const xp0 = skillInfo(s, 'Magic').experience;
         await s.direct({ type: 'clickComponent', componentId: SPELLS.varrockTeleport, reason: 'SDK' });
         const gained = await waitUntil(s, () => skillInfo(s, 'Magic').experience > xp0 || stop(), { timeoutTicks: 5 });
-        if (gained && skillInfo(s, 'Magic').experience > xp0 && skillInfo(s, 'Magic').baseLevel < 45 && !stop()) {
-            await waitTicks(s, 2);
+        if (gained && skillInfo(s, 'Magic').experience > xp0 && !stop()) {
+            await waitTicks(s, 3);
         }
     }
     await teleportTo(s, SPELLS.varrockTeleport, p => p.worldX >= 3195 && p.worldX <= 3230 && p.worldZ >= 3410 && p.worldZ <= 3440, stop, 'Varrock teleport');
@@ -589,15 +589,23 @@ async function walkGolrieToBolren(s: Session, stop: StopFn): Promise<void> {
 async function exitMazeAndClearArenaGear(s: Session, stop: StopFn): Promise<void> {
     await walkWaypoints(s, [{ x: 2529, z: 3165, tol: 2 }, { x: 2515, z: 3161, tol: 0 }], 80, stop, 'bolren to loose railing');
     await squeezeLooseRailing(s, z => z > 0 && z <= 3160, stop, 'exit maze');
-    await setProtectMelee(s, true, stop);
-    await walkWaypoints(
+    // South of the loose railing is an enclosed gate courtyard; talk to Elkoy to jump outside the maze (2504,3192).
+    await talkAndChoose(
         s,
-        [{ x: 2500, z: 3160, tol: 2 }, { x: 2500, z: 3201, tol: 2 }, { x: 2566, z: 3201, tol: 2 }],
-        120,
+        /^elkoy$/i,
+        { x: 2515, z: 3159 },
+        [/yes please/i],
+        () => {
+            const p = posOf(s);
+            return !!p && d8({ x: p.worldX, z: p.worldZ }, { x: 2504, z: 3192 }) <= 6;
+        },
         stop,
-        'railing to lady servil',
-        { ignoreMeleeHunters: true },
+        'elkoy out',
+        30,
     );
+    await dismissContinueDialogs(s, stop, 4);
+    await setProtectMelee(s, true, stop);
+    await walkWaypoints(s, [{ x: 2566, z: 3201, tol: 2 }], 120, stop, 'elkoy out to lady servil', { ignoreMeleeHunters: true });
 }
 
 async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
@@ -776,14 +784,14 @@ async function main(): Promise<void> {
                 await runQuestArena({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
                 milestone('fight_arena', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
 
-                // Unequip and drop Fight Arena armour/helmet before entering Glarial's tomb.
+                // Unequip and drop Fight Arena armour/helmet and TGV gnome amulet before entering Glarial's tomb.
                 for (const eq of s.sdk.getEquipment()) {
-                    if (eq.id === 74 || eq.id === 75) {
+                    if (eq.id === 74 || eq.id === 75 || eq.id === 589) {
                         await s.bot.unequipItem(eq);
                         await waitUntil(s, () => !s.sdk.getEquipment().some(e => e.id === eq.id) || stop(), { timeoutTicks: 5 });
                     }
                 }
-                const junkIds = [74, 75, 76, 77];
+                const junkIds = [74, 75, 76, 77, 589];
                 for (let i = 0; i < 4 && s.sdk.getInventory().some(it => junkIds.includes(it.id)) && !stop(); i++) {
                     const batch = s.sdk.getInventory().filter(it => junkIds.includes(it.id)).slice(0, 4);
                     await Promise.all(batch.map(it => s.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' })));
