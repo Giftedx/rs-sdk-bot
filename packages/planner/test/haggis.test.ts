@@ -537,8 +537,7 @@ test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps
     for (const id of ['waterfall', 'dragon', 'cannon', 'rival-mm', 'rival-fight-arena', 'witch']) {
         expect(real.order.find(p => p.id === id)!.start).toBeGreaterThanOrEqual(overall);
     }
-    // Co-located Deserted Keep combat blocks share zero internal travel (att-40 -> str-top -> att-top and def-top -> ranged).
-    expect(real.order.find(p => p.id === 'str-top')!.travel ?? 0).toBe(0);
+    // Co-located Deserted Keep combat blocks share zero internal travel (str-top -> att-top and def-top -> ranged).
     expect(real.order.find(p => p.id === 'att-top')!.travel ?? 0).toBe(0);
     expect(real.order.find(p => p.id === 'ranged')!.travel ?? 0).toBe(0);
     // Spirit tree cuts travel after tree completes, and deep Wildy exits via lever rather than teleporting.

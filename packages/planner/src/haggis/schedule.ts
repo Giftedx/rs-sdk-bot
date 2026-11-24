@@ -292,7 +292,7 @@ function scheduleRoute(
         if (sacDefence && next.id === 'agility-52' && next.requires?.includes('def-top')) {
             next = { ...next, requires: next.requires.filter(r => r !== 'def-top') };
         }
-        if (sacFletching && next.id === 'fletch' && !next.inside) {
+        if (sacFletching && (next.id === 'fletch' || next.id === 'fletch-arrows') && !next.inside) {
             next = { ...next, inside: 'thieve' };
         }
         if (hasTouristTrapAgility && (next.id === 'agility-25' || next.id === 'grandtree')) {

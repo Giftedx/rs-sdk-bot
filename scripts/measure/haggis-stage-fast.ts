@@ -79,8 +79,9 @@ async function setPrayer(s: Session, prayerIdx: number, wantOn: boolean): Promis
     }
 }
 
-async function measureDruidBurst(s: Session): Promise<{ ticks: number; hpMin: number }> {
+async function measureDruidBurst(s: Session): Promise<{ ticks: number; gamesToKaqTicks: number; hpMin: number }> {
     const t0 = s.tick();
+    let gamesToKaqTicks = 0;
     const isStopped = () => s.tick() - t0 > 600;
     let hpMin = s.sdk.getState()?.player?.hp ?? 10;
     const offWatch = s.onTick(() => {
@@ -116,6 +117,7 @@ async function measureDruidBurst(s: Session): Promise<{ ticks: number; hpMin: nu
             const doorClosed = () => !!q.findLoc(l => (l.id === 2143 || l.id === 2144) && l.x === 2889)
                 ?.optionsWithIndex?.some((o: any) => /open/i.test(o.text));
             await q.walk('to kaqemeex', [{ x: 2924, z: 3485, tol: 2 }]);
+            gamesToKaqTicks = s.tick() - t0;
             await q.talk('kaqemeex 1', /^kaqemeex$/i, [/search of a quest/i, /will try and help/i], () => q.sawText(/speak to my fellow sanfew|go to the village south/i), { x: 2924, z: 3486 });
             await q.walk('to sanfew stairs', [{ x: 2898, z: 3427, tol: 1 }]);
             await q.climb('sanfew stairs up', () => q.locAt(2898, 3428), /climb-up/i, () => q.lvl() === 1);
@@ -153,7 +155,7 @@ async function measureDruidBurst(s: Session): Promise<{ ticks: number; hpMin: nu
         } finally {
             await q.dispose();
         }
-        return { ticks: s.tick() - t0, hpMin };
+        return { ticks: s.tick() - t0, gamesToKaqTicks, hpMin };
     } finally {
         offWatch();
     }
@@ -322,7 +324,7 @@ async function measureMageArenaAndCharge(s: Session): Promise<{ arenaTicks: numb
     return { arenaTicks, kolodionXp, chargeTicks, magicLevel: level(s, 'Magic'), magicXp: xp(s, 'Magic') };
 }
 
-async function measureVampire10hp(s: Session): Promise<{ ticks: number; attackLevel: number; attackXp: number; hpMin: number }> {
+async function measureVampire10hp(s: Session, spellName: 'magic:fire_wave' | 'magic:fire_bolt' = 'magic:fire_wave'): Promise<{ ticks: number; attackLevel: number; attackXp: number; hpMin: number }> {
     const t0 = s.tick();
     let hpMin = s.sdk.getState()?.player?.hp ?? 10;
     const offHp = s.onTick(() => {
@@ -353,11 +355,11 @@ async function measureVampire10hp(s: Session): Promise<{ ticks: number; attackLe
         await setPrayer(s, PROTECT.melee, true);
         const COFFIN = { id: 2614, x: 3077, z: 9775 };
         await q.step('coffin', () => { const c = q.findLoc(l => l.x === COFFIN.x && l.z === COFFIN.z); return c ? q.opLoc(c, 1) : q.opLoc(COFFIN, 1); }, () => !!q.npc(/^count draynor$/i), 10, 4);
-        const fireWave = componentId('magic:fire_wave');
+        const spellComp = componentId(spellName);
         for (let t = 0; t < 120 && state() !== 'complete'; t++) {
             await q.guard('count');
             const n = q.npc(/^count draynor$/i);
-            if (n && q.has(1549) && t % 5 === 0) await s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: fireWave, reason: 'SDK' });
+            if (n && q.has(1549) && t % 5 === 0) await s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: spellComp, reason: 'SDK' });
             await q.waitTicks(1);
         }
         await setPrayer(s, PROTECT.melee, false);
@@ -433,11 +435,26 @@ async function runIsolated(): Promise<void> {
             ],
         }, measureVampire10hp);
 
+        const vampBolt = await runIsolatedAccount('hfvb', {
+            position: VAMPIRE_START_SPOT,
+            skills: { Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10, Prayer: 43, Magic: 44 },
+            inventory: [
+                { id: 1917, count: 1 },
+                { id: 2347, count: 1 },
+                { id: 1550, count: 1 },
+                { id: 563, count: 2 },
+                { id: 554, count: 100 },
+                { id: 556, count: 100 },
+                { id: 562, count: 50 },
+            ],
+        }, s => measureVampire10hp(s, 'magic:fire_bolt'));
+
         console.log(
-            `STAGE_FAST druidBurst=${druid.ticks}(hpMin=${druid.hpMin})`
+            `STAGE_FAST druidBurst=${druid.ticks}(walk=${druid.gamesToKaqTicks},hpMin=${druid.hpMin})`
             + ` herb10=${herb.ticks}(bank=${herb.bankTicks},brew=${herb.brewTicks},cycles=${herb.cycles},lvl=${herb.level})`
             + ` mageArenaStaff=${mage.arenaTicks}(koloXp=${mage.kolodionXp}) charge5=${mage.chargeTicks}(lvl=${mage.magicLevel},xp=${mage.magicXp})`
-            + ` vampire10hp=${vamp.ticks}(att=${vamp.attackLevel},attXp=${vamp.attackXp},hpMin=${vamp.hpMin})`,
+            + ` vampireWave=${vamp.ticks}(att=${vamp.attackLevel},attXp=${vamp.attackXp},hpMin=${vamp.hpMin})`
+            + ` vampireBolt=${vampBolt.ticks}(att=${vampBolt.attackLevel},attXp=${vampBolt.attackXp},hpMin=${vampBolt.hpMin})`,
         );
     } finally {
         await stack.stop();

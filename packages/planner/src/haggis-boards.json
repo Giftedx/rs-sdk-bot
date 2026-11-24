@@ -774,10 +774,10 @@
     "crafting"
    ],
    "ticks": {
-    "floor": 194,
-    "realistic": 195,
+    "floor": 183,
+    "realistic": 189,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: 194, 194, 195 ticks level 1 -> 99 on practice (scripts/measure/floor-crafting.ts, Draynor booth, 27 gems per trip, CLOSE_MODAL for level-ups); supply delivery not included"
+    "source": "hosted-bench 45510600695 skiller:crafting:specialist seeds 7/8/9: 183, 187, 197 ticks from tutorial (incl. starter drops and 12 companion gem trades anywhere; floor=183, mean=189)"
    },
    "xp": {
     "crafting": "to99"
@@ -786,7 +786,7 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md: 194, 194, 195 ticks level 1 -> 99 on practice (scripts/measure/floor-crafting.ts, Draynor booth, 27 gems per trip, CLOSE_MODAL for level-ups); supply delivery not included",
+   "source": "hosted-bench 45510600695 skiller:crafting:specialist seeds 7/8/9: 183, 187, 197 ticks (companion gem trades anywhere)",
    "supplies": [
     {
      "item": "chisel",
@@ -797,7 +797,7 @@
     "skill": "crafting",
     "margin": 1.1
    },
-   "at": "bank",
+   "at": "anywhere",
    "procurementNote": "Recheck sources and acquire required quantity. Historical observation: no legal source at this scale: uncut dragonstone 305 (crystal chest only, GE 0 sellers) (research/supply-logistics.md, Summary)",
    "variant": {
     "group": "crafting-method",
@@ -849,10 +849,10 @@
     "herblore"
    ],
    "ticks": {
-    "floor": 246,
-    "realistic": 246,
+    "floor": 130,
+    "realistic": 130,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: 246, 246, 246 ticks Herblore 3 -> 99 on practice (scripts/measure/floor-herblore.ts, Draynor booth, 14 + 14 per trip); Herblore 1-3 needs quest XP; supply delivery not included"
+    "source": "hosted-bench 45510600695 skiller:herblore:specialist seeds 7/8/9: bank=80 brew=50 = 130, 130, 130 ticks (Herblore 28->99 at Edgeville bank, 10 pairs per trip 5/tick); Herblore 1-28 via Druidic Ritual"
    },
    "xp": {
     "herblore": "to99"
@@ -1477,10 +1477,13 @@
      "lever": "charge-spam",
      "set": {
       "ticks": {
-       "floor": 336,
-       "realistic": 581,
-       "evidence": "ESTIMATE",
-       "source": "floor = rival fastest burst run 336, expected 382 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S16, Kolodion at base 76 under Protect from Magic); realistic = their fixed figure 581 (docs/speedrun/quests/README.md section 3)"
+       "floor": 423,
+       "realistic": 423,
+       "evidence": "MEASURED",
+       "source": "hosted CI 45510045357 scripts/measure/haggis-stage-fast.ts mageArenaStaff=423 (Kolodion 5 forms + pool + statue + guardian, staff given without 99 Flames casts); grants 81,412 Magic XP"
+      },
+      "xp": {
+       "magic": 81412
       }
      }
     }
@@ -1498,9 +1501,9 @@
     "toLevel": 99,
     "xpPerTick": {
      "floor": 22500,
-     "realistic": 4500,
-     "evidence": "CODE-READ",
-     "source": "floor 5 casts per tick (USER_EVENT cap 5), realistic 1 per tick; 1,800 tenths x25 = 4,500 XP per cast"
+     "realistic": 22500,
+     "evidence": "MEASURED",
+     "source": "5 casts per tick (USER_EVENT cap 5; 1,800 tenths x25 = 4,500 XP/cast): hosted CI 45510045357 scripts/measure/haggis-stage-fast.ts charge5=30 ticks Magic 80->99 (1,001,081 XP)"
     }
    },
    "requires": [
@@ -2140,7 +2143,7 @@
    "id": "thieving-25",
    "label": "Pickpocket to Thieving 25 (Dig Site)",
    "serves": [
-    "thieving"
+    "questpoints"
    ],
    "train": {
     "skill": "thieving",
@@ -2624,6 +2627,7 @@
    "id": "imp-catcher",
    "label": "Imp Catcher (21,875 Magic XP, 1 QP)",
    "serves": [
+    "magic",
     "questpoints"
    ],
    "ticks": {
@@ -2640,10 +2644,6 @@
    "requires": [
     "trade-start"
    ],
-   "lever": {
-    "id": "spiders-combat",
-    "role": "add"
-   },
    "evidence": "MEASURED",
    "source": "quest_imp.rs2:4 stat_advance(magic, 8750) = 21,875 XP at 25x (CODE-READ); 1 QP; ticks MEASURED practice 38/38/38",
    "patches": [
@@ -2683,7 +2683,6 @@
    "id": "plague-city",
    "label": "Plague City (60,625 Mining XP, Ardougne Teleport unlock, 1 QP)",
    "serves": [
-    "mining",
     "questpoints"
    ],
    "ticks": {
@@ -3787,7 +3786,7 @@
     }
    },
    "requires": [
-    "magic-43-tt"
+    "trade-start"
    ],
    "minLevel": {
     "magic": 43
@@ -3820,7 +3819,6 @@
    },
    "requires": [
     "fletch-10",
-    "smith-20",
     "prayer-43"
    ],
    "minLevel": {
@@ -4105,8 +4103,7 @@
      "set": {
       "at": "ardougne-zoo",
       "requires": [
-       "doric",
-       "plague-city"
+       "doric"
       ],
       "train": {
        "skill": "mining",
@@ -4377,19 +4374,55 @@
    "at": "anywhere"
   },
   {
+   "id": "vampire",
+   "label": "Vampire Slayer (120,625 Attack XP -> lvl 68, 3 QP)",
+   "serves": [
+    "attack",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 285,
+    "realistic": 285,
+    "evidence": "MEASURED",
+    "source": "hosted CI 45510045357 scripts/measure/haggis-stage-fast.ts vampire10hp=285 (10 HP, Attack 1, Protect from Melee, Fire Wave): 120,625 Attack XP, 3 QP"
+   },
+   "xp": {
+    "attack": 120625
+   },
+   "qp": 3,
+   "lump": true,
+   "requires": [
+    "trade-start",
+    "prayer-43"
+   ],
+   "minLevel": {
+    "prayer": 43,
+    "magic": 75
+   },
+   "evidence": "MEASURED",
+   "source": "hosted CI 45510045357 scripts/measure/haggis-stage-fast.ts vampire10hp=285 (10 HP, Attack 1, Protect from Melee, Fire Wave): 120,625 Attack XP, 3 QP",
+   "supplies": [
+    { "item": "beer", "count": 1 },
+    { "item": "hammer", "count": 1 },
+    { "item": "garlic", "count": 1 },
+    { "item": "varrock teleport", "count": 2 }
+   ],
+   "at": "glory-draynor"
+  },
+  {
    "id": "quests-short",
-   "label": "Short quests (9) from quests-rest, MEASURED (Doric split out)",
+   "label": "Short quests (7) from quests-rest, MEASURED (Doric, Imp Catcher, Vampire Slayer split out)",
    "serves": [
     "questpoints"
    ],
    "ticks": {
-    "floor": 2250,
-    "realistic": 2373,
+    "floor": 1925,
+    "realistic": 2038,
     "evidence": "MEASURED",
-    "source": "quests-short without Doric's Quest (18/18/18, 1 QP on row doric): research/quest-points-board.md \"Short rest quests\" and lockstep bench seeds 7/8/9: Sheep Shearer 57/57/57 (burst: true); Imp Catcher 38/38/38; Witch's Potion 67/56/58 (burst: true); Rune Mysteries 449/432/441; The Restless Ghost 439/444/444 (burst: true); Vampire Slayer 287/295/297 (burst: true); Gertrude's Cat 282/356/329 (burst: true, quest-fluffs.ts); Monk's Friend 244/247/250 (burst: true); Fishing Contest 415/415/415"
+    "source": "quests-short without Doric's Quest (18/18, row doric), Imp Catcher (38/38, row imp-catcher), and Vampire Slayer (287/297, row vampire): Sheep Shearer 57/57/57 (burst: true); Witch's Potion 67/56/58 (burst: true); Rune Mysteries 449/432/441; The Restless Ghost 439/444/444 (burst: true); Gertrude's Cat 282/356/329 (burst: true, quest-fluffs.ts); Monk's Friend 244/247/250 (burst: true); Fishing Contest 415/415/415"
    },
    "lump": true,
-   "qp": 11,
+   "qp": 7,
    "requires": [
     "dragon",
     "grail",
@@ -4400,21 +4433,7 @@
     "waterfall"
    ],
    "evidence": "MEASURED",
-   "source": "research/quest-points-board.md \"Short rest quests\" less Doric's Quest (on row doric)",
-   "patches": [
-    {
-     "lever": "spiders-combat",
-     "set": {
-      "qp": 10,
-      "ticks": {
-       "floor": 2212,
-       "realistic": 2335,
-       "evidence": "MEASURED",
-       "source": "quests-short without Doric's Quest (18/18) and Imp Catcher (38/38, row imp-catcher)"
-      }
-     }
-    }
-   ],
+   "source": "research/quest-points-board.md \"Short rest quests\" less Doric's Quest (row doric), Imp Catcher (row imp-catcher), and Vampire Slayer (row vampire)",
    "at": "anywhere"
   },
   {
