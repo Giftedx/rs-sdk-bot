@@ -1,7 +1,7 @@
 // Commands the hosted control page sends to this PC. Each one is accepted only from the owner's identity, applied once,
 // and goes through stop files (.practice/stop-<account>, .practice/stop-swarm), swarm.json under .practice/live's
 // plan-write lock, or Brain operator commands (.practice/live/operator-commands/). The main account is never a target.
-import {existsSync,readFileSync,writeFileSync,unlinkSync,mkdirSync,readdirSync} from 'node:fs';
+import {existsSync,readFileSync,writeFileSync,unlinkSync,mkdirSync,readdirSync,statSync} from 'node:fs';
 import {join} from 'node:path';
 import {withPlanWrite,atomicJson} from '../core/src/plan-lock';
 import {findStopFile,listStopEntries,liveRoot,operatorCommandsDir,practiceRoot,stopFilePaths} from '../core/src/practice-paths';
@@ -13,6 +13,7 @@ export const NAME_RE=/^[A-Za-z0-9]{1,12}$/;
 
 export const ACTIONS=['account-pause','account-resume','swarm-pause','swarm-resume','side-pause','side-resume','override-account','clear-defect','job-disable','job-enable','request'] as const;
 export type Action=typeof ACTIONS[number];
+const ACTION_SET=new Set<string>(ACTIONS);
 export const ACCOUNT_ACTIONS=new Set<Action>(['account-pause','account-resume','override-account','job-disable','job-enable']);
 export type Command={id:string;action:Action;account?:string;at:number;note?:string;text?:string;activityId?:string|null;role?:string;durationMin?:number;defectId?:string;faultSignature?:string};
 // Who committed the command: the GitHub login the API reports for the commit, or 'local' for the loopback console.
@@ -28,7 +29,7 @@ export function validateCommand(raw:unknown):Command{
  const c=raw as any;
  if(!c||typeof c!=='object')throw Error('command must be an object');
  if(typeof c.id!=='string'||!ID_RE.test(c.id))throw Error('command id must be a UUID');
- if(!ACTIONS.includes(c.action))throw Error(`unknown action ${String(c.action).slice(0,40)}`);
+ if(!ACTION_SET.has(c.action))throw Error(`unknown action ${String(c.action).slice(0,40)}`);
  if(typeof c.at!=='number'||!Number.isFinite(c.at))throw Error('command at must be a time in ms');
  if(ACCOUNT_ACTIONS.has(c.action)){if(typeof c.account!=='string'||!NAME_RE.test(c.account))throw Error(`${c.action} needs an account name`);}
  else if(c.account!=null)throw Error(`${c.action} takes no account`);
@@ -78,10 +79,26 @@ export function appendOwnerRequest(root:string,text:string):{id:number}{
  return {id};
 }
 function canonicalJson(value:unknown):string{
- if(Array.isArray(value))return `[${value.map(canonicalJson).join(',')}]`;
+ if(Array.isArray(value)){
+  let out='[';
+  for(let i=0;i<value.length;i++){
+   if(i>0)out+=',';
+   out+=canonicalJson(value[i]);
+  }
+  return out+']';
+ }
  if(value&&typeof value==='object'){
-  const entries=Object.entries(value as Record<string,unknown>).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b));
-  return `{${entries.map(([k,v])=>`${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
+  const obj=value as Record<string,unknown>;
+  const keys=Object.keys(obj).sort();
+  let out='{',first=true;
+  for(let i=0;i<keys.length;i++){
+   const k=keys[i]!,v=obj[k];
+   if(v===undefined)continue;
+   if(!first)out+=',';
+   first=false;
+   out+=`${JSON.stringify(k)}:${canonicalJson(v)}`;
+  }
+  return out+'}';
  }
  return JSON.stringify(value);
 }
@@ -193,8 +210,29 @@ export async function applyCommand(cmd:Command,ctx:ApplyContext):Promise<Outcome
 }
 // The ledger the local console also writes: one receipt per command id, so a replay returns the first outcome.
 export function receiptPath(root:string,id:string){return join(root,'.practice','dashboard-controls',id+'.json');}
+const receiptReadCache=new Map<string,{mtimeMs:number;size:number;doc:any}>();
 export function readReceipts(root:string):any[]{
- const dir=join(root,'.practice','dashboard-controls');if(!existsSync(dir))return [];
- return readdirSync(dir).filter(n=>/^[a-f0-9-]+\.json$/.test(n)).flatMap(n=>{try{return [JSON.parse(readFileSync(join(dir,n),'utf8'))];}catch{return [];}});
+ const dir=join(root,'.practice','dashboard-controls');
+ let names:string[];
+ try{names=readdirSync(dir);}catch{return [];}
+ const nowWall=Date.now(),out:any[]=[];
+ for(let i=0;i<names.length;i++){
+  const n=names[i]!;
+  if(!/^[a-f0-9-]+\.json$/.test(n))continue;
+  const file=join(dir,n);
+  try{
+   const st=statSync(file);
+   const hit=receiptReadCache.get(file);
+   if(hit&&nowWall-st.mtimeMs>1000&&hit.mtimeMs===st.mtimeMs&&hit.size===st.size){
+    out.push(hit.doc);
+    continue;
+   }
+   const doc=JSON.parse(readFileSync(file,'utf8'));
+   if(receiptReadCache.size>=1000)receiptReadCache.clear();
+   receiptReadCache.set(file,{mtimeMs:st.mtimeMs,size:st.size,doc});
+   out.push(doc);
+  }catch{}
+ }
+ return out;
 }
 export function writeReceipt(root:string,receipt:{id:string}&Record<string,unknown>){mkdirSync(join(root,'.practice','dashboard-controls'),{recursive:true});atomicJson(receiptPath(root,receipt.id),receipt);}

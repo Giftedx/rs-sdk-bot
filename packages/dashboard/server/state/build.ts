@@ -25,6 +25,20 @@ import { died, fleetDiagnostics, nativeProofs, newestDeath, newestRes, resultPro
 import { events, flows, phaseSince, practiceNames, rate, readStatuses, spark } from './statuses';
 import { alerts, fleetSides, foodChain, roleView, vaultTrend } from './views';
 
+const PAGE_VERSION_FILES = [
+    PAGE_FILE,
+    ...['map-shell.css', 'map-shell.js', 'client-shell.css', 'client-shell.js', 'client-viewer.css', 'operations.css', 'operations.js', 'xp-tracker.js'].map(f => join(dashboardDir, f)),
+];
+const XP_FOR_LEVEL_CACHE = new Map<number, number>();
+function cachedXpForLevel(level: number): number {
+    let v = XP_FOR_LEVEL_CACHE.get(level);
+    if (v === undefined) {
+        v = xpForLevel(level);
+        XP_FOR_LEVEL_CACHE.set(level, v);
+    }
+    return v;
+}
+
 const GEAR_TARGETS_VIEW = GEAR_TARGETS.map(t => ({
     slot: t.slot,
     ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])],
@@ -195,11 +209,19 @@ function buildState() {
             if (it) visiblePrices.push(it);
         }
     };
+    const examineItems: { id: number; name?: string }[] = [];
+    const pushExamineList = (list: unknown) => {
+        if (!Array.isArray(list)) return;
+        for (let i = 0; i < list.length; i++) examineItems.push(list[i]);
+    };
     for (let bi = 0; bi < bots.length; bi++) {
         const b = bots[bi] as any;
         pushList(b.inventory);
         pushList(b.bank);
         pushList(b.equipment);
+        pushExamineList(b.inventory);
+        pushExamineList(b.equipment);
+        pushExamineList(b.bank);
         pushList(b.flow?.loot);
         pushList(b.flow?.used);
         const ground = b.ground;
@@ -233,7 +255,7 @@ function buildState() {
         // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
         // else the shop base price), for the page's item prices and bank value.
         // The game's examine text of each held item (obj configs), for the page's Examine option.
-        ...projectItemExamine(itemExamines, bots.flatMap(b => [...(b.inventory ?? []), ...(b.equipment ?? []), ...(b.bank ?? [])])),
+        ...projectItemExamine(itemExamines, examineItems),
         // Also the items of the Loot and Supplies lists (flow.ts), which stay after the fleet holds none of them.
         itemValues: visibleItemValues(visiblePrices, projectedPrices.byName),
         // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
@@ -279,14 +301,23 @@ function buildState() {
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
         viewerTimings: viewerTimings.slice(0, 20),
         race: currentRace, gates: currentGates, chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
-        pageVersion: (() => { try { return Math.max(...[PAGE_FILE,...['map-shell.css','map-shell.js','client-shell.css','client-shell.js','client-viewer.css','operations.css','operations.js','xp-tracker.js'].map(f=>join(dashboardDir,f))].map(f=>existsSync(f)?statSync(f).mtimeMs:0)); } catch { return 0; } })(),
+        pageVersion: (() => {
+            let maxMt = 0;
+            for (const f of PAGE_VERSION_FILES) {
+                try {
+                    const mt = statSync(f).mtimeMs;
+                    if (mt > maxMt) maxMt = mt;
+                } catch { /* missing */ }
+            }
+            return maxMt;
+        })(),
         ...(() => {
             // Other players: the roster, each board's rivals, who stands at our claimed spots.
             const fleet = new Set(bots.map(b => b.name.toLowerCase()));
             const best = new Map(SKILL_BOARDS.map(b => [b, bestOverallByBoard.get(b) ?? null] as const));
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
-            return { roster: rosterView(roster, now), rivals, contention, farms: farmsView(roster, fleet, contention, now), wilderness: wildernessView(roster, fleet, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
+            return { roster: rosterView(roster, now), rivals, contention, farms: farmsView(roster, fleet, contention, now), wilderness: wildernessView(roster, fleet, now), overtake: overtakeView(boardTops, bots as any, cachedXpForLevel) };
         })(),
         prs: getPrRows(),
         scoreboard:currentScoreboard, fleetSides:fleetSides(now, snapshots),

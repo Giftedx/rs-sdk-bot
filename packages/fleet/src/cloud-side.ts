@@ -86,8 +86,13 @@ export function worktreeSetupResult(
     const command = `$ bun tools/worktree-setup.ts -> ${result.status}`;
     if (result.status === 0) { retain(command); return { ok: true, detail: '' }; }
     let output = [result.stdout ?? '', result.stderr ?? '', result.error?.message ?? ''].join('\n').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
-    const secrets = Object.entries(env).filter(([name, value]) => /TOKEN|PASSWORD|PASSWD|SECRET|SEED|KEY|COOKIE|AUTH/i.test(name) && value)
-        .map(([, value]) => value!).sort((a, b) => b.length - a.length);
+    const secrets: string[] = [];
+    for (const name in env) {
+        if (!Object.hasOwn(env, name)) continue;
+        const value = env[name];
+        if (value && /TOKEN|PASSWORD|PASSWD|SECRET|SEED|KEY|COOKIE|AUTH/i.test(name)) secrets.push(value);
+    }
+    secrets.sort((a, b) => b.length - a.length);
     for (const secret of secrets) output = output.split(secret).join('[redacted]');
     output = output.replace(/\b(?:Bearer|Basic)\s+\S+/gi, '[redacted]')
         .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+:[^\s/@]+@/gi, '$1[redacted]@')
@@ -108,15 +113,24 @@ export function daemonCommand(name: Daemon, plan: string): string[] {
 }
 
 export function managedCommands(recover: boolean, plan: string, inspect = false): Record<string, string[]> {
-    return recover || inspect
-        ? { swarm: daemonCommand('swarm', plan) }
-        : Object.fromEntries(DAEMONS.map(n => [n, daemonCommand(n, plan)]));
+    if (recover || inspect) return { swarm: daemonCommand('swarm', plan) };
+    const out: Record<string, string[]> = {};
+    for (const n of DAEMONS) out[n] = daemonCommand(n, plan);
+    return out;
 }
 
 export const boundedStopSettled = (swarmAlive: boolean, extraAlive = false) => !swarmAlive && !extraAlive;
 
 export function mayRestart(restarts: readonly number[], now: number): boolean {
-    return restarts.filter(t => now - t < 60 * 60_000).length < MAX_RESTARTS_PER_HOUR;
+    const cutoff = now - 60 * 60_000;
+    let recent = 0;
+    for (let i = 0; i < restarts.length; i++) {
+        if (restarts[i]! > cutoff) {
+            recent++;
+            if (recent >= MAX_RESTARTS_PER_HOUR) return false;
+        }
+    }
+    return true;
 }
 
 export const ownerStop = (text: string | undefined) => text !== undefined && !swarmWroteStop(text);
@@ -154,10 +168,20 @@ export async function prepareNormalStop(base: string) {
     }, join(base, '.practice/live'));
 }
 
+function isAsciiDigits(s: string): boolean {
+    if (s.length === 0) return false;
+    for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        if (c < 48 || c > 57) return false;
+    }
+    return true;
+}
+
 function normalSwarmProcesses(base: string) {
     if (process.platform !== 'linux') return [];
     const directory = realpathSync(base), found: number[] = [];
-    for (const row of readdirSync('/proc').filter(n => /^\d+$/.test(n))) {
+    for (const row of readdirSync('/proc')) {
+        if (!isAsciiDigits(row)) continue;
         try {
             const pid = Number(row), line = commandLine(pid);
             if (!line?.includes('scripts/swarm.ts')) continue;
@@ -207,7 +231,11 @@ export function observeNormalOwners(
             if (match(launched)) { ownedSwarmPids.add(launched.pid); if (!swarm) swarm = { pid: launched.pid, nonce: launched.nonce }; }
         }
         const state = read(join(base, '.practice/swarm-state.json'));
-        const candidates = new Set([...(deps.processes ?? (() => normalSwarmProcesses(base)))(), records.swarm?.pid, state?.controllerPid].filter((p): p is number => Number.isSafeInteger(p)));
+        const candidates = new Set<number>();
+        const procs = (deps.processes ?? (() => normalSwarmProcesses(base)))();
+        for (let i = 0; i < procs.length; i++) if (Number.isSafeInteger(procs[i])) candidates.add(procs[i]!);
+        if (Number.isSafeInteger(records.swarm?.pid)) candidates.add(records.swarm!.pid);
+        if (Number.isSafeInteger(state?.controllerPid)) candidates.add(state.controllerPid);
         for (const pid of candidates) if (alive(pid) && !ownedSwarmPids.has(pid)) throw Error('normal migration waits for unowned swarm to settle');
         for (const row of read(join(base, '.practice/swarm-runs.json')) ?? []) {
             if (!Number.isSafeInteger(row.pid) || row.pid < 1) throw Error('normal supervisor identity unreadable');

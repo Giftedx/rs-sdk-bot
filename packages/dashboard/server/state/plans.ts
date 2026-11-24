@@ -54,12 +54,13 @@ type ReqChange = { id: string; kind: string; request: string; at: number; where:
 let changesCache: { mtime: number; value: ReqChange[] } = { mtime: -1, value: [] };
 function requestChanges(all: Req[], mtime: number): ReqChange[] {
     if (changesCache.mtime === mtime) return changesCache.value;
+    const byId = new Map<string, Req>(all.map(x => [x.id, x]));
     const out: ReqChange[] = [], seen = new Set<string>();
     const take = (diff: string, at: number, where: string) => {
         for (const l of diff.split(NL).reverse()) {
             const m = l.match(/^\+\|\s*(\d+)\s*\|/);
             if (!m || seen.has(m[1]!)) continue;
-            const r = all.find(x => x.id === m[1]);
+            const r = byId.get(m[1]!);
             if (!r) continue;
             seen.add(m[1]!);
             out.push({ id: r.id, kind: r.kind, request: r.request, at, where });
@@ -113,18 +114,27 @@ function planFromRun(text: string): Record<string, { status: string; note: strin
     }
     return out;
 }
+let haggisPlanCache: { run: unknown; json: unknown; value: { source: string; boards: { board: string; status: string; note: string }[] } } | null = null;
 function haggisPlan() {
-    const run = existsSync(FILES.haggisRun) ? cached(FILES.haggisRun, planFromRun, {}) : {};
-    const json = cached<{ boards: { board: string; status: string; note?: string }[] }>(FILES.haggisPlan, t => JSON.parse(t), { boards: [] });
-    const fromRun = Object.keys(run).length > 0;
-    return {
+    const run = existsSync(FILES.haggisRun) ? cached(FILES.haggisRun, planFromRun, {}) : EMPTY_RUN_PLAN;
+    const json = cached<{ boards: { board: string; status: string; note?: string }[] }>(FILES.haggisPlan, t => JSON.parse(t), EMPTY_JSON_PLAN);
+    if (haggisPlanCache && haggisPlanCache.run === run && haggisPlanCache.json === json) return haggisPlanCache.value;
+    const runMap = run as Record<string, { status: string; note: string }>;
+    const jsonByBoard = new Map<string, { board: string; status: string; note?: string }>();
+    for (const x of json.boards) jsonByBoard.set(x.board, x);
+    const fromRun = Object.keys(runMap).length > 0;
+    const value = {
         source: fromRun ? 'research/haggis-run.md' : 'packages/dashboard/haggis-plan.json',
         boards: ALL_BOARDS.map(b => {
-            const r = (run as Record<string, { status: string; note: string }>)[b], j = json.boards.find(x => x.board === b);
+            const r = runMap[b], j = jsonByBoard.get(b);
             return { board: b, status: r?.status ?? j?.status ?? 'not started', note: r?.note ?? j?.note ?? '' };
         }),
     };
+    haggisPlanCache = { run, json, value };
+    return value;
 }
+const EMPTY_RUN_PLAN: Record<string, { status: string; note: string }> = {};
+const EMPTY_JSON_PLAN: { boards: { board: string; status: string; note?: string }[] } = { boards: [] };
 
 // ---------- main account race: the planner's schedule against the live #1 deadlines ----------
 // One source of truth: exactly the options of `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`,
@@ -141,8 +151,9 @@ const gapHistory: GapRec[] = tailJsonl<GapRec>(GAP_FILE, 300).filter(g => g.m ==
 let raceCache: { key: string; value: any } | null = null;
 const mt = (f: string) => { try { return statSync(f).mtimeMs; } catch { return 0; } };
 function race() {
-    const key = [LIVE_HISCORES, BOARDS_FILE, TRAVEL_FILE].map(mt).join('|');
-    if (!mt(LIVE_HISCORES)) return null;
+    const liveMt = mt(LIVE_HISCORES);
+    if (!liveMt) return null;
+    const key = `${liveMt}|${mt(BOARDS_FILE)}|${mt(TRAVEL_FILE)}`;
     if (raceCache?.key === key) return raceCache.value;
     try {
         const boards = loadSnapshot(LIVE_HISCORES);
@@ -151,12 +162,26 @@ function race() {
         const fl = run('floor'), re = run('realistic');
         // Evidence of the inputs behind each board: the activities (levers applied) that serve it. Overall: all of them.
         const live = applyLevers(acts, {});
-        const ev = (id: string) => {
-            const l = live.filter(a => id === 'overall' || a.serves.includes(id as any)).map(a => (a.ticks ?? a.train?.xpPerTick)?.evidence ?? a.evidence);
-            return { measured: l.filter(e => e === 'MEASURED').length, codeRead: l.filter(e => e === 'CODE-READ').length, estimate: l.filter(e => e === 'ESTIMATE').length };
-        };
+        const liveById = new Map<string, (typeof live)[number]>();
+        const evOverall = { measured: 0, codeRead: 0, estimate: 0 };
+        const evByBoard = new Map<string, { measured: number; codeRead: number; estimate: number }>();
+        for (const a of live) {
+            liveById.set(a.id, a);
+            const evKind = (a.ticks ?? a.train?.xpPerTick)?.evidence ?? a.evidence;
+            const field = evKind === 'MEASURED' ? 'measured' : evKind === 'CODE-READ' ? 'codeRead' : evKind === 'ESTIMATE' ? 'estimate' : null;
+            if (!field) continue;
+            evOverall[field]++;
+            for (const s of a.serves) {
+                let bEv = evByBoard.get(s);
+                if (!bEv) { bEv = { measured: 0, codeRead: 0, estimate: 0 }; evByBoard.set(s, bEv); }
+                bEv[field]++;
+            }
+        }
+        const ev = (id: string) => id === 'overall' ? evOverall : (evByBoard.get(id) ?? { measured: 0, codeRead: 0, estimate: 0 });
+        const flById = new Map(fl.boards.map(x => [x.id, x]));
+        const boardById = new Map(boards.map(x => [x.id, x]));
         const rows = re.boards.map(r => {
-            const f = fl.boards.find(x => x.id === r.id)!, b = boards.find(x => x.id === r.id)!;
+            const f = flById.get(r.id)!, b = boardById.get(r.id)!;
             const label = r.label.replace(/\s*\(.*\)$/, ''), holder = (r.label.match(/\(#1 ([^,)]+)/) ?? [])[1] ?? null;
             const rule = b.rule.kind === 'clock' ? { kind: 'clock' } : b.rule.kind === 'qp' ? { kind: 'qp', points: b.rule.leaderPoints, ticks: b.rule.leaderTicks } : { kind: 'value', note: b.rule.note };
             return { id: r.id, label, holder, deadline: r.deadline, rule, evidence: ev(r.id), real: { finish: r.finish, slack: r.slack, status: r.status }, floor: { finish: f.finish, slack: f.slack, status: f.status } };
@@ -165,7 +190,7 @@ function race() {
         // The board that finishes last in the realistic plan (Overall aside) and the activity that finishes it.
         const clock = rows.filter(r => r.rule.kind === 'clock' && r.id !== 'overall' && r.real.finish != null);
         const lastB = clock.reduce((a, r) => (!a || r.real.finish! > a.real.finish! ? r : a), null as (typeof rows)[number] | null);
-        const lastAct = lastB ? [...re.order].reverse().find(p => live.find(a => a.id === p.id)?.serves.includes(lastB.id as any)) : null;
+        const lastAct = lastB ? [...re.order].reverse().find(p => liveById.get(p.id)?.serves.includes(lastB.id as any)) : null;
         const n = (l: typeof rows, k: 'real' | 'floor') => l.filter(r => r[k].status === 'WIN').length;
         const value = {
             supplies: re.overallFinish === null ? null : overallRequirementsFor(acts, {travel, mode:'realistic', tricks:new Set(TRICKS)}, re)

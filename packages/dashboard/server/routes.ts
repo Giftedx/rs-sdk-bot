@@ -133,8 +133,10 @@ export function createFetchHandler() {
             if (req.headers.get('if-none-match') === tag) return new Response(null, { status: 304, headers: { etag: tag, 'cache-control': 'no-cache' } });
             return new Response(body, { headers: { 'content-type': 'application/json', etag: tag, 'cache-control': 'no-cache' } });
         }
-        const mapBytes = getMapBytes();
-        if (url.pathname === '/api/map') return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
+        if (url.pathname === '/api/map') {
+            const mapBytes = getMapBytes();
+            return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
+        }
         if (url.pathname === '/events') {
             let me: ReadableStreamDefaultController;
             const latest = getLatest();

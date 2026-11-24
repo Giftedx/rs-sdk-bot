@@ -151,24 +151,30 @@ export function placeOf(p: { x: number; z: number } | undefined | null): string 
     return hit ? hit[0] : null;
 }
 
+const shortPhaseCache = new Map<string, string>();
 export function shortPhase(ph: string) {
+    const hit = shortPhaseCache.get(ph);
+    if (hit !== undefined) return hit;
+    let res = ph;
     // "gave 1 Shortbow, 1 Bronze sword, ..." -> "gave 19 items": never ship item lists to the roster.
     const m = ph.match(/^(\w+(?: \w+)?)\s+\d+ [A-Za-z][^,]*(?:,\s*\d+ [^,]+)+/);
     if (m) {
         const parts = m[0].slice(m[1]!.length).split(',').map(p => p.trim().match(/^(\d+) (.+?)(?: t=\d+)?$/));
         const n = parts.reduce((k, p) => k + Number(p?.[1] ?? 0), 0);
         const fish = parts.every(p => p && /^(trout|salmon|lobster|tuna|swordfish|shark)$/i.test(p[2]!));
-        return `${m[1]} ${n} ${fish ? 'fish' : 'items'}`;
-    }
-    // A key=value progress line ("t=2000 banked=28850 packCoins=5100 ... food=10"): the two numbers a viewer wants.
-    if (/^t=\d+ \w+=/.test(ph)) {
+        res = `${m[1]} ${n} ${fish ? 'fish' : 'items'}`;
+    } else if (/^t=\d+ \w+=/.test(ph)) {
+        // A key=value progress line ("t=2000 banked=28850 packCoins=5100 ... food=10"): the two numbers a viewer wants.
         const kv = Object.fromEntries([...ph.matchAll(/(\w+)=(-?\d+)/g)].map(x => [x[1], Number(x[2])]));
         const k = (v: number) => v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : v >= 1e4 ? (v / 1e3).toFixed(1) + 'K' : String(v);
         const out = [kv.banked != null ? `banked ${k(kv.banked)}` : '', kv.food != null ? `food ${kv.food}` : '', kv.picks != null ? `${k(kv.picks)} picks` : ''].filter(Boolean);
-        if (out.length) return out.join(' · ');
+        if (out.length) res = out.join(' · ');
+    } else {
+        // A courier leg milestone ("received129 708", "sarim 204"): drop the run tick.
+        const leg = ph.match(/^([a-z]+?)(\d*) \d+$/);
+        if (leg) res = leg[2] ? `${leg[1]} ${leg[2]}` : leg[1]!;
     }
-    // A courier leg milestone ("received129 708", "sarim 204"): drop the run tick.
-    const leg = ph.match(/^([a-z]+?)(\d*) \d+$/);
-    if (leg) return leg[2] ? `${leg[1]} ${leg[2]}` : leg[1]!;
-    return ph;
+    if (shortPhaseCache.size >= 2048) shortPhaseCache.clear();
+    shortPhaseCache.set(ph, res);
+    return res;
 }

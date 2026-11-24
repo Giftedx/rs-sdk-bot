@@ -1,5 +1,7 @@
-import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { remoteBots, fleetSidesView } from './fleet-view';
 import { publicView, pushDue, withoutClocks, withoutClocksValue } from './publish-relay';
 import { contentionView, hiscoreRows, overtakeView, rosterView, wildernessView } from './world-view';
@@ -9,9 +11,19 @@ import { goalProgress } from './goals';
 import { gearProgress } from './goal-details';
 import { buildItemPrices, itemPrice, priceItemKey } from './item-prices';
 import { isLocalServer } from '../core/src/localserver';
+import { createOperatorControl } from './operator-control';
+import { readReceipts } from './publish-commands';
+import { shortPhase } from './server/config';
 import { itemSources, npcDrops } from './gen-map-data';
+import { huntKinds, npcDefence, npcHunters } from './gen-npc-defence';
+import { npcBlocks, npcLoot } from './gen-npc-loot';
 import { wikiReqs } from './gen-quest-reqs';
 import { skillActions } from './gen-skill-actions';
+
+const tempDashDirs: string[] = [];
+afterEach(() => {
+    while (tempDashDirs.length) rmSync(tempDashDirs.pop()!, { recursive: true, force: true });
+});
 
 describe('dashboard perf invariants', () => {
     test('withoutClocksValue matches withoutClocks(JSON.stringify) and pushDue honors precomputed stable hash', () => {
@@ -411,5 +423,105 @@ describe('dashboard perf invariants', () => {
             () => '1m',
         ) as string;
         expect(html).toContain('<b>2 / 35</b>');
+    });
+
+    test('operator-control owned, receipt caches, and readReceipts refresh on same-second edits and backdated mtime updates', async () => {
+        const root = mkdtempSync(join(tmpdir(), 'dash-perf-inv-'));
+        tempDashDirs.push(root);
+        const botsDir = join(root, 'vendor', 'rs-sdk', 'bots');
+        const auditDir = join(root, '.practice', 'dashboard-controls');
+        const appliedDir = join(root, '.practice', 'live', 'operator-commands', 'applied');
+        mkdirSync(join(botsDir, 'WorkerOne'), { recursive: true });
+        mkdirSync(auditDir, { recursive: true });
+        mkdirSync(appliedDir, { recursive: true });
+
+        const handler = createOperatorControl({ root, nonce: 'test-nonce', alive: () => false });
+        const getMeta = async () => (await handler(new Request('http://127.0.0.1:3000/api/control'), '127.0.0.1')).json() as Promise<any>;
+
+        // Write 35 receipts so slicing to top 30 precedes applied-dir lookups, then reconcile newest receipt.
+        const baseAt = 1_700_000_000_000;
+        for (let i = 0; i < 35; i++) {
+            const id = `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+            writeFileSync(join(auditDir, `${id}.json`), JSON.stringify({
+                id,
+                action: 'pause',
+                at: baseAt + i * 1000,
+                status: 'submitted',
+            }));
+        }
+        const newestId = `00000000-0000-4000-8000-${String(34).padStart(12, '0')}`;
+        writeFileSync(join(appliedDir, `${newestId}.json`), JSON.stringify({ applied: true }));
+
+        let meta = await getMeta();
+        expect(meta.requests).toHaveLength(30);
+        expect(meta.requests[0].id).toBe(newestId);
+        expect(meta.requests[0].status).toBe('accepted');
+        expect(readReceipts(root)).toHaveLength(35);
+
+        // Same-second overwrite of a receipt and addition of a bot hold must be observed immediately.
+        const editFile = join(auditDir, `${newestId}.json`);
+        writeFileSync(editFile, JSON.stringify({ id: newestId, action: 'pause', at: baseAt + 99_000, status: 'failed', note: 'same-second' }));
+        mkdirSync(join(botsDir, 'WorkerTwo'), { recursive: true });
+        mkdirSync(join(root, '.practice', 'live'), { recursive: true });
+        writeFileSync(join(root, '.practice', 'live', 'stop-workertwo'), 'dashboard-stop: hold\n');
+        meta = await getMeta();
+        expect(meta.requests[0].status).toBe('failed');
+        expect(meta.requests[0].note).toBe('same-second');
+        expect(meta.accountHolds).toEqual([{ name: 'WorkerTwo', owner: 'dashboard' }]);
+        expect(readReceipts(root).find((r) => r.id === newestId)?.note).toBe('same-second');
+
+        // Backdated mtime (>1s old) exercises stat-cache hit, then newer update invalidates cleanly.
+        const old = new Date(Date.now() - 10_000);
+        utimesSync(editFile, old, old);
+        expect(readReceipts(root).find((r) => r.id === newestId)?.note).toBe('same-second');
+        writeFileSync(editFile, JSON.stringify({ id: newestId, action: 'pause', at: baseAt + 100_000, status: 'refused', note: 'after-backdate' }));
+        const newer = new Date(Date.now() - 5_000);
+        utimesSync(editFile, newer, newer);
+        meta = await getMeta();
+        expect(meta.requests[0].status).toBe('refused');
+        expect(meta.requests[0].note).toBe('after-backdate');
+        expect(readReceipts(root).find((r) => r.id === newestId)?.note).toBe('after-backdate');
+    });
+
+    test('shortPhase, gen-npc-loot, and gen-npc-defence preserve exact formatting and variant parity', () => {
+        expect(shortPhase('gave 1 Shortbow, 2 Willow logs')).toBe('gave 3 items');
+        expect(shortPhase('banked 2 Shark, 3 Lobster')).toBe('banked 5 fish');
+        expect(shortPhase('t=2000 banked=28850 packCoins=5100 food=10')).toBe('banked 28.9K · food 10');
+        expect(shortPhase('sarim 204')).toBe('sarim');
+
+        const npcText = [
+            '[goblin]',
+            'name=Goblin',
+            'category=goblins',
+            'op2=Attack',
+            'attack=1',
+            'strength=1',
+            'defence=1',
+            'hitpoints=5',
+            'param=stabdefence,-15',
+            'param=damagetype,^crush_style',
+            'huntrange=3',
+            'huntmode=aggressive',
+            'vislevel=2',
+        ].join('\n');
+        const blocks = npcBlocks([npcText]);
+        expect(blocks).toEqual([{ debug: 'goblin', name: 'Goblin', category: 'goblins', deathDrop: 'bones', attackable: true }]);
+
+        const loot = npcLoot(
+            [
+                { trigger: '_goblins', always: [{ item: 'death_drop' }], rolls: [], uses: 'shared_coin' },
+                { trigger: 'proc:shared_coin', always: [], rolls: [{ item: 'coins', chance: 0.5, count: 1, countMax: 5 }] },
+            ],
+            blocks,
+            (d) => (d === 'bones' ? 'Bones' : d === 'coins' ? 'Coins' : d),
+        );
+        expect(loot.Goblin).toEqual([['Coins', 1.5], ['Bones', 1]]);
+
+        const hunts = huntKinds(['[aggressive]\ntype=player\ncheck_nottoostrong=outside_wilderness\n']);
+        expect(hunts.get('aggressive')).toBe(1);
+        const def = npcDefence([npcText], new Map([['goblin', 2]]));
+        expect(def.Goblin?.[0]).toEqual([2, 1, 1, -15, 0, 0, 0, 0, 1, 1, 0, 0, 2, 5, 1000, 100]);
+        const hunters = npcHunters([npcText], hunts, [{ debugname: 'goblin', spawns: [{ x: 3250, z: 3230 }, { x: 3250, z: 3230, level: 0 }] }]);
+        expect(hunters).toEqual([['Goblin', 1, 2, [3250, 3230, 0]]]);
     });
 });

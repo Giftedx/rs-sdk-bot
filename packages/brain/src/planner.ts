@@ -172,7 +172,9 @@ function precomputeWearableWeapons(acct: AccountState, acctCache?: AccountLookup
 
     const ownedRighthand: Gear[] = [];
     const scanContainer = (container: Readonly<Record<number, number>>) => {
-        for (const [idStr, cnt] of Object.entries(container)) {
+        for (const idStr in container) {
+            if (!Object.hasOwn(container, idStr)) continue;
+            const cnt = container[idStr as unknown as number]!;
             if (cnt <= 0) continue;
             const g = gearMap.get(Number(idStr));
             if (!g || g.slot !== 'righthand') continue;
@@ -344,7 +346,9 @@ export function buildPlannerSharedIndex(params: {
     for (const donor of allIdleDonors) {
         const seen = new Set<number>();
         const addItems = (src: Readonly<Record<number, number>>) => {
-            for (const [idStr, cnt] of Object.entries(src)) {
+            for (const idStr in src) {
+                if (!Object.hasOwn(src, idStr)) continue;
+                const cnt = src[idStr as unknown as number]!;
                 if (cnt <= 0) continue;
                 const itemId = Number(idStr);
                 if (seen.has(itemId)) continue;
@@ -393,6 +397,42 @@ export interface AccountPlannerInput {
     readonly xpRate?: number;
     readonly ticksPerHour?: number;
     readonly _sharedIndex?: PlannerSharedIndex;
+    readonly _reuse?: AccountPlannerReuse;
+}
+
+export interface AccountPlannerReuse {
+    readonly acctNameLower: string;
+    readonly worldAt: number;
+    readonly acctCache: AccountLookupCache;
+    readonly profile: AccountProfileSummary;
+    readonly protection: ReturnType<typeof canProtectedAccountLaunch>;
+    readonly rateCache: Map<string, RateEstimate>;
+    readonly preflightCache: Map<string, PreflightResult>;
+    readonly getPrecomputedWeapons: () => PrecomputedWeaponInfo;
+}
+
+export function createAccountPlannerReuse(
+    acct: AccountState,
+    world: WorldSnapshot,
+    campaigns: readonly Campaign[] = [],
+): AccountPlannerReuse {
+    const acctCache = createAccountLookupCache(acct, world, DEFAULT_OPERATING_COIN_FLOAT);
+    const profile = summarizeAccountProfile(acct, acctCache);
+    const protection = canProtectedAccountLaunch(acct, campaigns, world);
+    let precomputedWeapons: PrecomputedWeaponInfo | undefined;
+    return {
+        acctNameLower: acct.name.toLowerCase(),
+        worldAt: world.at,
+        acctCache,
+        profile,
+        protection,
+        rateCache: new Map<string, RateEstimate>(),
+        preflightCache: new Map<string, PreflightResult>(),
+        getPrecomputedWeapons: () => {
+            if (!precomputedWeapons) precomputedWeapons = precomputeWearableWeapons(acct, acctCache);
+            return precomputedWeapons;
+        },
+    };
 }
 
 export interface AccountProfileSummary {
@@ -411,8 +451,8 @@ const TRIBRID_SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 
 
 export function summarizeAccountProfile(acct: AccountState, _acctCache?: AccountLookupCache): AccountProfileSummary {
     let completedQuests = 0;
-    for (const st of Object.values(acct.quests)) {
-        if (st === 'complete') completedQuests += 1;
+    for (const q in acct.quests) {
+        if (Object.hasOwn(acct.quests, q) && acct.quests[q] === 'complete') completedQuests += 1;
     }
     let artisanMax = 1;
     for (const sk of ARTISAN_SKILLS) {
@@ -431,10 +471,14 @@ export function summarizeAccountProfile(acct: AccountState, _acctCache?: Account
     const prayer = cachedAccountSkillLevel(acct, 'Prayer', _acctCache);
 
     let totalLevel = 0;
-    for (const [sk, st] of Object.entries(acct.skills)) {
-        totalLevel += Number.isFinite(st?.level) ? st.level : sk.toLowerCase() === 'hitpoints' ? 10 : 1;
+    let skillCount = 0;
+    for (const sk in acct.skills) {
+        if (!Object.hasOwn(acct.skills, sk)) continue;
+        skillCount += 1;
+        const st = acct.skills[sk];
+        totalLevel += Number.isFinite(st?.level) ? st!.level : sk.toLowerCase() === 'hitpoints' ? 10 : 1;
     }
-    if (Object.keys(acct.skills).length === 0) totalLevel = 28;
+    if (skillCount === 0) totalLevel = 28;
 
     return {
         completedQuests,
@@ -1047,7 +1091,12 @@ function planAccountCore(
         return { bestPlan: { account: acct.name, steps: [], scorePerHour: 0, idleReason: holdReason }, candidates: [] };
     }
 
-    const protection = canProtectedAccountLaunch(acct, campaigns, world);
+    const acctLower = acct.name.toLowerCase();
+    const reuse = input._reuse && input._reuse.acctNameLower === acctLower && input._reuse.worldAt === now
+        ? input._reuse
+        : undefined;
+
+    const protection = reuse ? reuse.protection : canProtectedAccountLaunch(acct, campaigns, world);
     if (!protection.allowed) {
         return {
             bestPlan: {
@@ -1093,8 +1142,8 @@ function planAccountCore(
     }
 
     const minTrust: TrustTier = input.minTrust ?? 'practice_passed';
-    const acctCache = createAccountLookupCache(acct, world, DEFAULT_OPERATING_COIN_FLOAT);
-    const profile = summarizeAccountProfile(acct, acctCache);
+    const acctCache = reuse ? reuse.acctCache : createAccountLookupCache(acct, world, DEFAULT_OPERATING_COIN_FLOAT);
+    const profile = reuse ? reuse.profile : summarizeAccountProfile(acct, acctCache);
     const isProtected = Boolean(acct.protectedClock || isProtectedAccountName(acct.name));
     const hasActExclusions = Boolean(input.excludedActivityIds?.size || input.excludedSpotIds?.size);
     const isActAllowed = (act: ActivityDefinition): boolean =>
@@ -1195,8 +1244,6 @@ function planAccountCore(
         _skipDiagnostics: true,
     };
 
-    const acctLower = acct.name.toLowerCase();
-
     const candidateListForDemand = (demand: GoalDemand): readonly ActivityDefinition[] => {
         if (demand.assignedAccount && demand.assignedAccount.toLowerCase() !== acctLower) {
             return [];
@@ -1221,7 +1268,9 @@ function planAccountCore(
                 if (t.account.toLowerCase() !== acctLower) return [];
                 const set = new Set<ActivityDefinition>();
                 let allMet = true;
-                for (const [sk, targetLvl] of Object.entries(t.targets)) {
+                for (const sk in t.targets) {
+                    if (!Object.hasOwn(t.targets, sk)) continue;
+                    const targetLvl = t.targets[sk]!;
                     if (cachedAccountSkillLevel(acct, sk, acctCache) < targetLvl) {
                         allMet = false;
                         for (const act of bySkill.get(sk.toLowerCase()) ?? []) set.add(act);
@@ -1236,7 +1285,7 @@ function planAccountCore(
     };
 
     const acctProtectedAllowed = protection.allowed;
-    const rateCache = new Map<string, RateEstimate>();
+    const rateCache = reuse ? reuse.rateCache : new Map<string, RateEstimate>();
     const getRate = (activity: ActivityDefinition): RateEstimate => {
         let r = rateCache.get(activity.id);
         if (!r) {
@@ -1250,9 +1299,9 @@ function planAccountCore(
         return r;
     };
 
-    const preflightCache = new Map<string, PreflightResult>();
+    const preflightCache = reuse ? reuse.preflightCache : new Map<string, PreflightResult>();
     const getPreflight = (activity: ActivityDefinition, batchUnits: number): PreflightResult => {
-        const key = `${activity.id}:${batchUnits}`;
+        const key = activity.inputs && activity.inputs.length > 0 ? `${activity.id}:${batchUnits}` : activity.id;
         let p = preflightCache.get(key);
         if (!p) {
             p = activityPreflightFromConfig(
@@ -1281,11 +1330,13 @@ function planAccountCore(
         return res;
     };
 
-    let precomputedWeapons: PrecomputedWeaponInfo | undefined;
-    const getPrecomputedWeapons = (): PrecomputedWeaponInfo => {
-        if (!precomputedWeapons) precomputedWeapons = precomputeWearableWeapons(acct, acctCache);
-        return precomputedWeapons;
-    };
+    let localWeapons: PrecomputedWeaponInfo | undefined;
+    const getPrecomputedWeapons = reuse
+        ? reuse.getPrecomputedWeapons
+        : (): PrecomputedWeaponInfo => {
+            if (!localWeapons) localWeapons = precomputeWearableWeapons(acct, acctCache);
+            return localWeapons;
+        };
     const upgradeCache = new Map<string, GearUpgradeCandidateResult | null>();
     const upgradeCandidatesCache = new Map<string, readonly ResolvedGearUpgradeCandidate[]>();
     const skillUnlockCache = new Map<string, { activity: ActivityDefinition; rate: RateEstimate } | null>();
@@ -1313,6 +1364,11 @@ function planAccountCore(
                       && (!needsMatchCheck || activityMatchesDemand(acct, demand, a, acctCache)),
               )
             : rawCandidates;
+        const canMarketBuy = demand.target.kind === 'item'
+            && defaultSpendableCoins > 0
+            && Boolean(shopBuyActivity || directGeBuyActivity);
+        if (matching.length === 0 && !canMarketBuy) continue;
+
         let bestThroughput = 0;
         for (const act of matching) {
             const tp = activityDemandThroughput(act, demand, getRate(act));
@@ -1426,6 +1482,7 @@ function planAccountCore(
                 ? Math.max(0.25, Math.min(1.0, mc.throughput / bestThroughput))
                 : 1.0;
             const scorePerHour = Math.max(0, baseVph * mc.advMult * throughputRatio);
+            if (demandBest && scorePerHour <= demandBest.scorePerHour) continue;
             const targetItemId = (demand.target as { kind: 'item'; itemId: number }).itemId;
             const workStep: TargetWorkPlannedStep = {
                 stepKind: 'work',
@@ -1476,10 +1533,12 @@ function planAccountCore(
             if (!preflight.ok) {
                 // Resolve quest unlocks before skill requirements so quest XP rewards (e.g. Druidic Ritual -> Herblore 3)
                 // can satisfy downstream skill gates in the same 2-step chain.
-                const orderedBlockers = [...preflight.blockers].sort((a, b) => {
-                    const rank = (k: string) => (k === 'quest_incomplete' ? 0 : k === 'skill_level' ? 1 : 2);
-                    return rank(a.kind) - rank(b.kind);
-                });
+                const orderedBlockers = preflight.blockers.length <= 1
+                    ? preflight.blockers
+                    : [...preflight.blockers].sort((a, b) => {
+                        const rank = (k: string) => (k === 'quest_incomplete' ? 0 : k === 'skill_level' ? 1 : 2);
+                        return rank(a.kind) - rank(b.kind);
+                    });
                 const grantedQuestXp: Record<string, number> = {};
                 for (const blocker of orderedBlockers) {
                     if (
@@ -1734,9 +1793,14 @@ function planAccountCore(
                         prepSteps.push(upgrade.step);
                         committedCoins += stepCommittedCoinCost(upgrade.step);
                         const upgScale = rate.xpPerTick > 0 ? upgrade.improvedXpPerTick / rate.xpPerTick : 1;
-                        const scaledSkillXp = rate.skillXpPerTick
-                            ? Object.fromEntries(Object.entries(rate.skillXpPerTick).map(([k, v]) => [k, v * upgScale]))
-                            : undefined;
+                        let scaledSkillXp: Record<string, number> | undefined;
+                        if (rate.skillXpPerTick) {
+                            scaledSkillXp = {};
+                            for (const k in rate.skillXpPerTick) {
+                                if (!Object.hasOwn(rate.skillXpPerTick, k)) continue;
+                                scaledSkillXp[k] = rate.skillXpPerTick[k]! * upgScale;
+                            }
+                        }
                         effectiveRate = {
                             ...rate,
                             xpPerTick: upgrade.improvedXpPerTick,
@@ -1767,10 +1831,11 @@ function planAccountCore(
                     + baseExecTicks * speedScale,
                 ),
             );
-            const prepTicks = prepSteps.reduce(
-                (sum, st) => sum + (st.stepKind === 'gear_upgrade' ? st.acquisitionTicks : st.estimatedTicks),
-                0,
-            );
+            let prepTicks = 0;
+            for (let pi = 0; pi < prepSteps.length; pi++) {
+                const st = prepSteps[pi]!;
+                prepTicks += st.stepKind === 'gear_upgrade' ? st.acquisitionTicks : st.estimatedTicks;
+            }
             const totalTicks = workTicks + prepTicks;
             const baseVph = demand.valuePerHour ?? (demand.valueScore * demand.priorityWeight);
             const speedEfficiency = baseWorkTicks / Math.max(1, totalTicks);
@@ -1779,8 +1844,13 @@ function planAccountCore(
                 ? Math.max(0.25, Math.min(1.0, actThroughput / bestThroughput))
                 : 1.0;
             const scorePerHour = Math.max(0, baseVph * advMult * speedEfficiency * throughputRatio);
+            if (demandBest && scorePerHour <= demandBest.scorePerHour) {
+                continue;
+            }
 
-            const trainTarget = selectWorkTrainingTarget(acct, demand, activity, effectiveRate, acctCache);
+            const trainTarget = upgrade
+                ? selectWorkTrainingTarget(acct, demand, activity, effectiveRate, acctCache)
+                : preTrainTarget;
             const workStep: TargetWorkPlannedStep = {
                 stepKind: 'work',
                 activityId: activity.id,
@@ -1804,9 +1874,7 @@ function planAccountCore(
                 steps,
                 scorePerHour,
             };
-            if (!demandBest || scorePerHour > demandBest.scorePerHour) {
-                demandBest = candidatePlan;
-            }
+            demandBest = candidatePlan;
             if (!bestPlan || scorePerHour > bestPlan.scorePerHour) {
                 bestPlan = candidatePlan;
             }

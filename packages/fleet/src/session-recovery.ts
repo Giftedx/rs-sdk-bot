@@ -54,6 +54,7 @@ export {
 export const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 export const MAX_RECOVERY_ATTEMPTS = 2;
 export const NEVER_RECOVERED: readonly string[] = [...RESERVED_ACCOUNTS, 'afknight'];
+const NEVER_RECOVERED_SET = new Set<string>(NEVER_RECOVERED);
 export const RECOVERABLE_END = /^(?:blocked|gave-up|exit|no-progress|stopped)(?:\b| )/;
 export const END_SETTLE_MS = BOOTSTRAP_STATUS_AGE_MS + 5 * 60_000;
 
@@ -181,7 +182,12 @@ export function recordStandaloneAttempt(root: string, entry: StandaloneRecoveryR
 
 export function spentStandaloneAttempts(history: readonly StandaloneRecoveryRecord[], account: string, endedAt: number): number {
     const key = account.toLowerCase();
-    return history.filter(r => r.account.toLowerCase() === key && r.endedAt === endedAt && !r.ok && !r.infraFault).length;
+    let count = 0;
+    for (let i = 0; i < history.length; i++) {
+        const r = history[i]!;
+        if (!r.ok && !r.infraFault && r.endedAt === endedAt && r.account.toLowerCase() === key) count++;
+    }
+    return count;
 }
 
 export function findAccountStatus(root: string, account: string, server?: string): any {
@@ -284,6 +290,14 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
     const skipped: { account: string; reason: string }[] = [];
 
     const accountFilter = opts.account?.trim().toLowerCase();
+    const serverLower = server.toLowerCase();
+    const spentAttemptCounts = new Map<string, number>();
+    for (let i = 0; i < history.length; i++) {
+        const r = history[i]!;
+        if (r.ok || r.infraFault) continue;
+        const k = `${r.account.toLowerCase()}|${r.endedAt}`;
+        spentAttemptCounts.set(k, (spentAttemptCounts.get(k) ?? 0) + 1);
+    }
     let heldRecoverySet: Set<string> | null = null;
     const isRecoveryLeaseHeld = (account: string): boolean => {
         if (!existsSync(leaseFile(root, account))) return false;
@@ -293,8 +307,8 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
 
     for (const [lower, owner] of owners) {
         if (accountFilter && lower !== accountFilter) continue;
-        if (owner.side !== side || owner.server.toLowerCase() !== server.toLowerCase()) continue;
-        if (NEVER_RECOVERED.includes(lower)) continue;
+        if (owner.side !== side || owner.server.toLowerCase() !== serverLower) continue;
+        if (NEVER_RECOVERED_SET.has(lower)) continue;
 
         const proof = readLogoutProof(lower, server, { root: lRoot });
         if (proof.state !== 'held') continue;
@@ -321,7 +335,7 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
 
         const stopText = readStopFile(lower, root);
         const end = ended.get(lower);
-        const attempts = end ? spentStandaloneAttempts(history, lower, end.at) : 0;
+        const attempts = end ? (spentAttemptCounts.get(`${lower}|${end.at}`) ?? 0) : 0;
         const e = assessRecoveryEligibility({
             proof,
             claim,
@@ -494,11 +508,11 @@ export function findCurrentNativeRecoveryQualification(
     let best: { at: number; ref: RecoveryQualificationRef } | null = null;
     let entries: string[] = [];
     try { entries = readdirSync(deliveriesRoot); } catch { return null; }
+    let realDeliveriesAllowed: string | null = null;
 
     for (const dirName of entries) {
         const deliveryDir = join(deliveriesRoot, dirName);
         const reportPath = join(deliveryDir, 'report.json');
-        if (!existsSync(reportPath)) continue;
         let reportBytes: Buffer;
         let report: any;
         try {
@@ -540,8 +554,10 @@ export function findCurrentNativeRecoveryQualification(
         if (typeof proofRef?.path !== 'string' || !/^[a-f0-9]{64}$/.test(String(proofRef.sha256 ?? ''))) continue;
 
         let realProofPath: string;
-        try { realProofPath = realpathSync(resolve(resolvedRoot, proofRef.path)); } catch { continue; }
-        const realDeliveriesAllowed = realpathSync(deliveriesRoot) + sep;
+        try {
+            realProofPath = realpathSync(resolve(resolvedRoot, proofRef.path));
+            if (realDeliveriesAllowed === null) realDeliveriesAllowed = realpathSync(deliveriesRoot) + sep;
+        } catch { continue; }
         if (!realProofPath.startsWith(realDeliveriesAllowed)) continue;
 
         let proofBytes: Buffer;

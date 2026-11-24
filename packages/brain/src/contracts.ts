@@ -606,53 +606,105 @@ export type OperatorCommand =
 // ============================================================================
 
 const ACCOUNT_NAME = /^[A-Za-z0-9_ -]{1,12}$/;
-const ITEM_KEY = /^(0|[1-9]\d*)$/;
 const COINS_ITEM_ID = 995;
 const PROTECTED_SET = new Set(RESERVED_ACCOUNTS.map((n) => n.toLowerCase()));
 
+const ACCOUNT_LIFECYCLE_SET: ReadonlySet<string> = new Set(ACCOUNT_LIFECYCLES);
+const ACCOUNT_ROLE_SET: ReadonlySet<string> = new Set(ACCOUNT_ROLES);
+const SYSTEM_HOLD_KIND_SET: ReadonlySet<string> = new Set(SYSTEM_HOLD_KINDS);
+const GOAL_KIND_SET: ReadonlySet<string> = new Set(GOAL_KINDS);
+const CAMPAIGN_STATE_SET: ReadonlySet<string> = new Set(CAMPAIGN_STATES);
+const MISSION_STATE_SET: ReadonlySet<string> = new Set(MISSION_STATES);
+const ACQUIRE_SOURCE_SET: ReadonlySet<string> = new Set(ACQUIRE_SOURCE_ORDER);
+const TRANSFER_ORDER_STATE_SET: ReadonlySet<string> = new Set(TRANSFER_ORDER_STATES);
+const OPERATOR_COMMAND_KIND_SET: ReadonlySet<string> = new Set(OPERATOR_COMMAND_KINDS);
+
 const isPlainRecord = (v: unknown): v is Record<string, unknown> =>
     typeof v === 'object' && v !== null && !Array.isArray(v);
-const isNonEmptyStr = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
-const isAccountName = (v: unknown): v is string => typeof v === 'string' && ACCOUNT_NAME.test(v);
+const isNonEmptyStr = (v: unknown): v is string => {
+    if (typeof v !== 'string') return false;
+    const len = v.length;
+    if (len === 0) return false;
+    if (v.charCodeAt(0) > 32 && v.charCodeAt(len - 1) > 32) return true;
+    return v.trim().length > 0;
+};
+const isItemKey = (k: string): boolean => {
+    const len = k.length;
+    if (len === 0) return false;
+    const c0 = k.charCodeAt(0);
+    if (len === 1) return c0 >= 48 && c0 <= 57;
+    if (c0 < 49 || c0 > 57) return false;
+    for (let i = 1; i < len; i++) {
+        const c = k.charCodeAt(i);
+        if (c < 48 || c > 57) return false;
+    }
+    return true;
+};
+const isAccountName = (v: unknown): v is string => {
+    if (typeof v !== 'string') return false;
+    const len = v.length;
+    if (len === 0 || len > 12) return false;
+    for (let i = 0; i < len; i++) {
+        const c = v.charCodeAt(i);
+        if (
+            (c >= 65 && c <= 90)
+            || (c >= 97 && c <= 122)
+            || (c >= 48 && c <= 57)
+            || c === 95
+            || c === 32
+            || c === 45
+        ) {
+            continue;
+        }
+        return false;
+    }
+    return true;
+};
 const isSide = (v: unknown): v is string => typeof v === 'string' && SIDE_NAME.test(v);
 const isNonNegInt = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 const isPosInt = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 const isFiniteNonNeg = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 const isFinitePos = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
 
-function checkItemCountMap(raw: unknown, label: string, errors: string[], allowZero = false): void {
+function checkItemCountMap(raw: unknown, label: string, errors: string[], allowZero = false, prefix = ''): void {
     if (!isPlainRecord(raw)) {
-        errors.push(`${label} must be an object`);
+        errors.push(`${prefix}${label} must be an object`);
         return;
     }
-    for (const [k, count] of Object.entries(raw)) {
-        if (!ITEM_KEY.test(k)) errors.push(`${label} has invalid itemId key "${k}"`);
+    for (const k in raw) {
+        if (!Object.hasOwn(raw, k)) continue;
+        const count = raw[k];
+        if (!isItemKey(k)) errors.push(`${prefix}${label} has invalid itemId key "${k}"`);
         if (allowZero ? !isNonNegInt(count) : !isPosInt(count)) {
-            errors.push(`${label}[${k}] count must be a ${allowZero ? 'non-negative' : 'positive'} integer`);
+            errors.push(`${prefix}${label}[${k}] count must be a ${allowZero ? 'non-negative' : 'positive'} integer`);
         }
     }
 }
 
-function checkCooldownMap(raw: unknown, label: string, errors: string[]): void {
+function checkCooldownMap(raw: unknown, label: string, errors: string[], prefix = ''): void {
     if (!isPlainRecord(raw)) {
-        errors.push(`${label} must be an object`);
+        errors.push(`${prefix}${label} must be an object`);
         return;
     }
-    for (const [k, expiresAt] of Object.entries(raw)) {
-        if (!isNonEmptyStr(k)) errors.push(`${label} key must be non-empty`);
-        if (!isFinitePos(expiresAt)) errors.push(`${label}["${k}"] must have a finite positive expiry timestamp`);
+    for (const k in raw) {
+        if (!Object.hasOwn(raw, k)) continue;
+        const expiresAt = raw[k];
+        if (!isNonEmptyStr(k)) errors.push(`${prefix}${label} key must be non-empty`);
+        if (!isFinitePos(expiresAt)) errors.push(`${prefix}${label}["${k}"] must have a finite positive expiry timestamp`);
     }
 }
 
-function checkPositiveIntMap(raw: unknown, label: string, errors: string[], maxVal?: number): void {
+function checkPositiveIntMap(raw: unknown, label: string, errors: string[], maxVal?: number, prefix = ''): void {
     if (!isPlainRecord(raw)) {
-        errors.push(`${label} must be an object`);
+        errors.push(`${prefix}${label} must be an object`);
         return;
     }
-    for (const [k, val] of Object.entries(raw)) {
-        if (!isNonEmptyStr(k)) errors.push(`${label} key must be non-empty`);
+    for (const k in raw) {
+        if (!Object.hasOwn(raw, k)) continue;
+        const val = raw[k];
+        if (!isNonEmptyStr(k)) errors.push(`${prefix}${label} key must be non-empty`);
         if (!isPosInt(val) || (maxVal !== undefined && (val as number) > maxVal)) {
-            errors.push(`${label}["${k}"] is out of range`);
+            errors.push(`${prefix}${label}["${k}"] is out of range`);
         }
     }
 }
@@ -662,40 +714,44 @@ function checkPositiveIntMap(raw: unknown, label: string, errors: string[], maxV
 // ============================================================================
 
 export const isAccountLifecycle = (v: unknown): v is AccountLifecycle =>
-    typeof v === 'string' && (ACCOUNT_LIFECYCLES as readonly string[]).includes(v);
+    typeof v === 'string' && ACCOUNT_LIFECYCLE_SET.has(v);
 
 export const isAccountRole = (v: unknown): v is AccountRole =>
-    typeof v === 'string' && (ACCOUNT_ROLES as readonly string[]).includes(v);
+    typeof v === 'string' && ACCOUNT_ROLE_SET.has(v);
 
 export const isSystemHoldKind = (v: unknown): v is SystemHoldKind =>
-    typeof v === 'string' && (SYSTEM_HOLD_KINDS as readonly string[]).includes(v);
+    typeof v === 'string' && SYSTEM_HOLD_KIND_SET.has(v);
 
 export const isGoalKind = (v: unknown): v is GoalKind =>
-    typeof v === 'string' && (GOAL_KINDS as readonly string[]).includes(v);
+    typeof v === 'string' && GOAL_KIND_SET.has(v);
 
 export const isCampaignState = (v: unknown): v is CampaignState =>
-    typeof v === 'string' && (CAMPAIGN_STATES as readonly string[]).includes(v);
+    typeof v === 'string' && CAMPAIGN_STATE_SET.has(v);
 
 export const isMissionState = (v: unknown): v is MissionState =>
-    typeof v === 'string' && (MISSION_STATES as readonly string[]).includes(v);
+    typeof v === 'string' && MISSION_STATE_SET.has(v);
 
 export const isAcquireSourceKind = (v: unknown): v is AcquireSourceKind =>
-    typeof v === 'string' && (ACQUIRE_SOURCE_ORDER as readonly string[]).includes(v);
+    typeof v === 'string' && ACQUIRE_SOURCE_SET.has(v);
 
 export const isHubBankId = (v: unknown): v is HubBankId =>
     typeof v === 'string' && Object.hasOwn(HUB_BANKER_LOCATIONS, v);
 
 export const isTransferOrderState = (v: unknown): v is TransferOrderState =>
-    typeof v === 'string' && (TRANSFER_ORDER_STATES as readonly string[]).includes(v);
+    typeof v === 'string' && TRANSFER_ORDER_STATE_SET.has(v);
 
 export const isOperatorCommandKind = (v: unknown): v is OperatorCommandKind =>
-    typeof v === 'string' && (OPERATOR_COMMAND_KINDS as readonly string[]).includes(v);
+    typeof v === 'string' && OPERATOR_COMMAND_KIND_SET.has(v);
 
 // ============================================================================
 // Section 3.1 Helpers: Protected Clocks, Offline Bank Trust, TTL Holds, Recovery
 // ============================================================================
 
 export function isProtectedAccountName(name: string): boolean {
+    const len = name.length;
+    if (len > 0 && name.charCodeAt(0) > 32 && name.charCodeAt(len - 1) > 32) {
+        return PROTECTED_SET.has(name.toLowerCase());
+    }
     return PROTECTED_SET.has(name.trim().toLowerCase());
 }
 
@@ -705,17 +761,24 @@ export function lifecycleAutoExpires(lifecycle: AccountLifecycle): boolean {
 
 export const canAutoClearLifecycle = lifecycleAutoExpires;
 
-export function validateSystemHold(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['SystemHold must be an object'];
-    const errors: string[] = [];
-    if (!isSystemHoldKind(v.kind)) errors.push(`invalid SystemHold kind: ${String(v.kind)}`);
-    if (!isNonEmptyStr(v.key)) errors.push('SystemHold.key must be non-empty');
-    if (!isNonEmptyStr(v.reason)) errors.push('SystemHold.reason must be non-empty');
-    if (!isFinitePos(v.createdAt)) errors.push('SystemHold.createdAt must be a finite positive timestamp');
-    if (!isFinitePos(v.expiresAt)) errors.push('SystemHold.expiresAt must be a finite positive timestamp');
-    if (isFinitePos(v.createdAt) && isFinitePos(v.expiresAt) && v.expiresAt <= v.createdAt) {
-        errors.push('SystemHold.expiresAt must be strictly after createdAt');
+function pushSystemHoldErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}SystemHold must be an object`);
+        return;
     }
+    if (!isSystemHoldKind(v.kind)) errors.push(`${prefix}invalid SystemHold kind: ${String(v.kind)}`);
+    if (!isNonEmptyStr(v.key)) errors.push(`${prefix}SystemHold.key must be non-empty`);
+    if (!isNonEmptyStr(v.reason)) errors.push(`${prefix}SystemHold.reason must be non-empty`);
+    if (!isFinitePos(v.createdAt)) errors.push(`${prefix}SystemHold.createdAt must be a finite positive timestamp`);
+    if (!isFinitePos(v.expiresAt)) errors.push(`${prefix}SystemHold.expiresAt must be a finite positive timestamp`);
+    if (isFinitePos(v.createdAt) && isFinitePos(v.expiresAt) && v.expiresAt <= v.createdAt) {
+        errors.push(`${prefix}SystemHold.expiresAt must be strictly after createdAt`);
+    }
+}
+
+export function validateSystemHold(v: unknown): string[] {
+    const errors: string[] = [];
+    pushSystemHoldErrors(v, errors);
     return errors;
 }
 
@@ -786,7 +849,9 @@ export function pruneExpiredCooldowns(
 ): Record<string, number> {
     const next: Record<string, number> = {};
     if (!cooldowns) return next;
-    for (const [k, expiresAt] of Object.entries(cooldowns)) {
+    for (const k in cooldowns) {
+        if (!Object.hasOwn(cooldowns, k)) continue;
+        const expiresAt = cooldowns[k];
         if (typeof expiresAt === 'number' && Number.isFinite(expiresAt) && now < expiresAt) {
             next[k] = expiresAt;
         }
@@ -833,11 +898,16 @@ export function accountFrozenValue(
 ): number {
     const sumContainer = (items: Readonly<Record<number, number>>): number => {
         let total = 0;
-        for (const [idStr, count] of Object.entries(items)) {
-            const id = Number(idStr);
+        for (const idStr in items) {
+            if (!Object.hasOwn(items, idStr)) continue;
+            const count = items[idStr as unknown as number]!;
             if (!Number.isFinite(count) || count <= 0) continue;
+            const id = Number(idStr);
             if (id === COINS_ITEM_ID) total += count;
-            else if (itemPrices[id] && Number.isFinite(itemPrices[id])) total += count * itemPrices[id]!;
+            else {
+                const price = itemPrices[id];
+                if (price && Number.isFinite(price)) total += count * price;
+            }
         }
         return total;
     };
@@ -867,89 +937,102 @@ export function compareRecoveryPriority(
 // AccountState & WorldSnapshot Validators
 // ============================================================================
 
-export function validateAccountState(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['AccountState must be an object'];
-    const errors: string[] = [];
-    if (!isAccountName(v.name)) errors.push(`invalid account name: ${String(v.name)}`);
-    if (!isSide(v.side)) errors.push(`invalid side: ${String(v.side)}`);
-    if (!isAccountRole(v.role)) errors.push(`invalid role: ${String(v.role)}`);
-    if (typeof v.protectedClock !== 'boolean') errors.push('protectedClock must be a boolean');
+function pushAccountStateErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}AccountState must be an object`);
+        return;
+    }
+    if (!isAccountName(v.name)) errors.push(`${prefix}invalid account name: ${String(v.name)}`);
+    if (!isSide(v.side)) errors.push(`${prefix}invalid side: ${String(v.side)}`);
+    if (!isAccountRole(v.role)) errors.push(`${prefix}invalid role: ${String(v.role)}`);
+    if (typeof v.protectedClock !== 'boolean') errors.push(`${prefix}protectedClock must be a boolean`);
     if (typeof v.name === 'string' && typeof v.protectedClock === 'boolean') {
         if ((v.role === 'main' || v.role === 'specialist' || isProtectedAccountName(v.name)) && !v.protectedClock) {
-            errors.push('protected/reserved accounts must set protectedClock=true');
+            errors.push(`${prefix}protected/reserved accounts must set protectedClock=true`);
         }
-        if (v.role === 'main' && v.name.toLowerCase() !== 'haggis') {
-            errors.push('role "main" is reserved for Haggis');
+        if (v.role === 'main' && v.name !== 'Haggis' && v.name !== 'haggis' && v.name.toLowerCase() !== 'haggis') {
+            errors.push(`${prefix}role "main" is reserved for Haggis`);
         }
     }
-    if (v.maxLevels !== undefined) checkPositiveIntMap(v.maxLevels, 'maxLevels', errors, 99);
-    if (!isAccountLifecycle(v.lifecycle)) errors.push(`invalid lifecycle: ${String(v.lifecycle)}`);
+    if (v.maxLevels !== undefined) checkPositiveIntMap(v.maxLevels, 'maxLevels', errors, 99, prefix);
+    if (!isAccountLifecycle(v.lifecycle)) errors.push(`${prefix}invalid lifecycle: ${String(v.lifecycle)}`);
 
     if (!isPlainRecord(v.skills)) {
-        errors.push('skills must be an object');
+        errors.push(`${prefix}skills must be an object`);
     } else {
-        for (const [skill, stat] of Object.entries(v.skills)) {
-            if (!isNonEmptyStr(skill)) errors.push('skills key must be non-empty');
+        for (const skill in v.skills) {
+            if (!Object.hasOwn(v.skills, skill)) continue;
+            const stat = v.skills[skill];
+            if (!isNonEmptyStr(skill)) errors.push(`${prefix}skills key must be non-empty`);
             if (!isPlainRecord(stat) || !isPosInt(stat.level) || !isFiniteNonNeg(stat.xp)) {
-                errors.push(`skills["${skill}"] must have positive integer level and non-negative xp`);
+                errors.push(`${prefix}skills["${skill}"] must have positive integer level and non-negative xp`);
             }
         }
     }
 
     if (!isPlainRecord(v.quests)) {
-        errors.push('quests must be an object');
+        errors.push(`${prefix}quests must be an object`);
     } else {
-        for (const [slug, qState] of Object.entries(v.quests)) {
-            if (!isNonEmptyStr(slug)) errors.push('quests key must be non-empty');
-            if (!isWorkerQuestState(qState)) errors.push(`quests["${slug}"] invalid state: ${String(qState)}`);
+        for (const slug in v.quests) {
+            if (!Object.hasOwn(v.quests, slug)) continue;
+            const qState = v.quests[slug];
+            if (!isNonEmptyStr(slug)) errors.push(`${prefix}quests key must be non-empty`);
+            if (!isWorkerQuestState(qState)) errors.push(`${prefix}quests["${slug}"] invalid state: ${String(qState)}`);
         }
     }
 
-    if (v.pos !== null && !isWorkerTile(v.pos)) errors.push('pos must be a valid tile or null');
-    checkItemCountMap(v.inventory, 'inventory', errors);
-    checkItemCountMap(v.equipment, 'equipment', errors);
+    if (v.pos !== null && !isWorkerTile(v.pos)) errors.push(`${prefix}pos must be a valid tile or null`);
+    checkItemCountMap(v.inventory, 'inventory', errors, false, prefix);
+    checkItemCountMap(v.equipment, 'equipment', errors, false, prefix);
 
     if (!isPlainRecord(v.bank)) {
-        errors.push('bank must be an object');
+        errors.push(`${prefix}bank must be an object`);
     } else {
-        checkItemCountMap(v.bank.items, 'bank.items', errors);
-        if (!isFiniteNonNeg(v.bank.observedAt)) errors.push('bank.observedAt must be finite non-negative');
-        if (typeof v.bank.trusted !== 'boolean') errors.push('bank.trusted must be a boolean');
+        checkItemCountMap(v.bank.items, 'bank.items', errors, false, prefix);
+        if (!isFiniteNonNeg(v.bank.observedAt)) errors.push(`${prefix}bank.observedAt must be finite non-negative`);
+        if (typeof v.bank.trusted !== 'boolean') errors.push(`${prefix}bank.trusted must be a boolean`);
         if (v.bank.observedAt === 0 && v.bank.trusted === true) {
-            errors.push('unobserved bank (observedAt=0) cannot have trusted=true');
+            errors.push(`${prefix}unobserved bank (observedAt=0) cannot have trusted=true`);
         }
         if (v.lastLoginAttemptAt !== undefined) {
-            if (!isFinitePos(v.lastLoginAttemptAt)) errors.push('lastLoginAttemptAt must be finite positive');
+            if (!isFinitePos(v.lastLoginAttemptAt)) errors.push(`${prefix}lastLoginAttemptAt must be finite positive`);
             else if (isFiniteNonNeg(v.bank.observedAt) && v.lastLoginAttemptAt > v.bank.observedAt && v.bank.trusted === true) {
-                errors.push('bank.trusted must be false after a newer login attempt');
+                errors.push(`${prefix}bank.trusted must be false after a newer login attempt`);
             }
         }
         if (v.lastSettledTransferAt !== undefined) {
-            if (!isFinitePos(v.lastSettledTransferAt)) errors.push('lastSettledTransferAt must be finite positive');
+            if (!isFinitePos(v.lastSettledTransferAt)) errors.push(`${prefix}lastSettledTransferAt must be finite positive`);
             else if (isFiniteNonNeg(v.bank.observedAt) && v.lastSettledTransferAt > v.bank.observedAt && v.bank.trusted === true) {
-                errors.push('bank.trusted must be false after a newer settled transfer');
+                errors.push(`${prefix}bank.trusted must be false after a newer settled transfer`);
             }
         }
     }
 
-    if (v.reserves !== undefined) checkItemCountMap(v.reserves, 'reserves', errors, true);
-    if (v.cooldowns !== undefined) checkCooldownMap(v.cooldowns, 'cooldowns', errors);
+    if (v.reserves !== undefined) checkItemCountMap(v.reserves, 'reserves', errors, true, prefix);
+    if (v.cooldowns !== undefined) checkCooldownMap(v.cooldowns, 'cooldowns', errors, prefix);
     if (v.systemHolds !== undefined) {
-        if (!Array.isArray(v.systemHolds)) errors.push('systemHolds must be an array');
-        else v.systemHolds.forEach((h, i) => {
-            for (const err of validateSystemHold(h)) errors.push(`systemHolds[${i}]: ${err}`);
-        });
+        if (!Array.isArray(v.systemHolds)) errors.push(`${prefix}systemHolds must be an array`);
+        else {
+            const holds = v.systemHolds;
+            for (let i = 0; i < holds.length; i++) {
+                pushSystemHoldErrors(holds[i], errors, `${prefix}systemHolds[${i}]: `);
+            }
+        }
     }
 
     if (v.lifecycle === 'running') {
         if (!isPlainRecord(v.activeJob) || !isNonEmptyStr(v.activeJob.activityId)
             || !isNonEmptyStr(v.activeJob.demandId) || !isFinitePos(v.activeJob.startedAt)) {
-            errors.push('running account requires valid activeJob');
+            errors.push(`${prefix}running account requires valid activeJob`);
         }
     } else if (v.activeJob !== undefined) {
-        errors.push(`non-running lifecycle "${String(v.lifecycle)}" must not hold activeJob`);
+        errors.push(`${prefix}non-running lifecycle "${String(v.lifecycle)}" must not hold activeJob`);
     }
+}
 
+export function validateAccountState(v: unknown): string[] {
+    const errors: string[] = [];
+    pushAccountStateErrors(v, errors);
     return errors;
 }
 
@@ -966,9 +1049,11 @@ export function validateWorldSnapshot(v: unknown): string[] {
     if (!isPlainRecord(v.accounts)) {
         errors.push('WorldSnapshot.accounts must be an object');
     } else {
-        for (const [key, acct] of Object.entries(v.accounts)) {
-            for (const err of validateAccountState(acct)) errors.push(`accounts["${key}"]: ${err}`);
-            if (isPlainRecord(acct) && typeof acct.name === 'string' && key.toLowerCase() !== acct.name.toLowerCase()) {
+        for (const key in v.accounts) {
+            if (!Object.hasOwn(v.accounts, key)) continue;
+            const acct = v.accounts[key];
+            pushAccountStateErrors(acct, errors, `accounts["${key}"]: `);
+            if (isPlainRecord(acct) && typeof acct.name === 'string' && key !== acct.name && key.toLowerCase() !== acct.name.toLowerCase()) {
                 errors.push(`accounts["${key}"] key mismatch with name "${acct.name}"`);
             }
         }
@@ -976,7 +1061,9 @@ export function validateWorldSnapshot(v: unknown): string[] {
 
     if (v.fleetSides !== undefined) {
         if (!isPlainRecord(v.fleetSides)) errors.push('fleetSides must be an object');
-        else for (const [k, s] of Object.entries(v.fleetSides)) {
+        else for (const k in v.fleetSides) {
+            if (!Object.hasOwn(v.fleetSides, k)) continue;
+            const s = v.fleetSides[k];
             if (!isSide(k) || !isPlainRecord(s) || !isSide(s.side)
                 || (s.seenAt !== null && !isFinitePos(s.seenAt))
                 || !isNonNegInt(s.capacity) || typeof s.stopped !== 'boolean') {
@@ -986,7 +1073,9 @@ export function validateWorldSnapshot(v: unknown): string[] {
     }
     if (v.reserves !== undefined) {
         if (!isPlainRecord(v.reserves)) errors.push('reserves must be an object');
-        else for (const [acctKey, map] of Object.entries(v.reserves)) {
+        else for (const acctKey in v.reserves) {
+            if (!Object.hasOwn(v.reserves, acctKey)) continue;
+            const map = v.reserves[acctKey];
             if (!isAccountName(acctKey)) errors.push(`reserves key "${acctKey}" invalid`);
             checkItemCountMap(map, `reserves["${acctKey}"]`, errors, true);
         }
@@ -995,21 +1084,28 @@ export function validateWorldSnapshot(v: unknown): string[] {
     if (v.marketCooldowns !== undefined) checkCooldownMap(v.marketCooldowns, 'marketCooldowns', errors);
     if (v.spotOccupancy !== undefined) {
         if (!isPlainRecord(v.spotOccupancy)) errors.push('spotOccupancy must be an object');
-        else for (const [spotId, cnt] of Object.entries(v.spotOccupancy)) {
+        else for (const spotId in v.spotOccupancy) {
+            if (!Object.hasOwn(v.spotOccupancy, spotId)) continue;
+            const cnt = v.spotOccupancy[spotId];
             if (!isNonEmptyStr(spotId) || !isNonNegInt(cnt)) errors.push(`spotOccupancy["${spotId}"] must be a non-negative integer`);
         }
     }
     if (v.geEscrowCoins !== undefined) {
         if (!isPlainRecord(v.geEscrowCoins)) errors.push('geEscrowCoins must be an object');
-        else for (const [acctKey, coins] of Object.entries(v.geEscrowCoins)) {
+        else for (const acctKey in v.geEscrowCoins) {
+            if (!Object.hasOwn(v.geEscrowCoins, acctKey)) continue;
+            const coins = v.geEscrowCoins[acctKey];
             if (!isAccountName(acctKey) || !isNonNegInt(coins)) errors.push(`geEscrowCoins["${acctKey}"] must be a non-negative integer`);
         }
     }
     if (v.activeTransfers !== undefined) {
         if (!Array.isArray(v.activeTransfers)) errors.push('activeTransfers must be an array');
-        else v.activeTransfers.forEach((t, i) => {
-            for (const err of validateTransferOrder(t)) errors.push(`activeTransfers[${i}]: ${err}`);
-        });
+        else {
+            const list = v.activeTransfers;
+            for (let i = 0; i < list.length; i++) {
+                pushTransferOrderErrors(list[i], errors, `activeTransfers[${i}]: `);
+            }
+        }
     }
     return errors;
 }
@@ -1020,51 +1116,58 @@ export const isWorldSnapshot = (v: unknown): v is WorldSnapshot => validateWorld
 // Section 3.3 Validators & Helpers: Demand, Campaign, Mission, Activity, Rate
 // ============================================================================
 
-export function validateGoalDemand(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['GoalDemand must be an object'];
-    const errors: string[] = [];
-    if (!isNonEmptyStr(v.id)) errors.push('GoalDemand.id must be non-empty');
-    if (!isGoalKind(v.goalKind)) errors.push(`invalid GoalDemand.goalKind: ${String(v.goalKind)}`);
-    if (v.sourceId !== undefined && !isNonEmptyStr(v.sourceId)) errors.push('GoalDemand.sourceId must be non-empty');
-    if (!isFiniteNonNeg(v.valueScore)) errors.push('GoalDemand.valueScore must be finite non-negative');
-    if (v.valuePerHour !== undefined && !isFiniteNonNeg(v.valuePerHour)) errors.push('GoalDemand.valuePerHour must be finite non-negative');
-    if (!isFiniteNonNeg(v.fulfilled)) errors.push('GoalDemand.fulfilled must be finite non-negative');
-    if (!isFiniteNonNeg(v.remaining)) errors.push('GoalDemand.remaining must be finite non-negative');
-    if (!isFiniteNonNeg(v.priorityWeight)) errors.push('GoalDemand.priorityWeight must be finite non-negative');
-    if (v.assignedAccount !== undefined && !isAccountName(v.assignedAccount)) errors.push('GoalDemand.assignedAccount invalid');
-    if (typeof v.active !== 'boolean') errors.push('GoalDemand.active must be a boolean');
+function pushGoalDemandErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}GoalDemand must be an object`);
+        return;
+    }
+    if (!isNonEmptyStr(v.id)) errors.push(`${prefix}GoalDemand.id must be non-empty`);
+    if (!isGoalKind(v.goalKind)) errors.push(`${prefix}invalid GoalDemand.goalKind: ${String(v.goalKind)}`);
+    if (v.sourceId !== undefined && !isNonEmptyStr(v.sourceId)) errors.push(`${prefix}GoalDemand.sourceId must be non-empty`);
+    if (!isFiniteNonNeg(v.valueScore)) errors.push(`${prefix}GoalDemand.valueScore must be finite non-negative`);
+    if (v.valuePerHour !== undefined && !isFiniteNonNeg(v.valuePerHour)) errors.push(`${prefix}GoalDemand.valuePerHour must be finite non-negative`);
+    if (!isFiniteNonNeg(v.fulfilled)) errors.push(`${prefix}GoalDemand.fulfilled must be finite non-negative`);
+    if (!isFiniteNonNeg(v.remaining)) errors.push(`${prefix}GoalDemand.remaining must be finite non-negative`);
+    if (!isFiniteNonNeg(v.priorityWeight)) errors.push(`${prefix}GoalDemand.priorityWeight must be finite non-negative`);
+    if (v.assignedAccount !== undefined && !isAccountName(v.assignedAccount)) errors.push(`${prefix}GoalDemand.assignedAccount invalid`);
+    if (typeof v.active !== 'boolean') errors.push(`${prefix}GoalDemand.active must be a boolean`);
 
     if (!isPlainRecord(v.target)) {
-        errors.push('GoalDemand.target must be an object');
+        errors.push(`${prefix}GoalDemand.target must be an object`);
     } else {
         switch (v.target.kind) {
             case 'item':
-                if (!isNonNegInt(v.target.itemId) || !isPosInt(v.target.count)) errors.push('target(item) invalid itemId or count');
-                if (v.target.itemName !== undefined && !isNonEmptyStr(v.target.itemName)) errors.push('target(item).itemName invalid');
-                if (v.target.holder !== undefined && !isAccountName(v.target.holder)) errors.push('target(item).holder invalid');
+                if (!isNonNegInt(v.target.itemId) || !isPosInt(v.target.count)) errors.push(`${prefix}target(item) invalid itemId or count`);
+                if (v.target.itemName !== undefined && !isNonEmptyStr(v.target.itemName)) errors.push(`${prefix}target(item).itemName invalid`);
+                if (v.target.holder !== undefined && !isAccountName(v.target.holder)) errors.push(`${prefix}target(item).holder invalid`);
                 break;
             case 'skill':
                 if (!isAccountName(v.target.account) || !isNonEmptyStr(v.target.skill) || !isPosInt(v.target.targetLevel) || (v.target.targetLevel as number) > 99) {
-                    errors.push('target(skill) invalid');
+                    errors.push(`${prefix}target(skill) invalid`);
                 }
-                if (v.target.targetXp !== undefined && !isFiniteNonNeg(v.target.targetXp)) errors.push('target(skill).targetXp invalid');
+                if (v.target.targetXp !== undefined && !isFiniteNonNeg(v.target.targetXp)) errors.push(`${prefix}target(skill).targetXp invalid`);
                 break;
             case 'quest':
-                if (!isNonEmptyStr(v.target.questSlug)) errors.push('target(quest).questSlug must be non-empty');
-                if (v.target.account !== undefined && !isAccountName(v.target.account)) errors.push('target(quest).account invalid');
+                if (!isNonEmptyStr(v.target.questSlug)) errors.push(`${prefix}target(quest).questSlug must be non-empty`);
+                if (v.target.account !== undefined && !isAccountName(v.target.account)) errors.push(`${prefix}target(quest).account invalid`);
                 break;
             case 'coins':
-                if (!isPosInt(v.target.amount)) errors.push('target(coins).amount must be positive integer');
-                if (v.target.account !== undefined && !isAccountName(v.target.account)) errors.push('target(coins).account invalid');
+                if (!isPosInt(v.target.amount)) errors.push(`${prefix}target(coins).amount must be positive integer`);
+                if (v.target.account !== undefined && !isAccountName(v.target.account)) errors.push(`${prefix}target(coins).account invalid`);
                 break;
             case 'combat_readiness':
-                if (!isAccountName(v.target.account)) errors.push('target(combat_readiness).account invalid');
-                checkPositiveIntMap(v.target.targets, 'target(combat_readiness).targets', errors, 99);
+                if (!isAccountName(v.target.account)) errors.push(`${prefix}target(combat_readiness).account invalid`);
+                checkPositiveIntMap(v.target.targets, 'target(combat_readiness).targets', errors, 99, prefix);
                 break;
             default:
-                errors.push(`unknown GoalDemand.target kind: ${String(v.target.kind)}`);
+                errors.push(`${prefix}unknown GoalDemand.target kind: ${String(v.target.kind)}`);
         }
     }
+}
+
+export function validateGoalDemand(v: unknown): string[] {
+    const errors: string[] = [];
+    pushGoalDemandErrors(v, errors);
     return errors;
 }
 
@@ -1107,42 +1210,46 @@ export function isCampaignLaunchReady(
     return true;
 }
 
-export function validateCampaign(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['Campaign must be an object'];
-    const errors: string[] = [];
-    if (!isNonEmptyStr(v.id)) errors.push('Campaign.id must be non-empty');
-    if (!isAccountName(v.account)) errors.push('Campaign.account invalid');
-    if (typeof v.protectedClock !== 'boolean') errors.push('Campaign.protectedClock must be boolean');
-    if (typeof v.account === 'string' && isProtectedAccountName(v.account) && v.protectedClock !== true) {
-        errors.push('reserved account campaign must have protectedClock=true');
+function pushCampaignErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}Campaign must be an object`);
+        return;
     }
-    if (!isNonEmptyStr(v.board)) errors.push('Campaign.board must be non-empty');
-    if (!isCampaignState(v.state)) errors.push(`invalid Campaign.state: ${String(v.state)}`);
-    if (v.weight !== undefined && !isFiniteNonNeg(v.weight)) errors.push('Campaign.weight must be finite non-negative');
+    if (!isNonEmptyStr(v.id)) errors.push(`${prefix}Campaign.id must be non-empty`);
+    if (!isAccountName(v.account)) errors.push(`${prefix}Campaign.account invalid`);
+    if (typeof v.protectedClock !== 'boolean') errors.push(`${prefix}Campaign.protectedClock must be boolean`);
+    if (typeof v.account === 'string' && isProtectedAccountName(v.account) && v.protectedClock !== true) {
+        errors.push(`${prefix}reserved account campaign must have protectedClock=true`);
+    }
+    if (!isNonEmptyStr(v.board)) errors.push(`${prefix}Campaign.board must be non-empty`);
+    if (!isCampaignState(v.state)) errors.push(`${prefix}invalid Campaign.state: ${String(v.state)}`);
+    if (v.weight !== undefined && !isFiniteNonNeg(v.weight)) errors.push(`${prefix}Campaign.weight must be finite non-negative`);
 
     if (!Array.isArray(v.requiredSupplies)) {
-        errors.push('Campaign.requiredSupplies must be an array');
+        errors.push(`${prefix}Campaign.requiredSupplies must be an array`);
     } else {
-        v.requiredSupplies.forEach((s, idx) => {
+        const list = v.requiredSupplies;
+        for (let idx = 0; idx < list.length; idx++) {
+            const s = list[idx];
             if (!isPlainRecord(s) || !isNonNegInt(s.itemId) || !isPosInt(s.count)
                 || (s.itemName !== undefined && !isNonEmptyStr(s.itemName))
                 || (s.stage !== undefined && !isNonEmptyStr(s.stage))) {
-                errors.push(`Campaign.requiredSupplies[${idx}] invalid`);
+                errors.push(`${prefix}Campaign.requiredSupplies[${idx}] invalid`);
             }
-        });
+        }
     }
 
     if (v.stagingHolder !== null) {
-        if (!isAccountName(v.stagingHolder)) errors.push('Campaign.stagingHolder must be an account name or null');
+        if (!isAccountName(v.stagingHolder)) errors.push(`${prefix}Campaign.stagingHolder must be an account name or null`);
         else if (v.protectedClock === true && typeof v.account === 'string'
             && v.stagingHolder.toLowerCase() === v.account.toLowerCase()) {
-            errors.push('protectedClock campaign cannot stage supplies directly on the protected account');
+            errors.push(`${prefix}protectedClock campaign cannot stage supplies directly on the protected account`);
         }
     }
 
     if (v.rehearsalProof !== null) {
         if (!isPlainRecord(v.rehearsalProof) || typeof v.rehearsalProof.verified !== 'boolean') {
-            errors.push('Campaign.rehearsalProof invalid');
+            errors.push(`${prefix}Campaign.rehearsalProof invalid`);
         }
     }
     if (v.hiscoreMargin !== null) {
@@ -1151,18 +1258,23 @@ export function validateCampaign(v: unknown): string[] {
             || !Number.isSafeInteger(v.hiscoreMargin.marginTicks)
             || typeof v.hiscoreMargin.marginRatio !== 'number' || !Number.isFinite(v.hiscoreMargin.marginRatio)
             || !isFinitePos(v.hiscoreMargin.checkedAt) || typeof v.hiscoreMargin.meetsMargin !== 'boolean') {
-            errors.push('Campaign.hiscoreMargin invalid');
+            errors.push(`${prefix}Campaign.hiscoreMargin invalid`);
         }
     }
 
     if (v.protectedClock === true && (v.state === 'ready' || v.state === 'running')) {
         if (!isPlainRecord(v.rehearsalProof) || v.rehearsalProof.verified !== true) {
-            errors.push('protectedClock campaign requires verified rehearsalProof before ready/running');
+            errors.push(`${prefix}protectedClock campaign requires verified rehearsalProof before ready/running`);
         }
         if (!isPlainRecord(v.hiscoreMargin) || v.hiscoreMargin.meetsMargin !== true || v.hiscoreMargin.board !== v.board) {
-            errors.push('protectedClock campaign requires passing hiscoreMargin on the campaign board before ready/running');
+            errors.push(`${prefix}protectedClock campaign requires passing hiscoreMargin on the campaign board before ready/running`);
         }
     }
+}
+
+export function validateCampaign(v: unknown): string[] {
+    const errors: string[] = [];
+    pushCampaignErrors(v, errors);
     return errors;
 }
 
@@ -1172,52 +1284,64 @@ export function missionEffectiveWeight(mission: Mission): number {
     return mission.state === 'paused' ? 0 : mission.weight;
 }
 
-export function validateMission(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['Mission must be an object'];
-    const errors: string[] = [];
-    if (!isNonEmptyStr(v.id)) errors.push('Mission.id must be non-empty');
-    if (!isMissionState(v.state)) errors.push(`invalid Mission.state: ${String(v.state)}`);
-    if (!isFiniteNonNeg(v.weight)) errors.push('Mission.weight must be finite non-negative');
+function pushMissionErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}Mission must be an object`);
+        return;
+    }
+    if (!isNonEmptyStr(v.id)) errors.push(`${prefix}Mission.id must be non-empty`);
+    if (!isMissionState(v.state)) errors.push(`${prefix}invalid Mission.state: ${String(v.state)}`);
+    if (!isFiniteNonNeg(v.weight)) errors.push(`${prefix}Mission.weight must be finite non-negative`);
 
     if (!Array.isArray(v.participants)) {
-        errors.push('Mission.participants must be an array');
+        errors.push(`${prefix}Mission.participants must be an array`);
     } else {
         const seen = new Set<string>();
-        for (const p of v.participants) {
-            if (!isAccountName(p)) { errors.push(`Mission.participants invalid account: ${String(p)}`); continue; }
+        const parts = v.participants;
+        for (let i = 0; i < parts.length; i++) {
+            const p = parts[i];
+            if (!isAccountName(p)) { errors.push(`${prefix}Mission.participants invalid account: ${String(p)}`); continue; }
             const lower = p.toLowerCase();
-            if (seen.has(lower)) errors.push(`Mission.participants duplicate: ${p}`);
+            if (seen.has(lower)) errors.push(`${prefix}Mission.participants duplicate: ${p}`);
             seen.add(lower);
         }
-        if (v.state !== 'paused' && v.participants.length === 0) {
-            errors.push('active Mission requires at least one participant');
+        if (v.state !== 'paused' && parts.length === 0) {
+            errors.push(`${prefix}active Mission requires at least one participant`);
         }
     }
 
     if (!Array.isArray(v.kitTargets)) {
-        errors.push('Mission.kitTargets must be an array');
+        errors.push(`${prefix}Mission.kitTargets must be an array`);
     } else {
-        v.kitTargets.forEach((k, idx) => {
+        const list = v.kitTargets;
+        for (let idx = 0; idx < list.length; idx++) {
+            const k = list[idx];
             if (!isPlainRecord(k) || !isNonNegInt(k.itemId) || !isPosInt(k.countPerParticipant)
                 || (k.itemName !== undefined && !isNonEmptyStr(k.itemName))
                 || (k.slot !== undefined && !isNonEmptyStr(k.slot))) {
-                errors.push(`Mission.kitTargets[${idx}] invalid`);
+                errors.push(`${prefix}Mission.kitTargets[${idx}] invalid`);
             }
-        });
+        }
     }
 
     if (!Array.isArray(v.consumables)) {
-        errors.push('Mission.consumables must be an array');
+        errors.push(`${prefix}Mission.consumables must be an array`);
     } else {
-        v.consumables.forEach((c, idx) => {
+        const list = v.consumables;
+        for (let idx = 0; idx < list.length; idx++) {
+            const c = list[idx];
             if (!isPlainRecord(c) || !isNonNegInt(c.itemId) || !isPosInt(c.countPerParticipant)
                 || (c.minReservePerParticipant !== undefined && !isNonNegInt(c.minReservePerParticipant))
                 || (c.itemName !== undefined && !isNonEmptyStr(c.itemName))) {
-                errors.push(`Mission.consumables[${idx}] invalid`);
+                errors.push(`${prefix}Mission.consumables[${idx}] invalid`);
             }
-        });
+        }
     }
+}
 
+export function validateMission(v: unknown): string[] {
+    const errors: string[] = [];
+    pushMissionErrors(v, errors);
     return errors;
 }
 
@@ -1287,166 +1411,192 @@ export const isRateSample = (v: unknown): v is RateSample => validateRateSample(
 // Section 3.4 Validators & Helpers: Planner, Scheduler, Transfers
 // ============================================================================
 
-export function validateAcquireStep(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['AcquireStep must be an object'];
-    const errors: string[] = [];
-    if (v.stepKind !== 'acquire') errors.push('AcquireStep.stepKind must be "acquire"');
-    if (!isAcquireSourceKind(v.source)) errors.push(`invalid AcquireStep.source: ${String(v.source)}`);
-    if (!isNonNegInt(v.itemId)) errors.push('AcquireStep.itemId must be non-negative integer');
-    if (v.itemName !== undefined && !isNonEmptyStr(v.itemName)) errors.push('AcquireStep.itemName must be non-empty');
-    if (!isPosInt(v.quantity)) errors.push('AcquireStep.quantity must be positive integer');
-    if (!isFiniteNonNeg(v.estimatedTicks)) errors.push('AcquireStep.estimatedTicks must be finite non-negative');
-    if (!isFiniteNonNeg(v.estimatedCoinCost)) errors.push('AcquireStep.estimatedCoinCost must be finite non-negative');
-    if (!isNonNegInt(v.coinFloatPreserved)) errors.push('AcquireStep.coinFloatPreserved must be non-negative integer');
-    if (v.source === 'npc_shop' && v.shopId !== undefined && !isNonEmptyStr(v.shopId)) errors.push('shopId must be non-empty');
-    if (v.source === 'hub_banker') {
-        if (v.donorAccount !== undefined && !isAccountName(v.donorAccount)) errors.push('donorAccount invalid');
-        if (v.hub !== undefined && !isHubBankId(v.hub)) errors.push('hub invalid');
+function pushAcquireStepErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}AcquireStep must be an object`);
+        return;
     }
+    if (v.stepKind !== 'acquire') errors.push(`${prefix}AcquireStep.stepKind must be "acquire"`);
+    if (!isAcquireSourceKind(v.source)) errors.push(`${prefix}invalid AcquireStep.source: ${String(v.source)}`);
+    if (!isNonNegInt(v.itemId)) errors.push(`${prefix}AcquireStep.itemId must be non-negative integer`);
+    if (v.itemName !== undefined && !isNonEmptyStr(v.itemName)) errors.push(`${prefix}AcquireStep.itemName must be non-empty`);
+    if (!isPosInt(v.quantity)) errors.push(`${prefix}AcquireStep.quantity must be positive integer`);
+    if (!isFiniteNonNeg(v.estimatedTicks)) errors.push(`${prefix}AcquireStep.estimatedTicks must be finite non-negative`);
+    if (!isFiniteNonNeg(v.estimatedCoinCost)) errors.push(`${prefix}AcquireStep.estimatedCoinCost must be finite non-negative`);
+    if (!isNonNegInt(v.coinFloatPreserved)) errors.push(`${prefix}AcquireStep.coinFloatPreserved must be non-negative integer`);
+    if (v.source === 'npc_shop' && v.shopId !== undefined && !isNonEmptyStr(v.shopId)) errors.push(`${prefix}shopId must be non-empty`);
+    if (v.source === 'hub_banker') {
+        if (v.donorAccount !== undefined && !isAccountName(v.donorAccount)) errors.push(`${prefix}donorAccount invalid`);
+        if (v.hub !== undefined && !isHubBankId(v.hub)) errors.push(`${prefix}hub invalid`);
+    }
+}
+
+export function validateAcquireStep(v: unknown): string[] {
+    const errors: string[] = [];
+    pushAcquireStepErrors(v, errors);
     return errors;
 }
 
 export const isAcquireStep = (v: unknown): v is AcquireStep => validateAcquireStep(v).length === 0;
 
-export function validatePlannedStep(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['PlannedStep must be an object'];
-    switch (v.stepKind) {
-        case 'recover': {
-            const errors: string[] = [];
-            if (v.recoveryKind !== 'logout' && v.recoveryKind !== 'location') errors.push('recover.recoveryKind invalid');
-            if (v.targetHub !== undefined && !isHubBankId(v.targetHub)) errors.push('recover.targetHub invalid');
-            if (!isFiniteNonNeg(v.estimatedTicks)) errors.push('recover.estimatedTicks must be finite non-negative');
-            if (!isNonEmptyStr(v.reason)) errors.push('recover.reason must be non-empty');
-            return errors;
-        }
-        case 'acquire':
-            return validateAcquireStep(v);
-        case 'gear_upgrade': {
-            const errors: string[] = [];
-            if (!isNonNegInt(v.itemId)) errors.push('gear_upgrade.itemId invalid');
-            if (v.itemName !== undefined && !isNonEmptyStr(v.itemName)) errors.push('gear_upgrade.itemName invalid');
-            if (!isNonEmptyStr(v.slot)) errors.push('gear_upgrade.slot must be non-empty');
-            if (!isFinitePos(v.netXpPerTickGain)) errors.push('gear_upgrade.netXpPerTickGain must be finite positive');
-            if (!isFinitePos(v.remainingBandTicks)) errors.push('gear_upgrade.remainingBandTicks must be finite positive');
-            if (!isFiniteNonNeg(v.acquisitionTicks)) errors.push('gear_upgrade.acquisitionTicks must be finite non-negative');
-            if (!isFinitePos(v.paybackNetTicks)) errors.push('gear_upgrade.paybackNetTicks must be finite positive');
-            if (!isAcquireSourceKind(v.source)) errors.push('gear_upgrade.source invalid');
-            if (v.shopId !== undefined && !isNonEmptyStr(v.shopId)) errors.push('gear_upgrade.shopId invalid');
-            if (v.donorAccount !== undefined && !isAccountName(v.donorAccount)) errors.push('gear_upgrade.donorAccount invalid');
-            if (v.hub !== undefined && !isHubBankId(v.hub)) errors.push('gear_upgrade.hub invalid');
-            if (v.transferOrderId !== undefined && !isNonEmptyStr(v.transferOrderId)) errors.push('gear_upgrade.transferOrderId invalid');
-            if (v.activityId !== undefined && !isNonEmptyStr(v.activityId)) errors.push('gear_upgrade.activityId invalid');
-            if (v.estimatedCoinCost !== undefined && !isFiniteNonNeg(v.estimatedCoinCost)) errors.push('gear_upgrade.estimatedCoinCost invalid');
-            if (v.coinFloatPreserved !== undefined && !isFiniteNonNeg(v.coinFloatPreserved)) errors.push('gear_upgrade.coinFloatPreserved invalid');
-            return errors;
-        }
-        case 'unlock': {
-            const errors: string[] = [];
-            if (v.unlockKind !== 'quest' && v.unlockKind !== 'skill') errors.push('unlock.unlockKind invalid');
-            if (!isNonEmptyStr(v.activityId)) errors.push('unlock.activityId must be non-empty');
-            if (v.questSlug !== undefined && !isNonEmptyStr(v.questSlug)) errors.push('unlock.questSlug invalid');
-            if (v.skill !== undefined && !isNonEmptyStr(v.skill)) errors.push('unlock.skill invalid');
-            if (v.targetLevel !== undefined && (!isPosInt(v.targetLevel) || (v.targetLevel as number) > 99)) errors.push('unlock.targetLevel invalid');
-            if (!isFiniteNonNeg(v.estimatedTicks)) errors.push('unlock.estimatedTicks invalid');
-            return errors;
-        }
-        case 'work': {
-            const errors: string[] = [];
-            if (!isNonEmptyStr(v.activityId)) errors.push('work.activityId must be non-empty');
-            if (!isNonEmptyStr(v.demandId)) errors.push('work.demandId must be non-empty');
-            if (!isNonEmptyStr(v.workerId)) errors.push('work.workerId must be non-empty');
-            if (!isPosInt(v.batchUnits)) errors.push('work.batchUnits must be positive integer');
-            if (!isFiniteNonNeg(v.estimatedTicks)) errors.push('work.estimatedTicks must be finite non-negative');
-            if (!isFiniteNonNeg(v.expectedValuePerHour)) errors.push('work.expectedValuePerHour must be finite non-negative');
-            if (!isPlainRecord(v.config)) errors.push('work.config must be an object');
-            return errors;
-        }
-        default:
-            return [`unknown PlannedStep.stepKind: ${String(v.stepKind)}`];
+function pushPlannedStepErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}PlannedStep must be an object`);
+        return;
     }
+    switch (v.stepKind) {
+        case 'recover':
+            if (v.recoveryKind !== 'logout' && v.recoveryKind !== 'location') errors.push(`${prefix}recover.recoveryKind invalid`);
+            if (v.targetHub !== undefined && !isHubBankId(v.targetHub)) errors.push(`${prefix}recover.targetHub invalid`);
+            if (!isFiniteNonNeg(v.estimatedTicks)) errors.push(`${prefix}recover.estimatedTicks must be finite non-negative`);
+            if (!isNonEmptyStr(v.reason)) errors.push(`${prefix}recover.reason must be non-empty`);
+            return;
+        case 'acquire':
+            pushAcquireStepErrors(v, errors, prefix);
+            return;
+        case 'gear_upgrade':
+            if (!isNonNegInt(v.itemId)) errors.push(`${prefix}gear_upgrade.itemId invalid`);
+            if (v.itemName !== undefined && !isNonEmptyStr(v.itemName)) errors.push(`${prefix}gear_upgrade.itemName invalid`);
+            if (!isNonEmptyStr(v.slot)) errors.push(`${prefix}gear_upgrade.slot must be non-empty`);
+            if (!isFinitePos(v.netXpPerTickGain)) errors.push(`${prefix}gear_upgrade.netXpPerTickGain must be finite positive`);
+            if (!isFinitePos(v.remainingBandTicks)) errors.push(`${prefix}gear_upgrade.remainingBandTicks must be finite positive`);
+            if (!isFiniteNonNeg(v.acquisitionTicks)) errors.push(`${prefix}gear_upgrade.acquisitionTicks must be finite non-negative`);
+            if (!isFinitePos(v.paybackNetTicks)) errors.push(`${prefix}gear_upgrade.paybackNetTicks must be finite positive`);
+            if (!isAcquireSourceKind(v.source)) errors.push(`${prefix}gear_upgrade.source invalid`);
+            if (v.shopId !== undefined && !isNonEmptyStr(v.shopId)) errors.push(`${prefix}gear_upgrade.shopId invalid`);
+            if (v.donorAccount !== undefined && !isAccountName(v.donorAccount)) errors.push(`${prefix}gear_upgrade.donorAccount invalid`);
+            if (v.hub !== undefined && !isHubBankId(v.hub)) errors.push(`${prefix}gear_upgrade.hub invalid`);
+            if (v.transferOrderId !== undefined && !isNonEmptyStr(v.transferOrderId)) errors.push(`${prefix}gear_upgrade.transferOrderId invalid`);
+            if (v.activityId !== undefined && !isNonEmptyStr(v.activityId)) errors.push(`${prefix}gear_upgrade.activityId invalid`);
+            if (v.estimatedCoinCost !== undefined && !isFiniteNonNeg(v.estimatedCoinCost)) errors.push(`${prefix}gear_upgrade.estimatedCoinCost invalid`);
+            if (v.coinFloatPreserved !== undefined && !isFiniteNonNeg(v.coinFloatPreserved)) errors.push(`${prefix}gear_upgrade.coinFloatPreserved invalid`);
+            return;
+        case 'unlock':
+            if (v.unlockKind !== 'quest' && v.unlockKind !== 'skill') errors.push(`${prefix}unlock.unlockKind invalid`);
+            if (!isNonEmptyStr(v.activityId)) errors.push(`${prefix}unlock.activityId must be non-empty`);
+            if (v.questSlug !== undefined && !isNonEmptyStr(v.questSlug)) errors.push(`${prefix}unlock.questSlug invalid`);
+            if (v.skill !== undefined && !isNonEmptyStr(v.skill)) errors.push(`${prefix}unlock.skill invalid`);
+            if (v.targetLevel !== undefined && (!isPosInt(v.targetLevel) || (v.targetLevel as number) > 99)) errors.push(`${prefix}unlock.targetLevel invalid`);
+            if (!isFiniteNonNeg(v.estimatedTicks)) errors.push(`${prefix}unlock.estimatedTicks invalid`);
+            return;
+        case 'work':
+            if (!isNonEmptyStr(v.activityId)) errors.push(`${prefix}work.activityId must be non-empty`);
+            if (!isNonEmptyStr(v.demandId)) errors.push(`${prefix}work.demandId must be non-empty`);
+            if (!isNonEmptyStr(v.workerId)) errors.push(`${prefix}work.workerId must be non-empty`);
+            if (!isPosInt(v.batchUnits)) errors.push(`${prefix}work.batchUnits must be positive integer`);
+            if (!isFiniteNonNeg(v.estimatedTicks)) errors.push(`${prefix}work.estimatedTicks must be finite non-negative`);
+            if (!isFiniteNonNeg(v.expectedValuePerHour)) errors.push(`${prefix}work.expectedValuePerHour must be finite non-negative`);
+            if (!isPlainRecord(v.config)) errors.push(`${prefix}work.config must be an object`);
+            return;
+        default:
+            errors.push(`${prefix}unknown PlannedStep.stepKind: ${String(v.stepKind)}`);
+    }
+}
+
+export function validatePlannedStep(v: unknown): string[] {
+    const errors: string[] = [];
+    pushPlannedStepErrors(v, errors);
+    return errors;
 }
 
 export const isPlannedStep = (v: unknown): v is PlannedStep => validatePlannedStep(v).length === 0;
 
-export function validateAccountPlan(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['AccountPlan must be an object'];
-    const errors: string[] = [];
-    if (!isAccountName(v.account)) errors.push('AccountPlan.account invalid');
-    if (!isFiniteNonNeg(v.scorePerHour)) errors.push('AccountPlan.scorePerHour must be finite non-negative');
-    if (v.demandId !== undefined && !isNonEmptyStr(v.demandId)) errors.push('AccountPlan.demandId must be non-empty');
+function pushAccountPlanErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}AccountPlan must be an object`);
+        return;
+    }
+    if (!isAccountName(v.account)) errors.push(`${prefix}AccountPlan.account invalid`);
+    if (!isFiniteNonNeg(v.scorePerHour)) errors.push(`${prefix}AccountPlan.scorePerHour must be finite non-negative`);
+    if (v.demandId !== undefined && !isNonEmptyStr(v.demandId)) errors.push(`${prefix}AccountPlan.demandId must be non-empty`);
     if (v.retentionMarginApplied !== undefined && typeof v.retentionMarginApplied !== 'boolean') {
-        errors.push('AccountPlan.retentionMarginApplied must be boolean');
+        errors.push(`${prefix}AccountPlan.retentionMarginApplied must be boolean`);
     }
     if (!Array.isArray(v.steps)) {
-        errors.push('AccountPlan.steps must be an array');
+        errors.push(`${prefix}AccountPlan.steps must be an array`);
     } else {
-        if (v.steps.length > MAX_ACCOUNT_PLAN_STEPS) {
-            errors.push(`AccountPlan.steps exceeds MAX_ACCOUNT_PLAN_STEPS (${MAX_ACCOUNT_PLAN_STEPS})`);
+        const steps = v.steps;
+        if (steps.length > MAX_ACCOUNT_PLAN_STEPS) {
+            errors.push(`${prefix}AccountPlan.steps exceeds MAX_ACCOUNT_PLAN_STEPS (${MAX_ACCOUNT_PLAN_STEPS})`);
         }
-        if (v.steps.length === 0 && !isNonEmptyStr(v.idleReason)) {
-            errors.push('AccountPlan with empty steps requires non-empty idleReason');
+        if (steps.length === 0 && !isNonEmptyStr(v.idleReason)) {
+            errors.push(`${prefix}AccountPlan with empty steps requires non-empty idleReason`);
         }
-        v.steps.forEach((step, idx) => {
-            for (const err of validatePlannedStep(step)) errors.push(`steps[${idx}]: ${err}`);
-        });
+        for (let idx = 0; idx < steps.length; idx++) {
+            pushPlannedStepErrors(steps[idx], errors, `${prefix}steps[${idx}]: `);
+        }
     }
+}
+
+export function validateAccountPlan(v: unknown): string[] {
+    const errors: string[] = [];
+    pushAccountPlanErrors(v, errors);
     return errors;
 }
 
 export const isAccountPlan = (v: unknown): v is AccountPlan => validateAccountPlan(v).length === 0;
 
-export function validateTransferOrder(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['TransferOrder must be an object'];
-    const errors: string[] = [];
-    if (!isNonEmptyStr(v.id)) errors.push('TransferOrder.id must be non-empty');
-    if (!isNonEmptyStr(v.server)) errors.push('TransferOrder.server must be non-empty');
-    if (!isAccountName(v.from)) errors.push('TransferOrder.from invalid');
-    if (!isAccountName(v.to)) errors.push('TransferOrder.to invalid');
+function pushTransferOrderErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}TransferOrder must be an object`);
+        return;
+    }
+    if (!isNonEmptyStr(v.id)) errors.push(`${prefix}TransferOrder.id must be non-empty`);
+    if (!isNonEmptyStr(v.server)) errors.push(`${prefix}TransferOrder.server must be non-empty`);
+    if (!isAccountName(v.from)) errors.push(`${prefix}TransferOrder.from invalid`);
+    if (!isAccountName(v.to)) errors.push(`${prefix}TransferOrder.to invalid`);
     if (typeof v.from === 'string' && typeof v.to === 'string' && v.from.toLowerCase() === v.to.toLowerCase()) {
-        errors.push('TransferOrder cannot self-transfer (from === to)');
+        errors.push(`${prefix}TransferOrder cannot self-transfer (from === to)`);
     }
-    if (!isHubBankId(v.hub)) errors.push(`TransferOrder.hub must be varrock_west or ardougne (got ${String(v.hub)})`);
-    if (v.hubBanker !== undefined && !isAccountName(v.hubBanker)) errors.push('TransferOrder.hubBanker invalid');
-    if (!isNonEmptyStr(v.demandId)) errors.push('TransferOrder.demandId must be non-empty');
-    if (!isNonEmptyStr(v.reason)) errors.push('TransferOrder.reason must be non-empty');
-    if (!isFinitePos(v.createdAt)) errors.push('TransferOrder.createdAt must be finite positive');
-    if (!isFinitePos(v.expiresAt)) errors.push('TransferOrder.expiresAt must be finite positive');
+    if (!isHubBankId(v.hub)) errors.push(`${prefix}TransferOrder.hub must be varrock_west or ardougne (got ${String(v.hub)})`);
+    if (v.hubBanker !== undefined && !isAccountName(v.hubBanker)) errors.push(`${prefix}TransferOrder.hubBanker invalid`);
+    if (!isNonEmptyStr(v.demandId)) errors.push(`${prefix}TransferOrder.demandId must be non-empty`);
+    if (!isNonEmptyStr(v.reason)) errors.push(`${prefix}TransferOrder.reason must be non-empty`);
+    if (!isFinitePos(v.createdAt)) errors.push(`${prefix}TransferOrder.createdAt must be finite positive`);
+    if (!isFinitePos(v.expiresAt)) errors.push(`${prefix}TransferOrder.expiresAt must be finite positive`);
     if (isFinitePos(v.createdAt) && isFinitePos(v.expiresAt) && v.expiresAt <= v.createdAt) {
-        errors.push('TransferOrder.expiresAt must be strictly after createdAt');
+        errors.push(`${prefix}TransferOrder.expiresAt must be strictly after createdAt`);
     }
-    if (!isTransferOrderState(v.state)) errors.push(`invalid TransferOrder.state: ${String(v.state)}`);
-    if (typeof v.bothIdleVerified !== 'boolean') errors.push('TransferOrder.bothIdleVerified must be boolean');
-    if (!isFiniteNonNeg(v.donorLogoutConfirmedAt)) errors.push('TransferOrder.donorLogoutConfirmedAt must be finite non-negative');
-    if (!isFiniteNonNeg(v.recipientLogoutConfirmedAt)) errors.push('TransferOrder.recipientLogoutConfirmedAt must be finite non-negative');
+    if (!isTransferOrderState(v.state)) errors.push(`${prefix}invalid TransferOrder.state: ${String(v.state)}`);
+    if (typeof v.bothIdleVerified !== 'boolean') errors.push(`${prefix}TransferOrder.bothIdleVerified must be boolean`);
+    if (!isFiniteNonNeg(v.donorLogoutConfirmedAt)) errors.push(`${prefix}TransferOrder.donorLogoutConfirmedAt must be finite non-negative`);
+    if (!isFiniteNonNeg(v.recipientLogoutConfirmedAt)) errors.push(`${prefix}TransferOrder.recipientLogoutConfirmedAt must be finite non-negative`);
 
     if (!Array.isArray(v.items) || v.items.length === 0 || v.items.length > MAX_ORDER_LINES) {
-        errors.push(`TransferOrder.items must contain 1..${MAX_ORDER_LINES} lines`);
+        errors.push(`${prefix}TransferOrder.items must contain 1..${MAX_ORDER_LINES} lines`);
     } else {
         const seen = new Set<number>();
-        v.items.forEach((line, idx) => {
+        const items = v.items;
+        for (let idx = 0; idx < items.length; idx++) {
+            const line = items[idx];
             if (!isPlainRecord(line) || !isNonNegInt(line.itemId) || !isPosInt(line.count)
                 || (line.itemName !== undefined && !isNonEmptyStr(line.itemName))) {
-                errors.push(`TransferOrder.items[${idx}] invalid`);
+                errors.push(`${prefix}TransferOrder.items[${idx}] invalid`);
             } else {
-                if (seen.has(line.itemId)) errors.push(`TransferOrder.items duplicate itemId ${line.itemId}`);
+                if (seen.has(line.itemId)) errors.push(`${prefix}TransferOrder.items duplicate itemId ${line.itemId}`);
                 seen.add(line.itemId);
             }
-        });
+        }
     }
 
     if (!isPlainRecord(v.antiPingPong)) {
-        errors.push('TransferOrder.antiPingPong must be an object');
+        errors.push(`${prefix}TransferOrder.antiPingPong must be an object`);
     } else {
         if (typeof v.antiPingPong.donorHoldsDemandForItems !== 'boolean') {
-            errors.push('antiPingPong.donorHoldsDemandForItems must be boolean');
+            errors.push(`${prefix}antiPingPong.donorHoldsDemandForItems must be boolean`);
         }
         if (!isFiniteNonNeg(v.antiPingPong.cooldownWindowMs)) {
-            errors.push('antiPingPong.cooldownWindowMs must be finite non-negative');
+            errors.push(`${prefix}antiPingPong.cooldownWindowMs must be finite non-negative`);
         }
         if (v.antiPingPong.donorRecentReceivedAt !== undefined && !isFinitePos(v.antiPingPong.donorRecentReceivedAt)) {
-            errors.push('antiPingPong.donorRecentReceivedAt must be finite positive');
+            errors.push(`${prefix}antiPingPong.donorRecentReceivedAt must be finite positive`);
         }
     }
+}
+
+export function validateTransferOrder(v: unknown): string[] {
+    const errors: string[] = [];
+    pushTransferOrderErrors(v, errors);
     return errors;
 }
 
@@ -1513,35 +1663,41 @@ export function validateFleetPlan(v: unknown): string[] {
     if (!Array.isArray(v.recoveryQueue)) {
         errors.push('FleetPlan.recoveryQueue must be an array');
     } else {
-        v.recoveryQueue.forEach((entry, i) => {
+        const rq = v.recoveryQueue;
+        for (let i = 0; i < rq.length; i++) {
+            const entry = rq[i];
             if (!isPlainRecord(entry) || !isAccountName(entry.account)
                 || (entry.lifecycle !== 'needs_logout_recovery' && entry.lifecycle !== 'needs_location_recovery')
                 || !isFiniteNonNeg(entry.priorityValue)) {
                 errors.push(`recoveryQueue[${i}] invalid`);
             }
-        });
+        }
     }
 
     if (!isPlainRecord(v.accountPlans)) {
         errors.push('FleetPlan.accountPlans must be an object');
     } else {
-        for (const [k, plan] of Object.entries(v.accountPlans)) {
-            for (const err of validateAccountPlan(plan)) errors.push(`accountPlans["${k}"]: ${err}`);
+        for (const k in v.accountPlans) {
+            if (!Object.hasOwn(v.accountPlans, k)) continue;
+            pushAccountPlanErrors(v.accountPlans[k], errors, `accountPlans["${k}"]: `);
         }
     }
 
     if (!Array.isArray(v.transferOrders)) {
         errors.push('FleetPlan.transferOrders must be an array');
     } else {
-        v.transferOrders.forEach((o, i) => {
-            for (const err of validateTransferOrder(o)) errors.push(`transferOrders[${i}]: ${err}`);
-        });
+        const orders = v.transferOrders;
+        for (let i = 0; i < orders.length; i++) {
+            pushTransferOrderErrors(orders[i], errors, `transferOrders[${i}]: `);
+        }
     }
 
     if (!isPlainRecord(v.spotAllocations)) {
         errors.push('FleetPlan.spotAllocations must be an object');
     } else {
-        for (const [spotId, list] of Object.entries(v.spotAllocations)) {
+        for (const spotId in v.spotAllocations) {
+            if (!Object.hasOwn(v.spotAllocations, spotId)) continue;
+            const list = v.spotAllocations[spotId];
             if (!isNonEmptyStr(spotId) || !Array.isArray(list) || !list.every(isAccountName)) {
                 errors.push(`spotAllocations["${spotId}"] invalid`);
             }
@@ -1556,25 +1712,32 @@ export const isFleetPlan = (v: unknown): v is FleetPlan => validateFleetPlan(v).
 // Section 3.5 Validators: DefectRecord, FleetState, OperatorCommand
 // ============================================================================
 
-export function validateDefectRecord(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['DefectRecord must be an object'];
-    const errors: string[] = [];
-    if (!isNonEmptyStr(v.id)) errors.push('DefectRecord.id must be non-empty');
-    if (!isNonEmptyStr(v.activityId)) errors.push('DefectRecord.activityId must be non-empty');
-    if (!isNonEmptyStr(v.faultSignature)) errors.push('DefectRecord.faultSignature must be non-empty');
-    if (v.outcomeKind !== 'worker_defect' && v.outcomeKind !== 'death') errors.push('DefectRecord.outcomeKind invalid');
-    if (!isAccountName(v.account)) errors.push('DefectRecord.account invalid');
-    if (!isFinitePos(v.observedAt)) errors.push('DefectRecord.observedAt must be finite positive');
-    if (!isFinitePos(v.quarantinedAt)) errors.push('DefectRecord.quarantinedAt must be finite positive');
-    if (v.expiresAt !== undefined && (!isFinitePos(v.expiresAt) || (isFinitePos(v.quarantinedAt) && v.expiresAt <= v.quarantinedAt))) {
-        errors.push('DefectRecord.expiresAt must be strictly after quarantinedAt');
+function pushDefectRecordErrors(v: unknown, errors: string[], prefix = ''): void {
+    if (!isPlainRecord(v)) {
+        errors.push(`${prefix}DefectRecord must be an object`);
+        return;
     }
-    if (typeof v.quarantined !== 'boolean') errors.push('DefectRecord.quarantined must be boolean');
-    if (v.workerRelease !== undefined && !isNonEmptyStr(v.workerRelease)) errors.push('DefectRecord.workerRelease must be non-empty');
-    if (!isNonEmptyStr(v.logPath)) errors.push('DefectRecord.logPath must be non-empty');
-    if (v.tickRecordPath !== undefined && !isNonEmptyStr(v.tickRecordPath)) errors.push('DefectRecord.tickRecordPath must be non-empty');
-    if (!isNonEmptyStr(v.detail)) errors.push('DefectRecord.detail must be non-empty');
-    if (!isPosInt(v.count)) errors.push('DefectRecord.count must be a positive integer');
+    if (!isNonEmptyStr(v.id)) errors.push(`${prefix}DefectRecord.id must be non-empty`);
+    if (!isNonEmptyStr(v.activityId)) errors.push(`${prefix}DefectRecord.activityId must be non-empty`);
+    if (!isNonEmptyStr(v.faultSignature)) errors.push(`${prefix}DefectRecord.faultSignature must be non-empty`);
+    if (v.outcomeKind !== 'worker_defect' && v.outcomeKind !== 'death') errors.push(`${prefix}DefectRecord.outcomeKind invalid`);
+    if (!isAccountName(v.account)) errors.push(`${prefix}DefectRecord.account invalid`);
+    if (!isFinitePos(v.observedAt)) errors.push(`${prefix}DefectRecord.observedAt must be finite positive`);
+    if (!isFinitePos(v.quarantinedAt)) errors.push(`${prefix}DefectRecord.quarantinedAt must be finite positive`);
+    if (v.expiresAt !== undefined && (!isFinitePos(v.expiresAt) || (isFinitePos(v.quarantinedAt) && v.expiresAt <= v.quarantinedAt))) {
+        errors.push(`${prefix}DefectRecord.expiresAt must be strictly after quarantinedAt`);
+    }
+    if (typeof v.quarantined !== 'boolean') errors.push(`${prefix}DefectRecord.quarantined must be boolean`);
+    if (v.workerRelease !== undefined && !isNonEmptyStr(v.workerRelease)) errors.push(`${prefix}DefectRecord.workerRelease must be non-empty`);
+    if (!isNonEmptyStr(v.logPath)) errors.push(`${prefix}DefectRecord.logPath must be non-empty`);
+    if (v.tickRecordPath !== undefined && !isNonEmptyStr(v.tickRecordPath)) errors.push(`${prefix}DefectRecord.tickRecordPath must be non-empty`);
+    if (!isNonEmptyStr(v.detail)) errors.push(`${prefix}DefectRecord.detail must be non-empty`);
+    if (!isPosInt(v.count)) errors.push(`${prefix}DefectRecord.count must be a positive integer`);
+}
+
+export function validateDefectRecord(v: unknown): string[] {
+    const errors: string[] = [];
+    pushDefectRecordErrors(v, errors);
     return errors;
 }
 
@@ -1600,38 +1763,59 @@ export function validateFleetState(v: unknown): string[] {
     }
 
     if (!isPlainRecord(v.accounts)) errors.push('FleetState.accounts must be an object');
-    else for (const [k, a] of Object.entries(v.accounts)) {
-        for (const err of validateAccountState(a)) errors.push(`accounts["${k}"]: ${err}`);
+    else for (const k in v.accounts) {
+        if (!Object.hasOwn(v.accounts, k)) continue;
+        pushAccountStateErrors(v.accounts[k], errors, `accounts["${k}"]: `);
     }
 
     if (!isPlainRecord(v.activeChains)) errors.push('FleetState.activeChains must be an object');
-    else for (const [k, plan] of Object.entries(v.activeChains)) {
-        for (const err of validateAccountPlan(plan)) errors.push(`activeChains["${k}"]: ${err}`);
+    else for (const k in v.activeChains) {
+        if (!Object.hasOwn(v.activeChains, k)) continue;
+        pushAccountPlanErrors(v.activeChains[k], errors, `activeChains["${k}"]: `);
     }
 
     if (!isPlainRecord(v.idleReasons)) errors.push('FleetState.idleReasons must be an object');
-    else for (const [k, reason] of Object.entries(v.idleReasons)) {
+    else for (const k in v.idleReasons) {
+        if (!Object.hasOwn(v.idleReasons, k)) continue;
+        const reason = v.idleReasons[k];
         if (!isAccountName(k) || !isNonEmptyStr(reason)) errors.push(`idleReasons["${k}"] must map account to non-empty reason`);
     }
 
     if (!Array.isArray(v.goals)) errors.push('FleetState.goals must be an array');
-    else v.goals.forEach((g, i) => { for (const err of validateGoalDemand(g)) errors.push(`goals[${i}]: ${err}`); });
+    else {
+        const goals = v.goals;
+        for (let i = 0; i < goals.length; i++) pushGoalDemandErrors(goals[i], errors, `goals[${i}]: `);
+    }
 
     if (!Array.isArray(v.campaigns)) errors.push('FleetState.campaigns must be an array');
-    else v.campaigns.forEach((c, i) => { for (const err of validateCampaign(c)) errors.push(`campaigns[${i}]: ${err}`); });
+    else {
+        const campaigns = v.campaigns;
+        for (let i = 0; i < campaigns.length; i++) pushCampaignErrors(campaigns[i], errors, `campaigns[${i}]: `);
+    }
 
     if (!Array.isArray(v.missions)) errors.push('FleetState.missions must be an array');
-    else v.missions.forEach((m, i) => { for (const err of validateMission(m)) errors.push(`missions[${i}]: ${err}`); });
+    else {
+        const missions = v.missions;
+        for (let i = 0; i < missions.length; i++) pushMissionErrors(missions[i], errors, `missions[${i}]: `);
+    }
 
     if (!Array.isArray(v.pendingTransfers)) errors.push('FleetState.pendingTransfers must be an array');
-    else v.pendingTransfers.forEach((t, i) => { for (const err of validateTransferOrder(t)) errors.push(`pendingTransfers[${i}]: ${err}`); });
+    else {
+        const pending = v.pendingTransfers;
+        for (let i = 0; i < pending.length; i++) pushTransferOrderErrors(pending[i], errors, `pendingTransfers[${i}]: `);
+    }
 
     if (!Array.isArray(v.quarantinedDefects)) errors.push('FleetState.quarantinedDefects must be an array');
-    else v.quarantinedDefects.forEach((d, i) => { for (const err of validateDefectRecord(d)) errors.push(`quarantinedDefects[${i}]: ${err}`); });
+    else {
+        const defects = v.quarantinedDefects;
+        for (let i = 0; i < defects.length; i++) pushDefectRecordErrors(defects[i], errors, `quarantinedDefects[${i}]: `);
+    }
 
     if (v.rateStats !== undefined) {
         if (!isPlainRecord(v.rateStats)) errors.push('FleetState.rateStats must be an object');
-        else for (const [id, r] of Object.entries(v.rateStats)) {
+        else for (const id in v.rateStats) {
+            if (!Object.hasOwn(v.rateStats, id)) continue;
+            const r = v.rateStats[id];
             if (!isNonEmptyStr(id) || !isPlainRecord(r) || !isPosInt(r.samples) || !isFiniteNonNeg(r.xpPerTick)
                 || !isFiniteNonNeg(r.unitsPerTick) || typeof r.gpPerTick !== 'number' || !Number.isFinite(r.gpPerTick)) {
                 errors.push(`rateStats["${id}"] invalid`);
@@ -1688,14 +1872,14 @@ export function validateOperatorCommand(v: unknown): string[] {
             if (!isCampaignState(v.state)) errors.push('set_campaign_state.state invalid');
             break;
         case 'upsert_campaign':
-            for (const err of validateCampaign(v.campaign)) errors.push(`upsert_campaign.campaign: ${err}`);
+            pushCampaignErrors(v.campaign, errors, 'upsert_campaign.campaign: ');
             break;
         case 'set_mission_state':
             if (!isNonEmptyStr(v.missionId)) errors.push('set_mission_state.missionId must be non-empty');
             if (!isMissionState(v.state)) errors.push('set_mission_state.state invalid');
             break;
         case 'upsert_mission':
-            for (const err of validateMission(v.mission)) errors.push(`upsert_mission.mission: ${err}`);
+            pushMissionErrors(v.mission, errors, 'upsert_mission.mission: ');
             break;
         default:
             errors.push(`unknown OperatorCommand.kind: ${String(v.kind)}`);

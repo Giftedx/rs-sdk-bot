@@ -17,33 +17,71 @@ export type NpcBlock = { debug: string; name: string; category?: string; deathDr
 // A resolver makes identity explicit: null is unresolved; only legacy calls omit the third field.
 export type ExpectedLoot = [string, number, (number | null)?];
 
+const LOOT_NAME_RE = /^name=(.*)$/m;
+const LOOT_CAT_RE = /^category=(.*)$/m;
+const LOOT_DEATH_DROP_RE = /^param=death_drop,(\S+)\s*$/m;
+const LOOT_ATTACK_RE = /^op\d=Attack\s*$/m;
+
 export function npcBlocks(files: string[]): NpcBlock[] {
     const out: NpcBlock[] = [];
     for (const text of files) for (const block of text.split(/^\[/m).slice(1)) {
-        const field = (k: string) => block.match(new RegExp(`^${k}=(.*)$`, 'm'))?.[1]?.trim(), name = field('name');
+        const name = block.match(LOOT_NAME_RE)?.[1]?.trim();
         if (!name) continue;
-        out.push({ debug: block.slice(0, block.indexOf(']')), name, category: field('category'), deathDrop: block.match(/^param=death_drop,(\S+)\s*$/m)?.[1] ?? 'bones', attackable: /^op\d=Attack\s*$/m.test(block) });
+        out.push({
+            debug: block.slice(0, block.indexOf(']')),
+            name,
+            category: block.match(LOOT_CAT_RE)?.[1]?.trim(),
+            deathDrop: block.match(LOOT_DEATH_DROP_RE)?.[1] ?? 'bones',
+            attackable: LOOT_ATTACK_RE.test(block),
+        });
     }
     return out;
 }
 
 export function npcLoot(drops: DropEntry[], npcs: NpcBlock[], itemName: (d: string) => string, spawns: Map<string, number> = new Map(), itemId?: (d: string) => number | undefined): Record<string, ExpectedLoot[]> {
     const byTrigger = new Map(drops.map(d => [d.trigger, d]));
+    const npcsByCategory = new Map<string, NpcBlock[]>();
+    const npcsByDebug = new Map<string, NpcBlock[]>();
+    for (let i = 0; i < npcs.length; i++) {
+        const n = npcs[i]!;
+        if (n.category) {
+            let list = npcsByCategory.get(n.category);
+            if (!list) { list = []; npcsByCategory.set(n.category, list); }
+            list.push(n);
+        }
+        let dList = npcsByDebug.get(n.debug);
+        if (!dList) { dList = []; npcsByDebug.set(n.debug, dList); }
+        dList.push(n);
+    }
     // A ranged quantity (count to countMax) counts its mean.
     const mean = (r: Roll) => r.countMax != null && r.countMax > (r.count ?? 1) ? ((r.count ?? 1) + r.countMax) / 2 : (r.count ?? 1);
     const forNpc = new Map<string, DropEntry[]>();
     for (const d of drops) {
-        const targets = d.trigger.startsWith('_') ? npcs.filter(n => n.category === d.trigger.slice(1)) : npcs.filter(n => n.debug === d.trigger);
-        for (const n of targets) forNpc.set(n.debug, [...(forNpc.get(n.debug) ?? []), d]);
+        const targets = d.trigger.startsWith('_') ? npcsByCategory.get(d.trigger.slice(1)) : npcsByDebug.get(d.trigger);
+        if (!targets) continue;
+        for (const n of targets) {
+            let list = forNpc.get(n.debug);
+            if (!list) { list = []; forNpc.set(n.debug, list); }
+            list.push(d);
+        }
     }
     const out: Record<string, ExpectedLoot[]> = {}, kept = new Map<string, number>();
     // A shared proc or label is listed as `label:name` or `proc:name`.
     // The explicit label: or proc: entry comes first: a label can share its name with an NPC handler (skeleton_armed),
     // and the bare name would read the empty handler again.
     const shared = (u: string) => byTrigger.get('label:' + u) ?? byTrigger.get('proc:' + u) ?? byTrigger.get(u);
-    for (const n of npcs.filter(n => n.attackable)) {
+    for (const n of npcs) {
+        if (!n.attackable) continue;
         const exp = new Map<string, number>(), add = (item: string | undefined, chance: number, count = 1) => { if (!item || item === 'null' || !(chance > 0)) return; const d = item === 'death_drop' ? n.deathDrop : item; if (d === 'null') return; exp.set(d, (exp.get(d) ?? 0) + chance * count); };
-        const entries = (forNpc.get(n.debug) ?? []).flatMap(e => { const s = e.uses ? shared(e.uses) : undefined; return s ? [e, s] : [e]; });
+        const rawEntries = forNpc.get(n.debug);
+        const entries: DropEntry[] = [];
+        if (rawEntries) {
+            for (const e of rawEntries) {
+                entries.push(e);
+                const s = e.uses ? shared(e.uses) : undefined;
+                if (s) entries.push(s);
+            }
+        }
         // An NPC with no drop handler drops its death drop (the default death); a handler drops what it lists.
         if (!entries.length) add('death_drop', 1);
         for (const e of entries) {

@@ -66,7 +66,12 @@ export function dueTrades(
     now: number,
     lead = LEAD,
 ) {
-    const names = new Set(orders.flatMap(o => [o.from, o.to]).filter(n => sideOf(n, owners) === side).map(n => n.toLowerCase()));
+    const names = new Set<string>();
+    for (let i = 0; i < orders.length; i++) {
+        const o = orders[i]!;
+        if (sideOf(o.from, owners) === side) names.add(o.from.toLowerCase());
+        if (sideOf(o.to, owners) === side) names.add(o.to.toLowerCase());
+    }
     const pick = buildOrderPicker(orders, receipts);
     const due: { account: string; order: Order; busy: boolean }[] = [];
     for (const n of names) {

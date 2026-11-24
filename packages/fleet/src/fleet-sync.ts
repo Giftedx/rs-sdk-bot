@@ -63,28 +63,56 @@ function durableGuildFacts(raw: any) {
 }
 
 export function snapshot(statuses: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now(), prior: readonly any[] = []) {
-    const mine = (s: any) => typeof s?.name === 'string' && owners.get(s.name.toLowerCase())?.side === side && owners.get(s.name.toLowerCase())?.server === String(s.server).toLowerCase();
-    const by = new Map<string, any>(prior.filter(mine).map(r => [r.name.toLowerCase(), r]));
-    for (const s of statuses.filter(mine)) {
-        const kept = by.get(s.name.toLowerCase());
+    const isMine = (s: any, lower: string): boolean => {
+        const own = owners.get(lower);
+        return !!own && own.side === side && own.server === String(s.server).toLowerCase();
+    };
+    const by = new Map<string, any>();
+    for (let i = 0; i < prior.length; i++) {
+        const r = prior[i];
+        if (typeof r?.name !== 'string') continue;
+        const lower = r.name.toLowerCase();
+        if (isMine(r, lower)) by.set(lower, r);
+    }
+    for (let i = 0; i < statuses.length; i++) {
+        const s = statuses[i];
+        if (typeof s?.name !== 'string') continue;
+        const lower = s.name.toLowerCase();
+        if (!isMine(s, lower)) continue;
+        const kept = by.get(lower);
         if (kept && Number.isFinite(kept.at) && !(Number(s.at) >= kept.at)) continue;
         const incomingBank = rows(s.bank), bank = incomingBank ?? rows(kept?.bank), equipment = rows(s.equipment, 'equipment'), inventory = rows(s.inventory, 'inventory'), p = s.pos;
         const incomingJournal = journalRows(s.quests), journal = incomingJournal ?? journalRows(kept?.questJournal);
         const incomingLegacyQuests = kept?.questJournal == null ? legacyJournalNames(s.quests) : undefined;
         const legacyQuests = incomingLegacyQuests ?? (kept?.questJournal == null && Array.isArray(kept?.quests)
             && kept.quests.every((q: unknown) => typeof q === 'string' && q.trim()) ? [...new Set(kept.quests)] : undefined);
-        const completed = journal ? journal.filter(q => q.state === 'complete').map(q => q.name) : legacyQuests;
+        let completed: unknown[] | undefined;
+        if (journal) {
+            completed = [];
+            for (let ji = 0; ji < journal.length; ji++) {
+                const q = journal[ji]!;
+                if (q.state === 'complete') completed.push(q.name);
+            }
+        } else {
+            completed = legacyQuests;
+        }
         const guildFacts = durableGuildFacts(s.guildFacts);
-        by.set(s.name.toLowerCase(), {
+        const skills: Record<string, unknown>[] = [];
+        if (Array.isArray(s.skills)) {
+            for (let ki = 0; ki < s.skills.length; ki++) {
+                const k = s.skills[ki];
+                if (!k || typeof k.name !== 'string' || !Number.isSafeInteger(k.level) || k.level <= 0) continue;
+                const entry: Record<string, unknown> = { name: k.name, level: k.level };
+                if (nonnegativeInteger(k.currentLevel)) entry.currentLevel = k.currentLevel;
+                if (typeof k.xp === 'number' && Number.isFinite(k.xp) && k.xp >= 0) entry.xp = k.xp;
+                skills.push(entry);
+            }
+        }
+        by.set(lower, {
             name: s.name, server: s.server, at: s.at, bank, inventory, ...(inventory !== null ? { inventoryIds: 'raw' as const } : {}), equipment,
             bankAt: bank ? incomingBank !== null ? observationAt(s.bankAt, s.at) : observationAt(kept?.bankAt, kept?.at) : null,
             ...(typeof s.equipmentObserved === 'boolean' ? { equipmentObserved: equipment !== null && s.equipmentObserved } : {}),
-            skills: (Array.isArray(s.skills) ? s.skills : []).filter((k: any) => k && typeof k.name === 'string'
-                && Number.isSafeInteger(k.level) && k.level > 0).map((k: any) => ({
-                name: k.name, level: k.level,
-                ...(nonnegativeInteger(k.currentLevel) ? { currentLevel: k.currentLevel } : {}),
-                ...(typeof k.xp === 'number' && Number.isFinite(k.xp) && k.xp >= 0 ? { xp: k.xp } : {}),
-            })),
+            skills,
             ...(Number.isSafeInteger(s.combat) && s.combat > 0 ? { combat: s.combat } : {}),
             ...(p && nonnegativeInteger(p.x) && nonnegativeInteger(p.z) && nonnegativeInteger(p.level) && p.level <= 3
                 ? { pos: { x: p.x, z: p.z, level: p.level } } : {}),
@@ -131,7 +159,16 @@ export function planView(jobs: readonly any[], side = mySide(), owners = loadOwn
     const roster = new Set((army ?? []).map(entry => String(typeof entry === 'string' ? entry : entry.account).toLowerCase()));
     const builds = goals?.builds && typeof goals.builds === 'object' && !Array.isArray(goals.builds)
         ? Object.fromEntries(Object.entries(goals.builds).filter(([account, build]) => roster.has(account.toLowerCase()) && typeof build === 'string')) : undefined;
-    return { side, at: now, jobs: own.map(j => Object.fromEntries(PLAN_FIELDS.filter(k => j[k] !== undefined).map(k => [k, j[k]]))), ...(army ? { army } : {}), ...(builds ? { builds } : {}) };
+    const outJobs: Record<string, unknown>[] = new Array(own.length);
+    for (let i = 0; i < own.length; i++) {
+        const j = own[i]!;
+        const copy: Record<string, unknown> = {};
+        for (const k of PLAN_FIELDS) {
+            if (j[k] !== undefined) copy[k] = j[k];
+        }
+        outJobs[i] = copy;
+    }
+    return { side, at: now, jobs: outJobs, ...(army ? { army } : {}), ...(builds ? { builds } : {}) };
 }
 
 export function brainPlannedJobs(base: string, existingJobs: readonly any[], now = Date.now()): any[] {
@@ -308,14 +345,29 @@ function pairedZeroTransferClaims(
     confirmed: (claim: FleetTradeClaim, receipt: TradeReceipt) => boolean,
     now: number,
 ): FleetTradeClaim[][] {
+    const byOrder = new Map<string, FleetTradeClaim[]>();
+    const candidateOrderIds = new Set<string>();
+    for (let i = 0; i < claims.length; i++) {
+        const claim = claims[i]!;
+        let list = byOrder.get(claim.orderId);
+        if (!list) {
+            list = [];
+            byOrder.set(claim.orderId, list);
+        }
+        list.push(claim);
+        if (claim.phase === 'held' && claim.side === side) {
+            candidateOrderIds.add(claim.orderId);
+        }
+    }
     const pairs: FleetTradeClaim[][] = [];
-    for (const orderId of new Set(claims.filter(claim => claim.phase === 'held' && claim.side === side).map(claim => claim.orderId))) {
+    for (const orderId of candidateOrderIds) {
         const order = read(`orders/${orderId}.json`);
         if (!validOrder(order) || order.id !== orderId || now < order.end) continue;
-        const pair = claims.filter(claim => claim.orderId === orderId);
-        if (pair.length !== 2 || pair.some(claim => claim.phase !== 'held' || claim.side !== side)) continue;
-        const from = pair.filter(claim => claim.role === 'from'), to = pair.filter(claim => claim.role === 'to');
-        if (from.length !== 1 || to.length !== 1 || from[0]!.nonce === to[0]!.nonce) continue;
+        const pair = byOrder.get(orderId)!;
+        if (pair.length !== 2 || pair[0]!.phase !== 'held' || pair[0]!.side !== side || pair[1]!.phase !== 'held' || pair[1]!.side !== side) continue;
+        const from = pair[0]!.role === 'from' ? pair[0]! : pair[1]!.role === 'from' ? pair[1]! : null;
+        const to = pair[0]!.role === 'to' ? pair[0]! : pair[1]!.role === 'to' ? pair[1]! : null;
+        if (!from || !to || from.nonce === to.nonce) continue;
         let matched = true;
         for (const claim of pair) {
             const receipt = read(`receipts/${orderId}.${claim.role}.json`);

@@ -7,13 +7,14 @@ import { beginSessionAttempt } from '../../core/src/session-lifecycle';
 import { RECOVERY_SCHEMA } from '../../core/src/session-recovery-permit';
 import { WORKER_FAMILIES } from '../../workers/src/contracts';
 import { materializeBrainTransferOrders } from '../src/brain-runtime';
+import { managedCommands, mayRestart, observeNormalOwners, worktreeSetupResult } from '../src/cloud-side';
 import { courierCargo, courierDeliveryWaiting } from '../src/courier-admission';
 import { dueTrades } from '../src/fleet-agent';
-import { droppedTradeClaims } from '../src/fleet-sync';
+import { droppedTradeClaims, planView, releasePublishedTradeClaims, snapshot } from '../src/fleet-sync';
 import { InfraCircuitBreaker } from '../src/infra-circuit-breaker';
 import { importClosure } from '../src/live-update/inspect';
-import { findCurrentNativeRecoveryQualification, runControlledDispatchOne } from '../src/session-recovery';
-import { readAllStatuses } from '../src/swarm';
+import { findCurrentNativeRecoveryQualification, runControlledDispatchOne, spentStandaloneAttempts } from '../src/session-recovery';
+import { overlappingRun, readAllStatuses } from '../src/swarm';
 import { buildOrderPicker, pickOrder } from '../src/trade-plan';
 import { resolveWorkerModule, UNIFIED_WORKER_MODULES } from '../src/worker-dispatch';
 
@@ -272,5 +273,93 @@ describe('fleet perf cache and index invariants', () => {
         snap.faults.proxy.lastError = 'mutated';
         expect(breaker.snapshot().faults.proxy.consecutiveFailures).toBe(1);
         expect(breaker.snapshot().faults.proxy.lastError).toBe('ERR_PROXY_CONNECTION_FAILED');
+    });
+
+    test('cloud-side managedCommands, mayRestart, observeNormalOwners, and worktreeSetupResult preserve safety and bounds', () => {
+        const now = 1_700_000_000_000;
+        expect(managedCommands(false, 'swarm.json')).toEqual({
+            swarm: ['scripts/swarm.ts', 'swarm.json'],
+            'fleet-agent': ['scripts/fleet-agent.ts'],
+        });
+        expect(managedCommands(true, 'swarm.json')).toEqual({ swarm: ['scripts/swarm.ts', 'swarm.json'] });
+
+        expect(mayRestart([now - 3_600_000, now - 3_600_001, now - 20_000, now - 15_000, now - 10_000, now - 5_000, now - 1_000], now)).toBe(true);
+        expect(mayRestart([now - 3_599_999, now - 200_000, now - 100_000, now - 50_000, now - 10_000, now - 1_000], now)).toBe(false);
+
+        let retained = '';
+        const res = worktreeSetupResult(
+            {
+                status: 1,
+                stdout: '\u001b[31mworktree-setup: SDK patch: FAILED\u001b[0m\nsecret=topsecretvalue',
+                stderr: 'Authorization: Bearer mytoken123',
+            },
+            (out) => { retained = out; },
+            { MY_SECRET_TOKEN: 'topsecretvalue' },
+        );
+        expect(res.ok).toBe(false);
+        expect(res.detail).toContain('SDK patch: FAILED');
+        expect(retained).not.toContain('topsecretvalue');
+        expect(retained).not.toContain('mytoken123');
+        expect(retained).toContain('[redacted]');
+
+        const root = scratch();
+        mkdirSync(join(root, '.practice'), { recursive: true });
+        const ownerView = observeNormalOwners(root, join(root, 'swarm.json'), 'local', {}, {
+            alive: (pid) => pid === 4242,
+            processes: () => [4242],
+            command: () => 'bun scripts/swarm.ts swarm.json',
+            groups: () => [],
+        });
+        expect(ownerView.known).toBe(false);
+        expect(ownerView.reason).toContain('normal migration waits for unowned swarm to settle');
+    });
+
+    test('session-recovery spentStandaloneAttempts, fleet-sync snapshot/planView/claims, swarm overlappingRun, and fleet-agent dueTrades parity', () => {
+        const now = 1_700_000_000_000;
+        expect(spentStandaloneAttempts([
+            { at: now - 100, account: 'Alpha', endedAt: 500, ok: false, reason: 'err' },
+            { at: now - 90, account: 'alpha', endedAt: 500, ok: false, infraFault: true, reason: 'proxy' },
+            { at: now - 80, account: 'alpha', endedAt: 500, ok: true, reason: 'ok' },
+            { at: now - 70, account: 'ALPHA', endedAt: 500, ok: false, reason: 'err2' },
+        ], 'Alpha', 500)).toBe(2);
+
+        const owners = new Map<string, any>([
+            ['alpha', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+            ['beta', { side: 'cloud', server: 'rs-sdk-demo.fly.dev' }],
+        ]);
+        const snap = snapshot([
+            {
+                name: 'Alpha',
+                server: 'rs-sdk-demo.fly.dev',
+                at: now - 1000,
+                skills: [{ name: 'Attack', level: 50, xp: 101333 }, { name: 'Bad', level: 0 }],
+                quests: [{ name: 'Cooks Assistant', state: 'complete' }, { name: 'Sheep Shearer', state: 'started' }],
+            },
+            { name: 'Beta', server: 'rs-sdk-demo.fly.dev', at: now },
+        ], 'local', owners, now);
+        expect(snap.accounts).toHaveLength(1);
+        expect(snap.accounts[0]?.skills).toEqual([{ name: 'Attack', level: 50, xp: 101333 }]);
+        expect(snap.accounts[0]?.quests).toEqual(['Cooks Assistant']);
+
+        const pv = planView([
+            { account: 'Alpha', script: 'scripts/aio.ts', enabled: true, extraDrop: 1 },
+            { account: 'Alpha', role: 'main', script: 'scripts/aio.ts', enabled: true },
+            { account: 'Beta', script: 'scripts/aio.ts', enabled: true },
+        ], 'local', owners, now);
+        expect(pv.jobs).toEqual([{ account: 'Alpha', script: 'scripts/aio.ts', enabled: true }]);
+
+        const runSet = new Set([{ accounts: ['Beta', 'Gamma'], pid: 1 }, { accounts: ['Alpha'], pid: 2 }]);
+        expect(overlappingRun(runSet, ['ALPHA'])?.pid).toBe(2);
+        expect(overlappingRun(runSet, ['Missing'])).toBeUndefined();
+
+        const orders = [{ id: 'o1', from: 'Alpha', to: 'Beta', server: 'rs-sdk-demo.fly.dev', at: now - 1000, end: now + 60_000 }] as any[];
+        expect(dueTrades(orders, [], 'local', owners, new Set(), new Set(), now)).toHaveLength(1);
+        expect(dueTrades(orders, [], 'local', owners, new Set(), new Set(['alpha']), now)).toEqual([]);
+
+        const releasedCount = releasePublishedTradeClaims([
+            { orderId: 'ord-1', role: 'from', side: 'local', account: 'Alpha', server: 'rs-sdk-demo.fly.dev', phase: 'held', at: now - 20_000, nonce: 'n1' },
+            { orderId: 'ord-1', role: 'to', side: 'local', account: 'Beta', server: 'rs-sdk-demo.fly.dev', phase: 'held', at: now - 20_000, nonce: 'n2' },
+        ] as any[], 'local', () => null, () => {}, now);
+        expect(releasedCount).toBe(0);
     });
 });
