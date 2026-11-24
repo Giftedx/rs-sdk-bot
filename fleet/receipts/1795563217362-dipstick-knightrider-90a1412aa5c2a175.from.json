@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795563217362-dipstick-knightrider-90a1412aa5c2a175",
+ "account": "Dipstick",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 97,
+ "claim": "5f309556-fb46-4f11-9109-96eaf4aaf95d",
+ "count": 0,
+ "ok": false,
+ "at": 1795564591189,
+ "detail": "trade claimed"
+}

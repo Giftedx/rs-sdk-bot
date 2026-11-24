@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795563216896-fatstack-knightrider-9615dd0fc9220a82",
+ "account": "KnightRider",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "100aaad0-9ad6-4d91-a59c-1732ff2f9f8f",
+ "count": 0,
+ "ok": false,
+ "at": 1795564596866,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Adamant arrowtips",
+   "requested": 495,
+   "count": 0
+  }
+ ]
+}

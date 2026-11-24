@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795563217601-swordswallow-bigchopper-9f4bc0432ddc15cc",
+ "account": "Bigchopper",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Headless arrow",
+ "requested": 495,
+ "claim": "bee365b9-45ca-4ecf-8e61-d8993bb694d6",
+ "count": 495,
+ "ok": true,
+ "at": 1795564583408,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 495
+ },
+ "bank": {
+  "count": 495,
+  "at": 1795564582639
+ },
+ "logout": {
+  "attemptId": "1795564573010-0000025784-0000000001",
+  "at": 1795564583396,
+  "sha256": "7ac48518f81a523bfc594a4cd1dba0f75462be6ad493a05ff50ea03adcb7d6df"
+ },
+ "screen": true
+}

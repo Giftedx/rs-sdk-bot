@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795564177488-2",
+ "account": "OreElse",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth talisman",
+ "requested": 1,
+ "claim": "f9695c80-595f-4f81-90f6-2f1ff7ee94a7",
+ "count": 0,
+ "ok": false,
+ "at": 1795564560199,
+ "detail": "trade claimed"
+}

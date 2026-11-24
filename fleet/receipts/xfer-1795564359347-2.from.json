@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795564359347-2",
+ "account": "UnderMyKilt",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragonhide chaps",
+ "requested": 1,
+ "claim": "4d9ffb68-b7b2-41c2-ac4b-9b877c7ccafd",
+ "count": 0,
+ "ok": false,
+ "at": 1795564534857,
+ "detail": "trade claimed"
+}
