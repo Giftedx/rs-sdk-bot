@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562005784,
+ "at": 1795562016629,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,6 +22,19 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/generated/quest-elena.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:elena",
+   "role": "army"
   },
   {
    "account": "Unsheathed",
@@ -69,19 +82,6 @@
    "resources": [
     "blood-chest"
    ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/generated/quest-elena.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "army"
   }
  ],
  "army": [
