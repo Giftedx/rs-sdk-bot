@@ -10,13 +10,14 @@ import { trackResult } from './results';
 // A status file is parsed again only when its mtime changes; track() runs once per new winning version. The scans
 // cover live, legacy and practice status folders so live bots under .practice/live/status stay visible.
 const statusScans = statusDirs.map(dir => ({ dir, scan: folderScan(dir) }));
-const statusCache = new Map<string, { mtime: number; doc: Status }>();
+const statusCache = new Map<string, { mtime: number; size: number; doc: Status }>();
 let statusCacheVersion = 0;
 let cachedPracticeVersion = -1;
 let cachedPracticeSet = new Set<string>();
 const trackedVersions = new Map<string, string>();
 const flows = new Map<string, any>(); // loot and supplies per account and session (flow.ts)
 function readStatuses(): Map<string, Status> {
+    const nowWall = Date.now();
     for (const { dir, scan } of statusScans) {
         const { check, gone } = scan();
         for (const f of gone) if (statusCache.delete(join(dir, f))) statusCacheVersion++;
@@ -24,30 +25,32 @@ function readStatuses(): Map<string, Status> {
             if (!f.endsWith('.json')) continue;
             const p = join(dir, f);
             try {
-                const mtime = statSync(p).mtimeMs;
-                if (statusCache.get(p)?.mtime === mtime) continue;
+                const st = statSync(p);
+                const size = typeof st.size === 'number' ? st.size : -1;
+                const hit = statusCache.get(p);
+                if (hit && nowWall - st.mtimeMs > 1000 && hit.mtime === st.mtimeMs && hit.size === size) continue;
                 const doc = JSON.parse(readFileSync(p, 'utf8'));
                 if (!doc || typeof doc.name !== 'string' || !doc.name || typeof doc.server !== 'string'
                     || !Number.isFinite(doc.at) || doc.at < 0
                     || ['phase','role','goal','result','timeline'].some(k => doc[k] != null && typeof doc[k] !== 'string')
                     || ['skills','inventory','bank','equipment','quests'].some(k => doc[k] != null && !Array.isArray(doc[k]))
                     || (doc.skills ?? []).some((k: any) => !k || typeof k.name !== 'string')) { if (statusCache.delete(p)) statusCacheVersion++; continue; }
-                statusCache.set(p, { mtime, doc });
+                statusCache.set(p, { mtime: st.mtimeMs, size, doc });
                 statusCacheVersion++;
             } catch { if (existsSync(p)) scan.retry(f); /* being written */ else if (statusCache.delete(p)) statusCacheVersion++; }
         }
     }
-    const winners = new Map<string, { path: string; mtime: number; doc: Status }>(), now = Date.now();
+    const winners = new Map<string, { path: string; mtime: number; size: number; doc: Status }>(), now = Date.now();
     for (const [path, entry] of statusCache.entries()) {
         const s = entry.doc;
         if (isLocalServer(s.server) && now - s.at > 30 * 60_000) continue; // stale practice bots
         const key = s.name.toLowerCase();
         const other = winners.get(key);
-        if (!other || s.at > other.doc.at) winners.set(key, { path, mtime: entry.mtime, doc: s });
+        if (!other || s.at > other.doc.at) winners.set(key, { path, mtime: entry.mtime, size: entry.size, doc: s });
     }
     const out = new Map<string, Status>();
     for (const [key, winner] of winners) {
-        const version = `${winner.path}:${winner.mtime}`;
+        const version = `${winner.path}:${winner.mtime}:${winner.size}:${winner.doc.at}:${winner.doc.tick ?? ''}`;
         if (trackedVersions.get(key) !== version) {
             track(winner.doc);
             trackedVersions.set(key, version);

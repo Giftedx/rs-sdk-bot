@@ -50,7 +50,7 @@ export function gearProgress(bots:any[],items:any[],now:number){
   for(let li=0;li<3;li++){
    const [place,list,at]=locations[li]!;
    if(!dated(at,now)||!Array.isArray(list))continue;
-   let matchedMask=0;
+   const matchedTargets=new Set<number>();
    for(let ii=0;ii<list.length;ii++){
     const item=list[ii];
     if(!item||!Number.isSafeInteger(item.count)||item.count<=0)continue;
@@ -58,9 +58,8 @@ export function gearProgress(bots:any[],items:any[],now:number){
     if(!hitTargets)continue;
     for(let ti=0;ti<hitTargets.length;ti++){
      const idx=hitTargets[ti]!;
-     const bit=1<<idx;
-     if((matchedMask&bit)!==0)continue;
-     matchedMask|=bit;
+     if(matchedTargets.has(idx))continue;
+     matchedTargets.add(idx);
      holdersByTarget[idx]!.push({name:b.name,place,at,recent:recent(at,now)});
     }
    }

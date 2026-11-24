@@ -110,7 +110,7 @@ function buildState() {
         const targetRaw = Number(s.env?.target), target = Number.isInteger(targetRaw) && targetRaw >= 2 && targetRaw <= 99 ? targetRaw : 99;
         const r = fresh ? rate(name, skill) : null;
         // XP left to this run's TARGET level on this server's curve (packages/planner/src/curve.ts), not always 99.
-        const xpLeft = sk && Number.isFinite(sk.xp) ? Math.max(0, xpForLevel(target) - sk.xp) : null;
+        const xpLeft = sk && Number.isFinite(sk.xp) ? Math.max(0, cachedXpForLevel(target) - sk.xp) : null;
         const ticksLeft = r && r > 0 && xpLeft != null ? xpLeft / r : null;
         // Pace: the account's hiscore time on the goal board (or this run's ticks) plus ticks left, against #1's time.
         // Pace only means something when the run's target reaches #1's level.

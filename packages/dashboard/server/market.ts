@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { buildItemExamine, catalogueIconAliases } from '../item-examine';
@@ -209,32 +209,40 @@ function vault(bots: any[], now: number) {
 }
 
 // ---------- gear catalog ----------
-let gearCatalogCache: { body: string; tag: string } | null = null;
+let gearCatalogCache: { mtimeMs: number; size: number; body: string; tag: string } | null = null;
 function gearCatalogResponse(): { body: string; tag: string } {
-    if (gearCatalogCache) return gearCatalogCache;
+    const file = join(sourceRoot, 'knowledge', 'gear.json');
+    let st: { mtimeMs: number; size: number } | null = null;
+    try { st = statSync(file); } catch { st = null; }
+    if (!st) {
+        const body = '[]';
+        const tag = `"${createHash('sha1').update(body).digest('hex').slice(0, 16)}"`;
+        gearCatalogCache = null;
+        return { body, tag };
+    }
+    if (gearCatalogCache && Date.now() - st.mtimeMs > 1000 && gearCatalogCache.mtimeMs === st.mtimeMs && gearCatalogCache.size === st.size) {
+        return { body: gearCatalogCache.body, tag: gearCatalogCache.tag };
+    }
     let body = '[]';
     try {
-        const file = join(sourceRoot, 'knowledge', 'gear.json');
-        if (existsSync(file)) {
-            const raw = JSON.parse(readFileSync(file, 'utf8')) as any[];
-            const compact = (Array.isArray(raw) ? raw : [])
-                .filter(g => g && Number.isSafeInteger(g.id) && g.id >= 0 && typeof g.name === 'string' && g.name && typeof g.slot === 'string')
-                .map(g => ({
-                    id: g.id,
-                    name: g.name,
-                    slot: g.slot,
-                    ...(Number.isFinite(g.attackRate) && g.attackRate > 0 ? { attackRate: g.attackRate } : {}),
-                    ...(g.bonuses ? { bonuses: g.bonuses } : {}),
-                    ...(g.requires ? { requires: { ...(g.requires.skills ? { skills: g.requires.skills } : {}), ...(g.requires.quest ? { quest: g.requires.quest } : {}) } } : {}),
-                    ...(g.special ? { special: g.special } : {}),
-                    ...(g.staffOnly ? { staffOnly: true } : {}),
-                }));
-            body = JSON.stringify(compact);
-        }
+        const raw = JSON.parse(readFileSync(file, 'utf8')) as any[];
+        const compact = (Array.isArray(raw) ? raw : [])
+            .filter(g => g && Number.isSafeInteger(g.id) && g.id >= 0 && typeof g.name === 'string' && g.name && typeof g.slot === 'string')
+            .map(g => ({
+                id: g.id,
+                name: g.name,
+                slot: g.slot,
+                ...(Number.isFinite(g.attackRate) && g.attackRate > 0 ? { attackRate: g.attackRate } : {}),
+                ...(g.bonuses ? { bonuses: g.bonuses } : {}),
+                ...(g.requires ? { requires: { ...(g.requires.skills ? { skills: g.requires.skills } : {}), ...(g.requires.quest ? { quest: g.requires.quest } : {}) } } : {}),
+                ...(g.special ? { special: g.special } : {}),
+                ...(g.staffOnly ? { staffOnly: true } : {}),
+            }));
+        body = JSON.stringify(compact);
     } catch { body = '[]'; }
     const tag = `"${createHash('sha1').update(body).digest('hex').slice(0, 16)}"`;
-    gearCatalogCache = { body, tag };
-    return gearCatalogCache;
+    gearCatalogCache = { mtimeMs: st.mtimeMs, size: st.size, body, tag };
+    return { body, tag };
 }
 
 function startMarketRefresh() {

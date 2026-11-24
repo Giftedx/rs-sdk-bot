@@ -13,7 +13,7 @@ import { buildItemPrices, itemPrice, priceItemKey } from './item-prices';
 import { isLocalServer } from '../core/src/localserver';
 import { createOperatorControl } from './operator-control';
 import { readReceipts } from './publish-commands';
-import { shortPhase } from './server/config';
+import { cached, shortPhase } from './server/config';
 import { itemSources, npcDrops } from './gen-map-data';
 import { huntKinds, npcDefence, npcHunters } from './gen-npc-defence';
 import { npcBlocks, npcLoot } from './gen-npc-loot';
@@ -523,5 +523,24 @@ describe('dashboard perf invariants', () => {
         expect(def.Goblin?.[0]).toEqual([2, 1, 1, -15, 0, 0, 0, 0, 1, 1, 0, 0, 2, 5, 1000, 100]);
         const hunters = npcHunters([npcText], hunts, [{ debugname: 'goblin', spawns: [{ x: 3250, z: 3230 }, { x: 3250, z: 3230, level: 0 }] }]);
         expect(hunters).toEqual([['Goblin', 1, 2, [3250, 3230, 0]]]);
+    });
+
+    test('server config cached() refreshes on same-second overwrites and clears deleted files', () => {
+        const dir = mkdtempSync(join(tmpdir(), 'dash-cfg-cache-'));
+        tempDashDirs.push(dir);
+        const file = join(dir, 'swarm.json');
+        writeFileSync(file, JSON.stringify({ running: 1 }));
+        expect(cached(file, JSON.parse, null)).toEqual({ running: 1 });
+
+        // Same-second overwrite with identical byte size must not hit a stale cache.
+        writeFileSync(file, JSON.stringify({ running: 2 }));
+        expect(cached(file, JSON.parse, null)).toEqual({ running: 2 });
+
+        // Backdated mtime (>1s old) exercises cache hit, then deletion returns empty instead of ghost state.
+        const old = new Date(Date.now() - 10_000);
+        utimesSync(file, old, old);
+        expect(cached(file, JSON.parse, null)).toEqual({ running: 2 });
+        rmSync(file);
+        expect(cached(file, JSON.parse, null)).toBeNull();
     });
 });

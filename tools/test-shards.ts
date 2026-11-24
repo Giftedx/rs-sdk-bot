@@ -169,12 +169,28 @@ export async function runShard(files: string[]): Promise<{ code: number; output:
     return { code, output, unknownFailure: code !== 0 && !failedFiles(output).length };
 }
 
+export function parsePorcelainPaths(raw: string): string[] {
+    const out: string[] = [];
+    for (const line of raw.split(/\r?\n/)) {
+        if (line.length < 4) continue;
+        let pathPart = line.slice(3);
+        const arrow = pathPart.indexOf(' -> ');
+        if (arrow >= 0) pathPart = pathPart.slice(arrow + 4);
+        if (pathPart.startsWith('"') && pathPart.endsWith('"') && pathPart.length >= 2) {
+            pathPart = pathPart.slice(1, -1);
+        }
+        if (pathPart) out.push(pathPart.replaceAll('\\', '/'));
+    }
+    return out;
+}
+
 if (import.meta.main) {
     const argv = process.argv.slice(2);
     const at = argv.indexOf('--shards');
     const count = at >= 0 ? Number(argv.splice(at, 2)[1]) : 12;
     const refAt = argv.indexOf('--changed');
     const changedRef = refAt >= 0 ? argv.splice(refAt, 2)[1] : undefined;
+    if (refAt >= 0 && !changedRef) throw new Error('--changed needs a git ref');
     const partAt = argv.indexOf('--part');
     const part = partAt >= 0 ? parsePart(argv.splice(partAt, 2)[1]) : undefined;
     if (!Number.isSafeInteger(count) || count < 1 || !argv.length) throw new Error('usage: bun tools/test-shards.ts [--shards n] [--changed <ref>] [--part i/n] <folder>...');
@@ -190,10 +206,13 @@ if (import.meta.main) {
     const from = argv.indexOf('--changed');
     if (from >= 0) throw new Error('--changed must come before the folders');
     if (changedRef) {
-        const git = (...args: string[]) => Bun.spawnSync(['git', '-C', root, ...args], { stdout: 'pipe', stderr: 'pipe', windowsHide: true }).stdout.toString().trim();
-        const mergeBase = git('merge-base', changedRef, 'HEAD');
+        const gitRaw = (...args: string[]) => Bun.spawnSync(['git', '-C', root, ...args], { stdout: 'pipe', stderr: 'pipe', windowsHide: true }).stdout.toString();
+        const mergeBase = gitRaw('merge-base', changedRef, 'HEAD').trim();
         if (!mergeBase) throw new Error(`--changed: no merge base with ${changedRef}`);
-        const changed = [...new Set([...git('diff', '--name-only', mergeBase, 'HEAD').split(/\r?\n/), ...git('status', '--porcelain', '--untracked-files=all').split(/\r?\n/).map(l => l.slice(3))])].filter(Boolean).map(f => f.replaceAll('\\', '/'));
+        const changed = [...new Set([
+            ...gitRaw('diff', '--name-only', mergeBase, 'HEAD').trim().split(/\r?\n/),
+            ...parsePorcelainPaths(gitRaw('status', '--porcelain', '--untracked-files=all')),
+        ])].filter(Boolean).map(f => f.replaceAll('\\', '/'));
         const selected = affectedTests(files, changed);
         console.log(selected ? `test-shards: ${changed.length} changed files reach ${selected.length} of ${total} test files` : `test-shards: a wide file changed, so all ${total} test files run`);
         if (selected) files.splice(0, files.length, ...selected);

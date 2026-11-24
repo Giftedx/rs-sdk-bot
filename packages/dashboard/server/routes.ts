@@ -77,7 +77,9 @@ export function createFetchHandler() {
         if(url.pathname.startsWith('/client-assets/')) {
             const name=url.pathname.slice('/client-assets/'.length);
             if(!['npc-names.json','item-stats.json','item-list.json','resources.json','multiway.json','skill-actions.json','pk-kits.json','agility.json','npc-spawns.json','npc-hunt.json','map-icons.json','item-sources.json','npc-drops.json','item-bonuses.json','spellbook.json','quest-rewards.json','item-alch.json','cooking.json','quest-reqs.json','thieving.json','gather-chance.json','runecraft.json','npc-defence.json','npc-loot.json','weapon-speed.json'].includes(name)&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
-            const file=Bun.file(join(dashboardDir,'client-assets',name));
+            const assetPath=join(dashboardDir,'client-assets',name);
+            if(typeof existsSync==='function'&&!existsSync(assetPath))return new Response('not found',{status:404});
+            const file=Bun.file(assetPath);
             // A data file changes with each page round (a new field, a new skill); the browser asks again each time and
             // gets a 304 when it is the same (a weak ETag of its size and time). Images and fonts keep the hour.
             if(!name.endsWith('.json'))return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
@@ -102,8 +104,14 @@ export function createFetchHandler() {
         const asset=viewerAsset(url.pathname);if(asset)return asset;
         // The page relays the 3D viewer's follow-change timings (time until the destination is loaded).
         if (url.pathname === '/api/viewer-timing' && req.method === 'POST') {
-            return req.json().then((t: any) => {
-                if (t && Number.isFinite(t.ms)) { viewerTimings.unshift({ at: Date.now(), mode: String(t.mode).slice(0, 24), ms: t.ms, tiles: Number(t.tiles) || 0, frames: Number(t.frames) || 0, blankFrames: Number(t.blankFrames) || 0, holdFrames: Number(t.holdFrames) || 0 }); viewerTimings.length = Math.min(viewerTimings.length, 40); }
+            return req.text().then((raw) => {
+                if (raw.length > 4096) return new Response('too large', { status: 413 });
+                const t = JSON.parse(raw) as any;
+                const nn = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.trunc(v) : 0;
+                if (t && typeof t.ms === 'number' && Number.isFinite(t.ms) && t.ms >= 0) {
+                    viewerTimings.unshift({ at: Date.now(), mode: String(t.mode ?? '').slice(0, 24), ms: t.ms, tiles: nn(t.tiles), frames: nn(t.frames), blankFrames: nn(t.blankFrames), holdFrames: nn(t.holdFrames) });
+                    viewerTimings.length = Math.min(viewerTimings.length, 40);
+                }
                 return new Response('ok');
             }).catch(() => new Response('bad', { status: 400 }));
         }

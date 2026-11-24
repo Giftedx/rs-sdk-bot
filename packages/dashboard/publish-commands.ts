@@ -224,11 +224,16 @@ export function readReceipts(root:string):any[]{
    const st=statSync(file);
    const hit=receiptReadCache.get(file);
    if(hit&&nowWall-st.mtimeMs>1000&&hit.mtimeMs===st.mtimeMs&&hit.size===st.size){
+    receiptReadCache.delete(file);
+    receiptReadCache.set(file,hit);
     out.push(hit.doc);
     continue;
    }
    const doc=JSON.parse(readFileSync(file,'utf8'));
-   if(receiptReadCache.size>=1000)receiptReadCache.clear();
+   if(receiptReadCache.size>=1000){
+    const oldest=receiptReadCache.keys().next().value;
+    if(oldest!==undefined)receiptReadCache.delete(oldest);
+   }
    receiptReadCache.set(file,{mtimeMs:st.mtimeMs,size:st.size,doc});
    out.push(doc);
   }catch{}
