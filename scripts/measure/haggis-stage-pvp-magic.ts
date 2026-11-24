@@ -4,7 +4,7 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { freemem } from 'node:os';
 import { join } from 'node:path';
-import { closeWithin, finish, logoutSession, openBot } from '../../packages/core/src/bot';
+import { closeWithin, logoutSession, openBot } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { componentId } from '../../packages/core/src/logout';
 import { PRACTICE_STARTUP_GB } from '../../packages/core/src/memory';
@@ -100,7 +100,7 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
 
         const tanks: Session[] = [];
         for (const tn of tankNames) {
-            const t = await openBot(tn, { onSessionEnd: async () => {} });
+            const t = await openBot(tn, { onStop: async () => {}, onSessionEnd: async () => {} });
             await tick(t, 2);
             tanks.push(t);
         }
@@ -108,6 +108,7 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
         const pt0 = readPlaytimeTicks(mageName);
         let intentionalRelog = false;
         const openMage = () => openBot(mageName, {
+            onStop: async () => {},
             onSessionEnd: async (_s, detail) => {
                 if (!intentionalRelog) throw Error(`unexpected mage session end: ${detail}`);
             },
@@ -172,7 +173,8 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
             const xpGained = xp(mage, 'Magic') - startXp;
             const endLvl = level(mage, 'Magic');
             intentionalRelog = true;
-            await finish([mage, ...tanks], true, `pvp-magic ${mode} done`).catch(() => {});
+            await Promise.all([mage, ...tanks].map(s => logoutSession(s).catch(() => {})));
+            await closeWithin([mage, ...tanks], 3000).catch(() => {});
             const playtimeTicks = Math.max(1, readPlaytimeTicks(mageName) - pt0);
             const xpPerTick = xpGained / playtimeTicks;
             return { playtimeTicks, casts, relogs, xpGained, xpPerTick, endLvl };

@@ -3,7 +3,7 @@
 import { existsSync, rmSync } from 'node:fs';
 import { freemem } from 'node:os';
 import { join } from 'node:path';
-import { closeWithin, finish, openBot } from '../../packages/core/src/bot';
+import { closeWithin, logoutSession, openBot } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { PRACTICE_STARTUP_GB } from '../../packages/core/src/memory';
 import { createBot } from '../../packages/practice/src/bots';
@@ -16,7 +16,7 @@ import { tick, xp } from '../../packages/practice/src/floor-lib';
 import { configureSpecialistGuardEnv } from '../combat-quest-specialists';
 import { burstTradeHost, countItem, findLocBy, ITEM_IDS, waitUntil } from '../fast-skills-lib';
 
-const NATURE_STAND = { x: 2400, z: 4840, level: 0 } as const;
+const NATURE_STAND = { x: 2400, z: 4838, level: 0 } as const;
 const NATURE_ALTAR_ID = 2486;
 const PACKS = 6;
 
@@ -96,21 +96,22 @@ async function main(): Promise<void> {
         await makeBot(crafterName, {
             position: { ...NATURE_STAND },
             skills: { Runecraft: 44 },
-            inventory: [{ id: 1462, count: 1 }],
+            inventory: [],
         });
         for (let i = 0; i < runnerNames.length; i++) {
             await makeBot(runnerNames[i]!, {
-                position: { x: NATURE_STAND.x + 1, z: NATURE_STAND.z + (i % 2 === 0 ? 0 : -1), level: 0 },
+                position: { x: NATURE_STAND.x + (i % 2 === 0 ? 1 : -1), z: NATURE_STAND.z, level: 0 },
                 skills: { Runecraft: 44 },
                 inventory: Array.from({ length: 27 }, () => ({ id: ITEM_IDS.blankrune, count: 1 })),
             });
         }
 
-        const crafter = await openBot(crafterName);
+        const openQuiet = (n: string) => openBot(n, { onStop: async () => {}, onSessionEnd: async () => {} });
+        const crafter = await openQuiet(crafterName);
         sessions.push(crafter);
         const runners: Session[] = [];
         for (const rn of runnerNames) {
-            const r = await openBot(rn);
+            const r = await openQuiet(rn);
             sessions.push(r);
             runners.push(r);
         }
@@ -126,6 +127,7 @@ async function main(): Promise<void> {
                 deadlineTick: deadline,
             });
             await craftNatureAltar(crafter, deadline);
+            console.log(`PHASE rc pack=${i + 1} ticks=${crafter.tick() - t0} xp=${xp(crafter, 'Runecraft') - xp0}`);
         }
 
         const ticks = crafter.tick() - t0;
@@ -135,7 +137,7 @@ async function main(): Promise<void> {
         console.log(
             `STAGE_RC nature=${ticks}t(packs=${PACKS},tPerPack=${ticksPerPack.toFixed(2)},xp=${xpGained},xpPerTick=${xpPerTick.toFixed(2)})`,
         );
-        await finish(sessions, true, 'haggis-stage-rc done').catch(() => {});
+        await Promise.all(sessions.map(s => logoutSession(s).catch(() => {})));
     } finally {
         await closeWithin(sessions, 3000).catch(() => {});
         await stack.stop().catch(() => {});
