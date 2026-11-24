@@ -186,6 +186,14 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
 const OVERALL_RELAXED_DEADLINES: ReadonlySet<BoardId> = new Set([
     'crafting', 'herblore', 'hitpoints', 'magic', 'runecraft', 'smithing', 'woodcutting',
 ]);
+// All clock boards that lose in Overall's schedule, plus all 19 skill boards, relaxed to overallDeadline so EDF tie-breaks by walk distance.
+const OVERALL_ALL_NON_WINNERS: ReadonlySet<BoardId> = new Set([
+    'cooking', 'fletching', 'crafting', 'herblore', 'firemaking', 'prayer', 'magic', 'runecraft',
+    'thieving', 'smithing', 'attack', 'woodcutting', 'fishing', 'mining', 'ranged', 'agility',
+]);
+const OVERALL_ALL_SKILLS: ReadonlySet<BoardId> = new Set([
+    ...OVERALL_ALL_NON_WINNERS, 'defence', 'strength', 'hitpoints',
+]);
 // Travel comparison in research/haggis-run.md, with prerequisite-first ties.
 const OVERALL_TRAVEL_DEADLINES: ReadonlySet<BoardId> = new Set([
     'cooking', 'crafting', 'fishing', 'fletching', 'herblore', 'hitpoints', 'magic', 'prayer', 'smithing', 'thieving',
@@ -206,17 +214,40 @@ export function scheduleOverall(boards: Board[], activities: Activity[], opts: S
     const travelChosen = travelChoice.route;
     const routeKey = (m: Record<string, string>) => Object.keys(m).sort().map(k => `${k}=${m[k]}`).join('\0');
     const seen = new Set<string>();
-    const pushIfNew = (routeMap: Record<string, string>, dlSet: ReadonlySet<BoardId> | undefined, precomputed?: ScheduleResult) => {
-        const key = `${dlSet === OVERALL_TRAVEL_DEADLINES ? 'T' : dlSet === OVERALL_RELAXED_DEADLINES ? 'R' : 'D'}|${routeKey(routeMap)}`;
+    const tagOf = (dlSet: ReadonlySet<BoardId> | undefined) =>
+        dlSet === OVERALL_TRAVEL_DEADLINES ? 'T'
+            : dlSet === OVERALL_ALL_SKILLS ? 'A'
+                : dlSet === OVERALL_ALL_NON_WINNERS ? 'W'
+                    : dlSet === OVERALL_RELAXED_DEADLINES ? 'R' : 'D';
+    const pushIfNew = (
+        routeMap: Record<string, string>,
+        dlSet: ReadonlySet<BoardId> | undefined,
+        tieOverallWalk = false,
+        precomputed?: ScheduleResult,
+        clusterWildy = false,
+        prereqFirst = true,
+    ) => {
+        const key = `${tagOf(dlSet)}|${prereqFirst ? 1 : 0}|${tieOverallWalk ? 1 : 0}|${clusterWildy ? 1 : 0}|${routeKey(routeMap)}`;
         if (seen.has(key)) return;
         seen.add(key);
         if (precomputed) { candidates.push(precomputed); return; }
         const fixed = { ...opts, force: { ...opts.force, ...routeMap } };
-        candidates.push(scheduleRoute(boards, activities, { ...fixed, sacrificed: dlSet }, true, cache));
+        candidates.push(scheduleRoute(boards, activities, { ...fixed, sacrificed: dlSet }, prereqFirst, cache, false, tieOverallWalk, clusterWildy));
     };
     pushIfNew(best.route, useRelaxed ? OVERALL_RELAXED_DEADLINES : undefined);
     pushIfNew(best.route, OVERALL_TRAVEL_DEADLINES);
-    pushIfNew(travelChosen, OVERALL_TRAVEL_DEADLINES, travelChoice.result);
+    pushIfNew(travelChosen, OVERALL_TRAVEL_DEADLINES, false, travelChoice.result);
+    pushIfNew(best.route, OVERALL_RELAXED_DEADLINES, true);
+    pushIfNew(best.route, OVERALL_ALL_NON_WINNERS, true);
+    const nonWinChoice = chooseRouteCore(boards, activities, { ...opts, sacrificed: OVERALL_ALL_NON_WINNERS }, false, cache);
+    pushIfNew(nonWinChoice.route, OVERALL_ALL_NON_WINNERS, true);
+    const allSkillsChoice = chooseRouteCore(boards, activities, { ...opts, sacrificed: OVERALL_ALL_SKILLS }, false, cache);
+    pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, false, allSkillsChoice.result, false, false);
+    pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, false, undefined, true, false);
+    pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, false);
+    pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, false, undefined, true);
+    pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, true);
+    pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, true, undefined, true);
     for (const c of candidates) if (finish(c) < finish(best)) best = c;
     return best;
 }
@@ -227,6 +258,19 @@ export function scheduleQpSpecialist(boards: Board[], activities: Activity[], op
     return schedule(boards, qpSpecialistActivities(activities), { ...opts, sacrificed }, legCacheFor(opts.travel));
 }
 
+const TELEPORT_BANKS = [
+    'bank:edgeville-bank:0',
+    'bank:draynor-bank:0',
+    'bank:al-kharid-bank:0',
+    'bank:varrock-west-bank:0',
+] as const;
+
+const DEEP_WILDY_PLACES: ReadonlySet<string> = new Set([
+    'deserted-keep-lever',
+    'mage-arena-lever',
+    'wilderness-course',
+]);
+
 // Schedule with opts.force where given and the raw-tick choice for the other variant groups.
 function scheduleRoute(
     boards: Board[],
@@ -235,6 +279,8 @@ function scheduleRoute(
     prerequisiteFirst = false,
     legCache?: HaggisLegCache,
     leversAlreadyApplied = false,
+    tieOverallWalk = false,
+    clusterWildy = false,
 ): ScheduleResult {
     const sacrificed = opts.sacrificed ?? new Set<BoardId>();
     const chosen = chooseVariants(allActivities, opts, leversAlreadyApplied);
@@ -386,6 +432,25 @@ function scheduleRoute(
             }
         }
     }
+    if (clusterWildy && Number.isFinite(overallDeadline)) {
+        // Keep non-Wilderness pre-Overall work slightly ahead of Deep Wilderness so all Wildy work shares one entry.
+        for (let i = 0; i < n; i++) {
+            if (eff[i]! === overallDeadline && !DEEP_WILDY_PLACES.has(activities[i]!.at ?? '')) {
+                eff[i] = overallDeadline - 1;
+            }
+        }
+        for (let changed = true; changed;) {
+            changed = false;
+            for (let i = 0; i < n; i++) {
+                const aEff = eff[i]!;
+                const reqs = reqIdx[i]!;
+                for (let j = 0; j < reqs.length; j++) {
+                    const r = reqs[j]!;
+                    if (aEff < eff[r]!) { eff[r] = aEff; changed = true; }
+                }
+            }
+        }
+    }
 
     const hp10 = xpForLevel(10);
     const startXpArr = new Float64Array(SKILLS.length);
@@ -492,6 +557,23 @@ function scheduleRoute(
         }
     };
 
+    const bestTargetLeg = (m: TravelModel, from: string, at: string, magicLvl: number): { to: string; leg: { ticks: number; method: string } } => {
+        const nearest = resolve(m, from, at);
+        let bestLegRes = bestLeg(m, from, nearest, magicLvl);
+        let bestTo = nearest;
+        if (at === BANK && !disableTeleports) {
+            for (const bankId of TELEPORT_BANKS) {
+                if (bankId === nearest || !m.cache.banks[bankId]) continue;
+                const cand = bestLeg(m, from, bankId, magicLvl);
+                if (cand.ticks < bestLegRes.ticks) {
+                    bestLegRes = cand;
+                    bestTo = bankId;
+                }
+            }
+        }
+        return { to: bestTo, leg: bestLegRes };
+    };
+
     const move = (idx: number): { walk: number; inner: number; from?: string; to?: string; method?: string } => {
         const m = opts.travel;
         const a = activities[idx]!;
@@ -503,9 +585,8 @@ function scheduleRoute(
         }
         if (here === BANK) return { walk: 0, inner: 0 };
         const from = here;
-        const to = resolve(m, here, a.at);
         const magicLvl = levelAtClock(6 /* magic */, clock);
-        const l = bestLeg(m, from, to, magicLvl);
+        const { to, leg: l } = bestTargetLeg(m, from, a.at, magicLvl);
         let inner = 0;
         let cur = to;
         for (const v of a.via ?? []) { inner += bestLeg(m, cur, v, magicLvl).ticks; cur = v; }
@@ -602,8 +683,7 @@ function scheduleRoute(
             let val = 0;
             if (at !== undefined && at !== ANYWHERE) {
                 if (magicLvlCache < 0) magicLvlCache = levelAtClock(magicIdx, clock);
-                const to = resolve(travelM!, here!, at);
-                val = bestLeg(travelM!, here!, to, magicLvlCache).ticks;
+                val = bestTargetLeg(travelM!, here!, at, magicLvlCache).leg.ticks;
             }
             walkCostVal[idx] = val;
             return val;
@@ -624,14 +704,16 @@ function scheduleRoute(
                 if (ei < eb) bestI = i;
                 continue;
             }
-            if (prerequisiteFirst) {
+            const tieCutoff = clusterWildy ? overallDeadline - 1 : overallDeadline;
+            const tieWalkHit = canTieWalk && (tieOverallWalk ? ei >= tieCutoff : ei > overallDeadline);
+            if (prerequisiteFirst && !tieOverallWalk) {
                 const di = dependants[i]!, db = dependants[bestI]!;
                 if (di !== db) {
                     if (di > db) bestI = i;
                     continue;
                 }
             }
-            if (canTieWalk && (prerequisiteFirst || ei > overallDeadline)) {
+            if (tieWalkHit || (canTieWalk && prerequisiteFirst)) {
                 const wi = getWalkCost(i), wb = getWalkCost(bestI);
                 if (wi < wb) bestI = i;
             }

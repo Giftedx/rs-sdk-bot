@@ -543,8 +543,12 @@ test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps
     expect(real.order.find(p => p.id === 'ranged')!.travel ?? 0).toBe(0);
     // Spirit tree cuts travel after tree completes, and deep Wildy exits via lever rather than teleporting.
     expect(real.order.some(p => p.method === 'spirit-tree')).toBe(true);
-    const arenaExit = real.order.find(p => p.from === 'mage-arena-lever')!;
-    expect(arenaExit.method).toBe('wildy-exit-lever');
+    const deepWildy = new Set(['mage-arena-lever', 'deserted-keep-lever', 'wilderness-course']);
+    const deepExits = real.order.filter(p => deepWildy.has(p.from ?? '') && !deepWildy.has(p.to ?? ''));
+    expect(deepExits.length).toBeGreaterThan(0);
+    expect(deepExits.every(p => p.method === 'wildy-exit-lever' || p.method === 'estimate')).toBe(true);
+    expect(deepExits.some(p => p.method === 'wildy-exit-lever')).toBe(true);
+    expect(real.order.some(p => deepWildy.has(p.from ?? '') && (p.method ?? '').startsWith('teleport:'))).toBe(false);
 }, 15_000);
 
 test('legacy stun-guest route absorbs superheat-stun and charge inside thieve when pvp-relog-combat is disabled', () => {
