@@ -2,7 +2,7 @@
 // specialist_prep, quest_board, gear_collection, pk_army) plus squad_supply, coin_fund,
 // active Campaigns, and active Missions — all scored in normalized goal value per end-to-end hour.
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { repoRoot } from '../../core/src/practice-paths';
 import { xpForLevel } from '../../core/src/xp-curve';
 import { accountOwnedItemCount, type RateEstimate } from '../../workers/src/contracts';
@@ -24,7 +24,8 @@ import {
     type WorldSnapshot,
 } from './contracts';
 import { evaluateMissions, loadMissionManifests, type MissionEvaluation } from './missions';
-import { hasCompletedQuest } from './preflight';
+import { fileStatStamp, readJsonStatCached } from './json-cache';
+import { hasCompletedQuest, questCandidateKeys } from './preflight';
 import type { RateStore } from './rate-store';
 
 export const TICK_MS = 400;
@@ -147,11 +148,14 @@ export function levelToXp(level: number): number {
     return xpForLevel(level);
 }
 
+let cachedItemGpValues: { key: string; values: Record<number, number> } | undefined;
 function loadItemGpValues(root: string): Record<number, number> {
     const filePath = existsSync(join(root, 'knowledge', 'items.json'))
         ? join(root, 'knowledge', 'items.json')
         : join(repoRoot, 'knowledge', 'items.json');
-    const raw = readJsonSafe(filePath);
+    const key = `${resolve(filePath)}|${fileStatStamp(filePath)}`;
+    if (cachedItemGpValues && cachedItemGpValues.key === key) return cachedItemGpValues.values;
+    const raw = readJsonStatCached<unknown>(filePath);
     const out: Record<number, number> = {};
     if (Array.isArray(raw)) {
         for (const item of raw) {
@@ -162,14 +166,18 @@ function loadItemGpValues(root: string): Record<number, number> {
             }
         }
     }
+    cachedItemGpValues = { key, values: out };
     return out;
 }
 
+let cachedDefaultGearTargets: { key: string; targets: GearCollectionTarget[] } | undefined;
 function loadDefaultGearTargets(root: string): GearCollectionTarget[] {
     const filePath = existsSync(join(root, 'knowledge', 'gear.json'))
         ? join(root, 'knowledge', 'gear.json')
         : join(repoRoot, 'knowledge', 'gear.json');
-    const raw = readJsonSafe(filePath);
+    const key = `${resolve(filePath)}|${fileStatStamp(filePath)}`;
+    if (cachedDefaultGearTargets && cachedDefaultGearTargets.key === key) return cachedDefaultGearTargets.targets;
+    const raw = readJsonStatCached<unknown>(filePath);
     if (!Array.isArray(raw)) return [];
 
     const bestBySlot = new Map<string, Array<{ entry: GearCollectionTarget; score: number }>>();
@@ -228,7 +236,9 @@ function loadDefaultGearTargets(root: string): GearCollectionTarget[] {
             targets.push(top.entry);
         }
     }
-    return targets.slice(0, 20);
+    const result = targets.slice(0, 20);
+    cachedDefaultGearTargets = { key, targets: result };
+    return result;
 }
 
 export class DemandEngine {
@@ -497,6 +507,9 @@ export class DemandEngine {
                 if (qState === 'complete') {
                     completedSlugs.add(slug.toLowerCase());
                     completedSlugs.add(slug.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                    for (const ck of questCandidateKeys(slug)) {
+                        completedSlugs.add(ck);
+                    }
                 }
             }
         }
@@ -528,11 +541,18 @@ export class DemandEngine {
             const questNameNorm = typeof (matchedActs[0]?.config as Record<string, unknown> | undefined)?.questName === 'string'
                 ? String((matchedActs[0]!.config as Record<string, unknown>).questName).toLowerCase().replace(/[^a-z0-9]/g, '')
                 : undefined;
-            const done =
+            let done =
                 completedSlugs.has(slug.toLowerCase()) ||
                 completedSlugs.has(norm) ||
-                (questNameNorm !== undefined && completedSlugs.has(questNameNorm)) ||
-                activeAccounts.some((acct) => hasCompletedQuest(acct, slug));
+                (questNameNorm !== undefined && completedSlugs.has(questNameNorm));
+            if (!done) {
+                for (const ck of questCandidateKeys(slug)) {
+                    if (completedSlugs.has(ck)) {
+                        done = true;
+                        break;
+                    }
+                }
+            }
             if (done) continue;
             out.push({
                 id: `goal:quest_board:${slug}`,

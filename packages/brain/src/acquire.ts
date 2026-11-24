@@ -37,6 +37,7 @@ import {
     loadItemsMap,
     type ItemMeta,
 } from './preflight';
+import { readJsonStatCached } from './json-cache';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 export const DEFAULT_ANTI_PING_PONG_MS = 10 * 60_000;
@@ -127,8 +128,8 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
     for (const meta of items.values()) {
         byDebug.set(meta.debugname, meta);
     }
-    const shops = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge', 'shops.json'), 'utf8')) as Shop[];
-    const sources = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge', 'gear-sources.json'), 'utf8')) as GearSources;
+    const shops = readJsonStatCached<Shop[]>(resolve(REPO_ROOT, 'knowledge', 'shops.json')) ?? [];
+    const sources = readJsonStatCached<GearSources>(resolve(REPO_ROOT, 'knowledge', 'gear-sources.json')) ?? { shopNpcs: [], npc: [], quest: [], clue: [] };
     const shopTiles = new Map<string, { x: number; z: number; level: number }>();
     for (const row of sources.shopNpcs) {
         const nonEntrana = row.spawns.find((t) => !isEntranaTile(t));
@@ -559,9 +560,11 @@ export function resolveAcquireItem(
                     rejectReason = reachRecip.message ?? `recipient cannot reach ${hub}`;
                     continue;
                 }
-                const donorBalance = availableSpendableCoins(donor, world, 0, { includeBank: true, requireTrustedBank: true });
+                const donorTotalUnreserved = world.world
+                    ? availableSpendableCoins(donor, world, 0, { includeBank: true, requireTrustedBank: true }).totalUnreserved
+                    : 0;
                 const reachDonor = evaluateTileReachability(donor, hubTile, world, {
-                    spendableCoins: donorBalance.totalUnreserved,
+                    spendableCoins: donorTotalUnreserved,
                     allowUnknownPos: true,
                 });
                 if (!reachDonor.reachable) {

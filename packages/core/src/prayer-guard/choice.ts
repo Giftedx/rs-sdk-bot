@@ -51,12 +51,34 @@ export const STATE_LAG = 2;
 
 // The active prayers: the state, with each prayer input of the last STATE_LAG ticks applied.
 export function believedPrayers(st: any, intents: Map<number, PrayerIntent>, now: number): number[] {
-    const set = new Set<number>((st?.prayers?.activePrayers ?? []).flatMap((on: boolean, i: number) => (on ? [i] : [])));
-    for (const [i, v] of intents) {
-        if (now - v.at > STATE_LAG) intents.delete(i);
-        else if (v.on) set.add(i); else set.delete(i);
+    const active: readonly boolean[] = st?.prayers?.activePrayers ?? [];
+    if (intents.size === 0) {
+        const out: number[] = [];
+        for (let i = 0; i < active.length; i++) if (active[i]) out.push(i);
+        return out;
     }
-    return [...set].sort((a, b) => a - b);
+    const out: number[] = [];
+    const len = active.length;
+    for (let i = 0; i < len; i++) {
+        const intent = intents.get(i);
+        if (intent) {
+            if (now - intent.at > STATE_LAG) {
+                intents.delete(i);
+                if (active[i]) out.push(i);
+            } else if (intent.on) {
+                out.push(i);
+            }
+        } else if (active[i]) {
+            out.push(i);
+        }
+    }
+    let appended = false;
+    for (const [i, v] of intents) {
+        if (now - v.at > STATE_LAG) { intents.delete(i); continue; }
+        if (i >= len && v.on) { out.push(i); appended = true; }
+    }
+    if (appended) out.sort((a, b) => a - b);
+    return out;
 }
 
 export function intendToggle(intents: Map<number, PrayerIntent>, before: readonly number[], prayer: number, now: number): number[] {
@@ -104,6 +126,7 @@ export function planPrayerTransition(
     now: number,
     fighting: boolean,
 ): PrayerTransition | null {
+    if (!active.length && !wanted.length) return null;
     const missing = wanted.filter(i => !active.includes(i));
     const stale = active.filter(i => owned.has(i) && !wanted.includes(i) && now > (keep.get(i) ?? -Infinity));
     if (!missing.length && !stale.length) return null;

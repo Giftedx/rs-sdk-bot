@@ -1,12 +1,8 @@
 // Travel edges (NPC transport, spells, jewellery, scripted gates, spirit trees/passages) and ship-deck disembark.
-import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
 import type { Outcome } from '../act';
-import { disembark, pickDisembarkPlank, type BoatSession } from '../boat';
+import type { BoatSession } from '../boat';
 import { accountForSdk } from '../door-policy';
-import { componentId } from '../logout';
 import { waitTicks } from '../ticks';
-import { travelAllowed } from '../travel';
 import { cheb, type WalkOptions, type Walker } from '../walk-leg';
 import type { Leg } from '../world';
 
@@ -15,18 +11,13 @@ type TravelEdge = TravelLeg['travel'];
 type DirectBoat = BoatSession & { direct(a: unknown): Promise<unknown> };
 type FailFn = (reason: 'rejected' | 'timeout' | 'precondition' | 'aborted', detail: string) => Outcome;
 
-let itemIds: Map<string, number> | undefined;
-function itemId(debugname: string): number | undefined {
-    itemIds ??= new Map((JSON.parse(readFileSync(join(resolve(import.meta.dir, '..', '..', '..', '..'), 'knowledge', 'items.json'), 'utf8')) as { id: number; debugname: string }[]).map(i => [i.debugname, i.id]));
-    return itemIds.get(debugname);
-}
-
 // Off a ship's deck by its gangplank: 'ground' when the account stood on a deck and now stands on level 0, 'none'
 // when it was not on a deck (level 1 with a gangplank within DECK_REACH tiles), 'stuck' when the crossing failed.
 export const DECK_REACH = 8;
 export async function leaveDeck(s: Walker, stop: () => boolean = () => false): Promise<'none' | 'ground' | 'stuck'> {
     const p = s.sdk.getState()?.player, b = s as unknown as BoatSession;
     if (!p || p.level !== 1 || typeof b.sdk.findNearbyLoc !== 'function') return 'none';
+    const { disembark, pickDisembarkPlank } = await import('../boat');
     const plank = pickDisembarkPlank(b, DECK_REACH);
     const near = !!plank && (plank.distance ?? Math.max(Math.abs((plank.x ?? 0) - p.worldX), Math.abs((plank.z ?? 0) - p.worldZ))) <= DECK_REACH;
     if (!near) return 'none';
@@ -73,6 +64,7 @@ async function travelNpcButtonLeg(
     const button = run.button!.component, namespace = button.split(':')[0]!;
     if (!/^[a-z0-9_]+:[a-z0-9_]+$/.test(button)) return fail('precondition', 'invalid native travel button');
     let main: number, component: number;
+    const { componentId } = await import('../logout');
     try { main = componentId(namespace); component = componentId(button); } catch { return fail('precondition', 'unknown native travel interface/button'); }
     const mapOpen = () => st()?.modalInterface === main || st()?.interface?.isOpen === true && st()?.interface?.interfaceId === main;
     const landed = () => { const p = here(); return !!p && p.level === t.to.level && Math.max(Math.abs(p.x - t.to.x), Math.abs(p.z - t.to.z)) <= 1; };
@@ -203,15 +195,17 @@ export async function travelLeg(s: Walker, leg: TravelLeg, opts: WalkOptions): P
         if (run.button) return travelNpcButtonLeg(s, b, t, run, npc, start, stop, st, here, fail);
         await b.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: run.op, reason: 'SDK' });
         await answerTravelDialog(s, b, choices, () => arrived() || (!!run.deck && onDeck()), stop, 60);
-        if (run.deck && onDeck()) { const off = await disembark(b, { stop }); if (!off.ok) return fail('timeout', off.detail); }
+        if (run.deck && onDeck()) { const { disembark } = await import('../boat'); const off = await disembark(b, { stop }); if (!off.ok) return fail('timeout', off.detail); }
     } else if (run.how === 'spell') {
         // The plan admitted the spell on the account as it stood when the route was planned; a cast on the way can have
         // spent the runes since, and the server refuses a short cast with a message the walker does not read.
+        const [{ travelAllowed }, { componentId }] = await Promise.all([import('../travel'), import('../logout')]);
         if (!travelAllowed(t, accountForSdk(s.sdk))) return fail('precondition', `cannot cast now (needs ${t.runes.map(r => `${r.count} ${r.item}`).join(', ')})`);
         await b.direct({ type: 'clickComponent', componentId: componentId(run.component), reason: 'SDK' });
         await answerTravelDialog(s, b, choices, arrived, stop, 12);
     } else if (run.how === 'rub') {
-        const ids = new Set(run.items.map(itemId).filter((i): i is number => i !== undefined));
+        const { itemIdOf } = await import('../trip');
+        const ids = new Set(run.items.map(itemIdOf).filter((i): i is number => i !== undefined));
         const item = (st()?.inventory ?? []).find((i: any) => ids.has(i.id));
         if (!item) return fail('precondition', 'no charged item in the pack');
         await b.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });

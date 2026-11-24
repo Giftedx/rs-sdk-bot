@@ -59,6 +59,7 @@ export class RateStore {
     private readonly maxSamplesPerActivity: number;
     private readonly persist: boolean;
     private readonly store = new Map<string, RateSample[]>();
+    private readonly estimateCache = new Map<string, RateEstimate>();
 
     constructor(opts: RateStoreOptions) {
         this.catalog = opts.catalog;
@@ -75,6 +76,7 @@ export class RateStore {
 
     load(): void {
         this.store.clear();
+        this.estimateCache.clear();
         if (!existsSync(this.filePath)) return;
         let parsed: unknown;
         try {
@@ -124,6 +126,7 @@ export class RateStore {
             next.splice(0, next.length - this.maxSamplesPerActivity);
         }
         this.store.set(sample.activityId, next);
+        this.estimateCache.delete(sample.activityId);
         if (opts?.save ?? this.persist) {
             this.save();
         }
@@ -160,9 +163,15 @@ export class RateStore {
         acct?: WorkerAccountView | AccountState,
         _world?: WorkerWorldView | WorldSnapshot,
     ): RateEstimate {
+        const cached = this.estimateCache.get(activityId);
+        if (cached) return cached;
         const def = this.catalog.require(activityId);
         const base = def.baselineRate;
-        const allSamples = this.store.get(activityId) ?? [];
+        const allSamples = this.store.get(activityId);
+        if (!allSamples || allSamples.length === 0) {
+            this.estimateCache.set(activityId, base);
+            return base;
+        }
         const list = this.effectiveSamples(activityId);
 
         let xpPerTick = base.xpPerTick;
@@ -241,6 +250,7 @@ export class RateStore {
         if (errors.length > 0) {
             throw new Error(`Invalid computed RateEstimate for ${activityId}: ${errors.join('; ')}`);
         }
+        this.estimateCache.set(activityId, est);
         return est;
     }
 

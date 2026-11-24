@@ -142,15 +142,11 @@ function loadPlanMetadata(root: string): {
         if (Array.isArray(v.accounts)) v.accounts.forEach(addName);
         for (const k of Object.keys(v)) walk(v[k], depth + 1);
     };
-    for (const file of [
-        join(root, 'swarm.json'),
-        fleetStateFile(root),
-        join(root, 'fleet', 'owners.json'),
-    ]) {
-        const parsed = safeReadJson(file);
-        if (!parsed) continue;
-        walk(parsed);
-        const jobs = Array.isArray((parsed as any).jobs) ? (parsed as any).jobs : [];
+    const swarmFile = join(root, 'swarm.json');
+    const swarmParsed = safeReadJson(swarmFile) as any;
+    if (swarmParsed) {
+        walk(swarmParsed);
+        const jobs = Array.isArray(swarmParsed.jobs) ? swarmParsed.jobs : [];
         for (const job of jobs) {
             if (!job || typeof job !== 'object' || job.enabled !== false) continue;
             if (typeof job.name === 'string' && job.name.trim()) disabledJobs.add(job.name.trim().toLowerCase());
@@ -163,6 +159,34 @@ function loadPlanMetadata(root: string): {
                 }
             }
         }
+    }
+    const fleetStateParsed = safeReadJson(fleetStateFile(root)) as any;
+    if (fleetStateParsed && typeof fleetStateParsed === 'object') {
+        if (fleetStateParsed.accounts && typeof fleetStateParsed.accounts === 'object') {
+            for (const [key, acct] of Object.entries(fleetStateParsed.accounts)) {
+                addName(key);
+                addName((acct as any)?.name);
+            }
+        }
+        if (fleetStateParsed.activeChains && typeof fleetStateParsed.activeChains === 'object') {
+            for (const [key, chain] of Object.entries(fleetStateParsed.activeChains)) {
+                addName(key);
+                addName((chain as any)?.account);
+            }
+        }
+        for (const c of Array.isArray(fleetStateParsed.campaigns) ? fleetStateParsed.campaigns : []) addName(c?.account);
+        for (const m of Array.isArray(fleetStateParsed.missions) ? fleetStateParsed.missions : []) {
+            if (Array.isArray(m?.participants)) m.participants.forEach(addName);
+        }
+        for (const t of Array.isArray(fleetStateParsed.pendingTransfers) ? fleetStateParsed.pendingTransfers : []) {
+            addName(t?.from);
+            addName(t?.to);
+        }
+        for (const d of Array.isArray(fleetStateParsed.quarantinedDefects) ? fleetStateParsed.quarantinedDefects : []) addName(d?.account);
+    }
+    const ownersParsed = safeReadJson(join(root, 'fleet', 'owners.json')) as any;
+    if (ownersParsed?.accounts && typeof ownersParsed.accounts === 'object') {
+        for (const name of Object.keys(ownersParsed.accounts)) addName(name);
     }
     return { namedAccounts, disabledJobs, disabledAccounts };
 }
@@ -310,8 +334,9 @@ function inspectLockOrLeaseFile(
 ): { kind: 'obsolete-job-lock' | 'expired-lease'; reason: string } | null {
     const baseName = basename(file);
     if (PROTECTED_LOCK_NAMES.has(baseName.toLowerCase())) return null;
+    let info;
     try {
-        const info = lstatSync(file);
+        info = lstatSync(file);
         if (info.isSymbolicLink() || !info.isFile()) return null;
     } catch {
         return null;
@@ -319,8 +344,7 @@ function inspectLockOrLeaseFile(
 
     let raw = '';
     try { raw = readFileSync(file, 'utf8'); } catch { return null; }
-    let statAt = 0;
-    try { statAt = statSync(file).mtimeMs; } catch { statAt = 0; }
+    const statAt = info.mtimeMs;
 
     const trimmed = raw.trim();
     const numericPid = Number(trimmed);
@@ -368,7 +392,10 @@ function inspectLockOrLeaseFile(
     return null;
 }
 
-export function scanPhase0Hygiene(root: string, opts: Phase0HygieneOptions = {}): Phase0HygieneReport {
+function scanPhase0HygieneInternal(
+    root: string,
+    opts: Phase0HygieneOptions = {},
+): { report: Phase0HygieneReport; activeSpecialists: Set<string> } {
     const now = opts.now ?? Date.now();
     const fixtureGraceMs = opts.fixtureGraceMs ?? DEFAULT_FIXTURE_GRACE_MS;
     const holdMaxAgeMs = opts.holdMaxAgeMs ?? DEFAULT_HOLD_MAX_AGE_MS;
@@ -571,31 +598,32 @@ export function scanPhase0Hygiene(root: string, opts: Phase0HygieneOptions = {})
         }
     }
 
-    for (const recoveryBase of [
-        join(practiceRoot(resolvedRoot), 'session-recovery'),
-        join(liveRoot(resolvedRoot), 'session-recovery'),
-    ]) {
-        const accountsDir = join(recoveryBase, 'accounts');
-        if (!existsSync(accountsDir)) continue;
+    const recoveryBases = [
+        join(practiceRoot(resolvedRoot), 'session-recovery', 'accounts'),
+        join(liveRoot(resolvedRoot), 'session-recovery', 'accounts'),
+    ].filter(dir => existsSync(dir));
+    if (recoveryBases.length > 0) {
         const heldAccounts = new Set(
             heldRecoveryOwners(resolvedRoot, [], alive, now).map(h => h.account.toLowerCase()),
         );
-        let accountDirs: string[] = [];
-        try { accountDirs = readdirSync(accountsDir); } catch { continue; }
-        for (const acct of accountDirs) {
-            const leaseFile = join(accountsDir, acct, 'lease.json');
-            if (!existsSync(leaseFile)) continue;
-            const parsed = safeReadJson(leaseFile) as any;
-            const pid = Number(parsed?.pid);
-            const pidLive = Number.isSafeInteger(pid) && pid > 0 && alive(pid);
-            if (!pidLive && !heldAccounts.has(acct.toLowerCase())) {
-                addFinding({
-                    kind: 'expired-lease',
-                    path: leaseFile,
-                    reason: `expired session-recovery lease for ${acct}`,
-                });
-            } else {
-                preserved.push({ path: leaseFile, reason: `active session-recovery lease for ${acct}` });
+        for (const accountsDir of recoveryBases) {
+            let accountDirs: string[] = [];
+            try { accountDirs = readdirSync(accountsDir); } catch { continue; }
+            for (const acct of accountDirs) {
+                const leaseFile = join(accountsDir, acct, 'lease.json');
+                if (!existsSync(leaseFile)) continue;
+                const parsed = safeReadJson(leaseFile) as any;
+                const pid = Number(parsed?.pid);
+                const pidLive = Number.isSafeInteger(pid) && pid > 0 && alive(pid);
+                if (!pidLive && !heldAccounts.has(acct.toLowerCase())) {
+                    addFinding({
+                        kind: 'expired-lease',
+                        path: leaseFile,
+                        reason: `expired session-recovery lease for ${acct}`,
+                    });
+                } else {
+                    preserved.push({ path: leaseFile, reason: `active session-recovery lease for ${acct}` });
+                }
             }
         }
     }
@@ -604,16 +632,23 @@ export function scanPhase0Hygiene(root: string, opts: Phase0HygieneOptions = {})
     for (const f of findings) counts[f.kind]++;
 
     return {
-        root: resolvedRoot,
-        now,
-        dry: true,
-        findings,
-        holdUpdates,
-        preserved,
-        counts,
-        applied: 0,
-        errors: [],
+        report: {
+            root: resolvedRoot,
+            now,
+            dry: true,
+            findings,
+            holdUpdates,
+            preserved,
+            counts,
+            applied: 0,
+            errors: [],
+        },
+        activeSpecialists,
     };
+}
+
+export function scanPhase0Hygiene(root: string, opts: Phase0HygieneOptions = {}): Phase0HygieneReport {
+    return scanPhase0HygieneInternal(root, opts).report;
 }
 
 export function applyPhase0Hygiene(
@@ -621,13 +656,12 @@ export function applyPhase0Hygiene(
     opts: Phase0HygieneOptions & { dry?: boolean } = {},
 ): Phase0HygieneReport {
     const dry = opts.dry ?? true;
-    const report = scanPhase0Hygiene(root, opts);
+    const { report, activeSpecialists } = scanPhase0HygieneInternal(root, opts);
     report.dry = dry;
     if (dry) return report;
 
     const now = report.now;
     const holdMaxAgeMs = opts.holdMaxAgeMs ?? DEFAULT_HOLD_MAX_AGE_MS;
-    const activeSpecialists = loadActiveSpecialistAccounts(report.root, now);
 
     // Group hold prunings by file so array JSON files are updated atomically once.
     const holdFilesToRewrite = new Set(report.holdUpdates.map(h => h.file));

@@ -324,32 +324,36 @@ export async function runCows(
     void s.ended.then(() => {
         ended = true;
     });
-    const observeLife = () => {
-        const p = state()?.player;
-        hpMin = Math.min(hpMin, hp());
-        if (profile.foodBanked && p && hp() <= 40) healthCutoff = true;
-        if (sessionDied(p0, p)) died = true;
-    };
-    const off = s.onTick(observeLife);
     let walkTicks = 0;
     let walkedTiles = 0;
     let doorInteractions = 0;
     let houseInteractions = 0;
     let maxPackSlots = inv().length;
     let detourTiles = 0;
-    let previousPosition = { x: p0.worldX, z: p0.worldZ };
-    const offMetrics = s.onTick(() => {
+    let prevX = p0.worldX;
+    let prevZ = p0.worldZ;
+    const observeLife = () => {
         const p = state()?.player;
-        maxPackSlots = Math.max(maxPackSlots, inv().length);
+        hpMin = Math.min(hpMin, hp());
+        if (profile.foodBanked && p && hp() <= 40) healthCutoff = true;
+        if (sessionDied(p0, p)) died = true;
+        return p;
+    };
+    const off = s.onTick(() => {
+        const p = observeLife();
+        const curInv = inv();
+        if (curInv.length > maxPackSlots) maxPackSlots = curInv.length;
         if (p) {
-            const distance = Math.max(Math.abs(p.worldX - previousPosition.x), Math.abs(p.worldZ - previousPosition.z));
+            const distance = Math.max(Math.abs(p.worldX - prevX), Math.abs(p.worldZ - prevZ));
             if (distance) {
                 walkTicks++;
                 walkedTiles += distance;
+                prevX = p.worldX;
+                prevZ = p.worldZ;
             }
-            previousPosition = { x: p.worldX, z: p.worldZ };
         }
     });
+    const offMetrics = () => {};
     const bankDistances: number[] = [];
     const walkLegs: Record<string, unknown>[] = [];
     const over = () => {

@@ -16,14 +16,35 @@ import { capabilityRevision } from '../../core/src/worker-release';
 import { brainPlannedJobs } from './fleet-sync';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
-import { pickOrder, readAgentJobs, swarmBusy } from './trade-plan';
+import { buildOrderPicker, readAgentJobs, swarmBusy } from './trade-plan';
 
 const root = repoRoot;
 export const AGENT_SUBPROCESS_TIMEOUT_MS = 180_000;
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
-const readJson = (dir: string) => existsSync(dir)
-    ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } })
-    : [];
+const jsonFileCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
+const readJson = (dir: string) => {
+    if (!existsSync(dir)) return [];
+    const now = Date.now();
+    const out: any[] = [];
+    for (const f of readdirSync(dir)) {
+        if (!f.endsWith('.json')) continue;
+        const full = join(dir, f);
+        try {
+            const st = statSync(full);
+            const hit = jsonFileCache.get(full);
+            if (hit && now - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+                out.push(hit.value);
+                continue;
+            }
+            const value = JSON.parse(readFileSync(full, 'utf8'));
+            jsonFileCache.set(full, { mtimeMs: st.mtimeMs, size: st.size, value });
+            out.push(value);
+        } catch {
+            jsonFileCache.delete(full);
+        }
+    }
+    return out;
+};
 
 export { readAgentJobs, swarmBusy } from './trade-plan';
 
@@ -46,10 +67,11 @@ export function dueTrades(
     lead = LEAD,
 ) {
     const names = new Set(orders.flatMap(o => [o.from, o.to]).filter(n => sideOf(n, owners) === side).map(n => n.toLowerCase()));
+    const pick = buildOrderPicker(orders, receipts);
     const due: { account: string; order: Order; busy: boolean }[] = [];
     for (const n of names) {
         if (running.has(n)) continue;
-        const p = pickOrder(orders, receipts, n, now, lead);
+        const p = pick(n, now, lead);
         if (!p) continue;
         const account = p.role === 'from' ? p.order.from : p.order.to;
         due.push({ account, order: p.order, busy: busy.has(n) });
@@ -185,11 +207,11 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         }
         sync();
         if (!renewLease(lock)) continue;
-        const dir = FLEET_DIR(), now = Date.now();
+        const dir = FLEET_DIR(), now = Date.now(), side = mySide(), owners = loadOwners();
         const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
         const handJobs = readAgentJobs();
         const busy = swarmBusy([...handJobs, ...brainPlannedJobs(base, handJobs, now)]);
-        for (const t of dueTrades(orders, receipts, mySide(), loadOwners(), busy, running, now)) {
+        for (const t of dueTrades(orders, receipts, side, owners, busy, running, now)) {
             if (t.busy) { console.log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
             const stop = tradeStop(base, t.account, now);
             if (stop.cleared) console.log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
@@ -225,7 +247,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             }
         }
         if (once && !running.size) break;
-        const soon = orders.some(o => o.end > now && o.start - now < LEAD && [o.from, o.to].some(n => sideOf(n) === mySide()));
+        const soon = orders.some(o => o.end > now && o.start - now < LEAD && (sideOf(o.from, owners) === side || sideOf(o.to, owners) === side));
         await Bun.sleep(soon || running.size ? 60_000 : CYCLE);
     }
 }

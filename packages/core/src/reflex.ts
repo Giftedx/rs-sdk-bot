@@ -11,7 +11,6 @@ export interface Reflexive extends TickSource {
 }
 
 // Missing Hitpoints state is unknown, not healthy: treat it as 0 so the reflex errs toward fleeing.
-const hp = (st: any): number => (st?.skills ?? []).find((k: any) => k.name === 'Hitpoints')?.level ?? 0;
 const hasFood = (st: any, re: RegExp): boolean => (st?.inventory ?? []).some((i: any) => re.test(i.name));
 
 // Checked every tick. Eating comes first; with no food left and HP below the flee line, the signal aborts
@@ -20,7 +19,18 @@ export function startReflexes(s: Reflexive, rules: ReflexRules): { stop(): void;
     const ac = new AbortController();
     let busy = false;
     let stopped = false;
+    let hpIdx = -1;
     let off = () => {};
+    const hp = (st: any): number => {
+        const skills = st?.skills;
+        if (!skills) return 0;
+        let k = hpIdx >= 0 ? skills[hpIdx] : undefined;
+        if (k?.name !== 'Hitpoints') {
+            k = undefined;
+            for (let i = 0; i < skills.length; i++) if (skills[i]?.name === 'Hitpoints') { hpIdx = i; k = skills[i]; break; }
+        }
+        return k?.level ?? 0;
+    };
     const stop = () => { stopped = true; off(); };
     // Task isolation follows RuneLite Scheduler.run (BSD-2), rewritten for our
     // abort-driven consumers. A failed reflex must end their work, not escape

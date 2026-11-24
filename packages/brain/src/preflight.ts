@@ -1,7 +1,6 @@
 // Pure shared preflight evaluator for AccountPlanner and WorkerModules.
 // Evaluates tile reachability, ferry fares, wearable skill/quest gates, reserve-adjusted stock,
 // GE escrow + operating coin float math, max-level caps, cooldowns, spot capacity, and combat survivability.
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
 import {
@@ -10,7 +9,8 @@ import {
 import type { BankObservation } from '../../core/src/session-types';
 import { routeFares, type Account as WorldAccount, type Tile, type World } from '../../core/src/world';
 import type { Gear, Skill } from '../../knowledge/src/gear';
-import { canWear, loadGear } from '../../knowledge/src/gear-query';
+import { canWear } from '../../knowledge/src/gear-query';
+import { readJsonStatCached } from './json-cache';
 import {
     accountOwnedItemCount,
     availableCoinsAfterReserves,
@@ -155,7 +155,7 @@ let cachedQuests: KnowledgeQuestRow[] | undefined;
 
 export function loadGearMap(): ReadonlyMap<number, Gear> {
     if (cachedGearById) return cachedGearById;
-    const raw = loadGear();
+    const raw = readJsonStatCached<Gear[]>(resolve(REPO_ROOT, 'knowledge', 'gear.json')) ?? [];
     const map = new Map<number, Gear>();
     for (const g of raw) {
         if (g.staffOnly) continue;
@@ -179,14 +179,14 @@ export function loadGearMap(): ReadonlyMap<number, Gear> {
 
 export function loadItemsMap(): ReadonlyMap<number, ItemMeta> {
     if (cachedItemsById) return cachedItemsById;
-    const rows = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge', 'items.json'), 'utf8')) as ItemMeta[];
+    const rows = readJsonStatCached<ItemMeta[]>(resolve(REPO_ROOT, 'knowledge', 'items.json')) ?? [];
     cachedItemsById = new Map(rows.map((r) => [r.id, r]));
     return cachedItemsById;
 }
 
 export function loadQuestRows(): readonly KnowledgeQuestRow[] {
     if (cachedQuests) return cachedQuests;
-    cachedQuests = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge', 'quests.json'), 'utf8')) as KnowledgeQuestRow[];
+    cachedQuests = readJsonStatCached<KnowledgeQuestRow[]>(resolve(REPO_ROOT, 'knowledge', 'quests.json')) ?? [];
     return cachedQuests;
 }
 
@@ -225,7 +225,7 @@ for (const [slug, aliases] of Object.entries(QUEST_ALIASES)) {
     }
 }
 
-function questCandidateKeys(quest: string): ReadonlySet<string> {
+export function questCandidateKeys(quest: string): ReadonlySet<string> {
     let cached = QUEST_KEYS_CACHE.get(quest);
     if (cached) return cached;
     const { norm, collapsed } = normalizeQuestParts(quest);
@@ -373,14 +373,11 @@ export function canWearItem(
 ): { ok: boolean; gear?: Gear; missingSkills: Record<string, number>; missingQuest?: string } {
     const gear = loadGearMap().get(itemId);
     if (!gear) return { ok: true, missingSkills: {} };
-    const levels: Partial<Record<Skill, number>> = {
-        attack: accountSkillLevel(acct, 'Attack'),
-        strength: accountSkillLevel(acct, 'Strength'),
-        defence: accountSkillLevel(acct, 'Defence'),
-        ranged: accountSkillLevel(acct, 'Ranged'),
-        magic: accountSkillLevel(acct, 'Magic'),
-    };
-    const done = completedQuestSet(acct);
+    const levels: Partial<Record<Skill, number>> = {};
+    for (const sk of Object.keys(gear.requires.skills) as Skill[]) {
+        levels[sk] = accountSkillLevel(acct, sk.charAt(0).toUpperCase() + sk.slice(1));
+    }
+    const done = gear.requires.quest ? completedQuestSet(acct) : null;
     if (canWear(gear, levels, done)) {
         return { ok: true, gear, missingSkills: {} };
     }
@@ -390,7 +387,7 @@ export function canWearItem(
             missingSkills[sk] = req;
         }
     }
-    const missingQuest = gear.requires.quest && !done.has(gear.requires.quest) && !hasCompletedQuest(acct, gear.requires.quest)
+    const missingQuest = gear.requires.quest && !done?.has(gear.requires.quest) && !hasCompletedQuest(acct, gear.requires.quest)
         ? gear.requires.quest
         : undefined;
     return { ok: false, gear, missingSkills, ...(missingQuest ? { missingQuest } : {}) };
@@ -937,7 +934,8 @@ export function evaluatePreflight(
         }
     }
 
-    const coinBalance = availableSpendableCoins(
+    let coinBalance: ReturnType<typeof availableSpendableCoins> | undefined;
+    const getCoinBalance = () => coinBalance ??= availableSpendableCoins(
         acct,
         world,
         spec.operatingCoinFloat ?? DEFAULT_PREFLIGHT_COIN_FLOAT,
@@ -952,7 +950,7 @@ export function evaluatePreflight(
 
     if (spec.targetTile) {
         const reach = evaluateTileReachability(acct, spec.targetTile, world, {
-            spendableCoins: coinBalance.totalUnreserved,
+            ...(world.world ? { spendableCoins: getCoinBalance().totalUnreserved } : {}),
             deadlineMs: spec.routeBudgetMs,
             ferryFareHint: spec.ferryFareHint,
             requireSamePlaneWithoutWorld: spec.requireSamePlaneWithoutWorld,
@@ -973,26 +971,42 @@ export function evaluatePreflight(
 
     const totalCoinNeed = coinsRequired + travelCoins;
     // Purchases must preserve operating float; ferry fares may use the operating float itself.
-    if (coinsRequired > 0 && coinBalance.spendable < coinsRequired) {
-        blockers.push({
-            kind: 'missing_coins',
-            required: totalCoinNeed,
-            available: coinBalance.spendable,
-            reserved: coinBalance.reserved,
-            escrow: coinBalance.escrow,
-            ferryFare: travelCoins,
-            message: `Coins after reserves/escrow/float ${coinBalance.spendable} < required ${coinsRequired}`,
-        });
-    } else if (totalCoinNeed > 0 && coinBalance.totalUnreserved < totalCoinNeed) {
-        blockers.push({
-            kind: 'missing_coins',
-            required: totalCoinNeed,
-            available: coinBalance.totalUnreserved,
-            reserved: coinBalance.reserved,
-            escrow: coinBalance.escrow,
-            ferryFare: travelCoins,
-            message: `Unreserved coins ${coinBalance.totalUnreserved} < required ${totalCoinNeed} (including ${travelCoins} gp fare)`,
-        });
+    if (coinsRequired > 0) {
+        const cb = getCoinBalance();
+        if (cb.spendable < coinsRequired) {
+            blockers.push({
+                kind: 'missing_coins',
+                required: totalCoinNeed,
+                available: cb.spendable,
+                reserved: cb.reserved,
+                escrow: cb.escrow,
+                ferryFare: travelCoins,
+                message: `Coins after reserves/escrow/float ${cb.spendable} < required ${coinsRequired}`,
+            });
+        } else if (totalCoinNeed > 0 && cb.totalUnreserved < totalCoinNeed) {
+            blockers.push({
+                kind: 'missing_coins',
+                required: totalCoinNeed,
+                available: cb.totalUnreserved,
+                reserved: cb.reserved,
+                escrow: cb.escrow,
+                ferryFare: travelCoins,
+                message: `Unreserved coins ${cb.totalUnreserved} < required ${totalCoinNeed} (including ${travelCoins} gp fare)`,
+            });
+        }
+    } else if (totalCoinNeed > 0) {
+        const cb = getCoinBalance();
+        if (cb.totalUnreserved < totalCoinNeed) {
+            blockers.push({
+                kind: 'missing_coins',
+                required: totalCoinNeed,
+                available: cb.totalUnreserved,
+                reserved: cb.reserved,
+                escrow: cb.escrow,
+                ferryFare: travelCoins,
+                message: `Unreserved coins ${cb.totalUnreserved} < required ${totalCoinNeed} (including ${travelCoins} gp fare)`,
+            });
+        }
     }
 
     if (spec.combatSurvivability) {
@@ -1008,22 +1022,37 @@ export function evaluatePreflight(
     return blockers.length === 0 ? preflightOk(extra) : preflightFail(blockers, extra);
 }
 
-export function activityPreflightFromConfig(
-    acct: WorkerAccountView,
-    activity: {
-        readonly id?: string;
-        readonly skill?: string;
-        readonly skills?: readonly string[];
-        readonly spotId?: string;
-        readonly maxConcurrentAccounts?: number;
-        readonly location?: WorkerTile;
-        readonly protectedAllowed?: boolean;
-        readonly inputs?: readonly { readonly itemId: number; readonly countPerUnit: number }[];
-        readonly config?: Readonly<Record<string, unknown>>;
-    },
-    world: WorkerWorldView,
-    batchUnits = 1,
-): PreflightResult {
+interface StaticActivityPreflight {
+    readonly protectedAllowed: boolean;
+    readonly skillRequirements: Readonly<Record<string, number>>;
+    readonly trainingSkills: readonly string[];
+    readonly questRequirements: readonly (string | QuestRequirementSpec)[];
+    readonly wearableItemIds: readonly number[];
+    readonly staticRequiredItems: readonly RequiredItemSpec[];
+    readonly coinsRequired: number | undefined;
+    readonly operatingCoinFloat: number;
+    readonly ferryFareHint: number | undefined;
+    readonly targetTile: WorkerTile | null;
+    readonly allowUnknownPos: boolean;
+    readonly combatSurvivability: CombatSurvivabilityFloor | undefined;
+    readonly spotId: string | undefined;
+    readonly maxConcurrentAccounts: number | undefined;
+}
+
+const staticPreflightCache = new WeakMap<object, StaticActivityPreflight>();
+
+function extractStaticActivityPreflight(activity: {
+    readonly id?: string;
+    readonly skill?: string;
+    readonly skills?: readonly string[];
+    readonly spotId?: string;
+    readonly maxConcurrentAccounts?: number;
+    readonly location?: WorkerTile;
+    readonly protectedAllowed?: boolean;
+    readonly config?: Readonly<Record<string, unknown>>;
+}): StaticActivityPreflight {
+    const cached = staticPreflightCache.get(activity);
+    if (cached) return cached;
     const cfg = activity.config ?? {};
     const skillRequirements: Record<string, number> = {};
     for (const key of ['skillRequirements', 'requiredSkills'] as const) {
@@ -1049,43 +1078,85 @@ export function activityPreflightFromConfig(
     const wearableItemIds: number[] = Array.isArray(cfg.wearableItemIds)
         ? (cfg.wearableItemIds as unknown[]).filter((n): n is number => Number.isSafeInteger(n) && (n as number) >= 0)
         : [];
-    const requiredItems: RequiredItemSpec[] = [];
+    const staticRequiredItems: RequiredItemSpec[] = [];
     if (Array.isArray(cfg.requiredTools)) {
         for (const id of cfg.requiredTools as unknown[]) {
             if (Number.isSafeInteger(id) && (id as number) >= 0) {
-                requiredItems.push({ itemId: id as number, count: 1 });
+                staticRequiredItems.push({ itemId: id as number, count: 1 });
             }
-        }
-    }
-    if (activity.inputs) {
-        for (const io of activity.inputs) {
-            const count = Math.max(1, Math.ceil(io.countPerUnit * Math.max(1, batchUnits)));
-            requiredItems.push({ itemId: io.itemId, count });
         }
     }
     const trainingSkills = [
         ...(activity.skill ? [activity.skill] : []),
         ...(activity.skills ?? []),
     ];
+    const spec: StaticActivityPreflight = {
+        protectedAllowed: activity.protectedAllowed ?? false,
+        skillRequirements,
+        trainingSkills,
+        questRequirements,
+        wearableItemIds,
+        staticRequiredItems,
+        coinsRequired: typeof cfg.coinsRequired === 'number' && cfg.coinsRequired > 0 ? Math.ceil(cfg.coinsRequired) : undefined,
+        operatingCoinFloat: typeof cfg.operatingCoinFloat === 'number' ? cfg.operatingCoinFloat : DEFAULT_PREFLIGHT_COIN_FLOAT,
+        ferryFareHint: typeof cfg.ferryFareHint === 'number' ? cfg.ferryFareHint : undefined,
+        targetTile: activity.location ?? null,
+        allowUnknownPos: cfg.allowUnknownPos === true,
+        combatSurvivability: cfg.combatSurvivability && typeof cfg.combatSurvivability === 'object'
+            ? (cfg.combatSurvivability as CombatSurvivabilityFloor)
+            : undefined,
+        spotId: activity.spotId,
+        maxConcurrentAccounts: activity.maxConcurrentAccounts,
+    };
+    staticPreflightCache.set(activity, spec);
+    return spec;
+}
+
+export function activityPreflightFromConfig(
+    acct: WorkerAccountView,
+    activity: {
+        readonly id?: string;
+        readonly skill?: string;
+        readonly skills?: readonly string[];
+        readonly spotId?: string;
+        readonly maxConcurrentAccounts?: number;
+        readonly location?: WorkerTile;
+        readonly protectedAllowed?: boolean;
+        readonly inputs?: readonly { readonly itemId: number; readonly countPerUnit: number }[];
+        readonly config?: Readonly<Record<string, unknown>>;
+    },
+    world: WorkerWorldView,
+    batchUnits = 1,
+    opts?: { readonly protectedAllowed?: boolean },
+): PreflightResult {
+    const base = extractStaticActivityPreflight(activity);
+    let requiredItems: readonly RequiredItemSpec[] = base.staticRequiredItems;
+    if (activity.inputs && activity.inputs.length > 0) {
+        const clampedBatch = Math.max(1, batchUnits);
+        const mutableItems: RequiredItemSpec[] = [...base.staticRequiredItems];
+        for (const io of activity.inputs) {
+            const count = Math.max(1, Math.ceil(io.countPerUnit * clampedBatch));
+            mutableItems.push({ itemId: io.itemId, count });
+        }
+        requiredItems = mutableItems;
+    }
     return evaluatePreflight(
         acct,
         {
-            protectedAllowed: activity.protectedAllowed ?? false,
-            skillRequirements,
-            trainingSkills,
-            questRequirements,
-            wearableItemIds,
+            protectedAllowed: opts?.protectedAllowed ?? base.protectedAllowed,
+            skillRequirements: base.skillRequirements,
+            trainingSkills: base.trainingSkills,
+            questRequirements: base.questRequirements,
+            wearableItemIds: base.wearableItemIds,
             requiredItems,
-            coinsRequired: typeof cfg.coinsRequired === 'number' && cfg.coinsRequired > 0 ? Math.ceil(cfg.coinsRequired) : undefined,
-            operatingCoinFloat: typeof cfg.operatingCoinFloat === 'number' ? cfg.operatingCoinFloat : DEFAULT_PREFLIGHT_COIN_FLOAT,
-            ferryFareHint: typeof cfg.ferryFareHint === 'number' ? cfg.ferryFareHint : undefined,
-            targetTile: activity.location ?? null,
-            allowUnknownPos: cfg.allowUnknownPos === true,
-            combatSurvivability: cfg.combatSurvivability && typeof cfg.combatSurvivability === 'object'
-                ? (cfg.combatSurvivability as CombatSurvivabilityFloor)
-                : undefined,
-            spotId: activity.spotId,
-            maxConcurrentAccounts: activity.maxConcurrentAccounts,
+            coinsRequired: base.coinsRequired,
+            operatingCoinFloat: base.operatingCoinFloat,
+            ferryFareHint: base.ferryFareHint,
+            targetTile: base.targetTile,
+            allowUnknownPos: base.allowUnknownPos,
+            combatSurvivability: base.combatSurvivability,
+            spotId: base.spotId,
+            maxConcurrentAccounts: base.maxConcurrentAccounts,
         },
         world,
     );

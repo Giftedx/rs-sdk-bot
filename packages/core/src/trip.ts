@@ -32,13 +32,13 @@ export function itemsFor(legs: Leg[], counts: Record<string, number>): Record<st
 }
 
 // The bank stand tiles packages/planner/src/haggis-travel.json lists (each walked to live by quest-sweep).
+let bankRecordsCache: Array<Tile & { site?: string }> | undefined;
 let banks: Tile[] | undefined;
-export function knownBanks(): Tile[] {
-    return banks ??= Object.values((JSON.parse(readFileSync(join(repoRoot, 'packages', 'planner', 'src', 'haggis-travel.json'), 'utf8')) as { banks: Record<string, Tile> }).banks)
-        .map(b => ({ x: b.x, z: b.z, level: b.level }));
-}
 export function knownBankRecords(): Array<Tile & { site?: string }> {
-    return Object.values((JSON.parse(readFileSync(join(repoRoot, 'packages', 'planner', 'src', 'haggis-travel.json'), 'utf8')) as { banks: Record<string, Tile & { site?: string }> }).banks);
+    return bankRecordsCache ??= Object.values((JSON.parse(readFileSync(join(repoRoot, 'packages', 'planner', 'src', 'haggis-travel.json'), 'utf8')) as { banks: Record<string, Tile & { site?: string }> }).banks);
+}
+export function knownBanks(): Tile[] {
+    return banks ??= knownBankRecords().map(b => ({ x: b.x, z: b.z, level: b.level }));
 }
 
 export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stock: BankStock | undefined, bankTiles: Tile[] = knownBanks(), nearest = 3, routeOpts?: RouteOptions): TripPlan | null {
@@ -91,8 +91,13 @@ export function bankStock(name: string, opts: { server?: string; base?: string }
             if (opts.server && st.server && (isLocalServer(opts.server) ? st.server !== opts.server : isLocalServer(st.server))) continue;
             if (!Array.isArray(st.bank)) return undefined;
             const items: Record<string, number> = {};
-            for (const i of st.bank) { const n = itemName(i.id); if (n && i.id !== 995) items[n] = (items[n] ?? 0) + i.count; }
-            return { coins: st.bank.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0), items };
+            let coins = 0;
+            for (const i of st.bank) {
+                if (i.id === 995) { coins += i.count; continue; }
+                const n = itemName(i.id);
+                if (n) items[n] = (items[n] ?? 0) + i.count;
+            }
+            return { coins, items };
         } catch (error) {
             if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') continue;
             return undefined;
@@ -102,9 +107,18 @@ export function bankStock(name: string, opts: { server?: string; base?: string }
 }
 
 let names: Map<number, string> | undefined, ids: Map<string, number> | undefined;
-const items = () => (JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'items.json'), 'utf8')) as { id: number; debugname: string }[]);
-export const itemName = (id: number) => (names ??= new Map(items().map(i => [i.id, i.debugname]))).get(id);
-export const itemIdOf = (name: string) => (ids ??= new Map(items().map(i => [i.debugname, i.id]))).get(name);
+function ensureItems(): void {
+    if (names && ids) return;
+    const raw = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'items.json'), 'utf8')) as { id: number; debugname: string }[];
+    names = new Map();
+    ids = new Map();
+    for (const i of raw) {
+        names.set(i.id, i.debugname);
+        ids.set(i.debugname, i.id);
+    }
+}
+export const itemName = (id: number) => { ensureItems(); return names!.get(id); };
+export const itemIdOf = (name: string) => { ensureItems(); return ids!.get(name); };
 
 type BankObservation={generation:number;items:{id:number;count:number}[]};
 type BankSession = { tick(): number; sdk: { getState(): any }; bankObservation?():BankObservation|null; bot: { openBank(): Promise<{ success: boolean; message?: string }>; withdrawItem(row: unknown, count: number): Promise<unknown>; closeBank(): Promise<unknown> } };

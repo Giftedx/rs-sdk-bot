@@ -1603,29 +1603,43 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const unwatch = s.onTick(() => {
         const stTick = s.sdk.getState();
         const pos = stTick?.player;
-        const hp = pos?.hp; if (hp !== undefined) { if (hp < lastHp) { stats.taken += lastHp - hp; damagedAt = s.tick(); } lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
-        for (const e of stTick?.combatEvents ?? []) {
-            const id = e.observationId ?? e.tick;
-            if (id <= seenCombatEv) continue;
-            seenCombatEv = id;
-            if (e.type === 'damage_taken' && e.sourceType === 'other_player' && typeof e.sourceIndex === 'number' && e.sourceIndex >= 0) {
-                recentHitters.set(e.sourceIndex, s.tick());
+        const tickNow = s.tick();
+        const hp = pos?.hp; if (hp !== undefined) { if (hp < lastHp) { stats.taken += lastHp - hp; damagedAt = tickNow; } lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
+        const combatEvents = stTick?.combatEvents;
+        if (combatEvents?.length) {
+            for (const e of combatEvents) {
+                const id = e.observationId ?? e.tick;
+                if (id <= seenCombatEv) continue;
+                seenCombatEv = id;
+                if (e.type === 'damage_taken' && e.sourceType === 'other_player' && typeof e.sourceIndex === 'number' && e.sourceIndex >= 0) {
+                    recentHitters.set(e.sourceIndex, tickNow);
+                }
             }
         }
-        if (!inFight && !inRescue && going()) wildSurvival.step(s.tick());
+        const activeGoing = going();
+        if (!inFight && !inRescue && activeGoing) wildSurvival.step(tickNow);
         if (pos && o.cohesion) {
-            const stNow = s.sdk.getState();
             const curSelf = { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel };
-            const activeTargetsSet = curInterlopers.size ? new Set([...o.targets, ...curInterlopers]) : o.targets;
-            const hasMultiTarget = (stNow?.nearbyPlayers ?? []).some(q =>
-                activeTargetsSet.has(q.name.toLowerCase())
-                && q.x !== undefined && q.z !== undefined && isMulti(q.x, q.z)
-                && attackable(curSelf, { z: q.z, combatLevel: q.combatLevel }),
-            );
-            o.cohesion.update(s.name, { x: pos.worldX, z: pos.worldZ, inMulti: isMulti(pos.worldX, pos.worldZ), hasMultiTarget, tick: s.tick() });
+            const nearby = stTick?.nearbyPlayers;
+            let hasMultiTarget = false;
+            if (nearby?.length) {
+                for (let i = 0; i < nearby.length; i++) {
+                    const q = nearby[i]!;
+                    const qLower = q.name.toLowerCase();
+                    if (!(o.targets.has(qLower) || (curInterlopers.size > 0 && curInterlopers.has(qLower)))) continue;
+                    if (q.x !== undefined && q.z !== undefined && isMulti(q.x, q.z) && attackable(curSelf, { z: q.z, combatLevel: q.combatLevel })) {
+                        hasMultiTarget = true;
+                        break;
+                    }
+                }
+            }
+            o.cohesion.update(s.name, { x: pos.worldX, z: pos.worldZ, inMulti: isMulti(pos.worldX, pos.worldZ), hasMultiTarget, tick: tickNow });
         }
-        for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = s.tick(); }
-        if (!inFight && going()) scanKillMessages(s.tick());
+        const msgs = stTick?.gameMessages;
+        if (msgs?.length) {
+            for (const m of msgs) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = tickNow; }
+        }
+        if (!inFight && activeGoing) scanKillMessages(tickNow);
     });
     try {
         await disableAutoRetaliate(s);

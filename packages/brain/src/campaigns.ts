@@ -1,7 +1,7 @@
 // Declarative Campaign manifests for Haggis (Overall) and all 19 reserved Specialists.
 // Reads launch manifests, rehearsal proofs, hiscore margins, staging holders, and owner stops,
 // and emits finite item shortfall GoalDemands for unfulfilled campaign supplies.
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { findStopFile, liveRoot, practiceRoot, repoRoot } from '../../core/src/practice-paths';
 import { SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
@@ -13,8 +13,8 @@ import {
     overallRequirementsFor,
     scheduleOverall,
 } from '../../planner/src/haggis';
-import { idsFor } from '../../planner/src/supply-bill';
 import { accountOwnedItemCount } from '../../workers/src/contracts';
+import { fileStatStamp, readJsonStatCached } from './json-cache';
 import { loadItemsMap } from './preflight';
 import {
     RETIRED_SPECIALIST_CAMPAIGN_SPECS,
@@ -123,27 +123,19 @@ function normalizeItemKey(raw: string): string {
         .replace(/^coins$/i, 'coins');
 }
 
-function fileStamp(filePath: string): string {
-    try {
-        const st = statSync(filePath);
-        return `${st.size}:${st.mtimeMs}`;
-    } catch {
-        return 'missing';
-    }
-}
-
 let cachedItemLookup: { key: string; lookup: ItemLookup } | undefined;
 
 function buildItemLookup(root: string): ItemLookup {
-    const itemsPath = existsSync(join(root, 'knowledge', 'items.json'))
-        ? join(root, 'knowledge', 'items.json')
-        : join(repoRoot, 'knowledge', 'items.json');
-    const cacheKey = `${itemsPath}|${fileStamp(itemsPath)}`;
+    const localItemsPath = join(root, 'knowledge', 'items.json');
+    const itemsPath = existsSync(localItemsPath) ? localItemsPath : join(repoRoot, 'knowledge', 'items.json');
+    const cacheKey = `${resolve(itemsPath)}|${fileStatStamp(itemsPath)}`;
     if (cachedItemLookup && cachedItemLookup.key === cacheKey) return cachedItemLookup.lookup;
-    const raw = readJsonSafe(itemsPath);
+    const raw = readJsonStatCached<unknown>(itemsPath);
     const items: KnowledgeItemRow[] = [];
     const byId = new Map<number, KnowledgeItemRow>();
     const byName = new Map<string, KnowledgeItemRow>();
+    const idsByExactLower = new Map<string, number[]>();
+    const idsByDebug = new Map<string, number[]>();
 
     if (Array.isArray(raw)) {
         for (const entry of raw) {
@@ -161,6 +153,14 @@ function buildItemLookup(root: string): ItemLookup {
             items.push(row);
             byId.set(id, row);
             const key = name.toLowerCase();
+            const idList = idsByExactLower.get(key);
+            if (idList) idList.push(id);
+            else idsByExactLower.set(key, [id]);
+            if (row.debugname) {
+                const dbgList = idsByDebug.get(row.debugname);
+                if (dbgList) dbgList.push(id);
+                else idsByDebug.set(row.debugname, [id]);
+            }
             const prev = byName.get(key);
             const prevPenalty =
                 prev && (prev.debugname?.startsWith('unstrung_') || prev.debugname?.startsWith('cert_')) ? 1 : 0;
@@ -172,6 +172,24 @@ function buildItemLookup(root: string): ItemLookup {
         }
     }
 
+    const resolvedByNameCache = new Map<string, { readonly itemId: number; readonly itemName: string } | null>();
+    const idsForFast = (trimmed: string): number[] => {
+        const want = trimmed.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim();
+        const unf = want.match(/^(.+) potion \(unf\)$/);
+        if (unf) return idsByDebug.get(unf[1]!.replace(/\s+/g, '') + 'vial') ?? [];
+        const matched: number[] = [];
+        const seenForms = new Set<string>();
+        for (const form of [want, want.replace(/s$/, ''), want.replace(/ies$/, 'y'), want.replace(/us$/, 'i')]) {
+            if (seenForms.has(form)) continue;
+            seenForms.add(form);
+            const list = idsByExactLower.get(form);
+            if (list) {
+                for (const id of list) matched.push(id);
+            }
+        }
+        return matched;
+    };
+
     const resolveItem = (rawId: unknown, rawName: unknown) => {
         if (typeof rawId === 'number' && Number.isSafeInteger(rawId) && rawId >= 0) {
             const known = byId.get(rawId);
@@ -181,7 +199,9 @@ function buildItemLookup(root: string): ItemLookup {
         }
         if (typeof rawName === 'string' && rawName.trim().length > 0) {
             const trimmed = rawName.trim();
-            const matchedIds = idsFor(trimmed, items);
+            const cached = resolvedByNameCache.get(trimmed);
+            if (cached !== undefined) return cached ?? undefined;
+            const matchedIds = idsForFast(trimmed);
             if (matchedIds.length > 0) {
                 let best: KnowledgeItemRow | undefined;
                 for (const id of matchedIds) {
@@ -200,14 +220,19 @@ function buildItemLookup(root: string): ItemLookup {
                     }
                 }
                 if (best) {
-                    return { itemId: best.id, itemName: best.name };
+                    const res = { itemId: best.id, itemName: best.name };
+                    resolvedByNameCache.set(trimmed, res);
+                    return res;
                 }
             }
             const norm = normalizeItemKey(trimmed);
             const known = byName.get(trimmed.toLowerCase()) ?? byName.get(norm);
             if (known) {
-                return { itemId: known.id, itemName: known.name };
+                const res = { itemId: known.id, itemName: known.name };
+                resolvedByNameCache.set(trimmed, res);
+                return res;
             }
+            resolvedByNameCache.set(trimmed, null);
         }
         return undefined;
     };
@@ -373,7 +398,7 @@ function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readon
             })
             .join(';');
         const itemsStamp = cachedItemLookup?.key ?? '';
-        const haggisKey = `${boardsFile}|${fileStamp(boardsFile)}|${itemsStamp}|${overallHit.snapshot.takenAt ?? ''}|${snapshotBoardsSig}`;
+        const haggisKey = `${boardsFile}|${fileStatStamp(boardsFile)}|${itemsStamp}|${overallHit.snapshot.takenAt ?? ''}|${snapshotBoardsSig}`;
         if (cachedHaggisSchedule && cachedHaggisSchedule.key === haggisKey) {
             plannedTicks = cachedHaggisSchedule.plannedTicks;
             rawSupplies.push(...cachedHaggisSchedule.rawSupplies);
@@ -656,7 +681,7 @@ function readCampaignOverrides(root: string, overridePath?: string): Map<string,
 }
 
 export function loadCampaignManifests(opts: LoadCampaignsOptions = {}): Campaign[] {
-    const root = opts.root ?? repoRoot;
+    const root = resolve(opts.root ?? repoRoot);
     const now = opts.now ?? Date.now();
     const lookup = buildItemLookup(root);
     const snapshots = loadHiscoreSnapshots(root);

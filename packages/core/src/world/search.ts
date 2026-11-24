@@ -4,36 +4,44 @@ import { doorBlock, doorBlocks, transportAllowed } from './filters';
 import { areasDisjoint, buildWorldGraph, lowerBoundX, solveLowerBounds, upperBoundX, type ApproachTransport, type WorldGraph } from './graph';
 import { GOAL_TOL, loadKnowledgeJson, MAX_LEG, PORTAL_TOL, routeFares, tileKey, TRANSPORT_COST, type Account, type Door, type Leg, type RouteOptions, type Tile, type Transport, type World, type WorldOptions } from './model';
 
-class MinHeap<T> {
+class MinHeap<T extends { f: number }> {
     private a: T[] = [];
-    constructor(private score: (t: T) => number) {}
     get size() { return this.a.length; }
     clear() { this.a = []; }
     push(t: T) {
         const a = this.a;
+        const f = t.f;
+        let i = a.length;
         a.push(t);
-        for (let i = a.length - 1; i > 0;) {
+        while (i > 0) {
             const p = (i - 1) >> 1;
-            if (this.score(a[p]!) <= this.score(a[i]!)) break;
-            const tmp = a[p]!; a[p] = a[i]!; a[i] = tmp;
+            const parent = a[p]!;
+            if (parent.f <= f) break;
+            a[i] = parent;
             i = p;
         }
+        a[i] = t;
     }
     pop(): T | undefined {
         const a = this.a;
         const top = a[0];
         const last = a.pop();
-        if (a.length > 0 && last !== undefined) {
-            a[0] = last;
-            for (let i = 0; ;) {
-                const l = 2 * i + 1, r = l + 1;
-                let m = i;
-                if (l < a.length && this.score(a[l]!) < this.score(a[m]!)) m = l;
-                if (r < a.length && this.score(a[r]!) < this.score(a[m]!)) m = r;
-                if (m === i) break;
-                const tmp = a[m]!; a[m] = a[i]!; a[i] = tmp;
+        const len = a.length;
+        if (len > 0 && last !== undefined) {
+            const lf = last.f;
+            let i = 0;
+            for (;;) {
+                const l = 2 * i + 1;
+                if (l >= len) break;
+                const r = l + 1;
+                let m = l;
+                let best = a[l]!;
+                if (r < len && a[r]!.f < best.f) { m = r; best = a[r]!; }
+                if (lf <= best.f) break;
+                a[i] = best;
                 i = m;
             }
+            a[i] = last;
         }
         return top;
     }
@@ -139,7 +147,7 @@ export function routeOnGraph(
             const lower = solveLowerBounds(backward ? backwardLBGraph : forwardLBGraph, goalBoundIdx, finishTile, radius);
             const h = (idx: number) => idx === goalIdx ? 0 : idx < W ? lower[idx]! : 0;
 
-            const heap = new MinHeap<SearchEntry>(e => e.f);
+            const heap = new MinHeap<SearchEntry>();
             // Fast flat arrays when trackFares is false (only fare=0 exists), numeric state ids when fares vary.
             const doneFast = trackFares ? null : new Uint8Array(totalStates);
             const bestFast = trackFares ? null : new Float64Array(totalStates);

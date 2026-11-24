@@ -91,11 +91,42 @@ export function smithStageRoute(p:{worldX:number;worldZ:number;level:number}) {
 const key = (a: string, b: string) => (a < b ? `${a}>${b}` : `${b}>${a}`);
 const cheb = (a: Place, b: Place) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 const gateMetadata=(path:{gates?:RouteGate[];locked?:string[]}):RouteGate[]=>path.gates?.length?path.gates:(path.locked??[]).map(id=>({id,source:'legacy travel cache; prerequisites not retained',requires:[['other:unparsed gate '+id]]}));
+const sortedBankKeysCache = new WeakMap<Record<string, Place>, string[]>();
+
+function sortedBankKeys(banks: Record<string, Place>): string[] {
+    let keys = sortedBankKeysCache.get(banks);
+    if (!keys) {
+        keys = Object.keys(banks).sort();
+        sortedBankKeysCache.set(banks, keys);
+    }
+    return keys;
+}
 
 export function place(m: TravelModel, id: string): Place {
     const p = m.places[id] ?? m.cache.banks[id];
     if (!p) throw new Error(`travel: unknown place ${id}`);
     return p;
+}
+
+function walkTicks(m: TravelModel, a: string, b: string): number {
+    if (a === b) return 0;
+    const pa = place(m, a), pb = place(m, b);
+    const nb = m.cache.nearestBank[a];
+    if (nb && nb.bank === b) return Math.ceil(nb.runTicks) + START_TICKS;
+    const c = m.cache.legs[m.cache.directed ? `${a}>${b}` : key(a, b)];
+    if (c) return Math.ceil(c.runTicks) + START_TICKS;
+    return Math.ceil(cheb(pa, pb) * RUN_TICKS_PER_TILE) + START_TICKS;
+}
+
+export function legTicks(m: TravelModel, a: string, b: string): number {
+    if (b === ANYWHERE || a === b) return 0;
+    const ia = place(m, a).island, ib = place(m, b).island;
+    if (ia?.id === ib?.id) return walkTicks(m, a, b);
+    let ticks = 0;
+    let cur = a;
+    if (ia) { ticks += walkTicks(m, cur, ia.landing) + ia.boatTicks; cur = ia.port; }
+    if (ib) { ticks += walkTicks(m, cur, ib.port) + ib.boatTicks; cur = ib.landing; }
+    return ticks + walkTicks(m, cur, b);
 }
 
 // One walk on the same land mass, start ticks included.
@@ -141,8 +172,8 @@ export function resolve(m: TravelModel, here: string, at: string): string {
     // No cached nearest bank: the bank with the cheapest leg.
     let best = '';
     let bestT = Infinity;
-    for (const b of Object.keys(m.cache.banks).sort()) {
-        const t = leg(m, here, b).ticks;
+    for (const b of sortedBankKeys(m.cache.banks)) {
+        const t = legTicks(m, here, b);
         if (t < bestT) { bestT = t; best = b; }
     }
     return best;
@@ -152,8 +183,8 @@ export function resolve(m: TravelModel, here: string, at: string): string {
 export function bankTrips(m: TravelModel, at: string, trips: number): Leg {
     if (trips <= 0) return { ticks: 0, method: 'bank-trip' };
     const b = resolve(m, at, BANK);
-    const one = leg(m, at, b).ticks;
-    const back = leg(m, b, at).ticks;
+    const one = legTicks(m, at, b);
+    const back = legTicks(m, b, at);
     return { ticks: trips * (one + back), method: 'bank-trip', detail: `${trips} x (${one} + ${back}) (${b})` };
 }
 

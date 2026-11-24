@@ -33,7 +33,8 @@ export function itemExamine(tables:ExamineTables,item:ExamineIdentity|string|nul
 }
 export function projectItemExamine(tables:ExamineTables,visible:readonly(ExamineIdentity|string)[]){
  const itemExamineById:Record<string,string>={},itemExamineByName:Record<string,string>={};
- for(const item of visible){
+ for(let i=0;i<visible.length;i++){
+  const item=visible[i]!;
   const id=examineId(item),name=examineName(typeof item==='string'?item:item?.name);
   if(id!==null&&Object.hasOwn(tables.byId,id))itemExamineById[id]=tables.byId[id]!;
   if(name&&Object.hasOwn(tables.byName,name))itemExamineByName[name]=tables.byName[name]!;

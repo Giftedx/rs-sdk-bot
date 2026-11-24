@@ -169,10 +169,19 @@ type FleetAccount = { name: string; skills: FleetSkill[]; ranks: { board: string
 const secondsOf = (t: string) => { let s = 0; for (const [, n, u] of t.matchAll(/(\d+)([hms])/g)) s += Number(n) * (u === 'h' ? 3600 : u === 'm' ? 60 : 1); return s; };
 export function overtakeView(tops: ReadonlyMap<string, { rows: BoardRow[] }>, accounts: FleetAccount[], xpForLevel: (level: number) => number) {
     const out: any[] = [];
+    const bestByBoard = new Map<string, { a: FleetAccount; rank: number; level: number; seconds: number }>();
+    for (const a of accounts) {
+        for (const r of a.ranks ?? []) {
+            if (r.board === 'Overall' || r.board === 'Quest Points') continue;
+            const cur = bestByBoard.get(r.board);
+            if (!cur || r.rank < cur.rank) {
+                bestByBoard.set(r.board, { a, rank: r.rank, level: r.level, seconds: secondsOf(r.time) });
+            }
+        }
+    }
     for (const [board, t] of tops) {
         if (board === 'Overall' || board === 'Quest Points') continue;
-        let best: { a: FleetAccount; rank: number; level: number; seconds: number } | null = null;
-        for (const a of accounts) { const r = a.ranks?.find(x => x.board === board); if (r && (!best || r.rank < best.rank)) best = { a, rank: r.rank, level: r.level, seconds: secondsOf(r.time) }; }
+        const best = bestByBoard.get(board);
         if (!best) continue;
         const skill = best.a.skills?.find(k => k.name === board), xp = skill?.xp ?? null, rate = best.a.goalSkill === board && best.a.xpPerHour && best.a.xpPerHour > 0 ? best.a.xpPerHour : null;
         const above = t.rows.filter(r => r.rank < best!.rank);

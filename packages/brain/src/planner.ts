@@ -1,13 +1,13 @@
 // AccountPlanner: solves 1-to-3-step dependency chains (recover -> acquire/gear -> unlock -> work),
 // evaluates gear upgrades by net XP/tick payback over remaining band vs. acquisition ticks,
 // applies comparative advantage across account profiles, and enforces protectedClock isolation.
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { levelForXp, xpForLevel } from '../../core/src/xp-curve';
 import type { Gear, Skill } from '../../knowledge/src/gear';
 import { canWear } from '../../knowledge/src/gear-query';
 import type { PreflightResult, RateEstimate, TrustTier } from '../../workers/src/contracts';
 import { trustMeetsMinimum } from '../../workers/src/contracts';
+import { readJsonStatCached } from './json-cache';
 import {
     DEFAULT_OPERATING_COIN_FLOAT,
     HUB_BANKER_LOCATIONS,
@@ -92,12 +92,14 @@ interface SkillToolRow {
 
 let cachedSkillTools: { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } | undefined;
 let cachedTradeableRighthand: Gear[] | undefined;
+type WeaponStyle = 'melee' | 'ranged' | 'magic';
+let cachedScoredRighthandByStyle: Record<WeaponStyle, readonly { readonly gear: Gear; readonly score: number }[]> | undefined;
 
 function loadSkillTools(): { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } {
     if (cachedSkillTools) return cachedSkillTools;
-    cachedSkillTools = JSON.parse(
-        readFileSync(resolve(REPO_ROOT, 'knowledge', 'skill-tools.json'), 'utf8'),
-    ) as { axes: SkillToolRow[]; pickaxes: SkillToolRow[] };
+    cachedSkillTools = readJsonStatCached<{ axes: SkillToolRow[]; pickaxes: SkillToolRow[] }>(
+        resolve(REPO_ROOT, 'knowledge', 'skill-tools.json'),
+    ) ?? { axes: [], pickaxes: [] };
     return cachedSkillTools;
 }
 
@@ -107,13 +109,23 @@ function getTradeableRighthandGear(): readonly Gear[] {
     return cachedTradeableRighthand;
 }
 
-type WeaponStyle = 'melee' | 'ranged' | 'magic';
+function getScoredRighthandByStyle(style: WeaponStyle): readonly { readonly gear: Gear; readonly score: number }[] {
+    if (!cachedScoredRighthandByStyle) {
+        const righthand = getTradeableRighthandGear();
+        cachedScoredRighthandByStyle = {
+            melee: righthand.map((gear) => ({ gear, score: scoreCombatWeapon(gear, 'melee') })).sort((a, b) => b.score - a.score),
+            ranged: righthand.map((gear) => ({ gear, score: scoreCombatWeapon(gear, 'ranged') })).sort((a, b) => b.score - a.score),
+            magic: righthand.map((gear) => ({ gear, score: scoreCombatWeapon(gear, 'magic') })).sort((a, b) => b.score - a.score),
+        };
+    }
+    return cachedScoredRighthandByStyle[style];
+}
+
 interface PrecomputedWeaponInfo {
-    readonly wearableRighthand: readonly Gear[];
-    readonly byStyle: Readonly<Record<WeaponStyle, {
+    readonly getStyle: (style: WeaponStyle) => {
         readonly bestOwnedScore: number;
         readonly candidates: readonly { readonly gear: Gear; readonly score: number }[];
-    }>>;
+    };
 }
 
 function buildWearLevels(acct: AccountState): Partial<Record<Skill, number>> {
@@ -130,7 +142,6 @@ function precomputeWearableWeapons(acct: AccountState): PrecomputedWeaponInfo {
     const gearMap = loadGearMap();
     const levels = buildWearLevels(acct);
     const doneSet = completedQuestSet(acct);
-    const wearableRighthand = getTradeableRighthandGear().filter((g) => canWear(g, levels, doneSet));
 
     const ownedRighthand: Gear[] = [];
     for (const [idStr, cnt] of [
@@ -145,23 +156,30 @@ function precomputeWearableWeapons(acct: AccountState): PrecomputedWeaponInfo {
         ownedRighthand.push(g);
     }
 
-    const styles: WeaponStyle[] = ['melee', 'ranged', 'magic'];
-    const byStyle = {} as Record<WeaponStyle, { bestOwnedScore: number; candidates: { gear: Gear; score: number }[] }>;
-    for (const style of styles) {
+    const cache: Partial<Record<WeaponStyle, { bestOwnedScore: number; candidates: { gear: Gear; score: number }[] }>> = {};
+    const getStyle = (style: WeaponStyle) => {
+        const hit = cache[style];
+        if (hit) return hit;
         let bestOwnedScore = 50;
         for (const g of ownedRighthand) {
             const sc = scoreCombatWeapon(g, style);
             if (sc > bestOwnedScore) bestOwnedScore = sc;
         }
-        const candidates = wearableRighthand
-            .map((g) => ({ gear: g, score: scoreCombatWeapon(g, style) }))
-            .filter((x) => x.score > bestOwnedScore * 1.05)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 6);
-        byStyle[style] = { bestOwnedScore, candidates };
-    }
+        const threshold = bestOwnedScore * 1.05;
+        const candidates: { gear: Gear; score: number }[] = [];
+        for (const entry of getScoredRighthandByStyle(style)) {
+            if (entry.score <= threshold) break;
+            if (canWear(entry.gear, levels, doneSet)) {
+                candidates.push(entry);
+                if (candidates.length >= 6) break;
+            }
+        }
+        const out = { bestOwnedScore, candidates };
+        cache[style] = out;
+        return out;
+    };
 
-    return { wearableRighthand, byStyle };
+    return { getStyle };
 }
 
 export interface RateEstimator {
@@ -611,7 +629,7 @@ export function evaluateBestGearUpgrade(params: {
     // Combat weapon upgrade check.
     const style: WeaponStyle = skill === 'ranged' ? 'ranged' : skill === 'magic' ? 'magic' : 'melee';
     const precomputed = params.precomputedWeapons ?? precomputeWearableWeapons(acct);
-    const { bestOwnedScore: bestOwnedWeaponScore, candidates: weaponCandidates } = precomputed.byStyle[style];
+    const { bestOwnedScore: bestOwnedWeaponScore, candidates: weaponCandidates } = precomputed.getStyle(style);
 
     for (const cand of weaponCandidates) {
         // Bound DPS ratio conservatively to avoid exaggerating upgrades on low-HP mobs.
@@ -911,6 +929,21 @@ export function planAccount(
     acct: AccountState,
     input: AccountPlannerInput,
 ): AccountPlan {
+    return planAccountCore(acct, input, false).bestPlan;
+}
+
+export function planAccountWithCandidates(
+    acct: AccountState,
+    input: AccountPlannerInput,
+): { readonly bestPlan: AccountPlan; readonly candidates: readonly AccountPlan[] } {
+    return planAccountCore(acct, input, true);
+}
+
+function planAccountCore(
+    acct: AccountState,
+    input: AccountPlannerInput,
+    collectCandidates: boolean,
+): { readonly bestPlan: AccountPlan; readonly candidates: readonly AccountPlan[] } {
     const { world } = input;
     const now = world.at;
     const campaigns = input.campaigns ?? [];
@@ -919,27 +952,30 @@ export function planAccount(
     const xpRate = input.xpRate ?? 1;
 
     if (acct.lifecycle === 'paused_owner') {
-        return { account: acct.name, steps: [], scorePerHour: 0, idleReason: 'paused_owner' };
+        return { bestPlan: { account: acct.name, steps: [], scorePerHour: 0, idleReason: 'paused_owner' }, candidates: [] };
     }
     if (acct.lifecycle === 'dead') {
-        return { account: acct.name, steps: [], scorePerHour: 0, idleReason: 'dead' };
+        return { bestPlan: { account: acct.name, steps: [], scorePerHour: 0, idleReason: 'dead' }, candidates: [] };
     }
     if (acct.lifecycle === 'in_trade') {
-        return { account: acct.name, steps: [], scorePerHour: 0, idleReason: 'in_trade' };
+        return { bestPlan: { account: acct.name, steps: [], scorePerHour: 0, idleReason: 'in_trade' }, candidates: [] };
     }
 
     const holdReason = hasBlockingSystemHold(acct, now);
     if (holdReason) {
-        return { account: acct.name, steps: [], scorePerHour: 0, idleReason: holdReason };
+        return { bestPlan: { account: acct.name, steps: [], scorePerHour: 0, idleReason: holdReason }, candidates: [] };
     }
 
     const protection = canProtectedAccountLaunch(acct, campaigns, world);
     if (!protection.allowed) {
         return {
-            account: acct.name,
-            steps: [],
-            scorePerHour: 0,
-            idleReason: protection.reason ?? 'protected_clock_reserved',
+            bestPlan: {
+                account: acct.name,
+                steps: [],
+                scorePerHour: 0,
+                idleReason: protection.reason ?? 'protected_clock_reserved',
+            },
+            candidates: [],
         };
     }
 
@@ -951,11 +987,12 @@ export function planAccount(
             estimatedTicks: 20,
             reason: 'unsettled session logout proof',
         };
-        return {
+        const p: AccountPlan = {
             account: acct.name,
             steps: [recStep],
             scorePerHour: 1e6,
         };
+        return { bestPlan: p, candidates: [p] };
     }
 
     if (acct.lifecycle === 'needs_location_recovery') {
@@ -966,11 +1003,12 @@ export function planAccount(
             estimatedTicks: 60,
             reason: 'stranded off-hub or non-ground plane',
         };
-        return {
+        const p: AccountPlan = {
             account: acct.name,
             steps: [recStep],
             scorePerHour: 5e5,
         };
+        return { bestPlan: p, candidates: [p] };
     }
 
     const minTrust: TrustTier = input.minTrust ?? 'practice_passed';
@@ -1132,12 +1170,10 @@ export function planAccount(
         if (!p) {
             p = activityPreflightFromConfig(
                 acct,
-                {
-                    ...activity,
-                    protectedAllowed: acctProtectedAllowed && (activity.protectedAllowed || !acct.protectedClock),
-                },
+                activity,
                 world,
                 batchUnits,
+                { protectedAllowed: acctProtectedAllowed && (activity.protectedAllowed || !acct.protectedClock) },
             );
             preflightCache.set(key, p);
         }
@@ -1173,20 +1209,31 @@ export function planAccount(
         requireTrustedBank: true,
     }).spendable;
 
+    const acctLower = acct.name.toLowerCase();
     let bestPlan: AccountPlan | null = null;
+    const demandCandidates: AccountPlan[] = [];
     let lastBlockerReason = 'no_matching_demand_or_activity';
 
     for (const demand of input.demands) {
         if (!demand.active || demand.remaining <= 0) continue;
+        if (demand.assignedAccount && demand.assignedAccount.toLowerCase() !== acctLower) continue;
 
-        const matching = candidateListForDemand(demand).filter(
-            (a) => (!shared || !hasActExclusions || isActAllowed(a)) && activityMatchesDemand(acct, demand, a),
-        );
+        const rawCandidates = candidateListForDemand(demand);
+        const needsMatchCheck = demand.target.kind === 'skill' || demand.target.kind === 'combat_readiness';
+        const needFilter = (shared && hasActExclusions) || needsMatchCheck;
+        const matching = needFilter
+            ? rawCandidates.filter(
+                  (a) => (!shared || !hasActExclusions || isActAllowed(a))
+                      && (!needsMatchCheck || activityMatchesDemand(acct, demand, a)),
+              )
+            : rawCandidates;
         let bestThroughput = 0;
         for (const act of matching) {
             const tp = activityDemandThroughput(act, demand, getRate(act));
             if (tp > bestThroughput) bestThroughput = tp;
         }
+
+        let demandBest: AccountPlan | null = null;
 
         const marketCandidates: {
             readonly marketAct: ActivityDefinition;
@@ -1203,83 +1250,87 @@ export function planAccount(
 
         if (
             demand.target.kind === 'item'
-            && (!demand.assignedAccount || demand.assignedAccount.toLowerCase() === acct.name.toLowerCase())
+            && defaultSpendableCoins > 0
             && (shopBuyActivity || directGeBuyActivity)
         ) {
-            const allowedExternal: AcquireSourceKind[] = [];
-            if (shopBuyActivity) allowedExternal.push('npc_shop');
-            if (directGeBuyActivity) allowedExternal.push('ge');
             const targetItemId = demand.target.itemId;
-            const maxQty = Math.max(1, Math.min(Math.round(demand.remaining), 250));
-            let acq = resolveAcquireCached({
-                itemId: targetItemId,
-                itemName: demand.target.itemName,
-                quantity: maxQty,
-                allowOwnBank: false,
-                allowedSources: allowedExternal,
-                operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
-            });
-            if (!acq.ok && maxQty > 1) {
-                const spendable = defaultSpendableCoins;
-                if (spendable > 0) {
-                    let minUnitPrice = Number.POSITIVE_INFINITY;
-                    if (shopBuyActivity) {
-                        const shops = [
-                            ...(acquireCtx.customShops ?? []).filter((s) => s.itemId === targetItemId),
-                            ...(shopCatalog.get(targetItemId) ?? []),
-                        ];
-                        for (const shop of shops) {
-                            if (shop.requiresQuest && !hasCompletedQuest(acct, shop.requiresQuest)) continue;
-                            if (shop.requiresSkill && accountSkillLevel(acct, shop.requiresSkill.skill) < shop.requiresSkill.level) continue;
-                            if (shop.requiresQuestPoints) continue;
-                            if (shop.cost > 0 && shop.cost < minUnitPrice) minUnitPrice = shop.cost;
+            const hasShop = Boolean(shopBuyActivity && (shopCatalog.has(targetItemId) || acquireCtx.customShops?.some((s) => s.itemId === targetItemId)));
+            const itemMetaForGe = directGeBuyActivity ? itemsMap.get(targetItemId) : undefined;
+            const hasGe = Boolean(
+                directGeBuyActivity
+                && (!itemMetaForGe || itemMetaForGe.tradeable)
+                && isValidGeAskQuote(input.marketQuotes?.[targetItemId], itemMetaForGe?.cost ?? 1),
+            );
+            if (hasShop || hasGe) {
+                const allowedExternal: AcquireSourceKind[] = [];
+                if (shopBuyActivity) allowedExternal.push('npc_shop');
+                if (directGeBuyActivity) allowedExternal.push('ge');
+                const maxQty = Math.max(1, Math.min(Math.round(demand.remaining), 250));
+                let acq = resolveAcquireCached({
+                    itemId: targetItemId,
+                    itemName: demand.target.itemName,
+                    quantity: maxQty,
+                    allowOwnBank: false,
+                    allowedSources: allowedExternal,
+                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                });
+                if (!acq.ok && maxQty > 1) {
+                    const spendable = defaultSpendableCoins;
+                    if (spendable > 0) {
+                        let minUnitPrice = Number.POSITIVE_INFINITY;
+                        if (hasShop) {
+                            const shops = [
+                                ...(acquireCtx.customShops ?? []).filter((s) => s.itemId === targetItemId),
+                                ...(shopCatalog.get(targetItemId) ?? []),
+                            ];
+                            for (const shop of shops) {
+                                if (shop.requiresQuest && !hasCompletedQuest(acct, shop.requiresQuest)) continue;
+                                if (shop.requiresSkill && accountSkillLevel(acct, shop.requiresSkill.skill) < shop.requiresSkill.level) continue;
+                                if (shop.requiresQuestPoints) continue;
+                                if (shop.cost > 0 && shop.cost < minUnitPrice) minUnitPrice = shop.cost;
+                            }
                         }
-                    }
-                    if (directGeBuyActivity) {
-                        const meta = itemsMap.get(targetItemId);
-                        if (!meta || meta.tradeable) {
-                            const quote = input.marketQuotes?.[targetItemId];
-                            if (isValidGeAskQuote(quote, meta?.cost ?? 1)) {
-                                minUnitPrice = Math.min(minUnitPrice, Math.ceil(Math.ceil(quote.ask) * GE_LIMIT_BUFFER));
+                        if (hasGe) {
+                            const quote = input.marketQuotes?.[targetItemId]!;
+                            minUnitPrice = Math.min(minUnitPrice, Math.ceil(Math.ceil(quote.ask!) * GE_LIMIT_BUFFER));
+                        }
+                        if (Number.isFinite(minUnitPrice) && minUnitPrice > 0) {
+                            const affordableQty = Math.min(maxQty, Math.floor(spendable / minUnitPrice));
+                            if (affordableQty >= 1 && affordableQty < maxQty) {
+                                acq = resolveAcquireCached({
+                                    itemId: targetItemId,
+                                    itemName: demand.target.itemName,
+                                    quantity: affordableQty,
+                                    allowOwnBank: false,
+                                    allowedSources: allowedExternal,
+                                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                                });
                             }
                         }
                     }
-                    if (Number.isFinite(minUnitPrice) && minUnitPrice > 0) {
-                        const affordableQty = Math.min(maxQty, Math.floor(spendable / minUnitPrice));
-                        if (affordableQty >= 1 && affordableQty < maxQty) {
-                            acq = resolveAcquireCached({
-                                itemId: targetItemId,
-                                itemName: demand.target.itemName,
-                                quantity: affordableQty,
-                                allowOwnBank: false,
-                                allowedSources: allowedExternal,
-                                operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
-                            });
-                        }
-                    }
                 }
-            }
-            for (const cand of acq.candidates) {
-                if (cand.source !== 'npc_shop' && cand.source !== 'ge') continue;
-                const marketAct = cand.source === 'npc_shop' ? shopBuyActivity : directGeBuyActivity;
-                if (!marketAct) continue;
-                const advMult = comparativeAdvantageMultiplier(acct, demand, marketAct, profile);
-                if (advMult <= 0) continue;
-                const workTicks = Math.max(1, Math.ceil(cand.step.estimatedTicks));
-                const throughput = cand.step.quantity / workTicks;
-                if (throughput > bestThroughput) bestThroughput = throughput;
-                marketCandidates.push({
-                    marketAct,
-                    source: cand.source,
-                    advMult,
-                    quantity: cand.step.quantity,
-                    workTicks,
-                    throughput,
-                    ...(cand.step.shopId ? { shopId: cand.step.shopId } : {}),
-                    ...(cand.step.itemName ? { itemName: cand.step.itemName } : {}),
-                    estimatedCoinCost: cand.step.estimatedCoinCost,
-                    coinFloatPreserved: cand.step.coinFloatPreserved,
-                });
+                for (const cand of acq.candidates) {
+                    if (cand.source !== 'npc_shop' && cand.source !== 'ge') continue;
+                    const marketAct = cand.source === 'npc_shop' ? shopBuyActivity : directGeBuyActivity;
+                    if (!marketAct) continue;
+                    const advMult = comparativeAdvantageMultiplier(acct, demand, marketAct, profile);
+                    if (advMult <= 0) continue;
+                    const workTicks = Math.max(1, Math.ceil(cand.step.estimatedTicks));
+                    const throughput = cand.step.quantity / workTicks;
+                    if (throughput > bestThroughput) bestThroughput = throughput;
+                    marketCandidates.push({
+                        marketAct,
+                        source: cand.source,
+                        advMult,
+                        quantity: cand.step.quantity,
+                        workTicks,
+                        throughput,
+                        ...(cand.step.shopId ? { shopId: cand.step.shopId } : {}),
+                        ...(cand.step.itemName ? { itemName: cand.step.itemName } : {}),
+                        estimatedCoinCost: cand.step.estimatedCoinCost,
+                        coinFloatPreserved: cand.step.coinFloatPreserved,
+                    });
+                }
             }
         }
 
@@ -1310,13 +1361,17 @@ export function planAccount(
                     batchUnits: mc.quantity,
                 },
             };
+            const candidatePlan: AccountPlan = {
+                account: acct.name,
+                demandId: demand.id,
+                steps: [workStep],
+                scorePerHour,
+            };
+            if (!demandBest || scorePerHour > demandBest.scorePerHour) {
+                demandBest = candidatePlan;
+            }
             if (!bestPlan || scorePerHour > bestPlan.scorePerHour) {
-                bestPlan = {
-                    account: acct.name,
-                    demandId: demand.id,
-                    steps: [workStep],
-                    scorePerHour,
-                };
+                bestPlan = candidatePlan;
             }
         }
 
@@ -1663,22 +1718,36 @@ export function planAccount(
             };
 
             const steps: PlannedStep[] = [...prepSteps, workStep];
-            if (!bestPlan || scorePerHour > bestPlan.scorePerHour) {
-                bestPlan = {
-                    account: acct.name,
-                    demandId: demand.id,
-                    steps,
-                    scorePerHour,
-                };
+            const candidatePlan: AccountPlan = {
+                account: acct.name,
+                demandId: demand.id,
+                steps,
+                scorePerHour,
+            };
+            if (!demandBest || scorePerHour > demandBest.scorePerHour) {
+                demandBest = candidatePlan;
             }
+            if (!bestPlan || scorePerHour > bestPlan.scorePerHour) {
+                bestPlan = candidatePlan;
+            }
+        }
+
+        if (collectCandidates && demandBest) {
+            demandCandidates.push(demandBest);
         }
     }
 
-    if (bestPlan) return bestPlan;
-    return {
+    if (bestPlan) {
+        if (collectCandidates) {
+            demandCandidates.sort((a, b) => b.scorePerHour - a.scorePerHour);
+        }
+        return { bestPlan, candidates: demandCandidates };
+    }
+    const emptyPlan: AccountPlan = {
         account: acct.name,
         steps: [],
         scorePerHour: 0,
         idleReason: lastBlockerReason,
     };
+    return { bestPlan: emptyPlan, candidates: [] };
 }

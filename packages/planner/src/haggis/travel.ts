@@ -1,6 +1,6 @@
 // Haggis travel model loader and teleport, spirit-tree, gnome-glider, and Wilderness lever leg routing.
 import { readFileSync } from 'node:fs';
-import { leg, loadTravel, type Place, type TravelModel } from '../travel';
+import { leg, legTicks, loadTravel, type Place, type TravelModel } from '../travel';
 import { BOARDS_FILE } from './model';
 
 interface TeleportSite {
@@ -37,6 +37,12 @@ const GLIDER_TICKS = 6;
 const HAGGIS_TRAVEL_MODELS = new WeakSet<TravelModel>();
 const inDeepWilderness = (p: Place | undefined) => !!p && p.x >= 2944 && p.x <= 3391 && p.z >= 3680 && p.z <= 3967;
 
+export type HaggisLegCache = Array<Map<string, Map<string, { ticks: number; method: string }>> | undefined>;
+
+export function createHaggisLegCache(): HaggisLegCache {
+    return new Array(512);
+}
+
 // Places of haggis-boards.json and the leg cache haggis-travel.json. The run starts where the tutorial skip lands.
 export function haggisTravel(path = BOARDS_FILE, cachePath?: string): TravelModel {
     const data = JSON.parse(readFileSync(path, 'utf8')) as { places?: Record<string, Place> };
@@ -53,78 +59,145 @@ export function bestHaggisLeg(
     magicLevel: number,
     doneAt: ReadonlyMap<string, number>,
     disableTeleports: boolean,
+    legCache?: HaggisLegCache,
 ): { ticks: number; method: string } {
+    if (!HAGGIS_TRAVEL_MODELS.has(m) || disableTeleports || from === to) return leg(m, from, to);
+
+    const hasPlagueCity = doneAt.has('plague-city');
+    const hasTradeStart = doneAt.has('trade-start');
+    const hasTree = doneAt.has('tree');
+    const hasGrandtree = doneAt.has('grandtree');
+
+    let stateKey = 0;
+    let byFrom: Map<string, { ticks: number; method: string }> | undefined;
+    let stateMap: Map<string, Map<string, { ticks: number; method: string }>> | undefined;
+    if (legCache) {
+        const magicTier = magicLevel >= 51 ? 5 : magicLevel >= 45 ? 4 : magicLevel >= 37 ? 3 : magicLevel >= 31 ? 2 : magicLevel >= 25 ? 1 : 0;
+        stateKey = (magicTier << 4)
+            | (hasPlagueCity ? 1 : 0)
+            | (hasTradeStart ? 2 : 0)
+            | (hasTree ? 4 : 0)
+            | (hasGrandtree ? 8 : 0);
+        stateMap = legCache[stateKey];
+        if (stateMap) {
+            byFrom = stateMap.get(from);
+            const hit = byFrom?.get(to);
+            if (hit) return hit;
+        }
+    }
+
     const direct = leg(m, from, to);
-    if (!HAGGIS_TRAVEL_MODELS.has(m) || disableTeleports || from === to) return direct;
-    let best: { ticks: number; method: string } = direct;
-    const unlocked = STANDARD_TELEPORTS.filter(tp => magicLevel >= tp.magicLevel && (!tp.requiresDone || doneAt.has(tp.requiresDone)) && !!m.places[tp.place]);
+    let bestTicks = direct.ticks;
+    let bestMethod: string | null = null;
+
+    const unlocked: TeleportSite[] = [];
+    for (let i = 0; i < STANDARD_TELEPORTS.length; i++) {
+        const tp = STANDARD_TELEPORTS[i]!;
+        if (magicLevel < tp.magicLevel) continue;
+        if (tp.requiresDone === 'plague-city' && !hasPlagueCity) continue;
+        if (tp.requiresDone === 'trade-start' && !hasTradeStart) continue;
+        if (m.places[tp.place]) unlocked.push(tp);
+    }
+
     const fromPlace = m.places[from] ?? m.cache.banks[from];
     const hasLever = !!m.places[WILDY_LEVER_IN] && !!m.places[WILDY_LEVER_OUT];
     const treeHubs: string[] = [];
-    if (doneAt.has('tree') && m.places['spirit-tree-village']) treeHubs.push('spirit-tree-village');
-    if (doneAt.has('grandtree') && m.places['spirit-tree-stronghold']) treeHubs.push('spirit-tree-stronghold');
-    const treeDests = treeHubs.length > 0
-        ? SPIRIT_TREE_DESTS.filter(p => !!m.places[p])
-        : [];
-    const gliderUnlocked = doneAt.has('grandtree') && !!m.places['glider-grandtree'];
-    if (!inDeepWilderness(fromPlace)) {
-        for (const tp of unlocked) {
-            const ticks = tp.castTicks + leg(m, tp.place, to).ticks;
-            if (ticks < best.ticks) best = { ticks, method: `teleport:${tp.id}` };
+    if (hasTree && m.places['spirit-tree-village']) treeHubs.push('spirit-tree-village');
+    if (hasGrandtree && m.places['spirit-tree-stronghold']) treeHubs.push('spirit-tree-stronghold');
+    const treeDests: string[] = [];
+    if (treeHubs.length > 0) {
+        for (let i = 0; i < SPIRIT_TREE_DESTS.length; i++) {
+            const p = SPIRIT_TREE_DESTS[i]!;
+            if (m.places[p]) treeDests.push(p);
         }
-        for (const hub of treeHubs) {
-            let toHub = leg(m, from, hub).ticks;
-            for (const tp of unlocked) toHub = Math.min(toHub, tp.castTicks + leg(m, tp.place, hub).ticks);
-            for (const dest of treeDests) {
+    }
+    const gliderUnlocked = hasGrandtree && !!m.places['glider-grandtree'];
+
+    const minFromWithTp = (src: string, dest: string): number => {
+        let bestT = legTicks(m, src, dest);
+        for (let i = 0; i < unlocked.length; i++) {
+            const tp = unlocked[i]!;
+            const t = tp.castTicks + legTicks(m, tp.place, dest);
+            if (t < bestT) bestT = t;
+        }
+        return bestT;
+    };
+
+    if (!inDeepWilderness(fromPlace)) {
+        for (let i = 0; i < unlocked.length; i++) {
+            const tp = unlocked[i]!;
+            const ticks = tp.castTicks + legTicks(m, tp.place, to);
+            if (ticks < bestTicks) { bestTicks = ticks; bestMethod = `teleport:${tp.id}`; }
+        }
+        for (let hi = 0; hi < treeHubs.length; hi++) {
+            const hub = treeHubs[hi]!;
+            const toHub = minFromWithTp(from, hub);
+            for (let di = 0; di < treeDests.length; di++) {
+                const dest = treeDests[di]!;
                 if (dest === hub) continue;
-                const t = toHub + SPIRIT_TREE_TICKS + leg(m, dest, to).ticks;
-                if (t < best.ticks) best = { ticks: t, method: 'spirit-tree' };
+                const t = toHub + SPIRIT_TREE_TICKS + legTicks(m, dest, to);
+                if (t < bestTicks) { bestTicks = t; bestMethod = 'spirit-tree'; }
             }
         }
         if (gliderUnlocked) {
-            const toTree = Math.min(
-                leg(m, from, 'glider-grandtree').ticks,
-                ...unlocked.map(tp => tp.castTicks + leg(m, tp.place, 'glider-grandtree').ticks),
-                ...treeHubs.map(h => {
-                    let toHub = leg(m, from, h).ticks;
-                    for (const tp of unlocked) toHub = Math.min(toHub, tp.castTicks + leg(m, tp.place, h).ticks);
-                    return toHub + SPIRIT_TREE_TICKS + leg(m, 'spirit-tree-stronghold', 'glider-grandtree').ticks;
-                }),
-            );
-            for (const dest of GLIDER_OUTPOSTS) {
-                if (!m.places[dest]) continue;
-                const t = toTree + GLIDER_TICKS + leg(m, dest, to).ticks;
-                if (t < best.ticks) best = { ticks: t, method: 'gnome-glider' };
+            let toTree = minFromWithTp(from, 'glider-grandtree');
+            if (treeHubs.length > 0) {
+                const strongholdToGlider = legTicks(m, 'spirit-tree-stronghold', 'glider-grandtree');
+                for (let hi = 0; hi < treeHubs.length; hi++) {
+                    const t = minFromWithTp(from, treeHubs[hi]!) + SPIRIT_TREE_TICKS + strongholdToGlider;
+                    if (t < toTree) toTree = t;
+                }
             }
-            for (const src of GLIDER_OUTPOSTS) {
+            for (let i = 0; i < GLIDER_OUTPOSTS.length; i++) {
+                const dest = GLIDER_OUTPOSTS[i]!;
+                if (!m.places[dest]) continue;
+                const t = toTree + GLIDER_TICKS + legTicks(m, dest, to);
+                if (t < bestTicks) { bestTicks = t; bestMethod = 'gnome-glider'; }
+            }
+            const gliderToTo = legTicks(m, 'glider-grandtree', to);
+            for (let i = 0; i < GLIDER_OUTPOSTS.length; i++) {
+                const src = GLIDER_OUTPOSTS[i]!;
                 if (!m.places[src]) continue;
-                let toSrc = leg(m, from, src).ticks;
-                for (const tp of unlocked) toSrc = Math.min(toSrc, tp.castTicks + leg(m, tp.place, src).ticks);
-                const t = toSrc + GLIDER_TICKS + leg(m, 'glider-grandtree', to).ticks;
-                if (t < best.ticks) best = { ticks: t, method: 'gnome-glider' };
+                const toSrc = minFromWithTp(from, src);
+                const t = toSrc + GLIDER_TICKS + gliderToTo;
+                if (t < bestTicks) { bestTicks = t; bestMethod = 'gnome-glider'; }
             }
         }
         if (hasLever) {
-            let toLever = leg(m, from, WILDY_LEVER_IN).ticks;
-            for (const tp of unlocked) toLever = Math.min(toLever, tp.castTicks + leg(m, tp.place, WILDY_LEVER_IN).ticks);
-            const leverTicks = toLever + WILDY_LEVER_TICKS + leg(m, WILDY_LEVER_OUT, to).ticks;
-            if (leverTicks < best.ticks) best = { ticks: leverTicks, method: 'wildy-lever' };
+            const toLever = minFromWithTp(from, WILDY_LEVER_IN);
+            const leverTicks = toLever + WILDY_LEVER_TICKS + legTicks(m, WILDY_LEVER_OUT, to);
+            if (leverTicks < bestTicks) { bestTicks = leverTicks; bestMethod = 'wildy-lever'; }
         }
     } else if (hasLever) {
-        const exitTicks = leg(m, from, WILDY_LEVER_OUT).ticks + WILDY_LEVER_TICKS;
-        let fromArdy = leg(m, WILDY_LEVER_IN, to).ticks;
-        for (const tp of unlocked) fromArdy = Math.min(fromArdy, tp.castTicks + leg(m, tp.place, to).ticks);
-        for (const hub of treeHubs) {
-            const toHub = Math.min(
-                leg(m, WILDY_LEVER_IN, hub).ticks,
-                ...unlocked.map(tp => tp.castTicks + leg(m, tp.place, hub).ticks),
-            );
-            for (const dest of treeDests) {
+        const exitTicks = legTicks(m, from, WILDY_LEVER_OUT) + WILDY_LEVER_TICKS;
+        let fromArdy = minFromWithTp(WILDY_LEVER_IN, to);
+        for (let hi = 0; hi < treeHubs.length; hi++) {
+            const hub = treeHubs[hi]!;
+            const toHub = minFromWithTp(WILDY_LEVER_IN, hub);
+            for (let di = 0; di < treeDests.length; di++) {
+                const dest = treeDests[di]!;
                 if (dest === hub) continue;
-                fromArdy = Math.min(fromArdy, toHub + SPIRIT_TREE_TICKS + leg(m, dest, to).ticks);
+                const t = toHub + SPIRIT_TREE_TICKS + legTicks(m, dest, to);
+                if (t < fromArdy) fromArdy = t;
             }
         }
-        if (exitTicks + fromArdy < best.ticks) best = { ticks: exitTicks + fromArdy, method: 'wildy-exit-lever' };
+        if (exitTicks + fromArdy < bestTicks) {
+            bestTicks = exitTicks + fromArdy;
+            bestMethod = 'wildy-exit-lever';
+        }
     }
-    return best;
+
+    const res = bestMethod === null ? direct : { ticks: bestTicks, method: bestMethod };
+    if (legCache) {
+        if (!stateMap) {
+            stateMap = new Map();
+            legCache[stateKey] = stateMap;
+        }
+        if (!byFrom) {
+            byFrom = new Map();
+            stateMap.set(from, byFrom);
+        }
+        byFrom.set(to, res);
+    }
+    return res;
 }

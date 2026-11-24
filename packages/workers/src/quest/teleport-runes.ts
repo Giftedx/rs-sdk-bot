@@ -9,20 +9,39 @@ type Staff = { rune: string; staffs: string[] };
 
 const REPO_ROOT = resolve(import.meta.dir, '../../../..');
 let data: { teleports: Tele[]; staffs: Staff[] } | undefined;
+let teleportByTrigger: Map<string, Tele> | undefined;
 let names: Map<number, string> | undefined;
 
-const load = () => (data ??= JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/teleports.json'), 'utf8')));
-const debugname = (id: number) =>
-    (names ??= new Map(
-        (JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/items.json'), 'utf8')) as { id: number; debugname: string }[]).map(i => [
-            i.id,
-            i.debugname,
-        ]),
-    )).get(id);
+const load = () => {
+    if (!data) {
+        data = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/teleports.json'), 'utf8'));
+        teleportByTrigger = new Map();
+        for (const t of data!.teleports) if (t.trigger) teleportByTrigger.set(t.trigger, t);
+    }
+    return data!;
+};
+const debugname = (id: number) => {
+    if (!names) {
+        const raw = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/items.json'), 'utf8')) as { id: number; debugname: string }[];
+        names = new Map();
+        for (let i = 0; i < raw.length; i++) names.set(raw[i]!.id, raw[i]!.debugname);
+    }
+    return names.get(id);
+};
+
+function findTeleport(comp: string, teleports?: readonly Tele[]): Tele | undefined {
+    const trigger = `[if_button,${comp}]`;
+    if (!teleports) {
+        load();
+        return teleportByTrigger!.get(trigger);
+    }
+    if (data && teleports === data.teleports) return teleportByTrigger!.get(trigger);
+    return teleports.find(t => t.trigger === trigger);
+}
 
 // The runes a spell component costs, by item id; null for a component no teleport spell has.
-export function spellRunes(comp: string, teleports: readonly Tele[] = load().teleports): Record<number, number> | null {
-    const t = teleports.find(t => t.trigger === `[if_button,${comp}]`);
+export function spellRunes(comp: string, teleports?: readonly Tele[]): Record<number, number> | null {
+    const t = findTeleport(comp, teleports);
     if (!t) return null;
     const out: Record<number, number> = {};
     for (const r of t.runes ?? []) out[r.id] = (out[r.id] ?? 0) + r.count;
@@ -31,14 +50,20 @@ export function spellRunes(comp: string, teleports: readonly Tele[] = load().tel
 
 // The rune debugnames a set of worn staffs stands in for.
 export function staffRunes(worn: readonly string[], staffs: readonly Staff[] = load().staffs): Set<string> {
-    return new Set(staffs.filter(s => s.staffs.some(n => worn.includes(n))).map(s => s.rune));
+    const out = new Set<string>();
+    if (!worn.length) return out;
+    for (let i = 0; i < staffs.length; i++) {
+        const s = staffs[i]!;
+        if (s.staffs.some(n => worn.includes(n))) out.add(s.rune);
+    }
+    return out;
 }
 
 const RUNE_NAMES: Record<number, string> = { 554: 'firerune', 555: 'waterrune', 556: 'airrune', 557: 'earthrune', 563: 'lawrune' };
 
 // The Magic level a spell needs; null for a component no teleport spell has.
-export function spellLevel(comp: string, teleports: readonly Tele[] = load().teleports): number | null {
-    const t = teleports.find(t => t.trigger === `[if_button,${comp}]`);
+export function spellLevel(comp: string, teleports?: readonly Tele[]): number | null {
+    const t = findTeleport(comp, teleports);
     if (!t) return null;
     return t.requires?.find(r => r.type === 'skill' && r.skill === 'magic')?.level ?? 1;
 }
@@ -48,12 +73,28 @@ export function castable(
     count: (id: number) => number,
     wornIds: readonly number[] = [],
     magic = 99,
-    teleports: readonly Tele[] = load().teleports,
+    teleports?: readonly Tele[],
     staffs: readonly Staff[] = load().staffs,
 ): boolean {
-    const runes = spellRunes(comp, teleports);
-    const level = spellLevel(comp, teleports);
-    if (!runes || level === null || magic < level) return false;
-    const covered = staffRunes(wornIds.map(id => debugname(id) ?? ''), staffs);
-    return Object.entries(runes).every(([id, n]) => covered.has(RUNE_NAMES[Number(id)] ?? '') || count(Number(id)) >= n);
+    const t = findTeleport(comp, teleports);
+    if (!t) return false;
+    const level = t.requires?.find(r => r.type === 'skill' && r.skill === 'magic')?.level ?? 1;
+    if (magic < level) return false;
+    let covered: Set<string> | undefined;
+    if (wornIds.length) {
+        const wornNames: string[] = [];
+        for (let i = 0; i < wornIds.length; i++) {
+            const dn = debugname(wornIds[i]!);
+            if (dn) wornNames.push(dn);
+        }
+        if (wornNames.length) covered = staffRunes(wornNames, staffs);
+    }
+    const runes: Record<number, number> = {};
+    for (const r of t.runes ?? []) runes[r.id] = (runes[r.id] ?? 0) + r.count;
+    for (const key in runes) {
+        const id = Number(key);
+        if (covered?.has(RUNE_NAMES[id] ?? '')) continue;
+        if (count(id) < runes[key]!) return false;
+    }
+    return true;
 }

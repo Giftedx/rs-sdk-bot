@@ -37,6 +37,7 @@ import {
     buildPlannerSharedIndex,
     canProtectedAccountLaunch,
     planAccount,
+    planAccountWithCandidates,
     type RateEstimator,
     type RateStoreLike,
 } from './planner';
@@ -614,21 +615,37 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     const initialExcludedSpots = currentFullSpots();
     const initialRemainingByDemand = new Map(remainingByDemand);
     const idleEvaluations = idleAccounts
-        .map((acct) => ({
-            acct,
-            plan: planAccount(acct, {
+        .map((acct) => {
+            const res = planAccountWithCandidates(acct, {
                 ...basePlannerOpts,
                 demands: initialUnallocated,
                 excludedSpotIds: initialExcludedSpots,
                 excludedDonorAccounts: busyAccounts,
-            }),
-        }))
+            });
+            return {
+                acct,
+                plan: res.bestPlan,
+                candidates: res.candidates,
+            };
+        })
         .sort((a, b) => b.plan.scorePerHour - a.plan.scorePerHour || a.acct.name.localeCompare(b.acct.name));
 
     const assignedIdleDonors = new Set<string>();
     let transferSeq = 0;
 
-    for (const { acct, plan: initialPlan } of idleEvaluations) {
+    const hasBusyHubDonor = (cand: AccountPlan): boolean => {
+        for (const st of cand.steps) {
+            if ((st.stepKind === 'acquire' || st.stepKind === 'gear_upgrade') && st.source === 'hub_banker' && st.donorAccount) {
+                const dl = st.donorAccount.toLowerCase();
+                if (busyAccounts.has(dl) || assignedIdleDonors.has(dl) || activeTransferParties.has(dl)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    for (const { acct, plan: initialPlan, candidates } of idleEvaluations) {
         if (sideStopped) {
             accountPlans[acct.name] = {
                 account: acct.name,
@@ -667,37 +684,36 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         }
 
         const excludedSpots = currentFullSpots();
-        let canReuseInitial = shrunkNonZeroDemands.size === 0;
-        if (canReuseInitial && initialPlan.steps.length > 0) {
-            if (
-                initialPlan.demandId
-                && remainingByDemand.get(initialPlan.demandId) !== initialRemainingByDemand.get(initialPlan.demandId)
-            ) {
-                canReuseInitial = false;
-            }
-            if (canReuseInitial) {
-                const initWorkStep = initialPlan.steps.at(-1);
-                const initWorkAct = initWorkStep?.stepKind === 'work' ? activityById.get(initWorkStep.activityId) : undefined;
-                if (initWorkAct?.spotId && excludedSpots.has(initWorkAct.spotId)) {
-                    canReuseInitial = false;
-                }
-            }
-            if (canReuseInitial) {
-                for (const st of initialPlan.steps) {
-                    if ((st.stepKind === 'acquire' || st.stepKind === 'gear_upgrade') && st.source === 'hub_banker' && st.donorAccount) {
-                        const dl = st.donorAccount.toLowerCase();
-                        if (busyAccounts.has(dl) || assignedIdleDonors.has(dl) || activeTransferParties.has(dl)) {
-                            canReuseInitial = false;
-                            break;
-                        }
+        let reusedPlan: AccountPlan | undefined;
+        if (shrunkNonZeroDemands.size === 0 && excludedSpots.size === initialExcludedSpots.size) {
+            if (initialPlan.steps.length === 0) {
+                reusedPlan = initialPlan;
+            } else {
+                for (let ci = 0; ci < candidates.length; ci++) {
+                    const cand = candidates[ci]!;
+                    if (
+                        cand.demandId
+                        && remainingByDemand.get(cand.demandId) !== initialRemainingByDemand.get(cand.demandId)
+                    ) {
+                        continue;
                     }
+                    const candWorkStep = cand.steps.at(-1);
+                    const candWorkAct = candWorkStep?.stepKind === 'work' ? activityById.get(candWorkStep.activityId) : undefined;
+                    if (candWorkAct?.spotId && excludedSpots.has(candWorkAct.spotId)) {
+                        break;
+                    }
+                    if (hasBusyHubDonor(cand)) {
+                        break;
+                    }
+                    reusedPlan = cand;
+                    break;
                 }
             }
         }
 
-        const availableDemands = canReuseInitial ? initialUnallocated : currentUnallocatedDemands();
-        let plan = canReuseInitial
-            ? initialPlan
+        const availableDemands = reusedPlan ? initialUnallocated : currentUnallocatedDemands();
+        let plan = reusedPlan
+            ? reusedPlan
             : planAccount(acct, {
                   ...basePlannerOpts,
                   demands: availableDemands,

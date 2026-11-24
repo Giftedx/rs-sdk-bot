@@ -85,8 +85,8 @@ function foodChain(st: Map<string, Status>, now: number) {
     };
 }
 
-function fleetSides(now: number) {
-    return fleetSidesView(snapshotFiles(), fleetList(join(FILES.fleet, 'orders')), now, fleetList(join(FILES.fleet, 'receipts')));
+function fleetSides(now: number, snapshots = snapshotFiles()) {
+    return fleetSidesView(snapshots, fleetList(join(FILES.fleet, 'orders')), now, fleetList(join(FILES.fleet, 'receipts')));
 }
 
 export {

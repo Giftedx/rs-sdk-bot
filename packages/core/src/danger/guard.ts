@@ -1,15 +1,17 @@
 // Danger tile region generation and route/walk collision guarding.
 import type { Account, Tile } from '../world-types';
 import { npcAttackStyles } from '../../../knowledge/src/npc-attack-styles';
-import { loadHunters } from './catalog';
-import { deadlyTo } from './threat';
+import { combatLevel, loadHunters } from './catalog';
+import { PROTECT_MELEE_LEVEL, isDeadlyWithCombat } from './threat';
 import { pack, unpack, withDanger, type FloorGrid } from './tiles';
 
 // Danger tiles (deadly hunters) for this account inside a box, one margin tile past each monster's reach, packed.
 export function dangerSet(acct: Account, level: number, box: { minX: number; maxX: number; minZ: number; maxZ: number }, list = loadHunters()): Int32Array {
     const styles = npcAttackStyles(), out = new Set<number>();
+    const combat = combatLevel(acct.skills), hitpoints = acct.skills.hitpoints ?? 10;
+    const prayerProtected = (acct.skills.prayer ?? 1) >= PROTECT_MELEE_LEVEL && process.env.PRAYER_GUARD !== '0';
     for (const h of list) {
-        if (!deadlyTo(h, acct.skills, styles)) continue;
+        if (!isDeadlyWithCombat(h, combat, hitpoints, prayerProtected, styles)) continue;
         const r = h.reach + 1;
         for (const s of h.spawns) {
             if (s.level !== level || s.x + r < box.minX || s.x - r > box.maxX || s.z + r < box.minZ || s.z - r > box.maxZ) continue;
@@ -24,19 +26,28 @@ export const dangerTiles = (acct: Account, level: number, box: { minX: number; m
 // Names the account's deadly hunters; accounts with the same key get the same closed tiles.
 function dangerKey(acct: Account, list = loadHunters()): string {
     const styles = npcAttackStyles();
-    return list.flatMap((h, i) => deadlyTo(h, acct.skills, styles) ? [i] : []).join('.') || 'none';
+    const combat = combatLevel(acct.skills), hitpoints = acct.skills.hitpoints ?? 10;
+    const prayerProtected = (acct.skills.prayer ?? 1) >= PROTECT_MELEE_LEVEL && process.env.PRAYER_GUARD !== '0';
+    const indices: number[] = [];
+    for (let i = 0; i < list.length; i++) if (isDeadlyWithCombat(list[i]!, combat, hitpoints, prayerProtected, styles)) indices.push(i);
+    return indices.length ? indices.join('.') : 'none';
 }
 
 // The deadly ground around `at`: every danger square that holds it. An account that already stands there may walk
 // out through it (a hunter spawn inside Catherby otherwise closes every walk from the beach).
 export function escapeTiles(acct: Account, at: Tile, list = loadHunters()): Tile[] {
-    const styles = npcAttackStyles(), out = new Map<string, Tile>();
+    const styles = npcAttackStyles(), out = new Map<number, Tile>();
+    const combat = combatLevel(acct.skills), hitpoints = acct.skills.hitpoints ?? 10;
+    const prayerProtected = (acct.skills.prayer ?? 1) >= PROTECT_MELEE_LEVEL && process.env.PRAYER_GUARD !== '0';
     for (const h of list) {
-        if (!deadlyTo(h, acct.skills, styles)) continue;
+        if (!isDeadlyWithCombat(h, combat, hitpoints, prayerProtected, styles)) continue;
         const r = h.reach + 1;
         for (const s of h.spawns) {
             if (s.level !== at.level || Math.abs(s.x - at.x) > r || Math.abs(s.z - at.z) > r) continue;
-            for (let x = s.x - r; x <= s.x + r; x++) for (let z = s.z - r; z <= s.z + r; z++) out.set(`${x},${z}`, { x, z, level: at.level });
+            for (let x = s.x - r; x <= s.x + r; x++) for (let z = s.z - r; z <= s.z + r; z++) {
+                const k = pack(at.level, x, z);
+                if (!out.has(k)) out.set(k, { x, z, level: at.level });
+            }
         }
     }
     return [...out.values()];

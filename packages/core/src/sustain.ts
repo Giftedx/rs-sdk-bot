@@ -20,7 +20,23 @@ const contentDir=()=>resolve(import.meta.dir,'../../../vendor/rs-sdk/server/cont
 
 // Item id of a content debug name (pack/obj.pack), e.g. 'shark' 385.
 export function objIdByDebugName(name:string):number|undefined{
- objIds??=new Map(readFileSync(resolve(contentDir(),'pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
+ if(!objIds){
+  const text=readFileSync(resolve(contentDir(),'pack/obj.pack'),'utf8');
+  const map=new Map<string,number>();
+  let pos=0;
+  while(pos<text.length){
+   let end=text.indexOf('\n',pos);
+   if(end<0)end=text.length;
+   const lineEnd=end>pos&&text.charCodeAt(end-1)===13?end-1:end;
+   const eq=text.indexOf('=',pos);
+   if(eq>pos&&eq<lineEnd){
+    const id=Number(text.slice(pos,eq));
+    if(Number.isInteger(id)&&id>=0)map.set(text.slice(eq+1,lineEnd),id);
+   }
+   pos=end+1;
+  }
+  objIds=map;
+ }
  return objIds.get(name);
 }
 
@@ -79,6 +95,11 @@ export function expandFoodStages(foodIds:readonly number[]):ReadonlySet<number>{
  return allowed;
 }
 
+let allEdibleFoodIds:ReadonlySet<number>|undefined;
+export function allFoodIds():ReadonlySet<number>{
+ return allEdibleFoodIds??=new Set(questFoodDefinitions().keys());
+}
+
 // Total effective HP healing available in an inventory/bank item list, accounting for multi-stage foods and reservations.
 export function totalAvailableHeal(items:readonly {id:number;count:number}[],foodIds:readonly number[],reserved:Readonly<Record<number,number>>={}):number{
  const defs=questFoodDefinitions(),allowed=expandFoodStages(foodIds);
@@ -101,19 +122,35 @@ export function totalAvailableHeal(items:readonly {id:number;count:number}[],foo
  return hp;
 }
 
+const EAT_OR_DRINK_RE=/^(eat|drink)$/i;
 export function selectQuestFood(state:any,policy:FoodPolicy){
  const skill=state?.skills?.find((s:any)=>s.name==='Hitpoints'),hp=skill?.level,max=skill?.baseLevel;
  if(!Number.isFinite(hp)||!Number.isFinite(max)||hp<=0||max<=0||hp>=max||hp>(typeof policy.eatAt==='function'?policy.eatAt(max):policy.eatAt))return null;
  const defs=questFoodDefinitions(),allowed=expandFoodStages(policy.food);
- const inventory:FoodItem[]=state?.inventory??[],counts=new Map<number,number>();
- for(const i of inventory)counts.set(i.id,(counts.get(i.id)??0)+i.count);
- const choices=inventory.flatMap(item=>{
-  const reserve=policy.reserved?.[item.id]??0;
-  if(!allowed.has(item.id)||!Number.isSafeInteger(reserve)||reserve<0||(counts.get(item.id)??0)<=reserve)return [];
-  const op=item.optionsWithIndex?.find(o=>/^(eat|drink)$/i.test(o.text));
-  return op&&Number.isSafeInteger(item.slot)&&Number.isSafeInteger(op.opIndex)?[{item,opIndex:op.opIndex,definition:defs.get(item.id)!,hp}]:[];
- });
- return choices.find(c=>c.definition.heal<=max-hp)??choices[0]??null;
+ const inventory:FoodItem[]=state?.inventory??[];
+ if(!inventory.length)return null;
+ const reserved=policy.reserved;
+ let counts:Map<number,number>|undefined;
+ if(reserved){
+  counts=new Map<number,number>();
+  for(const i of inventory)counts.set(i.id,(counts.get(i.id)??0)+i.count);
+ }
+ let fallback:{item:FoodItem;opIndex:number;definition:FoodDefinition;hp:number}|null=null;
+ const need=max-hp;
+ for(let k=0;k<inventory.length;k++){
+  const item=inventory[k]!;
+  if(!allowed.has(item.id)||!Number.isSafeInteger(item.slot))continue;
+  if(reserved){
+   const reserve=reserved[item.id]??0;
+   if(!Number.isSafeInteger(reserve)||reserve<0||(counts!.get(item.id)??0)<=reserve)continue;
+  }
+  const op=item.optionsWithIndex?.find(o=>EAT_OR_DRINK_RE.test(o.text));
+  if(!op||!Number.isSafeInteger(op.opIndex))continue;
+  const definition=defs.get(item.id)!;
+  if(definition.heal<=need)return {item,opIndex:op.opIndex,definition,hp};
+  fallback??={item,opIndex:op.opIndex,definition,hp};
+ }
+ return fallback;
 }
 
 // The eat guard of a session (eat-guard.ts) registers its hold here, by the session's SDK object. An eater with

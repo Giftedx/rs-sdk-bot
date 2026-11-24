@@ -21,29 +21,64 @@ const MAX_HEADER=65536;
 const sha256=(data:Uint8Array)=>createHash('sha256').update(data).digest('hex');
 
 const DOORS = join(repoRoot, 'knowledge', 'doors.json');
+const fileStamp=(file:string)=>{try{const s=statSync(file);return s.size+':'+s.mtimeMs;}catch{return 'missing';}};
+let defaultDoorsCache:{stamp:string;doors:{x:number;z:number;level:number}[]}|null=null;
 // Open diagonal doors (shape 9): the collision export leaves their loc collision on the tile, which seals the
 // building for the route search. The walker opens them like any door (walk.ts openNearestDoor).
 export function diagonalDoors(file=DOORS): {x:number;z:number;level:number}[] {
-    try{return (JSON.parse(readFileSync(file,'utf8')) as {x:number;z:number;level:number;shape?:number;kind:string}[])
-        .filter(d=>d.shape===9&&d.kind==='open').map(({x,z,level})=>({x,z,level}));}catch{return [];}
+    const isDefault=file===DOORS,stamp=isDefault?fileStamp(file):'';
+    if(isDefault&&defaultDoorsCache&&defaultDoorsCache.stamp===stamp)return defaultDoorsCache.doors.map(d=>({...d}));
+    let out:{x:number;z:number;level:number}[]=[];
+    try{out=(JSON.parse(readFileSync(file,'utf8')) as {x:number;z:number;level:number;shape?:number;kind:string}[])
+        .filter(d=>d.shape===9&&d.kind==='open').map(({x,z,level})=>({x,z,level}));}catch{out=[];}
+    if(isDefault)defaultDoorsCache={stamp,doors:out};
+    return out.map(d=>({...d}));
 }
 export function openDiagonalDoors(rsmod:{changeLoc(x:number,z:number,y:number,w:number,l:number,blockrange:boolean,route:boolean,add:boolean):void},doors=diagonalDoors()):number {
     for(const d of doors)rsmod.changeLoc(d.x,d.z,d.level,1,1,true,false,false);
     return doors.length;
 }
 
-// The key reads and hashes the 27.5 MB collision file, and one process asks for it from the snapshot, the leg cache, the
-// area labels and the route worker. A call with the default files keeps its key while the four files keep their size and
-// their modification time, so a process hashes them once. A call that names its files is always exact: it hashes the bytes.
+// The key hashes the 27.5 MB collision file by streaming chunks, and one process asks for it from the snapshot, the leg
+// cache, the area labels and the route worker. A call with the default files keeps each file's hash while its size and
+// modification time match, so pathfindingSourceKey and pathfindingDataKey hash the files once. A call that names its
+// files is always exact: it hashes the bytes directly.
 let defaultKey:{stamp:string;key:string}|null=null;
-const fileStamp=(file:string)=>{try{const s=statSync(file);return s.size+':'+s.mtimeMs;}catch{return 'missing';}};
+const HASH_CHUNK=256*1024;
+let hashChunkBuf:Buffer|null=null;
+const fileDigestCache=new Map<string,{stamp:string;digest:string}>();
+function sha256File(file:string,useMemo:boolean):string {
+    const stamp=useMemo?fileStamp(file):'';
+    if(useMemo){const hit=fileDigestCache.get(file);if(hit&&hit.stamp===stamp)return hit.digest;}
+    const fd=openSync(file,'r');
+    let digest:string;
+    try{
+        const size=fstatSync(fd).size;
+        if(size<=HASH_CHUNK){
+            const buf=Buffer.allocUnsafe(size);
+            digest=readFully(fd,buf,0)?sha256(buf):sha256(readFileSync(file));
+        }else{
+            const buf=(hashChunkBuf??=Buffer.allocUnsafe(HASH_CHUNK));
+            const h=createHash('sha256');
+            for(let pos=0;pos<size;){
+                const n=readSync(fd,buf,0,Math.min(HASH_CHUNK,size-pos),pos);
+                if(n<=0)throw Error(`short read on ${file}`);
+                h.update(buf.subarray(0,n));
+                pos+=n;
+            }
+            digest=h.digest('hex');
+        }
+    }finally{closeSync(fd);}
+    if(useMemo)fileDigestCache.set(file,{stamp,digest});
+    return digest;
+}
 export function pathfindingSourceKey(wasmFile?:string,collisionFile?:string,doorsFile?:string,initializerFile?:string): string {
     const named=wasmFile!==undefined||collisionFile!==undefined||doorsFile!==undefined||initializerFile!==undefined;
     const files=[wasmFile??WASM,collisionFile??DATA,doorsFile??DOORS,initializerFile??INITIALIZER];
-    if(named)return hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!);
+    if(named)return hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!,shouldWarmSnapshot()?5:4,false);
     const stamp=files.map(fileStamp).join(',')+':'+shouldWarmSnapshot();
     if(defaultKey&&defaultKey.stamp===stamp)return defaultKey.key;
-    const key=hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!);
+    const key=hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!,shouldWarmSnapshot()?5:4,true);
     defaultKey={stamp,key};
     return key;
 }
@@ -53,12 +88,12 @@ let dataKeyMemo:{stamp:string;key:string}|null=null;
 export function pathfindingDataKey(): string {
     const files=[WASM,DATA,DOORS,INITIALIZER],stamp=files.map(fileStamp).join(',');
     if(dataKeyMemo&&dataKeyMemo.stamp===stamp)return dataKeyMemo.key;
-    const key=hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!,4);
+    const key=hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!,4,true);
     dataKeyMemo={stamp,key};
     return key;
 }
-function hashedSourceKey(wasmFile:string,collisionFile:string,doorsFile:string,initializerFile:string,version=shouldWarmSnapshot()?5:4): string {
-    return JSON.stringify({v:version,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),initializer:sha256(readFileSync(initializerFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
+function hashedSourceKey(wasmFile:string,collisionFile:string,doorsFile:string,initializerFile:string,version=shouldWarmSnapshot()?5:4,useMemo=false): string {
+    return JSON.stringify({v:version,wasm:sha256File(wasmFile,useMemo),data:sha256File(collisionFile,useMemo),initializer:sha256File(initializerFile,useMemo),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
 }
 
 type SnapshotHeader={format:2;key:string;bytes:number;sha256:string};
@@ -117,34 +152,65 @@ export function verifyPathfindingSnapshotFile(file:string,key:string):boolean {
 // Copies the payload into WASM memory. A page that memory.grow() added is zero already, so a zero page of the payload
 // beyond `had` bytes is not written: writing it would make the operating system commit and map the page (about half of
 // the 1,593 pages of the snapshot are zero). A page below `had` is always written: it may hold other bytes.
-export function copyNonZeroPages(payload:Uint8Array,target:Uint8Array,had:number):void {
-    const zero=new Uint8Array(PAGE);
+const ZERO_PAGE = new Uint8Array(PAGE);
+export function copyNonZeroPages(payload:Uint8Array,target:Uint8Array,had:number,baseOffset=0):void {
     for(let at=0;at<payload.length;at+=PAGE){
         const page=payload.subarray(at,Math.min(at+PAGE,payload.length));
-        if(at>=had&&Buffer.compare(page,zero.subarray(0,page.length))===0)continue;
-        target.set(page,at);
+        const dest=baseOffset+at;
+        if(dest>=had&&Buffer.compare(page,ZERO_PAGE.subarray(0,page.length))===0)continue;
+        target.set(page,dest);
     }
 }
 
 // Stage the checked payload before changing WASM memory. A failed read remains
 // an optional cache miss, even when it happens after some payload bytes arrive.
-// This uses one transient payload buffer, bounded by the checked file length. It is not zero-filled: readFully fills all of it
-// and the hash covers all of it before any byte is used.
+// Snapshots above STREAM_THRESHOLD verify SHA-256 and restore in 1 MiB chunks so a 147 MB transient buffer is never
+// allocated in JS/native memory; saving `had` bytes before writing keeps mid-stream read failures atomic.
+const STREAM_THRESHOLD = 2 * 1024 * 1024;
+const STREAM_CHUNK = 16 * PAGE;
 export function restorePathfindingSnapshotFile(file:string,key:string,memory:WebAssembly.Memory):boolean {
-    let fd:number|undefined,payload:Buffer|undefined;
+    let fd:number|undefined;
     try {
         fd=openSync(file,'r');
         const total=fstatSync(fd).size,head=Buffer.alloc(Math.min(total,4+MAX_HEADER));
         const parsed=readFully(fd,head,0)?snapshotHeader(head,total,key):null;
         if(!parsed)return false;
-        payload=Buffer.allocUnsafe(parsed.header.bytes);
-        if(!readFully(fd,payload,parsed.offset)||sha256(payload)!==parsed.header.sha256)return false;
+        const bytes=parsed.header.bytes;
+        if(bytes<=STREAM_THRESHOLD){
+            const payload=Buffer.allocUnsafe(bytes);
+            if(!readFully(fd,payload,parsed.offset)||sha256(payload)!==parsed.header.sha256)return false;
+            const had=memory.buffer.byteLength,need=bytes/PAGE-had/PAGE;
+            if(need>0)try{memory.grow(need);}catch{return false;}
+            copyNonZeroPages(payload,new Uint8Array(memory.buffer,0,bytes),had);
+            return true;
+        }
+        const chunk=Buffer.allocUnsafe(STREAM_CHUNK);
+        const digest=createHash('sha256');
+        for(let at=0;at<bytes;at+=STREAM_CHUNK){
+            const size=Math.min(STREAM_CHUNK,bytes-at),part=chunk.subarray(0,size);
+            if(!readFully(fd,part,parsed.offset+at))return false;
+            digest.update(part);
+        }
+        if(digest.digest('hex')!==parsed.header.sha256)return false;
+        const had=memory.buffer.byteLength,need=bytes/PAGE-had/PAGE;
+        const prior=had>0?Buffer.from(new Uint8Array(memory.buffer,0,Math.min(had,bytes))):null;
+        if(need>0)try{memory.grow(need);}catch{return false;}
+        const target=new Uint8Array(memory.buffer,0,bytes);
+        const rollback=()=>{
+            if(prior)target.set(prior,0);
+            if(bytes>had)target.fill(0,had,bytes);
+            return false;
+        };
+        try{
+            for(let at=0;at<bytes;at+=STREAM_CHUNK){
+                const size=Math.min(STREAM_CHUNK,bytes-at),part=chunk.subarray(0,size);
+                if(!readFully(fd,part,parsed.offset+at))return rollback();
+                copyNonZeroPages(part,target,had,at);
+            }
+        }catch{return rollback();}
+        return true;
     } catch { return false; }
     finally { if(fd!==undefined)try{closeSync(fd);}catch{/* The cache is optional. */} }
-    const had=memory.buffer.byteLength,need=payload.length/PAGE-had/PAGE;
-    if(need>0)try{memory.grow(need);}catch{return false;}
-    copyNonZeroPages(payload,new Uint8Array(memory.buffer,0,payload.length),had);
-    return true;
 }
 
 export function writePathfindingSnapshot(file:string,key:string,payload:Uint8Array):void {

@@ -15,14 +15,14 @@ import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear }
 import { cargoAccountServer } from '../../core/src/cargo';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { controllerNamed, releaseLease, renewLease, saveLaunch, takeLease } from '../../core/src/controllers';
-import { loadOwners, mySide, sideOf, type Owner } from '../../core/src/fleet';
+import { FLEET_DIR, loadOwners, mySide, sideOf, type Owner } from '../../core/src/fleet';
 import { acquireFleetLease, FLEET_LEASE_RENEW_MS, FLEET_LEASE_RETRY_MS } from '../../core/src/fleet-lease';
 import { jobLogStart } from '../../core/src/job-log';
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { rotateLog } from '../../core/src/log-rotate';
 import { FREE_FLOOR_GB } from '../../core/src/memory';
 import { atomicJson, ownerPlanPath } from '../../core/src/plan-lock';
-import { hasStopFile, lifecycleReadRoots, liveRoot, operatorCommandsDir, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
+import { hasStopFile, lifecycleReadRoots, liveRoot, operatorCommandsDir, practiceRoot, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
 import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../../core/src/proc';
 import {
     BOOTSTRAP_STATUS_AGE_MS, missionSignature as sharedMissionSignature, successfulEnd, withSessionAdmission,
@@ -432,9 +432,21 @@ export function missionSignature(job: Job): string {
     return sharedMissionSignature(job);
 }
 
-export function foreignRun(planned: readonly ParsedJob[], p: ParsedJob, run: { revision: string }): boolean {
-    if (run.revision === missionSignature(p.job)) return false;
-    return planned.some(q => q !== p && missionSignature(q.job) === run.revision);
+function endedMapByLower(ended: ReadonlyMap<string, EndRecord>): Map<string, [string, EndRecord]> {
+    const byLower = new Map<string, [string, EndRecord]>();
+    for (const [name, end] of ended) byLower.set(name.toLowerCase(), [name, end]);
+    return byLower;
+}
+
+export function foreignRun(
+    planned: readonly ParsedJob[],
+    p: ParsedJob,
+    run: { revision: string },
+    signatures?: ReadonlyMap<ParsedJob, string>,
+): boolean {
+    const sigOf = (item: ParsedJob) => signatures?.get(item) ?? missionSignature(item.job);
+    if (run.revision === sigOf(p)) return false;
+    return planned.some(q => q !== p && sigOf(q) === run.revision);
 }
 
 export function overlappingRun<T extends { accounts: readonly string[] }>(runs: Iterable<T>, accounts: readonly string[]): T | undefined {
@@ -502,15 +514,37 @@ export function clearAccountAutoStops(account: string, root: string): boolean {
     return cleared;
 }
 
+const statusDataCache = new Map<string, { mtimeMs: number; size: number; ino: number; data: any }>();
+const statusRawCache = new Map<string, { mtimeMs: number; size: number; ino: number; raw: Buffer; data: any }>();
+
+function readCachedStatusData(filePath: string, nowWall: number): { mtimeMs: number; data: any } | null {
+    try {
+        const st = statSync(filePath);
+        const hit = statusDataCache.get(filePath);
+        if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size && hit.ino === st.ino) {
+            return { mtimeMs: st.mtimeMs, data: hit.data };
+        }
+        const data = JSON.parse(readFileSync(filePath, 'utf8'));
+        if (statusDataCache.size > 4096) statusDataCache.clear();
+        statusDataCache.set(filePath, { mtimeMs: st.mtimeMs, size: st.size, ino: st.ino, data });
+        return { mtimeMs: st.mtimeMs, data };
+    } catch {
+        statusDataCache.delete(filePath);
+        return null;
+    }
+}
+
 export function readAccountStatus(
     root: string,
     account: string,
 ): { file: string; mtimeMs: number; raw: Buffer; data: any } | null {
     const lower = `${account.toLowerCase()}.json`;
+    const nowWall = Date.now();
     for (const dir of statusReadDirs(root)) {
         if (!existsSync(dir)) continue;
         const exact = join(dir, `${account}.json`);
-        let target: string | null = existsSync(exact) ? exact : null;
+        const lowerPath = join(dir, lower);
+        let target: string | null = existsSync(exact) ? exact : (exact !== lowerPath && existsSync(lowerPath) ? lowerPath : null);
         if (!target) {
             try {
                 const match = readdirSync(dir).find(f => f.toLowerCase() === lower);
@@ -519,18 +553,31 @@ export function readAccountStatus(
         }
         if (!target) continue;
         try {
+            const st = statSync(target);
+            const hit = statusRawCache.get(target);
+            if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size && hit.ino === st.ino) {
+                return { file: target, mtimeMs: hit.mtimeMs, raw: hit.raw, data: hit.data };
+            }
             const raw = readFileSync(target);
-            const mtimeMs = statSync(target).mtimeMs;
             const data = JSON.parse(raw.toString('utf8'));
-            return { file: target, mtimeMs, raw, data };
-        } catch { /* incomplete record */ }
+            if (statusRawCache.size > 4096) statusRawCache.clear();
+            statusRawCache.set(target, { mtimeMs: st.mtimeMs, size: st.size, ino: st.ino, raw, data });
+            if (statusDataCache.size > 4096) statusDataCache.clear();
+            statusDataCache.set(target, { mtimeMs: st.mtimeMs, size: st.size, ino: st.ino, data });
+            return { file: target, mtimeMs: st.mtimeMs, raw, data };
+        } catch {
+            statusRawCache.delete(target);
+            /* incomplete record */
+        }
     }
     return null;
 }
 
-export function readAllStatuses(root: string): unknown[] {
+function readAllStatusEntries(root: string): { statuses: unknown[]; byLower: Map<string, { file: string; mtimeMs: number; data: any }> } {
     const statuses: unknown[] = [];
+    const byLower = new Map<string, { file: string; mtimeMs: number; data: any }>();
     const seen = new Set<string>();
+    const nowWall = Date.now();
     for (const dir of statusReadDirs(root)) {
         if (!existsSync(dir)) continue;
         let files: string[] = [];
@@ -539,10 +586,21 @@ export function readAllStatuses(root: string): unknown[] {
             const key = file.toLowerCase();
             if (!key.endsWith('.json') || seen.has(key)) continue;
             seen.add(key);
-            try { statuses.push(JSON.parse(readFileSync(join(dir, file), 'utf8'))); } catch { /* incomplete record */ }
+            const filePath = join(dir, file);
+            const hit = readCachedStatusData(filePath, nowWall);
+            if (!hit) continue;
+            statuses.push(hit.data);
+            const stem = key.slice(0, -5);
+            const rowKey = typeof hit.data?.name === 'string' && hit.data.name ? hit.data.name.toLowerCase() : stem;
+            if (!byLower.has(rowKey)) byLower.set(rowKey, { file: filePath, mtimeMs: hit.mtimeMs, data: hit.data });
+            if (!byLower.has(stem)) byLower.set(stem, { file: filePath, mtimeMs: hit.mtimeMs, data: hit.data });
         }
     }
-    return statuses;
+    return { statuses, byLower };
+}
+
+export function readAllStatuses(root: string): unknown[] {
+    return readAllStatusEntries(root).statuses;
 }
 
 export function shouldSwarmReload(opts: {
@@ -947,13 +1005,16 @@ export function applyResume(
     ended: Map<string, EndRecord>,
     pending: Set<string>,
     clearStop: (a: string) => void,
+    endedByLower?: ReadonlyMap<string, [string, EndRecord]>,
 ): boolean {
     if (active) return false;
     let changed = false;
+    let lowerMap = endedByLower;
     for (const a of accounts) {
         const key = a.toLowerCase();
         if (!pending.delete(key)) continue;
-        const entry = [...ended].find(([name]) => name.toLowerCase() === key);
+        lowerMap ??= endedMapByLower(ended);
+        const entry = lowerMap.get(key);
         if (entry && (persistentEnd(entry[1].reason) || successfulEnd(entry[1].reason))) continue;
         clearStop(a);
         if (entry) ended.delete(entry[0]);
@@ -992,8 +1053,16 @@ export function startable(
 ): { start: string[]; blocked: Record<string, string> } {
     const start: string[] = [];
     const blocked: Record<string, string> = {};
+    let lowerMap: Map<string, { reason: string; at?: number; revision?: string }> | null = null;
     for (const a of accounts) {
-        const end = ended.get(a) ?? [...ended].find(([name]) => name.toLowerCase() === a.toLowerCase())?.[1];
+        let end = ended.get(a);
+        if (end === undefined && ended.size > 0) {
+            if (!lowerMap) {
+                lowerMap = new Map();
+                for (const [name, rec] of ended) lowerMap.set(name.toLowerCase(), rec);
+            }
+            end = lowerMap.get(a.toLowerCase());
+        }
         const newMission = !!end?.revision && !!revision && end.revision !== revision && /^done(?: after \d+ runs)?$/.test(end.reason);
         const brainSwitched = !!brainManaged?.(a) && !!end?.revision && !!revision && end.revision !== revision && !/^died\b/.test(end.reason);
         const resumable = !!end && (
@@ -1120,13 +1189,15 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         return ended;
     };
     const stopFile = (a: string) => join(prac, `stop-${a}`);
+    let tickStatusByLower: Map<string, { file: string; mtimeMs: number; data: any }> | null = null;
+    const statusHit = (a: string) => tickStatusByLower?.get(a.toLowerCase()) ?? readAccountStatus(root, a);
     const statusAge = (a: string) => {
-        const hit = readAccountStatus(root, a);
+        const hit = statusHit(a);
         if (!hit || hit.data?.server !== LIVE_SERVER) return Infinity;
         return Date.now() - hit.mtimeMs;
     };
     const statusStarted = (a: string): number | undefined => {
-        const s = readAccountStatus(root, a)?.data;
+        const s = statusHit(a)?.data;
         return s && typeof s.name === 'string' && s.name.toLowerCase() === a.toLowerCase()
             && s.server === LIVE_SERVER && Number.isFinite(s.started) ? s.started : undefined;
     };
@@ -1300,6 +1371,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         follow(p.key, run, child);
     });
 
+    let cachedPlan: { mtimeMs: number; size: number; data: Plan } | null = null;
+    let cachedOwners: { file: string; mtimeMs: number; size: number; owners: Map<string, Owner> } | null = null;
+
     const tick = () => {
         if (!skipLock && !renewLease(lockFile)) {
             console.log('SWARM lost local controller lease; exiting to avoid split-brain');
@@ -1325,9 +1399,18 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             if (!accounts.size) { console.log('SWARM stopped (fleet controller lease unavailable)'); process.exit(2); }
             return;
         }
+        const nowWall = Date.now();
         let plan: Plan;
+        let planMtime = 0;
         try {
-            plan = JSON.parse(readFileSync(planFile, 'utf8'));
+            const pst = statSync(planFile);
+            planMtime = pst.mtimeMs;
+            if (cachedPlan && nowWall - pst.mtimeMs > 1000 && cachedPlan.mtimeMs === pst.mtimeMs && cachedPlan.size === pst.size) {
+                plan = cachedPlan.data;
+            } else {
+                plan = JSON.parse(readFileSync(planFile, 'utf8'));
+                cachedPlan = { mtimeMs: pst.mtimeMs, size: pst.size, data: plan };
+            }
         } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
         try {
             const m = statSync(holdsFile).mtimeMs;
@@ -1346,8 +1429,6 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         if (brainEnabled) {
             try {
                 const nowMs = Date.now();
-                let planMtime = 0;
-                try { planMtime = statSync(planFile).mtimeMs; } catch { /* ignore */ }
                 const cmdDir = operatorCommandsDir(root);
                 let hasPendingCommands = false;
                 try {
@@ -1445,13 +1526,24 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             }
         }
 
-        const stopAll = hasStopFile('swarm', root);
+        const stopFlagsPresent = new Set<string>();
+        for (const dir of [liveDir, prac]) {
+            if (!existsSync(dir)) continue;
+            try {
+                for (const f of readdirSync(dir)) {
+                    if (f.length > 5 && f.slice(0, 5).toLowerCase() === 'stop-') {
+                        stopFlagsPresent.add(f.slice(5).toLowerCase());
+                    }
+                }
+            } catch { /* unreadable */ }
+        }
+        const stopAll = stopFlagsPresent.has('swarm');
         inheritedRecoveries = heldRecoveryOwners(root, recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
         if (shouldSwarmReload({
             root,
             startedAt,
             recoveryActive: !!recoveryDispatch.active || inheritedRecoveries.length > 0,
-            stopAll: stopAll || hasStopFile('coordinator', root),
+            stopAll: stopAll || stopFlagsPresent.has('coordinator'),
         })) {
             saveRuns();
             cleanupOwner();
@@ -1465,9 +1557,19 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 process.exit(2);
             }
         }
-        if (stopAll && recoveryDispatch.active) writeSwarmStop(stopFile(recoveryDispatch.active.account), SWARM_STOP.recovery);
-        if (stopAll) for (const held of inheritedRecoveries) writeSwarmStop(stopFile(held.account), SWARM_STOP.inherited);
+        if (stopAll && recoveryDispatch.active) {
+            writeSwarmStop(stopFile(recoveryDispatch.active.account), SWARM_STOP.recovery);
+            stopFlagsPresent.add(recoveryDispatch.active.account.toLowerCase());
+        }
+        if (stopAll) {
+            for (const held of inheritedRecoveries) {
+                writeSwarmStop(stopFile(held.account), SWARM_STOP.inherited);
+                stopFlagsPresent.add(held.account.toLowerCase());
+            }
+        }
         const planned = combinedJobs.flatMap(j => { const p = parseJob(j); return 'error' in p ? [] : [p]; });
+        const jobSignatures = new Map<ParsedJob, string>();
+        for (const p of planned) jobSignatures.set(p, missionSignature(p.job));
         const accountEnabled = enabledByAccount(planned);
 
         if (Date.now() - orphanScanAt >= 60_000) {
@@ -1492,11 +1594,16 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
 
         for (const r of runs.values()) {
             if (!overlappingRun(planned, r.accounts) || stopAll) {
-                for (const a of r.accounts) writeSwarmStop(stopFile(a), SWARM_STOP.removed);
+                for (const a of r.accounts) {
+                    writeSwarmStop(stopFile(a), SWARM_STOP.removed);
+                    stopFlagsPresent.add(a.toLowerCase());
+                }
             }
         }
-        const statuses = readAllStatuses(root);
-
+        const statusEntries = readAllStatusEntries(root);
+        const statuses = statusEntries.statuses;
+        tickStatusByLower = statusEntries.byLower;
+        try {
         let endStateOk = inheritedRecoveries.every(r => r.source === process.env.WORKER_RELEASE);
         const claimedRepair = `${repairFile}.processing`;
         try {
@@ -1518,7 +1625,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     const active = [...runs.values()].flatMap(r => r.accounts).concat(activeExternalLive(statuses, [], Date.now()));
                     const proofs: RepairProofs = {
                         ...defaultRepairProofs,
-                        status: a => readAccountStatus(root, a)?.data,
+                        status: a => statusHit(a)?.data,
                         statusSha256: a => {
                             const hit = readAccountStatus(root, a);
                             return hit ? createHash('sha256').update(hit.raw).digest('hex') : undefined;
@@ -1559,19 +1666,37 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         });
         const state: Record<string, unknown>[] = [...brainRecoveryRows];
         let owners: Map<string, Owner>;
-        try { owners = loadOwners(); } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
+        try {
+            const ownersPath = join(FLEET_DIR(), 'owners.json');
+            if (existsSync(ownersPath)) {
+                const ost = statSync(ownersPath);
+                if (cachedOwners && cachedOwners.file === ownersPath && Date.now() - ost.mtimeMs > 1000 && cachedOwners.mtimeMs === ost.mtimeMs && cachedOwners.size === ost.size) {
+                    owners = cachedOwners.owners;
+                } else {
+                    owners = loadOwners(ownersPath);
+                    cachedOwners = { file: ownersPath, mtimeMs: ost.mtimeMs, size: ost.size, owners };
+                }
+            } else {
+                owners = new Map();
+            }
+        } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
 
+        let endedByLower = endedMapByLower(ended);
+        let parsedIdx = 0;
         for (const raw of combinedJobs) {
             if (isReservation(raw)) {
                 state.push({ account: raw.account, script: '', role: raw.role, goal: raw.goal, enabled: false, repeat: false, note: raw.note, state: 'reserved', since: null });
                 continue;
             }
-            const p = parseJob(raw);
-            if ('error' in p) {
-                state.push({ account: raw.account ?? (raw.accounts ?? []).join('+'), script: raw.script, enabled: raw.enabled, state: `bad job: ${p.error}` });
+            const parsedCandidate = parseJob(raw);
+            if ('error' in parsedCandidate) {
+                state.push({ account: raw.account ?? (raw.accounts ?? []).join('+'), script: raw.script, enabled: raw.enabled, state: `bad job: ${parsedCandidate.error}` });
                 continue;
             }
+            const p = planned[parsedIdx] ?? parsedCandidate;
+            parsedIdx++;
             const job = p.job;
+            const jobSig = jobSignatures.get(p) ?? missionSignature(job);
             const foreign = otherSideAccount(p.accounts, side, owners);
             if (foreign) {
                 state.push({ account: raw.account ?? p.accounts.join('+'), script: raw.script, enabled: raw.enabled, state: `other side: ${foreign.account} belongs to ${foreign.side}` });
@@ -1582,13 +1707,21 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 continue;
             }
             for (const a of p.accounts) observeEnabled([a], accountEnabled.get(a.toLowerCase()) === true, previousEnabled, pendingResume);
-            if (stopAll) for (const a of p.accounts) writeSwarmStop(stopFile(a), SWARM_STOP.all);
+            if (stopAll) {
+                for (const a of p.accounts) {
+                    writeSwarmStop(stopFile(a), SWARM_STOP.all);
+                    stopFlagsPresent.add(a.toLowerCase());
+                }
+            }
             const r = overlappingRun(runs.values(), p.accounts);
-            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearAccountSwarmStops(a, root))) {
+            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => {
+                if (clearAccountSwarmStops(a, root)) stopFlagsPresent.delete(a.toLowerCase());
+            }, endedByLower)) {
+                endedByLower = endedMapByLower(ended);
                 persistEnded(deathsFile, ended);
             }
             const st: Record<string, string> = {};
-            if (r && foreignRun(planned, p, r) && !stopAll) {
+            if (r && foreignRun(planned, p, r, jobSignatures) && !stopAll) {
                 for (const a of p.accounts) st[a] = 'waiting: another job of this account is running';
             } else if (r) {
                 Object.assign(st, runningJobState(p, r, ended, pendingResume, stopAll, stopFile));
@@ -1599,14 +1732,15 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             } else {
                 if (job.standing) {
                     for (const a of p.accounts) {
-                        const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
+                        const hit = endedByLower.get(a.toLowerCase()), key = hit?.[0], end = hit?.[1];
                         if (!end) continue;
-                        const s = readAccountStatus(root, a)?.data;
-                        if (!standingEndRetryable(end, job, missionSignature(job), s?.result)) continue;
+                        const s = statusHit(a)?.data;
+                        if (!standingEndRetryable(end, job, jobSig, s?.result)) continue;
                         let settled = false;
                         try { const lp = readLogoutProof(a, LIVE_SERVER, { base: root }); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* ignore */ }
                         if (!standingRetryDue(s, settled, Date.now())) continue;
                         ended.delete(key!);
+                        endedByLower.delete(a.toLowerCase());
                         for (let i = holds.length - 1; i >= 0; i--) if (holds[i]!.account.toLowerCase() === a.toLowerCase()) holds.splice(i, 1);
                         persistEnded(deathsFile, ended); persistHolds(holdsFile, holds);
                         console.log(`SWARM standing retry ${a} after ${end.reason}`);
@@ -1614,8 +1748,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 }
                 if (!stopAll) {
                     for (const a of p.accounts) {
-                        if (brainDispatchedAccounts.has(a.toLowerCase())) {
-                            clearAccountAutoStops(a, root);
+                        const lower = a.toLowerCase();
+                        if (brainDispatchedAccounts.has(lower) && stopFlagsPresent.has(lower)) {
+                            if (clearAccountAutoStops(a, root)) stopFlagsPresent.delete(lower);
                         }
                     }
                 }
@@ -1626,8 +1761,8 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         ended,
                         statusAge,
                         statusStarted,
-                        missionSignature(job),
-                        a => hasStopFile(a, root),
+                        jobSig,
+                        a => stopFlagsPresent.has(a.toLowerCase()),
                         a => brainDispatchedAccounts.has(a.toLowerCase()),
                     ),
                     job.script, holds,
@@ -1671,7 +1806,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             }
             const run = runs.get(p.key);
             for (const a of p.accounts) {
-                const endedEntry = ended.get(a) ?? [...ended].find(([name]) => name.toLowerCase() === a.toLowerCase())?.[1];
+                const endedEntry = endedByLower.get(a.toLowerCase())?.[1];
                 state.push({
                     account: a, script: job.script, role: job.role, goal: job.goal, enabled: job.enabled, repeat: !!job.repeat, note: job.note,
                     ...(p.host ? { host: p.key } : {}), state: st[a],
@@ -1692,6 +1827,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         if (stopAll && runs.size === 0 && !recoveryDispatch.active && !inheritedRecoveries.length) {
             console.log('SWARM stopped (stop-swarm)');
             process.exit(0);
+        }
+        } finally {
+            tickStatusByLower = null;
         }
     };
 

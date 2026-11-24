@@ -41,14 +41,21 @@ const content = resolve(REPO_ROOT, 'vendor/rs-sdk/server/content');
 const trail = 'scripts/minigames/game_trail/';
 
 function pack(file: string) {
-    return new Map(
-        readFileSync(resolve(content, 'pack', file), 'utf8')
-            .split(/\r?\n/)
-            .flatMap((l) => {
-                const m = l.match(/^(\d+)=(.+)$/);
-                return m ? ([[m[2]!, Number(m[1])] as const]) : [];
-            }),
-    );
+    const text = readFileSync(resolve(content, 'pack', file), 'utf8');
+    const out = new Map<string, number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) out.set(text.slice(eq + 1, lineEnd), id);
+        }
+        pos = end + 1;
+    }
+    return out;
 }
 
 export function nativeCluePoint(value: string): Point {
@@ -65,7 +72,12 @@ export function nativeClueSteps(): NativeClueStep[] {
     if (clueCache) return clueCache;
     const objs = pack('obj.pack');
     const npcs = pack('npc.pack');
+    const npcByDebug = new Map<string, any>();
+    for (const n of JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/npcs.json'), 'utf8')) as any[]) {
+        if (n.debugname && !npcByDebug.has(n.debugname)) npcByDebug.set(n.debugname, n);
+    }
     const out: NativeClueStep[] = [];
+    const byName = new Map<string, NativeClueStep>();
     for (const file of ['trail_easy.obj', 'trail_medium.obj', 'trail_hard.obj', 'trail_casket.obj', 'trail.obj']) {
         const source = trail + 'configs/' + file;
         for (const b of parseConfigs(readFileSync(resolve(content, source), 'utf8'), source)) {
@@ -125,9 +137,7 @@ export function nativeClueSteps(): NativeClueStep[] {
                 if (!script.includes('@trail_tanner;') || !script.includes('~progress_clue_easy(trail_clue_easy_simple008,')) {
                     throw Error('native Tanner clue handler changed');
                 }
-                const row = (JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/npcs.json'), 'utf8')) as any[]).find(
-                    (n) => n.debugname === 'tanner',
-                );
+                const row = npcByDebug.get('tanner');
                 const spawn = row?.spawns?.[0];
                 if (!spawn) r.gap = 'Native Tanner spawn is not mapped in knowledge/npcs.json';
                 else {
@@ -143,20 +153,20 @@ export function nativeClueSteps(): NativeClueStep[] {
                     '. Its exact NPC dialogue, challenge/key, quest or item handler needs consumer mapping; this is supported native content, not an absent-server claim.';
             }
             out.push(r);
+            byName.set(r.name, r);
         }
     }
-    const npcData = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/npcs.json'), 'utf8')) as any[];
     for (const h of discoverNativeClueNpcHandlers()) {
-        const r = out.find((r) => r.name === h.clue);
+        const r = byName.get(h.clue);
         if (!r || !['unsupported', 'talk'].includes(r.kind)) continue;
         const id = npcs.get(h.npc);
-        const spawn = npcData.find((n) => n.debugname === h.npc)?.spawns?.[0];
+        const spawn = npcByDebug.get(h.npc)?.spawns?.[0];
         if (id === undefined || !spawn) {
             r.gap = 'Exact native handler ' + h.source + ':' + h.line + ' targets ' + h.npc + '; generated native NPC ID/spawn mapping is missing.';
             r.gapType = 'npc-spawn';
             continue;
         }
-        const challenge = h.challenge ? out.find((v) => v.name === h.challenge) : undefined;
+        const challenge = h.challenge ? byName.get(h.challenge) : undefined;
         const answer = challenge?.nativeParams?.find((v) => v.startsWith('trail_challenge_answer,'))?.split(',')[1];
         if (h.kind === 'challenge' && (!challenge || !Number.isSafeInteger(Number(answer)))) {
             r.gap = 'Native challenge handler ' + h.source + ':' + h.line + ' requires ' + h.challenge + ' but numeric answer/object mapping is unresolved.';

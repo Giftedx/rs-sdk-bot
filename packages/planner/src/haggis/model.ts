@@ -238,8 +238,8 @@ export function rawRoute(groups: Map<string, Map<string, Activity[]>>, opts: Sch
 }
 
 // Pick one option per variant group: opts.force where given, else the raw-tick choice.
-export function chooseVariants(activities: Activity[], opts: ScheduleOptions): Activity[] {
-    activities = applyLevers(activities, opts);
+export function chooseVariants(activities: Activity[], opts: ScheduleOptions, leversAlreadyApplied = false): Activity[] {
+    if (!leversAlreadyApplied) activities = applyLevers(activities, opts);
     const groups = variantGroups(activities, opts);
     const route = rawRoute(groups, opts);
     return activities.filter(a => !a.variant || route[a.variant.group] === a.variant.option);

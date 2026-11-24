@@ -488,15 +488,20 @@ export const spinMain = (
 let itemIdsCache: Map<string, number> | undefined;
 function objNameMap(): Map<string, number> {
     if (itemIdsCache) return itemIdsCache;
-    itemIdsCache = new Map(
-        readFileSync(join(CONTENT_DIR, 'pack/obj.pack'), 'utf8')
-            .split(/\r?\n/)
-            .filter(l => l.includes('='))
-            .map(l => {
-                const at = l.indexOf('=');
-                return [l.slice(at + 1), Number(l.slice(0, at))] as const;
-            }),
-    );
+    const text = readFileSync(join(CONTENT_DIR, 'pack/obj.pack'), 'utf8');
+    itemIdsCache = new Map();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) itemIdsCache.set(text.slice(eq + 1, lineEnd), id);
+        }
+        pos = end + 1;
+    }
     return itemIdsCache;
 }
 const objIdByName = (name: string) => {

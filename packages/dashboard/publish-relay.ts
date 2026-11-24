@@ -103,15 +103,24 @@ function controlScoreboard(sb:any){
 function usedIcons(icons:any,roots:unknown[]){
  if(!icons||typeof icons!=='object')return icons;
  const seen=new Set<string>(),walk=(v:any)=>{
-  if(Array.isArray(v))v.forEach(walk);
-  else if(v&&typeof v==='object'){
+  if(Array.isArray(v)){
+   for(let i=0;i<v.length;i++)walk(v[i]);
+  }else if(v&&typeof v==='object'){
    if(typeof v.name==='string')seen.add(v.name);
    if(typeof v.item==='string')seen.add(v.item);
-   for(const x of Object.values(v))if(x&&typeof x==='object')walk(x);
+   for(const k in v){
+    if(!Object.prototype.hasOwnProperty.call(v,k))continue;
+    const x=v[k];
+    if(x&&typeof x==='object')walk(x);
+   }
   }
  };
- roots.forEach(walk);
- return Object.fromEntries(Object.entries(icons).filter(([k])=>seen.has(k)));
+ for(let i=0;i<roots.length;i++)walk(roots[i]);
+ const out:Record<string,unknown>={};
+ for(const k in icons){
+  if(Object.prototype.hasOwnProperty.call(icons,k)&&seen.has(k))out[k]=icons[k];
+ }
+ return out;
 }
 // Each bot row names its fleet side, so the page can show worlds. A remote row keeps the side of the snapshot it came
 // from: a new cloud account can sync its snapshot before its fleet/owners.json entry arrives. Other rows use
@@ -210,10 +219,30 @@ function publicExamines(economy:any,visible:any[]){
   if(Object.hasOwn(economy??{},field))out[field]=record(economy[field])?selected[field]:null;
  return out;
 }
+function containsSecret(value:unknown,re:RegExp):boolean{
+ if(typeof value==='string')return re.test(value);
+ if(Array.isArray(value)){
+  for(let i=0;i<value.length;i++)if(containsSecret(value[i],re))return true;
+  return false;
+ }
+ if(value&&typeof value==='object'){
+  for(const key in value as Record<string,unknown>){
+   if(!Object.prototype.hasOwnProperty.call(value,key))continue;
+   const prop=(value as Record<string,unknown>)[key];
+   if(prop===undefined)continue;
+   if(re.test(key)||containsSecret(prop,re))return true;
+  }
+ }
+ return false;
+}
 export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (PriceIdentity|string)[]=[]){
  const s=trimState(state);
  const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();
- const pick=(o:any,keys:readonly string[])=>Object.fromEntries(keys.filter(k=>o&&k in o).map(k=>[k,o[k]]));
+ const pick=(o:any,keys:readonly string[])=>{
+  const res:Record<string,unknown>={};
+  if(o)for(let i=0;i<keys.length;i++){const k=keys[i]!;if(k in o)res[k]=o[k];}
+  return res;
+ };
  // Practice bots play on this PC's local test server, not the public world: their runs are the owner's testing.
  const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{
   const copy:any=compactBotCommon(pick(b,PUBLIC_BOT));
@@ -232,14 +261,39 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  out.events=[];out.alerts=[];
  // Market prices are public; the fleet's income and its farmers are the owner's.
  // Item values only for what a public bot carries or wears: the bank's item list is the owner's.
- const carried=new Set(bots.flatMap((b:any)=>[...(b.inventory??[]),...(b.equipment??[])]).map((i:any)=>i?.name).filter(Boolean));
- const items=(value:any)=>Array.isArray(value)?value:[];
- const groundItems=(value:any)=>items(value).flatMap((row:any)=>Array.isArray(row)
-  ?row.length===5&&row.every(Number.isSafeInteger)&&row[3]>=0&&row[4]>=1?[{id:row[3]}]:[]
-  :row&&typeof row==='object'?[row]:[]);
- const prices=publicPrices(s.economy,[...bots.flatMap((b:any)=>[...items(b.inventory),...items(b.equipment),...groundItems(b.ground)]),...items(s.economy?.supplies),...expectedDrops]);
- const examines=publicExamines(s.economy,bots.flatMap((b:any)=>[...items(b.inventory),...items(b.equipment)]));
- out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues:Object.fromEntries(Object.entries(s.economy.itemValues??{}).filter(([n])=>carried.has(n))),itemExamine:Object.fromEntries(Object.entries(s.economy.itemExamine??{}).filter(([n])=>carried.has(n))),...prices,...examines,goldPerTick:0,farmers:[],trend:[]}:null;
+ const carried=new Set<string>();
+ const visiblePriceItems:(PriceIdentity|string)[]=[];
+ const visibleExamineItems:(PriceIdentity|string)[]=[];
+ for(let bi=0;bi<bots.length;bi++){
+  const b=bots[bi];
+  if(Array.isArray(b.inventory))for(let ii=0;ii<b.inventory.length;ii++){
+   const it=b.inventory[ii];
+   if(it?.name)carried.add(it.name);
+   visiblePriceItems.push(it);
+   visibleExamineItems.push(it);
+  }
+  if(Array.isArray(b.equipment))for(let ii=0;ii<b.equipment.length;ii++){
+   const it=b.equipment[ii];
+   if(it?.name)carried.add(it.name);
+   visiblePriceItems.push(it);
+   visibleExamineItems.push(it);
+  }
+  if(Array.isArray(b.ground))for(let gi=0;gi<b.ground.length;gi++){
+   const row=b.ground[gi];
+   if(Array.isArray(row)){
+    if(row.length===5&&row.every(Number.isSafeInteger)&&row[3]>=0&&row[4]>=1)visiblePriceItems.push({id:row[3]});
+   }else if(row&&typeof row==='object')visiblePriceItems.push(row);
+  }
+ }
+ if(Array.isArray(s.economy?.supplies))for(let i=0;i<s.economy.supplies.length;i++)visiblePriceItems.push(s.economy.supplies[i]);
+ for(let i=0;i<expectedDrops.length;i++)visiblePriceItems.push(expectedDrops[i]!);
+ const prices=publicPrices(s.economy,visiblePriceItems);
+ const examines=publicExamines(s.economy,visibleExamineItems);
+ const itemValues:Record<string,unknown>={};
+ if(s.economy?.itemValues)for(const n in s.economy.itemValues)if(Object.prototype.hasOwnProperty.call(s.economy.itemValues,n)&&carried.has(n))itemValues[n]=s.economy.itemValues[n];
+ const itemExamine:Record<string,unknown>={};
+ if(s.economy?.itemExamine)for(const n in s.economy.itemExamine)if(Object.prototype.hasOwnProperty.call(s.economy.itemExamine,n)&&carried.has(n))itemExamine[n]=s.economy.itemExamine[n];
+ out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues,itemExamine,...prices,...examines,goldPerTick:0,farmers:[],trend:[]}:null;
  // The queue's counts and agents stay; the task texts are the agents' working notes.
  out.coordination=s.coordination&&typeof s.coordination==='object'?{available:s.coordination.available,fresh:s.coordination.fresh,paused:s.coordination.paused,counts:s.coordination.counts,agents:s.coordination.agents,tasks:[]}:null;
  // Other sides' accounts and sync times are public; their coins are bank stock.
@@ -253,18 +307,21 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  // An icon entry names an item. The public keeps the icons of items it can see: packs, worn items and lookups.
  if(out.icons&&typeof out.icons==='object')out.icons=usedIcons(out.icons,[out.bots.map((b:any)=>[b.inventory,b.equipment]),out.lookups]);
  out.hosted={at:Date.now(),kind:'public'};
- const text=JSON.stringify(out);
- if(new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(text))throw Error('public view still names the main account; nothing published');
+ if(containsSecret(out,new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i')))throw Error('public view still names the main account; nothing published');
  return out;
 }
 
 // A published file changes every cycle through its clocks alone (`hosted.at`, `now`, each row's `at`). This is the
 // file with every epoch-millisecond number (2017 to 2065) set to 0: two files are the same news when this is equal.
 export const HEARTBEAT_MS=10*60_000;
+const clockReplacer=(_k:string,v:unknown)=>typeof v==='number'&&v>1.5e12&&v<3e12?0:v;
+export function withoutClocksValue(value:unknown):string{
+ return JSON.stringify(value,clockReplacer);
+}
 export function withoutClocks(json:string):string{
- return JSON.stringify(JSON.parse(json),(_k,v)=>typeof v==='number'&&v>1.5e12&&v<3e12?0:v);
+ return JSON.stringify(JSON.parse(json),clockReplacer);
 }
 // Push when the content changed, or when the last push is older than the heartbeat (the page reads its age from `hosted.at`).
-export function pushDue(next:string,last:{stable:string;at:number}|null,now:number):boolean{
- return !last||now-last.at>=HEARTBEAT_MS||withoutClocks(next)!==last.stable;
+export function pushDue(next:string,last:{stable:string;at:number}|null,now:number,nextStable?:string):boolean{
+ return !last||now-last.at>=HEARTBEAT_MS||(nextStable??withoutClocks(next))!==last.stable;
 }

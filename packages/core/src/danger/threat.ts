@@ -13,11 +13,26 @@ export const deadly = (h: Hunter, combat: number, hitpoints: number) => hunts(h,
 // (prayer-guard.ts). So a hunter that attacks with melee only (no row in npc-attack-styles, or a melee-only row) is
 // not deadly to an account with Prayer 43 or more. The guard needs prayer points above 0; the base level stands for them.
 export const PROTECT_MELEE_LEVEL = 43;
-export const meleeOnly = (h: Hunter, styles: ReadonlyMap<number, readonly string[]> = npcAttackStyles()) =>
-    h.id !== undefined && (styles.get(h.id) ?? ['melee']).every(s => s === 'melee');
+export const meleeOnly = (h: Hunter, styles: ReadonlyMap<number, readonly string[]> = npcAttackStyles()) => {
+    if (h.id === undefined) return false;
+    const s = styles.get(h.id);
+    if (!s) return true;
+    for (let i = 0; i < s.length; i++) if (s[i] !== 'melee') return false;
+    return true;
+};
 const guardProtects = () => process.env.PRAYER_GUARD !== '0';
 export const deadlyTo = (h: Hunter, skills: Record<string, number>, styles?: ReadonlyMap<number, readonly string[]>) =>
     deadly(h, combatLevel(skills), skills.hitpoints ?? 10) && !((skills.prayer ?? 1) >= PROTECT_MELEE_LEVEL && guardProtects() && meleeOnly(h, styles));
+
+export function isDeadlyWithCombat(
+    h: Hunter,
+    combat: number,
+    hitpoints: number,
+    prayerProtected: boolean,
+    styles: ReadonlyMap<number, readonly string[]>,
+): boolean {
+    return deadly(h, combat, hitpoints) && !(prayerProtected && meleeOnly(h, styles));
+}
 
 // Visible monsters that hunt this account, deadly or not, each with the square a walk keeps out of: its huntrange
 // from the tile it stands on now, plus its size and `margin` tiles. A Karamja scorpion (combat 14, huntrange 2) is

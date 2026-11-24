@@ -1,8 +1,5 @@
 // Session settlement, logout reporting, monitor teardown, and process exit handling.
 import type { Session } from '../inprocess';
-import { formatLedger } from '../ledger';
-import { runShutdownTasks } from '../shutdown';
-import { tickWaits } from '../tick-stream';
 import {
     closeWithin,
     deathRecoveries,
@@ -52,6 +49,11 @@ export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, o
 }
 
 async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail, opts: SettlementOptions, prior: Promise<boolean>): Promise<boolean> {
+    const [{ formatLedger }, { runShutdownTasks }, { tickWaits }] = await Promise.all([
+        import('../ledger'),
+        import('../shutdown'),
+        import('../tick-stream'),
+    ]);
     // A script that ends during a death recovery does not log the account out under it.
     await Promise.all(sessions.map(s => deathRecoveries.get(s)));
     for (const s of sessions) settling.add(s);

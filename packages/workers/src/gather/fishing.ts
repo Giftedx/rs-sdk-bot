@@ -2381,9 +2381,23 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
     let finiteHurt = false;
     let netCaught = 0;
     let flyCaught = 0;
-    const rawIds = (ids: number[]) => inv().filter(i => ids.includes(i.id)).reduce((n, i) => n + i.count, 0);
-    let lastRawNet = rawIds([317, 321]);
-    let lastRawFly = rawIds([335, 331]);
+    const rawIds = (ids: number[]) => {
+        let n = 0;
+        for (const i of inv()) if (ids.includes(i.id)) n += i.count;
+        return n;
+    };
+    const rawNet = () => {
+        let n = 0;
+        for (const i of inv()) if (i.id === 317 || i.id === 321) n += i.count;
+        return n;
+    };
+    const rawFly = () => {
+        let n = 0;
+        for (const i of inv()) if (i.id === 335 || i.id === 331) n += i.count;
+        return n;
+    };
+    let lastRawNet = rawNet();
+    let lastRawFly = rawFly();
     let lastCatchTick = s.tick();
     let activeFishingIndex: number | undefined;
     const life0 = (({ isDead, respawnCount, lifeId }: any = {}) => ({ isDead, respawnCount, lifeId }))(s.sdk.getState()?.player);
@@ -2392,8 +2406,11 @@ export async function runFishcook(s: Session, cfg: NormalizedGatherConfig, stop:
         hpMin = Math.min(hpMin, hp());
         if (FINITE) {
             finiteHurt ||= hp() < initialHp || p?.isDead === true || p?.lifeId !== initialLife || p?.respawnCount !== initialRespawns;
-            const net = rawIds([317, 321]);
-            const fly = rawIds([335, 331]);
+            let net = 0, fly = 0;
+            for (const i of inv()) {
+                if (i.id === 317 || i.id === 321) net += i.count;
+                else if (i.id === 335 || i.id === 331) fly += i.count;
+            }
             const a = Math.max(0, net - lastRawNet);
             const b = Math.max(0, fly - lastRawFly);
             netCaught += a;

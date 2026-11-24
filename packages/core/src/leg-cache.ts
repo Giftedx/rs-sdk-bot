@@ -10,6 +10,15 @@ import { Database } from 'bun:sqlite';
 import { pathfindingDataKey } from './pathcache';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
+let npcsDigestCache: { stamp: string; digest: string } | null = null;
+function npcsDigest(file: string): string {
+    let stamp = 'missing';
+    try { const st = statSync(file); stamp = `${st.size}:${st.mtimeMs}`; } catch { /* missing */ }
+    if (npcsDigestCache && npcsDigestCache.stamp === stamp) return npcsDigestCache.digest;
+    const digest = createHash('sha256').update(readFileSync(file)).digest('hex');
+    npcsDigestCache = { stamp, digest };
+    return digest;
+}
 // The file name holds the format of the keys: v2 keys name the closed danger ground alone (danger.ts withDanger).
 // The first file (route-legs.sqlite) holds one set of rows for each start and end tile of a trip, so it has no size
 // bound. A row of it whose key a search asks for is right, because a key names the closed ground exactly in both
@@ -55,7 +64,7 @@ export function routeDangerHash(danger:{key:string;kept:ReadonlySet<string>},cac
 let shared: LegCache | undefined;
 export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
     if (shared && file === LEG_CACHE_FILE && source === undefined) return shared;
-    const src = source ?? pathfindingDataKey() + ':' + createHash('sha256').update(readFileSync(join(repoRoot, 'knowledge', 'npcs.json'))).digest('hex');
+    const src = source ?? pathfindingDataKey() + ':' + npcsDigest(join(repoRoot, 'knowledge', 'npcs.json'));
     const namespace = createHash('sha256').update(src).digest('base64url');
     const legacyFile = file.replace(/\.sqlite$/, '.json');
     const legacy = (): Record<string, number | null> => {
