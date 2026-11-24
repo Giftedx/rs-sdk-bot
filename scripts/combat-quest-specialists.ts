@@ -1,12 +1,13 @@
 // Shared specialist combat-quest kits, navigation, supplier/tank companion helpers, and PvP training loops.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { accountOf, awaitBotReady, botWork, closeWithin, finish, getWorld, logoutSession, openBot } from '../packages/core/src/bot';
+import { accountOf, awaitBotReady, botWork, closeWithin, finish, getWorld, logoutSession, openBot, serverFromEnv } from '../packages/core/src/bot';
 import { protectedFromMelee } from '../packages/core/src/danger';
 import { withDoorPolicy } from '../packages/core/src/door-policy';
 import { connectInProcess, type Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
+import { simBotsDir } from '../packages/core/src/practice-paths';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { createTickRecorder } from '../packages/core/src/tick-record';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
@@ -23,7 +24,7 @@ export interface SpecialistBoardTarget {
 export const SPECIALIST_TARGETS: Readonly<Record<'hitpoints' | 'strength' | 'defence', SpecialistBoardTarget>> = {
     hitpoints: { board: 'hitpoints', liveChampion: 'nickvitalsq', liveTicks: 11343, targetTicks: 11116 },
     strength: { board: 'strength', liveChampion: 'nicksinew', liveTicks: 3288, targetTicks: 3222 },
-    defence: { board: 'defence', liveChampion: 'nickbicep', liveTicks: 4323, targetTicks: 4236 },
+    defence: { board: 'defence', liveChampion: 'bennetttank', liveTicks: 4018, targetTicks: 3937 },
 };
 
 export interface KitSpecItem {
@@ -178,8 +179,10 @@ export function assertNonReservedAccount(name: string, label = 'account'): strin
 }
 
 export function readServerHost(root: string, bot: string): string {
-    const raw = readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env'), 'utf8');
-    return (raw.match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+    for (const p of [join(simBotsDir(root), bot, 'bot.env'), join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env')]) {
+        if (existsSync(p)) return serverFromEnv(readFileSync(p, 'utf8'));
+    }
+    return '';
 }
 
 export function posOf(s: Session) {
@@ -736,11 +739,15 @@ export function rankKeepRelogTanks<T extends { index: number; name?: string; x?:
 }
 
 function readRelogCredentials(root: string, bot: string): { password: string; server: string } {
-    const raw = readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env'), 'utf8');
-    const password = raw.match(/^PASSWORD=(.*)$/m)?.[1]?.trim() ?? '';
-    const server = raw.match(/^SERVER=(.*)$/m)?.[1]?.trim() ?? '';
-    if (!password || !server) throw Error(`missing credentials in bots/${bot}/bot.env`);
-    return { password, server };
+    for (const p of [join(simBotsDir(root), bot, 'bot.env'), join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env')]) {
+        if (!existsSync(p)) continue;
+        const raw = readFileSync(p, 'utf8');
+        const password = raw.match(/^PASSWORD=(.*)$/m)?.[1]?.trim() ?? '';
+        const server = serverFromEnv(raw);
+        if (!password || !server) throw Error(`missing credentials in ${p}`);
+        return { password, server };
+    }
+    throw Error(`missing bot.env for ${bot}`);
 }
 
 export async function connectWithTransientRetry<T>(
