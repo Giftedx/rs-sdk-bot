@@ -465,11 +465,40 @@ async function teleportVarrockTo45(s: Session, stop: StopFn): Promise<void> {
         const xp0 = skillInfo(s, 'Magic').experience;
         await s.direct({ type: 'clickComponent', componentId: SPELLS.varrockTeleport, reason: 'SDK' });
         const gained = await waitUntil(s, () => skillInfo(s, 'Magic').experience > xp0 || stop(), { timeoutTicks: 5 });
-        if (gained && skillInfo(s, 'Magic').experience > xp0 && !stop()) {
-            await waitTicks(s, 3);
+        if (gained && skillInfo(s, 'Magic').experience > xp0 && skillInfo(s, 'Magic').baseLevel < 45 && !stop()) {
+            await waitTicks(s, 2);
         }
     }
     await teleportTo(s, SPELLS.varrockTeleport, p => p.worldX >= 3195 && p.worldX <= 3230 && p.worldZ >= 3410 && p.worldZ <= 3440, stop, 'Varrock teleport');
+}
+
+async function buyExactFromOpenShop(
+    s: Session,
+    itemRe: RegExp,
+    itemId: number,
+    amount: number,
+    stop: StopFn,
+    label: string,
+): Promise<void> {
+    const targetCount = countById(s.sdk.getInventory(), itemId) + amount;
+    const deadline = s.tick() + 20;
+    while (!stop() && countById(s.sdk.getInventory(), itemId) < targetCount) {
+        if (s.tick() >= deadline) throw Error(`failed buying ${label} (${countById(s.sdk.getInventory(), itemId)}/${targetCount})`);
+        const shopItem = (s.sdk.getState()?.shop?.shopItems ?? []).find((it: any) => it?.id === itemId || itemRe.test(it?.name ?? ''));
+        if (!shopItem) {
+            await waitTicks(s, 1);
+            continue;
+        }
+        let rem = targetCount - countById(s.sdk.getInventory(), itemId);
+        const clicks: Promise<unknown>[] = [];
+        while (rem > 0 && clicks.length < 4) {
+            const step = rem >= 10 ? 10 : rem >= 5 ? 5 : 1;
+            clicks.push(s.direct({ type: 'shopBuy', slot: shopItem.slot, amount: step, reason: 'SDK' }));
+            rem -= step;
+        }
+        await Promise.all(clicks);
+        await waitUntil(s, () => countById(s.sdk.getInventory(), itemId) >= targetCount || stop(), { timeoutTicks: 3 });
+    }
 }
 
 async function prepareVampireAndWaterfallInDraynorAndVarrock(s: Session, stop: StopFn): Promise<void> {
@@ -500,23 +529,14 @@ async function prepareVampireAndWaterfallInDraynorAndVarrock(s: Session, stop: S
     await walkWaypoints(s, [{ x: 3217, z: 3415, tol: 2 }], 40, stop, 'varrock square to general store');
     const openGen = await s.bot.openShop(/shop\s*(keeper|assistant)/i);
     if (!openGen.success) throw Error(`Varrock general store open failed: ${openGen.message}`);
-    const buyHammer = await s.bot.buyFromShop(/^hammer$/i, 1);
-    if (!buyHammer.success && countById(s.sdk.getInventory(), 2347) < 1) {
-        throw Error(`failed buying Hammer: ${buyHammer.message}`);
-    }
+    await buyExactFromOpenShop(s, /^hammer$/i, 2347, 1, stop, 'Hammer');
     await s.bot.closeShop();
 
     await walkWaypoints(s, [{ x: 3253, z: 3402, tol: 2 }], 60, stop, 'general store to aubury');
     const openAubury = await s.bot.openShop(/^aubury$/i);
     if (!openAubury.success) throw Error(`Aubury open failed: ${openAubury.message}`);
-    const buyWater = await s.bot.buyFromShop(/^water rune$/i, 6);
-    if (!buyWater.success && countById(s.sdk.getInventory(), 555) < 6) {
-        throw Error(`failed buying Water runes: ${buyWater.message}`);
-    }
-    const buyEarth = await s.bot.buyFromShop(/^earth rune$/i, 7);
-    if (!buyEarth.success && countById(s.sdk.getInventory(), 557) < 7) {
-        throw Error(`failed buying Earth runes: ${buyEarth.message}`);
-    }
+    await buyExactFromOpenShop(s, /^water rune$/i, 555, 6, stop, 'Water rune');
+    await buyExactFromOpenShop(s, /^earth rune$/i, 557, 7, stop, 'Earth rune');
     await s.bot.closeShop();
 
     await walkWaypoints(s, [{ x: 3278, z: 3490, tol: 2 }], 100, stop, 'aubury to jolly boar inn');
@@ -570,7 +590,14 @@ async function exitMazeAndClearArenaGear(s: Session, stop: StopFn): Promise<void
     await walkWaypoints(s, [{ x: 2529, z: 3165, tol: 2 }, { x: 2515, z: 3161, tol: 0 }], 80, stop, 'bolren to loose railing');
     await squeezeLooseRailing(s, z => z > 0 && z <= 3160, stop, 'exit maze');
     await setProtectMelee(s, true, stop);
-    await walkWaypoints(s, [{ x: 2566, z: 3201, tol: 2 }], 120, stop, 'railing to lady servil', { ignoreMeleeHunters: true });
+    await walkWaypoints(
+        s,
+        [{ x: 2500, z: 3160, tol: 2 }, { x: 2500, z: 3201, tol: 2 }, { x: 2566, z: 3201, tol: 2 }],
+        120,
+        stop,
+        'railing to lady servil',
+        { ignoreMeleeHunters: true },
+    );
 }
 
 async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
