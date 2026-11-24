@@ -3,14 +3,24 @@ import { existsSync, linkSync, mkdirSync, readFileSync, readdirSync, renameSync,
 import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { laterProcessHolds, processStartTimes } from './proc';
+import { renameRetry } from './status';
 
 export const planLockDir = join(resolve(import.meta.dir, '../../..'), '.practice/live');
 export const ownerPlanPath = (root: string, file = process.env.SWARM_PLAN) => resolve(root, file || 'swarm.json');
-export function atomicJson(file: string, value: unknown): void {
+export function atomicJson(
+    file: string,
+    value: unknown,
+    rename: (from: string, to: string) => void = renameSync,
+): void {
     mkdirSync(dirname(file), { recursive: true });
     const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
     writeFileSync(tmp, JSON.stringify(value, null, 2));
-    renameSync(tmp, file);
+    try {
+        renameRetry(tmp, file, rename);
+    } catch (error) {
+        try { unlinkSync(tmp); } catch { /* retain original error */ }
+        throw error;
+    }
 }
 const lockPath = (directory: string) => join(directory, 'plan-write-lock.json');
 const intentPath = (directory: string, nonce: string) => join(directory, `plan-write-${nonce}.intent.json`);

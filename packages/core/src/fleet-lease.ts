@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from './fleet';
+import { renameRetry } from './status';
 import { maskUrlCredentials } from './url-mask';
 
 export const FLEET_LEASE_TTL_MS = 10 * 60_000;
@@ -127,10 +128,21 @@ export function fleetLeaseAllowsWorker(root: string, holder = process.env.SWARM_
     } catch { return false; }
 }
 
-function writeFence(root: string, holder: string, until: number) {
-    const path = fenceFile(root), tmp = path + '.' + process.pid;
+export function writeFence(
+    root: string,
+    holder: string,
+    until: number,
+    rename: (from: string, to: string) => void = renameSync,
+) {
+    const path = fenceFile(root), tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
+    mkdirSync(dirname(path), { recursive: true });
     writeFileSync(tmp, JSON.stringify({ holder, until }));
-    renameSync(tmp, path);
+    try {
+        renameRetry(tmp, path, rename);
+    } catch (error) {
+        try { unlinkSync(tmp); } catch { /* retain original error */ }
+        throw error;
+    }
 }
 
 function deadLocalPid(pid: number): boolean {

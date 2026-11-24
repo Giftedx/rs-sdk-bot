@@ -82,3 +82,16 @@ test('dead pre-connect failures after a disconnected session remain unconfirmed'
  fail.record('connect-failed',SOCKET_NEVER_OPENED);
  for(const required of [true,false])expect(()=>liveLogoutRef('DiscPrev',f.base,required,Date.now()+AGED,false,dead)).toThrow('not confirmed');
 });
+
+test('live admission reads producer proofs and status rows from .practice/live without legacy directories',()=>{
+ const base=mkdtempSync(join(tmpdir(),'launch-session-live-'));
+ const liveLifecycle=join(base,'.practice','live','session-lifecycle');
+ const liveStatusDir=join(base,'.practice','live','status');
+ mkdirSync(liveStatusDir,{recursive:true});
+ const attempt=beginSessionAttempt({account:'LiveRod',server},{root:liveLifecycle});
+ attempt.record('connected');
+ attempt.record('ended','logged-out');
+ expect(liveLogoutRef('LiveRod',base)).toEqual({kind:'producer',attemptId:attempt.attemptId});
+ writeFileSync(join(liveStatusDir,'LiveRod.json'),JSON.stringify({name:'LiveRod',server,at:Date.now()+10_000,result:''}));
+ expect(()=>liveLogoutRef('LiveRod',base)).toThrow('not covered');
+});

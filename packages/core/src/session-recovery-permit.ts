@@ -8,6 +8,7 @@ export {
     assertNativeFixtureRoot,
     assertNoRecoveryLease,
     assertRecoveryNotStopped,
+    recoveryLifecycleRoot,
     recoveryPermitPaths,
     validateRecoveryRequest,
 } from './session-recovery-permit/request';

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute,relative,join,resolve } from 'node:path';
 import { isLocalServer } from './localserver';
-import { lifecycleReadRoots, lifecycleRootForServer, liveLifecycleRoot, repoRoot, simLifecycleRoot } from './practice-paths';
+import { lifecycleReadRoots, lifecycleRootForServer, liveLifecycleRoot, practiceRoot, repoRoot, simLifecycleRoot } from './practice-paths';
 
 // Per-account session lifecycle receipts. The in-process session producer (inprocess.ts connectInProcess) writes
 // one attempt file before its network attempt and records only events from that exact session: connect, START,
@@ -198,13 +198,37 @@ function readLogoutProofAt(account: string, server: string, root?: string): Logo
         ownerRun: receipt.owner.coordinatorRunId ?? null, receiptSha256: createHash('sha256').update(raw).digest('hex') };
 }
 
-export function readLogoutProof(account: string, server: string, opts: { root?: string } = {}): LogoutProof {
-    if (opts.root || isLocalServer(server)) return readLogoutProofAt(account, server, opts.root);
-    for (const candidate of lifecycleReadRoots(repoRoot)) {
+function candidateLifecycleRoots(server: string, base: string): string[] {
+    return isLocalServer(server)
+        ? [simLifecycleRoot(base), join(practiceRoot(base), 'session-lifecycle')]
+        : lifecycleReadRoots(base);
+}
+
+// Picks the lifecycle root holding this account on `server` under `base`, preferring .practice/live (or .practice/sim
+// for local servers) over legacy .practice/session-lifecycle.
+export function resolveLifecycleRoot(account: string, server: string, base = repoRoot): string {
+    const candidates = candidateLifecycleRoots(server, base);
+    try {
+        for (const candidate of candidates) {
+            if (existsSync(accountDir(account, server, candidate))) return candidate;
+        }
+    } catch { /* invalid identity falls through to directory/default lookup */ }
+    for (const candidate of candidates) {
+        if (existsSync(candidate)) return candidate;
+    }
+    return candidates[0]!;
+}
+
+export function readLogoutProof(account: string, server: string, opts: { root?: string; base?: string } = {}): LogoutProof {
+    if (opts.root) return readLogoutProofAt(account, server, opts.root);
+    if (isLocalServer(server) && !opts.base) return readLogoutProofAt(account, server);
+    const base = opts.base ?? repoRoot;
+    const candidates = candidateLifecycleRoots(server, base);
+    for (const candidate of candidates) {
         const res = readLogoutProofAt(account, server, candidate);
         if (res.state !== 'none') return res;
     }
-    return readLogoutProofAt(account, server, liveLifecycleRoot(repoRoot));
+    return readLogoutProofAt(account, server, candidates[0]!);
 }
 
 function readLatestAttemptReceiptAt(
@@ -243,14 +267,17 @@ function readLatestAttemptReceiptAt(
 export function readLatestAttemptReceipt(
     account: string,
     server: string,
-    opts: { root?: string } = {},
+    opts: { root?: string; base?: string } = {},
 ): { attemptId: string; receipt: AttemptReceipt; sha256: string } | null {
-    if (opts.root || isLocalServer(server)) return readLatestAttemptReceiptAt(account, server, opts.root);
-    for (const candidate of lifecycleReadRoots(repoRoot)) {
+    if (opts.root) return readLatestAttemptReceiptAt(account, server, opts.root);
+    if (isLocalServer(server) && !opts.base) return readLatestAttemptReceiptAt(account, server);
+    const base = opts.base ?? repoRoot;
+    const candidates = candidateLifecycleRoots(server, base);
+    for (const candidate of candidates) {
         const res = readLatestAttemptReceiptAt(account, server, candidate);
         if (res) return res;
     }
-    return readLatestAttemptReceiptAt(account, server, liveLifecycleRoot(repoRoot));
+    return readLatestAttemptReceiptAt(account, server, candidates[0]!);
 }
 
 function listAttemptsAt(account: string, server: string, root?: string): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
@@ -264,9 +291,11 @@ function listAttemptsAt(account: string, server: string, root?: string): { attem
 }
 
 // Every recorded attempt for one identity, oldest first. Malformed files are reported, never dropped.
-export function listAttempts(account: string, server: string, opts: { root?: string } = {}): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
-    if (opts.root || isLocalServer(server)) return listAttemptsAt(account, server, opts.root);
-    for (const candidate of lifecycleReadRoots(repoRoot)) {
+export function listAttempts(account: string, server: string, opts: { root?: string; base?: string } = {}): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
+    if (opts.root) return listAttemptsAt(account, server, opts.root);
+    if (isLocalServer(server) && !opts.base) return listAttemptsAt(account, server);
+    const base = opts.base ?? repoRoot;
+    for (const candidate of candidateLifecycleRoots(server, base)) {
         const res = listAttemptsAt(account, server, candidate);
         if (res.length) return res;
     }

@@ -59,41 +59,45 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     await runShutdownTasks();
     // A settling script waits for nothing more, and logout needs ticks: count as waiting so a lockstep tick is not held.
     tickWaits.active++;
-    const log = opts.log ?? ((l: string) => console.log(l));
-    for (const s of sessions) {
-        const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
-        // The guard's own prayers go off before the logout: a prayer that stays on drains until the session ends.
-        void prayerGuards.get(s)?.release(); prayerGuards.delete(s);
-        eatGuards.get(s)?.stop(); eatGuards.delete(s);
-        const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
+    try {
+        const log = opts.log ?? ((l: string) => console.log(l));
+        for (const s of sessions) {
+            const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
+            // The guard's own prayers go off before the logout: a prayer that stays on drains until the session ends.
+            void prayerGuards.get(s)?.release(); prayerGuards.delete(s);
+            eatGuards.get(s)?.stop(); eatGuards.delete(s);
+            const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
+        }
+        opts.onReported?.(() => ok);
+        const outs = await Promise.all(sessions.map(s => (opts.logout ?? logoutSession)(s)));
+        log(`LOGOUT ${outs.join(' ')}`);
+        // A session the server did not end keeps adding scored playtime until its 500-tick timeout, so it fails the run.
+        if (outs.some(o => o !== 'logged-out')) { log(`WARN logout did not complete: ${outs.join(' ')}`); ok = false; }
+        const c = await closeWithin(sessions, 5000);
+        if (c.timedOut > 0) log(`WARN ${c.timedOut} session close(s) timed out`);
+        if (c.timedOut > 0) ok = false;
+        // The session end normally ends its record; a close that timed out may not have. Then wait for the file.
+        await Promise.all(sessions.map(s => {
+            const r = records.get(s); if (!r) return;
+            records.delete(s);
+            r.end(s.tick(), 'settled');
+            return Promise.race([r.flushed, Bun.sleep(RECORD_FLUSH_MS)]);
+        }));
+        if (!await prior) ok = false;
+        let finalDetail: string;
+        try { finalDetail = typeof detail === 'function' ? detail(ok) : detail; }
+        catch (error) { ok = false; finalDetail = `final accounting: ${String(error)}`; }
+        log(`RESULT ${ok ? 'ok' : 'fail'} ${finalDetail}`);
+        for (const s of sessions) {
+            statuses.get(s)?.stop();
+            stallWatches.get(s)?.stop();
+            stallWatches.delete(s);
+            ledgers.delete(s);
+            statuses.delete(s);
+            randomEvents.delete(s);
+        }
+        return ok;
+    } finally {
+        tickWaits.active = Math.max(0, tickWaits.active - 1);
     }
-    opts.onReported?.(() => ok);
-    const outs = await Promise.all(sessions.map(s => (opts.logout ?? logoutSession)(s)));
-    log(`LOGOUT ${outs.join(' ')}`);
-    // A session the server did not end keeps adding scored playtime until its 500-tick timeout, so it fails the run.
-    if (outs.some(o => o !== 'logged-out')) { log(`WARN logout did not complete: ${outs.join(' ')}`); ok = false; }
-    const c = await closeWithin(sessions, 5000);
-    if (c.timedOut > 0) log(`WARN ${c.timedOut} session close(s) timed out`);
-    if (c.timedOut > 0) ok = false;
-    // The session end normally ends its record; a close that timed out may not have. Then wait for the file.
-    await Promise.all(sessions.map(s => {
-        const r = records.get(s); if (!r) return;
-        records.delete(s);
-        r.end(s.tick(), 'settled');
-        return Promise.race([r.flushed, Bun.sleep(RECORD_FLUSH_MS)]);
-    }));
-    if (!await prior) ok = false;
-    let finalDetail: string;
-    try { finalDetail = typeof detail === 'function' ? detail(ok) : detail; }
-    catch (error) { ok = false; finalDetail = `final accounting: ${String(error)}`; }
-    log(`RESULT ${ok ? 'ok' : 'fail'} ${finalDetail}`);
-    for (const s of sessions) {
-        statuses.get(s)?.stop();
-        stallWatches.get(s)?.stop();
-        stallWatches.delete(s);
-        ledgers.delete(s);
-        statuses.delete(s);
-        randomEvents.delete(s);
-    }
-    return ok;
 }

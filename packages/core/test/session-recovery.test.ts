@@ -3,7 +3,7 @@ import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:
 import {join,resolve} from 'node:path';
 import {cachedLaunchRevision} from '../src/worker-release';
 import {beginSessionAttempt,listAttempts} from '../src/session-lifecycle';
-import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,recoverSession,validateRecoveryRequest,recoveryBoundary,recoveryHeldDiagnostic,recoveryDiagnosticFromLog,RECOVERY_SETUP_PHASES,startRecoverySessionTimer,type RecoveryRequest} from '../src/session-recovery';
+import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,recoverSession,resolveRecoveryCliLifecycleRoot,validateRecoveryRequest,recoveryBoundary,recoveryHeldDiagnostic,recoveryDiagnosticFromLog,RECOVERY_SETUP_PHASES,startRecoverySessionTimer,type RecoveryRequest} from '../src/session-recovery';
 const source='a'.repeat(64),server='localhost:8888';
 import {useScratch} from './recovery-scratch';
 const scratch=useScratch();
@@ -165,4 +165,18 @@ test('caller success cannot replace actual producer source or script provenance'
   expect(result.state).toBe('held');expect(result.failure).toBe('producer outcome not bound and confirmed');expect(result.logout).toBe('logged-out');expect(result.proof.state).toBe('confirmed');
   expect(f.counts()).toEqual({connected:1,loggedOut:1,closed:1});
  }
+});
+
+test('CLI lifecycle root matches live and fixture producer trees',()=>{
+ const repoDir=scratch('recovery-cli-root-'),fixtureDir=scratch('recovery-cli-fixture-');
+ const live=resolveRecoveryCliLifecycleRoot('rs-sdk-demo.fly.dev',repoDir,undefined,'Rod');
+ expect(live).toEqual({root:join(repoDir,'.practice','live','session-lifecycle'),overrideForConnect:false});
+ const simDefault=resolveRecoveryCliLifecycleRoot('localhost:8888',repoDir,undefined,'Rod');
+ expect(simDefault).toEqual({root:join(repoDir,'.practice','sim','session-lifecycle'),overrideForConnect:false});
+ mkdirSync(join(fixtureDir,'.practice','session-lifecycle'),{recursive:true});
+ const legacyFixture=resolveRecoveryCliLifecycleRoot('localhost:8888',repoDir,fixtureDir,'Rod');
+ expect(legacyFixture).toEqual({root:join(fixtureDir,'.practice','session-lifecycle'),overrideForConnect:true});
+ mkdirSync(join(fixtureDir,'.practice','sim','session-lifecycle'),{recursive:true});
+ const simFixture=resolveRecoveryCliLifecycleRoot('localhost:8888',repoDir,fixtureDir,'Rod');
+ expect(simFixture).toEqual({root:join(fixtureDir,'.practice','sim','session-lifecycle'),overrideForConnect:true});
 });

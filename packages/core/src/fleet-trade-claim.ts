@@ -182,7 +182,7 @@ function commitAndPushTradeClaim(root: string, git: ReturnType<typeof gitForTrad
 
 const pendingDir = (root: string) => join(root, '.practice', 'fleet-account-pending');
 const pendingPath = (root: string, nonce: string) => join(pendingDir(root), nonce + '.json');
-const lifecycleOptions = (root: string) => ({root: join(root, '.practice/session-lifecycle')});
+const lifecycleOptions = (root: string) => ({ base: root });
 const claimOwner = (root: string): ClaimOwner => ({checkout: fleetCheckoutId(root), host: hostname(), pid: process.pid});
 
 function owningCheckout(root: string, claim: FleetAccountClaim, side: string) {

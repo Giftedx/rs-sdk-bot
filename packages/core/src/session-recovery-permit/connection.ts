@@ -1,12 +1,11 @@
 // Child binding readiness wait, single-use permit consumption, and opaque connection admission tokens.
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { isLocalServer } from '../localserver';
 import { listAttempts, readLogoutProof } from '../session-lifecycle';
 import { current } from './authority';
 import {
-    RECOVERY_BINDING_MS, json, recoveryPermitPaths, same, sha,
+    RECOVERY_BINDING_MS, json, recoveryLifecycleRoot, recoveryPermitPaths, same, sha,
     type ControlledRecoveryRequest, type RecoveryPermitChecks, type RecoveryRequest,
 } from './request';
 
@@ -64,7 +63,8 @@ export function consumeRecoveryConnection(r: ControlledRecoveryRequest, base: st
     const used = readFileSync(paths.used, 'utf8');
     const guard = () => { check(true); if (readFileSync(paths.used, 'utf8') !== used) throw Error('recovery consumption marker changed'); };
     const admission: RecoveryConnectionAdmission = Object.freeze({ nonce: r.nonce });
-    const latest = readLogoutProof(r.account, r.server, { root: join(base, '.practice/session-lifecycle') }), producer = latest.state === 'held' ? listAttempts(r.account, r.server, { root: join(base, '.practice/session-lifecycle') }).find(a => a.attemptId === latest.attemptId) : undefined;
+    const lcRoot = recoveryLifecycleRoot(r.server, base, r.account);
+    const latest = readLogoutProof(r.account, r.server, { root: lcRoot }), producer = latest.state === 'held' ? listAttempts(r.account, r.server, { root: lcRoot }).find(a => a.attemptId === latest.attemptId) : undefined;
     admissions.set(admission, { request: structuredClone(r), pid: process.pid, nativeFixture: permit.nativeFixture === true, guard, spent: false, base: realpathSync(base), previous: producer?.sha256 ? { attemptId: producer.attemptId, sha256: producer.sha256 } : null });
     return { guard, admission };
 }

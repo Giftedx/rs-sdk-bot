@@ -743,18 +743,61 @@ test('a held retired producer gets a permit only from a delivery at its capabili
  }finally{rmSync(f.base,{recursive:true,force:true});}
 });
 
-test('brain fleet-state heartbeat authorizes idle accounts and rejects stale or active ones',()=>{
+test('controller swarm-state heartbeat takes precedence over stale fleet-state while enforcing fresh active checks and fallback',()=>{
  const f=fixture();
  try{
   const liveFile='.practice/live/fleet-state.json';
   const baseState={schemaVersion:1,emittedAt:now,side:'local',server:f.request.server,maxBots:17,accounts:{rod:{account:'Rod',status:'idle',lifecycle:'held_logout',activeJob:null}},activeChains:{},idleReasons:{},goals:[],campaigns:[],missions:[],pendingTransfers:[],quarantinedDefects:[]};
+  // Fresh swarm-state.json allows recovery even when fleet-state.json is stale (e.g. bounded recovery or Brain cadence lag).
+  f.put(liveFile,{...baseState,emittedAt:now-FLEET_HEARTBEAT_MAX_MS-20_000});
+  expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).not.toThrow();
+  rmSync(recoveryPermitPaths(f.request,f.base).lease);
+  rmSync(recoveryPermitPaths(f.request,f.base).permit);
+  // Fresh fleet-state.json marking the account running still rejects even when swarm-state.json says disabled.
+  f.put(liveFile,{...baseState,accounts:{rod:{account:'Rod',status:'running',lifecycle:'running',activeJob:null}}});
+  expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow('recovery fleet ownership unresolved: account-active');
+  f.put(liveFile,{...baseState,accounts:{rod:{account:'Rod',status:'running',lifecycle:'running',activeJob:{script:'scripts/x.ts'}}}});
+  expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow('recovery assignment is active or reserved');
+  // Without swarm-state.json, fleet-state.json acts as fallback heartbeat: fresh idle passes, stale rejects.
+  rmSync(join(f.base,'.practice/swarm-state.json'));
   f.put(liveFile,baseState);
   expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).not.toThrow();
   rmSync(recoveryPermitPaths(f.request,f.base).lease);
   rmSync(recoveryPermitPaths(f.request,f.base).permit);
   f.put(liveFile,{...baseState,emittedAt:now-FLEET_HEARTBEAT_MAX_MS-1});
   expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow('recovery fleet ownership unresolved: stale');
-  f.put(liveFile,{...baseState,accounts:{rod:{account:'Rod',status:'running',lifecycle:'running',activeJob:{script:'scripts/x.ts'}}}});
-  expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow('recovery assignment is active or reserved');
+ }finally{rmSync(f.base,{recursive:true,force:true});}
+});
+
+test('live recovery permit reads .practice/live/session-lifecycle and .practice/live/status without legacy dirs',()=>{
+ const f=fixture();
+ f.request.server='rs-sdk-demo.fly.dev';
+ try{
+  const liveLifecycle=join(f.base,'.practice','live','session-lifecycle');
+  const prior=beginSessionAttempt({account:'Rod',server:f.request.server},{root:liveLifecycle,now:()=>now-50_000,
+   owner:{pid:2147483647,coordinatorRunId:null,workerRelease:runner,script:'scripts/old.ts',role:'supply',participants:null}});
+  prior.record('connect-failed','fixture disconnect');
+  const opts={...f.options,pidAlive:()=>false};
+  issueRecoveryPermit(f.request,f.base,opts);
+  bindRecoveryChild(f.request,process.pid,f.base,opts);
+  const {admission}=consumeRecoveryConnection(f.request,f.base,opts);
+  expect(admission.nonce).toBe(f.request.nonce);
+  const recoveryAttempt=beginSessionAttempt({account:'Rod',server:f.request.server},{root:liveLifecycle,now:()=>now+5,
+   owner:{pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null}});
+  recoveryAttempt.record('ended','logged-out');
+  const proof=readLogoutProof('Rod',f.request.server,{root:liveLifecycle});
+  if(proof.state!=='confirmed')throw Error('expected confirmed live proof');
+  const before={player:{name:'Rod',x:1,z:2,level:0,hp:43},inventory:[{id:995,count:100}],equipment:[],skills:[],bank:null,modalOpen:false};
+  f.put('.practice/coordinator/session-recovery/accounts/rod/one/output/receipt.json',{
+   state:'confirmed',request:f.request,logout:'logged-out',failure:'',startedAt:now+5,endedAt:now+10,runnerSha256:f.runnerHash,
+   before,after:before,attemptId:recoveryAttempt.attemptId,lifecycleSha256:proof.receiptSha256,
+   scope:{gameplay:false,production:0,repairsFailure:false,qualifiesScript:false},
+  });
+  opts.now=()=>now+20;
+  expect(finishRecoveryPermit(f.request,0,f.base,opts).proof.state).toBe('confirmed');
+  f.put('.practice/live/status/Rod.json',{name:'Rod',server:f.request.server,at:proof.loggedOutAt+5000,result:''});
+  expect(recoveredSessionForRun('Rod',f.request.server,f.request.runId,source,f.base)).toBe(false);
+  f.put('.practice/live/status/Rod.json',{name:'Rod',server:f.request.server,at:proof.loggedOutAt-1000,result:'ok'});
+  expect(recoveredSessionForRun('Rod',f.request.server,f.request.runId,source,f.base)).toBe(true);
  }finally{rmSync(f.base,{recursive:true,force:true});}
 });

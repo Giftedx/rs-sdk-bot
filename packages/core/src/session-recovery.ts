@@ -4,11 +4,12 @@ import {createHash} from 'node:crypto';
 import {connectInProcess,clientTransportState,observeClientTransport,inProcessRuntimePaths,type Session} from './inprocess';
 import {logoutSession,closeWithin,serverFromEnv} from './bot';
 import {isLocalServer} from './localserver';
+import {lifecycleRootForServer} from './practice-paths';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {cachedLaunchRevision} from './worker-release';
 import {waitUntil} from './ticks';
 
-import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,validateRecoveryRequest,recoveryStatePreserved,consumeRecoveryConnection,spendRecoveryConnection,recoveryPermitPaths,waitForRecoveryChildBinding,assertNativeFixtureRoot,assertRecoveryNotStopped,FLEET_REFUSALS,type RecoveryRequest,type ControlledRecoveryRequest,type RecoveryConnectionAdmission} from './session-recovery-permit';
+import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,validateRecoveryRequest,recoveryStatePreserved,consumeRecoveryConnection,spendRecoveryConnection,recoveryLifecycleRoot,recoveryPermitPaths,waitForRecoveryChildBinding,assertNativeFixtureRoot,assertRecoveryNotStopped,FLEET_REFUSALS,type RecoveryRequest,type ControlledRecoveryRequest,type RecoveryConnectionAdmission} from './session-recovery-permit';
 export {RECOVERY_SCHEMA,RECOVERY_SCRIPT,validateRecoveryRequest,recoveryStatePreserved,type RecoveryRequest};
 const repo=resolve(import.meta.dir,'../../..');
 const sha=(raw:string|Buffer)=>createHash('sha256').update(raw).digest('hex');
@@ -255,6 +256,19 @@ export function startRecoverySessionTimer(expiresAt?:number){
  const timer=setTimeout(()=>{console.error('RECOVERY_HELD '+JSON.stringify(recoveryHeldDiagnostic(new RecoveryBoundaryError('deadline','outer-deadline'))));process.exit(1);},budget);timer.unref();
  return timer;
 }
+export function resolveRecoveryCliLifecycleRoot(
+ server:string,
+ repoBase=repo,
+ fixtureBase?:string,
+ account?:string,
+):{root:string;overrideForConnect:boolean}{
+ const defaultRoot=lifecycleRootForServer(server,repoBase);
+ if(fixtureBase){
+  const fixtureRoot=recoveryLifecycleRoot(server,fixtureBase,account);
+  return{root:fixtureRoot,overrideForConnect:resolve(fixtureRoot)!==resolve(defaultRoot)};
+ }
+ return{root:defaultRoot,overrideForConnect:false};
+}
 async function cli(){
  const requestPath=process.argv[2],out=process.argv[3];
  await recoveryBoundary('arguments',()=>{if(!requestPath||!out)throw Error('missing arguments');});
@@ -266,7 +280,7 @@ async function cli(){
  await recoveryBoundary('source',()=>{if(request.source!==cachedLaunchRevision(repo))throw Error('recovery source changed');});
  process.env.BOT_GOAL=RECOVERY_SCRIPT;process.env.BOT_ROLE='recovery';process.env.COORDINATOR_RUN_ID=request.runId;process.env.WORKER_RELEASE=request.source;delete process.env.WORKER_ENTRY;
  let guard=()=>assertRecoveryNotStopped(request.account,repo),admission:RecoveryConnectionAdmission|undefined,permitExpiresAt:number|undefined;
- let lifecycleRoot=join(repo,'.practice/session-lifecycle');
+ let resolvedLifecycle=resolveRecoveryCliLifecycleRoot(request.server,repo,undefined,request.account);
  if(controlled){
   // A fixture may own an isolated state tree only on a local server. Remote setup always uses this repository.
   const override=process.argv.find(a=>a.startsWith('--permit-base='))?.slice('--permit-base='.length);
@@ -276,7 +290,7 @@ async function cli(){
   await recoveryBoundary('child-paths',()=>{if(resolve(requestPath!)!==resolve(paths.input)||resolve(out!)!==resolve(paths.output))throw Error('recovery child paths are not controller-owned');});
   await recoveryBoundary('child-binding',()=>waitForRecoveryChildBinding(request as ControlledRecoveryRequest,base,Bun.stdin.stream()));
   const permit=await recoveryBoundary('permit-read',()=>JSON.parse(readFileSync(paths.permit,'utf8')));
-  await recoveryBoundary('fixture-root',()=>{if(permit.nativeFixture===true){assertNativeFixtureRoot(base,request.server);lifecycleRoot=join(base,'.practice/session-lifecycle');}});
+  await recoveryBoundary('fixture-root',()=>{if(permit.nativeFixture===true){assertNativeFixtureRoot(base,request.server);resolvedLifecycle=resolveRecoveryCliLifecycleRoot(request.server,repo,base,request.account);}});
   ({guard,admission}=await recoveryBoundary('permit-consumption',()=>consumeRecoveryConnection(request as ControlledRecoveryRequest,base,{source:()=>cachedLaunchRevision(repo),nativeFixture:permit.nativeFixture===true})));
   permitExpiresAt=permit.expiresAt;
  }
@@ -287,9 +301,10 @@ async function cli(){
  await recoveryBoundary('output-request',()=>{mkdirSync(out!,{recursive:true});writeFileSync(join(out!,'request.json'),JSON.stringify(request,null,2),{flag:'wx'});});
  try{console.log('RECOVERY_RUNTIME '+JSON.stringify({at:Date.now(),pid:process.pid,bun:Bun.version,runner:import.meta.path,...inProcessRuntimePaths()}));}catch{/* Observation only. */}
  const timer=startRecoverySessionTimer(permitExpiresAt);
+ const lifecycleRoot=resolvedLifecycle.root;
  const receipt=await recoveryBoundary('session',()=>recoverSession(request,{root:lifecycleRoot,guard,...(admission?{admission}:{}),
   connect:async()=>{
-   const s=await connectInProcess({name:request.account,password,server:request.server,beforeConnect:guard,recoverSwarm:admission,...(lifecycleRoot!==join(repo,'.practice/session-lifecycle')?{lifecycleRoot}:{})});
+   const s=await connectInProcess({name:request.account,password,server:request.server,beforeConnect:guard,recoverSwarm:admission,...(resolvedLifecycle.overrideForConnect?{lifecycleRoot}:{})});
    // Through cleanup and logout: client write times and lengths, never payloads.
    observeClientTransport(s.client,row=>console.log('RECOVERY_TRANSPORT '+JSON.stringify(row)),{tick:()=>s.tick()});
    return s;

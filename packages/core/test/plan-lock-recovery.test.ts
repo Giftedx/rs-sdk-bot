@@ -2,7 +2,7 @@ import {afterEach, expect, spyOn, test} from 'bun:test';
 import {existsSync, linkSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {OWNER_START_READ_EVERY_MS, recoverConcurrentPlanWrite, withPlanWrite} from '../src/plan-lock';
+import {atomicJson, OWNER_START_READ_EVERY_MS, recoverConcurrentPlanWrite, withPlanWrite} from '../src/plan-lock';
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, {recursive: true, force: true}); });
@@ -100,4 +100,24 @@ test('a delayed ticket takeover cannot remove a replacement writer admitted by a
         release?.(); await active;
         expect(existsSync(fixture.file)).toBe(false);
     } finally { release?.(); await active; }
+});
+
+test('atomicJson retries transient EPERM renames and cleans temp files on failure', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rsbot-atomic-json-'));
+    directories.push(dir);
+    const target = join(dir, 'fleet-state.json');
+    let attempts = 0;
+    atomicJson(target, { ok: true, count: 2 }, (from, to) => {
+        attempts++;
+        if (attempts <= 2) throw Object.assign(Error('transient lock'), { code: 'EPERM' });
+        renameSync(from, to);
+    });
+    expect(attempts).toBe(3);
+    expect(JSON.parse(readFileSync(target, 'utf8'))).toEqual({ ok: true, count: 2 });
+    expect(readdirSync(dir).filter(f => f.endsWith('.tmp'))).toEqual([]);
+
+    expect(() => atomicJson(target, { ok: false }, () => {
+        throw Object.assign(Error('io failure'), { code: 'EIO' });
+    })).toThrow('io failure');
+    expect(readdirSync(dir).filter(f => f.endsWith('.tmp'))).toEqual([]);
 });
