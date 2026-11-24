@@ -417,8 +417,8 @@ export class DemandEngine {
                 if (Number.isFinite(bestHours)) {
                     return Math.max(DEFAULT_MIN_DEMAND_HOURS, bestHours);
                 }
-                // Market/shop fallback: setup trip + acquisition ticks scaled modestly by quantity.
-                const fallbackTicks = 120 + Math.min(3_000, remaining * 0.25);
+                // Market/shop fallback: setup + bank + travel + buy + logout cycle scaled modestly by quantity.
+                const fallbackTicks = 450 + Math.min(3_000, remaining * 0.25);
                 return Math.max(DEFAULT_MIN_DEMAND_HOURS, fallbackTicks / TICKS_PER_HOUR);
             }
 

@@ -387,3 +387,9 @@ test('madeProgress and supervise backward line scanners inspect only the final m
  });
  expect(rOk.reason).toBe('done');
 });
+
+test('shop-buy zero-purchase stock-wait and coin-reserve failures block immediately as prerequisites', () => {
+ expect(isPrerequisiteFailure('RESULT fail ticks=35 boughtTotal=0 stop=stock-wait targetMet=0')).toBe(true);
+ expect(isPrerequisiteFailure('RESULT fail ticks=15 boughtTotal=0 stop=coin-reserve targetMet=0')).toBe(true);
+ expect(isPrerequisiteFailure('RESULT fail ticks=45 boughtTotal=5 stop=stock-wait targetMet=0')).toBe(false);
+});

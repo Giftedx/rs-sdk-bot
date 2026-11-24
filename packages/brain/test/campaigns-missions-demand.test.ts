@@ -589,4 +589,59 @@ describe('Campaigns, Missions & DemandEngine', () => {
         // 200 sharks at 0.1/tick -> >2000 ticks (>0.2h), not skewed by the experimental 10/tick entry.
         expect(estHours).toBeGreaterThan(0.2);
     });
+
+    test('missionShortfalls designates deficit participant as target.holder and market fallback uses realistic >= 450 tick timing', () => {
+        const alpha = makeAccount('Alpha', {
+            role: 'army',
+            bank: { items: { 385: 15 }, observedAt: NOW - 1000, trusted: true },
+        });
+        const beta = makeAccount('Beta', {
+            role: 'army',
+            bank: { items: {}, observedAt: NOW - 1000, trusted: true },
+        });
+        const mission: Mission = {
+            id: 'mission:pk-holder-test',
+            participants: ['Alpha', 'Beta'],
+            state: 'staging',
+            kitTargets: [],
+            consumables: [{ itemId: 385, itemName: 'Shark', countPerParticipant: 10 }],
+            weight: 1.0,
+        };
+        const snap = makeSnapshot({ Alpha: alpha, Beta: beta });
+        const evalRes = missionShortfalls(mission, snap);
+        expect(evalRes.shortfalls).toHaveLength(1);
+        const sharkDemand = evalRes.shortfalls[0]!;
+        expect(sharkDemand.remaining).toBe(5);
+        expect(sharkDemand.fulfilled).toBe(15);
+        expect(sharkDemand.target.kind === 'item' && sharkDemand.target.holder).toBe('Beta');
+
+        const emptyCatalog: ActivityCatalog = {
+            get: () => undefined,
+            require: (id) => {
+                throw new Error(id);
+            },
+            has: () => false,
+            list: () => [],
+            byFamily: () => [],
+            byWorkerKind: () => [],
+            findByOutputItem: () => [],
+            findBySkill: () => [],
+            findByQuest: () => [],
+            size: () => 0,
+        };
+        const engine = createDemandEngine({ catalog: emptyCatalog, campaigns: [], missions: [] });
+        const unproducibleItemDemand = {
+            id: 'd:market-fallback',
+            goalKind: 'main_supply' as const,
+            valueScore: 100,
+            target: { kind: 'item' as const, itemId: 1317, itemName: 'Adamant 2h sword', count: 1 },
+            fulfilled: 0,
+            remaining: 1,
+            priorityWeight: 1,
+            active: true,
+        };
+        const hours = engine.estimateEndToEndHours(unproducibleItemDemand, snap);
+        // 450+ ticks at 400ms/tick = >= 0.05 hours (prevents 4x inflation over quests/combat).
+        expect(hours).toBeGreaterThanOrEqual(0.05);
+    });
 });

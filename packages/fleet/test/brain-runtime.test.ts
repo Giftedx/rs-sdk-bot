@@ -1064,4 +1064,77 @@ describe('packages/fleet/src/brain-runtime', () => {
         );
         expect(badHubRes).toEqual({ written: [], skipped: ['xfer-bad-hub'] });
     });
+
+    test('extractWorkerOutcomeInput attaches marketItemId/marketVenue only on failed market-unavailable runs and forwards skipRateSample', () => {
+        const root = makeTempRoot();
+        const now = 1_700_003_000_000;
+
+        const failedShop = extractWorkerOutcomeInput({
+            root,
+            account: 'AlphaBot',
+            activityId: 'market:shop-buy',
+            startedAt: now - 10_000,
+            finishedAt: now,
+            exitCode: 1,
+            endReason: 'blocked after 1 runs',
+            successful: false,
+            lastResultLine: 'RESULT fail ticks=30 boughtTotal=0 stop=stock-wait targetMet=0',
+            logPath: 'alpha.log',
+            marketItemId: 1317,
+            marketVenue: 'shop:taverley2hand',
+        });
+        expect(failedShop.marketItemId).toBe(1317);
+        expect(failedShop.marketVenue).toBe('shop:taverley2hand');
+
+        const okShop = extractWorkerOutcomeInput({
+            root,
+            account: 'AlphaBot',
+            activityId: 'market:shop-buy',
+            startedAt: now - 10_000,
+            finishedAt: now,
+            exitCode: 0,
+            endReason: 'done after 1 runs',
+            successful: true,
+            lastResultLine: 'RESULT ok boughtTotal=5 stop=item-cap',
+            logPath: 'alpha.log',
+            marketItemId: 1317,
+            marketVenue: 'shop:taverley2hand',
+        });
+        expect(okShop.marketItemId).toBeUndefined();
+        expect(okShop.marketVenue).toBeUndefined();
+
+        mkdirSync(liveStatusDir(root), { recursive: true });
+        writeFileSync(
+            join(liveStatusDir(root), 'AlphaBot.json'),
+            JSON.stringify({
+                name: 'AlphaBot',
+                server: 'rs-sdk-demo.fly.dev',
+                started: now - 10_000,
+                at: now - 1_000,
+                tick: 100,
+                counters: { units: 20 },
+                result: 'ok done',
+            }),
+        );
+        const chainRaw = extractWorkerOutcomeInput({
+            root,
+            account: 'AlphaBot',
+            activityId: 'gather:woodcutting-fresh45',
+            startedAt: now - 10_000,
+            finishedAt: now,
+            exitCode: 0,
+            endReason: 'done after 1 runs',
+            successful: true,
+            logPath: 'alpha.log',
+            skipRateSample: true,
+        });
+        expect(chainRaw.skipRateSample).toBe(true);
+        expect(chainRaw.ticksElapsed).toBe(100);
+        expect(chainRaw.unitsCompleted).toBe(20);
+        const rateStore = createRateStore({ catalog: defaultActivityCatalog(), root, minSamplesToOverride: 1, minTicksToOverride: 10 });
+        const classifier = new OutcomeClassifier({ rateStore, root });
+        const out = recordWorkerOutcome({ root, catalog: defaultActivityCatalog(), rateStore, classifier, raw: chainRaw, now });
+        expect(out.outcome.kind).toBe('target_met');
+        expect(out.recordedRateSample).toBeUndefined();
+    });
 });

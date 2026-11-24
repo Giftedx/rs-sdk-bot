@@ -458,3 +458,42 @@ test('excludedMarketVenues skips allocated NPC shop and GE venues per item', () 
     );
     expect(bothExcluded.ok).toBe(false);
 });
+
+test('AcquireItem hub_banker allowPartial consolidates largest partial surplus while default still requires full quantity', () => {
+    const recip = makeAcct({
+        name: 'HolderBot',
+        bank: { items: { 995: 1_000 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const donorSmall = makeAcct({
+        name: 'DonorSmall',
+        bank: { items: { 385: 30, 995: 1_000 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const donorLarge = makeAcct({
+        name: 'DonorLarge',
+        bank: { items: { 385: 75, 995: 1_000 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { HolderBot: recip, DonorSmall: donorSmall, DonorLarge: donorLarge },
+    };
+
+    const strictRes = resolveAcquireItem(
+        recip,
+        { itemId: 385, quantity: 200, allowOwnBank: false, allowedSources: ['hub_banker'] },
+        { world },
+    );
+    expect(strictRes.ok).toBe(false);
+
+    const partialRes = resolveAcquireItem(
+        recip,
+        { itemId: 385, quantity: 200, allowOwnBank: false, allowedSources: ['hub_banker'], allowPartial: true },
+        { world },
+    );
+    expect(partialRes.ok).toBe(true);
+    expect(partialRes.step?.source).toBe('hub_banker');
+    expect(partialRes.step?.donorAccount).toBe('DonorLarge');
+    expect(partialRes.step?.quantity).toBe(75);
+});

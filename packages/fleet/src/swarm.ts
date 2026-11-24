@@ -77,6 +77,10 @@ export type Job = {
     foodSourceAccounts?: string[];
     sourceFoodMinimum?: number;
     activityId?: string;
+    outcomeActivityId?: string;
+    isMultiStepChain?: boolean;
+    marketItemId?: number;
+    marketVenue?: string;
     demandId?: string;
 };
 
@@ -91,6 +95,10 @@ type Run = {
     log: string;
     offset: number;
     activityId?: string;
+    outcomeActivityId?: string;
+    isMultiStepChain?: boolean;
+    marketItemId?: number;
+    marketVenue?: string;
     demandId?: string;
     workerRelease?: string;
     baseline?: RunTelemetryBaseline;
@@ -109,6 +117,8 @@ export type SelectedBrainDispatch =
           readonly displayActivityId?: string;
           readonly attributedActivityId?: string;
           readonly isMultiStepChain: boolean;
+          readonly marketItemId?: number;
+          readonly marketVenue?: string;
       };
 
 export function selectBrainDispatchStep(
@@ -144,12 +154,34 @@ export function selectBrainDispatchStep(
         : (firstActivityStep && 'activityId' in firstActivityStep ? firstActivityStep.activityId : firstStepActivityId);
     const attributedActivityId = !isMultiStepChain ? firstStepActivityId : undefined;
 
+    let marketItemId: number | undefined;
+    let marketVenue: string | undefined;
+    const marketIdx = execSteps.findIndex((s) => s.family === 'market');
+    if (marketIdx >= 0) {
+        const marketExec = execSteps[marketIdx]!;
+        const marketRoute = dispatched.route?.steps?.[marketIdx];
+        const rawItemId = marketRoute?.config?.itemId ?? Number(marketExec.step.env?.ITEM_ID);
+        if (Number.isSafeInteger(rawItemId)) {
+            const mode = marketRoute?.config?.mode ?? marketExec.step.args[0];
+            const shopId = marketRoute?.config?.shopId ?? marketExec.step.args[1];
+            if (mode === 'shop-buy' && typeof shopId === 'string' && shopId.length > 0) {
+                marketItemId = Number(rawItemId);
+                marketVenue = `shop:${shopId}`;
+            } else if (mode === 'ge-buy') {
+                marketItemId = Number(rawItemId);
+                marketVenue = 'ge';
+            }
+        }
+    }
+
     return {
         mode: 'worker',
         step,
         ...(displayActivityId ? { displayActivityId } : {}),
         ...(attributedActivityId ? { attributedActivityId } : {}),
         isMultiStepChain,
+        ...(marketItemId !== undefined ? { marketItemId } : {}),
+        ...(marketVenue ? { marketVenue } : {}),
     };
 }
 
@@ -1284,12 +1316,13 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     const own = ends.get(account)!;
                     const diedRun = /^died\b/i.test(own);
                     let keepEnded = true;
-                    if (run.activityId && run.accounts.length === 1) {
+                    const outcomeActId = run.activityId ?? run.outcomeActivityId;
+                    if (outcomeActId && run.accounts.length === 1) {
                         try {
                             const raw = extractWorkerOutcomeInput({
                                 root,
                                 account,
-                                activityId: run.activityId,
+                                activityId: outcomeActId,
                                 server: LIVE_SERVER,
                                 startedAt: run.started,
                                 finishedAt: Date.now(),
@@ -1301,6 +1334,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                                 logPath: run.log,
                                 workerRelease: run.workerRelease,
                                 baseline: run.baseline,
+                                ...(run.isMultiStepChain ? { skipRateSample: true } : {}),
+                                ...(run.marketItemId !== undefined ? { marketItemId: run.marketItemId } : {}),
+                                ...(run.marketVenue ? { marketVenue: run.marketVenue } : {}),
                             });
                             const outcomeRes = recordWorkerOutcome({
                                 root, catalog, rateStore, classifier, domain: 'live',
@@ -1390,6 +1426,10 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         const run: Run = {
             pid: child.pid, started: Date.now(), accounts, revision, host: p.host, log: logPath, offset,
             ...(job.activityId ? { activityId: job.activityId } : {}),
+            ...(job.outcomeActivityId ? { outcomeActivityId: job.outcomeActivityId } : {}),
+            ...(job.isMultiStepChain ? { isMultiStepChain: true } : {}),
+            ...(job.marketItemId !== undefined ? { marketItemId: job.marketItemId } : {}),
+            ...(job.marketVenue ? { marketVenue: job.marketVenue } : {}),
             ...(job.demandId ? { demandId: job.demandId } : {}),
             ...(workRelease ? { workerRelease: workRelease } : {}),
             ...(baseline ? { baseline } : {}),
@@ -1474,7 +1514,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     for (const run of runs.values()) {
                         for (const acct of run.accounts) {
                             activeMap.set(acct.toLowerCase(), {
-                                activityId: run.activityId ?? 'hand:swarm',
+                                activityId: run.activityId ?? run.outcomeActivityId ?? 'hand:swarm',
                                 demandId: run.demandId ?? 'hand:swarm',
                                 startedAt: run.started,
                             });
@@ -1528,6 +1568,11 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         }
                         if (selected.mode !== 'worker') continue;
                         brainDispatchedAccounts.add(acctName.toLowerCase());
+                        const isFiniteBrainJob = selected.isMultiStepChain
+                            || selected.step.script === 'scripts/aio-market.ts'
+                            || selected.step.script === 'scripts/aio-quester.ts'
+                            || (selected.step.script === 'scripts/aio-logistics.ts' && selected.step.args[0] === 'walk-to');
+                        const outcomeActivityId = selected.displayActivityId ?? selected.attributedActivityId;
                         combinedJobs.push({
                             account: acctName,
                             script: selected.step.script,
@@ -1539,9 +1584,14 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             },
                             enabled: true,
                             repeat: true,
+                            ...(isFiniteBrainJob ? { maxRestarts: 2 } : {}),
                             role: acctState?.role,
                             goal: dispatched.demandId ?? selected.displayActivityId,
                             ...(selected.attributedActivityId ? { activityId: selected.attributedActivityId } : {}),
+                            ...(outcomeActivityId ? { outcomeActivityId } : {}),
+                            ...(selected.isMultiStepChain ? { isMultiStepChain: true } : {}),
+                            ...(selected.marketItemId !== undefined ? { marketItemId: selected.marketItemId } : {}),
+                            ...(selected.marketVenue ? { marketVenue: selected.marketVenue } : {}),
                             ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
                         });
                     }

@@ -991,6 +991,9 @@ export function extractWorkerOutcomeInput(params: {
     readonly logPath: string;
     readonly workerRelease?: string;
     readonly baseline?: RunTelemetryBaseline | null;
+    readonly marketItemId?: number;
+    readonly marketVenue?: string;
+    readonly skipRateSample?: boolean;
 }): RawWorkerExitInput {
     const server = params.server ?? DEFAULT_LIVE_SERVER;
     const status = readAccountStatusFile(params.root, params.account, server);
@@ -1054,6 +1057,11 @@ export function extractWorkerOutcomeInput(params: {
     ].filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
     const stdout = stdoutParts.length > 0 ? stdoutParts.join('\n') : undefined;
     const died = params.died === true || /^died\b/i.test(params.endReason);
+    const signalText = [params.endReason, stdout].filter(Boolean).join('\n');
+    const isMarketUnavailable =
+        !params.successful
+        && !died
+        && /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here|\bboughtTotal=0\b[\s\S]*\bstop=stock-wait\b|\bstop=stock-wait\b[\s\S]*\bboughtTotal=0\b/i.test(signalText);
 
     return {
         activityId: params.activityId,
@@ -1069,6 +1077,9 @@ export function extractWorkerOutcomeInput(params: {
         ...(pos ? { pos } : {}),
         ...(stdout ? { stdout } : {}),
         ...(died ? { died: true } : {}),
+        ...(isMarketUnavailable && params.marketItemId !== undefined ? { marketItemId: params.marketItemId } : {}),
+        ...(isMarketUnavailable && params.marketVenue ? { marketVenue: params.marketVenue } : {}),
+        ...(params.skipRateSample ? { skipRateSample: true } : {}),
         logPath: params.logPath,
     };
 }

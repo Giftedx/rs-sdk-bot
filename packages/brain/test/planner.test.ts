@@ -1198,3 +1198,135 @@ test('planAccount evaluates gear upgrade and band XP for the selected combat_rea
     });
     expect(rejectedOutlier.steps).toHaveLength(0);
 });
+
+test('planner prevents stagingHolder over-buying, lets holder consolidate partial/full surplus, and scores nearby market buyers higher', () => {
+    const geAct: ActivityDefinition = {
+        id: 'market:ge-buy',
+        workerId: 'market',
+        family: 'market',
+        kind: 'ge_buy',
+        label: 'Buy on GE',
+        location: { x: 3164, z: 3487, level: 0 },
+        config: { mode: 'ge-buy' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 4, gpPerTick: 0, setupTicks: 30, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const holder = makeAcct({
+        name: 'StageHolder',
+        role: 'helper',
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: {},
+        bank: { items: {}, observedAt: NOW - 1_000, trusted: true },
+    });
+    const nonHolder = makeAcct({
+        name: 'RichHelper',
+        role: 'helper',
+        pos: { x: 3164, z: 3487, level: 0 },
+        inventory: { 995: 500_000 },
+        bank: { items: { 995: 500_000 }, observedAt: NOW - 1_000, trusted: true },
+    });
+    const donor = makeAcct({
+        name: 'StockDonor',
+        role: 'helper',
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: {},
+        bank: { items: { 536: 200, 995: 2_000 }, observedAt: NOW - 1_000, trusted: true },
+    });
+    const fullSupplyDemand: GoalDemand = {
+        id: 'campaign:hiltsdeep:item:536',
+        goalKind: 'specialist_prep',
+        valueScore: 500,
+        valuePerHour: 2_000,
+        target: { kind: 'item', itemId: 536, itemName: 'Dragon bones', count: 200, holder: 'StageHolder' },
+        fulfilled: 0,
+        remaining: 200,
+        priorityWeight: 1,
+        active: true,
+    };
+    const worldFull: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { StageHolder: holder, RichHelper: nonHolder, StockDonor: donor },
+    };
+    const quotes = { 536: { ask: 2000, sell: 1800, trades: 20 } };
+
+    // Fleet non-holder surplus already covers 200 -> RichHelper must not over-buy; StageHolder consolidates via hub_banker even with 0 gp.
+    const nonHolderFullPlan = planAccount(nonHolder, {
+        world: worldFull,
+        activities: [geAct],
+        demands: [fullSupplyDemand],
+        marketQuotes: quotes,
+    });
+    expect(nonHolderFullPlan.steps).toHaveLength(0);
+
+    const holderPlan = planAccount(holder, {
+        world: worldFull,
+        activities: [geAct],
+        demands: [fullSupplyDemand],
+        marketQuotes: quotes,
+    });
+    expect(holderPlan.steps).toHaveLength(1);
+    expect(holderPlan.steps[0]?.stepKind).toBe('acquire');
+    if (holderPlan.steps[0]?.stepKind === 'acquire') {
+        expect(holderPlan.steps[0].source).toBe('hub_banker');
+        expect(holderPlan.steps[0].donorAccount).toBe('StockDonor');
+        expect(holderPlan.steps[0].quantity).toBe(200);
+    }
+
+    // Partial non-holder surplus (60 of 200) -> RichHelper caps purchase to remaining 140; StageHolder consolidates 60.
+    const worldPartial: WorldSnapshot = {
+        ...worldFull,
+        accounts: {
+            ...worldFull.accounts,
+            StockDonor: { ...donor, bank: { items: { 536: 60, 995: 2_000 }, observedAt: NOW - 1_000, trusted: true } },
+        },
+    };
+    const nonHolderPartialPlan = planAccount(nonHolder, {
+        world: worldPartial,
+        activities: [geAct],
+        demands: [fullSupplyDemand],
+        marketQuotes: quotes,
+    });
+    expect(nonHolderPartialPlan.steps).toHaveLength(1);
+    if (nonHolderPartialPlan.steps[0]?.stepKind === 'work') {
+        expect(nonHolderPartialPlan.steps[0].batchUnits).toBe(140);
+    }
+
+    // Travel-aware market scoring: buyer near GE beats distant buyer at Ardougne.
+    const nearBuyer = makeAcct({
+        name: 'NearGe',
+        pos: { x: 3164, z: 3487, level: 0 },
+        bank: { items: { 995: 500_000 }, observedAt: NOW - 1_000, trusted: true },
+    });
+    const farBuyer = makeAcct({
+        name: 'FarArdy',
+        pos: { x: 2655, z: 3283, level: 0 },
+        bank: { items: { 995: 500_000 }, observedAt: NOW - 1_000, trusted: true },
+    });
+    const unheldDemand: GoalDemand = {
+        id: 'd:unheld',
+        goalKind: 'main_supply',
+        valueScore: 500,
+        valuePerHour: 2_000,
+        target: { kind: 'item', itemId: 536, itemName: 'Dragon bones', count: 100 },
+        fulfilled: 0,
+        remaining: 100,
+        priorityWeight: 1,
+        active: true,
+    };
+    const nearPlan = planAccount(nearBuyer, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { NearGe: nearBuyer } },
+        activities: [geAct],
+        demands: [unheldDemand],
+        marketQuotes: quotes,
+    });
+    const farPlan = planAccount(farBuyer, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { FarArdy: farBuyer } },
+        activities: [geAct],
+        demands: [unheldDemand],
+        marketQuotes: quotes,
+    });
+    expect(nearPlan.scorePerHour).toBeGreaterThan(farPlan.scorePerHour);
+});
