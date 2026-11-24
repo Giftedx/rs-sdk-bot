@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795561937918-1",
+ "role": "from",
+ "account": "Bigchopper",
+ "partner": "BoneToPick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795562066960,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

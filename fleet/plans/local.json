@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562016629,
+ "at": 1795562133582,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -37,31 +37,55 @@
    "role": "army"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1022 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1022 -- ge-buy",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Unsheathed BATCH_UNITS=250 -- giant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
-   "role": "army"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/generated/quest-death.ts",
+   "account": "UnderMyKilt",
+   "script": "scripts/generated/quest-magearena.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:death",
+    "DEMAND_ID": "goal:quest_board:magearena",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:death",
+   "goal": "goal:quest_board:magearena",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/generated/quest-tree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:tree",
+   "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/generated/quest-priestperil.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:priestperil",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:priestperil",
+   "role": "auto"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/generated/quest-squire.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:squire",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:squire",
    "role": "auto"
   },
   {
@@ -82,6 +106,24 @@
    "resources": [
     "blood-chest"
    ]
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "trip"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Woodenstaff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
   }
  ],
  "army": [
@@ -112,12 +154,10 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "undermykilt",
   "woodpecker",
   "yewfirst"
  ],
