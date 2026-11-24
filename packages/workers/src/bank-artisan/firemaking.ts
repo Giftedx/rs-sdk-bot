@@ -88,6 +88,7 @@ export interface FiremakingOptions {
     batch?: number;
     burnOnly?: boolean;
     clearPack?: boolean;
+    stop?: () => boolean;
 }
 
 export function firemakingOptions(env: Record<string, string | undefined> = process.env): FiremakingOptions {
@@ -234,7 +235,7 @@ export async function runFiremaking(s: Session, o: FiremakingOptions, selectedSi
                 || now.level !== plane
                 || (original.sdk.getSkill('Hitpoints')?.level ?? 0) < initialHP
                 || original.tick() - start >= o.cap
-                || productionStopRequested(original.name)
+                || productionStopRequested(original.name, o.stop)
             ) {
                 throw Error('firemaking original owner/life/HP/stop/budget unavailable');
             }
@@ -283,7 +284,7 @@ export async function runFiremaking(s: Session, o: FiremakingOptions, selectedSi
     );
     const live = () => {
         if (guarded) continuation();
-        if (ended) throw Error('session interrupted');
+        if (ended || productionStopRequested(s.name, o.stop)) throw Error('session interrupted');
         if (hp() <= 0) throw Error('died');
     };
     const r = {
@@ -320,7 +321,7 @@ export async function runFiremaking(s: Session, o: FiremakingOptions, selectedSi
     fresh(/$^/);
     const walk = async (points: PathPoint[], label: string, maxTicks = 400) => {
         live();
-        const w = await walkPath(await sessionWalker(s), points, { maxTicks, stop: () => ended || hp() <= 0 });
+        const w = await walkPath(await sessionWalker(s), points, { maxTicks, stop: () => ended || hp() <= 0 || productionStopRequested(s.name, o.stop) });
         live();
         const p = pos();
         const goal = points.at(-1)!;
@@ -364,7 +365,7 @@ export async function runFiremaking(s: Session, o: FiremakingOptions, selectedSi
             if (plan.cost > budget) throw new Refusal(`route to ${site.name} bank estimates ${plan.cost} ticks, entry budget ${budget}`);
             console.log('FIREMAKING_ENTRY ' + JSON.stringify({ tick: s.tick(), from, cost: plan.cost, budget, legs: plan.legs.length, fares: 0 }));
             const ac = new AbortController();
-            const stop = () => { if (ended || hp() <= 0 || s.tick() - began >= budget) ac.abort('bank entry stopped or tick budget reached'); };
+            const stop = () => { if (ended || hp() <= 0 || productionStopRequested(s.name, o.stop) || s.tick() - began >= budget) ac.abort('bank entry stopped or tick budget reached'); };
             const unwatch = s.onTick(stop);
             stop();
             try {
@@ -1023,8 +1024,9 @@ export async function runFiremakingCli(
         try {
             if (!account || !/^[a-z0-9]{1,12}$/i.test(account)) throw Error('usage: firemaking:order <account>');
             const o = firemakingOptions(env);
-            s = await openBot(account);
-            const r = await runFiremaking(s, o);
+            let stopped = false;
+            s = await openBot(account, { onStop: async () => { stopped = true; } });
+            const r = await runFiremaking(s, { ...o, stop: () => stopped || !!stopFlag?.() });
             console.log('FIREMAKING_ORDER_RESULT ' + JSON.stringify(r));
             await finish([s], r.ok, `firemaking-order stop=${r.stop} level=${r.level} target=${r.target} logs=${r.logsBurnt} xp=${r.xpGained}${r.refused ? ` refused: ${r.refused}` : ''}${r.failure ? ` failure: ${r.failure}` : ''}`);
             return r.ok ? 0 : 1;

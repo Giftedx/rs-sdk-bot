@@ -495,4 +495,43 @@ describe('scripts/aio-market.ts shim and resolveMarketStep', () => {
         validateRunOutcome(endedOut);
         expect(endedOut.kind).toBe('session_unsettled');
     });
+
+    test('shop-buy preflight matches literal item names containing regex metacharacters and market stops honor shared helper', async () => {
+        const { saleStopRequested, buyListStop, geTripStop } = await import('../src/market');
+        const { selectItems } = await import('../src/market/preflight');
+        const waterskinItems = [
+            { id: 1823, re: /^waterskin\(4\)$/i },
+            { id: 1831, re: /^waterskin\(0\)$/i },
+            { id: 2434, re: /^prayer potion\(4\)$/i },
+        ];
+        expect(selectItems(waterskinItems, '^Waterskin\\(4\\)$').map(i => i.id)).toEqual([1823]);
+        expect(selectItems(waterskinItems, 'Waterskin\\(4\\)').map(i => i.id)).toEqual([1823]);
+        expect(selectItems(waterskinItems, 'Waterskin(4)').map(i => i.id)).toEqual([1823]);
+        expect(selectItems(waterskinItems, 'Prayer potion\\\\?\\(4\\\\?\\)').map(i => i.id)).toEqual([2434]);
+        expect(selectItems(waterskinItems, '^Waterskin\\(0\\)$').map(i => i.id)).toEqual([1831]);
+
+        const acct = makeAccount({ bank: { items: { 995: 50_000 }, observedAt: 1, trusted: true } });
+        const world = makeWorld(acct);
+        const waterskinCfg = {
+            mode: 'shop-buy',
+            shopId: 'shantay',
+            itemId: 1823, // Waterskin(4)
+            quantity: 5,
+        } as unknown as MarketConfig;
+        const pre = preflightMarket(acct, waterskinCfg, world);
+        expect(pre.ok).toBe(true);
+
+        const prevStopFile = process.env.STOP_FILE;
+        process.env.STOP_FILE = '.practice/stop-market-test';
+        try {
+            const exists = (p: string) => p.replace(/\\/g, '/').endsWith('.practice/stop-market-test');
+            expect(saleStopRequested('Trader', exists)).toBe(true);
+            expect(buyListStop('Trader', false, exists)).toBe(true);
+            expect(geTripStop('Trader', false, exists)).toBe(true);
+        } finally {
+            if (prevStopFile === undefined) delete process.env.STOP_FILE;
+            else process.env.STOP_FILE = prevStopFile;
+        }
+        expect(saleStopRequested('MixedTrader', p => p.replace(/\\/g, '/').endsWith('.practice/stop-mixedtrader'))).toBe(true);
+    });
 });

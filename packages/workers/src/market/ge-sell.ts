@@ -1,9 +1,9 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
 import { waitUntil } from '../../../core/src/ticks';
 import type { GEOffer } from '../../../../vendor/rs-sdk/sdk/ge-types';
+import { isStopFilePresent } from '../stop';
 import { collectClaim, marketEntryFailure, marketTileSafe, orderItemMatcher } from './ge-common';
 import { marketProgress } from './market-progress';
 import { getGeItemCatalogue, validateSale } from './preflight';
@@ -389,5 +389,5 @@ export async function runBankBidSale(
 }
 
 export function saleStopRequested(actor: string, exists: (path: string) => boolean = existsSync) {
-    return exists(resolve('.practice', 'stop-' + actor)) || exists(resolve('.practice', 'stop-all'));
+    return isStopFilePresent(actor, [], exists);
 }

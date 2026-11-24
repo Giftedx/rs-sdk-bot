@@ -13,6 +13,7 @@
 //   bun scripts/aio.ts <category> <account> <method|target|mode|quest|role> [args...] [KEY=value...]
 import {existsSync} from 'node:fs';
 import {join,resolve} from 'node:path';
+import {isStopFilePresent} from '../packages/workers/src/stop';
 import {runChild,runDirectChild} from '../packages/core/src/run-child';
 import {formatStep,tokenizeStep,runChainSteps,type Step} from '../packages/core/src/chain-step';
 import {SKILLER_ROUTES,skillerCatalogSummary,resolveSkillerStep,planProgressiveSkiller,discoverBankedProduction} from './aio-skiller';
@@ -348,16 +349,23 @@ export function recommendNextAioJob(account: Parameters<typeof recommendAuthored
  return recommendAuthoredAioJob(account, goal);
 }
 
+const AIO_DEFAULT_ROOT = resolve(import.meta.dir, '..');
+
 export async function runAioPipeline(
  account: string,
  specs: readonly string[],
  rounds = 1,
  env: Record<string, string | undefined> = process.env,
- root = resolve(import.meta.dir, '..'),
+ root = AIO_DEFAULT_ROOT,
 ): Promise<string> {
  if (!account) throw Error('aio pipeline requires account');
  const steps = planAioPipeline(specs);
- const stopped = () => existsSync(join(root, '.practice', `stop-${account}`)) || existsSync(join(root, '.practice', 'stop-all'));
+ const stopped = () => root === AIO_DEFAULT_ROOT
+  ? isStopFilePresent(account)
+  : existsSync(join(root, '.practice', `stop-${account}`))
+   || existsSync(join(root, '.practice', `stop-${account.toLowerCase()}`))
+   || existsSync(join(root, '.practice', 'stop-all'))
+   || Boolean(env.STOP_FILE && existsSync(join(root, env.STOP_FILE)));
  return runChainSteps(steps, rounds, {
   stopped,
   log: console.log,

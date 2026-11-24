@@ -9,6 +9,7 @@ import { expandPath, goTo, sessionWalker, walkPath } from '../../../core/src/wal
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import type { NearbyLoc } from '../../../../vendor/rs-sdk/sdk/types';
 import { defaultApproach, defaultWalkTargetPersist, productionStopRequested } from './runtime';
+import { isStopFilePresent } from '../stop';
 import {
     type ShopRetryGate,
     WOODCUTTING_AXES_DESC,
@@ -453,6 +454,7 @@ export async function runWoodSupply(
     headless: number,
     cap: number,
     deps?: GatherExternalDeps,
+    callerStop: () => boolean = () => false,
 ) {
     const plan = supplyPlan(logs, headless, cap);
     const start = s.tick();
@@ -483,7 +485,9 @@ export async function runWoodSupply(
         }
         hpMin = Math.min(hpMin, now);
     });
-    const stop = () => existsSync('.practice/stop-' + s.name);
+    let ended = false;
+    void s.ended?.then(() => { ended = true; });
+    const stop = () => ended || productionStopRequested(s.name, callerStop);
     const held = (id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
     // Damage latches: a later heal does not clear it. Every guard reads halt().
     const halt = () =>
@@ -1670,9 +1674,12 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
 // ---------------------------------------------------------------------------
 // 4. Lumbridge Basic Chop + Drop Loop (`woodcutting:loop`)
 // ---------------------------------------------------------------------------
-export async function runWcLoop(s: Session): Promise<GatherOutcome> {
+export async function runWcLoop(s: Session, callerStop: () => boolean = () => false, cap = 400): Promise<GatherOutcome> {
     const t0 = Date.now();
     const startTick = s.tick();
+    let ended = false;
+    void s.ended?.then(() => { ended = true; });
+    const isStopped = () => ended || productionStopRequested(s.name, callerStop);
     const xp0 = s.sdk.getSkillXp('Woodcutting') ?? 0;
     const levels = readSkillLevels(s.sdk);
     const inv = s.sdk.getInventory();
@@ -1686,21 +1693,30 @@ export async function runWcLoop(s: Session): Promise<GatherOutcome> {
         }
     }
     let chops = 0;
+    let stoppedEarly = false;
     for (let i = 0; i < 8; i++) {
+        if (isStopped() || s.tick() - startTick >= cap) {
+            stoppedEarly = true;
+            break;
+        }
         const r = await s.bot.chopTree(/^tree$/i);
         if (r.success) chops++;
         else console.log(`chop ${i + 1} failed: ${r.message ?? ''}`);
+        if (isStopped()) {
+            stoppedEarly = true;
+            break;
+        }
         await s.bot.dropItem(/logs/i, 'all');
     }
     const xp1 = s.sdk.getSkillXp('Woodcutting') ?? 0;
     const line = `RESULT chops=${chops} wcXpGained=${xp1 - xp0} seconds=${((Date.now() - t0) / 1000).toFixed(1)}`;
     console.log(line);
     return {
-        ok: true,
-        kind: 'completed',
-        detail: line,
+        ok: !stoppedEarly,
+        kind: stoppedEarly ? 'aborted' : 'completed',
+        detail: stoppedEarly ? 'woodcutting loop stopped or cap reached' : line,
         delta: { xp: { Woodcutting: xp1 - xp0 }, elapsedTicks: s.tick() - startTick },
-        recoverable: false,
+        recoverable: stoppedEarly,
         summary: { chops, wcXpGained: xp1 - xp0 },
         resultLine: line,
     };
@@ -1733,7 +1749,7 @@ export async function runWoodcuttingSession(
             const logs = Number(resolveSetting(cfg, 'SUPPLY_LOGS') ?? cfg.target?.count ?? 1);
             const headless = Number(resolveSetting(cfg, 'SUPPLY_HEADLESS') ?? 0);
             const cap = cfg.target?.capTicks ?? Number(resolveSetting(cfg, 'CAP') ?? 1000);
-            const r = await runWoodSupply(s, logs, headless, cap, cfg.deps);
+            const r = await runWoodSupply(s, logs, headless, cap, cfg.deps, stop);
             const line = `woodcut-supply ok=${r.ok} gathered=${r.gathered} ticks=${r.ticks}`;
             return {
                 ok: r.ok,
@@ -1748,7 +1764,7 @@ export async function runWoodcuttingSession(
         case 'yews':
             return runYewsGather(s, cfg, stop);
         case 'loop':
-            return runWcLoop(s);
+            return runWcLoop(s, stop, cfg.target?.capTicks ?? 400);
         default:
             return {
                 ok: false,
@@ -1765,7 +1781,7 @@ export async function runWoodcuttingCli(account: string, cfg: NormalizedGatherCo
         if (!/^[a-z0-9]{1,12}$/i.test(account)) {
             throw Error('Usage: edgeville woodcutting requires valid <account>');
         }
-        const stopped = () => existsSync('.practice/stop-all') || existsSync('.practice/stop-' + account);
+        const stopped = () => isStopFilePresent(account);
         let session: Session | undefined;
         let failure: string | undefined;
         try {
@@ -1796,14 +1812,23 @@ export async function runWoodcuttingCli(account: string, cfg: NormalizedGatherCo
     }
 
     let stopped = false;
-    const s = await openBot(account, {
-        onStop: (session, reason) => {
-            stopped = true;
-            return finish([session], false, reason);
-        },
-    }).catch(e => finish([], false, `login: ${String(e)}`));
+    let s: Session | undefined;
     try {
-        const outcome = await runWoodcuttingSession(s, cfg, () => stopped);
+        s = await openBot(account, {
+            onStop: (session, reason) => {
+                stopped = true;
+                return finish([session], false, reason);
+            },
+            onSessionEnd: async () => {
+                stopped = true;
+            },
+        });
+    } catch (e) {
+        await finish([], false, `login: ${String(e)}`);
+        return 1;
+    }
+    try {
+        const outcome = await runWoodcuttingSession(s, cfg, () => stopped || isStopFilePresent(account));
         await finish([s], outcome.ok, outcome.resultLine ?? outcome.detail ?? '');
         return outcome.ok ? 0 : 1;
     } catch (e) {

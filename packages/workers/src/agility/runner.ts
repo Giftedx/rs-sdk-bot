@@ -416,6 +416,19 @@ export async function runAgility(s: Session, o: AgilityOptions): Promise<Agility
                 live();
                 if (s.tick() >= entryEnd) throw Error(`${label}: entry tick budget exhausted`);
             };
+            const runGoTo = async (to: { x: number; z: number; level: number }, legTimeoutTicks: number) => {
+                const ac = new AbortController();
+                const watch = () => {
+                    if (ended || hp() <= 0 || o.stop?.() || s.tick() >= entryEnd) ac.abort('agility entry interrupted');
+                };
+                const off = s.onTick(watch);
+                watch();
+                try {
+                    return await goTo(s, await getWorld(), to, accountOf(s), { legTimeoutTicks, signal: ac.signal });
+                } finally {
+                    off();
+                }
+            };
             const travel = async (points: { x: number; z: number; tol?: number }[], label: string) => {
                 await travelAgilityEntry(await sessionWalker(s), points, label, entryEnd, {
                     left,
@@ -423,10 +436,10 @@ export async function runAgility(s: Session, o: AgilityOptions): Promise<Agility
                     health,
                     low,
                     heals: () => eats,
-                    interrupted: () => ended || hp() <= 0 || executionContext.getStore()?.signal.aborted === true,
+                    interrupted: () => ended || hp() <= 0 || Boolean(o.stop?.()) || executionContext.getStore()?.signal.aborted === true,
                 });
             };
-            const boatStop = () => ended || hp() <= 0;
+            const boatStop = () => ended || hp() <= 0 || Boolean(o.stop?.()) || executionContext.getStore()?.signal.aborted === true;
             const boatFailed = (r: BoatResult, label: string) => {
                 live();
                 if (r.outcome === 'deadline') throw Error(`${label}: entry tick budget exhausted`);
@@ -465,7 +478,7 @@ export async function runAgility(s: Session, o: AgilityOptions): Promise<Agility
                 const route = gnomeApproachRoute((a, b) => w.plan(0, a, b), { x: p.worldX, z: p.worldZ });
                 console.log(`AGILITY_ENTRY_ROUTE ${JSON.stringify({ route, at, tick: s.tick() })}`);
                 if (!route) {
-                    const r = await goTo(s, await getWorld(), { ...C.start, level: 0 }, accountOf(s), { legTimeoutTicks: 150 });
+                    const r = await runGoTo({ ...C.start, level: 0 }, 150);
                     live();
                     console.log(`AGILITY_ENTRY_WORLD ${JSON.stringify({ ok: r.ok, detail: r.ok ? undefined : r.detail, at: `${pos().worldX},${pos().worldZ},${pos().level}`, tick: s.tick() })}`);
                     if (!r.ok) throw Error(`course approach: no supported public route from ${at}: ${r.detail}`);
@@ -476,7 +489,7 @@ export async function runAgility(s: Session, o: AgilityOptions): Promise<Agility
                 }
             }
             if (course !== 'gnome' && o.course === 'progressive' && Math.max(Math.abs(pos().worldX - C.start.x), Math.abs(pos().worldZ - C.start.z)) > 12) {
-                const r = await goTo(s, await getWorld(), { ...C.start, level: 0 }, accountOf(s), { legTimeoutTicks: 150 });
+                const r = await runGoTo({ ...C.start, level: 0 }, 150);
                 live();
                 if (!r.ok) throw Error(`progressive course transfer failed: ${r.detail}`);
             }
@@ -676,7 +689,16 @@ async function runBrimhavenArena(s: Session, o: AgilityOptions, ctx: BrimhavenCt
         const entryEnd = Math.min(ctx.end, s.tick() + o.entryTicks);
         ctx.entry.route = 'brimhaven';
         if (Math.max(Math.abs(ctx.pos().worldX - BRIMHAVEN_ARENA.entry.x), Math.abs(ctx.pos().worldZ - BRIMHAVEN_ARENA.entry.z)) > 8) {
-            const move = await goTo(s, await getWorld(), { ...BRIMHAVEN_ARENA.entry }, accountOf(s), { legTimeoutTicks: Math.min(200, o.entryTicks) });
+            const ac = new AbortController();
+            const off = s.onTick(() => {
+                if (s.tick() >= entryEnd || ctx.hp() <= 0 || o.stop?.()) ac.abort('brimhaven entry interrupted');
+            });
+            let move;
+            try {
+                move = await goTo(s, await getWorld(), { ...BRIMHAVEN_ARENA.entry }, accountOf(s), { legTimeoutTicks: Math.min(200, o.entryTicks), signal: ac.signal });
+            } finally {
+                off();
+            }
             ctx.live();
             if (!move.ok) throw Error(`brimhaven entry travel failed: ${move.detail}`);
         }
@@ -781,17 +803,24 @@ async function runBrimhavenArena(s: Session, o: AgilityOptions, ctx: BrimhavenCt
     }
 
     if (o.tradeTickets && ticketCount() > 0 && inBrimhavenArena(ctx.pos())) {
+        ctx.live();
         const up = (s.sdk.getState()?.nearbyLocs ?? []).find(l => l.id === BRIMHAVEN_ARENA.ladderUp.id) ?? BRIMHAVEN_ARENA.ladderUp;
         await s.direct({ type: 'interactLoc', x: up.x, z: up.z, locId: up.id, optionIndex: 1, reason: 'SDK' });
         await waitUntil(s, () => !inBrimhavenArena(ctx.pos()), { timeoutTicks: 15 });
+        ctx.live();
         const trader = (s.sdk.getState()?.nearbyNpcs ?? []).find(n => /jack/i.test(n.name));
         if (trader) {
             const op = trader.optionsWithIndex.find(x => /trade/i.test(x.text)) ?? trader.optionsWithIndex[0];
-            if (op) await s.sdk.sendInteractNpc(trader.index, op.opIndex);
-            await waitTicks(s, 2);
-            const btn = componentId('agilityarena_trade:com_94');
-            await s.direct({ type: 'clickComponent', componentId: btn, reason: 'SDK' });
-            await waitTicks(s, 2);
+            if (op) {
+                const reply = await s.sdk.sendInteractNpc(trader.index, op.opIndex);
+                if (reply.success && await waitUntil(s, () => !!s.sdk.getState()?.interface?.isOpen, { timeoutTicks: 10 })) {
+                    ctx.live();
+                    const ticketsBefore = ticketCount();
+                    const btn = componentId('agilityarena_trade:com_94');
+                    await s.direct({ type: 'clickComponent', componentId: btn, reason: 'SDK' });
+                    await waitUntil(s, () => ticketCount() < ticketsBefore, { timeoutTicks: 6 });
+                }
+            }
         }
     }
 

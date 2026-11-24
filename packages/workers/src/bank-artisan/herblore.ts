@@ -9,7 +9,7 @@ import { goTo } from '../../../core/src/walk';
 import type { Tile } from '../../../core/src/world';
 import { abortable, executionContext } from '../../../../vendor/rs-sdk/sdk/execution-context';
 import { KNOWLEDGE_DIR } from './catalog';
-import { nearestBank } from './runtime';
+import { nearestBank, productionStopRequested } from './runtime';
 import type { Session } from './types';
 
 const OPEN_OP_RE = /^open$/i;
@@ -229,12 +229,14 @@ const stockMap = (rows: { id: number; count: number }[]) =>
         return out;
     }, {});
 
-export async function brew(s: Session, o: ReturnType<typeof herbloreOptions>) {
+export async function brew(s: Session, o: ReturnType<typeof herbloreOptions> & { stop?: () => boolean }) {
     const start = s.tick();
     const world = await getWorld();
     const delta: Stock = {};
     const spent: Stock = { 227: 0, 221: 0 };
     let brewed = 0;
+    let ended = false;
+    void s.ended?.then(() => { ended = true; });
     const inv = () => s.sdk.getInventory();
     const held = (id: number) => stockMap(inv())[id] ?? 0;
     const bankRows = () => s.sdk.getBankItems();
@@ -245,6 +247,7 @@ export async function brew(s: Session, o: ReturnType<typeof herbloreOptions>) {
     };
     const level = () => s.sdk.getSkill('Herblore')!.baseLevel;
     const check = () => {
+        if (ended || productionStopRequested(s.name, o.stop)) throw Error('herblore stopped');
         if (s.tick() - start >= o.cap) throw Error(`CAP ${o.cap} reached`);
     };
     const observed = async (pred: () => boolean, detail: string) => {
@@ -946,10 +949,11 @@ export async function runHerbloreCli(
         return;
     }
     let s: Session | undefined;
+    let stopped = false;
     try {
         const o = herbloreOptions([botName, ...restArgs], env);
-        s = await openBot(o.name);
-        const r = await brew(s, o);
+        s = await openBot(o.name, { onStop: async () => { stopped = true; } });
+        const r = await brew(s, { ...o, stop: () => stopped });
         await finish([s], true, `Herblore ${r.level} target ${r.target} brewed=${r.brewed} assets=${r.assets}`);
     } catch (e) {
         await finish(s ? [s] : [], false, `herblore ${String(e)}`);

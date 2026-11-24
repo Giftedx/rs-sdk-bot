@@ -1024,3 +1024,20 @@ test('agilityEstimate, toAgilityWorkerOutcome, agilityWorker.run, and runAgility
         expect(endedRun.kind).toBe('session_unsettled');
     } finally { fWorkerEnd.stop(); }
 });
+
+test('agility transit aborts goTo with signal when caller stop triggers', async () => {
+    const f = fixture({ level: 52, at: { worldX: 2980, worldZ: 3910, level: 0 } });
+    let stopChecks = 0;
+    try {
+        const outcome = await agilityWorker.run(f.s as any, {
+            course: 'progressive',
+            targetLevel: 60,
+            stop: () => stopChecks++ >= 2,
+        });
+        expect(isRunOutcome(outcome)).toBe(true);
+        expect(outcome.kind).toBe('session_unsettled');
+        expect(stopChecks).toBeGreaterThanOrEqual(3);
+    } finally {
+        f.stop();
+    }
+}, 20_000);

@@ -1151,7 +1151,7 @@ export async function softenOne(s: Session, fountain: NearbyLoc, over: () => boo
     return false;
 }
 
-export async function runSoftenClay(s: Session, options: { cap: number; maximum: number; reserve: number }) {
+export async function runSoftenClay(s: Session, options: { cap: number; maximum: number; reserve: number; stop?: () => boolean }) {
     if (![options.cap, options.maximum, options.reserve].every(Number.isSafeInteger) || options.cap <= 0 || options.maximum <= 0 || options.reserve < 0) {
         throw new Error('invalid soft clay cap/maximum/reserve');
     }
@@ -1169,9 +1169,10 @@ export async function runSoftenClay(s: Session, options: { cap: number; maximum:
             died = true;
         }
     });
-    const over = () => ended || died || s.tick() - start >= options.cap;
+    const stopped = () => ended || died || productionStopRequested(s.name, options.stop);
+    const over = () => stopped() || s.tick() - start >= options.cap;
     const walk = async (x: number, z: number) => {
-        const r = await walkPath(await sessionWalker(s), [{ x, z, tol: 1 }], { maxTicks: 250, stop: () => ended || died });
+        const r = await walkPath(await sessionWalker(s), [{ x, z, tol: 1 }], { maxTicks: 250, stop: stopped });
         if (!r.ok) throw new Error(`soft clay route: ${r.detail}`);
     };
     const open = async () => {
@@ -1197,13 +1198,17 @@ export async function runSoftenClay(s: Session, options: { cap: number; maximum:
     let output0 = 0;
     let failure = '';
     let stop = 'input-insufficient';
-    let initial = new Map<number, number>();
+    let initial = assets();
     try {
-        await open();
-        await deposit();
-        initial = assets();
-        output0 = bankCount(SOFT);
-        planned = planSoftClay(bankCount(CLAY), options.maximum, options.reserve);
+        if (over()) {
+            stop = 'cap';
+        } else {
+            await open();
+            await deposit();
+            initial = assets();
+            output0 = bankCount(SOFT);
+            planned = planSoftClay(bankCount(CLAY), options.maximum, options.reserve);
+        }
         if (planned && !over()) {
             if (!held(BUCKET) && !held(WATER)) await s.bot.withdrawItem(/^bucket$/i, 1, { asNote: false });
             if (!held(BUCKET) && !held(WATER)) throw new Error('no soft clay progress: owned bucket missing');
@@ -1228,7 +1233,7 @@ export async function runSoftenClay(s: Session, options: { cap: number; maximum:
     } catch (e) {
         failure = String(e);
     } finally {
-        if (!ended && !died) {
+        if (!stopped()) {
             try {
                 await walk(CLAY_BANK.x, CLAY_BANK.z);
                 await open();
@@ -1269,12 +1274,14 @@ export async function runSoftenClay(s: Session, options: { cap: number; maximum:
 }
 
 export async function runSoftenClayCli(botName: string, _restArgs: readonly string[], env: Record<string, string | undefined> = process.env) {
-    const s = await openBot(botName);
+    let requestedStop = false;
+    const s = await openBot(botName, { onStop: async () => { requestedStop = true; } });
     try {
         const r = await runSoftenClay(s, {
             cap: Number(env.CAP ?? 500),
             maximum: Number(env.MAX_MAKE ?? 20),
             reserve: Number(env.RAW_RESERVE ?? 0),
+            stop: () => requestedStop,
         });
         await finish([s], r.ok, `softClay ${Object.entries(r).map(([k, v]) => `${k}=${v}`).join(' ')}`);
     } catch (e) {

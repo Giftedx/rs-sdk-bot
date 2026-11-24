@@ -18,6 +18,7 @@ import {
 } from './runtime';
 import type { GatherExternalDeps, GatherOutcome, NormalizedGatherConfig } from './types';
 import { FALADOR_WEST_BANK } from '../logistics/recover';
+import { isStopFilePresent } from '../stop';
 
 const ROOT = resolve(import.meta.dir, '../../../..');
 
@@ -1073,9 +1074,24 @@ export async function runForagingCli(account: string, cfg: NormalizedGatherConfi
             : async () => {
                   stopped = true;
               };
-    const s = await openBot(account, { onStop }).catch(e => finish([], false, `login: ${String(e)}`));
+    let s: Session;
     try {
-        const outcome = await runForagingSession(s, cfg, () => stopped);
+        s = await openBot(account, {
+            onStop,
+            onSessionEnd: async () => {
+                stopped = true;
+            },
+        });
+    } catch (e) {
+        await finish([], false, `login: ${String(e)}`);
+        return 1;
+    }
+    let ended = false;
+    void s.ended?.then(() => {
+        ended = true;
+    });
+    try {
+        const outcome = await runForagingSession(s, cfg, () => ended || stopped || isStopFilePresent(account));
         await finish([s], outcome.ok, outcome.resultLine ?? outcome.detail ?? '');
         return outcome.ok ? 0 : 1;
     } catch (e) {
