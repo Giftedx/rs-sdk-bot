@@ -63,7 +63,53 @@ export function questPointObservation(bot:any,now:number):QuestPointObservation|
 }
 const nameKey=(s:string)=>s.trim().toLowerCase().replace(/\s*\(noted\)$/,'').replace(/^feathers$/,'feather').replace(/^headless arrows$/,'headless arrow');
 const boardKey=(s:string)=>s.toLowerCase().replace(/^lava maze /,'').replace(/[^a-z]/g,'');
-const num=(v:number)=>Number.isFinite(v)?Number(v.toFixed(2)).toLocaleString('en-US'):'?';
+const NUM_FMT=new Intl.NumberFormat('en-US');
+const num=(v:number)=>{
+ if(!Number.isFinite(v))return '?';
+ const rounded=Number(v.toFixed(2));
+ return rounded>=0&&rounded<1000&&Number.isInteger(rounded)?String(rounded):NUM_FMT.format(rounded);
+};
+const SKILL_SET=new Set<string>(SKILLS);
+type ItemCatalogIndex={len:number;first:any;last:any;byId:Map<number,any[]>;byDebug:Map<string,any[]>;byName:Map<string,any[]>};
+const itemCatalogCache=new WeakMap<any[],ItemCatalogIndex>();
+function indexItemCatalog(items:any[]):ItemCatalogIndex{
+ const cached=itemCatalogCache.get(items);
+ const len=items.length,first=len?items[0]:undefined,last=len?items[len-1]:undefined;
+ if(cached&&cached.len===len&&cached.first===first&&cached.last===last)return cached;
+ const byId=new Map<number,any[]>(),byDebug=new Map<string,any[]>(),byName=new Map<string,any[]>();
+ for(let idx=0;idx<len;idx++){
+  const i=items[idx];
+  if(!i)continue;
+  if(i.id!==undefined){
+   let list=byId.get(i.id);
+   if(!list){list=[];byId.set(i.id,list);}
+   list.push(i);
+  }
+  if(typeof i.debugname==='string'){
+   let list=byDebug.get(i.debugname);
+   if(!list){list=[];byDebug.set(i.debugname,list);}
+   list.push(i);
+  }
+  if(typeof i.name==='string'&&Number.isSafeInteger(i.id)){
+   const k=nameKey(i.name);
+   let list=byName.get(k);
+   if(!list){list=[];byName.set(k,list);}
+   list.push(i);
+  }
+ }
+ const entry:ItemCatalogIndex={len,first,last,byId,byDebug,byName};
+ itemCatalogCache.set(items,entry);
+ return entry;
+}
+let lastQuestConstantsText='',lastQuestConstantsParsed={count:0,maxQP:0};
+function parseQuestConstants(text:string):{count:number;maxQP:number}{
+ if(text===lastQuestConstantsText)return lastQuestConstantsParsed;
+ let count=0,maxQP=0;
+ for(const m of text.matchAll(/^\^(\w+)_questpoints\s*=\s*(\d+)/gm)){count++;maxQP+=Number(m[2]);}
+ lastQuestConstantsText=text;
+ lastQuestConstantsParsed={count,maxQP};
+ return lastQuestConstantsParsed;
+}
 // Pinned catalog debug names distinguish tutorial/fake items and unstrung bows.
 const supplyAliases:Record<string,string>={'pot of flour':'pot_flour','raw shrimps':'raw_shrimp',coins:'coins',logs:'logs','magic shortbow':'magic_shortbow','yew shortbow':'yew_shortbow','dragonfire shield (quest)':'antidragonbreathshield',...Object.fromEntries(['guam','harralander','ranarr','irit','avantoe','kwuarm'].map(h=>[h+' potion (unf)',h+'vial']))};
 export const GOAL_RECEIPTS={
@@ -133,20 +179,39 @@ export function goalProgress(state:any,input:GoalInputs):Lane[]{
  const row=(label:string,value:unknown,source:string,at?:number,tone?:GoalRow['tone']):GoalRow=>({label,value:String(value),source,...(validAt(at,now)?{at}:{}),tone});
  const statusPath=(b:any)=>`.practice/status/${b.name}.json`;
  const snapshotBots=bots.filter((b:any)=>validAt(b.at,now)),banks=bots.filter((b:any)=>validAt(b.bankAt,now)&&Array.isArray(b.bank)&&b.bank.every((i:any)=>i&&Number.isSafeInteger(i.baseId??i.id)&&Number.isSafeInteger(i.count)&&i.count>0));
- const catalog=new Map<string,any[]>();for(const i of input.items){if(!i||typeof i.name!=='string'||!Number.isSafeInteger(i.id))continue;const k=nameKey(i.name);catalog.set(k,[...(catalog.get(k)??[]),i]);}
+ const catalogIdx=indexItemCatalog(input.items);
  const demand=new Map<string|number,{item:string;count:number;id:number|null}>();
  for(const r of input.requirements??[]){
   const key=nameKey(r.item),alias=supplyAliases[key];
-  const matches=r.itemId!==undefined?input.items.filter(i=>i?.id===r.itemId)
-   :alias?input.items.filter(i=>i?.debugname===alias):(catalog.get(key)??[]);
+  const matches=r.itemId!==undefined?(catalogIdx.byId.get(r.itemId)??[])
+   :alias?(catalogIdx.byDebug.get(alias)??[]):(catalogIdx.byName.get(key)??[]);
   const id=matches.length===1&&Number.isSafeInteger(matches[0].id)?matches[0].id:null;
   const pool=id??key,prior=demand.get(pool);
   demand.set(pool,{item:prior?.item??r.item,count:(prior?.count??0)+r.count,id});
  }
+ const holdersById=new Map<number,{name:string;count:number;at:number;recent:boolean}[]>();
+ if(demand.size){
+  for(let bi=0;bi<banks.length;bi++){
+   const b=banks[bi],isRecent=fresh(b.bankAt,now);
+   const perBank=new Map<number,number>();
+   for(let ii=0;ii<b.bank.length;ii++){
+    const it=b.bank[ii];
+    const id=it.baseId??it.id;
+    perBank.set(id,(perBank.get(id)??0)+it.count);
+   }
+   for(const [id,count] of perBank){
+    if(!count)continue;
+    let list=holdersById.get(id);
+    if(!list){list=[];holdersById.set(id,list);}
+    list.push({name:b.name,count,at:b.bankAt,recent:isRecent});
+   }
+  }
+ }
  const supply=[...demand.values()].map(r=>{
   const {id}=r;
-  const holders=id===null?[]:banks.flatMap((b:any)=>{const count=b.bank.filter((i:any)=>(i.baseId??i.id)===id).reduce((n:number,i:any)=>n+i.count,0);return count?[{name:b.name,count,at:b.bankAt,recent:fresh(b.bankAt,now)}]:[]});
-  const recent=holders.filter((h:any)=>h.recent).reduce((n:number,h:any)=>n+h.count,0),old=holders.filter((h:any)=>!h.recent).reduce((n:number,h:any)=>n+h.count,0);
+  const holders=id===null?[]:(holdersById.get(id)??[]);
+  let recent=0,old=0;
+  for(let hi=0;hi<holders.length;hi++){const h=holders[hi]!;if(h.recent)recent+=h.count;else old+=h.count;}
   return {...r,id,holders,recent,old,missing:Math.max(0,r.count-recent)};
  });
  const covered=supply.filter(r=>r.id!==null&&r.missing===0),unresolved=supply.filter(r=>r.id===null),short=supply.filter(r=>r.id!==null&&r.missing>0);
@@ -166,9 +231,25 @@ export function goalProgress(state:any,input:GoalInputs):Lane[]{
  const gearTarget=gearProgress(bots,input.items,now),questFlags=questProgress(bots,now),costs=batchCosts(counter,productionOK,p?.at);
  const gear=snapshotBots.filter((b:any)=>Array.isArray(b.equipment));
  const collectionRows=[...gearTarget.rows,row('Route inputs covered',input.requirements?`${covered.length}/${supply.length} by recent banks`:'Model unavailable','packages/planner/src/haggis-boards.json'),row('Unresolved input IDs',unresolved.length,'knowledge/items.json',undefined,unresolved.length?'warn':'dm'),row('Bank observations',`${banks.filter((b:any)=>fresh(b.bankAt,now)).length} recent · ${banks.length} known / ${bots.length} owned`,'.practice/status'),row('Gear snapshots',`${gear.length}/${bots.length} accounts · ${gear.filter((b:any)=>fresh(b.at,now)).length} recent`,'.practice/status'),...supply.map(s=>row(s.item,s.id===null?'ID unresolved':`${num(s.recent)}/${num(s.count)} recent · ${num(s.old)} old`,'packages/planner/src/haggis-boards.json; '+s.holders.map((h:any)=>`.practice/status/${h.name}.json`).join(', '),s.holders.length?Math.min(...s.holders.map((h:any)=>h.at)):undefined,s.id===null||s.missing>0?'warn':'good')),...gear.map((b:any)=>row(`${b.name} gear`,b.equipment.map((i:any)=>i?.name).join(', ')||'observed empty',statusPath(b),b.at)),row('Useful / rare target set','Undefined; route inputs are only a subset','docs/plans/joined-plan.md',undefined,'warn')];
- const sourceQP=[...input.questConstants.matchAll(/^\^(\w+)_questpoints\s*=\s*(\d+)/gm)],maxQP=sourceQP.reduce((n,m)=>n+Number(m[2]),0),parsedQP=input.quests.reduce((n,q)=>n+(Number(q?.questPoints)||0),0);
- const skillRows=SKILLS.map(skill=>{const candidates=snapshotBots.flatMap((b:any)=>(b.skills??[]).filter((s:any)=>s.name?.toLowerCase()===skill&&Number.isFinite(s.level)&&Number.isFinite(s.xp)).map((s:any)=>({...s,account:b.name,at:b.at}))).sort((a:any,b:any)=>b.level-a.level||b.xp-a.xp);return {skill,best:candidates[0]};});
- const maxed=skillRows.filter(s=>s.best?.level>=99),pairs=snapshotBots.reduce((n:number,b:any)=>n+(b.skills??[]).filter((s:any)=>SKILLS.includes(s.name?.toLowerCase())&&s.level>=99).length,0);
+ const {count:sourceQPCount,maxQP}=parseQuestConstants(input.questConstants),parsedQP=input.quests.reduce((n,q)=>n+(Number(q?.questPoints)||0),0);
+ const bestBySkill=new Map<string,any>();
+ let pairs=0;
+ for(let bi=0;bi<snapshotBots.length;bi++){
+  const b=snapshotBots[bi],skillsList=b.skills;
+  if(!Array.isArray(skillsList))continue;
+  for(let si=0;si<skillsList.length;si++){
+   const s=skillsList[si];
+   const low=typeof s?.name==='string'?s.name.toLowerCase():'';
+   if(!low||!SKILL_SET.has(low))continue;
+   if(s.level>=99)pairs++;
+   if(Number.isFinite(s.level)&&Number.isFinite(s.xp)){
+    const cur=bestBySkill.get(low);
+    if(!cur||s.level>cur.level||(s.level===cur.level&&s.xp>cur.xp))bestBySkill.set(low,{...s,account:b.name,at:b.at});
+   }
+  }
+ }
+ const skillRows=SKILLS.map(skill=>({skill,best:bestBySkill.get(skill)}));
+ const maxed=skillRows.filter(s=>s.best?.level>=99);
 
  const qp=bots.flatMap((b:any)=>{const value=questPointObservation(b,now);return value?[{name:b.name,...value,
   path:value.source==='hiscores'?'hiscore snapshot':b.remote||b.snapshotOnly?`fleet/snapshots/${b.side??'unknown'}.json`:statusPath(b)}]:[];});
@@ -176,8 +257,21 @@ export function goalProgress(state:any,input:GoalInputs):Lane[]{
  const apronOK=validAt(a?.at,now)&&a.ok===true&&a.assetCheck===true&&a.code===0&&a.after?.server==='rs-sdk-demo.fly.dev'&&owned.has(String(a.after?.name).toLowerCase())&&Array.isArray(a.result?.bank?.items)&&a.result.bank.items.some((i:any)=>i&&i.id===1757&&i.count>0);
  const practiceOK=g?.ok===true&&g.code===0&&g.assetCheck===true&&g.result?.gained>0&&validAt(g.result?.bankAfter?.at,now);
  const liveGuild=validAt(gl?.at,now)&&gl.ok===false?'failed / stopped':'unproved';
- const questRows=[...questFlags.rows.slice(0,2),row('Reward extract',`${input.quests.length}/${sourceQP.length||'?'} · ${parsedQP}/${maxQP||'?'} QP`,'knowledge/quests.json; vendor/rs-sdk/server/content/scripts/general/configs/quest.constant',undefined,input.quests.length!==sourceQP.length?'warn':'dm'),row('Rune Mysteries · live',r.rune?.ok===false&&validAt(r.rune?.status?.at,now)?r.rune.status.result:'No accepted completion',GOAL_RECEIPTS.rune,r.rune?.status?.at,'warn'),...questFlags.rows.slice(2),...qp.map((q:any)=>row(`${q.name} recorded QP`,`${q.points}/${maxQP||'?'} · not a quest census`,q.path,q.at)),row('99s observed',`${pairs} skill-account pairs · ${maxed.length}/${SKILLS.length} skill types`,'.practice/status'),row('Brown apron',apronOK?'acquired + banked live':'unproved',GOAL_RECEIPTS.apron,a?.at,apronOK?'good':'warn'),row('Guild chain · practice',practiceOK?`${g.result.gained} ore · cloned inputs`:'unproved',GOAL_RECEIPTS.guildPractice,g?.result?.bankAfter?.at,practiceOK?'good':'warn'),row('Guild chain · live',liveGuild,GOAL_RECEIPTS.guildLive,gl?.at,'warn'),...skillRows.map(s=>row(s.skill,s.best?`${s.best.level}/99 · ${s.best.account} · ${num(Math.max(0,xpForLevel(99)-s.best.xp))} XP left`:'no observation',s.best?`.practice/status/${s.best.account}.json`:'.practice/status',s.best?.at,s.best?.level>=99?'good':'dm'))];
- const specialist=(state.boards??[]).map((b:any)=>{const ranks=bots.flatMap((a:any)=>(a.ranks??[]).filter((x:any)=>boardKey(x.board)===boardKey(b.board)&&fresh(x.at??a.ranksAt,now,600000)&&Number.isSafeInteger(x.rank)&&x.rank>0).map((x:any)=>({...x,account:a.name,at:x.at??a.ranksAt}))).sort((a:any,b:any)=>a.rank-b.rank);return {board:b.board,best:ranks[0],top:b.top,kind:b.kind,cutoff:b.cutoff};});
+ const questRows=[...questFlags.rows.slice(0,2),row('Reward extract',`${input.quests.length}/${sourceQPCount||'?'} · ${parsedQP}/${maxQP||'?'} QP`,'knowledge/quests.json; vendor/rs-sdk/server/content/scripts/general/configs/quest.constant',undefined,input.quests.length!==sourceQPCount?'warn':'dm'),row('Rune Mysteries · live',r.rune?.ok===false&&validAt(r.rune?.status?.at,now)?r.rune.status.result:'No accepted completion',GOAL_RECEIPTS.rune,r.rune?.status?.at,'warn'),...questFlags.rows.slice(2),...qp.map((q:any)=>row(`${q.name} recorded QP`,`${q.points}/${maxQP||'?'} · not a quest census`,q.path,q.at)),row('99s observed',`${pairs} skill-account pairs · ${maxed.length}/${SKILLS.length} skill types`,'.practice/status'),row('Brown apron',apronOK?'acquired + banked live':'unproved',GOAL_RECEIPTS.apron,a?.at,apronOK?'good':'warn'),row('Guild chain · practice',practiceOK?`${g.result.gained} ore · cloned inputs`:'unproved',GOAL_RECEIPTS.guildPractice,g?.result?.bankAfter?.at,practiceOK?'good':'warn'),row('Guild chain · live',liveGuild,GOAL_RECEIPTS.guildLive,gl?.at,'warn'),...skillRows.map(s=>row(s.skill,s.best?`${s.best.level}/99 · ${s.best.account} · ${num(Math.max(0,xpForLevel(99)-s.best.xp))} XP left`:'no observation',s.best?`.practice/status/${s.best.account}.json`:'.practice/status',s.best?.at,s.best?.level>=99?'good':'dm'))];
+ const bestRankByBoardKey=new Map<string,any>();
+ for(let bi=0;bi<bots.length;bi++){
+  const acct=bots[bi],acctRanks=acct.ranks;
+  if(!Array.isArray(acctRanks))continue;
+  for(let ri=0;ri<acctRanks.length;ri++){
+   const x=acctRanks[ri];
+   const at=x?.at??acct.ranksAt;
+   if(!x||!fresh(at,now,600000)||!Number.isSafeInteger(x.rank)||x.rank<=0)continue;
+   const bk=boardKey(x.board);
+   const cur=bestRankByBoardKey.get(bk);
+   if(!cur||x.rank<cur.rank)bestRankByBoardKey.set(bk,{...x,account:acct.name,at});
+  }
+ }
+ const specialist=(state.boards??[]).map((b:any)=>({board:b.board,best:bestRankByBoardKey.get(boardKey(b.board)),top:b.top,kind:b.kind,cutoff:b.cutoff}));
  const known=specialist.filter((s:any)=>s.best),first=known.filter((s:any)=>s.best.rank===1),contender=known.filter((s:any)=>s.best.rank>1).sort((a:any,b:any)=>a.best.rank-b.best.rank)[0];
  const rankRows=specialist.map((s:any)=>row(s.board,s.best?`#${s.best.rank} · ${s.best.account} · level ${s.best.level}`:s.kind==='value'?(s.cutoff?`Not in the top ${s.cutoff.rank} (#${s.cutoff.rank} holds ${s.cutoff.text})`:'Board not read'):'Recent rank missing',s.best?'hiscore snapshot':'packages/dashboard/server.ts',s.best?.at,s.best?'dm':'warn'));
  const race=state.race,overall=race?.rows?.find((x:any)=>x.id==='overall'),gates=state.gates,passes=gates?.valid?gates.gates.filter((g:any)=>g.pass).length:null;
@@ -186,7 +280,7 @@ export function goalProgress(state:any,input:GoalInputs):Lane[]{
  return [
   {title:'Fleet & wealth',metric:net.valid?`+${num(net.net!)}`:delivered===null?'No proof':`${num(delivered)} fish`,meta:net.valid?'saved net cash · food cost unknown':matchedDelivery?`${recipients.length} recipients · saved live proof`:'Delivery evidence missing',level:'LIVE RECORD',blocker:net.valid?`Opening food cost unknown; ${Math.abs(net.eaten!-net.fishUsed!)} eat event differs from stock depletion.`:'Net resources counted; food/support costs unallocated; full refill cycle unproved.',next:net.valid?'Trace opening food acquisition and the one-item depletion mismatch.':paused+'Bind food lot, NPC spend and support ticks to one refill cycle.',rows:fleetRows},
   {title:'Collection & gear',metric:input.requirements?`${covered.length}/${supply.length}`:'Unknown',meta:`route inputs · gear ${gearTarget.held}/${gearTarget.total} recent`,level:'OBSERVED',blocker:`${unresolved.length} input IDs unresolved; full collection target undefined; scoring set mapped, combat fit unproved.`,next:unresolved.length?`Resolve ${unresolved[0]!.item} to exact item IDs.`:short.length?`Plan ${num(short[0]!.missing)} ${short[0]!.item}; reserve operating stock first.`:'Define the useful/rare item target set and gear requirements.',rows:collectionRows},
-  {title:'Quests · unlocks · 99s',metric:`${maxed.length}/${SKILLS.length} at 99`,meta:`best skill levels · journals ${questFlags.observed}/${bots.length}`,level:'MIXED',blocker:`${questFlags.observed}/${bots.length} account journals observed; live guild unproved. ${sourceQP.length?'Reward extract omits '+Math.max(0,sourceQP.length-input.quests.length)+' rules.':'Quest source unavailable.'}`,next:questFlags.observed?'Review unknown quest flags and blocked unlocks.':'Passive journal capture is ready; keep existing sessions untouched.',rows:questRows},
+  {title:'Quests · unlocks · 99s',metric:`${maxed.length}/${SKILLS.length} at 99`,meta:`best skill levels · journals ${questFlags.observed}/${bots.length}`,level:'MIXED',blocker:`${questFlags.observed}/${bots.length} account journals observed; live guild unproved. ${sourceQPCount?'Reward extract omits '+Math.max(0,sourceQPCount-input.quests.length)+' rules.':'Quest source unavailable.'}`,next:questFlags.observed?'Review unknown quest flags and blocked unlocks.':'Passive journal capture is ready; keep existing sessions untouched.',rows:questRows},
   {title:'Specialist hiscores',metric:known.length?`${first.length} #1`:'Unknown',meta:`${known.length}/24 recent owned board ranks`,level:'OBSERVED',blocker:'Tie acceptance unverified.',next:contender?`Assess ${contender.best.account} on ${contender.board} (#${contender.best.rank}); plan a matched practice route.`:'Refresh owned rank coverage before choosing a contender.',rows:[row('Candidate by current rank',contender?`${contender.board} · #${contender.best.rank}`:'unknown','hiscore snapshot',contender?.best.at),...rankRows]},
   {title:'Main Overall',metric:overall?.real.slack<0?`${num(-overall.real.slack)} late`:passes===null?'No check':`${passes}/5 checks`,meta:overall?.real.slack<0?'model ticks · not a measured run':'launch checks · not goal completion',level:'MODEL',blocker:`${race?.unmeasured??'?'} unmeasured inputs; staging/rehearsals must pass the gate.`,next:race?.unmeasured?'Plan measurement of the largest unresolved shared-clock input.':'Inspect failed launch checks; keep main offline.',rows:mainRows},
   {title:'Tick efficiency',metric:rate===null?'Unknown':`${num(rate)} c/t`,meta:'saved cash rate · supply costs unallocated',level:'LIVE RECORD',blocker:net.valid?'Cash costs reconciled; opening food cost and full producer time unknown.':'Net-cost allocation incomplete: food lot and support work not linked.',next:net.valid?'Reconcile the opening food lot; keep full net profit unknown.':'Link consumed food to producer spend and courier receipt; exclude owned transfers.',rows:efficiencyRows}

@@ -102,21 +102,37 @@ function dropFact(source: any): DropFact {
         + (fact.trigger ? ' · Trigger: ' + fact.trigger : ''), 1600);
     return fact;
 }
-function sourceCost(raw: any, boundedNotes = true): SourceCost | undefined {
-    const out: SourceCost = {};
-    for (const [valueKey, basisKey, noteKey] of [
-        ['helperTicksPerUnit', 'ticksBasis', 'ticksNote'],
-        ['coinsPerUnit', 'coinsBasis', 'coinsNote'],
-        ['realSecondsPerUnit', 'realBasis', 'realNote'],
-    ] as const) {
-        const value = raw?.[valueKey], basis = raw?.[basisKey], note = raw?.[noteKey];
+const COST_FIELDS = [
+    ['helperTicksPerUnit', 'ticksBasis', 'ticksNote'],
+    ['coinsPerUnit', 'coinsBasis', 'coinsNote'],
+    ['realSecondsPerUnit', 'realBasis', 'realNote'],
+] as const;
+function sourceCostPair(raw: any): { display: SourceCost | undefined; full: SourceCost | undefined } {
+    if (!raw || typeof raw !== 'object') return { display: undefined, full: undefined };
+    let display: SourceCost | undefined, full: SourceCost | undefined;
+    let truncated = false;
+    for (let i = 0; i < COST_FIELDS.length; i++) {
+        const [valueKey, basisKey, noteKey] = COST_FIELDS[i]!;
+        const value = raw[valueKey], basis = raw[basisKey], note = raw[noteKey];
         if (typeof value !== 'number' || !Number.isFinite(value) || value < 0
-            || !['content', 'model', 'measured'].includes(basis)) continue;
-        Object.assign(out, { [valueKey]: value, [basisKey]: basis },
-            typeof note === 'string' && note.trim()
-                ? { [noteKey]: boundedNotes && note.length > 800 ? note.slice(0, 800) + '…' : note } : {});
+            || (basis !== 'content' && basis !== 'model' && basis !== 'measured')) continue;
+        if (!display) display = {};
+        (display as any)[valueKey] = value;
+        (display as any)[basisKey] = basis;
+        if (typeof note === 'string' && note.trim()) {
+            if (note.length > 800) {
+                if (!full) full = { ...display };
+                (display as any)[noteKey] = note.slice(0, 800) + '…';
+                (full as any)[noteKey] = note;
+                truncated = true;
+            } else {
+                (display as any)[noteKey] = note;
+                if (full) (full as any)[noteKey] = note;
+            }
+        }
     }
-    return Object.keys(out).length ? out : undefined;
+    if (!display) return { display: undefined, full: undefined };
+    return { display, full: truncated ? full : display };
 }
 
 export function mapIcons(teleports: any[], edges: any[], items: any[], names: Names): Icon[] {
@@ -157,19 +173,19 @@ export function itemSources(items: any[], names: Names): Record<string, Source[]
         const rows: { row: Source; key: string }[] = [];
         const sorted = (it.sources ?? []).filter((s: any) => !s.blocked).sort((a: any, b: any) => (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) || (b.chance ?? 0) - (a.chance ?? 0));
         for (const s of sorted) {
-            const cost = sourceCost(s.cost);
+            const { display: cost, full: identity } = sourceCostPair(s.cost);
+            const fact = s.kind === 'drop' ? dropFact(s) : null;
             const add = (kind: string, label: string, tiles: number[]) => {
                 const title = label + (typeof s.gate === 'string' && s.gate.trim() ? ` · Requires: ${kind === 'drop' ? bounded(s.gate.trim()) : s.gate.trim()}` : '');
                 // Full conditions identify a fact even when its display note needs truncation.
-                const identity = sourceCost(s.cost, false);
-                rows.push({ row: cost ? [kind, title, tiles, cost] : [kind, title, tiles], key: JSON.stringify([title, identity ?? null, kind === 'drop' ? dropFact(s) : null]) });
+                rows.push({ row: cost ? [kind, title, tiles, cost] : [kind, title, tiles], key: JSON.stringify([title, identity ?? null, fact]) });
             };
             if (s.kind === 'shop') {
                 const base = typeof s.basePrice === 'number' && Number.isFinite(s.basePrice) && s.basePrice >= 0
                     ? ` · base value ${s.basePrice} gp` : '';
                 add('shop', `Shop: ${(s.owners ?? []).map((o: any) => names.npc(o.npc)).join(', ') || pretty(s.shop)}${base}`, places(s.owners));
             }
-            else if (s.kind === 'drop') add('drop', `Drop: ${names.npc(s.npc)}${s.combat ? ' (level ' + s.combat + ')' : ''} · ${dropDescription(dropFact(s))}`, places(s.places));
+            else if (s.kind === 'drop') add('drop', `Drop: ${names.npc(s.npc)}${s.combat ? ' (level ' + s.combat + ')' : ''} · ${dropDescription(fact!)}`, places(s.places));
             else if (s.kind === 'gather') add('gather', `${cap(s.skill)} ${s.level}: ${(s.places ?? []).filter((p: any) => !/^macro_|dummy/.test(p.loc ?? '')).map((p: any) => pretty(p.loc ?? p.npc ?? '')).filter((v: string, i: number, a: string[]) => v && v !== 'Loc' && a.indexOf(v) === i).slice(0, 2).join(', ') || pretty(s.rung.split('/')[1] ?? '')}`, places(s.places));
             else if (s.kind === 'make') add('make', `${cap(s.skill)} ${s.level}: from ${(s.inputs ?? []).map((i: any) => (i.count > 1 ? i.count + ' ' : '') + names.item(i.item)).join(', ') || 'nothing'}`, []);
             else if (s.kind === 'pickup') add('pickup', `Floor spawn${s.spawns > 1 ? 's (' + s.spawns + ')' : ''}`, flat(s.tiles ?? []));
@@ -210,14 +226,46 @@ export function npcDrops(items: any[], names: Names, catalogue: readonly DropNpc
     }
     const out: NpcDrops = { byId: {}, byName: {} };
     // Chance orders the display only; every separate fact keeps its own probability and conditions.
-    const displayChance = (row: NpcDropRow) => Math.max(0, ...row.facts.map(fact => fact.chance ?? 0));
-    for (const [id, rows] of [...by].sort((a, b) => a[0] - b[0])) out.byId[id] = [...rows].map(([itemId, row]) => {
-        const facts = [...row.facts].sort((a, b) => a[0].localeCompare(b[0])).map(([, fact]) => fact);
-        return { id: itemId, name: row.name, summary: facts.length === 1 ? bounded(dropDescription(facts[0]!, false), 200) : 'multiple table entries', facts };
-    }).sort((a, b) => displayChance(b) - displayChance(a) || a.name.localeCompare(b.name) || a.id - b.id);
+    for (const [id, rows] of [...by].sort((a, b) => a[0] - b[0])) {
+        const list: { row: NpcDropRow; chance: number }[] = [];
+        for (const [itemId, row] of rows) {
+            const facts = [...row.facts].sort((a, b) => a[0].localeCompare(b[0])).map(([, fact]) => fact);
+            let maxChance = 0;
+            for (let fi = 0; fi < facts.length; fi++) {
+                const c = facts[fi]!.chance ?? 0;
+                if (c > maxChance) maxChance = c;
+            }
+            list.push({
+                row: { id: itemId, name: row.name, summary: facts.length === 1 ? bounded(dropDescription(facts[0]!, false), 200) : 'multiple table entries', facts },
+                chance: maxChance,
+            });
+        }
+        list.sort((a, b) => b.chance - a.chance || a.row.name.localeCompare(b.row.name) || a.row.id - b.row.id);
+        out.byId[id] = list.map(entry => entry.row);
+    }
+    const serializedById = new Map<number, string>();
+    const serializedOf = (id: number, rows: NpcDropRow[]) => {
+        let s = serializedById.get(id);
+        if (s === undefined) { s = JSON.stringify(rows); serializedById.set(id, s); }
+        return s;
+    };
     for (const [name, ids] of variants) {
-        const rows = [...ids].map(id => out.byId[id]), first = rows[0];
-        if (name && first && rows.every(row => row && JSON.stringify(row) === JSON.stringify(first))) out.byName[name] = first;
+        if (!name) continue;
+        let first: NpcDropRow[] | undefined;
+        let firstJson = '';
+        let ok = true;
+        for (const id of ids) {
+            const row = out.byId[id];
+            if (!row) { ok = false; break; }
+            if (!first) {
+                first = row;
+                if (ids.size > 1) firstJson = serializedOf(id, row);
+            } else if (serializedOf(id, row) !== firstJson) {
+                ok = false;
+                break;
+            }
+        }
+        if (ok && first) out.byName[name] = first;
     }
     return out;
 }

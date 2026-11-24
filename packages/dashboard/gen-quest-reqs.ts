@@ -20,6 +20,7 @@ export type Reqs = { s: [string, number, 1 | 2][]; qp?: [number, 1 | 2]; q: [str
 
 const SKILLS = ['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing',
     'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
+const SKILL_SET = new Set(SKILLS);
 const cap = (s: string) => s.replace(/^./, c => c.toUpperCase());
 export const norm = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/['’]/g, '').replace(/\bquest\b|\bthe\b/g, '').replace(/[^a-z0-9]/g, '');
 
@@ -80,9 +81,15 @@ export function serverPrereqs(scripts: string[], varpFolder: Map<string, string>
 // Subheadings from ### Recommended onwards are advisory, never hard gates.
 export function wikiReqs(page: string, journal: string[]): { s: Map<string, number>; qp: number | null; q: string[] } {
     const sec = (page.split(/^## Requirements\s*$/m)[1]?.split(/^## /m)[0] ?? '').split(/^###\s*Recommended\b/mi)[0] ?? '';
-    const s = new Map<string, number>(), q: string[] = [];
+    const s = new Map<string, number>(), q: string[] = [], seenQ = new Set<string>();
+    const journalNorm: [string, string][] = [];
+    for (let i = 0; i < journal.length; i++) {
+        const name = journal[i]!, normalized = norm(name);
+        if (normalized.length >= 4) journalNorm.push([name, normalized]);
+    }
     let qp: number | null = null;
-    for (const raw of sec.split(/\r?\n/).filter(l => /^\s*-\s/.test(l))) {
+    for (const raw of sec.split(/\r?\n/)) {
+        if (!/^\s*-\s/.test(raw)) continue;
         const line = raw.replace(/\*\*/g, '').replace(/^\s*-\s*/, '');
         if (/recommended|optional|for shortcuts|^no\b|^none\b|^ability\b/i.test(line)) continue;
         const qpm = line.match(/^(\d+)\s+quest points?/i);
@@ -91,9 +98,15 @@ export function wikiReqs(page: string, journal: string[]): { s: Map<string, numb
         // one way through the quest, not a gate; the server checks give the gates.
         if (/^\d+\s+[A-Za-z]+\s*\(\s*(for|or)\b|\bor\b/i.test(line)) continue;
         const sk = line.match(/^(\d+)\s+([A-Za-z]+)/);
-        if (sk && SKILLS.includes(cap(sk[2]!.toLowerCase()))) { s.set(cap(sk[2]!.toLowerCase()), Number(sk[1])); continue; }
+        if (sk) {
+            const skillName = cap(sk[2]!.toLowerCase());
+            if (SKILL_SET.has(skillName)) { s.set(skillName, Number(sk[1])); continue; }
+        }
         const n = norm(line);
-        for (const name of journal) if (norm(name).length >= 4 && n.includes(norm(name)) && !q.includes(name)) q.push(name);
+        for (let i = 0; i < journalNorm.length; i++) {
+            const [name, normalized] = journalNorm[i]!;
+            if (!seenQ.has(name) && n.includes(normalized)) { seenQ.add(name); q.push(name); }
+        }
     }
     return { s, qp, q };
 }

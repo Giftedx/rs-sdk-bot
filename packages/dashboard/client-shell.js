@@ -213,15 +213,25 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function bestSpell(b){
     if(!spellbookData?.combat?.length||!Array.isArray(b?.inventory))return null;
     const mg=curLevel(b,'Magic');if(!Number.isFinite(mg))return null;
-    const worn=new Set((b.equipmentObserved===false?[]:b.equipment||[]).map(e=>e?.name));
-    let best=null;for(const [name,lv,max,runes,staff,exp] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=runeCasts(b,runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max)){const charge=mg>=80&&/^(Saradomin Strike|Claws of Guthix|Flames of Zamorak)$/.test(name)&&runeCasts(b,[['Blood rune',3],['Fire rune',3],['Air rune',3]])>=1;best={name,max,casts,charge,xp:(exp||0)*2.5};}}
+    const invCounts=new Map();for(const i of b.inventory)if(i?.name)invCounts.set(i.name,(invCounts.get(i.name)||0)+(i.count||1));
+    const equip=b.equipmentObserved===false?[]:b.equipment||[];
+    const worn=new Set();let weapon=null;for(const e of equip){if(e?.name)worn.add(e.name);if(e?.slot===3)weapon=e.name;}
+    const free=new Set();if(weapon&&spellbookData.staffs)for(const [r,s] of Object.entries(spellbookData.staffs))if(Array.isArray(s)&&s.includes(weapon))free.add(r);
+    const castsOf=runes=>{let m=Infinity;for(let i=0;i<runes.length;i++){const [r,c]=runes[i];if(free.has(r))continue;const n=Math.floor((invCounts.get(r)||0)/c);if(n<m)m=n;if(m<=0)return 0;}return m;};
+    let best=null;for(const [name,lv,max,runes,staff,exp] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=castsOf(runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max)){const charge=mg>=80&&/^(Saradomin Strike|Claws of Guthix|Flames of Zamorak)$/.test(name)&&castsOf([['Blood rune',3],['Fire rune',3],['Air rune',3]])>=1;best={name,max,casts,charge,xp:(exp||0)*2.5};}}
     return best;
   }
   function teleCasts(b){
     if(!spellbookData||!Array.isArray(b?.inventory))return [];
-    const have=n=>b.inventory.filter(i=>i?.name===n).reduce((t,i)=>t+(i.count||1),0),weapon=b.equipmentObserved===false?null:b.equipment?.find(e=>e.slot===3)?.name;
-    const free=new Set(Object.entries(spellbookData.staffs||{}).filter(([,s])=>Array.isArray(s)&&s.includes(weapon)).map(([r])=>r)),mg=curLevel(b,'Magic');
-    return spellbookData.spells.map(([name,lv,runes])=>({name,lv,casts:Math.min(...runes.map(([r,c])=>free.has(r)?Infinity:Math.floor(have(r)/c))),can:Number.isFinite(mg)?mg>=lv:null})).filter(s=>s.casts>0&&Number.isFinite(s.casts));
+    const invCounts=new Map();for(const i of b.inventory)if(i?.name)invCounts.set(i.name,(invCounts.get(i.name)||0)+(i.count||1));
+    const weapon=b.equipmentObserved===false?null:b.equipment?.find(e=>e.slot===3)?.name;
+    const free=new Set();if(weapon&&spellbookData.staffs)for(const [r,s] of Object.entries(spellbookData.staffs))if(Array.isArray(s)&&s.includes(weapon))free.add(r);
+    const mg=curLevel(b,'Magic'),out=[];
+    for(const [name,lv,runes] of spellbookData.spells){
+      let casts=Infinity;for(let i=0;i<runes.length;i++){const [r,c]=runes[i];if(free.has(r))continue;const n=Math.floor((invCounts.get(r)||0)/c);if(n<casts)casts=n;if(casts<=0)break;}
+      if(casts>0&&Number.isFinite(casts))out.push({name,lv,casts,can:Number.isFinite(mg)?mg>=lv:null});
+    }
+    return out;
   }
   const teleLine=b=>{const l=teleCasts(b),note=b?.equipmentObserved===false?'; equipment not reported; counts use pack runes.':'';return l.length?'<p class="tele-casts" title="'+E(l.map(s=>s.name+' ×'+s.casts+(s.can==null?' (Magic level not reported)':s.can?'':' (Magic '+s.lv+' needed)')).join(', ')+note)+'">Tele: '+l.map(s=>'<span class="'+(s.can===true?'':'tele-low')+'" title="'+E(s.name+' · Magic '+s.lv+(s.can==null?' (Magic level not reported)':s.can?'':' (too low)')+note)+'">'+E(s.name.slice(0,3))+' ×'+s.casts+'</span>').join(' · ')+'</p>':'';};
   // Items kept on death (RuneLite's Items Kept on Death): in the Wilderness, the 3 items the account keeps (pvpState,
@@ -562,7 +572,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function bankedXp(b,skill){const acts=skillActions?.[String(skill).toLowerCase()],X=window.atlasXp;if(!acts||!Array.isArray(b?.bank)||!X||/^fishing$/i.test(String(skill)))return null;
     const s=(b.skills||[]).find(x=>x.name.toLowerCase()===String(skill).toLowerCase()),lvl=s?.xp!=null?X.levelForXp(s.xp):(s?.level??1),best=new Map();
     for(const a of acts){const ids=a[5]||[],id=ids[0];if(!id||!ids.every(x=>x===id)||a[1]>lvl||!(a[2]>0)||a[4].includes(a[3][0]))continue;const k=ids.length,cur=best.get(id);if(!cur||a[2]/k>cur.xp/cur.k)best.set(id,{k,xp:a[2]});}
-    let xp=0,items=0;for(const it of b.bank){const v=it&&best.get(it.baseId??it.id);if(v){const n=Math.floor((it.count||1)/v.k);xp+=n*v.xp;items+=n*v.k;}}
+    if(!best.size)return null;
+    let xp=0,items=0;for(let i=0;i<b.bank.length;i++){const it=b.bank[i];const v=it&&best.get(it.baseId??it.id);if(v){const n=Math.floor((it.count||1)/v.k);xp+=n*v.xp;items+=n*v.k;}}
     return xp?{xp:Math.round(xp),items,level:s?.xp!=null?X.levelForXp(s.xp+xp):null}:null;}
   // Best training spot (Skill Calculator): for woodcutting or mining, the best tree or rock the account can use at its
   // level (skill-actions.json, resources.json; normal trees are not in resources.json) and the nearest one on its floor.
@@ -1071,12 +1082,20 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // death and on the respawn wait gives no cast XP.
     // Overkill: a hit of 0 to max takes no more than the NPC has, so a swing does chance x the mean of min(hit, hitpoints)
     // (an 8 hitpoint cow wastes most of a 14 hit). The last swing of a kill can still overkill more; this counts the cap.
-    const capped=hp=>{let t=0;for(let d=0;d<=max;d++)t+=Math.min(d,hp);return t/(max+1);};
+    const capped=hp=>{if(hp>=max)return max/2;if(hp<=0)return 0;const m=Math.floor(hp);return (m*(m+1)/2+(max-m)*hp)/(max+1);};
     // A kill cycle is the swings of a kill, plus 2 ticks for the death and the next target. Each spawn gives one kill per
     // fight plus respawn (the respawn starts at the death), so a cycle is no shorter than (kill + respawn) over the spawns
     // of that name (npc-spawns.json; few spawns make the account wait). Walking is not counted.
     // safeOnly (Combat training): only the spawns outside the Wilderness count, as the training tip sends the account there.
-    const spawnRow=typeof npcSpawns!=='undefined'&&npcSpawns?npcSpawns.find(r=>r[0]===name):null,wl=safeOnly&&typeof wildLevel==='function'?wildLevel:null;
+    let spawnRow=null;
+    if(typeof npcSpawns!=='undefined'&&npcSpawns){
+      if(!hourRates._spawns||hourRates._spawnsRef!==npcSpawns){
+        const map=new Map();for(let i=0;i<npcSpawns.length;i++){const row=npcSpawns[i];if(!map.has(row[0]))map.set(row[0],row);}
+        hourRates._spawnsRef=npcSpawns;hourRates._spawns=map;
+      }
+      spawnRow=hourRates._spawns.get(name)||null;
+    }
+    const wl=safeOnly&&typeof wildLevel==='function'?wildLevel:null;
     let spawns=0;if(spawnRow)for(let i=0;i+1<spawnRow[3].length;i+=3)if(!wl||!wl({x:spawnRow[3][i],z:spawnRow[3][i+1]}))spawns++;if(spawnRow)spawns=Math.max(1,spawns);
     const rates=list.map(v=>{const dmg=chance(v)*capped(v[13]),kill=dmg>0?(v[13]/dmg)*speed*tickSec+2*tickSec:0,wait=spawns&&v.length>15?(kill+v[15]*tickSec)/spawns:0,k=kill>0?3600/Math.max(kill,wait):0;return {k,xp:magic?k*((v[13]/dmg)*spell.xp+v[13]*50*v[14]/1000):k*v[13]*100*v[14]/1000};}).filter(r=>r.k>0);
     if(!rates.length)return null;const ks=rates.map(r=>r.k),xs=rates.map(r=>r.xp);
@@ -1277,16 +1296,34 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // server's (pvp_combat.rs2): both in the Wilderness, combat levels apart by at most the lower Wilderness level.
   // Roster rows are [name, x, z, level, combat]. Players up to 30 tiles away count.
   const canAttack=(a,b)=>{const w=Math.min(wildLevel(a.pos),wildLevel(b.pos));return w>=1&&Number.isFinite(a.combat)&&Number.isFinite(b.combat)&&Math.abs(a.combat-b.combat)<=w;};
-  const inMulti=p=>!p||typeof multiLines==='undefined'||!multiLines?.length?false:multiLines.reduce((n,[x0,z0,x1,z1,l])=>(l===(p.level||0)&&x0===x1&&x0>p.x&&p.z>=z0&&p.z<z1?n+1:n),0)%2===1;
+  const inMulti=p=>{if(!p||typeof multiLines==='undefined'||!multiLines?.length)return false;const pl=p.level||0,px=p.x,pz=p.z;let n=0;for(let i=0;i<multiLines.length;i++){const e=multiLines[i];if(e[4]===pl&&e[0]===e[2]&&e[0]>px&&pz>=e[1]&&pz<e[3])n++;}return (n&1)===1;};
   function pvpState(b){
     if(!b?.inWorld||!b.pos)return null;
     const gearKnown=Array.isArray(b.equipment)&&b.equipmentObserved!==false,packKnown=Array.isArray(b.inventory),unobserved=[!gearKnown?'equipment':'',!packKnown?'inventory':''].filter(Boolean).join(' and ');
-    const carried=[...(gearKnown?b.equipment:[]),...(packKnown?b.inventory:[])].filter(i=>i&&i.count>0&&i.name),unpriced=carried.filter(i=>!price(i)).length,incomplete=!!unobserved||unpriced>0;
-    const risk=carried.reduce((n,i)=>n+(price(i)?.value??0)*i.count,0);
-    const kept=incomplete?[]:carried.flatMap(i=>Array.from({length:Math.min(i.count,3)},()=>({...i,value:price(i)?.value??0}))).sort((x,y)=>y.value-x.value).slice(0,3);
-    const keptValue=incomplete?null:kept.reduce((n,i)=>n+i.value,0),fleet=new Set(S.bots.map(x=>x.name.toLowerCase()));
-    const threats=(S.roster||[]).filter(r=>r[3]===(b.pos.level||0)&&String(r[0]).toLowerCase()!==b.name.toLowerCase()).map(r=>({name:String(r[0]),pos:{x:r[1],z:r[2]},combat:r[4],dist:Math.max(Math.abs(r[1]-b.pos.x),Math.abs(r[2]-b.pos.z)),ours:fleet.has(String(r[0]).toLowerCase())}))
-      .filter(p=>p.dist<=30&&!p.ours&&canAttack({pos:b.pos,combat:b.combat},p)).sort((x,y)=>x.dist-y.dist);
+    const carried=[];let unpriced=0,risk=0;
+    const scanCarried=list=>{if(!list)return;for(let i=0;i<list.length;i++){const it=list[i];if(!it||!(it.count>0)||!it.name)continue;const p=price(it);if(!p)unpriced++;const val=p?.value??0;risk+=val*it.count;carried.push({it,val});}};
+    if(gearKnown)scanCarried(b.equipment);if(packKnown)scanCarried(b.inventory);
+    const incomplete=!!unobserved||unpriced>0;
+    let kept=[];
+    if(!incomplete){
+      for(let i=0;i<carried.length;i++){const {it,val}=carried[i],take=Math.min(it.count,3);for(let k=0;k<take;k++)kept.push({...it,value:val});}
+      kept.sort((x,y)=>y.value-x.value);if(kept.length>3)kept=kept.slice(0,3);
+    }
+    const keptValue=incomplete?null:kept.reduce((n,i)=>n+i.value,0);
+    if(!pvpState._fleet||pvpState._botsRef!==S.bots){pvpState._botsRef=S.bots;pvpState._fleet=new Set((S.bots||[]).map(x=>x.name.toLowerCase()));}
+    const fleet=pvpState._fleet,bLow=b.name.toLowerCase(),blv=b.pos.level||0,bx=b.pos.x,bz=b.pos.z,threats=[];
+    const rosterRows=S.roster||[];
+    for(let i=0;i<rosterRows.length;i++){
+      const r=rosterRows[i];
+      if(r[3]!==blv)continue;
+      const dist=Math.max(Math.abs(r[1]-bx),Math.abs(r[2]-bz));
+      if(dist>30)continue;
+      const rName=String(r[0]),rLow=rName.toLowerCase();
+      if(rLow===bLow||fleet.has(rLow))continue;
+      const p={name:rName,pos:{x:r[1],z:r[2]},combat:r[4],dist,ours:false};
+      if(canAttack({pos:b.pos,combat:b.combat},p))threats.push(p);
+    }
+    threats.sort((x,y)=>x.dist-y.dist);
     return {wild:wildLevel(b.pos),multi:inMulti(b.pos),risk,kept,keptValue,lost:incomplete?null:Math.max(0,risk-keptValue),unpriced,unobserved,incomplete,threats};
   }
   // NPC aggression timer (RuneLite's NPC Aggression Timer, with the server's rule, Player.ts zonesAfk): a player who stays
@@ -1416,15 +1453,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // which becomes the base when it is 24 hours old. A change under 1% shows nothing.
   const GE_TREND_KEY='atlas-ge-prices';
   function geTrend(rows,now=Date.now()){
-    let st;try{st=JSON.parse(localStorage.getItem(GE_TREND_KEY)||'null');}catch{st=null;}
-    const cur=Object.fromEntries((rows||[]).map(i=>[i.id,i.ask??i.vwap]).filter(([,v])=>Number.isFinite(v)&&v>0));
+    let raw=null,st=null;
+    try{raw=localStorage.getItem(GE_TREND_KEY);if(geTrend._cache&&raw===geTrend._cache.raw)st=geTrend._cache.st;else{st=JSON.parse(raw||'null');geTrend._cache={raw,st};}}catch{st=null;}
+    const cur={};let curCount=0;
+    for(const i of rows||[]){const v=i.ask??i.vwap;if(Number.isFinite(v)&&v>0){cur[i.id]=v;curCount++;}}
     // No usable price yet (the market not fetched): keep the history as it is, so the next full refresh starts it.
-    if(!Object.keys(cur).length){const base=st?.base&&now-st.base.at>=72_000_000?st.base:null;return {at:base?.at??null,change:new Map()};}
-    if(!st||!st.next){st={base:null,next:{at:now,p:cur}};}
-    else if(now-st.next.at>=86_400_000){st={base:st.next,next:{at:now,p:cur}};}
-    try{localStorage.setItem(GE_TREND_KEY,JSON.stringify(st));}catch{/* private window */}
+    if(!curCount){const base=st?.base&&now-st.base.at>=72_000_000?st.base:null;return {at:base?.at??null,change:new Map()};}
+    let changed=false;
+    if(!st||!st.next){st={base:null,next:{at:now,p:cur}};changed=true;}
+    else if(now-st.next.at>=86_400_000){st={base:st.next,next:{at:now,p:cur}};changed=true;}
+    if(changed){try{const nextRaw=JSON.stringify(st);geTrend._cache={raw:nextRaw,st};localStorage.setItem(GE_TREND_KEY,nextRaw);}catch{/* private window */}}
     const base=st.base&&now-st.base.at>=72_000_000?st.base:null,out=new Map();
-    if(base)for(const [id,v] of Object.entries(cur)){const b=base.p[id];if(b>0){const pct=Math.round((v-b)/b*100);if(Math.abs(pct)>=1)out.set(String(id),pct);}}
+    if(base)for(const id in cur){const b=base.p[id];if(b>0){const pct=Math.round((cur[id]-b)/b*100);if(Math.abs(pct)>=1)out.set(String(id),pct);}}
     return {at:base?.at??null,change:out};
   }
   let geQuery='',geOpen=null,geOpenName='';
@@ -1437,7 +1477,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let geSort='stock';
   function geProfit(i,mode){
     if(mode==='flip'){if(i.ask==null||i.bid==null||i.vwap==null)return null;const sell=Math.floor(Math.min(i.ask-1,i.vwap)),buy=i.bid+1;return sell-Math.floor(sell/20)-buy;}
-    if(mode==='alch'){const h=typeof alchOf==='function'?alchOf(i):null,nat=(S?.economy?.supplies||[]).find(x=>x.name==='Nature rune'),rune=nat?.ask??(typeof price==='function'?price('Nature rune')?.value:null);if(!h||i.ask==null||rune==null)return null;return Math.round(h-i.ask-rune);}
+    if(mode==='alch'){const h=typeof alchOf==='function'?alchOf(i):null,rune=geProfit._nr!==undefined?geProfit._nr:((S?.economy?.supplies||[]).find(x=>x.name==='Nature rune')?.ask??(typeof price==='function'?price('Nature rune')?.value:null));if(!h||i.ask==null||rune==null)return null;return Math.round(h-i.ask-rune);}
     return null;}
   function gePanel(){
     const [head,rows]=geResults();return `<div class="ge-panel"><input id="ge-search" class="rl-search" placeholder="Find an item…" value="${E(geQuery)}" aria-label="Search items"><div class="ge-results"><div class="ge-head">${head}</div><div class="ge-rows">${rows}</div></div></div>`;
@@ -1476,12 +1516,20 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!S)return ['<p class="xp-muted" role="status">Waiting for market data…</p>',''];
     // The game names every unidentified herb "Herb"; the item id says which one it is (obj.pack unidentified_*).
     const HERBS={199:'guam',201:'marrentill',203:'tarromin',205:'harralander',207:'ranarr',209:'irit',211:'avantoe',213:'kwuarm',215:'cadantine',217:'dwarf weed',219:'torstol',2485:'lantadyme',3049:'toadflax',3051:'snapdragon'},geName=i=>i.name==='Herb'&&HERBS[i.id]?'Herb ('+HERBS[i.id]+')':i.name;
+    const supplies=S?.economy?.supplies||[];
     const offered=i=>i.ask!=null||i.bid!=null,owner=window.atlasOperator(),held=new Map(),nameOnly=new Map(),invalidNames=new Set();
     if(owner)for(const b of S.bots)if(!b.practice&&!b.reserved&&Array.isArray(b.bank))for(const it of b.bank){const {has,id,name}=priceIdentity(it);if(has&&id===null){invalidNames.add(name);continue;}const target=id!==null?held:nameOnly,key=id!==null?id:name;target.set(key,(target.get(key)||0)+(it.count||0));}
-    const heldCount=i=>{const name=priceIdentity(i).name,legacy=nameOnly.get(name)||0,ambiguous=legacy&&(S?.economy?.supplies||[]).filter(x=>priceIdentity(x).name===name).length>1,known=(held.get(i.id)||0)+(ambiguous?0:legacy);return invalidNames.has(name)||ambiguous?(known?nf(known)+' + ?':'?'):nf(known);};
+    const supplyNameCounts=owner&&nameOnly.size?new Map():null;
+    if(supplyNameCounts)for(let si=0;si<supplies.length;si++){const nm=priceIdentity(supplies[si]).name;supplyNameCounts.set(nm,(supplyNameCounts.get(nm)||0)+1);}
+    const heldCount=i=>{const name=priceIdentity(i).name,legacy=nameOnly.get(name)||0,ambiguous=legacy&&(supplyNameCounts.get(name)||0)>1,known=(held.get(i.id)||0)+(ambiguous?0:legacy);return invalidNames.has(name)||ambiguous?(known?nf(known)+' + ?':'?'):nf(known);};
     const query=geQuery.trim().toLowerCase();
-    const all=(S?.economy?.supplies||[]).filter(i=>i.name&&geName(i).toLowerCase().includes(query)),hidden=all.filter(i=>!offered(i)).length;
-    const gs=typeof geSort==='string'?geSort:'stock',profit=gs==='stock'?null:new Map(all.map(i=>[i,geProfit(i,gs)]));
+    const all=supplies.filter(i=>i.name&&(!query||geName(i).toLowerCase().includes(query))),hidden=all.filter(i=>!offered(i)).length;
+    const gs=typeof geSort==='string'?geSort:'stock';
+    let profit=null;
+    if(gs!=='stock'){
+      geProfit._nr=gs==='alch'?(supplies.find(x=>x.name==='Nature rune')?.ask??(typeof price==='function'?price('Nature rune')?.value:null)):undefined;
+      try{profit=new Map(all.map(i=>[i,geProfit(i,gs)]));}finally{geProfit._nr=undefined;}
+    }
     const rows=profit?all.filter(i=>profit.get(i)>0).sort((a,b)=>profit.get(b)-profit.get(a)):all.filter(i=>geAll||offered(i)).sort((a,b)=>Number(b.ask!=null||b.bid!=null)-Number(a.ask!=null||a.bid!=null)||(b.stock||0)-(a.stock||0)||a.name.localeCompare(b.name));
     const shown=rows.slice(0,geLimit);
     // One header names the columns, so a row holds numbers only. A long number is cut short; the row's tooltip has it whole.
@@ -1677,14 +1725,79 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const gearKnown=Array.isArray(b.equipment)&&b.equipmentObserved!==false;
     const packKnown=Array.isArray(b.inventory);
     const bankKnown=allowBank&&Array.isArray(b.bank);
+    let catById=null;
+    if(Array.isArray(gearCatalogData)){
+      const len=gearCatalogData.length;
+      if(!gearAdvisorFor._cat||gearAdvisorFor._catRef!==gearCatalogData||gearAdvisorFor._catLen!==len){
+        const map=new Map();
+        for(let i=0;i<len;i++){const g=gearCatalogData[i];if(g&&!map.has(g.id))map.set(g.id,g);}
+        gearAdvisorFor._catRef=gearCatalogData;gearAdvisorFor._catLen=len;gearAdvisorFor._cat=map;
+      }
+      catById=gearAdvisorFor._cat;
+    }
+    const skillLevels=new Map();
+    if(Array.isArray(b.skills)){
+      for(let i=0;i<b.skills.length;i++){
+        const s=b.skills[i],low=String(s?.name||'').toLowerCase();
+        if(!low||skillLevels.has(low))continue;
+        skillLevels.set(low,Number.isFinite(s.level)?s.level:Number.isFinite(s.currentLevel)?s.currentLevel:null);
+      }
+    }
+    const hasQuests=Array.isArray(b.quests),questStates=hasQuests?new Map():null;
+    if(hasQuests){
+      for(let i=0;i<b.quests.length;i++){
+        const q=b.quests[i],low=String(q?.name||'').toLowerCase();
+        if(!low||questStates.has(low))continue;
+        questStates.set(low,q.state==='complete'||q.state==='completed'?true:(q.state==='not started'||q.state==='started'?false:null));
+      }
+    }
+    const indexItems=list=>{
+      const ids=new Set(),names=new Set();
+      for(let i=0;i<list.length;i++){
+        const item=list[i];if(!item)continue;
+        const id=Number.isSafeInteger(item.baseId)?item.baseId:Number.isSafeInteger(item.id)?item.id:null;
+        if(id!==null)ids.add(id);
+        else names.add(String(item.name||'').toLowerCase());
+      }
+      return {ids,names};
+    };
+    const equipIdx=gearKnown?indexItems(b.equipment):null;
+    const packIdx=packKnown?indexItems(b.inventory):null;
+    const bankIdx=bankKnown?indexItems(b.bank):null;
+    const hasTier=(idx,tier)=>{
+      if(!idx)return false;
+      if(idx.ids.has(tier.id))return true;
+      if(tier.also)for(let a=0;a<tier.also.length;a++)if(idx.ids.has(tier.also[a]))return true;
+      if(!idx.names.size)return false;
+      if(!tier._bare)tier._bare=String(tier.name||'').replace(/\s+\((?:Green|Blue|Red|Black)\)$/i,'').toLowerCase();
+      return idx.names.has(tier._bare);
+    };
+    const evalReq=(tier,isTool)=>{
+      const cat=catById?catById.get(tier.id)||null:null;
+      const reqSkills=mergedTierSkills(tier,cat,isTool);
+      const reqQuest=cat?.requires?.quest||tier.quest||null;
+      const unmet=[];let unknown=false;
+      for(const [sk,req] of Object.entries(reqSkills)){
+        const lv=skillLevels.get(sk.toLowerCase())??null;
+        if(lv==null)unknown=true;
+        else if(lv<req)unmet.push(sk+' '+req);
+      }
+      if(reqQuest){
+        const qState=questStates?questStates.get(reqQuest.toLowerCase())??null:null;
+        if(qState===false)unmet.push(reqQuest);
+        else if(qState===null)unknown=true;
+      }
+      return {ok:!unmet.length&&!unknown,unknown:!unmet.length&&unknown,unmet,quest:reqQuest,skills:reqSkills};
+    };
     const rows=GEAR_LADDERS.map(ladder=>{
-      const isTool=!!ladder.tool;
+      const isTool=!!ladder.tool,reqs=new Array(ladder.items.length);
       let bestWorn=-1,bestHeld=-1,bestHeldPlace=null,bestUnlocked=-1,nextLocked=-1;
       for(let i=0;i<ladder.items.length;i++){
-        const tier=ladder.items[i],req=tierRequirements(b,tier,isTool);
-        if(gearKnown&&b.equipment.some(e=>matchesTier(e,tier)))bestWorn=i;
-        if(packKnown&&b.inventory.some(e=>matchesTier(e,tier))){bestHeld=i;bestHeldPlace='pack';}
-        else if(bankKnown&&b.bank.some(e=>matchesTier(e,tier))&&i>bestHeld){bestHeld=i;bestHeldPlace='bank';}
+        const tier=ladder.items[i],req=evalReq(tier,isTool);
+        reqs[i]=req;
+        if(equipIdx&&hasTier(equipIdx,tier))bestWorn=i;
+        if(packIdx&&hasTier(packIdx,tier)){bestHeld=i;bestHeldPlace='pack';}
+        else if(bankIdx&&hasTier(bankIdx,tier)&&i>bestHeld){bestHeld=i;bestHeldPlace='bank';}
         if(req.ok)bestUnlocked=i;
         else if(nextLocked<0&&i>(Math.max(bestWorn,bestUnlocked)))nextLocked=i;
       }
@@ -1692,19 +1805,19 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       const current=currentIdx>=0?ladder.items[currentIdx]:null;
       const currentPlace=bestWorn>=0&&(bestWorn>=bestHeld||!isTool)?'worn':bestHeld>=0?bestHeldPlace:null;
       let targetIdx=-1,status='bis',reason='';
-      if(bestHeld>currentIdx&&tierRequirements(b,ladder.items[bestHeld],isTool).ok){
+      if(bestHeld>currentIdx&&reqs[bestHeld].ok){
         targetIdx=bestHeld;status='owned';reason='Held in '+bestHeldPlace;
       }else if(bestUnlocked>currentIdx){
         targetIdx=bestUnlocked;status='ready';
         if(bestHeld===bestUnlocked)reason='Held in '+bestHeldPlace;
         else{
-          const req=tierRequirements(b,ladder.items[bestUnlocked],isTool);
+          const req=reqs[bestUnlocked];
           const skillTxt=Object.entries(req.skills||{}).map(([s,n])=>s+' '+n).join(', ');
           reason=skillTxt?(req.quest?skillTxt+' · '+req.quest:skillTxt):(req.quest||'Unlocked');
         }
       }else if(nextLocked>=0){
         targetIdx=nextLocked;status='locked';
-        const req=tierRequirements(b,ladder.items[nextLocked],isTool);
+        const req=reqs[nextLocked];
         reason=req.unmet.length?'Needs '+req.unmet.join(', '):'Needs quest/level check';
       }else{
         targetIdx=ladder.items.length-1;status=currentIdx===ladder.items.length-1?'bis':'locked';
@@ -1974,10 +2087,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(!p){const x0=x-(s>>1),y0=y-(s>>1);g.fillStyle='#000';g.fillRect(x0,y0,s+1,s+1);g.fillStyle=col;g.fillRect(x0,y0,s,s);return;}
       g.fillStyle='#000';g.fillRect(x-2,y+1,4,1);g.fillRect(x-1,y+2,2,1);g.fillStyle=col;g.fillRect(x-1,y-2,2,4);g.fillRect(x-2,y-1,4,2);g.fillStyle=shade;g.fillRect(x+1,y-1,1,2);g.fillRect(x-1,y+1,2,1);};
     // Busy areas: each 8 by 8 tile square with 5 or more players on the shown floor, shaded red (darker for more players).
-    if(typeof hl!=='undefined'&&hl.busy){const cell=new Map();for(const r of markers.roster){if((r[3]||0)!==floor||(r[2]>6400)!==(cz>6400))continue;const k=Math.floor(r[1]/8)+','+Math.floor(r[2]/8);cell.set(k,(cell.get(k)||0)+1);}
+    if(typeof hl!=='undefined'&&hl.busy){const cell=new Map();for(let i=0;i<markers.roster.length;i++){const r=markers.roster[i];if((r[3]||0)!==floor||(r[2]>6400)!==(cz>6400))continue;const k=((r[1]>>3)<<12)|(r[2]>>3);cell.set(k,(cell.get(k)||0)+1);}
       const corner=(qx,qz)=>{const dx=(qx-cx-0.5)*PX,dy=(cz-qz+0.5)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};
-      for(const [k,n] of cell){if(n<5)continue;const [gx,gz]=k.split(',').map(Number),x0=gx*8,z0=gz*8,pts=[corner(x0,z0),corner(x0+8,z0),corner(x0+8,z0+8),corner(x0,z0+8)];g.fillStyle='rgba(255,40,0,'+Math.min(0.5,0.12+n*0.02)+')';g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();const c=corner(x0+4,z0+4);hits.push([Math.round(c[0]),Math.round(c[1]),n+' players here']);}}
-    const fleetNames=new Set(markers.bots.map(o=>o.name.toLowerCase()));// In the Wilderness, a player who can attack the watched account now (PvP Tools) is a red dot.
+      for(const [k,n] of cell){if(n<5)continue;const gx=k>>12,gz=k&4095,x0=gx*8,z0=gz*8,pts=[corner(x0,z0),corner(x0+8,z0),corner(x0+8,z0+8),corner(x0,z0+8)];g.fillStyle='rgba(255,40,0,'+Math.min(0.5,0.12+n*0.02)+')';g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();const c=corner(x0+4,z0+4);hits.push([Math.round(c[0]),Math.round(c[1]),n+' players here']);}}
+    if(!D.fleetSet||D.fleetRef!==markers.bots){D.fleetRef=markers.bots;D.fleetSet=new Set(markers.bots.map(o=>o.name.toLowerCase()));}
+    const fleetNames=D.fleetSet;// In the Wilderness, a player who can attack the watched account now (PvP Tools) is a red dot.
     const attackers=new Set(((b&&b.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b)?.threats:null)||[]).map(t=>String(t.name).toLowerCase()));
     for(const [n,qx,qz,l] of markers.roster){if((l||0)!==floor)continue;const low=String(n).toLowerCase();if(fleetNames.has(low))continue;if(attackers.has(low))dot(qx,qz,'#ff2020','#b00000',n,2);else if(D.rival.has(low))dot(qx,qz,'#19b3ff','#0f84c4',n,2);else if(D.farm.has(low))dot(qx,qz,'#9a9a9a','#757575',n,2);else dot(qx,qz,'#fff','#d2d2d2',n,2);}
     for(const o of markers.bots){const q=o.live||o.pos;if(!q||(q.level||0)!==floor||(q.z>6400)!==(cz>6400)||o===b)continue;const[cl]=st(o);if(cl==='on')dot(q.x,q.z,'#2bff2b','#1fc21f',o.name,3);else dot(q.x,q.z,'#3d8a33','#2c6625',o.name,3);}

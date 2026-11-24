@@ -451,4 +451,5 @@ export function installViewerBridge(host:any) {
     },500);
 }
 
-export const viewerBridgeSource=()=>`(${installViewerBridge.toString()})(window);`;
+let cachedBridgeSource:string|null=null;
+export const viewerBridgeSource=()=>cachedBridgeSource??=(`(${installViewerBridge.toString()})(window);`);

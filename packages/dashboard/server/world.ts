@@ -132,13 +132,19 @@ async function refreshLiveTops() {
         await Bun.sleep(1000);
     }
 }
+const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8')); } catch { return null; } })();
+const snapshotTopByBoard = new Map<string, { name: string; level: number; ticks: number }>();
+for (const entry of snapshot?.boards ?? []) {
+    const row = entry?.rows?.[0];
+    if (entry?.board && row) snapshotTopByBoard.set(entry.board, row);
+}
+const snapshotTakenAt = snapshot?.takenAt ? (Date.parse(snapshot.takenAt) || 0) : 0;
 function topOf(board: string): { name: string; level: number; ticks: number; at: number; live: boolean } | null {
     const l = liveTop.get(board);
     if (l) return { ...l, live: true };
-    const s = snapshot?.boards?.find((x: any) => x.board === board)?.rows?.[0];
-    return s ? { name: s.name, level: s.level, ticks: s.ticks, at: Date.parse(snapshot.takenAt) || 0, live: false } : null;
+    const s = snapshotTopByBoard.get(board);
+    return s ? { name: s.name, level: s.level, ticks: s.ticks, at: snapshotTakenAt, live: false } : null;
 }
-const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8')); } catch { return null; } })();
 // Player lookups (World plugin): any player's hiscore page, one request every 1.2 s, each kept 30 minutes. They are served
 // only on demand, through /api/player; the state does not carry them. The hosted page cannot reach the hiscores
 // itself (no CORS), so it shows no lookup detail.
@@ -186,10 +192,34 @@ async function refreshExtra() {
         } catch { /* next round */ }
     }
 }
+const extraBoardRowIndex = new WeakMap<ValueRow[], Map<string, ValueRow>>();
+function extraBoardByName(rows: ValueRow[]): Map<string, ValueRow> {
+    let map = extraBoardRowIndex.get(rows);
+    if (!map) {
+        map = new Map<string, ValueRow>();
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i]!;
+            const low = row.name.toLowerCase();
+            if (!map.has(low)) map.set(low, row);
+        }
+        extraBoardRowIndex.set(rows, map);
+    }
+    return map;
+}
 // An account's rows on the value boards, in the shape of its skill rows (the value as the time text), with the
 // board read's own time (`at`): the account's ranksAt is the time of its skill page. A read older than 30 minutes
 // (the page has failed since) is not shown.
-const valueRanks = (name: string): (Row & { at: number })[] => EXTRA.flatMap(e => { const t = extraBoards.get(e.board), r = t && Date.now() - t.at < 1_800_000 ? t.rows.find(x => x.name.toLowerCase() === name.toLowerCase()) : undefined; return r ? [{ board: e.board, rank: r.rank, level: 0, time: r.text, at: t!.at }] : []; });
+const valueRanks = (name: string): (Row & { at: number })[] => {
+    const low = name.toLowerCase(), now = Date.now(), out: (Row & { at: number })[] = [];
+    for (let i = 0; i < EXTRA.length; i++) {
+        const e = EXTRA[i]!;
+        const t = extraBoards.get(e.board);
+        if (!t || now - t.at >= 1_800_000) continue;
+        const r = extraBoardByName(t.rows).get(low);
+        if (r) out.push({ board: e.board, rank: r.rank, level: 0, time: r.text, at: t.at });
+    }
+    return out;
+};
 
 // ---------- role inference for accounts the names list does not know ----------
 const NO_ROLE = new Set(['unknown', 'test', '', undefined, null]);

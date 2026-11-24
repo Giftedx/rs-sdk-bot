@@ -25,12 +25,22 @@ export function valueBoardRows(html: string): ValueRow[] {
     }
     return rows;
 }
+const HISCORE_BOARD_RE = new Map<string, RegExp>();
+function hiscoreBoardRe(board: string): RegExp {
+    let re = HISCORE_BOARD_RE.get(board);
+    if (!re) {
+        re = new RegExp(`${board} ([0-9,]+) ([0-9,]+) ((?:\\d+h )?(?:\\d+m )?\\d+s)`);
+        HISCORE_BOARD_RE.set(board, re);
+    }
+    return re;
+}
 export function hiscoreRows(html: string, boards: readonly string[]): HiscoreRow[] {
     const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
     const rows: HiscoreRow[] = [];
-    for (const b of boards) {
+    for (let i = 0; i < boards.length; i++) {
+        const b = boards[i]!;
         // Overall's level is a total with a thousands comma ("1,881").
-        const m = text.match(new RegExp(`${b} ([0-9,]+) ([0-9,]+) ((?:\\d+h )?(?:\\d+m )?\\d+s)`)), level = m ? Number(m[2]!.replace(/,/g, '')) : 0;
+        const m = hiscoreBoardRe(b).exec(text), level = m ? Number(m[2]!.replace(/,/g, '')) : 0;
         if (m && level > 1) rows.push({ board: b, rank: Number(m[1]!.replace(/,/g, '')), level, time: m[3]! });
     }
     return rows;
@@ -38,8 +48,13 @@ export function hiscoreRows(html: string, boards: readonly string[]): HiscoreRow
 
 // Online players: [name, x, z, plane, combat], seen in the last 30 seconds, sorted by name.
 export function rosterView(roster: ReadonlyMap<string, Seen & { name?: string }>, now: number) {
-    return [...roster].filter(([n, p]) => now - p.seen < ONLINE_MS && NAME.test(p.name ?? n)).map(([n, p]) => [p.name ?? n, p.x, p.z, p.level, p.combat] as [string, number, number, number, number])
-        .sort((a, b) => a[0].localeCompare(b[0]));
+    const out: [string, number, number, number, number][] = [];
+    for (const [n, p] of roster) {
+        if (now - p.seen >= ONLINE_MS) continue;
+        const name = p.name ?? n;
+        if (NAME.test(name)) out.push([name, p.x, p.z, p.level, p.combat]);
+    }
+    return out.sort((a, b) => a[0].localeCompare(b[0]));
 }
 
 // Each board's top 10 with who is ours, who is online now and where. ourBest: the fleet's best rank on the board.
@@ -89,19 +104,28 @@ export function wildernessInfo(pos: { x: number; z: number; level?: number } | n
 }
 
 export function wildernessView(roster: ReadonlyMap<string, Seen & { name?: string }>, fleet: ReadonlySet<string>, now: number) {
-    return [...roster]
-        .filter(([n, p]) => now - p.seen < ONLINE_MS && NAME.test(p.name ?? n))
-        .flatMap(([n, p]) => {
-            const name = p.name ?? n, info = wildernessInfo({ x: p.x, z: p.z, level: p.level }, p.combat);
-            return info.wild > 0 ? [{ name, fleet: fleet.has(name.toLowerCase()), x: p.x, z: p.z, plane: p.level, combat: p.combat, wild: info.wild, minCombat: info.minCombat, maxCombat: info.maxCombat }] : [];
-        })
-        .sort((a, b) => Number(a.fleet) - Number(b.fleet) || b.wild - a.wild || a.name.localeCompare(b.name));
+    const out: { name: string; fleet: boolean; x: number; z: number; plane: number; combat: number; wild: number; minCombat: number | null; maxCombat: number | null }[] = [];
+    for (const [n, p] of roster) {
+        if (now - p.seen >= ONLINE_MS) continue;
+        const name = p.name ?? n;
+        if (!NAME.test(name)) continue;
+        const info = wildernessInfo(p, p.combat);
+        if (info.wild > 0) {
+            out.push({ name, fleet: fleet.has(name.toLowerCase()), x: p.x, z: p.z, plane: p.level, combat: p.combat, wild: info.wild, minCombat: info.minCombat, maxCombat: info.maxCombat });
+        }
+    }
+    return out.sort((a, b) => Number(a.fleet) - Number(b.fleet) || b.wild - a.wild || a.name.localeCompare(b.name));
 }
 
 // Players near each claimed resource with a tile ("knight:2582,3297") or named spot ("shop:aubury"): ours and others,
 // within SPOT_RADIUS tiles on that plane.
 export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen & { name?: string }>, fleet: ReadonlySet<string>, now: number, radius = SPOT_RADIUS) {
-    const online = [...roster].filter(([, p]) => now - p.seen < ONLINE_MS);
+    const online: { name: string; x: number; z: number; level: number; isFleet: boolean }[] = [];
+    for (const [n, p] of roster) {
+        if (now - p.seen >= ONLINE_MS) continue;
+        const name = p.name ?? n;
+        online.push({ name, x: p.x, z: p.z, level: p.level, isFleet: fleet.has(name.toLowerCase()) });
+    }
     const spots: { side: string; resource: string; kind: string; x: number | null; z: number | null; others: string[]; ours: string[] }[] = [];
     const listed = new Set<string>();
     for (const c of claims) {
@@ -117,8 +141,17 @@ export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen &
             if (!m && !named) { spots.push({ side: c.side, resource: raw, kind: raw.split(':')[0]!, x: null, z: null, others: [], ours: [] }); continue; }
             const x = m ? Number(m[2]) : named!.x, z = m ? Number(m[3]) : named!.z, plane = m ? 0 : named!.level ?? 0;
             const kind = m ? m[1]! : raw.split(':')[0]!;
-            const near = online.filter(([, p]) => p.level === plane && Math.abs(p.x - x) <= radius && Math.abs(p.z - z) <= radius).map(([n, p]) => p.name ?? n);
-            spots.push({ side: c.side, resource: raw, kind, x, z, others: near.filter(n => !fleet.has(n.toLowerCase())).sort(), ours: near.filter(n => fleet.has(n.toLowerCase())).sort() });
+            const others: string[] = [], ours: string[] = [];
+            for (let i = 0; i < online.length; i++) {
+                const p = online[i]!;
+                if (p.level === plane && Math.abs(p.x - x) <= radius && Math.abs(p.z - z) <= radius) {
+                    if (p.isFleet) ours.push(p.name);
+                    else others.push(p.name);
+                }
+            }
+            if (others.length > 1) others.sort();
+            if (ours.length > 1) ours.sort();
+            spots.push({ side: c.side, resource: raw, kind, x, z, others, ours });
         }
     }
     return spots.sort((a, b) => b.others.length - a.others.length || a.resource.localeCompare(b.resource));

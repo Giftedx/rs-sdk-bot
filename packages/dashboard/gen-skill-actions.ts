@@ -16,8 +16,18 @@ export type SkillRow = { skill: string; row: string; level: number; xp: number; 
 export type Action = [string, number, number, string[], string[], number[]];
 
 // The count of each input in a row's dbrow block ("data=leather,dragon_leather,3": a body uses 3 leathers).
+const DATA_COUNT_RE = /^data=[a-z0-9_]+,([^,\r\n]+),(\d+)\s*$/gm;
 export function inputCounts(inputs: string[], block: string): number[] {
-    return inputs.map(i => Number(block.match(new RegExp(`^data=[a-z0-9_]+,${i},(\\d+)\\s*$`, 'm'))?.[1]) || 1);
+    if (!inputs.length) return [];
+    if (!block) return inputs.map(() => 1);
+    const counts = new Map<string, number>();
+    DATA_COUNT_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = DATA_COUNT_RE.exec(block)) !== null) {
+        const key = m[1]!;
+        if (!counts.has(key)) counts.set(key, Number(m[2]) || 1);
+    }
+    return inputs.map(i => counts.get(i) ?? 1);
 }
 
 // "limestone_rock1_table" is "Limestone rock": a rock or tree number is a map variant, not a different action.
@@ -26,22 +36,47 @@ const label = (row: string) => row.replace(/_table$/, '').replace(/(rock|tree)\d
 export function skillActions(rows: SkillRow[], names: Map<string, string>, rate = XP_RATE, ids: Map<string, number> = new Map()): Record<string, Action[]> {
     const name = (debug: string) => names.get(debug) ?? debug.replace(/_/g, ' ');
     const out: Record<string, Action[]> = {};
+    const seenBySkill = new Map<string, Set<string>>();
     const firstOut = (r: SkillRow) => r.skill + '|' + (r.outputs?.[0] ?? '');
     const uses = new Map<string, number>();
-    for (const r of rows) if (r.outputs?.[0]) uses.set(firstOut(r), (uses.get(firstOut(r)) ?? 0) + 1);
-    for (const r of rows) {
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i]!;
+        if (r.outputs?.[0]) uses.set(firstOut(r), (uses.get(firstOut(r)) ?? 0) + 1);
+    }
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i]!;
         if (!r.skill || !Number.isFinite(r.level) || !(r.xp > 0)) continue;
-        const debugIn = (r.inputs ?? []).flatMap((d, k) => Array.from({ length: Math.max(1, r.counts?.[k] ?? 1) }, () => d));
+        const debugIn: string[] = [];
+        const rawIn = r.inputs;
+        if (rawIn) {
+            for (let k = 0; k < rawIn.length; k++) {
+                const d = rawIn[k]!, count = Math.max(1, r.counts?.[k] ?? 1);
+                for (let c = 0; c < count; c++) debugIn.push(d);
+            }
+        }
         const outputs = (r.outputs ?? []).map(name), inputs = debugIn.map(name), inputIds = debugIn.map(d => ids.get(d) ?? 0);
         // A row with no output (a bone buried, a log burnt) is named after its input.
-        const action: Action = [outputs[0] && uses.get(firstOut(r)) === 1 ? outputs[0] : !outputs.length && inputs[0] ? inputs[0] : label(r.row), Math.max(1, r.level), Math.round(r.xp * rate * 10) / 10, inputs, outputs, inputIds];
+        const actionName = outputs[0] && uses.get(firstOut(r)) === 1 ? outputs[0] : !outputs.length && inputs[0] ? inputs[0] : label(r.row);
+        const actionLevel = Math.max(1, r.level);
+        const actionXp = Math.round(r.xp * rate * 10) / 10;
         // Map variants of one action (Limestone rock 1 to 3) give one row.
-        const list = (out[r.skill] ??= []);
-        if (!list.some(a => a[0] === action[0] && a[1] === action[1] && a[2] === action[2])) list.push(action);
+        let seen = seenBySkill.get(r.skill);
+        if (!seen) { seen = new Set(); seenBySkill.set(r.skill, seen); }
+        const dedupKey = `${actionName}\0${actionLevel}\0${actionXp}`;
+        if (!seen.has(dedupKey)) {
+            seen.add(dedupKey);
+            (out[r.skill] ??= []).push([actionName, actionLevel, actionXp, inputs, outputs, inputIds]);
+        }
     }
     for (const list of Object.values(out)) list.sort((a, b) => a[1] - b[1] || a[2] - b[2] || a[0].localeCompare(b[0]));
     return out;
 }
+
+const PARAM_BONE_EXP_RE = /^param=bone_exp,(\d+)/m;
+const PARAM_PRODUCT_EXP_RE = /^param=productexp,(\d+)/m;
+const PARAM_LEVEL_REQ_RE = /^param=levelrequire,(\d+)/m;
+const FIREMAKING_PATH_RE = /skill_firemaking/;
+const SKIP_OBJ_PATH_RE = /[\\/](tutorial|_test)[\\/]/;
 
 // Skills that knowledge/skills.json has no table for keep their XP in item params of the content's .obj files:
 // burying a bone gives oc_param(bone_exp) Prayer XP (skill_prayer/scripts/bury_bone.rs2), lighting a log gives
@@ -51,15 +86,24 @@ export function skillActions(rows: SkillRow[], names: Map<string, string>, rate 
 // (seven "Monkey bones" of Monkey Madness).
 export function objParamRows(files: [string, string][], keep: (debug: string) => boolean = () => true): SkillRow[] {
     const rows: SkillRow[] = [];
-    for (const [path, text] of files) {
-        if (/[\\/](tutorial|_test)[\\/]/.test(path)) continue;
-        for (const block of text.split(/^\[/m).slice(1)) {
+    for (let fi = 0; fi < files.length; fi++) {
+        const [path, text] = files[fi]!;
+        if (SKIP_OBJ_PATH_RE.test(path)) continue;
+        const isFiremaking = FIREMAKING_PATH_RE.test(path);
+        const blocks = text.split(/^\[/m);
+        for (let bi = 1; bi < blocks.length; bi++) {
+            const block = blocks[bi]!;
             const debug = block.slice(0, block.indexOf(']'));
             if (!keep(debug)) continue;
-            const param = (k: string) => Number(block.match(new RegExp(`^param=${k},(\\d+)`, 'm'))?.[1]);
-            const bone = param('bone_exp'), fire = param('productexp');
+            const bone = block.includes('bone_exp') ? Number(PARAM_BONE_EXP_RE.exec(block)?.[1]) : NaN;
             if (bone > 0) rows.push({ skill: 'prayer', row: debug, level: 1, xp: bone / 10, inputs: [debug], outputs: [] });
-            if (fire > 0 && /skill_firemaking/.test(path)) rows.push({ skill: 'firemaking', row: debug, level: param('levelrequire') || 1, xp: fire / 10, inputs: [debug], outputs: [] });
+            if (isFiremaking && block.includes('productexp')) {
+                const fire = Number(PARAM_PRODUCT_EXP_RE.exec(block)?.[1]);
+                if (fire > 0) {
+                    const req = Number(PARAM_LEVEL_REQ_RE.exec(block)?.[1]) || 1;
+                    rows.push({ skill: 'firemaking', row: debug, level: req, xp: fire / 10, inputs: [debug], outputs: [] });
+                }
+            }
         }
     }
     return rows;
