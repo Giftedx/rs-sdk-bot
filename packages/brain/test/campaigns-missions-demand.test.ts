@@ -472,4 +472,14 @@ describe('Campaigns, Missions & DemandEngine', () => {
         expect(evals[2]!.shortfalls[0]!.fulfilled).toBe(8);
         expect(evals[2]!.shortfalls[0]!.remaining).toBe(10);
     });
+
+    test('default gear_collection demands exclude staffOnly items like Poisoned dagger(p) (1235)', () => {
+        const catalog = defaultActivityCatalog();
+        const gearEngine = createDemandEngine({ catalog });
+        const snap = makeSnapshot({
+            IdleBot: makeAccount('IdleBot'),
+        });
+        const gearDemands = gearEngine.activeDemands(snap).filter((d) => d.goalKind === 'gear_collection');
+        expect(gearDemands.some((d) => d.target.kind === 'item' && d.target.itemId === 1235)).toBe(false);
+    });
 });

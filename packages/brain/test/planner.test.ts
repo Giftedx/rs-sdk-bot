@@ -638,3 +638,155 @@ test('planAccount never picks 0-XP activities for skill unlocks/demands and sele
         expect(herbSkillPlan.steps.some((s) => 'activityId' in s && s.activityId === 'quest:druid')).toBe(true);
     }
 });
+
+test('planner excludes quest activities from combat_readiness/skill, selects lowest unmet trainSkill, uses shop-buy for items, and skips mining:loot for unlocks', () => {
+    const activities = createActivityCatalog().list();
+    const armyBot = makeAcct({
+        name: 'ArmyBot',
+        role: 'army',
+        skills: {
+            Attack: { level: 40, xp: xpForLevel(40) },
+            Strength: { level: 90, xp: xpForLevel(90) },
+            Defence: { level: 50, xp: xpForLevel(50) },
+            Hitpoints: { level: 60, xp: xpForLevel(60) },
+            Ranged: { level: 90, xp: xpForLevel(90) },
+            Magic: { level: 90, xp: xpForLevel(90) },
+            Prayer: { level: 70, xp: xpForLevel(70) },
+            Agility: { level: 35, xp: xpForLevel(35) },
+        },
+        quests: { barcrawl: 'complete' },
+        bank: {
+            items: { 995: 50_000, 385: 100 },
+            observedAt: NOW - 10_000,
+            trusted: true,
+        },
+    });
+    const shopBot = makeAcct({
+        name: 'ShopBot',
+        role: 'helper',
+        skills: { Magic: { level: 60, xp: xpForLevel(60) } },
+        bank: {
+            items: { 995: 50_000 },
+            observedAt: NOW - 10_000,
+            trusted: true,
+        },
+    });
+    const minerBot = makeAcct({
+        name: 'MinerBot',
+        role: 'auto',
+        skills: {
+            Mining: { level: 1, xp: 0 },
+            Agility: { level: 25, xp: xpForLevel(25) },
+            Thieving: { level: 15, xp: xpForLevel(15) },
+            Magic: { level: 14, xp: xpForLevel(14) },
+            Herblore: { level: 14, xp: xpForLevel(14) },
+        },
+        bank: {
+            items: { 995: 20_000, 1265: 1 },
+            observedAt: NOW - 10_000,
+            trusted: true,
+        },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { ArmyBot: armyBot, ShopBot: shopBot, MinerBot: minerBot },
+    };
+
+    const armyPlan = planAccount(armyBot, {
+        world,
+        activities,
+        demands: [{
+            id: 'goal:pk_army:ArmyBot',
+            goalKind: 'pk_army',
+            valueScore: 500,
+            valuePerHour: 5000,
+            target: {
+                kind: 'combat_readiness',
+                account: 'ArmyBot',
+                targets: { Attack: 90, Strength: 90, Defence: 90, Hitpoints: 90, Ranged: 90, Magic: 90, Prayer: 70 },
+            },
+            fulfilled: 398,
+            remaining: 200,
+            priorityWeight: 1,
+            assignedAccount: 'ArmyBot',
+            active: true,
+        }],
+    });
+    expect(armyPlan.steps.length).toBeGreaterThan(0);
+    const armyWork = armyPlan.steps.find((s) => s.stepKind === 'work');
+    expect(armyWork?.stepKind).toBe('work');
+    if (armyWork?.stepKind === 'work') {
+        expect(armyWork.activityId.startsWith('quest:')).toBe(false);
+        expect(armyWork.config.trainSkill).toBe('Attack');
+        expect(armyWork.config.targetLevel).toBe(90);
+    }
+
+    const magicSkillPlan = planAccount(armyBot, {
+        world,
+        activities,
+        demands: [{
+            id: 'd:magic-only',
+            goalKind: 'pk_army',
+            valueScore: 500,
+            valuePerHour: 5000,
+            target: { kind: 'skill', account: 'ArmyBot', skill: 'Magic', targetLevel: 95 },
+            fulfilled: 90,
+            remaining: 5,
+            priorityWeight: 1,
+            assignedAccount: 'ArmyBot',
+            active: true,
+        }],
+    });
+    expect(magicSkillPlan.steps.some((s) => 'activityId' in s && Boolean(s.activityId?.startsWith('quest:')))).toBe(false);
+
+    // Cosmic rune (564) is stocked by magearena_runeshop (Magic 60) and dropped slowly by Hill Giants; ShopBot should choose market:shop-buy.
+    const cosmicPlan = planAccount(shopBot, {
+        world,
+        activities,
+        demands: [{
+            id: 'campaign:haggis:item:564',
+            goalKind: 'main_supply',
+            valueScore: 500,
+            valuePerHour: 5000,
+            target: { kind: 'item', itemId: 564, itemName: 'Cosmic rune', count: 100 },
+            fulfilled: 0,
+            remaining: 100,
+            priorityWeight: 1,
+            active: true,
+        }],
+    });
+    expect(cosmicPlan.steps).toHaveLength(1);
+    const shopWork = cosmicPlan.steps[0];
+    expect(shopWork?.stepKind).toBe('work');
+    if (shopWork?.stepKind === 'work') {
+        expect(shopWork.activityId).toBe('market:shop-buy');
+        expect(shopWork.config.itemId).toBe(564);
+        expect(shopWork.config.shopId).toBeDefined();
+    }
+
+    // Quest Watchtower requires Mining 40; unlocking Mining from level 1 must pick gather:mining-ore, never gather:mining-loot.
+    const watchtowerPlan = planAccount(minerBot, {
+        world,
+        activities,
+        demands: [{
+            id: 'goal:quest_board:itwatchtower',
+            goalKind: 'quest_board',
+            valueScore: 300,
+            valuePerHour: 1000,
+            target: { kind: 'quest', questSlug: 'itwatchtower' },
+            fulfilled: 0,
+            remaining: 1,
+            priorityWeight: 1,
+            active: true,
+        }],
+    });
+    expect(watchtowerPlan.steps.some((s) => 'activityId' in s && s.activityId === 'gather:mining-loot')).toBe(false);
+    const miningUnlock = watchtowerPlan.steps.find((s) => s.stepKind === 'unlock' && s.unlockKind === 'skill' && s.skill === 'Mining');
+    expect(miningUnlock).toBeDefined();
+    if (miningUnlock?.stepKind === 'unlock') {
+        expect(miningUnlock.activityId).toBe('gather:mining-ore');
+    }
+});

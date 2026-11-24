@@ -31,6 +31,7 @@ import {
     type WorldSnapshot,
 } from './contracts';
 import {
+    loadShopCatalogByItem,
     resolveAcquireItem,
     type AcquireContext,
     type AcquireRequest,
@@ -43,6 +44,7 @@ import {
     STANDARD_FOOD_IDS,
     accountSkillLevel,
     activityPreflightFromConfig,
+    availableSpendableCoins,
     availableStockAfterReserves,
     canWearItem,
     completedQuestSet,
@@ -581,6 +583,7 @@ function activityMatchesDemand(
             return false;
         }
         case 'skill': {
+            if (activity.family === 'quest') return false;
             if (t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
             const curLvl = accountSkillLevel(acct, t.skill);
             if (curLvl >= t.targetLevel) return false;
@@ -597,6 +600,7 @@ function activityMatchesDemand(
             return activity.baselineRate.gpPerTick > 0;
         }
         case 'combat_readiness': {
+            if (activity.family === 'quest') return false;
             if (t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
             for (const [skill, targetLvl] of Object.entries(t.targets)) {
                 if (accountSkillLevel(acct, skill) < targetLvl) {
@@ -611,6 +615,27 @@ function activityMatchesDemand(
             return combatTargetsMet && (activity.family === 'pvp' || activity.family === 'combat');
         }
     }
+}
+
+function selectWorkTrainingTarget(
+    acct: AccountState,
+    demand: GoalDemand,
+    activity: ActivityDefinition,
+    rate: RateEstimate,
+): { trainSkill?: string; targetLevel?: number } {
+    if (demand.target.kind === 'skill') {
+        return { trainSkill: demand.target.skill, targetLevel: demand.target.targetLevel };
+    }
+    if (demand.target.kind === 'combat_readiness') {
+        const unmet = Object.entries(demand.target.targets)
+            .filter(([sk, tgt]) => accountSkillLevel(acct, sk) < tgt && activityXpForSkill(activity, rate, sk) > 0)
+            .map(([sk, tgt]) => ({ skill: sk, targetLevel: tgt, currentLevel: accountSkillLevel(acct, sk) }))
+            .sort((a, b) => a.currentLevel - b.currentLevel || a.skill.localeCompare(b.skill));
+        if (unmet.length > 0) {
+            return { trainSkill: unmet[0]!.skill, targetLevel: unmet[0]!.targetLevel };
+        }
+    }
+    return {};
 }
 
 function resolveBatchUnits(
@@ -846,10 +871,12 @@ export function planAccount(
         if (act.family === 'market' && Number.isFinite(Number(act.config?.itemId))) {
             pushMap(byOutputItem, Number(act.config.itemId), act);
         }
-        if (act.skill) pushMap(bySkill, act.skill.toLowerCase(), act);
-        for (const sk of act.skills ?? []) pushMap(bySkill, sk.toLowerCase(), act);
-        for (const [sk, xp] of Object.entries(act.baselineRate.skillXpPerTick ?? {})) {
-            if (xp > 0) pushMap(bySkill, sk.toLowerCase(), act);
+        if (act.family !== 'quest') {
+            if (act.skill) pushMap(bySkill, act.skill.toLowerCase(), act);
+            for (const sk of act.skills ?? []) pushMap(bySkill, sk.toLowerCase(), act);
+            for (const [sk, xp] of Object.entries(act.baselineRate.skillXpPerTick ?? {})) {
+                if (xp > 0) pushMap(bySkill, sk.toLowerCase(), act);
+            }
         }
         if (act.family === 'quest' && act.questSlug) {
             pushMap(questsBySlug, act.questSlug.toLowerCase(), act);
@@ -950,6 +977,11 @@ export function planAccount(
     const skillUnlockCache = new Map<string, { activity: ActivityDefinition; rate: RateEstimate } | null>();
     const questRows = loadQuestRows();
 
+    const shopBuyActivity = eligibleActivities.find((a) => a.id === 'market:shop-buy');
+    const geBuyActivity = eligibleActivities.find((a) => a.id === 'market:ge-buy');
+    const shopCatalog = loadShopCatalogByItem();
+    const itemsMap = loadItemsMap();
+
     let bestPlan: AccountPlan | null = null;
     let lastBlockerReason = 'no_matching_demand_or_activity';
 
@@ -961,6 +993,151 @@ export function planAccount(
         for (const act of matching) {
             const tp = activityDemandThroughput(act, demand, getRate(act));
             if (tp > bestThroughput) bestThroughput = tp;
+        }
+
+        const marketCandidates: {
+            readonly marketAct: ActivityDefinition;
+            readonly source: 'npc_shop' | 'ge';
+            readonly advMult: number;
+            readonly quantity: number;
+            readonly workTicks: number;
+            readonly throughput: number;
+            readonly shopId?: string;
+            readonly itemName?: string;
+            readonly estimatedCoinCost: number;
+            readonly coinFloatPreserved: number;
+        }[] = [];
+
+        if (
+            demand.target.kind === 'item'
+            && (!demand.assignedAccount || demand.assignedAccount.toLowerCase() === acct.name.toLowerCase())
+            && (shopBuyActivity || geBuyActivity)
+        ) {
+            const allowedExternal: AcquireSourceKind[] = [];
+            if (shopBuyActivity) allowedExternal.push('npc_shop');
+            if (geBuyActivity) allowedExternal.push('ge');
+            const targetItemId = demand.target.itemId;
+            const maxQty = Math.max(1, Math.min(Math.round(demand.remaining), 250));
+            let acq = resolveAcquireItem(
+                acct,
+                {
+                    itemId: targetItemId,
+                    itemName: demand.target.itemName,
+                    quantity: maxQty,
+                    allowOwnBank: false,
+                    allowedSources: allowedExternal,
+                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                },
+                acquireCtx,
+            );
+            if (!acq.ok && maxQty > 1) {
+                const spendable = availableSpendableCoins(acct, world, DEFAULT_OPERATING_COIN_FLOAT, {
+                    includeBank: true,
+                    requireTrustedBank: true,
+                }).spendable;
+                if (spendable > 0) {
+                    let minUnitPrice = Number.POSITIVE_INFINITY;
+                    if (shopBuyActivity) {
+                        const shops = [
+                            ...(acquireCtx.customShops ?? []).filter((s) => s.itemId === targetItemId),
+                            ...(shopCatalog.get(targetItemId) ?? []),
+                        ];
+                        for (const shop of shops) {
+                            if (shop.requiresQuest && !hasCompletedQuest(acct, shop.requiresQuest)) continue;
+                            if (shop.requiresSkill && accountSkillLevel(acct, shop.requiresSkill.skill) < shop.requiresSkill.level) continue;
+                            if (shop.requiresQuestPoints) continue;
+                            if (shop.cost > 0 && shop.cost < minUnitPrice) minUnitPrice = shop.cost;
+                        }
+                    }
+                    if (geBuyActivity) {
+                        const meta = itemsMap.get(targetItemId);
+                        if (!meta || meta.tradeable) {
+                            const quote = input.marketQuotes?.[targetItemId];
+                            if (quote && quote.ask !== null && quote.ask > 0 && quote.sell > 0 && quote.trades !== 0) {
+                                minUnitPrice = Math.min(minUnitPrice, Math.ceil(quote.ask));
+                            } else if (!input.marketQuotes && !input.requireMarketQuote) {
+                                minUnitPrice = Math.min(minUnitPrice, Math.max(1, meta?.cost ?? 10));
+                            }
+                        }
+                    }
+                    if (Number.isFinite(minUnitPrice) && minUnitPrice > 0) {
+                        const affordableQty = Math.min(maxQty, Math.floor(spendable / minUnitPrice));
+                        if (affordableQty >= 1 && affordableQty < maxQty) {
+                            acq = resolveAcquireItem(
+                                acct,
+                                {
+                                    itemId: targetItemId,
+                                    itemName: demand.target.itemName,
+                                    quantity: affordableQty,
+                                    allowOwnBank: false,
+                                    allowedSources: allowedExternal,
+                                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                                },
+                                acquireCtx,
+                            );
+                        }
+                    }
+                }
+            }
+            for (const cand of acq.candidates) {
+                if (cand.source !== 'npc_shop' && cand.source !== 'ge') continue;
+                const marketAct = cand.source === 'npc_shop' ? shopBuyActivity : geBuyActivity;
+                if (!marketAct) continue;
+                const advMult = comparativeAdvantageMultiplier(acct, demand, marketAct, profile);
+                if (advMult <= 0) continue;
+                const workTicks = Math.max(1, Math.ceil(cand.step.estimatedTicks));
+                const throughput = cand.step.quantity / workTicks;
+                if (throughput > bestThroughput) bestThroughput = throughput;
+                marketCandidates.push({
+                    marketAct,
+                    source: cand.source,
+                    advMult,
+                    quantity: cand.step.quantity,
+                    workTicks,
+                    throughput,
+                    ...(cand.step.shopId ? { shopId: cand.step.shopId } : {}),
+                    ...(cand.step.itemName ? { itemName: cand.step.itemName } : {}),
+                    estimatedCoinCost: cand.step.estimatedCoinCost,
+                    coinFloatPreserved: cand.step.coinFloatPreserved,
+                });
+            }
+        }
+
+        for (const mc of marketCandidates) {
+            const baseVph = demand.valuePerHour ?? (demand.valueScore * demand.priorityWeight);
+            const throughputRatio = bestThroughput > 0
+                ? Math.max(0.25, Math.min(1.0, mc.throughput / bestThroughput))
+                : 1.0;
+            const scorePerHour = Math.max(0, baseVph * mc.advMult * throughputRatio);
+            const targetItemId = (demand.target as { kind: 'item'; itemId: number }).itemId;
+            const workStep: TargetWorkPlannedStep = {
+                stepKind: 'work',
+                activityId: mc.marketAct.id,
+                demandId: demand.id,
+                workerId: mc.marketAct.workerId,
+                batchUnits: mc.quantity,
+                estimatedTicks: mc.workTicks,
+                expectedValuePerHour: scorePerHour,
+                config: {
+                    ...mc.marketAct.config,
+                    mode: mc.source === 'npc_shop' ? 'shop-buy' : 'ge-buy',
+                    itemId: targetItemId,
+                    ...(mc.itemName ? { itemName: mc.itemName } : {}),
+                    quantity: mc.quantity,
+                    ...(mc.shopId ? { shopId: mc.shopId } : {}),
+                    estimatedCoinCost: mc.estimatedCoinCost,
+                    coinFloatPreserved: mc.coinFloatPreserved,
+                    batchUnits: mc.quantity,
+                },
+            };
+            if (!bestPlan || scorePerHour > bestPlan.scorePerHour) {
+                bestPlan = {
+                    account: acct.name,
+                    demandId: demand.id,
+                    steps: [workStep],
+                    scorePerHour,
+                };
+            }
         }
 
         for (const activity of matching) {
@@ -1271,6 +1448,7 @@ export function planAccount(
                 : 1.0;
             const scorePerHour = Math.max(0, baseVph * advMult * speedEfficiency * throughputRatio);
 
+            const trainTarget = selectWorkTrainingTarget(acct, demand, activity, effectiveRate);
             const workStep: TargetWorkPlannedStep = {
                 stepKind: 'work',
                 activityId: activity.id,
@@ -1279,7 +1457,12 @@ export function planAccount(
                 batchUnits,
                 estimatedTicks: workTicks,
                 expectedValuePerHour: scorePerHour,
-                config: { ...activity.config, batchUnits },
+                config: {
+                    ...activity.config,
+                    batchUnits,
+                    ...(trainTarget.trainSkill ? { trainSkill: trainTarget.trainSkill } : {}),
+                    ...(trainTarget.targetLevel !== undefined ? { targetLevel: trainTarget.targetLevel } : {}),
+                },
             };
 
             const steps: PlannedStep[] = [...prepSteps, workStep];

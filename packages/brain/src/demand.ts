@@ -104,6 +104,7 @@ interface RawGearEntry {
     readonly slot?: string;
     readonly cost?: number;
     readonly tradeable?: boolean;
+    readonly staffOnly?: boolean;
     readonly bonuses?: Record<string, number>;
 }
 
@@ -175,6 +176,7 @@ function loadDefaultGearTargets(root: string): GearCollectionTarget[] {
     for (const item of raw) {
         if (!isPlainRecord(item)) continue;
         const g = item as RawGearEntry;
+        if (g.staffOnly === true) continue;
         if (
             typeof g.id !== 'number' ||
             !Number.isSafeInteger(g.id) ||

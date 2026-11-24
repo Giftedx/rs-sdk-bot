@@ -536,6 +536,28 @@ function resolveAcquireOrGearSource(
     }
 }
 
+function applyTargetLevelArg(
+    resolved: Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'>,
+    targetLevel: number | undefined,
+): Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'> {
+    if (!targetLevel || !Number.isFinite(targetLevel)) return resolved;
+    if (
+        (resolved.routeKey === 'magic:splash' || resolved.routeKey === 'magic:splash-coop')
+        && resolved.args[0] === 'magic'
+        && resolved.args.length >= 3
+    ) {
+        const nextArgs = [...resolved.args];
+        nextArgs[2] = String(targetLevel);
+        return { ...resolved, args: nextArgs };
+    }
+    if (resolved.routeKey === 'magic:alch-train' && resolved.args[0] === 'magic' && resolved.args.length >= 3) {
+        const nextArgs = [...resolved.args];
+        nextArgs[2] = String(Math.max(55, targetLevel));
+        return { ...resolved, args: nextArgs };
+    }
+    return resolved;
+}
+
 export function resolvePlannedStepWorkerRoute(
     account: string,
     planned: PlannedStep,
@@ -617,49 +639,67 @@ export function resolvePlannedStepWorkerRoute(
                 ...(planned.skill ? { TRAIN_SKILL: planned.skill } : {}),
                 ...(planned.targetLevel ? { TARGET_LEVEL: String(planned.targetLevel) } : {}),
             };
-            const applyUnlockTargetArg = (resolved: Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'>) => {
-                if (!planned.targetLevel) return resolved;
-                if (
-                    (resolved.routeKey === 'magic:splash' || resolved.routeKey === 'magic:splash-coop')
-                    && resolved.args[0] === 'magic'
-                    && resolved.args.length >= 3
-                ) {
-                    const nextArgs = [...resolved.args];
-                    nextArgs[2] = String(planned.targetLevel);
-                    return { ...resolved, args: nextArgs };
-                }
-                if (resolved.routeKey === 'magic:alch-train' && resolved.args[0] === 'magic' && resolved.args.length >= 3) {
-                    const nextArgs = [...resolved.args];
-                    nextArgs[2] = String(Math.max(55, planned.targetLevel));
-                    return { ...resolved, args: nextArgs };
-                }
-                return resolved;
-            };
             if (act) {
-                const resolved = applyUnlockTargetArg(resolveActivityWorkerRoute(act, env));
+                const resolved = applyTargetLevelArg(resolveActivityWorkerRoute(act, env), planned.targetLevel);
                 return { account, stepKind: 'unlock', executionMode: 'worker', ...resolved };
             }
             const family = inferFamilyFromActivityId(planned.activityId, planned.skill);
-            const resolved = applyUnlockTargetArg(resolveActivityWorkerRoute(
+            const resolved = applyTargetLevelArg(resolveActivityWorkerRoute(
                 { id: planned.activityId, family, kind: 'train', skill: planned.skill, config: {} },
                 env,
-            ));
+            ), planned.targetLevel);
             return { account, stepKind: 'unlock', executionMode: 'worker', ...resolved };
         }
         case 'work': {
+            const cfg = (planned.config ?? {}) as Record<string, unknown>;
+            if (
+                (planned.activityId === 'market:shop-buy' || planned.activityId === 'market:ge-buy')
+                && Number.isSafeInteger(cfg.itemId)
+                && Number.isSafeInteger(cfg.quantity)
+                && Number(cfg.quantity) >= 1
+            ) {
+                const routed = resolveAcquireOrGearSource(
+                    account,
+                    'acquire',
+                    {
+                        source: planned.activityId === 'market:shop-buy' ? 'npc_shop' : 'ge',
+                        itemId: Number(cfg.itemId),
+                        itemName: typeof cfg.itemName === 'string' ? cfg.itemName : undefined,
+                        quantity: Number(cfg.quantity),
+                        shopId: typeof cfg.shopId === 'string' ? cfg.shopId : undefined,
+                        estimatedCoinCost: typeof cfg.estimatedCoinCost === 'number' ? cfg.estimatedCoinCost : undefined,
+                        coinFloatPreserved: typeof cfg.coinFloatPreserved === 'number' ? cfg.coinFloatPreserved : undefined,
+                    },
+                    ctx,
+                );
+                return {
+                    ...routed,
+                    stepKind: 'work',
+                    activityId: planned.activityId,
+                    env: {
+                        ...routed.env,
+                        DEMAND_ID: planned.demandId,
+                        BATCH_UNITS: String(planned.batchUnits),
+                    },
+                };
+            }
             const act = lookupActivity(planned.activityId, ctx);
+            const targetLevel = typeof cfg.targetLevel === 'number' && Number.isFinite(cfg.targetLevel)
+                ? Math.trunc(cfg.targetLevel)
+                : undefined;
             const env: Record<string, string> = {
+                ...(typeof cfg.trainSkill === 'string' ? { TRAIN_SKILL: cfg.trainSkill } : {}),
+                ...(targetLevel !== undefined ? { TARGET_LEVEL: String(targetLevel) } : {}),
                 DEMAND_ID: planned.demandId,
                 BATCH_UNITS: String(planned.batchUnits),
             };
             if (act) {
-                const resolved = resolveActivityWorkerRoute(act, env);
+                const resolved = applyTargetLevelArg(resolveActivityWorkerRoute(act, env), targetLevel);
                 return { account, stepKind: 'work', executionMode: 'worker', ...resolved };
             }
-            const cfg = (planned.config ?? {}) as Record<string, unknown>;
             const skill = typeof cfg.skill === 'string' ? cfg.skill : undefined;
             const family = inferFamilyFromActivityId(planned.activityId, skill);
-            const resolved = resolveActivityWorkerRoute(
+            const resolved = applyTargetLevelArg(resolveActivityWorkerRoute(
                 {
                     id: planned.activityId,
                     family,
@@ -669,7 +709,7 @@ export function resolvePlannedStepWorkerRoute(
                     config: cfg,
                 },
                 env,
-            );
+            ), targetLevel);
             return {
                 account,
                 stepKind: 'work',
