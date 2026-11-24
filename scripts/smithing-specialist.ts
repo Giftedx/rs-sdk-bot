@@ -1,5 +1,6 @@
 // Fresh-account 1-to-99 Smithing specialist via Glory-to-Edgeville, Varrock West bank runners, and platebody burst smithing.
 import type { Session } from '../packages/core/src/inprocess';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { smithRecipe } from '../packages/workers/src/bank-artisan';
 import {
  assertCatalogItems,
@@ -197,16 +198,25 @@ async function smithHeldBars(spec: Session, target: number, deadline: number): P
    slot: r.slot,
    reason: 'SDK',
   });
+  let delTick = -1;
   await waitUntil(
    spec,
    () => {
     if (spec.tick() <= sentTick) return false;
     if (skillLevel(spec, 'Smithing') >= target || st()?.dialog?.isOpen) return true;
     const nowBars = countItem(spec.sdk.getInventory(), r.bar);
-    return useMake5 ? nowBars < r.bars : nowBars < beforeBars;
+    const doneNow = useMake5 ? nowBars < r.bars : nowBars < beforeBars;
+    if (doneNow && delTick < 0) delTick = spec.tick();
+    return doneNow;
    },
    { timeoutTicks: useMake5 ? 30 : 8 },
   );
+  // smithing.rs2 runs p_delay(2) after inv_del (delayedUntil = delTick + 3); wait until delay clears before dropping.
+  if (delTick >= 0 && countItem(spec.sdk.getInventory(), r.bar) < r.bars && skillLevel(spec, 'Smithing') < target) {
+   while (spec.tick() < delTick + 3 && spec.tick() < deadline) {
+    await waitTicks(spec, 1);
+   }
+  }
  }
  throw Error('smithing loop exceeded cap');
 }
@@ -283,11 +293,24 @@ export async function runSmithingSpecialist(
   );
   logPhase(spec, start, 'smithing_glory_edgeville');
 
-  await navigateWorld(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0, Math.max(10, deadline - spec.tick()));
+  const walkEdgeToVarrock = await sessionWalker(spec);
+  const vWalk = await walkPath(
+   walkEdgeToVarrock,
+   [
+    { x: 3115, z: 3462, tol: 5 },
+    { x: 3150, z: 3440, tol: 5 },
+    { x: VARROCK_WEST_ANVIL.x, z: VARROCK_WEST_ANVIL.z, tol: 0 },
+   ],
+   { maxTicks: Math.max(10, Math.min(70, deadline - spec.tick())) },
+  );
+  if (!vWalk.ok && !nearTile(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0)) {
+   await navigateWorld(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0, Math.max(10, deadline - spec.tick()));
+  }
   logPhase(spec, start, 'smithing_at_anvil');
   await smithHeldBars(spec, target, deadline);
   await dropItemsFast(spec, keepSet, deadline);
 
+  const anvilLoc = spec.sdk.findNearbyLoc(/^anvil$/i) ?? { x: 3188, z: 3426, id: 2783 };
   let lastRunnerIdx = runners.length - 1;
   while (skillLevel(spec, 'Smithing') < target && spec.tick() < deadline) {
    const wantBar = nextWantedBarId(skillLevel(spec, 'Smithing'));
@@ -316,11 +339,16 @@ export async function runSmithingSpecialist(
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
    next.claimed = true;
    next.ready = false;
+   const hammerOnly = spec.sdk.getInventory().length === 1 && spec.sdk.getInventory()[0]?.id === ITEM_IDS.hammer;
+   const barSlot = hammerOnly && spec.sdk.getInventory()[0]!.slot === 0 ? 1 : hammerOnly ? 0 : -1;
    try {
     await burstTradeHost(spec, next.session, {
      giveIds: [wantBar],
      deadlineTick: deadline,
      canStand: anvilRoomOk,
+     onConfirmSend: barSlot >= 0
+      ? () => spec.direct({ type: 'useItemOnLoc', itemSlot: barSlot, x: anvilLoc.x, z: anvilLoc.z, locId: anvilLoc.id, reason: 'SDK' })
+      : undefined,
     });
     next.task = null;
    } finally {

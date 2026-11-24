@@ -179,7 +179,7 @@ export function selectPickpocketTarget<T extends {
         n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= 9,
     );
     const sticky = stickyIndex >= 0
-        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 3 && n.reachable !== false)
+        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 1 && n.reachable !== false)
         : undefined;
     if (sticky) return { target: sticky, blocked: undefined };
     const pool = (nearAnchor.length > 0 ? nearAnchor : matching).sort((a, b) => a.distance - b.distance);
@@ -278,7 +278,7 @@ export async function runArdougneStunRelogThieving(opts: {
         const msgs = st.gameMessages ?? [];
         const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
         lastMsgMark = latestMark(msgs, lastMsgMark);
-        if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
+        if (newMsgs.some(m => /you fail to pick|you've been stunned/i.test(m.text))) {
             stuns++;
             const bites = foodBitesCount(main);
             if (st.player.hp <= Math.max(3, tier.stunDamage) && bites === 0) {
@@ -287,8 +287,8 @@ export async function runArdougneStunRelogThieving(opts: {
                 lastPickTick = -99;
                 continue;
             }
-            // Keep >= 1 emergency bite in inventory so randomevents flee_guard never triggers on 0-food HP<=3 stuns.
-            if (bites >= 2 && st.player.hp <= Math.max(4, (st.player.maxHp ?? 10) - 5)) {
+            // Only eat at hp <= tier.stunDamage so 11-HP Pineapple pizza bites recover 7-9 HP instead of wasting 5-6 HP.
+            if (bites >= 2 && st.player.hp <= tier.stunDamage) {
                 await eatAnyFood(main);
             }
             totalTicks += Math.max(1, main.tick() - sessStart) + 1;
@@ -302,9 +302,9 @@ export async function runArdougneStunRelogThieving(opts: {
             continue;
         }
 
-        // Proactive food restock when empty or down to 1 reserve bite (skip trip at lv>=98 while hp still >= stun+3).
+        // Emergency food restock only when completely out of food and HP is at stun threshold.
         const bites = foodBitesCount(main);
-        const needRestock = bites === 0 || (bites <= 1 && (lvl < 98 || st.player.hp <= tier.stunDamage + 3));
+        const needRestock = bites === 0 && st.player.hp <= tier.stunDamage;
         if (needRestock && elapsedNow() >= stallCooldownUntil) {
             const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 4, 4);
             if (!restocked) {

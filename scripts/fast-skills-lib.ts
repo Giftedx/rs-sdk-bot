@@ -93,6 +93,7 @@ export const ITEM_IDS = {
  ring_of_life: 2570,
  ring_of_wealth: 2572,
  prayer_potion_4: 2434,
+ magic_potion_4: 3040,
  super_energy_4: 3016,
  shark: 385,
 } as const;
@@ -356,6 +357,7 @@ export interface BurstTradeSpec {
  deadlineTick: number;
  canStand?: (pos: NonNullable<ReturnType<typeof playerPos>>) => boolean;
  allowHelperOnSingleModal?: boolean;
+ onConfirmSend?: () => Promise<unknown>;
 }
 
 // Executes a 3-to-4-tick trade: closes dialogs + sends requests together, then pipelines offer/accept/confirm within USER_EVENT.limit=5.
@@ -413,11 +415,11 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
    // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
-   const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
+   const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 2;
    if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
    // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
    if (specDlg && !(canRequest && sTarget && hTarget)) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-   // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
+   // Send both OPPLAYER4 requests together once per 2-tick window so delayed packets cannot re-fire and close a newly opened trademain.
    if (canRequest && sTarget && hTarget) {
     lastOpenReqTick = spec.tick();
     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
@@ -437,11 +439,16 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   if (st.screen === 'confirm' || ht.screen === 'confirm') {
    sawConfirm = true;
    const confirmActs: Promise<unknown>[] = [];
-   if (ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted) {
+   const helperConfirmingNow = ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted;
+   if (helperConfirmingNow) {
     confirmActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
-   if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
+   const specNeedsConfirm = st.isOpen && st.screen === 'confirm' && !st.myAccepted;
+   if (specNeedsConfirm) {
     confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   if (opts.onConfirmSend && helperConfirmingNow && (st.myAccepted || specNeedsConfirm || !st.isOpen)) {
+    confirmActs.push(opts.onConfirmSend());
    }
    if (confirmActs.length) await Promise.all(confirmActs);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
