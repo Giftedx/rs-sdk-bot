@@ -154,11 +154,12 @@ function findBestTree(
                 // Inner normal trees beside (3117,3246) keep arrival transition to Oak 15 near zero-walk.
                 return l.x >= 3113 && l.x <= 3119 && l.z >= 3244 && l.z <= 3251 && l.reachable !== false;
             }
-            // 3 northern Draynor Jail hub oaks around (3117,3246)/(3117,3249): all inside Jail guard 4307's (3121,3249) maxrange 7.
+            // 4 Draynor Jail multiway oaks: 3 northern hub oaks + (3114,3239) fallback when all 3 are stumps.
             return (
                 (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
                 || (l.x === 3115 && l.z === 3250)
+                || (l.x === 3114 && l.z === 3239)
             ) && l.reachable !== false;
         });
     if (activeTree) {
@@ -166,11 +167,16 @@ function findBestTree(
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
     const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
+    const isFallbackSouthOak = (l: NearbyLoc) => l.x === 3114 && l.z === 3239;
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
         const adjDiff = (isBesideTree(px, pz, a.x, a.z, sizeA) ? 0 : 1) - (isBesideTree(px, pz, b.x, b.z, sizeB) ? 0 : 1);
         if (adjDiff !== 0) return adjDiff;
+        if (wantOak) {
+            const southDiff = (isFallbackSouthOak(a) ? 1 : 0) - (isFallbackSouthOak(b) ? 1 : 0);
+            if (southDiff !== 0) return southDiff;
+        }
         const distDiff = treeFootprintDist(px, pz, a.x, a.z, sizeA) - treeFootprintDist(px, pz, b.x, b.z, sizeB);
         if (distDiff !== 0) return distDiff;
         if (wantOak) {
@@ -198,16 +204,18 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
+    const filtered = perimeter.filter(t => (t.x === 3118 && t.z === 3244) || (t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249));
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3117,3246) for twin oaks (3115,3243)+(3118,3245), or (3117,3249) for (3115,3250) on x=3117 corridor.
-        const hub = (t.x === 3117 && t.z === 3246)
+        // Prefer (3118,3244) then (3117,3246) for twin oaks (3115,3243)+(3118,3245) to keep all 4 jail guards in range.
+        const hub = (t.x === 3118 && t.z === 3244)
             ? 0
-            : Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3246));
+            : (t.x === 3117 && t.z === 3246)
+                ? 1
+                : 2 + Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3246));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -239,10 +247,10 @@ function countAttackingGoblins(s: Session): number {
 function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
-        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 9) return false;
-        if (n.x < 3107 || n.x > 3123 || n.z < 3235 || n.z > 3251) return false;
+        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 12) return false;
+        if (n.x < 3105 || n.x > 3130 || n.z < 3234 || n.z > 3255) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
-        if ((taggedAt.get(n.index) ?? -999) >= now - 50) return false;
+        if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
         return n.targetIndex < 0;
     });
@@ -320,7 +328,7 @@ async function buryPrayerBones(s: Session, stop: () => boolean, targetLevel = 43
         const item = s.sdk.getInventory().find(it => it.slot === slot);
         const op = item?.optionsWithIndex?.find(o => /^bury$/i.test(o.text))?.opIndex ?? 1;
         await s.direct({ type: 'useInventoryItem', slot, optionIndex: op, reason: 'SDK' });
-        await waitTicks(s, 2);
+        await waitTicks(s, 1);
     }
 }
 
@@ -536,10 +544,10 @@ if (import.meta.main) {
             const canTag = !outOfPrayer
                 && wantOak
                 && !needNormalLog
-                && tagCount < 8
-                && gobs < 2
-                && recentHitsIn6.length === 0
-                && now - lastTagTick >= 15
+                && tagCount < 16
+                && gobs < 4
+                && (!activeHitIn1t || gobs < 2)
+                && now - lastTagTick >= 10
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -568,18 +576,18 @@ if (import.meta.main) {
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
                 if (knifeSlot !== undefined && logSlot !== undefined && !needNormalLog) {
-                    // Strictly 3 inputs (+ up to 2 PrayerGuard toggles = 5 USER_EVENT limit) so interactLoc never spills across ticks.
-                    if (main.sdk.getInventory().length >= 28) {
+                    // Drop 1 excess oak log before knife+make1+chop (4 inputs <= 5 USER_EVENT limit) so inventory never stalls.
+                    const acts: Promise<unknown>[] = [];
+                    if (main.sdk.getInventory().length >= 26) {
                         const dropSlot = main.sdk.getInventory().find(i => i.id === OBJ_OAK_LOGS || i.id === 1519)?.slot;
-                        if (dropSlot !== undefined) {
-                            await main.direct({ type: 'dropItem', slot: dropSlot, reason: 'SDK' });
-                            await waitTicks(main, 1);
-                            continue;
-                        }
+                        if (dropSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: dropSlot, reason: 'SDK' }));
                     }
-                    await main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' });
-                    await main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' });
-                    await main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' });
+                    acts.push(
+                        main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
+                        main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
+                        main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' }),
+                    );
+                    await Promise.all(acts);
                     knifeRolls++;
                     rolls++;
                     lastRollServerTick = now + 3;

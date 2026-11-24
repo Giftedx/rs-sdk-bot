@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { xpForLevel } from '../packages/planner/src/curve';
-import { miningProfiles, incidentalMiningGems, runRotationMining, siteTiles, MINING_SITES } from '../packages/workers/src/gather';
+import { miningProfiles, incidentalMiningGems, runRotationMining, siteTiles } from '../packages/workers/src/gather';
 import {
     openHelperAndMain,
     skipTutorialFast,
@@ -11,12 +11,10 @@ import {
     settleHelper,
     rubTeleport,
     walkWaypointsSafe,
-    sailBrimhavenToArdougne,
     isLiveSupplyVariant,
     itemQty,
     finish,
     chebDist,
-    CWARS_TO_ARDY_ZOO_WAYPOINTS,
     SKILL_MULTI3_MAKE1_A,
     OBJ_KNIFE,
     OBJ_LOGS,
@@ -36,6 +34,7 @@ export const OBJ_IRON_ORE = 440;
 export const IRON_ORE_XP_25X = 875;
 
 export const MINING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
+export const RELLEKKA_IRON_CENTER = { x: 2724, z: 3693, level: 0 } as const;
 
 export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_PICKAXE]: 1,
@@ -204,39 +203,13 @@ if (import.meta.main) {
         await completeDoricQuest(main, isStopped);
         const doricTicks = main.tick() - t0;
 
-        if (RING_OF_DUELING_IDS.some(id => itemQty(main, id) > 0)) {
-            await rubTeleport(
-                main,
-                RING_OF_DUELING_IDS,
-                /castle wars/i,
-                p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
-                isStopped,
-            );
-            await walkWaypointsSafe(main, CWARS_TO_ARDY_ZOO_WAYPOINTS, isStopped);
-        } else {
-            // Glory option 2 -> Karamja -> Brimhaven boat -> Ardougne dock -> Ardougne Zoo 6-rock iron.
-            await rubTeleport(
-                main,
-                MINING_GLORY_IDS,
-                2,
-                p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
-                isStopped,
-            );
-            await walkWaypointsSafe(
-                main,
-                [[2774, 3228, 3]],
-                isStopped,
-            );
-            await sailBrimhavenToArdougne(main, isStopped);
-            await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
-        }
+        // Rellekka East 9-rock iron cluster (2724,3693): 9 iron rocks allow continuous 3.00t/ore without waiting on 18t respawn.
+        await walkWaypointsSafe(main, [[2890, 3530, 4], [2820, 3600, 4], [2755, 3665, 4], [2724, 3693, 2]], isStopped);
 
         const zooStart = main.tick() - t0;
         const ironProfile = miningProfiles().find(p => p.name === 'iron_rock_table');
         if (!ironProfile) throw Error('missing iron_rock_table profile');
-        const zooSite = MINING_SITES.find(s => s.key === 'ardougne-zoo-iron');
-        if (!zooSite) throw Error('missing ardougne-zoo-iron site');
-        const rocks = siteTiles(ironProfile, zooSite);
+        const rocks = siteTiles(ironProfile, { key: 'rellekka-east-iron', profile: 'iron_rock_table', center: RELLEKKA_IRON_CENTER, radius: 6, bank: RELLEKKA_IRON_CENTER });
         const need = remainingIronOresTo99(main.sdk.getSkillXp('Mining') ?? 0);
 
         const rot = await runRotationMining(
@@ -249,7 +222,13 @@ if (import.meta.main) {
                 step: () => waitTicks(main, 1),
                 clearModal: () => main.direct({ type: 'closeModal', reason: 'SDK' }).then(() => {}),
                 send: async acts => {
-                    for (const a of acts) await main.direct({ ...a, reason: 'SDK' });
+                    const st = main.sdk.getState();
+                    const all: Array<{ type: string; [k: string]: unknown }> = [];
+                    if ((st?.dialog?.isOpen || st?.modalOpen) && !acts.some(a => a.type === 'closeModal') && acts.length < 5) {
+                        all.push({ type: 'closeModal', reason: 'SDK' });
+                    }
+                    for (const a of acts) all.push({ ...a, reason: 'SDK' });
+                    await Promise.all(all.map(a => main.direct(a)));
                 },
             },
             ironProfile,
