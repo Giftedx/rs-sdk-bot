@@ -102,8 +102,8 @@ export function countAntipoisonDoses(items: readonly { id: number; baseId?: numb
     return doses;
 }
 
-// 28 slots exact: Waterfall (83 Atk/Str) + 7x Super energy for 100% run + 1-tick Rune 2h relog Keep PvP.
-export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
+// 21 slots (infinite run enabled -> no Super energy(4) needed).
+export const MELEE_PVP_CORE_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
     { id: 555, name: 'Water rune', count: 6, stackable: true },
@@ -113,13 +113,18 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 954, name: 'Rope', count: 1, stackable: false },
     { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
     { id: 385, name: 'Shark', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 7, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+] as const;
+
+export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    ...MELEE_PVP_CORE_KIT.slice(0, 9),
+    { id: 3016, name: 'Super energy(4)', count: 7, stackable: false },
+    ...MELEE_PVP_CORE_KIT.slice(9),
 ] as const;
 
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
-export const HITPOINTS_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
+export const HITPOINTS_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_CORE_KIT;
 
 export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
     hitpoints: HP_SPECIALIST_KIT,
@@ -1490,26 +1495,15 @@ export async function runMeleePvpSpecialist(
     },
 ): Promise<{ session: Session; message: string }> {
     const skill = opts.board === 'strength' ? 'Strength' : opts.board === 'defence' ? 'Defence' : 'Hitpoints';
-    const kit = KIT_BY_BOARD[opts.board];
+    const kit = MELEE_PVP_CORE_KIT;
     const target = SPECIALIST_TARGETS[opts.board];
     const elapsed = () => s.tick() - opts.t0;
     const milestone = (step: string, extra = '') => {
         console.log(`MILESTONE ${step} tick=${elapsed()}${extra ? ' ' + extra : ''}`);
     };
 
-    let lastEnergyTick = -10;
     const syncCwPfm = createPfmSustainer(s);
     const ensureRunAndEnergy = () => {
-        const p: any = posOf(s);
-        const energy = p?.runEnergy ?? 100;
-        if (energy <= 78 && s.tick() - lastEnergyTick >= 3) {
-            const ep = s.sdk.getInventory().find(i => (SUPER_ENERGY_IDS as readonly number[]).includes(i.id));
-            if (ep) {
-                lastEnergyTick = s.tick();
-                void s.direct({ type: 'useInventoryItem', slot: ep.slot, optionIndex: 1, reason: 'SDK' });
-                return;
-            }
-        }
         const vial = s.sdk.getInventory().find(i => i.id === 229);
         if (vial) void s.direct({ type: 'dropItem', slot: vial.slot, reason: 'SDK' });
     };
@@ -1518,7 +1512,9 @@ export async function runMeleePvpSpecialist(
     await startAndExitTutorial(s, new Set(), opts.stop);
     milestone('tutorial');
 
-    await receiveSupplyKit(s, opts.supplierName, kit, opts.stop);
+    await receiveSupplyKit(s, opts.supplierName, kit, opts.stop, {
+        altSlots: new Map([[3016, { allowedIds: SUPER_ENERGY_IDS, satisfied: () => true }]]),
+    });
     milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');

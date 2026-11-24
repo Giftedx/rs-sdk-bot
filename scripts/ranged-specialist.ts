@@ -66,7 +66,7 @@ export {
 
 export type RangedKitVariant = 'knives' | 'msb' | 'live' | 'pvp';
 
-// 28 slots exact: single-trade Keep 1-tick PvP relog kit (Crossbow + Barbed bolts 1->49, MSB + Rune arrows 50->99, Def-1 BiS).
+// 25 slots exact: single-trade Keep 1-tick PvP relog kit (Crossbow + Barbed bolts 1->49, MSB + Rune arrows 50->99, Def-1 BiS; infinite run enabled).
 export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 837, name: 'Crossbow', count: 1, stackable: false },
     { id: 881, name: 'Barbed bolts', count: 1500, stackable: true },
@@ -81,7 +81,6 @@ export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
     { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 3, stackable: false },
     { id: 385, name: 'Shark', count: 1, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
@@ -1270,19 +1269,8 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
 
         await rubJewellery(s, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars pvp');
         await setProtectMelee(s, true, stop);
-        let lastEnergyTick = -10;
         await walkKeepWaypoints(s, [{ x: 2470, z: 3170, tol: 4 }, { x: 2561, z: 3311, tol: 1 }], 220, stop, 'cw to ardougne lever', {
             ignoreMeleeHunters: true,
-            onTickExtra: () => {
-                const p: any = posOf(s);
-                if ((p?.runEnergy ?? 100) <= 78 && s.tick() - lastEnergyTick >= 3) {
-                    const ep = (s.sdk.getInventory() as InvItem[]).find(i => ITEM_IDS.superEnergy.includes(i.id));
-                    if (ep && ep.slot !== undefined) {
-                        lastEnergyTick = s.tick();
-                        void s.direct({ type: 'useInventoryItem', slot: ep.slot, optionIndex: 1, reason: 'SDK' });
-                    }
-                }
-            },
         });
         await setProtectMelee(s, false, stop);
         await pullArdougneLeverToWildy(s, stop);

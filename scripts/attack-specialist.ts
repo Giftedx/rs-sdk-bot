@@ -545,14 +545,6 @@ async function prepareVampireAndWaterfallInDraynorAndVarrock(s: Session, stop: S
     await walkWaypoints(s, [{ x: 2522, z: 3494, tol: 1 }], 220, stop, 'camelot to almera');
 }
 
-const GOLRIE_TO_MAZE_EXIT: Point[] = [
-    [2545, 3155], [2545, 3150], [2544, 3150], [2544, 3148], [2541, 3148], [2541, 3150], [2538, 3150], [2538, 3145],
-    [2548, 3145], [2548, 3156], [2550, 3156], [2550, 3159], [2545, 3159], [2545, 3165], [2549, 3165], [2549, 3174],
-    [2544, 3174], [2544, 3177], [2533, 3177], [2533, 3179], [2531, 3179], [2531, 3177], [2529, 3177], [2529, 3179],
-    [2527, 3179], [2527, 3177], [2514, 3177], [2514, 3179], [2520, 3179], [2521, 3185], [2523, 3185], [2523, 3181],
-    [2532, 3182], [2532, 3188], [2512, 3188], [2512, 3190], [2505, 3190],
-].map(([x, z]) => ({ x, z, tol: 1 }));
-
 async function squeezeLooseRailing(s: Session, crossed: (z: number) => boolean, stop: StopFn, label: string): Promise<void> {
     for (let attempt = 0; attempt < 8 && !stop(); attempt++) {
         if (crossed(posOf(s)?.worldZ ?? 0)) return;
@@ -569,11 +561,8 @@ async function squeezeLooseRailing(s: Session, crossed: (z: number) => boolean, 
 }
 
 async function walkGolrieToBolren(s: Session, stop: StopFn): Promise<void> {
-    await mazeWalkWaypoints(s, GOLRIE_TO_MAZE_EXIT, 180, stop, 'golrie to maze exit');
-    await setProtectMelee(s, true, stop);
-    await walkWaypoints(s, [{ x: 2515, z: 3160, tol: 0 }], 60, stop, 'maze exit to loose railing', { ignoreMeleeHunters: true });
+    await mazeWalkWaypoints(s, [{ x: 2515, z: 3160, tol: 0 }], 120, stop, 'golrie to loose railing');
     await squeezeLooseRailing(s, z => z >= 3161, stop, 'enter maze');
-    await setProtectMelee(s, false, stop);
     await walkWaypoints(s, [{ x: 2529, z: 3165, tol: 2 }, { x: 2542, z: 3171, tol: 1 }], 80, stop, 'railing to bolren');
 }
 
