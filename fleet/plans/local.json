@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562535105,
+ "at": 1795562556587,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -58,19 +58,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/generated/quest-ikov.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ikov",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ikov",
-   "role": "army"
   },
   {
    "account": "Quickhandjob",
@@ -136,6 +123,7 @@
   "swordinhand",
   "thefullmonty",
   "trousersnake",
+  "undermykilt",
   "woodpecker",
   "yewfirst"
  ],

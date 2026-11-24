@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795562547696-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "UnderMyKilt",
+  "to": "Shaftsinker",
+  "item": "Dragonhide chaps",
+  "count": 1,
+  "itemId": 2497,
+  "start": 1795562547696,
+  "end": 1795563447696,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
