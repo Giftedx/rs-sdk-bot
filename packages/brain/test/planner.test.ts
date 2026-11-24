@@ -14,7 +14,9 @@ import {
     planAccount,
     xpForLevel,
 } from '../src/planner';
+import { loadShopCatalogByItem } from '../src/acquire';
 import { createActivityCatalog } from '../src/catalog';
+import { derivedProfile } from '../../workers/src/market/shop-profiles';
 
 const NOW = 1_700_000_000_000;
 
@@ -172,8 +174,8 @@ test('solves 1-to-3-step dependency chains (acquire + unlock + work) and respect
     expect(isAccountPlan(herblorePlan)).toBe(true);
     expect(herblorePlan.steps.map((s) => s.stepKind)).toEqual(['unlock', 'work']);
 
-    // Cooking sharks missing raw sharks -> 2-step chain: [acquire(npc_shop raw shark), work(cook-shark)]
-    // and when npc_shop is on cooldown, falls through to [acquire(ge raw shark), work(cook-shark)].
+    // Cooking sharks missing raw sharks -> 2-step chain: [acquire(ge raw shark), work(cook-shark)]
+    // (raw sharks have no runnable surface NPC shop, so GE acquires them cleanly).
     const cookAcct = makeAcct({
         skills: { Cooking: { level: 80, xp: xpForLevel(80) } },
         bank: { items: { 995: 100_000 }, observedAt: NOW - 10_000, trusted: true },
@@ -198,7 +200,7 @@ test('solves 1-to-3-step dependency chains (acquire + unlock + work) and respect
     expect(isAccountPlan(cookPlan)).toBe(true);
     expect(cookPlan.steps.length).toBeLessThanOrEqual(3);
     expect(cookPlan.steps.map((s) => s.stepKind)).toEqual(['acquire', 'work']);
-    expect(cookPlan.steps[0]?.stepKind === 'acquire' && cookPlan.steps[0].source).toBe('npc_shop');
+    expect(cookPlan.steps[0]?.stepKind === 'acquire' && cookPlan.steps[0].source).toBe('ge');
 
     const cooledCookAcct = { ...cookAcct, cooldowns: { '383:npc_shop': NOW + 60_000 } };
     const geCookPlan = planAccount(cooledCookAcct, {
@@ -742,29 +744,36 @@ test('planner excludes quest activities from combat_readiness/skill, selects low
     });
     expect(magicSkillPlan.steps.some((s) => 'activityId' in s && Boolean(s.activityId?.startsWith('quest:')))).toBe(false);
 
-    // Cosmic rune (564) is stocked by magearena_runeshop (Magic 60) and dropped slowly by Hill Giants; ShopBot should choose market:shop-buy.
-    const cosmicPlan = planAccount(shopBot, {
+    // Adamant 2h sword (1317) is stocked by runnable 2handedshop; ShopBot should choose market:shop-buy with a runnable derivedProfile.
+    const addy2hPlan = planAccount(shopBot, {
         world,
         activities,
         demands: [{
-            id: 'campaign:haggis:item:564',
+            id: 'campaign:haggis:item:1317',
             goalKind: 'main_supply',
             valueScore: 500,
             valuePerHour: 5000,
-            target: { kind: 'item', itemId: 564, itemName: 'Cosmic rune', count: 100 },
+            target: { kind: 'item', itemId: 1317, itemName: 'Adamant 2h sword', count: 1 },
             fulfilled: 0,
-            remaining: 100,
+            remaining: 1,
             priorityWeight: 1,
             active: true,
         }],
     });
-    expect(cosmicPlan.steps).toHaveLength(1);
-    const shopWork = cosmicPlan.steps[0];
+    expect(addy2hPlan.steps).toHaveLength(1);
+    const shopWork = addy2hPlan.steps[0];
     expect(shopWork?.stepKind).toBe('work');
     if (shopWork?.stepKind === 'work') {
         expect(shopWork.activityId).toBe('market:shop-buy');
-        expect(shopWork.config.itemId).toBe(564);
-        expect(shopWork.config.shopId).toBeDefined();
+        expect(shopWork.config.itemId).toBe(1317);
+        expect(shopWork.config.shopId).toBe('2handedshop');
+        expect(Boolean(derivedProfile(String(shopWork.config.shopId)))).toBe(true);
+    }
+
+    for (const entries of loadShopCatalogByItem().values()) {
+        for (const entry of entries) {
+            expect(Boolean(derivedProfile(entry.shop))).toBe(true);
+        }
     }
 
     // Quest Watchtower requires Mining 40; unlocking Mining from level 1 must pick gather:mining-ore, never gather:mining-loot.
