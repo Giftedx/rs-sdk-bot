@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562356256,
+ "at": 1795562367267,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -43,19 +43,6 @@
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/generated/quest-squire.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:squire",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:squire",
-   "role": "army"
-  },
-  {
-   "account": "UnderMyKilt",
    "script": "scripts/generated/quest-ball.ts",
    "args": [],
    "env": {
@@ -68,23 +55,30 @@
    "role": "army"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "blood-chest"
-   ],
+   "account": "UnderMyKilt",
+   "script": "scripts/generated/quest-ikov.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:565",
-    "BATCH_UNITS": "277"
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:565",
-   "role": "auto",
-   "resources": [
-    "blood-chest"
-   ]
+   "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/generated/quest-grandtree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
   },
   {
    "account": "OreElse",
@@ -119,17 +113,19 @@
    ]
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/generated/quest-ikov.ts",
-   "args": [],
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/quest-merlin.ts --",
+    "scripts/generated/quest-grail.ts DEMAND_ID=goal:quest_board:grail BATCH_UNITS=1 --"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:ikov",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:ikov",
-   "role": "army"
+   "goal": "goal:quest_board:grail",
+   "role": "auto"
   }
  ],
  "army": [
