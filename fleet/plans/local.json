@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562133582,
+ "at": 1795562144924,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -89,25 +89,6 @@
    "role": "auto"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "blood-chest"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:565",
-    "BATCH_UNITS": "184"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:565",
-   "role": "army",
-   "resources": [
-    "blood-chest"
-   ]
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -123,6 +104,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=40 --",
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=25 -- fletching shafts",
+    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
    "role": "auto"
   }
  ],
@@ -147,6 +144,7 @@
   "knightrider",
   "knightstick",
   "mineyourbiz",
+  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "oreelse",
