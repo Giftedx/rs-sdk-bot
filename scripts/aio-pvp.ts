@@ -1,12 +1,11 @@
 // AIO PvP ("PK Fighter"): unified Wilderness PvP, tribrid switching, hunting, roaming, kit staging, and escort suite.
 // Usage:
 //   bun scripts/aio-pvp.ts <account> <mode> [arg ...] [KEY=value ...]
-import '../packages/workers/src/pvp/pk-squad-stall-boot';
 import {
     escortInterceptDecision,
     retreatOrTeleportPlan,
     selectInboundRecovery,
-} from '../packages/workers/src/gather';
+} from '../packages/workers/src/gather/mining';
 
 export * from '../packages/workers/src/pvp/modes';
 export {
@@ -17,6 +16,9 @@ export {
 
 if (import.meta.main) {
     const [account, mode, ...rest] = process.argv.slice(2);
+    if (process.argv.includes('squad')) {
+        await import('../packages/workers/src/pvp/pk-squad-stall-boot');
+    }
     const { PVP_MODES, dispatchPvpCli } = await import('../packages/workers/src/pvp/modes');
     if (account === '--list') {
         console.log(JSON.stringify(PVP_MODES, null, 2));

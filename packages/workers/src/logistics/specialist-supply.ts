@@ -9,7 +9,6 @@ import { planTripOffThread } from '../../../core/src/route-plan';
 import { RESERVED_ACCOUNTS } from '../../../core/src/specialist-boards';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { goTo, sessionWalker, walkPath, walkRoute, withoutTeleports } from '../../../core/src/walk';
-import nativeItems from '../../../../knowledge/items.json';
 import { ACCOUNT_NAME_RE } from './admission';
 import { REPO_ROOT } from './types';
 
@@ -503,7 +502,54 @@ const HERBLORE_NOTED_SUPPLIES = [
     { id: SPECIALIST_ITEM_IDS.jangerberries, certId: 248, count: 170 },
 ] as const;
 
-const itemCatalogMap = new Map<number, { id: number; name: string }>(nativeItems.map(i => [i.id, i]));
+// Exact names from knowledge/items.json for static specialist kits, avoiding eager 734 KB JSON parse at import time.
+const STATIC_KIT_ITEM_NAMES: Readonly<Record<number, string>> = {
+    97: 'Unfinished potion',
+    101: 'Unfinished potion',
+    105: 'Unfinished potion',
+    111: 'Unfinished potion',
+    221: 'Eye of newt',
+    225: 'Limpwurt root',
+    241: 'Dragon scale dust',
+    247: 'Jangerberries',
+    536: 'Dragon bones',
+    555: 'Water rune',
+    556: 'Air rune',
+    557: 'Earth rune',
+    558: 'Mind rune',
+    563: 'Law rune',
+    564: 'Cosmic rune',
+    565: 'Blood rune',
+    946: 'Knife',
+    385: 'Shark',
+    1387: 'Staff of fire',
+    1637: 'Sapphire ring',
+    1639: 'Emerald ring',
+    1641: 'Ruby ring',
+    1643: 'Diamond ring',
+    1712: 'Amulet of glory(4)',
+    1727: 'Amulet of magic',
+    1975: 'Chocolate dust',
+    2132: 'Raw beef',
+    2134: 'Raw rat meat',
+    2136: 'Raw bear meat',
+    2138: 'Raw chicken',
+    2434: 'Prayer potion(4)',
+    2483: 'Unfinished potion',
+    3016: 'Super energy(4)',
+    3853: 'Games necklace(8)',
+};
+
+let cachedItemCatalogMap: Map<number, { id: number; name: string }> | undefined;
+function itemCatalogName(id: number): string | undefined {
+    const known = STATIC_KIT_ITEM_NAMES[id];
+    if (known !== undefined) return known;
+    if (!cachedItemCatalogMap) {
+        const nativeItems = JSON.parse(readFileSync(join(REPO_ROOT, 'knowledge', 'items.json'), 'utf8')) as { id: number; name: string }[];
+        cachedItemCatalogMap = new Map(nativeItems.map(i => [i.id, i]));
+    }
+    return cachedItemCatalogMap.get(id)?.name;
+}
 
 export const HERBLORE_SPECIALIST_KIT: readonly KitSpecItem[] = (() => {
     const counts = new Map<number, number>();
@@ -511,7 +557,7 @@ export const HERBLORE_SPECIALIST_KIT: readonly KitSpecItem[] = (() => {
     for (const item of HERBLORE_NOTED_SUPPLIES) counts.set(item.id, (counts.get(item.id) ?? 0) + item.count);
     return [...counts.entries()].map(([id, count]) => ({
         id,
-        name: itemCatalogMap.get(id)?.name ?? `Item ${id}`,
+        name: STATIC_KIT_ITEM_NAMES[id] ?? `Item ${id}`,
         count,
         stackable: STACKABLE_IDS.has(id),
     }));
@@ -573,7 +619,7 @@ export const MAGIC_SPECIALIST_KIT: readonly KitSpecItem[] = (() => {
     for (const batch of MAGIC_BATCHES) for (const item of batch.give) counts.set(item.id, (counts.get(item.id) ?? 0) + item.count);
     return [...counts.entries()].map(([id, count]) => ({
         id,
-        name: itemCatalogMap.get(id)?.name ?? `Item ${id}`,
+        name: STATIC_KIT_ITEM_NAMES[id] ?? `Item ${id}`,
         count,
         stackable: STACKABLE_IDS.has(id),
     }));
@@ -673,7 +719,7 @@ const isNotedId = (id: number): boolean => resolveBaseId(id) !== id;
 function invSpec(id: number, count: number, altIds?: readonly number[]): KitSpecItem {
     return {
         id,
-        name: itemCatalogMap.get(id)?.name ?? `Item ${id}`,
+        name: itemCatalogName(id) ?? `Item ${id}`,
         count,
         stackable: STACKABLE_IDS.has(id) || isNotedId(id),
         ...(altIds?.length ? { altIds } : {}),
@@ -847,7 +893,7 @@ export function resolveConcreteKit(kit: readonly KitSpecItem[], items: readonly 
         if (!spec.altIds?.length) return spec;
         const matchedId = specIds(spec).find(id => countById(items, id) >= spec.count);
         if (matchedId === undefined || matchedId === spec.id) return spec;
-        return { id: matchedId, name: itemCatalogMap.get(matchedId)?.name ?? spec.name, count: spec.count, stackable: spec.stackable };
+        return { id: matchedId, name: itemCatalogName(matchedId) ?? spec.name, count: spec.count, stackable: spec.stackable };
     });
 }
 

@@ -1,104 +1,6 @@
 // Dispatcher for unified bank-artisan WorkerModule<ArtisanConfig> in-session and CLI runs.
 import { sessionWalker, walkPath } from '../../../core/src/walk';
-import {
-    cookingRecipes,
-    runCookingBatch,
-    runCookingCli,
-    runCookFood,
-    runCookStock,
-    runGeCooking,
-    runMixedWine,
-    runWineSession,
-    validateGeCookingOrder,
-} from './cooking';
-import {
-    glassSupplyOptions,
-    inventoryRecipes,
-    jewelleryOrderFromEnv,
-    jewelleryRecipes,
-    registerDefaultBankJobRunner,
-    registerDefaultJewelleryBankJobRunner,
-    registerDefaultShaftsRunner,
-    runBankedGlass,
-    runBlackDhideSetsSession,
-    runCraftingCli,
-    runFurnaceGlass,
-    runInventoryBank,
-    runJewellery,
-    runJewelleryOrder,
-    runLegacyCraftJewelryCli,
-    runProgressiveProduction,
-    runSoftenClay,
-    runSpinBowstrings,
-    tanInventory,
-    type InventoryRecipe,
-    type JewelleryOrder,
-    type ProgressiveProduction,
-    type TanKind,
-} from './crafting';
-import {
-    firemakingOptions,
-    geFiremakingOptions,
-    LOGS,
-    runFiremaking,
-    runFiremakingCli,
-    runGeFiremaking,
-    type LogKind,
-} from './firemaking';
-import {
-    type ArrowMetal,
-    nativeArrowProfile,
-    runFletchingCli,
-    runHeadless,
-    runNativeArrows,
-    runOakBows,
-    runShafts,
-    runSteel,
-    runWoodProductDrop,
-} from './fletching';
-import {
-    depositMiscCoffer,
-    dropQolItems,
-    enableQolRun,
-    enableSpecial,
-    fillDruidPouch,
-    holdPrayer,
-    kittenCare,
-    refillCannon,
-    runForagingQolCli,
-    weedMiscellania,
-} from './foraging-qol';
-import { brew, herbloreOptions, runDruidMeats, runHerbloreCli } from './herblore';
-import {
-    chargeInventory,
-    itemMagicRecipe,
-    nativeTeleport,
-    type OrbKind,
-    orbOptions,
-    orbRecipes,
-    runAlch,
-    runBonesBank,
-    runEarthProduction,
-    runItemMagic,
-    runMagicBankTrips,
-    runMagicCli,
-    runOrbTrips,
-    runTeleportMagic,
-    type MagicBankJob,
-} from './magic';
-import { prayerOptions, runPrayer, runPrayerCli } from './prayer';
 import { readJobJson, resolveArgSetting } from './runtime';
-import {
-    runBronze,
-    runCannonballs,
-    runSmeltBatch,
-    runSmithBatch,
-    runSmithingCli,
-    smeltBonusFromEnv,
-    smeltRouteFromEnv,
-    type SmeltOrder,
-    validateSmeltOrder,
-} from './smithing';
 import {
     ARTISAN_METHOD_MAP,
     type ArtisanConfig,
@@ -108,10 +10,20 @@ import {
     type Session,
     VALID_ARTISAN_SKILLS,
 } from './types';
+import type { LogKind } from './firemaking';
+import type { ArrowMetal } from './fletching';
+import type { OrbKind, MagicBankJob } from './magic';
+import type { SmeltOrder } from './smithing';
+import type { InventoryRecipe, JewelleryOrder, ProgressiveProduction, TanKind } from './crafting';
 
-function ensureRegisteredCrossRunners(deps?: ArtisanConfig['deps']) {
+async function ensureRegisteredCrossRunners(deps?: ArtisanConfig['deps']) {
+    const [{ registerDefaultShaftsRunner }, { runShafts }] = await Promise.all([
+        import('./crafting'),
+        import('./fletching'),
+    ]);
     registerDefaultShaftsRunner(runShafts);
     if (deps?.runBankJob) {
+        const { registerDefaultBankJobRunner, registerDefaultJewelleryBankJobRunner } = await import('./crafting');
         registerDefaultBankJobRunner(deps.runBankJob as any);
         registerDefaultJewelleryBankJobRunner(deps.runBankJob as any);
     }
@@ -123,7 +35,7 @@ export async function runArtisan(
     stop: () => boolean = () => false,
 ): Promise<ArtisanSessionOutcome> {
     const cfg = normalizeArtisanConfig(rawCfg);
-    ensureRegisteredCrossRunners(cfg.deps);
+    await ensureRegisteredCrossRunners(cfg.deps);
     if (!VALID_ARTISAN_SKILLS.includes(cfg.skill)) {
         return { ok: false, summary: `unknown artisan skill: ${String(rawCfg.skill)}`, ticks: 0, produced: 0, failure: 'invalid_config' };
     }
@@ -140,6 +52,7 @@ export async function runArtisan(
     try {
         switch (cfg.skill) {
             case 'cooking': {
+                const { cookingRecipes, runCookingBatch, runCookFood, runCookStock, runGeCooking, runMixedWine, runWineSession, validateGeCookingOrder } = await import('./cooking');
                 if (cfg.method === 'food') {
                     const cap = Number(cfg.args[0] ?? setting('CAP', '15000'));
                     const foodType = (setting('FOOD_TYPE', cfg.args[1]) ?? 'lobster').toLowerCase();
@@ -164,6 +77,7 @@ export async function runArtisan(
                     const maximum = Number(setting('MAX_MAKE', cfg.args[0] ?? '1'));
                     const cap = Number(setting('CAP', cfg.args[1] ?? '500'));
                     const reserve = Number(setting('RAW_RESERVE', '0'));
+                    const { runInventoryBank } = await import('./crafting');
                     const r = await runMixedWine(s, maximum, cap, halted, reserve, { runInventoryBank });
                     return { ok: r.ok, summary: `good=${r.good} bad=${r.bad}`, ticks: r.ticks, produced: r.good, failure: r.ok ? undefined : r.failure };
                 }
@@ -181,6 +95,7 @@ export async function runArtisan(
                     };
                     validateGeCookingOrder(order);
                     const { runBankJob } = { runBankJob: cfg.deps?.runBankJob };
+                    const { runFiremaking } = await import('./firemaking');
                     const r = await runGeCooking(s, order, halted, {
                         light: (sess, o) => runFiremaking(sess as Session, o),
                         cook: runBankJob
@@ -216,6 +131,7 @@ export async function runArtisan(
                 return { ok: batchOk, summary: `cooked=${r.cooked} burnt=${r.burnt}`, ticks: r.ticks, produced: r.cooked, failure: batchOk ? undefined : 'cooking batch incomplete' };
             }
             case 'firemaking': {
+                const { firemakingOptions, geFiremakingOptions, runFiremaking, runGeFiremaking } = await import('./firemaking');
                 if (cfg.method === 'ge') {
                     const opts = geFiremakingOptions(cfg.env);
                     const r = await runGeFiremaking(s, opts, halted);
@@ -226,6 +142,7 @@ export async function runArtisan(
                 return { ok: r.ok, summary: `logsBurnt=${r.logsBurnt}`, ticks: r.ticks, produced: r.logsBurnt, failure: r.ok ? undefined : r.failure };
             }
             case 'fletching': {
+                const { nativeArrowProfile, runHeadless, runNativeArrows, runOakBows, runShafts, runSteel, runWoodProductDrop } = await import('./fletching');
                 if (cfg.method === 'shafts' || setting('MODE', cfg.args[1]) === 'shafts') {
                     const r = await runShafts(s, {
                         cap: Number(cfg.args[0] ?? setting('CAP', '600')),
@@ -296,6 +213,7 @@ export async function runArtisan(
                 return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
             }
             case 'smithing': {
+                const { runBronze, runCannonballs, runSmeltBatch, runSmithBatch, smeltBonusFromEnv, smeltRouteFromEnv, validateSmeltOrder } = await import('./smithing');
                 const cap = Number(cfg.args[0] ?? setting('CAP', '1500'));
                 if (cfg.method === 'cannonballs') {
                     const r = await runCannonballs(s, {
@@ -343,6 +261,12 @@ export async function runArtisan(
                 return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
             }
             case 'crafting': {
+                const {
+                    glassSupplyOptions, inventoryRecipes, jewelleryOrderFromEnv, jewelleryRecipes,
+                    runBankedGlass, runBlackDhideSetsSession, runFurnaceGlass, runInventoryBank,
+                    runJewellery, runJewelleryOrder, runLegacyCraftJewelryCli, runProgressiveProduction,
+                    runSoftenClay, runSpinBowstrings, tanInventory,
+                } = await import('./crafting');
                 const craftingMethod = cfg.method as (typeof ARTISAN_METHOD_MAP.crafting)[number];
                 switch (craftingMethod) {
                     case 'bowstrings': {
@@ -435,6 +359,7 @@ export async function runArtisan(
                 }
             }
             case 'herblore': {
+                const { brew, herbloreOptions, runDruidMeats } = await import('./herblore');
                 if (cfg.method === 'meats') {
                     const r = await runDruidMeats(s, { cap: Number(setting('CAP', '4000')), stop: halted });
                     return { ok: r.ok, summary: `kills=${r.kills}`, ticks: r.ticks, produced: r.acquired.length, failure: r.ok ? undefined : 'druid-meats incomplete' };
@@ -444,11 +369,17 @@ export async function runArtisan(
                 return { ok: r.ok, summary: `brewed=${r.brewed} level=${r.level}`, ticks: r.ticks, produced: r.brewed, failure: r.ok ? undefined : 'brew failed' };
             }
             case 'prayer': {
+                const { prayerOptions, runPrayer } = await import('./prayer');
                 const opts = prayerOptions([s.name, ...cfg.args], cfg.env);
                 const r = await runPrayer(s, { ...opts, stop: halted });
                 return { ok: r.ok, summary: `buried=${r.buried}`, ticks: r.ticks, produced: r.buried, failure: r.ok ? undefined : r.failure };
             }
             case 'magic': {
+                const {
+                    chargeInventory, itemMagicRecipe, nativeTeleport, orbOptions, orbRecipes,
+                    runAlch, runBonesBank, runEarthProduction, runItemMagic, runMagicBankTrips,
+                    runOrbTrips, runTeleportMagic,
+                } = await import('./magic');
                 if (cfg.method === 'items') {
                     const recipe = itemMagicRecipe(cfg.args[0]!, cfg.args[1] === '-' ? undefined : cfg.args[1]);
                     const r = await runItemMagic(s, recipe, { count: Number(cfg.args[2] ?? 1), cap: Number(cfg.args[3] ?? 200), members: setting('MEMBERS') === '1', stop: halted });
@@ -514,6 +445,10 @@ export async function runArtisan(
                 return { ok: r.ok, summary: `level=${r.level} gained=${r.gained}`, ticks: r.ticks, produced: r.gained, failure: r.ok ? undefined : r.failure };
             }
             case 'foraging': {
+                const {
+                    depositMiscCoffer, dropQolItems, enableQolRun, enableSpecial,
+                    fillDruidPouch, holdPrayer, kittenCare, refillCannon, weedMiscellania,
+                } = await import('./foraging-qol');
                 if (cfg.method === 'miscellania-coffer') {
                     const r = await depositMiscCoffer(s, Number(cfg.args[0]), Number(cfg.args[1] ?? 120), halted, { collectResources: cfg.args[2] === '--collect' });
                     return { ok: r.ok, summary: `amount=${r.amount}`, ticks: r.ticks, produced: r.amount, failure: r.ok ? undefined : r.detail };
@@ -567,7 +502,7 @@ export async function runArtisan(
 
 export async function runArtisanCli(account: string, rawCfg: ArtisanConfig): Promise<number> {
     const cfg = normalizeArtisanConfig(rawCfg);
-    ensureRegisteredCrossRunners(cfg.deps);
+    await ensureRegisteredCrossRunners(cfg.deps);
     if (!VALID_ARTISAN_SKILLS.includes(cfg.skill)) {
         throw Error(`unknown artisan skill: ${String(rawCfg.skill)}`);
     }
@@ -590,23 +525,23 @@ export async function runArtisanCli(account: string, rawCfg: ArtisanConfig): Pro
 
     switch (cfg.skill) {
         case 'cooking':
-            return await runCookingCli(cfg.method, account, cfg.args, env, cfg.deps);
+            return await (await import('./cooking')).runCookingCli(cfg.method, account, cfg.args, env, cfg.deps);
         case 'firemaking':
-            return await runFiremakingCli(cfg.method, account, cfg.args, env);
+            return await (await import('./firemaking')).runFiremakingCli(cfg.method, account, cfg.args, env);
         case 'fletching':
-            return await runLegacyExitCode(() => runFletchingCli(cfg.method, account, cfg.args, env));
+            return await runLegacyExitCode(async () => (await import('./fletching')).runFletchingCli(cfg.method, account, cfg.args, env));
         case 'smithing':
-            return await runLegacyExitCode(() => runSmithingCli(cfg.method, account, cfg.args, env));
+            return await runLegacyExitCode(async () => (await import('./smithing')).runSmithingCli(cfg.method, account, cfg.args, env));
         case 'crafting':
-            return await runLegacyExitCode(() => runCraftingCli(cfg.method, account, cfg.args, env, cfg.deps));
+            return await runLegacyExitCode(async () => (await import('./crafting')).runCraftingCli(cfg.method, account, cfg.args, env, cfg.deps));
         case 'herblore':
-            return await runLegacyExitCode(() => runHerbloreCli(cfg.method, account, cfg.args, env));
+            return await runLegacyExitCode(async () => (await import('./herblore')).runHerbloreCli(cfg.method, account, cfg.args, env));
         case 'prayer':
-            return await runPrayerCli(cfg.method, account, cfg.args, env);
+            return await (await import('./prayer')).runPrayerCli(cfg.method, account, cfg.args, env);
         case 'magic':
-            return await runLegacyExitCode(() => runMagicCli(cfg.method, account, cfg.args, env, cfg.deps));
+            return await runLegacyExitCode(async () => (await import('./magic')).runMagicCli(cfg.method, account, cfg.args, env, cfg.deps));
         case 'foraging':
-            return await runLegacyExitCode(() => runForagingQolCli(cfg.method, account, cfg.args, env));
+            return await runLegacyExitCode(async () => (await import('./foraging-qol')).runForagingQolCli(cfg.method, account, cfg.args, env));
         case 'bank-job':
             throw Error('bank-job CLI orchestration runs directly through runBankJob jobs in scripts/aio-skiller.ts');
     }

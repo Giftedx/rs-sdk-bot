@@ -1,19 +1,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { openBot, finish, finishHooks, settle } from '../../../core/src/bot';
+import { finish, finishHooks, openBot, settle } from '../../../core/src/bot';
 import type { Step } from '../../../core/src/chain-step';
-import { nativeNpcSpell, nativeTeleport } from '../../../core/src/magic-data';
 import { resolveRouteStep } from '../../../core/src/route-step';
 import { runDirectChild } from '../../../core/src/run-child';
-import { QUEST_NAMES, questShortfall, runQuestChainFromAccount } from './chain';
-import { runGuardianClue } from './clue-guardian';
-import { solveNativeCluePuzzle } from './clue-puzzle';
-import { runNativeClueStep } from './clues';
-import { parseCookJobArgs, runQuestCookJob, runQuestHettyJob } from './cook-job';
-import { runDustyKey, runSeaslugLeave } from './helpers';
-import { runQuestItemsOrder } from './items-order';
-import { QUEST_ORDERS, runQuestOrder } from './order';
-import { apiOptions, PRAYER_POTIONS, QUEST_FINDS, needs, prayerCovers, presetFor, sweep, sweepPreset, wornKitPlan } from './sweep';
+import { QUEST_NAMES, questShortfall } from './chain';
+import { QUEST_FINDS, PRAYER_POTIONS, needs, prayerCovers, presetFor, wornKitPlan } from './sweep';
 import { REPO_ROOT, type SweepApiOptions } from './types';
 
 export interface QuesterModeSpec {
@@ -225,6 +217,7 @@ export async function dispatchQuesterCli(
     try {
         switch (key) {
             case 'sweep': {
+                const { apiOptions, sweep, sweepPreset } = await import('./sweep');
                 const [quest, optionsPath] = subArgs;
                 if (!quest) throw Error('usage: bun scripts/aio-quester.ts <account> sweep <quest> [api-options.json]');
                 let options: SweepApiOptions | undefined;
@@ -250,6 +243,7 @@ export async function dispatchQuesterCli(
                 return 0;
             }
             case 'order': {
+                const { QUEST_ORDERS, runQuestOrder } = await import('./order');
                 const [questKeyArg] = subArgs.filter((a) => !a.startsWith('--'));
                 const flag = (k: string) => subArgs.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
                 if (!questKeyArg || !Object.hasOwn(QUEST_ORDERS, questKeyArg)) {
@@ -264,6 +258,7 @@ export async function dispatchQuesterCli(
                 return result.ok ? 0 : 1;
             }
             case 'chain': {
+                const { runQuestChainFromAccount } = await import('./chain');
                 const list = subArgs.join(',');
                 if (!list) throw Error('usage: bun scripts/aio-quester.ts <account> chain <quest,quest,...>');
                 const res = await runQuestChainFromAccount(account, list.split(','));
@@ -271,6 +266,7 @@ export async function dispatchQuesterCli(
                 return res.ok ? 0 : 1;
             }
             case 'items': {
+                const { runQuestItemsOrder } = await import('./items-order');
                 const [questKeyArg] = subArgs.filter((a) => !a.startsWith('--'));
                 const save = subArgs.find((a) => a.startsWith('--save='))?.slice(7);
                 if (!questKeyArg) throw Error('usage: bun scripts/aio-quester.ts <account> items <quest> --save=<own-save>');
@@ -282,20 +278,24 @@ export async function dispatchQuesterCli(
                 return result.ok ? 0 : 1;
             }
             case 'cook-job': {
+                const { parseCookJobArgs, runQuestCookJob, runQuestHettyJob } = await import('./cook-job');
                 const parsed = parseCookJobArgs([account, ...subArgs], mergedEnv.CAP ?? (subArgs[0] === 'hetty' ? '6000' : '2400'));
                 const result = 'quest' in parsed ? await runQuestHettyJob(parsed.name, parsed.cap) : await runQuestCookJob(parsed.name, parsed.cap);
                 console.log('QUEST_COOK_JOB_RESULT ' + JSON.stringify(result));
                 return result.ok ? 0 : 1;
             }
             case 'seaslug-leave': {
+                const { runSeaslugLeave } = await import('./helpers');
                 await runSeaslugLeave(Number(mergedEnv.CAP ?? 600), account);
                 return 0;
             }
             case 'dusty-key': {
+                const { runDustyKey } = await import('./helpers');
                 await runDustyKey(Number(mergedEnv.CAP ?? 3000), account);
                 return 0;
             }
             case 'clue': {
+                const { runNativeClueStep } = await import('./clues');
                 const clue = Number(subArgs[0]);
                 const cap = Number(subArgs[1] ?? 200);
                 if (!Number.isSafeInteger(clue) || !Number.isSafeInteger(cap) || cap < 1) {
@@ -321,6 +321,7 @@ export async function dispatchQuesterCli(
                 return ok ? 0 : 1;
             }
             case 'clue-puzzle': {
+                const { solveNativeCluePuzzle } = await import('./clue-puzzle');
                 const puzzle = Number(subArgs[0]);
                 const cap = Number(subArgs[1] ?? 200);
                 const npc = subArgs[2] === undefined ? undefined : Number(subArgs[2]);
@@ -347,6 +348,10 @@ export async function dispatchQuesterCli(
                 return ok ? 0 : 1;
             }
             case 'clue-guardian': {
+                const [{ nativeNpcSpell, nativeTeleport }, { runGuardianClue }] = await Promise.all([
+                    import('../../../core/src/magic-data'),
+                    import('./clue-guardian'),
+                ]);
                 const id = Number(subArgs[0]);
                 const spell = subArgs[1] ?? 'fire_blast';
                 const maximumCasts = Number(subArgs[2] ?? 30);

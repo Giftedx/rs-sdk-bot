@@ -70,18 +70,49 @@ export function isItemStackable(id: number): boolean {
     return itemById(id)?.stackable === true;
 }
 
+let cachedObjIdSet: ReadonlySet<number> | undefined;
+
+export function parsePackNameToId(text: string): Map<string, number> {
+    const map = new Map<string, number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) map.set(text.slice(eq + 1, lineEnd), id);
+        }
+        pos = end + 1;
+    }
+    return map;
+}
+
+export function objPackIdSet(): ReadonlySet<number> {
+    if (cachedObjIdSet) return cachedObjIdSet;
+    const text = readFileSync(join(CONTENT_DIR, 'pack/obj.pack'), 'utf8');
+    const ids = new Set<number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) ids.add(id);
+        }
+        pos = end + 1;
+    }
+    cachedObjIdSet = ids;
+    return ids;
+}
+
 export function packMap(kind: 'obj' | 'loc'): ReadonlyMap<string, number> {
     const existing = kind === 'obj' ? cachedObjPack : cachedLocPack;
     if (existing) return existing;
-    const map = new Map(
-        readFileSync(join(CONTENT_DIR, `pack/${kind}.pack`), 'utf8')
-            .split(/\r?\n/)
-            .filter(l => l.includes('='))
-            .map(l => {
-                const at = l.indexOf('=');
-                return [l.slice(at + 1), Number(l.slice(0, at))] as const;
-            }),
-    );
+    const map = parsePackNameToId(readFileSync(join(CONTENT_DIR, `pack/${kind}.pack`), 'utf8'));
     if (kind === 'obj') cachedObjPack = map;
     else cachedLocPack = map;
     return map;

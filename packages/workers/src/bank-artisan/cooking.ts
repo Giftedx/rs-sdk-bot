@@ -10,25 +10,12 @@ import { componentId } from '../../../core/src/logout';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import type { BotWorldState } from '../../../../vendor/rs-sdk/sdk/types';
-import { CONTENT_DIR } from './catalog';
+import { CONTENT_DIR, packMap } from './catalog';
 import { actionSessionOwner, finishActionSession, productionStopRequested } from './runtime';
 import { geFiremakingOptions, lineTiles, LOGS, runGeFiremaking, type LogKind } from './firemaking';
 
-const pack = (kind: string) =>
-    new Map(
-        readFileSync(resolve(CONTENT_DIR, `pack/${kind}.pack`), 'utf8')
-            .split(/\r?\n/)
-            .filter(l => l.includes('='))
-            .map(l => {
-                const at = l.indexOf('=');
-                return [l.slice(at + 1), Number(l.slice(0, at))] as const;
-            }),
-    );
-
-const obj = pack('obj');
-const loc = pack('loc');
 const itemIdOf = (name: string) => {
-    const n = obj.get(name);
+    const n = packMap('obj').get(name);
     if (n === undefined) throw Error('unknown native cook item ' + name);
     return n;
 };
@@ -110,6 +97,7 @@ let heatSources: Map<number, Heat> | undefined;
 export function nativeHeatSources(): ReadonlyMap<number, Heat> {
     if (heatSources) return heatSources;
     heatSources = new Map();
+    const loc = packMap('loc');
     const walk = (dir: string) => {
         for (const entry of readdirSync(dir, { withFileTypes: true })) {
             if (entry.isDirectory()) {
@@ -336,7 +324,8 @@ export function foodRule(foodType: string): { rawId: number; level: number } {
     const direct = FOOD_RULES[key];
     if (direct) return direct;
     const rawName = `raw ${key}`;
-    const recipe = cookingRecipes().recipes.find(r => r.name.endsWith(`_${key}`) || obj.get(rawName.replaceAll(' ', '_')) === r.raw);
+    const rawId = packMap('obj').get(rawName.replaceAll(' ', '_'));
+    const recipe = cookingRecipes().recipes.find(r => r.name.endsWith(`_${key}`) || rawId === r.raw);
     if (recipe) return { rawId: recipe.raw, level: recipe.level };
     return { rawId: FOOD_RULES.lobster!.rawId, level: 1 };
 }

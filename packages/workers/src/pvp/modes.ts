@@ -16,7 +16,6 @@ import {
     defaultSpec,
     fightPlayer,
     nextTick,
-    runPkFightCli,
     weaponStyle,
     wildernessLevel,
     type FightOptions,
@@ -39,19 +38,7 @@ import {
     verdict,
     type Spot,
 } from './hunt-kits';
-import { runPkHuntCli } from './hunt';
-import { runMicrobotPvpCli } from './microbot-pvp';
-import { runMonitorCli } from './monitor';
-import { runPkArmyCli } from './pk-army';
-import { runPkGangCli } from './pk-gang';
-import { runPkSparCli } from './pk-spar';
-import { runPkTeamCli } from './pk-team';
-import { runPkRoamCli, kitFrom } from './roam';
 import { runDirectChildBridge, pvpRuntime } from './runtime';
-import { runSpecialSwapCli } from './special-swap';
-import { runPkSquadCli } from './squad';
-import { runStageKitCli } from './stage-kit';
-import { runStandbyCli } from './standby';
 import { PVP_MODES_LIST, REPO_ROOT, type PvpMode, type PvpModeSpec } from './types';
 import {
     WILDERNESS_ESCAPES,
@@ -310,6 +297,7 @@ async function runEscortOreCli(
         if (m) mergedEnv[m[1]!] = m[2]!;
         else cleanArgs.push(token);
     }
+    const { kitFrom } = await import('./roam');
     const { runGatherCli } = await import('../gather');
     return runGatherCli(account, {
         skill: 'mining',
@@ -380,31 +368,31 @@ export async function dispatchPvpCli(
     try {
         switch (mode) {
             case 'fight':
-                return await (pvpRuntime.runPkFightCli ?? ((args) => runPkFightCli(args, existingSession)))([account, ...positional], mergedEnv);
+                return await (pvpRuntime.runPkFightCli ?? (async (args) => (await import('./fight')).runPkFightCli(args, existingSession)))([account, ...positional], mergedEnv);
             case 'spar':
-                return await runPkSparCli([account, ...positional], mergedEnv);
+                return await (await import('./pk-spar')).runPkSparCli([account, ...positional], mergedEnv);
             case 'gang':
-                return await runPkGangCli([account, ...positional], mergedEnv);
+                return await (await import('./pk-gang')).runPkGangCli([account, ...positional], mergedEnv);
             case 'team':
-                return await runPkTeamCli([account, ...positional], mergedEnv);
+                return await (await import('./pk-team')).runPkTeamCli([account, ...positional], mergedEnv);
             case 'hunt':
-                return await runPkHuntCli([account, ...positional], mergedEnv, existingSession);
+                return await (await import('./hunt')).runPkHuntCli([account, ...positional], mergedEnv, existingSession);
             case 'roam':
-                return await runPkRoamCli([account, ...rest], existingSession);
+                return await (await import('./roam')).runPkRoamCli([account, ...rest], existingSession);
             case 'army':
-                return await runPkArmyCli([account, ...rest]);
+                return await (await import('./pk-army')).runPkArmyCli([account, ...rest]);
             case 'squad':
-                return await (pvpRuntime.runPkSquadCli ?? runPkSquadCli)([account, ...rest], mergedEnv);
+                return await (pvpRuntime.runPkSquadCli ?? (await import('./squad')).runPkSquadCli)([account, ...rest], mergedEnv);
             case 'standby':
-                return await runStandbyCli([account, ...positional], existingSession);
+                return await (await import('./standby')).runStandbyCli([account, ...positional], existingSession);
             case 'stage-kit':
-                return await runStageKitCli([account, ...positional], existingSession);
+                return await (await import('./stage-kit')).runStageKitCli([account, ...positional], existingSession);
             case 'microbot-pvp':
-                return await runMicrobotPvpCli([account, ...positional]);
+                return await (await import('./microbot-pvp')).runMicrobotPvpCli([account, ...positional]);
             case 'special-swap':
-                return await runSpecialSwapCli([account, ...positional], mergedEnv, existingSession);
+                return await (await import('./special-swap')).runSpecialSwapCli([account, ...positional], mergedEnv, existingSession);
             case 'monitor':
-                return await runMonitorCli([account, ...positional], existingSession);
+                return await (await import('./monitor')).runMonitorCli([account, ...positional], existingSession);
             case 'escort-ore':
                 if (pvpRuntime.runDirectChild) {
                     const step = resolvePvpStep(mode, rest);

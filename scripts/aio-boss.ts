@@ -4,24 +4,23 @@
 import type { Step } from '../packages/core/src/chain-step';
 import { resolveRouteStep } from '../packages/core/src/route-step';
 import { runDirectChild } from '../packages/core/src/run-child';
+import { assessBossReadiness, runCombatModeCli } from '../packages/workers/src/combat/module';
+import { combatTeleportAllowed } from '../packages/workers/src/combat/survivability';
 import {
     BLACK_KIT,
     BLUE_KIT,
     KBD_KIT,
-    assessBossReadiness,
     blueDungeonEntry,
     combatAssetIssues,
     combatKitTotals,
-    combatTeleportAllowed,
     combatTrip,
     inKbdEntrancePit,
     inNativeKbdLair,
     leaveKbdEntrancePit,
-    runCombatModeCli,
     validateCombatKit,
-    type BossEncounterSpec,
     type CombatKit,
-} from '../packages/workers/src/combat';
+} from '../packages/workers/src/combat/trip-kit';
+import type { BossEncounterSpec } from '../packages/workers/src/combat/types';
 
 export const BOSS_ENCOUNTERS: readonly BossEncounterSpec[] = [
     {

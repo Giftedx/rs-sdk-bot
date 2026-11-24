@@ -59,6 +59,7 @@ export function protectedStyles(headicons: number | undefined): Set<Style> {
     if (bits & (1 << 5)) out.add('magic');
     return out;
 }
+const EMPTY_PROTECTED_STYLES: ReadonlySet<Style> = new Set<Style>();
 export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1) !== 0;
 // The death line's skull fields: the skull and what the death costs, read on the last tick that the account was alive (the
 // client clears the skull at the death itself), as ` skull=1 keeps=0 lost=420 lostValue=190000`. Empty when the client
@@ -95,12 +96,40 @@ export function deathRisk(units: readonly { id: number; count: number }[], cost:
 }
 let costTable: Map<number, number> | undefined;
 // The content cost of an item (knowledge/items.json). 0 for an item that the file does not know.
-export const itemCostOf = (id: number): number => (costTable ??= new Map((JSON.parse(readFileSync(join(REPO_ROOT, 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[]).map(i => [i.id, i.cost ?? 0]))).get(id) ?? 0;
+export const itemCostOf = (id: number): number => {
+    if (!costTable) {
+        const rows = JSON.parse(readFileSync(join(REPO_ROOT, 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[];
+        const map = new Map<number, number>();
+        for (let i = 0; i < rows.length; i++) map.set(rows[i]!.id, rows[i]!.cost ?? 0);
+        costTable = map;
+    }
+    return costTable.get(id) ?? 0;
+};
 
 // The style a worn weapon attacks with, from its object name (content pack/obj.pack). No weapon is melee (fists).
 let objNames: Map<number, string> | undefined;
-export const getObjNames = () => (objNames ??= new Map(readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
-    .split(/\r?\n/).flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; })));
+export const getObjNames = () => {
+    if (objNames) return objNames;
+    const text = readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8');
+    const map = new Map<number, string>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq + 1 < lineEnd) {
+            let digits = true;
+            for (let i = pos; i < eq; i++) {
+                const ch = text.charCodeAt(i);
+                if (ch < 48 || ch > 57) { digits = false; break; }
+            }
+            if (digits) map.set(Number(text.slice(pos, eq)), text.slice(eq + 1, lineEnd));
+        }
+        pos = end + 1;
+    }
+    return (objNames = map);
+};
 // The style of a weapon by its name: a bow or a thrown weapon is ranged, a staff magic. The simulator
 // (scripts/pk-sim.ts) and the prayer guard use the same rule (packages/core/src/opponent.ts).
 export function styleOfName(name: string): Style {
@@ -470,10 +499,18 @@ export const isDying = (seen: Observed | null) => !!seen && seen.totalHealth > 0
 export function newSplats(client: unknown, index: number, seen: { cycles: number[] | null }): number[] | null {
     const p = (client as { players?: ({ damageCycles?: ArrayLike<number>; damageValues?: ArrayLike<number> } | null)[] } | undefined)?.players?.[index];
     if (!p?.damageCycles || !p.damageValues) return null;
-    const cycles = Array.from({ length: 4 }, (_, j) => p.damageCycles![j] ?? 0);
-    const out = seen.cycles ? cycles.flatMap((cycle, j) => (cycle > 0 && cycle > seen.cycles![j]! ? [p.damageValues![j] ?? 0] : [])) : [];
-    seen.cycles = cycles;
-    return out;
+    const dc = p.damageCycles;
+    const prev = seen.cycles;
+    const c0 = dc[0] ?? 0, c1 = dc[1] ?? 0, c2 = dc[2] ?? 0, c3 = dc[3] ?? 0;
+    let out: number[] | undefined;
+    if (prev) {
+        if (c0 > 0 && c0 > prev[0]!) (out ??= []).push(p.damageValues[0] ?? 0);
+        if (c1 > 0 && c1 > prev[1]!) (out ??= []).push(p.damageValues[1] ?? 0);
+        if (c2 > 0 && c2 > prev[2]!) (out ??= []).push(p.damageValues[2] ?? 0);
+        if (c3 > 0 && c3 > prev[3]!) (out ??= []).push(p.damageValues[3] ?? 0);
+    }
+    seen.cycles = [c0, c1, c2, c3];
+    return out ?? [];
 }
 // Bodies the game lets only a Dragon Slayer finisher wear (levelrequire.rs2:94-101).
 const DRAGON_SLAYER_BODY = /^(rune_platebody|dragonhide_body)/;
@@ -562,10 +599,30 @@ export const meleeWeaponDelay = (ids: readonly number[] | undefined, names = get
 
 // Food best first by heal; any other item with an Eat option comes after these.
 export const FOOD_ORDER = [/^shark$/i, /^cooked karambwan$/i, /^swordfish$/i, /^lobster$/i, /^bass$/i, /^tuna$/i, /^salmon$/i, /^trout$/i, /^pike$/i];
+const EAT_OPT_RE = /^eat$/i;
+function hasEatOption(opts: readonly { text: string }[] | undefined): boolean {
+    if (!opts) return false;
+    for (let i = 0; i < opts.length; i++) if (EAT_OPT_RE.test(opts[i]!.text)) return true;
+    return false;
+}
 export function bestFood<T extends { name: string; optionsWithIndex: { text: string }[] }>(inv: readonly T[]): T | undefined {
-    const edible = inv.filter(i => i.optionsWithIndex.some(o => /^eat$/i.test(o.text)));
-    for (const re of FOOD_ORDER) { const hit = edible.find(i => re.test(i.name)); if (hit) return hit; }
-    return edible[0];
+    let bestRank = FOOD_ORDER.length;
+    let best: T | undefined;
+    let fallback: T | undefined;
+    for (let i = 0; i < inv.length; i++) {
+        const item = inv[i]!;
+        if (!hasEatOption(item.optionsWithIndex)) continue;
+        if (!fallback) fallback = item;
+        for (let r = 0; r < bestRank; r++) {
+            if (FOOD_ORDER[r]!.test(item.name)) {
+                bestRank = r;
+                best = item;
+                if (r === 0) return best;
+                break;
+            }
+        }
+    }
+    return best ?? fallback;
 }
 // A conservative max hit for an opponent of this combat level: about a quarter of it, never under 10 (a combat 126
 // melee main with a dragon weapon hits about 30; the dagger special hits twice).
@@ -580,12 +637,26 @@ export function dangerReason(o: { hp: number; maxHp: number; food: boolean; pray
     hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number; window?: number; race?: boolean; noFoodAt?: number }): string | null {
     if (!o.food && o.hp <= o.oppMax * (o.noFoodAt ?? 1.5)) return `no food at HP ${o.hp}`;
     // A hit's source is the entity the player faced (StateCollector); -1 is no one, not a second player.
-    const attackers = new Set(o.hits.filter(h => o.now - h.tick <= 10 && h.src >= 0).map(h => h.src));
-    if (attackers.size >= 2) return `${attackers.size} players hitting`;
-    // The race over the last `window` ticks (default 30).
     const window = o.window ?? 30;
-    const taken = o.hits.filter(h => o.now - h.tick <= window).reduce((n, h) => n + h.damage, 0);
-    const dealt = o.dealt.filter(h => o.now - h.tick <= window).reduce((n, h) => n + h.damage, 0);
+    let firstAttacker = -1;
+    let attackers: Set<number> | undefined;
+    let taken = 0;
+    for (let i = 0; i < o.hits.length; i++) {
+        const h = o.hits[i]!;
+        const age = o.now - h.tick;
+        if (age <= 10 && h.src >= 0) {
+            if (firstAttacker < 0) firstAttacker = h.src;
+            else if (h.src !== firstAttacker) (attackers ??= new Set([firstAttacker])).add(h.src);
+        }
+        if (age <= window) taken += h.damage;
+    }
+    if (attackers && attackers.size >= 2) return `${attackers.size} players hitting`;
+    // The race over the last `window` ticks (default 30).
+    let dealt = 0;
+    for (let i = 0; i < o.dealt.length; i++) {
+        const d = o.dealt[i]!;
+        if (o.now - d.tick <= window) dealt += d.damage;
+    }
     if (o.race !== false && taken >= 30 && taken >= 2 * dealt && o.hp < o.maxHp * 0.6) return `losing the race: took ${taken}, dealt ${dealt}`;
     if (o.prayer <= 0 && o.hp < o.maxHp * 0.5) return 'no prayer points';
     return null;
@@ -606,19 +677,44 @@ export function nextTick(s: Pick<Session, 'onTick' | 'ended'>): Promise<boolean>
 }
 
 // Multi-combat zones: maps/multiway.csv lists 8x8 zones as level_mapX_mapZ_localX_localZ (engine GameMap.loadCsvMap).
-let multi: Set<string> | undefined;
+let multi: Set<number> | undefined;
+let multiRoot: string | undefined;
+const packZoneKey = (zx: number, zz: number) => zx * 65536 + (zz & 0xffff);
 export function isMulti(x: number, z: number, root = REPO_ROOT): boolean {
-    if (!multi) {
-        multi = new Set();
+    if (!multi || multiRoot !== root) {
+        const next = new Set<number>();
         try {
-            for (const line of readFileSync(join(root, 'vendor/rs-sdk/server/content/maps/multiway.csv'), 'ascii').split(/\r?\n/)) {
-                if (!line || line.startsWith('//')) continue;
-                const [y, mx, mz, lx, lz] = line.split('_').map(Number);
-                if (y === 0) multi.add((((mx! << 6) + lx!) >> 3) + ',' + (((mz! << 6) + lz!) >> 3));
+            const text = readFileSync(join(root, 'vendor/rs-sdk/server/content/maps/multiway.csv'), 'ascii');
+            let pos = 0;
+            while (pos < text.length) {
+                let end = text.indexOf('\n', pos);
+                if (end < 0) end = text.length;
+                const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+                if (lineEnd > pos && !(text.charCodeAt(pos) === 47 && text.charCodeAt(pos + 1) === 47)) {
+                    const u1 = text.indexOf('_', pos);
+                    if (u1 > pos && u1 < lineEnd) {
+                        const y = Number(text.slice(pos, u1));
+                        if (y === 0) {
+                            const u2 = text.indexOf('_', u1 + 1);
+                            const u3 = u2 > 0 ? text.indexOf('_', u2 + 1) : -1;
+                            const u4 = u3 > 0 ? text.indexOf('_', u3 + 1) : -1;
+                            if (u4 > 0 && u4 < lineEnd) {
+                                const mx = Number(text.slice(u1 + 1, u2));
+                                const mz = Number(text.slice(u2 + 1, u3));
+                                const lx = Number(text.slice(u3 + 1, u4));
+                                const lz = Number(text.slice(u4 + 1, lineEnd));
+                                next.add(packZoneKey(((mx << 6) + lx) >> 3, ((mz << 6) + lz) >> 3));
+                            }
+                        }
+                    }
+                }
+                pos = end + 1;
             }
         } catch { /* no map: everything single-way */ }
+        multi = next;
+        multiRoot = root;
     }
-    return multi.has((x >> 3) + ',' + (z >> 3));
+    return multi.has(packZoneKey(x >> 3, z >> 3));
 }
 
 export const wildernessLevel = (z: number) => (z >= 9920 ? Math.floor((z - 9920) / 8) + 1 : z >= 3520 ? Math.floor((z - 3520) / 8) + 1 : 0);
@@ -631,6 +727,12 @@ export function attackable(me: { z: number; combatLevel: number }, other: { z: n
 export const freezeSpell = (magic: number) => (magic >= 79 ? SPELLS.entangle : magic >= 50 ? SPELLS.snare : magic >= 20 ? SPELLS.bind : null);
 const FREEZE_RUNES: Record<number, [number, number, number]> = { [SPELLS.entangle]: [5, 5, 4], [SPELLS.snare]: [4, 4, 3], [SPELLS.bind]: [3, 3, 2] };
 const FREEZE_TICKS: Record<number, number> = { [SPELLS.entangle]: 24, [SPELLS.snare]: 16, [SPELLS.bind]: 8 };
+const SPELL_KEY_BY_ID = new Map<number, string>(Object.entries(Spells).map(([k, id]) => [id, `magic:${k.toLowerCase()}`]));
+function countCarried(carried: readonly { id: number; count: number }[], id: number): number {
+    let total = 0;
+    for (let i = 0; i < carried.length; i++) if (carried[i]!.id === id) total += carried[i]!.count;
+    return total;
+}
 // Freeze duration in ticks (magic_combat_spells.dbrow freeze_time; halved against Protect from Magic in pvp_magic.rs2:156-158).
 export const freezeDuration = (spell: number, protectFromMagic: boolean) => {
     const base = FREEZE_TICKS[spell] ?? 16;
@@ -640,19 +742,25 @@ export const freezeDuration = (spell: number, protectFromMagic: boolean) => {
 // Magic level (scripts/teleport-runes.ts). Live, a squad account with no law runes clicked Camelot Teleport four times
 // at 17 to 8 HP and died beside its attacker; with this false the escape runs south instead.
 export function escapeCastable(spell: number, carried: readonly { id: number; count: number }[], wornIds: readonly number[], magic: number): boolean {
-    const key = Object.entries(Spells).find(([, id]) => id === spell)?.[0];
+    const key = SPELL_KEY_BY_ID.get(spell);
     if (!key) return false;
-    return castable(`magic:${key.toLowerCase()}`, id => carried.filter(i => i.id === id).reduce((n, i) => n + i.count, 0), wornIds, magic);
+    return castable(key, id => countCarried(carried, id), wornIds, magic);
 }
 
 // Strongest freeze the Magic level and held runes allow (557 earth, 555 water, 561 nature).
 export function castableFreeze(magic: number, carried: readonly { id: number; count: number }[]): number | null {
     const max = freezeSpell(magic);
     if (max === null) return null;
-    const held = (id: number) => carried.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    let earth = 0, water = 0, nature = 0;
+    for (let i = 0; i < carried.length; i++) {
+        const item = carried[i]!;
+        if (item.id === ITEMS.earthRune) earth += item.count;
+        else if (item.id === ITEMS.waterRune) water += item.count;
+        else if (item.id === ITEMS.natureRune) nature += item.count;
+    }
     for (const spell of [SPELLS.entangle, SPELLS.snare, SPELLS.bind]) {
-        const [earth, water, nature] = FREEZE_RUNES[spell]!;
-        if (spell <= max && held(ITEMS.earthRune) >= earth && held(ITEMS.waterRune) >= water && held(ITEMS.natureRune) >= nature) return spell;
+        const [needEarth, needWater, needNature] = FREEZE_RUNES[spell]!;
+        if (spell <= max && earth >= needEarth && water >= needWater && nature >= needNature) return spell;
     }
     return null;
 }
@@ -675,8 +783,15 @@ export const chargeVarpTicks = (client: unknown): number | undefined => {
 // Charge eligibility: Magic 80+, 3 fire/3 blood/3 air runes, and varp 272 <= 0 when observable.
 export function canCastChargeNow(magicLevel: number, inv: readonly { id: number; count: number }[], chargeVarp?: number): boolean {
     if (magicLevel < 80 || (chargeVarp !== undefined && chargeVarp > 0)) return false;
-    const countOf = (id: number) => inv.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
-    return countOf(ITEMS.fireRune) >= 3 && countOf(ITEMS.bloodRune) >= 3 && countOf(ITEMS.airRune) >= 3;
+    let fire = 0, blood = 0, air = 0;
+    for (let i = 0; i < inv.length; i++) {
+        const item = inv[i]!;
+        if (item.id === ITEMS.fireRune) fire += item.count;
+        else if (item.id === ITEMS.bloodRune) blood += item.count;
+        else if (item.id === ITEMS.airRune) air += item.count;
+        if (fire >= 3 && blood >= 3 && air >= 3) return true;
+    }
+    return false;
 }
 
 // Exact rev-289 Dragon Battleaxe warcry stat drains & Strength boost (specwep.rs2:67-77).
@@ -939,6 +1054,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         [...(initState?.equipment ?? []).filter(e => e.slot === 4), ...(initState?.inventory ?? [])]
             .filter(e => /(^|_)(platebody|chainbody)(_|$)/.test(names.get(e.id) ?? '')).map(e => e.id),
     );
+    const allySet = o.allies?.length ? new Set(o.allies) : null;
+    const combatPlayers = (s.client as { players?: ({ faceEntity?: number } | null)[] } | undefined)?.players;
     for (;;) {
         if (!await nextTick(s)) { result.outcome = 'session ended'; log(`PK session ended against ${targetName}`); return result; }
         const now = s.tick(), state = sdk.getState(), me = state?.player;
@@ -973,24 +1090,44 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         seenEvent = maxEvent;
         // escapeOutnumbered: in multi-way combat, hits from that many players in 8 ticks start the escape for good, food
         // or not. In single-way combat one player at a time can hit (pvp_combat.rs2:103-133), so a crowd is no danger.
-        const allyNear = o.allies?.length ? state.nearbyPlayers.filter(p => o.allies!.includes(p.name.toLowerCase()) && p.distance <= 10) : [];
-        const alliesNear = allyNear.length;
-        // The attackers: the client names a hit's source by the entity we face, so in a crowd every hit counts for one
-        // player. A player within 10 tiles, not an ally, faces us when the index it faces is not in our own list of
-        // nearby players (we are not in it); it faces an ally when that index is an ally's. Another fight close by (a
-        // player facing some other visible player) counts for neither.
-        const allyIdx = new Set(allyNear.map(p => p.index)), visibleIdx = new Set(state.nearbyPlayers.map(p => p.index));
-        const faceOf = (index: number) => (s.client as { players?: ({ faceEntity?: number } | null)[] } | undefined)?.players?.[index]?.faceEntity ?? -1;
-        const hostile = o.escapeOutnumbered != null || o.crowdPrayer
-            ? state.nearbyPlayers.filter(p => p.distance <= 10 && !allyIdx.has(p.index) && !o.allies?.includes(p.name.toLowerCase())).map(p => ({ p, f: faceOf(p.index) - 32768 })).filter(x => x.f >= 0)
-            : [];
-        // Those that face us directly (`!visibleIdx.has(x.f)`) count for self crowd/escape checks instead of drowning in ally attackers.
-        const directFacers = hostile.filter(x => !visibleIdx.has(x.f)).map(x => x.p);
-        const facing = directFacers.length;
-        const facers = hostile.filter(x => !visibleIdx.has(x.f) || allyIdx.has(x.f)).map(x => x.p);
-        const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8 && h.src >= 0).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
-        if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
-            outnumbered = true; if (o.escapeLatch) o.escapeLatch.outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
+        let alliesNear = 0;
+        let sources = 0;
+        let directFacers: NearbyPlayer[] = [];
+        const needOutnumbered = o.escapeOutnumbered != null && !outnumbered;
+        const needCrowd = !!o.crowdPrayer && !o.facedPrayer;
+        const needSources = needOutnumbered || !!o.safeStrip;
+        if (needSources || needCrowd) {
+            const nearby = state.nearbyPlayers;
+            const visibleIdx = new Set<number>();
+            let allyIdx: Set<number> | null = null;
+            for (let i = 0; i < nearby.length; i++) {
+                const p = nearby[i]!;
+                visibleIdx.add(p.index);
+                if (allySet && p.distance <= 10 && allySet.has(p.name.toLowerCase())) {
+                    alliesNear++;
+                    (allyIdx ??= new Set()).add(p.index);
+                }
+            }
+            for (let i = 0; i < nearby.length; i++) {
+                const p = nearby[i]!;
+                if (p.distance > 10 || (allyIdx && allyIdx.has(p.index)) || (allySet && allySet.has(p.name.toLowerCase()))) continue;
+                const f = (combatPlayers?.[p.index]?.faceEntity ?? -1) - 32768;
+                if (f >= 0 && !visibleIdx.has(f)) directFacers.push(p);
+            }
+            if (needSources) {
+                const hitSrcs = new Set<number>();
+                let anyRecentHit = false;
+                for (let i = hits.length - 1; i >= 0; i--) {
+                    const h = hits[i]!;
+                    if (now - h.tick > 8) break;
+                    anyRecentHit = true;
+                    if (h.src >= 0) hitSrcs.add(h.src);
+                }
+                sources = Math.max(hitSrcs.size, anyRecentHit ? directFacers.length : 0);
+                if (needOutnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered!) {
+                    outnumbered = true; if (o.escapeLatch) o.escapeLatch.outnumbered = true; log(`PK outnumbered at HP ${me.hp}: escape`);
+                }
+            }
         }
         const escapeNow = (pack: typeof state.inventory) => o.flee === true || outnumbered || (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(pack));
         let maxMessage = seenMessage;
@@ -1299,7 +1436,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // PK_TRACE=1: one line for each tick of what the loop reads, to find where two runs with one seed part.
         if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
-        const lastHit = [...hits].reverse().find(h => now - h.tick <= 5);
+        let lastHit: { tick: number; damage: number; src: number } | undefined;
+        for (let i = hits.length - 1; i >= 0; i--) {
+            const h = hits[i]!;
+            if (now - h.tick <= 5) { lastHit = h; break; }
+        }
         const hitter = !o.facedPrayer && lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
         if (seen) {
             const shown = weaponStyle(seen.worn[3]);
@@ -1311,8 +1452,15 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // counterRead: an opponent that reads our overhead does not attack with the style it covers. One that has shown
         // two styles then has one left, so its next attack is the style our overhead does not show now.
         const shownGuard: Style | null = prayers.activePrayers[PRAYER.melee] ? 'melee' : prayers.activePrayers[PRAYER.missiles] ? 'ranged' : prayers.activePrayers[PRAYER.magic] ? 'magic' : null;
-        const left = [...predictor.seen()].filter(st => st !== shownGuard);
-        const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
+        let countered: Style | null = null;
+        if (o.counterRead && shownGuard && predictor.seen().size === 2) {
+            let otherCount = 0;
+            let otherStyle: Style | null = null;
+            for (const st of predictor.seen()) {
+                if (st !== shownGuard) { otherCount++; otherStyle = st; }
+            }
+            if (otherCount === 1) countered = otherStyle;
+        }
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
         // crowdPrayer: two or more hostiles in multi-way facing US directly set the plurality overhead; a lone off-target direct facer sets offTargetFacer.
         const pluralityStyle = (list: readonly NearbyPlayer[]) => {
@@ -1338,8 +1486,16 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // An opponent that only has melee: hold it and stay out of its reach.
         // Only with a freeze that the carried runes can cast: with none, the loop would spend turns on a spell that
         // does not go out and kite an opponent that is not held.
-        const meleeOnly = !!o.adapt && hits.filter(h => h.src === target!.index).length >= 6 && [...predictor.seen()].every(st => st === 'melee')
-            && castableFreeze(state.skills.find(k => k.name === 'Magic')?.level ?? 1, inv) !== null;
+        let meleeOnly = false;
+        if (o.adapt) {
+            let targetHits = 0;
+            for (let i = 0; i < hits.length; i++) if (hits[i]!.src === target!.index && ++targetHits >= 6) break;
+            if (targetHits >= 6) {
+                let allMelee = true;
+                for (const st of predictor.seen()) if (st !== 'melee') { allMelee = false; break; }
+                if (allMelee && castableFreeze(state.skills.find(k => k.name === 'Magic')?.level ?? 1, inv) !== null) meleeOnly = true;
+            }
+        }
         const kiteTiles = o.kiteFrozen ?? (meleeOnly ? 3 : 0), freezeRule: FightOptions['freeze'] = o.kiteMelee !== undefined ? true : o.freeze || (meleeOnly ? true : false);
         // A chase: the target flees, or stands frozen more than 2 tiles away. A melee turn then spends the freeze on a
         // walk, so an account with a ranged or magic kit attacks from where it stands. Within 2 tiles a melee turn or
@@ -1349,20 +1505,28 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const heldMelee = now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
         const kiting = (!!kiteTiles || !!o.diagonalFrozen || !!o.stepUnderFrozen) && heldMelee;
         const canReachMelee = !chasing && !kiting && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
-        const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
+        const targetProtected = protectedStyles(seen?.headicons);
+        const guarded = o.readOverheads === false ? EMPTY_PROTECTED_STYLES : targetProtected;
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
         const turns = fled && o.fledRotation?.length ? o.fledRotation : rotation;
         const rotationTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
         // The styles open now: usable and not under the opponent's overhead.
-        const open = [...new Set(turns)].filter(st => styleUsable(st) && !guarded.has(st));
+        const open: Style[] = [];
+        for (let i = 0; i < turns.length; i++) {
+            const st = turns[i]!;
+            if (!open.includes(st) && styleUsable(st) && !guarded.has(st)) open.push(st);
+        }
         // adaptStyles: the tick after an attack shows the overhead it met. The loop learns from that which way to
         // choose the next style (StyleArms in pk-read.ts): one its overhead does not show, or the one it shows, which
         // an opponent that predicts is about to leave. The way is set once for each attack.
         if (lastStyle && now === lastAttackAt + 1) {
-            arms.record(lastArm, protectedStyles(seen?.headicons).has(lastStyle));
+            arms.record(lastArm, targetProtected.has(lastStyle));
             arm = o.adaptStyles ? arms.pick(rand) : 'avoid';
         }
-        const shownStyle = arm === 'into' ? [...protectedStyles(seen?.headicons)].find(st => turns.includes(st) && styleUsable(st)) : undefined;
+        let shownStyle: Style | undefined;
+        if (arm === 'into') {
+            for (const st of targetProtected) if (turns.includes(st) && styleUsable(st)) { shownStyle = st; break; }
+        }
         const chosen = shownStyle ? shownStyle : !open.length ? null
             : o.styleByArmour && seen ? weakestFirst(armourDefence(seen.worn.map(id => names.get(id) ?? ''))).find(st => open.includes(st)) ?? null
             : o.mixStyles ? open[Math.floor(rand() * open.length)]! : null;

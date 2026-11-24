@@ -15,13 +15,13 @@ import {existsSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {runChild,runDirectChild} from '../packages/core/src/run-child';
 import {formatStep,tokenizeStep,runChainSteps,type Step} from '../packages/core/src/chain-step';
-import {SKILLER_ROUTES,skillerCatalogSummary,resolveSkillerStep,runAioSkiller,planProgressiveSkiller,discoverBankedProduction} from './aio-skiller';
-import {FIGHTER_PROFILES,resolveFighterStep,runAioFighter,planAutoFighterBand} from './aio-fighter';
-import {BOSS_ENCOUNTERS,resolveBossStep,runAioBoss,assessBossReadiness} from './aio-boss';
-import {PVP_MODES,resolvePvpStep,runAioPvp,pvpCombatBracket,assessTribridReadiness} from './aio-pvp';
-import {QUESTER_MODES,listGeneratedQuestScripts,resolveQuesterStep,runAioQuester,assessQuestReadiness,prioritizeQuestsForAccount} from './aio-quester';
-import {MARKET_MODES,resolveMarketStep,runAioMarket,planGeRestockOrders} from './aio-market';
-import {LOGISTICS_ROLES,resolveLogisticsStep,runAioLogistics,planFleetDistribution} from './aio-logistics';
+import {SKILLER_ROUTES,skillerCatalogSummary,resolveSkillerStep,planProgressiveSkiller,discoverBankedProduction} from './aio-skiller';
+import {FIGHTER_PROFILES,resolveFighterStep,planAutoFighterBand} from './aio-fighter';
+import {BOSS_ENCOUNTERS,resolveBossStep,assessBossReadiness} from './aio-boss';
+import {PVP_MODES,resolvePvpStep,pvpCombatBracket,assessTribridReadiness} from './aio-pvp';
+import {QUESTER_MODES,listGeneratedQuestScripts,resolveQuesterStep,assessQuestReadiness,prioritizeQuestsForAccount} from './aio-quester';
+import {MARKET_MODES,resolveMarketStep,planGeRestockOrders} from './aio-market';
+import {LOGISTICS_ROLES,resolveLogisticsStep,planFleetDistribution} from './aio-logistics';
 
 export {
  planProgressiveSkiller,
@@ -370,13 +370,13 @@ export async function runAio(categoryInput: string, account: string, args: reado
  const category = categoryInput.toLowerCase().replace(/^--category=/, '');
  if (category === 'pipeline') return runAioPipeline(account, args, Number(env.ROUNDS ?? 1), env);
  switch (category as AioCategory) {
-  case 'fighter': return runAioFighter(account, args, env, undefined, run);
-  case 'skiller': return runAioSkiller(account, args, env);
-  case 'boss': return runAioBoss(account, args, env);
-  case 'pvp': return runAioPvp(account, args, env);
-  case 'quester': return runAioQuester(account, args, env);
-  case 'market': return runAioMarket(account, args, env);
-  case 'logistics': return runAioLogistics(account, args, env);
+  case 'fighter': return (await import('./aio-fighter')).runAioFighter(account, args, env, undefined, run);
+  case 'skiller': return (await import('./aio-skiller')).runAioSkiller(account, args, env);
+  case 'boss': return (await import('./aio-boss')).runAioBoss(account, args, env);
+  case 'pvp': return (await import('./aio-pvp')).runAioPvp(account, args, env);
+  case 'quester': return (await import('./aio-quester')).runAioQuester(account, args, env);
+  case 'market': return (await import('./aio-market')).runAioMarket(account, args, env);
+  case 'logistics': return (await import('./aio-logistics')).runAioLogistics(account, args, env);
   default:
    throw Error(`aio: unknown category "${categoryInput}"; known: ${AIO_CATEGORIES.join(', ')}, pipeline`);
  }

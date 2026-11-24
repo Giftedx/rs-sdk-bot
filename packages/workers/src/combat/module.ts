@@ -12,23 +12,19 @@ import type {
     WorkerModule,
     WorkerWorldView,
 } from '../contracts';
-import {
+import type {
     BLACK_DRAGON,
-    KBD_DROP_IDS,
     runBlackDragonCamp,
     runBlackDragonCli,
     runKbdCli,
     runKbdOne,
-    runTrawlerSupport,
     runTrawlerSupportCli,
     runTrawlerTrip,
     runTrawlerTripCli,
     runWildDragons,
     runWildDragonsCli,
-    trawlerAssetsReconcile,
-    type TrawlerMode,
 } from './boss-minigame';
-import {
+import type {
     buyCannon,
     CANNON_SPOTS,
     parseLevels,
@@ -36,11 +32,11 @@ import {
     reclaimCannon,
     runCannonCli,
     runCannonFight,
-    type CannonSpot,
+    CannonSpot,
 } from './cannon';
-import { runChickenCli, trainChickens } from './chickens';
+import type { runChickenCli, trainChickens } from './chickens';
 import { combatEstimate } from './estimate';
-import {
+import type {
     magicOptions,
     nativeCombatTeleport,
     nativeNpcSpell,
@@ -52,9 +48,9 @@ import {
     runSplash,
     runSplashCli,
     splashSite,
-    type NpcMagicOptions,
+    NpcMagicOptions,
 } from './magic';
-import {
+import type {
     CONFIGS,
     cowProfile,
     giantKillLimit,
@@ -64,12 +60,11 @@ import {
     runGiants,
     runMeleeGatherCli,
     TROOPER_SITE,
-    untilItemPattern,
-    type MeleeGatherStageHooks,
+    MeleeGatherStageHooks,
 } from './melee-gather';
-import { runPrayerFlickCli, withCombatPrayer, withIncomingProtection } from './prayer-flick';
+import type { runPrayerFlickCli, withCombatPrayer, withIncomingProtection } from './prayer-flick';
 import { COMBAT_SITES, combatPreflight } from './preflight';
-import {
+import type {
     BLUE_DRAGON,
     rangedComparisonMethod,
     rangedTrainOptions,
@@ -80,11 +75,10 @@ import {
     runRangedGatherCli,
     runRangedStarter,
     runRangedStarterCli,
-    type RangedAdaptiveDeps,
+    RangedAdaptiveDeps,
 } from './ranged';
-import {
+import type {
     chompyEnergyOption,
-    fetchLootQuotes,
     runChompy,
     runChompyCli,
     runChompyTrip,
@@ -100,8 +94,8 @@ import {
     runShadeTripCli,
     runShadeTrips,
     validateShadeJob,
-    type LootTripJob,
-    type ShadeJob,
+    LootTripJob,
+    ShadeJob,
 } from './special-mobs';
 import {
     combatAlchPolicy,
@@ -403,6 +397,7 @@ export async function runCombatModuleSession(
         let result: unknown;
         switch (mode) {
             case 'chicken': {
+                const { trainChickens } = await import('./chickens');
                 result = await trainChickens(
                     session,
                     cap,
@@ -413,6 +408,7 @@ export async function runCombatModuleSession(
                 break;
             }
             case 'cow': {
+                const { cowProfile, runCows } = await import('./melee-gather');
                 const bankProfile = env.COW_BANK_PROFILE ?? 'south';
                 const foodMode = env.COW_FOOD_MODE ?? (bankProfile === 'north' ? 'banked' : 'held');
                 const defaultMaxKills = bankProfile === 'north' ? (foodMode === 'banked' ? 9 : 8) : 5;
@@ -442,6 +438,7 @@ export async function runCombatModuleSession(
             case 'taverley_black_dragon':
             case 'taverley_giant':
             case 'chaos_wine': {
+                const { TROOPER_SITE, giantKillLimit, runGenericCombatSession, runGiants } = await import('./melee-gather');
                 const isGiantTrained =
                     mode === 'trooper'
                     || (mode === 'giant'
@@ -475,22 +472,24 @@ export async function runCombatModuleSession(
                 break;
             }
             case 'fire-giant':
-                result = await runFireReclaim(session, { cap, stop: isStopped });
+                result = await (await import('./special-mobs')).runFireReclaim(session, { cap, stop: isStopped });
                 break;
             case 'fire-combat':
-                result = await runFireCombat(session, { cap, stop: isStopped });
+                result = await (await import('./special-mobs')).runFireCombat(session, { cap, stop: isStopped });
                 break;
             case 'imp':
-                result = await runImps(session, { cap, maximum: cfg.maxKills ?? Number(env.MAX_KILLS ?? 1), stop: isStopped });
+                result = await (await import('./special-mobs')).runImps(session, { cap, maximum: cfg.maxKills ?? Number(env.MAX_KILLS ?? 1), stop: isStopped });
                 break;
             case 'shade': {
+                const { runShadeTrips, validateShadeJob } = await import('./special-mobs');
                 const jobPath = cfg.args?.[0];
                 if (!jobPath) throw Error('shade mode requires explicit job file path');
                 const job = validateShadeJob(JSON.parse(readFileSync(jobPath, 'utf8')) as ShadeJob);
                 result = await runShadeTrips(session, job, isStopped);
                 break;
             }
-            case 'chompy':
+            case 'chompy': {
+                const { chompyEnergyOption, runChompyTrip } = await import('./special-mobs');
                 result = await runChompyTrip(session, {
                     kills: cfg.maxKills ?? Number(cfg.args?.[0] ?? 1),
                     perTrip: Number(cfg.args?.[1] ?? 1),
@@ -501,8 +500,9 @@ export async function runCombatModuleSession(
                     energy: chompyEnergyOption(env),
                 }, isStopped);
                 break;
+            }
             case 'chompy-at-site':
-                result = await runChompy(session, {
+                result = await (await import('./special-mobs')).runChompy(session, {
                     kills: cfg.maxKills ?? Number(cfg.args?.[0] ?? 1),
                     cap: Number(cfg.args?.[1] ?? cap),
                     maxBaits: Number(cfg.args?.[2] ?? 5),
@@ -510,15 +510,16 @@ export async function runCombatModuleSession(
                 });
                 break;
             case 'ranged': {
+                const { rangedTrainOptions, runAdaptiveRanged } = await import('./ranged');
                 const o = rangedTrainOptions(env, ['bun', 'aio-fighter.ts', session.name, ...(cfg.args ?? [])]);
                 result = await runAdaptiveRanged(session, { ...o, cap, stop: isStopped }, hooks);
                 break;
             }
             case 'ranged-starter':
-                result = await runRangedStarter(session, isStopped, hooks.leaveStarter);
+                result = await (await import('./ranged')).runRangedStarter(session, isStopped, hooks.leaveStarter);
                 break;
             case 'ranged-gather':
-                result = await runRanged(session, {
+                result = await (await import('./ranged')).runRanged(session, {
                     cap,
                     maximum: cfg.maxKills ?? Number(env.MAX_KILLS ?? 2),
                     ammo: Number(env.AMMO ?? 90),
@@ -530,13 +531,16 @@ export async function runCombatModuleSession(
                     stop: isStopped,
                 });
                 break;
-            case 'ranged-camp':
+            case 'ranged-camp': {
+                const { BLUE_DRAGON, runRangedCamp } = await import('./ranged');
                 result =
                     env.STAGED === '1'
                         ? await runRangedCamp(session, BLUE_DRAGON, { cap, stop: isStopped })
                         : await combatTrip(session, 'blue', tripStop => runRangedCamp(session, BLUE_DRAGON, { cap: 2500, stop: () => tripStop() || isStopped(), returnSafe: false }), { cap, stop: isStopped });
                 break;
+            }
             case 'cannon': {
+                const { CANNON_SPOTS, buyCannon, parseLevels, parsePhases, reclaimCannon, runCannonFight } = await import('./cannon');
                 const spotName = cfg.spot ?? env.SPOT ?? 'spiders';
                 const spot = Object.prototype.hasOwnProperty.call(CANNON_SPOTS, spotName) ? CANNON_SPOTS[spotName] : undefined;
                 if (!spot) throw Error(`unknown cannon spot: ${spotName} (known: ${Object.keys(CANNON_SPOTS).join(', ')})`);
@@ -556,13 +560,15 @@ export async function runCombatModuleSession(
                 break;
             }
             case 'loot-trip': {
+                const { runLootTrip } = await import('./special-mobs');
                 const jobPath = cfg.args?.[0];
                 if (!jobPath) throw Error('loot-trip mode requires explicit job file path');
                 const job = JSON.parse(readFileSync(jobPath, 'utf8')) as LootTripJob;
                 result = await runLootTrip(session, job, isStopped);
                 break;
             }
-            case 'kbd':
+            case 'kbd': {
+                const { runKbdOne } = await import('./boss-minigame');
                 result =
                     env.STAGED === '1'
                         ? await runKbdOne(session, { cap, stop: isStopped })
@@ -571,7 +577,9 @@ export async function runCombatModuleSession(
                               stop: isStopped,
                           });
                 break;
+            }
             case 'black-dragon': {
+                const { runBlackDragonCamp } = await import('./boss-minigame');
                 const kills = cfg.maxKills ?? Number(env.KILLS ?? 9);
                 result =
                     env.STAGED === '1'
@@ -584,10 +592,13 @@ export async function runCombatModuleSession(
                           );
                 break;
             }
-            case 'blue-dragon':
+            case 'blue-dragon': {
+                const { BLUE_DRAGON, runRangedCamp } = await import('./ranged');
                 result = await combatTrip(session, 'blue', tripStop => runRangedCamp(session, BLUE_DRAGON, { cap: 2500, stop: () => tripStop() || isStopped(), returnSafe: false }), { cap, stop: isStopped });
                 break;
-            case 'green-dragon':
+            }
+            case 'green-dragon': {
+                const { runWildDragons } = await import('./boss-minigame');
                 result = await runWildDragons(session, {
                     cap,
                     foodCount: Number(env.FOOD_COUNT ?? 10),
@@ -598,14 +609,16 @@ export async function runCombatModuleSession(
                     stop: isStopped,
                 });
                 break;
+            }
             case 'trawler':
-                result = await runTrawlerTrip(session, { cap, collectOnly: cfg.args?.includes('--collect-only'), stop: isStopped });
+                result = await (await import('./boss-minigame')).runTrawlerTrip(session, { cap, collectOnly: cfg.args?.includes('--collect-only'), stop: isStopped });
                 break;
             case 'trawler-at-site':
-                if (cfg.args?.[0] === 'trip') result = await runTrawlerTrip(session, { cap: Number(cfg.args?.[1] ?? cap), stop: isStopped });
+                if (cfg.args?.[0] === 'trip') result = await (await import('./boss-minigame')).runTrawlerTrip(session, { cap: Number(cfg.args?.[1] ?? cap), stop: isStopped });
                 else throw Error('trawler-at-site WorkerModule supports trip subcommand; use CLI for support driver');
                 break;
             case 'magic-order': {
+                const { magicOptions, runMagicOrder } = await import('./magic');
                 const opts = magicOptions({
                     ...env,
                     ...(cfg.targetLevel !== undefined ? { TARGET_LEVEL: String(cfg.targetLevel) } : {}),
@@ -615,6 +628,7 @@ export async function runCombatModuleSession(
                 break;
             }
             case 'magic-npc': {
+                const { nativeNpcSpell, runNpcMagic } = await import('./magic');
                 const [spellName = 'wind_strike', npcArg = '1', castsArg = '1', capArg] = cfg.args ?? [];
                 const spell = nativeNpcSpell(spellName);
                 const combo = env.COMBO_ALCH
@@ -638,6 +652,7 @@ export async function runCombatModuleSession(
             }
             case 'magic-splash':
             case 'magic-splash-coop': {
+                const { runSplash, splashSite } = await import('./magic');
                 const target = cfg.targetLevel ?? Number(cfg.args?.[0] ?? 13);
                 const splashCap = Number(cfg.args?.[1] ?? cap);
                 const defaultSite = mode === 'magic-splash-coop' ? 'coop' : undefined;
@@ -651,7 +666,9 @@ export async function runCombatModuleSession(
                 break;
             }
             case 'prayer-flick': {
+                const { withCombatPrayer, withIncomingProtection } = await import('./prayer-flick');
                 if (env.INCOMING_PROTECTION === '1') {
+                    const { nativeCombatTeleport, nativeNpcSpell, runCombatTeleport, runNpcMagic } = await import('./magic');
                     const [castsArg = '3', capArg = '500'] = cfg.args ?? [];
                     const raw = await withIncomingProtection(
                         session,
@@ -677,6 +694,7 @@ export async function runCombatModuleSession(
                     );
                     result = { ok: raw.ok && !!raw.result?.ok, units: raw.attacksProtected, failure: raw.failure };
                 } else {
+                    const { runCows } = await import('./melee-gather');
                     const [prayerArg = '10', maximumArg = '1', capArg] = cfg.args ?? [];
                     const prayerCap = Number(capArg ?? cap);
                     const raw = await withCombatPrayer(
@@ -809,7 +827,7 @@ export async function runCombatModeCli(
     const { positional, env } = splitArgsAndEnv(rest, envInput);
     switch (mode) {
         case 'chicken':
-            await runChickenCli(account, env);
+            await (await import('./chickens')).runChickenCli(account, env);
             return;
         case 'cow':
         case 'druid':
@@ -824,6 +842,7 @@ export async function runCombatModeCli(
         case 'taverley_black_dragon':
         case 'taverley_giant':
         case 'chaos_wine': {
+            const { CONFIGS, runMeleeGatherCli } = await import('./melee-gather');
             const firstPos = positional[0];
             const firstIsTarget = !!firstPos && (firstPos.toLowerCase() === 'cow' || Object.prototype.hasOwnProperty.call(CONFIGS, firstPos.toLowerCase()));
             const meleeArgs = !firstPos
@@ -835,24 +854,25 @@ export async function runCombatModeCli(
             return;
         }
         case 'fire-giant':
-            await runFireReclaimCli([account, ...positional], env);
+            await (await import('./special-mobs')).runFireReclaimCli([account, ...positional], env);
             return;
         case 'fire-combat':
-            await runFireCombatCli([account, ...positional], env);
+            await (await import('./special-mobs')).runFireCombatCli([account, ...positional], env);
             return;
         case 'imp':
-            await runImpsCli([account, ...positional], env);
+            await (await import('./special-mobs')).runImpsCli([account, ...positional], env);
             return;
         case 'shade':
-            await runShadeTripCli([account, ...positional]);
+            await (await import('./special-mobs')).runShadeTripCli([account, ...positional]);
             return;
         case 'chompy':
-            await runChompyTripCli([account, ...positional], env);
+            await (await import('./special-mobs')).runChompyTripCli([account, ...positional], env);
             return;
         case 'chompy-at-site':
-            await runChompyCli([account, ...positional]);
+            await (await import('./special-mobs')).runChompyCli([account, ...positional]);
             return;
         case 'ranged': {
+            const { rangedComparisonMethod, rangedTrainOptions, runAdaptiveRanged } = await import('./ranged');
             let stopped = false;
             const s = await openBot(account, {
                 onStop: async () => {
@@ -878,52 +898,52 @@ export async function runCombatModeCli(
             return;
         }
         case 'ranged-starter':
-            await runRangedStarterCli(account, hooks.leaveStarter);
+            await (await import('./ranged')).runRangedStarterCli(account, hooks.leaveStarter);
             return;
         case 'ranged-gather':
-            await runRangedGatherCli(account, env);
+            await (await import('./ranged')).runRangedGatherCli(account, env);
             return;
         case 'ranged-camp':
-            await runRangedCampCli(account, positional, env);
+            await (await import('./ranged')).runRangedCampCli(account, positional, env);
             return;
         case 'cannon':
-            await runCannonCli(account, env);
+            await (await import('./cannon')).runCannonCli(account, env);
             return;
         case 'loot-trip':
-            await runLootTripCli([account, ...positional], env);
+            await (await import('./special-mobs')).runLootTripCli([account, ...positional], env);
             return;
         case 'kbd':
-            await runKbdCli([account, ...positional], env);
+            await (await import('./boss-minigame')).runKbdCli([account, ...positional], env);
             return;
         case 'black-dragon':
-            await runBlackDragonCli([account, ...positional], env);
+            await (await import('./boss-minigame')).runBlackDragonCli([account, ...positional], env);
             return;
         case 'blue-dragon':
-            await runRangedCampCli(account, positional, env);
+            await (await import('./ranged')).runRangedCampCli(account, positional, env);
             return;
         case 'green-dragon':
-            await runWildDragonsCli([account, ...positional], env);
+            await (await import('./boss-minigame')).runWildDragonsCli([account, ...positional], env);
             return;
         case 'trawler':
-            await runTrawlerTripCli([account, ...positional]);
+            await (await import('./boss-minigame')).runTrawlerTripCli([account, ...positional]);
             return;
         case 'trawler-at-site':
-            await runTrawlerSupportCli([account, ...positional], env);
+            await (await import('./boss-minigame')).runTrawlerSupportCli([account, ...positional], env);
             return;
         case 'magic-order':
-            await runMagicOrderCli(account, env);
+            await (await import('./magic')).runMagicOrderCli(account, env);
             return;
         case 'magic-npc':
-            await runNpcMagicCli([account, ...positional], env, hooks);
+            await (await import('./magic')).runNpcMagicCli([account, ...positional], env, hooks);
             return;
         case 'magic-splash':
-            await runSplashCli([account, ...positional], env, undefined, hooks.leaveStarter);
+            await (await import('./magic')).runSplashCli([account, ...positional], env, undefined, hooks.leaveStarter);
             return;
         case 'magic-splash-coop':
-            await runSplashCli([account, ...positional], env, 'coop', hooks.leaveStarter);
+            await (await import('./magic')).runSplashCli([account, ...positional], env, 'coop', hooks.leaveStarter);
             return;
         case 'prayer-flick':
-            await runPrayerFlickCli([account, ...positional], env);
+            await (await import('./prayer-flick')).runPrayerFlickCli([account, ...positional], env);
             return;
         default:
             throw Error(`combat: unsupported mode "${targetInput}"`);
