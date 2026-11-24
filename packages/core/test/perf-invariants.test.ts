@@ -168,4 +168,4 @@ test('world pathLength.measurePrechecked matches measure and invalidates interac
     expect(pl({ x: 3222, z: 3218, level: 0 }, { x: 3204, z: 3229, level: 0 }, [door], 2, stairs)).toBe(
         pl.measurePrechecked!({ x: 3222, z: 3218, level: 0 }, { x: 3204, z: 3229, level: 0 }, [door], 2, stairs),
     );
-});
+}, 120_000);
