@@ -2,7 +2,7 @@
 // Requests queue in the worker, so two bots planning at once wait their turn without blocking either game loop.
 import type { BankStock, TripPlan } from './trip';
 import type { Account, Tile } from './world-types';
-import { getBuiltAreas, shareLabels, type SharedLabels } from './components';
+import type { SharedLabels } from './components';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 // Bun workers have ref/unref: an idle worker does not keep the process alive.
@@ -76,8 +76,8 @@ export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: B
         signal?.addEventListener('abort', abort, { once: true });
         let sharedAreas: SharedLabels | undefined;
         if (!workerSentAreas) {
-            const areas = getBuiltAreas();
-            if (areas) { sharedAreas = shareLabels(areas) ?? undefined; workerSentAreas = true; }
+            sharedAreas = (globalThis as { __rsGetSharedLabels?: () => SharedLabels | null }).__rsGetSharedLabels?.() ?? undefined;
+            if (sharedAreas) workerSentAreas = true;
         }
         try { w.postMessage({ id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock, budgetMs, ...(sharedAreas ? { sharedAreas } : {}) }); }
         catch (error) { fail(error); }

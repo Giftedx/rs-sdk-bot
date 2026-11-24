@@ -100,6 +100,7 @@ export function attachSharedLabels(s: SharedLabels): Labels {
     const slotAt = new Int32Array(s.slotAt);
     const l = buildLookup(keys, cells, slotKey, slotAt, s.bits, s.areas, s.tiles);
     built = l;
+    (globalThis as { __rsGetSharedLabels?: () => SharedLabels | null }).__rsGetSharedLabels = () => built ? shareLabels(built) : null;
     return l;
 }
 
@@ -252,18 +253,24 @@ function readCollisionZones(file: string): [number, number, number][] {
 }
 
 let built: Labels | undefined;
+const publishBuiltAreas = (l: Labels): Labels => {
+    built = l;
+    (globalThis as { __rsGetSharedLabels?: () => SharedLabels | null }).__rsGetSharedLabels = () => built ? shareLabels(built) : null;
+    return l;
+};
 // Labels for the SDK map, built on first use; pf and grid must be the modules the route search uses.
 export function mapAreas(pf: any, grid: any, repoRoot: string): Labels {
     if (built) return built;
     pf.initPathfinding();
     const file = join(repoRoot, '.practice', 'cache', 'route-areas.bin'), source = pathfindingDataKey();
-    if ((built = readLabels(file, source) ?? undefined)) return built;
+    const cached = readLabels(file, source);
+    if (cached) return publishBuiltAreas(cached);
     const rawZones = readCollisionZones(join(repoRoot, 'vendor/rs-sdk/sdk/collision-data.json'));
     // Zones are given by their origin tile, as pathfinding.ts allocates them; the same mainland fill follows.
     const zones: [number, number, number][] = [...rawZones];
     for (let x = 2304; x <= 3392; x += 8) for (let z = 2944; z <= 3584; z += 8) zones.push([0, x, z]);
-    built = labelAreas(zones, (l, x, z) => pf.isTileWalkable(l, x, z),
+    const labels = labelAreas(zones, (l, x, z) => pf.isTileWalkable(l, x, z),
         (l, x, z, dx, dz) => grid.canTravel(l, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL));
-    if (built.areas < 0xffff) writeLabels(file, source, built);
-    return built;
+    if (labels.areas < 0xffff) writeLabels(file, source, labels);
+    return publishBuiltAreas(labels);
 }
