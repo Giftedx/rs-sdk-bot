@@ -20,7 +20,6 @@ import {
  parseExternalSuppliers,
  parseSpecialistArgs,
  playerPos,
- rubJewelryTeleport,
  skillLevel,
  skillXp,
  TRADE_CONFIRM_ACCEPT,
@@ -369,6 +368,39 @@ async function walkDirect(
  }
 }
 
+async function rubChainedTeleport(
+ spec: Session,
+ itemIds: readonly number[],
+ choiceRe: RegExp,
+ componentId: number,
+ arrived: () => boolean,
+ deadline: number,
+): Promise<void> {
+ let chained = false;
+ while (spec.tick() < deadline) {
+  if (arrived()) return;
+  const st = spec.sdk.getState();
+  const d = spec.sdk.getDialog();
+  const opt = d?.isOpen && !d.isWaiting ? d.options.find((o: any) => choiceRe.test(o.text)) : undefined;
+  if (opt) {
+   await spec.direct({ type: 'clickDialogOption', optionIndex: opt.index, reason: 'SDK' });
+  } else {
+   const item = spec.sdk.getInventory().find(i => itemIds.includes(i.id));
+   if (item && !chained) {
+    chained = true;
+    await spec.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
+    await spec.direct({ type: 'clickComponent', componentId, reason: 'SDK' });
+   } else if (item) {
+    await spec.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
+   } else if (d?.isOpen || st?.interface?.isOpen) {
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
+  }
+  await waitTicks(spec, 1);
+ }
+ throw Error(`rubChainedTeleport(${componentId}) exceeded cap`);
+}
+
 async function completeDruidicRitual(spec: Session, start: number, deadline: number): Promise<string> {
  const eatGuard = { lastTick: -1 };
  const offEat = spec.onTick(() => {
@@ -376,10 +408,11 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  });
  try {
  // Games necklace -> Burthorpe Games Room (2207,4940,0) -> west stairs 4622 -> stairs 4627 -> Burthorpe (2899,3564,0)
- await rubJewelryTeleport(
+ await rubChainedTeleport(
   spec,
   GAMES_NECKLACE_IDS,
   /burthorpe/i,
+  2461,
   () => {
    const p = playerPos(spec);
    return !!p && p.worldZ > 4500;
@@ -420,6 +453,9 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
    ['R', 'R', 2472, 'R', 'R'],
    ['R', 'R', 2471, 'R'],
   ],
+  async () => {
+   await spec.direct({ type: 'walkTo', x: 2905, z: 3466, running: true, reason: 'SDK' });
+  },
  );
  const tKaq1 = spec.tick() - start;
 
@@ -573,30 +609,18 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
 }
 
 async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): Promise<void> {
- let rubChained = false;
- while (spec.tick() < deadline) {
-  const p = playerPos(spec);
-  if (p && p.worldX > 3060 && p.worldZ > 3460 && p.worldZ < 4000) break;
-  const st = spec.sdk.getState();
-  const d = spec.sdk.getDialog();
-  const edgeOpt = d?.isOpen && !d.isWaiting ? d.options.find((o: any) => /edgeville/i.test(o.text)) : undefined;
-  if (edgeOpt) {
-   await spec.direct({ type: 'clickDialogOption', optionIndex: edgeOpt.index, reason: 'SDK' });
-  } else {
-   const glory = spec.sdk.getInventory().find(i => GLORY_SET.has(i.id));
-   if (glory && !rubChained) {
-    rubChained = true;
-    // Amulet of glory has no p_delay before p_choice5_header; send rub + Edgeville (2494) in one tick.
-    await spec.direct({ type: 'useInventoryItem', slot: glory.slot, optionIndex: 4, reason: 'SDK' });
-    await spec.direct({ type: 'clickComponent', componentId: 2494, reason: 'SDK' });
-   } else if (glory) {
-    await spec.direct({ type: 'useInventoryItem', slot: glory.slot, optionIndex: 4, reason: 'SDK' });
-   } else if (d?.isOpen || st?.interface?.isOpen) {
-    await spec.direct({ type: 'closeModal', reason: 'SDK' });
-   }
-  }
-  await waitTicks(spec, 1);
- }
+ // Amulet of glory has no p_delay before p_choice5_header; send rub + Edgeville (2494) in one tick.
+ await rubChainedTeleport(
+  spec,
+  GLORY_IDS,
+  /edgeville/i,
+  2494,
+  () => {
+   const p = playerPos(spec);
+   return !!p && p.worldX > 3060 && p.worldZ > 3460 && p.worldZ < 4000;
+  },
+  deadline,
+ );
  // Walk to Edgeville bank; the spent Glory stays in inventory and is deposited into bank cleanly.
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
@@ -606,15 +630,12 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): P
  }
 }
 
-async function openEdgevilleBank(spec: Session, deadline: number, diagLabel?: string): Promise<void> {
+async function openEdgevilleBank(spec: Session, deadline: number): Promise<void> {
  while (spec.tick() < deadline) {
   const st = spec.sdk.getState();
   if (st?.bank?.isOpen) return;
   const booth = findLocBy(spec, l => /bank booth/i.test(l.name) && !!l.optionsWithIndex?.some(o => /use-quickly/i.test(o.text)));
   const op = booth?.optionsWithIndex?.find(o => /use-quickly/i.test(o.text))?.opIndex ?? 2;
-  if (diagLabel) {
-   console.log(`OPEN_DIAG ${diagLabel} t=${spec.tick()} pos=${st?.player?.worldX},${st?.player?.worldZ} bank=${!!st?.bank?.isOpen} modal=${st?.modalInterface} dlg=${!!st?.dialog?.isOpen} booth=${booth ? `${booth.id}@${booth.x},${booth.z}:d${booth.distance}:op${op}` : 'none'}`);
-  }
   if (booth) {
    await spec.direct({ type: 'interactLoc', x: booth.x, z: booth.z, locId: booth.id, optionIndex: op, reason: 'SDK' });
   } else if (st?.dialog?.isOpen || st?.interface?.isOpen) {
@@ -825,7 +846,7 @@ async function executeHerbloreLoop(
   const b0 = spec.tick();
   if (!spec.sdk.getState()?.bank?.isOpen) {
    const o0 = spec.tick();
-   await openEdgevilleBank(spec, deadline, c === 0 || c === 1 || c === 5 || c === 8 ? `c${c}_pre` : undefined);
+   await openEdgevilleBank(spec, deadline);
    bankOpenTicks += spec.tick() - o0;
   }
   if (!depositedNotes) {
@@ -851,7 +872,7 @@ async function executeHerbloreLoop(
    if (!st?.bank?.isOpen && haveUnf >= step.count && haveSec >= step.count) break;
    if (!st?.bank?.isOpen) {
     const o1 = spec.tick();
-    await openEdgevilleBank(spec, deadline, c === 0 || c === 1 || c === 5 || c === 8 ? `c${c}_re` : undefined);
+    await openEdgevilleBank(spec, deadline);
     bankOpenTicks += spec.tick() - o1;
     continue;
    }

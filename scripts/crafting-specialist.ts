@@ -464,21 +464,12 @@ async function openCwChest(spec: Session, deadline: number): Promise<void> {
  throw Error('openCwChest exceeded cap');
 }
 
-async function executeCraftingCastleWars(
+async function craftAtCastleWarsBank(
  spec: Session,
  target: number,
  start: number,
  deadline: number,
- receiveCwKit: () => Promise<void>,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
- await skipTutorial2Ticks(spec, deadline);
- // Fresh tutorial inventory leaves >= 10 free slots, fitting all 8 stackable CW kit items without dropping.
- if (spec.sdk.getInventory().length > 20) {
-  await dropItemsFast(spec, new Set(), deadline);
- }
- await receiveCwKit();
- logPhase(spec, start, 'crafting_cw_traded');
-
  // Rub Ring of dueling(8) and pick option 2 (2462 = Castle Wars) in a single tick.
  let rubChained = false;
  while (spec.tick() < deadline) {
@@ -577,6 +568,23 @@ async function executeCraftingCastleWars(
   level,
   xp,
  };
+}
+
+async function executeCraftingCastleWars(
+ spec: Session,
+ target: number,
+ start: number,
+ deadline: number,
+ receiveCwKit: () => Promise<void>,
+): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
+ await skipTutorial2Ticks(spec, deadline);
+ // Fresh tutorial inventory leaves >= 10 free slots, fitting all 8 stackable CW kit items without dropping.
+ if (spec.sdk.getInventory().length > 20) {
+  await dropItemsFast(spec, new Set(), deadline);
+ }
+ await receiveCwKit();
+ logPhase(spec, start, 'crafting_cw_traded');
+ return craftAtCastleWarsBank(spec, target, start, deadline);
 }
 
 export async function runCraftingSpecialist(
@@ -688,7 +696,7 @@ export async function runCraftingExternal(
   });
   if (i === 0 && countItem(spec.sdk.getInventory(), ITEM_IDS.ring_of_dueling_8) > 0) {
    assertCatalogItems(CRAFTING_CW_SUPPLY_BILL);
-   return executeCraftingCastleWars(spec, target, start, deadline, async () => {});
+   return craftAtCastleWarsBank(spec, target, start, deadline);
   }
   await cutUnlockedGems(spec, target, deadline);
   if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
