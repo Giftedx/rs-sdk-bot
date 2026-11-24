@@ -1087,10 +1087,20 @@ function createPfmSustainer(s: Session): (want: boolean) => void {
     };
 }
 
+export interface SpecialistWaterfallOptions {
+    onEnergy?: () => void;
+    /** Optional hook run right after obtaining Glarial's pebble and climbing out of Golrie's cellar. */
+    afterGolrie?: () => Promise<void>;
+    /** Skip Castle Wars teleport and walk directly from current Khazard position to Glarial's tomb. */
+    skipCwTeleportToTomb?: boolean;
+    /** Extra item IDs to drop alongside Waterfall runes before entering Glarial's tomb (e.g., Staff of fire, Law/Chaos runes). */
+    extraTombDropIds?: readonly number[];
+}
+
 export async function runSpecialistWaterfall(
     s: Session,
     stop: StopFn,
-    opts: { onEnergy?: () => void } = {},
+    opts: SpecialistWaterfallOptions = {},
 ): Promise<{ attackXp: number; strengthXp: number }> {
     const LOC = {
         raft: { id: 1987, x: 2509, z: 3493 },
@@ -1284,25 +1294,45 @@ export async function runSpecialistWaterfall(
         await converse([], gotPebble, 30);
     }, gotPebble, 3, 2);
 
-    // Teleport out of Golrie's room straight to Castle Wars, pre-arming PFM so guardWalk skips the Observatory detour.
-    await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
-    await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
-    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    if (opts.afterGolrie) {
+        await walkFast([{ x: 2533, z: 9556, tol: 1 }], 30, 'to golrie cellar ladder');
+        await climb('cellar up', 2533, 9555, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
+        await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+        await opts.afterGolrie();
+    }
+
+    if (opts.skipCwTeleportToTomb) {
+        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+        await walkFast([{ x: 2557, z: 3444, tol: 2 }], 300, 'to glarial tomb', khazardPfm(3270));
+        await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    } else {
+        // Teleport out of Golrie's room straight to Castle Wars, pre-arming PFM so guardWalk skips the Observatory detour.
+        await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
+        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+        await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
+        await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    }
 
     // 3. Tomb: drop only banned weapons/runes (keep Ring, Amulet, and all potions).
-    const wornWeapon = s.sdk.getEquipment().find(e => e.id === ITEM.scim);
-    if (wornWeapon) {
-        await s.bot.unequipItem(wornWeapon);
-        await waitUntil(s, () => has(ITEM.scim) || stop(), { timeoutTicks: 5 });
+    const tombDropIds = Array.from(new Set([...RUNES, ITEM.scim, ...(opts.extraTombDropIds ?? [])]));
+    for (const eq of s.sdk.getEquipment()) {
+        if (tombDropIds.includes(eq.id)) {
+            await s.bot.unequipItem(eq);
+            await waitUntil(s, () => !s.sdk.getEquipment().some(e => e.id === eq.id) || stop(), { timeoutTicks: 5 });
+        }
     }
-    const tombDropIds = [...RUNES, ITEM.scim] as const;
-    const targetDropCount = new Map(tombDropIds.map(id => [id, id === ITEM.scim ? 1 : 6]));
-    for (let i = 0; i < 4 && tombDropIds.some(has) && !stop(); i++) {
-        await Promise.all(inv().filter(x => (tombDropIds as readonly number[]).includes(x.id)).map(r => s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' })));
-        await waitUntil(s, () => !tombDropIds.some(has) || stop(), { timeoutTicks: 2 });
+    const targetDropCount = new Map<number, number>();
+    for (const id of tombDropIds) {
+        const have = cnt(id);
+        if (have > 0) targetDropCount.set(id, have);
     }
-    if (tombDropIds.some(has)) throw Error('failed dropping banned Tomb items');
+    const activeDropIds = [...targetDropCount.keys()];
+    for (let i = 0; i < 8 && activeDropIds.some(has) && !stop(); i++) {
+        const batch = inv().filter(x => activeDropIds.includes(x.id)).slice(0, 4);
+        await Promise.all(batch.map(r => s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' })));
+        await waitUntil(s, () => batch.every(b => inv().every(x => x.slot !== b.slot || x.id !== b.id)) || stop(), { timeoutTicks: 2 });
+    }
+    if (activeDropIds.some(has)) throw Error(`failed dropping banned Tomb items: ${activeDropIds.filter(has).join(',')}`);
 
     const inTomb = () => inBox(2520, 9795, 2560, 9850);
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
@@ -1324,15 +1354,15 @@ export async function runSpecialistWaterfall(
     await climb('tomb up', 2556, 9844, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
-    for (let i = 0; i < 20 && tombDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
+    for (let i = 0; i < 24 && activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
         opts.onEnergy?.();
-        const id = tombDropIds.find(r => cnt(r) < (targetDropCount.get(r) ?? 1))!;
+        const id = activeDropIds.find(r => cnt(r) < (targetDropCount.get(r) ?? 1))!;
         const g = (s.sdk.getState()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
         if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
         await waitUntil(s, () => cnt(id) >= (targetDropCount.get(id) ?? 1) || stop(), { timeoutTicks: 3 });
     }
-    if (tombDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1))) {
-        throw Error(`failed recovering Tomb drops: ${tombDropIds.map(cnt).join('/')}`);
+    if (activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1))) {
+        throw Error(`failed recovering Tomb drops: ${activeDropIds.map(id => `${id}:${cnt(id)}/${targetDropCount.get(id)}`).join(' ')}`);
     }
 
     // 4. Waterfall Dungeon -> Baxtorian key -> Puzzle room -> Pillars -> Statue -> Chalice -> Exit.
@@ -1373,6 +1403,7 @@ export async function runSpecialistWaterfall(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
     // Apply all 18 runes on the exact 2-tick p_delay(0) rhythm without extra waitTicks waste.
+    const runesBeforePillars = new Map(RUNES.map(id => [id, cnt(id)]));
     for (const [px, pz] of PILLARS) {
         for (const id of RUNES) {
             const before = cnt(id);
@@ -1382,7 +1413,9 @@ export async function runSpecialistWaterfall(
             while (s.tick() < sentAt + 2 && !stop()) await waitTicks(s, 1);
         }
     }
-    if (RUNES.some(has)) throw Error(`runes remained after pillars: ${RUNES.map(cnt).join('/')}`);
+    if (RUNES.some(id => cnt(id) > (runesBeforePillars.get(id) ?? 0) - 6)) {
+        throw Error(`pillar runes not consumed as expected: ${RUNES.map(id => `${id}:${cnt(id)}/${runesBeforePillars.get(id)}`).join(' ')}`);
+    }
 
     await stepAct('statue', () => useOnLoc(ITEM.amulet, LOC.statue), () => inBox(2598, 9895, 2610, 9920), 10, 4);
 

@@ -46,7 +46,7 @@ test('ATTACK_SPECIALIST_KIT fills 28 tradeable cataloged inventory slots', () =>
 });
 
 test('spell components resolve in pinned interface.pack', () => {
-    for (const key of ['magic:wind_strike', 'magic:fire_strike', 'magic:varrock_teleport', 'magic:camelot_teleport']) {
+    for (const key of ['magic:wind_strike', 'magic:fire_strike', 'magic:fire_bolt', 'magic:varrock_teleport', 'magic:lumbridge_teleport', 'magic:camelot_teleport']) {
         expect(componentId(key)).toBeGreaterThan(0);
     }
 });

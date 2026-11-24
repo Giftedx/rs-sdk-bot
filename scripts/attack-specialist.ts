@@ -1,4 +1,4 @@
-// Run the fresh-clock Attack 99 specialist route from Tutorial Island through Tree Gnome Village, Grand Tree, and Fight Arena.
+// Run the fresh-clock Attack 99 specialist route from Tutorial Island through Waterfall Quest, Tree Gnome Village, Fight Arena, and Vampire Slayer.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { finish, openBot, serverFromEnv } from '../packages/core/src/bot';
@@ -8,12 +8,12 @@ import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
 import { simBotsDir } from '../packages/core/src/practice-paths';
+import { questFlags } from '../packages/core/src/quest-status';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, sessionWalker, walkPath } from '../packages/core/src/walk';
-import { agilityOptions, runAgility } from '../packages/workers/src/agility';
 import { runQuestArena } from './generated/quest-arena';
-import { runQuestGrandTree } from './generated/quest-grandtree';
 import { runQuestTree } from './generated/quest-tree';
+import { runSpecialistWaterfall } from './combat-quest-specialists';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 import {
     ATTACK_SPECIALIST_KIT,
@@ -33,7 +33,9 @@ const ALLOWED_KIT_IDS = new Set(ATTACK_SPECIALIST_KIT.map(item => item.id));
 const SPELLS = {
     windStrike: componentId('magic:wind_strike'),
     fireStrike: componentId('magic:fire_strike'),
+    fireBolt: componentId('magic:fire_bolt'),
     varrockTeleport: componentId('magic:varrock_teleport'),
+    lumbridgeTeleport: componentId('magic:lumbridge_teleport'),
     camelotTeleport: componentId('magic:camelot_teleport'),
 } as const;
 
@@ -387,31 +389,280 @@ async function trainCourtyardMagicTo25(s: Session, stop: StopFn): Promise<void> 
     }
 }
 
-async function teleportTo45AndCamelot(s: Session, stop: StopFn): Promise<void> {
+async function talkAndChoose(
+    s: Session,
+    npcRe: RegExp,
+    home: Point,
+    choices: RegExp[],
+    donePred: () => boolean,
+    stop: StopFn,
+    label: string,
+    maxTicks = 45,
+): Promise<void> {
+    for (let attempt = 0; attempt < 4 && !donePred() && !stop(); attempt++) {
+        if (attempt > 0 || d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, home) > 5) {
+            await walkWaypoints(s, [{ ...home, tol: 3 }], 80, stop, `approach ${label}`);
+        }
+        const npc = s.sdk.findNearbyNpc(npcRe);
+        if (npc) {
+            await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: 1, reason: 'SDK' });
+            await waitUntil(s, () => !!s.sdk.getDialog()?.isOpen || donePred() || stop(), { timeoutTicks: 12 });
+        }
+        if (!s.sdk.getDialog()?.isOpen && !donePred()) {
+            await s.bot.talkTo(npcRe);
+        }
+        const end = s.tick() + maxTicks;
+        let lastClick = -10;
+        let shutTicks = 0;
+        while (!stop() && s.tick() < end) {
+            if (donePred() && !s.sdk.getDialog()?.isOpen) return;
+            const d: any = s.sdk.getDialog();
+            if (d?.isOpen) {
+                shutTicks = 0;
+                if (!d.isWaiting && s.tick() - lastClick >= 1) {
+                    const opts: any[] = d.options ?? [];
+                    const pick = opts.find(o => choices.some(re => re.test(o.text ?? '')));
+                    lastClick = s.tick();
+                    await s.sdk.sendClickDialog(pick ? pick.index : 0);
+                }
+            } else {
+                shutTicks++;
+                if (donePred() || shutTicks >= 4) break;
+            }
+            await waitTicks(s, 1);
+        }
+    }
+    if (!donePred()) throw Error(`${label} dialogue incomplete`);
+}
+
+async function teleportTo(
+    s: Session,
+    spellComponent: number,
+    arrived: (p: { worldX: number; worldZ: number; level: number }) => boolean,
+    stop: StopFn,
+    label: string,
+): Promise<void> {
+    for (let attempt = 0; attempt < 6 && !stop(); attempt++) {
+        const p = posOf(s);
+        if (p && arrived(p)) return;
+        await s.direct({ type: 'clickComponent', componentId: spellComponent, reason: 'SDK' });
+        await waitUntil(s, () => {
+            const cur = posOf(s);
+            return (!!cur && arrived(cur)) || stop();
+        }, { timeoutTicks: 8 });
+    }
+    const p = posOf(s);
+    if (!p || !arrived(p)) {
+        throw Error(`${label} failed at ${p ? `${p.worldX},${p.worldZ},${p.level}` : 'unknown'}`);
+    }
+}
+
+async function teleportVarrockTo45(s: Session, stop: StopFn): Promise<void> {
     const deadline = s.tick() + 180;
     while (!stop() && skillInfo(s, 'Magic').baseLevel < 45) {
         if (s.tick() >= deadline) throw Error(`Varrock teleport Magic 25->45 timed out at ${skillInfo(s, 'Magic').baseLevel}`);
-        if (countById(s.sdk.getInventory(), 563) < 1) throw Error('out of Law runes during Varrock teleport');
+        if (countById(s.sdk.getInventory(), 563) < 2) throw Error('low Law runes during Varrock teleport');
         const xp0 = skillInfo(s, 'Magic').experience;
         await s.direct({ type: 'clickComponent', componentId: SPELLS.varrockTeleport, reason: 'SDK' });
         const gained = await waitUntil(s, () => skillInfo(s, 'Magic').experience > xp0 || stop(), { timeoutTicks: 5 });
         if (gained && skillInfo(s, 'Magic').experience > xp0 && !stop()) {
-            // teleport.rs2 closes dialogs itself and holds player delay across p_delay(1)+p_delay(0).
             await waitTicks(s, 3);
         }
     }
-    for (let attempt = 0; attempt < 6 && !stop(); attempt++) {
-        const p = posOf(s);
-        if (p && p.worldX <= 2800 && p.worldZ >= 3440) return;
-        await s.direct({ type: 'clickComponent', componentId: SPELLS.camelotTeleport, reason: 'SDK' });
-        await waitUntil(s, () => {
-            const cur = posOf(s);
-            return (!!cur && cur.worldX <= 2800 && cur.worldZ >= 3440) || stop();
-        }, { timeoutTicks: 8 });
+    await teleportTo(s, SPELLS.varrockTeleport, p => p.worldX >= 3195 && p.worldX <= 3230 && p.worldZ >= 3410 && p.worldZ <= 3440, stop, 'Varrock teleport');
+}
+
+async function prepareVampireAndWaterfallInDraynorAndVarrock(s: Session, stop: StopFn): Promise<void> {
+    // 1. Draynor: start Vampire Slayer with Morgan and buy Rope (15 gp) from Ned.
+    await walkWaypoints(s, [{ x: 3098, z: 3268, tol: 2 }], 140, stop, 'lumbridge to morgan');
+    await talkAndChoose(
+        s,
+        /^morgan$/i,
+        { x: 3098, z: 3268 },
+        [/up for an adventure/i],
+        () => questFlags(s.client)?.find(f => f.name === 'Vampire Slayer')?.state === 'started',
+        stop,
+        'morgan',
+    );
+    await walkWaypoints(s, [{ x: 3100, z: 3258, tol: 2 }], 40, stop, 'morgan to ned');
+    await talkAndChoose(
+        s,
+        /^ned$/i,
+        { x: 3100, z: 3258 },
+        [/yes, i would like some rope/i, /sell me some rope/i],
+        () => countById(s.sdk.getInventory(), 954) >= 1,
+        stop,
+        'ned rope',
+    );
+
+    // 2. Varrock Tele 25->45, buy Hammer (Gen Store), 6 Water + 7 Earth runes (Aubury), Beer + Stake (Jolly Boar Inn).
+    await teleportVarrockTo45(s, stop);
+    await walkWaypoints(s, [{ x: 3217, z: 3415, tol: 2 }], 40, stop, 'varrock square to general store');
+    const openGen = await s.bot.openShop(/shop\s*(keeper|assistant)/i);
+    if (!openGen.success) throw Error(`Varrock general store open failed: ${openGen.message}`);
+    const buyHammer = await s.bot.buyFromShop(/^hammer$/i, 1);
+    if (!buyHammer.success && countById(s.sdk.getInventory(), 2347) < 1) {
+        throw Error(`failed buying Hammer: ${buyHammer.message}`);
     }
-    const p = posOf(s);
-    if (!p || p.worldX > 2800 || p.worldZ < 3440) {
-        throw Error(`Camelot teleport failed at ${p ? `${p.worldX},${p.worldZ},${p.level}` : 'unknown'}`);
+    await s.bot.closeShop();
+
+    await walkWaypoints(s, [{ x: 3253, z: 3402, tol: 2 }], 60, stop, 'general store to aubury');
+    const openAubury = await s.bot.openShop(/^aubury$/i);
+    if (!openAubury.success) throw Error(`Aubury open failed: ${openAubury.message}`);
+    const buyWater = await s.bot.buyFromShop(/^water rune$/i, 6);
+    if (!buyWater.success && countById(s.sdk.getInventory(), 555) < 6) {
+        throw Error(`failed buying Water runes: ${buyWater.message}`);
+    }
+    const buyEarth = await s.bot.buyFromShop(/^earth rune$/i, 7);
+    if (!buyEarth.success && countById(s.sdk.getInventory(), 557) < 7) {
+        throw Error(`failed buying Earth runes: ${buyEarth.message}`);
+    }
+    await s.bot.closeShop();
+
+    await walkWaypoints(s, [{ x: 3278, z: 3490, tol: 2 }], 100, stop, 'aubury to jolly boar inn');
+    await talkAndChoose(
+        s,
+        /bartender/i,
+        { x: 3278, z: 3490 },
+        [/beer please/i],
+        () => countById(s.sdk.getInventory(), 1917) >= 1,
+        stop,
+        'jolly boar bartender beer',
+    );
+    await talkAndChoose(
+        s,
+        /^dr harlow$/i,
+        { x: 3277, z: 3492 },
+        [/morgan needs your help/i, /ok mate/i],
+        () => countById(s.sdk.getInventory(), 1549) >= 1,
+        stop,
+        'dr harlow stake',
+        65,
+    );
+
+    // 3. Camelot Teleport -> Almera.
+    await teleportTo(s, SPELLS.camelotTeleport, p => p.worldX <= 2800 && p.worldZ >= 3440, stop, 'Camelot teleport');
+    await walkWaypoints(s, [{ x: 2522, z: 3494, tol: 1 }], 220, stop, 'camelot to almera');
+}
+
+async function exitMazeAndClearArenaGear(s: Session, stop: StopFn): Promise<void> {
+    await walkWaypoints(s, [{ x: 2529, z: 3165, tol: 2 }, { x: 2515, z: 3161, tol: 0 }], 80, stop, 'bolren to loose railing');
+    for (let attempt = 0; attempt < 8 && !stop(); attempt++) {
+        if ((posOf(s)?.worldZ ?? 9999) <= 3160) break;
+        await dismissContinueDialogs(s, stop, 1);
+        const railing = (s.sdk.getState()?.nearbyLocs ?? [])
+            .filter((l: any) => (l.id === 2186 || /railing/i.test(l.name ?? '')) && (l.optionsWithIndex ?? []).some((o: any) => /squeeze/i.test(o.text ?? '')))
+            .sort((a: any, b: any) => d8(a, { x: 2515, z: 3161 }) - d8(b, { x: 2515, z: 3161 }))[0];
+        if (!railing) throw Error('loose railing not found at 2515,3161');
+        const op = railing.optionsWithIndex.find((o: any) => /squeeze/i.test(o.text ?? ''));
+        await s.sdk.sendInteractLoc(railing.x, railing.z, railing.id, op?.opIndex ?? 1);
+        await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) <= 3160 || stop(), { timeoutTicks: 8 });
+    }
+    if ((posOf(s)?.worldZ ?? 9999) > 3160) throw Error('failed exiting maze through loose railing');
+    await setProtectMelee(s, true, stop);
+    await walkWaypoints(s, [{ x: 2566, z: 3201, tol: 2 }], 120, stop, 'railing to lady servil', { ignoreMeleeHunters: true });
+}
+
+async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
+    await teleportTo(s, SPELLS.lumbridgeTeleport, p => p.worldX >= 3205 && p.worldX <= 3240 && p.worldZ >= 3205 && p.worldZ <= 3235, stop, 'Lumbridge teleport');
+    await walkWaypoints(s, [{ x: 3108, z: 3352, tol: 1 }], 180, stop, 'lumbridge to draynor manor');
+
+    const inManor = () => {
+        const p = posOf(s);
+        return !!p && p.worldZ >= 3354 && p.worldZ < 9000;
+    };
+    for (let i = 0; i < 6 && !inManor() && !stop(); i++) {
+        const d = (s.sdk.getState()?.nearbyLocs ?? []).find((l: any) => (l.id === 134 || l.id === 135) && l.z === 3353);
+        if (d) await s.sdk.sendInteractLoc(d.x, d.z, d.id, 1);
+        await waitUntil(s, () => inManor() || stop(), { timeoutTicks: 6 });
+    }
+    if (!inManor()) throw Error('failed entering Draynor Manor front door');
+
+    const openShutDoor = async (x: number, z: number, label: string) => {
+        for (let i = 0; i < 6 && !stop(); i++) {
+            const shut = (s.sdk.getState()?.nearbyLocs ?? []).find(
+                (l: any) => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
+            );
+            if (!shut) return;
+            const op = shut.optionsWithIndex.find((o: any) => /^open$/i.test(o.text ?? ''));
+            await s.sdk.sendInteractLoc(shut.x, shut.z, shut.id, op?.opIndex ?? 1);
+            await waitTicks(s, 2);
+        }
+        const still = (s.sdk.getState()?.nearbyLocs ?? []).find(
+            (l: any) => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
+        );
+        if (still) throw Error(`failed opening ${label} at ${x},${z}`);
+    };
+    const dash = async (x: number, z: number, tol: number, label: string) => {
+        for (let i = 0; i < 12 && !stop(); i++) {
+            const p = posOf(s);
+            if (p && d8({ x: p.worldX, z: p.worldZ }, { x, z }) <= tol) return;
+            await s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' });
+            await waitUntil(s, () => {
+                const cur = posOf(s);
+                return (!!cur && d8({ x: cur.worldX, z: cur.worldZ }, { x, z }) <= tol) || stop();
+            }, { timeoutTicks: 4 });
+        }
+        throw Error(`failed dash inside Draynor Manor: ${label}`);
+    };
+
+    // Exact open route inside Draynor Manor avoiding locked closet_door 131 at 3107,3367.
+    await openShutDoor(3109, 3358, 'manor hall door');
+    await dash(3106, 3367, 0, 'north room');
+    await openShutDoor(3106, 3368, 'corridor door');
+    await dash(3114, 3370, 0, 'corridor');
+    await dash(3118, 3362, 1, 'east room');
+    await dash(3115, 3356, 0, 'crypt stairs');
+
+    for (let i = 0; i < 6 && (posOf(s)?.worldZ ?? 0) < 9000 && !stop(); i++) {
+        const stairs = (s.sdk.getState()?.nearbyLocs ?? []).find(
+            (l: any) => l.x === 3115 && l.z === 3357 && (l.optionsWithIndex ?? []).some((o: any) => /walk-down|climb-down|go-down/i.test(o.text ?? '')),
+        );
+        if (stairs) {
+            const op = stairs.optionsWithIndex.find((o: any) => /walk-down|climb-down|go-down/i.test(o.text ?? ''));
+            await s.sdk.sendInteractLoc(stairs.x, stairs.z, stairs.id, op?.opIndex ?? 1);
+        }
+        await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) > 9000 || stop(), { timeoutTicks: 6 });
+    }
+    if ((posOf(s)?.worldZ ?? 0) <= 9000) throw Error('failed descending Draynor Manor crypt stairs');
+
+    await topUpPrayer(s, 20, stop);
+    await setProtectMelee(s, true, stop);
+    for (let i = 0; i < 8 && !stop(); i++) {
+        if (s.sdk.findNearbyNpc(/^count draynor$/i)) break;
+        const coffin = (s.sdk.getState()?.nearbyLocs ?? []).find((l: any) => l.x === 3077 && l.z === 9775);
+        await s.sdk.sendInteractLoc(coffin?.x ?? 3077, coffin?.z ?? 9775, coffin?.id ?? 2614, 1);
+        await waitUntil(s, () => !!s.sdk.findNearbyNpc(/^count draynor$/i) || stop(), { timeoutTicks: 6 });
+    }
+
+    let lastAttackTick = -10;
+    const fightDeadline = s.tick() + 180;
+    while (!stop() && skillInfo(s, 'Attack').baseLevel < 99) {
+        if (s.tick() >= fightDeadline) throw Error(`Count Draynor fight timed out at Attack ${skillInfo(s, 'Attack').baseLevel}`);
+        await dismissContinueDialogs(s, stop, 1);
+        await setProtectMelee(s, true, stop);
+        if ((s.sdk.getState()?.prayers?.prayerPoints ?? 0) <= 6) await topUpPrayer(s, 20, stop);
+        const count = s.sdk.findNearbyNpc(/^count draynor$/i);
+        if (count) {
+            const canFireBolt =
+                skillInfo(s, 'Magic').baseLevel >= 35 &&
+                s.sdk.getEquipment().some(e => e.id === 1387) &&
+                countById(s.sdk.getInventory(), 562) >= 1 &&
+                countById(s.sdk.getInventory(), 556) >= 3;
+            if (canFireBolt && s.tick() - lastAttackTick >= 5) {
+                lastAttackTick = s.tick();
+                await s.direct({ type: 'spellOnNpc', npcIndex: count.index, spellComponent: SPELLS.fireBolt, reason: 'SDK' });
+            } else if (!canFireBolt && s.tick() - lastAttackTick >= 4) {
+                lastAttackTick = s.tick();
+                const atkOp = count.optionsWithIndex?.find((o: any) => /attack/i.test(o.text ?? ''))?.opIndex ?? 2;
+                await s.direct({ type: 'interactNpc', npcIndex: count.index, optionIndex: atkOp, reason: 'SDK' });
+            }
+        } else if (countById(s.sdk.getInventory(), 1549) >= 1 && s.tick() - lastAttackTick >= 10) {
+            lastAttackTick = s.tick();
+            const coffin = (s.sdk.getState()?.nearbyLocs ?? []).find((l: any) => l.x === 3077 && l.z === 9775);
+            await s.sdk.sendInteractLoc(coffin?.x ?? 3077, coffin?.z ?? 9775, coffin?.id ?? 2614, 1);
+        }
+        await waitTicks(s, 1);
     }
 }
 
@@ -420,196 +671,6 @@ export function shouldEnableRailingProtectMelee(
     activePrayers: readonly boolean[] | undefined,
 ): boolean {
     return !!pos && (pos.worldZ ?? 9999) <= RAILING_PROTECT_Z && activePrayers?.[PROTECT_MELEE_INDEX] !== true;
-}
-
-async function squeezeLooseRailingAndReachBolren(s: Session, stop: StopFn): Promise<void> {
-    let prayedAt = -10;
-    let drankAt = -10;
-    const monitorSouth = () => {
-        const st = s.sdk.getState();
-        if (shouldEnableRailingProtectMelee(posOf(s), st?.prayers?.activePrayers) && (st?.prayers?.prayerPoints ?? 0) > 0 && s.tick() - prayedAt >= 2) {
-            prayedAt = s.tick();
-            void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE_INDEX, reason: 'SDK' });
-        }
-        if (st?.prayers?.activePrayers?.[PROTECT_MELEE_INDEX] && (st.prayers.prayerPoints ?? 0) <= 8 && s.tick() - drankAt >= 3) {
-            const pot = s.sdk.getInventory().find(i => PRAYER_POT_IDS.includes(i.id));
-            if (pot) {
-                drankAt = s.tick();
-                void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
-            }
-        }
-    };
-    await walkWaypoints(s, [{ x: 2561, z: 3242, tol: 4 }], 350, stop, 'camelot to khazard edge', {
-        ignoreMeleeHunters: true,
-        onTickExtra: monitorSouth,
-    });
-    await setProtectMelee(s, true, stop);
-    await walkWaypoints(s, [{ x: 2515, z: 3160, tol: 0 }], 350, stop, 'khazard edge to railing', {
-        ignoreMeleeHunters: true,
-        onTickExtra: monitorSouth,
-    });
-    for (let attempt = 0; attempt < 8 && !stop(); attempt++) {
-        if ((posOf(s)?.worldZ ?? 0) >= 3161) break;
-        await dismissContinueDialogs(s, stop, 1);
-        const locs: any[] = s.sdk.getState()?.nearbyLocs ?? [];
-        const railing = locs
-            .filter(l => (l.id === 2186 || /railing/i.test(l.name ?? '')) && (l.optionsWithIndex ?? []).some((o: any) => /squeeze/i.test(o.text ?? '')))
-            .sort((a, b) => d8(a, { x: 2515, z: 3161 }) - d8(b, { x: 2515, z: 3161 }))[0];
-        if (!railing) throw Error('loose railing not found at 2515,3161');
-        const op = railing.optionsWithIndex.find((o: any) => /squeeze/i.test(o.text ?? ''));
-        await s.sdk.sendInteractLoc(railing.x, railing.z, railing.id, op?.opIndex ?? 1);
-        await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3161 || stop(), { timeoutTicks: 8 });
-    }
-    if ((posOf(s)?.worldZ ?? 0) < 3161) throw Error('failed to squeeze through loose railing');
-    await setProtectMelee(s, false, stop);
-    await topUpPrayer(s, 26, stop);
-    await walkWaypoints(
-        s,
-        [
-            { x: 2529, z: 3165, tol: 2 },
-            { x: 2542, z: 3171, tol: 1 },
-        ],
-        120,
-        stop,
-        'railing to bolren',
-    );
-}
-
-async function rideSpiritTree(s: Session, treeTile: Point, choices: RegExp[], dest: Point, stop: StopFn): Promise<void> {
-    if (d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, treeTile) > 4) {
-        await walkWaypoints(s, [{ x: treeTile.x, z: treeTile.z + 2, tol: 2 }], 80, stop, `approach spirit tree ${treeTile.x},${treeTile.z}`);
-    }
-    const deadline = s.tick() + 80;
-    let interactedAt = -10;
-    while (!stop()) {
-        const p = posOf(s);
-        if (p && d8({ x: p.worldX, z: p.worldZ }, dest) <= 8) return;
-        if (s.tick() >= deadline) throw Error(`spirit tree travel to ${dest.x},${dest.z} timed out`);
-        const d: any = s.sdk.getDialog();
-        if (d?.isOpen) {
-            if (!d.isWaiting) {
-                const opts: any[] = d.options ?? [];
-                const pick = opts.find(o => choices.some(re => re.test(o.text ?? '')));
-                await s.sdk.sendClickDialog(pick ? pick.index : 0);
-            }
-        } else if (s.tick() - interactedAt >= 4) {
-            const tree = (s.sdk.getState()?.nearbyLocs ?? [])
-                .filter((l: any) => /spirit tree/i.test(l.name ?? ''))
-                .sort((a: any, b: any) => d8(a, treeTile) - d8(b, treeTile))[0];
-            if (!tree) throw Error(`Spirit tree not visible near ${treeTile.x},${treeTile.z}`);
-            const op = (tree.optionsWithIndex ?? [])[0];
-            interactedAt = s.tick();
-            await s.sdk.sendInteractLoc(tree.x, tree.z, tree.id, op?.opIndex ?? 1);
-        }
-        await waitTicks(s, 1);
-    }
-}
-
-async function travelCourseToNarnode(s: Session, stop: StopFn): Promise<void> {
-    const settleDeadline = s.tick() + 60;
-    while (!stop() && (posOf(s)?.level ?? 0) > 0) {
-        if (s.tick() >= settleDeadline) throw Error(`failed to descend from Gnome Agility level ${posOf(s)?.level}`);
-        await dismissContinueDialogs(s, stop, 1);
-        const p = posOf(s);
-        if (!p) { await waitTicks(s, 1); continue; }
-        if (p.level === 1) {
-            const branch = (s.sdk.getState()?.nearbyLocs ?? []).find((l: any) => l.id === 2313);
-            if (branch) await s.sdk.sendInteractLoc(branch.x, branch.z, branch.id, 1);
-            await waitUntil(s, () => (posOf(s)?.level ?? 1) !== 1 || stop(), { timeoutTicks: 10 });
-        } else if (p.level === 2 && p.worldX < 2483) {
-            const rope = (s.sdk.getState()?.nearbyLocs ?? []).find((l: any) => l.id === 2312);
-            if (rope) await s.sdk.sendInteractLoc(rope.x, rope.z, rope.id, 1);
-            await waitUntil(s, () => (posOf(s)?.worldX ?? 0) >= 2483 || (posOf(s)?.level ?? 2) !== 2 || stop(), { timeoutTicks: 12 });
-        } else {
-            const treeDown = (s.sdk.getState()?.nearbyLocs ?? []).find((l: any) => l.id === 2314);
-            if (treeDown) await s.sdk.sendInteractLoc(treeDown.x, treeDown.z, treeDown.id, 1);
-            await waitUntil(s, () => (posOf(s)?.level ?? 2) === 0 || stop(), { timeoutTicks: 10 });
-        }
-    }
-    const p0 = posOf(s);
-    if (p0 && p0.level === 0 && p0.worldX >= 2482 && p0.worldX <= 2489 && p0.worldZ >= 3426 && p0.worldZ <= 3431) {
-        const pipe = (s.sdk.getState()?.nearbyLocs ?? []).find((l: any) => (l.id === 154 || l.id === 4058) && l.z === 3431);
-        if (pipe) {
-            await s.sdk.sendInteractLoc(pipe.x, pipe.z, pipe.id, 1);
-            await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3436 || stop(), { timeoutTicks: 12 });
-        }
-    }
-    if ((posOf(s)?.worldZ ?? 0) < 3493) {
-        await walkWaypoints(s, [{ x: 2465, z: 3490, tol: 1 }], 80, stop, 'agility course to grand tree door');
-        const doorDeadline = s.tick() + 30;
-        while (!stop() && (posOf(s)?.worldZ ?? 0) < 3493) {
-            if (s.tick() >= doorDeadline) throw Error('failed to enter Grand Tree south door');
-            const door = (s.sdk.getState()?.nearbyLocs ?? [])
-                .filter((l: any) => /tree door/i.test(l.name ?? '') && d8(l, { x: 2465, z: 3492 }) <= 2)
-                .sort((a: any, b: any) => d8(a, { x: 2465, z: 3492 }) - d8(b, { x: 2465, z: 3492 }))[0];
-            if (door) {
-                const op = (door.optionsWithIndex ?? []).find((o: any) => /open/i.test(o.text ?? ''));
-                if (op) await s.sdk.sendInteractLoc(door.x, door.z, door.id, op.opIndex);
-            }
-            await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3493 || stop(), { timeoutTicks: 6 });
-        }
-    }
-}
-
-async function exitGrandTreeAndTravelToServil(s: Session, stop: StopFn): Promise<void> {
-    if ((posOf(s)?.worldZ ?? 0) > 6400) {
-        const upDeadline = s.tick() + 60;
-        while (!stop() && (posOf(s)?.worldZ ?? 0) > 6400) {
-            if (s.tick() >= upDeadline) throw Error('failed to climb Grand Tree root exit ladder');
-            const p = posOf(s);
-            if (!p || d8({ x: p.worldX, z: p.worldZ }, { x: 2464, z: 9897 }) > 3) {
-                await walkWaypoints(s, [{ x: 2464, z: 9897, tol: 1 }], 50, stop, 'roots to exit ladder');
-            }
-            const ladder = (s.sdk.getState()?.nearbyLocs ?? [])
-                .filter((l: any) => /ladder/i.test(l.name ?? '') && (l.optionsWithIndex ?? []).some((o: any) => /climb/i.test(o.text ?? '')))
-                .sort((a: any, b: any) => d8(a, { x: 2463, z: 9897 }) - d8(b, { x: 2463, z: 9897 }))[0];
-            if (!ladder) throw Error('Grand Tree root exit ladder not found near 2463,9897');
-            const op = ladder.optionsWithIndex.find((o: any) => /climb/i.test(o.text ?? ''));
-            await s.sdk.sendInteractLoc(ladder.x, ladder.z, ladder.id, op?.opIndex ?? 1);
-            await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) < 6400 || stop(), { timeoutTicks: 8 });
-        }
-    }
-
-    const inTrunk = (p?: { worldX: number; worldZ: number; level: number }) =>
-        !!p && p.level === 0 && p.worldX >= 2463 && p.worldX <= 2468 && p.worldZ >= 3493 && p.worldZ <= 3498;
-    if (inTrunk(posOf(s))) {
-        // Grand Tree trunk has a trapdoor at 2463,3497 that walkPath mistakes for a closed door; step directly through the south tree door.
-        for (let i = 0; i < 6 && !stop(); i++) {
-            const p = posOf(s);
-            if (!p || d8({ x: p.worldX, z: p.worldZ }, { x: 2465, z: 3493 }) <= 1) break;
-            await s.direct({ type: 'walkTo', x: 2465, z: 3493, running: true, reason: 'SDK' });
-            await waitTicks(s, 2);
-        }
-        const doorDeadline = s.tick() + 40;
-        while (!stop() && (posOf(s)?.worldZ ?? 9999) > 3491) {
-            if (s.tick() >= doorDeadline) throw Error('failed to exit Grand Tree south door');
-            const door = (s.sdk.getState()?.nearbyLocs ?? [])
-                .filter((l: any) => /tree door/i.test(l.name ?? '') && d8(l, { x: 2465, z: 3492 }) <= 2)
-                .sort((a: any, b: any) => d8(a, { x: 2465, z: 3492 }) - d8(b, { x: 2465, z: 3492 }))[0];
-            if (door) {
-                const op = (door.optionsWithIndex ?? []).find((o: any) => /open/i.test(o.text ?? ''));
-                if (op) await s.sdk.sendInteractLoc(door.x, door.z, door.id, op.opIndex);
-            } else {
-                await s.direct({ type: 'walkTo', x: 2465, z: 3488, running: true, reason: 'SDK' });
-            }
-            await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) <= 3491 || stop(), { timeoutTicks: 6 });
-        }
-    }
-
-    await walkWaypoints(s, [{ x: 2461, z: 3446, tol: 2 }], 120, stop, 'grand tree to stronghold tree');
-    await rideSpiritTree(s, { x: 2461, z: 3444 }, [/where can i go/i, /battlefield of khazard/i], { x: 2555, z: 3259 }, stop);
-    // Avoid the locked Khazard building door at 2567-2569,3237-3239 when walking south to Lady Servil.
-    await walkWaypoints(
-        s,
-        [
-            { x: 2561, z: 3241, tol: 2 },
-            { x: 2566, z: 3232, tol: 2 },
-            { x: 2566, z: 3201, tol: 2 },
-        ],
-        150,
-        stop,
-        'khazard battlefield to servil',
-    );
 }
 
 async function main(): Promise<void> {
@@ -660,35 +721,52 @@ async function main(): Promise<void> {
         await trainCourtyardMagicTo25(s, stop);
         milestone('magic25', `magic=${skillInfo(s, 'Magic').baseLevel} air=${countById(s.sdk.getInventory(), 556)} mind=${countById(s.sdk.getInventory(), 558)}`);
 
-        await teleportTo45AndCamelot(s, stop);
-        milestone('camelot', `magic=${skillInfo(s, 'Magic').baseLevel} laws=${countById(s.sdk.getInventory(), 563)}`);
+        await prepareVampireAndWaterfallInDraynorAndVarrock(s, stop);
+        milestone('camelot_almera', `magic=${skillInfo(s, 'Magic').baseLevel} laws=${countById(s.sdk.getInventory(), 563)} coins=${countById(s.sdk.getInventory(), 995)}`);
 
-        await squeezeLooseRailingAndReachBolren(s, stop);
-        milestone('bolren');
+        await runSpecialistWaterfall(s, stop, {
+            extraTombDropIds: [1387, 563, 562, 558],
+            skipCwTeleportToTomb: true,
+            afterGolrie: async () => {
+                milestone('golrie');
+                await topUpPrayer(s, 26, stop);
+                await walkWaypoints(s, [{ x: 2542, z: 3171, tol: 1 }], 40, stop, 'golrie to bolren');
+                await runQuestTree({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
+                milestone('tree_gnome_village', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
 
-        await runQuestTree({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
-        milestone('tree_gnome_village', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
+                await exitMazeAndClearArenaGear(s, stop);
+                await topUpPrayer(s, 26, stop);
+                await runQuestArena({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
+                milestone('fight_arena', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
 
-        await rideSpiritTree(s, { x: 2542, z: 3169 }, [/where can i go/i, /gnome stronghold/i], { x: 2461, z: 3444 }, stop);
-        milestone('stronghold_tree');
+                // Unequip and drop Fight Arena armour/helmet before entering Glarial's tomb.
+                for (const eq of s.sdk.getEquipment()) {
+                    if (eq.id === 74 || eq.id === 75) {
+                        await s.bot.unequipItem(eq);
+                        await waitUntil(s, () => !s.sdk.getEquipment().some(e => e.id === eq.id) || stop(), { timeoutTicks: 5 });
+                    }
+                }
+                const junkIds = [74, 75, 76, 77];
+                for (let i = 0; i < 4 && s.sdk.getInventory().some(it => junkIds.includes(it.id)) && !stop(); i++) {
+                    const batch = s.sdk.getInventory().filter(it => junkIds.includes(it.id)).slice(0, 4);
+                    await Promise.all(batch.map(it => s.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' })));
+                    await waitTicks(s, 1);
+                }
+                // Walk past Khazard locked building (2567-2569,3237-3239) before Waterfall climbs north to Tomb.
+                await setProtectMelee(s, true, stop);
+                await walkWaypoints(s, [{ x: 2566, z: 3232, tol: 2 }, { x: 2561, z: 3241, tol: 2 }], 80, stop, 'servil north past khazard building', { ignoreMeleeHunters: true });
+                await setProtectMelee(s, false, stop);
+            },
+        });
+        milestone('waterfall', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
 
-        const agility = await runAgility(s, agilityOptions('gnome', '25', { ...process.env, CAP: String(Math.max(200, CAP - elapsed())) }));
-        if (!agility.ok || skillInfo(s, 'Agility').baseLevel < 25) {
-            throw Error(`Gnome agility 1->25 incomplete: ${JSON.stringify(agility)}`);
+        // Re-equip Staff of fire dropped outside Glarial's tomb, then finish Vampire Slayer for 99 Attack.
+        if (!s.sdk.getEquipment().some(e => e.id === 1387)) {
+            const staff = s.sdk.getInventory().find(i => i.id === 1387);
+            if (staff) await s.bot.equipItem(staff);
         }
-        milestone('agility25', `agility=${skillInfo(s, 'Agility').baseLevel}`);
-
-        await travelCourseToNarnode(s, stop);
-        await topUpPrayer(s, 26, stop);
-        await runQuestGrandTree({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
-        milestone('grand_tree', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
-
-        await exitGrandTreeAndTravelToServil(s, stop);
-        await topUpPrayer(s, 26, stop);
-        milestone('servil');
-
-        await runQuestArena({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
-        milestone('fight_arena', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
+        await finishVampireSlayer(s, stop);
+        milestone('vampire_slayer', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
 
         if (s.sdk.getState()?.prayers?.activePrayers?.[PROTECT_MELEE_INDEX]) {
             await s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE_INDEX, reason: 'SDK' });
