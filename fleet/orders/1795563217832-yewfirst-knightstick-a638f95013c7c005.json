@@ -1,0 +1,24 @@
+{
+ "id": "1795563217832-yewfirst-knightstick-a638f95013c7c005",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Knightstick",
+ "item": "Headless arrow",
+ "count": 600,
+ "itemId": 53,
+ "start": 1795563217832,
+ "end": 1795565017832,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

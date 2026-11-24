@@ -1,0 +1,24 @@
+{
+ "id": "1795563217362-dipstick-knightrider-90a1412aa5c2a175",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "KnightRider",
+ "item": "Rune arrowtips",
+ "count": 97,
+ "itemId": 44,
+ "start": 1795563217362,
+ "end": 1795565017362,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

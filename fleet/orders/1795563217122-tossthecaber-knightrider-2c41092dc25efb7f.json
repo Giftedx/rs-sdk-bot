@@ -1,0 +1,23 @@
+{
+ "id": "1795563217122-tossthecaber-knightrider-2c41092dc25efb7f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "KnightRider",
+ "item": "Coins",
+ "count": 125000,
+ "start": 1795563217122,
+ "end": 1795565017122,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

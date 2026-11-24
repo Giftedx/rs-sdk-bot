@@ -1,0 +1,24 @@
+{
+ "id": "1795563217601-swordswallow-bigchopper-9f4bc0432ddc15cc",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordswallow",
+ "to": "Bigchopper",
+ "item": "Headless arrow",
+ "count": 495,
+ "itemId": 53,
+ "start": 1795563217601,
+ "end": 1795565017601,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

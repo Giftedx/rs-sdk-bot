@@ -1,0 +1,31 @@
+{
+ "id": "1795563216896-fatstack-knightrider-9615dd0fc9220a82",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "KnightRider",
+ "item": "Rune arrowtips",
+ "count": 500,
+ "itemId": 44,
+ "start": 1795563216896,
+ "end": 1795565016896,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Adamant arrowtips",
+   "count": 495,
+   "itemId": 43
+  }
+ ],
+ "takerWaits": true
+}
