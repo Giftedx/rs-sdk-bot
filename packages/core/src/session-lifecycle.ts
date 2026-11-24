@@ -354,8 +354,7 @@ export function listAttemptsSince(
 ): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
     if (minCreatedAt === Infinity) return [];
     const floor = Number.isFinite(minCreatedAt) ? Math.max(0, Math.floor(minCreatedAt)) : 0;
-    const rawPrefix = String(floor);
-    const prefix = rawPrefix.length <= 13 ? rawPrefix.padStart(13, '0') : '';
+    const prefix = floor <= 9_999_999_999_999 ? String(floor).padStart(13, '0') : '';
     const listAt = (root?: string) => {
         const attempts = join(accountDir(account, server, root), 'attempts');
         if (!existsSync(attempts)) return [];

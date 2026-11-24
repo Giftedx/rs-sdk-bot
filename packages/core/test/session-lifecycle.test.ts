@@ -366,6 +366,7 @@ test('readAttemptReceiptById, listAttemptsSince, and scanAttemptsNewestFirst mat
         expect(listAttemptsSince('Ana', 'localhost:8888', NaN, { root }).map(a => a.attemptId)).toEqual([a1.attemptId, a2.attemptId, a3.attemptId]);
         expect(listAttemptsSince('Ana', 'localhost:8888', -Infinity, { root }).map(a => a.attemptId)).toEqual([a1.attemptId, a2.attemptId, a3.attemptId]);
         expect(listAttemptsSince('Ana', 'localhost:8888', Infinity, { root })).toEqual([]);
+        expect(listAttemptsSince('Ana', 'localhost:8888', 1e21, { root })).toEqual([]);
 
         const visited: string[] = [];
         scanAttemptsNewestFirst('Ana', 'localhost:8888', entry => {

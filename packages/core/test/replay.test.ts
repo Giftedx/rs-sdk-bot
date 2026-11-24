@@ -192,21 +192,23 @@ test('replay comparison matches JSON semantics for array undefined/sparse/toJSON
         { k: 'meta', v: 1, account: 'Replayer', server: 'localhost:8888', script: 'scripts/fixture.ts', argv: ['Replayer'], startedAt: 1 },
         { k: 'p', t: 0, d: { tick: 0, inGame: true, player: { worldX: 3200, worldZ: 3200, level: 0 } } },
         { k: 's', t: 1, d: { tick: 1 } },
-        { k: 'a', t: 1, i: 0, a: { type: 'walkTo', tags: [null, null, 1], count: 5 }, direct: true },
+        { k: 'a', t: 1, i: 0, a: { type: 'walkTo', tags: [null, null, 1, '3', null], keyed: 'keyed', count: 5 }, direct: true },
         { k: 'r', t: 1, i: 0, r: { success: true } },
         { k: 'end', t: 2, reason: 'logged-out', ticks: 1, rawBytes: 1, cpuMs: 0 },
     ];
     const sparse: unknown[] = [];
-    sparse[0] = undefined;
     sparse[1] = { toJSON: () => undefined };
     sparse[2] = 1;
+    sparse[3] = { toJSON: (k?: string) => k };
+    sparse[4] = undefined;
     const out = await replayRecord(lines, async () => {
         const s = await openBot('Replayer');
         await waitTicks(s, 1);
         await s.direct({
             type: 'walkTo',
             tags: sparse,
-            omittedByToJson: { toJSON: () => undefined },
+            omittedByToJson: { toJSON: (k?: string) => (k === 'omittedByToJson' ? undefined : 'keep') },
+            keyed: { toJSON: (k?: string) => k },
             count: new Number(5),
         });
     });
