@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795561936162,
+ "at": 1795562005784,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,50 +24,14 @@
    "role": "rehearsal"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-starter"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-starter"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
-  },
-  {
    "account": "Unsheathed",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "ranged-starter"
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1022 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1022 -- ge-buy",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Unsheathed BATCH_UNITS=250 -- giant"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -76,19 +40,48 @@
   },
   {
    "account": "FishAndChips",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
+   "script": "scripts/generated/quest-death.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "DEMAND_ID": "goal:quest_board:death",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
+   "goal": "goal:quest_board:death",
    "role": "auto"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "blood-chest"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:565",
+    "BATCH_UNITS": "184"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:565",
+   "role": "army",
+   "resources": [
+    "blood-chest"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/generated/quest-elena.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:elena",
+   "role": "army"
   }
  ],
  "army": [
@@ -117,13 +110,13 @@
   "oreelse",
   "pickpockdick",
   "pocketpool",
+  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "trousersnake",
   "undermykilt",
   "woodpecker",
   "yewfirst"
