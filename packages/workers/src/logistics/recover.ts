@@ -1,10 +1,9 @@
 // Prayer altar restoration, antipoison cure, amulet of glory recharge, and trapped account recovery.
-import { closeSync, existsSync, openSync, readSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { BOARD_PLANK_IDS, DISEMBARK_PLANK_IDS, disembark, pickDisembarkPlank, type BoatSession } from '../../../core/src/boat';
 import { accountOf, getWorld, sessionDied } from '../../../core/src/bot';
 import { readLabels, type Labels } from '../../../core/src/components';
-import { combatLevel } from '../../../core/src/danger';
 import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
 import { pathfindingDataKey } from '../../../core/src/pathcache';
@@ -16,38 +15,45 @@ import { BANK_MEETS, classifyLocation, FLUFFS_FENCE, HUB_BANKS, hubTargetFor, in
 import { REPO_ROOT } from './types';
 import { leaveTutorial, onTutorialIsland, walkTarget, walkTargetPersist } from './walk';
 
-export type Altar = { id: number; x: number; z: number; level: number; label: string };
+import {
+    GLORY_UNCHARGED,
+    PRAYER_ALTARS,
+    SAFE_ALTARS,
+    altarText,
+    canEnterHeroesBasement,
+    inWilderness,
+    parseAltar,
+    parseRecoveryTargetArg,
+    type Altar,
+} from './preflight';
 
-export const PRAYER_ALTARS: readonly Altar[] = [
-    { id: 61, x: 3239, z: 3608, level: 0, label: 'Wilderness chaos temple' },
-    { id: 409, x: 3253, z: 3486, level: 0, label: 'Varrock east church' },
-    { id: 411, x: 2932, z: 3513, level: 0, label: 'Goblin Village chaos altar' },
-    { id: 411, x: 3259, z: 3381, level: 0, label: 'Varrock south-east chaos altar' },
-    { id: 410, x: 2925, z: 3483, level: 0, label: 'Taverley altar of Guthix' },
-    { id: 409, x: 2617, z: 3309, level: 0, label: 'East Ardougne church' },
-    { id: 409, x: 2694, z: 3462, level: 0, label: 'Seers Village church' },
-    { id: 409, x: 2853, z: 3348, level: 0, label: 'Entrana church' },
-    { id: 409, x: 3243, z: 3205, level: 0, label: 'Lumbridge church' },
-    { id: 409, x: 2991, z: 3177, level: 0, label: 'Port Sarim church' },
-];
+export {
+    GLORY_UNCHARGED,
+    PRAYER_ALTARS,
+    SAFE_ALTARS,
+    altarText,
+    canEnterHeroesBasement,
+    inWilderness,
+    parseAltar,
+    parseRecoveryTargetArg,
+    type Altar,
+};
 
-export const inWilderness = (a: Pick<Altar, 'x' | 'z'>): boolean => wildernessLevel(a.x, a.z) > 0;
-export const SAFE_ALTARS: readonly Altar[] = PRAYER_ALTARS.filter(a => !inWilderness(a));
-
-export const nearestAltar = (at: { x: number; z: number; level: number }, list: readonly Altar[] = SAFE_ALTARS): Altar =>
-    [...list].sort((a, b) => Math.max(Math.abs(a.x - at.x), Math.abs(a.z - at.z)) + (a.level === at.level ? 0 : 50)
-        - (Math.max(Math.abs(b.x - at.x), Math.abs(b.z - at.z)) + (b.level === at.level ? 0 : 50)))[0]!;
-
-export const altarText = (args: readonly string[], env: string | undefined): string | undefined =>
-    args.find(a => /^ALTAR=/.test(a))?.slice(6) ?? (env || undefined);
-
-export function parseAltar(text: string | undefined, list: readonly Altar[] = PRAYER_ALTARS): Altar | undefined {
-    if (!text) return undefined;
-    const m = text.match(/^(\d+),(\d+)$/);
-    const a = m ? list.find(r => r.x === Number(m[1]) && r.z === Number(m[2])) : undefined;
-    if (!a) throw Error(`ALTAR=${text} is not in PRAYER_ALTARS`);
-    return a;
-}
+export const nearestAltar = (at: { x: number; z: number; level: number }, list: readonly Altar[] = SAFE_ALTARS): Altar => {
+    let best = list[0]!;
+    let bestDist = Infinity;
+    for (let i = 0; i < list.length; i++) {
+        const a = list[i]!;
+        const dx = Math.abs(a.x - at.x);
+        const dz = Math.abs(a.z - at.z);
+        const d = (dx >= dz ? dx : dz) + (a.level === at.level ? 0 : 50);
+        if (d < bestDist) {
+            bestDist = d;
+            best = a;
+        }
+    }
+    return best;
+};
 
 export async function prayAtAltar(s: Session, altar: Altar): Promise<{ ok: boolean; detail: string }> {
     const points = () => s.sdk.getSkill('Prayer')?.level ?? 0, base = () => s.sdk.getSkill('Prayer')?.baseLevel ?? 1;
@@ -69,19 +75,42 @@ export async function prayAtAltar(s: Session, altar: Altar): Promise<{ ok: boole
 
 export type AntipoisonRow = { id: number; count: number };
 export const ANTIPOISON_IDS: readonly number[] = [2448, 181, 183, 185, 2446, 175, 177, 179];
-export const dosesOf = (id: number): number => 4 - (ANTIPOISON_IDS.indexOf(id) % 4);
+const ANTIPOISON_DOSE = new Map<number, number>(ANTIPOISON_IDS.map((id, i) => [id, 4 - (i % 4)]));
+export const dosesOf = (id: number): number => ANTIPOISON_DOSE.get(id) ?? 4 - (-1 % 4);
 
 export function chooseAntipoison(pack: readonly AntipoisonRow[], bank: readonly AntipoisonRow[]): { where: 'pack' | 'bank'; id: number } | null {
     for (const [where, rows] of [['pack', pack], ['bank', bank]] as const) {
-        const held = rows.filter(r => ANTIPOISON_IDS.includes(r.id) && r.count > 0).sort((a, b) => dosesOf(a.id) - dosesOf(b.id))[0];
-        if (held) return { where, id: held.id };
+        let bestId = -1;
+        let bestDose = Infinity;
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows[i]!;
+            if (r.count <= 0) continue;
+            const dose = ANTIPOISON_DOSE.get(r.id);
+            if (dose !== undefined && dose < bestDose) {
+                bestDose = dose;
+                bestId = r.id;
+            }
+        }
+        if (bestId !== -1) return { where, id: bestId };
     }
     return null;
 }
 
 export function nearestBank(at: { x: number; z: number }) {
-    const cheb = (t: { x: number; z: number }) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z));
-    return [...BANK_MEETS].sort((a, b) => cheb(a.meet[0]) - cheb(b.meet[0]))[0]!;
+    let best = BANK_MEETS[0]!;
+    let bestDist = Infinity;
+    for (let i = 0; i < BANK_MEETS.length; i++) {
+        const b = BANK_MEETS[i]!;
+        const t = b.meet[0];
+        const dx = Math.abs(t.x - at.x);
+        const dz = Math.abs(t.z - at.z);
+        const d = dx >= dz ? dx : dz;
+        if (d < bestDist) {
+            bestDist = d;
+            best = b;
+        }
+    }
+    return best;
 }
 
 export async function cureWithAntipoison(s: Session): Promise<{ ok: boolean; detail: string }> {
@@ -116,27 +145,11 @@ export async function cureWithAntipoison(s: Session): Promise<{ ok: boolean; det
         : { ok: false, detail: `the ${potion.name} was not drunk` };
 }
 
-export const GLORY_UNCHARGED = [1704, 1706, 1708, 1710] as const;
 export const GLORY_4 = 1712;
 export const FOUNTAIN_ID = 2638;
 export const FALADOR_WEST_BANK: Tile = { x: 2946, z: 3368, level: 0 };
 export const HEROES_FOUNTAIN_STAND: Tile = { x: 2916, z: 9893, level: 0 };
 export const HEROES_FOUNTAIN_TILE: Tile = { x: 2917, z: 9893, level: 0 };
-
-export function canEnterHeroesBasement(acct: {
-    quests?: ReadonlySet<string>;
-    varps?: Readonly<Record<string, number>>;
-    questStages?: Readonly<Record<string, number>>;
-    unlocks?: readonly string[];
-    skills: Record<string, number>;
-}): { ok: boolean; reason?: string } {
-    const heroDone = !!acct.quests?.has("hero's quest") || (acct.varps?.heroquest ?? acct.questStages?.heroquest ?? 0) >= 15 || !!acct.unlocks?.includes('complete:heroquest');
-    if (!heroDone) return { ok: false, reason: "Hero's Quest is required for the Fountain of Heroes" };
-    const skills = Object.fromEntries(Object.entries(acct.skills).map(([k, v]) => [k.toLowerCase(), v]));
-    const cb = combatLevel(skills), hp = skills.hitpoints ?? 10;
-    if (cb < 111 && hp < 75) return { ok: false, reason: `Heroes basement safety requires combat >= 111 or Hitpoints >= 75 (observed combat=${cb}, hp=${hp})` };
-    return { ok: true };
-}
 
 export async function runChargeGlory(
     s: Session,
@@ -253,13 +266,20 @@ const LUMBER_YARD_CRATES = [
     { x: 3303, z: 3506 }, { x: 3298, z: 3514 }, { x: 3311, z: 3511 },
 ] as const;
 
+const mainRootCache = new Map<string, string>();
+const cachedLabelsByFile = new Map<string, { mtimeMs: number; size: number; key: string; context: { labels?: Labels; hubAreas?: ReadonlySet<number> } }>();
+
 function resolveMainRoot(fromDir: string): string {
+    const cached = mainRootCache.get(fromDir);
+    if (cached !== undefined) return cached;
+    let resolved = fromDir;
     try {
         const list = Bun.spawnSync(['git', '-C', fromDir, 'worktree', 'list', '--porcelain'], { stdout: 'pipe', stderr: 'ignore', windowsHide: true }).stdout.toString();
         const main = /^worktree (.+)$/m.exec(list)?.[1];
-        if (main && existsSync(join(main, '.practice'))) return main;
+        if (main && existsSync(join(main, '.practice'))) resolved = main;
     } catch { /* fall back to fromDir */ }
-    return fromDir;
+    mainRootCache.set(fromDir, resolved);
+    return resolved;
 }
 
 function readCompatibleHeaderSource(file: string, currentKey: string): string | null {
@@ -285,10 +305,9 @@ function readCompatibleHeaderSource(file: string, currentKey: string): string | 
     }
 }
 
-function loadCachedLabels(rootDir: string): Labels | undefined {
+function loadCachedLabels(rootDir: string, key: string): Labels | undefined {
     const file = join(rootDir, '.practice', 'cache', 'route-areas.bin');
     if (!existsSync(file)) return undefined;
-    const key = pathfindingDataKey();
     const direct = readLabels(file, key);
     if (direct) return direct;
     const fallbackSource = readCompatibleHeaderSource(file, key);
@@ -298,14 +317,36 @@ function loadCachedLabels(rootDir: string): Labels | undefined {
 export function loadRecoveryLocationContext(
     rootDir = resolveMainRoot(REPO_ROOT),
 ): { labels?: Labels; hubAreas?: ReadonlySet<number> } {
-    const labels = loadCachedLabels(rootDir);
-    if (!labels) return {};
+    const file = join(rootDir, '.practice', 'cache', 'route-areas.bin');
+    let mtimeMs = -1;
+    let size = -1;
+    try {
+        const st = statSync(file);
+        mtimeMs = st.mtimeMs;
+        size = st.size;
+    } catch {
+        cachedLabelsByFile.delete(file);
+        return {};
+    }
+    const key = pathfindingDataKey();
+    const cached = cachedLabelsByFile.get(file);
+    if (cached && cached.mtimeMs === mtimeMs && cached.size === size && cached.key === key) {
+        return cached.context;
+    }
+    const labels = loadCachedLabels(rootDir, key);
+    if (!labels) {
+        const empty = {};
+        cachedLabelsByFile.set(file, { mtimeMs, size, key, context: empty });
+        return empty;
+    }
     const hubAreas = new Set<number>();
     for (const h of HUB_BANK_TILES) {
         const id = labels.area(h.level, h.x, h.z);
         if (id >= 0) hubAreas.add(id);
     }
-    return { labels, hubAreas: hubAreas.size > 0 ? hubAreas : undefined };
+    const context = { labels, hubAreas: hubAreas.size > 0 ? hubAreas : undefined };
+    cachedLabelsByFile.set(file, { mtimeMs, size, key, context });
+    return context;
 }
 
 function isHealthyHubLoc(classification: LocationClassification): boolean {
@@ -530,14 +571,4 @@ export async function recoverSessionToHub(
         from,
         to,
     };
-}
-
-export function parseRecoveryTargetArg(args: readonly string[]): { x: number; z: number; level: number } | undefined {
-    const raw = args.find(a => a.startsWith('--target='));
-    if (!raw) return undefined;
-    const parts = raw.slice('--target='.length).split(',').map(Number);
-    if (parts.length < 2 || parts.length > 3 || parts.some(n => !Number.isSafeInteger(n))) {
-        throw Error(`invalid --target=${raw}`);
-    }
-    return { x: parts[0]!, z: parts[1]!, level: parts[2] ?? 0 };
 }

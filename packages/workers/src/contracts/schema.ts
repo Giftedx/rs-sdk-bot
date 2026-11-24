@@ -371,36 +371,59 @@ function checkNumericMap(
         errors.push(`${label} must be an object`);
         return;
     }
-    for (const [k, val] of Object.entries(raw)) {
+    for (const k in raw) {
+        if (!Object.hasOwn(raw, k)) continue;
+        const val = raw[k];
         if (!keyValid(k)) errors.push(`${label} has invalid key "${k}"`);
         if (!valValid(val)) errors.push(`${label}["${k}"] has invalid value`);
     }
 }
 
-const isItemIdKey = (k: string): boolean => /^(0|[1-9]\d*)$/.test(k);
+const isItemIdKey = (k: string): boolean => {
+    const len = k.length;
+    if (len === 0) return false;
+    const c0 = k.charCodeAt(0);
+    if (c0 === 48) return len === 1;
+    if (c0 < 49 || c0 > 57) return false;
+    for (let i = 1; i < len; i++) {
+        const c = k.charCodeAt(i);
+        if (c < 48 || c > 57) return false;
+    }
+    return true;
+};
 
 // --- Type guards for closed vocabularies ---
 
+const WORKER_FAMILY_SET: ReadonlySet<string> = new Set(WORKER_FAMILIES);
+const TRUST_TIER_SET: ReadonlySet<string> = new Set(TRUST_TIERS);
+const WORKER_KIND_SET: ReadonlySet<string> = new Set(WORKER_KINDS);
+const OUTCOME_KIND_SET: ReadonlySet<string> = new Set(OUTCOME_KINDS);
+const INFRA_FAULT_SOURCE_SET: ReadonlySet<string> = new Set(INFRA_FAULT_SOURCES);
+const WORKER_QUEST_STATE_SET: ReadonlySet<string> = new Set(WORKER_QUEST_STATES);
+const RATE_CONFIDENCE_SET: ReadonlySet<string> = new Set(RATE_CONFIDENCE_LEVELS);
+const UNREACHABLE_REASONS: ReadonlySet<string> = new Set(['no_route', 'budget', 'unknown_pos', 'plane_mismatch']);
+const SURVIVABILITY_REASONS: ReadonlySet<string> = new Set(['defence', 'hitpoints', 'food', 'prayer', 'protection']);
+
 export const isWorkerFamily = (v: unknown): v is WorkerFamily =>
-    typeof v === 'string' && (WORKER_FAMILIES as readonly string[]).includes(v);
+    typeof v === 'string' && WORKER_FAMILY_SET.has(v);
 
 export const isTrustTier = (v: unknown): v is TrustTier =>
-    typeof v === 'string' && (TRUST_TIERS as readonly string[]).includes(v);
+    typeof v === 'string' && TRUST_TIER_SET.has(v);
 
 export const isWorkerKind = (v: unknown): v is WorkerKind =>
-    typeof v === 'string' && (WORKER_KINDS as readonly string[]).includes(v);
+    typeof v === 'string' && WORKER_KIND_SET.has(v);
 
 export const isOutcomeKind = (v: unknown): v is OutcomeKind =>
-    typeof v === 'string' && (OUTCOME_KINDS as readonly string[]).includes(v);
+    typeof v === 'string' && OUTCOME_KIND_SET.has(v);
 
 export const isInfraFaultSource = (v: unknown): v is InfraFaultSource =>
-    typeof v === 'string' && (INFRA_FAULT_SOURCES as readonly string[]).includes(v);
+    typeof v === 'string' && INFRA_FAULT_SOURCE_SET.has(v);
 
 export const isWorkerQuestState = (v: unknown): v is WorkerQuestState =>
-    typeof v === 'string' && (WORKER_QUEST_STATES as readonly string[]).includes(v);
+    typeof v === 'string' && WORKER_QUEST_STATE_SET.has(v);
 
 export const isRateEstimateConfidence = (v: unknown): v is RateEstimateConfidence =>
-    typeof v === 'string' && (RATE_CONFIDENCE_LEVELS as readonly string[]).includes(v);
+    typeof v === 'string' && RATE_CONFIDENCE_SET.has(v);
 
 export function trustMeetsMinimum(actual: TrustTier, minimum: TrustTier): boolean {
     return TRUST_TIER_RANK[actual] >= TRUST_TIER_RANK[minimum];
@@ -426,15 +449,17 @@ export function availableCoinsAfterReserves(
     geEscrowCoins = 0,
     operatingFloat = 0,
 ): number {
-    for (const [label, n] of [
-        ['totalCoins', totalCoins],
-        ['reservedCoins', reservedCoins],
-        ['geEscrowCoins', geEscrowCoins],
-        ['operatingFloat', operatingFloat],
-    ] as const) {
-        if (!Number.isFinite(n) || n < 0) {
-            throw new Error(`availableCoinsAfterReserves requires finite non-negative ${label} (got ${n})`);
-        }
+    if (!Number.isFinite(totalCoins) || totalCoins < 0) {
+        throw new Error(`availableCoinsAfterReserves requires finite non-negative totalCoins (got ${totalCoins})`);
+    }
+    if (!Number.isFinite(reservedCoins) || reservedCoins < 0) {
+        throw new Error(`availableCoinsAfterReserves requires finite non-negative reservedCoins (got ${reservedCoins})`);
+    }
+    if (!Number.isFinite(geEscrowCoins) || geEscrowCoins < 0) {
+        throw new Error(`availableCoinsAfterReserves requires finite non-negative geEscrowCoins (got ${geEscrowCoins})`);
+    }
+    if (!Number.isFinite(operatingFloat) || operatingFloat < 0) {
+        throw new Error(`availableCoinsAfterReserves requires finite non-negative operatingFloat (got ${operatingFloat})`);
     }
     return Math.max(0, totalCoins - reservedCoins - geEscrowCoins - operatingFloat);
 }
@@ -442,11 +467,11 @@ export function availableCoinsAfterReserves(
 export function accountOwnedItemCount(
     acct: WorkerAccountView,
     itemId: number,
-    opts: { includeBank?: boolean; requireTrustedBank?: boolean } = {},
+    opts?: { includeBank?: boolean; requireTrustedBank?: boolean },
 ): number {
     if (!isNonNegInt(itemId)) throw new Error(`invalid itemId: ${itemId}`);
-    const includeBank = opts.includeBank ?? true;
-    const requireTrustedBank = opts.requireTrustedBank ?? true;
+    const includeBank = opts?.includeBank ?? true;
+    const requireTrustedBank = opts?.requireTrustedBank ?? true;
     const inv = acct.inventory[itemId] ?? 0;
     const eq = acct.equipment[itemId] ?? 0;
     const bankOk = includeBank && (!requireTrustedBank || acct.bank.trusted);
@@ -460,93 +485,104 @@ export function accountReserveFor(
     itemId: number,
 ): number {
     const acctRes = acct.reserves?.[itemId] ?? 0;
-    const worldRes = world.reserves?.[acct.name.toLowerCase()]?.[itemId]
-        ?? world.reserves?.[acct.name]?.[itemId]
-        ?? 0;
+    let worldRes = 0;
+    const worldReserves = world.reserves;
+    if (worldReserves) {
+        const byLower = worldReserves[acct.name.toLowerCase()];
+        worldRes = byLower !== undefined ? (byLower[itemId] ?? 0) : (worldReserves[acct.name]?.[itemId] ?? 0);
+    }
     const globalRes = world.globalReserves?.[itemId] ?? 0;
-    return Math.max(acctRes, worldRes) + globalRes;
+    return (acctRes >= worldRes ? acctRes : worldRes) + globalRes;
 }
 
 export function accountEscrowCoins(
     acct: WorkerAccountView,
     world: WorkerWorldView,
 ): number {
-    return world.geEscrowCoins?.[acct.name.toLowerCase()]
-        ?? world.geEscrowCoins?.[acct.name]
-        ?? 0;
+    const escrow = world.geEscrowCoins;
+    if (!escrow) return 0;
+    return escrow[acct.name.toLowerCase()] ?? escrow[acct.name] ?? 0;
 }
 
 // --- Preflight validators & constructors ---
 
-export function validatePreflightBlocker(v: unknown): string[] {
-    if (!isPlainRecord(v)) return ['blocker must be an object'];
-    const errors: string[] = [];
-    if (v.message !== undefined && typeof v.message !== 'string') errors.push('blocker.message must be a string');
+function collectPreflightBlockerErrors(v: unknown, errors: string[], prefix: string): void {
+    const push = (msg: string) => errors.push(prefix ? `${prefix}${msg}` : msg);
+    if (!isPlainRecord(v)) {
+        push('blocker must be an object');
+        return;
+    }
+    if (v.message !== undefined && typeof v.message !== 'string') push('blocker.message must be a string');
     switch (v.kind) {
         case 'skill_level':
-            if (!isNonEmptyStr(v.skill)) errors.push('skill_level.skill must be non-empty');
-            if (!isPosInt(v.required)) errors.push('skill_level.required must be a positive integer');
-            if (!isNonNegInt(v.current)) errors.push('skill_level.current must be a non-negative integer');
+            if (!isNonEmptyStr(v.skill)) push('skill_level.skill must be non-empty');
+            if (!isPosInt(v.required)) push('skill_level.required must be a positive integer');
+            if (!isNonNegInt(v.current)) push('skill_level.current must be a non-negative integer');
             break;
         case 'quest_incomplete':
-            if (!isNonEmptyStr(v.quest)) errors.push('quest_incomplete.quest must be non-empty');
+            if (!isNonEmptyStr(v.quest)) push('quest_incomplete.quest must be non-empty');
             if (v.requiredState !== undefined && v.requiredState !== 'started' && v.requiredState !== 'complete') {
-                errors.push('quest_incomplete.requiredState must be started or complete');
+                push('quest_incomplete.requiredState must be started or complete');
             }
             if (v.currentState !== undefined && !isWorkerQuestState(v.currentState)) {
-                errors.push('quest_incomplete.currentState invalid');
+                push('quest_incomplete.currentState invalid');
             }
             break;
         case 'missing_supply':
-            if (!isNonNegInt(v.itemId)) errors.push('missing_supply.itemId must be a non-negative integer');
-            if (v.itemName !== undefined && !isNonEmptyStr(v.itemName)) errors.push('missing_supply.itemName must be non-empty');
-            if (!isPosInt(v.required)) errors.push('missing_supply.required must be a positive integer');
-            if (!isNonNegInt(v.available)) errors.push('missing_supply.available must be a non-negative integer');
-            if (!isNonNegInt(v.reserved)) errors.push('missing_supply.reserved must be a non-negative integer');
+            if (!isNonNegInt(v.itemId)) push('missing_supply.itemId must be a non-negative integer');
+            if (v.itemName !== undefined && !isNonEmptyStr(v.itemName)) push('missing_supply.itemName must be non-empty');
+            if (!isPosInt(v.required)) push('missing_supply.required must be a positive integer');
+            if (!isNonNegInt(v.available)) push('missing_supply.available must be a non-negative integer');
+            if (!isNonNegInt(v.reserved)) push('missing_supply.reserved must be a non-negative integer');
             break;
         case 'missing_coins':
-            if (!isPosInt(v.required)) errors.push('missing_coins.required must be a positive integer');
-            if (!isNonNegInt(v.available)) errors.push('missing_coins.available must be a non-negative integer');
-            if (!isNonNegInt(v.reserved)) errors.push('missing_coins.reserved must be a non-negative integer');
-            if (v.escrow !== undefined && !isNonNegInt(v.escrow)) errors.push('missing_coins.escrow must be a non-negative integer');
-            if (v.ferryFare !== undefined && !isNonNegInt(v.ferryFare)) errors.push('missing_coins.ferryFare must be a non-negative integer');
+            if (!isPosInt(v.required)) push('missing_coins.required must be a positive integer');
+            if (!isNonNegInt(v.available)) push('missing_coins.available must be a non-negative integer');
+            if (!isNonNegInt(v.reserved)) push('missing_coins.reserved must be a non-negative integer');
+            if (v.escrow !== undefined && !isNonNegInt(v.escrow)) push('missing_coins.escrow must be a non-negative integer');
+            if (v.ferryFare !== undefined && !isNonNegInt(v.ferryFare)) push('missing_coins.ferryFare must be a non-negative integer');
             break;
         case 'unreachable_tile':
-            if (!isWorkerTile(v.target)) errors.push('unreachable_tile.target must be a valid tile');
-            if (v.from !== undefined && v.from !== null && !isWorkerTile(v.from)) errors.push('unreachable_tile.from must be a valid tile or null');
-            if (v.reason !== undefined && !['no_route', 'budget', 'unknown_pos', 'plane_mismatch'].includes(String(v.reason))) {
-                errors.push('unreachable_tile.reason invalid');
+            if (!isWorkerTile(v.target)) push('unreachable_tile.target must be a valid tile');
+            if (v.from !== undefined && v.from !== null && !isWorkerTile(v.from)) push('unreachable_tile.from must be a valid tile or null');
+            if (v.reason !== undefined && (typeof v.reason !== 'string' || !UNREACHABLE_REASONS.has(v.reason))) {
+                push('unreachable_tile.reason invalid');
             }
             break;
         case 'combat_survivability':
-            if (!['defence', 'hitpoints', 'food', 'prayer', 'protection'].includes(String(v.reason))) {
-                errors.push('combat_survivability.reason invalid');
+            if (typeof v.reason !== 'string' || !SURVIVABILITY_REASONS.has(v.reason)) {
+                push('combat_survivability.reason invalid');
             }
-            if (v.required !== undefined && !isFiniteNonNeg(v.required)) errors.push('combat_survivability.required must be finite non-negative');
-            if (v.current !== undefined && !isFiniteNonNeg(v.current)) errors.push('combat_survivability.current must be finite non-negative');
+            if (v.required !== undefined && !isFiniteNonNeg(v.required)) push('combat_survivability.required must be finite non-negative');
+            if (v.current !== undefined && !isFiniteNonNeg(v.current)) push('combat_survivability.current must be finite non-negative');
             break;
         case 'max_level_cap':
-            if (!isNonEmptyStr(v.skill)) errors.push('max_level_cap.skill must be non-empty');
-            if (!isPosInt(v.maxLevel)) errors.push('max_level_cap.maxLevel must be a positive integer');
-            if (!isNonNegInt(v.current)) errors.push('max_level_cap.current must be a non-negative integer');
+            if (!isNonEmptyStr(v.skill)) push('max_level_cap.skill must be non-empty');
+            if (!isPosInt(v.maxLevel)) push('max_level_cap.maxLevel must be a positive integer');
+            if (!isNonNegInt(v.current)) push('max_level_cap.current must be a non-negative integer');
             break;
         case 'protected_clock':
             break;
         case 'cooldown_active':
-            if (!isNonEmptyStr(v.key)) errors.push('cooldown_active.key must be non-empty');
-            if (!isFinitePos(v.expiresAt)) errors.push('cooldown_active.expiresAt must be a positive timestamp');
+            if (!isNonEmptyStr(v.key)) push('cooldown_active.key must be non-empty');
+            if (!isFinitePos(v.expiresAt)) push('cooldown_active.expiresAt must be a positive timestamp');
             break;
         case 'capacity_full':
-            if (!isNonEmptyStr(v.spotId)) errors.push('capacity_full.spotId must be non-empty');
-            if (!isNonNegInt(v.active)) errors.push('capacity_full.active must be a non-negative integer');
-            if (!isPosInt(v.limit)) errors.push('capacity_full.limit must be a positive integer');
+            if (!isNonEmptyStr(v.spotId)) push('capacity_full.spotId must be non-empty');
+            if (!isNonNegInt(v.active)) push('capacity_full.active must be a non-negative integer');
+            if (!isPosInt(v.limit)) push('capacity_full.limit must be a positive integer');
             break;
         case 'invalid_config':
-            if (!isNonEmptyStr(v.message)) errors.push('invalid_config.message must be non-empty');
+            if (!isNonEmptyStr(v.message)) push('invalid_config.message must be non-empty');
             break;
         default:
-            errors.push(`unknown preflight blocker kind: ${String(v.kind)}`);
+            push(`unknown preflight blocker kind: ${String(v.kind)}`);
     }
+}
+
+export function validatePreflightBlocker(v: unknown): string[] {
+    const errors: string[] = [];
+    collectPreflightBlockerErrors(v, errors, '');
     return errors;
 }
 
@@ -559,9 +595,9 @@ export function validatePreflightResult(v: unknown): string[] {
     if (!Array.isArray(v.blockers)) {
         errors.push('blockers must be an array');
     } else {
-        v.blockers.forEach((b, idx) => {
-            for (const err of validatePreflightBlocker(b)) errors.push(`blockers[${idx}]: ${err}`);
-        });
+        for (let idx = 0; idx < v.blockers.length; idx++) {
+            collectPreflightBlockerErrors(v.blockers[idx], errors, `blockers[${idx}]: `);
+        }
         if (v.ok === true && v.blockers.length > 0) errors.push('ok=true requires blockers to be empty');
         if (v.ok === false && v.blockers.length === 0) errors.push('ok=false requires at least one blocker');
     }
@@ -569,34 +605,110 @@ export function validatePreflightResult(v: unknown): string[] {
     if (v.travelTicks !== undefined && !isFiniteNonNeg(v.travelTicks)) errors.push('travelTicks must be finite non-negative');
     if (v.missingItems !== undefined) {
         if (!Array.isArray(v.missingItems)) errors.push('missingItems must be an array');
-        else v.missingItems.forEach((item, idx) => {
-            if (!isPlainRecord(item) || !isNonNegInt(item.itemId) || !isPosInt(item.count)
-                || (item.itemName !== undefined && !isNonEmptyStr(item.itemName))) {
-                errors.push(`missingItems[${idx}] is invalid`);
+        else {
+            for (let idx = 0; idx < v.missingItems.length; idx++) {
+                const item = v.missingItems[idx];
+                if (!isPlainRecord(item) || !isNonNegInt(item.itemId) || !isPosInt(item.count)
+                    || (item.itemName !== undefined && !isNonEmptyStr(item.itemName))) {
+                    errors.push(`missingItems[${idx}] is invalid`);
+                }
             }
-        });
+        }
     }
     return errors;
 }
 
 export const isPreflightResult = (v: unknown): v is PreflightResult => validatePreflightResult(v).length === 0;
 
+function extraPreflightFieldsValid(extra: Omit<PreflightResult, 'ok' | 'blockers'>): boolean {
+    if (extra.travelCoins !== undefined && !isNonNegInt(extra.travelCoins)) return false;
+    if (extra.travelTicks !== undefined && !isFiniteNonNeg(extra.travelTicks)) return false;
+    if (extra.missingItems !== undefined) {
+        if (!Array.isArray(extra.missingItems)) return false;
+        for (let i = 0; i < extra.missingItems.length; i++) {
+            const item = extra.missingItems[i];
+            if (!isPlainRecord(item) || !isNonNegInt(item.itemId) || !isPosInt(item.count)
+                || (item.itemName !== undefined && !isNonEmptyStr(item.itemName))) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function fastBlockerValid(b: PreflightBlocker): boolean {
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return false;
+    if (b.message !== undefined && typeof b.message !== 'string') return false;
+    switch (b.kind) {
+        case 'skill_level':
+            return isNonEmptyStr(b.skill) && isPosInt(b.required) && isNonNegInt(b.current);
+        case 'quest_incomplete':
+            return isNonEmptyStr(b.quest)
+                && (b.requiredState === undefined || b.requiredState === 'started' || b.requiredState === 'complete')
+                && (b.currentState === undefined || isWorkerQuestState(b.currentState));
+        case 'missing_supply':
+            return isNonNegInt(b.itemId)
+                && (b.itemName === undefined || isNonEmptyStr(b.itemName))
+                && isPosInt(b.required) && isNonNegInt(b.available) && isNonNegInt(b.reserved);
+        case 'missing_coins':
+            return isPosInt(b.required) && isNonNegInt(b.available) && isNonNegInt(b.reserved)
+                && (b.escrow === undefined || isNonNegInt(b.escrow))
+                && (b.ferryFare === undefined || isNonNegInt(b.ferryFare));
+        case 'unreachable_tile':
+            return isWorkerTile(b.target)
+                && (b.from === undefined || b.from === null || isWorkerTile(b.from))
+                && (b.reason === undefined || (typeof b.reason === 'string' && UNREACHABLE_REASONS.has(b.reason)));
+        case 'combat_survivability':
+            return typeof b.reason === 'string' && SURVIVABILITY_REASONS.has(b.reason)
+                && (b.required === undefined || isFiniteNonNeg(b.required))
+                && (b.current === undefined || isFiniteNonNeg(b.current));
+        case 'max_level_cap':
+            return isNonEmptyStr(b.skill) && isPosInt(b.maxLevel) && isNonNegInt(b.current);
+        case 'protected_clock':
+            return true;
+        case 'cooldown_active':
+            return isNonEmptyStr(b.key) && isFinitePos(b.expiresAt);
+        case 'capacity_full':
+            return isNonEmptyStr(b.spotId) && isNonNegInt(b.active) && isPosInt(b.limit);
+        case 'invalid_config':
+            return isNonEmptyStr(b.message);
+        default:
+            return false;
+    }
+}
+
+const EMPTY_BLOCKERS: readonly PreflightBlocker[] = Object.freeze([]);
+
 export function preflightOk(
-    extra: Omit<PreflightResult, 'ok' | 'blockers'> = {},
+    extra?: Omit<PreflightResult, 'ok' | 'blockers'>,
 ): PreflightResult {
-    const result: PreflightResult = { ok: true, blockers: [], ...extra };
-    const errs = validatePreflightResult(result);
-    if (errs.length) throw new Error(`Invalid preflightOk: ${errs.join('; ')}`);
+    if (extra === undefined) return { ok: true, blockers: EMPTY_BLOCKERS };
+    const result: PreflightResult = { ok: true, blockers: EMPTY_BLOCKERS, ...extra };
+    if (!extraPreflightFieldsValid(result) || (result as unknown as { ok: unknown }).ok !== true || result.blockers.length > 0) {
+        const errs = validatePreflightResult(result);
+        if (errs.length) throw new Error(`Invalid preflightOk: ${errs.join('; ')}`);
+    }
     return result;
 }
 
 export function preflightFail(
     blockers: readonly PreflightBlocker[],
-    extra: Omit<PreflightResult, 'ok' | 'blockers'> = {},
+    extra?: Omit<PreflightResult, 'ok' | 'blockers'>,
 ): PreflightResult {
-    const result: PreflightResult = { ok: false, blockers: [...blockers], ...extra };
-    const errs = validatePreflightResult(result);
-    if (errs.length) throw new Error(`Invalid preflightFail: ${errs.join('; ')}`);
+    const copied = Array.isArray(blockers) ? blockers.slice() : blockers;
+    const result: PreflightResult = extra === undefined
+        ? { ok: false, blockers: copied }
+        : { ok: false, blockers: copied, ...extra };
+    let valid = Array.isArray(copied) && copied.length > 0 && (extra === undefined || extraPreflightFieldsValid(result));
+    if (valid) {
+        for (let i = 0; i < copied.length; i++) {
+            if (!fastBlockerValid(copied[i]!)) { valid = false; break; }
+        }
+    }
+    if (!valid || (result as unknown as { ok: unknown }).ok !== false) {
+        const errs = validatePreflightResult(result);
+        if (errs.length) throw new Error(`Invalid preflightFail: ${errs.join('; ')}`);
+    }
     return result;
 }
 
@@ -651,12 +763,13 @@ export function validateRunOutcome(v: unknown): string[] {
             if (!Array.isArray(v.missing) || v.missing.length === 0) {
                 errors.push('missing_supply.missing must be a non-empty array');
             } else {
-                v.missing.forEach((m, idx) => {
+                for (let idx = 0; idx < v.missing.length; idx++) {
+                    const m = v.missing[idx];
                     if (!isPlainRecord(m) || !isNonNegInt(m.itemId) || !isPosInt(m.required) || !isNonNegInt(m.available)
                         || (m.itemName !== undefined && !isNonEmptyStr(m.itemName))) {
                         errors.push(`missing_supply.missing[${idx}] is invalid`);
                     }
-                });
+                }
             }
             break;
         case 'location_stranded':
@@ -738,14 +851,16 @@ export function createWorkerRegistry(
             return mod;
         },
         has: (id) => modules.has(id),
-        list: (filter = {}) => {
+        list: (filter) => {
             const out: WorkerModule<any, any, any, any>[] = [];
             for (const mod of modules.values()) {
-                if (filter.family !== undefined && mod.family !== filter.family) continue;
-                if (filter.kind !== undefined && mod.kind !== filter.kind) continue;
-                if (filter.trust !== undefined && mod.trust !== filter.trust) continue;
-                if (filter.minTrust !== undefined && !trustMeetsMinimum(mod.trust, filter.minTrust)) continue;
-                if (filter.protectedAllowed !== undefined && Boolean(mod.protectedAllowed) !== filter.protectedAllowed) continue;
+                if (filter) {
+                    if (filter.family !== undefined && mod.family !== filter.family) continue;
+                    if (filter.kind !== undefined && mod.kind !== filter.kind) continue;
+                    if (filter.trust !== undefined && mod.trust !== filter.trust) continue;
+                    if (filter.minTrust !== undefined && !trustMeetsMinimum(mod.trust, filter.minTrust)) continue;
+                    if (filter.protectedAllowed !== undefined && Boolean(mod.protectedAllowed) !== filter.protectedAllowed) continue;
+                }
                 out.push(mod);
             }
             return out.sort((a, b) => a.id.localeCompare(b.id));

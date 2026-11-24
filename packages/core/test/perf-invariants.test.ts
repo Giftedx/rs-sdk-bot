@@ -8,7 +8,12 @@ import { ThreatBook, decideAdapt, type Member, type Sighting } from '../src/pvp-
 import { decodeAppearance, digest, model } from '../src/rival-feed';
 import { loadTravel } from '../src/travel';
 import { loadPathfinding } from '../src/pathcache';
-import { rsPathLength } from '../src/world';
+import { createWorld, rsPathLength } from '../src/world';
+import { loadDanger } from '../src/randomevents';
+import { hostedEntrySource } from '../src/host';
+import { magicKit, rangedKit, denseSpawns, killSpawns } from '../src/gather';
+import { classifyTick, startLedger } from '../src/ledger';
+import { safeCandidates } from '../src/combat-end';
 
 test('loadTravel cache matches cold parse and recovers cleanly from corrupt cache files', () => {
     const dir = mkdtempSync(join(tmpdir(), 'travel-cache-'));
@@ -169,3 +174,138 @@ test('world pathLength.measurePrechecked matches measure and invalidates interac
         pl.measurePrechecked!({ x: 3222, z: 3218, level: 0 }, { x: 3204, z: 3229, level: 0 }, [door], 2, stairs),
     );
 }, 120_000);
+
+test('loadDanger disk cache matches uncached parse and recovers from corrupt or stale cache files', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'danger-cache-'));
+    try {
+        const cacheFile = join(dir, 'danger-v1.json');
+        const uncached = loadDanger('');
+        const first = loadDanger(cacheFile);
+        const second = loadDanger(cacheFile);
+        expect(first).toEqual(uncached);
+        expect(second).toEqual(uncached);
+        writeFileSync(cacheFile, '{corrupt json');
+        expect(loadDanger(cacheFile)).toEqual(uncached);
+        const broken = JSON.parse(readFileSync(cacheFile, 'utf8'));
+        broken.pack = 'stale';
+        writeFileSync(cacheFile, JSON.stringify(broken));
+        expect(loadDanger(cacheFile)).toEqual(uncached);
+        const brokenDir = JSON.parse(readFileSync(cacheFile, 'utf8'));
+        brokenDir.dirs[0][1] = 'stale';
+        writeFileSync(cacheFile, JSON.stringify(brokenDir));
+        expect(loadDanger(cacheFile)).toEqual(uncached);
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+test('hostedEntrySource template cache substitutes per-bot ids accurately', () => {
+    const src = `import { openBot } from '../packages/core/src/bot';
+const label = "import.meta.main";
+if (import.meta.main) {
+    console.log(process.argv[2], label);
+    void openBot('a');
+}
+`;
+    const scriptDir = join(process.cwd(), 'scripts');
+    const a = hostedEntrySource(src, 'bot-alpha', scriptDir);
+    const b = hostedEntrySource(src, "bot'beta\\1", scriptDir);
+    expect(a).toContain('globalThis.__rsBotHost.get("bot-alpha")');
+    expect(a).toContain('hostbot=bot-alpha');
+    expect(a).not.toContain('bot-beta');
+    expect(b).toContain('globalThis.__rsBotHost.get("bot\'beta\\\\1")');
+    expect(b).toContain("hostbot=bot\\'beta\\\\1");
+    expect(b).not.toContain('bot-alpha');
+    expect(a).toContain('"import.meta.main"');
+});
+
+test('createWorld routes multi-hop and repeated waypoint goals consistently with cached lower bounds', () => {
+    const t1 = {
+        locName: 'stairs1',
+        option: 'op1',
+        from: { x: 100, z: 100, level: 0 },
+        to: { x: 200, z: 200, level: 1 },
+        exact: true,
+        src: 'a',
+        toSrc: 'b',
+        handler: 'h',
+    };
+    const t2 = {
+        locName: 'stairs2',
+        option: 'op1',
+        from: { x: 210, z: 200, level: 1 },
+        to: { x: 300, z: 300, level: 2 },
+        exact: true,
+        src: 'c',
+        toSrc: 'd',
+        handler: 'h',
+    };
+    const flat = (from: { x: number; z: number; level: number }, to: { x: number; z: number; level: number }) =>
+        (from.level === to.level ? Math.max(Math.abs(from.x - to.x), Math.abs(from.z - to.z)) : null);
+    const w = createWorld({ transports: [t1, t2], doors: [], pathLength: flat });
+    const acct = { skills: {}, varps: {}, items: [] };
+    const r1 = w.route({ x: 95, z: 100, level: 0 }, t2.to, acct);
+    const r2 = w.route({ x: 90, z: 100, level: 0 }, t2.to, acct);
+    const rDyn = w.route({ x: 95, z: 100, level: 0 }, { x: 305, z: 300, level: 2 }, acct);
+    expect(r1).toMatchObject({ ok: true, cost: 5 + 3 + 10 + 3 });
+    expect(r2).toMatchObject({ ok: true, cost: 10 + 3 + 10 + 3 });
+    expect(rDyn).toMatchObject({ ok: true, cost: 5 + 3 + 10 + 3 + 5 });
+});
+
+test('ledger startLedger and classifyTick preserve inventory and stun parity with reused state objects', () => {
+    const callbacks = new Set<() => void>();
+    let tick = 0;
+    const inv = [{ id: 314, count: 10 }];
+    const skills = [{ name: 'Attack', experience: 100 }];
+    const player = { worldX: 3200, worldZ: 3200, level: 0, animId: -1, combat: { lastDamageTick: -1 } };
+    const state: any = { tick: 0, player, skills, inventory: inv, gameMessages: [], combatEvents: [] };
+    const ledger = startLedger({
+        sdk: { getState: () => state },
+        onTick: cb => { callbacks.add(cb); return () => callbacks.delete(cb); },
+        tick: () => tick,
+    }, () => 'walkTo');
+
+    // Reorder / split stack in-place: total count unchanged -> idle.
+    tick = 1; state.tick = 1;
+    inv.length = 0;
+    inv.push({ id: 314, count: 4 }, { id: 314, count: 6 });
+    for (const cb of callbacks) cb();
+
+    // Actual count change -> inventory.
+    tick = 2; state.tick = 2;
+    inv[1]!.count = 7;
+    for (const cb of callbacks) cb();
+
+    // Stun message -> stun.
+    tick = 3; state.tick = 3;
+    state.gameMessages = [{ tick: 3, text: 'You have been stunned!' }];
+    for (const cb of callbacks) cb();
+
+    const summary = ledger.stop();
+    expect(summary.counts).toMatchObject({ idle: 1, inventory: 1, stun: 1 });
+    expect(classifyTick({ inventory: [{ id: 314, count: 10 }, null] }, { inventory: [null, { id: 314, count: 4 }, { id: 314, count: 6 }] })).toBe('idle');
+    expect(classifyTick({ inventory: [{ id: 314, count: 10 }] }, { inventory: [{ id: 314, count: 11 }] })).toBe('inventory');
+});
+
+test('gather kits, spawn clustering, and combat-end safeCandidates preserve selection invariants', () => {
+    const staffOwned = [{ id: 558, count: 6 }, { id: 556, count: 12 }, { id: 554, count: 18 }, { id: 1387, count: 1 }];
+    expect(magicKit(staffOwned, 13, 6)).toEqual({
+        staff: 1387,
+        component: 'magic:fire_strike',
+        level: 13,
+        maxhit: 8,
+        runes: { 558: 1, 556: 2 },
+    });
+    expect(rangedKit([{ id: 841, count: 1 }, { id: 882, count: 10 }, { id: 884, count: 15 }])).toEqual({
+        bow: 841,
+        arrows: 884,
+    });
+    const goblins = killSpawns(288);
+    expect(goblins.length).toBeGreaterThan(10);
+    expect(denseSpawns(goblins).length).toBeGreaterThan(0);
+
+    const sq = [{ x: 3200, z: 3200, r: 4, name: 'guard' }];
+    const cands = safeCandidates({ x: 3200, z: 3200, level: 0 }, sq, 10);
+    expect(cands.length).toBeGreaterThan(0);
+    expect(cands.every(c => Math.max(Math.abs(c.x - 3200), Math.abs(c.z - 3200)) > 4)).toBe(true);
+});

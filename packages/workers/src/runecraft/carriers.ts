@@ -37,7 +37,7 @@ function altarCraft(
 ) {
     const complete = () => ess(s) === 0
         && Math.abs((s.sdk.getSkillXp('Runecraft') ?? 0) - previousXp - n * rate) <= 1
-        && s.sdk.getInventory().filter(i => i.id === a.rune).reduce((sum, i) => sum + i.count, 0) - runes === n * runesPerEssence(a, level);
+        && countInvId(s, a.rune) - runes === n * runesPerEssence(a, level);
     const boundary = pipeline ? observeCraftCompletion(s, complete, stop) : undefined;
     return {
         complete,
@@ -58,6 +58,40 @@ const bodyCraft = (s: Session, n: number, previousXp: number, level: number, run
 
 type Craft = ReturnType<typeof altarCraft>;
 type Carrier = { s: Session; ready: boolean; deliveries: number; refills: number[]; flight?: Promise<void> };
+
+function pickMinReadyCarrier<T extends { ready: boolean }>(crew: readonly T[], score: (item: T) => number): T | undefined {
+    let best: T | undefined;
+    let bestScore = Infinity;
+    for (let i = 0; i < crew.length; i++) {
+        const c = crew[i]!;
+        if (!c.ready) continue;
+        const s = score(c);
+        if (s < bestScore) {
+            best = c;
+            bestScore = s;
+        }
+    }
+    return best;
+}
+
+function countInvId(s: Session, id: number): number {
+    const items = s.sdk.getInventory();
+    let n = 0;
+    for (let i = 0; i < items.length; i++) if (items[i]!.id === id) n += items[i]!.count;
+    return n;
+}
+
+function sameEquipment(
+    a: readonly { id: number; count: number; slot?: number }[],
+    b: readonly { id: number; count: number; slot?: number }[],
+): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        const x = a[i]!, y = b[i]!;
+        if (x.id !== y.id || x.count !== y.count || x.slot !== y.slot) return false;
+    }
+    return true;
+}
 
 async function carrierCraftLoop(
     a: RuneCarrierAltar,
@@ -82,19 +116,19 @@ async function carrierCraftLoop(
     const tickTrade = runeTickTrade() && !pipeline;
     while (xp() < o.targetXp) {
         if (stop()) throw failure() ?? Error('carrier route stopped or over budget');
-        let d = crew.filter(h => h.ready).sort((x, y) => x.deliveries - y.deliveries)[0];
+        let d = pickMinReadyCarrier(crew, h => h.deliveries);
         if (!d) {
             const at = s.tick();
             if (!await waitUntil(s, () => stop() || crew.some(h => h.ready), { timeoutTicks: 190 })) throw Error('no carrier returned');
             waiting += s.tick() - at;
             if (stop()) throw failure() ?? Error('carrier route stopped');
-            d = crew.filter(h => h.ready).sort((x, y) => x.deliveries - y.deliveries)[0];
+            d = pickMinReadyCarrier(crew, h => h.deliveries);
         }
         if (!d) throw Error('no owned ready carrier');
         d.ready = false;
         const before = xp(), at = s.tick();
-        const tal = s.sdk.getInventory().filter(i => i.id === a.talisman).reduce((n, i) => n + i.count, 0);
-        const runes = s.sdk.getInventory().filter(i => i.id === a.rune).reduce((n, i) => n + i.count, 0);
+        const tal = countInvId(s, a.talisman);
+        const runes = countInvId(s, a.rune);
         const craft = altarCraft(a, s, 27, before, s.sdk.getSkill('Runecraft')?.baseLevel ?? 0, runes, o.rate, stop, pipeline);
         const ticked = tickTrade && tal !== 1;
         const coupled = ticked || (craftAfter === 'trade-message' && tal !== 1);
@@ -178,7 +212,7 @@ export async function continueRuneBody(
         throw Error('body measurement requires an existing99 crafter');
     }
     if (measure) measurementNeed(xp0, Number(process.env.BODY_XP_RATE ?? 25) * 7.5, options.measurePacks!);
-    const health = all.map(a => a.sdk.getSkill('Hitpoints')?.level), equipment = all.map(a => JSON.stringify(a.sdk.getEquipment()));
+    const health = all.map(a => a.sdk.getSkill('Hitpoints')?.level), equipment = all.map(a => a.sdk.getEquipment().map(e => ({ id: e.id, count: e.count, slot: e.slot })));
     const parallel = async <T>(work: Promise<T>[]) => {
         let firstFailure: { reason: unknown } | undefined;
         const results = await Promise.allSettled(work.map(p => p.catch(e => { firstFailure ??= { reason: e }; stopCarriers(); throw e; })));
@@ -227,10 +261,10 @@ export async function continueRuneBody(
             }
             if (childFailure) throw childFailure;
             check();
-            const d = batches === 0 ? crew[loan]! : crew.filter(x => x.ready).sort((a, b) => a.spent - b.spent)[0]!;
+            const d = batches === 0 ? crew[loan]! : pickMinReadyCarrier(crew, x => x.spent)!;
             d.ready = false;
             const n = d.amount, prev = xp(), level = s.sdk.getSkill('Runecraft')?.baseLevel ?? 0;
-            const runes = s.sdk.getInventory().filter(i => i.id === 559).reduce((a, b) => a + b.count, 0);
+            const runes = countInvId(s, 559);
             const craft = bodyCraft(s, n, prev, level, runes, plan.xpPerEssence, stop, pipeline);
             const coupled = batches !== 0 && craftAfter === 'trade-message';
             crafts.add(craft);
@@ -243,7 +277,7 @@ export async function continueRuneBody(
             if (!coupled) { await s.bot.dismissBlockingUI(); check(); await craft.send(); }
             if (!await waitUntil(s, () => stop() || craft.complete(), { timeoutTicks: 15 })) throw Error('continuation craft effects unobserved');
             check();
-            const made = s.sdk.getInventory().filter(i => i.id === 559).reduce((a, b) => a + b.count, 0) - runes;
+            const made = countInvId(s, 559) - runes;
             if (ess(s) !== 0 || made !== n * (Math.floor(level / 46) + 1) || Math.abs(xp() - prev - n * plan.xpPerEssence) > 1) {
                 throw Error('continuation craft debit, product or XP mismatch');
             }
@@ -271,7 +305,7 @@ export async function continueRuneBody(
                 const expected = id === 1436 ? (i === 0 ? 0 : -crew[i - 1]!.spent) : id === 559 && i === 0 ? crafted : 0;
                 if (delta !== expected) throw Error(`continuation asset mismatch ${all[i]!.name} item${id}: ${delta} expected${expected}`);
             }
-            if ((all[i]!.sdk.getSkill('Hitpoints')?.level ?? 0) < (health[i] ?? 1) || ess(all[i]!) !== 0 || JSON.stringify(all[i]!.sdk.getEquipment()) !== equipment[i]) {
+            if ((all[i]!.sdk.getSkill('Hitpoints')?.level ?? 0) < (health[i] ?? 1) || ess(all[i]!) !== 0 || !sameEquipment(all[i]!.sdk.getEquipment(), equipment[i]!)) {
                 throw Error('continuation health, equipment or pack mismatch');
             }
         }

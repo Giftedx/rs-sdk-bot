@@ -110,16 +110,37 @@ export function squadBurnBudget(tribrids = 10, hours = SQUAD_HOURS, opts: { comb
     return out;
 }
 
+const SQUAD_FOOD_HEAL_ENTRIES = Object.entries(SQUAD_FOOD_HEAL);
+const SQUAD_HOURLY_KEYS = Object.keys(SQUAD_HOURLY);
+const SQUAD_ESCAPE_EXTRA = Object.entries(SQUAD_ESCAPE).filter(([item]) => !(item in SQUAD_HOURLY));
+const SQUAD_SPARES_EXTRA = Object.entries(SQUAD_SPARES).filter(([item]) => !(item in SQUAD_HOURLY));
+const SQUAD_STATIC_BASE_KEEPS: Readonly<Record<string, number>> = (() => {
+    const base: Record<string, number> = { ...SQUAD_ESCAPE, ...SQUAD_SPARES, 'cape of legend': 2 };
+    for (const [primary, names] of Object.entries(SQUAD_GEAR_ALIASES)) {
+        const cap = SQUAD_SPARES[primary] ?? 2;
+        for (const name of names) base[name] = Math.max(base[name] ?? 0, cap);
+    }
+    return base;
+})();
+const squadKeepsCache = new Map<number, Readonly<Record<string, number>>>();
+const squadLineNamesCache = new Map<string, readonly string[]>();
+const squadLinesCache = new Map<number, readonly [string, readonly string[], number][]>();
+
+function squadLineNamesRef(item: string): readonly string[] {
+    let cached = squadLineNamesCache.get(item);
+    if (!cached) {
+        if (item === 'food') cached = ['shark'];
+        else if (item === 'arrow') cached = SQUAD_ARROWS;
+        else if (SQUAD_POTION_ALIASES[item]) cached = SQUAD_POTION_ALIASES[item]!.map(([name]) => name);
+        else if (SQUAD_GEAR_ALIASES[item]) cached = SQUAD_GEAR_ALIASES[item]!;
+        else cached = [item];
+        squadLineNamesCache.set(item, cached);
+    }
+    return cached;
+}
+
 // The names that a row of a line asks for: sharks for food, the best arrows for the arrow line, potions in preferred order, else the item itself.
-export const squadLineNames = (item: string): string[] => {
-    if (item === 'food') return ['shark'];
-    if (item === 'arrow') return [...SQUAD_ARROWS];
-    const potion = SQUAD_POTION_ALIASES[item];
-    if (potion) return potion.map(([name]) => name);
-    const alias = SQUAD_GEAR_ALIASES[item];
-    if (alias) return [...alias];
-    return [item];
-};
+export const squadLineNames = (item: string): string[] => [...squadLineNamesRef(item)];
 
 export type SquadBlock = { active?: unknown; members?: unknown; hours?: unknown };
 // `maxCoins`: the most the rows ask in coins at the shop price in ONE PASS (a budget of outstanding demand, not a total: as stock
@@ -149,54 +170,86 @@ export const squadTarget = (item: string, hours: number): number => {
 };
 // What a member holds of a line, in the line's units: food as shark units by heal, potions in 3-dose units.
 export function squadHeld(item: string, items: Readonly<Record<string, number>>): number {
-    if (item === 'arrow') return SQUAD_ARROWS.reduce((n, arrow) => n + (items[arrow] ?? 0), 0);
-    if (item === 'food') return Object.entries(SQUAD_FOOD_HEAL).reduce((n, [food, heal]) => n + (items[food] ?? 0) * heal / SQUAD_FOOD_HEAL.shark!, 0);
+    if (item === 'arrow') {
+        let sum = 0;
+        for (const arrow of SQUAD_ARROWS) sum += items[arrow] ?? 0;
+        return sum;
+    }
+    if (item === 'food') {
+        let sum = 0;
+        const sharkHeal = SQUAD_FOOD_HEAL.shark!;
+        for (const [food, heal] of SQUAD_FOOD_HEAL_ENTRIES) sum += (items[food] ?? 0) * heal / sharkHeal;
+        return sum;
+    }
     const potion = SQUAD_POTION_ALIASES[item];
-    if (potion) return potion.reduce((n, [name, doses]) => n + (items[name] ?? 0) * doses / 3, 0);
+    if (potion) {
+        let sum = 0;
+        for (const [name, doses] of potion) sum += (items[name] ?? 0) * doses / 3;
+        return sum;
+    }
     const alias = SQUAD_GEAR_ALIASES[item];
-    if (alias) return alias.reduce((n, name) => n + (items[name] ?? 0), 0);
+    if (alias) {
+        let sum = 0;
+        for (const name of alias) sum += items[name] ?? 0;
+        return sum;
+    }
     return items[item] ?? 0;
 }
 // The most of each item a squad member keeps for the squad, by item name: a donor that is a member gives only what it
 // holds above this. Each food item is kept up to the whole food target in its own units.
 export function squadKeeps(hours: number): Record<string, number> {
-    const keeps: Record<string, number> = { ...SQUAD_ESCAPE, ...SQUAD_SPARES, 'cape of legend': 2 };
-    for (const [primary, names] of Object.entries(SQUAD_GEAR_ALIASES)) {
-        const cap = SQUAD_SPARES[primary] ?? 2;
-        for (const name of names) keeps[name] = Math.max(keeps[name] ?? 0, cap);
-    }
-    for (const item of Object.keys(SQUAD_HOURLY)) {
-        const target = Math.max(squadTarget(item, hours), SQUAD_ESCAPE[item] ?? 0);
-        if (item === 'arrow') { for (const arrow of SQUAD_ARROWS) keeps[arrow] = target; continue; }
-        if (item === 'food') {
-            for (const food of SQUAD_FOOD) keeps[food] = Math.ceil(target * SQUAD_FOOD_HEAL.shark! / SQUAD_FOOD_HEAL[food]!);
-            continue;
+    let cached = squadKeepsCache.get(hours);
+    if (!cached) {
+        const keeps: Record<string, number> = { ...SQUAD_STATIC_BASE_KEEPS };
+        const sharkHeal = SQUAD_FOOD_HEAL.shark!;
+        for (const item of SQUAD_HOURLY_KEYS) {
+            const target = Math.max(squadTarget(item, hours), SQUAD_ESCAPE[item] ?? 0);
+            if (item === 'arrow') { for (const arrow of SQUAD_ARROWS) keeps[arrow] = target; continue; }
+            if (item === 'food') {
+                for (const food of SQUAD_FOOD) keeps[food] = Math.ceil(target * sharkHeal / SQUAD_FOOD_HEAL[food]!);
+                continue;
+            }
+            const potion = SQUAD_POTION_ALIASES[item];
+            if (potion) {
+                for (const [name, doses] of potion) keeps[name] = Math.max(keeps[name] ?? 0, Math.ceil(target * 3 / doses));
+                continue;
+            }
+            keeps[item] = Math.max(keeps[item] ?? 0, target);
         }
-        const potion = SQUAD_POTION_ALIASES[item];
-        if (potion) {
-            for (const [name, doses] of potion) keeps[name] = Math.max(keeps[name] ?? 0, Math.ceil(target * 3 / doses));
-            continue;
-        }
-        keeps[item] = Math.max(keeps[item] ?? 0, target);
+        cached = keeps;
+        squadKeepsCache.set(hours, cached);
     }
-    return keeps;
+    return { ...cached };
 }
 
 // The demand rows of an active squad: each line a member holds fewer of than its target, and each escape/spare item it lacks. Food
 // is sized in sharks, potions in 3-dose units, and the arrow line in rune arrows (squadLineNames). The rows are priced with `price`
 // (the plan's price table; a missing price falls back to SQUAD_UNIT_COST of the supply table or 300 for a shark) and kept in line
 // order while they fit `maxCoins`.
+function getSquadLines(hours: number): readonly [string, readonly string[], number][] {
+    let lines = squadLinesCache.get(hours);
+    if (!lines) {
+        const built: [string, readonly string[], number][] = [];
+        for (const item of SQUAD_HOURLY_KEYS) {
+            built.push([item, squadLineNamesRef(item), Math.max(squadTarget(item, hours), SQUAD_ESCAPE[item] ?? 0)]);
+        }
+        for (const [item, n] of SQUAD_ESCAPE_EXTRA) built.push([item, squadLineNamesRef(item), n]);
+        for (const [item, n] of SQUAD_SPARES_EXTRA) built.push([item, squadLineNamesRef(item), n]);
+        lines = built;
+        squadLinesCache.set(hours, lines);
+    }
+    return lines;
+}
+
 const FOOD_UNIT_COINS = 300;
 export function squadRows(squad: SquadInput | undefined, price: (item: string) => number | undefined = () => undefined, unitCost: Readonly<Record<string, number>> = {}): SquadRow[] {
-    if (!squad?.active) return [];
+    if (!squad?.active || !squad.members.length) return [];
     const rows: SquadRow[] = [];
     let budget = squad.maxCoins ?? SQUAD_MAX_COINS;
+    const lines = getSquadLines(squad.hours);
     for (const m of squad.members) {
-        const lines: [string, string[], number][] = [
-            ...Object.keys(SQUAD_HOURLY).map(item => [item, squadLineNames(item), Math.max(squadTarget(item, squad.hours), SQUAD_ESCAPE[item] ?? 0)] as [string, string[], number]),
-            ...Object.entries(SQUAD_ESCAPE).filter(([item]) => !(item in SQUAD_HOURLY)).map(([item, n]) => [item, squadLineNames(item), n] as [string, string[], number]),
-            ...Object.entries(SQUAD_SPARES).filter(([item]) => !(item in SQUAD_HOURLY)).map(([item, n]) => [item, squadLineNames(item), n] as [string, string[], number]),
-        ];
+        const prefix = `gang squad ${m.name}: `;
+        const account = m.name.toLowerCase();
         for (const [item, names, target] of lines) {
             const units = Math.max(0, Math.ceil(target - squadHeld(item, m.items)));
             if (units <= 0) continue;
@@ -204,7 +257,7 @@ export function squadRows(squad: SquadInput | undefined, price: (item: string) =
             const coins = short * (price(first) ?? unitCost[first] ?? (item === 'food' ? FOOD_UNIT_COINS : 0));
             if (coins > budget) continue;
             budget -= coins;
-            rows.push({ account: m.name.toLowerCase(), names, short, target, consumer: `gang squad ${m.name}: ${item}` });
+            rows.push({ account, names: [...names], short, target, consumer: prefix + item });
         }
     }
     return rows;

@@ -52,60 +52,6 @@ export function upperBoundX(xs: Int32Array, target: number): number {
     return lo;
 }
 
-class CostMinHeap {
-    private idx: Int32Array;
-    private cost: Float64Array;
-    size = 0;
-    lastCost = 0;
-    constructor(cap: number) {
-        const n = Math.max(16, cap);
-        this.idx = new Int32Array(n);
-        this.cost = new Float64Array(n);
-    }
-    push(index: number, c: number): void {
-        if (this.size >= this.idx.length) {
-            const nextIdx = new Int32Array(this.idx.length * 2);
-            nextIdx.set(this.idx);
-            this.idx = nextIdx;
-            const nextCost = new Float64Array(this.cost.length * 2);
-            nextCost.set(this.cost);
-            this.cost = nextCost;
-        }
-        let i = this.size++;
-        while (i > 0) {
-            const p = (i - 1) >> 1;
-            if (this.cost[p]! <= c) break;
-            this.idx[i] = this.idx[p]!;
-            this.cost[i] = this.cost[p]!;
-            i = p;
-        }
-        this.idx[i] = index;
-        this.cost[i] = c;
-    }
-    popIdx(): number {
-        const topIdx = this.idx[0]!;
-        this.lastCost = this.cost[0]!;
-        const n = --this.size;
-        if (n > 0) {
-            const lastIdx = this.idx[n]!, lastCost = this.cost[n]!;
-            let i = 0;
-            for (;;) {
-                const l = 2 * i + 1;
-                if (l >= n) break;
-                const r = l + 1;
-                const c = r < n && this.cost[r]! < this.cost[l]! ? r : l;
-                if (lastCost <= this.cost[c]!) break;
-                this.idx[i] = this.idx[c]!;
-                this.cost[i] = this.cost[c]!;
-                i = c;
-            }
-            this.idx[i] = lastIdx;
-            this.cost[i] = lastCost;
-        }
-        return topIdx;
-    }
-}
-
 export type LowerBoundGraph = {
     nodeCount: number;
     xs: Int32Array;
@@ -116,6 +62,8 @@ export type LowerBoundGraph = {
     levelNodes: Int32Array[];
     levelXs: Int32Array[];
     levelZs: Int32Array[];
+    cachedRadius?: number;
+    cachedByGoal?: (Float64Array | undefined)[];
 };
 
 export function buildLowerBoundGraph(
@@ -178,17 +126,69 @@ export function buildLowerBoundGraph(
 // real walks, retaining lazy path measurements without pruning cheap detours.
 export function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, goalTile: Tile, relaxedRadius: number): Float64Array {
     const baseN = graph.nodeCount;
+    if (goalBoundIdx < baseN) {
+        if (graph.cachedRadius !== relaxedRadius) {
+            graph.cachedRadius = relaxedRadius;
+            graph.cachedByGoal = new Array(baseN);
+        }
+        const hit = graph.cachedByGoal![goalBoundIdx];
+        if (hit) return hit;
+    }
     const totalN = goalBoundIdx < baseN ? baseN : baseN + 1;
     const best = new Float64Array(totalN).fill(Infinity);
     best[goalBoundIdx] = 0;
     const settled = new Uint8Array(totalN);
-    const queue = new CostMinHeap(totalN);
-    queue.push(goalBoundIdx, 0);
+    const heapIdx = new Int32Array(totalN);
+    const heapCost = new Float64Array(totalN);
+    const heapPos = new Int32Array(totalN).fill(-1);
+    let heapSize = 1;
+    heapIdx[0] = goalBoundIdx;
+    heapCost[0] = 0;
+    heapPos[goalBoundIdx] = 0;
+
+    const pushOrDecrease = (node: number, cost: number) => {
+        let pos = heapPos[node]!;
+        if (pos < 0) pos = heapSize++;
+        while (pos > 0) {
+            const parentPos = (pos - 1) >> 1;
+            const parentCost = heapCost[parentPos]!;
+            if (parentCost <= cost) break;
+            const parentNode = heapIdx[parentPos]!;
+            heapIdx[pos] = parentNode;
+            heapCost[pos] = parentCost;
+            heapPos[parentNode] = pos;
+            pos = parentPos;
+        }
+        heapIdx[pos] = node;
+        heapCost[pos] = cost;
+        heapPos[node] = pos;
+    };
+
     const { xs, zs, levels, radii, incoming, levelNodes, levelXs, levelZs } = graph;
-    while (queue.size) {
-        const u = queue.popIdx();
-        const uCost = queue.lastCost;
-        if (uCost !== best[u]) continue;
+    while (heapSize > 0) {
+        const u = heapIdx[0]!;
+        const uCost = heapCost[0]!;
+        heapPos[u] = -1;
+        const n = --heapSize;
+        if (n > 0) {
+            const lastNode = heapIdx[n]!, lastCost = heapCost[n]!;
+            let i = 0;
+            for (;;) {
+                const l = 2 * i + 1;
+                if (l >= n) break;
+                const r = l + 1;
+                const c = r < n && heapCost[r]! < heapCost[l]! ? r : l;
+                if (lastCost <= heapCost[c]!) break;
+                const childNode = heapIdx[c]!;
+                heapIdx[i] = childNode;
+                heapCost[i] = heapCost[c]!;
+                heapPos[childNode] = i;
+                i = c;
+            }
+            heapIdx[i] = lastNode;
+            heapCost[i] = lastCost;
+            heapPos[lastNode] = i;
+        }
         settled[u] = 1;
         const isGoal = u === goalBoundIdx;
         const tx = u < baseN ? xs[u]! : goalTile.x;
@@ -204,14 +204,14 @@ export function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, g
                 const adx = dx < 0 ? -dx : dx, adz = dz < 0 ? -dz : dz;
                 const d = (adx > adz ? adx : adz) - tolerance;
                 const nc = uCost + (d > 0 ? d : 0);
-                if (nc < best[i]!) { best[i] = nc; queue.push(i, nc); }
+                if (nc < best[i]!) { best[i] = nc; pushOrDecrease(i, nc); }
             }
             if (goalBoundIdx >= baseN && goalTile.level === tLvl && !settled[goalBoundIdx]) {
                 const dx = goalTile.x - tx, dz = goalTile.z - tz;
                 const adx = dx < 0 ? -dx : dx, adz = dz < 0 ? -dz : dz;
                 const d = (adx > adz ? adx : adz) - tolerance;
                 const nc = uCost + (d > 0 ? d : 0);
-                if (nc < best[goalBoundIdx]!) { best[goalBoundIdx] = nc; queue.push(goalBoundIdx, nc); }
+                if (nc < best[goalBoundIdx]!) { best[goalBoundIdx] = nc; pushOrDecrease(goalBoundIdx, nc); }
             }
         }
         if (u < baseN) {
@@ -219,10 +219,11 @@ export function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, g
             const nextCost = uCost + TRANSPORT_COST;
             for (let k = 0; k < inc.length; k++) {
                 const idx = inc[k]!;
-                if (nextCost < best[idx]!) { best[idx] = nextCost; queue.push(idx, nextCost); }
+                if (nextCost < best[idx]!) { best[idx] = nextCost; pushOrDecrease(idx, nextCost); }
             }
         }
     }
+    if (goalBoundIdx < baseN) graph.cachedByGoal![goalBoundIdx] = best;
     return best;
 }
 

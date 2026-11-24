@@ -21,17 +21,22 @@ import { type AgilityConfig, type AgilitySessionOutcome, type NormalizedAgilityC
 
 const KNOWN_AGILITY_FOOD_IDS = [379, 373, 385, 333, 329, 361, 315, 2142, 2309, 1963, 1985, 1891, 1893, 1895] as const;
 const AGILITY_POTION_IDS = [3032, 3034, 3036, 3038] as const;
+const SUPPORTED_COURSE_SET = new Set<string>(SUPPORTED_AGILITY_COURSES);
+const BARCRAWL_RE = /barcrawl/i;
 
 function skillLevel(acct: WorkerAccountView, name: string): number {
-    for (const [k, v] of Object.entries(acct.skills)) {
-        if (k.toLowerCase() === name.toLowerCase()) return v.level;
+    const direct = acct.skills[name];
+    if (direct !== undefined) return direct.level;
+    const lower = name.toLowerCase();
+    for (const k in acct.skills) {
+        if (k.toLowerCase() === lower) return acct.skills[k]!.level;
     }
-    return name.toLowerCase() === 'hitpoints' ? 10 : 1;
+    return lower === 'hitpoints' ? 10 : 1;
 }
 
 function barcrawlState(acct: WorkerAccountView): number {
-    for (const [k, st] of Object.entries(acct.quests)) {
-        if (/barcrawl/i.test(k) && st === 'complete') return 2;
+    for (const k in acct.quests) {
+        if (BARCRAWL_RE.test(k) && acct.quests[k] === 'complete') return 2;
     }
     return 0;
 }
@@ -68,7 +73,7 @@ export function evaluateAgilityPreflight(
             message: 'ape-atoll agility course is unsupported on this rev-289 server',
         }]);
     }
-    if (!SUPPORTED_AGILITY_COURSES.includes(cfg.course as typeof SUPPORTED_AGILITY_COURSES[number])) {
+    if (!SUPPORTED_COURSE_SET.has(cfg.course)) {
         return preflightFail([{ kind: 'invalid_config', message: `unknown agility course: ${cfg.course}` }]);
     }
     if (!Number.isSafeInteger(cfg.targetLevel) || cfg.targetLevel < 1 || cfg.targetLevel > 99) {

@@ -1,11 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { finish, finishHooks, openBot, settle } from '../../../core/src/bot';
 import type { Step } from '../../../core/src/chain-step';
-import { resolveRouteStep } from '../../../core/src/route-step';
-import { runDirectChild } from '../../../core/src/run-child';
 import { QUEST_NAMES, questShortfall } from './chain';
-import { QUEST_FINDS, PRAYER_POTIONS, needs, prayerCovers, presetFor, wornKitPlan } from './sweep';
+import { QUEST_FINDS, PRAYER_POTIONS, needs, prayerCovers, presetFor, wornKitPlan } from './sweep-plan';
 import { REPO_ROOT, type SweepApiOptions } from './types';
 
 export interface QuesterModeSpec {
@@ -102,27 +99,33 @@ export function assessQuestReadiness(
     skills?: Readonly<Record<string, number>>,
 ) {
     const script = resolveQuestScript(questInput);
-    const slug = script.split('/').at(-1)!.replace(/^quest-/, '').replace(/\.ts$/, '');
-    const completed = new Set(
-        [...completedQuests].flatMap((name) => {
-            try {
-                return [questKey(name), questKey(resolveQuestScript(name).split('/').at(-1)!.replace(/^quest-/, '').replace(/\.ts$/, ''))];
-            } catch {
-                return [questKey(name)];
-            }
-        }),
-    );
+    const slug = script.slice(script.lastIndexOf('/') + 1).replace(/^quest-/, '').replace(/\.ts$/, '');
+    const completed = new Set<string>();
+    for (const name of completedQuests) {
+        completed.add(questKey(name));
+        try {
+            const resolved = resolveQuestScript(name);
+            completed.add(questKey(resolved.slice(resolved.lastIndexOf('/') + 1).replace(/^quest-/, '').replace(/\.ts$/, '')));
+        } catch {
+            /* ignore unresolved completed name */
+        }
+    }
     const isComplete = (q: string) => completed.has(questKey(q)) || (!!QUEST_NAMES[q] && completed.has(questKey(QUEST_NAMES[q]!)));
     const blockers: string[] = [];
     if (isComplete(slug) || completed.has(questKey(questInput))) {
         return { slug, script, alreadyComplete: true, ready: false, missingItems: {} as Record<number, number>, blockers, startTile: null };
     }
-    const observedSkills =
-        skills &&
-        Object.entries(skills)
-            .filter(([, level]) => Number.isFinite(level) && level >= 1)
-            .map(([name, level]) => ({ name, level }));
-    blockers.push(...questShortfall(slug, observedSkills).map((short) => `skill ${short}`));
+    let observedSkills: { name: string; level: number }[] | undefined;
+    if (skills) {
+        observedSkills = [];
+        for (const name in skills) {
+            if (!Object.prototype.hasOwnProperty.call(skills, name)) continue;
+            const level = skills[name]!;
+            if (Number.isFinite(level) && level >= 1) observedSkills.push({ name, level });
+        }
+    }
+    const shortfalls = questShortfall(slug, observedSkills);
+    for (let i = 0; i < shortfalls.length; i++) blockers.push(`skill ${shortfalls[i]!}`);
     for (const q of QUEST_PREREQUISITES[slug] ?? []) {
         if (!isComplete(q)) blockers.push(`quest ${QUEST_NAMES[q] ?? q} incomplete or unknown`);
     }
@@ -169,6 +172,7 @@ export function prioritizeQuestsForAccount(
 }
 
 export function resolveQuesterStep(modeOrQuest: string, rest: readonly string[] = [], root = REPO_ROOT): Step {
+    const { resolveRouteStep } = require('../../../core/src/route-step') as typeof import('../../../core/src/route-step');
     const key = modeOrQuest.toLowerCase().replace(/^--mode=/, '').replace(/^--quest=/, '');
     const modeSpec = QUESTER_MODES.find((m) => m.mode === key);
     if (modeSpec) {
@@ -214,6 +218,7 @@ export async function dispatchQuesterCli(
         process.env[k] = v;
     }
     const subArgs = resolved.args.slice(1);
+    const { finish, finishHooks, openBot, settle } = await import('../../../core/src/bot');
     try {
         switch (key) {
             case 'sweep': {
@@ -408,6 +413,10 @@ export async function runAioQuester(
     const key = first.toLowerCase().replace(/^--mode=/, '').replace(/^--quest=/, '');
     const mode = QUESTER_MODES.find((m) => m.mode === key);
     const resolved = resolveQuesterStep(first, rest);
+    const [{ resolveRouteStep }, { runDirectChild }] = await Promise.all([
+        import('../../../core/src/route-step'),
+        import('../../../core/src/run-child'),
+    ]);
     const step = mode?.orderFile ? resolveRouteStep({ script: mode.script, defaultArgs: mode.defaultArgs, defaultEnv: mode.defaultEnv }, rest) : resolved;
     const orderFile = mode?.orderFile;
     return runDirectChild(orderFile ? [step.script, ...step.args] : [step.script, account, ...step.args], { ...env, ...step.env });

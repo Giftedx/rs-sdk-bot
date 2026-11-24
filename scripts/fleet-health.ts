@@ -11,18 +11,23 @@ import { FLEET_DIR, loadOwners, mySide, type Owner } from '../packages/core/src/
 import { fleetStatusRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
 import { readLabels, type Labels } from '../packages/core/src/components';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
-import { findStopFile, hasStopFile, statusReadDirs, stopFilePaths } from '../packages/core/src/practice-paths';
-import { jobAccounts } from '../packages/fleet/src/trade-plan';
-import { brainPlannedJobs } from '../packages/fleet/src/fleet-sync';
+import { findStopFile, hasStopFile, liveRoot, practiceRoot, statusReadDirs, stopFilePaths } from '../packages/core/src/practice-paths';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { pathfindingDataKey } from '../packages/core/src/pathcache';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
-import { cachedReleaseFor } from '../packages/core/src/worker-release';
-import { SWARM_STOP, swarmWroteStop } from './swarm';
 import { failLoops, readRecentResults, type FailLoop, type ResultRow } from '../packages/core/src/fail-loops';
-import { inPaterdomusTemple } from './generated/quest-priestperil';
 
 const require = createRequire(import.meta.url);
+const getSwarm = () => require('./swarm') as typeof import('./swarm');
+const getTradePlan = () => require('../packages/fleet/src/trade-plan') as typeof import('../packages/fleet/src/trade-plan');
+const getFleetSync = () => require('../packages/fleet/src/fleet-sync') as typeof import('../packages/fleet/src/fleet-sync');
+const getWorkerRelease = () => require('../packages/core/src/worker-release') as typeof import('../packages/core/src/worker-release');
+
+const inPaterdomusTemple = (x: number, z: number, level = 0): boolean => {
+    if (level !== 0 || z < 3480 || z > 3500 || x > 3420) return false;
+    if (x >= 3409) return true;
+    return x === 3408 && (z < 3488 || z > 3489);
+};
 
 export const HEALTH_STOP_PREFIX = 'fleet-health auto-paused:';
 export const RECOVER_SCRIPT = 'scripts/aio-logistics.ts';
@@ -33,7 +38,7 @@ export const DEFAULT_MAX_RECOVERIES = 2;
 export function recoverEnvironment(
     rootDir: string,
     env: Record<string, string | undefined> = process.env,
-    release = cachedReleaseFor([RECOVER_SCRIPT], rootDir),
+    release = getWorkerRelease().cachedReleaseFor([RECOVER_SCRIPT], rootDir),
 ): Record<string, string | undefined> {
     return {
         ...env,
@@ -229,13 +234,54 @@ function readJson<T>(file: string, fallback: T): T {
     try { return JSON.parse(readFileSync(file, 'utf8')) as T; } catch { return fallback; }
 }
 
+const mainRootCache = new Map<string, string>();
 function resolveMainRoot(fromDir: string): string {
+    const cached = mainRootCache.get(fromDir);
+    if (cached) return cached;
+    let out = fromDir;
+    try {
+        const gitFile = join(fromDir, '.git');
+        if (existsSync(gitFile)) {
+            const raw = readFileSync(gitFile, 'utf8');
+            const m = /^gitdir:\s*(.+?)[\\/]\.git[\\/]worktrees[\\/]/m.exec(raw);
+            if (m) {
+                const main = resolve(fromDir, m[1]!);
+                if (existsSync(join(main, '.practice'))) {
+                    mainRootCache.set(fromDir, main);
+                    return main;
+                }
+            }
+        }
+    } catch { /* fall back to git worktree list */ }
     try {
         const list = Bun.spawnSync(['git', '-C', fromDir, 'worktree', 'list', '--porcelain'], { stdout: 'pipe', stderr: 'ignore', timeout: 5_000, windowsHide: true }).stdout.toString();
         const main = /^worktree (.+)$/m.exec(list)?.[1];
-        if (main && existsSync(join(main, '.practice'))) return resolve(main);
+        if (main && existsSync(join(main, '.practice'))) out = resolve(main);
     } catch { /* fall back to fromDir */ }
-    return fromDir;
+    mainRootCache.set(fromDir, out);
+    return out;
+}
+
+// Batch-index stop-* files across liveRoot and practiceRoot once per audit instead of scanning per account.
+function indexStopFiles(root: string): Map<string, string> {
+    const byLower = new Map<string, string>();
+    const dirs = [liveRoot(root), practiceRoot(root)];
+    for (let d = dirs.length - 1; d >= 0; d--) {
+        const dir = dirs[d]!;
+        if (!existsSync(dir)) continue;
+        try {
+            const entries = readdirSync(dir);
+            for (const name of entries) {
+                if (name.length <= 5 || !name.slice(0, 5).toLowerCase().startsWith('stop-')) continue;
+                const key = name.toLowerCase();
+                // Exact-case or liveRoot entry takes precedence over legacy/lowercase.
+                if (d === 0 || !byLower.has(key) || name !== key) {
+                    byLower.set(key, join(dir, name));
+                }
+            }
+        } catch { /* unreadable dir */ }
+    }
+    return byLower;
 }
 
 function readCompatibleHeaderSource(file: string, currentKey: string): string | null {
@@ -350,13 +396,17 @@ export function auditFleetHealth(opts: {
     const rawJobs = Array.isArray(rawSwarm?.jobs) ? rawSwarm.jobs : [];
     const plan = opts.swarmPlan
         ? rawSwarm
-        : { ...rawSwarm, jobs: [...rawJobs, ...brainPlannedJobs(root, rawJobs, now)] };
+        : { ...rawSwarm, jobs: [...rawJobs, ...getFleetSync().brainPlannedJobs(root, rawJobs, now)] };
     const jobByAccount = new Map<string, { name: string; script?: string; enabled: boolean; template?: string; env?: Record<string, string>; args?: string[] }>();
-    for (const j of (plan?.jobs ?? []) as any[]) {
-        for (const a of jobAccounts(j)) {
-            const key = a.toLowerCase();
-            if (!jobByAccount.has(key) || j.enabled !== false) {
-                jobByAccount.set(key, { name: String(j.name ?? ''), script: j.script, enabled: j.enabled !== false, template: j.template, env: j.env, args: j.args });
+    const jobsList = (plan?.jobs ?? []) as any[];
+    if (jobsList.length > 0) {
+        const { jobAccounts } = getTradePlan();
+        for (const j of jobsList) {
+            for (const a of jobAccounts(j)) {
+                const key = a.toLowerCase();
+                if (!jobByAccount.has(key) || j.enabled !== false) {
+                    jobByAccount.set(key, { name: String(j.name ?? ''), script: j.script, enabled: j.enabled !== false, template: j.template, env: j.env, args: j.args });
+                }
             }
         }
     }
@@ -393,15 +443,16 @@ export function auditFleetHealth(opts: {
         }
     }
 
+    const stopIndex = indexStopFiles(root);
     const accounts: AccountHealthReport[] = [];
     for (const [lower, meta] of [...sideAccounts].sort((a, b) => a[0].localeCompare(b[0]))) {
         const row = rowByAccount.get(lower);
         const account = row?.name ?? meta.account;
-        const stopFile = findStopFile(account, root);
+        const stopFile = stopIndex.get(`stop-${lower}`) ?? null;
         const stopExists = stopFile !== null;
         const stopText = stopFile ? (() => { try { return readFileSync(stopFile, 'utf8').trim(); } catch { return ''; } })() : undefined;
         const healthStop = isHealthStopText(stopText);
-        const swarmStop = stopExists && swarmWroteStop(stopText);
+        const swarmStop = stopExists && getSwarm().swarmWroteStop(stopText);
         const ownerStop = stopExists && !healthStop && !swarmStop;
         const isReserved = reserved.has(lower);
         const isActive = active.has(lower);
@@ -531,7 +582,7 @@ function writeHealthStop(stopFile: string, reason: string, root?: string, accoun
         if (!existsSync(candidate)) continue;
         try {
             const cur = readFileSync(candidate, 'utf8').trim();
-            if (!isHealthStopText(cur) && !swarmWroteStop(cur)) return false;
+            if (!isHealthStopText(cur) && !getSwarm().swarmWroteStop(cur)) return false;
             if (isHealthStopText(cur)) return false;
             rmSync(candidate, { force: true });
         } catch { return false; }
@@ -545,7 +596,7 @@ function clearOwnStop(stopFile: string, allowSwarmStop = false, root?: string, a
     for (const candidate of candidates) {
         try {
             const text = readFileSync(candidate, 'utf8').trim();
-            if (!isHealthStopText(text) && !(allowSwarmStop && swarmWroteStop(text))) return false;
+            if (!isHealthStopText(text) && !(allowSwarmStop && getSwarm().swarmWroteStop(text))) return false;
         } catch { return false; }
     }
     for (const candidate of candidates) {

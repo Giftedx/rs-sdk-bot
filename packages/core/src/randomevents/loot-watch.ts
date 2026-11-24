@@ -99,6 +99,11 @@ export function createLootScanner(ctx: WatcherContext, lootOpt: LootWatchOptions
         };
     };
 
+    const hasLootJob = () => {
+        for (const k of ctx.jobs.keys()) if (k.startsWith('loot:')) return true;
+        return false;
+    };
+
     const scanLoot = () => {
         const st = ctx.state(), p = meOf(st);
         if (!p) return;
@@ -114,31 +119,48 @@ export function createLootScanner(ctx: WatcherContext, lootOpt: LootWatchOptions
         for (const [k, t] of ctx.ownDrops) if (now - t > 300) ctx.ownDrops.delete(k);
         for (const [k, t] of skipPiles) if (t < now) skipPiles.delete(k);
         if (st?.bank?.isOpen) { if (pack.some(i => ctx.kept.has(i.id))) ctx.want('loot-bank', lootBankJob()); return; }
-        if (ctx.hasActiveJob() || [...ctx.jobs.keys()].some(k => k.startsWith('loot:'))) return;
+        if (ctx.hasActiveJob() || hasLootJob()) return;
         if (st?.dialog?.isOpen || st?.shop?.isOpen || st?.trade?.isOpen || st?.ge || st?.modalOpen) return;
         if (now - ctx.scriptPickupAt() <= SCRIPT_LOOT_TICKS) return;
+        const ground = st?.groundItems as Ground[] | undefined;
+        if (!ground?.length) return;
         const tables = lootOpt.tables;
-        const piles = ((st?.groundItems ?? []) as Ground[])
-            .filter(g => worthIt(g, tables, rules))
-            .sort((a, b) => pileValue(b, tables) - pileValue(a, tables) || a.distance - b.distance);
-        for (const g of piles) {
+        let first: Ground | null = null;
+        let ranked: { g: Ground; value: number }[] | null = null;
+        for (let i = 0; i < ground.length; i++) {
+            const g = ground[i]!;
+            if (!worthIt(g, tables, rules)) continue;
+            if (!first) {
+                first = g;
+            } else {
+                if (!ranked) ranked = [{ g: first, value: pileValue(first, tables) }];
+                ranked.push({ g, value: pileValue(g, tables) });
+            }
+        }
+        if (!first) return;
+        const consider = (g: Ground): boolean => {
             const key = pileKey(p.level, g);
-            if (skipPiles.has(key) || ctx.ownDrops.has(`${g.x},${g.z},${g.id}`)) continue;
+            if (skipPiles.has(key) || ctx.ownDrops.has(`${g.x},${g.z},${g.id}`)) return false;
             const risk = lure.allow(now, p, g) ?? lootRisk(st, g, ctx.danger(), ctx.fleetNames, rules);
             if (risk) {
                 skipPiles.set(key, now + SKIP_RISK);
                 if (!riskSaid.has(key)) { riskSaid.add(key); ctx.say('loot', `skip-${risk}`, `id=${g.id} value=${pileValue(g, tables)} d=${g.distance}`); }
-                continue;
+                return false;
             }
             if (lootRoom(pack, g, tables, keepOrReserve, objStackable) === null) {
                 skipPiles.set(key, now + SKIP_DONE);
                 ctx.say('loot', 'skip-full', `id=${g.id} value=${pileValue(g, tables)}`);
-                continue;
+                return false;
             }
-            if (!claimPile(key, lootOpt.name)) continue;
+            if (!claimPile(key, lootOpt.name)) return false;
             ctx.say('loot', 'seen', `id=${g.id} n=${g.count} value=${pileValue(g, tables)} d=${g.distance}`);
             ctx.want(`loot:${key}`, lootJob(g, key));
-            return;
+            return true;
+        };
+        if (!ranked) { consider(first); return; }
+        ranked.sort((a, b) => b.value - a.value || a.g.distance - b.g.distance);
+        for (let i = 0; i < ranked.length; i++) {
+            if (consider(ranked[i]!.g)) return;
         }
     };
 

@@ -25,10 +25,30 @@ import { loadAltarOps, loadGangCollectTap, loadGangFidelityOps } from './runtime
 import { REPO_ROOT } from './types';
 
 // The attack animations of a dragon dagger (content pack/seq.pack): the lunge, the hack and the special.
-const DAGGER_ATTACKS = ['human_ddagger_lunge', 'human_ddagger_hack', 'puncture'];
+const DAGGER_ATTACKS = new Set(['human_ddagger_lunge', 'human_ddagger_hack', 'puncture']);
 let attackSeqs: Set<number> | undefined;
-const attackAnims = () => (attackSeqs ??= new Set(readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/server/content/pack/seq.pack'), 'utf8').split(/\r?\n/)
-    .flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m && DAGGER_ATTACKS.includes(m[2]!) ? [Number(m[1])] : []; })));
+const attackAnims = () => {
+    if (attackSeqs) return attackSeqs;
+    const text = readFileSync(join(REPO_ROOT, 'vendor/rs-sdk/server/content/pack/seq.pack'), 'utf8');
+    const out = new Set<number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const name = text.slice(eq + 1, lineEnd);
+            if (DAGGER_ATTACKS.has(name)) {
+                const id = Number(text.slice(pos, eq));
+                if (Number.isInteger(id) && id >= 0) out.add(id);
+            }
+        }
+        pos = end + 1;
+    }
+    attackSeqs = out;
+    return out;
+};
 // True in the tick in which the client shows a player start an attack animation. The server plays it only for an
 // attack that it let through, so on a single-way tile it names the one account that fights us.
 export function startsAttack(entity: { primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null | undefined, anims: ReadonlySet<number> = attackAnims()): boolean {
@@ -46,8 +66,30 @@ export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap';
 // The account of the gang to fight now: the one that hit us last, else the nearest in view that the game has not
 // just refused. On a single-way tile the game refuses an attack on any other while one of them fights us.
 export function pickAttacker<P extends { name: string; index: number; distance: number }>(nearby: readonly P[], alive: ReadonlySet<string>, lastHitBy: number | null, refused: ReadonlySet<string> = new Set()): P | null {
-    const gang = nearby.filter(p => alive.has(p.name.toLowerCase())), open = gang.filter(p => !refused.has(p.name.toLowerCase()));
-    return gang.find(p => p.index === lastHitBy) ?? [...(open.length ? open : gang)].sort((x, y) => x.distance - y.distance)[0] ?? null;
+    let hitMatch: P | null = null;
+    let bestOpen: P | null = null;
+    let bestOpenDist = Infinity;
+    let bestAny: P | null = null;
+    let bestAnyDist = Infinity;
+    for (let i = 0; i < nearby.length; i++) {
+        const p = nearby[i]!;
+        const lower = p.name.toLowerCase();
+        if (!alive.has(lower)) continue;
+        if (p.index === lastHitBy) {
+            hitMatch = p;
+            break;
+        }
+        if (!refused.has(lower)) {
+            if (p.distance < bestOpenDist) {
+                bestOpenDist = p.distance;
+                bestOpen = p;
+            }
+        } else if (p.distance < bestAnyDist) {
+            bestAnyDist = p.distance;
+            bestAny = p;
+        }
+    }
+    return hitMatch ?? bestOpen ?? bestAny;
 }
 // focusRunner: the account of the gang in view with the lowest health bar at or under `fraction` that our attack can
 // reach now (`open`: the single-way rule lets it through), else null. `health` reads the bar (0..1) of a player index.
@@ -64,8 +106,22 @@ export function pickRunner<P extends { name: string; index: number }>(nearby: re
 const PRAYER_DOSES = new Map([...ITEMS.prayerPotion, ...ITEMS.superRestore].map((id, i) => [id as number, 4 - (i % 4)] as const));
 const attacksOf = (f: FightResult) => f.attacks.magic + f.attacks.ranged + f.attacks.melee;
 // A meeting that measured something: our account attacked, one of the gang attacked, and no session ended.
-export const gangValid = (r: GangResult) => r.fights.some(f => attacksOf(f) > 0) && r.gang.some(f => attacksOf(f) > 0)
-    && [...r.fights, ...r.gang].every(f => f.outcome !== 'session ended' && f.outcome !== 'danger');
+export function gangValid(r: GangResult): boolean {
+    let fightAttacked = false;
+    for (let i = 0; i < r.fights.length; i++) {
+        const f = r.fights[i]!;
+        if (f.outcome === 'session ended' || f.outcome === 'danger') return false;
+        if (attacksOf(f) > 0) fightAttacked = true;
+    }
+    if (!fightAttacked) return false;
+    let gangAttacked = false;
+    for (let i = 0; i < r.gang.length; i++) {
+        const f = r.gang[i]!;
+        if (f.outcome === 'session ended' || f.outcome === 'danger') return false;
+        if (attacksOf(f) > 0) gangAttacked = true;
+    }
+    return gangAttacked;
+}
 
 // Prayer below this share of the base level is restored on a trip (the start floor of scripts/squad-ready.ts PRAYER_FLOOR).
 export const TRIP_PRAYER_FLOOR = 0.7;

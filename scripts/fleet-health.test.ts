@@ -347,3 +347,29 @@ test('auditFleetHealth and remediateFleetHealth respect .practice/live/stop-* ow
     expect(existsSync(join(liveDir, 'stop-LiveHealed'))).toBe(false);
     expect(actions.some(a => a.account === 'LiveHealed' && a.action === 'cleared_health_stop')).toBe(true);
 });
+
+test('auditFleetHealth stop-file index prioritizes .practice/live/ over legacy .practice/ when both exist', () => {
+    const root = tempWorkspace();
+    const liveDir = join(root, '.practice', 'live');
+    mkdirSync(liveDir, { recursive: true });
+    const now = 4_000_000;
+    const owners = new Map([['bothstops', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]);
+
+    // Legacy stop is auto-generated, while live stop is a manual owner hold -> live must win.
+    writeFileSync(join(root, '.practice', 'stop-BothStops'), `${HEALTH_STOP_PREFIX} legacy auto\n`);
+    writeFileSync(join(liveDir, 'stop-BothStops'), 'owner manual hold');
+    const audit = auditFleetHealth({
+        root,
+        side: 'local',
+        now,
+        owners,
+        statusRows: [{ name: 'BothStops', server: 'rs-sdk-demo.fly.dev', pos: { x: 3095, z: 9830, level: 0 }, at: now - 1000 }],
+        swarmPlan: { jobs: [] },
+        results: [],
+        deaths: {},
+    });
+    const row = audit.accounts.find(a => a.account === 'BothStops');
+    expect(row?.ownerStop).toBe(true);
+    expect(row?.healthStop).toBe(false);
+    expect(row?.fixAction).toBe('manual_hold');
+});

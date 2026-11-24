@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import {
     accountOwnedItemCount,
     preflightFail,
@@ -13,42 +14,40 @@ import {
     type WorkerWorldView,
 } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
-import { nativeNpcSpell, nativeTeleport } from '../../../core/src/magic-data';
 import { QUEST_NAMES, questShortfall } from './chain';
-import { nativeGuardianClue, runGuardianClue } from './clue-guardian';
-import { nativePuzzleRecipe, solveNativeCluePuzzle } from './clue-puzzle';
-import { nativeClueSteps, runNativeClueStep } from './clues';
-import { parseCookJobArgs, runQuestCookJob, runQuestHettyJob } from './cook-job';
-import { runDustyKey, runSeaslugLeave } from './helpers';
-import { QUEST_ITEM_RECIPES, runQuestItemsOrder } from './items-order';
 import { assessQuestReadiness, listGeneratedQuestScripts, resolveQuestScript } from './modes';
-import { QUEST_ORDERS } from './order';
-import { handOver, presetFor, sweep } from './sweep';
-
-import type { QuestConfig } from './types';
-import { REPO_ROOT } from './types';
-import { join } from 'node:path';
+import { REPO_ROOT, type QuestConfig } from './types';
 
 function accountSkillLevels(acct: WorkerAccountView): Record<string, number> {
     const skills: Record<string, number> = {};
-    for (const [k, v] of Object.entries(acct.skills)) skills[k] = v.level;
+    for (const k in acct.skills) {
+        if (Object.prototype.hasOwnProperty.call(acct.skills, k)) skills[k] = acct.skills[k]!.level;
+    }
     return skills;
 }
 
 function accountOwnedItems(acct: WorkerAccountView): Record<number, number> {
     const owned: Record<number, number> = {};
-    for (const bag of [acct.inventory, acct.equipment, acct.bank.items]) {
-        for (const [idStr, count] of Object.entries(bag)) {
-            if (count > 0) owned[Number(idStr)] = (owned[Number(idStr)] ?? 0) + count;
+    const addBag = (bag: Readonly<Record<number, number>>) => {
+        for (const idStr in bag) {
+            if (!Object.prototype.hasOwnProperty.call(bag, idStr)) continue;
+            const count = bag[idStr as unknown as number]!;
+            if (count > 0) {
+                const id = Number(idStr);
+                owned[id] = (owned[id] ?? 0) + count;
+            }
         }
-    }
+    };
+    addBag(acct.inventory);
+    addBag(acct.equipment);
+    addBag(acct.bank.items);
     return owned;
 }
 
 function completedQuestSet(acct: WorkerAccountView): Set<string> {
     const out = new Set<string>();
-    for (const [name, state] of Object.entries(acct.quests)) {
-        if (state === 'complete') out.add(name);
+    for (const name in acct.quests) {
+        if (Object.prototype.hasOwnProperty.call(acct.quests, name) && acct.quests[name] === 'complete') out.add(name);
     }
     return out;
 }
@@ -130,6 +129,7 @@ function preflightQuest(acct: WorkerAccountView, cfg: QuestConfig, _world: Worke
             break;
         }
         case 'order': {
+            const { QUEST_ORDERS } = require('./order') as typeof import('./order');
             const key = cfg.quest ?? '';
             if (!Object.hasOwn(QUEST_ORDERS, key)) {
                 blockers.push({ kind: 'invalid_config', message: `unknown quest order "${key}"` });
@@ -177,7 +177,7 @@ function preflightQuest(acct: WorkerAccountView, cfg: QuestConfig, _world: Worke
         case 'items':
         case 'cook-job': {
             const key = cfg.quest ?? 'cook';
-            if (!Object.hasOwn(QUEST_ITEM_RECIPES, key)) {
+            if (key !== 'cook' && key !== 'hetty') {
                 blockers.push({ kind: 'invalid_config', message: `unsupported quest ${cfg.operation}: ${key}` });
             }
             if (cfg.operation === 'items' && cfg.savePath && !existsSync(cfg.savePath)) {
@@ -194,7 +194,8 @@ function preflightQuest(acct: WorkerAccountView, cfg: QuestConfig, _world: Worke
                 blockers.push({ kind: 'invalid_config', message: 'clue requires valid clueId' });
                 break;
             }
-            const step = nativeClueSteps().find((v) => v.id === cfg.clueId);
+            const { nativeClueStepById } = require('./clues') as typeof import('./clues');
+            const step = nativeClueStepById(cfg.clueId!);
             if (!step || step.kind === 'unsupported') {
                 blockers.push({ kind: 'invalid_config', message: step?.gap ?? `unsupported clueId ${cfg.clueId}` });
                 break;
@@ -211,6 +212,7 @@ function preflightQuest(acct: WorkerAccountView, cfg: QuestConfig, _world: Worke
                 break;
             }
             try {
+                const { nativePuzzleRecipe } = require('./clue-puzzle') as typeof import('./clue-puzzle');
                 nativePuzzleRecipe(cfg.puzzleId!);
             } catch (err) {
                 blockers.push({ kind: 'invalid_config', message: String(err) });
@@ -223,6 +225,8 @@ function preflightQuest(acct: WorkerAccountView, cfg: QuestConfig, _world: Worke
                 break;
             }
             try {
+                const { nativeGuardianClue } = require('./clue-guardian') as typeof import('./clue-guardian');
+                const { nativeNpcSpell, nativeTeleport } = require('../../../core/src/magic-data') as typeof import('../../../core/src/magic-data');
                 const g = nativeGuardianClue(cfg.clueId!);
                 const spell = nativeNpcSpell(cfg.spell ?? 'fire_blast');
                 const tele = nativeTeleport('varrock');
@@ -308,18 +312,21 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
     try {
         switch (cfg.operation) {
             case 'clue': {
+                const { runNativeClueStep } = await import('./clues');
                 const r = await runNativeClueStep(session, cfg.clueId ?? 0, cfg.cap ?? 200);
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: r.ticks, durationMs: ms(), unitsCompleted: 1, summary: `${r.clue} ${r.effect.outcome}` }
                     : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue failed');
             }
             case 'clue-puzzle': {
+                const { solveNativeCluePuzzle } = await import('./clue-puzzle');
                 const r = await solveNativeCluePuzzle(session, cfg.puzzleId ?? 0, cfg.cap ?? 200, 25000, cfg.npcIndex);
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: r.ticks, durationMs: ms(), unitsCompleted: 1, summary: r.puzzle }
                     : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue-puzzle failed');
             }
             case 'clue-guardian': {
+                const { runGuardianClue } = await import('./clue-guardian');
                 const r = await runGuardianClue(session, cfg.clueId ?? 0, {
                     spell: cfg.spell ?? 'fire_blast',
                     maximumCasts: cfg.maxCasts ?? 30,
@@ -331,6 +338,7 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
                     : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue-guardian failed');
             }
             case 'generated': {
+                const { handOver } = await import('./sweep');
                 const scriptRel = resolveQuestScript(cfg.quest ?? '');
                 const abs = join(REPO_ROOT, scriptRel);
                 const fresh = cfg.fresh ?? `run=${sessionCore.name.toLowerCase()}-${Date.now()}`;
@@ -338,16 +346,19 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
                 return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 };
             }
             case 'seaslug-leave': {
+                const { runSeaslugLeave } = await import('./helpers');
                 await runSeaslugLeave(cfg.cap ?? 600, sessionCore.name, session);
                 return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 };
             }
             case 'dusty-key': {
+                const { runDustyKey } = await import('./helpers');
                 await runDustyKey(cfg.cap ?? 3000, sessionCore.name, session);
                 return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 };
             }
             case 'sweep':
             case 'tbwt-owned':
             case 'watchtower-owned': {
+                const { sweep } = await import('./sweep');
                 const questSlug = cfg.operation === 'tbwt-owned' ? 'tbwt' : cfg.operation === 'watchtower-owned' ? 'itwatchtower' : (cfg.quest ?? '');
                 await sweep(sessionCore.name, questSlug, cfg.fresh, cfg.apiOptions, {}, session);
                 return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 };
@@ -367,12 +378,14 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
                 };
             }
             case 'items': {
+                const { runQuestItemsOrder } = await import('./items-order');
                 const r = await runQuestItemsOrder(sessionCore.name, cfg.quest ?? 'cook', { save: cfg.savePath, cap: cfg.cap ?? 2400, session });
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 }
                     : failOutcome(activityId, sessionCore.name, elapsed(), ms(), String((r as { refused?: string; detail?: string }).refused ?? (r as { detail?: string }).detail ?? 'quest items failed'));
             }
             case 'cook-job': {
+                const { parseCookJobArgs, runQuestCookJob, runQuestHettyJob } = await import('./cook-job');
                 const q = cfg.quest === 'hetty' ? 'hetty' : 'cook';
                 const parsed = parseCookJobArgs(q === 'hetty' ? [sessionCore.name, 'hetty'] : [sessionCore.name], String(cfg.cap ?? (q === 'hetty' ? 6000 : 2400)));
                 const r = 'quest' in parsed
@@ -403,6 +416,7 @@ export const questModule: WorkerModule<QuestConfig> = {
 };
 
 export function questCatalogSummary() {
+    const { presetFor } = require('./sweep-plan') as typeof import('./sweep-plan');
     return {
         generatedScripts: listGeneratedQuestScripts().length,
         namedQuests: Object.keys(QUEST_NAMES).length,

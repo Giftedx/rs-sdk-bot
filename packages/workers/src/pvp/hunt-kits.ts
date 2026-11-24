@@ -67,7 +67,9 @@ export const SNARE_TRIP: readonly TripItem[] = [
 
 // Never fight our own accounts: every fleet side's owners plus the main account.
 export function fleetNames(owners = loadOwners()): Set<string> {
-    return new Set([...owners.keys(), 'haggis'].map(n => n.toLowerCase()));
+    const out = new Set<string>(['haggis']);
+    for (const k of owners.keys()) out.add(k.toLowerCase());
+    return out;
 }
 
 type Seen = { index: number; name: string; combatLevel: number; z: number; distance: number; inCombat?: boolean; combatTargetType?: string };
@@ -85,9 +87,21 @@ export function verdict(me: { z: number; combatLevel: number }, p: Seen, ours: S
 // melee defence (read from what the client shows it wearing), then the nearest; HUNT_PICK=near takes the nearest.
 export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number }, players: readonly P[], ours: Set<string>, attackerIndex: number | null,
     armour?: (p: P) => number, multi = false): P | undefined {
-    const attacker = attackerIndex === null ? undefined : players.find(p => p.index === attackerIndex);
-    if (attacker) return attacker;
-    return [...players].filter(p => verdict(me, p, ours, multi) === 'attackable').sort((a, b) => (armour ? armour(a) - armour(b) : 0) || a.distance - b.distance)[0];
+    let best: P | undefined;
+    let bestArmour = Infinity;
+    let bestDist = Infinity;
+    for (let i = 0; i < players.length; i++) {
+        const p = players[i]!;
+        if (attackerIndex !== null && p.index === attackerIndex) return p;
+        if (verdict(me, p, ours, multi) !== 'attackable') continue;
+        const arm = armour ? armour(p) : 0;
+        if (!best || arm < bestArmour || (arm === bestArmour && p.distance < bestDist)) {
+            best = p;
+            bestArmour = arm;
+            bestDist = p.distance;
+        }
+    }
+    return best;
 }
 
 // A hit we took from another player. The SDK also reports an NPC's damage from someone else as damage_taken, with
@@ -95,7 +109,15 @@ export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number 
 export const hitByPlayer = (e: { type: string; sourceType: string; targetType: string; sourceIndex: number }) =>
     e.type === 'damage_taken' && e.sourceType === 'other_player' && e.targetType === 'player' && e.sourceIndex >= 0;
 
-const held = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+const held = (s: Session, id: number) => {
+    const inv = s.sdk.getInventory();
+    let total = 0;
+    for (let i = 0; i < inv.length; i++) {
+        const row = inv[i]!;
+        if (row.id === id) total += row.count;
+    }
+    return total;
+};
 // The food of a trip, best first, with the Hitpoints that one piece heals (content consume_effects.dbrow: shark 20, lobster 12).
 // The restock and the bank trips take sharks first and fill what the bank lacks with lobsters.
 // A member starts a run, or leaves a bank, with at least this share of the food of its pack. Under it the missing food
@@ -141,20 +163,51 @@ export function tripRequirements(trip: readonly TripItem[], worn: readonly ItemC
         || row.maxSlots !== undefined && !whole(row.maxSlots, 28)
         || row.minDoses !== undefined && row.minCharges !== undefined
         || row.minCount !== undefined && (row.minDoses !== undefined || row.minCharges !== undefined))) return [{ id: -1, count: NaN }];
-    return trip.flatMap((row): ItemRequirement[] => {
+    let wornMap: Map<number, number> | undefined;
+    let stockMap: Map<number, number> | undefined;
+    const out: ItemRequirement[] = [];
+    for (let i = 0; i < trip.length; i++) {
+        const row = trip[i]!;
         const unit = nativeRequirementMetadata(row.id)?.unit;
-        if (row.minDoses !== undefined && row.minCharges !== undefined || (row.minCount !== undefined && unit?.kind !== undefined) || !Number.isSafeInteger(row.count) || row.count < 1) return [{ id: row.id, count: NaN }];
+        if (row.minDoses !== undefined && row.minCharges !== undefined || (row.minCount !== undefined && unit?.kind !== undefined) || !Number.isSafeInteger(row.count) || row.count < 1) {
+            out.push({ id: row.id, count: NaN });
+            continue;
+        }
         const kind = row.minDoses !== undefined ? 'doses' : row.minCharges !== undefined ? 'charges' : unit?.kind;
-        if (kind) return [{ id: row.id, kind, minUnits: row.minDoses ?? row.minCharges ?? row.count * (unit?.units ?? NaN), maxSlots: row.maxSlots ?? row.count }];
-        const wornCount = worn.filter(item => item.id === row.id).reduce((n, item) => n + item.count, 0);
+        if (kind) {
+            out.push({ id: row.id, kind, minUnits: row.minDoses ?? row.minCharges ?? row.count * (unit?.units ?? NaN), maxSlots: row.maxSlots ?? row.count });
+            continue;
+        }
+        if (!wornMap) {
+            wornMap = new Map<number, number>();
+            for (let w = 0; w < worn.length; w++) {
+                const item = worn[w]!;
+                wornMap.set(item.id, (wornMap.get(item.id) ?? 0) + item.count);
+            }
+        }
+        const wornCount = wornMap.get(row.id) ?? 0;
         const wantNeed = Math.max(0, row.count - wornCount);
-        if (row.minCount === undefined) return wantNeed > 0 ? [{ id: row.id, count: wantNeed }] : [];
+        if (row.minCount === undefined) {
+            if (wantNeed > 0) out.push({ id: row.id, count: wantNeed });
+            continue;
+        }
         const minNeed = Math.max(0, Math.min(row.count, row.minCount) - wornCount);
-        if (!stock) return minNeed > 0 ? [{ id: row.id, count: minNeed }] : [];
-        const have = stock.filter(item => item.id === row.id).reduce((n, item) => n + item.count, 0);
+        if (!stock) {
+            if (minNeed > 0) out.push({ id: row.id, count: minNeed });
+            continue;
+        }
+        if (!stockMap) {
+            stockMap = new Map<number, number>();
+            for (let sIdx = 0; sIdx < stock.length; sIdx++) {
+                const item = stock[sIdx]!;
+                stockMap.set(item.id, (stockMap.get(item.id) ?? 0) + item.count);
+            }
+        }
+        const have = stockMap.get(row.id) ?? 0;
         const count = have >= wantNeed ? wantNeed : have >= minNeed ? have : minNeed;
-        return count > 0 ? [{ id: row.id, count }] : [];
-    });
+        if (count > 0) out.push({ id: row.id, count });
+    }
+    return out;
 }
 const resolveTrip = (stock: readonly ItemCount[], trip: readonly TripItem[], worn: readonly ItemCount[] = []) =>
     resolveItemRequirements(tripRequirements(trip, worn, stock), stock, nativeRequirementMetadata);
@@ -191,32 +244,42 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     // What the bank holds once the pack is deposited: the bank and the pack together. The trip is resolved against it
     // before the deposit, so a trip that cannot be filled leaves the pack in the pack (a deposit with no way back
     // stranded an account with an empty pack at the bank).
-    const stock = () => [...s.sdk.getBankItems(), ...s.sdk.getInventory()];
+    const initialStock = [...s.sdk.getBankItems(), ...s.sdk.getInventory()];
     let selected: RequirementResolution | undefined;
-    if (choose) { const pick = choose(stock(), equip()); trip = pick.trip; food += pick.moreFood; selected = pick.resolution; }
+    if (choose) { const pick = choose(initialStock, equip()); trip = pick.trip; food += pick.moreFood; selected = pick.resolution; }
     const fail = async (r: RequirementResolution) => { await s.bot.closeBank(); return 'bank lacks trip requirements ' + JSON.stringify(r.shortages) + ` (${shortageText(r.shortages, id => objNames().get(id))})`; };
-    selected ??= resolveTrip(stock(), trip, equip());
+    selected ??= resolveTrip(initialStock, trip, equip());
     if (!selected.ok) return fail(selected);
     // Resolve the trip before optional boosts. A boost never consumes declared
     // trip stock. Each optional bottle replaces one shark.
-    const reserved = new Map(selected.items.map(row => [row.id, row.count]));
+    const reserved = new Map<number, number>();
+    for (let i = 0; i < selected.items.length; i++) {
+        const row = selected.items[i]!;
+        reserved.set(row.id, row.count);
+    }
+    const stockTotals = new Map<number, number>();
+    for (let i = 0; i < initialStock.length; i++) {
+        const row = initialStock[i]!;
+        stockTotals.set(row.id, (stockTotals.get(row.id) ?? 0) + row.count);
+    }
     const boosts: ItemCount[] = [];
     for (const doses of BOOST_POTIONS) {
         if (boosts.length >= food - 1) break;
-        const totals = new Map<number, number>();
-        for (const row of stock()) totals.set(row.id, (totals.get(row.id) ?? 0) + row.count);
-        const remaining = [...totals].map(([id, count]) => ({ id, count: Math.max(0, count - (reserved.get(id) ?? 0)) }));
+        const remaining: ItemCount[] = [];
+        for (const [id, count] of stockTotals) {
+            remaining.push({ id, count: Math.max(0, count - (reserved.get(id) ?? 0)) });
+        }
         const boost = resolveItemRequirements([{ id: doses[0], kind: 'doses', minUnits: 1, maxSlots: 1 }], remaining, nativeRequirementMetadata);
         if (!boost.ok) continue;
         for (const row of boost.items) { boosts.push(row); reserved.set(row.id, (reserved.get(row.id) ?? 0) + row.count); }
     }
     food -= boosts.length;
-    const total = (id: number) => stock().filter(r => r.id === id).reduce((n, r) => n + r.count, 0);
+    const total = (id: number) => stockTotals.get(id) ?? 0;
     // A bank that holds at least the food floor of the pack's food fills the pack with what it holds: one meal eaten
     // since the pack was taken must not end a trip (live: `required 21, available 20`, `required 16, available 15`).
     const foodOwned = FOOD_LIST.reduce((n, f) => n + total(f.id), 0);
     if (foodOwned < food && foodOwned >= Math.ceil(food * FOOD_START_FLOOR)) food = foodOwned;
-    const target = resolveItemRequirements([...selected.items, ...boosts, ...planFood(total, food)], stock(), nativeRequirementMetadata);
+    const target = resolveItemRequirements([...selected.items, ...boosts, ...planFood(total, food)], initialStock, nativeRequirementMetadata);
     if (!target.ok) return fail(target);
     for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
     for (const want of target.items) {

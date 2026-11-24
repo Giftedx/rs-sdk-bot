@@ -2,43 +2,54 @@ import { existsSync, readFileSync } from 'node:fs';
 import { accountEscrowCoins, accountOwnedItemCount, accountReserveFor, availableCoinsAfterReserves, preflightFail, preflightOk, reserveAdjustedStock, type PreflightBlocker, type PreflightResult, type RateEstimate, type RunOutcome, type SessionCore, type WorkerAccountView, type WorkerModule, type WorkerTile, type WorkerWorldView } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
 import { routeFares, type Account as WorldAccount } from '../../../core/src/world';
-import { watchWorkerStop } from '../stop';
-import { runOwnedItem } from './ge-buy';
-import { GE_VARROCK_BANK, loadGeItemCatalogue, orderEscrow, orderPaths, orderQuantity, validateRequest } from './ge-common';
-import { runBankSeller, runBuyList, runGEPlan, runGETrip, runShopToBid, validateBankSeller, validateBuyList, validateGEPlan, validateGETrip } from './ge-bulk';
-import { runBankBidSale, runOwnedSale, validateSale } from './ge-sell';
-import { PROFILES, SWORD, SWORD_PROFILES, profileRefusal, resolveShopProfile, runBuySwordSession, runEarthShopSession, runShopBuy, selectItems } from './shop-buy';
-import { runShopTrip, validateShopTrip } from './shop-sell';
+import {
+    GE_VARROCK_BANK,
+    getGeCatalogueNameById,
+    orderEscrow,
+    orderPaths,
+    percentagePrice,
+    PROFILES,
+    profileRefusal,
+    resolveShopProfile,
+    selectItems,
+    SWORD,
+    SWORD_PROFILES,
+    validateBankSeller,
+    validateBuyList,
+    validateGEPlan,
+    validateGETrip,
+    validateRequest,
+    validateSale,
+} from './preflight';
 import type { BankSellerPolicy, BuyListRequest, GEPricePlan, GETripRequest, ItemRequest, MarketConfig, SaleRequest, ShopTripJob } from './types';
+
+void percentagePrice;
 
 const COINS = 995;
 const EARTH_RUNE = 557;
 const SWORD_SHOP_SPOT: WorkerTile = { x: 3204, z: 3398, level: 0 };
-
-let itemNameById: ReadonlyMap<number, string> | undefined;
-function catalogueNameMap(): ReadonlyMap<number, string> {
-    if (!itemNameById) {
-        const m = new Map<number, string>();
-        for (const row of loadGeItemCatalogue()) m.set(row.id, row.name);
-        itemNameById = m;
-    }
-    return itemNameById;
-}
 
 function readJsonFile<T>(path: string, label: string): T {
     if (!path || !existsSync(path)) throw new Error(`${label} file missing: ${path}`);
     return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
 
-function escrowForAccount(acct: WorkerAccountView, world: WorkerWorldView): number {
-    return accountEscrowCoins(acct, world);
-}
-
 function activeCooldown(acct: WorkerAccountView, world: WorkerWorldView, keys: readonly string[]): { key: string; expiresAt: number } | null {
-    for (const map of [world.marketCooldowns, acct.cooldowns]) {
-        if (!map) continue;
-        for (const key of keys) {
-            const expiresAt = map[key];
+    const worldCd = world.marketCooldowns;
+    if (worldCd) {
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i]!;
+            const expiresAt = worldCd[key];
+            if (typeof expiresAt === 'number' && Number.isFinite(expiresAt) && expiresAt > world.at) {
+                return { key, expiresAt };
+            }
+        }
+    }
+    const acctCd = acct.cooldowns;
+    if (acctCd) {
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i]!;
+            const expiresAt = acctCd[key];
             if (typeof expiresAt === 'number' && Number.isFinite(expiresAt) && expiresAt > world.at) {
                 return { key, expiresAt };
             }
@@ -52,7 +63,7 @@ function normalizeShopBuyConfig(cfg: Extract<MarketConfig, { mode: 'shop-buy' }>
     const maxItems = cfg.maxItems ?? cfg.quantity;
     let items = cfg.items;
     if (items === undefined && cfg.itemId !== undefined) {
-        const name = catalogueNameMap().get(cfg.itemId);
+        const name = getGeCatalogueNameById().get(cfg.itemId);
         const conf = profile ? resolveShopProfile(profile) : undefined;
         const matchedByName = name && conf ? conf.items.find(i => i.re.test(name))?.re.source : undefined;
         items = matchedByName ?? name;
@@ -66,69 +77,91 @@ function normalizeShopBuyConfig(cfg: Extract<MarketConfig, { mode: 'shop-buy' }>
 }
 
 function cooldownKeysFor(cfg: MarketConfig): string[] {
-    const base = ['market', cfg.mode];
+    const keys = ['market', cfg.mode];
     switch (cfg.mode) {
         case 'shop-buy': {
-            const norm = normalizeShopBuyConfig(cfg);
-            return norm.profile ? [...base, `shop:${norm.profile.toLowerCase()}`] : base;
+            const profile = cfg.profile ?? cfg.shopId ?? '';
+            if (profile) keys.push(`shop:${profile.toLowerCase()}`);
+            return keys;
         }
         case 'earth-shop':
-            return cfg.profile ? [...base, `shop:${cfg.profile.toLowerCase()}`] : base;
+            if (cfg.profile) keys.push(`shop:${cfg.profile.toLowerCase()}`);
+            return keys;
         case 'buy-sword':
-            return [...base, `shop:varrock_sword:${cfg.itemId ?? SWORD}`];
+            keys.push(`shop:varrock_sword:${cfg.itemId ?? SWORD}`);
+            return keys;
         case 'shop-trip':
         case 'shop-sell':
-            return cfg.job ? [...base, `shop:${cfg.job.merchant}`, `item:${cfg.job.item}:shop`] : base;
-        case 'ge-buy': {
-            const item = cfg.request?.item ?? cfg.itemId;
-            return item ? [...base, `item:${item}:ge`, `ge:${item}`] : base;
-        }
+            if (cfg.job) {
+                keys.push(`shop:${cfg.job.merchant}`, `item:${cfg.job.item}:shop`);
+            }
+            return keys;
+        case 'ge-buy':
         case 'ge-sell': {
             const item = cfg.request?.item ?? cfg.itemId;
-            return item ? [...base, `item:${item}:ge`, `ge:${item}`] : base;
+            if (item) keys.push(`item:${item}:ge`, `ge:${item}`);
+            return keys;
         }
         case 'ge-trip':
-            return cfg.request ? [...base, `item:${cfg.request.item}:ge`, `ge:${cfg.request.item}`] : base;
+            if (cfg.request) keys.push(`item:${cfg.request.item}:ge`, `ge:${cfg.request.item}`);
+            return keys;
         case 'ge-plan':
-            return cfg.plan ? [...base, `item:${cfg.plan.item}:ge`, `ge:${cfg.plan.item}`] : base;
+            if (cfg.plan) keys.push(`item:${cfg.plan.item}:ge`, `ge:${cfg.plan.item}`);
+            return keys;
         case 'shop-to-bid':
-            return [...base, ...cfg.profiles.map(p => `shop:${p.toLowerCase()}`), ...cfg.itemIds.map(id => `item:${id}:ge`)];
+            for (let i = 0; i < cfg.profiles.length; i++) keys.push(`shop:${cfg.profiles[i]!.toLowerCase()}`);
+            for (let i = 0; i < cfg.itemIds.length; i++) keys.push(`item:${cfg.itemIds[i]!}:ge`);
+            return keys;
         default:
-            return base;
+            return keys;
     }
 }
 
 function toWorldAccount(acct: WorkerAccountView, availableCoins: number): WorldAccount {
-    const names = catalogueNameMap();
+    const names = getGeCatalogueNameById();
     const skills: Record<string, number> = {};
-    for (const [k, v] of Object.entries(acct.skills)) skills[k] = v.level;
-    const itemMap = new Map<string, number>();
+    for (const k in acct.skills) {
+        if (Object.prototype.hasOwnProperty.call(acct.skills, k)) skills[k] = acct.skills[k]!.level;
+    }
+    const counts: Record<string, number> = {};
+    const items: string[] = [];
     const addCounts = (bag: Readonly<Record<number, number>>) => {
-        for (const [idStr, count] of Object.entries(bag)) {
+        for (const idStr in bag) {
+            if (!Object.prototype.hasOwnProperty.call(bag, idStr)) continue;
+            const count = bag[idStr as unknown as number]!;
             if (count <= 0) continue;
             const name = names.get(Number(idStr));
-            if (name) itemMap.set(name, (itemMap.get(name) ?? 0) + count);
+            if (name) {
+                if (counts[name] === undefined) {
+                    counts[name] = count;
+                    items.push(name);
+                } else {
+                    counts[name]! += count;
+                }
+            }
         }
     };
     addCounts(acct.inventory);
     addCounts(acct.equipment);
     if (acct.bank.trusted) addCounts(acct.bank.items);
     const worn: string[] = [];
-    for (const [idStr, count] of Object.entries(acct.equipment)) {
+    for (const idStr in acct.equipment) {
+        if (!Object.prototype.hasOwnProperty.call(acct.equipment, idStr)) continue;
+        const count = acct.equipment[idStr as unknown as number]!;
         if (count <= 0) continue;
         const name = names.get(Number(idStr));
         if (name) worn.push(name);
     }
-    const counts: Record<string, number> = {};
-    for (const [name, qty] of itemMap) counts[name] = qty;
     const questStages: Record<string, number> = {};
-    for (const [quest, state] of Object.entries(acct.quests)) {
+    for (const quest in acct.quests) {
+        if (!Object.prototype.hasOwnProperty.call(acct.quests, quest)) continue;
+        const state = acct.quests[quest]!;
         questStages[quest] = state === 'complete' ? 2 : state === 'started' ? 1 : 0;
     }
     return {
         skills,
         varps: {},
-        items: [...itemMap.keys()],
+        items,
         coins: availableCoins,
         counts,
         worn,
@@ -208,7 +241,7 @@ export function preflightMarket(acct: WorkerAccountView, cfg: MarketConfig, worl
 
     const totalCoins = accountOwnedItemCount(acct, COINS, { requireTrustedBank: true });
     const baseCoinReserve = accountReserveFor(acct, world, COINS);
-    const escrow = escrowForAccount(acct, world);
+    const escrow = accountEscrowCoins(acct, world);
     const freeCoins = availableCoinsAfterReserves(totalCoins, baseCoinReserve, escrow);
     let travelCoins = 0;
     let travelTicks = 0;
@@ -221,11 +254,11 @@ export function preflightMarket(acct: WorkerAccountView, cfg: MarketConfig, worl
             const maxItems = shopCfg.maxItems ?? Infinity;
             const flt = shopCfg.float ?? 20_000;
             const noBuyTicks = shopCfg.noBuyTicks ?? 0;
-            for (const [k, v] of Object.entries({ coinReserve, maxSpend, maxItems, float: flt, noBuyTicks })) {
-                if ((!Number.isSafeInteger(v) && !(v === Infinity && ['maxSpend', 'maxItems'].includes(k))) || v < 0) {
-                    buildConfigError(blockers, `invalid shop budget ${k}`);
-                }
-            }
+            if (!Number.isSafeInteger(coinReserve) || coinReserve < 0) buildConfigError(blockers, 'invalid shop budget coinReserve');
+            if ((maxSpend !== Infinity && !Number.isSafeInteger(maxSpend)) || maxSpend < 0) buildConfigError(blockers, 'invalid shop budget maxSpend');
+            if ((maxItems !== Infinity && !Number.isSafeInteger(maxItems)) || maxItems < 0) buildConfigError(blockers, 'invalid shop budget maxItems');
+            if (!Number.isSafeInteger(flt) || flt < 0) buildConfigError(blockers, 'invalid shop budget float');
+            if (!Number.isSafeInteger(noBuyTicks) || noBuyTicks < 0) buildConfigError(blockers, 'invalid shop budget noBuyTicks');
             if (flt <= (shopCfg.coinReserve ?? 0) || maxSpend === 0 || maxItems === 0) {
                 buildConfigError(blockers, 'shop budget needs float > coinReserve and positive maxSpend/maxItems');
             }
@@ -345,6 +378,7 @@ export function preflightMarket(acct: WorkerAccountView, cfg: MarketConfig, worl
             if (cfg.job) {
                 let merchant;
                 try {
+                    const { validateShopTrip } = require('./shop-sell') as typeof import('./shop-sell');
                     merchant = validateShopTrip(cfg.job);
                 } catch (err) {
                     buildConfigError(blockers, String(err));
@@ -758,6 +792,7 @@ function currentPos(session: SessionCore): WorkerTile | null {
 }
 
 export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): Promise<RunOutcome> {
+    const { watchWorkerStop } = await import('../stop');
     const startedMs = Date.now();
     const t0 = session.tick();
     const elapsed = () => Math.max(0, session.tick() - t0);
@@ -782,6 +817,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
     try {
         switch (cfg.mode) {
             case 'shop-buy': {
+                const { runShopBuy } = await import('./shop-buy');
                 const shopCfg = normalizeShopBuyConfig(cfg);
                 const r = await runShopBuy(s, shopCfg, isStopped);
                 const ticksElapsed = Math.max(0, r.ticks);
@@ -829,6 +865,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 };
             }
             case 'earth-shop': {
+                const { runEarthShopSession } = await import('./shop-buy');
                 const r = await runEarthShopSession(s, cfg, isStopped);
                 const ticksElapsed = Math.max(0, r.ticks);
                 if (r.ok) {
@@ -872,6 +909,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 };
             }
             case 'buy-sword': {
+                const { runBuySwordSession } = await import('./shop-buy');
                 const r = await runBuySwordSession(s, cfg, isStopped);
                 const ticksElapsed = Math.max(0, r.ticks);
                 const itemId = cfg.itemId ?? SWORD;
@@ -900,6 +938,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
             }
             case 'shop-trip':
             case 'shop-sell': {
+                const { runShopTrip } = await import('./shop-sell');
                 const job = cfg.job ?? readJsonFile<ShopTripJob>(cfg.jobFile ?? '', `${cfg.mode} job`);
                 const r = await runShopTrip(s, job, isStopped);
                 const ticksElapsed = Math.max(0, r.ticks ?? elapsed());
@@ -919,6 +958,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 return classifyFailureOutcome(activityId, session.name, ticksElapsed, ms(), r.failure || 'shop-trip failed', currentPos(session), `shop:${job.merchant}`, job.item);
             }
             case 'ge-buy': {
+                const { runOwnedItem } = await import('./ge-buy');
                 const now = Date.now();
                 const request: ItemRequest = cfg.request ?? {
                     actor: session.name,
@@ -961,6 +1001,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 return classifyFailureOutcome(activityId, session.name, ticksElapsed, ms(), r.failure, currentPos(session), 'ge', request.item);
             }
             case 'ge-sell': {
+                const { runBankBidSale, runOwnedSale } = await import('./ge-sell');
                 const request: SaleRequest = cfg.request ?? {
                     actor: session.name,
                     server,
@@ -999,6 +1040,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.error ?? 'ge-sell incomplete', currentPos(session), 'ge', request.item);
             }
             case 'ge-buy-list': {
+                const { runBuyList } = await import('./ge-bulk');
                 const request = cfg.request ?? readJsonFile<BuyListRequest>(cfg.requestFile ?? '', 'ge-buy-list request');
                 const r = await runBuyList(s, request, isStopped);
                 if (r.ok) {
@@ -1011,6 +1053,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.failure || 'ge-buy-list failed', currentPos(session), 'ge');
             }
             case 'ge-trip': {
+                const { runGETrip } = await import('./ge-bulk');
                 const request = cfg.request ?? readJsonFile<GETripRequest>(cfg.requestFile ?? '', 'ge-trip request');
                 const r = await runGETrip(s, request, isStopped);
                 if (r.ok) {
@@ -1030,6 +1073,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.failure || 'ge-trip failed', currentPos(session), 'ge', request.item);
             }
             case 'ge-plan': {
+                const { runGEPlan } = await import('./ge-bulk');
                 const plan = cfg.plan ?? readJsonFile<GEPricePlan>(cfg.planFile ?? '', 'ge-plan');
                 const r = await runGEPlan(s, plan, isStopped, {}, cfg.finish === true);
                 if (r.ok) {
@@ -1047,6 +1091,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.failure || 'ge-plan resting or failed', currentPos(session), 'ge', plan.item);
             }
             case 'bank-seller': {
+                const { runBankSeller } = await import('./ge-bulk');
                 const policy = cfg.policy ?? readJsonFile<BankSellerPolicy>(cfg.policyFile ?? '', 'bank-seller policy');
                 const r = await runBankSeller(s, policy, isStopped);
                 if (r.ok) {
@@ -1065,6 +1110,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.failure || 'bank-seller failed', currentPos(session), 'ge');
             }
             case 'shop-to-bid': {
+                const { runShopToBid } = await import('./ge-bulk');
                 const r = await runShopToBid(s, server, cfg, isStopped);
                 if (r.ok) {
                     return {

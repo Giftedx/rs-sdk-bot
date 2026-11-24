@@ -200,6 +200,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
     // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
     // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
     // Death recovery needs the watcher's gate too: it starts the watcher with events and loot off.
+    const ownerFriends = (lootTables || guardTables) ? new Set(loadOwners().keys()) : null;
     if (events || lootTables || deathOn || guardOn || fleeOn) {
         randomEvents.set(s, randomEventsMod.watchRandomEvents(s, {
             events,
@@ -212,7 +213,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
             guard: guardOn ? { tables: sharedLootTables(), minValue: GUARD_VALUE } : null,
             loot: lootTables ? {
                 tables: lootTables, name,
-                friends: new Set(loadOwners().keys()),
+                friends: new Set(ownerFriends!),
                 reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {},
             } : null,
         }));
@@ -227,7 +228,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
             offence: process.env.PRAYER_OFFENCE !== '0',
             melee: st => opponentMod!.wornWeaponStyle((st?.equipment ?? []).find((i: any) => i.slot === 3)?.id) === 'melee',
             players: {
-                ignore: new Set(loadOwners().keys()),
+                ignore: ownerFriends!,
                 style: q => { const seen = opponentMod!.readOpponents(s.client).find(v => v.index === q.index); return seen ? opponentMod!.wornWeaponStyle(seen.worn.rhand) : null; },
             },
         }));

@@ -86,6 +86,11 @@ export function createLockstepClock(client: ClientLike, listeners: Set<() => voi
     const holdFlush = () => { if (!flushHeld && sendNow) { flushHeld = true; client.flush = () => {}; } };
     const releaseFlush = () => { if (flushHeld) { flushHeld = false; delete (client as { flush?: unknown }).flush; sendNow?.(); } };
 
+    const anySessionWaiting = () => {
+        for (const f of waitingSessions) if (f()) return true;
+        return false;
+    };
+
     const acknowledgeTick = () => {
         const generation = ++ackGeneration, since = performance.now();
         let turns = 0;
@@ -100,13 +105,15 @@ export function createLockstepClock(client: ClientLike, listeners: Set<() => voi
             // acknowledgement and not, as the machine's speed decides, with the next.
             // A pending action waits for the server until its count dialog is open; then the executor submits within
             // its 50 ms poll and the tick waits for that, as before, so the submit stays in the same tick.
-            const serverWait = serverWaiting();
+            const dialogOpen = (actionPending || state.isRunning() || inDialogWait())
+                ? !!(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.()
+                : false;
+            const serverWait = actionPending && !dialogOpen;
             const waitLeft = state.getWaitLeft();
             const waiting = scriptTick ? listeners.size > listenersLow || selfWaiting()
-                : tickWaits.active > 0 || selfWaiting() || [...waitingSessions].some(f => f());
+                : tickWaits.active > 0 || selfWaiting() || anySessionWaiting();
             // The count-dialog wait counts as a wait only until the dialog is open; then the tick holds for the submit,
             // so the submit lands in the same tick on every run, whatever the executor's 50 ms poll meets.
-            const dialogOpen = !!(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.();
             const routes = pendingRouteWork(routeMs);
             // Persistent state listeners do not make an off-tick route a game-input wait.
             // Actual tick/actions/dialog waits still advance; SIM_ROUTE_MS bounds this hold.
@@ -137,7 +144,7 @@ export function createLockstepClock(client: ClientLike, listeners: Set<() => voi
     let owedCycles = 0, wallSpeed: number | undefined;
     const ageOwed = () => {
         if (!owedCycles || !liteCycle) return;
-        const stream = (transportParts(client).conn as { stream?: { available?: number } } | undefined)?.stream;
+        const stream = (client as { conn?: { stream?: { available?: number } } }).conn?.stream;
         if (!(Number(stream?.available) > 0)) return;
         for (let i = 0; i < owedCycles; i++) liteCycle();
         owedCycles = 0;

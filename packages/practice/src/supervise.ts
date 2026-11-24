@@ -78,11 +78,28 @@ export function isTransportStall(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /tick stream stalled: no new game tick for \d+ms/.test(result);
 }
 
+// Scan lines backward so large stdout logs do not split into full line arrays.
+function lastMatchingLine(text: string, test: (line: string) => boolean): string | undefined {
+    let end = text.length;
+    while (end > 0) {
+        const nl = text.lastIndexOf('\n', end - 1);
+        const start = nl + 1;
+        const lineEnd = end > start && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const line = text.slice(start, lineEnd);
+        if (test(line)) return line;
+        if (nl < 0) break;
+        end = nl;
+    }
+    return undefined;
+}
+
 // Real work in a run: the LEDGER line every worker prints at finish (packages/core/src/ledger.ts) with at least
 // PROGRESS_TICKS game ticks. A failed login or a session dropped at once prints none, so a dead server still gives up.
 export const PROGRESS_TICKS = 300;
+const LEDGER_TICKS_RE = /^LEDGER ticks=(\d+)/;
 export function madeProgress(stdout: string): boolean {
-    const m = stdout.split(/\r?\n/).filter(l => /^LEDGER ticks=\d+/.test(l)).at(-1)?.match(/^LEDGER ticks=(\d+)/);
+    const line = lastMatchingLine(stdout, l => l.startsWith('LEDGER ticks=') && LEDGER_TICKS_RE.test(l));
+    const m = line ? LEDGER_TICKS_RE.exec(line) : null;
     return !!m && Number(m[1]) >= PROGRESS_TICKS;
 }
 
@@ -127,9 +144,25 @@ export function lineKeeper(match: (line: string) => string | null) {
     const take = (raw: string) => { const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw, key = match(line); if (key !== null) kept.set(key, line); };
     return {
         push(chunk: string): void {
-            const parts = (partial + chunk).split('\n');
-            partial = parts.pop()!.slice(0, MAX_KEPT_LINE);
-            for (const part of parts) take(part.slice(0, MAX_KEPT_LINE));
+            let start = 0;
+            let nl = chunk.indexOf('\n');
+            if (nl < 0) {
+                if (partial.length < MAX_KEPT_LINE) partial += chunk.slice(0, MAX_KEPT_LINE - partial.length);
+                return;
+            }
+            const first = (partial + chunk.slice(0, nl)).slice(0, MAX_KEPT_LINE);
+            partial = '';
+            take(first);
+            start = nl + 1;
+            while (start <= chunk.length) {
+                nl = chunk.indexOf('\n', start);
+                if (nl < 0) {
+                    partial = chunk.slice(start, start + MAX_KEPT_LINE);
+                    break;
+                }
+                take(chunk.slice(start, Math.min(nl, start + MAX_KEPT_LINE)));
+                start = nl + 1;
+            }
         },
         /** The kept lines joined by newlines. This ends the open line. */
         text(): string { if (partial) { take(partial); partial = ''; } return [...kept.values()].join('\n'); },
@@ -155,7 +188,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
     for (let runs = 1; ; runs++) {
         if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
         const r = await d.run();
-        const result = r.stdout.split(/\r?\n/).filter(l => l.startsWith('RESULT')).pop() ?? '(no RESULT)';
+        const result = lastMatchingLine(r.stdout, l => l.startsWith('RESULT')) ?? '(no RESULT)';
         d.log?.(`SUPERVISE run ${runs} exit ${r.exitCode}: ${result.slice(0, 200)}`);
         if (r.exitCode === 0 && /^RESULT ok\b/.test(result)) return { reason: 'done', runs };
         if (d.stopped() || /stop file/.test(result)) return { reason: 'stopped', runs };

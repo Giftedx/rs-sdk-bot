@@ -1,10 +1,10 @@
 // Operator requests write validated Brain OperatorCommands to .practice/live/operator-commands/
 // and manage owned account/side stop files and swarm.json under the .practice/live lock.
-import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync, unlinkSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ACCOUNT_ROLES, GOAL_KINDS, type AccountRole, type OperatorCommand, type CampaignState, type MissionState } from '../brain/src/contracts';
-import { defaultActivityCatalog } from '../brain/src/catalog';
+import { defaultActivityCatalog, type ActivityCatalog } from '../brain/src/catalog';
 import { controllerStates } from '../core/src/controllers';
 import { atomicJson } from '../core/src/plan-lock';
 import { findStopFile, listStopEntries, liveRoot, operatorCommandsDir, practiceRoot } from '../core/src/practice-paths';
@@ -12,13 +12,67 @@ import { appendOwnerRequest, applyCommand, enqueueBrainCommand, existingStopFile
 import { MAIN_ACCOUNT } from './publish-relay';
 
 const OVERRIDE_ROLES = ACCOUNT_ROLES.filter((role): role is Exclude<AccountRole, 'main'> => role !== 'main');
+const TERMINAL_AUDIT_STATUSES = new Set(['refused', 'failed', 'rejected', 'not-applied']);
+const COMMAND_AUDIT_ACTIONS = new Set([
+    'override-account', 'clear-defect', 'set-campaign-state', 'set-mission-state',
+    'pause', 'resume', 'side-pause', 'side-resume',
+    'swarm-pause', 'swarm-resume', 'account-pause', 'account-release',
+]);
+const catalogViewCache = new WeakMap<ActivityCatalog, {
+    id: string;
+    goal: string;
+    workerId: string;
+    family: string;
+    kind: string;
+    skill?: string;
+    questSlug?: string;
+    spotId?: string;
+    trust: string;
+}[]>();
 
 export function createOperatorControl(options: { root: string; readOnly?: boolean; nonce?: string; alive?: (pid: number) => boolean }) {
  const { root } = options, nonce = options.nonce ?? randomUUID();
  const liveDir = liveRoot(root), commandsDir = operatorCommandsDir(root), audit = join(practiceRoot(root), 'dashboard-controls');
  const alive = options.alive ?? ((pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } });
  const read = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
- const owned = () => { const path = join(root, 'vendor/rs-sdk/bots'); return existsSync(path) ? readdirSync(path, { withFileTypes: true }).filter(n => n.isDirectory() && /^[A-Za-z0-9]{1,12}$/.test(n.name)).map(n => n.name) : []; };
+ const botsDir = join(root, 'vendor/rs-sdk/bots');
+ let cachedOwned: { mtimeMs: number; size: number; ino: number; names: string[] } | null = null;
+ const owned = (): string[] => {
+  let st;
+  try { st = statSync(botsDir); } catch { cachedOwned = null; return []; }
+  const nowWall = Date.now();
+  if (
+   cachedOwned
+   && nowWall - st.mtimeMs > 1000
+   && cachedOwned.mtimeMs === st.mtimeMs
+   && cachedOwned.size === st.size
+   && cachedOwned.ino === st.ino
+  ) {
+   return cachedOwned.names;
+  }
+  const names: string[] = [];
+  for (const entry of readdirSync(botsDir, { withFileTypes: true })) {
+   if (entry.isDirectory() && /^[A-Za-z0-9]{1,12}$/.test(entry.name)) names.push(entry.name);
+  }
+  cachedOwned = { mtimeMs: st.mtimeMs, size: st.size, ino: st.ino, names };
+  return names;
+ };
+ const auditJsonCache = new Map<string, { mtimeMs: number; size: number; doc: any }>();
+ const readAuditJson = (file: string, nowWall: number): any | null => {
+  try {
+   const st = statSync(file);
+   const hit = auditJsonCache.get(file);
+   if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+    return hit.doc;
+   }
+   const doc = JSON.parse(readFileSync(file, 'utf8'));
+   if (auditJsonCache.size >= 500) auditJsonCache.clear();
+   auditJsonCache.set(file, { mtimeMs: st.mtimeMs, size: st.size, doc });
+   return doc;
+  } catch {
+   return null;
+  }
+ };
  const resolveOwned = (rawAccount: unknown): string => {
   if (typeof rawAccount !== 'string' || !/^[A-Za-z0-9]{1,12}$/.test(rawAccount)) throw Error('Choose an owned account');
   if (rawAccount.toLowerCase() === MAIN_ACCOUNT.toLowerCase()) throw Error('The main account is not controlled from the dashboard');
@@ -41,17 +95,23 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
  };
 
  function catalog() {
-  return defaultActivityCatalog(root).list().map(a => ({
-   id: a.id,
-   goal: a.label,
-   workerId: a.workerId,
-   family: a.family,
-   kind: a.kind,
-   ...(a.skill ? { skill: a.skill } : {}),
-   ...(a.questSlug ? { questSlug: a.questSlug } : {}),
-   ...(a.spotId ? { spotId: a.spotId } : {}),
-   trust: a.trust,
-  }));
+  const cat = defaultActivityCatalog(root);
+  let cached = catalogViewCache.get(cat);
+  if (!cached) {
+   cached = cat.list().map(a => ({
+    id: a.id,
+    goal: a.label,
+    workerId: a.workerId,
+    family: a.family,
+    kind: a.kind,
+    ...(a.skill ? { skill: a.skill } : {}),
+    ...(a.questSlug ? { questSlug: a.questSlug } : {}),
+    ...(a.spotId ? { spotId: a.spotId } : {}),
+    trust: a.trust,
+   }));
+   catalogViewCache.set(cat, cached);
+  }
+  return cached;
  }
 
  function enqueueCommand(cmd: OperatorCommand) {
@@ -67,6 +127,61 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
   } catch { /* owner file absent or unreadable */ }
   const controllers = controllerStates(root, { alive }).map(c => ({ name: c.name, label: c.label, state: c.state, seenAt: c.seenAt }));
   const stopped = Boolean(findStopFile('swarm', root));
+  let requests: { id: unknown; action: unknown; at: number; taskId: unknown; status: unknown; note?: string }[] = [];
+  if (existsSync(audit)) {
+   const nowWall = Date.now();
+   const parsed: any[] = [];
+   for (const n of readdirSync(audit)) {
+    if (!/^[a-f0-9-]+\.json$/.test(n)) continue;
+    const r = readAuditJson(join(audit, n), nowWall);
+    if (r) parsed.push(r);
+   }
+   parsed.sort((a, b) => b.at - a.at);
+   const top = parsed.slice(0, 30);
+   requests = top.map(r => {
+    const terminalFailure = TERMINAL_AUDIT_STATUSES.has(r.status);
+    const isCommandAction = COMMAND_AUDIT_ACTIONS.has(r.action);
+    let status = r.status;
+    let rawNote = typeof r.note === 'string' ? r.note : '';
+    if (isCommandAction && !terminalFailure) {
+     const appliedPath = join(commandsDir, 'applied', `${r.id}.json`);
+     const rejectedPath = join(commandsDir, 'rejected', `${r.id}.json`);
+     const pendingPath = join(commandsDir, `${r.id}.json`);
+     let resolved = false;
+     try {
+      const appliedDoc = read(appliedPath);
+      status = appliedDoc?.applied === false ? 'not-applied' : 'accepted';
+      resolved = true;
+     } catch {
+      if (existsSync(appliedPath)) {
+       status = 'accepted';
+       resolved = true;
+      }
+     }
+     if (!resolved) {
+      try {
+       const rejectedDoc = read(rejectedPath);
+       status = 'rejected';
+       resolved = true;
+       if (!rawNote) {
+        if (typeof rejectedDoc?.error === 'string' && rejectedDoc.error.trim()) rawNote = rejectedDoc.error;
+        else if (Array.isArray(rejectedDoc?.errors) && rejectedDoc.errors.length) rawNote = rejectedDoc.errors.map(String).join('; ');
+       }
+      } catch {
+       if (existsSync(rejectedPath)) {
+        status = 'rejected';
+        resolved = true;
+       }
+      }
+     }
+     if (!resolved && existsSync(pendingPath)) {
+      status = 'submitted';
+     }
+    }
+    const note = rawNote.replace(/\s+/g, ' ').trim().slice(0, 200);
+    return { id: r.id, action: r.action, at: r.at, taskId: r.taskId ?? null, status, ...(note ? { note } : {}) };
+   });
+  }
   return {
    nonce,
    readOnly: !!options.readOnly,
@@ -78,45 +193,7 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
    fleetPaused: stopped,
    capabilities: catalog(),
    accountHolds: accountHolds(),
-   requests: existsSync(audit) ? readdirSync(audit).filter(n => /^[a-f0-9-]+\.json$/.test(n)).map(n => {
-    try {
-     const r = read(join(audit, n));
-     const terminalFailure = ['refused', 'failed', 'rejected', 'not-applied'].includes(r.status);
-     const isCommandAction = [
-      'override-account', 'clear-defect', 'set-campaign-state', 'set-mission-state',
-      'pause', 'resume', 'side-pause', 'side-resume',
-      'swarm-pause', 'swarm-resume', 'account-pause', 'account-release',
-     ].includes(r.action);
-     let status = r.status;
-     let rawNote = typeof r.note === 'string' ? r.note : '';
-     if (isCommandAction && !terminalFailure) {
-      const appliedPath = join(commandsDir, 'applied', `${r.id}.json`);
-      const rejectedPath = join(commandsDir, 'rejected', `${r.id}.json`);
-      const pendingPath = join(commandsDir, `${r.id}.json`);
-      if (existsSync(appliedPath)) {
-       try {
-        const appliedDoc = read(appliedPath);
-        status = appliedDoc?.applied === false ? 'not-applied' : 'accepted';
-       } catch {
-        status = 'accepted';
-       }
-      } else if (existsSync(rejectedPath)) {
-       status = 'rejected';
-       if (!rawNote) {
-        try {
-         const rejectedDoc = read(rejectedPath);
-         if (typeof rejectedDoc?.error === 'string' && rejectedDoc.error.trim()) rawNote = rejectedDoc.error;
-         else if (Array.isArray(rejectedDoc?.errors) && rejectedDoc.errors.length) rawNote = rejectedDoc.errors.map(String).join('; ');
-        } catch { /* ignore unreadable rejection payload */ }
-       }
-      } else if (existsSync(pendingPath)) {
-       status = 'submitted';
-      }
-     }
-     const note = rawNote.replace(/\s+/g, ' ').trim().slice(0, 200);
-     return { id: r.id, action: r.action, at: r.at, taskId: r.taskId ?? null, status, ...(note ? { note } : {}) };
-    } catch { return null; }
-   }).filter(r => r !== null).sort((a, b) => b.at - a.at).slice(0, 30) : [],
+   requests,
   };
  }
 

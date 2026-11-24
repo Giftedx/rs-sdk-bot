@@ -99,14 +99,14 @@ export async function bankCargo(s: Session, patterns: RegExp[], reserve = 0,
     const lifecycle = s.lifecycle, authenticatedServer = lifecycle?.server;
     const server = cargoServer(name, options, authenticatedServer);
     const sdk = s.sdk, bot = s.bot, client = s.client as { executeBotAction?: unknown; selfSlot?: unknown } | undefined, direct = s.direct, ended = s.ended;
-    const config = sdk.config, endpoint = JSON.stringify(config && [config.host, config.port, config.gatewayUrl]);
+    const config = sdk.config, configHost = config?.host, configPort = config?.port, configGatewayUrl = config?.gatewayUrl;
     const executor = client?.executeBotAction, self = client?.selfSlot, life = st.player.lifeId, respawns = st.player.respawnCount ?? 0;
     let terminal: { ended: boolean } | undefined, lost = false, guardsOwned = () => true;
     const own = () => {
         const p = sdk.getState()?.player;
         if (s.name !== name || s.sdk !== sdk || s.bot !== bot || s.client !== client || s.direct !== direct || s.ended !== ended || !guardsOwned()
             || s.lifecycle !== lifecycle || s.lifecycle?.server !== authenticatedServer
-            || sdk.config !== config || JSON.stringify(config && [config.host, config.port, config.gatewayUrl]) !== endpoint
+            || sdk.config !== config || config?.host !== configHost || config?.port !== configPort || config?.gatewayUrl !== configGatewayUrl
             || client?.executeBotAction !== executor || client?.selfSlot !== self || terminal?.ended || !p || p.isDead
             || life !== undefined && p.lifeId !== life || (p.respawnCount ?? 0) !== respawns) lost = true;
         return !lost;

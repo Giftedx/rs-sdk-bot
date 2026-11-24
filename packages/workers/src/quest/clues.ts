@@ -40,9 +40,13 @@ export type NativeClueStep = {
 const content = resolve(REPO_ROOT, 'vendor/rs-sdk/server/content');
 const trail = 'scripts/minigames/game_trail/';
 
+const packCache = new Map<string, Map<string, number>>();
+
 function pack(file: string) {
+    let out = packCache.get(file);
+    if (out) return out;
     const text = readFileSync(resolve(content, 'pack', file), 'utf8');
-    const out = new Map<string, number>();
+    out = new Map<string, number>();
     let pos = 0;
     while (pos < text.length) {
         let end = text.indexOf('\n', pos);
@@ -55,6 +59,7 @@ function pack(file: string) {
         }
         pos = end + 1;
     }
+    packCache.set(file, out);
     return out;
 }
 
@@ -67,6 +72,12 @@ export function nativeCluePoint(value: string): Point {
 }
 
 let clueCache: NativeClueStep[] | undefined;
+let clueByIdCache: Map<number, NativeClueStep> | undefined;
+
+export function nativeClueStepById(id: number): NativeClueStep | undefined {
+    if (!clueByIdCache) nativeClueSteps();
+    return clueByIdCache!.get(id);
+}
 
 export function nativeClueSteps(): NativeClueStep[] {
     if (clueCache) return clueCache;
@@ -77,6 +88,7 @@ export function nativeClueSteps(): NativeClueStep[] {
         if (n.debugname && !npcByDebug.has(n.debugname)) npcByDebug.set(n.debugname, n);
     }
     const out: NativeClueStep[] = [];
+    const byId = new Map<number, NativeClueStep>();
     const byName = new Map<string, NativeClueStep>();
     for (const file of ['trail_easy.obj', 'trail_medium.obj', 'trail_hard.obj', 'trail_casket.obj', 'trail.obj']) {
         const source = trail + 'configs/' + file;
@@ -153,9 +165,11 @@ export function nativeClueSteps(): NativeClueStep[] {
                     '. Its exact NPC dialogue, challenge/key, quest or item handler needs consumer mapping; this is supported native content, not an absent-server claim.';
             }
             out.push(r);
+            byId.set(id, r);
             byName.set(r.name, r);
         }
     }
+    clueByIdCache = byId;
     for (const h of discoverNativeClueNpcHandlers()) {
         const r = byName.get(h.clue);
         if (!r || !['unsupported', 'talk'].includes(r.kind)) continue;

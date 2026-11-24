@@ -48,20 +48,30 @@ export function combatSquares(at: Tile, npcs: readonly SeenNpc[], skills: Record
             if (!old || old.r < r) out.set(key, { x: sp.x, z: sp.z, r, name });
         }
     };
-    const fighting = new Set(npcs.filter(n => n.hp !== 0 && (n.combatTargetType === 'player' || n.inCombat)).map(n => n.id));
+    const fighting = new Set<number>();
+    for (let i = 0; i < npcs.length; i++) {
+        const n = npcs[i]!;
+        if (n.hp !== 0 && (n.combatTargetType === 'player' || n.inCombat)) fighting.add(n.id);
+    }
     for (const id of fighting) { const kind = roamers.get(id); if (kind) add(kind.name, kind.spawns, kind.keep + margin); }
     for (const h of hunters) if (hunts(h, combat)) add(h.name, h.spawns, Math.max(h.reach, h.id === undefined ? 0 : roamers.get(h.id)?.keep ?? 0) + margin);
     return [...out.values()];
 }
 
+const RING_COS = Array.from({ length: 16 }, (_, i) => Math.cos(i * Math.PI / 8));
+const RING_SIN = Array.from({ length: 16 }, (_, i) => Math.sin(i * Math.PI / 8));
+
 // Tiles outside every square, the nearest ring first: 16 directions on each ring around `at`, out to `maxRing` tiles.
 export function safeCandidates(at: Tile, squares: readonly Square[], maxRing = 96): Tile[] {
     if (outside(at, squares)) return [at];
-    const out: Tile[] = [], seen = new Set<string>();
+    const out: Tile[] = [], seen = new Set<number>();
     for (let r = 2; r <= maxRing; r += 2) {
         for (let i = 0; i < 16; i++) {
-            const a = i * Math.PI / 8, t = { x: at.x + Math.round(Math.cos(a) * r), z: at.z + Math.round(Math.sin(a) * r), level: at.level }, key = `${t.x},${t.z}`;
-            if (seen.has(key) || !outside(t, squares)) continue;
+            const x = at.x + Math.round(RING_COS[i]! * r), z = at.z + Math.round(RING_SIN[i]! * r);
+            const key = (x + 131072) * 262144 + (z + 131072);
+            if (seen.has(key)) continue;
+            const t = { x, z, level: at.level };
+            if (!outside(t, squares)) continue;
             seen.add(key); out.push(t);
         }
     }

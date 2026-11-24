@@ -36,8 +36,10 @@ import { DEFAULT_ANTI_PING_PONG_MS, type MarketQuotesMap } from './acquire';
 import {
     buildPlannerSharedIndex,
     canProtectedAccountLaunch,
+    createAccountPlannerReuse,
     planAccount,
     planAccountWithCandidates,
+    type AccountPlannerReuse,
     type RateEstimator,
     type RateStoreLike,
 } from './planner';
@@ -477,6 +479,17 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         _sharedIndex: sharedIndex,
     };
 
+    const reuseByAccount = new Map<string, AccountPlannerReuse>();
+    const getAccountReuse = (acct: AccountState): AccountPlannerReuse => {
+        const key = acct.name.toLowerCase();
+        let reuse = reuseByAccount.get(key);
+        if (!reuse) {
+            reuse = createAccountPlannerReuse(acct, world, campaigns);
+            reuseByAccount.set(key, reuse);
+        }
+        return reuse;
+    };
+
     // 1. Retain healthy running accounts with +15% retention hysteresis.
     // Running accounts cannot materialize hub_banker transfers (transfers require idle recipients).
     const runningPlannerOpts = {
@@ -488,6 +501,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         const job = acct.activeJob;
         const activeAct = job ? activityById.get(job.activityId) : undefined;
         const activeDem = job ? demandById.get(job.demandId) : undefined;
+        const acctReuse = getAccountReuse(acct);
 
         let currentPlan: AccountPlan | null = null;
         if (activeAct && activeDem) {
@@ -496,11 +510,12 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 activities: [activeAct],
                 demands: [activeDem],
                 _sharedIndex: undefined,
+                _reuse: acctReuse,
             });
             if (p.steps.length > 0) currentPlan = p;
         }
 
-        const bestAlt = planAccount(acct, runningPlannerOpts);
+        const bestAlt = planAccount(acct, { ...runningPlannerOpts, _reuse: acctReuse });
         let chosen: AccountPlan;
         if (currentPlan && currentPlan.steps.length > 0) {
             const threshold = currentPlan.scorePerHour * (1 + retentionMarginRatio);
@@ -547,7 +562,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         const workAct = workStep?.stepKind === 'work' ? activityById.get(workStep.activityId) : undefined;
         if (workAct && !spotHasCapacity(workAct.spotId, workAct.maxConcurrentAccounts)) {
             const excludedSpots = currentFullSpots(workAct.spotId);
-            const rerouted = planAccount(acct, { ...runningPlannerOpts, excludedSpotIds: excludedSpots });
+            const rerouted = planAccount(acct, { ...runningPlannerOpts, excludedSpotIds: excludedSpots, _reuse: getAccountReuse(acct) });
             const altWork = rerouted.steps.at(-1);
             const altAct = altWork?.stepKind === 'work' ? activityById.get(altWork.activityId) : undefined;
             if (rerouted.steps.length === 0 || (altAct && !spotHasCapacity(altAct.spotId, altAct.maxConcurrentAccounts))) {
@@ -622,6 +637,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 demands: initialUnallocated,
                 excludedSpotIds: initialExcludedSpots,
                 excludedDonorAccounts: busyAccounts,
+                _reuse: getAccountReuse(acct),
             });
             return {
                 acct,
@@ -748,6 +764,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                         demands: reevalDemands,
                         excludedSpotIds: excludedSpots,
                         excludedDonorAccounts: busyAccounts,
+                        _reuse: getAccountReuse(acct),
                     });
                     if (reevalBest.steps.length === 0) {
                         plan = bestUnchanged;
@@ -770,6 +787,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 demands: getAvailableDemands(),
                 excludedSpotIds: excludedSpots,
                 excludedDonorAccounts: busyAccounts,
+                _reuse: getAccountReuse(acct),
             });
         }
 
@@ -867,6 +885,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                         excludedSpotIds: excludedSpots,
                         excludedDonorAccounts: busyAccounts,
                         excludedAcquireSources: new Set<AcquireSourceKind>(['hub_banker']),
+                        _reuse: getAccountReuse(acct),
                     });
                     plan = replan.steps.length > 0
                         ? replan

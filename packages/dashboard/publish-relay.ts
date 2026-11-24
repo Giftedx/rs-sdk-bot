@@ -37,21 +37,31 @@ const EMPTY_DEFAULTS=['ground','spark'] as const;
 const NULL_DEFAULTS=['action','eta','finish','pace','lastRes','nativeProof','xpPerTick','xpPerHour','xpLeft','goalNow','goalXp','ranksAt','bankAt','questsAt','phaseSince','snapshotAt','uptime','death','outcome','flow','planJob','job','lastSeen','live'] as const;
 function compactItemList(list:any){
  if(!Array.isArray(list))return list;
- return list.map((it:any)=>{
-  if(!it||typeof it!=='object'||!('baseId'in it)||it.baseId!==it.id)return it;
-  const {baseId:_baseId,...rest}=it;
-  return rest;
- });
+ let out:any[]|null=null;
+ for(let i=0;i<list.length;i++){
+  const it=list[i];
+  if(it&&typeof it==='object'&&'baseId'in it&&it.baseId===it.id){
+   if(!out)out=list.slice(0,i);
+   const {baseId:_baseId,...rest}=it;
+   out.push(rest);
+  }else if(out){
+   out.push(it);
+  }
+ }
+ return out??list;
 }
 function compactRanksList(list:any){
  if(!Array.isArray(list))return list;
- return list.map((r:any)=>{
-  if(!r||typeof r!=='object')return r;
+ const out=new Array(list.length);
+ for(let i=0;i<list.length;i++){
+  const r=list[i];
+  if(!r||typeof r!=='object'){out[i]=r;continue;}
   const {hist:_hist,...rest}=r;
   if(rest.delta===0)delete rest.delta;
   if(rest.since==null)delete rest.since;
-  return rest;
- });
+  out[i]=rest;
+ }
+ return out;
 }
 function compactBotCommon(bot:any){
  if(!bot||typeof bot!=='object')return bot;
@@ -235,6 +245,7 @@ function containsSecret(value:unknown,re:RegExp):boolean{
  }
  return false;
 }
+const secretReCache=new Map<string,RegExp>();
 export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (PriceIdentity|string)[]=[]){
  const s=trimState(state);
  const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();
@@ -302,12 +313,27 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  if(Array.isArray(out.roster))out.roster=out.roster.filter((r:any)=>!isMain(r?.[0]));
  if(Array.isArray(out.rivals))out.rivals=out.rivals.map((b:any)=>({...b,ours:isMain(b?.ours?.name)?null:b?.ours??null,rows:(b.rows??[]).filter((r:any)=>!isMain(r?.name))}));
  if(Array.isArray(out.contention))out.contention=out.contention.map((c:any)=>({...c,others:(c.others??[]).filter((n:any)=>!isMain(n)),ours:(c.ours??[]).filter((n:any)=>!isMain(n))}));
- if(out.lookups&&typeof out.lookups==='object')out.lookups=Object.fromEntries(Object.entries(out.lookups).filter(([k,v]:any)=>!isMain(k)&&!isMain(v?.name)));
+ if(out.lookups&&typeof out.lookups==='object'){
+  const cleanLookups:Record<string,unknown>={};
+  const lookups=out.lookups as Record<string,any>;
+  for(const k in lookups){
+   if(!Object.hasOwn(lookups,k))continue;
+   const v=lookups[k];
+   if(!isMain(k)&&!isMain(v?.name))cleanLookups[k]=v;
+  }
+  out.lookups=cleanLookups;
+ }
  if(Array.isArray(out.farms))out.farms=out.farms.map((g:any)=>({...g,names:(g.names??[]).filter((n:any)=>!isMain(n))}));
  // An icon entry names an item. The public keeps the icons of items it can see: packs, worn items and lookups.
  if(out.icons&&typeof out.icons==='object')out.icons=usedIcons(out.icons,[out.bots.map((b:any)=>[b.inventory,b.equipment]),out.lookups]);
  out.hosted={at:Date.now(),kind:'public'};
- if(containsSecret(out,new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i')))throw Error('public view still names the main account; nothing published');
+ let secretRe=secretReCache.get(main);
+ if(!secretRe){
+  secretRe=new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');
+  if(secretReCache.size>=32)secretReCache.clear();
+  secretReCache.set(main,secretRe);
+ }
+ if(containsSecret(out,secretRe))throw Error('public view still names the main account; nothing published');
  return out;
 }
 

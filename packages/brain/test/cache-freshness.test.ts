@@ -4,15 +4,27 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { liveRoot, practiceRoot } from '../../core/src/practice-paths';
 import { beginSessionAttempt } from '../../core/src/session-lifecycle';
+import { RESERVED_ACCOUNTS } from '../../core/src/specialist-boards';
 import { bestHaggisLeg, createHaggisLegCache, haggisTravel } from '../../planner/src/haggis/travel';
 import { clearBrainJsonCache, readJsonStatCached } from '../src/json-cache';
 import { createActivityCatalog, defaultActivityCatalog } from '../src/catalog';
+import { isReservedSpecialistAccount } from '../src/campaigns/specialists';
 import { createRateStore } from '../src/rate-store';
 import { OutcomeClassifier } from '../src/outcome-classifier';
-import { buildPlannerSharedIndex, planAccount, planAccountWithCandidates } from '../src/planner';
+import { buildPlannerSharedIndex, createAccountPlannerReuse, planAccount, planAccountWithCandidates } from '../src/planner';
 import { scheduleFleet } from '../src/scheduler';
 import { inspectWorldSnapshot } from '../src/snapshot';
-import type { AccountState, ActivityDefinition, GoalDemand, WorldSnapshot } from '../src/contracts';
+import {
+    isProtectedAccountName,
+    validateAccountState,
+    validateFleetPlan,
+    validateFleetState,
+    validateOperatorCommand,
+    type AccountState,
+    type ActivityDefinition,
+    type GoalDemand,
+    type WorldSnapshot,
+} from '../src/contracts';
 
 const tempDirs: string[] = [];
 
@@ -390,5 +402,167 @@ describe('Brain & Planner cache freshness and parity', () => {
         }, { now });
         expect(classifier.isQuarantined('gather:mining-ore', now + 1000)).toBe(true);
         expect(classifier.isQuarantined('gather:mining-ore', now + 25 * 3_600_000)).toBe(false);
+    });
+
+    test('contracts fast validators and specialists reserved set parity hold across valid and malformed inputs', () => {
+        for (const reserved of RESERVED_ACCOUNTS) {
+            expect(isReservedSpecialistAccount(reserved)).toBe(true);
+            expect(isReservedSpecialistAccount(reserved.toUpperCase())).toBe(true);
+            expect(isProtectedAccountName(reserved)).toBe(true);
+        }
+        expect(isProtectedAccountName('Haggis')).toBe(true);
+        expect(isProtectedAccountName(' haggis ')).toBe(true);
+        expect(isReservedSpecialistAccount('Worker01')).toBe(false);
+        expect(isProtectedAccountName('Worker01')).toBe(false);
+
+        const now = 1_800_000_000_000;
+        const badAcctErrs = validateAccountState({
+            name: 'bad!name',
+            side: 'local',
+            role: 'invalid_role',
+            protectedClock: false,
+            lifecycle: 'idle',
+            skills: { Attack: { level: 0, xp: -1 } },
+            quests: {},
+            pos: { x: 3200, z: 3200, level: 0 },
+            inventory: { '995': -5 },
+            equipment: {},
+            bank: { items: {}, observedAt: now, trusted: true },
+        });
+        expect(badAcctErrs.some((e) => e.includes('invalid account name:'))).toBe(true);
+        expect(badAcctErrs.some((e) => e.includes('invalid role:'))).toBe(true);
+        expect(badAcctErrs.some((e) => e.includes('skills["Attack"]'))).toBe(true);
+        expect(badAcctErrs.some((e) => e.includes('inventory[995]'))).toBe(true);
+
+        const validPlan = {
+            schemaVersion: 1,
+            plannedAt: now,
+            side: 'local',
+            maxBots: 2,
+            retentionMarginRatio: 0.15,
+            selectedSlots: 0,
+            recoveryQueue: [],
+            accountPlans: {},
+            transferOrders: [],
+            spotAllocations: {},
+        };
+        expect(validateFleetPlan(validPlan)).toEqual([]);
+
+        expect(validateFleetState({
+            schemaVersion: 1,
+            emittedAt: now,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            maxBots: 2,
+            accounts: {},
+            activeChains: {},
+            idleReasons: {},
+            goals: [],
+            campaigns: [],
+            missions: [],
+            pendingTransfers: [],
+            quarantinedDefects: [],
+            rateStats: {},
+        })).toEqual([]);
+
+        expect(validateOperatorCommand({
+            schemaVersion: 1,
+            id: 'cmd-1',
+            kind: 'override_account',
+            issuedAt: now,
+            issuedBy: 'owner',
+            account: 'Worker01',
+            activityId: 'gather:mining-ore',
+            expiresAt: now + 60_000,
+        })).toEqual([]);
+        expect(validateOperatorCommand({
+            schemaVersion: 1,
+            id: 'bad id!',
+            kind: 'override_account',
+            issuedAt: now,
+            issuedBy: '',
+            account: 'Worker01',
+            expiresAt: now - 1,
+        }).length).toBeGreaterThanOrEqual(3);
+    });
+
+    test('planAccount and planAccountWithCandidates with _reuse match uncached results', () => {
+        const now = 1_800_000_000_000;
+        const acct: AccountState = {
+            name: 'ParityBot',
+            side: 'local',
+            role: 'auto',
+            protectedClock: false,
+            lifecycle: 'idle',
+            skills: { Woodcutting: { level: 15, xp: 2_500 }, Mining: { level: 1, xp: 0 }, Hitpoints: { level: 10, xp: 1154 } },
+            quests: {},
+            pos: { x: 3200, z: 3200, level: 0 },
+            inventory: { 995: 5000, 1351: 1, 1265: 1 },
+            equipment: {},
+            bank: { items: { 995: 5000 }, observedAt: now - 1_000, trusted: true },
+        };
+        const world: WorldSnapshot = {
+            schemaVersion: 1,
+            at: now,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { paritybot: acct },
+        };
+        const activities: ActivityDefinition[] = [
+            {
+                id: 'wc:oak-a',
+                workerId: 'gather',
+                family: 'gather',
+                kind: 'gather',
+                label: 'Oak logs (slow)',
+                trust: 'practice_passed',
+                skill: 'Woodcutting',
+                spotId: 'spot:oak-a',
+                config: { action: 'oak-a' },
+                baselineRate: { unitsPerTick: 0.08, xpPerTick: 3, gpPerTick: 0, setupTicks: 10, minBatchUnits: 10, confidence: 'practice', skillXpPerTick: { Woodcutting: 3 } },
+                outputs: [{ itemId: 1521, countPerUnit: 1 }],
+            },
+            {
+                id: 'wc:oak-b',
+                workerId: 'gather',
+                family: 'gather',
+                kind: 'gather',
+                label: 'Oak logs (fast)',
+                trust: 'practice_passed',
+                skill: 'Woodcutting',
+                spotId: 'spot:oak-b',
+                config: { action: 'oak-b' },
+                baselineRate: { unitsPerTick: 0.16, xpPerTick: 6, gpPerTick: 0, setupTicks: 10, minBatchUnits: 10, confidence: 'practice', skillXpPerTick: { Woodcutting: 6 } },
+                outputs: [{ itemId: 1521, countPerUnit: 1 }],
+            },
+            {
+                id: 'mine:copper',
+                workerId: 'gather',
+                family: 'gather',
+                kind: 'gather',
+                label: 'Copper ore',
+                trust: 'practice_passed',
+                skill: 'Mining',
+                spotId: 'spot:copper',
+                config: { action: 'copper' },
+                baselineRate: { unitsPerTick: 0.12, xpPerTick: 2, gpPerTick: 0, setupTicks: 8, minBatchUnits: 10, confidence: 'practice', skillXpPerTick: { Mining: 2 } },
+                outputs: [{ itemId: 436, countPerUnit: 1 }],
+            },
+        ];
+        const demands: GoalDemand[] = [
+            { id: 'd:oak', goalKind: 'main_supply', target: { kind: 'item', itemId: 1521, count: 50 }, fulfilled: 0, remaining: 50, valueScore: 100, priorityWeight: 1, active: true },
+            { id: 'd:copper', goalKind: 'main_supply', target: { kind: 'item', itemId: 436, count: 40 }, fulfilled: 0, remaining: 40, valueScore: 50, priorityWeight: 1, active: true },
+        ];
+        const shared = buildPlannerSharedIndex({ world, activities });
+        const reuse = createAccountPlannerReuse(acct, world);
+
+        const uncached = planAccountWithCandidates(acct, { world, activities, demands, _sharedIndex: shared });
+        const reused = planAccountWithCandidates(acct, { world, activities, demands, _sharedIndex: shared, _reuse: reuse });
+        expect(reused).toEqual(uncached);
+
+        const excluded = new Set(['spot:oak-b']);
+        const uncachedFiltered = planAccount(acct, { world, activities, demands: [demands[0]!], _sharedIndex: shared, excludedSpotIds: excluded });
+        const reusedFiltered = planAccount(acct, { world, activities, demands: [demands[0]!], _sharedIndex: shared, excludedSpotIds: excluded, _reuse: reuse });
+        expect(reusedFiltered).toEqual(uncachedFiltered);
     });
 });

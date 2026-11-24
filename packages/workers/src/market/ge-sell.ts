@@ -4,31 +4,23 @@ import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
 import { waitUntil } from '../../../core/src/ticks';
 import type { GEOffer } from '../../../../vendor/rs-sdk/sdk/ge-types';
-import { collectClaim, loadGeItemCatalogue, marketEntryFailure, marketTileSafe, orderItemMatcher } from './ge-common';
+import { collectClaim, marketEntryFailure, marketTileSafe, orderItemMatcher } from './ge-common';
 import { marketProgress } from './market-progress';
+import { getGeItemCatalogue, validateSale } from './preflight';
 import type { SaleJournal, SaleRequest, SaleView } from './types';
 import { walkTargetPersist } from './walk';
 
+export { validateSale };
 export type { SaleJournal, SaleRequest, SaleView };
 
 const VARROCK_BANK = { x: 3185, z: 3436, level: 0 };
 const GE_SPOT = { x: 3184, z: 3440, level: 0 };
 
-let cachedItems: { id: number; name: string }[] | undefined;
-const itemCatalogue = () => (cachedItems ??= loadGeItemCatalogue());
+const itemCatalogue = () => getGeItemCatalogue();
 
 export function saleItemMatcher(itemId: number, catalogue: readonly { id: number; name: string }[] = itemCatalogue()) {
     const match = orderItemMatcher(itemId, catalogue);
     return (i: { id: number; baseId?: number; name?: string }) => i.id === itemId || i.baseId === itemId || match(i);
-}
-
-export function validateSale(r: SaleRequest) {
-    if (!/^[a-z0-9]{1,12}$/i.test(r.actor) || !r.server || !/^[a-z0-9_-]{1,64}$/i.test(r.goal)
-        || ![r.item, r.quantity, r.price, r.floor, r.deadline].every(n => Number.isSafeInteger(n) && n > 0)
-        || !Number.isSafeInteger(r.reserveItems) || r.reserveItems < 0 || r.price < r.floor
-        || r.price * r.quantity > 2147483647 || r.item === 995) {
-        throw Error('invalid finite sale request');
-    }
 }
 
 function identity(j: SaleJournal, v: SaleView) {
@@ -146,7 +138,15 @@ export async function runOwnedSale(
     };
     const unsafe = () => fatal() || stop() || s.tick() - start > 350;
     const matchItem = saleItemMatcher(r.item, options.catalogue);
-    const held = (id: number) => s.sdk.getInventory().filter(i => (id === r.item ? matchItem(i) : i.id === id)).reduce((n, i) => n + i.count, 0);
+    const held = (id: number) => {
+        const inv = s.sdk.getInventory();
+        let total = 0;
+        for (let idx = 0; idx < inv.length; idx++) {
+            const row = inv[idx]!;
+            if (id === r.item ? matchItem(row) : row.id === id) total += row.count;
+        }
+        return total;
+    };
     let j: SaleJournal | undefined = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : undefined;
     if (j && (j.version !== 1 || JSON.stringify(j.request) !== JSON.stringify(r)
         || !['prepared', 'attempted', 'open', 'cancelling', 'collecting', 'settled'].includes(j.phase))) {
@@ -297,7 +297,15 @@ export async function runBankBidSale(
         }
         return depositObserved(s, item);
     });
-    const held = (id: number) => s.sdk.getInventory().filter(i => (id === r.item ? matchItem(i) : i.id === id)).reduce((n, i) => n + i.count, 0);
+    const held = (id: number) => {
+        const inv = s.sdk.getInventory();
+        let total = 0;
+        for (let idx = 0; idx < inv.length; idx++) {
+            const row = inv[idx]!;
+            if (id === r.item ? matchItem(row) : row.id === id) total += row.count;
+        }
+        return total;
+    };
     const openFreshBank = async () => {
         const generation = s.bankObservation?.()?.generation ?? -1;
         if (!(await s.bot.openBank()).success

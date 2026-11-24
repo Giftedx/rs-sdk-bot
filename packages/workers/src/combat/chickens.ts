@@ -6,17 +6,19 @@ import type { Session } from '../../../core/src/inprocess';
 import { questFlags } from '../../../core/src/quest-status';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { expandPath, sessionWalker, walkPath, type PathDeps, type PathTile } from '../../../core/src/walk';
-import {
-    gearLevelWatch,
-    readSkillLevels,
-    reconcileCombatLoadout,
-    scoreGearForStyle,
-    selectCombatLoadout,
-    type GearSkillLevels,
-    type QuestInput,
-} from './gear';
+import type { GearSkillLevels, QuestInput } from './gear';
 import type { CombatSession } from './types';
 import { levelForXp, xpForLevel } from './xp';
+
+let cachedGearMod: typeof import('./gear') | undefined;
+const loadGearMod = (): typeof import('./gear') => (cachedGearMod ??= require('./gear'));
+
+const DARK_WIZARD_RE = /^dark wizard$/i;
+const BEAR_RE = /^bear$/i;
+const ARDOUGNE_THREAT_RE = /^(giant bat|wolf|white wolf|scorpion)$/i;
+const DEFAULT_THREAT_RE = /^(giant rat|dark wizard|mugger|barbarian|highwayman|jail guard)$/i;
+const CHICKEN_RE = /^chicken$/i;
+const ATTACK_RE = /^attack$/i;
 
 const LOWER_HEALTH_MIN_WEAPON_SCORE = 1173;
 
@@ -26,6 +28,7 @@ export function chickenTrainingKit(
     items: readonly { id: number; count?: number }[],
     options: { levels?: GearSkillLevels; quests?: QuestInput; entry?: ChickenEntry; trainSkill?: string } = {},
 ): number[] {
+    const { scoreGearForStyle, selectCombatLoadout } = loadGearMod();
     const stock = items.map(i => ({ id: i.id, count: i.count ?? 1 }));
     const entry = options.entry ?? 'standard';
     const loadout = selectCombatLoadout('melee', stock, options.levels, options.quests, {
@@ -45,9 +48,17 @@ export function chickenTrainingKit(
 }
 
 export function chickenDesiredSkill(levels: { Attack: number; Strength: number; Defence: number }): 'Attack' | 'Strength' | 'Defence' {
-    if (Object.values(levels).some(n => !Number.isSafeInteger(n) || n < 1)) throw Error('training skills unavailable');
-    const choices = ['Strength', 'Attack', 'Defence'] as const;
-    return [...choices].sort((a, b) => levels[a] - levels[b])[0]!;
+    const { Attack, Strength, Defence } = levels;
+    if (
+        !Number.isSafeInteger(Attack) || Attack < 1
+        || !Number.isSafeInteger(Strength) || Strength < 1
+        || !Number.isSafeInteger(Defence) || Defence < 1
+    ) {
+        throw Error('training skills unavailable');
+    }
+    if (Strength <= Attack && Strength <= Defence) return 'Strength';
+    if (Attack <= Defence) return 'Attack';
+    return 'Defence';
 }
 
 export function chickenTrainingStyle(levels: { Attack: number; Strength: number; Defence: number }): number {
@@ -154,27 +165,48 @@ export function chickenCombatUnlockPlan(
     xp: { Strength: number; Defence: number; Hitpoints: number },
     target = 29,
 ) {
-    if (Object.values(levels).some(n => !Number.isSafeInteger(n) || n < 1 || n > 99) || Object.values(xp).some(n => !Number.isFinite(n) || n < 0)) {
+    if (
+        !Number.isSafeInteger(levels.Attack) || levels.Attack < 1 || levels.Attack > 99
+        || !Number.isSafeInteger(levels.Defence) || levels.Defence < 1 || levels.Defence > 99
+        || !Number.isSafeInteger(levels.Hitpoints) || levels.Hitpoints < 1 || levels.Hitpoints > 99
+        || !Number.isSafeInteger(levels.Prayer) || levels.Prayer < 1 || levels.Prayer > 99
+        || !Number.isSafeInteger(levels.Ranged) || levels.Ranged < 1 || levels.Ranged > 99
+        || !Number.isSafeInteger(levels.Magic) || levels.Magic < 1 || levels.Magic > 99
+        || !Number.isFinite(xp.Strength) || xp.Strength < 0
+        || !Number.isFinite(xp.Defence) || xp.Defence < 0
+        || !Number.isFinite(xp.Hitpoints) || xp.Hitpoints < 0
+    ) {
         throw Error('combat unlock observations unavailable');
     }
-    if (levelForXp(xp.Defence) !== levels.Defence || levelForXp(xp.Hitpoints) !== levels.Hitpoints) {
+    const startDef = levelForXp(xp.Defence);
+    if (startDef !== levels.Defence || levelForXp(xp.Hitpoints) !== levels.Hitpoints) {
         throw Error('combat unlock XP and levels disagree');
     }
+    const startStr = levelForXp(xp.Strength);
+    const otherTerm = Math.max(
+        0.325 * (Math.floor(levels.Ranged / 2) + levels.Ranged),
+        0.325 * (Math.floor(levels.Magic / 2) + levels.Magic),
+    );
+    const prayHalf = Math.floor(levels.Prayer / 2);
+    const defCosts = new Array<number>(100);
+    for (let d = startDef; d <= 99; d++) {
+        defCosts[d] = Math.max(0, xpForLevel(d) - xp.Defence);
+    }
     let best: { strength: number; defence: number; hitpoints: number; combat: number; requiredXp: number } | undefined;
-    for (let strength = levelForXp(xp.Strength); strength <= 99; strength++) {
-        for (let defence = levelForXp(xp.Defence); defence <= 99; defence++) {
-            const requiredXp = Math.max(0, xpForLevel(strength) - xp.Strength) + Math.max(0, xpForLevel(defence) - xp.Defence);
+    for (let strength = startStr; strength <= 99; strength++) {
+        const strCost = Math.max(0, xpForLevel(strength) - xp.Strength);
+        if (best && strCost > best.requiredXp) break;
+        const maxTerm = Math.max(0.325 * (levels.Attack + strength), otherTerm);
+        for (let defence = startDef; defence <= 99; defence++) {
+            const requiredXp = strCost + defCosts[defence]!;
+            if (best && requiredXp > best.requiredXp) break;
             const hitpoints = levelForXp(xp.Hitpoints + Math.floor((requiredXp * 13) / 40));
-            const combat = Math.floor(
-                0.25 * (defence + hitpoints + Math.floor(levels.Prayer / 2))
-                    + Math.max(
-                        0.325 * (levels.Attack + strength),
-                        0.325 * (Math.floor(levels.Ranged / 2) + levels.Ranged),
-                        0.325 * (Math.floor(levels.Magic / 2) + levels.Magic),
-                    ),
-            );
-            if (combat >= target && (!best || requiredXp < best.requiredXp || (requiredXp === best.requiredXp && strength > best.strength))) {
-                best = { strength, defence, hitpoints, combat, requiredXp };
+            const combat = Math.floor(0.25 * (defence + hitpoints + prayHalf) + maxTerm);
+            if (combat >= target) {
+                if (!best || requiredXp < best.requiredXp || (requiredXp === best.requiredXp && strength > best.strength)) {
+                    best = { strength, defence, hitpoints, combat, requiredXp };
+                }
+                break;
             }
         }
     }
@@ -235,10 +267,10 @@ export function chickenStrengthGoal(bank: string, skill: string | undefined, lev
 }
 
 export function chickenTrainingThreat(n: { name: string; distance: number }, bank: string): boolean {
-    if (bank === 'draynor' && /^dark wizard$/i.test(n.name)) return n.distance <= 4;
-    if (bank === 'ardougne' && /^bear$/i.test(n.name)) return n.distance <= 4;
-    if (bank === 'ardougne' && /^(giant bat|wolf|white wolf|scorpion)$/i.test(n.name)) return n.distance <= 8;
-    return /^(giant rat|dark wizard|mugger|barbarian|highwayman|jail guard)$/i.test(n.name) && n.distance <= 8;
+    if (bank === 'draynor' && DARK_WIZARD_RE.test(n.name)) return n.distance <= 4;
+    if (bank === 'ardougne' && BEAR_RE.test(n.name)) return n.distance <= 4;
+    if (bank === 'ardougne' && ARDOUGNE_THREAT_RE.test(n.name)) return n.distance <= 8;
+    return DEFAULT_THREAT_RE.test(n.name) && n.distance <= 8;
 }
 
 export function chickenTrainingTarget(target = 13): number {
@@ -337,6 +369,7 @@ export async function trainChickens(
         if (!(await s.bot.openBank()).success) throw Error('training bank unavailable');
         await waitTicks(s, 2);
         const before = assets();
+        const { gearLevelWatch, readSkillLevels, reconcileCombatLoadout } = loadGearMod();
         const levels = readSkillLevels(n => s.sdk.getSkill(n));
         const quests = s.client ? questFlags(s.client) : null;
         const kit = chickenTrainingKit([...s.sdk.getInventory(), ...s.sdk.getEquipment(), ...(state()?.bank.items ?? [])], {
@@ -408,24 +441,31 @@ export async function trainChickens(
                         + JSON.stringify({ style, skill: desiredSkill, strength: s.sdk.getSkill('Strength')?.baseLevel, defence: s.sdk.getSkill('Defence')?.baseLevel }),
                 );
             }
-            const chicken = state()
-                ?.nearbyNpcs.filter(
-                    n =>
-                        /^chicken$/i.test(n.name)
-                        && !n.inCombat
+            const npcs = state()?.nearbyNpcs;
+            let chicken: NonNullable<typeof npcs>[number] | undefined;
+            if (npcs) {
+                for (let i = 0; i < npcs.length; i++) {
+                    const n = npcs[i]!;
+                    if (
+                        !n.inCombat
                         && (n.hp ?? 1) > 0
                         && n.reachable !== false
                         && n.x >= profile.pen.x0
                         && n.x <= profile.pen.x1
                         && n.z >= profile.pen.z0
-                        && n.z <= profile.pen.z1,
-                )
-                .sort((a, b) => a.distance - b.distance)[0];
+                        && n.z <= profile.pen.z1
+                        && CHICKEN_RE.test(n.name)
+                        && (!chicken || n.distance < chicken.distance)
+                    ) {
+                        chicken = n;
+                    }
+                }
+            }
             if (!chicken) {
                 await waitTicks(s, 1);
                 continue;
             }
-            const op = chicken.optionsWithIndex.find(o => /^attack$/i.test(o.text))?.opIndex;
+            const op = chicken.optionsWithIndex.find(o => ATTACK_RE.test(o.text))?.opIndex;
             if (op === undefined) {
                 await waitTicks(s, 1);
                 continue;

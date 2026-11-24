@@ -240,21 +240,42 @@ export const SPECS: Spec[] = [
     },
 ];
 
+const nameRegexCache = new Map<string, RegExp>();
+const blockHeaderRe = /^\[/;
+
+function nameRegex(name: string): RegExp {
+    let re = nameRegexCache.get(name);
+    if (!re) {
+        re = new RegExp(`(^|[^a-z0-9_])${name.startsWith('_') ? '_?' : ''}${name.replace(/^_/, '')}\\b`);
+        nameRegexCache.set(name, re);
+    }
+    return re;
+}
+
 /** Materialize one anchored `Spec` into a `ToolRecord` with line citations. */
 export function fromSpec(sp: Spec, rungs: Rung[]): ToolRecord {
     const rec = emptyRecord(sp.id, sp.skill, applies(rungs, sp.skill, sp.kinds, sp.idPattern), '');
     if (sp.note) rec.note = sp.note;
     const miss = (a: SpecAnchor) => rec.gaps.push(`anchor not found: ${a.file} /${a.re.source}/`);
     const check = (names: string[], c: Cite, a: SpecAnchor) => {
-        let text = c.text;
-        if (a.block) {
-            const l = lines(a.file);
-            const start = Number(c.src.split(':').pop()) - 1;
-            const end = l.findIndex((x, i) => i > start && /^\[/.test(x));
-            text = l.slice(start, end < 0 ? l.length : end).join('\n');
+        if (!a.block) {
+            for (const n of names) if (!nameRegex(n).test(c.text)) rec.gaps.push(`${n} is not on ${c.src}: ${c.text}`);
+            return;
         }
-        // A category name may appear with its `_` (trigger) or without it (oc_category test).
-        for (const n of names) if (!new RegExp(`(^|[^a-z0-9_])${n.startsWith('_') ? '_?' : ''}${n.replace(/^_/, '')}\\b`).test(text)) rec.gaps.push(`${n} is not on ${c.src}${a.block ? ' or its block' : ''}: ${c.text}`);
+        const l = lines(a.file);
+        const start = Number(c.src.slice(c.src.lastIndexOf(':') + 1)) - 1;
+        let end = l.length;
+        for (let i = start + 1; i < l.length; i++) {
+            if (blockHeaderRe.test(l[i]!)) { end = i; break; }
+        }
+        for (const n of names) {
+            const re = nameRegex(n);
+            let found = false;
+            for (let i = start; i < end; i++) {
+                if (re.test(l[i]!)) { found = true; break; }
+            }
+            if (!found) rec.gaps.push(`${n} is not on ${c.src} or its block: ${c.text}`);
+        }
     };
     if (sp.level) {
         const c = cite(sp.level.file, sp.level.re, sp.level.after);

@@ -69,21 +69,58 @@ export const insideRuneAltar = (a: RuneAltar, p: { worldX: number; worldZ: numbe
         ? insideAirAltar(p)
         : !!p && p.level === a.inside.level && Math.floor(p.worldX / 64) === Math.floor(a.inside.x / 64) && Math.floor(p.worldZ / 64) === 75;
 
+const RUNE_ALTARS_BY_XP_DESC: readonly RuneAltar[] = [...RUNE_ALTARS].sort((a, b) => b.xp - a.xp);
+export const ALL_ALTARS_BY_NAME = new Map<string, RuneAltar>(ALL_ALTARS.map(a => [a.name, a]));
+
 export function chooseRuneAltar(level: number, owned: ReadonlySet<number>, forced?: string): { altar?: RuneAltar; wanted: string[] } {
     if (forced !== undefined) {
-        const altar = ALL_ALTARS.find(a => a.name === forced);
+        const altar = ALL_ALTARS_BY_NAME.get(forced);
         if (!altar) throw Error(`unknown rune altar: ${forced}`);
         if (!Number.isSafeInteger(level) || level < altar.level) throw Error(`${forced} altar requires Runecraft${altar.level}, observed${level}`);
         if (!owned.has(altar.talisman)) throw Error(`next acquisition: ${forced} talisman${altar.talisman} required for requested altar`);
         return { altar, wanted: [] };
     }
-    const usable = RUNE_ALTARS.filter(a => a.level <= level).sort((a, b) => b.xp - a.xp);
-    const altar = usable.find(a => owned.has(a.talisman));
-    return { altar, wanted: usable.filter(a => (!altar || a.xp > altar.xp) && !owned.has(a.talisman)).map(a => a.name) };
+    let altar: RuneAltar | undefined;
+    const wanted: string[] = [];
+    for (let i = 0; i < RUNE_ALTARS_BY_XP_DESC.length; i++) {
+        const a = RUNE_ALTARS_BY_XP_DESC[i]!;
+        if (a.level > level) continue;
+        if (owned.has(a.talisman)) {
+            if (!altar) altar = a;
+        } else if (!altar || a.xp > altar.xp) {
+            wanted.push(a.name);
+        }
+    }
+    return { altar, wanted };
 }
+
+type RuinTargetEntry = { at: Tile; q: InteractionTarget };
+const RUIN_TARGETS_BY_NAME = new Map<string, RuinTargetEntry>(
+    ALL_ALTARS.map((a, idx) => {
+        const at = tile(a.ruins.x - 1, a.ruins.z - 1, a.ruins.level);
+        return [
+            a.name,
+            {
+                at,
+                q: {
+                    id: 2452 + idx,
+                    shape: 10,
+                    angle: a.name === 'cosmic' ? 2 : 0,
+                    width: 3,
+                    height: 3,
+                    blockAccessFlags: 0,
+                    src: `maps/m${Math.floor(at.x / 64)}_${Math.floor(at.z / 64)}.jm2`,
+                    configSrc: 'scripts/skill_runecraft/configs/runecraft.loc',
+                },
+            },
+        ];
+    }),
+);
 
 // Pinned maps/*.jm2 place each ruin (runecraft.loc 3x3, no forceapproach) as shape 10, origin one tile south-west of its centre.
 export function ruinTarget(a: RuneAltar): { at: Tile; q: InteractionTarget } {
+    const cached = RUIN_TARGETS_BY_NAME.get(a.name);
+    if (cached) return { at: { ...cached.at }, q: { ...cached.q } };
     const at = tile(a.ruins.x - 1, a.ruins.z - 1, a.ruins.level);
     const id = 2452 + ALL_ALTARS.indexOf(a);
     return {
@@ -102,6 +139,11 @@ export function ruinTarget(a: RuneAltar): { at: Tile; q: InteractionTarget } {
 }
 
 export const inRuinFootprint = (a: RuneAltar, t: Tile): boolean => {
+    const cached = RUIN_TARGETS_BY_NAME.get(a.name);
+    if (cached) {
+        const { at, q } = cached;
+        return t.level === at.level && t.x >= at.x && t.x < at.x + q.width && t.z >= at.z && t.z < at.z + q.height;
+    }
     const { at, q } = ruinTarget(a);
     return t.level === at.level && t.x >= at.x && t.x < at.x + q.width && t.z >= at.z && t.z < at.z + q.height;
 };
@@ -173,13 +215,16 @@ export const UNSUPPORTED_CARRIER_ALTARS: readonly { name: string; reason: string
     { name: 'death', reason: 'members; the row puts altar, entry and exit on one Lumbridge tile (3221,3218): this content has no death temple' },
 ];
 
+const CARRIER_ALTARS_BY_NAME = new Map<string, RuneCarrierAltar>(RUNE_CARRIER_ALTARS.map(r => [r.name, r]));
+const UNSUPPORTED_CARRIER_BY_NAME = new Map<string, string>(UNSUPPORTED_CARRIER_ALTARS.map(r => [r.name, r.reason]));
+
 export const BODY_CARRIER_ALTAR: RuneCarrierAltar = carrierAltar('body');
 
 export function carrierAltar(name: string): RuneCarrierAltar {
-    const a = RUNE_CARRIER_ALTARS.find(r => r.name === name);
+    const a = CARRIER_ALTARS_BY_NAME.get(name);
     if (!a) {
         throw Error(
-            `no rune carrier altar ${name}: ${UNSUPPORTED_CARRIER_ALTARS.find(r => r.name === name)?.reason ?? 'not a runecraft altar'}`,
+            `no rune carrier altar ${name}: ${UNSUPPORTED_CARRIER_BY_NAME.get(name) ?? 'not a runecraft altar'}`,
         );
     }
     return a;

@@ -22,9 +22,12 @@ export function meter(s: Session, skill: string): Meter {
     return { skill, t0: s.tick(), sent: 0, refused: 0, perTickSent: new Map(), levelTicks: 0, levelClears: 0, bankTicks: 0, bankCycles: 0, actions: 0, bands: new Map() };
 }
 
+const BANK_OP_RE = /^bank(Deposit|Withdraw)$/;
+
 export async function send(s: Session, m: Meter, a: Act): Promise<boolean> {
     let r: any = await s.direct({ reason: 'SDK', ...a });
-    for (let k = 0; k < 3 && r?.success === false && /^bank(Deposit|Withdraw)$/.test(a.type); k++) {
+    const isBankOp = BANK_OP_RE.test(a.type);
+    for (let k = 0; k < 3 && r?.success === false && isBankOp; k++) {
         m.refused++;
         await waitTicks(s, 1);
         r = await s.direct({ reason: 'SDK', ...a });
@@ -78,9 +81,26 @@ export async function clearDialogs(s: Session, m: Meter, mode: 'close' | 'click'
 
 export function nearestLoc(s: Session, name: RegExp, op: RegExp): { loc: any; opIndex: number } | null {
     const locs = (s.sdk.getState()?.nearbyLocs ?? []) as any[];
-    const l = locs.filter(x => name.test(x.name) && x.optionsWithIndex.some((o: any) => op.test(o.text))).sort((a, b) => a.distance - b.distance)[0];
-    if (!l) return null;
-    return { loc: l, opIndex: l.optionsWithIndex.find((o: any) => op.test(o.text)).opIndex };
+    let best: any = null;
+    let bestOp = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < locs.length; i++) {
+        const x = locs[i];
+        if (!name.test(x.name)) continue;
+        const dist = x.distance ?? Infinity;
+        if (best !== null && dist >= bestDist) continue;
+        const opts = x.optionsWithIndex;
+        for (let j = 0; j < opts.length; j++) {
+            const o = opts[j];
+            if (op.test(o.text)) {
+                best = x;
+                bestOp = o.opIndex;
+                bestDist = dist;
+                break;
+            }
+        }
+    }
+    return best ? { loc: best, opIndex: bestOp } : null;
 }
 
 export async function openBank(s: Session, m: Meter, cap = 40): Promise<number> {

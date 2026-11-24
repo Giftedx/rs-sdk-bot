@@ -24,17 +24,31 @@ import { join } from 'node:path';
 
 export type Defence = [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
 const DAMAGE: Record<string, number> = { '^stab_style': 0, '^slash_style': 1, '^crush_style': 2 };
-const BONUS = ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence'];
+const BONUS = ['stabdefence', 'slashdefence', 'crushdefence', 'magicdefence', 'rangedefence'] as const;
+const DEF_ATTACK_RE = /^op\d=Attack\s*$/m;
+const DEF_DAMAGE_RE = /^param=damagetype,(\S+)\s*$/m;
+const DEF_XP_MULT_RE = /^param=combat_xp_multiplier,(\d+)\s*$/m;
+const FIELD_RE_CACHE = new Map<string, RegExp>();
+const PARAM_RE_CACHE = new Map<string, RegExp>();
+const fieldMatch = (block: string, k: string): string | undefined => {
+    let re = FIELD_RE_CACHE.get(k);
+    if (!re) { re = new RegExp(`^${k}=(.*)$`, 'm'); FIELD_RE_CACHE.set(k, re); }
+    return block.match(re)?.[1]?.trim();
+};
+const paramNum = (block: string, k: string): number => {
+    let re = PARAM_RE_CACHE.get(k);
+    if (!re) { re = new RegExp(`^param=${k},(-?\\d+)\\s*$`, 'm'); PARAM_RE_CACHE.set(k, re); }
+    return Number(block.match(re)?.[1] ?? 0);
+};
 
 export function npcDefence(files: string[], combat: Map<string, number>): Record<string, Defence[]> {
     const out: Record<string, Defence[]> = {};
     for (const text of files) for (const block of text.split(/^\[/m).slice(1)) {
-        const debug = block.slice(0, block.indexOf(']')), field = (k: string) => block.match(new RegExp(`^${k}=(.*)$`, 'm'))?.[1]?.trim();
-        const name = field('name');
-        if (!name || !/^op\d=Attack\s*$/m.test(block)) continue;
-        const param = (k: string) => Number(block.match(new RegExp(`^param=${k},(-?\\d+)\\s*$`, 'm'))?.[1] ?? 0);
-        const lvl = (k: string) => Number(field(k) ?? 1) || 1, damage = block.match(/^param=damagetype,(\S+)\s*$/m)?.[1] ?? '';
-        const row: Defence = [combat.get(debug) ?? 0, lvl('defence'), lvl('magic'), ...BONUS.map(param), lvl('attack'), lvl('strength'), param('attackbonus'), param('strengthbonus'), DAMAGE[damage] ?? -1, lvl('hitpoints'), Number(block.match(/^param=combat_xp_multiplier,(\d+)\s*$/m)?.[1] ?? 1000), Number(field('respawnrate') ?? 100) || 100] as Defence;
+        const name = fieldMatch(block, 'name');
+        if (!name || !DEF_ATTACK_RE.test(block)) continue;
+        const debug = block.slice(0, block.indexOf(']'));
+        const lvl = (k: string) => Number(fieldMatch(block, k) ?? 1) || 1, damage = block.match(DEF_DAMAGE_RE)?.[1] ?? '';
+        const row: Defence = [combat.get(debug) ?? 0, lvl('defence'), lvl('magic'), paramNum(block, BONUS[0]), paramNum(block, BONUS[1]), paramNum(block, BONUS[2]), paramNum(block, BONUS[3]), paramNum(block, BONUS[4]), lvl('attack'), lvl('strength'), paramNum(block, 'attackbonus'), paramNum(block, 'strengthbonus'), DAMAGE[damage] ?? -1, lvl('hitpoints'), Number(block.match(DEF_XP_MULT_RE)?.[1] ?? 1000), Number(fieldMatch(block, 'respawnrate') ?? 100) || 100];
         const list = (out[name] ??= []);
         if (!list.some(r => r.every((v, i) => v === row[i]))) list.push(row);
     }
@@ -46,9 +60,9 @@ export function npcDefence(files: string[], combat: Map<string, number>): Record
 export function huntKinds(files: string[]): Map<string, number> {
     const out = new Map<string, number>();
     for (const text of files) for (const block of text.split(/^\[/m).slice(1)) {
-        const name = block.slice(0, block.indexOf(']')), field = (k: string) => block.match(new RegExp(`^${k}=(.*)$`, 'm'))?.[1]?.trim();
-        if (field('type') !== 'player') continue;
-        out.set(name, field('check_afk') === 'off' ? 3 : field('check_nottoostrong') === 'outside_wilderness' ? 1 : 2);
+        const name = block.slice(0, block.indexOf(']'));
+        if (fieldMatch(block, 'type') !== 'player') continue;
+        out.set(name, fieldMatch(block, 'check_afk') === 'off' ? 3 : fieldMatch(block, 'check_nottoostrong') === 'outside_wilderness' ? 1 : 2);
     }
     return out;
 }
@@ -60,19 +74,35 @@ type Tile = { x: number; z: number; level?: number };
 export function npcHunters(files: string[], hunts: Map<string, number>, npcs: { debugname?: string; spawns?: Tile[] }[]): Hunter[] {
     const kind = new Map<string, { name: string; kind: number; vis: number }>();
     for (const text of files) for (const block of text.split(/^\[/m).slice(1)) {
-        const debug = block.slice(0, block.indexOf(']')), field = (k: string) => block.match(new RegExp(`^${k}=(.*)$`, 'm'))?.[1]?.trim();
-        const name = field('name'), k = Number(field('huntrange') ?? 0) >= 1 ? hunts.get(field('huntmode') ?? '') ?? 0 : 0;
-        if (name && k > 0) kind.set(debug, { name, kind: k, vis: Number(field('vislevel') ?? -1) });
+        const name = fieldMatch(block, 'name');
+        if (!name) continue;
+        const k = Number(fieldMatch(block, 'huntrange') ?? 0) >= 1 ? hunts.get(fieldMatch(block, 'huntmode') ?? '') ?? 0 : 0;
+        if (k > 0) kind.set(block.slice(0, block.indexOf(']')), { name, kind: k, vis: Number(fieldMatch(block, 'vislevel') ?? -1) });
     }
-    const by = new Map<string, { row: Hunter; tiles: Set<string> }>();
+    const by = new Map<string, { name: string; kind: number; vis: number; seen: Set<string>; flatTiles: number[] }>();
     for (const n of npcs) {
         const h = n.debugname ? kind.get(n.debugname) : undefined;
         if (!h || !n.spawns?.length) continue;
-        const key = `${h.name}|${h.kind}|${h.vis}`, g = by.get(key) ?? { row: [h.name, h.kind, h.vis, []] as Hunter, tiles: new Set<string>() };
-        for (const s of n.spawns) if (Number.isInteger(s.x) && Number.isInteger(s.z)) g.tiles.add(`${s.x},${s.z},${s.level ?? 0}`);
-        by.set(key, g);
+        const key = `${h.name}|${h.kind}|${h.vis}`;
+        let g = by.get(key);
+        if (!g) {
+            g = { name: h.name, kind: h.kind, vis: h.vis, seen: new Set<string>(), flatTiles: [] };
+            by.set(key, g);
+        }
+        for (const s of n.spawns) {
+            if (!Number.isInteger(s.x) || !Number.isInteger(s.z)) continue;
+            const lvl = s.level ?? 0;
+            const tk = `${s.x},${s.z},${lvl}`;
+            if (!g.seen.has(tk)) {
+                g.seen.add(tk);
+                g.flatTiles.push(s.x, s.z, lvl);
+            }
+        }
     }
-    return [...by.values()].map(g => [g.row[0], g.row[1], g.row[2], [...g.tiles].flatMap(t => t.split(',').map(Number))] as Hunter).sort((a, b) => a[0].localeCompare(b[0]) || a[1] - b[1] || a[2] - b[2]);
+    const out: Hunter[] = [];
+    for (const g of by.values()) out.push([g.name, g.kind, g.vis, g.flatTiles]);
+    out.sort((a, b) => a[0].localeCompare(b[0]) || a[1] - b[1] || a[2] - b[2]);
+    return out;
 }
 
 // The chance (0-1) that an attack roll beats a defence roll, both drawn from 0 up to the roll (randominc).

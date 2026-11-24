@@ -7,6 +7,23 @@ import type { Content, Facts, ModelInput, Roll, Timing } from './types';
 // Guide rungs that name the finished item while the craft makes another (symbols are strung and blessed later),
 // or whose item name does not resolve: rung output or label -> the struct the craft script reads.
 const STRUCT_ALIASES: Record<string, string> = { blessedstar: 'unstrung_symbol', blessedsnake: 'unstrung_emblem', 'Glass orb': 'stafforb' };
+const BREW_SOLVENT_INDEX = new WeakMap<Content, Map<string, ConfigBlock[]>>();
+
+function brewStructsBySolvent(c: Content): Map<string, ConfigBlock[]> {
+    let index = BREW_SOLVENT_INDEX.get(c);
+    if (!index) {
+        index = new Map();
+        for (const s of c.structs()) {
+            const sol = param(s, 'brew_potion_solvent')?.value;
+            if (!sol) continue;
+            let list = index.get(sol);
+            if (!list) { list = []; index.set(sol, list); }
+            list.push(s);
+        }
+        BREW_SOLVENT_INDEX.set(c, index);
+    }
+    return index;
+}
 
 // The config struct a crafting rung uses: by product, then alias, then the struct named after the label, then by ingredient.
 function structFor(c: Content, r: ModelInput, key: string): ConfigBlock | undefined {
@@ -190,9 +207,12 @@ export function productionFacts(c: Content, r: ModelInput, rowName: string): Fac
     case 'potion': {
         // Match by recipe: the unfinished potion of the rung herb, plus the rung secondary. The guide names the 4-dose item.
         const [herb, secondary] = r.inputs;
-        const unf = herb ? c.structs().find(x => param(x, 'brew_potion_ingredient')?.value === herb && param(x, 'brew_potion_solvent')?.value === 'vial_water') : undefined;
+        const bySolvent = brewStructsBySolvent(c);
+        const unf = herb ? (bySolvent.get('vial_water') ?? []).find(x => param(x, 'brew_potion_ingredient')?.value === herb) : undefined;
         const unfMix = param(unf, 'brew_potion_mixture')?.value;
-        const byRecipe = unfMix ? c.structs().filter(x => param(x, 'brew_potion_solvent')?.value === unfMix && (!secondary || param(x, 'brew_potion_ingredient')?.value === secondary)) : [];
+        const byRecipe = unfMix
+            ? (bySolvent.get(unfMix) ?? []).filter(x => !secondary || param(x, 'brew_potion_ingredient')?.value === secondary)
+            : [];
         const s = (r.outputs[0] ? struct(c, 'brew_potion_mixture', r.outputs[0]) : undefined) ?? (byRecipe.length === 1 ? byRecipe[0] : undefined);
         const xp = param(s, 'brew_potion_exp'), lvl = param(s, 'brew_potion_level');
         const ing = param(s, 'brew_potion_ingredient'), sol = param(s, 'brew_potion_solvent'), mix = param(s, 'brew_potion_mixture');

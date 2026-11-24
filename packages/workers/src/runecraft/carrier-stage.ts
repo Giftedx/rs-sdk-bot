@@ -9,8 +9,6 @@ import { fleetStateFile, resolveBotEnvPath } from '../../../core/src/practice-pa
 import { waitUntil } from '../../../core/src/ticks';
 import { ownedAccounts } from '../../../core/src/tradeguard';
 import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
-import { leaveRuneStarter, runeSupplyAssets } from '../logistics/walk-helpers';
-import { acquireAccountLeases, assertAccountOwnership, assertRecoverableStatus } from '../logistics/admission';
 import { enterBody, inside, leaveBody, stopCarriers } from './carrier-bank';
 import {
     assertRuneDonor,
@@ -26,8 +24,25 @@ import { ownedSwap, state } from './carrier-trade';
 import type { RunecraftExternalDeps } from './types';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..', '..');
+const OPEN_DOOR_RE = /^open$/i;
+type SkillXpSnap = readonly { name: string; experience: number }[];
+
+function sameXp(a: SkillXpSnap, b: SkillXpSnap): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i]!.name !== b[i]!.name || a[i]!.experience !== b[i]!.experience) return false;
+    }
+    return true;
+}
+
+let cachedWalkHelpersMod: typeof import('../logistics/walk-helpers') | undefined;
+let cachedAdmissionMod: typeof import('../logistics/admission') | undefined;
+const loadWalkHelpersMod = (): typeof import('../logistics/walk-helpers') => (cachedWalkHelpersMod ??= require('../logistics/walk-helpers'));
+const loadAdmissionMod = (): typeof import('../logistics/admission') => (cachedAdmissionMod ??= require('../logistics/admission'));
 
 export async function mainRuneStage(args: readonly string[], deps: RunecraftExternalDeps = {}): Promise<void> {
+    const { leaveRuneStarter, runeSupplyAssets } = loadWalkHelpersMod();
+    const { acquireAccountLeases, assertAccountOwnership, assertRecoverableStatus } = loadAdmissionMod();
     const { mode, names } = runeStageRoster(args);
     const root = REPO_ROOT, dir = join(root, '.practice');
     const purpose = process.env.RUNE_STAGE_PURPOSE;
@@ -108,8 +123,20 @@ export async function mainRuneStage(args: readonly string[], deps: RunecraftExte
         logout = confirmed && !warning && (!ok || result) && logout;
         active.delete(s);
     };
-    const xp = (s: Session) => JSON.stringify(state(s).skills.map(i => [i.name, i.experience]));
-    const count = (items: readonly { id: number; count: number }[], id: number) => items.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    const xp = (s: Session): SkillXpSnap => {
+        const skills = state(s).skills;
+        const out = new Array<{ name: string; experience: number }>(skills.length);
+        for (let i = 0; i < skills.length; i++) {
+            const sk = skills[i]!;
+            out[i] = { name: sk.name, experience: sk.experience };
+        }
+        return out;
+    };
+    const count = (items: readonly { id: number; count: number }[], id: number) => {
+        let n = 0;
+        for (let i = 0; i < items.length; i++) if (items[i]!.id === id) n += items[i]!.count;
+        return n;
+    };
     const bankItems = (s: Session) => {
         const b = s.bankObservation?.();
         if (!b) throw Error('Rune staging bank unobserved');
@@ -137,14 +164,14 @@ export async function mainRuneStage(args: readonly string[], deps: RunecraftExte
             },
             openDoor: async (label, x, z) => {
                 check();
-                const shut = () => state(s).nearbyLocs.find(l => l.x === x && l.z === z && l.optionsWithIndex.some(o => /^open$/i.test(o.text)));
+                const shut = () => state(s).nearbyLocs.find(l => l.x === x && l.z === z && l.optionsWithIndex.some(o => OPEN_DOOR_RE.test(o.text)));
                 const door = shut();
                 if (door && door.distance > 2) {
                     const r = await walkPath(await sessionWalker(s), [{ x, z, tol: 1 }], { maxTicks: 30, stop });
                     check();
                     if (!r.ok) throw Error('Rune staging ' + label + ' approach failed');
                 }
-                const current = shut(), op = current?.optionsWithIndex.find(o => /^open$/i.test(o.text));
+                const current = shut(), op = current?.optionsWithIndex.find(o => OPEN_DOOR_RE.test(o.text));
                 if (current && op && (!(await s.sdk.sendInteractLoc(current.x, current.z, current.id, op.opIndex)).success || !await waitUntil(s, () => stop() || !shut(), { timeoutTicks: 15 }))) {
                     throw Error('Rune staging ' + label + ' refused');
                 }
@@ -226,11 +253,11 @@ export async function mainRuneStage(args: readonly string[], deps: RunecraftExte
             check();
             await travel(s, 3222, 3223);
             assertRuneDonor(state(s).player, s.sdk.getInventory());
-            if (xp(s) !== beforeXp) throw Error('Rune staging changed donor XP');
+            if (!sameXp(xp(s), beforeXp)) throw Error('Rune staging changed donor XP');
             record(s, stored, { role: 'opening', receivedEssence: 0, receivedTalismans: 0 });
             await close(s, true);
         } else {
-            const prepared: Promise<{ s: Session; beforeXp: string; shortfall: ReturnType<typeof runeCarrierShortfall>; beforeEssence: number; beforeTalismans: number }>[] = [];
+            const prepared: Promise<{ s: Session; beforeXp: SkillXpSnap; shortfall: ReturnType<typeof runeCarrierShortfall>; beforeEssence: number; beforeTalismans: number }>[] = [];
             for (const name of names.slice(1)) {
                 const s = await open(name), beforeXp = xp(s);
                 const flight = (async () => {
@@ -249,7 +276,7 @@ export async function mainRuneStage(args: readonly string[], deps: RunecraftExte
             const receivers = await Promise.all(prepared);
             check();
             const needs = receivers.filter(r => r.shortfall.essence || r.shortfall.talismans);
-            let source: Session | undefined, sourceXp = '', sourceEssence = 0, sourceTalismans = 0;
+            let source: Session | undefined, sourceXp: SkillXpSnap = [], sourceEssence = 0, sourceTalismans = 0;
             if (needs.length) {
                 source = await open(names[0]!);
                 sourceXp = xp(source);
@@ -298,7 +325,7 @@ export async function mainRuneStage(args: readonly string[], deps: RunecraftExte
                     check();
                     await enterBody(s);
                     check();
-                    if (!inside(s) || count(s.sdk.getInventory(), 1436) !== 27 || count(s.sdk.getInventory(), 1446) !== 1 || count(stored, 1436) < 378 || xp(s) !== r.beforeXp) {
+                    if (!inside(s) || count(s.sdk.getInventory(), 1436) !== 27 || count(s.sdk.getInventory(), 1446) !== 1 || count(stored, 1436) < 378 || !sameXp(xp(s), r.beforeXp)) {
                         throw Error('Rune carrier readiness unobserved');
                     }
                     record(s, stored, { role: 'carrier', receivedEssence: shortfall.essence, receivedTalismans: shortfall.talismans });
@@ -308,7 +335,7 @@ export async function mainRuneStage(args: readonly string[], deps: RunecraftExte
             }
             if (source) {
                 await bank(source);
-                if (count(bankItems(source), 1436) !== sourceEssence - receivedEssence || count(bankItems(source), 1446) !== sourceTalismans - receivedTalismans || source.sdk.getInventory().length || xp(source) !== sourceXp) {
+                if (count(bankItems(source), 1436) !== sourceEssence - receivedEssence || count(bankItems(source), 1446) !== sourceTalismans - receivedTalismans || source.sdk.getInventory().length || !sameXp(xp(source), sourceXp)) {
                     throw Error('Rune staging supplier final reconciliation failed');
                 }
                 record(source, snapshot(source), { role: 'supplier', debitedEssence: receivedEssence, debitedTalismans: receivedTalismans });

@@ -9,6 +9,7 @@ import { resolveBotEnvPath } from '../../../core/src/practice-paths';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { payoutOrder } from './admission';
+import { parseTakeFromBankerArgs } from './preflight';
 import {
     courierDeliveryWaiting,
     ourAccounts,
@@ -18,7 +19,7 @@ import {
 } from './trade-helpers';
 import { REPO_ROOT } from './types';
 
-export { ourAccounts, payoutItems, preparePayout, type PayoutItem };
+export { ourAccounts, parseTakeFromBankerArgs, payoutItems, preparePayout, type PayoutItem };
 
 export function parseBankSpot(env: Record<string, string | undefined> = process.env): { x: number; z: number } {
     const spot = { x: Number(env.BANK_X ?? 2654), z: Number(env.BANK_Z ?? 3283) };
@@ -225,18 +226,6 @@ export async function runGiveToBanker(
         ok: only ? trades > 0 : left === 0,
         summary: `trades=${trades} slots=${items} coins=${coins0} left=${left}`,
     };
-}
-
-export function parseTakeFromBankerArgs(args: readonly string[]) {
-    const banker = args.find(a => a.startsWith('--banker='))?.slice(9) ?? 'Moneyshot';
-    const items = args.filter(a => !a.startsWith('--')).map(a => {
-        const [c, ...n] = a.split(':');
-        return { name: n.join(':'), count: Number(c) };
-    });
-    if (!items.length || items.some(i => !i.name || !Number.isSafeInteger(i.count) || i.count <= 0)) {
-        throw new Error('usage: take-from-banker <bot> <count>:<item> ... [--banker=Moneyshot]');
-    }
-    return { banker, items };
 }
 
 export async function runTakeFromBanker(

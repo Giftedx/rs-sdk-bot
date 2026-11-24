@@ -42,9 +42,16 @@ function firemakingSupplyRequirements(stage = 'Firemaking'): readonly CampaignSu
     let idx = 0;
     while (xp < goalXp + 25 && idx < 165) {
         const lvl = levelForXp(xp);
-        const tier = [...tiers].reverse().find((t) => lvl >= t.reqLevel)!;
+        let tier: (typeof tiers)[number] = tiers[0];
+        for (let i = tiers.length - 1; i >= 0; i--) {
+            if (lvl >= tiers[i]!.reqLevel) {
+                tier = tiers[i]!;
+                break;
+            }
+        }
         const prev = counts.get(tier.itemId);
-        counts.set(tier.itemId, { itemName: tier.itemName, count: (prev?.count ?? 0) + 1 });
+        if (prev) prev.count += 1;
+        else counts.set(tier.itemId, { itemName: tier.itemName, count: 1 });
         xp += tier.xp25x;
         idx++;
         if (xp >= goalXp && idx >= 157 && xp < goalXp + 10) {
@@ -557,16 +564,23 @@ export const ALL_SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = 
     ...RETIRED_SPECIALIST_CAMPAIGN_SPECS,
 ];
 
-export const SPECIALIST_CAMPAIGN_BY_ACCOUNT: ReadonlyMap<string, SpecialistCampaignSpec> = new Map(
-    ALL_SPECIALIST_CAMPAIGN_SPECS.map((spec) => [spec.account.toLowerCase(), spec]),
-);
+const RESERVED_ACCOUNT_SET: ReadonlySet<string> = new Set(RESERVED_ACCOUNTS.map((a) => a.toLowerCase()));
+
+export const SPECIALIST_CAMPAIGN_BY_ACCOUNT: ReadonlyMap<string, SpecialistCampaignSpec> = (() => {
+    const map = new Map<string, SpecialistCampaignSpec>();
+    for (let i = 0; i < ALL_SPECIALIST_CAMPAIGN_SPECS.length; i++) {
+        const spec = ALL_SPECIALIST_CAMPAIGN_SPECS[i]!;
+        map.set(spec.account.toLowerCase(), spec);
+    }
+    return map;
+})();
 
 export function getSpecialistCampaignSpec(account: string): SpecialistCampaignSpec | undefined {
     return SPECIALIST_CAMPAIGN_BY_ACCOUNT.get(account.toLowerCase());
 }
 
 export function isReservedSpecialistAccount(account: string): boolean {
-    return RESERVED_ACCOUNTS.includes(account.toLowerCase());
+    return RESERVED_ACCOUNT_SET.has(account.toLowerCase());
 }
 
 export function toDefaultSpecialistCampaign(spec: SpecialistCampaignSpec): Campaign {

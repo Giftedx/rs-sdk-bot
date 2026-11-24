@@ -1,30 +1,18 @@
 // Builds the --specialist Segment JSON and runs the isolated 400 ms practice rehearsal for one ready specialist account.
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, relative, resolve } from 'node:path';
 import { SPECIALIST_BOARDS } from '../../packages/core/src/specialist-boards';
 import { checkSpecialistSegment, type RehearsalReport, type Segment, type SupplierSpec } from '../../packages/practice/src/rehearse';
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import { playerSavePath } from '../../packages/practice/src/save-library';
 import { scoredClock } from '../../packages/practice/src/specialist-rehearsal';
-import { CRAFTING_BATCHES } from '../crafting-specialist';
-import { ITEM_IDS } from '../fast-skills-lib';
-import { buildFiremakingSupplierConfigs } from '../firemaking-specialist';
-import { HERBLORE_NOTED_SUPPLIES, HERBLORE_STARTER_BATCH } from '../herblore-specialist';
-import { LUMBRIDGE_SAFE_SPOT, MAGIC_BATCHES } from '../magic-specialist';
-import { PRAYER_RUNNER_COUNT } from '../prayer-specialist';
-import { RANGED_SPECIALIST_LIVE_TRADE1, RANGED_SPECIALIST_LIVE_TRADE2 } from '../ranged-specialist';
-import { BODY_RUNNER_COUNT } from '../runecraft-specialist';
-import { SMITHING_RUNNER_QUEUE, VARROCK_WEST_BANK } from '../smithing-specialist';
-import {
-    AGILITY_SPECIALIST_KIT,
-    COOKING_SPECIALIST_LIVE_KIT,
-    FISHING_SPECIALIST_KIT,
-    FLETCHING_SPECIALIST_LIVE_KIT,
-    MINING_SPECIALIST_LIVE_KIT,
-    THIEVING_SPECIALIST_LIVE_KIT,
-    WOODCUTTING_SPECIALIST_LIVE_KIT,
-    type KitSpecItem,
-} from '../../packages/workers/src/logistics';
+import type { KitSpecItem } from '../../packages/workers/src/logistics/specialist-supply';
+
+const require = createRequire(import.meta.url);
+const loadMod = <T>(rel: string): T => require(rel) as T;
+const getItemIds = () => loadMod<typeof import('../fast-skills-lib')>('../fast-skills-lib').ITEM_IDS;
+const getLogisticsKits = () => loadMod<typeof import('../../packages/workers/src/logistics/specialist-supply')>('../../packages/workers/src/logistics/specialist-supply');
 
 const ROOT = resolve(import.meta.dir, '..', '..');
 const DEFAULT_OUT_BASE = '.practice/hosted-rehearse';
@@ -51,32 +39,39 @@ export const READY_SPECIALIST_ACCOUNTS = [
 
 export type ReadySpecialistAccount = (typeof READY_SPECIALIST_ACCOUNTS)[number];
 
-const STACKABLE_SAVE_IDS = new Set<number>([
-    2, // Cannonball
-    39, // Bronze arrowtips
-    40, // Iron arrowtips
-    41, // Steel arrowtips
-    42, // Mithril arrowtips
-    43, // Adamant arrowtips
-    44, // Rune arrowtips
-    53, // Headless arrow
-    313, // Fishing bait
-    314, // Feather
-    884, // Iron arrow
-    892, // Rune arrow
-    995, // Coins
-    1996, // Noted Unfermented wine
-    ITEM_IDS.airrune,
-    ITEM_IDS.waterrune,
-    ITEM_IDS.earthrune,
-    ITEM_IDS.firerune,
-    ITEM_IDS.mindrune,
-    ITEM_IDS.cosmicrune,
-    ITEM_IDS.lawrune,
-    ITEM_IDS.bloodrune,
-    ITEM_IDS.bodyrune,
-    ...HERBLORE_NOTED_SUPPLIES.map(s => s.certId),
-]);
+let stackableSaveIdsCache: Set<number> | undefined;
+function getStackableSaveIds(): Set<number> {
+    if (stackableSaveIdsCache) return stackableSaveIdsCache;
+    const ITEM_IDS = getItemIds();
+    const { HERBLORE_NOTED_SUPPLIES } = loadMod<typeof import('../herblore-specialist')>('../herblore-specialist');
+    stackableSaveIdsCache = new Set<number>([
+        2, // Cannonball
+        39, // Bronze arrowtips
+        40, // Iron arrowtips
+        41, // Steel arrowtips
+        42, // Mithril arrowtips
+        43, // Adamant arrowtips
+        44, // Rune arrowtips
+        53, // Headless arrow
+        313, // Fishing bait
+        314, // Feather
+        884, // Iron arrow
+        892, // Rune arrow
+        995, // Coins
+        1996, // Noted Unfermented wine
+        ITEM_IDS.airrune,
+        ITEM_IDS.waterrune,
+        ITEM_IDS.earthrune,
+        ITEM_IDS.firerune,
+        ITEM_IDS.mindrune,
+        ITEM_IDS.cosmicrune,
+        ITEM_IDS.lawrune,
+        ITEM_IDS.bloodrune,
+        ITEM_IDS.bodyrune,
+        ...HERBLORE_NOTED_SUPPLIES.map(s => s.certId),
+    ]);
+    return stackableSaveIdsCache;
+}
 
 const SUPPLIER_GUARD_ENV: Record<string, string> = {
     LOOT_WATCH: '0',
@@ -86,10 +81,11 @@ const SUPPLIER_GUARD_ENV: Record<string, string> = {
 };
 
 export function expandKitToSave(items: readonly Pick<KitSpecItem, 'id' | 'count'>[], stackableMap?: ReadonlySet<number>): { id: number; count: number }[] {
+    const stackableIds = getStackableSaveIds();
     const out: { id: number; count: number }[] = [];
     for (const item of items) {
         const isStackable = stackableMap?.has(item.id)
-            || STACKABLE_SAVE_IDS.has(item.id)
+            || stackableIds.has(item.id)
             || ('stackable' in item && Boolean((item as KitSpecItem).stackable));
         if (isStackable) {
             out.push({ id: item.id, count: item.count });
@@ -114,6 +110,7 @@ export function aggregateKitBank(items: readonly { id: number; count: number }[]
 const SMITHING_EXTERNAL_RUNNER_COUNT = 3;
 
 function smithingRunnerQueueSlice(runnerIdx: number, runnerCount: number): Pick<SaveConfig, 'inventory' | 'bank'> {
+    const { SMITHING_RUNNER_QUEUE } = loadMod<typeof import('../smithing-specialist')>('../smithing-specialist');
     const deliveries = SMITHING_RUNNER_QUEUE.filter((_, i) => i % runnerCount === runnerIdx);
     const [first, ...rest] = deliveries;
     return {
@@ -152,7 +149,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             args: ['gathering-supplier', '{ACTOR}', '--kit=thieving-live', '3200'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(THIEVING_SPECIALIST_LIVE_KIT),
+                inventory: expandKitToSave(getLogisticsKits().THIEVING_SPECIALIST_LIVE_KIT),
             }),
         },
         planTicks: 2142,
@@ -169,7 +166,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             args: ['gathering-supplier', '{ACTOR}', '--kit=fletching-live', '400'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(FLETCHING_SPECIALIST_LIVE_KIT),
+                inventory: expandKitToSave(getLogisticsKits().FLETCHING_SPECIALIST_LIVE_KIT),
             }),
         },
         planTicks: 54,
@@ -186,7 +183,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             args: ['gathering-supplier', '{ACTOR}', '--kit=cooking-live', '200'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(COOKING_SPECIALIST_LIVE_KIT),
+                inventory: expandKitToSave(getLogisticsKits().COOKING_SPECIALIST_LIVE_KIT),
             }),
         },
         planTicks: 20,
@@ -198,7 +195,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         id: 'lightmylog-firemaking',
         script: 'scripts/firemaking-specialist.ts',
         env: { CAP: '900' },
-        suppliers: () => buildFiremakingSupplierConfigs().map((cfg): SpecialistSupplierDef => ({
+        suppliers: () => loadMod<typeof import('../firemaking-specialist')>('../firemaking-specialist').buildFiremakingSupplierConfigs().map((cfg): SpecialistSupplierDef => ({
             script: 'scripts/aio-logistics.ts',
             args: ['specialist-supplier', '{ACTOR}', '--kit=firemaking', `--role=${cfg.role}`, '1200'],
             save: () => ({
@@ -221,7 +218,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             args: ['gathering-supplier', '{ACTOR}', '--kit=woodcutting-live', '400'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(WOODCUTTING_SPECIALIST_LIVE_KIT),
+                inventory: expandKitToSave(getLogisticsKits().WOODCUTTING_SPECIALIST_LIVE_KIT),
             }),
         },
         planTicks: 3240,
@@ -236,11 +233,14 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         supplier: {
             script: 'scripts/aio-logistics.ts',
             args: ['specialist-supplier', '{ACTOR}', '--kit=ranged-live', '6000'],
-            save: () => ({
-                position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(RANGED_SPECIALIST_LIVE_TRADE1),
-                bank: aggregateKitBank(RANGED_SPECIALIST_LIVE_TRADE2),
-            }),
+            save: () => {
+                const { RANGED_SPECIALIST_LIVE_TRADE1, RANGED_SPECIALIST_LIVE_TRADE2 } = loadMod<typeof import('../ranged-specialist')>('../ranged-specialist');
+                return {
+                    position: { x: 3223, z: 3222, level: 0 },
+                    inventory: expandKitToSave(RANGED_SPECIALIST_LIVE_TRADE1),
+                    bank: aggregateKitBank(RANGED_SPECIALIST_LIVE_TRADE2),
+                };
+            },
         },
         planTicks: 4660,
         planSource: 'hosted-bench extra:ranged-specialist-live 4505-4774t (above targetCap 4379t vs #1 4469t; offline)',
@@ -251,33 +251,37 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         id: 'pouchstuffed-runecraft',
         script: 'scripts/runecraft-specialist.ts',
         env: { CAP: '2300' },
-        suppliers: () => [
-            {
-                script: 'scripts/aio-logistics.ts',
-                args: ['specialist-supplier', '{ACTOR}', '--kit=runecraft', '--role=starter', '3000'],
-                save: () => ({
-                    position: { x: 3223, z: 3222, level: 0 },
-                    inventory: expandKitToSave([
-                        { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
-                        { id: ITEM_IDS.air_talisman, count: 1 },
-                        { id: ITEM_IDS.body_talisman, count: 1 },
-                        { id: ITEM_IDS.blankrune, count: 25 },
-                    ]),
-                }),
-            },
-            ...Array.from({ length: BODY_RUNNER_COUNT }, (): SpecialistSupplierDef => ({
-                script: 'scripts/aio-logistics.ts',
-                args: ['specialist-supplier', '{ACTOR}', '--kit=runecraft', '--role=runner', '--bank-x=3094', '--bank-z=3491', '3000'],
-                save: () => ({
-                    position: { x: 3050, z: 3442, level: 0 },
-                    inventory: expandKitToSave([
-                        { id: ITEM_IDS.body_talisman, count: 1 },
-                        { id: ITEM_IDS.blankrune, count: 26 },
-                    ]),
-                    bank: [{ id: ITEM_IDS.blankrune, count: 500 }],
-                }),
-            })),
-        ],
+        suppliers: () => {
+            const ITEM_IDS = getItemIds();
+            const { BODY_RUNNER_COUNT } = loadMod<typeof import('../runecraft-specialist')>('../runecraft-specialist');
+            return [
+                {
+                    script: 'scripts/aio-logistics.ts',
+                    args: ['specialist-supplier', '{ACTOR}', '--kit=runecraft', '--role=starter', '3000'],
+                    save: () => ({
+                        position: { x: 3223, z: 3222, level: 0 },
+                        inventory: expandKitToSave([
+                            { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
+                            { id: ITEM_IDS.air_talisman, count: 1 },
+                            { id: ITEM_IDS.body_talisman, count: 1 },
+                            { id: ITEM_IDS.blankrune, count: 25 },
+                        ]),
+                    }),
+                },
+                ...Array.from({ length: BODY_RUNNER_COUNT }, (): SpecialistSupplierDef => ({
+                    script: 'scripts/aio-logistics.ts',
+                    args: ['specialist-supplier', '{ACTOR}', '--kit=runecraft', '--role=runner', '--bank-x=3094', '--bank-z=3491', '3000'],
+                    save: () => ({
+                        position: { x: 3050, z: 3442, level: 0 },
+                        inventory: expandKitToSave([
+                            { id: ITEM_IDS.body_talisman, count: 1 },
+                            { id: ITEM_IDS.blankrune, count: 26 },
+                        ]),
+                        bank: [{ id: ITEM_IDS.blankrune, count: 500 }],
+                    }),
+                })),
+            ];
+        },
         planTicks: 2155,
         planSource: 'hosted-bench extra:specialist-runecraft 2147-2161t (above targetCap 1845t vs #1 1883t; offline)',
         targetCap: 1845,
@@ -287,7 +291,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         id: 'cutmyjewels-crafting',
         script: 'scripts/crafting-specialist.ts',
         env: { CAP: '2500' },
-        suppliers: () => CRAFTING_BATCHES.map((batch, i): SpecialistSupplierDef => ({
+        suppliers: () => loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_BATCHES.map((batch, i): SpecialistSupplierDef => ({
             script: 'scripts/aio-logistics.ts',
             args: ['specialist-supplier', '{ACTOR}', '--kit=crafting', `--batch=${i}`, '3000'],
             save: () => ({
@@ -304,25 +308,28 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         id: 'grindmyherb-herblore',
         script: 'scripts/herblore-specialist.ts',
         env: { CAP: '600' },
-        suppliers: () => [
-            {
-                script: 'scripts/aio-logistics.ts',
-                args: ['specialist-supplier', '{ACTOR}', '--kit=herblore', '--batch=0', '1000'],
-                save: () => ({
-                    position: { x: 3223, z: 3222, level: 0 },
-                    inventory: expandKitToSave(HERBLORE_STARTER_BATCH.give),
-                }),
-            },
-            {
-                script: 'scripts/aio-logistics.ts',
-                args: ['specialist-supplier', '{ACTOR}', '--kit=herblore', '--batch=1', '1000'],
-                save: () => ({
-                    position: { x: 3094, z: 3491, level: 0 },
-                    inventory: [],
-                    bank: aggregateKitBank(HERBLORE_NOTED_SUPPLIES),
-                }),
-            },
-        ],
+        suppliers: () => {
+            const { HERBLORE_NOTED_SUPPLIES, HERBLORE_STARTER_BATCH } = loadMod<typeof import('../herblore-specialist')>('../herblore-specialist');
+            return [
+                {
+                    script: 'scripts/aio-logistics.ts',
+                    args: ['specialist-supplier', '{ACTOR}', '--kit=herblore', '--batch=0', '1000'],
+                    save: () => ({
+                        position: { x: 3223, z: 3222, level: 0 },
+                        inventory: expandKitToSave(HERBLORE_STARTER_BATCH.give),
+                    }),
+                },
+                {
+                    script: 'scripts/aio-logistics.ts',
+                    args: ['specialist-supplier', '{ACTOR}', '--kit=herblore', '--batch=1', '1000'],
+                    save: () => ({
+                        position: { x: 3094, z: 3491, level: 0 },
+                        inventory: [],
+                        bank: aggregateKitBank(HERBLORE_NOTED_SUPPLIES),
+                    }),
+                },
+            ];
+        },
         planTicks: 411,
         planSource: 'hosted-bench skiller:herblore:specialist 410-411t (<=415t vs #1 424t)',
         targetCap: 415,
@@ -332,16 +339,19 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         id: 'castmyload-magic',
         script: 'scripts/magic-specialist.ts',
         env: { CAP: '2500' },
-        suppliers: () => MAGIC_BATCHES.map((batch, i): SpecialistSupplierDef => ({
-            script: 'scripts/aio-logistics.ts',
-            args: ['specialist-supplier', '{ACTOR}', '--kit=magic', `--batch=${i}`, '3000'],
-            save: () => ({
-                position: i === 0
-                    ? { x: 3223, z: 3222, level: 0 }
-                    : { x: LUMBRIDGE_SAFE_SPOT.x, z: LUMBRIDGE_SAFE_SPOT.z, level: 0 },
-                inventory: expandKitToSave(batch.give),
-            }),
-        })),
+        suppliers: () => {
+            const { LUMBRIDGE_SAFE_SPOT, MAGIC_BATCHES } = loadMod<typeof import('../magic-specialist')>('../magic-specialist');
+            return MAGIC_BATCHES.map((batch, i): SpecialistSupplierDef => ({
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=magic', `--batch=${i}`, '3000'],
+                save: () => ({
+                    position: i === 0
+                        ? { x: 3223, z: 3222, level: 0 }
+                        : { x: LUMBRIDGE_SAFE_SPOT.x, z: LUMBRIDGE_SAFE_SPOT.z, level: 0 },
+                    inventory: expandKitToSave(batch.give),
+                }),
+            }));
+        },
         planTicks: 1170,
         planSource: '400ms rehearsals 1135-1208t (median 1150-1170t); hosted-bench skiller:magic:specialist 1137-1184t (<=1236t vs #1 1262t)',
         targetCap: 1236,
@@ -351,15 +361,19 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         id: 'bigboner-prayer',
         script: 'scripts/prayer-specialist.ts',
         env: { CAP: '1500' },
-        suppliers: () => Array.from({ length: PRAYER_RUNNER_COUNT }, (): SpecialistSupplierDef => ({
-            script: 'scripts/aio-logistics.ts',
-            args: ['specialist-supplier', '{ACTOR}', '--kit=prayer', '2000'],
-            save: () => ({
-                position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave([{ id: ITEM_IDS.dragon_bones, count: 28 }]),
-                bank: [{ id: ITEM_IDS.dragon_bones, count: 250 }],
-            }),
-        })),
+        suppliers: () => {
+            const ITEM_IDS = getItemIds();
+            const { PRAYER_RUNNER_COUNT } = loadMod<typeof import('../prayer-specialist')>('../prayer-specialist');
+            return Array.from({ length: PRAYER_RUNNER_COUNT }, (): SpecialistSupplierDef => ({
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=prayer', '2000'],
+                save: () => ({
+                    position: { x: 3223, z: 3222, level: 0 },
+                    inventory: expandKitToSave([{ id: ITEM_IDS.dragon_bones, count: 28 }]),
+                    bank: [{ id: ITEM_IDS.dragon_bones, count: 250 }],
+                }),
+            }));
+        },
         planTicks: 1213,
         planSource: 'hosted-bench skiller:prayer:specialist 1212-1214t (above targetCap 1143t vs #1 1167t; offline)',
         targetCap: 1143,
@@ -369,29 +383,33 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         id: 'steelrod-smithing',
         script: 'scripts/smithing-specialist.ts',
         env: { CAP: '1500' },
-        suppliers: () => [
-            {
-                script: 'scripts/aio-logistics.ts',
-                args: ['specialist-supplier', '{ACTOR}', '--kit=smithing', '--role=starter', '2000'],
-                save: () => ({
-                    position: { x: 3223, z: 3222, level: 0 },
-                    inventory: expandKitToSave([
-                        { id: ITEM_IDS.hammer, count: 1 },
-                        { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
-                        { id: ITEM_IDS.bronze_bar, count: 9 },
-                        { id: ITEM_IDS.iron_bar, count: 17 },
-                    ]),
-                }),
-            },
-            ...Array.from({ length: SMITHING_EXTERNAL_RUNNER_COUNT }, (_, i): SpecialistSupplierDef => ({
-                script: 'scripts/aio-logistics.ts',
-                args: ['specialist-supplier', '{ACTOR}', '--kit=smithing', '--role=runner', `--runner=${i}/${SMITHING_EXTERNAL_RUNNER_COUNT}`, '2000'],
-                save: () => ({
-                    position: { x: VARROCK_WEST_BANK.x, z: VARROCK_WEST_BANK.z, level: 0 },
-                    ...smithingRunnerQueueSlice(i, SMITHING_EXTERNAL_RUNNER_COUNT),
-                }),
-            })),
-        ],
+        suppliers: () => {
+            const ITEM_IDS = getItemIds();
+            const { VARROCK_WEST_BANK } = loadMod<typeof import('../smithing-specialist')>('../smithing-specialist');
+            return [
+                {
+                    script: 'scripts/aio-logistics.ts',
+                    args: ['specialist-supplier', '{ACTOR}', '--kit=smithing', '--role=starter', '2000'],
+                    save: () => ({
+                        position: { x: 3223, z: 3222, level: 0 },
+                        inventory: expandKitToSave([
+                            { id: ITEM_IDS.hammer, count: 1 },
+                            { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
+                            { id: ITEM_IDS.bronze_bar, count: 9 },
+                            { id: ITEM_IDS.iron_bar, count: 17 },
+                        ]),
+                    }),
+                },
+                ...Array.from({ length: SMITHING_EXTERNAL_RUNNER_COUNT }, (_, i): SpecialistSupplierDef => ({
+                    script: 'scripts/aio-logistics.ts',
+                    args: ['specialist-supplier', '{ACTOR}', '--kit=smithing', '--role=runner', `--runner=${i}/${SMITHING_EXTERNAL_RUNNER_COUNT}`, '2000'],
+                    save: () => ({
+                        position: { x: VARROCK_WEST_BANK.x, z: VARROCK_WEST_BANK.z, level: 0 },
+                        ...smithingRunnerQueueSlice(i, SMITHING_EXTERNAL_RUNNER_COUNT),
+                    }),
+                })),
+            ];
+        },
         planTicks: 1230,
         planSource: 'hosted-bench skiller:smithing:specialist 1197-1244t (<=1255t vs #1 1281t)',
         targetCap: 1255,
@@ -406,7 +424,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             args: ['gathering-supplier', '{ACTOR}', '--kit=mining-live', '400'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(MINING_SPECIALIST_LIVE_KIT),
+                inventory: expandKitToSave(getLogisticsKits().MINING_SPECIALIST_LIVE_KIT),
             }),
         },
         planTicks: 3800,
@@ -423,7 +441,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             args: ['gathering-supplier', '{ACTOR}', '--kit=fishing', '400'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(FISHING_SPECIALIST_KIT),
+                inventory: expandKitToSave(getLogisticsKits().FISHING_SPECIALIST_KIT),
             }),
         },
         planTicks: 2778,
@@ -440,7 +458,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             args: ['specialist-supplier', '{ACTOR}', '--kit=agility', '6500'],
             save: () => ({
                 position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(AGILITY_SPECIALIST_KIT),
+                inventory: expandKitToSave(getLogisticsKits().AGILITY_SPECIALIST_KIT),
             }),
         },
         planTicks: 5913,

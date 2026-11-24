@@ -230,7 +230,9 @@ type Shop = { inv: string; file: string; count: number; rate: number; sell?: num
 function shopParams(): Map<string, { sell: number | null; delta: number }> {
     const out = new Map<string, { sell: number | null; delta: number }>();
     for (const f of walk(join(CONTENT, 'scripts'), '.npc')) {
-        for (const block of readFileSync(f, 'utf8').split(/\n(?=\[)/)) {
+        const text = readFileSync(f, 'utf8');
+        if (!text.includes('owned_shop')) continue;
+        for (const block of text.split(/\n(?=\[)/)) {
             const inv = /param=owned_shop,(\w+)/.exec(block)?.[1];
             if (!inv || out.has(inv)) continue;
             const sell = /param=shop_sell_multiplier,(\d+)/.exec(block)?.[1];
@@ -342,16 +344,45 @@ async function fetchMode(out: string) {
 
 // ---------- cost mode ----------
 type Price = { each: number | null; source: string };
+const priceCacheBySnap = new WeakMap<object, Map<string, Price>>();
 function price(snap: any, name: string): Price {
     if (name === 'coins') return { each: 1, source: 'coins' };
+    let cache = priceCacheBySnap.get(snap);
+    if (!cache) { cache = new Map(); priceCacheBySnap.set(snap, cache); }
+    const hit = cache.get(name);
+    if (hit !== undefined) return hit;
     const it = snap.items[name];
-    if (!it) return { each: null, source: 'not in snapshot' };
-    const m = it.market ?? {};
-    const opts: Price[] = [];
-    if (m.ask !== null && m.ask !== undefined && m.sellQuantity > 0) opts.push({ each: m.ask, source: 'GE ask' });
-    if (it.shops.length > 0 && m.basePrice > 0) opts.push({ each: Math.min(...it.shops.map((s: Shop) => shopUnit(m.basePrice, s, 0))), source: 'shop' });
-    opts.sort((a, b) => a.each! - b.each!);
-    return opts[0] ?? { each: null, source: it.spawns.length ? 'ground spawn only' : 'no seller, no shop' };
+    let res: Price;
+    if (!it) {
+        res = { each: null, source: 'not in snapshot' };
+    } else {
+        const m = it.market ?? {};
+        const hasGe = m.ask !== null && m.ask !== undefined && m.sellQuantity > 0;
+        let shopMin = Infinity;
+        if (it.shops.length > 0 && m.basePrice > 0) {
+            for (const s of it.shops as Shop[]) {
+                const u = shopUnit(m.basePrice, s, 0);
+                if (u < shopMin) shopMin = u;
+            }
+        }
+        if (hasGe && shopMin < Infinity) {
+            res = m.ask <= shopMin ? { each: m.ask, source: 'GE ask' } : { each: shopMin, source: 'shop' };
+        } else if (hasGe) {
+            res = { each: m.ask, source: 'GE ask' };
+        } else if (shopMin < Infinity) {
+            res = { each: shopMin, source: 'shop' };
+        } else {
+            res = { each: null, source: it.spawns.length ? 'ground spawn only' : 'no seller, no shop' };
+        }
+    }
+    cache.set(name, res);
+    return res;
+}
+const expandedSlotCache = new WeakMap<Slot, Slot>();
+function expandCached(s: Slot): Slot {
+    let e = expandedSlotCache.get(s);
+    if (!e) { e = expand(s); expandedSlotCache.set(s, e); }
+    return e;
 }
 function bundleCost(snap: any, b: Record<string, number>) {
     let sum = 0;
@@ -360,7 +391,7 @@ function bundleCost(snap: any, b: Record<string, number>) {
 }
 function slotChoice(snap: any, s: Slot) {
     let best: { bundle: Record<string, number>; cost: number | null } = { bundle: s[0]!, cost: null };
-    for (const b of expand(s)) { const c = bundleCost(snap, b); if (c !== null && (best.cost === null || c < best.cost)) best = { bundle: b, cost: c }; }
+    for (const b of expandCached(s)) { const c = bundleCost(snap, b); if (c !== null && (best.cost === null || c < best.cost)) best = { bundle: b, cost: c }; }
     return best;
 }
 function tierCost(snap: any, tier: Tier) {
@@ -396,20 +427,40 @@ function fill(snap: any, n: string, q: number) {
     if (n === 'coins') return { coins: q, short: 0, shop: 0, ge: 0 };
     const it = snap.items[n];
     const m = it?.market ?? {};
-    const units: { p: number; src: 'shop' | 'ge' }[] = [];
     const need = Math.ceil(q - 1e-9);
-    for (const s of (it?.shops ?? []) as Shop[]) for (let i = 0; i < Math.min(s.count, need); i++) units.push({ p: shopUnit(m.basePrice, s, i), src: 'shop' });
-    if (m.sellQuantity > 0) {
-        for (let i = 0; i < Math.min(m.sellQuantity, need); i++) units.push({ p: m.ask, src: 'ge' });
+    const shopPrices: number[] = [];
+    for (const s of (it?.shops ?? []) as Shop[]) {
+        const limit = Math.min(s.count, need);
+        for (let i = 0; i < limit; i++) shopPrices.push(shopUnit(m.basePrice, s, i));
     }
-    units.sort((a, b) => a.p - b.p);
-    const take = units.slice(0, need);
-    return { coins: take.reduce((a, u) => a + u.p, 0), short: need - take.length, shop: take.filter(u => u.src === 'shop').length, ge: take.filter(u => u.src === 'ge').length };
+    if (shopPrices.length > 1) shopPrices.sort((a, b) => a - b);
+    const geAvail = m.sellQuantity > 0 ? Math.min(m.sellQuantity, need) : 0;
+    if (geAvail === 0) {
+        const take = Math.min(shopPrices.length, need);
+        let coins = 0;
+        for (let i = 0; i < take; i++) coins += shopPrices[i]!;
+        return { coins, short: need - take, shop: take, ge: 0 };
+    }
+    const ask = m.ask;
+    // Stable sort places equal-priced shop units (pushed first) ahead of GE units.
+    let split = 0;
+    while (split < shopPrices.length && shopPrices[split]! <= ask) split++;
+    const takeLe = Math.min(split, need);
+    let coins = 0;
+    for (let i = 0; i < takeLe; i++) coins += shopPrices[i]!;
+    const remAfterLe = need - takeLe;
+    const takeGe = Math.min(geAvail, remAfterLe);
+    if (takeGe > 0) coins += takeGe * ask;
+    const remAfterGe = remAfterLe - takeGe;
+    const takeGt = Math.min(shopPrices.length - split, remAfterGe);
+    for (let i = 0; i < takeGt; i++) coins += shopPrices[split + i]!;
+    const shop = takeLe + takeGt;
+    return { coins, short: need - shop - takeGe, shop, ge: takeGe };
 }
-function itemCell(snap: any, n: string, q: number) {
+function itemCell(snap: any, n: string, q: number, precomputed?: ReturnType<typeof fill>) {
     const it = snap.items[n];
     const m = it?.market ?? {};
-    const f = fill(snap, n, q);
+    const f = precomputed ?? fill(snap, n, q);
     const perDay = (m.volume ?? 0) / 7;
     const shop = (it?.shops ?? []).map((s: Shop) => `${s.inv} ${s.count} (+${fmt(TICKS_PER_HOUR / s.rate)}/h)`).join('; ');
     const wait = f.short > 0 ? (perDay > 0 ? `${fmt(f.short)}; ${(f.short / perDay).toFixed(1)} d at 7-day trade rate` : `${fmt(f.short)}; no trades in 7 days`) : '';
@@ -418,8 +469,15 @@ function itemCell(snap: any, n: string, q: number) {
 
 function costMode(file: string) {
     const snap = JSON.parse(readFileSync(file, 'utf8'));
-    const params = shopParams();
-    for (const it of Object.values(snap.items) as any[]) for (const s of it.shops) if (s.sell === undefined) Object.assign(s, params.get(s.inv) ?? { sell: null, delta: 10 });
+    let params: Map<string, { sell: number | null; delta: number }> | null = null;
+    for (const it of Object.values(snap.items) as any[]) {
+        for (const s of it.shops) {
+            if (s.sell === undefined) {
+                params ??= shopParams();
+                Object.assign(s, params.get(s.inv) ?? { sell: null, delta: 10 });
+            }
+        }
+    }
     console.log(`Snapshot ${file} taken ${snap.takenAt}. 99 = ${fmt(xpForLevel(99))} XP, ${RATE}x.\n`);
     for (const m of METHODS) {
         const rows = plan(snap, m);
@@ -436,7 +494,7 @@ function costMode(file: string) {
         for (const r of rows) console.log(`| ${r.tier.label} | ${r.from}-${r.to} | ${fmt(r.tier.xp * RATE)} | ${fmt(r.actions)} | ${fmt(r.cost)} |`);
         console.log('\n| Item | Need | GE ask | GE book avg | GE sellers | GE 7-day volume | Coins to fill now | Short | Shops (stock, restock) | Ground |');
         console.log('|---|---|---|---|---|---|---|---|---|---|');
-        for (const x of fills) console.log(itemCell(snap, x.n, x.q));
+        for (const x of fills) console.log(itemCell(snap, x.n, x.q, x.f));
         console.log('');
     }
     console.log('### Bank and Equipment leaders (value = obj cost, not GE price)');

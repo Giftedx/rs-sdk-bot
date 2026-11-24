@@ -32,11 +32,22 @@ const PACK_SLOTS = 28;
 const FERRY_LEG_PLAN_MS = 10_000;
 
 export function fareSpare(pack: readonly { id: number }[]): { id: number; all: boolean } | null {
-    if (pack.length < PACK_SLOTS || pack.some(i => i.id === COINS)) return null;
+    if (pack.length < PACK_SLOTS) return null;
     const rows = new Map<number, number>();
-    for (const i of pack) rows.set(i.id, (rows.get(i.id) ?? 0) + 1);
-    const [id, n] = [...rows].sort((x, y) => y[1] - x[1])[0]!;
-    return { id, all: n === 1 };
+    for (let i = 0; i < pack.length; i++) {
+        const id = pack[i]!.id;
+        if (id === COINS) return null;
+        rows.set(id, (rows.get(id) ?? 0) + 1);
+    }
+    let bestId = -1;
+    let bestCount = -1;
+    for (const [id, count] of rows) {
+        if (count > bestCount) {
+            bestCount = count;
+            bestId = id;
+        }
+    }
+    return bestId === -1 ? null : { id: bestId, all: bestCount === 1 };
 }
 
 export const fareFault = (need: number, missing: number, banked: number): string =>
@@ -46,14 +57,29 @@ export const fareFault = (need: number, missing: number, banked: number): string
 
 export async function bankFare(s: Session, need: number, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>): Promise<Outcome> {
     const start = s.tick();
-    const held = () => s.sdk.getInventory().filter(i => i.id === COINS).reduce((n, i) => n + i.count, 0);
+    const held = () => {
+        const inv = s.sdk.getInventory();
+        let total = 0;
+        for (let i = 0; i < inv.length; i++) {
+            const row = inv[i]!;
+            if (row.id === COINS) total += row.count;
+        }
+        return total;
+    };
     const done = (ok: boolean, detail: string): Outcome =>
         ok ? { ok: true, ticks: s.tick() - start } : { ok: false, reason: 'precondition', detail, ticks: s.tick() - start };
     const p = s.sdk.getState()?.player;
     if (!p || p.level !== 0) return done(false, `ferry needs ${need} coins in the pack`);
-    const bank = [...FARE_BANKS].sort(
-        (a, b) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ)) - Math.max(Math.abs(b.x - p.worldX), Math.abs(b.z - p.worldZ)),
-    )[0]!;
+    let bank = FARE_BANKS[0]!;
+    let bestDist = Math.max(Math.abs(bank.x - p.worldX), Math.abs(bank.z - p.worldZ));
+    for (let i = 1; i < FARE_BANKS.length; i++) {
+        const b = FARE_BANKS[i]!;
+        const d = Math.max(Math.abs(b.x - p.worldX), Math.abs(b.z - p.worldZ));
+        if (d < bestDist) {
+            bestDist = d;
+            bank = b;
+        }
+    }
     const there = await walk(bank, FERRY_LEG_PLAN_MS);
     if (!there.ok) return { ...there, ticks: s.tick() - start };
     const generation = s.bankObservation?.()?.generation ?? 0;

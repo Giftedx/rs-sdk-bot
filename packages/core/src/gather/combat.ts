@@ -21,20 +21,49 @@ export type KillStyle = 'melee' | 'ranged' | 'magic';
 // series that has spent most of its budget still takes its last easy animal (a chicken after a bear).
 // `sold`: a rune a shop sells counts as covered; the sweep's shop plan buys the kit's shortfall with its other
 // consumables (Quickhandjob: Magic 29, fire runes and nothing else; Aubury sells the air and mind runes).
+const STAFF_IDS = Object.keys(STAFF_RUNE).map(Number);
+const REVERSED_SPELLS = [...SPELLS].reverse().map(sp => ({
+    ...sp,
+    runeEntries: Object.entries(sp.runes).map(([id, n]) => [Number(id), n] as const),
+}));
+
+function countOwned(owned: readonly Item[]): Map<number, number> {
+    const counts = new Map<number, number>();
+    for (let i = 0; i < owned.length; i++) {
+        const item = owned[i]!;
+        counts.set(item.id, (counts.get(item.id) ?? 0) + item.count);
+    }
+    return counts;
+}
+
 export function magicKit(owned: readonly Item[], magic: number, casts = CASTS_MIN, sold: (id: number) => boolean = () => false): MagicKit | null {
-    const have = (id: number) => owned.filter(i => i.id === id).reduce((c, i) => c + i.count, 0);
-    const staffs = Object.keys(STAFF_RUNE).map(Number).filter(id => have(id) >= 1);
-    for (const sp of [...SPELLS].reverse()) {
+    const counts = countOwned(owned);
+    const have = (id: number) => counts.get(id) ?? 0;
+    const staffs: (number | undefined)[] = [];
+    for (let i = 0; i < STAFF_IDS.length; i++) {
+        const id = STAFF_IDS[i]!;
+        if (have(id) >= 1) staffs.push(id);
+    }
+    staffs.push(undefined);
+    for (let si = 0; si < REVERSED_SPELLS.length; si++) {
+        const sp = REVERSED_SPELLS[si]!;
         if (sp.level > magic) continue;
-        for (const staff of [...staffs, undefined]) {
-            const runes: Record<number, number> = Object.fromEntries(
-                Object.entries(sp.runes)
-                    .filter(([id]) => staff === undefined || STAFF_RUNE[staff] !== Number(id))
-                    .map(([id, n]) => [Number(id), n]),
-            );
-            if (Object.entries(runes).every(([id, n]) => have(Number(id)) >= n * casts || sold(Number(id)))) {
-                return { staff, component: sp.component, level: sp.level, maxhit: sp.maxhit, runes };
+        for (let st = 0; st < staffs.length; st++) {
+            const staff = staffs[st];
+            const covered = staff === undefined ? undefined : STAFF_RUNE[staff];
+            let ok = true;
+            for (let ri = 0; ri < sp.runeEntries.length; ri++) {
+                const [id, n] = sp.runeEntries[ri]!;
+                if (id === covered) continue;
+                if (have(id) < n * casts && !sold(id)) { ok = false; break; }
             }
+            if (!ok) continue;
+            const runes: Record<number, number> = {};
+            for (let ri = 0; ri < sp.runeEntries.length; ri++) {
+                const [id, n] = sp.runeEntries[ri]!;
+                if (id !== covered) runes[id] = n;
+            }
+            return { staff, component: sp.component, level: sp.level, maxhit: sp.maxhit, runes };
         }
     }
     return null;
@@ -59,9 +88,16 @@ export const castsFor = (id: number, count: number, maxhit: number) => {
 // The arrows are the kind owned in the greatest number (UnderMyKilt: 21 bronze, 19 iron): the shortfall for a long kill
 // series is bought, and bronze arrows are the kind most shops sell.
 export function rangedKit(owned: readonly Item[]): { bow: number; arrows: number } | null {
-    const have = (id: number) => owned.filter(i => i.id === id).reduce((c, i) => c + i.count, 0);
+    const counts = countOwned(owned);
+    const have = (id: number) => counts.get(id) ?? 0;
     const bow = BOWS.find(id => have(id) >= 1);
-    const arrows = [...ARROWS].filter(id => have(id) >= ARROWS_PER_KILL).sort((a, b) => have(b) - have(a))[0];
+    let arrows: number | undefined;
+    let bestCount = -1;
+    for (let i = 0; i < ARROWS.length; i++) {
+        const id = ARROWS[i]!;
+        const c = have(id);
+        if (c >= ARROWS_PER_KILL && c > bestCount) { bestCount = c; arrows = id; }
+    }
     return bow !== undefined && arrows !== undefined ? { bow, arrows } : null;
 }
 

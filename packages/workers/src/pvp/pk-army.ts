@@ -42,6 +42,8 @@ export function pickArmyScoutHandoff(opts: {
 }
 
 // Multi-way focus selection for army followers: follow leader's pile, switch to stunned/low-HP enemies in multi, respect single-way PJ lock.
+const EMPTY_SET: ReadonlySet<string> = new Set();
+
 export function armyFocusTarget<P extends { name: string; x: number; z: number; distance: number; combatLevel: number; inCombat?: boolean }>(opts: {
     me: { x: number; z: number; combatLevel: number };
     sharedTarget: string | null;
@@ -50,22 +52,47 @@ export function armyFocusTarget<P extends { name: string; x: number; z: number; 
     stunned?: ReadonlySet<string>;
     healthFrac?: (p: P) => number;
 }): P | undefined {
-    const { me, sharedTarget, view, friends, stunned = new Set(), healthFrac = () => 1 } = opts;
+    const { me, sharedTarget, view, friends, stunned = EMPTY_SET, healthFrac } = opts;
     const sharedLower = sharedTarget?.toLowerCase();
     const inMultiZone = isMulti(me.x, me.z);
-    const eligible = view.filter(p => {
+    let best: P | undefined;
+    let bestShared = false;
+    let bestStunned = false;
+    let bestHp = 1;
+    let bestDist = Infinity;
+    for (let i = 0; i < view.length; i++) {
+        const p = view[i]!;
         const key = p.name.toLowerCase();
-        if (friends.has(key) || !attackable(me, p)) return false;
-        if (!inMultiZone && p.inCombat && key !== sharedLower) return false;
-        return key === sharedLower || (inMultiZone && p.distance <= 15);
-    });
-    return eligible.sort((a, b) => {
-        const ak = a.name.toLowerCase(), bk = b.name.toLowerCase();
-        return Number(bk === sharedLower) - Number(ak === sharedLower)
-            || Number(stunned.has(bk)) - Number(stunned.has(ak))
-            || healthFrac(a) - healthFrac(b)
-            || a.distance - b.distance;
-    })[0];
+        if (friends.has(key) || !attackable(me, p)) continue;
+        const isShared = key === sharedLower;
+        if (!inMultiZone && p.inCombat && !isShared) continue;
+        if (!isShared && (!inMultiZone || p.distance > 15)) continue;
+        const isStunned = stunned.has(key);
+        const hp = healthFrac ? healthFrac(p) : 1;
+        if (!best) {
+            best = p;
+            bestShared = isShared;
+            bestStunned = isStunned;
+            bestHp = hp;
+            bestDist = p.distance;
+            continue;
+        }
+        if (isShared !== bestShared) {
+            if (!isShared) continue;
+        } else if (isStunned !== bestStunned) {
+            if (!isStunned) continue;
+        } else if (hp !== bestHp) {
+            if (hp >= bestHp) continue;
+        } else if (p.distance >= bestDist) {
+            continue;
+        }
+        best = p;
+        bestShared = isShared;
+        bestStunned = isStunned;
+        bestHp = hp;
+        bestDist = p.distance;
+    }
+    return best;
 }
 
 // One follower: keep with the leader, fight its target, leave when the army leaves.
@@ -76,6 +103,8 @@ export async function follow(s: Session, leader: Session, shared: { target: stri
     const me = () => s.sdk.getState()?.player;
     const life0 = me()?.lifeId;
     const dead = () => { const p = me(); return !!p && ((life0 !== undefined && p.lifeId !== life0) || Math.max(Math.abs(p.worldX - 3222), Math.abs(p.worldZ - 3218)) <= 40); };
+    const friendsSet = new Set<string>([...allies, leader.name.toLowerCase(), s.name.toLowerCase()]);
+    const stunnedSet = new Set<string>();
     let wentIn = false;
     while (!stopped() && !shared.over) {
         const p = me();
@@ -83,8 +112,11 @@ export async function follow(s: Session, leader: Session, shared: { target: stri
         if (wildernessLevel(p.worldZ) > 0) wentIn = true;
         if (dead()) { stats.died = true; emit({ e: 'follower-died', name: s.name }); return stats; }
         const view = s.sdk.getState()?.nearbyPlayers ?? [];
-        const friendsSet = new Set([...allies, leader.name.toLowerCase(), s.name.toLowerCase()]);
-        const stunnedSet = new Set(view.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
+        stunnedSet.clear();
+        for (let i = 0; i < view.length; i++) {
+            const q = view[i]!;
+            if (observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM) stunnedSet.add(q.name.toLowerCase());
+        }
         const focus = armyFocusTarget({
             me: { x: p.worldX, z: p.worldZ, combatLevel: p.combatLevel },
             sharedTarget: shared.target,

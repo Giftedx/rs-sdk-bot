@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import {
     accountEscrowCoins,
     accountOwnedItemCount,
@@ -16,11 +15,17 @@ import {
     type WorkerWorldView,
 } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
-import { watchWorkerStop } from '../stop';
-import { ITEMS } from './fight';
-import { TRIBRID_KIT, TRIP as TRIBRID_TRIP } from './hunt-kits';
-import { assessTribridReadiness, CLI_ONLY_PVP_MODES, dispatchPvpCli, isPvpMode, PVP_MODES, pvpCombatBracket } from './modes';
-import type { PvpConfig, PvpMode } from './types';
+import { PVP_MODES_LIST, type PvpConfig, type PvpMode } from './types';
+
+const PVP_MODES_SET = new Set<string>(PVP_MODES_LIST);
+const SHARK_ID = 385;
+const LAW_RUNE_ID = 563;
+const GLORY_IDS = [1712, 1710, 1708, 1706] as const;
+const FOOD_IDS = [SHARK_ID, 379, 373, 333, 329] as const;
+
+function isPvpModeLocal(mode: string): mode is PvpMode {
+    return PVP_MODES_SET.has(mode);
+}
 
 const MODE_RISK: Record<PvpMode, number> = {
     fight: 0.25,
@@ -42,11 +47,19 @@ const MODE_RISK: Record<PvpMode, number> = {
 
 function ownedCounts(acct: WorkerAccountView): Record<number, number> {
     const out: Record<number, number> = {};
-    for (const bag of [acct.inventory, acct.equipment, acct.bank.items]) {
-        for (const [k, n] of Object.entries(bag)) {
-            if (n > 0) out[Number(k)] = (out[Number(k)] ?? 0) + n;
+    const addBag = (bag: Readonly<Record<number, number>>) => {
+        for (const k in bag) {
+            if (!Object.prototype.hasOwnProperty.call(bag, k)) continue;
+            const n = bag[k as unknown as number]!;
+            if (n > 0) {
+                const id = Number(k);
+                out[id] = (out[id] ?? 0) + n;
+            }
         }
-    }
+    };
+    addBag(acct.inventory);
+    addBag(acct.equipment);
+    addBag(acct.bank.items);
     return out;
 }
 
@@ -56,7 +69,7 @@ function preflightPvp(acct: WorkerAccountView, cfg: PvpConfig, world: WorkerWorl
         blockers.push({ kind: 'protected_clock', message: `${acct.name} protected clock cannot run unprotected PvP` });
         return preflightFail(blockers);
     }
-    if (!isPvpMode(cfg.mode)) {
+    if (!isPvpModeLocal(cfg.mode)) {
         blockers.push({ kind: 'invalid_config', message: `unknown PvP mode ${String(cfg.mode)}` });
         return preflightFail(blockers);
     }
@@ -110,8 +123,8 @@ function preflightPvp(acct: WorkerAccountView, cfg: PvpConfig, world: WorkerWorl
     }
 
     if (cfg.foodFloor !== undefined && cfg.foodFloor > 0) {
-        const foodIds = [ITEMS.shark, 379, 373, 333, 329];
-        const foodHeld = foodIds.reduce((n, id) => n + accountOwnedItemCount(acct, id), 0);
+        let foodHeld = 0;
+        for (let i = 0; i < FOOD_IDS.length; i++) foodHeld += accountOwnedItemCount(acct, FOOD_IDS[i]!);
         if (foodHeld < cfg.foodFloor) {
             blockers.push({
                 kind: 'combat_survivability',
@@ -123,12 +136,19 @@ function preflightPvp(acct: WorkerAccountView, cfg: PvpConfig, world: WorkerWorl
     }
 
     if (cfg.requireEscape) {
-        const escapeIds = [...ITEMS.glory, ITEMS.lawRune];
-        const hasEscape = escapeIds.some(id => accountOwnedItemCount(acct, id) > 0);
+        let hasEscape = accountOwnedItemCount(acct, LAW_RUNE_ID) > 0;
+        if (!hasEscape) {
+            for (let i = 0; i < GLORY_IDS.length; i++) {
+                if (accountOwnedItemCount(acct, GLORY_IDS[i]!) > 0) {
+                    hasEscape = true;
+                    break;
+                }
+            }
+        }
         if (!hasEscape) {
             blockers.push({
                 kind: 'missing_supply',
-                itemId: ITEMS.glory[0],
+                itemId: GLORY_IDS[0],
                 itemName: 'escape_item',
                 required: 1,
                 available: 0,
@@ -141,7 +161,7 @@ function preflightPvp(acct: WorkerAccountView, cfg: PvpConfig, world: WorkerWorl
 }
 
 function estimatePvp(_acct: WorkerAccountView, cfg: PvpConfig): RateEstimate {
-    const mode = isPvpMode(cfg.mode) ? cfg.mode : 'hunt';
+    const mode = isPvpModeLocal(cfg.mode) ? cfg.mode : 'hunt';
     const isPracticeDuel = mode === 'spar' || mode === 'gang' || mode === 'team';
     const isPreparation = mode === 'stage-kit' || mode === 'standby' || mode === 'monitor' || mode === 'special-swap';
     return {
@@ -181,6 +201,7 @@ function accountViewFromSession(session: SessionCore): WorkerAccountView {
 }
 
 async function runPvp(session: SessionCore, cfg: PvpConfig): Promise<RunOutcome> {
+    const { watchWorkerStop } = await import('../stop');
     const activityId = `pvp:${cfg.mode}`;
     const startTick = session.tick?.() ?? 0;
     const { isStopped: stopCheck } = watchWorkerStop(session, cfg.stop);
@@ -222,6 +243,7 @@ async function runPvp(session: SessionCore, cfg: PvpConfig): Promise<RunOutcome>
         };
     }
 
+    const { assessTribridReadiness, CLI_ONLY_PVP_MODES, dispatchPvpCli } = await import('./modes');
     if (cfg.execute === false) {
         assessTribridReadiness(ownedCounts(acct), cfg.foodFloor ?? 18);
         return {
@@ -293,10 +315,6 @@ export const pvpModule: WorkerModule<PvpConfig> = {
     estimate: estimatePvp,
     run: (session: SessionCore, cfg: PvpConfig) => {
         void (session as unknown as Session);
-        void PVP_MODES;
-        void TRIBRID_KIT;
-        void TRIBRID_TRIP;
-        void pvpCombatBracket;
         return runPvp(session, cfg);
     },
 };

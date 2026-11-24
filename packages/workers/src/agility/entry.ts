@@ -1,9 +1,23 @@
 // Course entry helpers: Draynor sea transit, Wydin shop food, Stronghold Femi gate, travel, and Brimhaven entry.
 import type { Session } from '../../../core/src/inprocess';
-import { waitTicks, waitUntil } from '../../../core/src/ticks';
-import { walkPath, type PathDeps } from '../../../core/src/walk';
+import type { PathDeps } from '../../../core/src/walk';
 import { BRIMHAVEN_ARENA, COURSES, onCourse, resumeStep, type Pos } from './courses';
 import type { Course } from './types';
+
+let cachedTicksMod: typeof import('../../../core/src/ticks') | undefined;
+let cachedWalkMod: typeof import('../../../core/src/walk') | undefined;
+const loadTicksMod = (): typeof import('../../../core/src/ticks') => (cachedTicksMod ??= require('../../../core/src/ticks'));
+const loadWalkMod = (): typeof import('../../../core/src/walk') => (cachedWalkMod ??= require('../../../core/src/walk'));
+
+const TAG_RE = /<[^>]*>/g;
+const SPACE_RE = /\s+/g;
+const LINE_SPLIT_RE = /\n|\|/;
+const CONTINUE_OPT_RE = /^click here to continue[.!]?$/i;
+const TRADE_OPT_RE = /^trade$/i;
+const CLERK_IZZY_RE = /izzy/i;
+const PAY_OPT_RE = /^pay$/i;
+const TALK_OPT_RE = /^talk-to$/i;
+const BRIMHAVEN_PAY_OPT_RE = /use the agility arena|here's 200 coins/i;
 
 export type Point = { x: number; z: number; tol?: number };
 
@@ -102,11 +116,19 @@ type FemiChoice = {
     completed?: GateObservation;
 };
 
-const gatePageKey = (p: GatePage) => JSON.stringify([p.isOpen, p.text, p.options]);
+function sameGatePage(a: GatePage, b: GatePage): boolean {
+    if (a.isOpen !== b.isOpen || a.text !== b.text || a.options.length !== b.options.length) return false;
+    for (let i = 0; i < a.options.length; i++) {
+        const x = a.options[i]!, y = b.options[i]!;
+        if (x.index !== y.index || x.text !== y.text || x.componentId !== y.componentId) return false;
+    }
+    return true;
+}
 const femiThanks = (p: GatePage) => p.isOpen && p.text.split('\n').some(t => t === 'Thanks again friend!');
 const femiAccepted = (p: GatePage) => p.isOpen && p.text.split('\n').some(t => t === 'Thanks traveller!');
 
 export async function crossStrongholdGate(s: Session, d: GateDeps) {
+    const { waitTicks } = loadTicksMod();
     const G = STRONGHOLD_GATE;
     const label = 'open Stronghold gate';
     const pos = () => s.sdk.getState()?.player;
@@ -119,16 +141,30 @@ export async function crossStrongholdGate(s: Session, d: GateDeps) {
     let choiceAttempts = 0;
     const dialog: string[] = [];
     const choices: FemiChoice[] = [];
-    let pending: { key: string; choice?: FemiChoice } | undefined;
+    let pending: { page: GatePage; choice?: FemiChoice } | undefined;
 
+    const clean = (v: string) => v.replace(TAG_RE, '').replace(SPACE_RE, ' ').trim();
     const page = (): GatePage => {
         const dlg = s.sdk.getState()?.dialog;
-        const clean = (v: string) => v.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+        const lines = new Set<string>();
+        const pushLines = (raw: string | undefined) => {
+            if (!raw) return;
+            const parts = raw.split(LINE_SPLIT_RE);
+            for (let i = 0; i < parts.length; i++) {
+                const c = clean(parts[i]!);
+                if (c) lines.add(c);
+            }
+        };
+        pushLines(dlg?.text);
+        const comps = dlg?.allComponents;
+        if (comps) {
+            for (let i = 0; i < comps.length; i++) pushLines(comps[i]!.text);
+        }
         return {
             pageId: dlg?.pageId ?? null,
             isOpen: !!dlg?.isOpen,
             isWaiting: !!dlg?.isWaiting,
-            text: [...new Set([dlg?.text ?? '', ...(dlg?.allComponents ?? []).map(c => c.text)].flatMap(t => t.split(/\n|\|/)).map(clean).filter(Boolean))].join('\n'),
+            text: [...lines].join('\n'),
             options: (dlg?.options ?? []).map(o => ({ index: o.index, text: o.text, componentId: o.componentId })),
         };
     };
@@ -183,10 +219,9 @@ export async function crossStrongholdGate(s: Session, d: GateDeps) {
             d.left(label);
             const observed = { tick: s.tick(), page: page() };
             const p = observed.page;
-            const key = gatePageKey(p);
             trace('observe', observed);
             if (pending) {
-                if (key === pending.key || (pending.choice && p.isOpen && p.options.some(o => G.femi.test(o.text)))) {
+                if (sameGatePage(p, pending.page) || (pending.choice && p.isOpen && p.options.some(o => G.femi.test(o.text)))) {
                     quiet = 0;
                     continue;
                 }
@@ -227,7 +262,7 @@ export async function crossStrongholdGate(s: Session, d: GateDeps) {
             if (p.isOpen && !p.isWaiting) {
                 if (p.text && dialog.at(-1) !== p.text) dialog.push(p.text);
                 const pick = p.options.find(o => G.femi.test(o.text));
-                const continuation = p.options.length === 1 && /^click here to continue[.!]?$/i.test(p.options[0]!.text);
+                const continuation = p.options.length === 1 && CONTINUE_OPT_RE.test(p.options[0]!.text);
                 if (!pick && p.options.length && !continuation) {
                     fail(`unexpected dialogue choice ${p.options.map(o => o.text).join(' | ')}`);
                 }
@@ -246,7 +281,7 @@ export async function crossStrongholdGate(s: Session, d: GateDeps) {
                 d.live();
                 d.left(label);
                 if (!reply?.success) fail(`dialogue dispatch rejected ${reply?.reason ?? reply?.message ?? 'missing reply'}`);
-                pending = { key, choice };
+                pending = { page: p, choice };
                 talked = true;
                 quiet = 0;
                 continue;
@@ -289,6 +324,7 @@ export async function travelAgilityEntry(
     deadline: number,
     d: EntryTravelControls,
 ): Promise<void> {
+    const { walkPath } = loadWalkMod();
     const goal = points.at(-1);
     if (!goal) throw Error(`${label}: missing entry goal`);
     let rest = points;
@@ -367,6 +403,7 @@ export interface EntryFoodDeps {
 }
 
 export async function buyEntryFood(s: Session, d: EntryFoodDeps): Promise<{ bought: number; spent: number }> {
+    const { waitUntil } = loadTicksMod();
     const E = DRAYNOR_ENTRY;
     const reserve = E.fare * E.fares;
     const wydin = () => (s.sdk.getState()?.nearbyNpcs ?? []).find(n => n.id === E.wydin.id && E.wydin.name.test(n.name));
@@ -391,7 +428,7 @@ export async function buyEntryFood(s: Session, d: EntryFoodDeps): Promise<{ boug
     }
     d.live();
     const npc = wydin()!;
-    if (!(npc.optionsWithIndex ?? []).some(o => /^trade$/i.test(o.text))) fail('Wydin Trade option unobserved');
+    if (!(npc.optionsWithIndex ?? []).some(o => TRADE_OPT_RE.test(o.text))) fail('Wydin Trade option unobserved');
 
     let bought = 0;
     let spent = 0;
@@ -438,14 +475,15 @@ export async function payBrimhavenFee(
     tick: () => Promise<void>,
 ): Promise<void> {
     if (brimhavenPaid(s)) return;
+    const { waitUntil } = loadTicksMod();
     const clerk = () => (s.sdk.getState()?.nearbyNpcs ?? []).find(
-        n => n.id === BRIMHAVEN_ARENA.clerkId || /izzy/i.test(n.name),
+        n => n.id === BRIMHAVEN_ARENA.clerkId || CLERK_IZZY_RE.test(n.name),
     );
     if (!clerk() && !await waitUntil(s, () => !!clerk(), { timeoutTicks: Math.max(1, Math.min(12, deadline - s.tick())) })) {
         throw Error('brimhaven entry: Cap\'n Izzy No-Beard unobserved');
     }
     const npc = clerk()!;
-    const payOp = npc.optionsWithIndex.find(o => /^pay$/i.test(o.text));
+    const payOp = npc.optionsWithIndex.find(o => PAY_OPT_RE.test(o.text));
     if (payOp) {
         const res = await s.sdk.sendInteractNpc(npc.index, payOp.opIndex);
         if (!res.success) throw Error(`brimhaven fee payment refused: ${res.message}`);
@@ -453,7 +491,7 @@ export async function payBrimhavenFee(
             return;
         }
     }
-    const talkOp = npc.optionsWithIndex.find(o => /^talk-to$/i.test(o.text)) ?? npc.optionsWithIndex[0];
+    const talkOp = npc.optionsWithIndex.find(o => TALK_OPT_RE.test(o.text)) ?? npc.optionsWithIndex[0];
     if (!talkOp) throw Error('brimhaven entry: clerk interaction unavailable');
     const talk = await s.sdk.sendInteractNpc(npc.index, talkOp.opIndex);
     if (!talk.success) throw Error(`brimhaven clerk talk refused: ${talk.message}`);
@@ -462,7 +500,7 @@ export async function payBrimhavenFee(
         const dlg = s.sdk.getDialog();
         if (dlg?.isOpen && !dlg.isWaiting) {
             const opts = dlg.options ?? [];
-            const pick = opts.find(o => /use the agility arena|here's 200 coins/i.test(o.text));
+            const pick = opts.find(o => BRIMHAVEN_PAY_OPT_RE.test(o.text));
             if (pick) await s.sdk.sendClickDialog(pick.index);
             else await s.sdk.sendClickDialog(0);
         }

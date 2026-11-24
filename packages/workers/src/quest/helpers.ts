@@ -7,11 +7,13 @@ export function retainedGhostSkull(
     pack: readonly { id: number; count: number }[],
     worn: readonly { id: number; count: number }[],
 ) {
-    return (
-        state === 'started' &&
-        pack.filter((i) => i.id === 553).reduce((n, i) => n + i.count, 0) === 1 &&
-        worn.some((i) => i.id === 552 && i.count === 1)
-    );
+    if (state !== 'started') return false;
+    let skulls = 0;
+    for (let i = 0; i < pack.length; i++) {
+        const row = pack[i]!;
+        if (row.id === 553) skulls += row.count;
+    }
+    return skulls === 1 && worn.some((i) => i.id === 552 && i.count === 1);
 }
 
 export function retainedGhostBankSkull(

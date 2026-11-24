@@ -134,9 +134,12 @@ const QUEST_ALIASES: Readonly<Record<string, string>> = {
     quest_regicide: 'Regicide',
 };
 
+const MULTI_WS_RE = /\s{2,}|[\t\r\n]/;
+
 function normalizeQuestName(name: string): string {
-    const cleaned = name.toLowerCase().replace(/\s+/g, ' ').trim();
-    return QUEST_ALIASES[cleaned] ?? QUEST_ALIASES[cleaned.replace(/'/g, '')] ?? name.trim();
+    const trimmed = name.trim();
+    const cleaned = MULTI_WS_RE.test(trimmed) ? trimmed.toLowerCase().replace(/\s+/g, ' ') : trimmed.toLowerCase();
+    return QUEST_ALIASES[cleaned] ?? (cleaned.includes("'") ? QUEST_ALIASES[cleaned.replace(/'/g, '')] : undefined) ?? trimmed;
 }
 
 export function normalizeCompletedQuests(quests: QuestInput): Set<string> {
@@ -147,7 +150,8 @@ export function normalizeCompletedQuests(quests: QuestInput): Set<string> {
         return out;
     }
     if (Array.isArray(quests)) {
-        for (const q of quests) {
+        for (let i = 0; i < quests.length; i++) {
+            const q = quests[i];
             if (typeof q === 'string' && q.trim()) {
                 out.add(normalizeQuestName(q));
             } else if (q && typeof q === 'object' && 'state' in q && 'name' in q && q.state === 'complete' && typeof q.name === 'string') {
@@ -156,8 +160,9 @@ export function normalizeCompletedQuests(quests: QuestInput): Set<string> {
         }
         return out;
     }
-    for (const [q, done] of Object.entries(quests)) {
-        if (done === true) out.add(normalizeQuestName(q));
+    const questMap = quests as Record<string, boolean | null | undefined>;
+    for (const q in questMap) {
+        if (Object.prototype.hasOwnProperty.call(questMap, q) && questMap[q] === true) out.add(normalizeQuestName(q));
     }
     return out;
 }
@@ -176,7 +181,9 @@ export function normalizeSkills(levels: GearSkillLevels): Partial<Record<GearSki
         prayer: 1,
     };
     if (!levels) return out;
-    for (const [rawKey, rawVal] of Object.entries(levels)) {
+    for (const rawKey in levels) {
+        if (!Object.prototype.hasOwnProperty.call(levels, rawKey)) continue;
+        const rawVal = levels[rawKey];
         const key = rawKey.toLowerCase() as GearSkillName;
         const val = typeof rawVal === 'number'
             ? rawVal

@@ -10,16 +10,41 @@ import {
     type RandomEventOptions, type RandomEventWatch, type SeedTrack, type WatcherContext,
 } from './model';
 
+const EMPTY_MSGS: any[] = [];
+
 function createMessageTracker(s: Session) {
-    let seen = Math.max(-1, ...(s.sdk.getState()?.gameMessages ?? []).map((m: any) => m.tick ?? -1));
-    let fresh: any[] = [];
+    let seen = -1;
+    for (const m of s.sdk.getState()?.gameMessages ?? EMPTY_MSGS) {
+        const t = m.tick ?? -1;
+        if (t > seen) seen = t;
+    }
+    let fresh: any[] = EMPTY_MSGS;
     return {
         update(st: any) {
-            const ms = st?.gameMessages ?? [];
-            fresh = ms.filter((m: any) => (m.tick ?? -1) > seen);
-            seen = Math.max(seen, ...ms.map((m: any) => m.tick ?? -1));
+            const ms = st?.gameMessages ?? EMPTY_MSGS;
+            if (!ms.length) { fresh = EMPTY_MSGS; return; }
+            let maxTick = seen;
+            let hasFresh = false;
+            for (let i = 0; i < ms.length; i++) {
+                const t = ms[i].tick ?? -1;
+                if (t > seen) hasFresh = true;
+                if (t > maxTick) maxTick = t;
+            }
+            if (!hasFresh) {
+                fresh = EMPTY_MSGS;
+            } else {
+                const next: any[] = [];
+                for (let i = 0; i < ms.length; i++) {
+                    if ((ms[i].tick ?? -1) > seen) next.push(ms[i]);
+                }
+                fresh = next;
+            }
+            seen = maxTick;
         },
-        any: (re: RegExp) => fresh.some(m => re.test(m.text ?? '')),
+        any: (re: RegExp) => {
+            for (let i = 0; i < fresh.length; i++) if (re.test(fresh[i].text ?? '')) return true;
+            return false;
+        },
     };
 }
 
@@ -53,6 +78,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const loot = opts.loot ?? null;
     const jobs = new Map<string, Job>();
     let active: Job | null = null;
+    let activeKey: string | null = null;
     let st: any = null;
     let lastStateTick = -1;
 
@@ -83,7 +109,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         jobs,
         hasActiveJob: () => !!active,
         want: (key: string, job: JobSpec) => { if (!jobs.has(key)) jobs.set(key, { ...job, started: s.tick() }); },
-        clearJob: (key: string) => { if (active === jobs.get(key)) active = null; jobs.delete(key); },
+        clearJob: (key: string) => { if (active === jobs.get(key)) { active = null; activeKey = null; } jobs.delete(key); },
         hostiles: new Map<number, HostileTrack>(),
         friends: new Map<number, FriendTrack>(),
         seeds: new Map<number, SeedTrack>(),
@@ -104,10 +130,20 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const fleeGuard = opts.flee ? createFleeGuard(ctx, opts.flee) : null;
     const lootScanner = loot ? createLootScanner(ctx, loot) : null;
 
-    const topPendingJob = () =>
-        [...jobs.entries()]
-            .filter(([, j]) => j.name !== 'noop')
-            .sort((a, b) => jobPriority(a[0]) - jobPriority(b[0]) || a[1].started - b[1].started)[0];
+    const topPendingJob = (): [string, Job] | undefined => {
+        if (jobs.size === 0) return undefined;
+        let bestKey = '';
+        let bestJob: Job | undefined;
+        let bestPri = Infinity;
+        for (const [k, j] of jobs) {
+            if (j.name === 'noop') continue;
+            const pri = jobPriority(k);
+            if (!bestJob || pri < bestPri || (pri === bestPri && j.started < bestJob.started)) {
+                bestKey = k; bestJob = j; bestPri = pri;
+            }
+        }
+        return bestJob ? [bestKey, bestJob] : undefined;
+    };
 
     const off = s.onTick(() => {
         try {
@@ -115,7 +151,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             if (!st?.player || s.tick() === lastStateTick) return;
             lastStateTick = s.tick();
             if (ctx.xpStart.size === 0) {
-                for (const k of st.skills ?? []) ctx.xpStart.set(String(k.name).toLowerCase(), k.experience ?? 0);
+                for (const k of st.skills ?? EMPTY_MSGS) ctx.xpStart.set(String(k.name).toLowerCase(), k.experience ?? 0);
             }
             newMessages.update(st);
             if (gate.isExclusive()) {
@@ -126,19 +162,21 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             if (fleeGuard) { fleeGuard.seeFled(); fleeGuard.scanFlee(); }
             if (lootScanner) lootScanner.scanLoot();
             const top = topPendingJob();
-            if (top && (!active || jobPriority(top[0]) < jobPriority([...jobs.entries()].find(([, j]) => j === active)?.[0] ?? 'zzz'))) {
+            if (top && (!active || jobPriority(top[0]) < jobPriority(activeKey ?? 'zzz'))) {
+                activeKey = top[0];
                 active = top[1];
             }
             if (active) {
-                const key = [...jobs.entries()].find(([, j]) => j === active)?.[0];
+                const key = activeKey;
                 let done = false;
                 try { done = !!active.tick(); }
                 catch (e) { log(`EVENT ${active.name} error t=${s.tick()} ${String(e)}`); done = true; }
                 if (done) {
                     if (key) jobs.delete(key);
                     active = null;
+                    activeKey = null;
                     const next = topPendingJob();
-                    if (next) active = next[1];
+                    if (next) { activeKey = next[0]; active = next[1]; }
                 }
             }
             if (!gate.holding()) gate.flush();
@@ -152,6 +190,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         stop() {
             off();
             active = null;
+            activeKey = null;
             gate.stop();
         },
         counts: () => ({ ...counts }),

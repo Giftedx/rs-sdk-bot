@@ -52,10 +52,12 @@ export async function connectInProcess(opts: {
     installGameWebSocketProxy();
     // dom-shim must load before any webclient `#/` module (session.ts:15 does the same).
     await import(vendor('server/webclient/src/lite/dom-shim.ts'));
-    const { startSession } = await import(vendor('server/webclient/src/lite/session.ts'));
-    await shareLocIndex();
-    const { BotSDK } = await import(vendor('sdk/index.ts'));
-    const { BotActions } = await import(vendor('sdk/actions.ts'));
+    const [{ startSession }, { BotSDK }, { BotActions }] = await Promise.all([
+        import(vendor('server/webclient/src/lite/session.ts')),
+        import(vendor('sdk/index.ts')),
+        import(vendor('sdk/actions.ts')),
+        shareLocIndex(),
+    ]);
     if (!pathfindingReady) {
         // With a saved snapshot of the current source key (a stale one does not count) the route finder loads on its first use (pathcache.ts restorePathfindingOnFirstUse, or
         // loadPathfinding() from a route call), so a bot that stands at one bank never holds the grid. Without a

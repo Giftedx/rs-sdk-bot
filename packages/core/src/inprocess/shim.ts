@@ -20,7 +20,7 @@ function createInventoryTracker(client: ClientLike, isStopped: () => boolean, ge
         const packet = client.packetsReceived, opcode = client.ptype0;
         if (packet == null || packet === seenPacket) return component;
         seenPacket = packet;
-        if (![5382, 1688].includes(id) || !component || ![ServerProt.UPDATE_INV_FULL, ServerProt.UPDATE_INV_PARTIAL, ServerProt.UPDATE_INV_STOP_TRANSMIT].includes(opcode!)) return component;
+        if ((id !== 5382 && id !== 1688) || !component || (opcode !== ServerProt.UPDATE_INV_FULL && opcode !== ServerProt.UPDATE_INV_PARTIAL && opcode !== ServerProt.UPDATE_INV_STOP_TRANSMIT)) return component;
         if (id === 1688) {
             // Invalidate immediately; publish only after the handler fills all slots.
             const slots = component as { linkObjType?: unknown; linkObjNumber?: unknown };
@@ -80,6 +80,12 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     let commands = 0;
     const indexes = new Map<string, number>();
     const listeners = new Set<() => void>();
+    let listenersDirty = false;
+    let listenerSnapshot: (() => void)[] = [];
+    const rawListenerAdd = listeners.add.bind(listeners);
+    const rawListenerDelete = listeners.delete.bind(listeners);
+    listeners.add = (l: () => void) => { listenersDirty = true; return rawListenerAdd(l); };
+    listeners.delete = (l: () => void) => { const deleted = rawListenerDelete(l); if (deleted) listenersDirty = true; return deleted; };
     const inventory = createInventoryTracker(client, () => stopped, () => tick);
 
     const deliver = (msg: object) => s.handleMessage(JSON.stringify(msg));
@@ -125,7 +131,15 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             if (waitLeft > 0 && --waitLeft === 0) waitDone?.();
             // Like SDL_DispatchEventWatchList: freeze this dispatch's membership,
             // but respect removals. A new wait must start on the next game tick.
-            for (const l of [...listeners]) if (listeners.has(l)) l();
+            if (listenersDirty) {
+                listenerSnapshot = [...listeners];
+                listenersDirty = false;
+            }
+            const snap = listenerSnapshot;
+            for (let i = 0; i < snap.length; i++) {
+                const l = snap[i]!;
+                if (listeners.has(l)) l();
+            }
             // A one-time tick wait (nextTick, a tick stream's step) leaves the set as it fires.
             lockstep.onTickDispatched(listenersBefore, t1 - t0, performance.now() - t1);
         } catch (e) {

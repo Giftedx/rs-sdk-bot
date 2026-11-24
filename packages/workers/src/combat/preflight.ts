@@ -12,15 +12,20 @@ import {
     type WorkerAccountView,
     type WorkerWorldView,
 } from '../contracts';
-import { CANNON_SPOTS } from './cannon';
-import { CHOMPY, CHOMPY_TRIP, SHADE_ROUTE } from './special-mobs';
-import { DRAGON_FOOD_IDS, DRAGONFIRE_SHIELD_ID } from './survivability';
 import {
     COMBAT_MODE_SET,
     type CombatConfig,
     type CombatMode,
     type CombatSiteMeta,
 } from './types';
+
+let cachedCannonMod: typeof import('./cannon') | undefined;
+let cachedSpecialMobsMod: typeof import('./special-mobs') | undefined;
+let cachedSurvivabilityMod: typeof import('./survivability') | undefined;
+
+const loadCannonMod = (): typeof import('./cannon') => (cachedCannonMod ??= require('./cannon'));
+const loadSpecialMobsMod = (): typeof import('./special-mobs') => (cachedSpecialMobsMod ??= require('./special-mobs'));
+const loadSurvivabilityMod = (): typeof import('./survivability') => (cachedSurvivabilityMod ??= require('./survivability'));
 
 export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
     chicken: {
@@ -420,12 +425,28 @@ export const COMBAT_SITES: Readonly<Record<CombatMode, CombatSiteMeta>> = {
     },
 };
 
+function availableItemStock(acct: WorkerAccountView, itemId: number, world: WorkerWorldView): number {
+    const owned = accountOwnedItemCount(acct, itemId);
+    const reserved = accountReserveFor(acct, world, itemId);
+    return reserveAdjustedStock(owned, reserved);
+}
+
 const ALL_FOOD_IDS = [385, 373, 379, 329, 333, 315, 2140, 2309, 1891, 1893, 1895] as const;
 
 type SupplyReq = { itemId: number; itemName: string; required: number };
 
+function skillLevel(acct: WorkerAccountView, skill: string): number {
+    const direct = acct.skills[skill];
+    if (direct !== undefined) return direct.level;
+    const lower = skill.toLowerCase();
+    for (const k in acct.skills) {
+        if (k.toLowerCase() === lower) return acct.skills[k]!.level;
+    }
+    return lower === 'hitpoints' ? 10 : 1;
+}
+
 function requiredModeSupplies(acct: WorkerAccountView, mode: CombatMode): SupplyReq[] {
-    const agility = acct.skills.Agility?.level ?? 1;
+    const agility = skillLevel(acct, 'Agility');
     switch (mode) {
         case 'fire-giant':
             return [
@@ -439,7 +460,8 @@ function requiredModeSupplies(acct: WorkerAccountView, mode: CombatMode): Supply
                 { itemId: 329, itemName: 'Salmon', required: 16 },
                 { itemId: 1171, itemName: 'Wooden shield', required: 1 },
             ];
-        case 'shade':
+        case 'shade': {
+            const { SHADE_ROUTE } = loadSpecialMobsMod();
             return [
                 { itemId: SHADE_ROUTE.key, itemName: 'Mort\'ton shade key', required: 1 },
                 { itemId: 2958, itemName: 'Druid pouch', required: 30 },
@@ -447,18 +469,24 @@ function requiredModeSupplies(acct: WorkerAccountView, mode: CombatMode): Supply
                 { itemId: 379, itemName: 'Lobster', required: 4 },
                 { itemId: 1289, itemName: 'Rune sword', required: 1 },
             ];
-        case 'chompy':
+        }
+        case 'chompy': {
+            const { CHOMPY, CHOMPY_TRIP } = loadSpecialMobsMod();
             return [
                 { itemId: CHOMPY.bow, itemName: 'Ogre bow', required: 1 },
                 { itemId: CHOMPY.arrow, itemName: 'Ogre arrow', required: CHOMPY_TRIP.arrowsPerKill },
                 { itemId: 2434, itemName: 'Prayer potion(4)', required: 1 },
             ];
-        case 'chompy-at-site':
+        }
+        case 'chompy-at-site': {
+            const { CHOMPY } = loadSpecialMobsMod();
             return [
                 { itemId: CHOMPY.bow, itemName: 'Ogre bow', required: 1 },
                 { itemId: CHOMPY.arrow, itemName: 'Ogre arrow', required: 10 },
             ];
-        case 'kbd':
+        }
+        case 'kbd': {
+            const { DRAGONFIRE_SHIELD_ID } = loadSurvivabilityMod();
             return [
                 { itemId: DRAGONFIRE_SHIELD_ID, itemName: 'Anti-dragon shield', required: 1 },
                 { itemId: 1289, itemName: 'Rune sword', required: 1 },
@@ -470,17 +498,22 @@ function requiredModeSupplies(acct: WorkerAccountView, mode: CombatMode): Supply
                 { itemId: 556, itemName: 'Air rune', required: 3 },
                 { itemId: 554, itemName: 'Fire rune', required: 1 },
             ];
+        }
         case 'black-dragon':
             return agility < 70 ? [{ itemId: 1590, itemName: 'Dusty key', required: 1 }] : [];
-        case 'blue-dragon':
+        case 'blue-dragon': {
+            const { DRAGONFIRE_SHIELD_ID } = loadSurvivabilityMod();
             return [
                 { itemId: DRAGONFIRE_SHIELD_ID, itemName: 'Anti-dragon shield', required: 1 },
                 { itemId: 837, itemName: 'Crossbow', required: 1 },
                 { itemId: 877, itemName: 'Bolts', required: 100 },
                 ...(agility < 70 ? [{ itemId: 1590, itemName: 'Dusty key', required: 1 }] : []),
             ];
-        case 'green-dragon':
+        }
+        case 'green-dragon': {
+            const { DRAGONFIRE_SHIELD_ID } = loadSurvivabilityMod();
             return [{ itemId: DRAGONFIRE_SHIELD_ID, itemName: 'Anti-dragon shield', required: 1 }];
+        }
         case 'trawler':
             return [
                 { itemId: 1941, itemName: 'Swamp paste', required: 100 },
@@ -503,7 +536,7 @@ function requiredModeSupplies(acct: WorkerAccountView, mode: CombatMode): Supply
 }
 
 function foodIdsForMode(mode: CombatMode): readonly number[] {
-    if (mode === 'kbd' || mode === 'green-dragon' || mode === 'black-dragon' || mode === 'blue-dragon') return DRAGON_FOOD_IDS;
+    if (mode === 'kbd' || mode === 'green-dragon' || mode === 'black-dragon' || mode === 'blue-dragon') return loadSurvivabilityMod().DRAGON_FOOD_IDS;
     if (mode === 'fire-giant' || mode === 'fire-combat') return [329];
     if (mode === 'shade') return [379];
     if (mode === 'imp') return [333];
@@ -533,6 +566,7 @@ export function combatPreflight(acct: WorkerAccountView, cfg: CombatConfig, worl
         return preflightFail([{ kind: 'invalid_config', message: `targetLevel must be 1..99 (got ${cfg.targetLevel})` }]);
     }
     if (cfg.mode === 'cannon') {
+        const { CANNON_SPOTS } = loadCannonMod();
         const spotName = cfg.spot ?? cfg.env?.SPOT ?? 'spiders';
         if (!Object.prototype.hasOwnProperty.call(CANNON_SPOTS, spotName)) {
             return preflightFail([{ kind: 'invalid_config', message: `unknown cannon spot: ${spotName} (known: ${Object.keys(CANNON_SPOTS).join(', ')})` }]);
@@ -593,7 +627,7 @@ export function combatPreflight(acct: WorkerAccountView, cfg: CombatConfig, worl
 
     for (const [skill, reqLevel] of Object.entries(site.minCombatStats ?? {})) {
         if (reqLevel === undefined) continue;
-        const current = acct.skills[skill]?.level ?? 1;
+        const current = skillLevel(acct, skill);
         if (current < reqLevel) {
             if (skill === 'Hitpoints' || skill === 'Defence' || skill === 'Prayer') {
                 blockers.push({
@@ -615,12 +649,6 @@ export function combatPreflight(acct: WorkerAccountView, cfg: CombatConfig, worl
         }
     }
 
-function availableItemStock(acct: WorkerAccountView, itemId: number, world: WorkerWorldView): number {
-    const owned = accountOwnedItemCount(acct, itemId);
-    const reserved = accountReserveFor(acct, world, itemId);
-    return reserveAdjustedStock(owned, reserved);
-}
-
     for (const req of requiredModeSupplies(acct, cfg.mode)) {
         const avail = availableItemStock(acct, req.itemId, world);
         const total = accountOwnedItemCount(acct, req.itemId);
@@ -640,6 +668,7 @@ function availableItemStock(acct: WorkerAccountView, itemId: number, world: Work
     }
 
     if (cfg.mode === 'chompy') {
+        const { CHOMPY, CHOMPY_TRIP } = loadSpecialMobsMod();
         const bellowsCount = CHOMPY_TRIP.bellows.reduce((sum, id) => sum + availableItemStock(acct, id, world), 0);
         if (bellowsCount < 1) {
             blockers.push({
@@ -656,6 +685,7 @@ function availableItemStock(acct: WorkerAccountView, itemId: number, world: Work
     }
 
     if (cfg.mode === 'chompy-at-site') {
+        const { CHOMPY } = loadSpecialMobsMod();
         const charges =
             availableItemStock(acct, CHOMPY.full, world) * 3
             + availableItemStock(acct, CHOMPY.two, world) * 2

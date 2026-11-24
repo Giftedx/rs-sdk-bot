@@ -1,15 +1,25 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
+import type { BotActions as BotActionsType } from '../../../../vendor/rs-sdk/sdk/actions';
 import { PRAYER_LEVELS } from '../../../../vendor/rs-sdk/sdk/types';
-import { openBot, releasePrayerGuard, settle } from '../../../core/src/bot';
+import { releasePrayerGuard } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
 import { componentId } from '../../../core/src/logout';
 import { waitUntil } from '../../../core/src/ticks';
-import { nativeCombatTeleport, nativeNpcSpell, npcCastEffect, runCombatTeleport, runNpcMagic } from './magic';
-import { runCows } from './melee-gather';
-import { elementalRuneCost } from './survivability';
 import type { CombatSession } from './types';
+
+let cachedBotMod: typeof import('../../../core/src/bot') | undefined;
+let cachedSdkActionsMod: typeof import('../../../../vendor/rs-sdk/sdk/actions') | undefined;
+let cachedMagicMod: typeof import('./magic') | undefined;
+let cachedMeleeMod: typeof import('./melee-gather') | undefined;
+let cachedSurvMod: typeof import('./survivability') | undefined;
+
+const loadBotMod = (): typeof import('../../../core/src/bot') => (cachedBotMod ??= require('../../../core/src/bot'));
+const loadSdkActionsMod = (): typeof import('../../../../vendor/rs-sdk/sdk/actions') =>
+    (cachedSdkActionsMod ??= require('../../../../vendor/rs-sdk/sdk/actions'));
+const loadMagicMod = (): typeof import('./magic') => (cachedMagicMod ??= require('./magic'));
+const loadMeleeMod = (): typeof import('./melee-gather') => (cachedMeleeMod ??= require('./melee-gather'));
+const loadSurvMod = (): typeof import('./survivability') => (cachedSurvMod ??= require('./survivability'));
 
 export type CombatPrayerOptions = {
     prayer: number;
@@ -303,19 +313,38 @@ export async function withCombatPrayer<T>(s: CombatSession, o: CombatPrayerOptio
     };
 }
 
+let cachedFarmerProfile:
+    | {
+          npcKey: string;
+          seqKey: string;
+          value: { readonly npc: 7; readonly prayer: 14; readonly rate: number; readonly anim: number; readonly lead: 2; readonly source: '_unpack/225/all.npc farmer1; melee protection before queue0' };
+      }
+    | undefined;
+
 export function incomingFarmerProfile() {
     const base = resolve(import.meta.dir, '../../../../vendor/rs-sdk/server/content') + '/';
-    const row = readFileSync(base + 'scripts/_unpack/225/all.npc', 'utf8').split('[farmer1]')[1]?.split('\n[')[0] ?? '';
+    const npcPath = base + 'scripts/_unpack/225/all.npc';
+    const seqPath = base + 'pack/seq.pack';
+    const npcStat = statSync(npcPath);
+    const seqStat = statSync(seqPath);
+    const npcKey = `${npcStat.mtimeMs}:${npcStat.size}`;
+    const seqKey = `${seqStat.mtimeMs}:${seqStat.size}`;
+    if (cachedFarmerProfile && cachedFarmerProfile.npcKey === npcKey && cachedFarmerProfile.seqKey === seqKey) {
+        return cachedFarmerProfile.value;
+    }
+    const row = readFileSync(npcPath, 'utf8').split('[farmer1]')[1]?.split('\n[')[0] ?? '';
     const rate = Number(row.match(/^param=attackrate,(\d+)/m)?.[1]);
     const name = row.match(/^param=attack_anim,([^\r\n]+)/m)?.[1];
     const anim = Number(
-        readFileSync(base + 'pack/seq.pack', 'utf8')
+        readFileSync(seqPath, 'utf8')
             .split(/\r?\n/)
             .find(l => l.endsWith('=' + name))
             ?.split('=')[0],
     );
     if (rate !== 6 || anim !== 433 || !/^param=damagetype,\^stab_style$/m.test(row)) throw Error('native Farmer incoming profile changed');
-    return { npc: 7, prayer: 14, rate, anim, lead: 2, source: '_unpack/225/all.npc farmer1; melee protection before queue0' } as const;
+    const value = { npc: 7, prayer: 14, rate, anim, lead: 2, source: '_unpack/225/all.npc farmer1; melee protection before queue0' } as const;
+    cachedFarmerProfile = { npcKey, seqKey, value };
+    return value;
 }
 
 export async function withIncomingProtection<T>(
@@ -323,6 +352,9 @@ export async function withIncomingProtection<T>(
     o: { cap: number; hpFloor: number; spell: string; stop?: () => boolean },
     run: (owned: CombatSession, stop: () => boolean, finishCombat: () => void) => Promise<T>,
 ) {
+    const { BotActions } = loadSdkActionsMod();
+    const { nativeNpcSpell, npcCastEffect } = loadMagicMod();
+    const { elementalRuneCost } = loadSurvMod();
     await releasePrayerGuard(s);
     const profile = incomingFarmerProfile();
     const spell = nativeNpcSpell(o.spell);
@@ -566,7 +598,9 @@ export async function withIncomingProtection<T>(
 }
 
 export async function runPrayerFlickCli(args: readonly string[], env: Record<string, string | undefined>) {
+    const { openBot, settle } = loadBotMod();
     if (env.INCOMING_PROTECTION === '1') {
+        const { nativeCombatTeleport, nativeNpcSpell, runCombatTeleport, runNpcMagic } = loadMagicMod();
         const [actor, casts = '3', cap = '500'] = args;
         if (!actor || !Number.isSafeInteger(Number(casts)) || Number(casts) < 1 || Number(casts) > 3 || !Number.isSafeInteger(Number(cap)) || Number(cap) < 100 || Number(cap) > 1000) {
             throw Error('incoming account/casts1..3/cap100..1000 required');
@@ -612,6 +646,7 @@ export async function runPrayerFlickCli(args: readonly string[], env: Record<str
         }
         return;
     }
+    const { runCows } = loadMeleeMod();
     const [actor, prayer = '10', maximum = '1', cap = '1500'] = args;
     if (!actor) throw Error('usage: prayer-flick <account> [offensive-prayer] [cow-kills] [cap]');
     let stopped = false;

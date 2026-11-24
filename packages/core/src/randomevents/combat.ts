@@ -117,6 +117,7 @@ export function createFleeGuard(ctx: WatcherContext, fleeOpt: { hp: number; onSa
     let fleeing = false;
 
     const seeFled = () => {
+        if (!fleeing || ctx.hostiles.size === 0) return;
         const st = ctx.state(), now = ctx.tick();
         for (const n of st?.nearbyNpcs ?? []) {
             const h = ctx.hostiles.get(n.index);

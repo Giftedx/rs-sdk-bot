@@ -30,7 +30,35 @@ export interface ReplayResult {
 }
 const typeOf = (a: unknown) => (a as { type?: unknown } | null)?.type;
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+const same = (a: unknown, b: unknown): boolean => {
+    if (a === b) return true;
+    if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
+        return JSON.stringify(a) === JSON.stringify(b);
+    }
+    if (typeof (a as { toJSON?: unknown }).toJSON === 'function' || typeof (b as { toJSON?: unknown }).toJSON === 'function') {
+        return JSON.stringify(a) === JSON.stringify(b);
+    }
+    const aArr = Array.isArray(a);
+    if (aArr !== Array.isArray(b)) return false;
+    if (aArr) {
+        const arrA = a as unknown[], arrB = b as unknown[];
+        if (arrA.length !== arrB.length) return false;
+        for (let i = 0; i < arrA.length; i++) if (!same(arrA[i], arrB[i])) return false;
+        return true;
+    }
+    const objA = a as Record<string, unknown>, objB = b as Record<string, unknown>;
+    const keysA = Object.keys(objA), keysB = Object.keys(objB);
+    let ia = 0, ib = 0;
+    for (;;) {
+        while (ia < keysA.length && (objA[keysA[ia]!] === undefined || typeof objA[keysA[ia]!] === 'function' || typeof objA[keysA[ia]!] === 'symbol')) ia++;
+        while (ib < keysB.length && (objB[keysB[ib]!] === undefined || typeof objB[keysB[ib]!] === 'function' || typeof objB[keysB[ib]!] === 'symbol')) ib++;
+        const doneA = ia >= keysA.length, doneB = ib >= keysB.length;
+        if (doneA || doneB) return doneA && doneB;
+        const ka = keysA[ia++]!;
+        if (ka !== keysB[ib++]!) return false;
+        if (!same(objA[ka], objB[ka])) return false;
+    }
+};
 const turn = () => new Promise<void>(r => setImmediate(r));
 
 // `run` starts the worker (the CLI imports its entry). `actionWaitMs` bounds the wait for each recorded command;
@@ -41,6 +69,8 @@ export async function replayRecord(lines: any[], run: () => Promise<unknown>, op
     if (meta?.k !== 'meta' || meta.v !== RECORD_VERSION) throw new Error('not a version ' + RECORD_VERSION + ' tick record');
     const waitMs = opts.actionWaitMs ?? 3000, settleTurns = opts.settleTurns ?? 6;
     const expected = lines.filter(l => l.k === 'a');
+    const expectedIndex = new Map<unknown, number>();
+    for (let i = 0; i < expected.length; i++) expectedIndex.set(expected[i], i);
     const firstPublish = lines.find(l => l.k === 'p' || l.k === 's');
     const offset = firstPublish?.t ?? 0;
     const result: ReplayResult = { status: 'clean', account: meta.account, script: meta.script, ticks: 0, commands: 0, cut: false, allowed: 0 };
@@ -124,7 +154,7 @@ export async function replayRecord(lines: any[], run: () => Promise<unknown>, op
             } else if (l.k === 'p') {
                 state = applyDelta(state, l);
             } else if (l.k === 'a') {
-                const at = expected.indexOf(l), deadline = Date.now() + waitMs;
+                const at = expectedIndex.get(l)!, deadline = Date.now() + waitMs;
                 while (next <= at && !result.difference && Date.now() < deadline) await turn();
                 if (next <= at) differ({ tick: l.t, index: l.i, expected: { t: l.t, a: l.a, direct: !!l.direct }, actual: null });
             } else if (l.k === 'r') {

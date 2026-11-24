@@ -41,11 +41,30 @@ const OAK_LOGS = 1521;
 const EDGEVILLE_TARGET = 36;
 const EDGEVILLE_CAP = 900;
 const AXE_IDS: readonly number[] = WOODCUTTING_AXES_DESC;
+const AXE_ID_SET = new Set<number>(WOODCUTTING_AXES_DESC);
+const CHOP_OP_RE = /^chop/i;
+const CHOP_DOWN_OP_RE = /^chop down$/i;
+const TREE_RE = /^tree$/i;
+const WC_FOOD_RE = /^(shrimps|bread|trout|salmon|lobster|cooked chicken)$/i;
+const WC_BANK_FOOD_RE = /^(bread|shrimps|trout|salmon|cooked chicken)$/i;
+const WC_KEEP_ITEM_RE = /axe$|^(shrimps|bread|trout|salmon|lobster|cooked chicken)$/i;
 
-const countById = (items: readonly { id: number; count: number }[], id: number) =>
-    items.reduce((total, item) => total + (item.id === id ? item.count : 0), 0);
-const countAxes = (items: readonly { id: number; count: number }[]) =>
-    items.reduce((total, item) => total + (AXE_IDS.includes(item.id) ? item.count : 0), 0);
+const countById = (items: readonly { id: number; count: number }[], id: number) => {
+    let total = 0;
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]!;
+        if (item.id === id) total += item.count;
+    }
+    return total;
+};
+const countAxes = (items: readonly { id: number; count: number }[]) => {
+    let total = 0;
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]!;
+        if (AXE_ID_SET.has(item.id)) total += item.count;
+    }
+    return total;
+};
 
 function checkAssert(value: unknown, detail: string): asserts value {
     if (!value) throw Error(detail);
@@ -162,11 +181,22 @@ export async function runEdgevilleWoodcut(s: Session, stopped: () => boolean) {
             let previous = '';
             while (safe() && level() < EDGEVILLE_TARGET && pack().length < 27) {
                 await s.bot.dismissBlockingUI();
-                const standing = (s.sdk.getState()?.nearbyLocs ?? [])
-                    .filter(loc => loc.id === 1281 && EDGEVILLE_OAKS.has(loc.x + ',' + loc.z) && loc.reachable !== false)
-                    .sort((a, b) => a.distance - b.distance);
-                const tree = standing.find(loc => loc.x + ',' + loc.z !== previous) ?? standing[0];
-                const action = tree?.optionsWithIndex.find(op => /^chop/i.test(op.text));
+                const locs = s.sdk.getState()?.nearbyLocs ?? [];
+                let tree: (typeof locs)[number] | undefined;
+                let fallbackTree: (typeof locs)[number] | undefined;
+                for (let i = 0; i < locs.length; i++) {
+                    const loc = locs[i]!;
+                    if (loc.id !== 1281 || loc.reachable === false) continue;
+                    const key = `${loc.x},${loc.z}`;
+                    if (!EDGEVILLE_OAKS.has(key)) continue;
+                    if (key !== previous) {
+                        if (!tree || loc.distance < tree.distance) tree = loc;
+                    } else if (!fallbackTree || loc.distance < fallbackTree.distance) {
+                        fallbackTree = loc;
+                    }
+                }
+                tree ??= fallbackTree;
+                const action = tree?.optionsWithIndex.find(op => CHOP_OP_RE.test(op.text));
                 if (tree && action) {
                     const before = held(OAK_LOGS);
                     previous = tree.x + ',' + tree.z;
@@ -555,25 +585,31 @@ export async function runWoodSupply(
                     await waitTicks(s, 1);
                 }
                 const old = held(1511);
-                const tree = s.sdk
-                    .getState()
-                    ?.nearbyLocs.filter(
-                        l =>
-                            l.x >= 3214 &&
-                            l.x <= 3239 &&
-                            l.z >= 3226 &&
-                            l.z <= 3250 &&
-                            /^tree$/i.test(l.name) &&
-                            l.optionsWithIndex.some(o => /chop/i.test(o.text)) &&
-                            l.reachable !== false,
-                    )
-                    .sort((a, b) => a.distance - b.distance)[0];
+                const locs = s.sdk.getState()?.nearbyLocs;
+                let tree: NonNullable<typeof locs>[number] | undefined;
+                if (locs) {
+                    for (let i = 0; i < locs.length; i++) {
+                        const l = locs[i]!;
+                        if (
+                            l.x >= 3214
+                            && l.x <= 3239
+                            && l.z >= 3226
+                            && l.z <= 3250
+                            && l.reachable !== false
+                            && TREE_RE.test(l.name)
+                            && l.optionsWithIndex.some(o => CHOP_OP_RE.test(o.text))
+                            && (!tree || l.distance < tree.distance)
+                        ) {
+                            tree = l;
+                        }
+                    }
+                }
                 if (!tree) {
                     if (s.tick() - lastGain > 240) throw Error('supply no normal tree after respawn budget');
                     await waitTicks(s, 4);
                     continue;
                 }
-                const result = await s.bot.interactLoc(tree, tree.optionsWithIndex.find(o => /chop/i.test(o.text))!.text);
+                const result = await s.bot.interactLoc(tree, tree.optionsWithIndex.find(o => CHOP_OP_RE.test(o.text))!.text);
                 if (!result.success) {
                     console.log('WOOD_SUPPLY_CHOP_REFUSED ' + JSON.stringify({ tree: { id: tree.id, x: tree.x, z: tree.z }, result }));
                 }
@@ -1164,18 +1200,28 @@ export async function runDraynorOak(
         packStarted = lastProgress = s.tick();
         while (held(OAK_LOGS) < o.maximum && !over()) {
             if (s.tick() - lastProgress >= (o.noProgress ?? 180)) throw new Error('no wood progress: bounded oak output wait');
-            const tree = st()
-                ?.nearbyLocs.filter(
-                    l => l.id === 1281 && grove.trees.has(`${l.x},${l.z}`) && l.optionsWithIndex.some(op => /^chop down$/i.test(op.text)),
-                )
-                .sort((a, b) => a.distance - b.distance)[0];
+            const locs = st()?.nearbyLocs;
+            let tree: NonNullable<typeof locs>[number] | undefined;
+            if (locs) {
+                for (let i = 0; i < locs.length; i++) {
+                    const l = locs[i]!;
+                    if (
+                        l.id === 1281
+                        && grove.trees.has(`${l.x},${l.z}`)
+                        && l.optionsWithIndex.some(op => CHOP_DOWN_OP_RE.test(op.text))
+                        && (!tree || l.distance < tree.distance)
+                    ) {
+                        tree = l;
+                    }
+                }
+            }
             if (!tree) {
                 await waitTicks(s, 1);
                 continue;
             }
             const before = held(OAK_LOGS);
             const beforeXp = xp();
-            const op = tree.optionsWithIndex.find(x => /^chop down$/i.test(x.text))!;
+            const op = tree.optionsWithIndex.find(x => CHOP_DOWN_OP_RE.test(x.text))!;
             if (st()?.dialog?.isOpen || st()?.modalOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
             await s.sdk.sendInteractLoc(tree.x, tree.z, tree.id, op.opIndex);
             await waitUntil(
@@ -1392,7 +1438,7 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
             await waitTicks(s, 2);
             return;
         }
-        if (s.sdk.getInventory().filter(i => /^(bread|shrimps|trout|salmon|cooked chicken)$/i.test(i.name)).length < 3) {
+        if (s.sdk.getInventory().filter(i => WC_BANK_FOOD_RE.test(i.name)).length < 3) {
             for (const food of [/^salmon$/i, /^trout$/i, /^cooked chicken$/i]) {
                 if (s.sdk.getState()?.bank?.items.some(i => food.test(i.name) && i.count > 0)) {
                     await s.bot.withdrawItem(food, 5);
@@ -1402,7 +1448,7 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
         }
         await s.bot.depositItem(logRe, -1);
         for (const item of s.sdk.getInventory()) {
-            if (!/axe$|^(shrimps|bread|trout|salmon|lobster|cooked chicken)$/i.test(item.name)) {
+            if (!WC_KEEP_ITEM_RE.test(item.name)) {
                 await s.bot.depositItem(item.name, -1);
             }
         }
@@ -1536,17 +1582,28 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
             }
 
             const before = heldLogs();
-            const trees =
-                s.sdk
-                    .getState()
-                    ?.nearbyLocs.filter(
-                        l =>
-                            treeRe.test(l.name) &&
-                            (!local || (l.x >= 3214 && l.x <= 3239 && l.z >= 3226 && l.z <= 3250)) &&
-                            (!draynor || (grove!.contains(l.x, l.z) && (retryAfter.get(`${l.x},${l.z}`) ?? 0) <= s.tick())),
-                    )
-                    .sort((a, b) => a.distance - b.distance) ?? [];
-            const tree = (draynor ? woodTreeOrder(trees, s.sdk.getState()?.nearbyPlayers ?? []) : trees)[0];
+            const nearbyLocs = s.sdk.getState()?.nearbyLocs ?? [];
+            let tree: (typeof nearbyLocs)[number] | undefined;
+            let trees: typeof nearbyLocs | undefined;
+            if (draynor) {
+                const matching = nearbyLocs.filter(
+                    l =>
+                        treeRe.test(l.name) &&
+                        (!local || (l.x >= 3214 && l.x <= 3239 && l.z >= 3226 && l.z <= 3250)) &&
+                        grove!.contains(l.x, l.z) &&
+                        (retryAfter.get(`${l.x},${l.z}`) ?? 0) <= s.tick(),
+                );
+                if (matching.length > 1) matching.sort((a, b) => a.distance - b.distance);
+                trees = matching;
+                tree = woodTreeOrder(trees, s.sdk.getState()?.nearbyPlayers ?? [])[0];
+            } else {
+                for (let i = 0; i < nearbyLocs.length; i++) {
+                    const l = nearbyLocs[i]!;
+                    if (!treeRe.test(l.name)) continue;
+                    if (local && (l.x < 3214 || l.x > 3239 || l.z < 3226 || l.z > 3250)) continue;
+                    if (!tree || l.distance < tree.distance) tree = l;
+                }
+            }
             if (!tree) {
                 await waitTicks(s, 2);
                 continue;
@@ -1555,7 +1612,7 @@ export async function runYewsGather(s: Session, cfg: NormalizedGatherConfig, sto
                 const xp = s.sdk.getSkillXp('woodcutting') ?? 0;
                 const a = s.tick();
                 if (s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
-                const option = tree.optionsWithIndex.find(o => /^chop down$/i.test(o.text));
+                const option = tree.optionsWithIndex.find(o => CHOP_DOWN_OP_RE.test(o.text));
                 if (!option) {
                     retryAfter.set(`${tree.x},${tree.z}`, s.tick() + 20);
                     await waitTicks(s, 1);

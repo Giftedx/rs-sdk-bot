@@ -97,12 +97,22 @@ async function refreshRanks() {
     }
     } finally { ranksRefreshing = false; }
 }
+const EMPTY_RANK_DELTA = { delta: 0, since: null as number | null, hist: [] as number[] };
 function rankDelta(name: string, board: string) {
-    const l = rankHist.get(name + '|' + board) ?? [];
-    if (l.length < 2) return { delta: 0, since: null as number | null, hist: l.map(r => r.rank) };
+    const l = rankHist.get(name + '|' + board);
+    if (!l || l.length === 0) return EMPTY_RANK_DELTA;
+    if (l.length === 1) return { delta: 0, since: null as number | null, hist: [l[0]!.rank] };
     // A row is written only when a rank changes, so the rank held 24 hours ago is the newest row older than that.
-    const day = Date.now() - 86_400_000, base = l[Math.max(l.findLastIndex(r => r.at < day), 0)]!, now = l[l.length - 1]!;
-    return { delta: base.rank - now.rank, since: base.at, hist: l.slice(-30).map(r => r.rank) };
+    const day = Date.now() - 86_400_000;
+    let baseIdx = 0;
+    for (let i = l.length - 1; i >= 0; i--) {
+        if (l[i]!.at < day) { baseIdx = i; break; }
+    }
+    const base = l[baseIdx]!, now = l[l.length - 1]!;
+    const start = Math.max(0, l.length - 30);
+    const hist = new Array<number>(l.length - start);
+    for (let i = start; i < l.length; i++) hist[i - start] = l[i]!.rank;
+    return { delta: base.rank - now.rank, since: base.at, hist };
 }
 // Live #1 per skill board (category = skill index + 1, Quest Points 100: packages/planner/src/scout-cli.ts),
 // refreshed hourly, one request a second. The snapshot is only the fallback, with its age shown.

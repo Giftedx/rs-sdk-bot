@@ -16,38 +16,105 @@ export function reconcileOrder(receipt: any, current: OrderSnapshot): 'resume' |
         throw Error('order unresolved: bank/pack baseline missing; ' + JSON.stringify({ receipt, current }));
     }
     const expected: Items = receipt.expected;
-    if (
-        new Set(expected.map(i => i.id)).size !== expected.length
-        || expected.some(i => !Number.isSafeInteger(i.id) || i.id <= 0 || !Number.isSafeInteger(i.count) || i.count <= 0)
-    ) {
-        throw Error('order unresolved: invalid expected items');
-    }
-    const count = (items: Items, id: number) => {
-        if (!Array.isArray(items) || items.some(i => !Number.isSafeInteger(i.id) || !Number.isSafeInteger(i.count) || i.count < 0)) {
-            throw Error('order unresolved: invalid saved holdings');
+    const expectedIds = expected.length > 1 ? new Set<number>() : null;
+    for (let i = 0; i < expected.length; i++) {
+        const row = expected[i]!;
+        if (!Number.isSafeInteger(row.id) || row.id <= 0 || !Number.isSafeInteger(row.count) || row.count <= 0) {
+            throw Error('order unresolved: invalid expected items');
         }
-        const n = items.filter(i => i.id === id).reduce((acc, i) => acc + i.count, 0);
-        if (!Number.isSafeInteger(n)) throw Error('order unresolved: holdings overflow');
-        return n;
-    };
-    const total = (s: OrderHoldings, id: number) => {
-        const n = count(s.bank, id) + count(s.pack, id);
-        if (!Number.isSafeInteger(n)) throw Error('order unresolved: total overflow');
-        return n;
-    };
-    const facts = expected.map(i => ({
-        id: i.id,
-        expected: i.count,
-        donorDebit: total(receipt.baseline.donor, i.id) - total(current.donor, i.id),
-        receiverCredit: total(current.receiver, i.id) - total(receipt.baseline.receiver, i.id),
-        bankCredit: count(current.receiver.bank, i.id) - count(receipt.baseline.receiver.bank, i.id),
-        receiverPack: count(current.receiver.pack, i.id),
-        initialPack: count(receipt.baseline.receiver.pack, i.id),
-    }));
-    if (facts.every(i => i.donorDebit === 0 && i.receiverCredit === 0)) return 'resume';
-    if (facts.every(i => i.donorDebit === i.expected && i.receiverCredit === i.expected)) {
-        return facts.every(i => i.receiverPack === 0 && i.bankCredit === i.expected + i.initialPack) ? 'settle' : 'bank';
+        if (expectedIds) {
+            if (expectedIds.has(row.id)) throw Error('order unresolved: invalid expected items');
+            expectedIds.add(row.id);
+        }
     }
+    const validateAndSum = (items: Items, id: number): number => {
+        if (!Array.isArray(items)) throw Error('order unresolved: invalid saved holdings');
+        let sum = 0;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i]!;
+            if (!Number.isSafeInteger(item.id) || !Number.isSafeInteger(item.count) || item.count < 0) {
+                throw Error('order unresolved: invalid saved holdings');
+            }
+            if (item.id === id) sum += item.count;
+        }
+        if (!Number.isSafeInteger(sum)) throw Error('order unresolved: holdings overflow');
+        return sum;
+    };
+    const validateAndSumMap = (items: Items): Map<number, number> => {
+        if (!Array.isArray(items)) throw Error('order unresolved: invalid saved holdings');
+        const map = new Map<number, number>();
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i]!;
+            if (!Number.isSafeInteger(item.id) || !Number.isSafeInteger(item.count) || item.count < 0) {
+                throw Error('order unresolved: invalid saved holdings');
+            }
+            const next = (map.get(item.id) ?? 0) + item.count;
+            if (!Number.isSafeInteger(next)) throw Error('order unresolved: holdings overflow');
+            map.set(item.id, next);
+        }
+        return map;
+    };
+    if (expected.length === 1) {
+        const item = expected[0]!;
+        const id = item.id;
+        const baseDonor = validateAndSum(receipt.baseline.donor.bank, id) + validateAndSum(receipt.baseline.donor.pack, id);
+        const curDonor = validateAndSum(current.donor.bank, id) + validateAndSum(current.donor.pack, id);
+        const baseRecBank = validateAndSum(receipt.baseline.receiver.bank, id);
+        const initialPack = validateAndSum(receipt.baseline.receiver.pack, id);
+        const curRecBank = validateAndSum(current.receiver.bank, id);
+        const receiverPack = validateAndSum(current.receiver.pack, id);
+        if (!Number.isSafeInteger(baseDonor) || !Number.isSafeInteger(curDonor)
+            || !Number.isSafeInteger(baseRecBank + initialPack) || !Number.isSafeInteger(curRecBank + receiverPack)) {
+            throw Error('order unresolved: total overflow');
+        }
+        const donorDebit = baseDonor - curDonor;
+        const receiverCredit = (curRecBank + receiverPack) - (baseRecBank + initialPack);
+        const bankCredit = curRecBank - baseRecBank;
+        if (donorDebit === 0 && receiverCredit === 0) return 'resume';
+        if (donorDebit === item.count && receiverCredit === item.count) {
+            return receiverPack === 0 && bankCredit === item.count + initialPack ? 'settle' : 'bank';
+        }
+        throw Error('order unresolved: uncertain bank/pack facts ' + JSON.stringify({
+            facts: [{ id, expected: item.count, donorDebit, receiverCredit, bankCredit, receiverPack, initialPack }],
+            baseline: receipt.baseline,
+            current,
+        }));
+    }
+    const bDonorBank = validateAndSumMap(receipt.baseline.donor.bank);
+    const bDonorPack = validateAndSumMap(receipt.baseline.donor.pack);
+    const cDonorBank = validateAndSumMap(current.donor.bank);
+    const cDonorPack = validateAndSumMap(current.donor.pack);
+    const bRecBank = validateAndSumMap(receipt.baseline.receiver.bank);
+    const bRecPack = validateAndSumMap(receipt.baseline.receiver.pack);
+    const cRecBank = validateAndSumMap(current.receiver.bank);
+    const cRecPack = validateAndSumMap(current.receiver.pack);
+    const facts = [];
+    let allResume = true;
+    let allTransferred = true;
+    let allSettled = true;
+    for (let i = 0; i < expected.length; i++) {
+        const exp = expected[i]!;
+        const id = exp.id;
+        const baseDonor = (bDonorBank.get(id) ?? 0) + (bDonorPack.get(id) ?? 0);
+        const curDonor = (cDonorBank.get(id) ?? 0) + (cDonorPack.get(id) ?? 0);
+        const baseRecBank = bRecBank.get(id) ?? 0;
+        const initialPack = bRecPack.get(id) ?? 0;
+        const curRecBank = cRecBank.get(id) ?? 0;
+        const receiverPack = cRecPack.get(id) ?? 0;
+        if (!Number.isSafeInteger(baseDonor) || !Number.isSafeInteger(curDonor)
+            || !Number.isSafeInteger(baseRecBank + initialPack) || !Number.isSafeInteger(curRecBank + receiverPack)) {
+            throw Error('order unresolved: total overflow');
+        }
+        const donorDebit = baseDonor - curDonor;
+        const receiverCredit = (curRecBank + receiverPack) - (baseRecBank + initialPack);
+        const bankCredit = curRecBank - baseRecBank;
+        facts.push({ id, expected: exp.count, donorDebit, receiverCredit, bankCredit, receiverPack, initialPack });
+        if (donorDebit !== 0 || receiverCredit !== 0) allResume = false;
+        if (donorDebit !== exp.count || receiverCredit !== exp.count) allTransferred = false;
+        if (receiverPack !== 0 || bankCredit !== exp.count + initialPack) allSettled = false;
+    }
+    if (allResume) return 'resume';
+    if (allTransferred) return allSettled ? 'settle' : 'bank';
     throw Error('order unresolved: uncertain bank/pack facts ' + JSON.stringify({ facts, baseline: receipt.baseline, current }));
 }
 
@@ -89,23 +156,66 @@ export function createHandoff(allowedIds: readonly number[], root: string) {
     };
 
     function handoffCounts(items: Items): Items {
-        if (!Array.isArray(items) || items.some(i => !Number.isSafeInteger(i.id) || !Number.isSafeInteger(i.count) || i.count < 0)) {
-            throw Error('no courier progress: invalid handoff inventory');
+        if (!Array.isArray(items)) throw Error('no courier progress: invalid handoff inventory');
+        const out: Items = [];
+        for (let idx = 0; idx < items.length; idx++) {
+            const i = items[idx]!;
+            if (!Number.isSafeInteger(i.id) || !Number.isSafeInteger(i.count) || i.count < 0) {
+                throw Error('no courier progress: invalid handoff inventory');
+            }
+            if (i.count === 0 || !food.has(i.id)) continue;
+            let found = false;
+            for (let k = 0; k < out.length; k++) {
+                if (out[k]!.id === i.id) {
+                    out[k]!.count += i.count;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) out.push({ id: i.id, count: i.count });
         }
-        const counts = new Map<number, number>();
-        for (const i of items) if (food.has(i.id)) counts.set(i.id, (counts.get(i.id) ?? 0) + i.count);
-        return [...counts].filter(([, count]) => count > 0).sort(([a], [b]) => a - b).map(([id, count]) => ({ id, count }));
+        if (out.length > 1) out.sort((a, b) => a.id - b.id);
+        return out;
     }
 
     const delta = (before: Items, after: Items) => {
         const a = handoffCounts(before), b = handoffCounts(after);
-        return [...new Set([...a, ...b].map(i => i.id))]
-            .sort((x, y) => x - y)
-            .map(id => ({ id, count: (b.find(i => i.id === id)?.count ?? 0) - (a.find(i => i.id === id)?.count ?? 0) }))
-            .filter(i => i.count !== 0);
+        const out: Items = [];
+        let i = 0;
+        let j = 0;
+        while (i < a.length && j < b.length) {
+            const ai = a[i]!, bj = b[j]!;
+            if (ai.id === bj.id) {
+                const diff = bj.count - ai.count;
+                if (diff !== 0) out.push({ id: ai.id, count: diff });
+                i++;
+                j++;
+            } else if (ai.id < bj.id) {
+                out.push({ id: ai.id, count: -ai.count });
+                i++;
+            } else {
+                out.push({ id: bj.id, count: bj.count });
+                j++;
+            }
+        }
+        while (i < a.length) {
+            const ai = a[i++]!;
+            out.push({ id: ai.id, count: -ai.count });
+        }
+        while (j < b.length) {
+            const bj = b[j++]!;
+            out.push({ id: bj.id, count: bj.count });
+        }
+        return out;
     };
 
-    const same = (a: Items, b: Items) => JSON.stringify(a) === JSON.stringify(b);
+    const same = (a: Items, b: Items) => {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i]!.id !== b[i]!.id || a[i]!.count !== b[i]!.count) return false;
+        }
+        return true;
+    };
 
     async function awaitCollectionOffer(s: Session, from: string, server: string, timeoutTicks: number, targetRoot = dir): Promise<void> {
         const p = file(from, s.name, targetRoot);

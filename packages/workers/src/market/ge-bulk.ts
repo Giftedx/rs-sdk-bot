@@ -11,9 +11,18 @@ import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { MarketClient } from '../../../../vendor/rs-sdk/sdk/market';
 import { runMarketBankProfile } from './bank-runner';
 import { runOwnedItem } from './ge-buy';
-import { loadGeItemCatalogue, marketEntryFailure, orderAccounting, orderItemMatcher, orderPaths, validateRequest } from './ge-common';
+import { marketEntryFailure, orderAccounting, orderItemMatcher, orderPaths, validateRequest } from './ge-common';
 import { runOwnedSale, saleResting, saleStopRequested, validateSale } from './ge-sell';
-import { PROFILES, maximumUnitCost } from './shop-buy';
+import {
+    getGeItemCatalogue,
+    percentagePrice,
+    PROFILES,
+    validateBankSeller,
+    validateBuyList,
+    validateGEPlan,
+    validateGETrip,
+} from './preflight';
+import { maximumUnitCost } from './shop-buy';
 import type {
     BankSellerJournal,
     BankSellerPolicy,
@@ -34,6 +43,8 @@ import type {
 } from './types';
 import { productionStopRequested, walkTargetPersist } from './walk';
 
+export { percentagePrice, validateBankSeller, validateBuyList, validateGEPlan, validateGETrip };
+
 type NativeItem = { id: number; name: string; tradeable?: boolean; members?: boolean; cost?: number; debugname?: string; baseId?: number };
 type Row = { id: number; count: number };
 type Snapshot = { assets: Record<number, number>; bank: Row[]; gear: { id: number; slot: number; count: number }[] };
@@ -50,17 +61,9 @@ const positive = (n: number) => Number.isSafeInteger(n) && n > 0 && n <= 2147483
 const whole = (v: number, min = 0, max = 2147483647) => Number.isSafeInteger(v) && v >= min && v <= max;
 
 const BUY_LIST_BANK = { x: 3185, z: 3436 };
-const nativeItems = (): NativeItem[] => loadGeItemCatalogue() as NativeItem[];
+const nativeItems = (): readonly NativeItem[] => getGeItemCatalogue();
 
 // --- GE Buy List (from scripts/microbot-ge-buy-list.ts) ---
-
-export function percentagePrice(base: number, percent: number) {
-    if (!positive(base) || ![5, 10, 50, 99].includes(percent)) throw Error('unsupported native buy percentage/base');
-    let price = base;
-    if (percent === 99) return Math.min(2147483647, base + Math.max(1, Number((BigInt(base) * 99n) / 100n)));
-    for (let i = 0; i < percent / 5; i++) price = Math.min(2147483647, price + Math.max(1, Math.floor(price / 20)));
-    return price;
-}
 
 export function parseBuyList(text: string, catalogue: readonly NativeItem[] = nativeItems()) {
     if (typeof text !== 'string' || !text.trim()) throw Error('explicit finite buy list required');
@@ -77,40 +80,6 @@ export function parseBuyList(text: string, catalogue: readonly NativeItem[] = na
     }
     if (out.size > 32) throw Error('buy list exceeds 32 distinct native items');
     return [...out.values()];
-}
-
-export function validateBuyList(r: BuyListRequest, catalogue: readonly NativeItem[] = nativeItems()) {
-    if (!r || !Array.isArray(r.entries) || !r.entries.length || r.entries.length > 32
-        || new Set(r.entries.map(e => e.item)).size !== r.entries.length || !positive(r.budget)
-        || !Number.isSafeInteger(r.reserve) || r.reserve < 0 || !Number.isSafeInteger(r.cap) || r.cap < 1000 || r.cap > 100000
-        || !Number.isSafeInteger(r.fillWait) || r.fillWait < 0 || r.fillWait > 200
-        || !Number.isSafeInteger(r.createdAt) || !Number.isSafeInteger(r.deadline) || r.createdAt <= 0 || r.deadline <= r.createdAt) {
-        throw Error('invalid finite buy-list budget');
-    }
-    let exposure = 0;
-    for (const e of r.entries) {
-        if (!positive(e.quantity) || !positive(e.unitCap) || percentagePrice(e.basePrice, e.percent) > e.unitCap
-            || !catalogue.some(i => i.id === e.item && i.tradeable === true) || e.item === 995) {
-            throw Error('native item/percentage exceeds explicit unit cap');
-        }
-        exposure += e.quantity * percentagePrice(e.basePrice, e.percent);
-    }
-    if (!Number.isSafeInteger(exposure) || exposure > r.budget || r.budget + r.reserve > 2147483647) {
-        throw Error('buy list exceeds explicit owned budget');
-    }
-    validateRequest({
-        actor: r.actor,
-        server: r.server,
-        goal: r.goal,
-        item: r.entries[0]!.item,
-        quantity: 1,
-        limit: 1,
-        reserve: r.reserve,
-        createdAt: r.createdAt,
-        reviewAt: r.createdAt,
-        deadline: r.deadline,
-    });
-    if (r.goal.length > 52) throw Error('buy-list key must leave room for child identity');
 }
 
 export function buyListPaths(r: BuyListRequest) {
@@ -346,14 +315,6 @@ type TripOutcome = { filled: number; gross: number; tax: number; net: number; un
 
 export function geSaleRequest(r: GETripRequest): SaleRequest {
     return { actor: r.actor, server: r.server, goal: r.goal, item: r.item, quantity: r.quantity, price: r.price, floor: r.floor, reserveItems: 0, deadline: r.deadline };
-}
-
-export function validateGETrip(r: GETripRequest) {
-    validateSale(geSaleRequest(r));
-    if (!Number.isSafeInteger(r.reserve) || r.reserve < 0 || !Number.isSafeInteger(r.fillWait) || r.fillWait < 0 || r.fillWait > 200
-        || !Number.isSafeInteger(r.cap) || r.cap < 500 || r.cap > 100000 || r.quantity > 24) {
-        throw Error('invalid finite bank GE lot');
-    }
 }
 
 export function geTripPaths(r: GETripRequest) {
@@ -621,14 +582,6 @@ export function geTripStop(actor: string, stopped = false, exists: (p: string) =
 }
 
 // --- GE Price Plan (from scripts/microbot-ge-plan.ts) ---
-
-export function validateGEPlan(r: GEPricePlan) {
-    if (!r || !Array.isArray(r.prices) || r.prices.length < 1 || r.prices.length > 8 || !/^[a-z0-9_-]{1,40}$/i.test(r.goal)
-        || !Number.isSafeInteger(r.cap) || r.cap < 600 || r.cap > 100000) {
-        throw Error('invalid finite explicit GE plan');
-    }
-    for (const p of r.prices) validateGETrip({ ...r, goal: r.goal + '-p0', price: p.price, fillWait: p.fillWait });
-}
 
 export function gePlanPaths(r: GEPricePlan) {
     return orderPaths(r.server, r.actor, 'ge-plan-' + r.goal);
@@ -902,7 +855,7 @@ export async function runGEPlanSession(
 let bankSellerItems: NativeItem[] | undefined;
 export function bankSellerCatalogue() {
     if (bankSellerItems) return bankSellerItems;
-    const normal = loadGeItemCatalogue() as NativeItem[];
+    const normal = getGeItemCatalogue() as readonly NativeItem[];
     const byName = new Map(normal.map(i => [i.debugname, i]));
     bankSellerItems = [...normal];
     const text = readFileSync(new URL('../../../../vendor/rs-sdk/server/content/pack/obj.pack', import.meta.url), 'utf8');
@@ -929,34 +882,6 @@ const equalAssets = (a: Record<number, number>, b: Record<number, number>) => {
     for (const k in b) if (!(k in a) && (b[+k] ?? 0) !== 0) return false;
     return true;
 };
-
-export function validateBankSeller(r: BankSellerPolicy) {
-    if (!r || r.allTradeable !== true || !Array.isArray(r.protect) || r.protect.some(id => !whole(id))
-        || !r.reserves || Object.entries(r.reserves).some(([id, n]) => !/^\d+$/.test(id) || !whole(n))
-        || !whole(r.maxItems, 1, 32) || !whole(r.maxUnits, 1, 768) || !whole(r.perItem, 1, 24)
-        || ![0, 5, 10, 50].includes(r.discount) || !whole(r.floor, 1) || !whole(r.unitCap, r.floor)
-        || !whole(r.childCap, 600, 100000) || !whole(r.cap, r.childCap + 200, 100000)
-        || !whole(r.fillWait, 0, 200) || !whole(r.deadline, 1, Number.MAX_SAFE_INTEGER) || !/^[a-z0-9_-]{1,20}$/i.test(r.goal)) {
-        throw Error('invalid finite bank-wide sale policy');
-    }
-    if (r.liquidation !== undefined
-        && (!r.liquidation || r.floor !== 1 || !whole(r.liquidation.waitTicks, 150, 200)
-            || !whole(r.liquidation.fillWait, 0, 200) || r.childCap < 1500)) {
-        throw Error('liquidation requires declared floor1,150..200tick wait and bounded recovery budget');
-    }
-    validateGEPlan({
-        actor: r.actor,
-        server: r.server,
-        goal: r.goal + '-0',
-        item: 1511,
-        quantity: 1,
-        reserve: 0,
-        floor: r.floor,
-        deadline: r.deadline,
-        cap: r.childCap,
-        prices: [{ price: r.floor, fillWait: r.fillWait }],
-    });
-}
 
 export function bankSellerPrice(base: number, discount: number) {
     if (!whole(base, 1) || ![0, 5, 10, 50].includes(discount)) throw Error('native sale guide/discount invalid');

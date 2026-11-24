@@ -450,8 +450,14 @@ export function foreignRun(
 }
 
 export function overlappingRun<T extends { accounts: readonly string[] }>(runs: Iterable<T>, accounts: readonly string[]): T | undefined {
-    const names = new Set(accounts.map(a => a.toLowerCase()));
-    return [...runs].find(r => r.accounts.some(a => names.has(a.toLowerCase())));
+    const names = new Set<string>();
+    for (let i = 0; i < accounts.length; i++) names.add(accounts[i]!.toLowerCase());
+    for (const r of runs) {
+        for (let i = 0; i < r.accounts.length; i++) {
+            if (names.has(r.accounts[i]!.toLowerCase())) return r;
+        }
+    }
+    return undefined;
 }
 
 export type EndRecord = { at: number; reason: string; revision?: string };
@@ -1567,7 +1573,18 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 stopFlagsPresent.add(held.account.toLowerCase());
             }
         }
-        const planned = combinedJobs.flatMap(j => { const p = parseJob(j); return 'error' in p ? [] : [p]; });
+        const planned: ParsedJob[] = [];
+        const parsedByRow: (ParsedJob | { error: string })[] = new Array(combinedJobs.length);
+        for (let i = 0; i < combinedJobs.length; i++) {
+            const j = combinedJobs[i]!;
+            if (isReservation(j)) {
+                parsedByRow[i] = { error: '' };
+                continue;
+            }
+            const p = parseJob(j);
+            parsedByRow[i] = p;
+            if (!('error' in p)) planned.push(p);
+        }
         const jobSignatures = new Map<ParsedJob, string>();
         for (const p of planned) jobSignatures.set(p, missionSignature(p.job));
         const accountEnabled = enabledByAccount(planned);
@@ -1653,15 +1670,23 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             }
         } catch (e) { endStateOk = false; console.log(`SWARM repair unavailable; new starts paused: ${String(e)}`); }
 
-        const externalCount = () => activeExternalLive(
-            statuses,
-            [...runs.values()].flatMap(r => r.accounts).concat(recoveryDispatch.active ? [recoveryDispatch.active.account] : [], inheritedRecoveries.map(r => r.account)),
-            Date.now(),
-        ).length;
+        let cachedExternalCount: number | null = null;
+        const externalCount = () => {
+            if (cachedExternalCount === null) {
+                const known: string[] = [];
+                for (const r of runs.values()) for (const a of r.accounts) known.push(a);
+                if (recoveryDispatch.active) known.push(recoveryDispatch.active.account);
+                for (const r of inheritedRecoveries) known.push(r.account);
+                cachedExternalCount = activeExternalLive(statuses, known, Date.now()).length;
+            }
+            return cachedExternalCount;
+        };
+        const startedAccounts: string[] = [];
+        for (const r of runs.values()) for (const a of r.accounts) startedAccounts.push(a);
         heldSlot = recoverySlot(heldSlot, {
             leaseHeld: recoveryLeaseHeld(`${repairFile}.lease`, Date.now()),
             recovering: recoveryDispatch.active?.account,
-            started: [...runs.values()].flatMap(r => r.accounts),
+            started: startedAccounts,
             now: Date.now(),
         });
         const state: Record<string, unknown>[] = [...brainRecoveryRows];
@@ -1682,19 +1707,18 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
 
         let endedByLower = endedMapByLower(ended);
-        let parsedIdx = 0;
-        for (const raw of combinedJobs) {
+        const buildLocked = existsSync(join(liveDir, 'build-lock.json'));
+        for (let rowIdx = 0; rowIdx < combinedJobs.length; rowIdx++) {
+            const raw = combinedJobs[rowIdx]!;
             if (isReservation(raw)) {
                 state.push({ account: raw.account, script: '', role: raw.role, goal: raw.goal, enabled: false, repeat: false, note: raw.note, state: 'reserved', since: null });
                 continue;
             }
-            const parsedCandidate = parseJob(raw);
-            if ('error' in parsedCandidate) {
-                state.push({ account: raw.account ?? (raw.accounts ?? []).join('+'), script: raw.script, enabled: raw.enabled, state: `bad job: ${parsedCandidate.error}` });
+            const p = parsedByRow[rowIdx]!;
+            if ('error' in p) {
+                state.push({ account: raw.account ?? (raw.accounts ?? []).join('+'), script: raw.script, enabled: raw.enabled, state: `bad job: ${p.error}` });
                 continue;
             }
-            const p = planned[parsedIdx] ?? parsedCandidate;
-            parsedIdx++;
             const job = p.job;
             const jobSig = jobSignatures.get(p) ?? missionSignature(job);
             const foreign = otherSideAccount(p.accounts, side, owners);
@@ -1702,7 +1726,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 state.push({ account: raw.account ?? p.accounts.join('+'), script: raw.script, enabled: raw.enabled, state: `other side: ${foreign.account} belongs to ${foreign.side}` });
                 continue;
             }
-            if (!job.standing && existsSync(join(liveDir, 'build-lock.json'))) {
+            if (!job.standing && buildLocked) {
                 state.push({ account: raw.account, accounts: raw.accounts, script: raw.script, standing: false, state: 'waiting: release build owns runtime build' });
                 continue;
             }
@@ -1793,6 +1817,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         } else {
                             try {
                                 start(p, go);
+                                cachedExternalCount = null;
                                 infraBreaker.recordSuccess('proxy');
                                 infraBreaker.recordSuccess('server_drain');
                                 for (const a of go) st[a] = 'starting';

@@ -110,8 +110,24 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const kitKey = (i: { id: number; name: string }) => i.name.replace(/\(\d\)$/, '').toLowerCase();
     const startPack = new Map<string, number>();
     // Worn items count too: the fight loop's escape takes a worn glory off to rub it and leaves it in the pack.
-    for (const i of [...sdk.getInventory(), ...sdk.getEquipment()]) startPack.set(kitKey(i), (startPack.get(kitKey(i)) ?? 0) + i.count);
-    const extraLoot = () => { const now = new Map<string, number>(); for (const i of [...sdk.getInventory(), ...sdk.getEquipment()]) now.set(kitKey(i), (now.get(kitKey(i)) ?? 0) + i.count); return [...now].some(([k, n]) => n > (startPack.get(k) ?? 0)); };
+    const addToPackMap = (map: Map<string, number>, rows: readonly { id: number; name: string; count: number }[]) => {
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i]!;
+            const k = kitKey(row);
+            map.set(k, (map.get(k) ?? 0) + row.count);
+        }
+    };
+    addToPackMap(startPack, sdk.getInventory());
+    addToPackMap(startPack, sdk.getEquipment());
+    const extraLoot = () => {
+        const now = new Map<string, number>();
+        addToPackMap(now, sdk.getInventory());
+        addToPackMap(now, sdk.getEquipment());
+        for (const [k, n] of now) {
+            if (n > (startPack.get(k) ?? 0)) return true;
+        }
+        return false;
+    };
     const startFood = food()[0];
     const foodCount = startFood ? sdk.getInventory().filter(i => i.id === startFood.id).length : 0;
     const valuer = makeValuer(server);

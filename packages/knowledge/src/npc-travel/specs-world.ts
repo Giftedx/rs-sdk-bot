@@ -2,6 +2,12 @@ import { F, S } from './files';
 import { box, zone } from './lookup';
 import type { ExcludedSpec, Spec } from './types';
 
+const CRASH_ISLAND_BOX = box('0_45_42_0_0', '0_45_42_63_63');
+const DAERO_HANGAR_BOX_A = box('0_37_154_0_0', '0_37_154_63_63');
+const DAERO_HANGAR_BOX_B = box('0_40_70_0_0', '0_41_71_63_63');
+const APE_ATOLL_BOX = box('0_43_42_0_0', '0_43_42_63_63');
+const LUMDO_ISLAND_BOX = box('0_42_143_0_0', '2_42_143_63_63');
+
 const essence = (npc: string, op: number, file: string, trigger: string, ret: string): Spec => ({
     kind: 'npc-teleport', destination: 'Rune essence mine', npc, op,
     trigger: { file, needle: trigger },
@@ -100,7 +106,7 @@ export const WORLD_SPECS: Spec[] = [
         kind: 'glider', destination: 'Crash Island', npc: 'mm_waydar', op: 1,
         trigger: { file: F.waydar, needle: '[opnpc1,mm_waydar]' },
         options: ['Yes'], optionsFile: F.waydar,
-        from: { rule: 'Waydar outside the Crash Island square 0_45_42', at: { file: F.waydar, needle: 'if(inzone(0_45_42_0_0, 0_45_42_63_63, npc_coord) = true) {' }, keep: t => !box('0_45_42_0_0', '0_45_42_63_63')(t) },
+        from: { rule: 'Waydar outside the Crash Island square 0_45_42', at: { file: F.waydar, needle: 'if(inzone(0_45_42_0_0, 0_45_42_63_63, npc_coord) = true) {' }, keep: t => !CRASH_ISLAND_BOX(t) },
         to: { at: { file: F.waydar, needle: 'p_teleport(0_45_42_13_37);' } },
         fare: { coins: 0, free: 'waydar_fly_crash_island removes no coins' },
         requires: [{ varp: 'mm_daero', op: '=', constant: 'daero_complete', at: { file: F.waydar, needle: 'if(%mm_daero = ^daero_complete) {' } }],
@@ -110,7 +116,7 @@ export const WORLD_SPECS: Spec[] = [
         kind: 'glider', destination: 'Gnome Stronghold (near the Gnomeball pitch)', npc: 'mm_waydar', op: 1,
         trigger: { file: F.waydar, needle: '[opnpc1,mm_waydar]' },
         options: ['I need to return to your kingdom.'], optionsFile: F.waydar,
-        from: { rule: 'Waydar inside the Crash Island square 0_45_42', at: { file: F.waydar, needle: 'if(inzone(0_45_42_0_0, 0_45_42_63_63, npc_coord) = true) {' }, keep: box('0_45_42_0_0', '0_45_42_63_63') },
+        from: { rule: 'Waydar inside the Crash Island square 0_45_42', at: { file: F.waydar, needle: 'if(inzone(0_45_42_0_0, 0_45_42_63_63, npc_coord) = true) {' }, keep: CRASH_ISLAND_BOX },
         to: { at: { file: F.waydar, needle: 'p_teleport(0_37_54_25_10);' } },
         fare: { coins: 0, free: 'waydar_return removes no coins' },
         requires: [
@@ -123,7 +129,7 @@ export const WORLD_SPECS: Spec[] = [
         kind: 'other', destination: 'Underground glider hangar', npc: 'mm_daero', op: 1,
         trigger: { file: F.daero, needle: '[opnpc1,mm_daero]' },
         options: [],
-        from: { rule: 'Daero outside the hangar squares 0_37_154 and 0_40_70..0_41_71', at: { file: F.daero, needle: 'if(inzone(0_37_154_0_0, 0_37_154_63_63, npc_coord) = true | inzone(0_40_70_0_0, 0_41_71_63_63, npc_coord) = true) {' }, keep: t => !box('0_37_154_0_0', '0_37_154_63_63')(t) && !box('0_40_70_0_0', '0_41_71_63_63')(t) },
+        from: { rule: 'Daero outside the hangar squares 0_37_154 and 0_40_70..0_41_71', at: { file: F.daero, needle: 'if(inzone(0_37_154_0_0, 0_37_154_63_63, npc_coord) = true | inzone(0_40_70_0_0, 0_41_71_63_63, npc_coord) = true) {' }, keep: t => !DAERO_HANGAR_BOX_A(t) && !DAERO_HANGAR_BOX_B(t) },
         to: { at: { file: F.daero, needle: 'else p_teleport(0_41_70_25_36);' } },
         fare: { coins: 0, free: 'daero_move_hangar removes no coins' },
         requires: [
@@ -137,7 +143,7 @@ export const WORLD_SPECS: Spec[] = [
         kind: 'other', destination: 'Ape Atoll', npc: 'mm_lumdo', op: 1,
         trigger: { file: F.lumdo, needle: '[opnpc1,mm_lumdo]' },
         options: [],
-        from: { rule: 'Lumdo outside 0_43_42 (Ape Atoll) and 0_42_143', at: { file: F.lumdo, needle: 'if(inzone(0_43_42_0_0, 0_43_42_63_63, npc_coord) = true) {' }, keep: t => !box('0_43_42_0_0', '0_43_42_63_63')(t) && !box('0_42_143_0_0', '2_42_143_63_63')(t) },
+        from: { rule: 'Lumdo outside 0_43_42 (Ape Atoll) and 0_42_143', at: { file: F.lumdo, needle: 'if(inzone(0_43_42_0_0, 0_43_42_63_63, npc_coord) = true) {' }, keep: t => !APE_ATOLL_BOX(t) && !LUMDO_ISLAND_BOX(t) },
         to: { at: { file: F.lumdo, needle: 'p_teleport(0_43_42_50_19);' } },
         fare: { coins: 0, free: 'mm_lumdo removes no coins' },
         requires: [{ varp: 'mm_lumdo', op: '=', constant: 'lumdo_travelled', at: { file: F.lumdo, needle: 'case ^lumdo_travelled :' } }],
@@ -147,7 +153,7 @@ export const WORLD_SPECS: Spec[] = [
         kind: 'other', destination: 'Crash Island', npc: 'mm_lumdo', op: 1,
         trigger: { file: F.lumdo, needle: '[opnpc1,mm_lumdo]' },
         options: [],
-        from: { rule: 'Lumdo inside 0_43_42 (Ape Atoll)', at: { file: F.lumdo, needle: 'if(inzone(0_43_42_0_0, 0_43_42_63_63, npc_coord) = true) {' }, keep: box('0_43_42_0_0', '0_43_42_63_63') },
+        from: { rule: 'Lumdo inside 0_43_42 (Ape Atoll)', at: { file: F.lumdo, needle: 'if(inzone(0_43_42_0_0, 0_43_42_63_63, npc_coord) = true) {' }, keep: APE_ATOLL_BOX },
         to: { at: { file: F.lumdo, needle: 'p_teleport(0_45_42_14_38);' } },
         fare: { coins: 0, free: 'mm_lumdo removes no coins' },
     },

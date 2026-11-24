@@ -50,11 +50,22 @@ const PACK_SLOTS = 28;
 const FERRY_LEG_PLAN_MS = 15_000;
 
 export function fareSpare(pack: readonly { id: number }[]): { id: number; all: boolean } | null {
-    if (pack.length < PACK_SLOTS || pack.some(i => i.id === COINS)) return null;
+    if (pack.length < PACK_SLOTS) return null;
     const rows = new Map<number, number>();
-    for (const i of pack) rows.set(i.id, (rows.get(i.id) ?? 0) + 1);
-    const [id, n] = [...rows].sort((x, y) => y[1] - x[1])[0]!;
-    return { id, all: n === 1 };
+    for (let i = 0; i < pack.length; i++) {
+        const id = pack[i]!.id;
+        if (id === COINS) return null;
+        rows.set(id, (rows.get(id) ?? 0) + 1);
+    }
+    let bestId = 0;
+    let bestN = -1;
+    for (const [id, n] of rows) {
+        if (n > bestN) {
+            bestN = n;
+            bestId = id;
+        }
+    }
+    return { id: bestId, all: bestN === 1 };
 }
 
 export const fareFault = (need: number, missing: number, banked: number): string =>
@@ -340,7 +351,13 @@ export function relocationAssets(items: readonly { id: number; count: number }[]
 }
 
 export function relocationPreserved(a: ReadonlyMap<number, number>, b: ReadonlyMap<number, number>) {
-    return [...new Set([...a.keys(), ...b.keys()])].every(id => (a.get(id) ?? 0) === (b.get(id) ?? 0));
+    for (const [id, count] of a) {
+        if (count !== (b.get(id) ?? 0)) return false;
+    }
+    for (const [id, count] of b) {
+        if (count !== (a.get(id) ?? 0)) return false;
+    }
+    return true;
 }
 
 export function bankRelocationProfile() {
