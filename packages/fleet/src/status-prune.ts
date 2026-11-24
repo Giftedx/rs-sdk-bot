@@ -43,11 +43,11 @@ export function pruneStatus(root: string, opts: { now?: number; maxAgeMs?: numbe
         if (!existsSync(dir)) continue;
         let made = false;
         for (const file of readdirSync(dir)) {
+            if (!file.endsWith('.json')) { result.kept++; continue; }
+            if (keep.has(file.slice(0, -5).toLowerCase())) { result.kept++; continue; }
             const path = join(dir, file);
             let move = false;
-            if (file.endsWith('.json')) {
-                try { move = now - statSync(path).mtimeMs >= maxAgeMs && prunable(JSON.parse(readFileSync(path, 'utf8')), file, keep); } catch { move = false; }
-            }
+            try { move = now - statSync(path).mtimeMs >= maxAgeMs && prunable(JSON.parse(readFileSync(path, 'utf8')), file, keep); } catch { move = false; }
             if (!move) { result.kept++; continue; }
             if (opts.dry) { result.moved.push(file); continue; }
             try {

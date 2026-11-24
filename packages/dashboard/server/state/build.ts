@@ -8,7 +8,7 @@ import { flowView } from '../../flow';
 import { GEAR_TARGETS } from '../../goal-details';
 import { GOAL_RECEIPTS, goalPlan, goalProgress, questPointObservation, type GoalInputs } from '../../goals';
 import { projectItemExamine } from '../../item-examine';
-import { itemPrice, projectItemPrices, type PriceIdentity } from '../../item-prices';
+import { itemPrice, projectItemPrices, type ItemPrices, type PriceIdentity } from '../../item-prices';
 import { cachedTail } from '../../jsonl-tail';
 import { packQuests } from '../../quest-pack';
 import { contentionView, farmsView, overtakeView, rivalsView, rosterView, wildernessOverlayData, wildernessView } from '../../world-view';
@@ -25,6 +25,22 @@ import { died, fleetDiagnostics, nativeProofs, newestDeath, newestRes, resultPro
 import { events, flows, phaseSince, practiceNames, rate, readStatuses, spark } from './statuses';
 import { alerts, fleetSides, foodChain, roleView, vaultTrend } from './views';
 
+/** Computes per-item GP values across visible prices using projected name-based prices. */
+function visibleItemValues(
+    visiblePrices: (PriceIdentity | string)[],
+    byName: ItemPrices['byName'],
+): Record<string, number> {
+    const out: Record<string, number> = {};
+    const byNameOnly = { byId: {}, byName };
+    for (const i of visiblePrices) {
+        const name = typeof i === 'string' ? i : i.name;
+        if (!name || Object.hasOwn(out, name)) continue;
+        const p = itemPrice(byNameOnly, name);
+        if (p) out[name] = p.value;
+    }
+    return out;
+}
+
 // ---------- state ----------
 function buildState() {
     const proofs=nativeProofs(Date.now());
@@ -38,12 +54,29 @@ function buildState() {
     const st=dashboardStatuses(localStatuses,snapshots,ownerOf,side,now);
     const statusByName=new Map([...st.values()].map(s=>[s.name.toLowerCase(),s]));
     const names = localDisplayNames([...liveAccounts(), ...st.keys(), ...accountJobs.map(j => j.account)],snapshots,ownerOf,side,now);
+    const jobsByLower = new Map<string, typeof accountJobs>();
+    for (const j of accountJobs) {
+        const key = j.account.toLowerCase();
+        let list = jobsByLower.get(key);
+        if (!list) { list = []; jobsByLower.set(key, list); }
+        list.push(j);
+    }
+    const procsByLower = new Map<string, typeof procs>();
+    for (const p of procs) {
+        for (const a of p.accounts) {
+            const key = a.toLowerCase();
+            let list = procsByLower.get(key);
+            if (!list) { list = []; procsByLower.set(key, list); }
+            list.push(p);
+        }
+    }
     const bots = [...names].map(name => {
-        const s0 = statusByName.get(name.toLowerCase()) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
-        const live = roster.get(name.toLowerCase());
+        const nameLower = name.toLowerCase();
+        const s0 = statusByName.get(nameLower) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
+        const live = roster.get(nameLower);
         const inWorld = !!live && now - live.seen < 30_000;
         const fresh = !s0.snapshotOnly && now - s0.at < 20_000 && s0.at <= now + 5_000;
-        const mine = accountJobs.filter(j => j.account.toLowerCase() === name.toLowerCase());
+        const mine = jobsByLower.get(nameLower) ?? [];
         // Running by hand: a fresh status from a known script while the swarm has no enabled job for the account.
         const byHand = fresh && !isLocalServer(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
         const s = byHand ? { ...s0, role: byHand.role, goal: byHand.goal } : s0;
@@ -72,7 +105,8 @@ function buildState() {
         const jobRaw = mine.find(j => j.enabled && j.script) ?? mine.filter(j => j.script).pop() ?? null;
         const jobBeforeStatus = byHand ? { ...(jobRaw ?? { account: name, repeat: false, since: null }), script: String(s0.goal), role: byHand.role, goal: byHand.goal, enabled: true, state: 'manual', note: `started by hand: ${s0.goal}` } as SwarmJob : jobRaw;
         const job = effectiveJob(s, jobBeforeStatus, fresh);
-        const processActive = !s.snapshotOnly && procs.some(p => p.accounts.some(a => a.toLowerCase() === name.toLowerCase()) && p.started <= (s.at ?? 0));
+        const acctProcs = procsByLower.get(nameLower);
+        const processActive = !s.snapshotOnly && !!acctProcs && acctProcs.some(p => p.started <= (s.at ?? 0));
         const currentGoal = String(s.goal || job?.goal || '');
         // The status may carry a custom goal. Keep the configured script as
         // classification evidence even when effectiveJob labels it manual.
@@ -81,7 +115,7 @@ function buildState() {
         const res = String(s.result ?? '');
         return {
             ...s, ground: name === MAIN ? [] : s.ground ?? [], flow: name === MAIN || s.snapshotOnly ? null : flowView(flows, name), name, fresh, inWorld, processActive, currentGoal, production, operation: s.snapshotOnly ? (inWorld ? 'unobserved' : 'offline') : operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
-            role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
+            role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(nameLower),
             practice: isLocalServer(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
             xpPerHour: r != null ? r * 3_600_000 / world.tickMs : null, spark: s.snapshotOnly ? [] : spark.get(name) ?? [], rateSkill: skill ?? "all skills", xpLeft,
@@ -110,10 +144,22 @@ function buildState() {
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));
     // 24 boards: each board's #1 against our best live rank on it.
+    const bestOverallByBoard = new Map<string, any>();
+    const bestNonMainByBoard = new Map<string, any>();
+    for (const bot of bots) {
+        const notMain = bot.name !== MAIN;
+        for (const r of bot.ranks) {
+            const curAll = bestOverallByBoard.get(r.board);
+            if (!curAll || r.rank < curAll.rank) bestOverallByBoard.set(r.board, { rank: r.rank, name: bot.name });
+            if (notMain) {
+                const cur = bestNonMainByBoard.get(r.board);
+                if (!cur || r.rank < cur.rank) bestNonMainByBoard.set(r.board, { ...r, name: bot.name });
+            }
+        }
+    }
     const boards = [...SKILL_BOARDS.map(b => {
         const top = topOf(b);
-        let best: any = null;
-        for (const bot of bots) if (bot.name !== MAIN) for (const r of bot.ranks) if (r.board === b && (!best || r.rank < best.rank)) best = { ...r, name: bot.name };
+        const best = bestNonMainByBoard.get(b) ?? null;
         const ours = best ? parseTime(best.time) : null;
         // close: 1 = level with #1 or faster, toward 0 = far behind (levels, then time).
         const gap = best && top ? (best.level >= top.level
@@ -151,7 +197,7 @@ function buildState() {
         // The game's examine text of each held item (obj configs), for the page's Examine option.
         ...projectItemExamine(itemExamines,(bots as any[]).flatMap(b=>[b.inventory,b.bank,b.equipment].flatMap(l=>l??[]).filter(Boolean))),
         // Also the items of the Loot and Supplies lists (flow.ts), which stay after the fleet holds none of them.
-        itemValues: (() => { const out: Record<string, number> = {}; for (const i of visiblePrices) { const name=typeof i==='string'?i:i.name; if(!name)continue; const p=itemPrice({byId:{},byName:projectedPrices.byName},name); if(p)out[name]=p.value; } return out; })(),
+        itemValues: visibleItemValues(visiblePrices, projectedPrices.byName),
         // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
         gearTargets: GEAR_TARGETS.map(t => ({ slot: t.slot, ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])], name: OBJS.get(t.id)?.name ?? null, need: t.need, source: t.source })),
     };
@@ -174,6 +220,7 @@ function buildState() {
     const brainState = (() => {
         const file = fleetStateFile(root);
         const paused = Boolean(findStopFile('swarm', root));
+        if (!existsSync(file)) return coordinationView(null, 0, now, paused);
         try {
             const parsed = cached<any>(file, JSON.parse, null);
             const mtime = statSync(file).mtimeMs;
@@ -198,13 +245,13 @@ function buildState() {
         ...(() => {
             // Other players: the roster, each board's rivals, who stands at our claimed spots.
             const fleet = new Set(bots.map(b => b.name.toLowerCase()));
-            const best = new Map(SKILL_BOARDS.map(b => { let top: { rank: number; name: string } | null = null; for (const bot of bots as any[]) for (const r of bot.ranks ?? []) if (r.board === b && (!top || r.rank < top.rank)) top = { rank: r.rank, name: bot.name }; return [b, top] as const; }));
+            const best = new Map(SKILL_BOARDS.map(b => [b, bestOverallByBoard.get(b) ?? null] as const));
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
             return { roster: rosterView(roster, now), rivals, contention, farms: farmsView(roster, fleet, contention, now), wilderness: wildernessView(roster, fleet, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: getPrRows(),
-        scoreboard:currentScoreboard, fleetSides:fleetSides(now),
+        scoreboard:currentScoreboard, fleetSides:fleetSides(now, snapshots),
         wildernessOverlay: wildernessOverlayData(),
         diagnostics:fleetDiagnostics(now),
         icons, vault: v, collection, map: { ...MAP, ready: !!getMapBytes() }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,

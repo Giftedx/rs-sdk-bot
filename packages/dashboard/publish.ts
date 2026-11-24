@@ -14,7 +14,7 @@ import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,r
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {expandQuests} from './quest-pack';
-import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT,pushDue,withoutClocks} from './publish-relay';
+import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT,pushDue,withoutClocksValue} from './publish-relay';
 import {expectedLootPrices} from './item-prices';
 import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
 import {reloadDue,respawnDaemon} from '../core/src/live-reload';
@@ -110,13 +110,19 @@ export async function pushPublicCommit(dir:string):Promise<string>{
   return result.out;
  };
  let parent=(await checked('ls-remote','--refs','origin',ref)).split(/\s+/)[0]!;
- if(parent&&!(await git(dir,'cat-file','-e',parent+'^{commit}')).ok){
-  await checked('fetch','--no-tags','origin',ref);
-  parent=await checked('rev-parse','--verify','FETCH_HEAD');
+ let parentTree='';
+ if(parent){
+  const treeCheck=await git(dir,'rev-parse','--verify','-q',parent+'^{tree}');
+  if(treeCheck.ok)parentTree=treeCheck.out;
+  else{
+   await checked('fetch','--no-tags','origin',ref);
+   parent=await checked('rev-parse','--verify','FETCH_HEAD');
+   parentTree=await checked('rev-parse',parent+'^{tree}');
+  }
  }
  await checked('add','-A');
  const tree=await checked('write-tree');
- if(parent&&tree===await checked('rev-parse',parent+'^{tree}')){
+ if(parent&&tree===parentTree){
   await checked('update-ref','HEAD',parent);
   return 'unchanged';
  }
@@ -197,6 +203,13 @@ export function verifyStaticBundle(
  options:{allowDevFiles?:boolean;verifyImportContract?:boolean;allowWebpImages?:boolean}={}
 ):BundleAudit{
  const missing:string[]=[],leaks:string[]=[],assets=new Set<string>();
+ const secretRe=secretAccount?new RegExp(`\\b${secretAccount.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`,'i'):null;
+ const existCache=new Map<string,boolean>();
+ const hasFile=(rel:string)=>{
+  let ok=existCache.get(rel);
+  if(ok===undefined){ok=existsSync(join(dir,rel));existCache.set(rel,ok);}
+  return ok;
+ };
  let checkedFiles=0;
  const checkFile=(rel:string,source:string)=>{
   const clean=rel.split(/[?#]/)[0]!.replace(/^\/+/,'');
@@ -204,9 +217,9 @@ export function verifyStaticBundle(
   const tail=clean.split('/').pop()||'';
   if(ASSET_PREFIX_PLACEHOLDERS.has(tail)||clean.endsWith('item-sources.json.'))return;
   const webpClean=options.allowWebpImages&&/\.png$/i.test(clean)?clean.replace(/\.png$/i,'.webp'):null;
-  const found=existsSync(join(dir,clean))||(webpClean!=null&&existsSync(join(dir,webpClean)));
-  if(!found)missing.push(`${source} -> ${clean}`);
-  assets.add(webpClean&&!existsSync(join(dir,clean))&&existsSync(join(dir,webpClean))?webpClean:clean);
+  const hasPng=hasFile(clean),hasWebp=webpClean!=null&&hasFile(webpClean);
+  if(!hasPng&&!hasWebp)missing.push(`${source} -> ${clean}`);
+  assets.add(webpClean&&!hasPng&&hasWebp?webpClean:clean);
  };
  const walk=(sub:string)=>{
   const full=join(dir,sub);
@@ -216,15 +229,15 @@ export function verifyStaticBundle(
    if(ent.isDirectory()){if(ent.name!=='.git'&&ent.name!=='map-squares'&&ent.name!=='tools')walk(rel);continue;}
    const skipDevJson=options.allowDevFiles===true&&rel==='haggis-plan.json';
    if((rel==='public.json'||rel.endsWith('.json'))&&rel!=='client-assets/npcs.json'&&!skipDevJson){
-    const raw=readFileSync(join(dir,rel),'utf8');
-    if(secretAccount&&new RegExp(`\\b${secretAccount.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`,'i').test(raw))leaks.push(rel);
+    if(secretRe){
+     const raw=readFileSync(join(dir,rel),'utf8');
+     if(secretRe.test(raw))leaks.push(rel);
+    }
    }
    if(!STATIC_TEXT_EXT.test(ent.name))continue;
    checkedFiles++;
    const text=readFileSync(join(dir,rel),'utf8');
-   if(secretAccount){
-    if(new RegExp(`\\b${secretAccount.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`,'i').test(text))leaks.push(rel);
-   }
+   if(secretRe&&secretRe.test(text))leaks.push(rel);
    for(const m of text.matchAll(/['"(](?:\/?client-assets\/([a-zA-Z0-9_.-]+))/g)){
     const tail=m[1]!;
     if(!ASSET_PREFIX_PLACEHOLDERS.has(tail)&&!tail.endsWith('.'))checkFile(`client-assets/${tail}`,rel);
@@ -288,22 +301,25 @@ async function cycle(){
  // only when that page can expand them; otherwise the data keeps the old quest shape, so an old page never shows empty quests.
  if(!(REPO&&hostedPageExpandsQuests(join(DIR,'repo'))))state=expandQuests(state),delete state.questList;
  // The public view refuses a state that still names the main account. The owner's control view must still go out.
- const control=JSON.stringify(controlView(state,meta));let pub:string|null=null,pubError:unknown=null;
- try{pub=JSON.stringify(publicView(state,MAIN_ACCOUNT,expectedDrops));}catch(e){pubError=e;}
+ const controlObj=controlView(state,meta),control=JSON.stringify(controlObj);
+ let pubObj:any=null,pub:string|null=null,pubError:unknown=null;
+ try{pubObj=publicView(state,MAIN_ACCOUNT,expectedDrops);pub=JSON.stringify(pubObj);}catch(e){pubError=e;}
  writeAtomic(join(DIR,'out','control.json'),control);if(pub!==null)writeAtomic(join(DIR,'out','public.json'),pub);
  if(REPO){
   const main=join(DIR,'repo');
-  if(pushDue(control,lastControl,now)){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${await pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl={stable:withoutClocks(control),at:now};}else note+=' data=unchanged';
+  const controlStable=withoutClocksValue(controlObj);
+  if(pushDue(control,lastControl,now,controlStable)){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${await pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl={stable:controlStable,at:now};}else note+=' data=unchanged';
   // A server that has just started has no market prices or board tops yet; that thin file would stay live for a
   // whole push period, so the push waits for a warm state, at most three periods from the first cold cycle.
   const warm=stateWarm(state);if(warm)coldSince=0;else if(!coldSince)coldSince=now;
-  if(pub!==null&&pushDue(pub,lastPublic,now)&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
+  const pubStable=pubObj!==null?withoutClocksValue(pubObj):undefined;
+  if(pub!==null&&pushDue(pub,lastPublic,now,pubStable)&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
    const site=join(DIR,'site');
    for(const n of readdirSync(site))if(n!=='.git')rmSync(join(site,n),{recursive:true,force:true});
    if(existsSync(join(main,'site')))cpSync(join(main,'site'),site,{recursive:true});
    writeFileSync(join(site,'public.json'),pub);writeFileSync(join(site,'.nojekyll'),'');
    if(existsSync(join(DIR,'out','map.bin')))cpSync(join(DIR,'out','map.bin'),join(site,'map.bin'));
-   note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic={stable:withoutClocks(pub),at:now};
+   note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic={stable:pubStable!,at:now};
   }
  }
  if(pub===null)throw pubError;

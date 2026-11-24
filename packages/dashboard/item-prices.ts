@@ -17,7 +17,11 @@ export function expectedLootPrices(raw: unknown): (PriceIdentity | string)[] {
     return out;
 }
 
-export const priceName = (name: unknown): string => typeof name === 'string' ? name.replace(/\s*\(noted\)\s*$/i, '').trim().toLowerCase() : '';
+export const priceName = (name: unknown): string => {
+    if (typeof name !== 'string') return '';
+    const trimmed = name.includes('(') ? name.replace(/\s*\(noted\)\s*$/i, '').trim() : name.trim();
+    return trimmed.toLowerCase();
+};
 export const hasPriceId = (item: PriceIdentity | string | null | undefined): boolean => !!item && typeof item === 'object'
     && (Object.hasOwn(item, 'id') || Object.hasOwn(item, 'baseId'));
 export function priceItemId(item: PriceIdentity | string | null | undefined): number | null {
@@ -67,10 +71,13 @@ export function itemPrice(prices: ItemPrices, item: PriceIdentity | string | nul
 // Project only identities already visible to the consumer. Name aliases never reveal which bank-only IDs were held.
 export function projectItemPrices(prices: ItemPrices, visible: readonly (PriceIdentity | string)[]): ItemPrices {
     const out: ItemPrices = { byId: {}, byName: {} };
-    for (const item of visible) {
+    for (let i = 0; i < visible.length; i++) {
+        const item = visible[i]!;
         const id = priceItemId(item), name = priceName(typeof item === 'string' ? item : item?.name), value = itemPrice(prices, item);
         if (id !== null && value) out.byId[id] = value;
-        for (const key of new Set([name, priceName(value?.name)])) if (prices.byName[key]) out.byName[key] = prices.byName[key]!;
+        if (name && prices.byName[name]) out.byName[name] = prices.byName[name]!;
+        const valName = value ? priceName(value.name) : '';
+        if (valName && valName !== name && prices.byName[valName]) out.byName[valName] = prices.byName[valName]!;
     }
     return out;
 }

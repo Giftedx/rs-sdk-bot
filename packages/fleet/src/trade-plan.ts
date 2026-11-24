@@ -280,6 +280,51 @@ export function claimFor(
     return { side, at: now, resources: held.sort() };
 }
 
+export function buildOrderPicker(
+    orders: readonly Order[],
+    receipts: readonly Receipt[],
+): (account: string, now: number, lead?: number) => { order: Order; role: 'from' | 'to' } | null {
+    const sorted = [...orders].sort((a, b) => a.start - b.start);
+    const blocked = new Map<string, Set<TradeRole>>();
+    for (const r of receipts) {
+        if (!r?.id) continue;
+        let roles = blocked.get(r.id);
+        if (!roles) {
+            roles = new Set<TradeRole>();
+            blocked.set(r.id, roles);
+        }
+        roles.add(r.role);
+        if (r.version === 2 && r.state === 'failed') {
+            roles.add(r.role === 'from' ? 'to' : 'from');
+        }
+    }
+    const byAccount = new Map<string, { order: Order; role: 'from' | 'to' }[]>();
+    for (const order of sorted) {
+        const orderBlocked = blocked.get(order.id);
+        const fromKey = order.from.toLowerCase();
+        if (!orderBlocked?.has('from')) {
+            const list = byAccount.get(fromKey);
+            if (list) list.push({ order, role: 'from' });
+            else byAccount.set(fromKey, [{ order, role: 'from' }]);
+        }
+        const toKey = order.to.toLowerCase();
+        if (toKey !== fromKey && !orderBlocked?.has('to')) {
+            const list = byAccount.get(toKey);
+            if (list) list.push({ order, role: 'to' });
+            else byAccount.set(toKey, [{ order, role: 'to' }]);
+        }
+    }
+    return (account: string, now: number, lead = 10 * 60_000) => {
+        const candidates = byAccount.get(account.toLowerCase());
+        if (!candidates) return null;
+        for (const item of candidates) {
+            if (now >= item.order.end || item.order.start - now > lead) continue;
+            return item;
+        }
+        return null;
+    };
+}
+
 export function pickOrder(
     orders: readonly Order[],
     receipts: readonly Receipt[],

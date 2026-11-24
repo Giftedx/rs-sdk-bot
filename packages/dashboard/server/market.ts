@@ -73,16 +73,31 @@ function vault(bots: any[], now: number) {
     const live = bots.filter(b => !isLocalServer(b.server));
     const byKey = new Map(live.map(b => [keyName(b.name), b]));
     const names = new Set<string>([...live.filter(b => b.at).map(b => keyName(b.name))]);
-    for (const t of log) { names.add(keyName(t.from)); names.add(keyName(t.to)); }
+    const logByAccount = new Map<string, Transfer[]>();
+    const logSpellings = new Map<string, string>();
+    const lastLogAt = new Map<string, number>();
+    let overallLastTransfer = 0;
+    for (const t of log) {
+        const fk = keyName(t.from), tk = keyName(t.to);
+        names.add(fk); names.add(tk);
+        if (!logSpellings.has(fk)) logSpellings.set(fk, t.from);
+        if (!logSpellings.has(tk)) logSpellings.set(tk, t.to);
+        let fl = logByAccount.get(fk); if (!fl) { fl = []; logByAccount.set(fk, fl); } fl.push(t);
+        if (tk !== fk) { let tl = logByAccount.get(tk); if (!tl) { tl = []; logByAccount.set(tk, tl); } tl.push(t); }
+        lastLogAt.set(fk, Math.max(lastLogAt.get(fk) ?? 0, t.at));
+        lastLogAt.set(tk, Math.max(lastLogAt.get(tk) ?? 0, t.at));
+        if (t.at > overallLastTransfer) overallLastTransfer = t.at;
+    }
     const totals = new Map<string, VaultItem & { holders: Map<string, number> }>();
     const holders = [];
+    const bankerKey = keyName(BANKER);
     for (const k of names) {
         const b = byKey.get(k);
-        const name = b?.name ?? log.find(t => keyName(t.from) === k)?.from ?? log.find(t => keyName(t.to) === k)?.to ?? k;
-        const isBanker = keyName(BANKER) === k;
+        const name = b?.name ?? logSpellings.get(k) ?? k;
+        const isBanker = bankerKey === k;
         const mine = createVaultItems(), add = mine.add;
-        const mineLog = log.filter(t => keyName(t.from) === k || keyName(t.to) === k);
-        const lastLog = mineLog.reduce((n, t) => Math.max(n, t.at), 0);
+        const mineLog = logByAccount.get(k) ?? [];
+        const lastLog = lastLogAt.get(k) ?? 0;
         let source: 'snapshot' | 'log' | 'snapshot+log';
         if (isBanker && !(b?.bankAt && b.bankAt > lastLog) && mineLog.length) {
             // Base: the banker's last bank snapshot (what it held before the log, or at bankAt), then every logged
@@ -94,9 +109,9 @@ function vault(bots: any[], now: number) {
             const since = b?.at ?? 0;
             add((b?.inventory ?? []).filter(Boolean));
             add(b?.bank);
-            const after = mineLog.filter(t => t.at > since);
-            for (const t of after) add(t.items, keyName(t.to) === k ? 1 : -1);
-            source = after.length ? 'snapshot+log' : 'snapshot';
+            let hadAfter = false;
+            for (const t of mineLog) if (t.at > since) { add(t.items, keyName(t.to) === k ? 1 : -1); hadAfter = true; }
+            source = hadAfter ? 'snapshot+log' : 'snapshot';
         }
         const held = mine.rows();
         let value = 0, unpriced = 0;
@@ -121,18 +136,19 @@ function vault(bots: any[], now: number) {
     // Flow: one link per giver -> receiver pair, with coins, value and item counts.
     const links = new Map<string, { from: string; to: string; coins: number; value: number; unpriced: number; items: Map<string, Item>; n: number; last: number }>();
     // The vault log spells some accounts with a capital first letter; use the account's own spelling.
-    const accts = liveAccounts(), canon = (n: string) => accts.find(a => a.toLowerCase() === n.toLowerCase()) ?? n;
+    const canonByLower = new Map(liveAccounts().map(a => [a.toLowerCase(), a]));
+    const canon = (n: string) => canonByLower.get(n.toLowerCase()) ?? n;
     for (const t0 of log) {
-        const t = { ...t0, from: canon(t0.from), to: canon(t0.to) };
-        const k = t.from + '>' + t.to, l = links.get(k) ?? { from: t.from, to: t.to, coins: 0, value: 0, unpriced: 0, items: new Map<string,Item>(), n: 0, last: 0 };
-        for (const i of t.items) { const key=priceItemKey(i),held=l.items.get(key)??{...i,count:0};held.count+=i.count;l.items.set(key,held);const p=i.unconfirmed?null:priceOf(i);if(p==null)l.unpriced++;else l.value+=p*i.count;if(key==='id:995'&&!i.unconfirmed)l.coins+=i.count; }
-        l.n++; l.last = Math.max(l.last, t.at); links.set(k, l);
+        const from = canon(t0.from), to = canon(t0.to);
+        const k = from + '>' + to, l = links.get(k) ?? { from, to, coins: 0, value: 0, unpriced: 0, items: new Map<string,Item>(), n: 0, last: 0 };
+        for (const i of t0.items) { const key=priceItemKey(i),held=l.items.get(key)??{...i,count:0};held.count+=i.count;l.items.set(key,held);const p=i.unconfirmed?null:priceOf(i);if(p==null)l.unpriced++;else l.value+=p*i.count;if(key==='id:995'&&!i.unconfirmed)l.coins+=i.count; }
+        l.n++; l.last = Math.max(l.last, t0.at); links.set(k, l);
     }
     return {
         coins, value: coins + items.reduce((n, i) => n + (i.value ?? 0), 0), unpriced: items.filter(i => i.price == null).length,
         valueComplete: holders.every(h => h.valueComplete), countsComplete: holders.every(h => h.countsComplete),
         items, holders, log: log.slice(-20).reverse(), logExists: existsSync(FILES.vault), banker: BANKER, pricesAt,
-        lastTransferAt: log.reduce((n, t) => Math.max(n, t.at), 0) || null,
+        lastTransferAt: overallLastTransfer || null,
         flow: [...links.values()].map(l => ({ ...l, valueComplete: !l.unpriced, items: [...l.items.values()].sort((a, z) => z.count - a.count) })),
     };
 }

@@ -1,7 +1,7 @@
 // Brain runtime bridge for fleet controllers: drains OperatorCommands cleanly,
 // loads WorldSnapshot + DemandEngine + AccountPlanner + FleetScheduler,
 // applies short-TTL account overrides, and publishes validated FleetState JSON.
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { mySide } from '../../core/src/fleet';
 import { tradeSettlement, validOrder, type Order, type Receipt } from '../../core/src/fleet-trade-settlement';
@@ -134,6 +134,33 @@ function readJsonSafe(file: string): unknown {
     try {
         return JSON.parse(readFileSync(file, 'utf8'));
     } catch {
+        return undefined;
+    }
+}
+
+const immutableJsonCache = new Map<string, { mtimeMs: number; size: number; value: unknown }>();
+function readCachedImmutableJson(file: string, nowWall = Date.now()): unknown {
+    try {
+        const hit = immutableJsonCache.get(file);
+        if (hit && nowWall - hit.mtimeMs > 1000) {
+            const st = statSync(file);
+            if (nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+                return hit.value;
+            }
+            const value = JSON.parse(readFileSync(file, 'utf8'));
+            if (immutableJsonCache.size > 4096) immutableJsonCache.clear();
+            immutableJsonCache.set(file, { mtimeMs: st.mtimeMs, size: st.size, value });
+            return value;
+        }
+        const value = JSON.parse(readFileSync(file, 'utf8'));
+        if (!hit) {
+            const st = statSync(file);
+            if (immutableJsonCache.size > 4096) immutableJsonCache.clear();
+            immutableJsonCache.set(file, { mtimeMs: st.mtimeMs, size: st.size, value });
+        }
+        return value;
+    } catch {
+        immutableJsonCache.delete(file);
         return undefined;
     }
 }
@@ -566,35 +593,43 @@ export function applyActivityOverridesToPlan(
         nextSpotAllocations[act.spotId] = list;
     };
 
-    const inTradeAccounts = new Set(
-        Object.values(input.world.accounts)
-            .filter(
-                (a) =>
-                    a.side === input.world.side
-                    && a.lifecycle === 'in_trade'
-                    && canProtectedAccountLaunch(a, input.campaigns, input.world).allowed,
-            )
-            .map((a) => a.name.toLowerCase()),
-    );
+    const worldAccountList = Object.values(input.world.accounts);
+    const worldAccountByLower = new Map<string, (typeof worldAccountList)[number]>();
+    const inTradeAccounts = new Set<string>();
+    for (const a of worldAccountList) {
+        const lower = a.name.toLowerCase();
+        worldAccountByLower.set(lower, a);
+        if (
+            a.side === input.world.side
+            && a.lifecycle === 'in_trade'
+            && canProtectedAccountLaunch(a, input.campaigns, input.world).allowed
+        ) {
+            inTradeAccounts.add(lower);
+        }
+    }
     const assignedIdleDonors = new Set<string>();
     for (const ord of plan.transferOrders) {
         const lower = ord.from.toLowerCase();
-        const donorAcct = Object.values(input.world.accounts).find(
-            (a) => a.name.toLowerCase() === lower && a.side === input.world.side,
-        );
+        const donorAcct = worldAccountByLower.get(lower);
         if (
             donorAcct
+            && donorAcct.side === input.world.side
             && !inTradeAccounts.has(lower)
             && (nextAccountPlans[donorAcct.name]?.steps.length ?? 0) === 0
         ) {
             assignedIdleDonors.add(lower);
         }
     }
+    const quarantinedActivityIds = new Set(
+        input.defects
+            .filter((d) => d.quarantined && (d.expiresAt === undefined || input.world.at < d.expiresAt))
+            .map((d) => d.activityId),
+    );
     const reservedSlotCount = inTradeAccounts.size + assignedIdleDonors.size;
     let usedSlots = reservedSlotCount + Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
     let changed = false;
 
-    for (const [, acct] of Object.entries(input.world.accounts)) {
+    for (const acct of worldAccountList) {
         if (acct.side !== input.world.side) continue;
         const ov = input.overrides[acct.name.toLowerCase()];
         if (!ov || !ov.activityId) continue;
@@ -613,10 +648,7 @@ export function applyActivityOverridesToPlan(
 
         const act = input.catalog.get(ov.activityId);
         if (!act) continue;
-        const quarantined = input.defects.some(
-            (d) => d.activityId === act.id && d.quarantined && (d.expiresAt === undefined || input.world.at < d.expiresAt),
-        );
-        if (quarantined) continue;
+        if (quarantinedActivityIds.has(act.id)) continue;
         if (!spotHasCapacity(act, acct.name)) continue;
 
         const planned = planAccount(acct, {
@@ -1023,6 +1055,7 @@ export function materializeBrainTransferOrders(
     const skipped: string[] = [];
     if (orders.length === 0) return { written, skipped };
 
+    const nowWall = Date.now();
     const ordersDir = join(opts.fleetDir, 'orders');
     const receiptsDir = join(opts.fleetDir, 'receipts');
     const receiptsByOrderId = new Map<string, Receipt[]>();
@@ -1030,7 +1063,7 @@ export function materializeBrainTransferOrders(
         try {
             for (const f of readdirSync(receiptsDir)) {
                 if (!f.endsWith('.json')) continue;
-                const rec = readJsonSafe(join(receiptsDir, f)) as Receipt | undefined;
+                const rec = readCachedImmutableJson(join(receiptsDir, f), nowWall) as Receipt | undefined;
                 if (!rec || typeof rec.id !== 'string') continue;
                 const list = receiptsByOrderId.get(rec.id) ?? [];
                 list.push(rec);
@@ -1040,11 +1073,13 @@ export function materializeBrainTransferOrders(
     }
 
     const activePairItemKeys = new Set<string>();
+    const existingOrderFiles = new Set<string>();
     if (existsSync(ordersDir)) {
         try {
             for (const f of readdirSync(ordersDir)) {
                 if (!f.endsWith('.json')) continue;
-                const ord = readJsonSafe(join(ordersDir, f)) as Order | undefined;
+                existingOrderFiles.add(f);
+                const ord = readCachedImmutableJson(join(ordersDir, f), nowWall) as Order | undefined;
                 if (!validOrder(ord) || opts.now >= ord.end) continue;
                 const orderReceipts = receiptsByOrderId.get(ord.id) ?? [];
                 const settlement = tradeSettlement(ord, orderReceipts, opts.now);
@@ -1056,34 +1091,44 @@ export function materializeBrainTransferOrders(
         } catch { /* unreadable orders */ }
     }
 
-    const itemsMap = loadItemsMap();
+    let itemsMap: ReturnType<typeof loadItemsMap> | null = null;
+    const getItemsMap = () => (itemsMap ??= loadItemsMap());
+    let sideByLower: Map<string, string> | null = null;
+    const lookupSide = (name: string): string => {
+        const direct = opts.world.accounts[name] ?? opts.world.accounts[name.toLowerCase()];
+        if (direct) return direct.side;
+        if (!sideByLower) {
+            sideByLower = new Map<string, string>();
+            for (const a of Object.values(opts.world.accounts)) {
+                sideByLower.set(a.name.toLowerCase(), a.side);
+            }
+        }
+        return sideByLower.get(name.toLowerCase()) ?? opts.side;
+    };
+
     for (const order of orders) {
         if (order.items.length === 0 || opts.now >= order.expiresAt) {
             skipped.push(order.id);
             continue;
         }
         const first = order.items[0]!;
-        const firstItemName = first.itemName ?? itemsMap.get(first.itemId)?.name ?? `item:${first.itemId}`;
         const dedupKey = `${order.from.toLowerCase()}|${order.to.toLowerCase()}|${first.itemId}`;
-        const orderFile = join(ordersDir, `${order.id}.json`);
-        if (activePairItemKeys.has(dedupKey) || existsSync(orderFile)) {
+        const orderFileName = `${order.id}.json`;
+        const orderFile = join(ordersDir, orderFileName);
+        if (activePairItemKeys.has(dedupKey) || existingOrderFiles.has(orderFileName) || existsSync(orderFile)) {
             skipped.push(order.id);
             continue;
         }
 
+        const resolvedItems = getItemsMap();
+        const firstItemName = first.itemName ?? resolvedItems.get(first.itemId)?.name ?? `item:${first.itemId}`;
         const hubSpec = HUB_BANKER_LOCATIONS[order.hub];
         const [meetFrom, meetTo] = hubSpec.meetTiles;
-        const lookupSide = (name: string): string => {
-            const direct = opts.world.accounts[name] ?? opts.world.accounts[name.toLowerCase()];
-            if (direct) return direct.side;
-            const lower = name.toLowerCase();
-            return Object.values(opts.world.accounts).find((a) => a.name.toLowerCase() === lower)?.side ?? opts.side;
-        };
         const fromSide = lookupSide(order.from);
         const toSide = lookupSide(order.to);
         const bothLocal = fromSide === opts.side && toSide === opts.side;
         const extra = order.items.slice(1).map((line) => ({
-            item: line.itemName ?? itemsMap.get(line.itemId)?.name ?? `item:${line.itemId}`,
+            item: line.itemName ?? resolvedItems.get(line.itemId)?.name ?? `item:${line.itemId}`,
             count: line.count,
             itemId: line.itemId,
         }));

@@ -118,16 +118,36 @@ function readLeaseDiagnostics(dir: string, now: number): LeaseDiagnostic[] {
             });
     } catch { return []; }
 }
+let leaseDiagCache: { dir: string; at: number; leases: LeaseDiagnostic[] } | null = null;
+let failLoopsCache: { len: number; head: Res | undefined; tail: Res | undefined; at: number; loops: ReturnType<typeof failLoops> } | null = null;
 function fleetDiagnostics(now: number) {
     const syncedLeases = join(FILES.fleet, 'leases'), localLeases = join(root, 'fleet', 'leases');
     const leaseDir = existsSync(syncedLeases) ? syncedLeases : localLeases;
-    const leases = readLeaseDiagnostics(leaseDir, now);
-    const loops = failLoops(allResults.filter(r => r.name.toLowerCase() !== MAIN.toLowerCase()), now);
+    if (!leaseDiagCache || leaseDiagCache.dir !== leaseDir || now < leaseDiagCache.at || now - leaseDiagCache.at >= 5_000) {
+        leaseDiagCache = { dir: leaseDir, at: now, leases: readLeaseDiagnostics(leaseDir, now) };
+    }
+    const leases = leaseDiagCache.leases
+        .map(l => ({ ...l, ageMs: l.at !== null ? now - l.at : null, stale: l.at !== null ? now - l.at >= LEASE_MAX_AGE_MS : null }));
+    const head = allResults[0];
+    const tail = allResults.length ? allResults[allResults.length - 1] : undefined;
+    if (
+        !failLoopsCache ||
+        failLoopsCache.len !== allResults.length ||
+        failLoopsCache.head !== head ||
+        failLoopsCache.tail !== tail ||
+        now < failLoopsCache.at ||
+        now - failLoopsCache.at >= 5_000
+    ) {
+        const mainLower = MAIN.toLowerCase();
+        const cutoff = now - LOOP_WINDOW_MS;
+        const recent = allResults.filter(r => r.at >= cutoff && r.name.toLowerCase() !== mainLower);
+        failLoopsCache = { len: allResults.length, head, tail, at: now, loops: failLoops(recent, now) };
+    }
     return {
         at: now,
         windowMs: LOOP_WINDOW_MS,
         leaseMaxAgeMs: LEASE_MAX_AGE_MS,
-        failLoops: loops,
+        failLoops: failLoopsCache.loops,
         leases,
     };
 }

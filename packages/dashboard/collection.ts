@@ -24,7 +24,10 @@ export function collectionState(bots: any[], ownedNames: string[], cargo: any[],
     const owned = new Set(ownedNames.map(n => n.toLowerCase()));
     const accounts = bots.filter(b => !b.practice && owned.has(b.name.toLowerCase()));
     const items = new Map<string, { name: string; count: number; identified: boolean }>();
-    const normalize = (name: string) => String(name).replace(/\s*\(noted\)\s*$/i, '').trim();
+    const normalize = (name: string) => {
+        const s = String(name);
+        return (s.includes('(') ? s.replace(/\s*\(noted\)\s*$/i, '') : s).trim();
+    };
     const knownIds = new Map<string, number>();
     for (const b of accounts) for (const i of b.bank ?? []) if (i && Number.isInteger(i.baseId ?? i.id)) knownIds.set(normalize(i.name).toLowerCase(), i.baseId ?? i.id);
     let missingIds = 0;

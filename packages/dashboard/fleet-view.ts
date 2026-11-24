@@ -31,8 +31,15 @@ export function fleetSidesView(snapshots:any[],orders:any[],now:number,receipts:
    total:Array.isArray(a.skills)?a.skills.filter((k:any)=>k?.name!=='Overall').reduce((n:number,k:any)=>n+(Number(k.level)||0),0):null,
    coins:coinsIn(a.bank)+coinsIn(a.inventory)})).sort((x:any,y:any)=>x.name.localeCompare(y.name))}))
   .sort((a,b)=>(a.side==='local'?-1:b.side==='local'?1:a.side.localeCompare(b.side)));
+ const receiptsByOrder=new Map<string,any[]>();
+ for(const r of receipts){
+  if(!r?.id)continue;
+  let list=receiptsByOrder.get(r.id);
+  if(!list){list=[];receiptsByOrder.set(r.id,list);}
+  list.push(r);
+ }
  const state=(order:any)=>{
-  const rows=receipts.filter(r=>r?.id===order.id);
+  const rows=receiptsByOrder.get(order.id)??[];
   if(rows.some(r=>r.version!==undefined)){
    if(!validOrder(order))return 'reconcile';
    const settlement=tradeSettlement(order,rows,now);
@@ -74,17 +81,48 @@ function snapshotObservation(a:any,snapshotAt:any,now:number){
   pos:a.pos&&[a.pos.x,a.pos.z,a.pos.level].every(Number.isSafeInteger)&&a.pos.level>=0&&a.pos.level<=3?a.pos:null,
   combat:Number.isSafeInteger(a.combat)&&a.combat>0?a.combat:null};
 }
-function publishedJob(plans:any[],side:string,name:string,ownerOf:OwnerOf,now:number){
+function publishedJobsBySide(plans:any[],now:number){
+ const latestPlan=new Map<string,any>();
+ for(const p of plans){
+  if(!p||typeof p.side!=='string'||!Array.isArray(p.jobs)||!dated(p.at,now)||now-p.at>3*SIDE_SYNC_MS)continue;
+  const prev=latestPlan.get(p.side);
+  if(!prev||p.at>prev.at)latestPlan.set(p.side,p);
+ }
+ const out=new Map<string,{at:number;byAccount:Map<string,any>}>();
+ for(const [side,plan] of latestPlan){
+  const grouped=new Map<string,any[]>();
+  for(const j of plan.jobs){
+   if(!j||typeof j!=='object')continue;
+   const names=[j.account,...(Array.isArray(j.accounts)?j.accounts:[])];
+   const seen=new Set<string>();
+   for(const n of names){
+    if(typeof n!=='string')continue;
+    const key=n.toLowerCase();
+    if(seen.has(key))continue;
+    seen.add(key);
+    let list=grouped.get(key);
+    if(!list){list=[];grouped.set(key,list);}
+    list.push(j);
+   }
+  }
+  const selected=new Map<string,any>();
+  for(const [key,jobs] of grouped){
+   const job=jobs.find((j:any)=>j.enabled!==false&&typeof j.script==='string')??jobs[jobs.length-1];
+   if(job){
+    selected.set(key,{at:plan.at,state:'configured',
+     script:typeof job.script==='string'?job.script:null,goal:typeof job.goal==='string'?job.goal:null,
+     role:typeof job.role==='string'?job.role:null,enabled:job.enabled!==false});
+   }
+  }
+  out.set(side,{at:plan.at,byAccount:selected});
+ }
+ return out;
+}
+function publishedJob(bySide:ReturnType<typeof publishedJobsBySide>,side:string,name:string,ownerOf:OwnerOf){
  const owner=ownerOf(name);
  if(name.toLowerCase()==='haggis'||owner&&owner!==side)return null;
- const plan=plans.filter(p=>p?.side===side&&Array.isArray(p.jobs)&&dated(p.at,now)&&now-p.at<=3*SIDE_SYNC_MS)
-  .sort((a,b)=>b.at-a.at)[0];
- const jobs=(plan?.jobs??[]).filter((j:any)=>j&&typeof j==='object'&&[j.account,...(Array.isArray(j.accounts)?j.accounts:[])]
-  .some(n=>typeof n==='string'&&n.toLowerCase()===name.toLowerCase()));
- const job=jobs.find((j:any)=>j.enabled!==false&&typeof j.script==='string')??jobs[jobs.length-1];
- return job?{account:name,side,at:plan.at,state:'configured',
-  script:typeof job.script==='string'?job.script:null,goal:typeof job.goal==='string'?job.goal:null,
-  role:typeof job.role==='string'?job.role:null,enabled:job.enabled!==false}:null;
+ const job=bySide.get(side)?.byAccount.get(name.toLowerCase());
+ return job?{account:name,side,...job}:null;
 }
 // A fresh container can have this side's published observations before it has any status files. Select them by
 // the fleet ownership/freshness rule, without attaching an older local session's activity or rates to the snapshot.
@@ -124,6 +162,7 @@ export function localDisplayNames(names:Iterable<string>,snapshots:any[],ownerOf
 // one with the newer account time, so the fleet has one row for each name.
 export function remoteBots(snapshots:any[],localNames:ReadonlySet<string>,roster:ReadonlyMap<string,Seen>,firstSeen:ReadonlyMap<string,number>,now:number,mySide='local',plans:any[]=[],ownerOf:OwnerOf=()=>undefined){
  const rows:any[]=[],place=new Map<string,number>(),time=(r:any)=>r.at??r.snapshotAt??0;
+ const jobsBySide=plans.length?publishedJobsBySide(plans,now):new Map();
  for(const s of snapshots){
   if(!s||typeof s.side!=='string'||s.side===mySide||!Array.isArray(s.accounts))continue;
   for(const a of s.accounts){
@@ -131,7 +170,7 @@ export function remoteBots(snapshots:any[],localNames:ReadonlySet<string>,roster
    const observation=snapshotObservation(a,s.at,now),{at,pos}=observation;
    const live=roster.get(name.toLowerCase()),inWorld=!!live&&dated(live.seen,now)&&now-live.seen<30_000;
    const useFeed=!!live&&dated(live.seen,now)&&(inWorld||!pos||at===null||live.seen>=at);
-   const planJob=publishedJob(plans,s.side,name,ownerOf,now);
+   const planJob=publishedJob(jobsBySide,s.side,name,ownerOf);
    const row:any={...observation,side:s.side,remote:true,
     role:null,goal:null,planJob,currentGoal:planJob?.goal?`${planJob.enabled?'Planned':'Disabled'}: ${planJob.goal}`:'',
     pos:useFeed?{x:live!.x,z:live!.z,level:live!.level}:pos,live:inWorld?live:null,combat:useFeed?live!.combat:observation.combat,

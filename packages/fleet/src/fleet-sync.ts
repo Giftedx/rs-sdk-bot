@@ -14,7 +14,7 @@ import { canonicalRows, readSnapshotFiles, type SnapshotFile } from '../../core/
 import { readAllFleetAccountClaims, readHeldFleetTradeClaims, releaseFleetTradeClaim, releaseFleetTradeClaims, type FleetTradeClaim } from '../../core/src/fleet-trade-claim';
 import { terminalTradeReceipt, validOrder, type TradeReceipt } from '../../core/src/fleet-trade-settlement';
 import { hasCredential } from '../../core/src/fleet-vault';
-import { fleetStateFile, lifecycleReadRoots, lifecycleRootForRead, readStopFile, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
+import { fleetStateFile, lifecycleReadRoots, lifecycleRootForRead, liveRoot, practiceRoot, readStopFile, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
 import { listAttempts, readLogoutProof } from '../../core/src/session-lifecycle';
 import { savedProcessAlive } from '../../core/src/session-takeover';
 import { loadEnded, selectBrainDispatchStep, swarmWroteStop } from './swarm';
@@ -253,6 +253,27 @@ export function readSyncStopText(base: string, name: string): string | undefined
     return fallback ?? readStopFile(name, base);
 }
 
+function readAllSyncStopTexts(base: string): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const dir of [liveRoot(base), practiceRoot(base)]) {
+        if (!existsSync(dir)) continue;
+        let files: string[];
+        try { files = readdirSync(dir); } catch { continue; }
+        for (const file of files) {
+            if (!file.startsWith('stop-') && !file.toLowerCase().startsWith('stop-')) continue;
+            const flagLower = file.slice(5).toLowerCase();
+            if (!flagLower) continue;
+            const existing = out.get(flagLower);
+            if (existing !== undefined && !swarmWroteStop(existing)) continue;
+            try {
+                const text = readFileSync(join(dir, file), 'utf8');
+                if (existing === undefined || !swarmWroteStop(text)) out.set(flagLower, text);
+            } catch { /* unreadable stop file */ }
+        }
+    }
+    return out;
+}
+
 export function confirmedTradeLogout(
     base: string,
     claim: FleetTradeClaim,
@@ -347,14 +368,27 @@ export function releasePublishedTradeClaims(
 export const DROPPED_CLAIM_MS = 60 * 60_000, UNANSWERED_GRACE_MS = 2 * 60_000;
 
 export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any, now = Date.now()): FleetTradeClaim[] {
-    const publishedAt = (s: string) => Math.max(...['claims', 'leases', 'snapshots'].map(d => {
-        const at = read(`${d}/${s}.json`)?.at;
-        return Number.isSafeInteger(at) ? at as number : 0;
-    }));
+    const publishedAtCache = new Map<string, number>();
+    const publishedAt = (s: string) => {
+        const hit = publishedAtCache.get(s);
+        if (hit !== undefined) return hit;
+        const val = Math.max(...['claims', 'leases', 'snapshots'].map(d => {
+            const at = read(`${d}/${s}.json`)?.at;
+            return Number.isSafeInteger(at) ? at as number : 0;
+        }));
+        publishedAtCache.set(s, val);
+        return val;
+    };
+    let ownersByLower: Map<string, string> | null = null;
     const sideOf = (account: string): string => {
-        const owners: Record<string, { side?: unknown }> = read('owners.json')?.accounts ?? {};
-        const entry = Object.entries(owners).find(([n]) => n.toLowerCase() === account.toLowerCase())?.[1];
-        return typeof entry?.side === 'string' ? entry.side : 'local';
+        if (!ownersByLower) {
+            ownersByLower = new Map<string, string>();
+            const owners: Record<string, { side?: unknown }> = read('owners.json')?.accounts ?? {};
+            for (const [n, entry] of Object.entries(owners)) {
+                if (typeof entry?.side === 'string') ownersByLower.set(n.toLowerCase(), entry.side);
+            }
+        }
+        return ownersByLower.get(account.toLowerCase()) ?? 'local';
     };
     return claims.filter(claim => {
         if (claim.phase !== 'held' || claim.side !== side) return false;
@@ -386,9 +420,14 @@ function releaseSyncedTrades(dir: string, side: string) {
         } catch { return []; }
     });
     if (!accounts.length) return;
+    const showCache = new Map<string, any>();
     const read = (path: string) => {
+        if (showCache.has(path)) return showCache.get(path);
         const committed = git(dir, 'show', 'HEAD:fleet/' + path);
-        try { return committed.ok ? JSON.parse(committed.out) : null; } catch { return null; }
+        let parsed: any = null;
+        try { parsed = committed.ok ? JSON.parse(committed.out) : null; } catch { parsed = null; }
+        showCache.set(path, parsed);
+        return parsed;
     };
     const held = readHeldFleetTradeClaims(root, [...new Set(accounts)]);
     releasePublishedTradeClaims(held, side, read, claim => releaseFleetTradeClaim(root, claim), Date.now(),
@@ -430,12 +469,13 @@ export function runSync(push = true, base = root): string {
     const published = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
     const brainJobs = jobs ? brainPlannedJobs(base, jobs) : [];
     const combinedJobs = jobs ? [...jobs, ...brainJobs] : null;
-    if (combinedJobs && !keepPublished(combinedJobs, published(claimFile), Date.now(), published(out))) {
+    const priorView = published(out);
+    if (combinedJobs && !keepPublished(combinedJobs, published(claimFile), Date.now(), priorView)) {
         claim = claimFor(combinedJobs, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local', Date.now(), activeAccounts(snap.accounts));
         mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(claimFile, JSON.stringify(claim) + '\n');
         const view = planView(combinedJobs, snap.side, owners, Date.now(), { ...sourcePlan, observed: snap.accounts });
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
-        const priorView = published(out), was = JSON.stringify([priorView?.jobs, priorView?.army, priorView?.builds]);
+        const was = JSON.stringify([priorView?.jobs, priorView?.army, priorView?.builds]);
         if (was !== JSON.stringify([view.jobs, view.army, view.builds])) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');
     }
 
@@ -446,13 +486,12 @@ export function runSync(push = true, base = root): string {
     if (lease) { mkdirSync(join(dir, 'fleet', 'leases'), { recursive: true }); writeFileSync(join(dir, 'fleet', 'leases', `${snap.side}.json`), JSON.stringify(lease) + '\n'); }
     const leaseNote = lease ? 'ours' : leaseHeldElsewhere(current, thisHost()) ? `held by ${current!.host}` : 'none';
 
-    const plan = (() => { try { return JSON.parse(readFileSync(planFile, 'utf8')); } catch { return null; } })();
-    const capacity = sideCapacity(plan);
+    const capacity = sideCapacity(sourcePlan);
     if (mine && capacity !== null) {
-        const raw = (() => { try { return JSON.parse(readFileSync(join(dir, 'fleet', 'owners.json'), 'utf8')).accounts ?? {}; } catch { return {}; } })() as Record<string, { side?: string }>;
-        const owned = Object.keys(raw).filter(n => owners.get(n.toLowerCase())?.side === snap.side);
+        const owned = [...owners].filter(([, o]) => o.side === snap.side).map(([n]) => n);
         const died = (() => { try { return [...loadEnded(join(base, '.practice', 'swarm-deaths.json'))].filter(([, e]) => /^died\b/.test(e.reason)).map(([n]) => n); } catch { return []; } })();
-        const card = sideCard(snap.side, capacity, owned, (n: string) => readSyncStopText(base, n), died);
+        const stopTexts = readAllSyncStopTexts(base);
+        const card = sideCard(snap.side, capacity, owned, (n: string) => stopTexts.get(n.toLowerCase()), died);
         const cardFile = join(dir, 'fleet', 'sides', `${snap.side}.json`);
         if (JSON.stringify(published(cardFile)) !== JSON.stringify(card)) { mkdirSync(join(dir, 'fleet', 'sides'), { recursive: true }); writeFileSync(cardFile, JSON.stringify(card) + '\n'); }
     }

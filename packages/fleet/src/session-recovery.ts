@@ -4,7 +4,7 @@
 // Usage: bun packages/fleet/src/session-recovery.ts [--dry] [--json] [--root=<dir>]
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, linkSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { loadOwners, mySide } from '../../core/src/fleet';
@@ -38,7 +38,7 @@ import {
     type ControlledRecoveryRequest,
 } from '../../core/src/session-recovery-permit';
 import { RESERVED_ACCOUNTS } from '../../core/src/specialist-boards';
-import { cachedLaunchRevision, capabilityRevision } from '../../core/src/worker-release';
+import { cachedLaunchRevision, cachedReleaseFor } from '../../core/src/worker-release';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 
 export {
@@ -189,11 +189,17 @@ export function findAccountStatus(root: string, account: string, server?: string
     const serverLower = server?.toLowerCase();
     for (const dir of statusReadDirs(root)) {
         if (!existsSync(dir)) continue;
-        let files: string[] = [];
-        try { files = readdirSync(dir); } catch { continue; }
-        const match = files.find(f => f.toLowerCase() === target);
-        if (!match) continue;
-        const row = readJson(join(dir, match), null);
+        const exact = join(dir, `${account}.json`);
+        const lowerFile = join(dir, target);
+        let matchPath: string | null = existsSync(exact) ? exact : (exact !== lowerFile && existsSync(lowerFile) ? lowerFile : null);
+        if (!matchPath) {
+            try {
+                const match = readdirSync(dir).find(f => f.toLowerCase() === target);
+                if (match) matchPath = join(dir, match);
+            } catch { continue; }
+        }
+        if (!matchPath) continue;
+        const row = readJson(matchPath, null);
         if (row && (!serverLower || (typeof row.server === 'string' && row.server.toLowerCase() === serverLower))) return row;
     }
     return null;
@@ -278,6 +284,12 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
     const skipped: { account: string; reason: string }[] = [];
 
     const accountFilter = opts.account?.trim().toLowerCase();
+    let heldRecoverySet: Set<string> | null = null;
+    const isRecoveryLeaseHeld = (account: string): boolean => {
+        if (!existsSync(leaseFile(root, account))) return false;
+        heldRecoverySet ??= new Set(heldRecoveryOwners(root, [], alive, now).map(h => h.account.toLowerCase()));
+        return heldRecoverySet.has(account.toLowerCase());
+    };
 
     for (const [lower, owner] of owners) {
         if (accountFilter && lower !== accountFilter) continue;
@@ -335,8 +347,7 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
         if (!cloud && !endSettled(end!, now)) {
             continue;
         }
-        const leaseState = recoveryLeaseState(root, lower, alive, now);
-        if (leaseState === 'held') {
+        if (isRecoveryLeaseHeld(lower)) {
             const reason = 'active recovery child lease held';
             skipped.push({ account: lower, reason });
             log(`${lower}: refused: ${reason}`);
@@ -473,11 +484,12 @@ export function findCurrentNativeRecoveryQualification(
     let expectedCapabilityRev: string;
     try {
         resolvedSource = source ?? cachedLaunchRevision(resolvedRoot);
-        expectedCapabilityRev = expectedCapRev ?? capabilityRevision(['scripts/session-check.ts'], resolvedRoot);
+        expectedCapabilityRev = expectedCapRev ?? cachedReleaseFor(['scripts/session-check.ts'], resolvedRoot);
     } catch {
         return null;
     }
-    const runnerSha256 = sha256Buf(readFileSync(runnerPath));
+    let runnerSha256: string | null = null;
+    const getRunnerSha256 = () => (runnerSha256 ??= sha256Buf(readFileSync(runnerPath)));
 
     let best: { at: number; ref: RecoveryQualificationRef } | null = null;
     let entries: string[] = [];
@@ -538,7 +550,7 @@ export function findCurrentNativeRecoveryQualification(
             proofBytes = readFileSync(realProofPath);
             if (sha256Buf(proofBytes) !== proofRef.sha256) continue;
             proof = JSON.parse(proofBytes.toString('utf8'));
-            verifyNativeRecoveryProof(proof, dirname(realProofPath), { runtimeRevision: resolvedSource, runnerSha256 });
+            verifyNativeRecoveryProof(proof, dirname(realProofPath), { runtimeRevision: resolvedSource, runnerSha256: getRunnerSha256() });
         } catch { continue; }
 
         if (!best || report.at > best.at) {
@@ -713,21 +725,55 @@ export async function runControlledDispatchOne(
         atomicJson(repairFile, request);
         const deadline = Date.now() + timeoutMs;
         let matchedResult: any = null;
+        let readOffset = 0;
+        let lastSize = -1;
+        let lineTail = '';
 
         while (Date.now() < deadline) {
             if (existsSync(resultsFile)) {
-                const lines = readFileSync(resultsFile, 'utf8').split(/\r?\n/);
-                for (let i = lines.length - 1; i >= 0; i--) {
-                    const line = lines[i]?.trim();
-                    if (!line) continue;
-                    try {
-                        const row = JSON.parse(line);
-                        const rawReq = typeof row?.raw === 'string' ? JSON.parse(row.raw) : null;
-                        if (rawReq?.runId === opts.runId && rawReq?.nonce === opts.nonce) {
-                            matchedResult = row.result;
-                            break;
+                let size = 0;
+                try { size = statSync(resultsFile).size; } catch { size = 0; }
+                if (size !== lastSize) {
+                    lastSize = size;
+                    if (size < readOffset) {
+                        readOffset = 0;
+                        lineTail = '';
+                    }
+                    if (size > readOffset) {
+                        const fd = openSync(resultsFile, 'r');
+                        try {
+                            const delta = size - readOffset;
+                            const buf = Buffer.allocUnsafe(delta);
+                            const nRead = readSync(fd, buf, 0, delta, readOffset);
+                            readOffset += nRead;
+                            const chunk = lineTail + buf.subarray(0, nRead).toString('utf8');
+                            const lines = chunk.split(/\r?\n/);
+                            lineTail = lines.pop() ?? '';
+                            for (let i = lines.length - 1; i >= 0; i--) {
+                                const line = lines[i]?.trim();
+                                if (!line) continue;
+                                try {
+                                    const row = JSON.parse(line);
+                                    const rawReq = typeof row?.raw === 'string' ? JSON.parse(row.raw) : null;
+                                    if (rawReq?.runId === opts.runId && rawReq?.nonce === opts.nonce) {
+                                        matchedResult = row.result;
+                                        break;
+                                    }
+                                } catch { /* ignore partial line */ }
+                            }
+                            if (!matchedResult && lineTail.trim()) {
+                                try {
+                                    const row = JSON.parse(lineTail.trim());
+                                    const rawReq = typeof row?.raw === 'string' ? JSON.parse(row.raw) : null;
+                                    if (rawReq?.runId === opts.runId && rawReq?.nonce === opts.nonce) {
+                                        matchedResult = row.result;
+                                    }
+                                } catch { /* partial trailing line */ }
+                            }
+                        } finally {
+                            closeSync(fd);
                         }
-                    } catch { /* ignore partial line */ }
+                    }
                 }
                 if (matchedResult) break;
             }
