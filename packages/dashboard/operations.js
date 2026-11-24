@@ -171,7 +171,7 @@
  // not seen for one hour is marked late.
  function bestInSlot(){
   const targets=S?.economy?.gearTargets||[];if(!targets.length)return '<div class="op-empty">The server sends no Equipment-board set.</div>';
-  const idToTargets=new Map(),holdersByTarget=targets.map(()=>[]);
+  const idToTargets=new Map(),holdersByTarget=targets.map(()=>[]),useBitmask=targets.length<=31;
   for(let ti=0;ti<targets.length;ti++)for(const id of targets[ti].ids||[]){let list=idToTargets.get(id);if(!list){list=[];idToTargets.set(id,list);}list.push(ti);}
   let unreported=false;
   for(const b of bots()){
@@ -181,14 +181,14 @@
    for(let pi=0;pi<3;pi++){
     const [place,list,at]=places[pi];
     if(!Array.isArray(list))continue;
-    let seenMask=0;
+    let seenMask=0,seenSet=null;
     for(let ii=0;ii<list.length;ii++){
      const it=list[ii];if(!it||!(it.count>0))continue;
      const hit=idToTargets.get(it.baseId??it.id);if(!hit)continue;
      for(let hi=0;hi<hit.length;hi++){
-      const ti=hit[hi],bit=1<<ti;
-      if(seenMask&bit)continue;
-      seenMask|=bit;
+      const ti=hit[hi];
+      if(useBitmask){const bit=1<<ti;if(seenMask&bit)continue;seenMask|=bit;}
+      else{if(!seenSet)seenSet=new Set();if(seenSet.has(ti))continue;seenSet.add(ti);}
       holdersByTarget[ti].push({name:b.name,place,at,item:it.name});
      }
     }

@@ -119,6 +119,10 @@ function sourceCostPair(raw: any): { display: SourceCost | undefined; full: Sour
         if (!display) display = {};
         (display as any)[valueKey] = value;
         (display as any)[basisKey] = basis;
+        if (full) {
+            (full as any)[valueKey] = value;
+            (full as any)[basisKey] = basis;
+        }
         if (typeof note === 'string' && note.trim()) {
             if (note.length > 800) {
                 if (!full) full = { ...display };

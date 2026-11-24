@@ -344,6 +344,32 @@ describe('dashboard perf invariants', () => {
         expect(sources['1511']![0]![3]?.ticksNote).toBe('short note');
         expect(sources['1511']![0]![3]?.coinsNote).toBe('x'.repeat(800) + '…');
 
+        // Earlier truncated note (>800 chars) must keep subsequent cost fields on full dedup identity.
+        const distinctByCoins = itemSources([{
+            id: 1511,
+            item: 'logs',
+            name: 'Logs',
+            debugname: 'logs',
+            sources: [
+                {
+                    kind: 'drop',
+                    npc: 'goblin',
+                    chance: 0.25,
+                    count: 1,
+                    cost: { helperTicksPerUnit: 4, ticksBasis: 'model', ticksNote: longNote, coinsPerUnit: 10, coinsBasis: 'content' },
+                },
+                {
+                    kind: 'drop',
+                    npc: 'goblin',
+                    chance: 0.25,
+                    count: 1,
+                    cost: { helperTicksPerUnit: 4, ticksBasis: 'model', ticksNote: longNote, coinsPerUnit: 25, coinsBasis: 'content' },
+                },
+            ],
+        }], names);
+        expect(distinctByCoins['1511']).toHaveLength(2);
+        expect(distinctByCoins['1511']!.map(s => s[3]?.coinsPerUnit)).toEqual([10, 25]);
+
         const drops = npcDrops(items, names, [{ id: 100, name: 'Goblin', debugname: 'goblin' }]);
         expect(drops.byId['100']).toHaveLength(1);
         expect(drops.byId['100']![0]!.name).toBe('Logs');
@@ -359,5 +385,31 @@ describe('dashboard perf invariants', () => {
         expect(wq.s.has('Agility')).toBe(false);
         expect(wq.qp).toBe(15);
         expect(wq.q).toEqual(['Rune Mysteries']);
+    });
+
+    test('operations bestInSlot handles >31 targets without bitmask wrap collision', () => {
+        const opsSrc = readFileSync(new URL('./operations.js', import.meta.url), 'utf8');
+        const fnSrc = opsSrc.slice(opsSrc.indexOf(' function bestInSlot(){'), opsSrc.indexOf(' // Collection log'));
+        const targets = Array.from({ length: 35 }, (_, i) => ({
+            slot: `Slot${i}`,
+            name: `Item${i}`,
+            ids: [1000 + i],
+            need: 'None',
+            source: 'Shop',
+        }));
+        const bot = {
+            name: 'Bot1',
+            bankAt: Date.now(),
+            bank: [{ id: 1000, name: 'Item0', count: 1 }, { id: 1032, name: 'Item32', count: 1 }],
+        };
+        const html = new Function('S', 'bots', 'icon', 'E', 'safeName', 'age', `${fnSrc};return bestInSlot();`)(
+            { economy: { gearTargets: targets } },
+            () => [bot],
+            () => '',
+            String,
+            String,
+            () => '1m',
+        ) as string;
+        expect(html).toContain('<b>2 / 35</b>');
     });
 });
