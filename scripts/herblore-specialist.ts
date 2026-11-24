@@ -606,12 +606,15 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): P
  }
 }
 
-async function openEdgevilleBank(spec: Session, deadline: number): Promise<void> {
+async function openEdgevilleBank(spec: Session, deadline: number, diagLabel?: string): Promise<void> {
  while (spec.tick() < deadline) {
   const st = spec.sdk.getState();
   if (st?.bank?.isOpen) return;
   const booth = findLocBy(spec, l => /bank booth/i.test(l.name) && !!l.optionsWithIndex?.some(o => /use-quickly/i.test(o.text)));
   const op = booth?.optionsWithIndex?.find(o => /use-quickly/i.test(o.text))?.opIndex ?? 2;
+  if (diagLabel) {
+   console.log(`OPEN_DIAG ${diagLabel} t=${spec.tick()} pos=${st?.player?.worldX},${st?.player?.worldZ} bank=${!!st?.bank?.isOpen} modal=${st?.modalInterface} dlg=${!!st?.dialog?.isOpen} booth=${booth ? `${booth.id}@${booth.x},${booth.z}:d${booth.distance}:op${op}` : 'none'}`);
+  }
   if (booth) {
    await spec.direct({ type: 'interactLoc', x: booth.x, z: booth.z, locId: booth.id, optionIndex: op, reason: 'SDK' });
   } else if (st?.dialog?.isOpen || st?.interface?.isOpen) {
@@ -822,7 +825,7 @@ async function executeHerbloreLoop(
   const b0 = spec.tick();
   if (!spec.sdk.getState()?.bank?.isOpen) {
    const o0 = spec.tick();
-   await openEdgevilleBank(spec, deadline);
+   await openEdgevilleBank(spec, deadline, c === 0 || c === 1 || c === 5 || c === 8 ? `c${c}_pre` : undefined);
    bankOpenTicks += spec.tick() - o0;
   }
   if (!depositedNotes) {
@@ -848,7 +851,7 @@ async function executeHerbloreLoop(
    if (!st?.bank?.isOpen && haveUnf >= step.count && haveSec >= step.count) break;
    if (!st?.bank?.isOpen) {
     const o1 = spec.tick();
-    await openEdgevilleBank(spec, deadline);
+    await openEdgevilleBank(spec, deadline, c === 0 || c === 1 || c === 5 || c === 8 ? `c${c}_re` : undefined);
     bankOpenTicks += spec.tick() - o1;
     continue;
    }
