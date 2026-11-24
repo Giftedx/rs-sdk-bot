@@ -163,6 +163,17 @@ test('AcquireItem respects (item, venue) TTL cooldowns across account and world 
         marketCooldowns: { [marketCooldownKey(383, 'hub_banker')]: NOW + 60_000 },
     };
 
+    const customShops = [
+        {
+            shop: 'fish_test_shop',
+            itemId: 383,
+            stock: 50,
+            restockTicks: 10,
+            cost: 250,
+            tile: { x: 3013, z: 3225, level: 0 },
+        },
+    ];
+
     // With npc_shop, ge, and hub_banker all cooled down, must fall through to craft_gather.
     const cooled = resolveAcquireItem(
         acct,
@@ -170,6 +181,7 @@ test('AcquireItem respects (item, venue) TTL cooldowns across account and world 
         {
             world,
             activities: [CATCH_RAW_SHARK],
+            customShops,
             marketQuotes: { 383: { ask: 400, sell: 380, trades: 15 } },
         },
     );
@@ -185,6 +197,7 @@ test('AcquireItem respects (item, venue) TTL cooldowns across account and world 
         {
             world: expiredWorld,
             activities: [CATCH_RAW_SHARK],
+            customShops,
             marketQuotes: { 383: { ask: 400, sell: 380, trades: 15 } },
         },
     );
