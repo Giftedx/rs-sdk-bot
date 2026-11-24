@@ -323,6 +323,7 @@ test('strictly isolates protectedClock accounts unless Campaign launch gate pass
     };
     const readyCampaign: Campaign = {
         ...stagingCampaign,
+        requiredSupplies: [],
         state: 'ready',
         rehearsalProof: { verified: true, ticks: 400_000, verifiedAt: NOW },
         hiscoreMargin: {
@@ -399,4 +400,19 @@ test('strictly isolates protectedClock accounts unless Campaign launch gate pass
         defects: [defect],
     });
     expect(quarantinedPlan.steps).toEqual([]);
+
+    // Missing supplies or stale hiscore snapshot must block launch when WorldSnapshot is supplied.
+    const shortReadyCampaign: Campaign = { ...readyCampaign, requiredSupplies: [{ itemId: 385, count: 100 }] };
+    expect(canProtectedAccountLaunch(haggisCook, [shortReadyCampaign], { ...world, accounts: { Haggis: haggisCook } })).toMatchObject({
+        allowed: false,
+        reason: 'campaign_supplies_short',
+    });
+    const staleReadyCampaign: Campaign = {
+        ...readyCampaign,
+        hiscoreMargin: { ...readyCampaign.hiscoreMargin!, checkedAt: NOW - 2 * 3_600_000 },
+    };
+    expect(canProtectedAccountLaunch(haggisCook, [staleReadyCampaign], { ...world, accounts: { Haggis: haggisCook } })).toMatchObject({
+        allowed: false,
+        reason: 'campaign_hiscore_stale',
+    });
 });

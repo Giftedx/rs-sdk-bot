@@ -36,6 +36,7 @@ import {
     type MarketQuotesMap,
 } from './acquire';
 import { TICKS_PER_HOUR } from './demand';
+import { campaignShortfalls } from './campaigns';
 import {
     STANDARD_FOOD_IDS,
     accountSkillLevel,
@@ -244,6 +245,7 @@ export function summarizeAccountProfile(acct: AccountState): AccountProfileSumma
 export function canProtectedAccountLaunch(
     acct: AccountState,
     campaigns: readonly Campaign[] = [],
+    world?: WorldSnapshot,
 ): { allowed: boolean; campaign?: Campaign; reason?: string } {
     const isProtected = acct.protectedClock || isProtectedAccountName(acct.name);
     if (!isProtected) return { allowed: true };
@@ -253,6 +255,18 @@ export function canProtectedAccountLaunch(
     }
     if (campaign.state !== 'ready' && campaign.state !== 'running') {
         return { allowed: false, campaign, reason: `campaign_state_${campaign.state}` };
+    }
+    if (world) {
+        const evaluation = campaignShortfalls(campaign, world);
+        if (!isCampaignLaunchReady(campaign, { now: world.at, suppliesSatisfied: evaluation.shortfalls.length === 0 })) {
+            const reason = evaluation.shortfalls.length > 0
+                ? 'campaign_supplies_short'
+                : evaluation.missingGates.includes('staleHiscore')
+                  ? 'campaign_hiscore_stale'
+                  : 'campaign_launch_gate_not_met';
+            return { allowed: false, campaign, reason };
+        }
+        return { allowed: true, campaign };
     }
     if (!isCampaignLaunchReady(campaign)) {
         return { allowed: false, campaign, reason: 'campaign_launch_gate_not_met' };
@@ -672,7 +686,7 @@ export function planAccount(
         return { account: acct.name, steps: [], scorePerHour: 0, idleReason: holdReason };
     }
 
-    const protection = canProtectedAccountLaunch(acct, campaigns);
+    const protection = canProtectedAccountLaunch(acct, campaigns, world);
     if (!protection.allowed) {
         return {
             account: acct.name,

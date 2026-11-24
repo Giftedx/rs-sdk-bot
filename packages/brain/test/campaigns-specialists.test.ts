@@ -245,9 +245,14 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
         });
 
         const evalHilts = campaignShortfalls(hilts, makeWorld({ StageAlt: makeAccount('StageAlt', { 536: 7 }) }, { StageAlt: { 536: 2 } }));
-        expect(evalHilts.launchReady).toBe(true);
+        expect(evalHilts.launchReady).toBe(false);
+        expect(evalHilts.missingGates).toContain('supplies');
         expect(evalHilts.shortfalls).toHaveLength(1);
         expect(evalHilts.shortfalls[0]).toMatchObject({ remaining: 6, fulfilled: 5, assignedAccount: 'StageAlt' });
+
+        const evalHiltsReady = campaignShortfalls(hilts, makeWorld({ StageAlt: makeAccount('StageAlt', { 536: 13 }) }, { StageAlt: { 536: 2 } }));
+        expect(evalHiltsReady.launchReady).toBe(true);
+        expect(evalHiltsReady.shortfalls).toHaveLength(0);
 
         const loch = manifests.find((c) => c.account === 'lochnessrod')!;
         expect(loch.hiscoreMargin?.meetsMargin).toBe(false);
@@ -297,5 +302,61 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
         });
         const activeManifests = loadCampaignManifests({ root: tempRoot, now: NOW });
         expect(activeManifests.find((c) => c.account === 'lochnessrod')?.state).toBe('running');
+    });
+
+    test('prefers newest hiscore snapshot by takenAt over older specialist-launch snapshot', () => {
+        const launchDir = join(tempRoot, '.practice', 'specialist-launch');
+        writeJson(join(launchDir, 'hiscores.json'), {
+            takenAt: new Date(NOW - 3_600_000).toISOString(),
+            boards: [
+                {
+                    board: 'Attack',
+                    category: 1,
+                    rows: [{ rank: 1, name: 'hiltsdeep', level: 99, ticks: 3815 }],
+                },
+            ],
+        });
+        writeJson(join(tempRoot, 'research', 'hiscores-live.json'), {
+            takenAt: new Date(NOW - 60_000).toISOString(),
+            boards: [
+                {
+                    board: 'Attack',
+                    category: 1,
+                    rows: [{ rank: 1, name: 'nickatkquest', level: 99, ticks: 2607 }],
+                },
+            ],
+        });
+
+        const manifests = loadCampaignManifests({ root: tempRoot, now: NOW });
+        const hilts = manifests.find((c) => c.account === 'hiltsdeep')!;
+        expect(hilts.state).toBe('staging');
+        expect(hilts.hiscoreMargin?.rivalTicks).toBe(2607);
+        expect(hilts.hiscoreMargin?.meetsMargin).toBe(false);
+    });
+
+    test('uses active Haggis route (28,386 ticks, no boards-sum inflation) and computes specialist margins from repo hiscores', () => {
+        const snapshotNow = Date.parse('2026-11-21T19:44:18.486Z');
+        const manifests = loadCampaignManifests({ root: REPO_ROOT, now: snapshotNow });
+        const haggis = manifests.find((c) => c.account === 'haggis')!;
+        expect(haggis.hiscoreMargin?.ourTicks).toBe(28386);
+        expect(haggis.hiscoreMargin?.meetsMargin).toBe(true);
+        // Cannonballs from unchosen branches must not pollute Haggis's active route supplies,
+        // and iron ore / blood runes match supply-bill.ts exact active-route quantities (2 and 2100).
+        expect(haggis.requiredSupplies.some((s) => s.itemId === 2)).toBe(false);
+        expect(haggis.requiredSupplies.find((s) => s.itemId === 440)?.count).toBe(2);
+        expect(haggis.requiredSupplies.find((s) => s.itemId === 565)?.count).toBe(2100);
+
+        const hilts = manifests.find((c) => c.account === 'hiltsdeep')!;
+        expect(hilts.state).toBe('staging');
+        expect(hilts.hiscoreMargin?.rivalTicks).toBe(2607);
+
+        for (const positive of ['polevaulter', 'stickyfinger', 'castmyload', 'steelrod']) {
+            const c = manifests.find((m) => m.account === positive)!;
+            expect(c.hiscoreMargin?.meetsMargin).toBe(true);
+        }
+        for (const behind of ['bigboner', 'pouchstuffed']) {
+            const c = manifests.find((m) => m.account === behind)!;
+            expect(c.hiscoreMargin?.meetsMargin).toBe(false);
+        }
     });
 });

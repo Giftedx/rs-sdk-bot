@@ -5,6 +5,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { findStopFile, liveRoot, practiceRoot, repoRoot } from '../../core/src/practice-paths';
 import { SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
+import {
+    TRICKS,
+    boardsFromSnapshot,
+    haggisActivities,
+    haggisTravel,
+    overallRequirementsFor,
+    scheduleOverall,
+} from '../../planner/src/haggis';
+import { idsFor } from '../../planner/src/supply-bill';
 import { accountOwnedItemCount } from '../../workers/src/contracts';
 import {
     RETIRED_SPECIALIST_CAMPAIGN_SPECS,
@@ -13,6 +22,7 @@ import {
 export * from './campaigns/specialists';
 import {
     isCampaignLaunchReady,
+    isHiscoreMarginFresh,
     validateCampaign,
     validateGoalDemand,
     type Campaign,
@@ -33,7 +43,13 @@ export interface LoadCampaignsOptions {
     readonly overridePath?: string;
 }
 
-export type CampaignMissingGate = 'rehearsalProof' | 'hiscoreMargin' | 'supplies' | 'paused' | 'completed';
+export type CampaignMissingGate =
+    | 'rehearsalProof'
+    | 'hiscoreMargin'
+    | 'staleHiscore'
+    | 'supplies'
+    | 'paused'
+    | 'completed';
 
 export interface CampaignEvaluation {
     readonly campaign: Campaign;
@@ -58,6 +74,7 @@ interface KnowledgeItemRow {
 }
 
 interface ItemLookup {
+    readonly items: readonly KnowledgeItemRow[];
     readonly byId: ReadonlyMap<number, KnowledgeItemRow>;
     readonly resolve: (rawId: unknown, rawName: unknown) => { readonly itemId: number; readonly itemName: string } | undefined;
 }
@@ -110,6 +127,7 @@ function buildItemLookup(root: string): ItemLookup {
         ? join(root, 'knowledge', 'items.json')
         : join(repoRoot, 'knowledge', 'items.json');
     const raw = readJsonSafe(itemsPath);
+    const items: KnowledgeItemRow[] = [];
     const byId = new Map<number, KnowledgeItemRow>();
     const byName = new Map<string, KnowledgeItemRow>();
 
@@ -126,6 +144,7 @@ function buildItemLookup(root: string): ItemLookup {
                 ...(typeof entry.cost === 'number' ? { cost: entry.cost } : {}),
                 ...(typeof entry.tradeable === 'boolean' ? { tradeable: entry.tradeable } : {}),
             };
+            items.push(row);
             byId.set(id, row);
             const key = name.toLowerCase();
             const prev = byName.get(key);
@@ -147,8 +166,31 @@ function buildItemLookup(root: string): ItemLookup {
             return { itemId: rawId, itemName: known?.name ?? fallbackName };
         }
         if (typeof rawName === 'string' && rawName.trim().length > 0) {
-            const norm = normalizeItemKey(rawName);
-            const known = byName.get(rawName.trim().toLowerCase()) ?? byName.get(norm);
+            const trimmed = rawName.trim();
+            const matchedIds = idsFor(trimmed, items);
+            if (matchedIds.length > 0) {
+                let best: KnowledgeItemRow | undefined;
+                for (const id of matchedIds) {
+                    const candidate = byId.get(id);
+                    if (!candidate) continue;
+                    const bestPenalty =
+                        best && (best.debugname?.startsWith('unstrung_') || best.debugname?.startsWith('cert_')) ? 1 : 0;
+                    const curPenalty =
+                        candidate.debugname?.startsWith('unstrung_') || candidate.debugname?.startsWith('cert_') ? 1 : 0;
+                    if (
+                        !best ||
+                        curPenalty < bestPenalty ||
+                        (curPenalty === bestPenalty && candidate.tradeable && !best.tradeable)
+                    ) {
+                        best = candidate;
+                    }
+                }
+                if (best) {
+                    return { itemId: best.id, itemName: best.name };
+                }
+            }
+            const norm = normalizeItemKey(trimmed);
+            const known = byName.get(trimmed.toLowerCase()) ?? byName.get(norm);
             if (known) {
                 return { itemId: known.id, itemName: known.name };
             }
@@ -156,7 +198,7 @@ function buildItemLookup(root: string): ItemLookup {
         return undefined;
     };
 
-    return { byId, resolve: resolveItem };
+    return { items, byId, resolve: resolveItem };
 }
 
 function loadHiscoreSnapshots(root: string): HiscoreSnapshot[] {
@@ -165,14 +207,21 @@ function loadHiscoreSnapshots(root: string): HiscoreSnapshot[] {
         join(liveRoot(root), 'specialist-launch', 'hiscores.json'),
         join(root, 'research', 'hiscores-live.json'),
     ];
-    const snapshots: HiscoreSnapshot[] = [];
-    for (const file of candidates) {
+    const entries: { snapshot: HiscoreSnapshot; takenAtMs: number; priority: number }[] = [];
+    candidates.forEach((file, priority) => {
         const parsed = readJsonSafe(file);
         if (isPlainRecord(parsed) && Array.isArray(parsed.boards)) {
-            snapshots.push(parsed as HiscoreSnapshot);
+            const snap = parsed as HiscoreSnapshot;
+            const parsedAt = typeof snap.takenAt === 'string' ? Date.parse(snap.takenAt) : NaN;
+            entries.push({
+                snapshot: snap,
+                takenAtMs: Number.isFinite(parsedAt) ? parsedAt : 0,
+                priority,
+            });
         }
-    }
-    return snapshots;
+    });
+    entries.sort((a, b) => b.takenAtMs - a.takenAtMs || a.priority - b.priority);
+    return entries.map((e) => e.snapshot);
 }
 
 function findHiscoreBoard(
@@ -295,7 +344,35 @@ function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readon
     const rawSupplies: CampaignSupplyRequirement[] = [];
     let plannedTicks = 0;
 
-    if (isPlainRecord(boardsData) && Array.isArray(boardsData.activities)) {
+    const overallHit = findHiscoreBoard(snapshots, 'Overall', 0);
+    if (overallHit && existsSync(boardsFile)) {
+        try {
+            const activities = haggisActivities();
+            const boards = boardsFromSnapshot(overallHit.snapshot as Parameters<typeof boardsFromSnapshot>[0]);
+            const options = { mode: 'realistic' as const, tricks: new Set(TRICKS), travel: haggisTravel() };
+            const plan = scheduleOverall(boards, activities, options);
+            if (typeof plan.overallFinish === 'number' && Number.isFinite(plan.overallFinish) && plan.overallFinish > 0) {
+                const { supplies } = overallRequirementsFor(activities, options, plan);
+                plannedTicks = Math.round(plan.overallFinish);
+                for (const s of supplies) {
+                    const count = Math.round(Number(s.count));
+                    if (!Number.isSafeInteger(count) || count <= 0) continue;
+                    const resolved = lookup.resolve(s.itemId, s.item);
+                    if (!resolved) continue;
+                    rawSupplies.push({
+                        itemId: resolved.itemId,
+                        itemName: resolved.itemName,
+                        count,
+                        stage: 'Overall',
+                    });
+                }
+            }
+        } catch {
+            // Fall back to static boardsFile aggregation below if snapshot scheduling fails.
+        }
+    }
+
+    if (plannedTicks === 0 && isPlainRecord(boardsData) && Array.isArray(boardsData.activities)) {
         for (const act of boardsData.activities) {
             if (!isPlainRecord(act)) continue;
             const ticksObj = isPlainRecord(act.ticks) ? act.ticks : undefined;
@@ -341,9 +418,8 @@ function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readon
         };
     }
 
-    const hiscoreHit = findHiscoreBoard(snapshots, 'Overall', 0);
     const alreadyRank1 = Boolean(
-        hiscoreHit?.board.rows?.some((r) => r.rank === 1 && typeof r.name === 'string' && r.name.toLowerCase() === 'haggis'),
+        overallHit?.board.rows?.some((r) => r.rank === 1 && typeof r.name === 'string' && r.name.toLowerCase() === 'haggis'),
     );
     const hiscoreMargin = computeHiscoreMargin(
         'Overall',
@@ -358,7 +434,13 @@ function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readon
     let state: CampaignState = 'staging';
     if (alreadyRank1) state = 'completed';
     else if (stopped) state = 'paused';
-    else if (rehearsalProof?.verified === true && hiscoreMargin?.meetsMargin === true) state = 'ready';
+    else if (
+        rehearsalProof?.verified === true &&
+        hiscoreMargin?.meetsMargin === true &&
+        isHiscoreMarginFresh(hiscoreMargin, now)
+    ) {
+        state = 'ready';
+    }
 
     return {
         id: 'campaign:haggis',
@@ -492,7 +574,11 @@ function buildSpecialistCampaign(
     let state: CampaignState = 'staging';
     if (alreadyRank1) state = 'completed';
     else if (stopped) state = 'paused';
-    else if (rehearsalProof?.verified === true && hiscoreMargin?.meetsMargin === true) {
+    else if (
+        rehearsalProof?.verified === true &&
+        hiscoreMargin?.meetsMargin === true &&
+        isHiscoreMarginFresh(hiscoreMargin, now)
+    ) {
         state = hasGoToken ? 'running' : 'ready';
     }
 
@@ -610,7 +696,6 @@ export function campaignShortfalls(
     }
 
     const aggregated = aggregateSupplyRequirements(campaign.requiredSupplies);
-    const launchReady = isCampaignLaunchReady(campaign);
     const missingGates: CampaignMissingGate[] = [];
 
     if (campaign.state === 'paused') missingGates.push('paused');
@@ -621,6 +706,8 @@ export function campaignShortfalls(
         (campaign.hiscoreMargin?.meetsMargin !== true || campaign.hiscoreMargin.board !== campaign.board)
     ) {
         missingGates.push('hiscoreMargin');
+    } else if (campaign.protectedClock && !isHiscoreMarginFresh(campaign.hiscoreMargin, snapshot.at)) {
+        missingGates.push('staleHiscore');
     }
 
     let totalRequiredUnits = 0;
@@ -673,6 +760,11 @@ export function campaignShortfalls(
         }
         shortfalls.push(demand);
     }
+
+    const launchReady = isCampaignLaunchReady(campaign, {
+        now: snapshot.at,
+        suppliesSatisfied: !missingGates.includes('supplies'),
+    });
 
     return {
         campaign,

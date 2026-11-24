@@ -530,7 +530,7 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         if (acct.protectedClock || isProtectedAccountName(acct.name)) {
             protectedAccountsCount += 1;
             const plan = fleetPlan.accountPlans[acct.name];
-            const launchOk = canProtectedAccountLaunch(acct, campaigns).allowed;
+            const launchOk = canProtectedAccountLaunch(acct, campaigns, world).allowed;
             if (!launchOk) {
                 if (!plan || plan.steps.length === 0) protectedAccountsIdle += 1;
                 else protectedSafetyViolations += 1;

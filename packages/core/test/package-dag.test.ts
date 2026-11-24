@@ -26,7 +26,7 @@ const ALLOWED_PACKAGE_IMPORTS: Readonly<Record<PackageName, readonly PackageName
     core: ['knowledge'],
     planner: ['knowledge', 'core'],
     workers: ['knowledge', 'core', 'planner'],
-    brain: ['knowledge', 'core', 'workers'],
+    brain: ['knowledge', 'core', 'planner', 'workers'],
     fleet: ['knowledge', 'core', 'workers', 'brain'],
     practice: ['knowledge', 'core', 'planner', 'workers'],
     dashboard: ['knowledge', 'core', 'planner', 'workers', 'brain'],

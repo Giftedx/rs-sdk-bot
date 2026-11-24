@@ -195,6 +195,7 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
         protectedClock: true,
         status: 'reserved',
         script: 'scripts/prayer-specialist.ts',
+        planTicks: 1213,
         weight: 1.0,
         defaultStagingHolder: null,
         requiredSupplies: [supply(536, 'Dragon bones', 555, 'Prayer')],
@@ -206,6 +207,7 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
         protectedClock: true,
         status: 'reserved',
         script: 'scripts/magic-specialist.ts',
+        planTicks: 1170,
         weight: 1.0,
         defaultStagingHolder: null,
         requiredSupplies: [
@@ -346,6 +348,7 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
         protectedClock: true,
         status: 'reserved',
         script: 'scripts/smithing-specialist.ts',
+        planTicks: 1230,
         weight: 1.0,
         defaultStagingHolder: null,
         requiredSupplies: [
@@ -417,6 +420,7 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
         status: 'reserved',
         script: 'scripts/agility-specialist.ts',
         defaultEnv: { AGI_ROUTE: 'monkeybars', AGI_POTION: '1', AGI_PRAY: '1' },
+        planTicks: 5913,
         weight: 1.0,
         defaultStagingHolder: null,
         requiredSupplies: [
@@ -437,6 +441,7 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
         status: 'reserved',
         script: 'scripts/thieving-specialist.ts',
         defaultArgs: ['--live'],
+        planTicks: 2142,
         weight: 1.0,
         defaultStagingHolder: null,
         requiredSupplies: [
@@ -452,6 +457,7 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
         protectedClock: true,
         status: 'reserved',
         script: 'scripts/runecraft-specialist.ts',
+        planTicks: 2155,
         weight: 1.0,
         defaultStagingHolder: null,
         requiredSupplies: [
