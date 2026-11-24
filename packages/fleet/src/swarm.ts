@@ -1210,7 +1210,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             });
                             if (outcomeRes.outcome.kind === 'infra_fault' && !diedRun && !successfulEnd(own)) {
                                 try {
-                                    if (readLogoutProof(account, LIVE_SERVER).state !== 'held') keepEnded = false;
+                                    if (readLogoutProof(account, LIVE_SERVER, { base: root }).state !== 'held') keepEnded = false;
                                 } catch { /* keep ended on unreadable proof */ }
                             }
                         } catch { /* outcome persistence errors never stop controller */ }
@@ -1478,13 +1478,13 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             }
             const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
             const producer = (a: string, id: string) => {
-                const receipt = listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt;
+                const receipt = listAttempts(a, LIVE_SERVER, { base: root }).find(x => x.attemptId === id)?.receipt;
                 return receipt ? { pid: receipt.owner.pid, createdAt: receipt.createdAt, updatedAt: receipt.updatedAt } : undefined;
             };
             const accounts = planned.flatMap(p => p.accounts).concat(
                 lifecycleReadRoots(root).flatMap(lcRoot => lifecycleAccounts(join(lcRoot, 'live', LIVE_SERVER))),
             );
-            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, pidAlive, processStartTimes)) {
+            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER, { base: root }), producer, pidAlive, processStartTimes)) {
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
             }
@@ -1604,7 +1604,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         const s = readAccountStatus(root, a)?.data;
                         if (!standingEndRetryable(end, job, missionSignature(job), s?.result)) continue;
                         let settled = false;
-                        try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* ignore */ }
+                        try { const lp = readLogoutProof(a, LIVE_SERVER, { base: root }); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* ignore */ }
                         if (!standingRetryDue(s, settled, Date.now())) continue;
                         ended.delete(key!);
                         for (let i = holds.length - 1; i >= 0; i--) if (holds[i]!.account.toLowerCase() === a.toLowerCase()) holds.splice(i, 1);
