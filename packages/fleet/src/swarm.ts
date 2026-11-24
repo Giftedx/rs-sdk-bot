@@ -10,10 +10,10 @@ import {
 import { spawn as spawnChild } from 'node:child_process';
 import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
-import { defaultActivityCatalog, createRateStore, OutcomeClassifier, type AccountActiveJob } from '../../brain/src/index';
+import { defaultActivityCatalog, createRateStore, OutcomeClassifier, type AccountActiveJob, type PlannedStep } from '../../brain/src/index';
 import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear } from '../../core/src/bank-demand';
 import { cargoAccountServer } from '../../core/src/cargo';
-import { parseStep, tokenizeStep } from '../../core/src/chain-step';
+import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { controllerNamed, releaseLease, renewLease, saveLaunch, takeLease } from '../../core/src/controllers';
 import { loadOwners, mySide, sideOf, type Owner } from '../../core/src/fleet';
 import { acquireFleetLease, FLEET_LEASE_RENEW_MS, FLEET_LEASE_RETRY_MS } from '../../core/src/fleet-lease';
@@ -44,6 +44,7 @@ import {
     type BrainCycleResult,
     type RunTelemetryBaseline,
 } from './brain-runtime';
+import type { DispatchedAccountPlan } from './worker-dispatch';
 import { courierDeliveryWaiting, deliveryResume, foodDeficit, selectFoodSource } from './courier-admission';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 
@@ -95,6 +96,60 @@ type Run = {
 
 export type SavedRun = Run & { key: string };
 export type ParsedJob = { key: string; accounts: string[]; host: boolean; job: Job };
+
+export type SelectedBrainDispatch =
+    | { readonly mode: 'none' }
+    | { readonly mode: 'session_recovery' }
+    | { readonly mode: 'fleet_trade' }
+    | {
+          readonly mode: 'worker';
+          readonly step: Step;
+          readonly displayActivityId?: string;
+          readonly attributedActivityId?: string;
+          readonly isMultiStepChain: boolean;
+      };
+
+export function selectBrainDispatchStep(
+    dispatched: DispatchedAccountPlan,
+    accountSteps: readonly PlannedStep[] = [],
+): SelectedBrainDispatch {
+    const first = dispatched.steps[0];
+    if (!first) return { mode: 'none' };
+    if (first.executionMode === 'session_recovery') return { mode: 'session_recovery' };
+
+    const firstTradeIdx = dispatched.steps.findIndex((s) => s.executionMode === 'fleet_trade');
+    if (firstTradeIdx === 0) return { mode: 'fleet_trade' };
+
+    const execSteps = firstTradeIdx > 0 ? dispatched.steps.slice(0, firstTradeIdx) : dispatched.steps;
+    if (execSteps.length === 0) return { mode: 'none' };
+
+    const isMultiStepChain = execSteps.length > 1;
+    const step: Step = isMultiStepChain
+        ? {
+              script: 'scripts/chain.ts',
+              args: execSteps.map((s) => s.chainStepText),
+              env: { ROUNDS: '1' },
+          }
+        : execSteps[0]!.step;
+
+    const firstWork = accountSteps.find((s) => s.stepKind === 'work');
+    const firstActivityStep = accountSteps.find((s) => 'activityId' in s && typeof s.activityId === 'string');
+    const firstStepActivityId = accountSteps[0] && 'activityId' in accountSteps[0] && typeof accountSteps[0].activityId === 'string'
+        ? accountSteps[0].activityId
+        : undefined;
+    const displayActivityId = firstWork?.stepKind === 'work'
+        ? firstWork.activityId
+        : (firstActivityStep && 'activityId' in firstActivityStep ? firstActivityStep.activityId : firstStepActivityId);
+    const attributedActivityId = !isMultiStepChain ? firstStepActivityId : undefined;
+
+    return {
+        mode: 'worker',
+        step,
+        ...(displayActivityId ? { displayActivityId } : {}),
+        ...(attributedActivityId ? { attributedActivityId } : {}),
+        isMultiStepChain,
+    };
+}
 
 export { PID_START_SLACK_MS };
 
@@ -1214,7 +1269,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     for (const [acctName, dispatched] of Object.entries(brainResult.dispatchedPlans)) {
                         if (handAccountSet.has(acctName.toLowerCase())) continue;
                         const acctState = brainResult.world.accounts[acctName.toLowerCase()];
-                        if (dispatched.steps[0]?.executionMode === 'session_recovery') {
+                        const accountSteps = brainResult.fleetPlan.accountPlans[acctName]?.steps ?? [];
+                        const selected = selectBrainDispatchStep(dispatched, accountSteps);
+                        if (selected.mode === 'session_recovery') {
                             brainRecoveryRows.push({
                                 account: acctName,
                                 script: '',
@@ -1227,7 +1284,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             });
                             continue;
                         }
-                        if (dispatched.steps[0]?.executionMode === 'fleet_trade') {
+                        if (selected.mode === 'fleet_trade') {
                             brainRecoveryRows.push({
                                 account: acctName,
                                 script: '',
@@ -1240,29 +1297,22 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             });
                             continue;
                         }
-                        const step = dispatched.combinedStep;
-                        if (!step) continue;
-                        const accountSteps = brainResult.fleetPlan.accountPlans[acctName]?.steps ?? [];
-                        const firstWork = accountSteps.find(s => s.stepKind === 'work');
-                        const firstActivityStep = accountSteps.find(s => 'activityId' in s && typeof s.activityId === 'string');
-                        const activityId = firstWork?.stepKind === 'work'
-                            ? firstWork.activityId
-                            : (firstActivityStep && 'activityId' in firstActivityStep ? firstActivityStep.activityId : undefined);
+                        if (selected.mode !== 'worker') continue;
                         brainDispatchedAccounts.add(acctName.toLowerCase());
                         combinedJobs.push({
                             account: acctName,
-                            script: step.script,
-                            args: [...step.args],
+                            script: selected.step.script,
+                            args: [...selected.step.args],
                             env: {
-                                ...step.env,
-                                ...(activityId ? { BRAIN_ACTIVITY_ID: activityId } : {}),
+                                ...selected.step.env,
+                                ...(selected.displayActivityId ? { BRAIN_ACTIVITY_ID: selected.displayActivityId } : {}),
                                 ...(dispatched.demandId ? { BRAIN_DEMAND_ID: dispatched.demandId } : {}),
                             },
                             enabled: true,
                             repeat: false,
                             role: acctState?.role,
-                            goal: dispatched.demandId ?? activityId,
-                            ...(activityId ? { activityId } : {}),
+                            goal: dispatched.demandId ?? selected.displayActivityId,
+                            ...(selected.attributedActivityId ? { activityId: selected.attributedActivityId } : {}),
                             ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
                         });
                     }

@@ -15,6 +15,7 @@ import {
 } from '../../planner/src/haggis';
 import { idsFor } from '../../planner/src/supply-bill';
 import { accountOwnedItemCount } from '../../workers/src/contracts';
+import { loadItemsMap } from './preflight';
 import {
     RETIRED_SPECIALIST_CAMPAIGN_SPECS,
     getSpecialistCampaignSpec,
@@ -657,11 +658,51 @@ export function loadCampaignManifests(opts: LoadCampaignsOptions = {}): Campaign
     return [...byId.values()];
 }
 
+const TIGHTENED_MARGIN_PRIORITY_FACTOR = 0.15;
+
+function canonicalUnnotedItemId(itemId: number, itemName?: string): number {
+    const itemsMap = loadItemsMap();
+    if (itemsMap.has(itemId)) return itemId;
+    if (itemId > 0) {
+        const prev = itemsMap.get(itemId - 1);
+        if (prev) {
+            if (!itemName || normalizeItemKey(prev.name) === normalizeItemKey(itemName)) {
+                return prev.id;
+            }
+        }
+    }
+    return itemId;
+}
+
+function accountReserveForItem(snapshot: WorldSnapshot, acctName: string, itemId: number): number {
+    if (!snapshot.reserves) return 0;
+    const exact = snapshot.reserves[acctName]?.[itemId];
+    if (exact !== undefined) return exact;
+    const lower = acctName.toLowerCase();
+    const lowerHit = snapshot.reserves[lower]?.[itemId];
+    if (lowerHit !== undefined) return lowerHit;
+    for (const [k, map] of Object.entries(snapshot.reserves)) {
+        if (k.toLowerCase() === lower) return map?.[itemId] ?? 0;
+    }
+    return 0;
+}
+
 function availableCampaignSupplyStock(
     campaign: Campaign,
     itemId: number,
     snapshot: WorldSnapshot,
+    canonicalId = itemId,
 ): number {
+    const ownedForAccount = (acct: WorldSnapshot['accounts'][string]): number => {
+        let owned = accountOwnedItemCount(acct, itemId);
+        let reserved = accountReserveForItem(snapshot, acct.name, itemId);
+        if (canonicalId !== itemId) {
+            owned += accountOwnedItemCount(acct, canonicalId);
+            reserved += accountReserveForItem(snapshot, acct.name, canonicalId);
+        }
+        return Math.max(0, owned - reserved);
+    };
+
     if (campaign.stagingHolder) {
         const holderAcct =
             snapshot.accounts[campaign.stagingHolder] ??
@@ -669,18 +710,14 @@ function availableCampaignSupplyStock(
                 (a) => a.name.toLowerCase() === campaign.stagingHolder!.toLowerCase(),
             );
         if (!holderAcct) return 0;
-        const owned = accountOwnedItemCount(holderAcct, itemId);
-        const reserved = snapshot.reserves?.[holderAcct.name]?.[itemId] ?? 0;
-        return Math.max(0, owned - reserved);
+        return ownedForAccount(holderAcct);
     }
 
     let total = 0;
     for (const acct of Object.values(snapshot.accounts)) {
         if (acct.protectedClock) continue;
         if (acct.lifecycle === 'paused_owner' || acct.lifecycle === 'dead') continue;
-        const owned = accountOwnedItemCount(acct, itemId);
-        const reserved = snapshot.reserves?.[acct.name]?.[itemId] ?? 0;
-        total += Math.max(0, owned - reserved);
+        total += ownedForAccount(acct);
     }
     return total;
 }
@@ -714,10 +751,16 @@ export function campaignShortfalls(
     let totalFulfilledUnits = 0;
     const shortfalls: GoalDemand[] = [];
     const inactiveState = campaign.state === 'paused' || campaign.state === 'completed';
+    const itemsMap = loadItemsMap();
+    const isTightenedSpecialist =
+        campaign.account.toLowerCase() !== 'haggis'
+        && campaign.hiscoreMargin !== null
+        && campaign.hiscoreMargin.meetsMargin === false;
 
     for (const req of aggregated) {
         totalRequiredUnits += req.count;
-        const owned = availableCampaignSupplyStock(campaign, req.itemId, snapshot);
+        const canonicalId = canonicalUnnotedItemId(req.itemId, req.itemName);
+        const owned = availableCampaignSupplyStock(campaign, req.itemId, snapshot, canonicalId);
         const fulfilled = Math.min(req.count, owned);
         const remaining = req.count - fulfilled;
         totalFulfilledUnits += fulfilled;
@@ -733,24 +776,28 @@ export function campaignShortfalls(
             continue;
         }
 
-        const weight = Math.max(0.1, campaign.weight ?? 1);
-        const unitGp = opts.itemValuesGp?.[req.itemId] ?? 500;
-        const valueScore = Math.max(40, Math.min(4000, Math.sqrt(Math.max(1, remaining * unitGp)) * 4)) * weight;
+        const baseWeight = Math.max(0.1, campaign.weight ?? 1);
+        const effectiveWeight = isTightenedSpecialist
+            ? Math.max(0.05, baseWeight * TIGHTENED_MARGIN_PRIORITY_FACTOR)
+            : baseWeight;
+        const unitGp = opts.itemValuesGp?.[req.itemId] ?? opts.itemValuesGp?.[canonicalId] ?? 500;
+        const valueScore = Math.max(40, Math.min(4000, Math.sqrt(Math.max(1, remaining * unitGp)) * 4)) * effectiveWeight;
+        const canonicalName = itemsMap.get(canonicalId)?.name ?? req.itemName;
         const demand: GoalDemand = {
-            id: `campaign:${campaign.id}:item:${req.itemId}`,
+            id: `campaign:${campaign.id}:item:${canonicalId}`,
             goalKind: campaign.account.toLowerCase() === 'haggis' ? 'main_supply' : 'specialist_prep',
             sourceId: campaign.id,
             valueScore,
             target: {
                 kind: 'item',
-                itemId: req.itemId,
-                ...(req.itemName ? { itemName: req.itemName } : {}),
+                itemId: canonicalId,
+                ...(canonicalName ? { itemName: canonicalName } : {}),
                 count: req.count,
                 ...(campaign.stagingHolder ? { holder: campaign.stagingHolder } : {}),
             },
             fulfilled,
             remaining,
-            priorityWeight: weight,
+            priorityWeight: effectiveWeight,
             ...(campaign.stagingHolder ? { assignedAccount: campaign.stagingHolder } : {}),
             active: !inactiveState,
         };

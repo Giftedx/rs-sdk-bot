@@ -231,6 +231,23 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     });
     expect(upgradeHub.executionMode).toBe('fleet_trade');
     expect(upgradeHub.args).toEqual(['fleet-trade', 'xfer-123']);
+
+    const fullCatalog = createActivityCatalog();
+    const splashUnlock = resolvePlannedStepWorkerRoute(
+        'MageBot',
+        {
+            stepKind: 'unlock',
+            unlockKind: 'skill',
+            activityId: 'combat:magic-splash',
+            skill: 'Magic',
+            targetLevel: 37,
+            estimatedTicks: 200,
+        },
+        { activities: fullCatalog.list() },
+    );
+    expect(splashUnlock.args).toEqual(['magic', 'splash', '37', '3000']);
+    expect(splashUnlock.env.TARGET_LEVEL).toBe('37');
+    expect(splashUnlock.env.TRAIN_SKILL).toBe('Magic');
 });
 
 test('catalog covers all 9 worker families with existing standalone scripts only', () => {

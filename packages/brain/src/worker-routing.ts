@@ -613,16 +613,37 @@ export function resolvePlannedStepWorkerRoute(
                     warnings: [],
                 };
             }
-            const env: Record<string, string> = planned.targetLevel ? { TARGET_LEVEL: String(planned.targetLevel) } : {};
+            const env: Record<string, string> = {
+                ...(planned.skill ? { TRAIN_SKILL: planned.skill } : {}),
+                ...(planned.targetLevel ? { TARGET_LEVEL: String(planned.targetLevel) } : {}),
+            };
+            const applyUnlockTargetArg = (resolved: Omit<WorkerRouteStep, 'account' | 'stepKind' | 'executionMode'>) => {
+                if (!planned.targetLevel) return resolved;
+                if (
+                    (resolved.routeKey === 'magic:splash' || resolved.routeKey === 'magic:splash-coop')
+                    && resolved.args[0] === 'magic'
+                    && resolved.args.length >= 3
+                ) {
+                    const nextArgs = [...resolved.args];
+                    nextArgs[2] = String(planned.targetLevel);
+                    return { ...resolved, args: nextArgs };
+                }
+                if (resolved.routeKey === 'magic:alch-train' && resolved.args[0] === 'magic' && resolved.args.length >= 3) {
+                    const nextArgs = [...resolved.args];
+                    nextArgs[2] = String(Math.max(55, planned.targetLevel));
+                    return { ...resolved, args: nextArgs };
+                }
+                return resolved;
+            };
             if (act) {
-                const resolved = resolveActivityWorkerRoute(act, env);
+                const resolved = applyUnlockTargetArg(resolveActivityWorkerRoute(act, env));
                 return { account, stepKind: 'unlock', executionMode: 'worker', ...resolved };
             }
             const family = inferFamilyFromActivityId(planned.activityId, planned.skill);
-            const resolved = resolveActivityWorkerRoute(
+            const resolved = applyUnlockTargetArg(resolveActivityWorkerRoute(
                 { id: planned.activityId, family, kind: 'train', skill: planned.skill, config: {} },
                 env,
-            );
+            ));
             return { account, stepKind: 'unlock', executionMode: 'worker', ...resolved };
         }
         case 'work': {

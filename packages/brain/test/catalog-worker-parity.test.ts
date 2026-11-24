@@ -106,4 +106,33 @@ describe('catalog-worker parity', () => {
             expect(pre.blockers.some((b) => b.kind === 'combat_survivability' || b.kind === 'quest_incomplete')).toBe(true);
         }
     });
+
+    test('herblore:meats gives 0 XP, herblore:potions requires druid, and runnable CLI defaults are populated', () => {
+        const catalog = createActivityCatalog();
+        const meats = catalog.require('bank-artisan:herblore-meats');
+        expect(meats.baselineRate.xpPerTick).toBe(0);
+
+        const potions = catalog.require('bank-artisan:herblore-potions');
+        expect(potions.config.requiredQuests).toEqual(['druid']);
+
+        expect(catalog.require('gather:mining-progressive').trust).toBe('experimental');
+        expect(catalog.require('gather:mining-at-site').config.requiredLevel).toBe(15);
+
+        const miningRoute = resolveActivityWorkerRoute(catalog.require('gather:mining-at-site'));
+        expect(miningRoute.args).toEqual(['mining', 'at-site', 'iron_rock_table', '200', '3000']);
+
+        const trooperRoute = resolveActivityWorkerRoute(catalog.require('combat:trooper'));
+        expect(trooperRoute.env.TRAIN_SKILL).toBe('Strength');
+        expect(trooperRoute.env.TARGET_LEVEL).toBe('90');
+
+        const splashRoute = resolveActivityWorkerRoute(catalog.require('combat:magic-splash'));
+        expect(splashRoute.args).toEqual(['magic', 'splash', '55', '3000']);
+
+        const splashCoopRoute = resolveActivityWorkerRoute(catalog.require('combat:magic-splash-coop'));
+        expect(splashCoopRoute.args).toEqual(['magic', 'splash-coop', '19', '3000']);
+        expect(splashCoopRoute.env.SPLASH_SITE).toBe('coop');
+
+        const magicOrderRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:magic-order'));
+        expect(magicOrderRoute.env.TARGET_LEVEL).toBe('55');
+    });
 });
