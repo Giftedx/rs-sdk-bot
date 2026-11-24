@@ -969,4 +969,99 @@ describe('packages/fleet/src/brain-runtime', () => {
         const stalePlan = staleRun.fleetPlan.accountPlans.AlphaBot;
         expect(stalePlan?.steps.some(s => s.stepKind === 'acquire' && s.source === 'ge')).toBe(false);
     });
+
+    test('persist: false leaves operator commands untouched, pause normalizes auto-stop markers, death records gate resume, and invalid transfer hubs skip cleanly', () => {
+        const root = makeTempRoot();
+        const now = 1_700_002_000_000;
+        const cmdDir = operatorCommandsDir(root);
+        mkdirSync(cmdDir, { recursive: true });
+
+        // 1. persist: false must not drain operator-commands/ or mutate stop files by default.
+        writeFileSync(
+            join(cmdDir, '001-pause.json'),
+            JSON.stringify({
+                schemaVersion: 1,
+                id: 'cmd-non-persist',
+                issuedAt: now,
+                issuedBy: 'operator',
+                kind: 'pause_account',
+                account: 'AlphaBot',
+                reason: 'swarm stopped',
+            }),
+        );
+        const dryRes = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 10,
+            side: 'local',
+            persist: false,
+            marketQuotes: {},
+        });
+        expect(dryRes.appliedCommands).toEqual([]);
+        expect(existsSync(join(cmdDir, '001-pause.json'))).toBe(true);
+        expect(existsSync(join(practiceRoot(root), 'stop-AlphaBot'))).toBe(false);
+
+        // 2. Draining pause_account with reason "swarm stopped" normalizes it so it stays an owner pause.
+        const appliedRes = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 20,
+            side: 'local',
+            persist: true,
+            marketQuotes: {},
+        });
+        expect(appliedRes.appliedCommands.find(c => c.id === 'cmd-non-persist')?.applied).toBe(true);
+        expect(readFileSync(join(practiceRoot(root), 'stop-AlphaBot'), 'utf8')).toBe('operator pause: swarm stopped');
+        expect(appliedRes.fleetState.accounts.alphabot?.lifecycle).toBe('paused_owner');
+
+        // 3. A persisted death record in swarm-deaths.json gates resume_account unless clearDead: true.
+        writeFileSync(
+            join(liveRoot(root), 'swarm-deaths.json'),
+            JSON.stringify({ AlphaBot: { at: now + 25, reason: 'died after 1 runs' } }),
+        );
+        writeFileSync(
+            join(cmdDir, '002-resume-dead.json'),
+            JSON.stringify({
+                schemaVersion: 1,
+                id: 'cmd-resume-swarm-dead',
+                issuedAt: now + 30,
+                issuedBy: 'operator',
+                kind: 'resume_account',
+                account: 'AlphaBot',
+            }),
+        );
+        const blockedResume = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 40,
+            side: 'local',
+            persist: true,
+            marketQuotes: {},
+        });
+        expect(blockedResume.appliedCommands.find(c => c.id === 'cmd-resume-swarm-dead')?.applied).toBe(false);
+        expect(existsSync(join(practiceRoot(root), 'stop-AlphaBot'))).toBe(true);
+
+        // 4. Invalid hub in materializeBrainTransferOrders skips cleanly without throwing.
+        const badHubRes = materializeBrainTransferOrders(
+            [{
+                id: 'xfer-bad-hub',
+                server: 'rs-sdk-demo.fly.dev',
+                from: 'AlphaBot',
+                to: 'BetaBot',
+                hub: 'unknown_hub' as any,
+                items: [{ itemId: 385, itemName: 'Shark', count: 5 }],
+                demandId: 'd:shark',
+                reason: 'test',
+                createdAt: now,
+                expiresAt: now + 60_000,
+                state: 'planned',
+                bothIdleVerified: true,
+                donorLogoutConfirmedAt: now - 1000,
+                recipientLogoutConfirmedAt: now - 1000,
+                antiPingPong: { donorHoldsDemandForItems: false, cooldownWindowMs: 600_000 },
+            }],
+            { fleetDir: join(root, 'fleet'), side: 'local', world: blockedResume.world, now },
+        );
+        expect(badHubRes).toEqual({ written: [], skipped: ['xfer-bad-hub'] });
+    });
 });

@@ -136,7 +136,13 @@ async function launch(s: SideConfig): Promise<{ ok: boolean; detail: string }> {
 if (import.meta.main) {
     const args = process.argv.slice(2);
     if (args[0] === '--prompt') {
-        console.log(sessionPrompt(args[1] === 'codex' ? 'codex' : 'claude', args[2] ?? ''));
+        const kind = args[1];
+        const side = args[2];
+        if ((kind !== 'claude' && kind !== 'codex') || !side) {
+            console.error('usage: bun scripts/cloud-launch.ts --prompt <claude|codex> <side>');
+            process.exit(2);
+        }
+        console.log(sessionPrompt(kind, side));
         process.exit(0);
     }
     if (!args.includes('--once') && !args.includes('--dry')) { console.log('usage: bun scripts/cloud-launch.ts --once | --dry | --prompt <claude|codex> <side>'); process.exit(2); }

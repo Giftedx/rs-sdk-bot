@@ -37,6 +37,7 @@ const readJson = (dir: string) => {
                 continue;
             }
             const value = JSON.parse(readFileSync(full, 'utf8'));
+            if (jsonFileCache.size > 4096) jsonFileCache.clear();
             jsonFileCache.set(full, { mtimeMs: st.mtimeMs, size: st.size, value });
             out.push(value);
         } catch {

@@ -946,23 +946,42 @@ if (import.meta.main) {
     const argv = process.argv.slice(2);
     const argVal = (prefix: string) => argv.find(a => a.startsWith(prefix))?.slice(prefix.length);
     if (argv.includes('--dispatch-one')) {
-        const root = resolve(argVal('--root=') ?? resolve(import.meta.dir, '../../..'));
-        const account = argVal('--account=') ?? '';
-        const endedAt = Number(argVal('--ended-at=') ?? '0');
-        const server = argVal('--server=') ?? LIVE_SERVER;
-        const runId = argVal('--run-id=') ?? '';
-        const nonce = argVal('--nonce=') ?? '';
-        const source = argVal('--source=') ?? cachedLaunchRevision(root);
-        const qualB64 = argVal('--qualification=') ?? '';
-        const qualification = JSON.parse(Buffer.from(qualB64, 'base64url').toString('utf8')) as RecoveryQualificationRef;
-        const res = await runControlledDispatchOne({ root, account, endedAt, server, runId, nonce, source, qualification });
-        console.log(`FLEET_DISPATCH_RESULT ${JSON.stringify(res)}`);
-        process.exit(res.ok ? 0 : 1);
+        try {
+            const root = resolve(argVal('--root=') ?? resolve(import.meta.dir, '../../..'));
+            const account = argVal('--account=') ?? '';
+            const endedAt = Number(argVal('--ended-at=') ?? 'NaN');
+            const server = argVal('--server=') ?? LIVE_SERVER;
+            const runId = argVal('--run-id=') ?? '';
+            const nonce = argVal('--nonce=') ?? '';
+            const source = argVal('--source=') ?? cachedLaunchRevision(root);
+            const qualB64 = argVal('--qualification=') ?? '';
+            if (!account || !Number.isFinite(endedAt) || endedAt < 0 || !runId || !nonce || !qualB64) {
+                throw Error('missing or invalid --dispatch-one arguments');
+            }
+            const qualification = JSON.parse(Buffer.from(qualB64, 'base64url').toString('utf8')) as RecoveryQualificationRef;
+            const res = await runControlledDispatchOne({ root, account, endedAt, server, runId, nonce, source, qualification });
+            console.log(`FLEET_DISPATCH_RESULT ${JSON.stringify(res)}`);
+            process.exit(res.ok ? 0 : 1);
+        } catch (err) {
+            const detail = err instanceof Error ? err.message : String(err);
+            console.log(`FLEET_DISPATCH_RESULT ${JSON.stringify({ ok: false, detail })}`);
+            process.exit(1);
+        }
+    }
+    const unknown = argv.find(a => a !== '--dry' && a !== '--json' && !a.startsWith('--root=') && !a.startsWith('--account='));
+    if (unknown) {
+        console.error(`usage: bun packages/fleet/src/session-recovery.ts [--dry] [--json] [--root=<dir>] [--account=<name>] (unexpected ${unknown})`);
+        process.exit(2);
     }
     const dry = argv.includes('--dry');
     const jsonOut = argv.includes('--json');
     const root = resolve(argVal('--root=') ?? resolve(import.meta.dir, '../../..'));
-    const account = argVal('--account=');
+    const hasAccountFlag = argv.some(a => a.startsWith('--account='));
+    const account = argVal('--account=')?.trim();
+    if (hasAccountFlag && !account) {
+        console.error('session-recovery: --account= requires a non-empty account name');
+        process.exit(2);
+    }
     const res = await runStandaloneRecoveryPass({ root, dry, ...(account ? { account } : {}) });
     if (jsonOut) console.log(JSON.stringify(res, null, 2));
     process.exit(res.ok ? 0 : 1);

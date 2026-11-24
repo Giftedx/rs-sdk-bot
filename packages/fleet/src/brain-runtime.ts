@@ -265,8 +265,29 @@ function writeOperatorStop(flag: string, text: string, root: string): boolean {
     }
     const target = join(practiceRoot(root), `stop-${flag}`);
     mkdirSync(practiceRoot(root), { recursive: true });
-    writeFileSync(target, text, { encoding: 'utf8', flag: 'wx' });
-    return true;
+    // Prevent operator pause reasons from matching controller auto-stop markers cleared by hygiene or snapshot.
+    const safeText = SWARM_AUTO_STOP_RE.test(text.trim()) ? `operator pause: ${text.trim()}` : text;
+    try {
+        writeFileSync(target, safeText, { encoding: 'utf8', flag: 'wx' });
+        return true;
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'EEXIST') return false;
+        throw err;
+    }
+}
+
+function hasPersistedDeathRecord(account: string, root: string): boolean {
+    const key = account.toLowerCase();
+    for (const file of [join(liveRoot(root), 'swarm-deaths.json'), join(practiceRoot(root), 'swarm-deaths.json')]) {
+        const parsed = readJsonSafe(file);
+        if (!isPlainRecord(parsed)) continue;
+        for (const [name, entry] of Object.entries(parsed)) {
+            if (name.toLowerCase() === key && isPlainRecord(entry) && typeof entry.reason === 'string' && /^died\b/i.test(entry.reason.trim())) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function clearOperatorStops(flag: string, root: string): number {
@@ -300,7 +321,7 @@ function applyCommand(
             return true;
         case 'resume_account': {
             const overlay = classifier.snapshotState(now).accountOverlays[cmd.account.toLowerCase()];
-            if (overlay?.lifecycleOverride === 'dead' && cmd.clearDead !== true) {
+            if ((overlay?.lifecycleOverride === 'dead' || hasPersistedDeathRecord(cmd.account, root)) && cmd.clearDead !== true) {
                 return false;
             }
             const removed = clearOperatorStops(cmd.account, root);
@@ -729,7 +750,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     const side = opts.side ?? mySide();
     const server = (opts.server ?? DEFAULT_LIVE_SERVER).toLowerCase();
     const persist = opts.persist !== false;
-    const consumeCommands = opts.consumeCommands !== false;
+    const consumeCommands = opts.consumeCommands ?? persist;
 
     const knowledgeRoot = existsSync(join(root, 'knowledge', 'items.json')) ? root : repoRoot;
     const catalog = opts.catalog ?? defaultActivityCatalog(knowledgeRoot);
@@ -1133,6 +1154,10 @@ export function materializeBrainTransferOrders(
         const resolvedItems = getItemsMap();
         const firstItemName = first.itemName ?? resolvedItems.get(first.itemId)?.name ?? `item:${first.itemId}`;
         const hubSpec = HUB_BANKER_LOCATIONS[order.hub];
+        if (!hubSpec) {
+            skipped.push(order.id);
+            continue;
+        }
         const [meetFrom, meetTo] = hubSpec.meetTiles;
         const fromSide = lookupSide(order.from);
         const toSide = lookupSide(order.to);

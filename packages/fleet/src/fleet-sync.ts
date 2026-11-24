@@ -182,11 +182,18 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
     const out: any[] = [];
     for (const [acctName, plan] of Object.entries(state.activeChains)) {
         if (existing.has(acctName.toLowerCase()) || !plan.steps.length) continue;
+        const acctState = state.accounts[acctName.toLowerCase()] ?? state.accounts[acctName];
+        if (
+            acctState
+            && (acctState.protectedClock
+                || acctState.lifecycle === 'paused_owner'
+                || acctState.lifecycle === 'reserved'
+                || acctState.lifecycle === 'dead')
+        ) continue;
         const dispatched = dispatchAccountPlan(plan, { catalog });
         const selected = selectBrainDispatchStep(dispatched, plan.steps);
         if (selected.mode !== 'worker') continue;
         const step = selected.step;
-        const acctState = state.accounts[acctName.toLowerCase()] ?? state.accounts[acctName];
         const workStep = plan.steps.find(s => s.stepKind === 'work');
         const claimsWorkSpot = workStep?.stepKind === 'work'
             && !selected.isMultiStepChain
@@ -407,8 +414,8 @@ export function releasePublishedTradeClaims(
         const order = read(`orders/${claim.orderId}.json`), receipt = read(`receipts/${claim.orderId}.${claim.role}.json`);
         if (
             !validOrder(order) || order.id !== claim.orderId || !receipt || !terminalTradeReceipt(order, claim.role, receipt, now)
-            || receipt.claim !== claim.nonce || receipt.side !== claim.side || receipt.account.toLowerCase() !== claim.account
-            || receipt.server.toLowerCase() !== claim.server || receipt.logout!.at < claim.at
+            || receipt.claim !== claim.nonce || receipt.side !== claim.side || receipt.account.toLowerCase() !== claim.account.toLowerCase()
+            || receipt.server.toLowerCase() !== claim.server.toLowerCase() || (receipt.logout?.at ?? -Infinity) < claim.at
         ) continue;
         release(claim);
         released++;
@@ -447,7 +454,7 @@ export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: str
         if (!validOrder(order) || order.id !== claim.orderId) return false;
         const own = read(`receipts/${claim.orderId}.${claim.role}.json`), partner = read(`receipts/${claim.orderId}.${other}.json`);
         const ownIdle = !!own && own.version === 2 && (own.state === 'prepared' || own.state === 'reconcile') && own.claim === claim.nonce && own.side === claim.side
-            && typeof own.account === 'string' && own.account.toLowerCase() === claim.account && own.count === 0
+            && typeof own.account === 'string' && own.account.toLowerCase() === claim.account.toLowerCase() && own.count === 0
             && (!own.inventory || own.inventory.before === own.inventory.after);
         if (!ownIdle) return false;
         if (own.state === 'reconcile' && own.screen === false && now >= order.end) return true;
@@ -460,7 +467,7 @@ export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: str
     });
 }
 
-function releaseSyncedTrades(dir: string, side: string) {
+function releaseSyncedTrades(dir: string, side: string, base = root) {
     const receiptDir = join(dir, 'fleet', 'receipts');
     if (!existsSync(receiptDir)) return;
     const accounts = readdirSync(receiptDir).filter(name => name.endsWith('.json')).flatMap(name => {
@@ -480,11 +487,11 @@ function releaseSyncedTrades(dir: string, side: string) {
         showCache.set(path, parsed);
         return parsed;
     };
-    const held = readHeldFleetTradeClaims(root, [...new Set(accounts)]);
-    releasePublishedTradeClaims(held, side, read, claim => releaseFleetTradeClaim(root, claim), Date.now(),
-        (claim, receipt) => confirmedTradeLogout(root, claim, receipt), pair => { releaseFleetTradeClaims(root, pair); });
+    const held = readHeldFleetTradeClaims(base, [...new Set(accounts)]);
+    releasePublishedTradeClaims(held, side, read, claim => releaseFleetTradeClaim(base, claim), Date.now(),
+        (claim, receipt) => confirmedTradeLogout(base, claim, receipt), pair => { releaseFleetTradeClaims(base, pair); });
     for (const claim of droppedTradeClaims(held, side, read)) {
-        releaseFleetTradeClaim(root, claim);
+        releaseFleetTradeClaim(base, claim);
         console.log(`FLEET_SYNC released the dropped trade claim of ${claim.account} for order ${claim.orderId}: the partner moved nothing (a failed receipt, or no claim by the end of the window)`);
     }
 }
@@ -553,10 +560,10 @@ export function runSync(push = true, base = root): string {
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
-    if (push) releaseSyncedTrades(dir, snap.side);
+    if (push) releaseSyncedTrades(dir, snap.side, base);
     let adopted = '';
     if (push && mine && capacity !== null && process.env.FLEET_ADOPT !== '0') {
-        try { adopted = ` adoption=${adoptionPass(dir, snap.side, capacity) || 'none'}`; }
+        try { adopted = ` adoption=${adoptionPass(dir, snap.side, capacity, base) || 'none'}`; }
         catch (e) { adopted = ` adoption=failed: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`; }
     }
     return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}${adopted}`;
@@ -576,15 +583,15 @@ export function sideCard(side: string, capacity: number, owned: readonly string[
     return { side, capacity, paused, died: dead, stopped: swarm !== undefined && !swarmWroteStop(swarm) };
 }
 
-function adoptionPass(dir: string, side: string, capacity: number): string {
-    const moves = planAdoption(dir, side, capacity);
+function adoptionPass(dir: string, side: string, capacity: number, base = root): string {
+    const moves = planAdoption(dir, side, capacity, base);
     if (!moves.length) return '';
-    const landed = transferFleetOwnersLocked(root, moves, dir);
+    const landed = transferFleetOwnersLocked(base, moves, dir);
     return landed.length ? describeMoves(landed) : 'lost to another side';
 }
 
-export function planAdoption(dir: string, side: string, capacity: number) {
-    const gitWindow = fleetGitWindow(root, 'fleet adoption', 60_000);
+export function planAdoption(dir: string, side: string, capacity: number, base = root) {
+    const gitWindow = fleetGitWindow(base, 'fleet adoption', 60_000);
     const seen = allLeaseLastSeen(gitWindow, join(dir, 'fleet', 'leases'));
     const raw = JSON.parse(readFileSync(join(dir, 'fleet', 'owners.json'), 'utf8')).accounts as Record<string, OwnerRow>;
     const names = new Set([...Object.values(raw).map(o => o.side), ...seen.keys()]);

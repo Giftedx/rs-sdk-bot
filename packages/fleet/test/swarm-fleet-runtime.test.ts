@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { FLEET_STATE_SCHEMA_VERSION, type FleetState } from '../../brain/src/contracts';
 import { writeLiveUpdate } from '../../core/src/live-reload';
 import { hasStopFile, liveLifecycleRoot, liveRoot, liveStatusDir, practiceRoot } from '../../core/src/practice-paths';
 import { beginSessionAttempt, readLogoutProof } from '../../core/src/session-lifecycle';
 import { courierDeliveryWaiting, readCourierStatus } from '../src/courier-admission';
-import { confirmedTradeLogout, readSyncStatuses, readSyncStopText, sideCard } from '../src/fleet-sync';
+import { brainPlannedJobs, confirmedTradeLogout, droppedTradeClaims, readSyncStatuses, readSyncStopText, releasePublishedTradeClaims, sideCard } from '../src/fleet-sync';
 import {
     clearAccountAutoStops,
     clearAccountSwarmStops,
@@ -17,6 +18,8 @@ import {
     startable,
     SWARM_STOP,
     swarmReloadArgs,
+    syncDeathHolds,
+    type ScriptHold,
 } from '../src/swarm';
 
 const dirs: string[] = [];
@@ -235,5 +238,164 @@ describe('fleet runtime live-path, Brain dispatch, reload, and lease fixes', () 
             name => readCourierStatus(name, root),
             now,
         )).toBe(true);
+    });
+
+    test('syncDeathHolds refreshes same-second edits and clears holds when the hold file is removed', () => {
+        const root = scratch();
+        const holdsFile = join(root, 'swarm-script-holds.json');
+        const holds: ScriptHold[] = [];
+        let stamp = syncDeathHolds(holdsFile, holds, { mtimeMs: -1, size: -1 });
+        expect(holds).toEqual([]);
+
+        const makeHold = (at: number): ScriptHold => ({
+            account: 'BotA',
+            script: 'scripts/aio-fighter.ts',
+            at,
+            reason: 'died after 1 runs',
+            heldAt: at,
+        });
+        writeFileSync(holdsFile, JSON.stringify([makeHold(1000)]));
+        stamp = syncDeathHolds(holdsFile, holds, stamp);
+        expect(holds.map(h => h.at)).toEqual([1000]);
+
+        // Same-second overwrite refreshes immediately without stale mtime hit.
+        writeFileSync(holdsFile, JSON.stringify([makeHold(2000)]));
+        stamp = syncDeathHolds(holdsFile, holds, stamp);
+        expect(holds.map(h => h.at)).toEqual([2000]);
+
+        // Backdated steady-state hit skips reload when stamp matches, then removal clears in-memory holds.
+        const past = new Date(Date.now() - 10_000);
+        utimesSync(holdsFile, past, past);
+        stamp = syncDeathHolds(holdsFile, holds, stamp);
+        expect(holds.map(h => h.at)).toEqual([2000]);
+
+        rmSync(holdsFile);
+        stamp = syncDeathHolds(holdsFile, holds, stamp);
+        expect(holds).toEqual([]);
+        expect(stamp).toEqual({ mtimeMs: 0, size: 0 });
+    });
+
+    test('hasStopFile remains true when auto-stop clearing leaves an owner stop in the sibling directory', () => {
+        const root = scratch();
+        mkdirSync(liveRoot(root), { recursive: true });
+        mkdirSync(practiceRoot(root), { recursive: true });
+        writeFileSync(join(liveRoot(root), 'stop-DualBot'), SWARM_STOP.all);
+        writeFileSync(join(practiceRoot(root), 'stop-DualBot'), 'owner manual hold');
+
+        expect(clearAccountAutoStops('DualBot', root)).toBe(true);
+        expect(existsSync(join(liveRoot(root), 'stop-DualBot'))).toBe(false);
+        expect(hasStopFile('DualBot', root)).toBe(true);
+
+        writeFileSync(join(liveRoot(root), 'stop-DualBot'), SWARM_STOP.removed);
+        expect(clearAccountSwarmStops('DualBot', root)).toBe(true);
+        expect(hasStopFile('DualBot', root)).toBe(true);
+    });
+
+    test('brainPlannedJobs skips paused_owner, reserved, dead, and protectedClock accounts; trade claims match mixed-case claims', () => {
+        const root = scratch();
+        const now = Date.now();
+        mkdirSync(liveRoot(root), { recursive: true });
+        const mkAcct = (name: string, lifecycle: 'idle' | 'paused_owner' | 'reserved' | 'dead', protectedClock = false) => ({
+            name,
+            side: 'local',
+            role: 'auto' as const,
+            protectedClock,
+            lifecycle,
+            pos: { x: 3222, z: 3218, level: 0 },
+            skills: {},
+            quests: {},
+            inventory: {},
+            equipment: {},
+            bank: { items: {}, observedAt: now, trusted: true },
+        });
+        const step = {
+            stepKind: 'work' as const,
+            activityId: 'skiller:fishing:cage',
+            demandId: 'd:fish',
+            workerId: 'skiller',
+            batchUnits: 1,
+            estimatedTicks: 100,
+            expectedValuePerHour: 100,
+            config: { skill: 'fishing', method: 'cage' },
+        };
+        const state: FleetState = {
+            schemaVersion: FLEET_STATE_SCHEMA_VERSION,
+            emittedAt: now,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            maxBots: 5,
+            accounts: {
+                pausedbot: mkAcct('PausedBot', 'paused_owner'),
+                reservedbot: mkAcct('ReservedBot', 'reserved', true),
+                deadbot: mkAcct('DeadBot', 'dead'),
+                activebot: mkAcct('ActiveBot', 'idle'),
+            },
+            activeChains: {
+                PausedBot: { account: 'PausedBot', demandId: 'd:fish', scorePerHour: 100, steps: [step] },
+                ReservedBot: { account: 'ReservedBot', demandId: 'd:fish', scorePerHour: 100, steps: [step] },
+                DeadBot: { account: 'DeadBot', demandId: 'd:fish', scorePerHour: 100, steps: [step] },
+                ActiveBot: { account: 'ActiveBot', demandId: 'd:fish', scorePerHour: 100, steps: [step] },
+            },
+            idleReasons: {},
+            goals: [],
+            campaigns: [],
+            missions: [],
+            pendingTransfers: [],
+            quarantinedDefects: [],
+        };
+        writeFileSync(join(liveRoot(root), 'fleet-state.json'), JSON.stringify(state));
+        const planned = brainPlannedJobs(root, [], now + 1000);
+        expect(planned.map(j => j.account)).toEqual(['ActiveBot']);
+
+        // Mixed-case claim identity still resolves dropped and released trade claims.
+        const nonce = '11111111-2222-3333-4444-555555555555';
+        const sha = 'a'.repeat(64);
+        const attemptId = '1700000000000-1-1';
+        const orderStart = now - 60_000;
+        const orderEnd = now - 10_000;
+        const files: Record<string, any> = {
+            'owners.json': { accounts: { Alpha: { side: 'local' }, Beta: { side: 'cloud' } } },
+            'orders/ord-case.json': { id: 'ord-case', server: 'rs-sdk-demo.fly.dev', from: 'Alpha', to: 'Beta', item: 'Shark', count: 5, start: orderStart, end: orderEnd },
+            'receipts/ord-case.from.json': {
+                version: 2,
+                state: 'settled',
+                ok: true,
+                id: 'ord-case',
+                account: 'alpha',
+                role: 'from',
+                side: 'local',
+                partner: 'Beta',
+                server: 'rs-sdk-demo.fly.dev',
+                item: 'Shark',
+                requested: 5,
+                count: 5,
+                at: orderStart + 5000,
+                claim: nonce,
+                inventory: { before: 10, after: 5 },
+                logout: { attemptId, at: orderStart + 4000, sha256: sha },
+            },
+        };
+        const released: string[] = [];
+        const count = releasePublishedTradeClaims(
+            [{ orderId: 'ord-case', role: 'from', side: 'local', account: 'Alpha', server: 'RS-SDK-DEMO.FLY.DEV', phase: 'held', at: orderStart, nonce }],
+            'local',
+            p => files[p] ?? null,
+            c => released.push(c.account),
+            now,
+        );
+        expect(count).toBe(1);
+        expect(released).toEqual(['Alpha']);
+
+        const dropped = droppedTradeClaims(
+            [{ orderId: 'ord-drop', role: 'from', side: 'local', account: 'Alpha', server: 'rs-sdk-demo.fly.dev', phase: 'held', at: orderStart, nonce }],
+            'local',
+            p => ({
+                'owners.json': { accounts: { Alpha: { side: 'local' }, Beta: { side: 'cloud' } } },
+                'orders/ord-drop.json': { id: 'ord-drop', server: 'rs-sdk-demo.fly.dev', from: 'Alpha', to: 'Beta', item: 'Shark', count: 5, start: orderStart, end: orderEnd },
+                'receipts/ord-drop.from.json': { version: 2, state: 'reconcile', screen: false, claim: nonce, side: 'local', account: 'alpha', count: 0 },
+            }[p] ?? null),
+            now,
+        );
+        expect(dropped.map(c => c.orderId)).toEqual(['ord-drop']);
     });
 });

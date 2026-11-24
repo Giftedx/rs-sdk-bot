@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Dirty, Git } from './inspect';
 
@@ -66,7 +66,7 @@ function indexBytes(root: string, entry: IndexCopy): Buffer | undefined {
 function restoreWorking(file: string, copy: WorkingCopy) {
     if (copy.kind === 'missing') { rmSync(file, { force: true }); return; }
     mkdirSync(dirname(file), { recursive: true });
-    if (workingCopy(file).kind !== 'missing') unlinkSync(file);
+    if (workingCopy(file).kind !== 'missing') rmSync(file, { force: true });
     if (copy.kind === 'link') symlinkSync(copy.target, file);
     else { writeFileSync(file, copy.bytes); chmodSync(file, copy.mode); }
 }
@@ -121,7 +121,7 @@ export function applyUpdate(git: Git, root: string, target: string, adopt: reado
                     if (!r.ok) failure = `adopt ${d.path}: ${r.out.slice(0, 160)}`;
                     else if (targets[n] === null) rmSync(file, { force: true });
                 }
-                else if (workingCopy(file).kind !== 'missing') rmSync(file);
+                else if (workingCopy(file).kind !== 'missing') rmSync(file, { force: true });
             } finally {
                 const current = workingCopy(file);
                 if (!d.untracked && workAtTarget(current, targets[n]!, git, file, d.path, fileMode, symlinks)) copy.ownedWork = current;

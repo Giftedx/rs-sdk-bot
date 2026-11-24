@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import type TS from 'typescript';
@@ -195,15 +195,43 @@ export function parseStatus(out: string): { path: string; untracked: boolean }[]
     return rows;
 }
 
+export function touchesIncomingPath(rawPath: string, changed: ReadonlySet<string>): boolean {
+    const clean = rawPath.endsWith('/') ? rawPath.slice(0, -1) : rawPath;
+    if (changed.has(clean)) return true;
+    const prefix = `${clean}/`;
+    for (const incomingPath of changed) {
+        if (incomingPath.startsWith(prefix) || clean.startsWith(`${incomingPath}/`)) return true;
+    }
+    return false;
+}
+
+function symlinkSameAsTarget(git: Git, target: string, path: string, linkTarget: string): boolean {
+    const ls = git('ls-tree', '-z', target, '--', path);
+    if (!ls.ok) return false;
+    const entry = /^120000 blob ([a-f0-9]+)\t/.exec(ls.out.split('\0')[0] ?? '');
+    if (!entry) return false;
+    const bytes = Buffer.from(linkTarget);
+    const digest = createHash(entry[1]!.length === 64 ? 'sha256' : 'sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+    return digest === entry[1];
+}
+
 export function readCheckout(git: Git, root: string, target: string): Omit<UpdateInput, 'holds' | 'heldFiles'> {
     const need = (r: { ok: boolean; out: string }, what: string) => { if (!r.ok) throw Error(`${what}: ${r.out.slice(0, 200)}`); return r.out; };
     const branch = need(git('rev-parse', '--abbrev-ref', 'HEAD'), 'branch');
     const ahead = Number(need(git('rev-list', '--count', `${target}..HEAD`), 'ahead')), behind = Number(need(git('rev-list', '--count', `HEAD..${target}`), 'behind'));
     const incoming = behind ? need(git('diff', '--name-only', '-z', 'HEAD', target), 'diff').split('\0').filter(Boolean) : [];
     const changed = new Set(incoming);
-    const dirty = !behind ? [] : parseStatus(need(git('status', '--porcelain', '-z', '--untracked-files=all'), 'status')).filter(r => changed.has(r.path)).map(r => {
-        const want = git('rev-parse', '--verify', '--quiet', `${target}:${r.path}`), here = existsSync(join(root, r.path));
-        const sameAsTarget = here ? want.ok && git('hash-object', '--', r.path).out === want.out : !want.ok;
+    const dirty = !behind ? [] : parseStatus(need(git('status', '--porcelain', '-z', '--untracked-files=all'), 'status')).filter(r => touchesIncomingPath(r.path, changed)).map(r => {
+        if (r.path.endsWith('/') || !changed.has(r.path)) return { ...r, sameAsTarget: false };
+        const want = git('rev-parse', '--verify', '--quiet', `${target}:${r.path}`);
+        const full = join(root, r.path);
+        let st: ReturnType<typeof lstatSync> | null = null;
+        try { st = lstatSync(full); } catch (err) { if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err; }
+        const sameAsTarget = !st
+            ? !want.ok
+            : st.isSymbolicLink()
+                ? symlinkSameAsTarget(git, target, r.path, readlinkSync(full))
+                : st.isFile() && want.ok && git('hash-object', `--path=${r.path}`, '--', r.path).out === want.out;
         return { ...r, sameAsTarget };
     });
     // A bunfig.toml that only adds preload files is no dependency change when each added file is in the target.
