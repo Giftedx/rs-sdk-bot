@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562389090,
+ "at": 1795562399211,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -100,22 +100,19 @@
   },
   {
    "account": "Woodenstaff",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "thieving",
-    "blood-chest"
+    "scripts/generated/waterfall.ts --",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=12 -- thieving stalls stealing_bakery_stall 28 600",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- fire-giant"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:565",
-    "BATCH_UNITS": "277"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:565",
-   "role": "auto",
-   "resources": [
-    "blood-chest"
-   ]
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
   },
   {
    "account": "OreElse",
@@ -129,25 +126,6 @@
    "repeat": false,
    "goal": "goal:quest_board:crest",
    "role": "army"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "blood-chest"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:565",
-    "BATCH_UNITS": "277"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:565",
-   "role": "army",
-   "resources": [
-    "blood-chest"
-   ]
   },
   {
    "account": "Porksword",
@@ -164,6 +142,21 @@
    "repeat": false,
    "goal": "goal:quest_board:dig",
    "role": "auto"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
+    "scripts/aio-boss.ts DEMAND_ID=campaign:haggis:item:536 BATCH_UNITS=452 -- green-dragon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:536",
+   "role": "army"
   }
  ],
  "army": [
@@ -173,6 +166,7 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
+  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
@@ -187,7 +181,6 @@
   "knightstick",
   "mineyourbiz",
   "mmtha0205",
-  "mmthv2350",
   "moneyshot",
   "pickpockdick",
   "pocketpool",
