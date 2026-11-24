@@ -51,6 +51,39 @@ test('a Brain-planned active chain appears in the view without duplicating owner
         expect(enabled[0]!.script).toBe('scripts/goldfarm.ts');
         expect(enabled[1]!.script).toBe('scripts/aio-skiller.ts');
         expect(enabled[1]!.goal).toBe('d-fish');
+
+        // Plans whose first step yields to fleet-agent or standalone session recovery must not mark accounts swarmBusy.
+        const yieldedState = {
+            ...state,
+            activeChains: {
+                TradeGuy: {
+                    account: 'TradeGuy',
+                    scorePerHour: 5000,
+                    steps: [{
+                        stepKind: 'acquire' as const,
+                        source: 'hub_banker' as const,
+                        itemId: 385,
+                        quantity: 50,
+                        estimatedTicks: 40,
+                        estimatedCoinCost: 0,
+                        coinFloatPreserved: 1000,
+                        transferOrderId: 'xfer-1',
+                    }],
+                },
+                RecoverGuy: {
+                    account: 'RecoverGuy',
+                    scorePerHour: 1e6,
+                    steps: [{
+                        stepKind: 'recover' as const,
+                        recoveryKind: 'logout' as const,
+                        estimatedTicks: 20,
+                        reason: 'held',
+                    }],
+                },
+            },
+        };
+        writeFileSync(join(base, '.practice', 'live', 'fleet-state.json'), JSON.stringify(yieldedState));
+        expect(brainPlannedJobs(base, owner, now)).toEqual([]);
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
 

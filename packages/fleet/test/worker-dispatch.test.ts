@@ -213,7 +213,7 @@ test('dispatchPlannedStep and dispatchAccountPlan compile recover, acquire, gear
     }
 });
 
-test('dispatchWorkerStep accepts every default ActivityCatalog entry cleanly', () => {
+test('dispatchWorkerStep accepts every default ActivityCatalog entry cleanly with zero warnings for practice_passed', () => {
     const catalog = createActivityCatalog();
     for (const act of catalog.list()) {
         const route: WorkerRouteStep = {
@@ -224,5 +224,8 @@ test('dispatchWorkerStep accepts every default ActivityCatalog entry cleanly', (
         };
         const res = dispatchWorkerStep(route);
         expect(res.step.script).toMatch(/^scripts\/[\w./-]+\.ts$/);
+        if (act.trust !== 'experimental') {
+            expect(res.warnings).toEqual([]);
+        }
     }
 });

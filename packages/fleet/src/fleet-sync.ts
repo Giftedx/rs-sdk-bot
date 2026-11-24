@@ -147,6 +147,8 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
     for (const [acctName, plan] of Object.entries(state.activeChains)) {
         if (existing.has(acctName.toLowerCase()) || !plan.steps.length) continue;
         const dispatched = dispatchAccountPlan(plan, { activities });
+        const firstMode = dispatched.steps[0]?.executionMode;
+        if (firstMode === 'fleet_trade' || firstMode === 'session_recovery') continue;
         const step = dispatched.combinedStep;
         if (!step) continue;
         const workStep = plan.steps.find(s => s.stepKind === 'work');

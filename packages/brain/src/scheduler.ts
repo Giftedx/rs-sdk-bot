@@ -26,6 +26,7 @@ import {
     type Mission,
     type RateSummary,
     type RecoveryQueueEntry,
+    type TargetWorkPlannedStep,
     type TransferOrder,
     type WorldSnapshot,
 } from './contracts';
@@ -216,6 +217,34 @@ function pickHubBanker(
     return best?.name;
 }
 
+function estimateDemandContribution(
+    plan: AccountPlan,
+    demand: GoalDemand,
+    activityById: ReadonlyMap<string, ActivityDefinition>,
+): number {
+    const workStep = plan.steps.find((s): s is TargetWorkPlannedStep => s.stepKind === 'work');
+    if (!workStep || workStep.demandId !== demand.id) return 0;
+    const act = activityById.get(workStep.activityId);
+    switch (demand.target.kind) {
+        case 'quest':
+            return 1;
+        case 'item': {
+            const targetItemId = demand.target.itemId;
+            const outPerUnit = act?.outputs?.find((o) => o.itemId === targetItemId)?.countPerUnit
+                ?? act?.baselineRate.outputsPerUnit?.[targetItemId]
+                ?? 1;
+            return Math.max(1, Math.round(workStep.batchUnits * Math.max(0.01, outPerUnit)));
+        }
+        case 'coins': {
+            const gpPerTick = Math.max(1, act?.baselineRate.gpPerTick ?? 1);
+            return Math.max(1, Math.round(workStep.estimatedTicks * gpPerTick));
+        }
+        case 'skill':
+        case 'combat_readiness':
+            return 0;
+    }
+}
+
 export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     const { world, activities } = input;
     const now = world.at;
@@ -236,6 +265,41 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     );
 
     const activityById = new Map(activities.map((a) => [a.id, a]));
+    const spotMaxBySpotId = new Map<string, number>();
+    for (const a of activities) {
+        if (a.spotId && a.maxConcurrentAccounts !== undefined) {
+            const prev = spotMaxBySpotId.get(a.spotId);
+            spotMaxBySpotId.set(
+                a.spotId,
+                prev === undefined ? a.maxConcurrentAccounts : Math.min(prev, a.maxConcurrentAccounts),
+            );
+        }
+    }
+    const demandById = new Map(activeDemands.map((d) => [d.id, d]));
+    const remainingByDemand = new Map(activeDemands.map((d) => [d.id, d.remaining]));
+
+    const consumeDemandAllocation = (plan: AccountPlan) => {
+        const workStep = plan.steps.find((s) => s.stepKind === 'work');
+        const demandId = plan.demandId ?? workStep?.demandId;
+        if (!demandId) return;
+        const dem = demandById.get(demandId);
+        if (!dem) return;
+        const contrib = estimateDemandContribution(plan, dem, activityById);
+        if (contrib <= 0) return;
+        const cur = remainingByDemand.get(demandId) ?? 0;
+        remainingByDemand.set(demandId, Math.max(0, cur - contrib));
+    };
+
+    const currentUnallocatedDemands = (): GoalDemand[] => {
+        const out: GoalDemand[] = [];
+        for (const d of activeDemands) {
+            const rem = remainingByDemand.get(d.id) ?? 0;
+            if (rem > 0) {
+                out.push(rem === d.remaining ? d : { ...d, remaining: rem });
+            }
+        }
+        return out;
+    };
     const itemPrices = buildItemPriceTable(input.marketQuotes);
     const { states: logoutStates, confirmedAt: confirmedLogoutAt } = resolveLogoutMaps(
         world,
@@ -457,11 +521,13 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             const altWork = rerouted.steps.at(-1);
             const altAct = altWork?.stepKind === 'work' ? activityById.get(altWork.activityId) : undefined;
             reserveSpot(acct.name, altAct?.spotId);
+            consumeDemandAllocation(rerouted);
             accountPlans[acct.name] = rerouted;
             remainingSlots -= 1;
             continue;
         }
         reserveSpot(acct.name, workAct?.spotId);
+        consumeDemandAllocation(plan);
         accountPlans[acct.name] = plan;
         remainingSlots -= 1;
     }
@@ -502,8 +568,9 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     }
 
     // 3. Plan idle (and launch-ready reserved) accounts ordered by value/hour descending.
+    const initialUnallocated = currentUnallocatedDemands();
     const idleEvaluations = idleAccounts
-        .map((acct) => ({ acct, plan: planAccount(acct, basePlannerOpts) }))
+        .map((acct) => ({ acct, plan: planAccount(acct, { ...basePlannerOpts, demands: initialUnallocated }) }))
         .sort((a, b) => b.plan.scorePerHour - a.plan.scorePerHour || a.acct.name.localeCompare(b.acct.name));
 
     const assignedIdleDonors = new Set<string>();
@@ -549,14 +616,18 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
 
         const excludedSpots = new Set<string>();
         for (const [spotId, list] of Object.entries(spotAllocations)) {
-            const act = activities.find((a) => a.spotId === spotId && a.maxConcurrentAccounts !== undefined);
-            if (act?.maxConcurrentAccounts !== undefined
-                && (world.spotOccupancy?.[spotId] ?? 0) + list.length >= act.maxConcurrentAccounts) {
+            const maxConc = spotMaxBySpotId.get(spotId);
+            if (maxConc !== undefined && (world.spotOccupancy?.[spotId] ?? 0) + list.length >= maxConc) {
                 excludedSpots.add(spotId);
             }
         }
 
-        let plan = planAccount(acct, { ...basePlannerOpts, excludedSpotIds: excludedSpots });
+        const availableDemands = currentUnallocatedDemands();
+        let plan = planAccount(acct, {
+            ...basePlannerOpts,
+            demands: availableDemands,
+            excludedSpotIds: excludedSpots,
+        });
 
         // Validate and materialize any hub_banker AcquireSteps as safe TransferOrders.
         if (plan.steps.length > 0) {
@@ -659,6 +730,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         const workStep = plan.steps.at(-1);
         const workAct = workStep?.stepKind === 'work' ? activityById.get(workStep.activityId) : undefined;
         reserveSpot(acct.name, workAct?.spotId);
+        consumeDemandAllocation(plan);
         accountPlans[acct.name] = plan;
         remainingSlots -= 1;
     }

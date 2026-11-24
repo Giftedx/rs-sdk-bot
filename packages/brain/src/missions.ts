@@ -241,7 +241,7 @@ export function missionShortfalls(
         }
 
         const unitGp = opts.itemValuesGp?.[req.itemId] ?? 500;
-        const valueScore = remaining * Math.max(10, Math.min(500, Math.sqrt(Math.max(1, unitGp)))) * effectiveWeight;
+        const valueScore = Math.max(40, Math.min(4000, Math.sqrt(Math.max(1, remaining * unitGp)) * 4)) * effectiveWeight;
         const demand: GoalDemand = {
             id: `mission:${mission.id}:item:${req.itemId}`,
             goalKind: 'squad_supply',

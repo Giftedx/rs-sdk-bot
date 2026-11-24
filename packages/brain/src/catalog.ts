@@ -273,6 +273,9 @@ function skillerFamily(skill: string, method: string): { family: WorkerFamily; k
     if (skill === 'magic' && ['npc', 'splash', 'splash-coop'].includes(method)) {
         return { family: 'combat', kind: 'train' };
     }
+    if (skill === 'foraging' && ['care', 'miscellania-coffer', 'qol'].includes(method)) {
+        return { family: 'bank-artisan', kind: 'train' };
+    }
     if (['fishing', 'woodcutting', 'mining', 'thieving', 'foraging'].includes(skill)) {
         return { family: 'gather', kind: method === 'specialist' || method === 'bootstrap55' || method === 'fresh45' || method === 'fly30' ? 'train' : 'gather' };
     }
@@ -302,6 +305,7 @@ function makeIOList(
 
 interface SkillerSeed {
     readonly skill: string;
+    readonly trainingSkill?: string;
     readonly method: string;
     readonly script: string;
     readonly label: string;
@@ -313,6 +317,9 @@ interface SkillerSeed {
     readonly gpPerTick?: number;
     readonly minBatchUnits?: number;
     readonly requiredLevel?: number;
+    readonly requiredSkills?: Readonly<Record<string, number>>;
+    readonly requiredQuests?: readonly string[];
+    readonly requiredTools?: readonly number[];
     readonly outputs?: readonly { itemId: number; countPerUnit: number }[];
     readonly inputs?: readonly { itemId: number; countPerUnit: number }[];
     readonly defaultArgs?: readonly string[];
@@ -391,15 +398,15 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'runecraft', method: 'specialist', script: 'scripts/runecraft-specialist.ts', label: 'Runecraft 1-99 specialist route', location: HUB_TILES.falador_east, xpPerTick: 900, unitsPerTick: 4.5, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
     // Magic
     { skill: 'magic', method: 'order', script: 'scripts/magic-order.ts', label: 'Magic teleport and enchantment training order', location: HUB_TILES.varrock_west, xpPerTick: 280, unitsPerTick: 0.25, gpPerTick: -4, minBatchUnits: 25, requiredLevel: 1 },
-    { skill: 'magic', method: 'items', script: 'scripts/aio-skiller.ts', label: 'Alch, Superheat, and Jewellery Enchanting', location: HUB_TILES.draynor, xpPerTick: 325, unitsPerTick: 0.25, gpPerTick: -2, minBatchUnits: 25, requiredLevel: 7 },
+    { skill: 'magic', method: 'items', script: 'scripts/aio-skiller.ts', label: 'Alch, Superheat, and Jewellery Enchanting', location: HUB_TILES.draynor, xpPerTick: 325, unitsPerTick: 0.25, gpPerTick: -2, minBatchUnits: 25, requiredLevel: 7, defaultArgs: ['enchant:sapphire_ring', '-', '50', '1200'] },
     { skill: 'magic', method: 'npc', script: 'scripts/aio-skiller.ts', label: 'Combat/curse spell casting on NPCs', location: HUB_TILES.lumbridge, xpPerTick: 75, unitsPerTick: 0.25, gpPerTick: -1, minBatchUnits: 25, requiredLevel: 1 },
-    { skill: 'magic', method: 'teleport', script: 'scripts/aio-skiller.ts', label: 'Repeated teleport spell training', location: HUB_TILES.varrock_west, xpPerTick: 310, unitsPerTick: 0.25, gpPerTick: -5, minBatchUnits: 25, requiredLevel: 25 },
+    { skill: 'magic', method: 'teleport', script: 'scripts/aio-skiller.ts', label: 'Repeated teleport spell training', location: HUB_TILES.varrock_west, xpPerTick: 310, unitsPerTick: 0.25, gpPerTick: -5, minBatchUnits: 25, requiredLevel: 25, defaultArgs: ['varrock', '50', '1200'] },
     { skill: 'magic', method: 'trip', script: 'scripts/aio-skiller.ts', label: 'Bank-staged magic training trip', location: HUB_TILES.varrock_west, xpPerTick: 290, unitsPerTick: 0.22, gpPerTick: -4, minBatchUnits: 25, requiredLevel: 25 },
-    { skill: 'magic', method: 'orbs', script: 'scripts/aio-skiller.ts', label: 'Bank-to-obelisk orb charging trip', location: HUB_TILES.varrock_west, xpPerTick: 160, unitsPerTick: 0.08, gpPerTick: 8, minBatchUnits: 27, requiredLevel: 56, defaultEnv: { ORB_TRIP: '1' } },
-    { skill: 'magic', method: 'orbs-at-site', script: 'scripts/aio-skiller.ts', label: 'At-obelisk orb charging batch', location: HUB_TILES.catherby, xpPerTick: 250, unitsPerTick: 0.22, gpPerTick: 10, minBatchUnits: 27, requiredLevel: 56 },
+    { skill: 'magic', method: 'orbs', script: 'scripts/aio-skiller.ts', label: 'Bank-to-obelisk orb charging trip', location: HUB_TILES.varrock_west, xpPerTick: 160, unitsPerTick: 0.08, gpPerTick: 8, minBatchUnits: 27, requiredLevel: 56, defaultArgs: ['water', '27', '3000'], defaultEnv: { ORB_TRIP: '1' } },
+    { skill: 'magic', method: 'orbs-at-site', script: 'scripts/aio-skiller.ts', label: 'At-obelisk orb charging batch', location: HUB_TILES.catherby, xpPerTick: 250, unitsPerTick: 0.22, gpPerTick: 10, minBatchUnits: 27, requiredLevel: 56, defaultArgs: ['water', '27', '1200'] },
     { skill: 'magic', method: 'bones', script: 'scripts/aio-skiller.ts', label: 'Bones to Bananas conversion', location: HUB_TILES.draynor, xpPerTick: 150, unitsPerTick: 0.25, gpPerTick: -1, minBatchUnits: 25, requiredLevel: 15 },
-    { skill: 'magic', method: 'earth-production', script: 'scripts/aio-skiller.ts', label: 'Earth rune production for magic/superheat', location: HUB_TILES.varrock_east, xpPerTick: 32, unitsPerTick: 0.2, gpPerTick: 2, minBatchUnits: 27, requiredLevel: 9, outputs: [{ itemId: 557, countPerUnit: 1 }] },
-    { skill: 'magic', method: 'alch-train', script: 'scripts/aio-skiller.ts', label: 'Low/High Alchemy bank training at Ardougne', location: HUB_TILES.ardougne_north, xpPerTick: 325, unitsPerTick: 0.2, gpPerTick: -2, minBatchUnits: 50, requiredLevel: 21 },
+    { skill: 'magic', trainingSkill: 'Runecraft', method: 'earth-production', script: 'scripts/aio-skiller.ts', label: 'Earth rune production for magic/superheat', location: HUB_TILES.varrock_east, spotId: 'earth-altar', maxConcurrentAccounts: 4, xpPerTick: 32, unitsPerTick: 0.2, gpPerTick: 2, minBatchUnits: 27, requiredSkills: { Runecraft: 9 }, requiredQuests: ['runemysteries'], requiredTools: [1440], inputs: [{ itemId: 1436, countPerUnit: 1 }], outputs: [{ itemId: 557, countPerUnit: 1 }], defaultArgs: ['craft', '2000'] },
+    { skill: 'magic', method: 'alch-train', script: 'scripts/aio-skiller.ts', label: 'Low/High Alchemy bank training at Ardougne', location: HUB_TILES.ardougne_north, xpPerTick: 325, unitsPerTick: 0.2, gpPerTick: -2, minBatchUnits: 50, requiredLevel: 21, defaultArgs: ['55', '3000'] },
     { skill: 'magic', method: 'splash', script: 'scripts/aio-skiller.ts', label: 'Curse splash over Ardougne cow fence', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, xpPerTick: 145, unitsPerTick: 0.2, gpPerTick: -1, minBatchUnits: 50, requiredLevel: 19 },
     { skill: 'magic', method: 'splash-coop', script: 'scripts/aio-skiller.ts', label: 'Lumbridge chicken coop Wind Strike/Confuse splash', location: HUB_TILES.lumbridge, spotId: 'lumbridge-coop', maxConcurrentAccounts: 4, xpPerTick: 110, unitsPerTick: 0.2, gpPerTick: -1, minBatchUnits: 50, requiredLevel: 1, defaultEnv: { SPLASH_SITE: 'coop' } },
     { skill: 'magic', method: 'specialist', script: 'scripts/magic-specialist.ts', label: 'Magic 1-99 specialist route', location: HUB_TILES.varrock_west, xpPerTick: 1400, unitsPerTick: 0.6, gpPerTick: 0, minBatchUnits: 50, requiredLevel: 1 },
@@ -429,9 +436,9 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'foraging', method: 'feathers', script: 'scripts/aio-skiller.ts', label: 'Collect feathers at chicken pens', location: HUB_TILES.lumbridge, xpPerTick: 0, unitsPerTick: 0.4, gpPerTick: 1, minBatchUnits: 50, requiredLevel: 1, outputs: [{ itemId: 314, countPerUnit: 1 }] },
     { skill: 'foraging', method: 'spawn', script: 'scripts/aio-skiller.ts', label: 'Collect ground item spawns and bank', location: HUB_TILES.edgeville, xpPerTick: 0, unitsPerTick: 0.08, gpPerTick: 2, minBatchUnits: 10, requiredLevel: 1 },
     { skill: 'foraging', method: 'grapes', script: 'scripts/aio-skiller.ts', label: 'Collect grapes for wine making', location: HUB_TILES.varrock_west, xpPerTick: 0, unitsPerTick: 0.08, gpPerTick: 4, minBatchUnits: 20, requiredLevel: 1, outputs: [{ itemId: 1987, countPerUnit: 1 }] },
-    { skill: 'foraging', method: 'care', script: 'scripts/aio-skiller.ts', label: 'Kitten care / Miscellania / Druid pouch', location: HUB_TILES.lumbridge, xpPerTick: 0, unitsPerTick: 0.05, gpPerTick: 0, minBatchUnits: 1, requiredLevel: 1 },
-    { skill: 'foraging', method: 'miscellania-coffer', script: 'scripts/aio-skiller.ts', label: 'Manage Miscellania coffer and approval', location: { x: 2500, z: 3857, level: 1 }, xpPerTick: 0, unitsPerTick: 0.02, gpPerTick: 0, minBatchUnits: 1, requiredLevel: 1 },
-    { skill: 'foraging', method: 'qol', script: 'scripts/aio-skiller.ts', label: 'Cannon refill / prayer hold / drop helper', location: HUB_TILES.lumbridge, xpPerTick: 0, unitsPerTick: 0.2, gpPerTick: 0, minBatchUnits: 1, requiredLevel: 1 },
+    { skill: 'foraging', method: 'care', script: 'scripts/aio-skiller.ts', label: 'Kitten care / Miscellania / Druid pouch', location: HUB_TILES.lumbridge, xpPerTick: 0, unitsPerTick: 0.05, gpPerTick: 0, minBatchUnits: 1, requiredLevel: 1, defaultArgs: ['feed', '1', '80'] },
+    { skill: 'foraging', method: 'miscellania-coffer', script: 'scripts/aio-skiller.ts', label: 'Manage Miscellania coffer and approval', location: { x: 2500, z: 3857, level: 1 }, xpPerTick: 0, unitsPerTick: 0.02, gpPerTick: 0, minBatchUnits: 1, requiredLevel: 1, defaultArgs: ['1000', '200'] },
+    { skill: 'foraging', method: 'qol', script: 'scripts/aio-skiller.ts', label: 'Cannon refill / prayer hold / drop helper', location: HUB_TILES.lumbridge, xpPerTick: 0, unitsPerTick: 0.2, gpPerTick: 0, minBatchUnits: 1, requiredLevel: 1, defaultArgs: ['prayer', '0', '10', '40'] },
     { skill: 'foraging', method: 'crystal-chest', script: 'scripts/aio-skiller.ts', label: 'Open Taverley crystal chests from Falador West', location: HUB_TILES.falador_west, xpPerTick: 0, unitsPerTick: 0.02, gpPerTick: 10, minBatchUnits: 1, requiredLevel: 1, outputs: [{ itemId: 1631, countPerUnit: 1 }], inputs: [{ itemId: 989, countPerUnit: 1 }] },
 ];
 
@@ -636,7 +643,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         if (spec.inputs) {
             for (const i of spec.inputs) inputsMap[i.itemId] = i.countPerUnit;
         }
-        const skillCap = titleCase(spec.skill);
+        const skillCap = spec.trainingSkill ? titleCase(spec.trainingSkill) : titleCase(spec.skill);
         const xpPerTick = spec.xpPerTick ?? measuredBySkill.get(spec.skill) ?? 50;
 
         register({
@@ -654,7 +661,10 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 script: spec.script,
                 skill: spec.skill,
                 method: spec.method,
-                requiredLevel: spec.requiredLevel ?? 1,
+                ...(spec.requiredLevel !== undefined ? { requiredLevel: spec.requiredLevel } : !spec.requiredSkills ? { requiredLevel: 1 } : {}),
+                ...(spec.requiredSkills ? { requiredSkills: spec.requiredSkills } : {}),
+                ...(spec.requiredQuests ? { requiredQuests: spec.requiredQuests } : {}),
+                ...(spec.requiredTools ? { requiredTools: spec.requiredTools } : {}),
                 ...(spec.defaultArgs ? { defaultArgs: spec.defaultArgs } : {}),
                 ...(spec.defaultEnv ? { defaultEnv: spec.defaultEnv } : {}),
             },

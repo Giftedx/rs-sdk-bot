@@ -733,9 +733,9 @@ export function campaignShortfalls(
             continue;
         }
 
-        const weight = campaign.weight ?? 1;
+        const weight = Math.max(0.1, campaign.weight ?? 1);
         const unitGp = opts.itemValuesGp?.[req.itemId] ?? 500;
-        const valueScore = remaining * Math.max(10, Math.min(500, Math.sqrt(Math.max(1, unitGp)))) * Math.max(0.1, weight);
+        const valueScore = Math.max(40, Math.min(4000, Math.sqrt(Math.max(1, remaining * unitGp)) * 4)) * weight;
         const demand: GoalDemand = {
             id: `campaign:${campaign.id}:item:${req.itemId}`,
             goalKind: campaign.account.toLowerCase() === 'haggis' ? 'main_supply' : 'specialist_prep',

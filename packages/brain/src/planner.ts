@@ -660,6 +660,30 @@ function estimateRemainingBandXp(
     return 0;
 }
 
+function activityDemandThroughput(
+    activity: ActivityDefinition,
+    demand: GoalDemand,
+    rate: RateEstimate,
+): number {
+    const t = demand.target;
+    switch (t.kind) {
+        case 'item': {
+            const outPerUnit = activity.outputs?.find((o) => o.itemId === t.itemId)?.countPerUnit
+                ?? rate.outputsPerUnit?.[t.itemId]
+                ?? 1;
+            return Math.max(0, rate.unitsPerTick * outPerUnit);
+        }
+        case 'skill':
+            return Math.max(0, rate.skillXpPerTick?.[t.skill] ?? rate.xpPerTick);
+        case 'combat_readiness':
+            return rate.xpPerTick > 0 ? rate.xpPerTick : Math.max(0, rate.gpPerTick);
+        case 'coins':
+            return Math.max(0, rate.gpPerTick);
+        case 'quest':
+            return Math.max(0, rate.unitsPerTick);
+    }
+}
+
 export function planAccount(
     acct: AccountState,
     input: AccountPlannerInput,
@@ -914,8 +938,14 @@ export function planAccount(
     for (const demand of input.demands) {
         if (!demand.active || demand.remaining <= 0) continue;
 
-        for (const activity of candidateListForDemand(demand)) {
-            if (!activityMatchesDemand(acct, demand, activity)) continue;
+        const matching = candidateListForDemand(demand).filter((a) => activityMatchesDemand(acct, demand, a));
+        let bestThroughput = 0;
+        for (const act of matching) {
+            const tp = activityDemandThroughput(act, demand, getRate(act));
+            if (tp > bestThroughput) bestThroughput = tp;
+        }
+
+        for (const activity of matching) {
             const advMult = comparativeAdvantageMultiplier(acct, demand, activity, profile);
             if (advMult <= 0) continue;
 
@@ -1107,11 +1137,12 @@ export function planAccount(
 
             // Evaluate optional net XP/tick payback gear upgrade if step budget permits.
             let effectiveRate = rate;
+            let upgrade: GearUpgradeCandidateResult | null | undefined;
             if (prepSteps.length < MAX_ACCOUNT_PLAN_STEPS - 1 && rate.xpPerTick > 0) {
                 const remXp = estimateRemainingBandXp(acct, demand, activity);
                 if (remXp > 0) {
                     const upgKey = `${activity.family}:${activity.skill ?? ''}:${rate.xpPerTick}:${Math.round(remXp)}`;
-                    let upgrade = upgradeCache.get(upgKey);
+                    upgrade = upgradeCache.get(upgKey);
                     if (upgrade === undefined) {
                         upgrade = evaluateBestGearUpgrade({
                             acct,
@@ -1126,9 +1157,14 @@ export function planAccount(
                     }
                     if (upgrade) {
                         prepSteps.push(upgrade.step);
+                        const upgScale = rate.xpPerTick > 0 ? upgrade.improvedXpPerTick / rate.xpPerTick : 1;
+                        const scaledSkillXp = rate.skillXpPerTick
+                            ? Object.fromEntries(Object.entries(rate.skillXpPerTick).map(([k, v]) => [k, v * upgScale]))
+                            : undefined;
                         effectiveRate = {
                             ...rate,
                             xpPerTick: upgrade.improvedXpPerTick,
+                            ...(scaledSkillXp ? { skillXpPerTick: scaledSkillXp } : {}),
                         };
                     }
                 }
@@ -1139,12 +1175,20 @@ export function planAccount(
                 continue;
             }
 
+            const baseExecTicks = batchUnits / Math.max(1e-4, rate.unitsPerTick);
+            const baseWorkTicks = Math.max(
+                1,
+                Math.ceil(rate.setupTicks + (preflight.travelTicks ?? 0) + baseExecTicks),
+            );
+            const speedScale = upgrade && rate.xpPerTick > 0 && effectiveRate.xpPerTick > rate.xpPerTick
+                ? rate.xpPerTick / effectiveRate.xpPerTick
+                : 1;
             const workTicks = Math.max(
                 1,
                 Math.ceil(
                     effectiveRate.setupTicks
                     + (preflight.travelTicks ?? 0)
-                    + batchUnits / Math.max(1e-4, effectiveRate.unitsPerTick),
+                    + baseExecTicks * speedScale,
                 ),
             );
             const prepTicks = prepSteps.reduce(
@@ -1152,13 +1196,13 @@ export function planAccount(
                 0,
             );
             const totalTicks = workTicks + prepTicks;
-            const totalHours = totalTicks / ticksPerHour;
-            const rawGoalValue = (demand.valuePerHour ?? demand.valueScore) * Math.max(0.05, totalHours) * demand.priorityWeight;
-            const valuePerHour = (rawGoalValue / Math.max(1e-4, totalHours)) * advMult;
-
-            // Penalize multi-step chains slightly on total end-to-end ticks via dilution.
-            const effectiveEfficiency = workTicks / Math.max(1, totalTicks);
-            const scorePerHour = Math.max(0, valuePerHour * effectiveEfficiency);
+            const baseVph = demand.valuePerHour ?? (demand.valueScore * demand.priorityWeight);
+            const speedEfficiency = baseWorkTicks / Math.max(1, totalTicks);
+            const actThroughput = activityDemandThroughput(activity, demand, effectiveRate);
+            const throughputRatio = bestThroughput > 0
+                ? Math.max(0.25, Math.min(1.0, actThroughput / bestThroughput))
+                : 1.0;
+            const scorePerHour = Math.max(0, baseVph * advMult * speedEfficiency * throughputRatio);
 
             const workStep: TargetWorkPlannedStep = {
                 stepKind: 'work',

@@ -36,7 +36,14 @@ import { RESERVED_ACCOUNTS, SPECIALIST_BOARDS } from '../../core/src/specialist-
 import { renameRetry } from '../../core/src/status';
 import { ownedAccounts } from '../../core/src/tradeguard';
 import { assertWorkerRelease, cachedLaunchRevision, cachedReleaseFor, workerEntries } from '../../core/src/worker-release';
-import { recordWorkerOutcome, runBrainCycle, type BrainCycleResult } from './brain-runtime';
+import {
+    captureRunBaseline,
+    extractWorkerOutcomeInput,
+    recordWorkerOutcome,
+    runBrainCycle,
+    type BrainCycleResult,
+    type RunTelemetryBaseline,
+} from './brain-runtime';
 import { courierDeliveryWaiting, deliveryResume, foodDeficit, selectFoodSource } from './courier-admission';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 
@@ -82,6 +89,8 @@ type Run = {
     offset: number;
     activityId?: string;
     demandId?: string;
+    workerRelease?: string;
+    baseline?: RunTelemetryBaseline;
 };
 
 export type SavedRun = Run & { key: string };
@@ -981,9 +990,11 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     };
 
     const follow = (key: string, run: Run, child?: { on(e: 'exit', f: (code: number | null) => void): unknown }) => {
-        let tail = '', currentEnd: string | undefined, diedNames: string[] | undefined, exitCode: number | null | undefined, done = false;
+        let tail = '', currentEnd: string | undefined, diedNames: string[] | undefined, lastResultLine: string | undefined, exitCode: number | null | undefined, done = false;
         const consume = (line: string) => {
             observeSwarmInfraFault(infraBreaker, line);
+            const resMatch = line.match(/(?:^|\s)(RESULT\s+(?:ok|fail)\s+.*)$/);
+            if (resMatch) lastResultLine = resMatch[1];
             if (!run.host) { currentEnd = supervisorEndLine(line) ?? currentEnd; diedNames = diedAccountsOf(line) ?? diedNames; return; }
             const m = line.match(/^SUPERVISE-HOST account (.+?) ([\w-]+) after \d+ runs/);
             if (m) { ended.set(m[1]!, { at: Date.now(), reason: m[2]!, revision: run.revision }); console.log(`SWARM end ${m[1]} ${m[2]} (host)`); }
@@ -1017,16 +1028,26 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     console.log(`SWARM end ${account} ${own}`);
                     if (run.activityId && run.accounts.length === 1) {
                         try {
+                            const raw = extractWorkerOutcomeInput({
+                                root,
+                                account,
+                                activityId: run.activityId,
+                                server: LIVE_SERVER,
+                                startedAt: run.started,
+                                finishedAt: Date.now(),
+                                exitCode: typeof exitCode === 'number' ? exitCode : undefined,
+                                endReason: own,
+                                successful: successfulEnd(own),
+                                died: /^died\b/i.test(own),
+                                lastResultLine,
+                                logPath: run.log,
+                                workerRelease: run.workerRelease,
+                                baseline: run.baseline,
+                            });
                             recordWorkerOutcome({
                                 root, catalog, rateStore, classifier, domain: 'live',
-                                raw: {
-                                    activityId: run.activityId,
-                                    account,
-                                    exitCode: typeof exitCode === 'number' ? exitCode : undefined,
-                                    status: successfulEnd(own) ? 'ok' : 'fail',
-                                    reason: own,
-                                    durationMs: Math.max(0, Date.now() - run.started),
-                                },
+                                ...(run.workerRelease ? { workerRelease: run.workerRelease } : {}),
+                                raw,
                             });
                         } catch { /* outcome persistence errors never stop controller */ }
                     }
@@ -1068,10 +1089,14 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         const cmd = supervisorCommand(p, accounts);
         rotateLog(logPath);
         const offset = existsSync(logPath) ? statSync(logPath).size : 0, out = openSync(logPath, 'a');
+        const baseline = accounts.length === 1 && job.activityId
+            ? captureRunBaseline(root, accounts[0]!, LIVE_SERVER) ?? undefined
+            : undefined;
         let child: ReturnType<typeof spawnChild>;
+        let workRelease: string | undefined;
         try {
             const entries = workerEntries(job.script, job.args ?? [], root);
-            const workRelease = cachedReleaseFor(entries, root);
+            workRelease = cachedReleaseFor(entries, root);
             assertLease();
             writeSync(out, jobLogStart(job));
             child = spawnChild(cmd[0]!, cmd.slice(1), {
@@ -1092,6 +1117,8 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             pid: child.pid, started: Date.now(), accounts, revision, host: p.host, log: logPath, offset,
             ...(job.activityId ? { activityId: job.activityId } : {}),
             ...(job.demandId ? { demandId: job.demandId } : {}),
+            ...(workRelease ? { workerRelease: workRelease } : {}),
+            ...(baseline ? { baseline } : {}),
         };
         runs.set(p.key, run); saveRuns();
         console.log(`SWARM start ${p.host ? `host ${accounts.join(',')}` : accounts[0]} ${job.script} ${JSON.stringify(job.env ?? {})}`);
@@ -1196,6 +1223,19 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                                 enabled: false,
                                 repeat: false,
                                 state: 'waiting: standalone session recovery',
+                                since: null,
+                            });
+                            continue;
+                        }
+                        if (dispatched.steps[0]?.executionMode === 'fleet_trade') {
+                            brainRecoveryRows.push({
+                                account: acctName,
+                                script: '',
+                                role: acctState?.role,
+                                goal: dispatched.demandId ?? 'fleet trade',
+                                enabled: false,
+                                repeat: false,
+                                state: 'waiting: fleet-agent trade',
                                 since: null,
                             });
                             continue;

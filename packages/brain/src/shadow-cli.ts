@@ -436,16 +436,21 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
     const maxBots = options.maxBots ?? (Number.isSafeInteger(swarmCfg?.maxBots) && swarmCfg!.maxBots! > 0 ? swarmCfg!.maxBots! : 25);
 
     const provider = options.provider;
-    const diagnostics = provider ? null : inspectWorldSnapshot({ root, now, side, server });
-    const world = provider
-        ? provider.loadSnapshot({ root, now, side, server })
-        : diagnostics!.snapshot;
-
     const catalogRoot = existsSync(join(root, 'knowledge', 'items.json')) ? root : DEFAULT_REPO_ROOT;
     const catalog = provider ? null : createActivityCatalog({ root: catalogRoot });
     const activities = provider
         ? provider.loadActivities({ root })
         : catalog!.list();
+    const activitySpotById = new Map<string, string>();
+    for (const act of activities) {
+        if (act.spotId) activitySpotById.set(act.id, act.spotId);
+    }
+
+    const diagnostics = provider ? null : inspectWorldSnapshot({ root, now, side, server, activitySpotById });
+    const world = provider
+        ? provider.loadSnapshot({ root, now, side, server })
+        : diagnostics!.snapshot;
+
     const rateStore: RateStore | undefined = catalog ? createRateStore({ catalog, root }) : undefined;
 
     const campaigns = provider?.loadCampaigns

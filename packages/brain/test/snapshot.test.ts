@@ -405,4 +405,38 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
         expect(after.accounts.tradera!.lifecycle).toBe('idle');
         expect(after.accounts.traderb!.lifecycle).toBe('idle');
     });
+
+    test('spotOccupancy aggregates remote-side claims without double-counting local running Brain accounts', () => {
+        const fleetDir = join(tempRoot, '.practice', 'live', 'fleet-data', 'fleet');
+        writeJson(join(fleetDir, 'owners.json'), {
+            accounts: {
+                LocalRunner: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                RemoteRunner: { side: 'cloud', server: DEFAULT_LIVE_SERVER },
+            },
+        });
+        writeJson(join(fleetDir, 'claims', 'cloud.json'), {
+            side: 'cloud',
+            at: NOW - 5_000,
+            resources: ['catherby-sharks', 'catherby-sharks'],
+        });
+        writeJson(join(fleetDir, 'claims', 'local.json'), {
+            side: 'local',
+            at: NOW - 5_000,
+            resources: ['ardougne-knights'],
+        });
+
+        const snapshot = loadWorldSnapshot({
+            root: tempRoot,
+            now: NOW,
+            side: 'local',
+            activitySpotById: new Map([['gather:fishing-shark', 'catherby-sharks']]),
+            activeAccounts: new Map([
+                ['localrunner', { activityId: 'gather:fishing-shark', demandId: 'd:shark', startedAt: NOW - 20_000 }],
+            ]),
+        });
+
+        expect(snapshot.accounts.localrunner?.lifecycle).toBe('running');
+        // Remote claims count (2), local own claims & local running job are NOT double-counted into spotOccupancy.
+        expect(snapshot.spotOccupancy).toEqual({ 'catherby-sharks': 2 });
+    });
 });
