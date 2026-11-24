@@ -111,11 +111,11 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
     if (!stopped('dashboard-publish') && existsSync(join(clone, '.git'))) {
         const pid = existsSync(pubLock) ? Number(readFileSync(pubLock, 'utf8')) : 0;
         if (!pid || !alive(pid)) {
-            const remote = Bun.spawnSync(['git', '-C', clone, 'remote', 'get-url', 'origin'], { stdout: 'pipe', stderr: 'ignore', windowsHide: true }).stdout.toString();
+            const remote = Bun.spawnSync(['git', '-C', clone, 'remote', 'get-url', 'origin'], { stdout: 'pipe', stderr: 'ignore', timeout: 15_000, windowsHide: true }).stdout.toString();
             const repo = publisherRepo(remote);
             if (!repo) log(`publisher not restarted: no GitHub origin in ${clone}`);
             else {
-                const r = Bun.spawnSync([process.execPath, 'packages/dashboard/publish.ts', '--daemon'], { cwd: base, env: { ...process.env, FLEET_COMMAND_REPO: repo }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+                const r = Bun.spawnSync([process.execPath, 'packages/dashboard/publish.ts', '--daemon'], { cwd: base, env: { ...process.env, FLEET_COMMAND_REPO: repo }, stdout: 'pipe', stderr: 'pipe', timeout: 30_000, windowsHide: true });
                 log(`publisher restarted for ${repo} (previous pid=${pid || 'none'}): ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
             }
         }
@@ -130,7 +130,7 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
         if (controllerState(base, c, { now }).state !== 'down') continue;
         const launch = readLaunch(join(base, c.launch));
         if (!launch) continue;
-        const start = restartCommand(c.name, launch);
+        const start = restartCommand(c.name, launch, p => existsSync(resolve(base, p)));
         if (typeof start === 'string') { log(`${c.name} not restarted: ${start}`); continue; }
         const env = { ...process.env, ...launch.env };
         if (deps.restartController) {
@@ -138,7 +138,7 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
             continue;
         }
         if (c.name === 'fleet-agent') {
-            const r = Bun.spawnSync([process.execPath, ...start], { cwd: base, env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+            const r = Bun.spawnSync([process.execPath, ...start], { cwd: base, env, stdout: 'pipe', stderr: 'pipe', timeout: 30_000, windowsHide: true });
             log(`fleet-agent restarted: ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
         } else {
             mkdirSync(join(prac, 'swarm-logs'), { recursive: true });
@@ -149,13 +149,17 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
     }
 
     if ((process.env.FLEET_SIDE || 'local') === 'local' && !stopped('session-recovery')) {
-        if (deps.recover) {
-            await deps.recover();
-        } else {
-            await runStandaloneRecoveryPass({
-                root: base,
-                log: msg => log(`session recovery: ${msg.slice(0, 400)}`),
-            });
+        try {
+            if (deps.recover) {
+                await deps.recover();
+            } else {
+                await runStandaloneRecoveryPass({
+                    root: base,
+                    log: msg => log(`session recovery: ${msg.slice(0, 400)}`),
+                });
+            }
+        } catch (e) {
+            log(`session recovery failed: ${String(e).slice(0, 200)}`);
         }
     }
 

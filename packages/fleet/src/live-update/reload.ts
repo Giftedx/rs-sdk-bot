@@ -44,7 +44,7 @@ export async function runLiveUpdateCli(
         let cache: Record<string, true> = {};
         try { cache = JSON.parse(readFileSync(mergedCache, 'utf8')); } catch { /* none yet */ }
         const merged = (url: string) => {
-            if (cache[url]) return true;
+            if (Object.hasOwn(cache, url) && cache[url]) return true;
             const p = spawnSyncTimed(['gh', 'pr', 'view', url, '--json', 'state', '--jq', '.state'], {
                 cwd: root,
                 env: { ...process.env, GH_PROMPT_DISABLED: '1' },

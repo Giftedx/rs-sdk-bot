@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { HUB_BANKER_LOCATIONS, validateFleetState, type TransferOrder, type WorldSnapshot } from '../../brain/src/contracts';
+import { HUB_BANKER_LOCATIONS, validateFleetState, type ActivityDefinition, type TransferOrder, type WorldSnapshot } from '../../brain/src/contracts';
 import { createActivityCatalog, defaultActivityCatalog, type ActivityCatalog } from '../../brain/src/catalog';
 import { createRateStore } from '../../brain/src/rate-store';
 import { OutcomeClassifier } from '../../brain/src/outcome-classifier';
@@ -557,5 +557,178 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(existsSync(join(cmdDir, 'escaped-receipt.json'))).toBe(false);
         expect(existsSync(join(cmdDir, 'rejected', '001-traversal.json'))).toBe(true);
         expect(existsSync(join(practiceRoot(root), 'stop-AlphaBot'))).toBe(false);
+    });
+
+    test('pause/resume commands preserve empty owner stops, gate dead resumes on clearDead, and write id-keyed rejection receipts', () => {
+        const root = makeTempRoot();
+        const now = 1_700_000_900_000;
+        const cmdDir = operatorCommandsDir(root);
+        mkdirSync(cmdDir, { recursive: true });
+        mkdirSync(liveRoot(root), { recursive: true });
+
+        // Empty stop-AlphaBot in .practice/live/ is a manual owner pause and must not be overwritten.
+        writeFileSync(join(liveRoot(root), 'stop-AlphaBot'), '');
+        writeFileSync(
+            join(cmdDir, '001-pause.json'),
+            JSON.stringify({
+                schemaVersion: 1,
+                id: 'cmd-pause-owner-preserve',
+                issuedAt: now,
+                issuedBy: 'dashboard',
+                kind: 'pause_account',
+                account: 'AlphaBot',
+                reason: 'dashboard operator pause',
+            }),
+        );
+
+        // Seed a death overlay on AlphaBot; resume_account without clearDead must refuse (applied: false) and keep stop file.
+        recordWorkerOutcome({
+            root,
+            now: now - 500,
+            raw: {
+                activityId: 'combat:fire-giant',
+                account: 'AlphaBot',
+                died: true,
+                status: 'fail',
+                reason: 'died',
+            },
+        });
+        writeFileSync(
+            join(cmdDir, '002-resume-no-cleardead.json'),
+            JSON.stringify({
+                schemaVersion: 1,
+                id: 'cmd-resume-dead-refused',
+                issuedAt: now + 1,
+                issuedBy: 'dashboard',
+                kind: 'resume_account',
+                account: 'AlphaBot',
+            }),
+        );
+        // Campaign transition lacking rehearsalProof throws inside applyCommand -> rejected/<cmd.id>.json.
+        writeFileSync(
+            join(cmdDir, '003-bad-campaign.json'),
+            JSON.stringify({
+                schemaVersion: 1,
+                id: 'cmd-invalid-campaign-err',
+                issuedAt: now + 2,
+                issuedBy: 'dashboard',
+                kind: 'set_campaign_state',
+                campaignId: 'campaign:haggis',
+                state: 'running',
+            }),
+        );
+
+        const first = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 10,
+            side: 'local',
+            marketQuotes: {},
+        });
+
+        expect(readFileSync(join(liveRoot(root), 'stop-AlphaBot'), 'utf8')).toBe('');
+        const resumeRefused = first.appliedCommands.find(c => c.id === 'cmd-resume-dead-refused');
+        expect(resumeRefused?.applied).toBe(false);
+        expect(first.fleetState.accounts.alphabot?.lifecycle).toBe('paused_owner');
+        expect(existsSync(join(cmdDir, 'rejected', 'cmd-invalid-campaign-err.json'))).toBe(true);
+
+        // Replaying the rejected command id must be treated as duplicate.
+        writeFileSync(
+            join(cmdDir, '004-replay-rejected.json'),
+            JSON.stringify({
+                schemaVersion: 1,
+                id: 'cmd-invalid-campaign-err',
+                issuedAt: now + 15,
+                issuedBy: 'dashboard',
+                kind: 'set_campaign_state',
+                campaignId: 'campaign:haggis',
+                state: 'running',
+            }),
+        );
+        // resume_account with clearDead: true clears both the death overlay and stop file.
+        writeFileSync(
+            join(cmdDir, '005-resume-cleardead.json'),
+            JSON.stringify({
+                schemaVersion: 1,
+                id: 'cmd-resume-cleardead',
+                issuedAt: now + 20,
+                issuedBy: 'dashboard',
+                kind: 'resume_account',
+                account: 'AlphaBot',
+                clearDead: true,
+            }),
+        );
+
+        const second = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 30,
+            side: 'local',
+            marketQuotes: {},
+        });
+
+        expect(second.appliedCommands.find(c => c.id === 'cmd-invalid-campaign-err')?.duplicate).toBe(true);
+        expect(second.appliedCommands.find(c => c.id === 'cmd-resume-cleardead')?.applied).toBe(true);
+        expect(existsSync(join(liveRoot(root), 'stop-AlphaBot'))).toBe(false);
+        expect(second.fleetState.accounts.alphabot?.lifecycle).toBe('idle');
+    });
+
+    test('overrides cannot promote roles to main, mutate protectedClock roles, or double-book single-account spots', () => {
+        const root = makeTempRoot();
+        writeFileSync(
+            join(root, 'fleet', 'owners.json'),
+            JSON.stringify({
+                accounts: {
+                    haggis: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
+                    AlphaBot: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
+                    BetaBot: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
+                },
+            }, null, 2),
+        );
+        const now = 1_700_001_000_000;
+        const baseAct = defaultActivityCatalog().get('gather:woodcutting-loop')!;
+        const exclusiveAct: ActivityDefinition = {
+            ...baseAct,
+            id: 'gather:exclusive-spot',
+            spotId: 'spot:single',
+            maxConcurrentAccounts: 1,
+        };
+        const singleCatalog: ActivityCatalog = {
+            get: id => (id === exclusiveAct.id ? exclusiveAct : undefined),
+            require: id => {
+                if (id === exclusiveAct.id) return exclusiveAct;
+                throw new Error(`Missing ${id}`);
+            },
+            has: id => id === exclusiveAct.id,
+            list: () => [exclusiveAct],
+            byFamily: f => (exclusiveAct.family === f ? [exclusiveAct] : []),
+            byWorkerKind: k => (exclusiveAct.kind === k ? [exclusiveAct] : []),
+            findByOutputItem: () => [],
+            findBySkill: s => (exclusiveAct.skill?.toLowerCase() === s.toLowerCase() ? [exclusiveAct] : []),
+            findByQuest: () => [],
+            size: () => 1,
+        };
+
+        writeAccountOverrides(root, {
+            haggis: { account: 'haggis', role: 'helper', issuedAt: now - 100, expiresAt: now + 60_000 },
+            alphabot: { account: 'AlphaBot', activityId: exclusiveAct.id, role: 'main', issuedAt: now - 100, expiresAt: now + 60_000 },
+            betabot: { account: 'BetaBot', activityId: exclusiveAct.id, role: 'helper', issuedAt: now - 100, expiresAt: now + 60_000 },
+        }, now);
+
+        const cycle = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now,
+            side: 'local',
+            maxBots: 4,
+            catalog: singleCatalog,
+            marketQuotes: {},
+        });
+
+        expect(cycle.world.accounts.haggis?.role).toBe('main');
+        expect(cycle.world.accounts.alphabot?.role).not.toBe('main');
+        expect(cycle.fleetPlan.spotAllocations['spot:single']?.length ?? 0).toBeLessThanOrEqual(1);
+        const assignedToSpot = Object.values(cycle.fleetPlan.accountPlans).filter(p => p.steps.length > 0);
+        expect(assignedToSpot.length).toBe(1);
     });
 });

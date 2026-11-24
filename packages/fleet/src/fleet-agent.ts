@@ -79,7 +79,11 @@ export function tradeStop(base: string, account: string, now = Date.now()): { he
         if (!swarmWroteStop(text)) return { held: 'owner stop file', cleared };
         let status: any = null;
         for (const dir of statusReadDirs(base)) {
-            try { status = JSON.parse(readFileSync(join(dir, `${account}.json`), 'utf8')); break; } catch { /* check fallback */ }
+            let found = false;
+            for (const fileName of new Set([`${account}.json`, `${account.toLowerCase()}.json`])) {
+                try { status = JSON.parse(readFileSync(join(dir, fileName), 'utf8')); found = true; break; } catch { /* check fallback */ }
+            }
+            if (found) break;
         }
         if (!stopClearable(status, now)) return { held: 'its last run is still ending', cleared };
         if (clearSwarmStop(file)) cleared = true;
@@ -104,7 +108,7 @@ export function syncResult(out: string, exitCode: number | null): string {
 
 const procCmdline = (pid: number): string | undefined => { try { return readFileSync(`/proc/${pid}/cmdline`, 'utf8'); } catch { return undefined; } };
 export function agentAlive(pid: number, cmdline: (pid: number) => string | undefined = procCmdline): boolean {
-    try { process.kill(pid, 0); } catch { return false; }
+    try { process.kill(pid, 0); } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'EPERM') return false; }
     const c = cmdline(pid);
     return c === undefined || c.includes('fleet-agent');
 }
@@ -127,7 +131,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     if (!once) saveLaunch(join(base, controllerNamed('fleet-agent').launch), []);
     const infraBreaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(base), 'infra-circuit-breaker.json') });
     const sync = () => {
-        const p = spawnSyncTimed(['bun', 'scripts/fleet-sync.ts'], {
+        const p = spawnSyncTimed([process.execPath, 'scripts/fleet-sync.ts'], {
             cwd: base,
             windowsHide: true,
             env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
@@ -155,7 +159,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             await Bun.sleep(Math.min(CYCLE, Math.max(5_000, infraGate.waitMs)));
             continue;
         }
-        const update = spawnSyncTimed(['bun', 'packages/fleet/src/live-update.ts'], {
+        const update = spawnSyncTimed([process.execPath, 'packages/fleet/src/live-update.ts'], {
             cwd: base,
             windowsHide: true,
             env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
@@ -169,7 +173,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         if (!/ live-update (?:none|off|paused)/.test(updateLine)) console.log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
         if (!renewLease(lock)) continue;
         if (!once && !marketRefresh && marketStale(base)) {
-            marketRefresh = spawn('bun', [join(base, 'scripts', 'market-cache.ts')], { cwd: base, windowsHide: true, stdio: 'ignore' });
+            marketRefresh = spawn(process.execPath, [join(base, 'scripts', 'market-cache.ts')], { cwd: base, windowsHide: true, stdio: 'ignore' });
             marketRefresh.on('exit', () => { marketRefresh = null; });
             marketRefresh.on('error', () => { marketRefresh = null; });
         }
@@ -190,16 +194,35 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             const stop = tradeStop(base, t.account, now);
             if (stop.cleared) console.log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
             if (stop.held) { console.log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
-            running.add(t.account.toLowerCase());
+            const accountKey = t.account.toLowerCase();
+            running.add(accountKey);
             console.log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
-            const p = Bun.spawn(['bun', TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], { cwd: base, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
-            void (async () => {
-                const out = await new Response(p.stdout).text();
-                const exitCode = await p.exited;
-                if (exitCode !== 0) recordAgentInfraResult(infraBreaker, out, exitCode);
-                console.log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);
-                running.delete(t.account.toLowerCase()); sync();
-            })();
+            try {
+                const p = Bun.spawn([process.execPath, TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], {
+                    cwd: base, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: tradeEnvironment(dir),
+                });
+                void (async () => {
+                    try {
+                        const [out, errOut, exitCode] = await Promise.all([
+                            new Response(p.stdout).text(),
+                            new Response(p.stderr).text(),
+                            p.exited,
+                        ]);
+                        if (errOut) process.stderr.write(errOut);
+                        const combined = `${out}\n${errOut}`;
+                        if (exitCode !== 0) recordAgentInfraResult(infraBreaker, combined, exitCode);
+                        console.log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);
+                    } catch (err) {
+                        console.log(`FLEET_AGENT error ${t.account} ${String(err).slice(0, 160)}`);
+                    } finally {
+                        running.delete(accountKey);
+                        if (renewLease(lock)) sync();
+                    }
+                })();
+            } catch (err) {
+                running.delete(accountKey);
+                console.log(`FLEET_AGENT spawn failed ${t.account}: ${String(err).slice(0, 160)}`);
+            }
         }
         if (once && !running.size) break;
         const soon = orders.some(o => o.end > now && o.start - now < LEAD && [o.from, o.to].some(n => sideOf(n) === mySide()));

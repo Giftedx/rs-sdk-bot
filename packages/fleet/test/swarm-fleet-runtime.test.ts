@@ -194,4 +194,13 @@ describe('fleet runtime live-path, Brain dispatch, reload, and lease fixes', () 
         // Reused PID started after lease.at is not the lease owner.
         expect(recoveryLeaseHeld(lease, now, () => true, () => new Map([[999991, now + 10_000]]))).toBe(false);
     });
+
+    test('readSyncStatuses excludes practice:true rows across status directories', () => {
+        const root = scratch();
+        mkdirSync(liveStatusDir(root), { recursive: true });
+        writeFileSync(join(liveStatusDir(root), 'LiveBot.json'), JSON.stringify({ name: 'LiveBot', server: 'rs-sdk-demo.fly.dev', at: 1000 }));
+        writeFileSync(join(liveStatusDir(root), 'SimBot.json'), JSON.stringify({ name: 'SimBot', server: 'rs-sdk-demo.fly.dev', at: 1000, practice: true }));
+        const rows = readSyncStatuses(root) as { name: string }[];
+        expect(rows.map(r => r.name)).toEqual(['LiveBot']);
+    });
 });
