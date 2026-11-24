@@ -210,3 +210,23 @@ describe('kill receipt pass rules', () => {
     expect(pass('RESULT fail squad accounts=4 kills=3 killReceipts=3 receiptDomain=practice')).toBe(false);
   });
 });
+
+describe('benchCases lazy cache invariants', () => {
+  test('invalidates cached cases when case environment overrides change and returns fresh array copies', () => {
+    const prev = process.env.SPAR_NPC_NEAR;
+    try {
+      delete process.env.SPAR_NPC_NEAR;
+      const a = benchCases();
+      const origLen = a.length;
+      a.pop();
+      expect(benchCases().length).toBe(origLen);
+      expect(byKey('pvp:fight').engineEnv?.SIM_NPC_NEAR).toBe('64');
+
+      process.env.SPAR_NPC_NEAR = '32';
+      expect(byKey('pvp:fight').engineEnv?.SIM_NPC_NEAR).toBe('32');
+    } finally {
+      if (prev === undefined) delete process.env.SPAR_NPC_NEAR;
+      else process.env.SPAR_NPC_NEAR = prev;
+    }
+  });
+});

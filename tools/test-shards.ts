@@ -51,19 +51,41 @@ const WIDE = /^(package\.json|bun\.lock|bunfig\.toml|tsconfig[^/]*\.json|\.gitmo
 // A test with one of these reads a set of files it does not name, so it runs for every change.
 const SCANS = /readdirSync\(|new Glob\(|ls-files|aioCatalog|benchCoverage/;
 
+const RE_REL_IMPORT = /(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g;
+const RE_NEW_URL = /new\s+URL\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*,\s*import\.meta\.url\s*\)/g;
+const RE_QUOTED_PATH = /['"`]((?:\.\/)?(?:scripts|packages|tools|knowledge|docs|research|fleet|patches)\/[\w\-./]+\.(?:tsx?|js|json|md|html|css))['"`]/g;
+const RE_TRACKED_EXT = /\.(tsx?|js|json|md|html|css)$/;
+
+function referencesFromText(file: string, text: string, base: string, exists: (absPath: string) => boolean): string[] {
+    const out = new Set<string>();
+    const fileDir = dirname(file);
+    const add = (path: string) => {
+        const candidates = [path, `${path}.ts`, `${path}.tsx`, join(path, 'index.ts')];
+        for (let i = 0; i < candidates.length; i++) {
+            const candidate = candidates[i]!;
+            if (RE_TRACKED_EXT.test(candidate) && exists(resolve(base, candidate))) {
+                out.add(candidate.replaceAll('\\', '/'));
+                return;
+            }
+        }
+    };
+    if (text.includes('from') || text.includes('import')) {
+        for (const m of text.matchAll(RE_REL_IMPORT)) add(join(fileDir, m[1]!).replaceAll('\\', '/'));
+    }
+    if (text.includes('URL(')) {
+        for (const m of text.matchAll(RE_NEW_URL)) add(join(fileDir, m[1]!).replaceAll('\\', '/'));
+    }
+    if (text.includes('/')) {
+        for (const m of text.matchAll(RE_QUOTED_PATH)) add(m[1]!.replace(/^\.\//, ''));
+    }
+    return [...out];
+}
+
 // The repo files one file can reach in one step: a relative import, or a quoted repo path (a worker that a test
 // starts as a subprocess, a JSON file it reads).
 export function references(file: string, base = root): string[] {
-    const text = readFileSync(resolve(base, file), 'utf8'), out = new Set<string>();
-    const add = (path: string) => {
-        for (const candidate of [path, `${path}.ts`, `${path}.tsx`, join(path, 'index.ts')]) {
-            if (/\.(tsx?|js|json|md|html|css)$/.test(candidate) && existsSync(resolve(base, candidate))) { out.add(candidate.replaceAll('\\', '/')); return; }
-        }
-    };
-    for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g)) add(join(dirname(file), m[1]!).replaceAll('\\', '/'));
-    for (const m of text.matchAll(/new\s+URL\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*,\s*import\.meta\.url\s*\)/g)) add(join(dirname(file), m[1]!).replaceAll('\\', '/'));
-    for (const m of text.matchAll(/['"`]((?:\.\/)?(?:scripts|packages|tools|knowledge|docs|research|fleet|patches)\/[\w\-./]+\.(?:tsx?|js|json|md|html|css))['"`]/g)) add(m[1]!.replace(/^\.\//, ''));
-    return [...out];
+    const text = readFileSync(resolve(base, file), 'utf8');
+    return referencesFromText(file, text, base, existsSync);
 }
 
 // The test files that a change to `changed` can reach: the test changed, it reaches a changed file through
@@ -71,7 +93,31 @@ export function references(file: string, base = root): string[] {
 export function affectedTests(tests: readonly string[], changed: readonly string[], base = root): string[] | null {
     if (changed.some(f => WIDE.test(f))) return null;
     const hit = new Set(changed), steps = new Map<string, string[]>(), reaches = new Map<string, boolean>();
-    const step = (f: string) => { let r = steps.get(f); if (!r) { try { r = references(f, base); } catch { r = []; } steps.set(f, r); } return r; };
+    const textCache = new Map<string, string | null>();
+    const existsCache = new Map<string, boolean>();
+    const readCached = (f: string): string | null => {
+        if (textCache.has(f)) return textCache.get(f)!;
+        let text: string | null = null;
+        try { text = readFileSync(resolve(base, f), 'utf8'); } catch { text = null; }
+        textCache.set(f, text);
+        return text;
+    };
+    const existsCached = (absPath: string): boolean => {
+        const cached = existsCache.get(absPath);
+        if (cached !== undefined) return cached;
+        const yes = existsSync(absPath);
+        existsCache.set(absPath, yes);
+        return yes;
+    };
+    const step = (f: string) => {
+        let r = steps.get(f);
+        if (!r) {
+            const text = readCached(f);
+            r = text === null ? [] : referencesFromText(f, text, base, existsCached);
+            steps.set(f, r);
+        }
+        return r;
+    };
     const reach = (f: string, path: Set<string>): boolean => {
         if (hit.has(f)) return true;
         const known = reaches.get(f);
@@ -83,7 +129,13 @@ export function affectedTests(tests: readonly string[], changed: readonly string
         reaches.set(f, yes);
         return yes;
     };
-    return tests.filter(t => reach(t, new Set()) || SCANS.test(readFileSync(resolve(base, t), 'utf8')));
+    const active = new Set<string>();
+    return tests.filter(t => {
+        if (reach(t, active)) return true;
+        const text = readCached(t);
+        if (text === null) throw new Error(`missing test file ${t}`);
+        return SCANS.test(text);
+    });
 }
 
 // The files `bun test` names in its output, each followed by its failed tests.

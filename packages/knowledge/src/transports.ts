@@ -285,25 +285,47 @@ export function monkLadderSpawn(ctx:TransportContext,constants:{text:string;file
 export function buildTransports(handlers: Handler[], locs: LocSpawn[], locPack: Map<number, string>,configs?:Map<string,{props:Record<string,string[]>;file:string;line:number}>,dynamicSpawns:DynamicTransportSpawn[]=[]): { edges: Edge[]; unmatchedAngles: number } {
     const edges: Edge[] = [];
     const byName = new Map<string, Handler[]>();
+    const neededNames = new Set<string>();
+    let needTableSpawnIndex = false;
     for (const h of handlers) {
+        neededNames.add(h.locName);
         if (h.kind === 'table') {
-            for (const c of h.cases) {
-                const spawn=c.spawn?locs.find(l=>locPack.get(l.id)===h.locName&&l.x===c.from.x&&l.z===c.from.z&&l.level===c.from.level):undefined;
-                if(c.spawn&&!spawn)continue;
-                const src = spawn?.src??`${h.file}:${c.line}`;
-                const absolute='to'in c;
-                const to=absolute?c.to:moved(c.from,c.offset);
-                edges.push({ locName: h.locName, option: h.option, from: c.from, to, exact: absolute?!c.landing:!!c.offset.loc, src, toSrc: `${h.file}:${absolute?c.toLine??c.line:c.offset.line}`, handler: h.handler,...metaOf(c) });
-            }
+            if (h.cases.some(c => c.spawn)) needTableSpawnIndex = true;
             continue;
         }
-        byName.set(h.locName, [...(byName.get(h.locName) ?? []), h]);
+        let list = byName.get(h.locName);
+        if (!list) byName.set(h.locName, list = []);
+        list.push(h);
+    }
+    const placed = (configs || needTableSpawnIndex) ? new Map<string, LocSpawn[]>() : undefined;
+    if (placed) {
+        for (const l of locs) {
+            const name = locPack.get(l.id);
+            if (!name || !neededNames.has(name)) continue;
+            const k = `${l.level},${l.x},${l.z}`;
+            let list = placed.get(k);
+            if (!list) placed.set(k, list = []);
+            list.push(l);
+        }
+    }
+    for (const h of handlers) {
+        if (h.kind !== 'table') continue;
+        for (const c of h.cases) {
+            const spawn = c.spawn ? placed!.get(`${c.from.level},${c.from.x},${c.from.z}`)?.find(l => locPack.get(l.id) === h.locName) : undefined;
+            if (c.spawn && !spawn) continue;
+            const src = spawn?.src ?? `${h.file}:${c.line}`;
+            const absolute = 'to' in c;
+            const to = absolute ? c.to : moved(c.from, c.offset);
+            edges.push({ locName: h.locName, option: h.option, from: c.from, to, exact: absolute ? !c.landing : !!c.offset.loc, src, toSrc: `${h.file}:${absolute ? c.toLine ?? c.line : c.offset.line}`, handler: h.handler, ...metaOf(c) });
+        }
     }
     let unmatchedAngles = 0;
     for (const loc of locs) {
         const name = locPack.get(loc.id);
         if (!name) continue;
-        for (const h of byName.get(name) ?? []) {
+        const list = byName.get(name);
+        if (!list) continue;
+        for (const h of list) {
             const from = { x: loc.x, z: loc.z, level: loc.level };
             if(h.kind==='coordinate'){
                 const branch=h.cases.find(c=>c.from.x===loc.x&&c.from.z===loc.z&&c.from.level===loc.level);
@@ -328,26 +350,31 @@ export function buildTransports(handlers: Handler[], locs: LocSpawn[], locPack: 
             });
         }
     }
-    if(configs){
-        const placed=new Map<string,LocSpawn[]>();for(const l of [...locs,...dynamicSpawns]){const k=`${l.level},${l.x},${l.z}`;placed.set(k,[...placed.get(k)??[],l]);}
+    if(configs && placed){
+        const dynamicSet = new Set<LocSpawn>(dynamicSpawns);
+        for(const l of dynamicSpawns){
+            const k=`${l.level},${l.x},${l.z}`;
+            let list=placed.get(k);
+            if(!list)placed.set(k,list=[]);
+            list.push(l);
+        }
         for(const e of edges){const l=placed.get(`${e.from.level},${e.from.x},${e.from.z}`)?.find(p=>locPack.get(p.id)===e.locName),c=configs.get(e.locName);if(!l||!c){e.unplaced=true;continue;}
             const width=Number(c.props.width?.[0]??1),height=Number(c.props.length?.[0]??1);if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1)continue;
             const force=c.props.forceapproach?.[0],bit=({north:1,east:2,south:4,west:8} as Record<string,number>)[force??''];
             // GameMap.reachedLoc passes raw dimensions/angle/shape. RSMod
             // rotates the rectangle and forceapproach bits internally.
             e.interaction={id:l.id,shape:l.shape,angle:l.angle,width,height,blockAccessFlags:force===undefined?0:15&~(bit??0),src:l.src,configSrc:`${c.file}:${c.line}`};
-            const dynamic=dynamicSpawns.find(d=>d===l);
-            if(dynamic){e.requires={...e.requires,visibleLoc:{id:l.id,x:l.x,z:l.z,level:l.level}};e.requireSrc=dynamic.conditionSrc;e.dynamic={spawnSrc:dynamic.src,activationSrc:dynamic.activationSrc,duration:dynamic.duration};}
-
+            if(dynamicSet.has(l)){const dynamic=l as DynamicTransportSpawn;e.requires={...e.requires,visibleLoc:{id:l.id,x:l.x,z:l.z,level:l.level}};e.requireSrc=dynamic.conditionSrc;e.dynamic={spawnSrc:dynamic.src,activationSrc:dynamic.activationSrc,duration:dynamic.duration};}
         }
     }
     // Legacy script literals share coordinates with newer board-game locs.
     // Resolve only the named source pair, identical operation and destination,
     // and a real placed canonical ID/geometry; preserve the old literal row.
-    for(const e of edges.filter(e=>e.unplaced)){
+    for(const e of edges){
+        if(!e.unplaced)continue;
         const name=({stairs:'board_game_stairs_grey_base',stairstop:'board_game_stairs_grey_top'} as Record<string,string>)[e.locName];
         if(!name)continue;
-        const c=edges.find(c=>c.locName===name&&!c.unplaced&&c.interaction&&c.option===e.option&&c.exact===e.exact&&JSON.stringify(c.from)===JSON.stringify(e.from)&&JSON.stringify(c.to)===JSON.stringify(e.to));
+        const c=edges.find(c=>c.locName===name&&!c.unplaced&&c.interaction&&c.option===e.option&&c.exact===e.exact&&c.from.x===e.from.x&&c.from.z===e.from.z&&c.from.level===e.from.level&&c.to.x===e.to.x&&c.to.z===e.to.z&&c.to.level===e.to.level);
         if(c?.interaction)e.canonical={id:c.interaction.id,locName:c.locName,option:c.option,from:c.from,to:c.to,exact:c.exact,src:c.src,toSrc:c.toSrc,handler:c.handler,interaction:c.interaction,...(c.requires?{requires:c.requires}:{})};
     }
     return { edges, unmatchedAngles };

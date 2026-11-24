@@ -5,12 +5,17 @@ import { join } from 'node:path';
 import { liveRoot, liveStatusDir, practiceRoot } from '../../core/src/practice-paths';
 import { beginSessionAttempt } from '../../core/src/session-lifecycle';
 import { RECOVERY_SCHEMA } from '../../core/src/session-recovery-permit';
+import { WORKER_FAMILIES } from '../../workers/src/contracts';
 import { materializeBrainTransferOrders } from '../src/brain-runtime';
+import { courierCargo, courierDeliveryWaiting } from '../src/courier-admission';
 import { dueTrades } from '../src/fleet-agent';
 import { droppedTradeClaims } from '../src/fleet-sync';
+import { InfraCircuitBreaker } from '../src/infra-circuit-breaker';
+import { importClosure } from '../src/live-update/inspect';
 import { findCurrentNativeRecoveryQualification, runControlledDispatchOne } from '../src/session-recovery';
 import { readAllStatuses } from '../src/swarm';
 import { buildOrderPicker, pickOrder } from '../src/trade-plan';
+import { resolveWorkerModule, UNIFIED_WORKER_MODULES } from '../src/worker-dispatch';
 
 const dirs: string[] = [];
 const scratch = () => {
@@ -198,5 +203,74 @@ describe('fleet perf cache and index invariants', () => {
         } finally {
             clearTimeout(timer);
         }
+    });
+
+    test('UNIFIED_WORKER_MODULES lazy getters preserve family enumeration, identity, and resolveWorkerModule parity', () => {
+        expect(Object.keys(UNIFIED_WORKER_MODULES).sort()).toEqual([...WORKER_FAMILIES].sort());
+        for (const family of WORKER_FAMILIES) {
+            const mod = UNIFIED_WORKER_MODULES[family];
+            expect(mod.family).toBe(family);
+            expect(resolveWorkerModule(family)).toBe(mod);
+        }
+    });
+
+    test('importClosure invalidates immediately on same-second edits and backdated mtime changes', () => {
+        const root = scratch();
+        const entry = join(root, 'entry.ts');
+        const depA = join(root, 'dep-a.ts');
+        const depB = join(root, 'dep-b.ts');
+        writeFileSync(depA, 'export const a = 1;\n', 'utf8');
+        writeFileSync(depB, 'export const b = 2;\n', 'utf8');
+        writeFileSync(entry, "import { a } from './dep-a';\nexport const x = a;\n", 'utf8');
+
+        expect(importClosure(['entry.ts'], root)).toEqual(['dep-a.ts', 'entry.ts']);
+
+        // Same-second overwrite adding a second relative import must invalidate immediately.
+        writeFileSync(entry, "import { a } from './dep-a';\nimport { b } from './dep-b';\nexport const x = a + b;\n", 'utf8');
+        expect(importClosure(['entry.ts'], root)).toEqual(['dep-a.ts', 'dep-b.ts', 'entry.ts']);
+
+        // Backdate > 1s to exercise stat-cached steady state, then update content and mtime.
+        const past = new Date(Date.now() - 10_000);
+        utimesSync(entry, past, past);
+        expect(importClosure(['entry.ts'], root)).toEqual(['dep-a.ts', 'dep-b.ts', 'entry.ts']);
+
+        writeFileSync(entry, "import type { Foo } from './dep-a';\nexport const x: Foo | number = 3;\n", 'utf8');
+        const newerPast = new Date(Date.now() - 5_000);
+        utimesSync(entry, newerPast, newerPast);
+        // Type-only import is erased at runtime and excluded from closure.
+        expect(importClosure(['entry.ts'], root)).toEqual(['entry.ts']);
+    });
+
+    test('courierDeliveryWaiting and courierCargo preserve multi-account job matching and trout separation guards', () => {
+        const now = 1_700_000_000_000;
+        expect(courierCargo([{ id: 333, name: 'Trout', count: 2 }, { id: 334, name: 'Trout', count: 5 }], 2).blocked).toEqual([
+            'Trout: need-bank-separation',
+        ]);
+        expect(courierCargo([{ id: 333, name: 'Trout', count: 4 }, { id: 995, name: 'Coins', count: 500 }], 2)).toEqual({
+            items: [{ name: 'Trout', count: 2 }],
+            blocked: [],
+        });
+
+        const jobs = [
+            { accounts: ['HaulerA', 'HaulerB'], script: 'scripts/aio-logistics.ts', args: ['food-courier'], env: { OUTBOUND_ONLY: '1' } },
+        ];
+        const waiting = courierDeliveryWaiting(
+            ['HaulerB'],
+            undefined,
+            jobs,
+            () => ({ name: 'HaulerB', at: now - 1000, server: 'rs-sdk-demo.fly.dev', inventory: [{ id: 379, name: 'Lobster', count: 10 }] }),
+            now,
+        );
+        expect(waiting).toBe(false);
+    });
+
+    test('InfraCircuitBreaker.snapshot returns an isolated deep copy of all fault buckets', () => {
+        const breaker = new InfraCircuitBreaker({ now: () => 1_700_000_000_000, random: () => 0.5 });
+        breaker.recordFailure('ERR_PROXY_CONNECTION_FAILED', 'proxy');
+        const snap = breaker.snapshot();
+        snap.faults.proxy.consecutiveFailures = 999;
+        snap.faults.proxy.lastError = 'mutated';
+        expect(breaker.snapshot().faults.proxy.consecutiveFailures).toBe(1);
+        expect(breaker.snapshot().faults.proxy.lastError).toBe('ERR_PROXY_CONNECTION_FAILED');
     });
 });

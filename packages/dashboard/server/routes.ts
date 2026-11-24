@@ -20,14 +20,41 @@ const ISO = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedde
 // DASH_VIEWER_ROOT names another rs-world folder (build/ and caches/), for a server whose pin differs from the build in root.
 const viewerRoot=resolve(process.env.DASH_VIEWER_ROOT??join(root,'vendor','rs-world')),viewerBuild=join(viewerRoot,'build'),viewerCaches=join(viewerRoot,'caches');
 const VIEWER_ISO={...ISO,'Cross-Origin-Embedder-Policy':'require-corp','Cross-Origin-Resource-Policy':'same-origin'};
+const SHELL_ASSETS = new Set(['/map-shell.css', '/map-shell.js', '/client-shell.css', '/client-shell.js', '/client-viewer.css', '/operations.css', '/operations.js', '/xp-tracker.js']);
+const LOOPBACK_ONLY_ROUTES = new Set(['/api/reveal', '/api/hidden-names', '/api/death-recap']);
+
+let manifestCache: { mtimeMs: number; size: number; valid: boolean; entry: { main: string; css: string } | null } | null = null;
 function viewerAvailable() {
     try {
-        const text=readFileSync(join(viewerBuild,'asset-manifest.json'),'utf8');
-        if(createHash('sha256').update(text).digest('hex').toUpperCase()!==VIEWER_MANIFEST_SHA256)return false;
-        const entry=viewerEntry(text);
-        return existsSync(join(viewerBuild,'index.html'))&&existsSync(join(viewerCaches,'caches.json'))
-            &&[entry.main,entry.css].every(p=>existsSync(join(viewerBuild,p.slice(1))));
-    }catch{return false;}
+        const manifestPath = join(viewerBuild, 'asset-manifest.json');
+        const st = statSync(manifestPath);
+        let parsed = manifestCache;
+        if (!parsed || parsed.mtimeMs !== st.mtimeMs || parsed.size !== st.size) {
+            const text = readFileSync(manifestPath, 'utf8');
+            const valid = createHash('sha256').update(text).digest('hex').toUpperCase() === VIEWER_MANIFEST_SHA256;
+            const entry = valid ? viewerEntry(text) : null;
+            parsed = { mtimeMs: st.mtimeMs, size: st.size, valid, entry };
+            manifestCache = parsed;
+        }
+        if (!parsed.valid || !parsed.entry) return false;
+        return existsSync(join(viewerBuild, 'index.html')) && existsSync(join(viewerCaches, 'caches.json'))
+            && existsSync(join(viewerBuild, parsed.entry.main.slice(1))) && existsSync(join(viewerBuild, parsed.entry.css.slice(1)));
+    } catch { return false; }
+}
+let viewerIndexCache: { mtimeMs: number; size: number; standard: string; client: string } | null = null;
+function viewerIndexHtml(clientMode: boolean): string {
+    const indexPath = join(viewerBuild, 'index.html');
+    const st = statSync(indexPath);
+    if (!viewerIndexCache || viewerIndexCache.mtimeMs !== st.mtimeMs || viewerIndexCache.size !== st.size) {
+        const base = readFileSync(indexPath, 'utf8').replace(/<script\s+src="\/coi-serviceworker\.js"><\/script>/, '');
+        viewerIndexCache = {
+            mtimeMs: st.mtimeMs,
+            size: st.size,
+            standard: base.replace('<head>', '<head><script src="/api/viewer-bridge.js"></script>'),
+            client: base.replace('<head>', '<head><script src="/api/viewer-bridge.js"></script><link rel="stylesheet" href="/client-viewer.css">'),
+        };
+    }
+    return clientMode ? viewerIndexCache.client : viewerIndexCache.standard;
 }
 function viewerAsset(pathname:string):Response|null {
     const route=viewerAssetRoute(pathname);
@@ -46,7 +73,7 @@ export function createFetchHandler() {
         const url = new URL(req.url);
         if(url.pathname==='/api/control')return operatorControl(req,server.requestIP(req)?.address??'').then(async response=>new Response((await response.text()).replace(SECRET_RE,SECRET_MARK),{status:response.status,headers:response.headers}));
         if(url.pathname==='/RUNELITE-LICENSE.txt')return new Response(Bun.file(join(dashboardDir,'RUNELITE-LICENSE.txt')),{headers:{'content-type':'text/plain;charset=utf-8'}});
-        if(['/map-shell.css','/map-shell.js','/client-shell.css','/client-shell.js','/client-viewer.css','/operations.css','/operations.js','/xp-tracker.js'].includes(url.pathname))return new Response(Bun.file(join(dashboardDir,url.pathname.slice(1))),{headers:{'content-type':url.pathname.endsWith('.css')?'text/css':'text/javascript','cache-control':'no-store'}});
+        if(SHELL_ASSETS.has(url.pathname))return new Response(Bun.file(join(dashboardDir,url.pathname.slice(1))),{headers:{'content-type':url.pathname.endsWith('.css')?'text/css':'text/javascript','cache-control':'no-store'}});
         if(url.pathname.startsWith('/client-assets/')) {
             const name=url.pathname.slice('/client-assets/'.length);
             if(!['npc-names.json','item-stats.json','item-list.json','resources.json','multiway.json','skill-actions.json','pk-kits.json','agility.json','npc-spawns.json','npc-hunt.json','map-icons.json','item-sources.json','npc-drops.json','item-bonuses.json','spellbook.json','quest-rewards.json','item-alch.json','cooking.json','quest-reqs.json','thieving.json','gather-chance.json','runecraft.json','npc-defence.json','npc-loot.json','weapon-speed.json'].includes(name)&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
@@ -70,9 +97,7 @@ export function createFetchHandler() {
             if(!viewerAvailable())return new Response('3D viewer assets unavailable',{status:503});
             // Native isolation headers replace this root-scoped service worker;
             // the viewer must not install a worker over the dashboard itself.
-            const html=readFileSync(join(viewerBuild,'index.html'),'utf8').replace(/<script\s+src="\/coi-serviceworker\.js"><\/script>/,'')
-                .replace('<head>','<head><script src="/api/viewer-bridge.js"></script>'+(url.searchParams.get('client')==='1'?'<link rel="stylesheet" href="/client-viewer.css">':''));
-            return new Response(html,{headers:{...VIEWER_ISO,'content-type':'text/html;charset=utf-8','cache-control':'no-store'}});
+            return new Response(viewerIndexHtml(url.searchParams.get('client')==='1'),{headers:{...VIEWER_ISO,'content-type':'text/html;charset=utf-8','cache-control':'no-store'}});
         }
         const asset=viewerAsset(url.pathname);if(asset)return asset;
         // The page relays the 3D viewer's follow-change timings (time until the destination is loaded).
@@ -88,7 +113,7 @@ export function createFetchHandler() {
         // never holds the name: the iframe URL carries only this endpoint.
         // Our live accounts, for the viewer's gold nameplates (the main account stays hidden, not highlighted).
         if (url.pathname === '/api/our-names') return Response.json([...new Set([...liveAccounts(), ...remoteNames()])].filter(n => n.toLowerCase() !== MAIN.toLowerCase()), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
-        if (['/api/reveal', '/api/hidden-names', '/api/death-recap'].includes(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
+        if (LOOPBACK_ONLY_ROUTES.has(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
         // Death recap: the newest death in the account's tick records, read when the page asks, kept for 30 s.
         if (url.pathname === '/api/death-recap') {
             const name = url.searchParams.get('name') ?? '';

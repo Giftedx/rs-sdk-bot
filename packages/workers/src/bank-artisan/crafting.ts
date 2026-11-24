@@ -13,7 +13,7 @@ import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { abortable, executionContext } from '../../../../vendor/rs-sdk/sdk/execution-context';
 import type { BotWorldState } from '../../../../vendor/rs-sdk/sdk/types';
-import { CONTENT_DIR } from './catalog';
+import { CONTENT_DIR, packMap } from './catalog';
 import { cookingRecipes, runCookingBatch } from './cooking';
 import {
     inventoryRecipes,
@@ -485,27 +485,8 @@ export const spinMain = (
 
 // ---- Furnace Jewellery (microbot-b-jewellery.ts) ----
 
-let itemIdsCache: Map<string, number> | undefined;
-function objNameMap(): Map<string, number> {
-    if (itemIdsCache) return itemIdsCache;
-    const text = readFileSync(join(CONTENT_DIR, 'pack/obj.pack'), 'utf8');
-    itemIdsCache = new Map();
-    let pos = 0;
-    while (pos < text.length) {
-        let end = text.indexOf('\n', pos);
-        if (end < 0) end = text.length;
-        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
-        const eq = text.indexOf('=', pos);
-        if (eq > pos && eq < lineEnd) {
-            const id = Number(text.slice(pos, eq));
-            if (Number.isInteger(id) && id >= 0) itemIdsCache.set(text.slice(eq + 1, lineEnd), id);
-        }
-        pos = end + 1;
-    }
-    return itemIdsCache;
-}
 const objIdByName = (name: string) => {
-    const n = objNameMap().get(name);
+    const n = packMap('obj').get(name);
     if (n === undefined) throw Error('unknown native jewellery item ' + name);
     return n;
 };

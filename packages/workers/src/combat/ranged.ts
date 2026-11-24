@@ -13,7 +13,10 @@ import { holdSessionEater, startQuestSustain } from '../../../core/src/sustain';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { expandPath, goTo, sessionWalker, walkPath, walkRoute, type PathPoint } from '../../../core/src/walk';
 import { routeFares, type Account } from '../../../core/src/world';
-import { buyWithBudget, orderPaths, runOwnedItem, type ItemRequest } from '../market';
+import { buyWithBudget } from '../market/shop-buy';
+import { orderPaths } from '../market/ge-common';
+import { runOwnedItem } from '../market/ge-buy';
+import type { ItemRequest } from '../market/types';
 import { ARROWS, BOWS, LOWE_ARROWS, MIN_TRIP_ARROWS, bestBow, chooseArrow, gearById, usableArrows } from './gear';
 import { TROOPER_SITE, runGiants } from './melee-gather';
 import {

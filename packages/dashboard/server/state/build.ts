@@ -25,6 +25,14 @@ import { died, fleetDiagnostics, nativeProofs, newestDeath, newestRes, resultPro
 import { events, flows, phaseSince, practiceNames, rate, readStatuses, spark } from './statuses';
 import { alerts, fleetSides, foodChain, roleView, vaultTrend } from './views';
 
+const GEAR_TARGETS_VIEW = GEAR_TARGETS.map(t => ({
+    slot: t.slot,
+    ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])],
+    name: OBJS.get(t.id)?.name ?? null,
+    need: t.need,
+    source: t.source,
+}));
+
 /** Computes per-item GP values across visible prices using projected name-based prices. */
 function visibleItemValues(
     visiblePrices: (PriceIdentity | string)[],
@@ -179,27 +187,57 @@ function buildState() {
     if (!vaultTrend.length || now - vaultTrend[vaultTrend.length - 1]!.at > 60_000) { vaultTrend.push({ at: now, value: Math.round(v.value), coins: v.coins }); if (vaultTrend.length > 240) vaultTrend.shift(); }
     const farmers = (bots as any[]).filter(b => b.role4?.kind === 'gold' && !b.practice);
     const itemPrices = getItemPrices(), pricesAt = getPricesAt();
-    const visiblePrices: (PriceIdentity | string)[] = [...(bots as any[]).flatMap(b => [b.inventory,b.bank,b.equipment,b.flow?.loot,b.flow?.used].flatMap(l => l ?? []).filter(Boolean)),
-        ...(bots as any[]).flatMap(b => (b.ground ?? []).filter((row:any) => Array.isArray(row) && row.length >= 5).map((row:any) => ({id:row[3]}))),
-        ...v.items,...v.log.flatMap(t => t.items),...v.flow.flatMap(f => f.items),...keySupplyIds().map(id => ({id})),...npcLootPrices()];
-    for (const f of flows.values()) for (const m of [f.loot,f.used]) for (const item of m?.values?.() ?? []) visiblePrices.push(item);
+    const visiblePrices: (PriceIdentity | string)[] = [];
+    const pushList = (list: any[] | null | undefined) => {
+        if (!Array.isArray(list)) return;
+        for (let i = 0; i < list.length; i++) {
+            const it = list[i];
+            if (it) visiblePrices.push(it);
+        }
+    };
+    for (let bi = 0; bi < bots.length; bi++) {
+        const b = bots[bi] as any;
+        pushList(b.inventory);
+        pushList(b.bank);
+        pushList(b.equipment);
+        pushList(b.flow?.loot);
+        pushList(b.flow?.used);
+        const ground = b.ground;
+        if (Array.isArray(ground)) {
+            for (let gi = 0; gi < ground.length; gi++) {
+                const row = ground[gi];
+                if (Array.isArray(row) && row.length >= 5) visiblePrices.push({ id: row[3] });
+            }
+        }
+    }
+    for (let i = 0; i < v.items.length; i++) visiblePrices.push(v.items[i]!);
+    for (let i = 0; i < v.log.length; i++) pushList(v.log[i]!.items);
+    for (let i = 0; i < v.flow.length; i++) pushList(v.flow[i]!.items);
+    const supplyIds = keySupplyIds();
+    for (let i = 0; i < supplyIds.length; i++) visiblePrices.push({ id: supplyIds[i]! });
+    const lootPriceItems = npcLootPrices();
+    for (let i = 0; i < lootPriceItems.length; i++) visiblePrices.push(lootPriceItems[i]!);
+    for (const f of flows.values()) {
+        if (f.loot) for (const item of f.loot.values()) visiblePrices.push(item);
+        if (f.used) for (const item of f.used.values()) visiblePrices.push(item);
+    }
     const projectedPrices = projectItemPrices(itemPrices,visiblePrices);
     const economy = {
         goldPerTick: farmers.reduce((n, b) => n + (b.fresh && b.role4.coinsPerTick > 0 ? b.role4.coinsPerTick : 0), 0),
         farmers: farmers.map(b => ({ name: b.name, fresh: b.fresh, ...b.role4 })),
         trend: vaultTrend.map(t => t.value),
-        supplies: keySupplyIds().map(id => ({ id, ...(marketById.get(id) ?? { name: '?', ask: null, bid: null, stock: 0, vwap: null, base: null }) })).filter(x => x.name !== '?'),
+        supplies: supplyIds.map(id => ({ id, ...(marketById.get(id) ?? { name: '?', ask: null, bid: null, stock: 0, vwap: null, base: null }) })).filter(x => x.name !== '?'),
         pricesAt,
         itemPricesById: projectedPrices.byId,
         itemPricesByName: projectedPrices.byName,
         // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
         // else the shop base price), for the page's item prices and bank value.
         // The game's examine text of each held item (obj configs), for the page's Examine option.
-        ...projectItemExamine(itemExamines,(bots as any[]).flatMap(b=>[b.inventory,b.bank,b.equipment].flatMap(l=>l??[]).filter(Boolean))),
+        ...projectItemExamine(itemExamines, bots.flatMap(b => [...(b.inventory ?? []), ...(b.equipment ?? []), ...(b.bank ?? [])])),
         // Also the items of the Loot and Supplies lists (flow.ts), which stay after the fleet holds none of them.
         itemValues: visibleItemValues(visiblePrices, projectedPrices.byName),
         // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
-        gearTargets: GEAR_TARGETS.map(t => ({ slot: t.slot, ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])], name: OBJS.get(t.id)?.name ?? null, need: t.need, source: t.source })),
+        gearTargets: GEAR_TARGETS_VIEW,
     };
     const prac = practiceNames();
     const sys = {

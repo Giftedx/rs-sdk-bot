@@ -465,14 +465,28 @@ export function drainOperatorCommands(opts: {
     return results;
 }
 
+const catalogSpotMapCache = new WeakMap<ActivityCatalog, Map<string, string>>();
+function spotMapForCatalog(catalog: ActivityCatalog): Map<string, string> {
+    let hit = catalogSpotMapCache.get(catalog);
+    if (!hit) {
+        hit = new Map<string, string>();
+        for (const act of catalog.list()) {
+            if (act.spotId) hit.set(act.id, act.spotId);
+        }
+        catalogSpotMapCache.set(catalog, hit);
+    }
+    return hit;
+}
+
 function loadConfirmedLogoutProofs(diagnostics: WorldSnapshotDiagnostics): Map<string, LogoutProof> {
     const out = new Map<string, LogoutProof>();
     const world = diagnostics.snapshot;
+    const existingLcRoots = diagnostics.readRoots.lifecycleRoots.filter((r) => existsSync(r));
+    if (existingLcRoots.length === 0) return out;
     for (const acct of Object.values(world.accounts)) {
         if (acct.side !== world.side || acct.lifecycle !== 'idle') continue;
         if (diagnostics.accounts[acct.name.toLowerCase()]?.logoutState !== 'confirmed') continue;
-        for (const lcRoot of diagnostics.readRoots.lifecycleRoots) {
-            if (!existsSync(lcRoot)) continue;
+        for (const lcRoot of existingLcRoots) {
             const proof = readLogoutProof(acct.name, world.server, { root: lcRoot });
             if (proof.state === 'confirmed') {
                 out.set(acct.name.toLowerCase(), proof);
@@ -719,10 +733,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
 
     const knowledgeRoot = existsSync(join(root, 'knowledge', 'items.json')) ? root : repoRoot;
     const catalog = opts.catalog ?? defaultActivityCatalog(knowledgeRoot);
-    const activitySpotById = new Map<string, string>();
-    for (const act of catalog.list()) {
-        if (act.spotId) activitySpotById.set(act.id, act.spotId);
-    }
+    const activitySpotById = spotMapForCatalog(catalog);
     const rateStore = opts.rateStore ?? createRateStore({ catalog, root, persist });
     const classifier = opts.classifier ?? new OutcomeClassifier({ rateStore, root, persist });
     const infraBreaker =
@@ -813,10 +824,9 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     }
 
     const dispatchedPlans: Record<string, DispatchedAccountPlan> = {};
-    const activities = catalog.list();
     for (const [acctName, plan] of Object.entries(fleetPlan.accountPlans)) {
         if (plan.steps.length > 0) {
-            dispatchedPlans[acctName] = dispatchAccountPlan(plan, { activities });
+            dispatchedPlans[acctName] = dispatchAccountPlan(plan, { catalog });
         }
     }
 

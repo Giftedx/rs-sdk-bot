@@ -15,7 +15,8 @@ export const COST_RECEIPTS={
 };
 const root='.practice/joined-plan/';
 const count=(s:any,ids:number[])=>[...s.inventory,...s.bank].filter(i=>ids.includes(i.baseId??i.id)).reduce((n,i)=>n+i.count,0);
-const n=(x:number)=>x.toLocaleString('en-US');
+const NF = new Intl.NumberFormat('en-US');
+const n = (x: number) => (Number.isInteger(x) && x > -1000 && x < 1000 ? String(x) : NF.format(x));
 
 // A bounded historical cash reconciliation, not a valuation of opening food stock.
 // Each production gain must agree with BOTH its raw RESULT and account cash delta.

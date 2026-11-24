@@ -905,16 +905,30 @@ export function bankSellerCatalogue() {
     const normal = loadGeItemCatalogue() as NativeItem[];
     const byName = new Map(normal.map(i => [i.debugname, i]));
     bankSellerItems = [...normal];
-    for (const line of readFileSync(new URL('../../../../vendor/rs-sdk/server/content/pack/obj.pack', import.meta.url), 'utf8').split(/\r?\n/)) {
-        const m = line.match(/^(\d+)=cert_(\w+)$/);
-        const base = m && byName.get(m[2]!);
-        if (m && base) bankSellerItems.push({ ...base, id: Number(m[1]), baseId: base.id });
+    const text = readFileSync(new URL('../../../../vendor/rs-sdk/server/content/pack/obj.pack', import.meta.url), 'utf8');
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq + 6 < lineEnd && text.startsWith('cert_', eq + 1)) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) {
+                const base = byName.get(text.slice(eq + 6, lineEnd));
+                if (base) bankSellerItems.push({ ...base, id, baseId: base.id });
+            }
+        }
+        pos = end + 1;
     }
     return bankSellerItems;
 }
 
-const equalAssets = (a: Record<number, number>, b: Record<number, number>) =>
-    [...new Set([...Object.keys(a), ...Object.keys(b)])].every(k => (a[+k] ?? 0) === (b[+k] ?? 0));
+const equalAssets = (a: Record<number, number>, b: Record<number, number>) => {
+    for (const k in a) if ((a[+k] ?? 0) !== (b[+k] ?? 0)) return false;
+    for (const k in b) if (!(k in a) && (b[+k] ?? 0) !== 0) return false;
+    return true;
+};
 
 export function validateBankSeller(r: BankSellerPolicy) {
     if (!r || r.allTradeable !== true || !Array.isArray(r.protect) || r.protect.some(id => !whole(id))

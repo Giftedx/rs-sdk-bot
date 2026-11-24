@@ -8,7 +8,7 @@ import {planProgressiveSkiller} from '../aio-skiller';
 import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
-import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
+import {KITS, kitItems as rawKitItems, kitSkills as rawKitSkills, kitVarps as rawKitVarps, levelsBeforeRoute as rawLevelsBeforeRoute, overBuild} from '../pk-kits';
 import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode, type CloneName } from '../../packages/workers/src/pvp/pk-gang-clone';
 import {carrierAltar, type CarrierAltarName} from '../../packages/workers/src/runecraft';
 import type { BenchCase } from './bench-case-types';
@@ -24,6 +24,43 @@ import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-pro
 import {ATTACK_SPECIALIST_KIT} from '../../packages/workers/src/logistics';
 
 export type { BenchCase };
+
+const kitItemsCache = new Map<string, ReturnType<typeof rawKitItems>>();
+const kitItems = (kit: string): ReturnType<typeof rawKitItems> => {
+  let tpl = kitItemsCache.get(kit);
+  if (!tpl) { tpl = rawKitItems(kit); kitItemsCache.set(kit, tpl); }
+  return {
+    equipment: tpl.equipment.map(e => ({...e})),
+    inventory: tpl.inventory.map(i => ({...i})),
+  };
+};
+const kitSkillsCache = new Map<string, ReturnType<typeof rawKitSkills>>();
+const kitSkills = (kit: string): ReturnType<typeof rawKitSkills> => {
+  let tpl = kitSkillsCache.get(kit);
+  if (!tpl) { tpl = rawKitSkills(kit); kitSkillsCache.set(kit, tpl); }
+  return {...tpl};
+};
+const kitVarpsCache = new Map<string, ReturnType<typeof rawKitVarps>>();
+const kitVarps = (kit: string): ReturnType<typeof rawKitVarps> => {
+  let tpl = kitVarpsCache.get(kit);
+  if (!tpl) { tpl = rawKitVarps(kit); kitVarpsCache.set(kit, tpl); }
+  return {...tpl};
+};
+const levelsBeforeRouteCache = new Map<string, ReturnType<typeof rawLevelsBeforeRoute>>();
+const levelsBeforeRoute = (kit: string): ReturnType<typeof rawLevelsBeforeRoute> => {
+  let tpl = levelsBeforeRouteCache.get(kit);
+  if (!tpl) { tpl = rawLevelsBeforeRoute(kit); levelsBeforeRouteCache.set(kit, tpl); }
+  return {...tpl};
+};
+
+const CASE_ENV_KEYS = [
+  'ARMY_PROFILE', 'ARMY_OPTS', 'OPEN_TOGETHER', 'VOLLEY', 'VOLLEY_TICKS', 'FREEZE_STAGGER', 'FREEZE_SHARE',
+  'BURST_HOLD', 'OPEN_FREEZE', 'OPEN_RANGE', 'OPEN_TICKS', 'LEADER_SPEC', 'STUN_SHARE', 'LEADER_CAP',
+  'TARGET_PROFILE', 'TARGET_OPTS', 'TARGET_SIGHT', 'TARGET_SIGHT_DELAY', 'ARMY_TRACE', 'FOLLOW_TARGET',
+  'PACE', 'OPEN_ON_RUN', 'SPAR_NPC_NEAR', 'HUNTER_KIT', 'TARGET_STRONG', 'ARMY_AT', 'TARGET_KIT',
+  'ARMY_SPEARS', 'ROAM_PROFILE', 'LOOT', 'LOOT_MIN', 'BANK_AT',
+] as const;
+const caseEnvSignature = () => CASE_ENV_KEYS.map(k => `${k}=${process.env[k] ?? ''}`).join('\0');
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
 // True when the worker's result line lists every id in its worn gear (`worn=[...]`, scripts/gather-combat.ts).
@@ -192,7 +229,7 @@ export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
 // One spar for each pair of kits, all at once at the mirror spot: `matchups` is side A's kit and side B's kit.
 // A spar needs no npc far from its players: the engine of a spar case gives a turn only to an npc within about 64
 // tiles of a player (patches/rs-sdk.md, item 10).
-const SPAR_ENGINE = {SIM_NPC_NEAR: process.env.SPAR_NPC_NEAR ?? '64'};
+let SPAR_ENGINE = {SIM_NPC_NEAR: process.env.SPAR_NPC_NEAR ?? '64'};
 // A tile at Wilderness level 1 north of Edgeville, and the bank of an account that fights there: sharks, the four
 // boosts, antipoison and steel arrows for six trips.
 export const GANG_EDGE = {x: 3087, z: 3522};
@@ -422,6 +459,7 @@ const skiller = (skill: string, method: string, preset: string, args: string[] =
 
 // Early Dragon Slayer uses the route's combat level floors after Monkey Madness. These twelve native quest
 // varps supply exactly 32 QP; the rune chainbody is wearable before Dragon Slayer, unlike the rune platebody.
+function buildRouteCases(): BenchCase[] {
 const EARLY_DRAGON_CASE: BenchCase = {
   key: 'extra:dragon-post-mm', script: 'scripts/aio-quester.ts', preset: 'quest_dragon', scriptArgs: ['dragon'],
   pass: earlyDragonPass, timeoutMs: 600_000,
@@ -431,7 +469,7 @@ const EARLY_DRAGON_CASE: BenchCase = {
     equipment: PRESETS.quest_dragon!.equipment!.map(item => item.id === 1127 ? {...item, id: 1113} : item)},
 };
 
-const ROUTE_CASES: BenchCase[] = [
+return [
   skiller('fishing', 'cage', 'gather_fish_catherby', ['cage', '1500'], {output: /totalCaught=(\d+)/}),
   skiller('smithing', 'smelt', 'smelt_bars_alkharid'),
   // Start states and arguments below come from each worker's proof or fleet fixture (the source is named per case).
@@ -1764,6 +1802,7 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
 ];
+}
 
 // Routes that do the same job, each from one start state (research/aio-bench.md, "Routes that do the same job").
 // A route that ends at a unit count shows its speed in its ticks. A route with no unit count ends at a tick cap and
@@ -1776,7 +1815,8 @@ const SAME_MINE = (x: number, z: number): SaveConfig => ({position: {x, z, level
 const VARROCK_EAST = {bank: {x: 3253, z: 3420, level: 0}, site: {x: 3286, z: 3368, level: 0}};
 const sameJob = (name: string, args: string[], presetConfig: SaveConfig, output: RegExp, extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `extra:same-${name}`, script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: args, pass: ok, presetConfig, output, ...extra});
-const SAME_JOB_CASES: BenchCase[] = [
+function buildSameJobCases(): BenchCase[] {
+return [
   // Cook raw trout from the bank at Cooking 70: 250 raw trout banked, an empty pack, the start at the bank of the
   // route. `food` (Catherby range) has no unit count and runs to a cap of 450 ticks. `stock` (Draynor fireplace) and
   // the bank job of the `batch` worker (Catherby range) cook 84, three packs, and end.
@@ -1831,9 +1871,11 @@ const SAME_JOB_CASES: BenchCase[] = [
   // goldfarm_knights) and a bank trip only at 50,000 coins.
   ...(['knights', 'knights-stable'] as const).map(method => sameJob(method, ['thieving', method, 'TICKS=600', 'BANK_AT=50000'], PRESETS.goldfarm_knights!, /coinsGained=(\d+)/)),
 ];
+}
 
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
-const EXTRA_CASES: BenchCase[] = [
+function buildExtraCases(): BenchCase[] {
+return [
   {key:'extra:owned-bank-observation',script:'scripts/measure/catalog-integration-proof.ts',preset:'fresh_lumbridge',scriptArgs:['observer','{save}'],timeoutMs:120_000,
     presetConfig:{position:{x:3085,z:3250,level:0},skills:{Crafting:51,Hitpoints:64},inventory:[],equipment:[],bank:[{id:995,count:100470},{id:1623,count:4}]},
     pass:s=>ok(s)&&s.includes('"mode":"observer"')&&s.includes('bankObserved=1')&&s.includes('"assets":true')&&s.includes('"logout":true')},
@@ -2084,7 +2126,7 @@ const EXTRA_CASES: BenchCase[] = [
       ...(KITS[kit]!.noRoute ? {known: KITS[kit]!.noRoute, scriptArgs: ['magearena', 'MA_MODE=leash']} : {}),
       presetConfig: {...preset, skills: before, ...(KITS[kit]!.noRoute ? {inventory: sharks} : {})}};
   }),
-  ...SAME_JOB_CASES,
+  ...buildSameJobCases(),
   ...SPECIALIST_AGILITY_CASES,
   // From the Varrock West bank to the Ardougne north bank with the 60-coin fare of the two ferries (scripts/walk-to.ts
   // ferryWalk). The wall time of the case and the ms of each WALK_NO_ROUTE line give the plan time.
@@ -2104,6 +2146,7 @@ const EXTRA_CASES: BenchCase[] = [
       return !!result && loggedOutOnce(s) && /\battack=99\b/.test(result) && !/^DEATH\b/m.test(s) && ticks <= 3942;
     }},
 ];
+}
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {
 };
@@ -2159,8 +2202,19 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'market:ge-buy': 'needs a seller on the Grand Exchange, or two runs for the shop fallback',
 };
 
+let cachedEnvSig: string | undefined;
+let cachedRouteCases: BenchCase[] | undefined;
+let cachedExtraCases: BenchCase[] | undefined;
+
 export function benchCases(): BenchCase[] {
-  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES, ...PROGRESSION_BENCH_CASES, ...SPECIALIST_RANGED_CASES, ...SPECIALIST_GATHERING_CASES, ...SPECIALIST_GATHERING_EXTERNAL_CASES, ...SPECIALIST_FAST_SKILLS_CASES, ...SPECIALIST_FAST_SKILLS_EXTERNAL_CASES, ...SPECIALIST_COMBAT_QUESTS_CASES, ...SUPPLY_BENCH_CASES, ...OVERALL_PVP_CASES];
+  const sig = caseEnvSignature();
+  if (sig !== cachedEnvSig || !cachedRouteCases || !cachedExtraCases) {
+    SPAR_ENGINE = {SIM_NPC_NEAR: process.env.SPAR_NPC_NEAR ?? '64'};
+    cachedRouteCases = buildRouteCases();
+    cachedExtraCases = buildExtraCases();
+    cachedEnvSig = sig;
+  }
+  return [...cachedRouteCases, ...questCases(), ...cachedExtraCases, ...PROGRESSION_BENCH_CASES, ...SPECIALIST_RANGED_CASES, ...SPECIALIST_GATHERING_CASES, ...SPECIALIST_GATHERING_EXTERNAL_CASES, ...SPECIALIST_FAST_SKILLS_CASES, ...SPECIALIST_FAST_SKILLS_EXTERNAL_CASES, ...SPECIALIST_COMBAT_QUESTS_CASES, ...SUPPLY_BENCH_CASES, ...OVERALL_PVP_CASES];
 }
 
 export function benchCoverage() {

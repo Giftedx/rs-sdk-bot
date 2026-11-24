@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import ts from 'typescript';
+import type TS from 'typescript';
 import { spawnSyncTimed } from '../../../core/src/proc';
 import { runtimeImports } from '../../../core/src/release-digest';
 
@@ -73,40 +73,96 @@ export const gitHash = (path: string, timeoutMs = LIVE_UPDATE_GIT_TIMEOUT_MS): s
     return p.exitCode === 0 ? p.stdout.toString().trim() : null;
 };
 
-const importParses = new Map<string, { source: string; relative: string[] }>();
+const importParses = new Map<string, { mtimeMs: number; size: number; source: string; relative: string[] }>();
 const IMPORT_PARSE_LIMIT = 2048;
+let lazyTs: typeof TS | undefined;
+function loadTs(): typeof TS {
+    return (lazyTs ??= require('typescript') as typeof TS);
+}
 
-function relativeImports(path: string, bytes: Buffer): readonly string[] {
-    const content = bytes.toString('utf8'), source = createHash('sha256').update(content).digest('hex');
+function relativeImports(path: string, mtimeMs: number, size: number, nowWall: number): readonly string[] {
     const prior = importParses.get(path);
-    if (prior?.source === source) return prior.relative;
+    // Trust (mtimeMs, size) without reading file bytes once mtime is strictly older than 1s;
+    // within 1s verify content sha256 so same-tick file writes invalidate immediately.
+    if (prior && prior.mtimeMs === mtimeMs && prior.size === size && nowWall - mtimeMs > 1000) {
+        return prior.relative;
+    }
+    const content = readFileSync(path, 'utf8');
+    const source = createHash('sha256').update(content).digest('hex');
+    if (prior?.source === source) {
+        if (prior.mtimeMs !== mtimeMs || prior.size !== size) {
+            importParses.set(path, { mtimeMs, size, source, relative: prior.relative });
+        }
+        return prior.relative;
+    }
     const loaded = runtimeImports(path, content);
-    const rels = ts.preProcessFile(content, true, true).importedFiles.map(s => s.fileName).filter(s => s.startsWith('.') && (!loaded || loaded.includes(s)));
+    let rels: string[];
+    if (loaded !== null) {
+        const uniq = new Set<string>();
+        for (const s of loaded) {
+            if (s.startsWith('.')) uniq.add(s);
+        }
+        rels = [...uniq];
+    } else {
+        rels = loadTs().preProcessFile(content, true, true).importedFiles.map(s => s.fileName).filter(s => s.startsWith('.'));
+    }
     if (!prior && importParses.size >= IMPORT_PARSE_LIMIT) importParses.clear();
-    importParses.set(path, { source, relative: rels });
+    importParses.set(path, { mtimeMs, size, source, relative: rels });
     return rels;
+}
+
+function statRegularFile(fullPath: string): { mtimeMs: number; size: number } | null {
+    try {
+        const st = statSync(fullPath);
+        return st.isFile() ? { mtimeMs: st.mtimeMs, size: st.size } : null;
+    } catch {
+        return null;
+    }
 }
 
 // Relative import closure for a list of repository entry files, without depending on packages/router/.
 export function importClosure(starts: readonly string[], base = resolve(import.meta.dir, '../../../..')): string[] {
-    const seen = new Set<string>(), queue = [...starts];
-    const resolved = new Map<string, string | undefined>();
-    const resolveFile = (file: string, spec: string): string | undefined => {
-        const target = relative(resolve(base), resolve(base, dirname(file), spec)).replaceAll('\\', '/');
+    const resolvedBase = resolve(base);
+    const nowWall = Date.now();
+    const seen = new Set<string>();
+    const queue: { file: string; stat?: { mtimeMs: number; size: number } }[] = starts.map(file => ({ file }));
+    const resolved = new Map<string, { file: string; stat: { mtimeMs: number; size: number } } | undefined>();
+    const resolveFile = (file: string, spec: string): { file: string; stat: { mtimeMs: number; size: number } } | undefined => {
+        const target = relative(resolvedBase, resolve(resolvedBase, dirname(file), spec)).replaceAll('\\', '/');
         if (resolved.has(target)) return resolved.get(target);
-        const next = [target, `${target}.ts`, `${target}.tsx`, `${target}/index.ts`].find(c => existsSync(join(base, c)) && !statSync(join(base, c)).isDirectory());
+        const candidates = /\.(?:ts|tsx|js|mjs|cjs|json)$/.test(target)
+            ? [target, `${target}.ts`, `${target}.tsx`, `${target}/index.ts`]
+            : [`${target}.ts`, `${target}/index.ts`, target, `${target}.tsx`];
+        let next: { file: string; stat: { mtimeMs: number; size: number } } | undefined;
+        for (const c of candidates) {
+            const st = statRegularFile(join(resolvedBase, c));
+            if (st) {
+                next = { file: c, stat: st };
+                break;
+            }
+        }
         resolved.set(target, next);
         return next;
     };
     while (queue.length) {
-        const file = queue.pop()!;
-        if (seen.has(file) || !existsSync(join(base, file))) continue;
+        const item = queue.pop()!;
+        const { file } = item;
+        if (seen.has(file)) continue;
+        const full = join(resolvedBase, file);
+        let st = item.stat;
+        if (!st) {
+            try {
+                const s = statSync(full);
+                st = { mtimeMs: s.mtimeMs, size: s.size };
+            } catch {
+                continue;
+            }
+        }
         seen.add(file);
         if (!/\.(?:ts|tsx|js|mjs)$/.test(file)) continue;
-        const bytes = readFileSync(join(base, file));
-        for (const spec of relativeImports(join(base, file), bytes)) {
+        for (const spec of relativeImports(full, st.mtimeMs, st.size, nowWall)) {
             const next = resolveFile(file, spec);
-            if (next && !seen.has(next)) queue.push(next);
+            if (next && !seen.has(next.file)) queue.push(next);
         }
     }
     return [...seen].sort();

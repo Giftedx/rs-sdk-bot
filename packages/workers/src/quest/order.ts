@@ -97,17 +97,27 @@ function varpId(name: string) {
 
 export type QuestSpec = Order & { varpId: number; qpVarpId: number; complete: number; questPoints: number };
 
+let questFactsByVarp: Map<string, { varp: string; complete: number; questPoints: number }> | undefined;
+function questFacts(varp: string) {
+    if (!questFactsByVarp) {
+        const rows = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/quests.json'), 'utf8')) as {
+            varp: string;
+            complete: number;
+            questPoints: number;
+        }[];
+        questFactsByVarp = new Map();
+        for (const q of rows) {
+            if (!questFactsByVarp.has(q.varp)) questFactsByVarp.set(q.varp, q);
+        }
+    }
+    return questFactsByVarp.get(varp);
+}
+
 // Complete value and quest points come from the generated knowledge (count_questpoints), not from the script.
 export function questSpec(key: string): QuestSpec {
     const order = Object.hasOwn(QUEST_ORDERS, key) ? QUEST_ORDERS[key] : undefined;
     if (!order) throw Error(`quest order: unknown quest ${key}; known ${Object.keys(QUEST_ORDERS).join(',')}`);
-    const facts = (
-        JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/quests.json'), 'utf8')) as {
-            varp: string;
-            complete: number;
-            questPoints: number;
-        }[]
-    ).find((q) => q.varp === order.varp);
+    const facts = questFacts(order.varp);
     if (!facts || !Number.isSafeInteger(facts.complete) || !Number.isSafeInteger(facts.questPoints) || facts.questPoints < 1) {
         throw Error(`quest order: no quest facts for ${order.varp}`);
     }

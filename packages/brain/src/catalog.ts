@@ -1,6 +1,6 @@
 // Unified ActivityCatalog covering all 9 worker families, AIO routes, knowledge/skills.json actions, and all 68 quests.
 // Derives baseline XP/item/GP rates and setupTicks from knowledge/ + travel cache with minBatchUnits floors.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { repoRoot } from '../../core/src/practice-paths';
 import { questDefinitions } from '../../core/src/quest-status';
@@ -15,7 +15,7 @@ import {
     type WorkerTile,
 } from '../../workers/src/contracts';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
-import { readJsonStatCached } from './json-cache';
+import { fileStatStamp, readJsonStatCached } from './json-cache';
 import type { CombatSurvivabilityFloor } from './preflight';
 
 const XP_MULTIPLIER = 25;
@@ -629,8 +629,53 @@ const QUEST_MODE_SPECS: readonly { mode: string; script: string; label: string; 
     { mode: 'clue-guardian', script: 'scripts/aio-quester.ts', label: 'Defeat clue scroll wizard guardians', location: HUB_TILES.varrock_west },
 ];
 
+const BASE_CATALOG_CACHE_LIMIT = 8;
+const baseCatalogCache = new Map<string, { stamp: string; catalog: ActivityCatalog }>();
+
+function catalogRootStamp(root: string): { stamp: string; genFiles: string[] | null } {
+    const itemsPath = join(root, 'knowledge', 'items.json');
+    const skillsPath = join(root, 'knowledge', 'skills.json');
+    const ratesPath = join(root, 'knowledge', 'rates.json');
+    const questsPath = join(root, 'knowledge', 'quests.json');
+    const travelPath = join(root, 'packages', 'planner', 'src', 'haggis-travel.json');
+    const genDir = join(root, 'scripts', 'generated');
+    let genStamp = 'missing';
+    let genFiles: string[] | null = null;
+    try {
+        const st = statSync(genDir);
+        genFiles = readdirSync(genDir);
+        genStamp = `${st.mtimeMs}:${genFiles.length}`;
+    } catch { /* absent scripts/generated */ }
+    const stamp = [
+        fileStatStamp(itemsPath),
+        fileStatStamp(skillsPath),
+        fileStatStamp(ratesPath),
+        fileStatStamp(questsPath),
+        fileStatStamp(travelPath),
+        genStamp,
+    ].join('|');
+    return { stamp, genFiles };
+}
+
 export function createActivityCatalog(opts: ActivityCatalogOptions = {}): ActivityCatalog {
     const root = resolve(opts.root ?? repoRoot);
+    const hasOverrides = Boolean(
+        opts.benchPassedIds?.size
+        || opts.liveProvenIds?.size
+        || opts.launchQualifiedIds?.size
+        || opts.extraActivities?.length,
+    );
+    let cacheStamp: string | undefined;
+    let preReadGenFiles: string[] | null | undefined;
+    if (!hasOverrides) {
+        const probe = catalogRootStamp(root);
+        cacheStamp = probe.stamp;
+        preReadGenFiles = probe.genFiles;
+        const hit = baseCatalogCache.get(root);
+        if (hit && hit.stamp === cacheStamp) {
+            return hit.catalog;
+        }
+    }
     const items = safeReadJson<KnowledgeItem[]>(join(root, 'knowledge', 'items.json'), []);
     const skills = safeReadJson<KnowledgeSkillRow[]>(join(root, 'knowledge', 'skills.json'), []);
     const rates = safeReadJson<KnowledgeRateRow[]>(join(root, 'knowledge', 'rates.json'), []);
@@ -924,16 +969,19 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     }
 
     const genDir = join(root, 'scripts', 'generated');
-    if (existsSync(genDir)) {
-        try {
-            for (const f of readdirSync(genDir)) {
-                if (!f.endsWith('.ts') || f.endsWith('.test.ts') || f === 'quest-lib.ts') continue;
-                if (!f.startsWith('quest-') && f !== 'dwarfcannon.ts' && f !== 'waterfall.ts') continue;
-                const slug = f.replace(/^quest-/, '').replace(/\.ts$/, '');
-                if (slug.endsWith('-owned') || questBySlug.has(slug)) continue;
-                questBySlug.set(slug, { label: slug, qp: 1, xpTotal: 0, skills: [], folder: `quest_${slug}` });
-            }
-        } catch { /* unreadable scripts/generated */ }
+    const genFiles = preReadGenFiles !== undefined
+        ? preReadGenFiles
+        : existsSync(genDir)
+            ? (() => { try { return readdirSync(genDir); } catch { return null; } })()
+            : null;
+    if (genFiles) {
+        for (const f of genFiles) {
+            if (!f.endsWith('.ts') || f.endsWith('.test.ts') || f === 'quest-lib.ts') continue;
+            if (!f.startsWith('quest-') && f !== 'dwarfcannon.ts' && f !== 'waterfall.ts') continue;
+            const slug = f.replace(/^quest-/, '').replace(/\.ts$/, '');
+            if (slug.endsWith('-owned') || questBySlug.has(slug)) continue;
+            questBySlug.set(slug, { label: slug, qp: 1, xpTotal: 0, skills: [], folder: `quest_${slug}` });
+        }
     }
 
     const EXTRA_QUEST_SKILLS: Readonly<Record<string, Readonly<Record<string, number>>>> = {
@@ -1144,7 +1192,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
 
     const sortedAll = [...activities.values()].sort((a, b) => a.id.localeCompare(b.id));
 
-    return {
+    const catalog: ActivityCatalog = {
         get: (id) => activities.get(id),
         require: (id) => {
             const act = activities.get(id);
@@ -1189,15 +1237,19 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         },
         size: () => activities.size,
     };
+
+    if (!hasOverrides && cacheStamp !== undefined) {
+        if (baseCatalogCache.size >= BASE_CATALOG_CACHE_LIMIT) {
+            const oldestKey = baseCatalogCache.keys().next().value;
+            if (oldestKey !== undefined) baseCatalogCache.delete(oldestKey);
+        }
+        baseCatalogCache.set(root, { stamp: cacheStamp, catalog });
+    }
+    return catalog;
 }
 
-let cachedDefaultCatalog: { root: string; catalog: ActivityCatalog } | null = null;
 export function defaultActivityCatalog(root = repoRoot): ActivityCatalog {
-    const resolved = resolve(root);
-    if (!cachedDefaultCatalog || cachedDefaultCatalog.root !== resolved) {
-        cachedDefaultCatalog = { root: resolved, catalog: createActivityCatalog({ root: resolved }) };
-    }
-    return cachedDefaultCatalog.catalog;
+    return createActivityCatalog({ root: resolve(root) });
 }
 
 export { TRUST_TIER_RANK };

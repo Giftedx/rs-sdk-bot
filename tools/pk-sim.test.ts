@@ -1,4 +1,7 @@
 import { expect, test } from 'bun:test';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { foodHeal, itemBonuses, league, series, simulate, SPECIAL } from './pk-sim';
 import { styleOfName } from '../scripts/pk';
 
@@ -56,4 +59,20 @@ test('a build fights at its own levels: Defence 45 loses to Defence 99 in the sa
 
 test('the special bar of the simulator is the content numbers', () => {
     expect(SPECIAL).toEqual({ max: 1000, regenAmount: 100, regenInterval: 50, cost: 250 });
+});
+
+test('itemBonuses isolates caches by root path and simulate stays deterministic under prediction/armour options', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pk-sim-root-'));
+    try {
+        writeFileSync(join(dir, 'custom.obj'), '[fixture_blade]\nparam=slashattack,77\nparam=attackrate,4\n');
+        const custom = itemBonuses(dir);
+        expect(custom.get('fixture_blade')?.slash).toBe(77);
+        expect(custom.get('fixture_blade')?.rate).toBe(4);
+        expect(itemBonuses().has('fixture_blade')).toBe(false);
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+    const f1 = simulate('tribrid-pots', 'zerker', { predictPrayer: true, styleByArmour: true }, { mixStyles: true, castArmour: 'keep' }, 42);
+    const f2 = simulate('tribrid-pots', 'zerker', { predictPrayer: true, styleByArmour: true }, { mixStyles: true, castArmour: 'keep' }, 42);
+    expect(f1).toEqual(f2);
 });

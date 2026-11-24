@@ -24,7 +24,7 @@ const valid=(t:Tile)=>[t.x,t.z,t.level].every(Number.isSafeInteger)&&t.x>=0&&t.x
 
 // Parse literals without importing entry scripts, including scripts with unguarded top-level gameplay.
 export function fixedTiles(text:string,file:string):AuditTarget[]{
- const source=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true),out:AuditTarget[]=[];
+ const source=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,false),out:AuditTarget[]=[];
  const literal=(n:ts.Node|undefined):number|undefined=>n&&ts.isNumericLiteral(n)?Number(n.text):undefined;
  const add=(x:number|undefined,z:number|undefined,level=0,pos=0)=>{
   if(x===undefined||z===undefined)return;
@@ -32,22 +32,33 @@ export function fixedTiles(text:string,file:string):AuditTarget[]{
  };
  const visit=(n:ts.Node)=>{
   if(ts.isObjectLiteralExpression(n)){
-   const fields=new Map(n.properties.filter(ts.isPropertyAssignment).map(p=>[p.name.getText(source),p.initializer]));
-   add(literal(fields.get('x')),literal(fields.get('z')),literal(fields.get('level'))??0,n.pos);
-  }
-  if(ts.isArrayLiteralExpression(n)&&(n.elements.length===2||n.elements.length===3)){
+   let x:number|undefined,z:number|undefined,level:number|undefined;
+   for(const p of n.properties){
+    if(!ts.isPropertyAssignment(p))continue;
+    const name=ts.isIdentifier(p.name)?p.name.text:p.name.getText(source);
+    if(name==='x')x=literal(p.initializer);
+    else if(name==='z')z=literal(p.initializer);
+    else if(name==='level')level=literal(p.initializer);
+   }
+   if(x!==undefined&&z!==undefined)add(x,z,level??0,n.pos);
+  }else if(ts.isArrayLiteralExpression(n)&&(n.elements.length===2||n.elements.length===3)){
    const x=literal(n.elements[0]),z=literal(n.elements[1]),level=n.elements.length===3?literal(n.elements[2]):0;
    if(x!==undefined&&z!==undefined&&x>=1024&&z>=1024&&level!==undefined)add(x,z,level,n.pos);
+  }else if(ts.isCallExpression(n)&&ts.isIdentifier(n.expression)){
+   const fn=n.expression.text;
+   if(fn==='walk'||fn==='go'||fn==='walkTo')add(literal(n.arguments[0]),literal(n.arguments[1]),0,n.pos);
   }
-  if(ts.isCallExpression(n)&&/^(walk|go|walkTo)$/.test(n.expression.getText(source)))
-   add(literal(n.arguments[0]),literal(n.arguments[1]),0,n.pos);
   ts.forEachChild(n,visit);
  };
  visit(source);
  // Spawn alternatives documented beside configurable coordinates are literal targets too.
- const scanner=ts.createScanner(ts.ScriptTarget.Latest,false,ts.LanguageVariant.Standard,text);
- for(let token=scanner.scan();token!==ts.SyntaxKind.EndOfFileToken;token=scanner.scan())if(token===ts.SyntaxKind.SingleLineCommentTrivia||token===ts.SyntaxKind.MultiLineCommentTrivia){
-  const comment=scanner.getTokenText();for(const m of comment.matchAll(/\b(\d{4,5})\s*,\s*(\d{4,5})\b/g))add(Number(m[1]),Number(m[2]),0,scanner.getTokenPos());
+ if(text.includes('//')||text.includes('/*')){
+  const scanner=ts.createScanner(ts.ScriptTarget.Latest,false,ts.LanguageVariant.Standard,text);
+  for(let token=scanner.scan();token!==ts.SyntaxKind.EndOfFileToken;token=scanner.scan())if(token===ts.SyntaxKind.SingleLineCommentTrivia||token===ts.SyntaxKind.MultiLineCommentTrivia){
+   const comment=scanner.getTokenText();
+   if(!comment.includes(','))continue;
+   for(const m of comment.matchAll(/\b(\d{4,5})\s*,\s*(\d{4,5})\b/g))add(Number(m[1]),Number(m[2]),0,scanner.getTokenPos());
+  }
  }
  return out;
 }
@@ -61,9 +72,17 @@ export function auditStarts(base=root):Record<string,Tile>{
 const WORLD_SITE_KINDS=new Set(['bank','shop','agility-course','rc-ruins','rc-altar','anvil','furnace','spinning-wheel','tanner','range']);
 export function auditTargets(base=root):AuditTarget[]{
  const targets=new Map<string,AuditTarget>();
+ const sourceSets=new Map<string,Set<string>>();
  const add=(t:Tile,source:string)=>{
   if(!valid(t))throw Error('invalid target '+source);
-  const k=key(t),row=targets.get(k);if(row){if(!row.sources.includes(source))row.sources.push(source);}else targets.set(k,{x:t.x,z:t.z,level:t.level,sources:[source]});
+  const k=key(t),row=targets.get(k);
+  if(row){
+   const set=sourceSets.get(k)!;
+   if(!set.has(source)){set.add(source);row.sources.push(source);}
+  }else{
+   targets.set(k,{x:t.x,z:t.z,level:t.level,sources:[source]});
+   sourceSets.set(k,new Set([source]));
+  }
  };
  for(const [name,p]of Object.entries(PRESETS))if(p.position)add({...p.position,level:p.position.level??0},'preset:'+name);
  for(const sellers of shopSellers().values())for(const s of sellers)for(const t of s.spawns)add(t,`seller:${s.shop}:${s.npc}`);
@@ -98,10 +117,11 @@ if(import.meta.main){
  writeFileSync(join(output,'manifest.json'),JSON.stringify({profiles:AUDIT_PROFILES,starts,targets,total},null,2)+'\n');
  if(process.argv.includes('--list')){console.log(JSON.stringify({targets:targets.length,starts:Object.keys(starts).length,total}));process.exit(0);}
  await loadPathfinding();const path=await rsPathLength(),world=createWorld({pathLength:path,goalTolerance:0});
- const explain=(from:Tile,to:Tile,a:Account)=>{
+ const hunters=loadHunters();
+ const explain=(from:Tile,to:Tile,a:Account,blockedDoors:readonly Tile[])=>{
   const reasons=[`no route under account policy; area labels ${path.areaOf?.(from)} -> ${path.areaOf?.(to)}`];
-  for(const h of loadHunters())if(deadlyTo(h,a.skills)&&h.spawns.some(s=>s.level===to.level&&Math.max(Math.abs(s.x-to.x),Math.abs(s.z-to.z))<=h.reach+1))reasons.push('target danger rule: '+h.name);
-  for(const d of world.blockedDoors(a))if(d.level===to.level&&Math.max(Math.abs(d.x-to.x),Math.abs(d.z-to.z))<=4)reasons.push(`nearby blocked door ${d.x},${d.z},${d.level}`);
+  for(const h of hunters)if(deadlyTo(h,a.skills)&&h.spawns.some(s=>s.level===to.level&&Math.max(Math.abs(s.x-to.x),Math.abs(s.z-to.z))<=h.reach+1))reasons.push('target danger rule: '+h.name);
+  for(const d of blockedDoors)if(d.level===to.level&&Math.max(Math.abs(d.x-to.x),Math.abs(d.z-to.z))<=4)reasons.push(`nearby blocked door ${d.x},${d.z},${d.level}`);
   return reasons;
  };
  const pf=await import('../vendor/rs-sdk/sdk/pathfinding'),grid=await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
@@ -152,7 +172,7 @@ if(import.meta.main){
      }finally{grid.changeFloor(target.x,target.z,target.level,true);}
     }
     const fares=areas.flatMap(a=>reached.has(a)?[reached.get(a)!]:[]),reachable=fares.length>0;
-    const cause=reachable?[]:explain(from,target,account);
+    const cause=reachable?[]:explain(from,target,account,blocked);
     if(!reachable){
      cause[0]=`no route under account policy; masked area labels ${rootAreas.join(',')} -> ${areas.join(',')||labels.area(target.level,target.x,target.z)}`;
      const needed=areas.flatMap(a=>unlimited.has(a)?[unlimited.get(a)!]:[]);

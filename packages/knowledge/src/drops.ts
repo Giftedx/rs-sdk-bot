@@ -40,7 +40,14 @@ function parseObj(line: string): { item?: string; table?: string; count?: number
     return { item, count: Number.isFinite(count) ? count : 1 };
 }
 
+function countChar(s: string, code: number): number {
+    let n = 0;
+    for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) === code) n++;
+    return n;
+}
+
 export function parseDrops(text: string, file: string): DropTable[] {
+    if (!text.includes('[ai_queue3,') && !text.includes('[label,')) return [];
     const out: DropTable[] = [];
     const lines = cleanLines(text);
     let cur: DropTable | null = null;
@@ -98,8 +105,8 @@ export function parseDrops(text: string, file: string): DropTable[] {
             if (label) c.uses = label[1];
         }
 
-        const opens = (line.match(/\{/g) ?? []).length;
-        const closes = (line.match(/\}/g) ?? []).length;
+        const opens = countChar(line, 123);
+        const closes = countChar(line, 125);
         depth += opens - closes;
         if (inChain && depth === chainDepth && closes > opens) { inChain = false; slot = null; }
     });
@@ -118,6 +125,7 @@ export interface ProcRow { chance: number; item?: string; table?: string; count:
 
 export function parseDropProcs(text: string, file: string): Map<string, ProcRow[]> {
     const procs = new Map<string, ProcRow[]>();
+    if (!text.includes('[proc,') || !text.includes('namedobj')) return procs;
     const lines = cleanLines(text);
     let name = '';
     let rows: ProcRow[] | null = null;
@@ -141,8 +149,8 @@ export function parseDropProcs(text: string, file: string): Map<string, ProcRow[
         if (!rows || !line) return;
         const out: ProcRow[] = rows;
         const startDepth = depth;
-        const opens = (line.match(/\{/g) ?? []).length;
-        const closes = (line.match(/\}/g) ?? []).length;
+        const opens = countChar(line, 123);
+        const closes = countChar(line, 125);
         depth += opens - closes;
 
         const cond = line.match(/^(?:\}\s*)?(?:else\s+)?if\s*\((.*)\)\s*\{?/);

@@ -190,13 +190,12 @@ function buildRecentReceivedMap(
     return map;
 }
 
-function isPausedMissionDemand(
-    demand: GoalDemand,
-    missions: readonly Mission[],
-): boolean {
-    if (!demand.sourceId) return false;
-    const match = missions.find((m) => m.id === demand.sourceId);
-    return match?.state === 'paused';
+function buildPausedMissionIdSet(missions: readonly Mission[]): ReadonlySet<string> {
+    const out = new Set<string>();
+    for (const m of missions) {
+        if (m.state === 'paused') out.add(m.id);
+    }
+    return out;
 }
 
 function pickHubBanker(
@@ -264,9 +263,12 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     const transferOrderTtlMs = input.transferOrderTtlMs ?? 15 * 60_000;
 
     // Gate out any demands owned by paused missions.
+    const pausedMissionIds = buildPausedMissionIdSet(missions);
     const activeDemands = input.demands.filter(
-        (d) => d.active && d.remaining > 0 && !isPausedMissionDemand(d, missions),
+        (d) => d.active && d.remaining > 0 && (!d.sourceId || !pausedMissionIds.has(d.sourceId)),
     );
+    const demandOrder = new Map<string, number>();
+    for (let i = 0; i < activeDemands.length; i++) demandOrder.set(activeDemands[i]!.id, i);
 
     const activityById = new Map(activities.map((a) => [a.id, a]));
     const spotMaxBySpotId = new Map<string, number>();
@@ -485,7 +487,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     for (const acct of runningAccounts) {
         const job = acct.activeJob;
         const activeAct = job ? activityById.get(job.activityId) : undefined;
-        const activeDem = job ? activeDemands.find((d) => d.id === job.demandId) : undefined;
+        const activeDem = job ? demandById.get(job.demandId) : undefined;
 
         let currentPlan: AccountPlan | null = null;
         if (activeAct && activeDem) {
@@ -613,7 +615,6 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     // 3. Plan idle (and launch-ready reserved) accounts ordered by value/hour descending.
     const initialUnallocated = currentUnallocatedDemands();
     const initialExcludedSpots = currentFullSpots();
-    const initialRemainingByDemand = new Map(remainingByDemand);
     const idleEvaluations = idleAccounts
         .map((acct) => {
             const res = planAccountWithCandidates(acct, {
@@ -684,42 +685,93 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         }
 
         const excludedSpots = currentFullSpots();
-        let reusedPlan: AccountPlan | undefined;
-        if (shrunkNonZeroDemands.size === 0 && excludedSpots.size === initialExcludedSpots.size) {
-            if (initialPlan.steps.length === 0) {
-                reusedPlan = initialPlan;
-            } else {
-                for (let ci = 0; ci < candidates.length; ci++) {
-                    const cand = candidates[ci]!;
-                    if (
-                        cand.demandId
-                        && remainingByDemand.get(cand.demandId) !== initialRemainingByDemand.get(cand.demandId)
-                    ) {
-                        continue;
+        const candidateUsesExcludedSpot = (cand: AccountPlan): boolean => {
+            if (excludedSpots.size === 0) return false;
+            for (const st of cand.steps) {
+                if ('activityId' in st && st.activityId) {
+                    const spot = activityById.get(st.activityId)?.spotId;
+                    if (spot && excludedSpots.has(spot)) return true;
+                }
+            }
+            return false;
+        };
+
+        let plan: AccountPlan | undefined;
+        let availableDemands: GoalDemand[] | undefined;
+        const getAvailableDemands = (): GoalDemand[] => (availableDemands ??= currentUnallocatedDemands());
+
+        if (initialPlan.steps.length === 0 && shrunkNonZeroDemands.size === 0 && excludedSpots.size === initialExcludedSpots.size) {
+            plan = initialPlan;
+        } else if (candidates.length > 0) {
+            let bestUnchanged: AccountPlan | undefined;
+            const dirtyDemandIds = new Set<string>();
+            for (let ci = 0; ci < candidates.length; ci++) {
+                const cand = candidates[ci]!;
+                const did = cand.demandId;
+                if (did) {
+                    const rem = remainingByDemand.get(did) ?? 0;
+                    if (rem <= 0) continue;
+                    if (shrunkNonZeroDemands.has(did)) continue;
+                }
+                if (candidateUsesExcludedSpot(cand) || hasBusyHubDonor(cand)) {
+                    if (did) dirtyDemandIds.add(did);
+                    continue;
+                }
+                bestUnchanged = cand;
+                break;
+            }
+
+            if (bestUnchanged) {
+                const reevalDemands: GoalDemand[] = [];
+                for (const did of shrunkNonZeroDemands) {
+                    const rem = remainingByDemand.get(did) ?? 0;
+                    if (rem <= 0) continue;
+                    const base = demandById.get(did);
+                    if (base) reevalDemands.push(rem === base.remaining ? base : { ...base, remaining: rem });
+                }
+                for (const did of dirtyDemandIds) {
+                    if (shrunkNonZeroDemands.has(did)) continue;
+                    const rem = remainingByDemand.get(did) ?? 0;
+                    if (rem <= 0) continue;
+                    const base = demandById.get(did);
+                    if (base) reevalDemands.push(rem === base.remaining ? base : { ...base, remaining: rem });
+                }
+
+                if (reevalDemands.length === 0) {
+                    plan = bestUnchanged;
+                } else if (reevalDemands.length * 2 < activeDemands.length) {
+                    if (reevalDemands.length > 1) {
+                        reevalDemands.sort((a, b) => (demandOrder.get(a.id) ?? 0) - (demandOrder.get(b.id) ?? 0));
                     }
-                    const candWorkStep = cand.steps.at(-1);
-                    const candWorkAct = candWorkStep?.stepKind === 'work' ? activityById.get(candWorkStep.activityId) : undefined;
-                    if (candWorkAct?.spotId && excludedSpots.has(candWorkAct.spotId)) {
-                        break;
+                    const reevalBest = planAccount(acct, {
+                        ...basePlannerOpts,
+                        demands: reevalDemands,
+                        excludedSpotIds: excludedSpots,
+                        excludedDonorAccounts: busyAccounts,
+                    });
+                    if (reevalBest.steps.length === 0) {
+                        plan = bestUnchanged;
+                    } else if (reevalBest.scorePerHour > bestUnchanged.scorePerHour) {
+                        plan = reevalBest;
+                    } else if (reevalBest.scorePerHour < bestUnchanged.scorePerHour) {
+                        plan = bestUnchanged;
+                    } else {
+                        const reevalIdx = reevalBest.demandId ? (demandOrder.get(reevalBest.demandId) ?? Infinity) : Infinity;
+                        const unchIdx = bestUnchanged.demandId ? (demandOrder.get(bestUnchanged.demandId) ?? Infinity) : Infinity;
+                        plan = reevalIdx < unchIdx ? reevalBest : bestUnchanged;
                     }
-                    if (hasBusyHubDonor(cand)) {
-                        break;
-                    }
-                    reusedPlan = cand;
-                    break;
                 }
             }
         }
 
-        const availableDemands = reusedPlan ? initialUnallocated : currentUnallocatedDemands();
-        let plan = reusedPlan
-            ? reusedPlan
-            : planAccount(acct, {
-                  ...basePlannerOpts,
-                  demands: availableDemands,
-                  excludedSpotIds: excludedSpots,
-                  excludedDonorAccounts: busyAccounts,
-              });
+        if (!plan) {
+            plan = planAccount(acct, {
+                ...basePlannerOpts,
+                demands: getAvailableDemands(),
+                excludedSpotIds: excludedSpots,
+                excludedDonorAccounts: busyAccounts,
+            });
+        }
 
         // Validate and materialize any hub_banker AcquireSteps or GearUpgradePlannedSteps as safe TransferOrders.
         if (plan.steps.length > 0) {
@@ -811,7 +863,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                     // Re-plan forbidding hub_banker transfers when a safe transfer check fails.
                     const replan = planAccount(acct, {
                         ...basePlannerOpts,
-                        demands: availableDemands,
+                        demands: getAvailableDemands(),
                         excludedSpotIds: excludedSpots,
                         excludedDonorAccounts: busyAccounts,
                         excludedAcquireSources: new Set<AcquireSourceKind>(['hub_banker']),

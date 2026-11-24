@@ -14,10 +14,27 @@ export interface StepPrice { step: CairnStep; ours: number | null; plan: number;
 
 // Our ticks for a step are the foreground ticks of its rows plus the walk into each row.
 export function priceSteps(order: Placed[], overallFinish: number, steps: CairnStep[], root: string): StepPrice[] {
+    const orderById = new Map<string, Placed>();
+    for (const p of order) if (!orderById.has(p.id)) orderById.set(p.id, p);
+    const joinedByTarget = new Map<string, CairnStep[]>();
+    for (const s of steps) {
+        if (!s.pricedWith) continue;
+        let list = joinedByTarget.get(s.pricedWith);
+        if (!list) joinedByTarget.set(s.pricedWith, list = []);
+        list.push(s);
+    }
+    const scriptExists = new Map<string, boolean>();
+    const hasScript = (s: string) => {
+        const cached = scriptExists.get(s);
+        if (cached !== undefined) return cached;
+        const ok = existsSync(join(root, s));
+        scriptExists.set(s, ok);
+        return ok;
+    };
     return steps.map(step => {
-        const rows = step.ours.map(id => ({ id, placed: order.find(p => p.id === id) }));
+        const rows = step.ours.map(id => ({ id, placed: orderById.get(id) }));
         const placed = rows.filter(r => r.placed);
-        const joined = steps.filter(s => s.pricedWith === step.id);
+        const joined = joinedByTarget.get(step.id) ?? [];
         return {
             step,
             ours: placed.length ? placed.reduce((n, r) => n + r.placed!.ticks + (r.placed!.travel ?? 0), 0) : null,
@@ -26,7 +43,7 @@ export function priceSteps(order: Placed[], overallFinish: number, steps: CairnS
             joined: joined.map(s => s.id),
             late: placed.filter(r => r.placed!.end > overallFinish).map(r => r.id),
             unplaced: rows.filter(r => !r.placed).map(r => r.id),
-            missingScripts: step.scripts.filter(s => !existsSync(join(root, s))),
+            missingScripts: step.scripts.filter(s => !hasScript(s)),
         };
     });
 }

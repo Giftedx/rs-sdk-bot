@@ -4,9 +4,18 @@
 // client-shell.js renders it.
 (function (global) {
     // The engine stores tenths of XP: levelExperience[i] = floor(acc / 4) * 10, acc += floor(L + 2^(L/10) * 300).
-    const TABLE = (() => { const t = []; let acc = 0; for (let i = 0; i < 99; i++) { const level = i + 1; acc += Math.floor(level + Math.pow(2, level / 10) * 300); t.push(Math.floor(acc / 4)); } return t; })();
+    const VIRTUAL_TABLE = (() => { const t = []; let acc = 0; for (let i = 0; i < 174; i++) { const level = i + 1; acc += Math.floor(level + Math.pow(2, level / 10) * 300); t.push(Math.floor(acc / 4)); } return t; })();
+    const TABLE = VIRTUAL_TABLE.slice(0, 99);
     const xpForLevel = level => level <= 1 ? 0 : TABLE[Math.min(level, 99) - 2];
-    const levelForXp = xp => { for (let i = 97; i >= 0; i--) if (xp >= TABLE[i]) return Math.min(i + 2, 99); return 1; };
+    const levelForXp = xp => {
+        if (!(xp >= TABLE[0])) return 1;
+        let lo = 0, hi = 97;
+        while (lo < hi) {
+            const mid = (lo + hi + 1) >> 1;
+            if (xp >= TABLE[mid]) lo = mid; else hi = mid - 1;
+        }
+        return Math.min(lo + 2, 99);
+    };
     // The baseline for an account session: its skills' XP when the tracker first saw this login (bot.started).
     function baseline(store, bot, now) {
         const have = store[bot.name];
@@ -89,20 +98,43 @@
         return { level, next };
     }
     // Virtual levels (RuneLite's virtual levels): the level this server's XP formula gives past 99. RuneLite stops at 126. This server's curve reaches 126 at 6.5M XP, so the count goes on to the level of the 200M XP cap (175).
-    const virtualLevel = xp => { let acc = 0, level = 1; while (level < 175) { acc += Math.floor(level + Math.pow(2, level / 10) * 300); if (xp < Math.floor(acc / 4)) break; level++; } return level; };
+    const virtualLevel = xp => {
+        if (!(xp >= VIRTUAL_TABLE[0])) return 1;
+        let lo = 0, hi = VIRTUAL_TABLE.length - 1;
+        while (lo < hi) {
+            const mid = (lo + hi + 1) >> 1;
+            if (xp >= VIRTUAL_TABLE[mid]) lo = mid; else hi = mid - 1;
+        }
+        return lo + 2;
+    };
     // Tick efficiency: what each of the last ticks did, from the status `timeline` (one letter a tick, the newest last):
     // x XP, v inventory change, m move, a anim, d dialog, s stun, i idle. Work is XP or an inventory change. Waste is the
     // biggest share that is not work. `idle` is the share of idle ticks, in percent.
     const TICK_KINDS = { x: 'xp', v: 'inventory', m: 'move', a: 'anim', d: 'dialog', s: 'stun', i: 'idle' };
     function efficiency(timeline) {
-        const ticks = String(timeline || '').split('').filter(k => k in TICK_KINDS);
-        if (!ticks.length) return null;
-        const counts = Object.fromEntries(Object.values(TICK_KINDS).map(k => [k, 0]));
-        for (const k of ticks) counts[TICK_KINDS[k]]++;
-        const pct = n => n * 100 / ticks.length;
-        const shares = Object.fromEntries(Object.entries(counts).map(([k, n]) => [k, pct(n)]));
-        const waste = Object.entries(counts).filter(([k]) => k !== 'xp' && k !== 'inventory').sort((a, b) => b[1] - a[1])[0];
-        return { ticks: ticks.length, counts, shares, idle: shares.idle, work: shares.xp + shares.inventory, waste: waste[1] ? { kind: waste[0], share: pct(waste[1]) } : null };
+        const s = String(timeline || '');
+        let xp = 0, inventory = 0, move = 0, anim = 0, dialog = 0, stun = 0, idle = 0, totalTicks = 0;
+        for (let i = 0; i < s.length; i++) {
+            switch (s.charCodeAt(i)) {
+                case 120: xp++; totalTicks++; break; // 'x'
+                case 118: inventory++; totalTicks++; break; // 'v'
+                case 109: move++; totalTicks++; break; // 'm'
+                case 97: anim++; totalTicks++; break; // 'a'
+                case 100: dialog++; totalTicks++; break; // 'd'
+                case 115: stun++; totalTicks++; break; // 's'
+                case 105: idle++; totalTicks++; break; // 'i'
+            }
+        }
+        if (!totalTicks) return null;
+        const scale = 100 / totalTicks;
+        const counts = { xp, inventory, move, anim, dialog, stun, idle };
+        const shares = { xp: xp * scale, inventory: inventory * scale, move: move * scale, anim: anim * scale, dialog: dialog * scale, stun: stun * scale, idle: idle * scale };
+        let wasteKind = 'move', wasteCount = move;
+        if (anim > wasteCount) { wasteKind = 'anim'; wasteCount = anim; }
+        if (dialog > wasteCount) { wasteKind = 'dialog'; wasteCount = dialog; }
+        if (stun > wasteCount) { wasteKind = 'stun'; wasteCount = stun; }
+        if (idle > wasteCount) { wasteKind = 'idle'; wasteCount = idle; }
+        return { ticks: totalTicks, counts, shares, idle: shares.idle, work: shares.xp + shares.inventory, waste: wasteCount ? { kind: wasteKind, share: wasteCount * scale } : null };
     }
     // Rev 289 EHP rates in XP per game tick, calibrated from the planner board benchmarks and
     // research/cooking-board.md across the 19 skills of 2004 rev 289 (never Slayer/Hunter/Farming/Construction).
@@ -112,7 +144,8 @@
         Fishing: 2321.8, Firemaking: 19541.9, Crafting: 66843.2, Smithing: 13139.5, Mining: 97,
         Herblore: 52985.5, Agility: 196, Thieving: 2112.9, Runecraft: 4379.8,
     };
-    const ehpKey = skill => Object.keys(EHP_XP_PER_TICK).find(k => k.toLowerCase() === String(skill || '').trim().toLowerCase()) || null;
+    const EHP_KEYS_BY_LOWER = new Map(Object.keys(EHP_XP_PER_TICK).map(k => [k.toLowerCase(), k]));
+    const ehpKey = skill => EHP_KEYS_BY_LOWER.get(String(skill || '').trim().toLowerCase()) || null;
     function ehpRate(skill, tickMs = 400) {
         const key = ehpKey(skill), ms = Number(tickMs);
         if (!key || !Number.isFinite(ms) || ms <= 0) return null;
@@ -149,76 +182,144 @@
         const secret = String(options.secretName || '⟦MAIN⟧').toLowerCase();
         const query = String(options.query || '').trim().toLowerCase();
         const includePractice = options.includePractice === true;
-        const normName = s => String(s || '').replace(/\s*\(noted\)\s*$/i, '').trim().toLowerCase();
+        const normName = s => {
+            if (typeof s !== 'string') return '';
+            return (s.includes('(') ? s.replace(/\s*\(noted\)\s*$/i, '') : s).trim().toLowerCase();
+        };
         const merged = new Map();
+        const wantIds = new Set();
+        const wantNamesAll = new Set();
+        const wantNamesNoId = new Set();
         for (const raw of supplies || []) {
             const name = String(raw?.item || raw?.name || '').trim();
             const baseCount = Math.max(0, Math.floor(Number(raw?.count ?? raw?.need ?? 0)));
             if (!name || baseCount <= 0) continue;
             const id = Number.isSafeInteger(raw?.itemId) && raw.itemId >= 0 ? raw.itemId : null;
-            const key = id != null ? 'id:' + id : 'name:' + normName(name);
-            const cur = merged.get(key) || { item: name, itemId: id, baseCount: 0, consumer: raw?.consumer || null };
+            const wantName = normName(name);
+            const key = id != null ? 'id:' + id : 'name:' + wantName;
+            const cur = merged.get(key) || { item: name, itemId: id, wantName, baseCount: 0, consumer: raw?.consumer || null };
             cur.baseCount += baseCount;
             if (!cur.consumer && raw?.consumer) cur.consumer = raw.consumer;
             merged.set(key, cur);
+            if (id != null) { wantIds.add(id); wantNamesNoId.add(wantName); }
+            else wantNamesAll.add(wantName);
         }
         const safeAccount = name => String(name || '').toLowerCase() === secret || name === '⟦MAIN⟧' ? 'Main · reserved' : String(name || '');
-        const eligible = (bots || []).filter(b => {
-            if (!b || typeof b !== 'object') return false;
-            if (!includePractice && b.practice) return false;
-            if (b.reserved) return false;
+        const eligible = [];
+        for (const b of bots || []) {
+            if (!b || typeof b !== 'object') continue;
+            if (!includePractice && b.practice) continue;
+            if (b.reserved) continue;
             const low = String(b.name || '').toLowerCase();
-            if (options.includeSecret !== true && (low === secret || b.name === '⟦MAIN⟧')) return false;
-            return true;
-        });
-        const items = [];
-        for (const req of merged.values()) {
-            const need = req.baseCount * batches, wantName = normName(req.item);
-            let bankCount = 0, packCount = 0, wornCount = 0;
-            const owners = new Map();
-            const matches = item => {
-                if (!item || typeof item !== 'object') return false;
-                if (req.itemId != null) {
-                    const iid = Object.hasOwn(item, 'baseId') && Number.isSafeInteger(item.baseId) && item.baseId >= 0 ? item.baseId : item.id;
-                    if (Number.isSafeInteger(iid) && iid >= 0) return iid === req.itemId;
-                }
-                return normName(item.name) === wantName;
-            };
-            const addOwner = (b, count, place) => {
-                if (count <= 0) return;
-                const label = safeAccount(b.name);
-                const row = owners.get(label) || { name: b.name === '⟦MAIN⟧' || String(b.name || '').toLowerCase() === secret ? label : b.name, label, count: 0, bank: 0, pack: 0, worn: 0, bankAt: b.bankAt ?? null };
-                row.count += count;
-                row[place] += count;
-                owners.set(label, row);
-            };
-            const itemCount = it => {
-                if (it.count == null) return 1;
-                const n = Number(it.count);
-                return Number.isFinite(n) && n > 0 ? n : 0;
-            };
-            for (const b of eligible) {
-                for (const it of Array.isArray(b.bank) ? b.bank : []) if (matches(it)) { const c = itemCount(it); bankCount += c; addOwner(b, c, 'bank'); }
-                for (const it of Array.isArray(b.inventory) ? b.inventory : []) if (matches(it)) { const c = itemCount(it); packCount += c; addOwner(b, c, 'pack'); }
-                if (b.equipmentObserved !== false) {
-                    for (const it of Array.isArray(b.equipment) ? b.equipment : []) if (matches(it)) { const c = itemCount(it); wornCount += c; addOwner(b, c, 'worn'); }
+            if (options.includeSecret !== true && (low === secret || b.name === '⟦MAIN⟧')) continue;
+            eligible.push(b);
+        }
+        const byId = new Map();
+        const byNameNoId = new Map();
+        const byNameAll = new Map();
+        const addBucket = (index, key, b, label, rowName, count, place) => {
+            let bucket = index.get(key);
+            if (!bucket) { bucket = { bank: 0, pack: 0, worn: 0, owners: new Map() }; index.set(key, bucket); }
+            bucket[place] += count;
+            let row = bucket.owners.get(label);
+            if (!row) {
+                row = { name: rowName, label, count: 0, bank: 0, pack: 0, worn: 0, bankAt: b.bankAt ?? null };
+                bucket.owners.set(label, row);
+            }
+            row.count += count;
+            row[place] += count;
+        };
+        const recordList = (list, b, label, rowName, place) => {
+            if (!Array.isArray(list)) return;
+            for (let i = 0; i < list.length; i++) {
+                const it = list[i];
+                if (!it || typeof it !== 'object') continue;
+                let count;
+                if (it.count == null) count = 1;
+                else { const n = Number(it.count); count = Number.isFinite(n) && n > 0 ? n : 0; }
+                if (count <= 0) continue;
+                const iid = Object.hasOwn(it, 'baseId') && Number.isSafeInteger(it.baseId) && it.baseId >= 0 ? it.baseId : it.id;
+                const hasValidId = Number.isSafeInteger(iid) && iid >= 0;
+                if (hasValidId) {
+                    if (wantIds.has(iid)) addBucket(byId, iid, b, label, rowName, count, place);
+                    if (wantNamesAll.size) {
+                        const nm = normName(it.name);
+                        if (wantNamesAll.has(nm)) addBucket(byNameAll, nm, b, label, rowName, count, place);
+                    }
+                } else if (wantNamesNoId.size || wantNamesAll.size) {
+                    const nm = normName(it.name);
+                    if (wantNamesNoId.has(nm)) addBucket(byNameNoId, nm, b, label, rowName, count, place);
+                    if (wantNamesAll.has(nm)) addBucket(byNameAll, nm, b, label, rowName, count, place);
                 }
             }
+        };
+        if (merged.size) {
+            for (let bi = 0; bi < eligible.length; bi++) {
+                const b = eligible[bi];
+                const label = safeAccount(b.name);
+                const rowName = b.name === '⟦MAIN⟧' || String(b.name || '').toLowerCase() === secret ? label : b.name;
+                recordList(b.bank, b, label, rowName, 'bank');
+                recordList(b.inventory, b, label, rowName, 'pack');
+                if (b.equipmentObserved !== false) recordList(b.equipment, b, label, rowName, 'worn');
+            }
+        }
+        const items = [];
+        for (const req of merged.values()) {
+            const need = req.baseCount * batches;
+            let bankCount = 0, packCount = 0, wornCount = 0;
+            let ownersList;
+            if (req.itemId != null) {
+                const b1 = byId.get(req.itemId);
+                const b2 = byNameNoId.get(req.wantName);
+                if (b1 && !b2) {
+                    bankCount = b1.bank; packCount = b1.pack; wornCount = b1.worn;
+                    ownersList = [...b1.owners.values()].map(o => ({ ...o }));
+                } else if (!b1 && b2) {
+                    bankCount = b2.bank; packCount = b2.pack; wornCount = b2.worn;
+                    ownersList = [...b2.owners.values()].map(o => ({ ...o }));
+                } else if (b1 && b2) {
+                    bankCount = b1.bank + b2.bank; packCount = b1.pack + b2.pack; wornCount = b1.worn + b2.worn;
+                    const combined = new Map();
+                    for (const [k, o] of b1.owners) combined.set(k, { ...o });
+                    for (const [k, o] of b2.owners) {
+                        const prev = combined.get(k);
+                        if (prev) { prev.count += o.count; prev.bank += o.bank; prev.pack += o.pack; prev.worn += o.worn; }
+                        else combined.set(k, { ...o });
+                    }
+                    ownersList = [...combined.values()];
+                } else {
+                    ownersList = [];
+                }
+            } else {
+                const bAll = byNameAll.get(req.wantName);
+                if (bAll) {
+                    bankCount = bAll.bank; packCount = bAll.pack; wornCount = bAll.worn;
+                    ownersList = [...bAll.owners.values()].map(o => ({ ...o }));
+                } else {
+                    ownersList = [];
+                }
+            }
+            if (ownersList.length > 1) ownersList.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
             const have = bankCount + packCount + wornCount;
             const short = Math.max(0, need - have);
             const pct = need > 0 ? Math.min(100, have * 100 / need) : 100;
             items.push({
                 item: req.item, itemId: req.itemId, consumer: req.consumer, need, have, short, pct,
                 bankCount, packCount, wornCount,
-                owners: [...owners.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+                owners: ownersList,
             });
         }
         items.sort((a, b) => (b.short > 0 ? 1 : 0) - (a.short > 0 ? 1 : 0) || a.pct - b.pct || b.short - a.short || a.item.localeCompare(b.item));
         const filtered = query ? items.filter(it => it.item.toLowerCase().includes(query) || String(it.consumer || '').toLowerCase().includes(query)) : items;
-        const totalNeed = filtered.reduce((n, r) => n + r.need, 0);
-        const totalCappedHave = filtered.reduce((n, r) => n + Math.min(r.need, r.have), 0);
-        const totalShort = filtered.reduce((n, r) => n + r.short, 0);
-        const fulfilledCount = filtered.filter(r => r.short === 0).length;
+        let totalNeed = 0, totalCappedHave = 0, totalShort = 0, totalHave = 0, fulfilledCount = 0;
+        for (let i = 0; i < filtered.length; i++) {
+            const r = filtered[i];
+            totalNeed += r.need;
+            totalHave += r.have;
+            totalCappedHave += r.have < r.need ? r.have : r.need;
+            totalShort += r.short;
+            if (r.short === 0) fulfilledCount++;
+        }
         return {
             batches,
             items: filtered,
@@ -226,7 +327,7 @@
             fulfilledCount,
             shortageCount: filtered.length - fulfilledCount,
             totalNeed,
-            totalHave: filtered.reduce((n, r) => n + r.have, 0),
+            totalHave,
             totalShort,
             completionPct: totalNeed > 0 ? totalCappedHave * 100 / totalNeed : 100,
         };

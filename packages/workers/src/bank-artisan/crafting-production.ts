@@ -8,7 +8,7 @@ import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import type { NearbyLoc } from '../../../../vendor/rs-sdk/sdk/types';
-import { CONTENT_DIR } from './catalog';
+import { CONTENT_DIR, packMap } from './catalog';
 import { cookingRecipes, registerDefaultInventoryBankRunner, type CookRecipe } from './cooking';
 import { productionStopRequested, watchProductionLife } from './runtime';
 import type { ArtisanExternalDeps, Session } from './types';
@@ -53,15 +53,7 @@ let cachedInventoryRecipes: InventoryRecipe[] | undefined;
 export function inventoryRecipes(): InventoryRecipe[] {
     if (cachedInventoryRecipes) return cachedInventoryRecipes;
     const contentRel = 'vendor/rs-sdk/server/content/';
-    const names = new Map(
-        readFileSync(join(CONTENT_DIR, 'pack/obj.pack'), 'utf8')
-            .split(/\r?\n/)
-            .filter(l => l.includes('='))
-            .map(l => {
-                const at = l.indexOf('=');
-                return [l.slice(at + 1), Number(l.slice(0, at))] as const;
-            }),
-    );
+    const names = packMap('obj');
     const id = (name: string) => {
         const value = names.get(name);
         if (value === undefined) throw Error('unknown production item ' + name);
@@ -649,25 +641,26 @@ export function registerDefaultShaftsRunner(fn: (s: Session, o: { cap: number; m
     defaultShaftsRunner = fn;
 }
 
-const equalAssets = (a: Record<number, number>, b: Record<number, number>) =>
-    [...new Set([...Object.keys(a), ...Object.keys(b)])].every(k => (a[+k] ?? 0) === (b[+k] ?? 0));
+const equalAssets = (a: Record<number, number>, b: Record<number, number>) => {
+    for (const k in a) if ((a[+k] ?? 0) !== (b[+k] ?? 0)) return false;
+    for (const k in b) if (!(k in a) && (b[+k] ?? 0) !== 0) return false;
+    return true;
+};
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 let cachedCertificates: Map<number, number> | undefined;
 function certMap(): Map<number, number> {
     if (cachedCertificates) return cachedCertificates;
-    const packed = new Map(
-        readFileSync(join(CONTENT_DIR, 'pack/obj.pack'), 'utf8')
-            .split(/\r?\n/)
-            .flatMap(l => {
-                const m = l.match(/^(\d+)=(\w+)$/);
-                return m ? ([[m[2]!, Number(m[1])] as const]) : [];
-            }),
-    );
-    cachedCertificates = new Map(
-        [...packed].flatMap(([name, id]) => (name.startsWith('cert_') && packed.has(name.slice(5)) ? [[id, packed.get(name.slice(5))!] as const] : [])),
-    );
-    return cachedCertificates;
+    const packed = packMap('obj');
+    const out = new Map<number, number>();
+    for (const [name, id] of packed) {
+        if (name.startsWith('cert_')) {
+            const baseId = packed.get(name.slice(5));
+            if (baseId !== undefined) out.set(id, baseId);
+        }
+    }
+    cachedCertificates = out;
+    return out;
 }
 
 export function validateProgressiveProduction(o: ProgressiveProduction) {

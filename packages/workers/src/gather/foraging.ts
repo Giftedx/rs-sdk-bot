@@ -440,6 +440,24 @@ export async function enterPen(
 
 export const featherRunOk = (gained: number, held: number, target: number): boolean => gained > 0 || held >= target;
 
+let cachedChickenSpawns: { x: number; z: number; level: number }[] | undefined;
+function chickenSpawns(): { x: number; z: number; level: number }[] {
+    if (cachedChickenSpawns) return cachedChickenSpawns;
+    const rows = JSON.parse(readFileSync(resolve(ROOT, 'knowledge/npcs.json'), 'utf8')) as {
+        name: string;
+        spawns?: { x: number; z: number; level: number }[];
+    }[];
+    const out: { x: number; z: number; level: number }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+        const n = rows[i]!;
+        if (n.name === 'Chicken' && n.spawns) {
+            for (let si = 0; si < n.spawns.length; si++) out.push(n.spawns[si]!);
+        }
+    }
+    cachedChickenSpawns = out;
+    return out;
+}
+
 export async function runFeathers(
     s: Session,
     opts: { pen?: string; ticks?: number; target?: number; stop?: () => boolean; deps?: GatherExternalDeps } = {},
@@ -455,12 +473,7 @@ export async function runFeathers(
     const f0 = countItems(s, FEATHER);
     let kills = 0;
     let idle = 0;
-    const spawns = (JSON.parse(readFileSync(resolve(ROOT, 'knowledge/npcs.json'), 'utf8')) as {
-        name: string;
-        spawns?: { x: number; z: number; level: number }[];
-    }[])
-        .filter(n => n.name === 'Chicken')
-        .flatMap(n => n.spawns ?? []);
+    const spawns = chickenSpawns();
     const fault = await enterPen(s, PEN, [...penTiles(PEN, spawns).slice(0, 4), PEN], to =>
         defaultApproach(s, to, () => !!opts.stop?.(), opts.deps),
     );
@@ -473,24 +486,35 @@ export async function runFeathers(
             await waitTicks(s, 1);
             continue;
         }
-        const loot = (st()?.groundItems ?? [])
-            .filter((g: any) => g.distance <= 8 && g.reachable !== false && FEATHER.test(g.name))
-            .sort((a: any, b: any) => a.distance - b.distance)[0];
+        const groundItems: any[] = st()?.groundItems ?? [];
+        let loot: any;
+        for (let i = 0; i < groundItems.length; i++) {
+            const g = groundItems[i]!;
+            if (g.distance <= 8 && g.reachable !== false && FEATHER.test(g.name) && (!loot || g.distance < loot.distance)) {
+                loot = g;
+            }
+        }
         if (loot) {
             const n0 = countItems(s, FEATHER);
             await s.direct({ type: 'pickupItem', x: loot.x, z: loot.z, itemId: loot.id, reason: 'SDK' });
             await waitUntil(s, () => countItems(s, FEATHER) > n0, { timeoutTicks: Math.min(12, loot.distance + 3) });
             continue;
         }
-        const c = (st()?.nearbyNpcs ?? [])
-            .filter(
-                (n: any) =>
-                    CHICKEN.test(n.name)
-                    && n.reachable !== false
-                    && (n.hp ?? 1) > 0
-                    && Math.max(Math.abs(n.x - PEN.x), Math.abs(n.z - PEN.z)) <= 10,
-            )
-            .sort((a: any, b: any) => a.distance - b.distance)[0];
+        const npcs: any[] = st()?.nearbyNpcs ?? [];
+        let c: any;
+        for (let i = 0; i < npcs.length; i++) {
+            const n = npcs[i]!;
+            if (
+                CHICKEN.test(n.name)
+                && n.reachable !== false
+                && (n.hp ?? 1) > 0
+                && Math.abs(n.x - PEN.x) <= 10
+                && Math.abs(n.z - PEN.z) <= 10
+                && (!c || n.distance < c.distance)
+            ) {
+                c = n;
+            }
+        }
         const op = c?.optionsWithIndex?.find((o: any) => /^attack$/i.test(o.text))?.opIndex;
         if (!c || op === undefined) {
             idle++;

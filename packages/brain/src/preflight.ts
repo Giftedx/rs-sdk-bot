@@ -6,6 +6,7 @@ import { offMap as isEntranaTile } from '../../core/src/shop-index';
 import {
     totalAvailableHeal,
 } from '../../core/src/sustain';
+import { xpForLevel } from '../../core/src/xp-curve';
 import type { BankObservation } from '../../core/src/session-types';
 import { routeFares, type Account as WorldAccount, type Tile, type World } from '../../core/src/world';
 import type { Gear, Skill } from '../../knowledge/src/gear';
@@ -240,6 +241,225 @@ export function questCandidateKeys(quest: string): ReadonlySet<string> {
     return keys;
 }
 
+export interface AccountLookupCache {
+    readonly skillLevels: ReadonlyMap<string, number>;
+    readonly skillXps: ReadonlyMap<string, number>;
+    readonly completedQuests: ReadonlySet<string>;
+    readonly startedQuests: ReadonlySet<string>;
+    readonly completedSet: ReadonlySet<string>;
+    readonly questStateByRaw: Map<string, WorkerQuestState>;
+    readonly worldAcctReserves: Readonly<Record<number, number>> | undefined;
+    readonly geEscrow: number;
+    readonly defaultSpendableCoins: ReturnType<typeof availableSpendableCoins>;
+    readonly tileReach: Map<string, TileReachabilityResult>;
+}
+
+export function createAccountLookupCache(
+    acct: WorkerAccountView,
+    world: WorkerWorldView,
+    operatingFloat = DEFAULT_PREFLIGHT_COIN_FLOAT,
+): AccountLookupCache {
+    const skillLevels = new Map<string, number>();
+    const skillXps = new Map<string, number>();
+    for (const [k, stat] of Object.entries(acct.skills)) {
+        const lower = k.trim().toLowerCase();
+        if (Number.isFinite(stat?.level)) {
+            const lvl = Math.max(1, Math.floor(stat.level));
+            if (!skillLevels.has(lower)) skillLevels.set(lower, lvl);
+            if (!skillXps.has(lower)) skillXps.set(lower, stat.xp ?? xpForLevel(stat.level));
+        }
+    }
+
+    const completedQuests = new Set<string>();
+    const startedQuests = new Set<string>();
+    const completedSet = new Set<string>();
+    for (const [key, state] of Object.entries(acct.quests)) {
+        if (state !== 'complete' && state !== 'started') continue;
+        const { norm, collapsed } = normalizeQuestParts(key);
+        const lower = key.toLowerCase();
+        if (state === 'complete') {
+            completedQuests.add(norm);
+            completedQuests.add(collapsed);
+            completedQuests.add(lower);
+            for (const candidate of questCandidateKeys(key)) completedSet.add(candidate);
+            completedSet.add(key);
+            if (norm === 'dragon' || norm === 'dragon slayer') completedSet.add('Dragon Slayer');
+            if (norm === 'zanaris' || norm === 'lost city') completedSet.add('Lost City');
+            if (norm === 'hero' || norm === 'heros quest' || norm === 'heroes quest') completedSet.add("Hero's Quest");
+            if (norm === 'legends' || norm === 'legends quest' || norm === 'the legends quest') completedSet.add('Legends Quest');
+            if (norm === 'viking' || norm === 'fremennik trials' || norm === 'the fremennik trials') completedSet.add('The Fremennik Trials');
+            if (norm === 'regicide') completedSet.add('Regicide');
+        } else {
+            startedQuests.add(norm);
+            startedQuests.add(collapsed);
+            startedQuests.add(lower);
+        }
+    }
+
+    let worldAcctReserves: Readonly<Record<number, number>> | undefined;
+    if (world.reserves) {
+        const lowerName = acct.name.toLowerCase();
+        worldAcctReserves = world.reserves[acct.name] ?? world.reserves[lowerName];
+        if (worldAcctReserves === undefined) {
+            for (const [k, map] of Object.entries(world.reserves)) {
+                if (k.toLowerCase() === lowerName) {
+                    worldAcctReserves = map;
+                    break;
+                }
+            }
+        }
+    }
+
+    const geEscrow = accountGeEscrowCoins(acct, world);
+    const coinsOwned = accountOwnedItemCount(acct, COINS_ITEM_ID, { includeBank: true, requireTrustedBank: true });
+    const coinsRes = Math.max(0, Math.max(acct.reserves?.[COINS_ITEM_ID] ?? 0, worldAcctReserves?.[COINS_ITEM_ID] ?? 0) + (world.globalReserves?.[COINS_ITEM_ID] ?? 0));
+    const safeFloat = Math.max(0, operatingFloat);
+    const defaultSpendableCoins = {
+        owned: coinsOwned,
+        reserved: coinsRes,
+        escrow: geEscrow,
+        float: safeFloat,
+        spendable: availableCoinsAfterReserves(coinsOwned, coinsRes, geEscrow, safeFloat),
+        totalUnreserved: availableCoinsAfterReserves(coinsOwned, coinsRes, geEscrow, 0),
+    };
+
+    return {
+        skillLevels,
+        skillXps,
+        completedQuests,
+        startedQuests,
+        completedSet,
+        questStateByRaw: new Map(),
+        worldAcctReserves,
+        geEscrow,
+        defaultSpendableCoins,
+        tileReach: new Map(),
+    };
+}
+
+export function cachedAccountSkillLevel(
+    acct: WorkerAccountView,
+    skill: string,
+    cache?: AccountLookupCache,
+): number {
+    if (!cache) return accountSkillLevel(acct, skill);
+    const direct = acct.skills[skill];
+    if (direct && Number.isFinite(direct.level)) {
+        return Math.max(1, Math.floor(direct.level));
+    }
+    const lower = skill.trim().toLowerCase();
+    const hit = cache.skillLevels.get(lower);
+    if (hit !== undefined) return hit;
+    return lower === 'hitpoints' ? 10 : 1;
+}
+
+export function cachedAccountSkillXp(
+    acct: WorkerAccountView,
+    skill: string,
+    cache?: AccountLookupCache,
+): number {
+    const direct = acct.skills[skill];
+    if (direct) return direct.xp ?? xpForLevel(direct.level);
+    if (cache) {
+        const lower = skill.trim().toLowerCase();
+        const hit = cache.skillXps.get(lower);
+        if (hit !== undefined) return hit;
+        return xpForLevel(lower === 'hitpoints' ? 10 : 1);
+    }
+    const lower = skill.toLowerCase();
+    for (const [k, v] of Object.entries(acct.skills)) {
+        if (k.toLowerCase() === lower) return v.xp ?? xpForLevel(v.level);
+    }
+    return xpForLevel(accountSkillLevel(acct, skill));
+}
+
+export function cachedAccountQuestState(
+    acct: WorkerAccountView,
+    quest: string,
+    cache?: AccountLookupCache,
+): WorkerQuestState {
+    if (!cache) return accountQuestState(acct, quest);
+    const hit = cache.questStateByRaw.get(quest);
+    if (hit !== undefined) return hit;
+    const direct = acct.quests[quest];
+    if (direct === 'complete') {
+        cache.questStateByRaw.set(quest, 'complete');
+        return 'complete';
+    }
+    let result: WorkerQuestState = direct === 'started' ? 'started' : 'not_started';
+    if (cache.completedQuests.size > 0 || cache.startedQuests.size > 0) {
+        const want = questCandidateKeys(quest);
+        for (const token of want) {
+            if (cache.completedQuests.has(token)) {
+                result = 'complete';
+                break;
+            }
+            if (result !== 'started' && cache.startedQuests.has(token)) {
+                result = 'started';
+            }
+        }
+    }
+    cache.questStateByRaw.set(quest, result);
+    return result;
+}
+
+export function cachedHasCompletedQuest(
+    acct: WorkerAccountView,
+    quest: string,
+    cache?: AccountLookupCache,
+): boolean {
+    return cachedAccountQuestState(acct, quest, cache) === 'complete';
+}
+
+export function cachedEffectiveItemReserve(
+    acct: WorkerAccountView,
+    world: WorkerWorldView,
+    itemId: number,
+    cache?: AccountLookupCache,
+): number {
+    if (!cache) return effectiveItemReserve(acct, world, itemId);
+    const acctRes = acct.reserves?.[itemId] ?? 0;
+    const worldAcctRes = cache.worldAcctReserves?.[itemId] ?? 0;
+    const globalRes = world.globalReserves?.[itemId] ?? 0;
+    return Math.max(0, Math.max(acctRes, worldAcctRes) + globalRes);
+}
+
+export function cachedAvailableSpendableCoins(
+    acct: WorkerAccountView,
+    world: WorkerWorldView,
+    operatingFloat = DEFAULT_PREFLIGHT_COIN_FLOAT,
+    opts: { includeBank?: boolean; requireTrustedBank?: boolean } = {},
+    cache?: AccountLookupCache,
+): ReturnType<typeof availableSpendableCoins> {
+    if (!cache) return availableSpendableCoins(acct, world, operatingFloat, opts);
+    const includeBank = opts.includeBank ?? true;
+    const requireTrustedBank = opts.requireTrustedBank ?? true;
+    const safeFloat = Math.max(0, operatingFloat);
+    if (includeBank && requireTrustedBank) {
+        const base = cache.defaultSpendableCoins;
+        if (safeFloat === base.float) return base;
+        return {
+            owned: base.owned,
+            reserved: base.reserved,
+            escrow: base.escrow,
+            float: safeFloat,
+            spendable: availableCoinsAfterReserves(base.owned, base.reserved, base.escrow, safeFloat),
+            totalUnreserved: base.totalUnreserved,
+        };
+    }
+    const owned = accountOwnedItemCount(acct, COINS_ITEM_ID, opts);
+    const reserved = cache.defaultSpendableCoins.reserved;
+    const escrow = cache.geEscrow;
+    return {
+        owned,
+        reserved,
+        escrow,
+        float: safeFloat,
+        spendable: availableCoinsAfterReserves(owned, reserved, escrow, safeFloat),
+        totalUnreserved: availableCoinsAfterReserves(owned, reserved, escrow, 0),
+    };
+}
+
 export function accountQuestState(acct: WorkerAccountView, quest: string): WorkerQuestState {
     const direct = acct.quests[quest];
     if (direct === 'complete') return 'complete';
@@ -469,9 +689,34 @@ export function evaluateTileReachability(
         ferryFareHint?: number;
         requireSamePlaneWithoutWorld?: boolean;
         allowUnknownPos?: boolean;
+        _acctCache?: AccountLookupCache;
     } = {},
 ): TileReachabilityResult {
-    const coins = opts.spendableCoins ?? availableSpendableCoins(acct, world, 0).totalUnreserved;
+    const cache = opts._acctCache;
+    if (cache && !world.world) {
+        const key = `${target.x}:${target.z}:${target.level}:${opts.ferryFareHint ?? 0}:${opts.allowUnknownPos ? 1 : 0}:${opts.requireSamePlaneWithoutWorld ? 1 : 0}`;
+        const hit = cache.tileReach.get(key);
+        if (hit) return hit;
+        const res = evaluateTileReachabilityUncached(acct, target, world, opts, cache);
+        cache.tileReach.set(key, res);
+        return res;
+    }
+    return evaluateTileReachabilityUncached(acct, target, world, opts, cache);
+}
+
+function evaluateTileReachabilityUncached(
+    acct: WorkerAccountView,
+    target: WorkerTile,
+    world: WorkerWorldView,
+    opts: {
+        spendableCoins?: number;
+        deadlineMs?: number;
+        ferryFareHint?: number;
+        requireSamePlaneWithoutWorld?: boolean;
+        allowUnknownPos?: boolean;
+    },
+    cache?: AccountLookupCache,
+): TileReachabilityResult {
     if (acct.pos === null) {
         if (opts.allowUnknownPos) {
             return { reachable: true, travelCoins: opts.ferryFareHint ?? 0, travelTicks: 60 };
@@ -486,6 +731,7 @@ export function evaluateTileReachability(
     }
 
     if (world.world) {
+        const coins = opts.spendableCoins ?? cachedAvailableSpendableCoins(acct, world, 0, {}, cache).totalUnreserved;
         const wAcct = toWorldAccount(acct, world, coins);
         const deadline = opts.deadlineMs !== undefined ? performance.now() + opts.deadlineMs : undefined;
         const res = world.world.route(acct.pos as Tile, target as Tile, wAcct, deadline ? { deadline } : undefined);
@@ -536,7 +782,7 @@ export function evaluateTileReachability(
 
     if (isInZanarisRegion(target) && !isInZanarisRegion(acct.pos)) {
         const hasDramen = accountOwnedItemCount(acct, DRAMEN_STAFF_ID, { includeBank: true, requireTrustedBank: true }) > 0;
-        if (!hasCompletedQuest(acct, 'Lost City') || !hasDramen) {
+        if (!cachedHasCompletedQuest(acct, 'Lost City', cache) || !hasDramen) {
             return {
                 reachable: false,
                 travelCoins: 0,
@@ -547,7 +793,7 @@ export function evaluateTileReachability(
         }
     }
 
-    if (isInShiloRegion(target) && !isInShiloRegion(acct.pos) && !hasCompletedQuest(acct, 'Shilo Village')) {
+    if (isInShiloRegion(target) && !isInShiloRegion(acct.pos) && !cachedHasCompletedQuest(acct, 'Shilo Village', cache)) {
         return {
             reachable: false,
             travelCoins: 0,
@@ -566,7 +812,7 @@ export function evaluateTileReachability(
     if (isInShiloRegion(target) !== isInShiloRegion(acct.pos)) {
         fare = Math.max(fare, 200);
     }
-    if (isInAlKharidRegion(target) !== isInAlKharidRegion(acct.pos) && !hasCompletedQuest(acct, 'Prince Ali Rescue')) {
+    if (isInAlKharidRegion(target) !== isInAlKharidRegion(acct.pos) && !cachedHasCompletedQuest(acct, 'Prince Ali Rescue', cache)) {
         fare = Math.max(fare, 10);
     }
 
@@ -603,11 +849,12 @@ export function evaluateCombatSurvivability(
     acct: WorkerAccountView,
     floor: CombatSurvivabilityFloor,
     world: WorkerWorldView,
+    _acctCache?: AccountLookupCache,
 ): CombatSurvivabilityBlocker[] {
     const blockers: CombatSurvivabilityBlocker[] = [];
-    const def = accountSkillLevel(acct, 'Defence');
-    const hp = accountSkillLevel(acct, 'Hitpoints');
-    const prayer = accountSkillLevel(acct, 'Prayer');
+    const def = cachedAccountSkillLevel(acct, 'Defence', _acctCache);
+    const hp = cachedAccountSkillLevel(acct, 'Hitpoints', _acctCache);
+    const prayer = cachedAccountSkillLevel(acct, 'Prayer', _acctCache);
 
     if (floor.minDefence !== undefined && def < floor.minDefence) {
         blockers.push({
@@ -688,11 +935,13 @@ export function evaluateCombatSurvivability(
         const foodIds = floor.foodIds ?? STANDARD_FOOD_IDS;
         const rows: { id: number; count: number }[] = [];
         const reservedMap: Record<number, number> = {};
+        let countAvail = 0;
         for (const id of foodIds) {
             const owned = accountOwnedItemCount(acct, id, { includeBank, requireTrustedBank: true });
-            const reserved = effectiveItemReserve(acct, world, id);
+            const reserved = cachedEffectiveItemReserve(acct, world, id, _acctCache);
             if (owned > 0) rows.push({ id, count: owned });
             if (reserved > 0) reservedMap[id] = reserved;
+            countAvail += reserveAdjustedStock(owned, reserved);
         }
         const totalHeal = totalAvailableHeal(rows, foodIds, reservedMap);
         if (floor.minFoodHeal !== undefined && totalHeal < floor.minFoodHeal) {
@@ -705,13 +954,6 @@ export function evaluateCombatSurvivability(
             });
         }
         if (floor.minFoodCount !== undefined) {
-            let countAvail = 0;
-            for (const id of foodIds) {
-                countAvail += availableStockAfterReserves(acct, world, id, {
-                    includeBank,
-                    requireTrustedBank: true,
-                }).available;
-            }
             if (countAvail < floor.minFoodCount) {
                 blockers.push({
                     kind: 'combat_survivability',
@@ -766,6 +1008,7 @@ export function evaluatePreflight(
     acct: WorkerAccountView,
     spec: PreflightSpec,
     world: WorkerWorldView,
+    _acctCache?: AccountLookupCache,
 ): PreflightResult {
     const blockers: PreflightBlocker[] = [];
     const missingItems: PreflightMissingItem[] = [];
@@ -777,7 +1020,7 @@ export function evaluatePreflight(
         });
     }
 
-    if (spec.cooldownKeys) {
+    if (spec.cooldownKeys && (acct.cooldowns || world.marketCooldowns)) {
         for (const key of spec.cooldownKeys) {
             const acctExpiry = acct.cooldowns?.[key];
             const worldExpiry = world.marketCooldowns?.[key];
@@ -818,11 +1061,12 @@ export function evaluatePreflight(
 
     if (spec.trainingSkills && acct.maxLevels) {
         for (const skill of spec.trainingSkills) {
-            const cap = Object.entries(acct.maxLevels).find(
-                ([k]) => k.toLowerCase() === skill.trim().toLowerCase(),
-            )?.[1];
+            const cap = acct.maxLevels[skill]
+                ?? Object.entries(acct.maxLevels).find(
+                    ([k]) => k.toLowerCase() === skill.trim().toLowerCase(),
+                )?.[1];
             if (cap !== undefined) {
-                const current = accountSkillLevel(acct, skill);
+                const current = cachedAccountSkillLevel(acct, skill, _acctCache);
                 if (current >= cap) {
                     blockers.push({
                         kind: 'max_level_cap',
@@ -842,7 +1086,7 @@ export function evaluatePreflight(
                 blockers.push({ kind: 'invalid_config', message: `invalid skill requirement ${skill}=${required}` });
                 continue;
             }
-            const current = accountSkillLevel(acct, skill);
+            const current = cachedAccountSkillLevel(acct, skill, _acctCache);
             if (current < required) {
                 blockers.push({
                     kind: 'skill_level',
@@ -855,10 +1099,10 @@ export function evaluatePreflight(
         }
     }
 
-    if (spec.questRequirements) {
+    if (spec.questRequirements && spec.questRequirements.length > 0) {
         for (const raw of spec.questRequirements) {
             const q = typeof raw === 'string' ? { quest: raw, requiredState: 'complete' as const } : { quest: raw.quest, requiredState: raw.requiredState ?? 'complete' as const };
-            const currentState = accountQuestState(acct, q.quest);
+            const currentState = cachedAccountQuestState(acct, q.quest, _acctCache);
             const satisfied = q.requiredState === 'started'
                 ? currentState === 'started' || currentState === 'complete'
                 : currentState === 'complete';
@@ -874,7 +1118,7 @@ export function evaluatePreflight(
         }
     }
 
-    if (spec.wearableItemIds) {
+    if (spec.wearableItemIds && spec.wearableItemIds.length > 0) {
         for (const itemId of spec.wearableItemIds) {
             const wear = canWearItem(acct, itemId);
             if (!wear.ok) {
@@ -883,7 +1127,7 @@ export function evaluatePreflight(
                         kind: 'skill_level',
                         skill,
                         required: req,
-                        current: accountSkillLevel(acct, skill),
+                        current: cachedAccountSkillLevel(acct, skill, _acctCache),
                         message: `Item ${itemId} requires ${skill} ${req}`,
                     });
                 }
@@ -892,7 +1136,7 @@ export function evaluatePreflight(
                         kind: 'quest_incomplete',
                         quest: wear.missingQuest,
                         requiredState: 'complete',
-                        currentState: accountQuestState(acct, wear.missingQuest),
+                        currentState: cachedAccountQuestState(acct, wear.missingQuest, _acctCache),
                         message: `Item ${itemId} requires quest ${wear.missingQuest}`,
                     });
                 }
@@ -901,7 +1145,7 @@ export function evaluatePreflight(
     }
 
     let coinsRequired = Math.max(0, spec.coinsRequired ?? 0);
-    if (spec.requiredItems) {
+    if (spec.requiredItems && spec.requiredItems.length > 0) {
         for (const req of spec.requiredItems) {
             if (!Number.isSafeInteger(req.itemId) || req.itemId < 0 || !Number.isSafeInteger(req.count) || req.count < 1) {
                 blockers.push({ kind: 'invalid_config', message: `invalid required item ${req.itemId}:${req.count}` });
@@ -911,10 +1155,12 @@ export function evaluatePreflight(
                 coinsRequired = Math.max(coinsRequired, req.count);
                 continue;
             }
-            const { available, reserved } = availableStockAfterReserves(acct, world, req.itemId, {
+            const owned = accountOwnedItemCount(acct, req.itemId, {
                 includeBank: req.includeBank ?? true,
                 requireTrustedBank: req.requireTrustedBank ?? true,
             });
+            const reserved = cachedEffectiveItemReserve(acct, world, req.itemId, _acctCache);
+            const available = reserveAdjustedStock(owned, reserved);
             if (available < req.count) {
                 blockers.push({
                     kind: 'missing_supply',
@@ -935,7 +1181,7 @@ export function evaluatePreflight(
     }
 
     let coinBalance: ReturnType<typeof availableSpendableCoins> | undefined;
-    const getCoinBalance = () => coinBalance ??= availableSpendableCoins(
+    const getCoinBalance = () => coinBalance ??= cachedAvailableSpendableCoins(
         acct,
         world,
         spec.operatingCoinFloat ?? DEFAULT_PREFLIGHT_COIN_FLOAT,
@@ -943,6 +1189,7 @@ export function evaluatePreflight(
             includeBank: spec.includeBankCoins ?? true,
             requireTrustedBank: spec.requireTrustedBankCoins ?? true,
         },
+        _acctCache,
     );
 
     let travelCoins = Math.max(0, spec.ferryFareHint ?? 0);
@@ -955,6 +1202,7 @@ export function evaluatePreflight(
             ferryFareHint: spec.ferryFareHint,
             requireSamePlaneWithoutWorld: spec.requireSamePlaneWithoutWorld,
             allowUnknownPos: spec.allowUnknownPos,
+            _acctCache,
         });
         travelCoins = reach.travelCoins;
         travelTicks = reach.travelTicks;
@@ -1010,7 +1258,7 @@ export function evaluatePreflight(
     }
 
     if (spec.combatSurvivability) {
-        blockers.push(...evaluateCombatSurvivability(acct, spec.combatSurvivability, world));
+        blockers.push(...evaluateCombatSurvivability(acct, spec.combatSurvivability, world, _acctCache));
     }
 
     const extra = {
@@ -1127,7 +1375,7 @@ export function activityPreflightFromConfig(
     },
     world: WorkerWorldView,
     batchUnits = 1,
-    opts?: { readonly protectedAllowed?: boolean },
+    opts?: { readonly protectedAllowed?: boolean; readonly _acctCache?: AccountLookupCache },
 ): PreflightResult {
     const base = extractStaticActivityPreflight(activity);
     let requiredItems: readonly RequiredItemSpec[] = base.staticRequiredItems;
@@ -1159,5 +1407,6 @@ export function activityPreflightFromConfig(
             maxConcurrentAccounts: base.maxConcurrentAccounts,
         },
         world,
+        opts?._acctCache,
     );
 }

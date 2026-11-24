@@ -34,7 +34,10 @@ export interface Gear {
 // Items a script names on a line that checks staffmodlevel: kit for the server's staff, not for players.
 export function parseStaffItems(files: readonly { text: string }[]): Set<string> {
     const out = new Set<string>();
-    for (const { text } of files) for (const line of text.split(/\r?\n/)) if (/staffmodlevel/.test(line)) for (const m of line.matchAll(/=\s*([a-z0-9_]+)\s*\)/g)) out.add(m[1]!);
+    for (const { text } of files) {
+        if (!text.includes('staffmodlevel')) continue;
+        for (const line of text.split(/\r?\n/)) if (line.includes('staffmodlevel')) for (const m of line.matchAll(/=\s*([a-z0-9_]+)\s*\)/g)) out.add(m[1]!);
+    }
     return out;
 }
 

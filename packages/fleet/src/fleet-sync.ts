@@ -142,11 +142,10 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
     const existing = new Set(existingJobs.flatMap(jobAccounts).map(n => n.toLowerCase()));
     const knowledgeRoot = existsSync(join(base, 'knowledge', 'items.json')) ? base : root;
     const catalog = defaultActivityCatalog(knowledgeRoot);
-    const activities = catalog.list();
     const out: any[] = [];
     for (const [acctName, plan] of Object.entries(state.activeChains)) {
         if (existing.has(acctName.toLowerCase()) || !plan.steps.length) continue;
-        const dispatched = dispatchAccountPlan(plan, { activities });
+        const dispatched = dispatchAccountPlan(plan, { catalog });
         const selected = selectBrainDispatchStep(dispatched, plan.steps);
         if (selected.mode !== 'worker') continue;
         const step = selected.step;

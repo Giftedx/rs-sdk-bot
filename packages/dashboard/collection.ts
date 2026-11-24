@@ -21,38 +21,105 @@ export function productionReview(b: any): string[] {
     return warnings;
 }
 export function collectionState(bots: any[], ownedNames: string[], cargo: any[], transfers: any[], now: number) {
-    const owned = new Set(ownedNames.map(n => n.toLowerCase()));
-    const accounts = bots.filter(b => !b.practice && owned.has(b.name.toLowerCase()));
+    const owned = new Set<string>();
+    for (let i = 0; i < ownedNames.length; i++) owned.add(ownedNames[i]!.toLowerCase());
+    const accounts: any[] = [];
+    for (let i = 0; i < bots.length; i++) {
+        const b = bots[i];
+        if (!b.practice && owned.has(b.name.toLowerCase())) accounts.push(b);
+    }
     const items = new Map<string, { name: string; count: number; identified: boolean }>();
     const normalize = (name: string) => {
         const s = String(name);
         return (s.includes('(') ? s.replace(/\s*\(noted\)\s*$/i, '') : s).trim();
     };
-    const knownIds = new Map<string, number>();
-    for (const b of accounts) for (const i of b.bank ?? []) if (i && Number.isInteger(i.baseId ?? i.id)) knownIds.set(normalize(i.name).toLowerCase(), i.baseId ?? i.id);
-    let missingIds = 0;
-    for (const b of accounts) for (const i of b.bank ?? []) {
-        if (!i || !(i.count > 0)) continue;
-        // Name-only snapshots may contain noted aliases. Collapse these for the estimate,
-        // but never call that an exact item-ID count.
-        const name = normalize(i.name);
-        const identified = Number.isInteger(i.baseId ?? i.id);
-        if (!identified) missingIds++;
-        const id = i.baseId ?? i.id ?? knownIds.get(name.toLowerCase());
-        const key = id != null ? `id:${id}` : `name:${name.toLowerCase()}`;
-        const row = items.get(key) ?? { name, count: 0, identified };
-        row.count += i.count;
-        items.set(key, row);
+    let hasNameOnly = false;
+    for (let bi = 0; bi < accounts.length && !hasNameOnly; bi++) {
+        const bank = accounts[bi].bank;
+        if (!Array.isArray(bank)) continue;
+        for (let ii = 0; ii < bank.length; ii++) {
+            const it = bank[ii];
+            if (it && it.count > 0 && !Number.isInteger(it.baseId ?? it.id)) {
+                hasNameOnly = true;
+                break;
+            }
+        }
     }
-    const banks = accounts.map(b => ({ name: b.name, at: b.bankAt ?? null,
-        state: !Array.isArray(b.bank) || !b.bankAt ? 'unknown' : now - b.bankAt > 300_000 ? 'stale' : 'recent',
-        kinds: Array.isArray(b.bank) ? b.bank.filter((i: any) => i?.count > 0).length : null }));
-    const pending = cargo.filter(c => owned.has(String(c.name).toLowerCase()) && Array.isArray(c.items) && c.items.some((i: any) => i.count > 0))
-        .map(c => ({ ...c, stale: !c.at || now - c.at > 300_000 }));
-    const confirmed = transfers.filter(t => owned.has(String(t.from).toLowerCase()) && owned.has(String(t.to).toLowerCase()));
-    return { distinct: items.size, missingIds, banks, items: [...items.values()].sort((a, b) => b.count - a.count), pending,
+    const knownIds = hasNameOnly ? new Map<string, number>() : null;
+    if (knownIds) {
+        for (let bi = 0; bi < accounts.length; bi++) {
+            const bank = accounts[bi].bank;
+            if (!Array.isArray(bank)) continue;
+            for (let ii = 0; ii < bank.length; ii++) {
+                const it = bank[ii];
+                if (!it) continue;
+                const rawId = it.baseId ?? it.id;
+                if (Number.isInteger(rawId)) knownIds.set(normalize(it.name).toLowerCase(), rawId);
+            }
+        }
+    }
+    let missingIds = 0;
+    const banks: { name: string; at: number | null; state: string; kinds: number | null }[] = [];
+    for (let bi = 0; bi < accounts.length; bi++) {
+        const b = accounts[bi];
+        const bank = b.bank;
+        const isArr = Array.isArray(bank);
+        let kinds = 0;
+        if (isArr) {
+            for (let ii = 0; ii < bank.length; ii++) {
+                const it = bank[ii];
+                if (!it || !(it.count > 0)) continue;
+                kinds++;
+                // Name-only snapshots may contain noted aliases. Collapse these for the estimate,
+                // but never call that an exact item-ID count.
+                const rawId = it.baseId ?? it.id;
+                const identified = Number.isInteger(rawId);
+                let name = '';
+                let key = '';
+                if (identified) {
+                    key = `id:${rawId}`;
+                    if (!items.has(key)) name = normalize(it.name);
+                } else {
+                    missingIds++;
+                    name = normalize(it.name);
+                    const lower = name.toLowerCase();
+                    const resolved = knownIds?.get(lower);
+                    key = resolved != null ? `id:${resolved}` : `name:${lower}`;
+                }
+                let row = items.get(key);
+                if (!row) {
+                    row = { name: name || normalize(it.name), count: 0, identified };
+                    items.set(key, row);
+                }
+                row.count += it.count;
+            }
+        }
+        banks.push({
+            name: b.name,
+            at: b.bankAt ?? null,
+            state: !isArr || !b.bankAt ? 'unknown' : now - b.bankAt > 300_000 ? 'stale' : 'recent',
+            kinds: isArr ? kinds : null,
+        });
+    }
+    const pending: any[] = [];
+    for (let i = 0; i < cargo.length; i++) {
+        const c = cargo[i];
+        if (owned.has(String(c.name).toLowerCase()) && Array.isArray(c.items) && c.items.some((it: any) => it.count > 0)) {
+            pending.push({ ...c, stale: !c.at || now - c.at > 300_000 });
+        }
+    }
+    const confirmed: any[] = [];
+    for (let i = 0; i < transfers.length; i++) {
+        const t = transfers[i];
+        if (owned.has(String(t.from).toLowerCase()) && owned.has(String(t.to).toLowerCase())) confirmed.push(t);
+    }
+    return {
+        distinct: items.size, missingIds, banks,
+        items: [...items.values()].sort((a, b) => b.count - a.count),
+        pending,
         transfers: confirmed.slice(-12).reverse(), transferCount: confirmed.length,
-        excludedTransfers: transfers.length - confirmed.length };
+        excludedTransfers: transfers.length - confirmed.length,
+    };
 }
 
 export function operationState(b: any, now: number) {
@@ -90,6 +157,16 @@ export const productionGoal = (goal: string, script = '') =>
 
 export const isLoopback = (address: string) => /^(127\.|::1$|::ffff:127\.)/.test(address);
 
+const BOUNDED_BASE_FIELDS = ['boughtTotal', 'bankedTotal', 'spentTotal', 'coinsLeft', 'coinReserve', 'maxSpend', 'maxItems', 'noBuyTicks', 'noBuyLimit'] as const;
+const BOUNDED_OUTPUT_FIELDS = ['made', 'banked', 'planned', 'xpGain'] as const;
+const BOUNDED_ALL_FIELDS = [...BOUNDED_BASE_FIELDS, ...BOUNDED_OUTPUT_FIELDS] as const;
+const BOUNDED_FIELD_RE: Record<string, RegExp> = Object.fromEntries(
+    BOUNDED_ALL_FIELDS.map(field => [field, new RegExp(`\\b${field}=([0-9]+)(?=\\s|$)`)]),
+);
+const BOUNDED_MODE_RE = /\bmode=(?:headless|steel)(?=\s|$)/;
+const BOUNDED_TARGET_RE = /\btargetMet=(true|false|[01])(?=\s|$)/;
+const BOUNDED_STOP_RE = /\bstop=([^\s]+)/;
+
 // Bounded supplier evidence is explicit. RESULT ok may mean a safe partial stop,
 // and a ready buffer may require no new purchases at all.
 export function boundedOperation(status: any) {
@@ -100,17 +177,25 @@ export function boundedOperation(status: any) {
     const counters: Record<string, number> = {};
     // Bounded fletching reports made/banked/planned item units. A generic
     // banked= elsewhere may be coins, so do not relabel every script's metrics.
-    const outputFields = /\bmode=(?:headless|steel)(?=\s|$)/.test(text) ? ['made','banked','planned','xpGain'] : [];
-    for (const field of ['boughtTotal','bankedTotal','spentTotal','coinsLeft','coinReserve','maxSpend','maxItems','noBuyTicks','noBuyLimit',...outputFields]) {
+    const fields = BOUNDED_MODE_RE.test(text) ? BOUNDED_ALL_FIELDS : BOUNDED_BASE_FIELDS;
+    const hasEq = text.includes('=');
+    let counterCount = 0;
+    for (let i = 0; i < fields.length; i++) {
+        const field = fields[i]!;
         const value = recorded?.[field];
-        if (typeof value === 'number' && Number.isFinite(value) && value >= 0) { counters[field] = value; continue; }
-        const match = text.match(new RegExp(`\\b${field}=([0-9]+)(?=\\s|$)`));
-        if (match && Number.isFinite(Number(match[1]))) counters[field] = Number(match[1]);
+        if (typeof value === 'number' && Number.isFinite(value) && value >= 0) { counters[field] = value; counterCount++; continue; }
+        if (!hasEq) continue;
+        const match = BOUNDED_FIELD_RE[field]!.exec(text);
+        if (match) {
+            const parsed = Number(match[1]);
+            if (Number.isFinite(parsed)) { counters[field] = parsed; counterCount++; }
+        }
     }
-    const target = result.match(/\btargetMet=(true|false|[01])(?=\s|$)/), recordedTarget = recorded?.targetMet;
+    const target = result.includes('targetMet=') ? BOUNDED_TARGET_RE.exec(result) : null;
+    const recordedTarget = recorded?.targetMet;
     const targetMet = recordedTarget === 0 ? false : recordedTarget === 1 ? true : target ? target[1] === '1' || target[1] === 'true' : null;
-    const stop = result.match(/\bstop=([^\s]+)/)?.[1] ?? null;
-    return { counters, targetMet, stop, visible: Object.keys(counters).length > 0 || targetMet !== null,
+    const stop = result.includes('stop=') ? BOUNDED_STOP_RE.exec(result)?.[1] ?? null : null;
+    return { counters, targetMet, stop, visible: counterCount > 0 || targetMet !== null,
         label: targetMet === true ? (counters.boughtTotal === 0 ? 'Buffer ready · no new purchases' : 'Stock target met')
             : targetMet === false ? (stop === 'stock-wait' ? 'Partial stock · waiting offline' : 'Partial stock · target unmet')
             : 'Target fulfillment unreported' };

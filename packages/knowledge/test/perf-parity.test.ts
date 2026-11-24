@@ -1,9 +1,14 @@
 import { expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { listConfigFiles, listConfigFilesByExt } from '../src/config';
+import { parseDropProcs, parseDrops } from '../src/drops';
+import { parseStaffItems } from '../src/gear';
 import { buildItemSources } from '../src/item-sources';
 import { parseJm2 } from '../src/jm2';
+import { block, loadContent, modelRung } from '../src/method-model';
 import { contentRoot } from '../src/paths';
+import { buildShortcuts, movingScripts, parseScripts, stripComments } from '../src/shortcuts';
 import { cachedValue } from '../src/table-cache';
 
 test('parseJm2 skips MAP sections, preserves comment line numbers, and filters LOC/OBJ spawns cleanly', () => {
@@ -105,3 +110,93 @@ test('buildItemSources cached output matches KNOWLEDGE_CACHE=0 uncached output i
     }
     expect(cached).toEqual(uncached);
 }, 20000);
+
+test('listConfigFilesByExt matches listConfigFiles identically for multiple extensions', () => {
+    const exts = ['.obj', '.param', '.dbtable', '.loc'] as const;
+    const grouped = listConfigFilesByExt(exts);
+    for (const ext of exts) {
+        expect(grouped.get(ext)).toEqual(listConfigFiles(ext));
+    }
+});
+
+test('stripComments preserves line counts, string literals, and CRLF across fast and comment paths', () => {
+    const noComments = '  [oploc1,foo]  \r\n  p_teleport(0_50_50_1_1);  \n';
+    expect(stripComments(noComments)).toEqual(['[oploc1,foo]', 'p_teleport(0_50_50_1_1);', '']);
+
+    const withComments = [
+        'mes("keep // and /* inside \\"quotes\\""); // trailing',
+        '/* block start',
+        '   ignored middle */ code_after();',
+        'plain_line();',
+    ].join('\r\n');
+    expect(stripComments(withComments)).toEqual([
+        'mes("keep // and /* inside \\"quotes\\"");',
+        '',
+        'code_after();',
+        'plain_line();',
+    ]);
+});
+
+test('shortcuts movingScripts and buildShortcuts merge complementary branches and detect twoWay pairs', () => {
+    const scriptText = [
+        '[proc,hop_helper](coord $dest)',
+        'p_teleport($dest);',
+        '',
+        '[oploc1,portal_a]',
+        'if (%misc_flag = 1) { ~hop_helper(0_50_50_10_10); } else { ~hop_helper(0_50_50_10_10); }',
+        '',
+        '[oploc1,portal_b]',
+        'p_teleport(0_50_50_1_1);',
+    ].join('\n');
+    const scripts = parseScripts([{ text: scriptText, file: 'scripts/areas/test/portals.rs2' }]);
+    const moving = movingScripts(scripts);
+    expect(moving.has('proc,hop_helper')).toBe(true);
+    expect(moving.has('oploc1,portal_a')).toBe(true);
+    expect(moving.has('oploc1,portal_b')).toBe(true);
+
+    const out = buildShortcuts({
+        scriptFiles: [{ text: scriptText, file: 'scripts/areas/test/portals.rs2' }],
+        constantFiles: [],
+        locConfigs: new Map([
+            ['portal_a', { name: 'portal_a', props: { op1: ['Enter'] }, propLines: { op1: [2] }, file: 'test.loc', line: 1 }],
+            ['portal_b', { name: 'portal_b', props: { op1: ['Enter'] }, propLines: { op1: [5] }, file: 'test.loc', line: 4 }],
+        ]),
+        locPack: new Map([[101, 'portal_a'], [102, 'portal_b'], [103, 'irrelevant_tree']]),
+        locs: [
+            { id: 103, x: 3200, z: 3200, level: 0, shape: 10, angle: 0, src: 'maps/m50_50.jm2:1' },
+            { id: 101, x: 3201, z: 3201, level: 0, shape: 10, angle: 0, src: 'maps/m50_50.jm2:2' },
+            { id: 102, x: 3210, z: 3210, level: 0, shape: 10, angle: 0, src: 'maps/m50_50.jm2:3' },
+        ],
+        questVarps: new Set(),
+        excludeLocNames: new Set(),
+        dbTables: [],
+    });
+    expect(out.edges).toHaveLength(2);
+    const a = out.edges.find(e => e.locName === 'portal_a')!;
+    expect(a.to).toEqual({ x: 3210, z: 3210, level: 0 });
+    expect(a.conditions).toBeUndefined();
+    expect(a.twoWay).toBe(true);
+    expect(out.edges.find(e => e.locName === 'portal_b')!.twoWay).toBe(true);
+});
+
+test('knowledge prefilters and method-model facade indexes preserve exact results', () => {
+    expect(parseDrops('[proc,noop]\nreturn;', 'noop.rs2')).toEqual([]);
+    expect(parseDropProcs('[oploc1,foo]\nmes("hi");', 'foo.rs2').size).toBe(0);
+    expect(parseStaffItems([{ text: '[oploc1,foo]\nmes("no staff check");' }]).size).toBe(0);
+
+    const c = loadContent();
+    const smithBlock = block(c, 'scripts/skill_smithing/scripts/smithing/smithing.rs2', 'smithing_anvil');
+    expect(smithBlock).not.toBeNull();
+    expect(smithBlock!.to).toBeGreaterThan(smithBlock!.from);
+    const smeltFacts = modelRung(c, {
+        id: 'smithing/smelt-bronze',
+        skill: 'smithing',
+        kind: 'smelt',
+        level: 1,
+        label: 'Bronze',
+        row: null,
+        outputs: ['bronze_bar'],
+        inputs: [],
+    });
+    expect(smeltFacts.xpPerAction).toBe(6.2);
+});

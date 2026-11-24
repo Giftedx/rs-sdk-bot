@@ -3,10 +3,29 @@ import type {Session} from '../../../core/src/inprocess';
 import {waitUntil,waitTicks} from '../../../core/src/ticks';
 import {loadActionSessionHelpers,type ActionSessionOwnerLike} from './runtime';
 import {watchProductionLife} from '../../../core/src/production-life';
-import {wildernessZones,teleports} from '../../../../knowledge/teleports.json';
 import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {REPO_ROOT} from './types';
+type MonitorTeleportsDoc={wildernessZones:{from:{x:number;z:number;level:number};to:{x:number;z:number;level:number}}[];teleports:{id:string;wildernessMax:{level:number};charges:{id:number;next:string}[];to:{option:string;candidates:{x:number;z:number;level:number}[]}[]}[]};
+let cachedTeleportsDoc:MonitorTeleportsDoc|undefined;
+function teleportsDoc():MonitorTeleportsDoc{return cachedTeleportsDoc??=JSON.parse(readFileSync(join(REPO_ROOT,'knowledge/teleports.json'),'utf8')) as MonitorTeleportsDoc;}
+let cachedNativeItemIds:Map<string,number>|undefined;
+function nativeItemIds():Map<string,number>{
+ if(cachedNativeItemIds)return cachedNativeItemIds;
+ const text=readFileSync(join(REPO_ROOT,'vendor/rs-sdk/server/content/pack/obj.pack'),'utf8');
+ const out=new Map<string,number>();
+ let pos=0;
+ while(pos<text.length){
+  let end=text.indexOf('\n',pos);
+  if(end<0)end=text.length;
+  const lineEnd=end>pos&&text.charCodeAt(end-1)===13?end-1:end;
+  const eq=text.indexOf('=',pos);
+  if(eq>pos&&eq<lineEnd){const id=Number(text.slice(pos,eq));if(Number.isInteger(id)&&id>=0)out.set(text.slice(eq+1,lineEnd),id);}
+  pos=end+1;
+ }
+ cachedNativeItemIds=out;
+ return out;
+}
 export function monitorStopRequested(name:string|undefined,stop:()=>boolean,fileExists:(path:string)=>boolean=existsSync,roleStop:string|undefined=process.env.STOP_FILE){
  return stop()||fileExists('.practice/stop-all')||!!name&&fileExists(`.practice/stop-${name}`)||!!roleStop&&fileExists(roleStop);
 }
@@ -15,14 +34,13 @@ export type MonitorPolicy={radius:number;ignore:readonly string[];onlyNew:boolea
 // The knowledge generator parses the native wilderness_zones coord-pair table.
 export function monitorWildernessLevel(p:{worldX:number;worldZ:number;level:number}|undefined){
  if(!p||![p.worldX,p.worldZ,p.level].every(Number.isSafeInteger)||p.worldX<0||p.worldZ<0||p.level<0||p.level>3)return undefined;
- for(const {from:a,to:b} of wildernessZones)if(p.worldX>=a.x&&p.worldX<=b.x&&p.worldZ>=a.z&&p.worldZ<=b.z&&p.level>=a.level&&p.level<=b.level)return Math.trunc((p.worldZ-a.z)/8)+1;
+ for(const {from:a,to:b} of teleportsDoc().wildernessZones)if(p.worldX>=a.x&&p.worldX<=b.x&&p.worldZ>=a.z&&p.worldZ<=b.z&&p.level>=a.level&&p.level<=b.level)return Math.trunc((p.worldZ-a.z)/8)+1;
  return 0;
 }
 const inventoryStock=(s:Session)=>{const out:Record<number,number>={};for(const i of s.sdk.getState()?.inventory??[])out[i.id]=(out[i.id]??0)+i.count;return out;};
-const nativeItemIds=new Map(readFileSync(join(REPO_ROOT,'vendor/rs-sdk/server/content/pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(line=>{const m=line.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
 export function monitorGloryProfile(destination:string,id:number){
- const glory=teleports.find(t=>t.id==='jewellery:amulet_of_glory') as unknown as {wildernessMax:{level:number};charges:{id:number;next:string}[];to:{option:string;candidates:{x:number;z:number;level:number}[]}[]}|undefined;
- const charge=glory?.charges.find(c=>c.id===id),landing=glory?.to.find(t=>t.option===destination),next=charge&&nativeItemIds.get(charge.next);
+ const glory=teleportsDoc().teleports.find(t=>t.id==='jewellery:amulet_of_glory');
+ const charge=glory?.charges.find(c=>c.id===id),landing=glory?.to.find(t=>t.option===destination),next=charge&&nativeItemIds().get(charge.next);
  if(!charge||next===undefined||!landing||landing.candidates.length!==1||glory?.wildernessMax.level!==30)throw Error('unsupported monitor Glory teleport');
  return{id,next,destination,to:landing.candidates[0]!,maximumWilderness:30};
 }

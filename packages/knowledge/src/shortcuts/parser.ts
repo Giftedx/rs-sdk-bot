@@ -3,19 +3,76 @@ import { Unsupported, type Coord, type Ctx, type Expr, type Line, type Script, t
 
 // Removes `//` and `/* */` comments outside string literals; keeps one entry per source line.
 export function stripComments(text: string): string[] {
-    const out: string[] = [];
-    let cur = '', inStr = false, inBlock = false;
-    for (let i = 0; i < text.length; i++) {
-        const ch = text[i]!, nx = text[i + 1];
-        if (ch === '\n') { out.push(cur.replace(/\r$/, '').trim()); cur = ''; inStr = false; continue; }
-        if (inBlock) { if (ch === '*' && nx === '/') { inBlock = false; i++; } continue; }
-        if (inStr) { cur += ch; if (ch === '\\') { cur += nx ?? ''; i++; } else if (ch === '"') inStr = false; continue; }
-        if (ch === '"') { inStr = true; cur += ch; continue; }
-        if (ch === '/' && nx === '/') { while (i + 1 < text.length && text[i + 1] !== '\n') i++; continue; }
-        if (ch === '/' && nx === '*') { inBlock = true; i++; continue; }
-        cur += ch;
+    const total = text.length;
+    // Fast path when no comment opener appears anywhere in the file.
+    if (text.indexOf('//') === -1 && text.indexOf('/*') === -1) {
+        const out: string[] = [];
+        let pos = 0;
+        while (pos <= total) {
+            const nl = text.indexOf('\n', pos);
+            const end = nl === -1 ? total : nl;
+            let s = pos, e = end;
+            if (e > s && text.charCodeAt(e - 1) === 13) e--;
+            while (s < e && text.charCodeAt(s) <= 32) s++;
+            while (e > s && text.charCodeAt(e - 1) <= 32) e--;
+            out.push(s < e ? text.slice(s, e) : '');
+            if (nl === -1) break;
+            pos = nl + 1;
+        }
+        return out;
     }
-    out.push(cur.replace(/\r$/, '').trim());
+    const out: string[] = [];
+    let cur = '', segStart = 0, inStr = false, inBlock = false;
+    const flush = (end: number) => {
+        const line = cur ? (segStart < end ? cur + text.slice(segStart, end) : cur) : (segStart < end ? text.slice(segStart, end) : '');
+        out.push(line.endsWith('\r') ? line.slice(0, -1).trim() : line.trim());
+        cur = '';
+    };
+    for (let i = 0; i < total; i++) {
+        const code = text.charCodeAt(i);
+        if (code === 10 /* '\n' */) {
+            flush(inBlock ? segStart : i);
+            inStr = false;
+            segStart = i + 1;
+            continue;
+        }
+        if (inBlock) {
+            if (code === 42 /* '*' */ && text.charCodeAt(i + 1) === 47 /* '/' */) {
+                inBlock = false;
+                i++;
+                segStart = i + 1;
+            }
+            continue;
+        }
+        if (inStr) {
+            if (code === 92 /* '\\' */) { i++; }
+            else if (code === 34 /* '"' */) { inStr = false; }
+            continue;
+        }
+        if (code === 34 /* '"' */) { inStr = true; continue; }
+        if (code === 47 /* '/' */) {
+            const nx = text.charCodeAt(i + 1);
+            if (nx === 47 /* '/' */) {
+                if (i > segStart) cur += text.slice(segStart, i);
+                const nl = text.indexOf('\n', i + 2);
+                if (nl === -1) {
+                    segStart = total;
+                    break;
+                }
+                i = nl - 1;
+                segStart = nl;
+                continue;
+            }
+            if (nx === 42 /* '*' */) {
+                if (i > segStart) cur += text.slice(segStart, i);
+                inBlock = true;
+                i++;
+                segStart = i + 1;
+                continue;
+            }
+        }
+    }
+    flush(inBlock ? segStart : total);
     return out;
 }
 
@@ -45,36 +102,63 @@ export function parseCoord(s: string): Coord {
     return { x: mx * 64 + lx, z: mz * 64 + lz, level: lv };
 }
 
+const RE_QUEUE = /\.?((?:weak|strong|long)?queue)\*/y;
+const RE_COORD = /\d+_\d+_\d+_\d+_\d+/y;
+const RE_NUM = /0x[0-9a-fA-F]+|\d+/y;
+const RE_SIGIL = /([$%^~@])([A-Za-z0-9_:]+)/y;
+const RE_ID = /\.?[A-Za-z_][A-Za-z0-9_]*(?::[A-Za-z_][A-Za-z0-9_]*)?/y;
+const RE_SYM = /<=|>=|[(){}\[\],;:=!<>&|+\-*/]/y;
+const SIGIL_KIND = { $: 'var', '%': 'varp', '^': 'const', '~': 'proc', '@': 'label' } as const;
+
 function tokenize(body: Line[]): Tok[] {
     const out: Tok[] = [];
     for (const { text, line } of body) {
         let i = 0;
-        while (i < text.length) {
-            const ch = text[i]!;
-            if (/\s/.test(ch)) { i++; continue; }
-            if (ch === '"') {
+        const len = text.length;
+        while (i < len) {
+            const c = text.charCodeAt(i);
+            if (c === 32 || c === 9 || c === 13 || c === 10 || c === 12 || c === 11 || (c > 127 && /\s/.test(text[i]!))) { i++; continue; }
+            if (c === 34 /* '"' */) {
                 let j = i + 1;
-                while (j < text.length && text[j] !== '"') j += text[j] === '\\' ? 2 : 1;
-                if (j >= text.length) throw new Unsupported(`unterminated string at line ${line}`);
+                while (j < len && text.charCodeAt(j) !== 34) j += text.charCodeAt(j) === 92 ? 2 : 1;
+                if (j >= len) throw new Unsupported(`unterminated string at line ${line}`);
                 out.push({ k: 'str', v: text.slice(i + 1, j), line }); i = j + 1; continue;
             }
-            const rest = text.slice(i);
             // `.` marks the secondary player or loc (`.%duelstatus`, `.loc_find`); `queue*(name)(args)` passes typed args.
-            let m = rest.match(/^\.(?=[$%])/);
-            if (m) { i += 1; continue; }
-            m = rest.match(/^\.?((?:weak|strong|long)?queue)\*/);
-            if (m) { out.push({ k: 'id', v: m[1]!, line }); i += m[0].length; continue; }
-            m = rest.match(/^\d+_\d+_\d+_\d+_\d+/);
-            if (m) { out.push({ k: 'coord', v: m[0], line }); i += m[0].length; continue; }
-            m = rest.match(/^0x[0-9a-fA-F]+|^\d+/);
-            if (m) { out.push({ k: 'num', v: m[0], line }); i += m[0].length; continue; }
-            m = rest.match(/^([$%^~@])([A-Za-z0-9_:]+)/);
-            if (m) { out.push({ k: ({ $: 'var', '%': 'varp', '^': 'const', '~': 'proc', '@': 'label' } as const)[m[1] as '$']!, v: m[2]!, line }); i += m[0].length; continue; }
-            m = rest.match(/^\.?[A-Za-z_][A-Za-z0-9_]*(?::[A-Za-z_][A-Za-z0-9_]*)?/);
-            if (m) { out.push({ k: 'id', v: m[0], line }); i += m[0].length; continue; }
-            m = rest.match(/^(<=|>=|[(){}\[\],;:=!<>&|+\-*/])/);
-            if (m) { out.push({ k: 'sym', v: m[0], line }); i += m[0].length; continue; }
-            throw new Unsupported(`unexpected character '${ch}' at line ${line}`);
+            if (c === 46 /* '.' */) {
+                const nx = text.charCodeAt(i + 1);
+                if (nx === 36 /* '$' */ || nx === 37 /* '%' */) { i += 1; continue; }
+                RE_QUEUE.lastIndex = i;
+                let m = RE_QUEUE.exec(text);
+                if (m) { out.push({ k: 'id', v: m[1]!, line }); i = RE_QUEUE.lastIndex; continue; }
+                RE_ID.lastIndex = i;
+                m = RE_ID.exec(text);
+                if (m) { out.push({ k: 'id', v: m[0], line }); i = RE_ID.lastIndex; continue; }
+            } else if (c >= 48 && c <= 57 /* '0'-'9' */) {
+                RE_COORD.lastIndex = i;
+                let m = RE_COORD.exec(text);
+                if (m) { out.push({ k: 'coord', v: m[0], line }); i = RE_COORD.lastIndex; continue; }
+                RE_NUM.lastIndex = i;
+                m = RE_NUM.exec(text);
+                if (m) { out.push({ k: 'num', v: m[0], line }); i = RE_NUM.lastIndex; continue; }
+            } else if (c === 36 || c === 37 || c === 94 || c === 126 || c === 64 /* $%^~@ */) {
+                RE_SIGIL.lastIndex = i;
+                const m = RE_SIGIL.exec(text);
+                if (m) { out.push({ k: SIGIL_KIND[m[1] as '$'], v: m[2]!, line }); i = RE_SIGIL.lastIndex; continue; }
+            } else if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95 /* A-Za-z_ */) {
+                if (c === 119 || c === 115 || c === 108 || c === 113 /* w,s,l,q */) {
+                    RE_QUEUE.lastIndex = i;
+                    const mq = RE_QUEUE.exec(text);
+                    if (mq) { out.push({ k: 'id', v: mq[1]!, line }); i = RE_QUEUE.lastIndex; continue; }
+                }
+                RE_ID.lastIndex = i;
+                const m = RE_ID.exec(text);
+                if (m) { out.push({ k: 'id', v: m[0], line }); i = RE_ID.lastIndex; continue; }
+            }
+            RE_SYM.lastIndex = i;
+            const ms = RE_SYM.exec(text);
+            if (ms) { out.push({ k: 'sym', v: ms[0], line }); i = RE_SYM.lastIndex; continue; }
+            throw new Unsupported(`unexpected character '${text[i]!}' at line ${line}`);
         }
     }
     return out;

@@ -11,12 +11,10 @@ import { orderLines, tradeSettlement, validOrder, type Order, type Receipt } fro
 import { isLocalServer } from '../../core/src/localserver';
 import { NAMES } from '../../core/src/names';
 import {
-    findStopFile,
     lifecycleReadRoots,
     liveFleetDataDir,
     liveRoot,
     practiceRoot,
-    readStopFile,
     repoRoot,
     resolveFleetDataDir,
     simLifecycleRoot,
@@ -24,7 +22,8 @@ import {
     statusReadDirs,
 } from '../../core/src/practice-paths';
 import { PVP_DEATH_SCHEMA, type PvpDeath } from '../../core/src/pvp-deaths';
-import { readLatestAttemptReceipt, readLogoutProof, type AttemptReceipt, type LogoutProof } from '../../core/src/session-lifecycle';
+import { domainOf, readLatestAttemptReceipt, readLogoutProof, type AttemptReceipt, type LogoutProof } from '../../core/src/session-lifecycle';
+import { readJsonStatCached } from './json-cache';
 import { RESERVED_ACCOUNTS } from '../../core/src/specialist-boards';
 import type { World } from '../../core/src/world';
 import { isWorkerQuestState, isWorkerTile, type WorkerQuestState, type WorkerTile } from '../../workers/src/contracts';
@@ -131,12 +130,97 @@ export interface AccountLifecycleInput {
 }
 
 function safeReadJson<T = unknown>(file: string): T | null {
-    if (!existsSync(file)) return null;
     try {
         return JSON.parse(readFileSync(file, 'utf8')) as T;
     } catch {
         return null;
     }
+}
+
+interface StopDirEntry {
+    readonly dir: string;
+    readonly exact: ReadonlySet<string>;
+    readonly byLower: ReadonlyMap<string, string>;
+}
+
+interface StopFileIndex {
+    find(flag: string): string | null;
+    read(flag: string): { path: string; text: string } | null;
+}
+
+function buildStopFileIndex(root: string): StopFileIndex {
+    const dirs: StopDirEntry[] = [];
+    for (const dir of [liveRoot(root), practiceRoot(root)]) {
+        try {
+            const entries = readdirSync(dir);
+            const exact = new Set<string>();
+            const byLower = new Map<string, string>();
+            for (const name of entries) {
+                const lower = name.toLowerCase();
+                if (!lower.startsWith('stop-')) continue;
+                exact.add(name);
+                if (!byLower.has(lower)) byLower.set(lower, name);
+            }
+            if (exact.size > 0) dirs.push({ dir, exact, byLower });
+        } catch { /* absent or unreadable dir */ }
+    }
+    const isWin = process.platform === 'win32';
+    const find = (flag: string): string | null => {
+        if (dirs.length === 0) return null;
+        const lowerFlag = flag.toLowerCase();
+        const lowerName = `stop-${lowerFlag}`;
+        if (isWin) {
+            for (const d of dirs) {
+                const hit = d.byLower.get(lowerName);
+                if (hit) return join(d.dir, hit);
+            }
+            return null;
+        }
+        const exactName = `stop-${flag}`;
+        for (const d of dirs) {
+            if (d.exact.has(exactName)) return join(d.dir, exactName);
+            if (lowerName !== exactName && d.exact.has(lowerName)) return join(d.dir, lowerName);
+        }
+        for (const d of dirs) {
+            const hit = d.byLower.get(lowerName);
+            if (hit) return join(d.dir, hit);
+        }
+        return null;
+    };
+    return {
+        find,
+        read(flag: string) {
+            const file = find(flag);
+            if (!file) return null;
+            try {
+                return { path: file, text: readFileSync(file, 'utf8') };
+            } catch {
+                return { path: file, text: '' };
+            }
+        },
+    };
+}
+
+interface LifecycleRootIndex {
+    readonly lcRoot: string;
+    readonly accountKeys: ReadonlySet<string>;
+}
+
+function buildLifecycleRootIndexes(lcRoots: readonly string[], server: string): LifecycleRootIndex[] {
+    const domain = domainOf(server);
+    const serverKey = server.trim().toLowerCase().replace(/[^a-z0-9.-]/g, '_');
+    const out: LifecycleRootIndex[] = [];
+    for (const lcRoot of lcRoots) {
+        const serverDir = join(lcRoot, domain, serverKey);
+        try {
+            const entries = readdirSync(serverDir);
+            if (entries.length === 0) continue;
+            const accountKeys = new Set<string>();
+            for (const e of entries) accountKeys.add(e.toLowerCase());
+            out.push({ lcRoot, accountKeys });
+        } catch { /* absent or unreadable lifecycle server dir */ }
+    }
+    return out;
 }
 
 function resolveFleetDir(root: string, explicit?: string): string {
@@ -664,9 +748,11 @@ function readGeEscrowByAccount(root: string, server: string): Record<string, num
 function inferLogoutProofAndLatestAttempt(
     name: string,
     server: string,
-    lifecycleRoots: readonly string[],
+    lcIndexes: readonly LifecycleRootIndex[],
 ): { proof: LogoutProof; latestAttempt?: AttemptReceipt } {
-    for (const lcRoot of lifecycleRoots) {
+    const acctKey = name.toLowerCase().replace(/ /g, '_');
+    for (const { lcRoot, accountKeys } of lcIndexes) {
+        if (!accountKeys.has(acctKey)) continue;
         const proof = readLogoutProof(name, server, { root: lcRoot });
         if (proof.state !== 'none') {
             const latest = readLatestAttemptReceipt(name, server, { root: lcRoot });
@@ -710,11 +796,25 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
     );
     const { activeOrders, inTradeAccounts, settledTransferByAccount } = readOrdersAndReceipts(fleetDir, server, now);
 
-    const swarmPlan = safeReadJson<any>(join(root, 'swarm.json')) ?? {};
+    const swarmPlan = readJsonStatCached<any>(join(root, 'swarm.json')) ?? {};
     const swarmRoleIndex = buildSwarmRoleIndex(swarmPlan);
     const swarmState = safeReadJson<any>(join(liveRoot(root), 'swarm-state.json'))
         ?? safeReadJson<any>(join(practiceRoot(root), 'swarm-state.json'));
+    const swarmRunByAccount = new Map<string, any>();
+    if (swarmState && Array.isArray(swarmState.runs)) {
+        for (const r of swarmState.runs) {
+            if (!Array.isArray(r?.accounts)) continue;
+            for (const a of r.accounts) {
+                if (typeof a === 'string') {
+                    const k = a.toLowerCase();
+                    if (!swarmRunByAccount.has(k)) swarmRunByAccount.set(k, r);
+                }
+            }
+        }
+    }
     const heldByHandJob = handNamed(Array.isArray(swarmPlan?.jobs) ? swarmPlan.jobs : [], side);
+    const stopIndex = buildStopFileIndex(root);
+    const lcIndexes = buildLifecycleRootIndexes(lcRoots, server);
 
     // Gather canonical display names across all owned sources.
     const displayNames = new Map<string, string>();
@@ -724,9 +824,10 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         if (!displayNames.has(lower)) displayNames.set(lower, n);
     };
 
-    if (existsSync(join(fleetDir, 'owners.json'))) {
-        const rawOwners = safeReadJson<{ accounts?: Record<string, Owner> }>(join(fleetDir, 'owners.json'));
-        for (const [name, o] of Object.entries(rawOwners?.accounts ?? {})) {
+    const ownersPath = join(fleetDir, 'owners.json');
+    const rawOwners = readJsonStatCached<{ accounts?: Record<string, Owner> }>(ownersPath);
+    if (rawOwners?.accounts) {
+        for (const [name, o] of Object.entries(rawOwners.accounts)) {
             if (o?.server?.toLowerCase() === server) registerName(name);
         }
     }
@@ -780,12 +881,11 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         let ownerPaused = false;
         let ownerStopPath: string | undefined;
         if (isLocalSide) {
-            const stopPath = findStopFile(name, root);
-            if (stopPath) {
-                const stopText = readStopFile(name, root) ?? '';
-                if (!STALE_AUTO_STOP_TEXT.test(stopText.trim())) {
+            const stopHit = stopIndex.read(name);
+            if (stopHit) {
+                if (!STALE_AUTO_STOP_TEXT.test(stopHit.text.trim())) {
                     ownerPaused = true;
-                    ownerStopPath = stopPath;
+                    ownerStopPath = stopHit.path;
                 }
             }
         } else {
@@ -820,10 +920,8 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         ) {
             isRunning = true;
         }
-        if (!isRunning && swarmState && Array.isArray(swarmState.runs)) {
-            const runningEntry = swarmState.runs.find((r: any) =>
-                Array.isArray(r?.accounts) && r.accounts.some((a: string) => a.toLowerCase() === lower),
-            );
+        if (!isRunning && swarmRunByAccount.size > 0) {
+            const runningEntry = swarmRunByAccount.get(lower);
             if (runningEntry) {
                 isRunning = true;
                 activeJob = {
@@ -849,7 +947,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
 
         // Session logout proof & attempt timestamps.
         const { proof, latestAttempt } = isLocalSide
-            ? inferLogoutProofAndLatestAttempt(name, server, lcRoots)
+            ? inferLogoutProofAndLatestAttempt(name, server, lcIndexes)
             : { proof: { state: 'none' as const, account: name, server, domain: 'live' as const }, latestAttempt: undefined };
         const lastLoginAttemptAt = latestAttempt?.createdAt
             ?? (Number.isFinite(status?.started) && status.started > 0 ? Number(status.started) : undefined);
@@ -993,9 +1091,9 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
     const fleetSides: Record<string, FleetSideStatus> = {};
     let localStopped = false;
     for (const scope of ['swarm', 'all'] as const) {
-        if (!findStopFile(scope, root)) continue;
-        const text = (readStopFile(scope, root) ?? '').trim();
-        if (!STALE_AUTO_STOP_TEXT.test(text)) {
+        const stopHit = stopIndex.read(scope);
+        if (!stopHit) continue;
+        if (!STALE_AUTO_STOP_TEXT.test(stopHit.text.trim())) {
             localStopped = true;
             break;
         }

@@ -46,15 +46,13 @@ export function readPreparationInputs(options:{base?:string;fleetDir?:string;sid
   catch{inputSources[key]={path,sha256:null};return null;}
  };
  const defaultPlan=join(base,'swarm.json'),ownerPlan=resolve(base,options.planFile??process.env.SWARM_PLAN??defaultPlan);
- const planInputs=[['ownerPlan',ownerPlan]] as const;
- for(const[key,path]of planInputs)read(path,key);
- const rawPlan=JSON.parse(readFileSync(ownerPlan,'utf8'));
+ const planRaw=read(ownerPlan,'ownerPlan');
+ if(planRaw===null)readFileSync(ownerPlan,'utf8');
+ const rawPlan=JSON.parse(planRaw!);
  const merged={...rawPlan,jobs:[...(Array.isArray(rawPlan?.jobs)?rawPlan.jobs:[]),...brainPlannedJobs(base,Array.isArray(rawPlan?.jobs)?rawPlan.jobs:[])]};
  if(!Array.isArray(rawPlan?.jobs))throw Error('Preparation needs a readable jobs array');
- for(const[key,path]of planInputs){
-  const after=existsSync(path)?hash(readFileSync(path)):null;
-  if(after!==inputSources[key]!.sha256)throw Error('Preparation plan changed while reading: '+path);
- }
+ const afterPlan=existsSync(ownerPlan)?hash(readFileSync(ownerPlan)):null;
+ if(afterPlan!==inputSources.ownerPlan!.sha256)throw Error('Preparation plan changed while reading: '+ownerPlan);
  const registry=join(fleetDir,'owners.json'),ownerRaw=read(registry,'owners'),owners=loadOwners(registry);
  if((existsSync(registry)?hash(readFileSync(registry)):null)!==inputSources.owners!.sha256)throw Error('Preparation owner registry changed while reading');
  const registered=ownerRaw?Object.keys(JSON.parse(ownerRaw).accounts??{}):[];
@@ -93,11 +91,16 @@ export function readPreparationInputs(options:{base?:string;fleetDir?:string;sid
    for(const row of snapshot.accounts)candidates.push({row,side:snapshot.side,source:{...inputSources[path]!,kind:'snapshot'}});
   }catch{issues.push(file+': unreadable fleet snapshot');}
  }
+ const candidateIndex=new Map<string,{row:any;side:string;source:PreparationSource&{kind:'status'|'snapshot'}}>();
+ for(const c of candidates){
+  if(typeof c.row?.name!=='string'||typeof c.row.server!=='string'||c.row.server.toLowerCase()!==server||c.row.practice)continue;
+  const ck=`${c.side}|${c.row.name.toLowerCase()}|${c.row.at}`;
+  if(!candidateIndex.has(ck))candidateIndex.set(ck,c);
+ }
  const selected=fleetStatusRows(local,files,name=>owners.get(name.toLowerCase())?.side,side,server)
   .filter(row=>named.has(row.name.toLowerCase()));
  const statuses=selected.map(row=>{
-  const key=row.name.toLowerCase(),source=candidates.find(c=>c.side===row.side&&typeof c.row?.name==='string'&&c.row.name.toLowerCase()===key
-   &&typeof c.row.server==='string'&&c.row.server.toLowerCase()===server&&!c.row.practice&&c.row.at===row.at);
+  const key=row.name.toLowerCase(),source=candidateIndex.get(`${row.side}|${key}|${row.at}`);
   if(!source)throw Error('Preparation observation source missing: '+row.name);
   sources[row.name]=source.source.sha256!;
   observationSources[row.name]={...source.source,side:source.side,ownerSide:owners.get(key)?.side??source.side};
@@ -116,18 +119,30 @@ export function readPreparationInputs(options:{base?:string;fleetDir?:string;sid
 export function preparationGear(jobs:GearJob[],statuses:any[],ownedNames:string[],now=Date.now(),reservations:GearReservation[]=[],orderJournals:Record<string,ItemOrder>={}){
  const assignments=jobs.flatMap(j=>gearJobAccounts(j).map(account=>({...j,account})));
  const owned=new Set(ownedNames.map(x=>x.toLowerCase()));
+ const displayNameByLower=new Map<string,string>();
+ for(const n of ownedNames){const l=n.toLowerCase();if(!displayNameByLower.has(l))displayNameByLower.set(l,n);}
  const fresh=(at:unknown)=>typeof at==='number'&&at>0&&at<=now&&now-at<=300000;
- const rowFor=(name:string)=>statuses.filter(s=>s?.name?.toLowerCase()===name.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.practice).sort((a,b)=>(b.at??0)-(a.at??0))[0];
+ const latestLiveByName=new Map<string,any>();
+ for(const s of statuses){
+  if(typeof s?.name!=='string'||s.server!=='rs-sdk-demo.fly.dev'||s.practice)continue;
+  const l=s.name.toLowerCase(),prior=latestLiveByName.get(l);
+  if(!prior||(s.at??0)>(prior.at??0))latestLiveByName.set(l,s);
+ }
  const validItems=(items:any)=>Array.isArray(items)&&items.every(i=>integer(i?.id)&&integer(i?.count)&&i.count>0&&(i.baseId===undefined||integer(i.baseId)));
+ const holdersByItemId=new Map<number,string[]>();
  const snapshots=new Map([...owned].map(name=>{
-  const s=rowFor(name),current=!!s&&fresh(s.at);
+  const s=latestLiveByName.get(name),current=!!s&&fresh(s.at);
   const packKnown=current&&validItems(s.inventory),wornKnown=current&&s.equipmentObserved!==false&&validItems(s.equipment);
   const bankKnown=current&&fresh(s.bankAt)&&s.bankAt<=s.at&&validItems(s.bank);
   const counts=(items:any[],canonical:boolean)=>{const m=new Map<number,number>();for(const i of items){const id=canonical?(i.baseId??i.id):i.id,n=(m.get(id)??0)+i.count;if(!integer(n))throw Error('Gear stock overflow');m.set(id,n);}return m;};
   const held=counts([...(packKnown?s.inventory:[]),...(wornKnown?s.equipment:[])],false),bank=counts(bankKnown?s.bank:[],true),stock=new Map<number,number>();
   // A dated bank can precede pack changes. Use the larger independently seen
   // amount, never add potentially repeated stock across these snapshots.
-  for(const id of new Set([...held.keys(),...bank.keys()]))stock.set(id,Math.max(held.get(id)??0,bank.get(id)??0));
+  for(const id of new Set([...held.keys(),...bank.keys()])){
+   const count=Math.max(held.get(id)??0,bank.get(id)??0);
+   stock.set(id,count);
+   if(count>0){let list=holdersByItemId.get(id);if(!list)holdersByItemId.set(id,list=[]);list.push(name);}
+  }
   const skill=(name:string)=>{const rows=current&&Array.isArray(s.skills)?s.skills.filter((k:any)=>k?.name===name):[];return rows.length===1&&integer(rows[0].level)&&rows[0].level>=1&&rows[0].level<=99?rows[0].level as number:null;};
   return[name,{stock:[...stock].map(([id,count])=>({id,count})),complete:!!packKnown&&!!wornKnown&&!!bankKnown,skill,at:current?s.at:null,bankAt:bankKnown?s.bankAt:null}] as const;
  }));
@@ -146,7 +161,10 @@ export function preparationGear(jobs:GearJob[],statuses:any[],ownedNames:string[
   const loadout=ownedLoadout(slots,snapshot.stock,reserved,snapshot.complete);
   if(loadout.state==='ready')spent.set(name,[...(spent.get(name)??[]),...loadout.selected]);
   const foreignStock=[...new Set(slots.flatMap(s=>s.options.map(o=>o.id)))].flatMap(id=>{
-   const holders=[...snapshots].filter(([holder,s])=>holder!==name&&s.stock.some(i=>i.id===id&&i.count>0)).map(([holder])=>ownedNames.find(n=>n.toLowerCase()===holder)??holder);
+   const rawHolders=holdersByItemId.get(id);
+   if(!rawHolders)return[];
+   const holders:string[]=[];
+   for(const holder of rawHolders)if(holder!==name)holders.push(displayNameByLower.get(holder)??holder);
    return holders.length?[{id,holders}]:[];
   });
   return[{account:job.account,script:job.script,goal:job.goal??'',at:snapshot.at,bankAt:snapshot.bankAt,loadout,foreignStock,staged:false as const,scope:'Worker input stock only. Does not settle procurement, prove delivery/equip, qualify a route or clear a hold.'}];
@@ -171,50 +189,63 @@ const procurement=assignments.filter(j=>owned.has(j.account.toLowerCase())&&isGe
 
 // Advisory stock only. Possession does not prove reservation, transport, or staging.
 export function reconcilePreparation(requirements:Requirement[],statuses:any[],ownedNames:string[],now=Date.now()) {
- const owned=new Set(ownedNames.map(n=>n.toLowerCase())),latest=new Map<string,any>();
+ const owned=new Set(ownedNames.map(n=>n.toLowerCase())),latest=new Map<string,any>(),newestByAt=new Map<string,any>();
  for(const s of statuses){
-  if(typeof s?.name!=='string'||!owned.has(s.name.toLowerCase())||s.server!=='rs-sdk-demo.fly.dev'||s.practice)continue;
-  const name=s.name.toLowerCase(),prior=latest.get(name);
+  if(typeof s?.name!=='string'||s.server!=='rs-sdk-demo.fly.dev'||s.practice)continue;
+  const name=s.name.toLowerCase();
+  const prevAt=newestByAt.get(name);
+  if(!prevAt||(s.at??0)>(prevAt.at??0))newestByAt.set(name,s);
+  if(!owned.has(name))continue;
+  const prior=latest.get(name);
   if(!prior||(s.bankAt??0)>(prior.bankAt??0))latest.set(name,s);
  }
  const uniqueNames=[...new Map(ownedNames.map(name=>[name.toLowerCase(),name])).values()];
+ const idsByItemName=new Map<string,Set<number>>();
  const banks=uniqueNames.map(name=>{
   const s=latest.get(name.toLowerCase());
   const valid=s&&Number.isFinite(s.bankAt)&&s.bankAt>0&&s.bankAt<=now&&Array.isArray(s.bank)
    &&s.bank.every((i:any)=>integer(i?.baseId??i?.id)&&typeof i.name==='string'&&integer(i.count)&&i.count>0);
   const state:'unknown'|'recent'|'stale'=!valid?'unknown':now-s.bankAt>300000?'stale':'recent';
-  return{name,at:s?.bankAt??null,state,items:valid?s.bank as {id:number;baseId?:number;name:string;count:number}[]:[]};
+  const items=valid?s.bank as {id:number;baseId?:number;name:string;count:number}[]:[];
+  const byId=new Map<number,number>();
+  for(const i of items){
+   const canonical=i.baseId??i.id,itemKey=key(i.name);
+   let set=idsByItemName.get(itemKey);
+   if(!set)idsByItemName.set(itemKey,set=new Set());
+   set.add(canonical);
+   byId.set(canonical,(byId.get(canonical)??0)+i.count);
+  }
+  return{name,at:s?.bankAt??null,state,items,byId};
  });
  const shared=new Map<string|number,Requirement&{resolvedId:number|null}>();
  for(const r of requirements){
   if(!r.item||!integer(r.count)||r.count<1||r.itemId!==undefined&&!integer(r.itemId))throw Error('Invalid supply requirement');
   const name=key(r.item);
-  const ids=r.itemId===undefined?new Set(banks.flatMap(b=>b.items.filter(i=>key(i.name)===name).map(i=>i.baseId??i.id))):new Set([r.itemId]);
+  const ids=r.itemId===undefined?(idsByItemName.get(name)??new Set<number>()):new Set([r.itemId]);
   const resolvedId=ids.size===1?[...ids][0]!:null,id=resolvedId??name,prior=shared.get(id);
   const total=(prior?.count??0)+r.count;
   if(!integer(total))throw Error('Supply requirement exceeds safe integer range');
   shared.set(id,{item:prior?.item??r.item,resolvedId,count:total,consumers:[...new Set([...(prior?.consumers??[]),...(r.consumers??[])])]});
  }
+ const anyNonRecentBank=banks.some(b=>b.state!=='recent');
  const items=[...shared.values()].map(r=>{
   const unresolved=r.resolvedId===null;
   const holders:Holder[]=unresolved?[]:banks.flatMap(b=>{
-   const count=b.items.filter(i=>(i.baseId??i.id)===r.resolvedId).reduce((n,i)=>n+i.count,0);
+   const count=b.byId.get(r.resolvedId!)??0;
    if(!Number.isSafeInteger(count))throw Error('Supply total exceeds safe integer range');
    return count>0&&b.state!=='unknown'?[{name:b.name,count,at:b.at as number,state:b.state}]:[];
   });
-  const recentBanked=holders.filter(h=>h.state==='recent').reduce((n,h)=>n+h.count,0),datedBanked=holders.filter(h=>h.state==='stale').reduce((n,h)=>n+h.count,0);
-  const state=!unresolved&&recentBanked>=r.count?'covered':unresolved||banks.some(b=>b.state!=='recent')?'unknown':'short';
+  let recentBanked=0,datedBanked=0;
+  for(const h of holders){if(h.state==='recent')recentBanked+=h.count;else if(h.state==='stale')datedBanked+=h.count;}
+  const state=!unresolved&&recentBanked>=r.count?'covered':unresolved||anyNonRecentBank?'unknown':'short';
   return{item:r.item,consumers:r.consumers,state,itemId:r.resolvedId,required:r.count,recentBanked,datedBanked,shortfall:Math.max(0,r.count-recentBanked),unresolved,holders};
  });
- const readiness=uniqueNames.map(name=>{
-  const newest=statuses.filter(s=>s?.name?.toLowerCase()===name.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.practice).sort((a,b)=>(b.at??0)-(a.at??0))[0];
-  return goalReadiness(newest,name,now);
- });
+ const readiness=uniqueNames.map(name=>goalReadiness(newestByAt.get(name.toLowerCase()),name,now));
  const routeActors:RouteActor[]=uniqueNames.map(name=>{
-  const s=statuses.filter(s=>s?.name?.toLowerCase()===name.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.practice).sort((a,b)=>(b.at??0)-(a.at??0))[0];
+  const s=newestByAt.get(name.toLowerCase());
   return{name,server:s?.server,at:s?.at??null,inventory:s?.inventory??null,equipment:s?.equipment??null,equipmentObserved:s?.equipmentObserved===true,skills:s?.skills??null,guildFacts:s?.guildFacts??null,doorStates:s?.doorStates??null};
  });
- return{at:now,staged:false as const,scope:'Advisory selected-route supplies. No reservations or delivery acceptance.',banks:banks.map(({items,...b})=>b),items,readiness,routeActors};
+ return{at:now,staged:false as const,scope:'Advisory selected-route supplies. No reservations or delivery acceptance.',banks:banks.map(({items:_,byId:__,...b})=>b),items,readiness,routeActors};
 }
 
 // Bind route stock to this report's dated, owned-bank observations. Never trust

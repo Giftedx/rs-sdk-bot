@@ -1,8 +1,10 @@
 import { expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { priceSteps, type CairnStep } from '../src/cairn-cli';
 import {
-    bestSet, haggisActivities, haggisTravel, loadSnapshot, schedule, scheduleOverall, scheduleQpSpecialist, TRICKS,
+    bestSet, haggisActivities, haggisTravel, haggisUnsourceable, loadSnapshot, schedule, scheduleOverall, scheduleQpSpecialist, TRICKS,
 } from '../src/haggis';
 import { bestHaggisLeg, createHaggisLegCache, legCacheFor } from '../src/haggis/travel';
 import { selectProgressiveLoadout, meleeWeaponSlot } from '../src/gear-progression';
@@ -98,4 +100,56 @@ test('gear progression slot index and gearSources table reset keep exact parity'
     const weaponSlot = meleeWeaponSlot(40, { oneHanded: true });
     expect(weaponSlot.options.find(o => o.equippable === true)?.id).toBe(1333);
     expect(weaponSlot.options.some(o => o.id === 1319)).toBe(false); // rune 2h excluded when oneHanded: true
+});
+
+test('haggisActivities and haggisUnsourceable isolate caller mutations and invalidate on file change', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'haggis-boards-cache-'));
+    const file = join(dir, 'boards.json');
+    try {
+        const writeBoards = (label: string, item: string, mtimeSec: number) => {
+            writeFileSync(file, JSON.stringify({
+                activities: [{ id: 'a1', label, ticks: 100, serves: ['overall'], supplies: [{ item, count: 5 }] }],
+                supplyResearch: [{ item, reason: 'test', source: 'fixture' }],
+            }));
+            utimesSync(file, mtimeSec, mtimeSec);
+        };
+        writeBoards('first', 'logs', 1_700_000_000);
+        const a1 = haggisActivities(file);
+        const u1 = haggisUnsourceable(file);
+        expect(a1[0]!.label).toBe('first');
+        expect(u1[0]!.item).toBe('logs');
+
+        // Mutating returned rows must not corrupt the cached template.
+        a1[0]!.label = 'mutated';
+        a1[0]!.supplies![0]!.count = 999;
+        u1[0]!.item = 'mutated';
+        expect(haggisActivities(file)[0]!.label).toBe('first');
+        expect(haggisActivities(file)[0]!.supplies![0]!.count).toBe(5);
+        expect(haggisUnsourceable(file)[0]!.item).toBe('logs');
+
+        // Updating the file invalidates the stat cache immediately.
+        writeBoards('second', 'oak logs', 1_700_000_010);
+        expect(haggisActivities(file)[0]!.label).toBe('second');
+        expect(haggisUnsourceable(file)[0]!.item).toBe('oak logs');
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+test('cairn priceSteps indexed lookup aggregates joined steps and missing scripts identically', () => {
+    const steps: CairnStep[] = [
+        { id: 's1', label: 'Step 1', skills: 'Magic', plan: 100, took: 110, ours: ['r1', 'r2'], scripts: ['package.json', 'missing-script.ts'] },
+        { id: 's2', label: 'Step 2', skills: 'Magic', plan: 50, took: 60, ours: [], scripts: [], pricedWith: 's1' },
+    ];
+    const order = [
+        { id: 'r1', label: 'Row 1', start: 0, end: 80, ticks: 70, travel: 10, serves: ['overall'] },
+        { id: 'r2', label: 'Row 2', start: 80, end: 150, ticks: 65, travel: 5, serves: ['overall'] },
+    ];
+    const priced = priceSteps(order as any, 100, steps, root);
+    expect(priced[0]!.ours).toBe(150);
+    expect(priced[0]!.plan).toBe(150);
+    expect(priced[0]!.took).toBe(170);
+    expect(priced[0]!.joined).toEqual(['s2']);
+    expect(priced[0]!.late).toEqual(['r2']);
+    expect(priced[0]!.missingScripts).toEqual(['missing-script.ts']);
 });

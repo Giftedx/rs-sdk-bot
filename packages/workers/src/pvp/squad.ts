@@ -935,9 +935,25 @@ export function configureBenchSession(s: Session, opts: { isGang: boolean; picku
 // refused ("I'm already under attack.", "Someone else is already fighting your opponent.") leaves the pick for 8 ticks.
 // `me`: the squad account; a target is taken only where the game lets it attack (both in the Wilderness, the combat gap
 // within the shallower level: pk.ts attackable). A target that walked out of the Wilderness held the squad at its edge.
-export function squadTarget<P extends { name: string; index: number; distance: number; z?: number; combatLevel?: number }>(view: readonly P[], targets: ReadonlySet<string>, health: (p: P) => number, skip: ReadonlySet<string> = new Set(), me?: { z: number; combatLevel: number }): P | undefined {
-    return view.filter(p => targets.has(p.name.toLowerCase()) && !skip.has(p.name.toLowerCase()) && (!me || p.z === undefined || attackable(me, { z: p.z, combatLevel: p.combatLevel ?? me.combatLevel })))
-        .sort((a, b) => health(a) - health(b) || a.distance - b.distance)[0];
+const EMPTY_STR_SET: ReadonlySet<string> = new Set();
+
+export function squadTarget<P extends { name: string; index: number; distance: number; z?: number; combatLevel?: number }>(view: readonly P[], targets: ReadonlySet<string>, health: (p: P) => number, skip: ReadonlySet<string> = EMPTY_STR_SET, me?: { z: number; combatLevel: number }): P | undefined {
+    let best: P | undefined;
+    let bestHealth = Infinity;
+    let bestDist = Infinity;
+    for (let i = 0; i < view.length; i++) {
+        const p = view[i]!;
+        const key = p.name.toLowerCase();
+        if (!targets.has(key) || skip.has(key)) continue;
+        if (me && p.z !== undefined && !attackable(me, { z: p.z, combatLevel: p.combatLevel ?? me.combatLevel })) continue;
+        const hp = health(p);
+        if (best === undefined || hp < bestHealth || (hp === bestHealth && p.distance < bestDist)) {
+            best = p;
+            bestHealth = hp;
+            bestDist = p.distance;
+        }
+    }
+    return best;
 }
 
 // Multi-way pile & anti-PJ target focus: prioritizes multi-way targets when preferMulti is set, then priority interlopers, stunned targets, lowest HP%, scouted target, and skips busy single-way fights.
@@ -956,42 +972,65 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
     scoutTarget?: string;
     selfIndex?: number;
 }): P | undefined {
-    const { view, targets, health, skip = new Set(), me, inMulti, preferMulti, stunned = new Set(), priority = new Set<string>(), activeFocus, scoutTarget, selfIndex } = opts;
+    const { view, targets, health, skip = EMPTY_STR_SET, me, inMulti, preferMulti, stunned = EMPTY_STR_SET, priority = EMPTY_STR_SET, activeFocus, scoutTarget, selfIndex } = opts;
     const active = activeFocus?.toLowerCase();
     const scout = scoutTarget?.toLowerCase();
     const selfMulti = inMulti ?? true;
-    const isTargetMulti = (p: { x?: number; z?: number }) => (p.x !== undefined && p.z !== undefined ? isMulti(p.x, p.z) : selfMulti);
-    const eligible = view.filter(p => {
+    const hasPriority = priority.size > 0;
+    const hasStunned = stunned.size > 0;
+    const hasSkip = skip.size > 0;
+    let best: P | undefined;
+    let bestMulti = false;
+    let bestPrio = false;
+    let bestStun = false;
+    let bestHp = Infinity;
+    let bestActive = false;
+    let bestScout = false;
+    let bestDist = Infinity;
+    for (let i = 0; i < view.length; i++) {
+        const p = view[i]!;
         const key = p.name.toLowerCase();
-        if (!targets.has(key) || skip.has(key)) return false;
-        if (me && p.z !== undefined && !attackable(me, { z: p.z, combatLevel: p.combatLevel ?? me.combatLevel })) return false;
+        if (!targets.has(key) || (hasSkip && skip.has(key))) continue;
+        if (me && p.z !== undefined && !attackable(me, { z: p.z, combatLevel: p.combatLevel ?? me.combatLevel })) continue;
         // Anti-PJ in single-way: avoid hopping onto someone already actively engaged by another attacker.
         // Shared activeFocus applies to multi-way piles, not single-way fights owned by another ally.
-        const targetMulti = isTargetMulti(p);
+        const targetMulti = p.x !== undefined && p.z !== undefined ? isMulti(p.x, p.z) : selfMulti;
         const engagedByOther = p.inCombat && (
             selfIndex !== undefined && selfIndex >= 0 && p.combatTargetType === 'player' && p.combatTargetIndex !== undefined
                 ? p.combatTargetIndex !== selfIndex
                 : key !== active
         );
-        if ((!selfMulti || !targetMulti) && engagedByOther) return false;
-        return true;
-    });
-    return eligible.sort((a, b) => {
-        if (preferMulti) {
-            const ma = Number(isTargetMulti(a)), mb = Number(isTargetMulti(b));
-            if (ma !== mb) return mb - ma;
+        if ((!selfMulti || !targetMulti) && engagedByOther) continue;
+        const prio = hasPriority && priority.has(key);
+        const stun = hasStunned && stunned.has(key);
+        const hp = health(p);
+        const isAct = key === active;
+        const isSct = key === scout;
+        if (best === undefined) {
+            best = p; bestMulti = targetMulti; bestPrio = prio; bestStun = stun; bestHp = hp; bestActive = isAct; bestScout = isSct; bestDist = p.distance;
+            continue;
         }
-        const ak = a.name.toLowerCase(), bk = b.name.toLowerCase();
-        const pa = Number(priority.has(ak)), pb = Number(priority.has(bk));
-        if (pa !== pb) return pb - pa;
-        const sa = Number(stunned.has(ak)), sb = Number(stunned.has(bk));
-        if (sa !== sb) return sb - sa;
-        const ha = health(a), hb = health(b);
-        const aa = ak === active, ab = bk === active;
-        if (aa !== ab && Math.abs(ha - hb) < 0.08) return aa ? -1 : 1;
-        if (ha !== hb) return ha - hb;
-        return Number(bk === scout) - Number(ak === scout) || a.distance - b.distance;
-    })[0];
+        let better = false;
+        if (preferMulti && targetMulti !== bestMulti) {
+            better = targetMulti;
+        } else if (prio !== bestPrio) {
+            better = prio;
+        } else if (stun !== bestStun) {
+            better = stun;
+        } else if (isAct !== bestActive && Math.abs(hp - bestHp) < 0.08) {
+            better = isAct;
+        } else if (hp !== bestHp) {
+            better = hp < bestHp;
+        } else if (isSct !== bestScout) {
+            better = isSct;
+        } else if (p.distance < bestDist) {
+            better = true;
+        }
+        if (better) {
+            best = p; bestMulti = targetMulti; bestPrio = prio; bestStun = stun; bestHp = hp; bestActive = isAct; bestScout = isSct; bestDist = p.distance;
+        }
+    }
+    return best;
 }
 
 export interface SquadFocusEntry {

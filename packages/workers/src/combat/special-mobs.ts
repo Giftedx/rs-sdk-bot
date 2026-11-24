@@ -137,60 +137,102 @@ function nativeCombatKitItem(id: number) {
     return item;
 }
 
+type CombatKitMeta = { id: number; name: string; debugname: string; src: string; members: boolean };
+const COMBAT_KIT_SLOTS: Readonly<Record<string, number>> = {
+    hat: 0,
+    back: 1,
+    front: 2,
+    righthand: 3,
+    torso: 4,
+    lefthand: 5,
+    arms: 6,
+    legs: 7,
+    head: 8,
+    hands: 9,
+    feet: 10,
+    jaw: 11,
+    ring: 12,
+    quiver: 13,
+};
+let kitObjPackById: Map<number, string> | undefined;
+let kitItemsById: Map<number, CombatKitMeta> | undefined;
+let kitItemsByDebug: Map<string, CombatKitMeta> | undefined;
+let kitStyleTabByCategory: Map<string, string> | undefined;
+let kitStyleIndicesByTab: Map<string, number[]> | undefined;
+const kitObjSourceFiles = new Map<string, string>();
+
+function ensureCombatKitTables() {
+    if (!kitObjPackById) {
+        const text = readFileSync(CONTENT_DIR + 'pack/obj.pack', 'utf8');
+        kitObjPackById = new Map();
+        let pos = 0;
+        while (pos < text.length) {
+            let end = text.indexOf('\n', pos);
+            if (end < 0) end = text.length;
+            const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+            const eq = text.indexOf('=', pos);
+            if (eq > pos && eq < lineEnd) {
+                const parsedId = Number(text.slice(pos, eq));
+                if (Number.isInteger(parsedId) && parsedId >= 0) kitObjPackById.set(parsedId, text.slice(eq + 1, lineEnd));
+            }
+            pos = end + 1;
+        }
+    }
+    if (!kitItemsById || !kitItemsByDebug) {
+        const rows = JSON.parse(readFileSync(resolve(ROOT, 'knowledge/items.json'), 'utf8')) as CombatKitMeta[];
+        kitItemsById = new Map();
+        kitItemsByDebug = new Map();
+        for (let i = 0; i < rows.length; i++) {
+            const it = rows[i]!;
+            if (!kitItemsById.has(it.id)) kitItemsById.set(it.id, it);
+            if (!kitItemsByDebug.has(it.debugname)) kitItemsByDebug.set(it.debugname, it);
+        }
+    }
+    if (!kitStyleTabByCategory || !kitStyleIndicesByTab) {
+        const styles = readFileSync(CONTENT_DIR + 'scripts/skill_combat/scripts/player/player_attackstyles.rs2', 'utf8');
+        kitStyleTabByCategory = new Map();
+        for (const m of styles.matchAll(/case ([\w, ]+) : ~weapon_category_tab_attack\((combat_\w+):preview/g)) {
+            for (const cat of m[1]!.split(/,\s*/)) if (cat) kitStyleTabByCategory.set(cat, m[2]!);
+        }
+        kitStyleIndicesByTab = new Map();
+        for (const m of styles.matchAll(/\[if_button,(combat_\w+):[^\]]+\]\s*~set_attackstyle\((\d+)\);/g)) {
+            let list = kitStyleIndicesByTab.get(m[1]!);
+            if (!list) {
+                list = [];
+                kitStyleIndicesByTab.set(m[1]!, list);
+            }
+            list.push(Number(m[2]));
+        }
+    }
+}
+
 function readNativeCombatKitItem(id: number) {
-    const items = JSON.parse(readFileSync(resolve(ROOT, 'knowledge/items.json'), 'utf8')) as {
-        id: number;
-        name: string;
-        debugname: string;
-        src: string;
-        members: boolean;
-    }[];
-    const packed = readFileSync(CONTENT_DIR + 'pack/obj.pack', 'utf8')
-        .split(/\r?\n/)
-        .find(l => l.startsWith(id + '='))
-        ?.split('=')[1];
+    ensureCombatKitTables();
+    const packed = kitObjPackById!.get(id);
     const noted = !!packed?.startsWith('cert_');
-    const item = items.find(i => (noted ? i.debugname === packed!.slice(5) : i.id === id));
+    const item = noted ? kitItemsByDebug!.get(packed!.slice(5)) : kitItemsById!.get(id);
     if (!item || !wholeInt(id)) throw Error('unknown native kit item ' + id);
-    const block = readFileSync(CONTENT_DIR + item.src.replace(/:\d+$/, ''), 'utf8')
-        .split('[' + item.debugname + ']')[1]
-        ?.split('\n[')[0];
+    const relPath = item.src.replace(/:\d+$/, '');
+    let fileText = kitObjSourceFiles.get(relPath);
+    if (fileText === undefined) {
+        fileText = readFileSync(CONTENT_DIR + relPath, 'utf8');
+        kitObjSourceFiles.set(relPath, fileText);
+    }
+    const block = fileText.split('[' + item.debugname + ']')[1]?.split('\n[')[0];
     if (!block) throw Error('native item definition absent ' + id);
     const fields = (key: string) => block.match(new RegExp('^' + key + '=([^\\r\\n]+)', 'm'))?.[1];
-    const slots: Record<string, number> = {
-        hat: 0,
-        back: 1,
-        front: 2,
-        righthand: 3,
-        torso: 4,
-        lefthand: 5,
-        arms: 6,
-        legs: 7,
-        head: 8,
-        hands: 9,
-        feet: 10,
-        jaw: 11,
-        ring: 12,
-        quiver: 13,
-    };
     const slot = fields('wearpos');
     const extra = [fields('wearpos2'), fields('wearpos3')].filter((x): x is string => !!x);
-    const styles = readFileSync(CONTENT_DIR + 'scripts/skill_combat/scripts/player/player_attackstyles.rs2', 'utf8');
     const category = fields('category');
-    const tab =
-        [...styles.matchAll(/case ([\w, ]+) : ~weapon_category_tab_attack\((combat_\w+):preview/g)].find(m =>
-            m[1]!.split(/,\s*/).includes(category ?? ''),
-        )?.[2] ?? 'combat_unarmed';
-    const styleIndices = [...styles.matchAll(new RegExp('\\[if_button,' + tab + ':[^\\]]+\\] ~set_attackstyle\\((\\d+)\\);', 'g'))].map(m =>
-        Number(m[1]),
-    );
+    const tab = (category ? kitStyleTabByCategory!.get(category) : undefined) ?? 'combat_unarmed';
+    const styleIndices = kitStyleIndicesByTab!.get(tab) ?? [];
     return {
         ...item,
         id,
         baseId: item.id,
         stackable: noted || fields('stackable') === 'yes',
-        slot: noted || slot === undefined ? undefined : slots[slot],
-        occupies: [slot, ...extra].filter((x): x is string => !!x).map(x => slots[x]),
+        slot: noted || slot === undefined ? undefined : COMBAT_KIT_SLOTS[slot],
+        occupies: [slot, ...extra].filter((x): x is string => !!x).map(x => COMBAT_KIT_SLOTS[x]),
         noted,
         styleIndices,
         styleTab: componentId(tab),
@@ -914,18 +956,44 @@ export function fireTargetInRoom(n: Pick<NearbyNpc, 'tileX' | 'tileZ'>): boolean
 export function selectFireTarget(npcs: readonly NearbyNpc[], selfSlot: number) {
     if (!Number.isSafeInteger(selfSlot) || selfSlot < 0) return;
     const own = 32768 + selfSlot;
-    const spiders = npcs.filter(n => n.id === 58 && (n.tileZ ?? n.z) >= 9882);
-    return npcs
-        .filter(
-            n =>
-                n.id === 110
-                && n.reachable !== false
-                && (!n.inCombat || n.targetIndex === own)
-                && spiders.every(a => Math.max(Math.abs((a.tileX ?? a.x) - ((n.tileX ?? n.x) - 1)), Math.abs((a.tileZ ?? a.z) - (n.tileZ ?? n.z))) > 2)
-                && (n.hp === null || n.maxHp === null || n.hp >= n.maxHp)
-                && fireTargetInRoom(n),
-        )
-        .sort((a, b) => Number(b.inCombat && b.targetIndex === own) - Number(a.inCombat && a.targetIndex === own) || a.distance - b.distance)[0];
+    const spiders: NearbyNpc[] = [];
+    for (let i = 0; i < npcs.length; i++) {
+        const n = npcs[i]!;
+        if (n.id === 58 && (n.tileZ ?? n.z) >= 9882) spiders.push(n);
+    }
+    let best: NearbyNpc | undefined;
+    let bestMine = false;
+    let bestDist = Infinity;
+    for (let i = 0; i < npcs.length; i++) {
+        const n = npcs[i]!;
+        if (
+            n.id !== 110
+            || n.reachable === false
+            || (n.inCombat && n.targetIndex !== own)
+            || (n.hp !== null && n.maxHp !== null && n.hp < n.maxHp)
+            || !fireTargetInRoom(n)
+        ) {
+            continue;
+        }
+        const nx = (n.tileX ?? n.x) - 1;
+        const nz = n.tileZ ?? n.z;
+        let blocked = false;
+        for (let si = 0; si < spiders.length; si++) {
+            const a = spiders[si]!;
+            if (Math.abs((a.tileX ?? a.x) - nx) <= 2 && Math.abs((a.tileZ ?? a.z) - nz) <= 2) {
+                blocked = true;
+                break;
+            }
+        }
+        if (blocked) continue;
+        const mine = !!(n.inCombat && n.targetIndex === own);
+        if (best === undefined || (mine && !bestMine) || (mine === bestMine && n.distance < bestDist)) {
+            best = n;
+            bestMine = mine;
+            bestDist = n.distance;
+        }
+    }
+    return best;
 }
 
 export async function sealFireRoom(s: CombatSession, stop: () => boolean) {
@@ -2876,12 +2944,7 @@ export async function runShadeTrips(original: CombatSession, value: ShadeJob, re
             if (deps.walker || !inside || key0() !== 1) return d;
             const pf = await import('../../../../vendor/rs-sdk/sdk/pathfinding');
             const grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
-            const doors = JSON.parse(readFileSync(resolve(ROOT, 'knowledge/doors.json'), 'utf8')) as { id: number; x: number; z: number; level: number }[];
-            const allowed = new Set(
-                doors
-                    .filter(v => [4106, 4107, 4108, 4109].includes(v.id) && v.level === 0 && v.x >= 3450 && v.x <= 3510 && v.z >= 9690 && v.z <= 9730)
-                    .map(v => `${v.level}:${v.x}:${v.z}`),
-            );
+            const { doors, allowed } = shadeDoorsData();
             return {
                 ...d,
                 plan: (level: number, from: { x: number; z: number }, to: { x: number; z: number }) => {
@@ -4612,6 +4675,21 @@ export async function runChompyTripCli(args: readonly string[], env: Record<stri
 }
 
 // ============================================================================
+let cachedShadeDoors: { id: number; x: number; z: number; level: number }[] | undefined;
+let cachedShadeAllowedDoors: Set<string> | undefined;
+function shadeDoorsData() {
+    if (!cachedShadeDoors || !cachedShadeAllowedDoors) {
+        cachedShadeDoors = JSON.parse(readFileSync(resolve(ROOT, 'knowledge/doors.json'), 'utf8')) as { id: number; x: number; z: number; level: number }[];
+        cachedShadeAllowedDoors = new Set();
+        for (const v of cachedShadeDoors) {
+            if ((v.id === 4106 || v.id === 4107 || v.id === 4108 || v.id === 4109) && v.level === 0 && v.x >= 3450 && v.x <= 3510 && v.z >= 9690 && v.z <= 9730) {
+                cachedShadeAllowedDoors.add(`${v.level}:${v.x}:${v.z}`);
+            }
+        }
+    }
+    return { doors: cachedShadeDoors, allowed: cachedShadeAllowedDoors };
+}
+
 // 5. Ground Loot Trips
 // ============================================================================
 export interface LootTripJob {
@@ -4626,12 +4704,29 @@ export interface LootTripJob {
     valuation?: { source: 'native-ge-last-trade'; ids: number[]; thresholds?: 'donor' };
 }
 
-const LOOT_IDS = readFileSync(resolve(ROOT, 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
-    .split(/\r?\n/)
-    .flatMap(l => {
-        const m = l.match(/^(\d+)=/);
-        return m ? [Number(m[1])] : [];
-    });
+let cachedLootIds: { set: Set<number>; list: number[] } | undefined;
+function lootIds(): { set: ReadonlySet<number>; list: readonly number[] } {
+    if (cachedLootIds) return cachedLootIds;
+    const text = readFileSync(resolve(ROOT, 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8');
+    const set = new Set<number>();
+    const list: number[] = [];
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < end) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) {
+                set.add(id);
+                list.push(id);
+            }
+        }
+        pos = end + 1;
+    }
+    cachedLootIds = { set, list };
+    return cachedLootIds;
+}
 
 type LootDefFn = (id: number) => { name: string; cost: number; stackable: boolean } | undefined;
 
@@ -4642,7 +4737,8 @@ export async function fetchLootQuotes(
     market: Pick<MarketClient, 'item'> = new MarketClient(origin),
     now: () => number = Date.now,
 ): Promise<LootQuoteSnapshot> {
-    if (!scope.length || scope.length > 16 || new Set(scope).size !== scope.length || scope.some(id => !Number.isSafeInteger(id) || id < 1 || !LOOT_IDS.includes(id))) {
+    const validIds = lootIds().set;
+    if (!scope.length || scope.length > 16 || new Set(scope).size !== scope.length || scope.some(id => !Number.isSafeInteger(id) || id < 1 || !validIds.has(id))) {
         throw Error('invalid finite native quote scope');
     }
     if (stop()) throw Error('loot quotes stopped');
@@ -4692,6 +4788,7 @@ export function donorLootEligible(item: { id: number; name: string; count: numbe
 }
 
 export function lootTripOutputs(p: LootTripJob['policy'], definition: (id: number) => { name: string; cost: number; stackable: boolean } | undefined, donor = false) {
+    const { set: validLootIds, list: allLootIds } = lootIds();
     if (
         !validLootFilters(p)
         || !Number.isSafeInteger(p.minimumValue)
@@ -4704,20 +4801,27 @@ export function lootTripOutputs(p: LootTripJob['policy'], definition: (id: numbe
         || p.radius > 12
         || !Number.isSafeInteger(p.idleTicks)
         || p.idleTicks < 1
-        || [...p.ids, ...(p.ignoredIds ?? [])].some(id => !LOOT_IDS.includes(id))
+        || [...p.ids, ...(p.ignoredIds ?? [])].some(id => !validLootIds.has(id))
     ) {
         throw Error('invalid native bank-loot policy');
     }
     const names = new Set(p.names.map(n => n.toLowerCase()));
     const globs = new Set(p.nameGlobs ?? []);
     const found = new Set<string>();
-    const outputs = LOOT_IDS.filter(id => {
+    const outputs: number[] = [];
+    for (let i = 0; i < allLootIds.length; i++) {
+        const id = allLootIds[i]!;
         const d = definition(id);
-        if (!d || typeof d.name !== 'string' || !Number.isSafeInteger(d.cost) || d.cost < 0 || typeof d.stackable !== 'boolean') return false;
-        for (const name of names) if (name === d.name.toLowerCase()) found.add(name);
-        for (const glob of globs) if (lootNameMatches(d.name, glob)) found.add(glob);
-        return lootMatches({ id, name: d.name, count: 1 }, p, d, { donor, potential: true });
-    });
+        if (!d || typeof d.name !== 'string' || !Number.isSafeInteger(d.cost) || d.cost < 0 || typeof d.stackable !== 'boolean') continue;
+        if (names.size > 0) {
+            const lower = d.name.toLowerCase();
+            if (names.has(lower)) found.add(lower);
+        }
+        if (globs.size > 0) {
+            for (const glob of globs) if (lootNameMatches(d.name, glob)) found.add(glob);
+        }
+        if (lootMatches({ id, name: d.name, count: 1 }, p, d, { donor, potential: true })) outputs.push(id);
+    }
     if ([...names, ...globs].some(n => !found.has(n)) || !outputs.length) throw Error('native loot names or outputs unresolved');
     return outputs;
 }

@@ -751,7 +751,13 @@ export function resolveAccountWorkerPlan(
     plan: AccountPlan,
     ctx?: WorkerRoutingContext,
 ): ResolvedWorkerPlan {
-    const steps = plan.steps.map((s) => resolvePlannedStepWorkerRoute(plan.account, s, ctx));
+    let resolvedCtx = ctx;
+    if (ctx && !ctx.catalog && !ctx.activityById && ctx.activities && plan.steps.length > 1) {
+        const activityById = new Map<string, ActivityDefinition>();
+        for (const a of ctx.activities) activityById.set(a.id, a);
+        resolvedCtx = { ...ctx, activityById };
+    }
+    const steps = plan.steps.map((s) => resolvePlannedStepWorkerRoute(plan.account, s, resolvedCtx));
     return {
         account: plan.account,
         ...(plan.demandId ? { demandId: plan.demandId } : {}),
