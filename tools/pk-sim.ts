@@ -17,9 +17,9 @@
 //   (skill_prayer/scripts/prayer.rs2, player/scripts/equip.rs2). A dose of prayer restore gives 31 points. At 0 points
 //   every prayer is off. The fight loop flicks its prayers and keeps most of its points; the simulator does not.
 // What it leaves out: movement, freezes, poison. Fighters stand next to each other. Check a result on the bench before it goes into the fight loop.
-// Usage: bun scripts/pk-sim.ts <kit a> <kit b> [fights, default 2000] [options a as JSON] [options b as JSON]
-//        bun scripts/pk-sim.ts --table [fights]   every kit against the tribrid
-//        bun scripts/pk-sim.ts --league <kit,kit,...> [fights]   every kit of the list against every other
+// Usage: bun tools/pk-sim.ts <kit a> <kit b> [fights, default 2000] [options a as JSON] [options b as JSON]
+//        bun tools/pk-sim.ts --table [fights]   every kit against the tribrid
+//        bun tools/pk-sim.ts --league <kit,kit,...> [fights]   every kit of the list against every other
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { KITS, type KitSpec } from '../scripts/pk-kits';
@@ -234,14 +234,14 @@ if (import.meta.main) {
     const argv = process.argv.slice(2);
     if (argv[0] === '--league') {
         const kits = (argv[1] ?? '').split(',').filter(Boolean), unknown = kits.filter(k => !KITS[k]);
-        if (kits.length < 2 || unknown.length) { console.log(`usage: bun scripts/pk-sim.ts --league <kit,kit,...> [fights]; unknown: ${unknown.join(', ') || 'none'}`); process.exit(2); }
+        if (kits.length < 2 || unknown.length) { console.log(`usage: bun tools/pk-sim.ts --league <kit,kit,...> [fights]; unknown: ${unknown.join(', ') || 'none'}`); process.exit(2); }
         for (const row of league(kits, Number(argv[2] ?? 1000))) console.log(`SIM ${JSON.stringify(row)}`);
     } else if (argv[0] === '--table') {
         const fights = Number(argv[1] ?? 2000);
         for (const kit of Object.keys(KITS)) console.log(`SIM ${JSON.stringify({ kit, against: 'tribrid', ...series(kit, 'tribrid', {}, {}, fights) })}`);
     } else {
         const [kitA, kitB, fights, optionsA, optionsB] = argv;
-        if (!kitA || !kitB || !KITS[kitA] || !KITS[kitB]) { console.log(`usage: bun scripts/pk-sim.ts <kit a> <kit b> [fights] [options a] [options b]; kits: ${Object.keys(KITS).join(', ')}`); process.exit(2); }
+        if (!kitA || !kitB || !KITS[kitA] || !KITS[kitB]) { console.log(`usage: bun tools/pk-sim.ts <kit a> <kit b> [fights] [options a] [options b]; kits: ${Object.keys(KITS).join(', ')}`); process.exit(2); }
         console.log(`SIM ${JSON.stringify({ a: kitA, b: kitB, ...series(kitA, kitB, optionsA ? JSON.parse(optionsA) : {}, optionsB ? JSON.parse(optionsB) : {}, Number(fights ?? 2000)) })}`);
     }
 }

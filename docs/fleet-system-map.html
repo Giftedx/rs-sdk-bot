@@ -38,7 +38,7 @@ nav.toc{display:flex;flex-wrap:wrap;gap:7px 16px;font-size:.92rem}.sec-head{disp
 .map .ext rect{fill:var(--ext-bg);stroke:var(--ext)}.map .person rect{fill:var(--person-bg);stroke:var(--person)}.map text{fill:var(--fg)}.map .t{font-size:17px;font-weight:600}
 .map .s{font-size:14px;fill:var(--muted)}.map .l{font-size:13px;fill:var(--muted)}.map .mono{font-family:var(--mono);font-size:14px}.map .ln{fill:none;stroke:var(--line);stroke-width:1.5}
 .map .ln.d{stroke-dasharray:5 4}.map .ah{fill:var(--line)}.map .n,.map .e{transition:opacity .15s}.map[data-show] .n,.map[data-show] .e{opacity:.12}
-.map[data-show="job"] .p-job,.map[data-show="queue"] .p-queue,.map[data-show="code"] .p-code,.map[data-show="trade"] .p-trade,
+.map[data-show="job"] .p-job,.map[data-show="brain"] .p-brain,.map[data-show="code"] .p-code,.map[data-show="trade"] .p-trade,
 .map[data-show="heal"] .p-heal,.map[data-show="watch"] .p-watch,.map[data-show="goal"] .p-goal,.map[data-show="cloud"] .p-cloud{opacity:1}
 figcaption{color:var(--muted);font-size:.9rem;max-width:94ch}.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.86rem;color:var(--muted)}.key{display:inline-flex;align-items:center;gap:6px}
 .sw{width:18px;height:12px;border-radius:3px;border:1.4px solid}.sw.proc{background:var(--proc-bg);border-color:var(--proc)}.sw.file{background:var(--file-bg);border-color:var(--file)}
@@ -62,129 +62,127 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
 <body>
 <main class="wrap">
 <header>
- <span class="eyebrow">rs-sdk-bot · source revision <a href="https://github.com/Giftedx/rs-sdk-bot/tree/b98ebbe3f6f19440eed795666498ec7deb327aa9"><code>b98ebbe3f</code></a></span>
+ <span class="eyebrow">rs-sdk-bot · Fleet Brain architecture (<a href="https://github.com/Giftedx/rs-sdk-bot/tree/master"><code>master</code></a>)</span>
  <h1>Fleet System Map</h1>
- <p class="lede">From an owner goal to a chosen task, an owned account, a game worker and a proved result. Follow the work, the data and the repair path.</p>
- <p class="scope">This page describes source behavior. Tests, practice runs and live runs prove different things. Owner goals need fresh game evidence. The map alone proves no live result.</p>
+ <p class="lede">From an owner goal to a Fleet Brain chain, an owned account, a unified worker module and a settled live result. Follow the work, the data and the repair path.</p>
+ <p class="scope">This page describes current source behavior. Tests, practice runs and live runs prove different things. Owner goals need fresh game evidence. The map alone proves no live result.</p>
  <nav class="toc" aria-label="Sections">
-  <a href="#work">Start here</a><a href="#map">The map</a><a href="#parts">Controllers</a><a href="#goals">Goals and demand</a><a href="#selection">Task selection</a><a href="#tasks">Task types and states</a><a href="#accounts">Account life cycle</a><a href="#job">Job admission</a><a href="#workers">Inside a worker</a><a href="#queue">Build and delivery</a><a href="#proof">What counts as proof</a><a href="#code">Source and reload</a><a href="#supply">Supply choice</a><a href="#trade">Orders and trades</a><a href="#cloud">Sides and ownership</a><a href="#fail">Failure and repair</a><a href="#watch">Watching and control</a><a href="#state">Where state lives</a><a href="#tools">Find the right tool</a><a href="#stops">Stop switches</a><a href="#gaps">Limits</a>
+  <a href="#work">Start here</a><a href="#map">The map</a><a href="#parts">Controllers</a><a href="#goals">Goals and demand</a><a href="#selection">Brain planning</a><a href="#accounts">Account life cycle</a><a href="#job">Job admission</a><a href="#workers">Unified workers</a><a href="#proof">What counts as proof</a><a href="#code">Source and reload</a><a href="#supply">Supply acquisition</a><a href="#trade">Orders and trades</a><a href="#cloud">Sides and ownership</a><a href="#fail">Failure and repair</a><a href="#watch">Watching and control</a><a href="#state">Where state lives</a><a href="#tools">Find the right tool</a><a href="#stops">Stop switches</a><a href="#gaps">Limits</a>
  </nav>
 </header>
 
 <section id="work">
- <div class="sec-head"><h2>Start with the work</h2><p>A task, a job, a process and a game session are different things. One successful step does not complete the whole path.</p></div>
+ <div class="sec-head"><h2>Start with the work</h2><p>A goal demand, a planned chain, a running process and a game session are distinct layers. One passing check does not complete the whole path.</p></div>
  <figure>
   <div class="scroll map recovery" tabindex="0" role="region" aria-label="From owner goal to the next useful job">
    <svg viewBox="0 0 1240 380" role="img" aria-labelledby="work-title work-desc">
     <title id="work-title">The useful work cycle</title>
-    <desc id="work-desc">Owner goals and observed gaps feed task selection. A finite task can build, qualify, review, provision or run. A run becomes a job. The swarm admits an owned account, then its supervisor starts the worker. The worker observes the game and settles its session. Acceptance checks useful effect, identity and source. Results guide the next task. A failed step returns evidence for repair. Stops and ownership apply throughout.</desc>
+    <desc id="work-desc">Owner goals and observed world snapshots feed Fleet Brain demand and chain planning. The FleetScheduler assigns chains and transfer orders. Swarm admits owned accounts and launches supervisors over unified workers. Workers observe the game and settle sessions. OutcomeClassifier and RateStore feed results back into the next Brain cycle.</desc>
     <defs><marker id="work-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker></defs>
-    <g class="n person"><rect x="20" y="25" width="260" height="105" rx="7"/><text class="t" x="35" y="53">1. Name the useful effect</text><text class="s" x="35" y="78">goal, gap and finite consumer</text><text class="s" x="35" y="102">observed stock, skills and proof</text></g>
-    <g class="n proc"><rect x="340" y="25" width="260" height="105" rx="7"/><text class="t" x="355" y="53">2. Choose eligible work</text><text class="s" x="355" y="78">task value / estimated time</text><text class="s" x="355" y="102">or autopilot's useful job plan</text></g>
-    <g class="n file"><rect x="660" y="25" width="260" height="105" rx="7"/><text class="t" x="675" y="53">3. Prepare the run</text><text class="s" x="675" y="78">source, proof and account</text><text class="s" x="675" y="102">install one owned assignment</text></g>
+    <g class="n person"><rect x="20" y="25" width="260" height="105" rx="7"/><text class="t" x="35" y="53">1. Observe world state</text><text class="s" x="35" y="78">WorldSnapshot + goal gaps</text><text class="s" x="35" y="102">skills, banks, quests, stock</text></g>
+    <g class="n proc"><rect x="340" y="25" width="260" height="105" rx="7"/><text class="t" x="355" y="53">2. Plan chains</text><text class="s" x="355" y="78">DemandEngine + AccountPlanner</text><text class="s" x="355" y="102">1-to-3-step value / hour</text></g>
+    <g class="n file"><rect x="660" y="25" width="260" height="105" rx="7"/><text class="t" x="675" y="53">3. Schedule fleet</text><text class="s" x="675" y="78">FleetScheduler + FleetState</text><text class="s" x="675" y="102">slots, spots, transfers, holds</text></g>
     <g class="n proc"><rect x="660" y="225" width="260" height="105" rx="7"/><text class="t" x="675" y="253">4. Admit and execute</text><text class="s" x="675" y="278">swarm → supervisor → worker</text><text class="s" x="675" y="302">claim → login → observe → act</text></g>
-    <g class="n file"><rect x="340" y="225" width="260" height="105" rx="7"/><text class="t" x="355" y="253">5. Settle and accept</text><text class="s" x="355" y="278">useful effect + matching source</text><text class="s" x="355" y="302">result, participants and logout</text></g>
-    <g class="n proc"><rect x="20" y="225" width="260" height="105" rx="7"/><text class="t" x="35" y="253">6. Choose the next step</text><text class="s" x="35" y="278">remaining demand or next band</text><text class="s" x="35" y="302">failure → evidence → repair</text></g>
-    <g class="e"><path class="ln d" d="M280 77H340" marker-end="url(#work-arrow)"/><path class="ln" d="M600 77H660" marker-end="url(#work-arrow)"/><path class="ln" d="M790 130V225" marker-end="url(#work-arrow)"/><path class="ln d" d="M660 277H600" marker-end="url(#work-arrow)"/><path class="ln d" d="M340 277H280" marker-end="url(#work-arrow)"/><path class="ln d" d="M150 225V130" marker-end="url(#work-arrow)"/></g>
-    <text class="l" x="947" y="163">Every start still needs:</text><text class="s" x="947" y="189">owner permission</text><text class="s" x="947" y="213">account ownership</text><text class="s" x="947" y="237">settled prior session</text><text class="s" x="947" y="261">host capacity</text>
+    <g class="n file"><rect x="340" y="225" width="260" height="105" rx="7"/><text class="t" x="355" y="253">5. Settle and record</text><text class="s" x="355" y="278">status, RESULT, LEDGER</text><text class="s" x="355" y="302">server-confirmed logout proof</text></g>
+    <g class="n proc"><rect x="20" y="225" width="260" height="105" rx="7"/><text class="t" x="35" y="253">6. Classify and adapt</text><text class="s" x="35" y="278">OutcomeClassifier + RateStore</text><text class="s" x="35" y="302">quarantine defects, update rates</text></g>
+    <g class="e"><path class="ln d" d="M280 77H340" marker-end="url(#work-arrow)"/><path class="ln" d="M600 77H660" marker-end="url(#work-arrow)"/><path class="ln" d="M790 130V225" marker-end="url(#work-arrow)"/><path class="ln" d="M660 277H600" marker-end="url(#work-arrow)"/><path class="ln" d="M340 277H280" marker-end="url(#work-arrow)"/><path class="ln" d="M150 225V130" marker-end="url(#work-arrow)"/></g>
+    <text class="l" x="947" y="163">Every live start needs:</text><text class="s" x="947" y="189">no stop file or hold</text><text class="s" x="947" y="213">side ownership match</text><text class="s" x="947" y="237">confirmed prior logout</text><text class="s" x="947" y="261">RAM and slot capacity</text>
    </svg>
   </div>
-  <figcaption>This is the shared work cycle. Coordinator tasks, standing jobs and trade orders have separate owners and acceptance rules.</figcaption>
+  <figcaption>The continuous Fleet Brain loop. Explicit owner reservations in <code>swarm.json</code>, protected clocks and cross-side trade orders keep separate gates.</figcaption>
  </figure>
  <div class="tscroll" tabindex="0" role="region" aria-label="Names used for work"><table>
   <thead><tr><th>Name</th><th>Meaning</th><th>Who owns the decision</th></tr></thead><tbody>
-  <tr><td>Owner goal</td><td>A wanted game outcome: a board win, quest, useful item or army result.</td><td>The owner sets intent. The goal ledger tracks evidence and unknowns.</td></tr>
-  <tr><td>Capability</td><td>A named worker with an entry, owned files and declared regression, practice and consumer checks.</td><td>The delivery definition states what a checked source can do.</td></tr>
-  <tr><td>Task</td><td>A finite queue item with dependencies, an estimate, a reason and a result receipt.</td><td>The coordinator selects and records it. Model proposals still need validation.</td></tr>
-  <tr><td>Job</td><td>An account assignment: script, arguments, environment, participants and repeat policy.</td><td>Owner, autopilot or coordinator writes its own plan entries. The swarm admits starts.</td></tr>
-  <tr><td>Process / session</td><td>A supervisor or worker is a process. A logged-in account has a game session. Hosted workers can share a process.</td><td>The supervisor controls process retries. The worker and connection producer settle the exact session.</td></tr>
-  <tr><td>Order</td><td>A finite transfer between owned accounts with item counts, a window and receipts.</td><td>Each side's fleet agent runs its own part. An order is not a coordinator task or a trade result.</td></tr>
+  <tr><td>Owner goal</td><td>A target game outcome: Haggis rank 1 Overall, specialist board wins, all quests, useful items/BiS gear, or the maxed PK army.</td><td>The owner sets intent in <code>docs/plans/joined-plan.md</code>. <code>DemandEngine</code> translates unresolved goals into finite demand.</td></tr>
+  <tr><td>Activity</td><td>A declarative <code>ActivityDefinition</code> in <code>packages/brain/src/catalog.ts</code> backed by one of the 9 worker families in <code>packages/workers/src/</code>.</td><td>Catalog trust tiers (<code>practice_passed</code>, <code>live_proven</code>) and preflight checks bound what accounts can run.</td></tr>
+  <tr><td>Account plan / chain</td><td>A 1-to-3-step sequence (<code>recover</code>, <code>acquire</code>, <code>gear_upgrade</code>, <code>unlock</code>, <code>work</code>) scored by goal value per end-to-end hour.</td><td><code>AccountPlanner</code> and <code>FleetScheduler</code> select chains under <code>maxBots</code>, spot caps and retention margins.</td></tr>
+  <tr><td>Job / dispatch</td><td>A concrete worker launch built by <code>packages/fleet/src/worker-dispatch.ts</code> or reserved by hand in <code>swarm.json</code>.</td><td><code>packages/fleet/src/swarm.ts</code> admits starts, enforces memory/slot caps and adopts detached supervisors.</td></tr>
+  <tr><td>Process / session</td><td>A supervisor or worker process vs. an authenticated in-game session with attempt identity and server-confirmed logout proof.</td><td><code>packages/practice/src/supervise.ts</code> manages bounded retries; <code>openBot</code> settles the exact game session.</td></tr>
+  <tr><td>Transfer order</td><td>A finite item transfer between owned accounts with item counts, a time window and bilateral receipts.</td><td><code>packages/fleet/src/fleet-agent.ts</code> and <code>scripts/fleet-trade.ts</code> execute due orders on idle accounts.</td></tr>
   </tbody></table></div>
- <p class="to">People and agent sessions also do research, route measurement, review, pull requests and delivery. A tool supports a named game consumer. Its output alone is not game progress.</p>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L8">task contract</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/delivery.ts#L8">capability contract</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/swarm.ts#L1">job controller</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/docs/script-contract.md#L147">coordination contract</a></p>
+ <p class="to">Developer tools under <code>tools/</code> support measurement, auditing and CI. A tool or passing test alone is not live game progress.</p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/contracts.ts">Brain contracts</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/brain-runtime.ts">Brain runtime</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/swarm.ts">swarm controller</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/docs/script-contract.md">script contract</a></p>
 </section>
 
 <section id="map">
  <div class="sec-head"><h2>The map</h2><p>Select a path to highlight its parts. Solid arrows start work. Dashed arrows carry data.</p></div>
  <div class="filters" role="group" aria-label="Show one path on the map">
   <button type="button" data-f="" aria-pressed="true">Everything</button><button type="button" data-f="goal" aria-pressed="false">Goals and supply</button>
-  <button type="button" data-f="job" aria-pressed="false">A job becomes a bot</button><button type="button" data-f="queue" aria-pressed="false">Coordinator work</button>
+  <button type="button" data-f="job" aria-pressed="false">A job becomes a bot</button><button type="button" data-f="brain" aria-pressed="false">Fleet Brain planning</button>
   <button type="button" data-f="code" aria-pressed="false">Code reaches the fleet</button><button type="button" data-f="trade" aria-pressed="false">Items between sides</button>
   <button type="button" data-f="cloud" aria-pressed="false">Cloud and ownership</button><button type="button" data-f="heal" aria-pressed="false">Recovery</button><button type="button" data-f="watch" aria-pressed="false">Watching</button>
  </div>
  <div class="map-tools" role="group" aria-label="Map size"><button type="button" id="readable" aria-pressed="true">Readable size</button><button type="button" id="fit" aria-pressed="false">Fit width</button><span id="path-status" role="status" aria-live="polite">Showing everything</span></div>
  <p class="map-help" id="map-help">On a small screen, scroll across the map. Fit width gives a wider overview. Each path has full steps below.</p>
  <ol class="map-summary">
-  <li>Goals and finite demand guide the coordinator and autopilot.</li><li>Two job files feed the swarm. Detached supervisors run the workers.</li>
-  <li>Session claims and logout receipts protect account ownership.</li><li>The fleet agent updates source, shares data and runs trades.</li><li>Cloud sessions run their own side. The publisher shares a filtered view.</li>
+  <li>Owner goals, route supply bills and live observations feed Fleet Brain.</li><li>Swarm runs Brain cycles and merges explicit reservations from <code>swarm.json</code>.</li>
+  <li>Detached supervisors launch unified <code>packages/workers/</code> modules through <code>worker-dispatch.ts</code>.</li><li>The fleet agent updates source, syncs <code>fleet-data</code> and executes due trades.</li><li>Dashboard server and publisher expose local control and filtered public views.</li>
  </ol>
  <figure>
  <div class="scroll map" id="mapbox" tabindex="0" role="region" aria-label="Scrollable fleet map" aria-describedby="map-help">
  <svg viewBox="0 0 1400 1150" role="img" aria-labelledby="map-title map-desc">
- <title id="map-title">Fleet control, work, data and recovery</title>
- <desc id="map-desc">Owner goals guide the coordinator. The Overall supply bill and army kits guide autopilot. Coordinator jobs and swarm.json feed the swarm. Detached supervisors run direct scripts, AIO or chains. Account claims and session receipts guard game sessions. The fleet agent runs live-update, fleet-sync and trades. The watchdog restarts recorded services and can launch cloud-side. Dashboard state feeds private control and filtered public publication.</desc>
+ <title id="map-title">Fleet Brain, runtime controllers, data and recovery</title>
+ <desc id="map-desc">Owner goals, supply bills and WorldSnapshot feed Fleet Brain inside Swarm. Brain emits fleet-state.json and dispatches unified workers through detached supervisors. Operator commands flow from dashboard and publisher to Brain. Fleet agent drives live-update, fleet-sync and fleet-trade. Watchdog restores controllers and triggers standalone session recovery.</desc>
  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker></defs>
  <!-- Goals and starts -->
- <g class="n file p-goal p-queue p-heal"><rect x="25" y="25" width="280" height="76" rx="7"/><text class="t" x="40" y="49">Owner goal ledger</text><text class="s" x="40" y="71">five goals, evidence and gaps</text><text class="s" x="40" y="91">accepted effect per estimated time</text></g>
- <g class="n file p-goal p-job"><rect x="375" y="25" width="280" height="76" rx="7"/><text class="t" x="390" y="49">Overall bill + army kits</text><text class="s" x="390" y="71">finite shortages, stock and builds</text><text class="s" x="390" y="91">claims, resources and pilot limits</text></g>
- <g class="n proc p-heal p-cloud p-watch"><rect x="725" y="25" width="280" height="76" rx="7"/><text class="t" x="740" y="49">Watchdog</text><text class="s" x="740" y="71">Windows task: 5 min and logon</text><text class="s" x="740" y="91">owner stops and launch records</text></g>
- <g class="n file p-heal p-job p-code p-cloud"><rect x="1075" y="25" width="300" height="76" rx="7"/><text class="t" x="1090" y="49">Stop files + launch gates</text><text class="s" x="1090" y="71">main and specialist clocks protected</text><text class="s" x="1090" y="91">each reader has a defined scope</text></g>
- <g class="e p-goal p-queue"><path class="ln d" d="M165 101V155" marker-end="url(#ah)"/></g>
- <g class="e p-goal p-job"><path class="ln d" d="M515 101V155" marker-end="url(#ah)"/></g>
- <g class="e p-heal"><path class="ln" d="M865 101V125H320V205H305" marker-end="url(#ah)"/><path class="ln" d="M515 125V155" marker-end="url(#ah)"/><path class="ln" d="M865 125V155" marker-end="url(#ah)"/><path class="ln" d="M865 125H1225V155" marker-end="url(#ah)"/></g>
- <!-- Four independent loops -->
- <g class="n proc p-queue p-goal p-code p-heal"><rect x="25" y="155" width="280" height="100" rx="7"/><text class="t" x="40" y="180">Coordinator</text><text class="s" x="40" y="203">planner + rules + task dispatcher</text><text class="s" x="40" y="224">build, qualify, review, provision, run</text><text class="s" x="40" y="245">receipts wake the next pass</text></g>
- <g class="n proc p-goal p-job p-trade p-heal"><rect x="375" y="155" width="280" height="100" rx="7"/><text class="t" x="390" y="180">Autopilot</text><text class="s" x="390" y="203">army bands, kits, then useful supply</text><text class="s" x="390" y="224">10 min / successful trainer: 30 s</text><text class="s" x="390" y="245">reads matching worker log results</text></g>
- <g class="n proc p-trade p-code p-heal p-cloud"><rect x="725" y="155" width="280" height="100" rx="7"/><text class="t" x="740" y="180">Fleet agent</text><text class="s" x="740" y="203">update source → sync → due trades</text><text class="s" x="740" y="224">10 min / near a trade: 1 min</text><text class="s" x="740" y="245">one local lease for this daemon</text></g>
- <g class="n proc p-watch p-heal"><rect x="1075" y="155" width="300" height="100" rx="7"/><text class="t" x="1090" y="180">Publisher</text><text class="s" x="1090" y="203">collects local state, polls commands</text><text class="s" x="1090" y="224">60 s cycle + work time</text><text class="s" x="1090" y="245">public pushes at least 10 min apart</text></g>
+ <g class="n file p-goal p-brain p-heal"><rect x="25" y="25" width="280" height="76" rx="7"/><text class="t" x="40" y="49">Owner goals + Campaigns</text><text class="s" x="40" y="71">Overall, specialists, quests, PK army</text><text class="s" x="40" y="91">declarative specs + launch gates</text></g>
+ <g class="n file p-goal p-brain"><rect x="375" y="25" width="280" height="76" rx="7"/><text class="t" x="390" y="49">Route supply bill + kits</text><text class="s" x="390" y="71">finite item shortages + reserves</text><text class="s" x="390" y="91">packages/planner/src/supply-bill.ts</text></g>
+ <g class="n proc p-heal p-cloud p-watch"><rect x="725" y="25" width="280" height="76" rx="7"/><text class="t" x="740" y="49">Watchdog</text><text class="s" x="740" y="71">packages/fleet/src/watchdog.ts</text><text class="s" x="740" y="91">restarts, recovery, status prune</text></g>
+ <g class="n file p-heal p-job p-code p-cloud"><rect x="1075" y="25" width="300" height="76" rx="7"/><text class="t" x="1090" y="49">Stop files + launch gates</text><text class="s" x="1090" y="71">.practice/live/stop-* &amp; .practice/stop-*</text><text class="s" x="1090" y="91">Haggis and specialist clocks protected</text></g>
+ <g class="e p-goal p-brain"><path class="ln d" d="M165 101V155" marker-end="url(#ah)"/><path class="ln d" d="M515 101V155" marker-end="url(#ah)"/></g>
+ <g class="e p-heal"><path class="ln" d="M865 101V125H320V205H305" marker-end="url(#ah)"/><path class="ln" d="M865 125V155" marker-end="url(#ah)"/><path class="ln" d="M865 125H1225V155" marker-end="url(#ah)"/></g>
+ <!-- Core loops -->
+ <g class="n proc p-brain p-goal p-heal"><rect x="25" y="155" width="280" height="100" rx="7"/><text class="t" x="40" y="180">Fleet Brain</text><text class="s" x="40" y="203">packages/brain/src/*</text><text class="s" x="40" y="224">Demand → Planner → Scheduler</text><text class="s" x="40" y="245">RateStore + OutcomeClassifier</text></g>
+ <g class="n file p-brain p-job p-watch"><rect x="375" y="155" width="280" height="100" rx="7"/><text class="t mono" x="390" y="180">.practice/live/</text><text class="s" x="390" y="203">fleet-state.json + scoreboard.json</text><text class="s" x="390" y="224">operator-commands/*.json</text><text class="s" x="390" y="245">overrides + rate/defect stores</text></g>
+ <g class="n proc p-trade p-code p-heal p-cloud"><rect x="725" y="155" width="280" height="100" rx="7"/><text class="t" x="740" y="180">Fleet agent</text><text class="s" x="740" y="203">live-update → fleet-sync → trades</text><text class="s" x="740" y="224">10 min / near a trade: 1 min</text><text class="s" x="740" y="245">one per-side controller lease</text></g>
+ <g class="n proc p-watch p-heal"><rect x="1075" y="155" width="300" height="100" rx="7"/><text class="t" x="1090" y="180">Publisher</text><text class="s" x="1090" y="203">packages/dashboard/publish.ts</text><text class="s" x="1090" y="224">60 s cycle; public pushes ≥ 10 min</text><text class="s" x="1090" y="245">polls hosted owner commands</text></g>
+ <g class="e p-brain"><path class="ln d" d="M305 205H375" marker-start="url(#ah)" marker-end="url(#ah)"/></g>
  <!-- Plans and source -->
- <g class="n file p-job p-queue"><rect x="25" y="305" width="280" height="85" rx="7"/><text class="t mono" x="40" y="332">coordinator/jobs.json</text><text class="s" x="40" y="356">run jobs + temporary pause overlay</text><text class="s" x="40" y="377">coordinator owns these assignments</text></g>
- <g class="n file p-job p-goal"><rect x="375" y="305" width="280" height="85" rx="7"/><text class="t mono" x="390" y="332">swarm.json</text><text class="s" x="390" y="356">owner jobs + marked autopilot jobs</text><text class="s" x="390" y="377">limits, army, builds and pilots</text></g>
- <g class="e p-job p-queue"><path class="ln d" d="M165 255V305" marker-end="url(#ah)"/></g><g class="e p-job p-goal"><path class="ln d" d="M515 255V305" marker-end="url(#ah)"/></g>
+ <g class="n file p-job p-brain"><rect x="25" y="305" width="280" height="85" rx="7"/><text class="t mono" x="40" y="332">swarm.json</text><text class="s" x="40" y="356">explicit reservations, hand jobs</text><text class="s" x="40" y="377">maxBots, minFreeGB, protected clocks</text></g>
+ <g class="n proc p-brain p-job"><rect x="375" y="305" width="280" height="85" rx="7"/><text class="t" x="390" y="332">worker-dispatch.ts</text><text class="s" x="390" y="356">maps Brain steps → 9 worker families</text><text class="s" x="390" y="377">preflight + env + batch caps</text></g>
+ <g class="e p-brain p-job"><path class="ln d" d="M515 255V305" marker-end="url(#ah)"/></g>
  <g class="n proc p-code"><rect x="725" y="305" width="135" height="85" rx="7"/><text class="t" x="738" y="332">live-update</text><text class="s" x="738" y="355">guarded master</text><text class="s" x="738" y="376">move + reloads</text></g>
  <g class="n proc p-trade p-cloud"><rect x="880" y="305" width="125" height="85" rx="7"/><text class="t" x="892" y="332">fleet-sync</text><text class="s" x="892" y="355">pull, write,</text><text class="s" x="892" y="376">commit, push</text></g>
  <g class="e p-code"><path class="ln" d="M790 255V305" marker-end="url(#ah)"/></g><g class="e p-trade"><path class="ln" d="M940 255V305" marker-end="url(#ah)"/></g>
  <g class="e p-watch"><path class="ln d" d="M1225 255V445" marker-start="url(#ah)" marker-end="url(#ah)"/><text class="l" x="1238" y="340">reads state</text><text class="l" x="1238" y="360">sends commands</text></g>
  <!-- Runtime and shared data -->
- <g class="n proc p-job p-code p-heal"><rect x="200" y="445" width="300" height="85" rx="7"/><text class="t" x="215" y="472">Swarm · every 2 s</text><text class="s" x="215" y="495">merges both plans, checks admission</text><text class="s" x="215" y="516">adopts saved detached supervisors</text></g>
- <g class="e p-job"><path class="ln d" d="M165 390V420H275V445" marker-end="url(#ah)"/><path class="ln d" d="M515 390V420H425V445" marker-end="url(#ah)"/></g>
- <g class="e p-heal p-code"><path class="ln" d="M25 210H10V488H200" marker-end="url(#ah)"/><text class="l" x="23" y="432">coordinator starts/replaces controller</text></g>
- <g class="n file p-trade p-cloud p-goal p-watch"><rect x="725" y="445" width="280" height="100" rx="7"/><text class="t mono" x="740" y="470">.practice/fleet-data</text><text class="s" x="740" y="493">orders, receipts, owners, plans</text><text class="s" x="740" y="514">snapshots, resource claims, side cards</text><text class="s" x="740" y="535">encrypted credential vault</text></g>
+ <g class="n proc p-job p-brain p-code p-heal"><rect x="200" y="445" width="300" height="85" rx="7"/><text class="t" x="215" y="472">Swarm · packages/fleet/src/swarm.ts</text><text class="s" x="215" y="495">runs Brain cycles + checks admission</text><text class="s" x="215" y="516">adopts saved detached supervisors</text></g>
+ <g class="e p-job p-brain"><path class="ln d" d="M165 390V420H275V445" marker-end="url(#ah)"/><path class="ln d" d="M515 390V420H425V445" marker-end="url(#ah)"/></g>
+ <g class="n file p-trade p-cloud p-goal p-watch"><rect x="725" y="445" width="280" height="100" rx="7"/><text class="t mono" x="740" y="470">.practice/live/fleet-data</text><text class="s" x="740" y="493">orders, receipts, owners, plans</text><text class="s" x="740" y="514">snapshots, claims, leases</text><text class="s" x="740" y="535">encrypted credential vault</text></g>
  <g class="e p-trade p-cloud"><path class="ln d" d="M940 390V445" marker-start="url(#ah)" marker-end="url(#ah)"/></g>
- <g class="e p-trade p-goal"><path class="ln d" d="M655 205H690V495H725" marker-end="url(#ah)"/><text class="l" x="692" y="416">orders</text></g>
- <g class="n proc p-watch"><rect x="1075" y="445" width="300" height="100" rx="7"/><text class="t" x="1090" y="470">Local dashboard</text><text class="s" x="1090" y="493">status + world feed + fleet snapshots</text><text class="s" x="1090" y="514">goals, coordinator and process evidence</text><text class="s" x="1090" y="535">SSE state every 2 s while watched</text></g>
- <g class="e p-watch"><path class="ln d" d="M1005 495H1075" marker-end="url(#ah)"/></g>
+ <g class="n proc p-watch"><rect x="1075" y="445" width="300" height="100" rx="7"/><text class="t" x="1090" y="470">Local dashboard</text><text class="s" x="1090" y="493">packages/dashboard/server.ts</text><text class="s" x="1090" y="514">FleetState, status, world feed, control</text><text class="s" x="1090" y="535">SSE state every 2 s while watched</text></g>
+ <g class="e p-watch"><path class="ln d" d="M1005 495H1075" marker-end="url(#ah)"/><path class="ln d" d="M655 205H690V470H1075" marker-start="url(#ah)" marker-end="url(#ah)"/></g>
  <!-- Workers, trades and cloud -->
- <g class="n proc p-job p-heal p-code"><rect x="200" y="585" width="300" height="76" rx="7"/><text class="t" x="215" y="610">Detached supervisor</text><text class="s" x="215" y="632">single / orchestrated / hosted job</text><text class="s" x="215" y="652">classifies ends, bounded 10 s retries</text></g>
+ <g class="n proc p-job p-heal p-code"><rect x="200" y="585" width="300" height="76" rx="7"/><text class="t" x="215" y="610">Detached supervisor</text><text class="s" x="215" y="632">packages/practice/src/supervise*.ts</text><text class="s" x="215" y="652">classifies ends, bounded retries</text></g>
  <g class="e p-job"><path class="ln" d="M350 530V585" marker-end="url(#ah)"/></g>
  <g class="n proc p-trade"><rect x="725" y="585" width="280" height="76" rx="7"/><text class="t" x="740" y="610">fleet-trade</text><text class="s" x="740" y="632">idle owned account, exact transfer</text><text class="s" x="740" y="652">prepared → settled / failed / reconcile</text></g>
  <g class="e p-trade"><path class="ln d" d="M865 545V585" marker-start="url(#ah)" marker-end="url(#ah)"/></g>
- <g class="n proc p-cloud p-heal"><rect x="1075" y="585" width="300" height="76" rx="7"/><text class="t" x="1090" y="610">cloud-launch</text><text class="s" x="1090" y="632">watchdog + local config + limits</text><text class="s" x="1090" y="652">starts a Claude or Codex cloud session</text></g>
+ <g class="n proc p-cloud p-heal"><rect x="1075" y="585" width="300" height="76" rx="7"/><text class="t" x="1090" y="610">cloud-launch / cloud-recover</text><text class="s" x="1090" y="632">bounded cloud launches + recovery</text><text class="s" x="1090" y="652">packages/fleet/src/session-recovery.ts</text></g>
  <g class="e p-cloud p-heal"><path class="ln" d="M1005 63H1040V623H1075" marker-end="url(#ah)"/></g>
- <g class="n proc p-job"><rect x="200" y="705" width="300" height="85" rx="7"/><text class="t" x="215" y="732">Worker entry</text><text class="s" x="215" y="755">direct script / AIO / chain / host</text><text class="s" x="215" y="776">openBot → SDK + LiteClient</text></g>
+ <g class="n proc p-job"><rect x="200" y="705" width="300" height="85" rx="7"/><text class="t" x="215" y="732">Unified workers</text><text class="s" x="215" y="755">packages/workers/src/* + scripts/aio*.ts</text><text class="s" x="215" y="776">openBot → SDK + LiteClient</text></g>
  <g class="e p-job"><path class="ln" d="M350 661V705" marker-end="url(#ah)"/></g>
  <g class="n proc p-job p-trade p-heal p-cloud"><rect x="575" y="705" width="430" height="85" rx="7"/><text class="t" x="590" y="732">Account and session admission</text><text class="s" x="590" y="755">side owner + per-side lease + shared account claim</text><text class="s" x="590" y="776">launch gates, stops, release checks, logout proof</text></g>
  <g class="e p-job"><path class="ln" d="M500 747H575" marker-end="url(#ah)"/></g><g class="e p-trade"><path class="ln" d="M865 661V705" marker-end="url(#ah)"/></g>
- <g class="n ext p-cloud p-heal"><rect x="1075" y="705" width="300" height="85" rx="7"/><text class="t" x="1090" y="732">Cloud session → cloud-side</text><text class="s" x="1090" y="755">swarm + fleet-agent + autopilot</text><text class="s" x="1090" y="776">vault restore, bounded watch, own side</text></g>
+ <g class="n ext p-cloud p-heal"><rect x="1075" y="705" width="300" height="85" rx="7"/><text class="t" x="1090" y="732">Cloud session → cloud-side</text><text class="s" x="1090" y="755">swarm (Brain) + fleet-agent</text><text class="s" x="1090" y="776">vault restore, bounded watch, own side</text></g>
  <g class="e p-cloud"><path class="ln" d="M1225 661V705" marker-end="url(#ah)"/></g>
  <!-- Evidence, publication, and external services -->
- <g class="n file p-job p-queue p-watch p-goal"><rect x="25" y="875" width="220" height="90" rx="7"/><text class="t mono" x="40" y="902">status/&lt;account&gt;</text><text class="s" x="40" y="925">levels, stock, outcome</text><text class="s" x="40" y="946">5 ticks + 5 s heartbeat</text></g>
- <g class="n file p-job p-goal p-heal"><rect x="275" y="875" width="225" height="90" rx="7"/><text class="t mono" x="290" y="902">swarm-logs/</text><text class="s" x="290" y="925">RESULT + LEDGER + release</text><text class="s" x="290" y="946">assignment-bound feedback</text></g>
+ <g class="n file p-job p-brain p-watch p-goal"><rect x="25" y="875" width="220" height="90" rx="7"/><text class="t mono" x="40" y="902">live/status/&lt;acct&gt;</text><text class="s" x="40" y="925">levels, stock, outcome</text><text class="s" x="40" y="946">5 ticks + 5 s heartbeat</text></g>
+ <g class="n file p-job p-goal p-heal"><rect x="275" y="875" width="225" height="90" rx="7"/><text class="t mono" x="290" y="902">swarm-logs/</text><text class="s" x="290" y="925">RESULT + LEDGER + release</text><text class="s" x="290" y="946">run feedback + diagnostics</text></g>
  <g class="e p-job"><path class="ln d" d="M300 790V825H135V875" marker-end="url(#ah)"/><path class="ln d" d="M400 790V875" marker-end="url(#ah)"/></g>
- <g class="e p-queue p-goal"><path class="ln d" d="M25 920H10V285H90V255" marker-end="url(#ah)"/><path class="ln d" d="M500 920H550V275H615V255" marker-end="url(#ah)"/><text class="l" x="558" y="836">log results → autopilot</text></g>
- <g class="n file p-job p-trade p-heal"><rect x="575" y="875" width="430" height="90" rx="7"/><text class="t" x="590" y="902">Producer session receipts</text><text class="s" x="590" y="925">attempt before network, server-confirmed logout</text><text class="s" x="590" y="946">recovery needs proof before a later start</text></g>
+ <g class="e p-brain p-goal"><path class="ln d" d="M25 920H10V205H25" marker-end="url(#ah)"/></g>
+ <g class="n file p-job p-trade p-heal"><rect x="575" y="875" width="430" height="90" rx="7"/><text class="t" x="590" y="902">Producer session receipts</text><text class="s" x="590" y="925">.practice/live/session-lifecycle/</text><text class="s" x="590" y="946">attempt before network, server-confirmed logout</text></g>
  <g class="e p-job p-heal p-trade"><path class="ln d" d="M790 790V875" marker-end="url(#ah)"/></g>
  <g class="n file p-watch"><rect x="1075" y="875" width="300" height="90" rx="7"/><text class="t" x="1090" y="902">Hosted views + commands</text><text class="s" x="1090" y="925">private control / filtered public state</text><text class="s" x="1090" y="946">owner identity + one receipt per command</text></g>
  <g class="e p-watch"><path class="ln d" d="M1375 205H1390V920H1375" marker-start="url(#ah)" marker-end="url(#ah)"/><path class="ln d" d="M245 950H260V990H1020V520H1075" marker-end="url(#ah)"/></g>
  <g class="n ext p-job p-trade p-heal"><rect x="200" y="1035" width="300" height="85" rx="7"/><text class="t" x="215" y="1062">Game server</text><text class="s" x="215" y="1085">real worker actions and observations</text><text class="s" x="215" y="1106">practice and live are separate proof</text></g>
  <g class="e p-job p-trade"><path class="ln d" d="M575 770H535V1077H500" marker-start="url(#ah)" marker-end="url(#ah)"/></g>
- <g class="n ext p-code p-trade p-cloud p-queue p-heal p-watch"><rect x="725" y="1035" width="650" height="85" rx="7"/><text class="t" x="740" y="1062">GitHub + model CLIs</text><text class="s" x="740" y="1085">master and pull requests · fleet-data · authoritative lease and account-claim refs</text><text class="s" x="740" y="1106">Claude/Codex plan, write and review · agent/person merges after checks</text></g>
+ <g class="n ext p-code p-trade p-cloud p-brain p-heal p-watch"><rect x="725" y="1035" width="650" height="85" rx="7"/><text class="t" x="740" y="1062">GitHub + Actions CI</text><text class="s" x="740" y="1085">master and pull requests · fleet-data · authoritative lease and account-claim refs</text><text class="s" x="740" y="1106">standard runners run CI suites, multi-seed benches and clean practice proofs</text></g>
  <g class="e p-cloud"><path class="ln d" d="M1225 790V825H1020V1010H1050V1035" marker-start="url(#ah)" marker-end="url(#ah)"/></g>
  <g class="e p-code"><path class="ln d" d="M1085 1035V1020H1028V405H790V390" marker-end="url(#ah)"/><text class="l" x="798" y="416">merged source</text></g>
  <g class="e p-trade p-cloud"><path class="ln d" d="M1005 350H1052V1002H1160V1035" marker-start="url(#ah)" marker-end="url(#ah)"/><text class="l" x="1064" y="992">fleet-data + ownership refs</text></g>
  </svg>
  </div>
- <figcaption>The watchdog restores eligible loops. The coordinator owns tasks. Autopilot owns its marked jobs. The swarm owns worker starts and end records. Status files, logs and receipts each carry different evidence.</figcaption>
+ <figcaption>Swarm runs Fleet Brain cycles and dispatches unified workers. Fleet agent handles source updates, cross-side sync and trades. Watchdog restores down controllers and drives standalone session recovery.</figcaption>
  </figure>
  <div class="legend"><span class="key"><span class="sw proc"></span>process</span><span class="key"><span class="sw file"></span>file or evidence</span><span class="key"><span class="sw ext"></span>external service or machine</span><span class="key"><span class="solid"></span>starts work</span><span class="key"><span class="dash"></span>data</span></div>
 </section>
@@ -193,608 +191,264 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padd
  <div class="sec-head"><h2>Who starts what</h2><p>Times are default checks or delays. Work time, network waits, owner stops and admission can make a pass take longer.</p></div>
  <div class="tscroll" tabindex="0" role="region" aria-label="Controller table"><table>
  <thead><tr><th>Part</th><th>Starter</th><th>When it checks</th><th>What it owns</th></tr></thead><tbody>
- <tr><td>Watchdog</td><td>Windows task <code>rs-sdk-coordinator-watchdog</code></td><td>5 min and logon</td><td>Restarts, recovery submission, cloud launch, supply bill and owner-goal stall evidence.</td></tr>
- <tr><td>Coordinator</td><td>Watchdog or <code>bun run coordinate --run &lt;token&gt;</code></td><td>Receipts and request files wake it. A 1 s wait is the fallback.</td><td><code>coordinator/state.json</code>, task children, receipts and <code>jobs.json</code>.</td></tr>
- <tr><td>Swarm</td><td>Coordinator <code>ensureSwarm</code>, or an explicit manual start</td><td>2 s</td><td>Merged plan admission, detached supervisors, <code>swarm-runs.json</code> and end records.</td></tr>
- <tr><td>Autopilot</td><td>An initial daemon start, cloud-side, then a watchdog with its launch record</td><td>10 min. Checks successful trainers and ended kit buys each 30 s.</td><td>Only this side's marked jobs, finite funding orders and assignment log offsets.</td></tr>
- <tr><td>Fleet agent</td><td>An initial daemon start, cloud-side, then a watchdog with its launch record</td><td>10 min. Near an order or during a trade: 1 min.</td><td>Live-update child, fleet-sync child and this side's due trade workers.</td></tr>
- <tr><td>cloud-side</td><td>Configured cloud launch or an explicit cloud session</td><td>A bounded watch, with limited daemon restarts</td><td>Setup, credentials and the swarm, fleet-agent and autopilot for one cloud side.</td></tr>
- <tr><td>Publisher</td><td>Explicit start, or watchdog with an existing dashboard repo clone</td><td>60 s delay after a cycle. Public pushes are at least 10 min apart.</td><td>Private <code>data</code>, public <code>site</code> and hosted command receipts.</td></tr>
- <tr><td>Dashboard</td><td>Publisher if needed, or an explicit start</td><td>Shared SSE state each 2 s while watched</td><td>Local view, observations, control API and evidence display.</td></tr>
- <tr><td>monitor / loop-watch</td><td>Explicit session start</td><td>Default 30 s</td><td>Process/loop checks, <code>monitor.json</code> and <code>alerts.jsonl</code>. They are separate tools.</td></tr>
+ <tr><td>Watchdog</td><td><code>packages/fleet/src/watchdog.ts</code> (Windows task or scheduled pass)</td><td>5 min and logon</td><td>Restarts down controllers, prunes old practice status rows, keeps publisher healthy and runs standalone recovery.</td></tr>
+ <tr><td>Swarm + Fleet Brain</td><td><code>scripts/swarm.ts</code> (<code>packages/fleet/src/swarm.ts</code>)</td><td>2 s admission loop; 6 s default Brain cycle (<code>BRAIN_CYCLE_MS</code>)</td><td><code>brain-runtime.ts</code>, <code>.practice/live/fleet-state.json</code>, detached supervisors, <code>swarm-runs.json</code> and end records.</td></tr>
+ <tr><td>Fleet agent</td><td><code>scripts/fleet-agent.ts</code> (<code>packages/fleet/src/fleet-agent.ts</code>)</td><td>10 min. Near an order or during a trade: 1 min.</td><td><code>live-update.ts</code>, <code>fleet-sync.ts</code> and this side's due trade workers.</td></tr>
+ <tr><td>cloud-side</td><td><code>scripts/cloud-side.ts</code> (<code>packages/fleet/src/cloud-side.ts</code>)</td><td>Bounded watch, with limited daemon restarts</td><td>Setup, vault restore, swarm (Brain) and fleet-agent for one cloud side.</td></tr>
+ <tr><td>Publisher</td><td><code>packages/dashboard/publish.ts</code></td><td>60 s delay after a cycle. Public pushes at least 10 min apart.</td><td>Private <code>data</code>, public <code>site</code> and hosted command receipts.</td></tr>
+ <tr><td>Dashboard</td><td><code>packages/dashboard/server.ts</code></td><td>Shared SSE state each 2 s while watched</td><td>Local view, observations, <code>/api/control</code> OperatorCommand API and evidence display.</td></tr>
+ <tr><td>monitor / loop-watch</td><td><code>scripts/monitor.ts</code> / <code>tools/loop-watch.ts</code></td><td>Default 30 s</td><td>Process and fast-fail loop checks, <code>monitor.json</code> and <code>alerts.jsonl</code>.</td></tr>
  </tbody></table></div>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/watchdog.ts#L75">watchdog</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/controllers.ts#L170">daemon launch records</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/cloud-side.ts#L26">cloud-side</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/watchdog.ts">watchdog</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/swarm.ts">swarm</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/fleet-agent.ts">fleet-agent</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/cloud-side.ts">cloud-side</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/controllers.ts">daemon launch records</a></p>
 </section>
 
 <section id="goals">
- <div class="sec-head"><h2>Goals and useful demand</h2><p>The coordinator values accepted goal effects. Autopilot allocates standing jobs against finite demand. Both use observed evidence.</p></div>
+ <div class="sec-head"><h2>Goals and useful demand</h2><p><code>DemandEngine</code> values unresolved owner goal effects and finite consumer chains. Gold has no standalone value without a named supply or kit shortage.</p></div>
  <div class="tscroll" tabindex="0" role="region" aria-label="The five owner goals"><table>
   <thead><tr><th>Goal</th><th>Useful result</th><th>Evidence boundary</th></tr></thead><tbody>
   <tr><td>Main Overall</td><td>A fresh rank-one result under the record, after the final route passes its launch conditions.</td><td>Model ticks, rehearsal ticks, launch permission and a recorded board rank are separate facts.</td></tr>
-  <tr><td>Specialist boards</td><td>Fresh owned wins on skill boards with priced route margins.</td><td>The ledger tracks declared targets. It does not define the complete set of winnable boards.</td></tr>
+  <tr><td>Specialist boards</td><td>Fresh owned wins on skill boards with priced route margins (<code>packages/brain/src/campaigns/specialists.ts</code>).</td><td>Declarative campaign specs track declared targets and gate launch on fresh snapshots, rehearsals and staged supplies.</td></tr>
   <tr><td>Every quest</td><td>Complete implemented journal names observed across owned live accounts.</td><td>Script coverage or a seeded practice completion does not supply a live journal observation.</td></tr>
   <tr><td>Useful items and best gear</td><td>Recent stock capped at named route and army-kit demand, with delivery where required.</td><td>This finite subset does not define the full useful-item or best-in-slot collection.</td></tr>
-  <tr><td>PK army</td><td>Declared accounts reach 99 Attack, Strength, Defence, Ranged, Magic, Prayer and Hitpoints, then win against players and hold the Wilderness.</td><td>The goal ledger measures base levels. Its credited-kill and Wilderness-control fields remain unknown.</td></tr>
+  <tr><td>PK army</td><td>Declared accounts reach 99 Attack, Strength, Defence, Ranged, Magic, Prayer and Hitpoints, then win against players and hold the Wilderness.</td><td>Base combat levels, credited player kills and Wilderness control each need separate evidence.</td></tr>
   </tbody></table></div>
  <ol class="ladder">
- <li class="step"><span class="who">Owner goal ledger → coordinator</span><h3>Give useful work a value</h3>
-  <p>The ledger tracks main Overall, priced specialist targets, quests, useful collection items and the PK army. It keeps evidence gaps explicit.</p>
-  <p>The dispatcher requires positive goal value. It ranks eligible tasks by goal value per estimated time before model priority.</p>
-  <p>Build, qualify, review and provision work inherit value from viable finite run consumers. Rules also need a useful goal effect.</p>
-  <p>Unknown observations need a bounded check. Generic capability coverage, extra helper levels and surplus gold do not prove goal progress.</p>
-  <p>A bounded GE buy can receive observation support for a finite named supply. The worker checks fresh bank stock before funding. This support earns no acquired-item credit.</p></li>
- <li class="step"><span class="who">Overall route + army → autopilot</span><h3>Make only the missing supply</h3>
-  <p>The Overall planner derives its supply bill from the realistic route and board snapshot. Canonical helper observations show the stock each account holds.</p>
-  <p>Stock is last-seen evidence. Reservations, item form and delivery still matter. Autopilot adds eligible army kit needs and finite purchase budgets.</p>
-  <ul class="br">
-   <li><span class="tag go">first</span><span>Army accounts take useful goal bands. Earlier bands come first. Accounts nearest their targets take places first.</span></li>
-   <li><span class="tag go">then</span><span>Kit buys and transfers fill missing inputs. Local stock and coins precede cross-side orders. Filler bands use remaining eligible slots.</span></li>
-   <li><span class="tag go">then</span><span>Supply jobs earn estimated value over 1,000 ticks. The estimate clips output to unmet demand and subtracts input cost.</span></li>
-   <li><span class="tag wait">limits</span><span>Waste lowers value. Shared resources lower the value of crowded moves. Hard capacity, holdings, reach and owner claims still apply.</span></li>
-   <li><span class="tag stop">pilots</span><span>A practice-only template runs live only if the plan's <code>aio</code> list admits its ID. Catalog membership alone grants no live pilot.</span></li>
-  </ul>
-  <p class="to">Each assignment reserves expected useful output before the next pick. A vacant slot names its constraint. Gold funds finite consumers.</p></li>
- <li class="step"><span class="who">Worker logs → autopilot</span><h3>Use the result to choose the next job</h3>
-  <p>Autopilot reads matching <code>RESULT</code> and <code>LEDGER</code> lines after each assignment's saved log offset. Status files supply skills and holdings.</p>
-  <p>Repeated no-progress failures or excessive waste can retire an account/template pair. Transport drains do not count as worker failures.</p>
-  <p>A changed worker script can release a retirement. Death stays held for review. A successful trainer or ended kit buy requests a fresh pass.</p></li>
+ <li class="step"><span class="who">WorldSnapshot → DemandEngine</span><h3>Compute finite goal demand</h3>
+  <p><code>packages/brain/src/snapshot.ts</code> reads live statuses, synced fleet snapshots, reserves, market quotes, spot occupancy and active transfers into a canonical <code>WorldSnapshot</code>.</p>
+  <p><code>packages/brain/src/demand.ts</code> emits finite <code>GoalDemand</code> items for <code>main_supply</code>, <code>specialist_prep</code>, <code>quest_board</code>, <code>gear_collection</code>, <code>pk_army</code>, <code>squad_supply</code> and <code>coin_fund</code>.</p>
+  <p><code>packages/planner/src/supply-bill.ts</code> and <code>packages/brain/src/campaigns.ts</code> derive exact item shortages for Haggis and ready specialist campaigns while protecting reserved stock.</p></li>
+ <li class="step"><span class="who">ActivityCatalog + RateStore</span><h3>Price candidate methods</h3>
+  <p><code>packages/brain/src/catalog.ts</code> registers activities across all 9 unified worker families with inputs, outputs, spots, trust tiers and baseline rates.</p>
+  <p><code>packages/brain/src/rate-store.ts</code> blends observed live and practice <code>RateSample</code> throughput with baseline estimates so measured methods outrank slower alternatives.</p></li>
+ <li class="step"><span class="who">OutcomeClassifier</span><h3>Turn run endings into structured state</h3>
+  <p><code>packages/brain/src/outcome-classifier.ts</code> classifies worker exits into normal completion, transient transport/infra faults, missing prerequisites, deaths and worker defects.</p>
+  <p>Repeated defects quarantine the specific activity fault signature rather than blocking unrelated work; deaths hold the account until operator review.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/goal-scoreboard.ts">owner goals</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/goal-work.ts#L25">consumer value</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L341">dispatch</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/supply-bill.ts#L97">Overall supply bill</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/autopilot.ts#L504">autopilot selection</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/autopilot.ts#L402">log feedback</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/snapshot.ts">WorldSnapshot</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/demand.ts">DemandEngine</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/catalog.ts">ActivityCatalog</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/campaigns.ts">Campaigns</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/missions.ts">Missions</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/planner/src/supply-bill.ts">Overall supply bill</a></p>
 </section>
 
 <section id="selection">
- <div class="sec-head"><h2>How task selection works</h2><p>The model proposes work. Deterministic code validates the queue, scores useful effects and chooses an eligible task.</p></div>
+ <div class="sec-head"><h2>How Fleet Brain plans</h2><p>Deterministic planning scores 1-to-3-step account chains per end-to-end hour and schedules the whole side together.</p></div>
  <ol class="ladder">
-  <li class="step"><span class="who">Planner input</span><h3>Read the gap before proposing work</h3>
-   <p>The planner reads the goal ledger, account observations, merged plan, queue, outcomes, held builds and repair facts.</p>
-   <p>Owner requests bypass normal outcome and idle delays. They still wait for an active planner, resource admission and more than one second since the last round.</p>
-   <p>Unconsumed outcomes share a round after a five-minute gap. The idle interval defaults to thirty minutes.</p>
-   <p>A proposal names capabilities, dependencies, accepted effects, estimates and reasons. Planning does not log in accounts or execute game actions.</p>
-   <p>Graph validation rejects unknown dependencies, cycles, bad account bindings and unsupported capability changes. A new build needs a viable finite run consumer.</p></li>
-  <li class="step"><span class="who">Goal value → eligible pool → ranking</span><h3>Compare work that can start</h3>
-   <p>The actual CLI requires positive goal value. Unknown observations and zero useful value both hold dispatch.</p>
-   <p>Dependencies and resource gates filter candidates. A fresh qualification can give its first live consumer a turn before another build invalidates the proof.</p>
-   <p><code>preferLive</code> can favour eligible runs. Within the selected pool, goal value divided by <code>estimatedMs</code> comes first.</p>
-   <p>Focus then breaks ties. The next score is priority times one plus direct consumers, divided by estimated minutes, plus a capped age bonus.</p>
-   <p>The priority-score divisor has a one-minute floor. Goal value still divides by raw <code>estimatedMs</code>. Age adds at most twenty points.</p>
-   <p>Creation time and task ID break the remaining ties.</p>
-   <p class="to">Estimates are proposal inputs. They are not measured run times. With goal scoring active, there is no guaranteed thirty-minute rotation between goal lanes.</p></li>
-  <li class="step"><span class="who">Deterministic rule: next-band</span><h3>Continue a useful skill batch without another model call</h3>
-   <p>The newest finished run must succeed live within twenty-four hours. It must target one skill on one ordinary, unpaused account.</p>
-   <p>The capability needs an approved review and a retargetable worker. Separate supply dependencies and an existing open account/capability run prevent another band.</p>
-   <p>The rule chooses a method unlock at least five levels ahead. Otherwise it adds ten levels, capped at ninety-nine.</p>
-   <p>A source change adds the required qualification refresh. Positive owner-goal value still applies. A failed newest run stops the automatic chain.</p>
-   <p>Rules check new receipts or each five minutes. Models and owner proposals still supply new methods, builds, repairs and other task graphs.</p></li>
+  <li class="step"><span class="who">AccountPlanner</span><h3>Build 1-to-3-step dependency chains</h3>
+   <p><code>packages/brain/src/planner.ts</code> evaluates each eligible account against active demands, prepending needed <code>recover</code>, <code>acquire</code>, <code>gear_upgrade</code> or <code>unlock</code> steps before target <code>work</code>.</p>
+   <p><code>packages/brain/src/preflight.ts</code> enforces skill, quest, trust-tier, protected-clock, reserve and cooldown constraints before an activity enters candidate scoring.</p>
+   <p>Every chain carries an end-to-end <code>scorePerHour</code> including acquisition, travel and unlock ticks.</p></li>
+  <li class="step"><span class="who">FleetScheduler</span><h3>Allocate slots, spots and transfers</h3>
+   <p><code>packages/brain/src/scheduler.ts</code> prioritizes recovery queue entries, applies the retention margin (15% default) to avoid thrashing running bots, respects <code>maxBots</code> and spot concurrency caps, and emits safe hub transfers.</p>
+   <p>Accounts without useful work or blocked by holds receive explicit entries in <code>idleReasons</code>.</p></li>
+  <li class="step"><span class="who">brain-runtime.ts</span><h3>Drain commands and emit FleetState</h3>
+   <p>On each cycle, <code>packages/fleet/src/brain-runtime.ts</code> drains validated operator commands from <code>.practice/live/operator-commands/</code>, runs the planner/scheduler, and atomically writes <code>.practice/live/fleet-state.json</code>.</p></li>
  </ol>
- <details><summary>How useful goal value is calculated</summary>
- <div class="tscroll" tabindex="0" role="region" aria-label="Goal value terms"><table>
-  <thead><tr><th>Accepted effect</th><th>Selection value</th><th>Conditions</th></tr></thead><tbody>
-  <tr><td>Unresolved quest</td><td><code>1</code> per distinct remaining quest.</td><td>The quest must appear in the goal ledger's remaining set. Quest value can exist before a new account has a name.</td></tr>
-  <tr><td>Army combat level</td><td><code>max(0, min(99, target) − observed) / 98</code>.</td><td>The account must belong to the declared army. Its relevant base level must be observed.</td></tr>
-  <tr><td>Named supply</td><td>Useful additional quantity divided by the line's total need.</td><td>Quantity is capped by the accepted bank target and unmet named demand. Fresh bank evidence and stock verification apply.</td></tr>
-  <tr><td>Main / priced specialist preparation</td><td>Normalised accepted skill gain.</td><td>The target must meet its goal conditions. This gives preparation value, not rank credit or permission to launch.</td></tr>
-  <tr><td>Explicit recovery / bounded PK proof / supported GE observation</td><td><code>0.01</code> per supported term.</td><td>Each path has its own identity, entry and budget checks. Support value gives no completed-game credit.</td></tr>
-  <tr><td>Build, qualify, review, provision or a shared prerequisite</td><td>Value inherited from viable pending run consumers.</td><td>Distinct effect terms add. Duplicate terms use their maximum. The same promised output cannot multiply value through several consumers.</td></tr>
-  <tr><td>Unknown stock / unbound identity / arbitrary extra work</td><td><code>null</code> for unknown, or <code>0</code> for no useful effect.</td><td>These do not enter the positive-value pool. Gold, generic counters and helper levels need a supported owner-goal consumer.</td></tr>
-  </tbody></table></div>
- </details>
- <details><summary>Which resource budget holds a task</summary>
- <div class="tscroll" tabindex="0" role="region" aria-label="Task resource and time budgets"><table>
-  <thead><tr><th>Budget</th><th>Rule</th><th>What happens at the limit</th></tr></thead><tbody>
-  <tr><td>Development</td><td><code>coordination.maxActive</code> defaults to two non-run tasks. Isolated builds must not overlap owned files.</td><td>Other development waits. Builds and provisioning cannot overlap.</td></tr>
-  <tr><td>Live tasks</td><td><code>coordination.maxLive</code>, else plan <code>maxBots</code>. Each run participant counts. Provision uses one place.</td><td>The queue waits. Swarm and connection admission still check real sessions and startup work.</td></tr>
-  <tr><td>Host memory / disk</td><td>Source preparation needs 6 GiB free. Native startup needs 6.5 GiB. New planning and dispatch need 2 GiB free disk.</td><td>Eligible running work can settle. Waiting work does not become failed gameplay merely because the host is full.</td></tr>
-  <tr><td>Native practice</td><td>One shared native turn. Startup admission can wait up to fifteen minutes.</td><td>The saved check states the admission failure. Prepared source can need a later delivery continuation.</td></tr>
-  <tr><td>Model calls</td><td>Planning defaults to ten minutes. Authoring defaults to one fifteen-minute deadline. Review defaults to five minutes.</td><td>A recognised usage limit can select a fallback within the same budget. Delivery checks have separate timeouts.</td></tr>
-  <tr><td>Delivery / live run</td><td>Each delivery check has an explicit timeout, at most thirty minutes. A live run has its own explicit or estimate-based window.</td><td>A missed check or target returns a failed receipt. A validated pre-install ordinary wait can return to pending.</td></tr>
-  </tbody></table></div>
- </details>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-planner.ts#L345">planner input and proposal</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-decisions.ts">planning cadence</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/goal-work.ts#L25">goal value terms</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L341">eligibility and ranking</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-cli.ts#L424">actual dispatch mode</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-rules.ts#L73">next-band rule</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/memory.ts#L5">memory budgets</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-worker.ts#L213">author deadline</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/delivery-cli.ts#L44">native admission</a></p>
-</section>
-
-<section id="tasks">
- <div class="sec-head"><h2>Task types and saved states</h2><p>The queue connects preparation to a finite live consumer. It also retains failed and replaced work so a restart cannot erase its meaning.</p></div>
- <div class="tscroll" tabindex="0" role="region" aria-label="Coordinator task kinds"><table>
-  <thead><tr><th>Kind</th><th>Work</th><th>Result passed to consumers</th></tr></thead><tbody>
-  <tr><td><code>build</code></td><td>Author declared files in an isolated workspace. Run delivery and applicable review. Publish only the owned source.</td><td>Delivery fingerprint, runtime source, review and publication evidence. A build is not a live run.</td></tr>
-  <tr><td><code>qualify</code></td><td>Run the existing capability's native delivery checks on its current source.</td><td>A source-bound delivery result. Qualification does not author code or enable a worker.</td></tr>
-  <tr><td><code>review</code></td><td>Independently inspect source, callers and proof. Do not edit or launch work.</td><td>Approval or a concrete rejection tied to the reviewed source.</td></tr>
-  <tr><td><code>provision</code></td><td>Reserve and register one ordinary account for a prepared first job.</td><td>A confirmed identity that <code>accountFrom</code> or <code>@task-id</code> participants can resolve.</td></tr>
-  <tr><td><code>run</code></td><td>Install a finite coordinator job, wait for accepted live effects and disable that owned job at the end.</td><td>A live receipt with source, target account, status and acceptance outcome. Recovery is a distinct supported run path.</td></tr>
-  </tbody></table></div>
- <ol class="ladder">
-  <li class="step"><span class="who">Submission → pending → running</span><h3>Keep one attempt identity</h3>
-   <p>A valid submission enters <code>pending</code>. Dispatch changes it to <code>running</code> with a new run ID, start time, attempt count and worker owner.</p>
-   <p>The run folder retains its input, logs and receipt. A process restart reconciles those files with the saved queue.</p>
-   <p>Most dependencies need success. Recovery ordering edges can instead wait for an earlier recovery to end, so one failed account cannot strand all others.</p></li>
-  <li class="step"><span class="who">Matching receipt → succeeded / failed</span><h3>Settle the queue item</h3>
-   <p>Task ID, run ID and receipt time must match the active attempt. The receipt selects <code>succeeded</code> or <code>failed</code>.</p>
-   <p>A vanished child without a receipt fails after startup grace. A matching late receipt can repair that missing-receipt classification.</p>
-   <p>A supported ordinary run can return to <code>pending</code> if it installed no job and encountered a validated session, autopilot or memory wait.</p>
-   <p>That wait retains its raw receipt. It does not count as useful live success.</p></li>
-  <li class="step"><span class="who">Replacement / retirement → superseded</span><h3>Repair the graph without erasing evidence</h3>
-   <p>Explicit replacements reconnect pending consumers to compatible tasks. Failed receipts remain. Replaced pending work can become <code>superseded</code>.</p>
-   <p>Provision tasks cannot be replaced. Cancellation must not strand pending dependants or an account reference.</p>
-   <p>Old ordinary work behind dead dependencies can retire under its age rule. Main and specialist launch tasks remain protected.</p>
-   <p>Finished tasks older than two days can move to <code>archive/tasks.jsonl</code>. Open references and the newest result of each capability/kind retain their records.</p></li>
- </ol>
- <p class="to">Queue counts measure orchestration. A successful provision, review or build does not increase the count of completed quests or prove a useful item reached its consumer.</p>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L8">task and record schema</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-worker.ts#L136">task execution</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L461">start and finish transitions</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-cli.ts#L96">restart reconciliation and deferral</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L60">replacement</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L443">archive retention</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/planner.ts">AccountPlanner</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/scheduler.ts">FleetScheduler</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/preflight.ts">preflight</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/worker-routing.ts">worker routing</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/brain-runtime.ts">brain-runtime</a></p>
 </section>
 
 <section id="accounts">
- <div class="sec-head"><h2>The account life cycle</h2><p>An account needs a useful first job, a registered identity and one owner. Credentials alone do not make it ready to play.</p></div>
+ <div class="sec-head"><h2>The account life cycle</h2><p>An account needs a proved useful job, a registered identity and one owning side. Credentials alone do not make it ready to play.</p></div>
  <ol class="ladder">
-  <li class="step"><span class="who">Prepared consumer → provision task</span><h3>Prove why this account should exist</h3>
-   <p>A pending first run must have current native delivery proof. Its fingerprint and runtime revision must match the installed source.</p>
-   <p>Review holds and participant admission still apply. Prepared peers need the correct side, credentials, settled sessions and room within the job's account limit.</p>
-   <p>A pause, conflicting assignment or unresolved repair holds creation. A composed assignment must keep all its participants.</p>
-   <p>The coordinator creates new ordinary accounts through this path. Main and specialist accounts have separate protected launch rules.</p></li>
-  <li class="step"><span class="who">Reviewed name list → shared reservation</span><h3>Reserve one identity</h3>
-   <p>The role's name list supplies the first unused name, compared without case. Automated provisioning requires one to twelve letters or digits.</p>
-   <p>Local identities and names reserved by existing jobs are excluded. The coordinator saves <code>identity.json</code> before the shared owner reservation.</p>
-   <p>A definite reservation conflict permits the next name. An uncertain reservation stops with the selected identity retained for review.</p></li>
-  <li class="step"><span class="who">Credential creation → bounded registration</span><h3>Register, then confirm logout</h3>
-   <p><code>fleet.ts create</code> creates or restores local credentials. It does not register the account or install its first job.</p>
-   <p>Provisioning then makes one bounded registration attempt. The default deadline is sixty seconds. The claim worker does no tutorial or useful game work.</p>
-   <p>Success needs exit zero and one valid <code>CLAIM … logout=logged-out</code> line. The coordinator retains the registration result in <code>claim.json</code>.</p>
-   <p>A timeout, failed process or missing confirmation leaves availability unknown. It must not silently create another identity for the same uncertain attempt.</p>
-   <p class="to">The first login starts the account's live clock. Registration is not a free preparation step for a scored account.</p></li>
-  <li class="step"><span class="who">Confirmed identity → account assignment</span><h3>Choose the account's work owner</h3>
-   <p>A successful provision receipt can resolve <code>accountFrom</code> or an ordered participant reference such as <code>@provision-task</code>.</p>
-   <p>Autopilot plans correct-side accounts with its own marked job or no named job. Enabled hand jobs and coordinator assignments keep their accounts.</p>
-   <p>Reservations, owner pauses and plan ownership prevent takeover. A disabled marked job keeps its pause and repeat settings when its template changes.</p>
-   <p>The <code>army</code> roster opts accounts into goal bands. Per-account <code>builds</code> constrain levels and quest routes.</p>
-   <p>Template requirements check skills, combat, quests, quest points, food and kits. Practice-only templates also need the plan's explicit pilot opt-in.</p></li>
-  <li class="step"><span class="who">Admitted job → claimed session → settlement</span><h3>Run under one owner</h3>
-   <p>The <a href="#job">job admission path</a> checks the account and host. The connection takes its shared claim and records the exact attempt before network use.</p>
-   <p>The worker records observed progress. Its supervisor classifies the end. Logout proof must match this session.</p>
-   <p>A successful finite job can release the account for its next band or consumer. A standing job follows its own repeat policy.</p>
-   <p>A pause keeps the account held. A failure can need repair. Neither state is permission to reassign or log in the account blindly.</p></li>
-  <li class="step"><span class="who">Side handover / credential restore</span><h3>Keep identity across machines</h3>
-   <p><code>fleet/owners.json</code> names the side allowed to use the account. Credentials and vault access do not override that ownership.</p>
-   <p>When a credential is missing and the vault restores none, <code>FLEET_SEED</code> derives its password from the lower-case server and account name.</p>
-   <p>Without a seed, local creation uses a random password. Coordinator provisioning on a cloud side requires the seed.</p>
-   <p>The encrypted vault can restore a missing credential without overwriting an existing file. The main account is excluded from sealing.</p>
-   <p><a href="#cloud">Adoption and return</a> transfer eligible owner rows through a confirmed shared push. They do not create a new account or reset its clock.</p></li>
+  <li class="step"><span class="who">Naming and ownership</span><h3>Reserve one identity</h3>
+   <p><code>packages/core/src/names.ts</code> defines ordinary account names (1–12 alphanumeric characters); <code>packages/core/src/specialist-boards.ts</code> reserves specialist names so ordinary accounts never take them.</p>
+   <p><code>fleet/owners.json</code> assigns each account to one fleet side (<code>local</code>, <code>cloud</code>, <code>claude-cloud</code>, <code>claude-cloud-2</code>). <code>openBot</code> refuses accounts owned by another side.</p></li>
+  <li class="step"><span class="who">Credentials and registration</span><h3>Create, claim and confirm logout</h3>
+   <p><code>scripts/fleet.ts</code> manages local credentials and vault sealing (<code>scripts/fleet-vault.ts</code>, AES-256-GCM via <code>packages/core/src/fleet-vault.ts</code>). <code>scripts/claim-account.ts</code> registers a new live name and confirms logout.</p>
+   <p class="to">The first login starts the account's live clock. Protected main and specialist accounts stay offline until their launch gates pass.</p></li>
+  <li class="step"><span class="who">Account lifecycle states</span><h3>Keep blocked accounts explicit</h3>
+   <p>Brain tracks each account in <code>paused_owner</code>, <code>reserved</code>, <code>dead</code>, <code>needs_logout_recovery</code>, <code>needs_location_recovery</code>, <code>running</code>, <code>in_trade</code> or <code>idle</code>. Non-expiring states (<code>paused_owner</code>, <code>dead</code>) require explicit operator action.</p></li>
  </ol>
  <details><summary>Protected clocks and capacity</summary>
  <div class="tscroll" tabindex="0" role="region" aria-label="Account clock and capacity controls"><table>
   <thead><tr><th>Control</th><th>What it means</th><th>Required evidence</th></tr></thead><tbody>
-  <tr><td>Main account</td><td>The final Overall route has a source-bound launch gate and explicit <code>HAGGIS_RUN=1</code>.</td><td>Route, rehearsal, staged supplies and launch bindings must pass. The monitor sample must be under 120 seconds old, with at least 8 GiB free and no unfixed alert.</td></tr>
-  <tr><td>Specialist account</td><td>A configured skill board has a fresh-clock launch token bound to its account, source and mission.</td><td>Fresh exact-profile absence, board snapshot and rehearsal. Routes that need supplies also require staging proof. A level-99 rival requires a 2% tick margin. First login has at most ten minutes. The same authorised mission has a bounded continuation window.</td></tr>
-  <tr><td><code>maxBots</code></td><td>Maximum simultaneous managed, external and starting accounts.</td><td>Each account counts even inside one shared host. Per-start memory must retain the floor. An enabled job may still wait.</td></tr>
-  <tr><td><code>fleetCapacity</code></td><td>Owned-account capacity used for adoption. It falls back to <code>maxBots</code>.</td><td>Owning idle accounts and running simultaneous sessions are different counts.</td></tr>
-  <tr><td><code>coordination.autoExpand</code></td><td>An opt-in grant can add at most four places when useful demand exceeds capacity.</td><td>At least two fresh useful live receipts since expansion, ten minutes between grants, CPU at most 85%, advancing measured ticks at most 800 ms and free memory at least <code>minFreeGB + 4</code>.</td></tr>
+  <tr><td>Main account (<code>Haggis</code>)</td><td>The final Overall route has a source-bound launch gate (<code>scripts/haggis-gate.ts</code>) and explicit <code>HAGGIS_RUN=1</code>.</td><td>Route, rehearsal, staged supplies and fresh hiscore snapshot under one hour old.</td></tr>
+  <tr><td>Specialist accounts</td><td>Configured skill boards in <code>packages/core/src/specialist-boards.ts</code> require fresh-clock launch proof.</td><td>Fresh 404 profile check, hiscore snapshot under one hour, isolated rehearsal beating #1 by ≥ 2%, and verified staging.</td></tr>
+  <tr><td><code>maxBots</code> and RAM floor</td><td>Maximum simultaneous managed, external and starting accounts while retaining <code>max(4 GiB, minFreeGB)</code> free RAM.</td><td>Measured headroom (<code>packages/core/src/memory.ts</code>) plus 1 GiB pending startup reserve per launch.</td></tr>
   </tbody></table></div>
- <p class="to">Expansion uses receipts from the last fifteen minutes and rejects stale or stalled active rows. An owner edit of <code>maxBots</code> discards the overlay grant. It does not waive launch gates.</p>
  </details>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-worker.ts#L110">prepared first-job proof</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/provision-readiness.ts#L14">prepared peers</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/names.ts#L32">name choice</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/account-provision.ts#L37">identity and registration</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet.ts#L227">credentials only</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L242">account binding</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/autopilot.ts#L2140">plannable accounts</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/autopilot.ts#L2188">owned job merge</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/haggisgate.ts#L13">main login gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/specialist-launch.ts#L26">specialist gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-cli.ts#L77">measured expansion</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet-sync.ts#L435">adoption capacity</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/names.ts">names</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/specialist-boards.ts">specialist boards</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/haggisgate.ts">main launch gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/specialist-launch.ts">specialist launch gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/fleet-assign.ts">side ownership</a></p>
 </section>
 
 <section id="job">
- <div class="sec-head"><h2>A job becomes a bot</h2><p>The swarm controls starts. The worker owns its session. The producer records what the server confirms.</p></div>
+ <div class="sec-head"><h2>A job becomes a bot</h2><p>Swarm controls admission. The worker owns its session. The connection producer records what the server confirms.</p></div>
  <div class="tagkey"><span><span class="tag go">goes on</span>next step</span><span><span class="tag wait">waits</span>depends on a clearing event</span><span><span class="tag retry">retries</span>bounded repeat</span><span><span class="tag stop">holds</span>repair or owner action needed</span></div>
  <ol class="ladder">
- <li class="step"><span class="who">Three plan writers</span><h3>Install one assignment</h3>
-  <p>Owner and agent sessions edit <code>swarm.json</code>. Autopilot replaces only its side's marked jobs. Coordinator runs write <code>.practice/coordinator/jobs.json</code>.</p>
-  <p>The root swarm merges both files. Coordinator jobs take their accounts from overlapping owner jobs. A custom practice plan runs without that overlay.</p>
-  <p>Coordinator jobs use <code>repeat:false</code> and <code>maxRestarts:0</code>. Standing owner jobs have separate retry and release rules.</p></li>
- <li class="step"><span class="who">Swarm</span><h3>Check account and host admission</h3>
+ <li class="step"><span class="who">Swarm + worker-dispatch.ts</span><h3>Check account and host admission</h3>
   <ul class="br">
-   <li><span class="tag stop">holds</span><span>A reservation, wrong side, stop file, failed-script hold or unresolved repair blocks a start.</span></li>
-   <li><span class="tag wait">waits</span><span>A non-standing job waits for the runtime build lock. A coordinator-scoped swarm admits only qualified coordinator jobs and standing jobs.</span></li>
-   <li><span class="tag wait">waits</span><span>A running mission keeps the account. A fresh external status blocks a second login. Demand-only jobs wait offline when there is no demand.</span></li>
-   <li><span class="tag wait">waits</span><span>Admission counts managed, external and starting accounts against <code>maxBots</code>. Recovery can reserve one slot.</span></li>
-   <li><span class="tag wait">waits</span><span>Projected free memory must retain <code>max(4 GiB, minFreeGB)</code>. A new process reserves 1 GiB for 30 s.</span></li>
-   <li><span class="tag stop">holds</span><span>Session admission checks the exact account's logout proof. Unknown or crossed session evidence refuses a later start.</span></li>
-  </ul>
-  <p class="to">Hosted or orchestrated participants share one startup heap reserve. Each account still counts toward <code>maxBots</code>. The swarm itself does not test CPU/tick headroom.</p></li>
- <li class="step"><span class="who">Swarm → supervisor → worker</span><h3>Start a detached process</h3>
-  <p>A normal job uses <code>supervise.ts</code>. An <code>orchestrate:true</code> job uses that supervisor with all participants and defaults to zero restarts.</p>
-  <p>A <code>host:true</code> job uses <code>supervise-host.ts</code>, then one host process. Normal jobs default to 20 restarts.</p>
-  <p>The worker can be a direct script, AIO, chain or host. AIO dispatches a category or pipeline. Every job need not pass through AIO.</p>
-  <p>The swarm saves the detached supervisor's PID, accounts, mission, log and offset. A replacement swarm adopts those runs.</p></li>
+   <li><span class="tag stop">holds</span><span>Reservations, wrong side, stop files, quarantined defects or open <code>InfraCircuitBreaker</code> hold launches.</span></li>
+   <li><span class="tag wait">waits</span><span>Admission counts active, external and pending accounts against <code>maxBots</code> and keeps free RAM above <code>max(4 GiB, minFreeGB)</code>.</span></li>
+   <li><span class="tag stop">holds</span><span>Session admission checks the account's producer logout proof in <code>.practice/live/session-lifecycle/</code>.</span></li>
+  </ul></li>
+ <li class="step"><span class="who">Detached supervisor</span><h3>Start and monitor the worker</h3>
+  <p><code>packages/practice/src/supervise.ts</code> (or <code>supervise-host.ts</code> for hosted runs) spawns the worker, enforces stop files and fleet leases, keeps bounded <code>RESULT</code>/<code>LEDGER</code> output, and classifies end reasons.</p></li>
  <li class="step"><span class="who">openBot → connectInProcess</span><h3>Cross the network boundary</h3>
-  <p>The worker checks side ownership, credentials, live permission, launch gates, stop files and the controller lease. It checks the source release where required.</p>
-  <p>Standing jobs skip source-pin equality and the build-lock launch check. Main and specialist launch gates still protect their clocks.</p>
-  <p>The connection claims the account and writes its session attempt before network use. A held claim can stop a login.</p>
-  <p>Three consecutive held-claim refusals end an eligible supervisor retry streak. Coordinator jobs with zero restarts can end earlier.</p></li>
- <li class="step"><span class="who">Worker session</span><h3>Play, observe and settle</h3>
-  <p>Default status writes occur each 5 ticks and each 5 s. Tick recording is enabled by default, with <code>TICK_RECORD=0</code> as its off switch.</p>
-  <p>Each 25 ticks, the worker checks stop files and its controller lease. The default no-progress limit is 900 ticks.</p>
-  <p>A clock watcher ends a silent tick stream after the configured limit, default 120 s. A transport failure can retry within the supervisor budget.</p>
-  <p>The worker reconciles its outcome and closes its session. Only this attempt's server-confirmed logout supplies producer logout proof.</p></li>
- <li class="step"><span class="who">Supervisor → swarm</span><h3>Classify the end</h3>
-  <ul class="br">
-   <li><span class="tag go">done</span><span>Exit 0 plus <code>RESULT ok</code> ends successfully. Repeat policy or a changed successful mission can permit more work.</span></li>
-   <li><span class="tag stop">holds</span><span>Death, missing requirements, no progress or repeated matching failures stop blind retries. Empty food ends <code>stopped</code> and needs supply.</span></li>
-   <li><span class="tag wait">waits</span><span>Release holds end <code>release-paused</code>. A refusal before any game tick ends <code>refused</code>. Their next starts still need valid admission.</span></li>
-   <li><span class="tag retry">retries</span><span>Other failures wait 10 s. A ledger with at least 300 ticks sets the failure streak to one. The retry cap still applies.</span></li>
-   <li><span class="tag retry">standing</span><span>Standing jobs can clear blocked, gave-up, lost and qualifying stopped ends. Empty-food and death ends stay held.</span></li>
-  </ul>
-  <p>Standing retry needs a finished live status quiet for 15 min, or matching logout proof at least 2 min old. Owner stops still block starts.</p>
-  <p class="to">The swarm records ends in <code>swarm-deaths.json</code>. Coordinator acceptance also checks identity, source, freshness, useful effect and settled participants.</p></li>
+  <p><code>packages/core/src/bot.ts</code> and <code>packages/core/src/inprocess.ts</code> verify side ownership, launch gates, stop files, controller lease, worker release digest and shared account claim before connecting.</p></li>
+ <li class="step"><span class="who">Worker session</span><h3>Observe, act and settle</h3>
+  <p><code>packages/core/src/status.ts</code> writes live status to <code>.practice/live/status/&lt;account&gt;.json</code> (and practice status to <code>.practice/sim/status/</code>) every 5 ticks and 5 s. Tick records go to <code>.practice/ticks/</code>.</p>
+  <p>Settlement prints <code>LEDGER</code>, confirms logout with the server, writes logout proof and prints final <code>RESULT</code>.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/swarm.ts#L151">admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/swarm.ts#L247">supervisor command</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/swarm.ts#L748">detached runs</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/practice/src/supervise.ts#L99">end rules</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/inprocess.ts#L549">connection admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/worker-release.ts#L276">release checks</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/aio.ts#L346">AIO</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/swarm.ts">swarm admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/worker-dispatch.ts">worker dispatch</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/practice/src/supervise.ts">supervisor</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/bot.ts">openBot</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/session-admission.ts">session admission</a></p>
 </section>
 
 <section id="workers">
- <div class="sec-head"><h2>Inside a worker</h2><p>The planning models choose work outside the game loop. Worker code sends actions and reads game state through the SDK.</p></div>
- <div class="tscroll" tabindex="0" role="region" aria-label="Worker execution forms"><table>
-  <thead><tr><th>Form</th><th>What it does</th><th>Boundary to keep in mind</th></tr></thead><tbody>
-  <tr><td>Direct script</td><td>Runs a specific skill, quest, supply, combat or observation worker with its own arguments and stop contract.</td><td>Each script defines its target. A script file alone is not a qualified capability.</td></tr>
-  <tr><td>AIO</td><td>Dispatches <code>skiller</code>, <code>fighter</code>, <code>boss</code>, <code>pvp</code>, <code>quester</code>, <code>market</code> and <code>logistics</code> categories. Its pipeline compiler can choose job steps.</td><td>AIO reuses workers. It does not replace the coordinator, swarm or account admission.</td></tr>
-  <tr><td>Chain</td><td>Runs an ordered list of script steps. Each child process logs in and logs out. The first failed step ends the chain.</td><td><code>ROUNDS=0</code> repeats until a stop or failed step. A later producer cannot run after a failed prerequisite.</td></tr>
-  <tr><td>Hosted job</td><td>Runs supported workers inside one process. Hosted chain steps still log in and log out between steps.</td><td>Process sharing does not merge account identity, sessions or logout proof.</td></tr>
-  <tr><td>Orchestrated job</td><td>A single script coordinates a declared group of accounts, such as partners or a transfer.</td><td>The assignment retains all participants. Admission and settlement apply to each account.</td></tr>
+ <div class="sec-head"><h2>Unified workers</h2><p>Nine worker families under <code>packages/workers/src/</code> implement <code>WorkerModule&lt;Cfg&gt;</code> (<code>preflight</code>, <code>estimate</code>, <code>run</code>) with AIO entry dispatchers in <code>scripts/aio*.ts</code>.</p></div>
+ <div class="tscroll" tabindex="0" role="region" aria-label="Unified worker families"><table>
+  <thead><tr><th>Family</th><th>Package root</th><th>AIO dispatcher</th></tr></thead><tbody>
+  <tr><td>Gathering &amp; thieving</td><td><code>packages/workers/src/gather/</code></td><td><code>scripts/aio-skiller.ts</code></td></tr>
+  <tr><td>Artisan &amp; bank-standing</td><td><code>packages/workers/src/bank-artisan/</code></td><td><code>scripts/aio-skiller.ts</code></td></tr>
+  <tr><td>Agility</td><td><code>packages/workers/src/agility/</code></td><td><code>scripts/aio-skiller.ts</code></td></tr>
+  <tr><td>Runecraft</td><td><code>packages/workers/src/runecraft/</code></td><td><code>scripts/aio-skiller.ts</code></td></tr>
+  <tr><td>Combat &amp; bosses</td><td><code>packages/workers/src/combat/</code></td><td><code>scripts/aio-fighter.ts</code>, <code>scripts/aio-boss.ts</code></td></tr>
+  <tr><td>Quests</td><td><code>packages/workers/src/quest/</code></td><td><code>scripts/aio-quester.ts</code></td></tr>
+  <tr><td>Wilderness PvP &amp; spar</td><td><code>packages/workers/src/pvp/</code></td><td><code>scripts/aio-pvp.ts</code></td></tr>
+  <tr><td>Shops &amp; Grand Exchange</td><td><code>packages/workers/src/market/</code></td><td><code>scripts/aio-market.ts</code></td></tr>
+  <tr><td>Couriers, staging &amp; loadouts</td><td><code>packages/workers/src/logistics/</code></td><td><code>scripts/aio-logistics.ts</code></td></tr>
   </tbody></table></div>
- <ol class="ladder">
-  <li class="step"><span class="who">Worker → openBot → in-process session</span><h3>Use the game client</h3>
-   <p><code>BotSDK</code> reads state. <code>BotActions</code> supplies actions. A shim joins both to the LiteClient in the same process.</p>
-   <p>The normal worker path does not require a browser, an MCP call or a separate SDK gateway for each game action.</p>
-   <p>The game server owns the result. A sent click, queued action or completed helper call does not by itself prove the intended effect.</p></li>
-  <li class="step"><span class="who">Ticks, navigation and guards</span><h3>Act on observations</h3>
-   <p>Game ticks publish state and wake waits. Worker code checks skills, items, location, dialogue and other state before its next action.</p>
-   <p>Route search can run in a separate worker so a cold path search does not stop packet handling.</p>
-   <p>Shared helpers can handle food, prayer, events, loot, escape and death recovery. Their flags and script exclusions control which guards run.</p>
-   <p>Replay, practice and scored runs have different controls. A replay uses recorded accounts and must not fall through to a real login.</p></li>
-  <li class="step"><span class="who">Worker → status, ledger and settlement</span><h3>Report the effect, then close the session</h3>
-   <p>Status holds observed skills, stock, journal and counters. The tick ledger classifies XP, inventory changes, movement, animation, dialogue, stun and idle time.</p>
-   <p>An inventory change can be a withdrawal, trade or consumption. The ledger does not treat every change as net production.</p>
-   <p>Settlement prints the ledger, attempts logout and closes the client. Failed logout or timed-out close changes the final result to failure.</p>
-   <p>Only after settlement does the worker print its final <code>RESULT</code>. Tick records retain observed state and commands for replay.</p></li>
- </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/aio.ts#L38">AIO categories</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/chain.ts#L1">chain steps</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/host.ts#L13">hosted sessions</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/inprocess.ts#L44">SDK and LiteClient</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/bot.ts#L87">shared worker guards</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/route-worker.ts#L1">route search</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/ledger.ts#L1">tick ledger</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/bot.ts#L307">settlement</a></p>
-</section>
-
-<section id="queue">
- <div class="sec-head"><h2>Coordinator work</h2><p>One queue connects code, practice proof and a finite live consumer. A passing diagnostic alone cannot complete a delivery.</p></div>
- <ol class="ladder">
- <li class="step"><span class="who">Planner, rules and owner requests</span><h3>Add useful tasks</h3>
-  <p>A planner round can follow a request, a failure, an outcome without a consumer, or the idle interval. Rules also add tasks without a model call.</p>
-  <p>Proposals must name known capabilities, valid dependencies and finite consumers. Replacements reconnect pending consumers while retaining failed receipts.</p>
-  <p>Planner failures back off from 1 to 30 min. A usage limit can select the other model. Model choice also considers current work.</p></li>
- <li class="step"><span class="who">Dispatcher</span><h3>Choose work that can start</h3>
-  <p>Positive goal value per estimated time guides eligible choices. Dependencies, account ownership, qualifications, review, memory, disk and source ownership remain gates.</p>
-  <ul class="br">
-   <li><span class="tag wait">waits</span><span>Under 2 GiB free disk, new tasks and planning wait. Shared-file builds run one at a time.</span></li>
-   <li><span class="tag wait">waits</span><span>Two matching build failures hold a capability for 24 hours. A build with <code>newEvidence</code> can cross that first hold once.</span></li>
-   <li><span class="tag wait">waits</span><span>A third matching failure retains the hold. A rejected review holds later runs on the reviewed source. Changed source still needs fresh qualification.</span></li>
-   <li><span class="tag stop">retires</span><span>Ordinary pending work behind a dead dependency can retire after 24 hours. Protected main and specialist launches are excluded.</span></li>
-  </ul></li>
- <li class="step"><span class="who">Build worker</span><h3>Write code, then check the delivery</h3>
-  <p>A capability build has an isolated workspace and owned files. An explicit model choice wins. Otherwise build counts balance Claude and Codex.</p>
-  <p>Authoring permits at most three turns. A declared practice diagnostic can return observations during a turn. It cannot complete delivery.</p>
-  <p>The author's diagnostic helps find defects. Full delivery still checks regression, practice and the consumer against the exact source.</p>
-  <p>Only a failed regression can trigger automatic code repair in that delivery loop. It must be non-timeout, with repair enabled and fix rounds remaining.</p>
-  <p>Practice and consumer failures return to the integrator for diagnosis. A useful retry needs the cause, the smallest repair and fresh proof.</p></li>
- <li class="step"><span class="who">Replay + review</span><h3>Decide whether review blocks delivery</h3>
-  <p>Review prefers the other model. A recognized usage limit can select the fallback model within the same budget. Deferred review becomes a separate task.</p>
-  <p>Native qualification must pass first. Changes within owned files can deliver before review if three required recorded runs replay cleanly.</p>
-  <p><code>replayAllow</code> can permit named command types to change. Replay counts those changes and continues checking later commands.</p>
-  <p>Unknown scope, too few records, replay errors or disallowed differences require review before delivery. A later rejection holds subsequent capability runs.</p></li>
- <li class="step"><span class="who">Build publish</span><h3>Write the owned source into main</h3>
-  <p>The worker takes the build lock. It can copy unchanged-base files or merge supported earlier deliveries. Overlap or unowned edits refuse publication.</p>
-  <p>An unchanged prepared source can resume without another author pass. Delivery and applicable review still run again before publication.</p>
-  <p>Standing workers can continue during a publish. Non-standing starts wait for the lock. Publishing source and merging its pull request are separate steps.</p></li>
- <li class="step"><span class="who">Qualification → run</span><h3>Prove this source, then use it</h3>
-  <p>Qualification binds a capability fingerprint. A source change requires fresh proof for waiting live consumers. The coordinator refreshes demanded capabilities.</p>
-  <p>A run installs its job, waits for source-bound useful acceptance, and disables its own job when it ends.</p>
-  <p>An explicit <code>timeoutMs</code> controls the window. Otherwise the fallback uses 1.5 times the estimate, at least 15 min, with a maximum cap.</p>
-  <p>Missed targets or an expired window produce a failed receipt. They can request a planner diagnosis and a changed finite consumer.</p></li>
- </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L136">qualification refresh</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L269">build holds</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-decisions.ts#L21">retirement</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/model-worker.ts#L85">model and replay gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-planner.ts#L502">review fallback</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/author.ts#L179">diagnostic and delivery</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-live.ts#L361">run window</a></p>
+ <p class="to">Package dependencies follow a strict downward acyclic DAG enforced in CI by <code>packages/core/test/package-dag.test.ts</code>: <code>knowledge → core → planner → workers → brain → fleet</code>, with <code>practice</code> and <code>dashboard</code> at the top and zero runtime imports from <code>tools/</code>.</p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/workers/src/contracts.ts">WorkerModule contract</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/workers/src/index.ts">worker registry</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/scripts/aio.ts">AIO catalog</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/test/package-dag.test.ts">package DAG test</a></p>
 </section>
 
 <section id="proof">
- <div class="sec-head"><h2>What counts as proof</h2><p>Evidence answers one question at a time. Source behavior, a passed practice case and a useful live result are separate claims.</p></div>
+ <div class="sec-head"><h2>What counts as proof</h2><p>Evidence answers one question at a time. Unit tests, lockstep practice benches, isolated rehearsals and live runs prove different claims.</p></div>
  <div class="tscroll" tabindex="0" role="region" aria-label="Evidence and acceptance"><table>
-  <thead><tr><th>Evidence</th><th>What it can establish</th><th>What still needs a check</th></tr></thead><tbody>
-  <tr><td>Source / catalog / route model</td><td>A method exists. Its requirements and predicted ticks can be inspected.</td><td>Installed source, runtime behavior, real supplies and scored performance.</td></tr>
-  <tr><td>Unit / regression / typecheck</td><td>The checked code satisfies that test or type contract.</td><td>Native game behavior, full route conditions and useful live output.</td></tr>
-  <tr><td>Practice / AIO bench</td><td>The worker reaches a declared target in the checked practice state and seed.</td><td>Live procurement, travel, fresh clocks and behavior outside that fixture.</td></tr>
-  <tr><td>Native delivery</td><td>Declared regression, practice and consumer commands pass on an unchanged fingerprint.</td><td>A diagnostic stops short of full acceptance. Delivery alone enables no worker and clears no hold.</td></tr>
-  <tr><td>Recorded replay</td><td>Changed code can consume a saved observation stream with checked command differences.</td><td>The record cannot show how the live server would react to a new command.</td></tr>
-  <tr><td>Live status + settled run</td><td>The matching worker reports its target against fresh observed state, with the required participant settlement.</td><td>The task's target must cover the useful outcome. A run receipt is not a board win unless it proves that board claim.</td></tr>
-  <tr><td>Session / trade receipt</td><td>Exact session logout, or the proved movement and bank effect of a named transfer.</td><td>A logout proves session end. A command acknowledgement or an old stock row does not prove delivery.</td></tr>
+  <thead><tr><th>Evidence</th><th>What it proves</th><th>What still needs a check</th></tr></thead><tbody>
+  <tr><td>Unit tests + narrow/full typecheck + DAG + no-diary</td><td>Code satisfies type, invariant, package-boundary and documentation rules.</td><td>Engine behavior, full route timing and live account effects.</td></tr>
+  <tr><td>Hosted AIO bench (<code>bun tools/hosted-bench.ts</code>)</td><td>Deterministic lockstep ticks, XP/output and asset reconciliation on clean runners across seeds.</td><td>Live market depth, travel and fresh clocks outside the fixture.</td></tr>
+  <tr><td>Isolated rehearsal (<code>packages/practice/src/rehearse.ts</code>)</td><td>Continuous fresh-clock route execution at 400 ms ticks with trade ledger and tick record binding.</td><td>Live launch admission, staged supplies and recorded hiscore rank.</td></tr>
+  <tr><td>Live status + confirmed logout</td><td>Observed live levels, bank stock, quest flags and reconciled exit on <code>rs-sdk-demo.fly.dev</code>.</td><td>Board rank #1 requires a current hiscore observation.</td></tr>
   </tbody></table></div>
- <ol class="ladder">
-  <li class="step"><span class="who">Coordinator acceptance</span><h3>Bind the result to this run</h3>
-   <p>The status must name the target account, live server, run identity and exact worker revision. It must start after installation.</p>
-   <p>Its timestamp must fall within this run and be no more than five minutes old. Its result must begin with <code>ok</code>.</p>
-   <p>Skill targets are minimum levels. Bank targets require a bank observation from this run. Quest targets need complete journal flags.</p>
-   <p>Counters must meet their declared values. For a group, <code>acceptIndex</code> selects whose effects are checked. Every participant also needs an end record after installation.</p>
-   <p>The group end check does not independently require each participant's result to succeed.</p></li>
-  <li class="step"><span class="who">Stock, source and useful effect</span><h3>Keep the limits visible</h3>
-   <p>Bank targets check the held total, not an automatic production delta. Named acquisition workers need their own movement and provenance checks.</p>
-   <p>A last-seen bank observation can help planning. It does not prove that stock is still present, free, reachable or received by its consumer.</p>
-   <p>Capability fingerprints, worker import revisions and controller launch revisions bind different source scopes. One Git commit alone does not replace those runtime checks.</p>
-   <p>The goal ledger credits only evidence that meets each goal's rules. Scored launches, player kills and Wilderness control need their own bound proof.</p></li>
- </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/delivery.ts#L51">delivery and diagnostic</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L485">live identity and acceptance</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-live.ts#L655">group run and source scopes</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/status.ts#L177">bank observation</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/session-lifecycle.ts#L6">producer logout proof</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/tick-record.ts#L1">record and replay</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/goal-scoreboard.ts">goal acceptance</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/docs/script-contract.md">script contract</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/practice/src/rehearse.ts">rehearsal runner</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/scripts/measure/aio-practice-bench.ts">AIO bench</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/tick-record.ts">tick records</a></p>
 </section>
 
 <section id="code">
- <div class="sec-head"><h2>Code reaches the fleet</h2><p>A merged change needs an eligible checkout move. Existing processes and fresh starts can load different source.</p></div>
+ <div class="sec-head"><h2>Code reaches the fleet</h2><p>GitHub Actions standard runners verify pull requests. <code>live-update.ts</code> fast-forwards <code>master</code> safely and triggers affected daemon reloads.</p></div>
  <ol class="ladder">
- <li class="step"><span class="who">Agent session or coordinator delivery</span><h3>Check and merge the change</h3>
-  <p>An agent session opens a pull request from its branch. The coordinator can stage published deliveries against <code>origin/master</code> and open their pull requests.</p>
-  <p>An agent or person runs the applicable gate. Code needs complete type-check and test evidence. No repository daemon merges pull requests.</p>
-  <p><code>ci-gate.ts --post</code> posts its status on the checked commit. The hosted workflow also needs an explicit start.</p>
-  <p>Conflicts and failed checks need repair. Merge alone does not prove the main checkout or a live worker uses the change.</p></li>
- <li class="step"><span class="who">Fleet agent → live-update</span><h3>Move master without losing local work</h3>
-  <ul class="br">
-   <li><span class="tag stop">holds</span><span><code>LIVE_UPDATE=0</code>, its stop file, a non-master checkout, or local commits ahead prevent an automatic move.</span></li>
-   <li><span class="tag wait">waits</span><span>A build lock, pending publish or overlapping build-owned file holds the move. A qualification holds relevant changed source.</span></li>
-   <li><span class="tag wait">waits</span><span>A live non-standing session holds files its entry loads. This includes manual sessions. Standing sessions are exempt from release-equality waits.</span></li>
-   <li><span class="tag stop">manual</span><span>An incoming dependency manifest needs a manual checkout/dependency update. Running <code>bun install</code> alone does not clear this incoming-file guard.</span></li>
-   <li><span class="tag go">adopts</span><span>A dirty copy of a verified merged delivery can be adopted. A supported unmerged delivery edit can survive a clean three-way rebase.</span></li>
-   <li><span class="tag stop">holds</span><span>Other conflicting local edits stay in place. The result names the reason. Unrelated dirty files need not block the move.</span></li>
-  </ul>
-  <p>If the SDK patch changes, an exact patched or clean vendor tree can receive it. Other vendor edits or new-file collisions are preserved and reported.</p></li>
- <li class="step"><span class="who">live-update → daemon reload</span><h3>Reload only affected loops</h3>
-  <p><code>.practice/live-update.json</code> names daemons whose import closure intersects the changed files. Later unrelated updates retain each pending reload request.</p>
-  <p>Autopilot restarts after its active pass. Fleet-agent restarts after its active trades. A coordinator restart retains running task workers.</p>
-  <p>The dashboard collector closes its event streams and finishes active requests before starting its replacement. The publisher reloads between cycles.</p>
-  <p>If swarm source changes, the coordinator can replace a detached-run controller without pausing or draining its sessions. The replacement adopts detached supervisors.</p>
-  <p>A legacy controller can need a drain. The bounded standing drain has a 5 min limit and 1 hour backoff.</p>
-  <p>Existing sessions retain loaded code. Fresh worker starts load disk source and apply their job's release and launch rules.</p></li>
+ <li class="step"><span class="who">GitHub Actions CI</span><h3>Run full suites and benches on hosted runners</h3>
+  <p><code>.github/workflows/ci.yml</code> runs <code>linux</code> (2 shards, <code>check-pin</code>, <code>check-no-diary</code>, <code>typecheck</code>, isolated <code>packages/dashboard</code> tests), <code>windows</code> (6 shards via <code>tools/ci-gate.ts --full</code>), <code>route-key-parity</code>, hosted multi-seed <code>bench-cases</code>, <code>pvp-practice</code>, <code>preparation-practice</code> and <code>native-practice</code>.</p>
+  <p>Local checks stay fast (&lt; 3 min): <code>bun test &lt;changed-files&gt;</code>, <code>bun tools/typecheck-narrow.ts</code> and <code>bun tools/check-no-diary.ts --list</code>.</p></li>
+ <li class="step"><span class="who">Fleet agent → live-update</span><h3>Fast-forward master safely</h3>
+  <p><code>packages/fleet/src/live-update.ts</code> advances <code>master</code> to <code>origin/master</code> when no live run loads a changed file and no active campaign runs, while preserving dirty local edits and honoring <code>LIVE_UPDATE=0</code> or <code>stop-live-update</code>.</p></li>
+ <li class="step"><span class="who">live-update → daemon reload</span><h3>Reload affected controllers</h3>
+  <p><code>.practice/live-update.json</code> marks daemons whose import closure overlaps changed files; <code>packages/core/src/live-reload.ts</code> triggers clean reloads between cycles without losing active work.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/delivery-pr.ts">delivery pull requests</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/ci-gate.ts">local gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/live-update.ts#L62">move conditions</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/live-update.ts#L92">delivery adoption and rebase</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/live-update.ts#L504">SDK patch and reload</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/live-reload.ts#L18">pending daemon reloads</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-live.ts#L86">controller replacement</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/.github/workflows/ci.yml">CI workflow</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/tools/ci-gate.ts">CI gate</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/live-update.ts">live-update</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/live-reload.ts">live-reload</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/worker-release.ts">worker release</a></p>
 </section>
 
 <section id="supply">
- <div class="sec-head"><h2>How supply work is chosen</h2><p>A missing item is a finite acquisition problem. Demand, observed stock, funding and transport all belong to the same consumer path.</p></div>
+ <div class="sec-head"><h2>Supply acquisition</h2><p><code>packages/brain/src/acquire.ts</code> chooses the lowest-cost feasible source for each missing item in canonical priority order.</p></div>
  <ol class="ladder">
-  <li class="step"><span class="who">Route / army / finite production consumer</span><h3>Count the shortage</h3>
-   <p>The route bill and army kits name wanted items. Account observations show last-seen pack, worn and bank stock.</p>
-   <p>Reservations, donor reserves and accepted input forms reduce what is available. Old or unknown stock needs verification before another acquisition.</p>
-   <p>A production template sizes its order to demand, its maximum and available inputs. It reserves required inputs and marks the job finite.</p>
-   <p>The planner reserves expected output before its next choice. The 1,000-tick value estimate is separate from the worker's actual quantity and stop contract.</p></li>
-  <li class="step"><span class="who">Autopilot source choice</span><h3>Use reachable stock before buying it again</h3>
-   <p>Available spare stock on this side precedes a repurchase. Donors keep required kit and cash reserves.</p>
-   <p>An affordable local purchase can precede a remote transfer because remote orders retain their sync lead. Shops and self-supply have separate worker paths.</p>
-   <p>A donor must be available for its transfer. It does not receive another conflicting assignment during that pass.</p>
-   <p>A running band, open purchase or productive remote recipient can keep its assignment. A waiting transfer must not park useful local work without cause.</p></li>
-  <li class="step"><span class="who">Finite funding → acquisition → delivery</span><h3>Close the whole supply path</h3>
-   <p>A named purchase budget gives coins a use. Local funds, owned donors or a finite earning helper can cover the shortfall.</p>
-   <p>Quote-based acquisition selection needs a current ask and observed seller count. A quote is not a filled order.</p>
-   <p>The buyer can submit a bounded limit order. It checks the bank baseline, purchase cap and reconciled movement.</p>
-   <p>Transfers need the order and receipt path below. Production needs confirmed output. The consumer still needs the delivered item in its required form.</p>
-   <p class="to">Held stock, reserved stock, banked output and staged supplies are different states. A preparation report is advisory until its delivery and staging proof pass.</p></li>
+  <li class="step"><span class="who">AcquireItem ladder</span><h3>Resolve missing inputs</h3>
+   <p>Sources are evaluated in order: <code>own_bank</code> → <code>npc_shop</code> → <code>ge</code> → <code>hub_banker</code> → <code>craft_gather</code>, preserving <code>DEFAULT_OPERATING_COIN_FLOAT</code> and account/global reserves.</p>
+   <p>Shop catalogs filter to runnable derived shop profiles; GE pricing reads <code>.practice/market-all.json</code>; hub transfers require idle verified donor and recipient logout proofs plus anti-ping-pong checks.</p></li>
  </ol>
- <div class="tscroll" tabindex="0" role="region" aria-label="Supply and price evidence"><table>
-  <thead><tr><th>Input</th><th>Used for</th><th>Limit</th></tr></thead><tbody>
-  <tr><td>Static item value</td><td>Content rules and relevant board values.</td><td>It is not a market acquisition price.</td></tr>
-  <tr><td>Market bid / ask / seller count</td><td>Finite sale or purchase decisions with observation time.</td><td>Depth, quantity, freshness and the actual fill still matter.</td></tr>
-  <tr><td>VWAP / loot valuation</td><td>Estimated value under the valuation policy.</td><td>It is not a promise that the held stack can sell for that amount.</td></tr>
-  <tr><td>Bank observation / deposit credit</td><td>Observed holdings or the checked credit of a deposit.</td><td>A screen opening alone does not prove a bank update or an empty bank.</td></tr>
-  <tr><td>Preparation report</td><td>Advisory stock matching.</td><td>It reports <code>staged:false</code>. Possession alone proves no reservation, transport or launch readiness.</td></tr>
-  <tr><td>Launch staging evidence</td><td>Source-bound supplies for the declared launch requirements.</td><td>The launch validator checks bound artifacts, freshness, item forms and holders. An advisory report does not replace this evidence.</td></tr>
-  </tbody></table></div>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/supply-bill.ts">route demand</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/autopilot.ts#L570">finite production sizing</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/autopilot.ts#L738">stock and source choice</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/autopilot.ts#L893">finite earning support</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/market-cache.ts#L35">quote validity</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/buy-owned-ge-item.ts">bounded owned purchase</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/loot.ts#L189">valuation policy</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/deposit.ts#L6">bank credit</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/preparation-report.ts#L166">advisory preparation</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/acquire.ts">AcquireItem</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/tools/item-sources.ts">item-sources CLI</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/knowledge/src/item-sources/build.ts">knowledge item sources</a></p>
 </section>
 
 <section id="trade">
- <div class="sec-head"><h2>Items between sides</h2><p>Each side logs in its own accounts. Shared orders and exact receipts connect the two halves of a trade.</p></div>
+ <div class="sec-head"><h2>Orders and trades</h2><p>Cross-side item movement uses explicit fleet orders and bilateral settlement receipts on the <code>fleet-data</code> branch.</p></div>
  <ol class="ladder">
- <li class="step"><span class="who">Owner, route staging or autopilot</span><h3>Write a finite order</h3>
-  <p>An order names giver, receiver, server, item lines, counts, time window and optional meeting tiles. Varrock West is the default meet.</p>
-  <p>Autopilot uses finite coin or kit demand. Its army item orders meet at Ardougne north bank. Both participants stay available for the order.</p></li>
- <li class="step"><span class="who">fleet-sync</span><h3>Share the order and observations</h3>
-  <p>Sync uses the separate <code>.practice/fleet-data</code> worktree. It pulls with rebase and autostash, writes this side's data, commits, then pushes.</p>
-  <p>It shares snapshots, merged plans, resource claims, side cards, orders and receipts. Newer prior observations survive a fresh container or account handover.</p>
-  <p>Conflicts stop the sync before staging. The result keeps the failure visible. A later fleet-agent pass can retry.</p></li>
- <li class="step"><span class="who">Fleet agent → fleet-trade</span><h3>Use an idle owned account</h3>
-  <p>Enabled owner or coordinator jobs make the account busy. Owner pauses, unsettled runs, logout evidence and shared claims can also block it.</p>
-  <p>The worker rechecks admission within the order window. It writes a <code>prepared</code> receipt before network use.</p>
-  <p>The giver confirms its bank debit and pack credit. The receiver accepts exact item counts, deposits the received items, then confirms the bank credit.</p></li>
- <li class="step"><span class="who">Trade worker → sync</span><h3>Settle with proof</h3>
-  <ul class="br">
-   <li><span class="tag go">settled</span><span>Exact requested counts, receiver bank credit and matching confirmed logout support settlement. Sync publishes the terminal receipt, then releases its matching claim.</span></li>
-   <li><span class="tag go">failed</span><span>Confirmed logout and known zero movement support failure. Sync can release that matching claim after publication.</span></li>
-   <li><span class="tag wait">reconcile</span><span>Unknown movement or missing logout stays explicit. Proved zero-movement cases below can release held claims. Other cases need reconciliation.</span></li>
-  </ul></li>
- <li class="step"><span class="who">fleet-sync</span><h3>Release proved trade claims</h3>
-  <p>Each case needs a matching held claim and version 2 receipt, zero count, and no observed inventory change.</p>
-  <ul class="br">
-   <li><span class="tag go">case 1</span><span>A terminal failed partner receipt proves zero transfer. The own receipt must show an ended worker, or a prepared claim/window must be an hour old.</span></li>
-   <li><span class="tag go">case 2</span><span>No partner receipt exists after the order window. The own receipt is <code>reconcile</code>. The partner side publishes at least 2 min after the window ends.</span></li>
-   <li><span class="tag go">case 3</span><span>The own ended receipt proves no trade screen opened. The order window has ended. No partner receipt is needed.</span></li>
-   <li><span class="tag go">case 4</span><span>Both participants belong to this side. Their matching <code>reconcile</code> receipts show an opened trade screen and zero movement for every ordered stack. The order window has ended. Current producer logout proofs match both claims, and both processes have ended. Sync releases the two claims in one atomic push. A changed claim refuses the pair. The raw receipts remain <code>reconcile</code>.</span></li>
-  </ul>
-  <p class="to">Case 2 uses the local clock for a partner on this side. Other unresolved trade claims have no expiry. Do not infer settlement from elapsed time.</p></li>
+  <li class="step"><span class="who">fleet-order → fleet-sync → fleet-trade</span><h3>Move items between sides safely</h3>
+   <p><code>scripts/fleet-order.ts</code> (or <code>scripts/route-stage.ts</code>) writes an order under <code>fleet/orders/</code>. <code>fleet-sync.ts</code> shares orders, receipts and snapshots across sides.</p>
+   <p>Each side's <code>fleet-agent.ts</code> runs <code>scripts/fleet-trade.ts</code> when its participant is idle with confirmed logout. <code>packages/core/src/fleet-trade-settlement.ts</code> reconciles bilateral receipts into <code>settled</code>, <code>failed</code> or <code>reconcile</code>.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet-sync.ts#L246">claim release</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet-sync.ts#L203">paired logout proof</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/fleet-trade-claim.ts#L186">atomic pair release</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet-sync.ts#L298">dropped claims</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet-sync.ts#L363">sync</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet-trade.ts#L62">trade admission</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet-trade.ts#L309">receipt outcome</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/scripts/fleet-order.ts">fleet-order</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/fleet-sync.ts">fleet-sync</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/fleet-trade-settlement.ts">trade settlement</a></p>
 </section>
 
 <section id="cloud">
- <div class="sec-head"><h2>Cloud and ownership</h2><p>A side owns accounts. A controller lease owns the right to run that side. An account claim owns a particular session.</p></div>
- <div class="tscroll" tabindex="0" role="region" aria-label="Ownership and claim types"><table>
-  <thead><tr><th>Owner / claim</th><th>Authority</th><th>Lifetime</th></tr></thead><tbody>
-  <tr><td>Account's fleet side</td><td><code>fleet/owners.json</code> on shared fleet-data.</td><td>Changes only through a confirmed owner reservation or handover.</td></tr>
-  <tr><td>Local daemon owner</td><td>Daemon lock with a live PID and fresh local lease.</td><td>Owns one local daemon. It does not grant a game account or another side's controller.</td></tr>
-  <tr><td>Side controller lease</td><td>Authoritative <code>fleet-lease/&lt;side&gt;</code> Git ref.</td><td>Ten-minute TTL. Renews each three minutes. Workers are fenced after eight minutes without confirmation.</td></tr>
-  <tr><td>Account session / trade claim</td><td>Per-account <code>fleet-trade-claim/…</code> Git ref with a nonce and holder.</td><td>No generic time expiry. Release needs the matching proof. Eligible orphaned swarm claims have a separate adoption rule.</td></tr>
-  <tr><td>World resource claim</td><td><code>fleet/claims/&lt;side&gt;.json</code> reserves spots, pens and shops used by active jobs.</td><td>Planners ignore claims older than two hours. This is not an account login claim.</td></tr>
-  </tbody></table></div>
- <ol class="ladder">
- <li class="step"><span class="who">Controller and session ownership</span><h3>Keep one live owner</h3>
-  <p>Local daemon locks require a live PID and a fresh lease, default under 25 min. A recent file alone proves no live process.</p>
-  <p>The authoritative side controller lease uses Git refs. Its TTL is 10 min, renewal is each 3 min, and local drain starts earlier.</p>
-  <p>Shared per-account swarm and trade claims fence concurrent network use. Session receipts bind those claims to producer attempts and confirmed logout.</p>
-  <p><code>fleet/leases/&lt;side&gt;.json</code> mirrors older heartbeat data. It is separate from the authoritative lease refs.</p></li>
- <li class="step"><span class="who">Watchdog → cloud-launch → cloud-side</span><h3>Start the needed cloud side</h3>
-  <p>Local config can start a silent configured side when eligible accounts wait. Default limits allow one live/starting Claude session and one Codex session.</p>
-  <p>The launcher uses a 40 min cooldown and at most 12 starts per side per day. Owner stops and config can keep it off.</p>
-  <p>The cloud session runs <code>cloud-side.ts</code>. It prepares the workspace and credentials, then manages swarm, fleet-agent and autopilot for its own side.</p>
-  <p>The watch is bounded. Restarts are limited. Codex's generated command uses <code>--stop-at-end</code> so its workers settle before the session ends.</p></li>
- <li class="step"><span class="who">Credential vault</span><h3>Restore only the account assigned here</h3>
-  <p><code>openBot</code> checks <code>fleet/owners.json</code>. A missing credential can restore from the encrypted fleet-data vault.</p>
-  <p>Each account has an AES-256-GCM sealed entry bound to its name and server. The key stays in environment settings. Existing credentials are not overwritten.</p>
-  <p>The main account is never sealed. Access to the vault does not override side ownership or launch gates.</p></li>
- <li class="step"><span class="who">fleet-sync → account adoption</span><h3>Move idle accounts when a side is silent</h3>
-  <p>Adoption needs this side's active controller, a successful pushed sync, capacity and credential readiness. <code>FLEET_ADOPT=0</code> disables it.</p>
-  <p>A running side can adopt accounts from a side silent for an hour, within its published capacity. Credential readiness and claim rules still apply.</p>
-  <p>Main/specialists, reserved accounts, owner pauses, deaths and held trade claims prevent adoption. Stale swarm claims have a specific orphan rule.</p>
-  <p>When the home side returns with a heartbeat under fifteen minutes old, unheld adopted accounts can return if it has room and no local owner pause blocks them.</p>
-  <p>A handback pass adopts no other accounts.</p>
-  <p class="to">Adoption changes owner rows with a compare-and-swap push. It does not authorize another side to log in before that handover lands.</p></li>
- </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/controllers.ts#L64">local PID lease</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/fleet-lease.ts#L8">side lease</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/fleet-trade-claim.ts">account claims</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/cloud-launch.ts#L53">cloud limits</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/cloud-side.ts#L116">cloud runner</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/fleet-vault.ts#L104">vault restore</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/fleet-assign.ts#L36">adoption</a></p>
+ <div class="sec-head"><h2>Sides and ownership</h2><p>Each machine runs bots only for its own <code>FLEET_SIDE</code>. Main and specialist accounts never transfer sides.</p></div>
+ <p><code>fleet/owners.json</code> on <code>fleet-data</code> records account ownership. <code>packages/core/src/fleet-lease.ts</code> and <code>packages/core/src/fleet-trade-claim.ts</code> coordinate authoritative Git ref claims so two machines cannot log in the same account concurrently. Sealed credentials live in <code>fleet/vault/</code> and restore via <code>FLEET_VAULT_KEY</code>.</p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/fleet.ts">fleet config</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/fleet-lease.ts">controller leases</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/fleet-trade-claim.ts">account claims</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/fleet-vault.ts">sealed vault</a></p>
 </section>
 
 <section id="fail">
- <div class="sec-head"><h2>When something fails</h2><p>A fault creates bounded repair work. A current owner pause still stops that work. A receipt records what actually happened.</p></div>
- <figure>
-  <div class="scroll map recovery" tabindex="0" role="region" aria-label="Recovery feedback loop">
-   <svg viewBox="0 0 1240 335" role="img" aria-labelledby="recovery-title recovery-desc">
-    <title id="recovery-title">A failed recovery returns evidence to the planner</title>
-    <desc id="recovery-desc">The watchdog calls cloud-recover for a held session. Qualified cleanup runs through the owning controller. Confirmed logout supplies session proof. Qualification or recovery failure writes bounded facts and wakes the existing planner for diagnosis, practice repair and a finite consumer. Owner stops and admission still apply.</desc>
-    <defs><marker id="recovery-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker></defs>
-    <g class="n file"><rect x="20" y="30" width="220" height="105" rx="7"/><text class="t" x="35" y="58">Held session</text><text class="s" x="35" y="82">exact account and ended job</text><text class="s" x="35" y="106">logout remains unconfirmed</text></g>
-    <g class="n proc"><rect x="280" y="30" width="220" height="105" rx="7"/><text class="t" x="295" y="58">cloud-recover</text><text class="s" x="295" y="82">watchdog submission</text><text class="s" x="295" y="106">budgets, proof and owner holds</text></g>
-    <g class="n proc"><rect x="540" y="30" width="300" height="105" rx="7"/><text class="t" x="555" y="58">Qualified cleanup</text><text class="s" x="555" y="82">owning coordinator and swarm</text><text class="s" x="555" y="106">bounded permit and exact session</text></g>
-    <g class="n file"><rect x="880" y="30" width="300" height="105" rx="7"/><text class="t" x="895" y="58">Confirmed logout proof</text><text class="s" x="895" y="82">the server settles this session</text><text class="s" x="895" y="106">old failure repair stays separate</text></g>
-    <g class="n file"><rect x="540" y="205" width="300" height="105" rx="7"/><text class="t" x="555" y="233">Recovery failure facts</text><text class="s" x="555" y="257">source, failed check and settledAt</text><text class="s" x="555" y="281">bounded evidence, not another queue</text></g>
-    <g class="n proc"><rect x="880" y="205" width="300" height="105" rx="7"/><text class="t" x="895" y="233">Existing planner</text><text class="s" x="895" y="257">diagnosis → practice repair</text><text class="s" x="895" y="281">fresh proof → finite useful consumer</text></g>
-    <g class="e"><path class="ln" d="M240 82H280" marker-end="url(#recovery-arrow)"/><path class="ln" d="M500 82H540" marker-end="url(#recovery-arrow)"/><path class="ln d" d="M840 82H880" marker-end="url(#recovery-arrow)"/><path class="ln d" d="M390 135V257H540" marker-end="url(#recovery-arrow)"/><path class="ln d" d="M690 135V205" marker-end="url(#recovery-arrow)"/><text class="l" x="700" y="177">failure</text><path class="ln d" d="M840 257H880" marker-end="url(#recovery-arrow)"/><path class="ln d" d="M1180 257H1210V10H390V30" marker-end="url(#recovery-arrow)"/></g>
-   </svg>
-  </div>
-  <figcaption>Session proof and useful game output are separate results. A fresh qualified method can retry through the same ownership and admission checks.</figcaption>
- </figure>
- <div class="tscroll" tabindex="0" role="region" aria-label="Failure handling"><table>
- <thead><tr><th>Failure</th><th>First response</th><th>Next useful step</th></tr></thead><tbody>
- <tr><td>Coordinator process ends</td><td>Watchdog can start a replacement. Existing task children remain owned and can finish.</td><td>Read retained receipts. Check a fresh useful result before claiming progress.</td></tr>
- <tr><td>Fleet-agent or autopilot ends</td><td>Watchdog uses its launch record if no live lease holder or owner stop blocks it.</td><td>Keep the same side, plan and live permission from the launch record.</td></tr>
- <tr><td>Swarm process ends</td><td>Coordinator ensures it for standing jobs or a run. The replacement adopts saved detached supervisors.</td><td>Do not start a second account session to replace a still-owned supervisor.</td></tr>
- <tr><td>Transport drops</td><td>The worker reports the session failure. Its supervisor can retry within its budget.</td><td>If logout remains unknown, authenticated recovery must settle the session before another start.</td></tr>
- <tr><td>Death or no food</td><td>Blind retries stop. Death retains a script hold. Empty food needs supply.</td><td>Repair the cause, prove the required script/supply, then use a finite consumer.</td></tr>
- <tr><td>Unknown logout</td><td>Recovery queues a qualification and authenticated session cleanup through the owning controller.</td><td>Producer proof confirms logout. Clearing the old failure and qualifying a held script are separate checks.</td></tr>
- <tr><td>Recovery fails</td><td>The lineage allows two failed recovery runs. Recognized pre-login waits have a separate six-wait budget. Other pre-login failures can count as failed runs.</td><td>Failure requests planner diagnosis, the smallest repair, practice proof and a finite consumer. Independent useful work can continue.</td></tr>
- <tr><td>Recovery evidence changes</td><td>Retained failure evidence includes <code>settledAt</code>. A newer failure can request a new diagnosis.</td><td>Use fresh repaired delivery/qualification evidence. Do not restart an unchanged exhausted method.</td></tr>
- <tr><td>Build fails twice alike</td><td>A 24 hour hold limits repetition. <code>newEvidence</code> permits one exception at the first matching hold.</td><td>Read the failed check. Preserve failed evidence and reconnect a viable consumer.</td></tr>
- <tr><td>Side lease is lost</td><td>The swarm requests logout. Workers also check the lease fence.</td><td>A new controller needs the authoritative lease before it starts work.</td></tr>
- <tr><td>Trade is uncertain</td><td>The receipt stays <code>reconcile</code>. Only proved zero-movement cases release uncertain claims automatically.</td><td>Reconcile items, both session outcomes and matching claim nonces.</td></tr>
- <tr><td>Owner goals show no gain for 6 hours</td><td>Watchdog writes <code>coordinator/stall.json</code>.</td><td>The planner receives the stall and must change lane or method. Coverage counts alone do not clear it.</td></tr>
- </tbody></table></div>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/cloud-recover.ts#L137">recovery budgets</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/cloud-recover.ts#L293">retained failures</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/cloud-recover.ts#L476">diagnosis requests</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-planner.ts#L361">planner repair contract</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/watchdog.ts#L35">owner-goal stall</a></p>
+ <div class="sec-head"><h2>Failure and repair</h2><p>Session faults, infra outages and worker defects follow separate recovery paths without blind infinite retries.</p></div>
+ <div class="tscroll" tabindex="0" role="region" aria-label="Failure recovery paths"><table>
+  <thead><tr><th>Condition</th><th>Handler</th><th>Effect</th></tr></thead><tbody>
+  <tr><td>Missing logout proof</td><td><code>packages/fleet/src/session-recovery.ts</code> &amp; <code>scripts/cloud-recover.ts</code></td><td>Acquires a controlled recovery permit (<code>packages/core/src/session-recovery-permit/</code>), logs in once, clears modals, logs out and records producer proof.</td></tr>
+  <tr><td>Repeated worker defect</td><td><code>packages/brain/src/outcome-classifier.ts</code></td><td>Quarantines the activity fault signature in <code>FleetState.quarantinedDefects</code> until cleared or source changes.</td></tr>
+  <tr><td>Server / network outage</td><td><code>packages/fleet/src/infra-circuit-breaker.ts</code></td><td>Opens the circuit breaker with backoff across the side instead of burning login attempts.</td></tr>
+  <tr><td>Account death</td><td><code>supervise.ts</code> + <code>OutcomeClassifier</code></td><td>Marks account <code>dead</code> and stops retries until explicit operator review and <code>resume_account</code> (<code>clearDead: true</code>).</td></tr>
+  </tbody></table></div>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/session-recovery.ts">session recovery</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/infra-circuit-breaker.ts">circuit breaker</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/brain/src/outcome-classifier.ts">outcome classifier</a></p>
 </section>
 
 <section id="watch">
- <div class="sec-head"><h2>Watching and control</h2><p>The dashboard joins evidence. The publisher separates owner control data from its public projection.</p></div>
+ <div class="sec-head"><h2>Watching and control</h2><p>The dashboard joins live observations with Brain state. Operator commands flow through validated files under <code>.practice/live/operator-commands/</code>.</p></div>
  <ol class="ladder">
- <li class="step"><span class="who">Local dashboard</span><h3>Show evidence with its age</h3>
-  <p>Default address is <code>127.0.0.1:3100</code>. The dashboard joins local status, canonical fleet snapshots, world feed, boards, process state and coordinator evidence.</p>
-  <p>It builds shared state each 2 s while watched. Remote snapshots, observed positions and fresh local sessions carry different freshness and proof.</p>
-  <p>Responses mask the main account's name. Local control checks the session and loopback origin. <code>DASH_READ_ONLY=1</code> blocks actions.</p></li>
- <li class="step"><span class="who">Publisher → hosted views</span><h3>Publish the right projection</h3>
-  <p>The publisher writes local output each cycle. With a configured repository, it publishes private <code>control.json</code> to <code>data</code>.</p>
-  <p>The public <code>site</code> projection excludes main/reserved/practice accounts, banks, private task text and income. Carried inventory remains visible, including carried Coins.</p>
-  <p>Public pushes are at least 10 min apart by default. A cold dashboard can wait for prices and rivals before its first public push.</p>
-  <p>If public text still names the main account, that projection fails. Owner control can still publish. The daemon logs the error and retries later.</p></li>
- <li class="step"><span class="who">Owner → publisher → local control</span><h3>Apply a command once</h3>
-  <p>The hosted owner page commits a command file. The publisher polls it during the next completed cycle.</p>
-  <p>It checks owner identity, ID, age, account and prior receipt. Commands can pause/resume accounts or the swarm, pause the coordinator, change jobs or request planning.</p>
-  <p>Coordinator console commands can queue proposals. A command receipt records the outcome. Resume removes only the supported command's own hold.</p>
-  <p class="to">A command receipt proves its control effect. It does not prove useful game output or successful live work.</p></li>
+ <li class="step"><span class="who">Local dashboard</span><h3>Show live state and Brain chains</h3>
+  <p>Default address is <code>127.0.0.1:3100</code>. <code>packages/dashboard/server.ts</code> joins live status files, canonical fleet snapshots, world feed, hiscores, host metrics and <code>.practice/live/fleet-state.json</code> every 2 s over SSE.</p>
+  <p>Responses mask the main account name. <code>/api/control</code> enforces loopback origin, session nonce and <code>DASH_READ_ONLY=1</code>.</p></li>
+ <li class="step"><span class="who">Publisher → hosted views</span><h3>Publish private control and public spectator projections</h3>
+  <p><code>packages/dashboard/publish.ts</code> pushes owner-only <code>control.json</code> to the <code>data</code> branch and whitelisted <code>public.json</code> (excluding main/practice accounts, banks and private task text) to GitHub Pages <code>site</code>.</p></li>
+ <li class="step"><span class="who">OperatorCommand flow</span><h3>Apply validated commands once</h3>
+  <p><code>packages/dashboard/operator-control.ts</code> and <code>packages/dashboard/publish-commands.ts</code> write validated <code>OperatorCommand</code> JSON files to <code>.practice/live/operator-commands/</code>, which <code>brain-runtime.ts</code> drains into <code>applied/</code> or <code>rejected/</code>.</p></li>
  </ol>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/dashboard/server.ts#L1053">dashboard state</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/dashboard/publish.ts#L199">publication cycle</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/dashboard/publish-relay.ts#L101">public projection</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/dashboard/publish-commands.ts#L36">command checks</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/dashboard/server.ts">dashboard server</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/dashboard/operator-control.ts">operator control</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/dashboard/publish.ts">publisher</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/dashboard/publish-relay.ts">public projection</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/dashboard/publish-commands.ts">command checks</a></p>
 </section>
 
 <section id="state">
- <div class="sec-head"><h2>Where the state lives</h2><p>Code defines behavior. Local runtime files record this machine. Shared fleet-data carries observations and orders between sides.</p></div>
- <p>Paths below are relative to the checkout unless marked shared. Shared <code>fleet/…</code> files live in the separate <code>.practice/fleet-data</code> worktree.</p>
+ <div class="sec-head"><h2>Where the state lives</h2><p>Live runtime state lives under <code>.practice/live/</code>; simulation and bench artifacts stay isolated under <code>.practice/sim/</code>.</p></div>
  <div class="tscroll" tabindex="0" role="region" aria-label="State owners and consumers"><table>
   <thead><tr><th>Home</th><th>Writer / readers</th><th>Meaning</th></tr></thead><tbody>
-  <tr><td><code>swarm.json</code></td><td>Owner and marked autopilot jobs → merged plan readers.</td><td>Standing assignments and host limits. The coordinator keeps its assignments in its own overlay.</td></tr>
-  <tr><td><code>packages/router/tasks/*.json</code></td><td>Capability author / validated definition change → delivery, planner and workers.</td><td>Entry, owned files, consumer and checks. This is not the live queue.</td></tr>
-  <tr><td><code>.practice/coordinator/jobs.json</code></td><td>Coordinator → swarm, fleet-agent, planner and recovery admission.</td><td>Owned jobs, parked owner accounts, focus and capacity grants over the owner's plan.</td></tr>
-  <tr><td>Within <code>.practice/coordinator/</code>:<br><code>state.json</code>, <code>runs/&lt;runId&gt;/</code>, <code>events.jsonl</code>, <code>archive/tasks.jsonl</code></td><td>Coordinator and owned task workers → reconciliation, planner and dashboard.</td><td>Task graph, attempt inputs, logs, receipts and retained results. Task counts are not game completion.</td></tr>
-  <tr><td>Within <code>.practice/</code>:<br><code>swarm-state.json</code>, <code>swarm-runs.json</code>, <code>swarm-deaths.json</code>, <code>swarm-script-holds.json</code></td><td>Swarm / supported repair path → controllers and dashboard.</td><td>Admission snapshot, detached owners, ended jobs and held scripts. A controller restart adopts saved runs.</td></tr>
-  <tr><td><code>.practice/swarm-logs/</code></td><td>Supervisor/worker output → swarm, autopilot and diagnosis.</td><td>Raw appended output. Saved assignment offsets separate the current result from earlier output in the same log.</td></tr>
-  <tr><td><code>.practice/status/&lt;account&gt;.json</code></td><td>Session status producer → acceptance, planning, sync and dashboard.</td><td>Account/server/run/source observations with separate times for bank and journal facts.</td></tr>
-  <tr><td><code>.practice/session-lifecycle/</code></td><td>Connection producer → admission and recovery.</td><td>Attempt identity, connection/end events and server-confirmed logout. Practice and live have separate trees.</td></tr>
-  <tr><td><code>.practice/autopilot/&lt;side&gt;.json</code></td><td>Autopilot → next planning pass.</td><td>Assigned template, log offset, feedback and retired account/template pairs.</td></tr>
-  <tr><td><code>.practice/market-all.json</code><br><code>.practice/market-bids.json</code></td><td>Market tools / shared price cache → planners and dashboard.</td><td>Dated prices, depth and shop opportunities. A quote is neither stock nor a filled purchase.</td></tr>
-  <tr><td><code>.practice/market-orders/&lt;server-hash&gt;/…json</code></td><td>Owned GE buyer → reconciliation and repair.</td><td>Persistent purchase intent, offer identity, escrow and movement. These are separate from fleet transfer orders and receipts.</td></tr>
-  <tr><td>Within shared <code>fleet/</code>:<br><code>owners.json</code>, <code>snapshots/</code>, <code>claims/</code>, <code>leases/</code></td><td>Owner reservation / sync / adoption → all fleet sides.</td><td>Owner rows, last-seen stock, world resource claims and heartbeat mirrors. Authoritative controller/session claims use separate Git refs.</td></tr>
-  <tr><td>Within shared <code>fleet/</code>:<br><code>orders/</code>, <code>receipts/</code>, <code>vault/</code></td><td>Order writer, each trade participant, sync and vault tools.</td><td>Finite requested movement, participant evidence and sealed credentials. A receipt may remain uncertain.</td></tr>
-  <tr><td><code>.practice/ticks/&lt;script&gt;/</code></td><td>Tick recorder → replay and diagnosis.</td><td>Compressed state and command records from one session. They are not an alternate live game.</td></tr>
-  <tr><td><code>.practice/deliveries/&lt;run&gt;/</code></td><td>Native delivery → qualification, review and repair.</td><td>Declared task, per-check logs and source-bound <code>report.json</code>.</td></tr>
-  <tr><td><code>.practice/aio-bench/last.json</code><br><code>.practice/aio-bench/output/</code></td><td>Bench runner → route comparison and diagnosis.</td><td>Case results and raw worker logs. Seed/cache conditions are part of the proof.</td></tr>
-  <tr><td>Within <code>.practice/</code>:<br><code>live-update.json</code>, <code>monitor.json</code>, <code>alerts.jsonl</code></td><td>Updater or explicit monitor tools → daemons, dashboard and operator.</td><td>Pending reloads and host observations. File age matters. A missing or stale sample stays unknown.</td></tr>
+  <tr><td><code>swarm.json</code></td><td>Owner → <code>swarm.ts</code> &amp; <code>brain-runtime.ts</code></td><td>Host limits (<code>maxBots</code>, <code>minFreeGB</code>) and explicit hand reservations (<code>Haggis</code>, reserved specialists, manual holds).</td></tr>
+  <tr><td><code>.practice/live/fleet-state.json</code><br><code>.practice/live/scoreboard.json</code></td><td><code>brain-runtime.ts</code> → dashboard, <code>tools/now.ts</code>, planners</td><td>Emitted <code>FleetState</code> (accounts, active chains, goals, campaigns, missions, idle reasons, quarantined defects) and owner goal scoreboard.</td></tr>
+  <tr><td><code>.practice/live/operator-commands/</code></td><td>Dashboard / CLI → <code>brain-runtime.ts</code></td><td>Validated <code>OperatorCommand</code> queue with <code>applied/</code> and <code>rejected/</code> receipts.</td></tr>
+  <tr><td><code>.practice/live/status/&lt;account&gt;.json</code></td><td><code>packages/core/src/status.ts</code> → Brain, sync, dashboard, tools</td><td>Live account skills, bank, inventory, equipment, quest journal and session outcome.</td></tr>
+  <tr><td><code>.practice/live/session-lifecycle/</code></td><td>Connection producer → admission and recovery</td><td>Attempt identity, connection events and server-confirmed logout proofs (separate from <code>.practice/sim/session-lifecycle/</code>).</td></tr>
+  <tr><td><code>.practice/live/fleet-data/fleet/</code></td><td><code>fleet-sync.ts</code> → all fleet sides</td><td>Shared <code>owners.json</code>, <code>snapshots/</code>, <code>orders/</code>, <code>receipts/</code>, <code>claims/</code>, <code>leases/</code> and sealed <code>vault/</code>.</td></tr>
+  <tr><td><code>.practice/swarm-state.json</code><br><code>.practice/swarm-logs/</code></td><td><code>swarm.ts</code> / supervisors → dashboard and diagnostics</td><td>Active slot snapshot, detached supervisor records and raw worker logs.</td></tr>
+  <tr><td><code>.practice/ticks/&lt;script&gt;/</code></td><td><code>packages/core/src/tick-record.ts</code> → replay and diagnosis</td><td>Compressed state deltas and commands per session for offline replay.</td></tr>
+  <tr><td><code>.practice/sim/aio-bench/</code></td><td><code>aio-practice-bench.ts</code> → bench analysis</td><td>Lockstep bench results, case logs, profiles and content-hashed cache entries.</td></tr>
+  <tr><td><code>.practice/live-update.json</code></td><td><code>live-update.ts</code> → daemons</td><td>Pending reload notices for daemons whose import closure changed.</td></tr>
   </tbody></table></div>
- <p class="to">A dashboard joins these sources. It is not the authority that owns every source. Editing a view or deleting a claim file is not a supported ownership handover.</p>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/coordinator-jobs.ts#L71">merged plan</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-store.ts#L69">queue persistence</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/swarm.ts#L670">swarm runtime files</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/swarm.ts#L765">raw job logs</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/status.ts#L130">status writer</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/session-lifecycle.ts#L6">session files</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/autopilot.ts#L83">autopilot state</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/market-cache.ts#L17">market observations</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/buy-owned-ge-item.ts#L92">GE intent journal</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/fleet-sync.ts#L1">shared fleet data</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/delivery-cli.ts#L118">delivery evidence</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/measure/aio-practice-bench.ts#L184">bench outputs</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/practice-paths.ts">practice paths</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/status.ts">status writer</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/session-lifecycle.ts">session lifecycle</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/fleet-sync.ts">fleet-sync</a></p>
 </section>
 
 <section id="tools">
- <div class="sec-head"><h2>Find the right method or tool</h2><p>These entry points help a person or agent choose and prove work. They do not grant ownership or start a useful live consumer by themselves.</p></div>
+ <div class="sec-head"><h2>Find the right method or tool</h2><p>CLI tools under <code>tools/</code> and package CLIs support discovery, planning, verification and diagnostics without mutating live bots.</p></div>
  <div class="tscroll" tabindex="0" role="region" aria-label="Work discovery and proof tools"><table>
   <thead><tr><th>Need</th><th>Entry point</th><th>How it feeds the system</th></tr></thead><tbody>
-  <tr><td>See current constraints</td><td><code>bun scripts/now.ts</code><br><code>bun run coordinate --status</code></td><td>Read host load, stops, controllers, queue, fleet and checkout state before choosing work.</td></tr>
-  <tr><td>Find an existing worker</td><td><code>bun scripts/script-index.ts &lt;words&gt;</code><br><code>bun scripts/aio.ts --list</code><br><code>research/INDEX.md</code></td><td>Reuse existing scripts, catalog routes and topic evidence before designing another path.</td></tr>
-  <tr><td>Price the main route</td><td><code>bun packages/planner/src/cairn-cli.ts</code><br><code>bun packages/planner/src/haggis-cli.ts --order --supplies --evidence --levers</code></td><td>Compare the record method, route steps, travel, supplies and evidence gaps. Model ticks remain estimates.</td></tr>
-  <tr><td>Price a specialist target</td><td><code>bun packages/planner/src/scout-cli.ts</code></td><td>Compare a proposed fresh entry with records and route costs. Rehearsal and launch proof remain separate.</td></tr>
-  <tr><td>Inspect useful shortages</td><td><code>bun packages/planner/src/supply-bill.ts</code><br><code>bun scripts/preparation-report.ts</code></td><td>Join finite demand with last-seen stock. Advisory possession is not staged delivery.</td></tr>
-  <tr><td>Inspect game content and gear</td><td><code>bun scripts/gear.ts find|show|best|compare|kit</code><br><code>knowledge/*.json</code></td><td>Read requirements, bonuses, shops, items and routes. Gear ranking uses the supplied levels, quests and bonus weights.</td></tr>
-  <tr><td>Choose a practice case</td><td><code>bun run bench --coverage</code><br><code>scripts/measure/aio-bench-cases.ts</code></td><td>Find the case that reaches the changed route. Its seed, fixtures, runtime and cache state limit the claim.</td></tr>
-  <tr><td>Prove a capability</td><td><code>packages/router/tasks/&lt;capability&gt;.json</code><br><code>packages/router/src/delivery-cli.ts</code></td><td>Run declared regression, practice and consumer phases on bound source before an admitted live run.</td></tr>
-  <tr><td>Find wasted ticks</td><td><code>scripts/tick-waste.ts</code><br><code>scripts/learn.ts</code></td><td>Join logs, ledgers, status and run inputs. Generated learning summaries need the raw result when a claim is in doubt.</td></tr>
+  <tr><td>See current host &amp; fleet state</td><td><code>bun tools/now.ts</code><br><code>bun packages/brain/src/shadow-cli.ts</code></td><td>Inspect host RAM, heavy jobs, stop files, controllers, Brain chains, leases and checkout state.</td></tr>
+  <tr><td>Find an existing worker</td><td><code>bun tools/script-index.ts &lt;words&gt;</code><br><code>bun scripts/aio.ts --list</code><br><code>research/INDEX.md</code></td><td>Locate existing unified workers, AIO routes and topic evidence before writing new code.</td></tr>
+  <tr><td>Price the main route</td><td><code>bun packages/planner/src/cairn-cli.ts</code><br><code>bun packages/planner/src/haggis-cli.ts --order --supplies --evidence --levers</code></td><td>Compare the record route, step timings, travel, supplies and evidence gaps.</td></tr>
+  <tr><td>Price a specialist target</td><td><code>bun packages/planner/src/scout-cli.ts</code></td><td>Check live hiscore records and margin requirements for fresh-clock specialist launches.</td></tr>
+  <tr><td>Inspect shortages &amp; stock</td><td><code>bun packages/planner/src/supply-bill.ts</code><br><code>bun tools/preparation-report.ts</code><br><code>bun tools/item-sources.ts</code></td><td>Join finite demand with observed stock and item acquisition sources.</td></tr>
+  <tr><td>Inspect game content &amp; gear</td><td><code>bun tools/gear.ts find|show|best|compare|kit</code><br><code>knowledge/*.json</code></td><td>Query rev-289 requirements, bonuses, shops, items and routes built by <code>packages/knowledge/src/build.ts</code>.</td></tr>
+  <tr><td>Run hosted benches &amp; proofs</td><td><code>bun run bench --coverage</code><br><code>bun tools/hosted-bench.ts '&lt;pattern&gt;' --seeds 7,8,9</code></td><td>Measure lockstep ticks and multi-seed reliability on clean GitHub Actions runners.</td></tr>
+  <tr><td>Check hygiene, parity &amp; docs</td><td><code>bun tools/typecheck-narrow.ts</code><br><code>bun tools/check-no-diary.ts --list</code><br><code>bun tools/check-rev289-parity.ts --strict</code><br><code>bun tools/practice-hygiene.ts</code></td><td>Verify types, no-diary prose, rev-289 content parity, and scratch/order cleanup.</td></tr>
+  <tr><td>Audit routes &amp; tick waste</td><td><code>bun tools/route-audit.ts</code><br><code>bun tools/tick-waste.ts</code><br><code>bun tools/learn.ts</code><br><code>bun tools/fail-loops.ts</code></td><td>Check offline reachability, idle ticks, fast-fail loops and run history summaries.</td></tr>
   </tbody></table></div>
- <details><summary>Where game knowledge comes from</summary>
-  <p>The knowledge builder reads the pinned SDK's server content. It extracts items, gear, NPCs, shops, doors, transports, skill actions, quests and other facts.</p>
-  <p>Generated records keep source provenance. Extraction gaps remain in the build report. These content facts are separate from an account's live observations.</p>
-  <p>Navigation and route pricing use this world knowledge plus account requirements. A trip can include a bank visit to obtain fares and other route inputs.</p>
-  <p>Bench caches can reuse checked runs. A runtime-data change can require a fresh run with <code>--no-keep</code>. Cached output is not fresh live proof.</p>
- </details>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/now.ts#L1">read-only state summary</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/script-index.ts#L1">script lookup</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/cairn-cli.ts#L14">record route</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/planner/src/haggis-cli.ts#L7">route inputs</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/knowledge/src/build.ts#L125">knowledge outputs and provenance</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/gear.ts#L23">gear selection</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/trip.ts#L1">bank-aware trip</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/measure/aio-practice-bench.ts#L185">bench conditions</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/learn.ts#L480">learning inputs</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/tools/now.ts">now.ts</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/tools/script-index.ts">script-index</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/tools/gear.ts">gear CLI</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/tools/hosted-bench.ts">hosted-bench</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/tools/learn.ts">learn</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/knowledge/src/build.ts">knowledge builder</a></p>
 </section>
 
 <section id="stops">
- <div class="sec-head"><h2>Stop switches</h2><p>A switch affects its named reader. A resume still needs ownership, session proof and valid admission.</p></div>
+ <div class="sec-head"><h2>Stop switches</h2><p>Stop files work across both <code>.practice/live/stop-*</code> and <code>.practice/stop-*</code> via <code>packages/core/src/practice-paths.ts</code>. Owner stops stay intact until cleared by the owner.</p></div>
  <div class="tscroll" tabindex="0" role="region" aria-label="Stop switches"><table>
  <thead><tr><th>Switch</th><th>Effect</th></tr></thead><tbody>
- <tr><td><code>.practice/stop-&lt;account&gt;</code></td><td>Stops that account through its worker/controller path. Supported controller cleanup removes only its own stop text. An owner pause remains intact.</td></tr>
- <tr><td><code>.practice/stop-swarm</code></td><td>The swarm settles its workers and exits. Autopilot holds. Coordinator exits. Watchdog skips game-loop restarts and recovery/cloud work.</td></tr>
- <tr><td><code>.practice/stop-coordinator</code></td><td>Coordinator disables its jobs and exits. Watchdog skips game-loop restarts. Standing jobs under an existing swarm have their own owner controls.</td></tr>
- <tr><td><code>.practice/stop-fleet-agent</code><br><code>.practice/stop-autopilot</code></td><td>Watchdog does not restart that daemon. These files do not terminate a running daemon.</td></tr>
- <tr><td><code>.practice/stop-session-recovery</code></td><td>Watchdog does not submit its authenticated recovery step.</td></tr>
- <tr><td><code>.practice/stop-cloud-launch</code></td><td>Watchdog and cloud-launch do not launch another cloud session.</td></tr>
- <tr><td><code>.practice/stop-live-update</code><br><code>LIVE_UPDATE=0</code></td><td>live-update leaves the code checkout in place.</td></tr>
- <tr><td><code>.practice/stop-dashboard-publish</code></td><td>Watchdog does not restart the publisher. A running publisher has its own process lifetime.</td></tr>
- <tr><td><code>enabled:false</code></td><td>The swarm stops that job's owned run. It preserves an existing owner stop file.</td></tr>
- <tr><td><code>coordinator/build-lock.json</code></td><td>Blocks source movement and non-standing worker starts. Standing workers follow their distinct release policy.</td></tr>
- <tr><td><code>DASH_READ_ONLY=1</code></td><td>Dashboard actions are read-only. It does not stop existing workers.</td></tr>
+ <tr><td><code>stop-&lt;account&gt;</code></td><td>Halts that account's worker and supervisor restarts. Dashboard release clears only dashboard-owned holds; owner pauses remain intact.</td></tr>
+ <tr><td><code>stop-swarm</code></td><td>Pauses the side: Brain stops scheduling, swarm settles active workers, and watchdog skips game-loop restarts.</td></tr>
+ <tr><td><code>stop-fleet-agent</code></td><td>Watchdog skips restarting <code>fleet-agent.ts</code>.</td></tr>
+ <tr><td><code>stop-session-recovery</code></td><td>Watchdog skips standalone authenticated session recovery passes.</td></tr>
+ <tr><td><code>stop-cloud-launch</code></td><td>Watchdog and <code>cloud-launch.ts</code> skip starting new cloud sessions.</td></tr>
+ <tr><td><code>stop-live-update</code> / <code>LIVE_UPDATE=0</code></td><td><code>live-update.ts</code> leaves the checkout untouched.</td></tr>
+ <tr><td><code>stop-dashboard-publish</code></td><td>Watchdog skips restarting <code>packages/dashboard/publish.ts</code>.</td></tr>
+ <tr><td><code>DASH_READ_ONLY=1</code></td><td>Disables mutating commands on <code>/api/control</code> without stopping existing workers.</td></tr>
  </tbody></table></div>
- <p class="to">Watchdog can restore publication before checking coordinator/swarm stops. A paused game fleet can still have a working hosted page.</p>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/swarm.ts#L294">owner stop preservation</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/scripts/swarm.ts#L933">disabled owned run</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/watchdog.ts#L83">watchdog scopes</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/worker-release.ts#L276">standing release policy</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/practice-paths.ts">stop file lookup</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/swarm.ts">swarm stop checks</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/fleet/src/watchdog.ts">watchdog scopes</a></p>
 </section>
 
 <section id="gaps">
- <div class="sec-head"><h2>Limits and proof</h2><p>The source contains repair paths and clear limits. It cannot promise that every future fault will repair itself.</p></div>
+ <div class="sec-head"><h2>Limits and proof boundaries</h2><p>The codebase keeps unproved claims explicit across planners, proofs and dashboards.</p></div>
  <ul class="gaps">
-  <li>Goal-scored dispatch has no guaranteed lane rotation. The highest useful effect per estimated time wins within its eligible candidate pool.</li>
-  <li>A deferred review is queued after delivery. Without a viable pending run linked through that review, it can receive zero goal value and remain undispatched.</li>
-  <li>A prepared first job does not alone make provisioning dispatchable. Before its identity resolves, skill or bank effects can have unknown value. Remaining quest effects can provide value before account binding.</li>
-  <li>The goal ledger leaves the full specialist and collection scope unknown. Its player-kill and Wilderness-control metrics are unimplemented, and its overall <code>done</code> value remains false.</li>
-  <li>Agent sessions or people start the required gates, resolve pull request conflicts and merge changes after checks pass.</li>
-  <li>An incoming dependency change needs a manual checkout and dependency update. Its manifest guard does not watch for an install to finish.</li>
-  <li>An unresolved trade claim outside the proved dropped cases needs item/session reconciliation and release of the exact claim.</li>
-  <li>A failed recovery needs diagnosis, a repaired method, fresh practice evidence and a finite consumer. Old failure evidence remains visible.</li>
-  <li>Main and specialist launch gates protect scored clocks. Tool access, higher levels and practice proof do not grant a scored launch.</li>
-  <li>Host expansion needs useful demand and measured headroom. Per-start swarm memory checks do not establish CPU or game tick headroom.</li>
-  <li>Generic coverage describes capabilities. Goal completion needs accepted evidence for each owner goal, including player kills and Wilderness control.</li>
-  <li>The implemented goal ledger keeps unproved results explicit. This page makes no claim that the overall goal is complete.</li>
+  <li>Tests, practice benches and isolated rehearsals do not prove live procurement, market depth or recorded hiscore wins.</li>
+  <li>Main and specialist launch gates protect scored clocks; tool access or practice passes do not authorize a scored login.</li>
+  <li>The owner goal scoreboard leaves full specialist/collection scope, credited Wilderness kills and Wilderness control explicit until backed by live proof.</li>
+  <li>Incoming dependency manifest changes require manual checkout and lockfile updates rather than automatic <code>live-update</code> fast-forwards.</li>
+  <li>Host slot expansion requires measured RAM, CPU and game-tick headroom alongside real finite demand.</li>
  </ul>
- <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/core/src/haggisgate.ts">scored launch gates</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/goal-scoreboard.ts">goal evidence</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator-planner.ts#L361">goal and repair contract</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/coordinator.ts#L467">deferred review graph</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/b98ebbe3f6f19440eed795666498ec7deb327aa9/packages/router/src/goal-work.ts#L40">identity and value propagation limits</a></p>
+ <p class="sources">Source: <a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/docs/plans/joined-plan.md">joined plan</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/docs/plans/fleet-brain-architecture.md">Fleet Brain architecture</a><a href="https://github.com/Giftedx/rs-sdk-bot/blob/master/packages/core/src/haggisgate.ts">launch gates</a></p>
 </section>
 
 <footer>
- <p>Source snapshot: <a href="https://github.com/Giftedx/rs-sdk-bot/tree/b98ebbe3f6f19440eed795666498ec7deb327aa9"><code>b98ebbe3f</code></a>. Each section links to its owning code. Timings and budgets are defaults unless stated otherwise.</p>
- <p>Keep source checks, practice evidence and live evidence separate. Bind a runtime conclusion to the worker source, account, result and observation that support it.</p>
+ <p>Each section links to its owning code on <code>master</code>. Timings and budgets are defaults unless stated otherwise.</p>
+ <p>Keep source checks, practice evidence and live evidence separate. Bind every runtime conclusion to its worker source, account, result and observation.</p>
 </footer>
 </main>
 <script>

@@ -8,7 +8,7 @@ import { defaultMarket, readMarket } from './stock-adapter';
 
 export function runItemSourcesCli(argv: readonly string[]): void {
     if (argv.includes('--owned')) {
-        console.error('owned fleet stock lives outside packages/knowledge; run: bun scripts/item-sources.ts --owned');
+        console.error('owned fleet stock lives outside packages/knowledge; run: bun tools/item-sources.ts --owned');
         process.exit(2);
     }
     const arg = (k: string) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };

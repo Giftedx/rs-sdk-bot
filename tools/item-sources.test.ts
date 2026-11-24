@@ -84,3 +84,14 @@ test('default market keeps the newest quote per item without refreshing older qu
         expect(defaultLiveMarket(dir, join(dir, 'research'), now)!.prices.tin_ore).toMatchObject({ ask: 9, sell: 3, at: new Date(now - 2000).toISOString() });
     }
 }));
+
+test('owned sourcing reads live/status and prefers newer live status over legacy status', () => fixture((dir, write) => {
+    const server = 'rs-sdk-demo.fly.dev', now = 10000;
+    write('status/Worker.json', { name: 'Worker', server, at: 5000, inventory: [{ id: 436, count: 2 }] });
+    write('live/status/Worker.json', { name: 'Worker', server, at: 9000, inventory: [{ id: 436, count: 15 }] });
+    write('live/status/LiveOnly.json', { name: 'LiveOnly', server, at: 9500, inventory: [{ id: 438, count: 7 }] });
+    const owned = readOwned(dir, join(dir, 'snapshots'), 'local', now);
+    const byName = new Map(owned.accounts.map(a => [a.name, a]));
+    expect(byName.get('Worker')?.items.get(436)).toBe(15);
+    expect(byName.get('LiveOnly')?.items.get(438)).toBe(7);
+}));

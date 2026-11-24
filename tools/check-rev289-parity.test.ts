@@ -128,3 +128,15 @@ test('detectors catch post-rev-289 items, skills, prayers, spells, and OSRS ques
     expect(findScriptParityIssues('scripts/bad-dfs.ts', `const shield = [/^dragonfire shield$/i, 75];\nconst ammy = 'salve amulet (e)';\nconst x = { id: 11283, count: 1 };\nconst npc = { npcId: 9999 };\nconst loc = { locId: 9999 };\nconst xp = Math.pow(2, level / 7);\n`, baseline).length).toBe(6);
     expect(findScriptParityIssues('packages/core/src/ok.ts', `const anti = { id: 1540, count: 1, name: 'dragonfire shield' };\nconst salve = { id: 4081, count: 1, name: 'salve amulet' };\nconst fl = 2 ** (level / 10);\nconst absent = ['Lunar Isle', 'Port Phasmatys'];\n`, baseline, 'core')).toEqual([]);
 });
+
+test('checkCoreAndKnowledgeCodeParity audits all unified worker families under packages/workers/src/', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'rev289-workers-'));
+    try {
+        mkdirSync(join(tmp, 'packages', 'workers', 'src', 'combat'), { recursive: true });
+        writeFileSync(join(tmp, 'packages', 'workers', 'src', 'combat', 'sample.ts'), `const PURE_ESSENCE = 7936;\n`);
+        const issues = checkCoreAndKnowledgeCodeParity(tmp, baseline);
+        expect(issues.some(i => i.file.includes('packages/workers/src/combat/sample.ts'))).toBe(true);
+    } finally {
+        rmSync(tmp, { recursive: true, force: true });
+    }
+});

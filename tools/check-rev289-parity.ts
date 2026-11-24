@@ -1,7 +1,7 @@
 // Audits knowledge/, packages/dashboard/client-assets/, packages/planner/, packages/practice/, and scripts/
 // for strict RS2 Rev 289 (Lost City, January 17, 2005) parity against vendor/rs-sdk/server/content and PlayerStat.ts,
 // while preserving rs-sdk's built-in engine Market / Grand Exchange.
-// Usage: bun scripts/check-rev289-parity.ts [--strict]
+// Usage: bun tools/check-rev289-parity.ts [--strict]
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { loadRev289Baseline, type Rev289Baseline } from './rev289-baseline';
@@ -553,7 +553,7 @@ export function checkScriptsParity(
             if (statSync(p).isDirectory()) { walk(p); continue; }
             if (!f.endsWith('.ts') || f.endsWith('.test.ts')) continue;
             const rel = relative(repoRoot, p).replace(/\\/g, '/');
-            if (rel === 'scripts/check-rev289-parity.ts') continue;
+            if (rel === 'tools/check-rev289-parity.ts') continue;
             const isCross = crossFiles.has(rel);
             if (isCross && !opts.includeCrossWorker) continue;
             issues.push(...findScriptParityIssues(rel, readFileSync(p, 'utf8'), baseline, isCross ? 'cross-worker' : 'scripts'));
@@ -563,10 +563,10 @@ export function checkScriptsParity(
     return issues;
 }
 
-/** Audits packages/core/src/, packages/knowledge/src/, and packages/dashboard/gen-*.ts against Rev 289 parity. */
+/** Audits packages/core/src/, packages/knowledge/src/, packages/workers/src/, and packages/dashboard/gen-*.ts against Rev 289 parity. */
 export function checkCoreAndKnowledgeCodeParity(repoRoot: string, baseline: Rev289Baseline): ParityIssue[] {
     const issues: ParityIssue[] = [];
-    for (const [sub, scope] of [['core/src', 'core'], ['knowledge/src', 'knowledge'], ['workers/src/logistics', 'core']] as const) {
+    for (const [sub, scope] of [['core/src', 'core'], ['knowledge/src', 'knowledge'], ['workers/src', 'core']] as const) {
         const dir = join(repoRoot, 'packages', sub);
         if (!existsSync(dir)) continue;
         for (const p of walkExt(dir, '.ts')) {
@@ -705,7 +705,7 @@ if (import.meta.main) {
     for (const issue of ownedIssues) console.error(`[FAIL:${issue.scope}] ${issue.file}: ${issue.detail}`);
     for (const issue of crossIssues) console.warn(`[CROSS-WORKER] ${issue.file}: ${issue.detail}`);
     console.log(`rev289-parity: ${ownedIssues.length} owned error(s), ${crossIssues.length} cross-worker warning(s)${strict ? ' [strict]' : ''}`);
-    // The name sweep (scripts/check-rev289-names.ts) holds every game-call name against the content's names.
+    // The name sweep (tools/check-rev289-names.ts) holds every game-call name against the content's names.
     const { scanNames } = await import('./check-rev289-names');
     const names = scanNames({ baseline });
     for (const f of names.faults) console.error(`[FAIL:names] ${f.file}: ${f.kind} "${f.text}" in ${f.use}: ${f.detail}`);

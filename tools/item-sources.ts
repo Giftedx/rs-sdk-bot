@@ -1,5 +1,5 @@
 // Live item-source adapter: enriches knowledge/item-sources with owned fleet stock and .practice/market-all.json quotes.
-// Usage: bun scripts/item-sources.ts [--market <file>] [--owned] [--practice <dir>] [--out <file>]
+// Usage: bun tools/item-sources.ts [--market <file>] [--owned] [--practice <dir>] [--out <file>]
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { FLEET_DIR, mySide } from '../packages/core/src/fleet';
@@ -14,10 +14,21 @@ const json = (file: string) => JSON.parse(readFileSync(file, 'utf8'));
 
 // Read local status files and synced fleet snapshots using canonical owner/freshness rules before aggregating stock.
 export function readOwned(practice: string, fleetDir = join(FLEET_DIR(), 'snapshots'), side = mySide(), now = Date.now()): OwnedStock {
-    const statusDir = join(practice, 'status');
-    const local = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => {
-        try { return [json(join(statusDir, f))]; } catch { return []; }
-    }) : [];
+    const newestByAccount = new Map<string, any>();
+    for (const statusDir of [join(practice, 'live', 'status'), join(practice, 'status')]) {
+        if (!existsSync(statusDir)) continue;
+        for (const f of readdirSync(statusDir).filter(file => file.endsWith('.json'))) {
+            let row: any;
+            try { row = json(join(statusDir, f)); } catch { continue; }
+            if (!row || typeof row.name !== 'string') continue;
+            const key = row.name.toLowerCase();
+            const prev = newestByAccount.get(key);
+            if (!prev || (typeof row.at === 'number' && row.at > (typeof prev.at === 'number' ? prev.at : -Infinity))) {
+                newestByAccount.set(key, row);
+            }
+        }
+    }
+    const local = [...newestByAccount.values()];
     const accounts = fleetStatusRows(local, readSnapshotFiles(fleetDir), ownerOfIn(dirname(fleetDir)), side, LIVE_SERVER);
     return ownedStockFromRows(accounts, now);
 }
@@ -38,7 +49,7 @@ if (import.meta.main) {
     const owned = process.argv.includes('--owned') ? readOwned(practice) : null;
     const rows = buildItemSources({ market, owned });
     const file = arg('--out') ?? (owned ? join(practice, 'coordinator/item-sources.json') : join(knowledgeDir(), 'item-sources.json'));
-    writeFileSync(file, serializeItemSources(rows, market, owned, 'bun scripts/item-sources.ts'));
+    writeFileSync(file, serializeItemSources(rows, market, owned, 'bun tools/item-sources.ts'));
     if (!owned) writeFileSync(join(knowledgeDir(), 'item-sources-gaps.md'), gapsMarkdown(rows, market));
     console.log(JSON.stringify(counts(rows)));
 }

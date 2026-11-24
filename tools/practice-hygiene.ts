@@ -16,6 +16,7 @@
 import {existsSync,lstatSync,mkdirSync,readdirSync,readFileSync,renameSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
+import {resolveFleetDataDir} from '../packages/core/src/practice-paths';
 import {
  applyPhase0Hygiene,
  scanPhase0Hygiene,
@@ -135,6 +136,8 @@ export function applyFleetMoves(fleetDir:string,moves:FleetMove[]){
  return moved;
 }
 
+export const fleetOrdersDir=(root:string)=>join(resolveFleetDataDir(root),'fleet');
+
 if(import.meta.main){
  const args=process.argv.slice(2),arg=(k:string)=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
  const root=resolve(arg('--root')??join(import.meta.dir,'..')),apply=args.includes('--apply');
@@ -150,7 +153,7 @@ if(import.meta.main){
   process.exit(0);
  }
  if(args.includes('--fleet-orders')){
-  const fleetDir=join(root,'.practice','fleet-data','fleet'),r=scanFleetOrders(fleetDir,Date.now(),Number(arg('--keep-days')??FLEET_KEEP_DAYS));
+  const fleetDir=fleetOrdersDir(root),r=scanFleetOrders(fleetDir,Date.now(),Number(arg('--keep-days')??FLEET_KEEP_DAYS));
   const months:Record<string,number>={};for(const m of r.moves)months[m.month]=(months[m.month]??0)+1;
   console.log(JSON.stringify({fleetDir,ordersToArchive:r.moves.length,receiptsToArchive:r.receiptsMoved,ordersKept:r.kept,receiptsWithoutArchivedOrder:r.orphanReceipts,byMonth:months}));
   if(!apply)console.log(`RESULT ok practice-hygiene fleet-orders would move ${r.moves.length} orders (dry run)`);
