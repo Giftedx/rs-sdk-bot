@@ -1643,11 +1643,15 @@ export function validateFleetState(v: unknown): string[] {
 
 export const isFleetState = (v: unknown): v is FleetState => validateFleetState(v).length === 0;
 
+const OPERATOR_CMD_ID = /^[A-Za-z0-9._-]{1,128}$/;
+
 export function validateOperatorCommand(v: unknown): string[] {
     if (!isPlainRecord(v)) return ['OperatorCommand must be an object'];
     const errors: string[] = [];
     if (v.schemaVersion !== 1) errors.push('OperatorCommand.schemaVersion must be 1');
-    if (!isNonEmptyStr(v.id)) errors.push('OperatorCommand.id must be non-empty');
+    if (typeof v.id !== 'string' || !OPERATOR_CMD_ID.test(v.id)) {
+        errors.push('OperatorCommand.id must match /^[A-Za-z0-9._-]{1,128}$/');
+    }
     if (!isFinitePos(v.issuedAt)) errors.push('OperatorCommand.issuedAt must be finite positive');
     if (!isNonEmptyStr(v.issuedBy)) errors.push('OperatorCommand.issuedBy must be non-empty');
     if (v.reason !== undefined && typeof v.reason !== 'string') errors.push('OperatorCommand.reason must be a string');

@@ -15,7 +15,10 @@ import {
     xpForLevel,
 } from '../src/planner';
 import { loadShopCatalogByItem } from '../src/acquire';
+import { campaignShortfalls } from '../src/campaigns';
 import { createActivityCatalog } from '../src/catalog';
+import { loadItemsMap } from '../src/preflight';
+import { createRateStore } from '../src/rate-store';
 import { derivedProfile } from '../../workers/src/market/shop-profiles';
 
 const NOW = 1_700_000_000_000;
@@ -797,5 +800,302 @@ test('planner excludes quest activities from combat_readiness/skill, selects low
     expect(miningUnlock).toBeDefined();
     if (miningUnlock?.stepKind === 'unlock') {
         expect(miningUnlock.activityId).toBe('gather:mining-ore');
+    }
+});
+
+test('planner scales quest XP rewards by 25x, filters quarantined craft_gather producers, plans market:ge-buy with live quotes, and lets helpers plan stagingHolder campaigns', () => {
+    const catalog = createActivityCatalog();
+    const activities = catalog.list();
+
+    // 1. Waterfall Quest (13,750 * 25 = 343,750 Attack XP) satisfies Attack 50 in a 2-step chain.
+    const freshBot = makeAcct({
+        name: 'FreshWaterfall',
+        skills: {
+            Attack: { level: 1, xp: 0 },
+            Strength: { level: 1, xp: 0 },
+            Hitpoints: { level: 10, xp: xpForLevel(10) },
+        },
+        quests: {},
+        inventory: {},
+        bank: { items: { 995: 500 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const waterfallAct = activities.find((a) => a.questSlug?.toLowerCase() === 'waterfall')!;
+    expect(waterfallAct).toBeDefined();
+    const gatedMeleeAct: ActivityDefinition = {
+        id: 'combat:waterfall-gated',
+        workerId: 'combat',
+        family: 'combat',
+        kind: 'train',
+        label: 'Waterfall-gated melee',
+        skill: 'Attack',
+        config: {
+            requiredQuests: ['waterfall'],
+            requiredSkills: { Attack: 50 },
+        },
+        baselineRate: { xpPerTick: 200, unitsPerTick: 0.5, gpPerTick: 5, setupTicks: 10, minBatchUnits: 20, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const wfPlan = planAccount(freshBot, {
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { FreshWaterfall: freshBot },
+        },
+        activities: [waterfallAct, gatedMeleeAct],
+        requireMarketQuote: true,
+        marketQuotes: {},
+        demands: [{
+            id: 'd:atk60',
+            goalKind: 'specialist_prep',
+            valueScore: 500,
+            valuePerHour: 5000,
+            target: { kind: 'skill', account: 'FreshWaterfall', skill: 'Attack', targetLevel: 60 },
+            fulfilled: 1,
+            remaining: 59,
+            priorityWeight: 1,
+            assignedAccount: 'FreshWaterfall',
+            active: true,
+        }],
+    });
+    expect(wfPlan.steps).toHaveLength(2);
+    expect(wfPlan.steps.some((s) => s.stepKind === 'unlock' && s.unlockKind === 'skill')).toBe(false);
+    expect(wfPlan.steps[0]?.stepKind).toBe('unlock');
+    if (wfPlan.steps[0]?.stepKind === 'unlock') {
+        expect(wfPlan.steps[0].unlockKind).toBe('quest');
+        expect(wfPlan.steps[0].questSlug?.toLowerCase()).toBe('waterfall');
+    }
+    expect(wfPlan.steps[1]?.stepKind).toBe('work');
+
+    // 2. Quarantined producer activity is excluded from craft_gather supply resolution.
+    const producerAct: ActivityDefinition = {
+        id: 'gather:custom-raw',
+        workerId: 'gather',
+        family: 'gather',
+        kind: 'gather',
+        label: 'Gather raw shark',
+        skill: 'Fishing',
+        outputs: [{ itemId: 383, countPerUnit: 1 }],
+        config: {},
+        baselineRate: { xpPerTick: 100, unitsPerTick: 0.2, gpPerTick: 0, setupTicks: 10, minBatchUnits: 10, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const consumerAct: ActivityDefinition = {
+        id: 'bank-artisan:cook-custom',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'produce',
+        label: 'Cook raw shark',
+        skill: 'Cooking',
+        inputs: [{ itemId: 383, countPerUnit: 1 }],
+        outputs: [{ itemId: 385, countPerUnit: 1 }],
+        config: { requiredItems: [{ itemId: 383, count: 10 }] },
+        baselineRate: { xpPerTick: 200, unitsPerTick: 0.25, gpPerTick: 0, setupTicks: 10, minBatchUnits: 10, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const brokeCook = makeAcct({
+        name: 'BrokeCook',
+        skills: { Fishing: { level: 80, xp: xpForLevel(80) }, Cooking: { level: 85, xp: xpForLevel(85) } },
+        inventory: {},
+        bank: { items: { 995: 500 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const defect: DefectRecord = {
+        id: 'def-quarantine-gather',
+        activityId: 'gather:custom-raw',
+        faultSignature: 'stuck',
+        outcomeKind: 'worker_defect',
+        account: 'BrokeCook',
+        observedAt: NOW - 500,
+        quarantinedAt: NOW - 500,
+        quarantined: true,
+        expiresAt: NOW + 60_000,
+        logPath: '.practice/sim/logs/stuck.log',
+        detail: 'stuck loop',
+        count: 3,
+    };
+    const quarantinedPlan = planAccount(brokeCook, {
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { BrokeCook: brokeCook },
+        },
+        activities: [producerAct, consumerAct],
+        defects: [defect],
+        requireMarketQuote: true,
+        marketQuotes: {},
+        demands: [{
+            id: 'd:shark',
+            goalKind: 'main_supply',
+            valueScore: 500,
+            valuePerHour: 5000,
+            target: { kind: 'item', itemId: 385, count: 10 },
+            fulfilled: 0,
+            remaining: 10,
+            priorityWeight: 1,
+            active: true,
+        }],
+    });
+    expect(quarantinedPlan.steps).toHaveLength(0);
+
+    // 3. Default catalog + live marketQuotes enables market:ge-buy, and non-holder helpers can plan stagingHolder campaign demands.
+    const sharkCost = Math.max(10, loadItemsMap().get(383)?.cost ?? 100);
+    const stageCampaign: Campaign = {
+        id: 'campaign:hiltsdeep',
+        account: 'hiltsdeep',
+        protectedClock: true,
+        board: 'Attack',
+        requiredSupplies: [{ itemId: 383, itemName: 'Raw shark', count: 20 }],
+        stagingHolder: 'StageAlt',
+        rehearsalProof: null,
+        hiscoreMargin: null,
+        state: 'staging',
+        weight: 1,
+    };
+    const helperA = makeAcct({
+        name: 'HelperA',
+        role: 'helper',
+        skills: { Fishing: { level: 1, xp: 0 } },
+        bank: { items: { 995: 100_000 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const stageAlt = makeAcct({
+        name: 'StageAlt',
+        role: 'helper',
+        bank: { items: { 995: 1_000 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const geWorld: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { HelperA: helperA, StageAlt: stageAlt },
+    };
+    const campEval = campaignShortfalls(stageCampaign, geWorld);
+    expect(campEval.shortfalls).toHaveLength(1);
+    expect(campEval.shortfalls[0]?.id).toBe('campaign:hiltsdeep:item:383');
+    expect(campEval.shortfalls[0]?.assignedAccount).toBeUndefined();
+    const gePlan = planAccount(helperA, {
+        world: geWorld,
+        activities,
+        demands: campEval.shortfalls,
+        marketQuotes: { 383: { ask: sharkCost, sell: 500, trades: 20 } },
+    });
+    expect(gePlan.steps).toHaveLength(1);
+    expect(gePlan.steps[0]?.stepKind).toBe('work');
+    if (gePlan.steps[0]?.stepKind === 'work') {
+        expect(gePlan.steps[0].activityId).toBe('market:ge-buy');
+    }
+});
+
+test('planner prevents multi-step coin double-spend across prepSteps and does not double-count travelTicks with RateStore', () => {
+    // 1. Two required supplies each costing 4,000 gp nominal (4,600 gp buffered on GE) = 9,200 gp needed.
+    const itemA = 383; // Raw shark (base cost ~100; ask 100 * 40 = 4,000)
+    const itemB = 385; // Shark (base cost ~100; ask 100 * 40 = 4,000)
+    const costA = Math.max(10, loadItemsMap().get(itemA)?.cost ?? 100);
+    const costB = Math.max(10, loadItemsMap().get(itemB)?.cost ?? 100);
+    const qtyA = Math.max(1, Math.ceil(4_000 / costA));
+    const qtyB = Math.max(1, Math.ceil(4_000 / costB));
+    const bufA = Math.ceil(costA * 1.15) * qtyA;
+    const bufB = Math.ceil(costB * 1.15) * qtyB;
+
+    const twoInputAct: ActivityDefinition = {
+        id: 'bank-artisan:two-input',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'produce',
+        label: 'Two-input craft',
+        skill: 'Cooking',
+        inputs: [
+            { itemId: itemA, countPerUnit: qtyA },
+            { itemId: itemB, countPerUnit: qtyB },
+        ],
+        outputs: [{ itemId: 2434, countPerUnit: 1 }],
+        config: {},
+        baselineRate: { xpPerTick: 100, unitsPerTick: 0.2, gpPerTick: 0, setupTicks: 10, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const quotes = {
+        [itemA]: { ask: costA, sell: 500, trades: 20 },
+        [itemB]: { ask: costB, sell: 500, trades: 20 },
+    };
+    const demand: GoalDemand = {
+        id: 'd:two-input',
+        goalKind: 'main_supply',
+        valueScore: 500,
+        valuePerHour: 5000,
+        target: { kind: 'item', itemId: 2434, count: 1 },
+        fulfilled: 0,
+        remaining: 1,
+        priorityWeight: 1,
+        active: true,
+    };
+
+    // Account with enough for ONE step (after 1,000 float) but NOT both must fail cleanly.
+    const singleBudgetAcct = makeAcct({
+        name: 'TightCoins',
+        inventory: {},
+        bank: { items: { 995: 1_000 + Math.max(bufA, bufB) + 500 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const tightPlan = planAccount(singleBudgetAcct, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { TightCoins: singleBudgetAcct } },
+        activities: [twoInputAct],
+        demands: [demand],
+        marketQuotes: quotes,
+    });
+    expect(tightPlan.steps).toHaveLength(0);
+
+    // Account with enough for BOTH buffered steps plus 1,000 float succeeds and keeps coinFloatPreserved = 1,000.
+    const fullBudgetAcct = makeAcct({
+        name: 'FullCoins',
+        inventory: {},
+        bank: { items: { 995: 1_000 + bufA + bufB + 500 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const fullPlan = planAccount(fullBudgetAcct, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { FullCoins: fullBudgetAcct } },
+        activities: [twoInputAct],
+        demands: [demand],
+        marketQuotes: quotes,
+    });
+    expect(fullPlan.steps).toHaveLength(3);
+    expect(fullPlan.steps[0]?.stepKind).toBe('acquire');
+    expect(fullPlan.steps[1]?.stepKind).toBe('acquire');
+    if (fullPlan.steps[1]?.stepKind === 'acquire') {
+        expect(fullPlan.steps[1].coinFloatPreserved).toBe(1_000);
+    }
+
+    // 2. Plan with RateStore must not double-count travelTicks relative to baseline estimate.
+    const catalog = createActivityCatalog();
+    const rateStore = createRateStore({ catalog });
+    const located = catalog.list().find((a) => a.id === 'gather:mining-ore' && a.location !== undefined)!;
+    expect(located).toBeDefined();
+    const distantMiner = makeAcct({
+        name: 'FarMiner',
+        pos: { x: 2655, z: 3283, level: 0 }, // Ardougne (far from Varrock/Al Kharid)
+        skills: { Mining: { level: 45, xp: xpForLevel(45) } },
+        bank: { items: { 1265: 1, 995: 500 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const mineDemand: GoalDemand = {
+        id: 'd:mine-ore',
+        goalKind: 'specialist_prep',
+        valueScore: 200,
+        valuePerHour: 2000,
+        target: { kind: 'skill', account: 'FarMiner', skill: 'Mining', targetLevel: 50 },
+        fulfilled: 45,
+        remaining: 5,
+        priorityWeight: 1,
+        assignedAccount: 'FarMiner',
+        active: true,
+    };
+    const mineWorld: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { FarMiner: distantMiner } };
+    const withoutStore = planAccount(distantMiner, { world: mineWorld, activities: [located], demands: [mineDemand], requireMarketQuote: true, marketQuotes: {} });
+    const withStore = planAccount(distantMiner, { world: mineWorld, activities: [located], demands: [mineDemand], rateStore, requireMarketQuote: true, marketQuotes: {} });
+    const withoutWork = withoutStore.steps.at(-1);
+    const withWork = withStore.steps.at(-1);
+    expect(withoutWork?.stepKind).toBe('work');
+    expect(withWork?.stepKind).toBe('work');
+    if (withoutWork?.stepKind === 'work' && withWork?.stepKind === 'work') {
+        expect(withWork.estimatedTicks).toBe(withoutWork.estimatedTicks);
     }
 });

@@ -1,4 +1,8 @@
 import { expect, test } from 'bun:test';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { MARKET_CACHE_MS, writeMarketCache } from '../../core/src/market-cache';
 import {
     ACQUIRE_SOURCE_ORDER,
     DEFAULT_OPERATING_COIN_FLOAT,
@@ -8,7 +12,12 @@ import {
     type ActivityDefinition,
     type WorldSnapshot,
 } from '../src/contracts';
-import { loadShopCatalogByItem, resolveAcquireItem } from '../src/acquire';
+import {
+    GE_LIMIT_BUFFER,
+    loadMarketQuotesFromRoot,
+    loadShopCatalogByItem,
+    resolveAcquireItem,
+} from '../src/acquire';
 import { derivedProfile } from '../../workers/src/market/shop-profiles';
 
 const NOW = 1_700_000_000_000;
@@ -263,4 +272,68 @@ test('loadShopCatalogByItem only emits runnable derivedProfile shops and exclude
     }
     expect(allShops.has('cheapringshop')).toBe(false);
     expect(allShops.has('gnomeshop_gulluck')).toBe(false);
+});
+
+test('loadMarketQuotesFromRoot unwraps writeMarketCache { at, items } envelope and enforces MARKET_CACHE_MS freshness', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'brain-market-cache-'));
+    try {
+        writeMarketCache(dir, {
+            383: { name: 'Raw shark', price: 320, bid: 300, ask: 350, trades: 12, base: 100, sell: 500 },
+        }, NOW - 60_000);
+
+        const fresh = loadMarketQuotesFromRoot(dir, NOW);
+        expect(fresh[383]).toMatchObject({ ask: 350, sell: 500, trades: 12 });
+
+        const stale = loadMarketQuotesFromRoot(dir, NOW + MARKET_CACHE_MS);
+        expect(stale).toEqual({});
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+test('AcquireItem GE source checks spendable coins against GE_LIMIT_BUFFER (1.15x) limit cost', () => {
+    // 100 units at 100 gp ask = 10,000 gp nominal, 11,500 gp buffered limit.
+    const nominalOnly = makeAcct({
+        inventory: { 995: 1_000 },
+        bank: { items: { 995: 10_000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const bufferedReady = makeAcct({
+        inventory: { 995: 1_000 },
+        bank: { items: { 995: Math.ceil(100 * GE_LIMIT_BUFFER) * 100 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const quotes = { 383: { ask: 100, sell: 500, trades: 10 } };
+
+    const failRes = resolveAcquireItem(
+        nominalOnly,
+        { itemId: 383, quantity: 100, allowedSources: ['ge'] },
+        {
+            world: {
+                schemaVersion: 1,
+                at: NOW,
+                side: 'local',
+                server: 'rs-sdk-demo.fly.dev',
+                accounts: { Packhorse: nominalOnly },
+            },
+            marketQuotes: quotes,
+        },
+    );
+    expect(failRes.ok).toBe(false);
+
+    const okRes = resolveAcquireItem(
+        bufferedReady,
+        { itemId: 383, quantity: 100, allowedSources: ['ge'] },
+        {
+            world: {
+                schemaVersion: 1,
+                at: NOW,
+                side: 'local',
+                server: 'rs-sdk-demo.fly.dev',
+                accounts: { Packhorse: bufferedReady },
+            },
+            marketQuotes: quotes,
+        },
+    );
+    expect(okRes.ok).toBe(true);
+    expect(okRes.step?.source).toBe('ge');
+    expect(okRes.step?.estimatedCoinCost).toBe(10_000);
 });

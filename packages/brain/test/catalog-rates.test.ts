@@ -5,11 +5,13 @@ import { join } from 'node:path';
 import { WORKER_FAMILIES } from '../../workers/src/contracts';
 import {
     createActivityCatalog,
+    createDemandEngine,
     createRateStore,
     defaultActivityCatalog,
     validateActivityDefinition,
     type AccountState,
     type RateSample,
+    type WorldSnapshot,
 } from '../src/index';
 
 let tempRoot = '';
@@ -133,7 +135,7 @@ describe('ActivityCatalog & RateStore', () => {
         expect(reloaded.summaryFor(activityId)?.samples).toBe(3);
     });
 
-    test('RateStore adjusts setupTicks based on account position relative to activity location', () => {
+    test('RateStore keeps setupTicks travel-free and clamps short-session death riskPerHour to [0, 1]', () => {
         const catalog = defaultActivityCatalog();
         const located = catalog.list().find((a) => a.location !== undefined);
         expect(located).toBeDefined();
@@ -153,11 +155,38 @@ describe('ActivityCatalog & RateStore', () => {
             bank: { items: {}, observedAt: 0, trusted: false },
         });
 
-        const nearEst = store.estimate(located!.id, makeAccount(located!.location!));
-        const farEst = store.estimate(
-            located!.id,
-            makeAccount({ x: located!.location!.x + 400, z: located!.location!.z + 400, level: located!.location!.level }),
-        );
-        expect(farEst.setupTicks).toBeGreaterThan(nearEst.setupTicks);
+        const nearAcct = makeAccount(located!.location!);
+        const farAcct = makeAccount({ x: located!.location!.x + 400, z: located!.location!.z + 400, level: located!.location!.level });
+        const nearEst = store.estimate(located!.id, nearAcct);
+        const farEst = store.estimate(located!.id, farAcct);
+        expect(farEst.setupTicks).toBe(nearEst.setupTicks);
+        expect(farEst.setupTicks).toBe(located!.baselineRate.setupTicks);
+
+        // Short-session death (20 ticks) must clamp riskPerHour <= 1 and never throw in RateStore or DemandEngine.
+        store.recordSample({
+            activityId: located!.id,
+            account: 'Mover',
+            domain: 'live',
+            observedAt: NOW,
+            ticksElapsed: 20,
+            unitsCompleted: 0,
+            xpPerTick: 0,
+            unitsPerTick: 0,
+            gpPerTick: 0,
+            died: true,
+        });
+        const afterDeath = store.estimate(located!.id, farAcct);
+        expect(afterDeath.riskPerHour).toBeGreaterThan(0);
+        expect(afterDeath.riskPerHour).toBeLessThanOrEqual(1);
+
+        const snap: WorldSnapshot = {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { Mover: nearAcct },
+        };
+        const engine = createDemandEngine({ catalog, rateStore: store });
+        expect(() => engine.activeDemands(snap)).not.toThrow();
     });
 });

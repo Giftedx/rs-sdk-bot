@@ -470,7 +470,7 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         }).activeDemands(world);
     const marketQuotes = provider?.loadMarketQuotes
         ? provider.loadMarketQuotes({ root })
-        : loadMarketQuotesFromRoot(root);
+        : loadMarketQuotesFromRoot(root, now);
     const logoutProofs = diagnostics
         ? loadConfirmedLogoutProofs(diagnostics)
         : undefined;

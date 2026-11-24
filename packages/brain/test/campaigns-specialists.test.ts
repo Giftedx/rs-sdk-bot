@@ -248,7 +248,13 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
         expect(evalHilts.launchReady).toBe(false);
         expect(evalHilts.missingGates).toContain('supplies');
         expect(evalHilts.shortfalls).toHaveLength(1);
-        expect(evalHilts.shortfalls[0]).toMatchObject({ remaining: 6, fulfilled: 5, assignedAccount: 'StageAlt' });
+        expect(evalHilts.shortfalls[0]).toMatchObject({
+            id: 'campaign:hiltsdeep:item:536',
+            remaining: 6,
+            fulfilled: 5,
+            target: { kind: 'item', itemId: 536, holder: 'StageAlt' },
+        });
+        expect(evalHilts.shortfalls[0]?.assignedAccount).toBeUndefined();
 
         const evalHiltsReady = campaignShortfalls(hilts, makeWorld({ StageAlt: makeAccount('StageAlt', { 536: 13 }) }, { StageAlt: { 536: 2 } }));
         expect(evalHiltsReady.launchReady).toBe(true);

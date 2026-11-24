@@ -428,6 +428,17 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         spotAllocations[spotId] = list;
     };
 
+    const currentFullSpots = (extraSpotId?: string): Set<string> => {
+        const full = new Set<string>();
+        if (extraSpotId) full.add(extraSpotId);
+        for (const [spotId, maxConc] of spotMaxBySpotId.entries()) {
+            if ((world.spotOccupancy?.[spotId] ?? 0) + (spotAllocations[spotId]?.length ?? 0) >= maxConc) {
+                full.add(spotId);
+            }
+        }
+        return full;
+    };
+
     const basePlannerOpts = {
         world,
         activities,
@@ -448,6 +459,11 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     };
 
     // 1. Retain healthy running accounts with +15% retention hysteresis.
+    // Running accounts cannot materialize hub_banker transfers (transfers require idle recipients).
+    const runningPlannerOpts = {
+        ...basePlannerOpts,
+        excludedAcquireSources: new Set<AcquireSourceKind>(['hub_banker']),
+    };
     const evaluatedRunning: { acct: AccountState; plan: AccountPlan }[] = [];
     for (const acct of runningAccounts) {
         const job = acct.activeJob;
@@ -457,14 +473,14 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         let currentPlan: AccountPlan | null = null;
         if (activeAct && activeDem) {
             const p = planAccount(acct, {
-                ...basePlannerOpts,
+                ...runningPlannerOpts,
                 activities: [activeAct],
                 demands: [activeDem],
             });
             if (p.steps.length > 0) currentPlan = p;
         }
 
-        const bestAlt = planAccount(acct, basePlannerOpts);
+        const bestAlt = planAccount(acct, runningPlannerOpts);
         let chosen: AccountPlan;
         if (currentPlan && currentPlan.steps.length > 0) {
             const threshold = currentPlan.scorePerHour * (1 + retentionMarginRatio);
@@ -510,9 +526,11 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         const workStep = plan.steps.at(-1);
         const workAct = workStep?.stepKind === 'work' ? activityById.get(workStep.activityId) : undefined;
         if (workAct && !spotHasCapacity(workAct.spotId, workAct.maxConcurrentAccounts)) {
-            const excludedSpots = new Set<string>([workAct.spotId!]);
-            const rerouted = planAccount(acct, { ...basePlannerOpts, excludedSpotIds: excludedSpots });
-            if (rerouted.steps.length === 0) {
+            const excludedSpots = currentFullSpots(workAct.spotId);
+            const rerouted = planAccount(acct, { ...runningPlannerOpts, excludedSpotIds: excludedSpots });
+            const altWork = rerouted.steps.at(-1);
+            const altAct = altWork?.stepKind === 'work' ? activityById.get(altWork.activityId) : undefined;
+            if (rerouted.steps.length === 0 || (altAct && !spotHasCapacity(altAct.spotId, altAct.maxConcurrentAccounts))) {
                 accountPlans[acct.name] = {
                     account: acct.name,
                     steps: [],
@@ -521,8 +539,6 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 };
                 continue;
             }
-            const altWork = rerouted.steps.at(-1);
-            const altAct = altWork?.stepKind === 'work' ? activityById.get(altWork.activityId) : undefined;
             reserveSpot(acct.name, altAct?.spotId);
             consumeDemandAllocation(rerouted);
             accountPlans[acct.name] = rerouted;
@@ -570,8 +586,10 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         }
         const recPlan = planAccount(acct, basePlannerOpts);
         accountPlans[acct.name] = recPlan;
-        if (recPlan.steps.length > 0) busyAccounts.add(acct.name.toLowerCase());
-        remainingSlots -= 1;
+        if (recPlan.steps.length > 0) {
+            busyAccounts.add(acct.name.toLowerCase());
+            remainingSlots -= 1;
+        }
     }
 
     // 3. Plan idle (and launch-ready reserved) accounts ordered by value/hour descending.
@@ -628,13 +646,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             continue;
         }
 
-        const excludedSpots = new Set<string>();
-        for (const [spotId, list] of Object.entries(spotAllocations)) {
-            const maxConc = spotMaxBySpotId.get(spotId);
-            if (maxConc !== undefined && (world.spotOccupancy?.[spotId] ?? 0) + list.length >= maxConc) {
-                excludedSpots.add(spotId);
-            }
-        }
+        const excludedSpots = currentFullSpots();
 
         const availableDemands = currentUnallocatedDemands();
         let plan = planAccount(acct, {

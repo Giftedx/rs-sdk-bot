@@ -482,4 +482,38 @@ describe('Campaigns, Missions & DemandEngine', () => {
         const gearDemands = gearEngine.activeDemands(snap).filter((d) => d.goalKind === 'gear_collection');
         expect(gearDemands.some((d) => d.target.kind === 'item' && d.target.itemId === 1235)).toBe(false);
     });
+
+    test('missionShortfalls deducts acct.reserves, lowercase snapshot.reserves, and globalReserves via effectiveItemReserve', () => {
+        const mission: Mission = {
+            id: 'mission:reserve-check',
+            participants: ['Alpha', 'Beta', 'Gamma'],
+            state: 'staging',
+            kitTargets: [],
+            consumables: [{ itemId: 385, itemName: 'Shark', countPerParticipant: 10 }],
+            weight: 1,
+        };
+        const snap: WorldSnapshot = {
+            ...makeSnapshot({
+                Alpha: {
+                    ...makeAccount('Alpha', {
+                        bank: { items: { 385: 10 }, observedAt: NOW - 1000, trusted: true },
+                    }),
+                    reserves: { 385: 4 }, // max(4, 0) + global 3 = 7 reserved -> 3 unreserved
+                },
+                Beta: makeAccount('Beta', {
+                    bank: { items: { 385: 10 }, observedAt: NOW - 1000, trusted: true },
+                }),
+                Gamma: makeAccount('Gamma', {
+                    bank: { items: { 385: 10 }, observedAt: NOW - 1000, trusted: true },
+                }),
+            }),
+            reserves: { beta: { 385: 5 } }, // lowercase key: max(0, 5) + global 3 = 8 reserved -> 2 unreserved
+            globalReserves: { 385: 3 }, // Gamma: 0 + 3 = 3 reserved -> 7 unreserved
+        };
+        const evalRes = missionShortfalls(mission, snap);
+        expect(evalRes.totalRequiredUnits).toBe(30);
+        expect(evalRes.totalFulfilledUnits).toBe(12); // 3 + 2 + 7
+        expect(evalRes.shortfalls).toHaveLength(1);
+        expect(evalRes.shortfalls[0]).toMatchObject({ fulfilled: 12, remaining: 18 });
+    });
 });

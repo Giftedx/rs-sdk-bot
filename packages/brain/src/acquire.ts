@@ -3,6 +3,7 @@
 // Preserves an operating coin float (~1,000 gp) per active account and respects (item, venue) TTL cooldowns.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { marketQuotes as parseMarketCacheQuotes } from '../../core/src/market-cache';
 import { offMap as isEntranaTile } from '../../core/src/shop-index';
 import type { Shop } from '../../knowledge/src/shops';
 import type { GearSources } from '../../knowledge/src/gear-sources';
@@ -39,6 +40,7 @@ import {
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 export const DEFAULT_ANTI_PING_PONG_MS = 10 * 60_000;
+export const GE_LIMIT_BUFFER = 1.15;
 
 export interface MarketQuote {
     readonly ask: number | null;
@@ -65,6 +67,7 @@ export interface AcquireRequest {
     readonly itemName?: string;
     readonly quantity: number;
     readonly operatingCoinFloat?: number;
+    readonly committedCoinSpend?: number;
     readonly questPoints?: number;
     readonly allowOwnBank?: boolean;
     readonly includeInventoryInOwned?: boolean;
@@ -149,7 +152,7 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
     return out;
 }
 
-export function loadMarketQuotesFromRoot(root: string): MarketQuotesMap {
+export function loadMarketQuotesFromRoot(root: string, now = Date.now()): MarketQuotesMap {
     const candidates = [
         join(root, '.practice', 'live', 'market-all.json'),
         join(root, '.practice', 'market-all.json'),
@@ -157,9 +160,18 @@ export function loadMarketQuotesFromRoot(root: string): MarketQuotesMap {
     for (const file of candidates) {
         if (!existsSync(file)) continue;
         try {
-            const parsed = JSON.parse(readFileSync(file, 'utf8')) as { marketQuotes?: MarketQuotesMap; quotes?: MarketQuotesMap };
+            const parsed = JSON.parse(readFileSync(file, 'utf8')) as {
+                at?: unknown;
+                items?: unknown;
+                marketQuotes?: MarketQuotesMap;
+                quotes?: MarketQuotesMap;
+            };
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+            if ('items' in parsed && 'at' in parsed) {
+                return parseMarketCacheQuotes(parsed, now);
+            }
             const raw = parsed.marketQuotes ?? parsed.quotes ?? (parsed as unknown as MarketQuotesMap);
-            if (raw && typeof raw === 'object') return raw;
+            if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
         } catch {
             /* ignore unreadable market cache */
         }
@@ -226,11 +238,13 @@ export function resolveAcquireItem(
     const itemMeta = loadItemsMap().get(req.itemId);
     const itemName = req.itemName ?? itemMeta?.name;
     const operatingFloat = Math.max(0, req.operatingCoinFloat ?? DEFAULT_OPERATING_COIN_FLOAT);
-    const coinBalance = availableSpendableCoins(acct, world, operatingFloat, {
+    const committedSpend = Math.max(0, req.committedCoinSpend ?? 0);
+    const coinBalance = availableSpendableCoins(acct, world, operatingFloat + committedSpend, {
         includeBank: true,
         requireTrustedBank: true,
     });
-    const coinFloatPreserved = Math.min(coinBalance.totalUnreserved, operatingFloat);
+    const effectiveTotalUnreserved = Math.max(0, coinBalance.totalUnreserved - committedSpend);
+    const coinFloatPreserved = Math.min(effectiveTotalUnreserved, operatingFloat);
     const allowedSet = new Set(req.allowedSources ?? ACQUIRE_SOURCE_ORDER);
     const candidates: AcquireCandidate[] = [];
     const skippedReasons: { source: AcquireSourceKind; reason: string }[] = [];
@@ -323,7 +337,7 @@ export function resolveAcquireItem(
                 let travelCoins = 0;
                 if (shop.tile) {
                     const reach = evaluateTileReachability(acct, shop.tile, world, {
-                        spendableCoins: coinBalance.totalUnreserved,
+                        spendableCoins: effectiveTotalUnreserved,
                         allowUnknownPos: true,
                     });
                     if (!reach.reachable) {
@@ -335,7 +349,7 @@ export function resolveAcquireItem(
                 }
                 const totalCost = Math.ceil(shop.cost * req.quantity);
                 // Spending must preserve the operating coin float (~1,000 gp) for ferry fares.
-                if (coinBalance.spendable < totalCost || coinBalance.totalUnreserved < totalCost + travelCoins) {
+                if (coinBalance.spendable < totalCost || effectiveTotalUnreserved < totalCost + travelCoins) {
                     shopRejectReason = `insufficient spendable coins ${coinBalance.spendable} (after ${operatingFloat} gp float) for cost ${totalCost}`;
                     continue;
                 }
@@ -400,25 +414,26 @@ export function resolveAcquireItem(
             }
 
             const totalCost = unitPrice * req.quantity;
-            if (coinBalance.spendable < totalCost) {
+            const bufferedCost = Math.ceil(unitPrice * GE_LIMIT_BUFFER) * req.quantity;
+            if (coinBalance.spendable < bufferedCost) {
                 skippedReasons.push({
                     source,
-                    reason: `insufficient spendable coins ${coinBalance.spendable} (preserving ${operatingFloat} gp float) for GE cost ${totalCost}`,
+                    reason: `insufficient spendable coins ${coinBalance.spendable} (preserving ${operatingFloat} gp float) for GE limit cost ${bufferedCost}`,
                 });
                 continue;
             }
 
             const geTile = { x: 3164, z: 3487, level: 0 };
             const reach = evaluateTileReachability(acct, geTile, world, {
-                spendableCoins: coinBalance.totalUnreserved,
+                spendableCoins: effectiveTotalUnreserved,
                 allowUnknownPos: true,
             });
             if (!reach.reachable) {
                 skippedReasons.push({ source, reason: reach.message ?? 'GE unreachable' });
                 continue;
             }
-            if (coinBalance.totalUnreserved < totalCost + reach.travelCoins) {
-                skippedReasons.push({ source, reason: 'insufficient coins for GE cost plus travel fare' });
+            if (effectiveTotalUnreserved < bufferedCost + reach.travelCoins) {
+                skippedReasons.push({ source, reason: 'insufficient coins for GE limit cost plus travel fare' });
                 continue;
             }
             candidates.push({
