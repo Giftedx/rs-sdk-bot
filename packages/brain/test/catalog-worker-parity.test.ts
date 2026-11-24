@@ -134,5 +134,38 @@ describe('catalog-worker parity', () => {
 
         const magicOrderRoute = resolveActivityWorkerRoute(catalog.require('bank-artisan:magic-order'));
         expect(magicOrderRoute.env.TARGET_LEVEL).toBe('55');
+
+        expect(catalog.require('gather:mining-loot').baselineRate.xpPerTick).toBe(0);
+        for (const nonAutonomousId of [
+            'gather:mining-lava-maze',
+            'gather:mining-at-site',
+            'gather:mining-drop',
+            'bank-artisan:firemaking-line',
+            'gather:thieving-stun-base',
+            'gather:thieving-stun-bury',
+            'gather:thieving-stun-enchant',
+            'gather:thieving-pickpocket-at-site',
+            'bank-artisan:magic-orbs-at-site',
+            'combat:chompy-at-site',
+            'combat:boss-trawler-at-site',
+        ]) {
+            expect(catalog.require(nonAutonomousId).trust).toBe('experimental');
+        }
+
+        const stallsRoute = resolveActivityWorkerRoute(catalog.require('gather:thieving-stalls'));
+        expect(stallsRoute.args).toEqual(['thieving', 'stalls', 'stealing_bakery_stall', '28', '600']);
+
+        const agilityOrderRoute = resolveActivityWorkerRoute(catalog.require('agility:agility-order'));
+        expect(agilityOrderRoute.env.TARGET_LEVEL).toBe('99');
+
+        expect(catalog.require('combat:trooper').skills ?? []).not.toContain('Prayer');
+
+        const horror = catalog.require('quest:horror');
+        expect(horror.config.requiredQuests).toContain('barcrawl');
+        expect((horror.config.requiredSkills as Record<string, number>)?.Magic).toBe(75);
+
+        const mm = catalog.require('quest:mm');
+        expect(mm.config.requiredQuests).toContain('grandtree');
+        expect(mm.config.requiredQuests).toContain('tree');
     });
 });

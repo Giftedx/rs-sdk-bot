@@ -17,7 +17,7 @@ import { hasCredential } from '../../core/src/fleet-vault';
 import { fleetStateFile, repoRoot } from '../../core/src/practice-paths';
 import { listAttempts, readLogoutProof } from '../../core/src/session-lifecycle';
 import { savedProcessAlive } from '../../core/src/session-takeover';
-import { loadEnded, swarmWroteStop } from './swarm';
+import { loadEnded, selectBrainDispatchStep, swarmWroteStop } from './swarm';
 import { CLAIM_MAX_AGE_MS, claimFor, jobAccounts } from './trade-plan';
 import { dispatchAccountPlan } from './worker-dispatch';
 
@@ -147,10 +147,10 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
     for (const [acctName, plan] of Object.entries(state.activeChains)) {
         if (existing.has(acctName.toLowerCase()) || !plan.steps.length) continue;
         const dispatched = dispatchAccountPlan(plan, { activities });
-        const firstMode = dispatched.steps[0]?.executionMode;
-        if (firstMode === 'fleet_trade' || firstMode === 'session_recovery') continue;
-        const step = dispatched.combinedStep;
-        if (!step) continue;
+        const selected = selectBrainDispatchStep(dispatched, plan.steps);
+        if (selected.mode !== 'worker') continue;
+        const step = selected.step;
+        const acctState = state.accounts[acctName.toLowerCase()] ?? state.accounts[acctName];
         const workStep = plan.steps.find(s => s.stepKind === 'work');
         const spotId = workStep?.stepKind === 'work' ? catalog.get(workStep.activityId)?.spotId : undefined;
         const goalId = workStep?.stepKind === 'work' ? workStep.demandId : undefined;
@@ -161,7 +161,7 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
             env: { ...step.env },
             enabled: true,
             repeat: false,
-            ...(state.accounts[acctName.toLowerCase()]?.role ? { role: state.accounts[acctName.toLowerCase()]!.role } : {}),
+            ...(acctState?.role ? { role: acctState.role } : {}),
             ...(goalId ? { goal: goalId } : {}),
             ...(spotId ? { resources: [spotId] } : {}),
         });

@@ -248,6 +248,55 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(splashUnlock.args).toEqual(['magic', 'splash', '37', '3000']);
     expect(splashUnlock.env.TARGET_LEVEL).toBe('37');
     expect(splashUnlock.env.TRAIN_SKILL).toBe('Magic');
+
+    const trooperWork = resolvePlannedStepWorkerRoute(
+        'ArmyBot',
+        {
+            stepKind: 'work',
+            activityId: 'combat:trooper',
+            demandId: 'goal:pk_army:ArmyBot',
+            workerId: 'combat',
+            batchUnits: 250,
+            estimatedTicks: 500,
+            expectedValuePerHour: 1000,
+            config: { trainSkill: 'Attack', targetLevel: 90 },
+        },
+        { activities: fullCatalog.list() },
+    );
+    expect(trooperWork.env.TRAIN_SKILL).toBe('Attack');
+    expect(trooperWork.env.TARGET_LEVEL).toBe('90');
+    expect(trooperWork.env.DEMAND_ID).toBe('goal:pk_army:ArmyBot');
+
+    const shopWork = resolvePlannedStepWorkerRoute(
+        'ShopBuyer',
+        {
+            stepKind: 'work',
+            activityId: 'market:shop-buy',
+            demandId: 'campaign:campaign:haggis:item:564',
+            workerId: 'market',
+            batchUnits: 50,
+            estimatedTicks: 60,
+            expectedValuePerHour: 5000,
+            config: {
+                mode: 'shop-buy',
+                itemId: 564,
+                itemName: 'Cosmic rune',
+                quantity: 50,
+                shopId: 'magearena_runeshop',
+                estimatedCoinCost: 2500,
+                coinFloatPreserved: 1000,
+            },
+        },
+        { activities: fullCatalog.list() },
+    );
+    expect(shopWork.family).toBe('market');
+    expect(shopWork.routeKey).toBe('shop-buy');
+    expect(shopWork.args).toEqual(['shop-buy', 'magearena_runeshop', '3000']);
+    expect(shopWork.env.ITEM_ID).toBe('564');
+    expect(shopWork.env.MAX_ITEMS).toBe('50');
+    expect(shopWork.env.STOP_AT_TARGET).toBe('1');
+    expect(shopWork.env.BANK_PACK).toBe('1');
+    expect(shopWork.env.DEMAND_ID).toBe('campaign:campaign:haggis:item:564');
 });
 
 test('catalog covers all 9 worker families with existing standalone scripts only', () => {

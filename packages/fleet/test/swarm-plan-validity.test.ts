@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { brainPlannedJobs } from '../src/fleet-sync';
 import { brainCycleDue, clearAutoStop, DEFAULT_BRAIN_CYCLE_MS, isAutoStopText, selectBrainDispatchStep } from '../src/swarm';
 import { dispatchAccountPlan } from '../src/worker-dispatch';
-import type { AccountPlan } from '../../brain/src/contracts';
+import { FLEET_STATE_SCHEMA_VERSION, type AccountPlan, type FleetState } from '../../brain/src/contracts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 
@@ -164,6 +165,89 @@ describe('root swarm.json validity and Brain throttle helpers', () => {
             expect(multiSel.isMultiStepChain).toBe(true);
             expect(multiSel.attributedActivityId).toBeUndefined();
             expect(multiSel.displayActivityId).toBe('bank-artisan:cooking-food');
+        }
+    });
+
+    test('brainPlannedJobs truncates multi-step chains before fleet_trade and resolves MixedCase role', () => {
+        const root = mkdtempSync(join(tmpdir(), 'fleet-sync-brain-'));
+        try {
+            const liveDir = join(root, '.practice', 'live');
+            mkdirSync(liveDir, { recursive: true });
+            const now = Date.now();
+            const state: FleetState = {
+                schemaVersion: FLEET_STATE_SCHEMA_VERSION,
+                emittedAt: now,
+                side: 'local',
+                server: 'rs-sdk-demo.fly.dev',
+                maxBots: 5,
+                accounts: {
+                    mixedcasebot: {
+                        name: 'MixedCaseBot',
+                        side: 'local',
+                        role: 'army',
+                        protectedClock: false,
+                        lifecycle: 'idle',
+                        pos: { x: 3222, z: 3218, level: 0 },
+                        skills: {},
+                        quests: {},
+                        inventory: {},
+                        equipment: {},
+                        bank: { items: {}, observedAt: now, trusted: true },
+                    },
+                },
+                activeChains: {
+                    MixedCaseBot: {
+                        account: 'MixedCaseBot',
+                        demandId: 'd:fire',
+                        scorePerHour: 150,
+                        steps: [
+                            {
+                                stepKind: 'unlock',
+                                unlockKind: 'quest',
+                                activityId: 'quest:waterfall',
+                                questSlug: 'waterfall',
+                                estimatedTicks: 400,
+                            },
+                            {
+                                stepKind: 'acquire',
+                                source: 'hub_banker',
+                                itemId: 385,
+                                quantity: 10,
+                                estimatedTicks: 40,
+                                estimatedCoinCost: 0,
+                                coinFloatPreserved: 1000,
+                                donorAccount: 'BankAlt',
+                                hub: 'varrock_west',
+                                transferOrderId: 'xfer-1',
+                            },
+                            {
+                                stepKind: 'work',
+                                activityId: 'combat:fire-giant',
+                                demandId: 'd:fire',
+                                workerId: 'combat',
+                                batchUnits: 15,
+                                estimatedTicks: 500,
+                                expectedValuePerHour: 150,
+                                config: {},
+                            },
+                        ],
+                    },
+                },
+                idleReasons: {},
+                goals: [],
+                campaigns: [],
+                missions: [],
+                pendingTransfers: [],
+                quarantinedDefects: [],
+            };
+            writeFileSync(join(liveDir, 'fleet-state.json'), JSON.stringify(state));
+            const jobs = brainPlannedJobs(root, [], now + 1000);
+            expect(jobs).toHaveLength(1);
+            expect(jobs[0].account).toBe('MixedCaseBot');
+            expect(jobs[0].script).toBe('scripts/generated/waterfall.ts');
+            expect(jobs[0].role).toBe('army');
+        } finally {
+            rmSync(root, { recursive: true, force: true });
         }
     });
 });
