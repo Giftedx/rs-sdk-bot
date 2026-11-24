@@ -190,40 +190,67 @@ export function loadQuestRows(): readonly KnowledgeQuestRow[] {
     return cachedQuests;
 }
 
-function normalizeQuestToken(raw: string): string {
-    return raw.toLowerCase().replace(/['`]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const QUEST_STRING_CACHE_LIMIT = 4096;
+const NORM_QUEST_CACHE = new Map<string, { norm: string; collapsed: string }>();
+const QUEST_KEYS_CACHE = new Map<string, ReadonlySet<string>>();
+
+function normalizeQuestParts(raw: string): { norm: string; collapsed: string } {
+    let hit = NORM_QUEST_CACHE.get(raw);
+    if (hit) return hit;
+    const norm = raw.toLowerCase().replace(/['`]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+    const collapsed = norm.replace(/\s+/g, '');
+    hit = { norm, collapsed };
+    if (NORM_QUEST_CACHE.size >= QUEST_STRING_CACHE_LIMIT) NORM_QUEST_CACHE.clear();
+    NORM_QUEST_CACHE.set(raw, hit);
+    return hit;
 }
 
-function questCandidateKeys(quest: string): Set<string> {
-    const norm = normalizeQuestToken(quest);
-    const collapsed = norm.replace(/\s+/g, '');
-    const keys = new Set<string>([norm, collapsed, quest.trim().toLowerCase()]);
-    for (const [slug, aliases] of Object.entries(QUEST_ALIASES)) {
-        const hit = aliases.some((a) => {
-            const na = normalizeQuestToken(a);
-            return na === norm || na.replace(/\s+/g, '') === collapsed || slug === collapsed;
-        });
-        if (hit) {
-            keys.add(slug);
-            for (const a of aliases) {
-                const na = normalizeQuestToken(a);
-                keys.add(na);
-                keys.add(na.replace(/\s+/g, ''));
-            }
+const QUEST_ALIAS_SETS = new Map<string, ReadonlySet<string>>();
+for (const [slug, aliases] of Object.entries(QUEST_ALIASES)) {
+    const set = new Set<string>([slug]);
+    for (const a of aliases) {
+        const { norm, collapsed } = normalizeQuestParts(a);
+        set.add(norm);
+        set.add(collapsed);
+    }
+    for (const token of set) {
+        const prev = QUEST_ALIAS_SETS.get(token);
+        if (!prev) {
+            QUEST_ALIAS_SETS.set(token, set);
+        } else {
+            const merged = new Set<string>(prev);
+            for (const t of set) merged.add(t);
+            for (const t of merged) QUEST_ALIAS_SETS.set(t, merged);
         }
     }
+}
+
+function questCandidateKeys(quest: string): ReadonlySet<string> {
+    let cached = QUEST_KEYS_CACHE.get(quest);
+    if (cached) return cached;
+    const { norm, collapsed } = normalizeQuestParts(quest);
+    const lower = quest.trim().toLowerCase();
+    const aliasSet = QUEST_ALIAS_SETS.get(norm) ?? QUEST_ALIAS_SETS.get(collapsed);
+    const keys = aliasSet ? new Set<string>(aliasSet) : new Set<string>();
+    keys.add(norm);
+    keys.add(collapsed);
+    keys.add(lower);
+    if (QUEST_KEYS_CACHE.size >= QUEST_STRING_CACHE_LIMIT) QUEST_KEYS_CACHE.clear();
+    QUEST_KEYS_CACHE.set(quest, keys);
     return keys;
 }
 
 export function accountQuestState(acct: WorkerAccountView, quest: string): WorkerQuestState {
+    const direct = acct.quests[quest];
+    if (direct === 'complete') return 'complete';
     const want = questCandidateKeys(quest);
-    let best: WorkerQuestState = 'not_started';
+    let best: WorkerQuestState = direct === 'started' ? 'started' : 'not_started';
     for (const [key, state] of Object.entries(acct.quests)) {
-        const normKey = normalizeQuestToken(key);
-        const collapsedKey = normKey.replace(/\s+/g, '');
-        if (want.has(normKey) || want.has(collapsedKey) || want.has(key.toLowerCase())) {
+        if (state !== 'complete' && state !== 'started') continue;
+        const { norm, collapsed } = normalizeQuestParts(key);
+        if (want.has(norm) || want.has(collapsed) || want.has(key.toLowerCase())) {
             if (state === 'complete') return 'complete';
-            if (state === 'started') best = 'started';
+            best = 'started';
         }
     }
     return best;
@@ -240,7 +267,7 @@ export function completedQuestSet(acct: WorkerAccountView): Set<string> {
         for (const candidate of questCandidateKeys(key)) done.add(candidate);
         done.add(key);
         // Preserve original canonical title aliases used by knowledge/gear.json (`Dragon Slayer`, `Hero's Quest`, etc.)
-        const norm = normalizeQuestToken(key);
+        const norm = normalizeQuestParts(key).norm;
         if (norm === 'dragon' || norm === 'dragon slayer') done.add('Dragon Slayer');
         if (norm === 'zanaris' || norm === 'lost city') done.add('Lost City');
         if (norm === 'hero' || norm === 'heros quest' || norm === 'heroes quest') done.add("Hero's Quest");
@@ -252,6 +279,10 @@ export function completedQuestSet(acct: WorkerAccountView): Set<string> {
 }
 
 export function accountSkillLevel(acct: WorkerAccountView, skill: string): number {
+    const direct = acct.skills[skill];
+    if (direct && Number.isFinite(direct.level)) {
+        return Math.max(1, Math.floor(direct.level));
+    }
     const target = skill.trim().toLowerCase();
     for (const [k, stat] of Object.entries(acct.skills)) {
         if (k.trim().toLowerCase() === target && Number.isFinite(stat?.level)) {
@@ -267,13 +298,18 @@ export function effectiveItemReserve(
     itemId: number,
 ): number {
     const acctRes = acct.reserves?.[itemId] ?? 0;
-    const lowerName = acct.name.toLowerCase();
-    let worldAcctRes = world.reserves?.[acct.name]?.[itemId] ?? world.reserves?.[lowerName]?.[itemId] ?? 0;
-    if (worldAcctRes === 0 && world.reserves) {
-        for (const [k, map] of Object.entries(world.reserves)) {
-            if (k.toLowerCase() === lowerName) {
-                worldAcctRes = map?.[itemId] ?? 0;
-                break;
+    let worldAcctRes = 0;
+    if (world.reserves) {
+        const lowerName = acct.name.toLowerCase();
+        const acctMap = world.reserves[acct.name] ?? world.reserves[lowerName];
+        if (acctMap !== undefined) {
+            worldAcctRes = acctMap[itemId] ?? 0;
+        } else {
+            for (const [k, map] of Object.entries(world.reserves)) {
+                if (k.toLowerCase() === lowerName) {
+                    worldAcctRes = map?.[itemId] ?? 0;
+                    break;
+                }
             }
         }
     }

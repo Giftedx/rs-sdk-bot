@@ -55,6 +55,7 @@ class CostMinHeap {
     private idx: Int32Array;
     private cost: Float64Array;
     size = 0;
+    lastCost = 0;
     constructor(cap: number) {
         const n = Math.max(16, cap);
         this.idx = new Int32Array(n);
@@ -80,8 +81,9 @@ class CostMinHeap {
         this.idx[i] = index;
         this.cost[i] = c;
     }
-    popIndex(): { index: number; cost: number } {
-        const topIdx = this.idx[0]!, topCost = this.cost[0]!;
+    popIdx(): number {
+        const topIdx = this.idx[0]!;
+        this.lastCost = this.cost[0]!;
         const n = --this.size;
         if (n > 0) {
             const lastIdx = this.idx[n]!, lastCost = this.cost[n]!;
@@ -99,7 +101,7 @@ class CostMinHeap {
             this.idx[i] = lastIdx;
             this.cost[i] = lastCost;
         }
-        return { index: topIdx, cost: topCost };
+        return topIdx;
     }
 }
 
@@ -163,9 +165,9 @@ export function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, g
     };
     const { xs, zs, levels, radii, incoming, levelNodes } = graph;
     while (queue.size) {
-        const e = queue.popIndex();
-        const u = e.index;
-        if (e.cost !== best[u]) continue;
+        const u = queue.popIdx();
+        const uCost = queue.lastCost;
+        if (uCost !== best[u]) continue;
         settled[u] = 1;
         const isGoal = u === goalBoundIdx;
         const tx = u < baseN ? xs[u]! : goalTile.x;
@@ -176,20 +178,20 @@ export function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, g
             const peers = levelNodes[tLvl]!;
             for (let k = 0; k < peers.length; k++) {
                 const i = peers[k]!;
-                if (settled[i] || best[i]! <= e.cost) continue;
+                if (settled[i] || best[i]! <= uCost) continue;
                 const dx = Math.abs(xs[i]! - tx), dz = Math.abs(zs[i]! - tz);
                 const d = (dx > dz ? dx : dz) - tolerance;
-                relax(i, e.cost + (d > 0 ? d : 0));
+                relax(i, uCost + (d > 0 ? d : 0));
             }
             if (goalBoundIdx >= baseN && goalTile.level === tLvl && !settled[goalBoundIdx]) {
                 const dx = Math.abs(goalTile.x - tx), dz = Math.abs(goalTile.z - tz);
                 const d = (dx > dz ? dx : dz) - tolerance;
-                relax(goalBoundIdx, e.cost + (d > 0 ? d : 0));
+                relax(goalBoundIdx, uCost + (d > 0 ? d : 0));
             }
         }
         if (u < baseN) {
             const inc = incoming[u]!;
-            for (let k = 0; k < inc.length; k++) relax(inc[k]!, e.cost + TRANSPORT_COST);
+            for (let k = 0; k < inc.length; k++) relax(inc[k]!, uCost + TRANSPORT_COST);
         }
     }
     return best;
@@ -240,7 +242,10 @@ export interface WorldGraph {
     travelToByIdx: BwdTravel[][];
     anywhereIndexed: FwdTravel[];
     levelNodes: LevelBuckets;
+    walkableMask: Uint8Array;
+    walkableLevelNodes: LevelBuckets;
     approachesByLevel: ApproachTransport[][];
+    approachByIndex: (ApproachTransport | undefined)[];
     approachLevelXs: Int32Array[];
     radius: number;
     forwardLBGraph: LowerBoundGraph;
@@ -423,19 +428,35 @@ export function buildWorldGraph(opts: WorldOptions): WorldGraph {
         travelToByIdx[toIdx]!.push({ t, fromIdx: -1 });
     }
 
-    const levelNodes = bucketByLevel(waypoints.map((tile, idx) => ({ tile, idx })), e => e.tile, e => e.idx);
+    const walkableFn = opts.pathLength.walkable;
+    const walkableMask = new Uint8Array(W);
+    const allNodesForBucket: { tile: Tile; idx: number }[] = [];
+    const walkableNodesForBucket: { tile: Tile; idx: number }[] = [];
+    for (let idx = 0; idx < W; idx++) {
+        const tile = waypoints[idx]!;
+        const entry = { tile, idx };
+        allNodesForBucket.push(entry);
+        const ok = !walkableFn || walkableFn(tile);
+        walkableMask[idx] = ok ? 1 : 0;
+        if (ok) walkableNodesForBucket.push(entry);
+    }
+    const levelNodes = bucketByLevel(allNodesForBucket, e => e.tile, e => e.idx);
+    const walkableLevelNodes = bucketByLevel(walkableNodesForBucket, e => e.tile, e => e.idx);
     const approachTransports: ApproachTransport[] = [];
+    const approachByIndex: (ApproachTransport | undefined)[] = new Array(transports.length);
     for (let index = 0; index < transports.length; index++) {
         const t = transports[index]!;
         if (!t.entry && t.interaction) {
             const q = t.interaction;
-            approachTransports.push({
+            const app: ApproachTransport = {
                 t, index,
                 fromIdx: transportFromIdx[index]!,
                 toIdx: transportToIdx[index]!,
                 tol: Math.max(PORTAL_TOL, q.width, q.height),
                 q, leg: legByTransport[index]!,
-            });
+            };
+            approachTransports.push(app);
+            approachByIndex[index] = app;
         }
     }
     const approachesByLevel: ApproachTransport[][] = [[], [], [], []];
@@ -477,7 +498,10 @@ export function buildWorldGraph(opts: WorldOptions): WorldGraph {
         travelToByIdx,
         anywhereIndexed,
         levelNodes,
+        walkableMask,
+        walkableLevelNodes,
         approachesByLevel,
+        approachByIndex,
         approachLevelXs,
         radius,
         forwardLBGraph,

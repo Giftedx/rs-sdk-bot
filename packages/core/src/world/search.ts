@@ -15,7 +15,7 @@ class MinHeap<T> {
         for (let i = a.length - 1; i > 0;) {
             const p = (i - 1) >> 1;
             if (this.score(a[p]!) <= this.score(a[i]!)) break;
-            [a[p], a[i]] = [a[i]!, a[p]!];
+            const tmp = a[p]!; a[p] = a[i]!; a[i] = tmp;
             i = p;
         }
     }
@@ -31,7 +31,7 @@ class MinHeap<T> {
                 if (l < a.length && this.score(a[l]!) < this.score(a[m]!)) m = l;
                 if (r < a.length && this.score(a[r]!) < this.score(a[m]!)) m = r;
                 if (m === i) break;
-                [a[m], a[i]] = [a[i]!, a[m]!];
+                const tmp = a[m]!; a[m] = a[i]!; a[i] = tmp;
                 i = m;
             }
         }
@@ -72,7 +72,8 @@ export function routeOnGraph(
     const {
         transports, doors, travel, waypoints, waypointIndex, legByTransport,
         outgoingByIdx, incomingByIdx, transportFromIdx, transportToIdx, strictMask,
-        travelFromByIdx, travelToByIdx, anywhereIndexed, levelNodes, approachesByLevel,
+        travelFromByIdx, travelToByIdx, anywhereIndexed, levelNodes,
+        walkableMask, walkableLevelNodes, approachesByLevel, approachByIndex,
         approachLevelXs, radius, forwardLBGraph, backwardLBGraph, hasAreaOf,
     } = graph;
     const W = waypoints.length;
@@ -93,6 +94,10 @@ export function routeOnGraph(
     const approachOffset = totalNodes;
     const totalStates = totalNodes + transports.length;
     const strictTo = toIdx < W ? strictMask[toIdx] === 1 : false;
+    const walkableFn = opts.pathLength.walkable;
+    const dynWalkable = new Uint8Array(dynTiles.length);
+    for (let d = 0; d < dynTiles.length; d++) dynWalkable[d] = !walkableFn || walkableFn(dynTiles[d]!) ? 1 : 0;
+    const isWalkable = (idx: number): boolean => idx < W ? walkableMask[idx] === 1 : dynWalkable[idx - W] === 1;
     const { startAreasOf, endAreasOf } = graph.routeAreas(dynTiles);
 
     const allowedT = new Uint8Array(transports.length);
@@ -138,6 +143,7 @@ export function routeOnGraph(
             // Fast flat arrays when trackFares is false (only fare=0 exists), numeric state ids when fares vary.
             const doneFast = trackFares ? null : new Uint8Array(totalStates);
             const bestFast = trackFares ? null : new Float64Array(totalStates);
+            const bestResolvedFast = trackFares ? null : new Float64Array(totalStates).fill(Infinity);
             const prevFast = trackFares ? null : new Int32Array(totalStates).fill(-1);
             const legFast = trackFares ? null : new Array<Leg | null>(totalStates).fill(null);
             const doneMap = trackFares ? new Set<number>() : null;
@@ -159,6 +165,7 @@ export function routeOnGraph(
             const makeId = (stateBase: number, fare: number): number => trackFares ? fare * totalStates + stateBase : stateBase;
 
             const rootId = makeId(rootIdx, 0);
+            if (!trackFares) bestResolvedFast![rootId] = 0;
             heap.push({
                 nodeIdx: rootIdx, stateBase: rootIdx, id: rootId, fare: 0,
                 tile: startTile, g: 0, f: h(rootIdx), prev: -1, leg: null,
@@ -169,12 +176,17 @@ export function routeOnGraph(
                     const e = heap.pop()!;
                     if (isDone(e.id) || dominated(e.stateBase, e.fare, e.g)) continue;
                     if (e.walkToTile) {
+                        if (!trackFares && e.g >= bestResolvedFast![e.id]!) continue;
                         // Both orientations measure the original FORWARD edge,
                         // under the same synchronous policy and shared cache.
                         const c = walk(e.walkFromIdx!, e.walkFromTile!, e.walkToIdx!, e.walkToTile, e.tol!, e.interaction, e.qId);
                         if (c !== null) {
                             const prevBest = trackFares ? bestMap!.get(e.prev)! : bestFast![e.prev]!;
                             const g = prevBest + c;
+                            if (!trackFares) {
+                                if (g >= bestResolvedFast![e.id]!) { yield; continue; }
+                                bestResolvedFast![e.id] = g;
+                            }
                             e.leg = { kind: 'walk', to: e.walkToTile, tolerance: e.tol };
                             e.walkToTile = undefined;
                             e.g = g;
@@ -212,6 +224,10 @@ export function routeOnGraph(
                         const id = makeId(nextStateBase, e.fare);
                         if (isDone(id)) return;
                         const g = e.g + TRANSPORT_COST;
+                        if (!trackFares) {
+                            if (g >= bestResolvedFast![id]!) return;
+                            bestResolvedFast![id] = g;
+                        }
                         heap.push({
                             nodeIdx: nextNodeIdx, stateBase: nextStateBase, id, fare: e.fare,
                             tile: nextTile, g, f: g + h(nextNodeIdx), prev: e.id, leg, approach, approachIdx,
@@ -221,6 +237,7 @@ export function routeOnGraph(
                         nextNodeIdx: number, nextStateBase: number, nextTile: Tile,
                         targetIdx: number, targetTile: Tile, tol: number,
                         interaction?: InteractionTarget, qId = -1, appObj?: ApproachTransport, approach?: Transport,
+                        preStartA?: number[] | null, preEndA?: number[] | null,
                     ) => {
                         if (nextStateBase === e.stateBase) return;
                         const wFromIdx = backward ? nextNodeIdx : e.nodeIdx;
@@ -231,13 +248,14 @@ export function routeOnGraph(
                         if (dist > MAX_LEG) return;
                         const id = makeId(nextStateBase, e.fare);
                         if (isDone(id)) return;
-                        if (hasAreaOf) {
-                            const sA = startAreasOf(wFromIdx);
-                            const eA = endAreasOf(targetIdx, tol, interaction, appObj);
-                            if (areasDisjoint(sA, eA)) return;
-                        }
                         const rem = dist - tol;
                         const g = e.g + (rem > 0 ? rem : 0);
+                        if (!trackFares && g >= bestResolvedFast![id]!) return;
+                        if (hasAreaOf) {
+                            const sA = preStartA !== undefined ? preStartA : startAreasOf(wFromIdx);
+                            const eA = preEndA !== undefined ? preEndA : endAreasOf(targetIdx, tol, interaction, appObj);
+                            if (areasDisjoint(sA, eA)) return;
+                        }
                         heap.push({
                             nodeIdx: nextNodeIdx, stateBase: nextStateBase, id, fare: e.fare,
                             tile: nextTile, g, f: g + h(nextNodeIdx), prev: e.id, leg: null,
@@ -250,9 +268,11 @@ export function routeOnGraph(
                         const fare = e.fare + (trackFares ? t.coins : 0);
                         const id = makeId(nextIdx, fare);
                         if (isDone(id)) return;
+                        const g = e.g + t.cost;
+                        if (!trackFares && g >= bestResolvedFast![id]!) return;
                         const allowed = e.fare ? travelAllowed(t, { ...acct, coins: (acct.coins ?? 0) - e.fare }) : travelZeroOk.get(t)!;
                         if (!allowed) return;
-                        const g = e.g + t.cost;
+                        if (!trackFares) bestResolvedFast![id] = g;
                         heap.push({
                             nodeIdx: nextIdx, stateBase: nextIdx, id, fare, tile: nextTile,
                             g, f: g + h(nextIdx), prev: e.id, leg: { kind: 'travel', travel: t, at: t.from, to: t.to },
@@ -303,18 +323,22 @@ export function routeOnGraph(
                         const q = e.approach?.interaction;
                         const qId = q ? e.approachIdx! : -1;
                         const tol = q ? Math.max(PORTAL_TOL, q.width, q.height) : e.stateBase === toIdx && !strictTo ? goalTol : 0;
-                        if (eLvl >= 0 && eLvl < 4) {
-                            const xs = levelNodes.xs[eLvl]!, zs = levelNodes.zs[eLvl]!, ids = levelNodes.ids[eLvl]!;
-                            const lo = lowerBoundX(xs, targetTile.x - MAX_LEG), hi = upperBoundX(xs, targetTile.x + MAX_LEG);
-                            for (let k = lo; k < hi; k++) {
-                                if (Math.abs(zs[k]! - targetTile.z) > MAX_LEG) continue;
-                                const pIdx = ids[k]!;
-                                enqueueWalk(pIdx, pIdx, waypoints[pIdx]!, targetIdx, targetTile, tol, q, qId);
+                        if (q || tol > 0 || isWalkable(targetIdx)) {
+                            const appObj = e.approachIdx !== undefined ? approachByIndex[e.approachIdx] : undefined;
+                            const curEndA = hasAreaOf ? endAreasOf(targetIdx, tol, q, appObj) : undefined;
+                            if (eLvl >= 0 && eLvl < 4) {
+                                const xs = levelNodes.xs[eLvl]!, zs = levelNodes.zs[eLvl]!, ids = levelNodes.ids[eLvl]!;
+                                const lo = lowerBoundX(xs, targetTile.x - MAX_LEG), hi = upperBoundX(xs, targetTile.x + MAX_LEG);
+                                for (let k = lo; k < hi; k++) {
+                                    if (Math.abs(zs[k]! - targetTile.z) > MAX_LEG) continue;
+                                    const pIdx = ids[k]!;
+                                    enqueueWalk(pIdx, pIdx, waypoints[pIdx]!, targetIdx, targetTile, tol, q, qId, appObj, undefined, undefined, curEndA);
+                                }
                             }
-                        }
-                        for (let d = 0; d < dynTiles.length; d++) {
-                            const pIdx = W + d;
-                            enqueueWalk(pIdx, pIdx, dynTiles[d]!, targetIdx, targetTile, tol, q, qId);
+                            for (let d = 0; d < dynTiles.length; d++) {
+                                const pIdx = W + d;
+                                enqueueWalk(pIdx, pIdx, dynTiles[d]!, targetIdx, targetTile, tol, q, qId, appObj, undefined, undefined, curEndA);
+                            }
                         }
                     } else {
                         if (e.approach) {
@@ -329,27 +353,33 @@ export function routeOnGraph(
                                 if (allowedT[edge.index]) enqueueTransport(edge.toIdx, edge.toIdx, edge.t.to, edge.leg);
                             }
                         }
+                        const curStartA = hasAreaOf ? startAreasOf(e.nodeIdx) : undefined;
                         if (eLvl >= 0 && eLvl < 4) {
-                            const xs = levelNodes.xs[eLvl]!, zs = levelNodes.zs[eLvl]!, ids = levelNodes.ids[eLvl]!;
+                            const xs = walkableLevelNodes.xs[eLvl]!, zs = walkableLevelNodes.zs[eLvl]!, ids = walkableLevelNodes.ids[eLvl]!;
                             const lo = lowerBoundX(xs, e.tile.x - MAX_LEG), hi = upperBoundX(xs, e.tile.x + MAX_LEG);
                             for (let k = lo; k < hi; k++) {
                                 if (Math.abs(zs[k]! - e.tile.z) > MAX_LEG) continue;
                                 const tIdx = ids[k]!;
                                 const tol = tIdx === toIdx && !strictTo ? goalTol : 0;
-                                enqueueWalk(tIdx, tIdx, waypoints[tIdx]!, tIdx, waypoints[tIdx]!, tol);
+                                enqueueWalk(tIdx, tIdx, waypoints[tIdx]!, tIdx, waypoints[tIdx]!, tol, undefined, -1, undefined, undefined, curStartA);
+                            }
+                            if (toIdx < W && !strictTo && goalTol > 0 && walkableMask[toIdx] === 0 && waypoints[toIdx]!.level === eLvl) {
+                                const tTile = waypoints[toIdx]!;
+                                enqueueWalk(toIdx, toIdx, tTile, toIdx, tTile, goalTol, undefined, -1, undefined, undefined, curStartA);
                             }
                             const appList = approachesByLevel[eLvl]!, appXs = approachLevelXs[eLvl]!;
                             const aLo = lowerBoundX(appXs, e.tile.x - MAX_LEG), aHi = upperBoundX(appXs, e.tile.x + MAX_LEG);
                             for (let k = aLo; k < aHi; k++) {
                                 const app = appList[k]!;
                                 if (!allowedT[app.index] || Math.abs(app.t.from.z - e.tile.z) > MAX_LEG) continue;
-                                enqueueWalk(app.fromIdx, approachOffset + app.index, app.t.from, app.fromIdx, app.t.from, app.tol, app.q, app.index, app, app.t);
+                                enqueueWalk(app.fromIdx, approachOffset + app.index, app.t.from, app.fromIdx, app.t.from, app.tol, app.q, app.index, app, app.t, curStartA);
                             }
                         }
                         for (let d = 0; d < dynTiles.length; d++) {
                             const tIdx = W + d, tTile = dynTiles[d]!;
                             const tol = tIdx === toIdx && !strictTo ? goalTol : 0;
-                            enqueueWalk(tIdx, tIdx, tTile, tIdx, tTile, tol);
+                            if (tol === 0 && !isWalkable(tIdx)) continue;
+                            enqueueWalk(tIdx, tIdx, tTile, tIdx, tTile, tol, undefined, -1, undefined, undefined, curStartA);
                         }
                     }
                 }

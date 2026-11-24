@@ -34,6 +34,7 @@ import {
 } from './contracts';
 import { DEFAULT_ANTI_PING_PONG_MS, type MarketQuotesMap } from './acquire';
 import {
+    buildPlannerSharedIndex,
     canProtectedAccountLaunch,
     planAccount,
     type RateEstimator,
@@ -279,6 +280,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     }
     const demandById = new Map(activeDemands.map((d) => [d.id, d]));
     const remainingByDemand = new Map(activeDemands.map((d) => [d.id, d.remaining]));
+    const shrunkNonZeroDemands = new Set<string>();
 
     const consumeDemandAllocation = (plan: AccountPlan) => {
         const workStep = plan.steps.find((s) => s.stepKind === 'work');
@@ -289,7 +291,10 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         const contrib = estimateDemandContribution(plan, dem, activityById);
         if (contrib <= 0) return;
         const cur = remainingByDemand.get(demandId) ?? 0;
-        remainingByDemand.set(demandId, Math.max(0, cur - contrib));
+        const next = Math.max(0, cur - contrib);
+        remainingByDemand.set(demandId, next);
+        if (next === 0) shrunkNonZeroDemands.delete(demandId);
+        else if (next < cur) shrunkNonZeroDemands.add(demandId);
     };
 
     const currentUnallocatedDemands = (): GoalDemand[] => {
@@ -321,6 +326,8 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     const idleAccounts: AccountState[] = [];
 
     const sideAccounts = Object.values(world.accounts).sort((a, b) => a.name.localeCompare(b.name));
+    const accountsByLower = new Map<string, AccountState>();
+    for (const acct of sideAccounts) accountsByLower.set(acct.name.toLowerCase(), acct);
 
     for (const acct of sideAccounts) {
         if (acct.side !== world.side) {
@@ -439,6 +446,14 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         return full;
     };
 
+    const sharedIndex = buildPlannerSharedIndex({
+        world,
+        activities,
+        defects,
+        minTrust: input.minTrust,
+        allowExperimentalFallback: input.allowExperimentalFallback,
+    });
+
     const basePlannerOpts = {
         world,
         activities,
@@ -456,6 +471,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         confirmedLogoutAt,
         requireConfirmedLogoutForTransfer: true,
         xpRate: input.xpRate,
+        _sharedIndex: sharedIndex,
     };
 
     // 1. Retain healthy running accounts with +15% retention hysteresis.
@@ -476,6 +492,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 ...runningPlannerOpts,
                 activities: [activeAct],
                 demands: [activeDem],
+                _sharedIndex: undefined,
             });
             if (p.steps.length > 0) currentPlan = p;
         }
@@ -555,7 +572,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
 
     // 2. Unblock execution order: needs_logout_recovery first, then needs_location_recovery.
     for (const entry of recoveryQueue) {
-        const acct = world.accounts[entry.account] ?? sideAccounts.find((a) => a.name === entry.account);
+        const acct = world.accounts[entry.account] ?? accountsByLower.get(entry.account.toLowerCase());
         if (!acct) continue;
         if (sideStopped) {
             accountPlans[acct.name] = {
@@ -594,12 +611,15 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
 
     // 3. Plan idle (and launch-ready reserved) accounts ordered by value/hour descending.
     const initialUnallocated = currentUnallocatedDemands();
+    const initialExcludedSpots = currentFullSpots();
+    const initialRemainingByDemand = new Map(remainingByDemand);
     const idleEvaluations = idleAccounts
         .map((acct) => ({
             acct,
             plan: planAccount(acct, {
                 ...basePlannerOpts,
                 demands: initialUnallocated,
+                excludedSpotIds: initialExcludedSpots,
                 excludedDonorAccounts: busyAccounts,
             }),
         }))
@@ -608,7 +628,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     const assignedIdleDonors = new Set<string>();
     let transferSeq = 0;
 
-    for (const { acct } of idleEvaluations) {
+    for (const { acct, plan: initialPlan } of idleEvaluations) {
         if (sideStopped) {
             accountPlans[acct.name] = {
                 account: acct.name,
@@ -647,14 +667,43 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         }
 
         const excludedSpots = currentFullSpots();
+        let canReuseInitial = shrunkNonZeroDemands.size === 0;
+        if (canReuseInitial && initialPlan.steps.length > 0) {
+            if (
+                initialPlan.demandId
+                && remainingByDemand.get(initialPlan.demandId) !== initialRemainingByDemand.get(initialPlan.demandId)
+            ) {
+                canReuseInitial = false;
+            }
+            if (canReuseInitial) {
+                const initWorkStep = initialPlan.steps.at(-1);
+                const initWorkAct = initWorkStep?.stepKind === 'work' ? activityById.get(initWorkStep.activityId) : undefined;
+                if (initWorkAct?.spotId && excludedSpots.has(initWorkAct.spotId)) {
+                    canReuseInitial = false;
+                }
+            }
+            if (canReuseInitial) {
+                for (const st of initialPlan.steps) {
+                    if ((st.stepKind === 'acquire' || st.stepKind === 'gear_upgrade') && st.source === 'hub_banker' && st.donorAccount) {
+                        const dl = st.donorAccount.toLowerCase();
+                        if (busyAccounts.has(dl) || assignedIdleDonors.has(dl) || activeTransferParties.has(dl)) {
+                            canReuseInitial = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
-        const availableDemands = currentUnallocatedDemands();
-        let plan = planAccount(acct, {
-            ...basePlannerOpts,
-            demands: availableDemands,
-            excludedSpotIds: excludedSpots,
-            excludedDonorAccounts: busyAccounts,
-        });
+        const availableDemands = canReuseInitial ? initialUnallocated : currentUnallocatedDemands();
+        let plan = canReuseInitial
+            ? initialPlan
+            : planAccount(acct, {
+                  ...basePlannerOpts,
+                  demands: availableDemands,
+                  excludedSpotIds: excludedSpots,
+                  excludedDonorAccounts: busyAccounts,
+              });
 
         // Validate and materialize any hub_banker AcquireSteps or GearUpgradePlannedSteps as safe TransferOrders.
         if (plan.steps.length > 0) {
@@ -674,7 +723,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                     const donorName = step.donorAccount;
                     const hub: HubBankId = step.hub ?? 'varrock_west';
                     const donor = donorName
-                        ? Object.values(world.accounts).find((a) => a.name.toLowerCase() === donorName.toLowerCase())
+                        ? accountsByLower.get(donorName.toLowerCase())
                         : undefined;
                     if (
                         !donor

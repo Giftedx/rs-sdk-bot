@@ -53,7 +53,7 @@ export async function rsPathLength(): Promise<PathLength> {
     };
     // Searched legs are kept on disk (leg-cache.ts) under hashes of the doors kept shut and the danger key. A leg
     // the cheap checks refuse is not stored: refusing it again costs less than reading it back.
-    const cache = legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>();
+    const cache = legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
     const measureNow = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
         const pts: Tile[] | null = scoped(blocked, () => {
             if (!interaction) return pf.findLongPath(from.level, from.x, from.z, to.x, to.z, 500);
@@ -85,7 +85,8 @@ export async function rsPathLength(): Promise<PathLength> {
         if (separated(mapAreas(pf, grid, worldRepoRoot), from, to, tol, interaction, interaction && ((x, z) => grid.reached(to.level, x, z, to.x, to.z, interaction.width, interaction.height, 1, interaction.angle, interaction.shape, interaction.blockAccessFlags)))) return null;
         const d = activeDanger(), shut = policyKeys.get(blocked) ?? (policyKeys.set(blocked, cache.hash(blocked)), policyKeys.get(blocked)!);
         const dk = d ? dangerKeys.get(d) ?? (dangerKeys.set(d, routeDangerHash(d, cache)), dangerKeys.get(d)!) : '-';
-        const k = `kept:${shut}${dk}${tileKey(from)}>${tileKey(to)}:${tol}${interaction ? ':' + cache.hash(interaction) : ''}`;
+        const ik = interaction ? (interactionKeys.get(interaction) ?? (interactionKeys.set(interaction, cache.hash(interaction)), interactionKeys.get(interaction)!)) : '';
+        const k = `kept:${shut}${dk}${tileKey(from)}>${tileKey(to)}:${tol}${interaction ? ':' + ik : ''}`;
         const cached = cache.get(k);
         if (cached !== undefined) return cached;
         const v = measureNow(from, to, blocked, tol, interaction);

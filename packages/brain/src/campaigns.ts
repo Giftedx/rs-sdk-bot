@@ -1,7 +1,7 @@
 // Declarative Campaign manifests for Haggis (Overall) and all 19 reserved Specialists.
 // Reads launch manifests, rehearsal proofs, hiscore margins, staging holders, and owner stops,
 // and emits finite item shortfall GoalDemands for unfulfilled campaign supplies.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { findStopFile, liveRoot, practiceRoot, repoRoot } from '../../core/src/practice-paths';
 import { SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
@@ -123,10 +123,23 @@ function normalizeItemKey(raw: string): string {
         .replace(/^coins$/i, 'coins');
 }
 
+function fileStamp(filePath: string): string {
+    try {
+        const st = statSync(filePath);
+        return `${st.size}:${st.mtimeMs}`;
+    } catch {
+        return 'missing';
+    }
+}
+
+let cachedItemLookup: { key: string; lookup: ItemLookup } | undefined;
+
 function buildItemLookup(root: string): ItemLookup {
     const itemsPath = existsSync(join(root, 'knowledge', 'items.json'))
         ? join(root, 'knowledge', 'items.json')
         : join(repoRoot, 'knowledge', 'items.json');
+    const cacheKey = `${itemsPath}|${fileStamp(itemsPath)}`;
+    if (cachedItemLookup && cachedItemLookup.key === cacheKey) return cachedItemLookup.lookup;
     const raw = readJsonSafe(itemsPath);
     const items: KnowledgeItemRow[] = [];
     const byId = new Map<number, KnowledgeItemRow>();
@@ -199,7 +212,9 @@ function buildItemLookup(root: string): ItemLookup {
         return undefined;
     };
 
-    return { items, byId, resolve: resolveItem };
+    const lookup = { items, byId, resolve: resolveItem };
+    cachedItemLookup = { key: cacheKey, lookup };
+    return lookup;
 }
 
 function loadHiscoreSnapshots(root: string): HiscoreSnapshot[] {
@@ -332,6 +347,10 @@ function aggregateSupplyRequirements(
         }));
 }
 
+let cachedHaggisSchedule:
+    | { key: string; plannedTicks: number; rawSupplies: CampaignSupplyRequirement[] }
+    | undefined;
+
 function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readonly HiscoreSnapshot[], now: number): Campaign {
     const boardsFile = join(root, 'packages', 'planner', 'src', 'haggis-boards.json');
     const readinessFile =
@@ -347,29 +366,43 @@ function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readon
 
     const overallHit = findHiscoreBoard(snapshots, 'Overall', 0);
     if (overallHit && existsSync(boardsFile)) {
-        try {
-            const activities = haggisActivities();
-            const boards = boardsFromSnapshot(overallHit.snapshot as Parameters<typeof boardsFromSnapshot>[0]);
-            const options = { mode: 'realistic' as const, tricks: new Set(TRICKS), travel: haggisTravel() };
-            const plan = scheduleOverall(boards, activities, options);
-            if (typeof plan.overallFinish === 'number' && Number.isFinite(plan.overallFinish) && plan.overallFinish > 0) {
-                const { supplies } = overallRequirementsFor(activities, options, plan);
-                plannedTicks = Math.round(plan.overallFinish);
-                for (const s of supplies) {
-                    const count = Math.round(Number(s.count));
-                    if (!Number.isSafeInteger(count) || count <= 0) continue;
-                    const resolved = lookup.resolve(s.itemId, s.item);
-                    if (!resolved) continue;
-                    rawSupplies.push({
-                        itemId: resolved.itemId,
-                        itemName: resolved.itemName,
-                        count,
-                        stage: 'Overall',
-                    });
+        const snapshotBoardsSig = (overallHit.snapshot.boards ?? [])
+            .map((b) => {
+                const r0 = b.rows?.[0];
+                return `${b.board ?? ''}:${b.category ?? ''}:${r0?.ticks ?? ''}:${r0?.level ?? ''}`;
+            })
+            .join(';');
+        const itemsStamp = cachedItemLookup?.key ?? '';
+        const haggisKey = `${boardsFile}|${fileStamp(boardsFile)}|${itemsStamp}|${overallHit.snapshot.takenAt ?? ''}|${snapshotBoardsSig}`;
+        if (cachedHaggisSchedule && cachedHaggisSchedule.key === haggisKey) {
+            plannedTicks = cachedHaggisSchedule.plannedTicks;
+            rawSupplies.push(...cachedHaggisSchedule.rawSupplies);
+        } else {
+            try {
+                const activities = haggisActivities();
+                const boards = boardsFromSnapshot(overallHit.snapshot as Parameters<typeof boardsFromSnapshot>[0]);
+                const options = { mode: 'realistic' as const, tricks: new Set(TRICKS), travel: haggisTravel() };
+                const plan = scheduleOverall(boards, activities, options);
+                if (typeof plan.overallFinish === 'number' && Number.isFinite(plan.overallFinish) && plan.overallFinish > 0) {
+                    const { supplies } = overallRequirementsFor(activities, options, plan);
+                    plannedTicks = Math.round(plan.overallFinish);
+                    for (const s of supplies) {
+                        const count = Math.round(Number(s.count));
+                        if (!Number.isSafeInteger(count) || count <= 0) continue;
+                        const resolved = lookup.resolve(s.itemId, s.item);
+                        if (!resolved) continue;
+                        rawSupplies.push({
+                            itemId: resolved.itemId,
+                            itemName: resolved.itemName,
+                            count,
+                            stage: 'Overall',
+                        });
+                    }
+                    cachedHaggisSchedule = { key: haggisKey, plannedTicks, rawSupplies: [...rawSupplies] };
                 }
+            } catch {
+                // Fall back to static boardsFile aggregation below if snapshot scheduling fails.
             }
-        } catch {
-            // Fall back to static boardsFile aggregation below if snapshot scheduling fails.
         }
     }
 

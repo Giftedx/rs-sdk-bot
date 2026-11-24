@@ -254,3 +254,19 @@ test('combat survivability floors, maxLevels, cooldowns, capacity, and protected
     expect(actPre.ok).toBe(false);
     expect(actPre.blockers[0]).toMatchObject({ kind: 'skill_level', skill: 'Fishing', required: 80, current: 76 });
 });
+
+test('quest state checks reflect in-place quest map mutations and alias variants', async () => {
+    const { accountQuestState, hasCompletedQuest } = await import('../src/preflight');
+    const quests: Record<string, 'not_started' | 'started' | 'complete'> = {};
+    const acct = makeAcct({ quests });
+    expect(accountQuestState(acct, 'hero')).toBe('not_started');
+    expect(hasCompletedQuest(acct, "Hero's Quest")).toBe(false);
+
+    quests.quest_hero = 'started';
+    expect(accountQuestState(acct, "Heroes' Quest")).toBe('started');
+    expect(hasCompletedQuest(acct, 'hero')).toBe(false);
+
+    quests['Hero Quest'] = 'complete';
+    expect(accountQuestState(acct, 'hero')).toBe('complete');
+    expect(hasCompletedQuest(acct, 'quest_hero')).toBe(true);
+});
