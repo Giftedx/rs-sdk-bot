@@ -8,6 +8,7 @@
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {unplacedCause} from '../../core/src/order-refusal';
+import {hasStopFile} from '../../core/src/practice-paths';
 
 export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
     return ['bun',script,bot,...scriptArgs];
@@ -26,6 +27,10 @@ export function supervisorParticipants(bot:string,raw:string|undefined):string[]
 
 export function participantsStopped(accounts:readonly string[],stopped:(account:string)=>boolean):boolean{
     return accounts.some(stopped);
+}
+
+export function participantsHaveStopFile(accounts:readonly string[],root=process.cwd()):boolean{
+    return participantsStopped(accounts,account=>hasStopFile(account,root));
 }
 
 export interface SuperviseDeps {
@@ -176,7 +181,6 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
 }
 
 if (import.meta.main) {
-    const { existsSync } = await import('node:fs');
     const [bot, script, maxArg,...scriptArgs] = process.argv.slice(2);
     if (!bot || !script) { console.log('usage: supervise.ts <bot> <script> [maxRestarts=20]'); process.exit(2); }
     const participants=supervisorParticipants(bot,process.env.COORDINATOR_PARTICIPANTS);
@@ -188,7 +192,7 @@ if (import.meta.main) {
             const stdout = await keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null);
             return { stdout, exitCode: await p.exited };
         },
-        stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsStopped(participants,account=>existsSync(`.practice/stop-${account}`)),
+        stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsHaveStopFile(participants, process.cwd()),
         pause: ms => Bun.sleep(ms),
         maxRestarts: Number(maxArg ?? 20),
         log: l => console.log(l),

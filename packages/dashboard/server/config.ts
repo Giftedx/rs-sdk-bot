@@ -5,13 +5,14 @@ import { folderScan } from '../folder-scan';
 import { tailJsonlFile } from '../jsonl-tail';
 import { type PriceIdentity } from '../item-prices';
 import { canonicalSnapshots, ownerOfIn } from '../../core/src/fleet-snapshots';
+import { resolveFleetDataDir, simStatusDir, statusReadDirs } from '../../core/src/practice-paths';
 
 // DASH_ROOT lets a server in a worktree read the data of another checkout.
 export const dashboardDir = resolve(import.meta.dir, '..');
 export const sourceRoot = resolve(import.meta.dir, '..', '..', '..'), startedAt = Date.now();
 export const root = resolve(process.env.DASH_ROOT ?? sourceRoot);
 export const practice = join(root, '.practice');
-export const statusDir = join(practice, 'status');
+export const statusDirs = [...new Set([...statusReadDirs(root), simStatusDir(root)])];
 const botsDir = join(root, 'vendor', 'rs-sdk', 'bots');
 export const FILES = {
     events: join(practice, 'events.jsonl'),
@@ -23,7 +24,7 @@ export const FILES = {
     haggisRun: join(root, 'research', 'haggis-run.md'),
     haggisPlan: join(dashboardDir, 'haggis-plan.json'),
     scoreboard: join(practice, 'live', 'scoreboard.json'),
-    fleet: join(practice, 'fleet-data', 'fleet'),
+    fleet: join(resolveFleetDataDir(root), 'fleet'),
 };
 export const PORT = Number(process.env.DASH_PORT ?? 3100);
 export const PAGE_FILE = resolve(process.env.DASH_PAGE ?? join(dashboardDir, 'index.html'));

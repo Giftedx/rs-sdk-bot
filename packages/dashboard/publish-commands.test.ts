@@ -3,8 +3,11 @@ import {mkdtempSync,rmSync,mkdirSync,writeFileSync,readFileSync,existsSync} from
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {validateCommand,authorizeCommand,applyCommand,readReceipts,writeReceipt,type Command} from './publish-commands';
+import {defaultActivityCatalog} from '../brain/src/catalog';
 
 const ID='0f2e4a6c-1b3d-4e5f-8a9b-0c1d2e3f4a5b';
+const ID2='1f2e4a6c-1b3d-4e5f-8a9b-0c1d2e3f4a5b';
+const ID3='2f2e4a6c-1b3d-4e5f-8a9b-0c1d2e3f4a5b';
 const NOW=1_793_425_000_000;
 const cmd=(over:Partial<Command>={}):Command=>({id:ID,action:'account-pause',account:'CoinCock',at:NOW-1000,...over});
 const gate=(over:Partial<Parameters<typeof authorizeCommand>[2]>={})=>({owner:'Giftedx',now:NOW,owned:['CoinCock','Moneyshot','Haggis'],applied:()=>false,...over});
@@ -73,9 +76,9 @@ describe('applyCommand',()=>{
  test('swarm pause and resume use .practice/stop-swarm and respect a hand-set stop',async()=>{
   expect((await applyCommand(cmd({action:'swarm-pause',account:undefined}),{root,now:NOW})).status).toBe('stop-requested');
   expect(readFileSync(stop('swarm'),'utf8')).toStartWith('dashboard-stop:'+ID);
-  expect((await applyCommand(cmd({action:'swarm-resume',account:undefined}),{root})).status).toBe('stop-cleared');
+  expect((await applyCommand(cmd({id:ID2,action:'swarm-resume',account:undefined}),{root})).status).toBe('stop-cleared');
   writeFileSync(stop('swarm'),'owner stop by hand');
-  expect((await applyCommand(cmd({action:'swarm-resume',account:undefined}),{root})).status).toBe('refused');
+  expect((await applyCommand(cmd({id:ID3,action:'swarm-resume',account:undefined}),{root})).status).toBe('refused');
   expect(existsSync(stop('swarm'))).toBe(true);
  });
  test('side-pause and account-pause enqueue validated Brain OperatorCommands',async()=>{
@@ -83,8 +86,8 @@ describe('applyCommand',()=>{
   expect(readFileSync(stop('swarm'),'utf8')).toContain(ID);
   const queued=JSON.parse(readFileSync(join(root,'.practice','live','operator-commands',`${ID}.json`),'utf8'));
   expect(queued.kind).toBe('pause_side');
-  expect((await applyCommand(cmd({action:'side-pause',account:undefined}),{root})).status).toBe('already-stopped');
-  expect((await applyCommand(cmd({action:'side-resume',account:undefined}),{root,now:NOW+1000})).status).toBe('stop-cleared');
+  expect((await applyCommand(cmd({id:ID2,action:'side-pause',account:undefined}),{root})).status).toBe('already-stopped');
+  expect((await applyCommand(cmd({id:ID3,action:'side-resume',account:undefined}),{root,now:NOW+1000})).status).toBe('stop-cleared');
  });
  test('job-disable and job-enable flip only that account under the plan-write lock',async()=>{
   let locked=0;const pw=<T,>(a:()=>T|Promise<T>)=>{locked++;return Promise.resolve(a());};
@@ -106,6 +109,37 @@ describe('applyCommand',()=>{
   writeReceipt(root,{id:ID,action:'account-pause',account:'CoinCock',at:NOW,status:'stop-requested',source:'remote'});
   writeFileSync(join(root,'.practice','dashboard-controls','junk.txt'),'x');
   expect(readReceipts(root)).toEqual([{id:ID,action:'account-pause',account:'CoinCock',at:NOW,status:'stop-requested',source:'remote'}]);
+ });
+ test('override-account validates activityId against defaultActivityCatalog and rejects id conflicts',async()=>{
+  const unknown=await applyCommand(cmd({action:'override-account',activityId:'nonexistent:activity',durationMin:15}),{root,now:NOW});
+  expect(unknown.status).toBe('refused');
+  expect(existsSync(join(root,'.practice','live','operator-commands',`${ID}.json`))).toBe(false);
+
+  const validActivity=defaultActivityCatalog(root).list()[0]!.id;
+  const accepted=await applyCommand(cmd({action:'override-account',activityId:validActivity,durationMin:15}),{root,now:NOW});
+  expect(accepted.status).toBe('override-submitted');
+  expect(existsSync(join(root,'.practice','live','operator-commands',`${ID}.json`))).toBe(true);
+
+  const conflict=await applyCommand(cmd({action:'override-account',activityId:null,durationMin:15}),{root,now:NOW});
+  expect(conflict.status).toBe('refused');
+  expect(conflict.note).toContain('conflicts');
+  expect(JSON.parse(readFileSync(join(root,'.practice','live','operator-commands',`${ID}.json`),'utf8')).activityId).toBe(validActivity);
+ });
+ test('live stop files under .practice/live/stop-* are detected and released cleanly',async()=>{
+  const liveStop=(name:string)=>join(root,'.practice','live','stop-'+name);
+  writeFileSync(liveStop('CoinCock'),'dashboard-stop:live-1');
+  expect((await applyCommand(cmd({action:'account-pause'}),{root,now:NOW})).status).toBe('already-held');
+  expect((await applyCommand(cmd({id:ID2,action:'account-resume'}),{root,now:NOW})).status).toBe('hold-released');
+  expect(existsSync(liveStop('CoinCock'))).toBe(false);
+
+  writeFileSync(liveStop('swarm'),'owner stop in live');
+  expect((await applyCommand(cmd({action:'side-pause',account:undefined}),{root,now:NOW})).status).toBe('already-stopped');
+  expect((await applyCommand(cmd({id:ID3,action:'side-resume',account:undefined}),{root,now:NOW+1000})).status).toBe('refused');
+  expect(existsSync(liveStop('swarm'))).toBe(true);
+
+  writeFileSync(liveStop('swarm'),'dashboard-stop:live-swarm');
+  expect((await applyCommand(cmd({id:ID3,action:'side-resume',account:undefined}),{root,now:NOW+2000})).status).toBe('stop-cleared');
+  expect(existsSync(liveStop('swarm'))).toBe(false);
  });
 });
 

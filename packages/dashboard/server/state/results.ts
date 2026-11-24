@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { hostStopNativeProof, type NativeProof } from '../../collection';
 import { failLoops, LOOP_WINDOW_MS } from '../../../core/src/fail-loops';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from '../../../core/src/fleet';
-import { append, FILES, MAIN, practice, root, statusDir, tailJsonl, type Status } from '../config';
+import { append, FILES, MAIN, practice, root, statusDirs, tailJsonl, type Status } from '../config';
 
 // ---------- RESULT lines: every new result a status file shows, with pass/fail streaks per script ----------
 type Res = { at: number; name: string; goal: string; ok: boolean; text: string; started?: number };
@@ -35,13 +35,24 @@ function trackResult(s: Status) {
 type ProofEntry = {proof: NativeProof; resultPrefix: string};
 let proofScanAt=0,proofStamp='';
 let proofCache=new Map<string,ProofEntry>();
+function findStatusFile(actor: string): string | null {
+    let best: { path: string; mtimeMs: number } | null = null;
+    for (const dir of statusDirs) {
+        const candidate = join(dir, `${actor}.json`);
+        try {
+            const st = statSync(candidate);
+            if (!best || st.mtimeMs > best.mtimeMs) best = { path: candidate, mtimeMs: st.mtimeMs };
+        } catch { /* absent */ }
+    }
+    return best?.path ?? null;
+}
 function nativeProofs(now: number): Map<string,ProofEntry> {
     if(now-proofScanAt<10_000)return proofCache;
     proofScanAt=now;
     // The inputs are the three hashed sources, the proof files and the status files of their actors: unchanged stats, same answer.
     const stamp=(()=>{try{const proofDir=join(practice,'fleet-proof'),parts:string[]=[];
         for(const f of ['packages/core/src/host.ts','packages/workers/src/bank-artisan/prayer.ts','scripts/measure/fleet-host-stop.ts']){const t=statSync(join(root,f));parts.push(f+t.size+':'+t.mtimeMs);}
-        for(const f of readdirSync(proofDir)){const t=statSync(join(proofDir,f));parts.push(f+t.size+':'+t.mtimeMs);const m=/^host-stop-(fl[a-z0-9]+)-snapshot\.json$/i.exec(f);if(m)try{const t2=statSync(join(statusDir,m[1]+'.json'));parts.push('s'+t2.size+':'+t2.mtimeMs);}catch{/* no status */}}
+        for(const f of readdirSync(proofDir)){const t=statSync(join(proofDir,f));parts.push(f+t.size+':'+t.mtimeMs);const m=/^host-stop-(fl[a-z0-9]+)-snapshot\.json$/i.exec(f);if(m){const sp=findStatusFile(m[1]!);if(sp)try{const t2=statSync(sp);parts.push('s'+t2.size+':'+t2.mtimeMs);}catch{/* no status */}}}
         return parts.join('|');}catch{return '';}})();
     if(stamp&&stamp===proofStamp)return proofCache;
     proofStamp=stamp;
@@ -55,7 +66,9 @@ function nativeProofs(now: number): Map<string,ProofEntry> {
             const path=join(dir,filename),s=JSON.parse(boundedText(path,256_000));
             if(typeof s.actor!=='string'||filename!==`host-stop-${s.actor}-snapshot.json`
                 ||typeof s.sourcePath!=='string'||!/^\.practice\/fleet-proof\/prayer-fl[a-z0-9]+-source\.json$/i.test(s.sourcePath))continue;
-            const status=JSON.parse(boundedText(join(statusDir,`${s.actor}.json`),256_000));
+            const statusFile=findStatusFile(s.actor);
+            if(!statusFile)continue;
+            const status=JSON.parse(boundedText(statusFile,256_000));
             const raw=boundedText(join(dir,`host-stop-${s.actor}.log`),2_000_000);
             const proof=hostStopNativeProof(status,{filename,snapshot:s,raw,at:statSync(path).mtimeMs,
                 hashes:{...hashes,fixture:digest(join(dir,s.sourcePath.split('/').pop()!))}});
