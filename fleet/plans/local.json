@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562399211,
+ "at": 1795562409174,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -142,21 +142,6 @@
    "repeat": false,
    "goal": "goal:quest_board:dig",
    "role": "auto"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-boss.ts DEMAND_ID=campaign:haggis:item:536 BATCH_UNITS=452 -- green-dragon"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:536",
-   "role": "army"
   }
  ],
  "army": [
@@ -181,6 +166,7 @@
   "knightstick",
   "mineyourbiz",
   "mmtha0205",
+  "mmthv2350",
   "moneyshot",
   "pickpockdick",
   "pocketpool",
