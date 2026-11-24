@@ -192,5 +192,29 @@ describe('quest WorkerModule contract & mode routing', () => {
             expect(validateRunOutcome(refused)).toEqual([]);
             expect(refused).toMatchObject({ kind: 'worker_defect', faultSignature: `quest:${op}:requires_cli_orchestrator` });
         }
+
+        const stoppedEarly = await questModule.run(session, { operation: 'clue', clueId: 3511, stop: () => true });
+        expect(validateRunOutcome(stoppedEarly)).toEqual([]);
+        expect(stoppedEarly.kind).toBe('session_unsettled');
+
+        const endedOut = await questModule.run({ ...session, ended: Promise.resolve() } as unknown as SessionCore, { operation: 'clue', clueId: 3511 });
+        expect(validateRunOutcome(endedOut)).toEqual([]);
+        expect(endedOut.kind).toBe('session_unsettled');
+
+        let clueStopCalls = 0;
+        const clueSession = {
+            name: 'QuesterBot',
+            tick: () => 42,
+            ended: new Promise(() => {}),
+            sdk: { getState: () => ({ player: { worldX: 3200, worldZ: 3200, level: 0, lifeId: 1, respawnCount: 0 } }), getInventory: () => [] },
+        } as unknown as SessionCore;
+        const stoppedMidClue = await questModule.run(clueSession, {
+            operation: 'clue',
+            clueId: 3511,
+            cap: 5,
+            stop: () => ++clueStopCalls > 1,
+        });
+        expect(validateRunOutcome(stoppedMidClue)).toEqual([]);
+        expect(stoppedMidClue.kind).toBe('session_unsettled');
     });
 });

@@ -286,6 +286,16 @@ async function runPvp(session: SessionCore, cfg: PvpConfig): Promise<RunOutcome>
                 unitsCompleted: 1,
             };
         }
+        if (stopCheck()) {
+            return {
+                kind: 'session_unsettled',
+                activityId,
+                account: session.name,
+                ticksElapsed,
+                reason: 'stop requested during execution',
+                detail: `pvp:${cfg.mode}:exit_${code}`,
+            };
+        }
         return {
             kind: 'worker_defect',
             activityId,
@@ -294,12 +304,24 @@ async function runPvp(session: SessionCore, cfg: PvpConfig): Promise<RunOutcome>
             faultSignature: `pvp:${cfg.mode}:exit_${code}`,
         };
     } catch (error) {
+        const ticksElapsed = Math.max(0, (session.tick?.() ?? startTick) - startTick);
+        const detail = error instanceof Error ? error.message : String(error);
+        if (stopCheck()) {
+            return {
+                kind: 'session_unsettled',
+                activityId,
+                account: session.name,
+                ticksElapsed,
+                reason: 'stop requested during execution',
+                detail,
+            };
+        }
         return {
             kind: 'worker_defect',
             activityId,
             account: session.name,
-            ticksElapsed: Math.max(0, (session.tick?.() ?? startTick) - startTick),
-            faultSignature: `pvp:${cfg.mode}:${error instanceof Error ? error.message : String(error)}`,
+            ticksElapsed,
+            faultSignature: `pvp:${cfg.mode}:${detail}`,
         };
     }
 }

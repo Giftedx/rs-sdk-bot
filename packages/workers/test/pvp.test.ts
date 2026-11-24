@@ -325,6 +325,37 @@ describe('pvp WorkerModule contract & mode routing', () => {
             expect(fightOk.kind).toBe('target_met');
             expect(seenFight).toEqual([['Alpha', 'Beta', '120']]);
 
+            let midStopped = false;
+            pvpRuntime.runPkFightCli = async () => {
+                midStopped = true;
+                return 1;
+            };
+            const fightStoppedExit = await pvpModule.run(makeSession({ name: 'Alpha' }), {
+                mode: 'fight',
+                target: 'Beta',
+                stop: () => midStopped,
+            });
+            expect(validateRunOutcome(fightStoppedExit)).toEqual([]);
+            expect(fightStoppedExit.kind).toBe('session_unsettled');
+
+            midStopped = false;
+            pvpRuntime.runPkFightCli = async () => {
+                midStopped = true;
+                throw Error('aborted mid-fight');
+            };
+            const fightStoppedThrow = await pvpModule.run(makeSession({ name: 'Alpha' }), {
+                mode: 'fight',
+                target: 'Beta',
+                stop: () => midStopped,
+            });
+            expect(validateRunOutcome(fightStoppedThrow)).toEqual([]);
+            expect(fightStoppedThrow.kind).toBe('session_unsettled');
+
+            pvpRuntime.runPkFightCli = async () => 2;
+            const fightDefect = await pvpModule.run(makeSession({ name: 'Alpha' }), { mode: 'fight', target: 'Beta' });
+            expect(validateRunOutcome(fightDefect)).toEqual([]);
+            expect(fightDefect).toMatchObject({ kind: 'worker_defect', faultSignature: 'pvp:fight:exit_2' });
+
             const squadRefused = await pvpModule.run(makeSession({ name: 'Alpha' }), { mode: 'squad' });
             expect(validateRunOutcome(squadRefused)).toEqual([]);
             expect(squadRefused).toMatchObject({ kind: 'worker_defect', faultSignature: 'pvp:squad:requires_cli_orchestrator' });

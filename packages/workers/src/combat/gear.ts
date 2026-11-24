@@ -174,25 +174,49 @@ let cachedSkillTools: { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } | undef
 const unlockCache = new Map<GearUnlockKind | 'all', Readonly<Partial<Record<GearSkillName, readonly number[]>>>>();
 
 function lazyArray<T>(build: () => readonly T[]): readonly T[] {
-    let resolved: readonly T[] | undefined;
-    const ensure = () => (resolved ??= build());
+    let resolved: T[] | undefined;
+    const ensure = (target: T[]): T[] => {
+        if (resolved) return resolved;
+        const built = build();
+        target.length = built.length;
+        for (let i = 0; i < built.length; i++) target[i] = built[i]!;
+        resolved = target;
+        return resolved;
+    };
     return new Proxy([] as T[], {
-        get(_t, prop, receiver) {
-            const arr = ensure();
+        get(target, prop) {
+            const arr = ensure(target);
             const val = Reflect.get(arr, prop, arr);
-            return typeof val === 'function' ? val.bind(arr) : val;
+            return typeof val === 'function' && prop !== 'constructor' ? val.bind(arr) : val;
         },
-        has(_t, prop) {
-            return prop in ensure();
+        has(target, prop) {
+            return prop in ensure(target);
         },
-        ownKeys() {
-            return Reflect.ownKeys(ensure());
+        ownKeys(target) {
+            return Reflect.ownKeys(ensure(target));
         },
-        getOwnPropertyDescriptor(_t, prop) {
-            const desc = Reflect.getOwnPropertyDescriptor(ensure(), prop);
-            if (!desc) return undefined;
-            if (prop === 'length') return desc;
-            return { ...desc, configurable: true };
+        getOwnPropertyDescriptor(target, prop) {
+            return Reflect.getOwnPropertyDescriptor(ensure(target), prop);
+        },
+        isExtensible(target) {
+            ensure(target);
+            return Reflect.isExtensible(target);
+        },
+        preventExtensions(target) {
+            ensure(target);
+            return Reflect.preventExtensions(target);
+        },
+        defineProperty(target, prop, descriptor) {
+            ensure(target);
+            return Reflect.defineProperty(target, prop, descriptor);
+        },
+        set(target, prop, value, receiver) {
+            ensure(target);
+            return Reflect.set(target, prop, value, receiver);
+        },
+        deleteProperty(target, prop) {
+            ensure(target);
+            return Reflect.deleteProperty(target, prop);
         },
     });
 }

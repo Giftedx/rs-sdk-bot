@@ -14,6 +14,7 @@ import {
     type WorkerWorldView,
 } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
+import { watchWorkerStop } from '../stop';
 import { QUEST_NAMES, questShortfall } from './chain';
 import { assessQuestReadiness, listGeneratedQuestScripts, resolveQuestScript } from './modes';
 import { REPO_ROOT, type QuestConfig } from './types';
@@ -275,10 +276,13 @@ function estimateQuest(_acct: WorkerAccountView, cfg: QuestConfig, _world: Worke
     };
 }
 
-function failOutcome(activityId: string, account: string, ticksElapsed: number, durationMs: number, message: string): RunOutcome {
+function failOutcome(activityId: string, account: string, ticksElapsed: number, durationMs: number, message: string, stopped?: boolean): RunOutcome {
     const lower = message.toLowerCase();
     if (/died|death|isdead/.test(lower)) {
         return { kind: 'death', activityId, account, ticksElapsed, durationMs, faultSignature: `${activityId}:death`, detail: message };
+    }
+    if (stopped) {
+        return { kind: 'session_unsettled', activityId, account, ticksElapsed, durationMs, reason: 'stop requested during execution', detail: message };
     }
     const missingMatch = message.match(/missing (\d+):(\d+)/);
     if (missingMatch) {
@@ -308,22 +312,27 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
     const elapsed = () => Math.max(0, sessionCore.tick() - startTick);
     const ms = () => Math.max(0, Date.now() - t0);
     const activityId = cfg.quest ? `quest:${cfg.operation}:${cfg.quest}` : `quest:${cfg.operation}`;
+    const { isStopped } = watchWorkerStop(sessionCore, cfg.stop);
+    await Promise.resolve();
+    if (isStopped()) {
+        return { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed: 0, durationMs: ms(), reason: 'stop requested before start' };
+    }
 
     try {
         switch (cfg.operation) {
             case 'clue': {
                 const { runNativeClueStep } = await import('./clues');
-                const r = await runNativeClueStep(session, cfg.clueId ?? 0, cfg.cap ?? 200);
+                const r = await runNativeClueStep(session, cfg.clueId ?? 0, cfg.cap ?? 200, isStopped);
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: r.ticks, durationMs: ms(), unitsCompleted: 1, summary: `${r.clue} ${r.effect.outcome}` }
-                    : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue failed');
+                    : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue failed', isStopped());
             }
             case 'clue-puzzle': {
                 const { solveNativeCluePuzzle } = await import('./clue-puzzle');
-                const r = await solveNativeCluePuzzle(session, cfg.puzzleId ?? 0, cfg.cap ?? 200, 25000, cfg.npcIndex);
+                const r = await solveNativeCluePuzzle(session, cfg.puzzleId ?? 0, cfg.cap ?? 200, 25000, cfg.npcIndex, isStopped);
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: r.ticks, durationMs: ms(), unitsCompleted: 1, summary: r.puzzle }
-                    : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue-puzzle failed');
+                    : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue-puzzle failed', isStopped());
             }
             case 'clue-guardian': {
                 const { runGuardianClue } = await import('./clue-guardian');
@@ -332,10 +341,11 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
                     maximumCasts: cfg.maxCasts ?? 30,
                     cap: cfg.cap ?? 350,
                     ambientDamage: cfg.ambientDamage,
+                    stop: isStopped,
                 });
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: r.ticks, durationMs: ms(), unitsCompleted: 1, xpGained: { Magic: r.magicXp }, summary: r.clue }
-                    : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue-guardian failed');
+                    : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail || 'clue-guardian failed', isStopped());
             }
             case 'generated': {
                 const { handOver } = await import('./sweep');
@@ -382,7 +392,7 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
                 const r = await runQuestItemsOrder(sessionCore.name, cfg.quest ?? 'cook', { save: cfg.savePath, cap: cfg.cap ?? 2400, session });
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: 1 }
-                    : failOutcome(activityId, sessionCore.name, elapsed(), ms(), String((r as { refused?: string; detail?: string }).refused ?? (r as { detail?: string }).detail ?? 'quest items failed'));
+                    : failOutcome(activityId, sessionCore.name, elapsed(), ms(), String((r as { refused?: string; detail?: string }).refused ?? (r as { detail?: string }).detail ?? 'quest items failed'), isStopped());
             }
             case 'cook-job': {
                 const { parseCookJobArgs, runQuestCookJob, runQuestHettyJob } = await import('./cook-job');
@@ -393,14 +403,14 @@ async function runQuest(sessionCore: SessionCore, cfg: QuestConfig): Promise<Run
                     : await runQuestCookJob(parsed.name, parsed.cap, session);
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: r.ticks, durationMs: ms(), unitsCompleted: 1, summary: r.detail }
-                    : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail);
+                    : failOutcome(activityId, sessionCore.name, r.ticks, ms(), r.detail, isStopped());
             }
             default: {
                 return { kind: 'worker_defect', activityId, account: sessionCore.name, ticksElapsed: elapsed(), durationMs: ms(), faultSignature: `${activityId}:unsupported`, detail: `unsupported quest operation ${cfg.operation}` };
             }
         }
     } catch (err) {
-        return failOutcome(activityId, sessionCore.name, elapsed(), ms(), String(err));
+        return failOutcome(activityId, sessionCore.name, elapsed(), ms(), String(err), isStopped());
     }
 }
 

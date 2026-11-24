@@ -522,5 +522,14 @@ describe('combatWorkerModule contracts and preflight', () => {
         const diedOut = await runCombatModuleSession(diedSession, { mode: 'cannon', spot: 'nonexistent' });
         expect(validateRunOutcome(diedOut)).toEqual([]);
         expect(diedOut.kind).toBe('death');
+
+        let cannonStopCalls = 0;
+        const midStopCannon = await runCombatModuleSession(endedSession, {
+            mode: 'cannon',
+            spot: 'battlefield',
+            stop: () => ++cannonStopCalls > 1,
+        });
+        expect(validateRunOutcome(midStopCannon)).toEqual([]);
+        expect(midStopCannon.kind).toBe('session_unsettled');
     });
 });
