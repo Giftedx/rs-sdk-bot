@@ -344,7 +344,7 @@ async function dropExcessOaks(s: Session, maxKeep = 22): Promise<boolean> {
 if (import.meta.main) {
     const account = process.argv[2];
     const helperName = process.argv.slice(3).find(a => !a.includes('=') && !a.startsWith('-')) ?? process.env.HELPER ?? `${account}b`;
-    const cap = Number(process.env.CAP ?? 3400);
+    const cap = Number(process.env.CAP ?? 3600);
     const traceMode = process.env.WC_TRACE === '1';
     if (!account) throw Error('usage: bun scripts/woodcutting-specialist.ts <account> [helperAccount]');
 
@@ -544,7 +544,7 @@ if (import.meta.main) {
             const canTag = !outOfPrayer
                 && wantOak
                 && !needNormalLog
-                && tagCount < 16
+                && tagCount < 120
                 && gobs < 4
                 && (!activeHitIn1t || gobs < 2)
                 && now - lastTagTick >= 10

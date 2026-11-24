@@ -149,6 +149,18 @@ type NearbyLoc = NonNullable<NonNullable<ReturnType<Session['sdk']['getState']>>
 const besideTile = (px: number, pz: number, r: { x: number; z: number }): boolean =>
     Math.abs(px - r.x) + Math.abs(pz - r.z) === 1;
 
+const EAST_IRON_ROCK_COORDS = new Set<string>([
+    '3099,3768',
+    '3101,3768',
+    '3099,3767',
+    '3100,3766',
+    '3101,3765',
+    '3100,3765',
+    '3099,3765',
+]);
+
+const isEastHobgoblinStandTile = (x: number, z: number): boolean => x >= 3100 || z === 3764;
+
 function findAvailableRocks(
     s: Session,
     rockCoords: ReadonlySet<string>,
@@ -169,6 +181,7 @@ function pickBestIronStandTile(
     s: Session,
     avail: readonly { x: number; z: number }[],
     allRockCoords: ReadonlySet<string>,
+    eastOnly = false,
 ): { x: number; z: number } | undefined {
     const p = s.sdk.getState()?.player;
     const px = p?.worldX ?? WILDY_HOBGOBLIN_CENTER.x;
@@ -179,6 +192,7 @@ function pickBestIronStandTile(
             const x = r.x + dx;
             const z = r.z + dz;
             if (allRockCoords.has(`${x},${z}`)) continue;
+            if (eastOnly && !isEastHobgoblinStandTile(x, z)) continue;
             const k = `${x},${z}`;
             if (cands.has(k)) continue;
             const adjAvail = avail.filter(a => besideTile(x, z, a)).length;
@@ -189,9 +203,12 @@ function pickBestIronStandTile(
             cands.set(k, { x, z, adjAvail, adjTotal, dist: Math.max(Math.abs(x - px), Math.abs(z - pz)) });
         }
     }
-    const sorted = [...cands.values()].sort((a, b) =>
-        (a.dist - b.dist) || (b.adjAvail - a.adjAvail) || (b.adjTotal - a.adjTotal),
-    );
+    const sorted = [...cands.values()].sort((a, b) => {
+        // Stay on 2-rock hubs when within a 1-tick run step (dist <= 2) instead of chasing a single edge rock.
+        const aRun = a.dist <= 2 ? 1 : a.dist;
+        const bRun = b.dist <= 2 ? 1 : b.dist;
+        return (aRun - bRun) || (b.adjAvail - a.adjAvail) || (b.adjTotal - a.adjTotal) || (a.dist - b.dist);
+    });
     for (const c of sorted) {
         const path = s.sdk.findPath(c.x, c.z);
         if (path.success && path.reachedDestination === true) return { x: c.x, z: c.z };
@@ -218,11 +235,16 @@ function findUntaggedHobgoblin(s: Session, taggedAt: ReadonlyMap<number, number>
     const cands = (s.sdk.getState()?.nearbyNpcs ?? []).filter(n => {
         if (!/^hobgoblin$/i.test(n.name) || n.hp === 0 || n.distance > 12) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
-        if ((taggedAt.get(n.index) ?? -999) >= now - 25) return false;
+        if ((taggedAt.get(n.index) ?? -999) >= now - 16) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
         return n.targetIndex < 0;
     });
-    cands.sort((a, b) => (a.distance - b.distance) || (a.combatLevel - b.combatLevel));
+    // Prefer lvl 28 unarmed hobgoblins (attackrate=4, wanderrange=15) over lvl 42 armed (attackrate=6, wanderrange=3).
+    cands.sort((a, b) =>
+        ((a.combatLevel > 35 ? 1 : 0) - (b.combatLevel > 35 ? 1 : 0))
+        || (a.distance - b.distance)
+        || (a.combatLevel - b.combatLevel),
+    );
     return cands[0];
 }
 
@@ -362,13 +384,15 @@ if (import.meta.main) {
         if (!ironProfile) throw Error('missing iron_rock_table profile');
         const wildySite = MINING_SITES.find(s => s.key === 'wilderness-hobgoblin-iron');
         if (!wildySite) throw Error('missing wilderness-hobgoblin-iron site');
-        const rockTiles = siteTiles(ironProfile, wildySite);
+        const rockTiles = siteTiles(ironProfile, wildySite).filter(t => EAST_IRON_ROCK_COORDS.has(`${t.x},${t.z}`));
         const rockCoords = new Set(rockTiles.map(t => `${t.x},${t.z}`));
+        const allWildyRockCoords = new Set(siteTiles(ironProfile, wildySite).map(t => `${t.x},${t.z}`));
         const rockIds = new Set(ironProfile.rocks);
 
         let rolls = 0;
         let flinchRolls = 0;
         let knifeRolls = 0;
+        let moveTicks = 0;
         let lastTagTick = -99;
         let tagCount = 0;
         let actionDelayApprox = 0;
@@ -376,7 +400,7 @@ if (import.meta.main) {
         let droppedBronze = false;
         const taggedAt = new Map<number, number>();
         const seenHitKeys = new Set<string>();
-        const recentHitTicks: number[] = [];
+        const npcLastHit = new Map<number, { tick: number; period: number }>();
         let hitEventsTotal = 0;
 
         const drainHitEvents = (st: ReturnType<Session['sdk']['getState']>): number => {
@@ -384,6 +408,7 @@ if (import.meta.main) {
             const events = (st as {
                 combatEvents?: Array<{ observationId?: number; tick?: number; type?: string; sourceType?: string; targetType?: string; sourceIndex?: number; damage?: number }>;
             } | undefined)?.combatEvents ?? [];
+            const npcs = st?.nearbyNpcs ?? [];
             for (const e of events) {
                 if (e.type !== 'damage_taken' || e.sourceType !== 'npc') continue;
                 if (e.targetType && e.targetType !== 'player') continue;
@@ -392,7 +417,19 @@ if (import.meta.main) {
                 seenHitKeys.add(k);
                 hitEventsTotal++;
                 if (typeof e.tick === 'number') {
-                    if (!recentHitTicks.includes(e.tick)) recentHitTicks.push(e.tick);
+                    if (typeof e.sourceIndex === 'number') {
+                        const prev = npcLastHit.get(e.sourceIndex);
+                        const npc = npcs.find(n => n.index === e.sourceIndex);
+                        const defaultPeriod = npc && npc.combatLevel > 35 ? 6 : 4;
+                        let period = prev?.period ?? defaultPeriod;
+                        if (prev) {
+                            const diff = e.tick - prev.tick;
+                            if (diff >= 4 && diff <= 6) period = diff;
+                        }
+                        if (!prev || e.tick > prev.tick) {
+                            npcLastHit.set(e.sourceIndex, { tick: e.tick, period });
+                        }
+                    }
                     if (e.tick > maxHitTick) maxHitTick = e.tick;
                 }
             }
@@ -449,12 +486,15 @@ if (import.meta.main) {
 
             const adjRocks = avail.filter(r => besideTile(p.worldX, p.worldZ, r));
             if (adjRocks.length === 0) {
-                const stand = pickBestIronStandTile(main, avail, rockCoords);
+                const stand = pickBestIronStandTile(main, avail, allWildyRockCoords, true);
                 const acts: Promise<unknown>[] = [];
                 if (stand) acts.push(main.direct({ type: 'walkTo', x: stand.x, z: stand.z, running: true, reason: 'SDK' }));
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
                 if (potAct) acts.push(potAct);
+                const dropSlot = main.sdk.getInventory().length >= 18 ? (slotOfId(main, OBJ_IRON_ORE) ?? slotOfId(main, OBJ_TIN_ORE)) : undefined;
+                if (dropSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: dropSlot, reason: 'SDK' }));
                 if (acts.length > 0) await Promise.all(acts);
+                moveTicks++;
                 clearSentForTick = -99;
                 await waitTicks(main, 1);
                 continue;
@@ -484,17 +524,23 @@ if (import.meta.main) {
                 continue;
             }
 
-            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 9) recentHitTicks.shift();
-            const recentHitsIn5 = recentHitTicks.filter(h => now - h <= 5);
-            const activeHitMod4 = new Set<number>(recentHitsIn5.map(h => ((h % 4) + 4) % 4));
-            const nextMod1 = ((now + 1) % 4 + 4) % 4;
-            const activeHitIn1t = activeHitMod4.has(nextMod1);
+            let activeHitIn1t = false;
+            for (const [npcIdx, info] of npcLastHit) {
+                if (now - info.tick > 12) {
+                    npcLastHit.delete(npcIdx);
+                    continue;
+                }
+                if ((now + 1 - info.tick) % info.period === 0) {
+                    activeHitIn1t = true;
+                    break;
+                }
+            }
 
             const gobs = !outOfPrayer ? countAttackingHobgoblins(main) : 0;
             const canTag = !outOfPrayer
-                && tagCount < 40
-                && gobs < 1
-                && now - lastTagTick >= 10
+                && tagCount < 140
+                && gobs < 3
+                && now - lastTagTick >= 5
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -523,7 +569,7 @@ if (import.meta.main) {
                 const logSlot = slotOfId(main, OBJ_LOGS);
                 if (knifeSlot !== undefined && logSlot !== undefined) {
                     const acts: Promise<unknown>[] = [];
-                    if (main.sdk.getInventory().length >= 26) {
+                    if (main.sdk.getInventory().length >= 25) {
                         const oreSlot = slotOfId(main, OBJ_IRON_ORE) ?? slotOfId(main, OBJ_TIN_ORE);
                         if (oreSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: oreSlot, reason: 'SDK' }));
                     }
@@ -542,7 +588,7 @@ if (import.meta.main) {
                 }
             }
 
-            const oreDropSlot = main.sdk.getInventory().length >= 16
+            const oreDropSlot = main.sdk.getInventory().length >= 12
                 ? (slotOfId(main, OBJ_IRON_ORE) ?? slotOfId(main, OBJ_TIN_ORE))
                 : undefined;
             const potAct = tryDrinkPrayerPotion(main, 15);
@@ -570,7 +616,7 @@ if (import.meta.main) {
         const lvl = main.sdk.getSkill('Mining')?.baseLevel ?? 0;
         const xp = main.sdk.getSkillXp('Mining') ?? 0;
         const hp = main.sdk.getSkill('Hitpoints')?.level ?? 0;
-        detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} tin=${tinTicks} arrive=${arriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal} hp=${hp}`;
+        detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} tin=${tinTicks} arrive=${arriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} move=${moveTicks} tags=${tagCount} hits=${hitEventsTotal} hp=${hp}`;
     } catch (error) {
         detail = String(error);
     } finally {

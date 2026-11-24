@@ -1329,14 +1329,16 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await walkNear(s, { x: 3275, z: 9459 }, 3, 60, { ignoreHunters: true });
         await walkNear(s, { x: 3280, z: 9415 }, 1, 80, { ignoreHunters: true });
         await q.guard('to cave guard');
-        for (let talkTry = 0; talkTry < 2; talkTry++) {
+        for (let talkTry = 0; talkTry < 5; talkTry++) {
             // Do not equip Fire staff near west-cave Mercenaries (equip.rs2:20 jails in x <= 3283); let PrayerGuard settle first.
+            await clearAllDialogs(s, 2);
             await q.waitUntil(() => !q.st()?.prayers?.activePrayers?.[PRAYER_MELEE], 6);
+            if (talkTry >= 2) await walkNear(s, { x: 3282, z: 9415 }, 1, 15, { ignoreHunters: true });
             try {
                 await q.talk('cave guard', /^mercenary$/i, [/mine in a different area/i, /you're quite right sir/i, /we understand each other perfectly/i], () => q.sawText(/winks at you knowingly/i), { x: 3280, z: 9415 }, 60);
                 break;
             } catch (e) {
-                if (talkTry === 1 || q.sawText(/winks at you knowingly/i)) { if (q.sawText(/winks at you knowingly/i)) break; throw e; }
+                if (talkTry === 4 || q.sawText(/winks at you knowingly/i)) { if (q.sawText(/winks at you knowingly/i)) break; throw e; }
             }
         }
         await mineOut();
