@@ -9,6 +9,10 @@ import { parseJm2 } from '../src/jm2';
 import { block, loadContent, modelRung } from '../src/method-model';
 import { contentRoot } from '../src/paths';
 import { buildShortcuts, movingScripts, parseScripts, stripComments } from '../src/shortcuts';
+import { buildNpcTravel } from '../src/npc-travel';
+import { fromSpec, SPECS } from '../src/skill-tools/specs';
+import { buildSkillTools } from '../src/skill-tools';
+import { allFacts, spotcheck } from '../src/spotcheck';
 import { cachedValue } from '../src/table-cache';
 
 test('parseJm2 skips MAP sections, preserves comment line numbers, and filters LOC/OBJ spawns cleanly', () => {
@@ -199,4 +203,43 @@ test('knowledge prefilters and method-model facade indexes preserve exact result
         inputs: [],
     });
     expect(smeltFacts.xpPerAction).toBe(6.2);
+
+    const brewFacts = modelRung(c, {
+        id: 'herblore/potion-attack',
+        skill: 'herblore',
+        kind: 'potion',
+        level: 3,
+        label: 'Attack potion',
+        row: null,
+        outputs: [],
+        inputs: ['guam_leaf', 'eye_of_newt'],
+    });
+    expect(brewFacts.xpPerAction).toBe(25);
+});
+
+test('skill-tools, npc-travel, and spotcheck caches preserve deterministic parity and caller mutation isolation', () => {
+    const toolsA = buildSkillTools();
+    const toolsB = buildSkillTools();
+    expect(toolsB).toEqual(toolsA);
+    const committedTools = JSON.parse(readFileSync(join(import.meta.dir, '..', '..', '..', 'knowledge', 'skill-tools.json'), 'utf8'));
+    expect(toolsA.gaps).toEqual(committedTools.gaps);
+    expect(toolsA.records.length).toBe(committedTools.records.length);
+    const specSample = SPECS.find(s => s.id === 'fletching/darts')!;
+    expect(fromSpec(specSample, [])).toEqual(fromSpec(specSample, []));
+
+    const travelA = buildNpcTravel();
+    const travelB = buildNpcTravel();
+    expect(travelB).toEqual(travelA);
+    expect(travelA.records.length).toBeGreaterThan(20);
+
+    const factsBefore = allFacts();
+    const origCount = factsBefore.length;
+    factsBefore.pop();
+    expect(allFacts().length).toBe(origCount);
+
+    const sc1 = spotcheck(40, 1);
+    const sc2 = spotcheck(40, 1);
+    expect(sc1).toEqual(sc2);
+    expect(sc1.checked).toBe(40);
+    expect(sc1.wrong).toEqual([]);
 });

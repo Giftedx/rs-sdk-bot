@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { contentRoot } from '../paths';
 import { cite, configBlocks, emptyRecord, itemId, lines, walk } from './readers';
 import type { Rung, ToolRecord } from './types';
 
@@ -30,24 +33,31 @@ function reach(blocks: Map<string, Block>, start: Block, opType: string, target:
     const seen = new Set<string>();
     const out: Line[] = [];
     const queue = [start];
-    while (queue.length) {
-        const b = queue.shift()!;
+    for (let head = 0; head < queue.length; head++) {
+        const b = queue[head]!;
         if (seen.has(b.key)) continue;
         seen.add(b.key);
         for (const ln of b.body) {
-            const code = ln.t.replace(/\/\/.*$/, '');
+            const commentAt = ln.t.indexOf('//');
+            const code = commentAt >= 0 ? ln.t.slice(0, commentAt) : ln.t;
             out.push({ f: ln.f, n: ln.n, t: code });
-            for (const m of code.matchAll(/@([a-z0-9_]+)/g)) {
-                const nb = blocks.get(`label,${m[1]}`);
-                if (nb && !m[1]!.startsWith('macro_')) queue.push(nb);
+            if (code.includes('@')) {
+                for (const m of code.matchAll(/@([a-z0-9_]+)/g)) {
+                    const nb = blocks.get(`label,${m[1]}`);
+                    if (nb && !m[1]!.startsWith('macro_')) queue.push(nb);
+                }
             }
-            for (const m of code.matchAll(/~([a-z0-9_]+)/g)) {
-                const nb = blocks.get(`proc,${m[1]}`);
-                if (nb) queue.push(nb);
+            if (code.includes('~')) {
+                for (const m of code.matchAll(/~([a-z0-9_]+)/g)) {
+                    const nb = blocks.get(`proc,${m[1]}`);
+                    if (nb) queue.push(nb);
+                }
             }
-            for (const m of code.matchAll(/p_op(npc|loc)\((\d)\)/g)) {
-                const nb = blocks.get(`op${m[1]}${m[2]},${target}`);
-                if (nb && nb.key.startsWith(opType)) queue.push(nb);
+            if (code.includes('p_op')) {
+                for (const m of code.matchAll(/p_op(npc|loc)\((\d)\)/g)) {
+                    const nb = blocks.get(`op${m[1]}${m[2]},${target}`);
+                    if (nb && nb.key.startsWith(opType)) queue.push(nb);
+                }
             }
         }
     }
@@ -96,7 +106,10 @@ function fishOption(blocks: Map<string, Block>, trigger: Block, opType: string, 
             if (roll.bait !== 'null' && !baits.has(roll.bait)) baits.set(roll.bait, b);
             addCatch(roll.f1, rec.minLevel!, rec.levelSrc, at(b));
             if (roll.f2 !== 'null') {
-                const prev = body.slice(0, i).reverse().find(x => x.t.trim() !== '');
+                let prev: Line | undefined;
+                for (let p = i - 1; p >= 0; p--) {
+                    if (body[p]!.t.trim() !== '') { prev = body[p]; break; }
+                }
                 const g = prev && /if \(stat\(fishing\) >= (\d+)\)/.exec(prev.t);
                 if (g) addCatch(roll.f2, Number(g[1]), at(prev!), at(b));
                 else rec.gaps.push(`${roll.f2}: no "stat(fishing) >=" gate right before ${at(b)}`);
@@ -166,11 +179,27 @@ export function buildFishing(rungs: Rung[], gaps: string[]): ToolRecord[] {
         if (g) g.npcs++;
         else groups.set(target, { ops, npcs: 1, src: `${FISH_NPC}:${nb.line}` });
     }
+    let fishspotFiles: string[] | undefined;
+    const findElsewhereFishspot = (op: number) => {
+        if (!fishspotFiles) {
+            const root = contentRoot();
+            fishspotFiles = [];
+            for (const f of walk('scripts', '.rs2')) {
+                if (readFileSync(join(root, f), 'utf8').includes('fishspot]')) fishspotFiles.push(f);
+            }
+        }
+        const re = new RegExp(`^\\[opnpc${op},[a-z0-9_]*fishspot\\]`);
+        for (const f of fishspotFiles) {
+            const hit = cite(f, re);
+            if (hit) return hit;
+        }
+        return undefined;
+    };
     for (const [target, g] of groups) {
         for (const [n, op] of g.ops) {
             const t = findTrigger(`opnpc${n},${target}`);
             if (!t) {
-                const elsewhere = walk('scripts', '.rs2').map(f => cite(f, new RegExp(`^\\[opnpc${n},[a-z0-9_]*fishspot\\]`))).find(Boolean);
+                const elsewhere = findElsewhereFishspot(n);
                 gaps.push(`fishing: ${target} op${n} "${op.name}" (${op.src}) has no [opnpc${n},${target}] handler under ${FISH_DIR}${elsewhere ? `; its npcs are handled by name at ${elsewhere.src} (not a skill method)` : ''}`);
                 continue;
             }

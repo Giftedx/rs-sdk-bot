@@ -1,7 +1,8 @@
 // Skilling tool (axe/pickaxe), elemental staff, and tool-shop upgrade recommendation planners.
-import type { Gear } from '../../../knowledge/src/gear';
+import type { Gear, Skill } from '../../../knowledge/src/gear';
+import { canWear } from '../../../knowledge/src/gear-query';
 import type { GearCount } from '../owned-loadout';
-import { canWearGear, gearById, gearCatalog, shopAccessible, shopCatalog } from './catalog';
+import { gearById, gearCatalogBySlot, shopAccessible, shopCatalog } from './catalog';
 import {
     ELEMENTAL_STAFF_RUNES,
     MINING_PICKAXES_DESC,
@@ -47,9 +48,10 @@ function buildToolCandidates(
     const useStat = skillMap[useSkill] ?? 1;
     const attackStat = skillMap.attack ?? 1;
 
-    return orderedIdsDesc.flatMap(id => {
-        const item = gearById(id);
-        if (!item) return [];
+    const out: ToolCandidate[] = [];
+    for (let i = 0; i < orderedIdsDesc.length; i++) {
+        const item = gearById(orderedIdsDesc[i]!);
+        if (!item) continue;
         const paramLevel = Math.max(1, item.tier ?? 1);
         // Rev-289 woodcut.rs2:220-240 uses any axe without a Woodcutting level gate;
         // mining pickaxe_checker.rs2 checks stat(mining) >= oc_param(pickaxe, levelrequire).
@@ -57,7 +59,8 @@ function buildToolCandidates(
         const wieldAttackLevel = item.requires.skills.attack ?? 1;
         const canUse = useStat >= useLevel;
         const canWield = attackStat >= wieldAttackLevel;
-        return [{
+        const itemShops = shops.get(item.id);
+        out.push({
             item,
             useSkill,
             useLevel,
@@ -66,10 +69,11 @@ function buildToolCandidates(
             canUse,
             canWield,
             carryMode: canWield ? 'wield' : 'inventory',
-            shops: [...(shops.get(item.id) ?? [])],
+            shops: itemShops ? [...itemShops] : [],
             tradeable: item.tradeable,
-        }];
-    });
+        });
+    }
+    return out;
 }
 
 function selectTool(
@@ -83,18 +87,23 @@ function selectTool(
     const owned = stockTotals(stock);
     const candidates = buildToolCandidates(orderedIdsDesc, useSkill, levels, enforceUseLevel);
 
-    const usable = candidates.filter(c => c.canUse);
-    const current = usable.find(c => (owned.get(c.item.id) ?? 0) > 0) ?? null;
-    const bestUsable = usable[0] ?? null;
-    const currentIdx = current ? candidates.findIndex(c => c.item.id === current.item.id) : candidates.length;
+    let current: ToolCandidate | null = null;
+    let bestUsable: ToolCandidate | null = null;
+    let nextUnlock: ToolCandidate | null = null;
+    for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i]!;
+        if (c.canUse) {
+            if (!bestUsable) bestUsable = c;
+            if (!current && (owned.get(c.item.id) ?? 0) > 0) current = c;
+        } else if (!current) {
+            // Track the lowest locked tier strictly better than current usable.
+            nextUnlock = c;
+        }
+    }
 
     const nextAcquirable = bestUsable && (!current || bestUsable.item.id !== current.item.id)
         ? bestUsable
         : null;
-
-    // Lowest locked tier strictly better than current usable (or next wield unlock if use-unlimited).
-    const betterLocked = candidates.slice(0, currentIdx).filter(c => !c.canUse);
-    const nextUnlock = betterLocked.at(-1) ?? null;
 
     return { kind, current, bestUsable, nextAcquirable, nextUnlock };
 }
@@ -134,59 +143,68 @@ export interface ElementalStaffOptions {
     requireWieldable?: boolean;
 }
 
+type ScoredStaffOption = ElementalStaffOption & { magicScore: number };
+type ScoredLockedStaff = { item: Gear; providedRunes: readonly number[]; coveredRuneScore: number; magicScore: number };
+
 function elementalStaffRankList(
     levels?: GearSkillLevels,
     quests?: QuestInput,
     options: ElementalStaffOptions = {},
-): { usable: ElementalStaffOption[]; locked: { item: Gear; providedRunes: readonly number[]; coveredRuneScore: number }[] } {
+): { usable: ScoredStaffOption[]; locked: ScoredLockedStaff[] } {
     const shops = shopCatalog();
     const runeIds = options.runeIds ?? [];
-    const runeWeights = new Map<number, number>();
-    runeIds.forEach((id, idx) => {
-        // Count rune multiplicity (e.g. Curse: 3 Earth + 2 Water) plus gentle first-listed tie-break.
-        runeWeights.set(id, (runeWeights.get(id) ?? 0) + 1 + (runeIds.length - idx) * 1e-4);
-    });
+    const runeWeights = runeIds.length > 0 ? new Map<number, number>() : null;
+    if (runeWeights) {
+        for (let idx = 0; idx < runeIds.length; idx++) {
+            const id = runeIds[idx]!;
+            // Count rune multiplicity (e.g. Curse: 3 Earth + 2 Water) plus gentle first-listed tie-break.
+            runeWeights.set(id, (runeWeights.get(id) ?? 0) + 1 + (runeIds.length - idx) * 1e-4);
+        }
+    }
     const allowPlain = options.includePlainFallback === true;
     const requireWieldable = options.requireWieldable !== false;
     const allowMembers = options.members !== false;
+    const skillMap = requireWieldable ? normalizeSkills(levels) as Partial<Record<Skill, number>> : null;
+    const done = requireWieldable ? normalizeCompletedQuests(quests) : null;
 
-    const scoreCandidate = (g: Gear) => {
-        const providedRunes = ELEMENTAL_STAFF_RUNES[g.id] ?? [];
-        const coveredRuneScore = runeIds.length > 0
-            ? providedRunes.reduce((sum, r) => sum + (runeWeights.get(r) ?? 0), 0)
-            : providedRunes.length;
-        return { providedRunes, coveredRuneScore };
-    };
-
-    const raw = gearCatalog().filter(g => {
-        if (!isMagicWeapon(g)) return false;
-        if (!allowMembers && g.members) return false;
-        const providedRunes = ELEMENTAL_STAFF_RUNES[g.id];
+    const usable: ScoredStaffOption[] = [];
+    const locked: ScoredLockedStaff[] = [];
+    const weapons = gearCatalogBySlot('righthand');
+    for (let i = 0; i < weapons.length; i++) {
+        const item = weapons[i]!;
+        if (!isMagicWeapon(item)) continue;
+        if (!allowMembers && item.members) continue;
+        const providedRunes = ELEMENTAL_STAFF_RUNES[item.id];
+        let coveredRuneScore = 0;
         if (providedRunes) {
-            if (runeIds.length === 0) return true;
-            return providedRunes.some(r => runeWeights.has(r));
+            if (runeWeights) {
+                for (let r = 0; r < providedRunes.length; r++) {
+                    coveredRuneScore += runeWeights.get(providedRunes[r]!) ?? 0;
+                }
+                if (coveredRuneScore === 0) continue;
+            } else {
+                coveredRuneScore = providedRunes.length;
+            }
+        } else if (!(allowPlain && (item.id === 1389 || item.id === 1379))) {
+            continue;
         }
-        return allowPlain && (g.id === 1389 || g.id === 1379);
-    });
-
-    const sortFn = (a: { item: Gear; coveredRuneScore: number }, b: { item: Gear; coveredRuneScore: number }) =>
-        (b.coveredRuneScore - a.coveredRuneScore)
-        || (scoreGearForStyle(b.item, 'magic') - scoreGearForStyle(a.item, 'magic'))
-        || (a.item.id - b.item.id);
-
-    const usable: ElementalStaffOption[] = [];
-    const locked: { item: Gear; providedRunes: readonly number[]; coveredRuneScore: number }[] = [];
-    for (const item of raw) {
-        const { providedRunes, coveredRuneScore } = scoreCandidate(item);
-        if (!requireWieldable || canWearGear(item, levels, quests)) {
-            usable.push({ item, providedRunes, coveredRuneScore, shops: [...(shops.get(item.id) ?? [])], tradeable: item.tradeable });
+        const runes = providedRunes ?? [];
+        const magicScore = scoreGearForStyle(item, 'magic');
+        if (!requireWieldable || canWear(item, skillMap!, done!)) {
+            const itemShops = shops.get(item.id);
+            usable.push({ item, providedRunes: runes, coveredRuneScore, magicScore, shops: itemShops ? [...itemShops] : [], tradeable: item.tradeable });
         } else {
-            locked.push({ item, providedRunes, coveredRuneScore });
+            locked.push({ item, providedRunes: runes, coveredRuneScore, magicScore });
         }
     }
 
+    const sortFn = (a: { item: Gear; coveredRuneScore: number; magicScore: number }, b: { item: Gear; coveredRuneScore: number; magicScore: number }) =>
+        (b.coveredRuneScore - a.coveredRuneScore)
+        || (b.magicScore - a.magicScore)
+        || (a.item.id - b.item.id);
+
     usable.sort(sortFn);
-    locked.sort((a, b) => sortFn(a, b));
+    locked.sort(sortFn);
     return { usable, locked };
 }
 
@@ -205,9 +223,18 @@ export function bestElementalStaffForRunes(
         ? bestUsable
         : null;
     const minScore = current?.coveredRuneScore ?? 0;
-    const nextUnlock = locked
-        .filter(c => c.coveredRuneScore > minScore || (c.coveredRuneScore >= minScore && scoreGearForStyle(c.item, 'magic') > (current ? scoreGearForStyle(current.item, 'magic') : -1)))
-        .sort((a, b) => Math.max(a.item.requires.skills.magic ?? 1, a.item.requires.skills.attack ?? 1) - Math.max(b.item.requires.skills.magic ?? 1, b.item.requires.skills.attack ?? 1) || a.item.id - b.item.id)[0]?.item ?? null;
+    const curMagicScore = current ? current.magicScore : -1;
+    let nextUnlock: Gear | null = null;
+    let bestUnlockReq = Infinity;
+    for (let i = 0; i < locked.length; i++) {
+        const c = locked[i]!;
+        if (!(c.coveredRuneScore > minScore || (c.coveredRuneScore >= minScore && c.magicScore > curMagicScore))) continue;
+        const req = Math.max(c.item.requires.skills.magic ?? 1, c.item.requires.skills.attack ?? 1);
+        if (req < bestUnlockReq || (req === bestUnlockReq && nextUnlock && c.item.id < nextUnlock.id)) {
+            bestUnlockReq = req;
+            nextUnlock = c.item;
+        }
+    }
     return { current, bestUsable, nextAcquirable, nextUnlock };
 }
 

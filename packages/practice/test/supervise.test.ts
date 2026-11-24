@@ -356,3 +356,34 @@ test('participantsHaveStopFile honors stop files in both .practice/live/ and leg
   rmSync(dir, { recursive: true, force: true });
  }
 });
+
+test('madeProgress and supervise backward line scanners inspect only the final matching LEDGER and RESULT lines', async () => {
+ expect(madeProgress([
+  'LEDGER ticks=900 xp=50 inventory=1 move=2 anim=0 dialog=0 stun=0 idle=0 idlePct=0.0',
+  'noise line',
+  'LEDGER ticks=50 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=50 idlePct=100.0',
+ ].join('\r\n'))).toBe(false);
+ expect(madeProgress([
+  'LEDGER ticks=50 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=50 idlePct=100.0',
+  'LEDGER ticks=900 xp=0 inventory=3 move=1 anim=0 dialog=0 stun=0 idle=0 idlePct=0.0',
+ ].join('\n'))).toBe(true);
+
+ const logs: string[] = [];
+ const r = await supervise({
+  run: out(['RESULT ok intermediate', 'RESULT fail final failure'], 1),
+  stopped: () => false,
+  pause: async () => {},
+  maxRestarts: 0,
+  log: line => logs.push(line),
+ });
+ expect(r.reason).toBe('gave-up');
+ expect(logs[0]).toContain('RESULT fail final failure');
+
+ const rOk = await supervise({
+  run: out(['RESULT fail intermediate', 'RESULT ok final success'], 0),
+  stopped: () => false,
+  pause: async () => {},
+  maxRestarts: 0,
+ });
+ expect(rOk.reason).toBe('done');
+});

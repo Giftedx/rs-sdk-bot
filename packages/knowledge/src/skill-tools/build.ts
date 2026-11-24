@@ -11,21 +11,32 @@ function grindRecords(rungs: Rung[], gaps: string[]): ToolRecord[] {
     const tool = cite(GRIND, /if \(\$used_with ! pestle_and_mortar\)/);
     const members = cite(GRIND, MEMBERS);
     if (!tool) { gaps.push(`herblore: pestle_and_mortar check not found in ${GRIND}`); return []; }
+    const herbRungs = rungs.filter(r => r.skill === 'herblore');
     const out: ToolRecord[] = [];
+    const made = new Set<string>();
     for (const [raw, ob] of configBlocks(GRINDABLES)) {
         const p = ob.params.grindable_ingredient_refined;
         if (!p) continue;
-        const hits = rungs.filter(r => r.skill === 'herblore' && r.inputs.some(i => i.debugname === p.value)).map(r => r.id);
+        const hits: string[] = [];
+        for (const r of herbRungs) {
+            if (r.inputs.some(i => i.debugname === p.value)) hits.push(r.id);
+        }
         const rec = emptyRecord(`herblore/grind-${raw}`, 'herblore', { kinds: ['potion'], idPattern: null, rungs: hits }, tool.src);
         rec.items.push({ anyOf: ['pestle_and_mortar'], ids: [itemId('pestle_and_mortar')], hold: 'held', role: 'tool', src: tool.src });
         rec.consumed.push({ item: raw, id: itemId(raw), perAction: 1, src: `${GRINDABLES}:${p.line}`, note: `ground into ${p.value}` });
         if (members) rec.conditions.push({ text: members.text, src: members.src });
         rec.note = `makes ${p.value}, a potion secondary`;
+        made.add(p.value);
         out.push(rec);
     }
     // A *_dust secondary with no grind recipe has no known tool.
-    const made = new Set(out.map(r => r.note!.split(' ')[1]!.replace(/,$/, '')));
-    const dusts = new Set(rungs.filter(r => r.skill === 'herblore').flatMap(r => r.inputs.map(i => i.debugname ?? '')).filter(n => n.endsWith('_dust') && !made.has(n)));
+    const dusts = new Set<string>();
+    for (const r of herbRungs) {
+        for (const i of r.inputs) {
+            const n = i.debugname ?? '';
+            if (n.endsWith('_dust') && !made.has(n)) dusts.add(n);
+        }
+    }
     for (const d of dusts) gaps.push(`herblore: ${d} is a potion input but ${GRINDABLES} has no grind recipe that makes it`);
     return out;
 }

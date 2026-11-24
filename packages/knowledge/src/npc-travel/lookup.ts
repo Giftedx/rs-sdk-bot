@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { listConfigFiles, parseConfigs, type ConfigBlock } from '../config';
 import { parseJm2 } from '../jm2';
@@ -6,13 +6,32 @@ import { parsePack } from '../pack';
 import { contentRoot, knowledgeDir } from '../paths';
 import type { At, GangplankSpawn, Hit, NpcRow, NpcTravelEnv, SrcTile, Tile } from './types';
 
-const root = contentRoot();
-const fileCache = new Map<string, string[]>();
-let constantMap: Map<string, { value: string; src: string }> | undefined;
+const fileCache = new Map<string, { sig: string; lines: string[] }>();
+let constantCache: { root: string; map: Map<string, { value: string; src: string }> } | undefined;
+const EMPTY_ID_SET = new Set<number>();
+
+function statSig(absPath: string): string | null {
+    try {
+        const st = statSync(absPath);
+        return `${st.mtimeMs}:${st.size}`;
+    } catch {
+        return null;
+    }
+}
 
 export function lines(file: string): string[] {
-    let l = fileCache.get(file);
-    if (!l) { l = readFileSync(join(root, file), 'utf8').split(/\r?\n/); fileCache.set(file, l); }
+    const root = contentRoot();
+    const abs = join(root, file);
+    const key = `${root}\0${file}`;
+    const sig = statSig(abs);
+    if (!sig) {
+        fileCache.delete(key);
+        return [];
+    }
+    const cached = fileCache.get(key);
+    if (cached && cached.sig === sig) return cached.lines;
+    const l = readFileSync(abs, 'utf8').split(/\r?\n/);
+    fileCache.set(key, { sig, lines: l });
     return l;
 }
 
@@ -31,14 +50,21 @@ export function parseCoord(raw: string): Tile {
 }
 
 function getConstants(): Map<string, { value: string; src: string }> {
-    if (!constantMap) {
-        constantMap = new Map();
-        for (const f of listConfigFiles('.constant')) lines(f).forEach((t, i) => {
-            const m = t.match(/^\^(\w+)\s*=\s*(\S+)/);
-            if (m && !constantMap!.has(m[1]!)) constantMap!.set(m[1]!, { value: m[2]!, src: `${f}:${i + 1}` });
-        });
+    const root = contentRoot();
+    if (!constantCache || constantCache.root !== root) {
+        const map = new Map<string, { value: string; src: string }>();
+        for (const f of listConfigFiles('.constant')) {
+            const ls = lines(f);
+            for (let i = 0; i < ls.length; i++) {
+                const t = ls[i]!;
+                if (t.charCodeAt(0) !== 94 /* '^' */) continue;
+                const m = t.match(/^\^(\w+)\s*=\s*(\S+)/);
+                if (m && !map.has(m[1]!)) map.set(m[1]!, { value: m[2]!, src: `${f}:${i + 1}` });
+            }
+        }
+        constantCache = { root, map };
     }
-    return constantMap;
+    return constantCache.map;
 }
 
 export function constant(name: string): { value: string; src: string } {
@@ -84,14 +110,26 @@ export const box = (lo: string, hi: string) => {
     return (p: Tile) => p.x >= a.x && p.x <= b.x && p.z >= a.z && p.z <= b.z && p.level >= a.level && p.level <= b.level;
 };
 
-function gangplanks(): GangplankSpawn[] {
-    const locBlocks = listConfigFiles('.loc').flatMap(f => parseConfigs(readFileSync(join(root, f), 'utf8'), f));
-    const names = new Set(locBlocks.filter(b => b.props.category?.[0] === 'gangplank_disembark').map(b => b.name));
+function gangplanks(root: string): GangplankSpawn[] {
+    const names = new Set<string>();
+    for (const f of listConfigFiles('.loc')) {
+        const text = readFileSync(join(root, f), 'utf8');
+        if (!text.includes('gangplank_disembark')) continue;
+        for (const b of parseConfigs(text, f)) {
+            if (b.props.category?.[0] === 'gangplank_disembark') names.add(b.name);
+        }
+    }
     const ids = new Map<number, string>();
-    for (const [id, name] of parsePack(readFileSync(join(root, 'pack/loc.pack'), 'utf8'))) if (names.has(name)) ids.set(id, name);
+    const locIds = new Set<number>();
+    for (const [id, name] of parsePack(readFileSync(join(root, 'pack/loc.pack'), 'utf8'))) {
+        if (names.has(name)) { ids.set(id, name); locIds.add(id); }
+    }
     const out: GangplankSpawn[] = [];
-    for (const f of readdirSync(join(root, 'maps')).filter(f => f.endsWith('.jm2'))) {
-        for (const l of parseJm2(f, readFileSync(join(root, 'maps', f), 'utf8')).locs) {
+    const jm2Filter = { locIds, objIds: EMPTY_ID_SET, npcs: false };
+    const mapsDir = join(root, 'maps');
+    for (const f of readdirSync(mapsDir)) {
+        if (!f.endsWith('.jm2')) continue;
+        for (const l of parseJm2(f, readFileSync(join(mapsDir, f), 'utf8'), jm2Filter).locs) {
             const name = ids.get(l.id);
             if (name) out.push({ name, id: l.id, x: l.x, z: l.z, level: l.level, src: l.src });
         }
@@ -100,8 +138,9 @@ function gangplanks(): GangplankSpawn[] {
 }
 
 export function loadNpcTravelEnv(): NpcTravelEnv {
+    const root = contentRoot();
     const npcBlocks = new Map<string, ConfigBlock>();
     for (const f of listConfigFiles('.npc')) for (const b of parseConfigs(readFileSync(join(root, f), 'utf8'), f)) npcBlocks.set(b.name, b);
     const npcs = new Map<string, NpcRow>((JSON.parse(readFileSync(join(knowledgeDir(), 'npcs.json'), 'utf8')) as NpcRow[]).map(n => [n.debugname, n]));
-    return { npcBlocks, npcs, planks: gangplanks() };
+    return { npcBlocks, npcs, planks: gangplanks(root) };
 }

@@ -27,11 +27,12 @@
 //   --orders    writes one fleet order file for each transfer of the plan into <dir>, for review. The tool refuses the
 //               fleet's own orders folder; `bun scripts/fleet-order.ts`, which the plan prints, places an order.
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { wildernessLevel } from '../packages/core/src/prayer-guard';
 import { SQUAD_WAVE_BC } from '../packages/planner/src/squad';
-import { BANK_MEETS } from '../packages/workers/src/logistics';
+import { BANK_MEETS } from '../packages/workers/src/logistics/location';
 import { makeOrder, writeFleetOrder } from './fleet-order';
 import { castableFreeze, defaultSpec, ITEMS } from './pk';
 import { packOf } from '../packages/workers/src/pvp/pk-gang';
@@ -39,7 +40,9 @@ import { FOOD_LIST } from '../packages/workers/src/pvp/hunt-kits';
 import { kitItems } from './pk-kits';
 import { kitFrom } from '../packages/workers/src/pvp/wild-rules';
 import { SQUAD_OPTS, SQUAD_POST, squadEscapeSpell, squadStartFood } from './pk-squad';
-import { PROFILES } from '../packages/workers/src/market';
+
+const require = createRequire(import.meta.url);
+const getShopProfiles = () => (require('../packages/workers/src/market/shop-buy') as typeof import('../packages/workers/src/market/shop-buy')).PROFILES;
 
 export type Item = { id: number; name: string; count: number };
 export type Worn = Item & { slot: number };
@@ -228,7 +231,24 @@ const COMBAT = ['Attack', 'Strength', 'Defence', 'Ranged', 'Magic', 'Prayer', 'H
 const MELEE_BLADE = /dagger|scimitar|longsword|sword|mace|battleaxe|warhammer|spear|halberd/i, BOW = /bow$/i, CROSSBOW = /crossbow/i;
 // The food that a bank trip takes, in its order (scripts/pk-hunt.ts restock).
 const FOOD_IDS: readonly number[] = FOOD_LIST.map(f => f.id), PACK_SLOTS = 27;
-const isFood = (id: number) => FOOD_IDS.includes(id);
+const FOOD_ID_SET = new Set<number>(FOOD_IDS);
+const isFood = (id: number) => FOOD_ID_SET.has(id);
+const ANTIPOISON_IDS: readonly number[] = ITEMS.antipoison;
+const ANTIPOISON_SET = new Set<number>(ANTIPOISON_IDS);
+const ANTIPOISON_ORDER = new Map<number, number>(ANTIPOISON_IDS.map((id, idx) => [id, idx % 4]));
+const SLOT_COUNTED_IDS = new Set<number>([
+    TRIBRID_BIS_ITEMS.cookedKarambwan,
+    ...Object.values(TRIBRID_POTION_DOSE_IDS).flat().map(([id]) => id),
+]);
+const GLORY_IDS = new Set<number>([
+    TRIBRID_BIS_ITEMS.amuletOfGlory4,
+    TRIBRID_BIS_ITEMS.amuletOfGlory3,
+    TRIBRID_BIS_ITEMS.amuletOfGlory2,
+    TRIBRID_BIS_ITEMS.amuletOfGlory1,
+]);
+const BIS_POTION_DOSE_CHECKS = Object.entries(TRIBRID_POTION_DOSE_IDS)
+    .filter(([label]) => label !== 'Antipoison(3)')
+    .map(([label, pairs]) => ({ label, pairs, ids: new Set(pairs.map(([id]) => id)), firstId: pairs[0]![0] }));
 const armour = (g: Gear) => (g.bonuses.stabDefence ?? 0) + (g.bonuses.slashDefence ?? 0) + (g.bonuses.crushDefence ?? 0);
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 // West Ardougne behind its wall (x 2558): the city doors stay shut until Biohazard is complete, and the walker has no
@@ -239,7 +259,17 @@ export const maxed = (a: Account) => COMBAT.every(s => (a.levels[s.toLowerCase()
 // Everything an account owns, by item id.
 export function holdings(a: Account): Map<number, Item> {
     const out = new Map<number, Item>();
-    for (const i of [...a.worn, ...a.pack, ...a.bank]) out.set(i.id, { id: i.id, name: i.name, count: (out.get(i.id)?.count ?? 0) + i.count });
+    const add = (rows: readonly Item[]) => {
+        for (let k = 0; k < rows.length; k++) {
+            const i = rows[k]!;
+            const cur = out.get(i.id);
+            if (cur) cur.count += i.count;
+            else out.set(i.id, { id: i.id, name: i.name, count: i.count });
+        }
+    };
+    add(a.worn);
+    add(a.pack);
+    add(a.bank);
     return out;
 }
 export function wearable(g: Gear, a: Account): boolean {
@@ -262,35 +292,91 @@ const SPELL_NAME: Readonly<Record<number, string>> = { 1174: 'Camelot Teleport',
 // worn, a worn quiver under the least arrows, a supply or the bow that is not in the pack, and a pack with food under
 // the food floor. The fix of each is the kit step (`bun scripts/aio-logistics.ts <account> loadout <file>`).
 export function carriedFaults(a: Account, worn: readonly Worn[], carried: readonly Item[], foodSlots: number, rule: Rule, nameOf: (id: number) => string | undefined = () => undefined): string[] {
-    const out: string[] = [], count = (rows: readonly Item[], id: number) => rows.filter(r => r.id === id).reduce((n, r) => n + r.count, 0);
+    const out: string[] = [];
+    const count = (rows: readonly Item[], id: number) => {
+        let sum = 0;
+        for (let i = 0; i < rows.length; i++) if (rows[i]!.id === id) sum += rows[i]!.count;
+        return sum;
+    };
     for (const w of worn) {
-        if (w.slot === 13) { const held = a.worn.find(x => x.slot === 13 && x.id === w.id)?.count ?? 0; if (held < Math.min(w.count, rule.minArrows)) out.push(`not worn: ${held} ${w.name} in the quiver (needs ${Math.min(w.count, rule.minArrows)}): the kit step wears it`); continue; }
-        if (!a.worn.some(x => x.slot === w.slot && x.id === w.id)) out.push(`not worn: ${w.name}: the kit step wears it`);
+        if (w.slot === 13) {
+            let held = 0;
+            for (const x of a.worn) if (x.slot === 13 && x.id === w.id) { held = x.count; break; }
+            const minNeed = Math.min(w.count, rule.minArrows);
+            if (held < minNeed) out.push(`not worn: ${held} ${w.name} in the quiver (needs ${minNeed}): the kit step wears it`);
+            continue;
+        }
+        let okWorn = false;
+        for (const x of a.worn) if (x.slot === w.slot && x.id === w.id) { okWorn = true; break; }
+        if (!okWorn) out.push(`not worn: ${w.name}: the kit step wears it`);
     }
     for (const c of carried) { const held = count(a.pack, c.id); if (held < c.count) out.push(`pack lacks ${c.count - held} ${c.name}${c.count > 1 ? ` (${held} of ${c.count})` : ''}: the kit step takes it`); }
-    const food = a.pack.filter(i => FOOD_IDS.includes(i.id)).reduce((n, i) => n + i.count, 0);
-    if (!squadStartFood(food, foodSlots).ok) out.push(`pack holds ${food} food, under the floor of ${squadStartFood(food, foodSlots).floor} of ${foodSlots}: the kit step takes it`);
+    let food = 0;
+    for (const i of a.pack) if (FOOD_ID_SET.has(i.id)) food += i.count;
+    const foodCheck = squadStartFood(food, foodSlots);
+    if (!foodCheck.ok) out.push(`pack holds ${food} food, under the floor of ${foodCheck.floor} of ${foodSlots}: the kit step takes it`);
     return out;
 }
 // Stock for a second trip: the runes and arrows that the pack and the quiver carry, against what the pack, the bank and the quiver hold
 // together. Under one pack's worth the member cannot even refill after a trip (a block); under two it can make one trip only (a note).
 // Live run 4: every bank trip after the retreat failed for want of arrows and law runes (75 needed, 33 in the bank).
 export function stockFaults(a: Account, worn: readonly Worn[], carried: readonly Item[], rule: Rule, nameOf: (id: number) => string | undefined = () => undefined): { blocks: string[]; notes: string[] } {
-    const blocks: string[] = [], notes: string[] = [], total = (id: number) => [...a.pack, ...a.bank, ...a.worn.filter(w => w.slot === 13)].filter(r => r.id === id).reduce((n, r) => n + r.count, 0);
-    const lines = [...carried.filter(c => c.count > 1).map(c => ({ id: c.id, name: c.name, need: c.count })), ...worn.filter(w => w.slot === 13).map(w => ({ id: w.id, name: w.name, need: Math.min(w.count, rule.minArrows) }))];
-    for (const l of lines) {
-        const have = total(l.id);
-        if (have < l.need) blocks.push(`stock under one pack: ${have} ${l.name} in the pack, bank and quiver (a pack needs ${l.need})`);
-        else if (have < 2 * l.need) notes.push(`stock for one trip only: ${have} ${l.name} of ${2 * l.need} for two trips`);
-    }
+    const blocks: string[] = [], notes: string[] = [];
+    const total = (id: number) => {
+        let sum = 0;
+        for (const r of a.pack) if (r.id === id) sum += r.count;
+        for (const r of a.bank) if (r.id === id) sum += r.count;
+        for (const r of a.worn) if (r.slot === 13 && r.id === id) sum += r.count;
+        return sum;
+    };
+    const checkLine = (id: number, name: string, need: number) => {
+        const have = total(id);
+        if (have < need) blocks.push(`stock under one pack: ${have} ${name} in the pack, bank and quiver (a pack needs ${need})`);
+        else if (have < 2 * need) notes.push(`stock for one trip only: ${have} ${name} of ${2 * need} for two trips`);
+    };
+    for (const c of carried) if (c.count > 1) checkLine(c.id, c.name, c.count);
+    for (const w of worn) if (w.slot === 13) checkLine(w.id, w.name, Math.min(w.count, rule.minArrows));
     return { blocks, notes };
 }
 export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, post = SQUAD_POST, antipoisonRequired = true, carry = false): Pick {
     const own = holdings(a), needs: Need[] = [], reasons: string[] = [], notes: string[] = [];
-    const benchPiece = (test: (g: Gear) => boolean) => [...kit.equipment, ...kit.inventory].map(i => gear.get(i.id)).find(g => !!g && test(g))?.id;
-    const owned = [...own.values()].filter(i => i.count > 0), g = (i: Item) => gear.get(i.id);
+    const benchPiece = (test: (g: Gear) => boolean) => {
+        for (const e of kit.equipment) { const row = gear.get(e.id); if (row && test(row)) return row.id; }
+        for (const e of kit.inventory) { const row = gear.get(e.id); if (row && test(row)) return row.id; }
+        return undefined;
+    };
+    const g = (i: Item) => gear.get(i.id);
     const canWear = (i: Item) => { const row = g(i); return !!row && wearable(row, a); };
-    const benchWorn = new Map(kit.equipment.map(e => [e.slot, gear.get(e.id)] as const));
+    const wearableBySlot = new Map<string, { item: Item; row: Gear }[]>();
+    const quiverOwned: { item: Item; row: Gear }[] = [];
+    let antipoison: Item | undefined;
+    let antipoisonRank = Infinity;
+    let unstrung: Item | undefined;
+    for (const i of own.values()) {
+        if (i.count <= 0) continue;
+        if (ANTIPOISON_SET.has(i.id)) {
+            const rk = ANTIPOISON_ORDER.get(i.id)!;
+            if (rk < antipoisonRank) { antipoisonRank = rk; antipoison = i; }
+        }
+        const row = gear.get(i.id);
+        if (!row) {
+            if (!unstrung && BOW.test(i.name) && !CROSSBOW.test(i.name)) unstrung = i;
+            continue;
+        }
+        if (row.slot === 'quiver') quiverOwned.push({ item: i, row });
+        if (wearable(row, a)) {
+            let list = wearableBySlot.get(row.slot);
+            if (!list) { list = []; wearableBySlot.set(row.slot, list); }
+            list.push({ item: i, row });
+        }
+    }
+    const benchWorn = new Map<number, Gear | undefined>();
+    let benchArrow: number | undefined;
+    let wantArrows = 300;
+    for (const e of kit.equipment) {
+        benchWorn.set(e.slot, gear.get(e.id));
+        if (e.slot === 13 && benchArrow === undefined) { benchArrow = e.id; wantArrows = e.count; }
+    }
     const worn: Worn[] = [];
     const wear = (i: Item | undefined, slot: number, count = 1) => { if (i) worn.push({ id: i.id, name: i.name, count, slot }); };
     // Armour and accessory slots: body and legs must reach half the melee defence of the bench kit's piece.
@@ -307,10 +393,20 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
                     ? (bench && gRow.id === bench.id ? 1000 : 0) + armour(gRow)
                     : armour(gRow);
         const fits = (i: Item, who: (i: Item) => boolean) => { const row = g(i); return !!row && row.slot === slot && armour(row) >= floor && (slot !== 'lefthand' || /shield$/i.test(row.name)) && who(i); };
-        const best = owned.filter(i => fits(i, canWear)).sort((x, y) => slotRank(g(y)!) - slotRank(g(x)!))[0];
+        const pool = wearableBySlot.get(slot) ?? [];
+        let best: Item | undefined;
+        let bestRow: Gear | undefined;
+        let bestScore = -Infinity;
+        for (let k = 0; k < pool.length; k++) {
+            const { item, row } = pool[k]!;
+            if (armour(row) < floor) continue;
+            if (slot === 'lefthand' && !/shield$/i.test(row.name)) continue;
+            const sc = slotRank(row);
+            if (sc > bestScore) { bestScore = sc; best = item; bestRow = row; }
+        }
         wear(best, SLOT[slot]!);
         if (!best && required) needs.push({ what: `${slot === 'torso' ? 'body' : 'leg'} armour (melee defence ${floor} or more)`, count: 1, blocking: true, ...(bench ? { id: bench.id } : {}), accept: i => fits(i, canWear) && g(i)!.tradeable !== false });
-        else if (bench && (!best || (armourSlot ? armour(g(best)!) < armour(bench) : slotRank(g(best)!) < slotRank(bench)))) {
+        else if (bench && (!bestRow || (armourSlot ? armour(bestRow) < armour(bench) : bestScore < slotRank(bench)))) {
             if (!(!best && rule.waveBC && slot === 'back')) {
                 notes.push(best ? `${best.name} is weaker than the bench kit's ${bench.name}` : `no ${bench.name} or other ${slot} piece`);
             }
@@ -320,35 +416,64 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
         }
     }
     // Amulet: a charged glory, else the piece with the most strength.
-    const amulet = owned.filter(i => g(i)?.slot === 'front' && canWear(i)).sort((x, y) => Number(/glory\([1-4]\)/i.test(y.name)) - Number(/glory\([1-4]\)/i.test(x.name)) || (g(y)!.bonuses.strength ?? 0) - (g(x)!.bonuses.strength ?? 0))[0];
+    let amulet: Item | undefined;
+    let amuletGlory = -1;
+    let amuletStr = -Infinity;
+    for (const { item, row } of wearableBySlot.get('front') ?? []) {
+        const glory = /glory\([1-4]\)/i.test(item.name) ? 1 : 0;
+        const str = row.bonuses.strength ?? 0;
+        if (glory > amuletGlory || (glory === amuletGlory && str > amuletStr)) {
+            amuletGlory = glory; amuletStr = str; amulet = item;
+        }
+    }
     wear(amulet, SLOT.front!);
     if (!amulet) notes.push('no amulet');
     // Melee weapon: a dragon dagger first (the gang-hunter profile's special), then the other special weapons, then a
     // rune blade, each by its strength bonus.
     const blade = (i: Item) => { const row = g(i); return !!row && row.slot === 'righthand' && MELEE_BLADE.test(row.name) && !BOW.test(row.name) && !/staff/i.test(row.name) && (!!row.special?.pvp || /^rune /i.test(row.name)); };
-    const rank = (i: Item) => (/^dragon dagger/i.test(i.name) ? 2000 : g(i)!.special?.pvp ? 1000 : 0) + (g(i)!.bonuses.strength ?? 0);
-    const weapon = owned.filter(i => blade(i) && canWear(i)).sort((x, y) => rank(y) - rank(x))[0];
+    const isBow = (i: Item) => { const row = g(i); return !!row && row.slot === 'righthand' && row.tier !== undefined && BOW.test(row.name) && !CROSSBOW.test(row.name); };
+    let weapon: Item | undefined;
+    let weaponRank = -Infinity;
+    let bow: Item | undefined;
+    let bowRow: Gear | undefined;
+    let bowRange = -Infinity;
+    for (const { item, row } of wearableBySlot.get('righthand') ?? []) {
+        const isB = row.tier !== undefined && BOW.test(row.name) && !CROSSBOW.test(row.name);
+        if (isB) {
+            const ra = row.bonuses.rangeAttack ?? 0;
+            if (ra > bowRange) { bowRange = ra; bow = item; bowRow = row; }
+        } else if (MELEE_BLADE.test(row.name) && !BOW.test(row.name) && !/staff/i.test(row.name) && (!!row.special?.pvp || /^rune /i.test(row.name))) {
+            const rk = (/^dragon dagger/i.test(item.name) ? 2000 : row.special?.pvp ? 1000 : 0) + (row.bonuses.strength ?? 0);
+            if (rk > weaponRank) { weaponRank = rk; weapon = item; }
+        }
+    }
     wear(weapon, SLOT.righthand!);
     if (!weapon) needs.push({ what: 'melee weapon with a special attack or a rune blade', count: 1, blocking: true, ...(benchWorn.get(SLOT.righthand!) ? { id: benchWorn.get(SLOT.righthand!)!.id } : {}), accept: i => blade(i) && canWear(i) && g(i)!.tradeable !== false });
     // Bow and arrows: the bow with the most ranged attack, and the strongest arrows that it fires (tier at or under the
     // bow's tier) with the bench kit's count, else the largest stack.
-    const isBow = (i: Item) => { const row = g(i); return !!row && row.slot === 'righthand' && row.tier !== undefined && BOW.test(row.name) && !CROSSBOW.test(row.name); };
-    const bow = owned.filter(i => isBow(i) && canWear(i)).sort((x, y) => (g(y)!.bonuses.rangeAttack ?? 0) - (g(x)!.bonuses.rangeAttack ?? 0))[0];
-    const wantArrows = kit.equipment.find(e => e.slot === 13)?.count ?? 300, bowTier = bow ? g(bow)!.tier! : 1;
+    const bowTier = bowRow ? bowRow.tier! : 1;
     const fires = (i: Item, tier: number) => { const row = g(i); return !!row && row.slot === 'quiver' && /arrows?(?:\(p(?:\+\+?)?\))?$/i.test(row.name) && (row.tier ?? 99) <= tier; };
-    const stacks = owned.filter(i => fires(i, bowTier)).sort((x, y) =>
-        (g(y)!.bonuses.rangeStrength ?? 0) - (g(x)!.bonuses.rangeStrength ?? 0)
-        || (g(y)!.tier ?? 0) - (g(x)!.tier ?? 0)
-        || Number(/\(p(?:\+\+?)?\)$/i.test(y.name)) - Number(/\(p(?:\+\+?)?\)$/i.test(x.name)),
-    );
-    const benchBow = benchPiece(row => BOW.test(row.name)), benchArrow = kit.equipment.find(e => e.slot === 13)?.id;
+    const stacks = quiverOwned
+        .filter(({ item, row }) => /arrows?(?:\(p(?:\+\+?)?\))?$/i.test(row.name) && (row.tier ?? 99) <= bowTier)
+        .map(x => x.item)
+        .sort((x, y) =>
+            (g(y)!.bonuses.rangeStrength ?? 0) - (g(x)!.bonuses.rangeStrength ?? 0)
+            || (g(y)!.tier ?? 0) - (g(x)!.tier ?? 0)
+            || Number(/\(p(?:\+\+?)?\)$/i.test(y.name)) - Number(/\(p(?:\+\+?)?\)$/i.test(x.name)),
+        );
+    const benchBow = benchPiece(row => BOW.test(row.name));
     // Arrows as strong as the bench kit's first: the first live pilot shot bronze arrows on two accounts.
     const strength = (i: Item) => g(i)!.bonuses.rangeStrength ?? 0, benchStrength = benchArrow !== undefined ? gear.get(benchArrow)?.bonuses.rangeStrength ?? 0 : 0;
-    const largest = (rows: readonly Item[]) => [...rows].sort((x, y) => y.count - x.count)[0], strong = stacks.filter(i => strength(i) >= benchStrength);
-    const arrows = strong.find(i => i.count >= wantArrows) ?? ((largest(strong)?.count ?? 0) >= rule.minArrows ? largest(strong) : undefined) ?? stacks.find(i => i.count >= wantArrows) ?? largest(stacks);
-    const unstrung = owned.find(i => !g(i) && BOW.test(i.name) && !CROSSBOW.test(i.name));
-    if (unstrung && (!bow || (benchBow !== undefined && (g(bow)!.bonuses.rangeAttack ?? 0) < (gear.get(benchBow)!.bonuses.rangeAttack ?? 0)))) notes.push(`holds an unstrung ${unstrung.name} (item ${unstrung.id}): it fires nothing until a Fletching account strings it`);
-    if (bow && benchBow !== undefined && (g(bow)!.bonuses.rangeAttack ?? 0) < (gear.get(benchBow)!.bonuses.rangeAttack ?? 0)) {
+    const largest = (rows: readonly Item[]) => {
+        let bestItem: Item | undefined;
+        for (const r of rows) if (!bestItem || r.count > bestItem.count) bestItem = r;
+        return bestItem;
+    };
+    const strong = stacks.filter(i => strength(i) >= benchStrength);
+    const largestStrong = largest(strong);
+    const arrows = strong.find(i => i.count >= wantArrows) ?? ((largestStrong?.count ?? 0) >= rule.minArrows ? largestStrong : undefined) ?? stacks.find(i => i.count >= wantArrows) ?? largest(stacks);
+    if (unstrung && (!bow || (benchBow !== undefined && bowRange < (gear.get(benchBow)!.bonuses.rangeAttack ?? 0)))) notes.push(`holds an unstrung ${unstrung.name} (item ${unstrung.id}): it fires nothing until a Fletching account strings it`);
+    if (bow && benchBow !== undefined && bowRange < (gear.get(benchBow)!.bonuses.rangeAttack ?? 0)) {
         notes.push(`${bow.name} is weaker than the bench kit's ${gear.get(benchBow)!.name}`);
         needs.push({ what: gear.get(benchBow)!.name, count: 1, blocking: false, id: benchBow, accept: i => i.id === benchBow });
     }
@@ -364,13 +489,16 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     // The pack: the bow, an antipoison and each supply of the bench kit at its count, then sharks in every slot left.
     const carried: Item[] = [];
     if (bow) carried.push({ id: bow.id, name: bow.name, count: 1 });
-    const antipoisons = ITEMS.antipoison as readonly number[], isAntipoison = (i: Item) => antipoisons.includes(i.id);
-    const antipoison = owned.filter(isAntipoison).sort((x, y) => antipoisons.indexOf(x.id) % 4 - antipoisons.indexOf(y.id) % 4)[0];
     if (antipoison) carried.push({ id: antipoison.id, name: antipoison.name, count: 1 });
-    else needs.push({ what: 'antipoison', count: 1, blocking: antipoisonRequired, ...(kit.inventory.find(i => antipoisons.includes(i.id)) ? { id: kit.inventory.find(i => antipoisons.includes(i.id))!.id } : {}), accept: isAntipoison });
-    const rawSupplies = kit.inventory.filter(i => !isFood(i.id) && !antipoisons.includes(i.id) && !gear.has(i.id));
+    else {
+        const kitAnti = kit.inventory.find(i => ANTIPOISON_SET.has(i.id));
+        needs.push({ what: 'antipoison', count: 1, blocking: antipoisonRequired, ...(kitAnti ? { id: kitAnti.id } : {}), accept: i => ANTIPOISON_SET.has(i.id) });
+    }
     const supplyCounts = new Map<number, number>();
-    for (const s of rawSupplies) supplyCounts.set(s.id, (supplyCounts.get(s.id) ?? 0) + s.count);
+    for (const s of kit.inventory) {
+        if (FOOD_ID_SET.has(s.id) || ANTIPOISON_SET.has(s.id) || gear.has(s.id)) continue;
+        supplyCounts.set(s.id, (supplyCounts.get(s.id) ?? 0) + s.count);
+    }
     const supplies = [...supplyCounts.entries()].map(([id, count]) => ({ id, count }));
     const short = new Map<number, number>();
     for (const s of supplies) {
@@ -380,23 +508,32 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     }
     const wornIds = worn.map(w => w.id), magic = a.levels.magic ?? 1;
     const escapeSpell = squadEscapeSpell(post.z, carried, wornIds, magic), freezeSpell = castableFreeze(Math.min(magic, SQUAD_OPTS.freezeMagicCap), carried);
-    const freezeRunes: readonly number[] = [ITEMS.earthRune, ITEMS.waterRune, ITEMS.natureRune];
     const karamManaged = !!rule.bisSupplies && (!rule.waveBC || !!rule.comboFood);
     for (const s of supplies) {
         const n = short.get(s.id);
         if (!n) continue;
         if (karamManaged && s.id === TRIBRID_BIS_ITEMS.cookedKarambwan) continue;
-        const blocking = freezeRunes.includes(s.id) ? freezeSpell === null : escapeSpell === null;
+        const isFreezeRune = s.id === ITEMS.earthRune || s.id === ITEMS.waterRune || s.id === ITEMS.natureRune;
+        const blocking = isFreezeRune ? freezeSpell === null : escapeSpell === null;
         needs.push({ what: own.get(s.id)?.name ?? nameOf(s.id) ?? `item ${s.id}`, id: s.id, count: n, blocking, accept: i => i.id === s.id });
     }
     // Food: each kind of the food list that the account holds, the first kind first, up to the free slots of the pack.
     // Unstackable multi-count supplies (multiple Prayer potion(4) or Karambwans) occupy multiple slots in the pack.
-    const slotCountedIds = new Set<number>([TRIBRID_BIS_ITEMS.cookedKarambwan, ...Object.values(TRIBRID_POTION_DOSE_IDS).flat().map(([id]) => id)]);
-    const extraSupplySlots = carried.reduce((n, c) => n + (slotCountedIds.has(c.id) && c.count > 1 ? c.count - 1 : 0), 0);
-    const foodSlots = Math.max(0, PACK_SLOTS - carried.length - extraSupplySlots), foodStock = FOOD_IDS.flatMap(id => (own.get(id)?.count ?? 0) > 0 ? [{ ...own.get(id)! }] : []);
-    const foodHeld = foodStock.reduce((n, f) => n + f.count, 0), foodRows: Item[] = [];
-    for (const f of foodStock) { const take = Math.min(f.count, foodSlots - foodRows.reduce((n, r) => n + r.count, 0)); if (take > 0) foodRows.push({ id: f.id, name: f.name, count: take }); }
-    const food = foodRows.reduce((n, r) => n + r.count, 0);
+    let extraSupplySlots = 0;
+    for (const c of carried) if (SLOT_COUNTED_IDS.has(c.id) && c.count > 1) extraSupplySlots += c.count - 1;
+    const foodSlots = Math.max(0, PACK_SLOTS - carried.length - extraSupplySlots);
+    const foodStock: Item[] = [];
+    let foodHeld = 0;
+    for (const id of FOOD_IDS) {
+        const row = own.get(id);
+        if (row && row.count > 0) { foodStock.push({ ...row }); foodHeld += row.count; }
+    }
+    const foodRows: Item[] = [];
+    let food = 0;
+    for (const f of foodStock) {
+        const take = Math.min(f.count, foodSlots - food);
+        if (take > 0) { foodRows.push({ id: f.id, name: f.name, count: take }); food += take; }
+    }
     // A member that holds at least the food floor of its pack starts with what it holds (scripts/pk-squad.ts
     // squadStartFood), so the missing meals are a want; under the floor they block.
     if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: !squadStartFood(foodHeld, foodSlots).ok, accept: i => isFood(i.id) });
@@ -404,7 +541,10 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     // The special of the fight kit: the melee weapon's, else the bow's (scripts/pk.ts defaultSpec).
     const fight = kitFrom(worn, carried), special = defaultSpec(fight)?.style ?? null;
     const eat = [{ text: 'Eat' }], none: { text: string }[] = [];
-    const pack = packOf([...carried.map(c => ({ id: c.id, count: c.count, optionsWithIndex: none })), ...foodRows.flatMap(r => Array.from({ length: r.count }, () => ({ id: r.id, count: 1, optionsWithIndex: eat })))], worn);
+    const packInput: { id: number; count: number; optionsWithIndex: { text: string }[] }[] = [];
+    for (const c of carried) packInput.push({ id: c.id, count: c.count, optionsWithIndex: none });
+    for (const r of foodRows) for (let k = 0; k < r.count; k++) packInput.push({ id: r.id, count: 1, optionsWithIndex: eat });
+    const pack = packOf(packInput, worn);
     for (const n of needs) if (n.blocking) reasons.push(`no ${n.what}${n.count > 1 ? ` (${n.count} short)` : ''}`);
     if (!fight.melee?.length && weapon) reasons.push('the fight kit holds no melee weapon');
     if (escapeSpell === null && !reasons.some(r => /Law rune|Air rune/.test(r))) reasons.push(`no escape teleport that Magic ${magic} can cast with the runes held`);
@@ -451,10 +591,10 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
             }
         }
         if (rule.waveBC) {
-            const gloryIds = new Set<number>([TRIBRID_BIS_ITEMS.amuletOfGlory4, TRIBRID_BIS_ITEMS.amuletOfGlory3, TRIBRID_BIS_ITEMS.amuletOfGlory2, TRIBRID_BIS_ITEMS.amuletOfGlory1]);
-            const glories = [...gloryIds].reduce((n, id) => n + (own.get(id)?.count ?? 0), 0);
+            let glories = 0;
+            for (const id of GLORY_IDS) glories += own.get(id)?.count ?? 0;
             if (glories < 1) {
-                needs.push({ what: 'Amulet of glory(4)', id: TRIBRID_BIS_ITEMS.amuletOfGlory4, count: 1, blocking: true, accept: i => gloryIds.has(i.id) });
+                needs.push({ what: 'Amulet of glory(4)', id: TRIBRID_BIS_ITEMS.amuletOfGlory4, count: 1, blocking: true, accept: i => GLORY_IDS.has(i.id) });
                 reasons.push('no Amulet of glory(4)');
             }
             if ((own.get(TRIBRID_BIS_ITEMS.capeOfLegends)?.count ?? 0) < 1) {
@@ -466,13 +606,12 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
             if (rule.waveBC) reasons.push('no Berserker helm');
             else notes.push('no Berserker helm (upgrade over Rune full helm after The Fremennik Trials)');
         }
-        for (const [label, pairs] of Object.entries(TRIBRID_POTION_DOSE_IDS)) {
-            if (label === 'Antipoison(3)') continue;
-            const eq3 = pairs.reduce((n, [id, d]) => n + (own.get(id)?.count ?? 0) * d / 3, 0);
+        for (const { label, pairs, ids, firstId } of BIS_POTION_DOSE_CHECKS) {
+            let eq3 = 0;
+            for (const [id, d] of pairs) eq3 += (own.get(id)?.count ?? 0) * d / 3;
             if (eq3 < 4) {
                 const shortCount = Math.ceil(4 - eq3);
-                const ids = new Set(pairs.map(([id]) => id));
-                needs.push({ what: label, id: pairs[0]![0], count: shortCount, blocking: true, accept: i => ids.has(i.id) });
+                needs.push({ what: label, id: firstId, count: shortCount, blocking: true, accept: i => ids.has(i.id) });
                 reasons.push(`no ${label} (${shortCount} short)`);
             }
         }
@@ -614,7 +753,7 @@ export const PROFILE_SHOP: Readonly<Record<string, string>> = {
     helemos: 'dragonaxeshop',
     bob: 'axeshop',
 };
-export function shopSource(name: string, debugname: string, shops: readonly Shop[], profiles: Readonly<Record<string, { items: { re: RegExp }[]; need?: { skill: string; level: number } }>> = PROFILES): string | null {
+export function shopSource(name: string, debugname: string, shops: readonly Shop[], profiles: Readonly<Record<string, { items: { re: RegExp }[]; need?: { skill: string; level: number } }>> = getShopProfiles()): string | null {
     const out: string[] = [];
     for (const shop of shops) {
         if (WILDERNESS_SHOPS.has(shop.inv)) continue;
@@ -713,7 +852,8 @@ if (import.meta.main) {
         } catch { return []; }
     }) : [];
     // No account named: the maxed accounts, the one with the fewest blocking faults first.
-    const nameOf = (id: number) => items.find(i => i.id === id)?.name;
+    const itemById = new Map(items.map(i => [i.id, i]));
+    const nameOf = (id: number) => itemById.get(id)?.name;
     const blockers = (a: Account) => pickKit(a, gear, rule, now).reasons.length;
     const candidates = names.length ? names.map(n => fleet.find(a => a.name.toLowerCase() === n.toLowerCase()) ?? (() => { throw Error(`no status file of this side's account ${n} in ${statusDir}`); })())
         : fleet.filter(maxed).sort((x, y) => blockers(x) - blockers(y));
@@ -728,7 +868,7 @@ if (import.meta.main) {
     let market: Record<string, { ask: number | null; sell: number }> = {};
     try { market = read(join(root, '.practice', 'market-all.json')).items; } catch { /* no market file: the plan names no price */ }
     const source = (gap: Gap) => {
-        const row = gap.id !== undefined ? items.find(i => i.id === gap.id) : undefined, m = gap.id !== undefined ? market[String(gap.id)] : undefined;
+        const row = gap.id !== undefined ? itemById.get(gap.id) : undefined, m = gap.id !== undefined ? market[String(gap.id)] : undefined;
         const shop = row?.id === TRIBRID_BIS_ITEMS.climbingBoots ? 'shop-buyer profile tenzing (Death Plateau dialog, 12 coins)' : row ? shopSource(row.name, row.debugname, shops) : null;
         return [shop, m?.ask ? `Grand Exchange ask ${m.ask} each (${m.sell} on sale), ${gap.count * m.ask} for ${gap.count}` : row ? 'no Grand Exchange seller' : null].filter(Boolean).join('; ') || 'see the plan';
     };

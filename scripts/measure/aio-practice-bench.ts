@@ -31,35 +31,22 @@
 // localhost quirk: in this Windows sandbox `localhost` resolves to ::1 first
 // while the practice engine listens on IPv4 only, so fetch('http://localhost:8888/crc')
 // resets. Bench bots are therefore pinned to 127.0.0.1 after createBot.
-import {simStatFile, startStack, stopStack} from '../../packages/practice/src/stack';
-import {runTracker} from './bench-stop';
-import {proveInProcess} from '../../packages/practice/src/prove';
-import {createBot} from '../../packages/practice/src/bots';
-import {applyPreset, preparePresetDirectory, PRESETS} from '../../packages/practice/src/presets';
-import {benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS, type BenchCase} from './aio-bench-cases';
-import {FISHING_BENCH_CASES} from './fishing-bench-cases';
-import {practiceDir, rsSdkRoot} from '../../packages/practice/src/paths';
-import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, watch} from 'node:fs';
+import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, statSync, watch} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
 import {dirname, join, resolve} from 'node:path';
 import {FREE_FLOOR_GB} from '../../packages/core/src/memory';
 import {simBenchDir, simBotsDir} from '../../packages/core/src/practice-paths';
 import {fleet, freeGB, unitsThatFit} from '../../packages/core/src/heavy-admission';
 import {BENCH_CASE_GB, FLEET_STOP_EXIT, LIVE_MAX_ENGINES, START_REFUSED_EXIT, admitStart, fleetStop, liveBotProcs, readFleetFacts} from './bench-start-check';
 import {BUDGET_EXIT, BUDGET_MIN, budgetRefusal, estimateRun, parseAckStats, parseSimStat, readElapsed, readSince, recordElapsed} from './bench-budget';
-import {
-  discoverBankedProduction,
-  planProgressiveSkiller,
-  planAutoFighterBand,
-  assessBossReadiness,
-  pvpCombatBracket,
-  assessTribridReadiness,
-  assessQuestReadiness,
-  prioritizeQuestsForAccount,
-  planGeRestockOrders,
-  planFleetDistribution,
-  resolveAioStep,
-} from '../aio';
+import type { BenchCase } from './aio-bench-cases';
+
+const require = createRequire(import.meta.url);
+const lazy = <T>(id: string): T => require(id) as T;
+const getBenchCasesMod = () => lazy<typeof import('./aio-bench-cases')>('./aio-bench-cases');
+const getPresetsMod = () => lazy<typeof import('../../packages/practice/src/presets')>('../../packages/practice/src/presets');
+const getAioMod = () => lazy<typeof import('../aio')>('../aio');
 
 const root = resolve(import.meta.dir, '..', '..');
 
@@ -245,48 +232,142 @@ const TRACE_DIR = process.env.BENCH_TRACE;
 // reads at run time (knowledge/, vendor content) is not in the hash: use BENCH_CACHE=0 after such a change.
 const CACHE = FRESH && LOCKSTEP && process.env.BENCH_CACHE !== '0';
 const CACHE_DIR = '.practice/sim/aio-bench/cache';
+
+type FileImportEntry = { sig: string; deps: string[] };
+type FileDigestEntry = { sig: string; bytes: Buffer };
+const fileImportCache = new Map<string, FileImportEntry>();
+const fileDigestCache = new Map<string, FileDigestEntry>();
+const closureMemo = new Map<string, { sigs: [string, string][]; files: string[] }>();
+let harnessHashCache: { sigs: [string, string][]; digest: string } | undefined;
+let patchDigestCache: { sig: string; bytes: Buffer } | undefined;
+
+function statSig(absPath: string): string | null {
+  try {
+    const st = statSync(absPath);
+    return `${st.mtimeMs}:${st.size}`;
+  } catch {
+    return null;
+  }
+}
+
+function directImportDeps(absFile: string): string[] {
+  const sig = statSig(absFile);
+  if (!sig) {
+    fileImportCache.delete(absFile);
+    return [];
+  }
+  const cached = fileImportCache.get(absFile);
+  if (cached && cached.sig === sig) return cached.deps;
+  const text = readFileSync(absFile, 'utf8');
+  const bytes = Buffer.from(text, 'utf8');
+  fileDigestCache.set(absFile, { sig, bytes });
+  const deps: string[] = [];
+  const dir = dirname(absFile);
+  for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g)) {
+    const base = resolve(dir, m[1]!);
+    for (const candidate of [base, `${base}.ts`, join(base, 'index.ts')]) {
+      if (existsSync(candidate) && !candidate.endsWith(dirname(candidate))) {
+        if (/\.(ts|js|json)$/.test(candidate)) deps.push(candidate);
+        break;
+      }
+    }
+  }
+  fileImportCache.set(absFile, { sig, deps });
+  return deps;
+}
+
+function fileBytes(absFile: string): Buffer {
+  const sig = statSig(absFile) ?? '';
+  const cached = fileDigestCache.get(absFile);
+  if (cached && cached.sig === sig) return cached.bytes;
+  const bytes = readFileSync(absFile);
+  fileDigestCache.set(absFile, { sig, bytes });
+  return bytes;
+}
+
 function importClosure(entry: string, seen = new Set<string>()): Set<string> {
   const file = resolve(root, entry);
   if (seen.has(file) || !existsSync(file)) return seen;
-  seen.add(file);
-  const text = readFileSync(file, 'utf8');
-  for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g)) {
-    const base = resolve(dirname(file), m[1]!);
-    for (const candidate of [base, `${base}.ts`, join(base, 'index.ts')]) {
-      if (existsSync(candidate) && !candidate.endsWith(dirname(candidate))) { if (/\.(ts|js|json)$/.test(candidate)) importClosure(candidate, seen); break; }
+  const cached = closureMemo.get(file);
+  if (cached && cached.sigs.every(([f, s]) => statSig(f) === s)) {
+    for (const f of cached.files) seen.add(f);
+    return seen;
+  }
+  const ownSeen = new Set<string>();
+  const stack = [file];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (ownSeen.has(cur) || !existsSync(cur)) continue;
+    ownSeen.add(cur);
+    for (const dep of directImportDeps(cur)) {
+      if (!ownSeen.has(dep)) stack.push(dep);
     }
   }
+  const files = [...ownSeen];
+  closureMemo.set(file, { sigs: files.map(f => [f, statSig(f) ?? '']), files });
+  for (const f of files) seen.add(f);
   return seen;
 }
 // The start check and the run both ask for the hash of a case, so one run computes it once.
 const caseHashes = new Map<string, string>();
-let harnessHash: string | undefined;
 function benchHarnessHash(): string {
-  if (harnessHash === undefined) {
-    const h = createHash('sha256');
-    for (const file of [...importClosure(import.meta.path)].sort()) { h.update(file.slice(root.length)); h.update(readFileSync(file)); }
-    harnessHash = h.digest('hex');
+  if (harnessHashCache && harnessHashCache.sigs.every(([f, s]) => statSig(f) === s)) {
+    return harnessHashCache.digest;
   }
-  return harnessHash;
+  const files = [...importClosure(import.meta.path)].sort();
+  const h = createHash('sha256');
+  const sigs: [string, string][] = [];
+  for (const file of files) {
+    sigs.push([file, statSig(file) ?? '']);
+    h.update(file.slice(root.length));
+    h.update(fileBytes(file));
+  }
+  const digest = h.digest('hex');
+  harnessHashCache = { sigs, digest };
+  return digest;
 }
 function caseHash(c: BenchCase): string {
   let hash = caseHashes.get(c.key);
   if (!hash) caseHashes.set(c.key, hash = computeCaseHash(c));
   return hash;
 }
+function resolveWorkerScript(category: string, scriptArgs: readonly string[]): string | undefined {
+  try {
+    if (category === 'skiller') return lazy<typeof import('../aio-skiller')>('../aio-skiller').resolveSkillerStep(scriptArgs[0]!, scriptArgs[1], scriptArgs.slice(2)).script;
+    if (category === 'fighter') return lazy<typeof import('../aio-fighter')>('../aio-fighter').resolveFighterStep(scriptArgs[0]!, scriptArgs.slice(1)).script;
+    if (category === 'boss') return lazy<typeof import('../aio-boss')>('../aio-boss').resolveBossStep(scriptArgs[0]!, scriptArgs.slice(1)).script;
+    if (category === 'pvp') return lazy<typeof import('../aio-pvp')>('../aio-pvp').resolvePvpStep(scriptArgs[0]!, scriptArgs.slice(1)).script;
+    if (category === 'quester') return lazy<typeof import('../aio-quester')>('../aio-quester').resolveQuesterStep(scriptArgs[0]!, scriptArgs.slice(1)).script;
+    if (category === 'market') return lazy<typeof import('../aio-market')>('../aio-market').resolveMarketStep(scriptArgs[0]!, scriptArgs.slice(1)).script;
+    if (category === 'logistics') return lazy<typeof import('../aio-logistics')>('../aio-logistics').resolveLogisticsStep(scriptArgs[0]!, scriptArgs.slice(1)).script;
+    return getAioMod().resolveAioStep(category, scriptArgs).script;
+  } catch {
+    return undefined;
+  }
+}
 export function computeCaseHash(c: BenchCase): string {
   let worker = c.script;
   const category = /aio-([a-z]+)\.ts$/.exec(c.script)?.[1];
-  if (category) { try { worker = resolveAioStep(category, c.scriptArgs).script; } catch { /* a dispatcher-only case hashes the dispatcher */ } }
+  if (category && c.scriptArgs.length) {
+    worker = resolveWorkerScript(category, c.scriptArgs) ?? worker;
+  }
   if (c.script === 'scripts/measure/specialist-bench.ts' && c.scriptArgs[1]) worker = c.scriptArgs[1];
+  const { PRESETS } = getPresetsMod();
+  const { BENCH_JOB_FILES } = getBenchCasesMod();
   const h = createHash('sha256');
   h.update(JSON.stringify({ seed: SEED, key: c.key, script: c.script, args: c.scriptArgs, preset: c.presetConfig ?? PRESETS[c.preset], runs: RUNS,
     engineEnv: c.engineEnv, companions: c.companions?.map(k => ({suffix: k.suffix, preset: k.presetConfig ?? PRESETS[k.preset]})),
     jobFiles: c.jobFiles, sharedJobFiles: BENCH_JOB_FILES, pass: c.pass.toString(), output: c.output?.toString(), timeoutMs: c.timeoutMs ?? TIMEOUT,
     env: Object.entries(process.env).filter(([k]) => k.startsWith('Q_') || k === 'SIM_BUSY_MS' || SET_KEYS.includes(k)).sort() }));
   h.update(benchHarnessHash());
-  h.update(readFileSync(resolve(root, 'patches/rs-sdk-working.patch')));
-  for (const file of [...new Set([...importClosure(c.script), ...importClosure(worker)])].sort()) { h.update(file.slice(root.length)); h.update(readFileSync(file)); }
+  const patchPath = resolve(root, 'patches/rs-sdk-working.patch');
+  const patchSig = statSig(patchPath) ?? '';
+  if (!patchDigestCache || patchDigestCache.sig !== patchSig) {
+    patchDigestCache = { sig: patchSig, bytes: readFileSync(patchPath) };
+  }
+  h.update(patchDigestCache.bytes);
+  const files = worker === c.script ? [...importClosure(c.script)].sort() : [...new Set([...importClosure(c.script), ...importClosure(worker)])].sort();
+  for (const file of files) { h.update(file.slice(root.length)); h.update(fileBytes(file)); }
   return h.digest('hex').slice(0, 32);
 }
 
@@ -299,6 +380,18 @@ function pinLoopbackToIpv4(envPath: string, enginePort = 8888) {
 }
 
 function benchPlanners() {
+  const {
+    discoverBankedProduction,
+    planProgressiveSkiller,
+    planAutoFighterBand,
+    assessBossReadiness,
+    pvpCombatBracket,
+    assessTribridReadiness,
+    assessQuestReadiness,
+    prioritizeQuestsForAccount,
+    planGeRestockOrders,
+    planFleetDistribution,
+  } = getAioMod();
   const rows: unknown[] = [];
   const time = (label: string, fn: () => unknown) => {
     const t0 = performance.now();
@@ -372,11 +465,21 @@ function report(rows: Row[]) {
   }
 }
 
-// The worker processes and engines of the cases in flight (bench-stop.ts): a bench that stops for the live fleet ends
-// them first, and after the stop no engine and no worker of this run is left.
-const tracker = runTracker(proc => { if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }); else proc.kill(); });
 // Where the wall time of a case went, per runCase invocation for AIO_BENCH_TIMING.
-async function runCase(c: BenchCase, bot: string, enginePort = 8888, ackFile?: string) {
+async function runCase(
+  c: BenchCase,
+  bot: string,
+  enginePort = 8888,
+  ackFile?: string,
+  tracker?: ReturnType<typeof import('./bench-stop').runTracker>,
+  rivalTicks?: (key: string) => number | undefined,
+) {
+  const [{ proveInProcess }, { createBot }, { applyPreset, preparePresetDirectory, PRESETS }, { rsSdkRoot }] = await Promise.all([
+    import('../../packages/practice/src/prove'),
+    import('../../packages/practice/src/bots'),
+    import('../../packages/practice/src/presets'),
+    import('../../packages/practice/src/paths'),
+  ]);
   const t0 = Date.now();
   const phase = { prepareMs: 0, scriptMs: 0, cleanupMs: 0 };
   const timed = async <T>(key: keyof typeof phase, work: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await work(); } finally { phase[key] += Date.now() - t; } };
@@ -428,7 +531,7 @@ console.log('SAVES_DONE');`;
         for (const [path, value] of Object.entries(c.jobFiles ?? {})) { mkdirSync(dirname(fill(path)), { recursive: true }); writeFileSync(fill(path), fill(JSON.stringify(value, null, 1))); }
         const proc = Bun.spawn(['bun', resolve(script), name, ...args.map(fill)], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env, ...(ackFile ? { SIM_ACK_FILE: ackFile } : {}) } }); // Bun.spawn does not pass env set at run time unless given
         // A stop for the fleet between the engine start and this spawn: the worker is ended at once.
-        tracker.worker(proc);
+        tracker?.worker(proc);
         // An AIO dispatcher owns a worker child; a timeout must stop the whole tree or the worker keeps its session.
         const timer = setTimeout(() => {
           if (process.platform === 'win32') Bun.spawn(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true });
@@ -436,7 +539,7 @@ console.log('SAVES_DONE');`;
         }, timeoutMs);
         const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
         const exitCode = await proc.exited;
-        tracker.done(proc);
+        tracker?.done(proc);
         clearTimeout(timer);
         // The whole output of the last run of each case, for a failure the tail does not explain.
         mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -455,13 +558,25 @@ console.log('SAVES_DONE');`;
   const xpGains = [...tail.matchAll(/^LEDGER .*? xpGain=(\d+)/gm)].map(x => Number(x[1]));
   const result = tail.split(/\r?\n/).filter(l => /^RESULT /.test(l)).at(-1) ?? null;
   const amount = c.output && result ? Number(c.output.exec(result)?.[1] ?? NaN) : NaN;
-  const row = { case: c.key, ok, passes: r.passes, runs: RUNS, elapsedMs, ledgerTicks, rivalTicks: rivalTicks(c.key) ?? null, output: Number.isFinite(amount) ? amount : null, xp: xpGains.at(-1) ?? null, result: result?.slice(0, 400) ?? null };
+  const row = { case: c.key, ok, passes: r.passes, runs: RUNS, elapsedMs, ledgerTicks, rivalTicks: rivalTicks?.(c.key) ?? null, output: Number.isFinite(amount) ? amount : null, xp: xpGains.at(-1) ?? null, result: result?.slice(0, 400) ?? null };
   console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
   if (!ok) console.log(`--- tail ${c.key} ---\n${tail.slice(-1500)}\n--- end tail ---`);
   return { row, phase };
 }
 
 async function main() {
+  const [
+    { startStack, stopStack, simStatFile },
+    { runTracker },
+    { benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS },
+    { FISHING_BENCH_CASES },
+  ] = await Promise.all([
+    import('../../packages/practice/src/stack'),
+    import('./bench-stop'),
+    import('./aio-bench-cases'),
+    import('./fishing-bench-cases'),
+  ]);
+  const tracker = runTracker(proc => { if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }); else proc.kill(); });
   const prevRandom = process.env.RANDOM_EVENTS, prevLoot = process.env.LOOT_WATCH, prevDeath = process.env.DEATH_RECOVERY, prevGuard = process.env.VALUE_GUARD, prevFlee = process.env.FLEE_GUARD;
   process.env.RANDOM_EVENTS = '0';
   // A ground-item pickup, a run back after a death, a refused drop or a flight would move a case's ticks: off unless the
@@ -570,7 +685,7 @@ async function main() {
             const ackFile = profile ? resolve(profileDir, `${c.key.replace(/[^a-z0-9-]/gi, '_')}.ack`) : '';
             if (profile) rmSync(ackFile, { force: true });
             const statFile = statFileOf(slot), statFrom = profile && existsSync(statFile) ? readFileSync(statFile).length : 0;
-            const { row, phase } = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888, profile ? ackFile : undefined);
+            const { row, phase } = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888, profile ? ackFile : undefined, tracker, rivalTicks);
             if (profile) {
               const ack = parseAckStats(readSince(ackFile, 0)), sim = parseSimStat(readSince(statFile, statFrom));
               console.log(`AIO_BENCH_PROFILE ${JSON.stringify({ case: c.key, wallMs: row.elapsedMs, engineStartMs, ...phase, engine: sim, client: ack, cappedCostMs: ack.capped * Number(process.env.SIM_BUSY_MS ?? 2000) })}`);

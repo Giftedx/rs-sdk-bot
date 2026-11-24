@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 import {benchCases, BENCH_JOB_FILES, type BenchCase} from './aio-bench-cases';
 import {computeCaseHash} from './aio-practice-bench';
-import {readFileSync} from 'node:fs';
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 
 const byKey = (key: string): BenchCase => {
@@ -227,6 +227,36 @@ describe('benchCases lazy cache invariants', () => {
     } finally {
       if (prev === undefined) delete process.env.SPAR_NPC_NEAR;
       else process.env.SPAR_NPC_NEAR = prev;
+    }
+  });
+
+  test('computeCaseHash invalidates stat-mtime memoized import closure when a transitive script changes', () => {
+    const repoRoot = join(import.meta.dir, '..', '..');
+    const pracDir = join(repoRoot, '.practice');
+    mkdirSync(pracDir, { recursive: true });
+    const dir = mkdtempSync(join(pracDir, 'case-hash-inval-'));
+    try {
+      const dep = join(dir, 'dep.ts');
+      const entry = join(dir, 'entry.ts');
+      writeFileSync(dep, 'export const v = 1;\n');
+      utimesSync(dep, 1_700_000_000, 1_700_000_000);
+      writeFileSync(entry, "import { v } from './dep';\nexport const out = v;\n");
+      utimesSync(entry, 1_700_000_000, 1_700_000_000);
+      const relEntry = entry.slice(repoRoot.length + 1).replace(/\\/g, '/');
+      const sampleCase: BenchCase = {
+        ...byKey('pvp:fight'),
+        key: 'test:hash-inval',
+        script: relEntry,
+        scriptArgs: [],
+      };
+      const h1 = computeCaseHash(sampleCase);
+      expect(computeCaseHash(sampleCase)).toBe(h1);
+
+      writeFileSync(dep, 'export const v = 2;\n');
+      utimesSync(dep, 1_700_000_010, 1_700_000_010);
+      expect(computeCaseHash(sampleCase)).not.toBe(h1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

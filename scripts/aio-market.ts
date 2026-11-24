@@ -4,76 +4,46 @@
 //   bun scripts/aio-market.ts --list
 //   bun scripts/aio-market.ts shop-to-bid --scan [ITEMS=...] [MIN_NET=...]
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
-import { MarketClient } from '../vendor/rs-sdk/sdk/market';
-import { openBot, serverFromEnv, settle } from '../packages/core/src/bot';
 import type { Step } from '../packages/core/src/chain-step';
 import type { Session } from '../packages/core/src/inprocess';
 import { resolveRouteStep } from './aio-route-step';
-import {
-    PROFILES,
-    SWORD,
-    bankSellerCatalogue,
-    bankSellerPaths,
-    bidPlan,
-    buyListPaths,
-    buyListStop,
-    earthShopFallback,
-    fetchMarket,
-    fetchQuote,
-    gePlanPaths,
-    geTripPaths,
-    geTripStop,
-    loadGeItemCatalogue,
-    openOrderSession,
-    orderEscrow,
-    orderPaths,
-    orderQuantity,
-    parseBuyList,
-    parseItems,
-    parseProfiles,
-    reclaimGEPlanLock,
-    runBankBidSale,
-    runBankSeller,
-    runBuyList,
-    runEarthRefill,
-    runGEPlanSession,
-    runGETrip,
-    runOwnedItem,
-    runOwnedSale,
-    runOwnedSword,
-    runOwnedSwordFromEast,
-    runShopBuy,
-    runShopToBid,
-    runShopTrip,
-    saleStopRequested,
-    scanProfiles,
-    shopFallbackSpent,
-    shopFinishOk,
-    shopTripStop,
-    validateBankSeller,
-    validateBuyList,
-    validateGEPlan,
-    validateGETrip,
-    validateRequest,
-    validateSale,
-    validateShopTrip,
-    type BankSellerPolicy,
-    type BuyListRequest,
-    type GEPricePlan,
-    type GETripRequest,
-    type ItemOrder,
-    type ItemRequest,
-    type MarketMode,
-    type Quote,
-    type RescueControl,
-    type SaleJournal,
-    type SaleRequest,
-    type ShopTripJob,
-} from '../packages/workers/src/market';
+import type { RescueControl } from '../packages/workers/src/market/ge-common';
+import type {
+    BankSellerPolicy,
+    BuyListRequest,
+    GEPricePlan,
+    GETripRequest,
+    ItemOrder,
+    ItemRequest,
+    MarketMode,
+    Quote,
+    SaleJournal,
+    SaleRequest,
+    ShopProfile,
+    ShopTripJob,
+} from '../packages/workers/src/market/types';
 
-export * from '../packages/workers/src/market';
-export { PROFILES as SHOP_PROFILES };
+export type * from '../packages/workers/src/market/types';
+export type { RescueControl } from '../packages/workers/src/market/ge-common';
+export const orderQuantity = (r: ItemRequest) => r.quantity ?? 1;
+
+const require = createRequire(import.meta.url);
+let marketMod: typeof import('../packages/workers/src/market') | undefined;
+function getMarket() {
+    return marketMod ??= require('../packages/workers/src/market') as typeof import('../packages/workers/src/market');
+}
+let shopProfilesCache: Record<string, ShopProfile> | undefined;
+function getShopProfiles(): Record<string, ShopProfile> {
+    return shopProfilesCache ??= (require('../packages/workers/src/market/shop-buy') as typeof import('../packages/workers/src/market/shop-buy')).PROFILES;
+}
+export const SHOP_PROFILES: Record<string, ShopProfile> = new Proxy({} as Record<string, ShopProfile>, {
+    get: (_t, prop) => Reflect.get(getShopProfiles(), prop),
+    has: (_t, prop) => Reflect.has(getShopProfiles(), prop),
+    ownKeys: () => Reflect.ownKeys(getShopProfiles()),
+    getOwnPropertyDescriptor: (_t, prop) => Reflect.getOwnPropertyDescriptor(getShopProfiles(), prop),
+});
 
 export interface MarketModeSpec {
     mode: MarketMode;
@@ -148,6 +118,10 @@ export function planGeRestockOrders(options: {
     return { funded, unfunded, totalEscrow, remainingCoins: spendable + options.coinReserve };
 }
 
+function validateRequest(req: ItemRequest): void {
+    getMarket().validateRequest(req);
+}
+
 export function resolveMarketStep(modeInput: string, rest: readonly string[] = []): Step {
     const mode = modeInput.toLowerCase().replace(/^--mode=/, '').replace(/^--type=/, '');
     const spec = MARKET_MODES.find(m => m.mode === mode);
@@ -162,7 +136,8 @@ export function resolveMarketStep(modeInput: string, rest: readonly string[] = [
     };
 }
 
-function serverForActor(actor: string): string {
+async function serverForActor(actor: string): Promise<string> {
+    const { serverFromEnv } = await import('../packages/core/src/bot');
     return serverFromEnv(readFileSync(resolve(import.meta.dir, '../vendor/rs-sdk/bots', actor, 'bot.env'), 'utf8'));
 }
 
@@ -210,6 +185,7 @@ async function withEnv<T>(overrides: Record<string, string | undefined>, fn: (en
 }
 
 async function settleResult(sessions: Session[], ok: boolean, detail: string): Promise<string> {
+    const { settle } = await import('../packages/core/src/bot');
     const settled = await settle(sessions, ok, detail);
     return `${settled ? 'RESULT ok' : 'RESULT fail'} ${detail}`;
 }
@@ -223,6 +199,59 @@ export async function runAioMarket(account: string, args: readonly string[], env
     const step = resolveMarketStep(modeInput, rest);
     const mode = step.args[0] as MarketMode;
     const pos = step.args.slice(1);
+    const [
+        { openBot, settle },
+        { MarketClient },
+        {
+            PROFILES,
+            SWORD,
+            bankSellerCatalogue,
+            bankSellerPaths,
+            bidPlan,
+            buyListPaths,
+            buyListStop,
+            earthShopFallback,
+            fetchQuote,
+            gePlanPaths,
+            geTripPaths,
+            geTripStop,
+            loadGeItemCatalogue,
+            openOrderSession,
+            orderEscrow,
+            orderPaths,
+            parseBuyList,
+            parseItems,
+            parseProfiles,
+            reclaimGEPlanLock,
+            runBankBidSale,
+            runBankSeller,
+            runBuyList,
+            runEarthRefill,
+            runGEPlanSession,
+            runGETrip,
+            runOwnedItem,
+            runOwnedSale,
+            runOwnedSword,
+            runOwnedSwordFromEast,
+            runShopBuy,
+            runShopToBid,
+            runShopTrip,
+            saleStopRequested,
+            shopFallbackSpent,
+            shopFinishOk,
+            shopTripStop,
+            validateBankSeller,
+            validateBuyList,
+            validateGEPlan,
+            validateGETrip,
+            validateSale,
+            validateShopTrip,
+        },
+    ] = await Promise.all([
+        import('../packages/core/src/bot'),
+        import('../vendor/rs-sdk/sdk/market'),
+        import('../packages/workers/src/market'),
+    ]);
 
     return withEnv({ ...env, ...step.env }, async merged => {
         switch (mode) {
@@ -353,7 +382,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 if (!Number.isSafeInteger(fillWaitTicks) || fillWaitTicks < 0 || fillWaitTicks > 200) {
                     throw Error('FILL_WAIT_TICKS must be 0-200 game ticks');
                 }
-                const server = serverForActor(account);
+                const server = await serverForActor(account);
                 const { base, lock, journal: journalPath } = orderPaths(server, account, goal);
                 mkdirSync(base, { recursive: true });
                 acquirePidLock(lock, { pid: process.pid, actor: account, server, goal, at: Date.now() }, 'market');
@@ -457,7 +486,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
             }
             case 'ge-sell': {
                 const goal = merged.ORDER_KEY ?? 'owned-surplus-sale';
-                const server = serverForActor(account);
+                const server = await serverForActor(account);
                 const paths = orderPaths(server, account, 'sell-' + goal);
                 acquirePidLock(paths.lock, { pid: process.pid, actor: account, goal }, 'market');
                 let s: Session | undefined;
@@ -498,7 +527,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 const listPath = pos[0];
                 if (!listPath) throw Error('usage: bun scripts/aio-market.ts <account> ge-buy-list <plan.json>');
                 const input = JSON.parse(readFileSync(listPath, 'utf8'));
-                const server = serverForActor(account);
+                const server = await serverForActor(account);
                 let r = input as BuyListRequest;
                 if (r.actor !== account || r.server !== server) throw Error('buy-list CLI actor/server mismatch');
                 if (input.list) {
@@ -551,7 +580,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 const tripPath = pos[0];
                 if (!tripPath) throw Error('usage: bun scripts/aio-market.ts <account> ge-trip <lot.json>');
                 const r = JSON.parse(readFileSync(tripPath, 'utf8')) as GETripRequest;
-                const server = serverForActor(account);
+                const server = await serverForActor(account);
                 if (r.actor !== account || r.server !== server) throw Error('GE CLI actor/server mismatch');
                 validateGETrip(r);
                 const paths = geTripPaths(r);
@@ -580,7 +609,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 if (!file) throw Error('usage: bun scripts/aio-market.ts <account> ge-plan <explicit-plan.json> [--finish]');
                 const request = JSON.parse(readFileSync(file, 'utf8')) as GEPricePlan;
                 validateGEPlan(request);
-                if (serverForActor(account) !== request.server) throw Error('GE plan server mismatch');
+                if ((await serverForActor(account)) !== request.server) throw Error('GE plan server mismatch');
                 const p = gePlanPaths(request);
                 mkdirSync(p.base, { recursive: true });
                 reclaimGEPlanLock(p.lock);
@@ -610,7 +639,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 const r = JSON.parse(readFileSync(file, 'utf8')) as BankSellerPolicy;
                 validateBankSeller(r);
                 bankSellerCatalogue();
-                if (account !== r.actor || serverForActor(account) !== r.server) throw Error('bank-seller CLI actor/server mismatch');
+                if (account !== r.actor || (await serverForActor(account)) !== r.server) throw Error('bank-seller CLI actor/server mismatch');
                 const p = bankSellerPaths(r);
                 mkdirSync(p.base, { recursive: true });
                 reclaimGEPlanLock(p.lock);
@@ -665,7 +694,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 if (!quotes.length) {
                     return 'RESULT fail shop-to-bid refused before login: no item clears MIN_NET';
                 }
-                const server = serverForActor(account);
+                const server = await serverForActor(account);
                 const s = await openBot(account);
                 try {
                     const r = await runShopToBid(s, server, {
@@ -697,6 +726,7 @@ async function runScan(args: readonly string[]): Promise<number> {
     }
     const minNet = Number(env.MIN_NET ?? 50);
     if (!Number.isSafeInteger(minNet) || minNet < 0) throw Error('MIN_NET must be a whole number');
+    const { PROFILES, fetchMarket, scanProfiles } = await import('../packages/workers/src/market');
     const rows = scanProfiles(PROFILES, await fetchMarket(), minNet);
     for (const r of rows) {
         console.log(`${r.profile.padEnd(14)} ${String(r.id).padStart(5)} ${r.name.padEnd(20)} bid ${r.bid} want ${r.want} margin ${r.margin}`);

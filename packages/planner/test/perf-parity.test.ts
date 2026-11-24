@@ -7,8 +7,11 @@ import {
     bestSet, haggisActivities, haggisTravel, haggisUnsourceable, loadSnapshot, schedule, scheduleOverall, scheduleQpSpecialist, TRICKS,
 } from '../src/haggis';
 import { bestHaggisLeg, createHaggisLegCache, legCacheFor } from '../src/haggis/travel';
-import { selectProgressiveLoadout, meleeWeaponSlot } from '../src/gear-progression';
+import {
+    bestElementalStaffForRunes, bestMiningPickaxe, bestWoodcuttingAxe, meleeWeaponSlot, planToolShopUpgrade, selectProgressiveLoadout,
+} from '../src/gear-progression';
 import { gearSources, resetGearSourceTables } from '../src/gear-sources';
+import { squadHeld, squadKeeps, squadRows } from '../src/squad';
 import { loadGear } from '../../knowledge/src/gear-query';
 import { idsFor, supplyBill } from '../src/supply-bill';
 import type { TravelModel } from '../src/travel';
@@ -152,4 +155,45 @@ test('cairn priceSteps indexed lookup aggregates joined steps and missing script
     expect(priced[0]!.joined).toEqual(['s2']);
     expect(priced[0]!.late).toEqual(['r2']);
     expect(priced[0]!.missingScripts).toEqual(['missing-script.ts']);
+});
+
+test('tool planners and squad demand helpers isolate mutations and preserve exact recommendations', () => {
+    const axe = bestWoodcuttingAxe([{ id: 1349, count: 1 }], { woodcutting: 25, attack: 1 }, { enforceAxeLevel: true });
+    expect(axe.current?.item.id).toBe(1349);
+    expect(axe.bestUsable?.item.id).toBe(1355);
+    expect(axe.nextAcquirable?.item.id).toBe(1355);
+    expect(axe.nextUnlock?.item.id).toBe(1357);
+
+    const pick = bestMiningPickaxe([{ id: 1265, count: 1 }], { mining: 35, attack: 1 });
+    expect(pick.current?.item.id).toBe(1265);
+    expect(pick.bestUsable?.item.id).toBe(1271);
+    expect(pick.nextUnlock?.item.id).toBe(1275);
+
+    const staff = bestElementalStaffForRunes(
+        [{ id: 1381, count: 1 }],
+        { magic: 10, attack: 10 },
+        ['Lost City'],
+        { runeIds: [556, 557, 555] },
+    );
+    expect(staff.current?.item.id).toBe(1381);
+    expect(staff.bestUsable).not.toBeNull();
+
+    const shopUpgrade = planToolShopUpgrade('mining-pickaxe', [{ id: 1265, count: 1 }], 50_000, { mining: 45, attack: 1 });
+    expect(shopUpgrade?.target.id).toBe(1275);
+
+    expect(squadHeld('food', { shark: 2, swordfish: 1, lobster: 1 })).toBeCloseTo(2 + 14 / 20 + 12 / 20, 6);
+    expect(squadHeld('arrow', { 'rune arrow(p)': 100, 'rune arrow': 50 })).toBe(150);
+    expect(squadHeld('prayer potion(3)', { 'prayer potion(4)': 3 })).toBe(4);
+
+    const keeps1 = squadKeeps(4);
+    const origSharkKeep = keeps1.shark;
+    keeps1.shark = 999_999;
+    expect(squadKeeps(4).shark).toBe(origSharkKeep);
+
+    const rows = squadRows(
+        { active: true, hours: 4, members: [{ name: 'Alpha', items: { shark: 10, 'law rune': 1 } }], maxCoins: 500_000 },
+        () => 100,
+    );
+    expect(rows.some(r => r.consumer === 'gang squad Alpha: food' && r.short === (origSharkKeep! - 10))).toBe(true);
+    expect(rows.some(r => r.account === 'alpha')).toBe(true);
 });

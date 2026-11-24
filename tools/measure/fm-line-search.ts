@@ -59,34 +59,57 @@ type LocCfg = { models: string[]; op: boolean; active?: boolean; width: number; 
 const locCfg = new Map<string, LocCfg>();
 type NpcCfg = { hunt?: string; range: number; wander?: number };
 const npcCfg = new Map<string, NpcCfg>();
+const RE_SECTION = /^\[([^\]]+)\]/;
+const RE_KV = /^(\w+)=(.*)$/;
+const RE_MODEL_KEY = /^model\d?$/;
+const RE_OP_KEY = /^op[1-5]$/;
 for (const f of files) {
     const isLoc = f.endsWith('.loc'), isNpc = f.endsWith('.npc');
     if (!isLoc && !isNpc) continue;
+    const text = readFileSync(f, 'utf8');
     let cur: any = null;
-    for (const line of readFileSync(f, 'utf8').split(/\r?\n/)) {
-        const h = line.match(/^\[([^\]]+)\]/);
-        if (h) {
-            const n = h[1]!;
-            if (isLoc) { cur = locCfg.get(n) ?? { models: [], op: false, width: 1, length: 1 }; locCfg.set(n, cur); }
-            else { cur = npcCfg.get(n) ?? { range: 0 }; npcCfg.set(n, cur); }
-            continue;
+    let pos = 0;
+    while (pos <= text.length) {
+        let eol = text.indexOf('\n', pos);
+        if (eol < 0) eol = text.length;
+        const end = eol > pos && text.charCodeAt(eol - 1) === 13 ? eol - 1 : eol;
+        if (end > pos) {
+            const first = text.charCodeAt(pos);
+            if (first === 91 /* '[' */) {
+                const close = text.indexOf(']', pos + 1);
+                if (close > pos + 1 && close < end) {
+                    const n = text.slice(pos + 1, close);
+                    if (isLoc) { cur = locCfg.get(n) ?? { models: [], op: false, width: 1, length: 1 }; locCfg.set(n, cur); }
+                    else { cur = npcCfg.get(n) ?? { range: 0 }; npcCfg.set(n, cur); }
+                    pos = eol + 1;
+                    continue;
+                }
+            }
+            if (cur) {
+                const eq = text.indexOf('=', pos);
+                if (eq > pos && eq < end) {
+                    const line = text.slice(pos, end);
+                    const kv = RE_KV.exec(line);
+                    if (kv) {
+                        const k = kv[1]!, v = kv[2]!;
+                        if (isLoc) {
+                            if (RE_MODEL_KEY.test(k)) cur.models.push(v.trim());
+                            else if (RE_OP_KEY.test(k) && v.trim() !== 'hidden') cur.op = true;
+                            else if (k === 'active') cur.active = v.trim() === 'yes';
+                            else if (k === 'width') cur.width = Number(v);
+                            else if (k === 'length') cur.length = Number(v);
+                            else if (k === 'name') cur.name = v.trim();
+                        } else {
+                            if (k === 'huntmode') cur.hunt = v.trim();
+                            else if (k === 'huntrange') cur.range = Number(v);
+                            else if (k === 'wanderrange') cur.wander = Number(v);
+                        }
+                    }
+                }
+            }
         }
-        if (!cur) continue;
-        const kv = line.match(/^(\w+)=(.*)$/);
-        if (!kv) continue;
-        const [, k, v] = kv as unknown as [string, string, string];
-        if (isLoc) {
-            if (/^model\d?$/.test(k)) cur.models.push(v.trim());
-            else if (/^op[1-5]$/.test(k) && v.trim() !== 'hidden') cur.op = true;
-            else if (k === 'active') cur.active = v.trim() === 'yes';
-            else if (k === 'width') cur.width = Number(v);
-            else if (k === 'length') cur.length = Number(v);
-            else if (k === 'name') cur.name = v.trim();
-        } else {
-            if (k === 'huntmode') cur.hunt = v.trim();
-            else if (k === 'huntrange') cur.range = Number(v);
-            else if (k === 'wanderrange') cur.wander = Number(v);
-        }
+        if (eol === text.length) break;
+        pos = eol + 1;
     }
 }
 const locActive = (c: LocCfg | undefined) => {
@@ -99,32 +122,68 @@ const locActive = (c: LocCfg | undefined) => {
 // ---- Map files: locs (unsafe tiles, bank booths) and NPC spawns.
 const unsafe = new Map<number, string>();
 const booths: { x: number; z: number }[] = [];
-const spawns: { name: string; x: number; z: number; reach: number }[] = [];
+const spawns: { name: string; x: number; z: number; reach: number; label: string }[] = [];
 const huntSkip = /gnomeball|mm_guard|shades|hauntedmine|battle_mage/;
-for (const f of readdirSync(join(content, 'maps')).filter(f => /^m\d+_\d+\.jm2$/.test(f))) {
-    const [, mxs, mzs] = f.match(/^m(\d+)_(\d+)/)!;
-    const bx = Number(mxs) * 64, bz = Number(mzs) * 64;
-    let sec = '';
-    for (const line of readFileSync(join(content, 'maps', f), 'utf8').split(/\r?\n/)) {
-        if (line.startsWith('====')) { sec = line; continue; }
-        if (sec.includes('LOC')) {
-            const m = line.match(/^(\d+) (\d+) (\d+): (\d+) (\d+)(?: (\d+))?/);
-            if (!m || m[1] !== '0') continue;
-            const name = locNames.get(Number(m[4])) ?? `loc${m[4]}`;
-            const c = locCfg.get(name);
-            const x = bx + Number(m[2]), z = bz + Number(m[3]), angle = Number(m[6] ?? 0);
-            if (/bankbooth|bank_booth/i.test(name) || /bank booth/i.test(c?.name ?? '')) booths.push({ x, z });
-            if (!locActive(c)) continue;
-            const w = angle === 1 || angle === 3 ? (c?.length ?? 1) : (c?.width ?? 1);
-            const l = angle === 1 || angle === 3 ? (c?.width ?? 1) : (c?.length ?? 1);
-            for (let dx = 0; dx < w; dx++) for (let dz = 0; dz < l; dz++) if (!unsafe.has(key(x + dx, z + dz))) unsafe.set(key(x + dx, z + dz), name);
-        } else if (sec.includes('NPC')) {
-            const m = line.match(/^(\d+) (\d+) (\d+): (\d+)/);
-            if (!m || m[1] !== '0') continue;
-            const name = npcNames.get(Number(m[4])) ?? '';
-            const c = npcCfg.get(name);
-            if (c?.hunt && !huntSkip.test(c.hunt)) spawns.push({ name, x: bx + Number(m[2]), z: bz + Number(m[3]), reach: (c.range || 1) + (c.wander ?? 5) });
+const RE_JM2_FILE = /^m(\d+)_(\d+)\.jm2$/;
+const RE_BANK_BOOTH = /bankbooth|bank_booth/i;
+const RE_BANK_BOOTH_NAME = /bank booth/i;
+const RE_LOC_LINE = /^0 (\d+) (\d+): (\d+) (\d+)(?: (\d+))?/;
+const RE_NPC_LINE = /^0 (\d+) (\d+): (\d+)/;
+for (const f of readdirSync(join(content, 'maps'))) {
+    const mf = RE_JM2_FILE.exec(f);
+    if (!mf) continue;
+    const bx = Number(mf[1]) * 64, bz = Number(mf[2]) * 64;
+    const text = readFileSync(join(content, 'maps', f), 'utf8');
+    let secKind = 0; // 0 = other, 1 = LOC, 2 = NPC
+    let pos = 0;
+    while (pos < text.length) {
+        if (text.startsWith('====', pos)) {
+            let eol = text.indexOf('\n', pos);
+            if (eol < 0) eol = text.length;
+            const header = text.slice(pos, eol);
+            secKind = header.includes('LOC') ? 1 : header.includes('NPC') ? 2 : 0;
+            if (secKind === 0) {
+                const nextSec = text.indexOf('\n====', eol);
+                if (nextSec < 0) break;
+                pos = nextSec + 1;
+                continue;
+            }
+            pos = eol + 1;
+            continue;
         }
+        let eol = text.indexOf('\n', pos);
+        if (eol < 0) eol = text.length;
+        if (secKind !== 0 && text.charCodeAt(pos) === 48 /* '0' */ && text.charCodeAt(pos + 1) === 32 /* ' ' */) {
+            const end = eol > pos && text.charCodeAt(eol - 1) === 13 ? eol - 1 : eol;
+            const line = text.slice(pos, end);
+            if (secKind === 1) {
+                const m = RE_LOC_LINE.exec(line);
+                if (m) {
+                    const id = Number(m[3]);
+                    const name = locNames.get(id) ?? `loc${id}`;
+                    const c = locCfg.get(name);
+                    const x = bx + Number(m[1]), z = bz + Number(m[2]), angle = m[5] !== undefined ? Number(m[5]) : 0;
+                    if (RE_BANK_BOOTH.test(name) || (c?.name !== undefined && RE_BANK_BOOTH_NAME.test(c.name))) booths.push({ x, z });
+                    if (locActive(c)) {
+                        const w = angle === 1 || angle === 3 ? (c?.length ?? 1) : (c?.width ?? 1);
+                        const l = angle === 1 || angle === 3 ? (c?.width ?? 1) : (c?.length ?? 1);
+                        for (let dx = 0; dx < w; dx++) for (let dz = 0; dz < l; dz++) if (!unsafe.has(key(x + dx, z + dz))) unsafe.set(key(x + dx, z + dz), name);
+                    }
+                }
+            } else {
+                const m = RE_NPC_LINE.exec(line);
+                if (m) {
+                    const name = npcNames.get(Number(m[3])) ?? '';
+                    const c = npcCfg.get(name);
+                    if (c?.hunt && !huntSkip.test(c.hunt)) {
+                        const x = bx + Number(m[1]), z = bz + Number(m[2]);
+                        spawns.push({ name, x, z, reach: (c.range || 1) + (c.wander ?? 5), label: `${name}@${x},${z}` });
+                    }
+                }
+            }
+        }
+        if (eol === text.length) break;
+        pos = eol + 1;
     }
 }
 
@@ -268,14 +327,89 @@ if (FROM) {
 } else for (const r of rows) if (r.len >= 40) extend({ rows: [r], len: r.len, turns: 0, walk: 0 });
 
 // ---- Score: the first NEED tiles of the chain (a long row is cut at its best NEED-tile window later).
-const nearBooth = (x: number, z: number) => booths.reduce((b, p) => Math.min(b, Math.max(Math.abs(p.x - x), Math.abs(p.z - z))), 1e9);
-const dangerOf = (tiles: { x: number; z: number }[]) => {
-    const hits = new Map<string, number>();
-    for (const s of spawns) for (const t of tiles) {
-        const d = Math.max(Math.abs(s.x - t.x), Math.abs(s.z - t.z));
-        if (d <= s.reach) { hits.set(`${s.name}@${s.x},${s.z}`, d); break; }
+const boothCount = booths.length;
+const boothX = new Int32Array(boothCount);
+const boothZ = new Int32Array(boothCount);
+for (let i = 0; i < boothCount; i++) {
+    boothX[i] = booths[i]!.x;
+    boothZ[i] = booths[i]!.z;
+}
+const nearBooth = (x: number, z: number) => {
+    let best = 1e9;
+    for (let i = 0; i < boothCount; i++) {
+        const dx = Math.abs(boothX[i]! - x);
+        if (dx >= best) continue;
+        const dz = Math.abs(boothZ[i]! - z);
+        const d = dx > dz ? dx : dz;
+        if (d < best) best = d;
     }
-    return { count: hits.size, wild: tiles.some(t => wild(t.x, t.z)), desert: tiles.some(t => desert(t.x, t.z)), list: [...hits.keys()].slice(0, 6) };
+    return best;
+};
+const SPAWN_CELL = 32;
+const spawnGrid = new Map<number, number[]>();
+const spawnCellKey = (gx: number, gz: number) => (gx + 512) * 1024 + (gz + 512);
+for (let i = 0; i < spawns.length; i++) {
+    const s = spawns[i]!;
+    const minGx = Math.floor((s.x - s.reach) / SPAWN_CELL);
+    const maxGx = Math.floor((s.x + s.reach) / SPAWN_CELL);
+    const minGz = Math.floor((s.z - s.reach) / SPAWN_CELL);
+    const maxGz = Math.floor((s.z + s.reach) / SPAWN_CELL);
+    for (let gx = minGx; gx <= maxGx; gx++) {
+        for (let gz = minGz; gz <= maxGz; gz++) {
+            const k = spawnCellKey(gx, gz);
+            let list = spawnGrid.get(k);
+            if (!list) { list = []; spawnGrid.set(k, list); }
+            list.push(i);
+        }
+    }
+}
+const spawnSeen = new Uint32Array(spawns.length);
+let spawnGen = 0;
+const candSpawns: number[] = [];
+const dangerOf = (tiles: { x: number; z: number }[]) => {
+    let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
+    let isWild = false, isDesert = false;
+    for (let i = 0; i < tiles.length; i++) {
+        const t = tiles[i]!;
+        if (t.x < minX) minX = t.x;
+        if (t.x > maxX) maxX = t.x;
+        if (t.z < minZ) minZ = t.z;
+        if (t.z > maxZ) maxZ = t.z;
+        if (!isWild && wild(t.x, t.z)) isWild = true;
+        if (!isDesert && desert(t.x, t.z)) isDesert = true;
+    }
+    spawnGen++;
+    candSpawns.length = 0;
+    const minGx = Math.floor(minX / SPAWN_CELL), maxGx = Math.floor(maxX / SPAWN_CELL);
+    const minGz = Math.floor(minZ / SPAWN_CELL), maxGz = Math.floor(maxZ / SPAWN_CELL);
+    for (let gx = minGx; gx <= maxGx; gx++) {
+        for (let gz = minGz; gz <= maxGz; gz++) {
+            const bucket = spawnGrid.get(spawnCellKey(gx, gz));
+            if (!bucket) continue;
+            for (let i = 0; i < bucket.length; i++) {
+                const idx = bucket[i]!;
+                if (spawnSeen[idx] !== spawnGen) {
+                    spawnSeen[idx] = spawnGen;
+                    candSpawns.push(idx);
+                }
+            }
+        }
+    }
+    if (candSpawns.length > 1) candSpawns.sort((a, b) => a - b);
+    const hits = new Set<string>();
+    for (let i = 0; i < candSpawns.length; i++) {
+        const s = spawns[candSpawns[i]!]!;
+        for (let j = 0; j < tiles.length; j++) {
+            const t = tiles[j]!;
+            const dx = Math.abs(s.x - t.x);
+            if (dx > s.reach) continue;
+            const dz = Math.abs(s.z - t.z);
+            if (dz <= s.reach) { hits.add(s.label); break; }
+        }
+    }
+    const list: string[] = [];
+    for (const k of hits) { list.push(k); if (list.length >= 6) break; }
+    return { count: hits.size, wild: isWild, desert: isDesert, list };
 };
 type Cand = Chain & { tiles: number; bank: number; from: number; danger: ReturnType<typeof dangerOf>; start: { x: number; z: number }; end: { x: number; z: number } };
 const cands: Cand[] = [];

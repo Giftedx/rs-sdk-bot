@@ -6,18 +6,15 @@
 // Owned production: CAP=1600 bun scripts/handoff-inputs.ts <account> --headless-order 135 14
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ownedAccounts } from '../packages/core/src/tradeguard';
-import { assertServerAllowed, serverFromEnv, openBot, settle } from '../packages/core/src/bot';
+import type { openBot as openBotFn, settle as settleFn } from '../packages/core/src/bot';
+import type { ownedAccounts as ownedAccountsFn } from '../packages/core/src/tradeguard';
 import type { Session } from '../packages/core/src/inprocess';
-import {waitUntil} from '../packages/core/src/ticks';
-import {FAR_WALK_TILES} from '../packages/core/src/walk';
-import {depositObserved} from '../packages/core/src/deposit';
-import {preparePayout} from '../packages/workers/src/logistics';
-import {exactOrder,acquireExclusiveLease,ownerAlive} from './payout-order';
-import {reconcileOrder, type OrderSnapshot} from '../packages/workers/src/logistics';
-import {runShafts,runHeadless} from '../packages/workers/src/bank-artisan';
-import {walkTarget} from '../packages/workers/src/logistics';
-import {abortable, executionContext} from '../vendor/rs-sdk/sdk/execution-context';
+import { waitUntil } from '../packages/core/src/ticks';
+import { FAR_WALK_TILES } from '../packages/core/src/walk';
+import type { OrderSnapshot } from '../packages/workers/src/logistics/handoff';
+import type { walkTarget as walkTargetFn } from '../packages/workers/src/logistics/walk';
+import { exactOrder, acquireExclusiveLease, ownerAlive } from './payout-order';
+import { abortable, executionContext } from '../vendor/rs-sdk/sdk/execution-context';
 import { fleetStateFile } from '../packages/core/src/practice-paths';
 
 // Ownership checks read swarm.json directly when present.
@@ -42,6 +39,7 @@ export function parseHeadlessOrder(args:string[],cap=process.env.CAP??'1600') {
 
 // One budget covers bank entry, both helpers and final reconciliation. The entry owns logout.
 export async function runOwnedHeadless(s:Session,c:ReturnType<typeof parseHeadlessOrder>,check:()=>void) {
+    const {runShafts,runHeadless}=await import('../packages/workers/src/bank-artisan/fletching');
     const start=s.tick(),controller=new AbortController(),parent=executionContext.getStore();
     const parentAbort=()=>controller.abort(parent?.signal.reason);
     parent?.signal.addEventListener('abort',parentAbort,{once:true});
@@ -80,7 +78,11 @@ export async function runOwnedHeadless(s:Session,c:ReturnType<typeof parseHeadle
     })()));}finally{off();parent?.signal.removeEventListener('abort',parentAbort);controller.abort(Error('headless-order ended'));}
 }
 
-async function headlessMain(io:{root?:string;openBot?:typeof openBot;settle?:typeof settle;ownedAccounts?:typeof ownedAccounts}) {
+async function headlessMain(io:{root?:string;openBot?:typeof openBotFn;settle?:typeof settleFn;ownedAccounts?:typeof ownedAccountsFn}) {
+    const [{assertServerAllowed,serverFromEnv,openBot,settle},{ownedAccounts}]=await Promise.all([
+        import('../packages/core/src/bot'),
+        import('../packages/core/src/tradeguard'),
+    ]);
     const c=parseHeadlessOrder(process.argv.slice(2)),root=io.root??resolve(import.meta.dir,'..'),dir=join(root,'.practice');
     const host=serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',c.account,'bot.env'),'utf8'));assertServerAllowed(host);
     const owned=(io.ownedAccounts??ownedAccounts)(host),sessions:Session[]=[];
@@ -303,10 +305,11 @@ export function assertRecoverableStatus(status:any,owner:any,alive:(pid:number)=
         throw Error('account session ownership unsettled: '+status.name);
 }
 
-type ApproachOperations=NonNullable<Parameters<typeof walkTarget>[3]>;
+type ApproachOperations=NonNullable<Parameters<typeof walkTargetFn>[3]>;
 // Distant participants travel together, so neither waits idle at the bank. The caller retains
 // its sessions: a failure aborts both walks and returns to that owner for logout.
 async function approachBank(c:Handoff,sessions:Session[],check:()=>void,operations?:ApproachOperations) {
+    const {walkTarget}=await import('../packages/workers/src/logistics/walk');
     const to={x:c.x,z:c.z,level:0},deadline=Date.now()+c.approachMs!,controller=new AbortController(),parent=executionContext.getStore();
     const parentAbort=()=>controller.abort(parent?.signal.reason);
     parent?.signal.addEventListener('abort',parentAbort,{once:true});
@@ -348,6 +351,11 @@ async function approachBank(c:Handoff,sessions:Session[],check:()=>void,operatio
 // Own both sessions in this entry: the shared banker/taker mains are outside the
 // definition. Reuse their bounded withdrawal helper, but independently check every effect.
 export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,order:ReturnType<typeof exactOrder>,check:()=>void,approach?:ApproachOperations) {
+    const [{depositObserved},{reconcileOrder},{preparePayout}]=await Promise.all([
+        import('../packages/core/src/deposit'),
+        import('../packages/workers/src/logistics/handoff'),
+        import('../packages/workers/src/logistics/trade-helpers'),
+    ]);
     if(donor.name.toLowerCase()!==c.donor.toLowerCase()||receiver.name.toLowerCase()!==c.receiver.toLowerCase())throw Error('exact session identity mismatch');
     const sessions=[donor,receiver];
     if(c.approachMs)await approachBank(c,sessions,check,approach);
@@ -441,8 +449,12 @@ export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,o
 
 // Injectable I/O lets process-level regressions exercise this entry without
 // credentials or a game server. The real CLI always uses the production defaults.
-export async function main(io:{root?:string;openBot?:typeof openBot;settle?:typeof settle;ownedAccounts?:typeof ownedAccounts;approach?:ApproachOperations}={}) {
+export async function main(io:{root?:string;openBot?:typeof openBotFn;settle?:typeof settleFn;ownedAccounts?:typeof ownedAccountsFn;approach?:ApproachOperations}={}) {
     if(process.argv[3]==='--headless-order')return headlessMain(io);
+    const [{assertServerAllowed,serverFromEnv,openBot,settle},{ownedAccounts}]=await Promise.all([
+        import('../packages/core/src/bot'),
+        import('../packages/core/src/tradeguard'),
+    ]);
     const c=parseHandoff(process.argv.slice(2)),root=io.root??resolve(import.meta.dir,'..'),dir=join(root,'.practice');
     // Key and duplicate checks precede even opening credentials or sessions.
     const key=process.env.HANDOFF_ORDER??'';

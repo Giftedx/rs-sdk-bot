@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { contentRoot, knowledgeDir } from './paths';
 import { cleanLines } from './text';
@@ -23,13 +23,34 @@ export type Fact =
 
 type Door = { id: number; loc: string; x: number; z: number; level: number; kind: string; trigger: string; src: string };
 
-const fileCache = new Map<string, string[]>();
+const fileCache = new Map<string, { sig: string; lines: string[] }>();
+
+function statSig(absPath: string): string | null {
+    try {
+        const st = statSync(absPath);
+        return `${st.mtimeMs}:${st.size}`;
+    } catch {
+        return null;
+    }
+}
+
+function fileLines(file: string): string[] {
+    const root = contentRoot();
+    const abs = join(root, file);
+    const key = `${root}\0${file}`;
+    const sig = statSig(abs) ?? '';
+    const cached = fileCache.get(key);
+    if (cached && cached.sig === sig) return cached.lines;
+    const ls = cleanLines(readFileSync(abs, 'utf8'));
+    fileCache.set(key, { sig, lines: ls });
+    return ls;
+}
+
 function lineAt(src: string): string {
     const i = src.lastIndexOf(':');
     const file = src.slice(0, i);
     const n = Number(src.slice(i + 1));
-    if (!fileCache.has(file)) fileCache.set(file, cleanLines(readFileSync(join(contentRoot(), file), 'utf8')));
-    return fileCache.get(file)![n - 1] ?? '';
+    return fileLines(file)[n - 1] ?? '';
 }
 
 // The config block (props by key) that starts at a [name] header line. Re-read here so the check does not
@@ -38,8 +59,7 @@ function blockAt(src: string): { header: string; props: Record<string, string> }
     const i = src.lastIndexOf(':');
     const file = src.slice(0, i);
     const start = Number(src.slice(i + 1));
-    lineAt(src);
-    const lines = fileCache.get(file)!;
+    const lines = fileLines(file);
     const props: Record<string, string> = {};
     for (let n = start; n < lines.length; n++) {
         const l = lines[n]!;
@@ -50,10 +70,35 @@ function blockAt(src: string): { header: string; props: Record<string, string> }
     return { header: lines[start - 1] ?? '', props };
 }
 
-const packCache = new Map<string, Set<string>>();
+const packCache = new Map<string, { sig: string; entries: Set<string> }>();
 function inPack(pack: string, id: number, name: string): boolean {
-    if (!packCache.has(pack)) packCache.set(pack, new Set(cleanLines(readFileSync(join(contentRoot(), 'pack', `${pack}.pack`), 'utf8'))));
-    return packCache.get(pack)!.has(`${id}=${name}`);
+    const root = contentRoot();
+    const abs = join(root, 'pack', `${pack}.pack`);
+    const key = `${root}\0${pack}`;
+    const sig = statSig(abs) ?? '';
+    let cached = packCache.get(key);
+    if (!cached || cached.sig !== sig) {
+        const text = readFileSync(abs, 'utf8');
+        const entries = new Set<string>();
+        let pos = 0;
+        const total = text.length;
+        while (pos <= total) {
+            const nl = text.indexOf('\n', pos);
+            let end = nl === -1 ? total : nl;
+            if (end > pos && text.charCodeAt(end - 1) === 13) end--;
+            const comment = text.indexOf('//', pos);
+            if (comment >= 0 && comment < end) end = comment;
+            let s = pos;
+            while (s < end && text.charCodeAt(s) <= 32) s++;
+            while (end > s && text.charCodeAt(end - 1) <= 32) end--;
+            if (end > s) entries.add(text.slice(s, end));
+            if (nl === -1) break;
+            pos = nl + 1;
+        }
+        cached = { sig, entries };
+        packCache.set(key, cached);
+    }
+    return cached.entries.has(`${id}=${name}`);
 }
 
 const fmt = (c: { x: number; z: number; level: number }) => `${c.level}_${c.x >> 6}_${c.z >> 6}_${c.x & 63}_${c.z & 63}`;
@@ -185,27 +230,50 @@ function mulberry32(seed: number): () => number {
     };
 }
 
-export function allFacts(): Fact[] {
-    const load = <T>(name: string): T => JSON.parse(readFileSync(join(knowledgeDir(), name), 'utf8'));
+const FACT_FILES = ['items.json', 'npcs.json', 'shops.json', 'transports.json', 'doors.json', 'skills.json', 'quests.json', 'drops.json'] as const;
+let factsCache: { dir: string; sig: string; facts: Fact[] } | null = null;
+
+function buildAllFacts(dir: string): Fact[] {
+    const load = <T>(name: string): T => JSON.parse(readFileSync(join(dir, name), 'utf8'));
     const items = load<Item[]>('items.json');
     const npcs = load<Npc[]>('npcs.json');
     const shops = load<Shop[]>('shops.json');
     const edges = load<Edge[]>('transports.json');
-    return [
-        ...items.map(record => ({ kind: 'item', record }) as Fact),
-        ...npcs.map(record => ({ kind: 'npc', record }) as Fact),
-        ...npcs.flatMap(n => n.spawns.map(s => ({ kind: 'spawn', record: { ...s, id: n.id } }) as Fact)),
-        ...shops.flatMap(s => s.stock.map(record => ({ kind: 'stock', record }) as Fact)),
-        ...edges.map(record => ({ kind: 'transport', record }) as Fact),
-        ...load<Door[]>('doors.json').map(record => ({ kind: 'door', record }) as Fact),
-        ...load<any[]>('skills.json').map(record => ({ kind: 'skill', record }) as Fact),
-        ...load<any[]>('quests.json').map(record => ({ kind: 'quest', record }) as Fact),
-        ...load<any[]>('drops.json').flatMap(d => [...d.rolls, ...d.always].map((record: any) => ({ kind: 'drop', record }) as Fact)),
-    ];
+    const doors = load<Door[]>('doors.json');
+    const skills = load<any[]>('skills.json');
+    const quests = load<any[]>('quests.json');
+    const drops = load<any[]>('drops.json');
+    const out: Fact[] = [];
+    for (const record of items) out.push({ kind: 'item', record });
+    for (const record of npcs) out.push({ kind: 'npc', record });
+    for (const n of npcs) for (const s of n.spawns) out.push({ kind: 'spawn', record: { ...s, id: n.id } });
+    for (const s of shops) for (const record of s.stock) out.push({ kind: 'stock', record });
+    for (const record of edges) out.push({ kind: 'transport', record });
+    for (const record of doors) out.push({ kind: 'door', record });
+    for (const record of skills) out.push({ kind: 'skill', record });
+    for (const record of quests) out.push({ kind: 'quest', record });
+    for (const d of drops) {
+        for (const record of d.rolls) out.push({ kind: 'drop', record });
+        for (const record of d.always) out.push({ kind: 'drop', record });
+    }
+    return out;
+}
+
+function cachedAllFacts(): readonly Fact[] {
+    const dir = knowledgeDir();
+    const sig = FACT_FILES.map(f => statSig(join(dir, f)) ?? '').join('|');
+    if (!factsCache || factsCache.dir !== dir || factsCache.sig !== sig) {
+        factsCache = { dir, sig, facts: buildAllFacts(dir) };
+    }
+    return factsCache.facts;
+}
+
+export function allFacts(): Fact[] {
+    return [...cachedAllFacts()];
 }
 
 export function spotcheck(n: number, seed: number) {
-    const facts = allFacts();
+    const facts = cachedAllFacts();
     const rand = mulberry32(seed);
     const sample: Fact[] = [];
     const used = new Set<number>();
