@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795563217832-yewfirst-knightstick-a638f95013c7c005",
+ "role": "from",
+ "account": "YewFirst",
+ "partner": "Knightstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795563452377,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}
