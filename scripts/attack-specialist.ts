@@ -730,7 +730,7 @@ async function main(): Promise<void> {
             afterGolrie: async () => {
                 milestone('golrie');
                 await topUpPrayer(s, 26, stop);
-                await walkWaypoints(s, [{ x: 2542, z: 3171, tol: 1 }], 40, stop, 'golrie to bolren');
+                await walkWaypoints(s, [{ x: 2542, z: 3171, tol: 1 }], 140, stop, 'golrie to bolren');
                 await runQuestTree({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
                 milestone('tree_gnome_village', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
 
