@@ -221,19 +221,22 @@ async function cutUnlockedGems(
   const chisel = inv.find(i => i.id === ITEM_IDS.chisel);
   if (!chisel) throw Error('crafting chisel missing');
 
+  const stNow = spec.sdk.getState();
+  const bankOpen = !!stNow?.bank?.isOpen;
+  const maxCuts = bankOpen ? 4 : 5;
   const realXp = skillXp(spec, 'Crafting');
   const unlockedNow = new Set(CRAFTING_GEMS.filter(t => curBase >= t.level).map(t => t.id));
   const deterministicIds = new Set(
    CRAFTING_GEMS.filter(t => t.id !== ITEM_IDS.uncut_opal && t.id !== ITEM_IDS.uncut_jade && t.id !== ITEM_IDS.uncut_red_topaz).map(t => t.id),
   );
-  // Pick up to 5 gems in ascending level order, predicting level-ups across deterministic gems (sapphire+).
+  // Pick up to 5 gems (or 4 alongside closeModal) in ascending level order, predicting deterministic unlocks.
   const gems = inv
    .filter(i => tierIds.has(i.id))
    .sort((a, b) => (GEM_LEVEL_BY_ID.get(a.id) ?? 99) - (GEM_LEVEL_BY_ID.get(b.id) ?? 99));
   let simXp = realXp;
   const batch: typeof inv = [];
   for (const gem of gems) {
-   if (batch.length >= 5) break;
+   if (batch.length >= maxCuts) break;
    const reqLvl = GEM_LEVEL_BY_ID.get(gem.id) ?? 99;
    const canPredict = unlockedNow.has(gem.id) || (deterministicIds.has(gem.id) && levelForXp(simXp) >= reqLvl);
    if (!canPredict) continue;
@@ -245,21 +248,25 @@ async function cutUnlockedGems(
   const allDeterministic = batch.every(g => deterministicIds.has(g.id));
   const totalRemaining = gems.length;
   const willLevel = allDeterministic ? levelForXp(simXp) > curBase : true;
-  const dialogOpen = !!spec.sdk.getState()?.dialog?.isOpen;
+  const dialogOpen = !!stNow?.dialog?.isOpen;
   // Note: 1 OpHeldU closes an open dialog, so engineQueue drains 1 per tick whenever dialogOpen or pendingDialogs > 0.
   const canPreRequest =
    !!nextHelper &&
+   !bankOpen &&
    totalRemaining <= 4 &&
    batch.length === totalRemaining &&
    !willLevel &&
    pendingDialogs <= (dialogOpen ? 1 : 0);
 
   const actions: Promise<unknown>[] = [];
+  if (bankOpen) {
+   actions.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+  }
   for (const gem of batch) {
    actions.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
   }
   const helperActs: Promise<unknown>[] = [];
-  if (openBankOnFinal && totalRemaining <= 4 && batch.length === totalRemaining) {
+  if (openBankOnFinal && !bankOpen && totalRemaining <= 4 && batch.length === totalRemaining) {
    actions.push(
     spec.direct({
      type: 'interactLoc',
@@ -494,10 +501,14 @@ async function craftAtCastleWarsBank(
  }
 
  await openCwChest(spec, deadline);
- // Deposit all non-chisel items (noted gems + Ring of dueling) at 5/tick.
+ // Deposit Cycle 0 notes first (within the first 5 items) so Cycle 0 withdraws overlap the remaining <=2 deposits.
+ const cycle0Notes = new Set<number>([1626, 1624, 1622]);
  while (spec.tick() < deadline) {
-  const toDep = spec.sdk.getInventory().filter(i => i.id !== ITEM_IDS.chisel);
-  if (!toDep.length) break;
+  const toDep = spec.sdk
+   .getInventory()
+   .filter(i => i.id !== ITEM_IDS.chisel)
+   .sort((a, b) => Number(cycle0Notes.has(b.id)) - Number(cycle0Notes.has(a.id)));
+  if (toDep.length <= 2 && toDep.every(i => !cycle0Notes.has(i.id))) break;
   const acts: Promise<unknown>[] = [];
   const seenDep = new Set<number>();
   for (const item of toDep) {
@@ -516,7 +527,7 @@ async function craftAtCastleWarsBank(
   while (spec.tick() < deadline) {
    const st = spec.sdk.getState();
    const inv = spec.sdk.getInventory();
-   if (!st?.bank?.isOpen && cycle.every(g => countItem(inv, g.id) >= g.count)) break;
+   if (cycle.every(g => countItem(inv, g.id) >= g.count)) break;
    if (!st?.bank?.isOpen) {
     await openCwChest(spec, deadline);
     continue;
