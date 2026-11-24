@@ -15,6 +15,7 @@ import {
     type WorkerTile,
 } from '../../workers/src/contracts';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
+import { readJsonStatCached } from './json-cache';
 import type { CombatSurvivabilityFloor } from './preflight';
 
 const XP_MULTIPLIER = 25;
@@ -233,17 +234,11 @@ const QUEST_ESTIMATE_TICKS: Readonly<Record<string, number>> = {
 };
 
 function safeReadJson<T>(path: string, fallback: T): T {
-    if (!existsSync(path)) return fallback;
-    try {
-        return JSON.parse(readFileSync(path, 'utf8')) as T;
-    } catch {
-        return fallback;
-    }
+    return readJsonStatCached<T>(path) ?? fallback;
 }
 
-function estimateTravelTicksFromNearestBank(location: WorkerTile | undefined, travel: TravelCacheData): number {
+function estimateTravelTicksFromNearestBank(location: WorkerTile | undefined, banks: readonly { x: number; z: number; level?: number }[]): number {
     if (!location) return 8;
-    const banks = Object.values(travel.banks ?? HUB_TILES);
     let minCheb = Number.POSITIVE_INFINITY;
     for (const b of banks) {
         if ((b.level ?? 0) !== location.level) continue;
@@ -641,6 +636,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     const rates = safeReadJson<KnowledgeRateRow[]>(join(root, 'knowledge', 'rates.json'), []);
     const questsJson = safeReadJson<KnowledgeQuestRow[]>(join(root, 'knowledge', 'quests.json'), []);
     const travelData = safeReadJson<TravelCacheData>(join(root, 'packages', 'planner', 'src', 'haggis-travel.json'), {});
+    const travelBanks = Object.values(travelData.banks ?? HUB_TILES);
 
     const itemByDebug = new Map<string, KnowledgeItem>();
     for (const it of items) itemByDebug.set(it.debugname, it);
@@ -676,7 +672,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         const { family, kind } = skillerFamily(spec.skill, spec.method);
         const aioKey = `skiller:${spec.skill}:${spec.method}`;
         const id = `${family}:${spec.skill}-${spec.method}`;
-        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelData) + 6;
+        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 6;
         const outputsMap: Record<number, number> = {};
         if (spec.outputs) {
             for (const o of spec.outputs) outputsMap[o.itemId] = o.countPerUnit;
@@ -783,7 +779,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     for (const spec of FIGHTER_SPECS) {
         const aioKey = `fighter:${spec.target}`;
         const id = `combat:${spec.target}`;
-        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelData) + 10;
+        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 10;
         const outputsMap: Record<number, number> = {};
         if (spec.outputs) {
             for (const o of spec.outputs) outputsMap[o.itemId] = o.countPerUnit;
@@ -830,7 +826,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     for (const spec of BOSS_SPECS) {
         const aioKey = `boss:${spec.boss}`;
         const id = `combat:boss-${spec.boss}`;
-        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelData) + 18;
+        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 18;
         const outputsMap: Record<number, number> = {};
         if (spec.outputs) {
             for (const o of spec.outputs) outputsMap[o.itemId] = o.countPerUnit;
@@ -876,7 +872,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     for (const spec of QUEST_MODE_SPECS) {
         const aioKey = `quester:mode:${spec.mode}`;
         const id = `quest:mode-${spec.mode}`;
-        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelData) + 8;
+        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 8;
         register({
             id,
             workerId: 'quest',
@@ -1001,7 +997,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     for (const spec of MARKET_SPECS) {
         const aioKey = `market:${spec.mode}`;
         const id = `market:${spec.mode}`;
-        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelData) + 6;
+        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 6;
         register({
             id,
             workerId: 'market',
@@ -1032,7 +1028,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     for (const spec of LOGISTICS_SPECS) {
         const aioKey = spec.role === 'recover-location' || spec.role === 'inspect' ? null : `logistics:${spec.role}`;
         const id = `logistics:${spec.role}`;
-        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelData) + 6;
+        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 6;
         register({
             id,
             workerId: 'logistics',
@@ -1063,7 +1059,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     for (const spec of PVP_SPECS) {
         const aioKey = `pvp:${spec.mode}`;
         const id = `pvp:${spec.mode}`;
-        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelData) + 12;
+        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 12;
         register({
             id,
             workerId: 'pvp',

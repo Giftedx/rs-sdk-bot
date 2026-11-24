@@ -575,37 +575,67 @@ function normalizeTile(raw: unknown): WorkerTile | null {
     return { x: raw.x, z: raw.z, level: raw.level };
 }
 
+const STATIC_NAMES_BY_LOWER = new Map<string, string>();
+for (const [category, list] of Object.entries(NAMES)) {
+    for (const n of list as readonly string[]) {
+        const lower = n.toLowerCase();
+        if (!STATIC_NAMES_BY_LOWER.has(lower)) STATIC_NAMES_BY_LOWER.set(lower, category);
+    }
+}
+
+interface SwarmRoleIndex {
+    readonly armySet: ReadonlySet<string>;
+    readonly jobRoleByAccount: ReadonlyMap<string, string>;
+}
+
+function buildSwarmRoleIndex(swarmPlan: any): SwarmRoleIndex {
+    const armySet = new Set<string>();
+    const armyList = Array.isArray(swarmPlan?.army) ? swarmPlan.army : [];
+    for (const e of armyList) {
+        const n = typeof e === 'string' ? e : e?.account;
+        if (typeof n === 'string') armySet.add(n.toLowerCase());
+    }
+    const jobRoleByAccount = new Map<string, string>();
+    const jobs = Array.isArray(swarmPlan?.jobs) ? swarmPlan.jobs : [];
+    for (const j of jobs) {
+        const role = typeof j?.role === 'string' ? j.role.toLowerCase() : '';
+        if (!role) continue;
+        if (typeof j?.account === 'string') {
+            const k = j.account.toLowerCase();
+            if (!jobRoleByAccount.has(k)) jobRoleByAccount.set(k, role);
+        }
+        if (Array.isArray(j?.accounts)) {
+            for (const a of j.accounts) {
+                if (typeof a === 'string') {
+                    const k = a.toLowerCase();
+                    if (!jobRoleByAccount.has(k)) jobRoleByAccount.set(k, role);
+                }
+            }
+        }
+    }
+    return { armySet, jobRoleByAccount };
+}
+
 function resolveAccountRole(
     name: string,
     skills: Readonly<Record<string, { level: number; xp: number }>>,
-    swarmPlan: any,
+    swarmIndex: SwarmRoleIndex,
 ): AccountRole {
     const lower = name.toLowerCase();
     if (lower === 'haggis') return 'main';
     if (isProtectedAccountName(name)) return 'specialist';
 
-    const armyList = Array.isArray(swarmPlan?.army) ? swarmPlan.army : [];
-    const inArmyList = armyList.some((e: any) =>
-        (typeof e === 'string' ? e : e?.account)?.toLowerCase?.() === lower,
-    );
-    const skillLevels = Object.fromEntries(Object.entries(skills).map(([k, v]) => [k, v.level]));
-    if (inArmyList || admittedByLevels(name, skillLevels)) return 'army';
+    const skillLevels: Record<string, number> = {};
+    for (const [k, v] of Object.entries(skills)) skillLevels[k] = v.level;
+    if (swarmIndex.armySet.has(lower) || admittedByLevels(name, skillLevels)) return 'army';
 
-    const jobs = Array.isArray(swarmPlan?.jobs) ? swarmPlan.jobs : [];
-    const matchingJob = jobs.find((j: any) =>
-        j?.account?.toLowerCase?.() === lower
-        || (Array.isArray(j?.accounts) && j.accounts.some((a: any) => a?.toLowerCase?.() === lower)),
-    );
-    const jobRole = typeof matchingJob?.role === 'string' ? matchingJob.role.toLowerCase() : '';
+    const jobRole = swarmIndex.jobRoleByAccount.get(lower) ?? '';
     if (['pvp', 'pk', 'army', 'pk-trainee'].includes(jobRole)) return 'army';
     if (['supply', 'supplier', 'helper', 'bank', 'banker'].includes(jobRole)) return 'helper';
 
-    for (const [category, list] of Object.entries(NAMES)) {
-        if ((list as readonly string[]).some((n) => n.toLowerCase() === lower)) {
-            if (category === 'bank' || category === 'helper') return 'helper';
-            if (category === 'combat' && (skills.Attack?.level ?? 1) >= 60) return 'army';
-        }
-    }
+    const nameCat = STATIC_NAMES_BY_LOWER.get(lower);
+    if (nameCat === 'bank' || nameCat === 'helper') return 'helper';
+    if (nameCat === 'combat' && (skills.Attack?.level ?? 1) >= 60) return 'army';
     return 'auto';
 }
 
@@ -681,6 +711,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
     const { activeOrders, inTradeAccounts, settledTransferByAccount } = readOrdersAndReceipts(fleetDir, server, now);
 
     const swarmPlan = safeReadJson<any>(join(root, 'swarm.json')) ?? {};
+    const swarmRoleIndex = buildSwarmRoleIndex(swarmPlan);
     const swarmState = safeReadJson<any>(join(liveRoot(root), 'swarm-state.json'))
         ?? safeReadJson<any>(join(practiceRoot(root), 'swarm-state.json'));
     const heldByHandJob = handNamed(Array.isArray(swarmPlan?.jobs) ? swarmPlan.jobs : [], side);
@@ -739,7 +770,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
 
         const protectedClock = isProtectedAccountName(name);
         const skills = normalizeSkills(status?.skills);
-        const role = resolveAccountRole(name, skills, swarmPlan);
+        const role = resolveAccountRole(name, skills, swarmRoleIndex);
         const quests = normalizeQuests(status);
         const pos = normalizeTile(status?.pos);
         const inventory = normalizeItemContainer(status?.inventory);
