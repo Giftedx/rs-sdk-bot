@@ -13,7 +13,6 @@ const PACKAGE_NAMES = [
     'brain',
     'fleet',
     'practice',
-    'router',
     'dashboard',
 ] as const;
 type PackageName = (typeof PACKAGE_NAMES)[number];
@@ -30,12 +29,11 @@ const ALLOWED_PACKAGE_IMPORTS: Readonly<Record<PackageName, readonly PackageName
     brain: ['knowledge', 'core', 'workers'],
     fleet: ['knowledge', 'core', 'workers', 'brain'],
     practice: ['knowledge', 'core', 'planner', 'workers'],
-    router: ['knowledge', 'core', 'planner'],
     dashboard: ['knowledge', 'core', 'planner', 'workers', 'brain'],
 };
 
 const LOWER_LAYERS: ReadonlySet<PackageName> = new Set(['knowledge', 'core', 'planner', 'workers']);
-const UPPER_LAYERS: ReadonlySet<PackageName> = new Set(['brain', 'fleet', 'practice', 'dashboard', 'router']);
+const UPPER_LAYERS: ReadonlySet<PackageName> = new Set(['brain', 'fleet', 'practice', 'dashboard']);
 
 function walkProductionTs(rootDir: string, out: string[] = []): string[] {
     if (!existsSync(rootDir)) return out;
@@ -259,6 +257,11 @@ describe('CI package dependency DAG & runtime boundary enforcement', () => {
         const audit = auditCrossLayerViolations(graph.rawEdges);
         expect(audit.packageGraphSccs).toEqual([]);
         expect(audit.packageLayerViolations).toEqual([]);
+        expect(existsSync(resolve(REPO_ROOT, 'packages', 'router'))).toBe(false);
+        const routerRefs = graph.rawEdges.filter(
+            (e) => e.spec.includes('@rsbot/router') || e.resolved?.startsWith('packages/router/'),
+        );
+        expect(routerRefs).toEqual([]);
     });
 
     test('zero circular module dependencies across all production TypeScript files in packages/, tools/, and scripts/', () => {

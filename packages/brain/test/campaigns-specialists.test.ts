@@ -259,4 +259,43 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
         const mine = manifests.find((c) => c.account === 'mineshafted')!;
         expect(mine.state).toBe('completed');
     });
+
+    test('expired specialist .go.json tokens fall back to ready instead of running', () => {
+        const launchDir = join(tempRoot, '.practice', 'specialist-launch');
+        writeJson(join(launchDir, 'hiscores.json'), {
+            takenAt: new Date(NOW).toISOString(),
+            boards: [{ board: 'Fishing', category: 11, rows: [{ rank: 1, name: 'Rival', level: 99, ticks: 3200 }] }],
+        });
+        writeJson(join(launchDir, 'rehearsal-fishing', 'lochnessrod-fishing-99.receipt.json'), {
+            ok: true,
+            died: false,
+            logout: 'logged-out',
+            at: NOW - 30_000,
+            boardTicks: { Fishing: 2778 },
+        });
+        writeJson(join(launchDir, 'lochnessrod.json'), {
+            version: 1,
+            account: 'lochnessrod',
+            board: 'Fishing',
+            planTicks: 2778,
+            requirements: [],
+            rehearsal: { path: '.practice/specialist-launch/rehearsal-fishing/lochnessrod-fishing-99.receipt.json' },
+        });
+        writeJson(join(launchDir, 'lochnessrod.go.json'), {
+            version: 2,
+            account: 'lochnessrod',
+            runUntil: NOW - 10_000,
+        });
+
+        const expiredManifests = loadCampaignManifests({ root: tempRoot, now: NOW });
+        expect(expiredManifests.find((c) => c.account === 'lochnessrod')?.state).toBe('ready');
+
+        writeJson(join(launchDir, 'lochnessrod.go.json'), {
+            version: 2,
+            account: 'lochnessrod',
+            runUntil: NOW + 60_000,
+        });
+        const activeManifests = loadCampaignManifests({ root: tempRoot, now: NOW });
+        expect(activeManifests.find((c) => c.account === 'lochnessrod')?.state).toBe('running');
+    });
 });

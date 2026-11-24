@@ -95,3 +95,48 @@ test('a successful craft acknowledgement with no product cannot count as crafted
     expect(f.pack.map(item => item.id)).toEqual([1592, 2357, 1607]);
     expect(f.tick).toBeGreaterThanOrEqual(400);
 });
+
+test('legacy furnace smelting terminates cleanly when furnace walk fails repeatedly', async () => {
+    let tick = 0;
+    let walkCalls = 0;
+    let result: { ok: boolean; detail: string } | undefined;
+    const pack: Item[] = [
+        { id: 1592, name: 'Ring mould', count: 1, slot: 0 },
+        { id: 2357, name: 'Gold bar', count: 1, slot: 1 },
+        { id: 1607, name: 'Sapphire', count: 1, slot: 2 },
+    ];
+    const session = {
+        tick: () => tick,
+        sdk: {
+            getInventory: () => pack,
+            getState: () => ({ player: { worldX: 3269, worldZ: 3167 } }),
+        },
+        bot: {
+            openBank: async () => ({ success: true }),
+            closeInterface: async () => ({ success: true }),
+            depositItem: async () => ({ success: true }),
+            withdrawItem: async () => ({ success: true }),
+            craftJewelry: async () => ({ success: true }),
+        },
+    };
+    await runLegacyCraftJewelryCli(
+        'JewelWalkFail',
+        ['400', 'smelt', 'sapphire'],
+        {},
+        {
+            openBot: async () => session as any,
+            finish: (async (_sessions: unknown[], ok: boolean, detail: string) => { result = { ok, detail }; }) as any,
+            countItems: () => 0,
+            waitTicks: (async (_session: unknown, ticks = 1) => { tick += ticks; }) as any,
+            waitUntil: (async (_session: unknown, condition: () => boolean) => condition()) as any,
+            sessionWalker: (async () => ({})) as any,
+            walkPath: (async () => {
+                walkCalls++;
+                return { ok: false, ticks: 0, detail: 'blocked' };
+            }) as any,
+        },
+    );
+    expect(walkCalls).toBe(15);
+    expect(result?.ok).toBe(false);
+    expect(tick).toBeLessThan(400);
+});

@@ -21,7 +21,7 @@ import { jobLogStart } from '../../core/src/job-log';
 import { rotateLog } from '../../core/src/log-rotate';
 import { FREE_FLOOR_GB } from '../../core/src/memory';
 import { atomicJson, ownerPlanPath } from '../../core/src/plan-lock';
-import { hasStopFile, liveRoot, repoRoot } from '../../core/src/practice-paths';
+import { hasStopFile, liveRoot, operatorCommandsDir, repoRoot } from '../../core/src/practice-paths';
 import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../../core/src/proc';
 import {
     BOOTSTRAP_STATUS_AGE_MS, missionSignature as sharedMissionSignature, successfulEnd, withSessionAdmission,
@@ -35,8 +35,8 @@ import { assertNoRecoveryLease, heldRecoveryOwners, releaseExpiredRecoveryLeases
 import { RESERVED_ACCOUNTS, SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
 import { renameRetry } from '../../core/src/status';
 import { ownedAccounts } from '../../core/src/tradeguard';
-import { assertWorkerRelease, cachedReleaseFor, workerEntries } from '../../core/src/worker-release';
-import { recordWorkerOutcome, runBrainCycle } from './brain-runtime';
+import { assertWorkerRelease, cachedLaunchRevision, cachedReleaseFor, workerEntries } from '../../core/src/worker-release';
+import { recordWorkerOutcome, runBrainCycle, type BrainCycleResult } from './brain-runtime';
 import { courierDeliveryWaiting, deliveryResume, foodDeficit, selectFoodSource } from './courier-admission';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 
@@ -70,7 +70,7 @@ export type Job = {
     demandId?: string;
 };
 
-type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
+type Plan = { maxBots: number; minFreeGB: number; jobs: Job[]; boundedRecovery?: boolean; boundedInspection?: boolean };
 
 type Run = {
     pid: number;
@@ -378,6 +378,10 @@ export function swarmWroteStop(text: string | undefined): boolean {
     return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
 }
 
+export function isAutoStopText(text: string | undefined): boolean {
+    return swarmWroteStop(text) || /^fleet-health auto-paused:/i.test((text ?? '').trim());
+}
+
 export function writeSwarmStop(file: string, reason: string): void {
     try { writeFileSync(file, reason, { flag: 'wx' }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
@@ -389,6 +393,31 @@ export function clearSwarmStop(file: string): boolean {
     if (!swarmWroteStop(text)) return false;
     rmSync(file, { force: true });
     return true;
+}
+
+export function clearAutoStop(file: string): boolean {
+    let text: string;
+    try { text = readFileSync(file, 'utf8'); } catch { return false; }
+    if (!isAutoStopText(text)) return false;
+    rmSync(file, { force: true });
+    return true;
+}
+
+export const DEFAULT_BRAIN_CYCLE_MS = 6_000;
+
+export function brainCycleDue(v: {
+    hasCached: boolean;
+    dirty: boolean;
+    now: number;
+    lastAt: number;
+    intervalMs: number;
+    hasPendingCommands: boolean;
+    planMtime: number;
+    lastPlanMtime: number;
+}): boolean {
+    if (!v.hasCached || v.dirty || v.hasPendingCommands) return true;
+    if (v.planMtime !== v.lastPlanMtime) return true;
+    return v.now - v.lastAt >= v.intervalMs;
 }
 
 export function runningJobState(
@@ -843,9 +872,6 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const infraBreaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(root), 'infra-circuit-breaker.json') });
     const positional = argv.filter(a => !a.startsWith('--'));
     const planFile = resolve(positional[0] ?? process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
-    const rootPlan = process.platform === 'win32'
-        ? planFile.toLowerCase() === ownerPlanPath(root).toLowerCase()
-        : planFile === ownerPlanPath(root);
     const nonce = argv.find(a => a.startsWith('--nonce='))?.slice('--nonce='.length) || process.env.SWARM_OWNER_NONCE || randomUUID();
     const watchId = argv.find(a => a.startsWith('--watch-id='))?.slice('--watch-id='.length) || process.env.CLOUD_WATCH_ID;
     const prac = join(root, '.practice');
@@ -878,6 +904,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     atomicJson(ownerFile, {
         pid: process.pid,
         nonce,
+        source: cachedLaunchRevision(root),
         plan: planFile,
         side,
         at: Date.now(),
@@ -899,6 +926,12 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const catalog = defaultActivityCatalog(knowledgeRoot);
     const rateStore = createRateStore({ catalog, root, persist: true });
     const classifier = new OutcomeClassifier({ rateStore, root, persist: true });
+    const brainCycleMsRaw = Number(process.env.BRAIN_CYCLE_MS);
+    const brainCycleMs = Number.isFinite(brainCycleMsRaw) && brainCycleMsRaw >= 1000 ? brainCycleMsRaw : DEFAULT_BRAIN_CYCLE_MS;
+    let lastBrainResult: BrainCycleResult | null = null;
+    let lastBrainAt = 0;
+    let lastBrainPlanMtime = -1;
+    let brainDirty = true;
 
     const runs = new Map<string, Run>();
     const recoveryDispatch = createRecoveryDispatch({ base: root, server: LIVE_SERVER });
@@ -971,6 +1004,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         const finish = () => {
             if (done) return;
             done = true; clearInterval(timer);
+            brainDirty = true;
             read(); if (tail) consume(tail);
             runs.delete(key); adopted.delete(run); saveRuns();
             const code = exitCode === undefined ? 'unknown' : exitCode;
@@ -1098,56 +1132,100 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             console.log('SWARM bad plan shape'); return;
         }
 
-        // Run Brain cycle on the live/root swarm controller to drain OperatorCommands, publish FleetState,
-        // and plan autonomous jobs for accounts not governed by explicit hand jobs in swarm.json.
+        // Run Brain cycle on normal swarm controllers (local and cloud sides) to drain OperatorCommands,
+        // publish FleetState, and plan autonomous jobs for accounts not governed by explicit hand jobs.
         const combinedJobs: Job[] = [...plan.jobs];
-        if (rootPlan) {
+        const brainRecoveryRows: Record<string, unknown>[] = [];
+        const brainDispatchedAccounts = new Set<string>();
+        const brainEnabled = !plan.boundedRecovery && !plan.boundedInspection;
+        if (brainEnabled) {
             try {
-                const activeMap = new Map<string, AccountActiveJob>();
-                for (const run of runs.values()) {
-                    for (const acct of run.accounts) {
-                        activeMap.set(acct.toLowerCase(), {
-                            activityId: run.activityId ?? 'hand:swarm',
-                            demandId: run.demandId ?? 'hand:swarm',
-                            startedAt: run.started,
+                const nowMs = Date.now();
+                let planMtime = 0;
+                try { planMtime = statSync(planFile).mtimeMs; } catch { /* ignore */ }
+                const cmdDir = operatorCommandsDir(root);
+                let hasPendingCommands = false;
+                try {
+                    hasPendingCommands = existsSync(cmdDir) && readdirSync(cmdDir).some(f => f.endsWith('.json'));
+                } catch { /* ignore */ }
+
+                if (brainCycleDue({
+                    hasCached: lastBrainResult !== null,
+                    dirty: brainDirty,
+                    now: nowMs,
+                    lastAt: lastBrainAt,
+                    intervalMs: brainCycleMs,
+                    hasPendingCommands,
+                    planMtime,
+                    lastPlanMtime: lastBrainPlanMtime,
+                })) {
+                    const activeMap = new Map<string, AccountActiveJob>();
+                    for (const run of runs.values()) {
+                        for (const acct of run.accounts) {
+                            activeMap.set(acct.toLowerCase(), {
+                                activityId: run.activityId ?? 'hand:swarm',
+                                demandId: run.demandId ?? 'hand:swarm',
+                                startedAt: run.started,
+                            });
+                        }
+                    }
+                    lastBrainResult = runBrainCycle({
+                        root, side, server: LIVE_SERVER, maxBots: plan.maxBots,
+                        catalog, rateStore, classifier, infraBreaker,
+                        activeAccounts: activeMap, persist: true, consumeCommands: true,
+                    });
+                    lastBrainAt = nowMs;
+                    lastBrainPlanMtime = planMtime;
+                    brainDirty = false;
+                }
+
+                const brainResult = lastBrainResult;
+                if (brainResult) {
+                    const handAccountSet = new Set(
+                        plan.jobs.flatMap(j => j.accounts ?? (j.account ? [j.account] : [])).map(a => a.toLowerCase()),
+                    );
+                    for (const [acctName, dispatched] of Object.entries(brainResult.dispatchedPlans)) {
+                        if (handAccountSet.has(acctName.toLowerCase())) continue;
+                        const acctState = brainResult.world.accounts[acctName.toLowerCase()];
+                        if (dispatched.steps[0]?.executionMode === 'session_recovery') {
+                            brainRecoveryRows.push({
+                                account: acctName,
+                                script: '',
+                                role: acctState?.role,
+                                goal: 'session recovery',
+                                enabled: false,
+                                repeat: false,
+                                state: 'waiting: standalone session recovery',
+                                since: null,
+                            });
+                            continue;
+                        }
+                        const step = dispatched.combinedStep;
+                        if (!step) continue;
+                        const accountSteps = brainResult.fleetPlan.accountPlans[acctName]?.steps ?? [];
+                        const firstWork = accountSteps.find(s => s.stepKind === 'work');
+                        const firstActivityStep = accountSteps.find(s => 'activityId' in s && typeof s.activityId === 'string');
+                        const activityId = firstWork?.stepKind === 'work'
+                            ? firstWork.activityId
+                            : (firstActivityStep && 'activityId' in firstActivityStep ? firstActivityStep.activityId : undefined);
+                        brainDispatchedAccounts.add(acctName.toLowerCase());
+                        combinedJobs.push({
+                            account: acctName,
+                            script: step.script,
+                            args: [...step.args],
+                            env: {
+                                ...step.env,
+                                ...(activityId ? { BRAIN_ACTIVITY_ID: activityId } : {}),
+                                ...(dispatched.demandId ? { BRAIN_DEMAND_ID: dispatched.demandId } : {}),
+                            },
+                            enabled: true,
+                            repeat: false,
+                            role: acctState?.role,
+                            goal: dispatched.demandId ?? activityId,
+                            ...(activityId ? { activityId } : {}),
+                            ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
                         });
                     }
-                }
-                const brainResult = runBrainCycle({
-                    root, side, server: LIVE_SERVER, maxBots: plan.maxBots,
-                    catalog, rateStore, classifier, infraBreaker,
-                    activeAccounts: activeMap, persist: true, consumeCommands: true,
-                });
-                const handAccountSet = new Set(
-                    plan.jobs.flatMap(j => j.accounts ?? (j.account ? [j.account] : [])).map(a => a.toLowerCase()),
-                );
-                for (const [acctName, dispatched] of Object.entries(brainResult.dispatchedPlans)) {
-                    if (handAccountSet.has(acctName.toLowerCase())) continue;
-                    const step = dispatched.combinedStep;
-                    if (!step) continue;
-                    const acctState = brainResult.world.accounts[acctName.toLowerCase()];
-                    const accountSteps = brainResult.fleetPlan.accountPlans[acctName]?.steps ?? [];
-                    const firstWork = accountSteps.find(s => s.stepKind === 'work');
-                    const firstActivityStep = accountSteps.find(s => 'activityId' in s && typeof s.activityId === 'string');
-                    const activityId = firstWork?.stepKind === 'work'
-                        ? firstWork.activityId
-                        : (firstActivityStep && 'activityId' in firstActivityStep ? firstActivityStep.activityId : undefined);
-                    combinedJobs.push({
-                        account: acctName,
-                        script: step.script,
-                        args: [...step.args],
-                        env: {
-                            ...step.env,
-                            ...(activityId ? { BRAIN_ACTIVITY_ID: activityId } : {}),
-                            ...(dispatched.demandId ? { BRAIN_DEMAND_ID: dispatched.demandId } : {}),
-                        },
-                        enabled: true,
-                        repeat: false,
-                        role: acctState?.role,
-                        goal: dispatched.demandId ?? activityId,
-                        ...(activityId ? { activityId } : {}),
-                        ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
-                    });
                 }
             } catch (error) {
                 console.log(`SWARM brain cycle skipped: ${String(error)}`);
@@ -1254,7 +1332,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             started: [...runs.values()].flatMap(r => r.accounts),
             now: Date.now(),
         });
-        const state: Record<string, unknown>[] = [];
+        const state: Record<string, unknown>[] = [...brainRecoveryRows];
         let owners: Map<string, Owner>;
         try { owners = loadOwners(); } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
 
@@ -1308,6 +1386,13 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         for (let i = holds.length - 1; i >= 0; i--) if (holds[i]!.account.toLowerCase() === a.toLowerCase()) holds.splice(i, 1);
                         persistEnded(deathsFile, ended); persistHolds(holdsFile, holds);
                         console.log(`SWARM standing retry ${a} after ${end.reason}`);
+                    }
+                }
+                if (!stopAll) {
+                    for (const a of p.accounts) {
+                        if (brainDispatchedAccounts.has(a.toLowerCase()) && existsSync(stopFile(a))) {
+                            clearAutoStop(stopFile(a));
+                        }
                     }
                 }
                 const { start: go, blocked } = completeJobCandidates(p, demandCandidates(holdCandidates(

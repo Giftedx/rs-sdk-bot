@@ -1,6 +1,7 @@
 // Keeps autonomous fleet controllers, publisher, status pruning, and standalone session recovery running with zero LLM Coordinator dependency.
 // Honors .practice/stop-coordinator, .practice/stop-swarm, and .practice/live/stop-* owner stop files.
 // Usage: bun packages/fleet/src/watchdog.ts
+import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -140,7 +141,8 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
             log(`fleet-agent restarted: ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
         } else {
             mkdirSync(join(prac, 'swarm-logs'), { recursive: true });
-            const pid = spawnDetached([process.execPath, ...start], base, join(prac, 'swarm-logs', `daemon-${now}.out.log`), join(prac, 'swarm-logs', `daemon-${now}.err.log`), env);
+            const swarmArgs = [...start, `--nonce=${randomUUID()}`];
+            const pid = spawnDetached([process.execPath, ...swarmArgs], base, join(prac, 'swarm-logs', `daemon-${now}.out.log`), join(prac, 'swarm-logs', `daemon-${now}.err.log`), env);
             log(`swarm restarted pid=${pid} plan=${start[1]}`);
         }
     }

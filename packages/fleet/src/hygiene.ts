@@ -221,6 +221,9 @@ export function isProtectedStopEntry(
     if (activeSpecialists.has(normalized)) {
         return { protected: true, reason: `active specialist or reserved account hold: ${flag}` };
     }
+    if (STALE_AUTO_STOP_TEXT.test(text.trim())) {
+        return { protected: false };
+    }
     if (containsOwnerOrSpecialistMarker(text)) {
         return { protected: true, reason: 'stop text contains owner or specialist marker' };
     }

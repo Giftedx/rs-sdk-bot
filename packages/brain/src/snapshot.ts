@@ -1,6 +1,6 @@
 // Pure WorldSnapshot loader: reads .practice/live/ (and legacy .practice/ fallback paths via practice-paths.ts),
 // computes deterministic AccountLifecycle & AccountState per owned account, and enforces offline bank trust + TTL holds.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { admittedByLevels, handNamed } from '../../core/src/army-roster';
 import { readLease } from '../../core/src/controllers';
@@ -24,7 +24,7 @@ import {
     statusReadDirs,
 } from '../../core/src/practice-paths';
 import { PVP_DEATH_SCHEMA, type PvpDeath } from '../../core/src/pvp-deaths';
-import { listAttempts, readLogoutProof, type AttemptReceipt, type LogoutProof } from '../../core/src/session-lifecycle';
+import { readLatestAttemptReceipt, readLogoutProof, type AttemptReceipt, type LogoutProof } from '../../core/src/session-lifecycle';
 import { RESERVED_ACCOUNTS } from '../../core/src/specialist-boards';
 import type { World } from '../../core/src/world';
 import { isWorkerQuestState, isWorkerTile, type WorkerQuestState, type WorkerTile } from '../../workers/src/contracts';
@@ -354,6 +354,29 @@ function readSideCards(fleetDir: string): Map<string, any> {
     return out;
 }
 
+interface OrdersReceiptsCacheEntry {
+    readonly ordersCount: number;
+    readonly ordersDirMtime: number;
+    readonly receiptsCount: number;
+    readonly receiptsDirMtime: number;
+    readonly earliestPendingEnd: number;
+    readonly activeOrders: readonly TransferOrder[];
+    readonly settledTransferByAccount: ReadonlyMap<string, number>;
+}
+
+const ordersReceiptsCache = new Map<string, OrdersReceiptsCacheEntry>();
+
+function dirStatSignature(dir: string): { count: number; mtimeMs: number; files: string[] } {
+    if (!existsSync(dir)) return { count: 0, mtimeMs: 0, files: [] };
+    try {
+        const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
+        const mtimeMs = statSync(dir).mtimeMs;
+        return { count: files.length, mtimeMs, files };
+    } catch {
+        return { count: 0, mtimeMs: 0, files: [] };
+    }
+}
+
 function readOrdersAndReceipts(
     fleetDir: string,
     server: string,
@@ -365,22 +388,40 @@ function readOrdersAndReceipts(
 } {
     const ordersDir = join(fleetDir, 'orders');
     const receiptsDir = join(fleetDir, 'receipts');
-    const receipts: Receipt[] = [];
-    if (existsSync(receiptsDir)) {
-        try {
-            for (const f of readdirSync(receiptsDir)) {
-                if (!f.endsWith('.json')) continue;
-                const r = safeReadJson<Receipt>(join(receiptsDir, f));
-                if (r && typeof r.id === 'string') receipts.push(r);
-            }
-        } catch { /* ignore unreadable receipts dir */ }
+    const ordSig = dirStatSignature(ordersDir);
+    const recSig = dirStatSignature(receiptsDir);
+    const cacheKey = `${resolve(fleetDir)}|${server}`;
+    const totalFiles = ordSig.count + recSig.count;
+
+    if (totalFiles > 100) {
+        const cached = ordersReceiptsCache.get(cacheKey);
+        if (
+            cached
+            && cached.ordersCount === ordSig.count
+            && cached.ordersDirMtime === ordSig.mtimeMs
+            && cached.receiptsCount === recSig.count
+            && cached.receiptsDirMtime === recSig.mtimeMs
+            && (cached.earliestPendingEnd === Number.POSITIVE_INFINITY || now < cached.earliestPendingEnd)
+            && cached.activeOrders.length === 0
+        ) {
+            return {
+                activeOrders: [],
+                inTradeAccounts: new Set<string>(),
+                settledTransferByAccount: new Map(cached.settledTransferByAccount),
+            };
+        }
     }
 
-    const activeOrders: TransferOrder[] = [];
-    const inTradeAccounts = new Set<string>();
+    const receiptsByOrderId = new Map<string, Receipt[]>();
     const settledTransferByAccount = new Map<string, number>();
 
-    for (const r of receipts) {
+    for (const f of recSig.files) {
+        const r = safeReadJson<Receipt>(join(receiptsDir, f));
+        if (!r || typeof r.id !== 'string') continue;
+        const list = receiptsByOrderId.get(r.id);
+        if (list) list.push(r);
+        else receiptsByOrderId.set(r.id, [r]);
+
         const isSettled = ('version' in r && r.version === 2) ? r.state === 'settled' : r.ok === true;
         if (!isSettled || typeof r.account !== 'string' || !Number.isFinite(r.at)) continue;
         if ('server' in r && typeof r.server === 'string' && r.server.toLowerCase() !== server) continue;
@@ -389,43 +430,56 @@ function readOrdersAndReceipts(
         if (r.at > prev) settledTransferByAccount.set(key, r.at);
     }
 
-    if (existsSync(ordersDir)) {
-        let files: string[] = [];
-        try { files = readdirSync(ordersDir); } catch { files = []; }
-        for (const f of files) {
-            if (!f.endsWith('.json')) continue;
-            const order = safeReadJson<Order>(join(ordersDir, f));
-            if (!validOrder(order) || order.server.toLowerCase() !== server) continue;
-            const settlement = tradeSettlement(order, receipts, now);
-            if (settlement.state === 'pending' && now < order.end) {
-                inTradeAccounts.add(order.from.toLowerCase());
-                inTradeAccounts.add(order.to.toLowerCase());
-                const hub = inferHubFromOrder(order);
-                const lines = orderLines(order)
-                    .filter((l) => typeof l.itemId === 'number' && Number.isSafeInteger(l.itemId) && l.itemId >= 0)
-                    .map((l) => ({ itemId: l.itemId!, itemName: l.item, count: l.count }));
-                if (lines.length > 0) {
-                    const transfer: TransferOrder = {
-                        id: order.id,
-                        server: order.server,
-                        from: order.from,
-                        to: order.to,
-                        hub,
-                        items: lines,
-                        demandId: `fleet-order:${order.id}`,
-                        reason: `fleet order ${order.item}`,
-                        createdAt: order.start,
-                        expiresAt: order.end,
-                        state: 'in_progress',
-                        bothIdleVerified: true,
-                        donorLogoutConfirmedAt: order.start,
-                        recipientLogoutConfirmedAt: order.start,
-                        antiPingPong: { donorHoldsDemandForItems: false, cooldownWindowMs: 600_000 },
-                    };
-                    if (isTransferOrder(transfer)) activeOrders.push(transfer);
-                }
+    const activeOrders: TransferOrder[] = [];
+    const inTradeAccounts = new Set<string>();
+    let earliestPendingEnd = Number.POSITIVE_INFINITY;
+
+    for (const f of ordSig.files) {
+        const order = safeReadJson<Order>(join(ordersDir, f));
+        if (!validOrder(order) || order.server.toLowerCase() !== server || now >= order.end) continue;
+        const orderReceipts = receiptsByOrderId.get(order.id) ?? [];
+        const settlement = tradeSettlement(order, orderReceipts, now);
+        if (settlement.state === 'pending') {
+            if (order.end < earliestPendingEnd) earliestPendingEnd = order.end;
+            inTradeAccounts.add(order.from.toLowerCase());
+            inTradeAccounts.add(order.to.toLowerCase());
+            const hub = inferHubFromOrder(order);
+            const lines = orderLines(order)
+                .filter((l) => typeof l.itemId === 'number' && Number.isSafeInteger(l.itemId) && l.itemId >= 0)
+                .map((l) => ({ itemId: l.itemId!, itemName: l.item, count: l.count }));
+            if (lines.length > 0) {
+                const transfer: TransferOrder = {
+                    id: order.id,
+                    server: order.server,
+                    from: order.from,
+                    to: order.to,
+                    hub,
+                    items: lines,
+                    demandId: `fleet-order:${order.id}`,
+                    reason: `fleet order ${order.item}`,
+                    createdAt: order.start,
+                    expiresAt: order.end,
+                    state: 'in_progress',
+                    bothIdleVerified: true,
+                    donorLogoutConfirmedAt: order.start,
+                    recipientLogoutConfirmedAt: order.start,
+                    antiPingPong: { donorHoldsDemandForItems: false, cooldownWindowMs: 600_000 },
+                };
+                if (isTransferOrder(transfer)) activeOrders.push(transfer);
             }
         }
+    }
+
+    if (totalFiles > 100) {
+        ordersReceiptsCache.set(cacheKey, {
+            ordersCount: ordSig.count,
+            ordersDirMtime: ordSig.mtimeMs,
+            receiptsCount: recSig.count,
+            receiptsDirMtime: recSig.mtimeMs,
+            earliestPendingEnd,
+            activeOrders,
+            settledTransferByAccount,
+        });
     }
 
     return { activeOrders, inTradeAccounts, settledTransferByAccount };
@@ -546,19 +600,19 @@ function readGeEscrowByAccount(root: string, server: string): Record<string, num
     return out;
 }
 
-function inferLogoutProofAndAttempts(
+function inferLogoutProofAndLatestAttempt(
     name: string,
     server: string,
     lifecycleRoots: readonly string[],
-): { proof: LogoutProof; attempts: ReturnType<typeof listAttempts> } {
+): { proof: LogoutProof; latestAttempt?: AttemptReceipt } {
     for (const lcRoot of lifecycleRoots) {
         const proof = readLogoutProof(name, server, { root: lcRoot });
         if (proof.state !== 'none') {
-            const attempts = listAttempts(name, server, { root: lcRoot });
-            return { proof, attempts };
+            const latest = readLatestAttemptReceipt(name, server, { root: lcRoot });
+            return { proof, latestAttempt: latest?.receipt };
         }
     }
-    return { proof: { state: 'none', account: name, server, domain: isLocalServer(server) ? 'practice' : 'live' }, attempts: [] };
+    return { proof: { state: 'none', account: name, server, domain: isLocalServer(server) ? 'practice' : 'live' } };
 }
 
 function latestReceiptMatchesSession(attempt: AttemptReceipt | undefined, status: any): boolean {
@@ -728,10 +782,9 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         }
 
         // Session logout proof & attempt timestamps.
-        const { proof, attempts } = isLocalSide
-            ? inferLogoutProofAndAttempts(name, server, lcRoots)
-            : { proof: { state: 'none' as const, account: name, server, domain: 'live' as const }, attempts: [] };
-        const latestAttempt = attempts.at(-1)?.receipt ?? undefined;
+        const { proof, latestAttempt } = isLocalSide
+            ? inferLogoutProofAndLatestAttempt(name, server, lcRoots)
+            : { proof: { state: 'none' as const, account: name, server, domain: 'live' as const }, latestAttempt: undefined };
         const lastLoginAttemptAt = latestAttempt?.createdAt
             ?? (Number.isFinite(status?.started) && status.started > 0 ? Number(status.started) : undefined);
 

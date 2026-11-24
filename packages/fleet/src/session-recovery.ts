@@ -2,12 +2,15 @@
 // Evaluates held live sessions, honors owner pauses and global infra circuit-breaker backoff, archives stale recovery
 // leases, and runs direct session cleanup retries with bounded per-end attempt tracking.
 // Usage: bun packages/fleet/src/session-recovery.ts [--dry] [--json] [--root=<dir>]
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { loadOwners, mySide } from '../../core/src/fleet';
 import { readFleetAccountClaim } from '../../core/src/fleet-trade-claim';
 import { isLocalServer } from '../../core/src/localserver';
+import { atomicJson } from '../../core/src/plan-lock';
 import {
     findStopFile,
     hasStopFile,
@@ -16,6 +19,7 @@ import {
     readStopFile,
     statusReadDirs,
 } from '../../core/src/practice-paths';
+import { processMatchesRecent } from '../../core/src/proc';
 import { BOOTSTRAP_STATUS_AGE_MS } from '../../core/src/session-admission';
 import { attemptOutcome, listAttempts, readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
 import {
@@ -27,9 +31,13 @@ import {
     validateRecoveryRequest,
     type RecoveryRequest,
 } from '../../core/src/session-recovery';
-import { heldRecoveryOwners } from '../../core/src/session-recovery-permit';
+import {
+    heldRecoveryOwners,
+    verifyNativeRecoveryProof,
+    type ControlledRecoveryRequest,
+} from '../../core/src/session-recovery-permit';
 import { RESERVED_ACCOUNTS } from '../../core/src/specialist-boards';
-import { cachedLaunchRevision } from '../../core/src/worker-release';
+import { cachedLaunchRevision, capabilityRevision } from '../../core/src/worker-release';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 
 export {
@@ -199,6 +207,7 @@ export type StandaloneRecoveryPassOptions = {
     root?: string;
     side?: string;
     server?: string;
+    account?: string;
     dry?: boolean;
     now?: () => number;
     pidAlive?: (pid: number) => boolean;
@@ -206,7 +215,7 @@ export type StandaloneRecoveryPassOptions = {
     breaker?: InfraCircuitBreaker;
     owners?: ReadonlyMap<string, { side: string; server: string }>;
     readClaim?: (account: string) => ClaimView;
-    executeRecovery?: (target: { account: string; endedAt: number; server: string }) => Promise<{ ok: boolean; detail: string }>;
+    executeRecovery?: (target: { account: string; endedAt: number; server: string }) => Promise<{ ok: boolean; detail: string; deferred?: boolean }>;
     log?: (line: string) => void;
 };
 
@@ -260,7 +269,10 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
     const targets: { account: string; endedAt: number }[] = [];
     const skipped: { account: string; reason: string }[] = [];
 
+    const accountFilter = opts.account?.trim().toLowerCase();
+
     for (const [lower, owner] of owners) {
+        if (accountFilter && lower !== accountFilter) continue;
         if (owner.side !== side || owner.server.toLowerCase() !== server.toLowerCase()) continue;
         if (NEVER_RECOVERED.includes(lower)) continue;
 
@@ -336,9 +348,9 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
 
     const recovered: string[] = [];
     const failed: string[] = [];
-    const runner = opts.executeRecovery ?? (async target => {
+    const runner = opts.executeRecovery ?? (async (target: { account: string; endedAt: number; server: string }) => {
         if (!isLocalServer(target.server)) {
-            return { ok: false, detail: 'direct live recovery runner unavailable without live session transport' };
+            return executeControlledLiveRecovery(target, { root, now: nowFn, pidAlive: alive });
         }
         return { ok: false, detail: 'direct recovery session runner required for local execution' };
     });
@@ -356,6 +368,11 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
         clearSwarmStops(root, [target.account]);
         try {
             const res = await runner({ account: target.account, endedAt: target.endedAt, server });
+            if (res.deferred) {
+                skipped.push({ account: target.account, reason: res.detail });
+                log(`${target.account}: deferred without burning budget (${res.detail})`);
+                continue;
+            }
             const faultKind = res.ok ? null : classifyInfraFault(res.detail);
             if (faultKind) {
                 breaker.recordFailure(res.detail, faultKind);
@@ -425,6 +442,313 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
     return { ok: failed.length === 0, dry, targets, recovered, failed, skipped };
 }
 
+export type RecoveryQualificationRef = {
+    delivery: { path: string; sha256: string };
+    proof: { path: string; sha256: string };
+};
+
+const sha256Buf = (buf: Buffer | string) => createHash('sha256').update(buf).digest('hex');
+
+export function findCurrentNativeRecoveryQualification(
+    root: string,
+    source?: string,
+    endedAt = 0,
+    now = Date.now(),
+    expectedCapRev?: string,
+): RecoveryQualificationRef | null {
+    const resolvedRoot = resolve(root);
+    const deliveriesRoot = join(resolvedRoot, '.practice', 'deliveries');
+    if (!existsSync(deliveriesRoot)) return null;
+    const runnerPath = join(resolvedRoot, RECOVERY_SCRIPT);
+    if (!existsSync(runnerPath)) return null;
+    let resolvedSource: string;
+    let expectedCapabilityRev: string;
+    try {
+        resolvedSource = source ?? cachedLaunchRevision(resolvedRoot);
+        expectedCapabilityRev = expectedCapRev ?? capabilityRevision(['scripts/session-check.ts'], resolvedRoot);
+    } catch {
+        return null;
+    }
+    const runnerSha256 = sha256Buf(readFileSync(runnerPath));
+
+    let best: { at: number; ref: RecoveryQualificationRef } | null = null;
+    let entries: string[] = [];
+    try { entries = readdirSync(deliveriesRoot); } catch { return null; }
+
+    for (const dirName of entries) {
+        const deliveryDir = join(deliveriesRoot, dirName);
+        const reportPath = join(deliveryDir, 'report.json');
+        if (!existsSync(reportPath)) continue;
+        let reportBytes: Buffer;
+        let report: any;
+        try {
+            reportBytes = readFileSync(reportPath);
+            report = JSON.parse(reportBytes.toString('utf8'));
+        } catch { continue; }
+        if (
+            report?.ok !== true
+            || report.stage !== 'delivered'
+            || report.id !== 'session-recovery-only'
+            || report.runtimeRevision !== expectedCapabilityRev
+            || !Number.isFinite(report.at)
+            || report.at <= endedAt
+            || report.at > now
+            || !Array.isArray(report.checks)
+            || report.checks.some((c: any) => c?.exitCode !== 0 || c?.timedOut)
+        ) continue;
+
+        const gate = report.checks.find((c: any) => c?.id === 'native-session-recovery' && c?.phase === 'practice');
+        if (!gate) continue;
+        let stdoutPath: string;
+        try {
+            const detail = JSON.parse(gate.detail);
+            if (typeof detail?.stdout !== 'string') continue;
+            stdoutPath = realpathSync(resolve(resolvedRoot, detail.stdout));
+        } catch { continue; }
+        let realDeliveryDir: string;
+        try { realDeliveryDir = realpathSync(deliveryDir); } catch { continue; }
+        if (!stdoutPath.startsWith(realDeliveryDir + sep)) continue;
+
+        let markers: string[];
+        try {
+            markers = readFileSync(stdoutPath, 'utf8').split(/\r?\n/).filter(l => l.startsWith('RECOVERY_NATIVE_PROOF '));
+        } catch { continue; }
+        if (markers.length !== 1) continue;
+
+        let proofRef: { path?: unknown; sha256?: unknown };
+        try { proofRef = JSON.parse(markers[0]!.slice('RECOVERY_NATIVE_PROOF '.length)); } catch { continue; }
+        if (typeof proofRef?.path !== 'string' || !/^[a-f0-9]{64}$/.test(String(proofRef.sha256 ?? ''))) continue;
+
+        let realProofPath: string;
+        try { realProofPath = realpathSync(resolve(resolvedRoot, proofRef.path)); } catch { continue; }
+        const realDeliveriesAllowed = realpathSync(deliveriesRoot) + sep;
+        if (!realProofPath.startsWith(realDeliveriesAllowed)) continue;
+
+        let proofBytes: Buffer;
+        let proof: any;
+        try {
+            proofBytes = readFileSync(realProofPath);
+            if (sha256Buf(proofBytes) !== proofRef.sha256) continue;
+            proof = JSON.parse(proofBytes.toString('utf8'));
+            verifyNativeRecoveryProof(proof, dirname(realProofPath), { runtimeRevision: resolvedSource, runnerSha256 });
+        } catch { continue; }
+
+        if (!best || report.at > best.at) {
+            best = {
+                at: report.at,
+                ref: {
+                    delivery: { path: relative(resolvedRoot, reportPath).replaceAll('\\', '/'), sha256: sha256Buf(reportBytes) },
+                    proof: { path: relative(resolvedRoot, realProofPath).replaceAll('\\', '/'), sha256: String(proofRef.sha256) },
+                },
+            };
+        }
+    }
+    return best?.ref ?? null;
+}
+
+export type ControlledDispatchOneOptions = {
+    root: string;
+    account: string;
+    endedAt: number;
+    server: string;
+    runId: string;
+    nonce: string;
+    source: string;
+    qualification: RecoveryQualificationRef;
+    timeoutMs?: number;
+    pollMs?: number;
+    now?: () => number;
+};
+
+export async function runControlledDispatchOne(
+    opts: ControlledDispatchOneOptions,
+): Promise<{ ok: boolean; detail: string }> {
+    const resolvedRoot = resolve(opts.root);
+    const nowFn = opts.now ?? Date.now;
+    const timeoutMs = opts.timeoutMs ?? 180_000;
+    const pollMs = opts.pollMs ?? 500;
+    const liveDir = liveRoot(resolvedRoot);
+    const runDir = join(liveDir, 'fleet-runs', opts.runId);
+    mkdirSync(runDir, { recursive: true });
+
+    const recoveryRecord = {
+        status: 'running',
+        runId: opts.runId,
+        pid: process.pid,
+        spec: {
+            kind: 'run',
+            capability: 'session-recovery-only',
+            account: opts.account,
+            script: 'scripts/session-check.ts',
+            sessionRecovery: { account: opts.account, endedAt: opts.endedAt },
+            repairs: [{ account: opts.account, endedAt: opts.endedAt }],
+        },
+    };
+    atomicJson(join(runDir, 'recovery.json'), recoveryRecord);
+    atomicJson(join(runDir, 'owner.json'), { runId: opts.runId, pid: process.pid });
+
+    const request: ControlledRecoveryRequest = {
+        schema: RECOVERY_SCHEMA,
+        kind: 'session-recovery',
+        account: opts.account,
+        server: opts.server,
+        runId: opts.runId,
+        nonce: opts.nonce,
+        endedAt: opts.endedAt,
+        source: opts.source,
+        qualification: opts.qualification,
+    };
+    validateRecoveryRequest(request);
+
+    const repairFile = join(resolvedRoot, '.practice', 'swarm-repair.json');
+    const leaseFile = `${repairFile}.lease`;
+    const resultsFile = `${repairFile}.results.jsonl`;
+
+    try {
+        writeFileSync(leaseFile, JSON.stringify({ pid: process.pid, runId: opts.runId, nonce: opts.nonce, at: nowFn() }), { flag: 'wx' });
+    } catch (err) {
+        atomicJson(join(runDir, 'recovery.json'), { ...recoveryRecord, status: 'failed' });
+        return { ok: false, detail: `repair lease busy: ${String(err).slice(0, 120)}` };
+    }
+
+    let finalStatus: 'succeeded' | 'failed' = 'failed';
+    try {
+        atomicJson(repairFile, request);
+        const deadline = Date.now() + timeoutMs;
+        let matchedResult: any = null;
+
+        while (Date.now() < deadline) {
+            if (existsSync(resultsFile)) {
+                const lines = readFileSync(resultsFile, 'utf8').split(/\r?\n/);
+                for (let i = lines.length - 1; i >= 0; i--) {
+                    const line = lines[i]?.trim();
+                    if (!line) continue;
+                    try {
+                        const row = JSON.parse(line);
+                        const rawReq = typeof row?.raw === 'string' ? JSON.parse(row.raw) : null;
+                        if (rawReq?.runId === opts.runId && rawReq?.nonce === opts.nonce) {
+                            matchedResult = row.result;
+                            break;
+                        }
+                    } catch { /* ignore partial line */ }
+                }
+                if (matchedResult) break;
+            }
+            await Bun.sleep(pollMs);
+        }
+
+        if (!matchedResult) {
+            return { ok: false, detail: `controlled recovery timed out after ${timeoutMs}ms` };
+        }
+        if (matchedResult.sessionRecovered !== true) {
+            return { ok: false, detail: String(matchedResult.reason ?? 'controlled recovery did not confirm sessionRecovered') };
+        }
+        const proof = readLogoutProof(opts.account, opts.server, { root: lifecycleRootForRead(opts.server, resolvedRoot) });
+        if (proof.state !== 'confirmed') {
+            return { ok: false, detail: `logout proof after recovery is ${proof.state}` };
+        }
+        finalStatus = 'succeeded';
+        return { ok: true, detail: `controlled recovery confirmed (${proof.attemptId})` };
+    } finally {
+        try {
+            const cur = readJson(leaseFile, null);
+            if (cur?.pid === process.pid && cur?.runId === opts.runId && cur?.nonce === opts.nonce) {
+                rmSync(leaseFile, { force: true });
+            }
+        } catch { /* ignore */ }
+        atomicJson(join(runDir, 'recovery.json'), { ...recoveryRecord, status: finalStatus });
+    }
+}
+
+export async function executeControlledLiveRecovery(
+    target: { account: string; endedAt: number; server: string },
+    opts: { root: string; now?: () => number; pidAlive?: (pid: number) => boolean },
+): Promise<{ ok: boolean; detail: string; deferred?: boolean }> {
+    const resolvedRoot = resolve(opts.root);
+    const nowFn = opts.now ?? Date.now;
+    const alive = opts.pidAlive ?? pidAlive;
+    const ownerFile = join(liveRoot(resolvedRoot), 'swarm-owner.json');
+    const owner = readJson(ownerFile, null);
+
+    if (
+        !owner
+        || !Number.isSafeInteger(owner.pid)
+        || owner.pid < 1
+        || typeof owner.nonce !== 'string'
+        || !owner.nonce
+        || !alive(owner.pid)
+        || !processMatchesRecent(owner.pid, owner.nonce)
+    ) {
+        return { ok: false, deferred: true, detail: 'swarm controller unavailable or source mismatch for controlled recovery' };
+    }
+
+    let source: string;
+    try {
+        source = cachedLaunchRevision(resolvedRoot);
+    } catch {
+        return { ok: false, deferred: true, detail: 'swarm controller unavailable or source revision unreadable for controlled recovery' };
+    }
+
+    if (owner.source !== source) {
+        return { ok: false, deferred: true, detail: 'swarm controller unavailable or source mismatch for controlled recovery' };
+    }
+
+    const qualification = findCurrentNativeRecoveryQualification(resolvedRoot, source, target.endedAt, nowFn());
+    if (!qualification) {
+        return {
+            ok: false,
+            deferred: true,
+            detail: `current native recovery qualification missing for source ${source.slice(0, 12)}; run packages/practice/src/session-recovery-proof.ts`,
+        };
+    }
+
+    const runId = `fleet-recovery-${nowFn()}-${randomUUID().slice(0, 8)}`;
+    const nonce = randomUUID();
+    const childArgs = [
+        join(resolvedRoot, 'packages', 'fleet', 'src', 'session-recovery.ts'),
+        '--dispatch-one',
+        `--root=${resolvedRoot}`,
+        `--account=${target.account}`,
+        `--ended-at=${target.endedAt}`,
+        `--server=${target.server}`,
+        `--run-id=${runId}`,
+        `--nonce=${nonce}`,
+        `--source=${source}`,
+        `--qualification=${Buffer.from(JSON.stringify(qualification), 'utf8').toString('base64url')}`,
+    ];
+
+    return new Promise((resolvePromise) => {
+        const child = spawn(process.execPath, childArgs, {
+            cwd: resolvedRoot,
+            windowsHide: true,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: process.env,
+        });
+        let stdout = '';
+        let stderr = '';
+        child.stdout?.on('data', chunk => { stdout += String(chunk); });
+        child.stderr?.on('data', chunk => { stderr += String(chunk); });
+        child.on('error', err => resolvePromise({ ok: false, detail: `dispatch child spawn failed: ${String(err).slice(0, 160)}` }));
+        child.on('close', code => {
+            const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            const marker = [...lines].reverse().find(l => l.startsWith('FLEET_DISPATCH_RESULT '));
+            if (marker) {
+                try {
+                    const parsed = JSON.parse(marker.slice('FLEET_DISPATCH_RESULT '.length));
+                    if (typeof parsed?.ok === 'boolean' && typeof parsed?.detail === 'string') {
+                        resolvePromise({ ok: parsed.ok, detail: parsed.detail });
+                        return;
+                    }
+                } catch { /* fall through */ }
+            }
+            resolvePromise({
+                ok: code === 0,
+                detail: `${stdout} ${stderr}`.trim().slice(-200) || `dispatch child exited ${code}`,
+            });
+        });
+    });
+}
+
 export async function runLocalRecoveryDirect(
     account: string,
     server: string,
@@ -450,11 +774,26 @@ export async function runLocalRecoveryDirect(
 
 if (import.meta.main) {
     const argv = process.argv.slice(2);
+    const argVal = (prefix: string) => argv.find(a => a.startsWith(prefix))?.slice(prefix.length);
+    if (argv.includes('--dispatch-one')) {
+        const root = resolve(argVal('--root=') ?? resolve(import.meta.dir, '../../..'));
+        const account = argVal('--account=') ?? '';
+        const endedAt = Number(argVal('--ended-at=') ?? '0');
+        const server = argVal('--server=') ?? LIVE_SERVER;
+        const runId = argVal('--run-id=') ?? '';
+        const nonce = argVal('--nonce=') ?? '';
+        const source = argVal('--source=') ?? cachedLaunchRevision(root);
+        const qualB64 = argVal('--qualification=') ?? '';
+        const qualification = JSON.parse(Buffer.from(qualB64, 'base64url').toString('utf8')) as RecoveryQualificationRef;
+        const res = await runControlledDispatchOne({ root, account, endedAt, server, runId, nonce, source, qualification });
+        console.log(`FLEET_DISPATCH_RESULT ${JSON.stringify(res)}`);
+        process.exit(res.ok ? 0 : 1);
+    }
     const dry = argv.includes('--dry');
     const jsonOut = argv.includes('--json');
-    const rootArg = argv.find(a => a.startsWith('--root='))?.slice('--root='.length);
-    const root = resolve(rootArg ?? resolve(import.meta.dir, '../../..'));
-    const res = await runStandaloneRecoveryPass({ root, dry });
+    const root = resolve(argVal('--root=') ?? resolve(import.meta.dir, '../../..'));
+    const account = argVal('--account=');
+    const res = await runStandaloneRecoveryPass({ root, dry, ...(account ? { account } : {}) });
     if (jsonOut) console.log(JSON.stringify(res, null, 2));
     process.exit(res.ok ? 0 : 1);
 }

@@ -85,7 +85,7 @@ function dispatchSingleRoute(route: WorkerRouteStep): { step: Step; warnings: st
         return {
             step: {
                 script: 'scripts/cloud-recover.ts',
-                args: [],
+                args: [`--account=${route.account}`],
                 env: baseEnv,
             },
             warnings,

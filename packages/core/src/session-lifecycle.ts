@@ -207,6 +207,52 @@ export function readLogoutProof(account: string, server: string, opts: { root?: 
     return readLogoutProofAt(account, server, liveLifecycleRoot(repoRoot));
 }
 
+function readLatestAttemptReceiptAt(
+    account: string,
+    server: string,
+    root?: string,
+): { attemptId: string; receipt: AttemptReceipt; sha256: string } | null {
+    let dir: string;
+    try { dir = accountDir(account, server, root); } catch { return null; }
+    const latestFile = join(dir, 'latest.json');
+    if (!existsSync(latestFile)) return null;
+    const domain = domainOf(server), same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+    let pointer: any, raw: Buffer, receipt: any;
+    try { pointer = JSON.parse(readFileSync(latestFile, 'utf8')); } catch { return null; }
+    if (!pointer || pointer.schema !== LIFECYCLE_SCHEMA || typeof pointer.attemptId !== 'string' || !ATTEMPT.test(pointer.attemptId)
+        || typeof pointer.account !== 'string' || !same(pointer.account, account) || pointer.server !== server || pointer.domain !== domain) {
+        return null;
+    }
+    try {
+        raw = readFileSync(join(dir, 'attempts', `${pointer.attemptId}.json`));
+        receipt = JSON.parse(raw.toString('utf8'));
+    } catch {
+        return null;
+    }
+    if (!validReceipt(receipt) || receipt.attemptId !== pointer.attemptId || !same(receipt.account, account) || receipt.server !== server || receipt.domain !== domain) {
+        return null;
+    }
+    return {
+        attemptId: pointer.attemptId,
+        receipt,
+        sha256: createHash('sha256').update(raw).digest('hex'),
+    };
+}
+
+// O(1) lookup of the latest attempt receipt referenced by latest.json without scanning historical attempts.
+export function readLatestAttemptReceipt(
+    account: string,
+    server: string,
+    opts: { root?: string } = {},
+): { attemptId: string; receipt: AttemptReceipt; sha256: string } | null {
+    if (opts.root || isLocalServer(server)) return readLatestAttemptReceiptAt(account, server, opts.root);
+    for (const candidate of lifecycleReadRoots(repoRoot)) {
+        const res = readLatestAttemptReceiptAt(account, server, candidate);
+        if (res) return res;
+    }
+    return readLatestAttemptReceiptAt(account, server, liveLifecycleRoot(repoRoot));
+}
+
 function listAttemptsAt(account: string, server: string, root?: string): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
     const attempts = join(accountDir(account, server, root), 'attempts');
     if (!existsSync(attempts)) return [];

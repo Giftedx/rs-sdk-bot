@@ -65,18 +65,27 @@ export interface FleetSchedulerInput {
     readonly xpRate?: number;
 }
 
-function buildItemPriceTable(marketQuotes?: MarketQuotesMap): Record<number, number> {
+let cachedBaseItemPrices: Readonly<Record<number, number>> | undefined;
+
+function getBaseItemPrices(): Readonly<Record<number, number>> {
+    if (cachedBaseItemPrices) return cachedBaseItemPrices;
     const prices: Record<number, number> = {};
     for (const [id, meta] of loadItemsMap()) {
         if (meta.cost > 0) prices[id] = meta.cost;
     }
-    if (marketQuotes) {
-        for (const [idStr, quote] of Object.entries(marketQuotes)) {
-            if (quote && quote.ask !== null && quote.ask > 0) {
-                prices[Number(idStr)] = Math.ceil(quote.ask);
-            } else if (quote && quote.sell > 0) {
-                prices[Number(idStr)] = Math.ceil(quote.sell);
-            }
+    cachedBaseItemPrices = prices;
+    return cachedBaseItemPrices;
+}
+
+function buildItemPriceTable(marketQuotes?: MarketQuotesMap): Record<number, number> {
+    const base = getBaseItemPrices();
+    if (!marketQuotes) return base as Record<number, number>;
+    const prices: Record<number, number> = { ...base };
+    for (const [idStr, quote] of Object.entries(marketQuotes)) {
+        if (quote && quote.ask !== null && quote.ask > 0) {
+            prices[Number(idStr)] = Math.ceil(quote.ask);
+        } else if (quote && quote.sell > 0) {
+            prices[Number(idStr)] = Math.ceil(quote.sell);
         }
     }
     return prices;
