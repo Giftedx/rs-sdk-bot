@@ -321,14 +321,22 @@ function tryDrinkPrayerPotion(s: Session, minPts = 15): Promise<unknown> | null 
 }
 
 async function buryPrayerBones(s: Session, stop: () => boolean, targetLevel = 43): Promise<void> {
-    for (let i = 0; i < 20 && !stop(); i++) {
+    for (let i = 0; i < 24 && !stop(); i++) {
         if ((s.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= targetLevel) break;
         const slot = slotOfId(s, OBJ_DRAGON_BONES);
         if (slot === undefined) break;
         const item = s.sdk.getInventory().find(it => it.slot === slot);
         const op = item?.optionsWithIndex?.find(o => /^bury$/i.test(o.text))?.opIndex ?? 1;
+        const beforeXp = s.sdk.getSkill('Prayer')?.experience ?? 0;
         await s.direct({ type: 'useInventoryItem', slot, optionIndex: op, reason: 'SDK' });
-        await waitTicks(s, 1);
+        for (let t = 0; t < 3 && !stop(); t++) {
+            await waitTicks(s, 1);
+            if ((s.sdk.getSkill('Prayer')?.experience ?? 0) > beforeXp) break;
+        }
+    }
+    const lvl = s.sdk.getSkill('Prayer')?.baseLevel ?? 1;
+    if (lvl < targetLevel) {
+        throw new Error(`buryPrayerBones: reached Prayer ${lvl} < ${targetLevel}`);
     }
 }
 

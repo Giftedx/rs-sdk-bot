@@ -204,7 +204,11 @@ if (import.meta.main) {
         const doricTicks = main.tick() - t0;
 
         // Rellekka East 9-rock iron cluster (2724,3693): 9 iron rocks allow continuous 3.00t/ore without waiting on 18t respawn.
-        await walkWaypointsSafe(main, [[2890, 3530, 4], [2820, 3600, 4], [2755, 3665, 4], [2724, 3693, 2]], isStopped);
+        await walkWaypointsSafe(
+            main,
+            [[2855, 3481, 4], [2844, 3460, 4], [2798, 3449, 4], [2738, 3507, 4], [2671, 3563, 4], [2687, 3639, 4], [2724, 3693, 2]],
+            isStopped,
+        );
 
         const zooStart = main.tick() - t0;
         const ironProfile = miningProfiles().find(p => p.name === 'iron_rock_table');

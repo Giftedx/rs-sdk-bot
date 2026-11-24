@@ -276,7 +276,7 @@ if (import.meta.main) {
         );
         await walkWaypointsSafe(
             main,
-            [[3020, 3495, 4], [2950, 3465, 4], [2885, 3455, 4], [2837, 3443, 2]],
+            [[3059, 3405, 4], [2953, 3435, 4], [2866, 3459, 4], [2848, 3473, 4], [2837, 3443, 2]],
             isStopped,
         );
         await buyBigNetAtCatherby(main, isStopped);
