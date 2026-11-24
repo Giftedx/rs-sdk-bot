@@ -675,93 +675,119 @@ const FAST_HERB_STEPS: readonly BankBrewPlanStep[] = [
  })),
 ];
 
-async function fastInProcessHerbloreTrade(
- spec: Session,
- helper: Session,
- giveIds: readonly number[],
- deadlineTick: number,
-): Promise<void> {
- const begin = spec.tick();
- const helperLower = helper.name.toLowerCase();
- const specLower = spec.name.toLowerCase();
- const giveSet = new Set(giveIds);
- const offeredIds = new Set<number>();
- let sawConfirm = false;
-
- while (spec.tick() < deadlineTick) {
-  const st = spec.sdk.getTradeState();
-  const ht = helper.sdk.getTradeState();
-
-  if (!st.isOpen && !ht.isOpen) {
-   if (sawConfirm || giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
-    console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
-    return;
-   }
-   offeredIds.clear();
-   const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperLower);
-   const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);
-   const acts: Promise<unknown>[] = [];
-   if (sTarget && hTarget) {
-    acts.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
-    acts.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
-   } else {
-    const tp = playerPos(spec);
-    if (tp) acts.push(helper.direct({ type: 'walkTo', x: tp.worldX + 1, z: tp.worldZ, running: true, reason: 'SDK' }));
-   }
-   if (acts.length) await Promise.all(acts);
-   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
-   continue;
+ function pushExactWithdraw(acts: Promise<unknown>[], spec: Session, slot: number, need: number, bankCount: number): void {
+  if (need <= 0) return;
+  if (need >= bankCount) {
+   acts.push(spec.direct({ type: 'bankWithdraw', slot, amount: -1, reason: 'SDK' }));
+   return;
   }
-
-  if (st.screen === 'confirm' || ht.screen === 'confirm') {
-   sawConfirm = true;
-   const acts: Promise<unknown>[] = [];
-   if (ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted) {
-    acts.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
-   }
-   if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
-    acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
-   }
-   if (acts.length) await Promise.all(acts);
-   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
-   if (!spec.sdk.getTradeState().isOpen && !helper.sdk.getTradeState().isOpen && giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
-    console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
-    return;
-   }
-   continue;
+  let rem = need;
+  while (rem >= 10) {
+   acts.push(spec.direct({ type: 'bankWithdraw', slot, amount: 10, reason: 'SDK' }));
+   rem -= 10;
   }
-
-  const hActs: Promise<unknown>[] = [];
-  const sActs: Promise<unknown>[] = [];
-  const remaining: number[] = [];
-  for (const item of helper.sdk.getInventory()) {
-   if (giveSet.has(item.id) && !offeredIds.has(item.id)) {
-    offeredIds.add(item.id);
-    remaining.push(item.slot);
-    if (remaining.length >= 5) break;
-   }
+  while (rem >= 5) {
+   acts.push(spec.direct({ type: 'bankWithdraw', slot, amount: 5, reason: 'SDK' }));
+   rem -= 5;
   }
-  for (const slot of remaining) {
-   hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+  while (rem >= 1) {
+   acts.push(spec.direct({ type: 'bankWithdraw', slot, amount: 1, reason: 'SDK' }));
+   rem -= 1;
   }
-  const allOffered = helper.sdk.getInventory().every(item => !giveSet.has(item.id) || offeredIds.has(item.id));
-  if (allOffered && remaining.length <= 4 && !ht.myAccepted) {
-   hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
-  }
-  if (allOffered && remaining.length <= 3) {
-   hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
-  }
-  const seenUnique = new Set(st.theirOffer.map(x => x.id)).size;
-  if (!st.myAccepted && (allOffered || seenUnique >= 5)) {
-   sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
-   sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
-  }
-  if (hActs.length) await Promise.all(hActs);
-  if (sActs.length) await Promise.all(sActs);
-  await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
  }
- throw Error(`fastInProcessHerbloreTrade(${helper.name}) exceeded cap`);
-}
+
+ async function fastInProcessHerbloreTrade(
+  spec: Session,
+  helper: Session,
+  giveIds: readonly number[],
+  deadlineTick: number,
+ ): Promise<void> {
+  const begin = spec.tick();
+  const helperLower = helper.name.toLowerCase();
+  const specLower = spec.name.toLowerCase();
+  const giveSet = new Set(giveIds);
+  let sawConfirm = false;
+  let lastReqTick = -10;
+
+  while (spec.tick() < deadlineTick) {
+   const st = spec.sdk.getTradeState();
+   const ht = helper.sdk.getTradeState();
+
+   if (!st.isOpen && !ht.isOpen) {
+    if (sawConfirm || giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
+     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+     return;
+    }
+    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperLower);
+    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);
+    const acts: Promise<unknown>[] = [];
+    if (sTarget && hTarget && spec.tick() - lastReqTick >= 2) {
+     lastReqTick = spec.tick();
+     acts.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+     acts.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+    } else if (!sTarget || !hTarget) {
+     const tp = playerPos(spec);
+     if (tp) acts.push(helper.direct({ type: 'walkTo', x: tp.worldX + 1, z: tp.worldZ, running: true, reason: 'SDK' }));
+    }
+    if (acts.length) await Promise.all(acts);
+    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+    continue;
+   }
+
+   if (st.screen === 'confirm' || ht.screen === 'confirm') {
+    sawConfirm = true;
+    const acts: Promise<unknown>[] = [];
+    if (ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted) {
+     acts.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+    if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
+     acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+    if (acts.length) await Promise.all(acts);
+    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+    if (!spec.sdk.getTradeState().isOpen && !helper.sdk.getTradeState().isOpen && giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
+     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+     return;
+    }
+    continue;
+   }
+
+   const hActs: Promise<unknown>[] = [];
+   const sActs: Promise<unknown>[] = [];
+   const alreadyOffered = new Set(ht.myOffer.map(o => o.id));
+   const remaining: number[] = [];
+   const seenRem = new Set<number>();
+   for (const item of helper.sdk.getInventory()) {
+    if (giveSet.has(item.id) && !alreadyOffered.has(item.id) && !seenRem.has(item.id)) {
+     seenRem.add(item.id);
+     remaining.push(item.slot);
+    }
+   }
+   const maxOffer = remaining.length > 4 ? 5 : 4;
+   const batchOffer = remaining.slice(0, maxOffer);
+   for (const slot of batchOffer) {
+    hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+   }
+   const allOffered = remaining.length <= batchOffer.length;
+   if (allOffered && batchOffer.length <= 4 && !ht.myAccepted) {
+    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+   }
+   if (allOffered && batchOffer.length === 0 && ht.myAccepted) {
+    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   const seenUnique = new Set(st.theirOffer.map(x => x.id)).size;
+   if (allOffered && batchOffer.length === 0 && !st.myAccepted && seenUnique >= giveIds.length) {
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+    if (ht.myAccepted) {
+     sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+   }
+   if (hActs.length) await Promise.all(hActs);
+   if (sActs.length) await Promise.all(sActs);
+   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+  }
+  throw Error(`fastInProcessHerbloreTrade(${helper.name}) exceeded cap`);
+ }
 
 async function executeHerbloreLoop(
  spec: Session,
@@ -836,50 +862,28 @@ async function executeHerbloreLoop(
 
    const acts: Promise<unknown>[] = [];
    const seenDrop = new Set<number>();
-   let clearedInv = inv.length;
    for (const item of inv) {
     if (item.id === step.unf || item.id === step.sec || seenDrop.has(item.id)) continue;
     seenDrop.add(item.id);
-    clearedInv -= countItem(inv, item.id);
     acts.push(spec.direct({ type: 'bankDeposit', slot: item.slot, amount: -1, reason: 'SDK' }));
    }
 
    if (step.count === 13) {
     // Keep 2 leftover items from the previous 15+13 cycle when switching between unf and sec.
     if (haveUnf > 0 && haveUnf < 13) {
-     const needUnf = 13 - haveUnf;
-     if (needUnf === 11) {
-      acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: 10, reason: 'SDK' }));
-      acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: 1, reason: 'SDK' }));
-     } else {
-      acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: needUnf, reason: 'SDK' }));
-     }
+     pushExactWithdraw(acts, spec, unfBank.slot, 13 - haveUnf, unfBank.count);
      acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: -1, reason: 'SDK' }));
     } else if (haveSec > 0 && haveSec < 13) {
-     const needSec = 13 - haveSec;
-     if (needSec === 11) {
-      acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: 10, reason: 'SDK' }));
-      acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: 1, reason: 'SDK' }));
-     } else {
-      acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: needSec, reason: 'SDK' }));
-     }
+     pushExactWithdraw(acts, spec, secBank.slot, 13 - haveSec, secBank.count);
      acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: -1, reason: 'SDK' }));
     } else {
      // Empty inv (28 free): 10 + 5 = 15 unf, then Withdraw-All (-1) fills remaining 13 with sec.
-     acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: 10, reason: 'SDK' }));
-     acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: 5, reason: 'SDK' }));
+     pushExactWithdraw(acts, spec, unfBank.slot, 15, unfBank.count);
      acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: -1, reason: 'SDK' }));
     }
-   } else if (step.count === 4 && clearedInv === 0 && unfBank.count <= 4 && secBank.count <= 4) {
-    acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: -1, reason: 'SDK' }));
-    acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: -1, reason: 'SDK' }));
    } else {
-    if (haveUnf < step.count) {
-     acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: step.count - haveUnf, reason: 'SDK' }));
-    }
-    if (haveSec < step.count) {
-     acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: step.count - haveSec, reason: 'SDK' }));
-    }
+    pushExactWithdraw(acts, spec, unfBank.slot, step.count - haveUnf, unfBank.count);
+    pushExactWithdraw(acts, spec, secBank.slot, step.count - haveSec, secBank.count);
    }
 
    const results = acts.length ? ((await Promise.all(acts)) as Array<{ success?: boolean } | undefined>) : [];

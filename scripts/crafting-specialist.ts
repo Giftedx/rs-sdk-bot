@@ -250,20 +250,19 @@ async function fastInProcessBatchTrade(
  const returnSet = new Set(opts.returnIds);
  const keepSet = opts.dropUnwanted;
  let sawConfirm = false;
- let offered = false;
- let tradeDone = false;
+ let lastReqTick = opts.alreadyRequested ? begin - 1 : -10;
 
  while (spec.tick() < opts.deadlineTick) {
   const st = spec.sdk.getTradeState();
   const ht = helper.sdk.getTradeState();
 
   if (!st.isOpen && !ht.isOpen) {
-   if (sawConfirm || tradeDone || opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
+   if (sawConfirm || opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
     return;
    }
-   offered = false;
    const dropSlots = keepSet ? spec.sdk.getInventory().filter(i => !keepSet.has(i.id)).map(i => i.slot) : [];
+   const dlgOpen = !!spec.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperLower);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);
    const sActs: Promise<unknown>[] = [];
@@ -277,9 +276,12 @@ async function fastInProcessBatchTrade(
     for (const slot of dropSlots) {
      sActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     }
-    if (hTarget && sTarget) {
+    if (hTarget && sTarget && spec.tick() - lastReqTick >= 2) {
+     lastReqTick = spec.tick();
      hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
      sActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+    } else if (dlgOpen) {
+     sActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
     }
    }
    if (hActs.length) await Promise.all(hActs);
@@ -302,7 +304,6 @@ async function fastInProcessBatchTrade(
    if (sActs.length) await Promise.all(sActs);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    if (!spec.sdk.getTradeState().isOpen && !helper.sdk.getTradeState().isOpen && opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
-    tradeDone = true;
     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
     return;
    }
@@ -311,40 +312,49 @@ async function fastInProcessBatchTrade(
 
   const hActs: Promise<unknown>[] = [];
   const sActs: Promise<unknown>[] = [];
+  const hOffered = new Set(ht.myOffer.map(o => o.id));
+  const sOffered = new Set(st.myOffer.map(o => o.id));
   const hSlots = new Map<number, number>();
   const sSlots = new Map<number, number>();
-  if (!offered) {
+  if (ht.isOpen) {
    for (const item of helper.sdk.getInventory()) {
-    if (giveSet.has(item.id) && !hSlots.has(item.id)) hSlots.set(item.id, item.slot);
+    if (giveSet.has(item.id) && !hOffered.has(item.id) && !hSlots.has(item.id)) hSlots.set(item.id, item.slot);
    }
-   if (returnSet.size > 0) {
-    for (const item of spec.sdk.getInventory()) {
-     if (returnSet.has(item.id) && !sSlots.has(item.id)) sSlots.set(item.id, item.slot);
-    }
+  }
+  if (st.isOpen && returnSet.size > 0) {
+   for (const item of spec.sdk.getInventory()) {
+    if (returnSet.has(item.id) && !sOffered.has(item.id) && !sSlots.has(item.id)) sSlots.set(item.id, item.slot);
    }
   }
 
-  const specHasOffers = sSlots.size > 0;
-  offered = true;
-  for (const slot of hSlots.values()) {
+  const hAllOffered = hSlots.size === 0 || [...hSlots.keys()].length <= 4;
+  const sAllOffered = sSlots.size === 0 || [...sSlots.keys()].length <= 4;
+  const hToOffer = [...hSlots.values()].slice(0, hSlots.size > 4 ? 5 : 4);
+  const sToOffer = [...sSlots.values()].slice(0, sSlots.size > 4 ? 5 : 4);
+
+  for (const slot of hToOffer) {
    hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
   }
-  // When spec also offers items in this tick, spec's Offer-All resets helper's accept; defer helper's accept to tick 2.
-  if (!specHasOffers && hSlots.size <= 4) {
+  for (const slot of sToOffer) {
+   sActs.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+  }
+
+  // Since spec has lower PID than helper, let helper accept main on tick 1 and spec accept+confirm on tick 2.
+  if (hAllOffered && !ht.myAccepted && ht.isOpen) {
    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (!specHasOffers && hSlots.size <= 3) {
+  if (hAllOffered && sAllOffered && ht.myAccepted && st.myAccepted && hToOffer.length === 0 && sToOffer.length === 0) {
+   hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+  } else if (hAllOffered && sAllOffered && sToOffer.length === 0 && !st.myAccepted && ht.myAccepted) {
+   // Spec transitions main->confirm and accepts confirm together, so helper confirms right after in the same tick.
    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
-  for (const slot of sSlots.values()) {
-   sActs.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
-  }
-  if (sSlots.size <= 4 && !st.myAccepted) {
+  if (sAllOffered && sToOffer.length === 0 && !st.myAccepted && st.isOpen && hAllOffered && (ht.myAccepted || hToOffer.length === 0)) {
    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
-  }
-  if ((specHasOffers && hSlots.size === 0 && sSlots.size === 0) || (!specHasOffers && hSlots.size <= 3)) {
-   sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   if (ht.myAccepted || hToOffer.length > 0) {
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
   }
 
   if (hActs.length) await Promise.all(hActs);
