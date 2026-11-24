@@ -118,7 +118,7 @@ export function validateBuyList(r: BuyListRequest, catalogue?: readonly { id: nu
     let exposure = 0;
     for (let i = 0; i < r.entries.length; i++) {
         const e = r.entries[i]!;
-        const pct = positive(e.basePrice) ? percentagePrice(e.basePrice, e.percent) : -1;
+        const pct = percentagePrice(e.basePrice, e.percent);
         if (!positive(e.quantity) || !positive(e.unitCap) || pct > e.unitCap || !tradeableSet.has(e.item) || e.item === 995) {
             throw Error('native item/percentage exceeds explicit unit cap');
         }

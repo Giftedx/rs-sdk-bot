@@ -677,7 +677,7 @@ function fastBlockerValid(b: PreflightBlocker): boolean {
     }
 }
 
-const EMPTY_BLOCKERS: readonly PreflightBlocker[] = [];
+const EMPTY_BLOCKERS: readonly PreflightBlocker[] = Object.freeze([]);
 
 export function preflightOk(
     extra?: Omit<PreflightResult, 'ok' | 'blockers'>,

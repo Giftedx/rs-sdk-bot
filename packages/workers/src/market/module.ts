@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { accountEscrowCoins, accountOwnedItemCount, accountReserveFor, availableCoinsAfterReserves, preflightFail, preflightOk, reserveAdjustedStock, type PreflightBlocker, type PreflightResult, type RateEstimate, type RunOutcome, type SessionCore, type WorkerAccountView, type WorkerModule, type WorkerTile, type WorkerWorldView } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
-import { routeFares, type Account as WorldAccount } from '../../../core/src/world/model';
+import { routeFares, type Account as WorldAccount } from '../../../core/src/world';
 import {
     GE_VARROCK_BANK,
     getGeCatalogueNameById,

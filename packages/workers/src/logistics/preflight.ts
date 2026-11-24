@@ -1,5 +1,5 @@
 // Pure zero-heavy-dependency logistics preflight parsers, validators, and location/kit checks.
-import { combatLevel } from '../../../core/src/danger/catalog';
+import { combatLevel } from '../../../core/src/danger';
 
 export const ACCOUNT_NAME_RE = /^[A-Za-z0-9_ -]{1,12}$/;
 

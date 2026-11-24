@@ -15,6 +15,7 @@ import {
     validatePreflightResult,
     validateRateEstimate,
     validateRunOutcome,
+    type PreflightBlocker,
     type WorkerAccountView,
     type WorkerWorldView,
 } from '../src/contracts';
@@ -126,6 +127,8 @@ describe('contracts/schema fast-path parity', () => {
         const ok = preflightOk({ travelCoins: 30, travelTicks: 40 });
         expect(ok.ok).toBe(true);
         expect(ok.blockers).toEqual([]);
+        expect(Object.isFrozen(ok.blockers)).toBe(true);
+        expect(() => (ok.blockers as PreflightBlocker[]).push({ kind: 'protected_clock' })).toThrow();
         expect(validatePreflightResult(ok)).toEqual([]);
 
         const fail = preflightFail([
@@ -308,6 +311,48 @@ describe('market parity and cache invalidation', () => {
                 deadline: now + 60_000,
             }),
         ).not.toThrow();
+        expect(() =>
+            validateBuyList({
+                actor: 'OpsBot',
+                server: 'local',
+                goal: 'buybad0',
+                entries: [{ item: 385, quantity: 2, basePrice: 0, percent: 10, unitCap: 1200 }],
+                budget: 2500,
+                reserve: 0,
+                cap: 2000,
+                fillWait: 20,
+                createdAt: now,
+                deadline: now + 60_000,
+            }),
+        ).toThrow(/unsupported native buy percentage\/base/);
+        expect(() =>
+            validateBuyList({
+                actor: 'OpsBot',
+                server: 'local',
+                goal: 'buybadneg',
+                entries: [{ item: 385, quantity: 2, basePrice: -5, percent: 7 as unknown as 5, unitCap: 1200 }],
+                budget: 2500,
+                reserve: 0,
+                cap: 2000,
+                fillWait: 20,
+                createdAt: now,
+                deadline: now + 60_000,
+            }),
+        ).toThrow(/unsupported native buy percentage\/base/);
+        expect(() =>
+            validateBuyList({
+                actor: 'OpsBot',
+                server: 'local',
+                goal: 'buybadfloat',
+                entries: [{ item: 385, quantity: 2, basePrice: 10.5, percent: 10, unitCap: 1200 }],
+                budget: 2500,
+                reserve: 0,
+                cap: 2000,
+                fillWait: 20,
+                createdAt: now,
+                deadline: now + 60_000,
+            }),
+        ).toThrow(/unsupported native buy percentage\/base/);
         expect(() =>
             validateGETrip({
                 actor: 'OpsBot',
