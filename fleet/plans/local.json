@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562173287,
+ "at": 1795562250008,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -40,19 +40,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Woodenstaff",
    "role": "auto"
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/generated/quest-elena.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "army"
   },
   {
    "account": "UnderMyKilt",
@@ -124,6 +111,21 @@
    "resources": [
     "blood-chest"
    ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
+    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:itwatchtower",
+   "role": "army"
   }
  ],
  "army": [
