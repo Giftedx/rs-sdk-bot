@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562556587,
+ "at": 1795562577722,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,19 +60,6 @@
    "role": "auto"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
@@ -87,6 +74,35 @@
    "repeat": false,
    "goal": "goal:pk_army:Woodenstaff",
    "role": "auto"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/generated/quest-grandtree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "air"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Runecraft",
+    "TARGET_LEVEL": "9"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:557",
+   "role": "army"
   }
  ],
  "army": [
@@ -118,11 +134,10 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
-  "trousersnake",
   "undermykilt",
   "woodpecker",
   "yewfirst"
