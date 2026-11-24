@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795563217601-swordswallow-bigchopper-9f4bc0432ddc15cc",
+ "role": "from",
+ "account": "Swordswallow",
+ "partner": "Bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795563296788,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

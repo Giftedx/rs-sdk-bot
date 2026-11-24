@@ -5,6 +5,6 @@
  "account": "OreElse",
  "partner": "Magicwanda",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795563142204,
+ "at": 1795563371844,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }
