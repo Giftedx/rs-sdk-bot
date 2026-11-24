@@ -479,7 +479,10 @@ export function resolveSpecialistTargetCap(account: string): number {
     return def.targetCap;
 }
 
-export function resolveSpecialistSegment(account: string, opts?: { planTicks?: number }): SpecialistSegmentSpec {
+export function resolveSpecialistSegment(
+    account: string,
+    opts?: { planTicks?: number; env?: Record<string, string> },
+): SpecialistSegmentSpec {
     const key = account.trim().toLowerCase();
     const def = BY_ACCOUNT.get(key);
     const board = SPECIALIST_BOARDS[key]?.name;
@@ -502,7 +505,7 @@ export function resolveSpecialistSegment(account: string, opts?: { planTicks?: n
         start: { fresh: true },
         script: def.script,
         ...(def.args?.length ? { args: [...def.args] } : {}),
-        env: { ...def.env },
+        env: { ...def.env, ...(opts?.env ?? {}) },
         ...(def.suppliers
             ? { suppliers: def.suppliers().map(buildSupplier) }
             : { supplier: buildSupplier(def.supplier!) }),
@@ -525,6 +528,7 @@ export interface ParsedCliArgs {
     readonly out?: string;
     readonly planTicks?: number;
     readonly seeds?: readonly number[];
+    readonly env?: Readonly<Record<string, string>>;
 }
 
 function parseSeedList(raw: string): number[] {
@@ -535,19 +539,26 @@ function parseSeedList(raw: string): number[] {
     return nums;
 }
 
+function parseEnvEntry(raw: string, out: Record<string, string>): void {
+    const m = /^([A-Z][A-Z0-9_]*)=([\w.,:+@\/-]*)$/.exec(raw);
+    if (!m) throw Error(`usage: --env needs KEY=VALUE (got "${raw}")`);
+    out[m[1]!] = m[2]!;
+}
+
 export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
     let account = '';
     let dryRun = false;
     let out: string | undefined;
     let planTicks: number | undefined;
     let seeds: number[] | undefined;
+    const env: Record<string, string> = {};
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]!;
         if (arg === '--dry-run' || arg === '--print') {
             dryRun = true;
         } else if (arg === '--out') {
             out = argv[++i];
-            if (!out) throw Error('usage: rehearse-specialist-cli.ts <specialistAccount> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--dry-run]');
+            if (!out) throw Error('usage: rehearse-specialist-cli.ts <specialistAccount> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--env KEY=VALUE] [--dry-run]');
         } else if (arg.startsWith('--out=')) {
             out = arg.slice(6);
             if (!out) throw Error('usage: --out=<dir> requires a path');
@@ -565,6 +576,10 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
             seeds = parseSeedList(argv[++i] ?? '');
         } else if (arg.startsWith('--seeds=')) {
             seeds = parseSeedList(arg.slice(8));
+        } else if (arg === '--env') {
+            parseEnvEntry(argv[++i] ?? '', env);
+        } else if (arg.startsWith('--env=')) {
+            parseEnvEntry(arg.slice(6), env);
         } else if (arg.startsWith('--')) {
             throw Error(`rehearse-specialist-cli: unknown flag ${arg}`);
         } else if (!account) {
@@ -574,9 +589,16 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
         }
     }
     if (!account) {
-        throw Error(`usage: rehearse-specialist-cli.ts <${READY_SPECIALIST_ACCOUNTS.join('|')}> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--dry-run]`);
+        throw Error(`usage: rehearse-specialist-cli.ts <${READY_SPECIALIST_ACCOUNTS.join('|')}> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--env KEY=VALUE] [--dry-run]`);
     }
-    return { account, dryRun, out, planTicks, ...(seeds ? { seeds } : {}) };
+    return {
+        account,
+        dryRun,
+        out,
+        planTicks,
+        ...(seeds ? { seeds } : {}),
+        ...(Object.keys(env).length ? { env } : {}),
+    };
 }
 
 export interface RehearsalSummary {
@@ -706,7 +728,7 @@ export async function runHostedRehearsal(
     const root = opts.root ?? ROOT;
     const log = opts.log ?? console.log;
     const parsed = parseCliArgs(argv);
-    const seg = resolveSpecialistSegment(parsed.account, { planTicks: parsed.planTicks });
+    const seg = resolveSpecialistSegment(parsed.account, { planTicks: parsed.planTicks, env: parsed.env });
     if (parsed.dryRun) {
         log(JSON.stringify(seg, null, 2));
         return { exitCode: 0, seg };

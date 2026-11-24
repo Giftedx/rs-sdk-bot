@@ -332,17 +332,18 @@ const REHEARSE_GUARD_ENV: Record<string, string> = {
 
 export function buildCombatSpecialistRehearsalSegment(
     accountRaw: string,
-    opts?: { planTicks?: number },
+    opts?: { planTicks?: number; env?: Record<string, string> },
 ) {
     const key = accountRaw.trim().toLowerCase();
     const override = opts?.planTicks;
+    const extraEnv = opts?.env ?? {};
     if (key === 'fullblooded') {
         return {
             specialist: 'FullBlooded',
             id: 'fullblooded-hitpoints',
             start: { fresh: true as const },
             script: 'scripts/hp-specialist.ts',
-            env: { CAP: '12000' },
+            env: { CAP: '12000', ...extraEnv },
             supplier: {
                 script: 'scripts/aio-logistics.ts',
                 args: ['specialist-supplier', '{ACTOR}', '--kit=hp', '12000'],
@@ -366,7 +367,7 @@ export function buildCombatSpecialistRehearsalSegment(
             id: isStr ? 'bigswinger-strength' : 'rocksolid-defence',
             start: { fresh: true as const },
             script: isStr ? 'scripts/strength-specialist.ts' : 'scripts/defence-specialist.ts',
-            env: { CAP: cap },
+            env: { CAP: cap, ...extraEnv },
             suppliers: [
                 {
                     script: 'scripts/measure/specialist-combat-quests-cases.ts',
@@ -404,6 +405,12 @@ async function runRehearseMain(args: string[]): Promise<void> {
     const accounts: string[] = [];
     let planTicks: number | undefined;
     let runs = 1;
+    const env: Record<string, string> = {};
+    const parseEnvSpec = (raw: string) => {
+        const m = /^([A-Z][A-Z0-9_]*)=([\w.,:+@\/-]*)$/.exec(raw);
+        if (!m) throw Error(`usage: --env needs KEY=VALUE (got "${raw}")`);
+        env[m[1]!] = m[2]!;
+    };
     for (let i = 0; i < args.length; i++) {
         const a = args[i]!;
         if (a === '--all') {
@@ -416,11 +423,15 @@ async function runRehearseMain(args: string[]): Promise<void> {
             runs = Math.max(1, Number(a.slice('--runs='.length)));
         } else if (a === '--runs') {
             runs = Math.max(1, Number(args[++i]));
+        } else if (a.startsWith('--env=')) {
+            parseEnvSpec(a.slice('--env='.length));
+        } else if (a === '--env') {
+            parseEnvSpec(args[++i] ?? '');
         } else if (!a.startsWith('-')) {
             accounts.push(a);
         }
     }
-    if (accounts.length === 0) throw Error('usage: specialist-combat-quests-cases.ts --rehearse <FullBlooded|BigSwinger|RockSolid|--all> [--plan-ticks=<n>] [--runs=<n>]');
+    if (accounts.length === 0) throw Error('usage: specialist-combat-quests-cases.ts --rehearse <FullBlooded|BigSwinger|RockSolid|--all> [--plan-ticks=<n>] [--runs=<n>] [--env KEY=VALUE]');
 
     const engineDir = join(ROOT, 'vendor', 'rs-sdk', 'server', 'engine');
     if (!existsSync(join(engineDir, 'data', 'pack', 'server', 'script.dat'))) {
@@ -432,7 +443,7 @@ async function runRehearseMain(args: string[]): Promise<void> {
     mkdirSync(baseOut, { recursive: true });
     let allOk = true;
     for (const acc of accounts) {
-        const seg = buildCombatSpecialistRehearsalSegment(acc, { planTicks });
+        const seg = buildCombatSpecialistRehearsalSegment(acc, { planTicks, env });
         const segFile = join(baseOut, `${seg.specialist.toLowerCase()}.segment.json`);
         writeFileSync(segFile, JSON.stringify(seg, null, 2) + '\n');
         for (let runIdx = 1; runIdx <= runs; runIdx++) {
