@@ -783,6 +783,7 @@ export function toWorkerOutcome(
     account: string,
     cfg: NormalizedGatherConfig,
     fallbackTicks: number,
+    opts: { stopped?: boolean } = {},
 ): RunOutcome {
     const activityId = `gather:${cfg.skill}:${cfg.method}`;
     const ticksElapsed = Math.max(0, Math.trunc(outcome.delta?.elapsedTicks ?? fallbackTicks));
@@ -815,6 +816,14 @@ export function toWorkerOutcome(
     const lower = (outcome.detail ?? '').toLowerCase();
     if (outcome.kind === 'died' || /\bdied\b/.test(lower)) {
         return { kind: 'death', ...base, faultSignature: 'gather_death', detail: outcome.detail };
+    }
+    if (opts.stopped || outcome.kind === 'stopped' || /\b(stop|stopped|interrupt|interrupted|session ended|ended)\b/i.test(outcome.detail ?? '')) {
+        return {
+            kind: 'session_unsettled',
+            ...base,
+            reason: outcome.detail || 'stopped',
+            detail: outcome.detail,
+        };
     }
     if (/missing|exhausted|requires owned|no (crystal_key|fly fishing rod|small fishing net|owned)/i.test(outcome.detail)) {
         return {

@@ -31,13 +31,23 @@ export const bankArtisanWorker: WorkerModule<ArtisanConfig, WorkerAccountView, W
         const s = session as Session;
         const norm = normalizeArtisanConfig(cfg);
         const startTick = s.tick?.() ?? 0;
-        const { isStopped } = watchWorkerStop(s, (cfg as { stop?: () => boolean }).stop);
+        const { isStopped } = watchWorkerStop(s, norm.stop);
         await Promise.resolve();
+        if (isStopped()) {
+            return toArtisanWorkerOutcome(
+                { ok: false, summary: 'stop or session end requested', ticks: 0, produced: 0, failure: 'stopped' },
+                s.name ?? 'unknown',
+                norm,
+                0,
+                { stopped: true },
+            );
+        }
         try {
             const outcome = await runArtisan(s, norm, isStopped);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
-            return toArtisanWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed);
+            return toArtisanWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed, { stopped: isStopped() });
         } catch (error) {
+            await Promise.resolve();
             const msg = error instanceof Error ? error.message : String(error);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
             return toArtisanWorkerOutcome(
@@ -45,6 +55,7 @@ export const bankArtisanWorker: WorkerModule<ArtisanConfig, WorkerAccountView, W
                 s.name ?? 'unknown',
                 norm,
                 ticksElapsed,
+                { stopped: isStopped() },
             );
         }
     },

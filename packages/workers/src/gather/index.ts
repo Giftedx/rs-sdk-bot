@@ -33,18 +33,30 @@ export const gatherWorker: WorkerModule<GatherConfig, WorkerAccountView, WorkerW
         const startTick = s.tick?.() ?? 0;
         const { isStopped } = watchWorkerStop(s, (cfg as { stop?: () => boolean }).stop);
         await Promise.resolve();
+        if (isStopped()) {
+            return toWorkerOutcome(
+                { ok: false, kind: 'stopped', detail: 'stop or session end requested', delta: { elapsedTicks: 0 } },
+                s.name ?? 'unknown',
+                norm,
+                0,
+                { stopped: true },
+            );
+        }
         try {
             const outcome = await runGather(s, norm, isStopped);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
-            return toWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed);
+            return toWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed, { stopped: isStopped() });
         } catch (error) {
+            await Promise.resolve();
             const detail = String(error);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
+            const stopped = isStopped();
             return toWorkerOutcome(
-                { ok: false, kind: 'failed', detail, delta: { elapsedTicks: ticksElapsed } },
+                { ok: false, kind: stopped ? 'stopped' : 'failed', detail, delta: { elapsedTicks: ticksElapsed } },
                 s.name ?? 'unknown',
                 norm,
                 ticksElapsed,
+                { stopped },
             );
         }
     },

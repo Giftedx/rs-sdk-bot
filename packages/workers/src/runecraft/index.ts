@@ -44,14 +44,15 @@ export async function runRunecraftSession(
     const cfg: NormalizedRunecraftConfig = normalizeRunecraftConfig(rawCfg);
     if (cfg.mode === 'air') {
         const res = await craftAirRunes(s, stop);
+        const stoppedAir = !res.ok && stop();
         return {
             ok: res.ok,
-            kind: res.ok ? 'completed' : 'failed',
+            kind: res.ok ? 'completed' : stoppedAir ? 'stopped' : 'failed',
             mode: 'air',
             unitsCompleted: res.consumed,
             xpGained: res.xp,
             itemsDelta: { 1436: -res.consumed, 556: res.runes },
-            detail: `airRunes=${res.runes} essence=0 runecraftXp=${res.xp} ticks=${res.ticks}`,
+            detail: `airRunes=${res.runes} essence=0 runecraftXp=${res.xp} ticks=${res.ticks}${stoppedAir ? ' (stopped)' : ''}`,
             data: res,
         };
     }
@@ -66,7 +67,7 @@ export async function runRunecraftSession(
         const detail = 'failure' in res && res.failure ? String(res.failure) : `runecraft=${res.level} trips=${res.trips} consumed=${res.consumed} crafted=${res.crafted}`;
         return {
             ok: res.ok,
-            kind: res.ok ? 'completed' : outcomeFromFailure('bank-craft', detail),
+            kind: res.ok ? 'completed' : stop() ? 'stopped' : outcomeFromFailure('bank-craft', detail),
             mode: 'bank-craft',
             unitsCompleted: res.consumed,
             xpGained: typeof res.xp === 'number' ? res.xp : undefined,
@@ -80,7 +81,7 @@ export async function runRunecraftSession(
         const res = await runNatureTrips(s, job, stop, cfg.deps.runBankProfile);
         return {
             ok: res.ok,
-            kind: res.ok ? 'completed' : outcomeFromFailure('nature', res.auditFailure),
+            kind: res.ok ? 'completed' : stop() ? 'stopped' : outcomeFromFailure('nature', res.auditFailure),
             mode: 'nature',
             unitsCompleted: res.completed,
             xpGained: typeof res.runecraftXp === 'number' ? res.runecraftXp : undefined,
@@ -93,7 +94,7 @@ export async function runRunecraftSession(
         const detail = 'failure' in res && res.failure ? String(res.failure) : `mined=${res.mined} consumed=${res.consumed} crafted=${res.crafted}`;
         return {
             ok: res.ok,
-            kind: res.ok ? 'completed' : outcomeFromFailure('supply', detail),
+            kind: res.ok ? 'completed' : stop() ? 'stopped' : outcomeFromFailure('supply', detail),
             mode: 'supply',
             unitsCompleted: res.consumed,
             xpGained: res.xp?.runecraft,
@@ -128,17 +129,27 @@ export const runecraftWorker: WorkerModule<RunecraftConfig, WorkerAccountView, W
         const s = session as Session;
         const norm = normalizeRunecraftConfig(cfg);
         const startTick = s.tick?.() ?? 0;
-        const { isStopped } = watchWorkerStop(s, (cfg as { stop?: () => boolean }).stop);
+        const { isStopped } = watchWorkerStop(s, cfg.stop);
         await Promise.resolve();
+        if (isStopped()) {
+            return toRunecraftWorkerOutcome(
+                { ok: false, kind: 'stopped', mode: norm.mode, detail: 'stop or session end requested' },
+                s.name ?? 'unknown',
+                norm,
+                0,
+            );
+        }
         try {
             const outcome = await runRunecraftSession(s, norm, isStopped);
+            const finalOutcome = !outcome.ok && isStopped() ? { ...outcome, kind: 'stopped' as const } : outcome;
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
-            return toRunecraftWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed);
+            return toRunecraftWorkerOutcome(finalOutcome, s.name ?? 'unknown', norm, ticksElapsed);
         } catch (error) {
+            await Promise.resolve();
             const detail = String(error);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
             return toRunecraftWorkerOutcome(
-                { ok: false, kind: outcomeFromFailure(norm.mode, detail), mode: norm.mode, detail },
+                { ok: false, kind: isStopped() ? 'stopped' : outcomeFromFailure(norm.mode, detail), mode: norm.mode, detail },
                 s.name ?? 'unknown',
                 norm,
                 ticksElapsed,

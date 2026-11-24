@@ -77,6 +77,7 @@ export interface RunecraftConfig {
     xpRate?: number;
     args?: readonly string[];
     env?: Readonly<Record<string, string | undefined>>;
+    stop?: () => boolean;
     deps?: RunecraftExternalDeps;
 }
 

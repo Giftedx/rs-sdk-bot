@@ -2426,4 +2426,27 @@ test('runecraftEstimate, toRunecraftWorkerOutcome, runecraftWorker.run, and runR
     );
     expect(cliExit).toBe(0);
     expect(finishSummary).toContain('true:');
+
+    const stoppedEntry = await runecraftWorker.run(makeAirSession() as any, { mode: 'air', stop: () => true });
+    expect(isRunOutcome(stoppedEntry)).toBe(true);
+    expect(stoppedEntry.kind).toBe('session_unsettled');
+
+    const endedEntry = await runecraftWorker.run({ ...makeAirSession(), ended: Promise.resolve() } as any, { mode: 'air' });
+    expect(isRunOutcome(endedEntry)).toBe(true);
+    expect(endedEntry.kind).toBe('session_unsettled');
+
+    let stopDuringAir = false;
+    const midStopSession = {
+        ...makeAirSession(),
+        bot: {
+            dismissBlockingUI: async () => {},
+            interactLoc: async () => {
+                stopDuringAir = true;
+                return { success: false };
+            },
+        },
+    };
+    const airMidStop = await runecraftWorker.run(midStopSession as any, { mode: 'air', stop: () => stopDuringAir });
+    expect(isRunOutcome(airMidStop)).toBe(true);
+    expect(airMidStop.kind).toBe('session_unsettled');
 });
