@@ -5,6 +5,6 @@
  "account": "Bigchopper",
  "partner": "BoneToPick",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795562312859,
+ "at": 1795562503708,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }

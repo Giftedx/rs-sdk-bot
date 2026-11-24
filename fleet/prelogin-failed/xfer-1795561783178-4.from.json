@@ -5,6 +5,6 @@
  "account": "Masterbaiter",
  "partner": "Swordswallow",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795562324342,
+ "at": 1795562527603,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }

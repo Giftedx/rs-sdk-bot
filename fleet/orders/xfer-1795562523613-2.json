@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795562523613-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Magicwanda",
+  "item": "Earth talisman",
+  "count": 1,
+  "itemId": 1440,
+  "start": 1795562523613,
+  "end": 1795563423613,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

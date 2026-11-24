@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562409174,
+ "at": 1795562535105,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,19 +60,6 @@
    "role": "auto"
   },
   {
-   "account": "TrouserSnake",
-   "script": "scripts/generated/quest-ball.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ball",
-   "role": "army"
-  },
-  {
    "account": "UnderMyKilt",
    "script": "scripts/generated/quest-ikov.ts",
    "args": [],
@@ -113,35 +100,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Woodenstaff",
    "role": "auto"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/generated/quest-crest.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:crest",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:crest",
-   "role": "army"
-  },
-  {
-   "account": "Porksword",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/quest-druid.ts --",
-    "scripts/aio-skiller.ts TARGET_LEVEL=10 TRAIN_SKILL=Agility -- agility order gnome 10",
-    "scripts/generated/quest-dig.ts DEMAND_ID=goal:quest_board:dig BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dig",
-   "role": "auto"
   }
  ],
  "army": [
@@ -168,6 +126,7 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
@@ -176,6 +135,7 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
+  "trousersnake",
   "woodpecker",
   "yewfirst"
  ],
