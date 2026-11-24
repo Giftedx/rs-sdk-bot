@@ -3,10 +3,7 @@
 // quest is logged and the chain goes on to the next. A stop, death or disconnect ends the chain.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { openBot as hostOpenBot, finish as botFinish, settle, finishHooks, openHooks } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
-import { runDirectChild } from '../../../core/src/run-child';
-import { getQuestRuntime } from './runtime';
 import { REPO_ROOT } from './types';
 
 // Script name (scripts/generated/quest-<name>.ts) -> quest name in the status file.
@@ -100,6 +97,10 @@ function hosted() {
 }
 
 async function inProcess(account: string, quest: string): Promise<string> {
+    const [{ openBot: hostOpenBot, finish: botFinish, settle, finishHooks, openHooks }, { getQuestRuntime }] = await Promise.all([
+        import('../../../core/src/bot'),
+        import('./runtime'),
+    ]);
     const sweep = getQuestRuntime().sweep;
     if (!sweep) throw Error('quest chain: runtime sweep handler not registered');
     const key = account.toLowerCase();
@@ -130,7 +131,8 @@ async function inProcess(account: string, quest: string): Promise<string> {
     }
 }
 
-function subprocess(account: string, quest: string): Promise<string> {
+async function subprocess(account: string, quest: string): Promise<string> {
+    const { runDirectChild } = await import('../../../core/src/run-child');
     return runDirectChild(['scripts/aio-quester.ts', account, 'sweep', quest]);
 }
 

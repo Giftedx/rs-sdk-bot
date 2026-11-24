@@ -44,7 +44,7 @@ import { DRAYNOR_BANK, LUMBRIDGE_TO_DRAYNOR } from './walk';
 
 export type { RescueControl };
 
-let cachedCatalogue: { id: number; name: string }[] | undefined;
+let cachedCatalogue: readonly { id: number; name: string }[] | undefined;
 const catalogue = () => (cachedCatalogue ??= loadGeItemCatalogue());
 
 export function openOrderSession(actor: string, request: ItemRequest, rescue: RescueControl, onStop: () => void) {
@@ -78,11 +78,22 @@ export async function rescueMarketEntry(
         || !Number.isSafeInteger(p.lifeId) || !Number.isSafeInteger(p.respawnCount) || !Number.isFinite(hp.baseLevel) || hp.baseLevel <= 6) {
         throw Error('rescue refused: pocket, fresh unskulled state, sole tinderbox590 and no equipment required');
     }
-    const wolf = st?.nearbyNpcs
-        .filter(n => n.kind === 'npc' && /^white wolf$/i.test(n.name) && n.reachable === true && n.combatLevel === 25
-            && Number.isSafeInteger(n.index) && n.index >= 0 && Number.isFinite(n.distance) && n.distance <= 16 && n.distance > 0
-            && n.optionsWithIndex.some(o => /^attack$/i.test(o.text)))
-        .sort((a, b) => a.distance - b.distance)[0];
+    let wolf: NonNullable<typeof st>['nearbyNpcs'][number] | undefined;
+    const nearbyNpcs = st?.nearbyNpcs;
+    if (nearbyNpcs) {
+        let bestDist = Infinity;
+        for (let i = 0; i < nearbyNpcs.length; i++) {
+            const n = nearbyNpcs[i]!;
+            if (n.kind !== 'npc' || n.combatLevel !== 25 || n.reachable !== true
+                || !Number.isSafeInteger(n.index) || n.index < 0
+                || !Number.isFinite(n.distance) || n.distance <= 0 || n.distance > 16 || n.distance >= bestDist
+                || !/^white wolf$/i.test(n.name)) continue;
+            if (n.optionsWithIndex.some(o => /^attack$/i.test(o.text))) {
+                bestDist = n.distance;
+                wolf = n;
+            }
+        }
+    }
     if (!wolf) throw Error('rescue refused: observed reachable White wolf25 required');
     const snapshot = suppliedSnapshot ?? rescueBank(request);
     const totals = new Map(bankTotals(snapshot.bank));
@@ -231,7 +242,15 @@ export async function runOwnedItem(
     await leaveBattlefield(s, () => stop() || Date.now() >= request.deadline);
     await prepareMarketEntry(s, () => stop() || Date.now() >= request.deadline);
     const state = () => s.sdk.getState();
-    const held = (id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    const held = (id: number) => {
+        const inv = s.sdk.getInventory();
+        let total = 0;
+        for (let i = 0; i < inv.length; i++) {
+            const row = inv[i]!;
+            if (row.id === id) total += row.count;
+        }
+        return total;
+    };
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const start = s.tick();
     const hp0 = hp();
@@ -273,16 +292,29 @@ export async function runOwnedItem(
     });
     const terminal = () => ended || died;
     const over = () => terminal() || damaged || stop() || s.tick() - start >= 500;
-    const count = (a: readonly { id: number; name: string; count: number }[], match: (i: { id: number; name: string }) => boolean) =>
-        a.filter(match).reduce((n, i) => n + i.count, 0);
-    const coinsTotal = () => held(995) + count(bankItems, i => i.id === 995) + count(s.sdk.getEquipment(), i => i.id === 995);
+    const count = (a: readonly { id: number; name: string; count: number }[], match: (i: { id: number; name: string }) => boolean) => {
+        let total = 0;
+        for (let idx = 0; idx < a.length; idx++) {
+            const row = a[idx]!;
+            if (match(row)) total += row.count;
+        }
+        return total;
+    };
+    const isCoins = (i: { id: number }) => i.id === 995;
+    const coinsTotal = () => held(995) + count(bankItems, isCoins) + count(s.sdk.getEquipment(), isCoins);
     const itemTotal = () => count(s.sdk.getInventory(), isItem) + count(bankItems, isItem) + count(s.sdk.getEquipment(), isItem);
     const assets = () => {
         const m = new Map<number, number>();
-        for (const i of [...s.sdk.getInventory(), ...bankItems, ...s.sdk.getEquipment()]) {
-            const id = isItem(i) ? request.item : i.id;
-            m.set(id, (m.get(id) ?? 0) + i.count);
-        }
+        const addAll = (rows: readonly { id: number; name: string; count: number }[]) => {
+            for (let idx = 0; idx < rows.length; idx++) {
+                const i = rows[idx]!;
+                const id = isItem(i) ? request.item : i.id;
+                m.set(id, (m.get(id) ?? 0) + i.count);
+            }
+        };
+        addAll(s.sdk.getInventory());
+        addAll(bankItems);
+        addAll(s.sdk.getEquipment());
         return m;
     };
     const capture = () => {

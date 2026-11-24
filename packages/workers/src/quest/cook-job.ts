@@ -35,7 +35,14 @@ export interface CookJobSnapshot {
     bankGeneration: number;
 }
 
-const sum = (items: readonly Item[], id: number) => items.filter((i) => i.id === id).reduce((n, i) => n + i.count, 0);
+const sum = (items: readonly Item[], id: number) => {
+    let n = 0;
+    for (let i = 0; i < items.length; i++) {
+        const row = items[i]!;
+        if (row.id === id) n += row.count;
+    }
+    return n;
+};
 const holdings = (s: CookJobSnapshot) => [...s.pack, ...s.bank];
 const assets = (s: CookJobSnapshot, id: number) => sum(holdings(s), id);
 const ingredients = [1944, 1927, 1933];

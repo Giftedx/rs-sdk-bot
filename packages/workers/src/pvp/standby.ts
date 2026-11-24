@@ -112,8 +112,15 @@ export async function runWildernessStandby(
         return player && { x: player.worldX, z: player.worldZ, level: player.level };
     };
     const hp = () => session.sdk.getState()?.player?.hp ?? 0;
-    const held = (id: number) => session.sdk.getInventory().filter(item => item.id === id)
-        .reduce((total, item) => total + item.count, 0);
+    const held = (id: number) => {
+        const inv = session.sdk.getInventory();
+        let total = 0;
+        for (let i = 0; i < inv.length; i++) {
+            const item = inv[i]!;
+            if (item.id === id) total += item.count;
+        }
+        return total;
+    };
     const ammo = () => session.sdk.getEquipment().find(item => item.slot === 13 && item.id === 882)?.count ?? 0;
     const combat = session.sdk.getState()?.player?.combatLevel;
     const profile = combat === 12

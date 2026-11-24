@@ -32,13 +32,16 @@ import { ownedAccounts } from '../../../core/src/tradeguard';
 import type { Tile } from '../../../core/src/world';
 import { withExecutionDeadline } from '../../../../vendor/rs-sdk/sdk/execution-context';
 import type { TradeItem, TradeResult } from '../../../../vendor/rs-sdk/sdk/types';
-import { ACCOUNT_NAME_RE, parseHandoff } from './admission';
 import { meetingTiles } from './location';
+import { ACCOUNT_NAME_RE, parseCoins, parseFanin, parseFanout, parseHandoff } from './preflight';
 import { REPO_ROOT } from './types';
 
 export {
     clearPreloginFailure,
     orderLines,
+    parseCoins,
+    parseFanin,
+    parseFanout,
     readPreloginFailure,
     validOrder,
     writePreloginFailure,
@@ -52,22 +55,6 @@ export {
 };
 
 // --- Coin / Fan-out / Fan-in / Note-Courier Preflight Helpers ---
-
-export function parseCoins(args: string[]) {
-    const [from, to, amount, ...options] = args;
-    if (!amount || !/^\d+$/.test(amount) || Number(amount) > 2147483647) throw Error('positive exact coin amount required');
-    const reserves = options.filter(option => option.split('=')[0] === '--reserve');
-    if (reserves.length > 1) throw Error('duplicate coin reserve option');
-    const text = reserves[0]?.slice('--reserve='.length) ?? '0', reserve = Number(text);
-    if (reserves.length && (!reserves[0]!.startsWith('--reserve=') || !/^\d+$/.test(text)) || !Number.isSafeInteger(reserve) || reserve < 0 || reserve > 2147483647) {
-        throw Error('coin donor bank reserve must be an integer from 0 to 2147483647');
-    }
-    const rest = options.filter(option => option.split('=')[0] !== '--reserve');
-    const defaults = ['--bank-x=3185', '--bank-z=3436'].filter(d => !rest.some(o => o.split('=')[0] === d.split('=')[0]));
-    const c = parseHandoff([from ?? '', to ?? '', `${amount}:Coins`, ...defaults, ...rest]);
-    if (c.notes || c.keep) throw Error('coin courier does not accept notes or keep options');
-    return { ...c, amount: Number(amount), reserve };
-}
 
 const coinsIn = (items: { id: number; count: number }[]) => items.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
 export type CoinState = { bank: number; pack: number };
@@ -112,23 +99,14 @@ export function courierRecord(c: { donor: string; receiver: string }, argv: stri
     return { script: 'scripts/aio-logistics.ts', argv: normalizedArgv, env: { ...env, COORDINATOR_PARTICIPANTS: JSON.stringify([c.donor, c.receiver]) } };
 }
 
-export function parseFanout(args: string[]) {
-    const [donor, ...rest] = args, amount = rest.at(-1), receivers = rest.slice(0, -1);
-    if (!donor || !amount || !/^\d+$/.test(amount) || !receivers.length) throw Error('usage: coin-fanout <donor> <receiver> [receiver ...] <amount>');
-    if (new Set([donor, ...receivers].map(n => n.toLowerCase())).size !== receivers.length + 1) throw Error('each account once');
-    return { donor, receivers, pairs: receivers.map(r => parseCoins([donor, r, amount])) };
-}
-
-export function parseFanin(args: string[]) {
-    const item = args.at(-1), [receiver, ...donors] = args.slice(0, -1);
-    if (!receiver || !donors.length || !item || /^\d+$/.test(item)) throw Error('usage: item-fanin <receiver> <donor> [donor ...] <item name>');
-    if (new Set([receiver, ...donors].map(n => n.toLowerCase())).size !== donors.length + 1) throw Error('each account once');
-    for (const donor of donors) parseHandoff([donor, receiver, '1:' + item]);
-    return { receiver, donors, item };
-}
-
-export const heldItems = (items: readonly { id: number; count: number }[], id: number) =>
-    items.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+export const heldItems = (items: readonly { id: number; count: number }[], id: number) => {
+    let total = 0;
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]!;
+        if (item.id === id) total += item.count;
+    }
+    return total;
+};
 
 // --- Courier Cargo, Separation, Allocation, Route & Purchase Helpers ---
 
@@ -189,23 +167,54 @@ export function retainedTrout(env: Record<string, string | undefined> = {}): num
     return Number(raw);
 }
 
+function pathBasename(p: string): string {
+    const idx = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
+    return idx >= 0 ? p.slice(idx + 1) : p;
+}
+
+function jobHasLowerAccount(job: { account?: unknown; accounts?: readonly unknown[] } | null | undefined, lowerName: string): boolean {
+    if (!job) return false;
+    if (typeof job.account === 'string' && job.account.toLowerCase() === lowerName) return true;
+    const list = job.accounts;
+    if (Array.isArray(list)) {
+        for (let i = 0; i < list.length; i++) {
+            const entry = list[i];
+            if (typeof entry === 'string' && entry.toLowerCase() === lowerName) return true;
+        }
+    }
+    return false;
+}
+
 export function courierCargo(inventory: readonly CargoItem[], reserve: number): { items: { name: string; count: number }[]; blocked: string[] } {
-    const valid = inventory.filter(i => i && typeof i.name === 'string' && Number.isSafeInteger(i.count) && i.count > 0 && !/^coins$/i.test(i.name));
-    const food = valid.filter(i => /^trout$/i.test(i.name));
-    if (reserve > 0 && food.some(i => !Number.isSafeInteger(i.id))) return { items: [], blocked: ['Trout: identity unknown'] };
-    const unnoted = food.filter(i => i.id === 333).reduce((n, i) => n + i.count, 0);
-    if (reserve > 0 && unnoted > 0 && food.some(i => i.id !== 333)) return { items: [], blocked: ['Trout: need-bank-separation'] };
+    const valid: CargoItem[] = [];
+    let unnotedTrout = 0;
+    let hasOtherTrout = false;
+    for (let i = 0; i < inventory.length; i++) {
+        const item = inventory[i];
+        if (!item || typeof item.name !== 'string' || !Number.isSafeInteger(item.count) || item.count <= 0) continue;
+        if (item.name.length === 5 && item.name.toLowerCase() === 'coins') continue;
+        valid.push(item);
+        if (reserve > 0 && item.name.length === 5 && item.name.toLowerCase() === 'trout') {
+            if (!Number.isSafeInteger(item.id)) return { items: [], blocked: ['Trout: identity unknown'] };
+            if (item.id === 333) unnotedTrout += item.count;
+            else hasOtherTrout = true;
+        }
+    }
+    if (reserve > 0 && unnotedTrout > 0 && hasOtherTrout) return { items: [], blocked: ['Trout: need-bank-separation'] };
     const amounts = new Map<string, { name: string; count: number }>();
     let left = reserve;
-    for (const i of valid) {
-        const kept = i.id === 333 ? Math.min(left, i.count) : 0;
+    for (let i = 0; i < valid.length; i++) {
+        const item = valid[i]!;
+        const kept = item.id === 333 ? Math.min(left, item.count) : 0;
         left -= kept;
-        const count = i.count - kept;
+        const count = item.count - kept;
         if (count <= 0) continue;
-        const key = i.name.toLowerCase(), prior = amounts.get(key);
-        amounts.set(key, { name: prior?.name ?? i.name, count: (prior?.count ?? 0) + count });
+        const key = item.name.toLowerCase();
+        const prior = amounts.get(key);
+        if (prior) prior.count += count;
+        else amounts.set(key, { name: item.name, count });
     }
-    return { items: [...amounts.values()], blocked: [] };
+    return { items: Array.from(amounts.values()), blocked: [] };
 }
 
 export function courierDeliveryWaiting(
@@ -225,32 +234,53 @@ export function courierDeliveryWaiting(
             return false;
         }
     }
-    return names.some(name => {
-        if (!ACCOUNT_NAME_RE.test(name)) return false;
+    for (let nIdx = 0; nIdx < names.length; nIdx++) {
+        const name = names[nIdx]!;
+        if (!ACCOUNT_NAME_RE.test(name)) continue;
         try {
             const status = readStatus(name);
-            const job = jobs!.find(j => [...(j.accounts ?? []), j.account ?? ''].some(a => a.toLowerCase() === name.toLowerCase()));
-            const file = (path: string) => path.replaceAll('\\', '/').split('/').at(-1);
-            const script = job?.script && file(job.script);
-            const role = script === 'aio-logistics.ts'
-                ? job?.args?.find(a => !a.includes('=') && !a.startsWith('-'))?.toLowerCase()
-                : undefined;
+            const lowerName = name.toLowerCase();
+            const jobList = jobs!;
+            let job: DeliveryJob | undefined;
+            for (let jIdx = 0; jIdx < jobList.length; jIdx++) {
+                const candidate = jobList[jIdx]!;
+                if (jobHasLowerAccount(candidate, lowerName)) {
+                    job = candidate;
+                    break;
+                }
+            }
+            const script = job?.script ? pathBasename(job.script) : undefined;
+            let role: string | undefined;
+            if (script === 'aio-logistics.ts' && job?.args) {
+                for (let aIdx = 0; aIdx < job.args.length; aIdx++) {
+                    const a = job.args[aIdx]!;
+                    if (!a.includes('=') && !a.startsWith('-')) {
+                        role = a.toLowerCase();
+                        break;
+                    }
+                }
+            }
             const isFoodCourier = script === 'foodcourier.ts' || role === 'food-courier';
             const isNoteCourier = script === 'note-courier.ts' || role === 'note-courier';
-            if (isFoodCourier && job?.env?.OUTBOUND_ONLY === '1') return false;
-            if (!isNoteCourier) return hasDelivery(status, now, near);
+            if (isFoodCourier && job?.env?.OUTBOUND_ONLY === '1') continue;
+            if (!isNoteCourier) {
+                if (hasDelivery(status, now, near)) return true;
+                continue;
+            }
             const goal = typeof status?.goal === 'string' ? status.goal.trim() : '';
+            const goalFile = goal ? pathBasename(goal) : '';
             const matchesGoalScript = !!goal && (
-                file(goal) === script
-                || (script === 'aio-logistics.ts' && file(goal) === 'note-courier.ts')
+                goalFile === script
+                || (script === 'aio-logistics.ts' && goalFile === 'note-courier.ts')
             );
-            if (!goal || !(matchesGoalScript || (!goal.endsWith('.ts') && goal === job?.goal?.trim()))) return false;
+            if (!goal || !(matchesGoalScript || (!goal.endsWith('.ts') && goal === job?.goal?.trim()))) continue;
             const cargo = courierCargo(status?.inventory ?? [], retainedTrout(job?.env));
-            return cargo.blocked.length === 0 && hasDelivery({ ...status, inventory: cargo.items }, now, near);
+            if (cargo.blocked.length === 0 && hasDelivery({ ...status, inventory: cargo.items }, now, near)) return true;
         } catch {
-            return false;
+            continue;
         }
-    });
+    }
+    return false;
 }
 
 export function courierFoodAllocation(counts: readonly number[], need: number, perType = 0, total = 0): number[] {
@@ -693,7 +723,19 @@ export function readAgentJobs(file = tradePlanFile(REPO_ROOT)): readonly any[] {
 }
 
 export function swarmBusy(jobs: readonly any[]): Set<string> {
-    return new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
+    const busy = new Set<string>();
+    for (let i = 0; i < jobs.length; i++) {
+        const j = jobs[i];
+        if (!j?.enabled) continue;
+        if (typeof j.account === 'string') busy.add(j.account.toLowerCase());
+        if (Array.isArray(j.accounts)) {
+            for (let k = 0; k < j.accounts.length; k++) {
+                const n = j.accounts[k];
+                if (typeof n === 'string') busy.add(n.toLowerCase());
+            }
+        }
+    }
+    return busy;
 }
 
 export function assertTradeAdmission(order: Order, account: string, server: string, {
@@ -706,24 +748,48 @@ export function assertTradeAdmission(order: Order, account: string, server: stri
     if (server.toLowerCase() !== order.server.toLowerCase()) throw Error('fleet trade: account server differs from order server');
     if (now < order.start || now >= order.end) throw Error('fleet trade: outside order window');
     const practice = join(base, '.practice');
-    const stopFiles = new Set(existsSync(practice) ? readdirSync(practice).map(file => file.toLowerCase()) : []);
-    if (stopFiles.has('stop-swarm')) throw Error('fleet trade: swarm is paused');
-    if (stopFiles.has('stop-' + name)) throw Error('fleet trade: account has an owner stop file');
+    if (existsSync(practice)) {
+        const files = readdirSync(practice);
+        const stopName = 'stop-' + name;
+        for (let i = 0; i < files.length; i++) {
+            const lower = files[i]!.toLowerCase();
+            if (lower === 'stop-swarm') throw Error('fleet trade: swarm is paused');
+            if (lower === stopName) throw Error('fleet trade: account has an owner stop file');
+        }
+    }
     const plan = readTradePlan(planFile);
     const statePath = fleetStateFile(base);
     const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : null;
     if (state?.accounts?.[name]?.paused === true) throw Error('fleet trade: account is paused for controller rollout');
-    const includesAccount = (job: any) => [job?.account, ...(Array.isArray(job?.accounts) ? job.accounts : [])].some((n: unknown) => typeof n === 'string' && n.toLowerCase() === name);
-    const reservation = (job: any) => (!job.script && job.trades !== true) || /fresh.clock|24 boards|main simultaneous/i.test(job.goal ?? '');
-    if (plan.jobs.some((job: any) => includesAccount(job) && reservation(job))) throw Error('fleet trade: reserved account');
-    if (swarmBusy(plan.jobs).has(name) || state?.accounts?.[name]?.activeJob != null) throw Error('fleet trade: account has an enabled swarm job');
+    let hasEnabledJob = false;
+    for (let i = 0; i < plan.jobs.length; i++) {
+        const job = plan.jobs[i];
+        if (!jobHasLowerAccount(job, name)) continue;
+        if ((!job.script && job.trades !== true) || /fresh.clock|24 boards|main simultaneous/i.test(job.goal ?? '')) {
+            throw Error('fleet trade: reserved account');
+        }
+        if (job?.enabled) hasEnabledJob = true;
+    }
+    if (hasEnabledJob || state?.accounts?.[name]?.activeJob != null) throw Error('fleet trade: account has an enabled swarm job');
     const runsFile = join(practice, 'swarm-runs.json');
     if (existsSync(runsFile)) {
         const runs = JSON.parse(readFileSync(runsFile, 'utf8'));
-        const answering = Array.isArray(runs) ? runs.filter(run => includesAccount(run) && pidAlive(run.pid)) : [];
-        const table = answering.length ? starts(answering.map(run => run.pid)) : null;
-        if (!Array.isArray(runs) || answering.some(run => !laterProcessHolds(run.pid, run.started, table))) {
-            throw Error('fleet trade: account has an unsettled swarm worker');
+        if (!Array.isArray(runs)) throw Error('fleet trade: account has an unsettled swarm worker');
+        const answering: any[] = [];
+        const pids: number[] = [];
+        for (let i = 0; i < runs.length; i++) {
+            const run = runs[i];
+            if (jobHasLowerAccount(run, name) && pidAlive(run.pid)) {
+                answering.push(run);
+                pids.push(run.pid);
+            }
+        }
+        const table = pids.length ? starts(pids) : null;
+        for (let i = 0; i < answering.length; i++) {
+            const run = answering[i];
+            if (!laterProcessHolds(run.pid, run.started, table)) {
+                throw Error('fleet trade: account has an unsettled swarm worker');
+            }
         }
     }
     if (existsSync(join(receipts, `${order.id}.${role}.json`))) throw Error('fleet trade: order receipt already exists');
@@ -804,18 +870,74 @@ export const countLineItems = (s: Session, re: RegExp, itemId?: number) =>
         ? countItems(s, re)
         : s.sdk.getInventory().filter(i => re.test(i.name) && matchesLineId(s, i.id, itemId)).reduce((n, i) => n + i.count, 0);
 
-let tradeItems: { id: number; name: string; tradeable: boolean }[] | undefined;
+type TradeItemIndex = { byId: Map<number, number[]>; byName: Map<string, number[]> };
+let tradeItemsIndex: TradeItemIndex | undefined;
+
+function getTradeItemsIndex(): TradeItemIndex {
+    if (tradeItemsIndex) return tradeItemsIndex;
+    const raw = JSON.parse(readFileSync(join(REPO_ROOT, 'knowledge/items.json'), 'utf8')) as { id: number; name: string; tradeable: boolean }[];
+    const byId = new Map<number, number[]>();
+    const byName = new Map<string, number[]>();
+    for (let i = 0; i < raw.length; i++) {
+        const item = raw[i]!;
+        if (!item.tradeable) continue;
+        let idList = byId.get(item.id);
+        if (!idList) {
+            idList = [];
+            byId.set(item.id, idList);
+        }
+        idList.push(item.id);
+        const lower = item.name.toLowerCase();
+        let nameList = byName.get(lower);
+        if (!nameList) {
+            nameList = [];
+            byName.set(lower, nameList);
+        }
+        nameList.push(item.id);
+    }
+    tradeItemsIndex = { byId, byName };
+    return tradeItemsIndex;
+}
 
 function receiverReservation(s: Session, order: Order): number {
-    tradeItems ??= JSON.parse(readFileSync(join(REPO_ROOT, 'knowledge/items.json'), 'utf8'));
+    const index = getTradeItemsIndex();
     const pack = s.sdk.getInventory();
-    return Math.min(28, orderLines(order).reduce((slots, line) => {
-        const ids = tradeItems!.filter(i => i.tradeable && (line.itemId !== undefined ? i.id === line.itemId : i.name.toLowerCase() === line.item.toLowerCase())).map(i => i.id);
-        if (ids.length && ids.every(id => itemDefinition(s, id)?.stackable === true)) {
-            return slots + (ids.every(id => pack.some(i => i.id === id)) ? 0 : 1);
+    const lines = orderLines(order);
+    let slots = 0;
+    for (let l = 0; l < lines.length; l++) {
+        const line = lines[l]!;
+        const ids = line.itemId !== undefined ? index.byId.get(line.itemId) : index.byName.get(line.item.toLowerCase());
+        if (ids && ids.length > 0) {
+            let allStackable = true;
+            for (let k = 0; k < ids.length; k++) {
+                if (itemDefinition(s, ids[k]!)?.stackable !== true) {
+                    allStackable = false;
+                    break;
+                }
+            }
+            if (allStackable) {
+                let allInPack = true;
+                for (let k = 0; k < ids.length; k++) {
+                    const id = ids[k]!;
+                    let found = false;
+                    for (let p = 0; p < pack.length; p++) {
+                        if (pack[p]!.id === id) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        allInPack = false;
+                        break;
+                    }
+                }
+                slots += allInPack ? 0 : 1;
+                continue;
+            }
         }
-        return slots + (line.count > 28 ? 1 : line.count);
-    }, 0));
+        slots += line.count > 28 ? 1 : line.count;
+    }
+    return slots < 28 ? slots : 28;
 }
 
 function receiverSpace(s: Session, offer: readonly Pick<TradeItem, 'id' | 'count'>[]) {

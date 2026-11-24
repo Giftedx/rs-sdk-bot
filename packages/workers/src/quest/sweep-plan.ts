@@ -21,8 +21,14 @@ export type Walked = { ok: boolean; reason?: string; detail?: string; ticks?: nu
 
 export const BANKS: Array<Tile & { site?: string }> = knownBankRecords();
 
-export const countItems = (rows: readonly Item[], id: number) =>
-    rows.filter((r) => r.id === id).reduce((n, r) => n + r.count, 0);
+export const countItems = (rows: readonly Item[], id: number) => {
+    let n = 0;
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i]!;
+        if (r.id === id) n += r.count;
+    }
+    return n;
+};
 
 export function presetFor(quest: string): SaveConfig & { position: Tile } {
     const p = presetConfig('quest_' + quest);
@@ -129,6 +135,7 @@ export function plan(need: ReadonlyMap<number, number>, pack: readonly Item[], b
 }
 
 export const MEALS = [385, 373, 379, 365, 361, 333, 329, 1891, 1893, 1895, 2309];
+const MEAL_SET = new Set(MEALS);
 
 export function mealPlan(
     food: ReadonlyMap<number, number>,
@@ -137,18 +144,30 @@ export function mealPlan(
     questWithdraw: readonly Item[] = [],
     need: ReadonlyMap<number, number> = new Map(),
 ): Item[] {
-    const want = new Map([...food].map(([id, n]) => [id, n + (need.get(id) ?? 0)] as const));
-    const stock = [...food.keys()].map((id) => ({ id, count: Math.max(0, countItems(bank, id) - countItems(questWithdraw, id)) }));
-    const exact = plan(want, [...pack, ...questWithdraw], stock);
+    const want = new Map<number, number>();
+    const stock: Item[] = [];
+    for (const [id, n] of food) {
+        want.set(id, n + (need.get(id) ?? 0));
+        stock.push({ id, count: Math.max(0, countItems(bank, id) - countItems(questWithdraw, id)) });
+    }
+    const exact = plan(want, questWithdraw.length ? [...pack, ...questWithdraw] : pack, stock);
     const withdraw = [...exact.withdraw];
-    const edible = (id: number) => MEALS.includes(id) && !food.has(id);
-    const spare = (id: number) => Math.max(0, countItems(pack, id) - (need.get(id) ?? 0));
-    let left =
-        exact.missing.filter((m) => MEALS.includes(m.id)).reduce((n, m) => n + m.count, 0) -
-        MEALS.filter(edible).reduce((n, id) => n + spare(id), 0);
-    for (const id of MEALS) {
+    let left = 0;
+    for (let i = 0; i < exact.missing.length; i++) {
+        const m = exact.missing[i]!;
+        if (MEAL_SET.has(m.id)) left += m.count;
+    }
+    for (let i = 0; i < MEALS.length; i++) {
+        const id = MEALS[i]!;
+        if (!food.has(id)) {
+            const spare = countItems(pack, id) - (need.get(id) ?? 0);
+            if (spare > 0) left -= spare;
+        }
+    }
+    for (let i = 0; i < MEALS.length; i++) {
         if (left <= 0) break;
-        if (!edible(id)) continue;
+        const id = MEALS[i]!;
+        if (food.has(id)) continue;
         const take = Math.min(left, countItems(bank, id) - countItems(questWithdraw, id));
         if (take > 0) {
             withdraw.push({ id, count: take });
@@ -163,9 +182,23 @@ export function foodShort(
     pack: readonly Item[],
     need: ReadonlyMap<number, number> = new Map(),
 ): boolean {
-    const meals = [...food].filter(([id]) => MEALS.includes(id)).reduce((n, [, c]) => n + c, 0);
-    const held = MEALS.reduce((n, id) => n + Math.max(0, countItems(pack, id) - (need.get(id) ?? 0)), 0);
-    return held < meals || plan(new Map([...food].filter(([id]) => !MEALS.includes(id))), pack, []).missing.length > 0;
+    let meals = 0;
+    let nonMeals: Map<number, number> | undefined;
+    for (const [id, c] of food) {
+        if (MEAL_SET.has(id)) {
+            meals += c;
+        } else {
+            nonMeals ??= new Map();
+            nonMeals.set(id, c);
+        }
+    }
+    let held = 0;
+    for (let i = 0; i < MEALS.length; i++) {
+        const id = MEALS[i]!;
+        const s = countItems(pack, id) - (need.get(id) ?? 0);
+        if (s > 0) held += s;
+    }
+    return held < meals || (!!nonMeals && plan(nonMeals, pack, []).missing.length > 0);
 }
 
 export function toolPlan(
@@ -243,9 +276,13 @@ export function ikovExcessMeals(
     pack: readonly Item[],
     food: ReadonlyMap<number, number>,
 ): { id: number; deposit: number }[] {
-    let allowance = [...food].filter(([id]) => MEALS.includes(id)).reduce((n, [, c]) => n + c, 0);
+    let allowance = 0;
+    for (const [id, c] of food) {
+        if (MEAL_SET.has(id)) allowance += c;
+    }
     const deposits: { id: number; deposit: number }[] = [];
-    for (const id of MEALS) {
+    for (let i = 0; i < MEALS.length; i++) {
+        const id = MEALS[i]!;
         const held = countItems(pack, id);
         if (!held) continue;
         const keep = Math.min(held, allowance);
@@ -265,9 +302,17 @@ export function bareDeposits(
     food: ReadonlyMap<number, number>,
     tradeable: (id: number) => boolean | undefined,
 ): number[] {
-    return [...new Set(pack.map((i) => i.id))].filter(
-        (id) => id !== COINS && !need.has(id) && !food.has(id) && !MEALS.includes(id) && !keepsItem(quest, id, tradeable),
-    );
+    const seen = new Set<number>();
+    const out: number[] = [];
+    for (let i = 0; i < pack.length; i++) {
+        const id = pack[i]!.id;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        if (id !== COINS && !need.has(id) && !food.has(id) && !MEAL_SET.has(id) && !keepsItem(quest, id, tradeable)) {
+            out.push(id);
+        }
+    }
+    return out;
 }
 
 export function keepsItem(quest: string, id: number, tradeable: (id: number) => boolean | undefined): boolean {
@@ -341,16 +386,21 @@ export function depositPlan(
 ): Item[] {
     let free = 28 - pack.length;
     const out: Item[] = [];
-    for (const id of [...new Set(pack.map((i) => i.id))]) {
+    const slotCounts = new Map<number, number>();
+    for (let i = 0; i < pack.length; i++) {
+        const id = pack[i]!.id;
+        slotCounts.set(id, (slotCounts.get(id) ?? 0) + 1);
+    }
+    for (const [id, slots] of slotCounts) {
         if (free >= need) break;
         if (id === COINS || isEdible(id) || keep(id)) continue;
         out.push({ id, count: -1 });
-        free += pack.filter((i) => i.id === id).length;
+        free += slots;
     }
     let allowance = Math.max(0, Math.min(KEEP_FOOD, 28 - need - staysCount(pack, keep)));
-    for (const id of [...new Set(pack.filter((i) => isEdible(i.id) && !STACKS.has(i.id) && !keep(i.id)).map((i) => i.id))]) {
+    for (const [id, held] of slotCounts) {
         if (free >= need) break;
-        const held = pack.filter((i) => i.id === id).length;
+        if (!isEdible(id) || STACKS.has(id) || keep(id)) continue;
         const kept = Math.min(held, allowance);
         allowance -= kept;
         const bank = Math.min(held - kept, need - free);
@@ -359,10 +409,11 @@ export function depositPlan(
             free += bank;
         }
     }
-    for (const id of [...new Set(pack.filter((i) => spare(i.id)).map((i) => i.id))]) {
+    for (const [id, slots] of slotCounts) {
         if (free >= need) break;
+        if (!spare(id)) continue;
         out.push({ id, count: -1 });
-        free += pack.filter((i) => i.id === id).length;
+        free += slots;
     }
     return out;
 }
@@ -374,10 +425,25 @@ export const cheb = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs
 export function hopsTo(from: Tile, to: Tile, hubs: readonly Tile[] = [...BANKS, { x: 3222, z: 3218, level: 0 }]): Tile[] {
     const out: Tile[] = [];
     let at = from;
-    for (let i = 0; i < 12 && cheb(at, to) > MAX_HOP; i++) {
-        const next = hubs
-            .filter((h) => h.level === to.level && cheb(at, h) <= MAX_HOP && cheb(h, to) <= cheb(at, to) - HOP_GAIN)
-            .sort((a, b) => cheb(at, a) + cheb(a, to) - (cheb(at, b) + cheb(b, to)))[0];
+    for (let i = 0; i < 12; i++) {
+        const curDist = cheb(at, to);
+        if (curDist <= MAX_HOP) break;
+        const maxToDist = curDist - HOP_GAIN;
+        let next: Tile | undefined;
+        let bestScore = Infinity;
+        for (let hIdx = 0; hIdx < hubs.length; hIdx++) {
+            const h = hubs[hIdx]!;
+            if (h.level !== to.level) continue;
+            const dFrom = cheb(at, h);
+            if (dFrom > MAX_HOP) continue;
+            const dTo = cheb(h, to);
+            if (dTo > maxToDist) continue;
+            const score = dFrom + dTo;
+            if (score < bestScore) {
+                bestScore = score;
+                next = h;
+            }
+        }
         if (!next) break;
         out.push(next);
         at = next;
@@ -420,11 +486,18 @@ export function sellersByTravel<S extends { tile: Tile }>(
 }
 
 export function nearestBank(at: Tile): Tile {
-    return (
-        BANKS.filter((b) => b.level === at.level).sort(
-            (a, b) => Math.max(Math.abs(a.x - at.x), Math.abs(a.z - at.z)) - Math.max(Math.abs(b.x - at.x), Math.abs(b.z - at.z)),
-        )[0] ?? BANKS[0]!
-    );
+    let best: Tile | undefined;
+    let bestDist = Infinity;
+    for (let i = 0; i < BANKS.length; i++) {
+        const b = BANKS[i]!;
+        if (b.level !== at.level) continue;
+        const d = Math.max(Math.abs(b.x - at.x), Math.abs(b.z - at.z));
+        if (d < bestDist) {
+            bestDist = d;
+            best = b;
+        }
+    }
+    return best ?? BANKS[0]!;
 }
 
 export const WEST_ARDOUGNE = {
@@ -624,10 +697,21 @@ export function detour(stops: readonly Tile[], t: Tile): number {
 
 export function tourOrder(from: Tile, stops: readonly Tile[]): Tile[] {
     const out: Tile[] = [];
-    const left = [...stops];
+    const left = stops.slice();
     let at = from;
     while (left.length) {
-        const next = left.sort((a, b) => travelDistance(at, a) - travelDistance(at, b)).shift()!;
+        let bestIdx = 0;
+        let bestDist = travelDistance(at, left[0]!);
+        for (let i = 1; i < left.length; i++) {
+            const d = travelDistance(at, left[i]!);
+            if (d < bestDist) {
+                bestDist = d;
+                bestIdx = i;
+            }
+        }
+        const next = left[bestIdx]!;
+        left[bestIdx] = left[left.length - 1]!;
+        left.pop();
         out.push(next);
         at = next;
     }
@@ -787,9 +871,23 @@ export const returnToAmik = (quest: string, state: string) => quest === 'blackkn
 const DOWN = /(climb|walk)-down/i;
 type DownLoc = { distance: number; optionsWithIndex?: { text: string; opIndex: number }[] };
 export function downward<L extends DownLoc>(locs: readonly L[]): { loc: L; opIndex: number } | undefined {
-    const loc = locs.filter((l) => (l.optionsWithIndex ?? []).some((o) => DOWN.test(o.text))).sort((a, b) => a.distance - b.distance)[0];
-    const opIndex = loc?.optionsWithIndex?.find((o) => DOWN.test(o.text))?.opIndex;
-    return loc && opIndex !== undefined ? { loc, opIndex } : undefined;
+    let bestLoc: L | undefined;
+    let bestOp: number | undefined;
+    let bestDist = Infinity;
+    for (let i = 0; i < locs.length; i++) {
+        const l = locs[i]!;
+        if (l.distance >= bestDist || !l.optionsWithIndex) continue;
+        for (let o = 0; o < l.optionsWithIndex.length; o++) {
+            const opt = l.optionsWithIndex[o]!;
+            if (DOWN.test(opt.text)) {
+                bestDist = l.distance;
+                bestLoc = l;
+                bestOp = opt.opIndex;
+                break;
+            }
+        }
+    }
+    return bestLoc && bestOp !== undefined ? { loc: bestLoc, opIndex: bestOp } : undefined;
 }
 
 export const FLUFFS_FENCE = { id: 2618, x: 3305, z: 3493 };

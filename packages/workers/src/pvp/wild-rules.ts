@@ -191,6 +191,11 @@ export type WildernessEscapePlan = {
     detail: string;
 };
 
+const ESCAPE_LEVER = WILDERNESS_ESCAPES.find(e => e.id === 1815)!;
+const MAGE_BANK_LADDER = WILDERNESS_ESCAPES.find(e => e.id === 2871)!;
+const MAGE_BANK_EAST_WEB = WILDERNESS_ESCAPES.find(w => w.id === 733 && w.x === 3095 && w.z === 3957);
+const ESCAPE_OBSTACLES = WILDERNESS_ESCAPES.filter(e => e.kind === 'gate' || e.kind === 'web');
+
 // Choose the fastest rev-289 escape route from current coordinates: glory <=30, teleport <=20, nearby lever/safe ladder, else run south.
 export function planWildernessEscape(pos: { x: number; z: number }, has: { glory: boolean; teleport: boolean }): WildernessEscapePlan {
     const level = wildLevel(pos.x, pos.z);
@@ -200,18 +205,22 @@ export function planWildernessEscape(pos: { x: number; z: number }, has: { glory
 
     const targetZ = has.glory ? 3755 : has.teleport ? 3675 : 3518;
     const southDist = Math.max(0, pos.z - targetZ);
-    const exits = WILDERNESS_ESCAPES
-        .filter(e => e.id === 1815 || e.id === 2871)
-        .map(e => ({ loc: e, dist: cheb(pos, e) }))
-        .sort((a, b) => a.dist - b.dist);
-    const bestExit = exits[0];
-    if (bestExit && bestExit.dist <= 35 && bestExit.dist < southDist) {
-        const web = bestExit.loc.id === 2871 && pos.x >= 3093
-            ? WILDERNESS_ESCAPES.find(w => w.id === 733 && w.x === 3095 && w.z === 3957)
-            : undefined;
-        return { kind: bestExit.loc.kind as 'lever' | 'ladder', loc: bestExit.loc, web, distance: bestExit.dist, detail: `${bestExit.loc.name} (${bestExit.dist} tiles)` };
+    const leverDist = cheb(pos, ESCAPE_LEVER);
+    const ladderDist = cheb(pos, MAGE_BANK_LADDER);
+    const bestLoc = leverDist <= ladderDist ? ESCAPE_LEVER : MAGE_BANK_LADDER;
+    const bestDist = leverDist <= ladderDist ? leverDist : ladderDist;
+    if (bestDist <= 35 && bestDist < southDist) {
+        const web = bestLoc.id === 2871 && pos.x >= 3093 ? MAGE_BANK_EAST_WEB : undefined;
+        return { kind: bestLoc.kind as 'lever' | 'ladder', loc: bestLoc, web, distance: bestDist, detail: `${bestLoc.name} (${bestDist} tiles)` };
     }
-    const obstacle = WILDERNESS_ESCAPES.find(e => (e.kind === 'gate' || e.kind === 'web') && Math.abs(e.x - pos.x) <= 6 && e.z <= pos.z && pos.z - e.z <= 20);
+    let obstacle: WildernessEscapeLoc | undefined;
+    for (let i = 0; i < ESCAPE_OBSTACLES.length; i++) {
+        const e = ESCAPE_OBSTACLES[i]!;
+        if (Math.abs(e.x - pos.x) <= 6 && e.z <= pos.z && pos.z - e.z <= 20) {
+            obstacle = e;
+            break;
+        }
+    }
     return { kind: 'run', obstacle, distance: southDist, detail: `run south to level ${has.glory ? 30 : has.teleport ? 20 : 0}` };
 }
 
@@ -256,38 +265,91 @@ export function assessWildernessThreat(
     friends: ReadonlySet<string>,
     multiAt: (x: number, z: number) => boolean = isMulti,
 ) {
-    const multi = wildLevel(me.x, me.z) > 0 && multiAt(me.x, me.z);
-    const hostiles = nearby.filter(p => !friends.has(p.name.toLowerCase()) && p.distance <= 12
-        && canAttack({ x: me.x, z: me.z, combat: me.combat }, { x: p.x ?? me.x, z: p.z ?? me.z, combatLevel: p.combatLevel }));
-    const outclassedBy = hostiles.find(p => outclasses({ combat: me.combat, weaponValue: me.weaponValue }, { combatLevel: p.combatLevel, weapon: p.wornWeapon }));
-    const multiPile = multiPileThreat(me, nearby, friends, multiAt);
-    const pjWaiters = hostiles.filter(p => p.distance <= 8 && !p.inCombat).length;
+    const wild = wildLevel(me.x, me.z);
+    const multi = wild > 0 && multiAt(me.x, me.z);
+    let hostilesCount = 0;
+    let outclassedBy: (typeof nearby)[number] | undefined;
+    let pjWaiters = 0;
+    let pileCount = 0;
+    let pileName0 = '';
+    let pileName1 = '';
+    let pileName2 = '';
+    for (let i = 0; i < nearby.length; i++) {
+        const p = nearby[i]!;
+        if (p.distance > 12 || friends.has(p.name.toLowerCase())) continue;
+        if (!canAttack({ x: me.x, z: me.z, combat: me.combat }, { x: p.x ?? me.x, z: p.z ?? me.z, combatLevel: p.combatLevel })) continue;
+        hostilesCount++;
+        if (!outclassedBy && outclasses({ combat: me.combat, weaponValue: me.weaponValue }, { combatLevel: p.combatLevel, weapon: p.wornWeapon })) {
+            outclassedBy = p;
+        }
+        if (p.distance <= 8) {
+            if (!p.inCombat) pjWaiters++;
+            if (multi) {
+                if (pileCount === 0) pileName0 = p.name;
+                else if (pileCount === 1) pileName1 = p.name;
+                else if (pileCount === 2) pileName2 = p.name;
+                pileCount++;
+            }
+        }
+    }
+    const multiPile = multi && pileCount >= PILE_SIZE
+        ? `multi pile: ${pileCount} attackable enemies (${pileCount === 2 ? `${pileName0}, ${pileName1}` : `${pileName0}, ${pileName1}, ${pileName2}`}) within 8 tiles`
+        : null;
     const escapePlan = planWildernessEscape(me, { glory: me.glory, teleport: me.teleport });
-    const pjUnsafe = !multi && hostiles.length >= 2 && pjWaiters >= 1 && me.foodCount <= 4;
+    const pjUnsafe = !multi && hostilesCount >= 2 && pjWaiters >= 1 && me.foodCount <= 4;
     const retreatReason = outclassedBy ? `threat: ${outclassedBy.name} (combat ${outclassedBy.combatLevel}) at ${outclassedBy.distance} tiles`
         : multiPile ? multiPile
-        : pjUnsafe ? `pj risk: ${hostiles.length} attackable hostiles (${pjWaiters} idle) with ${me.foodCount} food`
+        : pjUnsafe ? `pj risk: ${hostilesCount} attackable hostiles (${pjWaiters} idle) with ${me.foodCount} food`
         : null;
-    return { multi, hostilesCount: hostiles.length, outclassedBy, multiPile, pjWaiters, escapePlan, retreatReason };
+    return { multi, hostilesCount, outclassedBy, multiPile, pjWaiters, escapePlan, retreatReason };
 }
 
 const AIR_STAFF = /staff of air|air battlestaff|mystic air staff/i;
 const FIRE_STAFF = /staff of fire|fire battlestaff|mystic fire staff/i;
+const LAW_RUNE_RE = /^law rune$/i;
+const AIR_RUNE_RE = /^air rune$/i;
+const FIRE_RUNE_RE = /^fire rune$/i;
 
 // Magic 25 Varrock Teleport runes: 1 law rune, 3 air runes (or air staff), 1 fire rune (or fire staff).
 export function hasVarrockTeleport(magic: number, inventory: readonly { name: string; count?: number }[], equipment: readonly { name: string }[]): boolean {
     if (magic < 25) return false;
-    const held = (re: RegExp) => inventory.filter(i => re.test(i.name)).reduce((n, i) => n + (i.count ?? 1), 0);
-    const worn = (re: RegExp) => equipment.some(i => re.test(i.name));
-    return held(/^law rune$/i) >= 1 && (held(/^air rune$/i) >= 3 || worn(AIR_STAFF)) && (held(/^fire rune$/i) >= 1 || worn(FIRE_STAFF));
+    let laws = 0;
+    let airs = 0;
+    let fires = 0;
+    for (let i = 0; i < inventory.length; i++) {
+        const item = inventory[i]!;
+        const c = item.count ?? 1;
+        if (LAW_RUNE_RE.test(item.name)) laws += c;
+        else if (AIR_RUNE_RE.test(item.name)) airs += c;
+        else if (FIRE_RUNE_RE.test(item.name)) fires += c;
+    }
+    if (laws < 1) return false;
+    let hasAirStaff = airs >= 3;
+    let hasFireStaff = fires >= 1;
+    if (hasAirStaff && hasFireStaff) return true;
+    for (let i = 0; i < equipment.length; i++) {
+        const name = equipment[i]!.name;
+        if (!hasAirStaff && AIR_STAFF.test(name)) hasAirStaff = true;
+        if (!hasFireStaff && FIRE_STAFF.test(name)) hasFireStaff = true;
+        if (hasAirStaff && hasFireStaff) return true;
+    }
+    return false;
 }
 
 // In multi-way combat, PILE_SIZE or more attackable strangers within 8 tiles can focus and stack out a solo roamer.
 export function multiPileThreat(me: { x: number; z: number; combat: number }, nearby: readonly { name: string; x?: number; z?: number; combatLevel: number; distance: number }[],
     friends: ReadonlySet<string>, multiAt: (x: number, z: number) => boolean = isMulti, pileSize = PILE_SIZE): string | null {
     if (wildLevel(me.x, me.z) === 0 || !multiAt(me.x, me.z)) return null;
-    const hostiles = nearby.filter(p => !friends.has(p.name.toLowerCase()) && p.distance <= 8 && canAttack(me, { x: p.x ?? me.x, z: p.z ?? me.z, combatLevel: p.combatLevel }));
-    return hostiles.length >= pileSize ? `multi pile: ${hostiles.length} attackable enemies (${hostiles.slice(0, 3).map(p => p.name).join(', ')}) within 8 tiles` : null;
+    let count = 0;
+    const sample: string[] = [];
+    for (let i = 0; i < nearby.length; i++) {
+        const p = nearby[i]!;
+        if (p.distance <= 8 && !friends.has(p.name.toLowerCase()) && canAttack(me, { x: p.x ?? me.x, z: p.z ?? me.z, combatLevel: p.combatLevel })) {
+            count++;
+            if (sample.length < 3) sample.push(p.name);
+        }
+    }
+    return count >= pileSize ? `multi pile: ${count} attackable enemies (${sample.join(', ')}) within 8 tiles` : null;
 }
 
 // Where to run to meet a moving target: the first tick t at which we (2 tiles per tick running) can stand on its
@@ -330,7 +392,15 @@ export function pickTrack(me: { x: number; z: number; combat: number; name?: str
         if (!multiHere && (t.fighting === 'player' || claimedByOther)) continue;
         // Survival first: never pick a fight with someone who outclasses us, or a pile of attackable strangers.
         if (outclasses(me, t)) continue;
-        if (tracks.filter(o => o !== t && !friends.has(o.name.toLowerCase()) && cheb(o, t) <= 6 && canAttack({ x: t.x, z: t.z, combat: me.combat }, o)).length >= PILE_SIZE) continue;
+        let pile = 0;
+        for (let oIdx = 0; oIdx < tracks.length; oIdx++) {
+            const o = tracks[oIdx]!;
+            if (o !== t && !friends.has(o.name.toLowerCase()) && cheb(o, t) <= 6 && canAttack({ x: t.x, z: t.z, combat: me.combat }, o)) {
+                pile++;
+                if (pile >= PILE_SIZE) break;
+            }
+        }
+        if (pile >= PILE_SIZE) continue;
         const score = preyScore(t, at.ticks, multiHere && claimedByOther);
         if (!best || score < best.score) best = { track: t, at, score };
     }
@@ -346,14 +416,18 @@ export class Radar {
     accept(m: { t?: string; k?: number; p?: [number, string, number, number, number, number][] }, now = Date.now()) {
         if (m?.t !== 'roster' || !Array.isArray(m.p) || typeof m.k !== 'number') return;
         const next = new Map<string, Track>();
-        for (const [, name, x, z, plane, combatLevel] of m.p) {
+        const nextPrev = new Map<string, { x: number; z: number; k: number }>();
+        const k = m.k;
+        for (let i = 0; i < m.p.length; i++) {
+            const [, name, x, z, plane, combatLevel] = m.p[i]!;
             if (plane !== 0 || typeof name !== 'string') continue;
-            const key = name.toLowerCase(), old = this.prev.get(key), dt = old ? m.k - old.k : 0;
+            const key = name.toLowerCase(), old = this.prev.get(key), dt = old ? k - old.k : 0;
             next.set(key, { name, x, z, combatLevel, vx: dt > 0 ? (x - old!.x) / dt : 0, vz: dt > 0 ? (z - old!.z) / dt : 0 });
+            nextPrev.set(key, { x, z, k });
         }
-        this.prev = new Map([...next].map(([k, t]) => [k, { x: t.x, z: t.z, k: m.k! }]));
+        this.prev = nextPrev;
         this.tracks = next;
-        this.tick = m.k;
+        this.tick = k;
         this.at = now;
     }
     fresh(now = Date.now()) { return now - this.at < 15_000; }
@@ -495,9 +569,18 @@ export function accountServerBeforeLogin(name: string, deps: { assertOwn: (n: st
 
 // Item value in gp: the live market (referencePrice, else lastPrice, else basePrice), cached per item; with no market
 // (a practice server or a failed request) the item cost in knowledge/items.json. Coins are 1 gp each.
-let costs: Map<number, number> | undefined;
+const costsByRoot = new Map<string, Map<number, number>>();
 export function itemCost(id: number, root = REPO_ROOT): number {
-    costs ??= new Map((JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[]).map(i => [i.id, i.cost ?? 0]));
+    let costs = costsByRoot.get(root);
+    if (!costs) {
+        const rows = JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[];
+        costs = new Map<number, number>();
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i]!;
+            costs.set(row.id, row.cost ?? 0);
+        }
+        costsByRoot.set(root, costs);
+    }
     return costs.get(id) ?? 0;
 }
 export function makeValuer(server: string, get: (url: string) => Promise<any> = async url => (await fetch(url, { signal: AbortSignal.timeout(3000) })).json()) {
@@ -519,8 +602,15 @@ export function makeValuer(server: string, get: (url: string) => Promise<any> = 
 type Ground = { id: number; name: string; count: number; x: number; z: number };
 // The stacks on and next to the kill tile worth at least min gp, most valuable first.
 export function planLoot(ground: readonly Ground[], at: { x: number; z: number }, price: ReadonlyMap<number, number>, min: number) {
-    return ground.filter(g => cheb(g, at) <= 1).map(g => ({ ...g, value: (price.get(g.id) ?? 0) * g.count }))
-        .filter(g => g.value >= min).sort((a, b) => b.value - a.value);
+    const out: (Ground & { value: number })[] = [];
+    for (let i = 0; i < ground.length; i++) {
+        const g = ground[i]!;
+        if (cheb(g, at) > 1) continue;
+        const value = (price.get(g.id) ?? 0) * g.count;
+        if (value >= min) out.push({ ...g, value });
+    }
+    out.sort((a, b) => b.value - a.value);
+    return out;
 }
 
 // Picks up the valuable stacks at a kill tile; a full pack eats a food to make room. Returns the gp picked up.
@@ -653,12 +743,43 @@ export function restockPlan(held: { law: number; nature: number; water: number; 
 
 // Compute restock GE/shop steps directly from combined bank + inventory + equipment stock counts.
 export function restockPlanFromStock(stock: readonly { id: number; count: number }[], skills: { magic: number; ranged?: number; defence?: number }, coins: number, market: RestockMarket): RestockStep[] {
-    const count = (ids: readonly number[]) => stock.filter(i => ids.includes(i.id)).reduce((n, i) => n + i.count, 0);
-    const hasGlory = count([1712, 1710, 1708, 1706]) > 0;
-    const prayerPots = count([2434, 139, 141, 143]);
-    const sharks = count([385]);
+    let hasGlory = false;
+    let prayerPots = 0;
+    let sharks = 0;
+    let law = 0;
+    let nature = 0;
+    let water = 0;
+    for (let i = 0; i < stock.length; i++) {
+        const row = stock[i]!;
+        switch (row.id) {
+            case 1712:
+            case 1710:
+            case 1708:
+            case 1706:
+                if (row.count > 0) hasGlory = true;
+                break;
+            case 2434:
+            case 139:
+            case 141:
+            case 143:
+                prayerPots += row.count;
+                break;
+            case 385:
+                sharks += row.count;
+                break;
+            case 563:
+                law += row.count;
+                break;
+            case 561:
+                nature += row.count;
+                break;
+            case 555:
+                water += row.count;
+                break;
+        }
+    }
     return restockPlan({
-        law: count([563]), nature: count([561]), water: count([555]), coins,
+        law, nature, water, coins,
         magic: skills.magic, ranged: skills.ranged, defence: skills.defence,
         food: sharks, sharks, glory: hasGlory, prayerPots,
     }, market);

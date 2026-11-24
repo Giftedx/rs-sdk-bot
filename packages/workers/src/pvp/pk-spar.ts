@@ -220,11 +220,29 @@ export async function stopSparPair(sessions: readonly Session[]): Promise<{ ok: 
 
 // The result of several spars that ran at once, from the A sides: kills, deaths, the B sides that got away, and draws.
 export function batchSummary(results: readonly SparResult[]) {
-    const count = (f: (r: SparResult) => boolean) => results.filter(f).length;
-    const mean = results.length ? Number((results.reduce((n, r) => n + r.score, 0) / results.length).toFixed(1)) : 0;
-    return { fights: results.length, kills: count(r => r.winner === 'a' && r.end === 'kill'), deaths: count(r => r.winner === 'b' && r.end === 'kill'),
-        escapes: count(r => r.winner === 'b' && r.end === 'escape'), fled: count(r => r.winner === 'a' && r.end === 'escape'), draws: count(r => r.winner === 'draw'),
-        mean, ticks: Math.max(0, ...results.map(r => r.ticks)), scores: results.map(r => r.score), nets: results.map(netRate) };
+    let kills = 0;
+    let deaths = 0;
+    let escapes = 0;
+    let fled = 0;
+    let draws = 0;
+    let scoreSum = 0;
+    let maxTicks = 0;
+    const scores: number[] = new Array(results.length);
+    const nets: number[] = new Array(results.length);
+    for (let i = 0; i < results.length; i++) {
+        const r = results[i]!;
+        if (r.winner === 'a' && r.end === 'kill') kills++;
+        else if (r.winner === 'b' && r.end === 'kill') deaths++;
+        else if (r.winner === 'b' && r.end === 'escape') escapes++;
+        else if (r.winner === 'a' && r.end === 'escape') fled++;
+        else if (r.winner === 'draw') draws++;
+        scoreSum += r.score;
+        if (r.ticks > maxTicks) maxTicks = r.ticks;
+        scores[i] = r.score;
+        nets[i] = netRate(r);
+    }
+    const mean = results.length ? Number((scoreSum / results.length).toFixed(1)) : 0;
+    return { fights: results.length, kills, deaths, escapes, fled, draws, mean, ticks: maxTicks, scores, nets };
 }
 // Net damage of side A for each 100 ticks of a spar: what side B took less what side A took. It moves with every hit,
 // so it separates two profiles in fewer fights than a count of kills.

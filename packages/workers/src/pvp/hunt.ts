@@ -47,7 +47,15 @@ async function huntProfile(combat: number): Promise<Partial<FightOptions>> {
 }
 const walk = async (s: Session, to: { x: number; z: number }, stop: () => boolean, maxTicks = 400) =>
     walkPath(await sessionWalker(s), [{ ...to, tol: 2 }], { maxTicks, idleMs: 9000, stop });
-const held = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+const held = (s: Session, id: number) => {
+    const inv = s.sdk.getInventory();
+    let total = 0;
+    for (let i = 0; i < inv.length; i++) {
+        const row = inv[i]!;
+        if (row.id === id) total += row.count;
+    }
+    return total;
+};
 
 
 export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;

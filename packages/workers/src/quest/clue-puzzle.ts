@@ -5,21 +5,33 @@ import { componentId } from '../../../core/src/logout';
 import { watchProductionLife } from '../../../core/src/production-life';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { parseConfigs } from '../../../knowledge/src/config';
-import { clueEffect, nativeCluePoint, nativeClueSteps } from './clues';
+import { clueEffect, nativeCluePoint, nativeClueStepById, nativeClueSteps } from './clues';
 import { applyClick, solve, solved } from './mm-puzzle';
 import { REPO_ROOT } from './types';
 
 const root = resolve(REPO_ROOT, 'vendor/rs-sdk/server/content');
 
+const packCache = new Map<string, Map<string, number>>();
+
 function pack(file: string) {
-    return new Map(
-        readFileSync(resolve(root, 'pack', file), 'utf8')
-            .split(/\r?\n/)
-            .flatMap((l) => {
-                const m = l.match(/^(\d+)=(.+)$/);
-                return m ? ([[m[2]!, Number(m[1])] as const]) : [];
-            }),
-    );
+    let out = packCache.get(file);
+    if (out) return out;
+    const text = readFileSync(resolve(root, 'pack', file), 'utf8');
+    out = new Map<string, number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) out.set(text.slice(eq + 1, lineEnd), id);
+        }
+        pos = end + 1;
+    }
+    packCache.set(file, out);
+    return out;
 }
 
 let pieces: Map<number, { tile: number; family: string }> | undefined;
@@ -43,17 +55,26 @@ export function readNativeTrailBoard(client: unknown, family: string): number[] 
     const com = c?.ifType?.(componentId('trail_puzzle:com_2'));
     const raw = com?.linkObjType;
     if (!raw || raw.length < 25) return null;
-    const b: number[] = [];
+    const pieceMap = nativePieces();
+    const b: number[] = new Array(25);
+    let seenMask = 0;
     for (let i = 0; i < 25; i++) {
         const id = Number(raw[i] ?? 0) - 1;
-        if (id < 0) b.push(0);
-        else {
-            const piece = nativePieces().get(id);
+        let tile: number;
+        if (id < 0) {
+            tile = 0;
+        } else {
+            const piece = pieceMap.get(id);
             if (!piece || piece.family !== family) return null;
-            b.push(piece.tile);
+            tile = piece.tile;
         }
+        if (!Number.isSafeInteger(tile) || tile < 0 || tile > 24) return null;
+        const bit = 1 << tile;
+        if ((seenMask & bit) !== 0) return null;
+        seenMask |= bit;
+        b[i] = tile;
     }
-    return new Set(b).size === 25 && b.every((n) => Number.isSafeInteger(n) && n >= 0 && n <= 24) ? b : null;
+    return seenMask === 0x1ffffff ? b : null;
 }
 
 export function dispatchTrailPuzzleMove(client: unknown, slot: number, expectedTile: number, family: string) {
@@ -87,56 +108,108 @@ function install(client: unknown) {
     };
 }
 
-export function nativePuzzleRecipe(puzzleId: number) {
+type PuzzleRecipe = {
+    puzzleId: number;
+    name: string;
+    family: string;
+    clue: number;
+    npc: number | undefined;
+    turninSource: string | null;
+    zone: ReturnType<typeof nativeCluePoint> | undefined;
+};
+
+const PUZZLE_TURNINS: Record<string, { npc: string; file: string; zone?: string }> = {
+    trail_clue_hard_riddle014: { npc: 'oziach', file: 'scripts/areas/area_edgeville/scripts/oziach.rs2' },
+    trail_clue_hard_riddle016: { npc: 'wilough', file: 'scripts/areas/area_varrock/scripts/wilough.rs2' },
+    trail_clue_hard_riddle017: { npc: 'general_bentnoze', file: 'scripts/areas/area_falador/scripts/goblin_village/general_bentnoze.rs2' },
+    trail_clue_hard_riddle018: { npc: 'lord_iorwerth', file: 'scripts/quests/quest_regicide/scripts/lord_iorwerth.rs2' },
+    trail_clue_hard_riddle019: { npc: 'examiner', file: 'scripts/quests/quest_itexam/scripts/examiner.rs2' },
+    trail_clue_hard_riddle020: { npc: 'duel_monk', file: 'scripts/minigames/game_duelarena/scripts/hamid.rs2' },
+    trail_clue_hard_riddle021: { npc: 'gnomepilot', file: 'scripts/areas/area_gnome/scripts/gnome_glider.rs2', zone: 'sindarpos' },
+    trail_clue_hard_riddle025: { npc: 'gnome_heckelfunch', file: 'scripts/areas/area_gnome/scripts/heckel_funch.rs2' },
+    trail_clue_hard_riddle026: { npc: 'gnometrainer', file: 'scripts/areas/area_gnome/scripts/gnome_trainer.rs2' },
+};
+
+type PuzzleBoxIndex = {
+    byPuzzleId: Map<number, { name: string; family: string }>;
+    familyByBoxName: Map<string, string>;
+};
+
+let puzzleBoxIndexCache: PuzzleBoxIndex | undefined;
+let gliderConstantText: string | undefined;
+const puzzleRecipeCache = new Map<number, PuzzleRecipe>();
+
+function puzzleBoxIndex(): PuzzleBoxIndex {
+    if (puzzleBoxIndexCache) return puzzleBoxIndexCache;
+    const ids = pack('obj.pack');
+    const byPuzzleId = new Map<number, { name: string; family: string }>();
+    const familyByBoxName = new Map<string, string>();
+    for (const file of ['trail.obj', 'trail_hard.obj']) {
+        for (const b of parseConfigs(readFileSync(resolve(root, 'scripts/minigames/game_trail/configs', file), 'utf8'), file)) {
+            if (b.props.category?.[0] !== 'trail_puzzle') continue;
+            const family = b.props.param?.find((v) => v.startsWith('trail_puzzle,'))?.match(/trail_puzzle([bcd])$/)?.[1];
+            if (family) familyByBoxName.set(b.name, family);
+            const id = ids.get(b.name);
+            if (id !== undefined && family && !byPuzzleId.has(id)) {
+                byPuzzleId.set(id, { name: b.name, family });
+            }
+        }
+    }
+    puzzleBoxIndexCache = { byPuzzleId, familyByBoxName };
+    return puzzleBoxIndexCache;
+}
+
+export function nativePuzzleRecipe(puzzleId: number): PuzzleRecipe {
+    const cached = puzzleRecipeCache.get(puzzleId);
+    if (cached) return { ...cached, ...(cached.zone ? { zone: { ...cached.zone } } : {}) };
+    const { byPuzzleId, familyByBoxName } = puzzleBoxIndex();
+    const box = byPuzzleId.get(puzzleId);
+    if (!box) throw Error('unknown native puzzle box');
     const ids = pack('obj.pack');
     const npcs = pack('npc.pack');
-    const boxes = ['trail.obj', 'trail_hard.obj'].flatMap((file) =>
-        parseConfigs(readFileSync(resolve(root, 'scripts/minigames/game_trail/configs', file), 'utf8'), file),
-    );
-    const b = boxes.find((b) => ids.get(b.name) === puzzleId && b.props.category?.[0] === 'trail_puzzle');
-    if (!b) throw Error('unknown native puzzle box');
-    const family = b.props.param?.find((v) => v.startsWith('trail_puzzle,'))?.match(/trail_puzzle([bcd])$/)?.[1];
-    if (!family) throw Error('native puzzle family unresolved');
-    const clueName = b.name.replace(/_puzzlebox$/, '');
+    const clueName = box.name.replace(/_puzzlebox$/, '');
     const clue = ids.get(clueName);
     if (clue === undefined) throw Error('native puzzle clue unresolved');
-    const turnins: Record<string, { npc: string; file: string; zone?: string }> = {
-        trail_clue_hard_riddle014: { npc: 'oziach', file: 'scripts/areas/area_edgeville/scripts/oziach.rs2' },
-        trail_clue_hard_riddle016: { npc: 'wilough', file: 'scripts/areas/area_varrock/scripts/wilough.rs2' },
-        trail_clue_hard_riddle017: { npc: 'general_bentnoze', file: 'scripts/areas/area_falador/scripts/goblin_village/general_bentnoze.rs2' },
-        trail_clue_hard_riddle018: { npc: 'lord_iorwerth', file: 'scripts/quests/quest_regicide/scripts/lord_iorwerth.rs2' },
-        trail_clue_hard_riddle019: { npc: 'examiner', file: 'scripts/quests/quest_itexam/scripts/examiner.rs2' },
-        trail_clue_hard_riddle020: { npc: 'duel_monk', file: 'scripts/minigames/game_duelarena/scripts/hamid.rs2' },
-        trail_clue_hard_riddle021: { npc: 'gnomepilot', file: 'scripts/areas/area_gnome/scripts/gnome_glider.rs2', zone: 'sindarpos' },
-        trail_clue_hard_riddle025: { npc: 'gnome_heckelfunch', file: 'scripts/areas/area_gnome/scripts/heckel_funch.rs2' },
-        trail_clue_hard_riddle026: { npc: 'gnometrainer', file: 'scripts/areas/area_gnome/scripts/gnome_trainer.rs2' },
-    };
-    const turn = turnins[clueName];
+    const turn = PUZZLE_TURNINS[clueName];
     let zone: ReturnType<typeof nativeCluePoint> | undefined;
     if (turn) {
         const text = readFileSync(resolve(root, turn.file), 'utf8');
         const expectedBox = text.match(/~trail_puzzle_complete\((trail_clue_\w+_puzzlebox)\)/)?.[1];
-        const expectedFamily = boxes
-            .find((b) => b.name === expectedBox)
-            ?.props.param?.find((v) => v.startsWith('trail_puzzle,'))
-            ?.match(/trail_puzzle([bcd])$/)?.[1];
+        const expectedFamily = expectedBox ? familyByBoxName.get(expectedBox) : undefined;
         if (
-            expectedFamily !== family ||
+            expectedFamily !== box.family ||
             !text.includes('~progress_clue_hard(' + clueName + ',') ||
-            !text.includes('~give_trail_puzzle(' + b.name + ',') ||
+            !text.includes('~give_trail_puzzle(' + box.name + ',') ||
             !text.includes('[opnpc1,' + turn.npc + ']')
         ) {
             throw Error('native puzzle turn-in handler/family changed');
         }
         if (turn.zone) {
-            const constant = readFileSync(resolve(root, 'scripts/areas/area_gnome/configs/glider.constant'), 'utf8').match(
-                new RegExp('\\^' + turn.zone + '\\s*=\\s*(\\d+_\\d+_\\d+_\\d+_\\d+)'),
-            )?.[1];
+            gliderConstantText ??= readFileSync(resolve(root, 'scripts/areas/area_gnome/configs/glider.constant'), 'utf8');
+            const constant = gliderConstantText.match(new RegExp('\\^' + turn.zone + '\\s*=\\s*(\\d+_\\d+_\\d+_\\d+_\\d+)'))?.[1];
             if (!constant) throw Error('native glider clue zone unmapped');
             zone = nativeCluePoint(constant);
         }
     }
-    return { puzzleId, name: b.name, family, clue, npc: turn ? npcs.get(turn.npc) : undefined, turninSource: turn?.file ?? null, zone };
+    const recipe: PuzzleRecipe = {
+        puzzleId,
+        name: box.name,
+        family: box.family,
+        clue,
+        npc: turn ? npcs.get(turn.npc) : undefined,
+        turninSource: turn?.file ?? null,
+        zone,
+    };
+    puzzleRecipeCache.set(puzzleId, recipe);
+    return { ...recipe, ...(recipe.zone ? { zone: { ...recipe.zone } } : {}) };
+}
+
+function boardsEqual(a: readonly number[] | null, b: readonly number[]): boolean {
+    if (!a || a.length !== b.length) return false;
+    for (let i = 0; i < b.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
 }
 
 export async function solveNativeCluePuzzle(
@@ -188,7 +261,7 @@ export async function solveNativeCluePuzzle(
             }
             if (s.sdk.getInventory().length > 19) throw Error('native puzzle requires nine reward slots');
         }
-        if (before.some((i) => i.id !== puzzleId && i.id !== r.clue && nativeClueSteps().some((v) => v.id === i.id))) {
+        if (before.some((i) => i.id !== puzzleId && i.id !== r.clue && !!nativeClueStepById(i.id))) {
             throw Error('stage only selected native clue and puzzle; board storage is shared');
         }
         if (!box) {
@@ -228,26 +301,27 @@ export async function solveNativeCluePuzzle(
         for (const slot of path) {
             if (over()) throw Error(life.reason() || 'native puzzle tick budget');
             const observed = readNativeTrailBoard(s.client, r.family);
-            if (!observed || observed.join() !== sim.join()) throw Error('native puzzle board drift');
+            if (!boardsEqual(observed, sim)) throw Error('native puzzle board drift');
             await s.direct({ type: 'trailPuzzleMove', slot, tile: sim[slot], family: r.family, reason: 'SDK' });
             applyClick(sim, slot);
             moves++;
             if (
-                !(await waitUntil(s, () => readNativeTrailBoard(s.client, r.family)?.join() === sim.join() || over(), {
+                !(await waitUntil(s, () => boardsEqual(readNativeTrailBoard(s.client, r.family), sim) || over(), {
                     timeoutTicks: Math.min(6, Math.max(1, cap - (s.tick() - start))),
                 }))
             ) {
                 throw Error('native puzzle slide unobserved');
             }
         }
-        boardSolved = !!readNativeTrailBoard(s.client, r.family) && solved(readNativeTrailBoard(s.client, r.family)!);
+        const finalBoard = readNativeTrailBoard(s.client, r.family);
+        boardSolved = !!finalBoard && solved(finalBoard);
         if (!boardSolved) throw Error('native puzzle solved board not observed');
         if (turnInNpcIndex !== undefined) {
             if (r.npc === undefined) throw Error('native puzzle NPC turn-in mapping missing for ' + r.name);
             if (s.sdk.getInventory().length > 19) throw Error('native puzzle turn-in requires nine reward slots');
             const npc = target();
             if (!npc) throw Error('exact native puzzle turn-in NPC/zone not nearby');
-            const step = nativeClueSteps().find((v) => v.id === r.clue)!;
+            const step = nativeClueStepById(r.clue)!;
             if (before.filter((i) => i.id === r.clue).reduce((n, i) => n + i.count, 0) !== 1) {
                 throw Error('stage exactly one original native puzzle clue');
             }
@@ -275,6 +349,7 @@ export async function solveNativeCluePuzzle(
         restore?.();
     }
     detail ||= life.reason();
+    void nativeClueSteps;
     const preserved = before.every(
         (i) =>
             (i.id === puzzleId && turnInNpcIndex !== undefined) ||

@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { accountOf, getWorld } from '../../../core/src/bot';
@@ -10,12 +9,28 @@ import { expandPath, goTo, sessionWalker, walkPath } from '../../../core/src/wal
 import { ROUTE_BUDGET_MS } from '../../../core/src/world';
 import type { GEActionResult, GEOffer } from '../../../../vendor/rs-sdk/sdk/ge-types';
 import { marketProgress } from './market-progress';
+import {
+    GE_VARROCK_BANK,
+    getGeItemCatalogue,
+    loadGeItemCatalogue,
+    orderEscrow,
+    orderPaths,
+    orderQuantity,
+    validateRequest,
+} from './preflight';
 import type { ItemOrder, ItemRequest, OrderView, RescueReceipt } from './types';
 import { ferryWalk, walkTargetPersist } from './walk';
 
-export { orderRefusal };
+export {
+    GE_VARROCK_BANK,
+    loadGeItemCatalogue,
+    orderEscrow,
+    orderPaths,
+    orderQuantity,
+    orderRefusal,
+    validateRequest,
+};
 
-export const GE_VARROCK_BANK = { x: 3185, z: 3436 };
 export const GE_EXCHANGE_SPOT = { x: 3181, z: 3443 };
 export const HEAL_FOOD = [333, 329, 361, 379, 373, 385] as const;
 export const NORTH_ENTRY = { x: 3165, z: 3487 };
@@ -28,9 +43,6 @@ const REPO_ROOT = resolve(import.meta.dir, '../../../..');
 
 export const productionMode = (profile: string) =>
     profile === 'owned-talismans' ? 'talismans' : profile === 'owned-craft' ? 'craft' : undefined;
-
-export const orderQuantity = (r: ItemRequest) => r.quantity ?? 1;
-export const orderEscrow = (r: ItemRequest) => orderQuantity(r) * r.limit;
 
 export function priorRounds(j: ItemOrder) {
     let acquired = 0;
@@ -160,28 +172,28 @@ export function claimSettlement(j: ItemOrder, c: { items: number; coins: number 
     return { acquired: p.acquired + c.items, refund: orderEscrow(j.request) - p.spent - p.escrow + c.coins };
 }
 
-export function validateRequest(r: ItemRequest) {
-    if (r.rescueMode !== undefined && r.rescueMode !== 'npc-respawn-once') throw Error('unsupported RESCUE_MODE');
-    if (!/^[a-z0-9]{1,12}$/i.test(r.actor) || !r.server || !/^[a-z0-9_-]{1,64}$/i.test(r.goal)
-        || ![r.item, r.limit].every(n => Number.isSafeInteger(n) && n > 0 && n <= 2147483647)
-        || (r.quantity !== undefined && !(Number.isSafeInteger(r.quantity) && r.quantity > 0))
-        || (r.expectedOwned !== undefined && !(Number.isSafeInteger(r.expectedOwned) && r.expectedOwned >= 0 && r.expectedOwned <= 2147483647))
-        || orderEscrow(r) > 2147483647 || !Number.isSafeInteger(r.reserve) || r.reserve < 0
-        || ![r.createdAt, r.reviewAt, r.deadline].every(n => Number.isSafeInteger(n) && n > 0)
-        || r.reviewAt < r.createdAt || r.deadline <= r.reviewAt) {
-        throw Error('invalid item order request');
+const orderMatcherCache = new WeakMap<readonly { id: number; name: string }[], { len: number; namesById: Map<number, string>; ids: Set<number> }>();
+
+function getOrderMatcherIndex(catalogue: readonly { id: number; name: string }[]) {
+    let idx = orderMatcherCache.get(catalogue);
+    if (!idx || idx.len !== catalogue.length) {
+        const namesById = new Map<number, string>();
+        const ids = new Set<number>();
+        for (let i = 0; i < catalogue.length; i++) {
+            const entry = catalogue[i]!;
+            ids.add(entry.id);
+            if (!namesById.has(entry.id)) namesById.set(entry.id, entry.name.toLowerCase());
+        }
+        idx = { len: catalogue.length, namesById, ids };
+        orderMatcherCache.set(catalogue, idx);
     }
+    return idx;
 }
 
 export function orderItemMatcher(item: number, catalogue: readonly { id: number; name: string }[]) {
-    const name = catalogue.find(i => i.id === item)?.name.toLowerCase();
-    const known = new Set(catalogue.map(i => i.id));
-    return (i: { id: number; name?: string }) => i.id === item || (!!name && i.name?.toLowerCase() === name && !known.has(i.id));
-}
-
-export function orderPaths(server: string, actor: string, goal: string) {
-    const base = resolve(REPO_ROOT, '.practice/market-orders', createHash('sha256').update(server).digest('hex').slice(0, 12));
-    return { base, lock: base + '/' + actor.toLowerCase() + '.lock', journal: base + '/' + actor.toLowerCase() + '-' + goal + '.json' };
+    const { namesById, ids } = getOrderMatcherIndex(catalogue);
+    const name = namesById.get(item);
+    return (i: { id: number; name?: string }) => i.id === item || (!!name && i.name?.toLowerCase() === name && !ids.has(i.id));
 }
 
 function identity(j: ItemOrder, v: OrderView) {
@@ -545,9 +557,4 @@ export function planGeRestockOrders(options: {
     return { funded, unfunded, totalEscrow, remainingCoins: spendable + options.coinReserve };
 }
 
-let cachedGeItemCatalogue: readonly { id: number; name: string }[] | undefined;
-
-export function loadGeItemCatalogue(): { id: number; name: string }[] {
-    const cached = (cachedGeItemCatalogue ??= JSON.parse(readFileSync(new URL('../../../../knowledge/items.json', import.meta.url), 'utf8')));
-    return cached.slice();
-}
+void getGeItemCatalogue;

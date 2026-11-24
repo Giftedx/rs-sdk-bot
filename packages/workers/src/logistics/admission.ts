@@ -5,24 +5,10 @@ import { fleetStateFile, simStatusDir } from '../../../core/src/practice-paths';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { ownedAccounts } from '../../../core/src/tradeguard';
 import { createHandoff, reconcileOrder, type OrderSnapshot } from './handoff';
+import { ACCOUNT_NAME_RE, parseHandoff, type Handoff, type HandoffItem } from './preflight';
 import { REPO_ROOT } from './types';
 
-export const ACCOUNT_NAME_RE = /^[A-Za-z0-9_ -]{1,12}$/;
-
-export type HandoffItem = { name: string; count: number };
-export type Handoff = {
-    donor: string;
-    receiver: string;
-    items: HandoffItem[];
-    notes: boolean;
-    keep?: string;
-    x: number;
-    z: number;
-    approachMs?: number;
-    requestMs: number;
-    timeoutMs: number;
-    graceMs: number;
-};
+export { ACCOUNT_NAME_RE, parseHandoff, type Handoff, type HandoffItem };
 
 export const ownerAlive = (pid: number) => {
     try {
@@ -54,68 +40,47 @@ export function acquireExclusiveLease(file: string, runId: string): () => void {
     };
 }
 
-export function parseHandoff(args: string[]): Handoff {
-    const [donor, receiver, ...rest] = args;
-    if (!donor || !receiver || ![donor, receiver].every(n => n.trim() === n && ACCOUNT_NAME_RE.test(n) && !/^(main|haggis)$/i.test(n)) || donor.toLowerCase() === receiver.toLowerCase()) {
-        throw new Error('two distinct non-reserved account names required');
-    }
-    const cfg: Handoff = { donor, receiver, items: [], notes: false, x: 2654, z: 3283, requestMs: 30_000, timeoutMs: 240_000, graceMs: 45_000 };
-    const seen = new Set<string>();
-    for (const arg of rest) {
-        if (!arg.startsWith('--')) {
-            const m = arg.match(/^(\d+):(.+)$/);
-            const count = Number(m?.[1]), name = m?.[2]?.trim();
-            if (!name || /[\r\n\0]/.test(name) || name.length > 80 || !Number.isSafeInteger(count) || count < 1) throw new Error('invalid handoff item/count');
-            if (cfg.items.some(i => i.name.toLowerCase() === name.toLowerCase())) throw new Error('duplicate handoff item');
-            cfg.items.push({ name, count });
-            continue;
-        }
-        const [key, ...value] = arg.split('=');
-        if (seen.has(key!)) throw new Error('duplicate handoff option');
-        seen.add(key!);
-        const v = value.join('=');
-        if (key === '--notes' && !value.length) cfg.notes = true;
-        else if (key === '--keep' && v && v.length <= 300) {
-            new RegExp(v, 'i');
-            cfg.keep = v;
-        } else if (['--bank-x', '--bank-z', '--approach-ms', '--request-ms', '--timeout-ms', '--grace-ms'].includes(key!) && /^\d+$/.test(v)) {
-            const fields: Record<string, 'x' | 'z' | 'approachMs' | 'requestMs' | 'timeoutMs' | 'graceMs'> = {
-                '--bank-x': 'x', '--bank-z': 'z', '--approach-ms': 'approachMs', '--request-ms': 'requestMs', '--timeout-ms': 'timeoutMs', '--grace-ms': 'graceMs',
-            };
-            cfg[fields[key!]!] = Number(v);
-        } else {
-            throw new Error(`unknown/invalid handoff option ${key}`);
-        }
-    }
-    if (!cfg.items.length || ![cfg.x, cfg.z].every(n => Number.isSafeInteger(n) && n > 0 && n < 16384)
-        || cfg.approachMs !== undefined && (!Number.isSafeInteger(cfg.approachMs) || cfg.approachMs < 1000 || cfg.approachMs > 1_800_000)
-        || !Number.isSafeInteger(cfg.requestMs) || cfg.requestMs < 1000 || cfg.requestMs > 60_000
-        || !Number.isSafeInteger(cfg.timeoutMs) || cfg.timeoutMs < cfg.requestMs || cfg.timeoutMs > 600_000
-        || !Number.isSafeInteger(cfg.graceMs) || cfg.graceMs < 1000 || cfg.graceMs > 60_000) {
-        throw new Error('invalid handoff bounds/items');
-    }
-    if (cfg.keep && cfg.items.some(i => new RegExp(cfg.keep!, 'i').test(i.name))) throw new Error('requested item overlaps protected KEEP');
-    return cfg;
-}
-
 export function assertAccountOwnership(names: string[], state: any, jobs: any[], stopped: (name: string) => boolean, runId: string) {
-    for (const name of ['coordinator', 'swarm', ...names]) if (stopped(name)) throw Error(`existing stop-${name}; preserve owner pause`);
+    if (stopped('coordinator')) throw Error('existing stop-coordinator; preserve owner pause');
+    if (stopped('swarm')) throw Error('existing stop-swarm; preserve owner pause');
+    const lowerNames: string[] = [];
+    for (let i = 0; i < names.length; i++) {
+        const name = names[i]!;
+        if (stopped(name)) throw Error(`existing stop-${name}; preserve owner pause`);
+        lowerNames.push(name.toLowerCase());
+    }
     if (!Array.isArray(jobs)) throw Error('swarm job ownership unavailable');
     if (state !== null && state !== undefined) {
         if (state.schemaVersion === 1 && typeof state.accounts === 'object' && state.accounts !== null) {
-            for (const name of names) {
-                if (state.accounts[name.toLowerCase()]?.paused === true) throw Error(`account paused in fleet state: ${name}`);
+            for (let i = 0; i < names.length; i++) {
+                if (state.accounts[lowerNames[i]!]?.paused === true) throw Error(`account paused in fleet state: ${names[i]}`);
             }
         } else if (state.version === 1 && Array.isArray(state.tasks)) {
-            for (const record of state.tasks.filter((r: any) => r.status === 'running')) {
+            let tasksById: Map<string, any> | undefined;
+            for (let t = 0; t < state.tasks.length; t++) {
+                const record = state.tasks[t];
+                if (record.status !== 'running') continue;
                 const spec = record.spec;
                 if (!spec) throw Error('coordinator task ownership unknown');
-                const bindings = spec.participants ?? (spec.account ? [spec.account] : spec.accountFrom ? ['@' + spec.accountFrom] : []);
-                const accounts = bindings.map((n: string) => n.startsWith('@') ? state.tasks.find((r: any) => r.spec?.id === n.slice(1))?.receipt?.output?.account : n);
-                if (accounts.some((n: unknown) => typeof n !== 'string')) throw Error('coordinator participant ownership unresolved');
-                for (const name of names) {
-                    if (accounts.some((n: string) => n.toLowerCase() === name.toLowerCase()) && (!runId || record.runId !== runId)) {
-                        throw Error(`account lease conflict: ${name}; coordinator ${spec.id} ${record.runId}`);
+                const bindings: string[] = spec.participants ?? (spec.account ? [spec.account] : spec.accountFrom ? ['@' + spec.accountFrom] : []);
+                for (let b = 0; b < bindings.length; b++) {
+                    let resolved: unknown = bindings[b]!;
+                    if ((resolved as string).startsWith('@')) {
+                        if (!tasksById) {
+                            tasksById = new Map<string, any>();
+                            for (let k = 0; k < state.tasks.length; k++) {
+                                const task = state.tasks[k];
+                                if (task.spec?.id !== undefined) tasksById.set(task.spec.id, task);
+                            }
+                        }
+                        resolved = tasksById.get((resolved as string).slice(1))?.receipt?.output?.account;
+                    }
+                    if (typeof resolved !== 'string') throw Error('coordinator participant ownership unresolved');
+                    const resolvedLower = resolved.toLowerCase();
+                    for (let i = 0; i < lowerNames.length; i++) {
+                        if (resolvedLower === lowerNames[i] && (!runId || record.runId !== runId)) {
+                            throw Error(`account lease conflict: ${names[i]}; coordinator ${spec.id} ${record.runId}`);
+                        }
                     }
                 }
             }
@@ -123,12 +88,27 @@ export function assertAccountOwnership(names: string[], state: any, jobs: any[],
             throw Error('fleet account ownership unavailable');
         }
     }
-    for (const job of jobs) {
-        for (const name of names) {
-            if (!(process.env.STANDING === '1' && job.standing === true && job.goal === process.env.BOT_GOAL)
-                && job.enabled !== false && (job.accounts ?? [job.account]).some((n: string) => n?.toLowerCase() === name.toLowerCase())
-                && (!runId || !String(job.goal ?? '').includes('[' + runId + ']'))) {
-                throw Error(`account lease conflict: ${name}; swarm ${job.id ?? job.coordinatorTask ?? job.script}`);
+    const standing = process.env.STANDING === '1';
+    const botGoal = process.env.BOT_GOAL;
+    const runTag = runId ? '[' + runId + ']' : '';
+    for (let j = 0; j < jobs.length; j++) {
+        const job = jobs[j];
+        if (job.enabled === false) continue;
+        if (standing && job.standing === true && job.goal === botGoal) continue;
+        if (runTag && String(job.goal ?? '').includes(runTag)) continue;
+        const accs: string[] | undefined = job.accounts;
+        for (let i = 0; i < lowerNames.length; i++) {
+            const ln = lowerNames[i]!;
+            let matched = false;
+            if (accs) {
+                for (let k = 0; k < accs.length; k++) {
+                    if (accs[k]?.toLowerCase() === ln) { matched = true; break; }
+                }
+            } else if (job.account?.toLowerCase() === ln) {
+                matched = true;
+            }
+            if (matched) {
+                throw Error(`account lease conflict: ${names[i]}; swarm ${job.id ?? job.coordinatorTask ?? job.script}`);
             }
         }
     }

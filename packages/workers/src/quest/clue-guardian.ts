@@ -5,27 +5,55 @@ import { elementalRuneCost, nativeNpcSpell, nativeTeleport } from '../../../core
 import { productionStopRequested as guardianStopRequested } from '../../../core/src/production-life';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { guardianSaraLandingTail, guardianWalk, recoverGuardian, setupSaradominMage } from './clue-guardian-travel';
-import { nativeCluePoint, nativeClueSteps } from './clues';
+import { nativeCluePoint, nativeClueStepById } from './clues';
 import { resolveNpcMagicModule } from './runtime';
 import { REPO_ROOT } from './types';
 
 const root = resolve(REPO_ROOT, 'vendor/rs-sdk/server/content');
 
+const packCache = new Map<string, Map<string, number>>();
+
 function pack(file: string) {
-    return new Map(
-        readFileSync(resolve(root, 'pack', file), 'utf8')
-            .split(/\r?\n/)
-            .flatMap((l) => {
-                const m = l.match(/^(\d+)=(.+)$/);
-                return m ? ([[m[2]!, Number(m[1])] as const]) : [];
-            }),
-    );
+    let out = packCache.get(file);
+    if (out) return out;
+    const text = readFileSync(resolve(root, 'pack', file), 'utf8');
+    out = new Map<string, number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) out.set(text.slice(eq + 1, lineEnd), id);
+        }
+        pos = end + 1;
+    }
+    packCache.set(file, out);
+    return out;
 }
 
 export { guardianStopRequested };
 
-export function nativeGuardianClue(id: number) {
-    const row = nativeClueSteps().find((r) => r.id === id);
+type GuardianClueSpec = {
+    id: number;
+    name: string;
+    guardian: string;
+    npc: number;
+    casket: number;
+    point: ReturnType<typeof nativeCluePoint>;
+    tools: number[];
+    source: string;
+    line: number;
+};
+
+const guardianClueCache = new Map<number, GuardianClueSpec>();
+
+export function nativeGuardianClue(id: number): GuardianClueSpec {
+    const cached = guardianClueCache.get(id);
+    if (cached) return { ...cached, point: { ...cached.point }, tools: cached.tools.slice() };
+    const row = nativeClueStepById(id);
     const objs = pack('obj.pack');
     const npcs = pack('npc.pack');
     const field = (key: string) => row?.nativeParams?.find((v) => v.startsWith(key + ','))?.slice(key.length + 1);
@@ -35,20 +63,22 @@ export function nativeGuardianClue(id: number) {
     const guardian = field('trail_guardian')!;
     const npc = npcs.get(guardian);
     const casket = objs.get(field('trail_casket')!);
-    if (!['trail_hard', 'trail_hard2'].includes(guardian) || npc === undefined || casket === undefined) {
+    if ((guardian !== 'trail_hard' && guardian !== 'trail_hard2') || npc === undefined || casket === undefined) {
         throw Error('native guardian mapping unresolved');
     }
-    return {
+    const spec: GuardianClueSpec = {
         id,
         name: row.name,
         guardian,
         npc,
         casket,
         point: nativeCluePoint(field('trail_coord')!),
-        tools: ['spade', 'trail_watch', 'trail_chart', 'trail_sextant'].map((n) => objs.get(n)!),
+        tools: [objs.get('spade')!, objs.get('trail_watch')!, objs.get('trail_chart')!, objs.get('trail_sextant')!],
         source: row.source,
         line: row.line,
     };
+    guardianClueCache.set(id, spec);
+    return { ...spec, point: { ...spec.point }, tools: spec.tools.slice() };
 }
 
 export function guardianSwampPoint(p: { x: number; z: number; level: number }) {
@@ -61,16 +91,20 @@ export function guardianFoodRotEffect(
     w: { freshSystem: boolean; nativeGhast: boolean; sameHpXpGear: boolean; sameLifeOwner: boolean; pairedAntidote?: boolean },
 ) {
     if (!w.freshSystem || !w.nativeGhast || !w.sameHpXpGear || !w.sameLifeOwner) return false;
-    const sums = (rows: readonly { id: number; count: number }[]) => {
-        const v: Record<number, number> = {};
-        for (const r of rows) v[r.id] = (v[r.id] ?? 0) + r.count;
-        return v;
-    };
-    const b = sums(before);
-    const a = sums(after);
-    return [...new Set([...Object.keys(b), ...Object.keys(a)])].every(
-        (k) => (a[+k] ?? 0) - (b[+k] ?? 0) === (+k === 379 ? -1 : +k === 2959 ? 1 : w.pairedAntidote && +k === 2448 ? -1 : w.pairedAntidote && +k === 181 ? 1 : 0),
-    );
+    const diff = new Map<number, number>();
+    for (let i = 0; i < before.length; i++) {
+        const r = before[i]!;
+        diff.set(r.id, (diff.get(r.id) ?? 0) - r.count);
+    }
+    for (let i = 0; i < after.length; i++) {
+        const r = after[i]!;
+        diff.set(r.id, (diff.get(r.id) ?? 0) + r.count);
+    }
+    for (const [id, d] of diff) {
+        const expected = id === 379 ? -1 : id === 2959 ? 1 : w.pairedAntidote && id === 2448 ? -1 : w.pairedAntidote && id === 181 ? 1 : 0;
+        if (d !== expected) return false;
+    }
+    return true;
 }
 
 type Options = { spell: string; maximumCasts: number; cap: number; ambientDamage?: number; stop?: () => boolean };
@@ -273,7 +307,8 @@ export async function runGuardianClue(s: Session, id: number, o: Options, io?: N
     let antidoteReceipt: Awaited<ReturnType<typeof guardianAntidote>> | undefined;
     let foodEaten = 0;
     let engaged = false;
-    const allGuardIds = [pack('npc.pack').get('trail_hard')!, pack('npc.pack').get('trail_hard2')!];
+    const npcPack = pack('npc.pack');
+    const allGuardIds = [npcPack.get('trail_hard')!, npcPack.get('trail_hard2')!];
     const guard = () => st()?.nearbyNpcs.find((n) => n.index === index && n.id === r.npc);
     const rotSnapshot = () => ({
         pack: inv().map((i) => ({ ...i })),

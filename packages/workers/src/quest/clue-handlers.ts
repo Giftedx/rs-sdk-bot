@@ -79,7 +79,21 @@ export function discoverNativeClueNpcHandlers(): ClueNpcHandler[] {
     return out.filter((v, i) => out.findIndex((w) => w.clue === v.clue && w.npc === v.npc && w.kind === v.kind) === i);
 }
 
-export function nativeSpecialClueSearchHandlers() {
+type SpecialClueSearchHandler = {
+    key: string | undefined;
+    source: string;
+    line: number;
+    clue: string;
+    coord: string;
+    label: string;
+    route: string;
+    effect: string;
+};
+
+let specialHandlersCache: readonly SpecialClueSearchHandler[] | undefined;
+
+export function nativeSpecialClueSearchHandlers(): SpecialClueSearchHandler[] {
+    if (specialHandlersCache) return specialHandlersCache.map((r) => ({ ...r }));
     const content = resolve(REPO_ROOT, 'vendor/rs-sdk/server/content');
     const rows = [
         {
@@ -105,7 +119,7 @@ export function nativeSpecialClueSearchHandlers() {
             effect: 'scripts/minigames/game_trail/scripts/medium/trail_clue_medium.rs2',
         })),
     ];
-    return rows.map((r) => {
+    specialHandlersCache = rows.map((r) => {
         const route = readFileSync(resolve(content, r.route), 'utf8');
         const effect = readFileSync(resolve(content, r.effect), 'utf8');
         if (!route.includes(r.coord) || !route.includes('@' + r.label + ';') || !effect.includes('[label,' + r.label + ']') || !effect.includes(r.clue)) {
@@ -115,4 +129,5 @@ export function nativeSpecialClueSearchHandlers() {
         const key = block.body.match(/inv_del\(inv,\s*(trail_clue_\w+_key),\s*1\)/)?.[1];
         return { ...r, key, source: 'vendor/rs-sdk/server/content/' + r.effect, line: block.line };
     });
+    return specialHandlersCache.map((r) => ({ ...r }));
 }

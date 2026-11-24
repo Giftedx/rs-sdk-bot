@@ -25,8 +25,15 @@ export const questItemsRuntime = {
     wait: waitPracticeSave,
 };
 
-const total = (items: readonly Item[] | undefined, id: number) =>
-    (items ?? []).filter((i) => i.id === id).reduce((n, i) => n + i.count, 0);
+const total = (items: readonly Item[] | undefined, id: number) => {
+    if (!items) return 0;
+    let n = 0;
+    for (let i = 0; i < items.length; i++) {
+        const row = items[i]!;
+        if (row.id === id) n += row.count;
+    }
+    return n;
+};
 
 export function itemRecipe(key: string) {
     if (!Object.hasOwn(QUEST_ITEM_RECIPES, key)) throw Error(`quest items: unknown quest ${key}`);

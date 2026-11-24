@@ -1,13 +1,9 @@
 // Unified WorkerModule implementation and role dispatcher for fleet logistics operations.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { accountOf, getWorld, openBot, sessionDied, settle } from '../../../core/src/bot';
 import type { Outcome } from '../../../core/src/act';
 import type { Session } from '../../../core/src/inprocess';
 import type { SessionCore } from '../../../core/src/session-types';
-import { waitUntil } from '../../../core/src/ticks';
-import { knownBanks } from '../../../core/src/trip';
-import { goTo } from '../../../core/src/walk';
 import {
     accountEscrowCoins,
     accountOwnedItemCount,
@@ -26,45 +22,19 @@ import {
     type WorkerTile,
     type WorkerWorldView,
 } from '../contracts';
-import { parseTakeFromBankerArgs, runBanker, runGiveToBanker, runPreservedWine, runSupplyHolder, runTakeFromBanker } from './hub-bank';
-import { inspectFleetState } from './inspect';
 import { HUB_BANKS, isWildernessTile } from './location';
 import {
     GLORY_UNCHARGED,
     altarText,
     canEnterHeroesBasement,
-    cureWithAntipoison,
-    nearestAltar,
     parseAltar,
+    parseCoins,
+    parseFanin,
+    parseFanout,
     parseRecoveryTargetArg,
-    prayAtAltar,
-    recoverSessionToHub,
-    runChargeGlory,
-} from './recover';
-import { runGatheringSupplierServe, runSpecialistServe, runSpecialistStage } from './specialist-supply';
-import {
-    bootstrapAccountServer,
-    bootstrapSupplyActor,
-    compileInventorySetup,
-    runOwnedLoadout,
-    runSupplyChain,
-    sortNativeBank,
-    validateOwnedKit,
-    type BankSortPolicy,
-    type BootstrapPhase,
-    type BootstrapRole,
-    type SupplyActors,
-} from './stage';
-import {
-    coinFanoutMain,
-    itemFaninMain,
-    noteCourierMain,
-    runCoinCourier,
-    runFleetTrade,
-    runFoodChain,
-    runFoodCourier,
-} from './trade';
-import { parseCoins, parseFanin, parseFanout } from './trade-helpers';
+    parseTakeFromBankerArgs,
+} from './preflight';
+import type { BankSortPolicy, BootstrapPhase, BootstrapRole, SupplyActors } from './stage';
 import {
     LOGISTICS_OPERATIONS,
     REPO_ROOT,
@@ -74,7 +44,6 @@ import {
     type LogisticsOperation,
     type LogisticsRole,
 } from './types';
-import { relocateBank, relocateKnight, runArriveDraynor, runWalkEdge, runWalkTo } from './walk';
 
 const GRAPES_ID = 1987;
 const JUG_WATER_ID = 1937;
@@ -100,6 +69,7 @@ function readJsonArg(rawPath: string): unknown {
 
 export function importAioLoadout(args: readonly string[]) {
     if (args.length !== 2) throw Error('aio-logistics loadout-import requires <donor-setup.json> <native-bindings.json>');
+    const { compileInventorySetup } = require('./stage') as typeof import('./stage');
     return compileInventorySetup(readJsonArg(args[0]!), readJsonArg(args[1]!));
 }
 
@@ -426,26 +396,32 @@ export async function runLogisticsRole(
     }
 
     if (role === 'coin-courier') {
+        const { runCoinCourier } = await import('./trade');
         const res = await runCoinCourier([account, ...args], mergedEnv);
         return { ok: res.ok, resultLine: `RESULT ${res.ok ? 'ok' : 'fail'} ${res.detail}` };
     }
     if (role === 'coin-fanout') {
+        const { coinFanoutMain } = await import('./trade');
         const res = await coinFanoutMain([account, ...args], mergedEnv);
         return { ok: res.ok, resultLine: `RESULT ${res.ok ? 'ok' : 'fail'} fanout completed=${res.results.filter(r => r.ok).length}` };
     }
     if (role === 'item-fanin') {
+        const { itemFaninMain } = await import('./trade');
         const res = await itemFaninMain([account, ...args], mergedEnv);
         return { ok: res.ok, resultLine: `RESULT ${res.ok ? 'ok' : 'fail'} fanin banked=${res.banked}` };
     }
     if (role === 'note-courier') {
+        const { noteCourierMain } = await import('./trade');
         await noteCourierMain([account, ...args], mergedEnv);
         return { ok: true, resultLine: lastResultLine || 'RESULT ok note-courier' };
     }
     if (role === 'food-courier') {
+        const { runFoodCourier } = await import('./trade');
         await runFoodCourier(account, mergedEnv);
         return { ok: true, resultLine: lastResultLine || 'RESULT ok food-courier' };
     }
     if (role === 'food-chain') {
+        const { runFoodChain } = await import('./trade');
         await runFoodChain([account, ...args], mergedEnv);
         return { ok: true, resultLine: 'RESULT ok food-chain' };
     }
@@ -453,6 +429,7 @@ export async function runLogisticsRole(
         const prevExitCode = process.exitCode;
         process.exitCode = 0;
         try {
+            const { runSpecialistServe, runSpecialistStage } = await import('./specialist-supply');
             const stageRaw = account === '--stage' ? [account, ...args] : args.includes('--stage') ? [account, ...args] : null;
             if (stageRaw) {
                 await runSpecialistStage(stageRaw, mergedEnv);
@@ -469,6 +446,7 @@ export async function runLogisticsRole(
         const prevExitCode = process.exitCode;
         process.exitCode = 0;
         try {
+            const { runGatheringSupplierServe } = await import('./specialist-supply');
             const supplierArgs = account === '--stage' ? [account, ...args] : [account, ...args];
             await runGatheringSupplierServe(supplierArgs, mergedEnv);
             const ok = !process.exitCode || process.exitCode === 0;
@@ -481,6 +459,7 @@ export async function runLogisticsRole(
         const prevExitCode = process.exitCode;
         process.exitCode = 0;
         try {
+            const { runFleetTrade } = await import('./trade');
             await runFleetTrade(account, args[0], mergedEnv);
             const ok = process.exitCode !== 2 && process.exitCode !== 1;
             return { ok, resultLine: lastResultLine || `RESULT ${ok ? 'ok' : 'fail'} fleet-trade` };
@@ -489,14 +468,21 @@ export async function runLogisticsRole(
         }
     }
     if (role === 'supply-chain') {
+        const { runSupplyChain } = await import('./stage');
         const chainCfg = validateSupplyChainCliArgs([account, ...args], mergedEnv);
         const res = await runSupplyChain(chainCfg);
         console.log('SUPPLY_CHAIN ' + JSON.stringify(res));
         return { ok: true, resultLine: `RESULT ok supply-chain cycles=${res.cycles.length}` };
     }
 
+    const { accountOf, getWorld, openBot, settle } = await import('../../../core/src/bot');
+    const { waitUntil } = await import('../../../core/src/ticks');
+    const { knownBanks } = await import('../../../core/src/trip');
+    const { goTo } = await import('../../../core/src/walk');
+
     if (role === 'supply-bootstrap') {
         try {
+            const { bootstrapAccountServer } = await import('./stage');
             const roleArg = (args[0] && !args[0].includes('=') ? args[0] : mergedEnv.ROLE ?? 'producer') as BootstrapRole;
             const phaseArg = (args[1] && !args[1].includes('=') ? args[1] : mergedEnv.PHASE ?? 'all') as BootstrapPhase;
             if (!['producer', 'courier', 'receiver'].includes(roleArg) || !['all', 'clean', 'earn'].includes(phaseArg)) {
@@ -518,30 +504,35 @@ export async function runLogisticsRole(
 
         switch (role) {
             case 'banker': {
+                const { runBanker } = await import('./hub-bank');
                 const res = await runBanker(s, { env: mergedEnv, stop: isStopped(account) });
                 ok = res.ok;
                 detail = res.summary;
                 break;
             }
             case 'give-to-banker': {
+                const { runGiveToBanker } = await import('./hub-bank');
                 const res = await runGiveToBanker(s, args, mergedEnv);
                 ok = res.ok;
                 detail = res.summary;
                 break;
             }
             case 'take-from-banker': {
+                const { runTakeFromBanker } = await import('./hub-bank');
                 const res = await runTakeFromBanker(s, args, mergedEnv);
                 ok = res.ok;
                 detail = res.summary;
                 break;
             }
             case 'supply-holder': {
+                const { runSupplyHolder } = await import('./hub-bank');
                 const res = await runSupplyHolder(s, args, mergedEnv);
                 ok = res.ok;
                 detail = res.summary;
                 break;
             }
             case 'wine-stock': {
+                const { runPreservedWine } = await import('./hub-bank');
                 const maximum = Number(args[0] ?? mergedEnv.MAXIMUM ?? 12);
                 const cap = Number(args[1] ?? mergedEnv.CAP ?? 1000);
                 const reserve = Number(args[2] ?? mergedEnv.RESERVE ?? 0);
@@ -552,6 +543,7 @@ export async function runLogisticsRole(
                 break;
             }
             case 'supply-bootstrap': {
+                const { bootstrapSupplyActor } = await import('./stage');
                 const roleArg = (args[0] && !args[0].includes('=') ? args[0] : mergedEnv.ROLE ?? 'producer') as BootstrapRole;
                 const phaseArg = (args[1] && !args[1].includes('=') ? args[1] : mergedEnv.PHASE ?? 'all') as BootstrapPhase;
                 const r = await bootstrapSupplyActor(s, roleArg, undefined, phaseArg);
@@ -563,6 +555,7 @@ export async function runLogisticsRole(
             case 'loadout': {
                 const kitPath = args[0] ?? mergedEnv.LOADOUT_FILE;
                 if (kitPath) {
+                    const { runOwnedLoadout, validateOwnedKit } = await import('./stage');
                     const kit = validateOwnedKit(readJsonArg(kitPath));
                     const r = await runOwnedLoadout(s, kit, isStopped(account));
                     console.log('LOADOUT ' + JSON.stringify(r));
@@ -627,6 +620,7 @@ export async function runLogisticsRole(
                 break;
             }
             case 'bank-sort': {
+                const { sortNativeBank } = await import('./stage');
                 const cap = Number(args[0] ?? mergedEnv.CAP ?? 200);
                 const maxMoves = Number(args[1] ?? mergedEnv.MAX_MOVES ?? 20);
                 const policy = (args[2] ?? mergedEnv.POLICY ?? 'name') as BankSortPolicy;
@@ -637,18 +631,21 @@ export async function runLogisticsRole(
                 break;
             }
             case 'walk-to': {
+                const { runWalkTo } = await import('./walk');
                 const r = await runWalkTo(s, args);
                 ok = r.ok;
                 detail = r.summary;
                 break;
             }
             case 'walk-edge': {
+                const { runWalkEdge } = await import('./walk');
                 const r = await runWalkEdge(s);
                 const settled = await settle([s], r.ok, r.ok ? 'at Edgeville bank' : r.detail, { log });
                 console.log('WALK_EDGE ' + JSON.stringify({ ...r, loggedOut: settled }));
                 return { ok: settled, resultLine: lastResultLine || `RESULT ${settled ? 'ok' : 'fail'} ${r.detail}` };
             }
             case 'relocate-bank': {
+                const { relocateBank } = await import('./walk');
                 const cap = Number(mergedEnv.CAP ?? args[0] ?? 1500);
                 const startTick = s.tick();
                 const r = await relocateBank(s, { stop: () => isStopped(account)() || s.tick() - startTick >= cap });
@@ -658,6 +655,7 @@ export async function runLogisticsRole(
                 break;
             }
             case 'relocate-knight': {
+                const { relocateKnight } = await import('./walk');
                 const cap = Number(mergedEnv.CAP ?? args[0] ?? 1500);
                 const startTick = s.tick();
                 const r = await relocateKnight(s, account, { stop: () => isStopped(account)() || s.tick() - startTick >= cap });
@@ -667,12 +665,14 @@ export async function runLogisticsRole(
                 break;
             }
             case 'arrive-draynor': {
+                const { runArriveDraynor } = await import('./walk');
                 const r = await runArriveDraynor(s);
                 ok = r.ok;
                 detail = r.detail;
                 break;
             }
             case 'restore-prayer': {
+                const { nearestAltar, prayAtAltar } = await import('./recover');
                 await waitUntil(s, () => !!s.sdk.getState()?.player, { timeoutTicks: 20 });
                 const spec = altarText(args, mergedEnv.ALTAR);
                 const p = s.sdk.getState()?.player;
@@ -683,6 +683,7 @@ export async function runLogisticsRole(
                 break;
             }
             case 'cure-poison': {
+                const { cureWithAntipoison } = await import('./recover');
                 await waitUntil(s, () => !!s.sdk.getState()?.player, { timeoutTicks: 20 });
                 const r = await cureWithAntipoison(s);
                 ok = r.ok;
@@ -690,6 +691,7 @@ export async function runLogisticsRole(
                 break;
             }
             case 'charge-glory': {
+                const { runChargeGlory } = await import('./recover');
                 const cap = Number(args.find(a => /^\d+$/.test(a)) ?? mergedEnv.CAP ?? 2000);
                 const maxGlories = Number(mergedEnv.MAX_GLORIES ?? 0);
                 const r = await runChargeGlory(s, { cap, maxGlories, stop: isStopped(account) });
@@ -698,6 +700,7 @@ export async function runLogisticsRole(
                 break;
             }
             case 'recover-trapped': {
+                const { recoverSessionToHub } = await import('./recover');
                 const capTicks = Number(args.find(a => /^\d+$/.test(a)) ?? mergedEnv.CAP ?? 900);
                 const target = parseRecoveryTargetArg(args);
                 await waitUntil(s, () => !!s.sdk.getState()?.player, { timeoutTicks: 20 });
@@ -708,6 +711,7 @@ export async function runLogisticsRole(
                 break;
             }
             case 'inspect': {
+                const { inspectFleetState } = await import('./inspect');
                 const requireBank = mergedEnv.REQUIRE_BANK === '1' || args.includes('--require-bank');
                 const observed = await inspectFleetState(s, { requireBank, afterLoginAt, stopped: isStopped(account) });
                 ok = true;
@@ -733,6 +737,7 @@ export async function runLogisticsRole(
 }
 
 export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: LogisticsConfig): Promise<RunOutcome> {
+    const { sessionDied } = await import('../../../core/src/bot');
     const role = cfg.role ?? defaultRoleForOperation(cfg.operation);
     const activityId = `logistics:${role}`;
     const s = sessionCore as unknown as Session;
@@ -750,6 +755,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
     try {
         switch (cfg.operation) {
             case 'inspect': {
+                const { inspectFleetState } = await import('./inspect');
                 await inspectFleetState(s, {
                     requireBank: env.REQUIRE_BANK === '1' || args.includes('--require-bank'),
                     stopped: isStopped,
@@ -758,6 +764,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
             }
             case 'recover': {
                 if (role === 'restore-prayer') {
+                    const { nearestAltar, prayAtAltar } = await import('./recover');
                     const spec = cfg.altar ? `${cfg.altar.x},${cfg.altar.z}` : altarText(args, env.ALTAR);
                     const p = s.sdk.getState()?.player;
                     const altar = parseAltar(spec) ?? nearestAltar(p ? { x: p.worldX, z: p.worldZ, level: p.level } : { x: 3243, z: 3205, level: 0 });
@@ -768,6 +775,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                         : { kind: 'location_stranded', activityId, account: sessionCore.name, ticksElapsed, pos: playerTileOrNull(s) ?? { x: altar.x, z: altar.z, level: altar.level }, detail: r.detail };
                 }
                 if (role === 'cure-poison') {
+                    const { cureWithAntipoison } = await import('./recover');
                     const r = await cureWithAntipoison(s);
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     if (r.ok) return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: r.detail };
@@ -777,12 +785,14 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     return { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.detail };
                 }
                 if (role === 'charge-glory') {
+                    const { runChargeGlory } = await import('./recover');
                     const r = await runChargeGlory(s, { cap: cfg.capTicks ?? 2000, maxGlories: cfg.count ?? 0, stop: isStopped });
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return r.ok
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.charged }
                         : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: 'charge-glory stopped before completion' };
                 }
+                const { recoverSessionToHub } = await import('./recover');
                 const target = cfg.target ?? parseRecoveryTargetArg(args);
                 const r = await recoverSessionToHub(s, { capTicks: cfg.capTicks ?? 900, target, stop: isStopped });
                 const ticksElapsed = Math.max(0, s.tick() - startTick);
@@ -801,22 +811,27 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                 let ok = false;
                 let summary = '';
                 if (role === 'walk-edge') {
+                    const { runWalkEdge } = await import('./walk');
                     const r = await runWalkEdge(s);
                     ok = r.ok;
                     summary = r.detail;
                 } else if (role === 'relocate-bank') {
+                    const { relocateBank } = await import('./walk');
                     const r = await relocateBank(s, { stop: isStopped });
                     ok = r.ok;
                     summary = r.failure;
                 } else if (role === 'relocate-knight') {
+                    const { relocateKnight } = await import('./walk');
                     const r = await relocateKnight(s, sessionCore.name, { stop: isStopped });
                     ok = r.ok;
                     summary = r.failure;
                 } else if (role === 'arrive-draynor') {
+                    const { runArriveDraynor } = await import('./walk');
                     const r = await runArriveDraynor(s);
                     ok = r.ok;
                     summary = r.detail;
                 } else {
+                    const { runWalkTo } = await import('./walk');
                     const walkArgs = target ? [String(target.x), String(target.z), String(target.level), ...args] : args;
                     const r = await runWalkTo(s, walkArgs);
                     ok = r.ok;
@@ -835,6 +850,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
             }
             case 'hub_bank': {
                 if (role === 'wine-stock') {
+                    const { runPreservedWine } = await import('./hub-bank');
                     const maximum = cfg.targetBatches ?? Number(args[0] ?? 12);
                     const cap = cfg.capTicks ?? Number(args[1] ?? 1000);
                     const reserve = cfg.reserveBatches ?? Number(args[2] ?? 0);
@@ -847,6 +863,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     return { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.failure };
                 }
                 if (role === 'give-to-banker') {
+                    const { runGiveToBanker } = await import('./hub-bank');
                     const gArgs = cfg.partner ? [cfg.partner, ...args] : args;
                     const res = await runGiveToBanker(s, gArgs, env);
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
@@ -855,6 +872,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                         : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary };
                 }
                 if (role === 'take-from-banker') {
+                    const { runTakeFromBanker } = await import('./hub-bank');
                     const res = await runTakeFromBanker(s, args, env, cfg.rootDir ?? REPO_ROOT);
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return res.ok
@@ -862,12 +880,14 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                         : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary };
                 }
                 if (role === 'supply-holder') {
+                    const { runSupplyHolder } = await import('./hub-bank');
                     const res = await runSupplyHolder(s, args, env);
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return res.ok
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: res.summary }
                         : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary };
                 }
+                const { runBanker } = await import('./hub-bank');
                 const res = await runBanker(s, { env, stop: isStopped, rootDir: cfg.rootDir });
                 const ticksElapsed = Math.max(0, s.tick() - startTick);
                 return res.ok
@@ -885,6 +905,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: Math.max(0, s.tick() - startTick), unitsCompleted: 1 };
                 }
                 if (role === 'bank-sort') {
+                    const { sortNativeBank } = await import('./stage');
                     const cap = cfg.capTicks ?? Number(args[0] ?? 200);
                     const maxMoves = cfg.count ?? Number(args[1] ?? 20);
                     const policy = (args[2] ?? 'name') as BankSortPolicy;
@@ -895,6 +916,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                         : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: 'bank-sort assets not preserved' };
                 }
                 if (role === 'supply-bootstrap') {
+                    const { bootstrapSupplyActor } = await import('./stage');
                     const bootRole = (args[0] ?? env.ROLE ?? 'producer') as BootstrapRole;
                     const phase = (args[1] ?? env.PHASE ?? 'all') as BootstrapPhase;
                     await bootstrapSupplyActor(s, bootRole, undefined, phase);
@@ -914,6 +936,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                 if (!kitPath) {
                     return { kind: 'worker_defect', activityId, account: sessionCore.name, ticksElapsed: 0, faultSignature: 'missing_loadout_setup_file' };
                 }
+                const { runOwnedLoadout, validateOwnedKit } = await import('./stage');
                 const kit = validateOwnedKit(readJsonArg(kitPath));
                 const r = await runOwnedLoadout(s, kit, isStopped);
                 const ticksElapsed = Math.max(0, s.tick() - startTick);
