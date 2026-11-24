@@ -10,6 +10,7 @@ import { componentId } from '../../packages/core/src/logout';
 import { PRACTICE_STARTUP_GB } from '../../packages/core/src/memory';
 import { waitTicks } from '../../packages/core/src/ticks';
 import { xpForLevel } from '../../packages/planner/src/curve';
+import { configureSpecialistGuardEnv } from '../combat-quest-specialists';
 import { createBot } from '../../packages/practice/src/bots';
 import { rsSdkRoot } from '../../packages/practice/src/paths';
 import { applyPreset } from '../../packages/practice/src/presets';
@@ -70,12 +71,15 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
     };
 
     try {
-        // CB 101 1-Def tanks (Attack 99, Strength 99, Defence 1, Hitpoints 99, Ranged 99, Prayer 52, Magic 99 -> CB ~101)
+        // CB 66 tanks (Attack 40, Strength 40, Defence 1, Hitpoints 99, Prayer 1, Magic 1, Ranged 70 -> within +/-51 wildy of CB 22 mage)
         for (let i = 0; i < tankNames.length; i++) {
             await makeBot(tankNames[i]!, {
                 position: { x: KEEP_SPOT.x + (i % 2 === 0 ? 1 : 0), z: KEEP_SPOT.z, level: 0 },
-                skills: { Attack: 99, Strength: 99, Defence: 1, Hitpoints: 99, Ranged: 99, Prayer: 52, Magic: 99 },
-                inventory: Array.from({ length: 28 }, () => ({ id: 385, count: 1 })),
+                skills: { Attack: 40, Strength: 40, Defence: 1, Hitpoints: 99, Prayer: 1, Ranged: 70, Magic: 1 },
+                inventory: [
+                    { id: 3024, count: 1 }, { id: 3024, count: 1 }, { id: 3024, count: 1 }, { id: 3024, count: 1 },
+                    ...Array.from({ length: 24 }, () => ({ id: 385, count: 1 })),
+                ],
             });
         }
         await makeBot(mageName, {
@@ -123,16 +127,17 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
                     await waitTicks(mage, 1);
                 }
                 const nearby = mage.sdk.getState()?.nearbyPlayers ?? [];
-                const target = nearby.find((p: any) => tankNames.some(tn => tn.toLowerCase() === (p.name ?? '').toLowerCase())) ?? nearby[0];
+                const wantName = tankNames[iter % tankNames.length]!;
+                const target = nearby.find((p: any) => (p.name ?? '').toLowerCase() === wantName.toLowerCase())
+                    ?? nearby.find((p: any) => tankNames.some(tn => tn.toLowerCase() === (p.name ?? '').toLowerCase()))
+                    ?? nearby[0];
                 if (!target) break;
                 const spell = spellForMagicLevel(level(mage, 'Magic'), mode);
                 const preXp = xp(mage, 'Magic');
                 intentionalRelog = true;
-                const [castRes] = await Promise.all([
-                    mage.direct({ type: 'spellOnPlayer', playerIndex: target.index, spellComponent: spell, reason: 'SDK' }),
-                    mage.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' }),
-                ]);
-                if (castRes && (castRes as any).success !== false) casts++;
+                void mage.direct({ type: 'spellOnPlayer', playerIndex: target.index, spellComponent: spell, reason: 'SDK' });
+                void mage.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' });
+                casts++;
                 const endReason = await Promise.race([
                     mage.ended.then(e => e.reason),
                     waitTicks(mage, 3).then(() => 'timeout'),
@@ -143,21 +148,26 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
                     throw Error(`unexpected mage relog end: ${endReason}`);
                 }
                 const postXp = xp(mage, 'Magic');
-                if (iter < 3) {
+                if (iter < 5) {
                     console.log(`DBG_PVP_MAGIC mode=${mode} iter=${iter} end=${endReason} xp=${preXp}->${postXp} casts=${casts}`);
                 }
                 await closeWithin([mage], 5000).catch(() => {});
                 intentionalRelog = false;
                 relogs++;
-                mage = await openMage();
-                if (iter % 4 === 0) {
-                    for (const tk of tanks) {
-                        if ((tk.sdk.getSkill('Hitpoints')?.level ?? 99) < 70) {
-                            const sh = tk.sdk.getInventory().find(i => i.id === 385);
-                            if (sh) void tk.direct({ type: 'useInventoryItem', slot: sh.slot, optionIndex: 1, reason: 'SDK' });
-                        }
+                // Refresh tank HP and drained stats between relogs
+                for (const tk of tanks) {
+                    if ((tk.sdk.getSkill('Hitpoints')?.level ?? 99) < 70) {
+                        const sh = tk.sdk.getInventory().find(i => i.id === 385);
+                        if (sh) void tk.direct({ type: 'useInventoryItem', slot: sh.slot, optionIndex: 1, reason: 'SDK' });
+                    }
+                    if (mode === 'curse' && ((tk.sdk.getSkill('Defence')?.level ?? 1) < (tk.sdk.getSkill('Defence')?.baseLevel ?? 1)
+                        || (tk.sdk.getSkill('Attack')?.level ?? 40) < (tk.sdk.getSkill('Attack')?.baseLevel ?? 40)
+                        || (tk.sdk.getSkill('Strength')?.level ?? 40) < (tk.sdk.getSkill('Strength')?.baseLevel ?? 40))) {
+                        const sr = tk.sdk.getInventory().find(i => [3024, 3026, 3028, 3030].includes(i.id));
+                        if (sr) void tk.direct({ type: 'useInventoryItem', slot: sr.slot, optionIndex: 1, reason: 'SDK' });
                     }
                 }
+                mage = await openMage();
             }
             const xpGained = xp(mage, 'Magic') - startXp;
             const endLvl = level(mage, 'Magic');
@@ -182,7 +192,7 @@ async function main(): Promise<void> {
     }
     ensurePackedGameAssets();
     process.env.SIM_LOCKSTEP = '1';
-    process.env.RANDOM_EVENTS ??= '0';
+    configureSpecialistGuardEnv();
     process.env.DEMO_OK = '';
 
     const stack = await startIsolatedStack();
