@@ -8,10 +8,9 @@ import { ThreatBook, decideAdapt, type Member, type Sighting } from '../src/pvp-
 import { decodeAppearance, digest, model } from '../src/rival-feed';
 import { loadTravel } from '../src/travel';
 import { loadPathfinding } from '../src/pathcache';
-import { rsPathLength } from '../src/world';
+import { createWorld, rsPathLength } from '../src/world';
 import { loadDanger } from '../src/randomevents';
 import { hostedEntrySource } from '../src/host';
-import { buildLowerBoundGraph, solveLowerBounds } from '../src/world/graph';
 import { magicKit, rangedKit, denseSpawns, killSpawns } from '../src/gather';
 import { classifyTick, startLedger } from '../src/ledger';
 import { safeCandidates } from '../src/combat-end';
@@ -220,38 +219,37 @@ if (import.meta.main) {
     expect(a).toContain('"import.meta.main"');
 });
 
-test('solveLowerBounds caches waypoint results and invalidates on relaxedRadius changes', () => {
-    const waypoints = [
-        { x: 100, z: 100, level: 0 },
-        { x: 110, z: 100, level: 0 },
-        { x: 200, z: 200, level: 1 },
-        { x: 215, z: 200, level: 1 },
-    ];
-    const waypointIndex = new Map(waypoints.map((w, i) => [`${w.x},${w.z},${w.level}`, i]));
-    const transports = [
-        {
-            locName: 'stairs',
-            option: 'op2',
-            from: waypoints[1]!,
-            to: waypoints[2]!,
-            exact: false,
-            src: 'a',
-            toSrc: 'b',
-            handler: 'h',
-        },
-    ];
-    const graph = buildLowerBoundGraph(waypoints, waypointIndex, transports as any, [], false);
-    const r2a = solveLowerBounds(graph, 3, waypoints[3]!, 2);
-    const r2b = solveLowerBounds(graph, 3, waypoints[3]!, 2);
-    expect(r2b).toBe(r2a);
-    expect(r2a[3]).toBe(0);
-    expect(r2a[2]).toBe(14);
-    expect(r2a[1]).toBe(17);
-    const r5 = solveLowerBounds(graph, 3, waypoints[3]!, 5);
-    expect(r5).not.toBe(r2a);
-    expect(r5[2]).toBe(14);
-    expect(r5[1]).toBe(17);
-    expect(r5[0]).toBe(22);
+test('createWorld routes multi-hop and repeated waypoint goals consistently with cached lower bounds', () => {
+    const t1 = {
+        locName: 'stairs1',
+        option: 'op1',
+        from: { x: 100, z: 100, level: 0 },
+        to: { x: 200, z: 200, level: 1 },
+        exact: true,
+        src: 'a',
+        toSrc: 'b',
+        handler: 'h',
+    };
+    const t2 = {
+        locName: 'stairs2',
+        option: 'op1',
+        from: { x: 210, z: 200, level: 1 },
+        to: { x: 300, z: 300, level: 2 },
+        exact: true,
+        src: 'c',
+        toSrc: 'd',
+        handler: 'h',
+    };
+    const flat = (from: { x: number; z: number; level: number }, to: { x: number; z: number; level: number }) =>
+        (from.level === to.level ? Math.max(Math.abs(from.x - to.x), Math.abs(from.z - to.z)) : null);
+    const w = createWorld({ transports: [t1, t2], doors: [], pathLength: flat });
+    const acct = { skills: {}, varps: {}, items: [] };
+    const r1 = w.route({ x: 95, z: 100, level: 0 }, t2.to, acct);
+    const r2 = w.route({ x: 90, z: 100, level: 0 }, t2.to, acct);
+    const rDyn = w.route({ x: 95, z: 100, level: 0 }, { x: 305, z: 300, level: 2 }, acct);
+    expect(r1).toMatchObject({ ok: true, cost: 5 + 3 + 10 + 3 });
+    expect(r2).toMatchObject({ ok: true, cost: 10 + 3 + 10 + 3 });
+    expect(rDyn).toMatchObject({ ok: true, cost: 5 + 3 + 10 + 3 + 5 });
 });
 
 test('ledger startLedger and classifyTick preserve inventory and stun parity with reused state objects', () => {
