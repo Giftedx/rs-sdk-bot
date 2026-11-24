@@ -1,6 +1,7 @@
 // Ordered route leg execution: bounded walk legs, long walkPath legs, transport climbs, and travel edges.
 import { atTile, checked, levelIs, type Outcome } from '../act';
 import { accountForSdk } from '../door-policy';
+import { waitTicks } from '../ticks';
 import { cancellable, cheb, walkLeg, type WalkOptions, type Walker } from '../walk-leg';
 import { canonicalTransportLeg, interactionApproach, transportAllowed, type Leg, type Tile } from '../world';
 import { walkPath } from './path';
@@ -34,10 +35,11 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
             last = leg.kind === 'walk' ? await (farWalk(s, leg.to) ? walkFar(s, leg.to, opts, leg.tolerance ?? 2) : walkLeg(s, leg.to, opts, leg.tolerance ?? 2))
                 : leg.kind === 'travel' ? await (await import('./travel')).travelLeg(s, leg, opts) : await climbLeg(s, leg, opts);
             total += last.ticks;
-            if (last.ok || last.reason === 'aborted' || leg.kind === 'travel' && leg.travel.run.how === 'npc' && leg.travel.run.button) break;
+            if (last.ok || last.reason === 'aborted' || opts.signal?.aborted || leg.kind === 'travel' && leg.travel.run.how === 'npc' && leg.travel.run.button) break;
             // Right after a climb the server refuses movement until the arrival delay ends (seen live: 3 quick
             // retries all refused within 11 ticks). Wait a little longer before each retry.
-            if (last.reason === 'rejected') { const { waitTicks } = await import('../ticks'); await waitTicks(s, 2 * (attempt + 1)); }
+            if (last.reason === 'rejected') await waitTicks(s, 2 * (attempt + 1));
+            if (opts.signal?.aborted) break;
             // rs-sdk's pathfinder treats every door as open, so a walk can stop behind a shut one and the
             // client then refuses the climb with "Can't reach". Open the shut door nearest the stair and retry.
             if (leg.kind === 'transport' && last.reason === 'rejected' && /reach/i.test(last.detail)) {
@@ -46,7 +48,7 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
                 await s.bot.walkTo(leg.at.x, leg.at.z, 1);
             }
         }
-        if (!last!.ok) return { ...last!, ticks: total };
+        if (!last!.ok) return opts.signal?.aborted ? { ok: false, reason: 'aborted', detail: String(opts.signal.reason ?? 'aborted'), ticks: total } : { ...last!, ticks: total };
     }
     return { ok: true, ticks: total };
 }

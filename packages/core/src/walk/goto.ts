@@ -1,6 +1,7 @@
 // High-level goTo orchestration: guild preflight, ship-deck exit, trip planning, spell-fallback replan, and bank stops.
 import type { Outcome } from '../act';
 import { accountForSdk } from '../door-policy';
+import { waitTicks } from '../ticks';
 import type { TripPlan } from '../trip';
 import type { WalkOptions, Walker } from '../walk-leg';
 import { installDoorPolicy, ROUTE_BUDGET_MS, type Account, type Tile, type World } from '../world';
@@ -106,7 +107,6 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
         if (d) first = await walkRoute(s, d.legs, opts);
     }
     if (!first.ok || !r.bank) return first;
-    const { waitTicks } = await import('../ticks');
     const took = await takeItems(banker, r.bank.coins, r.bank.items, n => waitTicks(s, n),
         { stop: () => opts.signal?.aborted === true, deadline: performance.now() + 30_000 });
     if (!took.ok) return { ok: false, reason: 'precondition', detail: `bank stop at ${r.bank.at.x},${r.bank.at.z}: ${took.detail}`, ticks: s.tick() - started };
