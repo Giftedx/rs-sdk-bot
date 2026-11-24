@@ -11,7 +11,7 @@ import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { knownBanks } from '../../../core/src/trip';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
-import { CONTENT_DIR, REPO_ROOT } from './catalog';
+import { CONTENT_DIR, packMap, REPO_ROOT } from './catalog';
 import { productionStopRequested } from './runtime';
 import type { Session } from './types';
 
@@ -374,26 +374,21 @@ export const ARROW_METALS = ['bronze', 'iron', 'steel', 'mithril', 'adamant', 'r
 export type ArrowMetal = (typeof ARROW_METALS)[number];
 type ArrowProfile = { metal: ArrowMetal; tip: number; product: number; units: number; level: number; rawXpPerArrow: number; tipName: string };
 const arrowProfiles = new Map<ArrowMetal, ArrowProfile>();
+let cachedArrowsDbrow: string | undefined;
+let cachedArrowsObj: string | undefined;
 
 export function nativeArrowProfile(metal: ArrowMetal): ArrowProfile {
     if (!ARROW_METALS.includes(metal)) throw Error('unsupported arrow metal');
     const cached = arrowProfiles.get(metal);
     if (cached) return cached;
-    const text = readFileSync(join(CONTENT_DIR, 'scripts/skill_fletching/configs/arrows/arrows.dbrow'), 'utf8');
+    const text = (cachedArrowsDbrow ??= readFileSync(join(CONTENT_DIR, 'scripts/skill_fletching/configs/arrows/arrows.dbrow'), 'utf8'));
     const body = text.split('[fletching_' + metal + '_arrow]')[1]?.split('\n[')[0];
     if (!body) throw Error('native arrow recipe absent');
     const field = (key: string) => body.match(new RegExp('^data=' + key + ',(.+)$', 'm'))?.[1]?.trim();
     const item = field('item')!;
     const [product, units] = field('product')!.split(',');
-    const ids = new Map(
-        readFileSync(join(CONTENT_DIR, 'pack/obj.pack'), 'utf8')
-            .split(/\r?\n/)
-            .map(l => {
-                const i = l.indexOf('=');
-                return [l.slice(i + 1), Number(l.slice(0, i))] as const;
-            }),
-    );
-    const obj = readFileSync(join(CONTENT_DIR, 'scripts/skill_fletching/configs/arrows/arrows.obj'), 'utf8')
+    const ids = packMap('obj');
+    const obj = (cachedArrowsObj ??= readFileSync(join(CONTENT_DIR, 'scripts/skill_fletching/configs/arrows/arrows.obj'), 'utf8'))
         .split('[' + item + ']')[1]
         ?.split('\n[')[0];
     const tipName = obj?.match(/^name=(.+)$/m)?.[1]?.trim();

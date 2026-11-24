@@ -12,18 +12,55 @@ export { combatTeleportAllowed };
 export type CombatKit = { id: number; count: number; slot?: number; native?: string };
 
 const CONTENT = resolve(import.meta.dir, '../../../../vendor/rs-sdk/server/content');
-const nativeItems = new Map(
-    readFileSync(resolve(CONTENT, 'pack/obj.pack'), 'utf8')
-        .split(/\r?\n/)
-        .filter(l => /^\d+=/.test(l))
-        .map(l => {
-            const at = l.indexOf('=');
-            return [l.slice(at + 1), Number(l.slice(0, at))] as const;
-        }),
-);
+let cachedNativeItems: Map<string, number> | undefined;
+let cachedNativeItemIds: Set<number> | undefined;
+let cachedTierRequirements: Map<string, { skill: string; level: number }> | undefined;
+
+function ensureNativeItems(): { byName: Map<string, number>; ids: Set<number> } {
+    if (!cachedNativeItems || !cachedNativeItemIds) {
+        const text = readFileSync(resolve(CONTENT, 'pack/obj.pack'), 'utf8');
+        const byName = new Map<string, number>();
+        const ids = new Set<number>();
+        let pos = 0;
+        while (pos < text.length) {
+            let end = text.indexOf('\n', pos);
+            if (end < 0) end = text.length;
+            const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+            const eq = text.indexOf('=', pos);
+            if (eq > pos && eq < lineEnd) {
+                const id = Number(text.slice(pos, eq));
+                if (Number.isInteger(id) && id >= 0) {
+                    byName.set(text.slice(eq + 1, lineEnd), id);
+                    ids.add(id);
+                }
+            }
+            pos = end + 1;
+        }
+        cachedNativeItems = byName;
+        cachedNativeItemIds = ids;
+    }
+    return { byName: cachedNativeItems, ids: cachedNativeItemIds };
+}
+
+function tierRequirements(): Map<string, { skill: string; level: number }> {
+    if (cachedTierRequirements) return cachedTierRequirements;
+    const map = new Map<string, { skill: string; level: number }>();
+    for (const f of ['tier1.rs2', 'tier40.rs2', 'tier50.rs2']) {
+        const text = readFileSync(resolve(CONTENT, 'scripts/levelrequire/scripts', f), 'utf8');
+        for (const m of text.matchAll(/\[opheld2,([^\]]+)\]\s*@levelrequire_(attack|defence|ranged)\((\d+),/g)) {
+            const name = m[1]!;
+            if (!map.has(name)) {
+                const rawSkill = m[2]!;
+                map.set(name, { skill: rawSkill[0]!.toUpperCase() + rawSkill.slice(1), level: Number(m[3]) });
+            }
+        }
+    }
+    cachedTierRequirements = map;
+    return map;
+}
 
 const kitItem = (native: string, count = 1, slot?: number): CombatKit => {
-    const id = nativeItems.get(native);
+    const id = ensureNativeItems().byName.get(native);
     if (id === undefined) throw Error('native combat item missing ' + native);
     return { id, count, native, ...(slot === undefined ? {} : { slot }) };
 };
@@ -66,20 +103,18 @@ export const KBD_KIT: CombatKit[] = [
 ];
 
 export function validateCombatKit(kit: readonly CombatKit[]) {
-    const ids = new Set(nativeItems.values());
+    const { byName, ids } = ensureNativeItems();
+    const tiers = tierRequirements();
     const requirements: { skill: string; level: number }[] = [];
-    const tiers = ['tier1.rs2', 'tier40.rs2', 'tier50.rs2']
-        .map(f => readFileSync(resolve(CONTENT, 'scripts/levelrequire/scripts', f), 'utf8'))
-        .join('\n');
     for (const i of kit) {
-        if (!ids.has(i.id) || (i.native && nativeItems.get(i.native) !== i.id) || !Number.isSafeInteger(i.count) || i.count < 1) {
+        if (!ids.has(i.id) || (i.native && byName.get(i.native) !== i.id) || !Number.isSafeInteger(i.count) || i.count < 1) {
             throw Error('invalid native combat kit item ' + i.id);
         }
         if (i.slot === undefined || i.slot === 13 || i.native === 'antidragonbreathshield') continue;
         if (!i.native) throw Error('native equipped item name required ' + i.id);
-        const handler = tiers.match(new RegExp('\\[opheld2,' + i.native + '\\]\\s*@levelrequire_(attack|defence|ranged)\\((\\d+),'));
-        if (!handler) throw Error('native kit wield handler unsupported ' + i.native);
-        requirements.push({ skill: handler[1]![0]!.toUpperCase() + handler[1]!.slice(1), level: Number(handler[2]) });
+        const req = tiers.get(i.native);
+        if (!req) throw Error('native kit wield handler unsupported ' + i.native);
+        requirements.push({ skill: req.skill, level: req.level });
     }
     return requirements;
 }

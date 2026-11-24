@@ -12,20 +12,31 @@ export { KNIFE, knifeDelay, NORMAL_LOGS, type MiningAction };
 export type Tile = { x: number; z: number; level: number };
 
 const content = resolve(import.meta.dir, '../../../../vendor/rs-sdk/server/content');
-const locPack = () =>
-    new Map(
-        readFileSync(resolve(content, 'pack/loc.pack'), 'utf8')
-            .split(/\r?\n/)
-            .flatMap(l => {
-                const m = l.match(/^(\d+)=(.+)$/);
-                return m ? ([[Number(m[1]), m[2]!] as const]) : [];
-            }),
-    );
+const EMPTY_ID_SET: ReadonlySet<number> = new Set();
+const packXZ = (x: number, z: number) => x * 65536 + z;
+
+function locPackNameToId(): Map<string, number> {
+    const text = readFileSync(resolve(content, 'pack/loc.pack'), 'utf8');
+    const names = new Map<string, number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) names.set(text.slice(eq + 1, lineEnd), id);
+        }
+        pos = end + 1;
+    }
+    return names;
+}
 
 let fastIds: Set<number> | undefined;
 export function oreLag(p: MiningProfile, rock = p.rocks[0]!): number {
     if (!fastIds) {
-        const names = new Map([...locPack()].map(([id, n]) => [n, id]));
+        const names = locPackNameToId();
         const files = ['scripts/skill_mining/configs/rocks.loc', 'scripts/quests/quest_hauntedmine/configs/hauntedmine.loc'];
         fastIds = new Set(
             files
@@ -46,30 +57,116 @@ export function firstRoll(delay: number, arrival: number, rate: number): { roll:
     return delay < arrival ? { roll: arrival + rate, delay: arrival + rate } : { roll: delay, delay };
 }
 
-let mapRocks: { id: number; x: number; z: number; level: number }[] | undefined;
-function allRocks() {
-    if (mapRocks) return mapRocks;
-    const dir = resolve(content, 'maps');
-    mapRocks = [];
-    for (const f of readdirSync(dir).filter(f => f.endsWith('.jm2'))) {
-        for (const l of parseJm2(f, readFileSync(resolve(dir, f), 'utf8')).locs) {
-            mapRocks.push({ id: l.id, x: l.x, z: l.z, level: l.level });
+let mapFileSet: Set<string> | undefined;
+const squareRocksCache = new Map<string, Map<number, Tile[]>>();
+let mapRocksById: Map<number, Tile[]> | undefined;
+
+function mapFiles(): Set<string> {
+    if (!mapFileSet) {
+        const dir = resolve(content, 'maps');
+        mapFileSet = new Set();
+        for (const f of readdirSync(dir)) {
+            if (f.endsWith('.jm2')) mapFileSet.add(f);
         }
     }
-    return mapRocks;
+    return mapFileSet;
+}
+
+function squareRocksById(file: string): Map<number, Tile[]> {
+    let byId = squareRocksCache.get(file);
+    if (byId) return byId;
+    byId = new Map();
+    const dir = resolve(content, 'maps');
+    const locs = parseJm2(file, readFileSync(resolve(dir, file), 'utf8'), { npcs: false, objIds: EMPTY_ID_SET }).locs;
+    for (let i = 0; i < locs.length; i++) {
+        const l = locs[i]!;
+        let list = byId.get(l.id);
+        if (!list) {
+            list = [];
+            byId.set(l.id, list);
+        }
+        list.push({ x: l.x, z: l.z, level: l.level });
+    }
+    squareRocksCache.set(file, byId);
+    return byId;
+}
+
+function allRocksById(): Map<number, Tile[]> {
+    if (mapRocksById) return mapRocksById;
+    const byId = new Map<number, Tile[]>();
+    for (const f of mapFiles()) {
+        for (const [id, tiles] of squareRocksById(f)) {
+            let list = byId.get(id);
+            if (!list) {
+                list = [];
+                byId.set(id, list);
+            }
+            for (let i = 0; i < tiles.length; i++) list.push(tiles[i]!);
+        }
+    }
+    mapRocksById = byId;
+    return byId;
 }
 
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 export function siteRocks(p: MiningProfile, center: Tile, radius: number): Tile[] {
-    return allRocks()
-        .filter(r => p.rocks.includes(r.id) && r.level === center.level && cheb(r, center) <= radius)
-        .map(r => ({ x: r.x, z: r.z, level: r.level }))
-        .sort((a, b) => a.x - b.x || a.z - b.z);
+    const out: Tile[] = [];
+    const seenIds = p.rocks.length > 1 ? new Set<number>() : undefined;
+    const minMx = (center.x - radius) >> 6;
+    const maxMx = (center.x + radius) >> 6;
+    const minMz = (center.z - radius) >> 6;
+    const maxMz = (center.z + radius) >> 6;
+    const squareCount = (maxMx - minMx + 1) * (maxMz - minMz + 1);
+    const collectFrom = (byId: Map<number, Tile[]>) => {
+        if (seenIds) seenIds.clear();
+        for (let ri = 0; ri < p.rocks.length; ri++) {
+            const rockId = p.rocks[ri]!;
+            if (seenIds) {
+                if (seenIds.has(rockId)) continue;
+                seenIds.add(rockId);
+            }
+            const list = byId.get(rockId);
+            if (!list) continue;
+            for (let i = 0; i < list.length; i++) {
+                const r = list[i]!;
+                if (r.level === center.level && Math.abs(r.x - center.x) <= radius && Math.abs(r.z - center.z) <= radius) {
+                    out.push({ x: r.x, z: r.z, level: r.level });
+                }
+            }
+        }
+    };
+    if (!mapRocksById && squareCount > 0 && squareCount <= 16) {
+        const files = mapFiles();
+        for (let mx = minMx; mx <= maxMx; mx++) {
+            for (let mz = minMz; mz <= maxMz; mz++) {
+                const f = `m${mx}_${mz}.jm2`;
+                if (files.has(f)) collectFrom(squareRocksById(f));
+            }
+        }
+    } else {
+        collectFrom(allRocksById());
+    }
+    return out.sort((a, b) => a.x - b.x || a.z - b.z);
 }
 
 export function contentSites(p: MiningProfile, gap = 3): { center: Tile; rocks: Tile[] }[] {
-    const left = allRocks().filter(r => p.rocks.includes(r.id)).map(r => ({ x: r.x, z: r.z, level: r.level }));
+    const byId = allRocksById();
+    const left: Tile[] = [];
+    const seenIds = p.rocks.length > 1 ? new Set<number>() : undefined;
+    for (let ri = 0; ri < p.rocks.length; ri++) {
+        const rockId = p.rocks[ri]!;
+        if (seenIds) {
+            if (seenIds.has(rockId)) continue;
+            seenIds.add(rockId);
+        }
+        const list = byId.get(rockId);
+        if (!list) continue;
+        for (let i = 0; i < list.length; i++) {
+            const r = list[i]!;
+            left.push({ x: r.x, z: r.z, level: r.level });
+        }
+    }
     const out: { center: Tile; rocks: Tile[] }[] = [];
     while (left.length) {
         const site = [left.pop()!];
@@ -125,29 +222,46 @@ export function standTiles(rock: Tile, rocks: readonly Tile[]): Tile[] {
 const beside = (p: { x: number; z: number }, rock: Tile) => Math.abs(p.x - rock.x) + Math.abs(p.z - rock.z) === 1;
 
 export function pathSteps(p: { x: number; z: number }, rock: Tile, rocks: readonly Tile[]): number {
-    const goals = new Set(standTiles(rock, rocks).map(t => `${t.x},${t.z}`));
-    const blocked = new Set(rocks.map(r => `${r.x},${r.z}`));
-    const free = (x: number, z: number) => !blocked.has(`${x},${z}`);
-    const seen = new Set([`${p.x},${p.z}`]);
-    let front = [{ x: p.x, z: p.z }];
-    for (let steps = 0; front.length && steps <= 24; steps++) {
-        if (front.some(t => goals.has(`${t.x},${t.z}`))) return steps;
-        const next: { x: number; z: number }[] = [];
-        for (const t of front) {
+    const stands = standTiles(rock, rocks);
+    const goals = new Set<number>();
+    for (let i = 0; i < stands.length; i++) goals.add(packXZ(stands[i]!.x, stands[i]!.z));
+    const blocked = new Set<number>();
+    for (let i = 0; i < rocks.length; i++) blocked.add(packXZ(rocks[i]!.x, rocks[i]!.z));
+    const startKey = packXZ(p.x, p.z);
+    if (goals.has(startKey)) return 0;
+    const seen = new Set<number>([startKey]);
+    let frontX = [p.x];
+    let frontZ = [p.z];
+    for (let steps = 1; frontX.length && steps <= 24; steps++) {
+        const nextX: number[] = [];
+        const nextZ: number[] = [];
+        for (let fi = 0; fi < frontX.length; fi++) {
+            const tx = frontX[fi]!;
+            const tz = frontZ[fi]!;
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dz = -1; dz <= 1; dz++) {
-                    const x = t.x + dx;
-                    const z = t.z + dz;
-                    const k = `${x},${z}`;
-                    if ((!dx && !dz) || seen.has(k) || !free(x, z) || (dx && dz && (!free(t.x + dx, t.z) || !free(t.x, t.z + dz)))) continue;
+                    if (!dx && !dz) continue;
+                    const x = tx + dx;
+                    const z = tz + dz;
+                    const k = packXZ(x, z);
+                    if (seen.has(k) || blocked.has(k)) continue;
+                    if (dx && dz && (blocked.has(packXZ(tx + dx, tz)) || blocked.has(packXZ(tx, tz + dz)))) continue;
+                    if (goals.has(k)) return steps;
                     seen.add(k);
-                    next.push({ x, z });
+                    nextX.push(x);
+                    nextZ.push(z);
                 }
             }
         }
-        front = next;
+        frontX = nextX;
+        frontZ = nextZ;
     }
-    return Math.min(...standTiles(rock, rocks).map(t => cheb(p, t)));
+    let best = Infinity;
+    for (let i = 0; i < stands.length; i++) {
+        const d = cheb(p, stands[i]!);
+        if (d < best) best = d;
+    }
+    return best;
 }
 
 const runTicks = (p: { x: number; z: number }, rock: Tile, rocks: readonly Tile[]) =>
@@ -208,16 +322,34 @@ export async function runRotationMining(
     const rocks = (o.rocks ?? siteRocks(p, { x: me.worldX, z: me.worldZ, level: me.level }, 3)).filter(r => r.level === me.level);
     if (!rocks.length) throw Error('no ' + p.name + ' rocks at this site in the map files');
     const key = (t: Tile) => `${t.x},${t.z}`;
-    const equipment = JSON.stringify(initial.equipment.map(i => ({ id: i.id, slot: i.slot })).sort((a, b) => a.slot - b.slot));
+    const initialEquipment = initial.equipment.map(i => ({ id: i.id, slot: i.slot })).sort((a, b) => a.slot - b.slot);
+    const equipmentUnchanged = (eq: readonly { id: number; slot: number }[]) => {
+        if (eq.length !== initialEquipment.length) return false;
+        for (let i = 0; i < initialEquipment.length; i++) {
+            const want = initialEquipment[i]!;
+            const direct = eq[i];
+            if (direct && direct.slot === want.slot && direct.id === want.id) continue;
+            let matched = false;
+            for (let j = 0; j < eq.length; j++) {
+                if (eq[j]!.slot === want.slot && eq[j]!.id === want.id) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) return false;
+        }
+        return true;
+    };
+    const initialHp = hpOf(initial);
     const state = () => {
         const s = d.state();
         if (!s?.player) throw Error('mining session ended');
         if (d.stop()) throw Error('mining stopped');
         if (d.tick() - start >= o.cap) throw Error('mining tick cap');
-        if (s.player.isDead || s.player.lifeId !== me.lifeId || s.player.level !== me.level || hpOf(s) < hpOf(initial)) {
+        if (s.player.isDead || s.player.lifeId !== me.lifeId || s.player.level !== me.level || hpOf(s) < initialHp) {
             throw Error('mining health or life changed');
         }
-        if (JSON.stringify(s.equipment.map(i => ({ id: i.id, slot: i.slot })).sort((a, b) => a.slot - b.slot)) !== equipment) {
+        if (!equipmentUnchanged(s.equipment)) {
             throw Error('mining equipment changed');
         }
         return s;
@@ -257,11 +389,33 @@ export async function runRotationMining(
     const first = state();
     let prevXp = xpOf(first);
     let prevInv = stockOf(first);
-    const locAt = (s: BotWorldState, t: Tile) =>
-        s.nearbyLocs.find(l => l.x === t.x && l.z === t.z && l.level === t.level && p.rocks.includes(l.id) && l.optionsWithIndex.some(v => v.opIndex === 1 && /^mine$/i.test(v.text)));
+    const rockIdSet = new Set(p.rocks);
+    const mineOptionRe = /^mine$/i;
+    const indexMineableLocs = (s: BotWorldState): Map<number, NearbyLoc> => {
+        const map = new Map<number, NearbyLoc>();
+        const locs = s.nearbyLocs;
+        for (let i = 0; i < locs.length; i++) {
+            const l = locs[i]!;
+            if (l.level !== me.level || !rockIdSet.has(l.id)) continue;
+            const k = packXZ(l.x, l.z);
+            if (map.has(k)) continue;
+            const opts = l.optionsWithIndex;
+            for (let oi = 0; oi < opts.length; oi++) {
+                const v = opts[oi]!;
+                if (v.opIndex === 1 && mineOptionRe.test(v.text)) {
+                    map.set(k, l);
+                    break;
+                }
+            }
+        }
+        return map;
+    };
+    let tickLocs = indexMineableLocs(first);
+    const locAt = (t: Tile) => (t.level === me.level ? tickLocs.get(packXZ(t.x, t.z)) : undefined);
 
     for (;;) {
         const s = state();
+        tickLocs = indexMineableLocs(s);
         const n = d.tick();
         const pos = { x: s.player!.worldX, z: s.player!.worldZ };
         const xp = xpOf(s);
@@ -300,7 +454,7 @@ export async function runRotationMining(
         if (n - progress >= o.idleTicks) throw Error('mining no useful ore progress');
         for (const r of rocks) {
             const k = key(r);
-            const up = !!locAt(s, r);
+            const up = !!locAt(r);
             const was = seen.get(k);
             if (was === true && !up) depleted.set(k, n);
             if (was === false && up && depleted.has(k)) {
@@ -310,7 +464,17 @@ export async function runRotationMining(
             seen.set(k, up);
         }
         const actions: MiningAction[] = [];
-        const ticksTo = (r: Tile) => runTicks(pos, r, rocks);
+        const stepCache = new Map<number, number>();
+        const stepsTo = (r: Tile) => {
+            const k = packXZ(r.x, r.z);
+            let dSteps = stepCache.get(k);
+            if (dSteps === undefined) {
+                dSteps = pathSteps(pos, r, rocks);
+                stepCache.set(k, dSteps);
+            }
+            return dSteps;
+        };
+        const ticksTo = (r: Tile) => (beside(pos, r) ? 0 : Math.ceil(stepsTo(r) / 2));
         const slot = (id: number) => s.inventory.find(i => i.id === id)?.slot;
         const knifeSlots = o.knife ? { k: slot(KNIFE), l: slot(NORMAL_LOGS) } : undefined;
         const canCut = !!knifeSlots && knifeSlots.k !== undefined && knifeSlots.l !== undefined;
@@ -338,7 +502,7 @@ export async function runRotationMining(
             }
         };
         if (!o.drop && s.inventory.length >= 28) throw Error('mining pack full; retain ore for owned bank route');
-        if (active && !locAt(s, active.rock)) active = undefined;
+        if (active && !locAt(active.rock)) active = undefined;
         const modal = !!(s.dialog?.isOpen || s.interface?.isOpen);
         if (active && ((modal && n >= active.sent) || (active.arrival === undefined && n >= active.sent + 8))) active = undefined;
         if (active) {
@@ -362,7 +526,7 @@ export async function runRotationMining(
         }
         if (!active) {
             const free = rocks
-                .map(r => ({ r, loc: locAt(s, r) }))
+                .map(r => ({ r, loc: locAt(r) }))
                 .filter(v => v.loc && v.loc.reachable !== false && !s.nearbyPlayers.some(q => cheb(q, v.r) <= 1));
             const freeRoll = (r: Tile) => {
                 const op = n + 1 + ticksTo(r);
@@ -373,7 +537,6 @@ export async function runRotationMining(
                 return canCut ? Math.max(click, n + 3) : click + rate;
             };
             const byRoll = (o.pick ?? (canCut ? 'roll' : 'nearest')) === 'roll';
-            const stepsTo = (r: Tile) => pathSteps(pos, r, rocks);
             const best = free
                 .map(v => ({ ...v, roll: freeRoll(v.r) }))
                 .sort((a, b) => (byRoll ? a.roll - b.roll : 0) || stepsTo(a.r) - stepsTo(b.r))[0];
@@ -420,7 +583,7 @@ export async function runRotationMining(
             console.log(
                 `MDBG n=${n} logs=${inv[NORMAL_LOGS] ?? 0} pos=${pos.x},${pos.z} made=${made} delay=${delay} active=${
                     active ? `${active.rock.x},${active.rock.z} a=${active.arrival} r=${active.roll}` : '-'
-                } up=${rocks.map(r => (locAt(s, r) ? 1 : 0)).join('')} locs=${s.nearbyLocs.length} dlg=${!!s.dialog?.isOpen}/${!!s.interface?.isOpen}/${!!(s as any).modalOpen} acts=${actions.map(a => a.type).join(',')}`,
+                } up=${rocks.map(r => (locAt(r) ? 1 : 0)).join('')} locs=${s.nearbyLocs.length} dlg=${!!s.dialog?.isOpen}/${!!s.interface?.isOpen}/${!!(s as any).modalOpen} acts=${actions.map(a => a.type).join(',')}`,
             );
         }
         if (actions.length) await send(actions);

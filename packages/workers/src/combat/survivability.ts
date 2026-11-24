@@ -49,7 +49,6 @@ import {
 import { waitTicks, waitUntil, type TickSource } from '../../../core/src/ticks';
 import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
 import { interactionApproach } from '../../../core/src/world';
-import itemsJson from '../../../../knowledge/items.json';
 import {
     approach as marketApproach,
     ferryWalk as marketFerryWalk,
@@ -99,8 +98,19 @@ export const cowFoodBites = (items: readonly { id: number; count: number }[]) =>
     items.reduce((n, i) => n + (COW_FOOD_BITES[i.id] ?? 0) * i.count, 0);
 export const cowFoodHeal = (items: readonly { id: number; count: number }[]) =>
     items.reduce((n, i) => n + (COW_FOOD_BITES[i.id] ?? 0) * (COW_BITE_HEAL[i.id] ?? 0) * i.count, 0);
-export const cowFoodPick = <T extends { id: number }>(items: readonly T[]) =>
-    items.filter(i => COW_FOOD_BITES[i.id]).sort((a, b) => COW_FOOD_BITES[a.id]! - COW_FOOD_BITES[b.id]!)[0];
+export const cowFoodPick = <T extends { id: number }>(items: readonly T[]): T | undefined => {
+    let best: T | undefined;
+    let bestBites = Infinity;
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]!;
+        const bites = COW_FOOD_BITES[item.id];
+        if (bites && bites < bestBites) {
+            best = item;
+            bestBites = bites;
+        }
+    }
+    return best;
+};
 
 // Food healing between casts / combat swings
 export interface EatEffect {
@@ -279,10 +289,22 @@ const packCounts = (s: CombatSession) => {
     for (const i of s.sdk.getInventory()) n[i.id] = (n[i.id] ?? 0) + i.count;
     return n;
 };
-const packDeltaMatches = (a: Record<number, number>, b: Record<number, number>, delta: Record<number, number>) =>
-    [...new Set([...Object.keys(a), ...Object.keys(b), ...Object.keys(delta)])].every(
-        k => (b[Number(k)] ?? 0) - (a[Number(k)] ?? 0) === (delta[Number(k)] ?? 0),
-    );
+const packDeltaMatches = (a: Record<number, number>, b: Record<number, number>, delta: Record<number, number>) => {
+    for (const k in a) {
+        const id = Number(k);
+        if ((b[id] ?? 0) - (a[id] ?? 0) !== (delta[id] ?? 0)) return false;
+    }
+    for (const k in b) {
+        if (k in a) continue;
+        const id = Number(k);
+        if ((b[id] ?? 0) !== (delta[id] ?? 0)) return false;
+    }
+    for (const k in delta) {
+        if (k in a || k in b) continue;
+        if ((delta[Number(k)] ?? 0) !== 0) return false;
+    }
+    return true;
+};
 const msgCursor = (s: CombatSession) => Math.max(-1, ...(s.sdk.getState()?.gameMessages ?? []).map(m => m.observationId ?? m.tick));
 const hasGameMsg = (s: CombatSession, after: number, text: string) =>
     (s.sdk.getState()?.gameMessages ?? []).some(m => m.type === 0 && (m.observationId ?? m.tick) > after && m.text === text);
@@ -970,6 +992,22 @@ export interface MagicRecipe {
     members: boolean;
 }
 
+type SurvivabilityItemMeta = { id: number; debugname: string; cost?: number; tradeable?: boolean };
+let cachedItemsByDebug: Map<string, SurvivabilityItemMeta> | undefined;
+let cachedItemsById: Map<number, SurvivabilityItemMeta> | undefined;
+function ensureSurvivabilityItems() {
+    if (!cachedItemsByDebug || !cachedItemsById) {
+        const rows = JSON.parse(readFileSync(resolve(ROOT, 'knowledge/items.json'), 'utf8')) as SurvivabilityItemMeta[];
+        cachedItemsByDebug = new Map();
+        cachedItemsById = new Map();
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i]!;
+            if (!cachedItemsByDebug.has(row.debugname)) cachedItemsByDebug.set(row.debugname, row);
+            if (!cachedItemsById.has(row.id)) cachedItemsById.set(row.id, row);
+        }
+    }
+}
+
 const magicTexts = new Map<string, string>();
 const magicParsed = new Map<string, { name: string; body: string }[]>();
 const readContentText = (file: string) => {
@@ -1004,7 +1042,8 @@ export function combatMagicRecipe(mode: 'low-alch' | 'high-alch', targetName: st
     for (let n = 0; n < runes.length; n += 2) {
         if (runes[n] !== 'null') inputs[objId(runes[n]!)] = (inputs[objId(runes[n]!)] ?? 0) + Number(runes[n + 1]);
     }
-    const item = (itemsJson as { debugname: string; cost?: number }[]).find(i => i.debugname === targetName);
+    ensureSurvivabilityItems();
+    const item = cachedItemsByDebug!.get(targetName);
     if (item?.cost === undefined) throw Error('unknown native alchemy value');
     const output = Math.max(1, Math.floor((item.cost * (mode === 'high-alch' ? 6 : 4)) / 10));
     return {
@@ -1218,9 +1257,10 @@ export function prepareCombatAlch(p: CombatAlchPolicy): PreparedCombatAlch {
         }
         prices[id] = Object.freeze({ ...v });
     }
+    ensureSurvivabilityItems();
     const recipes: Record<number, MagicRecipe> = {};
     for (const id of p.ids) {
-        const item = (itemsJson as { id: number; debugname: string; tradeable?: boolean }[]).find(i => i.id === id);
+        const item = cachedItemsById!.get(id);
         if (!item?.tradeable || [995, 561, 554].includes(id)) throw Error('explicit tradeable non-supply alchemy target required');
         const r = combatMagicRecipe('high-alch', item.debugname);
         if (r.target !== id) throw Error('native alchemy target differs');
@@ -1805,28 +1845,62 @@ export function selectGroundLoot(
     definition: (id: number) => LootDefinition | undefined,
     left = p.maximumUnits,
 ) {
-    return s.groundItems
-        .flatMap(i => {
-            if (s.groundItems.some(other => other.id === i.id && other.x === i.x && other.z === i.z && other.count !== i.count)) return [];
-            const d = definition(i.id);
-            if (
-                !d
-                || !Number.isSafeInteger(i.count)
-                || i.count < 1
-                || i.count > left
-                || !Number.isSafeInteger(d.cost)
-                || d.cost < 0
-                || !Number.isSafeInteger(i.count * d.cost)
-                || i.reachable === false
-                || i.distance > p.radius
-                || !lootCapacity(s, i, d)
-                || s.nearbyPlayers.some(player => Math.max(Math.abs(player.x - i.x), Math.abs(player.z - i.z)) <= 1)
-            ) {
-                return [];
+    const items = s.groundItems;
+    const len = items.length;
+    if (len === 0) return undefined;
+    let conflicts: Map<number | string, number> | undefined;
+    if (len > 1) {
+        conflicts = new Map();
+        for (let idx = 0; idx < len; idx++) {
+            const g = items[idx]!;
+            const key = g.id >= 0 && g.id < 1048576 && g.x >= 0 && g.x < 16384 && g.z >= 0 && g.z < 16384
+                ? g.id * 268435456 + g.x * 16384 + g.z
+                : `${g.id}:${g.x}:${g.z}`;
+            const prev = conflicts.get(key);
+            if (prev === undefined) conflicts.set(key, g.count);
+            else if (prev !== g.count) conflicts.set(key, -1);
+        }
+    }
+    const players = s.nearbyPlayers;
+    const pLen = players.length;
+    let bestItem: GroundItem | undefined;
+    let bestValue = -1;
+    for (let idx = 0; idx < len; idx++) {
+        const i = items[idx]!;
+        if (conflicts) {
+            const key = i.id >= 0 && i.id < 1048576 && i.x >= 0 && i.x < 16384 && i.z >= 0 && i.z < 16384
+                ? i.id * 268435456 + i.x * 16384 + i.z
+                : `${i.id}:${i.x}:${i.z}`;
+            if (conflicts.get(key) === -1) continue;
+        }
+        if (
+            i.reachable === false
+            || i.distance > p.radius
+            || !Number.isSafeInteger(i.count)
+            || i.count < 1
+            || i.count > left
+        ) {
+            continue;
+        }
+        const d = definition(i.id);
+        if (!d || !Number.isSafeInteger(d.cost) || d.cost < 0) continue;
+        const value = i.count * d.cost;
+        if (!Number.isSafeInteger(value) || !lootMatches(i, p, d) || !lootCapacity(s, i, d)) continue;
+        let blocked = false;
+        for (let pi = 0; pi < pLen; pi++) {
+            const player = players[pi]!;
+            if (Math.abs(player.x - i.x) <= 1 && Math.abs(player.z - i.z) <= 1) {
+                blocked = true;
+                break;
             }
-            return lootMatches(i, p, d) ? [{ item: i, value: i.count * d.cost }] : [];
-        })
-        .sort((a, b) => b.value - a.value || a.item.distance - b.item.distance)[0];
+        }
+        if (blocked) continue;
+        if (bestItem === undefined || value > bestValue || (value === bestValue && i.distance < bestItem.distance)) {
+            bestItem = i;
+            bestValue = value;
+        }
+    }
+    return bestItem ? { item: bestItem, value: bestValue } : undefined;
 }
 
 export function groundLootEffect(before: BotWorldState, after: BotWorldState, item: GroundItem): boolean {
@@ -1837,10 +1911,35 @@ export function groundLootEffect(before: BotWorldState, after: BotWorldState, it
     };
     const b = stockOf(before);
     const a = stockOf(after);
-    const keys = new Set([...Object.keys(b), ...Object.keys(a)].map(Number));
-    if ([...keys].every(id => (a[id] ?? 0) === (b[id] ?? 0))) return false;
-    if (![...keys].every(id => (a[id] ?? 0) - (b[id] ?? 0) === (id === item.id ? item.count : 0))) {
-        throw Error('ground pickup inventory delta does not reconcile');
+    let changed = false;
+    for (const k in b) {
+        const id = Number(k);
+        if ((a[id] ?? 0) !== (b[id] ?? 0)) {
+            changed = true;
+            break;
+        }
+    }
+    if (!changed) {
+        for (const k in a) {
+            if (!(k in b) && (a[Number(k)] ?? 0) !== 0) {
+                changed = true;
+                break;
+            }
+        }
+    }
+    if (!changed) return false;
+    for (const k in b) {
+        const id = Number(k);
+        if ((a[id] ?? 0) - (b[id] ?? 0) !== (id === item.id ? item.count : 0)) {
+            throw Error('ground pickup inventory delta does not reconcile');
+        }
+    }
+    for (const k in a) {
+        if (k in b) continue;
+        const id = Number(k);
+        if ((a[id] ?? 0) !== (id === item.id ? item.count : 0)) {
+            throw Error('ground pickup inventory delta does not reconcile');
+        }
     }
     return true;
 }
@@ -1882,7 +1981,26 @@ export async function runVisibleGroundLoot(d: LootDriver, p: LootPolicy) {
     let staticValue = 0;
     let progress = start;
     const acquired: Record<number, number> = {};
-    const kit = JSON.stringify(initial.equipment.map(i => ({ id: i.id, slot: i.slot, count: i.count })).sort((a, b) => a.slot - b.slot));
+    const initialKit = initial.equipment.map(i => ({ id: i.id, slot: i.slot, count: i.count })).sort((a, b) => a.slot - b.slot);
+    const kitUnchanged = (eq: readonly { id: number; slot: number; count: number }[]) => {
+        if (eq.length !== initialKit.length) return false;
+        for (let i = 0; i < initialKit.length; i++) {
+            const want = initialKit[i]!;
+            const direct = eq[i];
+            if (direct && direct.slot === want.slot && direct.id === want.id && direct.count === want.count) continue;
+            let matched = false;
+            for (let j = 0; j < eq.length; j++) {
+                const cur = eq[j]!;
+                if (cur.slot === want.slot && cur.id === want.id && cur.count === want.count) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) return false;
+        }
+        return true;
+    };
+    const initialHp = hpOf(initial);
     const state = () => {
         const s = d.state();
         if (!s?.player) throw Error('ground-loot session ended');
@@ -1892,12 +2010,12 @@ export async function runVisibleGroundLoot(d: LootDriver, p: LootPolicy) {
             s.player.lifeId !== initial.player!.lifeId
             || s.player.level !== initial.player!.level
             || s.player.isDead
-            || hpOf(s) !== hpOf(initial)
+            || hpOf(s) !== initialHp
             || Math.max(Math.abs(s.player.worldX - initial.player!.worldX), Math.abs(s.player.worldZ - initial.player!.worldZ)) > p.radius
         ) {
             throw Error('ground-loot health, life or area changed');
         }
-        if (JSON.stringify(s.equipment.map(i => ({ id: i.id, slot: i.slot, count: i.count })).sort((a, b) => a.slot - b.slot)) !== kit) {
+        if (!kitUnchanged(s.equipment)) {
             throw Error('ground-loot equipment changed');
         }
         return s;
@@ -2031,6 +2149,10 @@ export type WildernessEscapePlan = {
     detail: string;
 };
 
+const WILDERNESS_EXITS = WILDERNESS_ESCAPES.filter(e => e.id === 1815 || e.id === 2871);
+const MAGE_BANK_EAST_WEB = WILDERNESS_ESCAPES.find(w => w.id === 733 && w.x === 3095 && w.z === 3957);
+const WILDERNESS_OBSTACLES = WILDERNESS_ESCAPES.filter(e => e.kind === 'gate' || e.kind === 'web');
+
 export function planWildernessEscape(pos: { x: number; z: number }, has: { glory: boolean; teleport: boolean }): WildernessEscapePlan {
     const level = wildLevel(pos.x, pos.z);
     if (level === 0) return { kind: 'out', distance: 0, detail: 'outside Wilderness' };
@@ -2038,28 +2160,42 @@ export function planWildernessEscape(pos: { x: number; z: number }, has: { glory
     if (has.teleport && level <= 20) return { kind: 'teleport', distance: 0, detail: `teleport at level ${level}` };
     const targetZ = has.glory ? 3755 : has.teleport ? 3675 : 3518;
     const southDist = Math.max(0, pos.z - targetZ);
-    const exits = WILDERNESS_ESCAPES.filter(e => e.id === 1815 || e.id === 2871)
-        .map(e => ({ loc: e, dist: Math.max(Math.abs(pos.x - e.x), Math.abs(pos.z - e.z)) }))
-        .sort((a, b) => a.dist - b.dist);
-    const bestExit = exits[0];
-    if (bestExit && bestExit.dist <= 35 && bestExit.dist < southDist) {
-        const web =
-            bestExit.loc.id === 2871 && pos.x >= 3093
-                ? WILDERNESS_ESCAPES.find(w => w.id === 733 && w.x === 3095 && w.z === 3957)
-                : undefined;
+    let bestLoc: WildernessEscapeLoc | undefined;
+    let bestDist = Infinity;
+    for (let i = 0; i < WILDERNESS_EXITS.length; i++) {
+        const e = WILDERNESS_EXITS[i]!;
+        const dist = Math.max(Math.abs(pos.x - e.x), Math.abs(pos.z - e.z));
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestLoc = e;
+        }
+    }
+    if (bestLoc && bestDist <= 35 && bestDist < southDist) {
+        const web = bestLoc.id === 2871 && pos.x >= 3093 ? MAGE_BANK_EAST_WEB : undefined;
         return {
-            kind: bestExit.loc.kind as 'lever' | 'ladder',
-            loc: bestExit.loc,
+            kind: bestLoc.kind as 'lever' | 'ladder',
+            loc: bestLoc,
             web,
-            distance: bestExit.dist,
-            detail: `${bestExit.loc.name} (${bestExit.dist} tiles)`,
+            distance: bestDist,
+            detail: `${bestLoc.name} (${bestDist} tiles)`,
         };
     }
-    const obstacle = WILDERNESS_ESCAPES.find(
-        e => (e.kind === 'gate' || e.kind === 'web') && Math.abs(e.x - pos.x) <= 6 && e.z <= pos.z && pos.z - e.z <= 20,
-    );
+    let obstacle: WildernessEscapeLoc | undefined;
+    for (let i = 0; i < WILDERNESS_OBSTACLES.length; i++) {
+        const e = WILDERNESS_OBSTACLES[i]!;
+        if (Math.abs(e.x - pos.x) <= 6 && e.z <= pos.z && pos.z - e.z <= 20) {
+            obstacle = e;
+            break;
+        }
+    }
     return { kind: 'run', obstacle, distance: southDist, detail: `run south to level ${has.glory ? 30 : has.teleport ? 20 : 0}` };
 }
+
+const LAW_RUNE_RE = /^law rune$/i;
+const AIR_RUNE_RE = /^air rune$/i;
+const FIRE_RUNE_RE = /^fire rune$/i;
+const AIR_STAFF_RE = /staff of air|air battlestaff|mystic air staff/i;
+const FIRE_STAFF_RE = /staff of fire|fire battlestaff|mystic fire staff/i;
 
 export function hasVarrockTeleport(
     magic: number,
@@ -2067,13 +2203,28 @@ export function hasVarrockTeleport(
     equipment: readonly { name: string }[],
 ): boolean {
     if (magic < 25) return false;
-    const held = (re: RegExp) => inventory.filter(i => re.test(i.name)).reduce((n, i) => n + (i.count ?? 1), 0);
-    const worn = (re: RegExp) => equipment.some(i => re.test(i.name));
-    return (
-        held(/^law rune$/i) >= 1
-        && (held(/^air rune$/i) >= 3 || worn(/staff of air|air battlestaff|mystic air staff/i))
-        && (held(/^fire rune$/i) >= 1 || worn(/staff of fire|fire battlestaff|mystic fire staff/i))
-    );
+    let law = 0;
+    let air = 0;
+    let fire = 0;
+    for (let i = 0; i < inventory.length; i++) {
+        const item = inventory[i]!;
+        const count = item.count ?? 1;
+        if (LAW_RUNE_RE.test(item.name)) law += count;
+        else if (AIR_RUNE_RE.test(item.name)) air += count;
+        else if (FIRE_RUNE_RE.test(item.name)) fire += count;
+    }
+    if (law < 1) return false;
+    let airOk = air >= 3;
+    let fireOk = fire >= 1;
+    if (!airOk || !fireOk) {
+        for (let i = 0; i < equipment.length; i++) {
+            const name = equipment[i]!.name;
+            if (!airOk && AIR_STAFF_RE.test(name)) airOk = true;
+            if (!fireOk && FIRE_STAFF_RE.test(name)) fireOk = true;
+            if (airOk && fireOk) break;
+        }
+    }
+    return airOk && fireOk;
 }
 
 export function wildDragonPreflight(state: BotWorldState | null, requireFood = true): string | null {
@@ -2092,9 +2243,25 @@ export function wildDragonThreat(state: BotWorldState, ours: ReadonlySet<string>
 
 export function selectGreenDragon(npcs: readonly NearbyNpc[], selfSlot?: number): NearbyNpc | undefined {
     const selfTarget = Number.isInteger(selfSlot) ? 32768 + selfSlot! : -1;
-    return npcs
-        .filter(n => n.id === GREEN_DRAGON_ID && n.reachable !== false && (n.hp ?? 1) > 0 && (!n.inCombat || n.targetIndex === selfTarget))
-        .sort((a, b) => Number(b.targetIndex === selfTarget) - Number(a.targetIndex === selfTarget) || a.distance - b.distance)[0];
+    let best: NearbyNpc | undefined;
+    let bestMine = false;
+    let bestDist = Infinity;
+    for (let i = 0; i < npcs.length; i++) {
+        const n = npcs[i]!;
+        if (n.id !== GREEN_DRAGON_ID || n.reachable === false || (n.hp ?? 1) <= 0) continue;
+        const mine = n.targetIndex === selfTarget;
+        if (n.inCombat && !mine) continue;
+        if (
+            best === undefined
+            || (mine && !bestMine)
+            || (mine === bestMine && n.distance < bestDist)
+        ) {
+            best = n;
+            bestMine = mine;
+            bestDist = n.distance;
+        }
+    }
+    return best;
 }
 
 export function wildDragonRetreatReason(

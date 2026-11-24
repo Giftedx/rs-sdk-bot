@@ -16,9 +16,6 @@ import { ownedAccounts } from '../../../core/src/tradeguard';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { workerSourceRevision } from '../../../core/src/worker-release';
 import { parseConfigs } from '../../../knowledge/src/config';
-import nativeItems from '../../../../knowledge/items.json';
-import nativeTools from '../../../../knowledge/skill-tools.json';
-import nativeSkills from '../../../../knowledge/skills.json';
 import { ClientProt } from '../../../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { executionContext } from '../../../../vendor/rs-sdk/sdk/execution-context';
 import { FUND_AMOUNT, FUND_BELOW, FUND_RESERVE } from './trade-helpers';
@@ -46,12 +43,43 @@ export function nativeKitItem(id: number) {
 }
 
 type NativeKitMeta = { id: number; name: string; debugname: string; src: string; members: boolean };
+type NativeToolTable = { axes: { id: number; paramLevelrequire?: number | null }[]; pickaxes: { id: number; miningLevel?: number | null }[] };
+type NativeSkillRow = { skill: string; level: number | null; outputs: string[] };
+let cachedNativeItems: NativeKitMeta[] | undefined;
+let cachedNativeSkills: NativeSkillRow[] | undefined;
+let cachedToolLevelById: Map<number, number | null> | undefined;
 let objPackById: Map<number, string> | undefined;
 let itemsById: Map<number, NativeKitMeta> | undefined;
 let itemsByDebug: Map<string, NativeKitMeta> | undefined;
 let styleTabByCategory: Map<string, string> | undefined;
 let styleIndicesByTab: Map<string, number[]> | undefined;
 const objSourceFiles = new Map<string, string>();
+
+function getNativeItems(): NativeKitMeta[] {
+    return (cachedNativeItems ??= JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/items.json'), 'utf8')) as NativeKitMeta[]);
+}
+function getNativeSkills(): NativeSkillRow[] {
+    return (cachedNativeSkills ??= JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/skills.json'), 'utf8')) as NativeSkillRow[]);
+}
+function getToolLevelById(): Map<number, number | null> {
+    if (!cachedToolLevelById) {
+        const tools = JSON.parse(readFileSync(resolve(REPO_ROOT, 'knowledge/skill-tools.json'), 'utf8')) as NativeToolTable;
+        cachedToolLevelById = new Map();
+        for (const t of tools.axes) if (!cachedToolLevelById.has(t.id)) cachedToolLevelById.set(t.id, t.paramLevelrequire ?? null);
+        for (const t of tools.pickaxes) if (!cachedToolLevelById.has(t.id)) cachedToolLevelById.set(t.id, t.miningLevel ?? null);
+    }
+    return cachedToolLevelById;
+}
+function ensureItemIndexes() {
+    if (!itemsById || !itemsByDebug) {
+        itemsById = new Map();
+        itemsByDebug = new Map();
+        for (const it of getNativeItems()) {
+            if (!itemsById.has(it.id)) itemsById.set(it.id, it);
+            if (!itemsByDebug.has(it.debugname)) itemsByDebug.set(it.debugname, it);
+        }
+    }
+}
 
 function ensureNativeKitTables() {
     if (!objPackById) {
@@ -70,14 +98,7 @@ function ensureNativeKitTables() {
             pos = end + 1;
         }
     }
-    if (!itemsById || !itemsByDebug) {
-        itemsById = new Map();
-        itemsByDebug = new Map();
-        for (const it of nativeItems as NativeKitMeta[]) {
-            itemsById.set(it.id, it);
-            itemsByDebug.set(it.debugname, it);
-        }
-    }
+    ensureItemIndexes();
     if (!styleTabByCategory || !styleIndicesByTab) {
         const styles = readFileSync(contentDir + 'scripts/skill_combat/scripts/player/player_attackstyles.rs2', 'utf8');
         styleTabByCategory = new Map();
@@ -463,13 +484,15 @@ let nativeSortData: Map<number, NativeSortData> | undefined;
 
 function sortData() {
     if (nativeSortData) return nativeSortData;
+    ensureItemIndexes();
+    const nativeItems = getNativeItems();
     const data = new Map<number, NativeSortData>();
     const names = new Map(nativeItems.map(i => [i.debugname, i.id]));
-    const byId = new Map(nativeItems.map(i => [i.id, i]));
+    const byId = itemsById!;
     const put = (id: number, category: string, level: number, stage: number) => {
         if (Number.isFinite(level)) data.set(id, { category, level, stage });
     };
-    for (const r of nativeSkills) {
+    for (const r of getNativeSkills()) {
         for (const output of r.outputs) {
             const id = names.get(output);
             if (id === undefined || r.level === null) continue;
@@ -529,20 +552,38 @@ function sortData() {
     const byName = new Map<string, NativeSortData[]>();
     for (const [id, value] of data) {
         const name = byId.get(id)!.name.toLowerCase();
-        byName.set(name, [...(byName.get(name) ?? []), value]);
+        let list = byName.get(name);
+        if (!list) {
+            list = [];
+            byName.set(name, list);
+        }
+        list.push(value);
     }
     for (const item of nativeItems) {
         const name = item.name.toLowerCase(), values = byName.get(name);
-        if (values?.length && !data.has(item.id) && !/(?:^herb$|potion)/.test(name) && values.every(v => JSON.stringify(v) === JSON.stringify(values[0]))) {
-            data.set(item.id, values[0]!);
+        if (values?.length && !data.has(item.id) && !/(?:^herb$|potion)/.test(name)) {
+            const first = values[0]!;
+            let sameAll = true;
+            for (let vi = 1; vi < values.length; vi++) {
+                const v = values[vi]!;
+                if (v.category !== first.category || v.level !== first.level || v.stage !== first.stage) {
+                    sameAll = false;
+                    break;
+                }
+            }
+            if (sameAll) data.set(item.id, first);
         }
     }
     nativeSortData = data;
     return data;
 }
 
+const DONOR_MATERIALS = ['bronze', 'iron', 'steel', 'black', 'mithril', 'adamant', 'rune', 'dragon'] as const;
+const DONOR_TIERS: Readonly<Record<string, number>> = { bronze: 1, iron: 10, steel: 20, black: 25, mithril: 30, adamant: 40, rune: 50, dragon: 60 };
+
 export function bankDonorKey(row: BankSortRow) {
-    const native = nativeItems.find(i => i.id === row.id);
+    ensureItemIndexes();
+    const native = itemsById!.get(row.id);
     if (!native) throw Error('donor policy needs native item metadata');
     const name = native.name.toLowerCase().trim(), suffix = name.match(/^(.*?)\s*\((\d+)\)$/), base = suffix ? suffix[1]! : name, dose = suffix ? Number(suffix[2]) : -1;
     const has = (re: RegExp) => re.test(base), mapped = sortData().get(row.id);
@@ -580,10 +621,9 @@ export function bankDonorKey(row: BankSortRow) {
         else if (has(/key/) && !has(/crystal key/)) category = 'Quest-Items';
         else if (has(/event|holiday|cosmetic|santa hat|partyhat/)) category = 'Cosmetic/Holiday';
     }
-    const material = ['bronze', 'iron', 'steel', 'black', 'mithril', 'adamant', 'rune', 'dragon'].find(x => base.includes(x));
-    const tiers: Record<string, number> = { bronze: 1, iron: 10, steel: 20, black: 25, mithril: 30, adamant: 40, rune: 50, dragon: 60 };
-    const tool = [...nativeTools.axes.map(t => ({ id: t.id, level: t.paramLevelrequire })), ...nativeTools.pickaxes.map(t => ({ id: t.id, level: t.miningLevel }))].find(t => t.id === row.id);
-    const tier = category === 'Tool-Axe' || category === 'Tool-Pickaxe' ? (tool?.level ?? (material ? tiers[material]! : -1)) : (material ? tiers[material]! : -1);
+    const material = DONOR_MATERIALS.find(x => base.includes(x));
+    const toolLevel = category === 'Tool-Axe' || category === 'Tool-Pickaxe' ? getToolLevelById().get(row.id) : undefined;
+    const tier = category === 'Tool-Axe' || category === 'Tool-Pickaxe' ? (toolLevel ?? (material ? DONOR_TIERS[material]! : -1)) : (material ? DONOR_TIERS[material]! : -1);
     return {
         row,
         name,

@@ -545,6 +545,9 @@ export function planGeRestockOrders(options: {
     return { funded, unfunded, totalEscrow, remainingCoins: spendable + options.coinReserve };
 }
 
+let cachedGeItemCatalogue: readonly { id: number; name: string }[] | undefined;
+
 export function loadGeItemCatalogue(): { id: number; name: string }[] {
-    return JSON.parse(readFileSync(new URL('../../../../knowledge/items.json', import.meta.url), 'utf8'));
+    const cached = (cachedGeItemCatalogue ??= JSON.parse(readFileSync(new URL('../../../../knowledge/items.json', import.meta.url), 'utf8')));
+    return cached.slice();
 }

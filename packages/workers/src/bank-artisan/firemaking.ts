@@ -12,7 +12,7 @@ import { installDoorPolicy, type Account, type Leg } from '../../../core/src/wor
 import { loadTravel, travelAllowed, type Travel } from '../../../core/src/travel';
 import { planTripOffThread } from '../../../core/src/route-plan';
 import { depositObserved } from '../../../core/src/deposit';
-import { planShopPurchases, buyWithBudget, maximumUnitCost } from '../market';
+import { planShopPurchases, buyWithBudget, maximumUnitCost } from '../market/shop-buy';
 import { xpForLevel, levelForXp, REPO_ROOT } from './catalog';
 import { productionStopRequested } from './runtime';
 

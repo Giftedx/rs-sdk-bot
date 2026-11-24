@@ -514,6 +514,9 @@ export const PROFILES: Record<string, ShopProfile> = {
     },
 };
 
+const SHOP_TOOL_LIMIT_RE = /axe|pickaxe|tinderbox|hammer|chisel|mould|knife|pestle|harpoon|lobster pot/i;
+const SHOP_STACKABLE_RE = /arrow|rune|feather|thread|fishing bait/i;
+
 export function planShopPurchases(
     targets: ShopPurchaseTarget[],
     shop: ShopStock[],
@@ -525,18 +528,41 @@ export function planShopPurchases(
 ): { name: string; amount: number }[] {
     let slots = Math.max(0, 28 - inventory.length);
     let units = Math.max(0, maxItems);
-    const choices = targets.flatMap(target => {
-        const item = shop.find(i => target.re.test(i.name));
-        if (!item || item.count <= 0 || !Number.isFinite(item.buyPrice) || item.buyPrice < 0) return [];
-        const held = inventory.filter(i => target.re.test(i.name)).reduce((n, i) => n + i.count, 0);
-        const limit = /axe|pickaxe|tinderbox|hammer|chisel|mould|knife|pestle|harpoon|lobster pot/i.test(item.name) ? Math.min(2, stockTarget) : stockTarget;
+    const choices: { name: string; buyPrice: number; desired: number; amount: number; stackable: boolean; held: number }[] = [];
+    for (let ti = 0; ti < targets.length; ti++) {
+        const target = targets[ti]!;
+        let item: ShopStock | undefined;
+        for (let si = 0; si < shop.length; si++) {
+            const candidate = shop[si]!;
+            if (target.re.test(candidate.name)) {
+                item = candidate;
+                break;
+            }
+        }
+        if (!item || item.count <= 0 || !Number.isFinite(item.buyPrice) || item.buyPrice < 0) continue;
+        let held = 0;
+        for (let ii = 0; ii < inventory.length; ii++) {
+            const invItem = inventory[ii]!;
+            if (target.re.test(invItem.name)) held += invItem.count;
+        }
+        const limit = SHOP_TOOL_LIMIT_RE.test(item.name) ? Math.min(2, stockTarget) : stockTarget;
         const desired = Math.max(0, Math.min(item.count, target.buyPerTick, limit - held - (bank.get(item.name.toLowerCase()) ?? 0)));
-        return desired > 0 ? [{ ...item, desired, amount: 0, stackable: /arrow|rune|feather|thread|fishing bait/i.test(item.name), held }] : [];
-    });
+        if (desired > 0) {
+            choices.push({
+                name: item.name,
+                buyPrice: item.buyPrice,
+                desired,
+                amount: 0,
+                stackable: SHOP_STACKABLE_RE.test(item.name),
+                held,
+            });
+        }
+    }
     let progress = true;
     while (progress) {
         progress = false;
-        for (const c of choices) {
+        for (let ci = 0; ci < choices.length; ci++) {
+            const c = choices[ci]!;
             const slotCost = c.stackable && (c.held > 0 || c.amount > 0) ? 0 : 1;
             if (units <= 0 || c.amount >= c.desired || slots < slotCost || budget < c.buyPrice) continue;
             c.amount++;
@@ -546,7 +572,12 @@ export function planShopPurchases(
             progress = true;
         }
     }
-    return choices.filter(c => c.amount > 0).map(c => ({ name: c.name, amount: c.amount }));
+    const out: { name: string; amount: number }[] = [];
+    for (let ci = 0; ci < choices.length; ci++) {
+        const c = choices[ci]!;
+        if (c.amount > 0) out.push({ name: c.name, amount: c.amount });
+    }
+    return out;
 }
 
 export function shopTargetsMet(
@@ -555,13 +586,29 @@ export function shopTargetsMet(
     bank: ReadonlyMap<string, number>,
     stockTarget: number,
 ): boolean {
-    return targets.length > 0 && targets.every(t => {
-        const banked = [...bank].filter(([name]) => t.re.test(name));
-        const held = inventory.filter(i => t.re.test(i.name));
-        const name = banked[0]?.[0] ?? held[0]?.name ?? '';
-        const goal = /axe|pickaxe|tinderbox|hammer|chisel|mould|knife|pestle|harpoon|lobster pot/i.test(name) ? Math.min(2, stockTarget) : stockTarget;
-        return !!name && banked.reduce((n, [, count]) => n + count, 0) + held.reduce((n, i) => n + i.count, 0) >= goal;
-    });
+    if (targets.length === 0) return false;
+    for (let ti = 0; ti < targets.length; ti++) {
+        const t = targets[ti]!;
+        let firstName = '';
+        let total = 0;
+        for (const [name, count] of bank) {
+            if (t.re.test(name)) {
+                if (!firstName) firstName = name;
+                total += count;
+            }
+        }
+        for (let ii = 0; ii < inventory.length; ii++) {
+            const item = inventory[ii]!;
+            if (t.re.test(item.name)) {
+                if (!firstName) firstName = item.name;
+                total += item.count;
+            }
+        }
+        if (!firstName) return false;
+        const goal = SHOP_TOOL_LIMIT_RE.test(firstName) ? Math.min(2, stockTarget) : stockTarget;
+        if (total < goal) return false;
+    }
+    return true;
 }
 
 export function stockWaitStatus(now: number, since: number | undefined, limit: number, poll = 15) {

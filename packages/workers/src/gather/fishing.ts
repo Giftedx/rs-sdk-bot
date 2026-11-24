@@ -1485,13 +1485,27 @@ type NativeCookRecipe = {
 let cachedNativeCookRecipes: NativeCookRecipe[] | undefined;
 let cachedHeatLocs: Map<number, 'range' | 'fire'> | undefined;
 
+function parsePackNameMap(file: string): Map<string, number> {
+    const text = readFileSync(file, 'utf8');
+    const out = new Map<string, number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) out.set(text.slice(eq + 1, lineEnd), id);
+        }
+        pos = end + 1;
+    }
+    return out;
+}
+
 function readNativeVillageRecipes(): readonly NativeCookRecipe[] {
     if (cachedNativeCookRecipes) return cachedNativeCookRecipes;
-    const objPack = new Map<string, number>();
-    for (const line of readFileSync(resolve(CONTENT, 'pack/obj.pack'), 'utf8').split(/\r?\n/)) {
-        const at = line.indexOf('=');
-        if (at > 0) objPack.set(line.slice(at + 1), Number(line.slice(0, at)));
-    }
+    const objPack = parsePackNameMap(resolve(CONTENT, 'pack/obj.pack'));
     const dbFile = 'scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow';
     const text = readFileSync(resolve(CONTENT, dbFile), 'utf8');
     const out: NativeCookRecipe[] = [];
@@ -1525,11 +1539,7 @@ function readNativeVillageRecipes(): readonly NativeCookRecipe[] {
 
 function readNativeHeatMap(): ReadonlyMap<number, 'range' | 'fire'> {
     if (cachedHeatLocs) return cachedHeatLocs;
-    const locPack = new Map<string, number>();
-    for (const line of readFileSync(resolve(CONTENT, 'pack/loc.pack'), 'utf8').split(/\r?\n/)) {
-        const at = line.indexOf('=');
-        if (at > 0) locPack.set(line.slice(at + 1), Number(line.slice(0, at)));
-    }
+    const locPack = parsePackNameMap(resolve(CONTENT, 'pack/loc.pack'));
     const out = new Map<number, 'range' | 'fire'>();
     const walkDir = (dir: string) => {
         for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -1537,6 +1547,7 @@ function readNativeHeatMap(): ReadonlyMap<number, 'range' | 'fire'> {
                 if (entry.name !== '_unpack') walkDir(resolve(dir, entry.name));
             } else if (entry.name.endsWith('.loc')) {
                 const text = readFileSync(resolve(dir, entry.name), 'utf8');
+                if (!text.includes('cooking_oven') && !text.includes('cooking_fire')) continue;
                 for (const m of text.matchAll(/^\[([^\]]+)\]\r?\n([^\[]*)/gm)) {
                     const cat = m[2]!.match(/^category=(cooking_oven|cooking_fire)\r?$/m)?.[1];
                     const id = locPack.get(m[1]!);

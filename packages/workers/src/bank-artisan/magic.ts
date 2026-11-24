@@ -24,6 +24,7 @@ import {
     FIRE_PER,
     HIGH_LEVEL,
     KNOWLEDGE_DIR,
+    packMap,
     readSkillLevels,
     xpForLevel,
 } from './catalog';
@@ -63,7 +64,20 @@ const blocksOf = (file: string) => {
 
 // ---- Item Magic (microbot-magic-items.ts) ----
 
-let itemCostsCache: { debugname: string; cost: number }[] | undefined;
+let itemCostsMapCache: Map<string, number> | undefined;
+function itemCostsByDebug(): Map<string, number> {
+    if (!itemCostsMapCache) {
+        const rows = JSON.parse(readCached(join(KNOWLEDGE_DIR, 'items.json'))) as { debugname: string; cost?: number }[];
+        itemCostsMapCache = new Map();
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i]!;
+            if (!itemCostsMapCache.has(row.debugname) && row.cost !== undefined) {
+                itemCostsMapCache.set(row.debugname, row.cost);
+            }
+        }
+    }
+    return itemCostsMapCache;
+}
 const SPELL_SCRIPTS: Record<string, [string, string]> = {
     'low-alch': ['alchemy.rs2', 'magic_spell_low_alch'],
     'high-alch': ['alchemy.rs2', 'magic_spell_high_alch'],
@@ -97,7 +111,12 @@ export interface ItemMagicRecipe {
 }
 export type Recipe = ItemMagicRecipe;
 
+const itemMagicRecipeCache = new Map<string, ItemMagicRecipe>();
+
 export function itemMagicRecipe(mode: string, targetName?: string): ItemMagicRecipe {
+    const cacheKey = `${mode}\0${targetName ?? ''}`;
+    const hit = itemMagicRecipeCache.get(cacheKey);
+    if (hit) return { ...hit, inputs: { ...hit.inputs } };
     const spells = blocksOf(join(CONTENT_DIR, 'scripts/skill_magic/configs/magic_spells.dbrow'));
     const field = (body: string, key: string) => body.match(new RegExp('^data=' + key + ',(.+)$', 'm'))?.[1]?.trim();
     let row = spells.find(r => r.name === `magic_spell_${mode === 'low-alch' ? 'low_alch' : mode === 'high-alch' ? 'high_alch' : 'superheat'}`);
@@ -139,12 +158,11 @@ export function itemMagicRecipe(mode: string, targetName?: string): ItemMagicRec
     if (secondary) inputs[objId(secondary)] = secondaryCount;
     let output = 1;
     if (product === 'coins') {
-        const items = (itemCostsCache ??= JSON.parse(readCached(join(KNOWLEDGE_DIR, 'items.json'))) as { debugname: string; cost: number }[]);
-        const cost = items.find(i => i.debugname === input)?.cost;
+        const cost = itemCostsByDebug().get(input);
         if (cost === undefined) throw Error('unknown native alchemy value');
         output = Math.max(1, Math.floor((cost * (mode === 'high-alch' ? 6 : 4)) / 10));
     }
-    return {
+    const built: ItemMagicRecipe = {
         name: mode,
         spell: 'magic:' + field(row.body, 'spell')!.replace('^', ''),
         level: Number(field(row.body, 'levelrequired')),
@@ -155,6 +173,8 @@ export function itemMagicRecipe(mode: string, targetName?: string): ItemMagicRec
         output,
         members: field(row.body, 'members') === 'true',
     };
+    itemMagicRecipeCache.set(cacheKey, built);
+    return { ...built, inputs: { ...built.inputs } };
 }
 
 let staffRunesCache: Map<number, { runes: Set<number>; members: boolean }> | undefined;
@@ -317,17 +337,24 @@ export interface NativeTeleport {
     to: { x: number; z: number; level: number };
 }
 
+const nativeTeleportCache = new Map<string, NativeTeleport>();
+
 export function nativeTeleport(name: string): NativeTeleport {
     if (!/^(varrock|lumbridge|falador|camelot|ardougne|watchtower|trollheim)$/.test(name)) throw Error('unsupported native teleport');
-    const text = readFileSync(join(CONTENT_DIR, 'scripts/skill_magic/configs/magic_spells.dbrow'), 'utf8');
-    const body = text.split('[magic_spell_teleport_' + name + ']')[1]?.split('\n[')[0];
-    if (!body) throw Error('native teleport missing');
-    const field = (key: string) => body.match(new RegExp('^data=' + key + ',(.+)$', 'm'))?.[1]?.trim();
-    const parts = field('runesrequired')!.split(',');
-    const runes: Record<number, number> = {};
-    for (let i = 0; i < parts.length; i += 2) if (parts[i] !== 'null') runes[objId(parts[i]!)] = Number(parts[i + 1]);
-    const [level, mx, mz, lx, lz] = field('tele_coord')!.split('_').map(Number);
-    return { name, component: 'magic:' + name + '_teleport', level: Number(field('levelrequired')), members: field('members') === 'true', runes, to: { x: mx! * 64 + lx!, z: mz! * 64 + lz!, level: level! } };
+    let cached = nativeTeleportCache.get(name);
+    if (!cached) {
+        const text = readCached(join(CONTENT_DIR, 'scripts/skill_magic/configs/magic_spells.dbrow'));
+        const body = text.split('[magic_spell_teleport_' + name + ']')[1]?.split('\n[')[0];
+        if (!body) throw Error('native teleport missing');
+        const field = (key: string) => body.match(new RegExp('^data=' + key + ',(.+)$', 'm'))?.[1]?.trim();
+        const parts = field('runesrequired')!.split(',');
+        const runes: Record<number, number> = {};
+        for (let i = 0; i < parts.length; i += 2) if (parts[i] !== 'null') runes[objId(parts[i]!)] = Number(parts[i + 1]);
+        const [level, mx, mz, lx, lz] = field('tele_coord')!.split('_').map(Number);
+        cached = { name, component: 'magic:' + name + '_teleport', level: Number(field('levelrequired')), members: field('members') === 'true', runes, to: { x: mx! * 64 + lx!, z: mz! * 64 + lz!, level: level! } };
+        nativeTeleportCache.set(name, cached);
+    }
+    return { ...cached, runes: { ...cached.runes }, to: { ...cached.to } };
 }
 
 export function teleportReceipt(
@@ -339,14 +366,21 @@ export function teleportReceipt(
     xp1: number,
     p: { worldX: number; worldZ: number; level: number } | null | undefined,
 ) {
-    const keys = new Set([...Object.keys(b), ...Object.keys(a), ...Object.keys(costs)]);
-    return (
-        xp1 > xp0 &&
-        [...keys].every(k => (b[Number(k)] ?? 0) - (a[Number(k)] ?? 0) === (costs[Number(k)] ?? 0)) &&
-        !!p &&
-        p.level === t.to.level &&
-        Math.max(Math.abs(p.worldX - t.to.x), Math.abs(p.worldZ - t.to.z)) <= 2
-    );
+    if (xp1 <= xp0 || !p || p.level !== t.to.level || Math.abs(p.worldX - t.to.x) > 2 || Math.abs(p.worldZ - t.to.z) > 2) return false;
+    for (const k in b) {
+        const id = Number(k);
+        if ((b[id] ?? 0) - (a[id] ?? 0) !== (costs[id] ?? 0)) return false;
+    }
+    for (const k in a) {
+        if (k in b) continue;
+        const id = Number(k);
+        if (-(a[id] ?? 0) !== (costs[id] ?? 0)) return false;
+    }
+    for (const k in costs) {
+        if (k in b || k in a) continue;
+        if ((costs[Number(k)] ?? 0) !== 0) return false;
+    }
+    return true;
 }
 
 export async function runTeleportMagic(s: Session, t: NativeTeleport, o: { casts: number; cap: number; members?: boolean; combo?: ItemMagicRecipe; stop?: () => boolean }) {
@@ -738,16 +772,26 @@ export function orbOptions(env: Record<string, string | undefined> = process.env
 }
 
 export function ownedOrbStaff(items: readonly { id: number; count: number }[], rune: number, want: 'owned' | number) {
-    return items.filter(i => i.count > 0 && (want === 'owned' || i.id === want) && elementalRuneCost(rune, 30, [{ id: i.id, slot: 3 }], true) === 0).sort((a, b) => a.id - b.id)[0]?.id;
+    const staves = nativeStaffRunes();
+    let bestId: number | undefined;
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]!;
+        if (item.count <= 0 || (want !== 'owned' && item.id !== want)) continue;
+        const staff = staves.get(item.id);
+        if (staff && staff.runes.has(rune) && (bestId === undefined || item.id < bestId)) {
+            bestId = item.id;
+        }
+    }
+    return bestId;
 }
 
 let cachedOrbGlory: { item: string; id: number; charges: number; next: string; nextId: number }[] | undefined;
 export function orbGloryList() {
     if (cachedOrbGlory) return cachedOrbGlory;
-    const nativeItems = JSON.parse(readFileSync(join(KNOWLEDGE_DIR, 'items.json'), 'utf8')) as { id: number; debugname: string }[];
+    const objPack = packMap('obj');
     const entry = JSON.parse(readFileSync(join(KNOWLEDGE_DIR, 'teleports.json'), 'utf8')).teleports.find((t: any) => t.id === 'jewellery:amulet_of_glory');
     cachedOrbGlory = (entry.charges as { item: string; id: number; charges: number; next: string }[]).map(g => {
-        const next = nativeItems.find(i => i.debugname === g.next)?.id;
+        const next = objPack.get(g.next);
         if (next === undefined) throw Error('native Glory charge chain absent');
         return { ...g, nextId: next };
     });
@@ -761,7 +805,20 @@ const orbPack = (s: Session) => {
 };
 
 export function orbPackEffect(before: Record<number, number>, after: Record<number, number>, delta: Record<number, number>) {
-    return [...new Set([...Object.keys(before), ...Object.keys(after), ...Object.keys(delta)])].every(k => (after[Number(k)] ?? 0) - (before[Number(k)] ?? 0) === (delta[Number(k)] ?? 0));
+    for (const k in before) {
+        const id = Number(k);
+        if ((after[id] ?? 0) - (before[id] ?? 0) !== (delta[id] ?? 0)) return false;
+    }
+    for (const k in after) {
+        if (k in before) continue;
+        const id = Number(k);
+        if ((after[id] ?? 0) !== (delta[id] ?? 0)) return false;
+    }
+    for (const k in delta) {
+        if (k in before || k in after) continue;
+        if ((delta[Number(k)] ?? 0) !== 0) return false;
+    }
+    return true;
 }
 
 export async function equipOrbStaff(s: Session, id: number, alive: () => boolean) {

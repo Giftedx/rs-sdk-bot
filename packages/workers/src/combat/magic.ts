@@ -19,12 +19,11 @@ import { executeShopToolPurchase, reconcileBankTool, sessionToolHooks } from '..
 import {
     approach,
     leaveTutorial,
-    LUMBRIDGE_TO_DRAYNOR,
-    NORTH_BANK,
     onTutorialIsland,
     walkTargetPersist,
-} from '../logistics';
-import { buyWithBudget, maximumUnitCost, PROFILES } from '../market';
+} from '../logistics/walk';
+import { LUMBRIDGE_TO_DRAYNOR, NORTH_BANK } from '../logistics/trade-helpers';
+import { buyWithBudget, maximumUnitCost, PROFILES } from '../market/shop-buy';
 import { chickenTrainingProfile } from './chickens';
 import {
     bestElementalStaffForRunes,
@@ -64,28 +63,36 @@ export interface NativeCombatTeleport {
     to: { x: number; z: number; level: number };
 }
 
+let combatMagicSpellsText: string | undefined;
+const combatTeleportCache = new Map<string, NativeCombatTeleport>();
+
 export function nativeCombatTeleport(name: string): NativeCombatTeleport {
     if (!/^(varrock|lumbridge|falador|camelot|ardougne|watchtower|trollheim)$/.test(name)) {
         throw Error('unsupported native teleport');
     }
-    const text = readFileSync(resolve(CONTENT_ROOT, 'skill_magic/configs/magic_spells.dbrow'), 'utf8');
-    const body = text.split('[magic_spell_teleport_' + name + ']')[1]?.split('\n[')[0];
-    if (!body) throw Error('native teleport missing');
-    const field = (key: string) => body.match(new RegExp('^data=' + key + ',(.+)$', 'm'))?.[1]?.trim();
-    const parts = field('runesrequired')!.split(',');
-    const runes: Record<number, number> = {};
-    for (let i = 0; i < parts.length; i += 2) {
-        if (parts[i] !== 'null') runes[objId(parts[i]!)] = Number(parts[i + 1]);
+    let cached = combatTeleportCache.get(name);
+    if (!cached) {
+        const text = (combatMagicSpellsText ??= readFileSync(resolve(CONTENT_ROOT, 'skill_magic/configs/magic_spells.dbrow'), 'utf8'));
+        const body = text.split('[magic_spell_teleport_' + name + ']')[1]?.split('\n[')[0];
+        if (!body) throw Error('native teleport missing');
+        const field = (key: string) => body.match(new RegExp('^data=' + key + ',(.+)$', 'm'))?.[1]?.trim();
+        const parts = field('runesrequired')!.split(',');
+        const runes: Record<number, number> = {};
+        for (let i = 0; i < parts.length; i += 2) {
+            if (parts[i] !== 'null') runes[objId(parts[i]!)] = Number(parts[i + 1]);
+        }
+        const [level, mx, mz, lx, lz] = field('tele_coord')!.split('_').map(Number);
+        cached = {
+            name,
+            component: 'magic:' + name + '_teleport',
+            level: Number(field('levelrequired')),
+            members: field('members') === 'true',
+            runes,
+            to: { x: mx! * 64 + lx!, z: mz! * 64 + lz!, level: level! },
+        };
+        combatTeleportCache.set(name, cached);
     }
-    const [level, mx, mz, lx, lz] = field('tele_coord')!.split('_').map(Number);
-    return {
-        name,
-        component: 'magic:' + name + '_teleport',
-        level: Number(field('levelrequired')),
-        members: field('members') === 'true',
-        runes,
-        to: { x: mx! * 64 + lx!, z: mz! * 64 + lz!, level: level! },
-    };
+    return { ...cached, runes: { ...cached.runes }, to: { ...cached.to } };
 }
 
 function teleportLanded(

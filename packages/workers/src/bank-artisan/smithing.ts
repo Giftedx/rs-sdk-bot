@@ -11,12 +11,16 @@ import { knownBanks } from '../../../core/src/trip';
 import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
 import { parseConfigs } from '../../../knowledge/src/config';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
-import { CONTENT_DIR, productionBatch, SMITH_ANVIL, SMITH_BANK, smeltEntryRoute, smithStageRoute } from './catalog';
+import { CONTENT_DIR, packMap, parsePackNameToId, productionBatch, SMITH_ANVIL, SMITH_BANK, smeltEntryRoute, smithStageRoute } from './catalog';
 import { actionSessionOwner, finishActionSession, productionStopRequested } from './runtime';
 import type { Session } from './types';
 
 type Stock = readonly { id: number; count: number }[];
-const count = (rows: Stock, id: number) => rows.filter(v => v.id === id).reduce((n, v) => n + v.count, 0);
+const count = (rows: Stock, id: number) => {
+    let n = 0;
+    for (let i = 0; i < rows.length; i++) if (rows[i]!.id === id) n += rows[i]!.count;
+    return n;
+};
 
 // ---- Smelt Batch & Native Smelting (smelt-batch.ts) ----
 
@@ -105,7 +109,12 @@ export function nativeSmeltFurnace(id: number) {
     return value;
 }
 
+const smeltStandsCache = new Map<string, readonly { level: number; x: number; z: number }[]>();
+
 export function nativeSmeltStands(f: SmeltTile & { id: number }) {
+    const key = `${f.id}:${f.x}:${f.z}:${f.level}`;
+    const cached = smeltStandsCache.get(key);
+    if (cached) return cached.map(t => ({ ...t }));
     const type = nativeSmeltFurnace(f.id);
     const map = join(CONTENT_DIR, `maps/m${f.x >> 6}_${f.z >> 6}.jm2`);
     const placement = readFileSync(map, 'utf8').match(new RegExp(`^${f.level} ${f.x & 63} ${f.z & 63}: ${f.id} 10(?: ([0-3]))?\\r?$`, 'm'));
@@ -114,11 +123,13 @@ export function nativeSmeltStands(f: SmeltTile & { id: number }) {
     const width = angle % 2 ? type.length : type.width;
     const length = angle % 2 ? type.width : type.length;
     const side = (1 + angle) % 4;
-    return Array.from({ length: side % 2 ? length : width }, (_, i) => ({
+    const out = Array.from({ length: side % 2 ? length : width }, (_, i) => ({
         level: f.level,
         x: side === 1 ? f.x + width : side === 3 ? f.x - 1 : f.x + i,
         z: side === 0 ? f.z + length : side === 2 ? f.z - 1 : f.z + i,
     }));
+    smeltStandsCache.set(key, out);
+    return out.map(t => ({ ...t }));
 }
 
 export function validateSmeltRoute(route: SmeltLocalRoute) {
@@ -168,6 +179,14 @@ export function validateSmeltRoute(route: SmeltLocalRoute) {
 }
 
 const smeltRecipeCache = new Map<string, SmeltRecipe>();
+let cachedSmeltingStructByName: Map<string, ReturnType<typeof parseConfigs>[number]> | undefined;
+function smeltingStructByName() {
+    if (!cachedSmeltingStructByName) {
+        const file = 'scripts/skill_smithing/configs/smelting/smelting.struct';
+        cachedSmeltingStructByName = new Map(parseConfigs(readFileSync(join(CONTENT_DIR, file), 'utf8'), file).map(b => [b.name, b]));
+    }
+    return cachedSmeltingStructByName;
+}
 export const SMELT_BAR_TYPES = ['bronze', 'iron', 'silver', 'steel', 'gold', 'mithril', 'adamantite', 'runite'] as const;
 
 export function smeltRecipe(bar: string): SmeltRecipe {
@@ -181,16 +200,8 @@ export function smeltRecipe(bar: string): SmeltRecipe {
     if (!SMELT_BAR_TYPES.includes(bar as (typeof SMELT_BAR_TYPES)[number])) {
         throw Error('unsupported smelt recipe: ' + bar);
     }
-    const file = 'scripts/skill_smithing/configs/smelting/smelting.struct';
-    const ids = new Map(
-        readFileSync(join(CONTENT_DIR, 'pack/obj.pack'), 'utf8')
-            .split(/\r?\n/)
-            .flatMap(l => {
-                const m = l.match(/^(\d+)=(.+)$/);
-                return m ? ([[m[2]!, Number(m[1])] as const]) : [];
-            }),
-    );
-    const b = parseConfigs(readFileSync(join(CONTENT_DIR, file), 'utf8'), file).find(b => b.name === 'smelting_' + bar + '_bar');
+    const ids = packMap('obj');
+    const b = smeltingStructByName().get('smelting_' + bar + '_bar');
     if (!b) throw Error('pinned smelt recipe missing');
     const p = Object.fromEntries(
         (b.props.param ?? []).map(v => {
@@ -234,8 +245,7 @@ const bonusXpCache = new Map<string, number>();
 export function smeltBonusRawXp(b: SmeltBonusGear) {
     let base = bonusXpCache.get(b.kind);
     if (base === undefined) {
-        const file = join(CONTENT_DIR, 'scripts/skill_smithing/configs/smelting/smelting.struct');
-        const block = parseConfigs(readFileSync(file, 'utf8'), file).find(i => i.name === `smelting_${b.kind === 'goldsmith' ? 'gold' : 'iron'}_bar`);
+        const block = smeltingStructByName().get(`smelting_${b.kind === 'goldsmith' ? 'gold' : 'iron'}_bar`);
         base = Number(block?.props.param?.find(i => i.startsWith('productexp,'))?.split(',')[1]);
         if (!Number.isSafeInteger(base) || base <= 0) throw Error('native smelt XP missing');
         bonusXpCache.set(b.kind, base);
@@ -1580,47 +1590,71 @@ export const TOLL_GUARD_EAST = 926;
 
 const smithRecipeCache = new Map<number, SmithRecipe>();
 
+type SmithingTables = {
+    objs: ReadonlyMap<string, number>;
+    objNameById: Map<number, string>;
+    components: ReadonlyMap<string, number>;
+    dbrowByProduct: Map<string, ReturnType<typeof parseConfigs>[number]>;
+    smeltingObjByName: Map<string, ReturnType<typeof parseConfigs>[number]>;
+    smithingStructByName: Map<string, ReturnType<typeof parseConfigs>[number]>;
+    smithingInvByName: Map<string, ReturnType<typeof parseConfigs>[number]>;
+    handler: string;
+};
+let cachedSmithingTables: SmithingTables | undefined;
+
+function smithingTables(): SmithingTables {
+    if (cachedSmithingTables) return cachedSmithingTables;
+    const configs = 'scripts/skill_smithing/configs/';
+    const blocks = (file: string) => parseConfigs(readFileSync(join(CONTENT_DIR, configs + file), 'utf8'), file);
+    const field = (rows: string[] | undefined, key: string) => rows?.find(v => v.startsWith(key + ','))?.slice(key.length + 1);
+    const objs = packMap('obj');
+    const objNameById = new Map<number, string>();
+    for (const [name, id] of objs) if (!objNameById.has(id)) objNameById.set(id, name);
+    const dbrowByProduct = new Map<string, ReturnType<typeof parseConfigs>[number]>();
+    for (const b of blocks('smithing/smithing.dbrow')) {
+        const prod = field(b.props.data, 'product');
+        if (prod && !dbrowByProduct.has(prod)) dbrowByProduct.set(prod, b);
+    }
+    cachedSmithingTables = {
+        objs,
+        objNameById,
+        components: parsePackNameToId(readFileSync(join(CONTENT_DIR, 'pack/interface.pack'), 'utf8')),
+        dbrowByProduct,
+        smeltingObjByName: new Map(blocks('smelting/smelting.obj').map(b => [b.name, b])),
+        smithingStructByName: new Map(blocks('smithing/smithing.struct').map(b => [b.name, b])),
+        smithingInvByName: new Map(blocks('smithing/smithing.inv').map(b => [b.name, b])),
+        handler: readFileSync(join(CONTENT_DIR, 'scripts/skill_smithing/scripts/smithing/smithing.rs2'), 'utf8'),
+    };
+    return cachedSmithingTables;
+}
+
 export function smithRecipe(product: number): SmithRecipe {
     const unsupported = Error('unsupported smith recipe: ' + product);
     if (!Number.isSafeInteger(product) || product < 0) throw unsupported;
     const cached = smithRecipeCache.get(product);
     if (cached) return cached;
-    const configs = 'scripts/skill_smithing/configs/';
-    const pack = (file: string) =>
-        new Map(
-            readFileSync(join(CONTENT_DIR, 'pack', file), 'utf8')
-                .split(/\r?\n/)
-                .flatMap(l => {
-                    const m = l.match(/^(\d+)=(.+)$/);
-                    return m ? ([[m[2]!, Number(m[1])] as const]) : [];
-                }),
-        );
-    const blocks = (file: string) => parseConfigs(readFileSync(join(CONTENT_DIR, configs + file), 'utf8'), file);
     const field = (rows: string[] | undefined, key: string) => rows?.find(v => v.startsWith(key + ','))?.slice(key.length + 1);
-    const objs = pack('obj.pack');
-    const name = [...objs].find(([, id]) => id === product)?.[0];
-    const row = name === undefined ? undefined : blocks('smithing/smithing.dbrow').find(b => field(b.props.data, 'product') === name);
+    const t = smithingTables();
+    const name = t.objNameById.get(product);
+    const row = name === undefined ? undefined : t.dbrowByProduct.get(name);
     if (!row) throw unsupported;
     const bar = field(row.props.data, 'bar')!;
-    const struct = field(blocks('smelting/smelting.obj').find(b => b.name === bar)?.props.param, 'smithing_anvil_struct');
-    const params = blocks('smithing/smithing.struct').find(b => b.name === struct)?.props.param;
-    const invs = blocks('smithing/smithing.inv');
-    const components = pack('interface.pack');
+    const struct = field(t.smeltingObjByName.get(bar)?.props.param, 'smithing_anvil_struct');
+    const params = struct ? t.smithingStructByName.get(struct)?.props.param : undefined;
     const columns = Array.from({ length: 5 }, (_, i) => ({ inventory: field(params, 'invcolumn' + (i + 1)), component: 'smithing:column' + (i + 1) }));
-    const handler = readFileSync(join(CONTENT_DIR, 'scripts/skill_smithing/scripts/smithing/smithing.rs2'), 'utf8');
-    const branch = handler.split('case ' + bar + ' :')[1]?.split(/\bcase /)[0];
+    const branch = t.handler.split('case ' + bar + ' :')[1]?.split(/\bcase /)[0];
     const claws = branch?.match(/inv_transmit\((\w+), smithing:column_claws\)/)?.[1];
     if (claws) columns.push({ inventory: claws, component: 'smithing:column_claws' });
     for (const column of columns) {
-        const inv = invs.find(b => b.name === column.inventory);
+        const inv = column.inventory ? t.smithingInvByName.get(column.inventory) : undefined;
         const stock = Object.entries(inv?.props ?? {}).find(([k, v]) => /^stock\d+$/.test(k) && v[0]?.split(',')[0] === name);
-        const component = components.get(column.component);
+        const component = t.components.get(column.component);
         if (!stock || component === undefined) continue;
         const recipe = {
             product,
             amount: Number(field(row.props.data, 'product_amount')),
             level: Math.max(Number(field(row.props.data, 'levelrequired')), Number(field(params, 'levelrequired'))),
-            bar: objs.get(bar)!,
+            bar: t.objs.get(bar)!,
             bars: Number(field(row.props.data, 'bar_amount')),
             xpPerBar: Number(field(params, 'xpperbar')),
             component,

@@ -14,29 +14,67 @@ export type { ShopContract, ShopSaleOptions, ShopTripJob };
 
 const KNOWLEDGE_NPCS = resolve(import.meta.dir, '../../../../knowledge/npcs.json');
 
+function parsePackMaps(text: string): { byName: Map<string, number>; byId: Map<number, string> } {
+    const byName = new Map<string, number>();
+    const byId = new Map<number, string>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq < lineEnd) {
+            const id = Number(text.slice(pos, eq));
+            if (Number.isInteger(id) && id >= 0) {
+                const name = text.slice(eq + 1, lineEnd);
+                byName.set(name, id);
+                if (!byId.has(id)) byId.set(id, name);
+            }
+        }
+        pos = end + 1;
+    }
+    return { byName, byId };
+}
+
 function nativeData() {
-    const configs = (ext: string) => listConfigFiles(ext).flatMap(file => parseConfigs(readFileSync(join(contentRoot(), file), 'utf8'), file));
+    const root = contentRoot();
+    const configs = (ext: string) => listConfigFiles(ext).flatMap(file => parseConfigs(readFileSync(join(root, file), 'utf8'), file));
     const blocks = (ext: string) => new Map(configs(ext).map(v => [v.name, v]));
-    const pack = (kind: string) =>
-        new Map(
-            readFileSync(join(contentRoot(), 'pack', kind + '.pack'), 'utf8')
-                .split(/\r?\n/)
-                .flatMap(v => {
-                    const m = v.match(/^(\d+)=(.+)$/);
-                    return m ? [[m[2]!, Number(m[1])] as const] : [];
-                }),
-        );
+    const npcPack = parsePackMaps(readFileSync(join(root, 'pack', 'npc.pack'), 'utf8')).byName;
+    const objPacks = parsePackMaps(readFileSync(join(root, 'pack', 'obj.pack'), 'utf8'));
+    const spawnRows = JSON.parse(readFileSync(KNOWLEDGE_NPCS, 'utf8')) as {
+        id: number;
+        debugname: string;
+        spawns: { x: number; z: number; level: number }[];
+    }[];
+    const spawnsByKey = new Map<string, { x: number; z: number; level: number }[]>();
+    for (let i = 0; i < spawnRows.length; i++) {
+        const row = spawnRows[i]!;
+        const k = `${row.id}:${row.debugname}`;
+        if (!spawnsByKey.has(k)) spawnsByKey.set(k, row.spawns);
+    }
+    const opnpc3Handlers = new Map<string, string>();
+    let hasDefaultShopKeeper = false;
+    for (const file of listConfigFiles('.rs2')) {
+        const text = readFileSync(join(root, file), 'utf8');
+        if (!text.includes('[opnpc3,')) continue;
+        if (!hasDefaultShopKeeper && text.includes('[opnpc3,_shop_keeper] ~openshop_activenpc;')) {
+            hasDefaultShopKeeper = true;
+        }
+        for (const m of text.matchAll(/\[opnpc3,\s*([a-z0-9_]+)\s*\]([^]*?)(?=\n\[|$)/g)) {
+            const npcName = m[1]!;
+            if (!opnpc3Handlers.has(npcName)) opnpc3Handlers.set(npcName, m[2]!);
+        }
+    }
     return {
         npcs: blocks('.npc'),
         invs: blocks('.inv'),
-        npcPack: pack('npc'),
-        objPack: pack('obj'),
-        spawns: JSON.parse(readFileSync(KNOWLEDGE_NPCS, 'utf8')) as {
-            id: number;
-            debugname: string;
-            spawns: { x: number; z: number; level: number }[];
-        }[],
-        scripts: listConfigFiles('.rs2').map(file => readFileSync(join(contentRoot(), file), 'utf8')).join('\n'),
+        npcPack,
+        objPack: objPacks.byName,
+        objNameById: objPacks.byId,
+        spawnsByKey,
+        opnpc3Handlers,
+        hasDefaultShopKeeper,
     };
 }
 
@@ -178,7 +216,7 @@ export function nativeMerchant(
     if (!b || npc === undefined || !Object.entries(b.props).some(([k, v]) => /^op[1-5]$/.test(k) && v[0] === 'Trade')) {
         throw Error('merchant lacks native Trade option');
     }
-    const handler = d.scripts.match(new RegExp('\\[opnpc3,\\s*' + name + '\\s*\\]([^]*?)(?=\\n\\[|$)'))?.[1];
+    const handler = d.opnpc3Handlers.get(name);
     if (declared) {
         if (!bank || !site || typeof members !== 'boolean' || typeof declared.title !== 'string' || !declared.title.trim()
             || declared.title.length > 100 || !declared.inventory || !d.invs.has(declared.inventory)) {
@@ -204,7 +242,7 @@ export function nativeMerchant(
         title = declared.title;
     } else {
         if (!b.props.category?.includes('shop_keeper') || b.props.op3?.[0] !== 'Trade' || handler
-            || !d.scripts.includes('[opnpc3,_shop_keeper] ~openshop_activenpc;')) {
+            || !d.hasDefaultShopKeeper) {
             throw Error('custom native merchant requires a declared shop contract');
         }
         for (const pKey of ['shop_buy_multiplier', 'shop_sell_multiplier', 'shop_delta']) {
@@ -216,9 +254,9 @@ export function nativeMerchant(
     bank ??= convenience ? { x: 3269, z: 3167, level: 0 } : undefined;
     site ??= convenience ? { x: 3314, z: 3180, level: 0 } : undefined;
     if (!bank || !site) throw Error('merchant requires explicit bank and site');
-    const spawn = d.spawns
-        .find(n => n.id === npc && n.debugname === name)
-        ?.spawns.some(p => p.level === site!.level && Math.max(Math.abs(p.x - site!.x), Math.abs(p.z - site!.z)) <= 8);
+    const spawn = d.spawnsByKey
+        .get(`${npc}:${name}`)
+        ?.some(p => p.level === site!.level && Math.max(Math.abs(p.x - site!.x), Math.abs(p.z - site!.z)) <= 8);
     if (!spawn) throw Error('merchant site has no matching native spawn within eight tiles');
     return {
         npc,
@@ -237,7 +275,7 @@ export function validateShopTrip(j: ShopTripJob) {
     validateBankRouteJob({ ...j, family: 'merchant', recipe: String(j.item), ...merchant });
     if (!Number.isSafeInteger(j.item) || j.item < 1) throw Error('invalid native merchant item');
     const d = native();
-    const name = [...d.objPack].find(([, id]) => id === j.item)?.[0];
+    const name = d.objNameById.get(j.item);
     const inv = d.invs.get(merchant.inventory)!;
     if (j.item === 995 || !name || name.startsWith('cert_') || (merchant.alkharidSilkBan && name === 'silk')
         || !Number.isSafeInteger(j.minimumUnit) || j.minimumUnit < 1 || j.minimumUnit > 2147483647 || j.batch > 1000) {

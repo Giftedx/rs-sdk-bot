@@ -5,7 +5,7 @@ import type { Session } from '../../../core/src/inprocess';
 import { waitUntil } from '../../../core/src/ticks';
 import { walkPath, sessionWalker, goTo, type PathPoint } from '../../../core/src/walk';
 import { boneXp, objId } from '../../../core/src/content-facts';
-import { ferryWalk } from '../logistics';
+import { ferryWalk } from '../logistics/walk';
 import { xpForLevel } from './catalog';
 
 const BONE = 526;

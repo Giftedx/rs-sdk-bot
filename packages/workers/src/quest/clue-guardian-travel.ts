@@ -12,14 +12,31 @@ import { ClientProt } from '../../../../vendor/rs-sdk/server/webclient/src/io/Cl
 import { combatTeleportAllowed, eatBetweenCasts } from './runtime';
 import { REPO_ROOT } from './types';
 
-const mageAnim = Number(
-    readFileSync(resolve(REPO_ROOT, 'vendor/rs-sdk/server/content/pack/seq.pack'), 'utf8')
-        .split(/\r?\n/)
-        .find((l) => l.endsWith('=human_casting'))
-        ?.split('=')[0],
-);
+let cachedMageAnim: number | undefined;
+function getMageAnim(): number {
+    if (cachedMageAnim !== undefined) return cachedMageAnim;
+    const text = readFileSync(resolve(REPO_ROOT, 'vendor/rs-sdk/server/content/pack/seq.pack'), 'utf8');
+    const needle = '=human_casting';
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        if (lineEnd - pos > needle.length && text.endsWith(needle, lineEnd)) {
+            const id = Number(text.slice(pos, lineEnd - needle.length));
+            cachedMageAnim = id;
+            return id;
+        }
+        pos = end + 1;
+    }
+    cachedMageAnim = NaN;
+    return cachedMageAnim;
+}
 
-export const guardianMagePose = (npc: { animId?: number } | undefined) => Number.isInteger(mageAnim) && npc?.animId === mageAnim;
+export const guardianMagePose = (npc: { animId?: number } | undefined) => {
+    const anim = getMageAnim();
+    return Number.isInteger(anim) && npc?.animId === anim;
+};
 
 type Policy = { fatal: () => boolean; stop: () => boolean };
 const hp = (s: Session) => s.sdk.getSkill('Hitpoints')?.level ?? 0;
@@ -58,24 +75,37 @@ export async function guardianWalk(s: Session, to: { x: number; z: number }, p: 
     await guardianHeal(s, p);
 }
 
+let cachedEmptyCrossbowSpec: { item: number; range: number; cooldown: number; quiver: number; noAmmo: string } | undefined;
 export function guardianEmptyCrossbowSpec() {
+    if (cachedEmptyCrossbowSpec) return { ...cachedEmptyCrossbowSpec };
     const path = resolve(REPO_ROOT, 'vendor/rs-sdk/server/content') + '/';
-    const id = Number(
-        readFileSync(path + 'pack/obj.pack', 'utf8')
-            .split(/\r?\n/)
-            .find((l) => l.endsWith('=crossbow'))
-            ?.split('=')[0],
-    );
+    const objPackText = readFileSync(path + 'pack/obj.pack', 'utf8');
+    let id = NaN;
+    let pos = 0;
+    const needle = '=crossbow';
+    while (pos < objPackText.length) {
+        let end = objPackText.indexOf('\n', pos);
+        if (end < 0) end = objPackText.length;
+        const lineEnd = end > pos && objPackText.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        if (lineEnd - pos > needle.length && objPackText.endsWith(needle, lineEnd)) {
+            id = Number(objPackText.slice(pos, lineEnd - needle.length));
+            break;
+        }
+        pos = end + 1;
+    }
     const block = readFileSync(path + 'scripts/skill_combat/configs/ranged/crossbows.obj', 'utf8').split('[crossbow]')[1]?.split('\n[')[0]?.replace(/\r/g, '') ?? '';
     const field = (key: string) => Number(block.match(new RegExp('^param=' + key + ',([0-9]+)$', 'm'))?.[1]);
     const quiver = Number(readFileSync(path + 'scripts/player/configs/equip.constant', 'utf8').match(/\^wearpos_quiver\s*=\s*(\d+)/)?.[1]);
     const range = Math.min(field('attackrange'), 10);
     const cooldown = field('attackrate');
     if (id !== 837 || range !== 10 || cooldown !== 6 || quiver !== 13) throw Error('native empty-crossbow recipe changed');
-    return { item: id, range, cooldown, quiver, noAmmo: 'There is no ammo left in your quiver.' };
+    cachedEmptyCrossbowSpec = { item: id, range, cooldown, quiver, noAmmo: 'There is no ammo left in your quiver.' };
+    return { ...cachedEmptyCrossbowSpec };
 }
 
+let cachedSaraMeleeLimit: { strength: number; bonus: number; maximum: number; floor: number } | undefined;
 export function guardianSaraMeleeLimit() {
+    if (cachedSaraMeleeLimit) return { ...cachedSaraMeleeLimit };
     const base = resolve(REPO_ROOT, 'vendor/rs-sdk/server/content/scripts') + '/';
     const npc = readFileSync(base + 'minigames/game_trail/configs/trail.npc', 'utf8').split('[trail_hard2]')[1]?.split('\n[')[0] ?? '';
     const strength = Number(npc.match(/^strength=(\d+)/m)?.[1]);
@@ -93,24 +123,31 @@ export function guardianSaraMeleeLimit() {
     }
     const maximum = Math.floor(((strength + 9) * (bonus + 64) + 320) / 640);
     if (strength !== 80 || bonus !== 40 || maximum !== 14) throw Error('native Sara melee envelope changed');
-    return { strength, bonus, maximum, floor: 70 };
+    cachedSaraMeleeLimit = { strength, bonus, maximum, floor: 70 };
+    return { ...cachedSaraMeleeLimit };
 }
 
+let cachedSaraLandingTail: number | undefined;
 export function guardianSaraLandingTail() {
+    if (cachedSaraLandingTail !== undefined) return cachedSaraLandingTail;
     const base = resolve(REPO_ROOT, 'vendor/rs-sdk/server/content/scripts') + '/';
     const row = readFileSync(base + 'skill_combat/configs/magic/magic_combat_spells.dbrow', 'utf8').split('[magic_spell_saradomin_strike_npc]')[1]?.split('\n[')[0] ?? '';
     const source = readFileSync(base + 'skill_combat/scripts/npc/npc_combat_magic.rs2', 'utf8').replace(/\s/g, '');
     if (!row || /^data=spotanim_proj,/m.test(row) || !source.includes('def_int$duration=64;') || !source.includes('queue(combat_damage_player,calc($duration/30),$damage);')) {
         throw Error('native Sara projectile tail changed');
     }
-    return Math.floor(64 / 30) + 1;
+    cachedSaraLandingTail = Math.floor(64 / 30) + 1;
+    return cachedSaraLandingTail;
 }
 
+let cachedSaraAttackRange: number | undefined;
 export function guardianSaraAttackRange() {
+    if (cachedSaraAttackRange !== undefined) return cachedSaraAttackRange;
     const row = readFileSync(resolve(REPO_ROOT, 'vendor/rs-sdk/server/content/scripts/minigames/game_trail/configs/trail.npc'), 'utf8').split('[trail_hard2]')[1]?.split('\n[')[0] ?? '';
     const range = Number(row.match(/^attackrange=(\d+)/m)?.[1]);
     if (range !== 5) throw Error('native Sara AP attack range changed');
-    return range;
+    cachedSaraAttackRange = range;
+    return cachedSaraAttackRange;
 }
 
 export function guardianCrossbowGoals(
