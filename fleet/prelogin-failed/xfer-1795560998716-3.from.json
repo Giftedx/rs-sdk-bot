@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795560998716-3",
+ "role": "from",
+ "account": "TheFullMonty",
+ "partner": "Porksword",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795561650315,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

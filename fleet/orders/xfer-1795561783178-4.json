@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795561783178-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Masterbaiter",
+  "to": "Swordswallow",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795561783178,
+  "end": 1795562683178,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

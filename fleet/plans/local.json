@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795561602514,
+ "at": 1795561821902,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -27,7 +27,7 @@
    "account": "Pocketpython",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "chompy"
+    "ranged-starter"
    ],
    "env": {
     "TRAIN_SKILL": "Ranged",
@@ -41,73 +41,49 @@
    "role": "army"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/aio-fighter.ts",
+   "account": "mmtha0205",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "chicken"
+    "foraging",
+    "grapes"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Unsheathed",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Unsheathed",
-   "role": "army",
-   "resources": [
-    "chickens"
-   ]
+   "goal": "campaign:haggis:item:1987",
+   "role": "army"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
+   "account": "TrouserSnake",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "chompy"
+    "foraging",
+    "grapes"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
+   "goal": "campaign:haggis:item:1987",
    "role": "army"
   },
   {
    "account": "FishAndChips",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
+   "script": "scripts/generated/quest-death.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "DEMAND_ID": "goal:quest_board:death",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
+   "goal": "goal:quest_board:death",
    "role": "auto"
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
   }
  ],
  "army": [
@@ -142,7 +118,7 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "trousersnake",
+  "undermykilt",
   "woodpecker",
   "yewfirst"
  ],

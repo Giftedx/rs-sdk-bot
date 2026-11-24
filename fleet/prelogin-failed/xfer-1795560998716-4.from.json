@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795560998716-4",
+ "role": "from",
+ "account": "Deeppockets",
+ "partner": "Spitroaster",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795561690107,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

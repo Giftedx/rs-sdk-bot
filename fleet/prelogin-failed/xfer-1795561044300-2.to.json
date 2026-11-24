@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795561044300-2",
+ "role": "to",
+ "account": "MeatNTwoVeg",
+ "partner": "YewFirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795561799773,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

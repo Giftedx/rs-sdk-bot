@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795561020612-3",
+ "role": "from",
+ "account": "Dipstick",
+ "partner": "BoneToPick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795561711114,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

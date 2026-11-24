@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795561038278-3",
+ "role": "to",
+ "account": "Earlyshooter",
+ "partner": "Dipstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795561775140,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}
