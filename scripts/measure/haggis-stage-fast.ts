@@ -402,12 +402,14 @@ async function runIsolated(): Promise<void> {
                 ...DRUID_RAW_MEATS.map(id => ({ id, count: 1 })),
             ],
         }, measureDruidBurst);
+        console.log(`PHASE druidBurst=${druid.ticks}(walk=${druid.gamesToKaqTicks},hpMin=${druid.hpMin})`);
 
         const herb = await runIsolatedAccount('hfhb', {
             position: EDGEVILLE_BANK_SPOT,
             skills: { Herblore: 28, Hitpoints: 10, Prayer: 43, Magic: 80 },
             bank: [...herbBank.entries()].map(([id, count]) => ({ id, count })),
         }, measureHerb10);
+        console.log(`PHASE herb10=${herb.ticks}(bank=${herb.bankTicks},brew=${herb.brewTicks},cycles=${herb.cycles},lvl=${herb.level})`);
 
         const mage = await runIsolatedAccount('hfma', {
             position: MAGE_ARENA_CELLAR_SPOT,
@@ -420,6 +422,7 @@ async function runIsolated(): Promise<void> {
                 { id: OBJ_SHARK, count: 4 },
             ],
         }, measureMageArenaAndCharge);
+        console.log(`PHASE mageArenaStaff=${mage.arenaTicks}(koloXp=${mage.kolodionXp}) charge5=${mage.chargeTicks}(lvl=${mage.magicLevel},xp=${mage.magicXp})`);
 
         const vamp = await runIsolatedAccount('hfva', {
             position: VAMPIRE_START_SPOT,
@@ -432,8 +435,10 @@ async function runIsolated(): Promise<void> {
                 { id: 554, count: 100 },
                 { id: 556, count: 100 },
                 { id: 565, count: 50 },
+                { id: OBJ_SHARK, count: 4 },
+                { id: OBJ_PRAYER_POTION_4, count: 1 },
             ],
-        }, measureVampire10hp);
+        }, s => measureVampire10hp(s, 'magic:fire_wave'));
 
         const vampBolt = await runIsolatedAccount('hfvb', {
             position: VAMPIRE_START_SPOT,
@@ -446,6 +451,8 @@ async function runIsolated(): Promise<void> {
                 { id: 554, count: 100 },
                 { id: 556, count: 100 },
                 { id: 562, count: 50 },
+                { id: OBJ_SHARK, count: 4 },
+                { id: OBJ_PRAYER_POTION_4, count: 1 },
             ],
         }, s => measureVampire10hp(s, 'magic:fire_bolt'));
 

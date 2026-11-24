@@ -4,7 +4,7 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { freemem } from 'node:os';
 import { join } from 'node:path';
-import { closeWithin, logoutSession } from '../../packages/core/src/bot';
+import { closeWithin, finish, logoutSession, openBot } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { componentId } from '../../packages/core/src/logout';
 import { PRACTICE_STARTUP_GB } from '../../packages/core/src/memory';
@@ -16,7 +16,6 @@ import { runBotName } from '../../packages/practice/src/prove';
 import { ISOLATED, pointBotAt, startIsolatedStack } from '../../packages/practice/src/rehearse';
 import { playerSavePath } from '../../packages/practice/src/save-library';
 import { level, tick, xp } from '../../packages/practice/src/floor-lib';
-import { openBot, settle } from '../gathering-specialist-lib';
 
 const KEEP_SPOT = { x: 3153, z: 3923, level: 0 } as const;
 const TANK_COUNT = 5;
@@ -96,13 +95,20 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
 
         const tanks: Session[] = [];
         for (const tn of tankNames) {
-            const t = await openBot(tn);
+            const t = await openBot(tn, { onSessionEnd: async () => {} });
             await tick(t, 2);
             tanks.push(t);
         }
 
         const pt0 = readPlaytimeTicks(mageName);
-        let mage = await openBot(mageName);
+        let intentionalRelog = false;
+        const openMage = () => openBot(mageName, {
+            onSessionEnd: async (_s, detail) => {
+                if (!intentionalRelog) throw Error(`unexpected mage session end: ${detail}`);
+            },
+        });
+
+        let mage = await openMage();
         await tick(mage, 1);
         const startXp = xp(mage, 'Magic');
         const targetXp = xpForLevel(80);
@@ -111,26 +117,26 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
         let relogs = 0;
 
         try {
-            for (let iter = 0; iter < 400 && (level(mage, 'Magic') < 80 || xp(mage, 'Magic') < targetXp); iter++) {
-                // Wait up to 3 ticks if nearbyPlayers hasn't populated yet right after login.
-                for (let w = 0; w < 3 && !(mage.sdk.getState()?.nearbyPlayers ?? []).length; w++) {
+            for (let iter = 0; iter < 350 && (level(mage, 'Magic') < 80 || xp(mage, 'Magic') < targetXp); iter++) {
+                for (let w = 0; w < 4 && !(mage.sdk.getState()?.nearbyPlayers ?? []).length; w++) {
                     await tick(mage);
                 }
                 const nearby = mage.sdk.getState()?.nearbyPlayers ?? [];
                 const target = nearby.find((p: any) => tankNames.some(tn => tn.toLowerCase() === (p.name ?? '').toLowerCase())) ?? nearby[0];
                 if (!target) break;
                 const spell = spellForMagicLevel(level(mage, 'Magic'), mode);
-                // Cast and queue logout in the same game tick; pvp_magic sets %action_delay (non-p_delay), so logout lands cleanly on the same tick.
+                intentionalRelog = true;
                 const [castRes] = await Promise.all([
                     mage.direct({ type: 'spellOnPlayer', playerIndex: target.index, spellComponent: spell, reason: 'SDK' }),
                     mage.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' }),
                 ]);
                 if (castRes && (castRes as any).success !== false) casts++;
                 await tick(mage);
-                await closeWithin([mage], 5000).catch(() => logoutSession(mage).catch(() => {}));
+                await logoutSession(mage).catch(() => {});
+                await closeWithin([mage], 5000).catch(() => {});
+                intentionalRelog = false;
                 relogs++;
-                mage = await openBot(mageName);
-                // Heal tanks periodically
+                mage = await openMage();
                 if (iter % 4 === 0) {
                     for (const tk of tanks) {
                         if ((tk.sdk.getSkill('Hitpoints')?.level ?? 99) < 70) {
@@ -142,12 +148,14 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
             }
             const xpGained = xp(mage, 'Magic') - startXp;
             const endLvl = level(mage, 'Magic');
-            await settle([mage], true, `pvp-magic ${mode} done`).catch(() => {});
+            intentionalRelog = true;
+            await finish([mage, ...tanks], true, `pvp-magic ${mode} done`).catch(() => {});
             const playtimeTicks = Math.max(1, readPlaytimeTicks(mageName) - pt0);
             const xpPerTick = xpGained / playtimeTicks;
             return { playtimeTicks, casts, relogs, xpGained, xpPerTick, endLvl };
         } finally {
-            await settle(tanks, true, 'tanks done').catch(() => {});
+            intentionalRelog = true;
+            await closeWithin([mage, ...tanks], 3000).catch(() => {});
         }
     } finally {
         cleanup();
@@ -167,7 +175,9 @@ async function main(): Promise<void> {
     const stack = await startIsolatedStack();
     try {
         const combat = await runIsolatedMagicRelog('combat');
+        console.log(`PHASE pvp-magic combat=${combat.playtimeTicks}t(casts=${combat.casts},relogs=${combat.relogs},xp=${combat.xpGained},rate=${combat.xpPerTick.toFixed(1)},lvl=${combat.endLvl})`);
         const curse = await runIsolatedMagicRelog('curse');
+        console.log(`PHASE pvp-magic curse=${curse.playtimeTicks}t(casts=${curse.casts},relogs=${curse.relogs},xp=${curse.xpGained},rate=${curse.xpPerTick.toFixed(1)},lvl=${curse.endLvl})`);
         console.log(
             `STAGE_PVP_MAGIC`
             + ` combat44_80=${combat.playtimeTicks}t(casts=${combat.casts},relogs=${combat.relogs},xp=${combat.xpGained},rate=${combat.xpPerTick.toFixed(1)},lvl=${combat.endLvl})`

@@ -676,19 +676,27 @@ function scheduleRoute(
         let magicLvlCache = -1;
         const travelM = opts.travel;
         const canTieWalk = !!(travelM && here);
+        const walkEndPlace = new Array<string>(n);
         const getWalkCost = (idx: number): number => {
             if (walkCostStamp[idx] === stepEpoch) return walkCostVal[idx]!;
             walkCostStamp[idx] = stepEpoch;
-            const at = activities[idx]!.at;
+            const a = activities[idx]!;
+            const at = a.at;
             let val = 0;
+            let endP = here!;
             if (at !== undefined && at !== ANYWHERE) {
                 if (magicLvlCache < 0) magicLvlCache = levelAtClock(magicIdx, clock);
-                val = bestTargetLeg(travelM!, here!, at, magicLvlCache).leg.ticks;
+                const res = bestTargetLeg(travelM!, here!, at, magicLvlCache);
+                val = res.leg.ticks;
+                endP = a.endAt ?? res.to;
+                if (a.via?.length) endP = a.endAt ?? a.via[a.via.length - 1]!;
             }
             walkCostVal[idx] = val;
+            walkEndPlace[idx] = endP;
             return val;
         };
 
+        const ties: number[] = [];
         for (let i = 0; i < n; i++) {
             if (placed[i]) continue;
             const host = insideIdx[i]!;
@@ -697,25 +705,55 @@ function scheduleRoute(
             readyCount++;
             if (bestI < 0) {
                 bestI = i;
+                ties.push(i);
                 continue;
             }
             const ei = eff[i]!, eb = eff[bestI]!;
             if (ei !== eb) {
-                if (ei < eb) bestI = i;
+                if (ei < eb) { bestI = i; ties.length = 0; ties.push(i); }
                 continue;
             }
-            const tieCutoff = clusterWildy ? overallDeadline - 1 : overallDeadline;
-            const tieWalkHit = canTieWalk && (tieOverallWalk ? ei >= tieCutoff : ei > overallDeadline);
             if (prerequisiteFirst && !tieOverallWalk) {
                 const di = dependants[i]!, db = dependants[bestI]!;
                 if (di !== db) {
-                    if (di > db) bestI = i;
+                    if (di > db) { bestI = i; ties.length = 0; ties.push(i); }
                     continue;
                 }
             }
-            if (tieWalkHit || (canTieWalk && prerequisiteFirst)) {
-                const wi = getWalkCost(i), wb = getWalkCost(bestI);
-                if (wi < wb) bestI = i;
+            ties.push(i);
+        }
+
+        if (ties.length > 1 && canTieWalk) {
+            const eb = eff[bestI]!;
+            const tieCutoff = clusterWildy ? overallDeadline - 1 : overallDeadline;
+            const tieWalkHit = tieOverallWalk ? eb >= tieCutoff : eb > overallDeadline;
+            if (tieWalkHit || prerequisiteFirst) {
+                if (magicLvlCache < 0) magicLvlCache = levelAtClock(magicIdx, clock);
+                let bestScore = Infinity;
+                let bestFirst = Infinity;
+                for (let aIdx = 0; aIdx < ties.length; aIdx++) {
+                    const i = ties[aIdx]!;
+                    const wi = getWalkCost(i);
+                    let score = wi;
+                    if (wi > 0) {
+                        const fromEnd = walkEndPlace[i]!;
+                        let minNext = Infinity;
+                        for (let bIdx = 0; bIdx < ties.length; bIdx++) {
+                            if (aIdx === bIdx) continue;
+                            const b = activities[ties[bIdx]!]!;
+                            const nextW = (b.at === undefined || b.at === ANYWHERE)
+                                ? 0
+                                : bestTargetLeg(travelM!, fromEnd, b.at, magicLvlCache).leg.ticks;
+                            if (nextW < minNext) minNext = nextW;
+                        }
+                        if (minNext < Infinity) score += minNext;
+                    }
+                    if (score < bestScore || (score === bestScore && wi < bestFirst)) {
+                        bestScore = score;
+                        bestFirst = wi;
+                        bestI = i;
+                    }
+                }
             }
         }
 
