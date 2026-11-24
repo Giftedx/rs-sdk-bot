@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { isStopFilePresent } from '../stop';
 import { initPathfinding } from '../../../../vendor/rs-sdk/sdk/pathfinding';
 import type { BotWorldState, NearbyNpc } from '../../../../vendor/rs-sdk/sdk/types';
 import * as rsmod from '../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
@@ -1003,8 +1004,13 @@ export async function runWildDragonsCli(args: readonly string[], env: Record<str
     if (!bot) {
         throw Error('usage: bun scripts/aio-boss.ts green-dragon <bot> [CAP ticks]');
     }
-    const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-wild-dragons');
-    const s = await openBot(bot);
+    let stopped = false;
+    const stop = () => stopped || isStopFilePresent(bot, ['.practice/stop-wild-dragons']);
+    const s = await openBot(bot, {
+        onStop: async () => {
+            stopped = true;
+        },
+    });
     try {
         const r = await runWildDragons(s, {
             cap: Number(capArg ?? 6000),

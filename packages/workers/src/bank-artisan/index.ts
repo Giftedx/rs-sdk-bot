@@ -7,6 +7,7 @@ import {
     type WorkerModule,
     type WorkerWorldView,
 } from '../contracts';
+import { watchWorkerStop } from '../stop';
 import { runArtisan, runArtisanCli } from './dispatch';
 import { artisanEstimate, artisanPreflight, toArtisanWorkerOutcome } from './preflight';
 import { type ArtisanConfig, normalizeArtisanConfig } from './types';
@@ -30,12 +31,10 @@ export const bankArtisanWorker: WorkerModule<ArtisanConfig, WorkerAccountView, W
         const s = session as Session;
         const norm = normalizeArtisanConfig(cfg);
         const startTick = s.tick?.() ?? 0;
-        let ended = false;
-        void s.ended?.then(() => {
-            ended = true;
-        });
+        const { isStopped } = watchWorkerStop(s, (cfg as { stop?: () => boolean }).stop);
+        await Promise.resolve();
         try {
-            const outcome = await runArtisan(s, norm, () => ended);
+            const outcome = await runArtisan(s, norm, isStopped);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
             return toArtisanWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed);
         } catch (error) {

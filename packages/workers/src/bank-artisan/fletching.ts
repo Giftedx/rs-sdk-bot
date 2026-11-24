@@ -6,6 +6,7 @@ import { openBot, finish, countItems, settle } from '../../../core/src/bot';
 import { longbowIds } from '../../../core/src/content-facts';
 import { depositObserved, depositPack } from '../../../core/src/deposit';
 import { killTree } from '../../../core/src/proc';
+import { statusReadDirs } from '../../../core/src/practice-paths';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { knownBanks } from '../../../core/src/trip';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
@@ -1693,7 +1694,9 @@ export async function runFletchWorkerCli(
         return;
     }
     try {
-        const status = JSON.parse(readFileSync(join(root, `.practice/status/${actor}.json`), 'utf8'));
+        const statusPath = statusReadDirs(root).map(dir => join(dir, `${actor}.json`)).find(p => existsSync(p))
+            ?? join(root, `.practice/status/${actor}.json`);
+        const status = JSON.parse(readFileSync(statusPath, 'utf8'));
         const result = await runFletchingCycle({
             minimumHP: status.hp?.max,
             stopped,

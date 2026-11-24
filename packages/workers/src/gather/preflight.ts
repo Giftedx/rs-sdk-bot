@@ -449,6 +449,9 @@ export function gatherPreflight(
                     blockers.push({ kind: 'invalid_config', message: `invalid spawn item id: ${String(rawId)}` });
                 }
             } else if (cfg.method === 'crystal-chest') {
+                if (cfg.members === false) {
+                    blockers.push({ kind: 'invalid_config', message: 'foraging:crystal-chest requires members access' });
+                }
                 const full = availableItem(acct, world, CRYSTAL_KEY).available;
                 const tooth = availableItem(acct, world, KEY_TOOTH).available;
                 const loop = availableItem(acct, world, KEY_LOOP).available;

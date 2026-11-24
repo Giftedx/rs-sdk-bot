@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { accountEscrowCoins, accountOwnedItemCount, accountReserveFor, availableCoinsAfterReserves, preflightFail, preflightOk, reserveAdjustedStock, type PreflightBlocker, type PreflightResult, type RateEstimate, type RunOutcome, type SessionCore, type WorkerAccountView, type WorkerModule, type WorkerTile, type WorkerWorldView } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
 import { routeFares, type Account as WorldAccount } from '../../../core/src/world';
+import { watchWorkerStop } from '../stop';
 import { runOwnedItem } from './ge-buy';
 import { GE_VARROCK_BANK, loadGeItemCatalogue, orderEscrow, orderPaths, orderQuantity, validateRequest } from './ge-common';
 import { runBankSeller, runBuyList, runGEPlan, runGETrip, runShopToBid, validateBankSeller, validateBuyList, validateGEPlan, validateGETrip } from './ge-bulk';
@@ -46,12 +47,33 @@ function activeCooldown(acct: WorkerAccountView, world: WorkerWorldView, keys: r
     return null;
 }
 
+function normalizeShopBuyConfig(cfg: Extract<MarketConfig, { mode: 'shop-buy' }>): Extract<MarketConfig, { mode: 'shop-buy' }> {
+    const profile = cfg.profile ?? cfg.shopId ?? '';
+    const maxItems = cfg.maxItems ?? cfg.quantity;
+    let items = cfg.items;
+    if (items === undefined && cfg.itemId !== undefined) {
+        const name = catalogueNameMap().get(cfg.itemId);
+        const conf = profile ? resolveShopProfile(profile) : undefined;
+        const matchedByName = name && conf ? conf.items.find(i => i.re.test(name))?.re.source : undefined;
+        items = matchedByName ?? name;
+    }
+    return {
+        ...cfg,
+        profile,
+        ...(maxItems !== undefined ? { maxItems } : {}),
+        ...(items !== undefined ? { items } : {}),
+    };
+}
+
 function cooldownKeysFor(cfg: MarketConfig): string[] {
     const base = ['market', cfg.mode];
     switch (cfg.mode) {
-        case 'shop-buy':
+        case 'shop-buy': {
+            const norm = normalizeShopBuyConfig(cfg);
+            return norm.profile ? [...base, `shop:${norm.profile.toLowerCase()}`] : base;
+        }
         case 'earth-shop':
-            return [...base, `shop:${cfg.profile.toLowerCase()}`];
+            return cfg.profile ? [...base, `shop:${cfg.profile.toLowerCase()}`] : base;
         case 'buy-sword':
             return [...base, `shop:varrock_sword:${cfg.itemId ?? SWORD}`];
         case 'shop-trip':
@@ -193,33 +215,34 @@ export function preflightMarket(acct: WorkerAccountView, cfg: MarketConfig, worl
 
     switch (cfg.mode) {
         case 'shop-buy': {
-            const coinReserve = Math.max(baseCoinReserve, cfg.coinReserve ?? 0);
-            const maxSpend = cfg.maxSpend ?? Infinity;
-            const maxItems = cfg.maxItems ?? Infinity;
-            const flt = cfg.float ?? 20_000;
-            const noBuyTicks = cfg.noBuyTicks ?? 0;
+            const shopCfg = normalizeShopBuyConfig(cfg);
+            const coinReserve = Math.max(baseCoinReserve, shopCfg.coinReserve ?? 0);
+            const maxSpend = shopCfg.maxSpend ?? Infinity;
+            const maxItems = shopCfg.maxItems ?? Infinity;
+            const flt = shopCfg.float ?? 20_000;
+            const noBuyTicks = shopCfg.noBuyTicks ?? 0;
             for (const [k, v] of Object.entries({ coinReserve, maxSpend, maxItems, float: flt, noBuyTicks })) {
                 if ((!Number.isSafeInteger(v) && !(v === Infinity && ['maxSpend', 'maxItems'].includes(k))) || v < 0) {
                     buildConfigError(blockers, `invalid shop budget ${k}`);
                 }
             }
-            if (flt <= (cfg.coinReserve ?? 0) || maxSpend === 0 || maxItems === 0) {
+            if (flt <= (shopCfg.coinReserve ?? 0) || maxSpend === 0 || maxItems === 0) {
                 buildConfigError(blockers, 'shop budget needs float > coinReserve and positive maxSpend/maxItems');
             }
-            const conf = resolveShopProfile(cfg.profile);
+            const conf = shopCfg.profile ? resolveShopProfile(shopCfg.profile) : undefined;
             if (!conf) {
-                buildConfigError(blockers, `unknown shop profile: ${cfg.profile}`);
+                buildConfigError(blockers, `unknown shop profile: ${shopCfg.profile}`);
                 break;
             }
             try {
-                const matched = selectItems(conf.items, cfg.items);
-                if (!matched.length) buildConfigError(blockers, `items filter ${cfg.items} matches no ${cfg.profile} item`);
+                const matched = selectItems(conf.items, shopCfg.items);
+                if (!matched.length) buildConfigError(blockers, `items filter ${shopCfg.items} matches no ${shopCfg.profile} item`);
             } catch (err) {
                 buildConfigError(blockers, String(err));
             }
             if (conf.need) {
                 const current = acct.skills[conf.need.skill]?.level ?? 1;
-                const refusal = profileRefusal(cfg.profile, conf, current);
+                const refusal = profileRefusal(shopCfg.profile, conf, current);
                 if (refusal) {
                     blockers.push({
                         kind: 'skill_level',
@@ -532,8 +555,12 @@ export function estimateMarket(acct: WorkerAccountView, cfg: MarketConfig, world
     const baseSetup = (() => {
         if (!world.world || !acct.pos) return 35;
         let target: WorkerTile | null = null;
-        if (cfg.mode === 'shop-buy' || cfg.mode === 'earth-shop') {
-            const p = resolveShopProfile(cfg.profile);
+        if (cfg.mode === 'shop-buy') {
+            const shopCfg = normalizeShopBuyConfig(cfg);
+            const p = shopCfg.profile ? resolveShopProfile(shopCfg.profile) : undefined;
+            if (p) target = { x: p.npcSpot.x, z: p.npcSpot.z, level: p.npcSpot.level ?? 0 };
+        } else if (cfg.mode === 'earth-shop') {
+            const p = cfg.profile ? resolveShopProfile(cfg.profile) : undefined;
             if (p) target = { x: p.npcSpot.x, z: p.npcSpot.z, level: p.npcSpot.level ?? 0 };
         } else if (cfg.mode === 'buy-sword') {
             target = SWORD_SHOP_SPOT;
@@ -550,8 +577,9 @@ export function estimateMarket(acct: WorkerAccountView, cfg: MarketConfig, world
 
     switch (cfg.mode) {
         case 'shop-buy': {
-            const conf = resolveShopProfile(cfg.profile);
-            const matched = conf ? selectItems(conf.items, cfg.items) : [];
+            const shopCfg = normalizeShopBuyConfig(cfg);
+            const conf = shopCfg.profile ? resolveShopProfile(shopCfg.profile) : undefined;
+            const matched = conf ? selectItems(conf.items, shopCfg.items) : [];
             const batchRate = Math.max(1, matched[0]?.buyPerTick ?? 2);
             return {
                 xpPerTick: 0,
@@ -737,11 +765,25 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
     const activityId = `market:${cfg.mode}`;
     const s = session as unknown as Session;
     const server = s.lifecycle?.server ?? process.env.BOT_SERVER ?? 'local';
+    const { isStopped } = watchWorkerStop(session, cfg.stop);
+    await Promise.resolve();
+    if (isStopped()) {
+        return {
+            kind: 'session_unsettled',
+            activityId,
+            account: session.name,
+            ticksElapsed: 0,
+            durationMs: ms(),
+            reason: 'stopped',
+            detail: 'stop or session end observed before start',
+        };
+    }
 
     try {
         switch (cfg.mode) {
             case 'shop-buy': {
-                const r = await runShopBuy(s, cfg);
+                const shopCfg = normalizeShopBuyConfig(cfg);
+                const r = await runShopBuy(s, shopCfg, isStopped);
                 const ticksElapsed = Math.max(0, r.ticks);
                 if (r.strandedOnDeck) {
                     return { kind: 'location_stranded', activityId, account: session.name, ticksElapsed, durationMs: ms(), pos: currentPos(session), detail: r.summary };
@@ -772,6 +814,9 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 if (r.refused) {
                     return { kind: 'worker_defect', activityId, account: session.name, ticksElapsed, durationMs: ms(), faultSignature: `${activityId}:refused`, detail: r.refused };
                 }
+                if (isStopped() || r.stop === 'stopped' || r.stop === 'interrupted') {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.stop ?? 'stopped', detail: r.summary };
+                }
                 return {
                     kind: 'market_unavailable',
                     activityId,
@@ -779,12 +824,12 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                     ticksElapsed,
                     durationMs: ms(),
                     itemId: 0,
-                    venue: `shop:${cfg.profile}`,
+                    venue: `shop:${shopCfg.profile}`,
                     detail: r.summary,
                 };
             }
             case 'earth-shop': {
-                const r = await runEarthShopSession(s, cfg);
+                const r = await runEarthShopSession(s, cfg, isStopped);
                 const ticksElapsed = Math.max(0, r.ticks);
                 if (r.ok) {
                     return {
@@ -812,6 +857,9 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                         summary: r.failure,
                     };
                 }
+                if (isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.stop || 'stopped', detail: r.failure || r.stop };
+                }
                 return {
                     kind: 'market_unavailable',
                     activityId,
@@ -824,7 +872,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 };
             }
             case 'buy-sword': {
-                const r = await runBuySwordSession(s, cfg);
+                const r = await runBuySwordSession(s, cfg, isStopped);
                 const ticksElapsed = Math.max(0, r.ticks);
                 const itemId = cfg.itemId ?? SWORD;
                 if (r.ok) {
@@ -842,12 +890,18 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 if (r.died) {
                     return { kind: 'death', activityId, account: session.name, ticksElapsed, durationMs: ms(), pos: currentPos(session), faultSignature: `${activityId}:death`, detail: r.failure };
                 }
+                if (isStopped() && !r.preserved) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: 'stopped', detail: r.failure };
+                }
+                if (isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: 'stopped', detail: r.failure };
+                }
                 return classifyFailureOutcome(activityId, session.name, ticksElapsed, ms(), r.failure, currentPos(session), 'shop:varrock_sword', itemId);
             }
             case 'shop-trip':
             case 'shop-sell': {
                 const job = cfg.job ?? readJsonFile<ShopTripJob>(cfg.jobFile ?? '', `${cfg.mode} job`);
-                const r = await runShopTrip(s, job);
+                const r = await runShopTrip(s, job, isStopped);
                 const ticksElapsed = Math.max(0, r.ticks ?? elapsed());
                 if (r.ok) {
                     return {
@@ -859,8 +913,8 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                         unitsCompleted: r.completed,
                     };
                 }
-                if (r.recoveryDeferred) {
-                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: 'recovery_deferred', detail: r.failure };
+                if (r.recoveryDeferred || isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.recoveryDeferred ? 'recovery_deferred' : 'stopped', detail: r.failure };
                 }
                 return classifyFailureOutcome(activityId, session.name, ticksElapsed, ms(), r.failure || 'shop-trip failed', currentPos(session), `shop:${job.merchant}`, job.item);
             }
@@ -881,7 +935,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                     deadline: now + (cfg.orderMs ?? 60_000),
                 };
                 const paths = orderPaths(request.server, request.actor, request.goal);
-                const r = await runOwnedItem(s, request, paths.journal, () => false, cfg.cancel === true, cfg.fillWaitTicks ?? 40);
+                const r = await runOwnedItem(s, request, paths.journal, isStopped, cfg.cancel === true, cfg.fillWaitTicks ?? 40);
                 const ticksElapsed = Math.max(0, r.ticks);
                 if (r.ok) {
                     return {
@@ -898,8 +952,8 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                 if (r.died) {
                     return { kind: 'death', activityId, account: session.name, ticksElapsed, durationMs: ms(), pos: currentPos(session), faultSignature: `${activityId}:death`, detail: r.failure };
                 }
-                if (r.outcomeUnresolved) {
-                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.phase, detail: r.failure };
+                if (r.outcomeUnresolved || isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed, durationMs: ms(), reason: r.outcomeUnresolved ? r.phase : 'stopped', detail: r.failure };
                 }
                 if (r.pending || !r.targetMet) {
                     return { kind: 'market_unavailable', activityId, account: session.name, ticksElapsed, durationMs: ms(), itemId: request.item, venue: 'ge', detail: r.failure };
@@ -924,7 +978,7 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                     s,
                     request,
                     paths.journal,
-                    () => false,
+                    isStopped,
                     cfg.fillWaitTicks ?? 40,
                     cfg.cancel === true,
                     cfg.fromBank ? { bankCoins: cfg.bankCoins } : {},
@@ -939,20 +993,26 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                         unitsCompleted: r.journal?.progress?.filled ?? 0,
                     };
                 }
+                if (isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), reason: 'stopped', detail: r.error ?? 'ge-sell stopped' };
+                }
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.error ?? 'ge-sell incomplete', currentPos(session), 'ge', request.item);
             }
             case 'ge-buy-list': {
                 const request = cfg.request ?? readJsonFile<BuyListRequest>(cfg.requestFile ?? '', 'ge-buy-list request');
-                const r = await runBuyList(s, request);
+                const r = await runBuyList(s, request, isStopped);
                 if (r.ok) {
                     const bought = (r.outcomes ?? []).reduce((n, o) => n + (o?.acquired ?? 0), 0);
                     return { kind: 'target_met', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), unitsCompleted: bought };
+                }
+                if (isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), reason: 'stopped', detail: r.failure || 'ge-buy-list stopped' };
                 }
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.failure || 'ge-buy-list failed', currentPos(session), 'ge');
             }
             case 'ge-trip': {
                 const request = cfg.request ?? readJsonFile<GETripRequest>(cfg.requestFile ?? '', 'ge-trip request');
-                const r = await runGETrip(s, request);
+                const r = await runGETrip(s, request, isStopped);
                 if (r.ok) {
                     return {
                         kind: 'target_met',
@@ -964,11 +1024,14 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                         coinsDelta: r.net ?? 0,
                     };
                 }
+                if (isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), reason: 'stopped', detail: r.failure || 'ge-trip stopped' };
+                }
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.failure || 'ge-trip failed', currentPos(session), 'ge', request.item);
             }
             case 'ge-plan': {
                 const plan = cfg.plan ?? readJsonFile<GEPricePlan>(cfg.planFile ?? '', 'ge-plan');
-                const r = await runGEPlan(s, plan, () => false, {}, cfg.finish === true);
+                const r = await runGEPlan(s, plan, isStopped, {}, cfg.finish === true);
                 if (r.ok) {
                     return {
                         kind: 'target_met',
@@ -978,11 +1041,14 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                         durationMs: ms(),
                     };
                 }
+                if (isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), reason: 'stopped', detail: r.failure || 'ge-plan stopped' };
+                }
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.failure || 'ge-plan resting or failed', currentPos(session), 'ge', plan.item);
             }
             case 'bank-seller': {
                 const policy = cfg.policy ?? readJsonFile<BankSellerPolicy>(cfg.policyFile ?? '', 'bank-seller policy');
-                const r = await runBankSeller(s, policy);
+                const r = await runBankSeller(s, policy, isStopped);
                 if (r.ok) {
                     return {
                         kind: 'target_met',
@@ -993,10 +1059,13 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                         unitsCompleted: r.journal?.outcomes.reduce((n, o) => n + o.filled, 0) ?? 0,
                     };
                 }
+                if (isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), reason: 'stopped', detail: r.failure || 'bank-seller stopped' };
+                }
                 return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), r.failure || 'bank-seller failed', currentPos(session), 'ge');
             }
             case 'shop-to-bid': {
-                const r = await runShopToBid(s, server, cfg);
+                const r = await runShopToBid(s, server, cfg, isStopped);
                 if (r.ok) {
                     return {
                         kind: 'target_met',
@@ -1009,10 +1078,17 @@ export async function runMarketWorker(session: SessionCore, cfg: MarketConfig): 
                         summary: r.summary,
                     };
                 }
+                if (isStopped()) {
+                    return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), reason: 'stopped', detail: r.summary };
+                }
                 return { kind: 'market_unavailable', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), itemId: cfg.itemIds[0] ?? 0, venue: `shop:${cfg.profiles[0] ?? ''}`, detail: r.summary };
             }
         }
     } catch (error) {
+        await Promise.resolve();
+        if (isStopped()) {
+            return { kind: 'session_unsettled', activityId, account: session.name, ticksElapsed: elapsed(), durationMs: ms(), reason: 'stopped', detail: String(error) };
+        }
         return classifyFailureOutcome(activityId, session.name, elapsed(), ms(), String(error), currentPos(session), 'market');
     }
 }

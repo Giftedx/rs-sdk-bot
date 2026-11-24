@@ -1010,4 +1010,17 @@ test('agilityEstimate, toAgilityWorkerOutcome, agilityWorker.run, and runAgility
         expect(typeof capturedOnStop).toBe('function');
         expect(stoppedCode).toBe(1);
     } finally { fCliStop.stop(); }
+
+    const fWorkerEnd = fixture({ level: 1 });
+    try {
+        const endedRun = await agilityWorker.run(
+            {
+                ...fWorkerEnd.s,
+                ended: Promise.resolve(),
+            } as any,
+            { course: 'gnome', targetLevel: 10 },
+        );
+        expect(isRunOutcome(endedRun)).toBe(true);
+        expect(endedRun.kind).toBe('session_unsettled');
+    } finally { fWorkerEnd.stop(); }
 });

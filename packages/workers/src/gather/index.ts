@@ -7,6 +7,7 @@ import {
     type WorkerModule,
     type WorkerWorldView,
 } from '../contracts';
+import { watchWorkerStop } from '../stop';
 import { runGather, runGatherCli } from './dispatch';
 import { gatherEstimate, gatherPreflight, toWorkerOutcome } from './preflight';
 import { type GatherConfig, normalizeGatherConfig } from './types';
@@ -30,12 +31,10 @@ export const gatherWorker: WorkerModule<GatherConfig, WorkerAccountView, WorkerW
         const s = session as Session;
         const norm = normalizeGatherConfig(cfg);
         const startTick = s.tick?.() ?? 0;
-        let ended = false;
-        void s.ended?.then(() => {
-            ended = true;
-        });
+        const { isStopped } = watchWorkerStop(s, (cfg as { stop?: () => boolean }).stop);
+        await Promise.resolve();
         try {
-            const outcome = await runGather(s, norm, () => ended);
+            const outcome = await runGather(s, norm, isStopped);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
             return toWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed);
         } catch (error) {

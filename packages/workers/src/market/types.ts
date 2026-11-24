@@ -314,6 +314,9 @@ export type Quote = { id: number; name: string; basePrice: number; bid: number |
 export type ShopBuyConfig = {
     readonly mode: 'shop-buy';
     readonly profile: string;
+    readonly shopId?: string;
+    readonly itemId?: number;
+    readonly quantity?: number;
     readonly cap?: number;
     readonly bankAt?: number;
     readonly items?: string;
@@ -428,7 +431,7 @@ export type ShopToBidConfig = {
     readonly scanOnly?: boolean;
 };
 
-export type MarketConfig =
+export type MarketConfig = (
     | ShopBuyConfig
     | EarthShopConfig
     | BuySwordConfig
@@ -439,4 +442,7 @@ export type MarketConfig =
     | GeTripConfig
     | GePlanConfig
     | BankSellerConfig
-    | ShopToBidConfig;
+    | ShopToBidConfig
+) & {
+    readonly stop?: () => boolean;
+};

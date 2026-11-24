@@ -1,9 +1,11 @@
 // Unified firemaking workers: line firemaking order, multi-helper line drops, and Varrock GE regular-fire loop.
 // Supports banked normal logs ladder method.
 import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { openBot, finish, getWorld, accountOf, settle } from '../../../core/src/bot';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import type { Session } from '../../../core/src/inprocess';
+import { statusReadDirs } from '../../../core/src/practice-paths';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { walkPath, sessionWalker, walkRoute, FAR_WALK_TILES, type PathPoint } from '../../../core/src/walk';
 import { installDoorPolicy, type Account, type Leg } from '../../../core/src/world';
@@ -11,7 +13,7 @@ import { loadTravel, travelAllowed, type Travel } from '../../../core/src/travel
 import { planTripOffThread } from '../../../core/src/route-plan';
 import { depositObserved } from '../../../core/src/deposit';
 import { planShopPurchases, buyWithBudget, maximumUnitCost } from '../market';
-import { xpForLevel, levelForXp } from './catalog';
+import { xpForLevel, levelForXp, REPO_ROOT } from './catalog';
 import { productionStopRequested } from './runtime';
 
 export const LOGS = {
@@ -736,7 +738,9 @@ export async function runFiremakingLineCli(
         }
         const runnerXp = (() => {
             try {
-                return Number(JSON.parse(readFileSync(`.practice/status/${runnerName}.json`, 'utf8')).skills.find((k: any) => k.name === 'Firemaking').xp) || 0;
+                const statusPath = statusReadDirs(REPO_ROOT).map(dir => join(dir, `${runnerName}.json`)).find(p => existsSync(p))
+                    ?? join(REPO_ROOT, `.practice/status/${runnerName}.json`);
+                return Number(JSON.parse(readFileSync(statusPath, 'utf8')).skills.find((k: any) => k.name === 'Firemaking').xp) || 0;
             } catch {
                 return 0;
             }

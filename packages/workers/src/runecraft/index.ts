@@ -9,6 +9,7 @@ import {
     type WorkerModule,
     type WorkerWorldView,
 } from '../contracts';
+import { watchWorkerStop } from '../stop';
 import { craftAirRunes, exitAirAltar } from './air';
 import { carrierAltar, insideAirAltar } from './altars';
 import { runeBankOptions, runeBankTarget, runRuneBankCraft } from './bank-craft';
@@ -127,10 +128,10 @@ export const runecraftWorker: WorkerModule<RunecraftConfig, WorkerAccountView, W
         const s = session as Session;
         const norm = normalizeRunecraftConfig(cfg);
         const startTick = s.tick?.() ?? 0;
-        let ended = false;
-        void s.ended?.then(() => { ended = true; });
+        const { isStopped } = watchWorkerStop(s, (cfg as { stop?: () => boolean }).stop);
+        await Promise.resolve();
         try {
-            const outcome = await runRunecraftSession(s, norm, () => ended);
+            const outcome = await runRunecraftSession(s, norm, isStopped);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
             return toRunecraftWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed);
         } catch (error) {

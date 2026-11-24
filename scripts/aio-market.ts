@@ -262,18 +262,34 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 }
             }
             case 'earth-shop': {
+                const earthProfile = pos[0];
+                const earthCap = Number(pos[1] ?? merged.CAP);
+                const earthTarget = Number(merged.STOCK_TARGET);
+                const earthMaximum = Number(merged.MAX_ITEMS);
+                const earthSpend = Number(merged.MAX_SPEND);
+                const earthReserve = Number(merged.COIN_RESERVE);
+                const earthSeedUsed = Number(merged.EARTH_SEED_USED ?? 0);
+                if (
+                    !earthProfile
+                    || !['aubury', 'betty'].includes(earthProfile)
+                    || ![earthCap, earthTarget, earthMaximum, earthSpend, earthReserve, earthSeedUsed].every(n => Number.isSafeInteger(n) && n >= 0)
+                    || earthCap < 1
+                    || earthMaximum < 1
+                ) {
+                    throw Error('usage: bun scripts/aio-market.ts <account> earth-shop <aubury|betty> [CAP] with integer STOCK_TARGET, MAX_ITEMS>=1, MAX_SPEND, COIN_RESERVE');
+                }
                 let stopped = false;
                 let s: Session | undefined;
                 try {
                     s = await openBot(account, { onStop: async () => { stopped = true; } });
                     const r = await runEarthRefill(s, {
-                        profile: pos[0]!,
-                        cap: Number(pos[1] ?? merged.CAP),
-                        target: Number(merged.STOCK_TARGET),
-                        maximum: Number(merged.MAX_ITEMS),
-                        spend: Number(merged.MAX_SPEND),
-                        reserve: Number(merged.COIN_RESERVE),
-                        seedUsed: Number(merged.EARTH_SEED_USED ?? 0),
+                        profile: earthProfile,
+                        cap: earthCap,
+                        target: earthTarget,
+                        maximum: earthMaximum,
+                        spend: earthSpend,
+                        reserve: earthReserve,
+                        seedUsed: earthSeedUsed,
                         stop: () => stopped,
                     });
                     const quiescent = r.safeOffline && shopFinishOk(0, false, r.stop);
@@ -579,6 +595,8 @@ export async function runAioMarket(account: string, args: readonly string[], env
                     s = await openBot(account);
                     const code = await runGEPlanSession(s, request, () => stopped, {}, pos.includes('--finish'), settle);
                     return code === 0 ? 'RESULT ok finite explicit GE price plan' : 'RESULT fail finite explicit GE price plan';
+                } catch (e) {
+                    return await settleResult(s ? [s] : [], false, String(e));
                 } finally {
                     process.off('SIGINT', onSig);
                     process.off('SIGTERM', onSig);

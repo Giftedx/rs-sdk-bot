@@ -446,4 +446,81 @@ describe('combatWorkerModule contracts and preflight', () => {
 
         await expect(runWildDragonsCli([])).rejects.toThrow('usage: bun scripts/aio-boss.ts green-dragon');
     });
+
+    test('combatWorkerModule propagates cfg.stop, session.ended, sessionDied, and stop-file case normalization', async () => {
+        const stopFileHits: string[] = [];
+        const { isStopFilePresent } = await import('../src/stop');
+        expect(
+            isStopFilePresent('MixedBot', ['.practice/stop-wild-dragons'], path => {
+                stopFileHits.push(path);
+                return path === '.practice/stop-mixedbot';
+            }),
+        ).toBe(true);
+        expect(stopFileHits).toContain('.practice/stop-all');
+        expect(stopFileHits).toContain('.practice/stop-MixedBot');
+        expect(stopFileHits).toContain('.practice/stop-mixedbot');
+
+        const endedSession = {
+            name: 'EndedFighter',
+            tick: () => 5,
+            ended: Promise.resolve(),
+            sdk: {
+                getState: () => ({
+                    player: { worldX: 3258, worldZ: 3278, level: 0, lifeId: 1, respawnCount: 0, isDead: false },
+                    skills: [{ name: 'Hitpoints', level: 20, experience: 4500 }],
+                    inventory: [],
+                    equipment: [],
+                    nearbyNpcs: [],
+                    nearbyLocs: [],
+                }),
+                getInventory: () => [],
+                getEquipment: () => [],
+                getSkillXp: () => 0,
+            },
+        } as unknown as CombatSession;
+
+        const stoppedOut = await combatWorkerModule.run(endedSession, {
+            mode: 'cannon',
+            spot: 'battlefield',
+            stop: () => true,
+        });
+        expect(validateRunOutcome(stoppedOut)).toEqual([]);
+        expect(stoppedOut.kind).toBe('session_unsettled');
+
+        let stateCalls = 0;
+        const diedSession = {
+            name: 'DiedFighter',
+            tick: () => 12,
+            ended: new Promise(() => {}),
+            sdk: {
+                getState: () => {
+                    stateCalls += 1;
+                    const diedAfterStart = stateCalls > 1;
+                    return {
+                        player: {
+                            worldX: 3222,
+                            worldZ: 3218,
+                            level: 0,
+                            lifeId: diedAfterStart ? 2 : 1,
+                            respawnCount: diedAfterStart ? 1 : 0,
+                            isDead: false,
+                        },
+                        skills: [{ name: 'Hitpoints', level: 10, experience: 1154 }],
+                        inventory: [],
+                        equipment: [],
+                        nearbyNpcs: [],
+                        nearbyLocs: [],
+                    };
+                },
+                getInventory: () => [],
+                getEquipment: () => [],
+                getSkillXp: () => 0,
+            },
+        } as unknown as CombatSession;
+
+        // Second getState() call reports a new lifeId after start, so sessionDied overrides worker_defect.
+        const diedOut = await runCombatModuleSession(diedSession, { mode: 'cannon', spot: 'nonexistent' });
+        expect(validateRunOutcome(diedOut)).toEqual([]);
+        expect(diedOut.kind).toBe('death');
+    });
 });

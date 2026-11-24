@@ -5,7 +5,9 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {resolveBossStep} from './aio-boss';
 import {importAioLoadout,resolveLogisticsStep} from './aio-logistics';
+import {runAioMarket} from './aio-market';
 import {mergeSkillerEnv,resolveSkillerStep} from './aio-skiller';
+import {cookingRecipes} from '../packages/workers/src/bank-artisan';
 import {planAioPipeline,toSwarmChainJob} from './aio';
 import {parseStep} from '../packages/core/src/chain-step';
 import {workerEntries} from '../packages/core/src/worker-release';
@@ -79,4 +81,20 @@ test('aio-boss exposes blue-dragon and aio-skiller preserves caller env preceden
  const gatherStep=resolveSkillerStep('thieving','knights-stable',[]);
  expect(gatherStep.script).toBe('scripts/aio-skiller.ts');
  expect(gatherStep.args[0]).toBe('gather');
+});
+
+test('aio-market earth-shop validates parameters before login and aio-skiller bank-job settles cleanly on openBot failure',async()=>{
+ await expect(runAioMarket('NoLoginAcct',['earth-shop','aubury','badcap'],{})).rejects.toThrow('usage: bun scripts/aio-market.ts');
+ const dir=mkdtempSync(join(tmpdir(),'aio-skiller-bank-'));
+ const jobPath=join(dir,'bank.json');
+ try{
+  const validRecipe=cookingRecipes().recipes[0]!.name;
+  writeFileSync(jobPath,JSON.stringify({family:'cooking',recipe:validRecipe,target:1,batch:1,cap:200,returnTicks:50,members:false}));
+  // Unconfigured account should fail during openBot and settle with RESULT fail via finally rather than crashing before finish.
+  const r=spawnSync(process.execPath,['scripts/aio-skiller.ts','NoSuchAcct99','bank-job',jobPath],{cwd:root,encoding:'utf8',timeout:20000,windowsHide:true});
+  expect(r.status).toBe(1);
+  expect(r.stdout).toMatch(/^RESULT fail /m);
+ }finally{
+  rmSync(dir,{recursive:true,force:true});
+ }
 });

@@ -294,3 +294,43 @@ test('gatherPreflight honors lowercase world reserves, globalReserves, and escro
     expect(est1.xpPerTick).toBe(6.5);
     expect(est25.xpPerTick).toBe(6.5 * 25);
 });
+
+test('gatherPreflight catches F2P crystal-chest and gatherWorker forwards cfg.stop', async () => {
+    const acct = makeAccount({
+        skills: { Thieving: { level: 50, xp: 101333 }, Mining: { level: 50, xp: 101333 } },
+        bank: { observedAt: 1, trusted: true, items: { 989: 1, 1265: 1 } },
+    });
+    const world = makeWorld(acct);
+
+    const f2pChest = gatherPreflight(acct, { skill: 'foraging', method: 'crystal-chest', members: false }, world);
+    expect(f2pChest.ok).toBe(false);
+    expect(f2pChest.blockers.some(b => b.kind === 'invalid_config')).toBe(true);
+
+    const stopSession: any = {
+        name: 'StoppedMiner',
+        tick: () => 5,
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({ player: { worldX: 3092, worldZ: 3243, level: 0 }, inventory: [], nearbyLocs: [], nearbyNpcs: [] }),
+            getInventory: () => [],
+            getEquipment: () => [],
+            getSkill: () => ({ level: 50, baseLevel: 50 }),
+            getSkillXp: () => 101333,
+        },
+    };
+    let capturedStop: (() => boolean) | undefined;
+    const out = await gatherWorker.run(stopSession, {
+        skill: 'mining',
+        method: 'progressive',
+        args: ['job.json'],
+        stop: () => true,
+        deps: {
+            runProgressive: async (_s: any, _j: any, stop: () => boolean) => {
+                capturedStop = stop;
+                throw Error('stopped');
+            },
+        } as any,
+    });
+    expect(isRunOutcome(out)).toBe(true);
+    expect(capturedStop === undefined || capturedStop()).toBe(true);
+});

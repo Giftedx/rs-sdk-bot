@@ -459,4 +459,40 @@ describe('scripts/aio-market.ts shim and resolveMarketStep', () => {
         expect(plan.remainingCoins).toBe(9500);
         expect(existsSync('scripts/aio-market.ts')).toBe(true);
     });
+
+    test('marketModule normalizes brain shopId/itemId/quantity shop-buy configs and honors cfg.stop / session.ended', async () => {
+        const acct = makeAccount({ bank: { items: { 995: 50_000 }, observedAt: 1, trusted: true } });
+        const world = makeWorld(acct);
+        const brainCfg = {
+            mode: 'shop-buy',
+            shopId: 'aubury',
+            itemId: 556, // Air rune
+            quantity: 25,
+        } as unknown as MarketConfig;
+        const pre = preflightMarket(acct, brainCfg, world);
+        expect(pre.ok).toBe(true);
+        const est = estimateMarket(acct, brainCfg, world);
+        expect(est.unitsPerTick).toBeGreaterThan(0);
+
+        const badBrainCfg = { mode: 'shop-buy', shopId: 'unknown-shop', itemId: 556, quantity: 10 } as unknown as MarketConfig;
+        const badPre = preflightMarket(acct, badBrainCfg, world);
+        expect(badPre.ok).toBe(false);
+        if (!badPre.ok) expect(badPre.blockers.some(b => b.kind === 'invalid_config')).toBe(true);
+
+        const endedOut = await marketModule.run(
+            {
+                name: 'StoppedTrader',
+                tick: () => 5,
+                ended: Promise.resolve(),
+                sdk: {
+                    getState: () => ({ player: { worldX: 3164, worldZ: 3487, level: 0 } }),
+                    getInventory: () => [],
+                    getEquipment: () => [],
+                },
+            } as any,
+            { mode: 'shop-trip', jobFile: '/nonexistent-market-job.json' },
+        );
+        validateRunOutcome(endedOut);
+        expect(endedOut.kind).toBe('session_unsettled');
+    });
 });

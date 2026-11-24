@@ -99,6 +99,8 @@ export interface GatherConfig {
     progressive?: boolean;
     target?: GatherTargetSpec;
     escort?: string;
+    members?: boolean;
+    stop?: () => boolean;
     args?: readonly string[];
     env?: Readonly<Record<string, string | undefined>>;
     deps?: GatherExternalDeps;

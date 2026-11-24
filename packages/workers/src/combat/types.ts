@@ -78,6 +78,7 @@ export interface CombatConfig {
     readonly bank?: string;
     readonly members?: boolean;
     readonly maxRiskPerHour?: number;
+    readonly stop?: () => boolean;
 }
 
 export interface FighterProfileSpec {

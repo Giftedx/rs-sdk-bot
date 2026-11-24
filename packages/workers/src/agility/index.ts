@@ -9,6 +9,7 @@ import {
     type WorkerModule,
     type WorkerWorldView,
 } from '../contracts';
+import { isStopFilePresent, watchWorkerStop } from '../stop';
 import { agilityOptions } from './courses';
 import { agilityEstimate, evaluateAgilityPreflight, toAgilityWorkerOutcome } from './preflight';
 import { runAgility, runAgilitySession } from './runner';
@@ -37,11 +38,11 @@ export const agilityWorker: WorkerModule<AgilityConfig, WorkerAccountView, Worke
         const s = session as Session;
         const norm = normalizeAgilityConfig(cfg);
         const startTick = s.tick?.() ?? 0;
-        let ended = false;
-        void s.ended?.then(() => { ended = true; });
+        const { isStopped } = watchWorkerStop(s, norm.stop);
+        await Promise.resolve();
         const outcome = await runAgilitySession(s, {
             ...norm,
-            stop: () => ended || Boolean(norm.stop?.()),
+            stop: isStopped,
         });
         const elapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
         return toAgilityWorkerOutcome(outcome, s.name ?? 'unknown', norm, elapsed);
@@ -75,9 +76,10 @@ export async function runAgilityCli(
     const fin = deps.finish ?? defaultFinish;
     let s: Session | undefined;
     let stopped = false;
+    const isStopped = () => stopped || isStopFilePresent(name);
     try {
         s = await open(name, { onStop: async () => { stopped = true; } });
-        const result = await runAgility(s, { ...o, stop: () => stopped });
+        const result = await runAgility(s, { ...o, stop: isStopped });
         console.log('AGILITY_ORDER_RESULT ' + JSON.stringify(result));
         await fin([s], true, `agility-order ${result.course} level=${result.level} target=${result.target} xp=${result.xpGained}`);
         return 0;
