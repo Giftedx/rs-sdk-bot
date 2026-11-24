@@ -109,7 +109,6 @@ export const TOURIST_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.headlessArrow, name: 'Headless arrow', count: 150 },
     { id: ITEMS.bronzeArrowtips, name: 'Bronze arrowtips', count: 150 },
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 14 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
 ];
 
 export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
@@ -118,7 +117,6 @@ export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
     { id: ITEMS.desertShirt, name: 'Desert shirt', count: 1 },
     { id: ITEMS.desertRobe, name: 'Desert robe', count: 1 },
     { id: ITEMS.desertBoots, name: 'Desert boots', count: 1 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
     { id: ITEMS.shark, name: 'Shark', count: 1 },
 ];
 
@@ -130,12 +128,10 @@ export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
     { id: ITEMS.shark, name: 'Shark', count: 1 },
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 2 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
 ];
 
 export const TOURIST_TRADE_3: readonly SupplyEntry[] = [
     { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 6 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 4 },
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
 ];
@@ -146,7 +142,6 @@ export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 3 },
     { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 6 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 2 },
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
 ];
 
@@ -164,7 +159,6 @@ export const GNOME_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
     { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 4 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 7 },
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
 ];
 
@@ -172,7 +166,6 @@ export const GNOME_TRADE_1_NOPRAY: readonly SupplyEntry[] = [
     { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
     { id: ITEMS.coins, name: 'Coins', count: 100 },
     { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 5 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 12 },
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 9 },
 ];
 
@@ -186,7 +179,6 @@ export function trade1ForConfig(cfg: Pick<AgilityRouteConfig, 'route' | 'usePray
                 { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
                 { id: ITEMS.coins, name: 'Coins', count: 500 },
                 { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 5 },
-                { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 12 },
                 { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 9 },
             ];
     }
@@ -1773,7 +1765,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
     // Walk from Edgeville (or surface ladder) to Wilderness Ridge Gate (2998, 3916).
     if ((posOf(s)?.worldZ ?? 0) < 3916) {
         if (cfg.usePrayer && manualPrayer) await setProtectFromMelee(s, true);
-        await walkNear(s, { x: 2998, z: 3915, level: 0 }, 3, 520, { ignoreHunters: true, preDrinkAgility: cfg.usePotion, stop });
+        await walkNear(s, { x: 2998, z: 3916, level: 0 }, 1, 520, { ignoreHunters: true, preDrinkAgility: cfg.usePotion, stop });
     }
 
     // Drink Agility potion if needed and enter Ridge Gate (2998, 3917).
@@ -1822,6 +1814,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
     let i = 0, prog = 0, laps = 0, fails = 0, preClicks = 0, closes = 0, energyMin = 100;
     let stepXp = skillXp(s, 'Agility'), lastPos = '', still = 0, inPit = false, pitClicked = false, preBlock = -1, sentTick = -1;
     let lastPotTick = -10;
+    let preClickedIdx = -1;
 
     const sipAgilityPot = async () => {
         if (!cfg.usePotion) return;
@@ -1915,6 +1908,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 if (gained >= 4989 * 2.2) laps++;
                 prog = nextWildernessProgress(prog, WILDERNESS_STEPS[i]!.name);
                 i = (i + 1) % WILDERNESS_STEPS.length;
+                preClickedIdx = -1;
                 if (i === 0) {
                     await sipAgilityPot();
                     await maintainEnergy(s, 78);
@@ -1940,6 +1934,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 if (atEnd && (prog !== 4 || still >= 3)) {
                     prog = nextWildernessProgress(prog, 'rocks');
                     i = 0;
+                    preClickedIdx = -1;
                     stepXp = skillXp(s, 'Agility');
                     await sipAgilityPot();
                     await maintainEnergy(s, 78);
@@ -1978,6 +1973,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 let nextI = resumeStep('wilderness', p as any);
                 if (wasInPit && WILDERNESS_STEPS[nextI]?.name === 'stones') nextI = LOG_IDX;
                 i = nextI;
+                preClickedIdx = -1;
                 stepXp = skillXp(s, 'Agility');
                 await syncPrayer(i);
                 await maybeEat();
@@ -1987,16 +1983,18 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
             }
 
             // V2 wilderness pre-click: stay silent mid-obstacle so current crosses uninterrupted and PrayerGuard avoids
-            // false interactLoc holds, then send next obstacle's click on finishing tiles once reachable.
+            // false interactLoc holds, then pre-click next obstacle once on finishing tiles once reachable.
             if (preBlock < 0 && startedWildernessObstacle(step.name, p)) {
                 const nextIdx = (i + 1) % WILDERNESS_STEPS.length;
                 const readyToPreClick = step.name === 'ropeswing' || canPreClickNextObstacle(step.name, p);
-                if (readyToPreClick && sentTick !== s.tick()) {
+                if (readyToPreClick && sentTick !== s.tick() && preClickedIdx !== i) {
                     if (nextIdx === 0 && cfg.alignPipe) {
                         preClicks++;
+                        preClickedIdx = i;
                         await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
                     } else if (canReachStep(WILDERNESS_STEPS[nextIdx]!)) {
                         preClicks++;
+                        preClickedIdx = i;
                         await syncPrayer(nextIdx);
                         await maybeEat();
                         await clickStep(WILDERNESS_STEPS[nextIdx]!);

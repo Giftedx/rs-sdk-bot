@@ -13,6 +13,7 @@ import {
     settleHelper,
     rubTeleport,
     walkWaypointsSafe,
+    sailBrimhavenToArdougne,
     drinkEnergyIfLow,
     slotOfId,
     finish,
@@ -42,7 +43,6 @@ export const FISHING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_OAK_LOGS]: 4,
     [OBJ_GLORY_4]: 1,
     [OBJ_SWAMP_PASTE]: 1,
-    [OBJ_SUPER_ENERGY_4]: 1,
 };
 
 export const FISHING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
@@ -266,19 +266,17 @@ if (import.meta.main) {
             await Promise.all(unused.slice(0, 5).map(it => main.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' })));
         }
 
-        // Edgeville Glory option 1 -> walk west across White Wolf Mountain to Harry's Fishing Shop at Catherby.
+        // Karamja Glory option 2 -> Brimhaven Customs ship to Ardougne -> walk to Harry's Fishing Shop (no White Wolf Mountain wolves).
         await rubTeleport(
             main,
             FISHING_GLORY_IDS,
-            1,
-            p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
+            2,
+            p => p.worldX >= 2890 && p.worldX <= 2945 && p.worldZ >= 3150 && p.worldZ <= 3200,
             isStopped,
         );
-        await walkWaypointsSafe(
-            main,
-            [[3059, 3405, 4], [2953, 3435, 4], [2866, 3459, 4], [2848, 3473, 4], [2837, 3443, 2]],
-            isStopped,
-        );
+        await walkWaypointsSafe(main, [[2774, 3228, 3]], isStopped);
+        await sailBrimhavenToArdougne(main, isStopped);
+        await walkWaypointsSafe(main, [[2837, 3443, 2]], isStopped);
         await buyBigNetAtCatherby(main, isStopped);
         await walkWaypointsSafe(main, [[2838, 3432, 1]], isStopped);
 

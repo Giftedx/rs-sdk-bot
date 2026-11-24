@@ -1,141 +1,291 @@
 import { existsSync } from 'node:fs';
-import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { waitTicks } from '../packages/core/src/ticks';
 import { xpForLevel } from '../packages/planner/src/curve';
-import { miningProfiles, incidentalMiningGems, runRotationMining, siteTiles } from '../packages/workers/src/gather';
+import { componentId } from '../packages/core/src/logout';
+import { finish } from '../packages/core/src/bot';
+import type { Session } from '../packages/core/src/inprocess';
+import { miningProfiles, MINING_SITES, siteTiles } from '../packages/workers/src/gather';
 import {
     openHelperAndMain,
     skipTutorialFast,
-    dropTutorialJunk,
     startHelperTradeArm,
     receiveTradeFast,
     settleHelper,
     rubTeleport,
     walkWaypointsSafe,
-    isLiveSupplyVariant,
+    slotOfId,
     itemQty,
-    finish,
     chebDist,
     SKILL_MULTI3_MAKE1_A,
     OBJ_KNIFE,
     OBJ_LOGS,
-    OBJ_COINS,
     OBJ_GLORY_4,
-    OBJ_DUELING_8,
-    RING_OF_DUELING_IDS,
-    OBJ_GAMES_8,
-    OBJ_SUPER_ENERGY_4,
-    ENERGY_POTION_IDS,
 } from './gathering-specialist-lib';
 
+export const OBJ_BRONZE_PICKAXE = 1265;
 export const OBJ_RUNE_PICKAXE = 1275;
-export const OBJ_CLAY = 434;
-export const OBJ_COPPER_ORE = 436;
+export const OBJ_TIN_ORE = 438;
 export const OBJ_IRON_ORE = 440;
+export const OBJ_SHORTBOW = 841;
+export const OBJ_MONK_ROBE_BOTTOM = 542;
+export const OBJ_MONK_ROBE_TOP = 544;
+export const OBJ_HOLY_SYMBOL = 1718;
+export const OBJ_DRAGON_BONES = 536;
+export const OBJ_PRAYER_POTION_4 = 2434;
+export const PRAYER_POTION_IDS = [2434, 139, 141, 143] as const;
+export const OBJ_AIR_RUNE = 556;
+export const OBJ_MIND_RUNE = 558;
+export const PROTECT_FROM_MELEE_PRAYER = 14;
 export const IRON_ORE_XP_25X = 875;
 
-export const MINING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
-export const RELLEKKA_IRON_CENTER = { x: 2724, z: 3693, level: 0 } as const;
+export const MINING_GLORY_IDS = [OBJ_GLORY_4, 1710, 1708, 1706] as const;
+export const BARBARIAN_TIN_CENTER = { x: 3087, z: 3417, level: 0 } as const;
+export const WILDY_HOBGOBLIN_CENTER = { x: 3100, z: 3766, level: 0 } as const;
 
+// 25 supply slots + kept tutorial Bronze pickaxe & Shortbow = 27 slots: 11 Dragon bones (Prayer 43) + Monk robes +
+// Holy symbol + 4 Prayer pots allow zero-damage 2-tick Hobgoblin flinch + 3-tick knife mining at Wilderness 8-rock.
 export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_PICKAXE]: 1,
     [OBJ_KNIFE]: 1,
     [OBJ_LOGS]: 2,
-    [OBJ_CLAY]: 6,
-    [OBJ_COPPER_ORE]: 4,
-    [OBJ_IRON_ORE]: 2,
-    [OBJ_COINS]: 150,
     [OBJ_GLORY_4]: 1,
-    [OBJ_GAMES_8]: 1,
-    [OBJ_SUPER_ENERGY_4]: 2,
+    [OBJ_MONK_ROBE_BOTTOM]: 1,
+    [OBJ_MONK_ROBE_TOP]: 1,
+    [OBJ_HOLY_SYMBOL]: 1,
+    [OBJ_AIR_RUNE]: 150,
+    [OBJ_MIND_RUNE]: 150,
+    [OBJ_DRAGON_BONES]: 11,
+    [OBJ_PRAYER_POTION_4]: 4,
 };
 
-// Live-stockable variant: 0 Games necklace, 0 Super energy, 0 Coins (uses 1 GE-available Glory(4) + local Ring of dueling(8)).
-export const MINING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
-    [OBJ_RUNE_PICKAXE]: 1,
-    [OBJ_KNIFE]: 1,
-    [OBJ_LOGS]: 2,
-    [OBJ_CLAY]: 6,
-    [OBJ_COPPER_ORE]: 4,
-    [OBJ_IRON_ORE]: 2,
-    [OBJ_GLORY_4]: 1,
-    [OBJ_DUELING_8]: 1,
-};
+export const MINING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = MINING_SPECIALIST_SUPPLIES;
 
-async function exitGamesRoomToBurthorpe(main: Awaited<ReturnType<typeof openHelperAndMain>>['main'], stop: () => boolean): Promise<void> {
-    let lastClickLvl = -1;
-    let lastClickAt = -10;
-    for (let i = 0; i < 30 && !stop(); i++) {
-        const p = main.sdk.getState()?.player;
-        if (!p) { await waitTicks(main, 1); continue; }
-        if (p.level === 0 && p.worldX >= 2890 && p.worldX <= 2910 && p.worldZ >= 3555 && p.worldZ <= 3575) return;
-        const targetLocId = p.level === 0 ? 4622 : 4627;
-        // Level 0: the base stairs at (2207,4935) lead to the upper floor beside the Burthorpe exit stairs (1_34_77_29_7).
-        const locs = (main.sdk.getState()?.nearbyLocs ?? [])
-            .filter(l => l.id === targetLocId && (p.level !== 0 || l.x === 2207))
-            .sort((a, b) => chebDist({ x: a.x, z: a.z }, { x: p.worldX, z: p.worldZ }) - chebDist({ x: b.x, z: b.z }, { x: p.worldX, z: p.worldZ }));
-        const loc = locs[0];
-        if (loc && (lastClickLvl !== p.level || i - lastClickAt >= 5)) {
-            lastClickLvl = p.level;
-            lastClickAt = i;
-            await main.sdk.sendInteractLoc(loc.x, loc.z, loc.id, 1);
-        }
-        await waitTicks(main, 1);
-    }
-    throw Error('failed climbing Games Room stairs to Burthorpe');
-}
+const MINING_KEEP_IDS = new Set<number>([
+    OBJ_BRONZE_PICKAXE,
+    OBJ_RUNE_PICKAXE,
+    OBJ_KNIFE,
+    OBJ_LOGS,
+    ...MINING_GLORY_IDS,
+    OBJ_SHORTBOW,
+    OBJ_MONK_ROBE_BOTTOM,
+    OBJ_MONK_ROBE_TOP,
+    OBJ_HOLY_SYMBOL,
+    OBJ_AIR_RUNE,
+    OBJ_MIND_RUNE,
+    OBJ_DRAGON_BONES,
+    ...PRAYER_POTION_IDS,
+]);
+
+const WIND_STRIKE = componentId('magic:wind_strike');
+const AUTO_RETALIATE_ON_COMP = 150;
 
 export function remainingIronOresTo99(currentXp: number): number {
     return Math.max(0, Math.ceil((xpForLevel(99) - currentXp) / IRON_ORE_XP_25X));
 }
 
-async function completeDoricQuest(main: Awaited<ReturnType<typeof openHelperAndMain>>['main'], stop: () => boolean): Promise<void> {
-    const converse = async (pats: readonly RegExp[], done: () => boolean, maxTicks = 25): Promise<void> => {
-        for (let i = 0; i < maxTicks && !stop(); i++) {
-            if (done()) return;
-            const d = main.sdk.getDialog();
-            if (d?.isOpen && !d.isWaiting) {
-                const opt = d.options.find(o => pats.some(re => re.test(o.text)));
-                await main.direct({ type: 'clickDialogOption', optionIndex: opt ? opt.index : 0, reason: 'SDK' });
-            }
-            await waitTicks(main, 1);
+function isProtectMeleeOn(st: ReturnType<Session['sdk']['getState']>): boolean {
+    return Boolean((st as { prayers?: { activePrayers?: boolean[] } } | undefined)?.prayers?.activePrayers?.[PROTECT_FROM_MELEE_PRAYER]);
+}
+
+function findPrayerPotionSlot(s: Session): number | undefined {
+    const inv = s.sdk.getInventory();
+    for (const id of PRAYER_POTION_IDS) {
+        const hit = inv.find(i => i.id === id);
+        if (hit) return hit.slot;
+    }
+    return undefined;
+}
+
+function tryDrinkPrayerPotion(s: Session, minPts = 15): Promise<unknown> | null {
+    const pts = s.sdk.getSkill('Prayer')?.level ?? 0;
+    if (pts > minPts) return null;
+    const slot = findPrayerPotionSlot(s);
+    if (slot === undefined) return null;
+    const item = s.sdk.getInventory().find(i => i.slot === slot);
+    const op = item?.optionsWithIndex?.find(o => /^drink$/i.test(o.text))?.opIndex ?? 1;
+    return s.direct({ type: 'useInventoryItem', slot, optionIndex: op, reason: 'SDK' });
+}
+
+async function buryPrayerBones(s: Session, stop: () => boolean, targetLevel = 43): Promise<void> {
+    for (let i = 0; i < 24 && !stop(); i++) {
+        if ((s.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= targetLevel) break;
+        const slot = slotOfId(s, OBJ_DRAGON_BONES);
+        if (slot === undefined) break;
+        const item = s.sdk.getInventory().find(it => it.slot === slot);
+        const op = item?.optionsWithIndex?.find(o => /^bury$/i.test(o.text))?.opIndex ?? 1;
+        const beforeXp = s.sdk.getSkill('Prayer')?.experience ?? 0;
+        await s.direct({ type: 'useInventoryItem', slot, optionIndex: op, reason: 'SDK' });
+        for (let t = 0; t < 3 && !stop(); t++) {
+            await waitTicks(s, 1);
+            if ((s.sdk.getSkill('Prayer')?.experience ?? 0) > beforeXp) break;
         }
-    };
+    }
+    const lvl = s.sdk.getSkill('Prayer')?.baseLevel ?? 1;
+    if (lvl < targetLevel) throw Error(`buryPrayerBones: reached Prayer ${lvl} < ${targetLevel}`);
+}
 
-    const talkDoric = async () => {
-        for (let t = 0; t < 4 && !stop(); t++) {
-            const npc = main.sdk.findNearbyNpc(/^doric$/i);
-            if (npc && chebDist({ x: npc.x, z: npc.z }, { x: main.sdk.getState()!.player!.worldX, z: main.sdk.getState()!.player!.worldZ }) <= 5) {
-                const r = await main.bot.talkTo(/^doric$/i);
-                if (r.success || main.sdk.getDialog()?.isOpen) return;
+async function equipMiningGear(s: Session, ids: readonly number[]): Promise<void> {
+    const pending = ids
+        .map(id => s.sdk.getInventory().find(i => i.id === id))
+        .filter((it): it is NonNullable<typeof it> => !!it);
+    for (let i = 0; i < pending.length; i += 4) {
+        const batch = pending.slice(i, i + 4).map(item => {
+            const op = item.optionsWithIndex?.find(o => /^(wield|wear|equip)$/i.test(o.text))?.opIndex ?? 2;
+            return s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+        });
+        await Promise.all(batch);
+        await waitTicks(s, 1);
+    }
+    const st = s.sdk.getState();
+    const acts: Promise<unknown>[] = [];
+    const curStyle = typeof st?.combatStyle === 'object' && st.combatStyle !== null ? st.combatStyle.currentStyle : 0;
+    if (curStyle !== 1) acts.push(s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' }));
+    if (st?.autoRetaliateEnabled === false) acts.push(s.direct({ type: 'clickComponent', componentId: AUTO_RETALIATE_ON_COMP, reason: 'SDK' }));
+    if (acts.length > 0) await Promise.all(acts);
+}
+
+type NearbyLoc = NonNullable<NonNullable<ReturnType<Session['sdk']['getState']>>['nearbyLocs']>[number];
+
+const besideTile = (px: number, pz: number, r: { x: number; z: number }): boolean =>
+    Math.abs(px - r.x) + Math.abs(pz - r.z) === 1;
+
+function findAvailableRocks(
+    s: Session,
+    rockCoords: ReadonlySet<string>,
+    rockIds: ReadonlySet<number>,
+): { x: number; z: number; id: number; op: number }[] {
+    const out: { x: number; z: number; id: number; op: number }[] = [];
+    for (const l of s.sdk.getState()?.nearbyLocs ?? []) {
+        if (!rockIds.has(l.id) || !rockCoords.has(`${l.x},${l.z}`)) continue;
+        if (l.reachable === false) continue;
+        const op = l.optionsWithIndex?.find(o => /^mine$/i.test(o.text))?.opIndex;
+        if (op === undefined) continue;
+        out.push({ x: l.x, z: l.z, id: l.id, op });
+    }
+    return out;
+}
+
+function pickBestIronStandTile(
+    s: Session,
+    avail: readonly { x: number; z: number }[],
+    allRockCoords: ReadonlySet<string>,
+): { x: number; z: number } | undefined {
+    const p = s.sdk.getState()?.player;
+    const px = p?.worldX ?? WILDY_HOBGOBLIN_CENTER.x;
+    const pz = p?.worldZ ?? WILDY_HOBGOBLIN_CENTER.z;
+    const cands = new Map<string, { x: number; z: number; adjAvail: number; adjTotal: number; dist: number }>();
+    for (const r of avail) {
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+            const x = r.x + dx;
+            const z = r.z + dz;
+            if (allRockCoords.has(`${x},${z}`)) continue;
+            const k = `${x},${z}`;
+            if (cands.has(k)) continue;
+            const adjAvail = avail.filter(a => besideTile(x, z, a)).length;
+            let adjTotal = 0;
+            for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+                if (allRockCoords.has(`${x + ax},${z + az}`)) adjTotal++;
             }
-            await main.bot.walkTo(2952, 3451, 1);
-            await waitTicks(main, 1);
+            cands.set(k, { x, z, adjAvail, adjTotal, dist: Math.max(Math.abs(x - px), Math.abs(z - pz)) });
         }
-        throw Error('could not talk to Doric');
-    };
-
-    // Part 1: accept quest and exit immediately when dialog closes.
-    await talkDoric();
-    let part1Open = false;
-    await converse(
-        [/wanted to use your anvils/i, /yes, i will get you materials/i],
-        () => {
-            const open = !!main.sdk.getDialog()?.isOpen;
-            if (open) part1Open = true;
-            return part1Open && !open;
-        },
-        25,
+    }
+    const sorted = [...cands.values()].sort((a, b) =>
+        (a.dist - b.dist) || (b.adjAvail - a.adjAvail) || (b.adjTotal - a.adjTotal),
     );
+    for (const c of sorted) {
+        const path = s.sdk.findPath(c.x, c.z);
+        if (path.success && path.reachedDestination === true) return { x: c.x, z: c.z };
+    }
+    return sorted[0];
+}
 
-    // Part 2: hand in 6 clay, 4 copper ore, 2 iron ore -> 32,500 Mining XP (lvl 49).
-    await talkDoric();
-    await converse(
-        [/have my materials/i, /yes/i],
-        () => (main.sdk.getSkill('Mining')?.baseLevel ?? 1) >= 49,
-        35,
-    );
-    if ((main.sdk.getSkill('Mining')?.baseLevel ?? 1) < 49) {
-        throw Error(`Doric's Quest did not grant Mining 49 (level=${main.sdk.getSkill('Mining')?.baseLevel})`);
+function targetsPlayer(s: Session, targetIndex: number): boolean {
+    if (targetIndex < 32768) return false;
+    const otherPlayers = new Set((s.sdk.getState()?.nearbyPlayers ?? []).map(p => p.index));
+    return !otherPlayers.has(targetIndex - 32768);
+}
+
+function countAttackingHobgoblins(s: Session): number {
+    let count = 0;
+    for (const n of s.sdk.getState()?.nearbyNpcs ?? []) {
+        if (!/^hobgoblin$/i.test(n.name) || n.hp === 0) continue;
+        if (targetsPlayer(s, n.targetIndex) || (n.inCombat && n.distance <= 2)) count++;
+    }
+    return count;
+}
+
+function findUntaggedHobgoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
+    const cands = (s.sdk.getState()?.nearbyNpcs ?? []).filter(n => {
+        if (!/^hobgoblin$/i.test(n.name) || n.hp === 0 || n.distance > 12) return false;
+        if ((n as { reachable?: boolean }).reachable === false) return false;
+        if ((taggedAt.get(n.index) ?? -999) >= now - 25) return false;
+        if (targetsPlayer(s, n.targetIndex)) return false;
+        return n.targetIndex < 0;
+    });
+    cands.sort((a, b) => (a.distance - b.distance) || (a.combatLevel - b.combatLevel));
+    return cands[0];
+}
+
+async function mineTinTo15(main: Session, stop: () => boolean): Promise<void> {
+    const tinProf = miningProfiles().find(p => p.name === 'tin_rock_table');
+    if (!tinProf) throw Error('missing tin_rock_table profile');
+    const tinIds = new Set(tinProf.rocks);
+    const tinTiles = siteTiles(tinProf, { key: 'barb-tin', profile: 'tin_rock_table', center: BARBARIAN_TIN_CENTER, radius: 6, bank: BARBARIAN_TIN_CENTER });
+    const tinCoords = new Set(tinTiles.map(t => `${t.x},${t.z}`));
+    let delay = 0;
+    while (!stop() && (main.sdk.getSkill('Mining')?.baseLevel ?? 1) < 15) {
+        if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
+            await main.direct({ type: 'closeModal', reason: 'SDK' });
+        }
+        const now = main.tick();
+        if (now < delay) {
+            await waitTicks(main, 1);
+            continue;
+        }
+        const avail = findAvailableRocks(main, tinCoords, tinIds);
+        const p = main.sdk.getState()?.player;
+        if (!avail.length || !p) {
+            await waitTicks(main, 1);
+            continue;
+        }
+        avail.sort((a, b) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ)) - Math.max(Math.abs(b.x - p.worldX), Math.abs(b.z - p.worldZ)));
+        const rock = avail[0]!;
+        if (!besideTile(p.worldX, p.worldZ, rock)) {
+            const st = pickBestIronStandTile(main, [rock], tinCoords);
+            if (st) await main.direct({ type: 'walkTo', x: st.x, z: st.z, running: true, reason: 'SDK' });
+            await waitTicks(main, 1);
+            continue;
+        }
+        const knifeSlot = slotOfId(main, OBJ_KNIFE);
+        const logSlot = slotOfId(main, OBJ_LOGS);
+        const acts: Promise<unknown>[] = [];
+        const tinDrop = slotOfId(main, OBJ_TIN_ORE);
+        if (tinDrop !== undefined && main.sdk.getInventory().length >= 26) {
+            acts.push(main.direct({ type: 'dropItem', slot: tinDrop, reason: 'SDK' }));
+        }
+        if (knifeSlot !== undefined && logSlot !== undefined) {
+            acts.push(
+                main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
+                main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
+            );
+        }
+        acts.push(main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: rock.op, reason: 'SDK' }));
+        await Promise.all(acts);
+        delay = now + 4;
+        await waitTicks(main, 1);
+    }
+    if ((main.sdk.getSkill('Mining')?.baseLevel ?? 1) < 15) {
+        throw Error(`Barbarian Village tin failed reaching Mining 15 (lvl=${main.sdk.getSkill('Mining')?.baseLevel})`);
+    }
+    for (const it of main.sdk.getInventory().filter(i => i.id === OBJ_TIN_ORE).slice(0, 5)) {
+        await main.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' });
+    }
+}
+
+async function clearMiningInteraction(s: Session): Promise<void> {
+    const p = s.sdk.getState()?.player;
+    if (p) {
+        await s.direct({ type: 'walkTo', x: p.worldX, z: p.worldZ, running: true, reason: 'SDK' });
     }
 }
 
@@ -152,110 +302,275 @@ if (import.meta.main) {
     let ok = false;
     let detail = '';
 
-    const supplies = isLiveSupplyVariant() ? MINING_SPECIALIST_LIVE_SUPPLIES : MINING_SPECIALIST_SUPPLIES;
     let readyForTrade = false;
     const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
         const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 13);
+        for (let b = 0; b < 4 && !isStopped(); b++) {
+            const junk = main.sdk.getInventory().filter(i => !MINING_KEEP_IDS.has(i.id)).slice(0, 5);
+            if (junk.length === 0) break;
+            await Promise.all(junk.map(it => main.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' })));
+            await waitTicks(main, 1);
+        }
         readyForTrade = true;
-        const tradeTicks = await receiveTradeFast(main, helper, supplies, isStopped, arm);
+        const tradeTicks = await receiveTradeFast(
+            main,
+            helper,
+            MINING_SPECIALIST_SUPPLIES,
+            isStopped,
+            arm,
+            { [OBJ_GLORY_4]: MINING_GLORY_IDS },
+        );
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
         });
 
-        if (itemQty(main, OBJ_GAMES_8) > 0) {
-            // Games necklace option 1 -> Burthorpe Games Room -> climb 2 stairs to (2899,3564) -> walk to Doric (135 tiles).
-            await rubTeleport(
-                main,
-                [OBJ_GAMES_8],
-                1,
-                p => p.level === 0 && p.worldX >= 2195 && p.worldX <= 2220 && p.worldZ >= 4925 && p.worldZ <= 4950,
-                isStopped,
-            );
-            await exitGamesRoomToBurthorpe(main, isStopped);
-            await walkWaypointsSafe(
-                main,
-                [[2952, 3451, 2]],
-                isStopped,
-            );
-        } else if (MINING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
-            await rubTeleport(
-                main,
-                MINING_GLORY_IDS,
-                1,
-                p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
-                isStopped,
-            );
-            await walkWaypointsSafe(
-                main,
-                [[3020, 3425, 4], [2952, 3451, 2]],
-                isStopped,
-            );
-        } else {
-            await walkWaypointsSafe(
-                main,
-                [[3140, 3260, 4], [3075, 3315, 4], [3072, 3375, 4], [3010, 3408, 4], [2952, 3451, 2]],
-                isStopped,
-            );
-        }
+        await buryPrayerBones(main, isStopped, 43);
+        await equipMiningGear(main, [
+            OBJ_MONK_ROBE_TOP,
+            OBJ_MONK_ROBE_BOTTOM,
+            OBJ_SHORTBOW,
+            OBJ_HOLY_SYMBOL,
+        ]);
 
-        await completeDoricQuest(main, isStopped);
-        const doricTicks = main.tick() - t0;
-
-        // Rellekka East 9-rock iron cluster (2724,3693): 9 iron rocks allow continuous 3.00t/ore without waiting on 18t respawn.
-        await walkWaypointsSafe(
+        // Edgeville Glory -> Barbarian Village Tin (39t walk, 6 tin -> Mining 15) -> Edgeville Glory -> Wilderness Hobgoblin 8-rock.
+        await rubTeleport(
             main,
-            [[2855, 3481, 4], [2844, 3460, 4], [2798, 3449, 4], [2738, 3507, 4], [2671, 3563, 4], [2687, 3639, 4], [2724, 3693, 2]],
+            MINING_GLORY_IDS,
+            1,
+            p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
             isStopped,
         );
+        await walkWaypointsSafe(main, [[3087, 3417, 2]], isStopped);
+        await mineTinTo15(main, isStopped);
+        const tinTicks = main.tick() - t0;
 
-        const zooStart = main.tick() - t0;
+        await rubTeleport(
+            main,
+            MINING_GLORY_IDS,
+            1,
+            p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
+            isStopped,
+        );
+        if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && !isProtectMeleeOn(main.sdk.getState())) {
+            await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
+        }
+        await walkWaypointsSafe(main, [[3100, 3767, 1]], isStopped);
+        const arriveTick = main.tick() - t0;
+
         const ironProfile = miningProfiles().find(p => p.name === 'iron_rock_table');
         if (!ironProfile) throw Error('missing iron_rock_table profile');
-        const rocks = siteTiles(ironProfile, { key: 'rellekka-east-iron', profile: 'iron_rock_table', center: RELLEKKA_IRON_CENTER, radius: 6, bank: RELLEKKA_IRON_CENTER });
-        const need = remainingIronOresTo99(main.sdk.getSkillXp('Mining') ?? 0);
+        const wildySite = MINING_SITES.find(s => s.key === 'wilderness-hobgoblin-iron');
+        if (!wildySite) throw Error('missing wilderness-hobgoblin-iron site');
+        const rockTiles = siteTiles(ironProfile, wildySite);
+        const rockCoords = new Set(rockTiles.map(t => `${t.x},${t.z}`));
+        const rockIds = new Set(ironProfile.rocks);
 
-        const rot = await runRotationMining(
-            {
-                state: () => main.sdk.getState(),
-                tick: () => main.tick(),
-                stop: isStopped,
-                mine: l => main.sdk.sendInteractLoc(l.x, l.z, l.id, 1).then(r => r.success),
-                wait: (test, ticks) => waitUntil(main, test, { timeoutTicks: ticks }),
-                step: () => waitTicks(main, 1),
-                clearModal: () => main.direct({ type: 'closeModal', reason: 'SDK' }).then(() => {}),
-                send: async acts => {
-                    const st = main.sdk.getState();
-                    const all: Array<{ type: string; [k: string]: unknown }> = [];
-                    if ((st?.dialog?.isOpen || st?.modalOpen) && !acts.some(a => a.type === 'closeModal') && acts.length < 5) {
-                        all.push({ type: 'closeModal', reason: 'SDK' });
+        let rolls = 0;
+        let flinchRolls = 0;
+        let knifeRolls = 0;
+        let lastTagTick = -99;
+        let tagCount = 0;
+        let actionDelayApprox = 0;
+        let clearSentForTick = -99;
+        let droppedBronze = false;
+        const taggedAt = new Map<number, number>();
+        const seenHitKeys = new Set<string>();
+        const recentHitTicks: number[] = [];
+        let hitEventsTotal = 0;
+
+        const drainHitEvents = (st: ReturnType<Session['sdk']['getState']>): number => {
+            let maxHitTick = -1;
+            const events = (st as {
+                combatEvents?: Array<{ observationId?: number; tick?: number; type?: string; sourceType?: string; targetType?: string; sourceIndex?: number; damage?: number }>;
+            } | undefined)?.combatEvents ?? [];
+            for (const e of events) {
+                if (e.type !== 'damage_taken' || e.sourceType !== 'npc') continue;
+                if (e.targetType && e.targetType !== 'player') continue;
+                const k = `${e.observationId ?? ''}:${e.tick ?? ''}:${e.sourceIndex ?? ''}:${e.damage ?? ''}`;
+                if (seenHitKeys.has(k)) continue;
+                seenHitKeys.add(k);
+                hitEventsTotal++;
+                if (typeof e.tick === 'number') {
+                    if (!recentHitTicks.includes(e.tick)) recentHitTicks.push(e.tick);
+                    if (e.tick > maxHitTick) maxHitTick = e.tick;
+                }
+            }
+            return maxHitTick;
+        };
+        drainHitEvents(main.sdk.getState());
+
+        while (!isStopped()) {
+            const mineLvl = main.sdk.getSkill('Mining')?.baseLevel ?? 1;
+            const mineXp = main.sdk.getSkillXp('Mining') ?? 0;
+            if (mineLvl >= 99 || mineXp >= xpForLevel(99)) {
+                ok = true;
+                break;
+            }
+            if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
+                await main.direct({ type: 'closeModal', reason: 'SDK' });
+            }
+            if (!droppedBronze && mineLvl >= 41) {
+                const bronzeSlot = slotOfId(main, OBJ_BRONZE_PICKAXE);
+                if (bronzeSlot !== undefined) await main.direct({ type: 'dropItem', slot: bronzeSlot, reason: 'SDK' });
+                droppedBronze = true;
+            }
+
+            const now = main.tick();
+            const st = main.sdk.getState();
+            const hitTick = drainHitEvents(st);
+            const prayPts = main.sdk.getSkill('Prayer')?.level ?? 0;
+            const outOfPrayer = prayPts === 0 && findPrayerPotionSlot(main) === undefined;
+            if (!outOfPrayer && !isProtectMeleeOn(st) && prayPts === 0 && (main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
+                const potAct = tryDrinkPrayerPotion(main, 99);
+                if (potAct) {
+                    await potAct;
+                    clearSentForTick = -99;
+                    await waitTicks(main, 1);
+                    continue;
+                }
+            }
+
+            const validFlinchHit = !outOfPrayer && hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
+            const avail = findAvailableRocks(main, rockCoords, rockIds);
+            const p = st?.player;
+            if (!avail.length || !p) {
+                const acts: Promise<unknown>[] = [];
+                const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
+                if (potAct) acts.push(potAct);
+                if (now >= actionDelayApprox) {
+                    acts.push(clearMiningInteraction(main));
+                    clearSentForTick = now + 1;
+                }
+                if (acts.length > 0) await Promise.all(acts);
+                await waitTicks(main, 1);
+                continue;
+            }
+
+            const adjRocks = avail.filter(r => besideTile(p.worldX, p.worldZ, r));
+            if (adjRocks.length === 0) {
+                const stand = pickBestIronStandTile(main, avail, rockCoords);
+                const acts: Promise<unknown>[] = [];
+                if (stand) acts.push(main.direct({ type: 'walkTo', x: stand.x, z: stand.z, running: true, reason: 'SDK' }));
+                const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
+                if (potAct) acts.push(potAct);
+                if (acts.length > 0) await Promise.all(acts);
+                clearSentForTick = -99;
+                await waitTicks(main, 1);
+                continue;
+            }
+            const rock = adjRocks[0]!;
+
+            if (validFlinchHit) {
+                const acts: Promise<unknown>[] = [];
+                const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
+                if (potAct) acts.push(potAct);
+                if (!potAct && main.sdk.getInventory().length >= 26) {
+                    const oreSlot = slotOfId(main, OBJ_IRON_ORE) ?? slotOfId(main, OBJ_TIN_ORE);
+                    if (oreSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: oreSlot, reason: 'SDK' }));
+                }
+                acts.push(main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: rock.op, reason: 'SDK' }));
+                await Promise.all(acts);
+                flinchRolls++;
+                rolls++;
+                actionDelayApprox = now + 1;
+                clearSentForTick = -99;
+                await waitTicks(main, 1);
+                continue;
+            }
+
+            if (now < actionDelayApprox) {
+                await waitTicks(main, 1);
+                continue;
+            }
+
+            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 9) recentHitTicks.shift();
+            const recentHitsIn5 = recentHitTicks.filter(h => now - h <= 5);
+            const activeHitMod4 = new Set<number>(recentHitsIn5.map(h => ((h % 4) + 4) % 4));
+            const nextMod1 = ((now + 1) % 4 + 4) % 4;
+            const activeHitIn1t = activeHitMod4.has(nextMod1);
+
+            const gobs = !outOfPrayer ? countAttackingHobgoblins(main) : 0;
+            const canTag = !outOfPrayer
+                && tagCount < 40
+                && gobs < 1
+                && now - lastTagTick >= 10
+                && now >= actionDelayApprox
+                && itemQty(main, OBJ_AIR_RUNE) > 1
+                && itemQty(main, OBJ_MIND_RUNE) > 0;
+            if (canTag) {
+                const target = findUntaggedHobgoblin(main, taggedAt, now);
+                if (target) {
+                    lastTagTick = now;
+                    tagCount++;
+                    taggedAt.set(target.index, now);
+                    actionDelayApprox = now + 3;
+                    const acts: Promise<unknown>[] = [
+                        main.direct({ type: 'spellOnNpc', npcIndex: target.index, spellComponent: WIND_STRIKE, reason: 'SDK' }),
+                    ];
+                    const potAct = tryDrinkPrayerPotion(main, 15);
+                    if (potAct) acts.push(potAct);
+                    await Promise.all(acts);
+                    clearSentForTick = -99;
+                    await waitTicks(main, 1);
+                    continue;
+                }
+            }
+
+            const keepFlinchWindow = !outOfPrayer && activeHitIn1t;
+            if (!keepFlinchWindow) {
+                const knifeSlot = slotOfId(main, OBJ_KNIFE);
+                const logSlot = slotOfId(main, OBJ_LOGS);
+                if (knifeSlot !== undefined && logSlot !== undefined) {
+                    const acts: Promise<unknown>[] = [];
+                    if (main.sdk.getInventory().length >= 26) {
+                        const oreSlot = slotOfId(main, OBJ_IRON_ORE) ?? slotOfId(main, OBJ_TIN_ORE);
+                        if (oreSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: oreSlot, reason: 'SDK' }));
                     }
-                    for (const a of acts) all.push({ ...a, reason: 'SDK' });
-                    await Promise.all(all.map(a => main.direct(a)));
-                },
-            },
-            ironProfile,
-            {
-                maximum: need,
-                cap: Math.max(200, cap - (main.tick() - t0)),
-                idleTicks: 240,
-                knife: true,
-                drop: true,
-                make1: SKILL_MULTI3_MAKE1_A,
-                rocks,
-                pick: 'roll',
-                keep: [OBJ_RUNE_PICKAXE, ...MINING_GLORY_IDS, ...RING_OF_DUELING_IDS, OBJ_COINS, ...ENERGY_POTION_IDS],
-            },
-            2,
-            incidentalMiningGems,
-        );
+                    acts.push(
+                        main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
+                        main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
+                        main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: rock.op, reason: 'SDK' }),
+                    );
+                    await Promise.all(acts);
+                    knifeRolls++;
+                    rolls++;
+                    actionDelayApprox = now + 3;
+                    clearSentForTick = -99;
+                    await waitTicks(main, 1);
+                    continue;
+                }
+            }
+
+            const oreDropSlot = main.sdk.getInventory().length >= 16
+                ? (slotOfId(main, OBJ_IRON_ORE) ?? slotOfId(main, OBJ_TIN_ORE))
+                : undefined;
+            const potAct = tryDrinkPrayerPotion(main, 15);
+            if (oreDropSlot !== undefined) {
+                await Promise.all([
+                    ...(potAct ? [potAct] : []),
+                    main.direct({ type: 'dropItem', slot: oreDropSlot, reason: 'SDK' }),
+                ]);
+            } else {
+                await Promise.all([
+                    ...(potAct ? [potAct] : []),
+                    clearMiningInteraction(main),
+                ]);
+            }
+            clearSentForTick = now + 1;
+            await waitTicks(main, 1);
+        }
+
+        if ((main.sdk.getSkill('Mining')?.baseLevel ?? 1) >= 99) ok = true;
+        if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
+            await main.direct({ type: 'closeModal', reason: 'SDK' });
+        }
 
         const totalTicks = main.tick() - t0;
         const lvl = main.sdk.getSkill('Mining')?.baseLevel ?? 0;
         const xp = main.sdk.getSkillXp('Mining') ?? 0;
-        ok = lvl >= 99;
-        detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} doric=${doricTicks} zooStart=${zooStart} ores=${rot.made}`;
+        const hp = main.sdk.getSkill('Hitpoints')?.level ?? 0;
+        detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} tin=${tinTicks} arrive=${arriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal} hp=${hp}`;
     } catch (error) {
         detail = String(error);
     } finally {
