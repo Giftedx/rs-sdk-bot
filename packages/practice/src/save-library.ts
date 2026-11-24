@@ -165,7 +165,8 @@ export async function loadSnapshot(name: string, account: string, opts: {port?: 
     const root = opts.root ?? rsSdkRoot();
     const entry = findEntry(name, opts.dir);
     const bytes = entryBytes(entry, opts.dir);
-    if (entry.engine.saveVersion > engineSaveVersion(root)) throw new Error(`${name} is save version ${entry.engine.saveVersion}; this engine reads up to ${engineSaveVersion(root)}`);
+    const maxSaveVersion = engineSaveVersion(root);
+    if (entry.engine.saveVersion > maxSaveVersion) throw new Error(`${name} is save version ${entry.engine.saveVersion}; this engine reads up to ${maxSaveVersion}`);
     const online = opts.online ?? (async (a: string) => { const s = await onlineState(a, opts.port); return s.online || s.pendingLogout; });
     if (await online(account)) throw new Error(`${account} is online on practice; log it out before loading ${name}`);
     const path = playerSavePath(account, root);

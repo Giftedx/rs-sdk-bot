@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
@@ -76,6 +76,20 @@ test('--strict mode passes with zero errors and zero warnings on the repo and fa
         writeFileSync(join(tmp, 'scripts', 'gather-essence.ts'), `const RUNE_ESSENCE = { id: 1436, count: 28 };\n`);
         const cleanAfterFix = checkScriptsParity(tmp, baseline, { includeCrossWorker: true, crossWorkerFiles: new Set() });
         expect(cleanAfterFix).toEqual([]);
+
+        // Verify runRev289Parity partitions cross-worker warnings separately from owned issues in a single pass.
+        writeFileSync(join(tmp, 'scripts', 'cross-only.ts'), `const PURE_ESSENCE = 7936;\n`);
+        const linkKind = process.platform === 'win32' ? 'junction' : 'dir';
+        mkdirSync(join(tmp, 'packages', 'dashboard'), { recursive: true });
+        symlinkSync(join(repoRoot, 'vendor'), join(tmp, 'vendor'), linkKind);
+        symlinkSync(join(repoRoot, 'knowledge'), join(tmp, 'knowledge'), linkKind);
+        symlinkSync(join(repoRoot, 'packages', 'dashboard', 'client-assets'), join(tmp, 'packages', 'dashboard', 'client-assets'), linkKind);
+        const partitioned = runRev289Parity({ repoRoot: tmp, strict: false, crossWorkerFiles: new Set(['scripts/cross-only.ts']) });
+        expect(partitioned.ownedIssues).toEqual([]);
+        expect(partitioned.crossIssues.length).toBeGreaterThan(0);
+        expect(partitioned.passed).toBe(true);
+        const strictPartitioned = runRev289Parity({ repoRoot: tmp, strict: true, crossWorkerFiles: new Set(['scripts/cross-only.ts']) });
+        expect(strictPartitioned.passed).toBe(false);
     } finally {
         rmSync(tmp, { recursive: true, force: true });
     }

@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {mkdirSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {age,nowLines,procRows,readSwarmStops,resolveSyncedLeasesDir,scriptsOf,type Checkout,type DashState,type Local} from './now';
+import {age,isPortUnbound,nowLines,procRows,readSwarmStops,resolveSyncedLeasesDir,scriptsOf,type Checkout,type DashState,type Local} from './now';
 import {coordinationView} from '../packages/dashboard/coordination';
 import {scoreboardView} from '../packages/dashboard/fleet-view';
 
@@ -160,4 +160,19 @@ test('readSwarmStops and resolveSyncedLeasesDir prefer .practice/live/ and fall 
 test('procRows ignores malformed Windows WMI lines with invalid PID or creation time', () => {
     const rows = procRows('bad|not-a-date|bun.exe\r\n0|2001-09-09T01:45:40.0000000+00:00|bun.exe\r\n105|2001-09-09T01:45:40.0000000+00:00|bun.exe scripts/swarm.ts\r\n', true, NOW);
     expect(rows).toEqual([{ pid: 105, scripts: ['swarm.ts'], up: 60_000 }]);
+});
+
+test('isPortUnbound detects active listeners on 127.0.0.1 and 0.0.0.0 and rejects invalid ports', () => {
+    expect(isPortUnbound(0)).toBe(false);
+    expect(isPortUnbound(70000)).toBe(false);
+    for (const hostname of ['127.0.0.1', '0.0.0.0'] as const) {
+        const srv = Bun.listen({ hostname, port: 0, socket: { data() {} } });
+        const port = srv.port;
+        try {
+            expect(isPortUnbound(port)).toBe(false);
+        } finally {
+            srv.stop(true);
+        }
+        expect(isPortUnbound(port)).toBe(true);
+    }
 });

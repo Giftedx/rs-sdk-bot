@@ -149,3 +149,21 @@ test('startStack removes its pids file when the engine exits before becoming rea
         rmSync(dir, { recursive: true, force: true });
     }
 });
+
+test('waitReady detects a ready line written incrementally across chunks', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'stack-inc-'));
+    const log = join(dir, 'engine.log');
+    writeFileSync(log, 'booting\n');
+    const proc = Bun.spawn(['bun', '-e', 'setTimeout(() => {}, 10000)'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true });
+    const t1 = setTimeout(() => writeFileSync(log, 'booting\nloading world\nWorld '), 60);
+    const t2 = setTimeout(() => writeFileSync(log, 'booting\nloading world\nWorld ready\n'), 130);
+    try {
+        await expect(waitReady(proc, 'engine', log, 5000)).resolves.toBeUndefined();
+    } finally {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        proc.kill();
+        await proc.exited;
+        rmSync(dir, { recursive: true, force: true });
+    }
+});

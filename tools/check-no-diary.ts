@@ -34,6 +34,7 @@ export function flag(text: string): { line: number; id: string; text: string }[]
 // A comment starts at line start or after white space, so the // of a URL is not one.
 const DATE = DIARY.find(d => d.id === 'date')!.re;
 export function flagComments(text: string): { line: number; id: string; text: string }[] {
+    if (!DATE.test(text)) return [];
     const out: { line: number; id: string; text: string }[] = [];
     text.split(/\r?\n/).forEach((raw, i) => {
         const c = /(?:^|\s)\/\/(.*)$/.exec(raw)?.[1] ?? /^\s*(?:\/\*|\*)(.*)$/.exec(raw)?.[1];
@@ -44,11 +45,33 @@ export function flagComments(text: string): { line: number; id: string; text: st
 
 // The files the rule covers: hand-written Markdown and TypeScript outside generated and vendored trees, plus
 // swarm.json job notes.
+const SKIP_DIRS = new Set(['node_modules', 'vendor', '.git', '.practice', '.claude', '.superpowers', 'archive']);
+function walkCovered(root: string): { md: string[]; ts: string[] } {
+    const md: string[] = [];
+    const ts: string[] = [];
+    const walk = (dir: string) => {
+        for (const e of readdirSync(dir, { withFileTypes: true })) {
+            if (SKIP_DIRS.has(e.name)) continue;
+            const p = join(dir, e.name);
+            if (e.isDirectory()) walk(p);
+            else if (e.name.endsWith('.md')) {
+                if (!GENERATED.has(relative(root, p).replace(/\\/g, '/'))) md.push(p);
+            } else if (e.name.endsWith('.ts')) {
+                if (!GENERATED.has(relative(root, p).replace(/\\/g, '/'))) ts.push(p);
+            }
+        }
+    };
+    walk(root);
+    md.sort();
+    ts.sort();
+    return { md, ts };
+}
+
 export function covered(root: string, ext = '.md'): string[] {
     const files: string[] = [];
     const walk = (dir: string) => {
         for (const e of readdirSync(dir, { withFileTypes: true })) {
-            if (['node_modules', 'vendor', '.git', '.practice', '.claude', '.superpowers', 'archive'].includes(e.name)) continue;
+            if (SKIP_DIRS.has(e.name)) continue;
             const p = join(dir, e.name);
             if (e.isDirectory()) walk(p);
             else if (e.name.endsWith(ext) && !GENERATED.has(relative(root, p).replace(/\\/g, '/'))) files.push(p);
@@ -64,8 +87,9 @@ const GENERATED = new Set(['knowledge/BUILD.md', 'research/board-ranking.md', 'r
 
 export function check(root: string) {
     const results: { file: string; flags: ReturnType<typeof flag> }[] = [];
-    for (const f of covered(root)) results.push({ file: relative(root, f).replace(/\\/g, '/'), flags: flag(readFileSync(f, 'utf8')) });
-    for (const f of covered(root, '.ts')) results.push({ file: relative(root, f).replace(/\\/g, '/'), flags: flagComments(readFileSync(f, 'utf8')) });
+    const { md, ts } = walkCovered(root);
+    for (const f of md) results.push({ file: relative(root, f).replace(/\\/g, '/'), flags: flag(readFileSync(f, 'utf8')) });
+    for (const f of ts) results.push({ file: relative(root, f).replace(/\\/g, '/'), flags: flagComments(readFileSync(f, 'utf8')) });
     const swarm = join(root, 'swarm.json');
     if (existsSync(swarm) && statSync(swarm).isFile()) {
         const plan = JSON.parse(readFileSync(swarm, 'utf8'));

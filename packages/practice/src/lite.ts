@@ -25,16 +25,22 @@ function writeLite(map: Saved): void {
     writeFileSync(liteFile(), JSON.stringify(map));
 }
 
+function isPidAlive(pid: number): boolean {
+    if (!Number.isSafeInteger(pid) || pid <= 0) return false;
+    try { process.kill(pid, 0); return true; }
+    catch (error) { return (error as NodeJS.ErrnoException).code !== 'ESRCH'; }
+}
+
 // True only if the saved PID still runs our lite runner (Windows reuses PIDs).
 export function isLiteRunning(name: string): boolean {
     const p = readLite()[name];
-    return p !== undefined && processMatches(p.pid, p.marker);
+    return p !== undefined && isPidAlive(p.pid) && processMatches(p.pid, p.marker);
 }
 
 export async function stopLite(name: string): Promise<void> {
     const map = readLite();
     const p = map[name];
-    if (p !== undefined) await safeKill(p.pid, p.marker);
+    if (p !== undefined && isPidAlive(p.pid)) await safeKill(p.pid, p.marker);
     delete map[name];
     writeLite(map);
 }

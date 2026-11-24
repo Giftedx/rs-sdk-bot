@@ -2,7 +2,7 @@
 // that the revision-289 content defines. Compares string literals in scripts/ and packages/ against the names in
 // vendor/rs-sdk/server/content (.obj, .npc, .loc configs, quest.enum, skills, prayers, spells).
 // Usage: bun tools/check-rev289-names.ts [--all]   (--all also lists every checked literal count by callee)
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import ts from 'typescript';
 import { loadRev289Baseline, type Rev289Baseline } from './rev289-baseline';
@@ -80,23 +80,26 @@ const SKIP_DIRS = new Set(['node_modules', 'vendor', '.practice', 'generated-ass
 
 function walkTs(dir: string, out: string[] = []): string[] {
     if (!existsSync(dir)) return out;
-    for (const f of readdirSync(dir).sort()) {
-        if (SKIP_DIRS.has(f)) continue;
-        const p = join(dir, f);
-        if (statSync(p).isDirectory()) walkTs(p, out);
-        else if (f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.endsWith('.d.ts')) out.push(p);
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        if (SKIP_DIRS.has(entry.name)) continue;
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) walkTs(p, out);
+        else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts') && !entry.name.endsWith('.d.ts')) out.push(p);
     }
     return out;
 }
 
-function walkExt(dir: string, ext: string, out: string[] = []): string[] {
-    if (!existsSync(dir)) return out;
-    for (const f of readdirSync(dir).sort()) {
-        const p = join(dir, f);
-        if (statSync(p).isDirectory()) walkExt(p, ext, out);
-        else if (f.endsWith(ext)) out.push(p);
+function walkConfigExts(dir: string, byExt: Record<string, string[]>): void {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) { walkConfigExts(p, byExt); continue; }
+        const dot = entry.name.lastIndexOf('.');
+        if (dot >= 0) {
+            const list = byExt[entry.name.slice(dot)];
+            if (list) list.push(p);
+        }
     }
-    return out;
 }
 
 function packById(path: string): Map<number, string> {
@@ -112,18 +115,20 @@ function packById(path: string): Map<number, string> {
 export const norm = (s: string) => s.trim().toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ');
 
 /** Names from the configs whose debugname the engine pack lists, and each id's display name and debugname. */
-const debugNames = new Set<string>();
-function configNames(content: string, ext: string, pack: Map<number, string>): { names: Set<string>; byId: Map<number, string[]> } {
+function configNames(files: readonly string[], pack: Map<number, string>, debugNames: Set<string>): { names: Set<string>; byId: Map<number, string[]> } {
     const names = new Set<string>();
     const display = new Map<string, string>();
     const debugs = new Set(pack.values());
-    for (const f of walkExt(join(content, 'scripts'), ext)) {
+    for (const f of files) {
         let cur = '';
         for (const raw of readFileSync(f, 'utf8').split(/\r?\n/)) {
             const line = raw.trim();
-            const head = /^\[([^\]]+)\]$/.exec(line);
-            if (head) { cur = head[1]!; continue; }
-            if (cur && debugs.has(cur) && line.startsWith('name=')) { names.add(norm(line.slice(5))); display.set(cur, norm(line.slice(5))); }
+            if (line.startsWith('[') && line.endsWith(']') && line.length > 2) { cur = line.slice(1, -1); continue; }
+            if (cur && debugs.has(cur) && line.startsWith('name=')) {
+                const nm = norm(line.slice(5));
+                names.add(nm);
+                display.set(cur, nm);
+            }
         }
     }
     const byId = new Map<number, string[]>();
@@ -146,9 +151,12 @@ export function loadNameSets(repoRoot = resolve(import.meta.dir, '..'), baseline
 function readNameSets(repoRoot: string, baseline?: Rev289Baseline): NameSets {
     const base = baseline ?? loadRev289Baseline(repoRoot);
     const content = join(repoRoot, 'vendor', 'rs-sdk', 'server', 'content');
-    const obj = configNames(content, '.obj', packById(join(content, 'pack', 'obj.pack')));
-    const npc = configNames(content, '.npc', packById(join(content, 'pack', 'npc.pack')));
-    const loc = configNames(content, '.loc', packById(join(content, 'pack', 'loc.pack')));
+    const byExt: Record<string, string[]> = { '.obj': [], '.npc': [], '.loc': [] };
+    walkConfigExts(join(content, 'scripts'), byExt);
+    const debugNames = new Set<string>();
+    const obj = configNames(byExt['.obj']!, packById(join(content, 'pack', 'obj.pack')), debugNames);
+    const npc = configNames(byExt['.npc']!, packById(join(content, 'pack', 'npc.pack')), debugNames);
+    const loc = configNames(byExt['.loc']!, packById(join(content, 'pack', 'loc.pack')), debugNames);
     const quests = new Set<string>();
     const enumText = readFileSync(join(content, 'scripts', 'general', 'configs', 'quest.enum'), 'utf8');
     for (const m of enumText.matchAll(/^val=\d+,(.+)$/gm)) quests.add(norm(m[1]!));
@@ -160,17 +168,39 @@ function readNameSets(repoRoot: string, baseline?: Rev289Baseline): NameSets {
     return { all, items: obj.names, npcs: npc.names, locs: loc.names, quests, list: [...all], npcList: [...npc.names], debugs: debugNames, idNames: { obj: obj.byId, npc: npc.byId, loc: loc.byId } };
 }
 
+type MatchCache = { joined: string; regex: Map<string, boolean>; substr: Map<string, boolean> };
+const matchCaches = new WeakMap<NameSets, MatchCache>();
+function getMatchCache(sets: NameSets): MatchCache {
+    let c = matchCaches.get(sets);
+    if (!c) {
+        c = { joined: `\0${sets.list.join('\0')}\0`, regex: new Map(), substr: new Map() };
+        matchCaches.set(sets, c);
+    }
+    return c;
+}
+
 /** A pattern matches when the SDK would find a name with it: substring for text, a test for a regular expression. */
 function patternMatches(text: string, isRegex: boolean, flags: string, sets: NameSets): boolean {
+    const cache = getMatchCache(sets);
     if (isRegex) {
+        const normFlags = flags.includes('i') ? flags : `${flags}i`;
+        const key = `${normFlags}\0${text}`;
+        const hit = cache.regex.get(key);
+        if (hit !== undefined) return hit;
         let re: RegExp;
-        try { re = new RegExp(text, flags.includes('i') ? flags : `${flags}i`); } catch { return true; }
-        return sets.list.some(n => re.test(n));
+        try { re = new RegExp(text, normFlags); } catch { cache.regex.set(key, true); return true; }
+        const matched = sets.list.some(n => re.test(n));
+        cache.regex.set(key, matched);
+        return matched;
     }
     const t = norm(text);
     if (t === '') return true;
-    if (sets.all.has(t) || isPinnedForm(t, sets)) return true;
-    return sets.list.some(n => n.includes(t));
+    const hit = cache.substr.get(t);
+    if (hit !== undefined) return hit;
+    const matched = sets.all.has(t) || isPinnedForm(t, sets)
+        || (!t.includes('\0') ? cache.joined.includes(t) : sets.list.some(n => n.includes(t)));
+    cache.substr.set(t, matched);
+    return matched;
 }
 
 function editDistance(a: string, b: string, cap: number): number {
@@ -247,12 +277,56 @@ function isLabelOption(n: ts.Node): boolean {
 }
 
 interface Lit { node: ts.Node; text: string; regex: boolean; flags: string; callee: string | null; argIndex: number; container: ts.Node | null }
+interface IdCall { callee: string; arg: ts.NumericLiteral }
+interface IdObj { nm: string | null; entries: { key: string; id: number; node: ts.NumericLiteral }[] }
+interface SpelledConst { name: string; idText: string; node: ts.NumericLiteral }
 
-function collect(sf: ts.SourceFile): { lits: Lit[]; calls: ts.CallExpression[] } {
+const ID_CALL_RE = /^(?:findInventoryItemById|findBankItemById|hasItemId|invCountId|bankCountId|countById|withdrawId)$/;
+
+function analyzeSource(sf: ts.SourceFile): { lits: Lit[]; idCalls: IdCall[]; idObjs: IdObj[]; spelledConsts: SpelledConst[] } {
     const lits: Lit[] = [];
-    const calls: ts.CallExpression[] = [];
+    const idCalls: IdCall[] = [];
+    const idObjs: IdObj[] = [];
+    const spelledConsts: SpelledConst[] = [];
     const visit = (n: ts.Node, container: ts.Node | null) => {
-        if (ts.isCallExpression(n)) calls.push(n);
+        if (ts.isCallExpression(n)) {
+            const nme = calleeName(n.expression);
+            const a = n.arguments[0];
+            if (nme && ID_CALL_RE.test(nme) && a && ts.isNumericLiteral(a)) {
+                idCalls.push({ callee: nme, arg: a });
+            }
+        } else if (ts.isObjectLiteralExpression(n)) {
+            let hasRelevantKey = false;
+            for (const p of n.properties) {
+                if (!ts.isPropertyAssignment(p) || (!ts.isIdentifier(p.name) && !ts.isStringLiteralLike(p.name))) continue;
+                const key = p.name.text;
+                if (NAME_KEYS.has(key) || ((key === 'id' || ID_KEYS.has(key)) && ts.isNumericLiteral(p.initializer))) {
+                    hasRelevantKey = true;
+                    break;
+                }
+            }
+            if (hasRelevantKey) {
+                const props = new Map<string, ts.Expression>();
+                for (const p of n.properties) {
+                    if (ts.isPropertyAssignment(p) && (ts.isIdentifier(p.name) || ts.isStringLiteralLike(p.name))) props.set(p.name.text, p.initializer);
+                }
+                let nm: string | null = null;
+                for (const k of NAME_KEYS) {
+                    const v = props.get(k);
+                    if (v && ts.isStringLiteralLike(v)) { nm = v.text; break; }
+                }
+                const entries: { key: string; id: number; node: ts.NumericLiteral }[] = [];
+                for (const [key, v] of props) {
+                    if (ts.isNumericLiteral(v) && (key === 'id' || ID_KEYS.has(key))) {
+                        entries.push({ key, id: Number(v.text), node: v });
+                    }
+                }
+                if (entries.length) idObjs.push({ nm, entries });
+            }
+        } else if ((ts.isPropertyAssignment(n) || ts.isVariableDeclaration(n)) && ts.isIdentifier(n.name)
+            && n.initializer && ts.isNumericLiteral(n.initializer) && /^\d{3,5}$/.test(n.initializer.text)) {
+            spelledConsts.push({ name: n.name.text, idText: n.initializer.text, node: n.initializer });
+        }
         const lt = literalText(n);
         if (lt && !isLabelOption(n)) {
             const p = n.parent;
@@ -268,7 +342,7 @@ function collect(sf: ts.SourceFile): { lits: Lit[]; calls: ts.CallExpression[] }
         ts.forEachChild(n, c => visit(c, next));
     };
     visit(sf, null);
-    return { lits, calls };
+    return { lits, idCalls, idObjs, spelledConsts };
 }
 
 const posOf = (sf: ts.SourceFile, n: ts.Node) => sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1;
@@ -291,7 +365,7 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
     const parsed = files.map(f => {
         const text = readFileSync(f, 'utf8');
         const sf = ts.createSourceFile(f, text, ts.ScriptTarget.Latest, true);
-        return { rel: relative(repoRoot, f).replace(/\\/g, '/'), sf, ...collect(sf) };
+        return { rel: relative(repoRoot, f).replace(/\\/g, '/'), sf, ...analyzeSource(sf) };
     });
 
     // A callee is a game call when it is listed, or when most of its string arguments are exact real names.
@@ -304,6 +378,7 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
         fileCallees.set(rel, local);
         for (const l of lits) {
             if (!l.callee) continue;
+            if (NOT_GAME_CALLEES.has(l.callee) || STRING_METHODS.has(l.callee) || (l.regex && GAME_CALLEES.has(l.callee))) continue;
             const real = l.regex ? patternMatches(l.text, true, l.flags, sets) : sets.all.has(norm(l.text));
             for (const m of [callees, local]) {
                 const c = m.get(l.callee) ?? { total: 0, real: 0, rtotal: 0, rreal: 0 };
@@ -333,7 +408,7 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
         faults.push({ file: `${rel}:${line}`, text, use, kind, detail });
     };
 
-    for (const { rel, sf, lits, calls } of parsed) {
+    for (const { rel, sf, lits, idCalls, idObjs, spelledConsts } of parsed) {
         // Per container: how many of its strings are exact real names.
         const tally = new Map<ts.Node, { total: number; real: number }>();
         for (const l of lits) {
@@ -344,13 +419,12 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
             tally.set(l.container, t);
         }
         for (const l of lits) {
-            const line = posOf(sf, l.node);
             // The quest helpers take the NPC to talk to as a regular expression in their second argument.
             if (l.callee && TALK_CALLEES.has(l.callee) && l.argIndex === 1 && l.regex) {
                 namesChecked++;
                 let re: RegExp | null = null;
                 try { re = new RegExp(l.text, l.flags.includes('i') ? l.flags : `${l.flags}i`); } catch { /* not a pattern */ }
-                if (re && !sets.npcList.some(n => re!.test(n))) add(rel, line, `/${l.text}/${l.flags}`, `${l.callee}() npc`, 'osrs-only', 'matches no revision-289 NPC name');
+                if (re && !sets.npcList.some(n => re!.test(n))) add(rel, posOf(sf, l.node), `/${l.text}/${l.flags}`, `${l.callee}() npc`, 'osrs-only', 'matches no revision-289 NPC name');
                 continue;
             }
             if (l.callee && isGameCallee(rel, l.callee, l.regex) && !(l.callee === 'has' && l.regex) && (l.argIndex === 0 || /^useItemOn/.test(l.callee))) {
@@ -358,8 +432,8 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
                 namesChecked++;
                 if (!patternMatches(l.text, l.regex, l.flags, sets)) {
                     const near = l.regex ? null : nearestName(l.text, sets);
-                    if (near) add(rel, line, l.text, `${l.callee}()`, 'mismatch', `near "${near}"`);
-                    else add(rel, line, l.text, `${l.callee}()`, 'osrs-only', 'matches no revision-289 name');
+                    if (near) add(rel, posOf(sf, l.node), l.text, `${l.callee}()`, 'mismatch', `near "${near}"`);
+                    else add(rel, posOf(sf, l.node), l.text, `${l.callee}()`, 'osrs-only', 'matches no revision-289 name');
                 }
                 continue;
             }
@@ -371,8 +445,8 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
                     if (sets.all.has(n) || sets.debugs.has(l.text.trim().toLowerCase().replace(/ /g, '_')) || isPinnedForm(n, sets) || /^[a-z0-9]+(-[a-z0-9]+)+$/.test(l.text) || l.text.trim().split(/\s+/).length > 4) continue;
                     namesChecked++;
                     const near = nearestName(l.text, sets);
-                    if (near) add(rel, line, l.text, 'name table', 'mismatch', `near "${near}"`);
-                    else if (l.text.trim().includes(' ') && /^[A-Za-z]/.test(l.text)) add(rel, line, l.text, 'name table', 'osrs-only', 'matches no revision-289 name');
+                    if (near) add(rel, posOf(sf, l.node), l.text, 'name table', 'mismatch', `near "${near}"`);
+                    else if (l.text.trim().includes(' ') && /^[A-Za-z]/.test(l.text)) add(rel, posOf(sf, l.node), l.text, 'name table', 'osrs-only', 'matches no revision-289 name');
                 }
             }
         }
@@ -393,62 +467,36 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
                 add(rel, line, String(id), use, 'bad-id', `${pool} ${id} is "${names[names.length - 1]}", the code expects "${expectName}"`);
             }
         };
-        const visitIds = (n: ts.Node) => {
-            if (ts.isObjectLiteralExpression(n)) {
-                const props = new Map<string, ts.Expression>();
-                for (const p of n.properties) {
-                    if (ts.isPropertyAssignment(p) && (ts.isIdentifier(p.name) || ts.isStringLiteralLike(p.name))) props.set(p.name.text, p.initializer);
-                }
-                let nm: string | null = null;
-                for (const k of NAME_KEYS) {
-                    const v = props.get(k);
-                    if (v && ts.isStringLiteralLike(v)) { nm = v.text; break; }
-                }
-                for (const [k, v] of props) {
-                    if (!ts.isNumericLiteral(v)) continue;
-                    const id = Number(v.text);
-                    const keyPool = ID_KEYS.get(k);
-                    if (keyPool) { checkId(id, keyPool, nm, posOf(sf, v), `${k} key`); continue; }
-                    if (k !== 'id' || nm === null) continue;
-                    // id beside a name: the pool is the one that holds the name exactly; an id that the pool holds under another name is wrong.
-                    const nn = norm(nm);
-                    const pools = (['obj', 'npc', 'loc'] as const).filter(pl => (pl === 'obj' ? sets.items : pl === 'npc' ? sets.npcs : sets.locs).has(nn));
-                    if (pools.length === 0 || /\d/.test(nn)) continue;
-                    idsChecked++;
-                    if (!pools.some(pl => idNamesOk(pl, id, nm!))) {
-                        const have = pools.map(pl => sets.idNames[pl].get(id)?.[sets.idNames[pl].get(id)!.length - 1]).filter(Boolean);
-                        add(rel, posOf(sf, v), String(id), 'id beside name', 'bad-id', have.length ? `id ${id} is "${have[0]}", the code expects "${nm}"` : `no ${pools.join('/')} ${id} in the content`);
-                    }
+        for (const obj of idObjs) {
+            for (const { key, id, node } of obj.entries) {
+                const keyPool = ID_KEYS.get(key);
+                if (keyPool) { checkId(id, keyPool, obj.nm, posOf(sf, node), `${key} key`); continue; }
+                if (key !== 'id' || obj.nm === null) continue;
+                // id beside a name: the pool is the one that holds the name exactly; an id that the pool holds under another name is wrong.
+                const nn = norm(obj.nm);
+                const pools = (['obj', 'npc', 'loc'] as const).filter(pl => (pl === 'obj' ? sets.items : pl === 'npc' ? sets.npcs : sets.locs).has(nn));
+                if (pools.length === 0 || /\d/.test(nn)) continue;
+                idsChecked++;
+                if (!pools.some(pl => idNamesOk(pl, id, obj.nm!))) {
+                    const have = pools.map(pl => sets.idNames[pl].get(id)?.[sets.idNames[pl].get(id)!.length - 1]).filter(Boolean);
+                    add(rel, posOf(sf, node), String(id), 'id beside name', 'bad-id', have.length ? `id ${id} is "${have[0]}", the code expects "${obj.nm}"` : `no ${pools.join('/')} ${id} in the content`);
                 }
             }
-            ts.forEachChild(n, visitIds);
-        };
-        visitIds(sf);
+        }
         // A numeric property or constant whose name spells a real item (two or more words: `rawShark: 383`, `BRONZE_AXE = 1351`).
         const spelled = (id: string) => id.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase().trim();
-        const visitSpelled = (n: ts.Node) => {
-            let name: string | null = null;
-            let init: ts.Expression | undefined;
-            if (ts.isPropertyAssignment(n) && ts.isIdentifier(n.name)) { name = n.name.text; init = n.initializer; }
-            else if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) { name = n.name.text; init = n.initializer; }
-            if (name && init && ts.isNumericLiteral(init) && /^\d{3,5}$/.test(init.text)) {
-                const words = spelled(name);
-                if (words.includes(' ') && sets.items.has(words)) {
-                    idsChecked++;
-                    const id = Number(init.text);
-                    const names = sets.idNames.obj.get(id);
-                    if (!names) add(rel, posOf(sf, init), init.text, `constant ${name}`, 'bad-id', `no item ${id} in the content`);
-                    else if (!names.includes(words)) add(rel, posOf(sf, init), init.text, `constant ${name}`, 'bad-id', `item ${id} is "${names[names.length - 1]}", the name says "${words}"`);
-                }
+        for (const sc of spelledConsts) {
+            const words = spelled(sc.name);
+            if (words.includes(' ') && sets.items.has(words)) {
+                idsChecked++;
+                const id = Number(sc.idText);
+                const names = sets.idNames.obj.get(id);
+                if (!names) add(rel, posOf(sf, sc.node), sc.idText, `constant ${sc.name}`, 'bad-id', `no item ${id} in the content`);
+                else if (!names.includes(words)) add(rel, posOf(sf, sc.node), sc.idText, `constant ${sc.name}`, 'bad-id', `item ${id} is "${names[names.length - 1]}", the name says "${words}"`);
             }
-            ts.forEachChild(n, visitSpelled);
-        };
-        visitSpelled(sf);
-        for (const c of calls) {
-            const nme = calleeName(c.expression);
-            if (!nme || !/^(?:findInventoryItemById|findBankItemById|hasItemId|invCountId|bankCountId|countById|withdrawId)$/.test(nme)) continue;
-            const a = c.arguments[0];
-            if (a && ts.isNumericLiteral(a)) checkId(Number(a.text), 'obj', null, posOf(sf, a), `${nme}()`);
+        }
+        for (const c of idCalls) {
+            checkId(Number(c.arg.text), 'obj', null, posOf(sf, c.arg), `${c.callee}()`);
         }
     }
     return { faults, namesChecked, idsChecked, callees };

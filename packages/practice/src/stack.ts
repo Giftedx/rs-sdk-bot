@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { Subprocess } from 'bun';
 import { practiceDir, rsSdkRoot } from './paths';
@@ -77,15 +77,34 @@ function tail(file: string, lines = 20): string {
 
 // Resolves when the log shows the service's ready line. Rejects if the child exits first or the timeout passes.
 export async function waitReady(proc: Subprocess, service: Service, logFile: string, timeoutMs: number): Promise<void> {
-    const deadline = Date.now() + timeoutMs;
+    const started = Date.now();
+    const deadline = started + timeoutMs;
+    let scannedBytes = 0;
+    let carry = '';
     while (Date.now() < deadline) {
-        const text = existsSync(logFile) ? readFileSync(logFile, 'utf8') : '';
-        if (text.split(/\r?\n/).some(l => isReady(service, l))) return;
+        const st = statSync(logFile, { throwIfNoEntry: false });
+        if (st) {
+            if (st.size < scannedBytes) { scannedBytes = 0; carry = ''; }
+            if (st.size > scannedBytes) {
+                const len = st.size - scannedBytes;
+                const buf = Buffer.allocUnsafe(len);
+                const fd = openSync(logFile, 'r');
+                let read = 0;
+                try { read = readSync(fd, buf, 0, len, scannedBytes); }
+                finally { closeSync(fd); }
+                scannedBytes += read;
+                const chunk = carry + buf.subarray(0, read).toString('utf8');
+                const lines = chunk.split(/\r?\n/);
+                carry = lines.pop()!;
+                if (lines.some(l => isReady(service, l)) || isReady(service, carry)) return;
+            }
+        }
         if (proc.exitCode !== null) {
             throw new Error(`${service} exited with code ${proc.exitCode}\n${tail(logFile)}`);
         }
+        const pollMs = Date.now() - started < 500 ? 25 : 100;
         let timer: ReturnType<typeof setTimeout> | undefined;
-        await Promise.race([proc.exited, new Promise<void>(r => { timer = setTimeout(r, 100); })]).finally(() => clearTimeout(timer));
+        await Promise.race([proc.exited, new Promise<void>(r => { timer = setTimeout(r, pollMs); })]).finally(() => clearTimeout(timer));
     }
     throw new Error(`${service} not ready after ${timeoutMs} ms\n${tail(logFile)}`);
 }
@@ -141,8 +160,12 @@ export function pidsFile(instance?: string): string {
 export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const ports = opts.ports ?? DEFAULT_PORTS;
     for (const port of opts.gateway === false ? [ports.engine] : [ports.engine, ports.gateway]) {
-        for (let waited = 0; waited < (opts.portWaitMs ?? 0) && !canBind(port); waited += 100) await Bun.sleep(100);
-        if (!canBind(port)) throw new Error(`port ${port} in use`);
+        let free = canBind(port);
+        for (let waited = 0; !free && waited < (opts.portWaitMs ?? 0); waited += 100) {
+            await Bun.sleep(100);
+            free = canBind(port);
+        }
+        if (!free) throw new Error(`port ${port} in use`);
     }
     const root = rsSdkRoot();
     const tag = suffix(opts.instance);
@@ -199,8 +222,8 @@ export async function stopStack(instance?: string): Promise<void> {
     const file = pidsFile(instance);
     if (!existsSync(file)) return;
     const saved = JSON.parse(readFileSync(file, 'utf8')) as Saved;
-    for (const [name, p] of Object.entries(saved)) {
+    await Promise.all(Object.entries(saved).map(async ([name, p]) => {
         if (!(await safeKill(p.pid, p.marker))) console.warn(`stop: ${name} pid ${p.pid} is not running ${p.marker}; left alone`);
-    }
+    }));
     rmSync(file);
 }
