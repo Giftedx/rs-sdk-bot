@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562600215,
+ "at": 1795562707317,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -35,42 +35,6 @@
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
    "role": "army"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "splash",
-    "56",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "56"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
-   "role": "auto"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "splash",
-    "56",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "56"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
-   "role": "auto"
   }
  ],
  "army": [

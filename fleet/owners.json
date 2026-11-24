@@ -4,6 +4,27 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
+  "AFKnight": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "BackdoorMan": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Ballbag": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Balls": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-5c00a0ff-887f-41e9-bb91-53f2eb2b96ce"
+  },
+  "Ballspinner": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
   "Bigchopper": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
@@ -12,21 +33,139 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
+  "BigSwinger": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Billionaire": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "BoneToPick": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
+  },
   "BowBeforeMe": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "BraveHardon": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
+  },
+  "CoinCock": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Coinpurse": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-baf56625-8445-49b5-ba41-e814a75cc35e"
+  },
+  "Crownjewels": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
+  },
+  "Deeppockets": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "Dipstick": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "DropMyLoad": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Earlyshooter": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Familyjewel": {
+   "side": "cloud-kit",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-e05bb012-344d-479a-9db3-618013d935bd"
+  },
+  "Fatstack": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "Fingerblastr": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "Fingersmith": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
   },
   "FishAndChips": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
+  "FullLoad": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-668f79d3-8846-40af-8f7d-039b215124b5"
+  },
+  "FullSporran": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-a870ce17-35c1-443a-ba32-db62a09fefaa"
+  },
+  "Glassblower": {
+   "side": "cloud-kit",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-30b2bb88-95a5-42f0-8eb2-4d5c8e0ef7ea"
+  },
+  "Heavyload": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-49808733-8bca-4f45-8a36-a818d43b73d2"
+  },
   "Hocuspokeus": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "InTheSack": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Kiltlifter": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "KnightRider": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "Knightstick": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "Magicwanda": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Masterbaiter": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "MeatNTwoVeg": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
   },
   "Mightyrod": {
    "side": "local",
@@ -56,13 +195,30 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
+  "Nockitoff": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
   "OreElse": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "PackageDeal": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Packhorse": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
   "PickpockDick": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "PocketPool": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
   },
   "Pocketpython": {
    "side": "local",
@@ -72,15 +228,120 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
+  "Porksword": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
+  },
+  "Pullmybow": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Quickhandjob": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "Quiverfull": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "RearEntry": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "RockSolid": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Sausagefest": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-5b821a35-42f7-48cc-b292-4a49381bf8db"
+  },
   "Shaftmaker": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Shaftsinker": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Spitroaster": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
+  },
+  "SporranBulge": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "SporranDip": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "Stirmypot": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
   },
   "Swordinhand": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
+  "Swordswallow": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud-kit"
+  },
+  "TackleBox": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "TheFullMonty": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "TipMyShaft": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "TossTheCaber": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
+  },
+  "TrouserSnake": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "UnderMyKilt": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
+  },
+  "Unsheathed": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
+  },
+  "Wandwanker": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
   "Wandwaver": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "WeeQuickie": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-5087c858-ec43-43be-ac52-98da72cf80f4"
+  },
+  "WellHung": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
@@ -96,259 +357,10 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
-  "BraveHardon": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
-  "TossTheCaber": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
-  "Swordswallow": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud-kit"
-  },
-  "Unsheathed": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
-  "Quickhandjob": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "TrouserSnake": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "TheFullMonty": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "UnderMyKilt": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "Billionaire": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Magicwanda": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Shaftsinker": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "CoinCock": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Ballspinner": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Deeppockets": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "Fatstack": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "Fingerblastr": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "Porksword": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
-  "MeatNTwoVeg": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
   "YewGotWood": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev",
    "home": "cloud"
-  },
-  "Spitroaster": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
-  "Stirmypot": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
-  "BoneToPick": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
-  "Crownjewels": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "cloud"
-  },
-  "Kiltlifter": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "Knightstick": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "PocketPool": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "SporranDip": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "FullSporran": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-a870ce17-35c1-443a-ba32-db62a09fefaa"
-  },
-  "SporranBulge": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Heavyload": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-49808733-8bca-4f45-8a36-a818d43b73d2"
-  },
-  "FullLoad": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-668f79d3-8846-40af-8f7d-039b215124b5"
-  },
-  "Fingersmith": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "Dipstick": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "KnightRider": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "home": "claude-cloud"
-  },
-  "Familyjewel": {
-   "side": "cloud-kit",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-e05bb012-344d-479a-9db3-618013d935bd"
-  },
-  "Glassblower": {
-   "side": "cloud-kit",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-30b2bb88-95a5-42f0-8eb2-4d5c8e0ef7ea"
-  },
-  "Coinpurse": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-baf56625-8445-49b5-ba41-e814a75cc35e"
-  },
-  "Balls": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-5c00a0ff-887f-41e9-bb91-53f2eb2b96ce"
-  },
-  "Sausagefest": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-5b821a35-42f7-48cc-b292-4a49381bf8db"
-  },
-  "WeeQuickie": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev",
-   "reservation": "task-5087c858-ec43-43be-ac52-98da72cf80f4"
-  },
-  "AFKnight": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Ballbag": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Packhorse": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "DropMyLoad": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "InTheSack": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "WellHung": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "BackdoorMan": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "PackageDeal": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "RearEntry": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "TackleBox": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Wandwanker": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Earlyshooter": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Pullmybow": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Quiverfull": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Nockitoff": {
-   "side": "local",
-   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
