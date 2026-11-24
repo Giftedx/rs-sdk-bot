@@ -172,6 +172,134 @@ export interface RateStoreLike {
     estimate(activityId: string, acct?: AccountState, world?: WorldSnapshot): RateEstimate;
 }
 
+export interface PlannerActivityIndex {
+    readonly nonExpByOutputItem: ReadonlyMap<number, readonly ActivityDefinition[]>;
+    readonly byOutputItem: ReadonlyMap<number, readonly ActivityDefinition[]>;
+    readonly bySkill: ReadonlyMap<string, readonly ActivityDefinition[]>;
+    readonly questsBySlug: ReadonlyMap<string, readonly ActivityDefinition[]>;
+    readonly gpActivities: readonly ActivityDefinition[];
+    readonly combatOrPvpActivities: readonly ActivityDefinition[];
+    readonly shopBuyActivity: ActivityDefinition | undefined;
+    readonly geBuyActivity: ActivityDefinition | undefined;
+}
+
+export interface PlannerSharedIndex extends PlannerActivityIndex {
+    readonly eligibleActivities: readonly ActivityDefinition[];
+    readonly allIdleDonors: readonly AccountState[];
+}
+
+function indexEligibleActivities(eligibleActivities: readonly ActivityDefinition[]): PlannerActivityIndex {
+    const nonExpByOutputItem = new Map<number, ActivityDefinition[]>();
+    const byOutputItem = new Map<number, ActivityDefinition[]>();
+    const bySkill = new Map<string, ActivityDefinition[]>();
+    const questsBySlug = new Map<string, ActivityDefinition[]>();
+    const gpActivities: ActivityDefinition[] = [];
+    const combatOrPvpActivities: ActivityDefinition[] = [];
+    let shopBuyActivity: ActivityDefinition | undefined;
+    let geBuyActivity: ActivityDefinition | undefined;
+
+    const pushMap = <K, V>(map: Map<K, V[]>, key: K, val: V) => {
+        const list = map.get(key);
+        if (list) {
+            if (!list.includes(val)) list.push(val);
+        } else {
+            map.set(key, [val]);
+        }
+    };
+
+    for (const act of eligibleActivities) {
+        if (act.id === 'market:shop-buy') shopBuyActivity = act;
+        else if (act.id === 'market:ge-buy') geBuyActivity = act;
+
+        const isNonExp = act.trust !== 'experimental';
+        const seenOut = isNonExp ? new Set<number>() : undefined;
+        for (const o of act.outputs ?? []) {
+            if (o.countPerUnit > 0) {
+                pushMap(byOutputItem, o.itemId, act);
+                seenOut?.add(o.itemId);
+            }
+        }
+        for (const [idStr, cnt] of Object.entries(act.baselineRate.outputsPerUnit ?? {})) {
+            if (cnt > 0) {
+                const itemId = Number(idStr);
+                pushMap(byOutputItem, itemId, act);
+                seenOut?.add(itemId);
+            }
+        }
+        if (seenOut) {
+            for (const itemId of seenOut) pushMap(nonExpByOutputItem, itemId, act);
+        }
+        if (act.family === 'market' && Number.isFinite(Number(act.config?.itemId))) {
+            pushMap(byOutputItem, Number(act.config.itemId), act);
+        }
+        if (act.family !== 'quest') {
+            if (act.skill) pushMap(bySkill, act.skill.toLowerCase(), act);
+            for (const sk of act.skills ?? []) pushMap(bySkill, sk.toLowerCase(), act);
+            for (const [sk, xp] of Object.entries(act.baselineRate.skillXpPerTick ?? {})) {
+                if (xp > 0) pushMap(bySkill, sk.toLowerCase(), act);
+            }
+        }
+        if (act.family === 'quest' && act.questSlug) {
+            pushMap(questsBySlug, act.questSlug.toLowerCase(), act);
+        }
+        if (act.baselineRate.gpPerTick > 0) gpActivities.push(act);
+        if (act.family === 'pvp' || act.family === 'combat') combatOrPvpActivities.push(act);
+    }
+
+    return {
+        nonExpByOutputItem,
+        byOutputItem,
+        bySkill,
+        questsBySlug,
+        gpActivities,
+        combatOrPvpActivities,
+        shopBuyActivity,
+        geBuyActivity,
+    };
+}
+
+export function buildPlannerSharedIndex(params: {
+    readonly world: WorldSnapshot;
+    readonly activities: readonly ActivityDefinition[];
+    readonly defects?: readonly DefectRecord[];
+    readonly minTrust?: TrustTier;
+    readonly allowExperimentalFallback?: boolean;
+}): PlannerSharedIndex {
+    const now = params.world.at;
+    const minTrust: TrustTier = params.minTrust ?? 'practice_passed';
+    const defects = params.defects ?? [];
+    const quarantinedIds = new Set<string>();
+    for (const d of defects) {
+        if (d.quarantined && (d.expiresAt === undefined || now < d.expiresAt)) {
+            quarantinedIds.add(d.activityId);
+        }
+    }
+    const candidateActivities = params.activities.filter((act) => {
+        if (quarantinedIds.has(act.id)) return false;
+        if (!trustMeetsMinimum(act.trust, minTrust) && !params.allowExperimentalFallback) return false;
+        return true;
+    });
+    const eligibleActivities = candidateActivities.some((a) => trustMeetsMinimum(a.trust, minTrust))
+        ? candidateActivities.filter((a) => trustMeetsMinimum(a.trust, minTrust))
+        : candidateActivities;
+
+    const built = indexEligibleActivities(eligibleActivities);
+    const allIdleDonors = Object.values(params.world.accounts)
+        .filter((d) =>
+            d.lifecycle === 'idle'
+            && d.bank.trusted
+            && !d.protectedClock
+            && !isProtectedAccountName(d.name),
+        )
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+        eligibleActivities,
+        ...built,
+        allIdleDonors,
+    };
+}
+
 export interface AccountPlannerInput {
     readonly world: WorldSnapshot;
     readonly activities: readonly ActivityDefinition[];
@@ -194,6 +322,7 @@ export interface AccountPlannerInput {
     readonly requireConfirmedLogoutForTransfer?: boolean;
     readonly xpRate?: number;
     readonly ticksPerHour?: number;
+    readonly _sharedIndex?: PlannerSharedIndex;
 }
 
 export interface AccountProfileSummary {
@@ -846,51 +975,87 @@ export function planAccount(
 
     const minTrust: TrustTier = input.minTrust ?? 'practice_passed';
     const profile = summarizeAccountProfile(acct);
+    const isProtected = Boolean(acct.protectedClock || isProtectedAccountName(acct.name));
+    const hasActExclusions = Boolean(input.excludedActivityIds?.size || input.excludedSpotIds?.size);
+    const isActAllowed = (act: ActivityDefinition): boolean =>
+        (!input.excludedActivityIds || !input.excludedActivityIds.has(act.id))
+        && (!act.spotId || !input.excludedSpotIds || !input.excludedSpotIds.has(act.spotId));
 
-    const candidateActivities = input.activities.filter((act) => {
-        if (input.excludedActivityIds?.has(act.id)) return false;
-        if (act.spotId && input.excludedSpotIds?.has(act.spotId)) return false;
-        if (isActivityQuarantined(act.id, defects, now)) return false;
-        if (!trustMeetsMinimum(act.trust, minTrust)) {
-            if (!input.allowExperimentalFallback) return false;
-        }
-        if ((acct.protectedClock || isProtectedAccountName(acct.name)) && act.protectedAllowed !== true) {
-            return false;
-        }
-        return true;
-    });
+    const shared = input._sharedIndex && !isProtected && (!input.allowExperimentalFallback || !hasActExclusions)
+        ? input._sharedIndex
+        : undefined;
 
-    const eligibleActivities = candidateActivities.some((a) => trustMeetsMinimum(a.trust, minTrust))
-        ? candidateActivities.filter((a) => trustMeetsMinimum(a.trust, minTrust))
-        : candidateActivities;
+    let eligibleActivities: readonly ActivityDefinition[];
+    let nonExpByOutputItem: Pick<ReadonlyMap<number, readonly ActivityDefinition[]>, 'get'>;
+    let byOutputItem: ReadonlyMap<number, readonly ActivityDefinition[]>;
+    let bySkill: ReadonlyMap<string, readonly ActivityDefinition[]>;
+    let questsBySlug: ReadonlyMap<string, readonly ActivityDefinition[]>;
+    let gpActivities: readonly ActivityDefinition[];
+    let combatOrPvpActivities: readonly ActivityDefinition[];
+    let shopBuyActivity: ActivityDefinition | undefined;
+    let geBuyActivity: ActivityDefinition | undefined;
+    let sortedIdleDonors: readonly AccountState[];
 
-    // Pre-index eligible activities and per-account caches so O(D * A) collapses to O(D * matching)
-    // and craft_gather respects quarantine, exclusions, trust, and protectedClock filters.
-    const nonExpByOutputItem = new Map<number, ActivityDefinition[]>();
-    for (const act of eligibleActivities) {
-        if (act.trust === 'experimental') continue;
-        const seenOut = new Set<number>();
-        for (const o of act.outputs ?? []) {
-            if (o.countPerUnit > 0) seenOut.add(o.itemId);
-        }
-        for (const [idStr, cnt] of Object.entries(act.baselineRate.outputsPerUnit ?? {})) {
-            if (cnt > 0) seenOut.add(Number(idStr));
-        }
-        for (const itemId of seenOut) {
-            const list = nonExpByOutputItem.get(itemId);
-            if (list) list.push(act);
-            else nonExpByOutputItem.set(itemId, [act]);
-        }
+    if (shared) {
+        eligibleActivities = hasActExclusions ? shared.eligibleActivities.filter(isActAllowed) : shared.eligibleActivities;
+        nonExpByOutputItem = hasActExclusions
+            ? {
+                  get: (id: number) => {
+                      const list = shared.nonExpByOutputItem.get(id);
+                      return list ? list.filter(isActAllowed) : undefined;
+                  },
+              }
+            : shared.nonExpByOutputItem;
+        byOutputItem = shared.byOutputItem;
+        bySkill = shared.bySkill;
+        questsBySlug = shared.questsBySlug;
+        gpActivities = shared.gpActivities;
+        combatOrPvpActivities = shared.combatOrPvpActivities;
+        shopBuyActivity = shared.shopBuyActivity && (!hasActExclusions || isActAllowed(shared.shopBuyActivity))
+            ? shared.shopBuyActivity
+            : undefined;
+        geBuyActivity = shared.geBuyActivity && (!hasActExclusions || isActAllowed(shared.geBuyActivity))
+            ? shared.geBuyActivity
+            : undefined;
+        sortedIdleDonors = input.excludedDonorAccounts?.size
+            ? shared.allIdleDonors.filter((d) => !input.excludedDonorAccounts!.has(d.name.toLowerCase()))
+            : shared.allIdleDonors;
+    } else {
+        const candidateActivities = input.activities.filter((act) => {
+            if (!isActAllowed(act)) return false;
+            if (isActivityQuarantined(act.id, defects, now)) return false;
+            if (!trustMeetsMinimum(act.trust, minTrust)) {
+                if (!input.allowExperimentalFallback) return false;
+            }
+            if (isProtected && act.protectedAllowed !== true) {
+                return false;
+            }
+            return true;
+        });
+
+        eligibleActivities = candidateActivities.some((a) => trustMeetsMinimum(a.trust, minTrust))
+            ? candidateActivities.filter((a) => trustMeetsMinimum(a.trust, minTrust))
+            : candidateActivities;
+
+        const built = indexEligibleActivities(eligibleActivities);
+        nonExpByOutputItem = built.nonExpByOutputItem;
+        byOutputItem = built.byOutputItem;
+        bySkill = built.bySkill;
+        questsBySlug = built.questsBySlug;
+        gpActivities = built.gpActivities;
+        combatOrPvpActivities = built.combatOrPvpActivities;
+        shopBuyActivity = built.shopBuyActivity;
+        geBuyActivity = built.geBuyActivity;
+        sortedIdleDonors = Object.values(world.accounts)
+            .filter((d) =>
+                d.lifecycle === 'idle'
+                && d.bank.trusted
+                && !d.protectedClock
+                && !isProtectedAccountName(d.name)
+                && !input.excludedDonorAccounts?.has(d.name.toLowerCase()),
+            )
+            .sort((a, b) => a.name.localeCompare(b.name));
     }
-    const sortedIdleDonors = Object.values(world.accounts)
-        .filter((d) =>
-            d.lifecycle === 'idle'
-            && d.bank.trusted
-            && !d.protectedClock
-            && !isProtectedAccountName(d.name)
-            && !input.excludedDonorAccounts?.has(d.name.toLowerCase()),
-        )
-        .sort((a, b) => a.name.localeCompare(b.name));
 
     const acquireCtx: AcquireContext = {
         world,
@@ -906,44 +1071,6 @@ export function planAccount(
         _cachedByOutputItem: nonExpByOutputItem,
         _sortedIdleDonors: sortedIdleDonors,
     };
-
-    const byOutputItem = new Map<number, ActivityDefinition[]>();
-    const bySkill = new Map<string, ActivityDefinition[]>();
-    const questsBySlug = new Map<string, ActivityDefinition[]>();
-    const gpActivities: ActivityDefinition[] = [];
-    const combatOrPvpActivities: ActivityDefinition[] = [];
-    const pushMap = <K, V>(map: Map<K, V[]>, key: K, val: V) => {
-        const list = map.get(key);
-        if (list) {
-            if (!list.includes(val)) list.push(val);
-        } else {
-            map.set(key, [val]);
-        }
-    };
-
-    for (const act of eligibleActivities) {
-        for (const o of act.outputs ?? []) {
-            if (o.countPerUnit > 0) pushMap(byOutputItem, o.itemId, act);
-        }
-        for (const [idStr, cnt] of Object.entries(act.baselineRate.outputsPerUnit ?? {})) {
-            if (cnt > 0) pushMap(byOutputItem, Number(idStr), act);
-        }
-        if (act.family === 'market' && Number.isFinite(Number(act.config?.itemId))) {
-            pushMap(byOutputItem, Number(act.config.itemId), act);
-        }
-        if (act.family !== 'quest') {
-            if (act.skill) pushMap(bySkill, act.skill.toLowerCase(), act);
-            for (const sk of act.skills ?? []) pushMap(bySkill, sk.toLowerCase(), act);
-            for (const [sk, xp] of Object.entries(act.baselineRate.skillXpPerTick ?? {})) {
-                if (xp > 0) pushMap(bySkill, sk.toLowerCase(), act);
-            }
-        }
-        if (act.family === 'quest' && act.questSlug) {
-            pushMap(questsBySlug, act.questSlug.toLowerCase(), act);
-        }
-        if (act.baselineRate.gpPerTick > 0) gpActivities.push(act);
-        if (act.family === 'pvp' || act.family === 'combat') combatOrPvpActivities.push(act);
-    }
 
     const candidateListForDemand = (demand: GoalDemand): readonly ActivityDefinition[] => {
         if (demand.assignedAccount && demand.assignedAccount.toLowerCase() !== acct.name.toLowerCase()) {
@@ -1019,7 +1146,7 @@ export function planAccount(
 
     const acquireCache = new Map<string, AcquireResolution>();
     const resolveAcquireCached = (req: AcquireRequest): AcquireResolution => {
-        const key = `${req.itemId}:${req.quantity}:${req.allowOwnBank ?? true}:${req.includeInventoryInOwned ?? true}:${req.operatingCoinFloat ?? DEFAULT_OPERATING_COIN_FLOAT}:${req.committedCoinSpend ?? 0}:${req.allowedSources?.join(',') ?? ''}:${req.maxUnitPrice ?? ''}:${req.questPoints ?? 0}`;
+        const key = `${req.itemId}:${req.itemName ?? ''}:${req.quantity}:${req.allowOwnBank ?? true}:${req.includeInventoryInOwned ?? true}:${req.operatingCoinFloat ?? DEFAULT_OPERATING_COIN_FLOAT}:${req.committedCoinSpend ?? 0}:${req.allowedSources?.join(',') ?? ''}:${req.maxUnitPrice ?? ''}:${req.questPoints ?? 0}`;
         let res = acquireCache.get(key);
         if (!res) {
             res = resolveAcquireItem(acct, req, acquireCtx);
@@ -1037,12 +1164,14 @@ export function planAccount(
     const skillUnlockCache = new Map<string, { activity: ActivityDefinition; rate: RateEstimate } | null>();
     const questRows = loadQuestRows();
 
-    const shopBuyActivity = eligibleActivities.find((a) => a.id === 'market:shop-buy');
-    const geBuyActivity = eligibleActivities.find((a) => a.id === 'market:ge-buy');
     const hasLiveMarketQuotes = Boolean(input.marketQuotes && Object.keys(input.marketQuotes).length > 0);
     const directGeBuyActivity = hasLiveMarketQuotes ? geBuyActivity : undefined;
     const shopCatalog = loadShopCatalogByItem();
     const itemsMap = loadItemsMap();
+    const defaultSpendableCoins = availableSpendableCoins(acct, world, DEFAULT_OPERATING_COIN_FLOAT, {
+        includeBank: true,
+        requireTrustedBank: true,
+    }).spendable;
 
     let bestPlan: AccountPlan | null = null;
     let lastBlockerReason = 'no_matching_demand_or_activity';
@@ -1050,7 +1179,9 @@ export function planAccount(
     for (const demand of input.demands) {
         if (!demand.active || demand.remaining <= 0) continue;
 
-        const matching = candidateListForDemand(demand).filter((a) => activityMatchesDemand(acct, demand, a));
+        const matching = candidateListForDemand(demand).filter(
+            (a) => (!shared || !hasActExclusions || isActAllowed(a)) && activityMatchesDemand(acct, demand, a),
+        );
         let bestThroughput = 0;
         for (const act of matching) {
             const tp = activityDemandThroughput(act, demand, getRate(act));
@@ -1080,23 +1211,16 @@ export function planAccount(
             if (directGeBuyActivity) allowedExternal.push('ge');
             const targetItemId = demand.target.itemId;
             const maxQty = Math.max(1, Math.min(Math.round(demand.remaining), 250));
-            let acq = resolveAcquireItem(
-                acct,
-                {
-                    itemId: targetItemId,
-                    itemName: demand.target.itemName,
-                    quantity: maxQty,
-                    allowOwnBank: false,
-                    allowedSources: allowedExternal,
-                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
-                },
-                acquireCtx,
-            );
+            let acq = resolveAcquireCached({
+                itemId: targetItemId,
+                itemName: demand.target.itemName,
+                quantity: maxQty,
+                allowOwnBank: false,
+                allowedSources: allowedExternal,
+                operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+            });
             if (!acq.ok && maxQty > 1) {
-                const spendable = availableSpendableCoins(acct, world, DEFAULT_OPERATING_COIN_FLOAT, {
-                    includeBank: true,
-                    requireTrustedBank: true,
-                }).spendable;
+                const spendable = defaultSpendableCoins;
                 if (spendable > 0) {
                     let minUnitPrice = Number.POSITIVE_INFINITY;
                     if (shopBuyActivity) {
@@ -1123,18 +1247,14 @@ export function planAccount(
                     if (Number.isFinite(minUnitPrice) && minUnitPrice > 0) {
                         const affordableQty = Math.min(maxQty, Math.floor(spendable / minUnitPrice));
                         if (affordableQty >= 1 && affordableQty < maxQty) {
-                            acq = resolveAcquireItem(
-                                acct,
-                                {
-                                    itemId: targetItemId,
-                                    itemName: demand.target.itemName,
-                                    quantity: affordableQty,
-                                    allowOwnBank: false,
-                                    allowedSources: allowedExternal,
-                                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
-                                },
-                                acquireCtx,
-                            );
+                            acq = resolveAcquireCached({
+                                itemId: targetItemId,
+                                itemName: demand.target.itemName,
+                                quantity: affordableQty,
+                                allowOwnBank: false,
+                                allowedSources: allowedExternal,
+                                operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                            });
                         }
                     }
                 }
@@ -1248,7 +1368,9 @@ export function planAccount(
                     }
 
                     if (blocker.kind === 'quest_incomplete') {
-                        const unlockAct = (questsBySlug.get(blocker.quest.toLowerCase()) ?? [])[0];
+                        const unlockAct = (questsBySlug.get(blocker.quest.toLowerCase()) ?? []).find(
+                            (a) => !shared || !hasActExclusions || isActAllowed(a),
+                        );
                         if (!unlockAct) {
                             lastBlockerReason = `missing_quest_unlock:${blocker.quest}`;
                             chainFeasible = false;
@@ -1288,7 +1410,9 @@ export function planAccount(
                     } else if (blocker.kind === 'skill_level') {
                         const skLower = blocker.skill.toLowerCase();
                         if (skLower === 'herblore' && !hasCompletedQuest(acct, 'druid')) {
-                            const druidAct = (questsBySlug.get('druid') ?? [])[0];
+                            const druidAct = (questsBySlug.get('druid') ?? []).find(
+                                (a) => !shared || !hasActExclusions || isActAllowed(a),
+                            );
                             if (druidAct && getPreflight(druidAct, 1).ok && !prepSteps.some((s) => s.stepKind === 'unlock' && s.questSlug?.toLowerCase() === 'druid')) {
                                 const druidPre = getPreflight(druidAct, 1);
                                 const druidRow = questRows.find(
@@ -1326,7 +1450,8 @@ export function planAccount(
                         if (unlockEntry === undefined) {
                             const candidates = (bySkill.get(skLower) ?? [])
                                 .filter((a) =>
-                                    a.family !== 'quest'
+                                    (!shared || !hasActExclusions || isActAllowed(a))
+                                    && a.family !== 'quest'
                                     && a.skill?.toLowerCase() === skLower
                                     && activityXpForSkill(a, getRate(a), blocker.skill) > 0
                                     && getPreflight(a, 1).ok,

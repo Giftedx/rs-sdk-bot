@@ -797,3 +797,51 @@ test('hub_banker transfer slot accounting prevents recipient + idle donor from e
     expect(twoSlotPlan.transferOrders).toHaveLength(1);
     expect(twoSlotPlan.selectedSlots).toBe(2);
 });
+
+test('shared planner index and greedy reuse handle spot saturation and shrinking item demands cleanly', () => {
+    const fishA = makeAcct({ name: 'Alpha', bank: { items: { 995: 5_000 }, observedAt: NOW - 5_000, trusted: true } });
+    const fishB = makeAcct({ name: 'Bravo', bank: { items: { 995: 5_000 }, observedAt: NOW - 5_000, trusted: true } });
+    const fishC = makeAcct({ name: 'Charlie', bank: { items: { 995: 5_000 }, observedAt: NOW - 5_000, trusted: true } });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { Alpha: fishA, Bravo: fishB, Charlie: fishC },
+    };
+    const demands: GoalDemand[] = [
+        {
+            id: 'd:raw-sharks',
+            goalKind: 'main_supply',
+            valueScore: 500,
+            valuePerHour: 2000,
+            target: { kind: 'item', itemId: 383, itemName: 'Raw shark', count: 120 },
+            fulfilled: 0,
+            remaining: 120,
+            priorityWeight: 1,
+            active: true,
+        },
+        {
+            id: 'd:coins',
+            goalKind: 'coin_fund',
+            valueScore: 50,
+            valuePerHour: 200,
+            target: { kind: 'coins', amount: 500_000 },
+            fulfilled: 0,
+            remaining: 500_000,
+            priorityWeight: 1,
+            active: true,
+        },
+    ];
+    const plan = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 3 });
+    expect(plan.spotAllocations['catherby-sharks']).toHaveLength(1);
+    const sharkOwners = Object.values(plan.accountPlans).filter(
+        (p) => p.steps.at(-1)?.stepKind === 'work' && (p.steps.at(-1) as any).activityId === 'gather:fishing-shark',
+    );
+    const thievingOwners = Object.values(plan.accountPlans).filter(
+        (p) => p.steps.at(-1)?.stepKind === 'work' && (p.steps.at(-1) as any).activityId === 'gather:thieving-knights',
+    );
+    expect(sharkOwners).toHaveLength(1);
+    expect(thievingOwners).toHaveLength(2);
+    expect(plan.selectedSlots).toBe(3);
+});

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { RESERVED_ACCOUNTS, SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
@@ -440,4 +440,41 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
             rmSync(tempRoot, { recursive: true, force: true });
         }
     });
+
+    test('caches Haggis schedule across repeated loads while reflecting stop-file and hiscore changes', () => {
+        const tempRoot = mkdtempSync(join(tmpdir(), 'campaigns-haggis-cache-'));
+        try {
+            mkdirSync(join(tempRoot, 'packages', 'planner', 'src'), { recursive: true });
+            copyFileSync(
+                join(process.cwd(), 'packages', 'planner', 'src', 'haggis-boards.json'),
+                join(tempRoot, 'packages', 'planner', 'src', 'haggis-boards.json'),
+            );
+            writeJson(join(tempRoot, 'research', 'hiscores-live.json'), {
+                takenAt: new Date(NOW - 30_000).toISOString(),
+                boards: [{ board: 'Overall', category: 0, rows: [{ rank: 1, name: 'rival', level: 1881, ticks: 29_972 }] }],
+            });
+
+            const first = loadCampaignManifests({ root: tempRoot, now: NOW, includeSpecialists: false });
+            const second = loadCampaignManifests({ root: tempRoot, now: NOW + 1_000, includeSpecialists: false });
+            expect(first).toHaveLength(1);
+            expect(second[0]!.hiscoreMargin?.ourTicks).toBe(first[0]!.hiscoreMargin?.ourTicks);
+            expect(second[0]!.requiredSupplies).toEqual(first[0]!.requiredSupplies);
+            expect(second[0]!.state).toBe('staging');
+
+            mkdirSync(join(tempRoot, '.practice'), { recursive: true });
+            writeFileSync(join(tempRoot, '.practice', 'stop-haggis'), 'owner pause\n', 'utf8');
+            const paused = loadCampaignManifests({ root: tempRoot, now: NOW + 2_000, includeSpecialists: false });
+            expect(paused[0]!.state).toBe('paused');
+
+            writeJson(join(tempRoot, 'research', 'hiscores-live.json'), {
+                takenAt: new Date(NOW + 3_000).toISOString(),
+                boards: [{ board: 'Overall', category: 0, rows: [{ rank: 1, name: 'rival', level: 1881, ticks: 25_000 }] }],
+            });
+            const updatedRival = loadCampaignManifests({ root: tempRoot, now: NOW + 4_000, includeSpecialists: false });
+            expect(updatedRival[0]!.hiscoreMargin?.rivalTicks).toBe(25_000);
+            expect(updatedRival[0]!.hiscoreMargin?.meetsMargin).toBe(false);
+        } finally {
+            rmSync(tempRoot, { recursive: true, force: true });
+        }
+    }, 20_000);
 });

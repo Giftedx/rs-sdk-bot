@@ -102,7 +102,7 @@ export interface AcquireContext {
     readonly stationedHubBankers?: Readonly<Partial<Record<HubBankId, string>>>;
     readonly excludedDonorAccounts?: ReadonlySet<string>;
     readonly excludedSources?: ReadonlySet<AcquireSourceKind>;
-    readonly _cachedByOutputItem?: ReadonlyMap<number, readonly ActivityDefinition[]>;
+    readonly _cachedByOutputItem?: Pick<ReadonlyMap<number, readonly ActivityDefinition[]>, 'get'>;
     readonly _sortedIdleDonors?: readonly AccountState[];
 }
 

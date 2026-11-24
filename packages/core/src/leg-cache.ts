@@ -68,6 +68,11 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
         return Object.create(null);
     };
     const old = legacy(), fresh = new Map<string, number | null>();
+    const READ_MEMO_LIMIT = 100_000;
+    const readMemo = new Map<string, number | null>();
+    type GetStmt = { get(namespace: string, key: string): { value: number | null } | null };
+    let dbGetStmt: GetStmt | undefined;
+    let priorGetStmt: GetStmt | undefined;
     const open = () => {
         let connection: Database | undefined;
         try {
@@ -92,22 +97,29 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
     if (stored && file === LEG_CACHE_FILE && source === undefined) {
         try { if (db?.query('SELECT 1 FROM legs WHERE source < ?1 OR source > ?1 LIMIT 1').get(namespace)) db.query('DELETE FROM legs WHERE source < ?1 OR source > ?1').run(namespace); } catch { /* another process prunes, or the store is busy */ }
     }
+    const rememberRead = (key: string, value: number | null) => {
+        if (readMemo.size >= READ_MEMO_LIMIT) readMemo.clear();
+        readMemo.set(key, value);
+    };
     const get = (key: string) => {
         if (fresh.has(key)) return fresh.get(key);
+        if (readMemo.has(key)) return readMemo.get(key);
         try {
-            const row = db?.query<{ value: number | null }, [string, string]>('SELECT value FROM legs WHERE source = ? AND key = ?').get(namespace, key);
-            if (row) return row.value;
+            if (db && !dbGetStmt) dbGetStmt = db.query<{ value: number | null }, [string, string]>('SELECT value FROM legs WHERE source = ? AND key = ?');
+            const row = dbGetStmt?.get(namespace, key);
+            if (row) { rememberRead(key, row.value); return row.value; }
         } catch { /* Compute the leg when the cache is unavailable. */ }
         try {
-            const row = prior?.query<{ value: number | null }, [string, string]>('SELECT value FROM legs WHERE source = ? AND key = ?').get(namespace, key);
-            if (row) { fresh.set(key, row.value); return row.value; } // the next save writes it into the v2 file
+            if (prior && !priorGetStmt) priorGetStmt = prior.query<{ value: number | null }, [string, string]>('SELECT value FROM legs WHERE source = ? AND key = ?');
+            const row = priorGetStmt?.get(namespace, key);
+            if (row) { fresh.set(key, row.value); rememberRead(key, row.value); return row.value; } // the next save writes it into the v2 file
         } catch { /* The first file is optional. */ }
         return stored ? old[key] : undefined;
     };
     const c: LegCache = {
         has: k => get(k) !== undefined,
         get,
-        set: (k, v) => { fresh.set(k, v); },
+        set: (k, v) => { fresh.set(k, v); rememberRead(k, v); },
         hash: value => createHash('sha1').update(JSON.stringify(value)).digest('hex').slice(0, 12),
         save: () => {
             if (!fresh.size || !stored) return;
@@ -119,7 +131,7 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
                 fresh.clear();
             } catch { /* A busy or full store leaves these measurements available for retry. */ }
         },
-        close: () => { db?.close(); db = undefined; prior?.close(); prior = undefined; if (shared === c) shared = undefined; },
+        close: () => { dbGetStmt = undefined; priorGetStmt = undefined; readMemo.clear(); db?.close(); db = undefined; prior?.close(); prior = undefined; if (shared === c) shared = undefined; },
     };
     if (file === LEG_CACHE_FILE && source === undefined) shared = c;
     return c;

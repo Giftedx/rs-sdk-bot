@@ -149,3 +149,46 @@ test('areaOf prunes disjoint same-level walks without calling pathLength while k
     expect(seenPairs).not.toContain('0->30');
     expect(seenPairs).toContain('0->20');
 });
+
+test('walkable skips unwalkable tol=0 waypoints while preserving goalTol>0 goals and interaction approaches', () => {
+    const blockedWp = { x: 15, z: 0, level: 0 };
+    const stairTile = { x: 20, z: 0, level: 0 };
+    const stair: any = {
+        locName: 'stairs', option: 'op1', from: stairTile, to: { x: 20, z: 2, level: 1 },
+        exact: true, src: 's', toSrc: 's', handler: 's',
+        interaction: { id: 1, shape: 10, angle: 0, width: 2, height: 2, blockAccessFlags: 0, src: 's', configSrc: 's' },
+    };
+    const deadLink: any = { locName: 'dead', option: 'op1', from: blockedWp, to: { x: 15, z: 2, level: 2 }, exact: true, src: 'd', toSrc: 'd', handler: 'd' };
+    const unwalkableGoal = { x: 25, z: 2, level: 1 };
+    const seenTol0ToBlocked: string[] = [];
+    const walkable = (t: Tile) => !(t.x === blockedWp.x && t.z === blockedWp.z && t.level === 0)
+        && !(t.x === stairTile.x && t.z === stairTile.z && t.level === 0)
+        && !(t.x === unwalkableGoal.x && t.z === unwalkableGoal.z && t.level === 1);
+    const path = Object.assign(
+        (a: Tile, b: Tile, _blk: unknown[], tol: number) => {
+            if (a.level !== b.level) return null;
+            if (tol === 0 && !walkable(b)) {
+                seenTol0ToBlocked.push(`${a.x},${a.z}->${b.x},${b.z}`);
+                return null;
+            }
+            return Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+        },
+        { walkable },
+    );
+    const w = createWorld({ transports: [stair, deadLink], doors: [], goalTolerance: 1, pathLength: path });
+    const r = w.route({ x: 0, z: 0, level: 0 }, unwalkableGoal, acct());
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.cost).toBe(28);
+    expect(seenTol0ToBlocked).toEqual([]);
+});
+
+test('multi-path pruning keeps optimal cost when a direct walk beats an indirect transport chain', () => {
+    const tA: any = { locName: 'a', option: 'op1', from: { x: 10, z: 0, level: 0 }, to: { x: 10, z: 2, level: 1 }, exact: true, src: 'a', toSrc: 'a', handler: 'a' };
+    const tB: any = { locName: 'b', option: 'op1', from: { x: 30, z: 0, level: 0 }, to: { x: 30, z: 2, level: 1 }, exact: true, src: 'b', toSrc: 'b', handler: 'b' };
+    const bridge: any = { locName: 'c', option: 'op1', from: { x: 10, z: 2, level: 1 }, to: { x: 30, z: 2, level: 1 }, exact: true, src: 'c', toSrc: 'c', handler: 'c' };
+    // Via tA + bridge + walk: 10 + 3 + 3 + 20 = 36; via tB direct: 30 + 3 + 20 = 53; blocked wall on level 0 forces detour unless tA+bridge wins.
+    const w = createWorld({ transports: [tA, tB, bridge], doors: [], pathLength: flat });
+    const r = w.route({ x: 0, z: 0, level: 0 }, { x: 50, z: 2, level: 1 }, acct());
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.cost).toBe(36);
+});
