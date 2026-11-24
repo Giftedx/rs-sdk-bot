@@ -574,7 +574,7 @@ export class DemandEngine {
         if (w <= 0) return [];
         const targets = this.customGearTargets ?? this.defaultGearTargets;
         const activeAccounts = Object.values(snapshot.accounts).filter(
-            (a) => a.lifecycle !== 'dead' && !a.protectedClock,
+            (a) => a.lifecycle !== 'dead' && a.lifecycle !== 'paused_owner' && !a.protectedClock,
         );
         const out: GoalDemand[] = [];
         for (const gear of targets) {

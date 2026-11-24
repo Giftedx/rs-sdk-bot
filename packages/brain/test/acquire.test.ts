@@ -416,3 +416,45 @@ test('own_bank for coins (995) preserves operating float, GE escrow, and prior c
     );
     expect(committedFail.ok).toBe(false);
 });
+
+test('excludedMarketVenues skips allocated NPC shop and GE venues per item', () => {
+    const rich = makeAcct({
+        bank: { items: { 995: 50_000 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { Packhorse: rich },
+    };
+    const quotes = { 1317: { ask: 4000, sell: 3500, trades: 12 } };
+
+    const shopFirst = resolveAcquireItem(
+        rich,
+        { itemId: 1317, quantity: 1, allowOwnBank: false, allowedSources: ['npc_shop', 'ge'] },
+        { world, marketQuotes: quotes },
+    );
+    expect(shopFirst.ok).toBe(true);
+    expect(shopFirst.step?.source).toBe('npc_shop');
+    const shopVenue = shopFirst.step!.venueKey!;
+
+    const fallbackGe = resolveAcquireItem(
+        rich,
+        { itemId: 1317, quantity: 1, allowOwnBank: false, allowedSources: ['npc_shop', 'ge'] },
+        { world, marketQuotes: quotes, excludedMarketVenues: new Set([shopVenue]) },
+    );
+    expect(fallbackGe.ok).toBe(true);
+    expect(fallbackGe.step?.source).toBe('ge');
+
+    const bothExcluded = resolveAcquireItem(
+        rich,
+        { itemId: 1317, quantity: 1, allowOwnBank: false, allowedSources: ['npc_shop', 'ge'] },
+        {
+            world,
+            marketQuotes: quotes,
+            excludedMarketVenues: new Set([shopVenue, marketCooldownKey(1317, 'ge')]),
+        },
+    );
+    expect(bothExcluded.ok).toBe(false);
+});

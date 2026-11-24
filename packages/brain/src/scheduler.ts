@@ -12,6 +12,7 @@ import {
     canScheduleTransferOrder,
     compareRecoveryPriority,
     isProtectedAccountName,
+    marketCooldownKey,
     type AccountPlan,
     type AccountState,
     type AcquireSourceKind,
@@ -451,6 +452,35 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         return full;
     };
 
+    // Enforce 1-per-venue concurrency for market shop-buy (itemId + shopId) and GE-buy (itemId + ge)
+    // within a single scheduling cycle so accounts do not dogpile shared NPC shop stock or GE asks.
+    const allocatedMarketVenues = new Set<string>();
+    const planMarketVenues = (plan: AccountPlan): string[] => {
+        const venues: string[] = [];
+        for (const st of plan.steps) {
+            if (st.stepKind !== 'work' || !st.config) continue;
+            const itemId = st.config.itemId;
+            if (typeof itemId !== 'number' || !Number.isFinite(itemId)) continue;
+            if (st.config.mode === 'shop-buy' && typeof st.config.shopId === 'string' && st.config.shopId.length > 0) {
+                venues.push(marketCooldownKey(itemId, `shop:${st.config.shopId}`));
+            } else if (st.config.mode === 'ge-buy') {
+                venues.push(marketCooldownKey(itemId, 'ge'));
+            }
+        }
+        return venues;
+    };
+    const marketVenueHasCapacity = (plan: AccountPlan): boolean => {
+        for (const v of planMarketVenues(plan)) {
+            if (allocatedMarketVenues.has(v)) return false;
+        }
+        return true;
+    };
+    const reserveMarketVenues = (plan: AccountPlan) => {
+        for (const v of planMarketVenues(plan)) {
+            allocatedMarketVenues.add(v);
+        }
+    };
+
     const sharedIndex = buildPlannerSharedIndex({
         world,
         activities,
@@ -560,12 +590,23 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         }
         const workStep = plan.steps.at(-1);
         const workAct = workStep?.stepKind === 'work' ? activityById.get(workStep.activityId) : undefined;
-        if (workAct && !spotHasCapacity(workAct.spotId, workAct.maxConcurrentAccounts)) {
-            const excludedSpots = currentFullSpots(workAct.spotId);
-            const rerouted = planAccount(acct, { ...runningPlannerOpts, excludedSpotIds: excludedSpots, _reuse: getAccountReuse(acct) });
+        const spotOk = !workAct || spotHasCapacity(workAct.spotId, workAct.maxConcurrentAccounts);
+        const marketOk = marketVenueHasCapacity(plan);
+        if (!spotOk || !marketOk) {
+            const excludedSpots = currentFullSpots(!spotOk ? workAct?.spotId : undefined);
+            const rerouted = planAccount(acct, {
+                ...runningPlannerOpts,
+                excludedSpotIds: excludedSpots,
+                excludedMarketVenues: allocatedMarketVenues,
+                _reuse: getAccountReuse(acct),
+            });
             const altWork = rerouted.steps.at(-1);
             const altAct = altWork?.stepKind === 'work' ? activityById.get(altWork.activityId) : undefined;
-            if (rerouted.steps.length === 0 || (altAct && !spotHasCapacity(altAct.spotId, altAct.maxConcurrentAccounts))) {
+            if (
+                rerouted.steps.length === 0
+                || (altAct && !spotHasCapacity(altAct.spotId, altAct.maxConcurrentAccounts))
+                || !marketVenueHasCapacity(rerouted)
+            ) {
                 accountPlans[acct.name] = {
                     account: acct.name,
                     steps: [],
@@ -575,6 +616,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 continue;
             }
             reserveSpot(acct.name, altAct?.spotId);
+            reserveMarketVenues(rerouted);
             consumeDemandAllocation(rerouted);
             accountPlans[acct.name] = rerouted;
             busyAccounts.add(acct.name.toLowerCase());
@@ -582,6 +624,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             continue;
         }
         reserveSpot(acct.name, workAct?.spotId);
+        reserveMarketVenues(plan);
         consumeDemandAllocation(plan);
         accountPlans[acct.name] = plan;
         busyAccounts.add(acct.name.toLowerCase());
@@ -630,12 +673,14 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     // 3. Plan idle (and launch-ready reserved) accounts ordered by value/hour descending.
     const initialUnallocated = currentUnallocatedDemands();
     const initialExcludedSpots = currentFullSpots();
+    const initialExcludedMarketVenuesSize = allocatedMarketVenues.size;
     const idleEvaluations = idleAccounts
         .map((acct) => {
             const res = planAccountWithCandidates(acct, {
                 ...basePlannerOpts,
                 demands: initialUnallocated,
                 excludedSpotIds: initialExcludedSpots,
+                excludedMarketVenues: allocatedMarketVenues,
                 excludedDonorAccounts: busyAccounts,
                 _reuse: getAccountReuse(acct),
             });
@@ -711,12 +756,18 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             }
             return false;
         };
+        const candidateUsesExcludedMarketVenue = (cand: AccountPlan): boolean => !marketVenueHasCapacity(cand);
 
         let plan: AccountPlan | undefined;
         let availableDemands: GoalDemand[] | undefined;
         const getAvailableDemands = (): GoalDemand[] => (availableDemands ??= currentUnallocatedDemands());
 
-        if (initialPlan.steps.length === 0 && shrunkNonZeroDemands.size === 0 && excludedSpots.size === initialExcludedSpots.size) {
+        if (
+            initialPlan.steps.length === 0
+            && shrunkNonZeroDemands.size === 0
+            && excludedSpots.size === initialExcludedSpots.size
+            && allocatedMarketVenues.size === initialExcludedMarketVenuesSize
+        ) {
             plan = initialPlan;
         } else if (candidates.length > 0) {
             let bestUnchanged: AccountPlan | undefined;
@@ -729,7 +780,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                     if (rem <= 0) continue;
                     if (shrunkNonZeroDemands.has(did)) continue;
                 }
-                if (candidateUsesExcludedSpot(cand) || hasBusyHubDonor(cand)) {
+                if (candidateUsesExcludedSpot(cand) || candidateUsesExcludedMarketVenue(cand) || hasBusyHubDonor(cand)) {
                     if (did) dirtyDemandIds.add(did);
                     continue;
                 }
@@ -763,6 +814,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                         ...basePlannerOpts,
                         demands: reevalDemands,
                         excludedSpotIds: excludedSpots,
+                        excludedMarketVenues: allocatedMarketVenues,
                         excludedDonorAccounts: busyAccounts,
                         _reuse: getAccountReuse(acct),
                     });
@@ -786,6 +838,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 ...basePlannerOpts,
                 demands: getAvailableDemands(),
                 excludedSpotIds: excludedSpots,
+                excludedMarketVenues: allocatedMarketVenues,
                 excludedDonorAccounts: busyAccounts,
                 _reuse: getAccountReuse(acct),
             });
@@ -883,6 +936,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                         ...basePlannerOpts,
                         demands: getAvailableDemands(),
                         excludedSpotIds: excludedSpots,
+                        excludedMarketVenues: allocatedMarketVenues,
                         excludedDonorAccounts: busyAccounts,
                         excludedAcquireSources: new Set<AcquireSourceKind>(['hub_banker']),
                         _reuse: getAccountReuse(acct),
@@ -918,6 +972,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         const workStep = plan.steps.at(-1);
         const workAct = workStep?.stepKind === 'work' ? activityById.get(workStep.activityId) : undefined;
         reserveSpot(acct.name, workAct?.spotId);
+        reserveMarketVenues(plan);
         consumeDemandAllocation(plan);
         accountPlans[acct.name] = plan;
         busyAccounts.add(acct.name.toLowerCase());

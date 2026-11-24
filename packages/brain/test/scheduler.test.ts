@@ -826,9 +826,9 @@ test('shared planner index and greedy reuse handle spot saturation and shrinking
             goalKind: 'coin_fund',
             valueScore: 50,
             valuePerHour: 200,
-            target: { kind: 'coins', amount: 500_000 },
+            target: { kind: 'coins', amount: 5_000_000 },
             fulfilled: 0,
-            remaining: 500_000,
+            remaining: 5_000_000,
             priorityWeight: 1,
             active: true,
         },
@@ -844,4 +844,121 @@ test('shared planner index and greedy reuse handle spot saturation and shrinking
     expect(sharkOwners).toHaveLength(1);
     expect(thievingOwners).toHaveLength(2);
     expect(plan.selectedSlots).toBe(3);
+});
+
+test('scheduleFleet caps market:shop-buy and market:ge-buy to 1 concurrent buyer per venue even across finite cross-demands', () => {
+    const names = ['Fingerblastr', 'Kiltlifter', 'KnightRider', 'Knightstick', 'Masterbaiter', 'Popsicle'];
+    const accounts: Record<string, AccountState> = {};
+    for (const name of names) {
+        accounts[name] = makeAcct({
+            name,
+            skills: {
+                Ranged: { level: 50, xp: 105_000 },
+                Thieving: { level: 60, xp: 280_000 },
+            },
+            bank: { items: { 995: 500_000 }, observedAt: NOW - 5_000, trusted: true },
+        });
+    }
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts,
+    };
+    const marketActivities: ActivityDefinition[] = [
+        ...ACTIVITIES,
+        {
+            id: 'market:shop-buy',
+            workerId: 'market',
+            family: 'market',
+            kind: 'shop',
+            label: 'Buy item from NPC shop',
+            config: { mode: 'shop-buy' },
+            baselineRate: { xpPerTick: 0, unitsPerTick: 2, gpPerTick: 0, setupTicks: 25, minBatchUnits: 1, confidence: 'practice' },
+            trust: 'practice_passed',
+        },
+        {
+            id: 'market:ge-buy',
+            workerId: 'market',
+            family: 'market',
+            kind: 'ge_buy',
+            label: 'Buy item on GE',
+            config: { mode: 'ge-buy' },
+            baselineRate: { xpPerTick: 0, unitsPerTick: 4, gpPerTick: 0, setupTicks: 30, minBatchUnits: 1, confidence: 'practice' },
+            trust: 'practice_passed',
+        },
+    ];
+    const demands: GoalDemand[] = [
+        {
+            id: 'campaign:haggis:item:892',
+            goalKind: 'main_supply',
+            valueScore: 500,
+            valuePerHour: 21_962.66,
+            target: { kind: 'item', itemId: 892, itemName: 'Rune arrow', count: 2500 },
+            fulfilled: 0,
+            remaining: 2500,
+            priorityWeight: 1,
+            active: true,
+        },
+        {
+            id: 'campaign:shaftshooter:item:892',
+            goalKind: 'specialist_prep',
+            valueScore: 400,
+            valuePerHour: 18_000,
+            target: { kind: 'item', itemId: 892, itemName: 'Rune arrow', count: 1000 },
+            fulfilled: 0,
+            remaining: 1000,
+            priorityWeight: 1,
+            active: true,
+        },
+        {
+            id: 'd:coins',
+            goalKind: 'coin_fund',
+            valueScore: 50,
+            valuePerHour: 200,
+            target: { kind: 'coins', amount: 5_000_000 },
+            fulfilled: 0,
+            remaining: 5_000_000,
+            priorityWeight: 1,
+            active: true,
+        },
+    ];
+
+    const shopOnlyPlan = scheduleFleet({ world, activities: marketActivities, demands, maxBots: 6 });
+    expect(isFleetPlan(shopOnlyPlan)).toBe(true);
+    const shopBuyers = Object.values(shopOnlyPlan.accountPlans).filter((p) => {
+        const w = p.steps.at(-1);
+        return w?.stepKind === 'work' && w.config.mode === 'shop-buy';
+    });
+    const thievers = Object.values(shopOnlyPlan.accountPlans).filter((p) => {
+        const w = p.steps.at(-1);
+        return w?.stepKind === 'work' && w.activityId === 'gather:thieving-knights';
+    });
+    expect(shopBuyers).toHaveLength(1);
+    expect(thievers).toHaveLength(5);
+
+    const shopAndGePlan = scheduleFleet({
+        world,
+        activities: marketActivities,
+        demands,
+        maxBots: 6,
+        marketQuotes: { 892: { ask: 400, sell: 380, trades: 50 } },
+    });
+    expect(isFleetPlan(shopAndGePlan)).toBe(true);
+    const shopBuyersWithGe = Object.values(shopAndGePlan.accountPlans).filter((p) => {
+        const w = p.steps.at(-1);
+        return w?.stepKind === 'work' && w.config.mode === 'shop-buy';
+    });
+    const geBuyersWithGe = Object.values(shopAndGePlan.accountPlans).filter((p) => {
+        const w = p.steps.at(-1);
+        return w?.stepKind === 'work' && w.config.mode === 'ge-buy';
+    });
+    const thieversWithGe = Object.values(shopAndGePlan.accountPlans).filter((p) => {
+        const w = p.steps.at(-1);
+        return w?.stepKind === 'work' && w.activityId === 'gather:thieving-knights';
+    });
+    expect(shopBuyersWithGe).toHaveLength(1);
+    expect(geBuyersWithGe).toHaveLength(1);
+    expect(thieversWithGe).toHaveLength(4);
 });

@@ -490,6 +490,7 @@ function buildHaggisCampaign(
 
     const overallHit = findHiscoreBoard(snapshots, 'Overall', 0);
     const boardsStamp = overallHit ? fileStatStamp(boardsFile) : 'missing';
+    const travelStamp = overallHit ? fileStatStamp(join(root, 'packages', 'planner', 'src', 'haggis-travel.json')) : 'missing';
     if (overallHit && boardsStamp !== 'missing') {
         const snapshotBoardsSig = (overallHit.snapshot.boards ?? [])
             .map((b) => {
@@ -498,7 +499,7 @@ function buildHaggisCampaign(
             })
             .join(';');
         const itemsStamp = cachedItemLookup?.key ?? '';
-        const haggisKey = `${boardsFile}|${boardsStamp}|${itemsStamp}|${overallHit.snapshot.takenAt ?? ''}|${snapshotBoardsSig}`;
+        const haggisKey = `${boardsFile}|${boardsStamp}|${travelStamp}|${itemsStamp}|${overallHit.snapshot.takenAt ?? ''}|${snapshotBoardsSig}`;
         if (cachedHaggisSchedule && cachedHaggisSchedule.key === haggisKey) {
             plannedTicks = cachedHaggisSchedule.plannedTicks;
             rawSupplies.push(...cachedHaggisSchedule.rawSupplies);
