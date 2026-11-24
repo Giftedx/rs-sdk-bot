@@ -220,7 +220,7 @@ test('facades preserve every external/test export and keep internal-only helpers
     const permitExports = new Set(declaredExports('packages/core/src/session-recovery-permit.ts'));
     const expectedPermitRuntime = [
         'RECOVERY_SCHEMA', 'RECOVERY_BINDING_MS', 'FLEET_HEARTBEAT_MAX_MS', 'RECOVERY_SCRIPT',
-        'assertNativeFixtureRoot', 'assertRecoveryNotStopped', 'validateRecoveryRequest', 'recoveryPermitPaths', 'assertNoRecoveryLease',
+        'assertNativeFixtureRoot', 'assertRecoveryNotStopped', 'validateRecoveryRequest', 'recoveryLifecycleRoot', 'recoveryPermitPaths', 'assertNoRecoveryLease',
         'NATIVE_RECOVERY_CHECKS', 'verifyNativeRecoveryProof', 'FLEET_REFUSALS', 'assertFleetResolved',
         'issueRecoveryPermit', 'bindRecoveryChild', 'waitForRecoveryChildBinding', 'consumeRecoveryPermit',
         'consumeRecoveryConnection', 'spendRecoveryConnection', 'assertSpentRecoveryConnection',

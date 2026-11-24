@@ -1,5 +1,8 @@
 import { test, expect } from 'bun:test';
-import {supervisorParticipants,workerCommand,participantsStopped,lineKeeper,keepOutput,madeProgress,MAX_KEPT_LINE} from '../src/supervise';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {supervisorParticipants,workerCommand,participantsStopped,participantsHaveStopFile,lineKeeper,keepOutput,madeProgress,MAX_KEPT_LINE} from '../src/supervise';
 
 test('lineKeeper keeps the last line of each key across chunk splits, CRLF and an unended last line', () => {
     const keep = lineKeeper(l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null);
@@ -328,4 +331,28 @@ test('a Grand Exchange buy that ended before it placed an offer is a blocked pre
  // A stop can differ at the next login.
  expect(isPrerequisiteFailure(unplaced('order stopped: the session ended, died, was damaged, was told to stop or used its 500-tick budget'))).toBe(false);
  expect(isPrerequisiteFailure(unplaced('coins 1 are under the escrow 2 (1 x 2) plus the reserve 0: 1 short').replace('"escrow":0', '"escrow":2000'))).toBe(false);
+});
+
+test('participantsHaveStopFile honors stop files in both .practice/live/ and legacy .practice/', async () => {
+ const dir = mkdtempSync(join(tmpdir(), 'supervise-stop-'));
+ try {
+  expect(participantsHaveStopFile(['WorkerA', 'WorkerB'], dir)).toBe(false);
+  mkdirSync(join(dir, '.practice', 'live'), { recursive: true });
+  writeFileSync(join(dir, '.practice', 'live', 'stop-WorkerB'), 'owner live stop');
+  expect(participantsHaveStopFile(['WorkerA', 'WorkerB'], dir)).toBe(true);
+  let runs = 0;
+  const res = await supervise({
+   run: async () => { runs++; return { stdout: 'RESULT ok', exitCode: 0 }; },
+   stopped: () => participantsHaveStopFile(['WorkerA', 'WorkerB'], dir),
+   pause: async () => {},
+   maxRestarts: 2,
+  });
+  expect(res).toEqual({ reason: 'stopped', runs: 0 });
+  expect(runs).toBe(0);
+  rmSync(join(dir, '.practice', 'live', 'stop-WorkerB'));
+  writeFileSync(join(dir, '.practice', 'stop-workera'), 'legacy stop');
+  expect(participantsHaveStopFile(['WorkerA', 'WorkerB'], dir)).toBe(true);
+ } finally {
+  rmSync(dir, { recursive: true, force: true });
+ }
 });

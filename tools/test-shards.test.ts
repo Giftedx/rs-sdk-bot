@@ -98,14 +98,17 @@ test('a change selects the tests that reach it by import, by a quoted path, or b
         write('scripts/helper.ts', "import { worker } from './worker';\nexport const helper = worker;");
         write('scripts/other.ts', 'export const other = 1;');
         write('scripts/data.json', '{}');
+        write('knowledge/gear.json', '[]');
         write('scripts/imports.test.ts', "import { helper } from './helper';");
         write('scripts/spawns.test.ts', "const cmd = ['bun', 'scripts/worker.ts'];");
         write('scripts/reads.test.ts', "const file = 'scripts/data.json';");
+        write('scripts/reads-knowledge.test.ts', "const gear = 'knowledge/gear.json';");
         write('scripts/scans.test.ts', "import { readdirSync } from 'node:fs';\nreaddirSync('scripts');");
         write('scripts/apart.test.ts', "import { other } from './other';");
-        const tests = ['scripts/imports.test.ts', 'scripts/spawns.test.ts', 'scripts/reads.test.ts', 'scripts/scans.test.ts', 'scripts/apart.test.ts'];
+        const tests = ['scripts/imports.test.ts', 'scripts/spawns.test.ts', 'scripts/reads.test.ts', 'scripts/reads-knowledge.test.ts', 'scripts/scans.test.ts', 'scripts/apart.test.ts'];
         expect(affectedTests(tests, ['scripts/worker.ts'], base)).toEqual(['scripts/imports.test.ts', 'scripts/spawns.test.ts', 'scripts/scans.test.ts']);
         expect(affectedTests(tests, ['scripts/data.json'], base)).toEqual(['scripts/reads.test.ts', 'scripts/scans.test.ts']);
+        expect(affectedTests(tests, ['knowledge/gear.json'], base)).toEqual(['scripts/reads-knowledge.test.ts', 'scripts/scans.test.ts']);
         expect(affectedTests(tests, ['scripts/apart.test.ts'], base)).toEqual(['scripts/scans.test.ts', 'scripts/apart.test.ts']);
         expect(affectedTests(tests, ['research/note.md'], base)).toEqual(['scripts/scans.test.ts']);
         expect(affectedTests(tests, ['package.json'], base)).toBeNull();

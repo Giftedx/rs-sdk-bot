@@ -9,7 +9,9 @@ import { waitUntil } from '../../../core/src/ticks';
 import { knownBanks } from '../../../core/src/trip';
 import { goTo } from '../../../core/src/walk';
 import {
+    accountEscrowCoins,
     accountOwnedItemCount,
+    accountReserveFor,
     availableCoinsAfterReserves,
     isWorkerTile,
     preflightFail,
@@ -162,12 +164,10 @@ function checkLogisticsPreflight(acct: WorkerAccountView, cfg: LogisticsConfig, 
     const args = cfg.args ?? [];
     const env = { ...(cfg.env ?? {}) };
     const effectiveRole = role ?? defaultRoleForOperation(cfg.operation);
-    const acctKey = acct.name.toLowerCase();
-    const accountReserves = world.reserves?.[acctKey] ?? {};
 
     if (cfg.itemId !== undefined && cfg.count !== undefined && cfg.count > 0) {
         const owned = accountOwnedItemCount(acct, cfg.itemId, { requireTrustedBank: true });
-        const reserved = accountReserves[cfg.itemId] ?? 0;
+        const reserved = accountReserveFor(acct, world, cfg.itemId);
         if (reserveAdjustedStock(owned, reserved) < cfg.count) {
             blockers.push({
                 kind: 'missing_supply',
@@ -186,8 +186,8 @@ function checkLogisticsPreflight(acct: WorkerAccountView, cfg: LogisticsConfig, 
                 blockers.push({ kind: 'invalid_config', message: 'coins must be a positive integer' });
             } else if (cfg.coins !== undefined && cfg.coins > 0) {
                 const ownedCoins = accountOwnedItemCount(acct, 995, { requireTrustedBank: true });
-                const reservedCoins = (cfg.reserve ?? 0) + (accountReserves[995] ?? 0);
-                const escrow = world.geEscrowCoins?.[acctKey] ?? 0;
+                const reservedCoins = (cfg.reserve ?? 0) + accountReserveFor(acct, world, 995);
+                const escrow = accountEscrowCoins(acct, world);
                 const available = availableCoinsAfterReserves(ownedCoins, reservedCoins, escrow, 0);
                 if (available < cfg.coins) {
                     blockers.push({
@@ -225,7 +225,7 @@ function checkLogisticsPreflight(acct: WorkerAccountView, cfg: LogisticsConfig, 
                         const needed = cfg.targetBatches + (cfg.reserveBatches ?? 0);
                         for (const [id, itemName] of [[GRAPES_ID, 'Grapes'], [JUG_WATER_ID, 'Jug of water']] as const) {
                             const owned = accountOwnedItemCount(acct, id, { requireTrustedBank: true });
-                            const reserved = accountReserves[id] ?? 0;
+                            const reserved = accountReserveFor(acct, world, id);
                             if (reserveAdjustedStock(owned, reserved) < needed) {
                                 blockers.push({
                                     kind: 'missing_supply',
@@ -450,22 +450,43 @@ export async function runLogisticsRole(
         return { ok: true, resultLine: 'RESULT ok food-chain' };
     }
     if (role === 'specialist-supplier') {
-        const stageRaw = account === '--stage' ? [account, ...args] : args.includes('--stage') ? [account, ...args] : null;
-        if (stageRaw) {
-            await runSpecialistStage(stageRaw, mergedEnv);
-        } else {
-            await runSpecialistServe([account, ...args], mergedEnv);
+        const prevExitCode = process.exitCode;
+        process.exitCode = 0;
+        try {
+            const stageRaw = account === '--stage' ? [account, ...args] : args.includes('--stage') ? [account, ...args] : null;
+            if (stageRaw) {
+                await runSpecialistStage(stageRaw, mergedEnv);
+            } else {
+                await runSpecialistServe([account, ...args], mergedEnv);
+            }
+            const ok = !process.exitCode || process.exitCode === 0;
+            return { ok, resultLine: lastResultLine || `RESULT ${ok ? 'ok' : 'fail'} specialist-supplier` };
+        } finally {
+            process.exitCode = prevExitCode;
         }
-        return { ok: process.exitCode !== 1, resultLine: lastResultLine || `RESULT ${process.exitCode === 1 ? 'fail' : 'ok'} specialist-supplier` };
     }
     if (role === 'gathering-supplier') {
-        const supplierArgs = account === '--stage' ? [account, ...args] : [account, ...args];
-        await runGatheringSupplierServe(supplierArgs, mergedEnv);
-        return { ok: process.exitCode !== 1, resultLine: lastResultLine || `RESULT ${process.exitCode === 1 ? 'fail' : 'ok'} gathering-supplier` };
+        const prevExitCode = process.exitCode;
+        process.exitCode = 0;
+        try {
+            const supplierArgs = account === '--stage' ? [account, ...args] : [account, ...args];
+            await runGatheringSupplierServe(supplierArgs, mergedEnv);
+            const ok = !process.exitCode || process.exitCode === 0;
+            return { ok, resultLine: lastResultLine || `RESULT ${ok ? 'ok' : 'fail'} gathering-supplier` };
+        } finally {
+            process.exitCode = prevExitCode;
+        }
     }
     if (role === 'fleet-trade') {
-        await runFleetTrade(account, args[0], mergedEnv);
-        return { ok: process.exitCode !== 2 && process.exitCode !== 1, resultLine: lastResultLine || 'RESULT ok fleet-trade' };
+        const prevExitCode = process.exitCode;
+        process.exitCode = 0;
+        try {
+            await runFleetTrade(account, args[0], mergedEnv);
+            const ok = process.exitCode !== 2 && process.exitCode !== 1;
+            return { ok, resultLine: lastResultLine || `RESULT ${ok ? 'ok' : 'fail'} fleet-trade` };
+        } finally {
+            process.exitCode = prevExitCode;
+        }
     }
     if (role === 'supply-chain') {
         const chainCfg = validateSupplyChainCliArgs([account, ...args], mergedEnv);
@@ -880,9 +901,14 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: Math.max(0, s.tick() - startTick), unitsCompleted: 1 };
                 }
                 if (role === 'supply-chain') {
-                    const chainCfg = validateSupplyChainCliArgs(args, env);
-                    const res = await runSupplyChain(chainCfg);
-                    return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: Math.max(0, s.tick() - startTick), unitsCompleted: res.cycles.length };
+                    return {
+                        kind: 'worker_defect',
+                        activityId,
+                        account: sessionCore.name,
+                        ticksElapsed: 0,
+                        faultSignature: 'logistics:supply-chain:requires_cli_orchestrator',
+                        detail: 'multi-account supply-chain must run via runLogisticsRole / scripts/aio-logistics.ts',
+                    };
                 }
                 const kitPath = cfg.setupFile ?? args[0];
                 if (!kitPath) {
@@ -896,11 +922,14 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.failure };
             }
             case 'trade': {
-                const res = await runLogisticsRole(cfg.account ?? sessionCore.name, role, args, env, { captureLog: true });
-                const ticksElapsed = Math.max(0, s.tick() - startTick);
-                return res.ok
-                    ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: res.resultLine }
-                    : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.resultLine };
+                return {
+                    kind: 'worker_defect',
+                    activityId,
+                    account: sessionCore.name,
+                    ticksElapsed: 0,
+                    faultSignature: `logistics:${role}:requires_cli_orchestrator`,
+                    detail: `multi-account/CLI logistics trade role ${role} must run via runLogisticsRole / scripts/aio-logistics.ts`,
+                };
             }
         }
     } catch (err) {

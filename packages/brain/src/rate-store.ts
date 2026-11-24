@@ -8,7 +8,6 @@ import {
     type RateEstimate,
     type RateEstimateConfidence,
     type WorkerAccountView,
-    type WorkerTile,
     type WorkerWorldView,
 } from '../../workers/src/contracts';
 import type { ActivityCatalog } from './catalog';
@@ -50,11 +49,6 @@ function writeJsonAtomic(filePath: string, value: unknown): void {
     const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
     writeFileSync(tmpPath, JSON.stringify(value, null, 2), 'utf8');
     renameSync(tmpPath, filePath);
-}
-
-function tileDistance(a: WorkerTile, b: WorkerTile): number {
-    const planePenalty = a.level !== b.level ? 40 : 0;
-    return Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z)) + planePenalty;
 }
 
 export class RateStore {
@@ -228,17 +222,7 @@ export class RateStore {
             const totalTicksAll = allSamples.reduce((acc, s) => acc + s.ticksElapsed, 0);
             if (deaths > 0 && totalTicksAll > 0) {
                 const hours = (totalTicksAll * 0.4) / 3600;
-                riskPerHour = deaths / Math.max(hours, 1 / 60);
-            }
-        }
-
-        if (acct?.pos && def.location) {
-            const dist = tileDistance(acct.pos, def.location);
-            if (dist <= 10) {
-                setupTicks = Math.max(0, Math.min(setupTicks, Math.floor(base.setupTicks * 0.6)));
-            } else {
-                const travelTicks = Math.min(600, Math.ceil(dist / 2));
-                setupTicks = Math.max(base.setupTicks, setupTicks + Math.max(0, travelTicks - 20));
+                riskPerHour = Math.min(1, 1 - Math.exp(-deaths / Math.max(hours, 1 / 60)));
             }
         }
 

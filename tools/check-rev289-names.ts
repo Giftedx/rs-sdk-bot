@@ -1,7 +1,7 @@
 // Name sweep: every string a game call or a name table uses as an item, NPC, object or quest name must be a name
 // that the revision-289 content defines. Compares string literals in scripts/ and packages/ against the names in
 // vendor/rs-sdk/server/content (.obj, .npc, .loc configs, quest.enum, skills, prayers, spells).
-// Usage: bun scripts/check-rev289-names.ts [--all]   (--all also lists every checked literal count by callee)
+// Usage: bun tools/check-rev289-names.ts [--all]   (--all also lists every checked literal count by callee)
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import ts from 'typescript';

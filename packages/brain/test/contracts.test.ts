@@ -753,6 +753,30 @@ test('Section 3.5 DefectRecord, FleetState, and OperatorCommand validate dashboa
             expiresAt: NOW,
         }).length,
     ).toBeGreaterThan(0);
+
+    // OperatorCommand.id must match safe filename pattern /^[A-Za-z0-9._-]{1,128}$/.
+    expect(
+        isOperatorCommand({
+            schemaVersion: 1,
+            id: 'cmd-ok_1.2',
+            issuedAt: NOW,
+            issuedBy: 'operator',
+            kind: 'pause_side',
+            side: 'local',
+        }),
+    ).toBe(true);
+    for (const badId of ['../escape', 'dir/cmd', 'dir\\cmd', 'cmd space', '', 'x'.repeat(129)]) {
+        expect(
+            validateOperatorCommand({
+                schemaVersion: 1,
+                id: badId,
+                issuedAt: NOW,
+                issuedBy: 'operator',
+                kind: 'pause_side',
+                side: 'local',
+            }).length,
+        ).toBeGreaterThan(0);
+    }
 });
 
 test('packages/brain/src obeys acyclic DAG and relative-only import boundaries', () => {

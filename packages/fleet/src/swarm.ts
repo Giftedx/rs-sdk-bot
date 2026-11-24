@@ -18,10 +18,11 @@ import { controllerNamed, releaseLease, renewLease, saveLaunch, takeLease } from
 import { loadOwners, mySide, sideOf, type Owner } from '../../core/src/fleet';
 import { acquireFleetLease, FLEET_LEASE_RENEW_MS, FLEET_LEASE_RETRY_MS } from '../../core/src/fleet-lease';
 import { jobLogStart } from '../../core/src/job-log';
+import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { rotateLog } from '../../core/src/log-rotate';
 import { FREE_FLOOR_GB } from '../../core/src/memory';
 import { atomicJson, ownerPlanPath } from '../../core/src/plan-lock';
-import { hasStopFile, liveRoot, operatorCommandsDir, repoRoot } from '../../core/src/practice-paths';
+import { hasStopFile, lifecycleReadRoots, liveRoot, operatorCommandsDir, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
 import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../../core/src/proc';
 import {
     BOOTSTRAP_STATUS_AGE_MS, missionSignature as sharedMissionSignature, successfulEnd, withSessionAdmission,
@@ -32,6 +33,7 @@ import {
 } from '../../core/src/session-lifecycle';
 import { createRecoveryDispatch } from '../../core/src/session-recovery-dispatch';
 import { assertNoRecoveryLease, heldRecoveryOwners, releaseExpiredRecoveryLeases } from '../../core/src/session-recovery-permit';
+import { savedProcessAlive, type ProcessStarts } from '../../core/src/session-takeover';
 import { RESERVED_ACCOUNTS, SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
 import { renameRetry } from '../../core/src/status';
 import { ownedAccounts } from '../../core/src/tradeguard';
@@ -307,8 +309,25 @@ export const RECOVERY_SLOT_WAIT_MS = 600_000;
 export const RECOVERY_LEASE_MAX_MS = RECOVERY_SLOT_WAIT_MS + 300_000;
 export type RecoverySlot = { until: number; account?: string };
 
-export function recoveryLeaseHeld(file: string, now: number): boolean {
-    try { return now - statSync(file).mtimeMs < RECOVERY_LEASE_MAX_MS; } catch { return false; }
+export function recoveryLeaseHeld(
+    file: string,
+    now: number,
+    alive: (pid: number) => boolean = pid => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } },
+    starts: ProcessStarts = processStartTimes,
+): boolean {
+    let mtimeMs: number;
+    try { mtimeMs = statSync(file).mtimeMs; } catch { return false; }
+    if (now - mtimeMs >= RECOVERY_LEASE_MAX_MS) return false;
+    try {
+        const parsed = JSON.parse(readFileSync(file, 'utf8'));
+        if (Number.isSafeInteger(parsed?.pid) && parsed.pid > 0) {
+            const at = Number.isFinite(parsed.at) ? parsed.at : mtimeMs;
+            return savedProcessAlive(parsed.pid, at, starts, alive);
+        }
+    } catch {
+        // Non-JSON lease content falls back to mtime window.
+    }
+    return true;
 }
 
 export function recoverySlot(slot: RecoverySlot, v: { leaseHeld: boolean; recovering?: string; started: readonly string[]; now: number }): RecoverySlot {
@@ -465,6 +484,85 @@ export function clearAutoStop(file: string): boolean {
     if (!isAutoStopText(text)) return false;
     rmSync(file, { force: true });
     return true;
+}
+
+export function clearAccountSwarmStops(account: string, root: string): boolean {
+    let cleared = false;
+    for (const file of stopFilePaths(account, root)) {
+        if (clearSwarmStop(file)) cleared = true;
+    }
+    return cleared;
+}
+
+export function clearAccountAutoStops(account: string, root: string): boolean {
+    let cleared = false;
+    for (const file of stopFilePaths(account, root)) {
+        if (clearAutoStop(file)) cleared = true;
+    }
+    return cleared;
+}
+
+export function readAccountStatus(
+    root: string,
+    account: string,
+): { file: string; mtimeMs: number; raw: Buffer; data: any } | null {
+    const lower = `${account.toLowerCase()}.json`;
+    for (const dir of statusReadDirs(root)) {
+        if (!existsSync(dir)) continue;
+        const exact = join(dir, `${account}.json`);
+        let target: string | null = existsSync(exact) ? exact : null;
+        if (!target) {
+            try {
+                const match = readdirSync(dir).find(f => f.toLowerCase() === lower);
+                if (match) target = join(dir, match);
+            } catch { /* unreadable status dir */ }
+        }
+        if (!target) continue;
+        try {
+            const raw = readFileSync(target);
+            const mtimeMs = statSync(target).mtimeMs;
+            const data = JSON.parse(raw.toString('utf8'));
+            return { file: target, mtimeMs, raw, data };
+        } catch { /* incomplete record */ }
+    }
+    return null;
+}
+
+export function readAllStatuses(root: string): unknown[] {
+    const statuses: unknown[] = [];
+    const seen = new Set<string>();
+    for (const dir of statusReadDirs(root)) {
+        if (!existsSync(dir)) continue;
+        let files: string[] = [];
+        try { files = readdirSync(dir); } catch { continue; }
+        for (const file of files) {
+            const key = file.toLowerCase();
+            if (!key.endsWith('.json') || seen.has(key)) continue;
+            seen.add(key);
+            try { statuses.push(JSON.parse(readFileSync(join(dir, file), 'utf8'))); } catch { /* incomplete record */ }
+        }
+    }
+    return statuses;
+}
+
+export function shouldSwarmReload(opts: {
+    root: string;
+    startedAt: number;
+    recoveryActive: boolean;
+    stopAll: boolean;
+    check?: (root: string, name: string, startedAt: number) => boolean;
+}): boolean {
+    if (opts.recoveryActive || opts.stopAll) return false;
+    return (opts.check ?? reloadDue)(opts.root, 'swarm', opts.startedAt);
+}
+
+export function swarmReloadArgs(root: string, planFile: string, watchId?: string, nonce = randomUUID()): string[] {
+    return [
+        join(root, 'scripts', 'swarm.ts'),
+        planFile,
+        `--nonce=${nonce}`,
+        ...(watchId ? [`--watch-id=${watchId}`] : []),
+    ];
 }
 
 export const DEFAULT_BRAIN_CYCLE_MS = 6_000;
@@ -890,15 +988,18 @@ export function startable(
     statusStarted?: (a: string) => number | undefined,
     revision?: string,
     stopped?: (a: string) => boolean,
+    brainManaged?: (a: string) => boolean,
 ): { start: string[]; blocked: Record<string, string> } {
     const start: string[] = [];
     const blocked: Record<string, string> = {};
     for (const a of accounts) {
         const end = ended.get(a) ?? [...ended].find(([name]) => name.toLowerCase() === a.toLowerCase())?.[1];
         const newMission = !!end?.revision && !!revision && end.revision !== revision && /^done(?: after \d+ runs)?$/.test(end.reason);
+        const brainSwitched = !!brainManaged?.(a) && !!end?.revision && !!revision && end.revision !== revision && !/^died\b/.test(end.reason);
         const resumable = !!end && (
             (/^refused\b/.test(end.reason) && !!end.revision && !!revision && end.revision !== revision)
             || /^release-paused\b/.test(end.reason) || /^released\b/.test(end.reason)
+            || brainSwitched
         );
         if (stopped?.(a)) blocked[a] = 'paused: stop file';
         else if (endedForGood(end, repeat) && !newMission && !resumable) {
@@ -941,6 +1042,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const prac = join(root, '.practice');
     const liveDir = liveRoot(root);
     const side = mySide();
+    const startedAt = Date.now();
     const logDir = join(prac, 'swarm-logs');
     mkdirSync(logDir, { recursive: true });
     mkdirSync(liveDir, { recursive: true });
@@ -1018,13 +1120,14 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         return ended;
     };
     const stopFile = (a: string) => join(prac, `stop-${a}`);
-    const statusAge = (a: string) => { try { return Date.now() - statSync(join(prac, 'status', `${a}.json`)).mtimeMs; } catch { return Infinity; } };
+    const statusAge = (a: string) => {
+        const hit = readAccountStatus(root, a);
+        return hit ? Date.now() - hit.mtimeMs : Infinity;
+    };
     const statusStarted = (a: string): number | undefined => {
-        try {
-            const s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8'));
-            return typeof s.name === 'string' && s.name.toLowerCase() === a.toLowerCase()
-                && s.server === LIVE_SERVER && Number.isFinite(s.started) ? s.started : undefined;
-        } catch { return undefined; }
+        const s = readAccountStatus(root, a)?.data;
+        return s && typeof s.name === 'string' && s.name.toLowerCase() === a.toLowerCase()
+            && s.server === LIVE_SERVER && Number.isFinite(s.started) ? s.started : undefined;
     };
     const botsRunning = () => [...runs.values()].reduce((n, r) => n + r.accounts.length, 0) + (recoveryDispatch.active ? 1 : 0) + inheritedRecoveries.length;
     const pendingCount = () => pendingStartupCount([...runs.values()], Date.now())
@@ -1309,7 +1412,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                                 ...(dispatched.demandId ? { BRAIN_DEMAND_ID: dispatched.demandId } : {}),
                             },
                             enabled: true,
-                            repeat: false,
+                            repeat: true,
                             role: acctState?.role,
                             goal: dispatched.demandId ?? selected.displayActivityId,
                             ...(selected.attributedActivityId ? { activityId: selected.attributedActivityId } : {}),
@@ -1323,6 +1426,13 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         }
 
         const stopAll = hasStopFile('swarm', root);
+        if (shouldSwarmReload({ root, startedAt, recoveryActive: !!recoveryDispatch.active, stopAll })) {
+            saveRuns();
+            cleanupOwner();
+            const pid = respawnDaemon(root, swarmReloadArgs(root, planFile, watchId), join(logDir, `daemon-${Date.now()}.out.log`));
+            console.log(`SWARM reload after live-update: successor pid ${pid}`);
+            process.exit(0);
+        }
         inheritedRecoveries = heldRecoveryOwners(root, recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
         if (stopAll && recoveryDispatch.active) writeSwarmStop(stopFile(recoveryDispatch.active.account), SWARM_STOP.recovery);
         if (stopAll) for (const held of inheritedRecoveries) writeSwarmStop(stopFile(held.account), SWARM_STOP.inherited);
@@ -1340,7 +1450,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 const receipt = listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt;
                 return receipt ? { pid: receipt.owner.pid, createdAt: receipt.createdAt, updatedAt: receipt.updatedAt } : undefined;
             };
-            const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
+            const accounts = planned.flatMap(p => p.accounts).concat(
+                lifecycleReadRoots(root).flatMap(lcRoot => lifecycleAccounts(join(lcRoot, 'live', LIVE_SERVER))),
+            );
             for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, pidAlive, processStartTimes)) {
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
@@ -1352,12 +1464,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 for (const a of r.accounts) writeSwarmStop(stopFile(a), SWARM_STOP.removed);
             }
         }
-        const statuses: unknown[] = [];
-        try {
-            for (const file of readdirSync(join(prac, 'status'))) if (file.endsWith('.json')) {
-                try { statuses.push(JSON.parse(readFileSync(join(prac, 'status', file), 'utf8'))); } catch { /* incomplete record */ }
-            }
-        } catch { /* no status directory yet */ }
+        const statuses = readAllStatuses(root);
 
         let endStateOk = inheritedRecoveries.every(r => r.source === process.env.WORKER_RELEASE);
         const claimedRepair = `${repairFile}.processing`;
@@ -1380,13 +1487,10 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     const active = [...runs.values()].flatMap(r => r.accounts).concat(activeExternalLive(statuses, [], Date.now()));
                     const proofs: RepairProofs = {
                         ...defaultRepairProofs,
-                        status: a => {
-                            const file = join(prac, 'status', `${a}.json`);
-                            return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : undefined;
-                        },
+                        status: a => readAccountStatus(root, a)?.data,
                         statusSha256: a => {
-                            const file = join(prac, 'status', `${a}.json`);
-                            try { return createHash('sha256').update(readFileSync(file)).digest('hex'); } catch { return undefined; }
+                            const hit = readAccountStatus(root, a);
+                            return hit ? createHash('sha256').update(hit.raw).digest('hex') : undefined;
                         },
                     };
                     if (request) {
@@ -1449,7 +1553,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             for (const a of p.accounts) observeEnabled([a], accountEnabled.get(a.toLowerCase()) === true, previousEnabled, pendingResume);
             if (stopAll) for (const a of p.accounts) writeSwarmStop(stopFile(a), SWARM_STOP.all);
             const r = overlappingRun(runs.values(), p.accounts);
-            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearSwarmStop(stopFile(a)))) {
+            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearAccountSwarmStops(a, root))) {
                 persistEnded(deathsFile, ended);
             }
             const st: Record<string, string> = {};
@@ -1466,8 +1570,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     for (const a of p.accounts) {
                         const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
                         if (!end) continue;
-                        let s: any;
-                        try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { /* no status */ }
+                        const s = readAccountStatus(root, a)?.data;
                         if (!standingEndRetryable(end, job, missionSignature(job), s?.result)) continue;
                         let settled = false;
                         try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* ignore */ }
@@ -1480,13 +1583,22 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 }
                 if (!stopAll) {
                     for (const a of p.accounts) {
-                        if (brainDispatchedAccounts.has(a.toLowerCase()) && existsSync(stopFile(a))) {
-                            clearAutoStop(stopFile(a));
+                        if (brainDispatchedAccounts.has(a.toLowerCase())) {
+                            clearAccountAutoStops(a, root);
                         }
                     }
                 }
                 const { start: go, blocked } = completeJobCandidates(p, demandCandidates(holdCandidates(
-                    startable(p.accounts, job.repeat, ended, statusAge, statusStarted, missionSignature(job), a => existsSync(stopFile(a))),
+                    startable(
+                        p.accounts,
+                        job.repeat,
+                        ended,
+                        statusAge,
+                        statusStarted,
+                        missionSignature(job),
+                        a => hasStopFile(a, root),
+                        a => brainDispatchedAccounts.has(a.toLowerCase()),
+                    ),
                     job.script, holds,
                 ), () =>
                     job.whenFoodLowFrom !== undefined && !foodSupplyDemand(job, statuses)

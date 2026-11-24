@@ -77,7 +77,6 @@ export const BLOCKED_AIO_KEYS: ReadonlySet<string> = new Set([
     'market:bank-seller',
     'market:ge-sell',
     'market:shop-to-bid',
-    'market:ge-buy',
 ]);
 
 // Known non-passing AIO route keys marked experimental until fixed.

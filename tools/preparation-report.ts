@@ -13,6 +13,7 @@ import {orderAccounting,validateRequest,type ItemOrder} from '../packages/worker
 import {observedRouteResources,type RouteActor} from './preparation-route-state';
 import {FLEET_DIR,loadOwners,mySide,sideOf} from '../packages/core/src/fleet';
 import {fleetStatusRows,type SnapshotFile} from '../packages/core/src/fleet-snapshots';
+import {statusReadDirs} from '../packages/core/src/practice-paths';
 import {brainPlannedJobs} from '../packages/fleet/src/fleet-sync';
 
 type Requirement={item:string;count:number;itemId?:number;consumers?:string[]};
@@ -72,14 +73,15 @@ export function readPreparationInputs(options:{base?:string;fleetDir?:string;sid
   const owner=owners.get(name.toLowerCase());return !protectedNames.has(name.toLowerCase())&&sideOf(name,owners)===side&&(!owner||owner.server===server);
  }));
  const candidates:{row:any;side:string;source:PreparationSource&{kind:'status'|'snapshot'}}[]=[],local:any[]=[],files:SnapshotFile[]=[];
- const statusDir=join(base,'.practice/status');
- for(const file of existsSync(statusDir)?readdirSync(statusDir).filter(f=>f.endsWith('.json')):[]){
-  const path=join(statusDir,file),raw=read(path);
-  try{
-   const row=raw===null?null:JSON.parse(raw);
-   if(typeof row?.name!=='string'||row.name.toLowerCase()!==file.slice(0,-5).toLowerCase()){issues.push(file+': local status identity mismatch');continue;}
-   local.push(row);candidates.push({row,side,source:{...inputSources[path]!,kind:'status'}});
-  }catch{issues.push(file+': unreadable local status');}
+ for(const statusDir of statusReadDirs(base)){
+  for(const file of existsSync(statusDir)?readdirSync(statusDir).filter(f=>f.endsWith('.json')):[]){
+   const path=join(statusDir,file),raw=read(path);
+   try{
+    const row=raw===null?null:JSON.parse(raw);
+    if(typeof row?.name!=='string'||row.name.toLowerCase()!==file.slice(0,-5).toLowerCase()){issues.push(file+': local status identity mismatch');continue;}
+    local.push(row);candidates.push({row,side,source:{...inputSources[path]!,kind:'status'}});
+   }catch{issues.push(file+': unreadable local status');}
+  }
  }
  const snapshotDir=join(fleetDir,'snapshots');
  for(const file of existsSync(snapshotDir)?readdirSync(snapshotDir).filter(f=>f.endsWith('.json')):[]){

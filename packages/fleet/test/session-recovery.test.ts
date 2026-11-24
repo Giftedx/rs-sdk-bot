@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { NATIVE_RECOVERY_CHECKS, RECOVERY_SCHEMA, RECOVERY_SCRIPT } from '../../core/src/session-recovery-permit';
@@ -8,6 +8,7 @@ import { cachedLaunchRevision, capabilityRevision } from '../../core/src/worker-
 import { InfraCircuitBreaker } from '../src/infra-circuit-breaker';
 import {
     END_SETTLE_MS,
+    acquireRepairLease,
     assessRecoveryEligibility,
     clearSwarmStops,
     executeControlledLiveRecovery,
@@ -377,4 +378,29 @@ describe('fleet standalone session recovery', () => {
         expect(dispatchRes.ok).toBe(true);
         expect(existsSync(join(root, '.practice', 'swarm-repair.json.lease'))).toBe(false);
     }, 30_000);
+
+    test('acquireRepairLease reclaims dead-PID orphaned leases and refuses live active leases', () => {
+        const root = scratch();
+        mkdirSync(join(root, '.practice'), { recursive: true });
+        const leaseFile = join(root, '.practice', 'swarm-repair.json.lease');
+        const now = 1_700_000_900_000;
+
+        // Dead PID lease is reclaimed atomically.
+        writeFileSync(leaseFile, JSON.stringify({ pid: 999991, runId: 'dead-run', nonce: 'dead-nonce', at: now - 10_000 }));
+        acquireRepairLease(
+            leaseFile,
+            { pid: process.pid, runId: 'new-run', nonce: 'new-nonce', at: now },
+            { now, pidAlive: () => false, processStarts: () => new Map() },
+        );
+        const claimed = JSON.parse(readFileSync(leaseFile, 'utf8'));
+        expect(claimed.pid).toBe(process.pid);
+        expect(claimed.runId).toBe('new-run');
+
+        // Live PID lease within maxAgeMs is refused.
+        expect(() => acquireRepairLease(
+            leaseFile,
+            { pid: process.pid + 1, runId: 'contender', nonce: 'contender-nonce', at: now + 1_000 },
+            { now: now + 1_000, pidAlive: () => true, processStarts: () => new Map([[process.pid, now - 5_000]]) },
+        )).toThrow(/repair lease held by active pid/);
+    });
 });

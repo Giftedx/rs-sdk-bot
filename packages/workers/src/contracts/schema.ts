@@ -454,6 +454,28 @@ export function accountOwnedItemCount(
     return inv + eq + bank;
 }
 
+export function accountReserveFor(
+    acct: WorkerAccountView,
+    world: WorkerWorldView,
+    itemId: number,
+): number {
+    const acctRes = acct.reserves?.[itemId] ?? 0;
+    const worldRes = world.reserves?.[acct.name.toLowerCase()]?.[itemId]
+        ?? world.reserves?.[acct.name]?.[itemId]
+        ?? 0;
+    const globalRes = world.globalReserves?.[itemId] ?? 0;
+    return Math.max(acctRes, worldRes) + globalRes;
+}
+
+export function accountEscrowCoins(
+    acct: WorkerAccountView,
+    world: WorkerWorldView,
+): number {
+    return world.geEscrowCoins?.[acct.name.toLowerCase()]
+        ?? world.geEscrowCoins?.[acct.name]
+        ?? 0;
+}
+
 // --- Preflight validators & constructors ---
 
 export function validatePreflightBlocker(v: unknown): string[] {

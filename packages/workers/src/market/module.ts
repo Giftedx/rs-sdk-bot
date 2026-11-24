@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { accountOwnedItemCount, availableCoinsAfterReserves, preflightFail, preflightOk, reserveAdjustedStock, type PreflightBlocker, type PreflightResult, type RateEstimate, type RunOutcome, type SessionCore, type WorkerAccountView, type WorkerModule, type WorkerTile, type WorkerWorldView } from '../contracts';
+import { accountEscrowCoins, accountOwnedItemCount, accountReserveFor, availableCoinsAfterReserves, preflightFail, preflightOk, reserveAdjustedStock, type PreflightBlocker, type PreflightResult, type RateEstimate, type RunOutcome, type SessionCore, type WorkerAccountView, type WorkerModule, type WorkerTile, type WorkerWorldView } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
 import { routeFares, type Account as WorldAccount } from '../../../core/src/world';
 import { runOwnedItem } from './ge-buy';
@@ -29,16 +29,8 @@ function readJsonFile<T>(path: string, label: string): T {
     return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
 
-function accountReserveFor(acct: WorkerAccountView, world: WorkerWorldView, itemId: number): number {
-    const key = acct.name.toLowerCase();
-    const acctRes = acct.reserves?.[itemId] ?? 0;
-    const worldRes = world.reserves?.[key]?.[itemId] ?? world.reserves?.[acct.name]?.[itemId] ?? 0;
-    const globalRes = world.globalReserves?.[itemId] ?? 0;
-    return Math.max(acctRes, worldRes) + globalRes;
-}
-
 function escrowForAccount(acct: WorkerAccountView, world: WorkerWorldView): number {
-    return world.geEscrowCoins?.[acct.name.toLowerCase()] ?? world.geEscrowCoins?.[acct.name] ?? 0;
+    return accountEscrowCoins(acct, world);
 }
 
 function activeCooldown(acct: WorkerAccountView, world: WorkerWorldView, keys: readonly string[]): { key: string; expiresAt: number } | null {

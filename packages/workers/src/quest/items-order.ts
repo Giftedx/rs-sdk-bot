@@ -613,16 +613,24 @@ export async function probeQuestFlourBin(s: Session, observe: Observe) {
     }
 }
 
-export async function runQuestItemsOrder(name: string, key: string, options: { save?: string; cap: number }) {
+export async function runQuestItemsOrder(name: string, key: string, options: { save?: string; cap: number; session?: Session }) {
     itemRecipe(key);
     if (!/^[A-Za-z0-9]{1,12}$/.test(name) || !Number.isSafeInteger(options.cap) || options.cap < 1) {
         throw Error('invalid account or CAP');
     }
-    if (!options.save || !existsSync(options.save)) return { ok: false, refused: 'save required or not found', login: false };
-    const before = questItemsRuntime.read(options.save);
-    const refused = itemEntry(key, before);
-    if (refused) return { ok: false, refused, login: false };
-    const s = await openBot(name);
+    const existingSession = options.session;
+    let before: Save | null = null;
+    if (!existingSession) {
+        if (!options.save || !existsSync(options.save)) return { ok: false, refused: 'save required or not found', login: false };
+        before = questItemsRuntime.read(options.save);
+        const refused = itemEntry(key, before);
+        if (refused) return { ok: false, refused, login: false };
+    } else if (options.save && existsSync(options.save)) {
+        before = questItemsRuntime.read(options.save);
+        const refused = itemEntry(key, before);
+        if (refused) return { ok: false, refused, login: false };
+    }
+    const s = existingSession ?? (await openBot(name));
     holdSessionEater(s.sdk);
     let child: Awaited<ReturnType<typeof gatherQuestItems>> | undefined;
     let detail = '';
@@ -632,6 +640,9 @@ export async function runQuestItemsOrder(name: string, key: string, options: { s
     } catch (e) {
         detail = String(e);
     }
+    if (existingSession) {
+        return { ok: child?.ok === true, child, logout: false, detail };
+    }
     let logout = false;
     const settled = await settle([s], child?.ok === true, detail, {
         log: (line) => {
@@ -640,6 +651,6 @@ export async function runQuestItemsOrder(name: string, key: string, options: { s
         },
     });
     if (child?.ok !== true || !settled || !logout) return { ok: false, child, logout, detail };
-    const saved = await questItemsRuntime.wait(options.save, (s) => Object.values(itemSaveChecks(key, before, s, child.travel ?? [])).every(Boolean), { timeoutMs: 15000 });
-    return { ok: saved.matched, child, logout, checks: itemSaveChecks(key, before, saved.save, child.travel ?? []) };
+    const saved = await questItemsRuntime.wait(options.save!, (sv) => Object.values(itemSaveChecks(key, before!, sv, child!.travel ?? [])).every(Boolean), { timeoutMs: 15000 });
+    return { ok: saved.matched, child, logout, checks: itemSaveChecks(key, before!, saved.save, child.travel ?? []) };
 }

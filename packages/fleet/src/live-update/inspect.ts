@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, w
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import ts from 'typescript';
+import { spawnSyncTimed } from '../../../core/src/proc';
 import { runtimeImports } from '../../../core/src/release-digest';
 
 // `mergedDelivery`: the local bytes are the snapshot of a coordinator delivery whose pull request merged (or had nothing
@@ -38,13 +39,37 @@ const lf = (s: string) => s.replaceAll('\r\n', '\n');
 
 export const few = (files: readonly string[]) => files.slice(0, 3).join(', ') + (files.length > 3 ? ` and ${files.length - 3} more` : '');
 
-export const gitIn = (root: string): Git => (...args) => {
-    const p = Bun.spawnSync(['git', '-c', 'core.quotepath=off', ...args], { cwd: root, windowsHide: true, stdout: 'pipe', stderr: 'pipe' });
-    return { ok: p.exitCode === 0, out: (p.stdout.toString() + (p.exitCode === 0 ? '' : p.stderr.toString())).trimEnd() };
+export const LIVE_UPDATE_GIT_TIMEOUT_MS = 30_000;
+const nonInteractiveGitEnv = (): NodeJS.ProcessEnv => ({
+    ...process.env,
+    GIT_TERMINAL_PROMPT: '0',
+    GCM_INTERACTIVE: 'Never',
+});
+
+export const gitIn = (root: string, timeoutMs = LIVE_UPDATE_GIT_TIMEOUT_MS): Git => (...args) => {
+    const p = spawnSyncTimed(['git', '-c', 'core.quotepath=off', ...args], {
+        cwd: root,
+        env: nonInteractiveGitEnv(),
+        windowsHide: true,
+        stdout: 'pipe',
+        stderr: 'pipe',
+        timeout: timeoutMs,
+    });
+    const out = (p.stdout.toString() + (p.exitCode === 0 ? '' : p.stderr.toString())).trimEnd();
+    return {
+        ok: p.exitCode === 0,
+        out: out || (p.exitCode === null ? `git timed out after ${timeoutMs}ms` : ''),
+    };
 };
 
-export const gitHash = (path: string): string | null => {
-    const p = Bun.spawnSync(['git', 'hash-object', '--', path], { stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+export const gitHash = (path: string, timeoutMs = LIVE_UPDATE_GIT_TIMEOUT_MS): string | null => {
+    const p = spawnSyncTimed(['git', 'hash-object', '--', path], {
+        env: nonInteractiveGitEnv(),
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+        timeout: timeoutMs,
+    });
     return p.exitCode === 0 ? p.stdout.toString().trim() : null;
 };
 
@@ -200,7 +225,13 @@ export function mergeText(ours: string, base: string, theirs: string): string | 
     try {
         const [o, b, t] = ['ours', 'base', 'theirs'].map(n => join(dir, n));
         writeFileSync(o!, ours); writeFileSync(b!, base); writeFileSync(t!, theirs);
-        const p = Bun.spawnSync(['git', 'merge-file', '-p', o!, b!, t!], { stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+        const p = spawnSyncTimed(['git', 'merge-file', '-p', o!, b!, t!], {
+            env: nonInteractiveGitEnv(),
+            stdout: 'pipe',
+            stderr: 'pipe',
+            windowsHide: true,
+            timeout: LIVE_UPDATE_GIT_TIMEOUT_MS,
+        });
         return p.exitCode === 0 ? p.stdout.toString() : null;
     } finally { rmSync(dir, { recursive: true, force: true }); }
 }

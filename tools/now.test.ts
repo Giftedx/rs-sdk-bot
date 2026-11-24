@@ -1,5 +1,8 @@
 import {expect,test} from 'bun:test';
-import {age,nowLines,procRows,scriptsOf,type Checkout,type DashState,type Local} from './now';
+import {mkdirSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {age,nowLines,procRows,readSwarmStops,resolveSyncedLeasesDir,scriptsOf,type Checkout,type DashState,type Local} from './now';
 import {coordinationView} from '../packages/dashboard/coordination';
 import {scoreboardView} from '../packages/dashboard/fleet-view';
 
@@ -128,8 +131,28 @@ test('with no dashboard the local facts still print, and a worktree also shows t
 test('the loops line names each fast-fail loop, says none, or is left out when not read', () => {
     const loop = { name: 'Shaftmaker', goal: 'headless arrows', error: 'Error: bank did not open', runs: 6, medianSec: 3, lastAt: NOW };
     const lines = nowLines(state(), local({ loops: [loop] }), NOW);
-    expect(lines).toContain('loops   1 fast-fail loops in 2.0 h (bun scripts/fail-loops.ts):');
+    expect(lines).toContain('loops   1 fast-fail loops in 2.0 h (bun tools/fail-loops.ts):');
     expect(lines).toContain('  loop  Shaftmaker 6x 3 s: headless arrows | Error: bank did not open');
     expect(nowLines(state(), local({ loops: [] }), NOW)).toContain('loops   none in 2.0 h');
     expect(nowLines(state(), local(), NOW).some(l => l.startsWith('loops'))).toBe(false);
+});
+
+test('readSwarmStops and resolveSyncedLeasesDir prefer .practice/live/ and fall back to legacy paths', () => {
+    const base = mkdtempSync(join(tmpdir(), 'now-live-'));
+    try {
+        expect(readSwarmStops(base)).toEqual([]);
+        expect(resolveSyncedLeasesDir(base)).toBe(join(base, 'fleet', 'leases'));
+
+        mkdirSync(join(base, '.practice', 'fleet-data', 'fleet', 'leases'), { recursive: true });
+        writeFileSync(join(base, '.practice', 'stop-swarm'), 'legacy stop\nsecond line');
+        expect(readSwarmStops(base)).toEqual([{ file: 'stop-swarm', text: 'legacy stop' }]);
+        expect(resolveSyncedLeasesDir(base)).toBe(join(base, '.practice', 'fleet-data', 'fleet', 'leases'));
+
+        mkdirSync(join(base, '.practice', 'live', 'fleet-data', 'fleet', 'leases'), { recursive: true });
+        writeFileSync(join(base, '.practice', 'live', 'stop-swarm'), 'live owner pause');
+        expect(readSwarmStops(base)).toEqual([{ file: 'stop-swarm', text: 'live owner pause' }]);
+        expect(resolveSyncedLeasesDir(base)).toBe(join(base, '.practice', 'live', 'fleet-data', 'fleet', 'leases'));
+    } finally {
+        rmSync(base, { recursive: true, force: true });
+    }
 });

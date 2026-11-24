@@ -402,7 +402,10 @@ export async function runCombatModuleSession(
             case 'giant':
             case 'trooper':
             case 'taverley_druid':
+            case 'taverley_black_knight':
             case 'taverley_scales':
+            case 'taverley_blue_dragon':
+            case 'taverley_black_dragon':
             case 'taverley_giant':
             case 'chaos_wine': {
                 const isGiantTrained =
@@ -496,7 +499,9 @@ export async function runCombatModuleSession(
                         : await combatTrip(session, 'blue', tripStop => runRangedCamp(session, BLUE_DRAGON, { cap: 2500, stop: tripStop, returnSafe: false }), { cap, stop: () => false });
                 break;
             case 'cannon': {
-                const spot = CANNON_SPOTS[cfg.spot ?? env.SPOT ?? 'spiders']!;
+                const spotName = cfg.spot ?? env.SPOT ?? 'spiders';
+                const spot = Object.prototype.hasOwnProperty.call(CANNON_SPOTS, spotName) ? CANNON_SPOTS[spotName] : undefined;
+                if (!spot) throw Error(`unknown cannon spot: ${spotName} (known: ${Object.keys(CANNON_SPOTS).join(', ')})`);
                 if (env.MODE === 'buy') result = await buyCannon(session, { walk: cannonWalkerProxy(session, spot) });
                 else if (env.MODE === 'reclaim') result = await reclaimCannon(session, { walk: cannonWalkerProxy(session, spot) });
                 else {
@@ -641,6 +646,10 @@ export async function runCombatModuleSession(
                     result = { ok: raw.ok && !!raw.result?.ok, kills: raw.result?.creditedKills ?? 0, failure: raw.failure };
                 }
                 break;
+            }
+            default: {
+                const _exhaustive: never = mode;
+                throw Error(`unhandled combat mode: ${String(_exhaustive)}`);
             }
         }
         const xpGained = computeXpDelta(xpBefore, snapshotSkillXp(session));

@@ -783,8 +783,9 @@ export function campaignShortfalls(
         const unitGp = opts.itemValuesGp?.[req.itemId] ?? opts.itemValuesGp?.[canonicalId] ?? 500;
         const valueScore = Math.max(40, Math.min(4000, Math.sqrt(Math.max(1, remaining * unitGp)) * 4)) * effectiveWeight;
         const canonicalName = itemsMap.get(canonicalId)?.name ?? req.itemName;
+        const idSlug = campaign.id.replace(/^campaign:/, '');
         const demand: GoalDemand = {
-            id: `campaign:${campaign.id}:item:${canonicalId}`,
+            id: `campaign:${idSlug}:item:${canonicalId}`,
             goalKind: campaign.account.toLowerCase() === 'haggis' ? 'main_supply' : 'specialist_prep',
             sourceId: campaign.id,
             valueScore,
@@ -798,7 +799,6 @@ export function campaignShortfalls(
             fulfilled,
             remaining,
             priorityWeight: effectiveWeight,
-            ...(campaign.stagingHolder ? { assignedAccount: campaign.stagingHolder } : {}),
             active: !inactiveState,
         };
         const dErrors = validateGoalDemand(demand);

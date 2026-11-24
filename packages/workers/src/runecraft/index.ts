@@ -166,8 +166,14 @@ export async function runRunecraftCli(
     if (method === 'bank-craft') {
         const allArgs = [account, ...args];
         if (['--rune-carriers', '--rune-opening'].includes(allArgs.at(-1) ?? '')) {
-            await mainRuneStage(allArgs, deps);
-            return process.exitCode ? Number(process.exitCode) : 0;
+            const prevExitCode = process.exitCode;
+            process.exitCode = 0;
+            try {
+                await mainRuneStage(allArgs, deps);
+                return process.exitCode ? Number(process.exitCode) : 0;
+            } finally {
+                process.exitCode = prevExitCode;
+            }
         }
         if (allArgs.includes('--carriers')
             || allArgs.includes('--body-continuation')
@@ -303,8 +309,14 @@ export async function runRunecraftCli(
 
     if (method === 'stage-carriers' || method === 'stage-opening') {
         const flag = method === 'stage-opening' ? '--rune-opening' : '--rune-carriers';
-        await mainRuneStage([account, ...args, flag], deps);
-        return process.exitCode ? Number(process.exitCode) : 0;
+        const prevExitCode = process.exitCode;
+        process.exitCode = 0;
+        try {
+            await mainRuneStage([account, ...args, flag], deps);
+            return process.exitCode ? Number(process.exitCode) : 0;
+        } finally {
+            process.exitCode = prevExitCode;
+        }
     }
 
     throw Error(`unknown runecraft CLI method: ${String(method)}`);

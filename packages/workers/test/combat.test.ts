@@ -16,6 +16,7 @@ import {
     combatPreflight,
     combatWorkerModule,
     runCombatModuleSession,
+    runWildDragonsCli,
     type CombatConfig,
     type CombatSession,
 } from '../src/combat';
@@ -349,7 +350,13 @@ describe('combatWorkerModule contracts and preflight', () => {
     test('router steps, fighter profiles, boss encounters, and readiness assessment match unified dispatch', () => {
         expect(FIGHTER_PROFILES.some(p => p.target === 'chicken' && p.script === 'scripts/aio-fighter.ts')).toBe(true);
         expect(FIGHTER_PROFILES.some(p => p.target === 'cannon' && p.script === 'scripts/aio-fighter.ts')).toBe(true);
-        expect(BOSS_ENCOUNTERS.map(b => b.boss)).toEqual(['kbd', 'black-dragon', 'green-dragon', 'trawler', 'trawler-at-site']);
+        expect(BOSS_ENCOUNTERS.map(b => b.boss)).toEqual(['kbd', 'black-dragon', 'blue-dragon', 'green-dragon', 'trawler', 'trawler-at-site']);
+
+        expect(resolveBossStep('blue-dragon')).toEqual({
+            script: 'scripts/aio-boss.ts',
+            args: ['blue-dragon'],
+            env: {},
+        });
 
         expect(resolveFighterStep('cow', ['3000'])).toEqual({
             script: 'scripts/aio-fighter.ts',
@@ -389,5 +396,54 @@ describe('combatWorkerModule contracts and preflight', () => {
             members: true,
         });
         expect(readyBlackDragon.ready).toBe(true);
+    });
+
+    test('validates cannon spot, shared reserve/escrow coins, Hitpoints/non-damage estimate rules, and CLI usage throws', async () => {
+        const acct = makeAccount();
+        const badSpot = combatPreflight(acct, { mode: 'cannon', spot: 'nonexistent' }, emptyWorld);
+        expect(badSpot.ok).toBe(false);
+        expect(badSpot.blockers[0]?.kind).toBe('invalid_config');
+        expect(combatPreflight(acct, { mode: 'cannon', spot: 'battlefield' }, emptyWorld).ok).toBe(true);
+
+        const badCannonRun = await combatWorkerModule.run({
+            name: 'MockCannon',
+            tick: () => 0,
+            sdk: { getState: () => ({ skills: [], inventory: [], equipment: [] }), getInventory: () => [], getEquipment: () => [], getSkillXp: () => 0 },
+        } as unknown as CombatSession, { mode: 'cannon', spot: 'nonexistent' });
+        expect(badCannonRun.kind).toBe('worker_defect');
+        if (badCannonRun.kind === 'worker_defect') {
+            expect(badCannonRun.detail).toContain('unknown cannon spot');
+        }
+
+        const escrowWorld: WorkerWorldView = {
+            at: Date.now(),
+            side: 'local',
+            server: 'localhost:8888',
+            accounts: {},
+            reserves: { combattester: { 995: 40_000 } },
+            globalReserves: { 995: 5_000 },
+            geEscrowCoins: { combattester: 4_800 },
+        };
+        const coinRes = combatPreflight(acct, { mode: 'green-dragon' }, escrowWorld);
+        expect(coinRes.ok).toBe(false);
+        expect(coinRes.blockers.find(b => b.kind === 'missing_coins')).toMatchObject({
+            kind: 'missing_coins',
+            required: 500,
+            available: 50_000,
+            reserved: 45_000,
+            escrow: 4_800,
+        });
+
+        const hpEst = combatEstimate(acct, { mode: 'fire-giant' }, emptyWorld);
+        expect(hpEst.skillXpPerTick).toEqual({ Hitpoints: hpEst.xpPerTick });
+
+        const wineEst = combatEstimate(acct, { mode: 'chaos_wine' }, emptyWorld);
+        expect(wineEst.skillXpPerTick).toEqual({ Magic: wineEst.xpPerTick });
+        const splashEst = combatEstimate(acct, { mode: 'magic-splash' }, emptyWorld);
+        expect(splashEst.skillXpPerTick).toEqual({ Magic: splashEst.xpPerTick });
+        const trawlerEst = combatEstimate(acct, { mode: 'trawler' }, emptyWorld);
+        expect(trawlerEst.skillXpPerTick).toEqual({ Crafting: trawlerEst.xpPerTick });
+
+        await expect(runWildDragonsCli([])).rejects.toThrow('usage: bun scripts/aio-boss.ts green-dragon');
     });
 });

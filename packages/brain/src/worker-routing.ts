@@ -8,6 +8,7 @@ import {
     type ActivityDefinition,
     type PlannedStep,
 } from './contracts';
+import { GE_LIMIT_BUFFER } from './acquire';
 import { loadItemsMap } from './preflight';
 
 export interface WorkerRoutingContext {
@@ -40,7 +41,7 @@ export interface ResolvedWorkerPlan {
 }
 
 const WORKER_FAMILY_SET: ReadonlySet<string> = new Set(WORKER_FAMILIES);
-const BOSS_ID_RE = /^(?:(?:boss|combat):)?(?:boss-)?(kbd|black-dragon|green-dragon|trawler(?:-at-site)?)$/;
+const BOSS_ID_RE = /^(?:(?:boss|combat):)?(?:boss-)?(kbd|black-dragon|blue-dragon|green-dragon|trawler(?:-at-site)?)$/;
 const GATHER_SKILLS = new Set(['fishing', 'woodcutting', 'mining', 'thieving', 'foraging']);
 const ARTISAN_SKILLS = new Set(['cooking', 'firemaking', 'fletching', 'smithing', 'crafting', 'herblore', 'prayer', 'magic']);
 const STANDALONE_NON_AIO_SCRIPT_RE = /^scripts\/(?!aio-)[\w./-]+\.ts$/;
@@ -452,10 +453,12 @@ function resolveAcquireOrGearSource(
             };
         }
         case 'ge': {
-            const orderKey = `brain-${params.itemId}-${params.quantity}`;
             const unitLimit = params.estimatedCoinCost && params.estimatedCoinCost > 0
-                ? Math.max(1, Math.ceil((params.estimatedCoinCost / Math.max(1, params.quantity)) * 1.15))
+                ? Math.max(1, Math.ceil((params.estimatedCoinCost / Math.max(1, params.quantity)) * GE_LIMIT_BUFFER))
                 : undefined;
+            const orderKey = unitLimit
+                ? `brain-${params.itemId}-${params.quantity}-p${unitLimit}`
+                : `brain-${params.itemId}-${params.quantity}`;
             return {
                 account,
                 stepKind,

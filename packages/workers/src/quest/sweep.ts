@@ -159,6 +159,7 @@ async function apiSweep(
     fresh: string | undefined,
     value: unknown,
     injected: Partial<ApiSweepDeps>,
+    existingSession?: Session,
 ) {
     const o = apiOptions(quest, value);
     const { goTo } = await import('../../../core/src/walk');
@@ -203,11 +204,11 @@ async function apiSweep(
     const start: Tile = quest === 'tbwt' ? { x: 2781, z: 3086, level: 0 } : { x: 2548, z: 3118, level: 0 };
     validateOwnedKit({ bank: BANKS[0]!, pack, wear, cap: 600, maximumMoves: 160 });
     if (requested()) throw Error('quest sweep API stopped before login');
-    const raw = await d.open(account, {
+    const raw = existingSession ?? (await d.open(account, {
         onStop: async () => {
             signalled = true;
         },
-    });
+    }));
     const client = raw.client as any;
     const owner = client?.executeBotAction;
     const self = client?.selfSlot;
@@ -398,6 +399,10 @@ async function apiSweep(
         console.log('QUEST_SWEEP_SETTLEMENT_DEFERRED ' + detail);
         return { ok: false, recoveryDeferred: true, detail };
     }
+    if (existingSession) {
+        if (!ok) throw Error(detail);
+        return { ok: true, detail };
+    }
     return d.finish([s], ok, detail);
 }
 
@@ -468,15 +473,16 @@ export async function sweep(
     fresh?: string,
     options?: SweepApiOptions,
     deps: Partial<ApiSweepDeps> = {},
+    existingSession?: Session,
 ) {
     if (quest === 'hero' || quest === 'heroes') {
         throw Error('Heroes requires the explicit owned pair CLI quest-hero-owned.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
     }
-    if (quest === 'tbwt' || quest === 'itwatchtower') return apiSweep(account, quest, fresh, options, deps);
-    return sweepPreset(account, quest, fresh);
+    if (quest === 'tbwt' || quest === 'itwatchtower') return apiSweep(account, quest, fresh, options, deps, existingSession);
+    return sweepPreset(account, quest, fresh, existingSession);
 }
 
-export async function sweepPreset(account: string, quest: string, fresh?: string) {
+export async function sweepPreset(account: string, quest: string, fresh?: string, existingSession?: Session) {
     if (quest === 'hero' || quest === 'heroes') {
         throw Error('Heroes requires the explicit owned pair CLI quest-hero-owned.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
     }
@@ -486,10 +492,13 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
     const preset = presetFor(quest);
     let base = needs(preset, false, quest);
     const food = needs(preset, true, quest);
-    const s: Session = await openBot(account);
+    const s: Session = existingSession ?? (await openBot(account));
     // A quest session has no eat guard (packages/core/src/eat-guard.ts): the staged items can be food. The hold has no release.
     holdSessionEater(s.sdk);
-    const fail = (why: string) => finish([s], false, `quest-sweep ${quest} ${why}`);
+    const fail = (why: string) => {
+        if (existingSession) throw Error(`quest-sweep ${quest} ${why}`);
+        return finish([s], false, `quest-sweep ${quest} ${why}`);
+    };
     let handed = false;
     try {
         const st = () => s.sdk.getState();

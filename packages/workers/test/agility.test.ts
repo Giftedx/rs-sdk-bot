@@ -974,4 +974,40 @@ test('agilityEstimate, toAgilityWorkerOutcome, agilityWorker.run, and runAgility
         expect(logs[0]).toContain('true:agility-order gnome level=2');
     } finally { fCli.stop(); }
     await expect(runAgilityCli(['AgiCli', 'gnome', '10', '--save=other.sav'], {}, { readSave: () => ({ vars: {}, skills: [] }) })).rejects.toThrow('save must belong to account');
+
+    // CAP/MAX_LAPS fallbacks and shared lowercase/global reserve/escrow checks
+    const capOpts = agilityOptions('gnome', '50', { CAP: '4200', MAX_LAPS: '12' });
+    expect(capOpts.maxTicks).toBe(4200);
+    expect(capOpts.maxLaps).toBe(12);
+    const agiSpecific = agilityOptions('gnome', '50', { AGI_MAX_TICKS: '1200', CAP: '4200', AGI_MAX_LAPS: '5', MAX_LAPS: '12' });
+    expect(agiSpecific.maxTicks).toBe(1200);
+    expect(agiSpecific.maxLaps).toBe(5);
+
+    const brimAcct = makeAccount({ name: 'BrimTester', pos: { x: 2808, z: 3191, level: 0 }, inventory: {}, bank: { items: { 995: 500 }, observedAt: 1, trusted: true } });
+    const brimWorld: WorkerWorldView = { ...makeWorld(brimAcct), reserves: { brimtester: { 995: 200 } }, globalReserves: { 995: 100 }, geEscrowCoins: { brimtester: 100 } };
+    expect(evaluateAgilityPreflight(brimAcct, { course: 'brimhaven', targetLevel: 70 }, brimWorld).blockers.map(b => b.kind)).toContain('missing_coins');
+
+    const fStop = fixture({ level: 1 });
+    try {
+        await expect(runAgility(fStop.s as any, { ...agilityOptions('gnome', '10', {}), stop: () => true })).rejects.toThrow('session interrupted');
+    } finally { fStop.stop(); }
+
+    let capturedOnStop: ((...args: any[]) => Promise<unknown>) | undefined;
+    const fCliStop = fixture({ level: 1 });
+    try {
+        const stoppedCode = await runAgilityCli(
+            ['AgiCli', 'gnome', '10'],
+            {},
+            {
+                openBot: async (_name, opts) => {
+                    capturedOnStop = opts?.onStop as ((...args: any[]) => Promise<unknown>) | undefined;
+                    await capturedOnStop?.(fCliStop.s, 'test-stop');
+                    return fCliStop.s as any;
+                },
+                finish: async () => {},
+            },
+        );
+        expect(typeof capturedOnStop).toBe('function');
+        expect(stoppedCode).toBe(1);
+    } finally { fCliStop.stop(); }
 });

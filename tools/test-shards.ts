@@ -61,7 +61,7 @@ export function references(file: string, base = root): string[] {
         }
     };
     for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g)) add(join(dirname(file), m[1]!).replaceAll('\\', '/'));
-    for (const m of text.matchAll(/['"`]((?:\.\/)?(?:scripts|packages|tools|docs|research|fleet|patches)\/[\w\-./]+\.(?:tsx?|json|md))['"`]/g)) add(m[1]!.replace(/^\.\//, ''));
+    for (const m of text.matchAll(/['"`]((?:\.\/)?(?:scripts|packages|tools|knowledge|docs|research|fleet|patches)\/[\w\-./]+\.(?:tsx?|json|md))['"`]/g)) add(m[1]!.replace(/^\.\//, ''));
     return [...out];
 }
 
@@ -124,7 +124,7 @@ if (import.meta.main) {
     const changedRef = refAt >= 0 ? argv.splice(refAt, 2)[1] : undefined;
     const partAt = argv.indexOf('--part');
     const part = partAt >= 0 ? parsePart(argv.splice(partAt, 2)[1]) : undefined;
-    if (!Number.isSafeInteger(count) || count < 1 || !argv.length) throw new Error('usage: bun scripts/test-shards.ts [--shards n] [--changed <ref>] [--part i/n] <folder>...');
+    if (!Number.isSafeInteger(count) || count < 1 || !argv.length) throw new Error('usage: bun tools/test-shards.ts [--shards n] [--changed <ref>] [--part i/n] <folder>...');
     const files: string[] = [];
     for (const folder of argv) {
         for await (const f of new Glob('**/*.test.{ts,tsx}').scan({ cwd: resolve(root, folder) })) {

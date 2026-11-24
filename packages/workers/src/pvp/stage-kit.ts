@@ -184,8 +184,13 @@ export function verifyPvpStageSupplies(input: {
  }
  return { ok: missing.length === 0, missing, conflict, escape, canCharge, maxGodCasts };
 }
-export async function runStageKitCli(args: readonly string[]): Promise<number> {
+export async function runStageKitCli(args: readonly string[], existingSession?: Session): Promise<number> {
  let stopped=false;
+ if(existingSession){
+  const r=await runKitStage(existingSession,Number(args[1]??1800),()=>stopped);
+  console.log('KIT_STAGE_RESULT '+JSON.stringify(r));
+  return r.ok?0:1;
+ }
  const s=await openBot(args[0]!,{onStop:async()=>{stopped=true;}}).catch(e=>finish([],false,String(e)));
  try{
   const r=await runKitStage(s,Number(args[1]??1800),()=>stopped);

@@ -1349,6 +1349,146 @@ export function piecePlan(piece: DhidePiece, want: number, hides: number, leathe
     return planFor([PIECE_BY_NAME[piece]], want, hides, leather, thread, coins);
 }
 
+export async function runBlackDhideSetsSession(
+    s: Session,
+    restArgs: readonly string[],
+    env: Record<string, string | undefined> = process.env,
+    deps?: ArtisanExternalDeps,
+    stop: () => boolean = () => false,
+): Promise<{ ok: boolean; produced: number; ticks: number; summary: string; failure?: string }> {
+    const start = s.tick();
+    const argEnv = Object.fromEntries(
+        restArgs.flatMap(a => {
+            const m = a.match(/^([A-Z_]+)=(.*)$/);
+            return m ? [[m[1]!, m[2]!]] : [];
+        }),
+    );
+    const want = Number(argEnv.SETS ?? env.SETS ?? 0);
+    const pieceName = (argEnv.PIECE ?? env.PIECE)?.trim().toLowerCase() as DhidePiece | '' | undefined;
+    const selected = pieceName ? (pieceName in PIECE_BY_NAME ? [PIECE_BY_NAME[pieceName as DhidePiece]] : null) : [...SET_PIECES];
+    try {
+        if (!selected) throw Error(`unknown PIECE=${pieceName}`);
+        if (!Number.isSafeInteger(want) || want < 0 || want > 50) throw Error('SETS 0-50');
+        const st = () => s.sdk.getState();
+        const held = (id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+        const banked = (id: number) => (s.bankObservation?.()?.items ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+        const level = s.sdk.getSkill('Crafting')?.level ?? 1;
+        const reqLevel = Math.max(...selected.map(p => p.level));
+        const leatherPer = selected.reduce((n, p) => n + p.leather, 0);
+        if (level < reqLevel) throw Error(`Crafting ${level}, ${pieceName || 'a set'} asks ${reqLevel}`);
+        const waitFor = (pred: () => boolean, timeoutTicks: number) => waitUntil(s, () => stop() || pred(), { timeoutTicks });
+        const openBank = async (label: string) => {
+            const generation = s.bankObservation?.()?.generation ?? 0;
+            if (!(await s.bot.openBank()).success || !await waitFor(() => !!st()?.bank?.isOpen && (s.bankObservation?.()?.generation ?? 0) > generation, 20)) {
+                throw Error(`${label}: bank did not open`);
+            }
+        };
+        const closeBank = async () => {
+            await s.bot.closeBank();
+            await waitFor(() => !st()?.bank?.isOpen, 10);
+            await waitTicks(s, 2);
+        };
+        const bankPack = async (label: string) => {
+            for (const id of new Set(s.sdk.getInventory().map(i => i.id))) {
+                const row = s.sdk.getInventory().find(i => i.id === id);
+                if (row && (!(await s.bot.depositItem(row, held(id))).success || !await waitFor(() => held(id) === 0, 10))) {
+                    throw Error(`${label}: deposit of item ${id}`);
+                }
+            }
+        };
+        const take = async (id: number, n: number) => {
+            if (n < 1) return;
+            const row = (st()?.bank?.items ?? []).find((i: { id: number }) => i.id === id);
+            const before = held(id);
+            if (!row || banked(id) < n) throw Error(`withdraw: ${n} of item ${id} short in the bank (${banked(id)} banked)`);
+            if (!(await s.bot.withdrawItem(row, n, { asNote: false })).success || !await waitFor(() => held(id) >= before + n, 10)) {
+                throw Error(`withdraw ${n} of item ${id}`);
+            }
+        };
+        const go = async (to: { x: number; z: number; level: number }, label: string) => {
+            if (stop()) throw Error('stopped');
+            const out = deps?.walkTargetPersist
+                ? await deps.walkTargetPersist(s, to)
+                : await walkPath(await sessionWalker(s), [{ x: to.x, z: to.z, tol: 1 }], { stop });
+            const reason = 'reason' in out && typeof out.reason === 'string' ? out.reason : '';
+            if (!out.ok) throw Error(`route to ${label}: ${reason} ${out.detail ?? ''}`);
+        };
+        await go(AL_KHARID_BANK, 'the Al Kharid bank');
+        await openBank('stage');
+        await bankPack('stage');
+        const plan = planFor(selected, want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS));
+        const needle = banked(NEEDLE) < 1;
+        if (plan.count < 1) {
+            await closeBank();
+            throw Error(`no craft: ${banked(BLACK_HIDE)} hides, ${banked(BLACK_LEATHER)} leather, ${banked(COINS)} coins, asks ${leatherPer} leather`);
+        }
+        let tanned = 0;
+        let spent = 0;
+        while (tanned < plan.tan) {
+            if (stop()) throw Error('stopped');
+            const n = Math.min(TAN_TRIP, plan.tan - tanned);
+            await take(BLACK_HIDE, n);
+            await take(COINS, n * TAN_COST);
+            await closeBank();
+            await go(TANNER, 'the tanner');
+            const r = await tanInventory(s, 'black', n, 60 + n * 12, stop);
+            tanned += r.made;
+            spent += r.coinsSpent;
+            if (!r.ok) throw Error(`tanning: ${r.detail} made=${r.made} of ${n}`);
+            await go(AL_KHARID_BANK, 'the Al Kharid bank');
+            await openBank('tanned');
+            await bankPack('tanned');
+        }
+        if (needle || plan.thread > 0) {
+            await take(COINS, Math.min(SHOP_COINS, banked(COINS)));
+            await closeBank();
+            await go(DOMMIK, "Dommik's store");
+            const shop = await s.bot.openShop(/^dommik$/i);
+            if (!shop.success) throw Error(`dommik shop: ${shop.message}`);
+            const coins = held(COINS);
+            if (needle) {
+                await s.bot.buyFromShop(/^needle$/i, 1);
+                await waitFor(() => held(NEEDLE) > 0, 6);
+            }
+            if (plan.thread > 0) {
+                await s.bot.buyFromShop(/^thread$/i, plan.thread);
+                await waitFor(() => held(THREAD) >= plan.thread, 6);
+            }
+            await s.bot.closeShop();
+            await waitTicks(s, 2);
+            spent += coins - held(COINS);
+            if ((needle && held(NEEDLE) < 1) || held(THREAD) < plan.thread) {
+                throw Error(`dommik: needle=${held(NEEDLE)} thread=${held(THREAD)} of ${plan.thread}`);
+            }
+            await go(AL_KHARID_BANK, 'the Al Kharid bank');
+            await openBank('shop');
+            await bankPack('shop');
+        }
+        await closeBank();
+        const made: number[] = [];
+        for (const piece of selected) {
+            const recipe = inventoryRecipes().find(r => r.name === piece.recipe);
+            if (!recipe) throw Error(`no recipe ${piece.recipe}`);
+            const r = await runInventoryBank(s, recipe, { maximum: plan.count, cap: 100 + plan.count * 40, maxAttempts: plan.count, members: true, stop });
+            made.push(r.made);
+            if (!r.ok) throw Error(`craft ${piece.recipe}: ${r.failure} made=${r.made} of ${plan.count}`);
+        }
+        await openBank('end');
+        await bankPack('end');
+        const sets = Math.min(...selected.map(p => banked(p.product)));
+        const hidesLeft = banked(BLACK_HIDE);
+        const leatherLeft = banked(BLACK_LEATHER);
+        await closeBank();
+        const ok = made.every(n => n === plan.count);
+        const detail = selected.map((p, idx) => `${p.recipe.endsWith('body') ? 'bodies' : p.recipe.endsWith('chaps') ? 'chaps' : 'vambraces'}=${made[idx]}`).join(' ');
+        const summary = `sets=${plan.count} banked=${sets} ${detail} tanned=${tanned} spent=${spent} hidesLeft=${hidesLeft} leatherLeft=${leatherLeft} crafting=${s.sdk.getSkill('Crafting')?.level ?? 0} ticks=${s.tick() - start}`;
+        return { ok, produced: plan.count, ticks: s.tick() - start, summary, failure: ok ? undefined : summary };
+    } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { ok: false, produced: 0, ticks: s.tick() - start, summary: msg, failure: msg };
+    }
+}
+
 export async function runBlackDhideSetsCli(
     botName: string,
     restArgs: readonly string[],

@@ -274,3 +274,23 @@ test('gatherWorker.run and toWorkerOutcome map success, refusal, death, missing_
     expect(isRunOutcome(died)).toBe(true);
     expect(died.kind).toBe('death');
 });
+
+test('gatherPreflight honors lowercase world reserves, globalReserves, and escrow, and gatherEstimate applies 25x XP scaling', () => {
+    const acct = makeAccount({
+        name: 'MixedCaseFisher',
+        bank: { observedAt: 1, trusted: true, items: { 995: 5000, 329: 10 } },
+    });
+    const world = makeWorld(acct, {
+        reserves: { mixedcasefisher: { 995: 2000 } },
+        globalReserves: { 995: 1000 },
+        geEscrowCoins: { mixedcasefisher: 1500 },
+    });
+    const res = gatherPreflight(acct, { skill: 'fishing', method: 'shark' }, world);
+    expect(res.ok).toBe(false);
+    expect(res.blockers.some(b => b.kind === 'missing_coins')).toBe(true);
+
+    const est25 = gatherEstimate(acct, { skill: 'fishing', method: 'shark' }, world);
+    const est1 = gatherEstimate(acct, { skill: 'fishing', method: 'shark', env: { XP_RATE: '1' } }, world);
+    expect(est1.xpPerTick).toBe(6.5);
+    expect(est25.xpPerTick).toBe(6.5 * 25);
+});

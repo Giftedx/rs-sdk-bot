@@ -3,7 +3,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,utimesSync,readdir
 import {tmpdir} from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
-import {classify,scan,counts,archiveThenDelete,GRACE_MS,scanFleetOrders,applyFleetMoves} from './practice-hygiene';
+import {classify,scan,counts,archiveThenDelete,GRACE_MS,scanFleetOrders,applyFleetMoves,fleetOrdersDir} from './practice-hygiene';
 
 const now=1_800_000_000_000,old=now-2*GRACE_MS,named=new Set(['flrcvxkeep','trousersnake']);
 
@@ -110,5 +110,16 @@ test('a read-back that misses a name deletes nothing, and a missing archive driv
   expect(()=>archiveThenDelete(root,entries,join(root,'no-parent','deeper','x'),'q')).toThrow('archive parent is missing');
   expect(existsSync(join(root,'no-parent'))).toBe(false);
   expect(readdirSync(join(root,'.practice')).sort()).toEqual(before);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('fleetOrdersDir prefers .practice/live/fleet-data/fleet and falls back to legacy .practice/fleet-data/fleet',()=>{
+ const root=mkdtempSync(join(tmpdir(),'fleet-orders-dir-'));
+ try{
+  expect(fleetOrdersDir(root)).toBe(join(root,'.practice','live','fleet-data','fleet'));
+  mkdirSync(join(root,'.practice','fleet-data','fleet'),{recursive:true});
+  expect(fleetOrdersDir(root)).toBe(join(root,'.practice','fleet-data','fleet'));
+  mkdirSync(join(root,'.practice','live','fleet-data','fleet'),{recursive:true});
+  expect(fleetOrdersDir(root)).toBe(join(root,'.practice','live','fleet-data','fleet'));
  }finally{rmSync(root,{recursive:true,force:true});}
 });

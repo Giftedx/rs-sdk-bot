@@ -7,7 +7,9 @@ import {
     type RunOutcome,
     type WorkerAccountView,
     type WorkerWorldView,
+    accountEscrowCoins,
     accountOwnedItemCount,
+    accountReserveFor,
     availableCoinsAfterReserves,
     preflightFail,
     preflightOk,
@@ -61,13 +63,9 @@ function questStatusOf(acct: WorkerAccountView, needle: string | RegExp) {
     return 'not_started' as const;
 }
 
-function reservedOf(acct: WorkerAccountView, world: WorkerWorldView, itemId: number): number {
-    return world.reserves?.[acct.name]?.[itemId] ?? acct.reserves?.[itemId] ?? 0;
-}
-
 function availableItem(acct: WorkerAccountView, world: WorkerWorldView, itemId: number): { available: number; reserved: number } {
     const owned = accountOwnedItemCount(acct, itemId, { includeBank: true, requireTrustedBank: false });
-    const reserved = reservedOf(acct, world, itemId);
+    const reserved = accountReserveFor(acct, world, itemId);
     return { available: reserveAdjustedStock(owned, reserved), reserved };
 }
 
@@ -144,8 +142,8 @@ export function gatherPreflight(
     }
 
     const totalCoins = accountOwnedItemCount(acct, 995, { includeBank: true, requireTrustedBank: false });
-    const reservedCoins = reservedOf(acct, world, 995);
-    const escrowCoins = world.geEscrowCoins?.[acct.name] ?? 0;
+    const reservedCoins = accountReserveFor(acct, world, 995);
+    const escrowCoins = accountEscrowCoins(acct, world);
     const spendableCoins = availableCoinsAfterReserves(totalCoins, reservedCoins, escrowCoins, 0);
     const stock = stockRecords(acct, world);
 
@@ -481,13 +479,18 @@ export function gatherEstimate(
 ): RateEstimate {
     const cfg = normalizeGatherConfig(rawCfg);
     const level = primarySkillName(cfg) ? skillLevel(acct, primarySkillName(cfg)!) : 1;
+    const rawRate = Number(resolveSetting(cfg, 'XP_RATE') ?? 25);
+    const xpRate = Number.isFinite(rawRate) && rawRate > 0 ? rawRate : 25;
+    const scaleXp = (base: number) => Number((base * xpRate).toFixed(2));
 
     switch (cfg.skill) {
         case 'fishing': {
             if (cfg.method === 'shark') {
+                const fish = scaleXp(4.0);
+                const cook = scaleXp(2.5);
                 return {
-                    xpPerTick: 6.5,
-                    skillXpPerTick: { Fishing: 4.0, Cooking: 2.5 },
+                    xpPerTick: scaleXp(6.5),
+                    skillXpPerTick: { Fishing: fish, Cooking: cook },
                     unitsPerTick: 0.036,
                     gpPerTick: 28,
                     setupTicks: 180,
@@ -498,9 +501,10 @@ export function gatherEstimate(
                 };
             }
             if (cfg.method === 'cage') {
+                const xp = scaleXp(5.2);
                 return {
-                    xpPerTick: 5.2,
-                    skillXpPerTick: { Fishing: 5.2 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Fishing: xp },
                     unitsPerTick: 0.058,
                     gpPerTick: 12,
                     setupTicks: 80,
@@ -511,9 +515,10 @@ export function gatherEstimate(
                 };
             }
             if (cfg.method === 'harpoon') {
+                const xp = scaleXp(6.0);
                 return {
-                    xpPerTick: 6.0,
-                    skillXpPerTick: { Fishing: 6.0 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Fishing: xp },
                     unitsPerTick: 0.065,
                     gpPerTick: 18,
                     setupTicks: 80,
@@ -524,9 +529,11 @@ export function gatherEstimate(
                 };
             }
             if (cfg.method === 'fishcook' || cfg.method === 'village') {
+                const fish = scaleXp(10.5);
+                const cook = scaleXp(7.5);
                 return {
-                    xpPerTick: 18.0,
-                    skillXpPerTick: { Fishing: 10.5, Cooking: 7.5 },
+                    xpPerTick: scaleXp(18.0),
+                    skillXpPerTick: { Fishing: fish, Cooking: cook },
                     unitsPerTick: 0.052,
                     gpPerTick: 2,
                     setupTicks: 120,
@@ -539,9 +546,10 @@ export function gatherEstimate(
             }
             const methodKey = (cfg.spot ?? cfg.args[0] ?? 'fly') as FishMethod;
             const prof = FISH_PROFILES[methodKey] ?? FISH_PROFILES.fly;
+            const xp = scaleXp(Math.max(2, prof.level * 0.4 + 4));
             return {
-                xpPerTick: Math.max(2, prof.level * 0.4 + 4),
-                skillXpPerTick: { Fishing: Math.max(2, prof.level * 0.4 + 4) },
+                xpPerTick: xp,
+                skillXpPerTick: { Fishing: xp },
                 unitsPerTick: 0.25,
                 gpPerTick: 4,
                 setupTicks: 20,
@@ -554,9 +562,10 @@ export function gatherEstimate(
         }
         case 'woodcutting': {
             if (cfg.method === 'edgeville') {
+                const xp = scaleXp(8.5);
                 return {
-                    xpPerTick: 8.5,
-                    skillXpPerTick: { Woodcutting: 8.5 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Woodcutting: xp },
                     unitsPerTick: 0.14,
                     gpPerTick: 3,
                     setupTicks: 60,
@@ -567,9 +576,11 @@ export function gatherEstimate(
                 };
             }
             if (cfg.method === 'woodcut-supply') {
+                const wc = scaleXp(4.5);
+                const fletch = scaleXp(1.5);
                 return {
-                    xpPerTick: 6.0,
-                    skillXpPerTick: { Woodcutting: 4.5, Fletching: 1.5 },
+                    xpPerTick: scaleXp(6.0),
+                    skillXpPerTick: { Woodcutting: wc, Fletching: fletch },
                     unitsPerTick: 0.1,
                     gpPerTick: 2,
                     setupTicks: 90,
@@ -584,9 +595,10 @@ export function gatherEstimate(
             const unitRate = reqLvl >= 60 ? 0.03 * rateScale : reqLvl >= 15 ? 0.14 * rateScale : 0.22 * rateScale;
             const outId = reqLvl >= 75 ? 1513 : reqLvl >= 60 ? 1515 : reqLvl >= 45 ? 1517 : reqLvl >= 30 ? 1519 : reqLvl >= 15 ? 1521 : 1511;
             const xpPerLog = reqLvl >= 75 ? 250 : reqLvl >= 60 ? 175 : reqLvl >= 45 ? 100 : reqLvl >= 30 ? 67.5 : reqLvl >= 15 ? 37.5 : 25;
+            const xp = scaleXp(unitRate * xpPerLog);
             return {
-                xpPerTick: unitRate * xpPerLog,
-                skillXpPerTick: { Woodcutting: unitRate * xpPerLog },
+                xpPerTick: xp,
+                skillXpPerTick: { Woodcutting: xp },
                 unitsPerTick: unitRate,
                 gpPerTick: reqLvl >= 60 ? 10 : 3,
                 setupTicks: 60,
@@ -598,9 +610,10 @@ export function gatherEstimate(
         }
         case 'mining': {
             if (cfg.method === 'essence') {
+                const xp = scaleXp(1.4);
                 return {
-                    xpPerTick: 1.4,
-                    skillXpPerTick: { Mining: 1.4 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Mining: xp },
                     unitsPerTick: 0.28,
                     gpPerTick: 6,
                     setupTicks: 80,
@@ -611,9 +624,10 @@ export function gatherEstimate(
                 };
             }
             if (cfg.method === 'lava-maze') {
+                const xp = scaleXp(1.2);
                 return {
-                    xpPerTick: 1.2,
-                    skillXpPerTick: { Mining: 1.2 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Mining: xp },
                     unitsPerTick: 0.004,
                     gpPerTick: 45,
                     setupTicks: 300,
@@ -639,9 +653,10 @@ export function gatherEstimate(
             const unitsPerTick = cfg.method === 'ore' ? 0.12 : prof && prof.level >= 55 ? 0.06 : 0.25;
             const outId = prof?.products[0] ?? 440;
             const xpPerOre = prof && prof.level >= 40 ? 65 : 35;
+            const xp = scaleXp(unitsPerTick * xpPerOre);
             return {
-                xpPerTick: unitsPerTick * xpPerOre,
-                skillXpPerTick: { Mining: unitsPerTick * xpPerOre },
+                xpPerTick: xp,
+                skillXpPerTick: { Mining: xp },
                 unitsPerTick,
                 gpPerTick: 8,
                 setupTicks: cfg.method === 'at-site' || cfg.method === 'drop' ? 10 : 70,
@@ -655,9 +670,10 @@ export function gatherEstimate(
             if (cfg.method === 'knights' || cfg.method === 'knights-stable') {
                 const successRate = Math.min(0.94, Math.max(0.45, 0.35 + level * 0.006));
                 const unitsPerTick = 0.4 * successRate;
+                const xp = scaleXp(unitsPerTick * 84.3);
                 return {
-                    xpPerTick: unitsPerTick * 84.3,
-                    skillXpPerTick: { Thieving: unitsPerTick * 84.3 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Thieving: xp },
                     unitsPerTick,
                     gpPerTick: unitsPerTick * 50,
                     setupTicks: 40,
@@ -668,9 +684,10 @@ export function gatherEstimate(
                 };
             }
             if (cfg.method === 'blood-chest') {
+                const xp = scaleXp(0.4);
                 return {
-                    xpPerTick: 0.4,
-                    skillXpPerTick: { Thieving: 0.4 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Thieving: xp },
                     unitsPerTick: 0.005,
                     gpPerTick: 4.5,
                     setupTicks: 200,
@@ -681,9 +698,10 @@ export function gatherEstimate(
                 };
             }
             if (cfg.method === 'nature-chest') {
+                const xp = scaleXp(1.5);
                 return {
-                    xpPerTick: 1.5,
-                    skillXpPerTick: { Thieving: 1.5 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Thieving: xp },
                     unitsPerTick: 0.06,
                     gpPerTick: 12,
                     setupTicks: 10,
@@ -694,9 +712,10 @@ export function gatherEstimate(
                 };
             }
             if (cfg.method === 'stalls') {
+                const xp = scaleXp(6.0);
                 return {
-                    xpPerTick: 6.0,
-                    skillXpPerTick: { Thieving: 6.0 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Thieving: xp },
                     unitsPerTick: 0.12,
                     gpPerTick: 8,
                     setupTicks: 15,
@@ -705,9 +724,10 @@ export function gatherEstimate(
                     confidence: 'practice',
                 };
             }
+            const xp = scaleXp(4.0);
             return {
-                xpPerTick: 4.0,
-                skillXpPerTick: { Thieving: 4.0 },
+                xpPerTick: xp,
+                skillXpPerTick: { Thieving: xp },
                 unitsPerTick: 0.25,
                 gpPerTick: 5,
                 setupTicks: 20,
@@ -740,8 +760,9 @@ export function gatherEstimate(
                         : cfg.method === 'grapes'
                           ? 1987
                           : Math.max(1, Number(cfg.spot ?? cfg.args[0] ?? 1));
+            const baseXp = cfg.method === 'wool' ? 2.5 : cfg.method === 'feathers' ? 4.0 : 0;
             return {
-                xpPerTick: cfg.method === 'wool' ? 2.5 : cfg.method === 'feathers' ? 4.0 : 0,
+                xpPerTick: scaleXp(baseXp),
                 unitsPerTick: cfg.method === 'feathers' ? 0.5 : 0.18,
                 gpPerTick: cfg.method === 'flax' ? 12 : 4,
                 setupTicks: 60,

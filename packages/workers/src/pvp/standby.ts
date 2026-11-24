@@ -206,16 +206,20 @@ export async function runWildernessStandby(
     }
 }
 
-export async function runStandbyCli(args: readonly string[]): Promise<number> {
+export async function runStandbyCli(args: readonly string[], existingSession?: Session): Promise<number> {
     const [name, mode, ...extra] = args;
     check(name && (mode === 'stage' || mode === 'verify') && !extra.length,
         'usage: bun scripts/pvp-standby.ts <account> <stage|verify>');
     const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pvp-standby');
     check(!stop(), 'standby stop file present');
     const start = performance.now();
-    const session = await openBot(name);
+    const session = existingSession ?? (await openBot(name));
     const loginMs = Math.round(performance.now() - start);
     const result = await runWildernessStandby(session, mode, stop);
+    if (existingSession) {
+        console.log('PVP_STANDBY ' + JSON.stringify({ ...result, mode, loginMs }));
+        return result.ok ? 0 : 1;
+    }
     const loggedOut = await settle([session], result.ok, result.failure ?? 'Combat ' + result.final.combat + ' Wilderness standby ' + mode);
     console.log('PVP_STANDBY ' + JSON.stringify({ ...result, mode, loginMs, loggedOut }));
     return result.ok && loggedOut ? 0 : 1;

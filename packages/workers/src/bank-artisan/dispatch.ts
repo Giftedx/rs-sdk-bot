@@ -8,7 +8,7 @@ import {
     runCookStock,
     runGeCooking,
     runMixedWine,
-    runWineOrder,
+    runWineSession,
     validateGeCookingOrder,
 } from './cooking';
 import {
@@ -20,11 +20,13 @@ import {
     registerDefaultJewelleryBankJobRunner,
     registerDefaultShaftsRunner,
     runBankedGlass,
+    runBlackDhideSetsSession,
     runCraftingCli,
     runFurnaceGlass,
     runInventoryBank,
     runJewellery,
     runJewelleryOrder,
+    runLegacyCraftJewelryCli,
     runProgressiveProduction,
     runSoftenClay,
     runSpinBowstrings,
@@ -155,8 +157,8 @@ export async function runArtisan(
                 if (cfg.method === 'wine') {
                     const target = Number(cfg.args[0] ?? setting('TARGET_LEVEL', '35'));
                     const cap = Number(cfg.args[1] ?? setting('CAP', '300'));
-                    const r = await runWineOrder(s.name, { target, cap });
-                    return { ok: r.ok, summary: `targetMet=${r.targetMet} level=${r.level}`, ticks: r.ticks, produced: r.targetMet ? 1 : 0, failure: r.ok ? undefined : r.stages.at(-1)?.detail || 'wine order incomplete' };
+                    const r = await runWineSession(s, { target, cap });
+                    return { ok: r.ok, summary: `targetMet=${r.targetMet} level=${r.level}`, ticks: r.ticks, produced: r.targetMet ? 1 : 0, failure: r.ok ? undefined : r.detail || 'wine session incomplete' };
                 }
                 if (cfg.method === 'mixed-wine') {
                     const maximum = Number(setting('MAX_MAKE', cfg.args[0] ?? '1'));
@@ -341,75 +343,96 @@ export async function runArtisan(
                 return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
             }
             case 'crafting': {
-                if (cfg.method === 'jewellery') {
-                    const recipe = jewelleryRecipes().find(r => r.name === (cfg.args[0] ?? setting('RECIPE', 'sapphire_ring')));
-                    if (!recipe) throw Error('unknown jewellery recipe');
-                    const maximum = Number(cfg.args[1] ?? setting('MAX_MAKE', '1'));
-                    const cap = Number(cfg.args[2] ?? setting('CAP', '200'));
-                    const r = await runJewellery(
-                        {
-                            state: () => s.sdk.getState(),
-                            tick: () => s.tick(),
-                            stop: halted,
-                            close: async () => { await s.sdk.sendCloseModal(); },
-                            open: async slot => {
-                                const f = s.sdk.getState()?.nearbyLocs.find(l => /^furnace$/i.test(l.name) && l.distance <= 2 && l.reachable !== false);
-                                if (!f || !(await s.sdk.sendUseItemOnLoc(slot, f.x, f.z, f.id)).success) return false;
-                                const { waitUntil } = await import('../../../core/src/ticks');
-                                return waitUntil(s, st => halted() || !!st.interface?.isOpen || !!st.dialog?.isOpen, { timeoutTicks: 8 });
+                const craftingMethod = cfg.method as (typeof ARTISAN_METHOD_MAP.crafting)[number];
+                switch (craftingMethod) {
+                    case 'bowstrings': {
+                        const r = await runSpinBowstrings(s.name, cfg.args, cfg.env, { session: s, stop: halted });
+                        return { ok: r.ok, summary: r.summary, ticks: r.ticks, produced: r.made, failure: r.failure };
+                    }
+                    case 'jewellery': {
+                        const recipe = jewelleryRecipes().find(r => r.name === (cfg.args[0] ?? setting('RECIPE', 'sapphire_ring')));
+                        if (!recipe) throw Error('unknown jewellery recipe');
+                        const maximum = Number(cfg.args[1] ?? setting('MAX_MAKE', '1'));
+                        const cap = Number(cfg.args[2] ?? setting('CAP', '200'));
+                        const r = await runJewellery(
+                            {
+                                state: () => s.sdk.getState(),
+                                tick: () => s.tick(),
+                                stop: halted,
+                                close: async () => { await s.sdk.sendCloseModal(); },
+                                open: async slot => {
+                                    const f = s.sdk.getState()?.nearbyLocs.find(l => /^furnace$/i.test(l.name) && l.distance <= 2 && l.reachable !== false);
+                                    if (!f || !(await s.sdk.sendUseItemOnLoc(slot, f.x, f.z, f.id)).success) return false;
+                                    const { waitUntil } = await import('../../../core/src/ticks');
+                                    return waitUntil(s, st => halted() || !!st.interface?.isOpen || !!st.dialog?.isOpen, { timeoutTicks: 8 });
+                                },
+                                choose: async menu =>
+                                    (menu.option === undefined
+                                        ? await s.sdk.sendClickComponent(await import('../../../core/src/logout').then(m => m.componentId(menu.component)))
+                                        : await s.sdk.sendClickComponentWithOption(await import('../../../core/src/logout').then(m => m.componentId(menu.component)), menu.option, menu.slot)
+                                    ).success,
+                                wait: (test, ticks) => import('../../../core/src/ticks').then(m => m.waitUntil(s, test, { timeoutTicks: ticks })),
+                                step: () => import('../../../core/src/ticks').then(m => m.waitTicks(s, 1)),
                             },
-                            choose: async menu =>
-                                (menu.option === undefined
-                                    ? await s.sdk.sendClickComponent(await import('../../../core/src/logout').then(m => m.componentId(menu.component)))
-                                    : await s.sdk.sendClickComponentWithOption(await import('../../../core/src/logout').then(m => m.componentId(menu.component)), menu.option, menu.slot)
-                                ).success,
-                            wait: (test, ticks) => import('../../../core/src/ticks').then(m => m.waitUntil(s, test, { timeoutTicks: ticks })),
-                            step: () => import('../../../core/src/ticks').then(m => m.waitTicks(s, 1)),
-                        },
-                        recipe,
-                        { maximum, cap, members: setting('MEMBERS') === '1' },
-                    );
-                    return { ok: true, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made };
+                            recipe,
+                            { maximum, cap, members: setting('MEMBERS') === '1' },
+                        );
+                        return { ok: true, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made };
+                    }
+                    case 'jewellery-trip': {
+                        const order = cfg.args[0] ? (readJobJson(cfg.args[0]) as unknown as JewelleryOrder) : jewelleryOrderFromEnv(cfg.env);
+                        const r = await runJewelleryOrder(s, order, halted, {}, cfg.deps);
+                        return { ok: r.ok, summary: `made=${r.made} banked=${r.banked}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
+                    }
+                    case 'legacy-jewelry': {
+                        const r = await runLegacyCraftJewelryCli(s.name, cfg.args, cfg.env, { session: s, stop: halted });
+                        return { ok: r.ok, summary: r.summary, ticks: r.ticks, produced: r.crafted, failure: r.failure };
+                    }
+                    case 'glass': {
+                        const r =
+                            setting('SUPPLY_MODE') === '1'
+                                ? await runBankedGlass(s, glassSupplyOptions(cfg.env), halted)
+                                : await runFurnaceGlass(s, Number(setting('MAX_MAKE', '1')), Number(setting('CAP', '200')), halted);
+                        return { ok: r.ok, summary: `made=${(r as any).made ?? 0}`, ticks: r.ticks, produced: Number((r as any).made ?? 0), failure: r.ok ? undefined : r.failure };
+                    }
+                    case 'tanning': {
+                        const r = await tanInventory(s, cfg.args[0] as TanKind, Number(cfg.args[1] ?? 1), Number(cfg.args[2] ?? 80), halted);
+                        return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.detail };
+                    }
+                    case 'black-dhide-sets': {
+                        const r = await runBlackDhideSetsSession(s, cfg.args, cfg.env, cfg.deps, halted);
+                        return { ok: r.ok, summary: r.summary, ticks: r.ticks, produced: r.produced, failure: r.failure };
+                    }
+                    case 'soften-clay': {
+                        const r = await runSoftenClay(s, { cap: Number(setting('CAP', '500')), maximum: Number(setting('MAX_MAKE', '20')), reserve: Number(setting('RAW_RESERVE', '0')) });
+                        return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
+                    }
+                    case 'progressive': {
+                        const order = readJobJson(cfg.args[0]!) as unknown as ProgressiveProduction;
+                        const r = await runProgressiveProduction(s, order, halted, {}, cfg.deps);
+                        return { ok: r.ok, summary: `processed=${r.processed}`, ticks: r.ticks, produced: r.processed, failure: r.ok ? undefined : r.failure };
+                    }
+                    case 'inventory': {
+                        const rName = cfg.args[0] ?? setting('RECIPE');
+                        const recipe: InventoryRecipe | undefined = inventoryRecipes().find(x => x.name === rName);
+                        if (!recipe) throw Error(`crafting: unknown inventory recipe ${String(rName)}`);
+                        const maximum = Number(setting('MAX_MAKE', '1'));
+                        const res = await runInventoryBank(s, recipe, {
+                            maximum,
+                            cap: Number(setting('CAP', '500')),
+                            maxAttempts: Number(setting('MAX_ATTEMPTS', String(maximum))),
+                            partial: setting('ORDER_MODE') === 'best-effort',
+                            reserve: Number(setting('RAW_RESERVE', '0')),
+                            members: setting('MEMBERS') === '1',
+                            stop: halted,
+                        });
+                        return { ok: res.ok, summary: `made=${res.made}`, ticks: res.ticks, produced: res.made, failure: res.ok ? undefined : res.failure };
+                    }
+                    default: {
+                        const _exhaustive: never = craftingMethod;
+                        throw Error(`crafting: unhandled method ${String(_exhaustive)}`);
+                    }
                 }
-                if (cfg.method === 'jewellery-trip') {
-                    const order = cfg.args[0] ? (readJobJson(cfg.args[0]) as unknown as JewelleryOrder) : jewelleryOrderFromEnv(cfg.env);
-                    const r = await runJewelleryOrder(s, order, halted, {}, cfg.deps);
-                    return { ok: r.ok, summary: `made=${r.made} banked=${r.banked}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
-                }
-                if (cfg.method === 'glass') {
-                    const r =
-                        setting('SUPPLY_MODE') === '1'
-                            ? await runBankedGlass(s, glassSupplyOptions(cfg.env), halted)
-                            : await runFurnaceGlass(s, Number(setting('MAX_MAKE', '1')), Number(setting('CAP', '200')), halted);
-                    return { ok: r.ok, summary: `made=${(r as any).made ?? 0}`, ticks: r.ticks, produced: Number((r as any).made ?? 0), failure: r.ok ? undefined : r.failure };
-                }
-                if (cfg.method === 'tanning') {
-                    const r = await tanInventory(s, cfg.args[0] as TanKind, Number(cfg.args[1] ?? 1), Number(cfg.args[2] ?? 80), halted);
-                    return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.detail };
-                }
-                if (cfg.method === 'soften-clay') {
-                    const r = await runSoftenClay(s, { cap: Number(setting('CAP', '500')), maximum: Number(setting('MAX_MAKE', '20')), reserve: Number(setting('RAW_RESERVE', '0')) });
-                    return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
-                }
-                if (cfg.method === 'progressive') {
-                    const order = readJobJson(cfg.args[0]!) as unknown as ProgressiveProduction;
-                    const r = await runProgressiveProduction(s, order, halted, {}, cfg.deps);
-                    return { ok: r.ok, summary: `processed=${r.processed}`, ticks: r.ticks, produced: r.processed, failure: r.ok ? undefined : r.failure };
-                }
-                const rName = cfg.args[0] ?? setting('RECIPE');
-                const recipe: InventoryRecipe | undefined = inventoryRecipes().find(x => x.name === rName);
-                if (!recipe) throw Error(`crafting: unsupported in-session method ${cfg.method} / recipe ${String(rName)}`);
-                const maximum = Number(setting('MAX_MAKE', '1'));
-                const res = await runInventoryBank(s, recipe, {
-                    maximum,
-                    cap: Number(setting('CAP', '500')),
-                    maxAttempts: Number(setting('MAX_ATTEMPTS', String(maximum))),
-                    partial: setting('ORDER_MODE') === 'best-effort',
-                    reserve: Number(setting('RAW_RESERVE', '0')),
-                    members: setting('MEMBERS') === '1',
-                    stop: halted,
-                });
-                return { ok: res.ok, summary: `made=${res.made}`, ticks: res.ticks, produced: res.made, failure: res.ok ? undefined : res.failure };
             }
             case 'herblore': {
                 if (cfg.method === 'meats') {
@@ -554,31 +577,36 @@ export async function runArtisanCli(account: string, rawCfg: ArtisanConfig): Pro
     }
     const env: Record<string, string | undefined> = { ...process.env, ...cfg.env };
 
+    const runLegacyExitCode = async (fn: () => Promise<unknown>): Promise<number> => {
+        const prevExitCode = process.exitCode;
+        process.exitCode = 0;
+        try {
+            await fn();
+            return process.exitCode ? 1 : 0;
+        } finally {
+            process.exitCode = prevExitCode;
+        }
+    };
+
     switch (cfg.skill) {
         case 'cooking':
             return await runCookingCli(cfg.method, account, cfg.args, env, cfg.deps);
         case 'firemaking':
             return await runFiremakingCli(cfg.method, account, cfg.args, env);
         case 'fletching':
-            await runFletchingCli(cfg.method, account, cfg.args, env);
-            return process.exitCode ? 1 : 0;
+            return await runLegacyExitCode(() => runFletchingCli(cfg.method, account, cfg.args, env));
         case 'smithing':
-            await runSmithingCli(cfg.method, account, cfg.args, env);
-            return process.exitCode ? 1 : 0;
+            return await runLegacyExitCode(() => runSmithingCli(cfg.method, account, cfg.args, env));
         case 'crafting':
-            await runCraftingCli(cfg.method, account, cfg.args, env, cfg.deps);
-            return process.exitCode ? 1 : 0;
+            return await runLegacyExitCode(() => runCraftingCli(cfg.method, account, cfg.args, env, cfg.deps));
         case 'herblore':
-            await runHerbloreCli(cfg.method, account, cfg.args, env);
-            return process.exitCode ? 1 : 0;
+            return await runLegacyExitCode(() => runHerbloreCli(cfg.method, account, cfg.args, env));
         case 'prayer':
             return await runPrayerCli(cfg.method, account, cfg.args, env);
         case 'magic':
-            await runMagicCli(cfg.method, account, cfg.args, env, cfg.deps);
-            return process.exitCode ? 1 : 0;
+            return await runLegacyExitCode(() => runMagicCli(cfg.method, account, cfg.args, env, cfg.deps));
         case 'foraging':
-            await runForagingQolCli(cfg.method, account, cfg.args, env);
-            return process.exitCode ? 1 : 0;
+            return await runLegacyExitCode(() => runForagingQolCli(cfg.method, account, cfg.args, env));
         case 'bank-job':
             throw Error('bank-job CLI orchestration runs directly through runBankJob jobs in scripts/aio-skiller.ts');
     }

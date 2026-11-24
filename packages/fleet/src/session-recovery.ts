@@ -4,7 +4,7 @@
 // Usage: bun packages/fleet/src/session-recovery.ts [--dry] [--json] [--root=<dir>]
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { loadOwners, mySide } from '../../core/src/fleet';
@@ -19,9 +19,10 @@ import {
     readStopFile,
     statusReadDirs,
 } from '../../core/src/practice-paths';
-import { processMatchesRecent } from '../../core/src/proc';
+import { processMatchesRecent, processStartTimes } from '../../core/src/proc';
 import { BOOTSTRAP_STATUS_AGE_MS } from '../../core/src/session-admission';
 import { attemptOutcome, listAttempts, readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
+import { savedProcessAlive, type ProcessStarts } from '../../core/src/session-takeover';
 import {
     RECOVERY_SCHEMA,
     RECOVERY_SCRIPT,
@@ -546,6 +547,77 @@ export function findCurrentNativeRecoveryQualification(
     return best?.ref ?? null;
 }
 
+export const REPAIR_LEASE_MAX_MS = 900_000;
+
+export function acquireRepairLease(
+    leaseFile: string,
+    payload: { pid: number; runId: string; nonce: string; at: number },
+    opts: {
+        now?: number;
+        pidAlive?: (pid: number) => boolean;
+        processStarts?: ProcessStarts;
+        maxAgeMs?: number;
+    } = {},
+): void {
+    const serialized = JSON.stringify(payload);
+    try {
+        writeFileSync(leaseFile, serialized, { flag: 'wx' });
+        return;
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+    }
+
+    const now = opts.now ?? payload.at;
+    const alive = opts.pidAlive ?? pidAlive;
+    const starts = opts.processStarts ?? processStartTimes;
+    const maxAgeMs = opts.maxAgeMs ?? REPAIR_LEASE_MAX_MS;
+
+    let raw: string;
+    let mtimeMs: number;
+    try {
+        raw = readFileSync(leaseFile, 'utf8');
+        mtimeMs = statSync(leaseFile).mtimeMs;
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            writeFileSync(leaseFile, serialized, { flag: 'wx' });
+            return;
+        }
+        throw err;
+    }
+
+    let parsed: { pid?: unknown; at?: unknown } | null = null;
+    try { parsed = JSON.parse(raw); } catch { parsed = null; }
+    const ownerPid = Number(parsed?.pid);
+    const ownerAt = Number.isFinite(parsed?.at) ? Number(parsed!.at) : mtimeMs;
+    const expired = now - ownerAt >= maxAgeMs && now - mtimeMs >= maxAgeMs;
+    const ownerLive = Number.isSafeInteger(ownerPid) && ownerPid > 0 && savedProcessAlive(ownerPid, ownerAt, starts, alive);
+    if (ownerLive && !expired) {
+        throw Error(`repair lease held by active pid ${ownerPid}`);
+    }
+
+    const moved = `${leaseFile}.${process.pid}.${randomUUID()}.stale`;
+    try {
+        renameSync(leaseFile, moved);
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            writeFileSync(leaseFile, serialized, { flag: 'wx' });
+            return;
+        }
+        throw err;
+    }
+    try {
+        const movedRaw = readFileSync(moved, 'utf8');
+        if (movedRaw !== raw) {
+            try { linkSync(moved, leaseFile); } catch (e) { if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e; }
+            throw Error('repair lease changed during reclamation');
+        }
+    } finally {
+        rmSync(moved, { force: true });
+    }
+
+    writeFileSync(leaseFile, serialized, { flag: 'wx' });
+}
+
 export type ControlledDispatchOneOptions = {
     root: string;
     account: string;
@@ -558,6 +630,8 @@ export type ControlledDispatchOneOptions = {
     timeoutMs?: number;
     pollMs?: number;
     now?: () => number;
+    pidAlive?: (pid: number) => boolean;
+    processStarts?: ProcessStarts;
 };
 
 export async function runControlledDispatchOne(
@@ -605,7 +679,15 @@ export async function runControlledDispatchOne(
     const resultsFile = `${repairFile}.results.jsonl`;
 
     try {
-        writeFileSync(leaseFile, JSON.stringify({ pid: process.pid, runId: opts.runId, nonce: opts.nonce, at: nowFn() }), { flag: 'wx' });
+        acquireRepairLease(
+            leaseFile,
+            { pid: process.pid, runId: opts.runId, nonce: opts.nonce, at: nowFn() },
+            {
+                now: nowFn(),
+                pidAlive: opts.pidAlive,
+                processStarts: opts.processStarts,
+            },
+        );
     } catch (err) {
         atomicJson(join(runDir, 'recovery.json'), { ...recoveryRecord, status: 'failed' });
         return { ok: false, detail: `repair lease busy: ${String(err).slice(0, 120)}` };

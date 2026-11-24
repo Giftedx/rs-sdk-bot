@@ -12,6 +12,7 @@ import {uptime} from 'node:os';
 import {join,resolve} from 'node:path';
 import {failLoops,loopLines,readRecentResults,LOOP_WINDOW_MS,type FailLoop} from './fail-loops';
 import {LEASE_MAX_AGE_MS,SIDE_NAME} from '../packages/core/src/fleet';
+import {findStopFile,resolveFleetDataDir} from '../packages/core/src/practice-paths';
 
 type BrainChain = { account: string; goal?: string; step?: string };
 type Bot={name:string;job?:{enabled?:boolean;state?:string}|null};
@@ -33,7 +34,7 @@ export type DashState={
 export type Proc={scripts:string[];up:number};
 export type Checkout={path:string;branch:string;head:string;dirty:number;behind:number|null;ahead:number|null;fetchedAt:number|null;patch:'applied'|'not applied'|'no vendor/rs-sdk'};
 // `procs` is null when the process scan failed. Then the heavy jobs and the controllers are not known.
-// `loops`: the fast-fail loops of the main checkout's results (scripts/fail-loops.ts); null when they were not read.
+// `loops`: the fast-fail loops of the main checkout's results (tools/fail-loops.ts); null when they were not read.
 export type SyncedLease={side:string;pid:number|null;at:number|null};
 export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;syncedLeases?:SyncedLease[]|null};
 
@@ -152,7 +153,7 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
         const loops=local.loops;
         if(loops==null)return null;
         const window=age(LOOP_WINDOW_MS);
-        return loops.length?[`loops   ${loops.length} fast-fail loops in ${window} (bun scripts/fail-loops.ts):`,...loopLines(loops).map(l=>`  loop  ${l}`)]:`loops   none in ${window}`;
+        return loops.length?[`loops   ${loops.length} fast-fail loops in ${window} (bun tools/fail-loops.ts):`,...loopLines(loops).map(l=>`  loop  ${l}`)]:`loops   none in ${window}`;
     });
     add('here',()=>checkoutLine('here   ',local.here,now));
     add('main',()=>local.main?checkoutLine('main   ',local.main,now):null);
@@ -211,20 +212,29 @@ function readCheckout(path:string):Checkout{
         fetchedAt:fetched.length?Math.max(...fetched):null,patch};
 }
 
+export function readSwarmStops(main:string):{file:string;text:string}[]{
+    const stopFile=findStopFile('swarm',main);
+    if(!stopFile)return [];
+    return [{file:'stop-swarm',text:(readFileSync(stopFile,'utf8').split(/\r?\n/)[0]??'').trim().slice(0,120)}];
+}
+
+export function resolveSyncedLeasesDir(main:string):string{
+    const syncedFleet=join(resolveFleetDataDir(main),'fleet');
+    return join(existsSync(syncedFleet)?syncedFleet:join(main,'fleet'),'leases');
+}
+
 if(import.meta.main){
     const here=resolve(import.meta.dir,'..');
     const list=Bun.spawnSync(['git','-C',here,'worktree','list','--porcelain'],{stdout:'pipe',stderr:'ignore',windowsHide:true}).stdout.toString();
     // The first worktree of the list is the main checkout. Only the main checkout runs the fleet and holds the stop files.
     const main=resolve(/^worktree (.+)$/m.exec(list)?.[1]??here);
-    const stops=['stop-swarm'].filter(f=>existsSync(join(main,'.practice',f)))
-        .map(file=>({file,text:(readFileSync(join(main,'.practice',file),'utf8').split(/\r?\n/)[0]??'').trim().slice(0,120)}));
+    const stops=readSwarmStops(main);
     const port=Number(process.env.DASH_PORT??3100);
     // 127.0.0.1: the dashboard listens on IPv4 (DASH_HOST default), and localhost can resolve to ::1 first.
     const state=await fetch(`http://127.0.0.1:${port}/api/state`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json() as Promise<DashState>:null).catch(()=>null);
     const same=main.toLowerCase()===here.toLowerCase(),now=Date.now();
     let loops:FailLoop[]|null=null;
     try{loops=failLoops(readRecentResults(join(main,'.practice','results.jsonl')),now);}catch{/* an unreadable results file hides only this line */}
-    const syncedFleet=join(main,'.practice','fleet-data','fleet');
-    const syncedLeases=readSyncedLeases(join(existsSync(syncedFleet)?syncedFleet:join(main,'fleet'),'leases'));
+    const syncedLeases=readSyncedLeases(resolveSyncedLeasesDir(main));
     for(const line of nowLines(state,{uptimeSec:uptime(),procs:scanProcs(now),stops,here:readCheckout(here),main:same?null:readCheckout(main),loops,syncedLeases},now))console.log(line);
 }

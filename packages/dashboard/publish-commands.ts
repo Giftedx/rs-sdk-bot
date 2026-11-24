@@ -4,8 +4,9 @@
 import {existsSync,readFileSync,writeFileSync,unlinkSync,mkdirSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {withPlanWrite,atomicJson} from '../core/src/plan-lock';
-import {liveRoot,operatorCommandsDir,practiceRoot} from '../core/src/practice-paths';
+import {findStopFile,listStopEntries,liveRoot,operatorCommandsDir,practiceRoot,stopFilePaths} from '../core/src/practice-paths';
 import {mySide} from '../core/src/fleet';
+import {defaultActivityCatalog} from '../brain/src/catalog';
 import {validateOperatorCommand,type OperatorCommand} from '../brain/src/contracts';
 import {MAIN_ACCOUNT} from './publish-relay';
 export const NAME_RE=/^[A-Za-z0-9]{1,12}$/;
@@ -76,12 +77,50 @@ export function appendOwnerRequest(root:string,text:string):{id:number}{
  writeFileSync(file,lines.join('\n'));
  return {id};
 }
-function enqueueBrainCommand(root:string,cmd:OperatorCommand){
+function canonicalJson(value:unknown):string{
+ if(Array.isArray(value))return `[${value.map(canonicalJson).join(',')}]`;
+ if(value&&typeof value==='object'){
+  const entries=Object.entries(value as Record<string,unknown>).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b));
+  return `{${entries.map(([k,v])=>`${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
+ }
+ return JSON.stringify(value);
+}
+function stripReceiptMeta(value:unknown):unknown{
+ if(!value||typeof value!=='object'||Array.isArray(value))return value;
+ const {appliedAt:_appliedAt,applied:_applied,...rest}=value as Record<string,unknown>;
+ return rest;
+}
+function enqueueBrainCommand(root:string,cmd:OperatorCommand):string|null{
  const errs=validateOperatorCommand(cmd);
- if(errs.length)throw Error(errs.join('; '));
+ if(errs.length)return errs.join('; ');
  const dir=operatorCommandsDir(root);
- mkdirSync(dir,{recursive:true});
- atomicJson(join(dir,`${cmd.id}.json`),cmd);
+ const pendingFile=join(dir,`${cmd.id}.json`),appliedFile=join(dir,'applied',`${cmd.id}.json`),rejectedFile=join(dir,'rejected',`${cmd.id}.json`);
+ const cmdKey=canonicalJson(cmd);
+ for(const candidate of [pendingFile,appliedFile]){
+  if(!existsSync(candidate))continue;
+  try{
+   if(canonicalJson(stripReceiptMeta(JSON.parse(readFileSync(candidate,'utf8'))))!==cmdKey){
+    return 'command identity conflicts with existing operator command';
+   }
+  }catch{
+   return 'command identity conflicts with existing operator command';
+  }
+ }
+ if(!existsSync(pendingFile)&&!existsSync(appliedFile)&&!existsSync(rejectedFile)){
+  mkdirSync(dir,{recursive:true});
+  atomicJson(pendingFile,cmd);
+ }
+ return null;
+}
+function existingStopFiles(root:string,flag:string):string[]{
+ const seen=new Set<string>(),out:string[]=[];
+ const push=(p:string)=>{
+  const key=process.platform==='win32'?p.toLowerCase():p;
+  if(!seen.has(key)&&existsSync(p)){seen.add(key);out.push(p);}
+ };
+ for(const p of stopFilePaths(flag,root))push(p);
+ for(const e of listStopEntries(root))if(e.location!=='sim'&&e.flag.toLowerCase()===flag.toLowerCase())push(e.path);
+ return out;
 }
 export type ApplyContext={root:string;now?:number;planWrite?:<T>(action:()=>T|Promise<T>)=>Promise<T>};
 export type Outcome={status:string;note:string|null};
@@ -90,13 +129,54 @@ export async function applyCommand(cmd:Command,ctx:ApplyContext):Promise<Outcome
  const prac=practiceRoot(ctx.root),now=ctx.now??Date.now(),iso=new Date(now).toISOString(),planWrite=ctx.planWrite??(a=>withPlanWrite(a,liveRoot(ctx.root)));
  const read=(f:string)=>existsSync(f)?readFileSync(f,'utf8'):null;
  switch(cmd.action){
-  case 'account-pause':{const f=join(prac,'stop-'+cmd.account);if(existsSync(f))return {status:'already-held',note:'a stop file already holds this account'};mkdirSync(prac,{recursive:true});writeFileSync(f,HOLD_PREFIX+cmd.id,{flag:'wx'});enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'pause_account',account:cmd.account!,reason:cmd.note??HOLD_PREFIX+cmd.id});return {status:'stop-requested',note:'the bot finishes its step and logs out'};}
-  case 'account-resume':{const f=join(prac,'stop-'+cmd.account),text=read(f);if(text==null)return {status:'not-held',note:'no stop file'};if(!text.startsWith(HOLD_PREFIX))return {status:'refused',note:'this hold belongs elsewhere; inspect it before changing it'};unlinkSync(f);enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'resume_account',account:cmd.account!,reason:cmd.note});return {status:'hold-released',note:'the swarm starts the job again on its next tick'};}
-  case 'swarm-pause':case 'side-pause':{const f=join(prac,'stop-swarm');if(existsSync(f))return {status:'already-stopped',note:read(f)!.slice(0,80)};mkdirSync(prac,{recursive:true});writeFileSync(f,`${HOLD_PREFIX}${cmd.id} ${iso}`,{flag:'wx'});enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'pause_side',side:mySide(),reason:cmd.note});return {status:'stop-requested',note:'every bot logs out at its next step; the controller exits when all are down'};}
-  case 'swarm-resume':case 'side-resume':{const f=join(prac,'stop-swarm'),text=read(f);if(text==null)return {status:'not-stopped',note:null};if(!text.startsWith(HOLD_PREFIX))return {status:'refused',note:'the fleet stop was set by hand or by a controller; clear it there'};unlinkSync(f);enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'resume_side',side:mySide(),reason:cmd.note});return {status:'stop-cleared',note:'start the controller again on the PC: bun scripts/swarm.ts swarm.json'};}
+  case 'account-pause':{
+   if(findStopFile(cmd.account!,ctx.root))return {status:'already-held',note:'a stop file already holds this account'};
+   const err=enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'pause_account',account:cmd.account!,reason:cmd.note??HOLD_PREFIX+cmd.id});
+   if(err)return {status:'refused',note:err};
+   const f=join(prac,'stop-'+cmd.account);mkdirSync(prac,{recursive:true});writeFileSync(f,HOLD_PREFIX+cmd.id,{flag:'wx'});
+   return {status:'stop-requested',note:'the bot finishes its step and logs out'};
+  }
+  case 'account-resume':{
+   const files=existingStopFiles(ctx.root,cmd.account!);
+   if(!files.length)return {status:'not-held',note:'no stop file'};
+   if(files.some(f=>!(read(f)??'').startsWith(HOLD_PREFIX)))return {status:'refused',note:'this hold belongs elsewhere; inspect it before changing it'};
+   const err=enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'resume_account',account:cmd.account!,reason:cmd.note});
+   if(err)return {status:'refused',note:err};
+   for(const f of files)unlinkSync(f);
+   return {status:'hold-released',note:'the swarm starts the job again on its next tick'};
+  }
+  case 'swarm-pause':case 'side-pause':{
+   const existing=findStopFile('swarm',ctx.root);
+   if(existing)return {status:'already-stopped',note:(read(existing)??'').slice(0,80)};
+   const err=enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'pause_side',side:mySide(),reason:cmd.note});
+   if(err)return {status:'refused',note:err};
+   const f=join(prac,'stop-swarm');mkdirSync(prac,{recursive:true});writeFileSync(f,`${HOLD_PREFIX}${cmd.id} ${iso}`,{flag:'wx'});
+   return {status:'stop-requested',note:'every bot logs out at its next step; the controller exits when all are down'};
+  }
+  case 'swarm-resume':case 'side-resume':{
+   const files=existingStopFiles(ctx.root,'swarm');
+   if(!files.length)return {status:'not-stopped',note:null};
+   if(files.some(f=>!(read(f)??'').startsWith(HOLD_PREFIX)))return {status:'refused',note:'the fleet stop was set by hand or by a controller; clear it there'};
+   const err=enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'resume_side',side:mySide(),reason:cmd.note});
+   if(err)return {status:'refused',note:err};
+   for(const f of files)unlinkSync(f);
+   return {status:'stop-cleared',note:'start the controller again on the PC: bun scripts/swarm.ts swarm.json'};
+  }
   case 'request':{const {id}=appendOwnerRequest(ctx.root,cmd.text??'');return {status:'request-recorded',note:`row ${id} in ${REQUEST_FILE}`};}
-  case 'override-account':{const mins=cmd.durationMin??30;enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'override_account',account:cmd.account!,...(cmd.activityId!==undefined?{activityId:cmd.activityId}:{}),...(cmd.role?{role:cmd.role as any}:{}),expiresAt:now+mins*60_000,reason:cmd.note});return {status:'override-submitted',note:`${cmd.account}${cmd.activityId?' -> '+cmd.activityId:''}`};}
-  case 'clear-defect':{enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'clear_defect',activityId:cmd.activityId!,...(cmd.defectId?{defectId:cmd.defectId}:{}),...(cmd.faultSignature?{faultSignature:cmd.faultSignature}:{}),reason:cmd.note});return {status:'defect-clear-submitted',note:cmd.activityId!};}
+  case 'override-account':{
+   if(cmd.activityId!==undefined&&cmd.activityId!==null&&!defaultActivityCatalog(ctx.root).has(cmd.activityId)){
+    return {status:'refused',note:`unknown activity "${cmd.activityId}"`};
+   }
+   const mins=cmd.durationMin??30;
+   const err=enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'override_account',account:cmd.account!,...(cmd.activityId!==undefined?{activityId:cmd.activityId}:{}),...(cmd.role?{role:cmd.role as any}:{}),expiresAt:now+mins*60_000,reason:cmd.note});
+   if(err)return {status:'refused',note:err};
+   return {status:'override-submitted',note:`${cmd.account}${cmd.activityId?' -> '+cmd.activityId:''}`};
+  }
+  case 'clear-defect':{
+   const err=enqueueBrainCommand(ctx.root,{schemaVersion:1,id:cmd.id,issuedAt:now,issuedBy:'dashboard',kind:'clear_defect',activityId:cmd.activityId!,...(cmd.defectId?{defectId:cmd.defectId}:{}),...(cmd.faultSignature?{faultSignature:cmd.faultSignature}:{}),reason:cmd.note});
+   if(err)return {status:'refused',note:err};
+   return {status:'defect-clear-submitted',note:cmd.activityId!};
+  }
   case 'job-disable':case 'job-enable':{
    const enable=cmd.action==='job-enable';
    return planWrite(()=>{

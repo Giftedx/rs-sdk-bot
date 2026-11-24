@@ -3,8 +3,9 @@ import { join, resolve } from 'node:path';
 import { workspaceRoot } from '../../../core/src/build-workspace-root';
 import { writeLiveUpdate, type LiveUpdateMark } from '../../../core/src/live-reload';
 import { hasStopFile } from '../../../core/src/practice-paths';
+import { spawnSyncTimed } from '../../../core/src/proc';
 import { applyUpdate } from './adopt';
-import { gitHash, gitIn, importClosure, mergedDeliveryCopies, mergeText, readCheckout, readRebased, rebasableDeliveryEdits, REBASED_FILE } from './inspect';
+import { gitHash, gitIn, importClosure, LIVE_UPDATE_GIT_TIMEOUT_MS, mergedDeliveryCopies, mergeText, readCheckout, readRebased, rebasableDeliveryEdits, REBASED_FILE } from './inspect';
 import { coordinatorHolds, LIVE_SERVER, liveRuns, planUpdate, releaseClosure, type LiveRunsOptions } from './plan';
 import { few } from './inspect';
 import { patchCollisions, resetVendor, SDK, SDK_PATCH, vendorExact, vendorReleaseFiles, vendorState } from './vendor';
@@ -44,14 +45,31 @@ export async function runLiveUpdateCli(
         try { cache = JSON.parse(readFileSync(mergedCache, 'utf8')); } catch { /* none yet */ }
         const merged = (url: string) => {
             if (cache[url]) return true;
-            const p = Bun.spawnSync(['gh', 'pr', 'view', url, '--json', 'state', '--jq', '.state'], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+            const p = spawnSyncTimed(['gh', 'pr', 'view', url, '--json', 'state', '--jq', '.state'], {
+                cwd: root,
+                env: { ...process.env, GH_PROMPT_DISABLED: '1' },
+                stdout: 'pipe',
+                stderr: 'pipe',
+                windowsHide: true,
+                timeout: LIVE_UPDATE_GIT_TIMEOUT_MS,
+            });
             const yes = p.exitCode === 0 && p.stdout.toString().trim() === 'MERGED';
             if (yes) { cache[url] = true; try { writeFileSync(mergedCache, JSON.stringify(cache)); } catch { /* the cache is a speed-up only */ } }
             return yes;
         };
         const copies = read.behind ? mergedDeliveryCopies(root, read.dirty.filter(d => read.incoming.includes(d.path)), merged) : new Set<string>();
         const marked = read.dirty.map(d => copies.has(d.path) ? { ...d, mergedDelivery: true } : d);
-        const show = (rev: string) => (path: string) => { const p = Bun.spawnSync(['git', 'show', `${rev}:${path}`], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true }); return p.exitCode === 0 ? p.stdout.toString() : null; };
+        const show = (rev: string) => (path: string) => {
+            const p = spawnSyncTimed(['git', 'show', `${rev}:${path}`], {
+                cwd: root,
+                env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+                stdout: 'pipe',
+                stderr: 'pipe',
+                windowsHide: true,
+                timeout: LIVE_UPDATE_GIT_TIMEOUT_MS,
+            });
+            return p.exitCode === 0 ? p.stdout.toString() : null;
+        };
         const rebases = read.behind ? rebasableDeliveryEdits(root, marked, read.incoming,
             { head: show('HEAD'), target: show(target), local: path => { try { return readFileSync(join(root, path), 'utf8'); } catch { return null; } } }, mergeText) : new Map();
         const checkout = { ...read, dirty: marked.map(d => rebases.has(d.path) ? { ...d, rebase: rebases.get(d.path)!.text } : d) };

@@ -196,9 +196,32 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(resolved.steps[2]?.family).toBe('bank-artisan');
     expect(resolved.steps[2]?.routeKey).toBe('cooking:food');
     expect(resolved.steps[2]?.env.DEMAND_ID).toBe('d:sharks');
-    expect(resolved.steps[0]?.env.ORDER_KEY).toBe('brain-383-100');
+    expect(resolved.steps[0]?.env.ORDER_KEY).toBe('brain-383-100-p460');
     expect(resolved.steps[0]?.env.CASH_RESERVE).toBe('1000');
     expect(resolved.steps[0]?.env.LIMIT_PRICE).toBe('460');
+
+    const repricedGe = resolvePlannedStepWorkerRoute('Cooker', {
+        stepKind: 'acquire',
+        source: 'ge',
+        itemId: 383,
+        quantity: 100,
+        estimatedTicks: 40,
+        estimatedCoinCost: 50_000,
+        coinFloatPreserved: 1000,
+    });
+    expect(repricedGe.env.LIMIT_PRICE).toBe('575');
+    expect(repricedGe.env.ORDER_KEY).toBe('brain-383-100-p575');
+    expect(repricedGe.env.ORDER_KEY).not.toBe(resolved.steps[0]?.env.ORDER_KEY);
+
+    const blueDragonRoute = resolveActivityWorkerRoute({
+        id: 'combat:boss-blue-dragon',
+        family: 'combat',
+        kind: 'train',
+        config: {},
+    });
+    expect(blueDragonRoute.family).toBe('combat');
+    expect(blueDragonRoute.routeKey).toBe('boss:blue-dragon');
+    expect(blueDragonRoute.args).toEqual(['blue-dragon']);
     expect(resolved.steps[1]?.env.EQUIP).toBe('1');
 
     const shopAcquire = resolvePlannedStepWorkerRoute('Shopper', {

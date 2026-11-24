@@ -530,3 +530,191 @@ test('scheduler prevents donor double-booking, replans on failed transfer safety
         expect(upgStep.transferOrderId).toBe(upgradeXferPlan.transferOrders[0]!.id);
     }
 });
+
+test('recovery accounts with recovery-trigger holds emit recover steps, and blocked recovery does not burn remainingSlots', () => {
+    const stranded = makeAcct({
+        name: 'StrandedBot',
+        lifecycle: 'needs_location_recovery',
+        pos: { x: 3200, z: 3200, level: 2 },
+        systemHolds: [{
+            kind: 'maintenance',
+            key: 'location_stranded',
+            reason: 'stranded upstairs',
+            createdAt: NOW - 10_000,
+            expiresAt: NOW + 300_000,
+        }],
+    });
+    const unsettled = makeAcct({
+        name: 'UnsettledBot',
+        lifecycle: 'needs_logout_recovery',
+        systemHolds: [{
+            kind: 'retry_backoff',
+            key: 'session_unsettled',
+            reason: 'unsettled session',
+            createdAt: NOW - 10_000,
+            expiresAt: NOW + 300_000,
+        }],
+    });
+    const coinDemands: GoalDemand[] = [{
+        id: 'd:coins',
+        goalKind: 'coin_fund',
+        valueScore: 50,
+        valuePerHour: 50,
+        target: { kind: 'coins', amount: 10_000 },
+        fulfilled: 0,
+        remaining: 10_000,
+        priorityWeight: 1,
+        active: true,
+    }];
+    const recPlan = scheduleFleet({
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { StrandedBot: stranded, UnsettledBot: unsettled },
+        },
+        activities: ACTIVITIES,
+        demands: coinDemands,
+        maxBots: 2,
+    });
+    expect(recPlan.accountPlans.UnsettledBot?.steps[0]?.stepKind).toBe('recover');
+    expect(recPlan.accountPlans.StrandedBot?.steps[0]?.stepKind).toBe('recover');
+
+    // A recovery account blocked by a non-recovery hold emits 0 steps and must NOT consume remainingSlots.
+    const blockedRec = makeAcct({
+        name: 'BlockedRec',
+        lifecycle: 'needs_logout_recovery',
+        systemHolds: [{
+            kind: 'circuit_breaker',
+            key: 'login_storm',
+            reason: 'circuit open',
+            createdAt: NOW - 10_000,
+            expiresAt: NOW + 300_000,
+        }],
+    });
+    const idleBot = makeAcct({
+        name: 'IdleBot',
+        lifecycle: 'idle',
+    });
+    const slotPlan = scheduleFleet({
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { BlockedRec: blockedRec, IdleBot: idleBot },
+        },
+        activities: ACTIVITIES,
+        demands: coinDemands,
+        maxBots: 1,
+    });
+    expect(slotPlan.accountPlans.BlockedRec?.steps).toHaveLength(0);
+    expect(slotPlan.accountPlans.IdleBot?.steps.length).toBeGreaterThan(0);
+});
+
+test('running account switch excludes hub_banker and spot reroute respects all full spots', () => {
+    // 1. Running account switching to a higher-value cooking demand must NOT pick hub_banker.
+    const donor = makeAcct({
+        name: 'IdleDonor',
+        lifecycle: 'idle',
+        skills: { Fishing: { level: 1, xp: 0 }, Cooking: { level: 1, xp: 0 }, Thieving: { level: 1, xp: 0 } },
+        bank: { items: { 383: 500, 995: 5000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const runner = makeAcct({
+        name: 'RunnerBot',
+        lifecycle: 'running',
+        activeJob: { activityId: 'gather:thieving-knight', demandId: 'd:coins', startedAt: NOW - 60_000 },
+        inventory: {},
+        bank: { items: { 995: 500 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const noHubSwitch = scheduleFleet({
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { IdleDonor: donor, RunnerBot: runner },
+        },
+        activities: [ACTIVITIES[1]!, ACTIVITIES[2]!],
+        demands: [
+            { id: 'd:cooked-sharks', goalKind: 'main_supply', valueScore: 500, valuePerHour: 5000, target: { kind: 'item', itemId: 385, count: 100 }, fulfilled: 0, remaining: 100, priorityWeight: 1, active: true },
+            { id: 'd:coins', goalKind: 'coin_fund', valueScore: 20, valuePerHour: 20, target: { kind: 'coins', amount: 50_000 }, fulfilled: 0, remaining: 50_000, priorityWeight: 1, active: true },
+        ],
+        logoutProofs: new Map([['idledonor', confirmedProof('IdleDonor')]]),
+        requireMarketQuote: true,
+        marketQuotes: {},
+        maxBots: 5,
+    });
+    const runnerSteps = noHubSwitch.accountPlans.RunnerBot?.steps ?? [];
+    expect(runnerSteps.some((s) => (s.stepKind === 'acquire' || s.stepKind === 'gear_upgrade') && s.source === 'hub_banker')).toBe(false);
+    expect(noHubSwitch.transferOrders.some((t) => t.to === 'RunnerBot')).toBe(false);
+
+    // 2. Running-account reroute excludes both locally-allocated full spots and externally-occupied spots.
+    const spotA: ActivityDefinition = {
+        id: 'gather:spot-a',
+        workerId: 'gather',
+        family: 'gather',
+        kind: 'gather',
+        label: 'Spot A',
+        skill: 'Fishing',
+        spotId: 'spot_a',
+        maxConcurrentAccounts: 1,
+        outputs: [{ itemId: 383, countPerUnit: 1 }],
+        config: {},
+        baselineRate: { xpPerTick: 100, unitsPerTick: 0.3, gpPerTick: 0, setupTicks: 10, minBatchUnits: 10, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const spotB: ActivityDefinition = {
+        ...spotA,
+        id: 'gather:spot-b',
+        label: 'Spot B',
+        spotId: 'spot_b',
+        baselineRate: { xpPerTick: 100, unitsPerTick: 0.25, gpPerTick: 0, setupTicks: 10, minBatchUnits: 10, confidence: 'practice' },
+    };
+    const spotC: ActivityDefinition = {
+        ...spotA,
+        id: 'gather:spot-c',
+        label: 'Spot C',
+        spotId: 'spot_c',
+        baselineRate: { xpPerTick: 100, unitsPerTick: 0.2, gpPerTick: 0, setupTicks: 10, minBatchUnits: 10, confidence: 'practice' },
+    };
+    const run1 = makeAcct({
+        name: 'RunA',
+        lifecycle: 'running',
+        activeJob: { activityId: 'gather:spot-a', demandId: 'd:raw', startedAt: NOW - 60_000 },
+    });
+    const run2 = makeAcct({
+        name: 'RunB',
+        lifecycle: 'running',
+        activeJob: { activityId: 'gather:spot-a', demandId: 'd:raw', startedAt: NOW - 60_000 },
+    });
+    const reroutePlan = scheduleFleet({
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { RunA: run1, RunB: run2 },
+            spotOccupancy: { spot_b: 1 },
+        },
+        activities: [spotA, spotB, spotC],
+        demands: [{
+            id: 'd:raw',
+            goalKind: 'main_supply',
+            valueScore: 500,
+            valuePerHour: 5000,
+            target: { kind: 'item', itemId: 383, count: 500 },
+            fulfilled: 0,
+            remaining: 500,
+            priorityWeight: 1,
+            active: true,
+        }],
+        maxBots: 5,
+    });
+    const runAAct = reroutePlan.accountPlans.RunA?.steps.at(-1);
+    const runBAct = reroutePlan.accountPlans.RunB?.steps.at(-1);
+    expect(runAAct?.stepKind === 'work' && runAAct.activityId).toBe('gather:spot-a');
+    expect(runBAct?.stepKind === 'work' && runBAct.activityId).toBe('gather:spot-c');
+    expect(reroutePlan.spotAllocations.spot_b).toBeUndefined();
+});

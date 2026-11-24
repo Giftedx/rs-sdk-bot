@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { acquireFleetLease, fleetGitRetryable, fleetPushRetryable, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
+import { acquireFleetLease, fleetGitRetryable, fleetPushRetryable, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, writeFence, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
 
 const git = (cwd: string, ...args: string[]) => fleetGitWindow(cwd, 'fleet lease fixture', 5000)(args);
 
@@ -296,4 +296,27 @@ test('the same commit is pushed again after a remote that was busy, never after 
         'x unavailable or changed: ! [remote rejected] abc -> fleet-trade-claim/x (pre-receive hook declined)', 'x unavailable or changed: ! [remote rejected] abc -> x (protected branch hook declined)',
         'fleet account claim held by swarm'])
         expect(fleetPushRetryable(Error(text)), text).toBe(false);
+});
+
+test('writeFence retries transient EPERM/EBUSY renames and removes temp files on permanent error', () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-fence-'));
+    try {
+        let attempts = 0;
+        writeFence(base, 'local:00000000-0000-4000-8000-000000000001', 123456, (from, to) => {
+            attempts++;
+            if (attempts <= 2) throw Object.assign(Error('locked'), { code: attempts === 1 ? 'EPERM' : 'EBUSY' });
+            renameSync(from, to);
+        });
+        expect(attempts).toBe(3);
+        const fence = JSON.parse(readFileSync(join(base, '.practice', 'fleet-controller-fence.json'), 'utf8'));
+        expect(fence).toEqual({ holder: 'local:00000000-0000-4000-8000-000000000001', until: 123456 });
+        expect(readdirSync(join(base, '.practice')).filter(f => f.endsWith('.tmp'))).toEqual([]);
+
+        expect(() => writeFence(base, 'local:00000000-0000-4000-8000-000000000001', 999, () => {
+            throw Object.assign(Error('disk full'), { code: 'ENOSPC' });
+        })).toThrow('disk full');
+        expect(readdirSync(join(base, '.practice')).filter(f => f.endsWith('.tmp'))).toEqual([]);
+    } finally {
+        if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
+    }
 });

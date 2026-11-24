@@ -158,3 +158,90 @@ test('side pause and resume use .practice/stop-swarm and retain account holds', 
   f.close();
  }
 });
+
+test('override-account advertises Brain ACCOUNT_ROLES, persists valid roles, and rejects non-Brain roles', async () => {
+ const f = fixture();
+ try {
+  mkdirSync(join(f.root, 'vendor/rs-sdk/bots/Worker'), { recursive: true });
+  const meta = (await (await f.handler(new Request('http://127.0.0.1:3100/api/control'), '127.0.0.1')).json()) as any;
+  expect(meta.roles).toEqual(['auto', 'army', 'helper', 'specialist']);
+
+  const okId = randomUUID();
+  const okRes = await f.send({ id: okId, action: 'override-account', account: 'Worker', role: 'army', durationMin: 20 });
+  expect(okRes.status).toBe(200);
+  const queued = JSON.parse(readFileSync(join(f.liveDir, 'operator-commands', `${okId}.json`), 'utf8'));
+  expect(queued.role).toBe('army');
+
+  for (const badRole of ['mining', 'main', 123]) {
+   const badId = randomUUID();
+   const res = await f.send({ id: badId, action: 'override-account', account: 'Worker', role: badRole, durationMin: 20 });
+   expect(res.status).toBe(400);
+   expect(existsSync(join(f.liveDir, 'operator-commands', `${badId}.json`))).toBe(false);
+  }
+ } finally {
+  f.close();
+ }
+});
+
+test('account holds and releases handle .practice/live/stop-* files and preserve non-dashboard holds', async () => {
+ const f = fixture();
+ try {
+  mkdirSync(join(f.root, 'vendor/rs-sdk/bots/Worker'), { recursive: true });
+  writeFileSync(join(f.liveDir, 'stop-Worker'), 'dashboard-stop:live-hold');
+  const meta1 = (await (await f.handler(new Request('http://127.0.0.1:3100/api/control'), '127.0.0.1')).json()) as any;
+  expect(meta1.accountHolds).toEqual([{ name: 'Worker', owner: 'dashboard' }]);
+
+  const releaseId = randomUUID();
+  expect((await f.send({ id: releaseId, action: 'account-release', account: 'Worker' })).status).toBe(200);
+  expect(existsSync(join(f.liveDir, 'stop-Worker'))).toBe(false);
+
+  writeFileSync(join(f.liveDir, 'stop-Worker'), 'owner live hold');
+  const meta2 = (await (await f.handler(new Request('http://127.0.0.1:3100/api/control'), '127.0.0.1')).json()) as any;
+  expect(meta2.accountHolds).toEqual([{ name: 'Worker', owner: 'other' }]);
+  expect((await f.send({ id: randomUUID(), action: 'account-release', account: 'Worker' })).status).toBe(400);
+  expect(existsSync(join(f.liveDir, 'stop-Worker'))).toBe(true);
+ } finally {
+  f.close();
+ }
+});
+
+test('Brain receipt reconciliation distinguishes applied:false, tracks account/swarm commands, and allows idempotent re-enqueue', async () => {
+ const f = fixture();
+ try {
+  mkdirSync(join(f.root, 'vendor/rs-sdk/bots/Worker'), { recursive: true });
+  const cmdDir = join(f.liveDir, 'operator-commands');
+  const appliedDir = join(cmdDir, 'applied');
+  mkdirSync(appliedDir, { recursive: true });
+
+  const noopId = randomUUID();
+  const activity = defaultActivityCatalog(f.root).list()[0]!;
+  expect((await f.send({ id: noopId, action: 'clear-defect', activityId: activity.id })).status).toBe(200);
+  const queuedNoop = JSON.parse(readFileSync(join(cmdDir, `${noopId}.json`), 'utf8'));
+  rmSync(join(cmdDir, `${noopId}.json`));
+  writeFileSync(join(appliedDir, `${noopId}.json`), JSON.stringify({ ...queuedNoop, appliedAt: queuedNoop.issuedAt + 50, applied: false }));
+
+  const pauseId = randomUUID();
+  expect((await f.send({ id: pauseId, action: 'account-pause', account: 'Worker' })).status).toBe(200);
+  const queuedPause = JSON.parse(readFileSync(join(cmdDir, `${pauseId}.json`), 'utf8'));
+  rmSync(join(cmdDir, `${pauseId}.json`));
+  writeFileSync(join(appliedDir, `${pauseId}.json`), JSON.stringify({ ...queuedPause, appliedAt: queuedPause.issuedAt + 50, applied: true }));
+
+  const meta = (await (await f.handler(new Request('http://127.0.0.1:3100/api/control'), '127.0.0.1')).json()) as any;
+  expect(meta.requests.find((r: any) => r.id === noopId).status).toBe('not-applied');
+  expect(meta.requests.find((r: any) => r.id === pauseId).status).toBe('accepted');
+
+  // Remove dashboard audit receipt to exercise enqueueCommand's own idempotency check against applied/<id>.json.
+  rmSync(join(f.root, '.practice', 'dashboard-controls', `${noopId}.json`));
+  const realNow = Date.now;
+  Date.now = () => queuedNoop.issuedAt;
+  try {
+   expect((await f.send({ id: noopId, action: 'clear-defect', activityId: activity.id })).status).toBe(200);
+   rmSync(join(f.root, '.practice', 'dashboard-controls', `${noopId}.json`));
+   expect((await f.send({ id: noopId, action: 'clear-defect', activityId: activity.id, reason: 'different' })).status).toBe(400);
+  } finally {
+   Date.now = realNow;
+  }
+ } finally {
+  f.close();
+ }
+});

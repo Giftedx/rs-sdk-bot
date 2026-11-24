@@ -31,7 +31,7 @@ export function finishRecoveryPermit(r: ControlledRecoveryRequest, exitCode: num
         || !Number.isFinite(receipt.endedAt) || receipt.endedAt < receipt.startedAt || receipt.endedAt > (options.now ?? Date.now)()
         || receipt.scope?.gameplay !== false || receipt.scope.production !== 0 || receipt.scope.repairsFailure !== false || receipt.scope.qualifiesScript !== false
         || !same(receipt.before?.player?.name, r.account) || !recoveryStatePreserved(receipt.before, receipt.after)) throw Error('recovery child did not confirm preserved cleanup');
-    const root = recoveryLifecycleRoot(r.server, base), proof = readLogoutProof(r.account, r.server, { root });
+    const root = recoveryLifecycleRoot(r.server, base, r.account), proof = readLogoutProof(r.account, r.server, { root });
     const attempt = listAttempts(r.account, r.server, { root }).find(a => a.attemptId === receipt.attemptId);
     if (proof.state !== 'confirmed' || proof.attemptId !== receipt.attemptId || proof.receiptSha256 !== receipt.lifecycleSha256 || attempt?.sha256 !== proof.receiptSha256
         || !attempt.receipt || attempt.receipt.createdAt < receipt.startedAt || proof.loggedOutAt < receipt.startedAt
@@ -86,9 +86,13 @@ export function launchPermittedRecovery(r: ControlledRecoveryRequest, base: stri
 
 export function recoveredSessionForRun(account: string, server: string, runId: string, source: string, base: string): boolean {
     if (!/^[A-Za-z0-9_ -]{1,12}$/.test(account)) return false;
-    const root = recoveryLifecycleRoot(server, base), proof = readLogoutProof(account, server, { root });
+    const root = recoveryLifecycleRoot(server, base, account), proof = readLogoutProof(account, server, { root });
     if (proof.state !== 'confirmed' || proof.ownerRun !== runId) return false;
-    const statusFile = join(base, '.practice/status', account + '.json'), status = existsSync(statusFile) ? json(statusFile) : null;
+    let status: any = null;
+    for (const statusDir of statusReadDirs(base)) {
+        const statusFile = join(statusDir, account + '.json');
+        if (existsSync(statusFile)) { status = json(statusFile); break; }
+    }
     if (status?.server === server && !status.result && (!Number.isFinite(status.at) || status.at > proof.loggedOutAt)) return false;
     const dir = join(base, '.practice/coordinator/session-recovery/accounts', account.toLowerCase());
     if (!existsSync(dir) || existsSync(join(dir, 'lease.json'))) return false;

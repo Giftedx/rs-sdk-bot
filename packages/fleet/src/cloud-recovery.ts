@@ -2,10 +2,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
-import { isDeepStrictEqual } from 'node:util';
 import { assertBoundedRecoveryAssignments, validateBoundedRecovery, type RecoveryTarget } from '../../core/src/bounded-recovery';
 import { readFleetAccountClaim } from '../../core/src/fleet-trade-claim';
-import { liveRoot } from '../../core/src/practice-paths';
+import { lifecycleReadRoots, lifecycleRootForRead, liveRoot, readStopFile } from '../../core/src/practice-paths';
 import { missionSignature, successfulEnd } from '../../core/src/session-admission';
 import { listAttempts, readLogoutProof } from '../../core/src/session-lifecycle';
 import { capabilityRevision } from '../../core/src/worker-release';
@@ -46,17 +45,27 @@ export function boundedRecoveryPlan(plan: any, targets: RecoveryTarget[], owned:
     };
 }
 
+function resolveRecoveryLifecycleRoot(base: string, account: string, server = LIVE_SERVER): string {
+    for (const candidate of lifecycleReadRoots(base)) {
+        if (readLogoutProof(account, server, { root: candidate }).state !== 'none') {
+            return candidate;
+        }
+    }
+    return lifecycleRootForRead(server, base);
+}
+
 export function prepareBoundedRecovery(base: string, plan: any, targets: RecoveryTarget[], owned: readonly string[], side: string, now = Date.now()) {
     const next = boundedRecoveryPlan(plan, targets, owned, now);
     assertBoundedRecoveryAssignments(next.boundedRecovery, next.jobs);
     if (existsSync(join(liveRoot(base), 'build-lock.json'))) throw Error('bounded recovery refuses an active build lock');
     const ended = loadEnded(join(base, '.practice/swarm-deaths.json'));
     for (const target of targets) {
-        const proof = readLogoutProof(target.account, LIVE_SERVER, { root: join(base, '.practice/session-lifecycle') });
+        const lRoot = resolveRecoveryLifecycleRoot(base, target.account, LIVE_SERVER);
+        const proof = readLogoutProof(target.account, LIVE_SERVER, { root: lRoot });
         if (proof.state !== 'held' || proof.attemptId !== target.attemptId) throw Error('bounded recovery exact producer changed');
         const end = ended.get(target.account);
         if (!end || end.at !== target.endedAt) throw Error('bounded recovery exact failure changed');
-        const file = join(base, '.practice', 'stop-' + target.account), stopText = existsSync(file) ? readFileSync(file, 'utf8') : undefined;
+        const stopText = readStopFile(target.account, base);
         const claim = readFleetAccountClaim(base, { account: target.account, server: LIVE_SERVER });
         if (!claim || claim.side !== side) throw Error('bounded recovery claim ownership changed');
         const e = assessRecoveryEligibility({
@@ -98,7 +107,8 @@ export function prepareBoundedInspection(base: string, plan: any, targets: Recov
     const boundPath = join(base, '.practice/cloud-side', side, 'recovery-plan.json');
     const bound = existsSync(boundPath) ? JSON.parse(readFileSync(boundPath, 'utf8')).boundedRecovery : { targets };
     for (const account of accounts) {
-        const proof = readLogoutProof(account, LIVE_SERVER, { root: join(base, '.practice/session-lifecycle') });
+        const lRoot = resolveRecoveryLifecycleRoot(base, account, LIVE_SERVER);
+        const proof = readLogoutProof(account, LIVE_SERVER, { root: lRoot });
         const claim = readFleetAccountClaim(base, { account, server: LIVE_SERVER });
         if (proof.state !== 'confirmed' || !claim || claim.side !== side || claim.phase !== 'released') {
             throw Error('bounded inspection needs current confirmed logout and released claim');
@@ -107,7 +117,7 @@ export function prepareBoundedInspection(base: string, plan: any, targets: Recov
         if (!end || persistentEnd(end.reason) || !successfulEnd(end.reason)) {
             throw Error('bounded inspection end still requires controller repair or completed recovery');
         }
-        const producer = listAttempts(account, LIVE_SERVER, { root: join(base, '.practice/session-lifecycle') }).find(a => a.attemptId === proof.attemptId);
+        const producer = listAttempts(account, LIVE_SERVER, { root: lRoot }).find(a => a.attemptId === proof.attemptId);
         const target = targets.find(t => t.account === account)!;
         const job = staged.jobs.find((j: any) => j.account === account);
         const source = capabilityRevision(['scripts/session-check.ts'], base);

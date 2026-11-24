@@ -151,3 +151,17 @@ test('unregistered legacy jobs belong to local while their observed stock remain
   expect(stock.items[0]).toMatchObject({recentBanked:2,shortfall:0,state:'covered'});
  }
 }));
+
+test('preparation prefers fresher .practice/live/status observations over legacy .practice/status',()=>fixture((base,write)=>{
+ const fleetDir=join(base,'fleet');
+ write('swarm.json',{maxBots:1,jobs:[]});
+ write('fleet/owners.json',{accounts:{Local:{side:'cloud',server}}});
+ const legacy={name:'Local',server,at:now-500,bankAt:now-600,bank:[{id:333,name:'Trout',count:2}]};
+ const live={name:'Local',server,at:now-10,bankAt:now-20,bank:[{id:333,name:'Trout',count:14}]};
+ write('.practice/status/Local.json',legacy);
+ write('.practice/live/status/Local.json',live);
+ const input=readPreparationInputs({base,fleetDir,side:'cloud',planFile:join(base,'swarm.json'),fallbackAccounts:[]});
+ expect(input.statuses.find(s=>s.name==='Local')).toMatchObject(live);
+ expect(input.observationSources.Local).toMatchObject({kind:'status',path:join(base,'.practice/live/status/Local.json'),side:'cloud',ownerSide:'cloud'});
+ expect(input.sources.Local).toBe(digest(join(base,'.practice/live/status/Local.json')));
+}));

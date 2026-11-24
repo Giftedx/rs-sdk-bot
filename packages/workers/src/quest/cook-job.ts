@@ -118,11 +118,11 @@ export function observeCookJobSnapshot(s: Session, requireBank = true, key = 'co
     };
 }
 
-export async function runQuestCookJob(name: string, cap: number) {
+export async function runQuestCookJob(name: string, cap: number, existingSession?: Session) {
     parseCookJobArgs([name], String(cap));
     const completeCook = await cookJobRuntime.completeCook();
     const leaveRuneStarter = await cookJobRuntime.leaveRuneStarter();
-    const s = await openBot(name);
+    const s = existingSession ?? (await openBot(name));
     const deadline = s.tick() + cap;
     holdSessionEater(s.sdk);
     let before: CookJobSnapshot | undefined;
@@ -289,14 +289,16 @@ export async function runQuestCookJob(name: string, cap: number) {
         off();
     }
     let logout = false;
-    const settled = await settle([s], workOk, detail, {
-        log: (line) => {
-            console.log(line);
-            if (line === 'LOGOUT logged-out') logout = true;
-        },
-    });
+    const settled = existingSession
+        ? true
+        : await settle([s], workOk, detail, {
+              log: (line) => {
+                  console.log(line);
+                  if (line === 'LOGOUT logged-out') logout = true;
+              },
+          });
     return {
-        ok: Boolean(workOk && settled && logout && gather?.ok === true && quest?.ok === true && !!checks && Object.values(checks).every(Boolean)),
+        ok: Boolean(workOk && settled && (existingSession ? true : logout) && gather?.ok === true && quest?.ok === true && !!checks && Object.values(checks).every(Boolean)),
         account: name,
         gather,
         quest,
@@ -346,11 +348,11 @@ export function hettyJobChecks(
     };
 }
 
-export async function runQuestHettyJob(name: string, cap: number) {
+export async function runQuestHettyJob(name: string, cap: number, existingSession?: Session) {
     parseCookJobArgs([name, 'hetty'], String(cap));
     const completeHetty = await cookJobRuntime.completeHetty();
     const leaveRuneStarter = await cookJobRuntime.leaveRuneStarter();
-    const s = await openBot(name);
+    const s = existingSession ?? (await openBot(name));
     const deadline = s.tick() + cap;
     holdSessionEater(s.sdk);
     const workDeadline = deadline - Math.min(64, cap - 1);
@@ -476,15 +478,17 @@ export async function runQuestHettyJob(name: string, cap: number) {
         }
     }
     let logout = false;
-    const settled = await settle([s], workOk, detail, {
-        log: (line) => {
-            console.log(line);
-            if (line === 'LOGOUT logged-out') logout = true;
-            if (/^WARN .*?(?:logout|session close)/.test(line)) logout = false;
-        },
-    });
+    const settled = existingSession
+        ? true
+        : await settle([s], workOk, detail, {
+              log: (line) => {
+                  console.log(line);
+                  if (line === 'LOGOUT logged-out') logout = true;
+                  if (/^WARN .*?(?:logout|session close)/.test(line)) logout = false;
+              },
+          });
     return {
-        ok: !!(workOk && settled && logout && gather?.ok && quest?.ok),
+        ok: !!(workOk && settled && (existingSession ? true : logout) && gather?.ok && quest?.ok),
         account: name,
         questKey: 'hetty',
         gather,

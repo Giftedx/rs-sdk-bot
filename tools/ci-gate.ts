@@ -25,7 +25,7 @@ export function gateSteps(yml:string):Step[]{
         if(k==='name')step.name=v!.trim();
         if(k==='run')step.run=v!.trim();
     }
-    return raw.filter(s=>/^bun (run|test|tools\/test-shards\.ts) \S/.test(s.run??'')).map(s=>({name:s.name??s.run!,cmd:testCmd(s.run!.split(/\s+/)),env:s.env}));
+    return raw.filter(s=>/^bun (run|test|tools\/(?:test-shards|check-no-diary)\.ts) \S/.test(s.run??'')).map(s=>({name:s.name??s.run!,cmd:testCmd(s.run!.split(/\s+/)),env:s.env}));
 }
 // A CI step `bun tools/test-shards.ts [--part <i/n>] [--shards n] <folder>...` is the `bun test <folder>...` that it splits: the
 // gate runs every file of it, and `--part` of the gate (partSteps) splits it again.
@@ -44,15 +44,21 @@ export function partSteps<T extends {cmd:string[]}>(steps:T[],part:string|undefi
 
 // The local form of the workflow's test steps. One `bun test` process for every file takes about 520 s on the PC.
 // test-shards.ts runs the files in up to 12 processes within CPU and memory limits. With --changed it runs only the files that the change since
-// origin/master can reach. `--full` keeps the shards and runs every file. A `bun test` step on a folder inside an
-// earlier step's folders is the same files again, so it is left out.
+// origin/master can reach. `--full` keeps the shards and runs every file. A standalone `bun test` step on a strict
+// subfolder of an earlier step (such as `./packages/dashboard` after `./packages`) stays intact on `--full` so
+// isolated-process checks still run on part 1 without cross-package global pollution.
 export function localSteps<T extends {cmd:string[]}>(steps:T[],full:boolean):T[]{
     const out:T[]=[],seen:string[]=[];
     for(const step of steps){
         if(step.cmd[0]!=='bun'||step.cmd[1]!=='test'){out.push(step);continue;}
-        const folders=step.cmd.slice(2).filter(f=>!seen.some(s=>f===s||f.startsWith(s.replace(/\/$/,'')+'/')));
+        const rawFolders=step.cmd.slice(2);
+        const folders=rawFolders.filter(f=>!seen.some(s=>f===s||f.startsWith(s.replace(/\/$/,'')+'/')));
         seen.push(...folders);
-        if(folders.length)out.push({...step,cmd:['bun','tools/test-shards.ts',...(full?[]:['--changed','origin/master']),...folders]});
+        if(folders.length){
+            out.push({...step,cmd:['bun','tools/test-shards.ts',...(full?[]:['--changed','origin/master']),...folders]});
+        }else if(full&&rawFolders.length===1&&seen.some(s=>rawFolders[0]!==s&&rawFolders[0]!.startsWith(s.replace(/\/$/,'')+'/'))){
+            out.push(step);
+        }
     }
     return out;
 }

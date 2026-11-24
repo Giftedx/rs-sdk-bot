@@ -51,7 +51,7 @@ export function releaseExpiredRecoveryLease(account: string, base: string, optio
     if (!child || !Number.isSafeInteger(child.pid) || child.pid < 1 || child.nonce !== r.nonce || child.runId !== r.runId
         || !used || used.pid !== child.pid || used.nonce !== r.nonce || used.permitSha256 !== leaseSha256) throw Error('recovery lease child not bound');
     if (alive(child.pid, r.nonce)) throw Error('recovery lease child still alive');
-    const root = recoveryLifecycleRoot(r.server, base), proof = readLogoutProof(r.account, r.server, { root });
+    const root = recoveryLifecycleRoot(r.server, base, r.account), proof = readLogoutProof(r.account, r.server, { root });
     const attempts = listAttempts(r.account, r.server, { root });
     const receiptPath = join(paths.output, 'receipt.json'), receipt = existsSync(receiptPath) ? json(receiptPath) : null;
     let basis: null | 'superseded' | 'not-connected' | 'connect-failed' | undefined, lifecycleSha256: string;

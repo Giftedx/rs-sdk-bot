@@ -11,9 +11,9 @@ export const WHY_LIMIT=400,DETAIL_LIMIT=300,FINISHED_KEEP=200;
 
 // Planned chains and defects are summarized for the owner; the public keeps only counts and availability.
 // Texts are capped, and only the newest FINISHED_KEEP finished entries travel.
-export function trimState(state:any){
- if(!Array.isArray(state?.coordination?.tasks))return state;
- const all=state.coordination.tasks.map((t:any)=>{
+function trimQueue(queue:any){
+ if(!Array.isArray(queue?.tasks))return queue;
+ const all=queue.tasks.map((t:any)=>{
   const next:any={...t,why:String(t.why??'').slice(0,WHY_LIMIT)};
   const d=t.detail?String(t.detail).slice(0,DETAIL_LIMIT):'';
   if(d)next.detail=d;else delete next.detail;
@@ -21,7 +21,16 @@ export function trimState(state:any){
  });
  const open=all.filter((t:any)=>t.status==='running'||t.status==='pending');
  const finished=all.filter((t:any)=>t.status!=='running'&&t.status!=='pending').sort((a:any,b:any)=>(b.finishedAt??b.createdAt??0)-(a.finishedAt??a.createdAt??0)).slice(0,FINISHED_KEEP);
- return {...state,coordination:{...state.coordination,tasks:[...open,...finished]}};
+ return {...queue,tasks:[...open,...finished]};
+}
+export function trimState(state:any){
+ const hasCoord=Array.isArray(state?.coordination?.tasks);
+ const hasBrain=Array.isArray(state?.brain?.tasks);
+ if(!hasCoord&&!hasBrain)return state;
+ const same=hasCoord&&hasBrain&&state.brain===state.coordination;
+ const coordination=hasCoord?trimQueue(state.coordination):state.coordination;
+ const brain=same?coordination:hasBrain?trimQueue(state.brain):state.brain;
+ return {...state,...(hasCoord?{coordination}:{}),...(hasBrain?{brain}:{})};
 }
 const FALSE_DEFAULTS=['practice','reserved','roleInferred','processActive','training','production','phaseExact','remote','bounded','seenInFeed'] as const;
 const EMPTY_DEFAULTS=['ground','spark'] as const;

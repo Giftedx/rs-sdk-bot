@@ -5,6 +5,8 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { FLEET_DIR, mySide } from '../../core/src/fleet';
 import { fleetStatusRows, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
+import { statusReadDirs } from '../../core/src/practice-paths';
+import { RESERVED_ACCOUNTS } from '../../core/src/specialist-boards';
 import { dirname, join, resolve } from 'node:path';
 import { boardsFromSnapshot, haggisActivities, haggisTravel, overallRequirementsFor, schedule, scheduleOverall, SCENARIOS, TRICKS } from './haggis';
 
@@ -93,12 +95,25 @@ export function supplyBill(
     return [...pools.values()];
 }
 
+const RESERVED_SET = new Set(RESERVED_ACCOUNTS.map(n => n.toLowerCase()));
+
 // Live status and published snapshots across every side, including this side's observations from another container.
 // Each account counts once under the shared ownership/freshness rule. Holdings still need reservation and staging.
 export function liveHelperStatuses(base = root, fleetDir = join(FLEET_DIR(), 'snapshots'), side = mySide()): any[] {
     const read = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } }) : [];
-    return fleetStatusRows(read(join(base, '.practice/status')), readSnapshotFiles(fleetDir), ownerOfIn(dirname(fleetDir)), side)
-        .filter(s => s.name.toLowerCase() !== 'haggis');
+    const localByName = new Map<string, any>();
+    for (const dir of statusReadDirs(base)) {
+        for (const row of read(dir)) {
+            if (!row?.name || typeof row.name !== 'string') continue;
+            const key = row.name.toLowerCase();
+            const prev = localByName.get(key);
+            const rowAt = typeof row.at === 'number' && Number.isFinite(row.at) ? row.at : 0;
+            const prevAt = typeof prev?.at === 'number' && Number.isFinite(prev.at) ? prev.at : -1;
+            if (!prev || rowAt > prevAt) localByName.set(key, row);
+        }
+    }
+    return fleetStatusRows([...localByName.values()], readSnapshotFiles(fleetDir), ownerOfIn(dirname(fleetDir)), side)
+        .filter(s => !RESERVED_SET.has(String(s.name).toLowerCase()));
 }
 
 export function overallSupplyDemand(snapshot = join(root, 'research/hiscores-live.json')) {

@@ -446,7 +446,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
 
 const arg = (args: string[], key: string, d: string) => args.find(a => a.startsWith(key + '='))?.slice(key.length + 1) ?? d;
 
-export async function runPkRoamCli(argv: readonly string[]): Promise<number> {
+export async function runPkRoamCli(argv: readonly string[], existingSession?: Session): Promise<number> {
     const [name, ...args] = argv;
     if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=20000] [BANK_AT=30000] [MAX_TICKS=n] [FRIENDS=name,name]');
     const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pk-hunt');
@@ -462,7 +462,7 @@ export async function runPkRoamCli(argv: readonly string[]): Promise<number> {
         ...(arg(args, 'MAX_TICKS', '') ? { maxTicks: Number(arg(args, 'MAX_TICKS', '')) } : {}),
         ...(args.some(a => a.startsWith('FRIENDS=')) ? { friends: arg(args, 'FRIENDS', '').split(',').filter(Boolean) } : {}),
     };
-    const session = await openBot(name);
+    const session = existingSession ?? (await openBot(name));
     const roamProfile = arg(args, 'ROAM_PROFILE', 'auto'), combat = session.sdk.getState()?.player?.combatLevel ?? 0;
     const chosen = roamProfile === 'auto' ? (combat >= 115 ? 'champion' : '') : roamProfile === 'none' ? '' : roamProfile;
     if (chosen) {
@@ -474,6 +474,10 @@ export async function runPkRoamCli(argv: readonly string[]): Promise<number> {
     try { result = await huntOnce(session, cfg, stop, emit); }
     catch (error) { failure = String(error); }
     const ok = !!result && !failure;
+    if (existingSession) {
+        console.log('PK_HUNT ' + JSON.stringify({ ok, failure, ...result }));
+        return ok ? 0 : 1;
+    }
     const loggedOut = await settle([session], ok, failure ?? `PK hunt: ${result!.kills} kills, ${result!.deaths} deaths, ${result!.attacks} attacks`);
     console.log('PK_HUNT ' + JSON.stringify({ ok, failure, ...result, loggedOut }));
     return ok && loggedOut ? 0 : 1;

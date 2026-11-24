@@ -31,6 +31,7 @@ import {
     type WorldSnapshot,
 } from './contracts';
 import {
+    GE_LIMIT_BUFFER,
     loadShopCatalogByItem,
     resolveAcquireItem,
     type AcquireContext,
@@ -56,9 +57,27 @@ import {
 } from './preflight';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
+const SERVER_XP_MULTIPLIER = 25;
 
 const WOODCUTTING_AXES_DESC = [1359, 1357, 1355, 1361, 1353, 1349, 1351] as const;
 const MINING_PICKAXES_DESC = [1275, 1271, 1273, 1269, 1267, 1265] as const;
+
+function stepCommittedCoinCost(step: PlannedStep): number {
+    if (step.stepKind === 'acquire') {
+        if (step.source === 'ge' && step.estimatedCoinCost > 0) {
+            return Math.ceil((step.estimatedCoinCost / Math.max(1, step.quantity)) * GE_LIMIT_BUFFER) * step.quantity;
+        }
+        return Math.max(0, step.estimatedCoinCost);
+    }
+    if (step.stepKind === 'gear_upgrade') {
+        const cost = step.estimatedCoinCost ?? 0;
+        if (step.source === 'ge' && cost > 0) {
+            return Math.ceil(cost * GE_LIMIT_BUFFER);
+        }
+        return Math.max(0, cost);
+    }
+    return 0;
+}
 
 export { levelForXp, xpForLevel };
 
@@ -289,6 +308,13 @@ function hasBlockingSystemHold(acct: AccountState, now: number): string | null {
     if (!acct.systemHolds?.length) return null;
     for (const h of acct.systemHolds) {
         if (!isHoldActive(h, now)) continue;
+        // Recovery lifecycles are resolved directly by planAccount() recovery steps.
+        if (
+            (h.kind === 'maintenance' && h.key === 'location_stranded' && acct.lifecycle === 'needs_location_recovery')
+            || (h.kind === 'retry_backoff' && h.key === 'session_unsettled' && acct.lifecycle === 'needs_logout_recovery')
+        ) {
+            continue;
+        }
         if (h.kind === 'circuit_breaker' || h.kind === 'maintenance' || h.kind === 'retry_backoff') {
             return `system_hold:${h.kind}:${h.key}`;
         }
@@ -345,6 +371,7 @@ export function evaluateBestGearUpgrade(params: {
     readonly acquireCtx: AcquireContext;
     readonly precomputedWeapons?: PrecomputedWeaponInfo;
     readonly resolveAcquire?: (req: AcquireRequest) => AcquireResolution;
+    readonly committedCoinSpend?: number;
 }): GearUpgradeCandidateResult | null {
     const { acct, activity, rate, remainingXp, acquireCtx } = params;
     if (rate.xpPerTick <= 0 || !Number.isFinite(remainingXp) || remainingXp <= 0) return null;
@@ -378,6 +405,7 @@ export function evaluateBestGearUpgrade(params: {
             itemName: itemsMap.get(itemId)?.name ?? gearMap.get(itemId)?.name,
             quantity: 1,
             allowOwnBank: true,
+            ...(params.committedCoinSpend !== undefined ? { committedCoinSpend: params.committedCoinSpend } : {}),
         });
         if (!acq.ok || !acq.step) return null;
 
@@ -805,9 +833,10 @@ export function planAccount(
         ? candidateActivities.filter((a) => trustMeetsMinimum(a.trust, minTrust))
         : candidateActivities;
 
-    // Pre-index activities and per-account caches so O(D * A) collapses to O(D * matching).
+    // Pre-index eligible activities and per-account caches so O(D * A) collapses to O(D * matching)
+    // and craft_gather respects quarantine, exclusions, trust, and protectedClock filters.
     const nonExpByOutputItem = new Map<number, ActivityDefinition[]>();
-    for (const act of input.activities) {
+    for (const act of eligibleActivities) {
         if (act.trust === 'experimental') continue;
         const seenOut = new Set<number>();
         for (const o of act.outputs ?? []) {
@@ -834,7 +863,7 @@ export function planAccount(
 
     const acquireCtx: AcquireContext = {
         world,
-        activities: input.activities,
+        activities: eligibleActivities,
         marketQuotes: input.marketQuotes,
         requireMarketQuote: input.requireMarketQuote,
         donorDemandItemIds: input.donorDemandItemIds,
@@ -959,7 +988,7 @@ export function planAccount(
 
     const acquireCache = new Map<string, AcquireResolution>();
     const resolveAcquireCached = (req: AcquireRequest): AcquireResolution => {
-        const key = `${req.itemId}:${req.quantity}:${req.allowOwnBank ?? true}:${req.includeInventoryInOwned ?? true}`;
+        const key = `${req.itemId}:${req.quantity}:${req.allowOwnBank ?? true}:${req.includeInventoryInOwned ?? true}:${req.operatingCoinFloat ?? DEFAULT_OPERATING_COIN_FLOAT}:${req.committedCoinSpend ?? 0}:${req.allowedSources?.join(',') ?? ''}:${req.maxUnitPrice ?? ''}:${req.questPoints ?? 0}`;
         let res = acquireCache.get(key);
         if (!res) {
             res = resolveAcquireItem(acct, req, acquireCtx);
@@ -979,6 +1008,8 @@ export function planAccount(
 
     const shopBuyActivity = eligibleActivities.find((a) => a.id === 'market:shop-buy');
     const geBuyActivity = eligibleActivities.find((a) => a.id === 'market:ge-buy');
+    const hasLiveMarketQuotes = Boolean(input.marketQuotes && Object.keys(input.marketQuotes).length > 0);
+    const directGeBuyActivity = hasLiveMarketQuotes ? geBuyActivity : undefined;
     const shopCatalog = loadShopCatalogByItem();
     const itemsMap = loadItemsMap();
 
@@ -1011,11 +1042,11 @@ export function planAccount(
         if (
             demand.target.kind === 'item'
             && (!demand.assignedAccount || demand.assignedAccount.toLowerCase() === acct.name.toLowerCase())
-            && (shopBuyActivity || geBuyActivity)
+            && (shopBuyActivity || directGeBuyActivity)
         ) {
             const allowedExternal: AcquireSourceKind[] = [];
             if (shopBuyActivity) allowedExternal.push('npc_shop');
-            if (geBuyActivity) allowedExternal.push('ge');
+            if (directGeBuyActivity) allowedExternal.push('ge');
             const targetItemId = demand.target.itemId;
             const maxQty = Math.max(1, Math.min(Math.round(demand.remaining), 250));
             let acq = resolveAcquireItem(
@@ -1049,14 +1080,12 @@ export function planAccount(
                             if (shop.cost > 0 && shop.cost < minUnitPrice) minUnitPrice = shop.cost;
                         }
                     }
-                    if (geBuyActivity) {
+                    if (directGeBuyActivity) {
                         const meta = itemsMap.get(targetItemId);
                         if (!meta || meta.tradeable) {
                             const quote = input.marketQuotes?.[targetItemId];
                             if (quote && quote.ask !== null && quote.ask > 0 && quote.sell > 0 && quote.trades !== 0) {
-                                minUnitPrice = Math.min(minUnitPrice, Math.ceil(quote.ask));
-                            } else if (!input.marketQuotes && !input.requireMarketQuote) {
-                                minUnitPrice = Math.min(minUnitPrice, Math.max(1, meta?.cost ?? 10));
+                                minUnitPrice = Math.min(minUnitPrice, Math.ceil(Math.ceil(quote.ask) * GE_LIMIT_BUFFER));
                             }
                         }
                     }
@@ -1081,7 +1110,7 @@ export function planAccount(
             }
             for (const cand of acq.candidates) {
                 if (cand.source !== 'npc_shop' && cand.source !== 'ge') continue;
-                const marketAct = cand.source === 'npc_shop' ? shopBuyActivity : geBuyActivity;
+                const marketAct = cand.source === 'npc_shop' ? shopBuyActivity : directGeBuyActivity;
                 if (!marketAct) continue;
                 const advMult = comparativeAdvantageMultiplier(acct, demand, marketAct, profile);
                 if (advMult <= 0) continue;
@@ -1149,6 +1178,7 @@ export function planAccount(
             const preflight = getPreflight(activity, batchUnits);
 
             const prepSteps: PlannedStep[] = [];
+            let committedCoins = 0;
             let chainFeasible = true;
 
             if (!preflight.ok) {
@@ -1210,7 +1240,7 @@ export function planAccount(
                         if (qRow?.xp) {
                             for (const reward of qRow.xp) {
                                 const sk = reward.skill.toLowerCase();
-                                grantedQuestXp[sk] = (grantedQuestXp[sk] ?? 0) + reward.xp * xpRate;
+                                grantedQuestXp[sk] = (grantedQuestXp[sk] ?? 0) + reward.xp * SERVER_XP_MULTIPLIER * xpRate;
                             }
                         }
                         const unlockStep: UnlockPlannedStep = {
@@ -1236,7 +1266,7 @@ export function planAccount(
                                 if (druidRow?.xp) {
                                     for (const reward of druidRow.xp) {
                                         const sk = reward.skill.toLowerCase();
-                                        grantedQuestXp[sk] = (grantedQuestXp[sk] ?? 0) + reward.xp * xpRate;
+                                        grantedQuestXp[sk] = (grantedQuestXp[sk] ?? 0) + reward.xp * SERVER_XP_MULTIPLIER * xpRate;
                                     }
                                 }
                                 prepSteps.push({
@@ -1309,6 +1339,7 @@ export function planAccount(
                             itemName: blocker.itemName,
                             quantity: shortfall,
                             operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                            committedCoinSpend: committedCoins,
                         });
                         if (!acq.ok || !acq.step) {
                             lastBlockerReason = `unresolvable_supply:${blocker.itemId}`;
@@ -1316,6 +1347,7 @@ export function planAccount(
                             break;
                         }
                         prepSteps.push(acq.step);
+                        committedCoins += stepCommittedCoinCost(acq.step);
                     } else if (blocker.kind === 'missing_coins') {
                         const shortfall = Math.max(1, blocker.required - blocker.available);
                         const acq = resolveAcquireCached({
@@ -1324,6 +1356,7 @@ export function planAccount(
                             quantity: shortfall,
                             allowOwnBank: false,
                             operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                            committedCoinSpend: committedCoins,
                         });
                         if (!acq.ok || !acq.step) {
                             lastBlockerReason = `missing_coins:${shortfall}`;
@@ -1331,6 +1364,7 @@ export function planAccount(
                             break;
                         }
                         prepSteps.push(acq.step);
+                        committedCoins += stepCommittedCoinCost(acq.step);
                     } else if (blocker.kind === 'combat_survivability') {
                         if (blocker.reason === 'food') {
                             const floor = activity.config?.combatSurvivability as CombatSurvivabilityFloor | undefined;
@@ -1341,6 +1375,7 @@ export function planAccount(
                                     itemId: fid,
                                     quantity: countNeed,
                                     operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                                    committedCoinSpend: committedCoins,
                                 });
                                 if (acq.ok && acq.step) {
                                     foodStep = acq.step;
@@ -1353,6 +1388,7 @@ export function planAccount(
                                 break;
                             }
                             prepSteps.push(foodStep);
+                            committedCoins += stepCommittedCoinCost(foodStep);
                         } else {
                             lastBlockerReason = `combat_survivability:${blocker.reason}`;
                             chainFeasible = false;
@@ -1385,7 +1421,7 @@ export function planAccount(
             if (prepSteps.length < MAX_ACCOUNT_PLAN_STEPS - 1 && rate.xpPerTick > 0) {
                 const remXp = estimateRemainingBandXp(acct, demand, activity);
                 if (remXp > 0) {
-                    const upgKey = `${activity.family}:${activity.skill ?? ''}:${rate.xpPerTick}:${Math.round(remXp)}`;
+                    const upgKey = `${activity.family}:${activity.skill ?? ''}:${rate.xpPerTick}:${Math.round(remXp)}:${committedCoins}`;
                     upgrade = upgradeCache.get(upgKey);
                     if (upgrade === undefined) {
                         upgrade = evaluateBestGearUpgrade({
@@ -1396,11 +1432,13 @@ export function planAccount(
                             acquireCtx,
                             precomputedWeapons: getPrecomputedWeapons(),
                             resolveAcquire: resolveAcquireCached,
+                            committedCoinSpend: committedCoins,
                         });
                         upgradeCache.set(upgKey, upgrade);
                     }
                     if (upgrade) {
                         prepSteps.push(upgrade.step);
+                        committedCoins += stepCommittedCoinCost(upgrade.step);
                         const upgScale = rate.xpPerTick > 0 ? upgrade.improvedXpPerTick / rate.xpPerTick : 1;
                         const scaledSkillXp = rate.skillXpPerTick
                             ? Object.fromEntries(Object.entries(rate.skillXpPerTick).map(([k, v]) => [k, v * upgScale]))

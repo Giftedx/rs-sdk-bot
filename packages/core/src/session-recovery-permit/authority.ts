@@ -11,7 +11,7 @@ import { savedProcessAlive } from '../session-takeover';
 import { cachedLaunchRevision, capabilityRevision } from '../worker-release';
 import { assertFleetResolved, evidence, verifyNativeRecoveryProof } from './qualification';
 import {
-    RECOVERY_SCRIPT, assertNativeFixtureRoot, assertNoRecoveryLease, assertRecoveryNotStopped, json,
+    FLEET_HEARTBEAT_MAX_MS, RECOVERY_SCRIPT, assertNativeFixtureRoot, assertNoRecoveryLease, assertRecoveryNotStopped, json,
     recoveryLifecycleRoot, recoveryPermitPaths, same, sha, validateRecoveryRequest,
     type ControlledRecoveryRequest, type Permit, type ProducerRef, type RecoveryPermitChecks,
 } from './request';
@@ -98,11 +98,35 @@ function authority(r: ControlledRecoveryRequest, base: string, options: Recovery
         const legacyRevision = missionSignature({ account: r.account, script: entry, args: spec.args ?? [], env: { ...baseEnv, COORDINATOR_RUN_ID: r.runId } });
         if (typeof end.revision !== 'string' || !end.revision || end.revision === missionRevision || end.revision === legacyRevision) throw Error('recovery completed work needs a different mission');
     }
-    const fleetPath = existsSync(fleetStateFile(base)) ? fleetStateFile(base) : join(base, '.practice/swarm-state.json');
-    assertFleetResolved(fleetPath, r.account, owner.pid, options.now ?? Date.now);
+    const swarmStatePath = join(base, '.practice/swarm-state.json');
+    const brainStatePath = fleetStateFile(base);
+    const clock = options.now ?? Date.now;
+    if (existsSync(swarmStatePath)) {
+        assertFleetResolved(swarmStatePath, r.account, owner.pid, clock);
+        if (existsSync(brainStatePath)) {
+            // Cross-check active account status in fleet-state.json only when fresh; a stale Brain cycle
+            // snapshot does not invalidate a fresh 2 s swarm-state.json controller heartbeat.
+            try {
+                const brainDoc = json(brainStatePath);
+                const observedAt = clock();
+                if (
+                    brainDoc?.schemaVersion === 1
+                    && Number.isFinite(brainDoc.emittedAt)
+                    && observedAt - brainDoc.emittedAt >= 0
+                    && observedAt - brainDoc.emittedAt <= FLEET_HEARTBEAT_MAX_MS
+                ) {
+                    assertFleetResolved(brainStatePath, r.account, owner.pid, () => observedAt);
+                }
+            } catch (error) {
+                if (error instanceof Error && error.message.startsWith('recovery fleet ownership unresolved:')) throw error;
+            }
+        }
+    } else {
+        assertFleetResolved(brainStatePath, r.account, owner.pid, clock);
+    }
     const status = findAccountStatus(base, r.account);
     if (status && status.server === r.server && !status.result && (!Number.isFinite(status.at) || now - status.at < 30000)) throw Error('recovery account has an active external observation');
-    const lifecycleRoot = recoveryLifecycleRoot(r.server, base), latest = readLogoutProof(r.account, r.server, { root: lifecycleRoot });
+    const lifecycleRoot = recoveryLifecycleRoot(r.server, base, r.account), latest = readLogoutProof(r.account, r.server, { root: lifecycleRoot });
     if (latest.state === 'invalid') throw Error('recovery lifecycle ownership malformed');
     if (latest.state === 'none' && status?.server === r.server && !status.result) throw Error('recovery orphan owner unknown');
     if (latest.state === 'held') {
@@ -140,7 +164,7 @@ export function issueRecoveryPermit(r: ControlledRecoveryRequest, base: string, 
     const checked = authority(r, base, options, true), paths = recoveryPermitPaths(r, base);
     let producerHistory: ProducerRef[] | undefined;
     if (checked.completedEnd) {
-        const attempts = listAttempts(r.account, r.server, { root: recoveryLifecycleRoot(r.server, base) }), last = attempts.at(-1), a = last?.receipt;
+        const attempts = listAttempts(r.account, r.server, { root: recoveryLifecycleRoot(r.server, base, r.account) }), last = attempts.at(-1), a = last?.receipt;
         // A retired producer that reached START but disconnected needs cleanup, not a new owner for its history.
         // authority already checks that its owner is gone. Partial intents and confirmed histories stay refused.
         const held = checked.latest.state === 'held' && checked.latest.attemptId === last?.attemptId && a
@@ -172,7 +196,7 @@ export function current(r: ControlledRecoveryRequest, base: string, options: Rec
     const checked = authority(r, base, options, controller, ownedChild), paths = recoveryPermitPaths(r, base), p = json(paths.permit);
     if (!isDeepStrictEqual(p.completedEnd, checked.completedEnd) || p.missionRevision !== checked.missionRevision) throw Error('recovery completed end or mission changed');
     if (p.completedEnd) {
-        const attempts = listAttempts(r.account, r.server, { root: recoveryLifecycleRoot(r.server, base) });
+        const attempts = listAttempts(r.account, r.server, { root: recoveryLifecycleRoot(r.server, base, r.account) });
         const history: ProducerRef[] = p.producerHistory ?? [], retained = attempts.slice(0, history.length).map(({ attemptId, sha256 }) => ({ attemptId, sha256 }));
         if (!isDeepStrictEqual(history, retained)) throw Error('recovery completed producer ownership changed');
         const fresh = attempts.slice(history.length);

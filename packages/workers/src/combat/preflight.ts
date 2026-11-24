@@ -1,5 +1,7 @@
 import {
+    accountEscrowCoins,
     accountOwnedItemCount,
+    accountReserveFor,
     availableCoinsAfterReserves,
     preflightFail,
     preflightOk,
@@ -10,6 +12,7 @@ import {
     type WorkerAccountView,
     type WorkerWorldView,
 } from '../contracts';
+import { CANNON_SPOTS } from './cannon';
 import { CHOMPY, CHOMPY_TRIP, SHADE_ROUTE } from './special-mobs';
 import { DRAGON_FOOD_IDS, DRAGONFIRE_SHIELD_ID } from './survivability';
 import {
@@ -529,6 +532,12 @@ export function combatPreflight(acct: WorkerAccountView, cfg: CombatConfig, worl
     if (cfg.targetLevel !== undefined && (!Number.isSafeInteger(cfg.targetLevel) || cfg.targetLevel < 1 || cfg.targetLevel > 99)) {
         return preflightFail([{ kind: 'invalid_config', message: `targetLevel must be 1..99 (got ${cfg.targetLevel})` }]);
     }
+    if (cfg.mode === 'cannon') {
+        const spotName = cfg.spot ?? cfg.env?.SPOT ?? 'spiders';
+        if (!Object.prototype.hasOwnProperty.call(CANNON_SPOTS, spotName)) {
+            return preflightFail([{ kind: 'invalid_config', message: `unknown cannon spot: ${spotName} (known: ${Object.keys(CANNON_SPOTS).join(', ')})` }]);
+        }
+    }
 
     const site = COMBAT_SITES[cfg.mode];
 
@@ -606,13 +615,9 @@ export function combatPreflight(acct: WorkerAccountView, cfg: CombatConfig, worl
         }
     }
 
-function itemReserveFor(acct: WorkerAccountView, itemId: number, world: WorkerWorldView): number {
-    return world.globalReserves?.[itemId] ?? acct.reserves?.[itemId] ?? world.reserves?.[acct.name]?.[itemId] ?? 0;
-}
-
 function availableItemStock(acct: WorkerAccountView, itemId: number, world: WorkerWorldView): number {
     const owned = accountOwnedItemCount(acct, itemId);
-    const reserved = itemReserveFor(acct, itemId, world);
+    const reserved = accountReserveFor(acct, world, itemId);
     return reserveAdjustedStock(owned, reserved);
 }
 
@@ -687,14 +692,17 @@ function availableItemStock(acct: WorkerAccountView, itemId: number, world: Work
 
     const travelCoins = cfg.mode === 'chompy' || cfg.mode === 'trawler' || cfg.mode === 'green-dragon' ? 500 : 0;
     if (travelCoins > 0) {
-        const reservedCoins = itemReserveFor(acct, 995, world);
-        const coins = availableCoinsAfterReserves(accountOwnedItemCount(acct, 995), reservedCoins, world.geEscrowCoins?.[acct.name] ?? 0);
+        const totalCoins = accountOwnedItemCount(acct, 995);
+        const reservedCoins = accountReserveFor(acct, world, 995);
+        const escrowCoins = accountEscrowCoins(acct, world);
+        const coins = availableCoinsAfterReserves(totalCoins, reservedCoins, escrowCoins);
         if (coins < travelCoins) {
             blockers.push({
                 kind: 'missing_coins',
                 required: travelCoins,
-                available: coins,
+                available: totalCoins,
                 reserved: reservedCoins,
+                escrow: escrowCoins,
                 ferryFare: travelCoins,
                 message: `need ${travelCoins} coins for travel`,
             });

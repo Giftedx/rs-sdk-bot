@@ -26,6 +26,18 @@ describe('hosted views',()=>{
   expect(kept).toHaveLength(FINISHED_KEEP+2);
   expect(kept.slice(0,2).map((t:any)=>t.id)).toEqual(['p','r']);
   expect(kept[2].id).toBe('f'+(FINISHED_KEEP+49));
+
+  const shared={available:true,tasks:[{id:'p',why:'w'.repeat(1000),detail:'d'.repeat(1000),status:'pending'},...many]};
+  const aliased=trimState({coordination:shared,brain:shared});
+  expect(aliased.coordination.tasks).toHaveLength(FINISHED_KEEP+1);
+  expect(aliased.brain.tasks).toHaveLength(FINISHED_KEEP+1);
+  expect(aliased.brain.tasks[0].why).toHaveLength(WHY_LIMIT);
+  expect(aliased.brain).toBe(aliased.coordination);
+
+  const separate=trimState({coordination:{tasks:[{id:'c1',why:'c'.repeat(1000),status:'pending'}]},brain:{tasks:[{id:'b1',why:'b'.repeat(1000),status:'pending'},...many]}});
+  expect(separate.coordination.tasks[0].why).toHaveLength(WHY_LIMIT);
+  expect(separate.brain.tasks).toHaveLength(FINISHED_KEEP+1);
+  expect(separate.brain.tasks[0].why).toHaveLength(WHY_LIMIT);
  });
  test('control keeps every bot and holding, carries the operator metadata without its nonce, and the reveal name',()=>{
   const c=controlView(state(),meta);

@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {resolveBossStep} from './aio-boss';
 import {importAioLoadout,resolveLogisticsStep} from './aio-logistics';
+import {mergeSkillerEnv,resolveSkillerStep} from './aio-skiller';
 import {planAioPipeline,toSwarmChainJob} from './aio';
 import {parseStep} from '../packages/core/src/chain-step';
 import {workerEntries} from '../packages/core/src/worker-release';
@@ -63,4 +64,19 @@ test('catalog route identifiers and literal worker options survive generated hos
  expect(job.args.map(parseStep)).toEqual(steps);
  expect(workerEntries(job.script,job.args)).toEqual(expect.arrayContaining(['scripts/aio-pvp.ts','scripts/aio-skiller.ts','scripts/aio-quester.ts']));
  expect(()=>planAioPipeline([' '])).toThrow('requires');
+});
+
+test('aio-boss exposes blue-dragon and aio-skiller preserves caller env precedence over route defaults',()=>{
+ expect(resolveBossStep('blue-dragon',['CAP=2000'])).toEqual({script:'scripts/aio-boss.ts',args:['blue-dragon'],env:{CAP:'2000'}});
+ const orbStep=resolveSkillerStep('magic','orbs',['air']);
+ expect(orbStep.env.ORB_TRIP).toBe('1');
+ const callerWins=mergeSkillerEnv(orbStep.env,{ORB_TRIP:'0',CAP:'900',EMPTY:undefined},['air']);
+ expect(callerWins.ORB_TRIP).toBe('0');
+ expect(callerWins.CAP).toBe('900');
+ const cliWins=mergeSkillerEnv(orbStep.env,{ORB_TRIP:'0',CAP:'900'},['air','CAP=1200']);
+ expect(cliWins.ORB_TRIP).toBe('0');
+ expect(cliWins.CAP).toBe('1200');
+ const gatherStep=resolveSkillerStep('thieving','knights-stable',[]);
+ expect(gatherStep.script).toBe('scripts/aio-skiller.ts');
+ expect(gatherStep.args[0]).toBe('gather');
 });

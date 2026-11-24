@@ -1,6 +1,8 @@
 // Shared preflight(), estimate(), and RunOutcome adapters for the unified WorkerModule<ArtisanConfig>.
 import {
+    accountEscrowCoins,
     accountOwnedItemCount,
+    accountReserveFor,
     availableCoinsAfterReserves,
     preflightFail,
     preflightOk,
@@ -20,6 +22,7 @@ import { LOGS } from './firemaking';
 import { nativeArrowProfile, type ArrowMetal } from './fletching';
 import { RECIPES as HERBLORE_RECIPES } from './herblore';
 import { itemMagicRecipe, nativeTeleport, orbRecipes, type OrbKind } from './magic';
+import { BONE_XP } from './prayer';
 import { HAMMER, smeltRecipe, smithRecipe } from './smithing';
 import {
     ARTISAN_METHOD_MAP,
@@ -61,14 +64,25 @@ function questStatusOf(acct: WorkerAccountView, needle: string | RegExp) {
     return 'not_started' as const;
 }
 
-function reservedOf(acct: WorkerAccountView, world: WorkerWorldView, itemId: number): number {
-    return world.reserves?.[acct.name.toLowerCase()]?.[itemId] ?? world.reserves?.[acct.name]?.[itemId] ?? acct.reserves?.[itemId] ?? 0;
-}
-
 function usableStock(acct: WorkerAccountView, world: WorkerWorldView, itemId: number): { available: number; reserved: number; usable: number } {
     const available = accountOwnedItemCount(acct, itemId, { requireTrustedBank: false });
-    const reserved = reservedOf(acct, world, itemId);
+    const reserved = accountReserveFor(acct, world, itemId);
     return { available, reserved, usable: reserveAdjustedStock(available, reserved) };
+}
+
+function parseIntSetting(
+    raw: string | undefined,
+    fallback: number,
+    opts: { min: number; max?: number; label: string },
+    blockers: PreflightBlocker[],
+): number | null {
+    const val = raw === undefined || raw === '' ? fallback : Number(raw);
+    if (!Number.isSafeInteger(val) || val < opts.min || (opts.max !== undefined && val > opts.max)) {
+        const range = opts.max !== undefined ? `${opts.min}..${opts.max}` : `>= ${opts.min}`;
+        blockers.push({ kind: 'invalid_config', message: `${opts.label} must be an integer ${range} (got ${String(raw)})` });
+        return null;
+    }
+    return val;
 }
 
 function checkMaxCap(acct: WorkerAccountView, skill: string, blockers: PreflightBlocker[]) {
@@ -106,8 +120,8 @@ function checkSupply(
 
 function checkCoins(acct: WorkerAccountView, world: WorkerWorldView, required: number, blockers: PreflightBlocker[], ferryFare?: number) {
     const coins = accountOwnedItemCount(acct, 995, { requireTrustedBank: false });
-    const reserve = reservedOf(acct, world, 995);
-    const escrow = world.geEscrowCoins?.[acct.name.toLowerCase()] ?? world.geEscrowCoins?.[acct.name] ?? 0;
+    const reserve = accountReserveFor(acct, world, 995);
+    const escrow = accountEscrowCoins(acct, world);
     if (availableCoinsAfterReserves(coins, reserve, escrow, 0) < required) {
         blockers.push({ kind: 'missing_coins', required, available: coins, reserved: reserve, escrow, ...(ferryFare !== undefined ? { ferryFare } : {}) });
     }
@@ -151,21 +165,22 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     const rawId = FOOD_RAW_ID[foodType];
                     if (rawId !== undefined) checkSupply(acct, world, rawId, 1, `Raw ${foodType}`, blockers, missingItems);
                 } else if (cfg.method === 'stock') {
-                    const reserve = Number(resolveArtisanSetting(cfg, 'RAW_RESERVE', '50'));
-                    if (!Number.isSafeInteger(reserve) || reserve < 50) {
-                        blockers.push({ kind: 'invalid_config', message: 'cooking:stock requires RAW_RESERVE >= 50' });
-                    }
-                    const stockIds = [335, 331, 377, 371, 383];
-                    const hasAny = stockIds.some(id => usableStock(acct, world, id).usable > reserve);
-                    if (!hasAny) {
-                        checkSupply(acct, world, 335, reserve + 1, 'Raw trout/salmon stock', blockers, missingItems);
+                    const reserve = parseIntSetting(resolveArtisanSetting(cfg, 'RAW_RESERVE'), 50, { min: 50, label: 'RAW_RESERVE' }, blockers);
+                    if (reserve !== null) {
+                        const stockIds = [335, 331, 377, 371, 383];
+                        const hasAny = stockIds.some(id => usableStock(acct, world, id).usable > reserve);
+                        if (!hasAny) {
+                            checkSupply(acct, world, 335, reserve + 1, 'Raw trout/salmon stock', blockers, missingItems);
+                        }
                     }
                 } else if (cfg.method === 'wine' || cfg.method === 'mixed-wine') {
                     checkSkill(acct, 'Cooking', 35, blockers);
-                    const reserve = Number(resolveArtisanSetting(cfg, 'RAW_RESERVE', '0'));
-                    const max = Number(resolveArtisanSetting(cfg, 'MAX_MAKE', cfg.args[0] ?? '1'));
-                    checkSupply(acct, world, 1987, max + reserve, 'Grapes', blockers, missingItems);
-                    checkSupply(acct, world, 1937, max + reserve, 'Jug of water', blockers, missingItems);
+                    const reserve = parseIntSetting(resolveArtisanSetting(cfg, 'RAW_RESERVE'), 0, { min: 0, label: 'RAW_RESERVE' }, blockers);
+                    const max = parseIntSetting(resolveArtisanSetting(cfg, 'MAX_MAKE', cfg.args[0]), 1, { min: 1, label: 'MAX_MAKE' }, blockers);
+                    if (reserve !== null && max !== null) {
+                        checkSupply(acct, world, 1987, max + reserve, 'Grapes', blockers, missingItems);
+                        checkSupply(acct, world, 1937, max + reserve, 'Jug of water', blockers, missingItems);
+                    }
                 } else if (cfg.method === 'batch') {
                     const recipeName = resolveArtisanSetting(cfg, 'RECIPE', cfg.args[0]) ?? 'cooking_generic_trout';
                     const recipe = cookingRecipes().recipes.find(r => r.name === recipeName);
@@ -198,12 +213,14 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     blockers.push({ kind: 'invalid_config', message: `unknown firemaking log: ${log}` });
                 } else {
                     const info = LOGS[log];
-                    const reserve = Number(resolveArtisanSetting(cfg, 'LOG_RESERVE', '0'));
+                    const reserve = parseIntSetting(resolveArtisanSetting(cfg, 'LOG_RESERVE'), 0, { min: 0, label: 'LOG_RESERVE' }, blockers);
+                    const toolBudget = parseIntSetting(resolveArtisanSetting(cfg, 'TOOL_BUDGET'), 0, { min: 0, label: 'TOOL_BUDGET' }, blockers);
                     checkSkill(acct, 'Firemaking', info.level, blockers);
-                    checkSupply(acct, world, info.id, reserve + 1, `${log} logs`, blockers, missingItems);
+                    if (reserve !== null) {
+                        checkSupply(acct, world, info.id, reserve + 1, `${log} logs`, blockers, missingItems);
+                    }
                     const tinder = usableStock(acct, world, 590);
-                    const toolBudget = Number(resolveArtisanSetting(cfg, 'TOOL_BUDGET', '0'));
-                    if (tinder.usable < 1 && (cfg.method !== 'order' || toolBudget < 1)) {
+                    if (tinder.usable < 1 && (cfg.method !== 'order' || (toolBudget ?? 0) < 1)) {
                         checkSupply(acct, world, 590, 1, 'Tinderbox', blockers, missingItems);
                     }
                 }
@@ -215,31 +232,34 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     checkSkill(acct, 'Hitpoints', 10, blockers);
                 } else if (cfg.method === 'shafts') {
                     checkSupply(acct, world, 946, 1, 'Knife', blockers, missingItems);
-                    const res = Number(resolveArtisanSetting(cfg, 'LOG_RESERVE', '0'));
-                    checkSupply(acct, world, 1511, res + 1, 'Logs', blockers, missingItems);
+                    const res = parseIntSetting(resolveArtisanSetting(cfg, 'LOG_RESERVE'), 0, { min: 0, label: 'LOG_RESERVE' }, blockers);
+                    if (res !== null) checkSupply(acct, world, 1511, res + 1, 'Logs', blockers, missingItems);
                 } else {
                     const mode = (resolveArtisanSetting(cfg, 'MODE', cfg.args[1]) ?? 'arrows').toLowerCase();
                     if (mode === 'shafts') {
                         checkSupply(acct, world, 946, 1, 'Knife', blockers, missingItems);
-                        checkSupply(acct, world, 1511, Number(resolveArtisanSetting(cfg, 'LOG_RESERVE', '0')) + 1, 'Logs', blockers, missingItems);
+                        const res = parseIntSetting(resolveArtisanSetting(cfg, 'LOG_RESERVE'), 0, { min: 0, label: 'LOG_RESERVE' }, blockers);
+                        if (res !== null) checkSupply(acct, world, 1511, res + 1, 'Logs', blockers, missingItems);
                     } else if (mode === 'headless') {
-                        const sr = Number(resolveArtisanSetting(cfg, 'SHAFT_RESERVE', '200'));
-                        const fr = Number(resolveArtisanSetting(cfg, 'FEATHER_RESERVE', '100'));
-                        checkSupply(acct, world, 52, sr + 15, 'Arrow shafts', blockers, missingItems);
-                        checkSupply(acct, world, 314, fr + 15, 'Feathers', blockers, missingItems);
+                        const sr = parseIntSetting(resolveArtisanSetting(cfg, 'SHAFT_RESERVE'), 200, { min: 0, label: 'SHAFT_RESERVE' }, blockers);
+                        const fr = parseIntSetting(resolveArtisanSetting(cfg, 'FEATHER_RESERVE'), 100, { min: 0, label: 'FEATHER_RESERVE' }, blockers);
+                        if (sr !== null) checkSupply(acct, world, 52, sr + 15, 'Arrow shafts', blockers, missingItems);
+                        if (fr !== null) checkSupply(acct, world, 314, fr + 15, 'Feathers', blockers, missingItems);
                     } else if (mode === 'oak-bows') {
                         checkSkill(acct, 'Fletching', 25, blockers);
                         checkSupply(acct, world, 946, 1, 'Knife', blockers, missingItems);
-                        checkSupply(acct, world, 1521, Number(resolveArtisanSetting(cfg, 'LOG_RESERVE', '0')) + 1, 'Oak logs', blockers, missingItems);
-                        checkSupply(acct, world, 1777, Number(resolveArtisanSetting(cfg, 'STRING_RESERVE', '0')) + 1, 'Bow string', blockers, missingItems);
+                        const lr = parseIntSetting(resolveArtisanSetting(cfg, 'LOG_RESERVE'), 0, { min: 0, label: 'LOG_RESERVE' }, blockers);
+                        const strR = parseIntSetting(resolveArtisanSetting(cfg, 'STRING_RESERVE'), 0, { min: 0, label: 'STRING_RESERVE' }, blockers);
+                        if (lr !== null) checkSupply(acct, world, 1521, lr + 1, 'Oak logs', blockers, missingItems);
+                        if (strR !== null) checkSupply(acct, world, 1777, strR + 1, 'Bow string', blockers, missingItems);
                     } else if (['iron', 'steel', 'native-arrows'].includes(mode)) {
                         const metal = (mode === 'native-arrows' ? (resolveArtisanSetting(cfg, 'TIP_TYPE', cfg.args[2]) ?? 'steel') : mode) as ArrowMetal;
                         const prof = nativeArrowProfile(metal);
                         checkSkill(acct, 'Fletching', prof.level, blockers);
-                        const hr = Number(resolveArtisanSetting(cfg, 'HEADLESS_RESERVE', '200'));
-                        const tr = Number(resolveArtisanSetting(cfg, 'TIP_RESERVE', mode === 'iron' ? '0' : '5'));
-                        checkSupply(acct, world, 53, hr + 15, 'Headless arrow', blockers, missingItems);
-                        checkSupply(acct, world, prof.tip, tr + 15, prof.tipName, blockers, missingItems);
+                        const hr = parseIntSetting(resolveArtisanSetting(cfg, 'HEADLESS_RESERVE'), 200, { min: 0, label: 'HEADLESS_RESERVE' }, blockers);
+                        const tr = parseIntSetting(resolveArtisanSetting(cfg, 'TIP_RESERVE'), mode === 'iron' ? 0 : 5, { min: 0, label: 'TIP_RESERVE' }, blockers);
+                        if (hr !== null) checkSupply(acct, world, 53, hr + 15, 'Headless arrow', blockers, missingItems);
+                        if (tr !== null) checkSupply(acct, world, prof.tip, tr + 15, prof.tipName, blockers, missingItems);
                     }
                 }
                 break;
@@ -247,15 +267,18 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
             case 'smithing': {
                 checkMaxCap(acct, 'Smithing', blockers);
                 if (cfg.method === 'cannonballs' || (cfg.method === 'smelt' && (resolveArtisanSetting(cfg, 'BAR_TYPE', cfg.args[1]) ?? '').toLowerCase() === 'cannonballs')) {
-                    const bars = Number(cfg.args[0] ?? resolveArtisanSetting(cfg, 'MAX_MAKE', '1'));
-                    const reserve = Number(resolveArtisanSetting(cfg, 'CANNON_RESERVE', resolveArtisanSetting(cfg, 'ORE_RESERVE', '0')));
+                    const bars = parseIntSetting(cfg.args[0] ?? resolveArtisanSetting(cfg, 'MAX_MAKE'), 1, { min: 1, label: 'MAX_MAKE' }, blockers);
+                    const reserve = parseIntSetting(resolveArtisanSetting(cfg, 'CANNON_RESERVE', resolveArtisanSetting(cfg, 'ORE_RESERVE')), 0, { min: 0, label: 'CANNON_RESERVE' }, blockers);
                     checkSkill(acct, 'Smithing', 35, blockers);
                     checkSupply(acct, world, 4, 1, 'Ammo mould', blockers, missingItems);
-                    checkSupply(acct, world, 2353, (Number.isSafeInteger(bars) && bars > 0 ? bars : 1) + reserve, 'Steel bar', blockers, missingItems);
+                    if (bars !== null && reserve !== null) {
+                        checkSupply(acct, world, 2353, bars + reserve, 'Steel bar', blockers, missingItems);
+                    }
                 } else if (cfg.method === 'anvil' || (cfg.method === 'smelt' && resolveArtisanSetting(cfg, 'ORDER_ACTION') === 'smith')) {
-                    const pid = Number(resolveArtisanSetting(cfg, 'PRODUCT_ID', cfg.args[1]));
-                    const max = Number(resolveArtisanSetting(cfg, 'MAX_MAKE', '1'));
-                    const res = Number(resolveArtisanSetting(cfg, 'BAR_RESERVE', '0'));
+                    const pidRaw = resolveArtisanSetting(cfg, 'PRODUCT_ID', cfg.args[1]);
+                    const pid = pidRaw !== undefined && pidRaw !== '' ? Number(pidRaw) : NaN;
+                    const max = parseIntSetting(resolveArtisanSetting(cfg, 'MAX_MAKE'), 1, { min: 1, label: 'MAX_MAKE' }, blockers);
+                    const res = parseIntSetting(resolveArtisanSetting(cfg, 'BAR_RESERVE'), 0, { min: 0, label: 'BAR_RESERVE' }, blockers);
                     if (!Number.isSafeInteger(pid) || pid < 0) {
                         blockers.push({ kind: 'invalid_config', message: 'smithing anvil requires integer PRODUCT_ID' });
                     } else {
@@ -265,16 +288,20 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                             blockers.push({ kind: 'quest_incomplete', quest: r.quest, requiredState: 'complete', currentState: questStatusOf(acct, r.quest) });
                         }
                         checkSupply(acct, world, HAMMER, 1, 'Hammer', blockers, missingItems);
-                        checkSupply(acct, world, r.bar, (Number.isSafeInteger(max) && max > 0 ? max : 1) * r.bars + (Number.isSafeInteger(res) ? res : 0), `Bar #${r.bar}`, blockers, missingItems);
+                        if (max !== null && res !== null) {
+                            checkSupply(acct, world, r.bar, max * r.bars + res, `Bar #${r.bar}`, blockers, missingItems);
+                        }
                         travelTicks = 60;
                     }
                 } else {
                     const bar = (resolveArtisanSetting(cfg, 'BAR_TYPE', cfg.args[1]) ?? 'iron').toLowerCase();
                     const r = smeltRecipe(bar);
-                    const reserve = Number(resolveArtisanSetting(cfg, 'ORE_RESERVE', '1'));
+                    const reserve = parseIntSetting(resolveArtisanSetting(cfg, 'ORE_RESERVE'), 1, { min: 0, label: 'ORE_RESERVE' }, blockers);
                     checkSkill(acct, 'Smithing', r.level, blockers);
-                    for (const ing of r.ingredients) {
-                        checkSupply(acct, world, ing.id, ing.units + (Number.isSafeInteger(reserve) ? reserve : 0), `Ore #${ing.id}`, blockers, missingItems);
+                    if (reserve !== null) {
+                        for (const ing of r.ingredients) {
+                            checkSupply(acct, world, ing.id, ing.units + reserve, `Ore #${ing.id}`, blockers, missingItems);
+                        }
                     }
                     if (acct.pos && Math.max(Math.abs(acct.pos.x - 3253), Math.abs(acct.pos.z - 3420)) <= 5) {
                         travelCoins = 10;
@@ -288,8 +315,8 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                 if (cfg.method === 'bowstrings') {
                     checkMaxCap(acct, 'Crafting', blockers);
                     checkSkill(acct, 'Crafting', 10, blockers);
-                    const res = Number(resolveArtisanSetting(cfg, 'RAW_RESERVE', '50'));
-                    checkSupply(acct, world, 1779, res + 1, 'Flax', blockers, missingItems);
+                    const res = parseIntSetting(resolveArtisanSetting(cfg, 'RAW_RESERVE'), 50, { min: 0, label: 'RAW_RESERVE' }, blockers);
+                    if (res !== null) checkSupply(acct, world, 1779, res + 1, 'Flax', blockers, missingItems);
                     travelTicks = 30;
                 } else if (cfg.method === 'jewellery') {
                     checkMaxCap(acct, 'Crafting', blockers);
@@ -348,8 +375,8 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     const level = piece === 'vambraces' ? 79 : piece === 'chaps' ? 82 : 84;
                     checkSkill(acct, 'Crafting', level, blockers);
                 } else if (cfg.method === 'soften-clay') {
-                    const res = Number(resolveArtisanSetting(cfg, 'RAW_RESERVE', '0'));
-                    checkSupply(acct, world, 434, res + 1, 'Clay', blockers, missingItems);
+                    const res = parseIntSetting(resolveArtisanSetting(cfg, 'RAW_RESERVE'), 0, { min: 0, label: 'RAW_RESERVE' }, blockers);
+                    if (res !== null) checkSupply(acct, world, 434, res + 1, 'Clay', blockers, missingItems);
                     if (usableStock(acct, world, 1925).usable < 1 && usableStock(acct, world, 1929).usable < 1) {
                         checkSupply(acct, world, 1925, 1, 'Bucket', blockers, missingItems);
                     }
@@ -403,12 +430,16 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
             }
             case 'prayer': {
                 checkMaxCap(acct, 'Prayer', blockers);
-                const bone = Number(resolveArtisanSetting(cfg, 'BONE', '526'));
-                const reserve = Number(resolveArtisanSetting(cfg, 'BONE_RESERVE', '0'));
-                if (!Number.isSafeInteger(bone) || bone < 0) {
-                    blockers.push({ kind: 'invalid_config', message: 'invalid bone ID' });
-                } else {
-                    checkSupply(acct, world, bone, reserve + 1, `Bone #${bone}`, blockers, missingItems);
+                const boneRaw = resolveArtisanSetting(cfg, 'BONE_ID') ?? resolveArtisanSetting(cfg, 'BONE');
+                const bone = parseIntSetting(boneRaw, 526, { min: 0, label: 'BONE_ID' }, blockers);
+                const reserve = parseIntSetting(resolveArtisanSetting(cfg, 'BONE_RESERVE'), 6, { min: 6, label: 'BONE_RESERVE' }, blockers);
+                parseIntSetting(cfg.args[0] ?? resolveArtisanSetting(cfg, 'TARGET_LEVEL'), 43, { min: 43, max: 99, label: 'TARGET_LEVEL' }, blockers);
+                if (bone !== null) {
+                    if (BONE_XP[bone] === undefined) {
+                        blockers.push({ kind: 'invalid_config', message: `unsupported prayer bone ID: ${bone}` });
+                    } else if (reserve !== null) {
+                        checkSupply(acct, world, bone, reserve + 1, `Bone #${bone}`, blockers, missingItems);
+                    }
                 }
                 break;
             }
@@ -451,13 +482,15 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     checkSupply(acct, world, 526, 1, 'Bones', blockers, missingItems);
                     checkSupply(acct, world, 561, 1, 'Nature rune', blockers, missingItems);
                 } else if (cfg.method === 'alch-train') {
-                    const target = Number(cfg.args[0] ?? resolveArtisanSetting(cfg, 'TARGET_LEVEL', '55'));
+                    const target = parseIntSetting(cfg.args[0] ?? resolveArtisanSetting(cfg, 'TARGET_LEVEL'), 55, { min: 1, max: 99, label: 'TARGET_LEVEL' }, blockers);
                     const itemName = resolveArtisanSetting(cfg, 'ALCH_ITEM', 'feather')!;
                     const recipe = itemMagicRecipe('high-alch', itemName);
-                    const casts = alchCasts(skillXp(acct, 'Magic'), Number.isSafeInteger(target) ? target : 55);
-                    if (casts.low + casts.high > 0) {
-                        checkSupply(acct, world, 561, 1, 'Nature rune', blockers, missingItems);
-                        checkSupply(acct, world, recipe.target, 1, itemName, blockers, missingItems);
+                    if (target !== null) {
+                        const casts = alchCasts(skillXp(acct, 'Magic'), target);
+                        if (casts.low + casts.high > 0) {
+                            checkSupply(acct, world, 561, 1, 'Nature rune', blockers, missingItems);
+                            checkSupply(acct, world, recipe.target, 1, itemName, blockers, missingItems);
+                        }
                     }
                 } else if (cfg.method === 'earth-production') {
                     const mode = cfg.args[0] ?? 'craft';
@@ -516,12 +549,16 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
 export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, _world: WorkerWorldView): RateEstimate {
     const cfg = normalizeArtisanConfig(rawCfg);
     const catalog = artisanDbtablesCatalog();
+    const rawRate = Number(resolveArtisanSetting(cfg, 'XP_RATE') ?? 25);
+    const xpRate = Number.isFinite(rawRate) && rawRate > 0 ? rawRate : 25;
+    const scaleXp = (baseXpPerTick: number) => Number((baseXpPerTick * xpRate).toFixed(2));
     switch (cfg.skill) {
         case 'cooking': {
             if (cfg.method === 'wine' || cfg.method === 'mixed-wine') {
+                const xp = scaleXp(66.0);
                 return {
-                    xpPerTick: 66.0,
-                    skillXpPerTick: { Cooking: 66.0 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Cooking: xp },
                     unitsPerTick: 0.33,
                     gpPerTick: -4,
                     setupTicks: 22,
@@ -534,8 +571,8 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
             }
             const food = (resolveArtisanSetting(cfg, 'FOOD_TYPE', cfg.args[1]) ?? 'trout').toLowerCase();
             const entry = catalog.cooking.find(c => c.uncooked.includes(food));
-            const xpPer = (entry?.xp ?? 70) / 10;
-            const xpPerTick = Number((xpPer * 0.25).toFixed(2));
+            const xpPer = entry ? entry.xp / 10 : 70;
+            const xpPerTick = scaleXp(xpPer * 0.25);
             return {
                 xpPerTick,
                 skillXpPerTick: { Cooking: xpPerTick },
@@ -550,7 +587,8 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
         }
         case 'firemaking': {
             const log = (resolveArtisanSetting(cfg, 'LOG', cfg.args[1]) ?? 'normal').toLowerCase() as keyof typeof LOGS;
-            const xpPerTick = log === 'magic' ? 75.0 : log === 'yew' ? 50.0 : log === 'maple' ? 33.7 : log === 'willow' ? 22.5 : log === 'oak' ? 15.0 : 10.0;
+            const baseXp = log === 'magic' ? 75.0 : log === 'yew' ? 50.0 : log === 'maple' ? 33.7 : log === 'willow' ? 22.5 : log === 'oak' ? 15.0 : 10.0;
+            const xpPerTick = scaleXp(baseXp);
             return {
                 xpPerTick,
                 skillXpPerTick: { Firemaking: xpPerTick },
@@ -565,9 +603,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
         }
         case 'fletching': {
             if (cfg.method === 'shafts' || resolveArtisanSetting(cfg, 'MODE', cfg.args[1]) === 'shafts') {
+                const xp = scaleXp(2.5);
                 return {
-                    xpPerTick: 2.5,
-                    skillXpPerTick: { Fletching: 2.5 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Fletching: xp },
                     unitsPerTick: 7.5,
                     gpPerTick: 10,
                     setupTicks: 15,
@@ -578,9 +617,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                     outputsPerUnit: { 52: 15 },
                 };
             }
+            const xp = scaleXp(25.0);
             return {
-                xpPerTick: 25.0,
-                skillXpPerTick: { Fletching: 25.0 },
+                xpPerTick: xp,
+                skillXpPerTick: { Fletching: xp },
                 unitsPerTick: 3.0,
                 gpPerTick: 2,
                 setupTicks: 15,
@@ -592,9 +632,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
         }
         case 'smithing': {
             if (cfg.method === 'anvil') {
+                const xp = scaleXp(12.5);
                 return {
-                    xpPerTick: 12.5,
-                    skillXpPerTick: { Smithing: 12.5 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Smithing: xp },
                     unitsPerTick: 0.25,
                     gpPerTick: 5,
                     setupTicks: 40,
@@ -604,9 +645,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                 };
             }
             if (cfg.method === 'cannonballs') {
+                const xp = scaleXp(3.2);
                 return {
-                    xpPerTick: 3.2,
-                    skillXpPerTick: { Smithing: 3.2 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Smithing: xp },
                     unitsPerTick: 0.5,
                     gpPerTick: 40,
                     setupTicks: 30,
@@ -617,9 +659,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                     outputsPerUnit: { 2: 4 },
                 };
             }
+            const xp = scaleXp(8.5);
             return {
-                xpPerTick: 8.5,
-                skillXpPerTick: { Smithing: 8.5 },
+                xpPerTick: xp,
+                skillXpPerTick: { Smithing: xp },
                 unitsPerTick: 0.16,
                 gpPerTick: 10,
                 setupTicks: 45,
@@ -630,9 +673,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
         }
         case 'crafting': {
             if (cfg.method === 'bowstrings') {
+                const xp = scaleXp(4.5);
                 return {
-                    xpPerTick: 4.5,
-                    skillXpPerTick: { Crafting: 4.5 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Crafting: xp },
                     unitsPerTick: 0.3,
                     gpPerTick: 30,
                     setupTicks: 35,
@@ -643,9 +687,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                     outputsPerUnit: { 1777: 1 },
                 };
             }
+            const xp = scaleXp(20.0);
             return {
-                xpPerTick: 20.0,
-                skillXpPerTick: { Crafting: 20.0 },
+                xpPerTick: xp,
+                skillXpPerTick: { Crafting: xp },
                 unitsPerTick: 0.3,
                 gpPerTick: 4,
                 setupTicks: 20,
@@ -656,9 +701,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
         }
         case 'herblore': {
             if (cfg.method === 'meats') {
+                const xp = scaleXp(1.5);
                 return {
-                    xpPerTick: 1.5,
-                    skillXpPerTick: { Strength: 1.5 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Strength: xp },
                     unitsPerTick: 0.01,
                     gpPerTick: 0,
                     setupTicks: 100,
@@ -668,9 +714,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                     outputsPerUnit: { 2132: 1, 2134: 1, 2136: 1, 2138: 1 },
                 };
             }
+            const xp = scaleXp(18.0);
             return {
-                xpPerTick: 18.0,
-                skillXpPerTick: { Herblore: 18.0 },
+                xpPerTick: xp,
+                skillXpPerTick: { Herblore: xp },
                 unitsPerTick: 0.25,
                 gpPerTick: -10,
                 setupTicks: 30,
@@ -680,23 +727,26 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                 inputsPerUnit: { 227: 1 },
             };
         }
-        case 'prayer':
+        case 'prayer': {
+            const boneId = Number(resolveArtisanSetting(cfg, 'BONE_ID') ?? resolveArtisanSetting(cfg, 'BONE', '526')) || 526;
+            const xp = scaleXp(2.2);
             return {
-                xpPerTick: 2.2,
-                skillXpPerTick: { Prayer: 2.2 },
+                xpPerTick: xp,
+                skillXpPerTick: { Prayer: xp },
                 unitsPerTick: 0.5,
                 gpPerTick: -5,
                 setupTicks: 15,
                 minBatchUnits: 28,
                 riskPerHour: 0,
                 confidence: 'practice',
-                inputsPerUnit: { [Number(resolveArtisanSetting(cfg, 'BONE', '526')) || 526]: 1 },
+                inputsPerUnit: { [boneId]: 1 },
             };
+        }
         case 'magic': {
             const lvl = skillLevel(acct, 'Magic');
             const high = lvl >= 55;
             if (cfg.method === 'alch-train' || cfg.method === 'items') {
-                const xp = high ? 16.25 : 7.75;
+                const xp = scaleXp(high ? 16.25 : 7.75);
                 return {
                     xpPerTick: xp,
                     skillXpPerTick: { Magic: xp },
@@ -709,9 +759,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                 };
             }
             if (cfg.method === 'orbs' || cfg.method === 'orbs-at-site') {
+                const xp = scaleXp(15.0);
                 return {
-                    xpPerTick: 15.0,
-                    skillXpPerTick: { Magic: 15.0 },
+                    xpPerTick: xp,
+                    skillXpPerTick: { Magic: xp },
                     unitsPerTick: 0.2,
                     gpPerTick: 25,
                     setupTicks: 90,
@@ -720,9 +771,10 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                     confidence: 'practice',
                 };
             }
+            const xp = scaleXp(8.0);
             return {
-                xpPerTick: 8.0,
-                skillXpPerTick: { Magic: 8.0 },
+                xpPerTick: xp,
+                skillXpPerTick: { Magic: xp },
                 unitsPerTick: 0.15,
                 gpPerTick: 0,
                 setupTicks: 25,
@@ -743,7 +795,7 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
             };
         case 'bank-job':
             return {
-                xpPerTick: 15.0,
+                xpPerTick: scaleXp(15.0),
                 unitsPerTick: 0.25,
                 gpPerTick: 0,
                 setupTicks: 30,

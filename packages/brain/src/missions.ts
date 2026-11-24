@@ -16,6 +16,7 @@ import {
     type MissionState,
     type WorldSnapshot,
 } from './contracts';
+import { effectiveItemReserve } from './preflight';
 
 export interface LoadMissionsOptions {
     readonly root?: string;
@@ -191,7 +192,7 @@ function ownedByMissionParticipants(mission: Mission, itemId: number, snapshot: 
         if (!acct) continue;
         if (acct.lifecycle === 'dead' || acct.lifecycle === 'paused_owner') continue;
         const owned = accountOwnedItemCount(acct, itemId);
-        const reserved = snapshot.reserves?.[acct.name]?.[itemId] ?? 0;
+        const reserved = effectiveItemReserve(acct, snapshot, itemId);
         total += Math.max(0, owned - reserved);
     }
     return total;

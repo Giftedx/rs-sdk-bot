@@ -5,8 +5,10 @@ import { join, resolve } from 'node:path';
 import { ownerPlanPath } from '../plan-lock';
 import { isLocalServer } from '../localserver';
 import { lifecycleRootForRead, simLifecycleRoot } from '../practice-paths';
+import { resolveLifecycleRoot } from '../session-lifecycle';
 
-export function recoveryLifecycleRoot(server: string, base: string): string {
+export function recoveryLifecycleRoot(server: string, base: string, account?: string): string {
+    if (account) return resolveLifecycleRoot(account, server, base);
     if (!isLocalServer(server)) return lifecycleRootForRead(server, base);
     const sim = simLifecycleRoot(base);
     const legacy = join(base, '.practice/session-lifecycle');

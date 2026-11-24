@@ -26,7 +26,7 @@ export function readMarket(file: string, parseSharedQuotes?: SharedMarketParser)
     const norm = file.replace(/\\/g, '/'), cut = norm.search(/\/(\.practice|research)\//);
     const rel = cut >= 0 ? norm.slice(cut + 1) : norm;
     if (raw.items && Number.isSafeInteger(raw.at) && raw.at > 0) {
-        if (!parseSharedQuotes) throw Error('shared market cache requires a quote parser; use scripts/item-sources.ts');
+        if (!parseSharedQuotes) throw Error('shared market cache requires a quote parser; use tools/item-sources.ts');
         const quotes = parseSharedQuotes(raw, raw.at), prices: Market['prices'] = {};
         const items = json(join(knowledgeDir(), 'items.json')) as { id: number; debugname: string }[];
         for (const item of items) if (quotes[item.id]) {

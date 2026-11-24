@@ -11,7 +11,7 @@ import { runStandaloneRecoveryPass } from './session-recovery';
 import { pruneStatus } from './status-prune';
 
 export const STALL_MS = 6 * 3600_000;
-const root = resolve(import.meta.dir, '../../..'), logDir = join(root, '.practice', 'fleet');
+const root = resolve(import.meta.dir, '../../..');
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
 
 export interface WatchdogProgress {
@@ -91,8 +91,9 @@ export type WatchdogDeps = {
 
 export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Promise<{ stoppedByOwner: boolean; pruned: number }> {
     const now = (deps.now ?? Date.now)();
-    mkdirSync(logDir, { recursive: true });
-    const log = deps.log ?? ((line: string) => appendFileSync(join(base, '.practice', 'fleet', 'watchdog.log'), `${new Date(now).toISOString()} ${line}\n`));
+    const baseLogDir = join(base, '.practice', 'fleet');
+    mkdirSync(baseLogDir, { recursive: true });
+    const log = deps.log ?? ((line: string) => appendFileSync(join(baseLogDir, 'watchdog.log'), `${new Date(now).toISOString()} ${line}\n`));
     const stopped = deps.hasStop ?? (flag => hasStopFile(flag, base));
     const prac = join(base, '.practice'), clone = join(prac, 'fleet-command', 'repo'), pubLock = join(prac, 'dashboard-publish.lock');
 

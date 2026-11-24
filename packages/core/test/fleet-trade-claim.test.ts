@@ -260,6 +260,32 @@ test('trade admission accepts the owning checkout’s exact confirmed worker log
     });
 }, 30_000);
 
+test('swarm claim release and trade handoff read confirmed logout from .practice/live/session-lifecycle', async () => {
+    await withRepos((a, b) => {
+        const liveLifecycle = join(a, '.practice', 'live', 'session-lifecycle');
+        const worker = acquireFleetSwarmClaim(a, input);
+        const attempt = beginSessionAttempt(input, {
+            root: liveLifecycle,
+            owner: { ...lifecycleOwner(), sharedClaimNonce: worker.nonce },
+        });
+        worker.armNetwork();
+        expect(attempt.record('ended', 'logged-out')).toBe(true);
+        worker.releaseAfterLogout(attempt.attemptId);
+        expect(readFleetAccountClaim(b, input)).toMatchObject({ phase: 'released', nonce: worker.nonce });
+
+        const worker2 = acquireFleetSwarmClaim(a, input);
+        const attempt2 = beginSessionAttempt(input, {
+            root: liveLifecycle,
+            owner: { ...lifecycleOwner(), sharedClaimNonce: worker2.nonce },
+        });
+        worker2.armNetwork();
+        expect(attempt2.record('ended', 'logged-out')).toBe(true);
+        const trade = acquireFleetTradeClaim(a, input);
+        expect(readFleetTradeClaim(b, input)?.nonce).toBe(trade.nonce);
+        trade.release();
+    });
+}, 30_000);
+
 const T0 = 1_794_230_000_000;
 const oldSide = { account: 'Dipstick', server, side: 'claude-cloud-4' }, newSide = { account: 'Dipstick', server, side: 'claude-cloud' };
 

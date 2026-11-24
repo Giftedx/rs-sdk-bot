@@ -1,6 +1,7 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {readLogoutProof,verifyLegacyLogout,listAttempts,type LegacyLogoutClaim} from './session-lifecycle';
+import {statusReadDirs} from './practice-paths';
+import {readLogoutProof,resolveLifecycleRoot,verifyLegacyLogout,listAttempts,type LegacyLogoutClaim} from './session-lifecycle';
 import {assertNoRecoveryLease} from './session-recovery-permit';
 import {serverTakesOver,takeoverRef,pidAlive,type TakeoverLogoutRef} from './session-takeover';
 const LIVE_SERVER='rs-sdk-demo.fly.dev';
@@ -64,8 +65,9 @@ function priorConfirmedAfterDeadPreConnects(account:string,root:string,status:an
 export function liveLogoutRef(account:string,base:string,required=false,now=Date.now(),
  takeover=serverTakesOver(LIVE_SERVER),alive:(pid:number)=>boolean=pidAlive):LiveLogoutRef|null{
  assertNoRecoveryLease(account,base);
- const root=join(base,'.practice/session-lifecycle'),proof=readLogoutProof(account,LIVE_SERVER,{root});
- const statusPath=join(base,'.practice/status',account+'.json');
+ const root=resolveLifecycleRoot(account,LIVE_SERVER,base),proof=readLogoutProof(account,LIVE_SERVER,{root});
+ const statusDirs=statusReadDirs(base);
+ const statusPath=statusDirs.map(dir=>join(dir,account+'.json')).find(p=>existsSync(p))??join(base,'.practice/status',account+'.json');
  let status:any=null;
  if(existsSync(statusPath))status=JSON.parse(readFileSync(statusPath,'utf8'));
  if(proof.state==='confirmed'){

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -108,5 +108,18 @@ describe('fleet watchdog', () => {
         expect(watchdogSrc).not.toContain('coordinator-cli');
         expect(watchdogSrc).not.toContain('packages/router');
         expect(launcherScript('C:\\bun.exe', 'D:\\repo')).toContain('watchdog.ts');
+    });
+
+    test('creates .practice/fleet inside base rather than module root when logging', async () => {
+        const customBase = scratch();
+        const res = await runWatchdogPass(customBase, {
+            now: () => 2_500_000,
+            hasStop: flag => flag === 'swarm',
+            prune: () => ({ moved: [], kept: 0, failed: 0 }),
+        });
+        expect(res.stoppedByOwner).toBe(true);
+        const logFile = join(customBase, '.practice', 'fleet', 'watchdog.log');
+        expect(existsSync(logFile)).toBe(true);
+        expect(readFileSync(logFile, 'utf8')).toContain('owner stop present; nothing started');
     });
 });

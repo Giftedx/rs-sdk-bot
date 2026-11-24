@@ -137,7 +137,7 @@ jobs:
         run: |
           mkdir -p .practice/pvp-sweep
           git rev-parse HEAD > .practice/pvp-sweep/source.txt
-          sha256sum scripts/pk.ts scripts/pk-spar.ts scripts/measure/pk-escape-proof.ts scripts/measure/pk-spear-proof.ts scripts/measure/aio-bench-cases.ts patches/rs-sdk-working.patch >> .practice/pvp-sweep/source.txt
+          sha256sum scripts/pk.ts packages/workers/src/pvp/pk-spar.ts scripts/measure/pk-escape-proof.ts scripts/measure/pk-spear-proof.ts scripts/measure/aio-bench-cases.ts patches/rs-sdk-working.patch >> .practice/pvp-sweep/source.txt
       - name: Run this shard of the complete PvP sweep in bounded batches
         timeout-minutes: 45
         run: |
@@ -535,6 +535,8 @@ jobs:
           key: practice-cache-${{ runner.os }}-part${{ matrix.part }}-${{ hashFiles('knowledge/**/*.json', '.gitmodules', 'patches/*.patch') }}
           restore-keys: practice-cache-${{ runner.os }}-part${{ matrix.part }}-
       - run: bun run check-pin
+        if: matrix.part == 1
+      - run: bun tools/check-no-diary.ts --list
         if: matrix.part == 1
       # A Windows checkout (CRLF in the SDK submodule) and this runner give one release for one commit
       # (packages/core/src/release-digest.ts). Compare the line with `bun packages/core/src/worker-release.ts scripts/ranged-train.ts` on the PC.

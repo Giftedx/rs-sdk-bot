@@ -8,6 +8,7 @@ import {
     type WorkerAccountView,
     type WorkerWorldView,
     accountOwnedItemCount,
+    accountReserveFor,
     preflightFail,
     preflightOk,
     reserveAdjustedStock,
@@ -49,7 +50,7 @@ function questComplete(acct: WorkerAccountView, re: RegExp): boolean {
 
 function availableStock(acct: WorkerAccountView, world: WorkerWorldView, itemId: number): number {
     const owned = accountOwnedItemCount(acct, itemId, { includeBank: true, requireTrustedBank: false });
-    const reserved = world.reserves?.[acct.name]?.[itemId] ?? acct.reserves?.[itemId] ?? 0;
+    const reserved = accountReserveFor(acct, world, itemId);
     return reserveAdjustedStock(owned, reserved);
 }
 
@@ -164,7 +165,7 @@ export function runecraftPreflight(
                 itemName: 'Rune essence',
                 required: neededEssence,
                 available: essence,
-                reserved: world.reserves?.[acct.name]?.[ESSENCE] ?? acct.reserves?.[ESSENCE] ?? 0,
+                reserved: accountReserveFor(acct, world, ESSENCE),
             });
             missingItems.push({ itemId: ESSENCE, count: neededEssence - essence, itemName: 'Rune essence' });
         }
@@ -199,7 +200,7 @@ export function runecraftPreflight(
                 itemName: 'Rune essence',
                 required: j.batch,
                 available: essence,
-                reserved: world.reserves?.[acct.name]?.[ESSENCE] ?? acct.reserves?.[ESSENCE] ?? 0,
+                reserved: accountReserveFor(acct, world, ESSENCE),
             });
             missingItems.push({ itemId: ESSENCE, count: j.batch - essence, itemName: 'Rune essence' });
         }

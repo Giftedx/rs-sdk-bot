@@ -342,16 +342,17 @@ export async function loot(s: Session, at: { x: number; z: number }, stop: () =>
 export async function runPkHuntCli(
     argv: readonly string[],
     env: Record<string, string | undefined> = process.env,
+    existingSession?: Session,
 ): Promise<number> {
     const [bot, capArg] = argv;
     if (!bot) { console.log('usage: bun scripts/pk-hunt.ts <bot> [CAP ticks]'); return 2; }
     const { openBot, finish } = await import('../../../core/src/bot');
     let server = '';
-    try { server = accountServerBeforeLogin(bot); } catch (e) { console.log(`RESULT fail no server for ${bot}: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`); return 2; }
+    try { server = existingSession?.lifecycle?.server ?? accountServerBeforeLogin(bot); } catch (e) { console.log(`RESULT fail no server for ${bot}: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`); return 2; }
     const ledgerRefusal = pvpDeathRefusal({ accounts: [bot], server });
     if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); return 1; }
     const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
-    const s = await openBot(bot, { continueAfterDeath: true });
+    const s = existingSession ?? (await openBot(bot, { continueAfterDeath: true }));
     const threatRadar = env.HUNT_THREAT === '1' ? new Radar() : undefined;
     const closeRadar = threatRadar && !isLocalServer(server) ? connectRadar(server, threatRadar) : undefined;
     const threats = threatRadar ? new ThreatWatch({ sessions: () => [s], server, friends: fleetNames(), radar: threatRadar, log: l => console.log(l), act: env.HUNT_THREAT_ACT !== '0' }) : undefined;
@@ -362,6 +363,10 @@ export async function runPkHuntCli(
         onDeath: near => { recordPvpDeath({ account: bot, server, at: Date.now(), script: 'scripts/aio-pvp.ts', near }); } });
     closeRadar?.();
     console.log('HUNT ' + JSON.stringify(r));
+    if (existingSession) {
+        if (r.end === 'session ended') return 1;
+        return huntEnd(r).ok ? 0 : 1;
+    }
     if (r.end === 'session ended') { await finish([s], false, 'session ended: disconnected'); return 1; }
     const end = huntEnd(r);
     await finish([s], end.ok, end.detail);

@@ -171,3 +171,26 @@ test('specialBoardSupplyDemand covers non-Wilderness Equipment (1,366,450) and B
     expect(eqCost).toBe(1_366_450);
     expect(bk.supplies.map(s => s.itemId)).toEqual([995, 859, 1319]);
 });
+
+test('liveHelperStatuses reads .practice/live/status newest by at and excludes all reserved specialists', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const base = mkdtempSync(join(tmpdir(), 'bill-live-reserved-'));
+    const snaps = join(base, 'snaps');
+    try {
+        mkdirSync(join(base, '.practice/live/status'), { recursive: true });
+        mkdirSync(join(base, '.practice/status'), { recursive: true });
+        mkdirSync(snaps, { recursive: true });
+        const live = 'rs-sdk-demo.fly.dev';
+        writeFileSync(join(base, '.practice/status/HelperOne.json'), JSON.stringify({ name: 'HelperOne', server: live, at: 10, bank: [{ id: 536, count: 10 }] }));
+        writeFileSync(join(base, '.practice/live/status/HelperOne.json'), JSON.stringify({ name: 'HelperOne', server: live, at: 20, bank: [{ id: 536, count: 55 }] }));
+        writeFileSync(join(base, '.practice/live/status/HiltsDeep.json'), JSON.stringify({ name: 'HiltsDeep', server: live, at: 20, bank: [{ id: 536, count: 999 }] }));
+        writeFileSync(join(snaps, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [{ name: 'POLEVAULTER', server: live, at: 20, bank: [{ id: 536, count: 888 }] }] }));
+
+        const statuses = liveHelperStatuses(base, snaps, 'local');
+        expect(statuses.map(s => s.name)).toEqual(['HelperOne']);
+        expect(supplyBill([{ item: 'dragon bones', count: 100 }], items, statuses)[0]).toMatchObject({ owned: 55, short: 45 });
+    } finally {
+        rmSync(base, { recursive: true, force: true });
+    }
+});

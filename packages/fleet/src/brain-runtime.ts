@@ -22,6 +22,7 @@ import {
     HUB_BANKER_LOCATIONS,
     OutcomeClassifier,
     buildFleetState,
+    canProtectedAccountLaunch,
     createActivityCatalog,
     createDemandEngine,
     createRateStore,
@@ -114,8 +115,14 @@ export interface BrainCycleResult {
 }
 
 const DEFAULT_LIVE_SERVER = 'rs-sdk-demo.fly.dev';
+const SAFE_OPERATOR_COMMAND_ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
+const BLOCKED_OVERRIDE_REASON_RE = /^(?:protected_clock|campaign_|system_hold:|paused_owner|dead|in_trade|all_candidates_quarantined|quarantined)/;
 const SWARM_AUTO_STOP_RE =
     /^(?:swarm stopped|swarm plan removed or stopped|swarm recovery stopped|inherited recovery stopped|fleet controller lease unavailable|swarm)$/i;
+
+export function isSafeOperatorCommandId(id: unknown): id is string {
+    return typeof id === 'string' && SAFE_OPERATOR_COMMAND_ID_RE.test(id) && !id.includes('..');
+}
 
 function isPlainRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -341,6 +348,9 @@ export function drainOperatorCommands(opts: {
             continue;
         }
         const errors = validateOperatorCommand(parsed);
+        if (errors.length === 0 && isPlainRecord(parsed) && !isSafeOperatorCommandId(parsed.id)) {
+            errors.push('OperatorCommand.id must match /^[A-Za-z0-9._-]{1,128}$/ without ".."');
+        }
         if (errors.length > 0) {
             atomicJson(join(rejectedDir, file), { file, errors, rejectedAt: now, payload: parsed });
             rmSync(filePath, { force: true });
@@ -470,10 +480,18 @@ function applyActivityOverridesToPlan(
         readonly marketQuotes: MarketQuotesMap;
         readonly minTrust: TrustTier;
         readonly allowExperimentalFallback: boolean;
+        readonly ignoreSideStop?: boolean;
+        readonly infraCircuitBreaker?: InfraCircuitBreakerState;
     },
 ): FleetPlan {
     if (Object.keys(input.overrides).length === 0) return plan;
+    const sideStopped = input.world.fleetSides?.[input.world.side]?.stopped === true && !input.ignoreSideStop;
+    const infraOpen = input.infraCircuitBreaker?.open === true
+        && (input.infraCircuitBreaker.retryAt === undefined || input.world.at < input.infraCircuitBreaker.retryAt);
+    if (sideStopped || infraOpen) return plan;
+
     const nextAccountPlans: Record<string, AccountPlan> = { ...plan.accountPlans };
+    let usedSlots = Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
     let changed = false;
 
     for (const [name, acct] of Object.entries(input.world.accounts)) {
@@ -482,8 +500,18 @@ function applyActivityOverridesToPlan(
         if (!ov || !ov.activityId) continue;
         if (acct.lifecycle === 'paused_owner' || acct.lifecycle === 'dead' || acct.lifecycle === 'in_trade') continue;
         if (acct.lifecycle === 'needs_logout_recovery' || acct.lifecycle === 'needs_location_recovery') continue;
+        if (!canProtectedAccountLaunch(acct, input.campaigns, input.world).allowed) continue;
+
+        const alreadySelected = (nextAccountPlans[acct.name]?.steps.length ?? 0) > 0;
+        if (!alreadySelected && usedSlots >= plan.maxBots) continue;
+
         const act = input.catalog.get(ov.activityId);
         if (!act) continue;
+        const quarantined = input.defects.some(
+            (d) => d.activityId === act.id && d.quarantined && (d.expiresAt === undefined || input.world.at < d.expiresAt),
+        );
+        if (quarantined) continue;
+
         const planned = planAccount(acct, {
             world: input.world,
             activities: [act],
@@ -497,7 +525,11 @@ function applyActivityOverridesToPlan(
         });
         if (planned.steps.length > 0) {
             nextAccountPlans[acct.name] = planned;
+            if (!alreadySelected) usedSlots += 1;
             changed = true;
+            continue;
+        }
+        if (planned.idleReason && BLOCKED_OVERRIDE_REASON_RE.test(planned.idleReason)) {
             continue;
         }
         const syntheticScore = Math.max(1, nextAccountPlans[acct.name]?.scorePerHour ?? 100);
@@ -520,6 +552,7 @@ function applyActivityOverridesToPlan(
             retentionMarginApplied: true,
         };
         nextAccountPlans[acct.name] = synthetic;
+        if (!alreadySelected) usedSlots += 1;
         changed = true;
     }
 
@@ -616,6 +649,8 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         marketQuotes,
         minTrust,
         allowExperimentalFallback,
+        ignoreSideStop: opts.ignoreSideStop,
+        infraCircuitBreaker: infraState,
     });
 
     const fleetState = buildFleetState(fleetPlan, {
@@ -925,7 +960,7 @@ export function materializeBrainTransferOrders(
         }
 
         const hubSpec = HUB_BANKER_LOCATIONS[order.hub];
-        const tile = hubSpec.bankTile;
+        const [meetFrom, meetTo] = hubSpec.meetTiles;
         const lookupSide = (name: string): string => {
             const direct = opts.world.accounts[name] ?? opts.world.accounts[name.toLowerCase()];
             if (direct) return direct.side;
@@ -953,8 +988,8 @@ export function materializeBrainTransferOrders(
             start: opts.now,
             end: order.expiresAt,
             meet: [
-                { x: tile.x, z: tile.z, level: tile.level },
-                { x: tile.x, z: tile.z, level: tile.level },
+                { x: meetFrom.x, z: meetFrom.z, level: meetFrom.level },
+                { x: meetTo.x, z: meetTo.z, level: meetTo.level },
             ],
             ...(bothLocal ? { takerWaits: true } : {}),
         };
