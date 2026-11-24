@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562707317,
+ "at": 1795562799057,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,19 +22,6 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
   }
  ],
  "army": [
@@ -71,6 +58,7 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
+  "trousersnake",
   "undermykilt",
   "woodpecker",
   "yewfirst"
