@@ -5,6 +5,6 @@
  "account": "TossTheCaber",
  "partner": "KnightRider",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795563307226,
+ "at": 1795563669987,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }

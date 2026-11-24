@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795563427069-3",
+ "role": "from",
+ "account": "OreElse",
+ "partner": "Magicwanda",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795563705622,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}
