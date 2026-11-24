@@ -834,14 +834,13 @@ async function runFightArenaThroughKeys(s: Session, stop: StopFn): Promise<void>
         await s.direct({ type: 'walkTo', x: 2617, z: 3151, running: true, reason: 'SDK' });
         await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) <= 3151 || stop(), { timeoutTicks: 4 });
     }
-    await walkWaypoints(s, [{ x: 2616, z: 3148, tol: 0 }], 30, stop, 'corridor to guard door');
     await openShutArenaDoor(s, 2616, 3147, 'guard courtyard north door', stop);
-    await walkWaypoints(s, [{ x: 2615, z: 3142, tol: 1 }], 30, stop, 'to drunk guard 1');
+    await walkWaypoints(s, [{ x: 2615, z: 3142, tol: 2 }], 45, stop, 'to drunk guard 1');
     await talkGuardById('guard 1', () => sawArenaDialog(/fall asleep/i));
 
-    await walkWaypoints(s, [{ x: 2610, z: 3143, tol: 0 }], 30, stop, 'to guard west door out');
+    await walkWaypoints(s, [{ x: 2610, z: 3143, tol: 1 }], 30, stop, 'to guard west door out');
     await openShutArenaDoor(s, 2609, 3143, 'guard courtyard west door', stop);
-    await walkWaypoints(s, [{ x: 2608, z: 3143, tol: 0 }, { x: 2585, z: 3141, tol: 0 }], 60, stop, 'guard to west door');
+    await walkWaypoints(s, [{ x: 2608, z: 3143, tol: 1 }, { x: 2585, z: 3141, tol: 0 }], 60, stop, 'guard to west door');
     await passArenaGuardDoor(s, { x: 2585, z: 3141 }, () => (posOf(s)?.worldX ?? 9999) < 2585, 'west door out', stop);
 
     await walkWaypoints(s, [{ x: 2567, z: 3141, tol: 2 }], 60, stop, 'to khazard barman');
@@ -858,9 +857,9 @@ async function runFightArenaThroughKeys(s: Session, stop: StopFn): Promise<void>
 
     await walkWaypoints(s, [{ x: 2584, z: 3141, tol: 0 }], 60, stop, 'barman back to west door');
     await passArenaGuardDoor(s, { x: 2585, z: 3141 }, () => (posOf(s)?.worldX ?? 0) >= 2585, 'west door in', stop);
-    await walkWaypoints(s, [{ x: 2608, z: 3143, tol: 0 }], 60, stop, 'west door to guard courtyard door');
+    await walkWaypoints(s, [{ x: 2608, z: 3143, tol: 1 }], 60, stop, 'west door to guard courtyard door');
     await openShutArenaDoor(s, 2609, 3143, 'guard courtyard west door return', stop);
-    await walkWaypoints(s, [{ x: 2615, z: 3142, tol: 1 }], 30, stop, 'courtyard door to guard 2');
+    await walkWaypoints(s, [{ x: 2615, z: 3142, tol: 2 }], 30, stop, 'courtyard door to guard 2');
     await talkGuardById('guard 2', () => countById(s.sdk.getInventory(), 76) >= 1, 80);
 }
 
