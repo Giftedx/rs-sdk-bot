@@ -1,7 +1,8 @@
 // Whole-tree worker source revision and cached runtime-only import boundary scanning.
 import { createHash } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { writeAtomicFile } from '../atomic-file';
 import { importedPath, root, toolingRoots, ts, workerSourceRoots } from './paths';
 
 // The import check of a file depends only on its path and its bytes. It is 60% of workerSourceRevision (900 files
@@ -54,6 +55,6 @@ export function workerSourceRevision(base = root): string {
     };
     workerSourceRoots.forEach(walk);
     for (const p of ['package.json', 'bun.lock', 'tsconfig.json']) hash.update(p + '\0').update(readFileSync(join(base, p))).update('\0');
-    if (added) try { const file = sourceScanFile(base), tmp = `${file}.${process.pid}.tmp`; mkdirSync(dirname(file), { recursive: true }); writeFileSync(tmp, JSON.stringify(Object.fromEntries(checked))); renameSync(tmp, file); } catch { /* the record is optional */ }
+    if (added) try { writeAtomicFile(sourceScanFile(base), JSON.stringify(Object.fromEntries(checked)), { ensureDir: true }); } catch { /* the record is optional */ }
     return hash.digest('hex');
 }

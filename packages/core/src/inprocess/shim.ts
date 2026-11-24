@@ -217,6 +217,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             if (drainPacketBatch && client.pumpPackets === drainPacketBatch) client.pumpPackets = originalPacketPump;
             lockstep.restoreTickClock();
             queue.length = 0;
+            indexes.clear();
             recorder?.end(tick, reason);
             recorder = null;
             waitDone?.();

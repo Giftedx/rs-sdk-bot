@@ -4,6 +4,8 @@
 // route after the bank uses.
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { isLocalServer } from './localserver';
+import { practiceRoot, simStatusDir, statusReadDirs } from './practice-paths';
 import type { Account, Leg, RouteOptions, Tile, World } from './world';
 import { executionContext, withExecutionDeadline } from '../../../vendor/rs-sdk/sdk/execution-context';
 
@@ -78,14 +80,25 @@ export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stoc
 }
 
 // The last bank snapshot the status file holds (packages/core/src/status.ts writes it when a bank is open).
-export function bankStock(name: string): BankStock | undefined {
-    try {
-        const st = JSON.parse(readFileSync(join(repoRoot, '.practice', 'status', `${name}.json`), 'utf8')) as { bank?: { id: number; count: number }[] };
-        if (!Array.isArray(st.bank)) return undefined;
-        const items: Record<string, number> = {};
-        for (const i of st.bank) { const n = itemName(i.id); if (n && i.id !== 995) items[n] = (items[n] ?? 0) + i.count; }
-        return { coins: st.bank.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0), items };
-    } catch { return undefined; }
+export function bankStock(name: string, opts: { server?: string; base?: string } = {}): BankStock | undefined {
+    const base = opts.base ?? repoRoot;
+    const dirs = opts.server && isLocalServer(opts.server)
+        ? [simStatusDir(base), join(practiceRoot(base), 'status')]
+        : statusReadDirs(base);
+    for (const dir of dirs) {
+        try {
+            const st = JSON.parse(readFileSync(join(dir, `${name}.json`), 'utf8')) as { server?: string; bank?: { id: number; count: number }[] };
+            if (opts.server && st.server && (isLocalServer(opts.server) ? st.server !== opts.server : isLocalServer(st.server))) continue;
+            if (!Array.isArray(st.bank)) return undefined;
+            const items: Record<string, number> = {};
+            for (const i of st.bank) { const n = itemName(i.id); if (n && i.id !== 995) items[n] = (items[n] ?? 0) + i.count; }
+            return { coins: st.bank.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0), items };
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') continue;
+            return undefined;
+        }
+    }
+    return undefined;
 }
 
 let names: Map<number, string> | undefined, ids: Map<string, number> | undefined;

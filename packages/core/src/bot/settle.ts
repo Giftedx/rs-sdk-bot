@@ -80,7 +80,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
         await Promise.all(sessions.map(s => {
             const r = records.get(s); if (!r) return;
             records.delete(s);
-            r.end(s.tick(), 'settled');
+            r.end(typeof s.tick === 'function' ? s.tick() : 0, 'settled');
             return Promise.race([r.flushed, Bun.sleep(RECORD_FLUSH_MS)]);
         }));
         if (!await prior) ok = false;
@@ -88,16 +88,24 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
         try { finalDetail = typeof detail === 'function' ? detail(ok) : detail; }
         catch (error) { ok = false; finalDetail = `final accounting: ${String(error)}`; }
         log(`RESULT ${ok ? 'ok' : 'fail'} ${finalDetail}`);
-        for (const s of sessions) {
-            statuses.get(s)?.stop();
-            stallWatches.get(s)?.stop();
-            stallWatches.delete(s);
-            ledgers.delete(s);
-            statuses.delete(s);
-            randomEvents.delete(s);
-        }
         return ok;
     } finally {
+        for (const s of sessions) {
+            ledgers.get(s)?.stop();
+            ledgers.delete(s);
+            const pg = prayerGuards.get(s);
+            if (pg) { prayerGuards.delete(s); void pg.release().catch(() => {}); }
+            eatGuards.get(s)?.stop();
+            eatGuards.delete(s);
+            statuses.get(s)?.stop();
+            statuses.delete(s);
+            stallWatches.get(s)?.stop();
+            stallWatches.delete(s);
+            randomEvents.get(s)?.stop();
+            randomEvents.delete(s);
+            const rec = records.get(s);
+            if (rec) { records.delete(s); rec.end(typeof s.tick === 'function' ? s.tick() : 0, 'settled'); }
+        }
         tickWaits.active = Math.max(0, tickWaits.active - 1);
     }
 }

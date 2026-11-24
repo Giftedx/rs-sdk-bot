@@ -134,8 +134,12 @@ export function createTickRecorder(meta: RecordMeta, opts: { root?: string; env?
 
 export function pruneRecords(dir: string, keep: number, preserve?: ReadonlySet<string>) {
     if (!existsSync(dir)) return;
-    const files = readdirSync(dir).filter(f => f.endsWith('.ticks.ndjson.gz') && !preserve?.has(join(dir, f)))
-        .map(f => ({ f, at: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.at - a.at);
+    const files: { f: string; at: number }[] = [];
+    for (const f of readdirSync(dir)) {
+        if (!f.endsWith('.ticks.ndjson.gz') || preserve?.has(join(dir, f))) continue;
+        try { files.push({ f, at: statSync(join(dir, f)).mtimeMs }); } catch { /* removed concurrently */ }
+    }
+    files.sort((a, b) => b.at - a.at);
     for (const { f } of files.slice(keep)) try { unlinkSync(join(dir, f)); } catch { /* in use or gone */ }
 }
 

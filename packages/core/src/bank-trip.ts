@@ -48,7 +48,7 @@ export function validateBankRouteJob(j:BankRouteJob):void{
 }
 
 export function fittingBankBatch(inputs:Record<number,number>,tools:number[],maximum:number,freeSlots:number,stackable:(id:number)=>boolean,outputs:Record<number,number>={}):number{
- const slots=(items:Record<number,number>,n:number)=>{const ids=new Set([...Object.keys(items).map(Number),...tools]);let count=0;for(const id of ids){const units=(items[id]??0)*n+(tools.includes(id)?1:0);count+=stackable(id)?1:units;}return count;};
+ const slots=(items:Record<number,number>,n:number)=>{const ids=new Set([...Object.keys(items).map(Number),...tools]);let count=0;for(const id of ids){const units=(items[id]??0)*n+(tools.includes(id)?1:0);if(units>0)count+=stackable(id)?1:units;}return count;};
  let lower=0,upper=maximum;
  while(lower<upper){
   const n=Math.ceil((lower+upper)/2);
@@ -76,10 +76,11 @@ export function planBankTripSchedule(options:{
  const requiredInputs:Record<number,number>={},shortfalls:Record<number,number>={};
  let feasibleUnits=missingTools.length?0:options.target;
  for(const [rawId,units] of Object.entries(options.inputs)){
+  if(!Number.isFinite(units)||units<0)throw Error('invalid bank schedule input unit count');
   const id=Number(rawId),retained=tools.has(id)?1:0,need=units*options.target+reserve+retained,have=options.bankStock[id]??0;
   requiredInputs[id]=need;
   if(have<need)shortfalls[id]=need-have;
-  const canMake=Math.max(0,Math.floor((have-reserve-retained)/units));
+  const canMake=units===0?(have>=reserve+retained?options.target:0):Math.max(0,Math.floor((have-reserve-retained)/units));
   feasibleUnits=Math.min(feasibleUnits,canMake);
  }
  return {

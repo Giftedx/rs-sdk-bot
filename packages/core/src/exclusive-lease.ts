@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { createExclusiveAtomic } from './atomic-file';
 
 export const ownerAlive = (pid: number): boolean => {
     try {
@@ -16,10 +17,7 @@ export const ownerAlive = (pid: number): boolean => {
 export function acquireExclusiveLease(file: string, runId: string): () => void {
     mkdirSync(dirname(file), { recursive: true });
     const value = JSON.stringify({ pid: process.pid, runId, token: crypto.randomUUID() });
-    try {
-        writeFileSync(file, value, { flag: 'wx' });
-    } catch (e: any) {
-        if (e.code !== 'EEXIST') throw e;
+    if (!createExclusiveAtomic(file, value)) {
         const raw = readFileSync(file, 'utf8');
         const old = JSON.parse(raw);
         if (
@@ -35,7 +33,7 @@ export function acquireExclusiveLease(file: string, runId: string): () => void {
         if (readFileSync(file, 'utf8') !== raw) throw Error('lease changed during takeover: ' + file);
         unlinkSync(file);
         // A fresh claimant may win this gap. wx still permits exactly one winner.
-        writeFileSync(file, value, { flag: 'wx' });
+        if (!createExclusiveAtomic(file, value)) throw Error('account/order lease conflict: ' + file);
     }
     return () => {
         if (existsSync(file) && readFileSync(file, 'utf8') === value) unlinkSync(file);

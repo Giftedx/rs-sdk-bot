@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { writeAtomicFile } from './atomic-file';
 import { isLocalServer } from './localserver';
 
 // The ledger of PvP deaths on a live server: .practice/pvp-deaths.json. A death that a run recovers from (the hunt and the squad re-kit)
@@ -38,10 +39,7 @@ export function recordPvpDeath(entry: Omit<PvpDeath, 'schema'>, file = DEFAULT_P
     if (isLocalServer(entry.server)) return false;
     const all = readPvpDeaths(file);
     all.push({ schema: PVP_DEATH_SCHEMA, ...entry });
-    mkdirSync(dirname(file), { recursive: true });
-    const temporary = `${file}.tmp-${process.pid}`;
-    try { writeFileSync(temporary, JSON.stringify(all, null, 1) + '\n'); renameSync(temporary, file); }
-    catch (error) { try { rmSync(temporary, { force: true }); } catch { /* keep the first error */ } throw error; }
+    writeAtomicFile(file, JSON.stringify(all, null, 1) + '\n', { ensureDir: true });
     return true;
 }
 

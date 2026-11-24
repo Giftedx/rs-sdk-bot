@@ -1,8 +1,9 @@
 // Where an item lies on the ground and respawns: the OBJ section of each map square file. A line is
 // `<level> <localX> <localZ>: <obj id> <count>`; the file m<X>_<Z>.jm2 holds world x = X*64 + localX, z = Z*64 + localZ.
 import { createHash } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { writeAtomicFile } from './atomic-file';
 import type { Tile } from './world';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
@@ -82,7 +83,6 @@ function loadCachedSpawns(cacheFile: string, key: string): Map<number, Tile[]> |
 
 function saveCachedSpawns(cacheFile: string, key: string, map: Map<number, Tile[]>): void {
     try {
-        mkdirSync(dirname(cacheFile), { recursive: true });
         const entries: [number, number[]][] = [];
         for (const [id, tiles] of map) {
             const coords = new Array<number>(tiles.length * 3);
@@ -94,9 +94,7 @@ function saveCachedSpawns(cacheFile: string, key: string, map: Map<number, Tile[
             }
             entries.push([id, coords]);
         }
-        const tmp = `${cacheFile}.${process.pid}.${Date.now()}.tmp`;
-        writeFileSync(tmp, JSON.stringify({ v: 1, key, entries }));
-        renameSync(tmp, cacheFile);
+        writeAtomicFile(cacheFile, JSON.stringify({ v: 1, key, entries }), { ensureDir: true });
     } catch {
         // Ignore cache write contention or read-only filesystems.
     }
