@@ -13,7 +13,14 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, sessionWalker, walkPath } from '../packages/core/src/walk';
 import { runQuestArena } from './generated/quest-arena';
 import { runQuestTree } from './generated/quest-tree';
-import { mazeWalkWaypoints, runSpecialistWaterfall } from './combat-quest-specialists';
+import {
+    configureSpecialistGuardEnv,
+    mazeWalkWaypoints,
+    MELEE_PVP_CORE_KIT,
+    runMeleePvpSpecialist,
+    runSpecialistWaterfall,
+    type KitSpecItem,
+} from './combat-quest-specialists';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 import {
     ATTACK_SPECIALIST_KIT,
@@ -22,6 +29,8 @@ import {
     hasAtLeastKit,
     LUMBRIDGE_HANDOFF,
 } from '../packages/workers/src/logistics';
+
+export const ATTACK_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_CORE_KIT;
 
 const TUTORIAL_KEEP_IDS = new Set([556, 558]); // Tutorial Air and Mind runes stack with the kit.
 const PROTECT_MELEE_INDEX = 14;
@@ -711,6 +720,150 @@ async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
     }
 }
 
+async function openShutArenaDoor(s: Session, x: number, z: number, label: string, stop: StopFn): Promise<void> {
+    for (let i = 0; i < 6 && !stop(); i++) {
+        const shut = (s.sdk.getState()?.nearbyLocs ?? []).find(
+            (l: any) => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
+        );
+        if (!shut) return;
+        const op = shut.optionsWithIndex.find((o: any) => /^open$/i.test(o.text ?? ''));
+        await s.sdk.sendInteractLoc(shut.x, shut.z, shut.id, op?.opIndex ?? 1);
+        await waitTicks(s, 2);
+    }
+    const still = (s.sdk.getState()?.nearbyLocs ?? []).find(
+        (l: any) => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
+    );
+    if (still) throw Error(`failed opening ${label} at ${x},${z}`);
+}
+
+async function passArenaGuardDoor(
+    s: Session,
+    door: { x: number; z: number },
+    through: () => boolean,
+    label: string,
+    stop: StopFn,
+): Promise<void> {
+    for (let i = 0; i < 6 && !through() && !stop(); i++) {
+        const loc = (s.sdk.getState()?.nearbyLocs ?? []).find(
+            (l: any) => l.x === door.x && l.z === door.z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
+        );
+        if (loc) {
+            const op = loc.optionsWithIndex.find((o: any) => /^open$/i.test(o.text ?? ''));
+            await s.sdk.sendInteractLoc(loc.x, loc.z, loc.id, op?.opIndex ?? 1);
+        }
+        const deadline = s.tick() + 25;
+        while (!stop() && !through() && s.tick() < deadline) {
+            const d: any = s.sdk.getDialog();
+            if (d?.isOpen && !d.isWaiting) await s.sdk.sendClickDialog(0);
+            await waitTicks(s, 1);
+        }
+    }
+    if (!through()) throw Error(`Fight Arena stuck at ${label}`);
+}
+
+async function runFightArenaThroughKeys(s: Session, stop: StopFn): Promise<void> {
+    const sawArenaDialog = (re: RegExp) => {
+        const d: any = s.sdk.getDialog();
+        if (d?.isOpen && re.test(d.text ?? '')) return true;
+        return (s.sdk.getState()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
+    };
+    const talkGuardById = async (label: string, done: () => boolean, maxTicks = 60) => {
+        for (let attempt = 0; attempt < 3 && !done() && !stop(); attempt++) {
+            const guard = (s.sdk.getState()?.nearbyNpcs ?? [])
+                .filter((n: any) => n.id === 254)
+                .sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+            if (!guard) throw Error(`Fight Arena ${label}: guard 254 not visible`);
+            await s.direct({ type: 'interactNpc', npcIndex: guard.index, optionIndex: 1, reason: 'SDK' });
+            await waitUntil(s, () => !!s.sdk.getDialog()?.isOpen || done() || stop(), { timeoutTicks: 20 });
+            const end = s.tick() + maxTicks;
+            let shut = 0;
+            while (!stop() && s.tick() < end) {
+                const d: any = s.sdk.getDialog();
+                if (d?.isOpen) {
+                    shut = 0;
+                    if (!d.isWaiting) await s.sdk.sendClickDialog(0);
+                } else {
+                    shut++;
+                    if ((done() && shut >= 2) || shut >= 3) break;
+                }
+                await waitTicks(s, 1);
+            }
+            if (done()) return;
+        }
+        if (!done()) throw Error(`Fight Arena ${label} incomplete`);
+    };
+
+    // 1. Lady Servil -> 2. Chest (Khazard helmet + armour, equip both).
+    await talkAndChoose(
+        s,
+        /^lady servil$/i,
+        { x: 2566, z: 3199 },
+        [/can i help you/i],
+        () => sawArenaDialog(/i'll be waiting here for you|reward you handsomely/i),
+        stop,
+        'lady servil 1',
+        60,
+    );
+    await walkWaypoints(s, [{ x: 2613, z: 3190, tol: 0 }], 90, stop, 'servil to arena chest');
+    for (let i = 0; i < 12 && (countById(s.sdk.getInventory(), 74) < 1 || countById(s.sdk.getInventory(), 75) < 1) && !stop(); i++) {
+        const chest = (s.sdk.getState()?.nearbyLocs ?? []).find((l: any) => l.x === 2613 && l.z === 3189 && /chest/i.test(l.name ?? ''));
+        if (chest) {
+            const op = chest.optionsWithIndex?.find((o: any) => /search|open/i.test(o.text ?? ''))?.opIndex ?? 1;
+            await s.sdk.sendInteractLoc(chest.x, chest.z, chest.id, op);
+            await waitTicks(s, 2);
+            await dismissContinueDialogs(s, stop, 6);
+        } else {
+            await waitTicks(s, 1);
+        }
+    }
+    for (const gearId of [74, 75]) {
+        if (!s.sdk.getEquipment().some(e => e.id === gearId)) {
+            const it = s.sdk.getInventory().find(i => i.id === gearId);
+            if (!it) throw Error(`missing Khazard guard gear ${gearId}`);
+            await s.bot.equipItem(it);
+            await waitUntil(s, () => s.sdk.getEquipment().some(e => e.id === gearId) || stop(), { timeoutTicks: 5 });
+        }
+    }
+
+    // 3. North door -> corridor -> Guard 1 -> West door -> Barman -> West door -> Guard 2 (explicit door 1530 path).
+    if ((posOf(s)?.worldZ ?? 0) > 3171) {
+        await walkWaypoints(s, [{ x: 2617, z: 3172, tol: 0 }], 60, stop, 'chest to north arena door');
+        await passArenaGuardDoor(s, { x: 2617, z: 3171 }, () => (posOf(s)?.worldZ ?? 9999) <= 3171, 'north door', stop);
+    }
+    for (let i = 0; i < 12 && (posOf(s)?.worldZ ?? 0) > 3151 && !stop(); i++) {
+        await s.direct({ type: 'walkTo', x: 2617, z: 3151, running: true, reason: 'SDK' });
+        await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) <= 3151 || stop(), { timeoutTicks: 4 });
+    }
+    await walkWaypoints(s, [{ x: 2616, z: 3148, tol: 0 }], 30, stop, 'corridor to guard door');
+    await openShutArenaDoor(s, 2616, 3147, 'guard courtyard north door', stop);
+    await walkWaypoints(s, [{ x: 2615, z: 3142, tol: 1 }], 30, stop, 'to drunk guard 1');
+    await talkGuardById('guard 1', () => sawArenaDialog(/fall asleep/i));
+
+    await walkWaypoints(s, [{ x: 2610, z: 3143, tol: 0 }], 30, stop, 'to guard west door out');
+    await openShutArenaDoor(s, 2609, 3143, 'guard courtyard west door', stop);
+    await walkWaypoints(s, [{ x: 2608, z: 3143, tol: 0 }, { x: 2585, z: 3141, tol: 0 }], 60, stop, 'guard to west door');
+    await passArenaGuardDoor(s, { x: 2585, z: 3141 }, () => (posOf(s)?.worldX ?? 9999) < 2585, 'west door out', stop);
+
+    await walkWaypoints(s, [{ x: 2567, z: 3141, tol: 2 }], 60, stop, 'to khazard barman');
+    await talkAndChoose(
+        s,
+        /^khazard barman$/i,
+        { x: 2566, z: 3140 },
+        [/khali brew/i],
+        () => countById(s.sdk.getInventory(), 77) >= 1,
+        stop,
+        'khazard barman',
+        45,
+    );
+
+    await walkWaypoints(s, [{ x: 2584, z: 3141, tol: 0 }], 60, stop, 'barman back to west door');
+    await passArenaGuardDoor(s, { x: 2585, z: 3141 }, () => (posOf(s)?.worldX ?? 0) >= 2585, 'west door in', stop);
+    await walkWaypoints(s, [{ x: 2608, z: 3143, tol: 0 }], 60, stop, 'west door to guard courtyard door');
+    await openShutArenaDoor(s, 2609, 3143, 'guard courtyard west door return', stop);
+    await walkWaypoints(s, [{ x: 2615, z: 3142, tol: 1 }], 30, stop, 'courtyard door to guard 2');
+    await talkGuardById('guard 2', () => countById(s.sdk.getInventory(), 76) >= 1, 80);
+}
+
 export function shouldEnableRailingProtectMelee(
     pos: { worldZ?: number } | undefined,
     activePrayers: readonly boolean[] | undefined,
@@ -724,10 +877,71 @@ async function main(): Promise<void> {
     const CAP = Number(capArg ?? process.env.CAP ?? 5000);
     if (!bot) throw Error('usage: attack-specialist.ts <bot> [cap]');
     if (!Number.isSafeInteger(CAP) || CAP < 500 || CAP > 20000) throw Error(`invalid CAP: ${CAP}`);
-    const supplierName = (process.env.PRACTICE_SUPPLIER ?? process.env.SUPPLIER ?? '').trim();
+    const suppliersRaw = (process.env.PRACTICE_SUPPLIER ?? process.env.SUPPLIER ?? '').trim();
+    const suppliers = suppliersRaw.split(',').map(x => x.trim()).filter(Boolean);
+    const supplierName = suppliers[0] ?? '';
     if (!supplierName) throw Error('missing SUPPLIER (or PRACTICE_SUPPLIER) environment variable');
+    const tanksRaw = (process.env.PRACTICE_TANKS ?? process.env.TANKS ?? '').trim();
+    const tankNames = [...new Set(tanksRaw.split(',').map(x => x.trim()).filter(Boolean))];
+    const pvpMode =
+        process.env.VARIANT === 'pvp' ||
+        process.env.ATTACK_MODE === 'pvp' ||
+        tankNames.length > 0;
 
     const root = resolve(import.meta.dir, '..');
+    if (pvpMode) {
+        if (tankNames.length === 0) throw Error('Attack PvP mode requires TANKS or PRACTICE_TANKS');
+        configureSpecialistGuardEnv();
+        const retired = new WeakSet<Session>();
+        let ended = false;
+        let stopRequested = false;
+        const s = await openBot(bot, {
+            onStop: async (sess, detail) => {
+                if (retired.has(sess)) return;
+                stopRequested = true;
+                await finish([sess], false, detail);
+            },
+            onSessionEnd: async (sess, detail) => {
+                if (retired.has(sess)) return;
+                ended = true;
+                await finish([sess], false, detail);
+            },
+        });
+        const serverHost = readServerHost(root, bot);
+        if (!serverHost) {
+            await finish([s], false, `missing SERVER in bot.env for ${bot}`);
+            return;
+        }
+        const t0 = s.tick();
+        const stop: StopFn = () =>
+            stopRequested ||
+            ended ||
+            (!retired.has(s) && s.tick() - t0 >= CAP) ||
+            existsSync(join(root, '.practice', `stop-${bot}`)) ||
+            (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
+        try {
+            const res = await runMeleePvpSpecialist(s, {
+                botName: bot,
+                board: 'attack',
+                supplierName,
+                tankNames,
+                cap: CAP,
+                t0,
+                stop,
+                onRetireSession: sess => retired.add(sess),
+            });
+            await finish([res.session], true, res.message);
+        } catch (e) {
+            if (!retired.has(s)) {
+                await finish([s], false, String(e));
+            } else {
+                const errSess = await openBot(bot, { log: () => {} }).catch(() => null);
+                await finish(errSess ? [errSess] : [], false, String(e));
+            }
+        }
+        return;
+    }
+
     const s = await openBot(bot);
     const serverHost = readServerHost(root, bot);
     if (!serverHost) {
@@ -781,7 +995,15 @@ async function main(): Promise<void> {
 
                 await exitMazeAndClearArenaGear(s, stop);
                 await topUpPrayer(s, 26, stop);
-                await runQuestArena({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
+                await runFightArenaThroughKeys(s, stop);
+                const prevArenaFrom = process.env.ARENA_FROM;
+                process.env.ARENA_FROM = '5';
+                try {
+                    await runQuestArena({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
+                } finally {
+                    if (prevArenaFrom === undefined) delete process.env.ARENA_FROM;
+                    else process.env.ARENA_FROM = prevArenaFrom;
+                }
                 milestone('fight_arena', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
 
                 // Unequip and drop Fight Arena armour/helmet and TGV gnome amulet before entering Glarial's tomb.

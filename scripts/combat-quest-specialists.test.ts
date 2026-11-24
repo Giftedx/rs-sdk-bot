@@ -177,13 +177,15 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             [
                 { index: 1, name: 'tankA', x: 3154, z: 3924, hp: 99 },
                 { index: 2, name: 'tankB', x: 3155, z: 3923, hp: 99 },
-                { index: 3, name: 'tankFar', x: 3157, z: 3924, hp: 99 },
-                { index: 4, name: 'tankDead', x: 3154, z: 3923, hp: 0 },
+                { index: 3, name: 'tankDiag', x: 3154, z: 3923, hp: 99 },
+                { index: 4, name: 'tankNorth', x: 3155, z: 3925, hp: 99 },
+                { index: 5, name: 'tankFar', x: 3157, z: 3924, hp: 99 },
+                { index: 6, name: 'tankDead', x: 3154, z: 3923, hp: 0 },
             ],
-            ['tankA', 'tankB', 'tankFar', 'tankDead'],
+            ['tankA', 'tankB', 'tankDiag', 'tankNorth', 'tankFar', 'tankDead'],
             new Map([['tanka', 5], ['tankb', 2]]),
         );
-        expect(ranked.map(r => r.name)).toEqual(['tankB', 'tankA']);
+        expect(ranked.map(r => r.name)).toEqual(['tankNorth', 'tankB', 'tankA', 'tankDiag']);
     });
 });
 

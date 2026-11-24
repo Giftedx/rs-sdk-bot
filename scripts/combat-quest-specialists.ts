@@ -726,6 +726,9 @@ export function rankKeepRelogTanks<T extends { index: number; name?: string; x?:
     lastHitSeq?: ReadonlyMap<string, number>,
 ): T[] {
     const tankRes = tankNames.map(exactNameRe);
+    const manhattan = (p: T) =>
+        Math.abs((p.x ?? p.worldX ?? 0) - KEEP_SPECIALIST_POST.x) +
+        Math.abs((p.z ?? p.worldZ ?? 0) - KEEP_SPECIALIST_POST.z);
     return players
         .filter(p => {
             if (!tankRes.some(re => re.test(p.name ?? ''))) return false;
@@ -735,6 +738,10 @@ export function rankKeepRelogTanks<T extends { index: number; name?: string; x?:
             return d8({ x: p.x ?? p.worldX ?? 0, z }, KEEP_SPECIALIST_POST) <= 1;
         })
         .sort((a, b) => {
+            // Cardinal adjacent tanks (d1=1) allow zero-step 1-tick melee swings; diagonal/same-tile tanks step first.
+            const ca = manhattan(a) === 1 ? 0 : 1;
+            const cb = manhattan(b) === 1 ? 0 : 1;
+            if (ca !== cb) return ca - cb;
             const sa = lastHitSeq?.get((a.name ?? '').toLowerCase()) ?? 0;
             const sb = lastHitSeq?.get((b.name ?? '').toLowerCase()) ?? 0;
             if (sa !== sb) return sa - sb;
@@ -779,8 +786,8 @@ export async function runWildyPvpRelogLoop(
     initSess: Session,
     opts: {
         botName: string;
-        board: 'strength' | 'defence' | 'hitpoints' | 'ranged';
-        skill: 'Strength' | 'Defence' | 'Hitpoints' | 'Ranged';
+        board: 'attack' | 'strength' | 'defence' | 'hitpoints' | 'ranged';
+        skill: 'Attack' | 'Strength' | 'Defence' | 'Hitpoints' | 'Ranged';
         targetLevel: number;
         tankNames: readonly string[];
         setupTicks: number;
@@ -792,7 +799,14 @@ export async function runWildyPvpRelogLoop(
         styleForState?: (s: Session) => number | null;
         onPrepareSwing?: (s: Session) => Promise<void>;
     },
-): Promise<{ session: Session; totalTicks: number; swings: number }> {
+): Promise<{
+    session: Session;
+    totalTicks: number;
+    swings: number;
+    nonZeroDtSwings: number;
+    timeoutSwings: number;
+    recenterSwings: number;
+}> {
     const root = resolve(import.meta.dir, '..');
     const creds = readRelogCredentials(root, opts.botName);
     const members = isLocalServer(creds.server) || process.env.NODE_MEMBERS === 'true' ? true : undefined;
@@ -807,6 +821,9 @@ export async function runWildyPvpRelogLoop(
 
     let totalTicks = opts.setupTicks;
     let swings = 0;
+    let nonZeroDtSwings = 0;
+    let timeoutSwings = 0;
+    let recenterSwings = 0;
     const lastHitSeq = new Map<string, number>();
 
     opts.onRetireSession?.(initSess);
@@ -841,13 +858,15 @@ export async function runWildyPvpRelogLoop(
 
                 const finalSess = await openBot(opts.botName, { log: () => {} });
                 await dismissContinueDialogs(finalSess, () => true, 4);
-                return { session: finalSess, totalTicks, swings };
+                return { session: finalSess, totalTicks, swings, nonZeroDtSwings, timeoutSwings, recenterSwings };
             }
 
             if (!p0 || p0.worldZ < 3900) {
+                recenterSwings++;
                 if (!p0 || p0.worldZ < 3800) await pullArdougneLeverToWildy(sess, opts.shouldStop);
                 await walkWaypoints(sess, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.shouldStop, 'walk keep relog');
             } else if (d8({ x: p0.worldX, z: p0.worldZ }, KEEP_SPECIALIST_POST) > 0) {
+                recenterSwings++;
                 await walkWaypoints(sess, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 15, opts.shouldStop, 'recenter keep relog');
             }
 
@@ -863,7 +882,7 @@ export async function runWildyPvpRelogLoop(
                 await waitUntil(
                     sess,
                     st => rankKeepRelogTanks(st?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq).length > 0 || opts.shouldStop(),
-                    { timeoutTicks: 40 },
+                    { timeoutTicks: 40, idleMs: 60_000 },
                 );
                 target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
             }
@@ -896,9 +915,12 @@ export async function runWildyPvpRelogLoop(
 
             const endReason = await Promise.race([
                 sess.ended.then(e => e.reason),
-                waitTicks(sess, 4).then(() => 'timeout'),
+                waitTicks(sess, 4, { idleMs: 60_000 }).then(() => 'timeout'),
             ]);
-            if (endReason === 'timeout') await logoutSession(sess);
+            if (endReason === 'timeout') {
+                timeoutSwings++;
+                await logoutSession(sess);
+            }
             const endTick = sess.tick();
             const deadAfter = posOf(sess)?.isDead === true;
             await closeWithin([sess], 5000);
@@ -908,7 +930,9 @@ export async function runWildyPvpRelogLoop(
                 throw Error(`${opts.skill} relog PvP unexpected session end: ${endReason}`);
             }
             swings++;
-            const swingTicks = Math.max(0, endTick - tick0) + 1;
+            const dt = Math.max(0, endTick - tick0);
+            if (dt > 0) nonZeroDtSwings++;
+            const swingTicks = dt + 1;
             totalTicks += swingTicks;
             if (swings <= 3) {
                 console.log(`PVP_RELOG_SAMPLE swing=${swings} dt=${endTick - tick0} swingTicks=${swingTicks} totalTicks=${totalTicks} xp=${curStat.experience} pray=${prayPts}`);
@@ -996,7 +1020,7 @@ export async function runCompanionRole(
     opts: {
         role: 'supplier' | 'supplier-tank' | 'tank';
         specialistName: string;
-        board?: 'hitpoints' | 'strength' | 'defence';
+        board?: 'attack' | 'hitpoints' | 'strength' | 'defence';
         kit?: readonly KitSpecItem[];
         postTileOffsetX?: number;
         stopFile?: string;
@@ -1048,12 +1072,12 @@ export async function runCompanionRole(
         console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
     }
 
-    // Specialist stands at (3155,3924); tanks occupy (3154,3924), (3155,3923), and (3154,3923), all d8=1 from specialist.
+    // Specialist stands at (3155,3924); tanks occupy cardinal tiles (3154,3924), (3155,3923), and (3155,3925).
     const postTile = opts.postTileOffsetX === 0
         ? { x: 3154, z: 3924, level: 0 }
         : opts.postTileOffsetX === 1
             ? { x: 3155, z: 3923, level: 0 }
-            : { x: 3154, z: 3923, level: 0 };
+            : { x: 3155, z: 3925, level: 0 };
     const specialistRe = exactNameRe(opts.specialistName);
     let lastEatTick = -10;
     try {
@@ -1484,7 +1508,7 @@ export async function runMeleePvpSpecialist(
     s: Session,
     opts: {
         botName?: string;
-        board: 'strength' | 'defence' | 'hitpoints';
+        board: 'attack' | 'strength' | 'defence' | 'hitpoints';
         supplierName: string;
         tankNames: readonly string[];
         cap: number;
@@ -1494,9 +1518,9 @@ export async function runMeleePvpSpecialist(
         runWaterfallFn?: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
 ): Promise<{ session: Session; message: string }> {
-    const skill = opts.board === 'strength' ? 'Strength' : opts.board === 'defence' ? 'Defence' : 'Hitpoints';
+    const skill = opts.board === 'attack' ? 'Attack' : opts.board === 'strength' ? 'Strength' : opts.board === 'defence' ? 'Defence' : 'Hitpoints';
     const kit = MELEE_PVP_CORE_KIT;
-    const target = SPECIALIST_TARGETS[opts.board];
+    const targetTicks = opts.board === 'attack' ? 2554 : SPECIALIST_TARGETS[opts.board].targetTicks;
     const elapsed = () => s.tick() - opts.t0;
     const milestone = (step: string, extra = '') => {
         console.log(`MILESTONE ${step} tick=${elapsed()}${extra ? ' ' + extra : ''}`);
@@ -1590,13 +1614,21 @@ export async function runMeleePvpSpecialist(
     await equipItemById(s, 1319, opts.stop, 'Rune 2h sword');
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
 
-    const { session: finalSess, totalTicks } = await runWildyPvpRelogLoop(s, {
+    const setupTicks = elapsed();
+    const {
+        session: finalSess,
+        totalTicks,
+        swings,
+        nonZeroDtSwings,
+        timeoutSwings,
+        recenterSwings,
+    } = await runWildyPvpRelogLoop(s, {
         botName: opts.botName ?? s.name,
         board: opts.board,
         skill,
         targetLevel: 99,
         tankNames: opts.tankNames,
-        setupTicks: elapsed(),
+        setupTicks,
         cap: opts.cap,
         shouldStop: opts.stop,
         onRetireSession: opts.onRetireSession,
@@ -1605,11 +1637,11 @@ export async function runMeleePvpSpecialist(
     try {
         await finalSess.bot.dismissBlockingUI();
         const sk = skillInfo(finalSess, skill);
-        console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${target.targetTicks}`);
+        console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${targetTicks}`);
         if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
         return {
             session: finalSess,
-            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${target.targetTicks}`,
+            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings} to=${timeoutSwings} rec=${recenterSwings}`,
         };
     } catch (err) {
         await logoutSession(finalSess).catch(() => {});

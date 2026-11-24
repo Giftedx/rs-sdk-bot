@@ -201,3 +201,11 @@ test('withoutJewelry and withoutTeleports strip charged teleport jewelry while l
     expect(noTp.counts?.lawrune).toBe(0);
     expect(noTp.counts?.amulet_of_glory_4).toBe(0);
 });
+
+test('ATTACK_PVP_SPECIALIST_KIT matches 21-slot MELEE_PVP_CORE_KIT without Super energy', async () => {
+    const { ATTACK_PVP_SPECIALIST_KIT } = await import('./attack-specialist');
+    const { MELEE_PVP_CORE_KIT, kitSlotTotal } = await import('./combat-quest-specialists');
+    expect(ATTACK_PVP_SPECIALIST_KIT).toEqual(MELEE_PVP_CORE_KIT);
+    expect(kitSlotTotal(ATTACK_PVP_SPECIALIST_KIT)).toBe(21);
+    expect(ATTACK_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
+});
