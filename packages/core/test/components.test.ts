@@ -151,3 +151,22 @@ test('the flat labels give the answers of a Map of zone arrays for 20,000 sample
     expect(g.zones.size).toBe(3000);
     expect(back.zones.size).toBe(3000);
 });
+
+test('SharedArrayBuffer-backed labels preserve area and separated checks across attachSharedLabels', async () => {
+    const { attachSharedLabels, shareLabels } = await import('../src/components');
+    const g = grid(false);
+    const shared = shareLabels(g);
+    expect(shared).not.toBeNull();
+    const attached = attachSharedLabels(shared!);
+    expect(attached.areas).toBe(g.areas);
+    expect(attached.tiles).toBe(g.tiles);
+    expect(attached.zones.size).toBe(g.zones.size);
+    for (let x = -1; x < 9; x++) for (let z = 0; z < 8; z++) expect(attached.area(0, x, z)).toBe(g.area(0, x, z));
+    expect(separated(attached, { level: 0, x: 1, z: 1 }, { level: 0, x: 6, z: 1 }, 0)).toBe(true);
+    expect(separated(attached, { level: 0, x: 1, z: 1 }, { level: 0, x: 2, z: 5 }, 0)).toBe(false);
+    // Unwalkable start tile (returns -1) counts walkable neighbours cleanly without Set allocations.
+    const walled = labelAreas([[0, 0, 0]], (_l, x, z) => !(x === 0 && z === 0),
+        (_l, x, z, dx) => !(x === 0 && z === 0) && !(x + dx === 0 && z === 0) && !(dx !== 0 && Math.min(x, x + dx) === 3));
+    expect(separated(walled, { level: 0, x: 0, z: 0 }, { level: 0, x: 2, z: 2 }, 0)).toBe(false);
+    expect(separated(walled, { level: 0, x: 0, z: 0 }, { level: 0, x: 6, z: 2 }, 0)).toBe(true);
+});

@@ -25,13 +25,36 @@ export function parseObjSpawns(file: string, text: string, out = new Map<number,
         if (nl < 0) nl = len;
         const lineEnd = nl > pos && text.charCodeAt(nl - 1) === 13 ? nl - 1 : nl;
         if (text.startsWith('====', pos)) break;
-        const m = /^(\d+) (\d+) (\d+): (\d+)/.exec(text.slice(pos, lineEnd));
-        if (m) {
-            const id = Number(m[4]);
-            const tile: Tile = { x: baseX + Number(m[2]), z: baseZ + Number(m[3]), level: Number(m[1]) };
-            let list = out.get(id);
-            if (!list) { list = []; out.set(id, list); }
-            list.push(tile);
+        // Line format: "<level> <localX> <localZ>: <obj id> <count>"
+        let p = pos, lvl = 0, lx = 0, lz = 0, id = 0, c = 0;
+        if (p < lineEnd && (c = text.charCodeAt(p) - 48) >= 0 && c <= 9) {
+            lvl = c; p++;
+            while (p < lineEnd && (c = text.charCodeAt(p) - 48) >= 0 && c <= 9) { lvl = lvl * 10 + c; p++; }
+            if (p < lineEnd && text.charCodeAt(p) === 32) {
+                p++;
+                if (p < lineEnd && (c = text.charCodeAt(p) - 48) >= 0 && c <= 9) {
+                    lx = c; p++;
+                    while (p < lineEnd && (c = text.charCodeAt(p) - 48) >= 0 && c <= 9) { lx = lx * 10 + c; p++; }
+                    if (p < lineEnd && text.charCodeAt(p) === 32) {
+                        p++;
+                        if (p < lineEnd && (c = text.charCodeAt(p) - 48) >= 0 && c <= 9) {
+                            lz = c; p++;
+                            while (p < lineEnd && (c = text.charCodeAt(p) - 48) >= 0 && c <= 9) { lz = lz * 10 + c; p++; }
+                            if (p + 1 < lineEnd && text.charCodeAt(p) === 58 && text.charCodeAt(p + 1) === 32) {
+                                p += 2;
+                                if (p < lineEnd && (c = text.charCodeAt(p) - 48) >= 0 && c <= 9) {
+                                    id = c; p++;
+                                    while (p < lineEnd && (c = text.charCodeAt(p) - 48) >= 0 && c <= 9) { id = id * 10 + c; p++; }
+                                    const tile: Tile = { x: baseX + lx, z: baseZ + lz, level: lvl };
+                                    let list = out.get(id);
+                                    if (!list) { list = []; out.set(id, list); }
+                                    list.push(tile);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         pos = nl + 1;
     }

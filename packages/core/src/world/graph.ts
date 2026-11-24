@@ -10,12 +10,13 @@ export type LevelBuckets = {
 };
 
 /** Groups nodes by plane and sorts each plane by x then z for bounded range scans. */
-export function bucketByLevel<T>(items: readonly T[], getTile: (item: T) => Tile, getId: (item: T) => number): LevelBuckets {
+export function bucketByLevel<T>(items: readonly T[], getTile: (item: T) => Tile, getId: (item: T, index: number) => number): LevelBuckets {
     const lists: { id: number; x: number; z: number }[][] = [[], [], [], []];
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]!;
         const t = getTile(item);
         const lvl = t.level;
-        if (lvl >= 0 && lvl < 4) lists[lvl]!.push({ id: getId(item), x: t.x, z: t.z });
+        if (lvl >= 0 && lvl < 4) lists[lvl]!.push({ id: getId(item, i), x: t.x, z: t.z });
     }
     const ids: Int32Array[] = [], xs: Int32Array[] = [], zs: Int32Array[] = [];
     for (let lvl = 0; lvl < 4; lvl++) {
@@ -113,12 +114,16 @@ export type LowerBoundGraph = {
     radii: Float64Array;
     incoming: Int32Array[];
     levelNodes: Int32Array[];
+    levelXs: Int32Array[];
+    levelZs: Int32Array[];
 };
 
 export function buildLowerBoundGraph(
     waypoints: readonly Tile[],
     waypointIndex: Map<string, number>,
     transports: readonly Transport[],
+    fixedTravel: readonly Travel[] = [],
+    backward = false,
 ): LowerBoundGraph {
     const n = waypoints.length;
     const xs = new Int32Array(n), zs = new Int32Array(n), levels = new Int8Array(n);
@@ -130,11 +135,30 @@ export function buildLowerBoundGraph(
         if (w.level >= 0 && w.level < 4) byLvl[w.level]!.push(i);
     }
     const incLists: number[][] = Array.from({ length: n }, () => []);
-    for (const t of transports) {
-        const from = waypointIndex.get(tileKey(entryOf(t)))!, to = waypointIndex.get(tileKey(t.to))!;
+    for (let i = 0; i < transports.length; i++) {
+        const t = transports[i]!;
+        const eIdx = waypointIndex.get(tileKey(entryOf(t)))!, tIdx = waypointIndex.get(tileKey(t.to))!;
+        const from = backward ? tIdx : eIdx;
+        const to = backward ? eIdx : tIdx;
         incLists[to]!.push(from);
-        radii[from] = Math.max(radii[from]!, t.interaction?.width ?? 1, t.interaction?.height ?? 1);
+        if (!backward) radii[from] = Math.max(radii[from]!, t.interaction?.width ?? 1, t.interaction?.height ?? 1);
     }
+    for (let i = 0; i < fixedTravel.length; i++) {
+        const t = fixedTravel[i]!;
+        const fIdx = waypointIndex.get(tileKey(t.from!))!, tIdx = waypointIndex.get(tileKey(t.to))!;
+        incLists[backward ? fIdx : tIdx]!.push(backward ? tIdx : fIdx);
+    }
+    const levelNodes = byLvl.map(l => new Int32Array(l));
+    const levelXs = byLvl.map(l => {
+        const arr = new Int32Array(l.length);
+        for (let k = 0; k < l.length; k++) arr[k] = xs[l[k]!]!;
+        return arr;
+    });
+    const levelZs = byLvl.map(l => {
+        const arr = new Int32Array(l.length);
+        for (let k = 0; k < l.length; k++) arr[k] = zs[l[k]!]!;
+        return arr;
+    });
     return {
         nodeCount: n,
         xs,
@@ -142,7 +166,9 @@ export function buildLowerBoundGraph(
         levels,
         radii,
         incoming: incLists.map(l => new Int32Array(l)),
-        levelNodes: byLvl.map(l => new Int32Array(l)),
+        levelNodes,
+        levelXs,
+        levelZs,
     };
 }
 
@@ -158,12 +184,7 @@ export function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, g
     const settled = new Uint8Array(totalN);
     const queue = new CostMinHeap(totalN);
     queue.push(goalBoundIdx, 0);
-    const relax = (index: number, cost: number) => {
-        if (cost >= best[index]!) return;
-        best[index] = cost;
-        queue.push(index, cost);
-    };
-    const { xs, zs, levels, radii, incoming, levelNodes } = graph;
+    const { xs, zs, levels, radii, incoming, levelNodes, levelXs, levelZs } = graph;
     while (queue.size) {
         const u = queue.popIdx();
         const uCost = queue.lastCost;
@@ -175,23 +196,31 @@ export function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, g
         const tLvl = u < baseN ? levels[u]! : goalTile.level;
         const tolerance = isGoal ? GOAL_TOL : Math.max(relaxedRadius, u < baseN ? radii[u]! : PORTAL_TOL);
         if (tLvl >= 0 && tLvl < 4) {
-            const peers = levelNodes[tLvl]!;
-            for (let k = 0; k < peers.length; k++) {
+            const peers = levelNodes[tLvl]!, pXs = levelXs[tLvl]!, pZs = levelZs[tLvl]!, len = peers.length;
+            for (let k = 0; k < len; k++) {
                 const i = peers[k]!;
                 if (settled[i] || best[i]! <= uCost) continue;
-                const dx = Math.abs(xs[i]! - tx), dz = Math.abs(zs[i]! - tz);
-                const d = (dx > dz ? dx : dz) - tolerance;
-                relax(i, uCost + (d > 0 ? d : 0));
+                const dx = pXs[k]! - tx, dz = pZs[k]! - tz;
+                const adx = dx < 0 ? -dx : dx, adz = dz < 0 ? -dz : dz;
+                const d = (adx > adz ? adx : adz) - tolerance;
+                const nc = uCost + (d > 0 ? d : 0);
+                if (nc < best[i]!) { best[i] = nc; queue.push(i, nc); }
             }
             if (goalBoundIdx >= baseN && goalTile.level === tLvl && !settled[goalBoundIdx]) {
-                const dx = Math.abs(goalTile.x - tx), dz = Math.abs(goalTile.z - tz);
-                const d = (dx > dz ? dx : dz) - tolerance;
-                relax(goalBoundIdx, uCost + (d > 0 ? d : 0));
+                const dx = goalTile.x - tx, dz = goalTile.z - tz;
+                const adx = dx < 0 ? -dx : dx, adz = dz < 0 ? -dz : dz;
+                const d = (adx > adz ? adx : adz) - tolerance;
+                const nc = uCost + (d > 0 ? d : 0);
+                if (nc < best[goalBoundIdx]!) { best[goalBoundIdx] = nc; queue.push(goalBoundIdx, nc); }
             }
         }
         if (u < baseN) {
             const inc = incoming[u]!;
-            for (let k = 0; k < inc.length; k++) relax(inc[k]!, uCost + TRANSPORT_COST);
+            const nextCost = uCost + TRANSPORT_COST;
+            for (let k = 0; k < inc.length; k++) {
+                const idx = inc[k]!;
+                if (nextCost < best[idx]!) { best[idx] = nextCost; queue.push(idx, nextCost); }
+            }
         }
     }
     return best;
@@ -254,7 +283,10 @@ export interface WorldGraph {
     routeAreas(dynTiles: readonly Tile[]): RouteAreaScope;
 }
 
-function createAreaScopeFactory(areaOf: ((t: Tile) => number) | undefined, waypoints: readonly Tile[]): (dynTiles: readonly Tile[]) => RouteAreaScope {
+function createAreaScopeFactory(
+    areaOf: ((t: Tile) => number) | undefined,
+    waypoints: readonly Tile[],
+): (dynTiles: readonly Tile[]) => RouteAreaScope {
     const W = waypoints.length;
     const baseStartAreas: (number[] | null | undefined)[] | null = areaOf ? new Array(W) : null;
     const baseEnd0Areas: (number[] | null | undefined)[] | null = areaOf ? new Array(W) : null;
@@ -264,9 +296,12 @@ function createAreaScopeFactory(areaOf: ((t: Tile) => number) | undefined, waypo
         if (!areaOf) return null;
         const out: number[] = [];
         const x1 = tile.x + w - 1 + r, z1 = tile.z + h - 1 + r;
+        const probe: Tile = { level: tile.level, x: 0, z: 0 };
         for (let x = tile.x - r; x <= x1; x++) {
+            probe.x = x;
             for (let z = tile.z - r; z <= z1; z++) {
-                const v = areaOf({ level: tile.level, x, z });
+                probe.z = z;
+                const v = areaOf(probe);
                 if (v === -2) return null;
                 if (v >= 0 && !out.includes(v)) out.push(v);
             }
@@ -304,7 +339,9 @@ function createAreaScopeFactory(areaOf: ((t: Tile) => number) | undefined, waypo
                 if (!areaOf) return null;
                 if (q) {
                     if (app) {
-                        if (app.endAreas === undefined) app.endAreas = computeBoxAreas(app.t.from, Math.max(tol, 1), q.width, q.height);
+                        if (app.endAreas === undefined) {
+                            app.endAreas = computeBoxAreas(app.t.from, Math.max(tol, 1), q.width, q.height);
+                        }
                         return app.endAreas;
                     }
                     return computeBoxAreas(nodeTile(idx), Math.max(tol, 1), q.width, q.height);
@@ -430,18 +467,14 @@ export function buildWorldGraph(opts: WorldOptions): WorldGraph {
 
     const walkableFn = opts.pathLength.walkable;
     const walkableMask = new Uint8Array(W);
-    const allNodesForBucket: { tile: Tile; idx: number }[] = [];
-    const walkableNodesForBucket: { tile: Tile; idx: number }[] = [];
+    const walkableIdx: number[] = [];
     for (let idx = 0; idx < W; idx++) {
-        const tile = waypoints[idx]!;
-        const entry = { tile, idx };
-        allNodesForBucket.push(entry);
-        const ok = !walkableFn || walkableFn(tile);
+        const ok = !walkableFn || walkableFn(waypoints[idx]!);
         walkableMask[idx] = ok ? 1 : 0;
-        if (ok) walkableNodesForBucket.push(entry);
+        if (ok) walkableIdx.push(idx);
     }
-    const levelNodes = bucketByLevel(allNodesForBucket, e => e.tile, e => e.idx);
-    const walkableLevelNodes = bucketByLevel(walkableNodesForBucket, e => e.tile, e => e.idx);
+    const levelNodes = bucketByLevel(waypoints, t => t, (_t, i) => i);
+    const walkableLevelNodes = bucketByLevel(walkableIdx, idx => waypoints[idx]!, idx => idx);
     const approachTransports: ApproachTransport[] = [];
     const approachByIndex: (ApproachTransport | undefined)[] = new Array(transports.length);
     for (let index = 0; index < transports.length; index++) {
@@ -473,12 +506,16 @@ export function buildWorldGraph(opts: WorldOptions): WorldGraph {
         approachLevelXs.push(xs);
     }
 
-    const radius = Math.max(PORTAL_TOL, ...transports.flatMap(t => [t.interaction?.width ?? 1, t.interaction?.height ?? 1]));
-    const jumps = fixed.map(t => ({ from: t.from, to: t.to }) as Transport);
-    const jumpsBack = fixed.map(t => ({ from: t.to, to: t.from }) as Transport);
-    const reversed = transports.map(t => ({ ...t, from: t.to, to: entryOf(t), entry: undefined, interaction: undefined }));
-    const forwardLBGraph = buildLowerBoundGraph(waypoints, waypointIndex, [...transports, ...jumps]);
-    const backwardLBGraph = buildLowerBoundGraph(waypoints, waypointIndex, [...reversed, ...jumpsBack]);
+    let radius = PORTAL_TOL;
+    for (let i = 0; i < transports.length; i++) {
+        const q = transports[i]!.interaction;
+        if (q) {
+            if (q.width > radius) radius = q.width;
+            if (q.height > radius) radius = q.height;
+        }
+    }
+    const forwardLBGraph = buildLowerBoundGraph(waypoints, waypointIndex, transports, fixed, false);
+    const backwardLBGraph = buildLowerBoundGraph(waypoints, waypointIndex, transports, fixed, true);
 
     const areaOf = opts.pathLength.areaOf;
     return {

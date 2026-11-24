@@ -44,13 +44,29 @@ export function canonicalTransportLeg(leg: Extract<Leg, { kind: 'transport' }>, 
 export function normalizeTransports(raw: readonly Transport[]): Transport[] {
     // A stair with direct op2/op3 links (Climb-up / Climb-down) uses op1 for a "which way?" menu
     // (e.g. spiralstairsmiddle op1=Climb). Clicking op1 opens a dialog and never changes floor, so drop it.
-    const all = [...new Map(
-        raw.map(canonicalTransport)
-            .filter((t): t is Transport => t !== null)
-            .map(t => [`${t.locName}:${t.option}:${tileKey(t.from)}>${tileKey(t.to)}:${JSON.stringify([t.requires, t.entry, t.landing])}`, t]),
-    ).values()];
-    const hasDirect = new Set(all.filter(t => t.option !== 'op1').map(t => `${t.locName}@${tileKey(t.from)}`));
-    return all.filter(t => !t.unplaced && !(t.option === 'op1' && hasDirect.has(`${t.locName}@${tileKey(t.from)}`)));
+    const dedup = new Map<string, Transport>();
+    const hasDirect = new Set<string>();
+    const mapped = raw.map(canonicalTransport);
+    for (let i = 0; i < mapped.length; i++) {
+        const t = mapped[i]!;
+        if (!t) continue;
+        const key = `${t.locName}:${t.option}:${tileKey(t.from)}>${tileKey(t.to)}:${JSON.stringify([t.requires, t.entry, t.landing])}`;
+        dedup.set(key, t);
+    }
+    const kept: Transport[] = [];
+    for (const t of dedup.values()) {
+        if (t.unplaced) continue;
+        if (t.option !== 'op1') hasDirect.add(`${t.locName}@${tileKey(t.from)}`);
+        kept.push(t);
+    }
+    if (!hasDirect.size) return kept;
+    const out: Transport[] = [];
+    for (let i = 0; i < kept.length; i++) {
+        const t = kept[i]!;
+        if (t.option === 'op1' && hasDirect.has(`${t.locName}@${tileKey(t.from)}`)) continue;
+        out.push(t);
+    }
+    return out;
 }
 
 // Only an observed value meeting a mined threshold admits quest gates. The SDK state has no varps, so a quest that the

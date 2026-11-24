@@ -2,11 +2,12 @@
 // Requests queue in the worker, so two bots planning at once wait their turn without blocking either game loop.
 import type { BankStock, TripPlan } from './trip';
 import type { Account, Tile } from './world-types';
+import { getBuiltAreas, shareLabels, type SharedLabels } from './components';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 // Bun workers have ref/unref: an idle worker does not keep the process alive.
 type BunWorker = Worker & { ref(): void; unref(): void };
-let worker: BunWorker | null = null, next = 0, idle: ReturnType<typeof setTimeout> | null = null;
+let worker: BunWorker | null = null, next = 0, idle: ReturnType<typeof setTimeout> | null = null, workerSentAreas = false;
 // An idle worker holds a second pathfinder (about 800 MB per bot process); it closes this long after its last plan.
 export const WORKER_IDLE_MS = 30_000;
 const pending = new Map<number, { started: number; resolve(p: TripPlan | null): void; reject(e: unknown): void }>();
@@ -24,6 +25,7 @@ export const pendingRouteWork = (youngerThanMs = Infinity): number => {
 function stopWorker(w: BunWorker) {
     if (worker !== w) return;
     worker = null;
+    workerSentAreas = false;
     if (idle) clearTimeout(idle);
     idle = null;
     w.unref();
@@ -72,7 +74,12 @@ export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: B
             reject: error => { cleanup(); reject(error); },
         });
         signal?.addEventListener('abort', abort, { once: true });
-        try { w.postMessage({ id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock, budgetMs }); }
+        let sharedAreas: SharedLabels | undefined;
+        if (!workerSentAreas) {
+            const areas = getBuiltAreas();
+            if (areas) { sharedAreas = shareLabels(areas) ?? undefined; workerSentAreas = true; }
+        }
+        try { w.postMessage({ id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock, budgetMs, ...(sharedAreas ? { sharedAreas } : {}) }); }
         catch (error) { fail(error); }
     });
 }

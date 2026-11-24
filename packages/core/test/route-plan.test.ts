@@ -72,3 +72,35 @@ test('route worker can retry after native initialization fails',async()=>{
   expect({code,stdout,stderr}).toEqual({code:0,stdout:'',stderr:''});
  }finally{clearTimeout(deadline);}
 });
+
+test('planTripOffThread transfers SharedLabels once per worker lifecycle and re-sends after worker restart',async()=>{
+ const probe=`
+  import assert from 'node:assert/strict';
+  import {labelAreas,shareLabels,attachSharedLabels} from './packages/core/src/components';
+  const labels=labelAreas([[0,0,0]],()=>true,()=>true);
+  const shared=shareLabels(labels);
+  assert.ok(shared);
+  attachSharedLabels(shared);
+  const workers=[];
+  globalThis.Worker=class {
+   constructor(){workers.push(this);this.requests=[];}
+   ref(){} unref(){} terminate(){}
+   postMessage(req){this.requests.push(req);queueMicrotask(()=>this.onmessage({data:{id:req.id,plan:{cost:1,legs:[]}}}));}
+  };
+  const {planTripOffThread}=await import('./packages/core/src/route-plan');
+  const tile={x:1,z:1,level:0}, acct={skills:{},varps:{},items:[]};
+  await planTripOffThread(tile,tile,acct);
+  await planTripOffThread(tile,tile,acct);
+  assert.ok(workers[0].requests[0].sharedAreas);
+  assert.equal(workers[0].requests[1].sharedAreas,undefined);
+  workers[0].onerror({message:'restart'});
+  await planTripOffThread(tile,tile,acct);
+  assert.ok(workers[1].requests[0].sharedAreas);
+ `;
+ const child=Bun.spawn([process.execPath,'-e',probe],{cwd:resolve(import.meta.dir,'../../..'),stdout:'pipe',stderr:'pipe',windowsHide:true});
+ const deadline=setTimeout(()=>child.kill(),5000);
+ try{
+  const [code,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
+  expect({code,stdout,stderr}).toEqual({code:0,stdout:'',stderr:''});
+ }finally{clearTimeout(deadline);}
+});

@@ -54,51 +54,85 @@ export async function rsPathLength(): Promise<PathLength> {
     // Searched legs are kept on disk (leg-cache.ts) under hashes of the doors kept shut and the danger key. A leg
     // the cheap checks refuse is not stored: refusing it again costs less than reading it back.
     const cache = legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
+    const areas = mapAreas(pf, grid, worldRepoRoot);
+    let lastBlocked: DoorBlock[] | undefined, lastShut = '', lastDanger: object | null | undefined, lastDk = '-';
+    const scopePrefix = (blocked: DoorBlock[]): string => {
+        const d = activeDanger();
+        if (blocked !== lastBlocked) {
+            lastBlocked = blocked;
+            let shut = policyKeys.get(blocked);
+            if (shut === undefined) { shut = cache.hash(blocked); policyKeys.set(blocked, shut); }
+            lastShut = shut;
+        }
+        if (d !== lastDanger) {
+            lastDanger = d;
+            if (!d) lastDk = '-';
+            else {
+                let dk = dangerKeys.get(d);
+                if (dk === undefined) { dk = routeDangerHash(d, cache); dangerKeys.set(d, dk); }
+                lastDk = dk;
+            }
+        }
+        return `kept:${lastShut}${lastDk}`;
+    };
     const measureNow = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
-        const pts: Tile[] | null = scoped(blocked, () => {
-            if (!interaction) return pf.findLongPath(from.level, from.x, from.z, to.x, to.z, 500);
-            const q = interaction;
-            if (grid.reached(from.level, from.x, from.z, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags)) return [];
-            const raw = grid.findLongPath(from.level, from.x, from.z, to.x, to.z, 1, q.width, q.height, q.angle, q.shape, false, q.blockAccessFlags, 500, grid.CollisionType.NORMAL);
-            const path = Array.from(raw, p => ({ x: (p >>> 14) & 0x3fff, z: p & 0x3fff, level: (p >>> 28) & 3 }));
-            const end = path.at(-1) ?? from;
-            return grid.reached(from.level, end.x, end.z, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags) ? path : null;
-        });
-        if (pts === null) return null;
-        if (interaction) {
+        if (!interaction) {
+            const pts: Tile[] | null = scoped(blocked, () => pf.findLongPath(from.level, from.x, from.z, to.x, to.z, 500));
+            if (pts === null) return null;
+            if (pts.length === 0) return cheb(from, to) <= tol ? 0 : null;
+            const last = pts[pts.length - 1]!;
+            if (cheb(last, to) > tol) return null;
             let len = 0, prev = from;
-            for (const p of pts) { len += cheb(prev, p); prev = p; }
+            for (let i = 0; i < pts.length; i++) { const p = pts[i]!; len += cheb(prev, p); prev = p; }
             return len;
         }
-        if (pts.length === 0) return cheb(from, to) <= tol ? 0 : null;
-        const last = pts[pts.length - 1]!;
-        if (cheb(last, to) > tol) return null;
-        let len = 0, prev = from;
-        for (const p of pts) { len += cheb(prev, p); prev = p; }
-        return len;
+        const q = interaction;
+        return scoped(blocked, () => {
+            if (grid.reached(from.level, from.x, from.z, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags)) return 0;
+            const raw: Uint32Array = grid.findLongPath(from.level, from.x, from.z, to.x, to.z, 1, q.width, q.height, q.angle, q.shape, false, q.blockAccessFlags, 500, grid.CollisionType.NORMAL);
+            if (!raw.length) return null;
+            const lastPacked = raw[raw.length - 1]!;
+            const endX = (lastPacked >>> 14) & 0x3fff, endZ = lastPacked & 0x3fff;
+            if (!grid.reached(from.level, endX, endZ, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags)) return null;
+            let len = 0, px = from.x, pz = from.z;
+            for (let i = 0; i < raw.length; i++) {
+                const p = raw[i]!, nx = (p >>> 14) & 0x3fff, nz = p & 0x3fff;
+                const dx = nx - px, dz = nz - pz;
+                const adx = dx < 0 ? -dx : dx, adz = dz < 0 ? -dz : dz;
+                len += adx > adz ? adx : adz;
+                px = nx; pz = nz;
+            }
+            return len;
+        });
     };
-    const measure: PathLength = (from, to, blocked, tol, interaction) => {
-        if (from.level !== to.level) return null;
-        (pf as any).initPathfinding();
-        if (!interaction && tol === 0 && tileKey(from) !== tileKey(to) && !(pf as any).isTileWalkable(to.level, to.x, to.z)) return null;
-        // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
-        if (separated(mapAreas(pf, grid, worldRepoRoot), from, to, tol, interaction, interaction && ((x, z) => grid.reached(to.level, x, z, to.x, to.z, interaction.width, interaction.height, 1, interaction.angle, interaction.shape, interaction.blockAccessFlags)))) return null;
-        const d = activeDanger(), shut = policyKeys.get(blocked) ?? (policyKeys.set(blocked, cache.hash(blocked)), policyKeys.get(blocked)!);
-        const dk = d ? dangerKeys.get(d) ?? (dangerKeys.set(d, routeDangerHash(d, cache)), dangerKeys.get(d)!) : '-';
-        const ik = interaction ? (interactionKeys.get(interaction) ?? (interactionKeys.set(interaction, cache.hash(interaction)), interactionKeys.get(interaction)!)) : '';
-        const k = `kept:${shut}${dk}${tileKey(from)}>${tileKey(to)}:${tol}${interaction ? ':' + ik : ''}`;
+    const lookupOrMeasure = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
+        const prefix = scopePrefix(blocked);
+        let ik = '';
+        if (interaction) {
+            let cachedIk = interactionKeys.get(interaction);
+            if (cachedIk === undefined) { cachedIk = cache.hash(interaction); interactionKeys.set(interaction, cachedIk); }
+            ik = ':' + cachedIk;
+        }
+        const k = `${prefix}${from.x},${from.z},${from.level}>${to.x},${to.z},${to.level}:${tol}${ik}`;
         const cached = cache.get(k);
         if (cached !== undefined) return cached;
         const v = measureNow(from, to, blocked, tol, interaction);
         cache.set(k, v);
         return v;
     };
+    const measure: PathLength = (from, to, blocked, tol, interaction) => {
+        if (from.level !== to.level) return null;
+        if (!interaction && tol === 0 && (from.x !== to.x || from.z !== to.z) && !(pf as any).isTileWalkable(to.level, to.x, to.z)) return null;
+        // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
+        if (separated(areas, from, to, tol, interaction, interaction && ((x, z) => grid.reached(to.level, x, z, to.x, to.z, interaction.width, interaction.height, 1, interaction.angle, interaction.shape, interaction.blockAccessFlags)))) return null;
+        return lookupOrMeasure(from, to, blocked, tol, interaction);
+    };
     measure.withPolicy = scoped;
     measure.walkable = t => { (pf as any).initPathfinding(); return (pf as any).isTileWalkable(t.level, t.x, t.z); };
-    measure.areaOf = t => mapAreas(pf, grid, worldRepoRoot).area(t.level, t.x, t.z);
+    measure.areaOf = t => areas.area(t.level, t.x, t.z);
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
     // Labels first: built under closed danger tiles they would carry one account's danger to every account.
-    measure.withDanger = (acct, from, to, query) => { mapAreas(pf, grid, worldRepoRoot); try { return guardRoute(grid, acct, [from, to], query); } finally { cache.save(); } };
+    measure.withDanger = (acct, from, to, query) => { try { return guardRoute(grid, acct, [from, to], query); } finally { cache.save(); } };
     return measure;
 }
 

@@ -161,3 +161,41 @@ test('a call with the default files hashes them once, and a call that names its 
   expect(first).not.toBe(one);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test('streamed snapshot restore (>2 MiB) restores non-zero pages, rejects corruption, and rolls back mid-stream read faults',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'pathcache-stream-')),file=join(dir,'big.snap');
+ const P=65536,pages=40,payload=Buffer.alloc(pages*P); // 2.5 MiB > STREAM_THRESHOLD
+ payload.fill(11,0,P);payload.fill(22,19*P,20*P);payload.fill(33,39*P,40*P);
+ try{
+  api.writePathfindingSnapshot(file,'stream-k',payload);
+  const mem=new WebAssembly.Memory({initial:2});
+  new Uint8Array(mem.buffer).fill(9);
+  expect(restorePathfindingSnapshotFile(file,'stream-k',mem)).toBe(true);
+  expect(mem.buffer.byteLength).toBe(pages*P);
+  expect(new Uint8Array(mem.buffer,0,P).every(b=>b===11)).toBe(true);
+  expect(new Uint8Array(mem.buffer,19*P,P).every(b=>b===22)).toBe(true);
+  expect(new Uint8Array(mem.buffer,39*P,P).every(b=>b===33)).toBe(true);
+
+  const corrupt=Buffer.from(readFileSync(file));corrupt[corrupt.length-10]^=1;writeFileSync(file,corrupt);
+  const memBad=new WebAssembly.Memory({initial:2});
+  new Uint8Array(memBad.buffer).fill(7);
+  expect(restorePathfindingSnapshotFile(file,'stream-k',memBad)).toBe(false);
+  expect(memBad.buffer.byteLength).toBe(2*P);
+  expect(new Uint8Array(memBad.buffer).every(b=>b===7)).toBe(true);
+
+  api.writePathfindingSnapshot(file,'stream-k',payload);
+  const memFault=new WebAssembly.Memory({initial:2});
+  new Uint8Array(memFault.buffer).fill(5);
+  const realRead=fs.readSync;
+  let chunkReads=0;
+  const fault=spyOn(fs,'readSync').mockImplementation(((fd:number,buffer:Buffer,offset:number,length:number,position:number)=>{
+   if(buffer.buffer.byteLength===16*P&&++chunkReads>4){
+    throw Object.assign(Error('stream EIO'),{code:'EIO'});
+   }
+   return realRead(fd,buffer,offset,length,position);
+  }) as typeof fs.readSync);
+  try{expect(restorePathfindingSnapshotFile(file,'stream-k',memFault)).toBe(false);}finally{fault.mockRestore();}
+  expect(new Uint8Array(memFault.buffer,0,2*P).every(b=>b===5)).toBe(true);
+  expect(new Uint8Array(memFault.buffer,2*P).every(b=>b===0)).toBe(true);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
