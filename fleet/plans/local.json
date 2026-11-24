@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562144924,
+ "at": 1795562173287,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,6 +22,24 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "trip"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Woodenstaff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
   },
   {
    "account": "TrouserSnake",
@@ -89,38 +107,23 @@
    "role": "auto"
   },
   {
-   "account": "Woodenstaff",
+   "account": "Ballspinner",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "magic",
-    "trip"
+    "thieving",
+    "blood-chest"
    ],
    "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Woodenstaff",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "campaign:haggis:item:565",
+    "BATCH_UNITS": "270"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=40 --",
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=25 -- fletching shafts",
-    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:viking",
-   "role": "auto"
+   "goal": "campaign:haggis:item:565",
+   "role": "army",
+   "resources": [
+    "blood-chest"
+   ]
   }
  ],
  "army": [
@@ -130,7 +133,6 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
-  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
