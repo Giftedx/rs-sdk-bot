@@ -33,9 +33,12 @@ test('invalid or unknown raw identities never borrow an examine alias or a certi
 
 test('the actual server projection keeps sibling descriptions regardless of account and list order',()=>{
  const server=readFileSync(new URL('./server/state/build.ts',import.meta.url),'utf8');
+ const start=server.indexOf('    const visiblePrices:'),end=server.indexOf('    for (let i = 0; i < v.items.length; i++)',start);
+ expect(start).toBeGreaterThanOrEqual(0);
+ expect(end).toBeGreaterThan(start);
  const line=server.split('\n').find(line=>line.includes('...projectItemExamine('))!;
  expect(line).toBeDefined();
- const code=new Bun.Transpiler({loader:'ts'}).transformSync(`const result={${line}};`);
+ const code=new Bun.Transpiler({loader:'ts'}).transformSync(`${server.slice(start,end)}\nconst result={${line}};`);
  const project=new Function('bots','itemExamines','projectItemExamine',code+'return result;'),facts=buildItemExamine(catalogue());
  const first={inventory:[{id:2399,name:'Key'}],equipment:[{id:2400,name:'Key'}]},second={bank:[{id:2401,name:'Key'}]};
  const forward=project([first,second],facts,projectItemExamine),reverse=project([second,first],facts,projectItemExamine);

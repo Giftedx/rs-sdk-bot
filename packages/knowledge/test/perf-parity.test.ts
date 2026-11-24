@@ -10,7 +10,6 @@ import { block, loadContent, modelRung } from '../src/method-model';
 import { contentRoot } from '../src/paths';
 import { buildShortcuts, movingScripts, parseScripts, stripComments } from '../src/shortcuts';
 import { buildNpcTravel } from '../src/npc-travel';
-import { fromSpec, SPECS } from '../src/skill-tools/specs';
 import { buildSkillTools } from '../src/skill-tools';
 import { allFacts, spotcheck } from '../src/spotcheck';
 import { cachedValue } from '../src/table-cache';
@@ -224,8 +223,10 @@ test('skill-tools, npc-travel, and spotcheck caches preserve deterministic parit
     const committedTools = JSON.parse(readFileSync(join(import.meta.dir, '..', '..', '..', 'knowledge', 'skill-tools.json'), 'utf8'));
     expect(toolsA.gaps).toEqual(committedTools.gaps);
     expect(toolsA.records.length).toBe(committedTools.records.length);
-    const specSample = SPECS.find(s => s.id === 'fletching/darts')!;
-    expect(fromSpec(specSample, [])).toEqual(fromSpec(specSample, []));
+    const dartsA = toolsA.records.find(r => r.id === 'fletching/darts');
+    const dartsB = toolsB.records.find(r => r.id === 'fletching/darts');
+    expect(dartsA).toBeDefined();
+    expect(dartsB).toEqual(dartsA);
 
     const travelA = buildNpcTravel();
     const travelB = buildNpcTravel();
