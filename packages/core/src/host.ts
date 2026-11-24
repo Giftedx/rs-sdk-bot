@@ -63,6 +63,15 @@ class HostExit extends Error {
     constructor(readonly code: number) { super(`host exit ${code}`); }
 }
 
+const escapeSingleQuoted = (value: string): string =>
+    value
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+
 // Rewrites one script's source for the host. Pure, so the unit test checks it without a server.
 // scriptDir resolves relative specifiers: one that names botModule (with or without .ts) is redirected.
 export function rewriteScript(src: string, id: string, scriptDir: string, botModule: string = BOT_MODULE): string {
@@ -85,7 +94,7 @@ export function rewriteScript(src: string, id: string, scriptDir: string, botMod
             const module = ((ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent)) && parent.moduleSpecifier === node)
                 || (ts.isCallExpression(parent) && parent.expression.kind === ts.SyntaxKind.ImportKeyword && parent.arguments[0] === node);
             if (module && /^\.{1,2}\//.test(node.text) && norm(resolve(scriptDir, node.text)) === target) {
-                const path = `${botModule}?${BOT_Q}=${id}`.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const path = escapeSingleQuoted(`${botModule}?${BOT_Q}=${id}`);
                 edits.push({ start: node.getStart(parsed), end: node.getEnd(), value: `'${path}'` });
             }
         }
@@ -106,7 +115,7 @@ const BOT_LOAD_FILTER = new RegExp(`[?&]${BOT_Q}=`);
 function compileHostedTemplate(src: string, scriptDir: string): (id: string) => string {
     const entry = entryTranspiler.transformSync(src);
     let marker = '__RS_HOST_BOT_ID__';
-    while (entry.includes(marker) || scriptDir.includes(marker)) marker += '_X';
+    while (entry.includes(marker) || scriptDir.includes(marker) || BOT_MODULE.includes(marker)) marker += '_X';
     const rewritten = rewriteScript(entry, marker, scriptDir);
     const split = rewritten.indexOf('\n');
     const body = rewritten.slice(split + 1);
@@ -139,7 +148,7 @@ function compileHostedTemplate(src: string, scriptDir: string): (id: string) => 
     const importParts = imports.join('\n').split(marker);
     const stmtParts = statements.join('\n').split(marker);
     return (id: string) => {
-        const escapedId = id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const escapedId = escapeSingleQuoted(id);
         const imps = importParts.length === 1 ? importParts[0]! : importParts.join(escapedId);
         const stmts = stmtParts.length === 1 ? stmtParts[0]! : stmtParts.join(escapedId);
         return `${imps}\nconst __host = globalThis.__rsBotHost.get(${JSON.stringify(id)});\nawait __host.execution.run(async () => {\n${stmts}\n});`;

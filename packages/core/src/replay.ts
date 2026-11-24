@@ -30,12 +30,26 @@ export interface ReplayResult {
 }
 const typeOf = (a: unknown) => (a as { type?: unknown } | null)?.type;
 
+const JSON_OMIT = Symbol('json-omit');
+
+const resolveJsonValue = (v: unknown, key: string): unknown => {
+    if (v === undefined || typeof v === 'function' || typeof v === 'symbol') return JSON_OMIT;
+    if (v !== null && typeof v === 'object' && typeof (v as { toJSON?: unknown }).toJSON === 'function') {
+        const j = (v as { toJSON: (key: string) => unknown }).toJSON(key);
+        return j === undefined || typeof j === 'function' || typeof j === 'symbol' ? JSON_OMIT : j;
+    }
+    return v;
+};
+
 const same = (a: unknown, b: unknown): boolean => {
     if (a === b) return true;
     if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
         return JSON.stringify(a) === JSON.stringify(b);
     }
-    if (typeof (a as { toJSON?: unknown }).toJSON === 'function' || typeof (b as { toJSON?: unknown }).toJSON === 'function') {
+    if (a instanceof Number || a instanceof String || a instanceof Boolean
+        || b instanceof Number || b instanceof String || b instanceof Boolean
+        || typeof (a as { toJSON?: unknown }).toJSON === 'function'
+        || typeof (b as { toJSON?: unknown }).toJSON === 'function') {
         return JSON.stringify(a) === JSON.stringify(b);
     }
     const aArr = Array.isArray(a);
@@ -43,20 +57,36 @@ const same = (a: unknown, b: unknown): boolean => {
     if (aArr) {
         const arrA = a as unknown[], arrB = b as unknown[];
         if (arrA.length !== arrB.length) return false;
-        for (let i = 0; i < arrA.length; i++) if (!same(arrA[i], arrB[i])) return false;
+        for (let i = 0; i < arrA.length; i++) {
+            const k = String(i);
+            const resolvedA = i in arrA ? resolveJsonValue(arrA[i], k) : JSON_OMIT;
+            const resolvedB = i in arrB ? resolveJsonValue(arrB[i], k) : JSON_OMIT;
+            const va = resolvedA === JSON_OMIT ? null : resolvedA;
+            const vb = resolvedB === JSON_OMIT ? null : resolvedB;
+            if (!same(va, vb)) return false;
+        }
         return true;
     }
     const objA = a as Record<string, unknown>, objB = b as Record<string, unknown>;
     const keysA = Object.keys(objA), keysB = Object.keys(objB);
     let ia = 0, ib = 0;
     for (;;) {
-        while (ia < keysA.length && (objA[keysA[ia]!] === undefined || typeof objA[keysA[ia]!] === 'function' || typeof objA[keysA[ia]!] === 'symbol')) ia++;
-        while (ib < keysB.length && (objB[keysB[ib]!] === undefined || typeof objB[keysB[ib]!] === 'function' || typeof objB[keysB[ib]!] === 'symbol')) ib++;
-        const doneA = ia >= keysA.length, doneB = ib >= keysB.length;
+        let ka = '', va: unknown = JSON_OMIT;
+        while (ia < keysA.length) {
+            ka = keysA[ia++]!;
+            va = resolveJsonValue(objA[ka], ka);
+            if (va !== JSON_OMIT) break;
+        }
+        let kb = '', vb: unknown = JSON_OMIT;
+        while (ib < keysB.length) {
+            kb = keysB[ib++]!;
+            vb = resolveJsonValue(objB[kb], kb);
+            if (vb !== JSON_OMIT) break;
+        }
+        const doneA = va === JSON_OMIT, doneB = vb === JSON_OMIT;
         if (doneA || doneB) return doneA && doneB;
-        const ka = keysA[ia++]!;
-        if (ka !== keysB[ib++]!) return false;
-        if (!same(objA[ka], objB[ka])) return false;
+        if (ka !== kb) return false;
+        if (!same(va, vb)) return false;
     }
 };
 const turn = () => new Promise<void>(r => setImmediate(r));

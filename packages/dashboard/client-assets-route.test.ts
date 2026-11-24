@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync, existsSync } from 'node:fs';
+import { createFetchHandler } from './server/routes';
 
 // Every JSON file that the page fetches from /client-assets/ must pass the server's asset allowlist.
 test('the asset route serves every JSON data file that the page asks for', () => {
@@ -27,4 +28,19 @@ test('the asset route revalidates JSON data files and caches images', () => {
 test('the Skills tab tooltip adds a gather chance for Fishing, Mining and Woodcutting only', () => {
     const shell = readFileSync(new URL('./client-shell.js', import.meta.url), 'utf8');
     expect(shell).toContain("typeof gatherText==='function'&&/^(fishing|mining|woodcutting)$/i.test(sk.dataset.skill)?gatherText(");
+});
+
+test('missing client assets return 404 instead of 304 and oversized viewer timings return 413', async () => {
+    const fetch = createFetchHandler();
+    const server = { requestIP: () => ({ address: '127.0.0.1' }) };
+    const missing = await fetch(new Request('http://127.0.0.1:3100/client-assets/missing_asset.png', {
+        headers: { 'if-none-match': 'W/"0-0"' },
+    }), server);
+    expect(missing.status).toBe(404);
+
+    const tooBig = await fetch(new Request('http://127.0.0.1:3100/api/viewer-timing', {
+        method: 'POST',
+        body: 'x'.repeat(5000),
+    }), server);
+    expect(tooBig.status).toBe(413);
 });

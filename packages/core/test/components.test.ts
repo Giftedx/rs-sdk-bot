@@ -170,3 +170,12 @@ test('SharedArrayBuffer-backed labels preserve area and separated checks across 
     expect(separated(walled, { level: 0, x: 0, z: 0 }, { level: 0, x: 2, z: 2 }, 0)).toBe(false);
     expect(separated(walled, { level: 0, x: 0, z: 0 }, { level: 0, x: 6, z: 2 }, 0)).toBe(true);
 });
+
+test('writeLabels cleans up temporary files if rename fails', async () => {
+    const fs = await import('node:fs');
+    const g = grid(false);
+    const file = join(directory, 'blocked.bin');
+    fs.mkdirSync(file);
+    expect(() => writeLabels(file, 'src1', g)).toThrow();
+    expect(fs.readdirSync(directory).filter(n => n.startsWith('blocked.bin.') && n.endsWith('.tmp'))).toEqual([]);
+});

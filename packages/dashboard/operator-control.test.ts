@@ -285,6 +285,9 @@ test('main account commands are refused, stop files stay unchanged on enqueue co
   writeFileSync(join(cmdDir, 'rejected', `${rejId}.json`), JSON.stringify({ file: `${rejId}.json`, errors: ['defect not found'], rejectedAt: 2 }));
   const meta = (await (await f.handler(new Request('http://127.0.0.1:3100/api/control'), '127.0.0.1')).json()) as any;
   expect(meta.requests.find((r: any) => r.id === rejId)).toMatchObject({ status: 'rejected', note: 'defect not found' });
+
+  // Malformed UUID identities must be rejected cleanly with 400.
+  expect((await f.send({ id: '00000000---------------------------', action: 'pause' })).status).toBe(400);
  } finally {
   f.close();
  }

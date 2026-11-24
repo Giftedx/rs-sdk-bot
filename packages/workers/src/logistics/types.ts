@@ -68,6 +68,7 @@ export interface LogisticsConfigBase {
     readonly itemId?: number;
     readonly itemName?: string;
     readonly count?: number;
+    readonly stop?: () => boolean;
 }
 
 export interface LogisticsTradeConfig extends LogisticsConfigBase {

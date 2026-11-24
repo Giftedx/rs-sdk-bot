@@ -23,6 +23,7 @@ import {
     type WorkerWorldView,
 } from '../contracts';
 import { HUB_BANKS, isWildernessTile } from './location';
+import { watchWorkerStop } from '../stop';
 import {
     GLORY_UNCHARGED,
     altarText,
@@ -745,12 +746,42 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
     const initialLife = s.sdk.getState()?.player;
     const args = [...(cfg.args ?? [])];
     const env = { ...(cfg.env ?? {}) };
-    const isStopped = () => {
-        const cur = s.sdk.getState()?.player;
-        if (sessionDied(initialLife, cur)) return true;
-        if (cfg.capTicks !== undefined && s.tick() - startTick >= cfg.capTicks) return true;
-        return stopChecker(sessionCore.name)();
+    const { isStopped: watchStopped } = watchWorkerStop(sessionCore, cfg.stop);
+    await Promise.resolve();
+    const fileStopped = stopChecker(sessionCore.name);
+    const died = () => sessionDied(initialLife, s.sdk.getState()?.player);
+    const stopSignal = () => watchStopped() || fileStopped() || (cfg.capTicks !== undefined && s.tick() - startTick >= cfg.capTicks);
+    const isStopped = () => died() || stopSignal();
+    const settleFailure = (fallback: () => RunOutcome, detail?: string): RunOutcome => {
+        const ticksElapsed = Math.max(0, s.tick() - startTick);
+        if (died()) {
+            return {
+                kind: 'death',
+                activityId,
+                account: sessionCore.name,
+                ticksElapsed,
+                pos: playerTileOrNull(s) ?? { x: 3222, z: 3218, level: 0 },
+                ...(detail ? { detail } : {}),
+            };
+        }
+        if (stopSignal()) {
+            return {
+                kind: 'session_unsettled',
+                activityId,
+                account: sessionCore.name,
+                ticksElapsed,
+                reason: 'stop requested during execution',
+                ...(detail ? { detail } : {}),
+            };
+        }
+        return fallback();
     };
+    if (died()) {
+        return { kind: 'death', activityId, account: sessionCore.name, ticksElapsed: 0, pos: playerTileOrNull(s) ?? { x: 3222, z: 3218, level: 0 } };
+    }
+    if (stopSignal()) {
+        return { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed: 0, reason: 'stop requested before start' };
+    }
 
     try {
         switch (cfg.operation) {
@@ -760,7 +791,13 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     requireBank: env.REQUIRE_BANK === '1' || args.includes('--require-bank'),
                     stopped: isStopped,
                 });
-                return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed: Math.max(0, s.tick() - startTick), unitsCompleted: 1 };
+                return settleFailure(() => ({
+                    kind: 'target_met',
+                    activityId,
+                    account: sessionCore.name,
+                    ticksElapsed: Math.max(0, s.tick() - startTick),
+                    unitsCompleted: 1,
+                }));
             }
             case 'recover': {
                 if (role === 'restore-prayer') {
@@ -772,7 +809,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return r.ok
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: r.detail }
-                        : { kind: 'location_stranded', activityId, account: sessionCore.name, ticksElapsed, pos: playerTileOrNull(s) ?? { x: altar.x, z: altar.z, level: altar.level }, detail: r.detail };
+                        : settleFailure(() => ({ kind: 'location_stranded', activityId, account: sessionCore.name, ticksElapsed, pos: playerTileOrNull(s) ?? { x: altar.x, z: altar.z, level: altar.level }, detail: r.detail }), r.detail);
                 }
                 if (role === 'cure-poison') {
                     const { cureWithAntipoison } = await import('./recover');
@@ -780,9 +817,9 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     if (r.ok) return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: r.detail };
                     if (/no antipoison/i.test(r.detail)) {
-                        return { kind: 'missing_supply', activityId, account: sessionCore.name, ticksElapsed, missing: [{ itemId: 175, itemName: 'Antipoison', required: 1, available: 0 }] };
+                        return settleFailure(() => ({ kind: 'missing_supply', activityId, account: sessionCore.name, ticksElapsed, missing: [{ itemId: 175, itemName: 'Antipoison', required: 1, available: 0 }] }), r.detail);
                     }
-                    return { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.detail };
+                    return settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.detail }), r.detail);
                 }
                 if (role === 'charge-glory') {
                     const { runChargeGlory } = await import('./recover');
@@ -790,21 +827,21 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return r.ok
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.charged }
-                        : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: 'charge-glory stopped before completion' };
+                        : settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: 'charge-glory stopped before completion' }));
                 }
                 const { recoverSessionToHub } = await import('./recover');
                 const target = cfg.target ?? parseRecoveryTargetArg(args);
                 const r = await recoverSessionToHub(s, { capTicks: cfg.capTicks ?? 900, target, stop: isStopped });
                 const ticksElapsed = Math.max(0, s.tick() - startTick);
                 if (r.ok) return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: r.detail };
-                return {
+                return settleFailure(() => ({
                     kind: 'location_stranded',
                     activityId,
                     account: sessionCore.name,
                     ticksElapsed,
                     pos: playerTileOrNull(s) ?? (target ?? HUB_BANKS.varrockWest),
                     detail: r.detail,
-                };
+                }), r.detail);
             }
             case 'walk': {
                 const target = cfg.target;
@@ -839,14 +876,14 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                 }
                 const ticksElapsed = Math.max(0, s.tick() - startTick);
                 if (ok) return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary };
-                return {
+                return settleFailure(() => ({
                     kind: 'location_stranded',
                     activityId,
                     account: sessionCore.name,
                     ticksElapsed,
                     pos: playerTileOrNull(s) ?? (target ?? DEFAULT_HEROES_COORDS),
                     detail: summary || 'walk failed',
-                };
+                }), summary || 'walk failed');
             }
             case 'hub_bank': {
                 if (role === 'wine-stock') {
@@ -858,9 +895,9 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     if (r.ok) return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.noted };
                     if (/short of order/i.test(r.failure)) {
-                        return { kind: 'missing_supply', activityId, account: sessionCore.name, ticksElapsed, missing: [{ itemId: GRAPES_ID, itemName: 'Grapes', required: maximum + reserve, available: 0 }] };
+                        return settleFailure(() => ({ kind: 'missing_supply', activityId, account: sessionCore.name, ticksElapsed, missing: [{ itemId: GRAPES_ID, itemName: 'Grapes', required: maximum + reserve, available: 0 }] }), r.failure);
                     }
-                    return { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.failure };
+                    return settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.failure }), r.failure);
                 }
                 if (role === 'give-to-banker') {
                     const { runGiveToBanker } = await import('./hub-bank');
@@ -869,7 +906,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return res.ok
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: res.summary }
-                        : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary };
+                        : settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary }), res.summary);
                 }
                 if (role === 'take-from-banker') {
                     const { runTakeFromBanker } = await import('./hub-bank');
@@ -877,7 +914,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return res.ok
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: res.summary }
-                        : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary };
+                        : settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary }), res.summary);
                 }
                 if (role === 'supply-holder') {
                     const { runSupplyHolder } = await import('./hub-bank');
@@ -885,14 +922,14 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return res.ok
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: 1, summary: res.summary }
-                        : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary };
+                        : settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: res.summary }), res.summary);
                 }
                 const { runBanker } = await import('./hub-bank');
                 const res = await runBanker(s, { env, stop: isStopped, rootDir: cfg.rootDir });
                 const ticksElapsed = Math.max(0, s.tick() - startTick);
                 return res.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: res.trades, summary: res.summary }
-                    : { kind: 'location_stranded', activityId, account: sessionCore.name, ticksElapsed, pos: playerTileOrNull(s) ?? HUB_BANKS.ardougneNorth, detail: res.summary };
+                    : settleFailure(() => ({ kind: 'location_stranded', activityId, account: sessionCore.name, ticksElapsed, pos: playerTileOrNull(s) ?? HUB_BANKS.ardougneNorth, detail: res.summary }), res.summary);
             }
             case 'stage': {
                 if (role === 'loadout-import') {
@@ -913,7 +950,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                     const ticksElapsed = Math.max(0, s.tick() - startTick);
                     return r.preserved
                         ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.moves }
-                        : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: 'bank-sort assets not preserved' };
+                        : settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: 'bank-sort assets not preserved' }));
                 }
                 if (role === 'supply-bootstrap') {
                     const { bootstrapSupplyActor } = await import('./stage');
@@ -942,7 +979,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                 const ticksElapsed = Math.max(0, s.tick() - startTick);
                 return r.ok
                     ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.moves }
-                    : { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.failure };
+                    : settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.failure }), r.failure);
             }
             case 'trade': {
                 return {
@@ -957,17 +994,7 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
         }
     } catch (err) {
         const reason = err instanceof Error ? err.message : String(err);
-        const ticksElapsed = Math.max(0, s.tick() - startTick);
-        if (sessionDied(initialLife, s.sdk.getState()?.player)) {
-            return {
-                kind: 'death',
-                activityId,
-                account: sessionCore.name,
-                ticksElapsed,
-                pos: playerTileOrNull(s) ?? { x: 3222, z: 3218, level: 0 },
-            };
-        }
-        return { kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason };
+        return settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed: Math.max(0, s.tick() - startTick), reason }), reason);
     }
 }
 

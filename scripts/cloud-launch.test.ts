@@ -127,4 +127,23 @@ describe('cloud launch', () => {
         expect(() => readConfig('{"sides":[{"side":"cloud","kind":"codex"}]}')).toThrow('Codex env');
         expect(() => readConfig('{"sides":[{"side":"claude-cloud","kind":"claude","routine":"trig_x"}]}')).toThrow('token');
     });
+
+    test('CLI --prompt rejects unknown provider kinds and missing sides with exit 2', () => {
+        const badKind = Bun.spawnSync([process.execPath, 'scripts/cloud-launch.ts', '--prompt', 'bogus', 'cloud'], {
+            cwd: process.cwd(),
+            stdout: 'pipe',
+            stderr: 'pipe',
+            windowsHide: true,
+        });
+        expect(badKind.exitCode).toBe(2);
+        expect(badKind.stderr.toString()).toContain('--prompt <claude|codex> <side>');
+
+        const missingSide = Bun.spawnSync([process.execPath, 'scripts/cloud-launch.ts', '--prompt', 'claude'], {
+            cwd: process.cwd(),
+            stdout: 'pipe',
+            stderr: 'pipe',
+            windowsHide: true,
+        });
+        expect(missingSide.exitCode).toBe(2);
+    });
 });

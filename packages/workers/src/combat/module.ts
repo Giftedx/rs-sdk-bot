@@ -34,7 +34,7 @@ import type {
     runCannonFight,
     CannonSpot,
 } from './cannon';
-import type { runChickenCli, trainChickens } from './chickens';
+import type { ChickenEntry, runChickenCli, trainChickens } from './chickens';
 import { combatEstimate } from './estimate';
 import type {
     magicOptions,
@@ -403,7 +403,12 @@ export async function runCombatModuleSession(
                     cap,
                     cfg.bank ?? env.TRAIN_BANK ?? 'draynor',
                     Number(env.TRAIN_COMBAT ?? 13) as 13 | 29,
-                    { trainSkill: cfg.targetSkill ?? env.TRAIN_SKILL, targetLevel: cfg.targetLevel, stop: isStopped },
+                    {
+                        trainSkill: cfg.targetSkill ?? env.TRAIN_SKILL,
+                        targetLevel: cfg.targetLevel ?? (env.TARGET_LEVEL === undefined ? undefined : Number(env.TARGET_LEVEL)),
+                        entry: env.TRAIN_ENTRY as ChickenEntry | undefined,
+                        stop: isStopped,
+                    },
                 );
                 break;
             }
@@ -544,12 +549,13 @@ export async function runCombatModuleSession(
                 const spotName = cfg.spot ?? env.SPOT ?? 'spiders';
                 const spot = Object.prototype.hasOwnProperty.call(CANNON_SPOTS, spotName) ? CANNON_SPOTS[spotName] : undefined;
                 if (!spot) throw Error(`unknown cannon spot: ${spotName} (known: ${Object.keys(CANNON_SPOTS).join(', ')})`);
-                if (env.MODE === 'buy') result = await buyCannon(session, { walk: cannonWalkerProxy(session, spot) });
-                else if (env.MODE === 'reclaim') result = await reclaimCannon(session, { walk: cannonWalkerProxy(session, spot) });
+                if (env.MODE === 'buy') result = await buyCannon(session, { walk: cannonWalkerProxy(session, spot, isStopped) });
+                else if (env.MODE === 'reclaim') result = await reclaimCannon(session, { walk: cannonWalkerProxy(session, spot, isStopped) });
                 else {
                     result = await runCannonFight(session, {
                         spot,
                         cap,
+                        halt: isStopped,
                         stop: env.STOP ? parseLevels(env.STOP) : { [cfg.targetSkill ?? env.STOP_SKILL ?? 'Ranged']: cfg.targetLevel ?? Number(env.STOP_LEVEL ?? 99) },
                         phases: env.PHASES ? parsePhases(env.PHASES) : [{ ...(env.STYLE === undefined ? {} : { style: Number(env.STYLE) }) }],
                         reload: Number(env.RELOAD ?? 20),
@@ -791,11 +797,11 @@ export async function runCombatModuleSession(
     }
 }
 
-function cannonWalkerProxy(s: CombatSession, spot: CannonSpot) {
+function cannonWalkerProxy(s: CombatSession, spot: CannonSpot, stop?: () => boolean) {
     // Reclaim/buy paths use default cannonWalker when called via runCombatModuleSession.
     return async (to: { x: number; z: number; level: number }) => {
         const { walkPath, sessionWalker } = await import('../../../core/src/walk');
-        const r = await walkPath(await sessionWalker(s as any), [{ ...to, tol: 1 }], { maxTicks: 180 });
+        const r = await walkPath(await sessionWalker(s as any), [{ ...to, tol: 1 }], { maxTicks: 180, ...(stop ? { stop } : {}) });
         return r.ok;
     };
 }

@@ -6,7 +6,7 @@ import { hasStopFile, lifecycleRootForRead, resolveFleetDataDir, statusReadDirs 
 import { liveLogoutRef } from '../../../core/src/session-admission';
 import { readLogoutProof } from '../../../core/src/session-lifecycle';
 import { releaseEntries, releaseFiles, standingAccounts, standingPeer, workerLaunchers, workerSourceRoots } from '../../../core/src/worker-release';
-import { few, type Dirty, type LiveRun, type UpdateInput } from './inspect';
+import { few, touchesIncomingPath, type Dirty, type LiveRun, type UpdateInput } from './inspect';
 import { SDK_PATCH } from './vendor';
 
 export type UpdatePlan = { action: 'none' | 'wait'; reason: string } | { action: 'update'; adopt: Dirty[] };
@@ -44,6 +44,8 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
         if (loaded.length) return { action: 'wait', reason: `the live run of ${run.name} loads ${few(loaded)}` };
     }
     if (i.vendorRelease?.length && i.liveRuns?.length) return { action: 'wait', reason: `the live run of ${i.liveRuns[0]!.name} loads ${few(i.vendorRelease)} (changed by the SDK patch)` };
+    const collisions = i.dirty.filter(d => !incoming.has(d.path) && touchesIncomingPath(d.path, incoming) && !d.sameAsTarget).map(d => d.path);
+    if (collisions.length) return { action: 'wait', reason: `local edit differs from master: ${few(collisions)}` };
     const touched = i.dirty.filter(d => incoming.has(d.path));
     const differs = touched.filter(d => !d.sameAsTarget && !d.mergedDelivery && d.rebase === undefined).map(d => d.path);
     if (differs.length) return { action: 'wait', reason: `local edit differs from master: ${few(differs)}` };

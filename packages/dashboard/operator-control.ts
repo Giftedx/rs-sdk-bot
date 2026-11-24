@@ -8,7 +8,7 @@ import { defaultActivityCatalog, type ActivityCatalog } from '../brain/src/catal
 import { controllerStates } from '../core/src/controllers';
 import { atomicJson } from '../core/src/plan-lock';
 import { findStopFile, listStopEntries, liveRoot, operatorCommandsDir, practiceRoot } from '../core/src/practice-paths';
-import { appendOwnerRequest, applyCommand, enqueueBrainCommand, existingStopFiles, validateCommand, REQUEST_MAX, HOLD_PREFIX } from './publish-commands';
+import { appendOwnerRequest, applyCommand, enqueueBrainCommand, existingStopFiles, validateCommand, REQUEST_MAX, HOLD_PREFIX, ID_RE } from './publish-commands';
 import { MAIN_ACCOUNT } from './publish-relay';
 
 const OVERRIDE_ROLES = ACCOUNT_ROLES.filter((role): role is Exclude<AccountRole, 'main'> => role !== 'main');
@@ -63,10 +63,15 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
    const st = statSync(file);
    const hit = auditJsonCache.get(file);
    if (hit && nowWall - st.mtimeMs > 1000 && hit.mtimeMs === st.mtimeMs && hit.size === st.size) {
+    auditJsonCache.delete(file);
+    auditJsonCache.set(file, hit);
     return hit.doc;
    }
    const doc = JSON.parse(readFileSync(file, 'utf8'));
-   if (auditJsonCache.size >= 500) auditJsonCache.clear();
+   if (auditJsonCache.size >= 1000) {
+    const oldest = auditJsonCache.keys().next().value;
+    if (oldest !== undefined) auditJsonCache.delete(oldest);
+   }
    auditJsonCache.set(file, { mtimeMs: st.mtimeMs, size: st.size, doc });
    return doc;
   } catch {
@@ -143,7 +148,7 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
     const isCommandAction = COMMAND_AUDIT_ACTIONS.has(r.action);
     let status = r.status;
     let rawNote = typeof r.note === 'string' ? r.note : '';
-    if (isCommandAction && !terminalFailure) {
+    if (isCommandAction && !terminalFailure && typeof r.id === 'string' && ID_RE.test(r.id)) {
      const appliedPath = join(commandsDir, 'applied', `${r.id}.json`);
      const rejectedPath = join(commandsDir, 'rejected', `${r.id}.json`);
      const pendingPath = join(commandsDir, `${r.id}.json`);
@@ -212,7 +217,7 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
    const bytes = await req.text();
    if (bytes.length > 32768) throw Error('Command exceeds 32 KiB');
    const input = JSON.parse(bytes), id = input.id;
-   if (typeof id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9-]{27}$/.test(id)) throw Error('Command identity required');
+   if (typeof id !== 'string' || !ID_RE.test(id)) throw Error('Command identity required');
    const action = input.action;
    const allowed = ['pause', 'resume', 'side-pause', 'side-resume', 'swarm-pause', 'swarm-resume', 'account-pause', 'account-release', 'override-account', 'clear-defect', 'set-campaign-state', 'set-mission-state', 'job-disable', 'job-enable', 'request'];
    if (!allowed.includes(action)) throw Error('Unknown operator command');

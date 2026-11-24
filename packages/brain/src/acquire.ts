@@ -109,6 +109,7 @@ export interface AcquireContext {
     readonly stationedHubBankers?: Readonly<Partial<Record<HubBankId, string>>>;
     readonly excludedDonorAccounts?: ReadonlySet<string>;
     readonly excludedSources?: ReadonlySet<AcquireSourceKind>;
+    readonly excludedMarketVenues?: ReadonlySet<string>;
     readonly _cachedByOutputItem?: Pick<ReadonlyMap<number, readonly ActivityDefinition[]>, 'get'>;
     readonly _sortedIdleDonors?: readonly AccountState[];
     readonly _idleDonorsByItemId?: ReadonlyMap<number, readonly AccountState[]>;
@@ -370,6 +371,11 @@ export function resolveAcquireItem(
             let shopRejectReason = 'no accessible NPC shop';
             const hasCooldownMaps = Boolean(acct.cooldowns || world.marketCooldowns);
             for (const shop of shops) {
+                const shopVenueKey = marketCooldownKey(req.itemId, `shop:${shop.shop}`);
+                if (ctx.excludedMarketVenues?.has(shopVenueKey)) {
+                    if (!skipDiag) shopRejectReason = `shop:${shop.shop} already allocated`;
+                    continue;
+                }
                 if (hasCooldownMaps && isVenueOnCooldown(acct, world, req.itemId, `shop:${shop.shop}`, shop.shop)) {
                     if (!skipDiag) shopRejectReason = `shop:${shop.shop} on cooldown`;
                     continue;
@@ -439,6 +445,10 @@ export function resolveAcquireItem(
             }
             if (itemMeta && !itemMeta.tradeable) {
                 if (!skipDiag) skippedReasons.push({ source, reason: 'item is untradeable' });
+                continue;
+            }
+            if (ctx.excludedMarketVenues?.has(marketCooldownKey(req.itemId, 'ge'))) {
+                if (!skipDiag) skippedReasons.push({ source, reason: 'ge venue already allocated' });
                 continue;
             }
             if (isVenueOnCooldown(acct, world, req.itemId, 'ge')) {

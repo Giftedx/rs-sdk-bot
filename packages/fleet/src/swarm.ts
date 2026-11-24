@@ -978,6 +978,28 @@ export function loadHolds(file: string): ScriptHold[] {
     return raw;
 }
 
+export function syncDeathHolds(
+    holdsFile: string,
+    holds: ScriptHold[],
+    prev: { mtimeMs: number; size: number },
+    nowWall = Date.now(),
+): { mtimeMs: number; size: number } {
+    try {
+        const st = statSync(holdsFile);
+        if (nowWall - st.mtimeMs > 1000 && st.mtimeMs === prev.mtimeMs && st.size === prev.size) {
+            return prev;
+        }
+        holds.splice(0, holds.length, ...loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason)));
+        return { mtimeMs: st.mtimeMs, size: st.size };
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            holds.length = 0;
+            return { mtimeMs: 0, size: 0 };
+        }
+        return prev;
+    }
+}
+
 export function persistHolds(file: string, holds: readonly ScriptHold[]): void {
     const temporary = `${file}.tmp-${process.pid}`;
     try { writeFileSync(temporary, JSON.stringify(holds, null, 1)); renameRetry(temporary, file); }
@@ -1186,8 +1208,8 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const repairFile = join(prac, 'swarm-repair.json');
     const ended = loadEnded(deathsFile);
     const holdsFile = join(prac, 'swarm-script-holds.json');
-    const holds = loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason));
-    let holdsMtime = existsSync(holdsFile) ? statSync(holdsFile).mtimeMs : 0;
+    const holds: ScriptHold[] = [];
+    let holdsStamp = syncDeathHolds(holdsFile, holds, { mtimeMs: -1, size: -1 });
     const setEnded = ended.set.bind(ended);
     ended.set = (a, r) => {
         setEnded(a, r);
@@ -1418,10 +1440,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 cachedPlan = { mtimeMs: pst.mtimeMs, size: pst.size, data: plan };
             }
         } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
-        try {
-            const m = statSync(holdsFile).mtimeMs;
-            if (m !== holdsMtime) { holds.splice(0, holds.length, ...loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason))); holdsMtime = m; }
-        } catch { /* no hold file yet */ }
+        holdsStamp = syncDeathHolds(holdsFile, holds, holdsStamp, nowWall);
         if (!Array.isArray(plan.jobs) || !Number.isFinite(plan.maxBots) || plan.maxBots < 1 || !Number.isFinite(plan.minFreeGB)) {
             console.log('SWARM bad plan shape'); return;
         }
@@ -1739,7 +1758,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             }
             const r = overlappingRun(runs.values(), p.accounts);
             if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => {
-                if (clearAccountSwarmStops(a, root)) stopFlagsPresent.delete(a.toLowerCase());
+                if (clearAccountSwarmStops(a, root) && !hasStopFile(a, root)) stopFlagsPresent.delete(a.toLowerCase());
             }, endedByLower)) {
                 endedByLower = endedMapByLower(ended);
                 persistEnded(deathsFile, ended);
@@ -1774,7 +1793,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     for (const a of p.accounts) {
                         const lower = a.toLowerCase();
                         if (brainDispatchedAccounts.has(lower) && stopFlagsPresent.has(lower)) {
-                            if (clearAccountAutoStops(a, root)) stopFlagsPresent.delete(lower);
+                            if (clearAccountAutoStops(a, root) && !hasStopFile(a, root)) stopFlagsPresent.delete(lower);
                         }
                     }
                 }

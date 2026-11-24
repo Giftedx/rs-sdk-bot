@@ -6,7 +6,7 @@ import { parseDropProcs, parseDrops } from '../src/drops';
 import { parseStaffItems } from '../src/gear';
 import { buildItemSources } from '../src/item-sources';
 import { parseJm2 } from '../src/jm2';
-import { block, loadContent, modelRung } from '../src/method-model';
+import { block, find, findAll, loadContent, modelRung } from '../src/method-model';
 import { contentRoot } from '../src/paths';
 import { buildShortcuts, movingScripts, parseScripts, stripComments } from '../src/shortcuts';
 import { buildNpcTravel } from '../src/npc-travel';
@@ -243,4 +243,15 @@ test('skill-tools, npc-travel, and spotcheck caches preserve deterministic parit
     expect(sc1).toEqual(sc2);
     expect(sc1.checked).toBe(40);
     expect(sc1.wrong).toEqual([]);
+});
+
+test('method-model find and findAll reset stateful /g regexes across lines', () => {
+    const c = loadContent();
+    const globalRe = /^\[/g;
+    const hits = findAll(c, 'scripts/skill_smithing/scripts/smithing/smithing.rs2', globalRe);
+    expect(hits.length).toBeGreaterThan(1);
+    globalRe.lastIndex = 5;
+    const first = find(c, 'scripts/skill_smithing/scripts/smithing/smithing.rs2', globalRe);
+    expect(first).not.toBeNull();
+    expect(first!.line).toBe(hits[0]!.line);
 });

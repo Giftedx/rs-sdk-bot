@@ -23,15 +23,30 @@ test('shadow CLI runs offline read-only across full fleet fixture, verifying pro
             ChefPro: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
             TribridPro: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
             PausedHelper: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
+            Mightyrod: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
             CloudGuy: { side: 'cloud', server: 'rs-sdk-demo.fly.dev' },
         };
         for (const spec of Object.keys(SPECIALIST_BOARDS)) {
             owners[spec] = { side: 'local', server: 'rs-sdk-demo.fly.dev' };
         }
         writeJson(join(tempRoot, 'fleet', 'owners.json'), { accounts: owners });
-        writeJson(join(tempRoot, 'swarm.json'), { maxBots: 12, minFreeGB: 4, jobs: [] });
+        writeJson(join(tempRoot, 'swarm.json'), {
+            maxBots: 12,
+            minFreeGB: 4,
+            jobs: [{ name: 'pvp', account: 'Mightyrod', script: '', enabled: false, role: 'pvp' }],
+        });
         mkdirSync(join(tempRoot, '.practice', 'live'), { recursive: true });
         writeFileSync(join(tempRoot, '.practice', 'live', 'stop-PausedHelper'), 'owner pause test\n');
+        writeJson(join(tempRoot, '.practice', 'live', 'status', 'Mightyrod.json'), {
+            name: 'Mightyrod',
+            server: 'rs-sdk-demo.fly.dev',
+            at: NOW - 20 * 60_000,
+            result: 'done',
+            pos: { x: 3222, z: 3218, level: 0 },
+            skills: [{ name: 'Attack', level: 60, xp: 300_000 }],
+            bankAt: NOW - 20 * 60_000,
+            bank: [{ id: 995, name: 'Coins', count: 50_000 }],
+        });
 
         const OFFLINE_AT = NOW - 20 * 60_000;
         const statusDir = join(tempRoot, '.practice', 'live', 'status');
@@ -129,6 +144,8 @@ test('shadow CLI runs offline read-only across full fleet fixture, verifying pro
             expect(report.fleetPlan.accountPlans[spec]?.steps).toEqual([]);
         }
         expect(report.fleetPlan.accountPlans.PausedHelper?.idleReason).toBe('paused_owner');
+        expect(report.fleetPlan.accountPlans.Mightyrod?.idleReason).toBe('paused_owner');
+        expect(report.summary.lifecycleCounts.paused_owner).toBe(2);
         expect(report.fleetPlan.accountPlans.CloudGuy?.idleReason).toBe('owned_by_other_side:cloud');
 
         const summary = formatShadowSummary(report);

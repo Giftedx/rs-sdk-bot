@@ -172,6 +172,16 @@ describe('skills perf pass 4 parity and lazy-loading', () => {
         expect(LOWE_ARROWS.length).toBeLessThanOrEqual(ARROWS.length);
         const arrowIds = new Set(ARROWS.map(a => a.id));
         expect([...LOWE_ARROWS].every(id => arrowIds.has(id))).toBe(true);
+        expect(BOWS.constructor).toBe(Array);
+        expect(ARROWS.constructor).toBe(Array);
+        expect(Object.keys(LOWE_ARROWS).length).toBe(LOWE_ARROWS.length);
+        expect(JSON.stringify(LOWE_ARROWS)).toBe(JSON.stringify([...LOWE_ARROWS]));
+        expect(LOWE_ARROWS).toEqual([...LOWE_ARROWS]);
+        Object.freeze(GIANT_ARROWS);
+        expect(Object.isFrozen(GIANT_ARROWS)).toBe(true);
+        expect(Object.isExtensible(GIANT_ARROWS)).toBe(false);
+        expect(Object.keys(GIANT_ARROWS).length).toBe(GIANT_ARROWS.length);
+        expect([...GIANT_ARROWS]).toEqual(GIANT_ARROWS.slice());
 
         const stock = [
             { id: 1277, count: 1 },
@@ -284,6 +294,7 @@ describe('skills perf pass 4 parity and lazy-loading', () => {
         const p1 = incomingFarmerProfile();
         const p2 = incomingFarmerProfile();
         expect(p2).toBe(p1);
+        expect(Object.isFrozen(p1)).toBe(true);
         expect(p1.npc).toBeGreaterThan(0);
         expect(p1.rate).toBeGreaterThan(0);
     });

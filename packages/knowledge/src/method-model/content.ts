@@ -147,7 +147,9 @@ export function findAll(c: Content, file: string, re: RegExp, inBlock?: string):
     const r = inBlock ? block(c, file, inBlock) : { from: 0, to: ls.length };
     if (!r) return [];
     const out: Hit[] = [];
+    const reset = re.global || re.sticky;
     for (let i = r.from; i < r.to; i++) {
+        if (reset) re.lastIndex = 0;
         const m = re.exec(ls[i]!);
         if (m) out.push({ m, src: `${file}:${i + 1}`, line: i + 1 });
     }
@@ -160,7 +162,9 @@ export function find(c: Content, file: string, re: RegExp, inBlock?: string): Hi
     if (!ls) return null;
     const r = inBlock ? block(c, file, inBlock) : { from: 0, to: ls.length };
     if (!r) return null;
+    const reset = re.global || re.sticky;
     for (let i = r.from; i < r.to; i++) {
+        if (reset) re.lastIndex = 0;
         const m = re.exec(ls[i]!);
         if (m) return { m, src: `${file}:${i + 1}`, line: i + 1 };
     }

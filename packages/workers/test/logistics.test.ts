@@ -401,5 +401,43 @@ describe('WorkerModule logistics contract and dispatch', () => {
         const world = baseWorld({ globalReserves: { 995: 25_000 } });
         const res = logisticsWorker.preflight(acct, { operation: 'trade', role: 'coin-courier', coins: 50_000 }, world);
         expect(res).toMatchObject({ ok: false, blockers: [{ kind: 'missing_coins', required: 50_000, reserved: 55_000 }] });
+
+        const stopCfgSess = makeFakeSessionCore({ pos: { worldX: 3185, worldZ: 3436, level: 0 } });
+        try {
+            const stopped = await logisticsWorker.run(stopCfgSess.core, {
+                operation: 'recover',
+                role: 'recover-trapped',
+                stop: () => true,
+            });
+            expect(stopped).toMatchObject({ kind: 'session_unsettled', activityId: 'logistics:recover-trapped' });
+        } finally {
+            stopCfgSess.dispose();
+        }
+
+        const endedSess = makeFakeSessionCore({ pos: { worldX: 3185, worldZ: 3436, level: 0 } });
+        try {
+            const endedOut = await logisticsWorker.run(
+                { ...endedSess.core, ended: Promise.resolve() } as unknown as typeof endedSess.core,
+                { operation: 'recover', role: 'recover-trapped' },
+            );
+            expect(endedOut).toMatchObject({ kind: 'session_unsettled', activityId: 'logistics:recover-trapped' });
+        } finally {
+            endedSess.dispose();
+        }
+
+        const diedSess = makeFakeSessionCore({ pos: { worldX: 3185, worldZ: 3436, level: 0 } });
+        try {
+            let calls = 0;
+            const origGetState = diedSess.core.sdk.getState;
+            diedSess.core.sdk.getState = () => {
+                calls += 1;
+                const st = origGetState();
+                return st && st.player ? { ...st, player: { ...st.player, lifeId: calls > 1 ? 2 : 1, respawnCount: calls > 1 ? 1 : 0 } } : st;
+            };
+            const deathOut = await logisticsWorker.run(diedSess.core, { operation: 'recover', role: 'recover-trapped' });
+            expect(deathOut).toMatchObject({ kind: 'death', activityId: 'logistics:recover-trapped' });
+        } finally {
+            diedSess.dispose();
+        }
     });
 });

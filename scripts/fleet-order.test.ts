@@ -67,3 +67,24 @@ test('--id and --with-id bind exact itemId without altering plain --with behavio
     const twoVambs = makeOrder('Pocketpython', 'TheFullMonty', 1, 'Dragon vambraces', 1_000_000, 0, 60, owners, undefined, [{ item: 'Dragon vambraces', count: 1, itemId: 1065 }], 2491);
     expect(validOrder(twoVambs)).toBe(true);
 });
+
+test('CLI rejects missing arguments and invalid IN/MINUTES windows cleanly with exit 2', () => {
+    const missing = Bun.spawnSync([process.execPath, 'scripts/fleet-order.ts', 'Pocketpython', 'TheFullMonty'], {
+        cwd: process.cwd(),
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+    });
+    expect(missing.exitCode).toBe(2);
+    expect(missing.stderr.toString()).toContain('usage: bun scripts/fleet-order.ts');
+
+    const badWindow = Bun.spawnSync([process.execPath, 'scripts/fleet-order.ts', 'Pocketpython', 'TheFullMonty', '10', 'Shark'], {
+        cwd: process.cwd(),
+        env: { ...process.env, MINUTES: '-5' },
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+    });
+    expect(badWindow.exitCode).toBe(2);
+    expect(badWindow.stderr.toString()).toContain('MINUTES must be finite > 0');
+});

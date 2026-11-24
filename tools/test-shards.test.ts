@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import { affectedTests, failedFiles, runShard, shard, shardCount, partFiles, parsePart } from './test-shards';
+import { affectedTests, failedFiles, parsePorcelainPaths, runShard, shard, shardCount, partFiles, parsePart } from './test-shards';
 
 test.skipIf(process.platform !== 'win32')('Windows shards run every file in a fresh process before any retry', async () => {
     const root = resolve(import.meta.dir, '..'), scratch = join(root, '.practice');
@@ -122,4 +122,19 @@ test('a change selects the tests that reach it by import, by a quoted path, or b
         write('scripts/apart.test.ts', "import { worker } from './worker';");
         expect(affectedTests(tests, ['scripts/worker.ts'], base)).toEqual(['scripts/imports.test.ts', 'scripts/spawns.test.ts', 'scripts/scans.test.ts', 'scripts/apart.test.ts']);
     } finally { rmSync(base, { recursive: true, force: true }); }
+});
+
+test('parsePorcelainPaths preserves leading spaces on unstaged modified lines and resolves renames', () => {
+    const raw = [
+        ' M tools/now.ts',
+        'M  packages/dashboard/server.ts',
+        'R  tools/old-name.ts -> tools/new-name.ts',
+        '?? "packages/practice/test/new file.test.ts"',
+    ].join('\n');
+    expect(parsePorcelainPaths(raw)).toEqual([
+        'tools/now.ts',
+        'packages/dashboard/server.ts',
+        'tools/new-name.ts',
+        'packages/practice/test/new file.test.ts',
+    ]);
 });

@@ -57,6 +57,7 @@ export interface QuestConfig {
     readonly args?: readonly string[];
     readonly env?: Readonly<Record<string, string>>;
     readonly exitOnComplete?: boolean;
+    readonly stop?: () => boolean;
 }
 
 export interface QuestModeSpec {

@@ -520,13 +520,13 @@ export function bearRefusal(hp: number, attack: number, strength: number, defenc
 type Floor = { x: number; z: number; level: number };
 type Transport = { from: Floor; to: Floor };
 type ExitLoc = { id: number; x: number; z: number; optionsWithIndex: readonly { text: string; opIndex: number }[] };
-let transportRows: { key: string; checkedAt: number; rows: Transport[] } | undefined;
+let transportRows: { key: string; checkedAt: number; rows: readonly Transport[] } | undefined;
 const downTransportIndex = new WeakMap<readonly Transport[], Set<number>>();
 const packDownCoord = (level: number, x: number, z: number) => level * 268_435_456 + (x & 0x3fff) * 16_384 + (z & 0x3fff);
 
 const transports = (): readonly Transport[] => {
     const now = Date.now();
-    if (transportRows && now - transportRows.checkedAt < 1000) return transportRows.rows;
+    if (transportRows && now >= transportRows.checkedAt && now - transportRows.checkedAt < 1000) return transportRows.rows;
     const path = join(KNOWLEDGE_DIR, 'transports.json');
     const st = statSync(path);
     const key = `${st.mtimeMs}:${st.size}`;
@@ -534,7 +534,7 @@ const transports = (): readonly Transport[] => {
         transportRows.checkedAt = now;
         return transportRows.rows;
     }
-    const rows = JSON.parse(readFileSync(path, 'utf8')) as Transport[];
+    const rows = Object.freeze(JSON.parse(readFileSync(path, 'utf8')) as Transport[]);
     transportRows = { key, checkedAt: now, rows };
     return rows;
 };

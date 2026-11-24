@@ -813,6 +813,17 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         }
     }
     const heldByHandJob = handNamed(Array.isArray(swarmPlan?.jobs) ? swarmPlan.jobs : [], side);
+    const heldBySwarmPlan = new Set<string>(heldByHandJob);
+    if (Array.isArray(swarmPlan?.jobs)) {
+        for (const j of swarmPlan.jobs) {
+            if (!j || j.autopilot === side) continue;
+            if (j.enabled === false || !j.script) {
+                for (const raw of [j.account, ...(Array.isArray(j.accounts) ? j.accounts : [])]) {
+                    if (typeof raw === 'string' && raw.length > 0) heldBySwarmPlan.add(raw.toLowerCase());
+                }
+            }
+        }
+    }
     const stopIndex = buildStopFileIndex(root);
     const lcIndexes = buildLifecycleRootIndexes(lcRoots, server);
 
@@ -877,8 +888,9 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         const inventory = normalizeItemContainer(status?.inventory);
         const equipment = normalizeItemContainer(status?.equipment);
 
-        // Stop file / side card owner pause check (ignore controller auto-stops).
+        // Stop file / swarm.json / side card owner pause check (ignore controller auto-stops).
         let ownerPaused = false;
+        let ownerHoldBySwarmPlan = false;
         let ownerStopPath: string | undefined;
         if (isLocalSide) {
             const stopHit = stopIndex.read(name);
@@ -887,6 +899,10 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
                     ownerPaused = true;
                     ownerStopPath = stopHit.path;
                 }
+            }
+            if (!ownerPaused && !protectedClock && heldBySwarmPlan.has(lower)) {
+                ownerPaused = true;
+                ownerHoldBySwarmPlan = true;
             }
         } else {
             const card = sideCards.get(acctSide);
@@ -1015,7 +1031,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
             now,
         );
 
-        const activeLaunchAuthorized = protectedClock && (isRunning || Boolean(heldByHandJob.has(lower) && isRunning));
+        const activeLaunchAuthorized = protectedClock && isRunning;
 
         const lifecycle = classifyAccountLifecycle({
             name,
@@ -1071,7 +1087,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
             account: name,
             lifecycle,
             reason: ownerPaused
-                ? 'explicit owner stop'
+                ? (ownerHoldBySwarmPlan && !ownerStopPath ? 'swarm.json owner hold' : 'explicit owner stop')
                 : dead
                     ? 'live death record'
                     : lifecycle === 'reserved'

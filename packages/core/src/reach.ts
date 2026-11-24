@@ -76,8 +76,8 @@ export function canReachLocal(flags: FlagsAt, from: LocalPoint, to: LocalPoint, 
         || to.lx < 0 || to.lx >= SCENE_SIZE || to.lz < 0 || to.lz >= SCENE_SIZE) {
         return canReachLocalSlow(flags, from, to, maxSteps, adjacentOk);
     }
-    if (++currentStamp === 0) { seenStamp.fill(0); currentStamp = 1; }
-    const stamp = currentStamp;
+    if (currentStamp >= 0xffff_ffff) { seenStamp.fill(0); currentStamp = 0; }
+    const stamp = ++currentStamp;
     seenStamp[from.lx * SCENE_SIZE + from.lz] = stamp;
     bfsQueue[0] = (from.lx << 7) | from.lz;
     let tail = 1, expansions = 0;

@@ -7,6 +7,7 @@ import {
     classifyAccountLifecycle,
     createExpiringHold,
     DEFAULT_LIVE_SERVER,
+    inspectWorldSnapshot,
     isStrandedPosition,
     lifecycleAutoExpires,
     loadWorldSnapshot,
@@ -451,5 +452,38 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
 
         const snapshot = loadWorldSnapshot({ root: tempRoot, now: NOW, side: 'local' });
         expect(snapshot.fleetSides?.local?.stopped).toBe(true);
+    });
+
+    test('swarm.json reservations and disabled hand jobs mark non-protected local accounts as paused_owner while keeping protected clocks reserved', () => {
+        const fleetDir = join(tempRoot, '.practice', 'live', 'fleet-data', 'fleet');
+        writeJson(join(fleetDir, 'owners.json'), {
+            accounts: {
+                Haggis: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                Mightyrod: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                Balls: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                WeeQuickie: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                HandHold: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                AutoBot: { side: 'local', server: DEFAULT_LIVE_SERVER },
+            },
+        });
+        writeJson(join(tempRoot, 'swarm.json'), {
+            maxBots: 10,
+            jobs: [
+                { name: 'main', account: 'Haggis', script: '', enabled: false, role: 'main' },
+                { name: 'pvp', account: 'Mightyrod', script: '', enabled: false, role: 'pvp' },
+                { name: 'rehearsal', accounts: ['Balls', 'WeeQuickie'], script: '', enabled: false },
+                { name: 'hand', account: 'HandHold', script: 'scripts/manual.ts', enabled: false },
+                { name: 'auto', account: 'AutoBot', script: '', enabled: false, autopilot: 'local' },
+            ],
+        });
+
+        const { snapshot, accounts: accountDiags } = inspectWorldSnapshot({ root: tempRoot, now: NOW, side: 'local' });
+        expect(snapshot.accounts.haggis?.lifecycle).toBe('reserved');
+        expect(snapshot.accounts.mightyrod?.lifecycle).toBe('paused_owner');
+        expect(snapshot.accounts.balls?.lifecycle).toBe('paused_owner');
+        expect(snapshot.accounts.weequickie?.lifecycle).toBe('paused_owner');
+        expect(snapshot.accounts.handhold?.lifecycle).toBe('paused_owner');
+        expect(snapshot.accounts.autobot?.lifecycle).toBe('idle');
+        expect(accountDiags.mightyrod?.reason).toBe('swarm.json owner hold');
     });
 });

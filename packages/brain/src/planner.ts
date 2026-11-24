@@ -15,6 +15,7 @@ import {
     isCampaignLaunchReady,
     isHoldActive,
     isProtectedAccountName,
+    marketCooldownKey,
     type AccountPlan,
     type AccountState,
     type AcquireSourceKind,
@@ -390,6 +391,7 @@ export interface AccountPlannerInput {
     readonly excludedActivityIds?: ReadonlySet<string>;
     readonly excludedDonorAccounts?: ReadonlySet<string>;
     readonly excludedAcquireSources?: ReadonlySet<AcquireSourceKind>;
+    readonly excludedMarketVenues?: ReadonlySet<string>;
     readonly donorDemandItemIds?: ReadonlyMap<string, ReadonlySet<number>>;
     readonly recentReceivedAt?: ReadonlyMap<string, number>;
     readonly confirmedLogoutAt?: ReadonlyMap<string, number>;
@@ -403,6 +405,9 @@ export interface AccountPlannerInput {
 export interface AccountPlannerReuse {
     readonly acctNameLower: string;
     readonly worldAt: number;
+    readonly acctRef: AccountState;
+    readonly worldRef: WorldSnapshot;
+    readonly campaignsRef: readonly Campaign[];
     readonly acctCache: AccountLookupCache;
     readonly profile: AccountProfileSummary;
     readonly protection: ReturnType<typeof canProtectedAccountLaunch>;
@@ -423,6 +428,9 @@ export function createAccountPlannerReuse(
     return {
         acctNameLower: acct.name.toLowerCase(),
         worldAt: world.at,
+        acctRef: acct,
+        worldRef: world,
+        campaignsRef: campaigns,
         acctCache,
         profile,
         protection,
@@ -1092,7 +1100,12 @@ function planAccountCore(
     }
 
     const acctLower = acct.name.toLowerCase();
-    const reuse = input._reuse && input._reuse.acctNameLower === acctLower && input._reuse.worldAt === now
+    const reuse = input._reuse
+        && input._reuse.acctNameLower === acctLower
+        && input._reuse.worldAt === now
+        && input._reuse.acctRef === acct
+        && input._reuse.worldRef === world
+        && (!input.campaigns || input._reuse.campaignsRef === input.campaigns)
         ? input._reuse
         : undefined;
 
@@ -1237,6 +1250,7 @@ function planAccountCore(
         requireConfirmedLogoutForTransfer: input.requireConfirmedLogoutForTransfer,
         excludedDonorAccounts: input.excludedDonorAccounts,
         excludedSources: input.excludedAcquireSources,
+        excludedMarketVenues: input.excludedMarketVenues,
         _cachedByOutputItem: nonExpByOutputItem,
         _sortedIdleDonors: sortedIdleDonors,
         _idleDonorsByItemId: shared?.idleDonorsByItemId,
@@ -1426,13 +1440,14 @@ function planAccountCore(
                                 ...(shopCatalog.get(targetItemId) ?? []),
                             ];
                             for (const shop of shops) {
+                                if (input.excludedMarketVenues?.has(marketCooldownKey(targetItemId, `shop:${shop.shop}`))) continue;
                                 if (shop.requiresQuest && !cachedHasCompletedQuest(acct, shop.requiresQuest, acctCache)) continue;
                                 if (shop.requiresSkill && cachedAccountSkillLevel(acct, shop.requiresSkill.skill, acctCache) < shop.requiresSkill.level) continue;
                                 if (shop.requiresQuestPoints) continue;
                                 if (shop.cost > 0 && shop.cost < minUnitPrice) minUnitPrice = shop.cost;
                             }
                         }
-                        if (hasGe) {
+                        if (hasGe && !input.excludedMarketVenues?.has(marketCooldownKey(targetItemId, 'ge'))) {
                             const quote = input.marketQuotes?.[targetItemId]!;
                             minUnitPrice = Math.min(minUnitPrice, Math.ceil(Math.ceil(quote.ask!) * GE_LIMIT_BUFFER));
                         }
@@ -1554,7 +1569,7 @@ function planAccountCore(
                     }
 
                     if (blocker.kind === 'skill_level') {
-                        const curXp = accountSkillXp(acct, blocker.skill);
+                        const curXp = cachedAccountSkillXp(acct, blocker.skill, acctCache);
                         const bonusXp = grantedQuestXp[blocker.skill.toLowerCase()] ?? 0;
                         if (levelForXp(curXp + bonusXp) >= blocker.required) {
                             continue;
@@ -1626,7 +1641,7 @@ function planAccountCore(
                                         Math.ceil(druidAct.baselineRate.setupTicks + (druidPre.travelTicks ?? 0) + 1 / Math.max(1e-4, druidAct.baselineRate.unitsPerTick)),
                                     ),
                                 });
-                                const curHerbXp = accountSkillXp(acct, blocker.skill);
+                                const curHerbXp = cachedAccountSkillXp(acct, blocker.skill, acctCache);
                                 if (levelForXp(curHerbXp + (grantedQuestXp[skLower] ?? 0)) >= blocker.required) {
                                     continue;
                                 }
@@ -1664,7 +1679,7 @@ function planAccountCore(
                         }
                         const trainAct = unlockEntry.activity;
                         const trainRate = unlockEntry.rate;
-                        const curXp = accountSkillXp(acct, blocker.skill);
+                        const curXp = cachedAccountSkillXp(acct, blocker.skill, acctCache);
                         const bonusXp = grantedQuestXp[skLower] ?? 0;
                         const needXp = Math.max(1, xpForLevel(blocker.required) - (curXp + bonusXp));
                         const trainTicks = Math.max(

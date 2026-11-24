@@ -266,7 +266,8 @@ export function observeNormalOwners(
 
 function alive(pid: number, script: string): boolean {
     if (!boundedProcessAlive(pid)) return false;
-    try { return readFileSync(`/proc/${pid}/cmdline`, 'utf8').includes(script); } catch { return true; }
+    const cmd = commandLine(pid);
+    return cmd === null || cmd.replaceAll('\\', '/').includes(script);
 }
 
 export async function runCloudSideCli(argv: readonly string[] = process.argv.slice(2)): Promise<void> {

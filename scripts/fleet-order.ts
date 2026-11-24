@@ -126,7 +126,17 @@ const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8'
 if (import.meta.main) {
     const { rest, extra, itemId } = parseOrderArgs(process.argv.slice(2));
     const [from, to, countText, ...name] = rest;
-    const made = makeOrder(from ?? '', to ?? '', Number(countText), name.join(' '), Date.now(), Number(process.env.IN ?? 15), Number(process.env.MINUTES ?? 40), undefined, orderMeet(process.env.MEET), extra, itemId);
+    if (!from || !to || !countText || name.length === 0) {
+        console.error('usage: bun scripts/fleet-order.ts <from> <to> <count> <item name...> [--id <itemId>] [--with "<count> <item name>"]... [--with-id <itemId> "<count> <item name>"]...');
+        process.exit(2);
+    }
+    const inMin = Number(process.env.IN ?? 15);
+    const minutes = Number(process.env.MINUTES ?? 40);
+    if (!Number.isFinite(inMin) || inMin < 0 || !Number.isFinite(minutes) || minutes <= 0) {
+        console.error('fleet-order: IN must be finite >= 0 and MINUTES must be finite > 0');
+        process.exit(2);
+    }
+    const made = makeOrder(from, to, Number(countText), name.join(' '), Date.now(), inMin, minutes, undefined, orderMeet(process.env.MEET), extra, itemId);
     // TAKER_WAITS=1: the receiver stays offline until the giver is at the meet. The giver marks that on its own machine.
     const partySides = new Set([made.from, made.to].map(n => loadOwners().get(n.toLowerCase())?.side ?? 'local'));
     if (process.env.TAKER_WAITS === '1' && partySides.size !== 1) throw Error('TAKER_WAITS needs both accounts on one side');

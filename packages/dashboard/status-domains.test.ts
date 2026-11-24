@@ -18,10 +18,10 @@ function buildReadStatuses(entries:{dir:string;file:string;doc:any;mtime?:number
  const byPath=new Map<string,{doc:any;mtime:number}>();
  for(const e of entries){
   const list=byDir.get(e.dir)??[];
-  const mtime=e.mtime??1;
-  list.push({file:e.file,doc:e.doc,mtime});
+  if(e.mtime===undefined)e.mtime=1;
+  list.push({file:e.file,doc:e.doc,mtime:e.mtime});
   byDir.set(e.dir,list);
-  byPath.set(`${e.dir}/${e.file}`,{doc:e.doc,mtime});
+  byPath.set(`${e.dir}/${e.file}`,e as {doc:any;mtime:number});
  }
  const statusScans=[...byDir.entries()].map(([dir,list])=>({
   dir,
@@ -108,4 +108,14 @@ test('readStatuses deduplicates account status winners case-insensitively',()=>{
  const out=run();
  expect([...out.entries()].map(([k,v])=>[k,v.phase])).toEqual([['Worker','new']]);
  expect(tracked).toEqual(['new']);
+});
+
+test('readStatuses re-tracks same-mtime status updates when doc timestamp or tick advances',()=>{
+ const now=Date.now(),tracked:number[]=[];
+ const entry={dir:'.practice/live/status',file:'Fast.json',doc:{name:'Fast',server:'rs-sdk-demo.fly.dev',at:now-200,tick:10},mtime:now};
+ const run=buildReadStatuses([entry],doc=>tracked.push(doc.tick));
+ expect(run().get('Fast')?.tick).toBe(10);
+ entry.doc={name:'Fast',server:'rs-sdk-demo.fly.dev',at:now-100,tick:11};
+ expect(run().get('Fast')?.tick).toBe(11);
+ expect(tracked).toEqual([10,11]);
 });

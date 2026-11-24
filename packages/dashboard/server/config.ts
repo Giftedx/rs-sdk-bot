@@ -68,16 +68,22 @@ export function every<T>(ms: number, key: string, read: () => T): T {
     everyCache.set(key, { at: Date.now(), value });
     return value;
 }
-// Re-reads a file only when its mtime changes.
-const fileCache = new Map<string, { mtime: number; value: unknown }>();
+// Re-reads a file when modified within the last second or when its mtime or size changes.
+const fileCache = new Map<string, { mtime: number; size: number; value: unknown }>();
 export function cached<T>(file: string, parse: (text: string) => T, empty: T): T {
     try {
-        const mtime = statSync(file).mtimeMs, hit = fileCache.get(file);
-        if (hit && hit.mtime === mtime) return hit.value as T;
+        const st = statSync(file), hit = fileCache.get(file);
+        if (hit && Date.now() - st.mtimeMs > 1000 && hit.mtime === st.mtimeMs && hit.size === st.size) return hit.value as T;
         const value = parse(readFileSync(file, 'utf8'));
-        fileCache.set(file, { mtime, value });
+        fileCache.set(file, { mtime: st.mtimeMs, size: st.size, value });
         return value;
-    } catch { return (fileCache.get(file)?.value as T) ?? empty; }
+    } catch {
+        if (!existsSync(file)) {
+            fileCache.delete(file);
+            return empty;
+        }
+        return (fileCache.get(file)?.value as T) ?? empty;
+    }
 }
 
 // ---------- map: 2 tiles per pixel; 0 void, 1 land, 2 water/blocked floor, 3 objects/walls ----------

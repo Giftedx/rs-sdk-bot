@@ -335,6 +335,7 @@ export function incomingFarmerProfile() {
     const row = readFileSync(npcPath, 'utf8').split('[farmer1]')[1]?.split('\n[')[0] ?? '';
     const rate = Number(row.match(/^param=attackrate,(\d+)/m)?.[1]);
     const name = row.match(/^param=attack_anim,([^\r\n]+)/m)?.[1];
+    if (!name) throw Error('native Farmer incoming profile changed');
     const anim = Number(
         readFileSync(seqPath, 'utf8')
             .split(/\r?\n/)
@@ -342,7 +343,7 @@ export function incomingFarmerProfile() {
             ?.split('=')[0],
     );
     if (rate !== 6 || anim !== 433 || !/^param=damagetype,\^stab_style$/m.test(row)) throw Error('native Farmer incoming profile changed');
-    const value = { npc: 7, prayer: 14, rate, anim, lead: 2, source: '_unpack/225/all.npc farmer1; melee protection before queue0' } as const;
+    const value = Object.freeze({ npc: 7, prayer: 14, rate, anim, lead: 2, source: '_unpack/225/all.npc farmer1; melee protection before queue0' } as const);
     cachedFarmerProfile = { npcKey, seqKey, value };
     return value;
 }

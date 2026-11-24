@@ -32,7 +32,11 @@ export async function runLiveUpdateCli(
     const dry = argv.includes('--dry'), target = 'origin/master';
     const finish = (line: string, code = 0): number => { log(line); return code; };
     if (env.LIVE_UPDATE === '0') return finish('RESULT ok live-update off (LIVE_UPDATE=0)');
-    if (hasStopFile('live-update', root)) return finish('RESULT ok live-update paused by stop file');
+    for (const flag of ['live-update', 'coordinator', 'swarm'] as const) {
+        if (hasStopFile(flag, root)) {
+            return finish(flag === 'live-update' ? 'RESULT ok live-update paused by stop file' : `RESULT ok live-update paused by stop-${flag}`);
+        }
+    }
     const git = gitIn(root);
     const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
     if (!branch.ok || branch.out !== 'master') return finish(`RESULT ok live-update none: checkout is on ${branch.ok ? branch.out : 'no branch'}`);
