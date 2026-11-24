@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795561821902,
+ "at": 1795561832590,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -41,6 +41,39 @@
    "role": "army"
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-starter"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "grapes"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1987",
+   "role": "auto"
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -55,35 +88,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1987",
    "role": "army"
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/generated/quest-death.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:death",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:death",
-   "role": "auto"
   }
  ],
  "army": [
@@ -118,6 +122,7 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
+  "trousersnake",
   "undermykilt",
   "woodpecker",
   "yewfirst"
