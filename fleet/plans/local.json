@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562588127,
+ "at": 1795562600215,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,42 +24,6 @@
    "role": "rehearsal"
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "bones"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
-   "role": "auto"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "bones"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Spitroaster",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
-   "role": "auto"
-  },
-  {
    "account": "TrouserSnake",
    "script": "scripts/generated/quest-grandtree.ts",
    "args": [],
@@ -73,19 +37,39 @@
    "role": "army"
   },
   {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/generated/waterfall.ts --",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=12 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- fire-giant"
+    "magic",
+    "splash",
+    "56",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "56"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "splash",
+    "56",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "56"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
   }
  ],

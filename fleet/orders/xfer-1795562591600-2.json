@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795562591600-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "Quickhandjob",
+  "item": "Law rune",
+  "count": 30,
+  "itemId": 563,
+  "start": 1795562591600,
+  "end": 1795563491600,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
