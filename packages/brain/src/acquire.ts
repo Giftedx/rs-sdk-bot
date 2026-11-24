@@ -28,18 +28,24 @@ import {
 import {
     COINS_ITEM_ID,
     SHOP_GATES,
-    accountSkillLevel,
     activityPreflightFromConfig,
     availableSpendableCoins,
     availableStockAfterReserves,
+    cachedAccountSkillLevel,
+    cachedAvailableSpendableCoins,
+    cachedEffectiveItemReserve,
+    cachedHasCompletedQuest,
     evaluateTileReachability,
-    hasCompletedQuest,
     loadItemsMap,
+    type AccountLookupCache,
     type ItemMeta,
 } from './preflight';
 import { readJsonStatCached } from './json-cache';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
+const GE_TILE = { x: 3164, z: 3487, level: 0 } as const;
+const EMPTY_SHOPS: readonly ShopCatalogEntry[] = [];
+const EMPTY_DONORS: readonly AccountState[] = [];
 export const DEFAULT_ANTI_PING_PONG_MS = 10 * 60_000;
 export const GE_LIMIT_BUFFER = 1.15;
 export const DEFAULT_MAX_GE_ASK_FLOOR_GP = 25_000;
@@ -105,6 +111,9 @@ export interface AcquireContext {
     readonly excludedSources?: ReadonlySet<AcquireSourceKind>;
     readonly _cachedByOutputItem?: Pick<ReadonlyMap<number, readonly ActivityDefinition[]>, 'get'>;
     readonly _sortedIdleDonors?: readonly AccountState[];
+    readonly _idleDonorsByItemId?: ReadonlyMap<number, readonly AccountState[]>;
+    readonly _acctCache?: AccountLookupCache;
+    readonly _skipDiagnostics?: boolean;
 }
 
 export interface AcquireCandidate {
@@ -197,11 +206,17 @@ function isVenueOnCooldown(
     acct: AccountState,
     world: WorldSnapshot,
     itemId: number,
-    venues: readonly string[],
+    venue1: string,
+    venue2?: string,
 ): boolean {
-    for (const venue of venues) {
-        const key = marketCooldownKey(itemId, venue);
-        if (isCooldownActive(acct.cooldowns, key, world.at) || isCooldownActive(world.marketCooldowns, key, world.at)) {
+    if (!acct.cooldowns && !world.marketCooldowns) return false;
+    const key1 = marketCooldownKey(itemId, venue1);
+    if (isCooldownActive(acct.cooldowns, key1, world.at) || isCooldownActive(world.marketCooldowns, key1, world.at)) {
+        return true;
+    }
+    if (venue2 !== undefined) {
+        const key2 = marketCooldownKey(itemId, venue2);
+        if (isCooldownActive(acct.cooldowns, key2, world.at) || isCooldownActive(world.marketCooldowns, key2, world.at)) {
             return true;
         }
     }
@@ -227,9 +242,10 @@ function shopIsAccessible(
     acct: AccountState,
     shop: ShopCatalogEntry,
     questPoints = 0,
+    acctCache?: AccountLookupCache,
 ): boolean {
-    if (shop.requiresQuest && !hasCompletedQuest(acct, shop.requiresQuest)) return false;
-    if (shop.requiresSkill && accountSkillLevel(acct, shop.requiresSkill.skill) < shop.requiresSkill.level) return false;
+    if (shop.requiresQuest && !cachedHasCompletedQuest(acct, shop.requiresQuest, acctCache)) return false;
+    if (shop.requiresSkill && cachedAccountSkillLevel(acct, shop.requiresSkill.skill, acctCache) < shop.requiresSkill.level) return false;
     if (shop.requiresQuestPoints && questPoints < shop.requiresQuestPoints) return false;
     return true;
 }
@@ -249,37 +265,42 @@ export function resolveAcquireItem(
     }
 
     const { world } = ctx;
+    const acctCache = ctx._acctCache;
+    const skipDiag = ctx._skipDiagnostics === true;
     const itemMeta = loadItemsMap().get(req.itemId);
     const itemName = req.itemName ?? itemMeta?.name;
     const operatingFloat = Math.max(0, req.operatingCoinFloat ?? DEFAULT_OPERATING_COIN_FLOAT);
     const committedSpend = Math.max(0, req.committedCoinSpend ?? 0);
-    const coinBalance = availableSpendableCoins(acct, world, operatingFloat + committedSpend, {
-        includeBank: true,
-        requireTrustedBank: true,
-    });
+    const coinBalance = cachedAvailableSpendableCoins(
+        acct,
+        world,
+        operatingFloat + committedSpend,
+        { includeBank: true, requireTrustedBank: true },
+        acctCache,
+    );
     const effectiveTotalUnreserved = Math.max(0, coinBalance.totalUnreserved - committedSpend);
     const coinFloatPreserved = Math.min(effectiveTotalUnreserved, operatingFloat);
-    const allowedSet = new Set(req.allowedSources ?? ACQUIRE_SOURCE_ORDER);
+    const allowedSources = req.allowedSources;
     const candidates: AcquireCandidate[] = [];
     const skippedReasons: { source: AcquireSourceKind; reason: string }[] = [];
 
     for (const source of ACQUIRE_SOURCE_ORDER) {
-        if (!allowedSet.has(source)) {
-            skippedReasons.push({ source, reason: 'source excluded by request' });
+        if (allowedSources !== undefined && !allowedSources.includes(source)) {
+            if (!skipDiag) skippedReasons.push({ source, reason: 'source excluded by request' });
             continue;
         }
         if (ctx.excludedSources?.has(source)) {
-            skippedReasons.push({ source, reason: 'source excluded by context' });
+            if (!skipDiag) skippedReasons.push({ source, reason: 'source excluded by context' });
             continue;
         }
 
         if (source === 'own_bank') {
             if (req.allowOwnBank === false) {
-                skippedReasons.push({ source, reason: 'own_bank disabled by caller' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'own_bank disabled by caller' });
                 continue;
             }
-            if (isVenueOnCooldown(acct, world, req.itemId, ['own_bank'])) {
-                skippedReasons.push({ source, reason: 'own_bank cooldown active' });
+            if (isVenueOnCooldown(acct, world, req.itemId, 'own_bank')) {
+                if (!skipDiag) skippedReasons.push({ source, reason: 'own_bank cooldown active' });
                 continue;
             }
             const includeInv = req.includeInventoryInOwned ?? true;
@@ -294,19 +315,18 @@ export function resolveAcquireItem(
                 invEqAvailable = includeInv
                     ? accountOwnedItemCount(acct, req.itemId, { includeBank: false })
                     : 0;
-                reserve = availableStockAfterReserves(acct, world, req.itemId, {
-                    includeBank: true,
-                    requireTrustedBank: true,
-                }).reserved;
+                reserve = cachedEffectiveItemReserve(acct, world, req.itemId, acctCache);
                 ownedUnreserved = Math.max(0, invEqAvailable + bankAvailable - reserve);
             }
             if (ownedUnreserved < req.quantity) {
-                const reason = !acct.bank.trusted
-                    ? req.itemId === COINS_ITEM_ID
-                        ? `own bank untrusted (spendable=${ownedUnreserved}, need=${req.quantity})`
-                        : `own bank untrusted (inv/eq unreserved=${Math.max(0, invEqAvailable - reserve)}, need=${req.quantity})`
-                    : `own unreserved stock ${ownedUnreserved} < needed ${req.quantity}`;
-                skippedReasons.push({ source, reason });
+                if (!skipDiag) {
+                    const reason = !acct.bank.trusted
+                        ? req.itemId === COINS_ITEM_ID
+                            ? `own bank untrusted (spendable=${ownedUnreserved}, need=${req.quantity})`
+                            : `own bank untrusted (inv/eq unreserved=${Math.max(0, invEqAvailable - reserve)}, need=${req.quantity})`
+                        : `own unreserved stock ${ownedUnreserved} < needed ${req.quantity}`;
+                    skippedReasons.push({ source, reason });
+                }
                 continue;
             }
             const step: AcquireStep = {
@@ -326,35 +346,46 @@ export function resolveAcquireItem(
 
         if (source === 'npc_shop') {
             if (req.itemId === COINS_ITEM_ID) {
-                skippedReasons.push({ source, reason: 'coins cannot be bought from npc_shop' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'coins cannot be bought from npc_shop' });
                 continue;
             }
-            if (isVenueOnCooldown(acct, world, req.itemId, ['npc_shop', 'shop'])) {
-                skippedReasons.push({ source, reason: 'npc_shop cooldown active' });
+            if (isVenueOnCooldown(acct, world, req.itemId, 'npc_shop', 'shop')) {
+                if (!skipDiag) skippedReasons.push({ source, reason: 'npc_shop cooldown active' });
                 continue;
             }
-            const shops = [
-                ...(ctx.customShops ?? []).filter((s) => s.itemId === req.itemId),
-                ...(loadShopCatalogByItem().get(req.itemId) ?? []),
-            ];
+            const catalogShops = loadShopCatalogByItem().get(req.itemId) ?? EMPTY_SHOPS;
+            let shops: readonly ShopCatalogEntry[];
+            if (ctx.customShops && ctx.customShops.length > 0) {
+                const custom = ctx.customShops.filter((s) => s.itemId === req.itemId);
+                shops = custom.length > 0 ? [...custom, ...catalogShops] : catalogShops;
+            } else {
+                shops = catalogShops;
+            }
             if (shops.length === 0) {
-                skippedReasons.push({ source, reason: 'no NPC shop stocks item' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'no NPC shop stocks item' });
                 continue;
             }
 
             let bestShopStep: AcquireStep | null = null;
             let shopRejectReason = 'no accessible NPC shop';
+            const hasCooldownMaps = Boolean(acct.cooldowns || world.marketCooldowns);
             for (const shop of shops) {
-                if (isVenueOnCooldown(acct, world, req.itemId, [`shop:${shop.shop}`, shop.shop])) {
-                    shopRejectReason = `shop:${shop.shop} on cooldown`;
+                if (hasCooldownMaps && isVenueOnCooldown(acct, world, req.itemId, `shop:${shop.shop}`, shop.shop)) {
+                    if (!skipDiag) shopRejectReason = `shop:${shop.shop} on cooldown`;
                     continue;
                 }
-                if (!shopIsAccessible(acct, shop, req.questPoints ?? 0)) {
-                    shopRejectReason = `shop ${shop.shop} locked by quest/skill gate`;
+                if (!shopIsAccessible(acct, shop, req.questPoints ?? 0, acctCache)) {
+                    if (!skipDiag) shopRejectReason = `shop ${shop.shop} locked by quest/skill gate`;
                     continue;
                 }
                 if (req.maxUnitPrice !== undefined && shop.cost > req.maxUnitPrice) {
-                    shopRejectReason = `shop ${shop.shop} price ${shop.cost} > maxUnitPrice ${req.maxUnitPrice}`;
+                    if (!skipDiag) shopRejectReason = `shop ${shop.shop} price ${shop.cost} > maxUnitPrice ${req.maxUnitPrice}`;
+                    continue;
+                }
+                const totalCost = Math.ceil(shop.cost * req.quantity);
+                // Early reject when base spendable coins cannot cover shop cost before reachability.
+                if (coinBalance.spendable < totalCost) {
+                    if (!skipDiag) shopRejectReason = `insufficient spendable coins ${coinBalance.spendable} (after ${operatingFloat} gp float) for cost ${totalCost}`;
                     continue;
                 }
                 let travelTicks = 40;
@@ -363,18 +394,18 @@ export function resolveAcquireItem(
                     const reach = evaluateTileReachability(acct, shop.tile, world, {
                         spendableCoins: effectiveTotalUnreserved,
                         allowUnknownPos: true,
+                        _acctCache: acctCache,
                     });
                     if (!reach.reachable) {
-                        shopRejectReason = reach.message ?? `shop ${shop.shop} unreachable`;
+                        if (!skipDiag) shopRejectReason = reach.message ?? `shop ${shop.shop} unreachable`;
                         continue;
                     }
                     travelTicks = reach.travelTicks;
                     travelCoins = reach.travelCoins;
                 }
-                const totalCost = Math.ceil(shop.cost * req.quantity);
                 // Spending must preserve the operating coin float (~1,000 gp) for ferry fares.
-                if (coinBalance.spendable < totalCost || effectiveTotalUnreserved < totalCost + travelCoins) {
-                    shopRejectReason = `insufficient spendable coins ${coinBalance.spendable} (after ${operatingFloat} gp float) for cost ${totalCost}`;
+                if (effectiveTotalUnreserved < totalCost + travelCoins) {
+                    if (!skipDiag) shopRejectReason = `insufficient spendable coins ${coinBalance.spendable} (after ${operatingFloat} gp float) for cost ${totalCost}`;
                     continue;
                 }
                 const restockCycles = Math.max(0, Math.ceil(req.quantity / Math.max(1, shop.stock)) - 1);
@@ -397,21 +428,21 @@ export function resolveAcquireItem(
                 }
             }
             if (bestShopStep) candidates.push({ step: bestShopStep, source });
-            else skippedReasons.push({ source, reason: shopRejectReason });
+            else if (!skipDiag) skippedReasons.push({ source, reason: shopRejectReason });
             continue;
         }
 
         if (source === 'ge') {
             if (req.itemId === COINS_ITEM_ID) {
-                skippedReasons.push({ source, reason: 'coins cannot be bought on GE' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'coins cannot be bought on GE' });
                 continue;
             }
             if (itemMeta && !itemMeta.tradeable) {
-                skippedReasons.push({ source, reason: 'item is untradeable' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'item is untradeable' });
                 continue;
             }
-            if (isVenueOnCooldown(acct, world, req.itemId, ['ge'])) {
-                skippedReasons.push({ source, reason: 'ge venue cooldown active' });
+            if (isVenueOnCooldown(acct, world, req.itemId, 'ge')) {
+                if (!skipDiag) skippedReasons.push({ source, reason: 'ge venue cooldown active' });
                 continue;
             }
             let unitPrice: number | null = null;
@@ -421,42 +452,44 @@ export function resolveAcquireItem(
                 if (isValidGeAskQuote(quote, baseCost)) {
                     unitPrice = Math.ceil(quote.ask);
                 } else {
-                    skippedReasons.push({ source, reason: 'no valid GE ask quote in market cache' });
+                    if (!skipDiag) skippedReasons.push({ source, reason: 'no valid GE ask quote in market cache' });
                     continue;
                 }
             } else if (ctx.requireMarketQuote) {
-                skippedReasons.push({ source, reason: 'market quotes required but unavailable' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'market quotes required but unavailable' });
                 continue;
             } else {
                 unitPrice = Math.max(1, itemMeta?.cost ?? 10);
             }
 
             if (req.maxUnitPrice !== undefined && unitPrice > req.maxUnitPrice) {
-                skippedReasons.push({ source, reason: `GE ask ${unitPrice} > maxUnitPrice ${req.maxUnitPrice}` });
+                if (!skipDiag) skippedReasons.push({ source, reason: `GE ask ${unitPrice} > maxUnitPrice ${req.maxUnitPrice}` });
                 continue;
             }
 
             const totalCost = unitPrice * req.quantity;
             const bufferedCost = Math.ceil(unitPrice * GE_LIMIT_BUFFER) * req.quantity;
             if (coinBalance.spendable < bufferedCost) {
-                skippedReasons.push({
-                    source,
-                    reason: `insufficient spendable coins ${coinBalance.spendable} (preserving ${operatingFloat} gp float) for GE limit cost ${bufferedCost}`,
-                });
+                if (!skipDiag) {
+                    skippedReasons.push({
+                        source,
+                        reason: `insufficient spendable coins ${coinBalance.spendable} (preserving ${operatingFloat} gp float) for GE limit cost ${bufferedCost}`,
+                    });
+                }
                 continue;
             }
 
-            const geTile = { x: 3164, z: 3487, level: 0 };
-            const reach = evaluateTileReachability(acct, geTile, world, {
+            const reach = evaluateTileReachability(acct, GE_TILE, world, {
                 spendableCoins: effectiveTotalUnreserved,
                 allowUnknownPos: true,
+                _acctCache: acctCache,
             });
             if (!reach.reachable) {
-                skippedReasons.push({ source, reason: reach.message ?? 'GE unreachable' });
+                if (!skipDiag) skippedReasons.push({ source, reason: reach.message ?? 'GE unreachable' });
                 continue;
             }
             if (effectiveTotalUnreserved < bufferedCost + reach.travelCoins) {
-                skippedReasons.push({ source, reason: 'insufficient coins for GE limit cost plus travel fare' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'insufficient coins for GE limit cost plus travel fare' });
                 continue;
             }
             candidates.push({
@@ -478,57 +511,60 @@ export function resolveAcquireItem(
 
         if (source === 'hub_banker') {
             if (itemMeta && !itemMeta.tradeable && req.itemId !== COINS_ITEM_ID) {
-                skippedReasons.push({ source, reason: 'untradeable item cannot transfer via hub_banker' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'untradeable item cannot transfer via hub_banker' });
                 continue;
             }
             if (acct.protectedClock || isProtectedAccountName(acct.name)) {
-                skippedReasons.push({ source, reason: 'protectedClock account cannot participate in automated hub_banker trade' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'protectedClock account cannot participate in automated hub_banker trade' });
                 continue;
             }
-            if (isVenueOnCooldown(acct, world, req.itemId, ['hub_banker', 'hub'])) {
-                skippedReasons.push({ source, reason: 'hub_banker cooldown active' });
+            if (isVenueOnCooldown(acct, world, req.itemId, 'hub_banker', 'hub')) {
+                if (!skipDiag) skippedReasons.push({ source, reason: 'hub_banker cooldown active' });
                 continue;
             }
             const antiWindow = ctx.antiPingPongWindowMs ?? DEFAULT_ANTI_PING_PONG_MS;
             const acctLower = acct.name.toLowerCase();
             if (ctx.requireConfirmedLogoutForTransfer && (ctx.confirmedLogoutAt?.get(acctLower) ?? 0) <= 0) {
-                skippedReasons.push({ source, reason: 'both parties require confirmed logout proof' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'both parties require confirmed logout proof' });
                 continue;
             }
             let bestDonorStep: AcquireStep | null = null;
             let rejectReason = 'no eligible idle donor with surplus stock';
-            const donors = ctx._sortedIdleDonors ?? Object.values(world.accounts).sort((a, b) => a.name.localeCompare(b.name));
-            const reachRecipByHub = new Map<HubBankId, ReturnType<typeof evaluateTileReachability>>();
+            const donors = ctx._idleDonorsByItemId
+                ? (ctx._idleDonorsByItemId.get(req.itemId) ?? EMPTY_DONORS)
+                : (ctx._sortedIdleDonors ?? Object.values(world.accounts).sort((a, b) => a.name.localeCompare(b.name)));
+            const hasCooldownMaps = Boolean(acct.cooldowns || world.marketCooldowns);
+            let reachRecipByHub: Map<HubBankId, ReturnType<typeof evaluateTileReachability>> | undefined;
             for (const donor of donors) {
                 const donorLower = donor.name.toLowerCase();
                 if (donorLower === acctLower) continue;
                 if (ctx.excludedDonorAccounts?.has(donorLower)) {
-                    rejectReason = `donor ${donor.name} already assigned this cycle`;
+                    if (!skipDiag) rejectReason = `donor ${donor.name} already assigned this cycle`;
                     continue;
                 }
                 if (donor.protectedClock || isProtectedAccountName(donor.name)) continue;
                 if (donor.lifecycle !== 'idle') {
-                    rejectReason = `donor ${donor.name} lifecycle=${donor.lifecycle}`;
+                    if (!skipDiag) rejectReason = `donor ${donor.name} lifecycle=${donor.lifecycle}`;
                     continue;
                 }
                 if (!donor.bank.trusted) {
-                    rejectReason = `donor ${donor.name} bank untrusted`;
+                    if (!skipDiag) rejectReason = `donor ${donor.name} bank untrusted`;
                     continue;
                 }
                 if (ctx.requireConfirmedLogoutForTransfer) {
                     const donorLogout = ctx.confirmedLogoutAt?.get(donorLower) ?? 0;
                     if (donorLogout <= 0) {
-                        rejectReason = 'both parties require confirmed logout proof';
+                        if (!skipDiag) rejectReason = 'both parties require confirmed logout proof';
                         continue;
                     }
                 }
                 if (ctx.donorDemandItemIds?.get(donorLower)?.has(req.itemId)) {
-                    rejectReason = `anti-ping-pong: donor ${donor.name} holds demand for item ${req.itemId}`;
+                    if (!skipDiag) rejectReason = `anti-ping-pong: donor ${donor.name} holds demand for item ${req.itemId}`;
                     continue;
                 }
                 const recentAt = ctx.recentReceivedAt?.get(`${donorLower}:${req.itemId}`);
                 if (recentAt !== undefined && world.at - recentAt < antiWindow) {
-                    rejectReason = `anti-ping-pong: donor ${donor.name} recently received item ${req.itemId}`;
+                    if (!skipDiag) rejectReason = `anti-ping-pong: donor ${donor.name} recently received item ${req.itemId}`;
                     continue;
                 }
                 const stock = availableStockAfterReserves(donor, world, req.itemId, {
@@ -543,21 +579,23 @@ export function resolveAcquireItem(
                     continue;
                 }
                 const hub = nearestHub(acct.pos, donor.pos ? nearestHub(donor.pos) : 'varrock_west');
-                if (isVenueOnCooldown(acct, world, req.itemId, [`hub:${hub}:${donorLower}`, `hub:${hub}`])) {
-                    rejectReason = `hub:${hub}:${donorLower} on cooldown`;
+                if (hasCooldownMaps && isVenueOnCooldown(acct, world, req.itemId, `hub:${hub}:${donorLower}`, `hub:${hub}`)) {
+                    if (!skipDiag) rejectReason = `hub:${hub}:${donorLower} on cooldown`;
                     continue;
                 }
                 const hubTile = HUB_BANKER_LOCATIONS[hub].bankTile;
+                reachRecipByHub ??= new Map();
                 let reachRecip = reachRecipByHub.get(hub);
                 if (!reachRecip) {
                     reachRecip = evaluateTileReachability(acct, hubTile, world, {
                         spendableCoins: coinBalance.totalUnreserved,
                         allowUnknownPos: true,
+                        _acctCache: acctCache,
                     });
                     reachRecipByHub.set(hub, reachRecip);
                 }
                 if (!reachRecip.reachable) {
-                    rejectReason = reachRecip.message ?? `recipient cannot reach ${hub}`;
+                    if (!skipDiag) rejectReason = reachRecip.message ?? `recipient cannot reach ${hub}`;
                     continue;
                 }
                 const donorTotalUnreserved = world.world
@@ -568,7 +606,7 @@ export function resolveAcquireItem(
                     allowUnknownPos: true,
                 });
                 if (!reachDonor.reachable) {
-                    rejectReason = reachDonor.message ?? `donor ${donor.name} cannot reach ${hub}`;
+                    if (!skipDiag) rejectReason = reachDonor.message ?? `donor ${donor.name} cannot reach ${hub}`;
                     continue;
                 }
                 const sameSideBonus = donor.side === acct.side ? 0 : 120;
@@ -590,17 +628,17 @@ export function resolveAcquireItem(
                 }
             }
             if (bestDonorStep) candidates.push({ step: bestDonorStep, source });
-            else skippedReasons.push({ source, reason: rejectReason });
+            else if (!skipDiag) skippedReasons.push({ source, reason: rejectReason });
             continue;
         }
 
         if (source === 'craft_gather') {
-            if (isVenueOnCooldown(acct, world, req.itemId, ['craft_gather'])) {
-                skippedReasons.push({ source, reason: 'craft_gather cooldown active' });
+            if (isVenueOnCooldown(acct, world, req.itemId, 'craft_gather')) {
+                if (!skipDiag) skippedReasons.push({ source, reason: 'craft_gather cooldown active' });
                 continue;
             }
             const matching = ctx._cachedByOutputItem
-                ? (ctx._cachedByOutputItem.get(req.itemId) ?? []).filter((act) => act.trust !== 'experimental')
+                ? (ctx._cachedByOutputItem.get(req.itemId) ?? [])
                 : (ctx.activities ?? []).filter((act) => {
                     if (act.trust === 'experimental') return false;
                     if (act.outputs?.some((o) => o.itemId === req.itemId && o.countPerUnit > 0)) return true;
@@ -608,23 +646,25 @@ export function resolveAcquireItem(
                     return outPerUnit > 0;
                 });
             if (matching.length === 0) {
-                skippedReasons.push({ source, reason: 'no non-experimental catalog activity produces item' });
+                if (!skipDiag) skippedReasons.push({ source, reason: 'no non-experimental catalog activity produces item' });
                 continue;
             }
 
             let bestActStep: AcquireStep | null = null;
             let rejectReason = 'no craft/gather activity passed preflight';
+            const hasCooldownMaps = Boolean(acct.cooldowns || world.marketCooldowns);
             for (const act of matching) {
-                if (isVenueOnCooldown(acct, world, req.itemId, [`activity:${act.id}`])) {
-                    rejectReason = `activity ${act.id} on cooldown`;
+                if (act.trust === 'experimental') continue;
+                if (hasCooldownMaps && isVenueOnCooldown(acct, world, req.itemId, `activity:${act.id}`)) {
+                    if (!skipDiag) rejectReason = `activity ${act.id} on cooldown`;
                     continue;
                 }
                 const outSpec = act.outputs?.find((o) => o.itemId === req.itemId);
                 const outPerUnit = outSpec?.countPerUnit ?? act.baselineRate.outputsPerUnit?.[req.itemId] ?? 1;
                 const unitsNeeded = Math.max(act.baselineRate.minBatchUnits, Math.ceil(req.quantity / Math.max(0.01, outPerUnit)));
-                const pre = activityPreflightFromConfig(acct, act, world, unitsNeeded);
+                const pre = activityPreflightFromConfig(acct, act, world, unitsNeeded, { _acctCache: acctCache });
                 if (!pre.ok) {
-                    rejectReason = `${act.id} blocked: ${pre.blockers.map((b) => b.kind).join(',')}`;
+                    if (!skipDiag) rejectReason = `${act.id} blocked: ${pre.blockers.map((b) => b.kind).join(',')}`;
                     continue;
                 }
                 const upt = Math.max(1e-4, act.baselineRate.unitsPerTick);
@@ -648,7 +688,7 @@ export function resolveAcquireItem(
                 }
             }
             if (bestActStep) candidates.push({ step: bestActStep, source });
-            else skippedReasons.push({ source, reason: rejectReason });
+            else if (!skipDiag) skippedReasons.push({ source, reason: rejectReason });
         }
     }
 

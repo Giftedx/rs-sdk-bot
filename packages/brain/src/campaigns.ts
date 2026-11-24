@@ -1,9 +1,9 @@
 // Declarative Campaign manifests for Haggis (Overall) and all 19 reserved Specialists.
 // Reads launch manifests, rehearsal proofs, hiscore margins, staging holders, and owner stops,
 // and emits finite item shortfall GoalDemands for unfulfilled campaign supplies.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { findStopFile, liveRoot, practiceRoot, repoRoot } from '../../core/src/practice-paths';
+import { liveRoot, practiceRoot, repoRoot } from '../../core/src/practice-paths';
 import { SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
 import {
     TRICKS,
@@ -242,7 +242,27 @@ function buildItemLookup(root: string): ItemLookup {
     return lookup;
 }
 
-function loadHiscoreSnapshots(root: string): HiscoreSnapshot[] {
+interface IndexedHiscoreSnapshot {
+    readonly snapshot: HiscoreSnapshot;
+    readonly byBoardAndCat: ReadonlyMap<string, HiscoreBoard>;
+    readonly byBoard: ReadonlyMap<string, HiscoreBoard>;
+}
+
+function indexHiscoreSnapshot(snapshot: HiscoreSnapshot): IndexedHiscoreSnapshot {
+    const byBoardAndCat = new Map<string, HiscoreBoard>();
+    const byBoard = new Map<string, HiscoreBoard>();
+    for (const b of snapshot.boards ?? []) {
+        if (!b.board) continue;
+        if (!byBoard.has(b.board)) byBoard.set(b.board, b);
+        if (b.category !== undefined) {
+            const key = `${b.board}:${b.category}`;
+            if (!byBoardAndCat.has(key)) byBoardAndCat.set(key, b);
+        }
+    }
+    return { snapshot, byBoardAndCat, byBoard };
+}
+
+function loadHiscoreSnapshots(root: string): IndexedHiscoreSnapshot[] {
     const candidates = [
         join(practiceRoot(root), 'specialist-launch', 'hiscores.json'),
         join(liveRoot(root), 'specialist-launch', 'hiscores.json'),
@@ -250,7 +270,7 @@ function loadHiscoreSnapshots(root: string): HiscoreSnapshot[] {
     ];
     const entries: { snapshot: HiscoreSnapshot; takenAtMs: number; priority: number }[] = [];
     candidates.forEach((file, priority) => {
-        const parsed = readJsonSafe(file);
+        const parsed = readJsonStatCached<unknown>(file);
         if (isPlainRecord(parsed) && Array.isArray(parsed.boards)) {
             const snap = parsed as HiscoreSnapshot;
             const parsedAt = typeof snap.takenAt === 'string' ? Date.parse(snap.takenAt) : NaN;
@@ -262,20 +282,18 @@ function loadHiscoreSnapshots(root: string): HiscoreSnapshot[] {
         }
     });
     entries.sort((a, b) => b.takenAtMs - a.takenAtMs || a.priority - b.priority);
-    return entries.map((e) => e.snapshot);
+    return entries.map((e) => indexHiscoreSnapshot(e.snapshot));
 }
 
 function findHiscoreBoard(
-    snapshots: readonly HiscoreSnapshot[],
+    snapshots: readonly IndexedHiscoreSnapshot[],
     boardName: string,
     category?: number,
 ): { readonly snapshot: HiscoreSnapshot; readonly board: HiscoreBoard } | undefined {
-    for (const snap of snapshots) {
-        for (const b of snap.boards ?? []) {
-            if (b.board === boardName && (category === undefined || b.category === category)) {
-                return { snapshot: snap, board: b };
-            }
-        }
+    const catKey = category !== undefined ? `${boardName}:${category}` : undefined;
+    for (const entry of snapshots) {
+        const b = catKey !== undefined ? entry.byBoardAndCat.get(catKey) : entry.byBoard.get(boardName);
+        if (b) return { snapshot: entry.snapshot, board: b };
     }
     return undefined;
 }
@@ -284,7 +302,7 @@ function computeHiscoreMargin(
     boardName: string,
     category: number | undefined,
     ourTicks: number | undefined,
-    snapshots: readonly HiscoreSnapshot[],
+    snapshots: readonly IndexedHiscoreSnapshot[],
     now: number,
     requireMaxLevel99 = true,
 ): HiscoreMarginSummary | null {
@@ -315,8 +333,94 @@ function computeHiscoreMargin(
     };
 }
 
-function hasActiveGoToken(goPath: string, now: number): boolean {
-    if (!existsSync(goPath)) return false;
+interface CampaignFsIndex {
+    readonly liveLaunchDir: string;
+    readonly pracLaunchDir: string;
+    readonly liveLaunchFiles: ReadonlySet<string>;
+    readonly pracLaunchFiles: ReadonlySet<string>;
+    readonly liveRootFiles: ReadonlySet<string>;
+    readonly pracRootFiles: ReadonlySet<string>;
+    readonly isOwnerStopped: (account: string) => boolean;
+}
+
+function listDirSet(dir: string): Set<string> {
+    try {
+        return new Set(readdirSync(dir));
+    } catch {
+        return new Set();
+    }
+}
+
+function buildCampaignFsIndex(root: string): CampaignFsIndex {
+    const lRoot = liveRoot(root);
+    const pRoot = practiceRoot(root);
+    const liveRootFiles = listDirSet(lRoot);
+    const pracRootFiles = listDirSet(pRoot);
+    const liveLaunchDir = join(lRoot, 'specialist-launch');
+    const pracLaunchDir = join(pRoot, 'specialist-launch');
+    const liveLaunchFiles = liveRootFiles.has('specialist-launch') ? listDirSet(liveLaunchDir) : new Set<string>();
+    const pracLaunchFiles = pracRootFiles.has('specialist-launch') ? listDirSet(pracLaunchDir) : new Set<string>();
+
+    const stopDirs: { dir: string; exact: Set<string>; byLower: Map<string, string> }[] = [];
+    for (const [dir, entries] of [
+        [lRoot, liveRootFiles],
+        [pRoot, pracRootFiles],
+    ] as const) {
+        const exact = new Set<string>();
+        const byLower = new Map<string, string>();
+        for (const name of entries) {
+            const lower = name.toLowerCase();
+            if (!lower.startsWith('stop-')) continue;
+            exact.add(name);
+            if (!byLower.has(lower)) byLower.set(lower, name);
+        }
+        if (exact.size > 0) stopDirs.push({ dir, exact, byLower });
+    }
+    const isWin = process.platform === 'win32';
+    const findStop = (flag: string): string | null => {
+        if (stopDirs.length === 0) return null;
+        const lowerName = `stop-${flag.toLowerCase()}`;
+        if (isWin) {
+            for (const d of stopDirs) {
+                const hit = d.byLower.get(lowerName);
+                if (hit) return join(d.dir, hit);
+            }
+            return null;
+        }
+        const exactName = `stop-${flag}`;
+        for (const d of stopDirs) {
+            if (d.exact.has(exactName)) return join(d.dir, exactName);
+            if (lowerName !== exactName && d.exact.has(lowerName)) return join(d.dir, lowerName);
+        }
+        for (const d of stopDirs) {
+            const hit = d.byLower.get(lowerName);
+            if (hit) return join(d.dir, hit);
+        }
+        return null;
+    };
+    const isOwnerStopped = (account: string): boolean => {
+        const file = findStop(account) ?? findStop(account.toLowerCase());
+        if (!file) return false;
+        try {
+            const text = readFileSync(file, 'utf8').trim();
+            return !/^(?:swarm stopped|fleet-health auto-paused:)/i.test(text);
+        } catch {
+            return true;
+        }
+    };
+    return {
+        liveLaunchDir,
+        pracLaunchDir,
+        liveLaunchFiles,
+        pracLaunchFiles,
+        liveRootFiles,
+        pracRootFiles,
+        isOwnerStopped,
+    };
+}
+
+function hasActiveGoToken(goPath: string | null, now: number): boolean {
+    if (!goPath) return false;
     const parsed = readJsonSafe(goPath);
     if (!isPlainRecord(parsed)) return false;
     if (typeof parsed.runUntil === 'number' && Number.isFinite(parsed.runUntil)) {
@@ -326,17 +430,6 @@ function hasActiveGoToken(goPath: string, now: number): boolean {
         return now < parsed.expiresAt;
     }
     return true;
-}
-
-function isOwnerStoppedAccount(account: string, root: string): boolean {
-    const file = findStopFile(account, root) ?? findStopFile(account.toLowerCase(), root);
-    if (!file) return false;
-    try {
-        const text = readFileSync(file, 'utf8').trim();
-        return !/^(?:swarm stopped|fleet-health auto-paused:)/i.test(text);
-    } catch {
-        return true;
-    }
 }
 
 function aggregateSupplyRequirements(
@@ -376,21 +469,28 @@ let cachedHaggisSchedule:
     | { key: string; plannedTicks: number; rawSupplies: CampaignSupplyRequirement[] }
     | undefined;
 
-function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readonly HiscoreSnapshot[], now: number): Campaign {
+function buildHaggisCampaign(
+    root: string,
+    lookup: ItemLookup,
+    snapshots: readonly IndexedHiscoreSnapshot[],
+    fsIdx: CampaignFsIndex,
+    now: number,
+): Campaign {
     const boardsFile = join(root, 'packages', 'planner', 'src', 'haggis-boards.json');
-    const readinessFile =
-        existsSync(join(liveRoot(root), 'haggis-readiness.json'))
-            ? join(liveRoot(root), 'haggis-readiness.json')
-            : join(practiceRoot(root), 'haggis-readiness.json');
+    const readinessFile = fsIdx.liveRootFiles.has('haggis-readiness.json')
+        ? join(liveRoot(root), 'haggis-readiness.json')
+        : fsIdx.pracRootFiles.has('haggis-readiness.json')
+          ? join(practiceRoot(root), 'haggis-readiness.json')
+          : null;
 
-    const boardsData = readJsonSafe(boardsFile);
-    const readinessData = readJsonSafe(readinessFile);
+    const readinessData = readinessFile ? readJsonSafe(readinessFile) : undefined;
 
     const rawSupplies: CampaignSupplyRequirement[] = [];
     let plannedTicks = 0;
 
     const overallHit = findHiscoreBoard(snapshots, 'Overall', 0);
-    if (overallHit && existsSync(boardsFile)) {
+    const boardsStamp = overallHit ? fileStatStamp(boardsFile) : 'missing';
+    if (overallHit && boardsStamp !== 'missing') {
         const snapshotBoardsSig = (overallHit.snapshot.boards ?? [])
             .map((b) => {
                 const r0 = b.rows?.[0];
@@ -398,7 +498,7 @@ function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readon
             })
             .join(';');
         const itemsStamp = cachedItemLookup?.key ?? '';
-        const haggisKey = `${boardsFile}|${fileStatStamp(boardsFile)}|${itemsStamp}|${overallHit.snapshot.takenAt ?? ''}|${snapshotBoardsSig}`;
+        const haggisKey = `${boardsFile}|${boardsStamp}|${itemsStamp}|${overallHit.snapshot.takenAt ?? ''}|${snapshotBoardsSig}`;
         if (cachedHaggisSchedule && cachedHaggisSchedule.key === haggisKey) {
             plannedTicks = cachedHaggisSchedule.plannedTicks;
             rawSupplies.push(...cachedHaggisSchedule.rawSupplies);
@@ -431,6 +531,7 @@ function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readon
         }
     }
 
+    const boardsData = plannedTicks === 0 ? readJsonStatCached<unknown>(boardsFile) : undefined;
     if (plannedTicks === 0 && isPlainRecord(boardsData) && Array.isArray(boardsData.activities)) {
         for (const act of boardsData.activities) {
             if (!isPlainRecord(act)) continue;
@@ -489,7 +590,7 @@ function buildHaggisCampaign(root: string, lookup: ItemLookup, snapshots: readon
         false,
     );
 
-    const stopped = isOwnerStoppedAccount('haggis', root);
+    const stopped = fsIdx.isOwnerStopped('haggis');
     let state: CampaignState = 'staging';
     if (alreadyRank1) state = 'completed';
     else if (stopped) state = 'paused';
@@ -520,19 +621,26 @@ function buildSpecialistCampaign(
     account: string,
     board: { readonly name: string; readonly category: number },
     lookup: ItemLookup,
-    snapshots: readonly HiscoreSnapshot[],
+    snapshots: readonly IndexedHiscoreSnapshot[],
+    fsIdx: CampaignFsIndex,
     now: number,
 ): Campaign {
     const lower = account.toLowerCase();
     const declarative = getSpecialistCampaignSpec(lower);
-    const manifestPath = existsSync(join(liveRoot(root), 'specialist-launch', `${lower}.json`))
-        ? join(liveRoot(root), 'specialist-launch', `${lower}.json`)
-        : join(practiceRoot(root), 'specialist-launch', `${lower}.json`);
-    const goPath = existsSync(join(liveRoot(root), 'specialist-launch', `${lower}.go.json`))
-        ? join(liveRoot(root), 'specialist-launch', `${lower}.go.json`)
-        : join(practiceRoot(root), 'specialist-launch', `${lower}.go.json`);
+    const manifestName = `${lower}.json`;
+    const goName = `${lower}.go.json`;
+    const manifestPath = fsIdx.liveLaunchFiles.has(manifestName)
+        ? join(fsIdx.liveLaunchDir, manifestName)
+        : fsIdx.pracLaunchFiles.has(manifestName)
+          ? join(fsIdx.pracLaunchDir, manifestName)
+          : null;
+    const goPath = fsIdx.liveLaunchFiles.has(goName)
+        ? join(fsIdx.liveLaunchDir, goName)
+        : fsIdx.pracLaunchFiles.has(goName)
+          ? join(fsIdx.pracLaunchDir, goName)
+          : null;
 
-    const manifest = readJsonSafe(manifestPath);
+    const manifest = manifestPath ? readJsonSafe(manifestPath) : undefined;
     const rawSupplies: CampaignSupplyRequirement[] = [];
     let planTicks: number | undefined = declarative?.planTicks;
     let rehearsalProof: RehearsalProofSummary | null = null;
@@ -591,7 +699,10 @@ function buildSpecialistCampaign(
                 }
             }
         }
-    } else if (declarative?.defaultRehearsalReportPath) {
+    } else if (
+        declarative?.defaultRehearsalReportPath
+        && (fsIdx.pracLaunchFiles.size > 0 || fsIdx.liveLaunchFiles.size > 0 || !declarative.defaultRehearsalReportPath.startsWith('.practice/specialist-launch/'))
+    ) {
         const rPath = resolve(root, declarative.defaultRehearsalReportPath);
         const rJson = readJsonSafe(rPath);
         if (isPlainRecord(rJson)) {
@@ -631,7 +742,7 @@ function buildSpecialistCampaign(
             ? Math.max(planTicks ?? 0, rehearsalProof.ticks)
             : planTicks;
     const hiscoreMargin = computeHiscoreMargin(board.name, board.category, marginTicks, snapshots, now, true);
-    const stopped = isOwnerStoppedAccount(lower, root);
+    const stopped = fsIdx.isOwnerStopped(lower);
     const hasGoToken = hasActiveGoToken(goPath, now);
 
     let state: CampaignState = 'staging';
@@ -659,11 +770,14 @@ function buildSpecialistCampaign(
     };
 }
 
-function readCampaignOverrides(root: string, overridePath?: string): Map<string, Campaign> {
+function readCampaignOverrides(root: string, fsIdx: CampaignFsIndex, overridePath?: string): Map<string, Campaign> {
     const out = new Map<string, Campaign>();
     const paths = overridePath
         ? [overridePath]
-        : [join(practiceRoot(root), 'campaigns.json'), join(liveRoot(root), 'campaigns.json')];
+        : [
+              ...(fsIdx.pracRootFiles.has('campaigns.json') ? [join(practiceRoot(root), 'campaigns.json')] : []),
+              ...(fsIdx.liveRootFiles.has('campaigns.json') ? [join(liveRoot(root), 'campaigns.json')] : []),
+          ];
     for (const filePath of paths) {
         const parsed = readJsonSafe(filePath);
         const list = Array.isArray(parsed)
@@ -685,10 +799,11 @@ export function loadCampaignManifests(opts: LoadCampaignsOptions = {}): Campaign
     const now = opts.now ?? Date.now();
     const lookup = buildItemLookup(root);
     const snapshots = loadHiscoreSnapshots(root);
+    const fsIdx = buildCampaignFsIndex(root);
 
     const byId = new Map<string, Campaign>();
     if (opts.includeHaggis !== false) {
-        const haggis = buildHaggisCampaign(root, lookup, snapshots, now);
+        const haggis = buildHaggisCampaign(root, lookup, snapshots, fsIdx, now);
         const errors = validateCampaign(haggis);
         if (errors.length > 0) throw new Error(`Invalid Haggis campaign: ${errors.join('; ')}`);
         byId.set(haggis.id, haggis);
@@ -696,7 +811,7 @@ export function loadCampaignManifests(opts: LoadCampaignsOptions = {}): Campaign
 
     if (opts.includeSpecialists !== false) {
         for (const [account, board] of Object.entries(SPECIALIST_BOARDS)) {
-            const c = buildSpecialistCampaign(root, account, board, lookup, snapshots, now);
+            const c = buildSpecialistCampaign(root, account, board, lookup, snapshots, fsIdx, now);
             const errors = validateCampaign(c);
             if (errors.length > 0) throw new Error(`Invalid specialist campaign (${account}): ${errors.join('; ')}`);
             byId.set(c.id, c);
@@ -705,14 +820,14 @@ export function loadCampaignManifests(opts: LoadCampaignsOptions = {}): Campaign
 
     if (opts.includeRetiredSpecialists === true) {
         for (const spec of RETIRED_SPECIALIST_CAMPAIGN_SPECS) {
-            const c = buildSpecialistCampaign(root, spec.account, { name: spec.board, category: spec.category }, lookup, snapshots, now);
+            const c = buildSpecialistCampaign(root, spec.account, { name: spec.board, category: spec.category }, lookup, snapshots, fsIdx, now);
             const errors = validateCampaign(c);
             if (errors.length > 0) throw new Error(`Invalid retired specialist campaign (${spec.account}): ${errors.join('; ')}`);
             byId.set(c.id, c);
         }
     }
 
-    const overrides = readCampaignOverrides(root, opts.overridePath);
+    const overrides = readCampaignOverrides(root, fsIdx, opts.overridePath);
     for (const [id, c] of overrides.entries()) {
         byId.set(id, c);
     }
@@ -736,31 +851,60 @@ function canonicalUnnotedItemId(itemId: number, itemName?: string): number {
     return itemId;
 }
 
-function accountReserveForItem(snapshot: WorldSnapshot, acctName: string, itemId: number): number {
+interface SnapshotSupplyIndex {
+    readonly byLower: ReadonlyMap<string, WorldSnapshot['accounts'][string]>;
+    readonly activeNonProtected: readonly WorldSnapshot['accounts'][string][];
+    readonly reservesByLower: ReadonlyMap<string, Readonly<Record<number, number>>> | null;
+}
+
+function buildSnapshotSupplyIndex(snapshot: WorldSnapshot): SnapshotSupplyIndex {
+    const byLower = new Map<string, WorldSnapshot['accounts'][string]>();
+    const activeNonProtected: WorldSnapshot['accounts'][string][] = [];
+    for (const acct of Object.values(snapshot.accounts)) {
+        byLower.set(acct.name.toLowerCase(), acct);
+        if (!acct.protectedClock && acct.lifecycle !== 'paused_owner' && acct.lifecycle !== 'dead') {
+            activeNonProtected.push(acct);
+        }
+    }
+    let reservesByLower: Map<string, Readonly<Record<number, number>>> | null = null;
+    if (snapshot.reserves) {
+        reservesByLower = new Map<string, Readonly<Record<number, number>>>();
+        for (const [k, map] of Object.entries(snapshot.reserves)) {
+            const lower = k.toLowerCase();
+            if (!reservesByLower.has(lower)) reservesByLower.set(lower, map);
+        }
+    }
+    return { byLower, activeNonProtected, reservesByLower };
+}
+
+function accountReserveForItem(
+    snapshot: WorldSnapshot,
+    acctName: string,
+    itemId: number,
+    reservesByLower: ReadonlyMap<string, Readonly<Record<number, number>>> | null,
+): number {
     if (!snapshot.reserves) return 0;
     const exact = snapshot.reserves[acctName]?.[itemId];
     if (exact !== undefined) return exact;
     const lower = acctName.toLowerCase();
     const lowerHit = snapshot.reserves[lower]?.[itemId];
     if (lowerHit !== undefined) return lowerHit;
-    for (const [k, map] of Object.entries(snapshot.reserves)) {
-        if (k.toLowerCase() === lower) return map?.[itemId] ?? 0;
-    }
-    return 0;
+    return reservesByLower?.get(lower)?.[itemId] ?? 0;
 }
 
 function availableCampaignSupplyStock(
     campaign: Campaign,
     itemId: number,
     snapshot: WorldSnapshot,
+    supplyIdx: SnapshotSupplyIndex,
     canonicalId = itemId,
 ): number {
     const ownedForAccount = (acct: WorldSnapshot['accounts'][string]): number => {
         let owned = accountOwnedItemCount(acct, itemId);
-        let reserved = accountReserveForItem(snapshot, acct.name, itemId);
+        let reserved = accountReserveForItem(snapshot, acct.name, itemId, supplyIdx.reservesByLower);
         if (canonicalId !== itemId) {
             owned += accountOwnedItemCount(acct, canonicalId);
-            reserved += accountReserveForItem(snapshot, acct.name, canonicalId);
+            reserved += accountReserveForItem(snapshot, acct.name, canonicalId, supplyIdx.reservesByLower);
         }
         return Math.max(0, owned - reserved);
     };
@@ -768,18 +912,14 @@ function availableCampaignSupplyStock(
     if (campaign.stagingHolder) {
         const holderAcct =
             snapshot.accounts[campaign.stagingHolder] ??
-            Object.values(snapshot.accounts).find(
-                (a) => a.name.toLowerCase() === campaign.stagingHolder!.toLowerCase(),
-            );
+            supplyIdx.byLower.get(campaign.stagingHolder.toLowerCase());
         if (!holderAcct) return 0;
         if (holderAcct.lifecycle === 'paused_owner' || holderAcct.lifecycle === 'dead') return 0;
         return ownedForAccount(holderAcct);
     }
 
     let total = 0;
-    for (const acct of Object.values(snapshot.accounts)) {
-        if (acct.protectedClock) continue;
-        if (acct.lifecycle === 'paused_owner' || acct.lifecycle === 'dead') continue;
+    for (const acct of supplyIdx.activeNonProtected) {
         total += ownedForAccount(acct);
     }
     return total;
@@ -789,12 +929,14 @@ export function campaignShortfalls(
     campaign: Campaign,
     snapshot: WorldSnapshot,
     opts: CampaignShortfallsOptions = {},
+    _supplyIdx?: SnapshotSupplyIndex,
 ): CampaignEvaluation {
     const cErrors = validateCampaign(campaign);
     if (cErrors.length > 0) {
         throw new Error(`Invalid Campaign "${String((campaign as Campaign)?.id)}": ${cErrors.join('; ')}`);
     }
 
+    const supplyIdx = _supplyIdx ?? buildSnapshotSupplyIndex(snapshot);
     const aggregated = aggregateSupplyRequirements(campaign.requiredSupplies);
     const missingGates: CampaignMissingGate[] = [];
 
@@ -823,7 +965,7 @@ export function campaignShortfalls(
     for (const req of aggregated) {
         totalRequiredUnits += req.count;
         const canonicalId = canonicalUnnotedItemId(req.itemId, req.itemName);
-        const owned = availableCampaignSupplyStock(campaign, req.itemId, snapshot, canonicalId);
+        const owned = availableCampaignSupplyStock(campaign, req.itemId, snapshot, supplyIdx, canonicalId);
         const fulfilled = Math.min(req.count, owned);
         const remaining = req.count - fulfilled;
         totalFulfilledUnits += fulfilled;
@@ -891,5 +1033,6 @@ export function evaluateCampaigns(
     snapshot: WorldSnapshot,
     opts: CampaignShortfallsOptions = {},
 ): CampaignEvaluation[] {
-    return campaigns.map((campaign) => campaignShortfalls(campaign, snapshot, opts));
+    const supplyIdx = buildSnapshotSupplyIndex(snapshot);
+    return campaigns.map((campaign) => campaignShortfalls(campaign, snapshot, opts, supplyIdx));
 }

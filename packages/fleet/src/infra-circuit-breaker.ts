@@ -267,7 +267,16 @@ export class InfraCircuitBreaker {
     }
 
     snapshot(): InfraCircuitSnapshot {
-        return structuredClone(this.state);
+        const f = this.state.faults;
+        return {
+            schema: this.state.schema,
+            updatedAt: this.state.updatedAt,
+            faults: {
+                remote_git_claim: { ...f.remote_git_claim },
+                proxy: { ...f.proxy },
+                server_drain: { ...f.server_drain },
+            },
+        };
     }
 
     async guard<T>(fn: () => T | Promise<T>, kind?: InfraFaultKind): Promise<T> {

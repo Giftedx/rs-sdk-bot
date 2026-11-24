@@ -1,21 +1,20 @@
 // Full-fleet offline shadow verification CLI (ZERO live logins, read-only over --root).
 // Wires directly to Phase 1A (WorldSnapshot, ActivityCatalog, RateStore, Campaigns, Missions, DemandEngine),
 // Phase 1B (Preflight, AcquireItem, AccountPlanner, FleetScheduler), and unified worker-routing contracts.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { liveRoot } from '../../core/src/practice-paths';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
 import { WORKER_FAMILIES } from '../../workers/src/contracts';
 import { loadCampaignManifests } from './campaigns';
 import { createActivityCatalog } from './catalog';
+import { readJsonStatCached } from './json-cache';
 import {
     DEFAULT_RETENTION_MARGIN_RATIO,
     HUB_BANKER_LOCATIONS,
     canScheduleTransferOrder,
     isAccountPlan,
     isCampaign,
-    isFleetPlan,
-    isFleetState,
     isMission,
     isProtectedAccountName,
     isTransferOrder,
@@ -118,19 +117,7 @@ export interface RunShadowOptions {
 }
 
 function readJsonSafe<T>(file: string): T | null {
-    if (!existsSync(file)) return null;
-    try {
-        return JSON.parse(readFileSync(file, 'utf8')) as T;
-    } catch {
-        return null;
-    }
-}
-
-function findAccountByName(world: WorldSnapshot, accountName: string): AccountState | undefined {
-    const direct = world.accounts[accountName] ?? world.accounts[accountName.toLowerCase()];
-    if (direct) return direct;
-    const lower = accountName.toLowerCase();
-    return Object.values(world.accounts).find((a) => a.name.toLowerCase() === lower);
+    return readJsonStatCached<T>(file);
 }
 
 function loadConfirmedLogoutProofs(
@@ -138,11 +125,12 @@ function loadConfirmedLogoutProofs(
 ): Map<string, LogoutProof> {
     const out = new Map<string, LogoutProof>();
     const world = diagnostics.snapshot;
+    const existingLcRoots = diagnostics.readRoots.lifecycleRoots.filter((r) => existsSync(r));
+    if (existingLcRoots.length === 0) return out;
     for (const acct of Object.values(world.accounts)) {
         if (acct.side !== world.side || acct.lifecycle !== 'idle') continue;
         if (diagnostics.accounts[acct.name.toLowerCase()]?.logoutState !== 'confirmed') continue;
-        for (const lcRoot of diagnostics.readRoots.lifecycleRoots) {
-            if (!existsSync(lcRoot)) continue;
+        for (const lcRoot of existingLcRoots) {
             const proof = readLogoutProof(acct.name, world.server, { root: lcRoot });
             if (proof.state === 'confirmed') {
                 out.set(acct.name.toLowerCase(), proof);
@@ -569,10 +557,12 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         ...(rateStore ? { rateStats: rateStore.summary() } : {}),
     });
 
+    const activityById = catalog ? undefined : new Map(activities.map((a) => [a.id, a]));
+    const routingCtx = catalog ? { catalog } : { activityById };
     const routedPlans: Record<string, ResolvedWorkerPlan> = {};
     for (const [acctName, plan] of Object.entries(fleetPlan.accountPlans)) {
         if (plan.steps.length > 0) {
-            routedPlans[acctName] = resolveAccountWorkerPlan(plan, { activities });
+            routedPlans[acctName] = resolveAccountWorkerPlan(plan, routingCtx);
         }
     }
 
@@ -622,7 +612,7 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
     const fsErrors = validateFleetState(fleetState);
     checks.push({
         name: 'schema_valid',
-        ok: isFleetPlan(fleetPlan) && isFleetState(fleetState),
+        ok: fpErrors.length === 0 && fsErrors.length === 0,
         detail: `fleetPlanErrors=${fpErrors.length}, fleetStateErrors=${fsErrors.length}`,
     });
 
@@ -655,10 +645,12 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
 
     checks.push(...verifySyntheticScenarioProbes(activities, now));
 
+    const accountsByLower = new Map<string, AccountState>();
+    for (const acct of Object.values(world.accounts)) accountsByLower.set(acct.name.toLowerCase(), acct);
     const sampleAssignments = Object.values(fleetPlan.accountPlans)
         .sort((a, b) => b.steps.length - a.steps.length || b.scorePerHour - a.scorePerHour || a.account.localeCompare(b.account))
         .map((plan) => {
-            const acct = findAccountByName(world, plan.account);
+            const acct = world.accounts[plan.account] ?? accountsByLower.get(plan.account.toLowerCase());
             const routed = routedPlans[plan.account];
             const routeText = routed?.steps.map((s) => `${s.family}:${s.routeKey}`).join(' -> ');
             return {

@@ -180,20 +180,33 @@ function sanitizeItemsDelta(raw?: Readonly<Record<number, number>>): Record<numb
     return Object.keys(out).length > 0 ? out : undefined;
 }
 
+const INFRA_PROXY_RE = /(?:proxy|socks|econnrefused|ehostunreach|enetunreach|gateway.*502|\b502\b|\b503\b|\b429\b|tunnel)/i;
+const INFRA_DRAIN_RE = /(?:server.?drain|world.?update|restarting|maintenance|engine.?shutdown|eaddrinuse|localserver)/i;
+const INFRA_CLAIM_RE = /(?:remote.?git|push.*rejected|non-fast-forward|git.*lock|fleet-data.*sync|claim.?authority)/i;
+const INFRA_NETWORK_RE = /(?:websocket|gateway|connect|network|socket).*(?:timeout|timed out|etimedout)/i;
+const INFRA_GENERIC_RE = /(?:\binfra.?fault\b|circuit.?breaker|rate.?limit)/i;
+const DEATH_TEXT_RE = /\bdied\b|\bdeath\b|you are dead|oh dear/i;
+const SESSION_UNSETTLED_RE = /session.?unsettled|logout.?proof|still.?logged.?in|already logged in|session.?held|world.?switch.?failed|not logged out/i;
+const LOCATION_STRANDED_RE = /location.?stranded|stranded|no path to|cannot reach|unreachable bank|stuck.*(?:upstairs|basement|dungeon|island)/i;
+const MARKET_UNAVAILABLE_RE = /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here/i;
+const MISSING_SUPPLY_RE = /missing.?supply|insufficient.*(?:coins|gp|supply|supplies|food|runes|logs|ore|bars|arrows|tools|item)|out of supplies|no .* in bank/i;
+const FAILURE_MARKER_RE = /\b(?:fail|failed|error|exception|crash|abort|defect|timeout|timed out)\b/i;
+const SUCCESS_MARKER_RE = /\b(?:target.?met|completed?|done)\b/i;
+
 function detectInfraSource(text: string): InfraFaultSource | undefined {
-    if (/(?:proxy|socks|econnrefused|ehostunreach|enetunreach|gateway.*502|\b502\b|\b503\b|\b429\b|tunnel)/i.test(text)) {
+    if (INFRA_PROXY_RE.test(text)) {
         return 'proxy';
     }
-    if (/(?:server.?drain|world.?update|restarting|maintenance|engine.?shutdown|eaddrinuse|localserver)/i.test(text)) {
+    if (INFRA_DRAIN_RE.test(text)) {
         return 'server_drain';
     }
-    if (/(?:remote.?git|push.*rejected|non-fast-forward|git.*lock|fleet-data.*sync|claim.?authority)/i.test(text)) {
+    if (INFRA_CLAIM_RE.test(text)) {
         return 'claim_authority';
     }
-    if (/(?:websocket|gateway|connect|network|socket).*(?:timeout|timed out|etimedout)/i.test(text)) {
+    if (INFRA_NETWORK_RE.test(text)) {
         return 'network';
     }
-    if (/(?:\binfra.?fault\b|circuit.?breaker|rate.?limit)/i.test(text)) {
+    if (INFRA_GENERIC_RE.test(text)) {
         return 'unknown';
     }
     return undefined;
@@ -261,7 +274,7 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
         ...(summary ? { summary } : {}),
     };
 
-    if (input.died === true || /\bdied\b|\bdeath\b|you are dead|oh dear/i.test(text)) {
+    if (input.died === true || DEATH_TEXT_RE.test(text)) {
         const out: DeathOutcome = {
             kind: 'death',
             ...base,
@@ -288,11 +301,7 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
         return out;
     }
 
-    if (
-        /session.?unsettled|logout.?proof|still.?logged.?in|already logged in|session.?held|world.?switch.?failed|not logged out/i.test(
-            text,
-        )
-    ) {
+    if (SESSION_UNSETTLED_RE.test(text)) {
         const out: SessionUnsettledOutcome = {
             kind: 'session_unsettled',
             ...base,
@@ -302,7 +311,7 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
         return out;
     }
 
-    if (/location.?stranded|stranded|no path to|cannot reach|unreachable bank|stuck.*(?:upstairs|basement|dungeon|island)/i.test(text)) {
+    if (LOCATION_STRANDED_RE.test(text)) {
         const out: LocationStrandedOutcome = {
             kind: 'location_stranded',
             ...base,
@@ -315,7 +324,7 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
     if (
         input.marketItemId !== undefined ||
         input.marketVenue !== undefined ||
-        /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here/i.test(text)
+        MARKET_UNAVAILABLE_RE.test(text)
     ) {
         const market = inferMarketDetails(input, text);
         const out: MarketUnavailableOutcome = {
@@ -333,9 +342,7 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
 
     if (
         (input.missing && input.missing.length > 0) ||
-        /missing.?supply|insufficient.*(?:coins|gp|supply|supplies|food|runes|logs|ore|bars|arrows|tools|item)|out of supplies|no .* in bank/i.test(
-            text,
-        )
+        MISSING_SUPPLY_RE.test(text)
     ) {
         const missing = input.missing && input.missing.length > 0 ? input.missing : inferMissingItems(text);
         const out: MissingSupplyOutcome = {
@@ -347,13 +354,13 @@ export function classifyRawWorkerExit(input: RawWorkerExitInput): RunOutcome {
     }
 
     const headText = [input.status, input.reason, input.error].filter(Boolean).join(' ');
-    const hasFailureMarker = /\b(?:fail|failed|error|exception|crash|abort|defect|timeout|timed out)\b/i.test(headText);
+    const hasFailureMarker = FAILURE_MARKER_RE.test(headText);
     const hasSuccessStatus =
         input.exitCode === 0 ||
         input.status === 'done' ||
         input.status === 'ok' ||
         input.status === 'target_met' ||
-        /\b(?:target.?met|completed?|done)\b/i.test(headText);
+        SUCCESS_MARKER_RE.test(headText);
 
     if (hasSuccessStatus && !hasFailureMarker && (input.exitCode === undefined || input.exitCode === 0)) {
         const out: TargetMetOutcome = {
@@ -880,7 +887,15 @@ export class OutcomeClassifier {
     }
 
     isQuarantined(activityId: string, now = Date.now()): boolean {
-        return this.quarantinedDefects(now).some((d) => d.activityId === activityId);
+        for (const [key, d] of this.defects.entries()) {
+            if (!d.quarantined || d.activityId !== activityId) continue;
+            if (d.expiresAt !== undefined && now >= d.expiresAt) {
+                this.defects.set(key, { ...d, quarantined: false });
+                continue;
+            }
+            return true;
+        }
+        return false;
     }
 
     quarantinedDefects(now = Date.now()): DefectRecord[] {
@@ -944,7 +959,39 @@ export class OutcomeClassifier {
         return { ...this.marketCooldowns };
     }
 
-    applyToAccount(acct: AccountState, now = Date.now()): AccountState {
+    private applyToAccountInternal(acct: AccountState, now: number, validate: boolean): AccountState {
+        const key = acct.name.toLowerCase();
+        const hasOverlay = this.accountOverlays.has(key);
+        if (!hasOverlay) {
+            const hasActiveJobMismatch = acct.activeJob !== undefined && acct.lifecycle !== 'running';
+            let hasExpiredCooldown = false;
+            if (acct.cooldowns) {
+                for (const exp of Object.values(acct.cooldowns)) {
+                    if (now >= exp) {
+                        hasExpiredCooldown = true;
+                        break;
+                    }
+                }
+            }
+            let hasExpiredHold = false;
+            if (acct.systemHolds && acct.systemHolds.length > 0) {
+                for (const h of acct.systemHolds) {
+                    if (!isHoldActive(h, now)) {
+                        hasExpiredHold = true;
+                        break;
+                    }
+                }
+            }
+            if (!hasActiveJobMismatch && !hasExpiredCooldown && !hasExpiredHold) {
+                if (validate) {
+                    const errors = validateAccountState(acct);
+                    if (errors.length > 0) {
+                        throw new Error(`OutcomeClassifier.applyToAccount produced invalid AccountState for ${acct.name}: ${errors.join('; ')}`);
+                    }
+                }
+                return acct;
+            }
+        }
         const overlay = this.pruneAccountOverlay(acct.name, now);
         const mergedCooldowns = {
             ...pruneExpiredCooldowns(acct.cooldowns, now),
@@ -984,17 +1031,23 @@ export class OutcomeClassifier {
             ...(Object.keys(mergedCooldowns).length > 0 ? { cooldowns: mergedCooldowns } : { cooldowns: undefined }),
             ...(mergedHolds.length > 0 ? { systemHolds: mergedHolds } : { systemHolds: undefined }),
         };
-        const errors = validateAccountState(updated);
-        if (errors.length > 0) {
-            throw new Error(`OutcomeClassifier.applyToAccount produced invalid AccountState for ${acct.name}: ${errors.join('; ')}`);
+        if (validate) {
+            const errors = validateAccountState(updated);
+            if (errors.length > 0) {
+                throw new Error(`OutcomeClassifier.applyToAccount produced invalid AccountState for ${acct.name}: ${errors.join('; ')}`);
+            }
         }
         return updated;
+    }
+
+    applyToAccount(acct: AccountState, now = Date.now()): AccountState {
+        return this.applyToAccountInternal(acct, now, true);
     }
 
     applyToSnapshot(snapshot: WorldSnapshot, now = Date.now()): WorldSnapshot {
         const nextAccounts: Record<string, AccountState> = {};
         for (const [name, acct] of Object.entries(snapshot.accounts)) {
-            nextAccounts[name] = this.applyToAccount(acct, now);
+            nextAccounts[name] = this.applyToAccountInternal(acct, now, false);
         }
         const mergedMarketCooldowns = {
             ...pruneExpiredCooldowns(snapshot.marketCooldowns, now),

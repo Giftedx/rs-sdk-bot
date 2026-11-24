@@ -61,19 +61,32 @@ export async function separateTroutNotes(d: SeparationDeps): Promise<number> {
 
 export type DeliveryJob = { account?: string; accounts?: string[]; script?: string; args?: readonly string[]; goal?: string; env?: Record<string, string> };
 
+const TROUT_RE = /^trout$/i;
+const COINS_RE = /^coins$/i;
+const DIGITS_RE = /^\d+$/;
+const COURIER_ACCOUNT_RE = /^[A-Za-z0-9_ -]{1,12}$/;
+
 export function retainedTrout(env: Record<string, string | undefined> = {}): number {
     const raw = env.RETAIN_TROUT ?? '2';
-    if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) throw new Error('invalid RETAIN_TROUT');
+    if (!DIGITS_RE.test(raw) || !Number.isSafeInteger(Number(raw))) throw new Error('invalid RETAIN_TROUT');
     return Number(raw);
 }
 
 // ID333 is unnoted cooked Trout. Retain a count, not the whole food family.
 export function courierCargo(inventory: readonly CourierItem[], reserve: number): { items: { name: string; count: number }[]; blocked: string[] } {
-    const valid = inventory.filter(i => i && typeof i.name === 'string' && Number.isSafeInteger(i.count) && i.count > 0 && !/^coins$/i.test(i.name));
-    const food = valid.filter(i => /^trout$/i.test(i.name));
-    if (reserve > 0 && food.some(i => !Number.isSafeInteger(i.id))) return { items: [], blocked: ['Trout: identity unknown'] };
-    const unnoted = food.filter(i => i.id === 333).reduce((n, i) => n + i.count, 0);
-    if (reserve > 0 && unnoted > 0 && food.some(i => i.id !== 333)) return { items: [], blocked: ['Trout: need-bank-separation'] };
+    const valid: CourierItem[] = [];
+    let unnotedTrout = 0;
+    let hasOtherTrout = false;
+    for (const i of inventory) {
+        if (!i || typeof i.name !== 'string' || !Number.isSafeInteger(i.count) || i.count <= 0 || COINS_RE.test(i.name)) continue;
+        valid.push(i);
+        if (TROUT_RE.test(i.name)) {
+            if (reserve > 0 && !Number.isSafeInteger(i.id)) return { items: [], blocked: ['Trout: identity unknown'] };
+            if (i.id === 333) unnotedTrout += i.count;
+            else hasOtherTrout = true;
+        }
+    }
+    if (reserve > 0 && unnotedTrout > 0 && hasOtherTrout) return { items: [], blocked: ['Trout: need-bank-separation'] };
     const amounts = new Map<string, { name: string; count: number }>();
     let left = reserve;
     for (const i of valid) {
@@ -118,12 +131,25 @@ export function courierDeliveryWaiting(
             return false;
         }
     }
+    const jobByAccount = new Map<string, DeliveryJob>();
+    for (const j of jobs ?? []) {
+        if (j.accounts) {
+            for (const a of j.accounts) {
+                const k = a.toLowerCase();
+                if (!jobByAccount.has(k)) jobByAccount.set(k, j);
+            }
+        }
+        if (j.account) {
+            const k = j.account.toLowerCase();
+            if (!jobByAccount.has(k)) jobByAccount.set(k, j);
+        }
+    }
+    const file = (path: string) => path.replaceAll('\\', '/').split('/').at(-1);
     return names.some(name => {
-        if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return false;
+        if (!COURIER_ACCOUNT_RE.test(name)) return false;
         try {
             const status = readStatus(name);
-            const job = jobs!.find(j => [...(j.accounts ?? []), j.account ?? ''].some(a => a.toLowerCase() === name.toLowerCase()));
-            const file = (path: string) => path.replaceAll('\\', '/').split('/').at(-1);
+            const job = jobByAccount.get(name.toLowerCase());
             const script = job?.script && file(job.script);
             const role = script === 'aio-logistics.ts'
                 ? (job?.args as string[] | undefined)?.find((a: string) => !a.includes('=') && !a.startsWith('-'))?.toLowerCase()

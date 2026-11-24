@@ -9,6 +9,7 @@ import {
     missionEffectiveWeight,
     validateGoalDemand,
     validateMission,
+    type AccountState,
     type GoalDemand,
     type Mission,
     type MissionConsumableTarget,
@@ -16,6 +17,7 @@ import {
     type MissionState,
     type WorldSnapshot,
 } from './contracts';
+import { readJsonStatCached } from './json-cache';
 import { effectiveItemReserve } from './preflight';
 
 export interface LoadMissionsOptions {
@@ -69,7 +71,7 @@ function readJsonSafe(filePath: string): unknown {
 
 function loadPkSquadParticipants(root: string): string[] {
     const swarmPath = join(root, 'swarm.json');
-    const swarm = readJsonSafe(swarmPath);
+    const swarm = readJsonStatCached<unknown>(swarmPath);
     if (!isPlainRecord(swarm)) return [];
 
     const seen = new Set<string>();
@@ -183,14 +185,34 @@ function mergeMissionItemRequirements(mission: Mission): MergedMissionItemRequir
         }));
 }
 
-function ownedByMissionParticipants(mission: Mission, itemId: number, snapshot: WorldSnapshot): number {
-    let total = 0;
+function resolveMissionParticipants(mission: Mission, snapshot: WorldSnapshot): AccountState[] {
+    let byLower: Map<string, AccountState> | undefined;
+    const active: AccountState[] = [];
     for (const participant of mission.participants) {
-        const acct =
-            snapshot.accounts[participant] ??
-            Object.values(snapshot.accounts).find((a) => a.name.toLowerCase() === participant.toLowerCase());
+        let acct: AccountState | undefined = snapshot.accounts[participant] ?? snapshot.accounts[participant.toLowerCase()];
+        if (!acct) {
+            if (!byLower) {
+                byLower = new Map<string, AccountState>();
+                for (const a of Object.values(snapshot.accounts)) {
+                    byLower.set(a.name.toLowerCase(), a);
+                }
+            }
+            acct = byLower.get(participant.toLowerCase());
+        }
         if (!acct) continue;
         if (acct.lifecycle === 'dead' || acct.lifecycle === 'paused_owner') continue;
+        active.push(acct);
+    }
+    return active;
+}
+
+function ownedByMissionParticipants(
+    activeParticipants: readonly AccountState[],
+    itemId: number,
+    snapshot: WorldSnapshot,
+): number {
+    let total = 0;
+    for (const acct of activeParticipants) {
         const owned = accountOwnedItemCount(acct, itemId);
         const reserved = effectiveItemReserve(acct, snapshot, itemId);
         total += Math.max(0, owned - reserved);
@@ -226,10 +248,11 @@ export function missionShortfalls(
         };
     }
 
+    const activeParticipants = resolveMissionParticipants(mission, snapshot);
     for (const req of requirements) {
         const totalNeeded = req.countPerParticipant * participantCount;
         totalRequiredUnits += totalNeeded;
-        const owned = ownedByMissionParticipants(mission, req.itemId, snapshot);
+        const owned = ownedByMissionParticipants(activeParticipants, req.itemId, snapshot);
         const fulfilled = Math.min(totalNeeded, owned);
         const remaining = totalNeeded - fulfilled;
         totalFulfilledUnits += fulfilled;

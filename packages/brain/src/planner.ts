@@ -46,16 +46,23 @@ import {
     STANDARD_FOOD_IDS,
     accountSkillLevel,
     activityPreflightFromConfig,
-    availableSpendableCoins,
     availableStockAfterReserves,
+    cachedAccountSkillLevel,
+    cachedAccountSkillXp,
+    cachedEffectiveItemReserve,
+    cachedHasCompletedQuest,
     canWearItem,
     completedQuestSet,
+    createAccountLookupCache,
     hasCompletedQuest,
     loadGearMap,
     loadItemsMap,
     loadQuestRows,
+    type AccountLookupCache,
     type CombatSurvivabilityFloor,
+    type KnowledgeQuestRow,
 } from './preflight';
+import { accountOwnedItemCount, reserveAdjustedStock } from '../../workers/src/contracts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 const SERVER_XP_MULTIPLIER = 25;
@@ -128,33 +135,54 @@ interface PrecomputedWeaponInfo {
     };
 }
 
-function buildWearLevels(acct: AccountState): Partial<Record<Skill, number>> {
+let cachedQuestRowByKey: Map<string, KnowledgeQuestRow> | undefined;
+function getQuestRowBySlug(slugLower: string): KnowledgeQuestRow | undefined {
+    if (!cachedQuestRowByKey) {
+        const map = new Map<string, KnowledgeQuestRow>();
+        for (const q of loadQuestRows()) {
+            const v = q.varp.toLowerCase();
+            if (!map.has(v)) map.set(v, q);
+            if (q.folder) {
+                const fl = q.folder.toLowerCase();
+                if (!map.has(fl)) map.set(fl, q);
+            }
+        }
+        cachedQuestRowByKey = map;
+    }
+    const aliasFolder = QUEST_FOLDER_ALIASES[slugLower];
+    return cachedQuestRowByKey.get(slugLower)
+        ?? cachedQuestRowByKey.get(`quest_${slugLower}`)
+        ?? (aliasFolder !== undefined ? cachedQuestRowByKey.get(aliasFolder) : undefined);
+}
+
+function buildWearLevels(acct: AccountState, acctCache?: AccountLookupCache): Partial<Record<Skill, number>> {
     return {
-        attack: accountSkillLevel(acct, 'Attack'),
-        strength: accountSkillLevel(acct, 'Strength'),
-        defence: accountSkillLevel(acct, 'Defence'),
-        ranged: accountSkillLevel(acct, 'Ranged'),
-        magic: accountSkillLevel(acct, 'Magic'),
+        attack: cachedAccountSkillLevel(acct, 'Attack', acctCache),
+        strength: cachedAccountSkillLevel(acct, 'Strength', acctCache),
+        defence: cachedAccountSkillLevel(acct, 'Defence', acctCache),
+        ranged: cachedAccountSkillLevel(acct, 'Ranged', acctCache),
+        magic: cachedAccountSkillLevel(acct, 'Magic', acctCache),
     };
 }
 
-function precomputeWearableWeapons(acct: AccountState): PrecomputedWeaponInfo {
+function precomputeWearableWeapons(acct: AccountState, acctCache?: AccountLookupCache): PrecomputedWeaponInfo {
     const gearMap = loadGearMap();
-    const levels = buildWearLevels(acct);
-    const doneSet = completedQuestSet(acct);
+    const levels = buildWearLevels(acct, acctCache);
+    const doneSet = acctCache ? acctCache.completedSet : completedQuestSet(acct);
 
     const ownedRighthand: Gear[] = [];
-    for (const [idStr, cnt] of [
-        ...Object.entries(acct.equipment),
-        ...Object.entries(acct.inventory),
-        ...(acct.bank.trusted ? Object.entries(acct.bank.items) : []),
-    ]) {
-        if (cnt <= 0) continue;
-        const g = gearMap.get(Number(idStr));
-        if (!g || g.slot !== 'righthand') continue;
-        if (!canWear(g, levels, doneSet)) continue;
-        ownedRighthand.push(g);
-    }
+    const scanContainer = (container: Readonly<Record<number, number>>) => {
+        for (const [idStr, cnt] of Object.entries(container)) {
+            if (cnt <= 0) continue;
+            const g = gearMap.get(Number(idStr));
+            if (!g || g.slot !== 'righthand') continue;
+            if (!canWear(g, levels, doneSet)) continue;
+            ownedRighthand.push(g);
+        }
+    };
+    scanContainer(acct.equipment);
+    scanContainer(acct.inventory);
+    if (acct.bank.trusted) scanContainer(acct.bank.items);
 
     const cache: Partial<Record<WeaponStyle, { bestOwnedScore: number; candidates: { gear: Gear; score: number }[] }>> = {};
     const getStyle = (style: WeaponStyle) => {
@@ -204,6 +232,7 @@ export interface PlannerActivityIndex {
 export interface PlannerSharedIndex extends PlannerActivityIndex {
     readonly eligibleActivities: readonly ActivityDefinition[];
     readonly allIdleDonors: readonly AccountState[];
+    readonly idleDonorsByItemId: ReadonlyMap<number, readonly AccountState[]>;
 }
 
 function indexEligibleActivities(eligibleActivities: readonly ActivityDefinition[]): PlannerActivityIndex {
@@ -311,10 +340,33 @@ export function buildPlannerSharedIndex(params: {
         )
         .sort((a, b) => a.name.localeCompare(b.name));
 
+    const idleDonorsByItemId = new Map<number, AccountState[]>();
+    for (const donor of allIdleDonors) {
+        const seen = new Set<number>();
+        const addItems = (src: Readonly<Record<number, number>>) => {
+            for (const [idStr, cnt] of Object.entries(src)) {
+                if (cnt <= 0) continue;
+                const itemId = Number(idStr);
+                if (seen.has(itemId)) continue;
+                seen.add(itemId);
+                let list = idleDonorsByItemId.get(itemId);
+                if (!list) {
+                    list = [];
+                    idleDonorsByItemId.set(itemId, list);
+                }
+                list.push(donor);
+            }
+        };
+        addItems(donor.inventory);
+        addItems(donor.equipment);
+        if (donor.bank.trusted) addItems(donor.bank.items);
+    }
+
     return {
         eligibleActivities,
         ...built,
         allIdleDonors,
+        idleDonorsByItemId,
     };
 }
 
@@ -357,24 +409,26 @@ export interface AccountProfileSummary {
 const ARTISAN_SKILLS = ['Cooking', 'Smithing', 'Crafting', 'Fletching', 'Herblore', 'Runecraft', 'Magic'] as const;
 const TRIBRID_SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Magic'] as const;
 
-export function summarizeAccountProfile(acct: AccountState): AccountProfileSummary {
+export function summarizeAccountProfile(acct: AccountState, _acctCache?: AccountLookupCache): AccountProfileSummary {
     let completedQuests = 0;
     for (const st of Object.values(acct.quests)) {
         if (st === 'complete') completedQuests += 1;
     }
     let artisanMax = 1;
     for (const sk of ARTISAN_SKILLS) {
-        artisanMax = Math.max(artisanMax, accountSkillLevel(acct, sk));
+        artisanMax = Math.max(artisanMax, cachedAccountSkillLevel(acct, sk, _acctCache));
     }
-    const meleeLevels = [
-        accountSkillLevel(acct, 'Attack'),
-        accountSkillLevel(acct, 'Strength'),
-        accountSkillLevel(acct, 'Defence'),
-    ];
-    const combatMeleeMin = Math.min(...meleeLevels);
-    const tribridLevels = TRIBRID_SKILLS.map((sk) => accountSkillLevel(acct, sk));
-    const combatTribridMin = Math.min(...tribridLevels);
-    const prayer = accountSkillLevel(acct, 'Prayer');
+    const combatMeleeMin = Math.min(
+        cachedAccountSkillLevel(acct, 'Attack', _acctCache),
+        cachedAccountSkillLevel(acct, 'Strength', _acctCache),
+        cachedAccountSkillLevel(acct, 'Defence', _acctCache),
+    );
+    let combatTribridMin = 99;
+    for (const sk of TRIBRID_SKILLS) {
+        const lvl = cachedAccountSkillLevel(acct, sk, _acctCache);
+        if (lvl < combatTribridMin) combatTribridMin = lvl;
+    }
+    const prayer = cachedAccountSkillLevel(acct, 'Prayer', _acctCache);
 
     let totalLevel = 0;
     for (const [sk, st] of Object.entries(acct.skills)) {
@@ -511,6 +565,14 @@ export interface GearUpgradeCandidateResult {
     readonly improvedXpPerTick: number;
 }
 
+interface ResolvedGearUpgradeCandidate {
+    readonly itemId: number;
+    readonly itemName?: string;
+    readonly slot: string;
+    readonly multiplier: number;
+    readonly acq: AcquireResolution;
+}
+
 export function evaluateBestGearUpgrade(params: {
     readonly acct: AccountState;
     readonly activity: ActivityDefinition;
@@ -521,6 +583,8 @@ export function evaluateBestGearUpgrade(params: {
     readonly precomputedWeapons?: PrecomputedWeaponInfo;
     readonly resolveAcquire?: (req: AcquireRequest) => AcquireResolution;
     readonly committedCoinSpend?: number;
+    readonly _acctCache?: AccountLookupCache;
+    readonly _upgradeCandidatesCache?: Map<string, readonly ResolvedGearUpgradeCandidate[]>;
 }): GearUpgradeCandidateResult | null {
     const { acct, activity, rate, remainingXp, acquireCtx } = params;
     if (rate.xpPerTick <= 0 || !Number.isFinite(remainingXp) || remainingXp <= 0) return null;
@@ -534,45 +598,101 @@ export function evaluateBestGearUpgrade(params: {
 
     if (!isWoodcutting && !isMining && !isCombat) return null;
 
+    const style: WeaponStyle = skill === 'ranged' ? 'ranged' : skill === 'magic' ? 'magic' : 'melee';
+    const bucketKey = isMining
+        ? `mining:${params.committedCoinSpend ?? 0}`
+        : isWoodcutting
+            ? `wc:${params.committedCoinSpend ?? 0}`
+            : `combat:${style}:${params.committedCoinSpend ?? 0}`;
+
+    let resolvedList = params._upgradeCandidatesCache?.get(bucketKey);
+    if (!resolvedList) {
+        const gearMap = loadGearMap();
+        const itemsMap = loadItemsMap();
+        const doAcquire = params.resolveAcquire
+            ?? ((req: AcquireRequest) => resolveAcquireItem(acct, req, acquireCtx));
+        const acctCache = params._acctCache;
+        const built: ResolvedGearUpgradeCandidate[] = [];
+
+        const pushCandidate = (itemId: number, slot: string, multiplier: number) => {
+            if (multiplier <= 1.02) return;
+            const ownedRaw = accountOwnedItemCount(acct, itemId, {
+                includeBank: true,
+                requireTrustedBank: true,
+            });
+            const reserved = cachedEffectiveItemReserve(acct, acquireCtx.world, itemId, acctCache);
+            if (reserveAdjustedStock(ownedRaw, reserved) > 0) return;
+
+            const itemName = itemsMap.get(itemId)?.name ?? gearMap.get(itemId)?.name;
+            const acq = doAcquire({
+                itemId,
+                itemName,
+                quantity: 1,
+                allowOwnBank: true,
+                ...(params.committedCoinSpend !== undefined ? { committedCoinSpend: params.committedCoinSpend } : {}),
+            });
+            if (!acq.ok || !acq.step) return;
+            built.push({ itemId, itemName, slot, multiplier, acq });
+        };
+
+        if (isMining || isWoodcutting) {
+            const list = isMining ? MINING_PICKAXES_DESC : WOODCUTTING_AXES_DESC;
+            const toolRows = loadSkillTools();
+            const rows = isMining ? toolRows.pickaxes : toolRows.axes;
+            const useLvl = cachedAccountSkillLevel(acct, isMining ? 'Mining' : 'Woodcutting', acctCache);
+            let currentMult = 1.0;
+            for (const id of list) {
+                const ownedRaw = accountOwnedItemCount(acct, id);
+                const reserved = cachedEffectiveItemReserve(acct, acquireCtx.world, id, acctCache);
+                if (reserveAdjustedStock(ownedRaw, reserved) > 0) {
+                    const row = rows.find((r) => r.id === id);
+                    const reqLvl = isMining ? (row?.miningLevel ?? 1) : 1;
+                    if (useLvl >= reqLvl) {
+                        currentMult = Math.max(currentMult, toolSpeedMultiplier(id, isMining ? 'mining' : 'woodcutting'));
+                    }
+                }
+            }
+            for (const id of list) {
+                const row = rows.find((r) => r.id === id);
+                const reqLvl = isMining ? (row?.miningLevel ?? 1) : (row?.woodcuttingLevel ?? row?.paramLevelrequire ?? 1);
+                if (isMining && useLvl < reqLvl) continue;
+                const wear = canWearItem(acct, id);
+                if (!isMining && !wear.ok && useLvl < reqLvl) continue;
+                const mult = toolSpeedMultiplier(id, isMining ? 'mining' : 'woodcutting');
+                if (mult > currentMult) {
+                    pushCandidate(id, 'weapon', mult / currentMult);
+                }
+            }
+        } else {
+            const precomputed = params.precomputedWeapons ?? precomputeWearableWeapons(acct, acctCache);
+            const { bestOwnedScore: bestOwnedWeaponScore, candidates: weaponCandidates } = precomputed.getStyle(style);
+            for (const cand of weaponCandidates) {
+                const ratio = Math.min(2.2, Math.sqrt(cand.score / bestOwnedWeaponScore));
+                pushCandidate(cand.gear.id, 'weapon', ratio);
+            }
+        }
+        resolvedList = built;
+        params._upgradeCandidatesCache?.set(bucketKey, resolvedList);
+    }
+
+    if (resolvedList.length === 0) return null;
+
     const baseRemainingTicks = remainingXp / rate.xpPerTick;
     let best: GearUpgradeCandidateResult | null = null;
-    const gearMap = loadGearMap();
-    const itemsMap = loadItemsMap();
-    const doAcquire = params.resolveAcquire
-        ?? ((req: AcquireRequest) => resolveAcquireItem(acct, req, acquireCtx));
-
-    const tryCandidate = (itemId: number, slot: string, multiplier: number): GearUpgradeCandidateResult | null => {
-        if (multiplier <= 1.02) return null;
-        const owned = availableStockAfterReserves(acct, acquireCtx.world, itemId, {
-            includeBank: true,
-            requireTrustedBank: true,
-        }).available;
-        if (owned > 0) return null;
-
-        const acq = doAcquire({
-            itemId,
-            itemName: itemsMap.get(itemId)?.name ?? gearMap.get(itemId)?.name,
-            quantity: 1,
-            allowOwnBank: true,
-            ...(params.committedCoinSpend !== undefined ? { committedCoinSpend: params.committedCoinSpend } : {}),
-        });
-        if (!acq.ok || !acq.step) return null;
-
-        const improvedXpPerTick = rate.xpPerTick * multiplier;
+    for (const entry of resolvedList) {
+        const improvedXpPerTick = rate.xpPerTick * entry.multiplier;
         const netXpPerTickGain = improvedXpPerTick - rate.xpPerTick;
         const newBandTicks = remainingXp / improvedXpPerTick;
         let bestStep: GearUpgradePlannedStep | null = null;
-        for (const cand of acq.candidates) {
+        for (const cand of entry.acq.candidates) {
             const paybackNetTicks = (baseRemainingTicks - newBandTicks) - cand.step.estimatedTicks;
             if (paybackNetTicks <= 0 || !Number.isFinite(paybackNetTicks)) continue;
             if (!bestStep || paybackNetTicks > bestStep.paybackNetTicks) {
                 bestStep = {
                     stepKind: 'gear_upgrade',
-                    itemId,
-                    ...(itemsMap.get(itemId)?.name || gearMap.get(itemId)?.name
-                        ? { itemName: itemsMap.get(itemId)?.name ?? gearMap.get(itemId)?.name }
-                        : {}),
-                    slot,
+                    itemId: entry.itemId,
+                    ...(entry.itemName ? { itemName: entry.itemName } : {}),
+                    slot: entry.slot,
                     netXpPerTickGain,
                     remainingBandTicks: baseRemainingTicks,
                     acquisitionTicks: cand.step.estimatedTicks,
@@ -587,56 +707,10 @@ export function evaluateBestGearUpgrade(params: {
                 };
             }
         }
-        if (!bestStep) return null;
-        return { step: bestStep, improvedXpPerTick };
-    };
-
-    const pickBetter = (cand: GearUpgradeCandidateResult | null) => {
-        if (cand && (!best || cand.step.paybackNetTicks > best.step.paybackNetTicks)) {
-            best = cand;
+        if (bestStep && (!best || bestStep.paybackNetTicks > best.step.paybackNetTicks)) {
+            best = { step: bestStep, improvedXpPerTick };
         }
-    };
-
-    if (isMining || isWoodcutting) {
-        const list = isMining ? MINING_PICKAXES_DESC : WOODCUTTING_AXES_DESC;
-        const toolRows = loadSkillTools();
-        const rows = isMining ? toolRows.pickaxes : toolRows.axes;
-        const useLvl = accountSkillLevel(acct, isMining ? 'Mining' : 'Woodcutting');
-        let currentMult = 1.0;
-        for (const id of list) {
-            if (availableStockAfterReserves(acct, acquireCtx.world, id).available > 0) {
-                const row = rows.find((r) => r.id === id);
-                const reqLvl = isMining ? (row?.miningLevel ?? 1) : 1;
-                if (useLvl >= reqLvl) {
-                    currentMult = Math.max(currentMult, toolSpeedMultiplier(id, isMining ? 'mining' : 'woodcutting'));
-                }
-            }
-        }
-        for (const id of list) {
-            const row = rows.find((r) => r.id === id);
-            const reqLvl = isMining ? (row?.miningLevel ?? 1) : (row?.woodcuttingLevel ?? row?.paramLevelrequire ?? 1);
-            if (isMining && useLvl < reqLvl) continue;
-            const wear = canWearItem(acct, id);
-            if (!isMining && !wear.ok && useLvl < reqLvl) continue;
-            const mult = toolSpeedMultiplier(id, isMining ? 'mining' : 'woodcutting');
-            if (mult > currentMult) {
-                pickBetter(tryCandidate(id, 'weapon', mult / currentMult));
-            }
-        }
-        return best;
     }
-
-    // Combat weapon upgrade check.
-    const style: WeaponStyle = skill === 'ranged' ? 'ranged' : skill === 'magic' ? 'magic' : 'melee';
-    const precomputed = params.precomputedWeapons ?? precomputeWearableWeapons(acct);
-    const { bestOwnedScore: bestOwnedWeaponScore, candidates: weaponCandidates } = precomputed.getStyle(style);
-
-    for (const cand of weaponCandidates) {
-        // Bound DPS ratio conservatively to avoid exaggerating upgrades on low-HP mobs.
-        const ratio = Math.min(2.2, Math.sqrt(cand.score / bestOwnedWeaponScore));
-        pickBetter(tryCandidate(cand.gear.id, 'weapon', ratio));
-    }
-
     return best;
 }
 
@@ -645,6 +719,7 @@ export function comparativeAdvantageMultiplier(
     demand: GoalDemand,
     activity: ActivityDefinition,
     profile: AccountProfileSummary = summarizeAccountProfile(acct),
+    _acctCache?: AccountLookupCache,
 ): number {
     let mult = 1.0;
 
@@ -670,7 +745,7 @@ export function comparativeAdvantageMultiplier(
         || demand.goalKind === 'gear_collection'
     ) {
         const actSkill = activity.skill;
-        const lvl = actSkill ? accountSkillLevel(acct, actSkill) : profile.artisanMax;
+        const lvl = actSkill ? cachedAccountSkillLevel(acct, actSkill, _acctCache) : profile.artisanMax;
         if (activity.family === 'bank-artisan' && lvl >= 55) {
             mult *= 1.55 + Math.min(0.45, (lvl - 55) / 100);
         } else if (profile.isHighArtisan && (activity.family === 'bank-artisan' || activity.family === 'gather')) {
@@ -746,6 +821,7 @@ function activityMatchesDemand(
     acct: AccountState,
     demand: GoalDemand,
     activity: ActivityDefinition,
+    acctCache?: AccountLookupCache,
 ): boolean {
     if (!demand.active || demand.remaining <= 0) return false;
     if (demand.assignedAccount && demand.assignedAccount.toLowerCase() !== acct.name.toLowerCase()) return false;
@@ -762,13 +838,13 @@ function activityMatchesDemand(
         case 'skill': {
             if (activity.family === 'quest') return false;
             if (t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
-            const curLvl = accountSkillLevel(acct, t.skill);
+            const curLvl = cachedAccountSkillLevel(acct, t.skill, acctCache);
             if (curLvl >= t.targetLevel) return false;
             return activityXpForSkill(activity, activity.baselineRate, t.skill) > 0;
         }
         case 'quest': {
             if (t.account && t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
-            if (hasCompletedQuest(acct, t.questSlug)) return false;
+            if (cachedHasCompletedQuest(acct, t.questSlug, acctCache)) return false;
             return activity.family === 'quest'
                 && activity.questSlug?.toLowerCase() === t.questSlug.toLowerCase();
         }
@@ -779,16 +855,15 @@ function activityMatchesDemand(
         case 'combat_readiness': {
             if (activity.family === 'quest') return false;
             if (t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
+            let combatTargetsMet = true;
             for (const [skill, targetLvl] of Object.entries(t.targets)) {
-                if (accountSkillLevel(acct, skill) < targetLvl) {
+                if (cachedAccountSkillLevel(acct, skill, acctCache) < targetLvl) {
+                    combatTargetsMet = false;
                     if (activityXpForSkill(activity, activity.baselineRate, skill) > 0) {
                         return true;
                     }
                 }
             }
-            const combatTargetsMet = Object.entries(t.targets).every(
-                ([skill, targetLvl]) => accountSkillLevel(acct, skill) >= targetLvl,
-            );
             return combatTargetsMet && (activity.family === 'pvp' || activity.family === 'combat');
         }
     }
@@ -799,30 +874,34 @@ function selectWorkTrainingTarget(
     demand: GoalDemand,
     activity: ActivityDefinition,
     rate: RateEstimate,
+    acctCache?: AccountLookupCache,
 ): { trainSkill?: string; targetLevel?: number } {
     if (demand.target.kind === 'skill') {
         return { trainSkill: demand.target.skill, targetLevel: demand.target.targetLevel };
     }
     if (demand.target.kind === 'combat_readiness') {
-        const unmet = Object.entries(demand.target.targets)
-            .filter(([sk, tgt]) => accountSkillLevel(acct, sk) < tgt && activityXpForSkill(activity, rate, sk) > 0)
-            .map(([sk, tgt]) => ({ skill: sk, targetLevel: tgt, currentLevel: accountSkillLevel(acct, sk) }))
-            .sort((a, b) => a.currentLevel - b.currentLevel || a.skill.localeCompare(b.skill));
-        if (unmet.length > 0) {
-            return { trainSkill: unmet[0]!.skill, targetLevel: unmet[0]!.targetLevel };
+        let bestSkill: string | undefined;
+        let bestTarget = 0;
+        let bestLevel = Infinity;
+        for (const [sk, tgt] of Object.entries(demand.target.targets)) {
+            const curLvl = cachedAccountSkillLevel(acct, sk, acctCache);
+            if (curLvl < tgt && activityXpForSkill(activity, rate, sk) > 0) {
+                if (curLvl < bestLevel || (curLvl === bestLevel && bestSkill !== undefined && sk.localeCompare(bestSkill) < 0)) {
+                    bestSkill = sk;
+                    bestTarget = tgt;
+                    bestLevel = curLvl;
+                }
+            }
+        }
+        if (bestSkill !== undefined) {
+            return { trainSkill: bestSkill, targetLevel: bestTarget };
         }
     }
     return {};
 }
 
-function accountSkillXp(acct: AccountState, skill: string): number {
-    const lower = skill.toLowerCase();
-    const direct = acct.skills[skill];
-    if (direct) return direct.xp ?? xpForLevel(direct.level);
-    for (const [k, v] of Object.entries(acct.skills)) {
-        if (k.toLowerCase() === lower) return v.xp ?? xpForLevel(v.level);
-    }
-    return xpForLevel(accountSkillLevel(acct, skill));
+function accountSkillXp(acct: AccountState, skill: string, acctCache?: AccountLookupCache): number {
+    return cachedAccountSkillXp(acct, skill, acctCache);
 }
 
 function lookupSkillTarget(targets: Readonly<Record<string, number>>, skill: string): number | undefined {
@@ -841,6 +920,7 @@ function resolveBatchUnits(
     activity: ActivityDefinition,
     rate: RateEstimate,
     xpRate: number,
+    acctCache?: AccountLookupCache,
 ): number {
     const minUnits = Math.max(1, rate.minBatchUnits);
     const t = demand.target;
@@ -858,7 +938,7 @@ function resolveBatchUnits(
         return Math.max(minUnits, Math.min(needed, 2000));
     }
     if (t.kind === 'skill') {
-        const curXp = accountSkillXp(acct, t.skill);
+        const curXp = accountSkillXp(acct, t.skill, acctCache);
         const remXp = Math.max(1, (t.targetXp ?? xpForLevel(t.targetLevel)) - curXp);
         const xpPerUnit = rate.unitsPerTick > 0 ? (rate.xpPerTick * xpRate) / rate.unitsPerTick : 25;
         const needed = Math.ceil(remXp / Math.max(1, xpPerUnit));
@@ -873,9 +953,10 @@ function estimateRemainingBandXp(
     activity: ActivityDefinition,
     trainSkill?: string,
     targetLevel?: number,
+    acctCache?: AccountLookupCache,
 ): number {
     if (demand.target.kind === 'skill') {
-        const curXp = accountSkillXp(acct, demand.target.skill);
+        const curXp = accountSkillXp(acct, demand.target.skill, acctCache);
         const targetXp = demand.target.targetXp ?? xpForLevel(demand.target.targetLevel);
         return Math.max(0, targetXp - curXp);
     }
@@ -883,17 +964,17 @@ function estimateRemainingBandXp(
         const sk = trainSkill ?? activity.skill;
         if (sk) {
             const targetLvl = targetLevel ?? lookupSkillTarget(demand.target.targets, sk) ?? 99;
-            const curXp = accountSkillXp(acct, sk);
+            const curXp = accountSkillXp(acct, sk, acctCache);
             return Math.max(0, xpForLevel(targetLvl) - curXp);
         }
         return 0;
     }
     const sk = trainSkill ?? activity.skill;
     if (sk) {
-        const cur = accountSkillLevel(acct, sk);
+        const cur = cachedAccountSkillLevel(acct, sk, acctCache);
         if (cur >= 99) return 0;
         const nextBand = Math.min(99, cur + 10);
-        const curXp = accountSkillXp(acct, sk);
+        const curXp = accountSkillXp(acct, sk, acctCache);
         return Math.max(0, xpForLevel(nextBand) - curXp);
     }
     return 0;
@@ -1012,7 +1093,8 @@ function planAccountCore(
     }
 
     const minTrust: TrustTier = input.minTrust ?? 'practice_passed';
-    const profile = summarizeAccountProfile(acct);
+    const acctCache = createAccountLookupCache(acct, world, DEFAULT_OPERATING_COIN_FLOAT);
+    const profile = summarizeAccountProfile(acct, acctCache);
     const isProtected = Boolean(acct.protectedClock || isProtectedAccountName(acct.name));
     const hasActExclusions = Boolean(input.excludedActivityIds?.size || input.excludedSpotIds?.size);
     const isActAllowed = (act: ActivityDefinition): boolean =>
@@ -1108,10 +1190,15 @@ function planAccountCore(
         excludedSources: input.excludedAcquireSources,
         _cachedByOutputItem: nonExpByOutputItem,
         _sortedIdleDonors: sortedIdleDonors,
+        _idleDonorsByItemId: shared?.idleDonorsByItemId,
+        _acctCache: acctCache,
+        _skipDiagnostics: true,
     };
 
+    const acctLower = acct.name.toLowerCase();
+
     const candidateListForDemand = (demand: GoalDemand): readonly ActivityDefinition[] => {
-        if (demand.assignedAccount && demand.assignedAccount.toLowerCase() !== acct.name.toLowerCase()) {
+        if (demand.assignedAccount && demand.assignedAccount.toLowerCase() !== acctLower) {
             return [];
         }
         const t = demand.target;
@@ -1119,23 +1206,23 @@ function planAccountCore(
             case 'item':
                 return byOutputItem.get(t.itemId) ?? [];
             case 'quest':
-                if (t.account && t.account.toLowerCase() !== acct.name.toLowerCase()) return [];
-                if (hasCompletedQuest(acct, t.questSlug)) return [];
+                if (t.account && t.account.toLowerCase() !== acctLower) return [];
+                if (cachedHasCompletedQuest(acct, t.questSlug, acctCache)) return [];
                 return questsBySlug.get(t.questSlug.toLowerCase()) ?? [];
             case 'skill': {
-                if (t.account.toLowerCase() !== acct.name.toLowerCase()) return [];
-                if (accountSkillLevel(acct, t.skill) >= t.targetLevel) return [];
+                if (t.account.toLowerCase() !== acctLower) return [];
+                if (cachedAccountSkillLevel(acct, t.skill, acctCache) >= t.targetLevel) return [];
                 return bySkill.get(t.skill.toLowerCase()) ?? [];
             }
             case 'coins':
-                if (t.account && t.account.toLowerCase() !== acct.name.toLowerCase()) return [];
+                if (t.account && t.account.toLowerCase() !== acctLower) return [];
                 return gpActivities;
             case 'combat_readiness': {
-                if (t.account.toLowerCase() !== acct.name.toLowerCase()) return [];
+                if (t.account.toLowerCase() !== acctLower) return [];
                 const set = new Set<ActivityDefinition>();
                 let allMet = true;
                 for (const [sk, targetLvl] of Object.entries(t.targets)) {
-                    if (accountSkillLevel(acct, sk) < targetLvl) {
+                    if (cachedAccountSkillLevel(acct, sk, acctCache) < targetLvl) {
                         allMet = false;
                         for (const act of bySkill.get(sk.toLowerCase()) ?? []) set.add(act);
                     }
@@ -1173,7 +1260,10 @@ function planAccountCore(
                 activity,
                 world,
                 batchUnits,
-                { protectedAllowed: acctProtectedAllowed && (activity.protectedAllowed || !acct.protectedClock) },
+                {
+                    protectedAllowed: acctProtectedAllowed && (activity.protectedAllowed || !acct.protectedClock),
+                    _acctCache: acctCache,
+                },
             );
             preflightCache.set(key, p);
         }
@@ -1193,23 +1283,19 @@ function planAccountCore(
 
     let precomputedWeapons: PrecomputedWeaponInfo | undefined;
     const getPrecomputedWeapons = (): PrecomputedWeaponInfo => {
-        if (!precomputedWeapons) precomputedWeapons = precomputeWearableWeapons(acct);
+        if (!precomputedWeapons) precomputedWeapons = precomputeWearableWeapons(acct, acctCache);
         return precomputedWeapons;
     };
     const upgradeCache = new Map<string, GearUpgradeCandidateResult | null>();
+    const upgradeCandidatesCache = new Map<string, readonly ResolvedGearUpgradeCandidate[]>();
     const skillUnlockCache = new Map<string, { activity: ActivityDefinition; rate: RateEstimate } | null>();
-    const questRows = loadQuestRows();
 
     const hasLiveMarketQuotes = Boolean(input.marketQuotes && Object.keys(input.marketQuotes).length > 0);
     const directGeBuyActivity = hasLiveMarketQuotes ? geBuyActivity : undefined;
     const shopCatalog = loadShopCatalogByItem();
     const itemsMap = loadItemsMap();
-    const defaultSpendableCoins = availableSpendableCoins(acct, world, DEFAULT_OPERATING_COIN_FLOAT, {
-        includeBank: true,
-        requireTrustedBank: true,
-    }).spendable;
+    const defaultSpendableCoins = acctCache.defaultSpendableCoins.spendable;
 
-    const acctLower = acct.name.toLowerCase();
     let bestPlan: AccountPlan | null = null;
     const demandCandidates: AccountPlan[] = [];
     let lastBlockerReason = 'no_matching_demand_or_activity';
@@ -1224,7 +1310,7 @@ function planAccountCore(
         const matching = needFilter
             ? rawCandidates.filter(
                   (a) => (!shared || !hasActExclusions || isActAllowed(a))
-                      && (!needsMatchCheck || activityMatchesDemand(acct, demand, a)),
+                      && (!needsMatchCheck || activityMatchesDemand(acct, demand, a, acctCache)),
               )
             : rawCandidates;
         let bestThroughput = 0;
@@ -1284,8 +1370,8 @@ function planAccountCore(
                                 ...(shopCatalog.get(targetItemId) ?? []),
                             ];
                             for (const shop of shops) {
-                                if (shop.requiresQuest && !hasCompletedQuest(acct, shop.requiresQuest)) continue;
-                                if (shop.requiresSkill && accountSkillLevel(acct, shop.requiresSkill.skill) < shop.requiresSkill.level) continue;
+                                if (shop.requiresQuest && !cachedHasCompletedQuest(acct, shop.requiresQuest, acctCache)) continue;
+                                if (shop.requiresSkill && cachedAccountSkillLevel(acct, shop.requiresSkill.skill, acctCache) < shop.requiresSkill.level) continue;
                                 if (shop.requiresQuestPoints) continue;
                                 if (shop.cost > 0 && shop.cost < minUnitPrice) minUnitPrice = shop.cost;
                             }
@@ -1313,7 +1399,7 @@ function planAccountCore(
                     if (cand.source !== 'npc_shop' && cand.source !== 'ge') continue;
                     const marketAct = cand.source === 'npc_shop' ? shopBuyActivity : directGeBuyActivity;
                     if (!marketAct) continue;
-                    const advMult = comparativeAdvantageMultiplier(acct, demand, marketAct, profile);
+                    const advMult = comparativeAdvantageMultiplier(acct, demand, marketAct, profile, acctCache);
                     if (advMult <= 0) continue;
                     const workTicks = Math.max(1, Math.ceil(cand.step.estimatedTicks));
                     const throughput = cand.step.quantity / workTicks;
@@ -1376,11 +1462,11 @@ function planAccountCore(
         }
 
         for (const activity of matching) {
-            const advMult = comparativeAdvantageMultiplier(acct, demand, activity, profile);
+            const advMult = comparativeAdvantageMultiplier(acct, demand, activity, profile, acctCache);
             if (advMult <= 0) continue;
 
             const rate = getRate(activity);
-            const batchUnits = resolveBatchUnits(acct, demand, activity, rate, xpRate);
+            const batchUnits = resolveBatchUnits(acct, demand, activity, rate, xpRate, acctCache);
             const preflight = getPreflight(activity, batchUnits);
 
             const prepSteps: PlannedStep[] = [];
@@ -1438,13 +1524,7 @@ function planAccountCore(
                             break;
                         }
                         const qSlug = blocker.quest.toLowerCase();
-                        const aliasFolder = QUEST_FOLDER_ALIASES[qSlug];
-                        const qRow = questRows.find(
-                            (q) =>
-                                q.varp.toLowerCase() === qSlug
-                                || q.folder?.toLowerCase() === `quest_${qSlug}`
-                                || (aliasFolder !== undefined && q.folder?.toLowerCase() === aliasFolder),
-                        );
+                        const qRow = getQuestRowBySlug(qSlug);
                         if (qRow?.xp) {
                             for (const reward of qRow.xp) {
                                 const sk = reward.skill.toLowerCase();
@@ -1464,15 +1544,13 @@ function planAccountCore(
                         prepSteps.push(unlockStep);
                     } else if (blocker.kind === 'skill_level') {
                         const skLower = blocker.skill.toLowerCase();
-                        if (skLower === 'herblore' && !hasCompletedQuest(acct, 'druid')) {
+                        if (skLower === 'herblore' && !cachedHasCompletedQuest(acct, 'druid', acctCache)) {
                             const druidAct = (questsBySlug.get('druid') ?? []).find(
                                 (a) => !shared || !hasActExclusions || isActAllowed(a),
                             );
                             if (druidAct && getPreflight(druidAct, 1).ok && !prepSteps.some((s) => s.stepKind === 'unlock' && s.questSlug?.toLowerCase() === 'druid')) {
                                 const druidPre = getPreflight(druidAct, 1);
-                                const druidRow = questRows.find(
-                                    (q) => q.varp.toLowerCase() === 'druid' || q.folder?.toLowerCase() === 'quest_druid',
-                                );
+                                const druidRow = getQuestRowBySlug('druid');
                                 if (druidRow?.xp) {
                                     for (const reward of druidRow.xp) {
                                         const sk = reward.skill.toLowerCase();
@@ -1629,9 +1707,9 @@ function planAccountCore(
             // Evaluate optional net XP/tick payback gear upgrade if step budget permits.
             let effectiveRate = rate;
             let upgrade: GearUpgradeCandidateResult | null | undefined;
-            const preTrainTarget = selectWorkTrainingTarget(acct, demand, activity, rate);
+            const preTrainTarget = selectWorkTrainingTarget(acct, demand, activity, rate, acctCache);
             if (prepSteps.length < MAX_ACCOUNT_PLAN_STEPS - 1 && rate.xpPerTick > 0) {
-                const remXp = estimateRemainingBandXp(acct, demand, activity, preTrainTarget.trainSkill, preTrainTarget.targetLevel);
+                const remXp = estimateRemainingBandXp(acct, demand, activity, preTrainTarget.trainSkill, preTrainTarget.targetLevel, acctCache);
                 if (remXp > 0) {
                     const evalSkill = preTrainTarget.trainSkill ?? activity.skill ?? '';
                     const upgKey = `${activity.family}:${evalSkill}:${rate.xpPerTick}:${Math.round(remXp)}:${committedCoins}`;
@@ -1647,6 +1725,8 @@ function planAccountCore(
                             precomputedWeapons: getPrecomputedWeapons(),
                             resolveAcquire: resolveAcquireCached,
                             committedCoinSpend: committedCoins,
+                            _acctCache: acctCache,
+                            _upgradeCandidatesCache: upgradeCandidatesCache,
                         });
                         upgradeCache.set(upgKey, upgrade);
                     }
@@ -1700,7 +1780,7 @@ function planAccountCore(
                 : 1.0;
             const scorePerHour = Math.max(0, baseVph * advMult * speedEfficiency * throughputRatio);
 
-            const trainTarget = selectWorkTrainingTarget(acct, demand, activity, effectiveRate);
+            const trainTarget = selectWorkTrainingTarget(acct, demand, activity, effectiveRate, acctCache);
             const workStep: TargetWorkPlannedStep = {
                 stepKind: 'work',
                 activityId: activity.id,
