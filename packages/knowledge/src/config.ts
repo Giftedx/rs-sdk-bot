@@ -1,7 +1,6 @@
 import { readdirSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { join } from 'node:path';
 import { contentRoot } from './paths';
-import { cleanLines } from './text';
 
 export interface ConfigBlock {
     name: string;
@@ -46,18 +45,38 @@ export function parseConfigs(text: string, file: string): ConfigBlock[] {
     return out;
 }
 
+// Single-pass directory walk collecting files for multiple extensions under content/scripts.
+export function listConfigFilesByExt(exts: readonly string[], root = contentRoot()): Map<string, string[]> {
+    const out = new Map<string, string[]>();
+    const uniqueExts: string[] = [];
+    for (const ext of exts) {
+        if (!out.has(ext)) {
+            out.set(ext, []);
+            uniqueExts.push(ext);
+        }
+    }
+    const extCount = uniqueExts.length;
+    if (extCount === 0) return out;
+    const walk = (absDir: string, relPrefix: string) => {
+        for (const e of readdirSync(absDir, { withFileTypes: true })) {
+            const name = e.name;
+            if (e.isDirectory()) {
+                walk(join(absDir, name), `${relPrefix}${name}/`);
+            } else {
+                for (let i = 0; i < extCount; i++) {
+                    const ext = uniqueExts[i]!;
+                    if (name.endsWith(ext)) out.get(ext)!.push(`${relPrefix}${name}`);
+                }
+            }
+        }
+    };
+    walk(join(root, 'scripts'), 'scripts/');
+    for (const list of out.values()) list.sort();
+    return out;
+}
+
 // Same file set the engine pack tool reads: every file with this extension under content/scripts,
 // including _unpack/<rev>/ (each rev folder holds only that revision's additions). Paths are relative to the content root.
 export function listConfigFiles(ext: string): string[] {
-    const root = contentRoot();
-    const out: string[] = [];
-    const walk = (dir: string) => {
-        for (const e of readdirSync(dir, { withFileTypes: true })) {
-            const p = join(dir, e.name);
-            if (e.isDirectory()) walk(p);
-            else if (e.name.endsWith(ext)) out.push(relative(root, p).split(sep).join('/'));
-        }
-    };
-    walk(join(root, 'scripts'));
-    return out.sort();
+    return listConfigFilesByExt([ext]).get(ext)!;
 }

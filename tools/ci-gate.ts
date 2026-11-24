@@ -9,6 +9,7 @@
 // Setup steps (checkout, submodule patch, installs) are not run: this checkout needs vendor/rs-sdk and node_modules.
 import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
+import {isPortUnbound} from './now';
 
 export type Step={name:string;cmd:string[];env:Record<string,string>};
 
@@ -87,7 +88,7 @@ if(import.meta.main){
     const patched=sh(['git','-C',join(root,'vendor','rs-sdk'),'apply','--check','-R',join(root,'patches','rs-sdk-working.patch')]).exitCode===0;
     const problem=checkoutProblem(porcelain,patched,post);
     if(problem){console.error('gate: '+problem);process.exit(2);}
-    try{const s=await (await fetch('http://127.0.0.1:3100/api/state',{signal:AbortSignal.timeout(3000)})).json() as any;const active=s?.capacity?.active;
+    if(!isPortUnbound(3100))try{const s=await (await fetch('http://127.0.0.1:3100/api/state',{signal:AbortSignal.timeout(3000)})).json() as any;const active=s?.capacity?.active;
         if(active>0&&!force){console.error(`gate: ${active} bots run now; tsc and the suites slow their clients. Rerun with --force to run anyway.`);process.exit(2);}}catch{/* no local dashboard: no swarm load to read */}
     const partAt=process.argv.indexOf('--part'),part=partAt>=0?process.argv[partAt+1]:undefined;
     if(partAt>=0&&!/^\d+\/\d+$/.test(part??'')){console.error(`gate: --part needs i/n, not ${part}`);process.exit(2);}

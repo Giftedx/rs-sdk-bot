@@ -1,3 +1,4 @@
+import type { ConfigBlock } from '../config';
 import type { DbRow } from '../dbtables';
 import { astOf, exprText, parseCoord, show } from './parser';
 import {
@@ -9,6 +10,49 @@ import {
     type Assumption, type Coord, type Ctx, type Expr, type Placement, type RunResult,
     type RunState, type Script, type Stmt, type Sym, type V,
 } from './types';
+
+const LOC_PARAM_CACHE = new WeakMap<ConfigBlock, Map<string, string>>();
+function locParamMap(cfg: ConfigBlock): Map<string, string> {
+    let map = LOC_PARAM_CACHE.get(cfg);
+    if (!map) {
+        map = new Map();
+        for (const r of cfg.props.param ?? []) {
+            const comma = r.indexOf(',');
+            const key = (comma >= 0 ? r.slice(0, comma) : r).trim();
+            if (!map.has(key)) map.set(key, comma >= 0 ? r.slice(comma + 1).trim() : '');
+        }
+        LOC_PARAM_CACHE.set(cfg, map);
+    }
+    return map;
+}
+
+const DB_ROW_INDEX = new WeakMap<Ctx, Map<string, Map<string, DbRow>>>();
+function dbRowLookup(ctx: Ctx, table: string, rowName: string): DbRow | undefined {
+    let byTable = DB_ROW_INDEX.get(ctx);
+    if (!byTable) {
+        byTable = new Map();
+        DB_ROW_INDEX.set(ctx, byTable);
+    }
+    let rows = byTable.get(table);
+    if (!rows) {
+        rows = new Map();
+        for (const row of ctx.db.get(table) ?? []) {
+            if (!rows.has(row.name)) rows.set(row.name, row);
+        }
+        byTable.set(table, rows);
+    }
+    return rows.get(rowName);
+}
+
+const CONST_CACHE = new WeakMap<Ctx, Map<string, V>>();
+function constCacheFor(ctx: Ctx): Map<string, V> {
+    let map = CONST_CACHE.get(ctx);
+    if (!map) {
+        map = new Map();
+        CONST_CACHE.set(ctx, map);
+    }
+    return map;
+}
 
 // An int derived from the approximate player tile stays approximate.
 const approxOf = (...vs: V[]): { approx?: true } => vs.some(v => v.t === 'int' && v.approx) ? { approx: true } : {};
@@ -25,9 +69,11 @@ const valueProc = (s: Script) => {
     return v;
 };
 
-class Fork extends Error { constructor(public key: string, public options: string[], public sym: Sym, public details: string[], public line: number, public file: string) { super('fork'); } }
-class EndPath extends Error {}
-class ProcReturn extends Error { constructor(public value?: V) { super('return'); } }
+// Internal control-flow signals: plain objects avoid capturing JS stack traces on every branch fork/return.
+class Fork { constructor(public key: string, public options: string[], public sym: Sym, public details: string[], public line: number, public file: string) {} }
+class EndPath {}
+const END_PATH = new EndPath();
+class ProcReturn { constructor(public value?: V) {} }
 
 class Run {
     st: RunState;
@@ -68,24 +114,31 @@ class Run {
         return { t: 'unk', why: `$${n} unset` };
     }
     constant(n: string, depth = 0): V {
+        const cache = depth === 0 ? constCacheFor(this.ctx) : undefined;
+        if (cache) {
+            const cached = cache.get(n);
+            if (cached) return cached;
+        }
         const c = this.ctx.constants.get(n);
         if (!c || depth > 5) return { t: 'unk', why: `^${n} undefined` };
         const s = c.value;
-        if (/^-?\d+$/.test(s)) return { t: 'int', v: Number(s) };
-        if (/^\d+_\d+_\d+_\d+_\d+$/.test(s)) return { t: 'coord', c: parseCoord(s), exact: true };
-        if (s === 'true' || s === 'false') return { t: 'bool', v: s === 'true' };
-        if (s.startsWith('"')) return { t: 'str' };
-        if (s.startsWith('^')) return this.constant(s.slice(1), depth + 1);
-        return { t: 'name', v: s };
+        let out: V;
+        if (/^-?\d+$/.test(s)) out = { t: 'int', v: Number(s) };
+        else if (/^\d+_\d+_\d+_\d+_\d+$/.test(s)) out = { t: 'coord', c: parseCoord(s), exact: true };
+        else if (s === 'true' || s === 'false') out = { t: 'bool', v: s === 'true' };
+        else if (s.startsWith('"')) out = { t: 'str' };
+        else if (s.startsWith('^')) out = this.constant(s.slice(1), depth + 1);
+        else out = { t: 'name', v: s };
+        cache?.set(n, out);
+        return out;
     }
     locParam(name: string): V {
         const cfg = this.ctx.locConfigs.get(this.p.locName);
-        const row = cfg?.props.param?.find(r => r.split(',')[0]!.trim() === name);
-        if (!row) return { t: 'unk', why: `loc_param(${name}) not set on ${this.p.locName}` };
-        const val = row.slice(row.indexOf(',') + 1).trim();
+        const val = cfg ? locParamMap(cfg).get(name) : undefined;
+        if (val === undefined) return { t: 'unk', why: `loc_param(${name}) not set on ${this.p.locName}` };
         if (/^-?\d+$/.test(val)) return { t: 'int', v: Number(val) };
         if (/^\d+_\d+_\d+_\d+_\d+$/.test(val)) return { t: 'coord', c: parseCoord(val), exact: true };
-        if (/^\^/.test(val)) return this.constant(val.slice(1));
+        if (val.startsWith('^')) return this.constant(val.slice(1));
         return { t: 'name', v: val };
     }
     // A tuple-returning proc call as an argument fills several parameters.
@@ -217,7 +270,7 @@ class Run {
             case 'db_getfield': case 'db_getfieldcount': {
                 const r = this.eval(e.args[0]!);
                 const [table, col] = exprText(e.args[1]!).split(':');
-                const row = r.t === 'name' && r.v.startsWith('dbrow:') ? (this.ctx.db.get(table!) ?? []).find(x => x.name === r.v.slice(6)) : undefined;
+                const row = r.t === 'name' && r.v.startsWith('dbrow:') ? dbRowLookup(this.ctx, table!, r.v.slice(6)) : undefined;
                 if (!row) return { t: 'unk', why: `db_getfield on ${show(r)}` };
                 const vals = row.data[col!] ?? [];
                 if (n === 'db_getfieldcount') return { t: 'int', v: vals.length };
@@ -303,9 +356,9 @@ class Run {
             case 'jump': {
                 const label = this.ctx.scripts.get(`label,${s.n}`);
                 if (!label) throw new Unsupported(`label ${s.n} not found`);
-                if (skipCall(label)) throw new EndPath();
+                if (skipCall(label)) throw END_PATH;
                 this.enter(label, s.args.map(a => this.eval(a)), true);
-                throw new EndPath();
+                throw END_PATH;
             }
             case 'if': {
                 const c = this.eval(s.c);
@@ -383,7 +436,7 @@ class Run {
         catch (err) {
             leave();
             if (err instanceof ProcReturn && !isLabel) return err.value;
-            if (err instanceof ProcReturn) throw new EndPath();
+            if (err instanceof ProcReturn) throw END_PATH;
             throw err;
         }
         leave();
@@ -410,7 +463,14 @@ export function runAll(ctx: Ctx, s: Script, p: Placement): { results: RunResult[
         const r = new Run(ctx, p, assume, used);
         try { r.top(s); results.push({ assumptions: used, st: r.st }); }
         catch (err) {
-            if (err instanceof Fork) { for (const o of err.options) work.push(new Map([...assume, [err.key, o]])); continue; }
+            if (err instanceof Fork) {
+                for (const o of err.options) {
+                    const next = new Map(assume);
+                    next.set(err.key, o);
+                    work.push(next);
+                }
+                continue;
+            }
             if (err instanceof Unsupported) return { results, gap: err.message };
             return { results, gap: `interpreter error: ${(err as Error).message}` };
         }

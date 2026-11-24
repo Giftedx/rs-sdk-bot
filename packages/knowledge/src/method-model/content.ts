@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { listConfigFiles, parseConfigs, type ConfigBlock } from '../config';
+import { listConfigFilesByExt, parseConfigs, type ConfigBlock } from '../config';
 import { contentRoot } from '../paths';
 import { cleanLines } from '../text';
 import type { Content, Hit } from './types';
@@ -55,13 +55,18 @@ export function loadContent(root = contentRoot()): Content {
         }
         return texts.get(file)!;
     };
+    let filesByExt: Map<string, string[]> | undefined;
+    const filesFor = (ext: string) => {
+        if (!filesByExt) filesByExt = listConfigFilesByExt(['.obj', '.struct', '.npc'], root);
+        return filesByExt.get(ext) ?? [];
+    };
     const indexes = new Map<string, { byName: Map<string, ConfigBlock>; all: ConfigBlock[] }>();
     const index = (ext: string) => {
         let ix = indexes.get(ext);
         if (!ix) {
             const all: ConfigBlock[] = [];
             const byName = new Map<string, ConfigBlock>();
-            for (const f of listConfigFiles(ext)) for (const b of parseConfigs(readFileSync(join(root, f), 'utf8'), f)) {
+            for (const f of filesFor(ext)) for (const b of parseConfigs(readFileSync(join(root, f), 'utf8'), f)) {
                 all.push(b);
                 const cur = byName.get(b.name);
                 if (!cur || (cur.file.includes('/_unpack/') && !b.file.includes('/_unpack/'))) byName.set(b.name, b);
@@ -97,16 +102,42 @@ export function prop(b: ConfigBlock | undefined, key: string): { value: string; 
     return v === undefined ? null : { value: v, src: `${b!.file}:${b!.propLines[key]![0]}` };
 }
 
+const BLOCK_INDEX = new WeakMap<Content, Map<string, Map<string, { from: number; to: number }> | null>>();
+
+function blockIndex(c: Content, file: string): Map<string, { from: number; to: number }> | null {
+    let byFile = BLOCK_INDEX.get(c);
+    if (!byFile) {
+        byFile = new Map();
+        BLOCK_INDEX.set(c, byFile);
+    }
+    if (byFile.has(file)) return byFile.get(file)!;
+    const ls = c.lines(file);
+    if (!ls) {
+        byFile.set(file, null);
+        return null;
+    }
+    const headers: number[] = [];
+    for (let i = 0; i < ls.length; i++) if (ls[i]!.charCodeAt(0) === 91 /* '[' */) headers.push(i);
+    const map = new Map<string, { from: number; to: number }>();
+    for (let h = 0; h < headers.length; h++) {
+        const from = headers[h]!;
+        const to = headers[h + 1] ?? ls.length;
+        const m = /^\[(?:([a-z_0-9]+),)?([^\]]+)\]/.exec(ls[from]!);
+        if (!m) continue;
+        const range = { from, to };
+        if (!map.has(m[2]!)) map.set(m[2]!, range);
+        if (m[1] !== undefined) {
+            const full = `${m[1]},${m[2]}`;
+            if (!map.has(full)) map.set(full, range);
+        }
+    }
+    byFile.set(file, map);
+    return map;
+}
+
 /** Line range of the block whose header is `[kind,name]` or `[name]`, header to next header. */
 export function block(c: Content, file: string, name: string): { from: number; to: number } | null {
-    const ls = c.lines(file);
-    if (!ls) return null;
-    const head = new RegExp(`^\\[(?:[a-z_0-9]+,)?${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`);
-    const from = ls.findIndex(l => head.test(l));
-    if (from < 0) return null;
-    let to = ls.findIndex((l, i) => i > from && l.startsWith('['));
-    if (to < 0) to = ls.length;
-    return { from, to };
+    return blockIndex(c, file)?.get(name) ?? null;
 }
 
 /** Every match of `re` in a file (or in one script block of it), on comment-stripped lines. */
@@ -124,9 +155,35 @@ export function findAll(c: Content, file: string, re: RegExp, inBlock?: string):
 }
 
 /** First match of `re` in a file (or in one script block of it). */
-export const find = (c: Content, file: string, re: RegExp, inBlock?: string): Hit | null => findAll(c, file, re, inBlock)[0] ?? null;
+export function find(c: Content, file: string, re: RegExp, inBlock?: string): Hit | null {
+    const ls = c.lines(file);
+    if (!ls) return null;
+    const r = inBlock ? block(c, file, inBlock) : { from: 0, to: ls.length };
+    if (!r) return null;
+    for (let i = r.from; i < r.to; i++) {
+        const m = re.exec(ls[i]!);
+        if (m) return { m, src: `${file}:${i + 1}`, line: i + 1 };
+    }
+    return null;
+}
+
+const STRUCT_INDEX = new WeakMap<Content, Map<string, Map<string, ConfigBlock>>>();
 
 /** Lookup the first struct block whose `param=key,value` equals `value`. */
 export function struct(c: Content, key: string, value: string): ConfigBlock | undefined {
-    return c.structs().find(s => param(s, key)?.value === value);
+    let byKey = STRUCT_INDEX.get(c);
+    if (!byKey) {
+        byKey = new Map();
+        STRUCT_INDEX.set(c, byKey);
+    }
+    let byVal = byKey.get(key);
+    if (!byVal) {
+        byVal = new Map();
+        for (const s of c.structs()) {
+            const p = param(s, key);
+            if (p && !byVal.has(p.value)) byVal.set(p.value, s);
+        }
+        byKey.set(key, byVal);
+    }
+    return byVal.get(value);
 }

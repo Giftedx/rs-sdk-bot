@@ -1,5 +1,5 @@
 // Hiscore snapshot board parsing, skill supply ladders, haggis-boards.json activity loading, and QP specialist table adaptation.
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { xpForLevel } from '../curve';
 import { planSkill, type Method } from '../plan';
 import { BOARDS_FILE, SKILLS, type Activity, type Board, type BoardId, type Skill, type Supply } from './model';
@@ -155,21 +155,69 @@ const LADDERS: Record<string, Tier[]> = {
 
 type ActivityJson = Activity & { suppliesLadder?: { skill: Skill; tiers?: string; margin?: number; toLevel?: number } };
 
+type CachedBoardsJson = {
+    mtimeMs: number;
+    size: number;
+    data: { activities: ActivityJson[]; supplyResearch?: Unsourceable[]; unsourceable?: Unsourceable[] };
+    expandedActivities?: Activity[];
+};
+const boardsJsonCache = new Map<string, CachedBoardsJson>();
+const ladderSuppliesCache = new Map<string, Supply[]>();
+
+function readBoardsJson(path: string): CachedBoardsJson {
+    const st = statSync(path);
+    const cached = boardsJsonCache.get(path);
+    if (cached && cached.mtimeMs === st.mtimeMs && cached.size === st.size) return cached;
+    const entry: CachedBoardsJson = {
+        mtimeMs: st.mtimeMs,
+        size: st.size,
+        data: JSON.parse(readFileSync(path, 'utf8')) as CachedBoardsJson['data'],
+    };
+    boardsJsonCache.set(path, entry);
+    return entry;
+}
+
+function cachedLadderSupplies(skill: Skill, tierKey: string, tiers: Tier[], margin: number, toLevel: number): Supply[] {
+    const key = `${skill}|${tierKey}|${margin}|${toLevel}`;
+    let cached = ladderSuppliesCache.get(key);
+    if (!cached) {
+        cached = ladderSupplies(skill, tiers, margin, toLevel);
+        ladderSuppliesCache.set(key, cached);
+    }
+    return cached;
+}
+
+function cloneActivity(a: Activity): Activity {
+    return {
+        ...a,
+        ...(a.supplies ? { supplies: a.supplies.map(s => ({ ...s })) } : {}),
+        ...(a.patches ? { patches: a.patches.map(p => ({ ...p })) } : {}),
+        ...(a.requires ? { requires: [...a.requires] } : {}),
+        ...(a.serves ? { serves: [...a.serves] } : {}),
+        ...(a.xp ? { xp: { ...a.xp } } : {}),
+        ...(a.minLevel ? { minLevel: { ...a.minLevel } } : {}),
+    };
+}
+
 // Dated procurement leads, never quantity caps. Keep the old export for existing readers.
 export interface Unsourceable { item: string; observedAvailable?: number; max?: number; reason: string; source: string }
 export function haggisUnsourceable(path = BOARDS_FILE): Unsourceable[] {
-    const data = JSON.parse(readFileSync(path, 'utf8')) as { supplyResearch?: Unsourceable[]; unsourceable?: Unsourceable[] };
-    return data.supplyResearch ?? data.unsourceable ?? [];
+    const { data } = readBoardsJson(path);
+    return (data.supplyResearch ?? data.unsourceable ?? []).map(u => ({ ...u }));
 }
 
 export function haggisActivities(path = BOARDS_FILE): Activity[] {
-    const data = JSON.parse(readFileSync(path, 'utf8')) as { activities: ActivityJson[] };
-    return data.activities.map(({ suppliesLadder, ...a }) => {
-        if (!suppliesLadder) return a;
-        const tiers = LADDERS[suppliesLadder.tiers ?? suppliesLadder.skill];
-        if (!tiers) throw new Error(`${a.id}: no tier table for ${suppliesLadder.tiers ?? suppliesLadder.skill}`);
-        return { ...a, supplies: [...ladderSupplies(suppliesLadder.skill, tiers, suppliesLadder.margin ?? 1, suppliesLadder.toLevel ?? 99), ...(a.supplies ?? [])] };
-    });
+    const entry = readBoardsJson(path);
+    if (!entry.expandedActivities) {
+        entry.expandedActivities = entry.data.activities.map(({ suppliesLadder, ...a }) => {
+            if (!suppliesLadder) return a;
+            const tierKey = suppliesLadder.tiers ?? suppliesLadder.skill;
+            const tiers = LADDERS[tierKey];
+            if (!tiers) throw new Error(`${a.id}: no tier table for ${tierKey}`);
+            return { ...a, supplies: [...cachedLadderSupplies(suppliesLadder.skill, tierKey, tiers, suppliesLadder.margin ?? 1, suppliesLadder.toLevel ?? 99), ...(a.supplies ?? [])] };
+        });
+    }
+    return entry.expandedActivities.map(cloneActivity);
 }
 
 const QP_SPECIALIST_OMITTED_IDS = new Set([

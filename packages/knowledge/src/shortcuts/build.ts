@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { listConfigFiles, parseConfigs } from '../config';
+import { listConfigFilesByExt, parseConfigs } from '../config';
 import { buildDbTables } from '../dbtables';
 import { parseJm2, type LocSpawn } from '../jm2';
 import { parsePack } from '../pack';
@@ -17,15 +17,32 @@ import {
 
 export function movingScripts(scripts: Map<string, Script>): Set<string> {
     const moving = new Set<string>();
-    const text = new Map([...scripts].map(([k, s]) => [k, s.body.map(b => b.text).join('\n')]));
-    for (const [k, t] of text) if (MOVE_TEXT.test(t)) moving.add(k);
-    for (let changed = true; changed;) {
-        changed = false;
-        for (const [k, t] of text) {
-            if (moving.has(k)) continue;
-            const calls = [...t.matchAll(/~(\w+)/g)].map(m => `proc,${m[1]}`)
-                .concat([...t.matchAll(/@(\w+)/g)].map(m => `label,${m[1]}`), [...t.matchAll(/\b(?:weak|strong|long)?queue\((\w+)/g)].map(m => `queue,${m[1]}`));
-            if (calls.some(c => moving.has(c))) { moving.add(k); changed = true; }
+    const queue: string[] = [];
+    const callers = new Map<string, string[]>();
+    const addCaller = (callee: string, caller: string) => {
+        let list = callers.get(callee);
+        if (!list) callers.set(callee, list = []);
+        list.push(caller);
+    };
+    for (const [k, s] of scripts) {
+        const t = s.body.map(b => b.text).join('\n');
+        if (MOVE_TEXT.test(t)) {
+            moving.add(k);
+            queue.push(k);
+            continue;
+        }
+        if (t.includes('~')) for (const m of t.matchAll(/~(\w+)/g)) addCaller(`proc,${m[1]}`, k);
+        if (t.includes('@')) for (const m of t.matchAll(/@(\w+)/g)) addCaller(`label,${m[1]}`, k);
+        if (t.includes('queue(')) for (const m of t.matchAll(/\b(?:weak|strong|long)?queue\((\w+)/g)) addCaller(`queue,${m[1]}`, k);
+    }
+    for (let i = 0; i < queue.length; i++) {
+        const list = callers.get(queue[i]!);
+        if (!list) continue;
+        for (const caller of list) {
+            if (!moving.has(caller)) {
+                moving.add(caller);
+                queue.push(caller);
+            }
         }
     }
     return moving;
@@ -40,38 +57,60 @@ export function buildShortcuts(inp: BuildInput): BuildOutput {
     });
     const ctx: Ctx = { scripts, constants, locConfigs: inp.locConfigs, paramTypes: new Map(), questVarps: inp.questVarps, moving: movingScripts(scripts), ast: new Map(), db: new Map(inp.dbTables.map(t => [t.table, t.rows])) };
     const ids = new Map([...inp.locPack].map(([id, n]) => [n, id]));
-    const placements = new Map<string, Placement[]>();
-    for (const l of inp.locs) {
-        const n = inp.locPack.get(l.id);
-        if (n) { let a = placements.get(n); if (!a) placements.set(n, a = []); a.push({ locName: n, id: l.id, x: l.x, z: l.z, level: l.level, shape: l.shape, angle: l.angle, src: l.src }); }
-    }
 
     // Trigger for one loc and option: its own [oplocN,name], else its category's [oplocN,_category].
     const triggerFor = (loc: string, op: string) => scripts.get(`${op},${loc}`) ?? (() => { const c = inp.locConfigs.get(loc)?.props.category?.[0]; return c ? scripts.get(`${op},_${c}`) : undefined; })();
 
     const targets = new Map<Script, string[]>();
     const changeTargets = (t: Script) => { let v = targets.get(t); if (!v) { v = [...t.body.map(b => b.text).join('\n').matchAll(/\bloc_change\s*\(\s*(\w+)/g)].map(m => m[1]!); targets.set(t, v); } return v; };
+
+    type RelevantTrigger = { trig: Script; handler: string; option: string; optionText: string | null; moving: boolean };
+    const triggersByLoc = new Map<string, RelevantTrigger[]>();
+    const relevantTriggers = (locName: string): RelevantTrigger[] => {
+        let list = triggersByLoc.get(locName);
+        if (list) return list;
+        list = [];
+        if (!inp.excludeLocNames.has(locName)) {
+            const cfg = inp.locConfigs.get(locName);
+            for (const op of OPS) {
+                const trig = triggerFor(locName, op);
+                if (!trig || skipBuildFile(trig.file)) continue;
+                const key = `${trig.type},${trig.name}`;
+                const moving = ctx.moving.has(key);
+                const changes = changeTargets(trig).some(n => OPS.some(o => { const t = triggerFor(n, o); return !!t && !skipBuildFile(t.file) && ctx.moving.has(`${t.type},${t.name}`); }));
+                if (!moving && !changes) continue;
+                const option = op === 'oplocu' ? 'opu' : `op${op.slice(5)}`;
+                const optionText = op === 'oplocu' ? 'Use' : cfg?.props[option]?.[0] ?? null;
+                list.push({ trig, handler: `${trig.file}:${trig.line}`, option, optionText, moving });
+            }
+        }
+        triggersByLoc.set(locName, list);
+        return list;
+    };
+
+    const placements = new Map<string, Placement[]>();
+    for (const l of inp.locs) {
+        const n = inp.locPack.get(l.id);
+        if (!n || relevantTriggers(n).length === 0) continue;
+        let a = placements.get(n);
+        if (!a) placements.set(n, a = []);
+        a.push({ locName: n, id: l.id, x: l.x, z: l.z, level: l.level, shape: l.shape, angle: l.angle, src: l.src });
+    }
+
     const edges: ShortcutEdge[] = [], gaps: ShortcutGap[] = [];
     const handlers = new Set<string>();
     const capped = new Map<string, number>();
-    const queue: Placement[] = [...[...placements.values()].flat()];
+    const queue: Placement[] = [];
+    for (const group of placements.values()) for (const p of group) queue.push(p);
     const seen = new Set<string>();
     let qi = 0;
     while (qi < queue.length) {
         const p = queue[qi++]!;
         const pk = `${p.locName},${p.x},${p.z},${p.level}`;
         if (seen.has(pk)) continue; seen.add(pk);
-        if (inp.excludeLocNames.has(p.locName)) continue;
-        for (const op of OPS) {
-            const trig = triggerFor(p.locName, op);
-            if (!trig || skipBuildFile(trig.file)) continue;
-            const key = `${trig.type},${trig.name}`;
-            const handler = `${trig.file}:${trig.line}`;
-            const option = op === 'oplocu' ? 'opu' : `op${op.slice(5)}`;
-            const optionText = op === 'oplocu' ? 'Use' : inp.locConfigs.get(p.locName)?.props[option]?.[0] ?? null;
-            const moving = ctx.moving.has(key);
-            const changes = changeTargets(trig).some(n => OPS.some(o => { const t = triggerFor(n, o); return !!t && !skipBuildFile(t.file) && ctx.moving.has(`${t.type},${t.name}`); }));
-            if (!moving && !changes) continue;
+        const triggers = relevantTriggers(p.locName);
+        if (!triggers.length) continue;
+        for (const { trig, handler, option, optionText, moving } of triggers) {
             let out: ReturnType<typeof runAll>;
             const t0 = performance.now(); if (process.env.SHORTCUTS_TRACE) console.error(`run ${handler} ${pk}`);
             if ((capped.get(handler) ?? 0) >= MAX_CAPPED) { if (moving) gaps.push({ locName: p.locName, option, handler, src: p.src, gap: `not run: this handler passed ${MAX_RUNS} condition branches on ${MAX_CAPPED} other placements` }); continue; }
@@ -137,7 +176,32 @@ export function buildShortcuts(inp: BuildInput): BuildOutput {
         }
     }
     const near = (a: Coord, b: Coord) => a.level === b.level && Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z)) <= 3;
-    for (const e of edges) e.twoWay = edges.some(o => o !== e && near(o.from, e.to) && near(o.to, e.from));
+    const byFromCell = new Map<number, ShortcutEdge[]>();
+    const cellKey = (level: number, cx: number, cz: number) => (level << 24) | ((cx & 0xfff) << 12) | (cz & 0xfff);
+    for (const e of edges) {
+        const k = cellKey(e.from.level, e.from.x >> 2, e.from.z >> 2);
+        let bucket = byFromCell.get(k);
+        if (!bucket) byFromCell.set(k, bucket = []);
+        bucket.push(e);
+    }
+    for (const e of edges) {
+        let twoWay = false;
+        const minCx = (e.to.x - 3) >> 2, maxCx = (e.to.x + 3) >> 2;
+        const minCz = (e.to.z - 3) >> 2, maxCz = (e.to.z + 3) >> 2;
+        outer: for (let cx = minCx; cx <= maxCx; cx++) {
+            for (let cz = minCz; cz <= maxCz; cz++) {
+                const bucket = byFromCell.get(cellKey(e.to.level, cx, cz));
+                if (!bucket) continue;
+                for (const o of bucket) {
+                    if (o !== e && near(o.from, e.to) && near(o.to, e.from)) {
+                        twoWay = true;
+                        break outer;
+                    }
+                }
+            }
+        }
+        e.twoWay = twoWay;
+    }
     edges.sort((a, b) => a.kind.localeCompare(b.kind) || a.locName.localeCompare(b.locName) || a.from.x - b.from.x || a.from.z - b.from.z || a.from.level - b.from.level || a.to.x - b.to.x || a.to.z - b.to.z);
     return { edges, gaps, handlers: handlers.size };
 }
@@ -146,22 +210,33 @@ export function loadInput(): BuildInput {
     const root = contentRoot();
     const read = (rel: string) => readFileSync(join(root, rel), 'utf8');
     const locs: LocSpawn[] = [];
-    for (const f of readdirSync(join(root, 'maps')).filter(f => f.endsWith('.jm2'))) locs.push(...parseJm2(f, read(`maps/${f}`)).locs);
+    const emptyObjIds = new Set<number>();
+    for (const f of readdirSync(join(root, 'maps'))) {
+        if (!f.endsWith('.jm2')) continue;
+        const parsed = parseJm2(f, read(`maps/${f}`), { npcs: false, objIds: emptyObjIds });
+        for (const l of parsed.locs) locs.push(l);
+    }
     const kd = knowledgeDir();
     const json = <T>(f: string): T => JSON.parse(readFileSync(join(kd, f), 'utf8')) as T;
     const exclude = new Set<string>([
         ...json<{ locName: string }[]>('transports.json').map(t => t.locName),
         ...json<{ loc: string }[]>('doors.json').map(d => d.loc),
     ]);
+    const filesByExt = listConfigFilesByExt(['.rs2', '.constant', '.loc', '.dbtable', '.dbrow'], root);
+    const locConfigs = new Map<string, ReturnType<typeof parseConfigs>[number]>();
+    for (const f of filesByExt.get('.loc')!) for (const b of parseConfigs(read(f), f)) locConfigs.set(b.name, b);
     return {
-        scriptFiles: listConfigFiles('.rs2').map(f => ({ text: read(f), file: f })),
-        constantFiles: listConfigFiles('.constant').map(f => ({ text: read(f), file: f })),
-        locConfigs: new Map(listConfigFiles('.loc').flatMap(f => parseConfigs(read(f), f)).map(b => [b.name, b])),
+        scriptFiles: filesByExt.get('.rs2')!.map(f => ({ text: read(f), file: f })),
+        constantFiles: filesByExt.get('.constant')!.map(f => ({ text: read(f), file: f })),
+        locConfigs,
         locPack: parsePack(read('pack/loc.pack')),
         locs,
         questVarps: new Set(json<{ varp: string }[]>('quests.json').map(q => q.varp)),
         excludeLocNames: exclude,
-        dbTables: buildDbTables(listConfigFiles('.dbtable').flatMap(f => parseConfigs(read(f), f)), listConfigFiles('.dbrow').flatMap(f => parseConfigs(read(f), f))),
+        dbTables: buildDbTables(
+            filesByExt.get('.dbtable')!.flatMap(f => parseConfigs(read(f), f)),
+            filesByExt.get('.dbrow')!.flatMap(f => parseConfigs(read(f), f)),
+        ),
     };
 }
 

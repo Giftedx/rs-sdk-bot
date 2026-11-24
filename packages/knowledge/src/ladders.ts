@@ -144,12 +144,28 @@ export function buildLadders(d: Data) {
     for (const i of [...d.items].sort((a, b) => a.id - b.id)) if (!byName.has(nameKey(i.name))) byName.set(nameKey(i.name), i);
     const shopsOf = new Map<string, string[]>();
     for (const s of d.shops) for (const st of s.stock) { const l = shopsOf.get(st.item) ?? []; if (!l.includes(s.inv)) l.push(s.inv); shopsOf.set(st.item, l); }
-    const table = (name: string) => d.dbtables.find(t => t.table === name);
-    const dbRow = (t: string, r: string) => table(t)?.rows.find(x => x.name === r);
-    const questByName = (name: string) => {
-        const k = name.toLowerCase().replace(/[^a-z]/g, '');
-        return d.quests.find(q => (q.folder ?? '').replace(/^quest_/, '') === k || q.varp === k)?.varp ?? null;
-    };
+    const tableMap = new Map<string, DbTable>();
+    const dbRowMap = new Map<string, Map<string, DbRow>>();
+    for (const t of d.dbtables) {
+        if (!tableMap.has(t.table)) tableMap.set(t.table, t);
+        let rows = dbRowMap.get(t.table);
+        if (!rows) {
+            rows = new Map();
+            for (const r of t.rows) if (!rows.has(r.name)) rows.set(r.name, r);
+            dbRowMap.set(t.table, rows);
+        }
+    }
+    const table = (name: string) => tableMap.get(name);
+    const dbRow = (t: string, r: string) => dbRowMap.get(t)?.get(r);
+    const questByKey = new Map<string, string>();
+    for (const q of d.quests) {
+        const folderKey = (q.folder ?? '').replace(/^quest_/, '');
+        if (!questByKey.has(folderKey)) questByKey.set(folderKey, q.varp);
+        if (!questByKey.has(q.varp)) questByKey.set(q.varp, q.varp);
+    }
+    const questByName = (name: string) => questByKey.get(name.toLowerCase().replace(/[^a-z]/g, '')) ?? null;
+    const npcByDebug = new Map<string, Npc>();
+    for (const n of d.npcs) if (!npcByDebug.has(n.debugname)) npcByDebug.set(n.debugname, n);
     const ref = (debugname: string, count: number | null = null): ItemRef => {
         const it = byDebug.get(debugname);
         return { id: it?.id ?? null, debugname, name: it?.name ?? debugname, count, shops: shopsOf.get(debugname) ?? [] };
@@ -361,14 +377,23 @@ export function buildLadders(d: Data) {
         if (m.xpPerAction === null && !/gear$/.test(m.kind) && !f.gaps.some(g => /XP/.test(g))) m.gaps.push('XP per action unknown: no content value mapped for this rung');
         if (m.ticksPerAction === null && !f.gaps.some(g => /ticks/.test(g)) && !/gear$/.test(m.kind)) m.gaps.push('ticks per action unknown: no timing model for this rung');
         if (m.where?.npcs.length) {
-            m.where.tiles = m.where.npcs.map(n => d.npcs.find(x => x.debugname === n)).filter((n): n is Npc => !!n && n.spawns.length > 0)
-                .map(n => ({ npc: n.debugname, spawns: n.spawns.length, sample: n.spawns.slice(0, 3) }));
+            const tiles: { npc: string; spawns: number; sample: Spawn[] }[] = [];
+            for (const n of m.where.npcs) {
+                const found = npcByDebug.get(n);
+                if (found && found.spawns.length > 0) tiles.push({ npc: found.debugname, spawns: found.spawns.length, sample: found.spawns.slice(0, 3) });
+            }
+            m.where.tiles = tiles;
         }
     }
 
     // 4d. What each rung enables: rungs that consume its outputs as inputs or tools.
     const usedBy = new Map<string, string[]>();
-    for (const m of methods) for (const it of [...m.inputs, ...m.tools, ...m.requires]) if (it.debugname) usedBy.set(it.debugname, [...(usedBy.get(it.debugname) ?? []), m.id]);
+    for (const m of methods) for (const it of [...m.inputs, ...m.tools, ...m.requires]) {
+        if (!it.debugname) continue;
+        let list = usedBy.get(it.debugname);
+        if (!list) usedBy.set(it.debugname, list = []);
+        list.push(m.id);
+    }
     for (const m of methods) m.enables.feeds = [...new Set(m.outputs.flatMap(o => o.debugname ? usedBy.get(o.debugname) ?? [] : []))].filter(id => id !== m.id).sort();
 
     // 5. Rates.
@@ -381,17 +406,24 @@ export function buildLadders(d: Data) {
 
     // 6. Workers.
     const caps = new Map(d.capabilities.map(c => [c.id, c]));
+    const readCache = new Map<string, string | null>();
+    const readCached = (p: string) => {
+        if (readCache.has(p)) return readCache.get(p)!;
+        const v = d.readFile(p);
+        readCache.set(p, v);
+        return v;
+    };
     const unused: string[] = [];
     for (const rule of RULES) {
         let file: string | null, worker: string | null = rule.worker, pending: string | null = null;
         if (rule.worker.startsWith('cap:')) {
             const c = caps.get(rule.worker.slice(4));
             if (!c) { unused.push(`${rule.worker}: capability missing`); continue; }
-            const entry = d.readFile(c.entry);
-            const src = rule.source ? d.readFile(rule.source) : entry;
+            const entry = readCached(c.entry);
+            const src = rule.source ? readCached(rule.source) : entry;
             if (entry === null) { pending = c.id; worker = null; file = JSON.stringify(c); }
             else { worker = c.id; file = (src ?? entry) + '\n' + JSON.stringify(c); }
-        } else file = d.readFile(rule.source ?? rule.worker);
+        } else file = readCached(rule.source ?? rule.worker);
         if (file === null || !file.includes(rule.evidence)) { unused.push(`${rule.worker}: evidence ${JSON.stringify(rule.evidence)} not found`); continue; }
         const hits = methods.filter(m => rule.methods.test(m.id));
         if (!hits.length) unused.push(`${rule.worker}: pattern ${rule.methods} matched no method`);

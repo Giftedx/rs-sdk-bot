@@ -68,23 +68,57 @@ export function mapAssumptions(as: Assumption[]): Built {
 
 // Removes an assumption that two results with the same outcome take with opposite values; it does not decide that outcome.
 export function minimize(rs: RunResult[], outcome: (r: RunResult) => string): RunResult[] {
-    let list = rs.map(r => ({ ...r, assumptions: [...r.assumptions] }));
-    for (let changed = true; changed;) {
-        changed = false;
-        outer: for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
-            const a = list[i]!, b = list[j]!;
-            if (outcome(a) !== outcome(b)) continue;
-            const ka = new Map(a.assumptions.map(x => [x.key, x.value])), kb = new Map(b.assumptions.map(x => [x.key, x.value]));
-            const diff = [...new Set([...ka.keys(), ...kb.keys()])].filter(k => ka.get(k) !== kb.get(k));
-            const same = (x: Map<string, string>, y: Map<string, string>) => [...x].every(([k, v]) => k === diff[0] || y.get(k) === v);
-            if (diff.length === 1 && ka.has(diff[0]!) && kb.has(diff[0]!) && same(ka, kb) && same(kb, ka)) {
-                a.assumptions = a.assumptions.filter(x => x.key !== diff[0]);
-                list.splice(j, 1); changed = true; break outer;
-            }
-            if (diff.length === 0) { list.splice(j, 1); changed = true; break outer; }
-        }
+    if (rs.length <= 1) return rs.map(r => ({ ...r, assumptions: [...r.assumptions] }));
+    type Item = { idx: number; run: RunResult; map: Map<string, string> };
+    const groups = new Map<string, Item[]>();
+    for (let idx = 0; idx < rs.length; idx++) {
+        const r = rs[idx]!;
+        const key = outcome(r);
+        const map = new Map<string, string>();
+        for (const a of r.assumptions) map.set(a.key, a.value);
+        let group = groups.get(key);
+        if (!group) groups.set(key, group = []);
+        group.push({ idx, run: { ...r, assumptions: [...r.assumptions] }, map });
     }
-    return list;
+    const kept: Item[] = [];
+    for (const group of groups.values()) {
+        for (let changed = true; changed;) {
+            changed = false;
+            outer: for (let i = 0; i < group.length; i++) {
+                const a = group[i]!, ka = a.map, sizeA = ka.size;
+                for (let j = i + 1; j < group.length; j++) {
+                    const b = group[j]!, kb = b.map;
+                    if (sizeA !== kb.size) continue;
+                    let diffKey: string | undefined;
+                    let diffs = 0;
+                    let allPresent = true;
+                    for (const [k, v] of ka) {
+                        const bv = kb.get(k);
+                        if (bv === undefined) { allPresent = false; break; }
+                        if (bv !== v) {
+                            diffs++;
+                            if (diffs > 1) break;
+                            diffKey = k;
+                        }
+                    }
+                    if (!allPresent || diffs > 1) continue;
+                    if (diffs === 1) {
+                        a.run.assumptions = a.run.assumptions.filter(x => x.key !== diffKey);
+                        ka.delete(diffKey!);
+                        group.splice(j, 1);
+                        changed = true;
+                        break outer;
+                    }
+                    group.splice(j, 1);
+                    changed = true;
+                    break outer;
+                }
+            }
+        }
+        for (const item of group) kept.push(item);
+    }
+    kept.sort((a, b) => a.idx - b.idx);
+    return kept.map(item => item.run);
 }
 
 export function kindOf(file: string, requires: Requirements, randomStat?: string): ShortcutKind {

@@ -40,6 +40,7 @@ export function parseScriptSources(files: readonly { text: string; file: string 
     const npc: NpcSource[] = [], quest: QuestSource[] = [], clue: ClueSource[] = [];
     for (const { text, file } of files) {
         if (SKIP_DIRS.test(`/${file}`)) continue;
+        if (!text.includes('inv_add(')) continue;
         const lines = text.split(/\r?\n/);
         const folder = /\/(quest_\w+)\//.exec(file)?.[1];
         const trail = /\/game_trail\/scripts\/(?:(\w+)\/)?/.exec(file);

@@ -145,10 +145,17 @@ const LOG_MAP: [RegExp, string][] = [
     [/^waterfall/, 'waterfall'], [/^(proven|gather)/, 'gather'], [/^(floors|fl-)/, 'floors'], [/^(mi-|mj-)/, 'mining'],
     [/^cake/, 'cakestall'], [/^boat/, 'boat'], [/^travel/, 'travel'], [/^(force-|live-(wc|fish|mine))/, 'revents'],
 ];
+const archiveByName = new Map<string, any[]>();
+for (const a of Object.values(archive) as any[]) {
+    if (typeof a?.name !== 'string') continue;
+    let list = archiveByName.get(a.name);
+    if (!list) archiveByName.set(a.name, list = []);
+    list.push(a);
+}
 function logScript(base: string, text: string, name: string) {
     const hit = LOG_MAP.find(([re]) => re.test(base));
     if (hit) return hit[1];
-    const g = (statusByName.get(name) ?? (Object.values(archive) as any[]).find(a => a.name === name))?.goal;
+    const g = (statusByName.get(name) ?? archiveByName.get(name)?.[0])?.goal;
     const k = scriptKey(text, g ?? '', name);
     return k === 'unknown' ? base.replace(/[-_]?[a-z]?\d*$/, '') : k;
 }
@@ -212,16 +219,18 @@ for (const f of logFiles) {
 }
 
 // 2. results.jsonl (deduplicated), joined with the status file of the same run for its ledger and inputs.
+const logRunKeys = new Set<string>();
+for (const x of runs) if (x.src.startsWith('log:')) logRunKeys.add(`${x.name}|${x.ticks}|${x.ok}`);
 const seenRes = new Set<string>();
 for (const r of results) {
     const k = `${r.name}|${r.text}`;
     if (seenRes.has(k)) continue;
     seenRes.add(k);
     const p = parseResult(r.text ?? '');
-    const s = statusByName.get(r.name) ?? Object.values(archive).find((a: any) => a.name === r.name && a.result && r.text.startsWith(a.result.slice(0, 40)));
+    const s = statusByName.get(r.name) ?? archiveByName.get(r.name)?.find((a: any) => a.result && r.text.startsWith(a.result.slice(0, 40)));
     const joined = s && s.result && (s.result.slice(0, 60) === r.text.slice(0, 60));
     // Skip a results.jsonl row that a log already gave (same bot, same ticks, same verdict).
-    if (runs.some(x => x.name === r.name && x.ticks === p.ticks && x.ok === p.ok && x.src.startsWith('log:'))) continue;
+    if (logRunKeys.has(`${r.name}|${p.ticks}|${p.ok}`)) continue;
     runs.push({
         src: 'results', name: r.name, script: scriptKey(r.text, r.goal, r.name), env: liveNames.has(r.name) ? 'live' : 'practice', ok: p.ok, at: r.at, ticks: p.ticks, xp: p.xp,
         text: r.text, reason: p.reason, milestones: p.ms, idle: [], ledger: joined ? s.ledger : undefined, combos: joined ? s.inputs?.combos : undefined, strip: joined ? s.inputs?.strip : undefined,
@@ -248,6 +257,12 @@ for (const s of statuses) {
 const keys = Object.keys(archive).sort((a, b) => (archive[b].at ?? 0) - (archive[a].at ?? 0));
 for (const k of keys.slice(600)) { delete archive[k]; delete snapshots[k]; }
 const archived = Object.values(archive) as any[];
+const runsByName = new Map<string, Run[]>();
+for (const r of runs) {
+    let list = runsByName.get(r.name);
+    if (!list) runsByName.set(r.name, list = []);
+    list.push(r);
+}
 const timelineIdle: { name: string; script: string; env: Env; len: number; x: number; z: number; phase: string }[] = [];
 for (const a of archived) {
     if (!a.ledger) continue;
@@ -256,14 +271,18 @@ for (const a of archived) {
     const trail = (a.timeline ?? '').match(/i+$/)?.[0].length ?? 0;
     if (trail >= 3 && a.pos) timelineIdle.push({ name: a.name, script, env, len: trail, x: a.pos.x, z: a.pos.z, phase: phaseKey(a.phase) });
     // A run already counted from a log or results.jsonl keeps that record; attach the inputs data to it.
-    const dup = runs.find(r => r.name === a.name && (Math.abs(r.ticks - a.tick) <= 20 || (!!a.result && r.text.slice(0, 50) === a.result.slice(0, 50))));
+    const dup = runsByName.get(a.name)?.find(r => Math.abs(r.ticks - a.tick) <= 20 || (!!a.result && r.text.slice(0, 50) === a.result.slice(0, 50)));
     if (dup) { dup.ledger ??= a.ledger; dup.combos ??= a.combos; dup.strip ??= a.strip; continue; }
     const res = a.result ? parseResult(a.result) : undefined;
-    runs.push({
+    const added: Run = {
         src: a.result ? 'status' : 'status:running', name: a.name, script, env, ok: res ? res.ok : null, at: a.at, ticks: a.tick,
         xp: res?.xp ?? (a.combos ? a.combos.reduce((n: number, c: any) => n + (c.xp ?? 0), 0) : undefined),
         text: a.result ?? '', reason: res?.reason, ledger: a.ledger, milestones: [], idle: [], combos: a.combos, strip: a.strip, role: a.role,
-    });
+    };
+    runs.push(added);
+    let list = runsByName.get(added.name);
+    if (!list) runsByName.set(added.name, list = []);
+    list.push(added);
 }
 for (const r of runs) r.role ??= jobByAccount.get(r.name)?.role ?? statusByName.get(r.name)?.role;
 // Alerts with an idle streak: live, located, with the phase in brackets.
@@ -301,7 +320,7 @@ for (const [script, rs] of byScript) for (const env of ['live', 'practice'] as E
     // Compare like with like: same variant (mode, bench route, target level), passed runs only.
     const variant = (r: Run) => { const o = kv(r.text); return o.mode ?? (r.script === 'bench' ? r.text.split(/\s+/).slice(1, 3).join(' ') : `${o.target ?? ''}`); };
     const groups = new Map<string, typeof vals>();
-    for (const x of vals) if (x.r.ok) { const k = variant(x.r); groups.set(k, [...(groups.get(k) ?? []), x]); }
+    for (const x of vals) if (x.r.ok) { const k = variant(x.r); let g = groups.get(k); if (!g) groups.set(k, g = []); g.push(x); }
     for (const [k, g] of groups) for (let i = 3; i < g.length; i++) {
         const ref = median(g.slice(i - 3, i).map(x => x.u!.value));
         if (worse(g[i]!.u!.value, ref)) regressions.push(`${g[i]!.r.name} ${iso(g[i]!.r.at)}${k ? ` [${k}]` : ''}: ${f1(g[i]!.u!.value)} vs ${f1(ref)} (median of the 3 before)`);

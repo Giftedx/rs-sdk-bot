@@ -1,9 +1,16 @@
 import { expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { listConfigFiles, listConfigFilesByExt } from '../src/config';
+import { parseDropProcs, parseDrops } from '../src/drops';
+import { parseStaffItems } from '../src/gear';
 import { buildItemSources } from '../src/item-sources';
 import { parseJm2 } from '../src/jm2';
+import { block, loadContent, struct } from '../src/method-model/content';
 import { contentRoot } from '../src/paths';
+import { minimize } from '../src/shortcuts/assumptions';
+import { stripComments } from '../src/shortcuts/parser';
+import type { RunResult } from '../src/shortcuts/types';
 import { cachedValue } from '../src/table-cache';
 
 test('parseJm2 skips MAP sections, preserves comment line numbers, and filters LOC/OBJ spawns cleanly', () => {
@@ -105,3 +112,78 @@ test('buildItemSources cached output matches KNOWLEDGE_CACHE=0 uncached output i
     }
     expect(cached).toEqual(uncached);
 }, 20000);
+
+test('listConfigFilesByExt matches listConfigFiles identically for multiple extensions', () => {
+    const exts = ['.obj', '.param', '.dbtable', '.loc'] as const;
+    const grouped = listConfigFilesByExt(exts);
+    for (const ext of exts) {
+        expect(grouped.get(ext)).toEqual(listConfigFiles(ext));
+    }
+});
+
+test('stripComments preserves line counts, string literals, and CRLF across fast and comment paths', () => {
+    const noComments = '  [oploc1,foo]  \r\n  p_teleport(0_50_50_1_1);  \n';
+    expect(stripComments(noComments)).toEqual(['[oploc1,foo]', 'p_teleport(0_50_50_1_1);', '']);
+
+    const withComments = [
+        'mes("keep // and /* inside \\"quotes\\""); // trailing',
+        '/* block start',
+        '   ignored middle */ code_after();',
+        'plain_line();',
+    ].join('\r\n');
+    expect(stripComments(withComments)).toEqual([
+        'mes("keep // and /* inside \\"quotes\\"");',
+        '',
+        'code_after();',
+        'plain_line();',
+    ]);
+});
+
+test('shortcuts minimize merges complementary assumptions, deduplicates, and preserves group order', () => {
+    const makeRun = (destX: number, pairs: [string, string][]): RunResult => ({
+        assumptions: pairs.map(([key, value]) => ({
+            key,
+            value,
+            sym: { t: 'sym', cls: 'dynamic', text: key, line: 1 },
+            detail: `${key}=${value}`,
+            line: 1,
+            file: 'test.rs2',
+        })),
+        st: {
+            pos: { c: { x: destX, z: 3200, level: 0 }, exact: true },
+            moved: true,
+            fee: 0,
+            consumes: [],
+            damage: [],
+            changes: [],
+            queued: [],
+            steps: 1,
+        },
+    });
+    const input = [
+        makeRun(3201, [['a', 'T'], ['b', 'T']]),
+        makeRun(3202, [['c', 'T']]),
+        makeRun(3201, [['a', 'T'], ['b', 'F']]),
+        makeRun(3202, [['c', 'T']]),
+    ];
+    const out = minimize(input, r => JSON.stringify(r.st.pos));
+    expect(out.map(r => [r.st.pos?.c.x, r.assumptions.map(a => `${a.key}:${a.value}`)])).toEqual([
+        [3201, ['a:T']],
+        [3202, ['c:T']],
+    ]);
+    // Input assumptions arrays remain unmutated.
+    expect(input[0]!.assumptions).toHaveLength(2);
+});
+
+test('knowledge prefilters and method-model indexes preserve exact results', () => {
+    expect(parseDrops('[proc,noop]\nreturn;', 'noop.rs2')).toEqual([]);
+    expect(parseDropProcs('[oploc1,foo]\nmes("hi");', 'foo.rs2').size).toBe(0);
+    expect(parseStaffItems([{ text: '[oploc1,foo]\nmes("no staff check");' }]).size).toBe(0);
+
+    const c = loadContent();
+    const smithBlock = block(c, 'scripts/skill_smithing/scripts/smithing/smithing.rs2', 'smithing_anvil');
+    expect(smithBlock).not.toBeNull();
+    expect(smithBlock!.to).toBeGreaterThan(smithBlock!.from);
+    const barStruct = struct(c, 'namedobj', 'bronze_bar');
+    expect(barStruct?.name).toBeDefined();
+});

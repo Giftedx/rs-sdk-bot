@@ -9,9 +9,17 @@ function randomPassword(length = 12): string {
     return Array.from(bytes, b => ALNUM[b % ALNUM.length]!).join('');
 }
 
+const ENFORCE_RE = new Map<string, RegExp>();
 function enforce(env: string, key: string, value: string): string {
-    const re = new RegExp(`^${key}=.*$`, 'm');
-    return re.test(env) ? env.replace(new RegExp(`^${key}=.*$`, 'gm'), `${key}=${value}`) : `${env.trimEnd()}\n${key}=${value}\n`;
+    let re = ENFORCE_RE.get(key);
+    if (!re) {
+        re = new RegExp(`^${key}=.*$`, 'gm');
+        ENFORCE_RE.set(key, re);
+    }
+    re.lastIndex = 0;
+    let matched = false;
+    const replaced = env.replace(re, () => { matched = true; return `${key}=${value}`; });
+    return matched ? replaced : `${env.trimEnd()}\n${key}=${value}\n`;
 }
 
 export async function createBot(

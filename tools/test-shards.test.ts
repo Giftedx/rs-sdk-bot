@@ -118,5 +118,8 @@ test('a change selects the tests that reach it by import, by a quoted path, or b
         expect(affectedTests(tests, ['packages/dashboard/index.html'], base)).toEqual(['scripts/scans.test.ts', 'packages/dashboard/panel.test.ts']);
         expect(affectedTests(tests, ['package.json'], base)).toBeNull();
         expect(affectedTests(tests, ['patches/rs-sdk-working.patch'], base)).toBeNull();
+        // Per-call caches do not leak across calls when a file's imports change on disk.
+        write('scripts/apart.test.ts', "import { worker } from './worker';");
+        expect(affectedTests(tests, ['scripts/worker.ts'], base)).toEqual(['scripts/imports.test.ts', 'scripts/spawns.test.ts', 'scripts/scans.test.ts', 'scripts/apart.test.ts']);
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
