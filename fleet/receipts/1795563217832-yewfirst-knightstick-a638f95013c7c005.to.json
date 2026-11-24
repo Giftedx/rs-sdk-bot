@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795563217832-yewfirst-knightstick-a638f95013c7c005",
+ "account": "Knightstick",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Headless arrow",
+ "requested": 600,
+ "claim": "59ba7b7b-8185-4a61-9da3-f6c7a0d3f628",
+ "count": 0,
+ "ok": false,
+ "at": 1795564620183,
+ "detail": "trade claimed"
+}

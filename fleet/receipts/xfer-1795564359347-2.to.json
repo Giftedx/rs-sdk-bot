@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795564359347-2",
  "account": "Shaftsinker",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Dragonhide chaps",
  "requested": 1,
  "claim": "3fc67e51-39b7-4bf1-90a0-cb94f78620f8",
- "count": 0,
- "ok": false,
- "at": 1795564551318,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795564623748,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795564623090
+ },
+ "logout": {
+  "attemptId": "1795564551328-0000021744-0000000001",
+  "at": 1795564623738,
+  "sha256": "8448658fca549608414731183e011ecec1081423a711c55a1977f875a5326ed9"
+ },
+ "screen": true
 }

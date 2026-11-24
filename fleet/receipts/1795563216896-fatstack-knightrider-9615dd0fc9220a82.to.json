@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795563216896-fatstack-knightrider-9615dd0fc9220a82",
  "account": "KnightRider",
  "partner": "Fatstack",
@@ -10,15 +10,37 @@
  "item": "Rune arrowtips",
  "requested": 500,
  "claim": "100aaad0-9ad6-4d91-a59c-1732ff2f9f8f",
- "count": 0,
- "ok": false,
- "at": 1795564596866,
- "detail": "trade claimed",
+ "count": 500,
+ "ok": true,
+ "at": 1795564620538,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Adamant arrowtips",
    "requested": 495,
-   "count": 0
+   "count": 495,
+   "inventory": {
+    "before": 0,
+    "after": 495
+   },
+   "bank": {
+    "count": 495,
+    "at": 1795564619801
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 500
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795564619406
+ },
+ "logout": {
+  "attemptId": "1795564596877-0000027468-0000000001",
+  "at": 1795564620526,
+  "sha256": "24ba8b3be4fa7be99fc5c6c0239266350ede79c3fc79411b8bd3b0873b9f7d11"
+ },
+ "screen": true
 }
