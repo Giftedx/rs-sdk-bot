@@ -126,6 +126,10 @@
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-30b2bb88-95a5-42f0-8eb2-4d5c8e0ef7ea"
   },
+  "GrindMyHerb": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
   "Heavyload": {
    "side": "cloud",
    "server": "rs-sdk-demo.fly.dev",
