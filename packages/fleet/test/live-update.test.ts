@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
     DAEMONS,
+    LIVE_UPDATE_GIT_TIMEOUT_MS,
     SDK,
     SDK_PATCH,
     addedPreloads,
+    gitIn,
     patchChangedFiles,
     patchCollisions,
     patchSections,
@@ -15,6 +17,7 @@ import {
     reloadsFor,
     type UpdateInput,
 } from '../src/live-update';
+import { AGENT_SUBPROCESS_TIMEOUT_MS } from '../src/fleet-agent';
 
 const dirs: string[] = [];
 const scratch = () => {
@@ -100,5 +103,28 @@ describe('fleet live-update facade', () => {
             liveRuns: [{ name: 'tradebot', files: ['scripts/aio-logistics.ts'] }],
         });
         expect(liveTradeWait.action).toBe('wait');
+    });
+
+    test('bounds synchronous git and fleet-agent subprocess calls with timeouts and non-interactive git env', () => {
+        expect(LIVE_UPDATE_GIT_TIMEOUT_MS).toBeGreaterThanOrEqual(5_000);
+        expect(AGENT_SUBPROCESS_TIMEOUT_MS).toBeGreaterThanOrEqual(30_000);
+
+        const dir = scratch();
+        const git = gitIn(dir, 5_000);
+        // Verify GIT_TERMINAL_PROMPT=0 is propagated to git child processes.
+        const probe = git('--version');
+        expect(probe.ok).toBe(true);
+
+        const inspectSrc = readFileSync(join(import.meta.dir, '..', 'src', 'live-update', 'inspect.ts'), 'utf8');
+        expect(inspectSrc).toContain('spawnSyncTimed');
+        expect(inspectSrc).toContain("GIT_TERMINAL_PROMPT: '0'");
+
+        const reloadSrc = readFileSync(join(import.meta.dir, '..', 'src', 'live-update', 'reload.ts'), 'utf8');
+        expect(reloadSrc).toContain('spawnSyncTimed');
+        expect(reloadSrc).toContain('timeout: LIVE_UPDATE_GIT_TIMEOUT_MS');
+
+        const agentSrc = readFileSync(join(import.meta.dir, '..', 'src', 'fleet-agent.ts'), 'utf8');
+        expect(agentSrc).toContain('spawnSyncTimed');
+        expect(agentSrc).toContain('timeout: AGENT_SUBPROCESS_TIMEOUT_MS');
     });
 });

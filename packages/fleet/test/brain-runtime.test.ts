@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { validateFleetState, type TransferOrder, type WorldSnapshot } from '../../brain/src/contracts';
-import { createActivityCatalog } from '../../brain/src/catalog';
+import { HUB_BANKER_LOCATIONS, validateFleetState, type TransferOrder, type WorldSnapshot } from '../../brain/src/contracts';
+import { createActivityCatalog, defaultActivityCatalog, type ActivityCatalog } from '../../brain/src/catalog';
 import { createRateStore } from '../../brain/src/rate-store';
 import { OutcomeClassifier } from '../../brain/src/outcome-classifier';
 import { validOrder } from '../../core/src/fleet-trade-settlement';
@@ -11,11 +11,14 @@ import { fleetStateFile, liveRoot, liveStatusDir, operatorCommandsDir, practiceR
 import {
     captureRunBaseline,
     extractWorkerOutcomeInput,
+    isSafeOperatorCommandId,
     materializeBrainTransferOrders,
     readAccountOverrides,
     recordWorkerOutcome,
     runBrainCycle,
+    writeAccountOverrides,
 } from '../src/brain-runtime';
+import { InfraCircuitBreaker } from '../src/infra-circuit-breaker';
 
 const tempRoots: string[] = [];
 
@@ -332,6 +335,11 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(parsed.takerWaits).toBe(true);
         expect(parsed.itemId).toBe(385);
         expect(parsed.count).toBe(50);
+        expect(parsed.meet).toEqual([
+            HUB_BANKER_LOCATIONS.varrock_west.meetTiles[0],
+            HUB_BANKER_LOCATIONS.varrock_west.meetTiles[1],
+        ]);
+        expect(parsed.meet[0]).not.toEqual(parsed.meet[1]);
 
         const second = materializeBrainTransferOrders([{ ...order1, id: 'xfer-brain-3' }], {
             fleetDir,
@@ -357,5 +365,197 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(mixedRes.written).toEqual(['xfer-brain-mixed']);
         const mixedParsed = JSON.parse(readFileSync(join(fleetDir, 'orders', 'xfer-brain-mixed.json'), 'utf8'));
         expect(mixedParsed.takerWaits).toBe(true);
+    });
+
+    test('applyActivityOverridesToPlan enforces protectedClock, stop-swarm, open circuit breaker, quarantine, and maxBots', () => {
+        const root = makeTempRoot();
+        writeFileSync(
+            join(root, 'fleet', 'owners.json'),
+            JSON.stringify({
+                accounts: {
+                    haggis: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
+                    AlphaBot: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
+                    BetaBot: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
+                },
+            }, null, 2),
+        );
+        const now = 1_700_000_700_000;
+        writeAccountOverrides(root, {
+            haggis: {
+                account: 'haggis',
+                activityId: 'gather:woodcutting-loop',
+                issuedAt: now - 1000,
+                expiresAt: now + 3_600_000,
+            },
+            alphabot: {
+                account: 'AlphaBot',
+                activityId: 'gather:woodcutting-loop',
+                issuedAt: now - 1000,
+                expiresAt: now + 3_600_000,
+            },
+            betabot: {
+                account: 'BetaBot',
+                activityId: 'gather:mining-ore',
+                issuedAt: now - 1000,
+                expiresAt: now + 3_600_000,
+            },
+        });
+
+        // 1. Protected account (haggis) stays blocked even with override_account; maxBots bounds selected slots.
+        const zeroSlots = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now,
+            side: 'local',
+            maxBots: 0,
+            marketQuotes: {},
+        });
+        expect(zeroSlots.fleetPlan.accountPlans.haggis?.steps ?? []).toEqual([]);
+        expect(zeroSlots.fleetPlan.accountPlans.AlphaBot?.steps ?? []).toEqual([]);
+        expect(zeroSlots.fleetPlan.accountPlans.BetaBot?.steps ?? []).toEqual([]);
+
+        const oneSlot = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 50,
+            side: 'local',
+            maxBots: 1,
+            marketQuotes: {},
+        });
+        expect(oneSlot.fleetPlan.accountPlans.haggis?.steps ?? []).toEqual([]);
+        const oneSlotActive = Object.values(oneSlot.fleetPlan.accountPlans).filter(p => p.steps.length > 0).length;
+        expect(oneSlotActive).toBeLessThanOrEqual(1);
+
+        const normal = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 100,
+            side: 'local',
+            maxBots: 4,
+            marketQuotes: {},
+        });
+        expect(normal.fleetPlan.accountPlans.haggis?.steps ?? []).toEqual([]);
+        const normalSteps = normal.fleetPlan.accountPlans.AlphaBot?.steps ?? [];
+        expect(normalSteps.some(s => 'activityId' in s && s.activityId === 'gather:woodcutting-loop')).toBe(true);
+
+        // 2. Quarantined activity is never synthesized via override_account.
+        recordWorkerOutcome({
+            root,
+            now: now + 200,
+            raw: {
+                activityId: 'gather:woodcutting-loop',
+                account: 'AlphaBot',
+                status: 'fail',
+                error: 'boom',
+            },
+        });
+        const quarantinedRun = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 300,
+            side: 'local',
+            maxBots: 4,
+            marketQuotes: {},
+        });
+        const quarantinedSteps = quarantinedRun.fleetPlan.accountPlans.AlphaBot?.steps ?? [];
+        expect(quarantinedSteps.some(s => 'activityId' in s && s.activityId === 'gather:woodcutting-loop')).toBe(false);
+
+        const wcActivity = defaultActivityCatalog().get('gather:woodcutting-loop')!;
+        expect(wcActivity).toBeDefined();
+        const singleCatalog: ActivityCatalog = {
+            get: id => (id === wcActivity.id ? wcActivity : undefined),
+            require: id => {
+                if (id === wcActivity.id) return wcActivity;
+                throw new Error(`Missing ${id}`);
+            },
+            has: id => id === wcActivity.id,
+            list: () => [wcActivity],
+            byFamily: f => (wcActivity.family === f ? [wcActivity] : []),
+            byWorkerKind: k => (wcActivity.kind === k ? [wcActivity] : []),
+            findByOutputItem: () => [],
+            findBySkill: s => (wcActivity.skill?.toLowerCase() === s.toLowerCase() ? [wcActivity] : []),
+            findByQuest: () => [],
+            size: () => 1,
+        };
+        const quarantinedOnlyRun = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 350,
+            side: 'local',
+            maxBots: 4,
+            catalog: singleCatalog,
+            marketQuotes: {},
+        });
+        expect(quarantinedOnlyRun.fleetPlan.accountPlans.AlphaBot?.steps ?? []).toEqual([]);
+
+        // 3. stop-swarm and open InfraCircuitBreaker both block overrides.
+        writeAccountOverrides(root, {
+            alphabot: {
+                account: 'AlphaBot',
+                activityId: 'gather:mining-ore',
+                issuedAt: now,
+                expiresAt: now + 3_600_000,
+            },
+        });
+        const breaker = new InfraCircuitBreaker({ baseMs: 60_000, jitterRatio: 0, now: () => now + 400 });
+        breaker.recordFailure('ERR_PROXY_CONNECTION_FAILED', 'proxy');
+        const breakerOpenRun = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 400,
+            side: 'local',
+            maxBots: 4,
+            infraBreaker: breaker,
+            marketQuotes: {},
+        });
+        expect(breakerOpenRun.fleetPlan.accountPlans.AlphaBot?.steps ?? []).toEqual([]);
+
+        writeFileSync(join(practiceRoot(root), 'stop-swarm'), 'owner pause');
+        const stoppedRun = runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 500,
+            side: 'local',
+            maxBots: 4,
+            marketQuotes: {},
+        });
+        expect(stoppedRun.fleetPlan.accountPlans.AlphaBot?.steps ?? []).toEqual([]);
+    });
+
+    test('drainOperatorCommands rejects path-traversal OperatorCommand ids without escaping applied/', () => {
+        const root = makeTempRoot();
+        const now = 1_700_000_800_000;
+        const cmdDir = operatorCommandsDir(root);
+        mkdirSync(cmdDir, { recursive: true });
+
+        expect(isSafeOperatorCommandId('cmd-valid_1.2')).toBe(true);
+        expect(isSafeOperatorCommandId('../escape')).toBe(false);
+        expect(isSafeOperatorCommandId('a/b')).toBe(false);
+        expect(isSafeOperatorCommandId('a\\b')).toBe(false);
+        expect(isSafeOperatorCommandId('..')).toBe(false);
+
+        writeFileSync(
+            join(cmdDir, '001-traversal.json'),
+            JSON.stringify({
+                schemaVersion: 1,
+                id: '../escaped-receipt',
+                issuedAt: now,
+                issuedBy: 'operator',
+                kind: 'pause_account',
+                account: 'AlphaBot',
+            }),
+        );
+
+        runBrainCycle({
+            root,
+            fleetDir: join(root, 'fleet'),
+            now: now + 10,
+            side: 'local',
+            marketQuotes: {},
+        });
+
+        expect(existsSync(join(cmdDir, 'escaped-receipt.json'))).toBe(false);
+        expect(existsSync(join(cmdDir, 'rejected', '001-traversal.json'))).toBe(true);
+        expect(existsSync(join(practiceRoot(root), 'stop-AlphaBot'))).toBe(false);
     });
 });

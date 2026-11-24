@@ -5,6 +5,7 @@ import { runLiveUpdateCli } from './live-update/reload';
 
 export type { Dirty, LiveRun, RebasedFiles, UpdateInput } from './live-update/inspect';
 export {
+    LIVE_UPDATE_GIT_TIMEOUT_MS,
     REBASED_FILE,
     addedPreloads,
     gitIn,

@@ -10,6 +10,7 @@ import { validOrder, type Order, type Receipt } from '../../core/src/fleet-trade
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from '../../core/src/market-cache';
 import { findStopFile, liveRoot, repoRoot, statusReadDirs } from '../../core/src/practice-paths';
+import { spawnSyncTimed } from '../../core/src/proc';
 import { lastResult } from '../../core/src/run-child';
 import { capabilityRevision } from '../../core/src/worker-release';
 import { brainPlannedJobs } from './fleet-sync';
@@ -18,6 +19,7 @@ import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { pickOrder, readAgentJobs, swarmBusy } from './trade-plan';
 
 const root = repoRoot;
+export const AGENT_SUBPROCESS_TIMEOUT_MS = 180_000;
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
 const readJson = (dir: string) => existsSync(dir)
     ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } })
@@ -125,7 +127,14 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     if (!once) saveLaunch(join(base, controllerNamed('fleet-agent').launch), []);
     const infraBreaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(base), 'infra-circuit-breaker.json') });
     const sync = () => {
-        const p = Bun.spawnSync(['bun', 'scripts/fleet-sync.ts'], { cwd: base, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
+        const p = spawnSyncTimed(['bun', 'scripts/fleet-sync.ts'], {
+            cwd: base,
+            windowsHide: true,
+            env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+            stdout: 'pipe',
+            stderr: 'pipe',
+            timeout: AGENT_SUBPROCESS_TIMEOUT_MS,
+        });
         const combined = `${p.stdout.toString()}${p.stderr.toString()}`;
         recordAgentInfraResult(infraBreaker, combined, p.exitCode);
         console.log(`FLEET_AGENT sync ${syncResult(combined, p.exitCode)} at ${new Date().toISOString()}`);
@@ -146,7 +155,14 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             await Bun.sleep(Math.min(CYCLE, Math.max(5_000, infraGate.waitMs)));
             continue;
         }
-        const update = Bun.spawnSync(['bun', 'packages/fleet/src/live-update.ts'], { cwd: base, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
+        const update = spawnSyncTimed(['bun', 'packages/fleet/src/live-update.ts'], {
+            cwd: base,
+            windowsHide: true,
+            env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+            stdout: 'pipe',
+            stderr: 'pipe',
+            timeout: AGENT_SUBPROCESS_TIMEOUT_MS,
+        });
         const updateOut = `${update.stdout.toString()}${update.stderr.toString()}`;
         const updateLine = lastResult(updateOut);
         if (update.exitCode !== 0) recordAgentInfraResult(infraBreaker, updateOut, update.exitCode);

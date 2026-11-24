@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { InfraCircuitBreaker, classifyInfraFault } from '../src/infra-circuit-breaker';
@@ -167,5 +167,50 @@ describe('InfraCircuitBreaker', () => {
         now += 2_000;
         expect(recordAgentInfraResult(breaker, 'RESULT ok fleet-sync clean', 0)).toBe(false);
         expect(breaker.canProceed('remote_git_claim').allowed).toBe(true);
+    });
+
+    test('persist retries transient Windows EPERM renames and cleans up .tmp on permanent failure', () => {
+        const dir = scratch();
+        const stateFile = join(dir, 'live', 'infra-circuit-breaker.json');
+        let calls = 0;
+        const flakyRename = (from: string, to: string) => {
+            calls++;
+            if (calls <= 2) {
+                const err = new Error('EPERM') as NodeJS.ErrnoException;
+                err.code = 'EPERM';
+                throw err;
+            }
+            renameSync(from, to);
+        };
+        const breaker = new InfraCircuitBreaker({
+            baseMs: 1_000,
+            jitterRatio: 0,
+            stateFile,
+            now: () => 50_000,
+            random: () => 0.5,
+            rename: flakyRename,
+        });
+        breaker.recordFailure('ERR_PROXY_CONNECTION_FAILED', 'proxy');
+        expect(calls).toBe(3);
+        expect(existsSync(stateFile)).toBe(true);
+        expect(readdirSync(join(dir, 'live')).filter(f => f.endsWith('.tmp'))).toEqual([]);
+
+        const failDir = scratch();
+        const failState = join(failDir, 'live', 'infra-circuit-breaker.json');
+        const alwaysFail = () => {
+            const err = new Error('ENOENT') as NodeJS.ErrnoException;
+            err.code = 'ENOENT';
+            throw err;
+        };
+        const failBreaker = new InfraCircuitBreaker({
+            baseMs: 1_000,
+            jitterRatio: 0,
+            stateFile: failState,
+            now: () => 50_000,
+            random: () => 0.5,
+            rename: alwaysFail,
+        });
+        failBreaker.recordFailure('ERR_PROXY_CONNECTION_FAILED', 'proxy');
+        expect(readdirSync(join(failDir, 'live')).filter(f => f.endsWith('.tmp'))).toEqual([]);
     });
 });

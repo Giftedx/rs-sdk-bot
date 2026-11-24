@@ -1,7 +1,8 @@
 // Global controller-level exponential backoff circuit breaker for remote Git claim authority, proxy, and server-drain faults.
 // Never records per-account deaths, holds, stop files, or retirements.
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { renameRetry } from '../../core/src/status';
 
 export type InfraFaultKind = 'remote_git_claim' | 'proxy' | 'server_drain';
 
@@ -28,6 +29,7 @@ export interface InfraCircuitBreakerOptions {
     stateFile?: string;
     now?: () => number;
     random?: () => number;
+    rename?: (from: string, to: string) => void;
 }
 
 export interface InfraProceedCheck {
@@ -115,6 +117,7 @@ export class InfraCircuitBreaker {
     private readonly stateFile?: string;
     private readonly now: () => number;
     private readonly random: () => number;
+    private readonly rename?: (from: string, to: string) => void;
     private state: InfraCircuitSnapshot;
 
     constructor(opts: InfraCircuitBreakerOptions = {}) {
@@ -126,6 +129,7 @@ export class InfraCircuitBreaker {
         this.stateFile = opts.stateFile;
         this.now = opts.now ?? Date.now;
         this.random = opts.random ?? Math.random;
+        this.rename = opts.rename;
         this.state = this.load();
     }
 
@@ -166,12 +170,13 @@ export class InfraCircuitBreaker {
 
     private persist(): void {
         if (!this.stateFile) return;
+        const tmp = `${this.stateFile}.${process.pid}.tmp`;
         try {
             mkdirSync(dirname(this.stateFile), { recursive: true });
-            const tmp = `${this.stateFile}.${process.pid}.tmp`;
             writeFileSync(tmp, JSON.stringify(this.state, null, 2));
-            renameSync(tmp, this.stateFile);
+            renameRetry(tmp, this.stateFile, this.rename);
         } catch {
+            try { rmSync(tmp, { force: true }); } catch { /* ignore cleanup error */ }
             // Persistence must not break controller execution.
         }
     }

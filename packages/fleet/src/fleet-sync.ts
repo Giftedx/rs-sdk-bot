@@ -14,7 +14,7 @@ import { canonicalRows, readSnapshotFiles, type SnapshotFile } from '../../core/
 import { readAllFleetAccountClaims, readHeldFleetTradeClaims, releaseFleetTradeClaim, releaseFleetTradeClaims, type FleetTradeClaim } from '../../core/src/fleet-trade-claim';
 import { terminalTradeReceipt, validOrder, type TradeReceipt } from '../../core/src/fleet-trade-settlement';
 import { hasCredential } from '../../core/src/fleet-vault';
-import { fleetStateFile, repoRoot } from '../../core/src/practice-paths';
+import { fleetStateFile, lifecycleReadRoots, lifecycleRootForRead, readStopFile, repoRoot, statusReadDirs, stopFilePaths } from '../../core/src/practice-paths';
 import { listAttempts, readLogoutProof } from '../../core/src/session-lifecycle';
 import { savedProcessAlive } from '../../core/src/session-takeover';
 import { loadEnded, selectBrainDispatchStep, swarmWroteStop } from './swarm';
@@ -220,6 +220,33 @@ export function reattach(dir: string, branch = BRANCH): boolean {
     return true;
 }
 
+export function readSyncStatuses(base: string): any[] {
+    const out: any[] = [];
+    for (const dir of statusReadDirs(base)) {
+        if (!existsSync(dir)) continue;
+        let files: string[] = [];
+        try { files = readdirSync(dir); } catch { continue; }
+        for (const file of files) {
+            if (!file.endsWith('.json')) continue;
+            try { out.push(JSON.parse(readFileSync(join(dir, file), 'utf8'))); } catch { /* incomplete record */ }
+        }
+    }
+    return out;
+}
+
+export function readSyncStopText(base: string, name: string): string | undefined {
+    let fallback: string | undefined;
+    for (const candidate of stopFilePaths(name, base)) {
+        if (!existsSync(candidate)) continue;
+        try {
+            const text = readFileSync(candidate, 'utf8');
+            if (!swarmWroteStop(text)) return text;
+            if (fallback === undefined) fallback = text;
+        } catch { /* unreadable stop file */ }
+    }
+    return fallback ?? readStopFile(name, base);
+}
+
 export function confirmedTradeLogout(
     base: string,
     claim: FleetTradeClaim,
@@ -229,7 +256,14 @@ export function confirmedTradeLogout(
     try {
         const pid = claim.pid;
         if (typeof pid !== 'number' || !Number.isSafeInteger(pid) || pid <= 0 || !receipt.logout) return false;
-        const options = { root: join(base, '.practice/session-lifecycle') }, proof = readLogoutProof(claim.account, claim.server, options);
+        let resolvedRoot = lifecycleRootForRead(claim.server, base);
+        for (const candidate of lifecycleReadRoots(base)) {
+            if (readLogoutProof(claim.account, claim.server, { root: candidate }).state !== 'none') {
+                resolvedRoot = candidate;
+                break;
+            }
+        }
+        const options = { root: resolvedRoot }, proof = readLogoutProof(claim.account, claim.server, options);
         if (
             proof.state !== 'confirmed' || proof.attemptId !== receipt.logout.attemptId || proof.loggedOutAt !== receipt.logout.at
             || proof.receiptSha256 !== receipt.logout.sha256 || proof.loggedOutAt < claim.at
@@ -374,8 +408,7 @@ export function runSync(push = true, base = root): string {
     reattach(dir);
     const hasRemote = git(dir, 'ls-remote', '--exit-code', '--heads', 'origin', BRANCH).ok;
     if (hasRemote) pullFleetData(dir);
-    const statusDir = join(base, '.practice', 'status');
-    const statuses = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } }) : [];
+    const statuses = readSyncStatuses(base);
     const owners = loadOwners(join(dir, 'fleet', 'owners.json'));
     mkdirSync(join(dir, 'fleet', 'snapshots'), { recursive: true });
     const file = join(dir, 'fleet', 'snapshots', `${mySide()}.json`);
@@ -413,7 +446,7 @@ export function runSync(push = true, base = root): string {
         const raw = (() => { try { return JSON.parse(readFileSync(join(dir, 'fleet', 'owners.json'), 'utf8')).accounts ?? {}; } catch { return {}; } })() as Record<string, { side?: string }>;
         const owned = Object.keys(raw).filter(n => owners.get(n.toLowerCase())?.side === snap.side);
         const died = (() => { try { return [...loadEnded(join(base, '.practice', 'swarm-deaths.json'))].filter(([, e]) => /^died\b/.test(e.reason)).map(([n]) => n); } catch { return []; } })();
-        const card = sideCard(snap.side, capacity, owned, (n: string) => { try { return readFileSync(join(base, '.practice', `stop-${n}`), 'utf8'); } catch { return undefined; } }, died);
+        const card = sideCard(snap.side, capacity, owned, (n: string) => readSyncStopText(base, n), died);
         const cardFile = join(dir, 'fleet', 'sides', `${snap.side}.json`);
         if (JSON.stringify(published(cardFile)) !== JSON.stringify(card)) { mkdirSync(join(dir, 'fleet', 'sides'), { recursive: true }); writeFileSync(cardFile, JSON.stringify(card) + '\n'); }
     }
