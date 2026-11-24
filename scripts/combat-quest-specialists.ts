@@ -883,7 +883,11 @@ export async function runWildyPvpRelogLoop(
                 throw Error(`${opts.skill} relog PvP unexpected session end: ${endReason}`);
             }
             swings++;
-            totalTicks += Math.max(0, endTick - tick0) + 1;
+            const swingTicks = Math.max(0, endTick - tick0) + 1;
+            totalTicks += swingTicks;
+            if (swings <= 3) {
+                console.log(`PVP_RELOG_SAMPLE swing=${swings} dt=${endTick - tick0} swingTicks=${swingTicks} totalTicks=${totalTicks} xp=${curStat.experience} pray=${prayPts}`);
+            }
 
             if (swings % 100 === 0) {
                 console.log(`PVP_RELOG_PROGRESS tick=${totalTicks} ${opts.skill}=${curStat.baseLevel} xp=${curStat.experience} swings=${swings}`);
@@ -1295,7 +1299,10 @@ export async function runSpecialistWaterfall(
     }, gotPebble, 3, 2);
 
     if (opts.afterGolrie) {
-        await walkFast([{ x: 2533, z: 9556, tol: 1 }], 30, 'to golrie cellar ladder');
+        await walkFast([{ x: 2515, z: 9576, tol: 0 }], 30, 'to golrie gate exit');
+        await stepAct('golrie gate exit', () => opLoc(LOC.golrieGate, /open/i), () => !inBox(2502, 9576, 2523, 9593), 10, 5);
+        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+        await walkFast([{ x: 2533, z: 9556, tol: 1 }], 40, 'to golrie cellar ladder', () => syncWaterfallPfm(true));
         await climb('cellar up', 2533, 9555, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
         await opts.afterGolrie();
