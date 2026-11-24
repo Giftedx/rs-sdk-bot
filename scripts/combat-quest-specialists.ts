@@ -24,7 +24,7 @@ export interface SpecialistBoardTarget {
 export const SPECIALIST_TARGETS: Readonly<Record<'hitpoints' | 'strength' | 'defence', SpecialistBoardTarget>> = {
     hitpoints: { board: 'hitpoints', liveChampion: 'nickvitalsq', liveTicks: 11343, targetTicks: 11116 },
     strength: { board: 'strength', liveChampion: 'nicksinew', liveTicks: 3288, targetTicks: 3222 },
-    defence: { board: 'defence', liveChampion: 'nickbicep', liveTicks: 4323, targetTicks: 4236 },
+    defence: { board: 'defence', liveChampion: 'bennetttank', liveTicks: 4018, targetTicks: 3937 },
 };
 
 export interface KitSpecItem {

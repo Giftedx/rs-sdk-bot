@@ -92,9 +92,9 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         });
         expect(SPECIALIST_TARGETS.defence).toEqual({
             board: 'defence',
-            liveChampion: 'nickbicep',
-            liveTicks: 4323,
-            targetTicks: 4236,
+            liveChampion: 'bennetttank',
+            liveTicks: 4018,
+            targetTicks: 3937,
         });
         for (const t of Object.values(SPECIALIST_TARGETS)) {
             expect(t.targetTicks).toBeLessThanOrEqual(Math.floor(t.liveTicks * 0.98));
