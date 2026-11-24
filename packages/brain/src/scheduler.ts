@@ -578,6 +578,14 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
 
     evaluatedRunning.sort((a, b) => b.plan.scorePerHour - a.plan.scorePerHour || a.acct.name.localeCompare(b.acct.name));
 
+    const demandHasCapacity = (cand: AccountPlan): boolean => {
+        const work = cand.steps.find((s) => s.stepKind === 'work');
+        const did = cand.demandId ?? work?.demandId;
+        const dem = did ? demandById.get(did) : undefined;
+        if (!dem || dem.target.kind !== 'quest') return true;
+        return (remainingByDemand.get(dem.id) ?? 0) > 0;
+    };
+
     for (const { acct, plan } of evaluatedRunning) {
         if (sideStopped) {
             accountPlans[acct.name] = {
@@ -605,10 +613,12 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         const workAct = workStep?.stepKind === 'work' ? activityById.get(workStep.activityId) : undefined;
         const spotOk = !workAct || spotHasCapacity(workAct.spotId, workAct.maxConcurrentAccounts);
         const marketOk = marketVenueHasCapacity(plan);
-        if (!spotOk || !marketOk) {
+        const demandOk = demandHasCapacity(plan);
+        if (!spotOk || !marketOk || !demandOk) {
             const excludedSpots = currentFullSpots(!spotOk ? workAct?.spotId : undefined);
             const rerouted = planAccount(acct, {
                 ...runningPlannerOpts,
+                ...(demandOk ? {} : { demands: currentUnallocatedDemands() }),
                 excludedSpotIds: excludedSpots,
                 excludedMarketVenues: allocatedMarketVenues,
                 _reuse: getAccountReuse(acct),
@@ -619,12 +629,13 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                 rerouted.steps.length === 0
                 || (altAct && !spotHasCapacity(altAct.spotId, altAct.maxConcurrentAccounts))
                 || !marketVenueHasCapacity(rerouted)
+                || !demandHasCapacity(rerouted)
             ) {
                 accountPlans[acct.name] = {
                     account: acct.name,
                     steps: [],
                     scorePerHour: 0,
-                    idleReason: 'spot_capacity_full',
+                    idleReason: !spotOk || !marketOk ? 'spot_capacity_full' : (rerouted.idleReason ?? 'demand_saturated'),
                 };
                 continue;
             }

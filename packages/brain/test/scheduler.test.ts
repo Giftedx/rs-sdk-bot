@@ -1037,3 +1037,86 @@ test('scheduleFleet materializes TransferOrder for stagingHolder consolidation a
     expect(plan.accountPlans.DonorAlt?.idleReason).toBe('reserved_for_transfer');
     expect(plan.accountPlans.RichBuyer?.steps).toHaveLength(0);
 });
+
+test('two running accounts on the same finite quest demand do not double-allocate', () => {
+    const questActivity: ActivityDefinition = {
+        id: 'quest:sweep-sheep',
+        workerId: 'quest',
+        family: 'quest',
+        kind: 'quest',
+        label: 'Sheep Shearer',
+        questSlug: 'sheep',
+        config: { questSlug: 'sheep' },
+        baselineRate: { xpPerTick: 50, unitsPerTick: 0.02, gpPerTick: 0, setupTicks: 10, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const runnerA = makeAcct({
+        name: 'RunnerA',
+        lifecycle: 'running',
+        skills: { Thieving: { level: 80, xp: 2_000_000 } },
+        quests: {},
+        activeJob: {
+            activityId: 'quest:sweep-sheep',
+            demandId: 'd:quest:sheep',
+            startedAt: NOW - 10_000,
+        },
+    });
+    const runnerB = makeAcct({
+        name: 'RunnerB',
+        lifecycle: 'running',
+        skills: { Thieving: { level: 60, xp: 280_000 } },
+        quests: {},
+        activeJob: {
+            activityId: 'quest:sweep-sheep',
+            demandId: 'd:quest:sheep',
+            startedAt: NOW - 10_000,
+        },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { RunnerA: runnerA, RunnerB: runnerB },
+    };
+    const demands: GoalDemand[] = [
+        {
+            id: 'd:quest:sheep',
+            goalKind: 'quest_board',
+            valueScore: 900,
+            valuePerHour: 20_000,
+            target: { kind: 'quest', questSlug: 'sheep' },
+            fulfilled: 0,
+            remaining: 1,
+            priorityWeight: 1,
+            active: true,
+        },
+        {
+            id: 'd:coins',
+            goalKind: 'coin_fund',
+            valueScore: 100,
+            valuePerHour: 500,
+            target: { kind: 'coins', amount: 1_000_000 },
+            fulfilled: 0,
+            remaining: 1_000_000,
+            priorityWeight: 1,
+            active: true,
+        },
+    ];
+    const plan = scheduleFleet({
+        world,
+        activities: [...ACTIVITIES, questActivity],
+        demands,
+        maxBots: 2,
+    });
+    const questWorkers = Object.values(plan.accountPlans).filter(
+        (p) => p.steps.some((s) => s.stepKind === 'work' && s.activityId === 'quest:sweep-sheep'),
+    );
+    expect(questWorkers).toHaveLength(1);
+    const otherAcct = questWorkers[0]!.account === 'RunnerA' ? 'RunnerB' : 'RunnerA';
+    const reroutedWork = plan.accountPlans[otherAcct]?.steps.at(-1);
+    expect(reroutedWork?.stepKind).toBe('work');
+    if (reroutedWork?.stepKind === 'work') {
+        expect(reroutedWork.activityId).toBe('gather:thieving-knights');
+    }
+});

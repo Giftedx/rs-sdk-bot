@@ -1330,3 +1330,72 @@ test('planner prevents stagingHolder over-buying, lets holder consolidate partia
     });
     expect(nearPlan.scorePerHour).toBeGreaterThan(farPlan.scorePerHour);
 });
+
+test('multi-skill combat activities unlock Defence skill prerequisites', () => {
+    const meleeCamp: ActivityDefinition = {
+        id: 'combat:melee-camp',
+        workerId: 'combat',
+        family: 'combat',
+        kind: 'train',
+        label: 'Melee camp',
+        skill: 'Strength',
+        skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'],
+        location: { x: 3185, z: 3436, level: 0 },
+        config: { aioCategory: 'fighter', aioRoute: 'melee', target: 'cow', requiredLevel: 1 },
+        baselineRate: { xpPerTick: 120, unitsPerTick: 0.05, gpPerTick: 5, setupTicks: 10, minBatchUnits: 25, confidence: 'live' },
+        trust: 'live_proven',
+        protectedAllowed: false,
+    };
+    const gatedTarget: ActivityDefinition = {
+        id: 'combat:def-gated',
+        workerId: 'combat',
+        family: 'combat',
+        kind: 'train',
+        label: 'Guard camp',
+        skill: 'Attack',
+        location: { x: 3205, z: 3436, level: 0 },
+        config: { aioCategory: 'fighter', aioRoute: 'melee', target: 'guard', requiredSkills: { Defence: 20 } },
+        baselineRate: { xpPerTick: 400, unitsPerTick: 0.1, gpPerTick: 20, setupTicks: 10, minBatchUnits: 25, confidence: 'live' },
+        trust: 'live_proven',
+        protectedAllowed: false,
+    };
+    const acct = makeAcct({
+        name: 'DefLearner',
+        skills: {
+            Attack: { level: 25, xp: xpForLevel(25) },
+            Strength: { level: 25, xp: xpForLevel(25) },
+            Defence: { level: 1, xp: 0 },
+            Hitpoints: { level: 20, xp: xpForLevel(20) },
+        },
+        equipment: { 1321: 1 },
+    });
+    const demand: GoalDemand = {
+        id: 'd:atk:40',
+        goalKind: 'pk_army',
+        valueScore: 300,
+        valuePerHour: 2000,
+        target: { kind: 'skill', account: 'DefLearner', skill: 'Attack', targetLevel: 40 },
+        fulfilled: 0,
+        remaining: 1,
+        priorityWeight: 1,
+        assignedAccount: 'DefLearner',
+        active: true,
+    };
+    const plan = planAccount(acct, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { DefLearner: acct } },
+        activities: [meleeCamp, gatedTarget],
+        demands: [demand],
+    });
+    expect(plan.steps).toHaveLength(2);
+    expect(plan.steps[0]).toMatchObject({
+        stepKind: 'unlock',
+        unlockKind: 'skill',
+        activityId: 'combat:melee-camp',
+        skill: 'Defence',
+        targetLevel: 20,
+    });
+    expect(plan.steps[1]).toMatchObject({
+        stepKind: 'work',
+        activityId: 'combat:def-gated',
+    });
+});

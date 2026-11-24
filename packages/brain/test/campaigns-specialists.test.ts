@@ -10,6 +10,8 @@ import {
     SPECIALIST_CAMPAIGN_SPECS,
     campaignShortfalls,
     getSpecialistCampaignSpec,
+    isCampaignLaunchReady,
+    isHiscoreMarginFresh,
     isReservedSpecialistAccount,
     loadCampaignManifests,
     toDefaultSpecialistCampaign,
@@ -477,4 +479,43 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
             rmSync(tempRoot, { recursive: true, force: true });
         }
     }, 20_000);
+
+    test('undated hiscore snapshots fail freshness and controller auto-stop markers do not pause specialist campaigns', () => {
+        const launchDir = join(tempRoot, '.practice', 'specialist-launch');
+        writeJson(join(launchDir, 'hiscores.json'), {
+            boards: [{ board: 'Fishing', category: 11, rows: [{ rank: 1, name: 'Rival', level: 99, ticks: 3200 }] }],
+        });
+        writeJson(join(launchDir, 'rehearsal-fishing', 'lochnessrod-fishing-99.receipt.json'), {
+            ok: true,
+            died: false,
+            logout: 'logged-out',
+            at: NOW - 30_000,
+            boardTicks: { Fishing: 2778 },
+        });
+        writeJson(join(launchDir, 'lochnessrod.json'), {
+            version: 1,
+            account: 'lochnessrod',
+            board: 'Fishing',
+            planTicks: 2778,
+            requirements: [],
+            rehearsal: { path: '.practice/specialist-launch/rehearsal-fishing/lochnessrod-fishing-99.receipt.json' },
+        });
+        writeFileSync(join(tempRoot, '.practice', 'stop-lochnessrod'), 'swarm plan removed or stopped\n', 'utf8');
+
+        const manifests = loadCampaignManifests({ root: tempRoot, now: NOW, includeHaggis: false });
+        const loch = manifests.find((c) => c.account === 'lochnessrod')!;
+        expect(loch.state).toBe('staging');
+        expect(isHiscoreMarginFresh(loch.hiscoreMargin, NOW)).toBe(false);
+        expect(isCampaignLaunchReady(loch, { now: NOW })).toBe(false);
+
+        writeJson(join(launchDir, 'hiscores.json'), {
+            takenAt: new Date(NOW - 30_000).toISOString(),
+            boards: [{ board: 'Fishing', category: 11, rows: [{ rank: 1, name: 'Rival', level: 99, ticks: 3200 }] }],
+        });
+        const refreshed = loadCampaignManifests({ root: tempRoot, now: NOW, includeHaggis: false });
+        const lochRefreshed = refreshed.find((c) => c.account === 'lochnessrod')!;
+        expect(lochRefreshed.state).toBe('ready');
+        expect(isHiscoreMarginFresh(lochRefreshed.hiscoreMargin, NOW)).toBe(true);
+        expect(isCampaignLaunchReady(lochRefreshed, { now: NOW })).toBe(true);
+    });
 });
