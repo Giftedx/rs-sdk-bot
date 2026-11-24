@@ -21,7 +21,11 @@ function combatLevel(v: string | undefined): number {
 export function buildNpcs(blocks: ConfigBlock[], pack: Map<number, string>, spawns: Spawn[]): Npc[] {
     const ids = invert(pack);
     const byId = new Map<number, Npc['spawns']>();
-    for (const s of spawns) byId.set(s.id, [...(byId.get(s.id) ?? []), { x: s.x, z: s.z, level: s.level, src: s.src }]);
+    for (const s of spawns) {
+        let list = byId.get(s.id);
+        if (!list) { list = []; byId.set(s.id, list); }
+        list.push({ x: s.x, z: s.z, level: s.level, src: s.src });
+    }
     const out: Npc[] = [];
     for (const b of blocks) {
         const id = ids.get(b.name);

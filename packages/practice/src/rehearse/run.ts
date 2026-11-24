@@ -26,14 +26,16 @@ async function spawnSuppliers(
     endpoints: {port: number; engine: number; gateway: number; host: string},
     helperProcs: ReturnType<typeof Bun.spawn>[],
 ): Promise<string[]> {
-    const helpers: string[] = [];
     const seenHelpers = new Set<string>();
     const helperBase = 'sp' + seg.id.replace(/[^a-z0-9]/gi, '').slice(0, 3);
-    for (let i = 0; i < supplierSpecs.length; i++) {
-        const sup = supplierSpecs[i]!;
+    const helpers = supplierSpecs.map((_, i) => {
         let helper = runBotName(helperBase, i + 1);
         while (seenHelpers.has(helper.toLowerCase())) helper = runBotName(helperBase, i + 1);
         seenHelpers.add(helper.toLowerCase());
+        return helper;
+    });
+    await Promise.all(supplierSpecs.map(async (sup, i) => {
+        const helper = helpers[i]!;
         if (existsSync(join(practiceBotsRoot(), helper)) || existsSync(join(rsSdkRoot(), 'bots', helper))) throw new Error('fresh supplier account required');
         const helperSave = playerSavePath(helper);
         if (existsSync(helperSave)) throw new Error('fresh supplier account already has an engine save');
@@ -42,7 +44,10 @@ async function spawnSuppliers(
         const {envPath: helperEnvPath} = await createBot(helper);
         pointBotAt(helperEnvPath, endpoints.engine, endpoints.gateway, endpoints.host);
         await applyPreset(helper, sup.save);
-        helpers.push(helper);
+    }));
+    for (let i = 0; i < supplierSpecs.length; i++) {
+        const sup = supplierSpecs[i]!;
+        const helper = helpers[i]!;
         const helperArgs = (sup.args ?? []).map(a => a === '{ACTOR}' ? account : a);
         const helperEnv = rehearsalChildEnv(process.env, sup.env, {scored: !!opts.scored, role: 'supplier'});
         const logSuffix = supplierSpecs.length === 1 ? 'supplier' : `supplier-${i + 1}`;
@@ -87,6 +92,7 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
     const saved = () => (statSync(savePath, {throwIfNoEntry: false})?.mtimeMs ?? 0) > loadedAt;
 
     const log = join(opts.out, `${seg.id}.log`);
+    const captureRsSdk = seg.capture ? rsSdkRevision() : '';
     const supplierSpecs = resolveSegmentSuppliers(seg);
     const helperProcs: ReturnType<typeof Bun.spawn>[] = [];
     try {
@@ -109,7 +115,7 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
                         const c = await captureSave(account, port);
                         const {version: _v, ...now} = summarize(c.bytes);
                         if (c.source.via === 'endpoint' && (!cap.when || Object.values(checkExpect(now, cap.when)).every(Boolean))) {
-                            addEntry({name: cap.name, bytes: c.bytes, source: c.source, segment: cap.segment, rsSdk: rsSdkRevision()});
+                            addEntry({name: cap.name, bytes: c.bytes, source: c.source, segment: cap.segment, rsSdk: captureRsSdk});
                             captured = {name: cap.name, via: c.source.via, tick: c.source.tick};
                         }
                     }
@@ -152,7 +158,7 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
         catch (e) { checks.endSave = false; captureError ||= String(e); }
         if (seg.capture && seg.capture.afterTicks === undefined && !seg.capture.when && checks.saved) {
             const c = await captureSave(account, port);
-            addEntry({name: seg.capture.name, bytes: c.bytes, source: c.source, segment: seg.capture.segment, rsSdk: rsSdkRevision()});
+            addEntry({name: seg.capture.name, bytes: c.bytes, source: c.source, segment: seg.capture.segment, rsSdk: captureRsSdk});
             captured = {name: seg.capture.name, via: c.source.via, tick: c.source.tick};
         }
         if (seg.capture) checks.captured = !!captured;

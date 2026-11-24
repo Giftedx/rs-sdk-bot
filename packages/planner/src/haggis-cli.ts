@@ -98,11 +98,18 @@ for (const b of boards) {
 if (args.includes('--levers')) {
     const safe = LEVERS.filter(l => !l.owner && !l.retired).map(l => l.id);
     const owner = LEVERS.filter(l => l.owner).map(l => l.id);
+    const leverCache = new Map<string, { fin: number; slack: number; wins: string[] }>();
     const run = (mode: Mode, disable: string[], own: string[] = [], tricks: boolean = false) => {
-        const r = schedule(boards, activities, { mode, tricks: new Set(tricks ? TRICKS : []), disable: new Set(disable), owner: new Set(own) });
+        const dis = new Set(disable), ownSet = new Set(own);
+        const sig = `${mode}|${tricks ? 1 : 0}|` + LEVERS.map(l => (l.retired ? ownSet.has(l.id) : !dis.has(l.id)) ? '1' : '0').join('');
+        const hit = leverCache.get(sig);
+        if (hit) return hit;
+        const r = schedule(boards, activities, { mode, tricks: new Set(tricks ? TRICKS : []), disable: dis, owner: ownSet });
         const o = r.boards.find(b => b.id === 'overall')!;
         const wins = r.boards.filter(b => b.status === 'WIN' && b.deadline !== null).map(b => b.id);
-        return { fin: o.finish ?? NaN, slack: o.slack ?? NaN, wins };
+        const res = { fin: o.finish ?? NaN, slack: o.slack ?? NaN, wins };
+        leverCache.set(sig, res);
+        return res;
     };
     console.log('\n## Levers: Overall finish (scenario a order, EDF)\n');
     console.log('| Lever | Class | Floor finish | Saved alone (floor) | Saved last (floor) | Realistic finish | Saved alone (realistic) | Saved last (realistic) |');

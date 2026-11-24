@@ -117,6 +117,7 @@ function buildSegmentedPath(
     return { tiles, seg, planned };
 }
 
+const shutDoorAheadMap = new Map<number, number>();
 function findShutDoorAt(
     deps: PathDeps,
     level: number,
@@ -126,7 +127,8 @@ function findShutDoorAt(
     blockedDoor: (loc: PathTile) => boolean,
 ): { l: PathLoc; i: number } | null {
     const startIdx = Math.max(0, from), endIdx = Math.min(tiles.length - 1, to);
-    const ahead = new Map<number, number>();
+    const ahead = shutDoorAheadMap;
+    ahead.clear();
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (let i = startIdx; i <= endIdx; i++) {
         const t = tiles[i]!;
@@ -198,6 +200,19 @@ function findNearestPathIndex(
     return best;
 }
 
+function lineHitsSquare(from: PathTile, to: PathTile, squares: readonly HunterSquare[]): boolean {
+    let cx = from.x, cz = from.z;
+    while (cx !== to.x || cz !== to.z) {
+        cx += Math.sign(to.x - cx);
+        cz += Math.sign(to.z - cz);
+        for (let i = 0; i < squares.length; i++) {
+            const h = squares[i]!;
+            if (Math.max(Math.abs(cx - h.x), Math.abs(cz - h.z)) <= h.r) return true;
+        }
+    }
+    return false;
+}
+
 function selectClickIndex(
     deps: PathDeps,
     level: number,
@@ -220,8 +235,7 @@ function selectClickIndex(
     if (squares.length && here && top > Math.max(0, idx)) {
         if (squares.some(h => d8(h, here) <= look + h.r)) top = Math.min(top, Math.max(0, idx) + SHORT);
         let clear = top;
-        const inSquare = (t: PathTile) => squares.some(h => d8(t, h) <= h.r);
-        while (clear > Math.max(0, idx) && expandPath(here, [tiles[clear]!]).some(inSquare)) clear--;
+        while (clear > Math.max(0, idx) && lineHitsSquare(here, tiles[clear]!, squares)) clear--;
         if (clear > Math.max(0, idx)) top = clear;
         else if (!inside && held < HOLD) return -1;
     }

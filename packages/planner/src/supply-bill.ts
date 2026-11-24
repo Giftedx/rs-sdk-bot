@@ -45,11 +45,39 @@ export function supplyBill(
     items: readonly { id: number; name: string; debugname?: string }[],
     statuses: readonly any[],
 ): BillRow[] {
+    const idSet = new Set<number>();
+    const byDebug = new Map<string, number[]>();
+    const byLowerName = new Map<string, number[]>();
+    for (const i of items) {
+        idSet.add(i.id);
+        if (i.debugname) {
+            let l = byDebug.get(i.debugname);
+            if (!l) { l = []; byDebug.set(i.debugname, l); }
+            l.push(i.id);
+        }
+        const ln = String(i.name).toLowerCase();
+        let nl = byLowerName.get(ln);
+        if (!nl) { nl = []; byLowerName.set(ln, nl); }
+        nl.push(i.id);
+    }
     const pools = new Map<string, BillRow>();
     for (const {item, count, itemId, aliases} of supplies) {
-        const ids = itemId === undefined
-            ? [...new Set(idsFor(item, items))].sort((a, b) => a - b)
-            : items.some(i => i.id === itemId) ? [itemId] : [];
+        let ids: number[];
+        if (itemId !== undefined) {
+            ids = idSet.has(itemId) ? [itemId] : [];
+        } else {
+            const want = item.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim();
+            const unf = want.match(/^(.+) potion \(unf\)$/);
+            if (unf) {
+                ids = [...new Set(byDebug.get(unf[1]!.replace(/\s+/g, '') + 'vial') ?? [])].sort((a, b) => a - b);
+            } else {
+                const matched = new Set<number>();
+                for (const form of [want, want.replace(/s$/, ''), want.replace(/ies$/, 'y'), want.replace(/us$/, 'i')]) {
+                    for (const id of byLowerName.get(form) ?? []) matched.add(id);
+                }
+                ids = [...matched].sort((a, b) => a - b);
+            }
+        }
         const key = ids.length ? ids.join(',') : 'unmapped:' + item;
         const row: BillRow = pools.get(key) ?? {item, need: 0, owned: 0, short: 0, ids, holders: []};
         if (itemId !== undefined) row.itemId = itemId;

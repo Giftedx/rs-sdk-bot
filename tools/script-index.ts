@@ -86,11 +86,25 @@ export function aioRoutes(): AioRoute[] {
 
 // The scripts in `folders` that a route reaches. A script is reached when a route names it, or when a reached script
 // imports it or names its path in code.
-export function reachedScripts(folders: readonly string[] = CATALOG_FOLDERS, root = repo): {files: string[]; reached: Set<string>} {
- const files = folders.flatMap(folder => readdirSync(join(root, folder)).filter(isScript).map(f => `${folder}/${f}`));
+export function reachedScripts(
+ folders: readonly string[] = CATALOG_FOLDERS,
+ root = repo,
+ filesOverride?: readonly string[],
+ textCache?: Map<string, string>,
+): {files: string[]; reached: Set<string>} {
+ const files = filesOverride ? [...filesOverride] : folders.flatMap(folder => readdirSync(join(root, folder)).filter(isScript).map(f => `${folder}/${f}`));
  const known = new Set(files);
+ const readText = (file: string) => {
+  let raw = textCache?.get(file);
+  if (raw === undefined) {
+   raw = readFileSync(join(root, file), 'utf8');
+   textCache?.set(file, raw);
+  }
+  return raw;
+ };
  const links = (file: string) => {
-  const text = code(readFileSync(join(root, file), 'utf8')), out: string[] = [];
+  const raw = readText(file);
+  const text = code(raw), out: string[] = [];
   for (const m of text.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)['"](\.{1,2}\/[^'"]+)['"]/g)) {
    const target = posix(relative(root, resolve(root, dirname(file), m[1]!)));
    out.push(target.endsWith('.ts') ? target : `${target}.ts`);
@@ -137,24 +151,34 @@ function sentences(paragraph: string): string[] {
 // and an empty comment line end the paragraph. Not a header: a line that switches a checker off or on, and one
 // comment line directly above a declaration (it documents that declaration).
 export function headerSentence(source: string): string {
- const lines = source.replace(/^﻿/, '').split(/\r?\n/);
  let i = 0, comments = 0, block = false, open = true;
- if (lines[0]?.startsWith('#!')) i++;
  const words: string[] = [];
- for (; i < lines.length; i++) {
-  const raw = lines[i]!.trim();
+ let pos = source.startsWith('\uFEFF') ? 1 : 0;
+ const len = source.length;
+ let firstLine = true;
+ let next = '';
+ while (pos <= len) {
+  const nl = source.indexOf('\n', pos);
+  const endPos = nl < 0 ? len : nl;
+  const line = (endPos > pos && source.charCodeAt(endPos - 1) === 13 ? source.slice(pos, endPos - 1) : source.slice(pos, endPos)).trim();
+  pos = nl < 0 ? len + 1 : nl + 1;
+  if (firstLine) {
+   firstLine = false;
+   if (line.startsWith('#!')) { i++; continue; }
+  }
   let text: string;
   if (block) {
-   const end = raw.indexOf('*/');
-   text = (end < 0 ? raw : raw.slice(0, end)).replace(/^\*+\s?/, '');
+   const end = line.indexOf('*/');
+   text = (end < 0 ? line : line.slice(0, end)).replace(/^\*+\s?/, '');
    if (end >= 0) block = false;
-  } else if (raw.startsWith('//')) text = raw.replace(/^\/\/+\s?/, '');
-  else if (raw.startsWith('/*')) {
-   const end = raw.indexOf('*/', 2);
-   text = (end < 0 ? raw.slice(2) : raw.slice(2, end)).replace(/^\*+\s?/, '');
+  } else if (line.startsWith('//')) text = line.replace(/^\/\/+\s?/, '');
+  else if (line.startsWith('/*')) {
+   const end = line.indexOf('*/', 2);
+   text = (end < 0 ? line.slice(2) : line.slice(2, end)).replace(/^\*+\s?/, '');
    block = end < 0;
-  } else if (!raw && !comments) continue;
-  else break;
+  } else if (!line && !comments) { i++; continue; }
+  else { next = line; break; }
+  i++;
   text = text.trim();
   if (/^(?:@ts-|eslint-|biome-|prettier-|istanbul |c8 )/.test(text)) continue;
   comments++;
@@ -169,7 +193,6 @@ export function headerSentence(source: string): string {
    open = false;
   } else words.push(text);
  }
- const next = (lines[i] ?? '').trim();
  if (comments === 1 && next && !/^(?:import\b|export\s*(?:\*|\{|type\s*\{)|['"]use )/.test(next)) return '';
  let parts = sentences(words.join(' ').replace(/\s+/g, ' ').trim());
  while (parts.length > 1 && RECORD_SENTENCE.test(parts[0]!)) parts = parts.slice(1);
@@ -208,20 +231,47 @@ export interface ScriptLine {
 
 // The command files under packages/: a file with `import.meta.main` in code under packages/<name>/src, and under
 // packages/dashboard and packages/dashboard/tools.
-export function packageCommands(root = repo): string[] {
+function collectPackageCommands(root = repo, textCache?: Map<string, string>): string[] {
  const packages = readdirSync(join(root, 'packages'), {withFileTypes: true}).filter(e => e.isDirectory()).map(e => e.name);
  const flat = (folder: string) => existsSync(join(root, folder)) ? readdirSync(join(root, folder)).filter(isScript).map(f => `${folder}/${f}`) : [];
  const files = [...packages.flatMap(p => tree(root, `packages/${p}/src`)), ...flat('packages/dashboard'), ...flat('packages/dashboard/tools')];
- return files.filter(f => code(readFileSync(join(root, f), 'utf8')).includes('import.meta.main')).sort();
+ return files.filter(f => {
+  const raw = readFileSync(join(root, f), 'utf8');
+  if (!raw.includes('import.meta.main')) return false;
+  if (!code(raw).includes('import.meta.main')) return false;
+  textCache?.set(f, raw);
+  return true;
+ }).sort();
+}
+
+export function packageCommands(root = repo): string[] {
+ return collectPackageCommands(root);
 }
 
 export function scriptIndex(root = repo, table: Readonly<Record<string, string>> = SCRIPT_DESCRIPTIONS): ScriptLine[] {
  const routes = aioRoutes(), quests = new Set(listGeneratedQuestScripts(root));
+ const routesByScript = new Map<string, AioRoute[]>();
+ for (const r of routes) {
+  const list = routesByScript.get(r.script);
+  if (list) list.push(r);
+  else routesByScript.set(r.script, [r]);
+ }
+ const textCache = new Map<string, string>();
+ const scriptFiles = tree(root, 'scripts');
  // The reach rule covers three folders. The index also follows the imports into the other script folders.
- const folders = [...new Set(tree(root, 'scripts').map(f => dirname(f)))].filter(f => f !== 'scripts/measure');
- const {reached} = reachedScripts(folders, root);
+ const reachFiles = scriptFiles.filter(f => dirname(f) !== 'scripts/measure');
+ const folders = [...new Set(reachFiles.map(f => dirname(f)))];
+ const {reached} = reachedScripts(folders, root, reachFiles, textCache);
+ const readText = (path: string) => {
+  let raw = textCache.get(path);
+  if (raw === undefined) {
+   raw = readFileSync(join(root, path), 'utf8');
+   textCache.set(path, raw);
+  }
+  return raw;
+ };
  const line = (path: string, packaged: boolean): ScriptLine => {
-  const mine = routes.filter(r => r.script === path);
+  const mine = routesByScript.get(path) ?? [];
   const category = /^scripts\/aio-([a-z]+)\.ts$/.exec(path)?.[1] as AioCategory | undefined;
   const group: ScriptGroup = packaged ? 'packages'
    : path.startsWith('tools/') ? 'tools'
@@ -231,14 +281,14 @@ export function scriptIndex(root = repo, table: Readonly<Record<string, string>>
    : quests.has(path) ? 'quests'
    : reached.has(path) && !(path in OUTSIDE_CATALOG) ? 'helpers'
    : 'tools';
-  const header = headerSentence(readFileSync(join(root, path), 'utf8'));
   if (mine.length) return {path, group, source: 'route', description: mine.map(r => `${r.category} ${r.name}: ${r.description}`).join('; ')};
   if (path in OUTSIDE_CATALOG) return {path, group, source: 'outside', description: OUTSIDE_CATALOG[path]!};
+  const header = headerSentence(readText(path));
   if (header) return {path, group, source: 'header', description: header};
   if (path in table) return {path, group, source: 'table', description: table[path]!};
   return {path, group, source: 'none', description: ''};
  };
- const lines = [...tree(root, 'scripts').map(f => line(f, false)), ...tree(root, 'tools').map(f => line(f, false)), ...packageCommands(root).map(f => line(f, true))];
+ const lines = [...scriptFiles.map(f => line(f, false)), ...tree(root, 'tools').map(f => line(f, false)), ...collectPackageCommands(root, textCache).map(f => line(f, true))];
  const order = (l: ScriptLine) => SCRIPT_GROUPS.indexOf(l.group);
  return lines.sort((a, b) => order(a) - order(b) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }

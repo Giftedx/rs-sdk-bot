@@ -103,17 +103,15 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
 // the Monkey Madness varps are 365-374 (content/pack/varp.pack:366-375). PlayerLoading.ts:101-111 reads any count
 // (save version below 7: one 4-byte value per id from 0). This rewrites the varp block of a generated save with
 // count = highest id + 1 and the CRC32 trailer again.
-export function extendVarps(savePath: string, varps: Record<number, number>): void {
-    const { readFileSync, writeFileSync } = require('node:fs') as typeof import('node:fs');
-    const buf = readFileSync(savePath);
+export function extendVarpsBytes(buf: Buffer, varps: Record<number, number>, label = 'buffer'): Buffer {
     const body = buf.subarray(0, buf.length - 4);
     const crcOld = buf.readUInt32BE(buf.length - 4);
-    if ((Bun.hash.crc32(body) >>> 0) !== crcOld) throw new Error(`extendVarps: CRC of ${savePath} is not CRC32`);
+    if ((Bun.hash.crc32(body) >>> 0) !== crcOld) throw new Error(`extendVarps: CRC of ${label} is not CRC32`);
     let at = -1;
     for (let i = 0; i + 2 + 309 * 4 <= body.length; i++) {
         if (body.readUInt16BE(i) === 309 && body.readInt32BE(i + 2 + 281 * 4) === 1000) { at = i; break; }
     }
-    if (at < 0) throw new Error(`extendVarps: no varp block in ${savePath}`);
+    if (at < 0) throw new Error(`extendVarps: no varp block in ${label}`);
     const old: number[] = [];
     for (let k = 0; k < 309; k++) old.push(body.readInt32BE(at + 2 + k * 4));
     const count = Math.max(309, ...Object.keys(varps).map(k => Number(k) + 1));
@@ -123,5 +121,10 @@ export function extendVarps(savePath: string, varps: Record<number, number>): vo
     const out = Buffer.concat([body.subarray(0, at), block, body.subarray(at + 2 + 309 * 4)]);
     const crc = Buffer.alloc(4);
     crc.writeUInt32BE(Bun.hash.crc32(out) >>> 0, 0);
-    writeFileSync(savePath, Buffer.concat([out, crc]));
+    return Buffer.concat([out, crc]);
+}
+
+export function extendVarps(savePath: string, varps: Record<number, number>): void {
+    const { readFileSync, writeFileSync } = require('node:fs') as typeof import('node:fs');
+    writeFileSync(savePath, extendVarpsBytes(readFileSync(savePath), varps, savePath));
 }

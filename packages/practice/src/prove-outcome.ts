@@ -1,7 +1,7 @@
-import { copyFileSync, mkdirSync, readFileSync, renameSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { readPracticeSave, waitPracticeSave } from './fleet-player-save';
+import { parsePracticeSave, waitPracticeSave } from './fleet-player-save';
 import { practiceDir, rsSdkRoot } from './paths';
 
 export interface SaveSnapshot {
@@ -9,7 +9,7 @@ export interface SaveSnapshot {
     sourcePath: string;
     path: string;
     sha256: string;
-    save: ReturnType<typeof readPracticeSave>;
+    save: ReturnType<typeof parsePracticeSave>;
 }
 export interface OutcomeEvidence {
     ok: boolean;
@@ -63,10 +63,11 @@ export async function snapshotPracticeSave(bot: string, phase: 'before' | 'after
     const capture = () => {
         // An engine save may be publishing while copied. Keep the prior valid
         // artifact intact until its replacement passes the reader's CRC gate.
+        const raw = readFileSync(sourcePath);
+        const save = parsePracticeSave(raw);
+        const sha256 = createHash('sha256').update(raw).digest('hex');
         const pending = `${path}.pending`;
-        copyFileSync(sourcePath, pending);
-        const save = readPracticeSave(pending);
-        const sha256 = createHash('sha256').update(readFileSync(pending)).digest('hex');
+        writeFileSync(pending, raw);
         renameSync(pending, path);
         latest = { bot, sourcePath, path, sha256, save };
         return save;

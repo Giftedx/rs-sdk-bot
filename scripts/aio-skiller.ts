@@ -4,8 +4,6 @@
 //   bun scripts/aio-skiller.ts <account> bank-job <job.json> [job.json ...]   (several jobs: one login, in order)
 import {existsSync,readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {openBot,finish} from '../packages/core/src/bot';
-import {runDirectChild} from '../packages/core/src/run-child';
 import type {Step} from '../packages/core/src/chain-step';
 import {DEFAULT_METHOD,resolveRouteStep,resolveSkillerMethod} from './aio-route-step';
 import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
@@ -13,7 +11,6 @@ import {planBankTripSchedule} from '../packages/core/src/bank-trip';
 import {runBankJob,runBankProfile,validateBankJob,type BankJob} from './microbot-bank-jobs';
 import {
  gatherWorker,
- runGatherCli,
  VALID_GATHER_SKILLS,
  type GatherSkill,
  type GatherExternalDeps,
@@ -26,14 +23,8 @@ import {
  supplyPlan as woodSupplyPlan,takeOwnedSupplyKnife,runWoodSupply,
  incomingCookedFood,courierFoodReady,receiveFoodAtBank,
 } from '../packages/workers/src/gather';
-import { runCombatModeCli } from '../packages/workers/src/combat';
-import { runMagicOrderCli } from './magic-order';
-import {approach,awayFrom,walkTargetPersist,leaveTutorial,sendHandoff,receiveHandoff,pendingCourierFunding,serviceCourierFunding} from '../packages/workers/src/logistics';
-import {leaveRuneStarter} from './rune-starter';
-import {walkFar,nearestBanks} from '../packages/workers/src/quest/sweep';
 import {
  bankArtisanWorker,
- runArtisanCli,
  VALID_ARTISAN_SKILLS,
  type ArtisanSkill,
  type ArtisanExternalDeps,
@@ -55,16 +46,12 @@ import {
  boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller,
  kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta,
 } from '../packages/workers/src/bank-artisan';
-import {attackable,defaultSpec,fightPlayer,type FightOptions} from './pk';
-import {escapeStep,hasVarrockTeleport,kitFrom} from '../packages/workers/src/pvp/wild-rules';
 import {agilityWorker,runAgilityCli,COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions} from '../packages/workers/src/agility';
 import {runecraftWorker,runRunecraftCli,RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal,NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob,runRuneSupply,runeSupplyTarget,type RunecraftMode,type RunecraftExternalDeps} from '../packages/workers/src/runecraft';
-import {readPracticeSave} from './measure/fleet-player-save';
-import {runRuneMysteries} from './generated/quest-runemysteries';
-import {trainChickens,nativeNpcSpell,runNpcMagic,combatTeleportAllowed,withdrawFireOwned} from '../packages/workers/src/combat';
-import {reconcileLoadout} from './gear-reconcile';
-import {installOrbFloorBridge} from './microbot-edgeville-travel';
-import {monitorWildernessLevel} from '../packages/workers/src/pvp/monitor';
+
+async function runMagicOrderCli(account: string, env: Record<string, string | undefined> = process.env) {
+ return (await import('./magic-order')).runMagicOrderCli(account, env);
+}
 
 export {
  gatherWorker,
@@ -604,7 +591,20 @@ function parseGatherTokens(tokens: readonly string[]): { args: string[]; env: Re
  return { args, env };
 }
 
-function buildGatherDeps(): GatherExternalDeps {
+async function buildGatherDeps(): Promise<GatherExternalDeps> {
+ const [
+  {approach,awayFrom,walkTargetPersist,leaveTutorial,sendHandoff,receiveHandoff,pendingCourierFunding,serviceCourierFunding},
+  {leaveRuneStarter},
+  {walkFar,nearestBanks},
+  {attackable,defaultSpec,fightPlayer},
+  {escapeStep,hasVarrockTeleport,kitFrom},
+ ] = await Promise.all([
+  import('../packages/workers/src/logistics'),
+  import('./rune-starter'),
+  import('../packages/workers/src/quest/sweep'),
+  import('./pk'),
+  import('../packages/workers/src/pvp/wild-rules'),
+ ]);
  return {
   workScript: 'scripts/aio-skiller.ts',
   approach,
@@ -632,7 +632,7 @@ function buildGatherDeps(): GatherExternalDeps {
   runBankJob: (s, job, stop) => runBankJob(s, job as BankJob, stop),
   attackable,
   defaultSpec,
-  fightPlayer: (s, targetName, opts) => fightPlayer(s, targetName, (opts ?? {}) as FightOptions),
+  fightPlayer: (s, targetName, opts) => fightPlayer(s, targetName, (opts ?? {}) as Parameters<typeof fightPlayer>[2]),
   escapeStep,
   hasVarrockTeleport,
   kitFrom,
@@ -668,7 +668,11 @@ const RUNECRAFT_DIRECT_METHODS: Readonly<Record<string, RunecraftMode>> = {
  'stage-opening': 'stage-opening',
 };
 
-function buildRunecraftDeps(): RunecraftExternalDeps {
+async function buildRunecraftDeps(): Promise<RunecraftExternalDeps> {
+ const [{runRuneMysteries},{trainChickens}] = await Promise.all([
+  import('./generated/quest-runemysteries'),
+  import('../packages/workers/src/combat/chickens'),
+ ]);
  return {
   runBankProfile,
   runRuneMysteries,
@@ -697,7 +701,24 @@ const LEGACY_ARTISAN_METHOD_ALIASES: Readonly<Record<string, Readonly<Record<str
  foraging: { 'microbot-c-care': 'care', 'microbot-misc-coffer': 'miscellania-coffer', 'microbot-c-qol': 'qol' },
 };
 
-function buildArtisanDeps(): ArtisanExternalDeps {
+async function buildArtisanDeps(): Promise<ArtisanExternalDeps> {
+ const [
+  {nativeNpcSpell,runNpcMagic},
+  {combatTeleportAllowed},
+  {withdrawFireOwned},
+  {reconcileLoadout},
+  {installOrbFloorBridge},
+  {monitorWildernessLevel},
+  {walkTargetPersist},
+ ] = await Promise.all([
+  import('../packages/workers/src/combat/magic'),
+  import('../packages/workers/src/combat/survivability'),
+  import('../packages/workers/src/combat/trip-kit'),
+  import('./gear-reconcile'),
+  import('./microbot-edgeville-travel'),
+  import('../packages/workers/src/pvp/monitor'),
+  import('../packages/workers/src/logistics'),
+ ]);
  return {
   workScript: 'scripts/aio-skiller.ts',
   runBankJob: (s, job, stop) => runBankJob(s as Parameters<typeof runBankJob>[0], job as BankJob, stop),
@@ -778,112 +799,121 @@ export function mergeSkillerEnv(
  return { ...stepEnv, ...definedBase, ...cliOverrides };
 }
 
-export async function runAioSkiller(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {
- if (!account) throw Error('aio-skiller requires account');
- const [first, second, ...rest] = args;
- if (!first) throw Error('aio-skiller requires <skill|bank-job>');
- if (first === 'gather') {
-  if (!second || !VALID_GATHER_SKILLS.includes(second as GatherSkill)) {
-   throw Error(`aio-skiller gather requires <skill> (${VALID_GATHER_SKILLS.join('|')})`);
-  }
-  const [method = DEFAULT_METHOD[second] ?? '', ...tail] = rest;
-  const parsed = parseGatherTokens(tail);
-  const code = await runGatherCli(account, {
-   skill: second as GatherSkill,
-   method,
-   args: parsed.args,
-   env: { ...env, ...parsed.env },
-   deps: buildGatherDeps(),
-  });
-  return code === 0 ? 'RESULT ok' : 'RESULT fail';
- }
- const normalizedSkill = first.toLowerCase().replace(/^--skill=/, '');
- if (normalizedSkill === 'agility' && second?.toLowerCase() !== 'specialist') {
-  const explicitOrder = ['order', 'agility-order', '--method=order'].includes((second ?? '').toLowerCase());
-  const rawTokens = explicitOrder ? rest : [second ?? '', ...rest].filter(Boolean);
-  const parsed = parseGatherTokens(rawTokens);
-  const code = await runAgilityCli([account, ...parsed.args], { ...env, ...parsed.env }, { readSave: readPracticeSave });
-  return code === 0 ? 'RESULT ok' : 'RESULT fail';
- }
- if (normalizedSkill === 'runecraft' && second?.toLowerCase() !== 'specialist') {
-  const normalizedMethod = (second ?? '').toLowerCase().replace(/^--method=/, '');
-  const matchedMode = RUNECRAFT_DIRECT_METHODS[normalizedMethod];
-  const rcMode: RunecraftMode = matchedMode ?? 'bank-craft';
-  const rawTokens = matchedMode ? rest : [second ?? '', ...rest].filter(Boolean);
-  const parsed = parseGatherTokens(rawTokens);
-  const code = await runRunecraftCli(rcMode, account, parsed.args, { ...env, ...parsed.env }, buildRunecraftDeps());
-  return code === 0 ? 'RESULT ok' : 'RESULT fail';
- }
- if (first === 'combat') {
-  if (!second) throw Error('aio-skiller combat requires <mode>');
-  const prevExitCode = process.exitCode;
-  process.exitCode = 0;
-  try {
-   await runCombatModeCli(account, second, rest, env, {
-    leaveStarter: leaveRuneStarter,
-    comboRecipe: itemMagicRecipe,
-    runComboItem: runItemMagic,
-   });
-   return !process.exitCode || Number(process.exitCode) === 0 ? 'RESULT ok' : 'RESULT fail';
-  } finally {
-   process.exitCode = prevExitCode;
-  }
- }
- if (first === 'artisan') {
-  if (!second || !VALID_ARTISAN_SKILLS.includes(second as ArtisanSkill)) {
-   throw Error(`aio-skiller artisan requires <skill> (${VALID_ARTISAN_SKILLS.join('|')})`);
-  }
-  if (second === 'bank-job') {
-   return runAioSkiller(account, ['bank-job', ...rest], env);
-  }
-  const [method = DEFAULT_METHOD[second] ?? '', ...tail] = rest;
-  const parsed = parseGatherTokens(tail);
-  const code = await runArtisanCli(account, {
-   skill: second as ArtisanSkill,
-   method,
-   args: parsed.args,
-   env: { ...env, ...parsed.env },
-   deps: buildArtisanDeps(),
-  });
-  return code === 0 ? 'RESULT ok' : 'RESULT fail';
- }
- if (first === 'bank-job') {
-  if (!second) throw Error('aio-skiller bank-job requires <job.json>');
-  // Several job files run in one login, in order, and stop at the first failed job: each login costs board ticks.
-  const jobs = [second, ...rest].map(readBankJobArgument);
-  let stopped = false;
-  let s: Awaited<ReturnType<typeof openBot>> | undefined;
-  let ok = false, summary = '';
-  try {
-   s = await openBot(account, { onStop: async () => { stopped = true; } });
-   const results: Awaited<ReturnType<typeof runBankJob>>[] = [];
-   for (const job of jobs) {
-    const res = await runBankJob(
-     s,
-     job,
-     () => stopped || existsSync(join('.practice', 'stop-all')) || existsSync(join('.practice', `stop-${account}`)) || existsSync(join('.practice', `stop-${account.toLowerCase()}`)),
-    );
-    results.push(res);
-    if (!res.ok) break;
+ export async function runAioSkiller(account: string, args: readonly string[], env: Record<string, string | undefined> = process.env): Promise<string> {
+  if (!account) throw Error('aio-skiller requires account');
+  const [first, second, ...rest] = args;
+  if (!first) throw Error('aio-skiller requires <skill|bank-job>');
+  if (first === 'gather') {
+   if (!second || !VALID_GATHER_SKILLS.includes(second as GatherSkill)) {
+    throw Error(`aio-skiller gather requires <skill> (${VALID_GATHER_SKILLS.join('|')})`);
    }
-   ok = results.length === jobs.length && results.every(r => r.ok);
-   summary = jobs.length === 1 ? JSON.stringify(results[0]) : JSON.stringify({ ok, jobs: results });
-  } catch (error) {
-   summary = String(error);
-  } finally {
-   await finish(s ? [s] : [], ok, summary || 'aio-skiller bank-job');
+   const [method = DEFAULT_METHOD[second] ?? '', ...tail] = rest;
+   const parsed = parseGatherTokens(tail);
+   const [{ runGatherCli }, deps] = await Promise.all([import('../packages/workers/src/gather/dispatch'), buildGatherDeps()]);
+   const code = await runGatherCli(account, {
+    skill: second as GatherSkill,
+    method,
+    args: parsed.args,
+    env: { ...env, ...parsed.env },
+    deps,
+   });
+   return code === 0 ? 'RESULT ok' : 'RESULT fail';
   }
-  const result = `RESULT ${ok ? 'ok' : 'fail'} ${summary}`;
-  console.log(result);
-  return result;
+  const normalizedSkill = first.toLowerCase().replace(/^--skill=/, '');
+  if (normalizedSkill === 'agility' && second?.toLowerCase() !== 'specialist') {
+   const explicitOrder = ['order', 'agility-order', '--method=order'].includes((second ?? '').toLowerCase());
+   const rawTokens = explicitOrder ? rest : [second ?? '', ...rest].filter(Boolean);
+   const parsed = parseGatherTokens(rawTokens);
+   const { readPracticeSave } = await import('./measure/fleet-player-save');
+   const code = await runAgilityCli([account, ...parsed.args], { ...env, ...parsed.env }, { readSave: readPracticeSave });
+   return code === 0 ? 'RESULT ok' : 'RESULT fail';
+  }
+  if (normalizedSkill === 'runecraft' && second?.toLowerCase() !== 'specialist') {
+   const normalizedMethod = (second ?? '').toLowerCase().replace(/^--method=/, '');
+   const matchedMode = RUNECRAFT_DIRECT_METHODS[normalizedMethod];
+   const rcMode: RunecraftMode = matchedMode ?? 'bank-craft';
+   const rawTokens = matchedMode ? rest : [second ?? '', ...rest].filter(Boolean);
+   const parsed = parseGatherTokens(rawTokens);
+   const code = await runRunecraftCli(rcMode, account, parsed.args, { ...env, ...parsed.env }, await buildRunecraftDeps());
+   return code === 0 ? 'RESULT ok' : 'RESULT fail';
+  }
+  if (first === 'combat') {
+   if (!second) throw Error('aio-skiller combat requires <mode>');
+   const prevExitCode = process.exitCode;
+   process.exitCode = 0;
+   try {
+    const [{ runCombatModeCli }, { leaveRuneStarter }] = await Promise.all([
+     import('../packages/workers/src/combat/module'),
+     import('./rune-starter'),
+    ]);
+    await runCombatModeCli(account, second, rest, env, {
+     leaveStarter: leaveRuneStarter,
+     comboRecipe: itemMagicRecipe,
+     runComboItem: runItemMagic,
+    });
+    return !process.exitCode || Number(process.exitCode) === 0 ? 'RESULT ok' : 'RESULT fail';
+   } finally {
+    process.exitCode = prevExitCode;
+   }
+  }
+  if (first === 'artisan') {
+   if (!second || !VALID_ARTISAN_SKILLS.includes(second as ArtisanSkill)) {
+    throw Error(`aio-skiller artisan requires <skill> (${VALID_ARTISAN_SKILLS.join('|')})`);
+   }
+   if (second === 'bank-job') {
+    return runAioSkiller(account, ['bank-job', ...rest], env);
+   }
+   const [method = DEFAULT_METHOD[second] ?? '', ...tail] = rest;
+   const parsed = parseGatherTokens(tail);
+   const [{ runArtisanCli }, deps] = await Promise.all([import('../packages/workers/src/bank-artisan/dispatch'), buildArtisanDeps()]);
+   const code = await runArtisanCli(account, {
+    skill: second as ArtisanSkill,
+    method,
+    args: parsed.args,
+    env: { ...env, ...parsed.env },
+    deps,
+   });
+   return code === 0 ? 'RESULT ok' : 'RESULT fail';
+  }
+  if (first === 'bank-job') {
+   if (!second) throw Error('aio-skiller bank-job requires <job.json>');
+   // Several job files run in one login, in order, and stop at the first failed job: each login costs board ticks.
+   const jobs = [second, ...rest].map(readBankJobArgument);
+   const { openBot, finish } = await import('../packages/core/src/bot');
+   let stopped = false;
+   let s: Awaited<ReturnType<typeof openBot>> | undefined;
+   let ok = false, summary = '';
+   try {
+    s = await openBot(account, { onStop: async () => { stopped = true; } });
+    const results: Awaited<ReturnType<typeof runBankJob>>[] = [];
+    for (const job of jobs) {
+     const res = await runBankJob(
+      s,
+      job,
+      () => stopped || existsSync(join('.practice', 'stop-all')) || existsSync(join('.practice', `stop-${account}`)) || existsSync(join('.practice', `stop-${account.toLowerCase()}`)),
+     );
+     results.push(res);
+     if (!res.ok) break;
+    }
+    ok = results.length === jobs.length && results.every(r => r.ok);
+    summary = jobs.length === 1 ? JSON.stringify(results[0]) : JSON.stringify({ ok, jobs: results });
+   } catch (error) {
+    summary = String(error);
+   } finally {
+    await finish(s ? [s] : [], ok, summary || 'aio-skiller bank-job');
+   }
+   const result = `RESULT ${ok ? 'ok' : 'fail'} ${summary}`;
+   console.log(result);
+   return result;
+  }
+  const step = resolveSkillerStep(first, second, rest);
+  const mergedEnv = mergeSkillerEnv(step.env, env, [second ?? '', ...rest].filter(Boolean));
+  if (step.script === 'scripts/aio-skiller.ts' && (step.args[0] === 'gather' || step.args[0] === 'combat' || step.args[0] === 'artisan')) {
+   return runAioSkiller(account, step.args, mergedEnv);
+  }
+  const { runDirectChild } = await import('../packages/core/src/run-child');
+  return runDirectChild([step.script, account, ...step.args], mergedEnv);
  }
- const step = resolveSkillerStep(first, second, rest);
- const mergedEnv = mergeSkillerEnv(step.env, env, [second ?? '', ...rest].filter(Boolean));
- if (step.script === 'scripts/aio-skiller.ts' && (step.args[0] === 'gather' || step.args[0] === 'combat' || step.args[0] === 'artisan')) {
-  return runAioSkiller(account, step.args, mergedEnv);
- }
- return runDirectChild([step.script, account, ...step.args], mergedEnv);
-}
 
 if (import.meta.main) {
  const [account, ...rest] = process.argv.slice(2);

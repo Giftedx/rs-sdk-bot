@@ -61,13 +61,27 @@ export type SmeltOrder = {
 
 const furnaceCache = new Map<number, { name: string; fremennik: boolean; width: number; length: number }>();
 
+function findPackNameById(file: string, id: number): string | undefined {
+    const text = readFileSync(file, 'utf8');
+    const prefix = id + '=';
+    if (text.startsWith(prefix)) {
+        const end = text.indexOf('\n', prefix.length);
+        const lineEnd = end < 0 ? text.length : text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        return text.slice(prefix.length, lineEnd);
+    }
+    const needle = '\n' + prefix;
+    const idx = text.indexOf(needle);
+    if (idx < 0) return undefined;
+    const start = idx + needle.length;
+    const end = text.indexOf('\n', start);
+    const lineEnd = end < 0 ? text.length : text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+    return text.slice(start, lineEnd);
+}
+
 export function nativeSmeltFurnace(id: number) {
     const cached = furnaceCache.get(id);
     if (cached) return cached;
-    const name = readFileSync(join(CONTENT_DIR, 'pack/loc.pack'), 'utf8')
-        .split(/\r?\n/)
-        .find(l => l.startsWith(id + '='))
-        ?.split('=')[1];
+    const name = findPackNameById(join(CONTENT_DIR, 'pack/loc.pack'), id);
     if (!name || !['furnace1', 'viking_furnace', 'viking_furnace2'].includes(name)) {
         throw Error('declared furnace lacks the ordinary Native Smelt contract');
     }

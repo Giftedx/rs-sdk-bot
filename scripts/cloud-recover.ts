@@ -185,32 +185,69 @@ export function waitedAttempts(tasks: readonly any[], target: Target, waits: Rea
 
 // Compaction moves complete task records to this append-only archive. Replayed rows and the overlap before a state
 // save name the same task/run and count once. An unreadable or conflicting outcome cannot grant a fresh budget.
-export function retainedRecoveryTasks(root: string, tasks: readonly any[]): any[] {
-    const archive = join(root, '.practice/coordinator/archive/tasks.jsonl'), retained: any[] = [];
-    try {
-        for (const line of readFileSync(archive, 'utf8').split(/\r?\n/)) if (line.trim()) retained.push(JSON.parse(line));
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw Error('recovery outcome archive unreadable');
-    }
-    const outcomes = new Map<string, any>();
-    const terminal = (t: any) => ['succeeded', 'failed', 'superseded'].includes(t.status);
-    const binding = (t: any) => [t.spec.id, t.spec.kind, t.spec.capability, t.spec.account, t.spec.sessionRecovery, t.spec.repairs];
-    for (const t of [...retained, ...tasks]) {
-        if (typeof t?.spec?.id !== 'string' || !t.spec.id || !['pending', 'running', 'succeeded', 'failed', 'superseded'].includes(t.status))
-            throw Error('recovery outcome archive record invalid');
-        if (t.runId !== undefined && (typeof t.runId !== 'string' || !t.runId)) throw Error('recovery outcome archive run invalid');
-        // A compacted task id can be submitted again. Its distinct runs each spent their own budget. Tasks that
-        // never launched have no run id, so their creation time distinguishes separate submissions.
-        const key = t.runId ? `run:${t.runId}` : JSON.stringify(['task', t.spec.id, t.createdAt ?? null]), prior = outcomes.get(key);
-        if (prior) {
-            if (!isDeepStrictEqual(binding(prior), binding(t))
-                || terminal(prior) && terminal(t) && (prior.status !== t.status || prior.receipt?.error !== t.receipt?.error
+const TERMINAL_TASK_STATUSES = new Set(['succeeded', 'failed', 'superseded']);
+const VALID_TASK_STATUSES = new Set(['pending', 'running', 'succeeded', 'failed', 'superseded']);
+const taskBinding = (t: any) => [t.spec.id, t.spec.kind, t.spec.capability, t.spec.account, t.spec.sessionRecovery, t.spec.repairs];
+let cachedArchivePath = '';
+let cachedArchiveText = '';
+let cachedArchiveOutcomes: Map<string, any> | null = null;
+
+function mergeRecoveryRecord(outcomes: Map<string, any>, t: any): void {
+    if (typeof t?.spec?.id !== 'string' || !t.spec.id || !VALID_TASK_STATUSES.has(t.status))
+        throw Error('recovery outcome archive record invalid');
+    if (t.runId !== undefined && (typeof t.runId !== 'string' || !t.runId)) throw Error('recovery outcome archive run invalid');
+    // A compacted task id can be submitted again. Its distinct runs each spent their own budget. Tasks that
+    // never launched have no run id, so their creation time distinguishes separate submissions.
+    const key = t.runId ? `run:${t.runId}` : JSON.stringify(['task', t.spec.id, t.createdAt ?? null]);
+    const prior = outcomes.get(key);
+    if (prior) {
+        if (!isDeepStrictEqual(taskBinding(prior), taskBinding(t))
+            || TERMINAL_TASK_STATUSES.has(prior.status) && TERMINAL_TASK_STATUSES.has(t.status)
+                && (prior.status !== t.status || prior.receipt?.error !== t.receipt?.error
                     || prior.receipt?.ok !== t.receipt?.ok || !isDeepStrictEqual(prior.receipt?.output ?? null, t.receipt?.output ?? null)))
-                throw Error('recovery outcome archive conflict');
-        }
+            throw Error('recovery outcome archive conflict');
         // Preserve the terminal outcome while keeping current records last for dependency lookup by task id.
-        outcomes.delete(key); outcomes.set(key, prior && terminal(prior) ? prior : t);
+        outcomes.delete(key);
+        outcomes.set(key, TERMINAL_TASK_STATUSES.has(prior.status) ? prior : t);
+    } else {
+        outcomes.set(key, t);
     }
+}
+
+function loadArchiveOutcomes(archive: string): Map<string, any> {
+    let text = '';
+    const parsed: any[] = [];
+    let cacheHit = false;
+    try {
+        text = readFileSync(archive, 'utf8');
+        if (cachedArchiveOutcomes && cachedArchivePath === archive && cachedArchiveText === text) {
+            cacheHit = true;
+        } else {
+            let pos = 0;
+            while (pos < text.length) {
+                let end = text.indexOf('\n', pos);
+                if (end < 0) end = text.length;
+                const slice = text.slice(pos, end).trim();
+                if (slice) parsed.push(JSON.parse(slice));
+                pos = end + 1;
+            }
+        }
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return new Map();
+        throw Error('recovery outcome archive unreadable');
+    }
+    if (cacheHit) return new Map(cachedArchiveOutcomes!);
+    const base = new Map<string, any>();
+    for (let i = 0; i < parsed.length; i++) mergeRecoveryRecord(base, parsed[i]);
+    cachedArchivePath = archive;
+    cachedArchiveText = text;
+    cachedArchiveOutcomes = base;
+    return new Map(base);
+}
+
+export function retainedRecoveryTasks(root: string, tasks: readonly any[]): any[] {
+    const outcomes = loadArchiveOutcomes(join(root, '.practice/coordinator/archive/tasks.jsonl'));
+    for (let i = 0; i < tasks.length; i++) mergeRecoveryRecord(outcomes, tasks[i]);
     return [...outcomes.values()];
 }
 

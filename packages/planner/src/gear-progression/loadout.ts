@@ -3,7 +3,7 @@ import type { Bonus, Gear, Skill } from '../../../knowledge/src/gear';
 import { sumBonuses } from '../../../knowledge/src/gear-query';
 import { gearSources, sourceCost, valueOf, type GearSource, type MarketAsks } from '../gear-sources';
 import { ownedBestLoadout, type GearCount, type GearSlot, type OptionalGearSlot, type OwnedLoadout } from '../owned-loadout';
-import { canWearGear, gearById, gearCatalog, gearIdByName, shopAccessible, shopCatalog, weaponSupportsTrainSkill } from './catalog';
+import { canWearGear, gearById, gearCatalogBySlot, gearIdByName, shopAccessible, shopCatalog, weaponSupportsTrainSkill } from './catalog';
 import {
     GEAR_KEY_BY_SLOT,
     GOD_ALIGN_BY_ID,
@@ -121,7 +121,7 @@ export function selectProgressiveLoadout(
     // The ammunition a weapon fires from the owned stock: the strongest kind with a run's worth (arrowMin), and with
     // no such kind the largest stack. Three rune arrows never displace 300 mithril arrows.
     const ownedAmmo = style === 'ranged'
-        ? gearCatalog().filter(g => g.slot === 'quiver' && have(g) > 0)
+        ? gearCatalogBySlot('quiver').filter(g => have(g) > 0)
         : [];
     const ammoFor = (weapon: Gear): Gear | null => {
         const fits = ownedAmmo.filter(a => {
@@ -178,8 +178,7 @@ export function selectProgressiveLoadout(
 
     const slotCandidates = (slot: RangedLoadoutSlotName, currentWeapon: Gear | null, useCatalogArrow = true): Gear[] => {
         const wearSlot = GEAR_KEY_BY_SLOT[slot];
-        const all = gearCatalog().filter(g => {
-            if (g.slot !== wearSlot) return false;
+        const all = gearCatalogBySlot(wearSlot).filter(g => {
             if (!canWearGear(g, skillMap, done)) return false;
             if (slot === 'weapon') {
                 if (!weaponSupportsTrainSkill(g, options.trainSkill)) return false;
@@ -287,8 +286,8 @@ export function selectProgressiveLoadout(
         const current = slot === 'ammo' ? ammo : worn[slot];
         const wearSlot = GEAR_KEY_BY_SLOT[slot];
         const wearableList = slot === 'ammo'
-            ? gearCatalog()
-                .filter(g => g.slot === 'quiver' && arrowCompatibility(worn.weapon, g) && (g.tier ?? 1) <= (skillMap.ranged ?? 1))
+            ? gearCatalogBySlot('quiver')
+                .filter(g => arrowCompatibility(worn.weapon, g) && (g.tier ?? 1) <= (skillMap.ranged ?? 1))
                 .sort((a, b) => scoreGearForStyle(b, 'ranged') - scoreGearForStyle(a, 'ranged') || a.id - b.id)
             : slotCandidates(slot, worn.weapon);
         const bestWearable = wearableList[0] ?? null;
@@ -319,9 +318,8 @@ export function selectProgressiveLoadout(
 
         // Next unlock: items better than both current and bestWearable that fail at least one skill/quest req.
         const threshold = Math.max(currentScore, bestScore);
-        const locked = gearCatalog()
+        const locked = gearCatalogBySlot(wearSlot)
             .filter(g => {
-                if (g.slot !== wearSlot) return false;
                 if (slot === 'weapon' && !weaponSupportsTrainSkill(g, options.trainSkill)) return false;
                 if (slot === 'ammo') {
                     if (!isStandardArrow(g)) return false;
@@ -434,8 +432,8 @@ export function meleeWeaponSlot(
     options: { oneHanded?: boolean; trainSkill?: string; quests?: QuestInput } = {},
 ): GearSlot {
     const known = attack !== null && Number.isSafeInteger(attack) && attack >= 1 && attack <= 99;
-    const list = gearCatalog()
-        .filter(g => g.slot === 'righthand' && scoreGearForStyle(g, 'melee') > -1e8
+    const list = gearCatalogBySlot('righthand')
+        .filter(g => scoreGearForStyle(g, 'melee') > -1e8
             && weaponSupportsTrainSkill(g, options.trainSkill ?? 'all-melee')
             && !(options.oneHanded && g.covers.includes('lefthand')))
         .sort((a, b) => scoreGearForStyle(b, 'melee') - scoreGearForStyle(a, 'melee') || tieOrder(a, b, 'melee'));

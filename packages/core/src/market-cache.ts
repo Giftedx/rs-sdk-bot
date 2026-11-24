@@ -37,7 +37,10 @@ export function marketQuotes(raw: unknown, now = Date.now()): Record<number, Mar
     if (!Number.isSafeInteger(cache?.at) || cache.at <= 0 || now < cache.at || now - cache.at >= MARKET_CACHE_MS
         || !cache.items || typeof cache.items !== 'object' || Array.isArray(cache.items)) return out;
     const price = (value: unknown) => value === null || (Number.isSafeInteger(value) && (value as number) > 0);
-    for (const [key, row] of Object.entries<any>(cache.items)) {
+    const items = cache.items as Record<string, any>;
+    for (const key in items) {
+        if (!Object.hasOwn(items, key)) continue;
+        const row = items[key];
         const id = Number(key);
         if (!/^\d+$/.test(key) || !Number.isSafeInteger(id) || !row || !price(row.ask) || !price(row.bid)
             || !Number.isSafeInteger(row.sell) || row.sell < 0) continue;
@@ -67,13 +70,31 @@ type Profiles = Record<string, { items: { re: RegExp }[] }>;
 export function shopLots(items: Record<number, MarketItem>, profiles: Profiles,
     scan: (profiles: Profiles, quotes: Quote[], minNet: number) => (LotItem & { profile: string })[],
     value: (items: readonly { re: RegExp }[], quotes: Quote[]) => number, floor = 20_000, minNet = 50): Lot[] {
-    const quotes = Object.entries(items).filter(([, m]) => m.base !== undefined && m.want !== undefined)
-        .map(([id, m]) => ({ id: Number(id), name: m.name, basePrice: m.base!, bid: m.bid && m.bid > 0 ? m.bid : null, buyQuantity: m.want! }));
-    const rows = scan(profiles, quotes, minNet), lots: Lot[] = [];
-    for (const profile of new Set(rows.map(r => r.profile))) {
-        const mine = rows.filter(r => r.profile === profile);
-        const v = value(profiles[profile]!.items, quotes.filter(q => mine.some(r => r.id === q.id)));
-        if (v >= floor) lots.push({ profile, value: v, items: mine.map(({ id, name, bid, want, margin }) => ({ id, name, bid, want, margin })) });
+    const quotes: Quote[] = [], quoteById = new Map<number, Quote>();
+    for (const idStr in items) {
+        if (!Object.hasOwn(items, idStr)) continue;
+        const m = items[idStr as any]!;
+        if (m.base === undefined || m.want === undefined) continue;
+        const id = Number(idStr);
+        const q: Quote = { id, name: m.name, basePrice: m.base, bid: m.bid && m.bid > 0 ? m.bid : null, buyQuantity: m.want };
+        quotes.push(q);
+        quoteById.set(id, q);
+    }
+    const rows = scan(profiles, quotes, minNet), byProfile = new Map<string, LotItem[]>(), lots: Lot[] = [];
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i]!;
+        let list = byProfile.get(r.profile);
+        if (!list) { list = []; byProfile.set(r.profile, list); }
+        list.push({ id: r.id, name: r.name, bid: r.bid, want: r.want, margin: r.margin });
+    }
+    for (const [profile, mine] of byProfile) {
+        const matchedQuotes: Quote[] = [];
+        for (let i = 0; i < mine.length; i++) {
+            const q = quoteById.get(mine[i]!.id);
+            if (q) matchedQuotes.push(q);
+        }
+        const v = value(profiles[profile]!.items, matchedQuotes);
+        if (v >= floor) lots.push({ profile, value: v, items: mine });
     }
     return lots.sort((a, b) => b.value - a.value);
 }

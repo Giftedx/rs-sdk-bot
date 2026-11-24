@@ -5,30 +5,19 @@ import type { Step } from '../packages/core/src/chain-step';
 import { resolveRouteStep } from '../packages/core/src/route-step';
 import { runDirectChild } from '../packages/core/src/run-child';
 import { defaultEatAt, totalAvailableHeal } from '../packages/core/src/sustain';
-import { RANGED_ADAPTIVE_DEPS } from './ranged-train';
+import { bankCombatLoot, cowProfile, cowRoutePoints, genericCombatNpc, guardCowWalker } from '../packages/workers/src/combat/melee-gather';
+import { chickenCombatUnlockPlan, chickenTrainingKit, chickenTrainingProfile, chickenTrainingStyle } from '../packages/workers/src/combat/chickens';
 import {
-    bankCombatLoot,
-    chickenCombatUnlockPlan,
-    chickenTrainingKit,
-    chickenTrainingProfile,
-    chickenTrainingStyle,
     combatAlchPolicy,
     combatPotionPolicy,
     combatPotionRecovery,
     combatPotionSession,
-    cowProfile,
-    cowRoutePoints,
     createCombatLoot,
     createCombatPotions,
-    genericCombatNpc,
-    guardCowWalker,
-    runCombatModeCli,
     telegrabPolicy,
-    type CombatLevels,
-    type FighterProfileSpec,
-} from '../packages/workers/src/combat';
-import { stageCows } from './cow-stage';
-import { enableSpecial, holdPrayer, qolDropSelection, refillCannon, type QolDropOrder } from '../packages/workers/src/bank-artisan';
+} from '../packages/workers/src/combat/survivability';
+import type { CombatLevels, FighterProfileSpec } from '../packages/workers/src/combat/types';
+import { enableSpecial, holdPrayer, qolDropSelection, refillCannon, type QolDropOrder } from '../packages/workers/src/bank-artisan/foraging-qol';
 import {
     createPotionCareSession,
     potionCareRecipe,
@@ -37,8 +26,6 @@ import {
     type PotionCareOrder,
     type PotionCarePolicy,
 } from './microbot-potion-care';
-import { leaveRuneStarter } from './rune-starter';
-import { stageTrooperFood } from './trooper-food';
 
 export const FIGHTER_PROFILES: readonly FighterProfileSpec[] = [
     {
@@ -329,6 +316,13 @@ if (import.meta.main) {
     const step = resolveFighterStep(target!, args);
     const mergedEnv = mergeCombatEnv(step.env, process.env, args);
     if (step.script === 'scripts/aio-fighter.ts') {
+        const [{ runCombatModeCli }, { RANGED_ADAPTIVE_DEPS }, { stageCows }, { leaveRuneStarter }, { stageTrooperFood }] = await Promise.all([
+            import('../packages/workers/src/combat/module'),
+            import('./ranged-train'),
+            import('./cow-stage'),
+            import('./rune-starter'),
+            import('./trooper-food'),
+        ]);
         await runCombatModeCli(account, step.args[0] ?? target!, step.args.slice(1), mergedEnv, {
             stageTrooperFood,
             stageCows,

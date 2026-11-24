@@ -2,7 +2,7 @@
 // for strict RS2 Rev 289 (Lost City, January 17, 2005) parity against vendor/rs-sdk/server/content and PlayerStat.ts,
 // while preserving rs-sdk's built-in engine Market / Grand Exchange.
 // Usage: bun tools/check-rev289-parity.ts [--strict]
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { loadRev289Baseline, type Rev289Baseline } from './rev289-baseline';
 
@@ -107,12 +107,17 @@ const BANNED_ITEM_PHRASES_COMBINED_RE = new RegExp(
     `(?<![a-z0-9])(?:${BANNED_OSRS_ITEM_PHRASES.map(phraseBody).join('|')})(?![a-z0-9+])`,
     'i',
 );
+const BANNED_ITEM_PHRASES_PREFILTER_RE = new RegExp(BANNED_OSRS_ITEM_PHRASES.map(phraseBody).join('|'), 'i');
+const ID_DECL_PREFILTER_RE = /PURE_ESSENCE|ITEM_ID|itemId|objId|npcId|locId|protectedSet|\{\s*id:/i;
 const BANNED_ITEM_ID_MATCHERS = [...BANNED_OSRS_ITEM_IDS.entries()].map(([id, label]) => ({
     id,
     label,
     re: new RegExp(`\\b${id}\\b`),
 }));
 const BANNED_ITEM_IDS_COMBINED_RE = new RegExp(`\\b(?:${[...BANNED_OSRS_ITEM_IDS.keys()].join('|')})\\b`);
+const BANNED_SKILLS_COMBINED_RE = new RegExp(`${BANNED_SKILL_MATCHERS.map(m => `(?:${m.re.source})`).join('|')}|\\bslayer\\/drop\\b`, 'i');
+const BANNED_PRAYERS_COMBINED_RE = new RegExp(BANNED_PRAYER_MATCHERS.map(m => `(?:${m.re.source})`).join('|'), 'i');
+const BANNED_SPELLS_COMBINED_RE = new RegExp(BANNED_SPELL_MATCHERS.map(m => `(?:${m.re.source})`).join('|'), 'i');
 const COORD_OR_PORT_RE = /\b(?:x|z|worldX|worldZ|port|tick|cap|budget)\b\s*[:=]/;
 const NEGATIVE_COMMENT_RE = /^\s*\/\/.*\b(no|absent|off|not in|never|neither|without)\b/i;
 
@@ -121,12 +126,22 @@ export const KNOWN_CROSS_WORKER_FILES = new Set<string>();
 
 function walkExt(dir: string, ext: string, out: string[] = []): string[] {
     if (!existsSync(dir)) return out;
-    for (const f of readdirSync(dir).sort()) {
-        const p = join(dir, f);
-        if (statSync(p).isDirectory()) walkExt(p, ext, out);
-        else if (f.endsWith(ext)) out.push(p);
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) walkExt(p, ext, out);
+        else if (entry.name.endsWith(ext)) out.push(p);
     }
     return out;
+}
+
+function walkExts(dir: string, tsOut: string[], jsonOut: string[]): void {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) walkExts(p, tsOut, jsonOut);
+        else if (entry.name.endsWith('.ts')) tsOut.push(p);
+        else if (entry.name.endsWith('.json')) jsonOut.push(p);
+    }
 }
 
 /** Checks that a list of skill names belongs strictly to Rev 289's 19 enabled skills. */
@@ -423,6 +438,19 @@ export function findScriptParityIssues(
     baseline: Pick<Rev289Baseline, 'maxObjId'> & Partial<Pick<Rev289Baseline, 'maxNpcId' | 'maxLocId'>>,
     scope: ParityIssue['scope'] = 'scripts',
 ): ParityIssue[] {
+    const hasPow7 = /Math\.pow\s*\(|2\s*\*\*/.test(text);
+    const hasIdDecl = ID_DECL_PREFILTER_RE.test(text);
+    const hasBannedId = BANNED_ITEM_IDS_COMBINED_RE.test(text);
+    const hasBannedSkill = BANNED_SKILLS_COMBINED_RE.test(text);
+    const hasBannedPhrase = BANNED_ITEM_PHRASES_PREFILTER_RE.test(text);
+    const hasDfs = /dragonfire\s+shield/i.test(text);
+    const hasBannedPrayer = BANNED_PRAYERS_COMBINED_RE.test(text);
+    const hasBannedSpell = BANNED_SPELLS_COMBINED_RE.test(text);
+    const isStageFile = relPath === 'packages/workers/src/logistics/stage.ts';
+    if (!hasPow7 && !hasIdDecl && !hasBannedId && !hasBannedSkill && !hasBannedPhrase && !hasDfs && !hasBannedPrayer && !hasBannedSpell && !isStageFile) {
+        return [];
+    }
+
     const issues: ParityIssue[] = [];
     const lines = text.split(/\r?\n/);
 
@@ -433,53 +461,55 @@ export function findScriptParityIssues(
         const isNegativeComment = NEGATIVE_COMMENT_RE.test(line) || /^\s*(?:const|let)\s+absent\s*=/.test(line);
         const caughtIdsOnLine = new Set<number>();
 
-        if (!isComment && (/\bMath\.pow\s*\(\s*2\s*,[^)]*\/\s*7\b/.test(line) || /\b2\s*\*\*\s*\([^)]*\/\s*7\b/.test(line))) {
+        if (hasPow7 && !isComment && (/\bMath\.pow\s*\(\s*2\s*,[^)]*\/\s*7\b/.test(line) || /\b2\s*\*\*\s*\([^)]*\/\s*7\b/.test(line))) {
             issues.push({ scope, file: `${relPath}:${i + 1}`, detail: 'post-rev-289 OSRS 2^(L/7) XP curve formula' });
         }
 
-        // Flag explicit item-ID declarations above obj.pack max (4088), excluding coords/ticks/ports/interface IDs.
-        for (const m of line.matchAll(/\b(?:PURE_ESSENCE|ITEM_ID|itemId|objId)\s*[:=]\s*(\d{4,6})\b/gi)) {
-            const id = Number(m[1]);
-            if (id > baseline.maxObjId && !caughtIdsOnLine.has(id)) {
-                caughtIdsOnLine.add(id);
-                issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 item ID ${id} (max obj.pack=${baseline.maxObjId})` });
-            }
-        }
-        for (const m of line.matchAll(/\{\s*id:\s*(\d{4,6})\s*,\s*(?:count|qty|amount)\s*:/gi)) {
-            const id = Number(m[1]);
-            if (id > baseline.maxObjId && !caughtIdsOnLine.has(id)) {
-                caughtIdsOnLine.add(id);
-                issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 structured item ID ${id} (max obj.pack=${baseline.maxObjId})` });
-            }
-        }
-        if (baseline.maxNpcId !== undefined) {
-            for (const m of line.matchAll(/\bnpcId\s*[:=]\s*(\d{4,6})\b/gi)) {
+        if (hasIdDecl && ID_DECL_PREFILTER_RE.test(line)) {
+            // Flag explicit item-ID declarations above obj.pack max (4088), excluding coords/ticks/ports/interface IDs.
+            for (const m of line.matchAll(/\b(?:PURE_ESSENCE|ITEM_ID|itemId|objId)\s*[:=]\s*(\d{4,6})\b/gi)) {
                 const id = Number(m[1]);
-                if (id > baseline.maxNpcId) {
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 npc ID ${id} (max npc.pack=${baseline.maxNpcId})` });
-                }
-            }
-        }
-        if (baseline.maxLocId !== undefined) {
-            for (const m of line.matchAll(/\blocId\s*[:=]\s*(\d{4,6})\b/gi)) {
-                const id = Number(m[1]);
-                if (id > baseline.maxLocId) {
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 loc ID ${id} (max loc.pack=${baseline.maxLocId})` });
-                }
-            }
-        }
-        const protectSet = /\bprotectedSet\s*=\s*new Set\(\[([^\]]+)\]/i.exec(line);
-        if (protectSet) {
-            for (const m of protectSet[1]!.matchAll(/\b(\d{4,6})\b/g)) {
-                const id = Number(m[1]);
-                if (id > baseline.maxObjId) {
+                if (id > baseline.maxObjId && !caughtIdsOnLine.has(id)) {
                     caughtIdsOnLine.add(id);
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 protected item ID ${id} (max obj.pack=${baseline.maxObjId})` });
+                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 item ID ${id} (max obj.pack=${baseline.maxObjId})` });
+                }
+            }
+            for (const m of line.matchAll(/\{\s*id:\s*(\d{4,6})\s*,\s*(?:count|qty|amount)\s*:/gi)) {
+                const id = Number(m[1]);
+                if (id > baseline.maxObjId && !caughtIdsOnLine.has(id)) {
+                    caughtIdsOnLine.add(id);
+                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 structured item ID ${id} (max obj.pack=${baseline.maxObjId})` });
+                }
+            }
+            if (baseline.maxNpcId !== undefined) {
+                for (const m of line.matchAll(/\bnpcId\s*[:=]\s*(\d{4,6})\b/gi)) {
+                    const id = Number(m[1]);
+                    if (id > baseline.maxNpcId) {
+                        issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 npc ID ${id} (max npc.pack=${baseline.maxNpcId})` });
+                    }
+                }
+            }
+            if (baseline.maxLocId !== undefined) {
+                for (const m of line.matchAll(/\blocId\s*[:=]\s*(\d{4,6})\b/gi)) {
+                    const id = Number(m[1]);
+                    if (id > baseline.maxLocId) {
+                        issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 loc ID ${id} (max loc.pack=${baseline.maxLocId})` });
+                    }
+                }
+            }
+            const protectSet = /\bprotectedSet\s*=\s*new Set\(\[([^\]]+)\]/i.exec(line);
+            if (protectSet) {
+                for (const m of protectSet[1]!.matchAll(/\b(\d{4,6})\b/g)) {
+                    const id = Number(m[1]);
+                    if (id > baseline.maxObjId) {
+                        caughtIdsOnLine.add(id);
+                        issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `non-rev-289 protected item ID ${id} (max obj.pack=${baseline.maxObjId})` });
+                    }
                 }
             }
         }
         // Flag known post-289 OSRS item IDs in item-helper calls or non-coord ID references.
-        if (BANNED_ITEM_IDS_COMBINED_RE.test(line)) {
+        if (hasBannedId && BANNED_ITEM_IDS_COMBINED_RE.test(line)) {
             for (const m of line.matchAll(/\b(?:sum|has|hasItem|invCount|bankCount|itemCount)\s*\([^)]*\b(\d{4,5})\b/g)) {
                 const id = Number(m[1]);
                 if (id > baseline.maxObjId && !caughtIdsOnLine.has(id) && BANNED_OSRS_ITEM_IDS.has(id)) {
@@ -498,34 +528,40 @@ export function findScriptParityIssues(
 
         // Flag post-289 skills, item phrases, prayers, and spells in runtime literals or non-negated lines.
         if (!isNegativeComment) {
-            for (const { sk, re } of BANNED_SKILL_MATCHERS) {
-                if (re.test(line) || (sk === 'slayer' && /\bslayer\/drop\b/i.test(line))) {
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 skill "${sk}" in ${trimmed.slice(0, 80)}` });
+            if (hasBannedSkill && BANNED_SKILLS_COMBINED_RE.test(line)) {
+                for (const { sk, re } of BANNED_SKILL_MATCHERS) {
+                    if (re.test(line) || (sk === 'slayer' && /\bslayer\/drop\b/i.test(line))) {
+                        issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 skill "${sk}" in ${trimmed.slice(0, 80)}` });
+                    }
                 }
             }
-            if (BANNED_ITEM_PHRASES_COMBINED_RE.test(line)) {
+            if (hasBannedPhrase && BANNED_ITEM_PHRASES_COMBINED_RE.test(line)) {
                 for (const { phrase, re } of BANNED_ITEM_PHRASE_MATCHERS) {
                     if (re.test(line)) {
                         issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 item phrase "${phrase}" in ${trimmed.slice(0, 80)}` });
                     }
                 }
             }
-            if (/\bdragonfire\s+shield\b[^\n]*\b75\b/i.test(line)) {
+            if (hasDfs && /\bdragonfire\s+shield\b[^\n]*\b75\b/i.test(line)) {
                 issues.push({ scope, file: `${relPath}:${i + 1}`, detail: 'post-rev-289 75-Defence Dragonfire shield reference (Rev 289 Dragonfire shield is 1-Def antidragonbreathshield)' });
             }
-            for (const { pr, re } of BANNED_PRAYER_MATCHERS) {
-                if (re.test(line)) {
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: pr === 'preserve' ? 'post-rev-289 prayer literal "Preserve"' : `post-rev-289 prayer "${pr}"` });
+            if (hasBannedPrayer && BANNED_PRAYERS_COMBINED_RE.test(line)) {
+                for (const { pr, re } of BANNED_PRAYER_MATCHERS) {
+                    if (re.test(line)) {
+                        issues.push({ scope, file: `${relPath}:${i + 1}`, detail: pr === 'preserve' ? 'post-rev-289 prayer literal "Preserve"' : `post-rev-289 prayer "${pr}"` });
+                    }
                 }
             }
-            for (const { sp, re } of BANNED_SPELL_MATCHERS) {
-                if (re.test(line)) {
-                    issues.push({ scope, file: `${relPath}:${i + 1}`, detail: sp === 'lunar' ? 'post-rev-289 spellbook "lunar"' : `post-rev-289 spell "${sp}"` });
+            if (hasBannedSpell && BANNED_SPELLS_COMBINED_RE.test(line)) {
+                for (const { sp, re } of BANNED_SPELL_MATCHERS) {
+                    if (re.test(line)) {
+                        issues.push({ scope, file: `${relPath}:${i + 1}`, detail: sp === 'lunar' ? 'post-rev-289 spellbook "lunar"' : `post-rev-289 spell "${sp}"` });
+                    }
                 }
             }
         }
 
-        if (relPath === 'packages/workers/src/logistics/stage.ts') {
+        if (isStageFile) {
             for (const term of BANNED_OSRS_BANK_TERMS) {
                 if (line.toLowerCase().includes(term)) {
                     issues.push({ scope, file: `${relPath}:${i + 1}`, detail: `post-rev-289 bank-sort keyword "${term}"` });
@@ -548,10 +584,10 @@ export function checkScriptsParity(
     const scriptsRoot = join(repoRoot, 'scripts');
     if (!existsSync(scriptsRoot)) return issues;
     const walk = (dir: string) => {
-        for (const f of readdirSync(dir).sort()) {
-            const p = join(dir, f);
-            if (statSync(p).isDirectory()) { walk(p); continue; }
-            if (!f.endsWith('.ts') || f.endsWith('.test.ts')) continue;
+        for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+            const p = join(dir, entry.name);
+            if (entry.isDirectory()) { walk(p); continue; }
+            if (!entry.name.endsWith('.ts') || entry.name.endsWith('.test.ts')) continue;
             const rel = relative(repoRoot, p).replace(/\\/g, '/');
             if (rel === 'tools/check-rev289-parity.ts') continue;
             const isCross = crossFiles.has(rel);
@@ -596,12 +632,15 @@ export function checkPlannerRouterPracticeParity(repoRoot: string, baseline: Rev
     ];
     for (const { dir, scope } of targets) {
         if (!existsSync(dir)) continue;
-        for (const p of walkExt(dir, '.ts')) {
+        const tsFiles: string[] = [];
+        const jsonFiles: string[] = [];
+        walkExts(dir, tsFiles, jsonFiles);
+        for (const p of tsFiles) {
             if (p.endsWith('.test.ts')) continue;
             const rel = relative(repoRoot, p).replace(/\\/g, '/');
             issues.push(...findScriptParityIssues(rel, readFileSync(p, 'utf8'), baseline, scope));
         }
-        for (const p of walkExt(dir, '.json')) {
+        for (const p of jsonFiles) {
             const rel = relative(repoRoot, p).replace(/\\/g, '/');
             let data: unknown;
             try { data = JSON.parse(readFileSync(p, 'utf8')); } catch { continue; }
@@ -682,17 +721,23 @@ export function runRev289Parity(opts: {
 } {
     const repoRoot = opts.repoRoot ?? resolve(import.meta.dir, '..');
     const baseline = loadRev289Baseline(repoRoot);
+    const scriptIssues = checkScriptsParity(repoRoot, baseline, {
+        includeCrossWorker: true,
+        crossWorkerFiles: opts.crossWorkerFiles,
+    });
+    const ownedScriptIssues: ParityIssue[] = [];
+    const crossIssues: ParityIssue[] = [];
+    for (const issue of scriptIssues) {
+        if (issue.scope === 'cross-worker') crossIssues.push(issue);
+        else ownedScriptIssues.push(issue);
+    }
     const ownedIssues = [
         ...checkKnowledgeParity(repoRoot, baseline),
         ...checkDashboardAssetsParity(repoRoot, baseline),
         ...checkCoreAndKnowledgeCodeParity(repoRoot, baseline),
         ...checkPlannerRouterPracticeParity(repoRoot, baseline),
-        ...checkScriptsParity(repoRoot, baseline, { includeCrossWorker: false, crossWorkerFiles: opts.crossWorkerFiles }),
+        ...ownedScriptIssues,
     ];
-    const crossIssues = checkScriptsParity(repoRoot, baseline, {
-        includeCrossWorker: true,
-        crossWorkerFiles: opts.crossWorkerFiles,
-    }).filter(i => i.scope === 'cross-worker');
     const passed = ownedIssues.length === 0 && (!opts.strict || crossIssues.length === 0);
     return { baseline, ownedIssues, crossIssues, passed };
 }

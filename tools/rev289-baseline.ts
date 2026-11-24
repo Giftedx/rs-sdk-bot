@@ -1,5 +1,5 @@
 // Authoritative Rev 289 (Lost City Jan 17, 2005) baseline parser shared by tools/check-rev289-*.ts.
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 export interface Rev289Baseline {
@@ -20,14 +20,14 @@ export interface Rev289Baseline {
     specwepDebugs: Set<string>;
 }
 
-function walkExt(dir: string, ext: string, out: string[] = []): string[] {
-    if (!existsSync(dir)) return out;
-    for (const f of readdirSync(dir).sort()) {
-        const p = join(dir, f);
-        if (statSync(p).isDirectory()) walkExt(p, ext, out);
-        else if (f.endsWith(ext)) out.push(p);
+function walkConfigs(dir: string, objFiles: string[], npcFiles: string[]): void {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) walkConfigs(p, objFiles, npcFiles);
+        else if (entry.name.endsWith('.obj')) objFiles.push(p);
+        else if (entry.name.endsWith('.npc')) npcFiles.push(p);
     }
-    return out;
 }
 
 function parsePack(path: string): { byId: Map<number, string>; byDebug: Map<string, number>; maxId: number } {
@@ -54,15 +54,18 @@ export function loadRev289Baseline(repoRoot = resolve(import.meta.dir, '..')): R
     const npc = parsePack(join(content, 'pack', 'npc.pack'));
     const loc = parsePack(join(content, 'pack', 'loc.pack'));
 
+    const objFiles: string[] = [];
+    const npcFiles: string[] = [];
+    walkConfigs(join(content, 'scripts'), objFiles, npcFiles);
+
     const objNames = new Set<string>();
     const objNameById = new Map<number, string>();
     const specwepDebugs = new Set<string>();
-    for (const f of walkExt(join(content, 'scripts'), '.obj')) {
+    for (const f of objFiles) {
         let cur = '';
         for (const raw of readFileSync(f, 'utf8').split(/\r?\n/)) {
             const line = raw.trim();
-            const head = /^\[([^\]]+)\]$/.exec(line);
-            if (head) { cur = head[1]!; continue; }
+            if (line.startsWith('[') && line.endsWith(']') && line.length > 2) { cur = line.slice(1, -1); continue; }
             if (!cur) continue;
             if (line.startsWith('name=')) {
                 const name = line.slice(5).trim();
@@ -82,7 +85,7 @@ export function loadRev289Baseline(repoRoot = resolve(import.meta.dir, '..')): R
     }
 
     const npcNames = new Set<string>();
-    for (const f of walkExt(join(content, 'scripts'), '.npc')) {
+    for (const f of npcFiles) {
         for (const raw of readFileSync(f, 'utf8').split(/\r?\n/)) {
             const line = raw.trim();
             if (line.startsWith('name=')) npcNames.add(line.slice(5).trim().toLowerCase());

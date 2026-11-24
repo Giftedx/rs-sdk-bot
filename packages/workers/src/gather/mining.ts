@@ -69,14 +69,25 @@ const CONTENT = resolve(ROOT, 'vendor/rs-sdk/server/content');
 // 1. Native At-Site Mining (`mining:at-site`)
 // ---------------------------------------------------------------------------
 function contentPack(kind: string) {
-    return new Map(
-        readFileSync(resolve(CONTENT, 'pack', kind + '.pack'), 'utf8')
-            .split(/\r?\n/)
-            .flatMap(l => {
-                const m = l.match(/^(\d+)=(.+)$/);
-                return m ? ([[m[2]!, Number(m[1])] as const]) : [];
-            }),
-    );
+    const text = readFileSync(resolve(CONTENT, 'pack', kind + '.pack'), 'utf8');
+    const map = new Map<string, number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq + 1 < lineEnd) {
+            let digits = true;
+            for (let i = pos; i < eq; i++) {
+                const ch = text.charCodeAt(i);
+                if (ch < 48 || ch > 57) { digits = false; break; }
+            }
+            if (digits) map.set(text.slice(eq + 1, lineEnd), Number(text.slice(pos, eq)));
+        }
+        pos = end + 1;
+    }
+    return map;
 }
 
 let cachedObjPack: Map<string, number> | undefined;

@@ -1,15 +1,10 @@
 // Pure world-feed appearance decoder and rival fight digest (read-only trace parser).
 const BASE37 = ' abcdefghijklmnopqrstuvwxyz0123456789';
 
-/** Decodes a server player_info base64 appearance block into name, combat level, and worn objects. */
-export function decodeAppearance(b64: string): { name: string; combat: number; worn: { slot: number; obj: number }[] } | null {
-    let b: Uint8Array;
-    try {
-        b = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-    } catch {
-        return null;
-    }
+function decodeAppearanceRaw(b64: string): { name: string; combat: number; worn: { slot: number; obj: number }[]; head: number } | null {
+    const b = Buffer.from(b64, 'base64');
     if (b.length < 2) return null;
+    const head = b[1]!;
     let p = 2;
     const worn: { slot: number; obj: number }[] = [];
     const u1 = () => b[p++]!;
@@ -36,7 +31,13 @@ export function decodeAppearance(b64: string): { name: string; combat: number; w
         name = BASE37[Number(v % 37n)] + name;
         v /= 37n;
     }
-    return { name, combat: u1(), worn };
+    return { name, combat: u1(), worn, head };
+}
+
+/** Decodes a server player_info base64 appearance block into name, combat level, and worn objects. */
+export function decodeAppearance(b64: string): { name: string; combat: number; worn: { slot: number; obj: number }[] } | null {
+    const raw = decodeAppearanceRaw(b64);
+    return raw ? { name: raw.name, combat: raw.combat, worn: raw.worn } : null;
 }
 
 /** Feed sequence IDs for dagger attacks, eats, and player death animations. */
@@ -75,6 +76,7 @@ type Seen = { name: string; x: number; z: number; combat?: number; worn: string[
 /** Extracts fight timelines, prayer transitions, and deaths for `names` from feed lines. */
 export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objName: (id: number) => string = id => String(id)): Digest {
     const bySlot = new Map<number, Seen>();
+    const byName = new Map<string, Seen>();
     const open = new Map<string, Fight>();
     const out: Digest = { fights: [], intervals: {}, prayers: [], deaths: [] };
     const protect = (head: number) => (head & HEAD.melee ? 'melee' : head & HEAD.ranged ? 'ranged' : head & HEAD.magic ? 'magic' : 'off');
@@ -86,6 +88,7 @@ export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objN
             open.delete(name);
         }
     };
+    const rowBySlot = new Map<number, any>();
     for (const raw of lines) {
         if (!raw) continue;
         let m: any;
@@ -95,15 +98,18 @@ export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objN
             continue;
         }
         if (m.t === 'hello') {
-            for (const [slot, e] of bySlot) if (e.region === m.r) bySlot.delete(slot);
+            for (const [slot, e] of bySlot) if (e.region === m.r) { bySlot.delete(slot); if (byName.get(e.name) === e) byName.delete(e.name); }
             continue;
         }
         if (m.t === 'roster') {
             for (const p of m.p ?? []) {
                 const e = bySlot.get(p[0]);
                 const name = String(p[1]).toLowerCase();
-                if (!e || e.name !== name) bySlot.set(p[0], { name, x: p[2], z: p[3], combat: p[5], worn: [], head: 0 });
-                else {
+                if (!e || e.name !== name) {
+                    const entry: Seen = { name, x: p[2], z: p[3], combat: p[5], worn: [], head: 0 };
+                    bySlot.set(p[0], entry);
+                    byName.set(name, entry);
+                } else {
                     e.x = p[2];
                     e.z = p[3];
                     e.combat = p[5];
@@ -112,19 +118,24 @@ export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objN
             continue;
         }
         if (m.t !== 'tick') continue;
+        const players = m.p ?? [];
         const attacks: { by: Seen; spec: boolean }[] = [];
-        for (const r of m.p ?? []) {
+        for (let idx = 0; idx < players.length; idx++) {
+            const r = players[idx]!;
             let e = bySlot.get(r.i);
-            const a = typeof r.ap === 'string' ? decodeAppearance(r.ap) : null;
+            const a = typeof r.ap === 'string' ? decodeAppearanceRaw(r.ap) : null;
             if (r.f || !e) {
-                e = { name: a?.name ?? e?.name ?? `slot${r.i}`, x: r.x ?? e?.x ?? 0, z: r.z ?? e?.z ?? 0, combat: a?.combat ?? e?.combat, worn: e?.worn ?? [], head: e?.head ?? 0 };
+                const name = a?.name ?? e?.name ?? `slot${r.i}`;
+                e = { name, x: r.x ?? e?.x ?? 0, z: r.z ?? e?.z ?? 0, combat: a?.combat ?? e?.combat, worn: e?.worn ?? [], head: e?.head ?? 0 };
                 bySlot.set(r.i, e);
+                byName.set(name, e);
             }
             if (r.x !== undefined) {
                 e.x = r.x;
                 e.z = r.z;
-            } else {
-                for (const d of r.m ?? []) {
+            } else if (r.m) {
+                for (let mi = 0; mi < r.m.length; mi++) {
+                    const d = r.m[mi]!;
                     e.x += DX[d] ?? 0;
                     e.z += DZ[d] ?? 0;
                 }
@@ -132,12 +143,19 @@ export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objN
             e.region = m.r;
             if (r.fe !== undefined) e.fe = r.fe;
             if (a) {
-                const head = Uint8Array.from(atob(r.ap), c => c.charCodeAt(0))[1] ?? 0;
-                if (a.name) e.name = a.name;
+                const head = a.head;
+                if (a.name && a.name !== e.name) {
+                    if (byName.get(e.name) === e) byName.delete(e.name);
+                    e.name = a.name;
+                    byName.set(a.name, e);
+                }
                 if (names.has(e.name) && protect(head) !== protect(e.head)) {
-                    const other = e.fe !== undefined && e.fe >= 32768
-                        ? bySlot.get(e.fe - 32768)
-                        : [...bySlot.values()].find(o => o.fe !== undefined && o.fe >= 32768 && bySlot.get(o.fe - 32768) === e);
+                    let other = e.fe !== undefined && e.fe >= 32768 ? bySlot.get(e.fe - 32768) : undefined;
+                    if (!other) {
+                        for (const o of bySlot.values()) {
+                            if (o.fe !== undefined && o.fe >= 32768 && bySlot.get(o.fe - 32768) === e) { other = o; break; }
+                        }
+                    }
                     out.prayers.push({ tick: m.k, name: e.name, on: protect(head), ...(other?.worn.length ? { near: `${other.name}: ${other.worn.join(',')}` } : other ? { near: other.name } : {}) });
                 }
                 e.worn = a.worn.map(w => objName(w.obj));
@@ -163,27 +181,33 @@ export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objN
                 attacks.push({ by: e, spec: r.an[0] === SEQ.puncture });
             }
         }
-        for (const { by, spec } of attacks) {
-            const target = by.fe !== undefined && by.fe >= 32768 ? bySlot.get(by.fe - 32768) : undefined;
-            if (by.lastAttack !== undefined && m.k - by.lastAttack <= 12) out.intervals[m.k - by.lastAttack] = (out.intervals[m.k - by.lastAttack] ?? 0) + 1;
-            by.lastAttack = m.k;
-            if (!target) continue;
-            let f = open.get(by.name);
-            if (f && (f.target !== target.name || m.k - f.end > 40)) {
-                close(by.name, 'stopped');
-                f = undefined;
+        if (attacks.length) {
+            rowBySlot.clear();
+            for (let idx = 0; idx < players.length; idx++) rowBySlot.set(players[idx]!.i, players[idx]);
+            for (let ai = 0; ai < attacks.length; ai++) {
+                const { by, spec } = attacks[ai]!;
+                const targetSlot = by.fe !== undefined && by.fe >= 32768 ? by.fe - 32768 : -1;
+                const target = targetSlot >= 0 ? bySlot.get(targetSlot) : undefined;
+                if (by.lastAttack !== undefined && m.k - by.lastAttack <= 12) out.intervals[m.k - by.lastAttack] = (out.intervals[m.k - by.lastAttack] ?? 0) + 1;
+                by.lastAttack = m.k;
+                if (!target) continue;
+                let f = open.get(by.name);
+                if (f && (f.target !== target.name || m.k - f.end > 40)) {
+                    close(by.name, 'stopped');
+                    f = undefined;
+                }
+                if (!f) {
+                    f = { by: by.name, target: target.name, targetCombat: target.combat, wild: wild(target.z), start: m.k, end: m.k, order: '', open: [], prayed: [], eatAt: [], hpLow: by.hp ?? 99, targetWorn: [...target.worn], ended: 'stopped' };
+                    open.set(by.name, f);
+                }
+                f.end = m.k;
+                f.order += spec ? 'S' : 'L';
+                const rec = rowBySlot.get(targetSlot);
+                for (const h of rec?.hm ?? []) if (h[1] !== 2) (target.head & HEAD.melee ? f.prayed : f.open).push(h[0]);
             }
-            if (!f) {
-                f = { by: by.name, target: target.name, targetCombat: target.combat, wild: wild(target.z), start: m.k, end: m.k, order: '', open: [], prayed: [], eatAt: [], hpLow: by.hp ?? 99, targetWorn: [...target.worn], ended: 'stopped' };
-                open.set(by.name, f);
-            }
-            f.end = m.k;
-            f.order += spec ? 'S' : 'L';
-            const rec = (m.p ?? []).find((r: any) => bySlot.get(r.i) === target);
-            for (const h of rec?.hm ?? []) if (h[1] !== 2) (target.head & HEAD.melee ? f.prayed : f.open).push(h[0]);
         }
         for (const [name, f] of open) {
-            const e = [...bySlot.values()].find(s => s.name === name);
+            const e = byName.get(name);
             if (e?.hp !== undefined) f.hpLow = Math.min(f.hpLow, e.hp);
             if (m.k - f.end > 40) close(name, 'stopped');
         }
@@ -198,23 +222,53 @@ export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objN
 
 /** Summarizes a `Digest` into rival behavior metrics for bench profiles. */
 export function model(d: Digest) {
-    const all = (pick: (f: Fight) => number[]) => d.fights.flatMap(pick);
-    const max = (a: number[]) => (a.length ? Math.max(...a) : null);
-    const firstSpecial = d.fights.map(f => f.order.replace(/E/g, '').indexOf('S')).filter(i => i >= 0);
+    let attacks = 0, specials = 0, hpLow: number | null = null;
+    let maxHitOpen: number | null = null, maxHitPrayed: number | null = null;
+    let hitsOpen = 0, hitsPrayed = 0;
+    const firstSpecial: number[] = [];
+    const eatAt: number[] = [];
+    const ends: Record<string, number> = {};
+    for (let i = 0; i < d.fights.length; i++) {
+        const f = d.fights[i]!;
+        let atk = 0, firstS = -1;
+        for (let k = 0; k < f.order.length; k++) {
+            const c = f.order[k]!;
+            if (c === 'E') continue;
+            if (c === 'S') { specials++; if (firstS < 0) firstS = atk; }
+            atk++;
+        }
+        attacks += atk;
+        if (firstS >= 0) firstSpecial.push(firstS);
+        for (let k = 0; k < f.eatAt.length; k++) eatAt.push(f.eatAt[k]!);
+        if (hpLow === null || f.hpLow < hpLow) hpLow = f.hpLow;
+        hitsOpen += f.open.length;
+        for (let k = 0; k < f.open.length; k++) {
+            const h = f.open[k]!;
+            if (maxHitOpen === null || h > maxHitOpen) maxHitOpen = h;
+        }
+        hitsPrayed += f.prayed.length;
+        for (let k = 0; k < f.prayed.length; k++) {
+            const h = f.prayed[k]!;
+            if (maxHitPrayed === null || h > maxHitPrayed) maxHitPrayed = h;
+        }
+        ends[f.ended] = (ends[f.ended] ?? 0) + 1;
+    }
+    let prayers = 0;
+    for (let i = 0; i < d.prayers.length; i++) if (d.prayers[i]!.on !== 'off') prayers++;
     return {
         fights: d.fights.length,
-        attacks: d.fights.reduce((n, f) => n + f.order.replace(/E/g, '').length, 0),
+        attacks,
         intervals: d.intervals,
-        specials: d.fights.reduce((n, f) => n + (f.order.match(/S/g)?.length ?? 0), 0),
+        specials,
         firstSpecialAfterAttacks: firstSpecial,
-        eatAt: all(f => f.eatAt),
-        hpLow: max(d.fights.map(f => -f.hpLow)) === null ? null : -max(d.fights.map(f => -f.hpLow))!,
-        maxHitOpen: max(all(f => f.open)),
-        hitsOpen: all(f => f.open).length,
-        maxHitPrayed: max(all(f => f.prayed)),
-        hitsPrayed: all(f => f.prayed).length,
-        prayers: d.prayers.filter(p => p.on !== 'off').length,
+        eatAt,
+        hpLow,
+        maxHitOpen,
+        hitsOpen,
+        maxHitPrayed,
+        hitsPrayed,
+        prayers,
         deaths: d.deaths.length,
-        ends: d.fights.reduce((n, f) => ({ ...n, [f.ended]: (n[f.ended] ?? 0) + 1 }), {} as Record<string, number>),
+        ends,
     };
 }

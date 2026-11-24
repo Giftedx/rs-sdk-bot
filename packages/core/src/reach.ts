@@ -46,9 +46,12 @@ function canReachAdjacentTile(flags: FlagsAt, nx: number, nz: number, dx: number
     return (f & wall) === 0;
 }
 
-export function canReachLocal(flags: FlagsAt, from: LocalPoint, to: LocalPoint, opts: { maxSteps?: number; adjacentOk?: boolean } = {}): boolean {
-    const maxSteps = opts.maxSteps ?? 400, adjacentOk = opts.adjacentOk ?? false;
-    if (flags(from.lx, from.lz) === null) return false;
+const SCENE_SIZE = 104;
+const seenStamp = new Uint32Array(SCENE_SIZE * SCENE_SIZE);
+const bfsQueue = new Int32Array(SCENE_SIZE * SCENE_SIZE);
+let currentStamp = 0;
+
+function canReachLocalSlow(flags: FlagsAt, from: LocalPoint, to: LocalPoint, maxSteps: number, adjacentOk: boolean): boolean {
     const key = (lx: number, lz: number) => lx * 256 + lz;
     const seen = new Set<number>([key(from.lx, from.lz)]), queue: LocalPoint[] = [from];
     let expansions = 0;
@@ -58,8 +61,43 @@ export function canReachLocal(flags: FlagsAt, from: LocalPoint, to: LocalPoint, 
         if (adjacentOk && Math.abs(cur.lx - to.lx) + Math.abs(cur.lz - to.lz) === 1 && canReachAdjacentTile(flags, to.lx, to.lz, to.lx - cur.lx, to.lz - cur.lz)) return true;
         if (++expansions > maxSteps) return false;
         for (const [dx, dz] of DIRS) {
-            const k = key(cur.lx + dx, cur.lz + dz);
-            if (!seen.has(k) && canStepLocal(flags, cur.lx, cur.lz, dx, dz)) { seen.add(k); queue.push({ lx: cur.lx + dx, lz: cur.lz + dz }); }
+            const nx = cur.lx + dx, nz = cur.lz + dz;
+            const k = key(nx, nz);
+            if (!seen.has(k) && canStepLocal(flags, cur.lx, cur.lz, dx, dz)) { seen.add(k); queue.push({ lx: nx, lz: nz }); }
+        }
+    }
+    return false;
+}
+
+export function canReachLocal(flags: FlagsAt, from: LocalPoint, to: LocalPoint, opts: { maxSteps?: number; adjacentOk?: boolean } = {}): boolean {
+    const maxSteps = opts.maxSteps ?? 400, adjacentOk = opts.adjacentOk ?? false;
+    if (flags(from.lx, from.lz) === null) return false;
+    if (from.lx < 0 || from.lx >= SCENE_SIZE || from.lz < 0 || from.lz >= SCENE_SIZE
+        || to.lx < 0 || to.lx >= SCENE_SIZE || to.lz < 0 || to.lz >= SCENE_SIZE) {
+        return canReachLocalSlow(flags, from, to, maxSteps, adjacentOk);
+    }
+    if (++currentStamp === 0) { seenStamp.fill(0); currentStamp = 1; }
+    const stamp = currentStamp;
+    seenStamp[from.lx * SCENE_SIZE + from.lz] = stamp;
+    bfsQueue[0] = (from.lx << 7) | from.lz;
+    let tail = 1, expansions = 0;
+    for (let head = 0; head < tail; head++) {
+        const packed = bfsQueue[head]!, cx = packed >> 7, cz = packed & 127;
+        if (cx === to.lx && cz === to.lz) return true;
+        if (adjacentOk && Math.abs(cx - to.lx) + Math.abs(cz - to.lz) === 1 && canReachAdjacentTile(flags, to.lx, to.lz, to.lx - cx, to.lz - cz)) return true;
+        if (++expansions > maxSteps) return false;
+        for (let d = 0; d < 8; d++) {
+            const dx = DIRS[d]![0], dz = DIRS[d]![1];
+            const nx = cx + dx, nz = cz + dz;
+            if (nx < 0 || nx >= SCENE_SIZE || nz < 0 || nz >= SCENE_SIZE) {
+                if (canStepLocal(flags, cx, cz, dx, dz)) return canReachLocalSlow(flags, from, to, maxSteps, adjacentOk);
+                continue;
+            }
+            const idx = nx * SCENE_SIZE + nz;
+            if (seenStamp[idx] !== stamp && canStepLocal(flags, cx, cz, dx, dz)) {
+                seenStamp[idx] = stamp;
+                bfsQueue[tail++] = (nx << 7) | nz;
+            }
         }
     }
     return false;

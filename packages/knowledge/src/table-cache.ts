@@ -42,3 +42,24 @@ export function cachedRows<Row>(name: string, schema: number, build: () => Row[]
     } catch { /* the cache is an optimization */ }
     return rows;
 }
+
+/** Cache a single JSON value by contentVersion plus an explicit tag (e.g. input file stats). */
+export function cachedValue<T>(name: string, schema: number, tag: string, build: () => T): T {
+    const key = process.env.KNOWLEDGE_CACHE === '0' ? null : contentVersion();
+    if (key === null) return build();
+    const dir = join(repoRoot, '.practice', 'cache', 'knowledge'), file = join(dir, `${name}-${schema}-${key}.json`);
+    try {
+        if (existsSync(file)) {
+            const parsed = JSON.parse(readFileSync(file, 'utf8')) as { tag?: string; value?: T };
+            if (parsed.tag === tag && parsed.value !== undefined) return parsed.value;
+        }
+    } catch { /* a damaged file: build again */ }
+    const value = build();
+    try {
+        mkdirSync(dir, { recursive: true });
+        const part = `${file}.${process.pid}.part`;
+        writeFileSync(part, JSON.stringify({ tag, value }));
+        renameSync(part, file);
+    } catch { /* the cache is an optimization */ }
+    return value;
+}

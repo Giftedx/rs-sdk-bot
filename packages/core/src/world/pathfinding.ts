@@ -56,24 +56,74 @@ export async function rsPathLength(): Promise<PathLength> {
     const cache = legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
     const areas = mapAreas(pf, grid, worldRepoRoot);
     let lastBlocked: DoorBlock[] | undefined, lastShut = '', lastDanger: object | null | undefined, lastDk = '-';
+    let interactionAreasScope = '';
+    const interactionAreasCache = new Map<string, number[] | null>();
     const scopePrefix = (blocked: DoorBlock[]): string => {
         const d = activeDanger();
+        let changed = false;
         if (blocked !== lastBlocked) {
             lastBlocked = blocked;
             let shut = policyKeys.get(blocked);
             if (shut === undefined) { shut = cache.hash(blocked); policyKeys.set(blocked, shut); }
-            lastShut = shut;
+            if (shut !== lastShut) { lastShut = shut; changed = true; }
         }
         if (d !== lastDanger) {
             lastDanger = d;
-            if (!d) lastDk = '-';
-            else {
-                let dk = dangerKeys.get(d);
-                if (dk === undefined) { dk = routeDangerHash(d, cache); dangerKeys.set(d, dk); }
-                lastDk = dk;
+            let dk = '-';
+            if (d) {
+                const cached = dangerKeys.get(d);
+                if (cached !== undefined) dk = cached;
+                else { dk = routeDangerHash(d, cache); dangerKeys.set(d, dk); }
             }
+            if (dk !== lastDk) { lastDk = dk; changed = true; }
         }
-        return `kept:${lastShut}${lastDk}`;
+        if (changed) {
+            interactionAreasScope = `kept:${lastShut}${lastDk}`;
+            interactionAreasCache.clear();
+        }
+        return interactionAreasScope || (interactionAreasScope = `kept:${lastShut}${lastDk}`);
+    };
+    const interactionKey = (q: InteractionTarget): string => {
+        let cachedIk = interactionKeys.get(q);
+        if (cachedIk === undefined) { cachedIk = cache.hash(q); interactionKeys.set(q, cachedIk); }
+        return cachedIk;
+    };
+    const separatedInteraction = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, q: InteractionTarget): boolean => {
+        if (from.level !== to.level) return false;
+        const lvl = from.level;
+        const own = areas.area(lvl, from.x, from.z);
+        if (own === -2) return false;
+        let starts: number[] | null = null;
+        if (own < 0) {
+            starts = [];
+            for (let x = from.x - 1; x <= from.x + 1; x++) for (let z = from.z - 1; z <= from.z + 1; z++) {
+                const v = areas.area(lvl, x, z);
+                if (v === -2) return false;
+                if (v >= 0 && !starts.includes(v)) starts.push(v);
+            }
+            if (starts.length === 0) return false;
+        }
+        scopePrefix(blocked);
+        const key = `${to.x},${to.z},${lvl}:${tol}:${interactionKey(q)}`;
+        let targetAreas = interactionAreasCache.get(key);
+        if (targetAreas === undefined) {
+            const r = Math.max(tol, 1);
+            const x0 = to.x - r, z0 = to.z - r, x1 = to.x + q.width - 1 + r, z1 = to.z + q.height - 1 + r;
+            const list: number[] = [];
+            let unknown = false;
+            for (let x = x0; x <= x1 && !unknown; x++) for (let z = z0; z <= z1; z++) {
+                if (!grid.reached(lvl, x, z, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags)) continue;
+                const v = areas.area(lvl, x, z);
+                if (v === -2) { unknown = true; break; }
+                if (v >= 0 && !list.includes(v)) list.push(v);
+            }
+            targetAreas = unknown ? null : list;
+            interactionAreasCache.set(key, targetAreas);
+        }
+        if (!targetAreas || targetAreas.length === 0) return false;
+        if (own >= 0) return !targetAreas.includes(own);
+        for (let i = 0; i < starts!.length; i++) if (targetAreas.includes(starts![i]!)) return false;
+        return true;
     };
     const measureNow = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
         if (!interaction) {
@@ -107,12 +157,7 @@ export async function rsPathLength(): Promise<PathLength> {
     };
     const lookupOrMeasure = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
         const prefix = scopePrefix(blocked);
-        let ik = '';
-        if (interaction) {
-            let cachedIk = interactionKeys.get(interaction);
-            if (cachedIk === undefined) { cachedIk = cache.hash(interaction); interactionKeys.set(interaction, cachedIk); }
-            ik = ':' + cachedIk;
-        }
+        const ik = interaction ? `:${interactionKey(interaction)}` : '';
         const k = `${prefix}${from.x},${from.z},${from.level}>${to.x},${to.z},${to.level}:${tol}${ik}`;
         const cached = cache.get(k);
         if (cached !== undefined) return cached;
@@ -124,7 +169,16 @@ export async function rsPathLength(): Promise<PathLength> {
         if (from.level !== to.level) return null;
         if (!interaction && tol === 0 && (from.x !== to.x || from.z !== to.z) && !(pf as any).isTileWalkable(to.level, to.x, to.z)) return null;
         // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
-        if (separated(areas, from, to, tol, interaction, interaction && ((x, z) => grid.reached(to.level, x, z, to.x, to.z, interaction.width, interaction.height, 1, interaction.angle, interaction.shape, interaction.blockAccessFlags)))) return null;
+        if (interaction ? separatedInteraction(from, to, blocked, tol, interaction) : separated(areas, from, to, tol)) return null;
+        return lookupOrMeasure(from, to, blocked, tol, interaction);
+    };
+    measure.measurePrechecked = (from, to, blocked, tol, interaction) => {
+        if (from.level !== to.level) return null;
+        if (interaction) {
+            if (separatedInteraction(from, to, blocked, tol, interaction)) return null;
+        } else if (tol === 0 && (from.x !== to.x || from.z !== to.z) && !(pf as any).isTileWalkable(to.level, to.x, to.z)) {
+            return null;
+        }
         return lookupOrMeasure(from, to, blocked, tol, interaction);
     };
     measure.withPolicy = scoped;
@@ -132,7 +186,7 @@ export async function rsPathLength(): Promise<PathLength> {
     measure.areaOf = t => areas.area(t.level, t.x, t.z);
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
     // Labels first: built under closed danger tiles they would carry one account's danger to every account.
-    measure.withDanger = (acct, from, to, query) => { try { return guardRoute(grid, acct, [from, to], query); } finally { cache.save(); } };
+    measure.withDanger = (acct, from, to, query) => { try { return guardRoute(grid, acct, [from, to], query); } finally { interactionAreasCache.clear(); cache.save(); } };
     return measure;
 }
 

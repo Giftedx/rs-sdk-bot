@@ -84,7 +84,9 @@ export function buildDropSources(catalog: SourceCatalog): Map<string, DropSource
         const places = names.map(catalog.npcPlace).filter(p => p.spawns > 0);
         const combat = names.map(n => catalog.npcByName.get(n)?.combat).filter((c): c is number => typeof c === 'number');
         const avg = (row.count + row.countMax) / 2, wild = places.length > 0 && places.every(p => p.wilderness);
-        dropSources.set(row.item, [...(dropSources.get(row.item) ?? []), {
+        let list = dropSources.get(row.item);
+        if (!list) { list = []; dropSources.set(row.item, list); }
+        list.push({
             kind: 'drop', npc: trigger, combat: combat.length ? Math.min(...combat) : null, chance: Math.round(row.chance * 1e6) / 1e6, countMin: row.count, countMax: row.countMax,
             conditional: row.conditional, condition: row.conditional ? condition : null, via: row.via, places, src: row.src, gate,
             blocked: places.length === 0 ? 'no spawn of this npc in the maps' : null,
@@ -93,7 +95,7 @@ export function buildDropSources(catalog: SourceCatalog): Map<string, DropSource
                 coinsPerUnit: 0, coinsBasis: 'content', coinsNote: 'no coins spent; food and ammunition are not counted',
                 risk: null, riskBasis: wild ? 'model' : 'unknown', riskNote: `npc combat ${combat.length ? Math.min(...combat) : '?'}; death chance not modelled${wild ? '; every spawn is in the Wilderness, so a death loses carried items' : ''}`,
             }),
-        }]);
+        });
     };
 
     const tabled = new Set<string>();
@@ -107,7 +109,11 @@ export function buildDropSources(catalog: SourceCatalog): Map<string, DropSource
             const byItem = new Map<string, string[]>();
             for (const n of names) {
                 const dd = catalog.deathDrop.get(n) ?? DEATH_DEFAULT;
-                if (dd.item !== 'null') byItem.set(dd.item, [...(byItem.get(dd.item) ?? []), n]);
+                if (dd.item !== 'null') {
+                    let list = byItem.get(dd.item);
+                    if (!list) { list = []; byItem.set(dd.item, list); }
+                    list.push(n);
+                }
             }
             for (const [item, ns] of byItem) addDrop(d.trigger, ns, { ...row, item, src: row.src, via: `death_drop param (${(catalog.deathDrop.get(ns[0]!) ?? DEATH_DEFAULT).src})` });
         }

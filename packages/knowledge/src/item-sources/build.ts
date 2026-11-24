@@ -1,29 +1,39 @@
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
+import { contentRoot, knowledgeDir } from '../paths';
+import { cachedValue } from '../table-cache';
 import { buildDropSources } from './drops';
 import { loadSourceCatalog, type SourceCatalog } from './lookup';
 import {
-    DELTA_DEFAULT,
-    GATHER_KINDS,
-    LIVE_TICK_SECONDS,
-    PACK_SLOTS,
-    SHOP_UNITS_PER_TICK,
-    TRADE_TICKS,
-    XP_RATE,
-    cost,
-    inWilderness,
-    r3,
-    shopUnitPrice,
-    sourceTiles,
-    type Cost,
-    type GatherSource,
-    type ItemSources,
-    type MakeSource,
-    type Options,
-    type Rung,
-    type ShopSource,
-    type Source,
-    type Substitute,
+    DELTA_DEFAULT, GATHER_KINDS, LIVE_TICK_SECONDS, PACK_SLOTS, SHOP_UNITS_PER_TICK, TRADE_TICKS, XP_RATE,
+    cost, inWilderness, r3, shopUnitPrice, sourceTiles,
+    type Cost, type GatherSource, type ItemSources, type MakeSource, type Options, type Rung, type ShopSource, type Source, type Substitute,
 } from './model';
 import { geSource, ownedSource } from './stock-adapter';
+import type { KnowledgeShop } from './recipes';
+
+type StaticRow = Omit<ItemSources, 'sources' | 'usable' | 'blocked'> & {
+    staticSources: Source[];
+    staticUsable: number;
+    defId: number | undefined;
+    defTradeable: boolean | undefined;
+};
+
+let staticCache: { key: string; stackable: ReadonlySet<string>; rows: StaticRow[] } | undefined;
+
+function staticKey(): string | null {
+    if (process.env.KNOWLEDGE_CACHE === '0') return null;
+    try {
+        const kdir = knowledgeDir();
+        const files = ['items.json', 'ladders.json', 'skill-tools.json', 'shops.json', 'drops.json', 'npcs.json', 'dbtables.json'];
+        const parts = [contentRoot(), kdir];
+        for (const f of files) {
+            const st = statSync(join(kdir, f));
+            parts.push(`${f}:${st.mtimeMs}:${st.size}`);
+        }
+        return parts.join('|');
+    } catch { return null; }
+}
 
 function ticksFrom(r: Rung, perAction: number | null): Pick<Cost, 'helperTicksPerUnit' | 'ticksBasis' | 'ticksNote'> {
     // A measured rate (rates.json, xpPerTick at 25x) wins over the content timing model (ticksPerAction, timing.basis).
@@ -76,21 +86,56 @@ function buildMakeSource(r: Rung, item: string, yieldCount: number | null, gate:
     };
 }
 
-function buildShopSources(item: string, objCost: number, catalog: SourceCatalog): ShopSource[] {
-    const out: ShopSource[] = [];
+function buildStaticRows(): { stackable: ReadonlySet<string>; rows: StaticRow[] } {
+    const catalog = loadSourceCatalog();
+    const dropSources = buildDropSources(catalog);
+
+    const shopsByItem = new Map<string, { inv: string; stock: KnowledgeShop['stock'][number] }[]>();
     for (const s of catalog.shops) {
         if (/^(skill_guide|smithing_)/.test(s.inv)) continue;
         for (const st of s.stock) {
-            if (st.item !== item || st.count <= 0) continue;
-            const owners = catalog.shopOwners.get(s.inv) ?? [];
+            if (st.count <= 0) continue;
+            let list = shopsByItem.get(st.item);
+            if (!list) { list = []; shopsByItem.set(st.item, list); }
+            list.push({ inv: s.inv, stock: st });
+        }
+    }
+
+    const toolSubsByItem = new Map<string, Substitute[]>();
+    for (const t of catalog.toolsFile.records) {
+        for (const g of t.items) {
+            if (g.anyOf.length <= 1) continue;
+            for (const item of g.anyOf) {
+                let list = toolSubsByItem.get(item);
+                if (!list) { list = []; toolSubsByItem.set(item, list); }
+                if (!list.some(s => s.group === t.id)) {
+                    list.push({ group: t.id, items: g.anyOf.filter(x => x !== item), note: `any one of these meets ${t.id} (${g.role})`, src: g.src });
+                }
+            }
+        }
+    }
+    const staffSubsByRune = new Map<string, Substitute[]>();
+    for (const row of catalog.tablesByName.get('magic_staff_table')?.rows ?? []) {
+        const rune = row.data.rune?.[0]?.[0];
+        if (!rune) continue;
+        let list = staffSubsByRune.get(rune);
+        if (!list) { list = []; staffSubsByRune.set(rune, list); }
+        list.push({ group: 'magic_staff_table', items: row.data.staff!.map(s => s[0]!), note: 'a worn staff in this row supplies this rune for spells', src: row.src.staff![0]! });
+    }
+    const foodItems = [...catalog.needed.keys()].filter(x => catalog.food.has(x));
+
+    const buildShopSources = (item: string, objCost: number): ShopSource[] => {
+        const out: ShopSource[] = [];
+        for (const { inv, stock: st } of shopsByItem.get(item) ?? []) {
+            const owners = catalog.shopOwners.get(inv) ?? [];
             const o = owners[0] ?? { sell: 1000, sellSrc: 'no owner found: sell multiplier 1000 assumed', delta: DELTA_DEFAULT };
             const n = Math.min(st.count, PACK_SLOTS);
             let total = 0;
             for (let i = 0; i < n; i++) total += shopUnitPrice(objCost, o.sell, o.delta, st.count - i, st.count);
             const places = [...new Set(owners.map(x => x.npc))].map(catalog.npcPlace);
             out.push({
-                kind: 'shop', shop: s.inv, owners: places, basePrice: objCost, priceAtFullStock: shopUnitPrice(objCost, o.sell, o.delta, st.count, st.count), stock: st.count, restockTicks: st.restockTicks,
-                sellMultiplier: o.sell, sellMultiplierSrc: o.sellSrc, delta: o.delta, src: st.src, gate: /quest/i.test(s.inv) ? 'shop name says quest' : null,
+                kind: 'shop', shop: inv, owners: places, basePrice: objCost, priceAtFullStock: shopUnitPrice(objCost, o.sell, o.delta, st.count, st.count), stock: st.count, restockTicks: st.restockTicks,
+                sellMultiplier: o.sell, sellMultiplierSrc: o.sellSrc, delta: o.delta, src: st.src, gate: /quest/i.test(inv) ? 'shop name says quest' : null,
                 blocked: owners.length && places.every(p => p.spawns === 0) ? 'no spawn of the shop owner in the maps' : null,
                 cost: cost({
                     helperTicksPerUnit: 1 / SHOP_UNITS_PER_TICK, ticksBasis: 'model', ticksNote: 'buy-10 button at one click per tick; travel and banking not included',
@@ -101,33 +146,21 @@ function buildShopSources(item: string, objCost: number, catalog: SourceCatalog)
                 }),
             });
         }
-    }
-    return out;
-}
+        return out;
+    };
 
-function buildSubstitutes(item: string, catalog: SourceCatalog): Substitute[] {
-    const subs: Substitute[] = [];
-    for (const t of catalog.toolsFile.records) for (const g of t.items) if (g.anyOf.length > 1 && g.anyOf.includes(item) && !subs.some(s => s.group === t.id)) {
-        subs.push({ group: t.id, items: g.anyOf.filter(x => x !== item), note: `any one of these meets ${t.id} (${g.role})`, src: g.src });
-    }
-    for (const row of catalog.tablesByName.get('magic_staff_table')?.rows ?? []) if (row.data.rune?.[0]?.[0] === item) {
-        subs.push({ group: 'magic_staff_table', items: row.data.staff!.map(s => s[0]!), note: 'a worn staff in this row supplies this rune for spells', src: row.src.staff![0]! });
-    }
-    if (catalog.food.has(item)) {
-        subs.push({ group: 'food', items: [...catalog.needed.keys()].filter(x => catalog.food.has(x) && x !== item), note: `any healing food; this one heals ${catalog.food.get(item)!.heal}`, src: catalog.food.get(item)!.src });
-    }
-    return subs;
-}
+    const buildSubstitutes = (item: string): Substitute[] => {
+        const subs: Substitute[] = [...(toolSubsByItem.get(item) ?? []), ...(staffSubsByRune.get(item) ?? [])];
+        if (catalog.food.has(item)) {
+            subs.push({ group: 'food', items: foodItems.filter(x => x !== item), note: `any healing food; this one heals ${catalog.food.get(item)!.heal}`, src: catalog.food.get(item)!.src });
+        }
+        return subs;
+    };
 
-export function buildItemSources(opts: Options = {}): ItemSources[] {
-    const catalog = loadSourceCatalog();
-    const dropSources = buildDropSources(catalog);
-    const out: ItemSources[] = [];
-
+    const rows: StaticRow[] = [];
     for (const [item, by] of [...catalog.needed.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
         const def = catalog.byName.get(item);
         const sources: Source[] = [];
-
         for (const r of catalog.makers.get(item) ?? []) {
             const o = r.outputs.find(x => x.debugname === item)!;
             const gate = r.quest ? `quest ${r.quest.name}` : null;
@@ -136,7 +169,6 @@ export function buildItemSources(opts: Options = {}): ItemSources[] {
         }
         for (const m of catalog.bowMakes.get(item) ?? []) sources.push(m);
         if (catalog.tanning.has(item)) sources.push(catalog.tanning.get(item)!);
-
         for (const a of catalog.actions.get(item) ?? []) {
             const places = a.trigger.includes('loc') && !a.subject.startsWith('_') ? [catalog.locPlace(a.subject)] : a.trigger.includes('npc') && !a.subject.startsWith('_') ? catalog.npcsFor(a.subject).map(catalog.npcPlace) : [];
             const quest = a.src.startsWith('scripts/quests/');
@@ -147,27 +179,45 @@ export function buildItemSources(opts: Options = {}): ItemSources[] {
                 cost: cost({ ticksNote: 'script action; time not modelled', coinsNote: 'the script may take coins or items; read the cited line', riskNote: 'not modelled' }),
             });
         }
-
         const os = catalog.objSpawns.get(item) ?? [];
         if (os.length) sources.push({
             kind: 'pickup', spawns: os.length, countPerSpawn: os[0]!.count, tiles: sourceTiles(os), wilderness: os.every(inWilderness), src: os[0]!.src, gate: null, blocked: null,
             cost: cost({ ticksNote: 'walk and take; respawn time is the engine default and is not read here', coinsPerUnit: 0, coinsBasis: 'content', coinsNote: 'no coins spent', risk: os.every(inWilderness) ? null : 0, riskBasis: os.every(inWilderness) ? 'model' : 'content', riskNote: os.every(inWilderness) ? 'every spawn is in the Wilderness' : 'no combat at the spawn' }),
         });
-
-        sources.push(...buildShopSources(item, def?.cost ?? 0, catalog));
+        sources.push(...buildShopSources(item, def?.cost ?? 0));
         sources.push(...(dropSources.get(item) ?? []));
-        const ge = geSource(item, def?.tradeable, opts.market);
-        if (ge) sources.push(ge);
-        const owned = ownedSource(item, def?.id, opts.owned, catalog.stackable);
-        if (owned) sources.push(owned);
-
-        const usable = sources.filter(s => !s.blocked && !s.gate && s.kind !== 'owned').length;
-        out.push({
+        const staticUsable = sources.filter(s => !s.blocked && !s.gate).length;
+        rows.push({
             item, id: def?.id ?? null, name: def?.name ?? null, cost: def?.cost ?? null, members: def?.members ?? null, tradeable: def?.tradeable ?? null, stackable: catalog.stackable.has(item),
-            neededBy: [...by].sort(), substitutes: buildSubstitutes(item, catalog),
+            neededBy: [...by].sort(), substitutes: buildSubstitutes(item),
             delivery: { scoredTicksPerTrade: TRADE_TICKS, helperTicksPerTrade: TRADE_TICKS, unitsPerTrade: catalog.stackable.has(item) ? null : PACK_SLOTS, basis: 'measured', note: 'helper trade to the scored account (scripts/measure/trade-supply.ts); a stackable item takes one slot for any count' },
-            sources, usable, blocked: usable === 0,
+            staticSources: sources, staticUsable, defId: def?.id, defTradeable: def?.tradeable,
         });
     }
-    return out;
+    return { stackable: catalog.stackable, rows };
+}
+
+export function buildItemSources(opts: Options = {}): ItemSources[] {
+    const key = staticKey();
+    let cached = key !== null && staticCache?.key === key ? staticCache : undefined;
+    if (!cached) {
+        const built = key !== null
+            ? cachedValue('item-sources-static', 1, key, () => {
+                const b = buildStaticRows();
+                return { stackable: [...b.stackable], rows: b.rows };
+            })
+            : (() => {
+                const b = buildStaticRows();
+                return { stackable: [...b.stackable], rows: b.rows };
+            })();
+        cached = { key: key ?? '', stackable: new Set(built.stackable), rows: built.rows };
+        if (key !== null) staticCache = cached;
+    }
+    return cached.rows.map(({ staticSources, staticUsable, defId, defTradeable, ...base }) => {
+        const ge = geSource(base.item, defTradeable, opts.market);
+        const owned = ownedSource(base.item, defId, opts.owned, cached!.stackable);
+        const sources = [...staticSources, ...(ge ? [ge] : []), ...(owned ? [owned] : [])];
+        const usable = staticUsable + (ge && !ge.blocked && !ge.gate ? 1 : 0);
+        return { ...base, sources, usable, blocked: usable === 0 };
+    });
 }

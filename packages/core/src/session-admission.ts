@@ -1,7 +1,7 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {statusReadDirs} from './practice-paths';
-import {readLogoutProof,resolveLifecycleRoot,verifyLegacyLogout,listAttempts,type LegacyLogoutClaim} from './session-lifecycle';
+import {readAttemptReceiptById,readLogoutProof,resolveLifecycleRoot,scanAttemptsNewestFirst,verifyLegacyLogout,type LegacyLogoutClaim} from './session-lifecycle';
 import {assertNoRecoveryLease} from './session-recovery-permit';
 import {serverTakesOver,takeoverRef,pidAlive,type TakeoverLogoutRef} from './session-takeover';
 const LIVE_SERVER='rs-sdk-demo.fly.dev';
@@ -35,7 +35,7 @@ export const SERVER_SESSION_DROP_MS=200_000;
 // ("Account already logged in" names an open session), a timeout and a missing packet observer come after the login
 // block was sent and prove nothing about the session, so those attempts stay held (session-lifecycle.ts attemptOutcome).
 const NO_GAME_SOCKET=/^(?:\[object WebSocket\]|Error: lite: GET \S+ failed with \d+)/;
-function isDeadPreConnectFailure(receipt:ReturnType<typeof listAttempts>[number]['receipt'],account:string,alive:(pid:number)=>boolean,now:number):boolean{
+function isDeadPreConnectFailure(receipt:ReturnType<typeof readAttemptReceiptById> extends infer T ? T extends {receipt:infer R} ? R : never : never,account:string,alive:(pid:number)=>boolean,now:number):boolean{
  if(!receipt||receipt.account.toLowerCase()!==account.toLowerCase()||receipt.server!==LIVE_SERVER)return false;
  if(!Number.isFinite(receipt.owner?.pid)||receipt.owner.pid<=0||alive(receipt.owner.pid))return false;
  if(!receipt.events.every(e=>e.kind==='connecting'||e.kind==='connect-failed'||e.kind==='closed'))return false;
@@ -47,19 +47,19 @@ function isDeadPreConnectFailure(receipt:ReturnType<typeof listAttempts>[number]
 // the server's session drop, so the account is as offline as the confirmed logout before them left it. The controller
 // accepts only the latest attempt as a repair proof (swarm.ts currentLogout), so a repair never takes this path.
 function priorConfirmedAfterDeadPreConnects(account:string,root:string,status:any,alive:(pid:number)=>boolean,now:number):ProducerProofRef|null{
- const attempts=listAttempts(account,LIVE_SERVER,{root});
- let skipped=0;
- for(let i=attempts.length-1;i>=0;i--){
-  const r=attempts[i]!.receipt;
-  if(!r)return null;
-  if(isDeadPreConnectFailure(r,account,alive,now)){skipped++;continue;}
-  if(skipped===0||r.account.toLowerCase()!==account.toLowerCase()||r.server!==LIVE_SERVER)return null;
+ let skipped=0,result:ProducerProofRef|null=null;
+ scanAttemptsNewestFirst(account,LIVE_SERVER,entry=>{
+  const r=entry.receipt;
+  if(!r)return false;
+  if(isDeadPreConnectFailure(r,account,alive,now)){skipped++;return true;}
+  if(skipped===0||r.account.toLowerCase()!==account.toLowerCase()||r.server!==LIVE_SERVER)return false;
   const end=r.events.find(e=>e.kind==='ended');
-  if(end?.detail!=='logged-out')return null;
+  if(end?.detail!=='logged-out')return false;
   assertStatusCovered(status,account,r.attemptId,r.createdAt,end.at);
-  return{kind:'producer',attemptId:r.attemptId};
- }
- return null;
+  result={kind:'producer',attemptId:r.attemptId};
+  return false;
+ },{root});
+ return result;
 }
 
 export function liveLogoutRef(account:string,base:string,required=false,now=Date.now(),
@@ -71,7 +71,7 @@ export function liveLogoutRef(account:string,base:string,required=false,now=Date
  let status:any=null;
  if(existsSync(statusPath))status=JSON.parse(readFileSync(statusPath,'utf8'));
  if(proof.state==='confirmed'){
-  const latest=listAttempts(account,LIVE_SERVER,{root}).find(a=>a.attemptId===proof.attemptId)?.receipt;
+  const latest=readAttemptReceiptById(account,LIVE_SERVER,proof.attemptId,{root})?.receipt;
   if(!latest)throw Error('producer logout receipt changed: '+account);
   assertStatusCovered(status,account,proof.attemptId,latest.createdAt,proof.loggedOutAt);
   return{kind:'producer',attemptId:proof.attemptId};

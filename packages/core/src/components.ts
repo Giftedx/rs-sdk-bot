@@ -17,30 +17,90 @@ const cell = (x: number, z: number) => ((x & 7) << 3) | (z & 7);
 // zones: [level, origin x, origin z] of each 8x8 zone, in tiles.
 export function labelAreas(zones: Iterable<[number, number, number]>, walkable: (l: number, x: number, z: number) => boolean,
     canStep: (l: number, x: number, z: number, dx: number, dz: number) => boolean): Labels {
-    const label = new Map<number, Int32Array>();
-    for (const [l, zx, zz] of zones) if (!label.has(zoneKey(l, zx, zz))) label.set(zoneKey(l, zx, zz), new Int32Array(64).fill(-1));
-    const get = (l: number, x: number, z: number) => label.get(zoneKey(l, x, z))?.[cell(x, z)] ?? -2;
-    const set = (l: number, x: number, z: number, v: number) => { label.get(zoneKey(l, x, z))![cell(x, z)] = v; };
-    let areas = 0, tiles = 0;
+    const uniqueKeys: number[] = [];
+    const seenZone = new Set<number>();
+    for (const [l, zx, zz] of zones) {
+        const k = zoneKey(l, zx, zz);
+        if (!seenZone.has(k)) { seenZone.add(k); uniqueKeys.push(k); }
+    }
+    seenZone.clear();
+    const n = uniqueKeys.length;
+    const keys = makeInt32(n);
+    for (let i = 0; i < n; i++) keys[i] = uniqueKeys[i]!;
+    const bits = Math.max(4, 32 - Math.clz32(Math.max(1, n) * 2 - 1)), shift = 32 - bits, mask = (1 << bits) - 1;
+    const slotKey = makeInt32(1 << bits), slotAt = makeInt32(1 << bits).fill(-1);
+    for (let i = 0; i < n; i++) {
+        const k = keys[i]!;
+        let s = Math.imul(k, 0x9e3779b1) >>> shift;
+        while (slotAt[s]! >= 0) s = (s + 1) & mask;
+        slotKey[s] = k;
+        slotAt[s] = i;
+    }
+    const rawCells = new Int32Array(n * 64).fill(-1);
+    const lookupZone = (l: number, x: number, z: number): number => {
+        const k = zoneKey(l, x, z);
+        let s = Math.imul(k, 0x9e3779b1) >>> shift;
+        for (;;) {
+            const at = slotAt[s]!;
+            if (at < 0) return -1;
+            if (slotKey[s] === k) return at;
+            s = (s + 1) & mask;
+        }
+    };
     const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
-    for (const key of label.keys()) {
+    let stackCap = Math.max(256, Math.min(65536, n * 4));
+    let stackX = new Int32Array(stackCap);
+    let stackZ = new Int32Array(stackCap);
+    let areas = 0, tiles = 0;
+    for (let zi = 0; zi < n; zi++) {
+        const key = keys[zi]!;
         const l = key >>> 28, zx = ((key >>> 14) & 0x3fff) << 3, zz = (key & 0x3fff) << 3;
+        const zoneBase = zi * 64;
         for (let dx = 0; dx < 8; dx++) for (let dz = 0; dz < 8; dz++) {
-            const x = zx + dx, z = zz + dz;
-            if (get(l, x, z) !== -1 || !walkable(l, x, z)) continue;
-            const id = areas++, stack = [x, z];
-            set(l, x, z, id);
-            while (stack.length) {
-                const cz = stack.pop()!, cx = stack.pop()!; tiles++;
-                for (const [ox, oz] of dirs) {
+            const c0 = (dx << 3) | dz;
+            const x0 = zx + dx, z0 = zz + dz;
+            if (rawCells[zoneBase + c0] !== -1 || !walkable(l, x0, z0)) continue;
+            const id = areas++;
+            rawCells[zoneBase + c0] = id;
+            let sp = 1;
+            stackX[0] = x0;
+            stackZ[0] = z0;
+            while (sp > 0) {
+                sp--;
+                const cx = stackX[sp]!, cz = stackZ[sp]!;
+                tiles++;
+                for (let d = 0; d < 4; d++) {
+                    const ox = dirs[d]![0], oz = dirs[d]![1];
                     const nx = cx + ox, nz = cz + oz;
-                    if (get(l, nx, nz) !== -1 || !canStep(l, cx, cz, ox, oz)) continue;
-                    set(l, nx, nz, id); stack.push(nx, nz);
+                    const nzi = lookupZone(l, nx, nz);
+                    if (nzi < 0) continue;
+                    const nIdx = nzi * 64 + cell(nx, nz);
+                    if (rawCells[nIdx] !== -1 || !canStep(l, cx, cz, ox, oz)) continue;
+                    rawCells[nIdx] = id;
+                    if (sp >= stackCap) {
+                        stackCap *= 2;
+                        const nextX = new Int32Array(stackCap), nextZ = new Int32Array(stackCap);
+                        nextX.set(stackX); nextZ.set(stackZ);
+                        stackX = nextX; stackZ = nextZ;
+                    }
+                    stackX[sp] = nx;
+                    stackZ[sp] = nz;
+                    sp++;
                 }
             }
         }
     }
-    return fromZones(label, areas, tiles);
+    const small = areas < 0xffff;
+    const cells = small ? makeUint16(n * 64) : makeInt32(n * 64);
+    if (small) {
+        for (let i = 0; i < rawCells.length; i++) {
+            const v = rawCells[i]!;
+            cells[i] = v < 0 ? 0xffff : v;
+        }
+    } else {
+        (cells as Int32Array).set(rawCells);
+    }
+    return buildLookup(keys, cells, slotKey, slotAt, bits, areas, tiles);
 }
 
 const useSab = typeof SharedArrayBuffer !== 'undefined';
@@ -105,20 +165,6 @@ export function attachSharedLabels(s: SharedLabels): Labels {
 }
 
 export const getBuiltAreas = (): Labels | undefined => built;
-
-function fromZones(label: Map<number, Int32Array>, areas: number, tiles: number): Labels {
-    const keys = makeInt32(label.size);
-    let idx = 0;
-    for (const k of label.keys()) keys[idx++] = k;
-    const small = areas < 0xffff;
-    const cells = small ? makeUint16(keys.length * 64) : makeInt32(keys.length * 64);
-    for (let i = 0; i < keys.length; i++) {
-        const z = label.get(keys[i]!)!;
-        const base = i * 64;
-        for (let c = 0; c < 64; c++) cells[base + c] = z[c]! < 0 ? (small ? 0xffff : -1) : z[c]!;
-    }
-    return flat(keys, cells, areas, tiles)!;
-}
 
 // The labels over one flat array. null when two zones have one key. The table holds at least twice as many slots as zones.
 function flat(keys: Int32Array, cells: Uint16Array | Int32Array, areas: number, tiles: number): Labels | null {
@@ -232,24 +278,24 @@ export function separated(labels: Labels, from: { level: number; x: number; z: n
 }
 
 function readCollisionZones(file: string): [number, number, number][] {
-    const text = readFileSync(file, 'utf8');
-    const marker = text.indexOf('"zones":');
+    const bytes = readFileSync(file);
+    const marker = bytes.indexOf('"zones":');
     if (marker >= 0) {
-        const start = text.indexOf('[', marker + 8);
+        const start = bytes.indexOf(91, marker + 8);
         if (start >= 0) {
             let depth = 0, end = -1;
-            for (let i = start; i < text.length; i++) {
-                const c = text.charCodeAt(i);
+            for (let i = start; i < bytes.length; i++) {
+                const c = bytes[i]!;
                 if (c === 91) depth++;
                 else if (c === 93 && --depth === 0) { end = i + 1; break; }
             }
             if (end > start) {
-                try { return JSON.parse(text.slice(start, end)) as [number, number, number][]; }
+                try { return JSON.parse(bytes.subarray(start, end).toString('utf8')) as [number, number, number][]; }
                 catch { /* fall back to full JSON parse */ }
             }
         }
     }
-    return (JSON.parse(text) as { zones: [number, number, number][] }).zones;
+    return (JSON.parse(bytes.toString('utf8')) as { zones: [number, number, number][] }).zones;
 }
 
 let built: Labels | undefined;

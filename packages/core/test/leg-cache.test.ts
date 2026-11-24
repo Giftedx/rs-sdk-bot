@@ -93,3 +93,27 @@ test('the first store is read only and feeds the v2 store; it goes when nothing 
   expect(removeSupersededLegFiles(join(dir,'missing','route-legs-v2.sqlite'))).toEqual([]);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('bulk read-ahead preload after 256 lookups preserves exact hits, nulls, misses, and later peer writes', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'route-leg-preload-')), file = join(dir, 'legs.sqlite');
+    const writer = legCache(file, 'source');
+    try {
+        for (let i = 0; i < 320; i++) writer.set(`k:${i}`, i % 7 === 0 ? null : i);
+        writer.save();
+        const reader = legCache(file, 'source');
+        try {
+            for (let i = 0; i < 320; i++) {
+                expect(reader.get(`k:${i}`)).toBe(i % 7 === 0 ? null : i);
+            }
+            expect(reader.get('k:absent')).toBeUndefined();
+            writer.set('k:later', 99);
+            writer.save();
+            expect(reader.get('k:later')).toBe(99);
+        } finally {
+            reader.close();
+        }
+    } finally {
+        writer.close();
+        rmSync(dir, { recursive: true, force: true });
+    }
+});

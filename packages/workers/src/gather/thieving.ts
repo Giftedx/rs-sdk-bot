@@ -38,17 +38,38 @@ export interface PocketProfile {
     line: number;
 }
 
+function parseWordPackNameToId(text: string): Map<string, number> {
+    const map = new Map<string, number>();
+    let pos = 0;
+    while (pos < text.length) {
+        let end = text.indexOf('\n', pos);
+        if (end < 0) end = text.length;
+        const lineEnd = end > pos && text.charCodeAt(end - 1) === 13 ? end - 1 : end;
+        const eq = text.indexOf('=', pos);
+        if (eq > pos && eq + 1 < lineEnd) {
+            let valid = true;
+            for (let i = pos; i < eq; i++) {
+                const ch = text.charCodeAt(i);
+                if (ch < 48 || ch > 57) { valid = false; break; }
+            }
+            if (valid) {
+                for (let i = eq + 1; i < lineEnd; i++) {
+                    const ch = text.charCodeAt(i);
+                    const isWord = (ch >= 48 && ch <= 57) || (ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122) || ch === 95;
+                    if (!isWord) { valid = false; break; }
+                }
+                if (valid) map.set(text.slice(eq + 1, lineEnd), Number(text.slice(pos, eq)));
+            }
+        }
+        pos = end + 1;
+    }
+    return map;
+}
+
 export function pickpocketProfiles(): PocketProfile[] {
     const path = resolve(CONTENT, 'scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow');
     const text = readFileSync(path, 'utf8');
-    const ids = new Map(
-        readFileSync(resolve(CONTENT, 'pack/npc.pack'), 'utf8')
-            .split(/\r?\n/)
-            .flatMap(l => {
-                const m = l.match(/^(\d+)=(\w+)$/);
-                return m ? ([[m[2]!, Number(m[1])] as const]) : [];
-            }),
-    );
+    const ids = parseWordPackNameToId(readFileSync(resolve(CONTENT, 'pack/npc.pack'), 'utf8'));
     const triggers = readFileSync(resolve(CONTENT, 'scripts/skill_thieving/scripts/pickpocketing/pickpocket.rs2'), 'utf8');
     return [...text.matchAll(/^\[pickpocket_([^\]]+)\]\r?\n([^\[]*)/gm)].map(m => {
         const body = m[2]!;

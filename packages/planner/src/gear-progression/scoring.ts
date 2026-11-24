@@ -54,7 +54,9 @@ export function standardBowTiers(): { level: number; ids: number[] }[] {
     for (const g of gearCatalog()) {
         if (!isStandardRangedBow(g)) continue;
         const level = g.requires.skills.ranged ?? 1;
-        byLevel.set(level, [...(byLevel.get(level) ?? []), g]);
+        let list = byLevel.get(level);
+        if (!list) { list = []; byLevel.set(level, list); }
+        list.push(g);
     }
     return [...byLevel].sort((a, b) => b[0] - a[0])
         .map(([level, bows]) => ({ level, ids: bows.sort((a, b) => (a.attackRate ?? 4) - (b.attackRate ?? 4) || a.id - b.id).map(g => g.id) }));

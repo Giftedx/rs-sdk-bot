@@ -91,11 +91,37 @@ export interface WatchOptions {
 // A record file moves aside at 5 MB, and a server directory takes at most 500 names.
 export const MAX_RECORD_BYTES = 5_000_000, MAX_RECORD_FILES = 500;
 
+const EAT_OPTION_RE = /^eat$/i;
+function countEdibleInv(inv: readonly { optionsWithIndex?: readonly { text: string }[] }[]): number {
+    let count = 0;
+    for (let i = 0; i < inv.length; i++) {
+        const opts = inv[i]!.optionsWithIndex;
+        if (!opts) continue;
+        for (let j = 0; j < opts.length; j++) {
+            if (EAT_OPTION_RE.test(opts[j]!.text)) { count++; break; }
+        }
+    }
+    return count;
+}
+
+function adaptSig(a: Adapt): string {
+    switch (a.kind) {
+        case 'protect': return `protect:${a.member}:${a.style}`;
+        case 'kit': return `kit:${a.member}:${a.style}:${a.wear.join(',')}:${a.gain}`;
+        case 'single-way': return `single-way:${a.to.x},${a.to.z}`;
+        case 'retreat': return 'retreat';
+    }
+}
+
 export class ThreatWatch {
     private book: ThreatBook;
     private cache: { tick: number; classes: ThreatClass[]; actions: Adapt[]; interlopers: string[] } | null = null;
     private logged = new Map<string, string>();
+    private activeAdapts = new Set<string>();
+    private nextAdapts = new Set<string>();
     private recorded = new Map<string, number>();
+    private recordFiles = new Map<string, string>();
+    private recordDir: string | null;
     private cooling = new Map<string, number>();
     private held: { until: number; moves: Adapt[] } | null = null;
     private pending: { culprits: string[]; moves: Adapt[] } | null = null;
@@ -103,14 +129,33 @@ export class ThreatWatch {
     readonly act: boolean;
     constructor(private o: WatchOptions) {
         this.act = o.act !== false;
+        this.recordDir = o.recordRoot === false ? null : join(o.recordRoot ?? '.', '.practice', 'threat-records', o.server.replace(/[^A-Za-z0-9._-]/g, '_'));
         this.book = new ThreatBook({ friends: o.friends, weaponStyle: id => wornWeaponStyle(id), attackStyle: anim => attackStyleOfAnim(anim), multiAt: isMulti, wildAt: wildLevel });
     }
 
     // The members now in the Wilderness, from the sessions that are logged in.
     private members(): { sessions: Session[]; members: Member[] } {
-        const sessions = this.o.sessions().filter(s => { const p = s.sdk.getState()?.player; return !!p && !p.isDead && wildLevel(p.worldX, p.worldZ) > 0; });
-        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: s.sdk.getState()!.prayers?.prayerPoints, prayerLevel: s.sdk.getSkill('Prayer')?.level,
-            hp: p.hp, food: s.sdk.getInventory().filter(i => i.optionsWithIndex?.some(op => /^eat$/i.test(op.text))).length }; }) };
+        const raw = this.o.sessions();
+        const sessions: Session[] = [];
+        const members: Member[] = [];
+        for (let i = 0; i < raw.length; i++) {
+            const s = raw[i]!;
+            const st = s.sdk.getState();
+            const p = st?.player;
+            if (!p || p.isDead || wildLevel(p.worldX, p.worldZ) <= 0) continue;
+            sessions.push(s);
+            members.push({
+                name: s.name,
+                x: p.worldX,
+                z: p.worldZ,
+                combat: p.combatLevel,
+                prayer: st!.prayers?.prayerPoints,
+                prayerLevel: s.sdk.getSkill('Prayer')?.level,
+                hp: p.hp,
+                food: countEdibleInv(s.sdk.getInventory()),
+            });
+        }
+        return { sessions, members };
     }
 
     // The threats, their classes and the decisions of this tick. One reading for the squad each tick, whichever member asks.
@@ -118,9 +163,19 @@ export class ThreatWatch {
         if (this.cache?.tick === tick) return this.cache;
         const { sessions, members } = this.members();
         const sightings = new Map<string, Sighting>();
-        const nameAt = new Map(sessions.map(s => [selfIndex(s.client), s.name] as const));
-        for (const s of sessions) {
-            for (const q of s.sdk.getState()?.nearbyPlayers ?? []) {
+        const nameAt = new Map<number, string>();
+        const sessionByName = new Map<string, Session>();
+        for (let i = 0; i < sessions.length; i++) {
+            const s = sessions[i]!;
+            nameAt.set(selfIndex(s.client), s.name);
+            sessionByName.set(s.name, s);
+        }
+        for (let i = 0; i < sessions.length; i++) {
+            const s = sessions[i]!;
+            const nearby = s.sdk.getState()?.nearbyPlayers;
+            if (!nearby) continue;
+            for (let j = 0; j < nearby.length; j++) {
+                const q = nearby[j]!;
                 const key = q.name.toLowerCase();
                 if (sightings.has(key)) continue;
                 const sight = readSighting(s.client, q.index, q.name, q.combatLevel, q.x, q.z);
@@ -128,14 +183,42 @@ export class ThreatWatch {
                 sightings.set(key, sight);
             }
         }
-        if (this.o.radar?.fresh()) for (const t of this.o.radar.tracks.values()) if (!sightings.has(t.name.toLowerCase())) sightings.set(t.name.toLowerCase(), { name: t.name, combat: t.combatLevel, x: t.x, z: t.z, inView: false });
-        const records = this.book.observe(tick, members, [...sightings.values()].filter(x => members.some(m => Math.max(Math.abs(m.x - x.x), Math.abs(m.z - x.z)) <= 40)));
-        const classes = records.map(r => classifyThreat(r, members, { canAttack: (m, t) => canAttack(m, t) }));
+        if (this.o.radar?.fresh()) {
+            for (const t of this.o.radar.tracks.values()) {
+                const key = t.name.toLowerCase();
+                if (!sightings.has(key)) sightings.set(key, { name: t.name, combat: t.combatLevel, x: t.x, z: t.z, inView: false });
+            }
+        }
+        const nearbySightings: Sighting[] = [];
+        for (const x of sightings.values()) {
+            for (let i = 0; i < members.length; i++) {
+                const m = members[i]!;
+                if (Math.max(Math.abs(m.x - x.x), Math.abs(m.z - x.z)) <= 40) {
+                    nearbySightings.push(x);
+                    break;
+                }
+            }
+        }
+        const records = this.book.observe(tick, members, nearbySightings);
+        const canAttackFn = (m: { x: number; z: number; combat: number }, t: { x: number; z: number; combatLevel: number }) => canAttack(m, t);
+        const classes: ThreatClass[] = new Array(records.length);
+        for (let i = 0; i < records.length; i++) classes[i] = classifyThreat(records[i]!, members, { canAttack: canAttackFn });
         const levelOf = (s: Session, skill: string) => s.sdk.getSkill(skill)?.level ?? 1;
         const counterFor = (member: string, style: CombatStyle) => {
-            const s = sessions.find(x => x.name === member);
-            return s ? planCounterSwap({ worn: s.sdk.getEquipment().map(e => e.id), pack: s.sdk.getInventory().map(i => i.id), style,
-                levels: { attack: levelOf(s, 'Attack'), strength: levelOf(s, 'Strength'), defence: levelOf(s, 'Defence'), ranged: levelOf(s, 'Ranged'), magic: levelOf(s, 'Magic') } }) : null;
+            const s = sessionByName.get(member);
+            if (!s) return null;
+            const eq = s.sdk.getEquipment();
+            const inv = s.sdk.getInventory();
+            const worn: number[] = new Array(eq.length);
+            for (let i = 0; i < eq.length; i++) worn[i] = eq[i]!.id;
+            const pack: number[] = new Array(inv.length);
+            for (let i = 0; i < inv.length; i++) pack[i] = inv[i]!.id;
+            return planCounterSwap({
+                worn,
+                pack,
+                style,
+                levels: { attack: levelOf(s, 'Attack'), strength: levelOf(s, 'Strength'), defence: levelOf(s, 'Defence'), ranged: levelOf(s, 'Ranged'), magic: levelOf(s, 'Magic') },
+            });
         };
         const decided = refineProtectActions(classes, members, decideAdapt(classes, members, {
             outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }),
@@ -151,7 +234,11 @@ export class ThreatWatch {
         const actions = this.cooldown(tick, classes, decided);
         // The interlopers: dangerous players that the squad did not come for. They are targets (the squad switches to them, one at a time).
         const expected = this.o.decide?.expected;
-        const interlopers = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name);
+        const interlopers: string[] = [];
+        for (let i = 0; i < classes.length; i++) {
+            const c = classes[i]!;
+            if (c.dangerous && !expected?.has(c.record.name.toLowerCase())) interlopers.push(c.record.name);
+        }
         this.cache = { tick, classes, actions, interlopers };
         this.report(tick, classes, actions);
         return this.cache;
@@ -161,20 +248,44 @@ export class ThreatWatch {
     // another one for `cooldown` ticks (the protect prayer and the swap stay): a stranger at the post would cause retreat, return, retreat until the trips
     // run out. A member inside a fight does not read the decision, so the cooldown must not start before one has acted.
     private cooldown(tick: number, classes: readonly ThreatClass[], actions: Adapt[]): Adapt[] {
-        const move = (a: Adapt) => a.kind === 'retreat' || a.kind === 'single-way';
-        const rest = actions.filter(a => !move(a)), moves = actions.filter(move);
-        const hasRetreat = moves.some(a => a.kind === 'retreat');
-        if (this.held && tick <= this.held.until && (!hasRetreat || this.held.moves.some(a => a.kind === 'retreat'))) {
-            return [...this.held.moves, ...rest];
+        let hasMove = false;
+        let hasRetreat = false;
+        for (let i = 0; i < actions.length; i++) {
+            const k = actions[i]!.kind;
+            if (k === 'retreat') { hasMove = true; hasRetreat = true; }
+            else if (k === 'single-way') hasMove = true;
         }
-        if (!moves.length) { this.pending = null; return actions; }
+        const heldValid = this.held && tick <= this.held.until && (!hasRetreat || this.held.moves.some(a => a.kind === 'retreat'));
+        if (!hasMove && !heldValid) {
+            this.pending = null;
+            return actions;
+        }
+        const rest: Adapt[] = [];
+        const moves: Adapt[] = [];
+        for (let i = 0; i < actions.length; i++) {
+            const a = actions[i]!;
+            if (a.kind === 'retreat' || a.kind === 'single-way') moves.push(a);
+            else rest.push(a);
+        }
+        if (heldValid) return [...this.held!.moves, ...rest];
         // The players that caused the move: the strangers; with the win-chance estimate every dangerous player counts (it counts the squad's targets too, so a lost fight
         // against the gang alone must have a cooldown as well).
         const expected = this.o.odds === false ? this.o.decide?.expected : undefined;
-        const culprits = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name.toLowerCase());
-        const kinds = [...new Set(moves.map(a => a.kind))];
+        const culprits: string[] = [];
+        for (let i = 0; i < classes.length; i++) {
+            const c = classes[i]!;
+            if (!c.dangerous) continue;
+            const lower = c.record.name.toLowerCase();
+            if (!expected?.has(lower)) culprits.push(lower);
+        }
+        const kinds: Adapt['kind'][] = [];
+        for (let i = 0; i < moves.length; i++) {
+            const k = moves[i]!.kind;
+            if (!kinds.includes(k)) kinds.push(k);
+        }
         if (culprits.length && culprits.every(n => kinds.every(k => (this.cooling.get(`${k}:${n}`) ?? -1) > tick))) {
-            if (this.logged.get('cooldown') !== culprits.join('+')) { this.logged.set('cooldown', culprits.join('+')); this.o.log(`THREAT retreat held, cooldown: ${culprits.join(', ')}`); }
+            const sig = culprits.join('+');
+            if (this.logged.get('cooldown') !== sig) { this.logged.set('cooldown', sig); this.o.log(`THREAT retreat held, cooldown: ${culprits.join(', ')}`); }
             this.pending = null;
             return rest;
         }
@@ -201,30 +312,42 @@ export class ThreatWatch {
 
     // The log and the record: a line when a dangerous player or a decision changes, and a record line for each player in range.
     private report(tick: number, classes: ThreatClass[], actions: Adapt[]) {
-        for (const c of classes) {
+        for (let i = 0; i < classes.length; i++) {
+            const c = classes[i]!;
             if (!c.dangerous && !c.record.lastAttack) continue;
             const key = c.record.name.toLowerCase(), sig = `${c.style}/${c.canHit.join('+')}/${c.record.closing}`;
             if (this.logged.get(key) !== sig) { this.logged.set(key, sig); this.o.log(threatLine(c)); }
             this.record(tick, c);
         }
-        for (const a of actions) {
+        const next = this.nextAdapts;
+        next.clear();
+        for (let i = 0; i < actions.length; i++) {
+            const a = actions[i]!;
             // The reason holds distances that change each tick: a decision is logged again only when its kind, member, style, kit or tile changes.
-            const key = `adapt:${a.kind}:${'member' in a ? a.member : ''}`, sig = JSON.stringify({ ...a, reason: undefined });
+            const key = `adapt:${a.kind}:${'member' in a ? a.member : ''}`;
+            const sig = adaptSig(a);
+            next.add(key);
             if (this.logged.get(key) !== sig) { this.logged.set(key, sig); this.o.log(`ADAPT ${a.kind}${'member' in a ? ` ${a.member}` : ''}${'style' in a ? ` ${a.style}` : ''}: ${a.reason}`); }
         }
         // A decision that no longer holds is forgotten, so that its next time is logged again.
-        for (const key of [...this.logged.keys()]) if (key.startsWith('adapt:') && !actions.some(a => `adapt:${a.kind}:${'member' in a ? a.member : ''}` === key)) this.logged.delete(key);
+        for (const key of this.activeAdapts) if (!next.has(key)) this.logged.delete(key);
+        this.nextAdapts = this.activeAdapts;
+        this.activeAdapts = next;
     }
 
     private record(tick: number, c: ThreatClass) {
-        if (this.o.recordRoot === false) return;
+        const dir = this.recordDir;
+        if (!dir) return;
         const r: ThreatRecord = c.record, key = r.name.toLowerCase(), last = this.recorded.get(key);
         if (last !== undefined && tick - last < 25 && !(r.lastAttack && r.lastAttack.tick === tick)) return;
         this.recorded.set(key, tick);
-        const dir = join(this.o.recordRoot ?? '.', '.practice', 'threat-records', this.o.server.replace(/[^A-Za-z0-9._-]/g, '_'));
         const line = { schema: 'threat-sighting/1', tick, at: (this.o.now ?? Date.now)(), server: this.o.server, name: r.name, combat: r.combat, worn: r.worn, wild: r.wild, multi: r.multi, x: r.x, z: r.z,
             nearest: r.nearest, closing: r.closing, speed: r.speed, style: c.style, by: c.by, cover: c.cover, lastAttack: r.lastAttack, targeting: r.targeting, protect: r.protect, skulled: r.skulled, canHit: c.canHit };
-        const file = join(dir, `${r.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.jsonl`);
+        let file = this.recordFiles.get(key);
+        if (!file) {
+            file = join(dir, `${key.replace(/[^a-z0-9_-]/g, '_')}.jsonl`);
+            this.recordFiles.set(key, file);
+        }
         try {
             mkdirSync(dir, { recursive: true });
             if (existsSync(file)) {
@@ -261,42 +384,59 @@ export function refineProtectActions(
     actions: Adapt[],
     counterFor?: (member: string, style: CombatStyle) => CounterSwap | null,
 ): Adapt[] {
-    const danger = classes.filter(c => c.dangerous);
-    if (!danger.length || !members.length) return actions;
-    const out = [...actions];
-    for (const m of members) {
-        const protectIdx = out.findIndex(a => a.kind === 'protect' && a.member === m.name);
+    if (!members.length || !classes.length) return actions;
+    let hasDanger = false;
+    for (let i = 0; i < classes.length; i++) if (classes[i]!.dangerous) { hasDanger = true; break; }
+    if (!hasDanger) return actions;
+    let out: Adapt[] | null = null;
+    for (let mi = 0; mi < members.length; mi++) {
+        const m = members[mi]!;
+        const list = out ?? actions;
+        let protectIdx = -1;
+        for (let i = 0; i < list.length; i++) {
+            const a = list[i]!;
+            if (a.kind === 'protect' && a.member === m.name) { protectIdx = i; break; }
+        }
         if (protectIdx < 0) continue;
-        const curProtect = out[protectIdx] as Extract<Adapt, { kind: 'protect' }>;
-        const mine = danger
-            .filter(c => c.canHit.includes(m.name))
-            .map(c => {
-                const dist = tileDist(m, c.record);
-                const style = effectiveCoverForMember(m, c);
-                if (!style) return null;
-                const canReachNow = style !== 'melee' || dist <= 2;
-                const hitsMe = c.record.targeting !== null && c.record.targeting.toLowerCase() === m.name.toLowerCase();
-                const tier = (hitsMe ? 0 : 1) + (canReachNow ? 0 : 2);
-                return { c, dist, style, tier };
-            })
-            .filter((x): x is NonNullable<typeof x> => x !== null)
-            .sort((a, b) => a.tier - b.tier || a.dist - b.dist);
-        const best = mine[0];
-        if (!best) continue;
-        const newReason = `${best.c.record.name} ${best.c.style} by ${best.style === best.c.cover ? best.c.by : 'weapon'}, ${best.dist} tiles`;
-        if (best.style === curProtect.style && curProtect.reason === newReason) continue;
-        out[protectIdx] = { kind: 'protect', member: m.name, style: best.style, reason: newReason };
-        if (best.style !== curProtect.style && counterFor) {
-            const kept = out.filter(a => !(a.kind === 'kit' && a.member === m.name));
-            out.length = 0;
-            out.push(...kept);
-            const swap = counterFor(m.name, best.style);
+        const curProtect = list[protectIdx] as Extract<Adapt, { kind: 'protect' }>;
+        const memberLower = m.name.toLowerCase();
+        let bestClass: ThreatClass | null = null;
+        let bestStyle: CombatStyle | null = null;
+        let bestDist = Infinity;
+        let bestTier = 5;
+        for (let ci = 0; ci < classes.length; ci++) {
+            const c = classes[ci]!;
+            if (!c.dangerous || !c.canHit.includes(m.name)) continue;
+            const style = effectiveCoverForMember(m, c);
+            if (!style) continue;
+            const dist = tileDist(m, c.record);
+            const canReachNow = style !== 'melee' || dist <= 2;
+            const hitsMe = c.record.targeting !== null && c.record.targeting.toLowerCase() === memberLower;
+            const tier = (hitsMe ? 0 : 1) + (canReachNow ? 0 : 2);
+            if (tier < bestTier || (tier === bestTier && dist < bestDist)) {
+                bestTier = tier;
+                bestDist = dist;
+                bestStyle = style;
+                bestClass = c;
+            }
+        }
+        if (!bestClass || !bestStyle) continue;
+        const newReason = `${bestClass.record.name} ${bestClass.style} by ${bestStyle === bestClass.cover ? bestClass.by : 'weapon'}, ${bestDist} tiles`;
+        if (bestStyle === curProtect.style && curProtect.reason === newReason) continue;
+        out ??= [...actions];
+        out[protectIdx] = { kind: 'protect', member: m.name, style: bestStyle, reason: newReason };
+        if (bestStyle !== curProtect.style && counterFor) {
+            for (let i = out.length - 1; i >= 0; i--) {
+                const a = out[i]!;
+                if (a.kind === 'kit' && a.member === m.name) out.splice(i, 1);
+            }
+            const swap = counterFor(m.name, bestStyle);
             if (swap && swap.wear.length) {
-                out.push({ kind: 'kit', member: m.name, style: best.style, wear: swap.wear, gain: swap.gain, reason: `${best.c.record.name} ${best.c.style}: wear ${swap.wear.join('+')} (+${swap.gain})` });
+                out.push({ kind: 'kit', member: m.name, style: bestStyle, wear: swap.wear, gain: swap.gain, reason: `${bestClass.record.name} ${bestClass.style}: wear ${swap.wear.join('+')} (+${swap.gain})` });
             }
         }
     }
-    return out;
+    return out ?? actions;
 }
 
 // The protect prayer to hold now for a member, from the decisions: the style of the nearest dangerous player that can hit it, or null.

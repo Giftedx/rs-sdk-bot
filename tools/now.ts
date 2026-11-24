@@ -164,22 +164,32 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
 // while a page is open, and /api/state answers from the last scan, of any age: that list can not prove that no
 // heavy job runs.
 // Returns null when the scan did not run or did not see the processes: the caller must not read that as "none".
-function scanProcs(now:number):Proc[]|null{
+async function spawnText(cmd:string[],options:{cwd?:string;timeoutMs?:number}={}):Promise<{exitCode:number|null;stdout:string}>{
+    try{
+        const proc=Bun.spawn(cmd,{cwd:options.cwd,stdout:'pipe',stderr:'ignore',windowsHide:true});
+        let timedOut=false;
+        let timer:ReturnType<typeof setTimeout>|undefined;
+        const done=options.timeoutMs?Promise.race([
+            Promise.all([new Response(proc.stdout).text(),proc.exited]),
+            new Promise<null>(r=>{timer=setTimeout(()=>{timedOut=true;proc.kill();r(null);},options.timeoutMs);}),
+        ]):Promise.all([new Response(proc.stdout).text(),proc.exited]);
+        const res=await done.finally(()=>{if(timer)clearTimeout(timer);});
+        if(!res||timedOut)return{exitCode:null,stdout:''};
+        return{exitCode:res[1],stdout:res[0]};
+    }catch{return{exitCode:null,stdout:''};}
+}
+
+async function scanProcsAsync(now:number):Promise<Proc[]|null>{
     const windows=process.platform==='win32';
     // Windows: pid|start time|command line. Other systems: pid, seconds of run time, command line (`ps`).
     const cmd=windows
         ?['powershell','-NoProfile','-Command',"Get-CimInstance Win32_Process -Filter \"Name='bun.exe' OR Name='node.exe'\" | ForEach-Object { '{0}|{1}|{2}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.CommandLine }"]
         :['ps','-eo','pid=,etimes=,args='];
-    let text:string;
-    try{
-        // A program that is not installed makes spawnSync throw.
-        const r=Bun.spawnSync(cmd,{stdout:'pipe',stderr:'ignore',windowsHide:true,timeout:20_000});
-        if(r.exitCode!==0)return null;
-        text=r.stdout.toString();
-    }catch{return null;}
-    const rows=procRows(text,windows,now);
+    const r=await spawnText(cmd,{timeoutMs:20_000});
+    if(r.exitCode!==0)return null;
+    const rows=procRows(r.stdout,windows,now);
     // This process is a bun process. A list without it means that the scan did not see the processes.
-    return rows.some(r=>r.pid===process.pid)?rows.filter(r=>r.pid!==process.pid).map(({scripts,up})=>({scripts,up})):null;
+    return rows.some(row=>row.pid===process.pid)?rows.filter(row=>row.pid!==process.pid).map(({scripts,up})=>({scripts,up})):null;
 }
 // The bun and node processes of one scan output, in the format of `scanProcs` for that system.
 export function procRows(text:string,windows:boolean,now:number):(Proc&{pid:number})[]{
@@ -199,20 +209,46 @@ export function procRows(text:string,windows:boolean,now:number):(Proc&{pid:numb
     return out;
 }
 
-function readCheckout(path:string):Checkout{
-    const git=(...args:string[])=>{const r=Bun.spawnSync(['git','-C',path,...args],{stdout:'pipe',stderr:'ignore',windowsHide:true});return r.exitCode===0?r.stdout.toString().trim():null;};
-    const counts=git('rev-list','--left-right','--count','HEAD...origin/master')?.split(/\s+/).map(Number);
-    // A fetch writes FETCH_HEAD in the git folder of the worktree that ran it. Any of them moves origin/master.
-    const common=git('rev-parse','--path-format=absolute','--git-common-dir');
-    const fetched=[git('rev-parse','--path-format=absolute','--git-path','FETCH_HEAD'),common&&join(common,'FETCH_HEAD')]
-        .filter((f):f is string=>!!f&&existsSync(f)).map(f=>statSync(f).mtimeMs);
+async function readCheckoutAsync(path:string):Promise<Checkout>{
+    const git=async(...args:string[])=>{
+        const r=await spawnText(['git','-C',path,...args]);
+        return r.exitCode===0?r.stdout.trim():null;
+    };
     const vendor=join(path,'vendor','rs-sdk');
-    const patch=!existsSync(join(vendor,'package.json'))?'no vendor/rs-sdk'
-        :Bun.spawnSync(['git','-C',vendor,'apply','--check','-R',join(path,'patches','rs-sdk-working.patch')],{stdout:'ignore',stderr:'ignore',windowsHide:true}).exitCode===0?'applied':'not applied';
-    return {path,branch:git('rev-parse','--abbrev-ref','HEAD')??'?',head:git('rev-parse','--short','HEAD')??'?',
-        dirty:(git('status','--porcelain')??'').split('\n').filter(Boolean).length,
+    const hasVendor=existsSync(join(vendor,'package.json'));
+    const [countsRaw,gitPathsRaw,branch,head,dirtyRaw,patchOk]=await Promise.all([
+        git('rev-list','--left-right','--count','HEAD...origin/master'),
+        git('rev-parse','--path-format=absolute','--git-common-dir','--git-path','FETCH_HEAD'),
+        git('rev-parse','--abbrev-ref','HEAD'),
+        git('rev-parse','--short','HEAD'),
+        git('status','--porcelain'),
+        hasVendor
+            ?(async()=>{try{const p=Bun.spawn(['git','-C',vendor,'apply','--check','-R',join(path,'patches','rs-sdk-working.patch')],{stdout:'ignore',stderr:'ignore',windowsHide:true});return await p.exited===0;}catch{return false;}})()
+            :Promise.resolve(false),
+    ]);
+    const counts=countsRaw?.split(/\s+/).map(Number);
+    // A fetch writes FETCH_HEAD in the git folder of the worktree that ran it. Any of them moves origin/master.
+    const [common,worktreeFetch]=gitPathsRaw?gitPathsRaw.split(/\r?\n/):[];
+    const fetched=[worktreeFetch,common&&join(common,'FETCH_HEAD')]
+        .filter((f):f is string=>!!f&&existsSync(f)).map(f=>statSync(f).mtimeMs);
+    const patch=!hasVendor?'no vendor/rs-sdk':patchOk?'applied':'not applied';
+    return {path,branch:branch??'?',head:head??'?',
+        dirty:(dirtyRaw??'').split('\n').filter(Boolean).length,
         ahead:counts?.[0]??null,behind:counts?.[1]??null,
         fetchedAt:fetched.length?Math.max(...fetched):null,patch};
+}
+
+export function isPortUnbound(port:number):boolean{
+    if(!Number.isInteger(port)||port<1||port>65535)return false;
+    for(const hostname of ['127.0.0.1','0.0.0.0']){
+        try{
+            const s=Bun.listen({hostname,port,socket:{data(){}}});
+            s.stop(true);
+        }catch{
+            return false;
+        }
+    }
+    return true;
 }
 
 export function readSwarmStops(main:string):{file:string;text:string}[]{
@@ -227,17 +263,24 @@ export function resolveSyncedLeasesDir(main:string):string{
 }
 
 if(import.meta.main){
-    const here=resolve(import.meta.dir,'..');
-    const list=Bun.spawnSync(['git','-C',here,'worktree','list','--porcelain'],{stdout:'pipe',stderr:'ignore',windowsHide:true}).stdout.toString();
-    // The first worktree of the list is the main checkout. Only the main checkout runs the fleet and holds the stop files.
-    const main=resolve(/^worktree (.+)$/m.exec(list)?.[1]??here);
-    const stops=readSwarmStops(main);
+    const here=resolve(import.meta.dir,'..'),now=Date.now();
     const port=Number(process.env.DASH_PORT??3100);
     // 127.0.0.1: the dashboard listens on IPv4 (DASH_HOST default), and localhost can resolve to ::1 first.
-    const state=await fetch(`http://127.0.0.1:${port}/api/state`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json() as Promise<DashState>:null).catch(()=>null);
-    const same=main.toLowerCase()===here.toLowerCase(),now=Date.now();
+    // On Windows a closed loopback port stalls fetch for ~2 s on TCP retry; check socket binding first.
+    const statePromise=isPortUnbound(port)
+        ?Promise.resolve(null)
+        :fetch(`http://127.0.0.1:${port}/api/state`,{signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.json() as Promise<DashState>:null).catch(()=>null);
+    const procsPromise=scanProcsAsync(now);
+    const herePromise=readCheckoutAsync(here);
+    const listRes=await spawnText(['git','-C',here,'worktree','list','--porcelain']);
+    // The first worktree of the list is the main checkout. Only the main checkout runs the fleet and holds the stop files.
+    const main=resolve(/^worktree (.+)$/m.exec(listRes.stdout)?.[1]??here);
+    const same=main.toLowerCase()===here.toLowerCase();
+    const mainPromise=same?Promise.resolve(null):readCheckoutAsync(main);
+    const stops=readSwarmStops(main);
     let loops:FailLoop[]|null=null;
     try{loops=failLoops(readRecentResults(join(main,'.practice','results.jsonl')),now);}catch{/* an unreadable results file hides only this line */}
     const syncedLeases=readSyncedLeases(resolveSyncedLeasesDir(main));
-    for(const line of nowLines(state,{uptimeSec:uptime(),procs:scanProcs(now),stops,here:readCheckout(here),main:same?null:readCheckout(main),loops,syncedLeases},now))console.log(line);
+    const [state,procs,hereCheckout,mainCheckout]=await Promise.all([statePromise,procsPromise,herePromise,mainPromise]);
+    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,syncedLeases},Date.now()))console.log(line);
 }

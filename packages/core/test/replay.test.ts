@@ -170,3 +170,19 @@ test('createTickRecorder retains all relog segments in one process including tim
         rmSync(root, { recursive: true, force: true });
     }
 });
+
+test('single-pass tickRecorder state delta output matches JSON.stringify(stateDelta) across adds, updates, removals, and special keys', () => {
+    const lines: string[] = [];
+    const rec = tickRecorder({ account: 'a', server: 's', script: 'x.ts', argv: [], startedAt: 1 }, { write: l => lines.push(l), close() {} });
+    const prev = new Map<string, string>();
+    const states = [
+        { tick: 1, 'a"b': { nested: [1, 2] }, dropMe: 'gone', keepUndef: undefined, fn: () => {} },
+        { tick: 2, 'a"b': { nested: [1, 2] }, added: true },
+        { tick: 3, 'a"b': { nested: [1, 3] }, added: true },
+    ];
+    for (let i = 0; i < states.length; i++) {
+        rec.publish(i + 1, states[i], 's');
+        const expected = JSON.parse(JSON.stringify({ k: 's', t: i + 1, ...stateDelta(prev, states[i]) }));
+        expect(JSON.parse(lines[i + 1]!)).toEqual(expected);
+    }
+});

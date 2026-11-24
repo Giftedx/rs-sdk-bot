@@ -1,3 +1,7 @@
+const FALL_POS_RE = /slip|lose your footing|lost your balance|fall|bites you|stumble/i;
+const FALL_NEG_RE = /carefully|safely|skillfully|skilfully/i;
+const fallText = (t: string) => FALL_POS_RE.test(t) && !FALL_NEG_RE.test(t);
+
 // Core Agility runner covering Gnome, Barbarian, Wilderness, Brimhaven Arena, and progressive courses.
 import { accountOf, getWorld } from '../../../core/src/bot';
 import { sail as sailBoat, disembark as disembarkBoat, type BoatResult } from '../../../core/src/boat';
@@ -189,10 +193,6 @@ export async function runAgility(s: Session, o: AgilityOptions): Promise<Agility
         actionTrace('dispatch', { step: step.name, locId: step.id, x: step.x, z: step.z, speculative, actionId: pending?.ops ?? null });
         await s.direct({ type: 'interactLoc', x: step.x, z: step.z, locId: step.id, optionIndex: 1, reason: 'SDK' });
     };
-
-    const fallText = (t: string) =>
-        /slip|lose your footing|lost your balance|fall|bites you|stumble/i.test(t)
-        && !/carefully|safely|skillfully|skilfully/i.test(t);
 
     const settleObstacle = async (sequence: number) => {
         const p = pending;
@@ -525,19 +525,29 @@ export async function runAgility(s: Session, o: AgilityOptions): Promise<Agility
         await click(step);
     };
     const seen = new Set<string>();
-    for (const m of s.sdk.getState()?.gameMessages ?? []) seen.add(`${m.observationId}:${m.tick}:${m.text}`);
+    let maxSeenObs = -1;
+    for (const m of s.sdk.getState()?.gameMessages ?? []) {
+        if (m.observationId !== undefined && m.observationId > maxSeenObs) maxSeenObs = m.observationId;
+        seen.add(`${m.observationId}:${m.tick}:${m.text}`);
+    }
 
     if (!doneGoal()) await advance(C.steps[i]!);
     while (!doneGoal()) {
         await tick();
         const p = pos();
         let fell = false;
+        let nextMaxObs = maxSeenObs;
         for (const m of s.sdk.getState()?.gameMessages ?? []) {
+            if (m.observationId !== undefined) {
+                if (m.observationId < maxSeenObs) continue;
+                if (m.observationId > nextMaxObs) nextMaxObs = m.observationId;
+            }
             const key = `${m.observationId}:${m.tick}:${m.text}`;
             if (seen.has(key)) continue;
             seen.add(key);
             if (fallText(m.text)) fell = true;
         }
+        maxSeenObs = nextMaxObs;
         if (fell) {
             falls++;
             preBlocked = true;

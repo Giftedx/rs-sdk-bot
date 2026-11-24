@@ -55,6 +55,7 @@ const ROOT = resolve(import.meta.dir, '../../../..');
 
 let cachedGear: Gear[] | undefined;
 let cachedGearById: Map<number, Gear> | undefined;
+let cachedGearBySlot: Map<string, Gear[]> | undefined;
 let cachedGearByName: Map<string, number> | undefined;
 let cachedShopsById: Map<number, ShopSource[]> | undefined;
 
@@ -92,7 +93,18 @@ export function gearCatalog(): readonly Gear[] {
             };
         });
     cachedGearById = new Map(cachedGear.map(g => [g.id, g]));
+    cachedGearBySlot = new Map<string, Gear[]>();
+    for (const g of cachedGear) {
+        let list = cachedGearBySlot.get(g.slot);
+        if (!list) { list = []; cachedGearBySlot.set(g.slot, list); }
+        list.push(g);
+    }
     return cachedGear;
+}
+
+export function gearCatalogBySlot(slot: string): readonly Gear[] {
+    gearCatalog();
+    return cachedGearBySlot!.get(slot) ?? [];
 }
 
 export function gearById(id: number): Gear | undefined {

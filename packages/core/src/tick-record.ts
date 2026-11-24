@@ -38,18 +38,67 @@ export interface TickRecorder {
 // Shallow delta against the previous publication: the JSON of each top-level key, compared as text.
 export function stateDelta(previous: Map<string, string>, state: unknown): { d: Record<string, unknown>; x?: string[] } {
     const d: Record<string, unknown> = {};
-    const seen = new Set<string>();
     const obj = (state && typeof state === 'object' ? state : {}) as Record<string, unknown>;
+    let existing = 0;
+    let skippedNonJson = false;
     for (const key of Object.keys(obj)) {
         const value = obj[key];
         if (value === undefined) continue;
-        seen.add(key);
         const text = JSON.stringify(value);
-        if (previous.get(key) !== text) { previous.set(key, text); d[key] = value; }
+        if (text === undefined) { skippedNonJson = true; continue; }
+        const prev = previous.get(key);
+        if (prev !== undefined) existing++;
+        if (prev !== text) { previous.set(key, text); d[key] = value; }
     }
-    const x = [...previous.keys()].filter(k => !seen.has(k));
-    for (const k of x) previous.delete(k);
-    return x.length ? { d, x } : { d };
+    if (existing < previous.size) {
+        const x: string[] = [];
+        for (const k of previous.keys()) {
+            const v = obj[k];
+            if (!Object.hasOwn(obj, k) || v === undefined || (skippedNonJson && JSON.stringify(v) === undefined)) {
+                x.push(k);
+            }
+        }
+        if (x.length) {
+            for (const k of x) previous.delete(k);
+            return { d, x };
+        }
+    }
+    return { d };
+}
+
+function serializeStateDeltaLine(previous: Map<string, string>, kind: 's' | 'p', tick: number, state: unknown): string {
+    const obj = (state && typeof state === 'object' ? state : {}) as Record<string, unknown>;
+    const changed: string[] = [];
+    let existing = 0;
+    let skippedNonJson = false;
+    for (const key of Object.keys(obj)) {
+        const value = obj[key];
+        if (value === undefined) continue;
+        const text = JSON.stringify(value);
+        if (text === undefined) { skippedNonJson = true; continue; }
+        const prev = previous.get(key);
+        if (prev !== undefined) existing++;
+        if (prev !== text) {
+            previous.set(key, text);
+            changed.push(`${JSON.stringify(key)}:${text}`);
+        }
+    }
+    let removedSuffix = '';
+    if (existing < previous.size) {
+        const x: string[] = [];
+        for (const k of previous.keys()) {
+            const v = obj[k];
+            if (!Object.hasOwn(obj, k) || v === undefined || (skippedNonJson && JSON.stringify(v) === undefined)) {
+                x.push(k);
+            }
+        }
+        if (x.length) {
+            for (const k of x) previous.delete(k);
+            removedSuffix = `,"x":${JSON.stringify(x)}`;
+        }
+    }
+    const tickJson = Number.isFinite(tick) ? tick : 'null';
+    return `{"k":"${kind}","t":${tickJson},"d":{${changed.join(',')}}${removedSuffix}}\n`;
 }
 
 export function applyDelta(state: Record<string, unknown>, line: { d?: Record<string, unknown>; x?: string[] }): Record<string, unknown> {
@@ -64,9 +113,8 @@ export function tickRecorder(meta: RecordMeta, sink: { write(line: string): void
     const clock = opts.now ?? (() => performance.now());
     const previous = new Map<string, string>();
     let rawBytes = 0, cpuMs = 0, ticks = 0, cut = false, ended = false;
-    const write = (row: object, tick: number) => {
+    const writeLine = (line: string, tick: number) => {
         if (cut || ended) return;
-        const line = JSON.stringify(row) + '\n';
         if (rawBytes + line.length > max) {
             cut = true;
             const mark = JSON.stringify({ k: 'cut', t: tick, rawBytes }) + '\n';
@@ -77,10 +125,14 @@ export function tickRecorder(meta: RecordMeta, sink: { write(line: string): void
         rawBytes += line.length;
         sink.write(line);
     };
+    const write = (row: object, tick: number) => {
+        if (cut || ended) return;
+        writeLine(JSON.stringify(row) + '\n', tick);
+    };
     const timed = (f: () => void) => { const start = clock(); try { f(); } catch { /* a record must never stop the worker */ } cpuMs += clock() - start; };
     write({ k: 'meta', v: RECORD_VERSION, ...meta }, 0);
     return {
-        publish(tick, state, kind) { timed(() => { if (kind === 's') ticks++; write({ k: kind, t: tick, ...stateDelta(previous, state) }, tick); }); },
+        publish(tick, state, kind) { timed(() => { if (kind === 's') ticks++; if (!cut && !ended) writeLine(serializeStateDeltaLine(previous, kind, tick, state), tick); }); },
         action(tick, index, action, direct) { timed(() => write(direct ? { k: 'a', t: tick, i: index, a: action, direct: true } : { k: 'a', t: tick, i: index, a: action }, tick)); },
         result(tick, index, result) { timed(() => write({ k: 'r', t: tick, i: index, r: result ?? null }, tick)); },
         end(tick, reason) {

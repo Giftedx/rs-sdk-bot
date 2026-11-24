@@ -1,9 +1,5 @@
 // Skill dispatcher for unified WorkerModule<GatherConfig> sessions and CLI runs.
 import type { Session } from '../../../core/src/inprocess';
-import { runFishingCli, runFishingSession } from './fishing';
-import { runForagingCli, runForagingSession } from './foraging';
-import { runMiningCli, runMiningSession } from './mining';
-import { runThievingCli, runThievingSession } from './thieving';
 import {
     GATHER_METHOD_MAP,
     type GatherConfig,
@@ -11,7 +7,6 @@ import {
     VALID_GATHER_SKILLS,
     normalizeGatherConfig,
 } from './types';
-import { runWoodcuttingCli, runWoodcuttingSession } from './woodcutting';
 
 export async function runGather(
     s: Session,
@@ -39,15 +34,15 @@ export async function runGather(
     }
     switch (cfg.skill) {
         case 'fishing':
-            return runFishingSession(s, cfg, stop);
+            return (await import('./fishing')).runFishingSession(s, cfg, stop);
         case 'woodcutting':
-            return runWoodcuttingSession(s, cfg, stop);
+            return (await import('./woodcutting')).runWoodcuttingSession(s, cfg, stop);
         case 'mining':
-            return runMiningSession(s, cfg, stop);
+            return (await import('./mining')).runMiningSession(s, cfg, stop);
         case 'thieving':
-            return runThievingSession(s, cfg, stop);
+            return (await import('./thieving')).runThievingSession(s, cfg, stop);
         case 'foraging':
-            return runForagingSession(s, cfg, stop);
+            return (await import('./foraging')).runForagingSession(s, cfg, stop);
     }
 }
 
@@ -61,14 +56,14 @@ export async function runGatherCli(account: string, rawCfg: GatherConfig): Promi
     }
     switch (cfg.skill) {
         case 'fishing':
-            return runFishingCli(account, cfg);
+            return (await import('./fishing')).runFishingCli(account, cfg);
         case 'woodcutting':
-            return runWoodcuttingCli(account, cfg);
+            return (await import('./woodcutting')).runWoodcuttingCli(account, cfg);
         case 'mining':
-            return runMiningCli(account, cfg);
+            return (await import('./mining')).runMiningCli(account, cfg);
         case 'thieving':
-            return runThievingCli(account, cfg);
+            return (await import('./thieving')).runThievingCli(account, cfg);
         case 'foraging':
-            return runForagingCli(account, cfg);
+            return (await import('./foraging')).runForagingCli(account, cfg);
     }
 }
