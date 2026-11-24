@@ -15,14 +15,8 @@ import {
     preflightOk,
     reserveAdjustedStock,
 } from '../contracts';
-import { FISH_PROFILES, type FishMethod } from './fishing';
-import { KEY_LOOP, KEY_TOOTH, CRYSTAL_KEY } from './foraging';
-import { MINING_SITES } from './mining-rotation';
-import { miningProfiles } from './mining';
-import { pickpocketProfiles, stallRecipes } from './thieving';
+import type { FishMethod } from './fishing';
 import {
-    MINING_PICKAXES_DESC,
-    WOODCUTTING_AXES_DESC,
     bestMiningPickaxe,
     bestWoodcuttingAxe,
 } from './tools';
@@ -36,29 +30,98 @@ import {
     resolveSetting,
 } from './types';
 
-function skillLevel(acct: WorkerAccountView, name: string): number {
-    for (const [k, v] of Object.entries(acct.skills)) {
-        if (k.toLowerCase() === name.toLowerCase()) return v.level;
+let cachedFishingMod: typeof import('./fishing') | undefined;
+let cachedForagingMod: typeof import('./foraging') | undefined;
+let cachedMiningRotationMod: typeof import('./mining-rotation') | undefined;
+let cachedMiningMod: typeof import('./mining') | undefined;
+let cachedThievingMod: typeof import('./thieving') | undefined;
+
+const loadFishingMod = (): typeof import('./fishing') => (cachedFishingMod ??= require('./fishing'));
+const loadForagingMod = (): typeof import('./foraging') => (cachedForagingMod ??= require('./foraging'));
+const loadMiningRotationMod = (): typeof import('./mining-rotation') => (cachedMiningRotationMod ??= require('./mining-rotation'));
+const loadMiningMod = (): typeof import('./mining') => (cachedMiningMod ??= require('./mining'));
+const loadThievingMod = (): typeof import('./thieving') => (cachedThievingMod ??= require('./thieving'));
+
+let cachedMiningProfileMap: Map<string, ReturnType<typeof import('./mining')['miningProfiles']>[number]> | undefined;
+let cachedMiningSiteSet: Set<string> | undefined;
+let cachedPickpocketMap: Map<string, ReturnType<typeof import('./thieving')['pickpocketProfiles']>[number]> | undefined;
+let cachedStallMap: Map<string, ReturnType<typeof import('./thieving')['stallRecipes']>[number]> | undefined;
+
+function miningProfileByName(name: string) {
+    if (!cachedMiningProfileMap) {
+        cachedMiningProfileMap = new Map(loadMiningMod().miningProfiles().map(p => [p.name, p]));
     }
-    return name.toLowerCase() === 'hitpoints' ? 10 : 1;
+    return cachedMiningProfileMap.get(name);
+}
+
+function hasMiningSite(key: string): boolean {
+    if (!cachedMiningSiteSet) {
+        cachedMiningSiteSet = new Set(loadMiningRotationMod().MINING_SITES.map(s => s.key));
+    }
+    return cachedMiningSiteSet.has(key);
+}
+
+function pickpocketProfileByName(name: string) {
+    if (!cachedPickpocketMap) {
+        cachedPickpocketMap = new Map(loadThievingMod().pickpocketProfiles().map(p => [p.name, p]));
+    }
+    return cachedPickpocketMap.get(name);
+}
+
+function stallRecipeByName(name: string) {
+    if (!cachedStallMap) {
+        cachedStallMap = new Map(loadThievingMod().stallRecipes().map(r => [r.name, r]));
+    }
+    return cachedStallMap.get(name);
+}
+
+function skillLevel(acct: WorkerAccountView, name: string): number {
+    const direct = acct.skills[name];
+    if (direct !== undefined) return direct.level;
+    const lower = name.toLowerCase();
+    for (const k in acct.skills) {
+        if (k.toLowerCase() === lower) return acct.skills[k]!.level;
+    }
+    return lower === 'hitpoints' ? 10 : 1;
 }
 
 function hasSkillEntry(acct: WorkerAccountView, name: string): boolean {
-    return Object.keys(acct.skills).some(k => k.toLowerCase() === name.toLowerCase());
+    if (acct.skills[name] !== undefined) return true;
+    const lower = name.toLowerCase();
+    for (const k in acct.skills) {
+        if (k.toLowerCase() === lower) return true;
+    }
+    return false;
 }
 
 function questComplete(acct: WorkerAccountView, needle: string | RegExp): boolean {
-    for (const [k, st] of Object.entries(acct.quests)) {
-        const matched = typeof needle === 'string' ? k.toLowerCase() === needle.toLowerCase() : needle.test(k);
-        if (matched && st === 'complete') return true;
+    if (typeof needle === 'string') {
+        const direct = acct.quests[needle];
+        if (direct !== undefined) return direct === 'complete';
+        const lower = needle.toLowerCase();
+        for (const k in acct.quests) {
+            if (k.toLowerCase() === lower) return acct.quests[k] === 'complete';
+        }
+        return false;
+    }
+    for (const k in acct.quests) {
+        if (needle.test(k) && acct.quests[k] === 'complete') return true;
     }
     return false;
 }
 
 function questStatusOf(acct: WorkerAccountView, needle: string | RegExp) {
-    for (const [k, st] of Object.entries(acct.quests)) {
-        const matched = typeof needle === 'string' ? k.toLowerCase() === needle.toLowerCase() : needle.test(k);
-        if (matched) return st;
+    if (typeof needle === 'string') {
+        const direct = acct.quests[needle];
+        if (direct !== undefined) return direct;
+        const lower = needle.toLowerCase();
+        for (const k in acct.quests) {
+            if (k.toLowerCase() === lower) return acct.quests[k]!;
+        }
+        return 'not_started' as const;
+    }
+    for (const k in acct.quests) {
+        if (needle.test(k)) return acct.quests[k]!;
     }
     return 'not_started' as const;
 }
@@ -70,11 +133,10 @@ function availableItem(acct: WorkerAccountView, world: WorkerWorldView, itemId: 
 }
 
 function stockRecords(acct: WorkerAccountView, world: WorkerWorldView): { id: number; count: number }[] {
-    const ids = new Set<number>([
-        ...Object.keys(acct.inventory).map(Number),
-        ...Object.keys(acct.equipment).map(Number),
-        ...Object.keys(acct.bank.items).map(Number),
-    ]);
+    const ids = new Set<number>();
+    for (const k in acct.inventory) ids.add(Number(k));
+    for (const k in acct.equipment) ids.add(Number(k));
+    for (const k in acct.bank.items) ids.add(Number(k));
     const rows: { id: number; count: number }[] = [];
     for (const id of ids) {
         const { available } = availableItem(acct, world, id);
@@ -145,7 +207,8 @@ export function gatherPreflight(
     const reservedCoins = accountReserveFor(acct, world, 995);
     const escrowCoins = accountEscrowCoins(acct, world);
     const spendableCoins = availableCoinsAfterReserves(totalCoins, reservedCoins, escrowCoins, 0);
-    const stock = stockRecords(acct, world);
+    let cachedStock: { id: number; count: number }[] | undefined;
+    const stock = () => (cachedStock ??= stockRecords(acct, world));
 
     const requireItem = (itemId: number, required: number, itemName?: string) => {
         const { available, reserved } = availableItem(acct, world, itemId);
@@ -218,7 +281,7 @@ export function gatherPreflight(
                 if (sub !== 'fly' && sub !== 'riverBait') {
                     blockers.push({ kind: 'invalid_config', message: `invalid village fishing method: ${sub}` });
                 } else {
-                    const prof = FISH_PROFILES[sub];
+                    const prof = loadFishingMod().FISH_PROFILES[sub];
                     requireSkill('Fishing', prof.level);
                     requireItem(prof.tool, 1);
                     if (prof.bait) requireItem(prof.bait, 1);
@@ -243,6 +306,7 @@ export function gatherPreflight(
                 }
             } else if (cfg.method === 'staged') {
                 const methodKey = cfg.spot ?? cfg.args[0] ?? resolveSetting(cfg, 'METHOD') ?? 'fly';
+                const { FISH_PROFILES } = loadFishingMod();
                 if (methodKey === 'shark') {
                     requireSkill('Fishing', 76);
                     requireItem(311, 1, 'Harpoon');
@@ -266,7 +330,7 @@ export function gatherPreflight(
         case 'woodcutting': {
             const wcLevel = skillLevel(acct, 'Woodcutting');
             const atkLevel = skillLevel(acct, 'Attack');
-            const rec = bestWoodcuttingAxe(stock, { woodcutting: wcLevel, attack: atkLevel }).current;
+            const rec = bestWoodcuttingAxe(stock(), { woodcutting: wcLevel, attack: atkLevel }).current;
             if (cfg.method === 'edgeville') {
                 requireSkill('Woodcutting', 15);
                 if (wcLevel >= 36) {
@@ -313,7 +377,7 @@ export function gatherPreflight(
         case 'mining': {
             const mLevel = skillLevel(acct, 'Mining');
             const atkLevel = skillLevel(acct, 'Attack');
-            const rec = bestMiningPickaxe(stock, { mining: mLevel, attack: atkLevel }).current;
+            const rec = bestMiningPickaxe(stock(), { mining: mLevel, attack: atkLevel }).current;
             if (cfg.method === 'ore') {
                 const profile = cfg.spot ?? resolveSetting(cfg, 'ORE_PROFILE') ?? 'mixed';
                 if (profile !== 'mixed' && profile !== 'clay') {
@@ -334,14 +398,14 @@ export function gatherPreflight(
                 }
             } else if (cfg.method === 'at-site' || cfg.method === 'drop') {
                 const profName = cfg.spot ?? cfg.args[0] ?? resolveSetting(cfg, 'PROFILE') ?? 'iron_rock_table';
-                const prof = miningProfiles().find(p => p.name === profName);
+                const prof = miningProfileByName(profName);
                 if (!prof || prof.essence) {
                     blockers.push({ kind: 'invalid_config', message: `invalid mining profile: ${profName}` });
                 } else {
                     requireSkill('Mining', prof.level);
                 }
                 const siteKey = resolveSetting(cfg, 'MINING_SITE');
-                if (siteKey && !MINING_SITES.some(s => s.key === siteKey)) {
+                if (siteKey && !hasMiningSite(siteKey)) {
                     blockers.push({ kind: 'invalid_config', message: `unknown MINING_SITE: ${siteKey}` });
                 }
                 if (!rec) requireItem(1265, 1, 'Bronze pickaxe');
@@ -395,7 +459,7 @@ export function gatherPreflight(
                 }
             } else if (cfg.method === 'pickpocket-at-site') {
                 const name = cfg.spot ?? cfg.args[0] ?? resolveSetting(cfg, 'PROFILE') ?? '';
-                const prof = pickpocketProfiles().find(p => p.name === name);
+                const prof = pickpocketProfileByName(name);
                 if (!prof) {
                     blockers.push({ kind: 'invalid_config', message: `unknown pickpocket profile: ${name || '-'}` });
                 } else {
@@ -412,13 +476,13 @@ export function gatherPreflight(
             } else if (cfg.method === 'pickpocket') {
                 const name = cfg.spot ?? resolveSetting(cfg, 'PROFILE');
                 if (name) {
-                    const prof = pickpocketProfiles().find(p => p.name === name);
+                    const prof = pickpocketProfileByName(name);
                     if (!prof) blockers.push({ kind: 'invalid_config', message: `unknown pickpocket profile: ${name}` });
                     else requireSkill('Thieving', prof.level);
                 }
             } else if (cfg.method === 'stalls') {
                 const stall = cfg.spot ?? cfg.args[0] ?? resolveSetting(cfg, 'STALL') ?? '';
-                const rec = stallRecipes().find(r => r.name === stall);
+                const rec = stallRecipeByName(stall);
                 if (!rec) {
                     blockers.push({ kind: 'invalid_config', message: `unknown stall recipe: ${stall || '-'}` });
                 } else {
@@ -452,6 +516,7 @@ export function gatherPreflight(
                 if (cfg.members === false) {
                     blockers.push({ kind: 'invalid_config', message: 'foraging:crystal-chest requires members access' });
                 }
+                const { CRYSTAL_KEY, KEY_LOOP, KEY_TOOTH } = loadForagingMod();
                 const full = availableItem(acct, world, CRYSTAL_KEY).available;
                 const tooth = availableItem(acct, world, KEY_TOOTH).available;
                 const loop = availableItem(acct, world, KEY_LOOP).available;
@@ -548,6 +613,7 @@ export function gatherEstimate(
                 };
             }
             const methodKey = (cfg.spot ?? cfg.args[0] ?? 'fly') as FishMethod;
+            const { FISH_PROFILES } = loadFishingMod();
             const prof = FISH_PROFILES[methodKey] ?? FISH_PROFILES.fly;
             const xp = scaleXp(Math.max(2, prof.level * 0.4 + 4));
             return {
@@ -652,7 +718,7 @@ export function gatherEstimate(
                 };
             }
             const profName = cfg.spot ?? cfg.args[0] ?? 'iron_rock_table';
-            const prof = miningProfiles().find(p => p.name === profName);
+            const prof = miningProfileByName(profName);
             const unitsPerTick = cfg.method === 'ore' ? 0.12 : prof && prof.level >= 55 ? 0.06 : 0.25;
             const outId = prof?.products[0] ?? 440;
             const xpPerOre = prof && prof.level >= 40 ? 65 : 35;

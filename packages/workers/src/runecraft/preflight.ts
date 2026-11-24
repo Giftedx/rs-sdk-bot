@@ -15,6 +15,7 @@ import {
 } from '../contracts';
 import {
     ALL_ALTARS,
+    ALL_ALTARS_BY_NAME,
     BODY_CARRIER_ALTAR,
     COSMIC_ALTAR,
     DRAMEN_STAFF,
@@ -25,7 +26,6 @@ import {
     chooseRuneAltar,
     insideAirAltar,
 } from './altars';
-import { runeCarrierRoster, runeStageRoster } from './carrier-roster';
 import {
     RUNECRAFT_MODES,
     type NormalizedRunecraftConfig,
@@ -34,16 +34,26 @@ import {
     normalizeRunecraftConfig,
 } from './types';
 
+let cachedCarrierRosterMod: typeof import('./carrier-roster') | undefined;
+const loadCarrierRosterMod = (): typeof import('./carrier-roster') => (cachedCarrierRosterMod ??= require('./carrier-roster'));
+
+const LOST_CITY_RE = /^Lost City$/i;
+const RUNE_MYSTERIES_RE = /^Rune Mysteries(?: Quest)?$/i;
+const SHILO_VILLAGE_RE = /^Shilo Village$/i;
+
 function skillLevel(acct: WorkerAccountView, name: string): number {
-    for (const [k, v] of Object.entries(acct.skills)) {
-        if (k.toLowerCase() === name.toLowerCase()) return v.level;
+    const direct = acct.skills[name];
+    if (direct !== undefined) return direct.level;
+    const lower = name.toLowerCase();
+    for (const k in acct.skills) {
+        if (k.toLowerCase() === lower) return acct.skills[k]!.level;
     }
-    return name.toLowerCase() === 'hitpoints' ? 10 : 1;
+    return lower === 'hitpoints' ? 10 : 1;
 }
 
 function questComplete(acct: WorkerAccountView, re: RegExp): boolean {
-    for (const [k, st] of Object.entries(acct.quests)) {
-        if (re.test(k) && st === 'complete') return true;
+    for (const k in acct.quests) {
+        if (re.test(k) && acct.quests[k] === 'complete') return true;
     }
     return false;
 }
@@ -80,7 +90,7 @@ export function runecraftPreflight(
         if (!Number.isSafeInteger(cfg.targetLevel) || cfg.targetLevel < 2 || cfg.targetLevel > 99) {
             return preflightFail([{ kind: 'invalid_config', message: `Runecraft target must be 2..99 (got ${cfg.targetLevel})` }]);
         }
-        if (cfg.altar !== undefined && !ALL_ALTARS.some(a => a.name === cfg.altar)) {
+        if (cfg.altar !== undefined && !ALL_ALTARS_BY_NAME.has(cfg.altar)) {
             return preflightFail([{ kind: 'invalid_config', message: `unknown rune altar: ${cfg.altar}` }]);
         }
         if (cfg.essenceTarget !== undefined && (!Number.isSafeInteger(cfg.essenceTarget) || cfg.essenceTarget < 1)) {
@@ -91,13 +101,14 @@ export function runecraftPreflight(
         }
 
         const ownedIds = new Set<number>();
-        for (const altar of ALL_ALTARS) {
+        for (let i = 0; i < ALL_ALTARS.length; i++) {
+            const altar = ALL_ALTARS[i]!;
             if (availableStock(acct, world, altar.talisman) > 0) ownedIds.add(altar.talisman);
         }
 
         if (cfg.altar === 'cosmic') {
             if (!cfg.members) blockers.push({ kind: 'invalid_config', message: 'members account required for Cosmic altar (Zanaris)' });
-            if (!questComplete(acct, /^Lost City$/i)) {
+            if (!questComplete(acct, LOST_CITY_RE)) {
                 blockers.push({ kind: 'quest_incomplete', quest: 'Lost City', requiredState: 'complete' });
             }
             if (availableStock(acct, world, DRAMEN_STAFF) < 1) {
@@ -126,7 +137,7 @@ export function runecraftPreflight(
                 missingItems.push({ itemId: COSMIC_ALTAR.talisman, count: 1, itemName: 'Cosmic talisman' });
             }
         } else if (cfg.altar !== undefined) {
-            const altar = RUNE_ALTARS.find(a => a.name === cfg.altar)!;
+            const altar = ALL_ALTARS_BY_NAME.get(cfg.altar)!;
             if (rcLevel < altar.level) {
                 blockers.push({ kind: 'skill_level', skill: 'Runecraft', required: altar.level, current: rcLevel });
             }
@@ -179,10 +190,10 @@ export function runecraftPreflight(
         }
         if (!cfg.members) blockers.push({ kind: 'invalid_config', message: 'members account required for Shilo Village Nature altar' });
         if (rcLevel < 44) blockers.push({ kind: 'skill_level', skill: 'Runecraft', required: 44, current: rcLevel });
-        if (!questComplete(acct, /^Rune Mysteries(?: Quest)?$/i)) {
+        if (!questComplete(acct, RUNE_MYSTERIES_RE)) {
             blockers.push({ kind: 'quest_incomplete', quest: 'Rune Mysteries', requiredState: 'complete' });
         }
-        if (!questComplete(acct, /^Shilo Village$/i)) {
+        if (!questComplete(acct, SHILO_VILLAGE_RE)) {
             blockers.push({ kind: 'quest_incomplete', quest: 'Shilo Village', requiredState: 'complete' });
         }
         if (j.protectMelee) {
@@ -237,6 +248,7 @@ export function runecraftPreflight(
 
     // Multi-account carrier and staging modes validate roster/altar parameters eagerly.
     try {
+        const { runeCarrierRoster, runeStageRoster } = loadCarrierRosterMod();
         if (cfg.mode === 'carriers') runeCarrierRoster([...cfg.roster, '--carriers']);
         else if (cfg.mode === 'body-continuation') runeCarrierRoster([...cfg.roster, '--body-continuation']);
         else if (cfg.mode === 'body-measure') runeCarrierRoster([...cfg.roster, `--body-measure=${cfg.measurePacks ?? 12}`]);
@@ -324,9 +336,12 @@ export function runecraftEstimate(
     }
 
     const ownedIds = new Set<number>();
-    for (const a of ALL_ALTARS) if (availableStock(acct, world, a.talisman) > 0) ownedIds.add(a.talisman);
+    for (let i = 0; i < ALL_ALTARS.length; i++) {
+        const a = ALL_ALTARS[i]!;
+        if (availableStock(acct, world, a.talisman) > 0) ownedIds.add(a.talisman);
+    }
     const altar = cfg.altar
-        ? ALL_ALTARS.find(a => a.name === cfg.altar) ?? RUNE_ALTARS[0]!
+        ? ALL_ALTARS_BY_NAME.get(cfg.altar) ?? RUNE_ALTARS[0]!
         : chooseRuneAltar(rcLevel, ownedIds).altar ?? RUNE_ALTARS[0]!;
     const xpPerUnit = altar.xp * xpRate;
     const multiplier = Math.floor(rcLevel / altar.multiplier) + 1;

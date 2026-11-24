@@ -13,7 +13,48 @@ const marker = (s: Session) =>
 const fresh = (s: Session, cursor: number, re: RegExp) =>
     (s.sdk.getState()?.gameMessages ?? []).some(m => m.type === 0 && (m.observationId ?? m.tick) > cursor && re.test(m.text)) ||
     (s.sdk.getState()?.recentDialogs ?? []).some(m => (m.observationId ?? m.tick) > cursor && re.test(m.text.join(' ')));
-const count = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+const count = (s: Session, id: number) => {
+    let n = 0;
+    const inv = s.sdk.getInventory();
+    for (let i = 0; i < inv.length; i++) {
+        if (inv[i]!.id === id) n += inv[i]!.count;
+    }
+    return n;
+};
+const KITTEN_NAME_RE = /^Kitten$/i;
+const DROP_OP_RE = /^drop$/i;
+const CANNON_LOAD_RE = /You load the cannon with (\d+) cannonballs\./;
+const CANNON_WITH_RE = /with (\d+) cannonballs/;
+const SPECBAR_RE = /^combat_(blunt|axe|crossbow|bow|stabsword|hacksword|spiked|thrown|spear|claw|pickaxe|polearm|heavysword|unarmed):specbar$/;
+const sameEquipmentRows = (
+    a: readonly { id: number; slot: number; count: number }[],
+    b: readonly { id: number; slot: number; count: number }[],
+): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i]!.id !== b[i]!.id || a[i]!.slot !== b[i]!.slot || a[i]!.count !== b[i]!.count) return false;
+    }
+    return true;
+};
+const sameSkillXp = (a: readonly { experience: number }[], b: readonly number[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i]!.experience !== b[i]!) return false;
+    }
+    return true;
+};
+const samePackTotals = (inv: readonly { id: number; count: number }[], baseline: ReadonlyMap<number, number>): boolean => {
+    const cur = new Map<number, number>();
+    for (let i = 0; i < inv.length; i++) {
+        const row = inv[i]!;
+        cur.set(row.id, (cur.get(row.id) ?? 0) + row.count);
+    }
+    if (cur.size !== baseline.size) return false;
+    for (const [id, n] of baseline) {
+        if (cur.get(id) !== n) return false;
+    }
+    return true;
+};
 
 // ---- Care, Miscellania Weed, and Druid Pouch (microbot-c-care.ts) ----
 
@@ -641,8 +682,8 @@ export function qolDropSelection(rows: readonly { id: number; name: string; slot
         !o ||
         !Array.isArray(o.ids) ||
         !Array.isArray(o.names) ||
-        !['listed', 'except'].includes(o.mode) ||
-        !['slot', 'reverse', 'column'].includes(o.order) ||
+        (o.mode !== 'listed' && o.mode !== 'except') ||
+        (o.order !== 'slot' && o.order !== 'reverse' && o.order !== 'column') ||
         !Number.isSafeInteger(o.maximumDrops) ||
         o.maximumDrops < 1 ||
         o.maximumDrops > 28 ||
@@ -655,23 +696,36 @@ export function qolDropSelection(rows: readonly { id: number; name: string; slot
     ) {
         throw Error('explicit finite native drop selection required');
     }
-    if (new Set(rows.map(i => i.slot)).size !== rows.length || rows.some(i => !Number.isSafeInteger(i.slot) || i.slot < 0 || i.slot > 27 || !Number.isSafeInteger(i.count) || i.count < 1)) {
-        throw Error('drop inventory unknown');
+    let seenMask = 0;
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i]!;
+        if (!Number.isSafeInteger(row.slot) || row.slot < 0 || row.slot > 27 || !Number.isSafeInteger(row.count) || row.count < 1) {
+            throw Error('drop inventory unknown');
+        }
+        const bit = 1 << row.slot;
+        if ((seenMask & bit) !== 0) throw Error('drop inventory unknown');
+        seenMask |= bit;
     }
-    const names = o.names.map(n => n.trim().toLowerCase());
-    const selected = rows.filter(i => {
-        const listed = o.ids.includes(i.id) || names.includes(i.name.toLowerCase());
-        return o.mode === 'listed' ? listed : !listed;
-    });
-    return selected
-        .sort((a, b) =>
-            o.order === 'reverse'
-                ? b.slot - a.slot
-                : o.order === 'column'
-                  ? a.slot % 4 - b.slot % 4 || Math.floor(a.slot / 4) - Math.floor(b.slot / 4)
-                  : a.slot - b.slot,
-        )
-        .slice(0, o.maximumDrops);
+    const idSet = o.ids.length > 3 ? new Set(o.ids) : null;
+    const names = o.names.length > 0 ? o.names.map(n => n.trim().toLowerCase()) : null;
+    const nameSet = names && names.length > 3 ? new Set(names) : null;
+    const wantListed = o.mode === 'listed';
+    const selected: { id: number; name: string; slot: number; count: number }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i]!;
+        const listed =
+            (idSet ? idSet.has(row.id) : o.ids.includes(row.id))
+            || (names !== null && (nameSet ? nameSet.has(row.name.toLowerCase()) : names.includes(row.name.toLowerCase())));
+        if (listed === wantListed) selected.push(row);
+    }
+    selected.sort((a, b) =>
+        o.order === 'reverse'
+            ? b.slot - a.slot
+            : o.order === 'column'
+              ? a.slot % 4 - b.slot % 4 || Math.floor(a.slot / 4) - Math.floor(b.slot / 4)
+              : a.slot - b.slot,
+    );
+    return selected.length > o.maximumDrops ? selected.slice(0, o.maximumDrops) : selected;
 }
 
 function qolOwnedState(s: Session, stop: () => boolean) {
@@ -685,8 +739,8 @@ function qolOwnedState(s: Session, stop: () => boolean) {
     if (!client || typeof executor !== 'function' || !p || !Number.isSafeInteger(life) || !Number.isSafeInteger(hp) || hp! < 1 || !equipmentObserved(client)) {
         throw Error('QoL owned state/gear/life unknown');
     }
-    const gear = JSON.stringify(first!.equipment);
-    const xp = JSON.stringify(first!.skills.map(i => i.experience));
+    const gear = first!.equipment.map(i => ({ id: i.id, slot: i.slot, count: i.count }));
+    const xp = first!.skills.map(i => i.experience);
     const x = p.worldX;
     const z = p.worldZ;
     const plane = p.level;
@@ -713,8 +767,8 @@ function qolOwnedState(s: Session, stop: () => boolean) {
             me.level !== plane ||
             !equipmentObserved(client) ||
             s.sdk.getStateAge() > 5000 ||
-            JSON.stringify(st!.equipment) !== gear ||
-            JSON.stringify(st!.skills.map(i => i.experience)) !== xp
+            !sameEquipmentRows(st!.equipment, gear) ||
+            !sameSkillXp(st!.skills, xp)
         );
     };
     return { client, unsafe };
@@ -725,8 +779,20 @@ const qolPack = (s: Session) => {
     for (const i of s.sdk.getInventory()) a[i.id] = (a[i.id] ?? 0) + i.count;
     return a;
 };
-const qolPackEffect = (a: Record<number, number>, b: Record<number, number>, delta: Record<number, number>) =>
-    [...new Set([...Object.keys(a), ...Object.keys(b), ...Object.keys(delta)])].every(k => (b[Number(k)] ?? 0) - (a[Number(k)] ?? 0) === (delta[Number(k)] ?? 0));
+const qolPackEffect = (a: Record<number, number>, b: Record<number, number>, delta: Record<number, number>) => {
+    for (const k in a) {
+        if ((b[Number(k)] ?? 0) - (a[Number(k)] ?? 0) !== (delta[Number(k)] ?? 0)) return false;
+    }
+    for (const k in b) {
+        if (k in a) continue;
+        if ((b[Number(k)] ?? 0) !== (delta[Number(k)] ?? 0)) return false;
+    }
+    for (const k in delta) {
+        if (k in a || k in b) continue;
+        if ((delta[Number(k)] ?? 0) !== 0) return false;
+    }
+    return true;
+};
 
 export async function dropQolItems(s: Session, o: QolDropOrder, stop: () => boolean = () => false) {
     const selected = qolDropSelection(s.sdk.getInventory(), o);

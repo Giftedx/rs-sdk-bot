@@ -45,11 +45,14 @@ export function natureReceipt(essence: number, runes: number, xp: number, level:
     return essence > 0 && Number.isSafeInteger(level) && level >= 44 && runes === essence * multiplier && natureXpReceipt(essence, xp, xpRate, initialXp);
 }
 
+const RUNE_MYSTERIES_RE = /^Rune Mysteries(?: Quest)?$/i;
+const SHILO_VILLAGE_RE = /^Shilo Village$/i;
+
 export function requireNatureEligibility(s: Session, j: NatureJob): void {
     natureRouteJob(j);
     const flags = questFlags(s.client);
-    if (!flags?.some(q => /^Rune Mysteries(?: Quest)?$/i.test(q.name) && q.state === 'complete')
-        || !flags.some(q => /^Shilo Village$/i.test(q.name) && q.state === 'complete')) {
+    if (!flags?.some(q => RUNE_MYSTERIES_RE.test(q.name) && q.state === 'complete')
+        || !flags.some(q => SHILO_VILLAGE_RE.test(q.name) && q.state === 'complete')) {
         throw Error('Nature requires observed completed Rune Mysteries and Shilo Village');
     }
     if ((s.sdk.getSkill('Runecraft')?.level ?? 0) < 44) throw Error('Nature requires Runecraft44');
@@ -379,8 +382,30 @@ export async function runNatureTrips(
         for (const i of [...s.sdk.getInventory(), ...s.sdk.getEquipment(), ...bank.items]) m.set(i.id, (m.get(i.id) ?? 0) + i.count);
         return m;
     };
+function sameEquipmentSnapshot(
+    a: readonly { id: number; count: number; slot?: number }[],
+    b: readonly { id: number; count: number; slot?: number }[],
+): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        const x = a[i]!, y = b[i]!;
+        if (x.id !== y.id || x.count !== y.count || x.slot !== y.slot) return false;
+    }
+    return true;
+}
+
+function sameNonRuneAssets(before: ReadonlyMap<number, number>, after: ReadonlyMap<number, number>): boolean {
+    for (const [id, n] of before) {
+        if (id !== 1436 && id !== 561 && (after.get(id) ?? 0) !== n) return false;
+    }
+    for (const [id, n] of after) {
+        if (id !== 1436 && id !== 561 && (before.get(id) ?? 0) !== n) return false;
+    }
+    return true;
+}
+
     await open();
-    const before = snapshot(), gear = JSON.stringify(s.sdk.getEquipment()), xp = s.sdk.getSkillXp('Runecraft') ?? NaN, remaining = j.cap - (s.tick() - start) - 40;
+    const before = snapshot(), gear = s.sdk.getEquipment().map(e => ({ id: e.id, count: e.count, slot: e.slot })), xp = s.sdk.getSkillXp('Runecraft') ?? NaN, remaining = j.cap - (s.tick() - start) - 40;
     if (remaining <= j.returnTicks) throw Error('Nature production budget exhausted before withdrawals');
     if (!natureXpReceipt(0, 0, j.xpRate ?? NATURE_XP_RATE, xp)) throw Error('Nature initial Runecraft XP unavailable');
     const result = await bankRunner(s, { ...natureRouteJob(j), cap: remaining }, p, stop);
@@ -423,8 +448,8 @@ export async function runNatureTrips(
         consumed: result.completed,
         crafted: result.banked[561] ?? 0,
     });
-    const preserved = !!after && original() && gear === JSON.stringify(s.sdk.getEquipment())
-        && [...new Set([...before.keys(), ...after.keys()])].every(id => [1436, 561].includes(id) || (before.get(id) ?? 0) === (after.get(id) ?? 0));
+    const preserved = !!after && original() && sameEquipmentSnapshot(gear, s.sdk.getEquipment())
+        && sameNonRuneAssets(before, after);
     const runecraftXp = (s.sdk.getSkillXp('Runecraft') ?? NaN) - xp;
     const xpBalanced = natureXpReceipt(result.completed, runecraftXp, j.xpRate ?? NATURE_XP_RATE, xp);
     if (!xpBalanced) auditFailure += (auditFailure ? '; ' : '') + 'Nature whole-trip XP receipt failed';

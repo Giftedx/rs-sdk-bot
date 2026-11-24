@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Bonus, Gear, Skill } from '../../../knowledge/src/gear';
-import { canWear, loadGear, sumBonuses } from '../../../knowledge/src/gear-query';
+import { BONUSES, type Bonus, type Gear, type Skill } from '../../../knowledge/src/gear';
+import { canWear, loadGear } from '../../../knowledge/src/gear-query';
 import type { Shop } from '../../../knowledge/src/shops';
 import type { SessionCore as Session } from '../contracts';
 import { questFlags } from '../../../core/src/quest-status';
@@ -148,6 +148,13 @@ const EXCLUDED_DEBUG_RE = /^macro_|^xmas_yoyoworn$|^ikov_bootsoflightnessworn$|^
 const STANDARD_ARROW_RE = /^(bronze|iron|steel|mithril|adamant|rune)_arrow(_p)?$/;
 const STANDARD_BOW_RE = /^(shortbow|longbow|oak_shortbow|oak_longbow|willow_shortbow|willow_longbow|maple_shortbow|maple_longbow|yew_shortbow|yew_longbow|magic_shortbow|magic_longbow)$/;
 const ELEMENTAL_STAFF_RE = /^staff_of_(air|water|earth|fire)$|^(air|water|earth|fire|lava)_battlestaff$|^mystic_(air|water|earth|fire|lava)_staff$/;
+const DIGITS_ONLY_RE = /^\d+$/;
+const SPEAR_RE = /\bspear\b/i;
+const HALBERD_RE = /\bhalberd\b/i;
+const RANGED_NAME_RE = /bow|dart|knife|javelin|thrown/i;
+const STAFF_NAME_RE = /\b(?:staff|battlestaff)\b/i;
+const GLORY_NAME_RE = /^Amulet of glory/i;
+const BOLT_NAME_RE = /\bbolt/i;
 const ROOT = resolve(import.meta.dir, '../../../..');
 
 interface SkillToolRow {
@@ -161,9 +168,34 @@ interface SkillToolRow {
 let cachedGear: Gear[] | undefined;
 let cachedGearById: Map<number, Gear> | undefined;
 let cachedGearByName: Map<string, number> | undefined;
+let cachedElementalStaves: Gear[] | undefined;
 let cachedShopsById: Map<number, ShopSource[]> | undefined;
 let cachedSkillTools: { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } | undefined;
 const unlockCache = new Map<GearUnlockKind | 'all', Readonly<Partial<Record<GearSkillName, readonly number[]>>>>();
+
+function lazyArray<T>(build: () => readonly T[]): readonly T[] {
+    let resolved: readonly T[] | undefined;
+    const ensure = () => (resolved ??= build());
+    return new Proxy([] as T[], {
+        get(_t, prop, receiver) {
+            const arr = ensure();
+            const val = Reflect.get(arr, prop, arr);
+            return typeof val === 'function' ? val.bind(arr) : val;
+        },
+        has(_t, prop) {
+            return prop in ensure();
+        },
+        ownKeys() {
+            return Reflect.ownKeys(ensure());
+        },
+        getOwnPropertyDescriptor(_t, prop) {
+            const desc = Reflect.getOwnPropertyDescriptor(ensure(), prop);
+            if (!desc) return undefined;
+            if (prop === 'length') return desc;
+            return { ...desc, configurable: true };
+        },
+    });
+}
 
 export function skillTools(): { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } {
     return cachedSkillTools ??= JSON.parse(readFileSync(resolve(ROOT, 'knowledge', 'skill-tools.json'), 'utf8')) as {
@@ -199,14 +231,19 @@ export function gearById(id: number): Gear | undefined {
 
 export function gearIdByName(name: string | number): number | undefined {
     if (typeof name === 'number') return gearById(name) ? name : undefined;
-    const key = name.trim().toLowerCase().replace(/_/g, ' ');
-    if (/^\d+$/.test(key)) return gearById(Number(key)) ? Number(key) : undefined;
+    const trimmed = name.trim().toLowerCase();
+    const key = trimmed.includes('_') ? trimmed.replace(/_/g, ' ') : trimmed;
+    if (DIGITS_ONLY_RE.test(key)) {
+        const id = Number(key);
+        return gearById(id) ? id : undefined;
+    }
     if (!cachedGearByName) {
         cachedGearByName = new Map();
         for (const g of gearCatalog()) {
-            for (const k of [g.name.toLowerCase(), g.debugname.toLowerCase().replace(/_/g, ' ')]) {
-                if (!cachedGearByName.has(k)) cachedGearByName.set(k, g.id);
-            }
+            const lowerName = g.name.toLowerCase();
+            if (!cachedGearByName.has(lowerName)) cachedGearByName.set(lowerName, g.id);
+            const lowerDebug = g.debugname.toLowerCase().replace(/_/g, ' ');
+            if (!cachedGearByName.has(lowerDebug)) cachedGearByName.set(lowerDebug, g.id);
         }
     }
     return cachedGearByName.get(key);
@@ -311,8 +348,8 @@ export function weaponSupportsTrainSkill(item: Gear, trainSkill?: string): boole
     if (!trainSkill || item.slot !== 'righthand') return true;
     const target = trainSkill.trim().toLowerCase();
     if (target === 'hitpoints' || target === 'defence' || target === 'ranged' || target === 'magic') return true;
-    if (/\bspear\b/i.test(item.name)) return target !== 'attack' && target !== 'strength' && target !== 'all-melee';
-    if (/\bhalberd\b/i.test(item.name)) return target !== 'attack' && target !== 'all-melee';
+    if (SPEAR_RE.test(item.name)) return target !== 'attack' && target !== 'strength' && target !== 'all-melee';
+    if (HALBERD_RE.test(item.name)) return target !== 'attack' && target !== 'all-melee';
     return true;
 }
 
@@ -321,12 +358,12 @@ export function isRangedWeapon(g: Gear): boolean {
         (g.attackRange !== undefined && g.attackRange >= 3)
         || g.bonuses.rangeAttack > 0
         || g.bonuses.rangeStrength > 0
-        || /bow|dart|knife|javelin|thrown/i.test(g.name)
+        || RANGED_NAME_RE.test(g.name)
     );
 }
 
 export function isMagicWeapon(g: Gear): boolean {
-    return g.slot === 'righthand' && /\b(?:staff|battlestaff)\b/i.test(g.name);
+    return g.slot === 'righthand' && STAFF_NAME_RE.test(g.name);
 }
 
 export function isMeleeWeapon(g: Gear): boolean {
@@ -398,7 +435,7 @@ export function tieOrder(a: Gear, b: Gear, style: CombatFocus): number {
         const strDiff = b.bonuses.strength - a.bonuses.strength;
         if (strDiff !== 0) return strDiff;
     }
-    if (/^Amulet of glory/i.test(a.name) && /^Amulet of glory/i.test(b.name)) {
+    if (GLORY_NAME_RE.test(a.name) && GLORY_NAME_RE.test(b.name)) {
         return b.id - a.id;
     }
     return a.id - b.id;
@@ -438,7 +475,7 @@ function unreservedCounts(stock: readonly GearCount[], reserved: readonly GearCo
 function arrowCompatibility(bow: Gear | null, arrow: Gear): boolean {
     if (!bow) return isStandardArrow(arrow);
     if (bow.debugname === 'ogre_bow') return arrow.debugname === 'ogre_arrow';
-    if (bow.debugname.includes('crossbow')) return /\bbolt/i.test(arrow.name);
+    if (bow.debugname.includes('crossbow')) return BOLT_NAME_RE.test(arrow.name);
     if (isStandardRangedBow(bow)) return isStandardArrow(arrow) && (arrow.tier ?? 1) <= (bow.tier ?? 1);
     return false;
 }
@@ -477,102 +514,167 @@ export function selectCombatLoadout(
     const skillMap = normalizeSkills(levels);
     const done = normalizeCompletedQuests(quests);
     const arrowMin = options.arrowMinCount ?? RANGED_RUN_AMMO;
-    const have = (g: Gear) => avail.get(g.id) ?? 0;
+    gearCatalog();
+    const byId = cachedGearById!;
+    const canWearLevels = skillMap as Partial<Record<Skill, number>>;
+    const rangedSkill = skillMap.ranged ?? 1;
 
-    const ammoCandidates = (bow: Gear | null): { arrow: Gear; count: number }[] => {
-        if (style !== 'ranged') return [];
-        const usable = gearCatalog()
-            .filter(g => g.slot === 'quiver' && arrowCompatibility(bow, g) && (g.tier ?? 1) <= (skillMap.ranged ?? 1) && have(g) > 0)
-            .map(arrow => ({ arrow, count: have(arrow) }))
-            .sort((a, b) => scoreGearForStyle(b.arrow, 'ranged') - scoreGearForStyle(a.arrow, 'ranged') || a.arrow.id - b.arrow.id);
-        return usable;
-    };
+    // Bucket owned positive-count gear by wear slot once instead of rescanning the full catalog per slot.
+    const ownedBySlot = new Map<string, Gear[]>();
+    const ownedQuivers: { arrow: Gear; count: number; score: number }[] = [];
+    for (const [id, count] of avail) {
+        if (count <= 0) continue;
+        const g = byId.get(id);
+        if (!g) continue;
+        if (g.slot === 'quiver') {
+            if (style === 'ranged' && (g.tier ?? 1) <= rangedSkill) {
+                ownedQuivers.push({ arrow: g, count, score: scoreGearForStyle(g, 'ranged') });
+            }
+            continue;
+        }
+        if (!canWear(g, canWearLevels, done)) continue;
+        const list = ownedBySlot.get(g.slot);
+        if (list) list.push(g);
+        else ownedBySlot.set(g.slot, [g]);
+    }
+    if (ownedQuivers.length > 1) {
+        ownedQuivers.sort((a, b) => b.score - a.score || a.arrow.id - b.arrow.id);
+    }
 
+    const ammoCache = new Map<number, Gear | null>();
     const ammoFor = (bow: Gear | null): Gear | null => {
-        const list = ammoCandidates(bow);
-        return (list.find(a => a.count >= arrowMin) ?? [...list].sort((a, b) => b.count - a.count)[0])?.arrow ?? null;
+        if (style !== 'ranged') return null;
+        const key = bow ? bow.id : -1;
+        if (ammoCache.has(key)) return ammoCache.get(key)!;
+        let firstOverMin: Gear | null = null;
+        let bestCount = -1;
+        let bestFallback: Gear | null = null;
+        for (let i = 0; i < ownedQuivers.length; i++) {
+            const entry = ownedQuivers[i]!;
+            if (!arrowCompatibility(bow, entry.arrow)) continue;
+            if (entry.count >= arrowMin) {
+                firstOverMin = entry.arrow;
+                break;
+            }
+            if (entry.count > bestCount) {
+                bestCount = entry.count;
+                bestFallback = entry.arrow;
+            }
+        }
+        const picked = firstOverMin ?? bestFallback;
+        ammoCache.set(key, picked);
+        return picked;
     };
 
-    const slotCandidates = (slot: LoadoutSlotName): Gear[] => {
-        const wearSlot = GEAR_KEY_BY_SLOT[slot];
-        return gearCatalog()
-            .filter(g => {
-                if (g.slot !== wearSlot) return false;
-                if (!canWearGear(g, skillMap, done)) return false;
-                if (slot === 'weapon') {
-                    if (!weaponSupportsTrainSkill(g, options.trainSkill)) return false;
-                    if (options.oneHanded && g.covers.includes('lefthand')) return false;
-                    if (style === 'ranged' && options.thrown === false && isThrownWeapon(g)) return false;
-                    if (options.minWeaponStrength !== undefined && g.bonuses.strength < options.minWeaponStrength) return false;
-                }
-                if (slot === 'shield' && options.minShieldDefence !== undefined && meleeDefenceMean(g.bonuses) < options.minShieldDefence) {
-                    return false;
-                }
-                if (slot === 'cape' && options.godAlign) {
-                    const cg = GOD_ALIGN_BY_ID[g.id];
-                    if (cg && cg !== options.godAlign) return false;
-                }
-                const sc = scoreGearForStyle(g, style, style === 'ranged' && g.slot === 'righthand' ? (ammoFor(g)?.bonuses.rangeStrength ?? 0) : 0);
-                if (sc <= -1e8) return false;
-                if (slot !== 'weapon' && sc <= 0) return false;
-                return have(g) > 0;
-            })
-            .sort((a, b) => {
-                const as = scoreGearForStyle(a, style, style === 'ranged' && a.slot === 'righthand' ? (ammoFor(a)?.bonuses.rangeStrength ?? 0) : 0);
-                const bs = scoreGearForStyle(b, style, style === 'ranged' && b.slot === 'righthand' ? (ammoFor(b)?.bonuses.rangeStrength ?? 0) : 0);
-                return bs - as || tieOrder(a, b, style);
-            });
+    const slotCandidates = (slot: LoadoutSlotName): { item: Gear; score: number }[] => {
+        const list = ownedBySlot.get(GEAR_KEY_BY_SLOT[slot]);
+        if (!list) return [];
+        const scored: { item: Gear; score: number }[] = [];
+        for (let i = 0; i < list.length; i++) {
+            const g = list[i]!;
+            if (slot === 'weapon') {
+                if (!weaponSupportsTrainSkill(g, options.trainSkill)) continue;
+                if (options.oneHanded && g.covers.includes('lefthand')) continue;
+                if (style === 'ranged' && options.thrown === false && isThrownWeapon(g)) continue;
+                if (options.minWeaponStrength !== undefined && g.bonuses.strength < options.minWeaponStrength) continue;
+            } else if (slot === 'shield') {
+                if (options.minShieldDefence !== undefined && meleeDefenceMean(g.bonuses) < options.minShieldDefence) continue;
+            } else if (slot === 'cape' && options.godAlign) {
+                const cg = GOD_ALIGN_BY_ID[g.id];
+                if (cg && cg !== options.godAlign) continue;
+            }
+            const arrowStr = style === 'ranged' && g.slot === 'righthand' ? (ammoFor(g)?.bonuses.rangeStrength ?? 0) : 0;
+            const sc = scoreGearForStyle(g, style, arrowStr);
+            if (sc <= -1e8) continue;
+            if (slot !== 'weapon' && sc <= 0) continue;
+            scored.push({ item: g, score: sc });
+        }
+        if (scored.length > 1) {
+            scored.sort((a, b) => b.score - a.score || tieOrder(a.item, b.item, style));
+        }
+        return scored;
     };
 
     const weapons = slotCandidates('weapon');
     const shields = slotCandidates('shield');
-    const oneHandedWeapon = weapons.find(w => !w.covers.includes('lefthand')) ?? null;
-    const twoHandedWeapon = options.requireShield ? null : (weapons.find(w => w.covers.includes('lefthand')) ?? null);
-    const topShield = shields[0] ?? null;
-
-    const scoreW = (w: Gear | null) =>
-        w ? scoreGearForStyle(w, style, style === 'ranged' ? (ammoFor(w)?.bonuses.rangeStrength ?? 0) : 0) : -1e9;
-    const scoreS = (s: Gear | null) => (s ? scoreGearForStyle(s, style) : 0);
+    const oneHandedEntry = weapons.find(w => !w.item.covers.includes('lefthand')) ?? null;
+    const twoHandedEntry = options.requireShield ? null : (weapons.find(w => w.item.covers.includes('lefthand')) ?? null);
+    const topShieldEntry = shields[0] ?? null;
 
     let chosenWeapon: Gear | null = null;
     let chosenShield: Gear | null = null;
 
-    const pair1hScore = oneHandedWeapon ? scoreW(oneHandedWeapon) + scoreS(topShield) : -Infinity;
-    const solo2hScore = twoHandedWeapon ? scoreW(twoHandedWeapon) : -Infinity;
-    if (pair1hScore >= solo2hScore && oneHandedWeapon) {
-        chosenWeapon = oneHandedWeapon;
-        chosenShield = topShield;
-    } else if (twoHandedWeapon) {
-        chosenWeapon = twoHandedWeapon;
+    const pair1hScore = oneHandedEntry ? oneHandedEntry.score + (topShieldEntry ? topShieldEntry.score : 0) : -Infinity;
+    const solo2hScore = twoHandedEntry ? twoHandedEntry.score : -Infinity;
+    if (pair1hScore >= solo2hScore && oneHandedEntry) {
+        chosenWeapon = oneHandedEntry.item;
+        chosenShield = topShieldEntry?.item ?? null;
+    } else if (twoHandedEntry) {
+        chosenWeapon = twoHandedEntry.item;
         chosenShield = null;
     } else if (!options.requireWeapon) {
-        chosenShield = topShield;
+        chosenShield = topShieldEntry?.item ?? null;
     }
 
-    const worn = Object.fromEntries(LOADOUT_SLOTS.map(s => [s, null])) as Record<LoadoutSlotName, Gear | null>;
-    worn.weapon = chosenWeapon;
-    worn.shield = chosenShield;
-    for (const slot of LOADOUT_SLOTS) {
+    const worn: Record<LoadoutSlotName, Gear | null> = {
+        weapon: chosenWeapon,
+        shield: chosenShield,
+        helm: null,
+        body: null,
+        legs: null,
+        amulet: null,
+        cape: null,
+        hands: null,
+        feet: null,
+    };
+    for (let i = 0; i < LOADOUT_SLOTS.length; i++) {
+        const slot = LOADOUT_SLOTS[i]!;
         if (slot === 'weapon' || slot === 'shield') continue;
         const cands = slotCandidates(slot);
         if (slot === 'cape' && style === 'magic' && chosenWeapon) {
             const wGod = GOD_ALIGN_BY_ID[chosenWeapon.id];
-            worn[slot] = cands.find(c => !wGod || !GOD_ALIGN_BY_ID[c.id] || GOD_ALIGN_BY_ID[c.id] === wGod) ?? null;
+            const picked = wGod ? cands.find(c => !GOD_ALIGN_BY_ID[c.item.id] || GOD_ALIGN_BY_ID[c.item.id] === wGod) : cands[0];
+            worn[slot] = picked?.item ?? null;
         } else {
-            worn[slot] = cands[0] ?? null;
+            worn[slot] = cands[0]?.item ?? null;
         }
     }
 
     const thrown = style === 'ranged' && !!worn.weapon && isThrownWeapon(worn.weapon);
     const ammo = style === 'ranged' && worn.weapon && !thrown ? ammoFor(worn.weapon) : null;
-    const ammoCount = style === 'ranged' && worn.weapon ? (thrown ? have(worn.weapon) : ammo ? have(ammo) : 0) : 0;
+    const ammoCount = style === 'ranged' && worn.weapon ? (thrown ? (avail.get(worn.weapon.id) ?? 0) : ammo ? (avail.get(ammo.id) ?? 0) : 0) : 0;
 
     const items: { slot: RangedLoadoutSlotName; wearpos: number; item: Gear }[] = [];
-    for (const slot of LOADOUT_SLOTS) {
+    for (let i = 0; i < LOADOUT_SLOTS.length; i++) {
+        const slot = LOADOUT_SLOTS[i]!;
         const item = worn[slot];
         if (item) items.push({ slot, wearpos: WEARPOS_BY_SLOT[slot], item });
     }
     if (ammo) items.push({ slot: 'ammo', wearpos: WEARPOS_BY_SLOT.ammo, item: ammo });
+
+    const bonuses = {
+        stabAttack: 0,
+        slashAttack: 0,
+        crushAttack: 0,
+        magicAttack: 0,
+        rangeAttack: 0,
+        stabDefence: 0,
+        slashDefence: 0,
+        crushDefence: 0,
+        magicDefence: 0,
+        rangeDefence: 0,
+        strength: 0,
+        rangeStrength: 0,
+        magicDamage: 0,
+        prayer: 0,
+    } as Record<Bonus, number>;
+    for (let i = 0; i < items.length; i++) {
+        const b = items[i]!.item.bonuses;
+        for (let j = 0; j < BONUSES.length; j++) {
+            const k = BONUSES[j]!;
+            bonuses[k] += b[k];
+        }
+    }
 
     return {
         style,
@@ -581,8 +683,21 @@ export function selectCombatLoadout(
         thrown,
         ammoCount,
         items,
-        bonuses: sumBonuses(items.map(i => i.item)),
+        bonuses,
     };
+}
+
+function elementalStavesCatalog(): readonly Gear[] {
+    if (cachedElementalStaves) return cachedElementalStaves;
+    gearCatalog();
+    const byId = cachedGearById!;
+    const out: Gear[] = [];
+    for (const idStr in ELEMENTAL_STAFF_RUNES) {
+        const g = byId.get(Number(idStr));
+        if (g && g.slot === 'righthand') out.push(g);
+    }
+    cachedElementalStaves = out;
+    return out;
 }
 
 function rankedElementalStaves(
@@ -591,21 +706,34 @@ function rankedElementalStaves(
     runeIds: readonly number[] = [],
     members = true,
 ) {
+    const skillMap = normalizeSkills(levels) as Partial<Record<Skill, number>>;
+    const done = normalizeCompletedQuests(quests);
     const runeWeights = new Map<number, number>();
-    runeIds.forEach((id, idx) => {
+    for (let idx = 0; idx < runeIds.length; idx++) {
+        const id = runeIds[idx]!;
         runeWeights.set(id, (runeWeights.get(id) ?? 0) + 1 + (runeIds.length - idx) * 1e-4);
-    });
-    const score = (id: number) => {
-        const provided = ELEMENTAL_STAFF_RUNES[id] ?? [];
-        return runeIds.length > 0 ? provided.reduce((sum, r) => sum + (runeWeights.get(r) ?? 0), 0) : provided.length;
-    };
-    return gearCatalog()
-        .filter(g => {
-            const provided = ELEMENTAL_STAFF_RUNES[g.id];
-            if (g.slot !== 'righthand' || !provided || (!members && g.members) || !canWearGear(g, levels, quests)) return false;
-            return runeIds.length === 0 || provided.some(r => runeWeights.has(r));
-        })
-        .sort((a, b) => score(b.id) - score(a.id) || scoreGearForStyle(b, 'magic') - scoreGearForStyle(a, 'magic') || a.id - b.id);
+    }
+    const staves = elementalStavesCatalog();
+    const scored: { gear: Gear; runeScore: number; styleScore: number }[] = [];
+    for (let i = 0; i < staves.length; i++) {
+        const g = staves[i]!;
+        if ((!members && g.members) || !canWear(g, skillMap, done)) continue;
+        const provided = ELEMENTAL_STAFF_RUNES[g.id]!;
+        let runeScore = 0;
+        if (runeIds.length === 0) {
+            runeScore = provided.length;
+        } else {
+            for (let j = 0; j < provided.length; j++) {
+                runeScore += runeWeights.get(provided[j]!) ?? 0;
+            }
+            if (runeScore <= 0) continue;
+        }
+        scored.push({ gear: g, runeScore, styleScore: scoreGearForStyle(g, 'magic') });
+    }
+    if (scored.length > 1) {
+        scored.sort((a, b) => b.runeScore - a.runeScore || b.styleScore - a.styleScore || a.gear.id - b.gear.id);
+    }
+    return scored.map(s => s.gear);
 }
 
 export function bestElementalStaffForRunes(
@@ -615,8 +743,17 @@ export function bestElementalStaffForRunes(
     runeIds: readonly number[] = [],
     members = true,
 ): Gear | null {
-    const owned = new Set(stock.filter(s => s.count > 0).map(s => s.id));
-    return rankedElementalStaves(levels, quests, runeIds, members).find(g => owned.has(g.id)) ?? null;
+    const owned = new Set<number>();
+    for (let i = 0; i < stock.length; i++) {
+        const s = stock[i]!;
+        if (s.count > 0) owned.add(s.id);
+    }
+    if (owned.size === 0) return null;
+    const ranked = rankedElementalStaves(levels, quests, runeIds, members);
+    for (let i = 0; i < ranked.length; i++) {
+        if (owned.has(ranked[i]!.id)) return ranked[i]!;
+    }
+    return null;
 }
 
 export function planMagicStaffShopUpgrade(
@@ -684,6 +821,7 @@ export function selectFireWeapon(
 }
 
 const GIANT_ARMOUR_SLOT_ORDER = [2, 10, 0, 4, 7, 5, 1, 9] as const;
+const GIANT_ARMOUR_SLOT_RANK = new Map<number, number>(GIANT_ARMOUR_SLOT_ORDER.map((slot, idx) => [slot, idx]));
 
 export function selectGiantWeapon(
     stock: readonly GearCount[],
@@ -710,19 +848,27 @@ export function selectGiantArmour(
     levels?: GearSkillLevels,
 ): { slot: number; id: number }[] {
     if (!Number.isSafeInteger(defence) || defence < 1 || defence > 99) return [];
-    const armourStock = stock.filter(row => gearById(row.id)?.slot !== 'righthand');
+    const armourStock: GearCount[] = [];
+    for (let i = 0; i < stock.length; i++) {
+        const row = stock[i]!;
+        if (gearById(row.id)?.slot !== 'righthand') armourStock.push(row);
+    }
     const skillMap: Record<string, number> = { Attack: 1, Strength: 1, Defence: defence, ...normalizeSkills(levels) };
     skillMap.defence = defence;
     const loadout = selectCombatLoadout('melee', armourStock, skillMap, completedQuests);
-    const order = new Map<number, number>(GIANT_ARMOUR_SLOT_ORDER.map((slot, idx) => [slot, idx]));
-    return loadout.items
-        .filter(entry => entry.slot !== 'weapon')
-        .map(entry => ({ slot: entry.wearpos, id: entry.item.id }))
-        .sort((a, b) => (order.get(a.slot) ?? 99) - (order.get(b.slot) ?? 99));
+    const out: { slot: number; id: number }[] = [];
+    for (let i = 0; i < loadout.items.length; i++) {
+        const entry = loadout.items[i]!;
+        if (entry.slot !== 'weapon') out.push({ slot: entry.wearpos, id: entry.item.id });
+    }
+    out.sort((a, b) => (GIANT_ARMOUR_SLOT_RANK.get(a.slot) ?? 99) - (GIANT_ARMOUR_SLOT_RANK.get(b.slot) ?? 99));
+    return out;
 }
 
-export const GIANT_BOWS: readonly { level: number; ids: readonly number[] }[] = standardBowTiers();
-export const GIANT_ARROWS: readonly { level: number; id: number }[] = standardArrowTiers().map(({ level, id }) => ({ level, id }));
+export const GIANT_BOWS: readonly { level: number; ids: readonly number[] }[] = lazyArray(() => standardBowTiers());
+export const GIANT_ARROWS: readonly { level: number; id: number }[] = lazyArray(() =>
+    standardArrowTiers().map(({ level, id }) => ({ level, id })),
+);
 
 export function selectGiantBow(stock: readonly GearCount[], ranged: number) {
     for (const tier of GIANT_BOWS) {
@@ -764,28 +910,56 @@ export function selectedGiantRangedKit(
     return { bow: { id: selected.bow, level: tier.level }, arrow: selected.arrow };
 }
 
-export const BOWS = [...standardBowTiers()].reverse().flatMap(t =>
-    t.ids.map(id => ({ id, req: t.level, name: gearById(id)?.name ?? String(id) })),
+export const BOWS: readonly { id: number; req: number; name: string }[] = lazyArray(() =>
+    [...standardBowTiers()].reverse().flatMap(t =>
+        t.ids.map(id => ({ id, req: t.level, name: gearById(id)?.name ?? String(id) })),
+    ),
 );
-export const ARROWS: readonly { id: number; req: number; name: string }[] = standardArrowTiers()
-    .sort((x, y) => x.id - y.id)
-    .map(t => ({ id: t.id, req: t.level, name: gearById(t.id)?.name ?? String(t.id) }));
-export const LOWE_ARROWS: readonly number[] = ARROWS.filter(a => shopCatalog().get(a.id)?.some(s => s.shop === 'archeryshop')).map(a => a.id);
+export const ARROWS: readonly { id: number; req: number; name: string }[] = lazyArray(() =>
+    standardArrowTiers()
+        .sort((x, y) => x.id - y.id)
+        .map(t => ({ id: t.id, req: t.level, name: gearById(t.id)?.name ?? String(t.id) })),
+);
+export const LOWE_ARROWS: readonly number[] = lazyArray(() =>
+    ARROWS.filter(a => shopCatalog().get(a.id)?.some(s => s.shop === 'archeryshop')).map(a => a.id),
+);
 
 export function bestBow(owned: readonly GearCount[], ranged: number) {
-    return BOWS
-        .filter(b => b.req <= ranged && countPackItems(owned, b.id) > 0)
-        .reduce<(typeof BOWS)[number] | undefined>((best, b) => (!best || b.req > best.req ? b : best), undefined);
+    const bows = BOWS;
+    let best: (typeof BOWS)[number] | undefined;
+    for (let i = 0; i < bows.length; i++) {
+        const b = bows[i]!;
+        if (b.req <= ranged && countPackItems(owned, b.id) > 0 && (!best || b.req > best.req)) {
+            best = b;
+        }
+    }
+    return best;
 }
 
-export const usableArrows = (bowReq: number, ranged: number): number[] =>
-    ARROWS.filter(a => a.req <= bowReq && a.req <= ranged).map(a => a.id);
+export const usableArrows = (bowReq: number, ranged: number): number[] => {
+    const limit = Math.min(bowReq, ranged);
+    const arrows = ARROWS;
+    const out: number[] = [];
+    for (let i = 0; i < arrows.length; i++) {
+        const a = arrows[i]!;
+        if (a.req <= limit) out.push(a.id);
+    }
+    return out;
+};
 
 export function chooseArrow(owned: readonly GearCount[], bowReq: number, ranged: number, min = MIN_TRIP_ARROWS) {
-    return usableArrows(bowReq, ranged)
-        .map(id => ({ id, count: countPackItems(owned, id) }))
-        .filter(a => a.count >= min)
-        .sort((a, b) => b.id - a.id)[0];
+    const limit = Math.min(bowReq, ranged);
+    const arrows = ARROWS;
+    let best: { id: number; count: number } | undefined;
+    for (let i = 0; i < arrows.length; i++) {
+        const a = arrows[i]!;
+        if (a.req > limit) continue;
+        const count = countPackItems(owned, a.id);
+        if (count >= min && (!best || a.id > best.id)) {
+            best = { id: a.id, count };
+        }
+    }
+    return best;
 }
 
 export function gearUnlockLevels(kind: CombatFocus): Readonly<Partial<Record<GearSkillName, readonly number[]>>> {

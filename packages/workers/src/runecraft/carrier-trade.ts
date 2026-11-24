@@ -40,12 +40,52 @@ export function pipelineOpeningReady(s: Pick<Publications, 'tick'>, boundary: Cr
 
 const eager = true;
 const inv = (s: Session) => s.sdk.getInventory();
-export const ess = (s: Session) => inv(s).filter(i => i.id === 1436).reduce((n, i) => n + i.count, 0);
+export const ess = (s: Session) => {
+    const items = inv(s);
+    let n = 0;
+    for (let i = 0; i < items.length; i++) if (items[i]!.id === 1436) n += items[i]!.count;
+    return n;
+};
 export const state = (s: Session) => s.sdk.getState()!;
 const trade = (s: Session) => state(s).trade;
+const sumOfferCount = (items: readonly { count: number }[] | undefined): number | undefined => {
+    if (!items) return undefined;
+    let total = 0;
+    for (let i = 0; i < items.length; i++) total += items[i]!.count;
+    return total;
+};
+
+const RUNE_ADVANCE_RE = /^(@dbl@)?Congratulations, you just advanced a runecraft level\.$/i;
+const RUNE_CRAFT_UNLOCK_RE = /^(?:Members can now|You can now) craft @dbl@(?:Air|Mind|Water|Earth|Fire|Body|Cosmic|Chaos|Nature|Law|Death) Runes@bla@\.$/;
+
+const tradeSnapshotRow = (a: Session) => {
+    const t = trade(a);
+    return {
+        name: a.name,
+        open: t?.isOpen,
+        screen: t?.screen,
+        partner: t?.partner,
+        my: sumOfferCount(t?.myOffer),
+        their: sumOfferCount(t?.theirOffer),
+        accepted: t?.myAccepted,
+    };
+};
+
+const tradeSnapshotKey = (a: Session): string => {
+    const t = trade(a);
+    return `${a.name}|${t?.isOpen ? 1 : t?.isOpen === false ? 0 : ''}|${t?.screen ?? ''}|${t?.partner ?? ''}|${sumOfferCount(t?.myOffer) ?? ''}|${sumOfferCount(t?.theirOffer) ?? ''}|${t?.myAccepted ? 1 : t?.myAccepted === false ? 0 : ''}`;
+};
 const index = (s: Session, n: string) => state(s).nearbyPlayers.find(p => p.name.toLowerCase() === n.toLowerCase())?.index;
 const messages = (s: Session) => state(s).gameMessages ?? [];
-const cursor = (s: Session) => Math.max(0, ...messages(s).map(m => m.observationId ?? 0));
+const cursor = (s: Session) => {
+    const msgs = messages(s);
+    let max = 0;
+    for (let i = 0; i < msgs.length; i++) {
+        const id = msgs[i]!.observationId ?? 0;
+        if (id > max) max = id;
+    }
+    return max;
+};
 
 export function exactCarrierOffer(
     t: ReturnType<Session['sdk']['getTradeState']>,
@@ -53,12 +93,18 @@ export function exactCarrierOffer(
     partner: string,
     amount: number,
 ): boolean {
-    const offered = giver ? t.myOffer : t.theirOffer, returned = giver ? t.theirOffer : t.myOffer;
-    return t.isOpen
-        && t.partner?.toLowerCase() === partner.toLowerCase()
-        && (returned ?? []).length === 0
-        && (offered ?? []).every(i => i.id === 1436 && Number.isSafeInteger(i.count) && i.count > 0)
-        && (offered ?? []).reduce((n, i) => n + i.count, 0) === amount;
+    if (!t.isOpen || t.partner?.toLowerCase() !== partner.toLowerCase()) return false;
+    const offered = giver ? t.myOffer : t.theirOffer;
+    const returned = giver ? t.theirOffer : t.myOffer;
+    if (returned && returned.length !== 0) return false;
+    if (!offered) return amount === 0;
+    let total = 0;
+    for (let i = 0; i < offered.length; i++) {
+        const item = offered[i]!;
+        if (item.id !== 1436 || !Number.isSafeInteger(item.count) || item.count <= 0) return false;
+        total += item.count;
+    }
+    return total === amount;
 }
 
 export function runeOpening(): 'incoming' | 'helper-ack' {
@@ -181,24 +227,18 @@ export async function transfer(
                 await mutate(s, () => craft.send());
             }
             if (complete()) break;
-            const snapshot = JSON.stringify([s, h].map(a => ({
-                name: a.name,
-                open: trade(a)?.isOpen,
-                screen: trade(a)?.screen,
-                partner: trade(a)?.partner,
-                my: trade(a)?.myOffer?.reduce((n, i) => n + i.count, 0),
-                their: trade(a)?.theirOffer?.reduce((n, i) => n + i.count, 0),
-                accepted: trade(a)?.myAccepted,
-            })));
-            if (snapshot !== last) { console.log('RC_TRADE_STATE ' + JSON.stringify({ at: Date.now(), tick: s.tick(), actors: JSON.parse(snapshot) })); last = snapshot; }
+            const snapshot = `${tradeSnapshotKey(s)}||${tradeSnapshotKey(h)}`;
+            if (snapshot !== last) {
+                console.log('RC_TRADE_STATE ' + JSON.stringify({ at: Date.now(), tick: s.tick(), actors: [tradeSnapshotRow(s), tradeSnapshotRow(h)] }));
+                last = snapshot;
+            }
             if (trade(s)?.isOpen || trade(h)?.isOpen) opened = true;
             if (!trade(s)?.isOpen && !trade(h)?.isOpen && !opened && !responseSent) {
                 if (pipeline) {
                     if (pipelineOpeningReady(s, pipeline.boundary!)) {
                         const main = state(s).player, helper = state(h).player, si = index(h, s.name), hi = index(s, h.name), dialog = state(s).dialog;
                         const runeDialog = dialog?.allComponents?.some(c =>
-                            /^(@dbl@)?Congratulations, you just advanced a runecraft level\.$/i.test(c.text)
-                            || /^(?:Members can now|You can now) craft @dbl@(?:Air|Mind|Water|Earth|Fire|Body|Cosmic|Chaos|Nature|Law|Death) Runes@bla@\.$/.test(c.text));
+                            RUNE_ADVANCE_RE.test(c.text) || RUNE_CRAFT_UNLOCK_RE.test(c.text));
                         if ((dialog?.isOpen && !runeDialog) || state(h).dialog?.isOpen) throw Error('pipeline handoff preserves unrelated dialogs');
                         if (main && helper && si !== undefined && hi !== undefined && main.level === helper.level && Math.max(Math.abs(main.worldX - helper.worldX), Math.abs(main.worldZ - helper.worldZ)) <= 1) {
                             if (ess(s) !== 0 || ess(h) !== amount) throw Error('pipeline opening stock changed');
@@ -216,7 +256,7 @@ export async function transfer(
                     }
                 } else {
                     const dialog = state(s).dialog;
-                    if (!levelupDismissed && dialog?.isOpen && dialog.allComponents?.some(c => /^(@dbl@)?Congratulations, you just advanced a runecraft level\.$/i.test(c.text))) {
+                    if (!levelupDismissed && dialog?.isOpen && dialog.allComponents?.some(c => RUNE_ADVANCE_RE.test(c.text))) {
                         mark('close-modal');
                         await direct(s, { type: 'closeModal', reason: 'SDK' });
                         mark('control');
@@ -377,8 +417,14 @@ export async function tickTransfer(
     };
     const partnerOk = (t: NonNullable<ReturnType<typeof trade>>, name: string) => !t.partner || t.partner.toLowerCase() === name.toLowerCase();
     const offered = (items: readonly { id: number; count: number }[] | undefined) => {
-        if ((items ?? []).some(i => i.id !== 1436)) throw Error('unexpected item in owned handoff');
-        return (items ?? []).reduce((n, i) => n + i.count, 0);
+        if (!items) return 0;
+        let total = 0;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i]!;
+            if (item.id !== 1436) throw Error('unexpected item in owned handoff');
+            total += item.count;
+        }
+        return total;
     };
     const crafter = () => {
         if (finished || failure) return;
@@ -477,7 +523,15 @@ const countItemsMap = (items: readonly { id: number; count: number }[]): Items =
     for (const i of items) result[i.id] = (result[i.id] ?? 0) + i.count;
     return result;
 };
-const equalItems = (a: Items, b: Items) => [...new Set([...Object.keys(a), ...Object.keys(b)])].every(k => (a[Number(k)] ?? 0) === (b[Number(k)] ?? 0));
+const equalItems = (a: Items, b: Items) => {
+    for (const k in a) {
+        if ((a[Number(k)] ?? 0) !== (b[Number(k)] ?? 0)) return false;
+    }
+    for (const k in b) {
+        if ((a[Number(k)] ?? 0) !== (b[Number(k)] ?? 0)) return false;
+    }
+    return true;
+};
 
 export async function ownedSwap(a: Session, b: Session, giveA: Items, giveB: Items, stop: () => boolean = () => false) {
     const actors = [a, b], gives = [giveA, giveB], before = actors.map(s => countItemsMap(s.sdk.getInventory()));

@@ -1,5 +1,5 @@
 // Unified herblore worker combining brew-potions and druid-meats.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { accountOf, finish, getWorld, openBot, sessionDied } from '../../../core/src/bot';
 import { depositObserved } from '../../../core/src/deposit';
@@ -11,6 +11,10 @@ import { abortable, executionContext } from '../../../../vendor/rs-sdk/sdk/execu
 import { KNOWLEDGE_DIR } from './catalog';
 import { nearestBank } from './runtime';
 import type { Session } from './types';
+
+const OPEN_OP_RE = /^open$/i;
+const CLIMB_DOWN_RE = /^climb-down$/i;
+const ROUTE_FAILED_SPAWN_RE = /^route-failed \d+,\d+: no route to \d+,\d+,0( within \d+-tile hops)?$/;
 
 // ---- Brew Potions (brew-potions.ts) ----
 
@@ -127,12 +131,23 @@ export const RECIPES: Record<string, BrewRecipe> = Object.fromEntries(
     ].map(([key, level, dirty, clean, unf, sec, pot]) => [key, { key, level, dirty, clean, unf, sec, pot }]),
 ) as Record<string, BrewRecipe>;
 
+const RECIPES_BY_LEVEL_DESC: readonly BrewRecipe[] = Object.values(RECIPES).sort((a, b) => b.level - a.level);
+
 export function selectRecipe(level: number, stock: Stock, key = 'auto'): BrewRecipe {
-    const candidates = Object.values(RECIPES)
-        .filter(r => r.level <= level && (!['auto', 'unf'].includes(key) ? r.key === key : true) && [r.dirty, r.clean, r.unf].some(id => (stock[id] ?? 0) > 0))
-        .sort((a, b) => b.level - a.level);
-    if (!candidates[0]) throw Error(`herbs missing: no usable owned herbs or unfinished potions for ${key} at level ${level}`);
-    return candidates[0];
+    if (key !== 'auto' && key !== 'unf') {
+        const r = RECIPES[key];
+        if (r && r.level <= level && ((stock[r.dirty] ?? 0) > 0 || (stock[r.clean] ?? 0) > 0 || (stock[r.unf] ?? 0) > 0)) {
+            return r;
+        }
+        throw Error(`herbs missing: no usable owned herbs or unfinished potions for ${key} at level ${level}`);
+    }
+    for (let i = 0; i < RECIPES_BY_LEVEL_DESC.length; i++) {
+        const r = RECIPES_BY_LEVEL_DESC[i]!;
+        if (r.level <= level && ((stock[r.dirty] ?? 0) > 0 || (stock[r.clean] ?? 0) > 0 || (stock[r.unf] ?? 0) > 0)) {
+            return r;
+        }
+    }
+    throw Error(`herbs missing: no usable owned herbs or unfinished potions for ${key} at level ${level}`);
 }
 
 export function supplyPlan(herbs: number, vials: number, eyes: number, coins: number, vialBudget: number, eyeBudget: number) {
@@ -170,9 +185,20 @@ export function supplyPurchases(o: { batch: number; make: number; vials: number;
 }
 
 export function reconcile(before: Stock, after: Stock, delta: Stock) {
-    return [...new Set([...Object.keys(before), ...Object.keys(after), ...Object.keys(delta)])].every(
-        k => (after[+k] ?? 0) === (before[+k] ?? 0) + (delta[+k] ?? 0),
-    );
+    for (const k in before) {
+        const id = +k;
+        if ((after[id] ?? 0) !== (before[id] ?? 0) + (delta[id] ?? 0)) return false;
+    }
+    for (const k in after) {
+        if (k in before) continue;
+        const id = +k;
+        if ((after[id] ?? 0) !== (delta[id] ?? 0)) return false;
+    }
+    for (const k in delta) {
+        if (k in before || k in after) continue;
+        if ((delta[+k] ?? 0) !== 0) return false;
+    }
+    return true;
 }
 
 export function herbloreOptions(args: string[], env: Record<string, string | undefined> = process.env) {
@@ -494,21 +520,78 @@ export function bearRefusal(hp: number, attack: number, strength: number, defenc
 type Floor = { x: number; z: number; level: number };
 type Transport = { from: Floor; to: Floor };
 type ExitLoc = { id: number; x: number; z: number; optionsWithIndex: readonly { text: string; opIndex: number }[] };
-let transportRows: Transport[] | undefined;
-const transports = () => (transportRows ??= JSON.parse(readFileSync(join(KNOWLEDGE_DIR, 'transports.json'), 'utf8')) as Transport[]);
+let transportRows: { key: string; checkedAt: number; rows: Transport[] } | undefined;
+const downTransportIndex = new WeakMap<readonly Transport[], Set<number>>();
+const packDownCoord = (level: number, x: number, z: number) => level * 268_435_456 + (x & 0x3fff) * 16_384 + (z & 0x3fff);
 
-export function floorExit<L extends ExitLoc>(at: Floor, locs: readonly L[], rows: readonly Transport[] = transports()) {
-    const exits = locs.flatMap(loc => {
-        const op = loc.optionsWithIndex.find(o => /^climb-down$/i.test(o.text));
-        if (!op) return [];
-        const known = rows.some(r => r.from.level === at.level && r.from.x === loc.x && r.from.z === loc.z && r.to.level < at.level);
-        return [{ loc, opIndex: op.opIndex, known, stand: { x: loc.x, z: loc.z } }];
-    });
-    return exits.sort((a, b) => Number(b.known) - Number(a.known) || cheb(at, a.loc) - cheb(at, b.loc))[0] ?? null;
+const transports = (): readonly Transport[] => {
+    const now = Date.now();
+    if (transportRows && now - transportRows.checkedAt < 1000) return transportRows.rows;
+    const path = join(KNOWLEDGE_DIR, 'transports.json');
+    const st = statSync(path);
+    const key = `${st.mtimeMs}:${st.size}`;
+    if (transportRows && transportRows.key === key) {
+        transportRows.checkedAt = now;
+        return transportRows.rows;
+    }
+    const rows = JSON.parse(readFileSync(path, 'utf8')) as Transport[];
+    transportRows = { key, checkedAt: now, rows };
+    return rows;
+};
+
+function downCoordsFor(rows: readonly Transport[]): Set<number> {
+    let index = downTransportIndex.get(rows);
+    if (!index) {
+        index = new Set<number>();
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows[i]!;
+            if (r.to.level < r.from.level) {
+                index.add(packDownCoord(r.from.level, r.from.x, r.from.z));
+            }
+        }
+        downTransportIndex.set(rows, index);
+    }
+    return index;
 }
 
-export const nearestMeatBank = (x: number, z: number) =>
-    [...MEAT_BANKS].sort((a, b) => Math.max(Math.abs(a.x - x), Math.abs(a.z - z)) - Math.max(Math.abs(b.x - x), Math.abs(b.z - z)))[0]!;
+export function floorExit<L extends ExitLoc>(at: Floor, locs: readonly L[], rows: readonly Transport[] = transports()) {
+    const downIndex = downCoordsFor(rows);
+    let best: { loc: L; opIndex: number; known: boolean; stand: { x: number; z: number } } | null = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < locs.length; i++) {
+        const loc = locs[i]!;
+        let opIndex = -1;
+        const opts = loc.optionsWithIndex;
+        for (let j = 0; j < opts.length; j++) {
+            if (CLIMB_DOWN_RE.test(opts[j]!.text)) {
+                opIndex = opts[j]!.opIndex;
+                break;
+            }
+        }
+        if (opIndex < 0) continue;
+        const known = downIndex.has(packDownCoord(at.level, loc.x, loc.z));
+        const dist = cheb(at, loc);
+        if (!best || (known && !best.known) || (known === best.known && dist < bestDist)) {
+            best = { loc, opIndex, known, stand: { x: loc.x, z: loc.z } };
+            bestDist = dist;
+        }
+    }
+    return best;
+}
+
+export const nearestMeatBank = (x: number, z: number) => {
+    let best: (typeof MEAT_BANKS)[number] = MEAT_BANKS[0];
+    let bestDist = Math.max(Math.abs(best.x - x), Math.abs(best.z - z));
+    for (let i = 1; i < MEAT_BANKS.length; i++) {
+        const b = MEAT_BANKS[i]!;
+        const d = Math.max(Math.abs(b.x - x), Math.abs(b.z - z));
+        if (d < bestDist) {
+            best = b;
+            bestDist = d;
+        }
+    }
+    return best;
+};
 
 export async function runDruidMeats(
     s: Session,

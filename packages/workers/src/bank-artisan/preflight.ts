@@ -15,15 +15,10 @@ import {
     type WorkerAccountView,
     type WorkerWorldView,
 } from '../contracts';
-import { artisanDbtablesCatalog, alchCasts, levelForXp, xpForLevel } from './catalog';
-import { cookingRecipes, foodRule } from './cooking';
-import { inventoryRecipes, jewelleryRecipes, tanningRecipes, type JewelleryOrder, validateJewelleryOrder, validateProgressiveProduction, type ProgressiveProduction } from './crafting';
-import { LOGS } from './firemaking';
-import { nativeArrowProfile, type ArrowMetal } from './fletching';
-import { RECIPES as HERBLORE_RECIPES } from './herblore';
-import { itemMagicRecipe, nativeTeleport, orbRecipes, type OrbKind } from './magic';
-import { BONE_XP } from './prayer';
-import { HAMMER, smeltRecipe, smithRecipe } from './smithing';
+import { levelForXp, xpForLevel } from './catalog';
+import type { JewelleryOrder, ProgressiveProduction } from './crafting';
+import type { ArrowMetal } from './fletching';
+import type { OrbKind } from './magic';
 import {
     ARTISAN_METHOD_MAP,
     normalizeArtisanConfig,
@@ -34,32 +29,99 @@ import {
     type NormalizedArtisanConfig,
 } from './types';
 
-function skillLevel(acct: WorkerAccountView, name: string): number {
-    for (const [k, v] of Object.entries(acct.skills)) {
-        if (k.toLowerCase() === name.toLowerCase()) return v.level;
+let cachedCatalogMod: typeof import('./catalog') | undefined;
+let cachedCookingMod: typeof import('./cooking') | undefined;
+let cachedCraftingMod: typeof import('./crafting') | undefined;
+let cachedFiremakingMod: typeof import('./firemaking') | undefined;
+let cachedFletchingMod: typeof import('./fletching') | undefined;
+let cachedHerbloreMod: typeof import('./herblore') | undefined;
+let cachedMagicMod: typeof import('./magic') | undefined;
+let cachedPrayerMod: typeof import('./prayer') | undefined;
+let cachedSmithingMod: typeof import('./smithing') | undefined;
+
+const loadCatalogMod = (): typeof import('./catalog') => (cachedCatalogMod ??= require('./catalog'));
+const loadCookingMod = (): typeof import('./cooking') => (cachedCookingMod ??= require('./cooking'));
+const loadCraftingMod = (): typeof import('./crafting') => (cachedCraftingMod ??= require('./crafting'));
+const loadFiremakingMod = (): typeof import('./firemaking') => (cachedFiremakingMod ??= require('./firemaking'));
+const loadFletchingMod = (): typeof import('./fletching') => (cachedFletchingMod ??= require('./fletching'));
+const loadHerbloreMod = (): typeof import('./herblore') => (cachedHerbloreMod ??= require('./herblore'));
+const loadMagicMod = (): typeof import('./magic') => (cachedMagicMod ??= require('./magic'));
+const loadPrayerMod = (): typeof import('./prayer') => (cachedPrayerMod ??= require('./prayer'));
+const loadSmithingMod = (): typeof import('./smithing') => (cachedSmithingMod ??= require('./smithing'));
+
+let cachedCookingByName: Map<string, ReturnType<typeof import('./cooking')['cookingRecipes']>['recipes'][number]> | undefined;
+let cachedJewelleryByName: Map<string, ReturnType<typeof import('./crafting')['jewelleryRecipes']>[number]> | undefined;
+let cachedInventoryByName: Map<string, ReturnType<typeof import('./crafting')['inventoryRecipes']>[number]> | undefined;
+
+function cookingRecipeByName(name: string) {
+    if (!cachedCookingByName) {
+        cachedCookingByName = new Map(loadCookingMod().cookingRecipes().recipes.map(r => [r.name, r]));
     }
-    return name.toLowerCase() === 'hitpoints' ? 10 : 1;
+    return cachedCookingByName.get(name);
+}
+
+function jewelleryRecipeByName(name: string) {
+    if (!cachedJewelleryByName) {
+        cachedJewelleryByName = new Map(loadCraftingMod().jewelleryRecipes().map(r => [r.name, r]));
+    }
+    return cachedJewelleryByName.get(name);
+}
+
+function inventoryRecipeByName(name: string) {
+    if (!cachedInventoryByName) {
+        cachedInventoryByName = new Map(loadCraftingMod().inventoryRecipes().map(r => [r.name, r]));
+    }
+    return cachedInventoryByName.get(name);
+}
+
+function skillLevel(acct: WorkerAccountView, name: string): number {
+    const direct = acct.skills[name];
+    if (direct !== undefined) return direct.level;
+    const lower = name.toLowerCase();
+    for (const k in acct.skills) {
+        if (k.toLowerCase() === lower) return acct.skills[k]!.level;
+    }
+    return lower === 'hitpoints' ? 10 : 1;
 }
 
 function skillXp(acct: WorkerAccountView, name: string): number {
-    for (const [k, v] of Object.entries(acct.skills)) {
-        if (k.toLowerCase() === name.toLowerCase()) return v.xp;
+    const direct = acct.skills[name];
+    if (direct !== undefined) return direct.xp;
+    const lower = name.toLowerCase();
+    for (const k in acct.skills) {
+        if (k.toLowerCase() === lower) return acct.skills[k]!.xp;
     }
     return 0;
 }
 
 function questComplete(acct: WorkerAccountView, needle: string | RegExp): boolean {
-    for (const [k, st] of Object.entries(acct.quests)) {
-        const matched = typeof needle === 'string' ? k.toLowerCase() === needle.toLowerCase() : needle.test(k);
-        if (matched && st === 'complete') return true;
+    if (typeof needle === 'string') {
+        const direct = acct.quests[needle];
+        if (direct !== undefined) return direct === 'complete';
+        const lower = needle.toLowerCase();
+        for (const k in acct.quests) {
+            if (k.toLowerCase() === lower) return acct.quests[k] === 'complete';
+        }
+        return false;
+    }
+    for (const k in acct.quests) {
+        if (needle.test(k) && acct.quests[k] === 'complete') return true;
     }
     return false;
 }
 
 function questStatusOf(acct: WorkerAccountView, needle: string | RegExp) {
-    for (const [k, st] of Object.entries(acct.quests)) {
-        const matched = typeof needle === 'string' ? k.toLowerCase() === needle.toLowerCase() : needle.test(k);
-        if (matched) return st;
+    if (typeof needle === 'string') {
+        const direct = acct.quests[needle];
+        if (direct !== undefined) return direct;
+        const lower = needle.toLowerCase();
+        for (const k in acct.quests) {
+            if (k.toLowerCase() === lower) return acct.quests[k]!;
+        }
+        return 'not_started' as const;
+    }
+    for (const k in acct.quests) {
+        if (needle.test(k)) return acct.quests[k]!;
     }
     return 'not_started' as const;
 }
@@ -160,7 +222,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                 checkMaxCap(acct, 'Cooking', blockers);
                 if (cfg.method === 'food') {
                     const foodType = (resolveArtisanSetting(cfg, 'FOOD_TYPE', cfg.args[1]) ?? 'lobster').toLowerCase();
-                    const rule = foodRule(foodType);
+                    const rule = loadCookingMod().foodRule(foodType);
                     checkSkill(acct, 'Cooking', rule.level, blockers);
                     const rawId = FOOD_RAW_ID[foodType];
                     if (rawId !== undefined) checkSupply(acct, world, rawId, 1, `Raw ${foodType}`, blockers, missingItems);
@@ -183,7 +245,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     }
                 } else if (cfg.method === 'batch') {
                     const recipeName = resolveArtisanSetting(cfg, 'RECIPE', cfg.args[0]) ?? 'cooking_generic_trout';
-                    const recipe = cookingRecipes().recipes.find(r => r.name === recipeName);
+                    const recipe = cookingRecipeByName(recipeName);
                     if (!recipe) {
                         blockers.push({ kind: 'invalid_config', message: `unknown cooking recipe: ${recipeName}` });
                     } else {
@@ -192,7 +254,8 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     }
                 } else if (cfg.method === 'ge-cook') {
                     const recipeName = resolveArtisanSetting(cfg, 'RECIPE', cfg.args[0]) ?? 'cooking_generic_trout';
-                    const recipe = cookingRecipes().recipes.find(r => r.name === recipeName);
+                    const recipe = cookingRecipeByName(recipeName);
+                    const { LOGS } = loadFiremakingMod();
                     const log = (resolveArtisanSetting(cfg, 'LOG', cfg.args[1]) ?? 'normal') as keyof typeof LOGS;
                     if (!recipe || !Object.hasOwn(LOGS, log)) {
                         blockers.push({ kind: 'invalid_config', message: `invalid ge-cook recipe/log: ${recipeName}/${log}` });
@@ -208,6 +271,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
             }
             case 'firemaking': {
                 checkMaxCap(acct, 'Firemaking', blockers);
+                const { LOGS } = loadFiremakingMod();
                 const log = (resolveArtisanSetting(cfg, 'LOG', cfg.args[1]) ?? 'normal').toLowerCase() as keyof typeof LOGS;
                 if (!Object.hasOwn(LOGS, log)) {
                     blockers.push({ kind: 'invalid_config', message: `unknown firemaking log: ${log}` });
@@ -252,9 +316,9 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                         const strR = parseIntSetting(resolveArtisanSetting(cfg, 'STRING_RESERVE'), 0, { min: 0, label: 'STRING_RESERVE' }, blockers);
                         if (lr !== null) checkSupply(acct, world, 1521, lr + 1, 'Oak logs', blockers, missingItems);
                         if (strR !== null) checkSupply(acct, world, 1777, strR + 1, 'Bow string', blockers, missingItems);
-                    } else if (['iron', 'steel', 'native-arrows'].includes(mode)) {
+                    } else if (mode === 'iron' || mode === 'steel' || mode === 'native-arrows') {
                         const metal = (mode === 'native-arrows' ? (resolveArtisanSetting(cfg, 'TIP_TYPE', cfg.args[2]) ?? 'steel') : mode) as ArrowMetal;
-                        const prof = nativeArrowProfile(metal);
+                        const prof = loadFletchingMod().nativeArrowProfile(metal);
                         checkSkill(acct, 'Fletching', prof.level, blockers);
                         const hr = parseIntSetting(resolveArtisanSetting(cfg, 'HEADLESS_RESERVE'), 200, { min: 0, label: 'HEADLESS_RESERVE' }, blockers);
                         const tr = parseIntSetting(resolveArtisanSetting(cfg, 'TIP_RESERVE'), mode === 'iron' ? 0 : 5, { min: 0, label: 'TIP_RESERVE' }, blockers);
@@ -282,6 +346,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     if (!Number.isSafeInteger(pid) || pid < 0) {
                         blockers.push({ kind: 'invalid_config', message: 'smithing anvil requires integer PRODUCT_ID' });
                     } else {
+                        const { HAMMER, smithRecipe } = loadSmithingMod();
                         const r = smithRecipe(pid);
                         checkSkill(acct, 'Smithing', r.level, blockers);
                         if (r.quest && !questComplete(acct, r.quest)) {
@@ -295,7 +360,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     }
                 } else {
                     const bar = (resolveArtisanSetting(cfg, 'BAR_TYPE', cfg.args[1]) ?? 'iron').toLowerCase();
-                    const r = smeltRecipe(bar);
+                    const r = loadSmithingMod().smeltRecipe(bar);
                     const reserve = parseIntSetting(resolveArtisanSetting(cfg, 'ORE_RESERVE'), 1, { min: 0, label: 'ORE_RESERVE' }, blockers);
                     checkSkill(acct, 'Smithing', r.level, blockers);
                     if (reserve !== null) {
@@ -321,7 +386,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                 } else if (cfg.method === 'jewellery') {
                     checkMaxCap(acct, 'Crafting', blockers);
                     const rName = cfg.args[0] ?? resolveArtisanSetting(cfg, 'RECIPE', 'sapphire_ring')!;
-                    const r = jewelleryRecipes().find(x => x.name === rName);
+                    const r = jewelleryRecipeByName(rName);
                     if (!r) {
                         blockers.push({ kind: 'invalid_config', message: `unknown jewellery recipe: ${rName}` });
                     } else {
@@ -334,7 +399,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     const rName = resolveArtisanSetting(cfg, 'RECIPE', '');
                     if (rName) {
                         const target = Number(resolveArtisanSetting(cfg, 'TARGET', '13'));
-                        const r = validateJewelleryOrder({
+                        const r = loadCraftingMod().validateJewelleryOrder({
                             recipe: rName,
                             target,
                             batch: Number(resolveArtisanSetting(cfg, 'BATCH', '13')),
@@ -351,8 +416,8 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                 } else if (cfg.method === 'legacy-jewelry') {
                     checkMaxCap(acct, 'Crafting', blockers);
                     const tier = (cfg.args[2] ?? resolveArtisanSetting(cfg, 'TIER', 'sapphire'))!.toLowerCase();
-                    const levels: Record<string, number> = { sapphire: 20, emerald: 27, ruby: 34, diamond: 43, dragonstone: 55 };
-                    if (levels[tier]) checkSkill(acct, 'Crafting', levels[tier]!, blockers);
+                    const level = tier === 'sapphire' ? 20 : tier === 'emerald' ? 27 : tier === 'ruby' ? 34 : tier === 'diamond' ? 43 : tier === 'dragonstone' ? 55 : 0;
+                    if (level) checkSkill(acct, 'Crafting', level, blockers);
                 } else if (cfg.method === 'glass') {
                     checkMaxCap(acct, 'Crafting', blockers);
                     if (resolveArtisanSetting(cfg, 'SUPPLY_MODE') !== '1') {
@@ -360,6 +425,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                         checkSupply(acct, world, 1781, 1, 'Soda ash', blockers, missingItems);
                     }
                 } else if (cfg.method === 'tanning') {
+                    const { tanningRecipes } = loadCraftingMod();
                     const kind = (cfg.args[0] ?? 'soft') as keyof typeof tanningRecipes;
                     const qty = Number(cfg.args[1] ?? 1);
                     if (!Object.hasOwn(tanningRecipes, kind) || !Number.isSafeInteger(qty) || qty < 1) {
@@ -382,7 +448,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     }
                 } else if (cfg.method === 'inventory') {
                     const rName = cfg.args[0];
-                    const r = inventoryRecipes().find(x => x.name === rName);
+                    const r = rName !== undefined ? inventoryRecipeByName(rName) : undefined;
                     if (!r) {
                         blockers.push({ kind: 'invalid_config', message: `unknown inventory production recipe: ${String(rName)}` });
                     } else {
@@ -392,7 +458,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     }
                 } else if (cfg.method === 'progressive') {
                     const mode = resolveArtisanSetting(cfg, 'MODE', 'fletch') as ProgressiveProduction['mode'];
-                    validateProgressiveProduction({
+                    loadCraftingMod().validateProgressiveProduction({
                         mode,
                         targetLevel: Number(resolveArtisanSetting(cfg, 'TARGET_LEVEL', '50')),
                         maximum: Number(resolveArtisanSetting(cfg, 'MAX_MAKE', '10')),
@@ -401,7 +467,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                         cap: Number(resolveArtisanSetting(cfg, 'CAP', '1500')),
                         members: resolveArtisanSetting(cfg, 'MEMBERS') === '1',
                         bank: { x: 3185, z: 3436, level: 0 },
-                        ...(['cooking-prepared', 'burn-bake'].includes(mode) ? { site: { x: 3212, z: 3414, level: 0 } } : {}),
+                        ...(mode === 'cooking-prepared' || mode === 'burn-bake' ? { site: { x: 3212, z: 3414, level: 0 } } : {}),
                     });
                 }
                 break;
@@ -409,11 +475,12 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
             case 'herblore': {
                 if (cfg.method === 'potions') {
                     checkMaxCap(acct, 'Herblore', blockers);
+                    const { RECIPES } = loadHerbloreMod();
                     const key = (cfg.args[1] ?? resolveArtisanSetting(cfg, 'RECIPE', 'auto'))!.toLowerCase();
-                    if (!['auto', 'unf', ...Object.keys(HERBLORE_RECIPES)].includes(key)) {
+                    if (key !== 'auto' && key !== 'unf' && !Object.hasOwn(RECIPES, key)) {
                         blockers.push({ kind: 'invalid_config', message: `unknown herblore recipe: ${key}` });
                     } else if (key !== 'auto' && key !== 'unf') {
-                        const rec = HERBLORE_RECIPES[key]!;
+                        const rec = RECIPES[key]!;
                         checkSkill(acct, 'Herblore', rec.level, blockers);
                     }
                 } else {
@@ -435,6 +502,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                 const reserve = parseIntSetting(resolveArtisanSetting(cfg, 'BONE_RESERVE'), 6, { min: 6, label: 'BONE_RESERVE' }, blockers);
                 parseIntSetting(cfg.args[0] ?? resolveArtisanSetting(cfg, 'TARGET_LEVEL'), 43, { min: 43, max: 99, label: 'TARGET_LEVEL' }, blockers);
                 if (bone !== null) {
+                    const { BONE_XP } = loadPrayerMod();
                     if (BONE_XP[bone] === undefined) {
                         blockers.push({ kind: 'invalid_config', message: `unsupported prayer bone ID: ${bone}` });
                     } else if (reserve !== null) {
@@ -451,19 +519,21 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     if (!mode) {
                         blockers.push({ kind: 'invalid_config', message: 'magic:items requires mode argument' });
                     } else {
-                        const r = itemMagicRecipe(mode, targetName === '-' ? undefined : targetName);
+                        const r = loadMagicMod().itemMagicRecipe(mode, targetName === '-' ? undefined : targetName);
                         checkSkill(acct, 'Magic', r.level, blockers);
                         if (r.smithing > 0) checkSkill(acct, 'Smithing', r.smithing, blockers);
                         checkSupply(acct, world, r.target, 1, `Target #${r.target}`, blockers, missingItems);
                     }
                 } else if (cfg.method === 'teleport') {
                     const dest = cfg.args[0] ?? 'varrock';
-                    const t = nativeTeleport(dest);
+                    const t = loadMagicMod().nativeTeleport(dest);
                     checkSkill(acct, 'Magic', t.level, blockers);
-                    for (const [idStr, n] of Object.entries(t.runes)) {
+                    for (const idStr in t.runes) {
+                        const n = t.runes[Number(idStr)]!;
                         checkSupply(acct, world, Number(idStr), n, `Rune #${idStr}`, blockers, missingItems);
                     }
                 } else if (cfg.method === 'orbs' || cfg.method === 'orbs-at-site') {
+                    const { orbRecipes } = loadMagicMod();
                     const kind = (cfg.args[0] ?? 'air') as OrbKind;
                     if (!Object.hasOwn(orbRecipes, kind)) {
                         blockers.push({ kind: 'invalid_config', message: `unknown orb kind: ${String(kind)}` });
@@ -484,6 +554,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                 } else if (cfg.method === 'alch-train') {
                     const target = parseIntSetting(cfg.args[0] ?? resolveArtisanSetting(cfg, 'TARGET_LEVEL'), 55, { min: 1, max: 99, label: 'TARGET_LEVEL' }, blockers);
                     const itemName = resolveArtisanSetting(cfg, 'ALCH_ITEM', 'feather')!;
+                    const { itemMagicRecipe, alchCasts } = loadMagicMod();
                     const recipe = itemMagicRecipe('high-alch', itemName);
                     if (target !== null) {
                         const casts = alchCasts(skillXp(acct, 'Magic'), target);
@@ -494,7 +565,7 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
                     }
                 } else if (cfg.method === 'earth-production') {
                     const mode = cfg.args[0] ?? 'craft';
-                    if (!['talismans', 'craft'].includes(mode)) {
+                    if (mode !== 'talismans' && mode !== 'craft') {
                         blockers.push({ kind: 'invalid_config', message: `invalid earth-production mode: ${mode}` });
                     } else if (mode === 'talismans') {
                         checkSkill(acct, 'Attack', 30, blockers);
@@ -548,7 +619,6 @@ export function artisanPreflight(acct: WorkerAccountView, rawCfg: ArtisanConfig,
 
 export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, _world: WorkerWorldView): RateEstimate {
     const cfg = normalizeArtisanConfig(rawCfg);
-    const catalog = artisanDbtablesCatalog();
     const rawRate = Number(resolveArtisanSetting(cfg, 'XP_RATE') ?? 25);
     const xpRate = Number.isFinite(rawRate) && rawRate > 0 ? rawRate : 25;
     const scaleXp = (baseXpPerTick: number) => Number((baseXpPerTick * xpRate).toFixed(2));
@@ -569,6 +639,7 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
                     outputsPerUnit: { 1993: 1 },
                 };
             }
+            const catalog = loadCatalogMod().artisanDbtablesCatalog();
             const food = (resolveArtisanSetting(cfg, 'FOOD_TYPE', cfg.args[1]) ?? 'trout').toLowerCase();
             const entry = catalog.cooking.find(c => c.uncooked.includes(food));
             const xpPer = entry ? entry.xp / 10 : 70;
@@ -586,6 +657,7 @@ export function artisanEstimate(acct: WorkerAccountView, rawCfg: ArtisanConfig, 
             };
         }
         case 'firemaking': {
+            const { LOGS } = loadFiremakingMod();
             const log = (resolveArtisanSetting(cfg, 'LOG', cfg.args[1]) ?? 'normal').toLowerCase() as keyof typeof LOGS;
             const baseXp = log === 'magic' ? 75.0 : log === 'yew' ? 50.0 : log === 'maple' ? 33.7 : log === 'willow' ? 22.5 : log === 'oak' ? 15.0 : 10.0;
             const xpPerTick = scaleXp(baseXp);

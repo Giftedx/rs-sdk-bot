@@ -11,6 +11,7 @@ import { craftAirRunes, enterAirAltar, exitAirAltar } from './air';
 import {
     AIR,
     ALL_ALTARS,
+    ALL_ALTARS_BY_NAME,
     BANK,
     COSMIC_ALTAR,
     COSMIC_EXIT_APPROACH,
@@ -27,6 +28,8 @@ import {
     runeAltarStaging,
 } from './altars';
 import type { RunecraftExternalDeps } from './types';
+
+const USE_PORTAL_RE = /^use$/i;
 
 export function runeEntrySnapshot(state: BotWorldState | null, revision: number, tick: number) {
     return {
@@ -152,10 +155,22 @@ export type RuneBankLedger = {
 };
 
 export function runeBankBalanced(l: RuneBankLedger): boolean {
-    const products = l.runes
-        ? Object.values(l.runes).every(r => r.after - r.before === r.crafted)
-            && Object.values(l.runes).reduce((n, r) => n + r.crafted, 0) === l.crafted
-        : l.air - l.air0 === l.crafted;
+    let products: boolean;
+    if (l.runes) {
+        let totalCrafted = 0;
+        products = true;
+        for (const k in l.runes) {
+            const r = l.runes[k]!;
+            if (r.after - r.before !== r.crafted) {
+                products = false;
+                break;
+            }
+            totalCrafted += r.crafted;
+        }
+        if (products && totalCrafted !== l.crafted) products = false;
+    } else {
+        products = l.air - l.air0 === l.crafted;
+    }
     return l.essence0 - l.essence === l.consumed && products && l.crafted >= l.consumed;
 }
 
@@ -208,8 +223,19 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
     const stop = () => stopReason() !== undefined;
     const check = () => { if (stop()) throw Error(`rune bank craft stopped at ${stage}: ${stopReason()}`); };
     const inv = () => s.sdk.getInventory();
-    const count = (id: number) => inv().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
-    const bankCount = (id: number) => (s.bankObservation?.()?.items ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    const count = (id: number) => {
+        const items = inv();
+        let n = 0;
+        for (let i = 0; i < items.length; i++) if (items[i]!.id === id) n += items[i]!.count;
+        return n;
+    };
+    const bankCount = (id: number) => {
+        const items = s.bankObservation?.()?.items;
+        if (!items) return 0;
+        let n = 0;
+        for (let i = 0; i < items.length; i++) if (items[i]!.id === id) n += items[i]!.count;
+        return n;
+    };
     const level = () => s.sdk.getSkill('Runecraft')?.baseLevel ?? 0;
     const currentLevel = () => s.sdk.getSkill('Runecraft')?.level ?? NaN;
     const xp = () => s.sdk.getSkillXp('Runecraft') ?? NaN;
@@ -218,7 +244,11 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
     let chosen: RuneAltar | undefined;
     const activeAltars = forced === 'cosmic' ? [COSMIC_ALTAR] : RUNE_ALTARS;
     const bankSpot = forced === 'cosmic' ? ZANARIS_BANK : BANK;
-    const runeCount = () => activeAltars.reduce((n, a) => n + count(a.rune), 0);
+    const runeCount = () => {
+        let n = 0;
+        for (let i = 0; i < activeAltars.length; i++) n += count(activeAltars[i]!.rune);
+        return n;
+    };
     const action = async <T>(name: string, work: () => Promise<T>): Promise<T> => {
         const record = (phase: string) => console.log('RUNE_BANK_ACTION ' + JSON.stringify({
             tick: s.tick(),
@@ -362,11 +392,29 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
     const exit = async (a: RuneAltar) => {
         check();
         if (a.name === 'air') { await action('exit-air', () => exitAirAltar(s, stop)); return; }
-        let portals = (state()?.nearbyLocs ?? []).filter(l => l.id === a.portal && l.optionsWithIndex.some(o => o.opIndex === 1 && /^use$/i.test(o.text))).sort((x, y) => x.distance - y.distance);
+        const findPortals = () => {
+            const nearby = state()?.nearbyLocs ?? [];
+            const found: typeof nearby = [];
+            for (let i = 0; i < nearby.length; i++) {
+                const l = nearby[i]!;
+                if (l.id !== a.portal) continue;
+                const opts = l.optionsWithIndex;
+                for (let j = 0; j < opts.length; j++) {
+                    const o = opts[j]!;
+                    if (o.opIndex === 1 && USE_PORTAL_RE.test(o.text)) {
+                        found.push(l);
+                        break;
+                    }
+                }
+            }
+            if (found.length > 1) found.sort((x, y) => x.distance - y.distance);
+            return found;
+        };
+        let portals = findPortals();
         if (!portals.length && a.name === 'cosmic') {
             await action('approach-cosmic-portal', async () => walkPath(await sessionWalker(s), [{ x: COSMIC_EXIT_APPROACH.x, z: COSMIC_EXIT_APPROACH.z, tol: 4 }], { maxTicks: 40, stop }));
             check();
-            portals = (state()?.nearbyLocs ?? []).filter(l => l.id === a.portal && l.optionsWithIndex.some(o => o.opIndex === 1 && /^use$/i.test(o.text))).sort((x, y) => x.distance - y.distance);
+            portals = findPortals();
         }
         let portal: typeof portals[number] | undefined, edge: Tile | undefined;
         for (const cand of portals) {
@@ -386,7 +434,14 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
         check();
         if (!outside()) throw Error(`${a.name} exit stopped`);
     };
-    const xpBalanced = () => runeBankXpBalanced(xp0, xp(), tripResults.reduce((n, t) => n + t.consumed * ALL_ALTARS.find(a => a.name === t.altar)!.xp, 0));
+    const xpBalanced = () => {
+        let expected = 0;
+        for (let i = 0; i < tripResults.length; i++) {
+            const t = tripResults[i]!;
+            expected += t.consumed * ALL_ALTARS_BY_NAME.get(t.altar)!.xp;
+        }
+        return runeBankXpBalanced(xp0, xp(), expected);
+    };
     const summary = () => ({
         target,
         essenceTarget,

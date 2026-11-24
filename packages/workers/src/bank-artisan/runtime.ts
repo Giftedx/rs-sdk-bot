@@ -27,11 +27,18 @@ export const atNorthBank = (p: { worldX: number; worldZ: number; level: number }
     !!p && p.level === 0 && Math.max(Math.abs(p.worldX - COW_NORTH_BANK.x), Math.abs(p.worldZ - COW_NORTH_BANK.z)) <= 3;
 
 export function nearestBank(at: { x: number; z: number; level: number }): BankSpot {
-    return (
-        BANKS.filter(b => b.level === at.level)
-            .sort((a, b) => Math.max(Math.abs(a.x - at.x), Math.abs(a.z - at.z)) - Math.max(Math.abs(b.x - at.x), Math.abs(b.z - at.z)))[0]
-        ?? BANKS[0]!
-    );
+    let best: BankSpot | undefined;
+    let bestDist = Infinity;
+    for (let i = 0; i < BANKS.length; i++) {
+        const b = BANKS[i]!;
+        if (b.level !== at.level) continue;
+        const d = Math.max(Math.abs(b.x - at.x), Math.abs(b.z - at.z));
+        if (d < bestDist) {
+            bestDist = d;
+            best = b;
+        }
+    }
+    return best ?? BANKS[0]!;
 }
 
 export function productionStopRequested(
@@ -85,7 +92,9 @@ export function actionSessionOwner(
     const client = raw.client as { executeBotAction?: unknown; selfSlot?: number } | undefined;
     const sdk = raw.sdk;
     const config = sdk.config;
-    const origin = JSON.stringify([config?.gatewayUrl, config?.host, config?.port]);
+    const originGateway = config?.gatewayUrl;
+    const originHost = config?.host;
+    const originPort = config?.port;
     const player = raw.sdk.getState()?.player;
     const life = player?.lifeId;
     const respawns = player?.respawnCount ?? 0;
@@ -101,7 +110,9 @@ export function actionSessionOwner(
         && client.selfSlot === self
         && raw.sdk === sdk
         && sdk.config === config
-        && JSON.stringify([config?.gatewayUrl, config?.host, config?.port]) === origin;
+        && config?.gatewayUrl === originGateway
+        && config?.host === originHost
+        && config?.port === originPort;
     const own = () => {
         const now = sdk.getState()?.player;
         const hp = sdk.getSkill('Hitpoints')?.level ?? 0;

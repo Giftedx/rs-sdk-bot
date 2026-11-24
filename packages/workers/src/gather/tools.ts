@@ -148,6 +148,8 @@ let cachedGear: Gear[] | undefined;
 let cachedGearById: Map<number, Gear> | undefined;
 let cachedShopsById: Map<number, ShopSource[]> | undefined;
 let cachedSkillTools: { axes: { id: number; woodcuttingLevel?: number | null; paramLevelrequire?: number | null }[]; pickaxes: { id: number; miningLevel?: number | null }[] } | undefined;
+let cachedAxeTierLevels: number[] | undefined;
+let cachedPickaxeTierLevels: number[] | undefined;
 
 const SHOP_GATES: Readonly<Record<string, Pick<ShopSource, 'requiresQuest' | 'requiresSkill' | 'requiresQuestPoints'>>> = {
     dragonaxeshop: { requiresQuest: "Hero's Quest" },
@@ -260,18 +262,20 @@ function buildToolCandidates(
     enforceUseLevel = true,
 ): ToolCandidate[] {
     const skillMap = normalizeSkills(levels);
-    const shops = shopCatalog();
     const useStat = skillMap[useSkill] ?? 1;
     const attackStat = skillMap.attack ?? 1;
-    return orderedIdsDesc.flatMap(id => {
+    const out: ToolCandidate[] = [];
+    for (let i = 0; i < orderedIdsDesc.length; i++) {
+        const id = orderedIdsDesc[i]!;
         const item = gearById(id);
-        if (!item) return [];
+        if (!item) continue;
         const paramLevel = Math.max(1, item.tier ?? 1);
         const useLevel = enforceUseLevel ? paramLevel : 1;
         const wieldAttackLevel = item.requires.skills.attack ?? 1;
         const canUse = useStat >= useLevel;
         const canWield = attackStat >= wieldAttackLevel;
-        return [{
+        let cachedShops: ShopSource[] | undefined;
+        const candidate: ToolCandidate = {
             item,
             useSkill,
             useLevel,
@@ -280,10 +284,19 @@ function buildToolCandidates(
             canUse,
             canWield,
             carryMode: canWield ? 'wield' : 'inventory',
-            shops: [...(shops.get(item.id) ?? [])],
+            shops: undefined as unknown as ShopSource[],
             tradeable: item.tradeable,
-        }];
-    });
+        };
+        Object.defineProperty(candidate, 'shops', {
+            enumerable: true,
+            configurable: true,
+            get() {
+                return (cachedShops ??= [...(shopCatalog().get(item.id) ?? [])]);
+            },
+        });
+        out.push(candidate);
+    }
+    return out;
 }
 
 function selectTool(
@@ -296,13 +309,28 @@ function selectTool(
 ): ToolRecommendation {
     const owned = stockTotals(stock);
     const candidates = buildToolCandidates(orderedIdsDesc, useSkill, levels, enforceUseLevel);
-    const usable = candidates.filter(c => c.canUse);
-    const current = usable.find(c => (owned.get(c.item.id) ?? 0) > 0) ?? null;
-    const bestUsable = usable[0] ?? null;
-    const currentIdx = current ? candidates.findIndex(c => c.item.id === current.item.id) : candidates.length;
+    let bestUsable: ToolCandidate | null = null;
+    let current: ToolCandidate | null = null;
+    let currentIdx = candidates.length;
+    for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i]!;
+        if (!c.canUse) continue;
+        if (!bestUsable) bestUsable = c;
+        if (!current && (owned.get(c.item.id) ?? 0) > 0) {
+            current = c;
+            currentIdx = i;
+            break;
+        }
+    }
     const nextAcquirable = bestUsable && (!current || bestUsable.item.id !== current.item.id) ? bestUsable : null;
-    const betterLocked = candidates.slice(0, currentIdx).filter(c => !c.canUse);
-    const nextUnlock = betterLocked.at(-1) ?? null;
+    let nextUnlock: ToolCandidate | null = null;
+    for (let i = currentIdx - 1; i >= 0; i--) {
+        const c = candidates[i]!;
+        if (!c.canUse) {
+            nextUnlock = c;
+            break;
+        }
+    }
     return { kind, current, bestUsable, nextAcquirable, nextUnlock };
 }
 
@@ -325,40 +353,58 @@ export function tierBoundaryOf(level: number, tiers: readonly number[]): number 
     return highest;
 }
 
+function skillToolTierLevels(kind: 'woodcutting-axe' | 'mining-pickaxe'): readonly number[] {
+    if (kind === 'woodcutting-axe') {
+        if (cachedAxeTierLevels) return cachedAxeTierLevels;
+        const set = new Set<number>();
+        for (const r of skillToolsData().axes) {
+            const lvl = r.woodcuttingLevel ?? r.paramLevelrequire;
+            if (typeof lvl === 'number' && lvl >= 1) set.add(lvl);
+        }
+        return (cachedAxeTierLevels = [...set].sort((a, b) => a - b));
+    }
+    if (cachedPickaxeTierLevels) return cachedPickaxeTierLevels;
+    const set = new Set<number>();
+    for (const r of skillToolsData().pickaxes) {
+        if (typeof r.miningLevel === 'number' && r.miningLevel >= 1) set.add(r.miningLevel);
+    }
+    return (cachedPickaxeTierLevels = [...set].sort((a, b) => a - b));
+}
+
+function readNormalizedSkill(levels: GearSkillLevels, lowerKey: string): number {
+    if (!levels) return lowerKey === 'hitpoints' ? 10 : 1;
+    const direct = levels[lowerKey];
+    if (direct !== undefined) {
+        const val = typeof direct === 'number' ? direct : direct && typeof direct === 'object' ? (direct.baseLevel ?? direct.level) : undefined;
+        if (typeof val === 'number' && Number.isSafeInteger(val) && val >= 1) return val;
+    }
+    for (const k in levels) {
+        if (k.toLowerCase() === lowerKey) {
+            const v = levels[k];
+            const val = typeof v === 'number' ? v : v && typeof v === 'object' ? (v.baseLevel ?? v.level) : undefined;
+            if (typeof val === 'number' && Number.isSafeInteger(val) && val >= 1) return val;
+            break;
+        }
+    }
+    return lowerKey === 'hitpoints' ? 10 : 1;
+}
+
 export function crossedTierBoundary(
     previous: GearSkillLevels,
     current: GearSkillLevels,
     skills: readonly string[],
     kindOrLevels: 'woodcutting-axe' | 'mining-pickaxe' | readonly number[],
 ): boolean {
-    const prev = normalizeSkills(previous);
-    const curr = normalizeSkills(current);
-    let levels: number[];
-    if (Array.isArray(kindOrLevels)) {
-        levels = [...kindOrLevels].sort((a, b) => a - b);
-    } else {
-        const set = new Set<number>();
-        if (kindOrLevels === 'woodcutting-axe') {
-            for (const r of skillToolsData().axes) {
-                const lvl = r.woodcuttingLevel ?? r.paramLevelrequire;
-                if (typeof lvl === 'number' && lvl >= 1) set.add(lvl);
-            }
-        } else {
-            for (const r of skillToolsData().pickaxes) {
-                if (typeof r.miningLevel === 'number' && r.miningLevel >= 1) set.add(r.miningLevel);
-            }
+    const levels = Array.isArray(kindOrLevels)
+        ? [...kindOrLevels].sort((a, b) => a - b)
+        : skillToolTierLevels(kindOrLevels as 'woodcutting-axe' | 'mining-pickaxe');
+    for (let i = 0; i < skills.length; i++) {
+        const k = skills[i]!.toLowerCase();
+        if (tierBoundaryOf(readNormalizedSkill(current, k), levels) > tierBoundaryOf(readNormalizedSkill(previous, k), levels)) {
+            return true;
         }
-        levels = [...set].sort((a, b) => a - b);
     }
-    const boundary = (lvl: number) => {
-        let highest = 1;
-        for (const t of levels) if (lvl >= t) highest = t;
-        return highest;
-    };
-    return skills.some(s => {
-        const k = s.toLowerCase();
-        return boundary(curr[k] ?? 1) > boundary(prev[k] ?? 1);
-    });
+    return false;
 }
 
 function shopAccessible(

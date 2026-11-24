@@ -2,7 +2,6 @@ import { existsSync } from 'node:fs';
 import { isStopFilePresent } from '../stop';
 import { initPathfinding } from '../../../../vendor/rs-sdk/sdk/pathfinding';
 import type { BotWorldState, NearbyNpc } from '../../../../vendor/rs-sdk/sdk/types';
-import * as rsmod from '../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { finish, openBot, sessionDied } from '../../../core/src/bot';
 import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
@@ -10,33 +9,31 @@ import { componentId } from '../../../core/src/logout';
 import { holdSessionEater } from '../../../core/src/sustain';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
-import { reconcileCombatLoadout } from './gear';
-import { giantStyle } from './melee-gather';
-import { campOwnershipConflict } from './ranged';
-import {
-    depositPack,
-    DRAGON_BONES_ID,
-    DRAGON_FOOD_IDS,
-    DRAGON_LOOT_IDS,
-    eatBetweenCasts,
-    EDGEVILLE_BANK,
-    fleetNames,
-    GREEN_DHIDE_ID,
-    GREEN_DRAGON_SPOT,
-    hasVarrockTeleport,
-    runVisibleGroundLoot,
-    SAFE_SOUTH_TILE,
-    selectGreenDragon,
-    combatWalkTargetPersist,
-    wildDragonEscapeAction,
-    wildDragonEscapeKeep,
-    wildDragonPreflight,
-    wildDragonRetreatReason,
-    wildDragonThreat,
-    wildernessLevel,
-} from './survivability';
-import { BLACK_BANK, blackKit, combatTrip, varrockTeleport } from './trip-kit';
 import type { CombatSession, CombatTile } from './types';
+
+let cachedRsmod: typeof import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder') | undefined;
+let cachedGearMod: typeof import('./gear') | undefined;
+let cachedMeleeMod: typeof import('./melee-gather') | undefined;
+let cachedRangedMod: typeof import('./ranged') | undefined;
+let cachedSurvMod: typeof import('./survivability') | undefined;
+let cachedTripKitMod: typeof import('./trip-kit') | undefined;
+
+const loadRsmod = (): typeof import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder') =>
+    (cachedRsmod ??= require('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder'));
+const loadGearMod = (): typeof import('./gear') => (cachedGearMod ??= require('./gear'));
+const loadMeleeMod = (): typeof import('./melee-gather') => (cachedMeleeMod ??= require('./melee-gather'));
+const loadRangedMod = (): typeof import('./ranged') => (cachedRangedMod ??= require('./ranged'));
+const loadSurvMod = (): typeof import('./survivability') => (cachedSurvMod ??= require('./survivability'));
+const loadTripKitMod = (): typeof import('./trip-kit') => (cachedTripKitMod ??= require('./trip-kit'));
+
+const ATTACK_OP_RE = /^attack$/i;
+const BAIL_WITH_RE = /^bail-with$/i;
+const EMPTY_OP_RE = /^empty$/i;
+const INSPECT_OP_RE = /^inspect$/i;
+const FILL_OP_RE = /^fill$/i;
+const NET_RIPPED_FAIL_RE = /^You fail to repair the net in the harsh conditions\.$/;
+const NET_RIPPED_RE = /The net has ripped!/;
+const FAIL_REPAIR_RE = /fail to repair the net/;
 
 // ============================================================================
 // 1. Black Dragon Safe-Corridor Camp (Taverley Dungeon)
@@ -70,6 +67,7 @@ export function footprintDistance(sw: CampTile, tile: CampTile, size: number = B
 
 export function canShoot(tile: CampTile, sw: CampTile, range: number = BLACK_DRAGON.range): boolean {
     initPathfinding();
+    const rsmod = loadRsmod();
     return (
         Math.max(Math.abs(sw.x - tile.x), Math.abs(sw.z - tile.z)) <= range
         && rsmod.hasLineOfSight(0, tile.x, tile.z, sw.x, sw.z, 1, 1, 1, 1, 0)
@@ -147,7 +145,7 @@ export async function runBlackDragonCamp(s: CombatSession, o: { cap: number; kil
             hpMin = Math.min(hpMin, curHp);
         });
         const dragons = () => (st()?.nearbyNpcs ?? []).filter(n => n.id === BLACK_DRAGON.npc && n.hp !== 0);
-        const attackOp = (n: NearbyNpc) => n.optionsWithIndex.find(v => /^attack$/i.test(v.text))?.opIndex;
+        const attackOp = (n: typeof dragons extends () => (infer U)[] ? U : never) => n.optionsWithIndex.find(v => ATTACK_OP_RE.test(v.text))?.opIndex;
         const backToSafe = async () => {
             if (at(SAFE)) return;
             strays++;
@@ -170,10 +168,31 @@ export async function runBlackDragonCamp(s: CombatSession, o: { cap: number; kil
             await s.sdk.sendTogglePrayer(PROTECT_MAGIC);
             await waitUntil(s, () => praying() === on, { timeoutTicks: 3 });
         };
-        const pick = () =>
-            dragons()
-                .filter(n => attackOp(n) !== undefined && canShoot(SAFE, swTile(n)) && (!n.inCombat || (Number.isInteger(own) && n.targetIndex === 32768 + own!)))
-                .sort((a, b) => Number(b.inCombat) - Number(a.inCombat) || (a.hp ?? BLACK_DRAGON.hitpoints) - (b.hp ?? BLACK_DRAGON.hitpoints) || a.distance - b.distance)[0];
+        const pick = () => {
+            const npcs = st()?.nearbyNpcs ?? [];
+            let best: (typeof npcs)[number] | undefined;
+            let bestCombat = false;
+            let bestHp = 0;
+            let bestDist = Infinity;
+            for (let i = 0; i < npcs.length; i++) {
+                const n = npcs[i]!;
+                if (n.id !== BLACK_DRAGON.npc || n.hp === 0) continue;
+                if (n.inCombat && !(Number.isInteger(own) && n.targetIndex === 32768 + own!)) continue;
+                if (attackOp(n) === undefined || !canShoot(SAFE, swTile(n))) continue;
+                const hpVal = n.hp ?? BLACK_DRAGON.hitpoints;
+                if (
+                    best === undefined
+                    || (n.inCombat && !bestCombat)
+                    || (n.inCombat === bestCombat && (hpVal < bestHp || (hpVal === bestHp && n.distance < bestDist)))
+                ) {
+                    best = n;
+                    bestCombat = n.inCombat;
+                    bestHp = hpVal;
+                    bestDist = n.distance;
+                }
+            }
+            return best;
+        };
         const intruder = () =>
             (st()?.nearbyNpcs ?? []).find(
                 n => n.id !== BLACK_DRAGON.npc && n.hp !== 0 && Number.isInteger(own) && n.targetIndex === 32768 + own! && attackOp(n) !== undefined,
@@ -210,6 +229,7 @@ export async function runBlackDragonCamp(s: CombatSession, o: { cap: number; kil
             }
             const picked = inv().find(i => i.id === ammo);
             if (picked) {
+                const { reconcileCombatLoadout } = loadGearMod();
                 await reconcileCombatLoadout(sess, { style: 'ranged', trainSkill: 'ranged', pin: { weapon: eq().find(i => i.slot === 3)!.id, ammo }, label: 'camp ammo' });
                 await waitUntil(s, () => held(ammo) === 0, { timeoutTicks: 5 });
             }
@@ -219,6 +239,7 @@ export async function runBlackDragonCamp(s: CombatSession, o: { cap: number; kil
                 await s.direct({ type: 'clickComponent', componentId: 151, reason: 'camp holds its tile' });
                 if (!(await waitUntil(s, () => st()?.autoRetaliateEnabled === false, { timeoutTicks: 8 }))) throw Error('auto-retaliate off unobserved');
             }
+            const { giantStyle } = loadMeleeMod();
             const style = giantStyle(st()?.combatStyle as Parameters<typeof giantStyle>[0], 'Ranged');
             if (st()?.combatStyle?.currentStyle !== style.index) {
                 await s.sdk.sendSetCombatStyle(style.index);
@@ -353,6 +374,7 @@ export const TELEPORT_RUNES = { 563: 1, 556: 3, 554: 1 } as const;
 export const underground = (p: { worldZ: number } | null | undefined) => !!p && p.worldZ > 9000;
 
 export async function leaveToVarrock(s: CombatSession): Promise<{ banked: Record<number, number> }> {
+    const { varrockTeleport } = loadTripKitMod();
     const sess = s as Session;
     const st = () => s.sdk.getState();
     const inv = () => s.sdk.getInventory();
@@ -403,6 +425,8 @@ export async function runBlackDragonCli(args: readonly string[], env: Record<str
                 `black-dragon-camp kills=${r.kills} hides=${r.hides} bones=${r.bones} ammoUsed=${r.ammoUsed} foods=${r.foods} hpMin=${r.hpMin} strays=${r.strays} reason=${r.reason}${r.failure ? ' failure=' + r.failure : ''}`,
             );
         } else {
+            const { combatWalkTargetPersist } = loadSurvMod();
+            const { BLACK_BANK, blackKit, combatTrip } = loadTripKitMod();
             const live = s;
             await waitUntil(live, () => !!live.sdk.getState()?.player, { timeoutTicks: 15 });
             if (underground(live.sdk.getState()?.player)) {
@@ -511,6 +535,7 @@ export async function runKbdOne(
     o: { cap: number; stop: () => boolean; wait?: (test: () => boolean, ticks: number) => Promise<boolean>; step?: () => Promise<void> },
 ) {
     if (!Number.isSafeInteger(o.cap) || o.cap < 1 || o.cap > 1000) throw Error('KBD CAP must be 1..1000 ticks');
+    const { eatBetweenCasts } = loadSurvMod();
     const eatHold = holdSessionEater(s.sdk);
     try {
         const own = (s.client as { selfSlot?: number } | undefined)?.selfSlot;
@@ -683,7 +708,7 @@ export async function runKbdOne(
                     current = st();
                 }
                 const npc = current.nearbyNpcs.find(n => n.index === target.index && n.id === 50);
-                if (npc && Number.isInteger(own) && campOwnershipConflict(npc, own!)) throw Error('KBD target ownership changed');
+                if (npc && Number.isInteger(own) && loadRangedMod().campOwnershipConflict(npc, own!)) throw Error('KBD target ownership changed');
                 if (npc) {
                     x = npc.tileX ?? npc.x;
                     z = npc.tileZ ?? npc.z;
@@ -724,6 +749,7 @@ export async function runKbdOne(
             const ids = [...new Set(fresh.map(i => i.id))];
             const units = fresh.reduce((n, i) => n + i.count, 0);
             const client = s.client as { objType?: (id: number) => { cost: number; stackable: boolean } } | undefined;
+            const { runVisibleGroundLoot } = loadSurvMod();
             const loot = await runVisibleGroundLoot(
                 {
                     state: () => {
@@ -779,6 +805,7 @@ export async function runKbdCli(args: readonly string[], env: Record<string, str
         },
     }).catch(e => finish([], false, `login: ${String(e)}`));
     try {
+        const { combatTrip } = loadTripKitMod();
         const stop = () => stopped || existsSync(`.practice/stop-${name}`) || existsSync('.practice/stop-all');
         const result =
             env.STAGED === '1'
@@ -796,9 +823,24 @@ export async function runKbdCli(args: readonly string[], env: Record<string, str
 const WILD_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 const WILD_LAW_RUNE_ID = 563;
 
-const countId = (s: BotWorldState, id: number) => s.inventory.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
-const countDragonFood = (s: BotWorldState) =>
-    s.inventory.filter(i => (DRAGON_FOOD_IDS as readonly number[]).includes(i.id)).reduce((n, i) => n + i.count, 0);
+const countId = (s: BotWorldState, id: number) => {
+    let n = 0;
+    const inv = s.inventory;
+    for (let i = 0; i < inv.length; i++) {
+        if (inv[i]!.id === id) n += inv[i]!.count;
+    }
+    return n;
+};
+const countDragonFood = (s: BotWorldState) => {
+    const { DRAGON_FOOD_IDS } = loadSurvMod();
+    let n = 0;
+    const inv = s.inventory;
+    for (let i = 0; i < inv.length; i++) {
+        const item = inv[i]!;
+        if ((DRAGON_FOOD_IDS as readonly number[]).includes(item.id)) n += item.count;
+    }
+    return n;
+};
 
 export interface WildDragonOptions {
     cap: number;
@@ -811,6 +853,25 @@ export interface WildDragonOptions {
 }
 
 export async function runWildDragons(s: CombatSession, o: WildDragonOptions) {
+    const {
+        depositPack,
+        DRAGON_BONES_ID,
+        DRAGON_FOOD_IDS,
+        DRAGON_LOOT_IDS,
+        eatBetweenCasts,
+        EDGEVILLE_BANK,
+        fleetNames,
+        GREEN_DHIDE_ID,
+        GREEN_DRAGON_SPOT,
+        hasVarrockTeleport,
+        SAFE_SOUTH_TILE,
+        selectGreenDragon,
+        wildDragonEscapeAction,
+        wildDragonEscapeKeep,
+        wildDragonPreflight,
+        wildDragonRetreatReason,
+        wildernessLevel,
+    } = loadSurvMod();
     const sess = s as Session;
     const eatHold = holdSessionEater(s.sdk);
     try {
@@ -1077,9 +1138,15 @@ export function trawlerNetWindow(ripped: boolean, water: number, activeLeaks: nu
 
 export function trawlerCatchRows(component: { linkObjType: ArrayLike<number> | null; linkObjNumber: ArrayLike<number> | null } | undefined) {
     if (!component?.linkObjType || !component.linkObjNumber) throw Error('owned trawler reward inventory unavailable');
-    return Array.from(component.linkObjType, (id, slot) => ({ id: id - 1, slot, count: component.linkObjNumber![slot] ?? 0 })).filter(
-        i => i.id >= 0 && i.count > 0,
-    );
+    const types = component.linkObjType;
+    const nums = component.linkObjNumber;
+    const out: { id: number; slot: number; count: number }[] = [];
+    for (let slot = 0; slot < types.length; slot++) {
+        const id = types[slot]! - 1;
+        const count = nums[slot] ?? 0;
+        if (id >= 0 && count > 0) out.push({ id, slot, count });
+    }
+    return out;
 }
 
 export function trawlerAssetsReconcile(
@@ -1089,10 +1156,20 @@ export function trawlerAssetsReconcile(
     paste: number,
     ropes: number,
 ) {
-    const ids = new Set([...Object.keys(banked), ...Object.keys(rewards), ...initial.keys()].map(Number));
-    return [...ids].every(
-        id => (banked[id] ?? 0) === (initial.get(id) ?? 0) + (rewards[id] ?? 0) - (id === 1941 ? paste : 0) - (id === 954 ? ropes : 0),
-    );
+    const checkId = (id: number) =>
+        (banked[id] ?? 0) === (initial.get(id) ?? 0) + (rewards[id] ?? 0) - (id === 1941 ? paste : 0) - (id === 954 ? ropes : 0);
+    for (const id of initial.keys()) {
+        if (!checkId(id)) return false;
+    }
+    for (const k in banked) {
+        const id = Number(k);
+        if (!initial.has(id) && !checkId(id)) return false;
+    }
+    for (const k in rewards) {
+        const id = Number(k);
+        if (!initial.has(id) && !(k in banked) && !checkId(id)) return false;
+    }
+    return true;
 }
 
 export interface TrawlerDriver {
@@ -1150,11 +1227,21 @@ export async function runTrawlerSupport(d: TrawlerDriver, o: { mode: TrawlerMode
         } else {
             const need = o.mode === 'net' ? 954 : 1941;
             if (trawlerCount(before, need) < 1) throw Error('trawler repair supply exhausted');
-            const ids = o.mode === 'net' ? [2172, 2173] : [2167];
-            const target = before.nearbyLocs
-                .filter(l => ids.includes(l.id) && l.distance <= 2 && l.level === before.player!.level && l.reachable !== false)
-                .sort((a, b) => a.distance - b.distance)[0];
-            const option = target?.optionsWithIndex.find(v => (o.mode === 'net' ? /^inspect$/i.test(v.text) : /^fill$/i.test(v.text)));
+            const locs = before.nearbyLocs;
+            let target: (typeof locs)[number] | undefined;
+            for (let i = 0; i < locs.length; i++) {
+                const l = locs[i]!;
+                if (
+                    (o.mode === 'net' ? l.id === 2172 || l.id === 2173 : l.id === 2167)
+                    && l.distance <= 2
+                    && l.level === before.player!.level
+                    && l.reachable !== false
+                    && (!target || l.distance < target.distance)
+                ) {
+                    target = l;
+                }
+            }
+            const option = target?.optionsWithIndex.find(v => (o.mode === 'net' ? INSPECT_OP_RE.test(v.text) : FILL_OP_RE.test(v.text)));
             if (!target || !option) {
                 await d.step();
                 continue;
@@ -1249,11 +1336,16 @@ export async function runTrawlerTrip(s: CombatSession, o: { cap: number; stop?: 
         const loc = async (id: number, west = false) => {
             check();
             await s.bot.dismissBlockingUI();
-            const l =
-                st()
-                    .nearbyLocs.filter(l => l.id === id && l.level === st().player!.level)
-                    .sort((a, b) => (west ? a.x - b.x : a.distance - b.distance))[0]
-                ?? (id === 2178 ? { x: 2674, z: 3170, id } : id === 2166 ? { x: 2666, z: 3167, id } : undefined);
+            const locs = st().nearbyLocs;
+            let found: (typeof locs)[number] | undefined;
+            const curLevel = st().player!.level;
+            for (let i = 0; i < locs.length; i++) {
+                const l = locs[i]!;
+                if (l.id === id && l.level === curLevel) {
+                    if (!found || (west ? l.x < found.x : l.distance < found.distance)) found = l;
+                }
+            }
+            const l = found ?? (id === 2178 ? { x: 2674, z: 3170, id } : id === 2166 ? { x: 2666, z: 3167, id } : undefined);
             if (!l) throw Error('trawler object absent ' + id);
             if (!(await s.sdk.sendInteractLoc(l.x, l.z, l.id, 1)).success) throw Error('trawler object refused ' + id);
             return l;
@@ -1350,8 +1442,17 @@ export async function runTrawlerTrip(s: CombatSession, o: { cap: number; stop?: 
                     }
                     await ladder(0);
                 } else {
-                    const leak = state.nearbyLocs.filter(l => l.id === 2167).sort((a, b) => a.distance - b.distance)[0];
-                    if (trawlerNetWindow(ripped, water, state.nearbyLocs.filter(l => l.id === 2167).length)) {
+                    let leak: (typeof state.nearbyLocs)[number] | undefined;
+                    let activeLeaks = 0;
+                    const locs = state.nearbyLocs;
+                    for (let i = 0; i < locs.length; i++) {
+                        const l = locs[i]!;
+                        if (l.id === 2167) {
+                            activeLeaks++;
+                            if (!leak || l.distance < leak.distance) leak = l;
+                        }
+                    }
+                    if (trawlerNetWindow(ripped, water, activeLeaks)) {
                         console.log('TRAWLER_NET_WINDOW ' + JSON.stringify({ tick: s.tick(), water, activeLeaks: 0 }));
                         await ladder(1);
                     } else if (leak) {
@@ -1513,6 +1614,7 @@ export async function runTrawlerTrip(s: CombatSession, o: { cap: number; stop?: 
                     return { ...st(), groundItems: st().groundItems.filter(i => i.x === at.x && i.z === at.z && escrow[i.id]) };
                 };
                 const definition = (s.client as { objType: (id: number) => { cost: number; stackable: boolean } }).objType.bind(s.client);
+                const { runVisibleGroundLoot } = loadSurvMod();
                 const result = await runVisibleGroundLoot(
                     { state: owned, tick: () => s.tick(), stop: () => !securing && !!o.stop?.(), definition, pickup: async i => (await s.sdk.sendPickup(i.x, i.z, i.id)).success, wait, step },
                     {

@@ -4,9 +4,23 @@ import type { Session } from '../../../core/src/inprocess';
 import { componentId } from '../../../core/src/logout';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { goTo, sessionWalker, walkPath } from '../../../core/src/walk';
-import { gearById, reconcileCombatLoadout } from './gear';
-import { combatFerryWalk } from './survivability';
 import type { CombatSession, CombatTile } from './types';
+
+let cachedGearMod: typeof import('./gear') | undefined;
+let cachedSurvivabilityMod: typeof import('./survivability') | undefined;
+const loadGearMod = (): typeof import('./gear') => (cachedGearMod ??= require('./gear'));
+const loadSurvivabilityMod = (): typeof import('./survivability') => (cachedSurvivabilityMod ??= require('./survivability'));
+
+const LOADED_BALLS_RE = /^You load the cannon with (\d+) cannonballs\.$/;
+const ATTACK_OP_RE = /^attack$/i;
+const CANNON_NAME_RE = /cannon/i;
+const PICKUP_OP_RE = /pick-?up/i;
+const DWARF_CANNON_RE = /^dwarf multicannon$/i;
+const SETUP_OP_RE = /set-?up/i;
+const FIRE_OP_RE = /^fire$/i;
+const LEVEL_PAIR_RE = /^([A-Za-z]+)=(\d+)$/;
+const DIGITS_RE = /^\d+$/;
+const STYLE_RE = /^[0-3]$/;
 
 export type CannonSpot = {
     label: string;
@@ -41,7 +55,7 @@ const FOOD = /^(shrimps|trout|salmon|tuna|lobster|swordfish|bass|pike|cooked kar
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 export function loadedBalls(text: string): number {
-    const m = text.match(/^You load the cannon with (\d+) cannonballs\.$/);
+    const m = text.match(LOADED_BALLS_RE);
     return m ? Number(m[1]) : 0;
 }
 
@@ -65,19 +79,45 @@ export function pickTarget(
     npcs: readonly TargetNpc[],
     o: { target: RegExp; centre: { x: number; z: number }; me: { x: number; z: number }; near: number; reach: number; skip: (index: number) => boolean },
 ): TargetNpc | undefined {
-    const close = (n: TargetNpc) => Number(cheb(n, o.me) <= 1);
-    return npcs
-        .filter(
-            n =>
-                o.target.test(n.name)
-                && (n.hp ?? 1) > 0
-                && n.reachable !== false
-                && !o.skip(n.index)
-                && n.optionsWithIndex.some(p => /^attack$/i.test(p.text))
-                && cheb(n, o.centre) <= o.near
-                && cheb(n, o.me) <= o.reach,
-        )
-        .sort((a, b) => close(b) - close(a) || (a.hp ?? 99) - (b.hp ?? 99) || a.distance - b.distance)[0];
+    let best: TargetNpc | undefined;
+    let bestClose = false;
+    let bestHp = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < npcs.length; i++) {
+        const n = npcs[i]!;
+        if (
+            !o.target.test(n.name)
+            || (n.hp ?? 1) <= 0
+            || n.reachable === false
+            || o.skip(n.index)
+            || cheb(n, o.centre) > o.near
+            || cheb(n, o.me) > o.reach
+        ) {
+            continue;
+        }
+        let hasAttack = false;
+        const opts = n.optionsWithIndex;
+        for (let j = 0; j < opts.length; j++) {
+            if (ATTACK_OP_RE.test(opts[j]!.text)) {
+                hasAttack = true;
+                break;
+            }
+        }
+        if (!hasAttack) continue;
+        const close = cheb(n, o.me) <= 1;
+        const hp = n.hp ?? 99;
+        if (
+            best === undefined
+            || (close && !bestClose)
+            || (close === bestClose && (hp < bestHp || (hp === bestHp && n.distance < bestDist)))
+        ) {
+            best = n;
+            bestClose = close;
+            bestHp = hp;
+            bestDist = n.distance;
+        }
+    }
+    return best;
 }
 
 export function bandTicks(levelAt: ReadonlyMap<number, number>, bands: readonly number[]): Record<string, number> {
@@ -102,11 +142,30 @@ function messageFeed(s: CombatSession) {
             }
         }
     });
-    return { all, mark: () => all.length, saw: (re: RegExp, from: number) => all.slice(from).some(t => re.test(t)), off };
+    return {
+        all,
+        mark: () => all.length,
+        saw: (re: RegExp, from: number) => {
+            for (let i = from; i < all.length; i++) {
+                if (re.test(all[i]!)) return true;
+            }
+            return false;
+        },
+        off,
+    };
 }
 
 export type PlacedCannon = { x: number; z: number; id: number; centre: { x: number; z: number }; setupTicks: number };
-const findCannon = (s: CombatSession) => (s.sdk.getState()?.nearbyLocs ?? []).filter(l => /cannon/i.test(l.name)).sort((a, b) => a.distance - b.distance)[0];
+const findCannon = (s: CombatSession) => {
+    const locs = s.sdk.getState()?.nearbyLocs;
+    if (!locs) return undefined;
+    let best: (typeof locs)[number] | undefined;
+    for (let i = 0; i < locs.length; i++) {
+        const l = locs[i]!;
+        if (CANNON_NAME_RE.test(l.name) && (!best || l.distance < best.distance)) best = l;
+    }
+    return best;
+};
 
 export async function setupCannon(s: CombatSession, o: { centre?: { x: number; z: number }; avoidOld?: boolean } = {}): Promise<PlacedCannon> {
     const feed = messageFeed(s);
@@ -201,7 +260,7 @@ export async function setupCannon(s: CombatSession, o: { centre?: { x: number; z
         m0 = feed.mark();
         await s.direct({ type: 'useItemOnLoc', itemSlot: balls.slot, x: l.x, z: l.z, locId: l.id, reason: 'cannon load' });
         if (!(await waitUntil(s, () => feed.saw(/load the cannon/i, m0), { timeoutTicks: 8 }))) throw Error('first cannon load unobserved');
-        const fire = l.optionsWithIndex.find(p => /^fire$/i.test(p.text))?.opIndex ?? 1;
+        const fire = l.optionsWithIndex.find(p => FIRE_OP_RE.test(p.text))?.opIndex ?? 1;
         await s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: fire, reason: 'cannon fire' });
         await waitTicks(s, 2);
         return { x: l.x, z: l.z, id: l.id, centre: { x: l.x + 1, z: l.z + 1 }, setupTicks: s.tick() - t0 };
@@ -211,9 +270,9 @@ export async function setupCannon(s: CombatSession, o: { centre?: { x: number; z
 }
 
 export async function pickupCannon(s: CombatSession, c: { x: number; z: number }): Promise<boolean> {
-    const l = (s.sdk.getState()?.nearbyLocs ?? []).find(n => n.x === c.x && n.z === c.z && /cannon/i.test(n.name));
+    const l = (s.sdk.getState()?.nearbyLocs ?? []).find(n => n.x === c.x && n.z === c.z && CANNON_NAME_RE.test(n.name));
     if (!l) return false;
-    const op = l.optionsWithIndex.find(p => /pick-?up/i.test(p.text))?.opIndex ?? (/^dwarf multicannon$/i.test(l.name) ? 2 : 1);
+    const op = l.optionsWithIndex.find(p => PICKUP_OP_RE.test(p.text))?.opIndex ?? (DWARF_CANNON_RE.test(l.name) ? 2 : 1);
     await s.direct({ type: 'interactLoc', x: c.x, z: c.z, locId: l.id, optionIndex: op, reason: 'cannon pick-up' });
     return waitUntil(s, () => !!s.sdk.getInventory().some(i => CANNON_PARTS[0].test(i.name)), { timeoutTicks: 12 });
 }
@@ -227,40 +286,49 @@ export type CannonPhase = { weapon?: number; style?: number; until?: Record<stri
 
 export function parseLevels(text: string): Record<string, number> {
     const out: Record<string, number> = {};
-    for (const part of text
-        .split(',')
-        .map(p => p.trim())
-        .filter(Boolean)) {
-        const m = part.match(/^([A-Za-z]+)=(\d+)$/);
-        if (!m || Number(m[2]) < 1 || Number(m[2]) > 99) throw Error(`bad level "${part}"`);
-        out[m[1]![0]!.toUpperCase() + m[1]!.slice(1).toLowerCase()] = Number(m[2]);
+    const parts = text.split(',');
+    for (let i = 0; i < parts.length; i++) {
+        const part = parts[i]!.trim();
+        if (!part) continue;
+        const m = part.match(LEVEL_PAIR_RE);
+        if (!m) throw Error(`bad level "${part}"`);
+        const val = Number(m[2]);
+        if (val < 1 || val > 99) throw Error(`bad level "${part}"`);
+        const k = m[1]!;
+        out[k[0]!.toUpperCase() + k.slice(1).toLowerCase()] = val;
     }
     return out;
 }
 
 export function parsePhases(text: string): CannonPhase[] {
-    return text
-        .split(';')
-        .map(p => p.trim())
-        .filter(Boolean)
-        .map(p => {
-            const [weapon, style, until] = p.split(':');
-            const ph: CannonPhase = {};
-            if (weapon) {
-                if (!/^\d+$/.test(weapon)) throw Error(`bad phase weapon "${weapon}"`);
-                ph.weapon = Number(weapon);
-            }
-            if (style) {
-                if (!/^[0-3]$/.test(style)) throw Error(`bad phase style "${style}"`);
-                ph.style = Number(style);
-            }
-            if (until) ph.until = parseLevels(until);
-            return ph;
-        });
+    const out: CannonPhase[] = [];
+    const parts = text.split(';');
+    for (let i = 0; i < parts.length; i++) {
+        const p = parts[i]!.trim();
+        if (!p) continue;
+        const [weapon, style, until] = p.split(':');
+        const ph: CannonPhase = {};
+        if (weapon) {
+            if (!DIGITS_RE.test(weapon)) throw Error(`bad phase weapon "${weapon}"`);
+            ph.weapon = Number(weapon);
+        }
+        if (style) {
+            if (!STYLE_RE.test(style)) throw Error(`bad phase style "${style}"`);
+            ph.style = Number(style);
+        }
+        if (until) ph.until = parseLevels(until);
+        out.push(ph);
+    }
+    return out;
 }
 
-export const levelsMet = (levels: (k: string) => number, want: Record<string, number> | undefined) =>
-    !!want && Object.entries(want).every(([k, v]) => levels(k) >= v);
+export const levelsMet = (levels: (k: string) => number, want: Record<string, number> | undefined) => {
+    if (!want) return false;
+    for (const k in want) {
+        if (levels(k) < want[k]!) return false;
+    }
+    return true;
+};
 
 export const MSB = 861;
 export const MSB_SPECIAL_COST = 350;
@@ -325,10 +393,22 @@ export async function reclaimCannon(
     const held = () => s.sdk.getInventory().some(i => CANNON_PARTS[0].test(i.name));
     if (held()) return { ok: true, how: 'held', detail: 'cannon base already in the pack' };
     const me = () => s.sdk.getState()?.player;
-    const nearCannon = () =>
-        (s.sdk.getState()?.nearbyLocs ?? [])
-            .filter(l => /cannon/i.test(l.name) && l.optionsWithIndex.some(p => /pick-?up/i.test(p.text)))
-            .sort((a, b) => (o.at ? cheb(a, o.at) - cheb(b, o.at) : 0) || a.distance - b.distance)[0];
+    const nearCannon = () => {
+        const locs = s.sdk.getState()?.nearbyLocs;
+        if (!locs) return undefined;
+        let best: (typeof locs)[number] | undefined;
+        let bestCheb = Infinity;
+        for (let i = 0; i < locs.length; i++) {
+            const l = locs[i]!;
+            if (!CANNON_NAME_RE.test(l.name) || !l.optionsWithIndex.some(p => PICKUP_OP_RE.test(p.text))) continue;
+            const cDist = o.at ? cheb(l, o.at) : 0;
+            if (!best || cDist < bestCheb || (cDist === bestCheb && l.distance < best.distance)) {
+                best = l;
+                bestCheb = cDist;
+            }
+        }
+        return best;
+    };
     if (o.at) {
         const p = me();
         if (!p || p.level !== (o.at.level ?? 0) || cheb({ x: p.worldX, z: p.worldZ }, o.at) > 12) {
@@ -387,6 +467,7 @@ export function cannonWalker(s: CombatSession, spot: CannonSpot, walk?: Walk): W
                 return (await walkPath(await sessionWalker(sess), [{ ...to, tol: 1 }], { maxTicks: 600 })).ok;
             }
             const world = await getWorld();
+            const { combatFerryWalk } = loadSurvivabilityMod();
             return (
                 await combatFerryWalk(s, to, (tile, planBudgetMs) => goTo(sess, world, tile, accountOf(sess), { legTimeoutTicks: 100, planBudgetMs }))
             ).ok;
@@ -425,6 +506,7 @@ export async function runCannonFight(s: CombatSession, o: CannonFightOptions) {
         if (!ph) return;
         if (ph.weapon !== undefined && weapon()?.id !== ph.weapon) {
             if (!inv().some(i => i.id === ph.weapon)) throw Error(`phase weapon ${ph.weapon} is not in the pack`);
+            const { gearById, reconcileCombatLoadout } = loadGearMod();
             const g = gearById(ph.weapon);
             await reconcileCombatLoadout(s, {
                 style: g && (g.bonuses.rangeAttack > 0 || g.bonuses.rangeStrength > 0) ? 'ranged' : 'melee',

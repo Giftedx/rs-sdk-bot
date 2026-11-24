@@ -18,7 +18,12 @@ const bank = { x: BODY_CARRIER_ALTAR.bank.x, z: BODY_CARRIER_ALTAR.bank.z };
 const events: unknown[] = [];
 const pos = (s: Session) => state(s).player!;
 export const inside = (s: Session, a: RuneCarrierAltar = BODY_CARRIER_ALTAR): boolean => insideCarrierAltar(a, pos(s));
-const count = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+const count = (s: Session, id: number) => {
+    const items = s.sdk.getInventory();
+    let n = 0;
+    for (let i = 0; i < items.length; i++) if (items[i]!.id === id) n += items[i]!.count;
+    return n;
+};
 
 let stopped = false;
 const cancellation = new AbortController();
@@ -139,6 +144,16 @@ export const carrierAssets = (items: readonly { id: number; count: number }[]): 
     return totals;
 };
 
+function sameCarrierAssets(a: CarrierAssets, b: CarrierAssets): boolean {
+    for (const k in a) {
+        if (a[Number(k)] !== b[Number(k)]) return false;
+    }
+    for (const k in b) {
+        if (a[Number(k)] !== b[Number(k)]) return false;
+    }
+    return true;
+}
+
 export async function bankCarrier(s: Session): Promise<CarrierAssets> {
     check(s);
     if (!s.bankObservation) throw Error('carrier bank observation unavailable');
@@ -173,7 +188,7 @@ export async function bankCarrier(s: Session): Promise<CarrierAssets> {
     }
     check(s);
     const after = carrierAssets(s.bankObservation()!.items);
-    if (s.sdk.getInventory().length || JSON.stringify(Object.entries(before).sort()) !== JSON.stringify(Object.entries(after).sort())) {
+    if (s.sdk.getInventory().length || !sameCarrierAssets(before, after)) {
         throw Error('continuation deposit mismatch');
     }
     return after;
