@@ -14,7 +14,9 @@ import {
     planAccount,
     xpForLevel,
 } from '../src/planner';
+import { loadShopCatalogByItem } from '../src/acquire';
 import { createActivityCatalog } from '../src/catalog';
+import { derivedProfile } from '../../workers/src/market/shop-profiles';
 
 const NOW = 1_700_000_000_000;
 
@@ -742,29 +744,36 @@ test('planner excludes quest activities from combat_readiness/skill, selects low
     });
     expect(magicSkillPlan.steps.some((s) => 'activityId' in s && Boolean(s.activityId?.startsWith('quest:')))).toBe(false);
 
-    // Cosmic rune (564) is stocked by magearena_runeshop (Magic 60) and dropped slowly by Hill Giants; ShopBot should choose market:shop-buy.
-    const cosmicPlan = planAccount(shopBot, {
+    // Feather (314) is stocked by runnable surface shops (e.g. fishingshop) and dropped slowly by chickens; ShopBot should choose market:shop-buy with a runnable derivedProfile.
+    const featherPlan = planAccount(shopBot, {
         world,
         activities,
         demands: [{
-            id: 'campaign:haggis:item:564',
+            id: 'campaign:haggis:item:314',
             goalKind: 'main_supply',
             valueScore: 500,
             valuePerHour: 5000,
-            target: { kind: 'item', itemId: 564, itemName: 'Cosmic rune', count: 100 },
+            target: { kind: 'item', itemId: 314, itemName: 'Feather', count: 100 },
             fulfilled: 0,
             remaining: 100,
             priorityWeight: 1,
             active: true,
         }],
     });
-    expect(cosmicPlan.steps).toHaveLength(1);
-    const shopWork = cosmicPlan.steps[0];
+    expect(featherPlan.steps).toHaveLength(1);
+    const shopWork = featherPlan.steps[0];
     expect(shopWork?.stepKind).toBe('work');
     if (shopWork?.stepKind === 'work') {
         expect(shopWork.activityId).toBe('market:shop-buy');
-        expect(shopWork.config.itemId).toBe(564);
+        expect(shopWork.config.itemId).toBe(314);
         expect(shopWork.config.shopId).toBeDefined();
+        expect(Boolean(derivedProfile(String(shopWork.config.shopId)))).toBe(true);
+    }
+
+    for (const entries of loadShopCatalogByItem().values()) {
+        for (const entry of entries) {
+            expect(Boolean(derivedProfile(entry.shop))).toBe(true);
+        }
     }
 
     // Quest Watchtower requires Mining 40; unlocking Mining from level 1 must pick gather:mining-ore, never gather:mining-loot.

@@ -8,7 +8,8 @@ import {
     type ActivityDefinition,
     type WorldSnapshot,
 } from '../src/contracts';
-import { resolveAcquireItem } from '../src/acquire';
+import { loadShopCatalogByItem, resolveAcquireItem } from '../src/acquire';
+import { derivedProfile } from '../../workers/src/market/shop-profiles';
 
 const NOW = 1_700_000_000_000;
 
@@ -235,4 +236,18 @@ test('AcquireItem enforces untrusted bank, protectedClock, and anti-ping-pong ex
     );
     expect(res.ok).toBe(false);
     expect(res.step).toBeNull();
+});
+
+test('loadShopCatalogByItem only emits runnable derivedProfile shops and excludes unreachable shops', () => {
+    const catalog = loadShopCatalogByItem();
+    expect(catalog.size).toBeGreaterThan(0);
+    const allShops = new Set<string>();
+    for (const entries of catalog.values()) {
+        for (const entry of entries) {
+            allShops.add(entry.shop);
+            expect(Boolean(derivedProfile(entry.shop))).toBe(true);
+        }
+    }
+    expect(allShops.has('cheapringshop')).toBe(false);
+    expect(allShops.has('gnomeshop_gulluck')).toBe(false);
 });

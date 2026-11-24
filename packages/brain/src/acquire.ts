@@ -9,6 +9,7 @@ import type { GearSources } from '../../knowledge/src/gear-sources';
 import {
     accountOwnedItemCount,
 } from '../../workers/src/contracts';
+import { derivedProfile } from '../../workers/src/market/shop-profiles';
 import {
     ACQUIRE_SOURCE_ORDER,
     DEFAULT_OPERATING_COIN_FLOAT,
@@ -123,6 +124,7 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
     const out = new Map<number, ShopCatalogEntry[]>();
     for (const shop of shops) {
         if (/^(skill_guide_|smithing_|crafting_make_)|_free$/.test(shop.inv)) continue;
+        if (!derivedProfile(shop.inv)) continue;
         const gate = SHOP_GATES[shop.inv];
         const tile = shopTiles.get(shop.inv);
         for (const row of shop.stock) {
