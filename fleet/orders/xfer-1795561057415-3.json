@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795561057415-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Masterbaiter",
+  "to": "mmtha0205",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795561057415,
+  "end": 1795561957415,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

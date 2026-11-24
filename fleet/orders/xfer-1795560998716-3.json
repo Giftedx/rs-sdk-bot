@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795560998716-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Porksword",
+  "item": "Staff of air",
+  "count": 1,
+  "itemId": 1381,
+  "start": 1795560998716,
+  "end": 1795561898716,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

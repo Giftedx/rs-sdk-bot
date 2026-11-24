@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795561032268-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Pullmybow",
+  "item": "Staff of air",
+  "count": 1,
+  "itemId": 1381,
+  "start": 1795561032268,
+  "end": 1795561932268,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795561105170-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Dipstick",
+  "to": "Swordswallow",
+  "item": "Rune scimitar",
+  "count": 1,
+  "itemId": 1333,
+  "start": 1795561105170,
+  "end": 1795562005170,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

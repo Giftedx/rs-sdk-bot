@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795560998716-5",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "Swordswallow",
+  "item": "Staff of air",
+  "count": 1,
+  "itemId": 1381,
+  "start": 1795560998716,
+  "end": 1795561898716,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
