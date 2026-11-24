@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795562250008,
+ "at": 1795562356256,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -42,46 +42,7 @@
    "role": "auto"
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/generated/quest-magearena.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:magearena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:magearena",
-   "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/generated/quest-tree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:tree",
-   "role": "army"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/generated/quest-priestperil.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:priestperil",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:priestperil",
-   "role": "auto"
-  },
-  {
-   "account": "FishAndChips",
+   "account": "TrouserSnake",
    "script": "scripts/generated/quest-squire.ts",
    "args": [],
    "env": {
@@ -91,7 +52,52 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:squire",
-   "role": "auto"
+   "role": "army"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/generated/quest-ball.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:ball",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:ball",
+   "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "thieving",
+    "blood-chest"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:565",
+    "BATCH_UNITS": "277"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:565",
+   "role": "auto",
+   "resources": [
+    "blood-chest"
+   ]
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/generated/quest-crest.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:crest",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:crest",
+   "role": "army"
   },
   {
    "account": "Ballspinner",
@@ -102,7 +108,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:565",
-    "BATCH_UNITS": "270"
+    "BATCH_UNITS": "277"
    },
    "enabled": true,
    "repeat": false,
@@ -113,18 +119,16 @@
    ]
   },
   {
-   "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
-    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
-   ],
+   "account": "Quickhandjob",
+   "script": "scripts/generated/quest-ikov.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
+   "goal": "goal:quest_board:ikov",
    "role": "army"
   }
  ],
@@ -151,7 +155,6 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
