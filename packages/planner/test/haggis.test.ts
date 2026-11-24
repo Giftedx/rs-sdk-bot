@@ -623,3 +623,37 @@ test('dedicated Quest Points specialist omits non-quest 99s and beats #1 stunque
     expect(real.order.some(p => p.id === 'quests-rest')).toBe(true);
     expect(real.order.some(p => p.id === 'runecraft' || p.id === 'mine' || p.id === 'att-top')).toBe(false);
 }, 15_000);
+
+test('schedule walks after an initial bank-at activity without start and tracks sequential guest start ticks', () => {
+    const boards: Board[] = [
+        { id: 'cooking', label: 'Cooking', rule: { kind: 'clock', deadline: 10_000 } },
+        { id: 'fletching', label: 'Fletching', rule: { kind: 'clock', deadline: 10_000 } },
+        { id: 'crafting', label: 'Crafting', rule: { kind: 'clock', deadline: 10_000 } },
+        { id: 'overall', label: 'Overall', rule: { kind: 'clock', deadline: 10_000 } },
+    ];
+    const travelModel: TravelModel = {
+        places: { spotA: { x: 3200, z: 3200 }, spotB: { x: 3250, z: 3200 } },
+        cache: {
+            legs: { 'spotA>spotB': { runTicks: 25, tiles: 50 } },
+            nearestBank: {},
+            banks: { bankA: { x: 3201, z: 3200 } },
+        },
+    };
+    const acts: Activity[] = [
+        { id: 'prep', label: 'prep at bank', serves: ['cooking'], at: 'bank', ticks: { floor: 10, realistic: 10 }, evidence: 'CODE-READ', source: 'test' },
+        { id: 'cook', label: 'cook at A', serves: ['cooking'], requires: ['prep'], at: 'spotA', ticks: { floor: 20, realistic: 20 }, deadTicks: { floor: 15, realistic: 15 }, evidence: 'CODE-READ', source: 'test' },
+        { id: 'g1', label: 'guest 1', serves: ['fletching'], inside: 'cook', ticks: { floor: 30, realistic: 30 }, evidence: 'CODE-READ', source: 'test' },
+        { id: 'g2', label: 'guest 2', serves: ['crafting'], inside: 'cook', requires: ['g1'], ticks: { floor: 10, realistic: 10 }, evidence: 'CODE-READ', source: 'test' },
+        { id: 'moveB', label: 'move to B', serves: ['cooking'], requires: ['cook'], at: 'spotB', ticks: { floor: 5, realistic: 5 }, evidence: 'CODE-READ', source: 'test' },
+    ];
+    const res = schedule(boards, acts, { mode: 'realistic', tricks: new Set(), travel: travelModel });
+    expect(res.travel).toBeGreaterThan(0);
+    const moveB = res.order.find(p => p.id === 'moveB')!;
+    expect(moveB.from).toBe('spotA');
+    expect(moveB.to).toBe('spotB');
+    const g1 = res.order.find(p => p.id === 'g1')!;
+    const g2 = res.order.find(p => p.id === 'g2')!;
+    expect(g1.end).toBe(45);
+    expect(g2.start).toBe(45);
+    expect(g2.end).toBe(55);
+});

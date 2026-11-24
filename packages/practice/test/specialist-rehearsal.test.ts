@@ -282,3 +282,11 @@ test('ISOLATED_ENGINE_ENV keeps all worker ports below Linux ip_local_port_range
         expect(port).toBeLessThan(32_768);
     }
 });
+
+test('checkExpect validates item container locations and min/max bounds upfront', () => {
+    const empty = {position: {x: 0, z: 0, level: 0}, skills: {}, inventory: {}, worn: {}, bank: {}, varps: 0};
+    expect(() => checkExpect(empty, {items: {'556': {in: 'pouch' as never, min: 1}}})).toThrow(/location/);
+    expect(() => checkExpect(empty, {items: {'556': {min: -1}}})).toThrow(/min/);
+    expect(() => checkExpect(empty, {items: {'556': {max: -1}}})).toThrow(/max/);
+    expect(() => checkExpect(empty, {items: {'556': {min: 10, max: 5}}})).toThrow(/min > max/);
+});

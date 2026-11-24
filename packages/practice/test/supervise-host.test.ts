@@ -209,3 +209,23 @@ test('the host waits longer before its next run when the claim authority of an a
     expect((await superviseHost(['a', 'b'], other.deps)).ends).toEqual({ a: 'done', b: 'done' });
     expect(other.pauses).toEqual([10_000]);
 });
+
+test('hostStopped honors stop files in .practice/live/ as well as root .practice/', async () => {
+    const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { hostStopped } = await import('../src/supervise-host');
+    const dir = mkdtempSync(join(tmpdir(), 'supervise-host-stop-'));
+    try {
+        expect(hostStopped('HostedBot', dir)).toBe(false);
+        mkdirSync(join(dir, '.practice', 'live'), { recursive: true });
+        writeFileSync(join(dir, '.practice', 'live', 'stop-hostedbot'), 'owner live stop');
+        expect(hostStopped('HostedBot', dir)).toBe(true);
+        rmSync(join(dir, '.practice', 'live', 'stop-hostedbot'));
+        expect(hostStopped('HostedBot', dir)).toBe(false);
+        writeFileSync(join(dir, '.practice', 'stop-HostedBot'), 'legacy stop');
+        expect(hostStopped('HostedBot', dir)).toBe(true);
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});

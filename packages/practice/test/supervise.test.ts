@@ -393,3 +393,13 @@ test('shop-buy zero-purchase stock-wait and coin-reserve failures block immediat
  expect(isPrerequisiteFailure('RESULT fail ticks=15 boughtTotal=0 stop=coin-reserve targetMet=0')).toBe(true);
  expect(isPrerequisiteFailure('RESULT fail ticks=45 boughtTotal=5 stop=stock-wait targetMet=0')).toBe(false);
 });
+
+test('parseSuperviseArgs validates bot, script, and non-negative integer maxRestarts', async () => {
+ const { parseSuperviseArgs } = await import('../src/supervise');
+ expect(parseSuperviseArgs(['Bot1', 'scripts/a.ts'])).toEqual({ bot: 'Bot1', script: 'scripts/a.ts', maxRestarts: 20, scriptArgs: [] });
+ expect(parseSuperviseArgs(['Bot1', 'scripts/a.ts', '5', '--foo'])).toEqual({ bot: 'Bot1', script: 'scripts/a.ts', maxRestarts: 5, scriptArgs: ['--foo'] });
+ expect(() => parseSuperviseArgs(['Bot1'])).toThrow(/usage/);
+ expect(() => parseSuperviseArgs(['Bot1', 'scripts/a.ts', '--foo'])).toThrow(/maxRestarts/);
+ expect(() => parseSuperviseArgs(['Bot1', 'scripts/a.ts', '-1'])).toThrow(/maxRestarts/);
+ expect(() => parseSuperviseArgs(['Bot1', 'scripts/a.ts', '1.5'])).toThrow(/maxRestarts/);
+});

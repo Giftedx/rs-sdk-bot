@@ -214,9 +214,18 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
     }
 }
 
+export function parseSuperviseArgs(argv: readonly string[]): { bot: string; script: string; maxRestarts: number; scriptArgs: string[] } {
+    const [bot, script, maxArg, ...scriptArgs] = argv;
+    if (!bot || !script) throw Error('usage: supervise.ts <bot> <script> [maxRestarts=20]');
+    const maxRestarts = maxArg === undefined ? 20 : Number(maxArg);
+    if (!Number.isSafeInteger(maxRestarts) || maxRestarts < 0) throw Error(`maxRestarts must be a whole number: ${maxArg}`);
+    return { bot, script, maxRestarts, scriptArgs };
+}
+
 if (import.meta.main) {
-    const [bot, script, maxArg,...scriptArgs] = process.argv.slice(2);
-    if (!bot || !script) { console.log('usage: supervise.ts <bot> <script> [maxRestarts=20]'); process.exit(2); }
+    let parsed: ReturnType<typeof parseSuperviseArgs>;
+    try { parsed = parseSuperviseArgs(process.argv.slice(2)); } catch (e) { console.log(String(e)); process.exit(2); }
+    const { bot, script, maxRestarts, scriptArgs } = parsed;
     const participants=supervisorParticipants(bot,process.env.COORDINATOR_PARTICIPANTS);
     const r = await supervise({
         run: async () => {
@@ -228,7 +237,7 @@ if (import.meta.main) {
         },
         stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsHaveStopFile(participants, process.cwd()),
         pause: ms => Bun.sleep(ms),
-        maxRestarts: Number(maxArg ?? 20),
+        maxRestarts,
         log: l => console.log(l),
     });
     console.log(`SUPERVISE end ${r.reason} after ${r.runs} runs`);
