@@ -428,3 +428,20 @@ test('bunfig top-level preloads pin the preloaded module closure without putting
  const repoFiles=releaseFiles(['packages/core/src/host.ts'],repo);
  expect(repoFiles).toContain('packages/core/src/host.ts');
 });
+
+test('assertLiveWorkerRelease resolves confirmed legacy logout proofs even when .practice/live/session-lifecycle exists', async () => {
+ const { beginSessionAttempt } = await import('../src/session-lifecycle');
+ const root = fixture(), server = 'rs-sdk-demo.fly.dev';
+ try {
+  const pin = capabilityRevision(['scripts/worker.ts'], root), env = { WORKER_RELEASE: pin, WORKER_ENTRY: 'scripts/worker.ts' };
+  const liveLc = join(root, '.practice/live/session-lifecycle'), legacyLc = join(root, '.practice/session-lifecycle');
+  const liveAttempt = beginSessionAttempt({ account: 'FreshPeer', server }, { root: liveLc });
+  liveAttempt.record('connected'); liveAttempt.record('ready'); liveAttempt.record('ended', 'logged-out');
+  const legacyAttempt = beginSessionAttempt({ account: 'LegacyPeer', server }, { root: legacyLc });
+  legacyAttempt.record('connected'); legacyAttempt.record('ready'); legacyAttempt.record('ended', 'logged-out');
+  writeFileSync(join(root, '.practice/status/LegacyPeer.json'), JSON.stringify({
+   name: 'LegacyPeer', server, result: '', at: Date.now() - 600_000, workRevision: pin, sessionAttemptId: legacyAttempt.attemptId,
+  }));
+  expect(() => assertLiveWorkerRelease(server, env, root)).not.toThrow();
+ } finally { rmSync(root, { recursive: true, force: true }); }
+});
