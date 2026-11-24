@@ -2,19 +2,23 @@
 import type { Session } from '../packages/core/src/inprocess';
 import {
  assertCatalogItems,
- burstTradeHost,
  countItem,
  dropItemsFast,
  fastTradeExternalReceive,
  goalXp,
  ITEM_IDS,
+ levelForXp,
  logPhase,
  parseExternalSuppliers,
  parseSpecialistArgs,
- skipTutorialFast,
+ playerPos,
  skillLevel,
  skillXp,
+ TRADE_CONFIRM_ACCEPT,
+ TRADE_MAIN_ACCEPT,
+ TRADE_OFFER_INV,
  waitTicks,
+ waitUntil,
  withSingleSpecialist,
  withSpecialistFleet,
  type SupplyEntry,
@@ -90,6 +94,54 @@ export const CRAFTING_SUPPLY_BILL: readonly SupplyEntry[] = [
  { itemId: ITEM_IDS.uncut_dragonstone, item: 'Uncut dragonstone', count: 277 },
 ];
 
+const GEM_XP_BY_ID = new Map<number, number>(CRAFTING_GEMS.map(g => [g.id, g.xp]));
+const GEM_LEVEL_BY_ID = new Map<number, number>(CRAFTING_GEMS.map(g => [g.id, g.level]));
+const ON_STARTER_ISLAND = (p: { worldX: number; worldZ: number } | null | undefined): boolean =>
+ !!p && p.worldX >= 3050 && p.worldX <= 3160 && p.worldZ >= 3050 && p.worldZ <= 3140;
+
+/** Skip Tutorial Island in 2 ticks by chaining character design + guide talk and continue + "Yes please." */
+async function skipTutorial2Ticks(spec: Session, deadlineTick: number): Promise<void> {
+ const ready = await waitUntil(spec, () => !!playerPos(spec), { timeoutTicks: 20 });
+ if (!ready) throw Error('tutorial start player state unobserved');
+ let designSent = false;
+ let guideClicked = false;
+ while (spec.tick() < deadlineTick) {
+  const st = spec.sdk.getState();
+  const p = st?.player;
+  if (p && !ON_STARTER_ISLAND(p) && !st?.dialog?.isOpen && !st?.modalOpen) return;
+  if (st?.modalOpen && st.modalInterface === 3559 && !designSent) {
+   designSent = true;
+   await spec.direct({ type: 'acceptCharacterDesign', reason: 'SDK' });
+   const guide = st.nearbyNpcs.find(n => /^runescape guide$/i.test(n.name));
+   const op = guide?.optionsWithIndex.find(o => /^talk-to$/i.test(o.text));
+   if (guide && op) {
+    guideClicked = true;
+    await spec.direct({ type: 'interactNpc', npcIndex: guide.index, optionIndex: op.opIndex, reason: 'SDK' });
+   }
+  } else if (p && ON_STARTER_ISLAND(p)) {
+   const dlg = spec.sdk.getDialog();
+   if (dlg?.isOpen && !dlg.isWaiting) {
+    const yes = dlg.options.find((o: any) => /^yes please[.]?$/i.test(o.text));
+    if (yes && dlg.options.every((o: any) => /^(yes please|no, thank you)[.]?$/i.test(o.text))) {
+     await spec.direct({ type: 'clickDialogOption', optionIndex: yes.index, reason: 'SDK' });
+    } else if (dlg.options.length === 0 || (dlg.options.length === 1 && dlg.options[0]!.buttonType === 6)) {
+     await spec.direct({ type: 'clickDialogOption', optionIndex: 0, reason: 'SDK' });
+     await spec.direct({ type: 'clickComponent', componentId: 2461, reason: 'SDK' });
+    }
+   } else if (!guideClicked && designSent) {
+    const guide = st?.nearbyNpcs.find(n => /^runescape guide$/i.test(n.name));
+    const op = guide?.optionsWithIndex.find(o => /^talk-to$/i.test(o.text));
+    if (guide && op) {
+     guideClicked = true;
+     await spec.direct({ type: 'interactNpc', npcIndex: guide.index, optionIndex: op.opIndex, reason: 'SDK' });
+    }
+   }
+  }
+  await waitTicks(spec, 1);
+ }
+ throw Error('tutorial skip exceeded cap');
+}
+
 function keepSetFor(preserveCutDragonstones: boolean): Set<number> {
  const keep = new Set<number>([ITEM_IDS.chisel]);
  for (const tier of CRAFTING_GEMS) keep.add(tier.id);
@@ -97,66 +149,219 @@ function keepSetFor(preserveCutDragonstones: boolean): Set<number> {
  return keep;
 }
 
-async function cutUnlockedGems(spec: Session, target: number, deadlineTick: number, clearAllModals = false): Promise<void> {
+/** Cut gems at 5/tick across deterministic tier boundaries; optionally fire a pre-request on the final <5 tick. */
+async function cutUnlockedGems(
+ spec: Session,
+ target: number,
+ deadlineTick: number,
+ nextHelper?: Session,
+): Promise<{ preRequested: boolean; pendingDialogs: number }> {
  const tierIds = new Set(CRAFTING_GEMS.map(t => t.id));
+ let preRequested = false;
+ let pendingDialogs = 0;
+ let prevBaseLevel = skillLevel(spec, 'Crafting');
+
  while (spec.tick() < deadlineTick) {
-  if (skillLevel(spec, 'Crafting') >= target) return;
+  const curBase = skillLevel(spec, 'Crafting');
+  if (curBase > prevBaseLevel) {
+   pendingDialogs += curBase - prevBaseLevel;
+   prevBaseLevel = curBase;
+  }
+  if (curBase >= target) return { preRequested, pendingDialogs };
+
   const inv = spec.sdk.getInventory();
   const chisel = inv.find(i => i.id === ITEM_IDS.chisel);
   if (!chisel) throw Error('crafting chisel missing');
-  const lvl = skillLevel(spec, 'Crafting');
-  const unlocked = new Set(CRAFTING_GEMS.filter(t => lvl >= t.level).map(t => t.id));
-  const gems = inv.filter(i => tierIds.has(i.id) && unlocked.has(i.id));
-  if (!gems.length) return;
-  const st = spec.sdk.getState();
-  const modalOpen = !!st?.dialog?.isOpen && !st?.trade?.isOpen;
-  const spare = Math.ceil(gems.length / 5) * 5 - gems.length;
-  const closeNow = modalOpen && (clearAllModals || spare > 0 || gems.length <= 4);
-  const batch = gems.slice(0, closeNow ? 4 : 5);
+
+  const realXp = skillXp(spec, 'Crafting');
+  const unlockedNow = new Set(CRAFTING_GEMS.filter(t => curBase >= t.level).map(t => t.id));
+  const deterministicIds = new Set(
+   CRAFTING_GEMS.filter(t => t.id !== ITEM_IDS.uncut_opal && t.id !== ITEM_IDS.uncut_jade && t.id !== ITEM_IDS.uncut_red_topaz).map(t => t.id),
+  );
+  // Pick up to 5 gems in ascending level order, predicting level-ups across deterministic gems (sapphire+).
+  const gems = inv
+   .filter(i => tierIds.has(i.id))
+   .sort((a, b) => (GEM_LEVEL_BY_ID.get(a.id) ?? 99) - (GEM_LEVEL_BY_ID.get(b.id) ?? 99));
+  let simXp = realXp;
+  const batch: typeof inv = [];
+  for (const gem of gems) {
+   if (batch.length >= 5) break;
+   const reqLvl = GEM_LEVEL_BY_ID.get(gem.id) ?? 99;
+   const canPredict = unlockedNow.has(gem.id) || (deterministicIds.has(gem.id) && levelForXp(simXp) >= reqLvl);
+   if (!canPredict) continue;
+   batch.push(gem);
+   if (deterministicIds.has(gem.id)) simXp += GEM_XP_BY_ID.get(gem.id) ?? 0;
+  }
+  if (!batch.length) return { preRequested, pendingDialogs };
+
+  const allDeterministic = batch.every(g => deterministicIds.has(g.id));
+  const totalRemaining = gems.length;
+  const willLevel = allDeterministic ? levelForXp(simXp) > curBase : true;
+  const dialogOpen = !!spec.sdk.getState()?.dialog?.isOpen;
+  // Note: 1 OpHeldU closes an open dialog, so engineQueue drains 1 per tick whenever dialogOpen or pendingDialogs > 0.
+  const canPreRequest =
+   !!nextHelper &&
+   totalRemaining <= 4 &&
+   batch.length === totalRemaining &&
+   !willLevel &&
+   pendingDialogs <= (dialogOpen ? 1 : 0);
+
   const actions: Promise<unknown>[] = [];
-  if (closeNow) actions.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
   for (const gem of batch) {
    actions.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
   }
-  await Promise.all(actions);
-  await waitTicks(spec, 1);
+  const helperActs: Promise<unknown>[] = [];
+  if (canPreRequest) {
+   const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === nextHelper.name.toLowerCase());
+   const sTarget = nextHelper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === spec.name.toLowerCase());
+   if (hTarget && sTarget) {
+    preRequested = true;
+    helperActs.push(nextHelper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+    actions.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+   }
+  }
+  await Promise.all([...helperActs, ...actions]);
+  // One dialog popped/cleared during this tick if one was open or queued.
+  if (dialogOpen && pendingDialogs > 0) pendingDialogs--;
+  await Promise.all(nextHelper ? [waitTicks(spec, 1), waitTicks(nextHelper, 1)] : [waitTicks(spec, 1)]);
  }
  throw Error('crafting gem cut exceeded cap');
 }
 
-async function executeCraftingLoop(
+/**
+ * Drop unwanted tutorial/cut items at 5/tick (or 4/tick + interactPlayer when draining level-ups)
+ * and execute a zero-cooldown in-process trade with `helper`.
+ */
+async function fastInProcessBatchTrade(
  spec: Session,
- target: number,
- start: number,
- deadline: number,
- receiveBatch: (batch: CraftingBatchPlan, index: number) => Promise<void>,
-): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
- await skipTutorialFast(spec, deadline);
- await dropItemsFast(spec, new Set(), deadline);
- logPhase(spec, start, 'crafting_ready');
+ helper: Session,
+ opts: {
+  giveIds: readonly number[];
+  returnIds: readonly number[];
+  dropUnwanted?: ReadonlySet<number>;
+  deadlineTick: number;
+  alreadyRequested?: boolean;
+ },
+): Promise<void> {
+ const begin = spec.tick();
+ const helperLower = helper.name.toLowerCase();
+ const specLower = spec.name.toLowerCase();
+ const giveSet = new Set(opts.giveIds);
+ const returnSet = new Set(opts.returnIds);
+ const keepSet = opts.dropUnwanted;
+ let sawConfirm = false;
+ let lastReqTick = opts.alreadyRequested ? begin - 1 : -10;
 
- for (let i = 0; i < CRAFTING_BATCHES.length && skillLevel(spec, 'Crafting') < target; i++) {
-  const batch = CRAFTING_BATCHES[i]!;
-  if (i > 0 && batch.returnIds.length === 0) {
-   await dropItemsFast(spec, keepSetFor(false), deadline);
+ while (spec.tick() < opts.deadlineTick) {
+  const st = spec.sdk.getTradeState();
+  const ht = helper.sdk.getTradeState();
+
+  if (!st.isOpen && !ht.isOpen) {
+   if (sawConfirm || opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
+    console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+    return;
+   }
+   const dropSlots = keepSet ? spec.sdk.getInventory().filter(i => !keepSet.has(i.id)).map(i => i.slot) : [];
+   const dlgOpen = !!spec.sdk.getState()?.dialog?.isOpen;
+   const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperLower);
+   const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);
+   const sActs: Promise<unknown>[] = [];
+   const hActs: Promise<unknown>[] = [];
+
+   if (dropSlots.length > 4) {
+    for (const slot of dropSlots.slice(0, 5)) {
+     sActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+    }
+   } else {
+    for (const slot of dropSlots) {
+     sActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+    }
+    if (hTarget && sTarget && spec.tick() - lastReqTick >= 2) {
+     lastReqTick = spec.tick();
+     hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+     sActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+    } else if (dlgOpen) {
+     sActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+    }
+   }
+   if (hActs.length) await Promise.all(hActs);
+   if (sActs.length) await Promise.all(sActs);
+   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+   continue;
   }
-  await receiveBatch(batch, i);
-  // Batches 0..2 cross 10-20+ levels each; later batches drain up to 3 free modals inside the same 6-tick cut window.
-  await cutUnlockedGems(spec, target, deadline, i <= 2);
-  if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
- }
 
- const level = skillLevel(spec, 'Crafting');
- const xp = skillXp(spec, 'Crafting');
- const ok = level >= target && xp >= (target === 99 ? goalXp() : 0);
- const ticks = spec.tick() - start;
- return {
-  ok,
-  detail: `skill=crafting level=${level} xp=${xp} ticks=${ticks} gemCount=${countItem(spec.sdk.getInventory(), ITEM_IDS.dragonstone)}`,
-  ticks,
-  level,
-  xp,
- };
+  if (st.screen === 'confirm' || ht.screen === 'confirm') {
+   sawConfirm = true;
+   const hActs: Promise<unknown>[] = [];
+   const sActs: Promise<unknown>[] = [];
+   if (ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted) {
+    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   if (hActs.length) await Promise.all(hActs);
+   if (sActs.length) await Promise.all(sActs);
+   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+   if (!spec.sdk.getTradeState().isOpen && !helper.sdk.getTradeState().isOpen && opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
+    console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+    return;
+   }
+   continue;
+  }
+
+  const hActs: Promise<unknown>[] = [];
+  const sActs: Promise<unknown>[] = [];
+  const hOffered = new Set(ht.myOffer.map(o => o.id));
+  const sOffered = new Set(st.myOffer.map(o => o.id));
+  const hSlots = new Map<number, number>();
+  const sSlots = new Map<number, number>();
+  if (ht.isOpen) {
+   for (const item of helper.sdk.getInventory()) {
+    if (giveSet.has(item.id) && !hOffered.has(item.id) && !hSlots.has(item.id)) hSlots.set(item.id, item.slot);
+   }
+  }
+  if (st.isOpen && returnSet.size > 0) {
+   for (const item of spec.sdk.getInventory()) {
+    if (returnSet.has(item.id) && !sOffered.has(item.id) && !sSlots.has(item.id)) sSlots.set(item.id, item.slot);
+   }
+  }
+
+  const hAllOffered = hSlots.size === 0 || [...hSlots.keys()].length <= 4;
+  const sAllOffered = sSlots.size === 0 || [...sSlots.keys()].length <= 4;
+  const hToOffer = [...hSlots.values()].slice(0, hSlots.size > 4 ? 5 : 4);
+  const sToOffer = [...sSlots.values()].slice(0, sSlots.size > 4 ? 5 : 4);
+
+  for (const slot of hToOffer) {
+   hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+  }
+  for (const slot of sToOffer) {
+   sActs.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+  }
+
+  // Since spec has lower PID than helper, let helper accept main on tick 1 and spec accept+confirm on tick 2.
+  if (hAllOffered && !ht.myAccepted && ht.isOpen) {
+   hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+  }
+  if (hAllOffered && sAllOffered && ht.myAccepted && st.myAccepted && hToOffer.length === 0 && sToOffer.length === 0) {
+   hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+  } else if (hAllOffered && sAllOffered && sToOffer.length === 0 && !st.myAccepted && ht.myAccepted) {
+   // Spec transitions main->confirm and accepts confirm together, so helper confirms right after in the same tick.
+   hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+  }
+
+  if (sAllOffered && sToOffer.length === 0 && !st.myAccepted && st.isOpen && hAllOffered && (ht.myAccepted || hToOffer.length === 0)) {
+   sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+   if (ht.myAccepted || hToOffer.length > 0) {
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+  }
+
+  if (hActs.length) await Promise.all(hActs);
+  if (sActs.length) await Promise.all(sActs);
+  await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+ }
+ throw Error(`fastInProcessBatchTrade with ${helper.name} exceeded cap`);
 }
 
 export async function runCraftingSpecialist(
@@ -181,14 +386,38 @@ export async function runCraftingSpecialist(
  );
 
  try {
-  return await executeCraftingLoop(spec, target, start, deadline, (batch, i) =>
-   burstTradeHost(spec, helpers[i]!, {
+  await skipTutorial2Ticks(spec, deadline);
+  let preReq = false;
+
+  for (let i = 0; i < CRAFTING_BATCHES.length && skillLevel(spec, 'Crafting') < target; i++) {
+   const batch = CRAFTING_BATCHES[i]!;
+   // Batch 0 drops all 18 tutorial items (4t + pre-request on 4th tick); Batches 1 & 2 drop Batch 0/1 cut gems while draining level-up modals for free.
+   const dropKeep = i === 0 ? new Set<number>() : i <= 2 ? keepSetFor(false) : undefined;
+   await fastInProcessBatchTrade(spec, helpers[i]!, {
     giveIds: batch.give.map(g => g.id),
-    returnIds: batch.returnIds,
+    returnIds: i <= 2 ? [] : batch.returnIds,
+    dropUnwanted: dropKeep,
     deadlineTick: deadline,
-    allowHelperOnSingleModal: i >= 3,
-   }),
-  );
+    alreadyRequested: preReq,
+   });
+   if (i === 0) logPhase(spec, start, 'crafting_ready');
+   const nextHelper = i + 1 < CRAFTING_BATCHES.length && i >= 2 ? helpers[i + 1]! : undefined;
+   const cutRes = await cutUnlockedGems(spec, target, deadline, nextHelper);
+   preReq = cutRes.preRequested;
+   if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
+  }
+
+  const level = skillLevel(spec, 'Crafting');
+  const xp = skillXp(spec, 'Crafting');
+  const ok = level >= target && xp >= (target === 99 ? goalXp() : 0);
+  const ticks = spec.tick() - start;
+  return {
+   ok,
+   detail: `skill=crafting level=${level} xp=${xp} ticks=${ticks} gemCount=${countItem(spec.sdk.getInventory(), ITEM_IDS.dragonstone)}`,
+   ticks,
+   level,
+   xp,
+  };
  } finally {
   done = true;
   await Promise.allSettled(keepers);
@@ -205,15 +434,37 @@ export async function runCraftingExternal(
  const target = opts.target ?? 99;
  const start = spec.tick();
  const deadline = start + opts.cap;
- return executeCraftingLoop(spec, target, start, deadline, async (batch, index) => {
-  const targets = supplierNames.length >= CRAFTING_BATCHES.length ? [supplierNames[index]!] : supplierNames;
+ await skipTutorial2Ticks(spec, deadline);
+ await dropItemsFast(spec, new Set(), deadline);
+ logPhase(spec, start, 'crafting_ready');
+
+ for (let i = 0; i < CRAFTING_BATCHES.length && skillLevel(spec, 'Crafting') < target; i++) {
+  const batch = CRAFTING_BATCHES[i]!;
+  if (i > 0 && i <= 2) {
+   await dropItemsFast(spec, keepSetFor(false), deadline);
+  }
+  const targets = supplierNames.length >= CRAFTING_BATCHES.length ? [supplierNames[i]!] : supplierNames;
   await fastTradeExternalReceive(spec, targets, {
-   returnIds: batch.returnIds,
-   allowSingleModal: index >= 3,
+   returnIds: i <= 2 ? [] : batch.returnIds,
+   allowSingleModal: true,
    acceptOffer: offer => batch.give.every(g => countItem(offer, g.id) >= g.count),
    deadlineTick: deadline,
   });
- });
+  await cutUnlockedGems(spec, target, deadline);
+  if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
+ }
+
+ const level = skillLevel(spec, 'Crafting');
+ const xp = skillXp(spec, 'Crafting');
+ const ok = level >= target && xp >= (target === 99 ? goalXp() : 0);
+ const ticks = spec.tick() - start;
+ return {
+  ok,
+  detail: `skill=crafting level=${level} xp=${xp} ticks=${ticks} gemCount=${countItem(spec.sdk.getInventory(), ITEM_IDS.dragonstone)}`,
+  ticks,
+  level,
+  xp,
+ };
 }
 
 if (import.meta.main) {
