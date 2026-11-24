@@ -172,3 +172,10 @@ test('invalid chain rounds refuse one hosted actor without rejecting its peers',
         expect(results[1]!.result).toBe('RESULT fail chain needs steps and nonnegative integer ROUNDS');
     } finally { rmSync(logDir, { recursive: true, force: true }); }
 });
+
+test('hostedEntrySource escapes newline and separator characters in bot ids cleanly', () => {
+    const src = `import { openBot } from '../packages/core/src/bot';\nvoid openBot('x');\n`;
+    const rendered = hostedEntrySource(src, "bot\nline\r'\u2028", resolve(import.meta.dir, '..', '..', '..', 'scripts'));
+    expect(() => new Bun.Transpiler({ loader: 'js', target: 'bun' }).transformSync(rendered)).not.toThrow();
+    expect(rendered).toContain('hostbot=bot\\nline\\r\\\'\\u2028');
+});

@@ -2,9 +2,10 @@
 // pathfinder masks them). A route search asks "same area?" before it runs findLongPath: a leg between two areas
 // cannot be walked, and searching it scans the whole 2048x2048 grid. Ardougne to Varrock took 180 s of search that
 // way. Labelling the map takes about 5 s for 7.7M tiles in 20,763 areas.
-import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from 'node:fs';
+import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { renameRetry } from './atomic-file';
 import { pathfindingDataKey } from './pathcache';
 
 // Labels hold one flat array of 64 labels for each zone (cells, in the order of zoneKeys; 0xffff in a Uint16Array, or -1 in an
@@ -190,7 +191,12 @@ export function writeLabels(file: string, source: string, l: Labels): void {
     mkdirSync(dirname(file), { recursive: true });
     const tmp = `${file}.${process.pid}.tmp`;
     writeFileSync(tmp, Buffer.concat([len, header, keyBytes, idBytes]));
-    renameSync(tmp, file);
+    try {
+        renameRetry(tmp, file);
+    } catch (error) {
+        try { unlinkSync(tmp); } catch { /* retain original error */ }
+        throw error;
+    }
 }
 export function readLabels(file: string, source: string): Labels | null {
     let fd: number | undefined;
@@ -317,6 +323,8 @@ export function mapAreas(pf: any, grid: any, repoRoot: string): Labels {
     for (let x = 2304; x <= 3392; x += 8) for (let z = 2944; z <= 3584; z += 8) zones.push([0, x, z]);
     const labels = labelAreas(zones, (l, x, z) => pf.isTileWalkable(l, x, z),
         (l, x, z, dx, dz) => grid.canTravel(l, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL));
-    if (labels.areas < 0xffff) writeLabels(file, source, labels);
+    if (labels.areas < 0xffff) {
+        try { writeLabels(file, source, labels); } catch { /* optional cache */ }
+    }
     return publishBuiltAreas(labels);
 }

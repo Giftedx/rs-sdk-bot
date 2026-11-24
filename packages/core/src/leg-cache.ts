@@ -110,7 +110,10 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
         try { if (db?.query('SELECT 1 FROM legs WHERE source < ?1 OR source > ?1 LIMIT 1').get(namespace)) db.query('DELETE FROM legs WHERE source < ?1 OR source > ?1').run(namespace); } catch { /* another process prunes, or the store is busy */ }
     }
     const rememberRead = (key: string, value: number | null) => {
-        if (readMemo.size >= READ_MEMO_LIMIT) readMemo.clear();
+        if (!readMemo.has(key) && readMemo.size >= READ_MEMO_LIMIT) {
+            const oldest = readMemo.keys().next().value;
+            if (oldest !== undefined) readMemo.delete(oldest);
+        }
         readMemo.set(key, value);
     };
     const preloadFromDb = () => {

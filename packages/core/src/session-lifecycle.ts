@@ -352,14 +352,18 @@ export function listAttemptsSince(
     minCreatedAt: number,
     opts: { root?: string; base?: string } = {},
 ): { attemptId: string; receipt: AttemptReceipt | null; sha256: string | null }[] {
-    const prefix = String(Math.max(0, Math.floor(minCreatedAt))).padStart(13, '0');
+    if (minCreatedAt === Infinity) return [];
+    const floor = Number.isFinite(minCreatedAt) ? Math.max(0, Math.floor(minCreatedAt)) : 0;
+    const rawPrefix = String(floor);
+    const prefix = rawPrefix.length <= 13 ? rawPrefix.padStart(13, '0') : '';
     const listAt = (root?: string) => {
         const attempts = join(accountDir(account, server, root), 'attempts');
         if (!existsSync(attempts)) return [];
         const names = readdirSync(attempts).filter(n => {
             if (!n.endsWith('.json')) return false;
             const id = n.slice(0, -5);
-            return !ATTEMPT.test(id) || id.slice(0, 13) >= prefix;
+            if (!ATTEMPT.test(id)) return true;
+            return prefix ? id.slice(0, 13) >= prefix : Number(id.slice(0, id.indexOf('-'))) >= floor;
         }).sort();
         return names.map(n => readAttemptEntry(attempts, n));
     };

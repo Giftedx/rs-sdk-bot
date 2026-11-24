@@ -39,13 +39,15 @@ import { finish } from './settle';
 const NO_GUARD_SCRIPT_RE = /quest|microbot/i;
 
 function samePackSnapshot(prev: readonly { id: number; count: number }[], raw: readonly any[] | undefined): boolean {
-    const len = raw?.length ?? 0;
-    if (prev.length !== len) return false;
-    for (let i = 0; i < len; i++) {
-        const cur = raw![i];
-        if (prev[i]!.id !== cur.id || prev[i]!.count !== (cur.count ?? 1)) return false;
+    if (!raw?.length) return prev.length === 0;
+    let count = 0;
+    for (let i = 0; i < raw.length; i++) {
+        const cur = raw[i];
+        if (!cur) continue;
+        if (count >= prev.length || prev[count]!.id !== cur.id || prev[count]!.count !== (cur.count ?? 1)) return false;
+        count++;
     }
-    return true;
+    return count === prev.length;
 }
 
 function sameWornSnapshot(prev: readonly number[], raw: readonly any[] | undefined): boolean {
@@ -269,7 +271,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
                 lastMaxHpVal = pNow.maxHp;
                 const pack = deathOn && lastAlive && samePackSnapshot(lastAlive.pack, st.inventory)
                     ? lastAlive.pack
-                    : (deathOn ? (st.inventory ?? []).map((i: any) => ({ id: i.id, count: i.count ?? 1 })) : []);
+                    : (deathOn ? (st.inventory ?? []).filter(Boolean).map((i: any) => ({ id: i.id, count: i.count ?? 1 })) : []);
                 const worn = deathOn && lastAlive && sameWornSnapshot(lastAlive.worn, st.equipment)
                     ? lastAlive.worn
                     : (deathOn ? (st.equipment ?? []).filter(Boolean).map((i: any) => i.id) : []);

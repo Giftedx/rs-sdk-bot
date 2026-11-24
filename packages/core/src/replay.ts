@@ -30,12 +30,33 @@ export interface ReplayResult {
 }
 const typeOf = (a: unknown) => (a as { type?: unknown } | null)?.type;
 
+const jsonElement = (v: unknown): unknown => {
+    if (v === undefined || typeof v === 'function' || typeof v === 'symbol') return null;
+    if (v !== null && typeof v === 'object' && typeof (v as { toJSON?: unknown }).toJSON === 'function') {
+        const j = (v as { toJSON: () => unknown }).toJSON();
+        return j === undefined || typeof j === 'function' || typeof j === 'symbol' ? null : j;
+    }
+    return v;
+};
+
+const jsonPropOmitted = (v: unknown): boolean => {
+    if (v === undefined || typeof v === 'function' || typeof v === 'symbol') return true;
+    if (v !== null && typeof v === 'object' && typeof (v as { toJSON?: unknown }).toJSON === 'function') {
+        const j = (v as { toJSON: () => unknown }).toJSON();
+        return j === undefined || typeof j === 'function' || typeof j === 'symbol';
+    }
+    return false;
+};
+
 const same = (a: unknown, b: unknown): boolean => {
     if (a === b) return true;
     if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
         return JSON.stringify(a) === JSON.stringify(b);
     }
-    if (typeof (a as { toJSON?: unknown }).toJSON === 'function' || typeof (b as { toJSON?: unknown }).toJSON === 'function') {
+    if (a instanceof Number || a instanceof String || a instanceof Boolean
+        || b instanceof Number || b instanceof String || b instanceof Boolean
+        || typeof (a as { toJSON?: unknown }).toJSON === 'function'
+        || typeof (b as { toJSON?: unknown }).toJSON === 'function') {
         return JSON.stringify(a) === JSON.stringify(b);
     }
     const aArr = Array.isArray(a);
@@ -43,15 +64,19 @@ const same = (a: unknown, b: unknown): boolean => {
     if (aArr) {
         const arrA = a as unknown[], arrB = b as unknown[];
         if (arrA.length !== arrB.length) return false;
-        for (let i = 0; i < arrA.length; i++) if (!same(arrA[i], arrB[i])) return false;
+        for (let i = 0; i < arrA.length; i++) {
+            const va = i in arrA ? jsonElement(arrA[i]) : null;
+            const vb = i in arrB ? jsonElement(arrB[i]) : null;
+            if (!same(va, vb)) return false;
+        }
         return true;
     }
     const objA = a as Record<string, unknown>, objB = b as Record<string, unknown>;
     const keysA = Object.keys(objA), keysB = Object.keys(objB);
     let ia = 0, ib = 0;
     for (;;) {
-        while (ia < keysA.length && (objA[keysA[ia]!] === undefined || typeof objA[keysA[ia]!] === 'function' || typeof objA[keysA[ia]!] === 'symbol')) ia++;
-        while (ib < keysB.length && (objB[keysB[ib]!] === undefined || typeof objB[keysB[ib]!] === 'function' || typeof objB[keysB[ib]!] === 'symbol')) ib++;
+        while (ia < keysA.length && jsonPropOmitted(objA[keysA[ia]!])) ia++;
+        while (ib < keysB.length && jsonPropOmitted(objB[keysB[ib]!])) ib++;
         const doneA = ia >= keysA.length, doneB = ib >= keysB.length;
         if (doneA || doneB) return doneA && doneB;
         const ka = keysA[ia++]!;

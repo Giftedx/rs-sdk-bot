@@ -151,7 +151,9 @@ test('external callers import bot, gather, and loot only through their facades',
     const directSubmoduleImports: string[] = [];
     for (const rel of allModules) {
         const abs = join(repoRoot, rel);
-        const info = ts.preProcessFile(readFileSync(abs, 'utf8'), true, true);
+        const source = readFileSync(abs, 'utf8');
+        if (!GROUPS.some(g => source.includes(`${g}/`) || source.includes(`${g}\\`))) continue;
+        const info = ts.preProcessFile(source, true, true);
         for (const imp of info.importedFiles) {
             const spec = imp.fileName;
             for (const group of GROUPS) {
