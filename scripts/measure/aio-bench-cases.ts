@@ -1783,8 +1783,7 @@ const SAME_JOB_CASES: BenchCase[] = [
     jobFiles: {'.practice/aio-bench/jobs/{bot}-same-cook.json': {family: 'cooking', recipe: 'cooking_generic_trout', target: 84, batch: 28, cap: 1500, returnTicks: 300, members: true, bank: {x: 2809, z: 3441, level: 0}, site: {x: 2816, z: 3443, level: 0}, heat: 'range'}}}),
   // 26 sapphire rings from the Al Kharid bank at Crafting 50: a ring mould, 26 gold bars and 26 sapphires banked,
   // 13 rings a pack. `legacy-jewelry` has no unit count and runs to a cap of 400 ticks; `jewellery-trip` makes 26 and ends.
-  sameJob('jewel-legacy', ['crafting', 'legacy-jewelry', '400', 'smelt', 'sapphire'], SAME_JEWEL, /crafted=(\d+)/, {timeoutMs: 60_000,
-    known: 'the smelt action in packages/workers/src/bank-artisan/crafting.ts does not end: the furnace distance test is always true, and the loop holds about 1 GB until the time limit'}),
+  sameJob('jewel-legacy', ['crafting', 'legacy-jewelry', '400', 'smelt', 'sapphire'], SAME_JEWEL, /crafted=(\d+)/, {timeoutMs: 60_000}),
   sameJob('jewel-trip', ['crafting', 'jewellery-trip', '.practice/aio-bench/jobs/{bot}-same-jewel.json'], SAME_JEWEL, /"made":(\d+)/, {pass: s => ok(s) && /"made":26,"banked":26/.test(s),
     jobFiles: {'.practice/aio-bench/jobs/{bot}-same-jewel.json': {recipe: 'sapphire_ring', target: 26, batch: 13, cap: 1500, returnTicks: 200, reserve: 0, members: false, stringAmulet: false, bank: {x: 3269, z: 3167, level: 0}, furnace: {x: 3275, z: 3186, level: 0}}}}),
   // The enchant steps of the mock Haggis run's block 2 (Magic 9 to 59 at the Draynor bank): each gem's rings, cosmic

@@ -165,7 +165,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'crafting',method:'bowstrings',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','bowstrings'],description:'Spin flax into bowstrings at Seers/Lumbridge wheel'},
  {skill:'crafting',method:'jewellery',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','jewellery'],description:'Craft rings, necklaces, and amulets at furnace'},
  {skill:'crafting',method:'jewellery-trip',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','jewellery-trip'],description:'Full bank-to-furnace jewellery crafting trip'},
- {skill:'crafting',method:'legacy-jewelry',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','legacy-jewelry'],description:'Gem cutting at the Al Kharid bank (action cut). The smelt action does not end (bench case extra:same-jewel-legacy): use jewellery-trip for furnace jewellery'},
+ {skill:'crafting',method:'legacy-jewelry',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','legacy-jewelry'],description:'Gem cutting and furnace jewellery smelting at Al Kharid (use jewellery-trip for bounded orders)'},
  {skill:'crafting',method:'glass',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','glass'],description:'Smelt soda ash + sand into molten glass and blow glass items'},
  {skill:'crafting',method:'tanning',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','tanning'],description:'Tan cowhide and dragonhides at Al Kharid tanner'},
  {skill:'crafting',method:'black-dhide-sets',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','black-dhide-sets'],description:'Tan banked black dragonhide at Al Kharid and craft body, chaps and vambraces sets at the bank'},
