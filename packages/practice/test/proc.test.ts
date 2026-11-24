@@ -102,8 +102,8 @@ test('a PowerShell read that times out gives "not known" and carries the time li
     }) as any);
     Object.defineProperty(process, 'platform', { value: 'win32' });
     try {
-        expect(processStartTimes([4242])).toBeNull();
-        expect(commandLine(4242)).toBeNull();
+        expect(processStartTimes([process.pid])).toBeNull();
+        expect(commandLine(process.pid)).toBeNull();
         expect(calls).toHaveLength(2);
         for (const call of calls) {
             expect(call.command[0]).toBe('powershell');
@@ -117,11 +117,12 @@ test('a PowerShell read that times out gives "not known" and carries the time li
 
 test('spawnSyncTimed retries once on an immediate SIGTERM null exit and stops after two', () => {
     const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    const livePid = process.pid;
     const replies: any[] = [
         { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
         { exitCode: 0, stdout: Buffer.from('C:\\bun.exe'), stderr: Buffer.from(''), success: true },
         { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
-        { exitCode: 0, stdout: Buffer.from('4242|1700000000000\nread\n'), stderr: Buffer.from(''), success: true },
+        { exitCode: 0, stdout: Buffer.from(`${livePid}|1700000000000\nread\n`), stderr: Buffer.from(''), success: true },
         { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
         { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
         { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
@@ -131,13 +132,13 @@ test('spawnSyncTimed retries once on an immediate SIGTERM null exit and stops af
     const spawn = spyOn(Bun, 'spawnSync').mockImplementation((() => replies[calls++]) as any);
     Object.defineProperty(process, 'platform', { value: 'win32' });
     try {
-        expect(commandLine(4242)).toBe('C:\\bun.exe');
+        expect(commandLine(livePid)).toBe('C:\\bun.exe');
         expect(calls).toBe(2);
-        expect(processStartTimes([4242])).toEqual(new Map([[4242, 1700000000000]]));
+        expect(processStartTimes([livePid])).toEqual(new Map([[livePid, 1700000000000]]));
         expect(calls).toBe(4);
-        expect(commandLine(4242)).toBeNull();
+        expect(commandLine(livePid)).toBeNull();
         expect(calls).toBe(6);
-        expect(processStartTimes([4242])).toBeNull();
+        expect(processStartTimes([livePid])).toBeNull();
         expect(calls).toBe(8);
     } finally {
         Object.defineProperty(process, 'platform', platform);
