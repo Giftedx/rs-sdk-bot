@@ -20,33 +20,67 @@ let buildMs = 0;
 const getBuildMs = () => buildMs;
 const setBuildMs = (ms: number) => { buildMs = ms; };
 
-const procs: { pid: number; script: string; started: number; mb: number; accounts: string[] }[] = [];
+type ProcRow = { pid: number; script: string; started: number; mb: number; accounts: string[] };
+const procs: ProcRow[] = [];
 let procsAt = 0, procsScanning = false;
 const clients = new Set<ReadableStreamDefaultController>();
 const viewerTimings: { at: number; mode: string; ms: number; tiles: number; frames: number; blankFrames: number; holdFrames: number }[] = [];
 
+function parseProcLines(text: string, windows: boolean, now: number, accounts: readonly string[]): ProcRow[] {
+    const out: ProcRow[] = [];
+    const accountEntries = accounts.map(name => ({ name, lower: name.toLowerCase() }));
+    for (const line of text.split(/\r?\n/)) {
+        let pid: number;
+        let started: number;
+        let mb: number;
+        let cmdLine: string;
+        if (windows) {
+            const [pidRaw, created, ws, ...cmd] = line.trim().split('|');
+            pid = Number(pidRaw);
+            started = Date.parse(created ?? '');
+            const wsNum = Number(ws);
+            if (!pidRaw || !created || !Number.isSafeInteger(pid) || pid <= 0 || !Number.isFinite(started) || !Number.isFinite(wsNum) || wsNum < 0) continue;
+            mb = Math.round(wsNum / 2 ** 20);
+            cmdLine = cmd.join('|');
+        } else {
+            const m = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)(.*)$/.exec(line);
+            if (!m || !/(?:^|\/)bun$/.test(m[4]!)) continue;
+            pid = Number(m[1]);
+            const elapsedSec = Number(m[2]), rssKb = Number(m[3]);
+            if (!Number.isSafeInteger(pid) || pid <= 0 || !Number.isFinite(elapsedSec) || elapsedSec < 0 || !Number.isFinite(rssKb) || rssKb < 0) continue;
+            started = now - elapsedSec * 1000;
+            mb = Math.round(rssKb / 1024);
+            cmdLine = m[4]! + m[5]!;
+        }
+        // Only the script file name: command lines never reach the page.
+        const script = (cmdLine.match(/([\w.-]+\.(?:ts|js))\b/g) ?? []).pop() ?? 'bun';
+        const tokens = (cmdLine.match(/"[^"]*"|'[^']*'|[^\s]+/g) ?? []).map(t => t.replace(/^["']|["']$/g, '').toLowerCase());
+        const matchedAccounts = accountEntries.filter(a => tokens.includes(a.lower)).map(a => a.name);
+        out.push({ pid, script, started, mb, accounts: matchedAccounts });
+    }
+    out.sort((a, b) => a.started - b.started);
+    return out;
+}
+
 async function scanProcs(force = false) {
-    if (!clients.size && !force) return; // nobody watching: no PowerShell
-    if (procsScanning) return; // a slow scan must not stack a second PowerShell
+    if (!clients.size && !force) return; // nobody watching: no process scan
+    if (procsScanning) return; // a slow scan must not stack a second process
     procsScanning = true;
     procsAt = Date.now();
     try {
-        const ps = "Get-CimInstance Win32_Process -Filter \"Name='bun.exe'\" | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.WorkingSetSize, $_.CommandLine }";
-        const p = Bun.spawn(['powershell', '-NoProfile', '-Command', ps], { stdout: 'pipe', stderr: 'ignore', windowsHide: true });
-        const hung = setTimeout(() => p.kill(), 20_000);
-        const text = await new Response(p.stdout).text().finally(() => clearTimeout(hung));
+        const windows = process.platform === 'win32';
+        const cmd = windows
+            ? ['powershell', '-NoProfile', '-Command', "Get-CimInstance Win32_Process -Filter \"Name='bun.exe'\" | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.WorkingSetSize, $_.CommandLine }"]
+            : ['ps', '-eo', 'pid=,etimes=,rss=,args='];
+        const p = Bun.spawn(cmd, { stdout: 'pipe', stderr: 'ignore', windowsHide: true });
+        let timedOut = false;
+        const hung = setTimeout(() => { timedOut = true; try { p.kill(); } catch { /* exited */ } }, 20_000);
+        const [text, exitCode] = await Promise.all([new Response(p.stdout).text(), p.exited]).finally(() => clearTimeout(hung));
+        if (timedOut || exitCode !== 0) return;
+        const next = parseProcLines(text, windows, Date.now(), liveAccounts());
         procs.length = 0;
-        for (const line of text.split(NL)) {
-            const [pid, created, ws, ...cmd] = line.trim().split('|');
-            if (!pid || !created) continue;
-            // Only the script file name: command lines never reach the page.
-            const script = (cmd.join('|').match(/([\w.-]+\.(?:ts|js))\b/g) ?? []).pop() ?? 'bun';
-            const tokens = (cmd.join('|').match(/"[^"]*"|'[^']*'|[^\s]+/g) ?? []).map(t => t.replace(/^["']|["']$/g, '').toLowerCase());
-            const accounts = liveAccounts().filter(name => tokens.includes(name.toLowerCase()));
-            procs.push({ pid: Number(pid), script, started: Date.parse(created), mb: Math.round(Number(ws) / 2 ** 20), accounts });
-        }
-        procs.sort((a, b) => a.started - b.started);
-    } catch { /* not Windows */ } finally { procsScanning = false; }
+        procs.push(...next);
+    } catch { /* process scan unavailable */ } finally { procsScanning = false; }
 }
 
 function maybeScanProcs() {

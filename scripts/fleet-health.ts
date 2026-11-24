@@ -369,13 +369,11 @@ export function auditFleetHealth(opts: {
     }
 
     const localStatuses = opts.statusRows ?? (() => {
-        const seen = new Set<string>();
         const out: any[] = [];
         for (const dir of statusReadDirs(root)) {
             if (!existsSync(dir)) continue;
             for (const f of readdirSync(dir)) {
-                if (!f.endsWith('.json') || seen.has(f.toLowerCase())) continue;
-                seen.add(f.toLowerCase());
+                if (!f.endsWith('.json')) continue;
                 const row = readJson<any>(join(dir, f), null);
                 if (row && row.practice !== true) out.push(row);
             }
@@ -522,7 +520,7 @@ export function auditFleetHealth(opts: {
             } else if (loop || statusErrMatch) {
                 fixAction = healthStop ? 'manual_hold' : 'pause_looping';
                 if (healthStop) blockedBy = 'already health-paused; needs fix/clear';
-            } else if (issues.every(i => i.code === 'ended_error')) {
+            } else if (issues.some(i => i.code === 'ended_error')) {
                 fixAction = 'manual_hold';
                 blockedBy = `ended: ${endedReason}`;
             }
@@ -708,6 +706,7 @@ export async function remediateFleetHealth(
         recoveriesDone++;
         const res = await runner(item.account, item.location.targetHub);
         if (!res.ok && /no worker progress: (?:release|active legacy)/i.test(res.detail)) {
+            if (item.healthStop) writeHealthStop(stopFile, item.stopText?.replace(HEALTH_STOP_PREFIX, '').trim() || `prior ${item.location.kind}`, audit.root, item.account);
             actions.push({ account: item.account, action: 'skipped', detail: res.detail });
             continue;
         }

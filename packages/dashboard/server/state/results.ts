@@ -14,7 +14,7 @@ const died = (text: string) => /\bdied=true\b/.test(text) || /\bdied (?!=)/.test
 // Per account, the newest result and the newest death. They do not drop out of the 300-row list when practice runs
 // fill it (three live farmer deaths vanished from the page that way).
 const lastResult = new Map<string, { text: string; started?: number }>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
-const noteRes = (r: Res) => { lastResult.set(r.name, { text: r.text, started: r.started }); newestRes.set(r.name, r); if (died(r.text)) newestDeath.set(r.name, r); };
+const noteRes = (r: Res) => { const key = r.name.toLowerCase(); lastResult.set(key, { text: r.text, started: r.started }); newestRes.set(key, r); if (died(r.text)) newestDeath.set(key, r); };
 for (const r of allResults) noteRes(r);
 // The long read above fed the per-account maps; the list that fleetDiagnostics scans every 2 s keeps the newest RESULT_KEEP.
 const RESULT_KEEP = 5000;
@@ -22,7 +22,7 @@ if (allResults.length > RESULT_KEEP) allResults.splice(0, allResults.length - RE
 function trackResult(s: Status) {
     const text = String(s.result ?? '');
     // Two runs can end with the same text: the run start tells them apart.
-    const last = lastResult.get(s.name), started = typeof s.started === 'number' ? s.started : undefined;
+    const last = lastResult.get(s.name.toLowerCase()), started = typeof s.started === 'number' ? s.started : undefined;
     if (!text || (last?.text === text.slice(0, 240) && (last.started === undefined || started === undefined || last.started === started))) return;
     const r: Res = { started, at: s.at, name: s.name, goal: String(s.goal ?? '').replace(/\.ts$/, ''), ok: /^ok\b/.test(text), text: text.slice(0, 240) };
     noteRes(r);

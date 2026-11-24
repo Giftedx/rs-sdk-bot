@@ -2,7 +2,7 @@ import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {expect, test} from 'bun:test';
-import {autoPlanOptions, benchPlan, checkArgs, decodeSetB64, expandMultiSeedArtifacts, extractPlanOpts, MAX_JOBS, POLL_MS, resultLines} from './hosted-bench';
+import {autoPlanOptions, benchPlan, checkArgs, decodeSetB64, evaluatePollState, expandMultiSeedArtifacts, extractPlanOpts, MAX_JOBS, parseBoundedIntFlag, parseRunId, POLL_MS, resultLines} from './hosted-bench';
 
 test('the plan gives one runner to each pattern and seed', () => {
     expect(benchPlan('^pvp:squad$  ^quester:quest:crest$', '7,8')).toEqual([
@@ -147,4 +147,37 @@ test('ci.yml caches Bun/route/pack across route-key-parity, measure, and rebalan
     expect(paritySection).toContain('~/.bun/install/cache');
     expect(paritySection).toContain('actions/cache/restore@v4');
     expect(paritySection).toContain('route-caches-v2');
+});
+
+test('run id and bounded flag validation reject malformed inputs and evaluatePollState detects bench-plan failure', () => {
+    expect(parseRunId('12345678')).toBe('12345678');
+    for (const bad of ['', '../etc', '123abc', '12 34']) {
+        expect(() => parseRunId(bad)).toThrow(/invalid --run id/);
+    }
+    expect(parseBoundedIntFlag('--batch', '4', 1, 8)).toBe(4);
+    for (const bad of ['0', '9', 'abc', '-1']) {
+        expect(() => parseBoundedIntFlag('--batch', bad, 1, 8)).toThrow(/--batch/);
+    }
+    expect(evaluatePollState({status: 'in_progress', jobs: [{name: 'bench-plan', status: 'completed', conclusion: 'failure'}]})).toEqual({
+        done: true,
+        planFailed: true,
+        conclusion: 'failure',
+    });
+    expect(evaluatePollState({status: 'in_progress', jobs: [
+        {name: 'bench-plan', status: 'completed', conclusion: 'success'},
+        {name: 'bench-cases p1-s7', status: 'in_progress'},
+    ]})).toEqual({done: false});
+    expect(evaluatePollState({status: 'in_progress', jobs: [
+        {name: 'bench-plan', status: 'completed', conclusion: 'success'},
+        {name: 'bench-cases p1-s7', status: 'completed'},
+    ]})).toEqual({done: true, planFailed: false});
+
+    const missingVal = Bun.spawnSync([process.execPath, 'tools/hosted-bench.ts', '--run'], {
+        cwd: resolve(import.meta.dir, '..'),
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+    });
+    expect(missingVal.exitCode).toBe(2);
+    expect(missingVal.stderr.toString()).toContain('--run requires a value');
 });

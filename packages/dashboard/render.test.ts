@@ -272,3 +272,16 @@ test('pick releases the camera for an account that is not in the world, with no 
  const p=picked([{name:'Away',inWorld:false,pos:{x:3200,z:3200}}]);
  expect(p.run('Away').sel).toBe('Away');expect(p.window.atlasFreeCamera).toBe(true);expect(p.sent).toEqual([{atlasFreeCamera:true}]);
 });
+
+test('prsPanel rejects non-HTTP(S) PR URLs while rendering valid GitHub links',()=>{
+ const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
+ const start=shell.indexOf('  const AGENT_OF='),end=shell.indexOf('  // Gear & Upgrade Advisor:',start);
+ const run=new Function('S','E','age',shell.slice(start,end)+';return prsPanel();');
+ const htmlOut=run({prs:[
+  {number:1,branch:'claude/a',state:'OPEN',draft:false,title:'Safe PR',url:'https://github.com/Giftedx/rs-sdk-bot/pull/1',updatedAt:'2026-01-01T00:00:00Z'},
+  {number:2,branch:'claude/b',state:'OPEN',draft:false,title:'Bad PR',url:'javascript:alert(1)',updatedAt:'2026-01-01T00:00:00Z'},
+ ]},escape,()=>'1m') as string;
+ expect(htmlOut).toContain('href="https://github.com/Giftedx/rs-sdk-bot/pull/1"');
+ expect(htmlOut).not.toContain('javascript:');
+ expect(htmlOut).toContain('Bad PR');
+});

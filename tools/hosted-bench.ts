@@ -179,9 +179,44 @@ export function resultLines(jobs: readonly {name: string; rows: readonly CaseRow
     return {lines, failed, cases};
 }
 
+export function parseRunId(raw: string): string {
+    const trimmed = raw.trim();
+    if (!/^\d{1,20}$/.test(trimmed)) throw new Error(`invalid --run id: ${raw}`);
+    return trimmed;
+}
+
+export function parseBoundedIntFlag(flag: string, raw: string, min: number, max: number): number {
+    if (!/^\d+$/.test(raw.trim())) throw new Error(`${flag} must be an integer ${min}..${max}, got ${raw}`);
+    const n = Number(raw);
+    if (!Number.isSafeInteger(n) || n < min || n > max) throw new Error(`${flag} must be ${min}..${max}, got ${raw}`);
+    return n;
+}
+
+export type PollState =
+    | { done: false }
+    | { done: true; planFailed: boolean; conclusion?: string | null };
+
+export function evaluatePollState(view: { status?: string; jobs?: { name: string; status: string; conclusion?: string | null }[] }): PollState {
+    const jobs = view.jobs ?? [];
+    const planJob = jobs.find(j => j.name === 'bench-plan');
+    if (planJob?.status === 'completed' && planJob.conclusion && planJob.conclusion !== 'success') {
+        return { done: true, planFailed: true, conclusion: planJob.conclusion };
+    }
+    const bench = jobs.filter(j => j.name.startsWith('bench-cases'));
+    if (view.status === 'completed' || (bench.length > 0 && bench.every(j => j.status === 'completed') && planJob?.status === 'completed')) {
+        return { done: true, planFailed: false };
+    }
+    return { done: false };
+}
+
 if (import.meta.main) {
     const root = resolve(import.meta.dir, '..'), argv = process.argv.slice(2);
-    const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv.splice(i, 2)[1] : undefined; };
+    const value = (flag: string) => {
+        const i = argv.indexOf(flag);
+        if (i < 0) return undefined;
+        if (i + 1 >= argv.length) { console.error(`hosted-bench: ${flag} requires a value`); process.exit(2); }
+        return argv.splice(i, 2)[1];
+    };
     const has = (flag: string) => { const i = argv.indexOf(flag); if (i < 0) return false; argv.splice(i, 1); return true; };
     // The workflow's first job: the matrix as a step output.
     if (has('--plan')) {
@@ -190,7 +225,8 @@ if (import.meta.main) {
         process.exit(0);
     }
     const gh = (args: string[]) => { const r = Bun.spawnSync(['gh', ...args], {cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true}); return {ok: r.exitCode === 0, out: r.stdout.toString(), err: r.stderr.toString()}; };
-    let run = value('--run');
+    const runArg = value('--run');
+    let run = runArg !== undefined ? parseRunId(runArg) : undefined;
     const seeds = value('--seeds') ?? '', args = value('--args') ?? '', wait = !has('--no-wait');
     const noBatch = has('--no-batch'), cliBatch = value('--batch'), cliSeedJobs = value('--seed-jobs'), cliArms = value('--arms');
     const branch = Bun.spawnSync(['git', '-C', root, 'rev-parse', '--abbrev-ref', 'HEAD'], {stdout: 'pipe', windowsHide: true}).stdout.toString().trim();
@@ -203,9 +239,9 @@ if (import.meta.main) {
         const hasFlag = (f: string) => parsedArgs.includes(f);
         const planOpts = autoPlanOptions(patternCount, seedCount, {
             noBatch,
-            ...(cliBatch !== undefined ? {batch: Number(cliBatch)} : {}),
-            ...(cliSeedJobs !== undefined ? {seedJobs: Number(cliSeedJobs)} : {}),
-            ...(cliArms !== undefined ? {arms: Number(cliArms)} : {}),
+            ...(cliBatch !== undefined ? {batch: parseBoundedIntFlag('--batch', cliBatch, 1, 8)} : {}),
+            ...(cliSeedJobs !== undefined ? {seedJobs: parseBoundedIntFlag('--seed-jobs', cliSeedJobs, 1, 4)} : {}),
+            ...(cliArms !== undefined ? {arms: parseBoundedIntFlag('--arms', cliArms, 1, 100)} : {}),
         });
         const extraPlanTokens = [
             ...(planOpts.seedJobs && planOpts.seedJobs > 1 && !hasFlag('--seed-jobs') ? ['--seed-jobs', String(planOpts.seedJobs)] : []),
@@ -220,19 +256,41 @@ if (import.meta.main) {
         if (!run) { console.error('hosted-bench: the run started and its id was not found: see gh run list --workflow CI'); process.exit(2); }
         console.log(`hosted-bench: run ${run}, ${plan.length} ${plan.length === 1 ? 'runner' : 'runners'} (${patternCount * seedCount} pairs), code ${ref}`);
         if (!wait) process.exit(0);
+    } else if (argv.length) {
+        console.error(`hosted-bench: unexpected arguments with --run: ${argv.join(' ')}`);
+        process.exit(2);
     }
     // Wait for the bench jobs only: the other jobs of the workflow take longer and hold no bench result.
     const deadline = Date.now() + 40 * 60_000;
+    let pollFailures = 0;
     for (;;) {
-        const view = JSON.parse(gh(['run', 'view', run, '--json', 'status,jobs']).out || '{}') as {status?: string; jobs?: {name: string; status: string}[]};
-        const bench = (view.jobs ?? []).filter(j => j.name.startsWith('bench-cases'));
-        if (view.status === 'completed' || (bench.length > 0 && bench.every(j => j.status === 'completed') && (view.jobs ?? []).some(j => j.name === 'bench-plan' && j.status === 'completed'))) break;
+        const res = gh(['run', 'view', run, '--json', 'status,jobs']);
+        if (!res.ok) {
+            if (++pollFailures >= 3) {
+                console.error(`hosted-bench: could not inspect run ${run}: ${res.err.trim() || 'gh run view failed'}`);
+                process.exit(2);
+            }
+        } else {
+            pollFailures = 0;
+            const view = JSON.parse(res.out || '{}') as {status?: string; jobs?: {name: string; status: string; conclusion?: string | null}[]};
+            const poll = evaluatePollState(view);
+            if (poll.done) {
+                if (poll.planFailed) {
+                    console.error(`hosted-bench: run ${run} bench-plan ended with conclusion=${poll.conclusion}`);
+                    process.exit(2);
+                }
+                break;
+            }
+        }
         if (Date.now() > deadline) { console.error(`hosted-bench: run ${run} did not end in 40 minutes`); process.exit(2); }
         await Bun.sleep(POLL_MS);
     }
     const dir = join(root, '.practice', 'hosted-bench', run);
     rmSync(dir, {recursive: true, force: true}); mkdirSync(dir, {recursive: true});
-    gh(['run', 'download', run, '-p', 'bench-*', '-D', dir]);
+    const download = gh(['run', 'download', run, '-p', 'bench-*', '-D', dir]);
+    if (!download.ok) {
+        console.error(`hosted-bench: artifact download failed for run ${run}: ${download.err.trim() || 'gh run download failed'}`);
+    }
     const expanded = expandMultiSeedArtifacts(dir);
     const jobs = (existsSync(dir) ? readdirSync(dir) : []).filter(n => n.startsWith('bench-') && !expanded.has(n)).map(name => {
         // The artifact holds .practice/bench-cases, alone or beside the case logs.

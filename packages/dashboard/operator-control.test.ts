@@ -288,6 +288,13 @@ test('main account commands are refused, stop files stay unchanged on enqueue co
 
   // Malformed UUID identities must be rejected cleanly with 400.
   expect((await f.send({ id: '00000000---------------------------', action: 'pause' })).status).toBe(400);
+
+  // Invalid override-account durations and clear-defect identifiers must be rejected with 400.
+  for (const badDuration of [0, -10, 1441, 'abc', null]) {
+   expect((await f.send({ id: randomUUID(), action: 'override-account', account: 'Worker', activityId: activity.id, durationMin: badDuration })).status).toBe(400);
+  }
+  expect((await f.send({ id: randomUUID(), action: 'clear-defect', activityId: activity.id, defectId: '  ' })).status).toBe(400);
+  expect((await f.send({ id: randomUUID(), action: 'clear-defect', activityId: activity.id, faultSignature: 123 })).status).toBe(400);
  } finally {
   f.close();
  }

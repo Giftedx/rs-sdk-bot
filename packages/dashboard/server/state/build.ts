@@ -153,8 +153,8 @@ function buildState() {
             training: fresh && !production && sk != null && sk.level < target && !/^gold farm|bank/i.test(String(job?.goal ?? s.goal ?? '')),
             role4: roleView(s, job, fresh, r),
             // Newest RESULT this server saw for the account, and its newest death in the last 24 h.
-            lastRes: (() => { const x = newestRes.get(name); return x && (!s.started || x.at >= s.started) ? { at: x.at, ok: x.ok, died: died(x.text), text: x.text } : null; })(),
-            death: (() => { const x0 = newestDeath.get(name), x = x0 && now - x0.at < 86_400_000 && (!s.started || x0.at >= s.started) ? x0 : null; return x ? { at: x.at, text: x.text } : null; })(),
+            lastRes: (() => { const x = newestRes.get(nameLower); return x && (!s.started || x.at >= s.started) ? { at: x.at, ok: x.ok, died: died(x.text), text: x.text } : null; })(),
+            death: (() => { const x0 = newestDeath.get(nameLower), x = x0 && now - x0.at < 86_400_000 && (!s.started || x0.at >= s.started) ? x0 : null; return x ? { at: x.at, text: x.text } : null; })(),
         };
     });
     // The other sides' accounts (Codex cloud, Claude cloud): snapshot items and levels, world-feed position, hiscore ranks.
