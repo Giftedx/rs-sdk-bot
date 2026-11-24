@@ -61,8 +61,9 @@ export function supplyRoute(model:TravelModel,r:SupplyRouteRequest) {
         }
         const outward=leg(model,r.from,s.bank),onward=leg(model,s.bank,r.to);
         const gates=[...gatesFor(model,r.from,s.bank,s.outbound).map(g=>({...g,id:'outbound:'+g.id})),...gatesFor(model,s.bank,r.to,s.onward).map(g=>({...g,id:'onward:'+g.id}))];
-        const transport=gates.length&&coins!==null&&coins>=0?allocateTransport(gates,coins,r.resources):null;
-        if(transport){blockers.push(...transport.blockers);if(transport.state!==true&&!transport.blockers.length)blockers.push('transport requirements unresolved');if(transport.remaining)coins=transport.remaining.coins;}
+        const transportResources:RouteResources|undefined=coins===null?{...r.resources,held:r.resources?.held??null,coinsKnown:false}:r.resources;
+        const transport=gates.length?allocateTransport(gates,Math.max(0,coins??0),transportResources):null;
+        if(transport){blockers.push(...transport.blockers);if(transport.state!==true&&!transport.blockers.length)blockers.push('transport requirements unresolved');if(transport.remaining&&coins!==null&&coins>=0)coins=transport.remaining.coins;}
         const costs=[s.outbound,s.onward],legs=[outward,onward];
         return {holder:s.holder,bank:s.bank,ticks:costs.reduce((n,c,i)=>n+(c.observed?.ticks??legs[i]!.ticks),0),methods:costs.map((c,i)=>c.observed?'receipt':legs[i]!.method),observations:costs.map(c=>c.observed??null),blockers,remaining:{coins,food},...(transport?{transport}:{})};
     }).sort((a,b)=>a.ticks-b.ticks||a.bank.localeCompare(b.bank)||a.holder.localeCompare(b.holder));

@@ -568,7 +568,11 @@ function buildSpecialistCampaign(
     const alreadyRank1 = Boolean(
         hiscoreHit?.board.rows?.some((r) => r.rank === 1 && typeof r.name === 'string' && r.name.toLowerCase() === lower),
     );
-    const hiscoreMargin = computeHiscoreMargin(board.name, board.category, planTicks, snapshots, now, true);
+    const marginTicks =
+        rehearsalProof?.verified === true && typeof rehearsalProof.ticks === 'number' && rehearsalProof.ticks > 0
+            ? Math.max(planTicks ?? 0, rehearsalProof.ticks)
+            : planTicks;
+    const hiscoreMargin = computeHiscoreMargin(board.name, board.category, marginTicks, snapshots, now, true);
     const stopped = isOwnerStoppedAccount(lower, root);
     const hasGoToken = hasActiveGoToken(goPath, now);
 
@@ -710,6 +714,7 @@ function availableCampaignSupplyStock(
                 (a) => a.name.toLowerCase() === campaign.stagingHolder!.toLowerCase(),
             );
         if (!holderAcct) return 0;
+        if (holderAcct.lifecycle === 'paused_owner' || holderAcct.lifecycle === 'dead') return 0;
         return ownedForAccount(holderAcct);
     }
 

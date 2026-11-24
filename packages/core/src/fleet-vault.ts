@@ -6,8 +6,9 @@
 // The authenticated data binds each sealed text to its account and server, so a file cannot be renamed onto another
 // account. Without the key the vault is inert: logins keep using the bot.env files this machine already has.
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { writeAtomicFile } from './atomic-file';
 import { FLEET_WORKTREE } from './fleet';
 import { MAIN_ACCOUNT } from './haggisgate';
 
@@ -82,9 +83,7 @@ export function listEntries(dir = vaultDir()): string[] {
 }
 
 function writeAtomic(file: string, text: string) {
-    const tmp = `${file}.${process.pid}.tmp`;
-    writeFileSync(tmp, text, { mode: 0o600 });
-    renameSync(tmp, file);
+    writeAtomicFile(file, text, { mode: 0o600 });
 }
 
 export type PutResult = 'sealed' | 'unchanged';

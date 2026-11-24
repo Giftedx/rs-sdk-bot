@@ -184,6 +184,7 @@ test('liveHelperStatuses reads .practice/live/status newest by at and excludes a
         const live = 'rs-sdk-demo.fly.dev';
         writeFileSync(join(base, '.practice/status/HelperOne.json'), JSON.stringify({ name: 'HelperOne', server: live, at: 10, bank: [{ id: 536, count: 10 }] }));
         writeFileSync(join(base, '.practice/live/status/HelperOne.json'), JSON.stringify({ name: 'HelperOne', server: live, at: 20, bank: [{ id: 536, count: 55 }] }));
+        writeFileSync(join(base, '.practice/status/PracticeBot.json'), JSON.stringify({ name: 'PracticeBot', practice: true, server: live, at: 30, bank: [{ id: 536, count: 777 }] }));
         writeFileSync(join(base, '.practice/live/status/HiltsDeep.json'), JSON.stringify({ name: 'HiltsDeep', server: live, at: 20, bank: [{ id: 536, count: 999 }] }));
         writeFileSync(join(snaps, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [{ name: 'POLEVAULTER', server: live, at: 20, bank: [{ id: 536, count: 888 }] }] }));
 

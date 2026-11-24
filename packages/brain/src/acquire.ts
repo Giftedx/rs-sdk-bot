@@ -41,6 +41,19 @@ import {
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 export const DEFAULT_ANTI_PING_PONG_MS = 10 * 60_000;
 export const GE_LIMIT_BUFFER = 1.15;
+export const DEFAULT_MAX_GE_ASK_FLOOR_GP = 25_000;
+
+export function isValidGeAskQuote(
+    quote: MarketQuote | undefined,
+    baseCost: number,
+): quote is MarketQuote & { ask: number } {
+    if (!quote || quote.ask === null || quote.ask <= 0 || quote.sell <= 0 || quote.trades === 0) {
+        return false;
+    }
+    const safeBase = Math.max(1, baseCost);
+    const maxAsk = Math.max(DEFAULT_MAX_GE_ASK_FLOOR_GP, safeBase * 10);
+    return quote.ask >= 0.2 * safeBase && quote.ask <= maxAsk;
+}
 
 export interface MarketQuote {
     readonly ask: number | null;
@@ -269,18 +282,28 @@ export function resolveAcquireItem(
                 continue;
             }
             const includeInv = req.includeInventoryInOwned ?? true;
-            const bankAvailable = acct.bank.trusted ? (acct.bank.items[req.itemId] ?? 0) : 0;
-            const invEqAvailable = includeInv
-                ? accountOwnedItemCount(acct, req.itemId, { includeBank: false })
-                : 0;
-            const reserve = availableStockAfterReserves(acct, world, req.itemId, {
-                includeBank: true,
-                requireTrustedBank: true,
-            }).reserved;
-            const ownedUnreserved = Math.max(0, invEqAvailable + bankAvailable - reserve);
+            let ownedUnreserved: number;
+            let invEqAvailable = 0;
+            let reserve = 0;
+            if (req.itemId === COINS_ITEM_ID) {
+                const excludedInv = includeInv ? 0 : accountOwnedItemCount(acct, COINS_ITEM_ID, { includeBank: false });
+                ownedUnreserved = Math.max(0, coinBalance.spendable - excludedInv);
+            } else {
+                const bankAvailable = acct.bank.trusted ? (acct.bank.items[req.itemId] ?? 0) : 0;
+                invEqAvailable = includeInv
+                    ? accountOwnedItemCount(acct, req.itemId, { includeBank: false })
+                    : 0;
+                reserve = availableStockAfterReserves(acct, world, req.itemId, {
+                    includeBank: true,
+                    requireTrustedBank: true,
+                }).reserved;
+                ownedUnreserved = Math.max(0, invEqAvailable + bankAvailable - reserve);
+            }
             if (ownedUnreserved < req.quantity) {
                 const reason = !acct.bank.trusted
-                    ? `own bank untrusted (inv/eq unreserved=${Math.max(0, invEqAvailable - reserve)}, need=${req.quantity})`
+                    ? req.itemId === COINS_ITEM_ID
+                        ? `own bank untrusted (spendable=${ownedUnreserved}, need=${req.quantity})`
+                        : `own bank untrusted (inv/eq unreserved=${Math.max(0, invEqAvailable - reserve)}, need=${req.quantity})`
                     : `own unreserved stock ${ownedUnreserved} < needed ${req.quantity}`;
                 skippedReasons.push({ source, reason });
                 continue;
@@ -393,9 +416,8 @@ export function resolveAcquireItem(
             let unitPrice: number | null = null;
             if (ctx.marketQuotes) {
                 const quote = ctx.marketQuotes[req.itemId];
-                const baseCost = Math.max(1, itemMeta?.cost ?? 1);
-                if (quote && quote.ask !== null && quote.ask > 0 && quote.sell > 0 && quote.trades !== 0
-                    && quote.ask >= 0.2 * baseCost && quote.ask <= 5 * baseCost) {
+                const baseCost = itemMeta?.cost ?? 1;
+                if (isValidGeAskQuote(quote, baseCost)) {
                     unitPrice = Math.ceil(quote.ask);
                 } else {
                     skippedReasons.push({ source, reason: 'no valid GE ask quote in market cache' });

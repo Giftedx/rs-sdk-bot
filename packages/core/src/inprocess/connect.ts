@@ -199,6 +199,7 @@ export async function startInProcessSession(
             },
         });
     } catch (e) {
+        (shim as Shim | null)?.stop('connect-failed');
         attempt.record('connect-failed', connectFailedDetail(e, http.rows));
         releaseConfirmed();
         leave();

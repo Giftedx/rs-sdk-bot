@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { isStopFilePresent } from '../stop';
 import { initPathfinding } from '../../../../vendor/rs-sdk/sdk/pathfinding';
 import type { NearbyNpc } from '../../../../vendor/rs-sdk/sdk/types';
 import * as rsmod from '../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
@@ -2065,7 +2066,7 @@ export async function runMagicOrderCli(account: string, env: Record<string, stri
                 stopped = true;
             },
         });
-        const r = await runMagicOrder(s, o, () => stopped);
+        const r = await runMagicOrder(s, o, () => stopped || isStopFilePresent(account));
         console.log('MAGIC_ORDER_RESULT ' + JSON.stringify(r));
         await finish(
             [s],

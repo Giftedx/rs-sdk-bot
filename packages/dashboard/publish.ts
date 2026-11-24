@@ -179,7 +179,7 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
    if(accepted&&!existsSync(receiptPath(root,accepted.id)))try{writeReceipt(root,{id:accepted.id,action:accepted.action,account:accepted.account,at:now,requestedAt:accepted.at,by:accepted.login,status:outcome.status,note:outcome.note,source:'remote'});}catch{/* the log line stands */}
   }
   // Remove the command file whatever happened: the receipt in control.json is the answer.
-  const del=await gh('api','-X','DELETE',`repos/${REPO}/contents/${path}`,'-f',`message=fleet command ${entry.name.slice(0,8)}: ${outcome.status}`,'-f',`sha=${entry.sha}`,'-f','branch=main');
+  const del=await gh('api','-X','DELETE',`repos/${REPO}/contents/${path}`,'-f',`message=fleet command ${entry.name.slice(0,8)}: ${outcome.status}`,'-f',`sha=${file.sha??entry.sha}`,'-f','branch=main');
   if(!del.ok)console.log(`PUBLISH command delete ${entry.name}: ${del.out.slice(0,160)}`);
  }
  return applied;
@@ -222,7 +222,7 @@ export function verifyStaticBundle(
    if(!STATIC_TEXT_EXT.test(ent.name))continue;
    checkedFiles++;
    const text=readFileSync(join(dir,rel),'utf8');
-   if(secretAccount&&(rel==='index.html'||rel==='client-shell.js'||rel==='operations.js'||rel==='xp-tracker.js')){
+   if(secretAccount){
     if(new RegExp(`\\b${secretAccount.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`,'i').test(text))leaks.push(rel);
    }
    for(const m of text.matchAll(/['"(](?:\/?client-assets\/([a-zA-Z0-9_.-]+))/g)){

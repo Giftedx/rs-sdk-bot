@@ -152,7 +152,10 @@ export function brainPlannedJobs(base: string, existingJobs: readonly any[], now
         const step = selected.step;
         const acctState = state.accounts[acctName.toLowerCase()] ?? state.accounts[acctName];
         const workStep = plan.steps.find(s => s.stepKind === 'work');
-        const spotId = workStep?.stepKind === 'work' ? catalog.get(workStep.activityId)?.spotId : undefined;
+        const claimsWorkSpot = workStep?.stepKind === 'work'
+            && !selected.isMultiStepChain
+            && selected.attributedActivityId === workStep.activityId;
+        const spotId = claimsWorkSpot ? catalog.get(workStep.activityId)?.spotId : undefined;
         const goalId = workStep?.stepKind === 'work' ? workStep.demandId : undefined;
         out.push({
             account: acctName,
@@ -228,7 +231,10 @@ export function readSyncStatuses(base: string): any[] {
         try { files = readdirSync(dir); } catch { continue; }
         for (const file of files) {
             if (!file.endsWith('.json')) continue;
-            try { out.push(JSON.parse(readFileSync(join(dir, file), 'utf8'))); } catch { /* incomplete record */ }
+            try {
+                const row = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+                if (row && row.practice !== true) out.push(row);
+            } catch { /* incomplete record */ }
         }
     }
     return out;

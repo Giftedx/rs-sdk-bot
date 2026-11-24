@@ -5,6 +5,7 @@ import type { Session } from '../../../core/src/inprocess';
 import type { Outcome } from '../../../core/src/act';
 import { goTo, sessionWalker, walkPath, type PathResult } from '../../../core/src/walk';
 import type { Tile } from '../../../core/src/world';
+import { isStopFilePresent } from '../stop';
 import type { GatherExternalDeps } from './types';
 
 export function awayFrom(
@@ -21,7 +22,7 @@ export function productionStopRequested(
     exists: (path: string) => boolean = existsSync,
     role: string | undefined = process.env.STOP_FILE,
 ): boolean {
-    return stop() || exists('.practice/stop-all') || (!!actor && exists(`.practice/stop-${actor}`)) || (!!role && exists(role));
+    return stop() || isStopFilePresent(actor, [], exists, role);
 }
 
 export function watchProductionLife(

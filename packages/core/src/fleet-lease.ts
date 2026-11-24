@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
+import { createExclusiveAtomic } from './atomic-file';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from './fleet';
 import { renameRetry } from './status';
 import { maskUrlCredentials } from './url-mask';
@@ -109,9 +110,7 @@ export function appendFleetGitRecord(git: FleetGit, ref: string, head: string | 
 
 export function fleetCheckoutId(root: string): string {
     const dir = join(root, '.practice'), file = join(dir, 'fleet-controller-id');
-    mkdirSync(dir, { recursive: true });
-    try { writeFileSync(file, randomUUID(), { flag: 'wx' }); }
-    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+    createExclusiveAtomic(file, randomUUID(), { ensureDir: true });
     const holder = readFileSync(file, 'utf8').trim();
     if (!HOLDER.test(holder)) throw Error('fleet controller identity unreadable');
     return holder;

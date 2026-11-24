@@ -340,5 +340,9 @@ describe('pvp WorkerModule contract & mode routing', () => {
             pvpRuntime.runPkSquadCli = prevSquad;
             pvpRuntime.runDirectChild = prevChild;
         }
+
+        const endedOut = await pvpModule.run({ ...makeSession(), ended: Promise.resolve() } as unknown as SessionCore, { mode: 'hunt' });
+        expect(validateRunOutcome(endedOut)).toEqual([]);
+        expect(endedOut.kind).toBe('session_unsettled');
     });
 });

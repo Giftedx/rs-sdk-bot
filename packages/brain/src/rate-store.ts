@@ -144,8 +144,7 @@ export class RateStore {
 
     private effectiveSamples(activityId: string): readonly RateSample[] {
         const list = this.store.get(activityId) ?? [];
-        const alive = list.filter((s) => s.died !== true);
-        return alive.length > 0 ? alive : list;
+        return list.filter((s) => s.died !== true);
     }
 
     hasOverride(activityId: string): boolean {

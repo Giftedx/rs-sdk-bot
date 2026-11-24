@@ -9,9 +9,11 @@ import { InfraCircuitBreaker } from '../src/infra-circuit-breaker';
 import {
     END_SETTLE_MS,
     acquireRepairLease,
+    archiveStaleLease,
     assessRecoveryEligibility,
     clearSwarmStops,
     executeControlledLiveRecovery,
+    findAccountStatus,
     findCurrentNativeRecoveryQualification,
     readStandaloneHistory,
     recoveryLeaseState,
@@ -402,5 +404,108 @@ describe('fleet standalone session recovery', () => {
             { pid: process.pid + 1, runId: 'contender', nonce: 'contender-nonce', at: now + 1_000 },
             { now: now + 1_000, pidAlive: () => true, processStarts: () => new Map([[process.pid, now - 5_000]]) },
         )).toThrow(/repair lease held by active pid/);
+    });
+
+    test('runControlledDispatchOne marks transient wait refusals as deferred, archiveStaleLease avoids same-second collisions, and findAccountStatus filters by server', async () => {
+        const root = scratch();
+        const server = 'rs-sdk-demo.fly.dev';
+        const lRoot = join(liveRoot(root), 'session-lifecycle');
+        const statusDir = join(liveRoot(root), 'status');
+        mkdirSync(statusDir, { recursive: true });
+        writeFileSync(join(statusDir, 'worker1.json'), JSON.stringify({ name: 'worker1', server: 'localhost:8880', at: Date.now() }));
+        expect(findAccountStatus(root, 'worker1', server)).toBeNull();
+        expect(findAccountStatus(root, 'worker1', 'localhost:8880')).not.toBeNull();
+
+        const leaseDir = join(root, '.practice', 'coordinator', 'session-recovery', 'accounts', 'worker1');
+        mkdirSync(leaseDir, { recursive: true });
+        const now = 1_700_000_500_000;
+        writeFileSync(join(leaseDir, 'lease.json'), '{"pid":1}');
+        const firstArchive = archiveStaleLease(root, 'worker1', now);
+        writeFileSync(join(leaseDir, 'lease.json'), '{"pid":2}');
+        const secondArchive = archiveStaleLease(root, 'worker1', now);
+        expect(firstArchive).not.toBe(secondArchive);
+        expect(existsSync(firstArchive)).toBe(true);
+        expect(existsSync(secondArchive)).toBe(true);
+
+        const repo = join(import.meta.dir, '..', '..', '..');
+        const source = cachedLaunchRevision(repo);
+        const capRev = capabilityRevision(['scripts/session-check.ts'], repo);
+        const delivDir = join(root, '.practice', 'deliveries', 'rec-wait');
+        mkdirSync(delivDir, { recursive: true });
+        const runnerDst = join(root, RECOVERY_SCRIPT);
+        mkdirSync(join(runnerDst, '..'), { recursive: true });
+        const runnerBytes = await Bun.file(join(repo, RECOVERY_SCRIPT)).bytes();
+        writeFileSync(runnerDst, runnerBytes);
+        const runnerSha = createHash('sha256').update(runnerBytes).digest('hex');
+        const evPath = join(delivDir, 'ev.txt');
+        writeFileSync(evPath, 'ok');
+        const evSha = createHash('sha256').update('ok').digest('hex');
+        const checks = Object.fromEntries(NATIVE_RECOVERY_CHECKS.map(k => [k, { ok: true, level: 'native-test', cases: ['c1'], evidence: [{ path: 'ev.txt', sha256: evSha }] }]));
+        const proofPath = join(delivDir, 'proof.json');
+        writeFileSync(proofPath, JSON.stringify({
+            ok: true,
+            level: 'native-controller-recovery',
+            runtimeRevision: source,
+            runnerSha256: runnerSha,
+            cases: [{ id: 'c1', ok: true, level: 'native-test', evidence: [{ path: 'ev.txt', sha256: evSha }] }],
+            checks,
+        }));
+        const proofSha = createHash('sha256').update(await Bun.file(proofPath).bytes()).digest('hex');
+        const gateLog = join(delivDir, 'gate.out.log');
+        writeFileSync(gateLog, `RECOVERY_NATIVE_PROOF ${JSON.stringify({ path: '.practice/deliveries/rec-wait/proof.json', sha256: proofSha })}\n`);
+        writeFileSync(join(delivDir, 'report.json'), JSON.stringify({
+            ok: true,
+            stage: 'delivered',
+            id: 'session-recovery-only',
+            at: now - 10_000,
+            runtimeRevision: capRev,
+            checks: [{ id: 'native-session-recovery', phase: 'practice', exitCode: 0, timedOut: false, detail: JSON.stringify({ stdout: '.practice/deliveries/rec-wait/gate.out.log' }) }],
+        }));
+        const qual = findCurrentNativeRecoveryQualification(root, source, now - 20_000, now, capRev)!;
+        expect(qual).not.toBeNull();
+
+        mkdirSync(lRoot, { recursive: true });
+        const runId = 'fleet-recovery-wait-1';
+        const nonce = 'nonce-wait-1';
+        const resultsFile = join(root, '.practice', 'swarm-repair.json.results.jsonl');
+        setTimeout(() => {
+            const raw = JSON.stringify({
+                schema: RECOVERY_SCHEMA,
+                kind: 'session-recovery',
+                account: 'worker1',
+                server,
+                runId,
+                nonce,
+                endedAt: now - 20_000,
+                source,
+                qualification: qual,
+            });
+            writeFileSync(resultsFile, JSON.stringify({
+                at: Date.now(),
+                raw,
+                result: {
+                    changed: false,
+                    sessionRecovered: false,
+                    reason: 'recovery setup refused; no lease issued; no retry',
+                    setup: { phase: 'admission', cause: 'recovery admission waiting: maxBots' },
+                },
+            }) + '\n');
+        }, 40);
+
+        const waitRes = await runControlledDispatchOne({
+            root,
+            account: 'worker1',
+            endedAt: now - 20_000,
+            server,
+            runId,
+            nonce,
+            source,
+            qualification: qual,
+            timeoutMs: 2_000,
+            pollMs: 20,
+        });
+        expect(waitRes.ok).toBe(false);
+        expect(waitRes.deferred).toBe(true);
+        expect(waitRes.detail).toContain('recovery admission waiting: maxBots');
     });
 });

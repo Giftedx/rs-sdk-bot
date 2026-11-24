@@ -294,3 +294,64 @@ test('gatherPreflight honors lowercase world reserves, globalReserves, and escro
     expect(est1.xpPerTick).toBe(6.5);
     expect(est25.xpPerTick).toBe(6.5 * 25);
 });
+
+test('gatherPreflight catches F2P crystal-chest and gatherWorker forwards cfg.stop', async () => {
+    const acct = makeAccount({
+        skills: { Thieving: { level: 50, xp: 101333 }, Mining: { level: 50, xp: 101333 } },
+        bank: { observedAt: 1, trusted: true, items: { 989: 1, 1265: 1 } },
+    });
+    const world = makeWorld(acct);
+
+    const f2pChest = gatherPreflight(acct, { skill: 'foraging', method: 'crystal-chest', members: false }, world);
+    expect(f2pChest.ok).toBe(false);
+    expect(f2pChest.blockers.some(b => b.kind === 'invalid_config')).toBe(true);
+
+    const stopSession: any = {
+        name: 'StoppedMiner',
+        tick: () => 5,
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({ player: { worldX: 3092, worldZ: 3243, level: 0 }, inventory: [], nearbyLocs: [], nearbyNpcs: [] }),
+            getInventory: () => [],
+            getEquipment: () => [],
+            getSkill: () => ({ level: 50, baseLevel: 50 }),
+            getSkillXp: () => 101333,
+        },
+    };
+    const endedOut = await gatherWorker.run({ ...stopSession, ended: Promise.resolve() }, {
+        skill: 'mining',
+        method: 'progressive',
+        args: ['job.json'],
+    });
+    expect(isRunOutcome(endedOut)).toBe(true);
+    expect(endedOut.kind).toBe('session_unsettled');
+
+    let midRunCalls = 0;
+    const notStoppedOut = await gatherWorker.run(stopSession, {
+        skill: 'mining',
+        method: 'bad-method',
+        stop: () => false,
+    });
+    expect(isRunOutcome(notStoppedOut)).toBe(true);
+    expect(notStoppedOut.kind).toBe('worker_defect');
+
+    const stoppedMidRun = await gatherWorker.run(stopSession, {
+        skill: 'foraging',
+        method: 'spawn',
+        args: ['1573'],
+        stop: () => midRunCalls++ > 0,
+    });
+    expect(isRunOutcome(stoppedMidRun)).toBe(true);
+    expect(stoppedMidRun.kind).toBe('session_unsettled');
+    expect(midRunCalls).toBeGreaterThan(1);
+
+    const mappedStop = toWorkerOutcome(
+        { ok: false, kind: 'failed', detail: 'session interrupted during walk', delta: { elapsedTicks: 4 } },
+        'Runner',
+        normalizeGatherConfig({ skill: 'fishing', method: 'shark' }),
+        4,
+        { stopped: true },
+    );
+    expect(isRunOutcome(mappedStop)).toBe(true);
+    expect(mappedStop.kind).toBe('session_unsettled');
+});

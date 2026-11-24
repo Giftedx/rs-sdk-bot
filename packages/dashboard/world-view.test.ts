@@ -127,6 +127,18 @@ test('native player-route validation and hidden-account privacy run before looku
  const invalid=await nativeLookup({connected:true,tickAt:now},seenPlayer,'<invalid>');expect(invalid.status).toBe(400);expect(invalid.calls).toBe(0);expect(invalid.body).not.toHaveProperty('rows');
 });
 
+test('death-recap route blocks normalized variants of the hidden main account',async()=>{
+ const start=serverSource.indexOf("        if (url.pathname === '/api/death-recap') {"),end=serverSource.indexOf("        if (url.pathname === '/api/hidden-names')",start);
+ const route=serverSource.slice(start,end);
+ for(const name of ['PrivateMain','Private_Main','Private Main','<bad>']){
+  let called=false;
+  const env={url:new URL('http://dashboard.test/api/death-recap?name='+encodeURIComponent(name)),MAIN:'PrivateMain',Response,recapCache:new Map(),root:'',world:{tickMs:400},isLocalServer:()=>false,deathRecap:()=>{called=true;return null;}};
+  const res=await new Function(...Object.keys(env),route)(...Object.values(env)) as Response;
+  expect(res.status).toBe(404);
+  expect(called).toBe(false);
+ }
+});
+
 test('farms group numbered series and random names, without fleet accounts, and count them at our spots', () => {
     const r = new Map<string, any>([
         ...[1, 2, 3, 40].map(i => [`money ${i}`, { name: `Money ${String(i).padStart(2, '0')}`, x: 2660, z: 3300, level: 0, combat: 3, seen: now }] as [string, any]),

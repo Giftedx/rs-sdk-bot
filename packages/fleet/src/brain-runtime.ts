@@ -7,6 +7,7 @@ import { mySide } from '../../core/src/fleet';
 import { tradeSettlement, validOrder, type Order, type Receipt } from '../../core/src/fleet-trade-settlement';
 import { atomicJson } from '../../core/src/plan-lock';
 import {
+    findStopFile,
     fleetStateFile,
     liveRoot,
     operatorCommandsDir,
@@ -118,7 +119,7 @@ const DEFAULT_LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 const SAFE_OPERATOR_COMMAND_ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
 const BLOCKED_OVERRIDE_REASON_RE = /^(?:protected_clock|campaign_|system_hold:|paused_owner|dead|in_trade|all_candidates_quarantined|quarantined)/;
 const SWARM_AUTO_STOP_RE =
-    /^(?:swarm stopped|swarm plan removed or stopped|swarm recovery stopped|inherited recovery stopped|fleet controller lease unavailable|swarm)$/i;
+    /^(?:fleet-health auto-paused:|swarm stopped|swarm plan removed or stopped|swarm recovery stopped|inherited recovery stopped|fleet controller lease unavailable|swarm(?::\s.*)?)$/i;
 
 export function isSafeOperatorCommandId(id: unknown): id is string {
     return typeof id === 'string' && SAFE_OPERATOR_COMMAND_ID_RE.test(id) && !id.includes('..');
@@ -174,8 +175,19 @@ export function readAccountOverrides(root = repoRoot, now = Date.now()): Record<
 export function writeAccountOverrides(
     root: string,
     overrides: Readonly<Record<string, AccountOverrideRecord>>,
+    now?: number,
 ): void {
-    atomicJson(accountOverridesFile(root), overrides);
+    if (now === undefined) {
+        atomicJson(accountOverridesFile(root), overrides);
+        return;
+    }
+    const active: Record<string, AccountOverrideRecord> = {};
+    for (const [k, v] of Object.entries(overrides)) {
+        if (v && Number.isFinite(v.expiresAt) && v.expiresAt > now) {
+            active[k] = v;
+        }
+    }
+    atomicJson(accountOverridesFile(root), active);
 }
 
 function upsertManifestOverride<T extends { readonly id: string }>(
@@ -200,25 +212,48 @@ function upsertManifestOverride<T extends { readonly id: string }>(
     atomicJson(file, [...byId.values()]);
 }
 
-function writeOperatorStop(flag: string, text: string, root: string): void {
-    const target = join(practiceRoot(root), `stop-${flag}`);
-    mkdirSync(practiceRoot(root), { recursive: true });
-    if (existsSync(target)) {
-        const existing = readFileSync(target, 'utf8').trim();
-        if (existing && !SWARM_AUTO_STOP_RE.test(existing)) {
-            return;
+function writeOperatorStop(flag: string, text: string, root: string): boolean {
+    const existingPath = findStopFile(flag, root);
+    if (existingPath) {
+        let existing = '';
+        try {
+            existing = readFileSync(existingPath, 'utf8').trim();
+        } catch {
+            return false;
+        }
+        // Empty stop files are manual owner pauses and must never be overwritten.
+        if (!existing || !SWARM_AUTO_STOP_RE.test(existing)) {
+            return false;
         }
     }
-    writeFileSync(target, text, 'utf8');
+    for (const candidate of stopFilePaths(flag, root)) {
+        if (!existsSync(candidate)) continue;
+        try {
+            const cur = readFileSync(candidate, 'utf8').trim();
+            if (!cur || !SWARM_AUTO_STOP_RE.test(cur)) return false;
+            rmSync(candidate, { force: true });
+        } catch {
+            return false;
+        }
+    }
+    const target = join(practiceRoot(root), `stop-${flag}`);
+    mkdirSync(practiceRoot(root), { recursive: true });
+    writeFileSync(target, text, { encoding: 'utf8', flag: 'wx' });
+    return true;
 }
 
-function clearOperatorStops(flag: string, root: string): void {
+function clearOperatorStops(flag: string, root: string): number {
+    let removed = 0;
     const variants = [...new Set([flag, flag.toLowerCase()])];
     for (const v of variants) {
         for (const p of stopFilePaths(v, root)) {
-            rmSync(p, { force: true });
+            if (existsSync(p)) {
+                rmSync(p, { force: true });
+                removed += 1;
+            }
         }
     }
+    return removed;
 }
 
 function applyCommand(
@@ -237,9 +272,13 @@ function applyCommand(
             writeOperatorStop(cmd.account, cmd.reason ?? 'dashboard operator pause', root);
             return true;
         case 'resume_account': {
-            clearOperatorStops(cmd.account, root);
+            const overlay = classifier.snapshotState(now).accountOverlays[cmd.account.toLowerCase()];
+            if (overlay?.lifecycleOverride === 'dead' && cmd.clearDead !== true) {
+                return false;
+            }
+            const removed = clearOperatorStops(cmd.account, root);
             const cleared = classifier.applyOperatorCommand(cmd, now);
-            return cleared || true;
+            return cleared || removed > 0 || overlay === undefined;
         }
         case 'pause_side':
             if (cmd.side !== side) return false;
@@ -252,6 +291,7 @@ function applyCommand(
         case 'clear_defect':
             return classifier.applyOperatorCommand(cmd, now);
         case 'override_account': {
+            if (cmd.expiresAt <= now) return false;
             const current = readAccountOverrides(root, now);
             const key = cmd.account.toLowerCase();
             if (cmd.activityId === null && cmd.role === undefined) {
@@ -266,7 +306,7 @@ function applyCommand(
                     ...(cmd.reason ? { reason: cmd.reason } : {}),
                 };
             }
-            writeAccountOverrides(root, current);
+            writeAccountOverrides(root, current, now);
             return true;
         }
         case 'set_campaign_state': {
@@ -348,11 +388,13 @@ export function drainOperatorCommands(opts: {
             continue;
         }
         const errors = validateOperatorCommand(parsed);
-        if (errors.length === 0 && isPlainRecord(parsed) && !isSafeOperatorCommandId(parsed.id)) {
+        const safeId = isPlainRecord(parsed) && isSafeOperatorCommandId(parsed.id) ? parsed.id : undefined;
+        if (errors.length === 0 && isPlainRecord(parsed) && !safeId) {
             errors.push('OperatorCommand.id must match /^[A-Za-z0-9._-]{1,128}$/ without ".."');
         }
         if (errors.length > 0) {
-            atomicJson(join(rejectedDir, file), { file, errors, rejectedAt: now, payload: parsed });
+            const rejectName = safeId ? `${safeId}.json` : file;
+            atomicJson(join(rejectedDir, rejectName), { file, errors, rejectedAt: now, payload: parsed });
             rmSync(filePath, { force: true });
             continue;
         }
@@ -369,7 +411,8 @@ export function drainOperatorCommands(opts: {
     for (const item of parsedItems) {
         const cmd = item.parsed as OperatorCommand;
         const receiptPath = join(appliedDir, `${cmd.id}.json`);
-        if (existsSync(receiptPath)) {
+        const rejectedReceiptPath = join(rejectedDir, `${cmd.id}.json`);
+        if (existsSync(receiptPath) || existsSync(rejectedReceiptPath)) {
             rmSync(item.path, { force: true });
             results.push({ id: cmd.id, file: item.file, kind: cmd.kind, applied: false, duplicate: true, at: now });
             continue;
@@ -387,7 +430,7 @@ export function drainOperatorCommands(opts: {
             results.push({ id: cmd.id, file: item.file, kind: cmd.kind, applied, at: now });
         } catch (err) {
             const error = err instanceof Error ? err.message : String(err);
-            atomicJson(join(rejectedDir, item.file), { file: item.file, command: cmd, error, rejectedAt: now });
+            atomicJson(rejectedReceiptPath, { file: item.file, command: cmd, error, rejectedAt: now });
             rmSync(item.path, { force: true });
             results.push({ id: cmd.id, file: item.file, kind: cmd.kind, applied: false, error, at: now });
         }
@@ -459,15 +502,16 @@ function applyAccountOverridesToWorld(
     if (Object.keys(overrides).length === 0) return world;
     const nextAccounts = { ...world.accounts };
     for (const [name, acct] of Object.entries(world.accounts)) {
+        if (acct.protectedClock || acct.role === 'main') continue;
         const ov = overrides[name.toLowerCase()];
-        if (ov?.role && ov.role !== acct.role) {
+        if (ov?.role && ov.role !== 'main' && ov.role !== acct.role) {
             nextAccounts[name] = { ...acct, role: ov.role };
         }
     }
     return { ...world, accounts: nextAccounts };
 }
 
-function applyActivityOverridesToPlan(
+export function applyActivityOverridesToPlan(
     plan: FleetPlan,
     input: {
         readonly world: WorldSnapshot;
@@ -491,14 +535,76 @@ function applyActivityOverridesToPlan(
     if (sideStopped || infraOpen) return plan;
 
     const nextAccountPlans: Record<string, AccountPlan> = { ...plan.accountPlans };
-    let usedSlots = Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
+    const nextSpotAllocations: Record<string, string[]> = {};
+    for (const [spot, accts] of Object.entries(plan.spotAllocations)) {
+        nextSpotAllocations[spot] = [...accts];
+    }
+    const spotForPlan = (p: AccountPlan | undefined): string | undefined => {
+        const work = p?.steps.find((s) => s.stepKind === 'work');
+        return work?.stepKind === 'work' ? input.catalog.get(work.activityId)?.spotId : undefined;
+    };
+    const removeAccountFromSpots = (account: string) => {
+        const lower = account.toLowerCase();
+        for (const [spot, accts] of Object.entries(nextSpotAllocations)) {
+            const filtered = accts.filter((a) => a.toLowerCase() !== lower);
+            if (filtered.length > 0) nextSpotAllocations[spot] = filtered;
+            else delete nextSpotAllocations[spot];
+        }
+    };
+    const spotHasCapacity = (act: ActivityDefinition, account: string): boolean => {
+        if (!act.spotId || !act.maxConcurrentAccounts) return true;
+        const lower = account.toLowerCase();
+        const remote = input.world.spotOccupancy?.[act.spotId] ?? 0;
+        const local = (nextSpotAllocations[act.spotId] ?? []).filter((a) => a.toLowerCase() !== lower).length;
+        return remote + local < act.maxConcurrentAccounts;
+    };
+    const recordAccountSpot = (act: ActivityDefinition, account: string) => {
+        removeAccountFromSpots(account);
+        if (!act.spotId) return;
+        const list = nextSpotAllocations[act.spotId] ?? [];
+        if (!list.some((a) => a.toLowerCase() === account.toLowerCase())) list.push(account);
+        nextSpotAllocations[act.spotId] = list;
+    };
+
+    const inTradeAccounts = new Set(
+        Object.values(input.world.accounts)
+            .filter(
+                (a) =>
+                    a.side === input.world.side
+                    && a.lifecycle === 'in_trade'
+                    && canProtectedAccountLaunch(a, input.campaigns, input.world).allowed,
+            )
+            .map((a) => a.name.toLowerCase()),
+    );
+    const assignedIdleDonors = new Set<string>();
+    for (const ord of plan.transferOrders) {
+        const lower = ord.from.toLowerCase();
+        const donorAcct = Object.values(input.world.accounts).find(
+            (a) => a.name.toLowerCase() === lower && a.side === input.world.side,
+        );
+        if (
+            donorAcct
+            && !inTradeAccounts.has(lower)
+            && (nextAccountPlans[donorAcct.name]?.steps.length ?? 0) === 0
+        ) {
+            assignedIdleDonors.add(lower);
+        }
+    }
+    const reservedSlotCount = inTradeAccounts.size + assignedIdleDonors.size;
+    let usedSlots = reservedSlotCount + Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
     let changed = false;
 
-    for (const [name, acct] of Object.entries(input.world.accounts)) {
+    for (const [, acct] of Object.entries(input.world.accounts)) {
         if (acct.side !== input.world.side) continue;
-        const ov = input.overrides[name.toLowerCase()];
+        const ov = input.overrides[acct.name.toLowerCase()];
         if (!ov || !ov.activityId) continue;
-        if (acct.lifecycle === 'paused_owner' || acct.lifecycle === 'dead' || acct.lifecycle === 'in_trade') continue;
+        if (
+            acct.lifecycle === 'paused_owner'
+            || acct.lifecycle === 'reserved'
+            || acct.lifecycle === 'dead'
+            || acct.lifecycle === 'in_trade'
+            || assignedIdleDonors.has(acct.name.toLowerCase())
+        ) continue;
         if (acct.lifecycle === 'needs_logout_recovery' || acct.lifecycle === 'needs_location_recovery') continue;
         if (!canProtectedAccountLaunch(acct, input.campaigns, input.world).allowed) continue;
 
@@ -511,6 +617,7 @@ function applyActivityOverridesToPlan(
             (d) => d.activityId === act.id && d.quarantined && (d.expiresAt === undefined || input.world.at < d.expiresAt),
         );
         if (quarantined) continue;
+        if (!spotHasCapacity(act, acct.name)) continue;
 
         const planned = planAccount(acct, {
             world: input.world,
@@ -525,6 +632,9 @@ function applyActivityOverridesToPlan(
         });
         if (planned.steps.length > 0) {
             nextAccountPlans[acct.name] = planned;
+            const plannedSpot = spotForPlan(planned);
+            if (plannedSpot) recordAccountSpot(input.catalog.get(planned.steps.find((s) => s.stepKind === 'work')!.activityId) ?? act, acct.name);
+            else removeAccountFromSpots(acct.name);
             if (!alreadySelected) usedSlots += 1;
             changed = true;
             continue;
@@ -552,6 +662,7 @@ function applyActivityOverridesToPlan(
             retentionMarginApplied: true,
         };
         nextAccountPlans[acct.name] = synthetic;
+        recordAccountSpot(act, acct.name);
         if (!alreadySelected) usedSlots += 1;
         changed = true;
     }
@@ -561,7 +672,8 @@ function applyActivityOverridesToPlan(
     return {
         ...plan,
         accountPlans: nextAccountPlans,
-        selectedSlots: Math.min(plan.maxBots, plansWithSteps),
+        spotAllocations: nextSpotAllocations,
+        selectedSlots: Math.min(plan.maxBots, reservedSlotCount + plansWithSteps),
     };
 }
 
@@ -612,7 +724,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     const demands = demandEngine.activeDemands(world);
     const defects = classifier.quarantinedDefects(now);
     const infraState = combineInfraState(classifier, infraBreaker, now);
-    const marketQuotes = opts.marketQuotes ?? loadMarketQuotesFromRoot(root);
+    const marketQuotes = opts.marketQuotes ?? loadMarketQuotesFromRoot(root, now);
     const logoutProofs = loadConfirmedLogoutProofs(diagnostics);
     const maxBots = resolveSwarmMaxBots(root, opts.maxBots);
     const minTrust: TrustTier = opts.minTrust ?? 'practice_passed';

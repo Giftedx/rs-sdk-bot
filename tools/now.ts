@@ -187,7 +187,10 @@ export function procRows(text:string,windows:boolean,now:number):(Proc&{pid:numb
     for(const line of text.split(/\r?\n/)){
         if(windows){
             const [pid,created,...cmd]=line.trim().split('|');
-            if(pid&&created)out.push({pid:Number(pid),scripts:scriptsOf(cmd.join('|')),up:now-Date.parse(created)});
+            const pidNum=Number(pid),startedMs=Date.parse(created??'');
+            if(pid&&created&&Number.isSafeInteger(pidNum)&&pidNum>0&&Number.isFinite(startedMs)){
+                out.push({pid:pidNum,scripts:scriptsOf(cmd.join('|')),up:now-startedMs});
+            }
         }else{
             const m=/^\s*(\d+)\s+(\d+)\s+(\S+)(.*)$/.exec(line);
             if(m&&/(?:^|\/)(?:bun|node)$/.test(m[3]!))out.push({pid:Number(m[1]),scripts:scriptsOf(m[3]!+m[4]!),up:Number(m[2])*1000});

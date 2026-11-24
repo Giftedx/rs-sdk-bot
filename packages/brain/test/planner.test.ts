@@ -1099,3 +1099,102 @@ test('planner prevents multi-step coin double-spend across prepSteps and does no
         expect(withWork.estimatedTicks).toBe(withoutWork.estimatedTicks);
     }
 });
+
+test('planAccount evaluates gear upgrade and band XP for the selected combat_readiness trainSkill with case-insensitive skills, and applies GE ask sanity bounds', () => {
+    // 1. combat_readiness target needs Attack 40 (already at Strength 99) on a melee Strength activity.
+    // Attack still needs XP so gear upgrade payback must be evaluated against Attack remaining XP rather than Strength=0.
+    const meleeAct: ActivityDefinition = {
+        id: 'combat:melee-camp',
+        workerId: 'combat',
+        family: 'combat',
+        kind: 'train',
+        label: 'Melee camp',
+        skill: 'Strength',
+        skills: ['Attack', 'Strength', 'Defence'],
+        location: { x: 3185, z: 3436, level: 0 },
+        config: { aioCategory: 'fighter', aioRoute: 'melee', target: 'melee', requiredLevel: 1 },
+        baselineRate: {
+            xpPerTick: 120,
+            unitsPerTick: 0.05,
+            gpPerTick: 5,
+            setupTicks: 10,
+            minBatchUnits: 25,
+            confidence: 'live',
+        },
+        trust: 'live_proven',
+        protectedAllowed: false,
+    };
+    const fighter = makeAcct({
+        name: 'CombatUpg',
+        skills: {
+            attack: { level: 40, xp: xpForLevel(40) },
+            strength: { level: 99, xp: xpForLevel(99) },
+            defence: { level: 99, xp: xpForLevel(99) },
+        },
+        // Bronze scimitar (1321) equipped, Rune scimitar (1333) missing, enough coins in bank for GE upgrade.
+        equipment: { 1321: 1 },
+        bank: { items: { 995: 100_000 }, observedAt: NOW - 1000, trusted: true },
+    });
+    const readinessDemand: GoalDemand = {
+        id: 'd:combat-ready',
+        goalKind: 'pk_army',
+        valueScore: 500,
+        valuePerHour: 3000,
+        target: { kind: 'combat_readiness', account: 'CombatUpg', targets: { Attack: 60, Strength: 60, Defence: 60 } },
+        fulfilled: 2,
+        remaining: 1,
+        priorityWeight: 1,
+        assignedAccount: 'CombatUpg',
+        active: true,
+    };
+    const plan = planAccount(fighter, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { CombatUpg: fighter } },
+        activities: [meleeAct],
+        demands: [readinessDemand],
+        marketQuotes: { 1333: { ask: 20_000, sell: 18_000, trades: 20 } },
+    });
+    expect(plan.steps.some((s) => s.stepKind === 'gear_upgrade' && s.itemId === 1333)).toBe(true);
+    const work = plan.steps.at(-1);
+    expect(work?.stepKind).toBe('work');
+    if (work?.stepKind === 'work') {
+        expect(work.config.trainSkill).toBe('Attack');
+        expect(work.config.targetLevel).toBe(60);
+    }
+
+    // 2. Garbage GE quote outlier on item demand must be rejected consistently by direct market planner precheck.
+    const directGeAct: ActivityDefinition = {
+        id: 'market:ge-buy',
+        workerId: 'market',
+        family: 'market',
+        kind: 'ge_buy',
+        label: 'Buy on GE',
+        location: { x: 3164, z: 3487, level: 0 },
+        config: { mode: 'ge-buy' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 0.4, gpPerTick: -10, setupTicks: 20, minBatchUnits: 1, confidence: 'live' },
+        trust: 'live_proven',
+        protectedAllowed: false,
+    };
+    const buyer = makeAcct({
+        name: 'GeBuyer',
+        bank: { items: { 995: 500_000 }, observedAt: NOW - 1000, trusted: true },
+    });
+    const itemDemand: GoalDemand = {
+        id: 'd:dbones',
+        goalKind: 'specialist_prep',
+        valueScore: 200,
+        valuePerHour: 1500,
+        target: { kind: 'item', itemId: 536, itemName: 'Dragon bones', count: 10 },
+        fulfilled: 0,
+        remaining: 10,
+        priorityWeight: 1,
+        assignedAccount: 'GeBuyer',
+        active: true,
+    };
+    const rejectedOutlier = planAccount(buyer, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { GeBuyer: buyer } },
+        activities: [directGeAct],
+        demands: [itemDemand],
+        marketQuotes: { 536: { ask: 60_000, sell: 50_000, trades: 2 } },
+    });
+    expect(rejectedOutlier.steps).toHaveLength(0);
+});

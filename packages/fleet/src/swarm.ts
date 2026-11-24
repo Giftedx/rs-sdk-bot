@@ -1122,7 +1122,8 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const stopFile = (a: string) => join(prac, `stop-${a}`);
     const statusAge = (a: string) => {
         const hit = readAccountStatus(root, a);
-        return hit ? Date.now() - hit.mtimeMs : Infinity;
+        if (!hit || hit.data?.server !== LIVE_SERVER) return Infinity;
+        return Date.now() - hit.mtimeMs;
     };
     const statusStarted = (a: string): number | undefined => {
         const s = readAccountStatus(root, a)?.data;
@@ -1182,8 +1183,8 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 const ends = endsOfRun(run.accounts, reason, diedNames);
                 for (const account of run.accounts) {
                     const own = ends.get(account)!;
-                    ended.set(account, { at: Date.now(), reason: own, revision: run.revision });
-                    console.log(`SWARM end ${account} ${own}`);
+                    const diedRun = /^died\b/i.test(own);
+                    let keepEnded = true;
                     if (run.activityId && run.accounts.length === 1) {
                         try {
                             const raw = extractWorkerOutcomeInput({
@@ -1196,18 +1197,34 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                                 exitCode: typeof exitCode === 'number' ? exitCode : undefined,
                                 endReason: own,
                                 successful: successfulEnd(own),
-                                died: /^died\b/i.test(own),
+                                died: diedRun,
                                 lastResultLine,
                                 logPath: run.log,
                                 workerRelease: run.workerRelease,
                                 baseline: run.baseline,
                             });
-                            recordWorkerOutcome({
+                            const outcomeRes = recordWorkerOutcome({
                                 root, catalog, rateStore, classifier, domain: 'live',
                                 ...(run.workerRelease ? { workerRelease: run.workerRelease } : {}),
                                 raw,
                             });
+                            if (outcomeRes.outcome.kind === 'infra_fault' && !diedRun && !successfulEnd(own)) {
+                                try {
+                                    if (readLogoutProof(account, LIVE_SERVER, { base: root }).state !== 'held') keepEnded = false;
+                                } catch { /* keep ended on unreadable proof */ }
+                            }
                         } catch { /* outcome persistence errors never stop controller */ }
+                    }
+                    if (keepEnded) {
+                        ended.set(account, { at: Date.now(), reason: own, revision: run.revision });
+                        console.log(`SWARM end ${account} ${own}`);
+                    } else {
+                        const existingKey = [...ended.keys()].find(n => n.toLowerCase() === account.toLowerCase());
+                        if (existingKey) {
+                            ended.delete(existingKey);
+                            persistEnded(deathsFile, ended);
+                        }
+                        console.log(`SWARM infra-fault exit ${account} ${own} (logout clean; retry allowed after backoff)`);
                     }
                 }
             } else {
@@ -1284,7 +1301,10 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     });
 
     const tick = () => {
-        if (!skipLock) renewLease(lockFile);
+        if (!skipLock && !renewLease(lockFile)) {
+            console.log('SWARM lost local controller lease; exiting to avoid split-brain');
+            process.exit(2);
+        }
         if (adopted.size && Date.now() - pidStartsAt >= 60_000) readPidStarts();
         if (performance.now() >= renewAt && lease.allows()) {
             let landed = true;
@@ -1426,14 +1446,25 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         }
 
         const stopAll = hasStopFile('swarm', root);
-        if (shouldSwarmReload({ root, startedAt, recoveryActive: !!recoveryDispatch.active, stopAll })) {
+        inheritedRecoveries = heldRecoveryOwners(root, recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
+        if (shouldSwarmReload({
+            root,
+            startedAt,
+            recoveryActive: !!recoveryDispatch.active || inheritedRecoveries.length > 0,
+            stopAll: stopAll || hasStopFile('coordinator', root),
+        })) {
             saveRuns();
             cleanupOwner();
-            const pid = respawnDaemon(root, swarmReloadArgs(root, planFile, watchId), join(logDir, `daemon-${Date.now()}.out.log`));
-            console.log(`SWARM reload after live-update: successor pid ${pid}`);
-            process.exit(0);
+            try {
+                const pid = respawnDaemon(root, swarmReloadArgs(root, planFile, watchId), join(logDir, `daemon-${Date.now()}.out.log`));
+                if (!pid) throw Error('successor pid unavailable');
+                console.log(`SWARM reload after live-update: successor pid ${pid}`);
+                process.exit(0);
+            } catch (err) {
+                console.log(`SWARM reload respawn failed: ${String(err)}`);
+                process.exit(2);
+            }
         }
-        inheritedRecoveries = heldRecoveryOwners(root, recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
         if (stopAll && recoveryDispatch.active) writeSwarmStop(stopFile(recoveryDispatch.active.account), SWARM_STOP.recovery);
         if (stopAll) for (const held of inheritedRecoveries) writeSwarmStop(stopFile(held.account), SWARM_STOP.inherited);
         const planned = combinedJobs.flatMap(j => { const p = parseJob(j); return 'error' in p ? [] : [p]; });
@@ -1447,13 +1478,13 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             }
             const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
             const producer = (a: string, id: string) => {
-                const receipt = listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt;
+                const receipt = listAttempts(a, LIVE_SERVER, { base: root }).find(x => x.attemptId === id)?.receipt;
                 return receipt ? { pid: receipt.owner.pid, createdAt: receipt.createdAt, updatedAt: receipt.updatedAt } : undefined;
             };
             const accounts = planned.flatMap(p => p.accounts).concat(
                 lifecycleReadRoots(root).flatMap(lcRoot => lifecycleAccounts(join(lcRoot, 'live', LIVE_SERVER))),
             );
-            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, pidAlive, processStartTimes)) {
+            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER, { base: root }), producer, pidAlive, processStartTimes)) {
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
             }
@@ -1573,7 +1604,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         const s = readAccountStatus(root, a)?.data;
                         if (!standingEndRetryable(end, job, missionSignature(job), s?.result)) continue;
                         let settled = false;
-                        try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* ignore */ }
+                        try { const lp = readLogoutProof(a, LIVE_SERVER, { base: root }); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* ignore */ }
                         if (!standingRetryDue(s, settled, Date.now())) continue;
                         ended.delete(key!);
                         for (let i = holds.length - 1; i >= 0; i--) if (holds[i]!.account.toLowerCase() === a.toLowerCase()) holds.splice(i, 1);
@@ -1640,19 +1671,23 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             }
             const run = runs.get(p.key);
             for (const a of p.accounts) {
+                const endedEntry = ended.get(a) ?? [...ended].find(([name]) => name.toLowerCase() === a.toLowerCase())?.[1];
                 state.push({
                     account: a, script: job.script, role: job.role, goal: job.goal, enabled: job.enabled, repeat: !!job.repeat, note: job.note,
                     ...(p.host ? { host: p.key } : {}), state: st[a],
-                    since: (run && run.accounts.includes(a) ? run.started : undefined) ?? ended.get(a)?.at ?? null,
+                    since: (run && run.accounts.some(n => n.toLowerCase() === a.toLowerCase()) ? run.started : undefined) ?? endedEntry?.at ?? null,
                 });
             }
         }
         const pendingStartup = pendingCount();
+        const infraStatus = infraBreaker.canProceed();
         writeStateFile(join(prac, 'swarm-state.json'), JSON.stringify({
             at: Date.now(), controllerPid: process.pid, release: process.env.WORKER_RELEASE, freeGB: freemem() / 2 ** 30,
             running: botsRunning(), recovery: recoveryDispatch.active ?? null, recoverySlot: heldSlot.until > Date.now() ? heldSlot : null,
             inheritedRecoveries, externalRunning: externalCount(), pendingStartup, pendingReserveGB: pendingStartup * START_BUDGET_GB,
-            minFreeGB: Math.max(FREE_FLOOR_GB, plan.minFreeGB), maxBots: plan.maxBots, jobs: state,
+            minFreeGB: Math.max(FREE_FLOOR_GB, plan.minFreeGB), maxBots: plan.maxBots,
+            infraBreaker: infraStatus,
+            jobs: state,
         }));
         if (stopAll && runs.size === 0 && !recoveryDispatch.active && !inheritedRecoveries.length) {
             console.log('SWARM stopped (stop-swarm)');

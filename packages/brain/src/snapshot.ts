@@ -960,11 +960,14 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
 
     // Build fleetSides summary.
     const fleetSides: Record<string, FleetSideStatus> = {};
-    const localSwarmStopPath = findStopFile('swarm', root) ?? findStopFile('all', root);
     let localStopped = false;
-    if (localSwarmStopPath) {
-        const text = (readStopFile('swarm', root) ?? readStopFile('all', root) ?? '').trim();
-        if (!STALE_AUTO_STOP_TEXT.test(text)) localStopped = true;
+    for (const scope of ['swarm', 'all'] as const) {
+        if (!findStopFile(scope, root)) continue;
+        const text = (readStopFile(scope, root) ?? '').trim();
+        if (!STALE_AUTO_STOP_TEXT.test(text)) {
+            localStopped = true;
+            break;
+        }
     }
     const maxBots = Number.isSafeInteger(swarmPlan?.maxBots) && swarmPlan.maxBots >= 0 ? swarmPlan.maxBots : 25;
     const localLease = readLease(join(practiceRoot(root), 'fleet-agent.lock'))

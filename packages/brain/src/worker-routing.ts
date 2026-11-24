@@ -203,14 +203,18 @@ export function resolveActivityWorkerRoute(
                             ? inferred.method
                             : 'gnome';
             const method = typeof cfg.method === 'string' ? cfg.method : routeParts[1] ?? 'order';
-            const args = standaloneScript ? explicitArgs : ['agility', 'order', course, ...explicitArgs];
+            const agilityTarget = explicitArgs[0] ?? env.TARGET_LEVEL ?? env.TARGET ?? '99';
+            const agilityEnv = env.TARGET_LEVEL || env.TARGET ? env : { ...env, TARGET_LEVEL: agilityTarget };
+            const args = standaloneScript
+                ? explicitArgs
+                : ['agility', 'order', course, ...(explicitArgs.length > 0 ? explicitArgs : [agilityTarget])];
             return {
                 family: 'agility',
                 workerId: 'agility',
                 activityId: activity.id,
                 routeKey: `agility:${method === 'specialist' ? 'specialist' : course}`,
                 args,
-                env,
+                env: agilityEnv,
                 config: {
                     ...cfg,
                     course,
@@ -425,6 +429,8 @@ function resolveAcquireOrGearSource(
             };
         case 'npc_shop': {
             const floatAmount = Math.max(20_000, reserveNum + Math.max(0, Math.ceil(params.estimatedCoinCost ?? 0)) + 1_000);
+            const profile = params.shopId ?? 'ardy';
+            const items = resolvedItemName ?? String(params.itemId);
             return {
                 account,
                 stepKind,
@@ -432,7 +438,7 @@ function resolveAcquireOrGearSource(
                 family: 'market',
                 workerId: 'market',
                 routeKey: 'shop-buy',
-                args: ['shop-buy', params.shopId ?? 'ardy', '3000'],
+                args: ['shop-buy', profile, '3000'],
                 env: {
                     ITEM_ID: String(params.itemId),
                     ...(resolvedItemName ? { ITEMS: resolvedItemName } : {}),
@@ -445,7 +451,16 @@ function resolveAcquireOrGearSource(
                 },
                 config: {
                     mode: 'shop-buy',
-                    shopId: params.shopId ?? 'ardy',
+                    profile,
+                    cap: 3000,
+                    items,
+                    maxItems: params.quantity,
+                    coinReserve: reserveNum,
+                    float: floatAmount,
+                    noBuyTicks: 25,
+                    stopAtTarget: true,
+                    bankPack: true,
+                    shopId: profile,
                     itemId: params.itemId,
                     quantity: params.quantity,
                 },
@@ -556,6 +571,11 @@ function applyTargetLevelArg(
     if (resolved.routeKey === 'magic:alch-train' && resolved.args[0] === 'magic' && resolved.args.length >= 3) {
         const nextArgs = [...resolved.args];
         nextArgs[2] = String(Math.max(55, targetLevel));
+        return { ...resolved, args: nextArgs };
+    }
+    if (resolved.family === 'agility' && resolved.args[0] === 'agility' && resolved.args[1] === 'order' && resolved.args.length >= 4) {
+        const nextArgs = [...resolved.args];
+        nextArgs[3] = String(targetLevel);
         return { ...resolved, args: nextArgs };
     }
     return resolved;

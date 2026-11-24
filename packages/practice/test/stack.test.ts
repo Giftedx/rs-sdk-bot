@@ -1,10 +1,10 @@
 import { test, expect } from 'bun:test';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { practiceDir } from '../src/paths';
 import { ISOLATED_ENGINE_ENV } from '../src/rehearse';
-import { engineCommand, MARKERS, startStack, waitHttpReady, waitReady } from '../src/stack';
+import { engineCommand, MARKERS, pidsFile, startStack, waitHttpReady, waitReady } from '../src/stack';
 
 test('quest proof carries private endpoints through stack, fresh account and real CLI without changing the parent', async () => {
     const { selectQuestSweepProofEndpoints, questSweepProofAccountEnv, startQuestSweepProofStack, questSweepChildConfiguration } = await import('../src/quest-sweep-proof');
@@ -124,4 +124,28 @@ test('waitHttpReady fails fast with exit code and log tail if process exits earl
 test('ISOLATED_ENGINE_ENV disables live reload and startup builds so practice trades are never interrupted', () => {
     expect(ISOLATED_ENGINE_ENV.BUILD_LIVE_RELOAD).toBe('false');
     expect(ISOLATED_ENGINE_ENV.BUILD_STARTUP).toBe('false');
+});
+
+test('startStack removes its pids file when the engine exits before becoming ready', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'stack-fail-'));
+    const preload = join(dir, 'abort.ts');
+    writeFileSync(preload, 'console.log("aborted boot"); process.exit(2);\n');
+    const probe = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { data() {} } });
+    const port = probe.port;
+    probe.stop(true);
+    const instance = `test-fail-${process.pid}`;
+    try {
+        await expect(startStack({
+            ports: { engine: port, gateway: port + 1 },
+            gateway: false,
+            instance,
+            enginePreload: { module: preload, env: {} },
+            readyTimeoutMs: 5000,
+        })).rejects.toThrow(/exited with code 2/);
+        expect(existsSync(pidsFile(instance))).toBe(false);
+    } finally {
+        rmSync(pidsFile(instance), { force: true });
+        rmSync(join(practiceDir(), 'logs', `engine-${instance}.log`), { force: true });
+        rmSync(dir, { recursive: true, force: true });
+    }
 });

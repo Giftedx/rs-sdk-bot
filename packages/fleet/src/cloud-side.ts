@@ -372,10 +372,12 @@ export async function runCloudSideCli(argv: readonly string[] = process.argv.sli
         const nonce = name === 'swarm' ? randomUUID() : undefined;
         const args = nonce ? [...commands[name]!, `--nonce=${nonce}`, ...(!o.inspect ? [`--watch-id=${binding.watchId}`] : [])] : commands[name]!;
         const child = spawn(process.execPath, args, { cwd: root, env, detached: true, windowsHide: true, stdio: ['ignore', out, out] });
-        closeSync(out); child.unref();
+        closeSync(out);
+        if (!child.pid) throw Error(`cloud-side failed to spawn ${name}`);
+        child.unref();
         const prior = records[name]?.restarts ?? [];
-        records[name] = { pid: child.pid!, started: Date.now(), restarts: [...prior.filter(t => Date.now() - t < 60 * 60_000), Date.now()], ...(nonce ? { nonce } : {}) };
-        if (nonce) { launched.push({ pid: child.pid!, nonce }); if (o.recover) recoveryLaunched = true; }
+        records[name] = { pid: child.pid, started: Date.now(), restarts: [...prior.filter(t => Date.now() - t < 60 * 60_000), Date.now()], ...(nonce ? { nonce } : {}) };
+        if (nonce) { launched.push({ pid: child.pid, nonce }); if (o.recover) recoveryLaunched = true; }
         writeFileSync(pidsFile, JSON.stringify(records));
         log(`started ${name} pid ${child.pid}`);
     };
@@ -462,12 +464,12 @@ export async function runCloudSideCli(argv: readonly string[] = process.argv.sli
         if (!bounded) {
             const view = normalOwners();
             if (!view.known) fail('normal stop ownership unavailable; owners preserved: ' + view.reason);
-            if (view.swarm) records.swarm = { pid: view.swarm, started: Date.now(), restarts: [] };
+            if (view.swarm) records.swarm = { ...records.swarm, pid: view.swarm, started: records.swarm?.started ?? Date.now(), restarts: records.swarm?.restarts ?? [] };
         }
         if (o.recover) {
             try {
                 const owner = JSON.parse(readFileSync(join(liveRoot(root), 'swarm-owner.json'), 'utf8'));
-                if (alive(owner.pid, 'scripts/swarm.ts')) records.swarm = { pid: owner.pid, started: owner.at, restarts: [] };
+                if (alive(owner.pid, 'scripts/swarm.ts')) records.swarm = { ...records.swarm, pid: owner.pid, started: owner.at ?? records.swarm?.started ?? Date.now(), restarts: records.swarm?.restarts ?? [] };
             } catch { /* no swarm ran */ }
         }
         const wrote = !bounded ? await prepareNormalStop(root) : endStopWrites(readStop());

@@ -142,7 +142,13 @@ export function recoveryLeaseState(root: string, account: string, alive: (pid: n
 }
 
 export function archiveStaleLease(root: string, account: string, now: number): string {
-    const file = leaseFile(root, account), to = join(resolve(file, '..'), `lease-stale-${stamp(now)}.json`);
+    const file = leaseFile(root, account);
+    const dir = resolve(file, '..');
+    const baseName = `lease-stale-${stamp(now)}`;
+    let to = join(dir, `${baseName}.json`);
+    if (existsSync(to)) {
+        to = join(dir, `${baseName}-${randomUUID().slice(0, 6)}.json`);
+    }
     renameSync(file, to);
     return to;
 }
@@ -178,8 +184,9 @@ export function spentStandaloneAttempts(history: readonly StandaloneRecoveryReco
     return history.filter(r => r.account.toLowerCase() === key && r.endedAt === endedAt && !r.ok && !r.infraFault).length;
 }
 
-export function findAccountStatus(root: string, account: string): any {
+export function findAccountStatus(root: string, account: string, server?: string): any {
     const target = `${account.toLowerCase()}.json`;
+    const serverLower = server?.toLowerCase();
     for (const dir of statusReadDirs(root)) {
         if (!existsSync(dir)) continue;
         let files: string[] = [];
@@ -187,7 +194,7 @@ export function findAccountStatus(root: string, account: string): any {
         const match = files.find(f => f.toLowerCase() === target);
         if (!match) continue;
         const row = readJson(join(dir, match), null);
-        if (row) return row;
+        if (row && (!serverLower || (typeof row.server === 'string' && row.server.toLowerCase() === serverLower))) return row;
     }
     return null;
 }
@@ -280,7 +287,7 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
         const proof = readLogoutProof(lower, server, { root: lRoot });
         if (proof.state !== 'held') continue;
 
-        const status = findAccountStatus(root, lower);
+        const status = findAccountStatus(root, lower, server);
         if (status && !status.result && Number.isFinite(status.at) && now - status.at < 60_000) continue;
 
         let claim: ClaimView = null;
@@ -634,9 +641,17 @@ export type ControlledDispatchOneOptions = {
     processStarts?: ProcessStarts;
 };
 
+const DISPATCH_WAIT_CAUSES = new Set([
+    'recovery admission waiting: memory',
+    'recovery admission waiting: maxBots',
+    'recovery waits for runtime source owner',
+]);
+
+export type ControlledDispatchResult = { ok: boolean; detail: string; deferred?: boolean };
+
 export async function runControlledDispatchOne(
     opts: ControlledDispatchOneOptions,
-): Promise<{ ok: boolean; detail: string }> {
+): Promise<ControlledDispatchResult> {
     const resolvedRoot = resolve(opts.root);
     const nowFn = opts.now ?? Date.now;
     const timeoutMs = opts.timeoutMs ?? 180_000;
@@ -723,7 +738,14 @@ export async function runControlledDispatchOne(
             return { ok: false, detail: `controlled recovery timed out after ${timeoutMs}ms` };
         }
         if (matchedResult.sessionRecovered !== true) {
-            return { ok: false, detail: String(matchedResult.reason ?? 'controlled recovery did not confirm sessionRecovered') };
+            const reason = String(matchedResult.reason ?? 'controlled recovery did not confirm sessionRecovered');
+            const cause = typeof matchedResult.setup?.cause === 'string' ? matchedResult.setup.cause : '';
+            const isWait = (reason === 'recovery setup refused; no lease issued; no retry' && DISPATCH_WAIT_CAUSES.has(cause))
+                || reason.startsWith('existing recovery lease held;');
+            if (isWait) {
+                return { ok: false, deferred: true, detail: cause ? `${reason}: ${cause}` : reason };
+            }
+            return { ok: false, detail: reason };
         }
         const proof = readLogoutProof(opts.account, opts.server, { root: lifecycleRootForRead(opts.server, resolvedRoot) });
         if (proof.state !== 'confirmed') {
@@ -818,7 +840,11 @@ export async function executeControlledLiveRecovery(
                 try {
                     const parsed = JSON.parse(marker.slice('FLEET_DISPATCH_RESULT '.length));
                     if (typeof parsed?.ok === 'boolean' && typeof parsed?.detail === 'string') {
-                        resolvePromise({ ok: parsed.ok, detail: parsed.detail });
+                        resolvePromise({
+                            ok: parsed.ok,
+                            detail: parsed.detail,
+                            ...(parsed.deferred === true ? { deferred: true } : {}),
+                        });
                         return;
                     }
                 } catch { /* fall through */ }

@@ -816,13 +816,18 @@ export async function runAioSkiller(account: string, args: readonly string[], en
  }
  if (first === 'combat') {
   if (!second) throw Error('aio-skiller combat requires <mode>');
+  const prevExitCode = process.exitCode;
   process.exitCode = 0;
-  await runCombatModeCli(account, second, rest, env, {
-   leaveStarter: leaveRuneStarter,
-   comboRecipe: itemMagicRecipe,
-   runComboItem: runItemMagic,
-  });
-  return !process.exitCode || Number(process.exitCode) === 0 ? 'RESULT ok' : 'RESULT fail';
+  try {
+   await runCombatModeCli(account, second, rest, env, {
+    leaveStarter: leaveRuneStarter,
+    comboRecipe: itemMagicRecipe,
+    runComboItem: runItemMagic,
+   });
+   return !process.exitCode || Number(process.exitCode) === 0 ? 'RESULT ok' : 'RESULT fail';
+  } finally {
+   process.exitCode = prevExitCode;
+  }
  }
  if (first === 'artisan') {
   if (!second || !VALID_ARTISAN_SKILLS.includes(second as ArtisanSkill)) {
@@ -847,19 +852,26 @@ export async function runAioSkiller(account: string, args: readonly string[], en
   // Several job files run in one login, in order, and stop at the first failed job: each login costs board ticks.
   const jobs = [second, ...rest].map(readBankJobArgument);
   let stopped = false;
-  const s = await openBot(account, { onStop: async () => { stopped = true; } });
+  let s: Awaited<ReturnType<typeof openBot>> | undefined;
   let ok = false, summary = '';
   try {
+   s = await openBot(account, { onStop: async () => { stopped = true; } });
    const results: Awaited<ReturnType<typeof runBankJob>>[] = [];
    for (const job of jobs) {
-    const res = await runBankJob(s, job, () => stopped || existsSync(join('.practice', `stop-${account}`)));
+    const res = await runBankJob(
+     s,
+     job,
+     () => stopped || existsSync(join('.practice', 'stop-all')) || existsSync(join('.practice', `stop-${account}`)) || existsSync(join('.practice', `stop-${account.toLowerCase()}`)),
+    );
     results.push(res);
     if (!res.ok) break;
    }
    ok = results.length === jobs.length && results.every(r => r.ok);
    summary = jobs.length === 1 ? JSON.stringify(results[0]) : JSON.stringify({ ok, jobs: results });
+  } catch (error) {
+   summary = String(error);
   } finally {
-   await finish([s], ok, summary || 'aio-skiller bank-job');
+   await finish(s ? [s] : [], ok, summary || 'aio-skiller bank-job');
   }
   const result = `RESULT ${ok ? 'ok' : 'fail'} ${summary}`;
   console.log(result);

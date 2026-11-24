@@ -17,6 +17,7 @@ import {
 import { knownBanks } from '../../../core/src/trip';
 import { BotActions } from '../../../../vendor/rs-sdk/sdk/actions';
 import { isItemStackable, REPO_ROOT } from './catalog';
+import { isStopFilePresent } from '../stop';
 
 export type BankSpot = Tile;
 export const BANKS: readonly BankSpot[] = knownBanks();
@@ -39,7 +40,7 @@ export function productionStopRequested(
     exists: (path: string) => boolean = existsSync,
     role: string | undefined = process.env.STOP_FILE,
 ): boolean {
-    return stop() || exists('.practice/stop-all') || (!!actor && exists(`.practice/stop-${actor}`)) || (!!role && exists(role));
+    return stop() || isStopFilePresent(actor, [], exists, role);
 }
 
 export function watchProductionLife(s: Session, stop: () => boolean = () => false, options: { allowDamage?: boolean } = {}) {

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { writeLiveUpdate } from '../../core/src/live-reload';
 import { hasStopFile, liveLifecycleRoot, liveRoot, liveStatusDir, practiceRoot } from '../../core/src/practice-paths';
 import { beginSessionAttempt, readLogoutProof } from '../../core/src/session-lifecycle';
+import { courierDeliveryWaiting, readCourierStatus } from '../src/courier-admission';
 import { confirmedTradeLogout, readSyncStatuses, readSyncStopText, sideCard } from '../src/fleet-sync';
 import {
     clearAccountAutoStops,
@@ -193,5 +194,46 @@ describe('fleet runtime live-path, Brain dispatch, reload, and lease fixes', () 
         expect(recoveryLeaseHeld(lease, now, () => true, () => new Map([[999991, now - 5000]]))).toBe(true);
         // Reused PID started after lease.at is not the lease owner.
         expect(recoveryLeaseHeld(lease, now, () => true, () => new Map([[999991, now + 10_000]]))).toBe(false);
+    });
+
+    test('readSyncStatuses excludes practice:true rows across status directories', () => {
+        const root = scratch();
+        mkdirSync(liveStatusDir(root), { recursive: true });
+        writeFileSync(join(liveStatusDir(root), 'LiveBot.json'), JSON.stringify({ name: 'LiveBot', server: 'rs-sdk-demo.fly.dev', at: 1000 }));
+        writeFileSync(join(liveStatusDir(root), 'SimBot.json'), JSON.stringify({ name: 'SimBot', server: 'rs-sdk-demo.fly.dev', at: 1000, practice: true }));
+        const rows = readSyncStatuses(root) as { name: string }[];
+        expect(rows.map(r => r.name)).toEqual(['LiveBot']);
+    });
+
+    test('readCourierStatus and courierDeliveryWaiting read .practice/live/status first with case-insensitive fallback', () => {
+        const root = scratch();
+        const now = 1_700_000_000_000;
+        mkdirSync(liveStatusDir(root), { recursive: true });
+        mkdirSync(join(practiceRoot(root), 'status'), { recursive: true });
+
+        writeFileSync(
+            join(practiceRoot(root), 'status', 'CourierBot.json'),
+            JSON.stringify({ name: 'CourierBot', server: 'rs-sdk-demo.fly.dev', at: now - 10_000, inventory: [] }),
+        );
+        writeFileSync(
+            join(liveStatusDir(root), 'courierbot.json'),
+            JSON.stringify({
+                name: 'CourierBot',
+                server: 'rs-sdk-demo.fly.dev',
+                at: now - 1_000,
+                pos: { x: 2653, z: 3302, level: 0 },
+                inventory: [{ id: 334, name: 'Trout', count: 50 }],
+            }),
+        );
+
+        const row = readCourierStatus('CourierBot', root);
+        expect(row.at).toBe(now - 1_000);
+        expect(courierDeliveryWaiting(
+            ['CourierBot'],
+            undefined,
+            [{ account: 'CourierBot', script: 'scripts/aio-logistics.ts', args: ['food-courier'] }],
+            name => readCourierStatus(name, root),
+            now,
+        )).toBe(true);
     });
 });

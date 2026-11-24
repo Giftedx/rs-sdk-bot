@@ -7,6 +7,7 @@ import {
     type WorkerModule,
     type WorkerWorldView,
 } from '../contracts';
+import { watchWorkerStop } from '../stop';
 import { runGather, runGatherCli } from './dispatch';
 import { gatherEstimate, gatherPreflight, toWorkerOutcome } from './preflight';
 import { type GatherConfig, normalizeGatherConfig } from './types';
@@ -30,22 +31,32 @@ export const gatherWorker: WorkerModule<GatherConfig, WorkerAccountView, WorkerW
         const s = session as Session;
         const norm = normalizeGatherConfig(cfg);
         const startTick = s.tick?.() ?? 0;
-        let ended = false;
-        void s.ended?.then(() => {
-            ended = true;
-        });
+        const { isStopped } = watchWorkerStop(s, (cfg as { stop?: () => boolean }).stop);
+        await Promise.resolve();
+        if (isStopped()) {
+            return toWorkerOutcome(
+                { ok: false, kind: 'aborted', detail: 'stop or session end requested', delta: { elapsedTicks: 0 } },
+                s.name ?? 'unknown',
+                norm,
+                0,
+                { stopped: true },
+            );
+        }
         try {
-            const outcome = await runGather(s, norm, () => ended);
+            const outcome = await runGather(s, norm, isStopped);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
-            return toWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed);
+            return toWorkerOutcome(outcome, s.name ?? 'unknown', norm, ticksElapsed, { stopped: isStopped() });
         } catch (error) {
+            await Promise.resolve();
             const detail = String(error);
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
+            const stopped = isStopped();
             return toWorkerOutcome(
-                { ok: false, kind: 'failed', detail, delta: { elapsedTicks: ticksElapsed } },
+                { ok: false, kind: stopped ? 'aborted' : 'failed', detail, delta: { elapsedTicks: ticksElapsed } },
                 s.name ?? 'unknown',
                 norm,
                 ticksElapsed,
+                { stopped },
             );
         }
     },

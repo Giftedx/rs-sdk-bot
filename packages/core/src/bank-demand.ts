@@ -1,5 +1,14 @@
 import { readFileSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { repoRoot, statusReadDirs } from './practice-paths';
+
+function readLiveStatus(name: string, base = repoRoot): any {
+    for (const dir of statusReadDirs(base)) {
+        try { return JSON.parse(readFileSync(join(dir, `${name}.json`), 'utf8')); }
+        catch (error) { if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') return null; }
+    }
+    return null;
+}
 export interface DemandNear { x:number; z:number; radius:number }
 // Cooked/noted forms only. Raw and burnt sharks never satisfy food demand.
 export const COOKED_FOOD_IDS = new Set([329,330,333,334,379,380,385,386]);
@@ -28,11 +37,11 @@ export function hasDelivery(status: any, now=Date.now(), near?: DemandNear): boo
         && (!near || (status.pos?.level===0 && Math.max(Math.abs(status.pos.x-near.x),Math.abs(status.pos.z-near.z))<=near.radius))
         && (status.inventory??[]).some((i:any)=>i.count>0&&!/^coins$/i.test(i.name));
 }
-export function deliveryWaiting(names: string[], near?: DemandNear): boolean {
+export function deliveryWaiting(names: string[], near?: DemandNear, base = repoRoot): boolean {
     return names.some(name=>{
         if(!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return false;
-        try { return hasDelivery(JSON.parse(readFileSync(resolve(import.meta.dir,'../../../.practice/status',`${name}.json`),'utf8')),Date.now(),near); }
-        catch { return false; }
+        const status = readLiveStatus(name, base);
+        return hasDelivery(status, Date.now(), near);
     });
 }
 
@@ -49,13 +58,13 @@ export function hasPayout(name: string, status: any, request: any, requestAt: nu
             i && typeof i.name==='string' && i.name.trim().length>0 && Number.isSafeInteger(i.count) && i.count>0);
 }
 
-export function payoutWaiting(names: string[], near?: DemandNear): boolean {
+export function payoutWaiting(names: string[], near?: DemandNear, base = repoRoot): boolean {
     return names.some(name=>{
         if(!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return false;
         try {
-            const request = resolve(import.meta.dir,'../../../.practice/withdraw',`${name}.json`);
-            const status = resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
-            return hasPayout(name, JSON.parse(readFileSync(status,'utf8')), JSON.parse(readFileSync(request,'utf8')), statSync(request).mtimeMs, Date.now(), near);
+            const request = resolve(base,'.practice/withdraw',`${name}.json`);
+            const status = readLiveStatus(name, base);
+            return status ? hasPayout(name, status, JSON.parse(readFileSync(request,'utf8')), statSync(request).mtimeMs, Date.now(), near) : false;
         } catch { return false; }
     });
 }

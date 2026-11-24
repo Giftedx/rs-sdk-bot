@@ -246,6 +246,8 @@ describe('root swarm.json validity and Brain throttle helpers', () => {
             expect(jobs[0].account).toBe('MixedCaseBot');
             expect(jobs[0].script).toBe('scripts/generated/waterfall.ts');
             expect(jobs[0].role).toBe('army');
+            // Multi-step plan truncated before fleet_trade runs quest:waterfall now, so it must not claim combat:fire-giant's spotId.
+            expect(jobs[0].resources).toBeUndefined();
         } finally {
             rmSync(root, { recursive: true, force: true });
         }

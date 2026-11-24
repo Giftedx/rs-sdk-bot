@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
-import { isAbsolute, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { Subprocess } from 'bun';
 import { practiceDir, rsSdkRoot } from './paths';
 import { canBind, portInUse } from './ports';
@@ -152,6 +152,7 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     };
     const timeout = opts.readyTimeoutMs ?? 180_000;
     const spawn = (cwd: string, cmd: string[], env: Record<string, string>, log: string) => {
+        mkdirSync(dirname(log), { recursive: true });
         writeFileSync(log, '');
         return Bun.spawn(cmd, { cwd, env: { ...process.env, ...env }, stdout: Bun.file(log), stderr: Bun.file(log) ,windowsHide:true});
     };
@@ -161,13 +162,16 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const launch = engineCommand(opts, ports.engine);
     const engine = spawn(join(root, 'server', 'engine'), launch.cmd, launch.env, logs.engine);
     const saved: Saved = { engine: { pid: engine.pid, marker: MARKERS.engine } };
-    writeFileSync(pidsFile(opts.instance), JSON.stringify(saved));
+    const pidFile = pidsFile(opts.instance);
+    mkdirSync(dirname(pidFile), { recursive: true });
+    writeFileSync(pidFile, JSON.stringify(saved));
     try {
         const readyDeadline = Date.now() + timeout;
         await waitReady(engine, 'engine', logs.engine, timeout);
         await waitHttpReady(engine, `http://127.0.0.1:${ports.engine}/crc`, logs.engine, Math.max(1000, readyDeadline - Date.now()));
     } catch (e) {
         await killTree(engine.pid);
+        rmSync(pidFile, { force: true });
         throw e;
     }
 
@@ -178,12 +182,13 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
         AGENT_PORT: String(ports.gateway),
     }, logs.gateway);
     saved.gateway = { pid: gateway.pid, marker: MARKERS.gateway };
-    writeFileSync(pidsFile(opts.instance), JSON.stringify(saved));
+    writeFileSync(pidFile, JSON.stringify(saved));
     try {
         await waitReady(gateway, 'gateway', logs.gateway, timeout);
     } catch (e) {
         await killTree(gateway.pid);
         await killTree(engine.pid);
+        rmSync(pidFile, { force: true });
         throw e;
     }
 

@@ -1,5 +1,7 @@
-import { mkdirSync, renameSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { renameRetry, writeAtomicFile } from './atomic-file';
+export { renameRetry };
 import { NAMES } from './names';
 import type { BankObservation } from './session-types';
 import { questFlags, questDefinitions, type QuestFlag } from './quest-status';
@@ -65,13 +67,6 @@ export function resultCounters(text: string): Record<string, number> {
     if(complete&&depth===0&&!quote)consume();
     return out;
 }
-export function renameRetry(from: string, to: string, rename: (a: string, b: string) => void = renameSync, maxRetries = 20): void {
-    if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 100) throw Error('rename retry limit must be an integer from 0 to 100');
-    for (let attempt = 0; ; attempt++) {
-        try { rename(from, to); return; }
-        catch (e) { if (attempt >= maxRetries || !['EPERM', 'EBUSY', 'EACCES'].includes((e as NodeJS.ErrnoException).code ?? '')) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50); }
-    }
-}
 function updateLines(e: StatusLines, line: string): void {
     if (line.startsWith('MILESTONE ')) e.line = line.slice(10);
     if (line.startsWith('RESULT ')) { e.result = line.slice(7, 300); e.counters=resultCounters(line.slice(7)); }
@@ -100,20 +95,26 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
     const sent: string[] = [];
     const note = (type: unknown) => { if (typeof type === 'string' && type !== 'wait') sent.push(type); };
     const sess = s as any, sdk = s.sdk as any;
-    if (typeof sess.direct === 'function') {
-        const orig = sess.direct.bind(sess);
-        sess.direct = (a: { type: string }) => { note(a?.type); return orig(a); };
+    let directWrapper: ((a: { type: string }) => unknown) | undefined;
+    const origDirect = sess.direct;
+    if (typeof origDirect === 'function') {
+        const bound = origDirect.bind(sess);
+        directWrapper = (a: { type: string }) => { note(a?.type); return bound(a); };
+        sess.direct = directWrapper;
     }
-    if (typeof sdk.send === 'function') {
-        const orig = sdk.send.bind(sdk);
-        sdk.send = (msg: { type: string; action?: { type: string } }) => { if (msg?.type === 'sdk_action') note(msg.action?.type); return orig(msg); };
+    let sendWrapper: ((msg: { type: string; action?: { type: string } }) => unknown) | undefined;
+    const origSend = sdk.send;
+    if (typeof origSend === 'function') {
+        const bound = origSend.bind(sdk);
+        sendWrapper = (msg: { type: string; action?: { type: string } }) => { if (msg?.type === 'sdk_action') note(msg.action?.type); return bound(msg); };
+        sdk.send = sendWrapper;
     }
     const xpNow = () => (s.sdk.getState()?.skills ?? []).reduce((n: number, k: any) => n + (k.experience ?? 0), 0);
     let lastXp = xpNow();
     let pending = '';
     let strip = '';
     const combos = new Map<string, { n: number; xp: number }>();
-    s.onTick(() => {
+    const off = s.onTick(() => {
         const xp = xpNow();
         if (pending) { const c = combos.get(pending)!; c.xp += Math.max(0, xp - lastXp); }
         lastXp = xp;
@@ -124,10 +125,17 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
         c.n++; combos.set(pending, c);
         sent.length = 0;
     });
-    return () => ({
-        strip,
-        combos: [...combos].sort((a, b) => b[1].n - a[1].n).slice(0, 10).map(([k, v]) => ({ k, n: v.n, xp: v.xp })),
-    });
+    return {
+        summary: () => ({
+            strip,
+            combos: [...combos].sort((a, b) => b[1].n - a[1].n).slice(0, 10).map(([k, v]) => ({ k, n: v.n, xp: v.xp })),
+        }),
+        stop: () => {
+            off();
+            if (directWrapper && sess.direct === directWrapper) sess.direct = origDirect;
+            if (sendWrapper && sdk.send === sendWrapper) sdk.send = origSend;
+        },
+    };
 }
 
 export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null; progression?:{decision():any;method?():string|null;binding?():{boundMethod:string|null;source:string|null;consumer:unknown}} }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string, opts: { dir?: string; lifecycleRoot?: string } = {}) {
@@ -202,10 +210,13 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
         }
     };
     // A bank visit can finish between the five-tick writes. Capture it before close as well as each tick.
-    const bot=(s as any).bot;
-    for (const method of ['closeBank','closeInterface']) if (typeof bot?.[method]==='function') {
-        const original=bot[method].bind(bot);
-        bot[method]=(...args:unknown[])=>{ observeBank(); return original(...args); };
+    const bot = (s as any).bot;
+    const restoredBotMethods: Array<() => void> = [];
+    for (const method of ['closeBank', 'closeInterface']) if (typeof bot?.[method] === 'function') {
+        const original = bot[method], bound = original.bind(bot);
+        const wrapped = (...args: unknown[]) => { observeBank(); return bound(...args); };
+        bot[method] = wrapped;
+        restoredBotMethods.push(() => { if (bot[method] === wrapped) bot[method] = original; });
     }
     const write = () => {
         // A late callback or repeated stop from an earlier login cannot replace this account's current row.
@@ -243,7 +254,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             // Last 300 ticks: x XP, v observed inventory change (not net output), m move, a anim, d dialog, s stun, i idle.
             timeline: timeline?.() ?? '',
             // Inputs sent per tick (last 300 ticks, one digit each) and the top action sets with the XP they gained.
-            inputs: inputs(),
+            inputs: inputs.summary(),
             // Every key=value counter from the last RESULT line (shopTicks, walkTicks, stuns, eaten, ...).
             counters: lines.counters,
             progression:(()=>{const d=s.progression?.decision(),executing=s.progression?.method?.(),binding=s.progression?.binding?.();return d?{...binding,state:d.state,selected:d.selected,executing:executing??null,expectedTicks:d.expectedTicks,basis:d.basis,reason:d.reason,followUps:d.followUps,stateFingerprint:d.stateFingerprint}:executing?{...binding,executing}:null;})(),
@@ -253,7 +264,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
         };
         // The fleet controller reads this file regularly during a live run, and on Windows that read can block the
         // rename for a moment; the final write carries the RESULT that live acceptance needs.
-        try { writeFileSync(`${file}.tmp`, JSON.stringify(doc)); renameRetry(`${file}.tmp`, file); } catch { /* the dashboard is optional */ }
+        try { writeAtomicFile(file, JSON.stringify(doc)); } catch { /* the dashboard is optional */ }
     };
     observeQuests();
     write();
@@ -268,7 +279,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     // login on the side. The row's `tick` still shows the stall.
     const beat = setInterval(write, statusHeartbeatMs());
     activeLines.add(lines);
-    return { stop: () => { clearInterval(beat); write(); off(); activeLines.delete(lines); } };
+    return { stop: () => { clearInterval(beat); write(); off(); inputs.stop(); for (const restore of restoredBotMethods) restore(); activeLines.delete(lines); } };
 }
 export const GROUND_STATUS_MAX = 50;
 // The SDK lists the ground items of the player's own level, nearest first.

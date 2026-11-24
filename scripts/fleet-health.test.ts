@@ -311,3 +311,39 @@ test('loadCachedLabels and auditFleetHealth load route-areas.bin across compatib
     writeLabels(cacheFile, JSON.stringify({ ...keyParsed, data: 'f'.repeat(64) }), built);
     expect(loadCachedLabels(root)).toBeUndefined();
 });
+
+test('auditFleetHealth and remediateFleetHealth respect .practice/live/stop-* owner holds and prefer live status', async () => {
+    const root = tempWorkspace();
+    const liveDir = join(root, '.practice', 'live');
+    const liveStatus = join(liveDir, 'status');
+    mkdirSync(liveStatus, { recursive: true });
+    const now = 3_000_000;
+    const owners = new Map([
+        ['livepaused', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+        ['livehealed', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+    ]);
+
+    writeFileSync(join(liveDir, 'stop-LivePaused'), 'owner hold in live root');
+    writeFileSync(join(liveDir, 'stop-LiveHealed'), `${HEALTH_STOP_PREFIX} stale hold\n`);
+    writeLogoutProof(root, 'LiveHealed', 'rs-sdk-demo.fly.dev', true);
+
+    // Stale legacy status vs fresh live status
+    writeFileSync(join(root, '.practice', 'status', 'LiveHealed.json'), JSON.stringify({ name: 'LiveHealed', server: 'rs-sdk-demo.fly.dev', pos: { x: 3095, z: 9830, level: 0 }, at: now - 10_000 }));
+    writeFileSync(join(liveStatus, 'LiveHealed.json'), JSON.stringify({ name: 'LiveHealed', server: 'rs-sdk-demo.fly.dev', pos: { x: 3185, z: 3436, level: 0 }, at: now - 1000, result: 'RESULT ok' }));
+    writeFileSync(join(liveStatus, 'LivePaused.json'), JSON.stringify({ name: 'LivePaused', server: 'rs-sdk-demo.fly.dev', pos: { x: 3095, z: 9830, level: 0 }, at: now - 1000 }));
+
+    const audit = auditFleetHealth({ root, side: 'local', now, owners, swarmPlan: { jobs: [] }, results: [], deaths: {} });
+    const byName = new Map(audit.accounts.map(a => [a.account, a]));
+    expect(byName.get('LivePaused')?.ownerStop).toBe(true);
+    expect(byName.get('LivePaused')?.fixAction).toBe('manual_hold');
+    expect(byName.get('LiveHealed')?.fixAction).toBe('clear_stale_health_stop');
+
+    const actions = await remediateFleetHealth(audit, {
+        now: now + 1000,
+        freeMemGB: () => 12.0,
+        runRecovery: async () => { throw Error('should not recover owner-paused account'); },
+    });
+    expect(existsSync(join(liveDir, 'stop-LivePaused'))).toBe(true);
+    expect(existsSync(join(liveDir, 'stop-LiveHealed'))).toBe(false);
+    expect(actions.some(a => a.account === 'LiveHealed' && a.action === 'cleared_health_stop')).toBe(true);
+});

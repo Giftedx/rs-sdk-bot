@@ -61,5 +61,10 @@ test('before a trade the agent removes the swarm\'s own stop file once the accou
   // An owner's stop file is never removed.
   writeFileSync(stop('TheFullMonty'),'hold offline until the GE pilot');
   expect(tradeStop(base,'TheFullMonty',now)).toEqual({held:'owner stop file',cleared:false});expect(readFileSync(stop('TheFullMonty'),'utf8')).toBe('hold offline until the GE pilot');
+  // Case-insensitive status file lookup in .practice/live/status holds trade while run is ending.
+  mkdirSync(join(prac,'live','status'),{recursive:true});
+  writeFileSync(join(prac,'live','stop-MixedBot'),SWARM_STOP.removed);
+  writeFileSync(join(prac,'live','status','mixedbot.json'),JSON.stringify({at:now-5_000}));
+  expect(tradeStop(base,'MixedBot',now)).toEqual({held:'its last run is still ending',cleared:false});
  }finally{rmSync(base,{recursive:true,force:true});}
 });

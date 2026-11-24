@@ -13,6 +13,7 @@
 // Lumbridge with 1 Hitpoints: it walks to the bank, eats up and wears its starting kit again); PK_OBSERVE=1 only watches and logs (it still fights back when attacked). Every player seen
 // is logged as `HUNT seen` when first seen and whenever its verdict changes. openBot refuses a non-local server without DEMO_OK=1.
 import { existsSync } from 'node:fs';
+import { isStopFilePresent } from '../stop';
 import type { Session } from '../../../core/src/inprocess';
 import { isLocalServer } from '../../../core/src/localserver';
 import { pvpDeathRefusal, recordPvpDeath } from '../../../core/src/pvp-deaths';
@@ -351,7 +352,7 @@ export async function runPkHuntCli(
     try { server = existingSession?.lifecycle?.server ?? accountServerBeforeLogin(bot); } catch (e) { console.log(`RESULT fail no server for ${bot}: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`); return 2; }
     const ledgerRefusal = pvpDeathRefusal({ accounts: [bot], server });
     if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); return 1; }
-    const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
+    const stop = () => isStopFilePresent(bot, ['.practice/stop-pk-hunt']);
     const s = existingSession ?? (await openBot(bot, { continueAfterDeath: true }));
     const threatRadar = env.HUNT_THREAT === '1' ? new Radar() : undefined;
     const closeRadar = threatRadar && !isLocalServer(server) ? connectRadar(server, threatRadar) : undefined;

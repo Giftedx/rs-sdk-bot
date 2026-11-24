@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { renameRetry } from './atomic-file';
 import type { Session } from './inprocess';
 import { ownedAccounts } from './tradeguard';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
@@ -51,7 +52,8 @@ function lastAttempt(dir: string, worker: string): number {
 function recordAttempt(dir: string, req: CargoRequest): void {
     const file = join(dir, `attempt-${req.worker.toLowerCase()}.json`), temp = `${file}.${process.pid}.tmp`;
     writeFileSync(temp, JSON.stringify({ version: 1, phase: 'attempted', worker: req.worker, courier: req.courier, at: req.at }));
-    renameSync(temp, file);
+    try { renameRetry(temp, file); }
+    catch (error) { try { unlinkSync(temp); } catch { /* retain original error */ } throw error; }
 }
 
 export function validCargoRequest(value: unknown, worker: string, owned: ReadonlySet<string>, now = Date.now(), server?: string): value is CargoRequest {

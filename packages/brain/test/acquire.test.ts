@@ -337,3 +337,82 @@ test('AcquireItem GE source checks spendable coins against GE_LIMIT_BUFFER (1.15
     expect(okRes.step?.source).toBe('ge');
     expect(okRes.step?.estimatedCoinCost).toBe(10_000);
 });
+
+test('AcquireItem accepts market-priced low-cost staples (Dragon bones, Prayer potion) and rejects inflated outliers', () => {
+    const richAcct = makeAcct({
+        bank: { items: { 995: 500_000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { Packhorse: richAcct },
+    };
+
+    // Dragon bones (536) have shop cost=1 in items.json, real market ask ~2400 gp.
+    const dboneRes = resolveAcquireItem(
+        richAcct,
+        { itemId: 536, quantity: 10, allowedSources: ['ge'] },
+        { world, marketQuotes: { 536: { ask: 2400, sell: 2200, trades: 20 } } },
+    );
+    expect(dboneRes.ok).toBe(true);
+    expect(dboneRes.step?.source).toBe('ge');
+    expect(dboneRes.step?.estimatedCoinCost).toBe(24_000);
+
+    // Prayer potion(4) (2434) has shop cost=190, real market ask ~8500 gp.
+    const ppotRes = resolveAcquireItem(
+        richAcct,
+        { itemId: 2434, quantity: 5, allowedSources: ['ge'] },
+        { world, marketQuotes: { 2434: { ask: 8500, sell: 8000, trades: 15 } } },
+    );
+    expect(ppotRes.ok).toBe(true);
+    expect(ppotRes.step?.estimatedCoinCost).toBe(42_500);
+
+    // Garbage ask above max(25_000, 10 * cost) is still rejected.
+    const outlierRes = resolveAcquireItem(
+        richAcct,
+        { itemId: 536, quantity: 1, allowedSources: ['ge'] },
+        { world, marketQuotes: { 536: { ask: 50_000, sell: 40_000, trades: 2 } } },
+    );
+    expect(outlierRes.ok).toBe(false);
+});
+
+test('own_bank for coins (995) preserves operating float, GE escrow, and prior committed coin spend', () => {
+    const acct = makeAcct({
+        inventory: {},
+        bank: { items: { 995: 2_500 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { Packhorse: acct },
+        geEscrowCoins: { Packhorse: 1_000 },
+    };
+
+    // 2500 banked - 1000 GE escrow - 1000 operating float = 500 spendable; requesting 600 must fail own_bank.
+    const overSpend = resolveAcquireItem(
+        acct,
+        { itemId: 995, quantity: 600, allowedSources: ['own_bank'] },
+        { world },
+    );
+    expect(overSpend.ok).toBe(false);
+
+    // Requesting 500 fits, unless committedCoinSpend already reserved 200.
+    const exactOk = resolveAcquireItem(
+        acct,
+        { itemId: 995, quantity: 500, allowedSources: ['own_bank'] },
+        { world },
+    );
+    expect(exactOk.ok).toBe(true);
+    expect(exactOk.step?.coinFloatPreserved).toBe(1_000);
+
+    const committedFail = resolveAcquireItem(
+        acct,
+        { itemId: 995, quantity: 500, allowedSources: ['own_bank'], committedCoinSpend: 200 },
+        { world },
+    );
+    expect(committedFail.ok).toBe(false);
+});

@@ -82,3 +82,21 @@ test('a faster receipt cannot outrank valid fallback when either leg loses evide
   expect(result.candidates.find(c=>c.bank==='through')!.blockers.length).toBeGreaterThan(0);
  }
 });
+
+test('unknown or short fare still surfaces missing transport gate blockers instead of masking them',()=>{
+ const gatedModel:TravelModel={
+  places:{start:{x:0,z:0},target:{x:10,z:0}},
+  cache:{nearestBank:{},banks:{near:{x:0,z:2}},legs:{}},
+ };
+ const r:SupplyRouteRequest={
+  from:'start',to:'target',count:10,capacity:10,
+  budget:{coins:10,food:3},
+  resources:{held:{},worn:{},facts:{}},
+  stops:[{holder:'near',bank:'near',available:10,reserved:0,outbound:{coins:null,food:1,accessible:true},onward:{coins:50,food:1,accessible:true,gates:[{id:'glory',source:'glory',requires:[['item:amulet_of_glory:worn']]}]}}],
+ };
+ const result=supplyRoute(gatedModel,r);
+ expect(result.selected).toBeNull();
+ const blockers=result.candidates[0]!.blockers;
+ expect(blockers).toContain('outbound fare unknown');
+ expect(blockers.some(b=>b.includes('amulet_of_glory'))).toBe(true);
+});

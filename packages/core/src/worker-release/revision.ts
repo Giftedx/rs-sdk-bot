@@ -1,7 +1,8 @@
 // Release digest hashing, stamp-checked memory/disk caches, and entry revision computation.
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
+import { writeAtomicFile } from '../atomic-file';
 import { RELEASE_DIGEST_VERSION, releaseFileDigest } from '../release-digest';
 import { releaseFiles } from './closure';
 import { codeFile, kind, launchEntries, posix, root, ts, workerLaunchers, type ReleaseMemo } from './paths';
@@ -29,7 +30,7 @@ function revisionOf(base: string, files: readonly string[], memo: ReleaseMemo): 
         }
         hash.update(p + '\0' + digest + '\0');
     }
-    if (added) try { const file = digestStore(base); mkdirSync(dirname(file), { recursive: true }); const tmp = file + '.' + process.pid + '.tmp'; writeFileSync(tmp, JSON.stringify({ version: digestStoreVersion(), digests: kept })); renameSync(tmp, file); } catch { /* the store is optional */ }
+    if (added) try { writeAtomicFile(digestStore(base), JSON.stringify({ version: digestStoreVersion(), digests: kept }), { ensureDir: true }); } catch { /* the store is optional */ }
     return hash.digest('hex');
 }
 export function releaseRevision(entries: readonly string[], base = root, memo: ReleaseMemo = new Map()): string {
@@ -52,7 +53,7 @@ export function releaseEntries(value: unknown): string[] { return typeof value =
 // changes it), with no file read: a controller loop checks this and hashes the files only when it changes.
 function releaseStamp(base: string, files: readonly string[]): string {
     const hash = createHash('sha256');
-    for (const p of [...files, ...new Set(files.map(f => dirname(f)))]) { const s = statSync(join(base, p)); hash.update(p + '\0' + s.size + '\0' + s.mtimeMs + '\0' + s.ctimeMs + '\0'); }
+    for (const p of [...new Set([...files, ...files.map(f => dirname(f))])]) { const s = statSync(join(base, p)); hash.update(p + '\0' + s.size + '\0' + s.mtimeMs + '\0' + s.ctimeMs + '\0'); }
     return hash.digest('hex');
 }
 const releaseByEntries = new Map<string, { files: string[]; stamp: string; value: string }>();
@@ -76,7 +77,7 @@ export function cachedReleaseFor(entries: readonly string[], base = root): strin
     const memo: ReleaseMemo = new Map(), sourceFiles = releaseFiles(fullEntries, base, memo);
     const files = [...new Set([...sourceFiles, ...[...memo].filter(([k]) => k.startsWith('dirs:')).flatMap(([, v]) => v as string[])])], stamp = releaseStamp(base, files);
     const value = revisionOf(base, sourceFiles, memo); releaseByEntries.set(key, { files, stamp, value });
-    try { mkdirSync(dirname(file), { recursive: true }); const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, JSON.stringify({ key, files, stamp, value })); renameSync(tmp, file); } catch { /* the cache is optional */ }
+    try { writeAtomicFile(file, JSON.stringify({ key, files, stamp, value }), { ensureDir: true }); } catch { /* the cache is optional */ }
     return value;
 }
 export function cachedLaunchRevision(base = root): string { return cachedReleaseFor([], base); }

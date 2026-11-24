@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { finish, openBot } from '../../../core/src/bot';
 import { objId } from '../../../core/src/content-facts';
 import { waitTicks } from '../../../core/src/ticks';
+import { watchWorkerStop } from '../stop';
 import type {
     PreflightResult,
     RateEstimate,
@@ -242,11 +243,12 @@ function parseModeResult(
     xpGained: Readonly<Record<string, number>>,
     itemsDelta: Readonly<Record<number, number>>,
     rawResult: unknown,
+    opts: { sessionDied?: boolean; stopped?: boolean } = {},
 ): RunOutcome {
     const site = COMBAT_SITES[mode];
     const r = (rawResult && typeof rawResult === 'object' ? rawResult : {}) as Record<string, unknown>;
     const ok = typeof rawResult === 'boolean' ? rawResult : Boolean(r.ok);
-    const died = Boolean(r.died);
+    const died = Boolean(r.died) || Boolean(opts.sessionDied);
     const failure =
         typeof r.failure === 'string' && r.failure !== '-'
             ? r.failure
@@ -292,6 +294,20 @@ function parseModeResult(
             xpGained,
             itemsDelta,
             summary: failure || `${mode} completed`,
+        };
+    }
+    if (opts.stopped || /stop|interrupt|disconnect|ended|timeout|budget|\bcap\b/i.test(failure)) {
+        return {
+            kind: 'session_unsettled',
+            activityId: site.activityId,
+            account,
+            ticksElapsed,
+            durationMs,
+            unitsCompleted,
+            xpGained,
+            itemsDelta,
+            reason: opts.stopped ? (failure || 'stopped') : failure,
+            detail: failure || `${mode} stopped or unsettled`,
         };
     }
     if (/missing|absent|short|need|exhaust|suppl|require/i.test(failure)) {
@@ -365,6 +381,23 @@ export async function runCombatModuleSession(
     if (cfg.spot) env.SPOT = cfg.spot;
     if (cfg.bank) env.TRAIN_BANK = cfg.bank;
     const cap = cfg.capTicks ?? Number(env.CAP ?? site.defaultCapTicks);
+    const { isStopped } = watchWorkerStop(session, cfg.stop);
+    await Promise.resolve();
+    const initialPlayer = session.sdk.getState()?.player;
+    const initialLifeId = initialPlayer?.lifeId;
+    const initialRespawns = initialPlayer?.respawnCount ?? 0;
+    const sessionDied = (): boolean => {
+        const st = session.sdk.getState();
+        const p = st?.player;
+        if (!p) return false;
+        const hp = st?.skills?.find(k => k.name === 'Hitpoints')?.level;
+        return Boolean(
+            p.isDead
+            || (hp !== undefined && hp <= 0)
+            || (p.respawnCount ?? 0) > initialRespawns
+            || (initialLifeId !== undefined && p.lifeId !== undefined && p.lifeId !== initialLifeId),
+        );
+    };
 
     try {
         let result: unknown;
@@ -375,7 +408,7 @@ export async function runCombatModuleSession(
                     cap,
                     cfg.bank ?? env.TRAIN_BANK ?? 'draynor',
                     Number(env.TRAIN_COMBAT ?? 13) as 13 | 29,
-                    { trainSkill: cfg.targetSkill ?? env.TRAIN_SKILL, targetLevel: cfg.targetLevel },
+                    { trainSkill: cfg.targetSkill ?? env.TRAIN_SKILL, targetLevel: cfg.targetLevel, stop: isStopped },
                 );
                 break;
             }
@@ -392,6 +425,7 @@ export async function runCombatModuleSession(
                     targetLevel: cfg.targetLevel ?? Number(env.TARGET_LEVEL ?? 40),
                     foodMode,
                     bankProfile,
+                    stop: isStopped,
                     ...(hooks.walk ? { walk: hooks.walk } : {}),
                 });
                 break;
@@ -425,6 +459,7 @@ export async function runCombatModuleSession(
                         food: env.GIANT_FOOD === undefined ? undefined : Number(env.GIANT_FOOD),
                         maximum: cfg.maxKills ?? giantKillLimit(env.MAX_KILLS ?? env.GIANT_KILLS),
                         bury: env.GIANT_BURY === '1',
+                        stop: isStopped,
                         ...(hooks.walk ? { walk: hooks.walk } : {}),
                     });
                 } else {
@@ -434,24 +469,25 @@ export async function runCombatModuleSession(
                         maximum: cfg.maxKills ?? (env.MAX_KILLS !== undefined ? Number(env.MAX_KILLS) : undefined),
                         untilItemName: env.UNTIL_ITEM,
                         env,
+                        stop: isStopped,
                     });
                 }
                 break;
             }
             case 'fire-giant':
-                result = await runFireReclaim(session, { cap });
+                result = await runFireReclaim(session, { cap, stop: isStopped });
                 break;
             case 'fire-combat':
-                result = await runFireCombat(session, { cap });
+                result = await runFireCombat(session, { cap, stop: isStopped });
                 break;
             case 'imp':
-                result = await runImps(session, { cap, maximum: cfg.maxKills ?? Number(env.MAX_KILLS ?? 1) });
+                result = await runImps(session, { cap, maximum: cfg.maxKills ?? Number(env.MAX_KILLS ?? 1), stop: isStopped });
                 break;
             case 'shade': {
                 const jobPath = cfg.args?.[0];
                 if (!jobPath) throw Error('shade mode requires explicit job file path');
                 const job = validateShadeJob(JSON.parse(readFileSync(jobPath, 'utf8')) as ShadeJob);
-                result = await runShadeTrips(session, job);
+                result = await runShadeTrips(session, job, isStopped);
                 break;
             }
             case 'chompy':
@@ -463,22 +499,23 @@ export async function runCombatModuleSession(
                     protectMelee: true,
                     prayerPotions: cfg.maxKills ?? Number(cfg.args?.[0] ?? 1),
                     energy: chompyEnergyOption(env),
-                });
+                }, isStopped);
                 break;
             case 'chompy-at-site':
                 result = await runChompy(session, {
                     kills: cfg.maxKills ?? Number(cfg.args?.[0] ?? 1),
                     cap: Number(cfg.args?.[1] ?? cap),
                     maxBaits: Number(cfg.args?.[2] ?? 5),
+                    stop: isStopped,
                 });
                 break;
             case 'ranged': {
                 const o = rangedTrainOptions(env, ['bun', 'aio-fighter.ts', session.name, ...(cfg.args ?? [])]);
-                result = await runAdaptiveRanged(session, { ...o, cap }, hooks);
+                result = await runAdaptiveRanged(session, { ...o, cap, stop: isStopped }, hooks);
                 break;
             }
             case 'ranged-starter':
-                result = await runRangedStarter(session, () => false, hooks.leaveStarter);
+                result = await runRangedStarter(session, isStopped, hooks.leaveStarter);
                 break;
             case 'ranged-gather':
                 result = await runRanged(session, {
@@ -490,13 +527,14 @@ export async function runCombatModuleSession(
                     telegrab: telegrabPolicy(env),
                     alch: combatAlchPolicy(env),
                     potions: combatPotionPolicy(env),
+                    stop: isStopped,
                 });
                 break;
             case 'ranged-camp':
                 result =
                     env.STAGED === '1'
-                        ? await runRangedCamp(session, BLUE_DRAGON, { cap })
-                        : await combatTrip(session, 'blue', tripStop => runRangedCamp(session, BLUE_DRAGON, { cap: 2500, stop: tripStop, returnSafe: false }), { cap, stop: () => false });
+                        ? await runRangedCamp(session, BLUE_DRAGON, { cap, stop: isStopped })
+                        : await combatTrip(session, 'blue', tripStop => runRangedCamp(session, BLUE_DRAGON, { cap: 2500, stop: () => tripStop() || isStopped(), returnSafe: false }), { cap, stop: isStopped });
                 break;
             case 'cannon': {
                 const spotName = cfg.spot ?? env.SPOT ?? 'spiders';
@@ -521,33 +559,33 @@ export async function runCombatModuleSession(
                 const jobPath = cfg.args?.[0];
                 if (!jobPath) throw Error('loot-trip mode requires explicit job file path');
                 const job = JSON.parse(readFileSync(jobPath, 'utf8')) as LootTripJob;
-                result = await runLootTrip(session, job);
+                result = await runLootTrip(session, job, isStopped);
                 break;
             }
             case 'kbd':
                 result =
                     env.STAGED === '1'
-                        ? await runKbdOne(session, { cap, stop: () => false })
-                        : await combatTrip(session, 'kbd', tripStop => runKbdOne(session, { cap, stop: tripStop }), {
+                        ? await runKbdOne(session, { cap, stop: isStopped })
+                        : await combatTrip(session, 'kbd', tripStop => runKbdOne(session, { cap, stop: () => tripStop() || isStopped() }), {
                               cap: Number(env.TRIP_CAP ?? 5000),
-                              stop: () => false,
+                              stop: isStopped,
                           });
                 break;
             case 'black-dragon': {
                 const kills = cfg.maxKills ?? Number(env.KILLS ?? 9);
                 result =
                     env.STAGED === '1'
-                        ? await runBlackDragonCamp(session, { cap, kills })
+                        ? await runBlackDragonCamp(session, { cap, kills, stop: isStopped })
                         : await combatTrip(
                               session,
                               'black',
-                              tripStop => runBlackDragonCamp(session, { cap: 5000, kills, stop: tripStop }),
-                              { cap, stop: () => false, kit: blackKit(env.ARROW ?? 'mithril_arrow', Number(env.ARROWS ?? 700)) },
+                              tripStop => runBlackDragonCamp(session, { cap: 5000, kills, stop: () => tripStop() || isStopped() }),
+                              { cap, stop: isStopped, kit: blackKit(env.ARROW ?? 'mithril_arrow', Number(env.ARROWS ?? 700)) },
                           );
                 break;
             }
             case 'blue-dragon':
-                result = await combatTrip(session, 'blue', tripStop => runRangedCamp(session, BLUE_DRAGON, { cap: 2500, stop: tripStop, returnSafe: false }), { cap, stop: () => false });
+                result = await combatTrip(session, 'blue', tripStop => runRangedCamp(session, BLUE_DRAGON, { cap: 2500, stop: () => tripStop() || isStopped(), returnSafe: false }), { cap, stop: isStopped });
                 break;
             case 'green-dragon':
                 result = await runWildDragons(session, {
@@ -557,13 +595,14 @@ export async function runCombatModuleSession(
                     escapeAt: Number(env.ESCAPE_AT ?? 30),
                     maxTrips: Number(env.MAX_TRIPS ?? 10),
                     staged: env.STAGED === '1',
+                    stop: isStopped,
                 });
                 break;
             case 'trawler':
-                result = await runTrawlerTrip(session, { cap, collectOnly: cfg.args?.includes('--collect-only') });
+                result = await runTrawlerTrip(session, { cap, collectOnly: cfg.args?.includes('--collect-only'), stop: isStopped });
                 break;
             case 'trawler-at-site':
-                if (cfg.args?.[0] === 'trip') result = await runTrawlerTrip(session, { cap: Number(cfg.args?.[1] ?? cap) });
+                if (cfg.args?.[0] === 'trip') result = await runTrawlerTrip(session, { cap: Number(cfg.args?.[1] ?? cap), stop: isStopped });
                 else throw Error('trawler-at-site WorkerModule supports trip subcommand; use CLI for support driver');
                 break;
             case 'magic-order': {
@@ -572,7 +611,7 @@ export async function runCombatModuleSession(
                     ...(cfg.targetLevel !== undefined ? { TARGET_LEVEL: String(cfg.targetLevel) } : {}),
                     ...(cfg.capTicks !== undefined ? { MAGIC_CAP: String(cfg.capTicks) } : {}),
                 });
-                result = await runMagicOrder(session, opts);
+                result = await runMagicOrder(session, opts, isStopped);
                 break;
             }
             case 'magic-npc': {
@@ -591,6 +630,7 @@ export async function runCombatModuleSession(
                     combo,
                     teleport: env.COMBO_TELEPORT,
                     members: cfg.members ?? env.MEMBERS === '1',
+                    stop: isStopped,
                     runComboItem: hooks.runComboItem,
                     runComboTeleport: hooks.runComboTeleport,
                 });
@@ -605,6 +645,7 @@ export async function runCombatModuleSession(
                     target,
                     cap: splashCap,
                     site: splashSite(env.SPLASH_SITE || defaultSite || undefined),
+                    stop: isStopped,
                     leaveStarter: hooks.leaveStarter,
                 });
                 break;
@@ -614,7 +655,7 @@ export async function runCombatModuleSession(
                     const [castsArg = '3', capArg = '500'] = cfg.args ?? [];
                     const raw = await withIncomingProtection(
                         session,
-                        { cap: Number(capArg), hpFloor: 70, spell: 'wind_strike' },
+                        { cap: Number(capArg), hpFloor: 70, spell: 'wind_strike', stop: isStopped },
                         async (owned, stopped, finishCombat) => {
                             const magic = await runNpcMagic(owned, nativeNpcSpell('wind_strike'), {
                                 npc: 7,
@@ -629,7 +670,7 @@ export async function runCombatModuleSession(
                                 casts: 1,
                                 cap: 30,
                                 members: true,
-                                stop: () => false,
+                                stop: stopped,
                             });
                             return { ok: magic.ok && escape.ok, magic, escape };
                         },
@@ -640,8 +681,8 @@ export async function runCombatModuleSession(
                     const prayerCap = Number(capArg ?? cap);
                     const raw = await withCombatPrayer(
                         session,
-                        { prayer: Number(prayerArg), cap: prayerCap, hpFloor: 40 },
-                        stopFn => runCows(session, { cap: prayerCap, maximum: Number(maximumArg), stop: stopFn }),
+                        { prayer: Number(prayerArg), cap: prayerCap, hpFloor: 40, stop: isStopped },
+                        stopFn => runCows(session, { cap: prayerCap, maximum: Number(maximumArg), stop: () => stopFn() || isStopped() }),
                     );
                     result = { ok: raw.ok && !!raw.result?.ok, kills: raw.result?.creditedKills ?? 0, failure: raw.failure };
                 }
@@ -654,14 +695,18 @@ export async function runCombatModuleSession(
         }
         const xpGained = computeXpDelta(xpBefore, snapshotSkillXp(session));
         const itemsDelta = computeItemsDelta(itemsBefore, snapshotOwnedItems(session));
-        return parseModeResult(mode, session.name, Math.max(0, session.tick() - startTick), Date.now() - startMs, xpGained, itemsDelta, result);
+        return parseModeResult(mode, session.name, Math.max(0, session.tick() - startTick), Date.now() - startMs, xpGained, itemsDelta, result, {
+            sessionDied: sessionDied(),
+            stopped: isStopped(),
+        });
     } catch (e) {
+        await Promise.resolve();
         const msg = String(e);
         const xpGained = computeXpDelta(xpBefore, snapshotSkillXp(session));
         const itemsDelta = computeItemsDelta(itemsBefore, snapshotOwnedItems(session));
         const ticksElapsed = Math.max(0, session.tick() - startTick);
         const durationMs = Date.now() - startMs;
-        if (/died|dead|hitpoints.*0/i.test(msg)) {
+        if (sessionDied() || /died|dead|hitpoints.*0/i.test(msg)) {
             return {
                 kind: 'death',
                 activityId: site.activityId,
@@ -672,6 +717,19 @@ export async function runCombatModuleSession(
                 itemsDelta,
                 pos: normalizePos(session),
                 faultSignature: `combat:${mode}:death`,
+                detail: msg,
+            };
+        }
+        if (isStopped() || /stop|interrupt|disconnect|ended|timeout|budget/i.test(msg)) {
+            return {
+                kind: 'session_unsettled',
+                activityId: site.activityId,
+                account: session.name,
+                ticksElapsed,
+                durationMs,
+                xpGained,
+                itemsDelta,
+                reason: isStopped() ? 'stopped' : msg,
                 detail: msg,
             };
         }

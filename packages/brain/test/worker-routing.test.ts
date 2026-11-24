@@ -320,6 +320,24 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(shopWork.env.STOP_AT_TARGET).toBe('1');
     expect(shopWork.env.BANK_PACK).toBe('1');
     expect(shopWork.env.DEMAND_ID).toBe('campaign:campaign:haggis:item:564');
+    expect(shopWork.config.profile).toBe('magearena_runeshop');
+    expect(shopWork.config.items).toBe('Cosmic rune');
+    expect(shopWork.config.maxItems).toBe(50);
+
+    const agilityUnlock = resolvePlannedStepWorkerRoute(
+        'AgiBot',
+        {
+            stepKind: 'unlock',
+            unlockKind: 'skill',
+            activityId: 'agility:gnome',
+            skill: 'Agility',
+            targetLevel: 45,
+            estimatedTicks: 300,
+        },
+        { activities: CATALOG_SAMPLE },
+    );
+    expect(agilityUnlock.args).toEqual(['agility', 'order', 'gnome', '45']);
+    expect(agilityUnlock.env.TARGET_LEVEL).toBe('45');
 });
 
 test('catalog covers all 9 worker families with existing standalone scripts only', () => {

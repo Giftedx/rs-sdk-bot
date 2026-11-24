@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { COOKED_FOOD_BASE_IDS, foodStock, hasDelivery, selectCookedFoodSource, type DemandNear } from '../../core/src/bank-demand';
-import { repoRoot } from '../../core/src/practice-paths';
+import { repoRoot, statusReadDirs } from '../../core/src/practice-paths';
 
 export type CourierItem = { id?: number; name: string; count: number };
 export type CourierSlotItem = { id: number; name: string; count: number; slot: number };
@@ -87,11 +87,25 @@ export function courierCargo(inventory: readonly CourierItem[], reserve: number)
     return { items: [...amounts.values()], blocked: [] };
 }
 
+export function readCourierStatus(name: string, base = repoRoot): any {
+    const lower = `${name.toLowerCase()}.json`;
+    for (const dir of statusReadDirs(base)) {
+        if (!existsSync(dir)) continue;
+        const exact = join(dir, `${name}.json`);
+        if (existsSync(exact)) return JSON.parse(readFileSync(exact, 'utf8'));
+        try {
+            const match = readdirSync(dir).find(f => f.toLowerCase() === lower);
+            if (match) return JSON.parse(readFileSync(join(dir, match), 'utf8'));
+        } catch { /* unreadable status dir */ }
+    }
+    throw new Error(`courier status missing for ${name}`);
+}
+
 export function courierDeliveryWaiting(
     names: readonly string[],
     near?: DemandNear,
     jobs?: readonly DeliveryJob[],
-    readStatus = (name: string): any => JSON.parse(readFileSync(join(repoRoot, '.practice', 'status', `${name}.json`), 'utf8')),
+    readStatus = (name: string): any => readCourierStatus(name),
     now = Date.now(),
 ): boolean {
     if (!jobs) {

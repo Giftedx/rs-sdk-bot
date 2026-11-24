@@ -11,6 +11,7 @@ import { FLEET_DIR, loadOwners, mySide, type Owner } from '../packages/core/src/
 import { fleetStatusRows, readSnapshotFiles } from '../packages/core/src/fleet-snapshots';
 import { readLabels, type Labels } from '../packages/core/src/components';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
+import { findStopFile, hasStopFile, statusReadDirs, stopFilePaths } from '../packages/core/src/practice-paths';
 import { jobAccounts } from '../packages/fleet/src/trade-plan';
 import { brainPlannedJobs } from '../packages/fleet/src/fleet-sync';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
@@ -230,7 +231,7 @@ function readJson<T>(file: string, fallback: T): T {
 
 function resolveMainRoot(fromDir: string): string {
     try {
-        const list = Bun.spawnSync(['git', '-C', fromDir, 'worktree', 'list', '--porcelain'], { stdout: 'pipe', stderr: 'ignore', windowsHide: true }).stdout.toString();
+        const list = Bun.spawnSync(['git', '-C', fromDir, 'worktree', 'list', '--porcelain'], { stdout: 'pipe', stderr: 'ignore', timeout: 5_000, windowsHide: true }).stdout.toString();
         const main = /^worktree (.+)$/m.exec(list)?.[1];
         if (main && existsSync(join(main, '.practice'))) return resolve(main);
     } catch { /* fall back to fromDir */ }
@@ -321,10 +322,20 @@ export function auditFleetHealth(opts: {
         }
     }
 
-    const statusDir = join(prac, 'status');
-    const localStatuses = opts.statusRows ?? (existsSync(statusDir)
-        ? readdirSync(statusDir).filter(f => f.endsWith('.json')).map(f => readJson<any>(join(statusDir, f), null)).filter(Boolean)
-        : []);
+    const localStatuses = opts.statusRows ?? (() => {
+        const seen = new Set<string>();
+        const out: any[] = [];
+        for (const dir of statusReadDirs(root)) {
+            if (!existsSync(dir)) continue;
+            for (const f of readdirSync(dir)) {
+                if (!f.endsWith('.json') || seen.has(f.toLowerCase())) continue;
+                seen.add(f.toLowerCase());
+                const row = readJson<any>(join(dir, f), null);
+                if (row && row.practice !== true) out.push(row);
+            }
+        }
+        return out;
+    })();
     const published = opts.statusRows ? [] : readSnapshotFiles(join(fleetDir, 'snapshots'));
     const ownerLookup = (name: string) => owners.get(name.toLowerCase())?.side;
     const rows = opts.statusRows
@@ -386,9 +397,9 @@ export function auditFleetHealth(opts: {
     for (const [lower, meta] of [...sideAccounts].sort((a, b) => a[0].localeCompare(b[0]))) {
         const row = rowByAccount.get(lower);
         const account = row?.name ?? meta.account;
-        const stopFile = join(prac, `stop-${account}`);
-        const stopExists = existsSync(stopFile);
-        const stopText = stopExists ? (() => { try { return readFileSync(stopFile, 'utf8').trim(); } catch { return ''; } })() : undefined;
+        const stopFile = findStopFile(account, root);
+        const stopExists = stopFile !== null;
+        const stopText = stopFile ? (() => { try { return readFileSync(stopFile, 'utf8').trim(); } catch { return ''; } })() : undefined;
         const healthStop = isHealthStopText(stopText);
         const swarmStop = stopExists && swarmWroteStop(stopText);
         const ownerStop = stopExists && !healthStop && !swarmStop;
@@ -514,26 +525,33 @@ function saveState(file: string, state: RemediationState): void {
     writeFileSync(file, JSON.stringify(state, null, 2) + '\n');
 }
 
-function writeHealthStop(stopFile: string, reason: string): boolean {
-    if (existsSync(stopFile)) {
+function writeHealthStop(stopFile: string, reason: string, root?: string, account?: string): boolean {
+    const candidates = root && account ? stopFilePaths(account, root) : [stopFile];
+    for (const candidate of candidates) {
+        if (!existsSync(candidate)) continue;
         try {
-            const cur = readFileSync(stopFile, 'utf8').trim();
+            const cur = readFileSync(candidate, 'utf8').trim();
             if (!isHealthStopText(cur) && !swarmWroteStop(cur)) return false;
             if (isHealthStopText(cur)) return false;
-            rmSync(stopFile, { force: true });
+            rmSync(candidate, { force: true });
         } catch { return false; }
     }
     try { writeFileSync(stopFile, `${HEALTH_STOP_PREFIX} ${reason}\n`, { flag: 'wx' }); return true; } catch { return false; }
 }
 
-function clearOwnStop(stopFile: string, allowSwarmStop = false): boolean {
-    if (!existsSync(stopFile)) return true;
-    try {
-        const text = readFileSync(stopFile, 'utf8').trim();
-        if (!isHealthStopText(text) && !(allowSwarmStop && swarmWroteStop(text))) return false;
-        rmSync(stopFile, { force: true });
-        return true;
-    } catch { return false; }
+function clearOwnStop(stopFile: string, allowSwarmStop = false, root?: string, account?: string): boolean {
+    const candidates = root && account ? stopFilePaths(account, root).filter(p => existsSync(p)) : (existsSync(stopFile) ? [stopFile] : []);
+    if (candidates.length === 0) return true;
+    for (const candidate of candidates) {
+        try {
+            const text = readFileSync(candidate, 'utf8').trim();
+            if (!isHealthStopText(text) && !(allowSwarmStop && swarmWroteStop(text))) return false;
+        } catch { return false; }
+    }
+    for (const candidate of candidates) {
+        try { rmSync(candidate, { force: true }); } catch { return false; }
+    }
+    return true;
 }
 
 export async function remediateFleetHealth(
@@ -555,7 +573,7 @@ export async function remediateFleetHealth(
     const maxRecoveries = opts.maxRecoveries ?? DEFAULT_MAX_RECOVERIES;
     const actions: RemediationAction[] = [];
 
-    if (existsSync(join(prac, 'stop-swarm')) || existsSync(join(prac, 'stop-fleet-health'))) {
+    if (hasStopFile('swarm', audit.root) || hasStopFile('fleet-health', audit.root)) {
         return [{ account: '*', action: 'skipped', detail: 'global stop file active' }];
     }
 
@@ -593,7 +611,7 @@ export async function remediateFleetHealth(
         const key = item.account.toLowerCase();
 
         if (item.fixAction === 'clear_stale_health_stop' || (opts.clearResolved && item.healthStop && !item.location.stranded)) {
-            if (!opts.dry && clearOwnStop(stopFile)) {
+            if (!opts.dry && clearOwnStop(stopFile, false, audit.root, item.account)) {
                 actions.push({ account: item.account, action: 'cleared_health_stop', detail: 'account healthy and confirmed offline' });
             }
             continue;
@@ -603,7 +621,7 @@ export async function remediateFleetHealth(
             const reason = item.failLoop ? `${item.failLoop.runs}x ${item.failLoop.error}` : (item.statusError ?? 'repeated failure');
             if (opts.dry) {
                 actions.push({ account: item.account, action: 'skipped', detail: `dry: would pause (${reason})` });
-            } else if (writeHealthStop(stopFile, reason)) {
+            } else if (writeHealthStop(stopFile, reason, audit.root, item.account)) {
                 actions.push({ account: item.account, action: 'paused', detail: reason });
             }
             continue;
@@ -631,8 +649,8 @@ export async function remediateFleetHealth(
         }
 
         // Remove our own stop marker (or swarm plan-removed marker) so openBot can log in to extract; re-apply if recovery fails.
-        const hadStop = existsSync(stopFile);
-        if (hadStop && !clearOwnStop(stopFile, true)) {
+        const hadStop = findStopFile(item.account, audit.root) !== null;
+        if (hadStop && !clearOwnStop(stopFile, true, audit.root, item.account)) {
             actions.push({ account: item.account, action: 'skipped', detail: 'protected stop file present' });
             continue;
         }
@@ -647,7 +665,7 @@ export async function remediateFleetHealth(
         if (res.ok) {
             actions.push({ account: item.account, action: 'recovered', detail: `${item.location.kind}: ${res.detail}` });
         } else {
-            writeHealthStop(stopFile, `recovery failed from ${item.location.kind}: ${res.detail.slice(0, 100)}`);
+            writeHealthStop(stopFile, `recovery failed from ${item.location.kind}: ${res.detail.slice(0, 100)}`, audit.root, item.account);
             actions.push({ account: item.account, action: 'recovery_failed', detail: res.detail });
         }
     }

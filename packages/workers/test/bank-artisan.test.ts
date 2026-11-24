@@ -454,4 +454,41 @@ test('artisanPreflight validates Prayer BONE_ID/reserve/target, malformed numeri
     await expect(runFletchArrowsCli('', [])).rejects.toThrow('Usage:');
     await expect(runLegacyCraftJewelryCli('', [])).rejects.toThrow('Usage:');
     await expect(runHerbloreCli('meats', '', [])).rejects.toThrow('Usage:');
+
+    const { bankArtisanWorker, toArtisanWorkerOutcome, normalizeArtisanConfig } = await import('../src/bank-artisan');
+    const preStopped = await bankArtisanWorker.run(wineSession, { skill: 'cooking', method: 'wine', stop: () => true });
+    expect(isRunOutcome(preStopped)).toBe(true);
+    expect(preStopped.kind).toBe('session_unsettled');
+
+    const endedOut = await bankArtisanWorker.run({ ...wineSession, ended: Promise.resolve() }, { skill: 'cooking', method: 'wine' });
+    expect(isRunOutcome(endedOut)).toBe(true);
+    expect(endedOut.kind).toBe('session_unsettled');
+
+    let midStop = false;
+    const midStoppedOut = await bankArtisanWorker.run(wineSession, {
+        skill: 'crafting',
+        method: 'black-dhide-sets',
+        env: { PIECE: 'invalid_piece' },
+        stop: () => midStop,
+    });
+    expect(midStoppedOut.kind).toBe('worker_defect');
+    midStop = true;
+    const midCaughtOut = await bankArtisanWorker.run(wineSession, {
+        skill: 'crafting',
+        method: 'black-dhide-sets',
+        env: { PIECE: 'invalid_piece' },
+        stop: () => midStop,
+    });
+    expect(isRunOutcome(midCaughtOut)).toBe(true);
+    expect(midCaughtOut.kind).toBe('session_unsettled');
+
+    const mappedStop = toArtisanWorkerOutcome(
+        { ok: false, summary: 'failed after walk', ticks: 3, produced: 0, failure: 'walk incomplete' },
+        'ArtisanStop',
+        normalizeArtisanConfig({ skill: 'cooking', method: 'wine' }),
+        3,
+        { stopped: true },
+    );
+    expect(isRunOutcome(mappedStop)).toBe(true);
+    expect(mappedStop.kind).toBe('session_unsettled');
 });

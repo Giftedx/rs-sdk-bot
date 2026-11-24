@@ -122,4 +122,27 @@ describe('fleet watchdog', () => {
         expect(existsSync(logFile)).toBe(true);
         expect(readFileSync(logFile, 'utf8')).toContain('owner stop present; nothing started');
     });
+
+    test('resolves relative swarm plan paths against base and isolates recovery errors', async () => {
+        const customBase = scratch();
+        mkdirSync(join(customBase, '.practice', 'fleet'), { recursive: true });
+        writeFileSync(join(customBase, 'custom-swarm.json'), JSON.stringify({ maxBots: 2, minFreeGB: 4, jobs: [] }));
+        writeFileSync(join(customBase, '.practice', 'swarm.launch.json'), JSON.stringify({ args: ['custom-swarm.json'], env: { FLEET_SIDE: 'local' } }));
+        utimesSync(join(customBase, '.practice', 'swarm.launch.json'), new Date(1_000_000), new Date(1_000_000));
+
+        const restarted: string[][] = [];
+        const logs: string[] = [];
+        const res = await runWatchdogPass(customBase, {
+            now: () => 2_500_000,
+            hasStop: () => false,
+            prune: () => ({ moved: [], kept: 0, failed: 0 }),
+            restartController: (_c, start) => restarted.push(start),
+            recover: async () => { throw new Error('transient recovery boom'); },
+            log: line => logs.push(line),
+        });
+
+        expect(res.stoppedByOwner).toBe(false);
+        expect(restarted).toEqual([['scripts/swarm.ts', 'custom-swarm.json']]);
+        expect(logs.some(l => l.includes('session recovery failed: Error: transient recovery boom'))).toBe(true);
+    });
 });

@@ -811,6 +811,7 @@ export function toArtisanWorkerOutcome(
     account: string,
     cfg: NormalizedArtisanConfig,
     fallbackTicks: number,
+    opts: { stopped?: boolean } = {},
 ): RunOutcome {
     const activityId = cfg.skill === 'bank-job' ? 'bank-artisan:bank-job' : `bank-artisan:${cfg.skill}:${cfg.method}`;
     const ticksElapsed = Math.max(0, Math.trunc(outcome.ticks || fallbackTicks));
@@ -828,6 +829,14 @@ export function toArtisanWorkerOutcome(
     const text = (outcome.failure ?? outcome.summary ?? '').toLowerCase();
     if (/\bdied\b|life-lost|life lost/.test(text)) {
         return { kind: 'death', ...base, faultSignature: `${activityId}:death` };
+    }
+    if (opts.stopped || /\b(stop|stopped|interrupt|interrupted|session ended|ended)\b/.test(text)) {
+        return {
+            kind: 'session_unsettled',
+            ...base,
+            reason: outcome.failure ?? outcome.summary ?? 'stopped',
+            detail: outcome.failure ?? outcome.summary,
+        };
     }
     if (/missing|short|exhausted|unavailable|reserve|supplies|insufficient|required|unowned/.test(text)) {
         return {

@@ -1,5 +1,6 @@
 import { rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { killTree } from '../../core/src/proc';
 import { createBot } from './bots';
 import { practiceBotsRoot, rsSdkRoot } from './paths';
 import { startLite, stopLite } from './lite';
@@ -43,12 +44,23 @@ export function runBotName(base: string, i: number): string {
     return base.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12 - suffix.length - 1) + 'x' + suffix;
 }
 
-async function runBun(args: string[], timeoutMs: number, cwd: string = rsSdkRoot()): Promise<{ stdout: string; exitCode: number }> {
-    const proc = Bun.spawn(['bun', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
-    const timer = setTimeout(() => proc.kill(), timeoutMs);
-    const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
-    const exitCode = await proc.exited;
+export async function runBun(args: string[], timeoutMs: number, cwd: string = rsSdkRoot()): Promise<{ stdout: string; exitCode: number }> {
+    const proc = Bun.spawn(['bun', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    let timedOut = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<null>(done => {
+        timer = setTimeout(() => { timedOut = true; void killTree(proc.pid); done(null); }, timeoutMs);
+    });
+    const result = await Promise.race([
+        Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]),
+        deadline,
+    ]);
     clearTimeout(timer);
+    if (!result || timedOut) {
+        await killTree(proc.pid);
+        return { stdout: `timed out after ${Math.round(timeoutMs / 1000)} s`, exitCode: 124 };
+    }
+    const [out, err, exitCode] = result;
     return { stdout: out + err, exitCode };
 }
 

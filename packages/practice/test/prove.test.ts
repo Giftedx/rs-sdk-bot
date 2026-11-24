@@ -135,3 +135,12 @@ test('runBotName gives a new name on each call, whatever the clock', () => {
     const names = new Set(Array.from({ length: 200 }, () => runBotName('aiobf', 1)));
     expect(names.size).toBeGreaterThan(195);
 });
+
+test('runBun kills timed-out subprocesses even when stdout is held open by a grandchild', async () => {
+    const { runBun } = await import('../src/prove');
+    const start = Date.now();
+    const res = await runBun(['-e', 'Bun.spawn([process.execPath, "-e", "await Bun.sleep(30000)"], {stdout: "inherit", stderr: "inherit"}); await Bun.sleep(30000);'], 500, process.cwd());
+    expect(res.exitCode).toBe(124);
+    expect(res.stdout).toContain('timed out');
+    expect(Date.now() - start).toBeLessThan(10_000);
+});

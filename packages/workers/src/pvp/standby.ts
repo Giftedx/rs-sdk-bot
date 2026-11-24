@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { isStopFilePresent } from '../stop';
 import { openBot, settle } from '../../../core/src/bot';
 import type { Session } from '../../../core/src/inprocess';
 import { componentId } from '../../../core/src/logout';
@@ -210,7 +211,7 @@ export async function runStandbyCli(args: readonly string[], existingSession?: S
     const [name, mode, ...extra] = args;
     check(name && (mode === 'stage' || mode === 'verify') && !extra.length,
         'usage: bun scripts/pvp-standby.ts <account> <stage|verify>');
-    const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pvp-standby');
+    const stop = () => isStopFilePresent(name, ['.practice/stop-pvp-standby']);
     check(!stop(), 'standby stop file present');
     const start = performance.now();
     const session = existingSession ?? (await openBot(name));

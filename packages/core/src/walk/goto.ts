@@ -45,6 +45,16 @@ async function preflightGuildEvidence(
     return { acct, legendsEntry };
 }
 
+function walkerServer(s: Walker): string | undefined {
+    const w = s as { lifecycle?: { server?: string }; sdk?: { config?: { browserLaunchUrl?: string } } };
+    if (typeof w.lifecycle?.server === 'string' && w.lifecycle.server) return w.lifecycle.server;
+    const url = w.sdk?.config?.browserLaunchUrl;
+    if (typeof url === 'string') {
+        try { return new URL(url).host || undefined; } catch { /* ignore malformed URL */ }
+    }
+    return undefined;
+}
+
 export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opts: WalkOptions = {}): Promise<Outcome> {
     const started = s.tick();
     const preflight = await preflightGuildEvidence(s, to, acct);
@@ -67,7 +77,7 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
     const name = (s as { name?: string }).name, banker = s as unknown as Parameters<typeof takeItems>[0];
     if (opts.noJewelry) acct = withoutJewelry(acct);
-    const rawStock = name && typeof (banker.bot as { openBank?: unknown }).openBank === 'function' ? bankStock(name) : undefined;
+    const rawStock = name && typeof (banker.bot as { openBank?: unknown }).openBank === 'function' ? bankStock(name, { server: walkerServer(s) }) : undefined;
     const stock = opts.noJewelry && rawStock ? { coins: rawStock.coins, items: Object.fromEntries(Object.entries(rawStock.items ?? {}).filter(([k]) => !TELEPORT_JEWELRY_RE.test(k))) } : rawStock;
     const budgetMs = opts.planBudgetMs ?? ROUTE_BUDGET_MS, planStart = performance.now(), deadline = planStart + budgetMs;
     let why = '';

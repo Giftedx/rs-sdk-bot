@@ -16,6 +16,7 @@ import {
     type WorkerWorldView,
 } from '../contracts';
 import type { Session } from '../../../core/src/inprocess';
+import { watchWorkerStop } from '../stop';
 import { ITEMS } from './fight';
 import { TRIBRID_KIT, TRIP as TRIBRID_TRIP } from './hunt-kits';
 import { assessTribridReadiness, CLI_ONLY_PVP_MODES, dispatchPvpCli, isPvpMode, PVP_MODES, pvpCombatBracket } from './modes';
@@ -182,7 +183,8 @@ function accountViewFromSession(session: SessionCore): WorkerAccountView {
 async function runPvp(session: SessionCore, cfg: PvpConfig): Promise<RunOutcome> {
     const activityId = `pvp:${cfg.mode}`;
     const startTick = session.tick?.() ?? 0;
-    const stopCheck = () => Boolean(cfg.stop?.()) || existsSync(`.practice/stop-${session.name}`);
+    const { isStopped: stopCheck } = watchWorkerStop(session, cfg.stop);
+    await Promise.resolve();
     if (stopCheck()) {
         return {
             kind: 'session_unsettled',

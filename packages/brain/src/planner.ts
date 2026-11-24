@@ -32,6 +32,7 @@ import {
 } from './contracts';
 import {
     GE_LIMIT_BUFFER,
+    isValidGeAskQuote,
     loadShopCatalogByItem,
     resolveAcquireItem,
     type AcquireContext,
@@ -369,6 +370,7 @@ export function evaluateBestGearUpgrade(params: {
     readonly rate: RateEstimate;
     readonly remainingXp: number;
     readonly acquireCtx: AcquireContext;
+    readonly trainingSkill?: string;
     readonly precomputedWeapons?: PrecomputedWeaponInfo;
     readonly resolveAcquire?: (req: AcquireRequest) => AcquireResolution;
     readonly committedCoinSpend?: number;
@@ -376,7 +378,7 @@ export function evaluateBestGearUpgrade(params: {
     const { acct, activity, rate, remainingXp, acquireCtx } = params;
     if (rate.xpPerTick <= 0 || !Number.isFinite(remainingXp) || remainingXp <= 0) return null;
 
-    const skill = activity.skill?.toLowerCase();
+    const skill = (params.trainingSkill ?? activity.skill)?.toLowerCase();
     const isWoodcutting = skill === 'woodcutting';
     const isMining = skill === 'mining';
     const isCombat = activity.family === 'combat'
@@ -666,6 +668,26 @@ function selectWorkTrainingTarget(
     return {};
 }
 
+function accountSkillXp(acct: AccountState, skill: string): number {
+    const lower = skill.toLowerCase();
+    const direct = acct.skills[skill];
+    if (direct) return direct.xp ?? xpForLevel(direct.level);
+    for (const [k, v] of Object.entries(acct.skills)) {
+        if (k.toLowerCase() === lower) return v.xp ?? xpForLevel(v.level);
+    }
+    return xpForLevel(accountSkillLevel(acct, skill));
+}
+
+function lookupSkillTarget(targets: Readonly<Record<string, number>>, skill: string): number | undefined {
+    const direct = targets[skill];
+    if (typeof direct === 'number') return direct;
+    const lower = skill.toLowerCase();
+    for (const [k, v] of Object.entries(targets)) {
+        if (k.toLowerCase() === lower) return v;
+    }
+    return undefined;
+}
+
 function resolveBatchUnits(
     acct: AccountState,
     demand: GoalDemand,
@@ -689,7 +711,7 @@ function resolveBatchUnits(
         return Math.max(minUnits, Math.min(needed, 2000));
     }
     if (t.kind === 'skill') {
-        const curXp = acct.skills[t.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, t.skill));
+        const curXp = accountSkillXp(acct, t.skill);
         const remXp = Math.max(1, (t.targetXp ?? xpForLevel(t.targetLevel)) - curXp);
         const xpPerUnit = rate.unitsPerTick > 0 ? (rate.xpPerTick * xpRate) / rate.unitsPerTick : 25;
         const needed = Math.ceil(remXp / Math.max(1, xpPerUnit));
@@ -702,22 +724,29 @@ function estimateRemainingBandXp(
     acct: AccountState,
     demand: GoalDemand,
     activity: ActivityDefinition,
+    trainSkill?: string,
+    targetLevel?: number,
 ): number {
     if (demand.target.kind === 'skill') {
-        const curXp = acct.skills[demand.target.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, demand.target.skill));
+        const curXp = accountSkillXp(acct, demand.target.skill);
         const targetXp = demand.target.targetXp ?? xpForLevel(demand.target.targetLevel);
         return Math.max(0, targetXp - curXp);
     }
-    if (demand.target.kind === 'combat_readiness' && activity.skill) {
-        const targetLvl = demand.target.targets[activity.skill] ?? 99;
-        const curXp = acct.skills[activity.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, activity.skill));
-        return Math.max(0, xpForLevel(targetLvl) - curXp);
+    if (demand.target.kind === 'combat_readiness') {
+        const sk = trainSkill ?? activity.skill;
+        if (sk) {
+            const targetLvl = targetLevel ?? lookupSkillTarget(demand.target.targets, sk) ?? 99;
+            const curXp = accountSkillXp(acct, sk);
+            return Math.max(0, xpForLevel(targetLvl) - curXp);
+        }
+        return 0;
     }
-    if (activity.skill) {
-        const cur = accountSkillLevel(acct, activity.skill);
+    const sk = trainSkill ?? activity.skill;
+    if (sk) {
+        const cur = accountSkillLevel(acct, sk);
         if (cur >= 99) return 0;
         const nextBand = Math.min(99, cur + 10);
-        const curXp = acct.skills[activity.skill]?.xp ?? xpForLevel(cur);
+        const curXp = accountSkillXp(acct, sk);
         return Math.max(0, xpForLevel(nextBand) - curXp);
     }
     return 0;
@@ -736,8 +765,10 @@ function activityDemandThroughput(
                 ?? 1;
             return Math.max(0, rate.unitsPerTick * outPerUnit);
         }
-        case 'skill':
-            return Math.max(0, rate.skillXpPerTick?.[t.skill] ?? rate.xpPerTick);
+        case 'skill': {
+            const xp = activityXpForSkill(activity, rate, t.skill);
+            return Math.max(0, xp);
+        }
         case 'combat_readiness':
             return rate.xpPerTick > 0 ? rate.xpPerTick : Math.max(0, rate.gpPerTick);
         case 'coins':
@@ -1084,7 +1115,7 @@ export function planAccount(
                         const meta = itemsMap.get(targetItemId);
                         if (!meta || meta.tradeable) {
                             const quote = input.marketQuotes?.[targetItemId];
-                            if (quote && quote.ask !== null && quote.ask > 0 && quote.sell > 0 && quote.trades !== 0) {
+                            if (isValidGeAskQuote(quote, meta?.cost ?? 1)) {
                                 minUnitPrice = Math.min(minUnitPrice, Math.ceil(Math.ceil(quote.ask) * GE_LIMIT_BUFFER));
                             }
                         }
@@ -1203,7 +1234,7 @@ export function planAccount(
                     }
 
                     if (blocker.kind === 'skill_level') {
-                        const curXp = acct.skills[blocker.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, blocker.skill));
+                        const curXp = accountSkillXp(acct, blocker.skill);
                         const bonusXp = grantedQuestXp[blocker.skill.toLowerCase()] ?? 0;
                         if (levelForXp(curXp + bonusXp) >= blocker.required) {
                             continue;
@@ -1279,7 +1310,7 @@ export function planAccount(
                                         Math.ceil(druidAct.baselineRate.setupTicks + (druidPre.travelTicks ?? 0) + 1 / Math.max(1e-4, druidAct.baselineRate.unitsPerTick)),
                                     ),
                                 });
-                                const curHerbXp = acct.skills[blocker.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, blocker.skill));
+                                const curHerbXp = accountSkillXp(acct, blocker.skill);
                                 if (levelForXp(curHerbXp + (grantedQuestXp[skLower] ?? 0)) >= blocker.required) {
                                     continue;
                                 }
@@ -1316,7 +1347,7 @@ export function planAccount(
                         }
                         const trainAct = unlockEntry.activity;
                         const trainRate = unlockEntry.rate;
-                        const curXp = acct.skills[blocker.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, blocker.skill));
+                        const curXp = accountSkillXp(acct, blocker.skill);
                         const bonusXp = grantedQuestXp[skLower] ?? 0;
                         const needXp = Math.max(1, xpForLevel(blocker.required) - (curXp + bonusXp));
                         const trainTicks = Math.max(
@@ -1418,10 +1449,12 @@ export function planAccount(
             // Evaluate optional net XP/tick payback gear upgrade if step budget permits.
             let effectiveRate = rate;
             let upgrade: GearUpgradeCandidateResult | null | undefined;
+            const preTrainTarget = selectWorkTrainingTarget(acct, demand, activity, rate);
             if (prepSteps.length < MAX_ACCOUNT_PLAN_STEPS - 1 && rate.xpPerTick > 0) {
-                const remXp = estimateRemainingBandXp(acct, demand, activity);
+                const remXp = estimateRemainingBandXp(acct, demand, activity, preTrainTarget.trainSkill, preTrainTarget.targetLevel);
                 if (remXp > 0) {
-                    const upgKey = `${activity.family}:${activity.skill ?? ''}:${rate.xpPerTick}:${Math.round(remXp)}:${committedCoins}`;
+                    const evalSkill = preTrainTarget.trainSkill ?? activity.skill ?? '';
+                    const upgKey = `${activity.family}:${evalSkill}:${rate.xpPerTick}:${Math.round(remXp)}:${committedCoins}`;
                     upgrade = upgradeCache.get(upgKey);
                     if (upgrade === undefined) {
                         upgrade = evaluateBestGearUpgrade({
@@ -1430,6 +1463,7 @@ export function planAccount(
                             rate,
                             remainingXp: remXp,
                             acquireCtx,
+                            trainingSkill: preTrainTarget.trainSkill,
                             precomputedWeapons: getPrecomputedWeapons(),
                             resolveAcquire: resolveAcquireCached,
                             committedCoinSpend: committedCoins,

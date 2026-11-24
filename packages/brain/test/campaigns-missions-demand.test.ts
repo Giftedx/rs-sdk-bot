@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SPECIALIST_BOARDS } from '../../core/src/specialist-boards';
+import type { ActivityCatalog } from '../src/catalog';
 import {
     campaignShortfalls,
     createDemandEngine,
@@ -16,6 +17,7 @@ import {
     validateGoalDemand,
     validateMission,
     type AccountState,
+    type ActivityDefinition,
     type Campaign,
     type Mission,
     type WorldSnapshot,
@@ -515,5 +517,76 @@ describe('Campaigns, Missions & DemandEngine', () => {
         expect(evalRes.totalFulfilledUnits).toBe(12); // 3 + 2 + 7
         expect(evalRes.shortfalls).toHaveLength(1);
         expect(evalRes.shortfalls[0]).toMatchObject({ fulfilled: 12, remaining: 18 });
+    });
+
+    test('DemandEngine skips shortfalls with zero goalWeight and prefers non-experimental activities when estimating item hours', () => {
+        const expFastAct: ActivityDefinition = {
+            id: 'gather:exp-sharks',
+            workerId: 'gather',
+            family: 'gather',
+            kind: 'gather',
+            label: 'Experimental ultra-fast sharks',
+            outputs: [{ itemId: 385, countPerUnit: 1 }],
+            config: { requiredLevel: 1 },
+            baselineRate: { xpPerTick: 10, unitsPerTick: 10, gpPerTick: 0, setupTicks: 1, minBatchUnits: 1, confidence: 'model' },
+            trust: 'experimental',
+            protectedAllowed: false,
+        };
+        const trustedAct: ActivityDefinition = {
+            id: 'gather:live-sharks',
+            workerId: 'gather',
+            family: 'gather',
+            kind: 'gather',
+            label: 'Verified sharks',
+            outputs: [{ itemId: 385, countPerUnit: 1 }],
+            config: { requiredLevel: 1 },
+            baselineRate: { xpPerTick: 10, unitsPerTick: 0.1, gpPerTick: 0, setupTicks: 20, minBatchUnits: 10, confidence: 'live' },
+            trust: 'live_proven',
+            protectedAllowed: false,
+        };
+        const list = [expFastAct, trustedAct];
+        const catalog: ActivityCatalog = {
+            get: (id) => list.find((a) => a.id === id),
+            require: (id) => {
+                const hit = list.find((a) => a.id === id);
+                if (!hit) throw new Error(id);
+                return hit;
+            },
+            has: (id) => list.some((a) => a.id === id),
+            list: () => list,
+            byFamily: (f) => list.filter((a) => a.family === f),
+            byWorkerKind: (k) => list.filter((a) => a.kind === k),
+            findByOutputItem: (id) => list.filter((a) => a.outputs?.some((o) => o.itemId === id)),
+            findBySkill: (sk) => list.filter((a) => a.skill?.toLowerCase() === sk.toLowerCase()),
+            findByQuest: () => [],
+            size: () => list.length,
+        };
+        const campaign: Campaign = {
+            id: 'campaign:haggis',
+            account: 'haggis',
+            protectedClock: true,
+            board: 'Overall',
+            requiredSupplies: [{ itemId: 385, itemName: 'Shark', count: 200, stage: 'prep' }],
+            stagingHolder: null,
+            rehearsalProof: null,
+            hiscoreMargin: null,
+            state: 'staging',
+            weight: 2,
+        };
+        const snap = makeSnapshot({ IdleBot: makeAccount('IdleBot') });
+
+        // With main_supply weight=0, campaign shortfall is omitted rather than emitted as zero-value demand.
+        const zeroWeightEngine = createDemandEngine({
+            catalog,
+            campaigns: [campaign],
+            goalWeights: { main_supply: 0 },
+        });
+        expect(zeroWeightEngine.activeDemands(snap).some((d) => d.goalKind === 'main_supply')).toBe(false);
+
+        const activeEngine = createDemandEngine({ catalog, campaigns: [campaign] });
+        const itemDemand = activeEngine.activeDemands(snap).find((d) => d.goalKind === 'main_supply' && d.target.kind === 'item' && d.target.itemId === 385)!;
+        const estHours = activeEngine.estimateEndToEndHours(itemDemand, snap);
+        // 200 sharks at 0.1/tick -> >2000 ticks (>0.2h), not skewed by the experimental 10/tick entry.
+        expect(estHours).toBeGreaterThan(0.2);
     });
 });

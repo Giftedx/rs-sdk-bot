@@ -1,6 +1,7 @@
-import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, statSync, unlinkSync, writeFileSync, writeSync } from 'node:fs';
+import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, statSync, unlinkSync, writeFileSync, writeSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { renameRetry } from './atomic-file';
 
 // rs-sdk's initPathfinding() costs about 14 s per process: 12.8 s of it is allocateIfAbsent for 136,704 zones in
 // rsmod's wasm memory (measured). Every proof run and every bot process paid it. This saves that wasm
@@ -152,12 +153,17 @@ export function writePathfindingSnapshot(file:string,key:string,payload:Uint8Arr
     if(head.length>MAX_HEADER)throw Error('Pathfinding snapshot header too large');
     const len=Buffer.alloc(4);len.writeUInt32LE(head.length);
     mkdirSync(dirname(file),{recursive:true});
-    const temporary=`${file}.${process.pid}.tmp`;
-    // Keep the previous completed file until persisted bytes have passed a
-    // streamed check. The payload is a view; no full-memory concat/copy is needed.
-    writeFileSync(temporary,len);appendFileSync(temporary,head);appendFileSync(temporary,payload);
-    if(!verifyPathfindingSnapshotFile(temporary,key))throw Error('Pathfinding snapshot write verification failed');
-    renameSync(temporary,file);
+    const temporary=`${file}.${process.pid}.${randomUUID()}.tmp`;
+    try{
+        // Keep the previous completed file until persisted bytes have passed a
+        // streamed check. The payload is a view; no full-memory concat/copy is needed.
+        writeFileSync(temporary,len);appendFileSync(temporary,head);appendFileSync(temporary,payload);
+        if(!verifyPathfindingSnapshotFile(temporary,key))throw Error('Pathfinding snapshot write verification failed');
+        renameRetry(temporary,file);
+    }catch(error){
+        try{unlinkSync(temporary);}catch{/* retain original error */}
+        throw error;
+    }
 }
 
 let loaded: Promise<{ restored: boolean; ms: number }> | null = null;

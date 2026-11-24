@@ -105,7 +105,7 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
             const cap = seg.capture;
             if (cap && !captured && s.online && window.enter !== null && (cap.when || cap.afterTicks !== undefined)) {
                 try {
-                    if (cap.when || s.tick - window.enter >= cap.afterTicks!) {
+                    if (cap.afterTicks === undefined || s.tick - window.enter >= cap.afterTicks) {
                         const c = await captureSave(account, port);
                         const {version: _v, ...now} = summarize(c.bytes);
                         if (c.source.via === 'endpoint' && (!cap.when || Object.values(checkExpect(now, cap.when)).every(Boolean))) {
@@ -202,7 +202,7 @@ export async function runRehearseCli(args: string[]): Promise<void> {
             console.log(`SPECIALIST_REHEARSAL ${report.ok ? 'ok' : 'fail'} report=${join(out, spec.id + '.json')}`);
             process.exitCode = report.ok ? 0 : 1;
         } else {
-            const ids = args.filter(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--out');
+            const ids = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--out');
             if (!ids.length) throw Error('usage: rehearse.ts <segment-id>... [--start] [--out <dir>]');
             if (args.includes('--start')) stack = await startIsolatedStack();
             let ok = true;
