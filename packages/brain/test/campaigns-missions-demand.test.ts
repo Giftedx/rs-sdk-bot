@@ -9,6 +9,7 @@ import {
     defaultActivityCatalog,
     evaluateCampaigns,
     evaluateMissions,
+    levelToXp,
     loadCampaignManifests,
     missionShortfalls,
     validateCampaign,
@@ -19,6 +20,7 @@ import {
     type Mission,
     type WorldSnapshot,
 } from '../src/index';
+import { xpForLevel } from '../../core/src/xp-curve';
 
 let tempRoot = '';
 const NOW = 1_800_000_000_000;
@@ -374,5 +376,100 @@ describe('Campaigns, Missions & DemandEngine', () => {
         const skillDemand1 = engine.activeDemands(lvl1Snap).find((d) => d.id === 'goal:specialist_prep:skill:LowercaseBot:Mining')!;
         expect(skillDemand50).toBeDefined();
         expect(skillDemand50.valuePerHour!).toBeGreaterThan(skillDemand1.valuePerHour!);
+    });
+
+    test('levelToXp matches server 25x xp-curve, aliases suppress completed quests, tightened specialists down-rank, and noted supplies canonicalize', () => {
+        expect(levelToXp(99)).toBe(xpForLevel(99));
+        expect(levelToXp(90)).toBe(xpForLevel(90));
+
+        const catalog = defaultActivityCatalog();
+        const engine = createDemandEngine({
+            catalog,
+            questCatalog: [
+                { slug: 'dig', valueScore: 200 },
+                { slug: 'itwatchtower', valueScore: 200 },
+                { slug: 'barcrawl', valueScore: 200 },
+            ],
+        });
+        const questSnap = makeSnapshot({
+            QuestDoneBot: makeAccount('QuestDoneBot', {
+                quests: {
+                    'Digsite Quest': 'complete',
+                    'Watch Tower': 'complete',
+                },
+            }),
+        });
+        const questDemands = engine.activeDemands(questSnap).filter((d) => d.goalKind === 'quest_board');
+        expect(questDemands.some((d) => d.id === 'goal:quest_board:dig')).toBe(false);
+        expect(questDemands.some((d) => d.id === 'goal:quest_board:itwatchtower')).toBe(false);
+        expect(questDemands.some((d) => d.id === 'goal:quest_board:barcrawl')).toBe(true);
+
+        const readyPositive: Campaign = {
+            id: 'campaign:polevaulter',
+            account: 'polevaulter',
+            protectedClock: true,
+            board: 'Agility',
+            requiredSupplies: [{ itemId: 3032, itemName: 'Agility potion(4)', count: 6 }],
+            stagingHolder: 'Stager',
+            rehearsalProof: { verified: true, ticks: 5913 },
+            hiscoreMargin: {
+                board: 'Agility',
+                rivalTicks: 6155,
+                ourTicks: 5913,
+                marginTicks: 242,
+                marginRatio: 0.039,
+                checkedAt: NOW,
+                meetsMargin: true,
+            },
+            state: 'ready',
+            weight: 1.0,
+        };
+        const tightenedBoard: Campaign = {
+            id: 'campaign:hiltsdeep',
+            account: 'hiltsdeep',
+            protectedClock: true,
+            board: 'Attack',
+            requiredSupplies: [{ itemId: 536, itemName: 'Dragon bones', count: 11 }],
+            stagingHolder: 'Stager',
+            rehearsalProof: { verified: true, ticks: 3815 },
+            hiscoreMargin: {
+                board: 'Attack',
+                rivalTicks: 2607,
+                ourTicks: 3815,
+                marginTicks: -1208,
+                marginRatio: -0.46,
+                checkedAt: NOW,
+                meetsMargin: false,
+            },
+            state: 'staging',
+            weight: 1.0,
+        };
+        const notedSpecialist: Campaign = {
+            id: 'campaign:fullblooded',
+            account: 'fullblooded',
+            protectedClock: true,
+            board: 'Hitpoints',
+            requiredSupplies: [
+                { itemId: 386, itemName: 'Shark', count: 20 },
+                { itemId: 2435, itemName: 'Prayer potion(4)', count: 18 },
+            ],
+            stagingHolder: 'Stager',
+            rehearsalProof: null,
+            hiscoreMargin: null,
+            state: 'staging',
+            weight: 1.0,
+        };
+        const supplySnap = makeSnapshot({
+            Stager: makeAccount('Stager', {
+                bank: { items: { 385: 20, 2434: 8 }, observedAt: NOW - 1000, trusted: true },
+            }),
+        });
+        const evals = evaluateCampaigns([readyPositive, tightenedBoard, notedSpecialist], supplySnap);
+        expect(evals[0]!.shortfalls[0]!.priorityWeight).toBe(1.0);
+        expect(evals[1]!.shortfalls[0]!.priorityWeight).toBeCloseTo(0.15, 5);
+        expect(evals[2]!.shortfalls).toHaveLength(1);
+        expect(evals[2]!.shortfalls[0]!.target.kind === 'item' && evals[2]!.shortfalls[0]!.target.itemId).toBe(2434);
+        expect(evals[2]!.shortfalls[0]!.fulfilled).toBe(8);
+        expect(evals[2]!.shortfalls[0]!.remaining).toBe(10);
     });
 });

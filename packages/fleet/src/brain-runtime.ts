@@ -926,8 +926,14 @@ export function materializeBrainTransferOrders(
 
         const hubSpec = HUB_BANKER_LOCATIONS[order.hub];
         const tile = hubSpec.bankTile;
-        const fromSide = opts.world.accounts[order.from.toLowerCase()]?.side ?? opts.side;
-        const toSide = opts.world.accounts[order.to.toLowerCase()]?.side ?? opts.side;
+        const lookupSide = (name: string): string => {
+            const direct = opts.world.accounts[name] ?? opts.world.accounts[name.toLowerCase()];
+            if (direct) return direct.side;
+            const lower = name.toLowerCase();
+            return Object.values(opts.world.accounts).find((a) => a.name.toLowerCase() === lower)?.side ?? opts.side;
+        };
+        const fromSide = lookupSide(order.from);
+        const toSide = lookupSide(order.to);
         const bothLocal = fromSide === opts.side && toSide === opts.side;
         const extra = order.items.slice(1).map((line) => ({
             item: line.itemName ?? itemsMap.get(line.itemId)?.name ?? `item:${line.itemId}`,

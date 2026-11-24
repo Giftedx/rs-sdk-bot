@@ -14,6 +14,7 @@ import {
     planAccount,
     xpForLevel,
 } from '../src/planner';
+import { createActivityCatalog } from '../src/catalog';
 
 const NOW = 1_700_000_000_000;
 
@@ -517,5 +518,123 @@ test('scoring rewards positive-payback gear upgrades, prefers faster candidate a
         expect(hubUpgradePlan.steps[0].source).toBe('hub_banker');
         expect(hubUpgradePlan.steps[0].donorAccount).toBe('DonorMiner');
         expect(hubUpgradePlan.steps[0].hub).toBe('varrock_west');
+    }
+});
+
+test('planAccount never picks 0-XP activities for skill unlocks/demands and selects fastest trainer + Druidic Ritual for Herblore', () => {
+    const catalog = createActivityCatalog();
+    const activities = catalog.list({ minTrust: 'practice_passed' });
+    const zeroXpTrainer: ActivityDefinition = {
+        id: 'bank-artisan:crafting-tanning-fake',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'train',
+        label: 'Zero XP crafting',
+        skill: 'Crafting',
+        config: { skill: 'crafting', method: 'tanning' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 0.3, gpPerTick: 2, setupTicks: 10, minBatchUnits: 14, confidence: 'model' },
+        trust: 'practice_passed',
+    };
+    const slowCrafter: ActivityDefinition = {
+        id: 'bank-artisan:crafting-slow',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'train',
+        label: 'Slow crafting',
+        skill: 'Crafting',
+        config: { skill: 'crafting', method: 'bowstrings' },
+        baselineRate: { xpPerTick: 65, unitsPerTick: 0.2, gpPerTick: 0, setupTicks: 20, minBatchUnits: 14, confidence: 'model' },
+        trust: 'practice_passed',
+    };
+    const fastCrafter: ActivityDefinition = {
+        id: 'bank-artisan:crafting-fast',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'train',
+        label: 'Fast crafting',
+        skill: 'Crafting',
+        config: { skill: 'crafting', method: 'inventory' },
+        baselineRate: { xpPerTick: 320, unitsPerTick: 0.3, gpPerTick: 0, setupTicks: 15, minBatchUnits: 14, confidence: 'model' },
+        trust: 'practice_passed',
+    };
+    const targetWithCraftReq: ActivityDefinition = {
+        id: 'quest:craft-gated',
+        workerId: 'quest',
+        family: 'quest',
+        kind: 'quest',
+        label: 'Craft gated quest',
+        questSlug: 'craftgated',
+        config: { requiredSkills: { Crafting: 20 } },
+        baselineRate: { xpPerTick: 50, unitsPerTick: 0.01, gpPerTick: 0, setupTicks: 15, minBatchUnits: 1, confidence: 'model' },
+        trust: 'practice_passed',
+    };
+    const freshBot = makeAcct({
+        name: 'FreshHerb',
+        skills: { Hitpoints: { level: 10, xp: xpForLevel(10) } },
+        quests: {},
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { FreshHerb: freshBot },
+    };
+
+    const craftUnlockPlan = planAccount(freshBot, {
+        world,
+        activities: [zeroXpTrainer, slowCrafter, fastCrafter, targetWithCraftReq],
+        demands: [{
+            id: 'd:craftgated',
+            goalKind: 'quest_board',
+            valueScore: 200,
+            target: { kind: 'quest', questSlug: 'craftgated' },
+            fulfilled: 0,
+            remaining: 1,
+            priorityWeight: 1,
+            active: true,
+        }],
+    });
+    expect(craftUnlockPlan.steps[0]?.stepKind).toBe('unlock');
+    if (craftUnlockPlan.steps[0]?.stepKind === 'unlock') {
+        expect(craftUnlockPlan.steps[0].activityId).toBe('bank-artisan:crafting-fast');
+    }
+
+    // Planning dig (requires Herblore 10, Agility 10, Thieving 25) must never emit bank-artisan:herblore-meats.
+    const digPlan = planAccount(freshBot, {
+        world,
+        activities,
+        demands: [{
+            id: 'goal:quest_board:dig',
+            goalKind: 'quest_board',
+            valueScore: 200,
+            target: { kind: 'quest', questSlug: 'dig' },
+            fulfilled: 0,
+            remaining: 1,
+            priorityWeight: 1,
+            active: true,
+        }],
+    });
+    expect(digPlan.steps.some((s) => 'activityId' in s && s.activityId === 'bank-artisan:herblore-meats')).toBe(false);
+
+    // A Herblore 3 skill demand without Druidic Ritual must unlock via quest:druid, never herblore:meats.
+    const herbSkillPlan = planAccount(freshBot, {
+        world,
+        activities,
+        demands: [{
+            id: 'd:herb3',
+            goalKind: 'specialist_prep',
+            valueScore: 200,
+            target: { kind: 'skill', account: 'FreshHerb', skill: 'Herblore', targetLevel: 3 },
+            fulfilled: 1,
+            remaining: 2,
+            priorityWeight: 1,
+            assignedAccount: 'FreshHerb',
+            active: true,
+        }],
+    });
+    expect(herbSkillPlan.steps.some((s) => 'activityId' in s && s.activityId === 'bank-artisan:herblore-meats')).toBe(false);
+    if (herbSkillPlan.steps.length > 0) {
+        expect(herbSkillPlan.steps.some((s) => 'activityId' in s && s.activityId === 'quest:druid')).toBe(true);
     }
 });

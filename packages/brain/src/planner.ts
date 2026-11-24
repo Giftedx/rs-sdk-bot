@@ -3,6 +3,7 @@
 // applies comparative advantage across account profiles, and enforces protectedClock isolation.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { levelForXp, xpForLevel } from '../../core/src/xp-curve';
 import type { Gear, Skill } from '../../knowledge/src/gear';
 import { canWear } from '../../knowledge/src/gear-query';
 import type { PreflightResult, RateEstimate, TrustTier } from '../../workers/src/contracts';
@@ -57,28 +58,7 @@ const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 const WOODCUTTING_AXES_DESC = [1359, 1357, 1355, 1361, 1353, 1349, 1351] as const;
 const MINING_PICKAXES_DESC = [1275, 1271, 1273, 1269, 1267, 1265] as const;
 
-const XP_TABLE: readonly number[] = (() => {
-    const t: number[] = [];
-    let acc = 0;
-    for (let i = 0; i < 99; i++) {
-        const level = i + 1;
-        acc += Math.floor(level + Math.pow(2.0, level / 10.0) * 300.0);
-        t.push((Math.floor(acc / 4) * 10) / 10);
-    }
-    return t;
-})();
-
-export function xpForLevel(level: number): number {
-    if (level <= 1) return 0;
-    return XP_TABLE[Math.min(level, 99) - 2] ?? 0;
-}
-
-export function levelForXp(xp: number): number {
-    for (let i = 97; i >= 0; i--) {
-        if (xp >= XP_TABLE[i]!) return Math.min(i + 2, 99);
-    }
-    return 1;
-}
+export { levelForXp, xpForLevel };
 
 interface SkillToolRow {
     readonly id: number;
@@ -558,6 +538,31 @@ export function comparativeAdvantageMultiplier(
     return mult;
 }
 
+const QUEST_FOLDER_ALIASES: Readonly<Record<string, string>> = {
+    dwarfcannon: 'quest_mcannon',
+    dig: 'quest_itexam',
+    merlin: 'quest_arthur',
+    rj: 'quest_romeojuliet',
+    scorpion: 'quest_scorpcatcher',
+    elemental: 'quest_elemental_workshop',
+    arrav: 'quest_blackarmgang',
+};
+
+function activityXpForSkill(activity: ActivityDefinition, rate: RateEstimate, skill: string): number {
+    const lower = skill.toLowerCase();
+    if (rate.skillXpPerTick) {
+        const direct = rate.skillXpPerTick[skill];
+        if (typeof direct === 'number' && Number.isFinite(direct)) return direct;
+        for (const [k, v] of Object.entries(rate.skillXpPerTick)) {
+            if (k.toLowerCase() === lower && Number.isFinite(v)) return v;
+        }
+    }
+    if (activity.skill?.toLowerCase() === lower || activity.skills?.some((s) => s.toLowerCase() === lower)) {
+        return rate.xpPerTick;
+    }
+    return 0;
+}
+
 function activityMatchesDemand(
     acct: AccountState,
     demand: GoalDemand,
@@ -579,10 +584,7 @@ function activityMatchesDemand(
             if (t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
             const curLvl = accountSkillLevel(acct, t.skill);
             if (curLvl >= t.targetLevel) return false;
-            const targetNorm = t.skill.toLowerCase();
-            if (activity.skill?.toLowerCase() === targetNorm) return true;
-            if (activity.skills?.some((s) => s.toLowerCase() === targetNorm)) return true;
-            return (activity.baselineRate.skillXpPerTick?.[t.skill] ?? activity.baselineRate.skillXpPerTick?.[targetNorm] ?? 0) > 0;
+            return activityXpForSkill(activity, activity.baselineRate, t.skill) > 0;
         }
         case 'quest': {
             if (t.account && t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
@@ -598,8 +600,7 @@ function activityMatchesDemand(
             if (t.account.toLowerCase() !== acct.name.toLowerCase()) return false;
             for (const [skill, targetLvl] of Object.entries(t.targets)) {
                 if (accountSkillLevel(acct, skill) < targetLvl) {
-                    const norm = skill.toLowerCase();
-                    if (activity.skill?.toLowerCase() === norm || activity.skills?.some((s) => s.toLowerCase() === norm)) {
+                    if (activityXpForSkill(activity, activity.baselineRate, skill) > 0) {
                         return true;
                     }
                 }
@@ -1022,8 +1023,12 @@ export function planAccount(
                             break;
                         }
                         const qSlug = blocker.quest.toLowerCase();
+                        const aliasFolder = QUEST_FOLDER_ALIASES[qSlug];
                         const qRow = questRows.find(
-                            (q) => q.varp.toLowerCase() === qSlug || q.folder?.toLowerCase() === `quest_${qSlug}`,
+                            (q) =>
+                                q.varp.toLowerCase() === qSlug
+                                || q.folder?.toLowerCase() === `quest_${qSlug}`
+                                || (aliasFolder !== undefined && q.folder?.toLowerCase() === aliasFolder),
                         );
                         if (qRow?.xp) {
                             for (const reward of qRow.xp) {
@@ -1044,12 +1049,56 @@ export function planAccount(
                         prepSteps.push(unlockStep);
                     } else if (blocker.kind === 'skill_level') {
                         const skLower = blocker.skill.toLowerCase();
+                        if (skLower === 'herblore' && !hasCompletedQuest(acct, 'druid')) {
+                            const druidAct = (questsBySlug.get('druid') ?? [])[0];
+                            if (druidAct && getPreflight(druidAct, 1).ok && !prepSteps.some((s) => s.stepKind === 'unlock' && s.questSlug?.toLowerCase() === 'druid')) {
+                                const druidPre = getPreflight(druidAct, 1);
+                                const druidRow = questRows.find(
+                                    (q) => q.varp.toLowerCase() === 'druid' || q.folder?.toLowerCase() === 'quest_druid',
+                                );
+                                if (druidRow?.xp) {
+                                    for (const reward of druidRow.xp) {
+                                        const sk = reward.skill.toLowerCase();
+                                        grantedQuestXp[sk] = (grantedQuestXp[sk] ?? 0) + reward.xp * xpRate;
+                                    }
+                                }
+                                prepSteps.push({
+                                    stepKind: 'unlock',
+                                    unlockKind: 'quest',
+                                    activityId: druidAct.id,
+                                    questSlug: 'druid',
+                                    estimatedTicks: Math.max(
+                                        10,
+                                        Math.ceil(druidAct.baselineRate.setupTicks + (druidPre.travelTicks ?? 0) + 1 / Math.max(1e-4, druidAct.baselineRate.unitsPerTick)),
+                                    ),
+                                });
+                                const curHerbXp = acct.skills[blocker.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, blocker.skill));
+                                if (levelForXp(curHerbXp + (grantedQuestXp[skLower] ?? 0)) >= blocker.required) {
+                                    continue;
+                                }
+                                if (prepSteps.length >= MAX_ACCOUNT_PLAN_STEPS - 1) {
+                                    lastBlockerReason = `${activity.id}:exceeds_${MAX_ACCOUNT_PLAN_STEPS}_steps`;
+                                    chainFeasible = false;
+                                    break;
+                                }
+                            }
+                        }
+
                         let unlockEntry = skillUnlockCache.get(skLower);
                         if (unlockEntry === undefined) {
-                            const candidates = bySkill.get(skLower) ?? [];
-                            const found = candidates.find(
-                                (a) => a.skill?.toLowerCase() === skLower && getPreflight(a, 1).ok,
-                            );
+                            const candidates = (bySkill.get(skLower) ?? [])
+                                .filter((a) =>
+                                    a.family !== 'quest'
+                                    && a.skill?.toLowerCase() === skLower
+                                    && activityXpForSkill(a, getRate(a), blocker.skill) > 0
+                                    && getPreflight(a, 1).ok,
+                                )
+                                .sort((a, b) => {
+                                    const xpDiff = activityXpForSkill(b, getRate(b), blocker.skill) - activityXpForSkill(a, getRate(a), blocker.skill);
+                                    if (xpDiff !== 0) return xpDiff;
+                                    return getRate(a).setupTicks - getRate(b).setupTicks || a.id.localeCompare(b.id);
+                                });
+                            const found = candidates[0];
                             unlockEntry = found ? { activity: found, rate: getRate(found) } : null;
                             skillUnlockCache.set(skLower, unlockEntry);
                         }
@@ -1061,10 +1110,11 @@ export function planAccount(
                         const trainAct = unlockEntry.activity;
                         const trainRate = unlockEntry.rate;
                         const curXp = acct.skills[blocker.skill]?.xp ?? xpForLevel(accountSkillLevel(acct, blocker.skill));
-                        const needXp = Math.max(1, xpForLevel(blocker.required) - curXp);
+                        const bonusXp = grantedQuestXp[skLower] ?? 0;
+                        const needXp = Math.max(1, xpForLevel(blocker.required) - (curXp + bonusXp));
                         const trainTicks = Math.max(
                             10,
-                            Math.ceil(trainRate.setupTicks + needXp / Math.max(1e-3, trainRate.xpPerTick * xpRate)),
+                            Math.ceil(trainRate.setupTicks + needXp / Math.max(1e-3, activityXpForSkill(trainAct, trainRate, blocker.skill) * xpRate)),
                         );
                         const unlockStep: UnlockPlannedStep = {
                             stepKind: 'unlock',

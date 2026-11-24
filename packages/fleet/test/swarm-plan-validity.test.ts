@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { brainCycleDue, clearAutoStop, DEFAULT_BRAIN_CYCLE_MS, isAutoStopText } from '../src/swarm';
+import { brainCycleDue, clearAutoStop, DEFAULT_BRAIN_CYCLE_MS, isAutoStopText, selectBrainDispatchStep } from '../src/swarm';
+import { dispatchAccountPlan } from '../src/worker-dispatch';
+import type { AccountPlan } from '../../brain/src/contracts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 
@@ -80,6 +82,88 @@ describe('root swarm.json validity and Brain throttle helpers', () => {
             expect(existsSync(ownerFile)).toBe(true);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test('selectBrainDispatchStep truncates multi-step chains before fleet_trade and skips multi-step work attribution', () => {
+        const planWithLateTrade: AccountPlan = {
+            account: 'TradeBot',
+            demandId: 'd:fire',
+            scorePerHour: 120,
+            steps: [
+                {
+                    stepKind: 'unlock',
+                    unlockKind: 'quest',
+                    activityId: 'quest:waterfall',
+                    questSlug: 'waterfall',
+                    estimatedTicks: 400,
+                },
+                {
+                    stepKind: 'acquire',
+                    source: 'hub_banker',
+                    itemId: 385,
+                    quantity: 10,
+                    estimatedTicks: 40,
+                    estimatedCoinCost: 0,
+                    coinFloatPreserved: 1000,
+                    donorAccount: 'BankAlt',
+                    hub: 'varrock_west',
+                    transferOrderId: 'xfer-1',
+                },
+                {
+                    stepKind: 'work',
+                    activityId: 'combat:fire-giant',
+                    demandId: 'd:fire',
+                    workerId: 'combat',
+                    batchUnits: 15,
+                    estimatedTicks: 500,
+                    expectedValuePerHour: 120,
+                    config: {},
+                },
+            ],
+        };
+        const dispatched = dispatchAccountPlan(planWithLateTrade);
+        const sel = selectBrainDispatchStep(dispatched, planWithLateTrade.steps);
+        expect(sel.mode).toBe('worker');
+        if (sel.mode === 'worker') {
+            expect(sel.step.script).toBe('scripts/aio-quester.ts');
+            expect(sel.isMultiStepChain).toBe(false);
+            expect(sel.attributedActivityId).toBe('quest:waterfall');
+        }
+
+        const multiNoTrade: AccountPlan = {
+            account: 'ChainBot',
+            demandId: 'd:cook',
+            scorePerHour: 100,
+            steps: [
+                {
+                    stepKind: 'acquire',
+                    source: 'ge',
+                    itemId: 383,
+                    quantity: 50,
+                    estimatedTicks: 50,
+                    estimatedCoinCost: 20_000,
+                    coinFloatPreserved: 1000,
+                },
+                {
+                    stepKind: 'work',
+                    activityId: 'bank-artisan:cooking-food',
+                    demandId: 'd:cook',
+                    workerId: 'bank-artisan',
+                    batchUnits: 50,
+                    estimatedTicks: 200,
+                    expectedValuePerHour: 100,
+                    config: {},
+                },
+            ],
+        };
+        const multiSel = selectBrainDispatchStep(dispatchAccountPlan(multiNoTrade), multiNoTrade.steps);
+        expect(multiSel.mode).toBe('worker');
+        if (multiSel.mode === 'worker') {
+            expect(multiSel.step.script).toBe('scripts/chain.ts');
+            expect(multiSel.isMultiStepChain).toBe(true);
+            expect(multiSel.attributedActivityId).toBeUndefined();
+            expect(multiSel.displayActivityId).toBe('bank-artisan:cooking-food');
         }
     });
 });

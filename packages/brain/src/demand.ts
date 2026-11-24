@@ -4,6 +4,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { repoRoot } from '../../core/src/practice-paths';
+import { xpForLevel } from '../../core/src/xp-curve';
 import { accountOwnedItemCount, type RateEstimate } from '../../workers/src/contracts';
 import { evaluateCampaigns, loadCampaignManifests, type CampaignEvaluation } from './campaigns';
 import type { ActivityCatalog } from './catalog';
@@ -23,6 +24,7 @@ import {
     type WorldSnapshot,
 } from './contracts';
 import { evaluateMissions, loadMissionManifests, type MissionEvaluation } from './missions';
+import { hasCompletedQuest } from './preflight';
 import type { RateStore } from './rate-store';
 
 export const TICK_MS = 400;
@@ -141,12 +143,7 @@ function readJsonSafe(filePath: string): unknown {
 }
 
 export function levelToXp(level: number): number {
-    const clamped = Math.max(1, Math.min(99, Math.floor(level)));
-    let points = 0;
-    for (let lvl = 1; lvl < clamped; lvl++) {
-        points += Math.floor(lvl + 300 * Math.pow(2, lvl / 7));
-    }
-    return Math.floor(points / 4);
+    return xpForLevel(level);
 }
 
 function loadItemGpValues(root: string): Record<number, number> {
@@ -355,16 +352,24 @@ export class DemandEngine {
         acct?: AccountState,
         snapshot?: WorldSnapshot,
     ): number {
-        const needXp = Math.max(
-            1,
-            (targetXp ?? levelToXp(targetLevel)) - (currentXp ?? levelToXp(currentLevel)),
-        );
-        const candidates = this.catalog.findBySkill(skill);
-        if (candidates.length === 0) {
+        const rawTargetXp = targetXp ?? levelToXp(targetLevel);
+        const rawCurrentXp = currentXp !== undefined && currentXp < rawTargetXp
+            ? currentXp
+            : levelToXp(currentLevel);
+        const needXp = Math.max(1, rawTargetXp - rawCurrentXp);
+        const allCandidates = this.catalog.findBySkill(skill).filter((act) => act.family !== 'quest');
+        const trusted = allCandidates.filter((act) => act.trust !== 'experimental');
+        const pool = trusted.length > 0 ? trusted : allCandidates;
+        const candidates = pool.filter((act) => {
+            const reqLvl = typeof act.config?.requiredLevel === 'number' ? act.config.requiredLevel : 1;
+            return reqLvl <= targetLevel;
+        });
+        const effectiveCandidates = candidates.length > 0 ? candidates : pool;
+        if (effectiveCandidates.length === 0) {
             return Math.max(DEFAULT_MIN_DEMAND_HOURS, needXp / 50_000);
         }
         let bestHours = Number.POSITIVE_INFINITY;
-        for (const act of candidates) {
+        for (const act of effectiveCandidates) {
             const rate = this.rateFor(act, acct, snapshot);
             const xpPerTick = rate.skillXpPerTick?.[skill] ?? rate.xpPerTick;
             if (xpPerTick <= 0) continue;
@@ -513,7 +518,8 @@ export class DemandEngine {
             const done =
                 completedSlugs.has(slug.toLowerCase()) ||
                 completedSlugs.has(norm) ||
-                (questNameNorm !== undefined && completedSlugs.has(questNameNorm));
+                (questNameNorm !== undefined && completedSlugs.has(questNameNorm)) ||
+                activeAccounts.some((acct) => hasCompletedQuest(acct, slug));
             if (done) continue;
             out.push({
                 id: `goal:quest_board:${slug}`,

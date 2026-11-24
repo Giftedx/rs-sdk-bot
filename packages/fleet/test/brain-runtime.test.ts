@@ -341,5 +341,21 @@ describe('packages/fleet/src/brain-runtime', () => {
         });
         expect(second.written).toEqual([]);
         expect(second.skipped).toEqual(['xfer-brain-3']);
+
+        // MixedCase world.accounts keys still detect bothLocal -> takerWaits=true
+        const mixedWorld: WorldSnapshot = {
+            ...world,
+            accounts: {
+                AlphaBot: world.accounts.alphabot!,
+                BetaBot: world.accounts.betabot!,
+            },
+        };
+        const mixedRes = materializeBrainTransferOrders(
+            [{ ...order1, id: 'xfer-brain-mixed', items: [{ itemId: 536, itemName: 'Dragon bones', count: 10 }] }],
+            { fleetDir, side: 'local', world: mixedWorld, now: now + 2000 },
+        );
+        expect(mixedRes.written).toEqual(['xfer-brain-mixed']);
+        const mixedParsed = JSON.parse(readFileSync(join(fleetDir, 'orders', 'xfer-brain-mixed.json'), 'utf8'));
+        expect(mixedParsed.takerWaits).toBe(true);
     });
 });

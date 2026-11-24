@@ -889,7 +889,9 @@ export async function runSplashCli(
     let s: CombatSession | undefined;
     let stopped = false;
     try {
-        const [account, target, cap] = args;
+        const [account, targetArg, capArg] = args;
+        const target = targetArg ?? env.TARGET_LEVEL;
+        const cap = capArg ?? env.CAP;
         if (!account || !Number.isSafeInteger(Number(target)) || Number(target) < 2 || Number(target) > 99) {
             throw Error('usage: splash <account> <TARGET_LEVEL> [CAP ticks]');
         }
