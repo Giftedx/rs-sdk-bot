@@ -817,7 +817,7 @@ export function toWorkerOutcome(
     if (outcome.kind === 'died' || /\bdied\b/.test(lower)) {
         return { kind: 'death', ...base, faultSignature: 'gather_death', detail: outcome.detail };
     }
-    if (opts.stopped || outcome.kind === 'stopped' || /\b(stop|stopped|interrupt|interrupted|session ended|ended)\b/i.test(outcome.detail ?? '')) {
+    if (opts.stopped || outcome.kind === 'aborted' || /\b(stop|stopped|interrupt|interrupted|session ended|ended)\b/i.test(outcome.detail ?? '')) {
         return {
             kind: 'session_unsettled',
             ...base,

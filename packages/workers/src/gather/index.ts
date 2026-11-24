@@ -35,7 +35,7 @@ export const gatherWorker: WorkerModule<GatherConfig, WorkerAccountView, WorkerW
         await Promise.resolve();
         if (isStopped()) {
             return toWorkerOutcome(
-                { ok: false, kind: 'stopped', detail: 'stop or session end requested', delta: { elapsedTicks: 0 } },
+                { ok: false, kind: 'aborted', detail: 'stop or session end requested', delta: { elapsedTicks: 0 } },
                 s.name ?? 'unknown',
                 norm,
                 0,
@@ -52,7 +52,7 @@ export const gatherWorker: WorkerModule<GatherConfig, WorkerAccountView, WorkerW
             const ticksElapsed = Math.max(0, (s.tick?.() ?? startTick) - startTick);
             const stopped = isStopped();
             return toWorkerOutcome(
-                { ok: false, kind: stopped ? 'stopped' : 'failed', detail, delta: { elapsedTicks: ticksElapsed } },
+                { ok: false, kind: stopped ? 'aborted' : 'failed', detail, delta: { elapsedTicks: ticksElapsed } },
                 s.name ?? 'unknown',
                 norm,
                 ticksElapsed,
