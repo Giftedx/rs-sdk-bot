@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { depositObserved } from '../../../core/src/deposit';
 import type { Session } from '../../../core/src/inprocess';
 import { waitUntil } from '../../../core/src/ticks';
@@ -389,5 +390,9 @@ export async function runBankBidSale(
 }
 
 export function saleStopRequested(actor: string, exists: (path: string) => boolean = existsSync) {
-    return isStopFilePresent(actor, [], exists);
+    return (
+        exists(resolve('.practice', 'stop-' + actor))
+        || exists(resolve('.practice', 'stop-all'))
+        || isStopFilePresent(actor, [], exists)
+    );
 }
