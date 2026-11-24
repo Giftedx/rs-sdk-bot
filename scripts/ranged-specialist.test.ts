@@ -23,6 +23,7 @@ import {
     kitSlotTotal,
     LUMBRIDGE_HANDOFF,
     parseSpecialistArgs,
+    RANGED_PVP_SPECIALIST_KIT,
     RANGED_SPECIALIST_KIT,
     RANGED_SPECIALIST_LIVE_KIT,
     RANGED_SPECIALIST_LIVE_TRADE1,
@@ -417,4 +418,21 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
     });
     expect(() => parseRangedLivePrepArgs(['Shaftshooter'])).toThrow('refuses reserved account');
     expect(() => parseRangedLivePrepArgs(['Moneyshot', '--mode=bogus'])).toThrow('unknown --mode');
+});
+
+test('RANGED_PVP_SPECIALIST_KIT fits 28 tradeable cataloged slots and parseSpecialistArgs supports VARIANT=pvp', () => {
+    expect(kitSlotTotal(RANGED_PVP_SPECIALIST_KIT)).toBe(28);
+    const byId = new Map(ITEMS.map(item => [item.id, item]));
+    for (const spec of RANGED_PVP_SPECIALIST_KIT) {
+        const entry = byId.get(spec.id);
+        expect(entry).toBeDefined();
+        expect(entry!.tradeable).toBe(true);
+        expect(entry!.name).toBe(spec.name);
+    }
+    expect(parseSpecialistArgs(['Moneyshot', '3000', 'VARIANT=pvp', 'TANKS=tank1,tank2'])).toMatchObject({
+        bot: 'Moneyshot',
+        cap: 3000,
+        variant: 'pvp',
+        tanks: ['tank1', 'tank2'],
+    });
 });

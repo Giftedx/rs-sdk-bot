@@ -373,4 +373,11 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         )).rejects.toThrow('Try again later');
         expect(stoppedCalls).toBe(1);
     });
+
+    test('HP PvP kit constant matches MELEE_PVP_SPECIALIST_KIT 28-slot contract', async () => {
+        const { HITPOINTS_PVP_SPECIALIST_KIT } = await import('./hp-specialist');
+        const { MELEE_PVP_SPECIALIST_KIT } = await import('./combat-quest-specialists');
+        expect(HITPOINTS_PVP_SPECIALIST_KIT).toEqual(MELEE_PVP_SPECIALIST_KIT);
+        expect(kitSlotTotal(HITPOINTS_PVP_SPECIALIST_KIT)).toBe(28);
+    });
 });

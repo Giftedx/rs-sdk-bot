@@ -119,6 +119,7 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
 
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
+export const HITPOINTS_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 
 export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
     hitpoints: HP_SPECIALIST_KIT,
@@ -773,14 +774,18 @@ export async function runWildyPvpRelogLoop(
     initSess: Session,
     opts: {
         botName: string;
-        board: 'strength' | 'defence';
-        skill: 'Strength' | 'Defence';
+        board: 'strength' | 'defence' | 'hitpoints' | 'ranged';
+        skill: 'Strength' | 'Defence' | 'Hitpoints' | 'Ranged';
         targetLevel: number;
         tankNames: readonly string[];
         setupTicks: number;
         cap: number;
         shouldStop: () => boolean;
         onRetireSession?: (s: Session) => void;
+        useMeleePrayers?: boolean;
+        requiredWeaponId?: number;
+        styleForState?: (s: Session) => number | null;
+        onPrepareSwing?: (s: Session) => Promise<void>;
     },
 ): Promise<{ session: Session; totalTicks: number; swings: number }> {
     const root = resolve(import.meta.dir, '..');
@@ -790,7 +795,10 @@ export async function runWildyPvpRelogLoop(
     const logoutCom = componentId('logout:try_logout');
     const ultStrCom = componentId('prayer:prayer_ultimatestrength');
     const incRefCom = componentId('prayer:prayer_incrediblereflexes');
-    const styleCom = componentId(opts.board === 'strength' ? 'combat_heavysword:heavy1' : 'combat_heavysword:heavy3');
+    const aggressiveStyleCom = componentId('combat_heavysword:heavy1');
+    const defensiveStyleCom = componentId('combat_heavysword:heavy3');
+    const useMeleePrayers = opts.useMeleePrayers ?? opts.board !== 'ranged';
+    const requiredWeaponId = opts.requiredWeaponId ?? (opts.board === 'ranged' ? undefined : 1319);
 
     let totalTicks = opts.setupTicks;
     let swings = 0;
@@ -838,8 +846,11 @@ export async function runWildyPvpRelogLoop(
                 await walkWaypoints(sess, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 15, opts.shouldStop, 'recenter keep relog');
             }
 
-            if (!sess.sdk.getEquipment().some(e => e.id === 1319)) {
-                await equipItemById(sess, 1319, opts.shouldStop, 'Rune 2h sword');
+            if (requiredWeaponId !== undefined && !sess.sdk.getEquipment().some(e => e.id === requiredWeaponId)) {
+                await equipItemById(sess, requiredWeaponId, opts.shouldStop, `weapon ${requiredWeaponId}`);
+            }
+            if (opts.onPrepareSwing) {
+                await opts.onPrepareSwing(sess);
             }
 
             let target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
@@ -862,10 +873,19 @@ export async function runWildyPvpRelogLoop(
 
             const prayPts = sess.sdk.getState()?.prayers?.prayerPoints ?? 0;
             const prayBase = skillInfo(sess, 'Prayer').baseLevel;
+            const styleCom = opts.styleForState
+                ? opts.styleForState(sess)
+                : opts.board === 'strength'
+                  ? aggressiveStyleCom
+                  : opts.board === 'defence'
+                    ? defensiveStyleCom
+                    : opts.board === 'hitpoints'
+                      ? (skillInfo(sess, 'Strength').baseLevel < 99 ? aggressiveStyleCom : null)
+                      : null;
             lastHitSeq.set((target.name ?? '').toLowerCase(), swings + 1);
-            if (prayPts > 0 && prayBase >= 31) void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
-            if (prayPts > 0 && prayBase >= 34) void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
-            void sess.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });
+            if (useMeleePrayers && prayPts > 0 && prayBase >= 31) void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
+            if (useMeleePrayers && prayPts > 0 && prayBase >= 34) void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+            if (styleCom !== null) void sess.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });
             void sess.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 2, reason: 'SDK' });
             void sess.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' });
 
@@ -1299,8 +1319,7 @@ export async function runSpecialistWaterfall(
     }, gotPebble, 3, 2);
 
     if (opts.afterGolrie) {
-        await walkFast([{ x: 2515, z: 9576, tol: 0 }], 30, 'to golrie gate exit');
-        await stepAct('golrie gate exit', () => opLoc(LOC.golrieGate, /open/i), () => !inBox(2502, 9576, 2523, 9593), 10, 5);
+        await stepAct('golrie gate exit', () => opLoc(LOC.golrieGate), () => !inBox(2502, 9576, 2523, 9593), 10, 6);
         await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
         await walkFast([{ x: 2533, z: 9556, tol: 1 }], 40, 'to golrie cellar ladder', () => syncWaterfallPfm(true));
         await climb('cellar up', 2533, 9555, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
@@ -1460,7 +1479,7 @@ export async function runMeleePvpSpecialist(
     s: Session,
     opts: {
         botName?: string;
-        board: 'strength' | 'defence';
+        board: 'strength' | 'defence' | 'hitpoints';
         supplierName: string;
         tankNames: readonly string[];
         cap: number;
@@ -1470,7 +1489,7 @@ export async function runMeleePvpSpecialist(
         runWaterfallFn?: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
 ): Promise<{ session: Session; message: string }> {
-    const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
+    const skill = opts.board === 'strength' ? 'Strength' : opts.board === 'defence' ? 'Defence' : 'Hitpoints';
     const kit = KIT_BY_BOARD[opts.board];
     const target = SPECIALIST_TARGETS[opts.board];
     const elapsed = () => s.tick() - opts.t0;
