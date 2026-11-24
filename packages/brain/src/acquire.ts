@@ -83,6 +83,8 @@ export interface AcquireContext {
     readonly confirmedLogoutAt?: ReadonlyMap<string, number>;
     readonly requireConfirmedLogoutForTransfer?: boolean;
     readonly stationedHubBankers?: Readonly<Partial<Record<HubBankId, string>>>;
+    readonly excludedDonorAccounts?: ReadonlySet<string>;
+    readonly excludedSources?: ReadonlySet<AcquireSourceKind>;
     readonly _cachedByOutputItem?: ReadonlyMap<number, readonly ActivityDefinition[]>;
     readonly _sortedIdleDonors?: readonly AccountState[];
 }
@@ -234,6 +236,10 @@ export function resolveAcquireItem(
     for (const source of ACQUIRE_SOURCE_ORDER) {
         if (!allowedSet.has(source)) {
             skippedReasons.push({ source, reason: 'source excluded by request' });
+            continue;
+        }
+        if (ctx.excludedSources?.has(source)) {
+            skippedReasons.push({ source, reason: 'source excluded by context' });
             continue;
         }
 
@@ -456,6 +462,10 @@ export function resolveAcquireItem(
             for (const donor of donors) {
                 const donorLower = donor.name.toLowerCase();
                 if (donorLower === acctLower) continue;
+                if (ctx.excludedDonorAccounts?.has(donorLower)) {
+                    rejectReason = `donor ${donor.name} already assigned this cycle`;
+                    continue;
+                }
                 if (donor.protectedClock || isProtectedAccountName(donor.name)) continue;
                 if (donor.lifecycle !== 'idle') {
                     rejectReason = `donor ${donor.name} lifecycle=${donor.lifecycle}`;

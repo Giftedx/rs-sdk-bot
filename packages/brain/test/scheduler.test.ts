@@ -424,3 +424,109 @@ test('global demand allocation prevents herd-piling on covered item and quest de
     });
     expect(spotCapped.spotAllocations['catherby-sharks']?.length).toBe(1);
 });
+
+test('scheduler prevents donor double-booking, replans on failed transfer safety gate, and materializes hub_banker gear_upgrade transfers', () => {
+    // 1. Donor already assigned work earlier in the cycle cannot be double-booked as a hub_banker donor.
+    const richDonor = makeAcct({
+        name: 'RichDonor',
+        pos: { x: 3185, z: 3436, level: 0 },
+        skills: { Fishing: { level: 76, xp: 1_500_000 }, Cooking: { level: 1, xp: 0 } },
+        bank: { items: { 383: 400, 995: 5000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const cooker = makeAcct({
+        name: 'Cooker',
+        pos: { x: 3185, z: 3436, level: 0 },
+        skills: { Cooking: { level: 80, xp: 2_000_000 }, Fishing: { level: 1, xp: 0 }, Thieving: { level: 60, xp: 280_000 } },
+        bank: { items: { 995: 2000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const doubleBookPlan = scheduleFleet({
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { RichDonor: richDonor, Cooker: cooker },
+        },
+        activities: [ACTIVITIES[0]!, ACTIVITIES[1]!, ACTIVITIES[2]!],
+        demands: [
+            { id: 'd:raw-sharks', goalKind: 'main_supply', valueScore: 500, valuePerHour: 500, target: { kind: 'item', itemId: 383, count: 500 }, fulfilled: 0, remaining: 500, priorityWeight: 1, assignedAccount: 'RichDonor', active: true },
+            { id: 'd:cooked-sharks', goalKind: 'main_supply', valueScore: 100, valuePerHour: 100, target: { kind: 'item', itemId: 385, count: 100 }, fulfilled: 0, remaining: 100, priorityWeight: 1, assignedAccount: 'Cooker', active: true },
+            { id: 'd:coins', goalKind: 'coin_fund', valueScore: 10, valuePerHour: 10, target: { kind: 'coins', amount: 50_000 }, fulfilled: 0, remaining: 50_000, priorityWeight: 1, active: true },
+        ],
+        logoutProofs: new Map([['richdonor', confirmedProof('RichDonor')], ['cooker', confirmedProof('Cooker')]]),
+        requireMarketQuote: true,
+        marketQuotes: {},
+        maxBots: 5,
+    });
+    expect(doubleBookPlan.accountPlans.RichDonor?.steps.at(-1)?.stepKind).toBe('work');
+    expect(doubleBookPlan.transferOrders.length).toBe(0);
+
+    // 2. When transfer safety gate fails (missing logout proof), scheduler re-plans onto useful local work instead of parking idle.
+    const replanResult = scheduleFleet({
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { RichDonor: makeAcct({ ...richDonor, skills: { Cooking: { level: 1, xp: 0 }, Fishing: { level: 1, xp: 0 } } }), Cooker: cooker },
+        },
+        activities: [ACTIVITIES[1]!, ACTIVITIES[2]!],
+        demands: [
+            { id: 'd:cooked-sharks', goalKind: 'main_supply', valueScore: 200, valuePerHour: 200, target: { kind: 'item', itemId: 385, count: 100 }, fulfilled: 0, remaining: 100, priorityWeight: 1, assignedAccount: 'Cooker', active: true },
+            { id: 'd:coins', goalKind: 'coin_fund', valueScore: 20, valuePerHour: 20, target: { kind: 'coins', amount: 50_000 }, fulfilled: 0, remaining: 50_000, priorityWeight: 1, active: true },
+        ],
+        requireMarketQuote: true,
+        marketQuotes: {},
+        maxBots: 5,
+    });
+    expect(replanResult.transferOrders.length).toBe(0);
+    expect(replanResult.accountPlans.Cooker?.steps.length).toBeGreaterThan(0);
+    expect(replanResult.accountPlans.Cooker?.demandId).toBe('d:coins');
+
+    // 3. gear_upgrade via hub_banker creates a validated TransferOrder and stamps transferOrderId.
+    const miningAct: ActivityDefinition = {
+        id: 'gather:mining-ore',
+        workerId: 'gather',
+        family: 'gather',
+        kind: 'gather',
+        label: 'Mine iron ore',
+        skill: 'Mining',
+        config: { skill: 'mining', method: 'ore' },
+        baselineRate: { xpPerTick: 65, unitsPerTick: 0.14, gpPerTick: 3, setupTicks: 15, minBatchUnits: 27, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const pickDonor = makeAcct({
+        name: 'PickDonor',
+        pos: { x: 3185, z: 3436, level: 0 },
+        bank: { items: { 1275: 1, 995: 5000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const miner = makeAcct({
+        name: 'MinerBot',
+        pos: { x: 3185, z: 3436, level: 0 },
+        skills: { Mining: { level: 45, xp: 62_000 } },
+        bank: { items: { 1265: 1, 995: 500 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const upgradeXferPlan = scheduleFleet({
+        world: {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: { PickDonor: pickDonor, MinerBot: miner },
+        },
+        activities: [miningAct],
+        demands: [
+            { id: 'd:mine65', goalKind: 'specialist_prep', valueScore: 100, valuePerHour: 100, target: { kind: 'skill', account: 'MinerBot', skill: 'Mining', targetLevel: 65 }, fulfilled: 45, remaining: 20, priorityWeight: 1, assignedAccount: 'MinerBot', active: true },
+        ],
+        logoutProofs: new Map([['pickdonor', confirmedProof('PickDonor')], ['minerbot', confirmedProof('MinerBot')]]),
+        requireMarketQuote: true,
+        marketQuotes: {},
+        maxBots: 5,
+    });
+    expect(upgradeXferPlan.transferOrders.length).toBe(1);
+    const upgStep = upgradeXferPlan.accountPlans.MinerBot?.steps[0];
+    expect(upgStep?.stepKind).toBe('gear_upgrade');
+    if (upgStep?.stepKind === 'gear_upgrade') {
+        expect(upgStep.transferOrderId).toBe(upgradeXferPlan.transferOrders[0]!.id);
+    }
+});

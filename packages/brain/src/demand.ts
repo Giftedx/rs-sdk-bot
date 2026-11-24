@@ -123,6 +123,14 @@ function isPlainRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+function lookupAccount(snapshot: WorldSnapshot | undefined, name: string | undefined): AccountState | undefined {
+    if (!snapshot || !name) return undefined;
+    const direct = snapshot.accounts[name] ?? snapshot.accounts[name.toLowerCase()];
+    if (direct) return direct;
+    const lower = name.toLowerCase();
+    return Object.values(snapshot.accounts).find((a) => a.name.toLowerCase() === lower);
+}
+
 function readJsonSafe(filePath: string): unknown {
     if (!existsSync(filePath)) return undefined;
     try {
@@ -368,7 +376,7 @@ export class DemandEngine {
     }
 
     estimateEndToEndHours(demand: GoalDemand, snapshot?: WorldSnapshot): number {
-        const acct = demand.assignedAccount ? snapshot?.accounts[demand.assignedAccount] : undefined;
+        const acct = lookupAccount(snapshot, demand.assignedAccount);
         const target = demand.target;
 
         switch (target.kind) {
@@ -396,7 +404,7 @@ export class DemandEngine {
             }
 
             case 'quest': {
-                const qAcct = target.account ? snapshot?.accounts[target.account] ?? acct : acct;
+                const qAcct = lookupAccount(snapshot, target.account) ?? acct;
                 const candidates = this.catalog.findByQuest(target.questSlug);
                 let bestHours = Number.POSITIVE_INFINITY;
                 for (const act of candidates) {
@@ -410,7 +418,7 @@ export class DemandEngine {
             }
 
             case 'skill': {
-                const sAcct = snapshot?.accounts[target.account] ?? acct;
+                const sAcct = lookupAccount(snapshot, target.account) ?? acct;
                 const curSkill = sAcct?.skills[target.skill] ?? sAcct?.skills[target.skill.toLowerCase()];
                 return this.bestSkillHours(
                     target.skill,
@@ -424,7 +432,7 @@ export class DemandEngine {
             }
 
             case 'combat_readiness': {
-                const cAcct = snapshot?.accounts[target.account] ?? acct;
+                const cAcct = lookupAccount(snapshot, target.account) ?? acct;
                 let totalHours = 0;
                 for (const [skill, targetLvl] of Object.entries(target.targets)) {
                     const cur = cAcct?.skills[skill] ?? cAcct?.skills[skill.toLowerCase()];
@@ -478,15 +486,18 @@ export class DemandEngine {
         const seeds: QuestDemandSeed[] =
             this.customQuestCatalog !== undefined
                 ? [...this.customQuestCatalog]
-                : this.catalog.byFamily('quest').map((act) => {
-                      const slug = act.questSlug ?? act.id.replace(/^quest:/, '');
-                      const unlockBonus = KEY_UNLOCK_QUESTS.has(slug.toLowerCase()) ? 250 : 120;
-                      const trustMult = act.trust === 'live_proven' ? 1.25 : act.trust === 'practice_passed' ? 1.15 : 0.85;
-                      return {
-                          slug,
-                          valueScore: Math.round(unlockBonus * trustMult),
-                      };
-                  });
+                : this.catalog
+                      .byFamily('quest')
+                      .filter((act) => Boolean(act.questSlug) && act.trust !== 'experimental')
+                      .map((act) => {
+                          const slug = act.questSlug!;
+                          const unlockBonus = KEY_UNLOCK_QUESTS.has(slug.toLowerCase()) ? 250 : 120;
+                          const trustMult = act.trust === 'live_proven' ? 1.25 : act.trust === 'practice_passed' ? 1.15 : 0.85;
+                          return {
+                              slug,
+                              valueScore: Math.round(unlockBonus * trustMult),
+                          };
+                      });
 
         const seen = new Set<string>();
         const out: GoalDemand[] = [];
@@ -608,7 +619,7 @@ export class DemandEngine {
         if (!this.customSkillTargets || this.customSkillTargets.length === 0) return [];
         const out: GoalDemand[] = [];
         for (const spec of this.customSkillTargets) {
-            const acct = snapshot.accounts[spec.account];
+            const acct = lookupAccount(snapshot, spec.account);
             if (acct && (acct.protectedClock || acct.lifecycle === 'paused_owner' || acct.lifecycle === 'dead')) {
                 continue;
             }

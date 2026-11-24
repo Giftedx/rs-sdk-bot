@@ -24,6 +24,7 @@ import {
     openEarthBankObserved,
     planShopPurchases,
     profileRefusal,
+    resolveShopProfile,
     retainedEarthBank,
     runDialogBuyStep,
     runOwnedSword,
@@ -821,4 +822,12 @@ test('native Value ignores stale private quotes and fresh player chat',async()=>
  const s:any={tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},sdk:{getState:()=>({gameMessages:messages}),sendClickComponentWithOption:async(component:number,option:number,slot:number)=>{expect([component,option,slot]).toEqual([3823,1,2]);messages.push({type:2,text:'Bronze dagger: shop will buy for 999gp.',observationId:2});return{success:true};}}};
  let done=false;const pending=observeMerchantQuote(s,{id:1205,name:'Bronze dagger',slot:2},()=>false,10).then(v=>{done=true;return v;});await Promise.resolve();await Promise.resolve();expect(done).toBe(false);
  messages.push({type:0,text:'Bronze dagger: shop will buy for 3gp.',observationId:3});tick++;for(const cb of listeners)cb();expect(await pending).toBe(3);
+});
+
+test('resolveShopProfile resolves hand-authored profiles and raw knowledge/shops.json shop ids', () => {
+ expect(resolveShopProfile('ardy')?.items.length).toBeGreaterThan(0);
+ const scim = resolveShopProfile('scimitarshop');
+ expect(scim).toBeDefined();
+ expect(scim!.npc.test('Zeke')).toBe(true);
+ expect(scim!.items.some(i => i.re.test('Bronze scimitar'))).toBe(true);
 });

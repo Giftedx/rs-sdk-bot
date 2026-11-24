@@ -16,6 +16,7 @@ import {
     isProtectedAccountName,
     type AccountPlan,
     type AccountState,
+    type AcquireSourceKind,
     type ActivityDefinition,
     type Campaign,
     type DefectRecord,
@@ -183,6 +184,8 @@ export interface AccountPlannerInput {
     readonly allowExperimentalFallback?: boolean;
     readonly excludedSpotIds?: ReadonlySet<string>;
     readonly excludedActivityIds?: ReadonlySet<string>;
+    readonly excludedDonorAccounts?: ReadonlySet<string>;
+    readonly excludedAcquireSources?: ReadonlySet<AcquireSourceKind>;
     readonly donorDemandItemIds?: ReadonlyMap<string, ReadonlySet<number>>;
     readonly recentReceivedAt?: ReadonlyMap<string, number>;
     readonly confirmedLogoutAt?: ReadonlyMap<string, number>;
@@ -416,6 +419,12 @@ export function evaluateBestGearUpgrade(params: {
                     acquisitionTicks: cand.step.estimatedTicks,
                     paybackNetTicks,
                     source: cand.step.source,
+                    ...(cand.step.shopId ? { shopId: cand.step.shopId } : {}),
+                    ...(cand.step.donorAccount ? { donorAccount: cand.step.donorAccount } : {}),
+                    ...(cand.step.hub ? { hub: cand.step.hub } : {}),
+                    ...(cand.step.activityId ? { activityId: cand.step.activityId } : {}),
+                    ...(Number.isFinite(cand.step.estimatedCoinCost) ? { estimatedCoinCost: cand.step.estimatedCoinCost } : {}),
+                    ...(Number.isFinite(cand.step.coinFloatPreserved) ? { coinFloatPreserved: cand.step.coinFloatPreserved } : {}),
                 };
             }
         }
@@ -788,7 +797,13 @@ export function planAccount(
         }
     }
     const sortedIdleDonors = Object.values(world.accounts)
-        .filter((d) => d.lifecycle === 'idle' && d.bank.trusted && !d.protectedClock && !isProtectedAccountName(d.name))
+        .filter((d) =>
+            d.lifecycle === 'idle'
+            && d.bank.trusted
+            && !d.protectedClock
+            && !isProtectedAccountName(d.name)
+            && !input.excludedDonorAccounts?.has(d.name.toLowerCase()),
+        )
         .sort((a, b) => a.name.localeCompare(b.name));
 
     const acquireCtx: AcquireContext = {
@@ -800,6 +815,8 @@ export function planAccount(
         recentReceivedAt: input.recentReceivedAt,
         confirmedLogoutAt: input.confirmedLogoutAt,
         requireConfirmedLogoutForTransfer: input.requireConfirmedLogoutForTransfer,
+        excludedDonorAccounts: input.excludedDonorAccounts,
+        excludedSources: input.excludedAcquireSources,
         _cachedByOutputItem: nonExpByOutputItem,
         _sortedIdleDonors: sortedIdleDonors,
     };

@@ -24,6 +24,7 @@ import {
     gePlanPaths,
     geTripPaths,
     geTripStop,
+    loadGeItemCatalogue,
     openOrderSession,
     orderEscrow,
     orderPaths,
@@ -233,12 +234,17 @@ export async function runAioMarket(account: string, args: readonly string[], env
                         onStop: async () => { stopped = true; },
                         onSessionEnd: async () => { stopped = true; },
                     });
+                    const itemIdFilter = merged.ITEM_ID ? Number(merged.ITEM_ID) : NaN;
+                    const resolvedItems = merged.ITEMS
+                        ?? (Number.isSafeInteger(itemIdFilter)
+                            ? loadGeItemCatalogue().find(r => r.id === itemIdFilter)?.name
+                            : undefined);
                     const res = await runShopBuy(s, {
                         mode: 'shop-buy',
                         profile: pos[0] || merged.PROFILE || 'catherby',
                         cap: Number(pos[1] ?? merged.CAP ?? 15000),
                         bankAt: optInt(merged.BANK_AT),
-                        items: merged.ITEMS,
+                        items: resolvedItems,
                         stockTarget: optInt(merged.STOCK_TARGET),
                         maxItems: merged.MAX_ITEMS ? Number(merged.MAX_ITEMS) : undefined,
                         maxSpend: merged.MAX_SPEND ? Number(merged.MAX_SPEND) : undefined,

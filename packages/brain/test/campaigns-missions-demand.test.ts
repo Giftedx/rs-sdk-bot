@@ -348,4 +348,31 @@ describe('Campaigns, Missions & DemandEngine', () => {
         expect(pausedOk).toBe(true);
         expect(engine.activeDemands(snapshot).some((d) => d.goalKind === 'squad_supply')).toBe(false);
     });
+
+    test('DemandEngine skips quest:mode-* and experimental quests and resolves lowercase-keyed snapshot accounts', () => {
+        const catalog = defaultActivityCatalog();
+        const engine = createDemandEngine({
+            catalog,
+            skillTargets: [
+                { account: 'LowercaseBot', skill: 'Mining', targetLevel: 60, goalKind: 'specialist_prep', valueScore: 100 },
+            ],
+        });
+        const lvl50Bot = makeAccount('LowercaseBot', {
+            skills: { Mining: { level: 50, xp: 105_000 } },
+        });
+        const lvl1Bot = makeAccount('LowercaseBot', {
+            skills: { Mining: { level: 1, xp: 0 } },
+        });
+        const lowerSnap = makeSnapshot({ lowercasebot: lvl50Bot });
+        const lvl1Snap = makeSnapshot({ lowercasebot: lvl1Bot });
+
+        const lowerDemands = engine.activeDemands(lowerSnap);
+        expect(lowerDemands.some((d) => d.id.startsWith('goal:quest_board:mode-'))).toBe(false);
+        expect(lowerDemands.some((d) => ['goal:quest_board:arrav', 'goal:quest_board:hero', 'goal:quest_board:legends'].includes(d.id))).toBe(false);
+
+        const skillDemand50 = lowerDemands.find((d) => d.id === 'goal:specialist_prep:skill:LowercaseBot:Mining')!;
+        const skillDemand1 = engine.activeDemands(lvl1Snap).find((d) => d.id === 'goal:specialist_prep:skill:LowercaseBot:Mining')!;
+        expect(skillDemand50).toBeDefined();
+        expect(skillDemand50.valuePerHour!).toBeGreaterThan(skillDemand1.valuePerHour!);
+    });
 });

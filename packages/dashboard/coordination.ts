@@ -60,7 +60,7 @@ export function coordinationView(state: unknown, at: number, now: number, paused
   const goalRec = demandId ? goalById.get(demandId) : undefined;
   const goalLabel = goalRec?.goalKind ?? demandId ?? 'fleet';
   const step = describeStep(firstStep);
-  const acct = s.accounts[account];
+  const acct = s.accounts[account] ?? s.accounts[account.toLowerCase()];
   const running = Boolean(acct?.activeJob);
   const startedAt = acct?.activeJob?.startedAt;
   const capability = workStep?.activityId ?? (firstStep.stepKind === 'unlock' ? firstStep.activityId : undefined);

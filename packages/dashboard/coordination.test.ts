@@ -35,6 +35,9 @@ test('fleet state projection separates active chains and defects without leaking
  expect(JSON.stringify(c)).not.toContain('NEVER_EXPOSE');
  expect(coordinationView(state,1,20000).fresh).toBe(false);
  expect(coordinationView(null,0,1).available).toBe(false);
+ const lowerKeyed=coordinationView({...state,accounts:{worker:state.accounts.Worker}},99,100);
+ expect(lowerKeyed.chains[0]).toMatchObject({account:'Worker',running:true});
+ expect(lowerKeyed.tasks[0]).toMatchObject({status:'running',startedAt:90});
 });
 test('camera destinations use the pinned viewer URL interface and reject invalid coordinates',()=>{
  const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');

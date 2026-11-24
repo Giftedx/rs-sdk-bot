@@ -368,6 +368,13 @@ export interface GearUpgradePlannedStep {
     readonly acquisitionTicks: number;
     readonly paybackNetTicks: number;
     readonly source: AcquireSourceKind;
+    readonly shopId?: string;
+    readonly donorAccount?: string;
+    readonly hub?: HubBankId;
+    readonly transferOrderId?: string;
+    readonly activityId?: string;
+    readonly estimatedCoinCost?: number;
+    readonly coinFloatPreserved?: number;
 }
 
 export interface UnlockPlannedStep {
@@ -1324,6 +1331,13 @@ export function validatePlannedStep(v: unknown): string[] {
             if (!isFiniteNonNeg(v.acquisitionTicks)) errors.push('gear_upgrade.acquisitionTicks must be finite non-negative');
             if (!isFinitePos(v.paybackNetTicks)) errors.push('gear_upgrade.paybackNetTicks must be finite positive');
             if (!isAcquireSourceKind(v.source)) errors.push('gear_upgrade.source invalid');
+            if (v.shopId !== undefined && !isNonEmptyStr(v.shopId)) errors.push('gear_upgrade.shopId invalid');
+            if (v.donorAccount !== undefined && !isAccountName(v.donorAccount)) errors.push('gear_upgrade.donorAccount invalid');
+            if (v.hub !== undefined && !isHubBankId(v.hub)) errors.push('gear_upgrade.hub invalid');
+            if (v.transferOrderId !== undefined && !isNonEmptyStr(v.transferOrderId)) errors.push('gear_upgrade.transferOrderId invalid');
+            if (v.activityId !== undefined && !isNonEmptyStr(v.activityId)) errors.push('gear_upgrade.activityId invalid');
+            if (v.estimatedCoinCost !== undefined && !isFiniteNonNeg(v.estimatedCoinCost)) errors.push('gear_upgrade.estimatedCoinCost invalid');
+            if (v.coinFloatPreserved !== undefined && !isFiniteNonNeg(v.coinFloatPreserved)) errors.push('gear_upgrade.coinFloatPreserved invalid');
             return errors;
         }
         case 'unlock': {
