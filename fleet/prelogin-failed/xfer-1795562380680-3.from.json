@@ -5,6 +5,6 @@
  "account": "TheFullMonty",
  "partner": "Shaftsinker",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795562910148,
+ "at": 1795563094748,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }
