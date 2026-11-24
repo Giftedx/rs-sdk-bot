@@ -13,7 +13,7 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, sessionWalker, walkPath } from '../packages/core/src/walk';
 import { runQuestArena } from './generated/quest-arena';
 import { runQuestTree } from './generated/quest-tree';
-import { runSpecialistWaterfall } from './combat-quest-specialists';
+import { mazeWalkWaypoints, runSpecialistWaterfall } from './combat-quest-specialists';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 import {
     ATTACK_SPECIALIST_KIT,
@@ -545,10 +545,17 @@ async function prepareVampireAndWaterfallInDraynorAndVarrock(s: Session, stop: S
     await walkWaypoints(s, [{ x: 2522, z: 3494, tol: 1 }], 220, stop, 'camelot to almera');
 }
 
-async function exitMazeAndClearArenaGear(s: Session, stop: StopFn): Promise<void> {
-    await walkWaypoints(s, [{ x: 2529, z: 3165, tol: 2 }, { x: 2515, z: 3161, tol: 0 }], 80, stop, 'bolren to loose railing');
+const GOLRIE_TO_MAZE_EXIT: Point[] = [
+    [2545, 3155], [2545, 3150], [2544, 3150], [2544, 3148], [2541, 3148], [2541, 3150], [2538, 3150], [2538, 3145],
+    [2548, 3145], [2548, 3156], [2550, 3156], [2550, 3159], [2545, 3159], [2545, 3165], [2549, 3165], [2549, 3174],
+    [2544, 3174], [2544, 3177], [2533, 3177], [2533, 3179], [2531, 3179], [2531, 3177], [2529, 3177], [2529, 3179],
+    [2527, 3179], [2527, 3177], [2514, 3177], [2514, 3179], [2520, 3179], [2521, 3185], [2523, 3185], [2523, 3181],
+    [2532, 3182], [2532, 3188], [2512, 3188], [2512, 3190], [2505, 3190],
+].map(([x, z]) => ({ x, z, tol: 1 }));
+
+async function squeezeLooseRailing(s: Session, crossed: (z: number) => boolean, stop: StopFn, label: string): Promise<void> {
     for (let attempt = 0; attempt < 8 && !stop(); attempt++) {
-        if ((posOf(s)?.worldZ ?? 9999) <= 3160) break;
+        if (crossed(posOf(s)?.worldZ ?? 0)) return;
         await dismissContinueDialogs(s, stop, 1);
         const railing = (s.sdk.getState()?.nearbyLocs ?? [])
             .filter((l: any) => (l.id === 2186 || /railing/i.test(l.name ?? '')) && (l.optionsWithIndex ?? []).some((o: any) => /squeeze/i.test(o.text ?? '')))
@@ -556,9 +563,23 @@ async function exitMazeAndClearArenaGear(s: Session, stop: StopFn): Promise<void
         if (!railing) throw Error('loose railing not found at 2515,3161');
         const op = railing.optionsWithIndex.find((o: any) => /squeeze/i.test(o.text ?? ''));
         await s.sdk.sendInteractLoc(railing.x, railing.z, railing.id, op?.opIndex ?? 1);
-        await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) <= 3160 || stop(), { timeoutTicks: 8 });
+        await waitUntil(s, () => crossed(posOf(s)?.worldZ ?? 0) || stop(), { timeoutTicks: 8 });
     }
-    if ((posOf(s)?.worldZ ?? 9999) > 3160) throw Error('failed exiting maze through loose railing');
+    if (!crossed(posOf(s)?.worldZ ?? 0)) throw Error(`failed loose railing squeeze: ${label}`);
+}
+
+async function walkGolrieToBolren(s: Session, stop: StopFn): Promise<void> {
+    await mazeWalkWaypoints(s, GOLRIE_TO_MAZE_EXIT, 180, stop, 'golrie to maze exit');
+    await setProtectMelee(s, true, stop);
+    await walkWaypoints(s, [{ x: 2515, z: 3160, tol: 0 }], 60, stop, 'maze exit to loose railing', { ignoreMeleeHunters: true });
+    await squeezeLooseRailing(s, z => z >= 3161, stop, 'enter maze');
+    await setProtectMelee(s, false, stop);
+    await walkWaypoints(s, [{ x: 2529, z: 3165, tol: 2 }, { x: 2542, z: 3171, tol: 1 }], 80, stop, 'railing to bolren');
+}
+
+async function exitMazeAndClearArenaGear(s: Session, stop: StopFn): Promise<void> {
+    await walkWaypoints(s, [{ x: 2529, z: 3165, tol: 2 }, { x: 2515, z: 3161, tol: 0 }], 80, stop, 'bolren to loose railing');
+    await squeezeLooseRailing(s, z => z > 0 && z <= 3160, stop, 'exit maze');
     await setProtectMelee(s, true, stop);
     await walkWaypoints(s, [{ x: 2566, z: 3201, tol: 2 }], 120, stop, 'railing to lady servil', { ignoreMeleeHunters: true });
 }
@@ -730,7 +751,7 @@ async function main(): Promise<void> {
             afterGolrie: async () => {
                 milestone('golrie');
                 await topUpPrayer(s, 26, stop);
-                await walkWaypoints(s, [{ x: 2542, z: 3171, tol: 1 }], 140, stop, 'golrie to bolren');
+                await walkGolrieToBolren(s, stop);
                 await runQuestTree({ session: s, cap: Math.max(200, CAP - elapsed()), stop, burst: true });
                 milestone('tree_gnome_village', `attack=${skillInfo(s, 'Attack').baseLevel} xp=${skillInfo(s, 'Attack').experience}`);
 
