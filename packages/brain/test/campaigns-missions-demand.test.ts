@@ -149,7 +149,32 @@ describe('Campaigns, Missions & DemandEngine', () => {
             rehearsalProof: { verified: true, ticks: 3800 },
             state: 'ready',
         };
-        expect(campaignShortfalls(readyCampaign, snapshot).launchReady).toBe(true);
+        // Supplies are still short (25/50 Dragon bones), so launchReady must be false.
+        const shortEval = campaignShortfalls(readyCampaign, snapshot);
+        expect(shortEval.launchReady).toBe(false);
+        expect(shortEval.missingGates).toContain('supplies');
+
+        // Stale hiscore margin (> 1 h old) blocks launch even when supplies are satisfied.
+        const fullSnapshot = makeSnapshot(
+            {
+                StagerOne: makeAccount('StagerOne', {
+                    bank: { items: { 536: 60, 556: 1200 }, observedAt: NOW - 1000, trusted: true },
+                }),
+            },
+            { reserves: { StagerOne: { 536: 10 } } },
+        );
+        expect(campaignShortfalls(readyCampaign, fullSnapshot).launchReady).toBe(true);
+
+        const staleCampaign: Campaign = {
+            ...readyCampaign,
+            hiscoreMargin: {
+                ...readyCampaign.hiscoreMargin!,
+                checkedAt: NOW - 2 * 3_600_000,
+            },
+        };
+        const staleEval = campaignShortfalls(staleCampaign, fullSnapshot);
+        expect(staleEval.launchReady).toBe(false);
+        expect(staleEval.missingGates).toContain('staleHiscore');
     });
 
     test('Mission paused emits zero demand while active missions compete proportionally by weight', () => {

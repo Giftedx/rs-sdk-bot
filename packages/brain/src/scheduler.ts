@@ -285,7 +285,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             continue;
         }
 
-        const prot = canProtectedAccountLaunch(acct, campaigns);
+        const prot = canProtectedAccountLaunch(acct, campaigns, world);
         if (!prot.allowed) {
             accountPlans[acct.name] = {
                 account: acct.name,

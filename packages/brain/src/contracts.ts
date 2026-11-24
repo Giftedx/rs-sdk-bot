@@ -1063,13 +1063,41 @@ export function validateGoalDemand(v: unknown): string[] {
 
 export const isGoalDemand = (v: unknown): v is GoalDemand => validateGoalDemand(v).length === 0;
 
-export function isCampaignLaunchReady(campaign: Campaign): boolean {
+export const MAX_CAMPAIGN_HISCORE_AGE_MS = 3_600_000;
+
+export interface CampaignLaunchReadyOptions {
+    readonly now?: number;
+    readonly maxHiscoreAgeMs?: number;
+    readonly suppliesSatisfied?: boolean;
+}
+
+export function isHiscoreMarginFresh(
+    margin: HiscoreMarginSummary | null | undefined,
+    now: number,
+    maxAgeMs = MAX_CAMPAIGN_HISCORE_AGE_MS,
+): boolean {
+    if (!margin || !Number.isFinite(margin.checkedAt) || !Number.isFinite(now) || !Number.isFinite(maxAgeMs) || maxAgeMs <= 0) {
+        return false;
+    }
+    const age = now - margin.checkedAt;
+    return age >= -60_000 && age <= maxAgeMs;
+}
+
+export function isCampaignLaunchReady(
+    campaign: Campaign,
+    opts?: CampaignLaunchReadyOptions,
+): boolean {
+    if (campaign.state === 'paused' || campaign.state === 'completed') return false;
+    if (opts?.suppliesSatisfied === false) return false;
     if (!campaign.protectedClock) return campaign.state === 'ready' || campaign.state === 'running';
-    return (
-        campaign.rehearsalProof?.verified === true
-        && campaign.hiscoreMargin?.meetsMargin === true
-        && campaign.hiscoreMargin.board === campaign.board
-    );
+    if (campaign.rehearsalProof?.verified !== true) return false;
+    if (campaign.hiscoreMargin?.meetsMargin !== true || campaign.hiscoreMargin.board !== campaign.board) {
+        return false;
+    }
+    if (opts?.now !== undefined && !isHiscoreMarginFresh(campaign.hiscoreMargin, opts.now, opts.maxHiscoreAgeMs)) {
+        return false;
+    }
+    return true;
 }
 
 export function validateCampaign(v: unknown): string[] {

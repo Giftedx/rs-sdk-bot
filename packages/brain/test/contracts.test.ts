@@ -22,6 +22,7 @@ import {
     GOAL_KINDS,
     HUB_BANKER_LOCATIONS,
     MAX_ACCOUNT_PLAN_STEPS,
+    MAX_CAMPAIGN_HISCORE_AGE_MS,
     MISSION_STATES,
     NON_EXPIRING_LIFECYCLES,
     OPERATOR_COMMAND_KINDS,
@@ -41,6 +42,7 @@ import {
     isFleetPlan,
     isFleetState,
     isGoalDemand,
+    isHiscoreMarginFresh,
     isHoldActive,
     isMission,
     isOfflineBankTrusted,
@@ -439,6 +441,11 @@ test('Section 3.3 GoalDemand, Campaign, Mission, ActivityDefinition, and RateSam
     };
     expect(isCampaign(readyCampaign)).toBe(true);
     expect(isCampaignLaunchReady(readyCampaign)).toBe(true);
+    expect(isHiscoreMarginFresh(readyCampaign.hiscoreMargin, NOW)).toBe(true);
+    expect(isHiscoreMarginFresh(readyCampaign.hiscoreMargin, NOW + MAX_CAMPAIGN_HISCORE_AGE_MS + 1)).toBe(false);
+    expect(isCampaignLaunchReady(readyCampaign, { now: NOW, suppliesSatisfied: false })).toBe(false);
+    expect(isCampaignLaunchReady(readyCampaign, { now: NOW + MAX_CAMPAIGN_HISCORE_AGE_MS + 1, suppliesSatisfied: true })).toBe(false);
+    expect(isCampaignLaunchReady(readyCampaign, { now: NOW, suppliesSatisfied: true })).toBe(true);
 
     const activeMission: Mission = {
         id: 'mission:wildy-rev-sweep',
@@ -754,7 +761,6 @@ test('packages/brain/src obeys acyclic DAG and relative-only import boundaries',
     const bannedRoots = [
         'packages/fleet/',
         'packages/practice/',
-        'packages/planner/',
         'packages/router/',
         'packages/dashboard/',
         'scripts/',
@@ -783,6 +789,7 @@ test('packages/brain/src obeys acyclic DAG and relative-only import boundaries',
     const dagFiles = [
         ...walkTs(join(repoRoot, 'packages', 'knowledge', 'src')),
         ...walkTs(join(repoRoot, 'packages', 'core', 'src')),
+        ...walkTs(join(repoRoot, 'packages', 'planner', 'src')),
         ...walkTs(join(repoRoot, 'packages', 'workers', 'src')),
         ...brainFiles,
     ];
