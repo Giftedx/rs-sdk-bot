@@ -90,6 +90,7 @@ export interface LoadWorldSnapshotOptions {
     readonly reserves?: Readonly<Record<string, Readonly<Record<number, number>>>>;
     readonly globalReserves?: Readonly<Record<number, number>>;
     readonly spotOccupancy?: Readonly<Record<string, number>>;
+    readonly activitySpotById?: ReadonlyMap<string, string>;
     readonly geEscrowCoins?: Readonly<Record<string, number>>;
     readonly activeTransfers?: readonly TransferOrder[];
     readonly world?: World;
@@ -336,6 +337,36 @@ function loadPersistedOutcomeOverlay(root: string, now: number): {
         accountHolds,
         lifecycleOverrides,
     };
+}
+
+function readRemoteSpotOccupancy(
+    fleetDir: string,
+    localSide: string,
+    now: number,
+): { occupancy: Record<string, number>; coveredSides: Set<string> } {
+    const occupancy: Record<string, number> = {};
+    const coveredSides = new Set<string>();
+    const claimsDir = join(fleetDir, 'claims');
+    if (!existsSync(claimsDir)) return { occupancy, coveredSides };
+    let files: string[] = [];
+    try { files = readdirSync(claimsDir); } catch { return { occupancy, coveredSides }; }
+    for (const f of files) {
+        if (!f.endsWith('.json')) continue;
+        const claim = safeReadJson<{ side?: unknown; at?: unknown; resources?: unknown }>(join(claimsDir, f));
+        if (!claim || typeof claim.side !== 'string' || !SIDE_NAME.test(claim.side) || claim.side === localSide) continue;
+        if (typeof claim.at !== 'number' || !Number.isFinite(claim.at) || now - claim.at >= 2 * 3_600_000 || claim.at - now > 60_000) {
+            continue;
+        }
+        coveredSides.add(claim.side);
+        if (!Array.isArray(claim.resources)) continue;
+        for (const res of claim.resources) {
+            if (typeof res === 'string' && res.trim().length > 0) {
+                const key = res.trim();
+                occupancy[key] = (occupancy[key] ?? 0) + 1;
+            }
+        }
+    }
+    return { occupancy, coveredSides };
 }
 
 function readSideCards(fleetDir: string): Map<string, any> {
@@ -688,7 +719,11 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
 
     const accounts: Record<string, AccountState> = {};
     const diagnostics: Record<string, SnapshotAccountDiagnostic> = {};
-    const spotOccupancy: Record<string, number> = { ...(opts.spotOccupancy ?? {}) };
+    const remoteClaims = readRemoteSpotOccupancy(fleetDir, side, now);
+    const spotOccupancy: Record<string, number> = {
+        ...remoteClaims.occupancy,
+        ...(opts.spotOccupancy ?? {}),
+    };
 
     for (const lower of [...displayNames.keys()].sort()) {
         const rawName = displayNames.get(lower)!;
@@ -895,8 +930,13 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         }
 
         accounts[lower] = state;
-        if (lifecycle === 'running' && activeJob) {
-            spotOccupancy[activeJob.activityId] = (spotOccupancy[activeJob.activityId] ?? 0) + 1;
+        // Local running accounts are accounted for in FleetScheduler.spotAllocations; only record
+        // un-claimed remote-side running accounts mapped to canonical spotIds to prevent double-counting.
+        if (!isLocalSide && !remoteClaims.coveredSides.has(acctSide) && lifecycle === 'running' && activeJob) {
+            const spotKey = opts.activitySpotById?.get(activeJob.activityId);
+            if (spotKey) {
+                spotOccupancy[spotKey] = (spotOccupancy[spotKey] ?? 0) + 1;
+            }
         }
         diagnostics[lower] = {
             account: name,

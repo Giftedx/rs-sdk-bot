@@ -4,6 +4,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { mySide } from '../../core/src/fleet';
+import { tradeSettlement, validOrder, type Order, type Receipt } from '../../core/src/fleet-trade-settlement';
 import { atomicJson } from '../../core/src/plan-lock';
 import {
     fleetStateFile,
@@ -11,12 +12,14 @@ import {
     operatorCommandsDir,
     practiceRoot,
     repoRoot,
+    statusReadDirs,
     stopFilePaths,
 } from '../../core/src/practice-paths';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
-import type { TrustTier } from '../../workers/src/contracts';
+import { isWorkerTile, type TrustTier, type WorkerTile } from '../../workers/src/contracts';
 import {
     DEFAULT_RETENTION_MARGIN_RATIO,
+    HUB_BANKER_LOCATIONS,
     OutcomeClassifier,
     buildFleetState,
     createActivityCatalog,
@@ -25,6 +28,7 @@ import {
     defaultActivityCatalog,
     inspectWorldSnapshot,
     loadCampaignManifests,
+    loadItemsMap,
     loadMarketQuotesFromRoot,
     loadMissionManifests,
     planAccount,
@@ -538,6 +542,10 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
 
     const knowledgeRoot = existsSync(join(root, 'knowledge', 'items.json')) ? root : repoRoot;
     const catalog = opts.catalog ?? defaultActivityCatalog(knowledgeRoot);
+    const activitySpotById = new Map<string, string>();
+    for (const act of catalog.list()) {
+        if (act.spotId) activitySpotById.set(act.id, act.spotId);
+    }
     const rateStore = opts.rateStore ?? createRateStore({ catalog, root, persist });
     const classifier = opts.classifier ?? new OutcomeClassifier({ rateStore, root, persist });
     const infraBreaker =
@@ -557,6 +565,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         now,
         side,
         server,
+        activitySpotById,
         ...(opts.fleetDir !== undefined ? { fleetDir: opts.fleetDir } : {}),
         ...(opts.activeAccounts !== undefined ? { activeAccounts: opts.activeAccounts } : {}),
         ...(opts.activeTransfers !== undefined ? { activeTransfers: opts.activeTransfers } : {}),
@@ -633,6 +642,14 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     }
 
     if (persist) {
+        if (fleetPlan.transferOrders.length > 0) {
+            materializeBrainTransferOrders(fleetPlan.transferOrders, {
+                fleetDir: diagnostics.readRoots.fleetDir,
+                side,
+                world,
+                now,
+            });
+        }
         atomicJson(fleetStateFile(root), fleetState);
     }
 
@@ -645,6 +662,307 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         dispatchedPlans,
         overrides,
     };
+}
+
+export interface RunTelemetryBaseline {
+    readonly observedAt: number;
+    readonly skillsXp: Readonly<Record<string, number>>;
+    readonly coins: number | null;
+    readonly bankTrusted: boolean;
+}
+
+const OUTCOME_UNIT_COUNTER_KEYS = [
+    'output',
+    'units',
+    'crafted',
+    'cooked',
+    'caught',
+    'mined',
+    'chopped',
+    'kills',
+    'laps',
+    'buried',
+    'casts',
+    'bought',
+    'stole',
+    'stolen',
+] as const;
+
+function readAccountStatusFile(root: string, account: string, server = DEFAULT_LIVE_SERVER): Record<string, any> | null {
+    const lower = account.toLowerCase();
+    const serverLower = server.toLowerCase();
+    for (const dir of statusReadDirs(root)) {
+        if (!existsSync(dir)) continue;
+        const exact = join(dir, `${account}.json`);
+        const candidates = existsSync(exact)
+            ? [exact]
+            : (() => {
+                  try {
+                      const match = readdirSync(dir).find((f) => f.toLowerCase() === `${lower}.json`);
+                      return match ? [join(dir, match)] : [];
+                  } catch {
+                      return [];
+              }
+              })();
+        for (const file of candidates) {
+            const parsed = readJsonSafe(file);
+            if (
+                isPlainRecord(parsed)
+                && typeof parsed.name === 'string'
+                && parsed.name.toLowerCase() === lower
+                && typeof parsed.server === 'string'
+                && parsed.server.toLowerCase() === serverLower
+            ) {
+                return parsed;
+            }
+        }
+    }
+    return null;
+}
+
+function sumContainerCoins(raw: unknown): number {
+    if (!Array.isArray(raw)) return 0;
+    let total = 0;
+    for (const item of raw) {
+        if (!isPlainRecord(item)) continue;
+        const id = item.baseId ?? item.id;
+        if (id === 995 && typeof item.count === 'number' && Number.isFinite(item.count) && item.count > 0) {
+            total += Math.floor(item.count);
+        }
+    }
+    return total;
+}
+
+function readStatusSkillsXp(raw: unknown): Record<string, number> {
+    const out: Record<string, number> = {};
+    if (!Array.isArray(raw)) return out;
+    for (const sk of raw) {
+        if (!isPlainRecord(sk) || typeof sk.name !== 'string') continue;
+        const xp = typeof sk.xp === 'number' && Number.isFinite(sk.xp) && sk.xp >= 0
+            ? sk.xp
+            : typeof sk.experience === 'number' && Number.isFinite(sk.experience) && sk.experience >= 0
+                ? sk.experience
+                : undefined;
+        if (xp !== undefined) out[sk.name] = xp;
+    }
+    return out;
+}
+
+export function captureRunBaseline(
+    root: string,
+    account: string,
+    server = DEFAULT_LIVE_SERVER,
+): RunTelemetryBaseline | null {
+    const status = readAccountStatusFile(root, account, server);
+    if (!status) return null;
+    const hasBank = Array.isArray(status.bank) && typeof status.bankAt === 'number' && Number.isFinite(status.bankAt) && status.bankAt > 0;
+    const invCoins = sumContainerCoins(status.inventory);
+    const bankCoins = hasBank ? sumContainerCoins(status.bank) : 0;
+    return {
+        observedAt: typeof status.at === 'number' && Number.isFinite(status.at) ? status.at : Date.now(),
+        skillsXp: readStatusSkillsXp(status.skills),
+        coins: hasBank ? invCoins + bankCoins : null,
+        bankTrusted: hasBank,
+    };
+}
+
+export function extractWorkerOutcomeInput(params: {
+    readonly root: string;
+    readonly account: string;
+    readonly activityId: string;
+    readonly server?: string;
+    readonly startedAt: number;
+    readonly finishedAt: number;
+    readonly exitCode?: number | null;
+    readonly endReason: string;
+    readonly successful: boolean;
+    readonly died?: boolean;
+    readonly lastResultLine?: string;
+    readonly logPath: string;
+    readonly workerRelease?: string;
+    readonly baseline?: RunTelemetryBaseline | null;
+}): RawWorkerExitInput {
+    const server = params.server ?? DEFAULT_LIVE_SERVER;
+    const status = readAccountStatusFile(params.root, params.account, server);
+    const statusAt = status && typeof status.at === 'number' && Number.isFinite(status.at) ? status.at : 0;
+    const statusStarted = status && typeof status.started === 'number' && Number.isFinite(status.started) ? status.started : undefined;
+    const matchesThisRun = Boolean(
+        status
+        && statusAt >= params.startedAt
+        && (statusStarted === undefined || statusStarted >= params.startedAt - 15_000),
+    );
+
+    let ticksElapsed: number | undefined;
+    let xpGained: Record<string, number> | undefined;
+    let unitsCompleted: number | undefined;
+    let coinsDelta: number | undefined;
+    let pos: WorkerTile | undefined;
+
+    if (matchesThisRun && status) {
+        if (typeof status.tick === 'number' && Number.isFinite(status.tick) && status.tick > 0) {
+            ticksElapsed = Math.round(status.tick);
+        }
+        if (params.baseline) {
+            const postSkills = readStatusSkillsXp(status.skills);
+            const deltas: Record<string, number> = {};
+            for (const [sk, postXp] of Object.entries(postSkills)) {
+                const delta = postXp - (params.baseline.skillsXp[sk] ?? 0);
+                if (delta > 0) deltas[sk] = Math.round(delta);
+            }
+            if (Object.keys(deltas).length > 0) xpGained = deltas;
+        }
+        if (isPlainRecord(status.counters)) {
+            for (const key of OUTCOME_UNIT_COUNTER_KEYS) {
+                const v = status.counters[key];
+                if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+                    unitsCompleted = v;
+                    break;
+                }
+            }
+        }
+        const postHasBank = Array.isArray(status.bank)
+            && typeof status.bankAt === 'number'
+            && Number.isFinite(status.bankAt)
+            && status.bankAt >= params.startedAt - 15_000;
+        if (params.baseline?.bankTrusted && params.baseline.coins !== null && postHasBank) {
+            const postCoins = sumContainerCoins(status.inventory) + sumContainerCoins(status.bank);
+            coinsDelta = Math.trunc(postCoins - params.baseline.coins);
+        } else if (isPlainRecord(status.counters)) {
+            const c = status.counters.coins ?? status.counters.gp ?? status.counters.coinsGained;
+            if (typeof c === 'number' && Number.isFinite(c)) {
+                coinsDelta = Math.trunc(c);
+            }
+        }
+        if (isWorkerTile(status.pos)) {
+            pos = { x: status.pos.x, z: status.pos.z, level: status.pos.level };
+        }
+    }
+
+    const stdoutParts = [
+        params.lastResultLine,
+        matchesThisRun && typeof status?.result === 'string' ? status.result : undefined,
+    ].filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
+    const stdout = stdoutParts.length > 0 ? stdoutParts.join('\n') : undefined;
+    const died = params.died === true || /^died\b/i.test(params.endReason);
+
+    return {
+        activityId: params.activityId,
+        account: params.account,
+        exitCode: typeof params.exitCode === 'number' ? params.exitCode : undefined,
+        status: params.successful ? 'ok' : 'fail',
+        reason: params.endReason,
+        durationMs: Math.max(0, params.finishedAt - params.startedAt),
+        ...(ticksElapsed !== undefined ? { ticksElapsed } : {}),
+        ...(xpGained ? { xpGained } : {}),
+        ...(unitsCompleted !== undefined ? { unitsCompleted } : {}),
+        ...(coinsDelta !== undefined ? { coinsDelta } : {}),
+        ...(pos ? { pos } : {}),
+        ...(stdout ? { stdout } : {}),
+        ...(died ? { died: true } : {}),
+        logPath: params.logPath,
+    };
+}
+
+export function materializeBrainTransferOrders(
+    orders: readonly TransferOrder[],
+    opts: {
+        readonly fleetDir: string;
+        readonly side: string;
+        readonly world: WorldSnapshot;
+        readonly now: number;
+    },
+): { written: string[]; skipped: string[] } {
+    const written: string[] = [];
+    const skipped: string[] = [];
+    if (orders.length === 0) return { written, skipped };
+
+    const ordersDir = join(opts.fleetDir, 'orders');
+    const receiptsDir = join(opts.fleetDir, 'receipts');
+    const receiptsByOrderId = new Map<string, Receipt[]>();
+    if (existsSync(receiptsDir)) {
+        try {
+            for (const f of readdirSync(receiptsDir)) {
+                if (!f.endsWith('.json')) continue;
+                const rec = readJsonSafe(join(receiptsDir, f)) as Receipt | undefined;
+                if (!rec || typeof rec.id !== 'string') continue;
+                const list = receiptsByOrderId.get(rec.id) ?? [];
+                list.push(rec);
+                receiptsByOrderId.set(rec.id, list);
+            }
+        } catch { /* unreadable receipts */ }
+    }
+
+    const activePairItemKeys = new Set<string>();
+    if (existsSync(ordersDir)) {
+        try {
+            for (const f of readdirSync(ordersDir)) {
+                if (!f.endsWith('.json')) continue;
+                const ord = readJsonSafe(join(ordersDir, f)) as Order | undefined;
+                if (!validOrder(ord) || opts.now >= ord.end) continue;
+                const orderReceipts = receiptsByOrderId.get(ord.id) ?? [];
+                const settlement = tradeSettlement(ord, orderReceipts, opts.now);
+                if (settlement.state === 'pending' || (settlement.state === 'legacy' && orderReceipts.length === 0)) {
+                    const itemKey = ord.itemId !== undefined ? String(ord.itemId) : ord.item.toLowerCase();
+                    activePairItemKeys.add(`${ord.from.toLowerCase()}|${ord.to.toLowerCase()}|${itemKey}`);
+                }
+            }
+        } catch { /* unreadable orders */ }
+    }
+
+    const itemsMap = loadItemsMap();
+    for (const order of orders) {
+        if (order.items.length === 0 || opts.now >= order.expiresAt) {
+            skipped.push(order.id);
+            continue;
+        }
+        const first = order.items[0]!;
+        const firstItemName = first.itemName ?? itemsMap.get(first.itemId)?.name ?? `item:${first.itemId}`;
+        const dedupKey = `${order.from.toLowerCase()}|${order.to.toLowerCase()}|${first.itemId}`;
+        const orderFile = join(ordersDir, `${order.id}.json`);
+        if (activePairItemKeys.has(dedupKey) || existsSync(orderFile)) {
+            skipped.push(order.id);
+            continue;
+        }
+
+        const hubSpec = HUB_BANKER_LOCATIONS[order.hub];
+        const tile = hubSpec.bankTile;
+        const fromSide = opts.world.accounts[order.from.toLowerCase()]?.side ?? opts.side;
+        const toSide = opts.world.accounts[order.to.toLowerCase()]?.side ?? opts.side;
+        const bothLocal = fromSide === opts.side && toSide === opts.side;
+        const extra = order.items.slice(1).map((line) => ({
+            item: line.itemName ?? itemsMap.get(line.itemId)?.name ?? `item:${line.itemId}`,
+            count: line.count,
+            itemId: line.itemId,
+        }));
+
+        const built: Order = {
+            id: order.id,
+            server: order.server,
+            from: order.from,
+            to: order.to,
+            item: firstItemName,
+            count: first.count,
+            itemId: first.itemId,
+            ...(extra.length > 0 ? { extra } : {}),
+            start: opts.now,
+            end: order.expiresAt,
+            meet: [
+                { x: tile.x, z: tile.z, level: tile.level },
+                { x: tile.x, z: tile.z, level: tile.level },
+            ],
+            ...(bothLocal ? { takerWaits: true } : {}),
+        };
+        if (!validOrder(built)) {
+            skipped.push(order.id);
+            continue;
+        }
+        mkdirSync(ordersDir, { recursive: true });
+        atomicJson(orderFile, built);
+        activePairItemKeys.add(dedupKey);
+        written.push(order.id);
+    }
+
+    return { written, skipped };
 }
 
 export function recordWorkerOutcome(opts: {

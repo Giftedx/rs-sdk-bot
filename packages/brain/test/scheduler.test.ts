@@ -357,3 +357,70 @@ test('scheduleFleet halts launches with side_paused_owner when fleetSides[side].
     expect(ignored.accountPlans.IdleBot?.steps.length).toBeGreaterThan(0);
     expect(ignored.accountPlans.RecBot?.steps.length).toBeGreaterThan(0);
 });
+
+test('global demand allocation prevents herd-piling on covered item and quest demands while allowing multiple accounts on large deficits', () => {
+    const botA = makeAcct({ name: 'Alpha', lifecycle: 'idle', quests: {} });
+    const botB = makeAcct({ name: 'Bravo', lifecycle: 'idle', quests: {} });
+    const botC = makeAcct({ name: 'Charlie', lifecycle: 'idle', quests: {} });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { Alpha: botA, Bravo: botB, Charlie: botC },
+    };
+    const questAct: ActivityDefinition = {
+        id: 'quest:cook',
+        workerId: 'quest',
+        family: 'quest',
+        kind: 'quest',
+        label: "Cook's Assistant",
+        questSlug: 'cook',
+        config: { questSlug: 'cook' },
+        baselineRate: { xpPerTick: 100, unitsPerTick: 0.02, gpPerTick: 0, setupTicks: 10, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const activities: ActivityDefinition[] = [
+        { ...ACTIVITIES[0]!, spotId: undefined, maxConcurrentAccounts: undefined },
+        questAct,
+        ACTIVITIES[2]!,
+    ];
+
+    // Alpha takes the small 50-shark item demand (covered by 1 batchUnits=50), Bravo takes the quest (1 account max), Charlie takes coins.
+    const diversified = scheduleFleet({
+        world,
+        activities,
+        demands: [
+            { id: 'd:sharks-50', goalKind: 'main_supply', valueScore: 300, valuePerHour: 300, target: { kind: 'item', itemId: 383, count: 50 }, fulfilled: 0, remaining: 50, priorityWeight: 1, active: true },
+            { id: 'd:quest-cook', goalKind: 'quest_board', valueScore: 200, valuePerHour: 200, target: { kind: 'quest', questSlug: 'cook' }, fulfilled: 0, remaining: 1, priorityWeight: 1, active: true },
+            { id: 'd:coins', goalKind: 'coin_fund', valueScore: 50, valuePerHour: 50, target: { kind: 'coins', amount: 100_000 }, fulfilled: 0, remaining: 100_000, priorityWeight: 1, active: true },
+        ],
+        maxBots: 5,
+    });
+    const assignedDemands = Object.values(diversified.accountPlans).map((p) => p.demandId);
+    expect(assignedDemands.filter((d) => d === 'd:sharks-50').length).toBe(1);
+    expect(assignedDemands.filter((d) => d === 'd:quest-cook').length).toBe(1);
+    expect(assignedDemands.filter((d) => d === 'd:coins').length).toBe(1);
+
+    // Large 10,000-shark item demand can still absorb multiple accounts, while spot capacity still gates when spotId is present.
+    const largeSplit = scheduleFleet({
+        world,
+        activities,
+        demands: [
+            { id: 'd:sharks-big', goalKind: 'main_supply', valueScore: 300, valuePerHour: 300, target: { kind: 'item', itemId: 383, count: 10_000 }, fulfilled: 0, remaining: 10_000, priorityWeight: 1, active: true },
+        ],
+        maxBots: 3,
+    });
+    const bigAssigned = Object.values(largeSplit.accountPlans).filter((p) => p.demandId === 'd:sharks-big');
+    expect(bigAssigned.length).toBe(3);
+
+    const spotCapped = scheduleFleet({
+        world,
+        activities: [ACTIVITIES[0]!, ACTIVITIES[2]!],
+        demands: [
+            { id: 'd:sharks-big', goalKind: 'main_supply', valueScore: 300, valuePerHour: 300, target: { kind: 'item', itemId: 383, count: 10_000 }, fulfilled: 0, remaining: 10_000, priorityWeight: 1, active: true },
+        ],
+        maxBots: 3,
+    });
+    expect(spotCapped.spotAllocations['catherby-sharks']?.length).toBe(1);
+});

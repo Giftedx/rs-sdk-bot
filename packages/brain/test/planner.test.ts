@@ -416,3 +416,78 @@ test('strictly isolates protectedClock accounts unless Campaign launch gate pass
         reason: 'campaign_hiscore_stale',
     });
 });
+
+test('scoring rewards positive-payback gear upgrades, prefers faster candidate activities, and avoids double-multiplying priorityWeight', () => {
+    const miner = makeAcct({
+        name: 'UpgradeMiner',
+        skills: { Mining: { level: 45, xp: xpForLevel(45) } },
+        bank: { items: { 995: 100_000, 1265: 1 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { UpgradeMiner: miner },
+    };
+    const skillDemand: GoalDemand = {
+        id: 'd:mine-65',
+        goalKind: 'specialist_prep',
+        valueScore: 100,
+        valuePerHour: 100,
+        target: { kind: 'skill', account: 'UpgradeMiner', skill: 'Mining', targetLevel: 65 },
+        fulfilled: 45,
+        remaining: 20,
+        priorityWeight: 3,
+        assignedAccount: 'UpgradeMiner',
+        active: true,
+    };
+    const slowMining: ActivityDefinition = {
+        ...ACTIVITIES[0]!,
+        id: 'gather:mining-slow',
+        baselineRate: { xpPerTick: 15, unitsPerTick: 0.15, gpPerTick: 5, setupTicks: 20, minBatchUnits: 28, confidence: 'practice' },
+    };
+    const fastMining: ActivityDefinition = {
+        ...ACTIVITIES[0]!,
+        id: 'gather:mining-fast',
+        baselineRate: { xpPerTick: 40, unitsPerTick: 0.4, gpPerTick: 5, setupTicks: 20, minBatchUnits: 28, confidence: 'practice' },
+    };
+
+    const minerNoCoins = makeAcct({
+        name: 'UpgradeMiner',
+        skills: { Mining: { level: 45, xp: xpForLevel(45) } },
+        inventory: { 995: 0 },
+        bank: { items: { 995: 1000, 1265: 1 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const planWithUpgrade = planAccount(miner, {
+        world,
+        activities: [ACTIVITIES[0]!],
+        demands: [skillDemand],
+        marketQuotes: { 1275: { ask: 32_000, sell: 30_000, trades: 10 } },
+    });
+    const planWithoutUpgrade = planAccount(minerNoCoins, {
+        world: { ...world, accounts: { UpgradeMiner: minerNoCoins } },
+        activities: [ACTIVITIES[0]!],
+        demands: [skillDemand],
+        requireMarketQuote: true,
+        marketQuotes: {},
+    });
+    expect(planWithUpgrade.steps.map((s) => s.stepKind)).toEqual(['gear_upgrade', 'work']);
+    expect(planWithoutUpgrade.steps.map((s) => s.stepKind)).toEqual(['work']);
+    expect(planWithUpgrade.scorePerHour).toBeGreaterThan(planWithoutUpgrade.scorePerHour);
+
+    // priorityWeight must NOT be double-multiplied when valuePerHour is already set.
+    expect(planWithoutUpgrade.scorePerHour).toBeCloseTo(100 * 2.0, 2);
+
+    // Faster activity strictly outscores slower activity for the same demand.
+    const multiPlan = planAccount(minerNoCoins, {
+        world: { ...world, accounts: { UpgradeMiner: minerNoCoins } },
+        activities: [slowMining, fastMining],
+        demands: [skillDemand],
+        requireMarketQuote: true,
+        marketQuotes: {},
+    });
+    expect(multiPlan.steps.at(-1)?.stepKind === 'work' && multiPlan.steps.at(-1)).toMatchObject({
+        activityId: 'gather:mining-fast',
+    });
+});

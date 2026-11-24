@@ -179,6 +179,7 @@ const LOGISTICS_ROLE_ALIASES: Readonly<Record<string, LogisticsRole>> = {
     'microbot-loadout-import': 'loadout-import',
     'microbot-bank-sort': 'bank-sort',
     'pk-live/walk-edge': 'walk-edge',
+    'recover-location': 'recover-trapped',
 };
 
 export function normalizeLogisticsRole(roleInput: string): string {
