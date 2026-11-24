@@ -5,6 +5,6 @@
  "account": "Fatstack",
  "partner": "KnightRider",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795563705988,
+ "at": 1795563959990,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }
