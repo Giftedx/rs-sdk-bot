@@ -98,13 +98,17 @@ export function rewriteScript(src: string, id: string, scriptDir: string, botMod
     return `const __host = globalThis.__rsBotHost.get(${JSON.stringify(id)});\n${out}`;
 }
 
-// Only the ?hostscript entry is passed here. A parser define avoids changing the
-// same text inside a string/comment or making an imported helper a main module.
-export function hostedEntrySource(src: string, id: string, scriptDir: string): string {
-    const entry = new Bun.Transpiler({ loader: 'ts', target: 'bun', define: { 'import.meta.main': 'true' } }).transformSync(src);
-    const rewritten = rewriteScript(entry, id, scriptDir);
+const entryTranspiler = new Bun.Transpiler({ loader: 'ts', target: 'bun', define: { 'import.meta.main': 'true' } });
+const hostedEntryCache = new Map<string, (id: string) => string>();
+const SCRIPT_LOAD_FILTER = new RegExp(`[?&]${SCRIPT_Q}=`);
+const BOT_LOAD_FILTER = new RegExp(`[?&]${BOT_Q}=`);
+
+function compileHostedTemplate(src: string, scriptDir: string): (id: string) => string {
+    const entry = entryTranspiler.transformSync(src);
+    let marker = '__RS_HOST_BOT_ID__';
+    while (entry.includes(marker) || scriptDir.includes(marker)) marker += '_X';
+    const rewritten = rewriteScript(entry, marker, scriptDir);
     const split = rewritten.indexOf('\n');
-    const prefix = rewritten.slice(0, split);
     const body = rewritten.slice(split + 1);
     // Bun module evaluation does not inherit the import caller's async scope.
     // Keep static imports at module level and start the worker body in its own
@@ -132,7 +136,27 @@ export function hostedEntrySource(src: string, id: string, scriptDir: string): s
             statements.push(text);
         }
     }
-    return `${imports.join('\n')}\n${prefix}\nawait __host.execution.run(async () => {\n${statements.join('\n')}\n});`;
+    const importParts = imports.join('\n').split(marker);
+    const stmtParts = statements.join('\n').split(marker);
+    return (id: string) => {
+        const escapedId = id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const imps = importParts.length === 1 ? importParts[0]! : importParts.join(escapedId);
+        const stmts = stmtParts.length === 1 ? stmtParts[0]! : stmtParts.join(escapedId);
+        return `${imps}\nconst __host = globalThis.__rsBotHost.get(${JSON.stringify(id)});\nawait __host.execution.run(async () => {\n${stmts}\n});`;
+    };
+}
+
+// Only the ?hostscript entry is passed here. A parser define avoids changing the
+// same text inside a string/comment or making an imported helper a main module.
+export function hostedEntrySource(src: string, id: string, scriptDir: string): string {
+    const key = `${scriptDir}\0${src}`;
+    let render = hostedEntryCache.get(key);
+    if (!render) {
+        if (hostedEntryCache.size >= 128) hostedEntryCache.clear();
+        render = compileHostedTemplate(src, scriptDir);
+        hostedEntryCache.set(key, render);
+    }
+    return render(id);
 }
 
 type OpenOptions = NonNullable<Parameters<typeof openBot>[1]>;
@@ -180,12 +204,12 @@ function install(out: (line: string) => void, guard: boolean): void {
     Bun.plugin({
         name: 'rs-bot-host',
         setup(build) {
-            build.onLoad({ filter: new RegExp(`[?&]${SCRIPT_Q}=`) }, args => {
+            build.onLoad({ filter: SCRIPT_LOAD_FILTER }, args => {
                 const [file, query] = args.path.split('?') as [string, string];
                 const id = new URLSearchParams(query).get(SCRIPT_Q)!;
                 return { contents: hostedEntrySource(readFileSync(file, 'utf8'), id, dirname(file)), loader: 'js' };
             });
-            build.onLoad({ filter: new RegExp(`[?&]${BOT_Q}=`) }, args => {
+            build.onLoad({ filter: BOT_LOAD_FILTER }, args => {
                 const id = new URLSearchParams(args.path.split('?')[1]).get(BOT_Q)!;
                 return { contents: botWrapper(id), loader: 'js' };
             });

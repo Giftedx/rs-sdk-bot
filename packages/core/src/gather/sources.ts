@@ -95,8 +95,20 @@ export const CLUSTER = 20;
 // cluster (Lumbridge's 20 goblin tiles, Port Sarim's 12, the Goblin Village's 21), not a lone pair east of Varrock, where
 // a series waited out its budget on one goblin at a time.
 const SERIES_CLUSTER = 4;
-export const denseSpawns = (tiles: readonly Tile[], min = SERIES_CLUSTER): Tile[] =>
-    tiles.filter(t => tiles.filter(u => u.level === t.level && Math.max(Math.abs(u.x - t.x), Math.abs(u.z - t.z)) <= CLUSTER).length >= min);
+export const denseSpawns = (tiles: readonly Tile[], min = SERIES_CLUSTER): Tile[] => {
+    const out: Tile[] = [];
+    for (let i = 0; i < tiles.length; i++) {
+        const t = tiles[i]!;
+        let count = 0;
+        for (let j = 0; j < tiles.length; j++) {
+            const u = tiles[j]!;
+            if (u.level === t.level && Math.abs(u.x - t.x) <= CLUSTER && Math.abs(u.z - t.z) <= CLUSTER) {
+                if (++count >= min) { out.push(t); break; }
+            }
+        }
+    }
+    return out;
+};
 
 // Meats no shop sells drop from animals on death, every kill (drop tables/scripts/cow.rs2, chicken.rs2, giant_rat.rs2,
 // bear.rs2 `always` rows); goblin mail drops from a goblin on 5 of 128 rolls (goblin.rs2:19,53; 10 of 128 for the Goblin
@@ -122,15 +134,53 @@ export const KILL_SOURCES: Record<number, { npcs: number[]; name: string; combat
 };
 export const EASY_KILL = 6;
 
-let npcRows: { id: number; spawns?: Tile[] }[] | undefined;
-const npcSpawns = (ids: readonly number[]): Tile[] =>
-    (npcRows ??= JSON.parse(readFileSync(resolve(import.meta.dir, '../../../../knowledge/npcs.json'), 'utf8')) as { id: number; spawns?: Tile[] }[])
-        .filter(n => ids.includes(n.id)).flatMap(n => n.spawns ?? []);
+let npcSpawnsById: Map<number, Tile[]> | undefined;
+const npcSpawnIndex = (): Map<number, Tile[]> => {
+    if (!npcSpawnsById) {
+        npcSpawnsById = new Map();
+        const rows = JSON.parse(readFileSync(resolve(import.meta.dir, '../../../../knowledge/npcs.json'), 'utf8')) as { id: number; spawns?: Tile[] }[];
+        for (let i = 0; i < rows.length; i++) {
+            const n = rows[i]!;
+            if (!n.spawns?.length) continue;
+            const prev = npcSpawnsById.get(n.id);
+            if (prev) prev.push(...n.spawns);
+            else npcSpawnsById.set(n.id, [...n.spawns]);
+        }
+    }
+    return npcSpawnsById;
+};
+const npcSpawns = (ids: readonly number[]): Tile[] => {
+    const idx = npcSpawnIndex();
+    if (ids.length === 1) return idx.get(ids[0]!) ?? [];
+    const out: Tile[] = [];
+    for (let i = 0; i < ids.length; i++) {
+        const list = idx.get(ids[i]!);
+        if (list) out.push(...list);
+    }
+    return out;
+};
 
-export const killSpawns = (id: number): Tile[] => KILL_SOURCES[id] ? npcSpawns(KILL_SOURCES[id]!.npcs) : [];
+const killSpawnsCache = new Map<number, Tile[]>();
+export const killSpawns = (id: number): Tile[] => {
+    let cached = killSpawnsCache.get(id);
+    if (!cached) {
+        cached = KILL_SOURCES[id] ? npcSpawns(KILL_SOURCES[id]!.npcs) : [];
+        killSpawnsCache.set(id, cached);
+    }
+    return cached;
+};
 
 let cowTiles: Tile[] | undefined;
 export const cows = () => cowTiles ??= npcSpawns([COW]);
 
-export const nearest = (tiles: readonly Tile[], at: Tile) =>
-    tiles.filter(t => t.level === at.level).sort((a, b) => Math.max(Math.abs(a.x - at.x), Math.abs(a.z - at.z)) - Math.max(Math.abs(b.x - at.x), Math.abs(b.z - at.z)));
+export const nearest = (tiles: readonly Tile[], at: Tile) => {
+    const scored: { t: Tile; d: number }[] = [];
+    for (let i = 0; i < tiles.length; i++) {
+        const t = tiles[i]!;
+        if (t.level === at.level) scored.push({ t, d: Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) });
+    }
+    scored.sort((a, b) => a.d - b.d);
+    const out: Tile[] = new Array(scored.length);
+    for (let i = 0; i < scored.length; i++) out[i] = scored[i]!.t;
+    return out;
+};

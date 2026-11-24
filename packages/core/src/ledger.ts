@@ -28,19 +28,41 @@ export function idleWhy(now: any, lastAction: string | null): string {
     return lastAction ? `after:${lastAction}` : 'none';
 }
 
-const xpSum = (st: any) => (st?.skills ?? []).reduce((n: number, k: any) => n + (k.experience ?? 0), 0);
-const inventoryKey = (items: any[]) => {
-    const totals = new Map<number, number>();
-    for (const item of items) if (Number.isInteger(item?.id) && item.id >= 0 && Number.isFinite(item.count) && item.count > 0)
-        totals.set(item.id, (totals.get(item.id) ?? 0) + item.count);
-    return JSON.stringify([...totals].sort((a, b) => a[0] - b[0]));
+const xpSum = (st: any) => {
+    const skills = st?.skills;
+    if (!skills) return 0;
+    let total = 0;
+    for (let i = 0; i < skills.length; i++) total += skills[i]?.experience ?? 0;
+    return total;
 };
+
+function fillInventoryTotals(items: readonly any[], out: Map<number, number>): void {
+    out.clear();
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item && Number.isInteger(item.id) && item.id >= 0 && Number.isFinite(item.count) && item.count > 0) {
+            out.set(item.id, (out.get(item.id) ?? 0) + item.count);
+        }
+    }
+}
+
+function sameTotals(a: ReadonlyMap<number, number>, b: ReadonlyMap<number, number>): boolean {
+    if (a.size !== b.size) return false;
+    for (const [id, count] of a) if (b.get(id) !== count) return false;
+    return true;
+}
+
+const invScratchA = new Map<number, number>();
+const invScratchB = new Map<number, number>();
 
 export function classifyTick(before: any, now: any, stunned = false): TickKind {
     if (xpSum(now) > xpSum(before)) return 'xp';
     // Missing state is unknown, not an empty inventory. Establish a baseline first.
-    if (Array.isArray(before?.inventory) && Array.isArray(now?.inventory)
-        && inventoryKey(before.inventory) !== inventoryKey(now.inventory)) return 'inventory';
+    if (Array.isArray(before?.inventory) && Array.isArray(now?.inventory)) {
+        fillInventoryTotals(before.inventory, invScratchA);
+        fillInventoryTotals(now.inventory, invScratchB);
+        if (!sameTotals(invScratchA, invScratchB)) return 'inventory';
+    }
     const a = before?.player, b = now?.player;
     if (a && b && (a.worldX !== b.worldX || a.worldZ !== b.worldZ || a.level !== b.level)) return 'move';
     if ((b?.animId ?? -1) !== -1) return 'anim';
@@ -102,38 +124,97 @@ export const LEDGER_KEEP = 1024;
 // count in the tally. `rows` holds between `keep` and 2 x `keep` rows.
 export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; onTick(cb: () => void): () => void; tick(): number }, lastAction: () => string | null = () => null, keep = LEDGER_KEEP) {
     const rows: TickRow[] = [], tally = new TickTally(), floor = Number.isFinite(keep) ? Math.max(1, keep) : LEDGER_KEEP;
-    // Copy the fields the classifier reads: the state object may be reused between ticks.
-    const snap = () => {
-        const st = s.sdk.getState(), p = st?.player, hit = p?.combat?.lastDamageTick ?? -1, now = st?.tick ?? 0;
-        // A fight is a hit the player dealt (a miss included) in the last FIGHT_TICKS ticks. `combat.inCombat` is no
-        // proof: the SDK sets it for any target, and a pickpocket click targets the NPC.
-        const dealt = (st?.combatEvents ?? []).some((e: any) => e?.type === 'damage_dealt' && now - (e.tick ?? -Infinity) <= FIGHT_TICKS);
-        return { player: p && { ...p }, skills: (st?.skills ?? []).map((k: any) => ({ experience: k.experience })),
-            inventory: Array.isArray(st?.inventory) ? st.inventory.map((i: any) => i && ({ id: i.id, count: i.count })) : undefined,
-            dialog: { isOpen: !!(s.sdk.getDialog?.()?.isOpen ?? st?.dialog?.isOpen) },
-            fight: dealt, hurt: hit >= 0 && now - hit <= FIGHT_TICKS,
-            bank: !!st?.bank?.isOpen, shop: !!st?.shop?.isOpen, window: !!st?.interface?.isOpen || !!st?.modalOpen };
+    const STUN_RE = /stunned/i;
+    type SnapState = {
+        xp: number;
+        hasPlayer: boolean;
+        x: number;
+        z: number;
+        level: number;
+        animId: number;
+        dialogOpen: boolean;
+        hasInv: boolean;
+        inv: Map<number, number>;
+        fight: boolean;
+        hurt: boolean;
+        bank: boolean;
+        shop: boolean;
+        window: boolean;
     };
-    let last = snap();
+    const readSnap = (into: SnapState): void => {
+        const st = s.sdk.getState(), p = st?.player, hit = p?.combat?.lastDamageTick ?? -1, now = st?.tick ?? 0;
+        let dealt = false;
+        const events = st?.combatEvents;
+        if (events?.length) {
+            for (let i = 0; i < events.length; i++) {
+                const e = events[i];
+                if (e?.type === 'damage_dealt' && now - (e.tick ?? -Infinity) <= FIGHT_TICKS) { dealt = true; break; }
+            }
+        }
+        into.xp = xpSum(st);
+        into.hasPlayer = !!p;
+        if (p) {
+            into.x = p.worldX;
+            into.z = p.worldZ;
+            into.level = p.level;
+            into.animId = p.animId ?? -1;
+        } else {
+            into.animId = -1;
+        }
+        into.dialogOpen = !!(s.sdk.getDialog?.()?.isOpen ?? st?.dialog?.isOpen);
+        into.hasInv = Array.isArray(st?.inventory);
+        if (into.hasInv) fillInventoryTotals(st.inventory, into.inv);
+        else into.inv.clear();
+        into.fight = dealt;
+        into.hurt = hit >= 0 && now - hit <= FIGHT_TICKS;
+        into.bank = !!st?.bank?.isOpen;
+        into.shop = !!st?.shop?.isOpen;
+        into.window = !!st?.interface?.isOpen || !!st?.modalOpen;
+    };
+    let last: SnapState = { xp: 0, hasPlayer: false, x: 0, z: 0, level: 0, animId: -1, dialogOpen: false, hasInv: false, inv: new Map(), fight: false, hurt: false, bank: false, shop: false, window: false };
+    let cur: SnapState = { xp: 0, hasPlayer: false, x: 0, z: 0, level: 0, animId: -1, dialogOpen: false, hasInv: false, inv: new Map(), fight: false, hurt: false, bank: false, shop: false, window: false };
+    readSnap(last);
     // Total XP over all skills at the start, so the summary can state the XP the run gained.
-    const xpStart = xpSum(last);
+    const xpStart = last.xp;
     // The message list keeps only the newest messages, so its length stops growing: track the newest tick seen.
-    let seenTick = Math.max(-1, ...(s.sdk.getState()?.gameMessages ?? []).map((m: any) => m.tick ?? -1));
+    let seenTick = -1;
+    for (const m of s.sdk.getState()?.gameMessages ?? []) {
+        const mt = m.tick ?? -1;
+        if (mt > seenTick) seenTick = mt;
+    }
     let stunUntil = -1;
     const off = s.onTick(() => {
-        const now = snap();
-        const msgs = s.sdk.getState()?.gameMessages ?? [];
-        for (const m of msgs) if ((m.tick ?? -1) > seenTick && /stunned/i.test(m.text ?? '')) stunUntil = s.tick() + 8;
-        seenTick = Math.max(seenTick, ...msgs.map((m: any) => m.tick ?? -1));
-        const kind = classifyTick(last, now, s.tick() <= stunUntil);
-        const row: TickRow = { tick: s.tick(), kind, at: `${now.player?.worldX},${now.player?.worldZ}`, ...(kind === 'idle' ? { why: idleWhy(now, lastAction()) } : {}) };
+        readSnap(cur);
+        const tick = s.tick();
+        const msgs = s.sdk.getState()?.gameMessages;
+        if (msgs?.length) {
+            let maxTick = seenTick;
+            for (let i = 0; i < msgs.length; i++) {
+                const m = msgs[i], mt = m.tick ?? -1;
+                if (mt > seenTick && STUN_RE.test(m.text ?? '')) stunUntil = tick + 8;
+                if (mt > maxTick) maxTick = mt;
+            }
+            seenTick = maxTick;
+        }
+        const kind: TickKind = cur.xp > last.xp ? 'xp'
+            : cur.hasInv && last.hasInv && !sameTotals(last.inv, cur.inv) ? 'inventory'
+            : last.hasPlayer && cur.hasPlayer && (last.x !== cur.x || last.z !== cur.z || last.level !== cur.level) ? 'move'
+            : cur.animId !== -1 ? 'anim'
+            : cur.dialogOpen ? 'dialog'
+            : tick <= stunUntil ? 'stun' : 'idle';
+        const row: TickRow = {
+            tick,
+            kind,
+            at: cur.hasPlayer ? `${cur.x},${cur.z}` : 'undefined,undefined',
+            ...(kind === 'idle' ? { why: idleWhy(cur, lastAction()) } : {}),
+        };
         tally.add(row);
         rows.push(row);
         if (rows.length >= 2 * floor) rows.splice(0, rows.length - floor);
-        last = now;
+        const tmp = last; last = cur; cur = tmp;
     });
     return {
-        stop: () => { off(); return tally.summary(Math.max(0, xpSum(last) - xpStart)); },
+        stop: () => { off(); return tally.summary(Math.max(0, last.xp - xpStart)); },
         rows,
         /** Ticks of each kind so far, for the kinds that occurred. */
         counts: (): Record<string, number> => Object.fromEntries(Object.entries(tally.counts).filter(([, n]) => n > 0)),
@@ -153,7 +234,12 @@ export function formatLedger(sum: ReturnType<typeof summarize>): string {
 // A journey counts too: a tile FAR_WALK or more from the tile at the window's start is travel (quest-sweep walks
 // Port Sarim to the Sinclair Mansion in about 1,200 ticks with nothing else changing), while pacing near one tile is not.
 export const FAR_WALK = 20;
-const tile = (at: string): [number, number] | null => { const m = at.match(/^(-?\d+),(-?\d+)$/); return m ? [Number(m[1]), Number(m[2])] : null; };
+const tile = (at: string): [number, number] | null => {
+    const comma = at.indexOf(',');
+    if (comma <= 0 || comma >= at.length - 1) return null;
+    const x = Number(at.slice(0, comma)), z = Number(at.slice(comma + 1));
+    return Number.isInteger(x) && Number.isInteger(z) ? [x, z] : null;
+};
 export function stalled(rows: readonly TickRow[], window: number): boolean {
     if (window <= 0 || rows.length < window) return false;
     const start = tile(rows[rows.length - window]!.at);

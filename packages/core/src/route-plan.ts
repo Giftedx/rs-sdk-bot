@@ -15,7 +15,7 @@ const pending = new Map<number, { started: number; resolve(p: TripPlan | null): 
 // search past the bound is hung and holds no tick, so one hung search costs a case one bound and not one bound for
 // each later tick.
 export const pendingRouteWork = (youngerThanMs = Infinity): number => {
-    if (youngerThanMs === Infinity) return pending.size;
+    if (pending.size === 0 || youngerThanMs === Infinity) return pending.size;
     const now = performance.now();
     let count = 0;
     for (const p of pending.values()) if (now - p.started < youngerThanMs) count++;

@@ -153,10 +153,16 @@ function createToolPickupJob(ctx: WatcherContext, id: number): JobSpec {
 }
 
 /** Create the per-tick random event scanner covering NPCs, locs, broken/dropped tools, and puzzle items/regions. */
+const EMPTY_LIST: any[] = [];
+const HOSTILE_BY_ID = new Map<number, (typeof HOSTILE)[number]>();
+for (const h of HOSTILE) for (let id = h.lo; id <= h.hi; id++) HOSTILE_BY_ID.set(id, h);
+const FISH_TOOL_INDEX = new Map<number, number>(FISH_TOOLS.map((id, i) => [id, i]));
+
 export function createEventScanner(ctx: WatcherContext) {
     const redirected = new Map<string, number>();
     const toolCounts = new Map<number, number>();
     const toolGone = new Map<number, number>();
+    const curToolCounts = new Int32Array(FISH_TOOLS.length);
 
     const redirect = (key: string, name: string, target: Act | null, away: Tile | null) => {
         const now = ctx.tick();
@@ -179,13 +185,16 @@ export function createEventScanner(ctx: WatcherContext) {
     const scanEvents = () => {
         const st = ctx.state(), p = meOf(st);
         if (!p) return;
-        const now = ctx.tick(), inv = invOf(st), eq = eqOf(st);
-        const npcs: any[] = st?.nearbyNpcs ?? [];
+        const now = ctx.tick();
+        const inv: any[] = st?.inventory ?? EMPTY_LIST, eq: any[] = st?.equipment ?? EMPTY_LIST;
+        const npcs: any[] = st?.nearbyNpcs ?? EMPTY_LIST;
+        const locs: any[] = st?.nearbyLocs ?? EMPTY_LIST;
         ctx.avoidNpcs.clear();
         ctx.avoidLocs.clear();
 
-        for (const n of npcs) {
-            const h = HOSTILE.find(x => inRange(n.id, x));
+        for (let ni = 0; ni < npcs.length; ni++) {
+            const n = npcs[ni];
+            const h = HOSTILE_BY_ID.get(n.id);
             if (h) {
                 let m = ctx.hostiles.get(n.index);
                 if (!m || m.id !== n.id) {
@@ -197,7 +206,10 @@ export function createEventScanner(ctx: WatcherContext) {
                 }
                 m.lastSeen = now;
                 if (n.targetIndex >= 32768) m.ours = targetsMe(st, n);
-                else if (m.ours === null && now - m.seen <= 1 && cheb(tileOf(n), p) <= 2 && !otherNear(st, tileOf(n), 3)) { m.ours = true; m.pre = true; }
+                else if (m.ours === null && now - m.seen <= 1) {
+                    const t = tileOf(n);
+                    if (cheb(t, p) <= 2 && !otherNear(st, t, 3)) { m.ours = true; m.pre = true; }
+                }
                 const engaged = targetsMe(st, n) || (m.pre && now - m.seen < 6);
                 if (m.ours && engaged && !outOfReach(p, m.spawn, m.range) && !ctx.jobs.has(`flee:${n.index}`)) {
                     m.done = false;
@@ -212,7 +224,10 @@ export function createEventScanner(ctx: WatcherContext) {
                 if (!f || f.id !== n.id) { f = { name: fname, id: n.id, seen: now, lastSeen: now, ours: null }; ctx.friends.set(n.index, f); ctx.say(fname, 'seen'); }
                 f.lastSeen = now;
                 if (n.targetIndex >= 32768) f.ours = targetsMe(st, n);
-                else if (f.ours === null && cheb(tileOf(n), p) <= 2 && !otherNear(st, tileOf(n), 3)) f.ours = true;
+                else if (f.ours === null) {
+                    const t = tileOf(n);
+                    if (cheb(t, p) <= 2 && !otherNear(st, t, 3)) f.ours = true;
+                }
                 // The old man's mime, maze and box variants vanish after 1-2 ticks: talk only to one that stays.
                 const settled = fname !== 'old_man' || now - f.seen >= 3;
                 if (f.ours && settled && !ctx.handledNpc.has(n.index) && !ctx.jobs.has(`talk:${n.index}`)) {
@@ -233,28 +248,29 @@ export function createEventScanner(ctx: WatcherContext) {
             }
             if (inRange(n.id, ENT)) {
                 ctx.avoidNpcs.add(n.index);
-                const size = n.size ?? 2, t = tileOf(n);
-                const touching = p.x >= t.x - 1 && p.x <= t.x + size && p.z >= t.z - 1 && p.z <= t.z + size;
+                const size = n.size ?? 2, tx = n.tileX ?? n.x, tz = n.tileZ ?? n.z;
+                const touching = p.x >= tx - 1 && p.x <= tx + size && p.z >= tz - 1 && p.z <= tz + size;
                 if (touching && (st.player.animId ?? -1) !== -1) {
-                    const tree = nearestLoc(st, new RegExp(`^${n.name}$`, 'i'), /chop/i, (l: any) => l.x >= t.x && l.x < t.x + size && l.z >= t.z && l.z < t.z + size);
-                    redirect(`ent:${n.index}`, 'ent', tree ? { type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: optIndex(tree.optionsWithIndex, /chop/i, 1) } : null, t);
+                    const tree = nearestLoc(st, new RegExp(`^${n.name}$`, 'i'), /chop/i, (l: any) => l.x >= tx && l.x < tx + size && l.z >= tz && l.z < tz + size);
+                    redirect(`ent:${n.index}`, 'ent', tree ? { type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: optIndex(tree.optionsWithIndex, /chop/i, 1) } : null, { x: tx, z: tz });
                 }
                 continue;
             }
             if (inRange(n.id, WHIRLPOOL)) {
                 ctx.avoidNpcs.add(n.index);
-                const t = tileOf(n);
-                if (cheb(t, p) <= 1 && (st.player.animId ?? -1) !== -1) {
+                const tx = n.tileX ?? n.x, tz = n.tileZ ?? n.z;
+                if (Math.max(Math.abs(tx - p.x), Math.abs(tz - p.z)) <= 1 && (st.player.animId ?? -1) !== -1) {
                     const spot = npcs.filter(o => o.name === n.name && !inRange(o.id, WHIRLPOOL) && o.reachable !== false).sort((a, b) => a.distance - b.distance)[0];
                     const op = spot?.optionsWithIndex?.find((o: any) => n.options?.includes(o.text));
-                    redirect(`whirl:${n.index}`, 'whirlpool', spot && op ? { type: 'interactNpc', npcIndex: spot.index, optionIndex: op.opIndex } : null, t);
+                    redirect(`whirl:${n.index}`, 'whirlpool', spot && op ? { type: 'interactNpc', npcIndex: spot.index, optionIndex: op.opIndex } : null, { x: tx, z: tz });
                 }
                 continue;
             }
             if (n.id === BIG_FISH && !ctx.handledNpc.has(n.index)) { ctx.handledNpc.add(n.index); ctx.say('big_fish', 'seen'); }
         }
 
-        for (const l of st?.nearbyLocs ?? []) {
+        for (let li = 0; li < locs.length; li++) {
+            const l = locs[li];
             if (inRange(l.id, GAS_ROCK)) {
                 ctx.avoidLocs.add(`${l.x},${l.z}`);
                 if (cheb(l, p) <= 1 && (st.player.animId ?? -1) !== -1) {
@@ -267,22 +283,48 @@ export function createEventScanner(ctx: WatcherContext) {
             }
         }
 
-        const all = [...inv, ...eq.filter(Boolean)];
-        if (all.some(i => i.id === AXE_HANDLE)) ctx.want('lost_axe', createLostToolJob(ctx, 'axe'));
-        if (all.some(i => i.id === PICK_HANDLE)) ctx.want('lost_pickaxe', createLostToolJob(ctx, 'pickaxe'));
+        let hasAxeHandle = false, hasPickHandle = false, hasCube = false, hasLamp = false;
+        curToolCounts.fill(0);
+        for (let i = 0; i < inv.length; i++) {
+            const item = inv[i];
+            if (!item) continue;
+            const id = item.id;
+            if (id === AXE_HANDLE) hasAxeHandle = true;
+            else if (id === PICK_HANDLE) hasPickHandle = true;
+            else if (id === CUBE) hasCube = true;
+            else if (id === LAMP) hasLamp = true;
+            else {
+                const ti = FISH_TOOL_INDEX.get(id);
+                if (ti !== undefined) curToolCounts[ti]!++;
+            }
+        }
+        if (!hasAxeHandle || !hasPickHandle) {
+            for (let i = 0; i < eq.length; i++) {
+                const item = eq[i];
+                if (!item) continue;
+                if (item.id === AXE_HANDLE) hasAxeHandle = true;
+                else if (item.id === PICK_HANDLE) hasPickHandle = true;
+            }
+        }
+        if (hasAxeHandle && !ctx.jobs.has('lost_axe')) ctx.want('lost_axe', createLostToolJob(ctx, 'axe'));
+        if (hasPickHandle && !ctx.jobs.has('lost_pickaxe')) ctx.want('lost_pickaxe', createLostToolJob(ctx, 'pickaxe'));
 
         // Trade offers remove tools from the pack without dropping them.
-        for (const id of FISH_TOOLS) {
-            const c = inv.filter(i => i.id === id).length;
+        const tradeOpen = !!st?.trade?.isOpen;
+        const bankOpen = !!st?.bank?.isOpen;
+        const groundItems: any[] = st?.groundItems ?? EMPTY_LIST;
+        for (let ti = 0; ti < FISH_TOOLS.length; ti++) {
+            const id = FISH_TOOLS[ti]!;
+            const c = curToolCounts[ti]!;
             const prev = toolCounts.get(id) ?? c;
             toolCounts.set(id, c);
-            if (st?.trade?.isOpen) {
+            if (tradeOpen) {
                 toolGone.delete(id);
                 ctx.scriptToolDrops.delete(id);
                 ctx.clearJob(`tool:${id}`);
                 continue;
             }
-            if (c < prev && !st?.bank?.isOpen) {
+            if (c < prev && !bankOpen) {
                 const lost = prev - c;
                 const drop = ctx.scriptToolDrops.get(id);
                 if (drop && now - drop.at <= 6 && drop.left > 0) {
@@ -298,17 +340,17 @@ export function createEventScanner(ctx: WatcherContext) {
                 }
             }
             const gone = toolGone.get(id);
-            if (gone !== undefined && now - gone <= 12 && (st?.groundItems ?? []).some((g: any) => g.id === id && g.distance <= 10)) {
+            if (gone !== undefined && now - gone <= 12 && !ctx.jobs.has(`tool:${id}`) && groundItems.some((g: any) => g.id === id && g.distance <= 10)) {
                 toolGone.delete(id);
                 ctx.say('big_fish', 'tool-dropped', `id=${id}`);
                 ctx.want(`tool:${id}`, createToolPickupJob(ctx, id));
             }
         }
 
-        if (inv.some(i => i.id === CUBE)) ctx.want('strange_box', createCubeJob(ctx));
+        if (hasCube && !ctx.jobs.has('strange_box')) ctx.want('strange_box', createCubeJob(ctx));
         const kept = ctx.jobs.get('lamp-kept');
         if (kept && now - kept.started >= 100 && ctx.lampSkill === 'auto') ctx.jobs.delete('lamp-kept');
-        if (inv.some(i => i.id === LAMP) && !ctx.jobs.has('lamp') && !ctx.jobs.has('lamp-kept')) {
+        if (hasLamp && !ctx.jobs.has('lamp') && !ctx.jobs.has('lamp-kept')) {
             const skill = lampTarget(st, ctx.lampSkill, ctx.xpStart);
             if (skill) ctx.want('lamp', createLampJob(ctx, skill));
             else {
@@ -316,8 +358,8 @@ export function createEventScanner(ctx: WatcherContext) {
                 ctx.jobs.set('lamp-kept', { name: 'noop', hold: false, started: now, tick: () => false });
             }
         }
-        if (inRegion(p, MIME_REGION)) ctx.want('mime', createMimeJob(ctx));
-        if (inRegion(p, MAZE_REGION)) ctx.want('maze', createMazeJob(ctx));
+        if (inRegion(p, MIME_REGION) && !ctx.jobs.has('mime')) ctx.want('mime', createMimeJob(ctx));
+        if (inRegion(p, MAZE_REGION) && !ctx.jobs.has('maze')) ctx.want('maze', createMazeJob(ctx));
 
         for (const [k, m] of ctx.hostiles) if (now - m.lastSeen > 50) ctx.hostiles.delete(k);
         for (const [k, f] of ctx.friends) if (now - f.lastSeen > 50) ctx.friends.delete(k);

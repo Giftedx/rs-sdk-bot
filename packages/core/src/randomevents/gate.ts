@@ -78,7 +78,7 @@ export function createActionGate(opts: GateOptions): ActionGate {
     };
 
     const noteToolDrop = (a: any) => {
-        if (!a) return;
+        if (!a || (a.type !== 'dropItem' && a.type !== 'useInventoryItem')) return;
         const pack = packNow();
         const slot = dropSlotOf(pack, a);
         const item = slot === undefined ? undefined : pack.find(x => x.slot === slot);
@@ -99,12 +99,11 @@ export function createActionGate(opts: GateOptions): ActionGate {
     };
 
     const keptRefusal = (a: any): string | null => {
-        if ((!loot || kept.size === 0) && !guard) return null;
-        if (!a) return null;
+        if (((!loot || kept.size === 0) && !guard) || !a) return null;
+        const t = a.type;
+        if (t !== 'dropItem' && t !== 'shopSell' && t !== 'spellOnItem' && t !== 'useInventoryItem') return null;
         const pack = packNow();
-        let slot: number | undefined;
-        if (a.type === 'dropItem' || a.type === 'shopSell' || a.type === 'spellOnItem') slot = a.slot;
-        else if (a.type === 'useInventoryItem') slot = dropSlotOf(pack, a);
+        const slot = t === 'useInventoryItem' ? dropSlotOf(pack, a) : a.slot;
         const item = slot === undefined ? undefined : pack.find(i => i.slot === slot);
         if (!item) return null;
         const keep = kept.get(item.id) ?? 0;
