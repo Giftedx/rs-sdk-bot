@@ -439,4 +439,17 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
         // Remote claims count (2), local own claims & local running job are NOT double-counted into spotOccupancy.
         expect(snapshot.spotOccupancy).toEqual({ 'catherby-sharks': 2 });
     });
+
+    test('stale auto-stop stop-swarm does not mask an active owner stop-all pause', () => {
+        const fleetDir = join(tempRoot, '.practice', 'live', 'fleet-data', 'fleet');
+        writeJson(join(fleetDir, 'owners.json'), {
+            accounts: { HelperOne: { side: 'local', server: DEFAULT_LIVE_SERVER } },
+        });
+        mkdirSync(join(tempRoot, '.practice', 'live'), { recursive: true });
+        writeFileSync(join(tempRoot, '.practice', 'live', 'stop-swarm'), 'auto stop: old limit\n');
+        writeFileSync(join(tempRoot, '.practice', 'live', 'stop-all'), 'owner manual pause\n');
+
+        const snapshot = loadWorldSnapshot({ root: tempRoot, now: NOW, side: 'local' });
+        expect(snapshot.fleetSides?.local?.stopped).toBe(true);
+    });
 });

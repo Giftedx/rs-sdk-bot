@@ -1094,9 +1094,9 @@ export function isCampaignLaunchReady(
     campaign: Campaign,
     opts?: CampaignLaunchReadyOptions,
 ): boolean {
-    if (campaign.state === 'paused' || campaign.state === 'completed') return false;
+    if (campaign.state !== 'ready' && campaign.state !== 'running') return false;
     if (opts?.suppliesSatisfied === false) return false;
-    if (!campaign.protectedClock) return campaign.state === 'ready' || campaign.state === 'running';
+    if (!campaign.protectedClock) return true;
     if (campaign.rehearsalProof?.verified !== true) return false;
     if (campaign.hiscoreMargin?.meetsMargin !== true || campaign.hiscoreMargin.board !== campaign.board) {
         return false;

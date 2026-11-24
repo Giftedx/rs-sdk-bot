@@ -365,4 +365,79 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
             expect(c.hiscoreMargin?.meetsMargin).toBe(false);
         }
     });
+
+    test('uses verified rehearsal ticks over optimistic planTicks, ignores dead/paused stagingHolders, and enforces ready/running state in isCampaignLaunchReady', async () => {
+        const { isCampaignLaunchReady } = await import('../src/contracts');
+        const { campaignShortfalls } = await import('../src/campaigns');
+        const tempRoot = mkdtempSync(join(tmpdir(), 'spec-launch-gates-'));
+        try {
+            writeJson(join(tempRoot, 'knowledge', 'items.json'), [{ id: 385, name: 'Shark', tradeable: true, cost: 600 }]);
+            writeJson(join(tempRoot, '.practice', 'live', 'specialist-launch', 'hiltsdeep.json'), {
+                planTicks: 2400,
+                requirements: [{ itemId: 385, item: 'Shark', count: 50 }],
+                rehearsal: { path: '.practice/specialist-hiltsdeep-rehearsal.json' },
+                staging: { path: '.practice/specialist-hiltsdeep-staging.json' },
+            });
+            writeJson(join(tempRoot, '.practice', 'specialist-hiltsdeep-staging.json'), {
+                allocations: [{ recipient: 'hiltsdeep', holder: 'PausedMule' }],
+            });
+            // Practice rehearsal came in slower (3100 ticks) than rival (2607 ticks) despite optimistic 2400 planTicks.
+            writeJson(join(tempRoot, '.practice', 'specialist-hiltsdeep-rehearsal.json'), {
+                ok: true,
+                died: false,
+                logout: 'logged-out',
+                boardTicks: { Attack: 3100 },
+                at: NOW - 10_000,
+            });
+            writeJson(join(tempRoot, 'research', 'hiscores-live.json'), {
+                takenAt: new Date(NOW - 10_000).toISOString(),
+                boards: [{ board: 'Attack', category: 1, rows: [{ rank: 1, name: 'rival', level: 99, ticks: 2607 }] }],
+            });
+
+            const manifests = loadCampaignManifests({ root: tempRoot, now: NOW });
+            const hilts = manifests.find((c) => c.account === 'hiltsdeep')!;
+            expect(hilts.hiscoreMargin?.ourTicks).toBe(3100);
+            expect(hilts.hiscoreMargin?.meetsMargin).toBe(false);
+            expect(hilts.state).toBe('staging');
+            expect(isCampaignLaunchReady(hilts, { now: NOW })).toBe(false);
+
+            // Even with verified rehearsal and positive margin, protectedClock campaigns in 'staging' must NOT launch.
+            const stagingButMarginOk = {
+                ...hilts,
+                state: 'staging' as const,
+                hiscoreMargin: { ...hilts.hiscoreMargin!, ourTicks: 2200, meetsMargin: true },
+            };
+            expect(isCampaignLaunchReady(stagingButMarginOk, { now: NOW })).toBe(false);
+            expect(isCampaignLaunchReady({ ...stagingButMarginOk, state: 'ready' }, { now: NOW })).toBe(true);
+
+            // Dead or owner-paused stagingHolder must count as 0 staged stock in campaignShortfalls.
+            const snapPaused = {
+                schemaVersion: 1 as const,
+                at: NOW,
+                side: 'local',
+                server: 'rs-sdk-demo.fly.dev',
+                accounts: {
+                    PausedMule: {
+                        name: 'PausedMule',
+                        side: 'local',
+                        server: 'rs-sdk-demo.fly.dev',
+                        role: 'helper' as const,
+                        lifecycle: 'paused_owner' as const,
+                        protectedClock: false,
+                        pos: null,
+                        skills: {},
+                        quests: {},
+                        inventory: {},
+                        equipment: {},
+                        bank: { items: { 385: 500 }, observedAt: NOW - 1000, trusted: true },
+                    },
+                },
+            };
+            const evalRes = campaignShortfalls(hilts, snapPaused);
+            expect(evalRes.totalFulfilledUnits).toBe(0);
+            expect(evalRes.shortfalls[0]?.remaining).toBe(50);
+        } finally {
+            rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
 });

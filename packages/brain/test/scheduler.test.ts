@@ -718,3 +718,82 @@ test('running account switch excludes hub_banker and spot reroute respects all f
     expect(runBAct?.stepKind === 'work' && runBAct.activityId).toBe('gather:spot-c');
     expect(reroutePlan.spotAllocations.spot_b).toBeUndefined();
 });
+
+test('hub_banker transfer slot accounting prevents recipient + idle donor from exceeding maxBots', () => {
+    const recipient = makeAcct({
+        name: 'NeedsBones',
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: {},
+        bank: { items: { 995: 500 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const donor = makeAcct({
+        name: 'BoneMule',
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: {},
+        bank: { items: { 536: 100, 995: 2_000 }, observedAt: NOW - 5_000, trusted: true },
+    });
+    const buryAct: ActivityDefinition = {
+        id: 'bank-artisan:prayer-bury',
+        workerId: 'bank-artisan',
+        family: 'bank-artisan',
+        kind: 'produce',
+        label: 'Bury banked bones',
+        skill: 'Prayer',
+        skills: ['Prayer'],
+        inputs: [{ itemId: 536, countPerUnit: 1 }],
+        location: { x: 3185, z: 3436, level: 0 },
+        config: { requiredLevel: 1 },
+        baselineRate: { xpPerTick: 400, unitsPerTick: 0.4, gpPerTick: 0, setupTicks: 10, minBatchUnits: 10, confidence: 'live' },
+        trust: 'live_proven',
+        protectedAllowed: false,
+    };
+    const demands: GoalDemand[] = [{
+        id: 'd:pray-need',
+        goalKind: 'specialist_prep',
+        valueScore: 500,
+        valuePerHour: 5000,
+        target: { kind: 'skill', account: 'NeedsBones', skill: 'Prayer', targetLevel: 43 },
+        fulfilled: 1,
+        remaining: 42,
+        priorityWeight: 1,
+        assignedAccount: 'NeedsBones',
+        active: true,
+    }];
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { NeedsBones: recipient, BoneMule: donor },
+    };
+    const logoutProofs = new Map<string, LogoutProof>([
+        ['needsbones', confirmedProof('NeedsBones')],
+        ['bonemule', confirmedProof('BoneMule')],
+    ]);
+
+    // With maxBots=1, a transfer requiring both recipient + donor (2 slots) cannot commit under hub_banker.
+    const oneSlotPlan = scheduleFleet({
+        world,
+        activities: [buryAct],
+        demands,
+        maxBots: 1,
+        logoutProofs,
+        requireMarketQuote: true,
+        marketQuotes: {},
+    });
+    expect(oneSlotPlan.transferOrders).toHaveLength(0);
+    expect(oneSlotPlan.selectedSlots).toBeLessThanOrEqual(1);
+
+    // With maxBots=2, recipient work plan + 1 idle donor = 2 selectedSlots total.
+    const twoSlotPlan = scheduleFleet({
+        world,
+        activities: [buryAct],
+        demands,
+        maxBots: 2,
+        logoutProofs,
+        requireMarketQuote: true,
+        marketQuotes: {},
+    });
+    expect(twoSlotPlan.transferOrders).toHaveLength(1);
+    expect(twoSlotPlan.selectedSlots).toBe(2);
+});

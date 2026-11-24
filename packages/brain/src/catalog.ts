@@ -357,6 +357,7 @@ interface SkillerSeed {
     readonly requiredTools?: readonly number[];
     readonly outputs?: readonly { itemId: number; countPerUnit: number }[];
     readonly inputs?: readonly { itemId: number; countPerUnit: number }[];
+    readonly coinsRequired?: number;
     readonly defaultArgs?: readonly string[];
     readonly defaultEnv?: Readonly<Record<string, string>>;
 }
@@ -432,7 +433,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'runecraft', method: 'air', script: 'scripts/aio-skiller.ts', label: 'Direct Air altar runecrafting', location: { x: 2983, z: 3291, level: 0 }, xpPerTick: 177.6, unitsPerTick: 1.4, gpPerTick: 5, minBatchUnits: 27, requiredLevel: 1, outputs: [{ itemId: 556, countPerUnit: 1 }], inputs: [{ itemId: 1436, countPerUnit: 1 }] },
     { skill: 'runecraft', method: 'specialist', script: 'scripts/runecraft-specialist.ts', label: 'Runecraft 1-99 specialist route', location: HUB_TILES.falador_east, xpPerTick: 900, unitsPerTick: 4.5, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
     // Magic
-    { skill: 'magic', method: 'order', script: 'scripts/magic-order.ts', label: 'Magic teleport and enchantment training order', location: HUB_TILES.varrock_west, xpPerTick: 280, unitsPerTick: 0.25, gpPerTick: -4, minBatchUnits: 25, requiredLevel: 1, defaultEnv: { TARGET_LEVEL: '55', CAP: '3000' } },
+    { skill: 'magic', method: 'order', script: 'scripts/magic-order.ts', label: 'Magic teleport and enchantment training order', location: HUB_TILES.varrock_west, xpPerTick: 95, unitsPerTick: 0.25, gpPerTick: -4, minBatchUnits: 25, requiredLevel: 1, coinsRequired: 300, defaultEnv: { TARGET_LEVEL: '55', CAP: '3000' } },
     { skill: 'magic', method: 'items', script: 'scripts/aio-skiller.ts', label: 'Alch, Superheat, and Jewellery Enchanting', location: HUB_TILES.draynor, xpPerTick: 325, unitsPerTick: 0.25, gpPerTick: -2, minBatchUnits: 25, requiredLevel: 7, defaultArgs: ['enchant:sapphire_ring', '-', '50', '1200'] },
     { skill: 'magic', method: 'npc', script: 'scripts/aio-skiller.ts', label: 'Combat/curse spell casting on NPCs', location: HUB_TILES.lumbridge, xpPerTick: 75, unitsPerTick: 0.25, gpPerTick: -1, minBatchUnits: 25, requiredLevel: 1 },
     { skill: 'magic', method: 'teleport', script: 'scripts/aio-skiller.ts', label: 'Repeated teleport spell training', location: HUB_TILES.varrock_west, xpPerTick: 310, unitsPerTick: 0.25, gpPerTick: -5, minBatchUnits: 25, requiredLevel: 25, defaultArgs: ['varrock', '50', '1200'] },
@@ -544,7 +545,7 @@ const BOSS_SPECS: readonly {
     combatSurvivability?: CombatSurvivabilityFloor;
     outputs?: readonly { itemId: number; countPerUnit: number }[];
 }[] = [
-    { boss: 'kbd', script: 'scripts/aio-boss.ts', label: 'King Black Dragon boss trip', location: HUB_TILES.edgeville, spotId: 'kbd-lair', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Prayer'], xpPerTick: 240, unitsPerTick: 0.015, gpPerTick: 35, minBatchUnits: 1, riskPerHour: 0.12, combatSurvivability: { minHitpoints: 70, minDefence: 60, requireProtectionPrayer: true, requireAntiDragonShield: true, requireAntipoison: true, minFoodCount: 12 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 2 }] },
+    { boss: 'kbd', script: 'scripts/aio-boss.ts', label: 'King Black Dragon boss trip', location: HUB_TILES.edgeville, spotId: 'kbd-lair', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 240, unitsPerTick: 0.015, gpPerTick: 35, minBatchUnits: 1, riskPerHour: 0.12, combatSurvivability: { minHitpoints: 70, minDefence: 60, requireProtectionPrayer: true, requireAntiDragonShield: true, requireAntipoison: true, minFoodCount: 12 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 2 }] },
     { boss: 'black-dragon', script: 'scripts/aio-boss.ts', label: 'Taverley Black Dragons safespot camp', location: HUB_TILES.falador_west, spotId: 'taverley-black-dragons', maxConcurrentAccounts: 2, skill: 'Ranged', skills: ['Ranged', 'Hitpoints', 'Defence'], xpPerTick: 210, unitsPerTick: 0.018, gpPerTick: 30, minBatchUnits: 1, riskPerHour: 0.04, combatSurvivability: { minHitpoints: 60, requireAntiDragonShield: true, minFoodCount: 10 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1747, countPerUnit: 1 }] },
     { boss: 'green-dragon', script: 'scripts/aio-boss.ts', label: 'Wilderness Green Dragons bones & hides trip', location: HUB_TILES.edgeville, spotId: 'wild-green-dragons', maxConcurrentAccounts: 3, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 185, unitsPerTick: 0.03, gpPerTick: 28, minBatchUnits: 5, riskPerHour: 0.18, combatSurvivability: { minHitpoints: 55, minDefence: 40, requireAntiDragonShield: true, minFoodCount: 10 }, outputs: [{ itemId: 536, countPerUnit: 1 }, { itemId: 1753, countPerUnit: 1 }] },
     { boss: 'trawler', script: 'scripts/aio-boss.ts', label: 'Port Khazard Fishing Trawler trip', location: { x: 2675, z: 3170, level: 0 }, skill: 'Fishing', skills: ['Fishing', 'Crafting'], xpPerTick: 65, unitsPerTick: 0.004, gpPerTick: 5, minBatchUnits: 1, riskPerHour: 0.02 },
@@ -706,6 +707,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 ...(spec.requiredSkills ? { requiredSkills: spec.requiredSkills } : {}),
                 ...(spec.requiredQuests ? { requiredQuests: spec.requiredQuests } : {}),
                 ...(spec.requiredTools ? { requiredTools: spec.requiredTools } : {}),
+                ...(spec.coinsRequired !== undefined ? { coinsRequired: spec.coinsRequired } : {}),
                 ...(spec.defaultArgs ? { defaultArgs: spec.defaultArgs } : {}),
                 ...(spec.defaultEnv ? { defaultEnv: spec.defaultEnv } : {}),
             },

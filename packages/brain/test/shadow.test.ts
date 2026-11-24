@@ -148,3 +148,46 @@ test('shadow CLI works read-only on main repo root when present', () => {
     expect(report.summary.totalOwnedAccounts).toBeGreaterThan(0);
     expect(report.summary.checksPassed).toBe(report.summary.checksTotal);
 }, 20_000);
+
+test('shadow CLI respects read-only OutcomeClassifier defects/holds and infra-circuit-breaker state without writing files', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'brain-shadow-oc-'));
+    try {
+        writeJson(join(tempRoot, 'fleet', 'owners.json'), {
+            accounts: {
+                AlphaBot: { side: 'local', server: 'rs-sdk-demo.fly.dev' },
+            },
+        });
+        writeJson(join(tempRoot, 'swarm.json'), { maxBots: 4, minFreeGB: 4, jobs: [] });
+        writeJson(join(tempRoot, '.practice', 'live', 'status', 'AlphaBot.json'), {
+            name: 'AlphaBot',
+            server: 'rs-sdk-demo.fly.dev',
+            at: NOW - 20 * 60_000,
+            result: 'done',
+            pos: { x: 3222, z: 3218, level: 0 },
+            skills: [{ name: 'Attack', level: 1, xp: 0 }],
+            bankAt: NOW - 20 * 60_000,
+            bank: [{ id: 995, name: 'Coins', count: 5_000 }],
+        });
+        writeJson(join(tempRoot, '.practice', 'live', 'infra-circuit-breaker.json'), {
+            schema: 'infra-circuit-breaker/1',
+            updatedAt: NOW - 5_000,
+            faults: {
+                proxy: {
+                    consecutiveFailures: 2,
+                    openUntil: NOW + 60_000,
+                    lastFailureAt: NOW - 5_000,
+                    lastBackoffMs: 60_000,
+                    lastError: 'HTTP 502',
+                },
+            },
+        });
+
+        const report = runShadowVerification({ root: tempRoot, now: NOW, side: 'local' });
+        expect(report.summary.checksPassed).toBe(report.summary.checksTotal);
+        expect(report.fleetPlan.accountPlans.AlphaBot?.idleReason).toBe('infra_circuit_breaker_open');
+        expect(report.fleetState.infraCircuitBreaker?.open).toBe(true);
+        expect(existsSync(join(tempRoot, '.practice', 'live', 'outcome-state.json'))).toBe(false);
+    } finally {
+        rmSync(tempRoot, { recursive: true, force: true });
+    }
+});

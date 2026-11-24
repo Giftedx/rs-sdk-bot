@@ -105,6 +105,7 @@ export function liveHelperStatuses(base = root, fleetDir = join(FLEET_DIR(), 'sn
     for (const dir of statusReadDirs(base)) {
         for (const row of read(dir)) {
             if (!row?.name || typeof row.name !== 'string') continue;
+            if (row.practice === true) continue;
             const key = row.name.toLowerCase();
             const prev = localByName.get(key);
             const rowAt = typeof row.at === 'number' && Number.isFinite(row.at) ? row.at : 0;

@@ -3,6 +3,7 @@
 // Phase 1B (Preflight, AcquireItem, AccountPlanner, FleetScheduler), and unified worker-routing contracts.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { liveRoot } from '../../core/src/practice-paths';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
 import { WORKER_FAMILIES } from '../../workers/src/contracts';
 import { loadCampaignManifests } from './campaigns';
@@ -29,6 +30,7 @@ import {
     type FleetPlan,
     type FleetState,
     type GoalDemand,
+    type InfraCircuitBreakerState,
     type Mission,
     type TransferOrder,
     type WorldSnapshot,
@@ -36,6 +38,7 @@ import {
 import { loadMarketQuotesFromRoot, type MarketQuotesMap } from './acquire';
 import { createDemandEngine } from './demand';
 import { loadMissionManifests } from './missions';
+import { OutcomeClassifier } from './outcome-classifier';
 import { canProtectedAccountLaunch, planAccount } from './planner';
 import { createRateStore, type RateStore } from './rate-store';
 import { buildFleetState, scheduleFleet } from './scheduler';
@@ -426,6 +429,58 @@ function verifySyntheticScenarioProbes(
     return checks;
 }
 
+function readCombinedInfraBreaker(
+    root: string,
+    classifier: OutcomeClassifier,
+    now: number,
+): InfraCircuitBreakerState {
+    const cls = classifier.canProceedInfra(now);
+    const snap = readJsonSafe<{
+        faults?: Record<string, { consecutiveFailures?: number; openUntil?: number; lastError?: string }>;
+    }>(join(liveRoot(root), 'infra-circuit-breaker.json'));
+    let brkOpen = false;
+    let brkOpenUntil = 0;
+    let brkFailures = 0;
+    let brkReason: string | undefined;
+    if (snap?.faults && typeof snap.faults === 'object') {
+        for (const [kind, bucket] of Object.entries(snap.faults)) {
+            if (!bucket || typeof bucket !== 'object') continue;
+            const fails = typeof bucket.consecutiveFailures === 'number' && Number.isFinite(bucket.consecutiveFailures)
+                ? Math.max(0, Math.trunc(bucket.consecutiveFailures))
+                : 0;
+            if (fails > brkFailures) brkFailures = fails;
+            const openUntil = typeof bucket.openUntil === 'number' && Number.isFinite(bucket.openUntil)
+                ? bucket.openUntil
+                : 0;
+            if (openUntil > now && openUntil >= brkOpenUntil) {
+                brkOpen = true;
+                brkOpenUntil = openUntil;
+                brkReason = typeof bucket.lastError === 'string' && bucket.lastError.trim().length > 0
+                    ? `${kind}: ${bucket.lastError.trim()}`
+                    : kind;
+            }
+        }
+    }
+    const clsOpen = !cls.allowed;
+    if (!clsOpen && !brkOpen) {
+        return {
+            open: false,
+            consecutiveFaults: Math.max(cls.state.consecutiveFaults, brkFailures),
+        };
+    }
+    const retryAt = Math.max(clsOpen ? cls.state.retryAt ?? now + cls.waitMs : 0, brkOpen ? brkOpenUntil : 0);
+    const reasons = [clsOpen ? cls.state.reason : undefined, brkOpen ? brkReason : undefined].filter(
+        (r): r is string => Boolean(r),
+    );
+    return {
+        open: true,
+        trippedAt: cls.state.trippedAt ?? now,
+        retryAt,
+        consecutiveFaults: Math.max(cls.state.consecutiveFaults, brkFailures, 1),
+        ...(reasons.length > 0 ? { reason: reasons.join('; ') } : {}),
+    };
+}
+
 export function runShadowVerification(options: RunShadowOptions = {}): ShadowVerificationReport {
     const root = resolve(options.root ?? DEFAULT_REPO_ROOT);
     const now = options.now ?? Date.now();
@@ -446,12 +501,26 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         if (act.spotId) activitySpotById.set(act.id, act.spotId);
     }
 
-    const diagnostics = provider ? null : inspectWorldSnapshot({ root, now, side, server, activitySpotById });
-    const world = provider
+    const rateStore: RateStore | undefined = catalog ? createRateStore({ catalog, root }) : undefined;
+    const classifier = provider ? null : new OutcomeClassifier({ rateStore, root, persist: false });
+    classifier?.load();
+
+    const diagnostics = provider
+        ? null
+        : inspectWorldSnapshot({
+              root,
+              now,
+              side,
+              server,
+              activitySpotById,
+              marketCooldowns: classifier!.activeMarketCooldowns(now),
+          });
+    const baseWorld = provider
         ? provider.loadSnapshot({ root, now, side, server })
         : diagnostics!.snapshot;
-
-    const rateStore: RateStore | undefined = catalog ? createRateStore({ catalog, root }) : undefined;
+    const world = classifier ? classifier.applyToSnapshot(baseWorld, now) : baseWorld;
+    const defects = classifier ? classifier.quarantinedDefects(now) : undefined;
+    const infraCircuitBreaker = classifier ? readCombinedInfraBreaker(root, classifier, now) : undefined;
 
     const campaigns = provider?.loadCampaigns
         ? provider.loadCampaigns({ root, world })
@@ -481,6 +550,8 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         demands,
         campaigns,
         missions,
+        ...(defects ? { defects } : {}),
+        ...(infraCircuitBreaker ? { infraCircuitBreaker } : {}),
         maxBots,
         ignoreSideStop: options.ignoreSideStop ?? true,
         retentionMarginRatio: DEFAULT_RETENTION_MARGIN_RATIO,
@@ -494,6 +565,7 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
         goals: demands,
         campaigns,
         missions,
+        ...(infraCircuitBreaker ? { infraCircuitBreaker } : {}),
         ...(rateStore ? { rateStats: rateStore.summary() } : {}),
     });
 
@@ -565,10 +637,11 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
     const validRoutes = Object.values(routedPlans).every(
         (r) => r.steps.length > 0 && r.steps.every((s) => isSupportedWorkerFamily(s.family) && s.routeKey.length > 0),
     );
+    const warningCount = Object.values(routedPlans).reduce((acc, r) => acc + r.warnings.length, 0);
     checks.push({
         name: 'worker_engine_coverage',
-        ok: validRoutes && allFamiliesCovered,
-        detail: `routedPlans=${Object.keys(routedPlans).length}, allFamilies=${allFamiliesCovered}, validRoutes=${validRoutes}`,
+        ok: validRoutes && allFamiliesCovered && warningCount === 0,
+        detail: `routedPlans=${Object.keys(routedPlans).length}, allFamilies=${allFamiliesCovered}, validRoutes=${validRoutes}, warnings=${warningCount}`,
     });
 
     const validHubs = fleetPlan.transferOrders.every(

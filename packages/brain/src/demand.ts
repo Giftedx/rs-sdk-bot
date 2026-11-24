@@ -389,7 +389,9 @@ export class DemandEngine {
         switch (target.kind) {
             case 'item': {
                 const remaining = Math.max(1, demand.remaining || target.count);
-                const candidates = this.catalog.findByOutputItem(target.itemId);
+                const rawCandidates = this.catalog.findByOutputItem(target.itemId);
+                const nonExp = rawCandidates.filter((a) => a.trust !== 'experimental');
+                const candidates = nonExp.length > 0 ? nonExp : rawCandidates;
                 let bestHours = Number.POSITIVE_INFINITY;
                 for (const act of candidates) {
                     const rate = this.rateFor(act, acct, snapshot);
@@ -412,7 +414,9 @@ export class DemandEngine {
 
             case 'quest': {
                 const qAcct = lookupAccount(snapshot, target.account) ?? acct;
-                const candidates = this.catalog.findByQuest(target.questSlug);
+                const rawCandidates = this.catalog.findByQuest(target.questSlug);
+                const nonExp = rawCandidates.filter((a) => a.trust !== 'experimental');
+                const candidates = nonExp.length > 0 ? nonExp : rawCandidates;
                 let bestHours = Number.POSITIVE_INFINITY;
                 for (const act of candidates) {
                     const rate = this.rateFor(act, qAcct, snapshot);
@@ -426,7 +430,9 @@ export class DemandEngine {
 
             case 'skill': {
                 const sAcct = lookupAccount(snapshot, target.account) ?? acct;
-                const curSkill = sAcct?.skills[target.skill] ?? sAcct?.skills[target.skill.toLowerCase()];
+                const lower = target.skill.toLowerCase();
+                const curSkill = sAcct?.skills[target.skill]
+                    ?? Object.entries(sAcct?.skills ?? {}).find(([k]) => k.toLowerCase() === lower)?.[1];
                 return this.bestSkillHours(
                     target.skill,
                     curSkill?.level ?? 1,
@@ -442,7 +448,9 @@ export class DemandEngine {
                 const cAcct = lookupAccount(snapshot, target.account) ?? acct;
                 let totalHours = 0;
                 for (const [skill, targetLvl] of Object.entries(target.targets)) {
-                    const cur = cAcct?.skills[skill] ?? cAcct?.skills[skill.toLowerCase()];
+                    const lower = skill.toLowerCase();
+                    const cur = cAcct?.skills[skill]
+                        ?? Object.entries(cAcct?.skills ?? {}).find(([k]) => k.toLowerCase() === lower)?.[1];
                     const curLvl = cur?.level ?? 1;
                     if (curLvl >= targetLvl) continue;
                     totalHours += this.bestSkillHours(skill, curLvl, targetLvl, cur?.xp, undefined, cAcct, snapshot);
@@ -452,8 +460,11 @@ export class DemandEngine {
 
             case 'coins': {
                 const remainingGp = Math.max(1, demand.remaining || target.amount);
+                const allActs = this.catalog.list();
+                const nonExp = allActs.filter((a) => a.trust !== 'experimental');
+                const candidates = nonExp.length > 0 ? nonExp : allActs;
                 let bestHours = Number.POSITIVE_INFINITY;
-                for (const act of this.catalog.list()) {
+                for (const act of candidates) {
                     const rate = this.rateFor(act, acct, snapshot);
                     if (rate.gpPerTick <= 0) continue;
                     const ticks = rate.setupTicks + remainingGp / rate.gpPerTick;
@@ -709,6 +720,7 @@ export class DemandEngine {
         for (const ce of campaignEvaluations) {
             for (const s of ce.shortfalls) {
                 const gw = this.goalWeights[s.goalKind];
+                if (!Number.isFinite(gw) || gw <= 0) continue;
                 rawDemands.push({
                     ...s,
                     valueScore: s.valueScore * gw,
@@ -719,6 +731,7 @@ export class DemandEngine {
         for (const me of missionEvaluations) {
             for (const s of me.shortfalls) {
                 const gw = this.goalWeights[s.goalKind];
+                if (!Number.isFinite(gw) || gw <= 0) continue;
                 rawDemands.push({
                     ...s,
                     valueScore: s.valueScore * gw,

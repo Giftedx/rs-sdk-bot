@@ -189,4 +189,40 @@ describe('ActivityCatalog & RateStore', () => {
         const engine = createDemandEngine({ catalog, rateStore: store });
         expect(() => engine.activeDemands(snap)).not.toThrow();
     });
+
+    test('RateStore preserves baseline rates instead of falling back to zero-XP death samples when all runs died', () => {
+        const catalog = defaultActivityCatalog();
+        const store = createRateStore({ catalog });
+        const combatAct = catalog.require('combat:trooper');
+
+        for (let i = 0; i < 4; i++) {
+            store.recordSample({
+                activityId: combatAct.id,
+                account: `DeadBot${i}`,
+                domain: 'live',
+                observedAt: NOW + i * 1000,
+                ticksElapsed: 150,
+                unitsCompleted: 0,
+                xpPerTick: 0,
+                unitsPerTick: 0,
+                gpPerTick: 0,
+                died: true,
+            });
+        }
+
+        expect(store.hasOverride(combatAct.id)).toBe(false);
+        const est = store.estimate(combatAct.id);
+        expect(est.xpPerTick).toBe(combatAct.baselineRate.xpPerTick);
+        expect(est.confidence).toBe(combatAct.baselineRate.confidence);
+        expect(est.riskPerHour).toBeGreaterThan(0);
+    });
+
+    test('Catalog excludes Prayer from combat:boss-kbd skills and gates bank-artisan:magic-order on coinsRequired', () => {
+        const catalog = defaultActivityCatalog();
+        const kbd = catalog.require('combat:boss-kbd');
+        expect(kbd.skills ?? []).not.toContain('Prayer');
+
+        const magicOrder = catalog.require('bank-artisan:magic-order');
+        expect(Number(magicOrder.config.coinsRequired)).toBeGreaterThan(0);
+    });
 });

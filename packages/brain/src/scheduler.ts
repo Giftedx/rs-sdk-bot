@@ -738,6 +738,10 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                     updatedSteps[i] = { ...step, transferOrderId: orderId };
                 }
 
+                const uniqueStagedDonors = new Set(stagedOrders.map((ord) => ord.from.toLowerCase()));
+                if (transfersOk && remainingSlots < 1 + uniqueStagedDonors.size) {
+                    transfersOk = false;
+                }
                 if (!transfersOk) {
                     // Re-plan forbidding hub_banker transfers when a safe transfer check fails.
                     const replan = planAccount(acct, {
@@ -764,6 +768,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                         busyAccounts.add(ord.from.toLowerCase());
                         busyAccounts.add(ord.to.toLowerCase());
                     }
+                    remainingSlots -= uniqueStagedDonors.size;
                     plan = { ...plan, steps: updatedSteps };
                 }
             }
@@ -784,7 +789,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     }
 
     const plansWithSteps = Object.values(accountPlans).filter((p) => p.steps.length > 0).length;
-    const selectedSlots = Math.min(maxBots, inTradeAccounts.length + plansWithSteps);
+    const selectedSlots = Math.min(maxBots, inTradeAccounts.length + plansWithSteps + assignedIdleDonors.size);
 
     return {
         schemaVersion: 1,
