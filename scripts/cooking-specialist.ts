@@ -1,5 +1,4 @@
 import { existsSync } from 'node:fs';
-import type { Session } from '../packages/core/src/inprocess';
 import { levelForXp, xpForLevel } from '../packages/planner/src/curve';
 import {
     openHelperAndMain,
@@ -14,9 +13,6 @@ import {
     itemQty,
     OBJ_DUELING_8,
     RING_OF_DUELING_IDS,
-    TRADE_SIDE_INV_ID,
-    TRADE_MAIN_ACCEPT_ID,
-    TRADE_CONFIRM_ACCEPT_ID,
 } from './gathering-specialist-lib';
 
 export const OBJ_UNFERMENTED_WINE = 1995;
@@ -87,72 +83,6 @@ export function planCookingSummary(cocktails = COOKING_SPECIALIST_COCKTAILS, win
 const inCastleWars = (p: { level: number; worldX: number; worldZ: number }): boolean =>
     p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105;
 
-/** 3-tick in-process trade for <=4 unique supply IDs (4 offers + main_accept in tick 2, confirm in tick 3). */
-async function fastInProcessSupplyTrade(
-    main: Session,
-    helper: Session,
-    isStopped: () => boolean,
-): Promise<number> {
-    const t0 = main.tick();
-    const mainLower = main.name.toLowerCase();
-    const helperLower = helper.name.toLowerCase();
-    let offered = false;
-
-    while (!isStopped()) {
-        const mt = main.sdk.getTradeState();
-        const ht = helper.sdk.getTradeState();
-        if (!mt.isOpen && !ht.isOpen && helper.sdk.getInventory().length === 0) {
-            return main.tick() - t0;
-        }
-
-        const mActs: Promise<unknown>[] = [];
-        const hActs: Promise<unknown>[] = [];
-
-        if (!mt.isOpen && !ht.isOpen) {
-            offered = false;
-            const pMain = helper.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === mainLower);
-            const pHelper = main.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === helperLower);
-            if (pMain) hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: pMain.index, optionIndex: 4, reason: 'SDK' }));
-            if (pHelper) mActs.push(main.direct({ type: 'interactPlayer', playerIndex: pHelper.index, optionIndex: 4, reason: 'SDK' }));
-        } else if (mt.screen === 'confirm' || ht.screen === 'confirm') {
-            if (ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted) {
-                hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' }));
-            }
-            if (mt.isOpen && mt.screen === 'confirm' && !mt.myAccepted) {
-                mActs.push(main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' }));
-            }
-        } else {
-            if (!offered) {
-                offered = true;
-                const uniqueSlots = new Map<number, number>();
-                for (const item of helper.sdk.getInventory()) {
-                    if (!uniqueSlots.has(item.id)) uniqueSlots.set(item.id, item.slot);
-                }
-                for (const slot of uniqueSlots.values()) {
-                    hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_SIDE_INV_ID, optionIndex: 4, slot, reason: 'SDK' }));
-                }
-                if (uniqueSlots.size <= 4 && !ht.myAccepted) {
-                    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' }));
-                }
-            } else if (!ht.myAccepted) {
-                hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' }));
-            }
-            if (!mt.myAccepted) {
-                mActs.push(main.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' }));
-                mActs.push(main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' }));
-            }
-        }
-
-        if (hActs.length) await Promise.all(hActs);
-        if (mActs.length) await Promise.all(mActs);
-        await Promise.all([waitTicks(helper, 1), waitTicks(main, 1)]);
-        if (!main.sdk.getTradeState().isOpen && !helper.sdk.getTradeState().isOpen && helper.sdk.getInventory().length === 0) {
-            return main.tick() - t0;
-        }
-    }
-    throw Error('fastInProcessSupplyTrade stopped');
-}
-
 if (import.meta.main) {
     const account = process.argv[2];
     const helperName = process.argv.slice(3).find(a => !a.includes('=') && !a.startsWith('-')) ?? process.env.HELPER ?? `${account}b`;
@@ -166,19 +96,17 @@ if (import.meta.main) {
     let detail = '';
     let helperSettled = false;
 
-    const arm = helper ? { close: () => {} } : startHelperTradeArm(helper, main.name, isStopped);
+    const arm = startHelperTradeArm(helper, main.name, isStopped);
     try {
         const tutTicks = await skipTutorialFast(main, isStopped);
-        const tradeTicks = helper
-            ? await fastInProcessSupplyTrade(main, helper, isStopped)
-            : await receiveTradeFast(
-                main,
-                helper,
-                COOKING_SPECIALIST_SUPPLIES,
-                isStopped,
-                arm,
-                { [OBJ_DUELING_8]: RING_OF_DUELING_IDS },
-            );
+        const tradeTicks = await receiveTradeFast(
+            main,
+            helper,
+            COOKING_SPECIALIST_SUPPLIES,
+            isStopped,
+            arm,
+            { [OBJ_DUELING_8]: RING_OF_DUELING_IDS },
+        );
         const helperDone = settleHelper(helper).then(() => { helperSettled = true; }).catch(() => {});
 
         await rubTeleport(main, RING_OF_DUELING_IDS, /castle wars/i, inCastleWars, isStopped);

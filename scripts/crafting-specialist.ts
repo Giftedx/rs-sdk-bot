@@ -277,7 +277,7 @@ async function fastInProcessBatchTrade(
     for (const slot of dropSlots) {
      sActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     }
-    if (hTarget && sTarget && !(opts.alreadyRequested && spec.tick() === begin)) {
+    if (hTarget && sTarget) {
      hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
      sActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
     }
@@ -312,26 +312,28 @@ async function fastInProcessBatchTrade(
   const hActs: Promise<unknown>[] = [];
   const sActs: Promise<unknown>[] = [];
   const hSlots = new Map<number, number>();
+  const sSlots = new Map<number, number>();
   if (!offered) {
    for (const item of helper.sdk.getInventory()) {
     if (giveSet.has(item.id) && !hSlots.has(item.id)) hSlots.set(item.id, item.slot);
    }
-  }
-  const sSlots = new Map<number, number>();
-  if (!offered && returnSet.size > 0) {
-   for (const item of spec.sdk.getInventory()) {
-    if (returnSet.has(item.id) && !sSlots.has(item.id)) sSlots.set(item.id, item.slot);
+   if (returnSet.size > 0) {
+    for (const item of spec.sdk.getInventory()) {
+     if (returnSet.has(item.id) && !sSlots.has(item.id)) sSlots.set(item.id, item.slot);
+    }
    }
   }
 
+  const specHasOffers = sSlots.size > 0;
   offered = true;
   for (const slot of hSlots.values()) {
    hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
   }
-  if (hSlots.size <= 4 && !ht.myAccepted) {
+  // When spec also offers items in this tick, spec's Offer-All resets helper's accept; defer helper's accept to tick 2.
+  if (!specHasOffers && hSlots.size <= 4) {
    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (hSlots.size <= 3 && sSlots.size <= 3) {
+  if (!specHasOffers && hSlots.size <= 3) {
    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
@@ -341,7 +343,7 @@ async function fastInProcessBatchTrade(
   if (sSlots.size <= 4 && !st.myAccepted) {
    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (sSlots.size <= 3 && hSlots.size <= 3) {
+  if ((specHasOffers && hSlots.size === 0 && sSlots.size === 0) || (!specHasOffers && hSlots.size <= 3)) {
    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 

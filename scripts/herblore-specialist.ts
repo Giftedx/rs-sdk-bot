@@ -481,7 +481,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   const pending = meatPairs.filter(m => countItem(inv, m.ench) === 0);
   if (!pending.length) break;
   const p = playerPos(spec);
-  const adjacent = !!p && Math.max(Math.abs(p.worldX - 2893), Math.abs(p.worldZ - 9831)) <= 2;
+  const adjacent = !!p && Math.max(Math.abs(p.worldX - 2893), Math.abs(p.worldZ - 9831)) <= 1;
   if (!adjacent) {
    await spec.direct({ type: 'walkTo', x: 2892, z: 9831, running: true, reason: 'SDK' });
   } else {
@@ -489,15 +489,6 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
    for (const m of pending) {
     const slotItem = inv.find(i => i.id === m.raw);
     if (slotItem) acts.push(spec.direct({ type: 'useItemOnLoc', itemSlot: slotItem.slot, x: 2893, z: 9831, locId: 2142, reason: 'SDK' }));
-   }
-   if (acts.length <= 4) {
-    const door = findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889);
-    const openOp = door?.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex;
-    if (door && openOp !== undefined) {
-     acts.push(spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: openOp, reason: 'SDK' }));
-    } else {
-     acts.push(spec.direct({ type: 'walkTo', x: 2888, z: 9831, running: true, reason: 'SDK' }));
-    }
    }
    if (acts.length) await Promise.all(acts);
   }
@@ -606,17 +597,11 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): P
   }
   await waitTicks(spec, 1);
  }
- // Walk to Edgeville bank while dropping the spent Glory in parallel on the first tick.
+ // Walk to Edgeville bank; the spent Glory stays in inventory and is deposited into bank cleanly.
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
-  const glories = spec.sdk.getInventory().filter(i => GLORY_SET.has(i.id));
-  if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0) && glories.length === 0) break;
-  const acts: Promise<unknown>[] = [];
-  for (const g of glories) acts.push(spec.direct({ type: 'dropItem', slot: g.slot, reason: 'SDK' }));
-  if (!p || !nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) {
-   acts.push(spec.direct({ type: 'walkTo', x: HERBLORE_BANK_SPOT.x, z: HERBLORE_BANK_SPOT.z, running: true, reason: 'SDK' }));
-  }
-  if (acts.length) await Promise.all(acts);
+  if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) break;
+  await spec.direct({ type: 'walkTo', x: HERBLORE_BANK_SPOT.x, z: HERBLORE_BANK_SPOT.z, running: true, reason: 'SDK' });
   await waitTicks(spec, 1);
  }
 }
@@ -816,7 +801,7 @@ async function executeHerbloreLoop(
   }
   if (!depositedNotes) {
    while (spec.tick() < deadline) {
-    const inv = spec.sdk.getInventory();
+    const inv = spec.sdk.getInventory().filter(i => !GLORY_SET.has(i.id));
     if (!inv.length) break;
     const acts: Promise<unknown>[] = [];
     for (const item of inv.slice(0, 5)) {
