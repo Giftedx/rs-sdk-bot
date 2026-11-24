@@ -1,4 +1,4 @@
-import { appendFileSync, constants, copyFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, constants, copyFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { localFile, MAX_LOGOUT_DRAIN_TICKS, sha, type Binding } from '../../../core/src/launch-evidence';
 import { specialistContext } from '../../../core/src/specialist-launch';
@@ -17,18 +17,20 @@ export async function writeSpecialistReceipt(seg: Segment, scored: ScoredRun, ac
     if (!successfulWorkerLog(workerLog)) throw Error('need one successful raw worker run with confirmed logout');
     const recordDir = join(recordRoot(REHEARSE_ROOT), scriptKey(seg.script));
     const prefix = actor.toLowerCase() + '-', suffix = '.ticks.ndjson.gz';
-    const records = readdirSync(recordDir)
-        .filter(file => file.startsWith(prefix) && file.endsWith(suffix))
-        .map(file => ({file: join(recordDir, file), at: Number(file.slice(prefix.length, -suffix.length))}))
-        .filter(r => Number.isSafeInteger(r.at))
-        .sort((a, b) => a.at - b.at)
-        .map(r => r.file);
+    const records = existsSync(recordDir)
+        ? readdirSync(recordDir)
+            .filter(file => file.startsWith(prefix) && file.endsWith(suffix))
+            .map(file => ({file: join(recordDir, file), at: Number(file.slice(prefix.length, -suffix.length))}))
+            .filter(r => Number.isSafeInteger(r.at))
+            .sort((a, b) => a.at - b.at)
+            .map(r => r.file)
+        : [];
     if (records.length === 0) throw Error('need one complete tick record of the fresh actor');
     await confirmLivingSession(records, actor, server);
     if (/\[trade-ledger\].*failed/.test(readFileSync(scored.engineLog, 'utf8'))) throw Error('practice trade ledger write failed');
     const save = readFileSync(savePath), {endPlaytime, boardTick} = scoredClock(save, scored.board);
     const planTicks = seg.plan!.ticks;
-    if (Math.abs(boardTick - planTicks) > planTicks * .02 || endPlaytime > boardTick + Math.max(planTicks * .02, MAX_LOGOUT_DRAIN_TICKS))
+    if (Math.abs(boardTick - planTicks) > planTicks * .02 || endPlaytime > planTicks + Math.max(planTicks * .02, MAX_LOGOUT_DRAIN_TICKS))
         throw Error('saved specialist clocks differ from the plan by more than 2%');
     if (capabilityRevision(workerEntries(seg.script, seg.args ?? [], REHEARSE_ROOT), REHEARSE_ROOT) !== scored.source)
         throw Error('worker source changed during specialist rehearsal');

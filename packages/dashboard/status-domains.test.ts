@@ -119,3 +119,37 @@ test('readStatuses re-tracks same-mtime status updates when doc timestamp or tic
  expect(run().get('Fast')?.tick).toBe(11);
  expect(tracked).toEqual([10,11]);
 });
+
+test('parseProcLines parses both Windows WMI and Linux/macOS ps process tables',()=>{
+ const hostSrc=readFileSync(new URL('./server/state/host.ts',import.meta.url),'utf8');
+ const code=transpile(hostSrc.slice(hostSrc.indexOf('function parseProcLines('),hostSrc.indexOf('async function scanProcs(')));
+ const parseProcLines=new Function(`${code};return parseProcLines;`)() as (text:string,windows:boolean,now:number,accounts:readonly string[])=>{pid:number;script:string;started:number;mb:number;accounts:string[]}[];
+ const now=1_700_000_000_000;
+ const winOut=[
+  '101|2023-11-14T22:13:00.000Z|104857600|"C:\\bun\\bun.exe" scripts/aio-skiller.ts Worker',
+  'bad|not-a-date|1024|bun.exe',
+  '102|2023-11-14T22:13:10.000Z|52428800|bun.exe scripts/swarm.ts',
+ ].join('\r\n');
+ expect(parseProcLines(winOut,true,now,['Worker','Other'])).toEqual([
+  {pid:101,script:'aio-skiller.ts',started:Date.parse('2023-11-14T22:13:00.000Z'),mb:100,accounts:['Worker']},
+  {pid:102,script:'swarm.ts',started:Date.parse('2023-11-14T22:13:10.000Z'),mb:50,accounts:[]},
+ ]);
+ const psOut=[
+  '  201   120  204800 /usr/local/bin/bun scripts/aio-fighter.ts worker',
+  '  202    60   10240 /usr/bin/bash -c bun scripts/swarm.ts',
+  '  203    30   51200 bun packages/dashboard/server.ts',
+ ].join('\n');
+ expect(parseProcLines(psOut,false,now,['Worker'])).toEqual([
+  {pid:201,script:'aio-fighter.ts',started:now-120_000,mb:200,accounts:['Worker']},
+  {pid:203,script:'server.ts',started:now-30_000,mb:50,accounts:[]},
+ ]);
+});
+
+test('results.ts keys lastResult, newestRes, and newestDeath case-insensitively and build.ts reads by nameLower',()=>{
+ const resSrc=readFileSync(new URL('./server/state/results.ts',import.meta.url),'utf8');
+ const buildSrc=readFileSync(new URL('./server/state/build.ts',import.meta.url),'utf8');
+ expect(resSrc).toContain('const key = r.name.toLowerCase(); lastResult.set(key');
+ expect(resSrc).toContain('lastResult.get(s.name.toLowerCase())');
+ expect(buildSrc).toContain('newestRes.get(nameLower)');
+ expect(buildSrc).toContain('newestDeath.get(nameLower)');
+});

@@ -58,6 +58,10 @@ function activeCooldown(acct: WorkerAccountView, world: WorkerWorldView, keys: r
     return null;
 }
 
+function escapeRegExpLiteral(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function normalizeShopBuyConfig(cfg: Extract<MarketConfig, { mode: 'shop-buy' }>): Extract<MarketConfig, { mode: 'shop-buy' }> {
     const profile = cfg.profile ?? cfg.shopId ?? '';
     const maxItems = cfg.maxItems ?? cfg.quantity;
@@ -66,7 +70,7 @@ function normalizeShopBuyConfig(cfg: Extract<MarketConfig, { mode: 'shop-buy' }>
         const name = getGeCatalogueNameById().get(cfg.itemId);
         const conf = profile ? resolveShopProfile(profile) : undefined;
         const matchedByName = name && conf ? conf.items.find(i => i.re.test(name))?.re.source : undefined;
-        items = matchedByName ?? name;
+        items = matchedByName ?? (name ? escapeRegExpLiteral(name) : undefined);
     }
     return {
         ...cfg,
@@ -274,7 +278,14 @@ export function preflightMarket(acct: WorkerAccountView, cfg: MarketConfig, worl
                 buildConfigError(blockers, String(err));
             }
             if (conf.need) {
-                const current = acct.skills[conf.need.skill]?.level ?? 1;
+                const needLower = conf.need.skill.toLowerCase();
+                let current = acct.skills[conf.need.skill]?.level;
+                if (current === undefined) {
+                    for (const k in acct.skills) {
+                        if (k.toLowerCase() === needLower) { current = acct.skills[k]!.level; break; }
+                    }
+                }
+                current ??= 1;
                 const refusal = profileRefusal(shopCfg.profile, conf, current);
                 if (refusal) {
                     blockers.push({

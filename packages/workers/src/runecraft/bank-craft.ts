@@ -28,6 +28,7 @@ import {
     runeAltarStaging,
 } from './altars';
 import type { RunecraftExternalDeps } from './types';
+import { isStopFilePresent } from '../stop';
 
 const USE_PORTAL_RE = /^use$/i;
 
@@ -215,7 +216,7 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
             ? 'session-ended'
             : options.stop?.()
                 ? 'operator'
-                : existsSync(`.practice/stop-${s.name}`)
+                : isStopFilePresent(s.name)
                     ? 'stop-file'
                     : s.tick() - start >= cap
                         ? 'tick-cap'
@@ -336,7 +337,7 @@ export async function runRuneBankCraft(s: Session, target = 99, options: RuneBan
     };
     const enter = async (a: RuneAltar) => {
         check();
-        if (a.name === 'air') { await action('enter-air', () => enterAirAltar(s)); return; }
+        if (a.name === 'air') { await action('enter-air', () => enterAirAltar(s, stop)); return; }
         const { at, q } = ruinTarget(a);
         const observed = () => state()?.nearbyLocs.find(l => l.id === q.id && l.x === at.x && l.z === at.z && l.level === at.level);
         if (!observed() || count(a.talisman) < 1) throw Error(`${a.name} ruins/talisman unobserved`);

@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { checkFacts, spotcheck, type Fact } from '../src/spotcheck';
+import { checkFacts, spotcheck, allFacts, type Fact } from '../src/spotcheck';
 import { knowledgeDir } from '../src/paths';
 
 const items = JSON.parse(readFileSync(join(knowledgeDir(), 'items.json'), 'utf8'));
@@ -76,4 +76,28 @@ test('every generated quest, drop roll item, and clean shop passes spotcheck', (
     const quests = load('quests.json');
     expect(quests.length).toBe(68);
     expect(checkFacts(quests.map((record: unknown) => ({ kind: 'quest', record })) as any[]).wrong).toEqual([]);
+});
+
+test('all knowledge facts including diagonal doors, config/smithing skills, and script/wrapped transports pass spotcheck', () => {
+    const load = (n: string) => JSON.parse(readFileSync(join(knowledgeDir(), n), 'utf8'));
+    const doors = load('doors.json') as any[];
+    const diag = doors.find(d => d.shape === 9);
+    expect(diag).toBeDefined();
+    expect(checkFacts([{ kind: 'door', record: diag }]).wrong).toEqual([]);
+
+    const skills = load('skills.json') as any[];
+    const smithing = skills.find(s => s.table === 'smithing' && s.xp > 12.5);
+    const firemaking = skills.find(s => s.table === 'firemaking.obj');
+    const unf = skills.find(s => s.table === 'brew_potion.struct' && s.level === 0);
+    expect(smithing && firemaking && unf).toBeTruthy();
+    expect(checkFacts([
+        { kind: 'skill', record: smithing },
+        { kind: 'skill', record: firemaking },
+        { kind: 'skill', record: unf },
+    ]).wrong).toEqual([]);
+    expect(checkFacts([{ kind: 'skill', record: { ...smithing, xp: smithing.xp + 1 } }]).wrong.length).toBe(1);
+
+    const all = allFacts();
+    expect(all.length).toBeGreaterThan(19_000);
+    expect(checkFacts(all).wrong).toEqual([]);
 });

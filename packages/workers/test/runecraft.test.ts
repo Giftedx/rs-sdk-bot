@@ -2450,3 +2450,53 @@ test('runecraftEstimate, toRunecraftWorkerOutcome, runecraftWorker.run, and runR
     expect(isRunOutcome(airMidStop)).toBe(true);
     expect(airMidStop.kind).toBe('session_unsettled');
 });
+
+test('runecraft preflight checks level caps/air reserves, maps config refusals to worker_defect, and enterAirAltar honors stop', async () => {
+    const { enterAirAltar } = await import('../src/runecraft/air');
+    const capped = makeRcAccount({ maxLevels: { Runecraft: 60 }, bank: { observedAt: 1, trusted: true, items: { 1436: 100, 1438: 1 } } });
+    const world = makeRcWorld(capped);
+    expect(runecraftPreflight(capped, { mode: 'supply' }, world).blockers.map(b => b.kind)).toContain('max_level_cap');
+    expect(runecraftPreflight(capped, { mode: 'nature', natureJob: natureJob() }, world).blockers.map(b => b.kind)).toContain('max_level_cap');
+    expect(runecraftPreflight(capped, { mode: 'air' }, world).blockers.map(b => b.kind)).toContain('max_level_cap');
+
+    const airAcct = makeRcAccount({
+        name: 'ReserveAir',
+        bank: { observedAt: 1, trusted: true, items: { 1436: 10, 1438: 1 } },
+    });
+    const reservedWorld: WorkerWorldView = {
+        ...makeRcWorld(airAcct),
+        reserves: { reserveair: { 1436: 6 } },
+        globalReserves: { 1436: 4 },
+    };
+    expect(runecraftPreflight(airAcct, { mode: 'air' }, reservedWorld).blockers.map(b => b.kind)).toContain('missing_supply');
+
+    const refusalOutcome = toRunecraftWorkerOutcome(
+        { ok: false, kind: 'refused', mode: 'supply', detail: 'Runecraft supply target must be 2..99 (got 1)' },
+        'RcTester',
+        normalizeRunecraftConfig({ mode: 'supply' }),
+        1,
+    );
+    expect(isRunOutcome(refusalOutcome)).toBe(true);
+    expect(refusalOutcome.kind).toBe('worker_defect');
+
+    let usedTalisman = false;
+    const ruinsSession: any = {
+        name: 'AirStop',
+        tick: () => 1,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 2985, worldZ: 3291, level: 0 },
+                nearbyLocs: [{ id: 2452, name: 'Mysterious ruins', x: 2985, z: 3292 }],
+            }),
+            getInventory: () => [{ id: 1438, name: 'Air talisman', count: 1, slot: 0 }],
+        },
+        bot: {
+            useItemOnLoc: async () => {
+                usedTalisman = true;
+                return { success: true };
+            },
+        },
+    };
+    await expect(enterAirAltar(ruinsSession, () => true)).rejects.toThrow('air entry stopped');
+    expect(usedTalisman).toBe(false);
+});

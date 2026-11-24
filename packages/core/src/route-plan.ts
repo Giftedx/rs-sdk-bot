@@ -44,12 +44,15 @@ function start(): BunWorker {
         if (e.data.error) p.reject(Error(`route worker: ${e.data.error}`)); else p.resolve(e.data.plan ?? null);
         if (!pending.size) { w.unref(); idle = setTimeout(() => { if (!pending.size) stopWorker(w); }, WORKER_IDLE_MS); (idle as { unref?(): void }).unref?.(); }
     };
-    w.onerror = (e: ErrorEvent) => {
+    const failAll = (reason: string) => {
         if (worker !== w) return;
-        for (const p of pending.values()) p.reject(Error(`route worker failed: ${e.message}`));
+        for (const p of pending.values()) p.reject(Error(reason));
         pending.clear();
         stopWorker(w);
     };
+    w.onerror = (e: ErrorEvent) => failAll(`route worker failed: ${e.message}`);
+    w.onmessageerror = () => failAll('route worker message unreadable');
+    w.addEventListener?.('close', () => failAll('route worker closed unexpectedly'));
     return worker = w;
 }
 
@@ -74,12 +77,13 @@ export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: B
             reject: error => { cleanup(); reject(error); },
         });
         signal?.addEventListener('abort', abort, { once: true });
-        let sharedAreas: SharedLabels | undefined;
-        if (!workerSentAreas) {
-            sharedAreas = (globalThis as { __rsGetSharedLabels?: () => SharedLabels | null }).__rsGetSharedLabels?.() ?? undefined;
+        const sharedAreas = workerSentAreas
+            ? undefined
+            : (globalThis as { __rsGetSharedLabels?: () => SharedLabels | null }).__rsGetSharedLabels?.() ?? undefined;
+        try {
+            w.postMessage({ id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock, budgetMs, ...(sharedAreas ? { sharedAreas } : {}) });
             if (sharedAreas) workerSentAreas = true;
         }
-        try { w.postMessage({ id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock, budgetMs, ...(sharedAreas ? { sharedAreas } : {}) }); }
         catch (error) { fail(error); }
     });
 }

@@ -4,6 +4,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { mySide } from '../../core/src/fleet';
+import { PVP_DEATH_SCHEMA } from '../../core/src/pvp-deaths';
 import { tradeSettlement, validOrder, type Order, type Receipt } from '../../core/src/fleet-trade-settlement';
 import { atomicJson } from '../../core/src/plan-lock';
 import {
@@ -22,6 +23,7 @@ import {
     DEFAULT_RETENTION_MARGIN_RATIO,
     HUB_BANKER_LOCATIONS,
     OutcomeClassifier,
+    activityPreflightFromConfig,
     buildFleetState,
     canProtectedAccountLaunch,
     createActivityCatalog,
@@ -29,6 +31,7 @@ import {
     createRateStore,
     defaultActivityCatalog,
     inspectWorldSnapshot,
+    isProtectedAccountName,
     loadCampaignManifests,
     loadItemsMap,
     loadMarketQuotesFromRoot,
@@ -117,7 +120,8 @@ export interface BrainCycleResult {
 
 const DEFAULT_LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 const SAFE_OPERATOR_COMMAND_ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
-const BLOCKED_OVERRIDE_REASON_RE = /^(?:protected_clock|campaign_|system_hold:|paused_owner|dead|in_trade|all_candidates_quarantined|quarantined)/;
+const BLOCKED_OVERRIDE_REASON_RE =
+    /^(?:protected_clock|campaign_|system_hold:|paused_owner|dead|in_trade|all_candidates_quarantined|quarantined)|:(?:protected_clock|max_level_cap|cooldown_active|capacity_full|invalid_config)\b/;
 const SWARM_AUTO_STOP_RE =
     /^(?:fleet-health auto-paused:|swarm stopped|swarm plan removed or stopped|swarm recovery stopped|inherited recovery stopped|fleet controller lease unavailable|swarm(?::\s.*)?)$/i;
 
@@ -287,7 +291,58 @@ function hasPersistedDeathRecord(account: string, root: string): boolean {
             }
         }
     }
+    for (const file of [join(liveRoot(root), 'pvp-deaths.json'), join(practiceRoot(root), 'pvp-deaths.json')]) {
+        const parsed = readJsonSafe(file);
+        if (!Array.isArray(parsed)) continue;
+        for (const entry of parsed) {
+            if (
+                isPlainRecord(entry)
+                && entry.schema === PVP_DEATH_SCHEMA
+                && typeof entry.account === 'string'
+                && entry.account.toLowerCase() === key
+            ) {
+                return true;
+            }
+        }
+    }
     return false;
+}
+
+function clearPersistedDeathRecords(account: string, root: string): number {
+    const key = account.toLowerCase();
+    let cleared = 0;
+    for (const file of [join(liveRoot(root), 'swarm-deaths.json'), join(practiceRoot(root), 'swarm-deaths.json')]) {
+        const parsed = readJsonSafe(file);
+        if (!isPlainRecord(parsed)) continue;
+        const next: Record<string, unknown> = {};
+        let fileChanged = false;
+        for (const [name, entry] of Object.entries(parsed)) {
+            if (name.toLowerCase() === key && isPlainRecord(entry) && typeof entry.reason === 'string' && /^died\b/i.test(entry.reason.trim())) {
+                fileChanged = true;
+                continue;
+            }
+            next[name] = entry;
+        }
+        if (fileChanged) {
+            atomicJson(file, next);
+            cleared += 1;
+        }
+    }
+    for (const file of [join(liveRoot(root), 'pvp-deaths.json'), join(practiceRoot(root), 'pvp-deaths.json')]) {
+        const parsed = readJsonSafe(file);
+        if (!Array.isArray(parsed)) continue;
+        const next = parsed.filter((entry) => !(
+            isPlainRecord(entry)
+            && entry.schema === PVP_DEATH_SCHEMA
+            && typeof entry.account === 'string'
+            && entry.account.toLowerCase() === key
+        ));
+        if (next.length !== parsed.length) {
+            atomicJson(file, next);
+            cleared += 1;
+        }
+    }
+    return cleared;
 }
 
 function clearOperatorStops(flag: string, root: string): number {
@@ -325,8 +380,9 @@ function applyCommand(
                 return false;
             }
             const removed = clearOperatorStops(cmd.account, root);
+            const clearedDeaths = cmd.clearDead === true ? clearPersistedDeathRecords(cmd.account, root) : 0;
             const cleared = classifier.applyOperatorCommand(cmd, now);
-            return cleared || removed > 0 || overlay === undefined;
+            return cleared || removed > 0 || clearedDeaths > 0 || overlay === undefined;
         }
         case 'pause_side':
             if (cmd.side !== side) return false;
@@ -642,19 +698,23 @@ export function applyActivityOverridesToPlan(
             inTradeAccounts.add(lower);
         }
     }
-    const assignedIdleDonors = new Set<string>();
-    for (const ord of plan.transferOrders) {
-        const lower = ord.from.toLowerCase();
-        const donorAcct = worldAccountByLower.get(lower);
-        if (
-            donorAcct
-            && donorAcct.side === input.world.side
-            && !inTradeAccounts.has(lower)
-            && (nextAccountPlans[donorAcct.name]?.steps.length ?? 0) === 0
-        ) {
-            assignedIdleDonors.add(lower);
+    const collectAssignedIdleDonors = (orders: readonly TransferOrder[]): Set<string> => {
+        const donors = new Set<string>();
+        for (const ord of orders) {
+            const lower = ord.from.toLowerCase();
+            const donorAcct = worldAccountByLower.get(lower);
+            if (
+                donorAcct
+                && donorAcct.side === input.world.side
+                && !inTradeAccounts.has(lower)
+                && (nextAccountPlans[donorAcct.name]?.steps.length ?? 0) === 0
+            ) {
+                donors.add(lower);
+            }
         }
-    }
+        return donors;
+    };
+    const assignedIdleDonors = collectAssignedIdleDonors(plan.transferOrders);
     const quarantinedActivityIds = new Set(
         input.defects
             .filter((d) => d.quarantined && (d.expiresAt === undefined || input.world.at < d.expiresAt))
@@ -662,6 +722,7 @@ export function applyActivityOverridesToPlan(
     );
     const reservedSlotCount = inTradeAccounts.size + assignedIdleDonors.size;
     let usedSlots = reservedSlotCount + Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
+    const overriddenRecipients = new Set<string>();
     let changed = false;
 
     for (const acct of worldAccountList) {
@@ -683,6 +744,7 @@ export function applyActivityOverridesToPlan(
 
         const act = input.catalog.get(ov.activityId);
         if (!act) continue;
+        if ((acct.protectedClock || isProtectedAccountName(acct.name)) && act.protectedAllowed !== true) continue;
         if (quarantinedActivityIds.has(act.id)) continue;
         if (!spotHasCapacity(act, acct.name)) continue;
 
@@ -694,11 +756,13 @@ export function applyActivityOverridesToPlan(
             defects: input.defects,
             rateStore: input.rateStore,
             marketQuotes: input.marketQuotes,
+            excludedAcquireSources: new Set(['hub_banker']),
             minTrust: 'experimental',
             allowExperimentalFallback: true,
         });
         if (planned.steps.length > 0) {
             nextAccountPlans[acct.name] = planned;
+            overriddenRecipients.add(acct.name.toLowerCase());
             const plannedSpot = spotForPlan(planned);
             if (plannedSpot) recordAccountSpot(input.catalog.get(planned.steps.find((s) => s.stepKind === 'work')!.activityId) ?? act, acct.name);
             else removeAccountFromSpots(acct.name);
@@ -707,6 +771,18 @@ export function applyActivityOverridesToPlan(
             continue;
         }
         if (planned.idleReason && BLOCKED_OVERRIDE_REASON_RE.test(planned.idleReason)) {
+            continue;
+        }
+        const pre = activityPreflightFromConfig(acct, act, input.world, 1);
+        if (
+            pre.blockers.some((b) =>
+                b.kind === 'protected_clock'
+                || b.kind === 'max_level_cap'
+                || b.kind === 'cooldown_active'
+                || b.kind === 'capacity_full'
+                || b.kind === 'invalid_config',
+            )
+        ) {
             continue;
         }
         const syntheticScore = Math.max(1, nextAccountPlans[acct.name]?.scorePerHour ?? 100);
@@ -729,18 +805,22 @@ export function applyActivityOverridesToPlan(
             retentionMarginApplied: true,
         };
         nextAccountPlans[acct.name] = synthetic;
+        overriddenRecipients.add(acct.name.toLowerCase());
         recordAccountSpot(act, acct.name);
         if (!alreadySelected) usedSlots += 1;
         changed = true;
     }
 
     if (!changed) return plan;
+    const nextTransferOrders = plan.transferOrders.filter((ord) => !overriddenRecipients.has(ord.to.toLowerCase()));
+    const nextReservedCount = inTradeAccounts.size + collectAssignedIdleDonors(nextTransferOrders).size;
     const plansWithSteps = Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
     return {
         ...plan,
         accountPlans: nextAccountPlans,
         spotAllocations: nextSpotAllocations,
-        selectedSlots: Math.min(plan.maxBots, reservedSlotCount + plansWithSteps),
+        transferOrders: nextTransferOrders,
+        selectedSlots: Math.min(plan.maxBots, nextReservedCount + plansWithSteps),
     };
 }
 

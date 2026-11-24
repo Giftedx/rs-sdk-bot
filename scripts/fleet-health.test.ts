@@ -373,3 +373,65 @@ test('auditFleetHealth stop-file index prioritizes .practice/live/ over legacy .
     expect(row?.healthStop).toBe(false);
     expect(row?.fixAction).toBe('manual_hold');
 });
+
+test('auditFleetHealth prefers newer legacy status over stale live status and holds accounts with ended_error plus healthStop', () => {
+    const root = tempWorkspace();
+    const liveDir = join(root, '.practice', 'live');
+    const liveStatus = join(liveDir, 'status');
+    mkdirSync(liveStatus, { recursive: true });
+    const now = 5_000_000;
+    const owners = new Map([
+        ['newerlegacy', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+        ['endedhealth', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+    ]);
+
+    // Stale live status must not shadow a newer valid legacy status.
+    writeFileSync(join(liveStatus, 'NewerLegacy.json'), JSON.stringify({ name: 'NewerLegacy', server: 'rs-sdk-demo.fly.dev', pos: { x: 3095, z: 9830, level: 0 }, at: now - 50_000 }));
+    writeFileSync(join(root, '.practice', 'status', 'NewerLegacy.json'), JSON.stringify({ name: 'NewerLegacy', server: 'rs-sdk-demo.fly.dev', pos: { x: 3185, z: 3436, level: 0 }, at: now - 1000, result: 'RESULT ok' }));
+
+    // Existing healthStop combined with ended_error must classify as manual_hold rather than falling through to none.
+    writeFileSync(join(liveDir, 'stop-EndedHealth'), `${HEALTH_STOP_PREFIX} prior failure\n`);
+    writeFileSync(join(liveStatus, 'EndedHealth.json'), JSON.stringify({ name: 'EndedHealth', server: 'rs-sdk-demo.fly.dev', pos: { x: 3185, z: 3436, level: 0 }, at: now - 2000 }));
+
+    const audit = auditFleetHealth({
+        root,
+        side: 'local',
+        now,
+        owners,
+        swarmPlan: { jobs: [{ name: 'eh', account: 'EndedHealth', script: 'scripts/train-prayer.ts', enabled: true }] },
+        results: [],
+        deaths: { EndedHealth: { at: now - 500, reason: 'blocked after 2 runs' } },
+    });
+    const byName = new Map(audit.accounts.map(a => [a.account, a]));
+    expect(byName.get('NewerLegacy')?.location.kind).toBe('ok');
+    expect(byName.get('NewerLegacy')?.fixAction).toBe('none');
+    expect(byName.get('EndedHealth')?.issues.map(i => i.code)).toEqual(['ended_error', 'stale_health_stop']);
+    expect(byName.get('EndedHealth')?.fixAction).toBe('manual_hold');
+    expect(byName.get('EndedHealth')?.blockedBy).toBe('ended: blocked after 2 runs');
+});
+
+test('remediateFleetHealth restores an existing healthStop when a release hold forces a skip', async () => {
+    const root = tempWorkspace();
+    const prac = join(root, '.practice');
+    const now = 6_000_000;
+    const owners = new Map([['heldbot', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]);
+    writeFileSync(join(prac, 'stop-HeldBot'), `${HEALTH_STOP_PREFIX} prior trap\n`);
+    writeLogoutProof(root, 'HeldBot', 'rs-sdk-demo.fly.dev', true);
+    const audit = auditFleetHealth({
+        root,
+        side: 'local',
+        now,
+        owners,
+        statusRows: [{ name: 'HeldBot', server: 'rs-sdk-demo.fly.dev', pos: { x: 3095, z: 9830, level: 0 }, at: now - 1000 }],
+        swarmPlan: { jobs: [] },
+        results: [],
+        deaths: {},
+    });
+    const actions = await remediateFleetHealth(audit, {
+        now: now + 1000,
+        freeMemGB: () => 12.0,
+        runRecovery: async () => ({ ok: false, detail: 'RESULT fail login: Error: no worker progress: release coordinator build in progress' }),
+    });
+    expect(actions.some(a => a.account === 'HeldBot' && a.action === 'skipped')).toBe(true);
+    expect(readFileSync(join(prac, 'stop-HeldBot'), 'utf8')).toContain(HEALTH_STOP_PREFIX);
+});

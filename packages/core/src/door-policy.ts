@@ -2,10 +2,12 @@ import {readFileSync} from 'node:fs';
 import type {Account,DoorBlock,Door} from './world-types';
 import {completedQuestUnlocks,guildActorFacts} from './guild-facts';
 import {equipmentObserved} from './container-observation';
+import {unwrapGuarded} from './worker-execution';
 const clients=new WeakMap<object,unknown>();
-export function registerRouteActor(sdk:object,client:unknown):void {if(client&&typeof client==='object')clients.set(sdk,client);}
+export function registerRouteActor(sdk:object,client:unknown):void {if(client&&typeof client==='object')clients.set(unwrapGuarded(sdk),client);}
 export function accountForSdk(sdk:any):Account {
-    const state=sdk.getState(),client=clients.get(sdk),actor=accountFromState(state);
+    const raw=unwrapGuarded(sdk);
+    const state=raw.getState(),client=clients.get(raw),actor=accountFromState(state);
     if(client&&typeof client==='object'){
         if(!equipmentObserved(client))delete actor.worn;
         if((client as {ingame?:boolean}).ingame!==true)delete actor.doorStates;

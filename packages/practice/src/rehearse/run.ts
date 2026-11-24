@@ -65,7 +65,9 @@ async function spawnSuppliers(
 export async function rehearse(seg: Segment, opts: {out: string; port?: number; engine?: number; gateway?: number; scored?: ScoredRun}): Promise<RehearsalReport> {
     const port = opts.port ?? ISOLATED.save, engine = opts.engine ?? ISOLATED.engine, gateway = opts.gateway ?? ISOLATED.gateway;
     if (seg.capture?.when && !Object.keys(seg.capture.when).length) throw new Error(`${seg.id}: capture.when has no condition`);
-    if (seg.capture?.when) checkExpect({position: {x: 0, z: 0, level: 0}, skills: {}, inventory: {}, worn: {}, bank: {}, varps: 0}, seg.capture.when);
+    const emptySave = {position: {x: 0, z: 0, level: 0}, skills: {}, inventory: {}, worn: {}, bank: {}, varps: 0};
+    checkExpect(emptySave, seg.expect);
+    if (seg.capture?.when) checkExpect(emptySave, seg.capture.when);
     mkdirSync(opts.out, {recursive: true});
     const account = runBotName('rh' + seg.id.replace(/[^a-z0-9]/gi, '').slice(0, 3), 1);
     if (existsSync(join(practiceBotsRoot(), account)) || existsSync(join(rsSdkRoot(), 'bots', account))) throw new Error('fresh account required');
@@ -157,9 +159,11 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
         try { const {version: _v, ...s} = summarize(readFileSync(savePath)); end = s; Object.assign(checks, checkExpect(s, seg.expect)); }
         catch (e) { checks.endSave = false; captureError ||= String(e); }
         if (seg.capture && seg.capture.afterTicks === undefined && !seg.capture.when && checks.saved) {
-            const c = await captureSave(account, port);
-            addEntry({name: seg.capture.name, bytes: c.bytes, source: c.source, segment: seg.capture.segment, rsSdk: captureRsSdk});
-            captured = {name: seg.capture.name, via: c.source.via, tick: c.source.tick};
+            try {
+                const c = await captureSave(account, port);
+                addEntry({name: seg.capture.name, bytes: c.bytes, source: c.source, segment: seg.capture.segment, rsSdk: captureRsSdk});
+                captured = {name: seg.capture.name, via: c.source.via, tick: c.source.tick};
+            } catch (e) { captureError ||= String(e); }
         }
         if (seg.capture) checks.captured = !!captured;
         const used = window.ticks;
@@ -183,7 +187,9 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
 
 export async function runRehearseCli(args: string[]): Promise<void> {
     const outFlag = args.indexOf('--out');
-    const out = outFlag >= 0 ? resolve(args[outFlag + 1]!) : join(practiceDir(), 'rehearse', String(Date.now()));
+    const outArg = outFlag >= 0 ? args[outFlag + 1] : undefined;
+    if (outFlag >= 0 && (!outArg || outArg.startsWith('--'))) throw Error('--out requires a directory path');
+    const out = outFlag >= 0 ? resolve(outArg!) : join(practiceDir(), 'rehearse', String(Date.now()));
     let stack: Stack | undefined;
     try {
         if (args[0] === '--specialist') {

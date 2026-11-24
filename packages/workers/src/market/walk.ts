@@ -6,6 +6,7 @@ import type { Session } from '../../../core/src/inprocess';
 import type { Tile, Account } from '../../../core/src/world';
 import type { Outcome } from '../../../core/src/act';
 import { loadTravel, travelAllowed, type Travel } from '../../../core/src/travel';
+import { isStopFilePresent } from '../stop';
 
 export const DRAYNOR_BANK = { x: 3092, z: 3243 };
 export const LUMBRIDGE_TO_DRAYNOR: [number, number, number][] = [
@@ -287,7 +288,7 @@ export function productionStopRequested(
     exists: (path: string) => boolean = existsSync,
     role: string | undefined = process.env.STOP_FILE,
 ) {
-    return stop() || exists('.practice/stop-all') || (!!actor && exists(`.practice/stop-${actor}`)) || (!!role && exists(role));
+    return stop() || isStopFilePresent(actor, [], exists, role);
 }
 
 export function watchProductionLife(s: Session, stop: () => boolean = () => false, options: { allowDamage?: boolean } = {}) {

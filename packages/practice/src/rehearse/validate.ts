@@ -63,6 +63,12 @@ export function checkExpect(s: SaveSummary, expect: Segment['expect']): Record<s
         out[`skill.${skill}>=${min}`] = Math.max(info?.level ?? 1, levelForXp(info?.xp ?? 0)) >= min;
     }
     for (const [id, e] of Object.entries(expect.items ?? {})) {
+        if (e.in !== undefined && e.in !== 'inventory' && e.in !== 'bank' && e.in !== 'worn' && e.in !== 'any') {
+            throw new Error(`unknown item expectation location ${String(e.in)} for ${id}`);
+        }
+        if (e.min !== undefined && (!Number.isSafeInteger(e.min) || e.min < 0)) throw new Error(`invalid min expectation for ${id}`);
+        if (e.max !== undefined && (!Number.isSafeInteger(e.max) || e.max < 0)) throw new Error(`invalid max expectation for ${id}`);
+        if (e.min !== undefined && e.max !== undefined && e.min > e.max) throw new Error(`min > max expectation for ${id}`);
         const n = itemCount(s, id, e.in);
         out[`item.${id}.${e.in ?? 'any'}`] = (e.min === undefined || n >= e.min) && (e.max === undefined || n <= e.max);
     }

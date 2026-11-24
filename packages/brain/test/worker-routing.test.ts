@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { WORKER_FAMILIES, type WorkerFamily } from '../../workers/src/contracts';
+import { selectItems } from '../../workers/src/market/preflight';
 import { createActivityCatalog } from '../src/catalog';
 import type { AccountPlan, ActivityDefinition } from '../src/contracts';
 import {
@@ -238,6 +239,22 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(shopAcquire.env.ITEMS).toBe('Bronze axe');
     expect(Number(shopAcquire.env.FLOAT)).toBeGreaterThan(Number(shopAcquire.env.COIN_RESERVE));
     expect(shopAcquire.env.STOP_AT_TARGET).toBe('1');
+
+    const potionShopAcquire = resolvePlannedStepWorkerRoute('Shopper', {
+        stepKind: 'acquire',
+        source: 'npc_shop',
+        itemId: 2434,
+        itemName: 'Prayer potion(4)',
+        quantity: 2,
+        estimatedTicks: 30,
+        estimatedCoinCost: 500,
+        coinFloatPreserved: 1000,
+        shopId: 'al_kharid_potion',
+    });
+    expect(potionShopAcquire.env.ITEMS).toBe('Prayer potion\\\\?\\(4\\\\?\\)');
+    expect(potionShopAcquire.config.items).toBe('Prayer potion\\\\?\\(4\\\\?\\)');
+    expect(selectItems([{ re: /^Prayer potion\(4\)$/i }], potionShopAcquire.env.ITEMS)).toHaveLength(1);
+    expect(new RegExp(potionShopAcquire.env.ITEMS!, 'i').test('Prayer potion(4)')).toBe(true);
 
     const upgradeHub = resolvePlannedStepWorkerRoute('Miner', {
         stepKind: 'gear_upgrade',

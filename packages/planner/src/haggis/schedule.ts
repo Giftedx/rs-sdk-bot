@@ -1,6 +1,6 @@
 // Earliest-deadline-first scheduler with dead-tick guest absorption, route selection, and Moore-Hodgson optimization.
 import { levelForXp, xpForLevel } from '../curve';
-import { ANYWHERE, bankTrips, resolve, type TravelModel } from '../travel';
+import { ANYWHERE, BANK, bankTrips, resolve, type TravelModel } from '../travel';
 import { qpSpecialistActivities } from './boards';
 import {
     MAX_QP, SKILLS, XP99, applyLevers, chooseVariants, pick, rawRoute, roughTicks, speed, variantGroups,
@@ -496,8 +496,12 @@ function scheduleRoute(
         const m = opts.travel;
         const a = activities[idx]!;
         if (!m || a.at === undefined || a.at === ANYWHERE) return { walk: 0, inner: 0 };
-        if (here === undefined) here = m.start ?? a.at;
-        if (here === 'bank') return { walk: 0, inner: 0 };
+        if (here === undefined) {
+            if (m.start) here = m.start;
+            else if (a.at === BANK) return { walk: 0, inner: 0 };
+            else here = a.at;
+        }
+        if (here === BANK) return { walk: 0, inner: 0 };
         const from = here;
         const to = resolve(m, here, a.at);
         const magicLvl = levelAtClock(6 /* magic */, clock);
@@ -723,11 +727,12 @@ function scheduleRoute(
                     pushSkillEvent(x.skill, clock, clock + rest, gLump, x.v * (1 - share));
                 }
             }
+            const gStart = absorbed > 0 ? start : clock;
             const gEnd = rest > 0 ? clock + rest : end;
             if (g.qp) { qpEvents.push({ at: gEnd, qp: g.qp }); cachedQpClock = -1; }
             markDone(gIdx, gEnd);
             remaining--;
-            order.push({ id: g.id, label: `${g.label} (inside ${a.id}: ${absorbed} ticks absorbed)`, start, end: gEnd, landsAt: gEnd, ticks: rest, deadline: eff[gIdx]! });
+            order.push({ id: g.id, label: `${g.label} (inside ${a.id}: ${absorbed} ticks absorbed)`, start: gStart, end: gEnd, landsAt: gEnd, ticks: rest, deadline: eff[gIdx]! });
             clock += rest;
         }
     }

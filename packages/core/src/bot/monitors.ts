@@ -84,7 +84,9 @@ export function attachTickStallWatch(
     onStall: (detail: string) => void,
     opts?: Parameters<typeof startTickStallWatch>[2],
 ): { stop(): void } {
-    const watch = startTickStallWatch(s, reason => {
+    let watch: { stop(): void } | undefined;
+    watch = startTickStallWatch(s, reason => {
+        watch?.stop();
         stallWatches.delete(s as Session);
         onStall(reason);
     }, opts);

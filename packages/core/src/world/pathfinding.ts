@@ -6,6 +6,7 @@ import { activeDanger, guardRoute, guardWalk } from '../danger';
 import { legCache, routeDangerHash } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
 import { cheb, tileKey, worldRepoRoot, type DoorBlock, type PathLength, type Tile } from './model';
+import { unwrapGuarded } from '../worker-execution';
 
 let rsPath: { findLongPath: Function; getDoorAt: Function } | null = null;
 let activePathPolicy: { owner: object; blocked: DoorBlock[] } | null = null;
@@ -18,22 +19,23 @@ async function loadPathfinding() {
 
 /** Installs per-account door policy and danger guards on an SDK instance's findPath method. */
 export async function installDoorPolicy(sdk: any, client?: unknown): Promise<void> {
-    registerRouteActor(sdk, client);
-    if (typeof sdk?.findPath !== 'function' || policySdks.has(sdk)) return;
+    const raw = unwrapGuarded(sdk);
+    registerRouteActor(raw, client);
+    if (typeof raw?.findPath !== 'function' || policySdks.has(raw)) return;
     const pf = await loadPathfinding();
     const grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
-    if (policySdks.has(sdk)) return;
-    const original = sdk.findPath;
-    sdk.findPath = function(x: number, z: number, ...args: unknown[]) {
-        const state = sdk.getState(), p = state?.player;
-        if (!p) return original.call(sdk, x, z, ...args);
+    if (policySdks.has(raw)) return;
+    const original = raw.findPath;
+    raw.findPath = function(x: number, z: number, ...args: unknown[]) {
+        const state = raw.getState(), p = state?.player;
+        if (!p) return original.call(raw, x, z, ...args);
         (pf as any).initPathfinding();
         const from = { x: p.worldX, z: p.worldZ, level: p.level };
-        const blocks = blockedDoorsNear(from, { x, z, level: p.level }, accountForSdk(sdk))
+        const blocks = blockedDoorsNear(from, { x, z, level: p.level }, accountForSdk(raw))
             .map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
-        return guardWalk(grid, accountForSdk(sdk), from, { x, z, level: p.level }, 32, () => withDoorPolicy(grid, blocks, () => original.call(sdk, x, z, ...args)));
+        return guardWalk(grid, accountForSdk(raw), from, { x, z, level: p.level }, 32, () => withDoorPolicy(grid, blocks, () => original.call(raw, x, z, ...args)));
     };
-    policySdks.add(sdk);
+    policySdks.add(raw);
 }
 
 // Default walk cost: rs-sdk findLongPath turn points, summed as Chebyshev steps. Null if the path stops short.

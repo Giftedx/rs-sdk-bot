@@ -2,9 +2,10 @@
 // Usage:
 //   bun scripts/aio-skiller.ts <account> <skill> [method] [arg ...] [KEY=value ...]
 //   bun scripts/aio-skiller.ts <account> bank-job <job.json> [job.json ...]   (several jobs: one login, in order)
-import {existsSync,readFileSync} from 'node:fs';
-import {join,resolve} from 'node:path';
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
 import type {Step} from '../packages/core/src/chain-step';
+import {isStopFilePresent} from '../packages/workers/src/stop';
 import {DEFAULT_METHOD,resolveRouteStep,resolveSkillerMethod} from './aio-route-step';
 import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
 import {planBankTripSchedule} from '../packages/core/src/bank-trip';
@@ -884,13 +885,16 @@ export function mergeSkillerEnv(
    let s: Awaited<ReturnType<typeof openBot>> | undefined;
    let ok = false, summary = '';
    try {
-    s = await openBot(account, { onStop: async () => { stopped = true; } });
+    s = await openBot(account, {
+     onStop: async () => { stopped = true; },
+     onSessionEnd: async () => { stopped = true; },
+    });
     const results: Awaited<ReturnType<typeof runBankJob>>[] = [];
     for (const job of jobs) {
      const res = await runBankJob(
       s,
       job,
-      () => stopped || existsSync(join('.practice', 'stop-all')) || existsSync(join('.practice', `stop-${account}`)) || existsSync(join('.practice', `stop-${account.toLowerCase()}`)),
+      () => stopped || isStopFilePresent(account),
      );
      results.push(res);
      if (!res.ok) break;

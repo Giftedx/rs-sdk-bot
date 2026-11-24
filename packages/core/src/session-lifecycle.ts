@@ -40,8 +40,13 @@ export function accountDir(account: string, server: string, root = lifecycleRoot
 function writeAtomic(path: string, text: string, exclusive = false): void {
     const temporary = `${path}.tmp-${process.pid}-${++sequence}`;
     writeFileSync(temporary, text);
+    if (exclusive) {
+        try { linkSync(temporary, path); }
+        finally { try { rmSync(temporary, { force: true }); } catch { /* temporary cleanup is best-effort after link */ } }
+        return;
+    }
     try {
-        if (exclusive) { linkSync(temporary, path); unlinkSync(temporary); } else replaceFile(temporary, path);
+        replaceFile(temporary, path);
     } catch (e) {
         try { rmSync(temporary, { force: true }); } catch { /* keep the original error */ }
         throw e;
@@ -133,12 +138,22 @@ export function beginSessionAttempt(identity: { account: string; server: string;
         attemptId, account: identity.account, server: identity.server, domain: receipt.domain,
         // Updates touch only this attempt's file. The first server end is kept; later ends cannot replace it.
         record(kind, detail) {
-            if (kind === 'ended') { if (ended) return false; ended = true; }
-            const at = Math.max(now(), receipt.updatedAt);
+            if (kind === 'ended' && ended) return false;
+            const prevUpdatedAt = receipt.updatedAt;
+            const prevLength = receipt.events.length;
+            const at = Math.max(now(), prevUpdatedAt);
             receipt.events.push({ at, kind, ...(detail !== undefined ? { detail: clean(detail, identity.secret) } : {}) });
             receipt.updatedAt = at;
-            try { writeAtomic(file, JSON.stringify(receipt)); return true; }
-            catch (e) { console.error(`[lifecycle] ${identity.account}: receipt update failed`, String(e)); return false; }
+            try {
+                writeAtomic(file, JSON.stringify(receipt));
+                if (kind === 'ended') ended = true;
+                return true;
+            } catch (e) {
+                receipt.events.length = prevLength;
+                receipt.updatedAt = prevUpdatedAt;
+                console.error(`[lifecycle] ${identity.account}: receipt update failed`, String(e));
+                return false;
+            }
         },
     };
 }

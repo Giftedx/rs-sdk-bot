@@ -98,3 +98,17 @@ test('aio-market earth-shop validates parameters before login and aio-skiller ba
   rmSync(dir,{recursive:true,force:true});
  }
 });
+
+test('runAioPipeline stops before spawning child steps when STOP_FILE or account stop exists in root',async()=>{
+ const {mkdirSync}=await import('node:fs');
+ const {runAioPipeline}=await import('./aio');
+ const dir=mkdtempSync(join(tmpdir(),'aio-pipe-stop-'));
+ try{
+  mkdirSync(join(dir,'.practice'),{recursive:true});
+  writeFileSync(join(dir,'.practice','stop-custom'),'1');
+  const out=await runAioPipeline('MixedCaseAcct',['skiller:woodcutting:loop'],1,{STOP_FILE:'.practice/stop-custom'},dir);
+  expect(out).toBe('RESULT fail stop file chain rounds=0 ok=0 failed=0');
+ }finally{
+  rmSync(dir,{recursive:true,force:true});
+ }
+});

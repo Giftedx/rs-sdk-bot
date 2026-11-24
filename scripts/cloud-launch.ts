@@ -15,7 +15,7 @@
 // .practice/cloud-launch/state.json.
 // Usage: bun scripts/cloud-launch.ts --once | --dry | --prompt <claude|codex> <side>
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, SIDE_NAME } from '../packages/core/src/fleet';
 import { allLeaseLastSeen, fleetGitWindow } from '../packages/core/src/fleet-lease';
@@ -133,6 +133,19 @@ async function launch(s: SideConfig): Promise<{ ok: boolean; detail: string }> {
     return { ok: p.status === 0, detail: p.status === 0 ? out.slice(-200) : `exit ${p.status ?? p.error?.message} ${out.slice(-200)}` };
 }
 
+export function writeLaunchState(stateFile: string, history: readonly Launch[], now: number): void {
+    const dirPath = resolve(stateFile, '..');
+    mkdirSync(dirPath, { recursive: true });
+    const retained = history.filter(l => now - l.at < 7 * 24 * 60 * 60_000);
+    const tmp = join(dirPath, `.state-${process.pid}-${Date.now()}.tmp`);
+    try {
+        writeFileSync(tmp, JSON.stringify({ launches: retained }, null, 1) + '\n');
+        renameSync(tmp, stateFile);
+    } finally {
+        rmSync(tmp, { force: true });
+    }
+}
+
 if (import.meta.main) {
     const args = process.argv.slice(2);
     if (args[0] === '--prompt') {
@@ -173,10 +186,11 @@ if (import.meta.main) {
         for (const s of due) {
             let r: { ok: boolean; detail: string };
             try { r = await launch(s); } catch (e) { r = { ok: false, detail: String(e).slice(0, 200) }; }
-            history.push({ side: s.side, kind: s.kind, via: s.kind === 'codex' ? 'codex' : s.via ?? 'routine', at: Date.now(), ok: r.ok, detail: r.detail });
+            const attemptedAt = Date.now();
+            history.push({ side: s.side, kind: s.kind, via: s.kind === 'codex' ? 'codex' : s.via ?? 'routine', at: attemptedAt, ok: r.ok, detail: r.detail });
+            writeLaunchState(stateFile, history, attemptedAt);
             console.log(`CLOUD_LAUNCH ${s.side} ${r.ok ? 'admitted' : 'failed'}: ${r.detail}`);
         }
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(stateFile, JSON.stringify({ launches: history.filter(l => now - l.at < 7 * 24 * 60 * 60_000) }, null, 1) + '\n');
+        writeLaunchState(stateFile, history, now);
     } catch (e) { console.log(`CLOUD_LAUNCH fail ${String(e).replace(/\s+/g, ' ').slice(0, 240)}`); process.exit(1); }
 }

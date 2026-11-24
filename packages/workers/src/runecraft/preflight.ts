@@ -188,6 +188,9 @@ export function runecraftPreflight(
         if (!j || !j.members || j.batch < 1 || j.batch > 27 || j.target < 1 || j.target > 100000) {
             return preflightFail([{ kind: 'invalid_config', message: 'nature mode requires valid member NatureJob (batch 1..27)' }]);
         }
+        if (acct.maxLevels?.Runecraft !== undefined && rcLevel >= acct.maxLevels.Runecraft) {
+            blockers.push({ kind: 'max_level_cap', skill: 'Runecraft', maxLevel: acct.maxLevels.Runecraft, current: rcLevel });
+        }
         if (!cfg.members) blockers.push({ kind: 'invalid_config', message: 'members account required for Shilo Village Nature altar' });
         if (rcLevel < 44) blockers.push({ kind: 'skill_level', skill: 'Runecraft', required: 44, current: rcLevel });
         if (!questComplete(acct, RUNE_MYSTERIES_RE)) {
@@ -222,6 +225,9 @@ export function runecraftPreflight(
         if (!Number.isSafeInteger(cfg.targetLevel) || cfg.targetLevel < 2 || cfg.targetLevel > 99) {
             return preflightFail([{ kind: 'invalid_config', message: `Runecraft supply target must be 2..99 (got ${cfg.targetLevel})` }]);
         }
+        if (acct.maxLevels?.Runecraft !== undefined && rcLevel >= acct.maxLevels.Runecraft) {
+            blockers.push({ kind: 'max_level_cap', skill: 'Runecraft', maxLevel: acct.maxLevels.Runecraft, current: rcLevel });
+        }
         if (rcLevel >= cfg.targetLevel) {
             blockers.push({ kind: 'invalid_config', message: `Runecraft level ${rcLevel} already at target ${cfg.targetLevel}` });
         }
@@ -229,6 +235,9 @@ export function runecraftPreflight(
     }
 
     if (cfg.mode === 'air') {
+        if (acct.maxLevels?.Runecraft !== undefined && rcLevel >= acct.maxLevels.Runecraft) {
+            blockers.push({ kind: 'max_level_cap', skill: 'Runecraft', maxLevel: acct.maxLevels.Runecraft, current: rcLevel });
+        }
         if (acct.pos && !insideAirAltar({ worldX: acct.pos.x, worldZ: acct.pos.z, level: acct.pos.level })) {
             blockers.push({
                 kind: 'unreachable_tile',
@@ -238,9 +247,18 @@ export function runecraftPreflight(
                 message: 'air mode expects position inside the Air altar',
             });
         }
-        const packEss = accountOwnedItemCount(acct, ESSENCE, { includeBank: false });
+        const rawPackEss = accountOwnedItemCount(acct, ESSENCE, { includeBank: false });
+        const reservedEss = accountReserveFor(acct, world, ESSENCE);
+        const packEss = reserveAdjustedStock(rawPackEss, reservedEss);
         if (packEss < 1) {
-            blockers.push({ kind: 'missing_supply', itemId: ESSENCE, itemName: 'Rune essence', required: 1, available: 0, reserved: 0 });
+            blockers.push({
+                kind: 'missing_supply',
+                itemId: ESSENCE,
+                itemName: 'Rune essence',
+                required: 1,
+                available: rawPackEss,
+                reserved: reservedEss,
+            });
             missingItems.push({ itemId: ESSENCE, count: 1, itemName: 'Rune essence' });
         }
         return blockers.length ? preflightFail(blockers, { missingItems }) : preflightOk();
@@ -384,6 +402,12 @@ export function toRunecraftWorkerOutcome(
         };
     }
     if (outcome.kind === 'stopped') return { ...base, kind: 'session_unsettled', reason: outcome.detail };
-    if (outcome.kind === 'refused') return { ...base, kind: 'location_stranded', detail: outcome.detail };
+    if (outcome.kind === 'refused') {
+        const detail = outcome.detail ?? '';
+        if (/requires natureJob|multi-account runecraft mode|unknown|must be|already at target/i.test(detail)) {
+            return { ...base, kind: 'worker_defect', faultSignature: `runecraft:${cfg.mode}:invalid_config`, detail };
+        }
+        return { ...base, kind: 'location_stranded', detail };
+    }
     return { ...base, kind: 'worker_defect', faultSignature: `runecraft:${cfg.mode}:failed`, detail: outcome.detail };
 }

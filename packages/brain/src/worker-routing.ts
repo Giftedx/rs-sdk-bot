@@ -50,6 +50,11 @@ export function isSupportedWorkerFamily(value: unknown): value is WorkerFamily {
     return typeof value === 'string' && WORKER_FAMILY_SET.has(value);
 }
 
+// Match both raw metacharacters and single-escaped i.re.source strings used by selectItems().
+function escapeRegExp(literal: string): string {
+    return literal.replace(/[.*+?^${}()|[\]\\]/g, (ch) => `\\\\?\\${ch}`);
+}
+
 function sanitizeEnv(raw: Record<string, unknown>): Record<string, string> {
     const out: Record<string, string> = {};
     for (const [key, val] of Object.entries(raw)) {
@@ -430,7 +435,8 @@ function resolveAcquireOrGearSource(
         case 'npc_shop': {
             const floatAmount = Math.max(20_000, reserveNum + Math.max(0, Math.ceil(params.estimatedCoinCost ?? 0)) + 1_000);
             const profile = params.shopId ?? 'ardy';
-            const items = resolvedItemName ?? String(params.itemId);
+            const escapedItemName = resolvedItemName ? escapeRegExp(resolvedItemName) : undefined;
+            const items = escapedItemName ?? String(params.itemId);
             return {
                 account,
                 stepKind,
@@ -441,7 +447,7 @@ function resolveAcquireOrGearSource(
                 args: ['shop-buy', profile, '3000'],
                 env: {
                     ITEM_ID: String(params.itemId),
-                    ...(resolvedItemName ? { ITEMS: resolvedItemName } : {}),
+                    ...(escapedItemName ? { ITEMS: escapedItemName } : {}),
                     MAX_ITEMS: String(params.quantity),
                     COIN_RESERVE: reserve,
                     FLOAT: String(floatAmount),

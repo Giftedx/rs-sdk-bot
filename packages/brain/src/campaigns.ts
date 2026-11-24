@@ -320,7 +320,8 @@ function computeHiscoreMargin(
     const levelNeedsMargin = !requireMaxLevel99 || (typeof leader.level === 'number' && leader.level >= 99);
     const meetsMargin = marginTicks >= (levelNeedsMargin ? requiredMargin : 1);
     const parsedAt = typeof hit.snapshot.takenAt === 'string' ? Date.parse(hit.snapshot.takenAt) : NaN;
-    const checkedAt = Number.isFinite(parsedAt) && parsedAt > 0 ? parsedAt : now;
+    // Never synthesize freshness when takenAt is missing or unparseable; force stale failure until refreshed.
+    const checkedAt = Number.isFinite(parsedAt) && parsedAt > 0 ? parsedAt : 1;
 
     return {
         board: boardName,
@@ -398,12 +399,14 @@ function buildCampaignFsIndex(root: string): CampaignFsIndex {
         }
         return null;
     };
+    const STALE_AUTO_STOP_RE =
+        /^(?:fleet-health auto-paused:|swarm stopped\b|swarm plan removed or stopped\b|swarm recovery stopped\b|inherited recovery stopped\b|fleet controller lease unavailable\b|swarm:(?:\s|$))/i;
     const isOwnerStopped = (account: string): boolean => {
         const file = findStop(account) ?? findStop(account.toLowerCase());
         if (!file) return false;
         try {
             const text = readFileSync(file, 'utf8').trim();
-            return !/^(?:swarm stopped|fleet-health auto-paused:)/i.test(text);
+            return !STALE_AUTO_STOP_RE.test(text);
         } catch {
             return true;
         }

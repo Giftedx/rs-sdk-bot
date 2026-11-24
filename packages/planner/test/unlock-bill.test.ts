@@ -131,3 +131,25 @@ test('expired or future-dated all-item observations cannot stand in for current 
         } finally { rmSync(base, { recursive: true, force: true }); }
     }
 });
+
+test('toolRecords skips per-tier axe and pickaxe duplicates and holdings deduplicates stale bank counts', async () => {
+    const { holdings, toolRecords } = await import('../src/unlock-bill');
+    const skillTools = JSON.parse(readFileSync(join(import.meta.dir, '..', '..', '..', 'knowledge', 'skill-tools.json'), 'utf8'));
+    const tools = toolRecords(skillTools);
+    const wcTools = tools.filter(t => t.skill === 'woodcutting' && t.kind === 'woodcutting_trees');
+    const mnTools = tools.filter(t => t.skill === 'mining' && t.kind === 'mining_table');
+    expect(wcTools.length).toBe(skillTools.axes.length);
+    expect(mnTools.length).toBe(skillTools.pickaxes.length);
+    expect(wcTools.filter(t => t.items.includes('bronze_axe')).map(t => t.rank)).toEqual([7]);
+    expect(mnTools.filter(t => t.items.includes('bronze_pickaxe')).map(t => t.rank)).toEqual([6]);
+
+    const idToName = new Map([[1511, 'logs'], [556, 'air_rune']]);
+    const own = holdings([{
+        name: 'Helper',
+        inventory: [{ id: 1511, count: 10 }, { id: 556, count: 20 }],
+        equipment: [],
+        bank: [{ id: 1511, count: 28 }, { id: 556, count: 5 }],
+    }], idToName);
+    expect(own.get('Helper')?.get('logs')).toBe(28);
+    expect(own.get('Helper')?.get('air_rune')).toBe(20);
+});

@@ -237,9 +237,14 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
      if (findStopFile(account, root)) {
       status = 'already-held';
      } else {
-      enqueueCommand({ schemaVersion: 1, id, issuedAt: now, issuedBy: 'dashboard', kind: 'pause_account', account, reason: HOLD_PREFIX + id });
       mkdirSync(practiceRoot(root), { recursive: true });
       writeFileSync(file, HOLD_PREFIX + id, { flag: 'wx' });
+      try {
+       enqueueCommand({ schemaVersion: 1, id, issuedAt: now, issuedBy: 'dashboard', kind: 'pause_account', account, reason: HOLD_PREFIX + id });
+      } catch (err) {
+       try { unlinkSync(file); } catch { /* ignore rollback error */ }
+       throw err;
+      }
       status = 'stop-requested';
      }
     } else {
@@ -272,7 +277,10 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
      }
      role = input.role as Exclude<AccountRole, 'main'>;
     }
-    const mins = typeof input.durationMin === 'number' && Number.isFinite(input.durationMin) ? Math.max(1, Math.min(1440, input.durationMin)) : 30;
+    if (input.durationMin !== undefined && (typeof input.durationMin !== 'number' || !Number.isFinite(input.durationMin) || input.durationMin <= 0 || input.durationMin > 1440)) {
+     throw Error('override-account durationMin must be 1..1440');
+    }
+    const mins = input.durationMin ?? 30;
     enqueueCommand({
      schemaVersion: 1,
      id,
@@ -288,6 +296,12 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
     status = 'submitted';
    } else if (action === 'clear-defect') {
     if (typeof input.activityId !== 'string' || !input.activityId.trim()) throw Error('Activity ID is required');
+    if (input.defectId !== undefined && (typeof input.defectId !== 'string' || !input.defectId.trim())) {
+     throw Error('clear-defect defectId invalid');
+    }
+    if (input.faultSignature !== undefined && (typeof input.faultSignature !== 'string' || !input.faultSignature.trim())) {
+     throw Error('clear-defect faultSignature invalid');
+    }
     enqueueCommand({
      schemaVersion: 1,
      id,
@@ -295,8 +309,8 @@ export function createOperatorControl(options: { root: string; readOnly?: boolea
      issuedBy: 'dashboard',
      kind: 'clear_defect',
      activityId: input.activityId.trim(),
-     ...(typeof input.defectId === 'string' && input.defectId.trim() ? { defectId: input.defectId.trim() } : {}),
-     ...(typeof input.faultSignature === 'string' && input.faultSignature.trim() ? { faultSignature: input.faultSignature.trim() } : {}),
+     ...(typeof input.defectId === 'string' ? { defectId: input.defectId.trim() } : {}),
+     ...(typeof input.faultSignature === 'string' ? { faultSignature: input.faultSignature.trim() } : {}),
      ...(typeof input.reason === 'string' && input.reason.trim() ? { reason: input.reason.trim().slice(0, 200) } : {}),
     });
     status = 'submitted';

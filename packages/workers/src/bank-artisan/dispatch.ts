@@ -70,7 +70,7 @@ export async function runArtisan(
                 if (cfg.method === 'wine') {
                     const target = Number(cfg.args[0] ?? setting('TARGET_LEVEL', '35'));
                     const cap = Number(cfg.args[1] ?? setting('CAP', '300'));
-                    const r = await runWineSession(s, { target, cap });
+                    const r = await runWineSession(s, { target, cap, stop: halted });
                     return { ok: r.ok, summary: `targetMet=${r.targetMet} level=${r.level}`, ticks: r.ticks, produced: r.targetMet ? 1 : 0, failure: r.ok ? undefined : r.detail || 'wine session incomplete' };
                 }
                 if (cfg.method === 'mixed-wine') {
@@ -138,8 +138,8 @@ export async function runArtisan(
                     return { ok: r.ok, summary: `logsBurnt=${r.logsBurnt}`, ticks: r.ticks, produced: r.logsBurnt, failure: r.ok ? undefined : r.failure };
                 }
                 const o = firemakingOptions(cfg.env);
-                const r = await runFiremaking(s, o);
-                return { ok: r.ok, summary: `logsBurnt=${r.logsBurnt}`, ticks: r.ticks, produced: r.logsBurnt, failure: r.ok ? undefined : r.failure };
+                const r = await runFiremaking(s, { ...o, stop: halted });
+                return { ok: r.ok, summary: `logsBurnt=${r.logsBurnt}`, ticks: r.ticks, produced: r.logsBurnt, failure: r.ok ? undefined : r.failure || r.refused };
             }
             case 'fletching': {
                 const { nativeArrowProfile, runHeadless, runNativeArrows, runOakBows, runShafts, runSteel, runWoodProductDrop } = await import('./fletching');
@@ -229,7 +229,7 @@ export async function runArtisan(
                 }
                 if (cfg.method === 'anvil' || setting('ORDER_ACTION') === 'smith') {
                     const r = await runSmithBatch(s, {
-                        product: Number(setting('PRODUCT_ID')),
+                        product: Number(setting('PRODUCT_ID', cfg.args[1])),
                         maximum: Number(setting('MAX_MAKE', '1')),
                         reserve: Number(setting('BAR_RESERVE', '0')),
                         cap,
@@ -328,7 +328,7 @@ export async function runArtisan(
                         return { ok: r.ok, summary: r.summary, ticks: r.ticks, produced: r.produced, failure: r.failure };
                     }
                     case 'soften-clay': {
-                        const r = await runSoftenClay(s, { cap: Number(setting('CAP', '500')), maximum: Number(setting('MAX_MAKE', '20')), reserve: Number(setting('RAW_RESERVE', '0')) });
+                        const r = await runSoftenClay(s, { cap: Number(setting('CAP', '500')), maximum: Number(setting('MAX_MAKE', '20')), reserve: Number(setting('RAW_RESERVE', '0')), stop: halted });
                         return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
                     }
                     case 'progressive': {
@@ -365,7 +365,7 @@ export async function runArtisan(
                     return { ok: r.ok, summary: `kills=${r.kills}`, ticks: r.ticks, produced: r.acquired.length, failure: r.ok ? undefined : 'druid-meats incomplete' };
                 }
                 const opts = herbloreOptions([s.name, ...cfg.args], cfg.env);
-                const r = await brew(s, opts);
+                const r = await brew(s, { ...opts, stop: halted });
                 return { ok: r.ok, summary: `brewed=${r.brewed} level=${r.level}`, ticks: r.ticks, produced: r.brewed, failure: r.ok ? undefined : 'brew failed' };
             }
             case 'prayer': {
@@ -400,7 +400,8 @@ export async function runArtisan(
                     return { ok: r.ok, summary: `completed=${r.completed}`, ticks: r.ticks ?? s.tick() - startTick, produced: r.completed, failure: r.ok ? undefined : r.failure };
                 }
                 if (cfg.method === 'orbs' || cfg.method === 'orbs-at-site') {
-                    const kind = cfg.args[0] as OrbKind;
+                    const kind = (cfg.args[0] ?? setting('ORB_KIND', 'air')) as OrbKind;
+                    if (!Object.hasOwn(orbRecipes, kind)) throw Error(`unknown orb kind: ${String(kind)}`);
                     const max = Number(cfg.args[1] ?? 1);
                     const cap = Number(cfg.args[2] ?? 6000);
                     const trip = cfg.method === 'orbs' && setting('ORB_TRIP') === '1';

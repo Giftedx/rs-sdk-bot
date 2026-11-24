@@ -354,4 +354,41 @@ test('gatherPreflight catches F2P crystal-chest and gatherWorker forwards cfg.st
     );
     expect(isRunOutcome(mappedStop)).toBe(true);
     expect(mappedStop.kind).toBe('session_unsettled');
+}, 20_000);
+
+test('woodcutting:loop and woodcut-supply honor caller stop signals without chopping', async () => {
+    const { runWcLoop, runWoodSupply } = await import('../src/gather/woodcutting');
+    let chopCalls = 0;
+    const wcSession: any = {
+        name: 'StoppedWc',
+        tick: () => 5,
+        onTick: () => () => {},
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({ player: { worldX: 3200, worldZ: 3240, level: 0 }, inventory: [], nearbyLocs: [], nearbyNpcs: [] }),
+            getInventory: () => [],
+            getEquipment: () => [],
+            getSkill: (name: string) => ({ level: name === 'Hitpoints' ? 10 : 1, baseLevel: name === 'Hitpoints' ? 10 : 1 }),
+            getSkillXp: () => 0,
+        },
+        bot: {
+            chopTree: async () => {
+                chopCalls++;
+                return { success: false };
+            },
+        },
+    };
+
+    const wcDirect = await runWcLoop(wcSession, () => true, 100);
+    expect(wcDirect.ok).toBe(false);
+    expect(wcDirect.kind).toBe('aborted');
+    expect(chopCalls).toBe(0);
+
+    const wcWorkerOut = await gatherWorker.run(wcSession, { skill: 'woodcutting', method: 'loop', stop: () => true });
+    expect(isRunOutcome(wcWorkerOut)).toBe(true);
+    expect(wcWorkerOut.kind).toBe('session_unsettled');
+
+    const supplyOut = await runWoodSupply(wcSession, 1, 0, 100, undefined, () => true);
+    expect(supplyOut.ok).toBe(false);
+    expect(chopCalls).toBe(0);
 });

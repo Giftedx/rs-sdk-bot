@@ -608,7 +608,7 @@ export async function runCookStock(
 
 // ---- Wine fermentation (cook-wine.ts & microbot-wine.ts) ----
 
-type WineOrderOptions = { target: number; cap: number };
+type WineOrderOptions = { target: number; cap: number; stop?: () => boolean };
 type WineStageResult = { ok: boolean; targetMet: boolean; level: number; ticks: number; banked: number; detail: string };
 export type WineStage = (name: string, options: WineOrderOptions, phase: 'starter' | 'finish') => Promise<WineStageResult>;
 
@@ -663,22 +663,31 @@ export async function runWineSession(s: Session, options: WineOrderOptions): Pro
         throw Error('invalid wine order');
     }
     const start = s.tick();
+    let ended = false;
+    void s.ended?.then(() => {
+        ended = true;
+    });
+    const stopped = () => ended || productionStopRequested(s.name, options.stop);
     const level = () => s.sdk.getSkill('Cooking')?.baseLevel ?? 0;
     const xp = () => s.sdk.getSkillXp('Cooking') ?? 0;
     let banked = 0;
     let detail = '';
     let ok = false;
     try {
+        if (stopped()) throw Error('wine session stopped');
         if (level() < options.target) {
             const xp0 = xp();
-            if (!await waitUntil(s, () => level() >= options.target || xp() > xp0, { timeoutTicks: Math.min(options.cap, 25) })) {
+            if (!await waitUntil(s, () => stopped() || level() >= options.target || xp() > xp0, { timeoutTicks: Math.min(options.cap, 25) })) {
+                if (stopped()) throw Error('wine session stopped');
                 if (!(await s.bot.openBank()).success) throw Error('starter outcome bank refused');
-                if (!await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 10 })) throw Error('starter outcome unknown');
+                if (!await waitUntil(s, () => stopped() || !!s.bankObservation?.(), { timeoutTicks: 10 })) throw Error('starter outcome unknown');
+                if (stopped()) throw Error('wine session stopped');
                 const bank = s.bankObservation?.();
                 const bankRaw = bank?.items.filter(i => i.id === 1995).reduce((n, i) => n + i.count, 0) ?? NaN;
                 const heldRaw = s.sdk.getInventory().filter(i => i.id === 1995).reduce((n, i) => n + i.count, 0);
                 if (!starterConsumed(bank ? { bankRaw, heldRaw } : null)) throw Error('starter wine has not settled');
             }
+            if (stopped()) throw Error('wine session stopped');
             if (level() < options.target) {
                 const notes = s.sdk.getInventory().find(i => i.id === 1996);
                 if (notes && notes.count >= 1) {
@@ -688,13 +697,15 @@ export async function runWineSession(s: Session, options: WineOrderOptions): Pro
                     if (banked !== amount) throw Error('wine bulk credit mismatch');
                 }
             }
+            if (stopped()) throw Error('wine session stopped');
             if (level() < options.target) {
                 const remaining = Math.max(1, options.cap - (s.tick() - start));
-                if (!await waitUntil(s, () => level() >= options.target, { timeoutTicks: remaining })) {
+                if (!await waitUntil(s, () => stopped() || level() >= options.target, { timeoutTicks: remaining })) {
                     throw Error('wine order short of target; acquire more stock');
                 }
             }
         }
+        if (stopped() && level() < options.target) throw Error('wine session stopped');
         ok = level() >= options.target;
         detail = `phase=session level=${level()} target=${options.target} banked=${banked} ticks=${s.tick() - start}`;
     } catch (error) {

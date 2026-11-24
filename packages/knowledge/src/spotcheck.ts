@@ -17,11 +17,11 @@ export type Fact =
     | { kind: 'stock'; record: Stock }
     | { kind: 'transport'; record: Edge }
     | { kind: 'door'; record: Door }
-    | { kind: 'skill'; record: { level: number; xp: number | null; src: { level: string; xp?: string } } }
+    | { kind: 'skill'; record: { level: number; xp: number | null; src: { level: string; xp?: string; row?: string } } }
     | { kind: 'quest'; record: { varp: string; xp: { skill: string; xp: number; src: string }[]; src: string } }
     | { kind: 'drop'; record: { item?: string; table?: string; src: string } };
 
-type Door = { id: number; loc: string; x: number; z: number; level: number; kind: string; trigger: string; src: string };
+type Door = { id: number; loc: string; x: number; z: number; level: number; shape?: number; kind: string; trigger: string; src: string };
 
 const fileCache = new Map<string, { sig: string; lines: string[] }>();
 
@@ -101,6 +101,26 @@ function inPack(pack: string, id: number, name: string): boolean {
     return cached.entries.has(`${id}=${name}`);
 }
 
+function hasMovecoord(line: string, dx: number, toLevel: number, fromLevel: number, dz: number): boolean {
+    const m = line.match(/movecoord\([^,]+,\s*(-?\d+),\s*(-?\d+),\s*(-?\d+)\)/);
+    if (!m) return false;
+    const lx = Number(m[1]), dlv = Number(m[2]), lz = Number(m[3]);
+    return lx === dx && lz === dz && ((fromLevel + dlv) & 3) === toLevel;
+}
+
+function smithingBarAmount(rowSrc: string): number {
+    const i = rowSrc.lastIndexOf(':');
+    const lines = fileLines(rowSrc.slice(0, i));
+    const start = Number(rowSrc.slice(i + 1));
+    for (let n = start; n < lines.length; n++) {
+        const l = lines[n]!;
+        if (l.startsWith('[')) break;
+        const m = /^data=bar_amount,(\d+)$/.exec(l);
+        if (m) return Number(m[1]);
+    }
+    return 1;
+}
+
 const fmt = (c: { x: number; z: number; level: number }) => `${c.level}_${c.x >> 6}_${c.z >> 6}_${c.x & 63}_${c.z & 63}`;
 
 // Each check returns the src it read and whether every field of the record matches the source text.
@@ -153,12 +173,26 @@ function expected(f: Fact): { src: string; ok: () => boolean; label: string } {
         }
         case 'skill': {
             const r = f.record;
-            // dbrow lines are `data=<column>,<value>`; XP is stored in tenths.
+            // dbrow lines use `data=<column>,<value>`; obj/struct configs use `param=<key>,<value>`; XP is stored in tenths.
             return {
                 src: r.src.level,
                 label: `level ${r.level} xp ${r.xp}`,
-                ok: () => /^data=\w+,/.test(lineAt(r.src.level)) && lineAt(r.src.level).endsWith(`,${r.level}`)
-                    && (r.xp === null || (!!r.src.xp && lineAt(r.src.xp).endsWith(`,${Math.round(r.xp * 10)}`))),
+                ok: () => {
+                    const lvlLine = lineAt(r.src.level);
+                    const levelOk = (/^(?:data|param)=\w+,/.test(lvlLine) && lvlLine.endsWith(`,${r.level}`))
+                        || (r.level === 0 && r.src.level === r.src.row && /^\[[^\]]+\]$/.test(lvlLine) && !(blockAt(r.src.row).props.param ?? '').startsWith('brew_potion_level,'));
+                    if (!levelOk) return false;
+                    if (r.xp === null) return true;
+                    if (!r.src.xp) return false;
+                    const xpLine = lineAt(r.src.xp);
+                    const tenths = Math.round(r.xp * 10);
+                    if (/^(?:data|param)=\w+,/.test(xpLine) && xpLine.endsWith(`,${tenths}`)) return true;
+                    if (xpLine.startsWith('param=xpperbar,') && r.src.row) {
+                        const perBar = Number(xpLine.slice('param=xpperbar,'.length));
+                        return Number.isFinite(perBar) && perBar * smithingBarAmount(r.src.row) === tenths;
+                    }
+                    return false;
+                },
             };
         }
         case 'quest': {
@@ -184,7 +218,7 @@ function expected(f: Fact): { src: string; ok: () => boolean; label: string } {
                 ok: () => {
                     const shape = Number(lineAt(r.src).slice(head.length).trim().split(' ')[0]);
                     const trig = r.trigger ? lineAt(r.trigger) : '';
-                    return lineAt(r.src).startsWith(`${head} `) && shape >= 0 && shape <= 3
+                    return lineAt(r.src).startsWith(`${head} `) && ((shape >= 0 && shape <= 3) || shape === 9)
                         && (r.kind === 'unknown' || /^\[(oploc1|oplocu),/.test(trig));
                 },
             };
@@ -196,13 +230,20 @@ function expected(f: Fact): { src: string; ok: () => boolean; label: string } {
                 label: `${r.locName} ${fmt(r.from)} -> ${fmt(r.to)} exact=${r.exact}`,
                 ok: () => {
                     const toLine = lineAt(r.toSrc);
+                    const srcLine = lineAt(r.src);
+                    const mapSrc = r.src.startsWith('maps/');
+                    const originOk = mapSrc
+                        ? srcLine.startsWith(`${r.from.level} ${r.from.x % 64} ${r.from.z % 64}:`)
+                        : srcLine.includes(`case ${fmt(r.from)}`) || (!!r.entry && r.src === r.toSrc);
+                    if (!originOk) return false;
                     if (!r.exact) {
-                        const d = `${r.to.x - r.from.x}, ${r.to.level - r.from.level}, ${r.to.z - r.from.z}`;
-                        const head = `${r.from.level} ${r.from.x % 64} ${r.from.z % 64}:`;
-                        return toLine.includes(`movecoord(`) && toLine.replace(/\s+/g, ' ').includes(d.replace(/\s+/g, ' ')) && lineAt(r.src).startsWith(head);
+                        if (r.landing && toLine.includes(fmt(r.to)) && toLine.includes('movecoord(')) return true;
+                        if (toLine.includes(`case ${fmt(r.from)}`) && /@\w+/.test(toLine)) return true;
+                        return hasMovecoord(toLine, r.to.x - r.from.x, r.to.level, r.from.level, r.to.z - r.from.z);
                     }
-                    if (r.src === r.toSrc) return toLine.includes(`case ${fmt(r.from)}`) && toLine.includes(fmt(r.to));
-                    return toLine.includes(fmt(r.to)) && lineAt(r.src).startsWith(`${r.from.level} ${r.from.x % 64} ${r.from.z % 64}:`);
+                    if (toLine.includes(fmt(r.to))) return true;
+                    if (r.entry && hasMovecoord(toLine, r.to.x - r.entry.x, r.to.level, r.entry.level, r.to.z - r.entry.z)) return true;
+                    return hasMovecoord(toLine, r.to.x - r.from.x, r.to.level, r.from.level, r.to.z - r.from.z);
                 },
             };
         }

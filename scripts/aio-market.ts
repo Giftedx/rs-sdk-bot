@@ -8,6 +8,7 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import type { Step } from '../packages/core/src/chain-step';
 import type { Session } from '../packages/core/src/inprocess';
+import { isStopFilePresent } from '../packages/workers/src/stop';
 import { resolveRouteStep } from './aio-route-step';
 import type { RescueControl } from '../packages/workers/src/market/ge-common';
 import type {
@@ -264,10 +265,11 @@ export async function runAioMarket(account: string, args: readonly string[], env
                         onSessionEnd: async () => { stopped = true; },
                     });
                     const itemIdFilter = merged.ITEM_ID ? Number(merged.ITEM_ID) : NaN;
+                    const resolvedName = Number.isSafeInteger(itemIdFilter)
+                        ? loadGeItemCatalogue().find(r => r.id === itemIdFilter)?.name
+                        : undefined;
                     const resolvedItems = merged.ITEMS
-                        ?? (Number.isSafeInteger(itemIdFilter)
-                            ? loadGeItemCatalogue().find(r => r.id === itemIdFilter)?.name
-                            : undefined);
+                        ?? (resolvedName ? `^${resolvedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$` : undefined);
                     const res = await runShopBuy(s, {
                         mode: 'shop-buy',
                         profile: pos[0] || merged.PROFILE || 'catherby',
@@ -473,7 +475,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                     }
                     const rescue: RescueControl = { active: false, start: 0, lifeId: 0, respawnCount: 0 };
                     s = await openOrderSession(account, request, rescue, () => { stopped = true; });
-                    const stop = () => stopped || existsSync(resolve('.practice', `stop-${account}`));
+                    const stop = () => stopped || isStopFilePresent(account);
                     const result = await runOwnedItem(s, request, journalPath, stop, merged.CANCEL === '1', fillWaitTicks, rescue);
                     console.log('OWNED_GE_ITEM ' + JSON.stringify(result));
                     return await settleResult([s], result.ok, JSON.stringify(result));
@@ -508,12 +510,17 @@ export async function runAioMarket(account: string, args: readonly string[], env
                         if (merged[key] !== undefined && Number(merged[key]) !== r[field]) throw Error('sale CLI budget mismatch');
                     }
                     validateSale(r);
-                    s = await openBot(account);
+                    let stopped = false;
+                    s = await openBot(account, {
+                        onStop: async () => { stopped = true; },
+                        onSessionEnd: async () => { stopped = true; },
+                    });
                     const waitTicks = Number(merged.FILL_WAIT_TICKS ?? 40);
                     const cancel = merged.CANCEL === '1';
+                    const stop = () => stopped || saleStopRequested(account);
                     const result = merged.FROM_BANK === '1'
-                        ? await runBankBidSale(s, r, paths.journal, () => saleStopRequested(account), waitTicks, cancel, { bankCoins: merged.BANK_COINS !== '0' })
-                        : await runOwnedSale(s, r, paths.journal, () => saleStopRequested(account), waitTicks, cancel);
+                        ? await runBankBidSale(s, r, paths.journal, stop, waitTicks, cancel, { bankCoins: merged.BANK_COINS !== '0' })
+                        : await runOwnedSale(s, r, paths.journal, stop, waitTicks, cancel);
                     console.log('OWNED_GE_SALE ' + JSON.stringify(result));
                     return await settleResult([s], result.ok, JSON.stringify(result));
                 } catch (e) {
@@ -591,7 +598,10 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 process.once('SIGINT', onSig);
                 process.once('SIGTERM', onSig);
                 try {
-                    s = await openBot(account);
+                    s = await openBot(account, {
+                        onStop: async () => { stopped = true; },
+                        onSessionEnd: async () => { stopped = true; },
+                    });
                     const result = await runGETrip(s, r, () => geTripStop(account, stopped));
                     console.log('GE_TRIP ' + JSON.stringify(result));
                     return await settleResult([s], result.ok, JSON.stringify(result));
@@ -621,8 +631,11 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 process.once('SIGINT', onSig);
                 process.once('SIGTERM', onSig);
                 try {
-                    s = await openBot(account);
-                    const code = await runGEPlanSession(s, request, () => stopped, {}, pos.includes('--finish'), settle);
+                    s = await openBot(account, {
+                        onStop: async () => { stopped = true; },
+                        onSessionEnd: async () => { stopped = true; },
+                    });
+                    const code = await runGEPlanSession(s, request, () => stopped || isStopFilePresent(account), {}, pos.includes('--finish'), settle);
                     return code === 0 ? 'RESULT ok finite explicit GE price plan' : 'RESULT fail finite explicit GE price plan';
                 } catch (e) {
                     return await settleResult(s ? [s] : [], false, String(e));
@@ -651,8 +664,11 @@ export async function runAioMarket(account: string, args: readonly string[], env
                 process.once('SIGINT', onSig);
                 process.once('SIGTERM', onSig);
                 try {
-                    s = await openBot(account);
-                    const result = await runBankSeller(s, r, () => stopped);
+                    s = await openBot(account, {
+                        onStop: async () => { stopped = true; },
+                        onSessionEnd: async () => { stopped = true; },
+                    });
+                    const result = await runBankSeller(s, r, () => stopped || isStopFilePresent(account));
                     console.log('BANK_SELLER ' + JSON.stringify(result));
                     return await settleResult([s], result.ok, JSON.stringify(result));
                 } catch (error) {
@@ -695,7 +711,11 @@ export async function runAioMarket(account: string, args: readonly string[], env
                     return 'RESULT fail shop-to-bid refused before login: no item clears MIN_NET';
                 }
                 const server = await serverForActor(account);
-                const s = await openBot(account);
+                let stopped = false;
+                const s = await openBot(account, {
+                    onStop: async () => { stopped = true; },
+                    onSessionEnd: async () => { stopped = true; },
+                });
                 try {
                     const r = await runShopToBid(s, server, {
                         mode: 'shop-to-bid',
@@ -708,7 +728,7 @@ export async function runAioMarket(account: string, args: readonly string[], env
                         waitTicks,
                         minLot,
                         lots,
-                    }, () => saleStopRequested(account), quotes);
+                    }, () => stopped || saleStopRequested(account), quotes);
                     return await settleResult([s], r.ok, r.summary);
                 } catch (e) {
                     return await settleResult([s], false, String(e));

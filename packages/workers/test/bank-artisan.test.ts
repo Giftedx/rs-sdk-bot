@@ -492,3 +492,68 @@ test('artisanPreflight validates Prayer BONE_ID/reserve/target, malformed numeri
     expect(isRunOutcome(mappedStop)).toBe(true);
     expect(mappedStop.kind).toBe('session_unsettled');
 });
+
+test('bank-artisan helpers honor caller stop signals and dispatch validates smithing/orbs args', async () => {
+    const { runWineSession } = await import('../src/bank-artisan/cooking');
+    const { runFiremaking, firemakingOptions } = await import('../src/bank-artisan/firemaking');
+    const { runSoftenClay } = await import('../src/bank-artisan/crafting-production');
+    const { brew, herbloreOptions } = await import('../src/bank-artisan/herblore');
+
+    let currentTick = 5;
+    let openedBank = 0;
+    const stopSession: any = {
+        name: 'ArtisanStopUnit',
+        tick: () => ++currentTick,
+        onTick: () => () => {},
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3185, worldZ: 3436, level: 0, lifeId: 1, respawnCount: 0 },
+                bank: { isOpen: false },
+                inventory: [],
+                equipment: [],
+            }),
+            getSkill: (name: string) => ({ baseLevel: name === 'Hitpoints' ? 10 : 50, level: name === 'Hitpoints' ? 10 : 50 }),
+            getSkillXp: () => 101_333,
+            getInventory: () => [],
+            getBankItems: () => [],
+        },
+        bot: {
+            openBank: async () => {
+                openedBank++;
+                return { success: false };
+            },
+        },
+        client: {},
+    };
+
+    await expect(runWineSession(stopSession, { target: 60, cap: 50, stop: () => true })).resolves.toMatchObject({
+        ok: false,
+        detail: 'Error: wine session stopped',
+    });
+
+    let fmStopChecks = 0;
+    const fmOpts = {
+        ...firemakingOptions({ LOG: 'normal', TARGET_LEVEL: '60', MAX_LOGS: '10', CAP: '1000' }),
+        stop: () => fmStopChecks++ >= 1,
+    };
+    await expect(runFiremaking(stopSession, fmOpts)).resolves.toMatchObject({
+        ok: false,
+        failure: 'Error: session interrupted',
+    });
+    expect(fmStopChecks).toBeGreaterThanOrEqual(2);
+    expect(openedBank).toBe(0);
+
+    const clayRes = await runSoftenClay(stopSession, { cap: 50, maximum: 10, reserve: 0, stop: () => true });
+    expect(clayRes.stop).toBe('cap');
+    expect(openedBank).toBe(0);
+
+    await expect(brew(stopSession, { ...herbloreOptions(['ArtisanStopUnit', '100', 'auto'], { TARGET_LEVEL: '60' }), stop: () => true })).rejects.toThrow('herblore stopped');
+
+    const orbsBad = await runArtisan(stopSession, { skill: 'magic', method: 'orbs', args: ['invalid_orb'] });
+    expect(orbsBad.ok).toBe(false);
+    expect(orbsBad.failure).toContain('unknown orb kind: invalid_orb');
+
+    const orbsDefault = await runArtisan(stopSession, { skill: 'magic', method: 'orbs', stop: () => true });
+    expect(orbsDefault.ok).toBe(false);
+}, 20_000);

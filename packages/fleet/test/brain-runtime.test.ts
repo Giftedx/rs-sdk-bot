@@ -14,6 +14,7 @@ import {
 import { createActivityCatalog, defaultActivityCatalog, type ActivityCatalog } from '../../brain/src/catalog';
 import { createRateStore } from '../../brain/src/rate-store';
 import { OutcomeClassifier } from '../../brain/src/outcome-classifier';
+import { PVP_DEATH_SCHEMA } from '../../core/src/pvp-deaths';
 import { validOrder } from '../../core/src/fleet-trade-settlement';
 import { MARKET_CACHE_MS, writeMarketCache } from '../../core/src/market-cache';
 import { fleetStateFile, liveRoot, liveStatusDir, operatorCommandsDir, practiceRoot } from '../../core/src/practice-paths';
@@ -1136,5 +1137,244 @@ describe('packages/fleet/src/brain-runtime', () => {
         const out = recordWorkerOutcome({ root, catalog: defaultActivityCatalog(), rateStore, classifier, raw: chainRaw, now });
         expect(out.outcome.kind).toBe('target_met');
         expect(out.recordedRateSample).toBeUndefined();
+    });
+
+    test('applyActivityOverridesToPlan enforces protectedAllowed, max_level_cap, and prunes stale TransferOrders; resume_account clears pvp-deaths.json', () => {
+        const root = makeTempRoot();
+        const now = 1_700_003_000_000;
+        const catalog = createActivityCatalog();
+        const wcAct = catalog.require('gather:woodcutting-loop');
+
+        const world: WorldSnapshot = {
+            schemaVersion: 1,
+            at: now,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: {
+                hiltsdeep: {
+                    name: 'hiltsdeep',
+                    side: 'local',
+                    role: 'specialist',
+                    lifecycle: 'idle',
+                    protectedClock: true,
+                    pos: { x: 3185, z: 3436, level: 0 },
+                    skills: { Woodcutting: { level: 1, xp: 0 } },
+                    quests: {},
+                    inventory: {},
+                    equipment: {},
+                    bank: { items: { 995: 10_000 }, observedAt: now, trusted: true },
+                },
+                CappedBot: {
+                    name: 'CappedBot',
+                    side: 'local',
+                    role: 'helper',
+                    lifecycle: 'idle',
+                    protectedClock: false,
+                    maxLevels: { Woodcutting: 40 },
+                    pos: { x: 3185, z: 3436, level: 0 },
+                    skills: { Woodcutting: { level: 55, xp: 170_000 } },
+                    quests: {},
+                    inventory: {},
+                    equipment: {},
+                    bank: { items: { 995: 10_000 }, observedAt: now, trusted: true },
+                },
+                AlphaBot: {
+                    name: 'AlphaBot',
+                    side: 'local',
+                    role: 'helper',
+                    lifecycle: 'idle',
+                    protectedClock: false,
+                    pos: { x: 3185, z: 3436, level: 0 },
+                    skills: { Woodcutting: { level: 10, xp: 1200 }, Mining: { level: 10, xp: 1200 } },
+                    quests: {},
+                    inventory: {},
+                    equipment: {},
+                    bank: { items: { 995: 10_000 }, observedAt: now, trusted: true },
+                },
+                DonorBot: {
+                    name: 'DonorBot',
+                    side: 'local',
+                    role: 'helper',
+                    lifecycle: 'idle',
+                    protectedClock: false,
+                    pos: { x: 3185, z: 3436, level: 0 },
+                    skills: {},
+                    quests: {},
+                    inventory: {},
+                    equipment: {},
+                    bank: { items: { 995: 100_000 }, observedAt: now, trusted: true },
+                },
+            },
+        };
+
+        const staleOrder: TransferOrder = {
+            id: 'xfer-alpha-1',
+            server: 'rs-sdk-demo.fly.dev',
+            from: 'DonorBot',
+            to: 'AlphaBot',
+            hub: 'varrock_west',
+            items: [{ itemId: 1351, itemName: 'Bronze axe', count: 1 }],
+            demandId: 'd:wc',
+            reason: 'tool acquire',
+            createdAt: now,
+            expiresAt: now + 60_000,
+            state: 'planned',
+            bothIdleVerified: true,
+            donorLogoutConfirmedAt: now - 1000,
+            recipientLogoutConfirmedAt: now - 1000,
+            antiPingPong: { donorHoldsDemandForItems: false, cooldownWindowMs: 600_000 },
+        };
+        const basePlan: FleetPlan = {
+            schemaVersion: 1,
+            plannedAt: now,
+            side: 'local',
+            maxBots: 4,
+            retentionMarginRatio: 0.15,
+            selectedSlots: 2,
+            accountPlans: {
+                AlphaBot: {
+                    account: 'AlphaBot',
+                    demandId: 'd:wc',
+                    steps: [
+                        {
+                            stepKind: 'acquire',
+                            source: 'hub_banker',
+                            itemId: 1351,
+                            quantity: 1,
+                            estimatedTicks: 40,
+                            estimatedCoinCost: 0,
+                            coinFloatPreserved: 1000,
+                            donorAccount: 'DonorBot',
+                            hub: 'varrock_west',
+                            transferOrderId: 'xfer-alpha-1',
+                        },
+                        {
+                            stepKind: 'work',
+                            activityId: 'gather:woodcutting-loop',
+                            demandId: 'd:wc',
+                            workerId: 'gather',
+                            batchUnits: 1,
+                            estimatedTicks: 100,
+                            expectedValuePerHour: 100,
+                            config: wcAct.config,
+                        },
+                    ],
+                    scorePerHour: 100,
+                    retentionMarginApplied: false,
+                },
+            },
+            transferOrders: [staleOrder],
+            recoveryQueue: [],
+            spotAllocations: {},
+        };
+
+        // hiltsdeep is marked launch-ready via matching ready campaign, yet protectedAllowed: false still blocks gather:woodcutting-loop.
+        const readyCampaign = {
+            id: 'campaign:hiltsdeep',
+            kind: 'specialist' as const,
+            account: 'hiltsdeep',
+            protectedClock: true,
+            board: 'Attack',
+            targetLevel: 99,
+            ourEstimatedTicks: 2200,
+            rivalTicks: 2600,
+            stagingHolder: null,
+            requiredSupplies: [],
+            stagingHolders: [],
+            rehearsalProof: { verified: true, died: false, loggedOut: true, checkedAt: now - 1000 },
+            hiscoreMargin: { board: 'Attack', rivalTicks: 2600, ourTicks: 2200, marginTicks: 400, marginRatio: 400 / 2600, checkedAt: now - 1000, meetsMargin: true },
+            state: 'ready' as const,
+        };
+
+        const overridden = applyActivityOverridesToPlan(basePlan, {
+            world,
+            catalog,
+            demands: [],
+            campaigns: [readyCampaign],
+            defects: [],
+            rateStore: createRateStore({ catalog, persist: false }),
+            minTrust: 'experimental',
+            allowExperimentalFallback: true,
+            marketQuotes: {},
+            overrides: {
+                hiltsdeep: { account: 'hiltsdeep', activityId: 'gather:woodcutting-loop', issuedAt: now, expiresAt: now + 60_000 },
+                cappedbot: { account: 'CappedBot', activityId: 'gather:woodcutting-loop', issuedAt: now, expiresAt: now + 60_000 },
+                alphabot: { account: 'AlphaBot', activityId: 'gather:mining-ore', issuedAt: now, expiresAt: now + 60_000 },
+            },
+        });
+        expect(overridden.accountPlans.hiltsdeep).toBeUndefined();
+        expect(overridden.accountPlans.CappedBot).toBeUndefined();
+        expect(overridden.accountPlans.AlphaBot?.steps[0]).toMatchObject({ activityId: 'gather:mining-ore' });
+        expect(overridden.transferOrders).toEqual([]);
+        expect(overridden.selectedSlots).toBe(1);
+
+        // Single donor holding multiple remaining TransferOrders must be counted once in selectedSlots.
+        const multiOrderPlan: FleetPlan = {
+            ...basePlan,
+            maxBots: 5,
+            selectedSlots: 3,
+            accountPlans: {
+                ...basePlan.accountPlans,
+                CappedBot: {
+                    account: 'CappedBot',
+                    demandId: 'd:wc',
+                    steps: basePlan.accountPlans.AlphaBot!.steps,
+                    scorePerHour: 100,
+                    retentionMarginApplied: false,
+                },
+            },
+            transferOrders: [
+                { ...staleOrder, id: 'xfer-cap-1', to: 'CappedBot' },
+                { ...staleOrder, id: 'xfer-cap-2', to: 'CappedBot', items: [{ itemId: 995, count: 500 }] },
+            ],
+        };
+        const multiDonorOverridden = applyActivityOverridesToPlan(multiOrderPlan, {
+            world,
+            catalog,
+            demands: [],
+            campaigns: [readyCampaign],
+            defects: [],
+            rateStore: createRateStore({ catalog, persist: false }),
+            minTrust: 'experimental',
+            allowExperimentalFallback: true,
+            marketQuotes: {},
+            overrides: {
+                alphabot: { account: 'AlphaBot', activityId: 'gather:mining-ore', issuedAt: now, expiresAt: now + 60_000 },
+            },
+        });
+        expect(multiDonorOverridden.transferOrders).toHaveLength(2);
+        expect(multiDonorOverridden.selectedSlots).toBe(3); // DonorBot (1) + AlphaBot + CappedBot = 3, not 4.
+
+        // resume_account enforces pvp-deaths.json and clears both death ledgers when clearDead: true.
+        mkdirSync(liveRoot(root), { recursive: true });
+        writeFileSync(
+            join(liveRoot(root), 'pvp-deaths.json'),
+            JSON.stringify([{ schema: PVP_DEATH_SCHEMA, account: 'AlphaBot', server: 'rs-sdk-demo.fly.dev', at: now, script: 'pk', near: null }]),
+        );
+        writeFileSync(
+            join(liveRoot(root), 'swarm-deaths.json'),
+            JSON.stringify({ AlphaBot: { at: now, reason: 'died after 1 runs' } }),
+        );
+        const cmdDir = operatorCommandsDir(root);
+        mkdirSync(cmdDir, { recursive: true });
+        writeFileSync(
+            join(cmdDir, '001-resume-blocked.json'),
+            JSON.stringify({ schemaVersion: 1, id: 'cmd-pvp-blocked', issuedAt: now + 10, issuedBy: 'operator', kind: 'resume_account', account: 'AlphaBot' }),
+        );
+        const blockedRes = runBrainCycle({ root, fleetDir: join(root, 'fleet'), now: now + 20, side: 'local', persist: true, marketQuotes: {} });
+        expect(blockedRes.appliedCommands.find((c) => c.id === 'cmd-pvp-blocked')?.applied).toBe(false);
+        const blockedAlpha = blockedRes.world.accounts.AlphaBot ?? blockedRes.world.accounts.alphabot;
+        expect(blockedAlpha?.lifecycle).toBe('dead');
+
+        writeFileSync(
+            join(cmdDir, '002-resume-clear.json'),
+            JSON.stringify({ schemaVersion: 1, id: 'cmd-pvp-clear', issuedAt: now + 30, issuedBy: 'operator', kind: 'resume_account', account: 'AlphaBot', clearDead: true }),
+        );
+        const clearedRes = runBrainCycle({ root, fleetDir: join(root, 'fleet'), now: now + 40, side: 'local', persist: true, marketQuotes: {} });
+        expect(clearedRes.appliedCommands.find((c) => c.id === 'cmd-pvp-clear')?.applied).toBe(true);
+        const clearedAlpha = clearedRes.world.accounts.AlphaBot ?? clearedRes.world.accounts.alphabot;
+        expect(clearedAlpha?.lifecycle).not.toBe('dead');
+        expect(JSON.parse(readFileSync(join(liveRoot(root), 'pvp-deaths.json'), 'utf8'))).toEqual([]);
+        expect(JSON.parse(readFileSync(join(liveRoot(root), 'swarm-deaths.json'), 'utf8'))).toEqual({});
     });
 });

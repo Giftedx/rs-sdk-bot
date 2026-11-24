@@ -42,6 +42,7 @@ import type {
     ShopToBidConfig,
 } from './types';
 import { productionStopRequested, walkTargetPersist } from './walk';
+import { isStopFilePresent } from '../stop';
 
 export { percentagePrice, validateBankSeller, validateBuyList, validateGEPlan, validateGETrip };
 
@@ -88,7 +89,7 @@ export function buyListPaths(r: BuyListRequest) {
 }
 
 export function buyListStop(actor: string, stopped = false, exists: (p: string) => boolean = existsSync) {
-    return stopped || [`.practice/stop-${actor}`, '.practice/stop-all', '.practice/stop-microbot-ge-buy-list'].some(exists);
+    return stopped || isStopFilePresent(actor, ['.practice/stop-microbot-ge-buy-list'], exists);
 }
 
 export type BuyListDeps = {
@@ -578,7 +579,7 @@ export async function runGETrip(s: Session, r: GETripRequest, requestStop: () =>
 }
 
 export function geTripStop(actor: string, stopped = false, exists: (p: string) => boolean = existsSync) {
-    return stopped || [`.practice/stop-${actor}`, '.practice/stop-all', '.practice/stop-microbot-ge-trip'].some(exists);
+    return stopped || isStopFilePresent(actor, ['.practice/stop-microbot-ge-trip'], exists);
 }
 
 // --- GE Price Plan (from scripts/microbot-ge-plan.ts) ---

@@ -50,14 +50,20 @@ function methodSummary(r: Rung): MethodSummary {
 }
 
 // Holdings by item debugname for one account (pack, worn and last seen bank) and for every other owned account.
+// Pack and equipment come from one status; the last bank snapshot may contain units before withdrawal, so take max.
 export function holdings(statuses: readonly any[], idToName: Map<number, string>) {
     const per = new Map<string, Map<string, number>>();
-    for (const s of statuses) {
-        const m = new Map<string, number>();
-        for (const r of [...(s.inventory ?? []), ...(s.equipment ?? []), ...(s.bank ?? [])]) {
+    const sum = (rows: readonly any[]) => {
+        const counts = new Map<string, number>();
+        for (const r of rows) {
             const n = idToName.get(r.baseId ?? r.id);
-            if (n) m.set(n, (m.get(n) ?? 0) + (r.count ?? 0));
+            if (n) counts.set(n, (counts.get(n) ?? 0) + (r.count ?? 0));
         }
+        return counts;
+    };
+    for (const s of statuses) {
+        const m = sum([...(s.inventory ?? []), ...(s.equipment ?? [])]);
+        for (const [n, count] of sum(s.bank ?? [])) m.set(n, Math.max(m.get(n) ?? 0, count));
         per.set(s.name, m);
     }
     return per;
@@ -188,7 +194,7 @@ export function toolRecords(file: any): Tool[] {
     for (const a of file?.axes ?? []) out.push({ skill: 'woodcutting', kind: 'woodcutting_trees', items: [a.item], level: a.woodcuttingLevel ?? 1, rank: a.rank });
     for (const p of file?.pickaxes ?? []) out.push({ skill: 'mining', kind: 'mining_table', items: [p.item], level: p.miningLevel ?? 1, rank: p.rank });
     for (const r of file?.records ?? []) {
-        if (r.id === 'woodcutting/axe' || r.id === 'mining/pickaxe') continue;
+        if (r.id === 'woodcutting/axe' || r.id.startsWith('woodcutting/axe/') || r.id === 'mining/pickaxe' || r.id.startsWith('mining/pickaxe/')) continue;
         for (const g of r.items ?? []) {
             if (g.role === 'bonus' || !Array.isArray(g.anyOf) || !g.anyOf.length) continue;
             for (const kind of r.appliesTo?.kinds?.length ? r.appliesTo.kinds : [undefined])

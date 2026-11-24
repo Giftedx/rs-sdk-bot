@@ -714,9 +714,21 @@ export const SWORD_PROFILES: Record<number, { cost: number; stock: number; limit
     1301: { cost: 3200, stock: 1, limit: 4000 },
 };
 
+const stripRegexAnchorsAndEscapes = (raw: string) => raw.replace(/^\^|\$$/g, '').replace(/\\(.)/g, '$1');
+
 export function selectItems<T extends { re: RegExp }>(items: T[], filter: string | undefined): T[] {
-    const re = filter ? new RegExp(filter, 'i') : null;
-    return re ? items.filter(i => re.test(i.re.source)) : items;
+    if (!filter) return items;
+    const re = new RegExp(filter, 'i');
+    const filterLower = filter.toLowerCase();
+    const filterPlain = stripRegexAnchorsAndEscapes(filter);
+    return items.filter(i => {
+        const src = i.re.source;
+        return src.toLowerCase() === filterLower
+            || i.re.test(filter)
+            || i.re.test(filterPlain)
+            || re.test(src)
+            || re.test(stripRegexAnchorsAndEscapes(src));
+    });
 }
 
 export function profileRefusal(key: string, conf: { need?: { skill: string; level: number } }, level: number | undefined): string | null {

@@ -4,13 +4,16 @@ import type { Session } from '../../../core/src/inprocess';
 import { waitUntil } from '../../../core/src/ticks';
 import { insideAirAltar, outsideAirAltar } from './altars';
 
-export async function enterAirAltar(s: Session): Promise<void> {
+export async function enterAirAltar(s: Session, stop: () => boolean = () => false): Promise<void> {
+    if (stop()) throw Error('air entry stopped');
     if (insideAirAltar(s.sdk.getState()?.player)) return;
     const ruins = s.sdk.getState()?.nearbyLocs.find(l => /mysterious ruins/i.test(l.name) && Math.max(Math.abs(l.x - 2985), Math.abs(l.z - 3292)) <= 3);
     const talisman = s.sdk.getInventory().find(i => i.id === 1438);
     if (!ruins || !talisman) throw Error('air entry requires earned air talisman1438 at ruins2985,3292');
     await s.bot.useItemOnLoc(talisman, ruins);
-    if (!await waitUntil(s, () => insideAirAltar(s.sdk.getState()?.player), { timeoutTicks: 20 })) throw Error('air altar entry unobserved');
+    if (!await waitUntil(s, () => stop() || insideAirAltar(s.sdk.getState()?.player), { timeoutTicks: 20 }) || stop()) {
+        throw Error(stop() ? 'air entry stopped' : 'air altar entry unobserved');
+    }
 }
 
 // Pinned content/pack/loc.pack and maps/m44_75.jm2: 2465 at 0_44_75_25_28; runecraft.dbrow air exit_coord 0_46_51_39_24.

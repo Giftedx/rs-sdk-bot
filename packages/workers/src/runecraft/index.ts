@@ -9,7 +9,7 @@ import {
     type WorkerModule,
     type WorkerWorldView,
 } from '../contracts';
-import { watchWorkerStop } from '../stop';
+import { isStopFilePresent, watchWorkerStop } from '../stop';
 import { craftAirRunes, exitAirAltar } from './air';
 import { carrierAltar, insideAirAltar } from './altars';
 import { runeBankOptions, runeBankTarget, runRuneBankCraft } from './bank-craft';
@@ -218,7 +218,7 @@ export async function runRunecraftCli(
         let stopped = false;
         const s = await open(account, { onStop: async () => { stopped = true; } });
         try {
-            const r = await runRuneBankCraft(s, target, { ...options, stop: () => stopped });
+            const r = await runRuneBankCraft(s, target, { ...options, stop: () => stopped || isStopFilePresent(account) });
             console.log('RUNE_BANK_CRAFT_RESULT ' + JSON.stringify(r));
             await fin([s], r.ok, `runecraft=${r.level} trips=${r.trips} consumed=${r.consumed} crafted=${r.crafted}${'failure' in r ? ' ' + r.failure : ''}`);
             return r.ok ? 0 : 1;
@@ -239,7 +239,7 @@ export async function runRunecraftCli(
             const result = await runNatureTrips(
                 s,
                 job,
-                () => stopped || existsSync('.practice/stop-all') || existsSync('.practice/stop-' + account) || existsSync('.practice/stop-microbot-rune-trip'),
+                () => stopped || isStopFilePresent(account, ['.practice/stop-microbot-rune-trip']),
                 deps.runBankProfile,
             );
             console.log('NATURE_TRIP ' + JSON.stringify(result));
@@ -284,7 +284,7 @@ export async function runRunecraftCli(
                 await fin([s], true, JSON.stringify(r));
                 return 0;
             }
-            const r = await runRuneSupply(s, target, { cap: Number(env.CAP ?? 30000), stop: () => stopped, deps });
+            const r = await runRuneSupply(s, target, { cap: Number(env.CAP ?? 30000), stop: () => stopped || isStopFilePresent(account), deps });
             console.log('RUNE_SUPPLY_RESULT ' + JSON.stringify(r));
             await fin([s], r.ok, JSON.stringify(r));
             return r.ok ? 0 : 1;
@@ -296,9 +296,10 @@ export async function runRunecraftCli(
 
     if (method === 'air') {
         if (!account) throw Error('account argument required');
-        const s = await open(account);
+        let stopped = false;
+        const s = await open(account, { onStop: async () => { stopped = true; } });
         try {
-            const r = await craftAirRunes(s);
+            const r = await craftAirRunes(s, () => stopped || isStopFilePresent(account));
             console.log(`RATE runecraft ${r.xp} ${r.ticks}`);
             await fin([s], r.ok, `airRunes=${countItems(s, /^air rune$/i)} essence=${countItems(s, /^rune essence$/i)} runecraftXp=${r.xp} ticks=${r.ticks}`);
             return r.ok ? 0 : 1;

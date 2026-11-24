@@ -1,5 +1,8 @@
-import { describe, expect, test } from 'bun:test';
-import { COOLDOWN_MS, MAX_PER_DAY, launchRequest, launchDecisions, launchDecisionLine, planLaunches, readConfig, type Config, type Launch } from './cloud-launch';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { COOLDOWN_MS, MAX_PER_DAY, launchRequest, launchDecisions, launchDecisionLine, planLaunches, readConfig, writeLaunchState, type Config, type Launch } from './cloud-launch';
 import { LIVE_MS } from '../packages/core/src/fleet-assign';
 
 const NOW = 1_800_000_000_000;
@@ -145,5 +148,22 @@ describe('cloud launch', () => {
             windowsHide: true,
         });
         expect(missingSide.exitCode).toBe(2);
+    });
+
+    const tempDirs: string[] = [];
+    afterEach(() => {
+        while (tempDirs.length) rmSync(tempDirs.pop()!, { recursive: true, force: true });
+    });
+
+    test('writeLaunchState persists launch records atomically and prunes entries older than 7 days', () => {
+        const dir = mkdtempSync(join(tmpdir(), 'cloud-launch-state-'));
+        tempDirs.push(dir);
+        const stateFile = join(dir, 'state.json');
+        const oldEntry: Launch = { side: 'cloud', kind: 'codex', via: 'codex', at: NOW - 8 * 24 * 60 * 60_000, ok: true, detail: 'old' };
+        const freshEntry: Launch = { side: 'claude-cloud', kind: 'claude', via: 'routine', at: NOW - 1000, ok: true, detail: 'fired' };
+        writeLaunchState(stateFile, [oldEntry, freshEntry], NOW);
+        expect(existsSync(stateFile)).toBe(true);
+        const saved = JSON.parse(readFileSync(stateFile, 'utf8')) as { launches: Launch[] };
+        expect(saved.launches).toEqual([freshEntry]);
     });
 });

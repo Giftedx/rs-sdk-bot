@@ -1748,7 +1748,6 @@ function planAccountCore(
                                 .filter((a) =>
                                     (!shared || !hasActExclusions || isActAllowed(a))
                                     && a.family !== 'quest'
-                                    && a.skill?.toLowerCase() === skLower
                                     && activityXpForSkill(a, getRate(a), blocker.skill) > 0
                                     && getPreflight(a, 1).ok,
                                 )

@@ -11,6 +11,7 @@
 import { CLAIM_AUTHORITY_PAUSE_MS, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
+import {hasStopFile} from '../../core/src/practice-paths';
 
 export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused';
 
@@ -127,8 +128,11 @@ export function hostOptions(p: Pick<SuperviseHostArgs, 'args' | 'env'>, active: 
     return [...p.args.flatMap(a => ['--arg', a]), ...active.flatMap(a => Object.entries(p.env[a] ?? {}).flatMap(([k, v]) => ['--env', a, `${k}=${v}`]))];
 }
 
+export function hostStopped(account: string, root = process.cwd()): boolean {
+    return !fleetLeaseAllowsWorker(root) || hasStopFile(account, root);
+}
+
 if (import.meta.main) {
-    const { existsSync } = await import('node:fs');
     let parsed: SuperviseHostArgs;
     try { parsed = parseSuperviseHostArgs(process.argv.slice(2)); } catch (e) { console.log(String(e)); process.exit(2); }
     const { script, accounts } = parsed;
@@ -140,7 +144,7 @@ if (import.meta.main) {
             const stdout = await keepOutput(p.stdout, keptHostLine);
             return { stdout, exitCode: await p.exited };
         },
-        stopped: a => !fleetLeaseAllowsWorker(process.cwd()) || existsSync(`.practice/stop-${a}`),
+        stopped: a => hostStopped(a, process.cwd()),
         pause: ms => Bun.sleep(ms),
         maxRestarts: parsed.maxRestarts,
         log: l => console.log(l),

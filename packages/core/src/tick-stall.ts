@@ -5,11 +5,22 @@ export const TICK_STALL_MS = Math.max(1_000, Number(process.env.TICK_STALL_MS ??
 export function startTickStallWatch(s: { onTick(cb: () => void): () => void }, onStall: (detail: string) => void,
     opts: { ms?: number; every?: number; now?: () => number; setInterval?: typeof globalThis.setInterval; clearInterval?: typeof globalThis.clearInterval } = {}): { stop(): void } {
     const ms = opts.ms ?? TICK_STALL_MS, now = opts.now ?? Date.now, every = opts.every ?? Math.min(10_000, Math.max(100, Math.floor(ms / 4)));
-    let lastTick = now(), fired = false;
+    let lastTick = now(), fired = false, stopped = false;
     const off = s.onTick(() => { lastTick = now(); });
-    const timer = (opts.setInterval ?? setInterval)(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+        if (stopped) return;
+        stopped = true;
+        if (timer !== undefined) (opts.clearInterval ?? clearInterval)(timer);
+        off();
+    };
+    timer = (opts.setInterval ?? setInterval)(() => {
         const idle = now() - lastTick;
-        if (!fired && idle >= ms) { fired = true; onStall(`tick stream stalled: ${Math.round(idle / 1000)} s without a game tick`); }
+        if (!fired && idle >= ms) {
+            fired = true;
+            stop();
+            onStall(`tick stream stalled: ${Math.round(idle / 1000)} s without a game tick`);
+        }
     }, every);
-    return { stop: () => { (opts.clearInterval ?? clearInterval)(timer); off(); } };
+    return { stop };
 }
