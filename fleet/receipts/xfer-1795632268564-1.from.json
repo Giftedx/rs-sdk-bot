@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795632268564-1",
  "account": "TheFullMonty",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Irit leaf",
  "requested": 5,
  "claim": "8e4743ad-21fe-407f-bee9-42a02de71060",
- "count": 0,
- "ok": false,
- "at": 1795632457017,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795632541538,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795632527178
+ },
+ "logout": {
+  "attemptId": "1795632457026-0000028984-0000000001",
+  "at": 1795632541528,
+  "sha256": "caf6a977847f7f0e787308320d878e83171d7153acc25d669a405e5e9b9ee723"
+ },
+ "screen": true
 }

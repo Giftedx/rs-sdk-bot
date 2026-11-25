@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795632303462-1",
  "account": "Stirmypot",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "f713aa6f-780e-49eb-b935-47ced4ea7aea",
- "count": 0,
- "ok": false,
- "at": 1795632512516,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795632522354,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795632521577
+ },
+ "logout": {
+  "attemptId": "1795632512549-0000001220-0000000001",
+  "at": 1795632522342,
+  "sha256": "ff7372e57e169d12127e7a6654e1e981bbdd2b7ddce9b4923aaeb535670d3570"
+ },
+ "screen": true
 }

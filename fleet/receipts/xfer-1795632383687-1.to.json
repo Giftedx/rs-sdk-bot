@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795632383687-1",
+ "account": "RearEntry",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 27,
+ "claim": "6d8fc655-3c40-422a-a7b7-ed813bb0ec3c",
+ "count": 27,
+ "ok": true,
+ "at": 1795632549136,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 27
+ },
+ "bank": {
+  "count": 27,
+  "at": 1795632548390
+ },
+ "logout": {
+  "attemptId": "1795632525485-0000015716-0000000001",
+  "at": 1795632549125,
+  "sha256": "98e87c51a79a0da7486de08023e610f9d312e9435b669c69caa25df9009245c4"
+ },
+ "screen": true
+}
