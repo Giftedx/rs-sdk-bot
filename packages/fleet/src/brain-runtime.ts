@@ -52,6 +52,7 @@ import {
     type Campaign,
     type DemandEngine,
     type FleetPlan,
+    type FleetSchedulerInput,
     type FleetState,
     type HubBankId,
     type InfraCircuitBreakerState,
@@ -108,6 +109,7 @@ export interface BrainCycleOptions {
     readonly infraBreaker?: InfraCircuitBreaker;
     readonly marketQuotes?: MarketQuotesMap;
     readonly stationedHubBankers?: Readonly<Partial<Record<HubBankId, string>>>;
+    readonly heldPlan?: FleetSchedulerInput['heldPlan'];
 }
 
 export interface BrainCycleResult {
@@ -720,7 +722,9 @@ export function applyActivityOverridesToPlan(
     const quarantinedFor = (activityId: string, account: string): boolean =>
         input.defects.some((d) => d.activityId === activityId && defectBlocksAccount(d, account, input.world.at));
     const reservedSlotCount = inTradeAccounts.size + assignedIdleDonors.size;
-    let usedSlots = reservedSlotCount + Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
+    const nextHeld: Record<string, string> = { ...plan.heldAccounts };
+    const plansInSlots = () => Object.values(nextAccountPlans).filter((p) => p.steps.length > 0 && !(p.account in nextHeld)).length;
+    let usedSlots = reservedSlotCount + plansInSlots();
     const overriddenRecipients = new Set<string>();
     let changed = false;
 
@@ -738,7 +742,8 @@ export function applyActivityOverridesToPlan(
         if (acct.lifecycle === 'needs_logout_recovery' || acct.lifecycle === 'needs_location_recovery') continue;
         if (!canProtectedAccountLaunch(acct, input.campaigns, input.world).allowed) continue;
 
-        const alreadySelected = (nextAccountPlans[acct.name]?.steps.length ?? 0) > 0;
+        // A held plan is in no slot, so the override that replaces it takes one.
+        const alreadySelected = (nextAccountPlans[acct.name]?.steps.length ?? 0) > 0 && !(acct.name in nextHeld);
         if (!alreadySelected && usedSlots >= plan.maxBots) continue;
 
         const act = input.catalog.get(ov.activityId);
@@ -761,6 +766,7 @@ export function applyActivityOverridesToPlan(
         });
         if (planned.steps.length > 0) {
             nextAccountPlans[acct.name] = planned;
+            delete nextHeld[acct.name];
             overriddenRecipients.add(acct.name.toLowerCase());
             const plannedSpot = spotForPlan(planned);
             if (plannedSpot) recordAccountSpot(input.catalog.get(planned.steps.find((s) => s.stepKind === 'work')!.activityId) ?? act, acct.name);
@@ -804,6 +810,7 @@ export function applyActivityOverridesToPlan(
             retentionMarginApplied: true,
         };
         nextAccountPlans[acct.name] = synthetic;
+        delete nextHeld[acct.name];
         overriddenRecipients.add(acct.name.toLowerCase());
         recordAccountSpot(act, acct.name);
         if (!alreadySelected) usedSlots += 1;
@@ -813,13 +820,14 @@ export function applyActivityOverridesToPlan(
     if (!changed) return plan;
     const nextTransferOrders = plan.transferOrders.filter((ord) => !overriddenRecipients.has(ord.to.toLowerCase()));
     const nextReservedCount = inTradeAccounts.size + collectAssignedIdleDonors(nextTransferOrders).size;
-    const plansWithSteps = Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
+    const { heldAccounts: _held, ...rest } = plan;
     return {
-        ...plan,
+        ...rest,
         accountPlans: nextAccountPlans,
         spotAllocations: nextSpotAllocations,
         transferOrders: nextTransferOrders,
-        selectedSlots: Math.min(plan.maxBots, nextReservedCount + plansWithSteps),
+        selectedSlots: Math.min(plan.maxBots, nextReservedCount + plansInSlots()),
+        ...(Object.keys(nextHeld).length > 0 ? { heldAccounts: nextHeld } : {}),
     };
 }
 
@@ -892,6 +900,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         stationedHubBankers: opts.stationedHubBankers,
         minTrust,
         allowExperimentalFallback,
+        heldPlan: opts.heldPlan,
     });
 
     const fleetPlan = applyActivityOverridesToPlan(scheduledPlan, {

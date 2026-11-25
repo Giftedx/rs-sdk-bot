@@ -922,6 +922,26 @@ describe('packages/fleet/src/brain-runtime', () => {
         expect(expanded.accountPlans.ExtraBot?.steps.length).toBeGreaterThan(0);
         expect(expanded.selectedSlots).toBe(4);
         expect(validateFleetPlan(expanded)).toEqual([]);
+
+        // A held plan is in no slot: with maxBots = 3, ExtraBot takes the slot that RecipBot's ended job held.
+        const held = 'ended: blocked after 2 runs';
+        const heldPlan: FleetPlan = { ...basePlan, heldAccounts: { RecipBot: held } };
+        const override = (account: string) => ({
+            world,
+            overrides: { [account.toLowerCase()]: { account, activityId: act.id, issuedAt: now - 50, expiresAt: now + 60_000 } },
+            catalog, demands: [], campaigns: [], defects: [], rateStore, marketQuotes: {},
+            minTrust: 'experimental' as const, allowExperimentalFallback: true,
+        });
+        const withHeld = applyActivityOverridesToPlan(heldPlan, override('ExtraBot'));
+        expect(withHeld.accountPlans.ExtraBot?.steps.length).toBeGreaterThan(0);
+        expect(withHeld.selectedSlots).toBe(3);
+        expect(withHeld.heldAccounts).toEqual({ RecipBot: held });
+        expect(validateFleetPlan(withHeld)).toEqual([]);
+        // An override gives RecipBot a new job, which leaves the held set and takes a slot. Its transfer order goes.
+        const replaced = applyActivityOverridesToPlan(heldPlan, override('RecipBot'));
+        expect(replaced.heldAccounts).toBeUndefined();
+        expect(replaced.transferOrders).toEqual([]);
+        expect(replaced.selectedSlots).toBe(2);
     });
 
     test('runBrainCycle forwards simulated now to loadMarketQuotesFromRoot so market-all.json freshness uses opts.now', () => {

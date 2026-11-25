@@ -10,7 +10,7 @@ import {
 import { spawn as spawnChild } from 'node:child_process';
 import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
-import { defaultActivityCatalog, createRateStore, OutcomeClassifier, type AccountActiveJob, type PlannedStep } from '../../brain/src/index';
+import { defaultActivityCatalog, createRateStore, OutcomeClassifier, type AccountActiveJob, type AccountPlan, type PlannedStep } from '../../brain/src/index';
 import { COOKED_FOOD_BASE_IDS, COOKED_FOOD_IDS, payoutWaiting, type DemandNear } from '../../core/src/bank-demand';
 import { cargoAccountServer } from '../../core/src/cargo';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
@@ -48,7 +48,7 @@ import {
     type BrainCycleResult,
     type RunTelemetryBaseline,
 } from './brain-runtime';
-import type { DispatchedAccountPlan } from './worker-dispatch';
+import { dispatchAccountPlan, type DispatchedAccountPlan } from './worker-dispatch';
 import { courierDeliveryWaiting, deliveryResume, foodDeficit, selectFoodSource } from './courier-admission';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
 import { askWorkersToLogOut } from './worker-stop';
@@ -215,6 +215,67 @@ export function selectBrainDispatchStep(
         ...(marketItemId !== undefined ? { marketItemId } : {}),
         ...(marketVenue ? { marketVenue } : {}),
     };
+}
+
+// The swarm job of one brain plan: the dispatch mode, and for a worker step the job that the tick runs.
+export function brainJobFor(
+    account: string,
+    dispatched: DispatchedAccountPlan,
+    accountSteps: readonly PlannedStep[],
+    role?: string,
+): { selected: SelectedBrainDispatch; job?: Job } {
+    const selected = selectBrainDispatchStep(dispatched, accountSteps);
+    if (selected.mode !== 'worker') return { selected };
+    const isFiniteBrainJob = selected.isMultiStepChain
+        || selected.step.script === 'scripts/aio-market.ts'
+        || selected.step.script === 'scripts/aio-quester.ts'
+        || (selected.step.script === 'scripts/aio-logistics.ts' && selected.step.args[0] === 'walk-to');
+    const outcomeActivityId = selected.displayActivityId ?? selected.attributedActivityId;
+    return {
+        selected,
+        job: {
+            account,
+            script: selected.step.script,
+            args: [...selected.step.args],
+            env: {
+                ...selected.step.env,
+                ...(selected.displayActivityId ? { BRAIN_ACTIVITY_ID: selected.displayActivityId } : {}),
+                ...(dispatched.demandId ? { BRAIN_DEMAND_ID: dispatched.demandId } : {}),
+            },
+            enabled: true,
+            repeat: true,
+            ...(isFiniteBrainJob ? { maxRestarts: 2 } : {}),
+            role,
+            goal: dispatched.demandId ?? selected.displayActivityId,
+            ...(selected.attributedActivityId ? { activityId: selected.attributedActivityId } : {}),
+            ...(outcomeActivityId ? { outcomeActivityId } : {}),
+            ...(selected.isMultiStepChain ? { isMultiStepChain: true } : {}),
+            ...(selected.chainActivityIds ? { chainActivityIds: [...selected.chainActivityIds] } : {}),
+            ...(selected.marketItemId !== undefined ? { marketItemId: selected.marketItemId } : {}),
+            ...(selected.marketVenue ? { marketVenue: selected.marketVenue } : {}),
+            ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
+        },
+    };
+}
+
+export const BRAIN_RECOVERY_WAIT = 'waiting: standalone session recovery';
+
+// The reason the swarm will not start the job of a brain plan, or undefined when it will. startable() rules on the
+// job that the tick builds from the plan, against the account's end record: the same job as an ended run stays
+// ended, and a changed job starts. The standalone recovery queue starts no swarm job. The planner gives such a plan
+// no slot (FleetSchedulerInput.heldPlan).
+export function brainPlanHold(
+    built: { selected: SelectedBrainDispatch; job?: Job },
+    ended: Map<string, EndRecord>,
+    statusAge: (a: string) => number,
+    statusStarted?: (a: string) => number | undefined,
+): string | undefined {
+    if (built.selected.mode === 'session_recovery') return BRAIN_RECOVERY_WAIT;
+    if (!built.job) return undefined;
+    const p = parseJob(built.job);
+    if ('error' in p || p.accounts.length !== 1) return undefined;
+    const why = startable(p.accounts, p.job.repeat, ended, statusAge, statusStarted, missionSignature(p.job), undefined, () => true).blocked[p.accounts[0]!];
+    return why?.startsWith('ended: ') ? why : undefined;
 }
 
 export { PID_START_SLACK_MS };
@@ -1647,10 +1708,17 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             });
                         }
                     }
+                    // Only an account with an end record, or a plan that starts with a recovery, can be held.
+                    const endedLower = endedMapByLower(ended);
+                    const heldPlan = (account: string, accountPlan: AccountPlan): string | undefined =>
+                        endedLower.has(account.toLowerCase()) || accountPlan.steps[0]?.stepKind === 'recover'
+                            ? brainPlanHold(brainJobFor(account, dispatchAccountPlan(accountPlan, { catalog }), accountPlan.steps), ended, statusAge, statusStarted)
+                            : undefined;
                     lastBrainResult = runBrainCycle({
                         root, side, server: LIVE_SERVER, maxBots: plan.maxBots,
                         catalog, rateStore, classifier, infraBreaker,
                         activeAccounts: activeMap, persist: true, consumeCommands: true,
+                        heldPlan,
                     });
                     lastBrainAt = nowMs;
                     lastBrainPlanMtime = planMtime;
@@ -1666,7 +1734,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                         if (handAccountSet.has(acctName.toLowerCase())) continue;
                         const acctState = brainResult.world.accounts[acctName.toLowerCase()];
                         const accountSteps = brainResult.fleetPlan.accountPlans[acctName]?.steps ?? [];
-                        const selected = selectBrainDispatchStep(dispatched, accountSteps);
+                        const { selected, job: brainJob } = brainJobFor(acctName, dispatched, accountSteps, acctState?.role);
                         if (selected.mode === 'session_recovery') {
                             brainRecoveryRows.push({
                                 account: acctName,
@@ -1675,7 +1743,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                                 goal: 'session recovery',
                                 enabled: false,
                                 repeat: false,
-                                state: 'waiting: standalone session recovery',
+                                state: BRAIN_RECOVERY_WAIT,
                                 since: null,
                             });
                             continue;
@@ -1693,35 +1761,9 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             });
                             continue;
                         }
-                        if (selected.mode !== 'worker') continue;
+                        if (!brainJob) continue;
                         brainDispatchedAccounts.add(acctName.toLowerCase());
-                        const isFiniteBrainJob = selected.isMultiStepChain
-                            || selected.step.script === 'scripts/aio-market.ts'
-                            || selected.step.script === 'scripts/aio-quester.ts'
-                            || (selected.step.script === 'scripts/aio-logistics.ts' && selected.step.args[0] === 'walk-to');
-                        const outcomeActivityId = selected.displayActivityId ?? selected.attributedActivityId;
-                        combinedJobs.push({
-                            account: acctName,
-                            script: selected.step.script,
-                            args: [...selected.step.args],
-                            env: {
-                                ...selected.step.env,
-                                ...(selected.displayActivityId ? { BRAIN_ACTIVITY_ID: selected.displayActivityId } : {}),
-                                ...(dispatched.demandId ? { BRAIN_DEMAND_ID: dispatched.demandId } : {}),
-                            },
-                            enabled: true,
-                            repeat: true,
-                            ...(isFiniteBrainJob ? { maxRestarts: 2 } : {}),
-                            role: acctState?.role,
-                            goal: dispatched.demandId ?? selected.displayActivityId,
-                            ...(selected.attributedActivityId ? { activityId: selected.attributedActivityId } : {}),
-                            ...(outcomeActivityId ? { outcomeActivityId } : {}),
-                            ...(selected.isMultiStepChain ? { isMultiStepChain: true } : {}),
-                            ...(selected.chainActivityIds ? { chainActivityIds: [...selected.chainActivityIds] } : {}),
-                            ...(selected.marketItemId !== undefined ? { marketItemId: selected.marketItemId } : {}),
-                            ...(selected.marketVenue ? { marketVenue: selected.marketVenue } : {}),
-                            ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
-                        });
+                        combinedJobs.push(brainJob);
                     }
                 }
             } catch (error) {

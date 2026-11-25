@@ -141,6 +141,124 @@ test('unblock order prioritizes needs_logout_recovery by frozen GP+supply value,
     expect(plan4.accountPlans.IdleOne?.steps[0]?.stepKind).toBe('work');
 });
 
+test('an account that the swarm will not start keeps its plan but takes no slot, so the next account gets the slot', () => {
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: {
+            LogHigh: makeAcct({ name: 'LogHigh', lifecycle: 'needs_logout_recovery', inventory: { 995: 500_000 } }),
+            LogLow: makeAcct({ name: 'LogLow', lifecycle: 'needs_logout_recovery', inventory: { 995: 100 } }),
+            LocStranded: makeAcct({ name: 'LocStranded', lifecycle: 'needs_location_recovery', inventory: { 995: 900_000 } }),
+            IdleOne: makeAcct({ name: 'IdleOne', lifecycle: 'idle' }),
+        },
+    };
+    const demands: GoalDemand[] = [
+        { id: 'd:coins', goalKind: 'coin_fund', valueScore: 10, valuePerHour: 10, target: { kind: 'coins', amount: 10_000 }, fulfilled: 0, remaining: 10_000, priorityWeight: 1, active: true },
+    ];
+    const held = new Map([
+        ['loghigh', 'ended: blocked after 2 runs'],
+        ['loglow', 'waiting: standalone session recovery'],
+    ]);
+    const asked: string[] = [];
+    const heldPlan = (account: string) => {
+        asked.push(account);
+        return held.get(account.toLowerCase());
+    };
+
+    const plan = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 2, heldPlan });
+    expect(asked.sort()).toEqual(['IdleOne', 'LocStranded', 'LogHigh', 'LogLow']);
+    expect(isFleetPlan(plan)).toBe(true);
+    // The held accounts keep the plan that the swarm holds, so its job (and its end record) stay the same.
+    expect(plan.accountPlans.LogHigh?.steps[0]?.stepKind).toBe('recover');
+    expect(plan.accountPlans.LogLow?.steps[0]?.stepKind).toBe('recover');
+    // The two slots go to the accounts that can start.
+    expect(plan.accountPlans.LocStranded?.steps[0]?.stepKind).toBe('recover');
+    expect(plan.accountPlans.IdleOne?.steps[0]?.stepKind).toBe('work');
+    expect(plan.selectedSlots).toBe(2);
+    expect(plan.heldAccounts).toEqual({ LogHigh: 'ended: blocked after 2 runs', LogLow: 'waiting: standalone session recovery' });
+    expect(plan.recoveryQueue.map((r) => r.account)).toEqual(['LogHigh', 'LogLow', 'LocStranded']);
+
+    const state = buildFleetState(plan, { world, goals: demands });
+    expect(isFleetState(state)).toBe(true);
+    expect(state.heldAccounts).toEqual(plan.heldAccounts);
+
+    // Without the held set, the same world fills both slots with the two recoveries.
+    const unheld = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 2 });
+    expect(unheld.accountPlans.IdleOne?.idleReason).toBe('max_bots_limit');
+    expect(unheld.heldAccounts).toBeUndefined();
+});
+
+test('a held plan takes no spot, so the next account gets the spot and the slot', () => {
+    // Both accounts plan sharks first, and the shark spot holds one account. AHeld sorts first by name.
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: {
+            AHeld: makeAcct({ name: 'AHeld' }),
+            BFree: makeAcct({ name: 'BFree' }),
+        },
+    };
+    const demands: GoalDemand[] = [
+        { id: 'd:coins', goalKind: 'coin_fund', valueScore: 10, valuePerHour: 10, target: { kind: 'coins', amount: 10_000_000 }, fulfilled: 0, remaining: 10_000_000, priorityWeight: 1, active: true },
+    ];
+    const workOf = (p: ReturnType<typeof scheduleFleet>, name: string) => p.accountPlans[name]?.steps.at(-1);
+    const activityOf = (p: ReturnType<typeof scheduleFleet>, name: string) => {
+        const step = workOf(p, name);
+        return step && 'activityId' in step ? step.activityId : undefined;
+    };
+
+    const free = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 2 });
+    expect(activityOf(free, 'AHeld')).toBe('gather:fishing-shark');
+    expect(activityOf(free, 'BFree')).not.toBe('gather:fishing-shark');
+
+    // The swarm ended AHeld's shark job. It holds only that job: another plan for AHeld would start.
+    const heldPlan = (account: string, plan: Parameters<NonNullable<Parameters<typeof scheduleFleet>[0]['heldPlan']>>[1]) => {
+        const work = plan.steps.at(-1);
+        return account === 'AHeld' && work && 'activityId' in work && work.activityId === 'gather:fishing-shark'
+            ? 'ended: stopped after 1 runs'
+            : undefined;
+    };
+    const held = scheduleFleet({ world, activities: ACTIVITIES, demands, maxBots: 1, heldPlan });
+    expect(activityOf(held, 'AHeld')).toBe('gather:fishing-shark');
+    expect(activityOf(held, 'BFree')).toBe('gather:fishing-shark');
+    expect(held.spotAllocations['catherby-sharks']).toEqual(['BFree']);
+    expect(held.selectedSlots).toBe(1);
+    expect(held.heldAccounts).toEqual({ AHeld: 'ended: stopped after 1 runs' });
+});
+
+test('a running account is never asked about a hold, and keeps its slot', () => {
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: {
+            Runner: makeAcct({
+                name: 'Runner',
+                lifecycle: 'running',
+                activeJob: { activityId: 'gather:thieving-knights', demandId: 'd:coins', startedAt: NOW - 60_000 },
+            }),
+            IdleOne: makeAcct({ name: 'IdleOne' }),
+        },
+    };
+    const demands: GoalDemand[] = [
+        { id: 'd:coins', goalKind: 'coin_fund', valueScore: 10, valuePerHour: 10, target: { kind: 'coins', amount: 10_000_000 }, fulfilled: 0, remaining: 10_000_000, priorityWeight: 1, active: true },
+    ];
+    const asked: string[] = [];
+    const plan = scheduleFleet({
+        world, activities: ACTIVITIES, demands, maxBots: 1,
+        heldPlan: (account) => { asked.push(account); return 'ended: blocked after 2 runs'; },
+    });
+    expect(asked).toEqual([]);
+    expect(plan.accountPlans.Runner?.steps.length).toBeGreaterThan(0);
+    expect(plan.accountPlans.IdleOne?.idleReason).toBe('max_bots_limit');
+    expect(plan.heldAccounts).toBeUndefined();
+});
+
 test('enforces +15% retention hysteresis on healthy running accounts and shared spot capacity', () => {
     const runner = makeAcct({
         name: 'Runner',
