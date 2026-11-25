@@ -5,7 +5,9 @@ import {
  assertCatalogItems,
  burstTradeHost,
  countItem,
+ createClaimGate,
  dropItemsFast,
+ type ClaimGate,
  fastTradeExternalReceive,
  findLocBy,
  goalXp,
@@ -50,6 +52,7 @@ type RcRunnerState = {
  claimed: boolean;
  ready: boolean;
  lastUsedTick: number;
+ gate: ClaimGate;
 };
 
 async function enterAltarWithTalisman(
@@ -94,7 +97,7 @@ async function runBodyEssenceRunner(
 
  while (!done() && !signal.aborted && s.tick() < deadline) {
   if (runner.claimed) {
-   await waitTicks(s, 1);
+   await runner.gate.wait();
    continue;
   }
   const heldEss = countItem(s.sdk.getInventory(), ITEM_IDS.blankrune);
@@ -106,7 +109,7 @@ async function runBodyEssenceRunner(
      continue;
     }
     runner.ready = true;
-    await waitTicks(s, 1);
+    await runner.gate.wait();
     continue;
    }
    runner.ready = false;
@@ -207,6 +210,7 @@ export async function runRunecraftSpecialist(
   claimed: false,
   ready: false,
   lastUsedTick: -1,
+  gate: createClaimGate(),
  }));
  const runnerTasks = runners.map(r => runBodyEssenceRunner(r, () => done, deadline, ac.signal));
 
@@ -341,6 +345,7 @@ export async function runRunecraftSpecialist(
     } finally {
      next.lastUsedTick = spec.tick();
      next.claimed = false;
+     next.gate.release();
     }
     await craftAtAltar(spec, 2483, deadline, true);
    }
@@ -359,6 +364,7 @@ export async function runRunecraftSpecialist(
  } finally {
   done = true;
   ac.abort();
+  for (const r of runners) r.gate.release();
   await Promise.allSettled([starterWaiter, ...runnerTasks]);
  }
 }

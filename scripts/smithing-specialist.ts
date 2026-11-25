@@ -6,7 +6,9 @@ import {
  assertCatalogItems,
  burstTradeHost,
  countItem,
+ createClaimGate,
  dropItemsFast,
+ type ClaimGate,
  fastTradeExternalReceive,
  goalXp,
  GLORY_IDS,
@@ -73,6 +75,7 @@ type SmithRunnerState = {
  task: SmithRunnerDelivery | null;
  claimed: boolean;
  ready: boolean;
+ gate: ClaimGate;
 };
 
 function selectProductForInventory(lvl: number, inv: readonly { id: number; count: number }[]): number | null {
@@ -133,7 +136,7 @@ async function runVarrockSmithRunner(
  const keep = new Set<number>();
  while (!done() && !signal.aborted && s.tick() < deadline) {
   if (runner.claimed) {
-   await waitTicks(s, 1);
+   await runner.gate.wait();
    continue;
   }
   if (runner.task) {
@@ -150,7 +153,8 @@ async function runVarrockSmithRunner(
     }
     if (done() || signal.aborted) break;
     runner.ready = nearTile(s, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 2) && anvilRoomOk(playerPos(s)) && held >= runner.task.count;
-    await waitTicks(s, 1);
+    if (runner.ready) await runner.gate.wait();
+    else await waitTicks(s, 1);
     continue;
    }
    runner.task = null;
@@ -279,6 +283,7 @@ export async function runSmithingSpecialist(
   task: initialTaskFor(idx),
   claimed: false,
   ready: false,
+  gate: createClaimGate(),
  }));
 
  const committedXp = (exclude: SmithRunnerState): number => {
@@ -356,6 +361,12 @@ export async function runSmithingSpecialist(
   let lastRunnerIdx = runners.length - 1;
   while (skillLevel(spec, 'Smithing') < target && spec.tick() < deadline) {
    const wantBar = nextWantedBarId(skillLevel(spec, 'Smithing'));
+   for (const r of runners) {
+    if (r.ready && !r.claimed && r.task && r.task.barId !== wantBar) {
+     r.ready = false;
+     r.gate.release();
+    }
+   }
    const pickRunner = () => {
     for (let offset = 1; offset <= runners.length; offset++) {
      const idx = (lastRunnerIdx + offset) % runners.length;
@@ -403,6 +414,7 @@ export async function runSmithingSpecialist(
     next.task = null;
    } finally {
     next.claimed = false;
+    next.gate.release();
    }
    delayUntil = await smithHeldBars(spec, target, deadline, keepSet);
   }
@@ -421,6 +433,7 @@ export async function runSmithingSpecialist(
  } finally {
   done = true;
   ac.abort();
+  for (const r of runners) r.gate.release();
   await Promise.allSettled([starterWaiter, ...runnerTasks]);
  }
 }
