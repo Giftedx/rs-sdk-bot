@@ -86,6 +86,15 @@ async function withdrawStage4Pack(main: Session, featherCount: number): Promise<
     if (!(await main.bot.openBank()).success || !await waitUntil(main, () => !!main.sdk.getState()?.bank?.isOpen, { timeoutTicks: 15 })) {
         throw Error('haggis-stage4: Ardougne south bank did not open');
     }
+    if (inv(main).length > 0) {
+        const seen = new Set<number>();
+        for (const it of inv(main)) {
+            if (seen.has(it.id)) continue;
+            seen.add(it.id);
+            await send(main, m, { type: 'bankDeposit', slot: it.slot, amount: -1 });
+        }
+        await waitUntil(main, () => inv(main).length === 0, { timeoutTicks: 10 });
+    }
     const items: ReadonlyArray<readonly [number, number, number]> = [
         [OBJ_SWAMP_PASTE, 1, 1],
         [OBJ_FLY_ROD, 1, 1],
