@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795600581856,
+ "at": 1795600734747,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -72,6 +72,26 @@
    "role": "helper"
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:ranarr_weed"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:257",
+    "BATCH_UNITS": "6"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:257",
+   "role": "army"
+  },
+  {
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
@@ -100,7 +120,6 @@
   "bowbeforeme",
   "deeppockets",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
