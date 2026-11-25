@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795626886735-2",
+ "role": "to",
+ "account": "Pocketpython",
+ "partner": "SporranBulge",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795627364562,
+ "detail": "Error: live admission paused by stop file"
+}

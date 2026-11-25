@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795626582524-4",
  "account": "Swordswallow",
  "partner": "YewGotWood",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "a6a63b73-c9e2-445a-948b-6478a937f172",
- "count": 0,
- "ok": false,
- "at": 1795627129242,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795627356162,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795627339437
+ },
+ "logout": {
+  "attemptId": "1795627129251-0000017540-0000000001",
+  "at": 1795627356153,
+  "sha256": "a7c3260c36680ef5c18b3fa2fcf863144d10840c6568cdd00050c9ccecca250a"
+ },
+ "screen": true
 }
