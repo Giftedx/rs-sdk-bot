@@ -810,14 +810,19 @@ export function resolveSupplierKitPlan(kitName: string | undefined = process.env
         };
     }
     if (raw === 'crafting-cw') {
-        const notedGive = [
+        const earlyUnnotedGive = [
             invSpec(2552, 1),
             invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
-            ...CRAFTING_CW_NOTED_ITEMS.map(g => invSpec(g.certId, g.count)),
+            ...CRAFTING_CW_NOTED_ITEMS.map(g =>
+                invSpec(
+                    g.id === SPECIALIST_ITEM_IDS.uncut_opal || g.id === SPECIALIST_ITEM_IDS.uncut_sapphire ? g.id : g.certId,
+                    g.count,
+                ),
+            ),
         ];
         return {
             name: 'crafting-cw',
-            legs: [{ kit: notedGive, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK, noted: true }],
+            legs: [{ kit: earlyUnnotedGive, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK, noted: false }],
             combined: SPECIALIST_KITS['crafting-cw'],
         };
     }
@@ -1449,12 +1454,23 @@ export async function runSpecialistServe(args: readonly string[], env: Record<st
             }
             allDone = ok;
         } else if (kitName === 'crafting-cw') {
-            const batch = [
+            const earlyUnnotedBatch = [
+                invSpec(2552, 1),
+                invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
+                ...CRAFTING_CW_NOTED_ITEMS.map(g =>
+                    invSpec(
+                        g.id === SPECIALIST_ITEM_IDS.uncut_opal || g.id === SPECIALIST_ITEM_IDS.uncut_sapphire ? g.id : g.certId,
+                        g.count,
+                    ),
+                ),
+            ];
+            const notedBatch = [
                 invSpec(2552, 1),
                 invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
                 ...CRAFTING_CW_NOTED_ITEMS.map(g => invSpec(g.certId, g.count)),
             ];
-            if (!hasExactKit(s.sdk.getInventory(), batch)) await withdrawExactKit(s, batch, bankTile, stop, true);
+            const batch = hasExactKit(s.sdk.getInventory(), notedBatch) ? notedBatch : earlyUnnotedBatch;
+            if (!hasExactKit(s.sdk.getInventory(), batch)) await withdrawExactKit(s, earlyUnnotedBatch, bankTile, stop, false);
             await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
             emitReady();
             allDone = (await serveFastBatch(s, specialist, batch, t0, CAP, stop)) === 'ok';

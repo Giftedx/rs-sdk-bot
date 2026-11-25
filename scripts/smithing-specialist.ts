@@ -377,14 +377,14 @@ export async function runSmithingSpecialist(
     if (!next) next = pickRunner();
    }
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
-   // Drop up to 4 finished products alongside OPPLAYER4 inside burstTradeHost T0; keep <= 2 platebodies + hammer so 25 bars fit.
+   // Drop up to 3 finished products alongside OPPLAYER4 inside burstTradeHost T0; keep <= 2 platebodies + hammer so 25 bars fit.
    const dropSlots = spec.sdk.getInventory().filter(i => !keepSet.has(i.id) || (i.id === ITEM_IDS.bronze_bar && skillLevel(spec, 'Smithing') >= 15)).map(i => i.slot);
    let preDropSlots: number[] | undefined;
    if (dropSlots.length > 6) {
     // Batch 0 leftover daggers/warhammers/excess bronze bars (>6 slots) need dropItemsFast before trading.
     await dropItemsFast(spec, new Set([ITEM_IDS.hammer]), deadline);
    } else if (dropSlots.length > 2) {
-    preDropSlots = dropSlots.slice(0, Math.min(4, dropSlots.length - 2));
+    preDropSlots = dropSlots.slice(0, dropSlots.length - 2);
    }
    next.claimed = true;
    next.ready = false;
@@ -394,7 +394,6 @@ export async function runSmithingSpecialist(
      preDropSlots,
      deadlineTick: deadline,
      canStand: anvilRoomOk,
-     allowHelperOnSingleModal: true,
     });
     next.task = null;
    } finally {

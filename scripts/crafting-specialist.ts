@@ -581,9 +581,9 @@ async function fastInProcessBatchTrade(
    }
   }
 
-  // When spec returns nothing, pipeline all helper offers + main/confirm accepts together across the 5/tick decoder.
+  // When spec returns nothing, pipeline up to 5 helper offers/accept per tick cleanly within USER_EVENT.limit=5.
   if (returnSet.size === 0 && ht.isOpen && ht.screen === 'offer') {
-   if (!helperPipelined && hSlots.size > 0) {
+   if (!helperPipelined && hSlots.size > 0 && hSlots.size <= 4) {
     helperPipelined = true;
     for (const slot of hSlots.values()) {
      hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
@@ -591,12 +591,18 @@ async function fastInProcessBatchTrade(
     if (!ht.myAccepted) {
      lastHelperAcceptTick = spec.tick();
      hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
-     hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
     }
-   } else if (hSlots.size === 0 && !ht.myAccepted && spec.tick() - lastHelperAcceptTick >= 2) {
+   } else if (hSlots.size > 0) {
+    for (const slot of [...hSlots.values()].slice(0, hSlots.size > 4 ? 5 : 4)) {
+     hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+    }
+    if (hSlots.size <= 4 && !ht.myAccepted) {
+     lastHelperAcceptTick = spec.tick();
+     hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+    }
+   } else if (!ht.myAccepted && spec.tick() - lastHelperAcceptTick >= 2) {
     lastHelperAcceptTick = spec.tick();
     hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
-    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
    const theirIds = new Set(st.theirOffer.map(o => o.id));
    const allGiveOffered = opts.giveIds.every(id => theirIds.has(id));
@@ -772,21 +778,12 @@ async function craftAtCastleWarsBank(
    const inv = spec.sdk.getInventory();
    const ring = inv.find(i => RING_OF_DUELING_SET.has(i.id));
    if (!ring) throw Error('ring of dueling missing after CW trade');
-   const acts: Promise<unknown>[] = [];
-   if (hasUnnotedEarly && lastRubTick < 0) {
-    const chisel = inv.find(i => i.id === ITEM_IDS.chisel);
-    if (chisel) {
-     // Keep to 3 cuts + rub + clickComponent(2462) = 5 USER_EVENT packets so teleport runs on this tick.
-     const { batch } = selectCutGemBatch(inv, skillLevel(spec, 'Crafting'), skillXp(spec, 'Crafting'), 3);
-     for (const gem of batch) {
-      acts.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
-     }
-    }
-   }
    lastRubTick = spec.tick();
-   acts.push(spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' }));
-   acts.push(spec.direct({ type: 'clickComponent', componentId: 2462, reason: 'SDK' }));
-   await Promise.all(acts);
+   // Avoid cutting on the rub tick so [advancestat] cannot interrupt the teleport before Castle Wars.
+   await Promise.all([
+    spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' }),
+    spec.direct({ type: 'clickComponent', componentId: 2462, reason: 'SDK' }),
+   ]);
   }
   await waitTicks(spec, 1);
  }
