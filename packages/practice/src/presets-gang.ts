@@ -47,4 +47,12 @@ export const GANG_PRESETS: Record<string, SaveConfig> = {
     quest_hero: hero({ 145: 4 }, [1165, 1125, 1077]),
     // Phoenix side.
     quest_hero_helper: hero({ 146: 10 }),
+    // Ice gloves on one account (scripts/generated/quest-herogloves-owned.ts): west of the hero rockslide on White Wolf
+    // Mountain, nothing worn. Kit: 30 Fire Blasts (150 fire 554, 120 air 556, 30 death 560), Camelot Teleport (1 law 563,
+    // 5 air), a prayer potion (2434), a bronze pickaxe (1265) and 6 lobsters (379).
+    'quest_herogloves-owned': {
+        position: { x: 2837, z: 3517, level: 0 }, skills: ALL_99, equipment: [], varps: { ...DONE },
+        inventory: [[554, 150], [556, 125], [560, 30], [563, 1], 2434, 1265, 379, 379, 379, 379, 379, 379]
+            .map(e => Array.isArray(e) ? { id: e[0]!, count: e[1]! } : { id: e, count: 1 }),
+    },
 };

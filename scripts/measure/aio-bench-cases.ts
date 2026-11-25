@@ -2264,6 +2264,9 @@ return [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 7}, equipment: [{id: 1381, count: 1, slot: 3}], inventory: [{id: 564, count: 50}, {id: 555, count: 50}], bank: [{id: 1637, count: 14}, {id: 1639, count: 18}]}},
   {key: 'extra:haggis-smith-20', engineEnv: {NODE_MEMBERS: 'true'}, script: 'scripts/measure/haggis-tt-prep.ts', preset: 'tutorial_done', scriptArgs: ['smith-20'], pass: ok, output: /\bticks=(\d+)/,
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 43, Smithing: 1}, equipment: [{id: 1387, count: 1, slot: 3}], inventory: [{id: 561, count: 20}], bank: [{id: 436, count: 14}, {id: 438, count: 14}, {id: 440, count: 6}]}},
+  // Ice gloves on one account for Heroes' Quest (scripts/generated/quest-herogloves-owned.ts; questCases skips `-owned`
+  // scripts): the rockslide, the ladder maze, the Ice Queen by Fire Blast, Camelot Teleport and the gloves banked at Seers.
+  {key: 'extra:herogloves-owned', script: 'scripts/aio-quester.ts', preset: 'quest_herogloves-owned', scriptArgs: ['herogloves-owned'], pass: ok, timeoutMs: 900_000},
 ];
 }
 

@@ -8847,6 +8847,105 @@
    }
   ]
  },
+ "quest_herogloves-owned": {
+  "position": {
+   "x": 2837,
+   "z": 3517,
+   "level": 0
+  },
+  "skills": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Hitpoints": 99,
+   "Ranged": 99,
+   "Prayer": 99,
+   "Magic": 99,
+   "Cooking": 99,
+   "Woodcutting": 99,
+   "Fletching": 99,
+   "Fishing": 99,
+   "Firemaking": 99,
+   "Crafting": 99,
+   "Smithing": 99,
+   "Mining": 99,
+   "Herblore": 99,
+   "Agility": 99,
+   "Thieving": 99,
+   "Runecraft": 99
+  },
+  "equipment": [],
+  "varps": {
+   "0": 11,
+   "14": 7,
+   "29": 2,
+   "32": 3,
+   "60": 3,
+   "62": 6,
+   "65": 10,
+   "80": 4,
+   "111": 9,
+   "130": 4,
+   "131": 9,
+   "144": 100,
+   "148": 11,
+   "150": 160,
+   "159": 12,
+   "176": 10,
+   "226": 7,
+   "273": 110
+  },
+  "inventory": [
+   {
+    "id": 554,
+    "count": 150
+   },
+   {
+    "id": 556,
+    "count": 125
+   },
+   {
+    "id": 560,
+    "count": 30
+   },
+   {
+    "id": 563,
+    "count": 1
+   },
+   {
+    "id": 2434,
+    "count": 1
+   },
+   {
+    "id": 1265,
+    "count": 1
+   },
+   {
+    "id": 379,
+    "count": 1
+   },
+   {
+    "id": 379,
+    "count": 1
+   },
+   {
+    "id": 379,
+    "count": 1
+   },
+   {
+    "id": 379,
+    "count": 1
+   },
+   {
+    "id": 379,
+    "count": 1
+   },
+   {
+    "id": 379,
+    "count": 1
+   }
+  ]
+ },
  "quest_hetty": {
   "position": {
    "level": 0,
