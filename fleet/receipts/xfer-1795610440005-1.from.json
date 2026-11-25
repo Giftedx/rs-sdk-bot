@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795610440005-1",
  "account": "OreElse",
  "partner": "Moneyshot",
@@ -12,6 +12,12 @@
  "claim": "776fd73a-0608-4b3e-93dd-23ebb8af057f",
  "count": 0,
  "ok": false,
- "at": 1795611139546,
- "detail": "trade claimed"
+ "at": 1795611217690,
+ "detail": "Error: stock short: Uncut diamond 0 banked + 0 held < 10",
+ "logout": {
+  "attemptId": "1795611139555-0000007928-0000000001",
+  "at": 1795611217681,
+  "sha256": "a31fe5bd5da1e8b4f95785647d788ab53e1c61b6675f53bc80c909b3a5a8a1f1"
+ },
+ "screen": false
 }
