@@ -190,6 +190,10 @@ async function withdrawObservedUnnoted(s: Session, id: number, amount: number) {
     }
 }
 
+// The Hitpoints rule of an owned loadout: a drop under the level at the start ends it (damage or poison at the bank), and so
+// does no level at all. A rise is the natural regeneration of a member that came back wounded, and the loadout goes on.
+export const loadoutHpFatal = (atStart: number, now: number): boolean => atStart < 1 || now < atStart;
+
 export async function runOwnedLoadout(s: Session, value: unknown, requestStop: () => boolean = () => false) {
     const j = validateOwnedKit(value), start = s.tick(), state = () => s.sdk.getState(), inv = () => s.sdk.getInventory(), gear = () => s.sdk.getEquipment(), first = state()?.player;
     const life = first?.lifeId, respawns = first?.respawnCount ?? 0, hp = s.sdk.getSkill('Hitpoints')?.level ?? 0, client = s.client as any, executor = client.executeBotAction;
@@ -203,7 +207,7 @@ export async function runOwnedLoadout(s: Session, value: unknown, requestStop: (
     const stored = (id: number) => (s.bankObservation?.()?.items ?? []).filter(i => i.id === id).reduce((a, i) => a + i.count, 0);
     const here = () => { const p = state()?.player; return !!p && p.level === j.bank.level && Math.max(Math.abs(p.worldX - j.bank.x), Math.abs(p.worldZ - j.bank.z)) <= 3; };
     const fatal = () => ended || !first || !state()?.player || state()!.player!.isDead || state()!.player!.lifeId !== life || (state()!.player!.respawnCount ?? 0) !== respawns
-        || !here() || (s.sdk.getSkill('Hitpoints')?.level ?? 0) !== hp || hp < 1 || s.sdk.getStateAge() > 5000 || client.executeBotAction !== executor || !equipmentObserved(client) || JSON.stringify(xpView()) !== xp;
+        || !here() || loadoutHpFatal(hp, s.sdk.getSkill('Hitpoints')?.level ?? 0) || s.sdk.getStateAge() > 5000 || client.executeBotAction !== executor || !equipmentObserved(client) || JSON.stringify(xpView()) !== xp;
     const guard = (cleanup = false) => {
         if (fatal() || s.tick() - start >= j.cap || moves >= j.maximumMoves || !cleanup && (loadoutStopRequested(s.name ?? '', requestStop) || s.tick() - start >= j.cap - 40 || moves >= j.maximumMoves - 32)) {
             throw Error('owned loadout life/state/stop/budget');
