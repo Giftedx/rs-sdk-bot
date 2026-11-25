@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795612890996-2",
+ "role": "to",
+ "account": "Unsheathed",
+ "partner": "Woodenstaff",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795612997695,
+ "detail": "Error: live admission paused by stop file"
+}

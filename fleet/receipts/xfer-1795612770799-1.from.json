@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795612770799-1",
  "account": "Ballspinner",
  "partner": "Woodpecker",
@@ -12,6 +12,16 @@
  "claim": "f674b3a0-bfbc-449e-90fa-d53f03a73bc6",
  "count": 0,
  "ok": false,
- "at": 1795612966875,
- "detail": "trade claimed"
+ "at": 1795612990770,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 10,
+  "at": 1795612974835
+ },
+ "logout": {
+  "attemptId": "1795612966884-0000011392-0000000001",
+  "at": 1795612990761,
+  "sha256": "495192a8734287303bce0b16cbc1ef46f503ed499bedc645c7f314988962d6ff"
+ },
+ "screen": false
 }
