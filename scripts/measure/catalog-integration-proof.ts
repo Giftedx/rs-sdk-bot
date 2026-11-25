@@ -168,7 +168,7 @@ async function prove(name:string,mode:string,savePath:string){
   assert.deepEqual(totals(after),totals(before));assert.deepEqual(after.inventories[94]??[],before.inventories[94]??[]);
   assert.deepEqual(after.skills,before.skills);
  }
- const logout=readLogoutProof(name,server,{root:resolve(root,'.practice/session-lifecycle')});assert.equal(logout.state,'confirmed');
+ const logout=readLogoutProof(name,server,{base:root});assert.equal(logout.state,'confirmed');
  if(artifact){
   const afterBytes=readFileSync(savePath);artisanTransition(artifact.record.mode,beforeBytes,afterBytes,stdout);
   writeFileSync(join(artifact.directory,'after.sav'),afterBytes);writeFileSync(join(artifact.directory,'logout.json'),JSON.stringify(logout,null,2));
