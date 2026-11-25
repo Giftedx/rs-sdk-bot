@@ -1419,7 +1419,7 @@ export async function runSpecialistWaterfall(
     const onIsland = () => inBox(2510, 3476, 2514, 3481);
     const crossToLedge = async (withHudon: boolean) => {
         await walkFast([{ x: 2511, z: 3494, tol: 1 }], withHudon ? 40 : 120, 'to raft');
-        await stepAct('board raft', () => opLoc(LOC.raft), onIsland, 10, 8);
+        await stepAct('board raft', () => opLoc(LOC.raft), onIsland, 10, 14);
         if (withHudon) {
             const hudonProof = /fine alone|so you're still here|find that treasure soon/i;
             let ok = await converse([], () => sawDialog(hudonProof) && !s.sdk.getDialog()?.isOpen, 24);
@@ -1449,9 +1449,9 @@ export async function runSpecialistWaterfall(
     const readDone = await stepAct('read book', async () => {
         const b = inv().find(x => x.id === ITEM.book);
         if (b) await s.direct({ type: 'useInventoryItem', slot: b.slot, optionIndex: 1, reason: 'SDK' });
-    }, () => sawMsg(/book is old/i), 4, 3).then(() => true).catch(() => false);
+    }, () => !!s.sdk.getState()?.modalOpen || sawMsg(/book is old/i), 4, 3).then(() => true).catch(() => false);
     if (!readDone) throw Error('failed reading Book on Baxtorian');
-    void s.direct({ type: 'closeModal', reason: 'SDK' });
+    if (s.sdk.getState()?.modalOpen) void s.direct({ type: 'closeModal', reason: 'SDK' });
     await climb('hadley down', 2518, 3429, /climb-down/i, () => posOf(s)?.level === 0);
     const phHad = markPhase();
 
@@ -1502,7 +1502,7 @@ export async function runSpecialistWaterfall(
     } else {
         // Teleport out of Golrie's room straight to Castle Wars, toggling PFM during walk via skipGuardWalk.
         await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
-        await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
+        await walkFast([{ x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     }
     const phCw = markPhase();
@@ -1530,7 +1530,7 @@ export async function runSpecialistWaterfall(
 
     const inTomb = () => inBox(2520, 9795, 2560, 9850);
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
-    await stepAct('enter tomb', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.pebble, LOC.tombstone); }, inTomb, 10, 4);
+    await stepAct('enter tomb', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.pebble, LOC.tombstone); }, inTomb, 10, 11);
     await walkFast([{ x: 2532, z: 9844, tol: 2 }], 30, 'to tomb chest', () => syncWaterfallPfm(true));
     await stepAct('tomb chest', async () => {
         syncWaterfallPfm(true);
@@ -1645,7 +1645,7 @@ export async function runSpecialistWaterfall(
     await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 60, 'return ledge exit', () => syncWaterfallPfm(true));
     await stepAct('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511, 3463, 3), 10, 4);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
-    await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 3);
+    await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 6);
     const phExit = markPhase();
 
     return {
@@ -1702,10 +1702,7 @@ export async function runMeleePvpSpecialist(
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
     await walkWaypoints(
         s,
-        [
-            { x: 2470, z: 3170, tol: 4 },
-            { x: 2522, z: 3494, tol: 1 },
-        ],
+        [{ x: 2522, z: 3494, tol: 1 }],
         340,
         opts.stop,
         'castle wars to almera',
@@ -1742,17 +1739,20 @@ export async function runMeleePvpSpecialist(
     } else {
         wfPhases = (await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy })).phases;
     }
-    await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     const tWaterfall = elapsed();
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    // Drop Waterfall rewards and equip Keep melee gear while running from barrel (2527,3413) to Ardougne lever.
+    // Drop Waterfall rewards and equip Keep melee gear while running straight from barrel (2527,3413) to Ardougne lever under Protect from Melee.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
+        ignoreMeleeHunters: true,
         ignoreLiveHunters: true,
+        skipGuardWalk: true,
         onTickExtra: () => {
             ensureRunAndEnergy();
+            syncCwPfm(true);
             if (s.tick() - preEquippedWait >= 2) {
                 const gear = s.sdk.getInventory().find(i => i.id === 1319);
                 if (gear) {
@@ -1765,6 +1765,7 @@ export async function runMeleePvpSpecialist(
             if (junk) void s.direct({ type: 'dropItem', slot: junk.slot, reason: 'SDK' });
         },
     });
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     await pullArdougneLeverToWildy(s, opts.stop);
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 

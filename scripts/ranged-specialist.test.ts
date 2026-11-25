@@ -425,9 +425,11 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
 test('RANGED_PVP_SPECIALIST_KIT and RANGED_PVP_GLORY_KIT fit <=28 tradeable cataloged slots and parseSpecialistArgs supports pvp modes', async () => {
     const { RANGED_PVP_GLORY_KIT } = await import('./ranged-specialist');
     expect(kitSlotTotal(RANGED_PVP_SPECIALIST_KIT)).toBe(25);
-    expect(kitSlotTotal(RANGED_PVP_GLORY_KIT)).toBe(25);
+    expect(kitSlotTotal(RANGED_PVP_GLORY_KIT)).toBe(15);
     expect(RANGED_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
     expect(RANGED_PVP_GLORY_KIT.some(k => k.id === 3016)).toBe(false);
+    expect(RANGED_PVP_GLORY_KIT.some(k => k.id === 536)).toBe(false);
+    expect(RANGED_PVP_GLORY_KIT.some(k => k.id === 857)).toBe(true);
     expect(RANGED_PVP_SPECIALIST_KIT.find(k => k.id === 892)?.count).toBeGreaterThanOrEqual(1500);
     expect(RANGED_PVP_GLORY_KIT.find(k => k.id === 892)?.count).toBeGreaterThanOrEqual(1500);
     const byId = new Map(ITEMS.map(item => [item.id, item]));
@@ -450,11 +452,11 @@ test('RANGED_PVP_SPECIALIST_KIT and RANGED_PVP_GLORY_KIT fit <=28 tradeable cata
     });
 });
 
-test('selectRangedPvpUpgradeIds upgrades Crossbow->MSB, Rune arrows, and dhide tiers in priority order', async () => {
+test('selectRangedPvpUpgradeIds upgrades Crossbow->Yew shortbow->MSB, Rune arrows, and dhide tiers in priority order', async () => {
     const { selectRangedPvpUpgradeIds } = await import('./ranged-specialist');
-    const inv = [837, 881, 861, 892, 2581, 2577, 1099, 1065, 2497, 2491].map((id, slot) => ({ id, slot, name: `item-${id}`, count: 1 }));
+    const inv = [837, 881, 857, 861, 892, 2581, 2577, 1099, 1065, 2497, 2491].map((id, slot) => ({ id, slot, name: `item-${id}`, count: 1 }));
     expect(selectRangedPvpUpgradeIds(1, inv, [])).toEqual([837, 881]);
-    expect(selectRangedPvpUpgradeIds(40, inv, [{ id: 837, slot: 3, count: 1 }, { id: 881, slot: 13, count: 1 }])).toEqual([2581, 2577, 1099, 1065]);
+    expect(selectRangedPvpUpgradeIds(40, inv, [{ id: 837, slot: 3, count: 1 }, { id: 881, slot: 13, count: 1 }])).toEqual([857, 892, 2581, 2577, 1099, 1065]);
     expect(selectRangedPvpUpgradeIds(50, inv, [])).toEqual([861, 892, 2581, 2577, 1099, 1065]);
     expect(selectRangedPvpUpgradeIds(70, inv, [{ id: 861, slot: 3, count: 1 }, { id: 892, slot: 13, count: 1 }])).toEqual([2581, 2577, 2497, 2491]);
 });
