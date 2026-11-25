@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795600685020-1",
+ "role": "to",
+ "account": "UnderMyKilt",
+ "partner": "TrouserSnake",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795601097550,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

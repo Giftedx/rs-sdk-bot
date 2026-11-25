@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795600793712-4",
+ "account": "Swordswallow",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "3e72b23d-7523-4040-869a-9d9708223ea4",
+ "count": 1,
+ "ok": true,
+ "at": 1795601104116,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795601103338
+ },
+ "logout": {
+  "attemptId": "1795601091277-0000019744-0000000001",
+  "at": 1795601104091,
+  "sha256": "905300af13549b814288036892458ac9a0288ffe62d0b07a9e0246056f8e1705"
+ },
+ "screen": true
+}

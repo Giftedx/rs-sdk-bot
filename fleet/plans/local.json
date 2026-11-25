@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601058273,
+ "at": 1795601115932,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -27,7 +27,7 @@
    "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts SPLASH_SITE=coop TRAIN_SKILL=Magic TARGET_LEVEL=7 -- magic splash-coop 7 3000",
+    "scripts/magic-order.ts TARGET_LEVEL=7 CAP=3000 TRAIN_SKILL=Magic --",
     "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
     "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Unsheathed BATCH_UNITS=250 -- magic items enchant:sapphire_ring - 50 1200"
    ],
@@ -41,19 +41,19 @@
   },
   {
    "account": "YewFirst",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+   ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:1975",
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -138,26 +138,6 @@
    "repeat": false,
    "goal": "goal:supply_chain:2152",
    "role": "helper"
-  },
-  {
-   "account": "Porksword",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "items",
-    "enchant:sapphire_ring",
-    "-",
-    "50",
-    "1200"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "25"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Porksword",
-   "role": "auto"
   }
  ],
  "army": [

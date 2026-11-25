@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795600919341-4",
+ "account": "Fatstack",
+ "partner": "Porksword",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "7b607c7b-5702-436f-9e9b-f9945aad5aec",
+ "count": 0,
+ "ok": false,
+ "at": 1795601112503,
+ "detail": "trade claimed"
+}
