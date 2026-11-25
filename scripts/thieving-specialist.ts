@@ -365,7 +365,23 @@ export async function runArdougneStunRelogThieving(opts: {
         lastMsgMark = latestMark(msgs, lastMsgMark);
         const stallHit = lvl >= 5 && lvl < 55 && st.player.hp < prevHp;
         prevHp = st.player.hp;
-        if (stallHit || newMsgs.some(m => /you fail to pick|you've been stunned|hands off there|you're the one who stole|guards guards|during combat/i.test(m.text))) {
+        const stallAlert = lvl >= 5 && lvl < 55 && (stallHit || newMsgs.some(m => /hands off there|you're the one who stole|guards guards|during combat/i.test(m.text)));
+        if (stallAlert) {
+            // Guards in Ardougne Market put the player in combat (blocking logout for 16t); eat and step out of guard range instead of logout.
+            if (foodBitesCount(main) >= 2 && st.player.hp <= 7) {
+                await eatAnyFood(main);
+            }
+            await walkWaypointsSafe(main, [[2653, 3284, 1]], () => opts.isStopped() || elapsedNow() >= opts.cap);
+            for (let w = 0; w < 10 && !opts.isStopped() && elapsedNow() < opts.cap; w++) {
+                if ((main.sdk.getState()?.player?.hp ?? 10) <= 6 && foodBitesCount(main) >= 2) await eatAnyFood(main);
+                await waitTicks(main, 1);
+            }
+            lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
+            prevHp = main.sdk.getState()?.player?.hp ?? 10;
+            lastPickTick = -99;
+            continue;
+        }
+        if (newMsgs.some(m => /you fail to pick|you've been stunned/i.test(m.text))) {
             stuns++;
             const bites = foodBitesCount(main);
             if (st.player.hp <= Math.max(4, tier.stunDamage) && bites === 0) {
@@ -443,9 +459,12 @@ export async function runArdougneStunRelogThieving(opts: {
                         l => spec.locPattern.test(l.name) && l.x <= spec.maxX && l.optionsWithIndex.some(o => /steal/i.test(o.text)),
                     );
                     if (!locs.length) continue;
-                    const watched = (x: number, z: number) => recipe && sight
+                    const watched = (x: number, z: number) => (recipe && sight
                         ? stallWatched(recipe, { worldX: x, worldZ: z, level: st.player!.level ?? 0 }, st.nearbyNpcs, sight)
-                        : st.nearbyNpcs.some(n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x, z }) <= 5);
+                        : false) || st.nearbyNpcs.some(
+                            n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name)
+                                && chebDist({ x: n.x, z: n.z }, { x, z }) <= 5,
+                        );
                     const tile = locs.flatMap(stall =>
                         spec.offsets.map(([dx, dz]) => ({ stall, x: stall.x + dx, z: stall.z + dz }))
                             .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))
@@ -463,7 +482,7 @@ export async function runArdougneStunRelogThieving(opts: {
                         continue;
                     }
                     const op = pickedStall.stall.optionsWithIndex.find(o => /steal/i.test(o.text));
-                    if (op) {
+                    if (op && !st.nearbyNpcs.some(n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x: st.player.worldX, z: st.player.worldZ }) <= 5)) {
                         const beforeXp = main.sdk.getSkillXp('Thieving') ?? 0;
                         await main.direct({ type: 'interactLoc', x: pickedStall.stall.x, z: pickedStall.stall.z, locId: pickedStall.stall.id, optionIndex: op.opIndex, reason: 'SDK' });
                         for (let w = 0; w < 3 && !opts.isStopped() && (main.sdk.getSkillXp('Thieving') ?? 0) === beforeXp; w++) {

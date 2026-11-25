@@ -376,6 +376,10 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
  }
  await slashWebAt(spec, 3095, 3957, 3094, 3957, () => (playerPos(spec)?.worldX ?? 9999) <= 3094, deadline);
  await slashWebAt(spec, 3093, 3957, 3092, 3957, () => (playerPos(spec)?.worldX ?? 9999) <= 3092, deadline);
+ const knifeDropSlot = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.knife)?.slot;
+ if (knifeDropSlot !== undefined) {
+  void spec.direct({ type: 'dropItem', slot: knifeDropSlot, reason: 'SDK' });
+ }
 
  while (spec.tick() < deadline && (playerPos(spec)?.worldZ ?? 0) < 4500) {
   const ladder = findLocBy(spec, l => l.id === 2871 || /ladder/i.test(l.name));
@@ -478,14 +482,35 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
 
  // Path back to Chamber Guardian (904 at 2508,4696) -> receive staff (2417, sets %magearena = 8)
  await walkPath(chamberWalker, [{ x: 2508, z: 4695, tol: 2 }], { maxTicks: Math.max(10, Math.min(30, deadline - spec.tick())) });
+ logPhase(spec, start, 'magic_guardian_start');
  while (spec.tick() < deadline && countItem(spec.sdk.getInventory(), 2417) === 0) {
+  const st = spec.sdk.getState();
   const d = spec.sdk.getDialog();
+  if (st?.interface?.isOpen) {
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   await waitTicks(spec, 1);
+   continue;
+  }
   if (d?.isOpen) {
-   if (!d.isWaiting) await spec.direct({ type: 'clickDialogOption', optionIndex: d.options[0]?.index ?? 0, reason: 'SDK' });
+   if (!d.isWaiting) {
+    const safeOpt = d.options.find((o: any) => /no thanks|charge/i.test(o.text));
+    if (d.options.some((o: any) => /what do you have to offer/i.test(o.text))) {
+     if (safeOpt) await spec.direct({ type: 'clickDialogOption', optionIndex: safeOpt.index, reason: 'SDK' });
+     else await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    } else {
+     await spec.direct({ type: 'clickDialogOption', optionIndex: d.options[0]?.index ?? 0, reason: 'SDK' });
+    }
+   }
   } else {
-   const guardian = findNpcBy(spec, n => n.id === 904 || /guardian/i.test(n.name));
-   if (guardian) await spec.direct({ type: 'interactNpc', npcIndex: guardian.index, optionIndex: 1, reason: 'SDK' });
-   else await spec.direct({ type: 'walkTo', x: 2508, z: 4695, running: true, reason: 'SDK' });
+   await spec.sdk.scanGroundItems(5);
+   const groundStaff = spec.sdk.getState()?.groundItems?.find((g: any) => g.id === 2417);
+   if (groundStaff) {
+    await spec.direct({ type: 'pickupItem', x: groundStaff.x, z: groundStaff.z, itemId: 2417, reason: 'SDK' });
+   } else {
+    const guardian = findNpcBy(spec, n => n.id === 904 || /guardian/i.test(n.name));
+    if (guardian) await spec.direct({ type: 'interactNpc', npcIndex: guardian.index, optionIndex: 1, reason: 'SDK' });
+    else await spec.direct({ type: 'walkTo', x: 2508, z: 4695, running: true, reason: 'SDK' });
+   }
   }
   await waitTicks(spec, 1);
  }
