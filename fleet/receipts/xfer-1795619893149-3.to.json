@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795619893149-3",
  "account": "Shaftsinker",
  "partner": "Woodenstaff",
@@ -12,6 +12,12 @@
  "claim": "06d16642-0307-4788-9f21-a9dd562cd86f",
  "count": 0,
  "ok": false,
- "at": 1795620505154,
- "detail": "trade claimed"
+ "at": 1795620793638,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795620505167-0000021008-0000000001",
+  "at": 1795620793628,
+  "sha256": "5b64b8944bccd3341e2d9fb7a2f83ede342ef649eb9ba2295aaf97b1c9dfde09"
+ },
+ "screen": false
 }
