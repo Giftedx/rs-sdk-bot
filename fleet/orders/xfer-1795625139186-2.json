@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795625139186-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Magicwanda",
+  "to": "OreElse",
+  "item": "Gold ore",
+  "count": 35,
+  "itemId": 444,
+  "start": 1795625139186,
+  "end": 1795626039186,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
