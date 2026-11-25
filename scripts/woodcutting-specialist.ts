@@ -570,9 +570,9 @@ if (import.meta.main) {
             const canTag = !outOfPrayer
                 && wantOak
                 && !needNormalLog
+                && !activeHitIn1t
                 && tagCount < 24
                 && gobs < 3
-                && recentHitsIn6.length === 0
                 && now - lastTagTick >= 15
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1

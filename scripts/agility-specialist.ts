@@ -118,6 +118,7 @@ export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
     { id: ITEMS.desertRobe, name: 'Desert robe', count: 1 },
     { id: ITEMS.desertBoots, name: 'Desert boots', count: 1 },
     { id: ITEMS.shark, name: 'Shark', count: 1 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 1 },
 ];
 
 export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
@@ -132,7 +133,7 @@ export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
 
 export const TOURIST_TRADE_3: readonly SupplyEntry[] = [
     { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 6 },
-    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
 ];
 

@@ -444,6 +444,9 @@ if (import.meta.main) {
         };
         drainHitEvents(main.sdk.getState());
 
+        const traceLimit = 35;
+        let traceCount = 0;
+
         while (!isStopped()) {
             const mineLvl = main.sdk.getSkill('Mining')?.baseLevel ?? 1;
             const mineXp = main.sdk.getSkillXp('Mining') ?? 0;
@@ -495,6 +498,27 @@ if (import.meta.main) {
             const adjRocks = avail.filter(r => besideTile(p.worldX, p.worldZ, r));
             if (adjRocks.length === 0) {
                 const stand = pickBestIronStandTile(main, avail, allWildyRockCoords, true);
+                const standDist = stand ? Math.max(Math.abs(stand.x - p.worldX), Math.abs(stand.z - p.worldZ)) : 99;
+                const stepRock = stand
+                    ? avail.find(r => besideTile(stand.x, stand.z, r) && EAST_IRON_ROCK_COORDS.has(`${r.x},${r.z}`))
+                    : undefined;
+                const knifeSlot = slotOfId(main, OBJ_KNIFE);
+                const logSlot = slotOfId(main, OBJ_LOGS);
+                if (stand && standDist <= 2 && stepRock && now >= actionDelayApprox && knifeSlot !== undefined && logSlot !== undefined && main.sdk.getInventory().length < 28) {
+                    // Combine 1-tick step + knife3 + interactLoc so arrival & swing overlap without an idle walk tick.
+                    await Promise.all([
+                        main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
+                        main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
+                        main.direct({ type: 'interactLoc', x: stepRock.x, z: stepRock.z, locId: stepRock.id, optionIndex: stepRock.op, reason: 'SDK' }),
+                    ]);
+                    knifeRolls++;
+                    rolls++;
+                    moveTicks++;
+                    actionDelayApprox = now + 3;
+                    clearSentForTick = -99;
+                    await waitTicks(main, 1);
+                    continue;
+                }
                 const acts: Promise<unknown>[] = [];
                 if (stand) acts.push(main.direct({ type: 'walkTo', x: stand.x, z: stand.z, running: true, reason: 'SDK' }));
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
@@ -523,6 +547,10 @@ if (import.meta.main) {
                 rolls++;
                 actionDelayApprox = now + 1;
                 clearSentForTick = -99;
+                if (traceCount < traceLimit) {
+                    traceCount++;
+                    console.log(`MINE_TRACE flinch t=${now - t0} pos=${p.worldX},${p.worldZ} hits=${hitEventsTotal} gobs=${countAttackingHobgoblins(main)}`);
+                }
                 await waitTicks(main, 1);
                 continue;
             }
@@ -533,7 +561,6 @@ if (import.meta.main) {
             }
 
             while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 10) recentHitTicks.shift();
-            const recentHitsIn6 = recentHitTicks.filter(h => now - h <= 6);
             const nearbyNpcs = st?.nearbyNpcs ?? [];
             let activeHitIn1t = false;
             for (const [npcIdx, info] of npcLastHit) {
@@ -542,7 +569,8 @@ if (import.meta.main) {
                     continue;
                 }
                 const npc = nearbyNpcs.find(n => n.index === npcIdx);
-                if (!npc || npc.hp === 0 || npc.distance > 2 || !targetsPlayer(main, npc.targetIndex)) continue;
+                if (!npc || npc.hp === 0 || npc.distance > 3) continue;
+                if (npc.targetIndex >= 0 && !targetsPlayer(main, npc.targetIndex)) continue;
                 if (now + 1 - info.tick === info.period || now + 1 - info.tick === info.period * 2) {
                     activeHitIn1t = true;
                     break;
@@ -551,9 +579,9 @@ if (import.meta.main) {
 
             const gobs = !outOfPrayer ? countAttackingHobgoblins(main) : 0;
             const canTag = !outOfPrayer
-                && tagCount < 35
-                && gobs < 2
-                && recentHitsIn6.length === 0
+                && !activeHitIn1t
+                && tagCount < 45
+                && gobs < 3
                 && now - lastTagTick >= 10
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
@@ -579,6 +607,14 @@ if (import.meta.main) {
 
             const keepFlinchWindow = !outOfPrayer && activeHitIn1t;
             if (!keepFlinchWindow) {
+                if (traceCount < traceLimit) {
+                    traceCount++;
+                    const tracked = [...npcLastHit.entries()].map(([id, inf]) => {
+                        const n = nearbyNpcs.find(x => x.index === id);
+                        return `${id}:dt=${now - inf.tick}/p=${inf.period}/d=${n?.distance ?? '?'}/t=${n?.targetIndex ?? '?'}`;
+                    }).join(',');
+                    console.log(`MINE_TRACE knife3 t=${now - t0} pos=${p.worldX},${p.worldZ} gobs=${gobs} hits=${hitEventsTotal} tracked=[${tracked}]`);
+                }
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
                 if (knifeSlot !== undefined && logSlot !== undefined) {
