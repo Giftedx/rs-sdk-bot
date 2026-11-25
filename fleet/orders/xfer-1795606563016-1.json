@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795606563016-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "Woodenstaff",
+  "item": "Swamp toad",
+  "count": 5,
+  "itemId": 2150,
+  "start": 1795606563016,
+  "end": 1795607463016,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

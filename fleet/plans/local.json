@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795606545902,
+ "at": 1795606569656,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -86,19 +86,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
    "role": "army"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/generated/quest-priestperil.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:priestperil",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:priestperil",
-   "role": "helper"
   },
   {
    "account": "Wandwaver",
@@ -194,21 +181,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
-   "role": "auto"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-561-250-p372 ITEM_ID=561 QUANTITY=250 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=372 -- ge-buy",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- magic alch-train 90 3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
    "role": "auto"
   }
  ],
