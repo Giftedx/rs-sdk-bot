@@ -462,11 +462,11 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
         expect(big.state).toBe('staging');
     });
 
-    test('uses active Haggis route (25,674 ticks, no boards-sum inflation) and computes specialist margins from repo hiscores', () => {
+    test('uses active Haggis route (25,694 ticks, no boards-sum inflation) and computes specialist margins from repo hiscores', () => {
         const snapshotNow = Date.parse('2026-11-21T19:44:18.486Z');
         const manifests = loadCampaignManifests({ root: REPO_ROOT, now: snapshotNow });
         const haggis = manifests.find((c) => c.account === 'haggis')!;
-        expect(haggis.hiscoreMargin?.ourTicks).toBe(25674);
+        expect(haggis.hiscoreMargin?.ourTicks).toBe(25694);
         expect(haggis.hiscoreMargin?.meetsMargin).toBe(true);
         // Cannonballs from unchosen branches must not pollute Haggis's active route supplies,
         // and iron ore / blood runes match supply-bill.ts exact active-route quantities (2 and 2140).

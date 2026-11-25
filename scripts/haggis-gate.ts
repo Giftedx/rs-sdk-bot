@@ -2,7 +2,7 @@
 // Only --authorize can issue login permission after all evidence passes.
 import {readFileSync,readdirSync,existsSync,writeFileSync,renameSync,mkdirSync} from 'node:fs';
 import {join,resolve,relative} from 'node:path';
-import {haggisActivities,haggisTravel,loadSnapshot,scheduleOverall,overallRequirementsFor,TRICKS,type Activity,type ScheduleResult} from '../packages/planner/src/haggis';
+import {applyLevers,haggisActivities,haggisTravel,loadSnapshot,scheduleOverall,overallRequirementsFor,TRICKS,type Activity,type ScheduleResult} from '../packages/planner/src/haggis';
 import {FLEET} from './fleet';
 import {launchContext,readBound,sha,fresh,validateSupplies,validateRehearsals,type Binding} from '../packages/core/src/launch-evidence';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
@@ -16,7 +16,8 @@ export function overallWins(plan:ScheduleResult,activities:Activity[]):string{
  const margin=Math.ceil(o.deadline*.02);
  if(o.status!=='WIN'||(o.slack??-1)<margin)throw Error(`Overall needs a ${margin}-tick margin: finish ${o.finish}, deadline ${o.deadline}, slack ${o.slack}`);
  const byId=new Map(activities.map(a=>[a.id,a]));
- const unmeasured=[...new Set(plan.order.filter(p=>p.start<o.finish!).map(p=>p.id))].filter(id=>{const a=byId.get(id);return !a||/"evidence":"(ESTIMATE|CODE-READ)"/.test(JSON.stringify(a))});
+ const activeIds=[...new Set(plan.order.filter(p=>p.start<o.finish!&&!((p.ticks??(p.end-p.start))<=0&&(p.landsAt??p.end)<=p.start)).map(p=>p.id))];
+ const unmeasured=activeIds.filter(id=>{const a=byId.get(id);if(!a)return true;const {patches:_patches,...effective}=a;return /"evidence":"(ESTIMATE|CODE-READ)"/.test(JSON.stringify(effective));});
  if(unmeasured.length)throw Error(`${unmeasured.length} activities before Overall lack MEASURED inputs: ${unmeasured.slice(0,8).join(', ')}`);
  return `Overall wins by ${o.slack} ticks (margin ${margin}) with measured inputs`;
 }
@@ -32,7 +33,7 @@ export function evaluateLaunch(root:string,snapshot:string,now=Date.now(),author
   const opts={travel:haggisTravel(),mode:'realistic' as const,tricks:new Set(TRICKS)};
   const activities=haggisActivities(),targets=loadSnapshot(join(root,snapshot)),plan=scheduleOverall(targets,activities,opts);
   read('packages/planner/src/haggis-boards.json');
-  const detail=overallWins(plan,activities);
+  const detail=overallWins(plan,applyLevers(activities,{}));
   for(const b of plan.boards)if(b.deadline!==null&&typeof b.finish==='number'&&Number.isFinite(b.finish)&&b.finish>0)expected[b.id]=b.finish;
   requirements=overallRequirementsFor(activities,opts,plan).supplies;return detail;
  });

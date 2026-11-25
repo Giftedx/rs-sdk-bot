@@ -2145,6 +2145,15 @@ return [
       const ticks = Number(/\bticks=(\d+)/.exec(result)?.[1] ?? NaN);
       return !!result && loggedOutOnce(s) && /\battack=99\b/.test(result) && !/^DEATH\b/m.test(s) && ticks <= 3942;
     }},
+  // Haggis Tourist Trap prep measurements (packages/planner/src/haggis-boards.json): fletch-10, magic-43-tt (1->7 + 7->43), smith-20.
+  {key: 'extra:haggis-fletch-10', engineEnv: {NODE_MEMBERS: 'true'}, script: 'scripts/measure/haggis-tt-prep.ts', preset: 'tutorial_done', scriptArgs: ['fletch-10'], pass: ok, output: /\bticks=(\d+)/,
+    presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Fletching: 1}, inventory: [{id: 53, count: 31}, {id: 39, count: 31}]}},
+  {key: 'extra:haggis-magic-wind-1-7', engineEnv: {NODE_MEMBERS: 'true'}, script: 'scripts/measure/haggis-tt-prep.ts', preset: 'tutorial_done', scriptArgs: ['magic-wind-1-7'], pass: ok, output: /\bticks=(\d+)/,
+    presetConfig: {position: {x: 3229, z: 3298, level: 0}, skills: {Magic: 1, Hitpoints: 10}, equipment: [{id: 1381, count: 1, slot: 3}], inventory: [{id: 558, count: 50}]}},
+  {key: 'extra:haggis-magic-enchant-7-43', engineEnv: {NODE_MEMBERS: 'true'}, script: 'scripts/measure/haggis-tt-prep.ts', preset: 'tutorial_done', scriptArgs: ['magic-enchant-7-43'], pass: ok, output: /\bticks=(\d+)/,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 7}, equipment: [{id: 1381, count: 1, slot: 3}], inventory: [{id: 564, count: 50}, {id: 555, count: 50}], bank: [{id: 1637, count: 14}, {id: 1639, count: 18}]}},
+  {key: 'extra:haggis-smith-20', engineEnv: {NODE_MEMBERS: 'true'}, script: 'scripts/measure/haggis-tt-prep.ts', preset: 'tutorial_done', scriptArgs: ['smith-20'], pass: ok, output: /\bticks=(\d+)/,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 43, Smithing: 1}, equipment: [{id: 1387, count: 1, slot: 3}], inventory: [{id: 561, count: 20}], bank: [{id: 436, count: 14}, {id: 438, count: 14}, {id: 440, count: 6}]}},
 ];
 }
 
