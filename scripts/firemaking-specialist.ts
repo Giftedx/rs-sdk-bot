@@ -45,8 +45,8 @@ export const FIREMAKING_TIERS: readonly FiremakingTier[] = [
     { name: 'magic', itemId: OBJ_MAGIC_LOGS, reqLevel: 75, xp25x: 7595 },
 ];
 
-// 159 distinct active-loc-free, danger-free tiles north of Lumbridge castle, BFS-verified door-free from (3222,3222)
-// with <=2t cooldown-masked transitions across all rows after leaving Lumbridge Castle courtyard.
+// 160 distinct active-loc-free, danger-free tiles north of Lumbridge castle, BFS-verified door-free from (3222,3222)
+// along the z=3254..3265 safe corridor without backtracking.
 function expandEwRun(xStart: number, xEnd: number, z: number): [number, number][] {
     const out: [number, number][] = [];
     for (let x = xStart; x >= xEnd; x--) out.push([x, z]);
@@ -55,14 +55,10 @@ function expandEwRun(xStart: number, xEnd: number, z: number): [number, number][
 
 export const LUMBRIDGE_FM_PATH: readonly [number, number][] = [
     ...expandEwRun(3222, 3219, 3222),
-    ...expandEwRun(3226, 3201, 3237),
-    ...expandEwRun(3200, 3189, 3233),
-    ...expandEwRun(3190, 3159, 3232),
-    ...expandEwRun(3160, 3142, 3233),
-    ...expandEwRun(3143, 3120, 3231),
-    ...expandEwRun(3121, 3108, 3228),
-    ...expandEwRun(3109, 3089, 3226),
-    ...expandEwRun(3095, 3089, 3225),
+    ...expandEwRun(3228, 3189, 3254),
+    ...expandEwRun(3192, 3149, 3263),
+    ...expandEwRun(3155, 3126, 3265),
+    ...expandEwRun(3131, 3090, 3264),
 ];
 
 export interface FiremakingPlanStep {
@@ -532,10 +528,8 @@ if (import.meta.main) {
                     if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
                         await main.direct({ type: 'closeModal', reason: 'SDK' });
                     }
-                    // On consecutive West steps, ~push_player moves spec onto step.x during the p_delay(0) tick; on jumps wait out p_delay(0) first.
-                    if (prevStep && (prevStep.x - 1 === step.x && prevStep.z === step.z
-                        ? (p?.worldX === prevStep.x && p?.worldZ === prevStep.z)
-                        : (p?.worldX === prevStep.x - 1 && p?.worldZ === prevStep.z))) {
+                    // On consecutive West steps, ~push_player moves spec onto step.x during the p_delay(0) tick.
+                    if (prevStep && prevStep.x - 1 === step.x && prevStep.z === step.z && p?.worldX === prevStep.x && p?.worldZ === prevStep.z) {
                         await waitTicks(main, 1);
                         continue;
                     }

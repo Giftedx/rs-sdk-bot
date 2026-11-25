@@ -311,11 +311,10 @@ export async function runSmithingSpecialist(
 
  try {
   await skipTutorialFast(spec, deadline);
-  const starterPreDrop = await dropItemsFast(spec, new Set(), deadline, 3);
+  await dropItemsFast(spec, new Set(), deadline);
 
   await burstTradeHost(spec, starterHelper, {
    giveIds: [ITEM_IDS.hammer, ITEM_IDS.amulet_of_glory_4, ITEM_IDS.bronze_bar, ITEM_IDS.iron_bar],
-   preDropSlots: starterPreDrop.length ? starterPreDrop : undefined,
    deadlineTick: deadline,
   });
 

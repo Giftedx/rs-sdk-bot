@@ -431,9 +431,15 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
     }
    }
    const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
-   if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
+   if (helpDlg) {
+    lastOpenReqTick = -10;
+    openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
+   }
    // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
-   if (specDlg && !(canRequest && sTarget && hTarget)) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+   if (specDlg && !(canRequest && sTarget && hTarget)) {
+    lastOpenReqTick = -10;
+    openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+   }
    // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
    if (canRequest && sTarget && hTarget) {
     lastOpenReqTick = spec.tick();
