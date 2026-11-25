@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795622207312-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "Magicwanda",
+  "item": "Coins",
+  "count": 59,
+  "itemId": 995,
+  "start": 1795622207312,
+  "end": 1795623107312,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
