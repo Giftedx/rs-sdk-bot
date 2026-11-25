@@ -21,6 +21,7 @@ export {
     USE_SOURCES,
     denseSpawns,
     killSpawns,
+    outsideWilderness,
     type Gather,
     type NpcSource,
 } from './gather/sources';

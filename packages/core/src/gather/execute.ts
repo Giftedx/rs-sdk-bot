@@ -31,6 +31,7 @@ import {
     denseSpawns,
     killSpawns,
     nearest,
+    outsideWilderness,
     type Gather,
     type Tile,
 } from './sources';
@@ -47,7 +48,8 @@ type GatherCtx = {
 };
 
 function gatherSources(g: Gather, here: Tile): Tile[] {
-    return (
+    if (g.how === 'combine' || g.how === 'burn') return [here];
+    return outsideWilderness(
         g.how === 'milk' ? nearest(cows(), here)
             : g.how === 'loc' ? [LOC_SOURCES[g.id]!.tile]
             : g.how === 'kill' ? nearest((KILL_SOURCES[g.id]?.chance ?? 1) < 1 ? denseSpawns(killSpawns(g.id)) : killSpawns(g.id), here)
@@ -55,7 +57,6 @@ function gatherSources(g: Gather, here: Tile): Tile[] {
             : g.how === 'npc' ? [NPC_SOURCES[g.id]!.tile]
             : g.how === 'use' ? nearest(USE_SOURCES[g.id]!.tiles, here)
             : g.how === 'mine' ? nearest(MINE_SOURCES[g.id]!.tiles, here)
-            : g.how === 'combine' || g.how === 'burn' ? [here]
             : spawnsByDistance(g.id, here)
     ).slice(0, 6);
 }
