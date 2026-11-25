@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795572729178-trousersnake-oreelse-c07644d233c841a8",
  "account": "TrouserSnake",
  "partner": "OreElse",
@@ -12,6 +12,16 @@
  "claim": "eab936c3-440d-4e51-b226-1f3c5deb6925",
  "count": 0,
  "ok": false,
- "at": 1795572879102,
- "detail": "trade claimed"
+ "at": 1795573803743,
+ "detail": "stop file",
+ "bank": {
+  "count": 1,
+  "at": 1795572886698
+ },
+ "logout": {
+  "attemptId": "1795572879111-0000027272-0000000001",
+  "at": 1795573803733,
+  "sha256": "cd7afa692613cd81f70bf45c1d039c973905cca368a2447431633592663fd18e"
+ },
+ "screen": false
 }

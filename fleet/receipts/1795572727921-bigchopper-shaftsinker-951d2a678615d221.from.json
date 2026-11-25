@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795572727921-bigchopper-shaftsinker-951d2a678615d221",
  "account": "Bigchopper",
  "partner": "Shaftsinker",
@@ -12,6 +12,16 @@
  "claim": "d3b116b0-0cc0-405f-ac54-99f93d27d699",
  "count": 0,
  "ok": false,
- "at": 1795572919288,
- "detail": "trade claimed"
+ "at": 1795573804142,
+ "detail": "stop file",
+ "bank": {
+  "count": 1,
+  "at": 1795572926226
+ },
+ "logout": {
+  "attemptId": "1795572919297-0000030584-0000000001",
+  "at": 1795573804130,
+  "sha256": "37ab503c2620e347967bb54c06130065a8ee3aed92f875da92b83f9657af87e6"
+ },
+ "screen": false
 }
