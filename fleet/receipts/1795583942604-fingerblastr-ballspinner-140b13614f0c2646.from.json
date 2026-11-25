@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795583942604-fingerblastr-ballspinner-140b13614f0c2646",
  "account": "Fingerblastr",
  "partner": "Ballspinner",
@@ -12,6 +12,16 @@
  "claim": "0cdd9176-b281-4727-853c-720a22e1ffc6",
  "count": 0,
  "ok": false,
- "at": 1795584111406,
- "detail": "trade claimed"
+ "at": 1795585205725,
+ "detail": "stop file",
+ "bank": {
+  "count": 20,
+  "at": 1795584119011
+ },
+ "logout": {
+  "attemptId": "1795584111416-0000024204-0000000001",
+  "at": 1795585205711,
+  "sha256": "4e205544a179b586e7c12cc3d5304414cf58dd556751943e8104fbb2f8b6ebd2"
+ },
+ "screen": false
 }

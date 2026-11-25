@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795584363052-4",
  "account": "PickpockDick",
  "partner": "UnderMyKilt",
@@ -12,6 +12,12 @@
  "claim": "e2f48efc-1aa6-48b9-967a-81e20f3d2940",
  "count": 0,
  "ok": false,
- "at": 1795584968382,
- "detail": "trade claimed"
+ "at": 1795585201707,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795584968392-0000017788-0000000001",
+  "at": 1795585201696,
+  "sha256": "f8e2d8ccae7bdabe40c4fb9b198f2b5d7603b9bac660ccc43c7e7086b8a3e5a6"
+ },
+ "screen": false
 }

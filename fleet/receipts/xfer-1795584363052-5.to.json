@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795584363052-5",
  "account": "Knightstick",
  "partner": "Woodenstaff",
@@ -12,6 +12,12 @@
  "claim": "773a8e1e-d86b-4381-847a-f41835b2c59b",
  "count": 0,
  "ok": false,
- "at": 1795584971966,
- "detail": "trade claimed"
+ "at": 1795585205326,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795584971977-0000021932-0000000001",
+  "at": 1795585205312,
+  "sha256": "611f2a94d71d7ef62073b1f710c3fa1cc33cc7f467cbc0ab0a155b83c531391b"
+ },
+ "screen": false
 }

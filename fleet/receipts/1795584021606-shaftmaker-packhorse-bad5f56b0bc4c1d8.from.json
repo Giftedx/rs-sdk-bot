@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795584021606-shaftmaker-packhorse-bad5f56b0bc4c1d8",
  "account": "Shaftmaker",
  "partner": "Packhorse",
@@ -12,6 +12,16 @@
  "claim": "193d20bd-73d1-43b8-939a-b9617f8a68e3",
  "count": 0,
  "ok": false,
- "at": 1795584351481,
- "detail": "trade claimed"
+ "at": 1795585204119,
+ "detail": "stop file",
+ "bank": {
+  "count": 240000,
+  "at": 1795584357010
+ },
+ "logout": {
+  "attemptId": "1795584351491-0000021112-0000000001",
+  "at": 1795585204103,
+  "sha256": "3f5aaace789ff74c6a3fd19696b7b59e926371a7c3341311feeac58e8a18212f"
+ },
+ "screen": false
 }

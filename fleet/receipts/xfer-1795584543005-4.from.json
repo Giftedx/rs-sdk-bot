@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795584543005-4",
  "account": "Porksword",
  "partner": "UnderMyKilt",
@@ -12,6 +12,12 @@
  "claim": "7487a09f-4892-4626-aaf9-7da4cb65e12b",
  "count": 0,
  "ok": false,
- "at": 1795584915623,
- "detail": "trade claimed"
+ "at": 1795585199334,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795584915633-0000019836-0000000001",
+  "at": 1795585199303,
+  "sha256": "9c3c9a732c0f696d39a88628d2ca8e8c98edd0f8085f82c99db04a13c5b95b12"
+ },
+ "screen": false
 }

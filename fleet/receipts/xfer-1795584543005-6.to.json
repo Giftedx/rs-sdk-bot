@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795584543005-6",
+ "account": "Unsheathed",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "b7df9683-034e-43d1-aa07-b5a3e7038a78",
+ "count": 0,
+ "ok": false,
+ "at": 1795585203321,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795585148092-0000008112-0000000001",
+  "at": 1795585203304,
+  "sha256": "b14c53e24e29f8023e04a55f6659b9dcf22463e1060df21dfc15d15054172995"
+ },
+ "screen": false
+}

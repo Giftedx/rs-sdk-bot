@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795584349888-1",
  "account": "Woodpecker",
  "partner": "TheFullMonty",
@@ -12,6 +12,12 @@
  "claim": "3959d358-6fdb-4c04-b920-25fb5290ca80",
  "count": 0,
  "ok": false,
- "at": 1795584961195,
- "detail": "trade claimed"
+ "at": 1795585206574,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795584961226-0000024232-0000000001",
+  "at": 1795585206560,
+  "sha256": "f7aebed37cbf04d52b93f5f8ee0aea93b3a0ae72bd08191f559404717e13e4cb"
+ },
+ "screen": false
 }

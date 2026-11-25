@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795584021244-dipstick-yewfirst-2ad00dbbd11b7d21",
  "account": "Dipstick",
  "partner": "YewFirst",
@@ -12,6 +12,16 @@
  "claim": "a0bfd268-6914-49f1-8386-4882b8b83162",
  "count": 0,
  "ok": false,
- "at": 1795584155042,
- "detail": "trade claimed"
+ "at": 1795585208513,
+ "detail": "stop file",
+ "bank": {
+  "count": 138,
+  "at": 1795584200192
+ },
+ "logout": {
+  "attemptId": "1795584155053-0000005236-0000000001",
+  "at": 1795585208498,
+  "sha256": "e91946541941710a58fe9c9e125e16bf28c71431c61a67cefa4e45714fac6854"
+ },
+ "screen": false
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795583943102-fingerblastr-oreelse-d6622f3103ceac3c",
  "account": "OreElse",
  "partner": "Fingerblastr",
@@ -12,6 +12,12 @@
  "claim": "c800670f-6b7c-4f34-809d-0443e3e35047",
  "count": 0,
  "ok": false,
- "at": 1795584140208,
- "detail": "trade claimed"
+ "at": 1795585206525,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795584140218-0000008924-0000000001",
+  "at": 1795585206512,
+  "sha256": "d6b863b2da5f3a52627173d17654b273b44d51300292d2ca55c69cb5bd5fad16"
+ },
+ "screen": false
 }
