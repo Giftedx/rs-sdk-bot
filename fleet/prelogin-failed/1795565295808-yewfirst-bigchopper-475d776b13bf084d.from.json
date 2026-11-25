@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795565295808-yewfirst-bigchopper-475d776b13bf084d",
+ "role": "from",
+ "account": "YewFirst",
+ "partner": "Bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795565447987,
+ "detail": "Error: account logout is not confirmed: YewFirst session active or outcome unknown"
+}
