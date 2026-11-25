@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795614087804-2",
+ "account": "Moneyshot",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 5,
+ "claim": "0baf839a-5d69-4114-88e1-d1f3f33147ab",
+ "count": 0,
+ "ok": false,
+ "at": 1795614179426,
+ "detail": "trade claimed"
+}
