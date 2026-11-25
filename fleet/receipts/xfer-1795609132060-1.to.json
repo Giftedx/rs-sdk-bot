@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795609132060-1",
+ "account": "Fatstack",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring mould",
+ "requested": 1,
+ "claim": "89a942c6-26bc-468b-8f73-dca7c7fb3429",
+ "count": 0,
+ "ok": false,
+ "at": 1795609315979,
+ "detail": "trade claimed"
+}
