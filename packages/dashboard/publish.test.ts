@@ -4,8 +4,20 @@ import {mkdirSync,mkdtempSync,rmSync,writeFileSync,cpSync,existsSync,readFileSyn
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {pushPublicCommit,pushSingleCommit,run,verifyStaticBundle} from './publish';
+import {pageHash,pushPublicCommit,pushSingleCommit,run,verifyStaticBundle} from './publish';
 import {publicView} from './publish-relay';
+
+test('the page hash follows the page files and ignores the data files beside them',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'page-hash-'));
+ try{
+  expect(pageHash(dir)).toBeNull();
+  writeFileSync(join(dir,'index.html'),'<html>1</html>');writeFileSync(join(dir,'shim.js'),'x');
+  const first=pageHash(dir);expect(first).toMatch(/^[0-9a-f]{16}$/);
+  writeFileSync(join(dir,'public.json'),'{"now":1}');writeFileSync(join(dir,'map.bin'),'m');
+  expect(pageHash(dir)).toBe(first);
+  writeFileSync(join(dir,'shim.js'),'y');expect(pageHash(dir)).not.toBe(first);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 
 test('a command that outlives its limit is stopped and reported as a failure',async()=>{
  const start=Date.now();

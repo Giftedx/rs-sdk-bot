@@ -101,6 +101,10 @@ describe('hosted views',()=>{
   expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,text:'coins'}]);expect(p.events).toEqual([]);
   expect(JSON.stringify(p)).not.toMatch(/banked|packCoins|15000/);
  });
+ test('a specialist run id reads as the skill specialist, not as the account name',()=>{
+  const p=publicView({bots:[{name:'NockAndLoad',goal:'run-nockandload-fletching-specialist-1795166115412 [task-1a2b]'},{name:'Mineshafted',currentGoal:'run-mineshafted-mining-specialist-1795166115999'}]});
+  expect(p.bots[0].goal).toBe('Fletching specialist');expect(p.bots[1].currentGoal).toBe('Mining specialist');
+ });
 });
 
 describe('withSides',()=>{
@@ -152,14 +156,20 @@ test('public exact prices follow visible base IDs and route supplies while alias
   {name:'Testworker',practice:true,ground:[[3200,3201,0,12,1]]},
   {name:'Heldworker',reserved:true,ground:[{id:13,name:'Reserved only'}]},
  ],economy:{supplies:[{id:561,name:'Nature rune'}],itemPricesById:prices.byId,itemPricesByName:prices.byName}});
- expect(Object.keys(p.economy.itemPricesById).sort()).toEqual(['1135','1277','526','561','6']);
+ expect(Object.keys(p.economy.itemPricesById).sort()).toEqual(['1135','1277','13','526','561','6']);
  expect(p.economy.itemPricesById[1135]).toEqual({name:'Dragonhide body',value:7800,ask:null,bid:null});
  expect(p.economy.itemPricesById[1136]).toBeUndefined();
- expect(Object.keys(p.economy.itemPricesByName).sort()).toEqual(['bones','bronze sword','nature rune','ring']);
+ expect(Object.keys(p.economy.itemPricesByName).sort()).toEqual(['bones','bronze sword','nature rune','reserved only','ring']);
  expect(p.economy.itemPricesByName.ring).toEqual({name:'Ring',value:1000,ask:null,bid:90});
  expect(p.economy.itemPricesByName['dragonhide body']).toBeUndefined();
- for(const word of ['Bank only','Main only','Practice only','Reserved only'])expect(JSON.stringify(p)).not.toContain(word);
- expect(p.bots).toHaveLength(1);expect('bank'in p.bots[0]).toBe(false);
+ for(const word of ['Bank only','Main only','Practice only'])expect(JSON.stringify(p)).not.toContain(word);
+ expect(p.bots.map((b:any)=>b.name)).toEqual(['Worker','Heldworker']);expect('bank'in p.bots[0]).toBe(false);
+});
+
+test('a reserved account that is not the main account stays public without the reserved flag',()=>{
+ const p=publicView({bots:[{name:'Worker'},{name:'Specialist',reserved:true,skills:[{name:'Ranged',level:99}]},{name:MAIN_MARK,reserved:true}]});
+ expect(p.bots.map((b:any)=>b.name)).toEqual(['Worker','Specialist']);
+ expect('reserved' in p.bots[1]).toBe(false);expect(p.bots[1].skills).toEqual([{name:'Ranged',level:99}]);
 });
 
 test('public ground tuples require valid observations and never infer note base IDs',()=>{
@@ -292,4 +302,9 @@ test('relay Views strip redundant defaults, raw collector blobs, unused vault ta
  expect(ctl.fleetSides.orders).toEqual([{end:20,from:'A',to:'B',item:'Coins',count:100,state:'open'}]);
  expect(ctl.control.capabilities[0].checks).toEqual([{id:'unit',phase:'regression',timeoutMs:5000}]);
  expect(Object.keys(ctl.icons).sort()).toEqual(['Coins','Lobster','Rune scimitar','Shark','Whip']);
+});
+
+test('an account with no status time and no skills (credentials only, never logged in) is not a public row',()=>{
+ const p=publicView({bots:[{name:'Fresh',at:0,skills:[],role:'unknown'},{name:'Worker',at:5,skills:[]},{name:'Seen',at:0,skills:[],inWorld:true}]});
+ expect(p.bots.map((b:any)=>b.name)).toEqual(['Worker','Seen']);
 });

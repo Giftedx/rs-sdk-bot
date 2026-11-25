@@ -35,10 +35,10 @@ test('the publisher releases its lock before restarting and keeps finite runs fi
  const code=source.slice(source.indexOf('  if(!once&&reloadDue('),source.indexOf('  try{await cycle();}'));
  const run=(once:boolean,due:boolean)=>{
   const calls:string[]=[];
-  new Function('once','reloadDue','root','startedAt','release','respawnDaemon','join','prac','process','console',code)(
+  new Function('once','reloadDue','root','startedAt','release','respawnDaemon','join','prac','process','log',code)(
    once,()=>due,'source',10,()=>calls.push('release'),
    (_dir:string,args:string[])=>{expect(args).toEqual([join('source','packages/dashboard/publish.ts')]);calls.push('spawn');return 100;},join,join('source','.practice'),
-   {argv:['bun','publish.ts'],exit:(code:number)=>calls.push('exit '+code)},{log:()=>{}},
+   {argv:['bun','publish.ts'],exit:(code:number)=>calls.push('exit '+code)},()=>{},
   );
   return calls;
  };

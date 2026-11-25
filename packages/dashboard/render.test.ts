@@ -119,7 +119,7 @@ test('work metric shows capped earners coin stock without claiming earnings',()=
  expect(run({role:'thieving',inventory:[]}).title).toContain('not earnings or net profit');
 });
 const rosterSource=html.slice(html.indexOf('function hasStopProof('),html.indexOf('function roster(){'));
-function rosterFunctions(){return new Function('S','E','ago','sel','ocIcon',rosterSource+';return{offlineGoal,offWhy,rowOff,operationPhase,hasStopProof,resultKind,nativeProofPanel,boundedLabel,controllerEvidence,cleanupBadge};')({now:600000},escape,()=> '1m','',()=>'<i>raw outcome</i>');}
+function rosterFunctions(){return new Function('S','E','ago','sel','ocIcon','MARK',rosterSource+';return{offlineGoal,offWhy,rowOff,operationPhase,hasStopProof,resultKind,nativeProofPanel,boundedLabel,controllerEvidence,cleanupBadge};')({now:600000},escape,()=> '1m','',()=>'<i>raw outcome</i>','⟦MAIN⟧');}
 const stopProof={kind:'host-stop-cleanup',outcome:'proved',level:'local-native',workerOutcome:'fail',goalMet:false,scope:'four sent inputs settled; assets banked'};
 
 test('goal cards use current plan actions while preserving evidence metrics and unknown-plan fallback',()=>{
@@ -160,7 +160,10 @@ test('offline roster keeps goal, failure and state readable while long raw contr
     const visible=row.replace(/title="[^"]*"/g,'');
     expect(visible).toContain('worker failed');expect(visible).toContain('blocked');expect(visible).toContain('disabled');
     expect(visible).toContain('Make useful strings');expect(visible).not.toContain('Old worker goal');expect(visible).not.toContain(raw);expect(row).toContain(raw);
-    expect(f.offlineGoal({reserved:true,currentGoal:'private identity'})).toBe('private main · reserved');
+    expect(f.offlineGoal({name:'⟦MAIN⟧',reserved:true,currentGoal:'private identity'})).toBe('private main · reserved');
+    expect(f.offlineGoal({name:'Specialist',reserved:true,currentGoal:'Ranged 99'})).toBe('reserved · Ranged 99');
+    expect(f.offWhy({name:'Specialist',reserved:true}).tip).not.toContain('main');expect(f.offWhy({name:'⟦MAIN⟧',reserved:true}).tip).toBe('private main account');
+    expect(f.rowOff({name:'Specialist',reserved:true})).not.toContain('main · reserved');
 });
 test('raw milestones are labelled historical and stale named phases retain evidence',()=>{
     const f=rosterFunctions();expect(f.operationPhase({phaseShort:'picks=20 banked=0 held=20'})).toBe('Last recorded milestone · open detail for counters');
@@ -244,7 +247,22 @@ test('goal summaries distinguish recent ranks, old stock, model gates and skill-
     const f=new Function('S','liveBots','observedAt','skills','ledger','boardKey',source+';return {specialistRows,goalMetrics};')(S,()=>S.bots.filter((b:any)=>!b.practice&&!b.reserved),(at:number,limit=300000)=>at>0&&at<=S.now&&S.now-at<limit,(b:any)=>b.skills.filter((s:any)=>!/^Stat\d+$/.test(s.name)),()=>null,key);
     expect(f.specialistRows()[0].best.name).toBe('Worker');expect(f.specialistRows()[1].best).toBeUndefined();
     const goals=f.goalMetrics();expect(goals).toHaveLength(6);expect(goals[0].metric).toBe('? active');expect(goals[1].metric).toBe('84 types');expect(goals[2].metric).toBe('1 × 99');expect(goals[3].metric).toBe('0 #1');expect(goals[4].metric).toBe('No check');expect(goals[5].metric).toBe('Unknown');
+    expect(f.specialistRows()[0].top).toMatchObject({name:'Old',rank:1,recent:false});
     S.bots[0].ranksAt=S.now+1;expect(f.specialistRows()[0].best.recent).toBe(false);
+});
+
+test('the board grid shows the best rank of all, with the board best of an account outside the list',()=>{
+    const source=html.slice(html.indexOf('function specialistRows(){'),html.indexOf('function goalCards(){'));
+    const S:any={now:1000000,bots:[
+        {name:'Fresh',at:999000,ranksAt:999000,ranks:[{board:'Ranged',rank:55},{board:'Overall',rank:1426}]},
+        {name:'Parked',at:100,ranksAt:100,ranks:[{board:'Overall',rank:574}]}
+    ],boards:[{board:'Overall',best:{rank:574,name:'Parked',at:100}},{board:'Ranged',best:{rank:6,name:'OtherSide',at:999500}},{board:'Smithing',best:{rank:46,name:'OtherSide',at:100}}]};
+    const key=(s:string)=>s.toLowerCase().replace(/[^a-z]/g,'');
+    const f=new Function('S','liveBots','observedAt','skills','ledger','boardKey',source+';return specialistRows;')(S,()=>S.bots,(at:number,limit=300000)=>at>0&&at<=S.now&&S.now-at<limit,(b:any)=>b.skills||[],()=>null,key);
+    const [overall,ranged,smithing]=f();
+    expect(overall.top).toMatchObject({rank:574,name:'Parked',recent:false});expect(overall.best).toMatchObject({rank:1426,name:'Fresh'});
+    expect(ranged.top).toMatchObject({rank:6,name:'OtherSide',recent:true});expect(ranged.best).toMatchObject({rank:6,name:'OtherSide'});
+    expect(smithing.top).toMatchObject({rank:46,name:'OtherSide',recent:false});
 });
 
 test('Runite inspector uses the known value-board record despite display-name differences',()=>{

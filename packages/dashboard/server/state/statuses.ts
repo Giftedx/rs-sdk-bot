@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { trackFlow } from '../../flow';
 import { folderScan } from '../../folder-scan';
 import { isLocalServer } from '../../../core/src/localserver';
-import { append, FILES, MAIN, NL, ROLE_SKILL, SCRIPT_ROLE, statusDirs, tailJsonl, type Status } from '../config';
+import { append, FILES, goalTraining, MAIN, NL, ROLE_SKILL, SCRIPT_ROLE, statusDirs, tailJsonl, type Status } from '../config';
 import { inferRole, NO_ROLE, ranks } from '../world';
 import { trackResult } from './results';
 
@@ -153,7 +153,7 @@ function flowRate(name: string, key: 'coins' | 'food') {
     return (b.coins - a.coins) / (b.tick - a.tick);
 }
 function goalSkillOf(s: Status): string | null {
-    const known = SCRIPT_ROLE[String(s.goal ?? '')]?.skill ?? ROLE_SKILL[s.role];
+    const known = SCRIPT_ROLE[String(s.goal ?? '')]?.skill ?? goalTraining(s.goal)?.skill ?? ROLE_SKILL[s.role];
     if (known) return known;
     if (NO_ROLE.has(s.role) && s.name.toLowerCase() !== MAIN.toLowerCase()) return inferRole(s, ranks.get(s.name)?.rows ?? []);
     return null;

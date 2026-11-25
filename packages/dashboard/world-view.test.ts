@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { botPathOverlays, contentionView, farmsView, hiscoreRows, lookupView, overtakeView, resolveBotDestination, rivalsView, rosterView, valueBoardRows, wildernessBandFor, wildernessInfo, wildernessOverlayData, wildernessView, WILDERNESS_BANDS, WILDERNESS_HOTSPOTS } from './world-view';
+import { botPathOverlays, CLAIM_MAX_MS, contentionView, farmsView, hiscoreRows, lookupView, overtakeView, resolveBotDestination, rivalsView, rosterView, valueBoardRows, wildernessBandFor, wildernessInfo, wildernessOverlayData, wildernessView, WILDERNESS_BANDS, WILDERNESS_HOTSPOTS } from './world-view';
 
 const now = 1_000_000;
 const roster = new Map([
@@ -29,7 +29,7 @@ test('spot contention counts other players near a claimed tile or named spot on 
         ...roster,
         ['auburyvisitor', { name: 'AuburyVisitor', x: 3253, z: 3403, level: 0, combat: 50, seen: now - 500 }],
     ]);
-    const v = contentionView([{ side: 'local', resources: ['knight:2582,3297', 'shop:aubury', 'unknown:place'] }, { bad: 1 }], ext, fleet, now);
+    const v = contentionView([{ side: 'local', at: now - 60_000, resources: ['knight:2582,3297', 'shop:aubury', 'unknown:place'] }, { bad: 1 }], ext, fleet, now);
     expect(v.find(s => s.resource === 'knight:2582,3297')).toEqual({ side: 'local', resource: 'knight:2582,3297', kind: 'knight', x: 2582, z: 3297, others: ['Zezima'], ours: ['MyBot'] });
     expect(v.find(s => s.resource === 'shop:aubury')).toEqual({ side: 'local', resource: 'shop:aubury', kind: 'shop', x: 3253, z: 3402, others: ['AuburyVisitor'], ours: [] });
     expect(v.find(s => s.resource === 'unknown:place')).toEqual({ side: 'local', resource: 'unknown:place', kind: 'unknown', x: null, z: null, others: [], ours: [] });
@@ -58,8 +58,17 @@ test('wildernessView lists online Wilderness sightings sorted with rivals first 
     ]);
 });
 test('a spot that several claims of one side name is listed once; another side keeps its own row', () => {
-    const v = contentionView([{ side: 'local', resources: ['knight:2582,3297'] }, { side: 'local', resources: ['knight:2582,3297', 'knight:2582,3297'] }, { side: 'cloud', resources: ['knight:2582,3297'] }], roster, fleet, now);
+    const v = contentionView([{ side: 'local', at: now, resources: ['knight:2582,3297'] }, { side: 'local', at: now, resources: ['knight:2582,3297', 'knight:2582,3297'] }, { side: 'cloud', at: now, resources: ['knight:2582,3297'] }], roster, fleet, now);
     expect(v.map(s => s.side + ' ' + s.resource).sort()).toEqual(['cloud knight:2582,3297', 'local knight:2582,3297']);
+});
+test('a claim file from a side that stopped syncing lists no spots, and a farm counts a spot two sides claim once', () => {
+    const stale = contentionView([{ side: 'claude-cloud', at: now - CLAIM_MAX_MS, resources: ['knight:2582,3297'] }, { side: 'cloud', resources: ['knight:2582,3297'] }], roster, fleet, now);
+    expect(stale).toEqual([]);
+    const ext = new Map([...roster, ...['Farmer01', 'Farmer02', 'Farmer03'].map((n, i) => [n.toLowerCase(), { name: n, x: 2582 + i, z: 3297, level: 0, combat: 3, seen: now - 100 }] as const)]);
+    const spots = contentionView([{ side: 'local', at: now, resources: ['knight:2582,3297'] }, { side: 'cloud', at: now, resources: ['knight:2582,3297'] }], ext, fleet, now);
+    expect(spots).toHaveLength(2);
+    const farm = farmsView(ext, fleet, spots, now).find(g => g.names.includes('Farmer01'))!;
+    expect(farm.atSpots).toEqual([{ resource: 'knight:2582,3297', count: 3 }]);
 });
 test('a lookup carries the hiscore rows and the last world-feed sighting', () => {
     expect(lookupView('Zezima', [], 7, roster.get('zezima'), now)).toEqual({ name: 'Zezima', at: 7, rows: [], online: true, x: 2585, z: 3300, plane: 0, combat: 99, lastSeen: now - 1000, worn: null, wornAt: null });

@@ -10,7 +10,8 @@
 // branch plus public.json and map.bin to its `site` branch (GitHub Pages) at most every PUBLIC_EVERY_S; apply the
 // commands the owner committed under commands/ on main (packages/dashboard/publish-commands.ts): the local
 // console's own actions replay into the dashboard's /api/control, the fleet actions go through the stop files.
-import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,rmSync,cpSync,openSync,closeSync} from 'node:fs';
+import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,rmSync,cpSync,openSync,closeSync,appendFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {expandQuests} from './quest-pack';
@@ -29,6 +30,10 @@ const DASH=`http://127.0.0.1:${Number(process.env.DASH_PORT??3100)}`;
 // The local console accepts these from its own page; actions in ACTIONS go through applyCommand directly.
 const CONSOLE_ACTIONS=new Set(['pause','resume','account-release','set-campaign-state','set-mission-state']);
 
+// The daemon writes each line to its log file itself. Output inherited through a detached child's stdout stopped
+// reaching the file after the first cycle when a watchdog pass started it (two 5-hour runs left one line each).
+const LOG=join(prac,'dashboard-publish.log'),LOG_DIRECT=process.env.PUBLISH_LOG_DIRECT==='1';
+const log=(line:string)=>{if(LOG_DIRECT){try{appendFileSync(LOG,line+'\n');return;}catch{/* stdout below */}}console.log(line);};
 const alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
 const writeAtomic=(f:string,data:string|Uint8Array)=>{mkdirSync(resolve(f,'..'),{recursive:true});writeFileSync(f+'.tmp',data);renameSync(f+'.tmp',f);};
 // A git push on a dead socket can hold for ten minutes or more, and every later publication waits behind it. A normal
@@ -59,7 +64,7 @@ async function ensureDashboard(){
  const out=openSync(join(prac,'dashboard.out.log'),'a'),err=openSync(join(prac,'dashboard.err.log'),'a');
  const child=spawn(process.execPath,[join(root,'packages','dashboard','server.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,err],env:process.env});
  closeSync(out);closeSync(err);child.unref();
- console.log(`PUBLISH started the local dashboard pid ${child.pid}`);
+ log(`PUBLISH started the local dashboard pid ${child.pid}`);
  for(let i=0;i<30;i++){await Bun.sleep(1000);try{if((await dash('/api/viewer-health',undefined,3000)).ok)return;}catch{/* not yet */}}
  throw Error('the local dashboard did not answer within 30 s');
 }
@@ -132,30 +137,35 @@ export async function pushPublicCommit(dir:string):Promise<string>{
  await checked('update-ref','HEAD',commit);
  return 'pushed';
 }
-async function pullMain(main:string){const r=await git(main,'pull','--ff-only','-q','origin','main');if(!r.ok)console.log(`PUBLISH pull main: ${r.out.slice(0,160)}`);}
+async function pullMain(main:string){const r=await git(main,'pull','--ff-only','-q','origin','main');if(!r.ok)log(`PUBLISH pull main: ${r.out.slice(0,160)}`);}
 
 // ---------- commands: files under commands/ on main; the GitHub API names the login that committed each ----------
+const COMMAND_FILE=/^[a-f0-9-]{36}\.json$/;
 async function replayToConsole(body:string,nonce:string){
  const r=await dash('/api/control',{method:'POST',headers:{'content-type':'application/json',origin:DASH,'x-atlas-control':nonce},body},60_000);
  const result:any=await r.json().catch(()=>({error:`HTTP ${r.status}`}));
  return r.ok?{status:String(result.status??'accepted'),note:result.taskId?`task ${result.taskId}`:null}:{status:'refused',note:String(result.error??`HTTP ${r.status}`).slice(0,200)};
 }
 async function pollCommands(now:number,nonce:string|null):Promise<number>{
+ // Command files arrive with the pull of main, so the API (one rate limit shared with the signed-in page) is asked only
+ // when the clone holds one. An empty commands/ folder is not in Git: most cycles ask nothing.
+ const pulled=join(DIR,'repo','commands');
+ if(!existsSync(pulled)||!readdirSync(pulled).some(n=>COMMAND_FILE.test(n)))return 0;
  let list:any[];
- try{list=await ghJson('api',`repos/${REPO}/contents/commands?ref=main`);}catch(e){if(!/404|Not Found/.test(String(e)))console.log(`PUBLISH commands list: ${String(e).slice(0,160)}`);return 0;}
+ try{list=await ghJson('api',`repos/${REPO}/contents/commands?ref=main`);}catch(e){if(!/404|Not Found/.test(String(e)))log(`PUBLISH commands list: ${String(e).slice(0,160)}`);return 0;}
  if(!Array.isArray(list))return 0;
  let applied=0;const owned=ownedNames(),owner=REPO.split('/')[0]!;
  for(const entry of list){
-  if(entry?.type!=='file'||!/^[a-f0-9-]{36}\.json$/.test(String(entry.name)))continue;
+  if(entry?.type!=='file'||!COMMAND_FILE.test(String(entry.name)))continue;
   const path=`commands/${entry.name}`;
   let outcome:{status:string;note:string|null};
   // A read that fails is not the command's fault: the file stays for the next cycle, and its age limit ends the retries.
   let file:any,commits:any;
   try{file=await ghJson('api',`repos/${REPO}/contents/${path}?ref=main`);commits=await ghJson('api',`repos/${REPO}/commits?path=${path}&sha=main&per_page=1`);}
-  catch(e){console.log(`PUBLISH command ${entry.name} not read: ${String(e instanceof Error?e.message:e).slice(0,160)}`);continue;}
-  let accepted:{id:string;action:string;account:string|null;at:number;login:string|null}|null=null;
+  catch(e){log(`PUBLISH command ${entry.name} not read: ${String(e instanceof Error?e.message:e).slice(0,160)}`);continue;}
+  let accepted:{id:string;action:string;account:string|null;at:number;login:string|null}|null=null,raw:any=null;
   try{
-   const text=Buffer.from(String(file.content??''),'base64').toString('utf8'),raw=JSON.parse(text);
+   raw=JSON.parse(Buffer.from(String(file.content??''),'base64').toString('utf8'));
    if(typeof raw?.id!=='string'||!ID_RE.test(raw.id)||raw.id!==entry.name.slice(0,-5))throw Error('file name and command id differ');
    if(typeof raw.at!=='number')throw Error('command carries no time');
    const login:string|null=commits?.[0]?.committer?.login??commits?.[0]?.author?.login??null;
@@ -177,16 +187,19 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
      outcome=await replayToConsole(JSON.stringify(envelope),nonce);
     }
     if(!existsSync(receiptPath(root,raw.id)))writeReceipt(root,{id:raw.id,action:raw.action,account:cmd.account??null,at:now,requestedAt:raw.at,by:login,status:outcome.status,note:outcome.note,source:'remote'});
-    applied++;console.log(`PUBLISH command ${raw.action} ${cmd.account??''} by ${login}: ${outcome.status}${outcome.note?' ('+outcome.note+')':''}`);
+    applied++;log(`PUBLISH command ${raw.action} ${cmd.account??''} by ${login}: ${outcome.status}${outcome.note?' ('+outcome.note+')':''}`);
    }
   }catch(e){
-   outcome={status:accepted?'failed':'invalid',note:String(e instanceof Error?e.message:e).slice(0,160)};console.log(`PUBLISH command ${entry.name} ${outcome.status}: ${outcome.note}`);
-   // A valid command that failed while it ran still gets its answer on the page.
-   if(accepted&&!existsSync(receiptPath(root,accepted.id)))try{writeReceipt(root,{id:accepted.id,action:accepted.action,account:accepted.account,at:now,requestedAt:accepted.at,by:accepted.login,status:outcome.status,note:outcome.note,source:'remote'});}catch{/* the log line stands */}
+   outcome={status:accepted?'failed':'invalid',note:String(e instanceof Error?e.message:e).slice(0,160)};log(`PUBLISH command ${entry.name} ${outcome.status}: ${outcome.note}`);
+   // A valid command that failed while it ran still gets its answer on the page. So does a refused one whose file names
+   // its own id (an action this PC does not know, a bad field): the page shows why instead of waiting 30 minutes.
+   const named=!accepted&&typeof raw?.id==='string'&&ID_RE.test(raw.id)&&raw.id===entry.name.slice(0,-5)?raw:null;
+   const answer=accepted??(named?{id:named.id,action:String(named.action??'unknown').slice(0,40),account:typeof named.account==='string'?named.account:null,at:typeof named.at==='number'?named.at:now,login:null}:null);
+   if(answer&&!existsSync(receiptPath(root,answer.id)))try{writeReceipt(root,{id:answer.id,action:answer.action,account:answer.account,at:now,requestedAt:answer.at,by:answer.login,status:outcome.status,note:outcome.note,source:'remote'});}catch{/* the log line stands */}
   }
   // Remove the command file whatever happened: the receipt in control.json is the answer.
   const del=await gh('api','-X','DELETE',`repos/${REPO}/contents/${path}`,'-f',`message=fleet command ${entry.name.slice(0,8)}: ${outcome.status}`,'-f',`sha=${file.sha??entry.sha}`,'-f','branch=main');
-  if(!del.ok)console.log(`PUBLISH command delete ${entry.name}: ${del.out.slice(0,160)}`);
+  if(!del.ok)log(`PUBLISH command delete ${entry.name}: ${del.out.slice(0,160)}`);
  }
  return applied;
 }
@@ -282,6 +295,15 @@ export function verifyStaticBundle(
  return {ok:missing.length===0&&leaks.length===0,checkedFiles,checkedAssets:assets.size,missing:[...new Set(missing)],leaks:[...new Set(leaks)]};
 }
 
+// The hash of the page files in a site folder (null when it holds none): it changes when, and only when, the page does.
+const PAGE_HASH_FILES=['index.html','shim.js','config.js','client-shell.js','client-shell.css','client-viewer.css','map-shell.js','map-shell.css','operations.js','operations.css','xp-tracker.js','runelite-chrome.css'];
+let deployedPage:string|null|undefined;
+export function pageHash(dir:string):string|null{
+ const h=createHash('sha1');let any=false;
+ for(const f of PAGE_HASH_FILES){try{h.update(f+'\0');h.update(readFileSync(join(dir,f)));any=true;}catch{/* not in this site */}}
+ return any?h.digest('hex').slice(0,16):null;
+}
+
 // True when the hosted page's index.html holds the expandQuests function of the packed quest state (quest-pack.ts).
 export function hostedPageExpandsQuests(main:string):boolean{
  try{return readFileSync(join(main,'site','index.html'),'utf8').includes('function expandQuests(');}catch{return false;}
@@ -300,6 +322,9 @@ async function cycle(){
  // The hosted page lives in the dashboard repository (main/site), deployed apart from this publisher. Packed quests go out
  // only when that page can expand them; otherwise the data keeps the old quest shape, so an old page never shows empty quests.
  if(!(REPO&&hostedPageExpandsQuests(join(DIR,'repo'))))state=expandQuests(state),delete state.questList;
+ // A hosted tab reloads when pageVersion changes. The local server's value is the mtime of this PC's page files, which
+ // change at every checkout update; the hosted tab runs the page deployed on the site branch, so that page's hash goes out.
+ if(REPO){deployedPage??=pageHash(join(DIR,'site'));state={...state,pageVersion:deployedPage};}
  // The public view refuses a state that still names the main account. The owner's control view must still go out.
  const controlObj=controlView(state,meta),control=JSON.stringify(controlObj);
  let pubObj:any=null,pub:string|null=null,pubError:unknown=null;
@@ -317,23 +342,25 @@ async function cycle(){
    const site=join(DIR,'site');
    for(const n of readdirSync(site))if(n!=='.git')rmSync(join(site,n),{recursive:true,force:true});
    if(existsSync(join(main,'site')))cpSync(join(main,'site'),site,{recursive:true});
+   // The file goes out with the page it deploys beside, so a tab that loads the new page does not reload again.
+   const page=pageHash(site);if(page!==pubObj.pageVersion){pubObj.pageVersion=page;pub=JSON.stringify(pubObj);}
    writeFileSync(join(site,'public.json'),pub);writeFileSync(join(site,'.nojekyll'),'');
    if(existsSync(join(DIR,'out','map.bin')))cpSync(join(DIR,'out','map.bin'),join(site,'map.bin'));
-   note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic={stable:pubStable!,at:now};
+   note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic={stable:withoutClocksValue(pubObj),at:now};deployedPage=page;
   }
  }
  if(pub===null)throw pubError;
- console.log(`PUBLISH ok ${new Date(now).toISOString()} ${note} control=${Math.round(control.length/1024)}K public=${Math.round(pub.length/1024)}K`);
+ log(`PUBLISH ok ${new Date(now).toISOString()} ${note} control=${Math.round(control.length/1024)}K public=${Math.round(pub.length/1024)}K`);
 }
 
 if(import.meta.main){
  const lock=join(prac,'dashboard-publish.lock');
  if(process.argv.includes('--daemon')){
   const out=openSync(join(prac,'dashboard-publish.log'),'a');
-  const child=spawn(process.execPath,[join(root,'packages','dashboard','publish.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,out],env:process.env});
+  const child=spawn(process.execPath,[join(root,'packages','dashboard','publish.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,out],env:{...process.env,PUBLISH_LOG_DIRECT:'1'}});
   closeSync(out);child.unref();console.log(`PUBLISH started pid ${child.pid} (log .practice/dashboard-publish.log)`);process.exit(0);
  }
- if(existsSync(lock)){const pid=Number(readFileSync(lock,'utf8'));if(pid>0&&pid!==process.pid&&alive(pid)){console.log(`PUBLISH already running pid ${pid}`);process.exit(0);}}
+ if(existsSync(lock)){const pid=Number(readFileSync(lock,'utf8'));if(pid>0&&pid!==process.pid&&alive(pid)){log(`PUBLISH already running pid ${pid}`);process.exit(0);}}
  mkdirSync(prac,{recursive:true});writeFileSync(lock,String(process.pid));
  const release=()=>{try{if(readFileSync(lock,'utf8')===String(process.pid))rmSync(lock);}catch{/* gone */}};
  process.on('exit',release);process.on('SIGINT',()=>process.exit(0));process.on('SIGTERM',()=>process.exit(0));
@@ -342,10 +369,10 @@ if(import.meta.main){
   if(!once&&reloadDue(root,'dashboard-publish',startedAt)){
    release();
    const pid=respawnDaemon(root,[join(root,'packages/dashboard/publish.ts'),...process.argv.slice(2)],join(prac,'dashboard-publish.log'));
-   console.log(`PUBLISH reload after a live update: successor pid ${pid}`);
+   log(`PUBLISH reload after a live update: successor pid ${pid}`);
    process.exit(0);
   }
-  try{await cycle();}catch(e){console.log(`PUBLISH fail ${String(e).slice(0,300)}`);if(once)process.exit(1);}
+  try{await cycle();}catch(e){log(`PUBLISH fail ${String(e).slice(0,300)}`);if(once)process.exit(1);}
   if(once)break;
   await Bun.sleep(CYCLE_MS);
  }

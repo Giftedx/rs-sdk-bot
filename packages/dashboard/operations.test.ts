@@ -129,7 +129,7 @@ test('the command centre names owner goal gaps and opens Project goals',()=>{
  expect(html).toContain('data-value="goals"');expect(html).not.toContain('board goals left');
 });
 function publicRow(bot:any,withHelper=true){
- const code=operations.slice(operations.indexOf(' function publicRow('),operations.indexOf(' function fleet(){'));
+ const code=operations.slice(operations.indexOf(' function goalShare('),operations.indexOf(' function fleetRow(b){'))+operations.slice(operations.indexOf(' function publicRow('),operations.indexOf(' function fleet(){'));
  const window=withHelper?{atlasCurrentHp:(b:any)=>currentHp(b,now)}:{};
  return new Function('window','S','sel','st','overallRank','totalLevel','E','nf','compactRate','safeName','skillIcon','age',`${code};return publicRow;`)
   (window,{results:[]},null,()=>['','observed'],()=>null,()=>0,String,String,String,String,()=>'/skill.png',String)(bot) as string;
@@ -304,7 +304,7 @@ test('fleet Wilderness filter counts and isolates playing accounts in the Wilder
  const wild=render('wildy');
  expect(wild).toContain('[ROW:WildOne]');
  expect(wild).not.toContain('[ROW:SafeOne]');
- const rowCode=operations.slice(operations.indexOf(' function fleetRow(b){'),operations.indexOf(' function publicRow(b){'));
+ const rowCode=operations.slice(operations.indexOf(' function goalShare('),operations.indexOf(' function publicRow(b){'));
  const rowHtml=new Function('window','issues','overallRank','totalLevel','st','resultSummary','safeName','skillIcon','compactRate','idleOf','button','E','nf',`${rowCode};return fleetRow({name:'WildOne',operation:'observed',inWorld:true,pos:{x:3060,z:3880,level:0}});`)(
   {atlasOperator:()=>true},()=>[],()=>null,()=>0,()=>['','observed'],()=>'',String,()=>'',String,()=>null,()=>'',String,String) as string;
  expect(rowHtml).toContain('Observed · wildy 46');
@@ -432,4 +432,13 @@ test('Supply bill tab calculates route fulfillment for operators only and stays 
  expect(pub.tabs).not.toContain('data-value="bill"');
  expect(pub.html).toContain('operator view only');
  expect(pub.html).not.toContain('Dragon bones');
+});
+
+test('the fleet goal meter counts XP on the server curve, not the level ratio',()=>{
+ const code=operations.slice(operations.indexOf(' function goalShare('),operations.indexOf(' function fleetRow(b){'));
+ const share=new Function('globalThis',`${code};return goalShare;`)({atlasXp:{xpForLevel:(l:number)=>l===99?998_458:0}});
+ expect(share({goalNow:70,goalLevel:99,goalXp:133_500})).toBeCloseTo(13.37,1);
+ expect(share({goalNow:70,goalLevel:99})).toBeCloseTo(70.7,1);
+ expect(share({goalNow:99,goalLevel:99,goalXp:998_458})).toBeNull();
+ expect(new Function('globalThis',`${code};return goalShare;`)({})({goalNow:50,goalLevel:99,goalXp:40_000})).toBeCloseTo(50.5,1);
 });

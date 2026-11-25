@@ -167,7 +167,7 @@ export function controlView(state:any,controlMeta:any,main=MAIN_ACCOUNT){
 // the private repository and this PC's resources stay with the owner (control.json).
 const PUBLIC_BOT=['name','server','side','remote','practice','reserved','at','started','fresh','inWorld','operation','pos','live','hp','hpAt','combat','questPoints',
  'skills','quests','questsDone','questsStarted','questsUnknown','questsAt','equipment','equipmentObserved','inventory','ranks','ranksAt','role','goal','currentGoal','goalSkill','goalLevel',
- 'goalNow','goalXp','xpPerTick','xpPerHour','xpLeft','eta','rateSkill','spark','uptime','action','death','seenInFeed','lastSeen','outcome','training','snapshotAt','ground'] as const;
+ 'goalNow','goalXp','xpPerTick','xpPerHour','xpLeft','eta','rateSkill','spark','uptime','action','death','seenInFeed','lastSeen','outcome','training','snapshotAt','ground','roleInferred'] as const;
 const PUBLIC_KEYS=['now','questList','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','snapshotAt','liveTopsAt','liveTops'] as const;
 // Goal texts can carry an internal task tag ("run-x [task-1a2b]") and, after a colon or in brackets, stock counts
 // ("Smithing from banked ore: 1630 bronze and 571 iron", "cooked lobsters (607 short)"): the public keeps the headline.
@@ -175,6 +175,9 @@ const PUBLIC_KEYS=['now','questList','world','worldPlayers','boards','roster','r
 const RUN_KIND:Record<string,string>={ranged:'Ranged training',ge:'Grand Exchange trade',handoff:'item hand-off',quest:'quests'};
 const publicGoal=(g:any)=>{
  if(typeof g!=='string')return g;
+ // A specialist run id names the account, then the skill: "run-nockandload-fletching-specialist-1795166115412".
+ const specialist=/^run-[a-z0-9]+-([a-z]+)-specialist\b/i.exec(g.trim());
+ if(specialist)return specialist[1]![0]!.toUpperCase()+specialist[1]!.slice(1).toLowerCase()+' specialist';
  const run=/^run-([a-z]+)-/.exec(g.trim());
  if(run)return RUN_KIND[run[1]!]??run[1]+' run';
  // A script file name ("magic-order.ts") reads as its words.
@@ -255,8 +258,14 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
   return res;
  };
  // Practice bots play on this PC's local test server, not the public world: their runs are the owner's testing.
- const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{
+ // A reserved account (a specialist or a fresh account whose route owner controls launches) plays on the public world,
+ // the boards name it and the 3D view marks it as ours, so it stays in the list. The page reads `reserved` as the
+ // private main account, which the public file never holds, so the flag goes.
+ // An account with credentials but no status, job or skills yet (never logged in) is an empty row: it stays private.
+ const empty=(b:any)=>b?.at===0&&Array.isArray(b?.skills)&&b.skills.length===0&&b?.inWorld!==true;
+ const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.practice&&!empty(b)).map((b:any)=>{
   const copy:any=compactBotCommon(pick(b,PUBLIC_BOT));
+  delete copy.reserved;
   if(Object.hasOwn(b,'hpAt')){const at=observedAt(copy.hpAt,s.now),accountAt=observedAt(copy.at,s.now);copy.hpAt=at!==null&&accountAt!==null&&at<=accountAt?at:null;}else delete copy.hpAt;
   if(Object.hasOwn(b,'questPoints'))copy.questPoints=publicQuestPoints(copy.questPoints,s.now);else delete copy.questPoints;
   for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);

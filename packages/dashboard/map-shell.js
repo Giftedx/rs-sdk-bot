@@ -18,7 +18,7 @@
   const svg=key=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${icons[key]}"></path></svg>`;
   const rail=document.createElement('nav');rail.className='plugin-rail';rail.setAttribute('aria-label','Dashboard plugins');
   const plugins=[['jobs','Agents & jobs'],['account','Account'],['pack','Inventory'],['gear','Equipment'],['skills','Skills'],['bank','Account bank'],['goals','Goals'],['stock','Shared stock'],['activity','Activity'],['world','World'],['machine','Host resources']];
-  rail.innerHTML=plugins.map(([key,label])=>`<button data-plugin="${key}" aria-label="${label}" title="${label}" aria-pressed="false">${svg(key)}</button>`).join('')+`<span class="rail-space"></span><button data-map-focus aria-label="Focus map" title="Focus map · Tab">${svg('focus')}</button><a class="rail-text" style="text-align:center" href="/RUNELITE-LICENSE.txt" target="_blank" rel="noreferrer" title="RuneLite palette attribution; independent project">RS</a>`;
+  rail.innerHTML=plugins.map(([key,label])=>`<button data-plugin="${key}" aria-label="${label}" title="${label}" aria-pressed="false">${svg(key)}</button>`).join('')+`<span class="rail-space"></span><button data-map-focus aria-label="Focus map" title="Focus map · Tab">${svg('focus')}</button><a class="rail-text" style="text-align:center" href="RUNELITE-LICENSE.txt" target="_blank" rel="noreferrer" title="RuneLite palette attribution; independent project">RS</a>`;
   app.append(rail);
   $('#detail-menu').insertAdjacentHTML('afterbegin','<option value="jobs">Agents & jobs</option>');
   $('.brand').innerHTML='SWARM ATLAS<small>WORLD OPERATIONS</small>';
