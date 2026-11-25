@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572469991-pickpockdick-unsheathed-de802ce0d7c8e88e",
+ "account": "Unsheathed",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 70,
+ "claim": "57636f08-2ca1-46d2-b5aa-17b8fbba3b3c",
+ "count": 0,
+ "ok": false,
+ "at": 1795572665472,
+ "detail": "trade claimed"
+}
