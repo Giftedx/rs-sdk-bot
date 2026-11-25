@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795629446270,
+ "at": 1795629458735,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -71,21 +71,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=1973 QUANTITY=1 \"ITEM_NAME=Chocolate bar\" -- loadout",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1975",
    "role": "army"
   },
   {
@@ -260,6 +245,21 @@
    "repeat": false,
    "goal": "goal:pk_army:mmtha0205",
    "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- ranged-camp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
   }
  ],
  "army": [
@@ -269,6 +269,7 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
+  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
@@ -282,7 +283,6 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
-  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
