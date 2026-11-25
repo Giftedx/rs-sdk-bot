@@ -73,12 +73,12 @@ const WC_KEEP_IDS = new Set<number>([
 export const WC_NORMAL_XP_25X = 625;
 export const WC_OAK_XP_25X = 937.5;
 
-// Draynor Jail multiway hub (multiway.csv 0_48_50): (3115,3242) touches both oakSW (3114,3239) and oakMid (3115,3243) inside <=7 maxrange of 3 Jail guards.
-export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3242 } as const;
+// Draynor Jail multiway courtyard: (3118,3244) touches oakMid (3115,3243) and oakHub (3118,3245) inside <=7 maxrange of se(3120,3238) and nw(3121,3249).
+export const DRAYNOR_JAIL_SPOT = { x: 3118, z: 3244 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
-    [3114, 3239],
     [3115, 3243],
     [3118, 3245],
+    [3114, 3239],
     [3115, 3250],
 ];
 
@@ -151,22 +151,21 @@ function findBestTree(
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (!wantOak) {
-                // Inner normal trees beside (3115,3242) keep arrival transition to Oak 15 near zero-walk.
-                return l.x >= 3111 && l.x <= 3119 && l.z >= 3238 && l.z <= 3251 && l.reachable !== false;
+                // Inner normal trees beside (3118,3244) keep arrival transition to Oak 15 near zero-walk.
+                return l.x >= 3112 && l.x <= 3119 && l.z >= 3238 && l.z <= 3251 && l.reachable !== false;
             }
-            // Draynor Jail multiway oaks beside (3115,3242) & (3118,3244); keep rolls inside 3-guard maxrange.
+            // Draynor Jail southern courtyard oaks keeping se(3120,3238) and nw(3121,3249) within maxrange=7.
             return (
-                (l.x === 3114 && l.z === 3239)
-                || (l.x === 3115 && l.z === 3243)
+                (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
-                || (l.x === 3115 && l.z === 3250)
+                || (l.x === 3114 && l.z === 3239)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3114 && l.z === 3239) || (l.x === 3115 && l.z === 3243);
+    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
@@ -199,18 +198,18 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = perimeter.filter(t => t.x >= 3113 && t.x <= 3119 && t.z >= 3242 && t.z <= 3247);
+    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3119 && t.z >= 3242 && t.z <= 3246);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3115,3242) touching oakSW+oakMid inside maxrange=7 of sw(3109,3237), se(3120,3238), and nw(3121,3249).
-        const hub = (t.x === 3115 && t.z === 3242)
+        // Prefer (3118,3244) touching oakMid+oakHub with clear paths to se(3120,3238) and nw(3121,3249).
+        const hub = (t.x === 3118 && t.z === 3244)
             ? 0
-            : (t.x === 3116 && t.z === 3242)
+            : (t.x === 3117 && t.z === 3246)
                 ? 1
-                : 2 + Math.max(Math.abs(t.x - 3115), Math.abs(t.z - 3242));
+                : 2 + Math.max(Math.abs(t.x - 3118), Math.abs(t.z - 3244));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -390,7 +389,7 @@ if (import.meta.main) {
             // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
             await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
         }
-        await walkWaypointsSafe(main, [[3115, 3242, 1]], isStopped);
+        await walkWaypointsSafe(main, [[3118, 3244, 1]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
@@ -577,9 +576,9 @@ if (import.meta.main) {
                 && wantOak
                 && !needNormalLog
                 && !activeHitIn1t
-                && tagCount < 24
+                && tagCount < 48
                 && gobs < 3
-                && (gobs === 0 || nextHitEta === 3)
+                && (nextHitEta === Infinity || nextHitEta === 3)
                 && now - lastTagTick >= 12
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
@@ -689,7 +688,7 @@ if (import.meta.main) {
         const finalLvl = main.sdk.getSkill('Woodcutting')?.baseLevel ?? 0;
         const finalXp = main.sdk.getSkillXp('Woodcutting') ?? 0;
         ok = ok && finalLvl >= 99;
-        detail = `level=${finalLvl} xp=${finalXp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} arrive=${arriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal} hp=${main.sdk.getState()?.player?.hp ?? '?'}`;
+        detail = `level=${finalLvl} xp=${finalXp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} arrive=${arriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal} tags=${tagCount} hp=${main.sdk.getState()?.player?.hp ?? '?'}`;
     } catch (error) {
         detail = String(error);
     } finally {
