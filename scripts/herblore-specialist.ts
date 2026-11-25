@@ -850,7 +850,7 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
   const specLower = spec.name.toLowerCase();
   const giveSet = new Set(giveIds);
   let sawConfirm = false;
-  let lastReqTick = alreadyPreRequested ? begin : -10;
+  let lastReqTick = -10;
 
   while (spec.tick() < deadlineTick) {
    const st = spec.sdk.getTradeState();
@@ -866,7 +866,9 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
     const acts: Promise<unknown>[] = [];
     if (sTarget && hTarget && spec.tick() - lastReqTick >= 2) {
      lastReqTick = spec.tick();
-     // Send only one request per cycle when not pre-requested to avoid same-tick OPPLAYER4 collision.
+     if (!alreadyPreRequested || spec.tick() > begin) {
+      acts.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+     }
      acts.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
     } else if (!sTarget || !hTarget) {
      const tp = playerPos(spec);
