@@ -226,16 +226,16 @@ export async function walkWaypoints(
     maxTicks: number,
     stop: StopFn,
     label: string,
-    opts: { ignoreMeleeHunters?: boolean; onTickExtra?: () => void; look?: number } = {},
+    opts: { ignoreMeleeHunters?: boolean; ignoreLiveHunters?: boolean; onTickExtra?: () => void; look?: number } = {},
 ): Promise<void> {
     const walker = await sessionWalker(s);
-    if (opts.ignoreMeleeHunters) {
+    if (opts.ignoreMeleeHunters || opts.ignoreLiveHunters) {
         const pf: any = await import('../vendor/rs-sdk/sdk/pathfinding');
         const grid = await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
         const { withDanger } = await import('../packages/core/src/danger');
         const basePlan = walker.plan;
         const baseHunters = walker.hunters;
-        walker.hunters = () => (protectedFromMelee(s.sdk.getState()) ? [] : (baseHunters?.() ?? []));
+        walker.hunters = () => (opts.ignoreLiveHunters || protectedFromMelee(s.sdk.getState()) ? [] : (baseHunters?.() ?? []));
         walker.plan = (level, from, to, avoid) => {
             const pfm = protectedFromMelee(s.sdk.getState());
             if (!pfm) return basePlan(level, from, to, avoid);
@@ -683,7 +683,7 @@ export async function pullArdougneLeverToWildy(s: Session, stop: StopFn): Promis
     if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, ARDY_LEVER) > 140) {
         await walkWaypoints(s, [{ x: 2660, z: 3405, tol: 3 }], 160, stop, 'walk camelot mid');
         await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 160, stop, 'walk mid to ardougne lever');
-    } else {
+    } else if (d8({ x: p0.worldX, z: p0.worldZ }, ARDY_LEVER) > 1) {
         await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 200, stop, 'walk to ardougne lever');
     }
     const deadline = s.tick() + 50;
@@ -911,8 +911,20 @@ export async function runWildyPvpRelogLoop(
                       ? (skillInfo(sess, 'Strength').baseLevel < 99 ? aggressiveStyleCom : null)
                       : null;
             lastHitSeq.set((target.name ?? '').toLowerCase(), swings + 1);
-            if (useMeleePrayers && prayPts > 0 && prayBase >= 31) void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
-            if (useMeleePrayers && prayPts > 0 && prayBase >= 34) void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+            const lowPrayerPot =
+                useMeleePrayers && prayPts <= 2
+                    ? sess.sdk.getInventory().find(i => (PRAYER_POT_IDS as readonly number[]).includes(i.id))
+                    : undefined;
+            if (lowPrayerPot) {
+                const drinkOp = (lowPrayerPot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+                void sess.direct({ type: 'useInventoryItem', slot: lowPrayerPot.slot, optionIndex: drinkOp, reason: 'SDK' });
+            }
+            if (useMeleePrayers && (prayPts > 0 || lowPrayerPot) && prayBase >= 31) {
+                void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
+            }
+            if (!lowPrayerPot && useMeleePrayers && prayPts > 0 && prayBase >= 34) {
+                void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+            }
             if (styleCom !== null) void sess.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });
             void sess.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 2, reason: 'SDK' });
             void sess.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' });
@@ -1307,6 +1319,7 @@ export async function runSpecialistWaterfall(
     const walkFast = (pts: Point[], maxTicks: number, label: string, extra?: () => void) =>
         walkWaypoints(s, pts, maxTicks, stop, label, {
             ignoreMeleeHunters: true,
+            ignoreLiveHunters: true,
             onTickExtra: () => {
                 opts.onEnergy?.();
                 extra?.();
@@ -1370,23 +1383,22 @@ export async function runSpecialistWaterfall(
         await stepAct('rope rock', async () => {
             const roped = findLoc(l => l.id === 1997 && l.x === LOC.rock.x && l.z === LOC.rock.z);
             if (!roped) await useOnLoc(ITEM.rope, LOC.rock);
-        }, () => near(LOC.rock.x + 1, LOC.rock.z, 0), 12, 4);
-        await waitTicks(s, 1);
-        await stepAct('rope tree', () => useOnLoc(ITEM.rope, LOC.tree), () => inBox(2510, 3462, 2513, 3464), 10, 4);
+        }, () => near(LOC.rock.x + 1, LOC.rock.z, 0), 12, 3);
+        await stepAct('rope tree', () => useOnLoc(ITEM.rope, LOC.tree), () => inBox(2510, 3462, 2513, 3464), 10, 3);
     };
 
     await crossToLedge(true);
-    await stepAct('barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
+    await stepAct('barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 3);
 
     await walkFast([{ x: 2517, z: 3427, tol: 2 }], 40, 'to hadley');
     await climb('hadley up', 2517, 3428, /climb-up/i, () => posOf(s)?.level === 1);
-    await stepAct('bookcase', () => opLoc(LOC.bookcase), () => has(ITEM.book), 10, 4);
+    await stepAct('bookcase', () => opLoc(LOC.bookcase), () => has(ITEM.book), 10, 3);
     const readDone = await stepAct('read book', async () => {
         const b = inv().find(x => x.id === ITEM.book);
         if (b) await s.direct({ type: 'useInventoryItem', slot: b.slot, optionIndex: 1, reason: 'SDK' });
     }, () => sawMsg(/book is old/i), 4, 3).then(() => true).catch(() => false);
     if (!readDone) throw Error('failed reading Book on Baxtorian');
-    await s.direct({ type: 'closeModal', reason: 'SDK' });
+    void s.direct({ type: 'closeModal', reason: 'SDK' });
     await climb('hadley down', 2518, 3429, /climb-down/i, () => posOf(s)?.level === 0);
     const phHad = markPhase();
 
@@ -1396,9 +1408,7 @@ export async function runSpecialistWaterfall(
         const p = posOf(s);
         syncWaterfallPfm(!!p && p.worldZ <= maxZ);
     };
-    await walkFast([{ x: 2561, z: 3280, tol: 4 }], 140, 'hadley to khazard border');
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
-    await walkFast([{ x: 2533, z: 3156, tol: 2 }], 220, 'khazard to golrie cellar', () => syncWaterfallPfm(true));
+    await walkFast([{ x: 2533, z: 3156, tol: 2 }], 260, 'hadley to golrie cellar', khazardPfm(3285));
 
     const inCellar = () => (posOf(s)?.worldZ ?? 0) > 9500 && (posOf(s)?.worldZ ?? 0) < 9600;
     await climb('cellar down', 2533, 3155, /climb-down/i, inCellar);
@@ -1410,13 +1420,18 @@ export async function runSpecialistWaterfall(
     let golrieShut = 0;
     const gotPebble = () => {
         golrieShut = s.sdk.getDialog()?.isOpen ? 0 : golrieShut + 1;
-        return has(ITEM.pebble) && !has(ITEM.golrieKey) && ((sawDialog(/take care golrie/i) && !s.sdk.getDialog()?.isOpen) || golrieShut >= 5);
+        if (!has(ITEM.pebble) || has(ITEM.golrieKey)) return false;
+        if (!opts.afterGolrie) return true;
+        return (sawDialog(/take care golrie/i) && !s.sdk.getDialog()?.isOpen) || golrieShut >= 5;
     };
     await stepAct('talk golrie', async () => {
         const g = s.sdk.findNearbyNpc(/^golrie$/i);
         if (g) await s.direct({ type: 'interactNpc', npcIndex: g.index, optionIndex: 1, reason: 'SDK' });
         await converse([], gotPebble, 30);
     }, gotPebble, 3, 2);
+    if (!opts.afterGolrie && s.sdk.getDialog()?.isOpen) {
+        await s.direct({ type: 'closeModal', reason: 'SDK' });
+    }
 
     if (opts.afterGolrie) {
         await stepAct('golrie gate exit', () => opLoc(LOC.golrieGate), () => !inBox(2502, 9576, 2523, 9593), 10, 6);
@@ -1429,14 +1444,12 @@ export async function runSpecialistWaterfall(
     const phGol = markPhase();
 
     if (opts.skipCwTeleportToTomb) {
-        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
         await walkFast([{ x: 2557, z: 3444, tol: 2 }], 300, 'to glarial tomb', khazardPfm(3270));
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     } else {
-        // Teleport out of Golrie's room straight to Castle Wars, pre-arming PFM so guardWalk skips the Observatory detour.
+        // Teleport out of Golrie's room straight to Castle Wars, toggling PFM during walk and routing east of Ardougne doors.
         await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
-        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
-        await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
+        await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2582, z: 3325, tol: 6 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     }
     const phCw = markPhase();
@@ -1483,12 +1496,19 @@ export async function runSpecialistWaterfall(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     const phTomb = markPhase();
 
+    let lastPickupSentAt = -10;
+    let lastPickupId = -1;
     for (let i = 0; i < 24 && activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
         opts.onEnergy?.();
-        const id = activeDropIds.find(r => cnt(r) < (targetDropCount.get(r) ?? 1))!;
-        const g = (s.sdk.getState()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
-        if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
-        await waitUntil(s, () => cnt(id) >= (targetDropCount.get(id) ?? 1) || stop(), { timeoutTicks: 3 });
+        const missing = activeDropIds.filter(r => cnt(r) < (targetDropCount.get(r) ?? 1));
+        const nextId = missing.find(r => r !== lastPickupId || s.tick() - lastPickupSentAt >= 2) ?? missing[0]!;
+        const g = (s.sdk.getState()?.groundItems ?? []).filter((x: any) => x.id === nextId).sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+        if (g) {
+            lastPickupSentAt = s.tick();
+            lastPickupId = nextId;
+            await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: nextId, reason: 'SDK' });
+        }
+        await waitTicks(s, 1);
     }
     if (activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1))) {
         throw Error(`failed recovering Tomb drops: ${activeDropIds.map(id => `${id}:${cnt(id)}/${targetDropCount.get(id)}`).join(' ')}`);
@@ -1514,16 +1534,15 @@ export async function runSpecialistWaterfall(
 
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
     const pastGiantDoor = () => inBox(2562, 9894, 2572, 9901);
-    let lastWalk = -99, keySent = -99;
+    let keySent = -99;
     for (let i = 0; i < 45 && !pastGiantDoor() && !stop(); i++) {
         opts.onEnergy?.();
         syncWaterfallPfm(true);
-        if (near(2568, 9893, 0)) {
-            if (s.tick() - keySent >= 3) { keySent = s.tick(); await useOnLoc(ITEM.baxKey, LOC.giantDoor); }
-        } else if (lastWalk < 0 || s.tick() - lastWalk >= 3) {
-            lastWalk = s.tick();
-            const w: any = await s.direct({ type: 'walkTo', x: 2568, z: 9893, running: true, reason: 'SDK' });
-            if (w && w.success === false) await openDoubleDoor();
+        if (doorShut()) {
+            await openDoubleDoor();
+        } else if (s.tick() - keySent >= 3) {
+            keySent = s.tick();
+            await useOnLoc(ITEM.baxKey, LOC.giantDoor);
         }
         await waitTicks(s, 1);
     }
@@ -1565,15 +1584,14 @@ export async function runSpecialistWaterfall(
 
     // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
-    await walkFast([{ x: 2604, z: 9901, tol: 1 }], 25, 'raised room exit', () => syncWaterfallPfm(true));
     await stepAct('raised door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }); }, () => inBox(2562, 9894, 2572, 9901), 10, 4);
     await stepAct('south giant door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, LOC.giantDoor); }, () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 10, 4);
-    await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 45, 'return giant room', () => syncWaterfallPfm(true));
-    await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 4);
+    await walkFast([{ x: 2565, z: 9882, tol: 1 }], 45, 'return giant room', () => syncWaterfallPfm(true));
+    await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 3);
     await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 60, 'return ledge exit', () => syncWaterfallPfm(true));
     await stepAct('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511, 3463, 3), 10, 4);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
-    await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
+    await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 3);
     const phExit = markPhase();
 
     return {
@@ -1628,11 +1646,11 @@ export async function runMeleePvpSpecialist(
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
     await walkWaypoints(
         s,
         [
             { x: 2470, z: 3170, tol: 4 },
+            { x: 2582, z: 3325, tol: 6 },
             { x: 2522, z: 3494, tol: 1 },
         ],
         340,
@@ -1640,6 +1658,7 @@ export async function runMeleePvpSpecialist(
         'castle wars to almera',
         {
             ignoreMeleeHunters: true,
+            ignoreLiveHunters: true,
             onTickExtra: () => {
                 ensureRunAndEnergy();
                 const p = posOf(s);
@@ -1676,7 +1695,10 @@ export async function runMeleePvpSpecialist(
     // Drop Waterfall rewards and equip Keep melee gear while running from barrel (2527,3413) to Ardougne lever.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
+    let drankSuperAtk = false;
+    let drankSuperStr = false;
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
+        ignoreLiveHunters: true,
         onTickExtra: () => {
             ensureRunAndEnergy();
             if (s.tick() - preEquippedWait >= 2) {
@@ -1685,6 +1707,22 @@ export async function runMeleePvpSpecialist(
                     const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
                     preEquippedWait = s.tick();
                     void s.direct({ type: 'useInventoryItem', slot: gear.slot, optionIndex: wieldOp, reason: 'SDK' });
+                }
+            }
+            if (!drankSuperAtk) {
+                const pot = s.sdk.getInventory().find(i => i.id === 2436 || i.id === 145 || i.id === 147 || i.id === 149);
+                if (pot) {
+                    drankSuperAtk = true;
+                    const op = (pot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+                    void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: op, reason: 'SDK' });
+                }
+            }
+            if (!drankSuperStr) {
+                const pot = s.sdk.getInventory().find(i => i.id === 2440 || i.id === 157 || i.id === 159 || i.id === 161);
+                if (pot) {
+                    drankSuperStr = true;
+                    const op = (pot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+                    void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: op, reason: 'SDK' });
                 }
             }
             const junk = s.sdk.getInventory().find(i => postWaterfallJunk.has(i.id));
