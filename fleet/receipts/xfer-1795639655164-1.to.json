@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795639655164-1",
  "account": "Ballspinner",
  "partner": "Fatstack",
@@ -12,6 +12,12 @@
  "claim": "3e2b1f80-4bab-4e00-8169-a6942b9dfeca",
  "count": 0,
  "ok": false,
- "at": 1795640282163,
- "detail": "trade claimed"
+ "at": 1795640298829,
+ "detail": "Error: route to 3182, 3440: precondition bank stop at 3094,3491: withdraw outcome unknown 554:0/1",
+ "logout": {
+  "attemptId": "1795640282180-0000002088-0000000001",
+  "at": 1795640298816,
+  "sha256": "06a8faba4ababb644cf216b0a19709ad37f056622b3d62e1efae12f9acbdb4f8"
+ },
+ "screen": false
 }
