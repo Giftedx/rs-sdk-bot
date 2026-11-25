@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795639385851-1",
  "account": "BoneToPick",
  "partner": "Ballspinner",
@@ -12,6 +12,16 @@
  "claim": "de99b323-bea4-4eec-b1b5-589f52653730",
  "count": 0,
  "ok": false,
- "at": 1795639613646,
- "detail": "trade claimed"
+ "at": 1795639655646,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795639624175
+ },
+ "logout": {
+  "attemptId": "1795639613656-0000017784-0000000001",
+  "at": 1795639655626,
+  "sha256": "20ffa776f59fbda71e268973a904595d713ab24b85ea2fe9c8d419bf6f197ab0"
+ },
+ "screen": false
 }

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795639647566,
+ "at": 1795639679429,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,18 +60,13 @@
   },
   {
    "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
+    "scripts/aio-logistics.ts ITEM_ID=2150 QUANTITY=1 \"ITEM_NAME=Swamp toad\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:2152 BATCH_UNITS=2 -- crafting inventory strip:swamp-toad"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -82,7 +77,7 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2330 TARGET_COUNT=233 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2310 TARGET_COUNT=231 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -94,7 +89,7 @@
    "role": "auto"
   },
   {
-   "account": "PackageDeal",
+   "account": "BowBeforeMe",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -107,7 +102,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:440",
-   "role": "helper",
+   "role": "army",
    "resources": [
     "varrock-se-mine"
    ]
@@ -132,57 +127,38 @@
    ]
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
    "account": "Woodpecker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "PackageDeal",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+    "scripts/aio-logistics.ts ITEM_ID=1973 QUANTITY=1 \"ITEM_NAME=Chocolate bar\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:235",
-   "role": "army"
+   "goal": "campaign:haggis:item:1975",
+   "role": "helper"
   },
   {
    "account": "PickpockDick",
@@ -249,22 +225,6 @@
    "role": "helper"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=2 \"ITEM_NAME=Gold bar\" -- loadout",
-    "scripts/aio-logistics.ts ITEM_ID=1601 QUANTITY=3 ITEM_NAME=Diamond -- loadout",
-    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=6 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
    "account": "Kiltlifter",
    "script": "scripts/chain.ts",
    "args": [
@@ -303,21 +263,6 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=1 BANK_PACK=1 -- giant",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:bigswinger:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:bigswinger:item:2552",
-   "role": "army"
-  },
-  {
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
@@ -331,6 +276,58 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "army"
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Stirmypot",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Stirmypot",
+   "role": "auto"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=3 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
   }
  ],
  "army": [
@@ -344,7 +341,7 @@
   "bigpackage",
   "billionaire",
   "dipstick",
-  "fingerblastr",
+  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "knightrider",
@@ -356,6 +353,7 @@
   "pocketpython",
   "quickhandjob",
   "sausagefest",
+  "swordinhand",
   "thefullmonty",
   "undermykilt",
   "yewfirst"
