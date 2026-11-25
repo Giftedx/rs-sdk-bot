@@ -1,0 +1,38 @@
+// The coins the worker's ferry fallback needs before it walks (walkWithFerryFallback in workers/src/logistics/walk.ts
+// and workers/src/market/walk.ts). Between the east mainland and Ardougne it takes two boats: Port Sarim to Karamja,
+// then Brimhaven to Ardougne, or the reverse. Before it walks it needs both fares, plus the Al Kharid toll from east of
+// the gate. With fewer coins in the pack it takes the rest from the nearest bank, or it stops with
+// "ferry needs N coins and the bank holds B". Preflight charges this fare, so a launch it passes can pay for the trip.
+// This copy keeps worker releases unchanged; test/ferry-fare.test.ts fails when it differs from either walker.
+import { loadTravel, type Travel } from '../../core/src/travel';
+import type { Tile } from '../../core/src/world-types';
+
+const PORT_SARIM_FERRY = 'npc:captain_tobias:karamja-musa-point@3028,3216';
+const ARDOUGNE_FERRY = 'npc:customs_officer:ardougne@2772,3225';
+const BRIMHAVEN_FERRY = 'npc:captain_barnaby:brimhaven@2679,3275';
+const MUSA_POINT_FERRY = 'npc:customs_officer:port-sarim@2953,3147';
+const AL_KHARID_TOLL = 'npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226';
+
+const inEast = (t: Tile) => t.level === 0 && t.x >= 2870 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
+const inArdougne = (t: Tile) => t.level === 0 && t.x >= 2550 && t.x <= 2700 && t.z >= 3240 && t.z <= 3400;
+const inKandarin = (t: Tile) => t.level === 0 && t.x >= 2440 && t.x < 2870 && t.z >= 3040 && t.z <= 3530;
+const inZanaris = (t: Tile) => t.level === 0 && t.x >= 3136 && t.x < 3264 && t.z >= 9536 && t.z < 9600;
+const ARDOUGNE_NORTH: Tile = { x: 2619, z: 3332, level: 0 };
+const ZANARIS_SHED: Tile = { x: 3201, z: 3169, level: 0 };
+
+// Coins the fallback needs (pack and bank together) before it walks from `from` to `to`. 0 when it takes no boat.
+export function ferryFallbackFare(from: Tile, to: Tile, travel: () => readonly Travel[] = loadTravel): number {
+    // The fallback first leaves Zanaris by the shed, then goes to Ardougne north bank from an Ardougne upper floor or
+    // from Kandarin when the target is east.
+    if (inZanaris(from) && !inZanaris(to) && !(to.x === ZANARIS_SHED.x && to.z === ZANARIS_SHED.z)) from = ZANARIS_SHED;
+    if (((from.level > 0 && inArdougne({ ...from, level: 0 })) || (!inArdougne(from) && inKandarin(from))) && inEast(to)) from = ARDOUGNE_NORTH;
+    const west = inEast(from) && to.level === 0 && to.x >= 2600 && to.x <= 2690 && to.z >= 3260 && to.z <= 3360;
+    const east = !west && inArdougne(from) && inEast(to);
+    if (!west && !east) return 0;
+    const all = travel();
+    const first = all.find(t => t.id === (west ? PORT_SARIM_FERRY : BRIMHAVEN_FERRY));
+    const second = all.find(t => t.id === (west ? ARDOUGNE_FERRY : MUSA_POINT_FERRY));
+    if (!first?.from || !second?.from) return 0;
+    const toll = west && from.x >= 3250 && from.z <= 3230 ? all.find(t => t.id === AL_KHARID_TOLL) : undefined;
+    return first.coins + second.coins + (toll?.coins ?? 0);
+}

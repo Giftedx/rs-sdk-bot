@@ -116,6 +116,29 @@ test('GE escrow, reserve, operating float, and ferry fare coin math', () => {
     expect(karamjaOk.travelCoins).toBe(30);
 });
 
+test('offline reachability charges the worker ferry fare between the east mainland and Ardougne', () => {
+    // An account at Falador bank with no coins passed preflight for an Ardougne activity. The worker then refused with
+    // "precondition ferry needs 60 coins and the bank holds 0" (workers/src/logistics/walk.ts walkWithFerryFallback).
+    const falador = { x: 2945, z: 3368, level: 0 }, ardougneNorth = { x: 2619, z: 3332, level: 0 };
+    const bankOf = (coins: number) => ({ items: (coins ? { 995: coins } : {}) as Record<number, number>, observedAt: NOW - 60_000, trusted: true });
+    const broke = makeAcct({ pos: falador, inventory: {}, bank: bankOf(0) });
+    expect(evaluateTileReachability(broke, ardougneNorth, makeWorld(broke))).toMatchObject({ reachable: true, travelCoins: 60 });
+    const refused = evaluatePreflight(broke, { targetTile: ardougneNorth }, makeWorld(broke));
+    expect(refused.ok).toBe(false);
+    expect(refused.blockers).toContainEqual(expect.objectContaining({ kind: 'missing_coins', required: 60, available: 0, ferryFare: 60 }));
+    const paid = makeAcct({ pos: falador, inventory: {}, bank: bankOf(60) });
+    expect(evaluatePreflight(paid, { targetTile: ardougneNorth }, makeWorld(paid))).toMatchObject({ ok: true, travelCoins: 60 });
+
+    const inArdougne = makeAcct({ pos: { x: 2655, z: 3283, level: 0 }, inventory: {}, bank: bankOf(0) });
+    expect(evaluateTileReachability(inArdougne, falador, makeWorld(inArdougne))).toMatchObject({ reachable: true, travelCoins: 60 });
+    expect(evaluatePreflight(inArdougne, { targetTile: ardougneNorth }, makeWorld(inArdougne)).ok).toBe(true);
+    const eastOnly = makeAcct({ pos: { x: 3185, z: 3436, level: 0 }, inventory: {}, bank: bankOf(0) });
+    expect(evaluatePreflight(eastOnly, { targetTile: falador }, makeWorld(eastOnly)).ok).toBe(true);
+    // East of the Al Kharid gate the worker also pays the 10 gp toll on the way west.
+    const alKharid = makeAcct({ pos: { x: 3269, z: 3164, level: 0 }, inventory: {}, bank: bankOf(0) });
+    expect(evaluateTileReachability(alKharid, ardougneNorth, makeWorld(alKharid))).toMatchObject({ travelCoins: 70 });
+});
+
 test('wearable skill/quest gates and rev-289 requirement fixes', () => {
     const midAcct = makeAcct({
         skills: { Attack: { level: 35, xp: 25_000 }, Defence: { level: 45, xp: 65_000 } },

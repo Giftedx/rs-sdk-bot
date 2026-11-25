@@ -257,6 +257,8 @@ export interface Mission {
 export interface ActivityIO {
     readonly itemId: number;
     readonly countPerUnit: number;
+    // Inputs only: units the worker leaves in the bank and never uses. Preflight needs this many on top of the batch.
+    readonly reserve?: number;
 }
 
 export interface ActivityDefinition<Cfg = Record<string, unknown>> {
@@ -1372,7 +1374,10 @@ export function validateActivityDefinition(v: unknown): string[] {
         if (list !== undefined) {
             if (!Array.isArray(list)) errors.push(`${field} must be an array`);
             else list.forEach((io, i) => {
-                if (!isPlainRecord(io) || !isNonNegInt(io.itemId) || !isFinitePos(io.countPerUnit)) {
+                if (
+                    !isPlainRecord(io) || !isNonNegInt(io.itemId) || !isFinitePos(io.countPerUnit)
+                    || (io.reserve !== undefined && (field === 'outputs' || !isNonNegInt(io.reserve)))
+                ) {
                     errors.push(`${field}[${i}] invalid`);
                 }
             });

@@ -50,6 +50,7 @@ import {
 import type { DispatchedAccountPlan } from './worker-dispatch';
 import { courierDeliveryWaiting, deliveryResume, foodDeficit, selectFoodSource } from './courier-admission';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
+import { askWorkersToLogOut } from './worker-stop';
 
 export type Job = {
     autopilot?: string;
@@ -548,6 +549,23 @@ export function isAutoStopText(text: string | undefined): boolean {
 export function writeSwarmStop(file: string, reason: string): void {
     try { writeFileSync(file, reason, { flag: 'wx' }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+}
+
+// The swarm's exit on a signal. An active session-recovery child is attached and dies with the swarm, so it is asked to
+// log out and given the grace to end first (worker-stop.ts).
+export async function recoveryLogOutThenExit(
+    active: { readonly account: string; readonly pid: number } | undefined,
+    alive: (pid: number) => boolean,
+    writeStop: (account: string) => void,
+    o: { graceMs?: number; now?: () => number; sleep?: (ms: number) => Promise<void>; exit?: (code: number) => void; log?: (line: string) => void } = {},
+): Promise<void> {
+    const log = o.log ?? console.log;
+    if (active) {
+        log(`SWARM signal: asking recovery ${active.account} to log out before exit`);
+        const left = await askWorkersToLogOut([{ account: active.account, ended: () => !alive(active.pid) }], { writeStop, graceMs: o.graceMs, now: o.now, sleep: o.sleep });
+        if (left.length > 0) log(`SWARM signal: recovery ${active.account} did not end in the grace; it ends with this process`);
+    }
+    (o.exit ?? process.exit)(0);
 }
 
 export function clearSwarmStop(file: string): boolean {
@@ -1248,8 +1266,6 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         } catch { /* ignore */ }
     };
     process.on('exit', cleanupOwner);
-    process.on('SIGINT', () => process.exit(0));
-    process.on('SIGTERM', () => process.exit(0));
 
     const knowledgeRoot = existsSync(join(root, 'knowledge', 'items.json')) ? root : repoRoot;
     const catalog = defaultActivityCatalog(knowledgeRoot);
@@ -1305,6 +1321,16 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     let pidStarts: ReturnType<typeof processStartTimes> = null, pidStartsAt = 0;
     const readPidStarts = () => { pidStartsAt = Date.now(); pidStarts = adopted.size ? processStartTimes([...adopted].map(r => r.pid)) : null; };
     const pidAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
+    // Runs are detached and outlive this process. The session-recovery child is attached and dies with it, so a signal
+    // asks it to log out first (worker-stop.ts). A second signal exits at once.
+    let signalled = false;
+    const onSignal = () => {
+        if (signalled) process.exit(0);
+        signalled = true;
+        void recoveryLogOutThenExit(recoveryDispatch.active, pidAlive, a => writeSwarmStop(stopFile(a), SWARM_STOP.recovery));
+    };
+    process.on('SIGINT', onSignal);
+    process.on('SIGTERM', onSignal);
     const saveRuns = () => {
         try {
             const tmp = `${runsFile}.tmp-${process.pid}`;
