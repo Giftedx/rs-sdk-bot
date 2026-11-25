@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795644296697-1",
+ "account": "TossTheCaber",
+ "partner": "Swordswallow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "bcc9fa56-7a9b-4511-9f78-7c8a7e884a4b",
+ "count": 60,
+ "ok": true,
+ "at": 1795644501420,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4026,
+  "after": 3966
+ },
+ "logout": {
+  "attemptId": "1795644461310-0000029992-0000000001",
+  "at": 1795644501407,
+  "sha256": "82b0828f0670ffefb222109301e6a415d5fd40798726196e1a25d4ca1728b75e"
+ },
+ "screen": true
+}

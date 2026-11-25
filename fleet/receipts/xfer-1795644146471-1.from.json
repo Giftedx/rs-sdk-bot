@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795644146471-1",
+ "account": "Quickhandjob",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "347f434f-aff1-4501-b93f-8e20e92cdf27",
+ "count": 1,
+ "ok": true,
+ "at": 1795644515023,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795644501082
+ },
+ "logout": {
+  "attemptId": "1795644494196-0000023652-0000000001",
+  "at": 1795644515010,
+  "sha256": "a98e3946c1e16cd51b6e5a5fea666ede28a3dff0bb931831b8067fb4aa581936"
+ },
+ "screen": true
+}

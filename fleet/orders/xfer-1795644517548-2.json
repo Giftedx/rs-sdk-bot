@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795644517548-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PocketPool",
+  "to": "Quickhandjob",
+  "item": "Cosmic rune",
+  "count": 1,
+  "itemId": 564,
+  "extra": [
+    {
+      "item": "Sapphire necklace",
+      "count": 1,
+      "itemId": 1656
+    }
+  ],
+  "start": 1795644517548,
+  "end": 1795645417548,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795643896495-1",
  "account": "PocketPool",
  "partner": "MeatNTwoVeg",
@@ -12,6 +12,16 @@
  "claim": "f52e0567-e29f-4767-8889-23990aafd3a6",
  "count": 0,
  "ok": false,
- "at": 1795644195841,
- "detail": "trade claimed"
+ "at": 1795644424645,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 230,
+  "at": 1795644363075
+ },
+ "logout": {
+  "attemptId": "1795644195850-0000020500-0000000001",
+  "at": 1795644424630,
+  "sha256": "8fb1ec1c1bebee32559389566d71480bca44d6ac97776be00f34567ba4fdbc56"
+ },
+ "screen": false
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795643896495-1",
  "account": "MeatNTwoVeg",
  "partner": "PocketPool",
@@ -12,6 +12,12 @@
  "claim": "a9e63980-31b4-478d-b471-8d20034ec83f",
  "count": 0,
  "ok": false,
- "at": 1795644378009,
- "detail": "trade claimed"
+ "at": 1795644418617,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795644378019-0000013812-0000000001",
+  "at": 1795644418605,
+  "sha256": "e4ce5bfdc609e0147770deaf3efcb435782510bb54f7d91d600acef1fde8cf5e"
+ },
+ "screen": false
 }
