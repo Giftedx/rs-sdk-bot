@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795565812645,
+ "at": 1795565827269,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -27,7 +27,7 @@
    "account": "FishAndChips",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=377 QUANTITY=11 \"ITEM_NAME=Raw lobster\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=377 QUANTITY=10 \"ITEM_NAME=Raw lobster\" -- loadout",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=28 -- cooking food"
    ],
    "env": {

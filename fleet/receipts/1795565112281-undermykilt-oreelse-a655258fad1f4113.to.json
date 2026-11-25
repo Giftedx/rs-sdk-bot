@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795565112281-undermykilt-oreelse-a655258fad1f4113",
  "account": "OreElse",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "e105d3a2-18fb-4dbb-899d-0ebdb82657c3",
- "count": 0,
- "ok": false,
- "at": 1795565809275,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795565826916,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 11
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795565826168
+ },
+ "logout": {
+  "attemptId": "1795565809285-0000015724-0000000001",
+  "at": 1795565826903,
+  "sha256": "53878387ddaf118d8e71870e12e3da848a1b5854601689b51f04630843f1f683"
+ },
+ "screen": true
 }
