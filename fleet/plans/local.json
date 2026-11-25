@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795625462349,
+ "at": 1795625487397,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -109,6 +109,31 @@
    "role": "auto"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "94",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20800",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "94"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
    "account": "NabTheKnob",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -126,19 +151,18 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 -- thieving knights",
+    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+   ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -205,32 +229,28 @@
    "role": "helper"
   },
   {
-   "account": "KnightRider",
+   "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
+    "ge-buy"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "420",
+    "ORDER_KEY": "brain-1617-11-p28750",
+    "ITEM_ID": "1617",
+    "QUANTITY": "11",
+    "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "FLOAT": "86000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "420"
+    "LIMIT_PRICE": "28750",
+    "DEMAND_ID": "campaign:haggis:item:1617",
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:1617",
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -240,39 +260,18 @@
    "env": {
     "ITEM_ID": "892",
     "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "111",
+    "MAX_ITEMS": "247",
     "COIN_RESERVE": "1000",
-    "FLOAT": "46400",
+    "FLOAT": "100800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "111"
+    "BATCH_UNITS": "247"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:892",
-   "role": "army"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1513-107-p2507",
-    "ITEM_ID": "1513",
-    "QUANTITY": "107",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "2507",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "107"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
    "role": "army"
   },
   {
@@ -282,14 +281,35 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-2353-78-p748",
+    "ORDER_KEY": "brain-1513-95-p2507",
+    "ITEM_ID": "1513",
+    "QUANTITY": "95",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "2507",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "95"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
+   "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-2353-84-p748",
     "ITEM_ID": "2353",
-    "QUANTITY": "78",
+    "QUANTITY": "84",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "748",
     "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "78"
+    "BATCH_UNITS": "84"
    },
    "enabled": true,
    "repeat": false,
@@ -297,7 +317,32 @@
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
+   "account": "Abracadickra",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "307",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "63400",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "307"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "auto"
+  },
+  {
+   "account": "Moneyshot",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy"
@@ -315,50 +360,35 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
-   "role": "auto"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "essence"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "40"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1436",
-   "role": "auto",
-   "resources": [
-    "essence-mine"
-   ]
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1515-25-p486",
-    "ITEM_ID": "1515",
-    "QUANTITY": "25",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "486",
-    "DEMAND_ID": "campaign:haggis:item:1515",
-    "BATCH_UNITS": "25"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1515",
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
+   "account": "SporranBulge",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "runeshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "562",
+    "ITEMS": "Chaos rune",
+    "MAX_ITEMS": "108",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:562",
+    "BATCH_UNITS": "108"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:562",
+   "role": "helper"
+  },
+  {
+   "account": "Fingerblastr",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -381,6 +411,51 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1169",
    "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2152",
+   "role": "army"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "clotheshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1061",
+    "ITEMS": "Leather boots",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1061",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1061",
+   "role": "army"
   }
  ],
  "army": [
@@ -395,7 +470,6 @@
   "bowbeforeme",
   "dipstick",
   "fatstack",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
@@ -408,8 +482,7 @@
   "sausagefest",
   "swordinhand",
   "undermykilt",
-  "woodpecker",
-  "yewfirst"
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

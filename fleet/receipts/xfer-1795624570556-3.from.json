@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795624570556-3",
  "account": "Fingerblastr",
  "partner": "Woodpecker",
@@ -12,6 +12,12 @@
  "claim": "b01e54c5-a777-4a96-90a7-4f0b09250f52",
  "count": 0,
  "ok": false,
- "at": 1795625418802,
- "detail": "trade claimed"
+ "at": 1795625471460,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795625418811-0000032512-0000000001",
+  "at": 1795625471449,
+  "sha256": "5bef0460d75234009eb07ba0b86334f64d78af33258e187b94abb4ff1e63b6b4"
+ },
+ "screen": false
 }
