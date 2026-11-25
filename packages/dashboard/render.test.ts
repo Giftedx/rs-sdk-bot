@@ -333,3 +333,20 @@ test('a free camera chosen for an account out of the world becomes a follow when
  // A camera the viewer chose to free (a drag, a reset, Free camera) stays free.
  expect(run(true)).toEqual({before:true,free:true,sent:[{atlasFreeCamera:true}]});
 });
+
+// shim.js resends the same published file every 4 s with a later clock (hostedAge, now) so the age texts move. A full
+// render for each one repeats the last render, so a resend renders at most every 15 s; a new file renders at once.
+test('a hosted resend of the same file renders at most every 15 s, a new file at once',()=>{
+ const start=html.indexOf('// A hosted heartbeat'),code=html.slice(start,html.indexOf('\n',html.indexOf('function receive(j){',start)));
+ let clock=1_000_000;
+ const api=new Function('Date',`let S=null,SNAPSHOT=null,LIVE_ROSTER=null,lastReceived=0,connected=false;const document={},expandQuests=()=>{},oneRowPerName=b=>b,withLiveRoster=j=>j,connectionState=()=>{};let renders=0;let render=()=>{renders++;lastRenderAt=Date.now();};${code};return {receive,now:()=>S.now,renders:()=>renders};`)({now:()=>clock});
+ const file=(at:number,now:number)=>({hosted:{at,kind:'public'},pageVersion:'p1',now,bots:[]});
+ const renderCount=()=>api.renders();
+ api.receive(file(1,1));expect(renderCount()).toBe(1);
+ clock+=4000;api.receive(file(1,5));expect(renderCount()).toBe(1);expect(api.now()).toBe(5);
+ clock+=4000;api.receive(file(1,9));expect(renderCount()).toBe(1);
+ clock+=8000;api.receive(file(1,17));expect(renderCount()).toBe(2);
+ clock+=1000;api.receive(file(2,18));expect(renderCount()).toBe(3);
+ // Frames with no hosted time (the local server's live stream) render each time.
+ clock+=1000;api.receive({now:19,bots:[]});clock+=1000;api.receive({now:20,bots:[]});expect(renderCount()).toBe(5);
+});

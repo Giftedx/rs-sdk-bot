@@ -518,7 +518,7 @@ function pick(n){if(!n)return;if(n==='Main · reserved')n=MARK;const b=S?.bots?.
 // Any online player, followed by the 3D camera (a player lookup's Follow button); picking one of our accounts returns.
 window.atlasFollow3d=(name,allowLoading=false)=>{const frame=$('#rsw').contentWindow,ready=mode==='3d'&&VIEWER.state==='ready'&&frame;if(!/^[A-Za-z0-9_ -]{1,12}$/.test(name)||!ready&&!(allowLoading&&['checking','loading'].includes(VIEWER.state)))return false;window.atlasFreeCamera=false;window.atlasDestination=null;window.atlasFollowOther=name;if(ready)frame.postMessage({follow:name},VIEWER.origin);render();return true;};
 function choose(v){view=v;detailPage=0;render();}
-function render(){if(!S)return;S.bots??=[];if(!window.atlasFreeCamera&&!picked&&!S.bots.some(b=>b.name===sel&&b.operation==='observed'))sel=liveBots().find(b=>b.operation==='observed')?.name||(S.bots.some(b=>b.name===sel)?sel:null);
+function render(){if(!S)return;lastRenderAt=Date.now();S.bots??=[];if(!window.atlasFreeCamera&&!picked&&!S.bots.some(b=>b.name===sel&&b.operation==='observed'))sel=liveBots().find(b=>b.operation==='observed')?.name||(S.bots.some(b=>b.name===sel)?sel:null);
  $('#pause').textContent=S.objectives?.paused?'Ⅱ GAME WORK PAUSED':S.objectives?.available?'PLAN ACTIVE':'PLAN UNKNOWN';
  capacityView();goalCards();roster();inspect();boardGrid();syncWorld();loadMap();drawMap();
  allocationView();
@@ -593,7 +593,12 @@ function expandQuests(state){
   }
   return state;
 }
-function receive(j){expandQuests(j);if(Array.isArray(j?.bots))j.bots=oneRowPerName(j.bots);SNAPSHOT=j;S=withLiveRoster(j,LIVE_ROSTER,Date.now());lastReceived=Date.now();connected=true;try{render();document.atlasDisplayError=''}catch(e){document.atlasDisplayError=String(e?.message||e);console.error(e);connectionState()}}
+// A hosted heartbeat (shim.js, every 4 s) resends the same published file with a later clock, for the age texts. A full
+// render of it repeats the last render, so a resend renders at most every CLOCK_RENDER_MS. S still takes the new clock,
+// which the connection check reads. A new file, and a frame with no hosted time (the local server's stream), render.
+const CLOCK_RENDER_MS=15000;let lastRenderAt=0;
+const sameFile=(a,b)=>!!a&&!!b&&Number.isFinite(a.hosted?.at)&&a.hosted.at===b.hosted?.at&&a.pageVersion===b.pageVersion;
+function receive(j){expandQuests(j);if(Array.isArray(j?.bots))j.bots=oneRowPerName(j.bots);const resend=sameFile(j,SNAPSHOT)&&Date.now()-lastRenderAt<CLOCK_RENDER_MS;SNAPSHOT=j;S=withLiveRoster(j,LIVE_ROSTER,Date.now());lastReceived=Date.now();connected=true;if(resend)return;try{render();document.atlasDisplayError=''}catch(e){document.atlasDisplayError=String(e?.message||e);console.error(e);connectionState()}}
 
 setInterval(()=>{if(SNAPSHOT&&LIVE_ROSTER&&!window.atlasLiveRoster()){LIVE_ROSTER=null;S=withLiveRoster(SNAPSHOT,null,Date.now());render();}},5000);
 if(STATIC)fetch('/api/state').then(r=>r.json()).then(receive).catch(()=>{connected=false;connectionState()});else{let version=null;const es=new EventSource('/events');es.onmessage=e=>{const j=JSON.parse(e.data);if(version&&j.pageVersion!==version){location.reload();return}version=j.pageVersion;receive(j)};es.onerror=()=>{connected=false;connectionState()};setInterval(connectionState,2000)}

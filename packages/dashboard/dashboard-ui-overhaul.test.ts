@@ -492,6 +492,13 @@ test('3. Fleet sidebar preserves account button DOM nodes across live ticks in b
   expect(doc.activeElement).toBe(aliceBtnBefore);
   expect(body.querySelector('.fl-main[data-value="Bob"]')).toBeNull();
   expect(body.querySelector('.fl-main[data-value="Carl"]')).not.toBeNull();
+  // A render with the same rows parses nothing: the markup is the same as the last.
+  const create = doc.createElement;let made = 0;
+  doc.createElement = (tag: string) => { made++; return create(tag); };
+  opsHarness.reconcile();opsHarness.reconcile();
+  doc.createElement = create;
+  expect(made).toBe(0);
+  expect(body.querySelector('.fl-main[data-value="Alice"]')).toBe(aliceBtnBefore);
 
   // 3b. index.html roster() preserves button.fleet-row DOM node identity
   const script = extractHtmlScript(html);
