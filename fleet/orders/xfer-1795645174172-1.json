@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795645174172-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwanker",
+  "to": "Stirmypot",
+  "item": "Rune essence",
+  "count": 28,
+  "itemId": 1436,
+  "start": 1795645174172,
+  "end": 1795646074172,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
