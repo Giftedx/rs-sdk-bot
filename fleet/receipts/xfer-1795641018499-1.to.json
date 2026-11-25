@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795641018499-1",
+ "account": "MineYourBiz",
+ "partner": "Stirmypot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "c6aaa37d-6205-4b98-9b9d-b996cd95ae4f",
+ "count": 0,
+ "ok": false,
+ "at": 1795641264845,
+ "detail": "trade claimed"
+}

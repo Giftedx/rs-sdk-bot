@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795641243813,
+ "at": 1795641271673,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,19 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "PackageDeal",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "helper"
   },
   {
    "account": "PickpockDick",
@@ -346,6 +333,19 @@
   },
   {
    "account": "Fingersmith",
+   "script": "scripts/generated/quest-grandtree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "mmthv2350",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/generated/quest-merlin.ts --",
@@ -360,23 +360,20 @@
    "role": "army"
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
    "args": [
-    "giant"
+    "scripts/generated/quest-druid.ts --",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
+    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:564",
-    "BATCH_UNITS": "1750",
-    "BANK_PACK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:564",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
+   "goal": "goal:quest_board:itwatchtower",
+   "role": "army"
   }
  ],
  "army": [
@@ -394,7 +391,6 @@
   "moneyshot",
   "oreelse",
   "pocketpool",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
