@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795611990427-1",
+ "account": "Moneyshot",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "3f1a13a6-a75b-4277-80a8-4bc0bef2924e",
+ "count": 0,
+ "ok": false,
+ "at": 1795612595411,
+ "detail": "trade claimed"
+}

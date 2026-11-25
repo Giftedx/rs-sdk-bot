@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795612484708,
+ "at": 1795612606638,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -153,22 +153,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "helper"
   }
  ],
  "army": [
