@@ -288,6 +288,35 @@ test('the [ and ] keys step through the page accounts, not the viewer roster',()
  const press=(k:string)=>key({key:k,stopImmediatePropagation:()=>stopped++,preventDefault:()=>{}});
  press(']');press('[');press('w');
  expect(b.messages.filter(m=>m.data.atlasStep).map(m=>m.data.atlasStep)).toEqual([1,-1]);expect(stopped).toBe(2);
+ // With a modifier, or typed into a field, [ and ] stay with the viewer, as the page's own keys do.
+ key({key:']',ctrlKey:true,stopImmediatePropagation:()=>stopped++,preventDefault:()=>{}});
+ key({key:'[',target:{tagName:'INPUT'},stopImmediatePropagation:()=>stopped++,preventDefault:()=>{}});
+ expect(b.messages.filter(m=>m.data.atlasStep)).toHaveLength(2);expect(stopped).toBe(2);
+});
+
+test('a ResizeObserver loop report does not fail the view; another window error does',()=>{
+ const b=browser();let onError:any;
+ b.host.addEventListener=(t:string,fn:any)=>{if(t==='error')onError=fn;};
+ installViewerBridge(b.host);
+ onError({message:'ResizeObserver loop completed with undelivered notifications.'});
+ onError({message:'ResizeObserver loop limit exceeded'});
+ expect(b.states().filter(s=>s?.state==='error')).toHaveLength(0);
+ onError({message:'TypeError: x is undefined'});
+ expect(b.states().at(-1).state).toBe('error');
+});
+
+test('after a page follow the opponent is the new player\'s, though the viewer URL still names the old one',async()=>{
+ const b=browser();let onMessage:any;b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')onMessage=fn;};
+ class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m)});}}
+ b.host.WebSocket=Socket;installViewerBridge(b.host);b.host.location.href+='&follow=Worker';const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ socket.message({t:'roster',p:[[8,'Worker',1,1,0,3],[9,'Other',1,1,0,3]]});
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const opp=()=>b.messages.filter(m=>'atlasOpponent' in m.data).map(m=>m.data.atlasOpponent);
+ socket.message({t:'tick',k:1,p:[{i:8,fe:23},{i:9,fe:24}],n:[{i:23,t:26,hp:[9,12]},{i:24,t:27,hp:[3,5]}]});
+ expect(opp().at(-1)).toEqual({kind:'npc',type:26,hp:[9,12]});
+ onMessage({origin:'http://localhost:3102',source:b.host.parent,data:{follow:'Other'}});
+ socket.message({t:'tick',k:2});
+ expect(opp().at(-1)).toEqual({kind:'npc',type:27,hp:[3,5]});
 });
 
 test('opponent information: the followed player\'s target after a hit, renamed when hidden, cleared when it stops facing',async()=>{

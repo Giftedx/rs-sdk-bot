@@ -153,6 +153,12 @@ button.op-kpi:hover{filter:brightness(1.15)}
 #viewer-status::after{content:'';position:absolute;left:0;right:0;bottom:0;height:20px;border:1px solid #8c1111;background:linear-gradient(90deg,#8c1111 0 40%,transparent 40%) 0 0/200% 100%;animation:fin-load 1.6s linear infinite}
 @keyframes fin-load{from{background-position:100% 0}to{background-position:-60% 0}}
 @media(prefers-reduced-motion:reduce){#viewer-status::after{animation:none;background:#8c1111}}
+/* One loading screen at a time: while the page waits for its first data, its Welcome box covers the view, and the 3D
+   bar would sit on top of that box. */
+body:has(#game-loading:not([hidden])) #viewer-status{visibility:hidden;transition:none}
+#viewer-status{transition:visibility 0s var(--mo-3)}/* shows once the Welcome box has faded out */
+/* On a phone the account overlay sits over the middle of the view, where the 3D bar is: it waits for the world. */
+@media(max-width:740px){body:has(#mw.loading3d) .game-overlay{visibility:hidden}}
 
 /* Motion, spacing and state finish. The tokens are in client-shell.css :root. Motion moves transform and opacity only;
    hover states change colour. The rules for the Fleet wall are not here. */

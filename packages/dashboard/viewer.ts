@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='520775A2E04CF4855FD257C2020E605CFAA249CAA33C4F5A899B53D0FE358051';
+export const VIEWER_MANIFEST_SHA256='1DCFEB4DF2CF1960814FA9D099B5445E73C2BE80189E1EF640648A6E54C57A3A';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -44,6 +44,9 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['capture reply', 'viewerCapture'],                                     // {viewerCapture:{id,url}} to the page that asked
     ['client camera preset', '.get("client")'],                             // ?client=1 close-up camera mode
     ['camera release event', 'atlasCameraReleased'],                        // notified when user releases camera follow
+    ['address while following', 'searchParamsWrittenAt'],                   // the URL (camera, follow) is written every 500 ms while the camera moves
+    ['own labels for each wall view', 'farLabelCopies'],                    // a wall view draws its own far-player names
+    ['silent feed check', 'isSilent('],                                     // a feed socket with no data for 15 s is opened again
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
@@ -310,7 +313,9 @@ export function installViewerBridge(host:any) {
                         for(const i of Array.isArray(message.rp)?message.rp:[]){faces.delete(i);playerHp.delete(i);}
                         for(const i of Array.isArray(message.rn)?message.rn:[])npcs.delete(i);
                         if(privacyReady&&renderReady&&!failed&&host.parent!==host){
-                            const follow=new host.URL(host.location.href).searchParams.get('follow')?.toLowerCase();let slot:number|undefined;
+                            // The viewer writes its URL up to a second late: until it names the page's new follow, the
+                            // name there is the old player's, and so would be the opponent.
+                            const follow=(pageFollowPolls>0&&pageFollow)||new host.URL(host.location.href).searchParams.get('follow')?.toLowerCase();let slot:number|undefined;
                             if(follow)for(const [i,n] of names)if(n.toLowerCase()===follow){slot=i;break;}
                             const fe=slot==null?undefined:faces.get(slot);let opponent:any=null;
                             // Shown once the target has taken a hit, as RuneLite shows it in combat, not for talk or pickpocketing.
@@ -410,13 +415,16 @@ export function installViewerBridge(host:any) {
     host.addEventListener('keydown',(event:any)=>{
         const plain=!event.ctrlKey&&!event.altKey&&!event.metaKey&&!/^(?:INPUT|SELECT|TEXTAREA)$/.test(event.target?.tagName??'');
         const wallKey=plain&&typeof event.key==='string'&&(event.key==='\\'||multiAsked.length>0&&/^(?:Arrow(?:Left|Right|Up|Down)|[hjklfHJKLF1-9? ]|Enter|Escape)$/.test(event.key));
-        if(event.key!=='['&&event.key!==']'&&!wallKey)return;
+        // [ and ] with a modifier, or typed into a field, stay with the viewer, as on the page.
+        const stepKey=plain&&(event.key==='['||event.key===']');
+        if(!stepKey&&!wallKey)return;
         event.stopImmediatePropagation();event.preventDefault();
         if(host.parent===host)return;
         if(wallKey)host.parent.postMessage({atlasWallKey:{key:event.key,shift:!!event.shiftKey}},host.location.origin);
         else host.parent.postMessage({atlasStep:event.key===']'?1:-1},host.location.origin);
     },true);
-    host.addEventListener('error',()=>fail('The 3D viewer reported an error; use the 2D map.'));
+    // A ResizeObserver that skips a frame reports "ResizeObserver loop ..." as a window error: the view still works.
+    host.addEventListener('error',(event:any)=>{if(/^ResizeObserver loop/.test(String(event?.message??'')))return;fail('The 3D viewer reported an error; use the 2D map.');});
     // A graphics reset leaves a black canvas. The page reloads the viewer after this failure. The event does not bubble.
     host.document?.addEventListener?.('webglcontextlost',()=>fail('The 3D view lost its graphics context.'),true);
     host.addEventListener('unhandledrejection',(event:any)=>{if(event.reason?.name!=='AbortError')fail('The 3D viewer could not finish loading; use the 2D map.');});
