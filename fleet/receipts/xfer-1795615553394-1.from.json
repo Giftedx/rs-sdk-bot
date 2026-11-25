@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795615553394-1",
+ "account": "Billionaire",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Knife",
+ "requested": 1,
+ "claim": "09b9d165-2ffd-4312-8e64-1be145d0e31d",
+ "count": 0,
+ "ok": false,
+ "at": 1795615850768,
+ "detail": "trade claimed"
+}

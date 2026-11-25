@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795615742430-nabtheknob-trousersnake-3d7f9e43b5769c03",
+ "account": "NabTheKnob",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 300,
+ "claim": "b991331b-3dec-4d26-8994-e48a5b60df2b",
+ "count": 0,
+ "ok": false,
+ "at": 1795615784657,
+ "detail": "trade claimed"
+}

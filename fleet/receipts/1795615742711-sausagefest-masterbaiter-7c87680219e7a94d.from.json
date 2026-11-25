@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795615742711-sausagefest-masterbaiter-7c87680219e7a94d",
+ "account": "Sausagefest",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 30,
+ "claim": "8161b98a-8b05-463e-8781-4f2e8bad832a",
+ "count": 0,
+ "ok": false,
+ "at": 1795615861381,
+ "detail": "trade claimed"
+}

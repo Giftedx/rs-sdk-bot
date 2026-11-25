@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795615742026-tossthecaber-bigchopper-bdc5c045c25c1dd6",
+ "account": "TossTheCaber",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "8c818f83-77ab-46cf-8eda-335bf092224d",
+ "count": 1,
+ "ok": true,
+ "at": 1795615808453,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 4
+ },
+ "logout": {
+  "attemptId": "1795615746840-0000029756-0000000001",
+  "at": 1795615808266,
+  "sha256": "b9bdda2284d7fc291a8e1dc813febd698d3e3d4366316060b462d5742ddd6515"
+ },
+ "screen": true
+}
