@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795580640936-ballspinner-yewfirst-efe93fe6e43ee98e",
  "account": "Ballspinner",
  "partner": "YewFirst",
@@ -10,15 +10,37 @@
  "item": "Rune arrowtips",
  "requested": 439,
  "claim": "0b71b8d2-dec5-4fb1-882a-938f94e2dba3",
- "count": 0,
- "ok": false,
- "at": 1795580887225,
- "detail": "trade claimed",
+ "count": 439,
+ "ok": true,
+ "at": 1795581103501,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Adamant arrowtips",
    "requested": 500,
-   "count": 0
+   "count": 500,
+   "inventory": {
+    "before": 500,
+    "after": 0
+   },
+   "bank": {
+    "count": 500,
+    "at": 1795581076739
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 439,
+  "after": 0
+ },
+ "bank": {
+  "count": 439,
+  "at": 1795581076030
+ },
+ "logout": {
+  "attemptId": "1795580887235-0000014528-0000000001",
+  "at": 1795581103487,
+  "sha256": "b54bbc8fb4556c66ca279943773831dbc553d509601bb227ed1569cc237971cf"
+ },
+ "screen": true
 }
