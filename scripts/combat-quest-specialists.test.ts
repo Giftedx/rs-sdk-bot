@@ -221,7 +221,13 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
             expect(bench).toBeDefined();
             expect(bench?.presetConfig).toEqual({});
         }
-        expect(SPECIALIST_COMBAT_QUESTS_CASES.length).toBe(3);
+        expect(SPECIALIST_COMBAT_QUESTS_CASES.map(c => c.key)).toEqual([
+            'fighter:specialist-hp',
+            'fighter:specialist-strength',
+            'fighter:specialist-defence',
+            'extra:specialist-attack-pvp',
+            'extra:specialist-hp-pvp',
+        ]);
 
         for (const [acc, board, minSup] of [
             ['FullBlooded', 'Hitpoints', 1],

@@ -64,14 +64,14 @@ export {
     type KitSpecItem,
 };
 
-export type RangedKitVariant = 'knives' | 'msb' | 'live' | 'pvp';
+export type RangedKitVariant = 'knives' | 'msb' | 'live' | 'pvp' | 'pvp-glory';
 
 // 25 slots exact: single-trade Keep 1-tick PvP relog kit (Crossbow + Barbed bolts 1->49, MSB + Rune arrows 50->99, Def-1 BiS; infinite run enabled).
 export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 837, name: 'Crossbow', count: 1, stackable: false },
     { id: 881, name: 'Barbed bolts', count: 1500, stackable: true },
     { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
-    { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
+    { id: 892, name: 'Rune arrow', count: 1500, stackable: true },
     { id: 1478, name: 'Amulet of accuracy', count: 1, stackable: false },
     { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
     { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
@@ -85,7 +85,14 @@ export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
+// 25 slots exact: Amulet of glory(4) (+10 Ranged atk) in place of Amulet of accuracy (+4).
+export const RANGED_PVP_GLORY_KIT: readonly KitSpecItem[] = [
+    ...RANGED_PVP_SPECIALIST_KIT.filter(item => item.id !== 1478),
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+] as const;
+
 export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
+    if (variant === 'pvp-glory') return { trade1: RANGED_PVP_GLORY_KIT, trade2: [] };
     if (variant === 'pvp') return { trade1: RANGED_PVP_SPECIALIST_KIT, trade2: [] };
     if (variant === 'msb') return { trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 };
     if (variant === 'live') return { trade1: RANGED_SPECIALIST_LIVE_TRADE1, trade2: RANGED_SPECIALIST_LIVE_TRADE2 };
@@ -93,6 +100,7 @@ export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: r
 }
 
 export function variantKit(variant: RangedKitVariant = 'knives'): readonly KitSpecItem[] {
+    if (variant === 'pvp-glory') return RANGED_PVP_GLORY_KIT;
     if (variant === 'pvp') return RANGED_PVP_SPECIALIST_KIT;
     if (variant === 'msb') return RANGED_SPECIALIST_MSB_KIT;
     if (variant === 'live') return RANGED_SPECIALIST_LIVE_KIT;
@@ -1185,26 +1193,20 @@ export function selectRangedPvpUpgradeIds(
 }
 
 async function ensureRangedPvpGear(sess: Session): Promise<void> {
-    const sk = skillInfo(sess, 'Ranged');
-    const ranged = sk.baseLevel;
+    const ranged = skillInfo(sess, 'Ranged').baseLevel;
     const inv = sess.sdk.getInventory() as InvItem[];
     const worn = sess.sdk.getEquipment() as WornItem[];
-    const rangePot = (inv as InvItem[]).find(i => i.id === 2444 || i.id === 169 || i.id === 171 || i.id === 173);
-    const needBoost = rangePot && sk.level <= ranged + (ranged >= 60 ? 3 : 1);
-    const maxEquips = needBoost ? 2 : 3;
-    // Cap actions per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
-    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, maxEquips);
-    const ops: Promise<unknown>[] = batch.map(id => {
-        const item = inv.find(i => i.id === id);
-        if (!item || item.slot === undefined) return Promise.resolve();
-        const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
-        return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
-    });
-    if (needBoost && rangePot && rangePot.slot !== undefined) {
-        const op = (rangePot.optionsWithIndex ?? []).find(o => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
-        ops.push(sess.direct({ type: 'useInventoryItem', slot: rangePot.slot, optionIndex: op, reason: 'SDK' }));
-    }
-    if (ops.length > 0) await Promise.all(ops);
+    // Cap at 3 equips per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
+    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, 3);
+    if (batch.length === 0) return;
+    await Promise.all(
+        batch.map(id => {
+            const item = inv.find(i => i.id === id);
+            if (!item || item.slot === undefined) return Promise.resolve();
+            const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+            return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+        }),
+    );
 }
 
 async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: string, CAP: number): Promise<void> {
@@ -1251,19 +1253,23 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
             : [...new Set((process.env.PRACTICE_TANKS ?? process.env.TANKS ?? rawSuppliers).split(',').map(x => x.trim()).filter(Boolean))];
         if (tankNames.length === 0) throw Error('missing TANKS / PRACTICE_TANKS for Ranged PvP mode');
 
-        milestone('start', 'variant=pvp');
+        const useGlory = opts.variant === 'pvp-glory' || process.env.RANGED_GLORY === '1';
+        const kit = useGlory ? RANGED_PVP_GLORY_KIT : RANGED_PVP_SPECIALIST_KIT;
+        const neckId = useGlory ? 1712 : 1478;
+
+        milestone('start', `variant=pvp${useGlory ? ' glory=1' : ''}`);
         await leaveRuneStarter(s, stop);
         if (onStarterIsland(posOf(s)) || posOf(s)?.level !== 0) {
             throw Error('still on Tutorial Island after leaveRuneStarter');
         }
-        const allowed = new Set(RANGED_PVP_SPECIALIST_KIT.map(k => k.id));
+        const allowed = new Set(kit.map(k => k.id));
         await dropItemsMatching(s, i => !allowed.has(i.id), stop, 'tutorial junk');
         milestone('tutorial');
 
-        await receiveSupplyKit(s, supplierName, RANGED_PVP_SPECIALIST_KIT, stop, LUMBRIDGE_HANDOFF);
+        await receiveSupplyKit(s, supplierName, kit, stop, LUMBRIDGE_HANDOFF);
         milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
-        const startGearIds = [837, 881, 1478, ITEM_IDS.leatherBody] as const;
+        const startGearIds = [837, 881, neckId, ITEM_IDS.leatherBody] as const;
         const startGearItems = startGearIds
             .map(id => (s.sdk.getInventory() as InvItem[]).find(i => i.id === id))
             .filter((x): x is InvItem => !!x && x.slot !== undefined);
@@ -1296,6 +1302,7 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
         await walkKeepWaypoints(s, [{ x: 2470, z: 3170, tol: 4 }, { x: 2561, z: 3311, tol: 1 }], 220, stop, 'cw to ardougne lever', {
             ignoreMeleeHunters: true,
             ignoreLiveHunters: true,
+            skipGuardWalk: true,
         });
         await setProtectMelee(s, false, stop);
         await pullArdougneLeverToWildy(s, stop);
@@ -1349,9 +1356,17 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
 
     const CAP = opts.cap ?? Number(process.env.CAP ?? 4800);
     const variantRaw = opts.variant ?? process.env.VARIANT;
-    const variant: RangedKitVariant = variantRaw === 'pvp' ? 'pvp' : variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
+    const variant: RangedKitVariant = variantRaw === 'pvp-glory' || (variantRaw === 'pvp' && process.env.RANGED_GLORY === '1')
+        ? 'pvp-glory'
+        : variantRaw === 'pvp'
+          ? 'pvp'
+          : variantRaw === 'msb'
+            ? 'msb'
+            : variantRaw === 'live'
+              ? 'live'
+              : 'knives';
     const root = resolve(import.meta.dir, '..');
-    if (variant === 'pvp') {
+    if (variant === 'pvp' || variant === 'pvp-glory') {
         await runRangedPvpSpecialist(opts, root, CAP);
         return;
     }
@@ -1522,7 +1537,7 @@ export function parseSpecialistArgs(argv: readonly string[]): RangedSpecialistOp
         }
     }
     const variantRaw = kv.get('VARIANT') ?? process.env.VARIANT;
-    const variant: RangedKitVariant = variantRaw === 'pvp' ? 'pvp' : variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
+    const variant: RangedKitVariant = variantRaw === 'pvp-glory' ? 'pvp-glory' : variantRaw === 'pvp' ? 'pvp' : variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
     const tanksRaw = (kv.get('TANKS') ?? process.env.PRACTICE_TANKS ?? process.env.TANKS ?? '').trim();
     const tanks = tanksRaw ? tanksRaw.split(',').map(x => x.trim()).filter(Boolean) : undefined;
     const sx = Number(kv.get('SPOT_X') ?? process.env.SPOT_X ?? SPIDERS_CENTRE.x);
