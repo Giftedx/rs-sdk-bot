@@ -34,7 +34,7 @@ export function participantsHaveStopFile(accounts:readonly string[],root=process
 }
 
 export interface SuperviseDeps {
-    run(): Promise<{ stdout: string; exitCode: number }>;
+    run(): Promise<{ stdout: string; exitCode: number; stderr?: string }>;
     stopped(): boolean;
     pause(ms: number): Promise<void>;
     maxRestarts: number;
@@ -95,14 +95,26 @@ function lastMatchingLine(text: string, test: (line: string) => boolean): string
 }
 
 // Real work in a run: the LEDGER line every worker prints at finish (packages/core/src/ledger.ts) with at least
-// PROGRESS_TICKS game ticks. A failed login or a session dropped at once prints none, so a dead server still gives up.
+// PROGRESS_TICKS game ticks, not all of them idle. A failed login or a session dropped at once prints none, so a dead
+// server still gives up. A session that was idle on every tick (idle= equal to ticks=) is no work: it adds to the streak
+// and its failure can repeat, so a worker that stands still ends instead of logging in again.
 export const PROGRESS_TICKS = 300;
 const LEDGER_TICKS_RE = /^LEDGER ticks=(\d+)/;
+const LEDGER_IDLE_RE = /\bidle=(\d+)\b/;
 export function madeProgress(stdout: string): boolean {
     const line = lastMatchingLine(stdout, l => l.startsWith('LEDGER ticks=') && LEDGER_TICKS_RE.test(l));
     const m = line ? LEDGER_TICKS_RE.exec(line) : null;
-    return !!m && Number(m[1]) >= PROGRESS_TICKS;
+    if (!m || Number(m[1]) < PROGRESS_TICKS) return false;
+    const idle = LEDGER_IDLE_RE.exec(line!);
+    return !idle || Number(idle[1]) < Number(m[1]);
 }
+
+// openBot prints `DEATH at=...` for every death of the account (packages/core/src/death-recovery.ts deathLine), also
+// inside a chain step (`  | DEATH at=...`). A worker can fail after the death without naming it in its RESULT, so a
+// failed run with a DEATH line ends as died: a restart would walk the account back into the same danger.
+const DEATH_LINE_RE = /^(?:\s*\|\s*)?DEATH at=/;
+export const isDeathLine = (line: string) => DEATH_LINE_RE.test(line);
+export const diedInRun = (stdout: string) => lastMatchingLine(stdout, isDeathLine) !== undefined;
 
 export function isEntryRefusal(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /\bticks=0\b/.test(result) && !/died=true/.test(result);
@@ -170,18 +182,30 @@ export function lineKeeper(match: (line: string) => string | null) {
     };
 }
 
-// Copies a child's stdout to this process and returns only the lines that `match` keeps.
-export async function keepOutput(stdout: ReadableStream<Uint8Array>, match: (line: string) => string | null): Promise<string> {
+// Copies a child's output stream to `write` (this process's stdout by default) and returns only the lines that `match` keeps.
+export async function keepOutput(stdout: ReadableStream<Uint8Array>, match: (line: string) => string | null, write: (chunk: string) => unknown = c => process.stdout.write(c)): Promise<string> {
     const keep = lineKeeper(match), reader = stdout.getReader(), decoder = new TextDecoder();
     for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         const c = decoder.decode(value, { stream: true });
         keep.push(c);
-        process.stdout.write(c);
+        write(c);
     }
     keep.push(decoder.decode());
     return keep.text();
+}
+
+// A worker that throws past its own RESULT handler prints no RESULT line. Bun writes the uncaught error to stderr as
+// `error: <message>` (an Error) or `<Name>Error: <message>` (a subclass). The supervisor reads that line as the run's
+// result, so the rules for a printed failure (a release hold, a stop, a prerequisite, a repeat) also apply to a crash.
+const UNCAUGHT_ERROR_RE = /^(?:error|[A-Z][A-Za-z]*Error): \S/;
+export const isUncaughtErrorLine = (line: string) => UNCAUGHT_ERROR_RE.test(line);
+// The RESULT a crash would have printed had the worker caught the error: `RESULT fail ${String(e)}`.
+export function crashResult(stderr: string | undefined): string | undefined {
+    const line = stderr === undefined ? undefined : lastMatchingLine(stderr, isUncaughtErrorLine);
+    if (line === undefined) return undefined;
+    return `RESULT fail ${line.startsWith('error: ') ? `Error: ${line.slice('error: '.length)}` : line}`.trimEnd();
 }
 
 export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused'; runs: number }> {
@@ -189,12 +213,12 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
     for (let runs = 1; ; runs++) {
         if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
         const r = await d.run();
-        const result = lastMatchingLine(r.stdout, l => l.startsWith('RESULT')) ?? '(no RESULT)';
+        const result = lastMatchingLine(r.stdout, l => l.startsWith('RESULT')) ?? crashResult(r.stderr) ?? '(no RESULT)';
         d.log?.(`SUPERVISE run ${runs} exit ${r.exitCode}: ${result.slice(0, 200)}`);
         if (r.exitCode === 0 && /^RESULT ok\b/.test(result)) return { reason: 'done', runs };
         if (d.stopped() || /stop file/.test(result)) return { reason: 'stopped', runs };
         // A death means the route or the food plan failed; a blind restart repeats it.
-        if (/died=true|RESULT fail died/.test(result)) return { reason: 'died', runs };
+        if (/died=true|RESULT fail died/.test(result) || diedInRun(r.stdout)) return { reason: 'died', runs };
         // Out of food: a restart only logs in again and finds the same empty bank. A resupply job must run first.
         if (/RESULT fail no food/.test(result)) return { reason: 'stopped', runs };
         if (isWorkerReleaseHold(result)) return { reason: 'release-paused', runs };
@@ -231,9 +255,12 @@ if (import.meta.main) {
         run: async () => {
             // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
-            const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
-            const stdout = await keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null);
-            return { stdout, exitCode: await p.exited };
+            const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'pipe', env: process.env ,windowsHide:true});
+            const [stdout, stderr] = await Promise.all([
+                keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : isDeathLine(l) ? 'DEATH' : null),
+                keepOutput(p.stderr, l => isUncaughtErrorLine(l) ? 'ERROR' : null, c => process.stderr.write(c)),
+            ]);
+            return { stdout, stderr, exitCode: await p.exited };
         },
         stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsHaveStopFile(participants, process.cwd()),
         pause: ms => Bun.sleep(ms),

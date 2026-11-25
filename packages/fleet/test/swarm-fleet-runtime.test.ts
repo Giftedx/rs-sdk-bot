@@ -14,6 +14,8 @@ import {
     readAccountStatus,
     readAllStatuses,
     recoveryLeaseHeld,
+    chainOutcomeActivity,
+    resultLineOf,
     selectBrainDispatchStep,
     shouldSwarmReload,
     startable,
@@ -399,6 +401,38 @@ describe('fleet runtime live-path, Brain dispatch, reload, and lease fixes', () 
             now,
         );
         expect(dropped.map(c => c.orderId)).toEqual(['ord-drop']);
+    });
+
+    test('a failed chain charges the step that failed, not the first work step', () => {
+        const step = (activityId: string, itemId: number, shopId?: string) => ({
+            stepKind: 'work' as const, activityId, demandId: 'd:chain', workerId: 'market', batchUnits: 1, estimatedTicks: 60, expectedValuePerHour: 200,
+            config: shopId ? { mode: 'shop-buy', itemId, quantity: 1, shopId } : { mode: 'ge-buy', itemId, quantity: 1 },
+        });
+        const plan = { account: 'ChainBot', demandId: 'd:chain', scorePerHour: 200, steps: [step('market:shop-buy', 1317, 'taverley2hand'), step('market:ge-buy', 882)] };
+        const sel = selectBrainDispatchStep(dispatchAccountPlan(plan), plan.steps);
+        expect(sel.mode).toBe('worker');
+        if (sel.mode !== 'worker') throw Error('unreachable');
+        expect(sel.isMultiStepChain).toBe(true);
+        expect(sel.chainActivityIds).toEqual(['market:shop-buy', 'market:ge-buy']);
+        const ids = sel.chainActivityIds!, first = sel.displayActivityId;
+        expect(chainOutcomeActivity(ids, 'RESULT fail smith refused: integer CAP>=1 required chain rounds=1 ok=0 failed=1', first)).toBe('market:shop-buy');
+        expect(chainOutcomeActivity(ids, 'RESULT fail no seller chain rounds=1 ok=1 failed=1', first)).toBe('market:ge-buy');
+        expect(chainOutcomeActivity(ids, 'RESULT ok chain rounds=1 ok=2 failed=0', first)).toBe(first);
+        expect(chainOutcomeActivity(['', 'market:ge-buy'], 'RESULT fail walk-to no route chain rounds=1 ok=0 failed=1', 'market:ge-buy')).toBeUndefined();
+        expect(chainOutcomeActivity(undefined, 'RESULT fail x chain rounds=1 ok=0 failed=1', 'work:a')).toBe('work:a');
+        expect(chainOutcomeActivity(ids, 'RESULT fail stop file chain rounds=0 ok=0 failed=0', first)).toBe(first);
+    });
+
+    test('the swarm keeps the full worker RESULT line behind the supervisor echo, and an echo-only crash result', () => {
+        const full = 'RESULT fail walk-to ' + '{"ok":false,"reason":"precondition","detail":"no route"}'.repeat(5) + ' chain rounds=1 ok=0 failed=1';
+        let [line, last] = resultLineOf(full, full, undefined);
+        expect(line).toBe(full);
+        [line, last] = resultLineOf(`SUPERVISE run 1 exit 1: ${full.slice(0, 200)}`, full.slice(0, 200), last);
+        expect(line).toBe(full);
+        expect(line).toContain('chain rounds=1 ok=0 failed=1');
+        const crash = 'RESULT fail Error: no worker progress: release peer state unknown; verify offline before rollout';
+        [line] = resultLineOf(`SUPERVISE run 2 exit 1: ${crash}`, crash, last);
+        expect(line).toBe(crash);
     });
 
     test('selectBrainDispatchStep extracts marketItemId and marketVenue for shop-buy and ge-buy routes', () => {

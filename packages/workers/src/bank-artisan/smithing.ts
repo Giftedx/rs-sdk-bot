@@ -2038,6 +2038,18 @@ export async function runSmithBatch(
 
 // ---- CLI Entry Points ----
 
+export type SmithOrderEnv = { product: number; maximum: number; reserve: number };
+// The anvil order of ORDER_ACTION=smith. The CLI and the catalog launch contract test both read it here.
+export function smithOrderFromEnv(cap: number, env: Record<string, string | undefined>): SmithOrderEnv {
+    const readNum = (k: string) => (env[k] === undefined || env[k] === '' ? NaN : Number(env[k]));
+    const smith = { product: readNum('PRODUCT_ID'), maximum: readNum('MAX_MAKE'), reserve: readNum('BAR_RESERVE') };
+    if (![cap, smith.product, smith.maximum, smith.reserve].every(Number.isSafeInteger) || cap < 1 || smith.maximum < 1 || smith.reserve < 0) {
+        throw Error('smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required');
+    }
+    smithRecipe(smith.product);
+    return smith;
+}
+
 export async function runSmeltBarsCli(
     botName: string,
     restArgs: readonly string[],
@@ -2049,15 +2061,10 @@ export async function runSmeltBarsCli(
     if (!botName) {
         throw Error('Usage: bun scripts/aio-skiller.ts <botName> artisan smithing smelt [CAP] [BAR_TYPE]');
     }
-    let smith: { product: number; maximum: number; reserve: number } | undefined;
+    let smith: SmithOrderEnv | undefined;
     let smelt: SmeltOrder | undefined;
     if (ACTION === 'smith') {
-        const readNum = (k: string) => (env[k] === undefined || env[k] === '' ? NaN : Number(env[k]));
-        smith = { product: readNum('PRODUCT_ID'), maximum: readNum('MAX_MAKE'), reserve: readNum('BAR_RESERVE') };
-        if (![CAP, smith.product, smith.maximum, smith.reserve].every(Number.isSafeInteger) || CAP < 1 || smith.maximum < 1 || smith.reserve < 0) {
-            throw Error('smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required');
-        }
-        smithRecipe(smith.product);
+        smith = smithOrderFromEnv(CAP, env);
     } else if (ACTION !== 'smelt') {
         throw Error('ORDER_ACTION must be smelt or smith');
     } else {

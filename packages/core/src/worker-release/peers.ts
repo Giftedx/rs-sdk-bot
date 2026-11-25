@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { isLocalServer } from '../localserver';
 import { lifecycleRootForRead, liveRoot, statusReadDirs } from '../practice-paths';
-import { commandLine } from '../proc';
+import { commandLine, laterProcessHolds, processStartTimes } from '../proc';
 import { listAttempts, readLogoutProof, resolveLifecycleRoot, type LogoutProof } from '../session-lifecycle';
 import { root, type ReleaseMemo } from './paths';
 import { cachedReleaseFor, releaseEntries } from './revision';
@@ -92,9 +92,11 @@ export const LOST_SESSION_DROP_MS = 200_000;
 // leaves its row unfinished and its attempt held; a later login the release gate refused leaves a newer held attempt
 // with no live owner either, and neither ever confirms logout, while the server dropped the session 200 s after its
 // client went. A held attempt whose owner still runs, or whose receipt is younger than the drop (its session may still
-// stand on the server), holds the row. An unreadable command line or missing producer script cannot prove a live PID
-// changed owner.
-export function closedSessionRow(row: any, server: string, opts: { root?: string; commandLine?: (pid: number) => string | null } = {}, alive: (pid: number) => boolean = pidAlive, now = Date.now()): boolean {
+// stand on the server), holds the row. A live PID whose process started after the attempt was created is a later process
+// (the owner wrote createdAt itself, so it started before it), also when its command line reads as empty, as a system
+// process's does. A start time that cannot be read proves nothing; then an unreadable command line or missing producer
+// script cannot prove a live PID changed owner.
+export function closedSessionRow(row: any, server: string, opts: { root?: string; commandLine?: (pid: number) => string | null; starts?: (pids: readonly number[]) => ReadonlyMap<number, number> | null } = {}, alive: (pid: number) => boolean = pidAlive, now = Date.now()): boolean {
     if (typeof row?.name !== 'string' || typeof row.sessionAttemptId !== 'string' || !row.sessionAttemptId) return false;
     let latest: LogoutProof; try { latest = readLogoutProof(row.name, server, opts); } catch { return false; }
     if (latest.state === 'confirmed') return latest.attemptId >= row.sessionAttemptId;
@@ -108,6 +110,7 @@ export function closedSessionRow(row: any, server: string, opts: { root?: string
             if (!Number.isSafeInteger(pid) || !pid || pid < 1) return false;
             if (a.attemptId !== row.sessionAttemptId && (!Number.isFinite(a.receipt?.updatedAt) || now - a.receipt!.updatedAt < LOST_SESSION_DROP_MS)) return false;
             if (!alive(pid)) continue;
+            if (laterProcessHolds(pid, a.receipt!.createdAt, (opts.starts ?? processStartTimes)([pid]))) continue;
             if (typeof owner?.script !== 'string' || !owner.script.endsWith('.ts')) return false;
             const line = (opts.commandLine ?? commandLine)(pid);
             if (!line?.trim() || normalize(line).includes(normalize(owner.script))) return false;

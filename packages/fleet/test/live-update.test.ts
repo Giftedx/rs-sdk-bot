@@ -198,7 +198,8 @@ describe('fleet live-update facade', () => {
             expect(applied).toEqual({ ok: true, detail: '' });
             expect(readFileSync(join(clone, 'dir', 'child.txt'), 'utf8').replace(/\r/g, '')).toBe('child\n');
         }
-    });
+        // Real git clones and checkouts: about 5.8 s on a Windows PC, past Bun's 5 s default.
+    }, 30_000);
 
     test('all subprocess spawns in packages/fleet/src and owned fleet/cloud scripts specify windowsHide: true', () => {
         const repo = resolve(import.meta.dir, '../../..');

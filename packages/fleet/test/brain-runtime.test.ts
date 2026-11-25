@@ -22,6 +22,7 @@ import {
     applyActivityOverridesToPlan,
     captureRunBaseline,
     extractWorkerOutcomeInput,
+    gateHeldRunEnd,
     isSafeOperatorCommandId,
     materializeBrainTransferOrders,
     readAccountOverrides,
@@ -55,6 +56,44 @@ afterEach(() => {
 });
 
 describe('packages/fleet/src/brain-runtime', () => {
+    test('gateHeldRunEnd: release holds and stop-file ends are not activity outcomes; a refusal before a stop still is', () => {
+        expect(gateHeldRunEnd('release-paused after 1 runs', 'RESULT fail Error: no worker progress: release peer state unknown; verify offline before rollout')).toBe(true);
+        expect(gateHeldRunEnd('gave-up after 21 runs', 'RESULT fail Error: no worker progress: release peer state unknown; verify offline before rollout')).toBe(true);
+        expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail stop file chain rounds=1 ok=0 failed=1')).toBe(true);
+        expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail live admission paused by stop file chain rounds=1 ok=0 failed=1')).toBe(true);
+        expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail stop file ticks=1200 picks=80 fails=2')).toBe(true);
+        expect(gateHeldRunEnd('stopped after 0 runs', undefined)).toBe(true);
+        expect(gateHeldRunEnd('stopped after 1 runs', 'RESULT fail smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required chain rounds=1 ok=0 failed=1')).toBe(false);
+        expect(gateHeldRunEnd('blocked after 2 runs', 'RESULT fail Error: account, native spell and NPC ID required')).toBe(false);
+        expect(gateHeldRunEnd('gave-up after 21 runs', 'RESULT fail feathers=2000 gained=0 kills=0 idle=0 ticks=2')).toBe(false);
+        expect(gateHeldRunEnd('done after 1 runs', 'RESULT ok level=99')).toBe(false);
+    });
+
+    test('a failed run names its defect by its RESULT text, not by the supervisor end reason', () => {
+        const root = makeTempRoot();
+        const startedAt = 1_700_000_500_000;
+        const raw = extractWorkerOutcomeInput({
+            root, account: 'AlphaBot', activityId: 'bank-artisan:skill:smithing:bronze_arrowheads', server: 'rs-sdk-demo.fly.dev',
+            startedAt, finishedAt: startedAt + 5_000, exitCode: 1, endReason: 'stopped after 1 runs', successful: false,
+            lastResultLine: 'RESULT fail smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required chain rounds=1 ok=0 failed=1',
+            logPath: join(practiceRoot(root), 'logs', 'AlphaBot.log'),
+        });
+        expect(raw.detail).toContain('smith refused');
+        const catalog = createActivityCatalog();
+        const classifier = new OutcomeClassifier({ rateStore: createRateStore({ catalog, root }), root });
+        const res = classifier.classifyAndApplyRaw(raw, { now: startedAt + 5_000, domain: 'live' });
+        expect(res.outcome.kind).toBe('worker_defect');
+        if (res.outcome.kind !== 'worker_defect') throw Error('unreachable');
+        expect(res.outcome.faultSignature).toStartWith('RESULT fail smith refused');
+        expect(res.outcome.faultSignature).not.toContain('stopped after');
+        const ok = extractWorkerOutcomeInput({
+            root, account: 'AlphaBot', activityId: 'gather:thieving-knights', server: 'rs-sdk-demo.fly.dev',
+            startedAt, finishedAt: startedAt + 5_000, exitCode: 0, endReason: 'done after 1 runs', successful: true,
+            lastResultLine: 'RESULT ok level=99', logPath: join(practiceRoot(root), 'logs', 'AlphaBot.log'),
+        });
+        expect(ok.detail).toBeUndefined();
+    });
+
     test('runs an offline Brain cycle and publishes a valid FleetState file', () => {
         const root = makeTempRoot();
         const now = 1_700_000_100_000;
@@ -265,7 +304,7 @@ describe('packages/fleet/src/brain-runtime', () => {
         const classifier = new OutcomeClassifier({ rateStore, root });
 
         // First classify a successful run so RateStore records a live sample
-        const okRaw = { ...raw, exitCode: 0, status: 'ok', reason: 'done', stdout: 'RESULT ok done' };
+        const okRaw = { ...raw, exitCode: 0, status: 'ok', reason: 'done', stdout: 'RESULT ok done', detail: undefined };
         const okRes = classifier.classifyAndApplyRaw(okRaw, { now: startedAt + 31_000, domain: 'live' });
         expect(okRes.outcome.kind).toBe('target_met');
         expect(okRes.recordedRateSample?.ticksElapsed).toBe(400);

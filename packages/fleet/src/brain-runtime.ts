@@ -18,6 +18,7 @@ import {
     stopFilePaths,
 } from '../../core/src/practice-paths';
 import { readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
+import { isWorkerReleaseHold } from '../../core/src/worker-release';
 import { isWorkerTile, type TrustTier, type WorkerTile } from '../../workers/src/contracts';
 import {
     DEFAULT_RETENTION_MARGIN_RATIO,
@@ -1057,6 +1058,17 @@ export function captureRunBaseline(
     };
 }
 
+// A run that a gate ended says nothing about its activity: a release hold (the release gate refused the login or the
+// supervisor paused on it) or a stop (an owner or account stop file, or a lost fleet lease, before or during the run).
+// Such a run is no outcome: as a worker defect it would quarantine its activity for every account.
+// A stopped run whose result is its own failure (a refusal printed before the stop was seen) is still that failure.
+export function gateHeldRunEnd(endReason: string, lastResultLine?: string): boolean {
+    if (/^release-paused\b/.test(endReason)) return true;
+    if (lastResultLine !== undefined && isWorkerReleaseHold(lastResultLine)) return true;
+    if (!/^stopped\b/.test(endReason)) return false;
+    return lastResultLine === undefined || /\bstop file\b/.test(lastResultLine);
+}
+
 export function extractWorkerOutcomeInput(params: {
     readonly root: string;
     readonly account: string;
@@ -1150,6 +1162,8 @@ export function extractWorkerOutcomeInput(params: {
         exitCode: typeof params.exitCode === 'number' ? params.exitCode : undefined,
         status: params.successful ? 'ok' : 'fail',
         reason: params.endReason,
+        // The failure text names the defect; the end reason ("stopped after 1 runs") names no cause.
+        ...(!params.successful && params.lastResultLine?.trim() ? { detail: params.lastResultLine.trim() } : {}),
         durationMs: Math.max(0, params.finishedAt - params.startedAt),
         ...(ticksElapsed !== undefined ? { ticksElapsed } : {}),
         ...(xpGained ? { xpGained } : {}),

@@ -541,7 +541,8 @@ export async function trainChickens(
     }
 }
 
-export async function runChickenCli(account: string, env: Record<string, string | undefined> = process.env) {
+// The CLI's order from its environment. The CLI and the catalog launch contract test both read it here.
+export function chickenCliOptions(env: Record<string, string | undefined>) {
     const bank = env.TRAIN_BANK ?? 'varrock';
     chickenTrainingProfile(bank);
     const target = chickenTrainingTarget(Number(env.TRAIN_COMBAT ?? 13));
@@ -549,6 +550,11 @@ export async function runChickenCli(account: string, env: Record<string, string 
     const trainSkill = env.TRAIN_SKILL;
     const targetLevel = env.TARGET_LEVEL === undefined ? undefined : Number(env.TARGET_LEVEL);
     if (!chickenCombatUnlockMode(bank, trainSkill, targetLevel, entry, target)) chickenStrengthGoal(bank, trainSkill, targetLevel);
+    return { bank, target, entry, trainSkill, targetLevel };
+}
+
+export async function runChickenCli(account: string, env: Record<string, string | undefined> = process.env) {
+    const { bank, target, entry, trainSkill, targetLevel } = chickenCliOptions(env);
     const s = await openBot(account);
     try {
         const r = await trainChickens(s, Number(env.CAP ?? 1800), bank, target, { trainSkill, targetLevel, entry });
