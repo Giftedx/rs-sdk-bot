@@ -9,8 +9,12 @@ import { beginSessionAttempt, readLogoutProof } from '../../core/src/session-lif
 import { courierDeliveryWaiting, readCourierStatus } from '../src/courier-admission';
 import { brainPlannedJobs, confirmedTradeLogout, droppedTradeClaims, readSyncStatuses, readSyncStopText, releasePublishedTradeClaims, sideCard } from '../src/fleet-sync';
 import {
+    BRAIN_RECOVERY_WAIT,
+    brainJobFor,
+    brainPlanHold,
     clearAccountAutoStops,
     clearAccountSwarmStops,
+    missionSignature,
     readAccountStatus,
     readAllStatuses,
     recoveryLeaseHeld,
@@ -479,5 +483,40 @@ describe('fleet runtime live-path, Brain dispatch, reload, and lease fixes', () 
             expect(geSel.marketItemId).toBe(892);
             expect(geSel.marketVenue).toBe('ge');
         }
+    });
+
+    test('the swarm holds a brain plan whose job is the job that ended for good, and the standalone recovery queue', () => {
+        const plan = (quantity: number) => ({
+            account: 'GeBot',
+            demandId: 'd:arrow',
+            scorePerHour: 200,
+            steps: [{
+                stepKind: 'work' as const, activityId: 'market:ge-buy', demandId: 'd:arrow', workerId: 'market',
+                batchUnits: quantity, estimatedTicks: 60, expectedValuePerHour: 200,
+                config: { mode: 'ge-buy', itemId: 892, quantity, estimatedCoinCost: 50_000 },
+            }],
+        });
+        const built = (quantity: number) => { const p = plan(quantity); return brainJobFor('GeBot', dispatchAccountPlan(p), p.steps, 'auto'); };
+        const job = built(250).job!;
+        expect(job).toMatchObject({ account: 'GeBot', enabled: true, repeat: true, role: 'auto', demandId: 'd:arrow', marketVenue: 'ge', env: { BRAIN_ACTIVITY_ID: 'market:ge-buy', BRAIN_DEMAND_ID: 'd:arrow' } });
+        const sig = missionSignature(job);
+        expect(missionSignature(built(300).job!)).not.toBe(sig);
+        const offline = () => Infinity;
+        const hold = (quantity: number, ended: Map<string, { at: number; reason: string; revision?: string }>, age: (a: string) => number = offline) =>
+            brainPlanHold(built(quantity), ended, age);
+
+        expect(hold(250, new Map())).toBeUndefined();
+        const blocked = new Map([['GeBot', { at: 1, reason: 'blocked after 2 runs', revision: sig }]]);
+        expect(hold(250, blocked)).toBe('ended: blocked after 2 runs');
+        // A changed job starts, so the planner charges it a slot.
+        expect(hold(300, blocked)).toBeUndefined();
+        // A death holds every job of the account.
+        expect(hold(300, new Map([['gebot', { at: 1, reason: 'died after 1 runs', revision: sig }]]))).toBe('ended: died after 1 runs');
+        // A repeating job that ended well starts again.
+        expect(hold(250, new Map([['GeBot', { at: 1, reason: 'done after 1 runs', revision: sig }]]))).toBeUndefined();
+        // An account that runs outside the swarm is a live bot, not a held one.
+        expect(hold(250, new Map(), () => 0)).toBeUndefined();
+        expect(brainPlanHold({ selected: { mode: 'session_recovery' } }, new Map(), offline)).toBe(BRAIN_RECOVERY_WAIT);
+        expect(brainPlanHold({ selected: { mode: 'fleet_trade' } }, blocked, offline)).toBeUndefined();
     });
 });

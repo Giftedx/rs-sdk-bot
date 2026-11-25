@@ -72,6 +72,10 @@ export interface FleetSchedulerInput {
     readonly transferOrderTtlMs?: number;
     readonly stationedHubBankers?: Readonly<Partial<Record<HubBankId, string>>>;
     readonly xpRate?: number;
+    // The controller's answer for one planned account: the reason it will not start the job of this plan (an ended
+    // job, the standalone session recovery queue), or undefined when it will. Such a plan keeps its steps, so the
+    // controller keeps the same job, but takes no slot, spot, market venue or demand share.
+    readonly heldPlan?: (account: string, plan: AccountPlan) => string | undefined;
 }
 
 let cachedBaseItemPrices: Readonly<Record<number, number>> | undefined;
@@ -441,7 +445,20 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
     }
     const busyAccounts = new Set<string>(activeTransferParties);
 
-    const spotHasCapacity = (spotId: string | undefined, maxConcurrent: number | undefined): boolean => {
+    // A plan whose job the controller will not start keeps its steps and takes nothing, so the slot, spot, market venue
+    // and demand share go to the next account (FleetSchedulerInput.heldPlan).
+    const heldAccounts: Record<string, string> = {};
+    const keepHeldPlan = (acct: AccountState, plan: AccountPlan): boolean => {
+        if (!input.heldPlan || plan.steps.length === 0) return false;
+        const held = input.heldPlan(acct.name, plan);
+        if (held === undefined) return false;
+        accountPlans[acct.name] = plan;
+        heldAccounts[acct.name] = held;
+        busyAccounts.add(acct.name.toLowerCase());
+        return true;
+    };
+
+    const spotHasCapacity =(spotId: string | undefined, maxConcurrent: number | undefined): boolean => {
         if (!spotId || maxConcurrent === undefined) return true;
         const ext = world.spotOccupancy?.[spotId] ?? 0;
         const cur = spotAllocations[spotId]?.length ?? 0;
@@ -678,7 +695,9 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             };
             continue;
         }
-        if (remainingSlots <= 0) {
+        const recPlan = remainingSlots > 0 || input.heldPlan ? planAccount(acct, basePlannerOpts) : undefined;
+        if (recPlan && keepHeldPlan(acct, recPlan)) continue;
+        if (!recPlan || remainingSlots <= 0) {
             accountPlans[acct.name] = {
                 account: acct.name,
                 steps: [],
@@ -687,7 +706,6 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             };
             continue;
         }
-        const recPlan = planAccount(acct, basePlannerOpts);
         accountPlans[acct.name] = recPlan;
         if (recPlan.steps.length > 0) {
             busyAccounts.add(acct.name.toLowerCase());
@@ -869,6 +887,9 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
             });
         }
 
+        // A held plan stages no transfer: the trade would serve a job that does not start.
+        if (keepHeldPlan(acct, plan)) continue;
+
         // Validate and materialize any hub_banker AcquireSteps or GearUpgradePlannedSteps as safe TransferOrders.
         if (plan.steps.length > 0) {
             const hubSteps = plan.steps.filter(
@@ -1023,7 +1044,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         remainingSlots -= 1;
     }
 
-    const plansWithSteps = Object.values(accountPlans).filter((p) => p.steps.length > 0).length;
+    const plansWithSteps = Object.values(accountPlans).filter((p) => p.steps.length > 0 && !(p.account in heldAccounts)).length;
     const selectedSlots = Math.min(maxBots, inTradeAccounts.length + plansWithSteps + assignedIdleDonors.size);
 
     return {
@@ -1037,6 +1058,7 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
         transferOrders,
         spotAllocations,
         selectedSlots,
+        ...(Object.keys(heldAccounts).length > 0 ? { heldAccounts } : {}),
     };
 }
 
@@ -1089,5 +1111,6 @@ export function buildFleetState(
         pendingTransfers: [...pendingMap.values()],
         quarantinedDefects: [...(input.defects ?? []).filter((d) => d.quarantined)],
         ...(input.rateStats ? { rateStats: input.rateStats } : {}),
+        ...(plan.heldAccounts ? { heldAccounts: plan.heldAccounts } : {}),
     };
 }

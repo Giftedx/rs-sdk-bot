@@ -491,6 +491,8 @@ export interface FleetPlan {
     readonly transferOrders: readonly TransferOrder[];
     readonly spotAllocations: Readonly<Record<string, readonly string[]>>;
     readonly selectedSlots: number;
+    // Planned accounts whose job the controller will not start, with its reason. They count in no slot.
+    readonly heldAccounts?: Readonly<Record<string, string>>;
 }
 
 // ============================================================================
@@ -547,6 +549,8 @@ export interface FleetState {
     readonly pendingTransfers: readonly TransferOrder[];
     readonly quarantinedDefects: readonly DefectRecord[];
     readonly rateStats?: Readonly<Record<string, RateSummary>>;
+    // Active chains whose job the controller will not start (FleetPlan.heldAccounts).
+    readonly heldAccounts?: Readonly<Record<string, string>>;
 }
 
 export const OPERATOR_COMMAND_KINDS = [
