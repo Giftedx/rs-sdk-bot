@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795604178655,
+ "at": 1795604212441,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,22 +57,6 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "PickpockDick",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -182,6 +166,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "auto"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=209 QUANTITY=1 ITEM_NAME=Herb -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:259 BATCH_UNITS=8 -- crafting inventory identify:irit_leaf"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:259",
+   "role": "army"
   }
  ],
  "army": [
@@ -206,13 +205,13 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
+  "pickpockdick",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "yewfirst"

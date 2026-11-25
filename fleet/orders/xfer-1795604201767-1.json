@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795604201767-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "Woodenstaff",
+  "item": "Swamp toad",
+  "count": 1,
+  "itemId": 2150,
+  "start": 1795604201767,
+  "end": 1795605101767,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
