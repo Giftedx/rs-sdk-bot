@@ -208,11 +208,7 @@ async function smithHeldBars(
   const useMake10 = product === SMITH_PRODUCTS.bronze_dagger && beforeBars >= 9;
   const useMake5 =
    !useMake10 &&
-   (r.bars === 5 ||
-    product === SMITH_PRODUCTS.bronze_warhammer ||
-    (product === SMITH_PRODUCTS.iron_dagger && beforeBars >= 4 && lvl < 20) ||
-    (product === SMITH_PRODUCTS.iron_scimitar && beforeBars >= 4 && lvl < 24) ||
-    (product === SMITH_PRODUCTS.iron_warhammer && beforeBars >= 9 && lvl < 33));
+   (r.bars === 5 || product === SMITH_PRODUCTS.bronze_warhammer || (product === SMITH_PRODUCTS.iron_warhammer && beforeBars >= 9 && lvl < 33));
   const optionIndex = useMake10 ? 3 : useMake5 ? 2 : 1;
   const sentTick = spec.tick();
   await spec.direct({
@@ -235,13 +231,9 @@ async function smithHeldBars(
     }
     if (useMake5) {
      const done =
-      product === SMITH_PRODUCTS.iron_dagger
-       ? skillLevel(spec, 'Smithing') >= 20 || nowBars < r.bars
-       : product === SMITH_PRODUCTS.iron_scimitar
-        ? skillLevel(spec, 'Smithing') >= 24 || nowBars < r.bars
-        : product === SMITH_PRODUCTS.iron_warhammer
-         ? skillLevel(spec, 'Smithing') >= 33 || nowBars < r.bars
-         : nowBars < r.bars;
+      product === SMITH_PRODUCTS.iron_warhammer
+       ? skillLevel(spec, 'Smithing') >= 33 || nowBars < r.bars
+       : nowBars < r.bars;
      if (done) { delayUntil = spec.tick() + 3; return true; }
      return false;
     }
@@ -385,14 +377,14 @@ export async function runSmithingSpecialist(
     if (!next) next = pickRunner();
    }
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
-   // Drop up to 4 finished products alongside OPPLAYER4 inside burstTradeHost T0; keep <= 1 platebody + hammer so 25 bars fit.
+   // Drop up to 4 finished products alongside OPPLAYER4 inside burstTradeHost T0; keep <= 2 platebodies + hammer so 25 bars fit.
    const dropSlots = spec.sdk.getInventory().filter(i => !keepSet.has(i.id) || (i.id === ITEM_IDS.bronze_bar && skillLevel(spec, 'Smithing') >= 15)).map(i => i.slot);
    let preDropSlots: number[] | undefined;
    if (dropSlots.length > 6) {
     // Batch 0 leftover daggers/warhammers/excess bronze bars (>6 slots) need dropItemsFast before trading.
     await dropItemsFast(spec, new Set([ITEM_IDS.hammer]), deadline);
    } else if (dropSlots.length > 2) {
-    preDropSlots = dropSlots.slice(0, Math.min(4, dropSlots.length - 1));
+    preDropSlots = dropSlots.slice(0, Math.min(4, dropSlots.length - 2));
    }
    next.claimed = true;
    next.ready = false;

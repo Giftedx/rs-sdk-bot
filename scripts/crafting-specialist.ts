@@ -827,7 +827,12 @@ async function craftAtCastleWarsBank(
  const needFor55 = hasDragonstone
   ? Math.ceil(Math.max(0, 46534 - curCraftXp - rubyCount * 2125 - diaCount * 2687.5) / 1687.5)
   : 0;
- const emerInC0 = hasUnnotedEarly && emerCount > 0 ? Math.min(emerCount, Math.max(1, needFor43, needFor55)) : emerCount;
+ const emerInC0 =
+  hasUnnotedEarly && emerCount > 0
+   ? emerCount <= 12
+     ? emerCount
+     : Math.min(emerCount, Math.max(1, needFor43, needFor55))
+   : emerCount;
  const emerRem = Math.max(0, emerCount - emerInC0);
  // Pack remaining high-tier gems with cap=25 when carryOver=2 leaves 2 uncut gems at each chest open.
  const lowQueues: { id: number; count: number }[] = [
@@ -986,7 +991,8 @@ async function craftAtCastleWarsBank(
    if (tickActs.length) await Promise.all(tickActs.map(a => spec.direct(a)));
    await waitTicks(spec, 1);
   }
-  const leaveGems = idx + 1 < cycles.length && cycles[idx + 1]!.length === 1 ? 2 : 0;
+  const nextSingleId = idx + 1 < cycles.length && cycles[idx + 1]!.length === 1 ? cycles[idx + 1]![0]!.id : undefined;
+  const leaveGems = nextSingleId !== undefined && rawCycle.some(g => g.id === nextSingleId) ? 2 : 0;
   await cutUnlockedGems(spec, target, deadline, undefined, idx < cycles.length - 1, leaveGems);
  }
 
