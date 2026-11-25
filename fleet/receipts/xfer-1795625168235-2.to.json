@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795625168235-2",
+ "account": "UnderMyKilt",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "86a7d238-a453-44ea-b00f-cc9a869f1338",
+ "count": 0,
+ "ok": false,
+ "at": 1795625772600,
+ "detail": "trade claimed"
+}
