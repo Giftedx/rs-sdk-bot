@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795602816969-1",
  "account": "Moneyshot",
  "partner": "mmsmk1232",
@@ -12,6 +12,12 @@
  "claim": "794677c9-72a8-4228-912e-6cb3f05cb499",
  "count": 0,
  "ok": false,
- "at": 1795603423587,
- "detail": "trade claimed"
+ "at": 1795603717181,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795603423600-0000009340-0000000001",
+  "at": 1795603717174,
+  "sha256": "cf1a8351605b02e27495f56604853649755118b51d7af7da18e7419035478918"
+ },
+ "screen": false
 }
