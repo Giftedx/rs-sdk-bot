@@ -733,6 +733,7 @@ export interface FastExternalReceiveOpts {
  deadlineTick: number;
  returnIds?: readonly number[];
  dropUnwanted?: ReadonlySet<number>;
+ minFreeSlots?: number;
  allowSingleModal?: boolean;
  maxDistance?: number;
  cooldownTicks?: number;
@@ -876,9 +877,12 @@ export async function fastTradeExternalReceive(
     }
    }
 
-   const dropSlots = opts.dropUnwanted
-    ? spec.sdk.getInventory().filter(i => !opts.dropUnwanted!.has(i.id)).map(i => i.slot)
-    : [];
+   const dropSlots = (() => {
+    if (!opts.dropUnwanted) return [];
+    const curInv = spec.sdk.getInventory();
+    const limit = opts.minFreeSlots !== undefined ? Math.max(0, curInv.length - (28 - opts.minFreeSlots)) : curInv.length;
+    return limit <= 0 ? [] : curInv.filter(i => !opts.dropUnwanted!.has(i.id)).map(i => i.slot).slice(0, limit);
+   })();
    if (dropSlots.length > 4) {
     await Promise.all(dropSlots.slice(0, 5).map(slot => spec.direct({ type: 'dropItem', slot, reason: 'SDK' })));
     await waitTicks(spec, 1);

@@ -223,7 +223,22 @@ function buildCwBatch(
  };
 }
 
-export const CRAFTING_CW_BATCH: CraftingBatchPlan = buildCwBatch(CRAFTING_CW_NOTED_SUPPLIES);
+export const CRAFTING_CW_BATCH: CraftingBatchPlan = {
+ give: [
+  { id: ITEM_IDS.ring_of_dueling_8, count: 1 },
+  { id: ITEM_IDS.chisel, count: 1 },
+  { id: ITEM_IDS.uncut_opal, count: 11 },
+  { id: 1626, count: 7 },
+  { id: 1624, count: 3 },
+  { id: 1622, count: 6 },
+  { id: 1620, count: 3 },
+  { id: 1618, count: 9 },
+  { id: 1632, count: 277 },
+ ],
+ returnIds: [],
+};
+
+export const CRAFTING_CW_LEGACY_EARLY_BATCH: CraftingBatchPlan = buildCwBatch(CRAFTING_CW_NOTED_SUPPLIES);
 
 export const CRAFTING_CW_NOTED_BATCH: CraftingBatchPlan = buildCwBatch(CRAFTING_CW_NOTED_SUPPLIES, new Set());
 
@@ -493,6 +508,7 @@ async function fastInProcessBatchTrade(
   giveIds: readonly number[];
   returnIds: readonly number[];
   dropUnwanted?: ReadonlySet<number>;
+  minFreeSlots?: number;
   deadlineTick: number;
   alreadyRequested?: boolean;
  },
@@ -520,7 +536,12 @@ async function fastInProcessBatchTrade(
     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
     return;
    }
-   const dropSlots = keepSet ? spec.sdk.getInventory().filter(i => !keepSet.has(i.id)).map(i => i.slot) : [];
+   const dropSlots = (() => {
+    if (!keepSet) return [];
+    const curInv = spec.sdk.getInventory();
+    const limit = opts.minFreeSlots !== undefined ? Math.max(0, curInv.length - (28 - opts.minFreeSlots)) : curInv.length;
+    return limit <= 0 ? [] : curInv.filter(i => !keepSet.has(i.id)).map(i => i.slot).slice(0, limit);
+   })();
    const dlgOpen = !!spec.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperLower);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);
@@ -713,11 +734,11 @@ async function craftAtCastleWarsBank(
  deadline: number,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  const initialInv = spec.sdk.getInventory();
- const hasUnnotedEarly = countItem(initialInv, ITEM_IDS.uncut_opal) > 0 && countItem(initialInv, 1626) === 0;
+ const hasUnnotedEarly = countItem(initialInv, ITEM_IDS.uncut_opal) > 0;
  const hasUnnotedSapphire = countItem(initialInv, ITEM_IDS.uncut_sapphire) > 0 && countItem(initialInv, 1624) === 0;
  const deferSurplusOpals = hasUnnotedEarly && countItem(initialInv, 1632) >= 200;
  const cycle0Notes = new Set<number>(
-  hasUnnotedEarly ? (hasUnnotedSapphire ? [1622, 1620, 1618, 1632] : [1624, 1622, 1620, 1618, 1632]) : [1626, 1624, 1622],
+  hasUnnotedEarly ? (hasUnnotedSapphire ? [1622, 1620, 1618, 1632] : [1626, 1624, 1622, 1620, 1618, 1632]) : [1626, 1624, 1622],
  );
  let walkingSent = false;
  let lastRubTick = -10;
@@ -772,8 +793,14 @@ async function craftAtCastleWarsBank(
    }
    if (gems.length > 0) break;
    // Drop cut early gems / ring while level-up dialogs drain so CW chest opens with chisel + noted stacks only.
+   const dropSurplusOpals = curLvl >= 20 && curXpVal >= 3105 && countItem(initialInv, 1632) >= 277 && countItem(initialInv, 1624) >= 3;
    const dropSlots = inv
-    .filter(i => i.id !== ITEM_IDS.chisel && !cycle0Notes.has(i.id) && !GEM_TIER_IDS.has(i.id))
+    .filter(
+     i =>
+      i.id !== ITEM_IDS.chisel &&
+      (!cycle0Notes.has(i.id) || (dropSurplusOpals && i.id === 1626)) &&
+      (!GEM_TIER_IDS.has(i.id) || (dropSurplusOpals && i.id === ITEM_IDS.uncut_opal)),
+    )
     .map(i => i.slot);
    if (!dropSlots.length) break;
    const acts: Promise<unknown>[] = dropSlots
@@ -845,7 +872,13 @@ async function craftAtCastleWarsBank(
  const opalCount = bankCount(ITEM_IDS.uncut_opal);
  const hasDragonstone = dstoneCount > 0;
  const cwModeLabel = hasDragonstone ? (diaCount > 20 ? 'cw-hybrid' : 'cw') : 'cw-diamond';
+ const curCraftLevel = skillLevel(spec, 'Crafting');
  const curCraftXp = skillXp(spec, 'Crafting');
+ const minOpalsSafe20 = Math.ceil(Math.max(0, 3105 - curCraftXp) / 95);
+ const idx0Opals =
+  hasUnnotedEarly && curCraftLevel < 20 && opalCount > 0
+   ? Math.min(opalCount, Math.max(2, minOpalsSafe20 <= 6 ? minOpalsSafe20 : opalCount))
+   : 0;
  const needFor43 = Math.ceil(Math.max(0, 19684 - curCraftXp - rubyCount * 2125) / 1687.5);
  const needFor55 = hasDragonstone
   ? Math.ceil(Math.max(0, 46534 - curCraftXp - rubyCount * 2125 - diaCount * 2687.5) / 1687.5)
@@ -860,9 +893,10 @@ async function craftAtCastleWarsBank(
  // Pack remaining high-tier gems with cap=25 when carryOver=2 leaves 2 uncut gems at each chest open.
  const lowQueues: { id: number; count: number }[] = [
   ...(hasUnnotedEarly
-   ? hasUnnotedSapphire
-     ? []
-     : [{ id: ITEM_IDS.uncut_sapphire, count: sapphCount }]
+   ? [
+      ...(idx0Opals > 0 ? [{ id: ITEM_IDS.uncut_opal, count: idx0Opals }] : []),
+      ...(hasUnnotedSapphire ? [] : [{ id: ITEM_IDS.uncut_sapphire, count: sapphCount }]),
+     ]
    : [
       { id: ITEM_IDS.uncut_opal, count: opalCount },
       { id: ITEM_IDS.uncut_sapphire, count: sapphCount },
@@ -913,10 +947,18 @@ async function craftAtCastleWarsBank(
    cycles.push([...cyc]);
   }
  }
- if (hasUnnotedEarly && opalCount > 0) {
-  const plannedGemXp = curCraftXp + emerCount * 1687.5 + rubyCount * 2125 + diaCount * 2687.5 + dstoneCount * 3437.5;
-  const extraOpalsNeeded = Math.min(opalCount, Math.ceil(Math.max(0, goalXp() - plannedGemXp) / 375));
-  const withdrawOpals = extraOpalsNeeded > 0 ? Math.min(opalCount, extraOpalsNeeded + 1) : 0;
+ const remOpals = Math.max(0, opalCount - idx0Opals);
+ if (hasUnnotedEarly && remOpals > 0) {
+  const plannedGemXp =
+   curCraftXp +
+   idx0Opals * 95 +
+   (!hasUnnotedSapphire ? sapphCount * 1250 : 0) +
+   emerCount * 1687.5 +
+   rubyCount * 2125 +
+   diaCount * 2687.5 +
+   dstoneCount * 3437.5;
+  const extraOpalsNeeded = Math.min(remOpals, Math.ceil(Math.max(0, goalXp() - plannedGemXp) / 375));
+  const withdrawOpals = extraOpalsNeeded > 0 ? Math.min(remOpals, extraOpalsNeeded + 1) : 0;
   if (withdrawOpals > 0) {
    const lastCyc = cycles[cycles.length - 1];
    const lastUsed = lastCyc ? lastCyc.reduce((s, g) => s + g.count, 0) : 27;
@@ -1073,6 +1115,7 @@ type CraftingMode = 'cw' | 'cw-hybrid' | 'cw-diamond' | 'multi' | 'hybrid' | 'di
 
 const CW_ACCEPTABLE_BATCHES: readonly CraftingBatchPlan[] = [
  CRAFTING_CW_BATCH,
+ CRAFTING_CW_LEGACY_EARLY_BATCH,
  CRAFTING_CW_NOTED_BATCH,
  CRAFTING_CW_HYBRID_BATCH,
  CRAFTING_CW_HYBRID_NOTED_BATCH,
@@ -1148,6 +1191,7 @@ export async function runCraftingSpecialist(
     giveIds: cwPlan.batch.give.map(g => g.id),
     returnIds: [],
     dropUnwanted: new Set<number>(),
+    minFreeSlots: cwPlan.batch.give.reduce((sum, g) => sum + (g.id === ITEM_IDS.uncut_opal || g.id === ITEM_IDS.uncut_sapphire ? g.count : 1), 0),
     deadlineTick: deadline,
    });
    startKeepers();
@@ -1217,6 +1261,7 @@ export async function runCraftingExternal(
    async () => {
     await fastTradeExternalReceive(spec, supplierNames, {
      dropUnwanted: new Set<number>(),
+     minFreeSlots: cwPlan.batch.give.reduce((sum, g) => sum + (g.id === ITEM_IDS.uncut_opal || g.id === ITEM_IDS.uncut_sapphire ? g.count : 1), 0),
      acceptOffer: offer => CW_ACCEPTABLE_BATCHES.some(b => b.give.every(g => countItem(offer, g.id) >= g.count)),
      deadlineTick: deadline,
     });
