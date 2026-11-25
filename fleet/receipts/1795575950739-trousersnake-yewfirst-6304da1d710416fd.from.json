@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795575950739-trousersnake-yewfirst-6304da1d710416fd",
+ "account": "TrouserSnake",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 3000,
+ "claim": "018d76fc-1f46-4f42-b227-3d21339912ad",
+ "count": 0,
+ "ok": false,
+ "at": 1795576446573,
+ "detail": "trade claimed"
+}
