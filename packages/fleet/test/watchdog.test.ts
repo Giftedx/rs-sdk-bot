@@ -9,6 +9,7 @@ import {
     restartCommand,
     runWatchdogPass,
     stalled,
+    watchdogArgs,
 } from '../src/watchdog';
 import { launcherScript } from '../src/watchdog-install';
 
@@ -144,5 +145,13 @@ describe('fleet watchdog', () => {
         expect(res.stoppedByOwner).toBe(false);
         expect(restarted).toEqual([['scripts/swarm.ts', 'custom-swarm.json']]);
         expect(logs.some(l => l.includes('session recovery failed: Error: transient recovery boom'))).toBe(true);
+    });
+
+    test('only a call without arguments runs a pass: --help shows the usage, and any other argument is refused', () => {
+        expect(watchdogArgs([])).toBe('run');
+        expect(watchdogArgs(['--help'])).toBe('help');
+        expect(watchdogArgs(['-h'])).toBe('help');
+        expect(watchdogArgs(['--once'])).toBe('refuse');
+        expect(watchdogArgs(['--help', '--dry'])).toBe('refuse');
     });
 });

@@ -739,14 +739,17 @@ export function swarmBusy(jobs: readonly any[]): Set<string> {
 }
 
 export function assertTradeAdmission(order: Order, account: string, server: string, {
-    base = REPO_ROOT, planFile = tradePlanFile(base), receipts = join(FLEET_DIR(), 'receipts'), now = Date.now(),
+    base = REPO_ROOT, planFile = tradePlanFile(base), receipts = join(FLEET_DIR(), 'receipts'), orders = join(FLEET_DIR(), 'orders'), now = Date.now(),
     starts = processStartTimes as (pids: readonly number[]) => ReadonlyMap<number, number> | null,
-}: { base?: string; planFile?: string; receipts?: string; now?: number; starts?: (pids: readonly number[]) => ReadonlyMap<number, number> | null } = {}): void {
+}: { base?: string; planFile?: string; receipts?: string; orders?: string; now?: number; starts?: (pids: readonly number[]) => ReadonlyMap<number, number> | null } = {}): void {
     const name = account.toLowerCase();
     const role = order.from.toLowerCase() === name ? 'from' : order.to.toLowerCase() === name ? 'to' : null;
     if (!role) throw Error('fleet trade: account is outside the order');
     if (server.toLowerCase() !== order.server.toLowerCase()) throw Error('fleet trade: account server differs from order server');
     if (now < order.start || now >= order.end) throw Error('fleet trade: outside order window');
+    // A withdrawn order has no file (scripts/fleet-order.ts --withdraw). The login runs this check again after it takes
+    // the trade claim, so a withdrawal that comes before the claim stops the trade.
+    if (!existsSync(join(orders, `${order.id}.json`))) throw Error('fleet trade: order withdrawn');
     const practice = join(base, '.practice');
     if (existsSync(practice)) {
         const files = readdirSync(practice);

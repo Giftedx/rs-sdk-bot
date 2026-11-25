@@ -8,10 +8,13 @@
 // TAKER_WAITS=1 keeps the receiver offline until the giver is at the meet (both accounts on one side).
 // MEET=<bank x>,<bank z> or MEET=<bank name> meets at that bank's tile pair (BANK_MEETS) instead
 // of Varrock West: MEET=2619,3332 is the Ardougne north bank, where the PK army's accounts already stand; MEET=draynor.
-import { closeSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+// Withdraw: bun scripts/fleet-order.ts --withdraw <order id>... deletes each order file, and the next fleet sync
+// publishes the deletion. It refuses an order that a held trade claim names (withdrawFleetOrder).
+import { closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
+import type { FleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
 import { BANK_MEETS, meetingTiles, orderLines, validOrder, type Order, type OrderLine } from '../packages/workers/src/logistics';
 
 export function orderMeet(text: string | undefined): Order['meet'] {
@@ -73,6 +76,32 @@ export function writeFleetOrder(directory: string, order: Order): string {
     } finally { rmSync(temporary, { force: true }); }
 }
 
+// Withdraw one order: delete its file from `directory`. The next fleet sync publishes the deletion to every side.
+// A held trade claim that names the order refuses it. Such a claim does not expire, and it keeps its account out of
+// every login until the trade ends or the README hand procedure releases it. Fleet sync also puts the file back.
+// The file moves aside before `readHeld` reads the held trade claims (readHeldFleetTradeClaims), and a trade worker
+// checks for the file after it takes its claim (assertTradeAdmission). So a claim taken before the read refuses the
+// withdrawal, and a claim taken after it finds no order. On a refusal the file goes back unchanged, with its own name
+// whatever the case of the id typed. The id may end in .json.
+const ORDER_ID = /^[A-Za-z0-9_-]{1,64}$/;
+export function withdrawFleetOrder(directory: string, id: string, readHeld: () => readonly FleetTradeClaim[]): string {
+    const name = id.replace(/\.json$/i, '');
+    if (!ORDER_ID.test(name)) throw Error(`not an order id: ${id}`);
+    const own = existsSync(directory) ? readdirSync(directory).find(f => f.toLowerCase() === `${name.toLowerCase()}.json`) : undefined;
+    if (!own) throw Error(`no order ${name} in ${directory}`);
+    const file = join(directory, own), aside = join(directory, `.${name}-withdraw-${randomUUID()}.tmp`);
+    renameSync(file, aside);
+    let holders: FleetTradeClaim[];
+    try { holders = readHeld().filter(c => c.orderId.toLowerCase() === name.toLowerCase()); }
+    catch (e) { renameSync(aside, file); throw Error(`the held trade claims are unreadable: ${String(e)}`); }
+    if (holders.length) {
+        renameSync(aside, file);
+        throw Error(`a held trade claim names order ${name} (${holders.map(c => `${c.account} ${c.role}`).join(', ')}): the trade must end, or the README hand procedure must release the claim, before the order can go`);
+    }
+    rmSync(aside);
+    return file;
+}
+
 // Why the sides' fleet agents may not run this order, from their published plans and snapshots. Plans change, so these
 // warn and never refuse. `plans` and `snapshots` are keyed by side.
 export function orderWarnings(order: Order, plans: Readonly<Record<string, { jobs?: any[] } | null | undefined>>,
@@ -122,6 +151,27 @@ export function parseOrderArgs(args: readonly string[]): { rest: string[]; extra
     return { rest, extra, ...(itemId !== undefined ? { itemId } : {}) };
 }
 const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
+
+if (import.meta.main && process.argv[2] === '--withdraw') {
+    const ids = process.argv.slice(3);
+    if (ids.length === 0) {
+        console.error('usage: bun scripts/fleet-order.ts --withdraw <order id>...');
+        process.exit(2);
+    }
+    const root = resolve(import.meta.dir, '..'), directory = join(FLEET_DIR(), 'orders');
+    const { readHeldFleetTradeClaims } = await import('../packages/core/src/fleet-trade-claim');
+    const { withFleetDataWrite } = await import('../packages/core/src/fleet-owner-claim');
+    // Under the fleet-data write lock, so a sync that is pulling cannot put a deleted file back.
+    const refused = await withFleetDataWrite(root, () => {
+        let count = 0;
+        for (const id of ids) {
+            try { withdrawFleetOrder(directory, id, () => readHeldFleetTradeClaims(root)); console.log(`FLEET_ORDER_WITHDRAWN ${id}`); }
+            catch (e) { count++; console.error(`FLEET_ORDER_WITHDRAW_REFUSED ${id}: ${(e as Error).message}`); }
+        }
+        return count;
+    }).catch(e => { console.error(`FLEET_ORDER_WITHDRAW_REFUSED all: ${String(e)}`); return ids.length; });
+    process.exit(refused ? 1 : 0);
+}
 
 if (import.meta.main) {
     const { rest, extra, itemId } = parseOrderArgs(process.argv.slice(2));
