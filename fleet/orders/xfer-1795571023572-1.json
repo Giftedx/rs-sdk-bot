@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795571023572-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Shaftsinker",
+  "item": "Rune arrow",
+  "count": 46,
+  "itemId": 892,
+  "start": 1795571023572,
+  "end": 1795571923572,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
