@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795585558690-5",
  "account": "MineYourBiz",
  "partner": "Unsheathed",
@@ -12,6 +12,16 @@
  "claim": "5f9be4cc-446c-4717-8f07-919022ae9a01",
  "count": 0,
  "ok": false,
- "at": 1795586036866,
- "detail": "trade claimed"
+ "at": 1795586459260,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795586098909
+ },
+ "logout": {
+  "attemptId": "1795586036875-0000024148-0000000001",
+  "at": 1795586459247,
+  "sha256": "63f375dcb09ac7cf9065b3dc2adc2bb4fd8dc54f657e8dcb40f8a1f0e8298e02"
+ },
+ "screen": false
 }
