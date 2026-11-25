@@ -51,6 +51,7 @@ import {
     partnerFailed,
     performFleetTransfer,
     pickOrder,
+    prepareFleetSender,
     readPreloginFailure,
     recoverSessionToHub,
     releaseWatch,
@@ -1420,4 +1421,139 @@ describe('recover-trapped off_hub_area and Lumber Yard handling', () => {
             okHub.s.dispose();
         }
     });
+});
+
+test('prepareFleetSender frees full 28-slot packs before withdrawing noted or unnoteable items', async () => {
+    const makeSender = (
+        initialPack: Array<{ id: number; name: string; count: number; slot: number }>,
+        initialBank: Array<{ id: number; name: string; count: number }>,
+        defs: Record<number, { stackable: boolean; certtemplate?: number; certlink?: number }>,
+    ) => {
+        let pack = structuredClone(initialPack);
+        const bank = structuredClone(initialBank);
+        let generation = 1;
+        let opened = false;
+        const withdrawals: Array<{ id: number; amount: number; asNote: boolean }> = [];
+        const session = {
+            client: { objType: (id: number) => defs[id] },
+            sdk: {
+                getInventory: () => pack,
+                getState: () => ({ inventory: pack, bank: { items: bank } }),
+            },
+            bankObservation: () => (opened ? { generation, at: 2300, items: bank } : undefined),
+            bot: {
+                openBank: async () => { opened = true; return { success: true }; },
+                closeBank: async () => { opened = false; return { success: true }; },
+                depositItem: async (row: { id: number; name: string }) => {
+                    const count = pack.filter(r => r.id === row.id).reduce((n, r) => n + r.count, 0);
+                    if (count > 0) {
+                        const existing = bank.find(b => b.id === row.id);
+                        if (existing) existing.count += count;
+                        else bank.push({ id: row.id, name: row.name, count });
+                        pack = pack.filter(r => r.id !== row.id);
+                    }
+                    generation++;
+                    return { success: true };
+                },
+                withdrawItem: async (target: { id: number; name: string }, amount: number, opts: { asNote?: boolean } = {}) => {
+                    const asNote = opts.asNote ?? false;
+                    withdrawals.push({ id: target.id, amount, asNote });
+                    const row = bank.find(b => b.id === target.id)!;
+                    const def = defs[target.id];
+                    const canNote = asNote && def?.stackable !== true && def?.certlink !== -1;
+                    const outId = canNote && typeof def?.certlink === 'number' ? def.certlink : target.id;
+                    const outStackable = def?.stackable === true || canNote;
+                    const slotsNeeded = outStackable
+                        ? (pack.some(r => r.id === outId) ? 0 : 1)
+                        : amount;
+                    if (28 - pack.length < slotsNeeded) {
+                        return { success: false, message: 'inventory full' };
+                    }
+                    row.count -= amount;
+                    if (outStackable) {
+                        const existing = pack.find(r => r.id === outId);
+                        if (existing) existing.count += amount;
+                        else pack.push({ id: outId, name: target.name, count: amount, slot: pack.length });
+                    } else {
+                        for (let k = 0; k < amount; k++) {
+                            pack.push({ id: outId, name: target.name, count: 1, slot: pack.length });
+                        }
+                    }
+                    generation++;
+                    return { success: true };
+                },
+            },
+        } as unknown as Session;
+        return { session, getPack: () => pack, getOpened: () => opened, withdrawals };
+    };
+
+    const defs: Record<number, { stackable: boolean; certtemplate?: number; certlink?: number }> = {
+        1925: { stackable: false, certtemplate: -1, certlink: 1926 },
+        1436: { stackable: false, certtemplate: -1, certlink: 1437 },
+        556: { stackable: true, certtemplate: -1, certlink: -1 },
+        175: { stackable: false, certtemplate: -1, certlink: 176 },
+        176: { stackable: false, certtemplate: 799, certlink: 175 },
+        772: { stackable: false, certtemplate: -1, certlink: -1 },
+    };
+
+    // Case 1: Full 28/28 pack (TheFullMonty scenario) withdraws noted Antipoison(3) after depositing Rune essence clutter.
+    const fullPack = [
+        { id: 1925, name: 'Bucket', count: 1, slot: 0 },
+        ...Array.from({ length: 26 }, (_, k) => ({ id: 1436, name: 'Rune essence', count: 1, slot: k + 1 })),
+        { id: 556, name: 'Air rune', count: 6, slot: 27 },
+    ];
+    const sender1 = makeSender(fullPack, [{ id: 175, name: 'Antipoison(3)', count: 3 }], defs);
+    const prog1: { uncertain: boolean; count: number; bank?: { count: number; at: number } } = { uncertain: false, count: 0 };
+    await prepareFleetSender(
+        sender1.session,
+        order({ item: 'Antipoison(3)', itemId: 175, count: 3 }),
+        prog1,
+        async (_s, pred) => pred(null),
+    );
+    expect(sender1.getOpened()).toBe(false);
+    expect(prog1.uncertain).toBe(false);
+    expect(prog1.bank).toEqual({ count: 3, at: 2300 });
+    expect(sender1.withdrawals).toEqual([{ id: 175, amount: 3, asNote: true }]);
+    expect(sender1.getPack().find(r => r.id === 176)?.count).toBe(3);
+
+    // Case 2: Unnoteable multi-item (certlink: -1) with 26/28 pack reserves 3 slots and withdraws unnoted.
+    const almostFull = [
+        { id: 1925, name: 'Bucket', count: 1, slot: 0 },
+        ...Array.from({ length: 25 }, (_, k) => ({ id: 1436, name: 'Rune essence', count: 1, slot: k + 1 })),
+    ];
+    const sender2 = makeSender(almostFull, [{ id: 772, name: 'Dramen staff', count: 3 }], defs);
+    const prog2: { uncertain: boolean; count: number; bank?: { count: number; at: number } } = { uncertain: false, count: 0 };
+    await prepareFleetSender(
+        sender2.session,
+        order({ item: 'Dramen staff', itemId: 772, count: 3 }),
+        prog2,
+        async (_s, pred) => pred(null),
+    );
+    expect(sender2.withdrawals).toEqual([{ id: 772, amount: 3, asNote: false }]);
+    expect(sender2.getPack().filter(r => r.id === 772)).toHaveLength(3);
+
+    // Case 3: Unnoteable item exceeding 28 pack slots fails cleanly before withdrawItem.
+    const sender3 = makeSender([], [{ id: 772, name: 'Dramen staff', count: 30 }], defs);
+    await expect(
+        prepareFleetSender(
+            sender3.session,
+            order({ item: 'Dramen staff', itemId: 772, count: 29 }),
+            { uncertain: false, count: 0 },
+            async (_s, pred) => pred(null),
+        ),
+    ).rejects.toThrow(/sender pack full/);
+    expect(sender3.withdrawals).toEqual([]);
+});
+
+test('partnerFailed and pickOrder treat partner reconcile receipts as terminal failures', () => {
+    const dir = makeTempDir('fleet-trade-reconcile-partner-');
+    const trade = order({ id: 'o-reconcile' });
+    writeTradeReceipt(dir, { ...claimedReceipt('from'), id: trade.id, state: 'prepared', ok: false });
+    expect(partnerFailed(dir, trade, 'to')).toBe(false);
+    expect(pickOrder([trade], [JSON.parse(readFileSync(join(dir, `${trade.id}.from.json`), 'utf8'))], 'Taker', 2000)?.order.id).toBe(trade.id);
+
+    const reconcile = { ...claimedReceipt('from'), id: trade.id, state: 'reconcile' as const, ok: false, detail: 'stock short' };
+    writeTradeReceipt(dir, reconcile);
+    expect(partnerFailed(dir, trade, 'to')).toBe(true);
+    expect(pickOrder([trade], [reconcile], 'Taker', 2000)).toBeNull();
 });
