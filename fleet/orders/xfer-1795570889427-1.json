@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795570889427-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "Shaftsinker",
+  "item": "Rune arrow",
+  "count": 56,
+  "itemId": 892,
+  "start": 1795570889427,
+  "end": 1795571789427,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
