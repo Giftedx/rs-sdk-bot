@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795629571690-1",
+ "account": "Fatstack",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 1,
+ "claim": "d1c186de-27a6-417d-99b9-9a824169db84",
+ "count": 0,
+ "ok": false,
+ "at": 1795629824662,
+ "detail": "trade claimed"
+}
