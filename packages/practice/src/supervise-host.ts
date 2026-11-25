@@ -12,7 +12,7 @@ import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, isClaimAuthorityFault, failureSha
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {hasStopFile} from '../../core/src/practice-paths';
-import {workerDrain} from '../../fleet/src/live-update/pending';
+import {workerDrain} from '../../core/src/live-update-pending';
 
 export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused';
 

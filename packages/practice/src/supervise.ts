@@ -9,7 +9,7 @@ import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-rel
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {unplacedCause} from '../../core/src/order-refusal';
 import {hasStopFile} from '../../core/src/practice-paths';
-import {workerDrain} from '../../fleet/src/live-update/pending';
+import {workerDrain} from '../../core/src/live-update-pending';
 
 export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
     return ['bun',script,bot,...scriptArgs];
@@ -40,12 +40,12 @@ export interface SuperviseDeps {
     pause(ms: number): Promise<void>;
     maxRestarts: number;
     log?(line: string): void;
-    // The files of a waiting live update that the next run would load (packages/fleet/src/live-update/pending.ts workerDrain).
+    // The files of a waiting live update that the next run would load (packages/core/src/live-update-pending.ts workerDrain).
     drained?(): readonly string[];
 }
 
-// A restart during a live-update drain loads the old files again, and the update waits on the new run too: live, one
-// failing chain job ran three times in one drain and held it for 26 minutes. The supervisor ends the job as release-paused
+// A restart during a live-update drain loads the old files again, so the update also waits on the new run, and each
+// further restart of a failing job holds the drain for one more run. The supervisor ends the job as release-paused
 // instead. The swarm starts it again once the update has landed (swarm.ts startable), and the brain does not count
 // the end as an outcome (brain-runtime.ts gateHeldRunEnd).
 export function drainPause(drained: readonly string[] | undefined): string | null {
