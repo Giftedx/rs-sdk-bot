@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795634237223-moneyshot-trousersnake-d7640bb6c14abb2b",
+ "account": "TrouserSnake",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "fa94ba95-f45a-4361-882f-e107ade71d1e",
+ "count": 0,
+ "ok": false,
+ "at": 1795634637118,
+ "detail": "trade claimed"
+}
