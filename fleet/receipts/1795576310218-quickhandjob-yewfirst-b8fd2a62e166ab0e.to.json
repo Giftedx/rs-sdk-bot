@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795576310218-quickhandjob-yewfirst-b8fd2a62e166ab0e",
+ "account": "YewFirst",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 2900,
+ "claim": "e6901ebd-b31e-451f-a6a7-f851e77e4279",
+ "count": 0,
+ "ok": false,
+ "at": 1795576671008,
+ "detail": "trade claimed"
+}
