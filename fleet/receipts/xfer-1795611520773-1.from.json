@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795611520773-1",
  "account": "Woodenstaff",
  "partner": "Bigpackage",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "2f38ac6f-b5e4-4dc5-bc12-76232e1fcad7",
- "count": 0,
- "ok": false,
- "at": 1795611731176,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795611928448,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795611737699
+ },
+ "logout": {
+  "attemptId": "1795611731184-0000002832-0000000001",
+  "at": 1795611928436,
+  "sha256": "059b6bb71d12e4755686b75ff34bc57fcd776180e9166a2143913e8306d15d37"
+ },
+ "screen": true
 }
