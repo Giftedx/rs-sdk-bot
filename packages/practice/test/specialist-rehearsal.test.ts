@@ -217,6 +217,10 @@ test('multi-supplier segments validate 1..32 helpers, reject mixing supplier/sup
 
     const workerEnv = rehearsalChildEnv({}, {CAP: '2300'}, {scored: true, role: 'worker', supplier: 'sp1,sp2,sp3'});
     expect(workerEnv.PRACTICE_SUPPLIER).toBe('sp1,sp2,sp3');
+    expect(workerEnv.PRACTICE_TANKS).toBe('sp1,sp2,sp3');
+    const overrideEnv = rehearsalChildEnv({}, {CAP: '6000', SUPPLIER: 'Woodenstaff', TANKS: 'Shaftsinker,Spitroaster,Unsheathed'}, {scored: true, role: 'worker', supplier: 'sp1,sp2,sp3'});
+    expect(overrideEnv.PRACTICE_SUPPLIER).toBe('sp1,sp2,sp3');
+    expect(overrideEnv.PRACTICE_TANKS).toBe('sp1,sp2,sp3');
     expect(SUPPLIER_ONLINE_TIMEOUT_MS).toBe(45_000);
 });
 
