@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795583403368-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Masterbaiter",
+  "to": "Shaftsinker",
+  "item": "Lobster",
+  "count": 5,
+  "itemId": 379,
+  "start": 1795583403368,
+  "end": 1795584303368,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

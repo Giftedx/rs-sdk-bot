@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795583238151,
+ "at": 1795583447737,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,6 +63,18 @@
    "enabled": true,
    "repeat": false,
    "goal": "Buy Rune arrowtips at Dargaud for TipMyShaft",
+   "role": "supply"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy-list",
+    ".practice/live-ops/sporrandip-ge.json"
+   ],
+   "enabled": true,
+   "repeat": false,
+   "goal": "Buy Cosmic rune, Coal, Dragon bones, Eye of newt on GE for Wave 1-2",
    "role": "supply"
   },
   {
@@ -142,7 +154,6 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "thefullmonty",
   "trousersnake",

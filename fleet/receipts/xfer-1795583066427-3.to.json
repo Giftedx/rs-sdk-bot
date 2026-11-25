@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795583066427-3",
+ "account": "Shaftsinker",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "567761ff-5537-414b-8d62-eecd9c7faf7a",
+ "count": 3,
+ "ok": true,
+ "at": 1795583388683,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795583387920
+ },
+ "logout": {
+  "attemptId": "1795583374888-0000024640-0000000001",
+  "at": 1795583388598,
+  "sha256": "920ab53e8fb8ac89ba686d609063b74ecc83f2dc7d300f753bd9a089bd744372"
+ },
+ "screen": true
+}

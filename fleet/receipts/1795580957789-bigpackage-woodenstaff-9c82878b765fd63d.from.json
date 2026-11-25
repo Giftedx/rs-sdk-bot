@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795580957789-bigpackage-woodenstaff-9c82878b765fd63d",
+ "account": "Bigpackage",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rope",
+ "requested": 4,
+ "claim": "d461f55a-c383-42e8-b7ef-407488e07a89",
+ "count": 0,
+ "ok": false,
+ "at": 1795583421123,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Air rune",
+   "requested": 24,
+   "count": 0
+  },
+  {
+   "item": "Earth rune",
+   "requested": 24,
+   "count": 0
+  },
+  {
+   "item": "Dragon bones",
+   "requested": 6,
+   "count": 0
+  }
+ ]
+}
