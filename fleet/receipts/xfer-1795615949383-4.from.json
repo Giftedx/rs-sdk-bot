@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795615949383-4",
+ "account": "Stirmypot",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 200,
+ "claim": "73d0d9bf-cafd-4fb9-9a0d-dedcef15f0b0",
+ "count": 0,
+ "ok": false,
+ "at": 1795616209154,
+ "detail": "trade claimed"
+}

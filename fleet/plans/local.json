@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795616186859,
+ "at": 1795616223961,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -264,6 +264,21 @@
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
    "role": "auto"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
+    "scripts/aio-boss.ts DEMAND_ID=campaign:haggis:item:536 BATCH_UNITS=485 -- green-dragon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:536",
+   "role": "army"
   }
  ],
  "army": [
@@ -285,7 +300,6 @@
   "knightrider",
   "mineyourbiz",
   "mmtha0205",
-  "mmthv2350",
   "moneyshot",
   "oreelse",
   "pocketpython",

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795615961425-5",
  "account": "YewGotWood",
  "partner": "mmthv2350",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "0352015d-ff5d-4a08-9834-c1ba8de7a1bb",
- "count": 0,
- "ok": false,
- "at": 1795616183595,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795616214257,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795616189910
+ },
+ "logout": {
+  "attemptId": "1795616183604-0000017152-0000000001",
+  "at": 1795616214231,
+  "sha256": "bd6db2f0da01e6496ded925e66d77594ccc77647f912aef04c3d55d52e483ad3"
+ },
+ "screen": true
 }
