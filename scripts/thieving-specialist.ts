@@ -183,13 +183,12 @@ export function selectPickpocketTarget<T extends {
         n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= 9,
     );
     const pool = (nearAnchor.length > 0 ? nearAnchor : matching).sort((a, b) => a.distance - b.distance);
-    const closest = pool.find(n => n.reachable !== false);
     const sticky = stickyIndex >= 0
-        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 2 && n.reachable !== false && (!closest || n.distance <= closest.distance))
+        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 2 && n.reachable !== false)
         : undefined;
     if (sticky) return { target: sticky, blocked: undefined };
     return {
-        target: closest,
+        target: pool.find(n => n.reachable !== false),
         blocked: pool.find(n => n.reachable === false),
     };
 }
@@ -357,11 +356,12 @@ export async function runArdougneStunRelogThieving(opts: {
 
         if (!npc) {
             if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 4) {
-                await main.direct({ type: 'walkTo', x: tier.anchor.x, z: tier.anchor.z, running: true, reason: 'SDK' });
+                await main.bot.walkTo(tier.anchor.x, tier.anchor.z, 2);
             } else if (blocked) {
-                await main.direct({ type: 'walkTo', x: blocked.x, z: blocked.z, running: true, reason: 'SDK' });
+                await main.bot.walkTo(blocked.x, blocked.z, 1);
+            } else {
+                await waitTicks(main, 1);
             }
-            await waitTicks(main, 1);
             continue;
         }
 
