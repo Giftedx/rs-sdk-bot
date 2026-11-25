@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795625523662-2",
+ "account": "CoinCock",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "98ebb5c7-2e83-4760-9920-7c49989c7cda",
+ "count": 0,
+ "ok": false,
+ "at": 1795626253603,
+ "detail": "trade claimed"
+}

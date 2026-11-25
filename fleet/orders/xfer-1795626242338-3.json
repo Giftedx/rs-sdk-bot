@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795626242338-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "KnightRider",
+  "item": "Herb",
+  "count": 6,
+  "itemId": 211,
+  "start": 1795626242338,
+  "end": 1795627142338,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
