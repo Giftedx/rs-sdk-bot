@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795607843533-fishandchips-bigchopper-323c9450a067fee4",
+ "account": "Bigchopper",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 20,
+ "claim": "14211659-55c5-407d-9b44-2adceb87056e",
+ "count": 20,
+ "ok": true,
+ "at": 1795608131872,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795608131043
+ },
+ "logout": {
+  "attemptId": "1795608117043-0000011612-0000000001",
+  "at": 1795608131786,
+  "sha256": "af0f68fe363e248a1929abe7477b41cee857a17466a0730183b39326a56e03c8"
+ },
+ "screen": true
+}

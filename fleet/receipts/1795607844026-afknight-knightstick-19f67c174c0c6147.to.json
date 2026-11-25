@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795607844026-afknight-knightstick-19f67c174c0c6147",
+ "account": "Knightstick",
+ "partner": "AFKnight",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "b6fa8e7e-b0c8-41be-a9f0-e67dcdd4355c",
+ "count": 0,
+ "ok": false,
+ "at": 1795608129671,
+ "detail": "trade claimed"
+}
