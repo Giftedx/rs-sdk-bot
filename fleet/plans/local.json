@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795625736978,
+ "at": 1795625746988,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,39 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "363",
+    "MAX_ITEMS": "366",
     "COIN_RESERVE": "1000",
-    "FLOAT": "74600",
+    "FLOAT": "75200",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "363"
+    "BATCH_UNITS": "366"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "169",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "35800",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "169"
    },
    "enabled": true,
    "repeat": false,
@@ -92,20 +117,20 @@
     "3000"
    ],
    "env": {
-    "ITEM_ID": "40",
-    "ITEMS": "Iron arrowtips",
-    "MAX_ITEMS": "90",
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "131",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:40",
-    "BATCH_UNITS": "90"
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "131"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
+   "goal": "campaign:haggis:item:42",
    "role": "army"
   },
   {
@@ -190,31 +215,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "169",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "35800",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:tipmyshaft:item:44",
-    "BATCH_UNITS": "169"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:tipmyshaft:item:44",
-   "role": "army"
   },
   {
    "account": "SporranDip",
