@@ -913,8 +913,9 @@ dearest item of the kit. Live squad run 4 made 10 kills and took 0 daggers. `SQU
 
 - **No first strike.** The squad does not start an attack on a gang account that is unskulled and has not attacked one of
   ours (pk_skull.rs2 `deserves_pk_skull`). It still fights an account that attacks a member, and a skulled one.
-- **Kill timing.** A skulled target whose overhead stays off for `SQUAD_DAGGER_OFF_READS` reads in combat (default 6) has 0
-  prayer points, so Protect Item is off too; it comes first. The hold (`SQUAD_DAGGER_HOLD=<fraction>,<ticks>`, default 0.7,300)
+- **Kill timing.** A skulled target whose overhead stays off for `SQUAD_DAGGER_OFF_READS` reads in combat (default 6) counts
+  as drained (0 prayer points, so Protect Item off too) and comes first. On the live gang this read has no proof ("The live
+  gang at its deaths" below). The hold (`SQUAD_DAGGER_HOLD=<fraction>,<ticks>`, default 0.7,300)
   stops the attacks on a skulled target with its overhead on from its first read at or below the fraction, and ends the
   attack click, until its overhead goes off or the ticks pass.
 - **Pickup.** Over single-way ground or interlopers, a kill's pickup takes a dagger within 3 tiles. A kill whose message came
@@ -927,8 +928,8 @@ Evidence: the line `SQUAD gang <name> died: skull= protectItem= prayer= ... figh
 death, read from the clone's varps in its last tick before the respawn. Hosted run 45677187196 (189 clone deaths): Protect
 Item off in 3,714 of 10,678 fight ticks with points left. Gap: the cause. Debug run 45677831660 shows the fight loop send Protect
 Item on in consecutive ticks while its view shows it off; no server script turns Protect Item off but a toggle, 0 points or a
-death. The live gang kept Protect Item on at 2 skulled kills with a pickup, so a bench dagger from a death with points left is
-a clone fault. The measure of a live dagger in the table below is a skulled clone death at 0 prayer points.
+death. The live gang kept Protect Item on at 2 skulled kills of run 4 and 4 of run 5, so a bench dagger from a death with points
+left is a clone fault. The measure of a live dagger in the table below is a skulled clone death at 0 prayer points.
 
 **The prayer points of the clones.** A clone fights with Protect Item, Steel Skin and an overhead (drain effects 2 + 12 + 12,
 prayer bonus 11: `drainTicks` empties 99 points in 315 ticks), and its fights on the bench end sooner: with no hold no clone
@@ -975,8 +976,31 @@ runners and grace:
 - **Two runs of one case differ.** The off case ran on two heads with the same off path: 19 and 20 kills, 1219 and 1113
   Hitpoints taken, 3743 and 4110 ticks (seed 8: 341 and 832 ticks). A difference of that size between two cases is not
   separated.
-- Not measured: a live run; a gang account that comes back after a death (a bench clone does not); a clone that holds
-  Protect Item steady; 5 of ours against the gang.
+- Not measured: a live run with dagger mode on; a gang account that comes back after a death (a bench clone does not); a
+  clone that holds Protect Item steady; 5 of ours against the gang.
+
+**The live gang at its deaths.** Claim: the live gang keeps Protect Item on to its death, also with its overhead off, so a
+skulled gang death keeps the dagger. Conditions: live squad run 5, dagger mode off, the 5 of ours on the post (3067, 3640),
+with the kill receipt fields `victimHead` (the skull and overhead of the victim in the last tick before the kill message) and
+`ground` (the stacks within 3 tiles of the victim's tile 6 ticks after the message). Evidence: `RESULT ok squad accounts=5
+kills=7 killReceipts=7 receiptDomain=live feedMatched=7 died=0 attackerKills=0 taken=672 trips=9` in
+`.practice/squad-kit/logs/hold-test-5.out`, and the 7 receipts under `.practice/kill-receipts/live/rs-sdk-demo.fly.dev/`:
+
+| Victim view | Kills | Ground has the dagger | Ground has the kit less the dagger |
+|---|---|---|---|
+| skulled, no overhead | 2 | 0 | 2 |
+| skulled, overhead on | 4 | 0 | 2 |
+| unskulled, overhead on | 1 | 0 | 0 |
+
+- **Protect Item is the block, not the skull.** 6 of the 7 victims were skulled. Each skulled death with a ground read at its
+  tile (4) left bones, both monk's robe pieces (542, 544) and the wizards hat (1017): the kit less its dearest item, which is
+  what a skulled death with Protect Item leaves.
+- **An overhead off is not 0 prayer points.** 2 of those 4 deaths showed no overhead 1 tick before the kill message. The
+  radar records show each gang account with no overhead between its fights and with one in its fights.
+- **A kill message outside the killer's fight.** 3 of the 7 came there. Their ground read is around the killer's tile (the
+  victim was out of view), and 2 of the 3 show no kit: the read missed the death tile.
+- Gap: whether the overheads of the 2 deaths were off for 6 reads in combat (the radar records a sighting each 25 ticks out
+  of an attack), so the live drained read of dagger mode stays unproved.
 
 ## Keep it true
 
