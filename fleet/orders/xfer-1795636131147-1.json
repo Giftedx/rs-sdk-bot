@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795636131147-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Ballspinner",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 4,
+  "itemId": 213,
+  "start": 1795636131147,
+  "end": 1795637031147,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

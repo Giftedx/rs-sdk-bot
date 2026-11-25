@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795636021987,
+ "at": 1795636134606,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -158,6 +158,28 @@
    "role": "army"
   },
   {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "jewellery-trip"
+   ],
+   "env": {
+    "RECIPE": "sapphire_ring",
+    "TARGET": "1",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1637",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
    "account": "Dipstick",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -287,7 +309,6 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
-  "bowbeforeme",
   "fatstack",
   "fingerblastr",
   "fingersmith",
