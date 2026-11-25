@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795584371128-5",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketpython",
+  "to": "Pocketrocket",
+  "item": "Herb",
+  "count": 2,
+  "itemId": 203,
+  "start": 1795584371128,
+  "end": 1795585271128,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

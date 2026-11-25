@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795584021606-shaftmaker-packhorse-bad5f56b0bc4c1d8",
+ "account": "Shaftmaker",
+ "partner": "Packhorse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 240000,
+ "claim": "193d20bd-73d1-43b8-939a-b9617f8a68e3",
+ "count": 0,
+ "ok": false,
+ "at": 1795584351481,
+ "detail": "trade claimed"
+}
