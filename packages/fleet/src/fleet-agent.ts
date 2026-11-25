@@ -125,19 +125,20 @@ export function tradeStop(base: string, account: string, now = Date.now()): { he
 // only its own runs, so trades of this agent stop only when this agent asks them.
 // A live update that waits on running workers asks for a drain (live-update/pending.ts). The agent then starts no new
 // trade whose worker loads a pending file, so the running trades end and the update lands. An order whose other side
-// has started (it runs here, or it wrote its receipt) is not held: one side must not wait alone for the other.
+// has started (it runs this order here, or it wrote its receipt) is not held: one side must not wait alone for the
+// other. A partner busy with another order has not started this one.
 export function tradeDrainHold(
     order: Pick<Order, 'id' | 'from' | 'to'>,
     account: string,
     drained: readonly string[],
     target: string,
-    running: ReadonlySet<string>,
+    runningOrders: ReadonlyMap<string, string>,
     receipts: readonly Pick<Receipt, 'id' | 'role'>[],
 ): string | null {
     if (!drained.length) return null;
     const role = order.from.toLowerCase() === account.toLowerCase() ? 'from' : 'to';
     const partner = role === 'from' ? order.to : order.from, otherRole = role === 'from' ? 'to' : 'from';
-    if (running.has(partner.toLowerCase()) || receipts.some(r => r?.id === order.id && r.role === otherRole)) return null;
+    if (runningOrders.get(partner.toLowerCase()) === order.id || receipts.some(r => r?.id === order.id && r.role === otherRole)) return null;
     return `live update to ${target.slice(0, 10)} drains ${drained.slice(0, 2).join(', ')}${drained.length > 2 ? ` and ${drained.length - 2} more` : ''}`;
 }
 const TRADE_ENTRY_REL = 'scripts/aio-logistics.ts';
@@ -240,7 +241,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     if (!takeLease(lock, process.pid, held)) { log(`FLEET_AGENT already running pid ${leaseHolder(lock, held)}`); process.exit(0); }
     const release = () => releaseLease(lock);
     // Running trades by lower-case account, with the account name as the order spells it.
-    const running = new Map<string, string>(), once = argv.includes('--once');
+    const running = new Map<string, string>(), runningOrders = new Map<string, string>(), once = argv.includes('--once');
     let stopping = false;
     const onSignal = (why: string) => {
         if (stopping) process.exit(0); // a second signal does not wait
@@ -324,13 +325,14 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         for (const t of dueTrades(orders, receipts, side, owners, busy, new Set(running.keys()), now)) {
             if (ownerStop || stopping) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${ownerStop ?? 'agent stopping'})`); continue; }
             if (t.busy) { log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
-            const drainHold = pending ? tradeDrainHold(t.order, t.account, tradeDrained, pending.target, new Set(running.keys()), receipts) : null;
+            const drainHold = pending ? tradeDrainHold(t.order, t.account, tradeDrained, pending.target, runningOrders, receipts) : null;
             if (drainHold) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${drainHold})`); continue; }
             const stop = tradeStop(base, t.account, now);
             if (stop.cleared) log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
             if (stop.held) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
             const accountKey = t.account.toLowerCase();
             running.set(accountKey, t.account);
+            runningOrders.set(accountKey, t.order.id);
             askedToStop.delete(accountKey);
             log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
             try {
@@ -352,11 +354,13 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
                         log(`FLEET_AGENT error ${t.account} ${String(err).slice(0, 160)}`);
                     } finally {
                         running.delete(accountKey);
+                        runningOrders.delete(accountKey);
                         if (renewLease(lock)) sync();
                     }
                 })();
             } catch (err) {
                 running.delete(accountKey);
+                runningOrders.delete(accountKey);
                 log(`FLEET_AGENT spawn failed ${t.account}: ${String(err).slice(0, 160)}`);
             }
         }
