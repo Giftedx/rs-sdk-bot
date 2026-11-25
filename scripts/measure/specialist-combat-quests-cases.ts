@@ -352,6 +352,51 @@ const REHEARSE_GUARD_ENV: Record<string, string> = {
     STALL_TICKS: '0',
 };
 
+function makeCombatPvpRehearsalSegment(opts: {
+    specialist: string;
+    id: string;
+    script: string;
+    env: Record<string, string>;
+    mode: CombatBenchMode;
+    skill: 'Attack' | 'Defence' | 'Strength' | 'Hitpoints' | 'Ranged';
+    planTicks: number;
+    planSource: string;
+    rangedTank?: boolean;
+}) {
+    const kit = COMBAT_BENCH_MODES[opts.mode].kit;
+    const skills = opts.rangedTank ? RANGED_TANK_SKILLS : undefined;
+    return {
+        specialist: opts.specialist,
+        id: opts.id,
+        start: { fresh: true as const },
+        script: opts.script,
+        env: opts.env,
+        suppliers: [
+            {
+                script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                args: ['--companion', '{ACTOR}', 'supplier-tank', opts.mode, '1'],
+                env: { ...REHEARSE_GUARD_ENV },
+                save: tankSupplierPresetConfig(kit, skills),
+            },
+            {
+                script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                args: ['--companion', '{ACTOR}', 'tank', opts.mode, '0'],
+                env: { ...REHEARSE_GUARD_ENV },
+                save: tankPostPresetConfig(0, skills),
+            },
+            {
+                script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                args: ['--companion', '{ACTOR}', 'tank', opts.mode, '2'],
+                env: { ...REHEARSE_GUARD_ENV },
+                save: tankPostPresetConfig(2, skills),
+            },
+        ],
+        plan: { ticks: opts.planTicks, source: opts.planSource },
+        expect: { skills: { [opts.skill]: 99 } },
+        timeoutMs: 900_000,
+    };
+}
+
 export function buildCombatSpecialistRehearsalSegment(
     accountRaw: string,
     opts?: { planTicks?: number; env?: Record<string, string> },
@@ -359,68 +404,68 @@ export function buildCombatSpecialistRehearsalSegment(
     const key = accountRaw.trim().toLowerCase();
     const override = opts?.planTicks;
     const extraEnv = opts?.env ?? {};
+    if (key === 'hiltsdeep') {
+        return makeCombatPvpRehearsalSegment({
+            specialist: 'HiltsDeep',
+            id: 'hiltsdeep-attack',
+            script: 'scripts/attack-specialist.ts',
+            env: { CAP: '5000', VARIANT: 'pvp', ...extraEnv },
+            mode: 'attack-pvp',
+            skill: 'Attack',
+            planTicks: override ?? 1936,
+            planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=2554t vs #1 2607t)',
+        });
+    }
     if (key === 'fullblooded') {
-        return {
+        return makeCombatPvpRehearsalSegment({
             specialist: 'FullBlooded',
             id: 'fullblooded-hitpoints',
-            start: { fresh: true as const },
             script: 'scripts/hp-specialist.ts',
-            env: { CAP: '12000', ...extraEnv },
-            supplier: {
-                script: 'scripts/aio-logistics.ts',
-                args: ['specialist-supplier', '{ACTOR}', '--kit=hp', '12000'],
-                env: { ...REHEARSE_GUARD_ENV },
-                save: { position: { x: 3223, z: 3222, level: 0 }, inventory: kitToSaveInventory(HP_SPECIALIST_KIT) },
-            },
-            plan: { ticks: override ?? 8475, source: '400ms rehearsals & hosted-bench fighter:specialist-hp median ~8475t (<=11116t vs #1 11343t)' },
-            expect: { skills: { Hitpoints: 99 } },
-            timeoutMs: 900_000,
-        };
+            env: { CAP: '6000', HP_MODE: 'pvp', ...extraEnv },
+            mode: 'hp-pvp',
+            skill: 'Hitpoints',
+            planTicks: override ?? 3367,
+            planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=5263t vs #1 5371t)',
+        });
     }
-    if (key === 'bigswinger' || key === 'rocksolid') {
-        const isStr = key === 'bigswinger';
-        const board = isStr ? 'strength' : 'defence';
-        const skill = isStr ? 'Strength' : 'Defence';
-        const cap = isStr ? '6000' : '7500';
-        const kit = isStr ? STRENGTH_SPECIALIST_KIT : DEFENCE_SPECIALIST_KIT;
-        const planTicks = override ?? (isStr ? 2230 : 2838);
-        return {
-            specialist: isStr ? 'BigSwinger' : 'RockSolid',
-            id: isStr ? 'bigswinger-strength' : 'rocksolid-defence',
-            start: { fresh: true as const },
-            script: isStr ? 'scripts/strength-specialist.ts' : 'scripts/defence-specialist.ts',
-            env: { CAP: cap, ...extraEnv },
-            suppliers: [
-                {
-                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
-                    args: ['--companion', '{ACTOR}', 'supplier-tank', board, '1'],
-                    env: { ...REHEARSE_GUARD_ENV },
-                    save: tankSupplierPresetConfig(kit),
-                },
-                {
-                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
-                    args: ['--companion', '{ACTOR}', 'tank', board, '0'],
-                    env: { ...REHEARSE_GUARD_ENV },
-                    save: tankPostPresetConfig(0),
-                },
-                {
-                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
-                    args: ['--companion', '{ACTOR}', 'tank', board, '2'],
-                    env: { ...REHEARSE_GUARD_ENV },
-                    save: tankPostPresetConfig(2),
-                },
-            ],
-            plan: {
-                ticks: planTicks,
-                source: isStr
-                    ? 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3222t vs #1 3288t)'
-                    : 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=4236t vs #1 4323t)',
-            },
-            expect: { skills: { [skill]: 99 } },
-            timeoutMs: 900_000,
-        };
+    if (key === 'bigswinger') {
+        return makeCombatPvpRehearsalSegment({
+            specialist: 'BigSwinger',
+            id: 'bigswinger-strength',
+            script: 'scripts/strength-specialist.ts',
+            env: { CAP: '6000', ...extraEnv },
+            mode: 'strength',
+            skill: 'Strength',
+            planTicks: override ?? 1907,
+            planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3222t vs #1 3288t)',
+        });
     }
-    throw Error(`unknown combat specialist account "${accountRaw}" (expected FullBlooded, BigSwinger, RockSolid)`);
+    if (key === 'rocksolid') {
+        return makeCombatPvpRehearsalSegment({
+            specialist: 'RockSolid',
+            id: 'rocksolid-defence',
+            script: 'scripts/defence-specialist.ts',
+            env: { CAP: '7500', ...extraEnv },
+            mode: 'defence',
+            skill: 'Defence',
+            planTicks: override ?? 2278,
+            planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3937t vs #1 4018t)',
+        });
+    }
+    if (key === 'shaftshooter') {
+        return makeCombatPvpRehearsalSegment({
+            specialist: 'Shaftshooter',
+            id: 'shaftshooter-ranged',
+            script: 'scripts/ranged-specialist.ts',
+            env: { CAP: '2500', VARIANT: 'pvp-glory', ...extraEnv },
+            mode: 'ranged-pvp-glory',
+            skill: 'Ranged',
+            planTicks: override ?? 1447,
+            planSource: '15-slot Glory/Yew shortbow/MSB Keep PvP (<=1663t vs #1 1697t)',
+            rangedTank: true,
+        });
+    }
+    throw Error(`unknown combat specialist account "${accountRaw}" (expected HiltsDeep, FullBlooded, BigSwinger, RockSolid, Shaftshooter)`);
 }
 
 async function runRehearseMain(args: string[]): Promise<void> {

@@ -8,7 +8,8 @@ import { CRAFTING_SUPPLY_BILL } from '../crafting-specialist';
 import { HERBLORE_SUPPLY_BILL } from '../herblore-specialist';
 import { MAGIC_SUPPLY_BILL } from '../magic-specialist';
 import { PRAYER_RUNNER_COUNT, PRAYER_SUPPLY_BILL } from '../prayer-specialist';
-import { RANGED_SPECIALIST_LIVE_KIT } from '../ranged-specialist';
+import { RANGED_PVP_GLORY_KIT } from '../ranged-specialist';
+import { MELEE_PVP_CORE_KIT } from '../combat-quest-specialists';
 import { BODY_RUNNER_COUNT, RUNECRAFT_SUPPLY_BILL } from '../runecraft-specialist';
 import { SMITHING_SUPPLY_BILL } from '../smithing-specialist';
 import {
@@ -60,6 +61,10 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         'SteelRod',
         'Mineshafted',
         'Polevaulter',
+        'HiltsDeep',
+        'RockSolid',
+        'BigSwinger',
+        'FullBlooded',
     ]);
 
     const expectedBills: Record<string, readonly { id: number; count: number }[]> = {
@@ -69,7 +74,7 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         Lightmylog: FIREMAKING_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
         Morningwood: WOODCUTTING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         Lochnessrod: FISHING_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
-        Shaftshooter: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        Shaftshooter: RANGED_PVP_GLORY_KIT.map(k => ({ id: k.id, count: k.count })),
         PouchStuffed: RUNECRAFT_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         CutMyJewels: CRAFTING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         GrindMyHerb: HERBLORE_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
@@ -78,6 +83,10 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         SteelRod: SMITHING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         Mineshafted: MINING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         Polevaulter: AGILITY_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
+        HiltsDeep: MELEE_PVP_CORE_KIT.map(k => ({ id: k.id, count: k.count })),
+        RockSolid: MELEE_PVP_CORE_KIT.map(k => ({ id: k.id, count: k.count })),
+        BigSwinger: MELEE_PVP_CORE_KIT.map(k => ({ id: k.id, count: k.count })),
+        FullBlooded: MELEE_PVP_CORE_KIT.map(k => ({ id: k.id, count: k.count })),
     };
 
     const expectedTargets: Record<string, number> = {
@@ -87,7 +96,7 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         Lightmylog: 646,
         Morningwood: 2818,
         Lochnessrod: 2924,
-        Shaftshooter: 4379,
+        Shaftshooter: 1663,
         PouchStuffed: 1845,
         CutMyJewels: 134,
         GrindMyHerb: 415,
@@ -96,7 +105,13 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         SteelRod: 1255,
         Mineshafted: 3557,
         Polevaulter: 6031,
+        HiltsDeep: 2554,
+        RockSolid: 3937,
+        BigSwinger: 3222,
+        FullBlooded: 5263,
     };
+
+    const pvpCombatAccounts = new Set(['Shaftshooter', 'HiltsDeep', 'RockSolid', 'BigSwinger', 'FullBlooded']);
 
     for (const account of READY_SPECIALIST_ACCOUNTS) {
         const seg = resolveSpecialistSegment(account);
@@ -109,7 +124,7 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         expect(seg.expect.skills).toEqual({ [expectedBoard]: 99 });
         expect(seg.plan!.ticks).toBeGreaterThan(0);
         // Empirical whole-clock baselines above strict targetCap stay offline while targetCap tracks the 2% record margin.
-        const maxPlanTicks = ({ Lightmylog: 760, Morningwood: 3300, Shaftshooter: 4700, PouchStuffed: 2200, BigBoner: 1250, Mineshafted: 3850 } as Record<string, number>)[account] ?? expectedTargets[account]!;
+        const maxPlanTicks = ({ Lightmylog: 760, Morningwood: 3300, PouchStuffed: 2200, BigBoner: 1250, Mineshafted: 3850 } as Record<string, number>)[account] ?? expectedTargets[account]!;
         expect(seg.plan!.ticks).toBeLessThanOrEqual(maxPlanTicks);
         expect(resolveSpecialistTargetCap(account)).toBe(expectedTargets[account]!);
         expect(seg.timeoutMs).toBeGreaterThanOrEqual(seg.plan!.ticks * 400 + 120_000);
@@ -118,10 +133,18 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         const sups = resolveSegmentSuppliers(seg);
         expect(sups.length).toBeGreaterThanOrEqual(1);
         for (const sup of sups) {
-            expect(sup.script).toBe('scripts/aio-logistics.ts');
-            expect(['specialist-supplier', 'gathering-supplier']).toContain(sup.args?.[0] ?? '');
-            expect(sup.args).toContain('{ACTOR}');
-            expect(() => parseKitArg(sup.args ?? [])).not.toThrow();
+            if (pvpCombatAccounts.has(account)) {
+                expect(sup.script).toBe('scripts/measure/specialist-combat-quests-cases.ts');
+                expect(sup.args?.[0]).toBe('--companion');
+                expect(sup.args).toContain('{ACTOR}');
+                expect(sup.env?.FLEE_GUARD).toBe('0');
+                expect(sup.env?.DEATH_RECOVERY).toBe('0');
+            } else {
+                expect(sup.script).toBe('scripts/aio-logistics.ts');
+                expect(['specialist-supplier', 'gathering-supplier']).toContain(sup.args?.[0] ?? '');
+                expect(sup.args).toContain('{ACTOR}');
+                expect(() => parseKitArg(sup.args ?? [])).not.toThrow();
+            }
             expect(sup.save.inventory!.length).toBeLessThanOrEqual(28);
             expect(sup.save.position).toBeDefined();
         }
@@ -182,13 +205,17 @@ test('account lookup is case-insensitive and rejects unknown accounts or invalid
     expect(lower.specialist).toBe('StickyFinger');
     expect(lower.env?.LIVE).toBe('1');
 
-    const ranged = resolveSpecialistSegment('shaftshooter', { planTicks: 4600, env: { SUPPLIER: 'Moneyshot' } });
-    expect(ranged.plan!.ticks).toBe(4600);
-    expect(ranged.env?.VARIANT).toBe('live');
+    const ranged = resolveSpecialistSegment('shaftshooter', { planTicks: 1450, env: { SUPPLIER: 'Moneyshot' } });
+    expect(ranged.plan!.ticks).toBe(1450);
+    expect(ranged.env?.VARIANT).toBe('pvp-glory');
     expect(ranged.env?.SUPPLIER).toBe('Moneyshot');
 
     expect(lower.plan!.ticks).toBe(2142);
-    expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(4660);
+    expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(1447);
+    expect(resolveSpecialistSegment('HiltsDeep').suppliers).toHaveLength(3);
+    expect(resolveSpecialistSegment('RockSolid').suppliers).toHaveLength(3);
+    expect(resolveSpecialistSegment('BigSwinger').suppliers).toHaveLength(3);
+    expect(resolveSpecialistSegment('FullBlooded').suppliers).toHaveLength(3);
 
     expect(() => resolveSpecialistSegment('Haggis')).toThrow('unknown specialist');
     expect(() => resolveSpecialistSegment('StickyFinger', { planTicks: 0 })).toThrow('invalid planTicks');

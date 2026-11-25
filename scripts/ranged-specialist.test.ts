@@ -450,6 +450,8 @@ test('RANGED_PVP_SPECIALIST_KIT and RANGED_PVP_GLORY_KIT fit <=28 tradeable cata
         cap: 3000,
         variant: 'pvp-glory',
     });
+    expect(resolveSupplierKitPlan('ranged-pvp').combined).toEqual(RANGED_PVP_SPECIALIST_KIT);
+    expect(resolveSupplierKitPlan('ranged-pvp-glory').combined).toEqual(RANGED_PVP_GLORY_KIT);
 });
 
 test('selectRangedPvpUpgradeIds upgrades Crossbow->Yew shortbow->MSB, Rune arrows, and dhide tiers in priority order', async () => {

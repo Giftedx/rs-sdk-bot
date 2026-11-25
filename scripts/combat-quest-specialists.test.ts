@@ -230,9 +230,11 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         ]);
 
         for (const [acc, board, minSup] of [
-            ['FullBlooded', 'Hitpoints', 1],
+            ['FullBlooded', 'Hitpoints', 3],
             ['BigSwinger', 'Strength', 3],
             ['RockSolid', 'Defence', 3],
+            ['HiltsDeep', 'Attack', 3],
+            ['Shaftshooter', 'Ranged', 3],
         ] as const) {
             const seg = buildCombatSpecialistRehearsalSegment(acc);
             expect(checkSpecialistSegment(seg, acc)).toBe(board);

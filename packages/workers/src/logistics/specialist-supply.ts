@@ -330,6 +330,12 @@ export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
+export const RANGED_PVP_GLORY_KIT: readonly KitSpecItem[] = [
+    ...RANGED_PVP_SPECIALIST_KIT.filter(item => item.id !== 1478 && item.id !== 536),
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 857, name: 'Yew shortbow', count: 1, stackable: false },
+] as const;
+
 export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 6, name: 'Cannon base', count: 1, stackable: false },
@@ -681,6 +687,7 @@ export const SPECIALIST_KITS = {
     'ranged-msb': RANGED_SPECIALIST_MSB_KIT,
     'ranged-live': RANGED_SPECIALIST_LIVE_KIT,
     'ranged-pvp': RANGED_PVP_SPECIALIST_KIT,
+    'ranged-pvp-glory': RANGED_PVP_GLORY_KIT,
     fletching: FLETCHING_SPECIALIST_KIT,
     'fletching-live': FLETCHING_SPECIALIST_LIVE_KIT,
     fishing: FISHING_SPECIALIST_KIT,
