@@ -1,5 +1,8 @@
 import { expect, test } from 'bun:test';
-import { makeOrder, orderMeet, orderWarnings, parseWith } from './fleet-order';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { makeOrder, orderMeet, orderWarnings, parseWith, withdrawFleetOrder } from './fleet-order';
 import { validOrder } from './fleet-trade-settlement';
 
 const server = 'rs-sdk-demo.fly.dev';
@@ -87,4 +90,27 @@ test('CLI rejects missing arguments and invalid IN/MINUTES windows cleanly with 
     });
     expect(badWindow.exitCode).toBe(2);
     expect(badWindow.stderr.toString()).toContain('MINUTES must be finite > 0');
+});
+
+test('--withdraw deletes an order file that no held trade claim names, and keeps one that a claim names', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-order-withdraw-'));
+    const claim = { account: 'woodenstaff', server, side: 'local', orderId: 'xfer-1795587227524-3', role: 'from' as const, nonce: 'n1', phase: 'held' as const, at: 1 };
+    try {
+        for (const id of ['xfer-1795587227524-3', '1795584021244-dipstick-yewfirst-2ad00dbbd11b7d21']) writeFileSync(join(dir, `${id}.json`), '{}\n');
+        expect(withdrawFleetOrder(dir, '1795584021244-dipstick-yewfirst-2ad00dbbd11b7d21.json', [claim])).toBe(join(dir, '1795584021244-dipstick-yewfirst-2ad00dbbd11b7d21.json'));
+        expect(existsSync(join(dir, '1795584021244-dipstick-yewfirst-2ad00dbbd11b7d21.json'))).toBe(false);
+        // The claim names the order in lower case; the id typed in upper case still matches it.
+        expect(() => withdrawFleetOrder(dir, 'XFER-1795587227524-3', [claim])).toThrow('a held trade claim names order XFER-1795587227524-3 (woodenstaff from)');
+        expect(existsSync(join(dir, 'xfer-1795587227524-3.json'))).toBe(true);
+        expect(() => withdrawFleetOrder(dir, 'xfer-1795587227524-3', [{ ...claim, orderId: 'xfer-1795587227524-2' }])).not.toThrow();
+        expect(existsSync(join(dir, 'xfer-1795587227524-3.json'))).toBe(false);
+        expect(() => withdrawFleetOrder(dir, 'xfer-1795587227524-3', [])).toThrow('no order xfer-1795587227524-3');
+        expect(() => withdrawFleetOrder(dir, '../owners', [])).toThrow('not an order id: ../owners');
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('--withdraw without an order id prints its usage and exits 2', () => {
+    const r = Bun.spawnSync([process.execPath, 'scripts/fleet-order.ts', '--withdraw'], { cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr.toString()).toContain('usage: bun scripts/fleet-order.ts --withdraw <order id>...');
 });

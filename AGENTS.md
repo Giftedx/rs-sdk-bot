@@ -35,7 +35,7 @@ Keep the loop fast:
 
 Ask only for a decision that changes the result. Do not add design docs, approval rounds or task boards.
 
-The [coordinator](docs/script-contract.md#autonomous-coordination) owns its queue, assignments and children. Check its state and leases before taking those resources. Never start a second controller. Extend existing workers and capability definitions; do not copy a worker per account.
+The [coordinator](docs/script-contract.md#autonomous-coordination) owns its queue, assignments and children. Check its state and leases before taking those resources. Never start a second controller. Start or restart the local controllers with `schtasks /Run /TN rs-sdk-coordinator-watchdog`, not from an agent's own command or background task: a foreground fleet agent writes its lines to that task's output instead of `.practice/fleet-agent.log`, and the end of the task stops its trade workers mid-trade, which leaves their trade claims held. Extend existing workers and capability definitions; do not copy a worker per account.
 
 On Windows every background subprocess uses `windowsHide:true`. Run only the services a job needs. Check ownership before stopping a process.
 
@@ -73,7 +73,7 @@ Start from the fastest method shown (the record route's method for route steps) 
 - Create an account only with a proved useful first job; a claimed or blocked account is not progress. First login registers the account and starts its clock.
 - When creating a new live account, pick or add a name following the 1-12 character naming standard and examples at the top of `packages/core/src/names.ts`. Keep existing accounts.
 - Every assignment names one owner, budget, acceptance and next action; a vacant slot names its constraint. `swarm.json` owns live assignments (`scripts/fleet.ts` holds templates; `apply` only creates a missing plan).
-- Each named fleet side (`FLEET_SIDE`: `local`, `cloud`, `claude-cloud`, `claude-cloud-2`) owns its accounts in `fleet/owners.json`; `openBot` refuses other sides, and main and specialist accounts never move (`packages/core/src/fleet-assign.ts`, `scripts/fleet-sync.ts`). Cross-side transfers use fleet orders (`scripts/fleet-order.ts`, `scripts/fleet-trade.ts`, `scripts/fleet-agent.ts --daemon`). See [README.md](README.md#one-account-pool-across-sides) for vault (`FLEET_VAULT_KEY`), adoption, `FLEET_SEED`, cloud-side launch/bootstrap (`scripts/cloud-side.ts`, `scripts/cloud-launch.ts`), SDK-reset recovery, and `fleet-data` sync procedures.
+- Each named fleet side (`FLEET_SIDE`: `local`, `cloud`, `claude-cloud`, `claude-cloud-2`) owns its accounts in `fleet/owners.json`; `openBot` refuses other sides, and main and specialist accounts never move (`packages/core/src/fleet-assign.ts`, `scripts/fleet-sync.ts`). Cross-side transfers use fleet orders (`scripts/fleet-order.ts`, `scripts/fleet-trade.ts`, `scripts/fleet-agent.ts --daemon`). Withdraw an order with `bun scripts/fleet-order.ts --withdraw <order id>`, never by deleting its file: the command refuses while a held trade claim names the order. See [README.md](README.md#one-account-pool-across-sides) for vault (`FLEET_VAULT_KEY`), adoption, `FLEET_SEED`, cloud-side launch/bootstrap (`scripts/cloud-side.ts`, `scripts/cloud-launch.ts`), SDK-reset recovery, and `fleet-data` sync procedures.
 
 ## Game and host limits
 
