@@ -10,7 +10,7 @@ import { validOrder, type Order, type Receipt } from '../../core/src/fleet-trade
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from '../../core/src/market-cache';
 import { findStopFile, liveRoot, readStopFile, repoRoot, statusReadDirs } from '../../core/src/practice-paths';
-import { spawnSyncTimed } from '../../core/src/proc';
+import { pidStartedAfter, spawnSyncTimed } from '../../core/src/proc';
 import { lastResult } from '../../core/src/run-child';
 import { capabilityRevision } from '../../core/src/worker-release';
 import { brainPlannedJobs } from './fleet-sync';
@@ -237,7 +237,8 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         process.exit(0);
     }
     const log = agentLog(logFile, process.env[AGENT_LOG_DIRECT] === '1');
-    const held = { alive: (pid: number) => agentAlive(pid), ...(procCmdline(process.pid) === undefined ? {} : { staleMs: Infinity }) };
+    // Windows has no /proc command line, so a start time later than the lease's heartbeat marks a reused id.
+    const held = { alive: (pid: number) => agentAlive(pid), reused: pidStartedAfter, ...(procCmdline(process.pid) === undefined ? {} : { staleMs: Infinity }) };
     if (!takeLease(lock, process.pid, held)) { log(`FLEET_AGENT already running pid ${leaseHolder(lock, held)}`); process.exit(0); }
     const release = () => releaseLease(lock);
     // Running trades by lower-case account, with the account name as the order spells it.

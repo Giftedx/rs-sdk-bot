@@ -103,6 +103,12 @@ export function laterProcessHolds(pid: number, savedAt: number, starts: Readonly
     return start !== undefined && Number.isFinite(savedAt) && start > savedAt + PID_START_SLACK_MS;
 }
 
+// laterProcessHolds with its own read of the process table: one PowerShell start on Windows. A failed read proves
+// nothing and gives false.
+export function pidStartedAfter(pid: number, savedAt: number, read: typeof processStartTimes = processStartTimes): boolean {
+    return laterProcessHolds(pid, savedAt, read([pid]));
+}
+
 // A light process that sleeps `seconds` and carries `label` on its command line, for a check that matches a live
 // process by command line (processMatchesRecent). On Windows its cmd.exe and ping tree measured 21 MB, where a Bun
 // runtime that sleeps measured 74 MB. End it with killTree: the sleep is a child process.

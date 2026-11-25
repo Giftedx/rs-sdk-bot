@@ -2,6 +2,7 @@ import { test, expect } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PID_START_SLACK_MS, pidStartedAfter } from '../src/proc';
 import { CONTROLLERS, GATE_STALE_MS, LAUNCH_ENV, LEASE_STALE_MS, controllerNamed, controllerState, controllerStates, leaseHolder, readLaunch, readLease, releaseLease, renewLease, saveLaunch, takeLease } from '../src/controllers';
 
 const now = 1_800_000_000_000;
@@ -49,6 +50,27 @@ test('take, renew and release let one process hold the lease and tell a holder t
         expect(existsSync(file)).toBe(false);
         expect(renewLease(file, 12)).toBe(false);
         releaseLease(file, 12);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a live process that got the id of an ended holder after its last heartbeat does not hold the lease', () => {
+    const dir = tmp(), file = join(dir, 'x.lock');
+    try {
+        writeFileSync(file, '4242'); setTime(file, now - 60_000);
+        const asked: [number, number][] = [];
+        const reusedAfter = (pid: number, savedAt: number) => { asked.push([pid, savedAt]); return true; };
+        expect(leaseHolder(file, { now, alive: () => true, reused: reusedAfter })).toBeNull();
+        expect(asked).toEqual([[4242, now - 60_000]]);
+        expect(leaseHolder(file, { now, alive: () => true, reused: () => false })).toBe(4242);
+        // An ended id needs no process-table read.
+        expect(leaseHolder(file, { now, alive: () => false, reused: () => { throw Error('not read'); } })).toBeNull();
+        // A take replaces the fresh lease of a reused id, and keeps the one of the process that wrote it.
+        expect(takeLease(file, 7, { now, alive: () => true, reused: () => false })).toBe(false);
+        expect(readFileSync(file, 'utf8')).toBe('4242');
+        expect(takeLease(file, 7, { now, alive: () => true, reused: () => true })).toBe(true);
+        expect(readFileSync(file, 'utf8')).toBe('7');
+        const st = controllerState(dir, { name: 'fleet-agent', label: 'Fleet agent', lease: 'x.lock', launch: 'x.launch.json', stop: 'x.stop' }, { now, alive: () => true, reused: () => true });
+        expect(st.pid).toBeNull();
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -190,4 +212,13 @@ test('a controller is running, stopped, down or never', () => {
         saveLaunch(join(root, swarmCtrl.launch), [join(root, 'swarm.json')], {});
         expect(controllerState(root, swarmCtrl, { now }).state).toBe('down');
     } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('pidStartedAfter marks an id whose process started after the save, and a failed read proves nothing', () => {
+    const at = (start: number) => () => new Map([[5, start]]);
+    expect(pidStartedAfter(5, 1_000, at(1_000 + PID_START_SLACK_MS + 1))).toBe(true);
+    expect(pidStartedAfter(5, 1_000, at(1_000 + PID_START_SLACK_MS))).toBe(false);
+    expect(pidStartedAfter(5, 1_000, at(500))).toBe(false);
+    expect(pidStartedAfter(5, 1_000, () => null)).toBe(false);
+    expect(pidStartedAfter(5, 1_000, () => new Map())).toBe(false);
 });
