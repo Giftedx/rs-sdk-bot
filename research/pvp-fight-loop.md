@@ -2755,14 +2755,39 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `itemFirst`) and the per-fight trace are on branch `claude/protect-item-flick-trace`. Gap: a rule that puts
     Protect Item first only in a tick in which the next hit can kill (skulled, Hitpoints at or below the attacker's max
     hit) is not measured; a spar score gives no value to a kept item.
-86. **Between two squad fights no prayer guard flicks, and a skulled account with `SQUAD_PROTECT_ITEM=on` has Protect
-    Item off in about 3 ticks of 10.** Claim: the fight loop's own flick toggles one prayer twice in one tick, and the
-    session's prayer guard then stands down for the rest of the session (`guard.ts` `note`, `stats.yielded`). Between
-    fights the squad's survival helper (`createWildSurvival`) and the loop's own prayer inputs are the only senders.
-    Conditions: `extra:clone-run1-prayer-x1`, seeds 1 to 12, the code of PR 1502 (`77aec1c48b`); ticks between fights
-    in the Wilderness with prayer points left. Evidence: `PRAYER_GUARD` lines, `yielded: true` in 48 of 48 sessions of
-    our accounts in each run; with `SQUAD_PROTECT_ITEM=on`, Protect Item off in 2,550 of 8,808 skulled ticks (run
-    45693420666), and in 2,081 of 7,325 with the guard held from the helper's first prayer input (run 45693434227).
-    Gap: the cause of the off ticks is not traced. A candidate is the loop's prayers-off while it waits with no target
-    (`hold` in `packages/workers/src/pvp/squad.ts`, one input each 3 ticks) against the helper's Protect Item toggle,
-    also each 3 ticks. With the default `protectItem: false` of `gang-hunter`, the helper sends no Protect Item input.
+86. **Between two squad fights the idle hold keeps Protect Item on while the survival helper wants it.** Claim: the
+    fight loop's own flick toggles one prayer twice in one tick, and the session's prayer guard then stands down for
+    the rest of the session (`guard.ts` `note`, `stats.yielded`). Between fights two senders remain: the survival
+    helper (`createWildSurvival` `prayStep`), which turns Protect Item on when the account is skulled and
+    `protectItem` is not off, and the hold loop's prayers-off while it waits with no target and no threat (`hold`,
+    one input each 3 ticks). `idlePrayersOff` leaves Protect Item out of the prayers-off while the helper wants it;
+    the other prayers go off as before. Without that exception the two senders toggle Protect Item in turn, and it
+    is off in about 3 ticks of 10. Protect Item drains 2 to an overhead prayer's 12 (`prayers.enum`). With the
+    default `protectItem: false` of `gang-hunter`, the helper sends no Protect Item input, and the inputs do not
+    change. Conditions: `extra:clone-run1-prayer-x1`, `SQUAD_PROTECT_ITEM=on`, seeds 1 to 12; ticks between fights in
+    the Wilderness with prayer points left in which the helper wants Protect Item. Evidence: `PRAYER_GUARD` lines,
+    `yielded: true` in 48 of 48 sessions of our accounts. Per-input trace (scratch branch
+    `claude/squad-protect-item-idle-trace`, run 45695320544): Protect Item off in 4,327 of 14,234 ticks; 4,288 of
+    them follow the hold's prayers-off input and 39 follow a fight. The lines alternate each 3 ticks, as in seed 11:
+    `t=284 idx=8 itemOn=1 ... from=squad.ts:2000` (the hold) and `t=285 idx=8 itemOn=0 ... from=squad.ts:367` (the
+    helper). The same trace on the fix (branch `claude/squad-protect-item-idle-trace2`, run 45696144237): Protect Item
+    off in 27 of 9,790 ticks, each in the first ticks after a fight.
+
+    Bench of `SQUAD_PROTECT_ITEM` with the fix, seeds 1 to 16, totals over the seeds:
+
+    | Case | Code, option | Kills | Deaths of ours | HP taken | Run |
+    |---|---|---|---|---|---|
+    | `extra:clone-run1-prayer-x1` | fix, default (`off`) | 37 | 0 | 2,597 | 45696459800 |
+    | | fix, default (`off`), again | 34 | 0 | 2,242 | 45696462370 |
+    | | fix, `skulled` | 35 | 0 | 2,310 | 45696461017 |
+    | | master, `skulled` | 37 | 0 | 2,509 | 45696463620 |
+    | `extra:attack-team5-pile-six-x1` | fix, default (`off`) | 30 | 2 | 12,796 | 45696459800 |
+    | | fix, `skulled` | 34 | 2 | 15,541 | 45696461017 |
+
+    Two runs of the same code and option differ by 3 kills and 355 HP taken (14%); a seed does not repeat, and the
+    paired difference of HP taken has sd 74 a seed. Against that noise, `skulled` against `off` (kills -0.13 a seed,
+    t -0.56; HP -18, t -0.89) and the fix against master with `skulled` (kills -0.13, t -0.52; HP -12, t -1.10) show
+    no change in the clone case. In the attack case `skulled` takes 21% more HP (t 1.79, no repeat arm). Each of the
+    4 deaths of ours is member 1, unskulled (`PK skull off: a death keeps 3 items`), after its escape teleport
+    (`SQUAD died on a bank trip`, near 2758,3476), so no arm shows the item that Protect Item keeps at a skulled
+    death. Gap: a case in which a skulled account of ours dies in the Wilderness.
