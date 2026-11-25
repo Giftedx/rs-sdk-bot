@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795621255025-2",
+ "account": "KnightRider",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 2,
+ "claim": "001faff7-7818-4c17-9ab7-d08d99b54ef8",
+ "count": 0,
+ "ok": false,
+ "at": 1795621870408,
+ "detail": "trade claimed"
+}
