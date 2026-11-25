@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795621255025-3",
+ "account": "Billionaire",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 1500,
+ "claim": "a4d148ea-cc58-4135-afa7-381281ecf7ba",
+ "count": 0,
+ "ok": false,
+ "at": 1795621590081,
+ "detail": "trade claimed"
+}

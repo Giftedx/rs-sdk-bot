@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795621605031-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "Woodenstaff",
+  "item": "Shark",
+  "count": 1,
+  "itemId": 385,
+  "start": 1795621605031,
+  "end": 1795622505031,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
