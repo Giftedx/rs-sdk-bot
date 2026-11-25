@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795607843770-thefullmonty-deeppockets-fdb6ae8b3a7f0798",
+ "account": "TheFullMonty",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "1c4309d6-0416-4689-9647-ca30db7bc87f",
+ "count": 1,
+ "ok": true,
+ "at": 1795608046583,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795608014608-0000011412-0000000001",
+  "at": 1795608046573,
+  "sha256": "d63f5e539454fee4e73a03968e02d5374aef91ca2cd022c92f37791a9589f1c6"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795607891634-nabtheknob-deeppockets-54a87119b20d12c2",
+ "account": "NabTheKnob",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant platelegs",
+ "requested": 1,
+ "claim": "42c095ba-3d58-47e4-9162-50ff5c537a1a",
+ "count": 0,
+ "ok": false,
+ "at": 1795608066262,
+ "detail": "trade claimed"
+}

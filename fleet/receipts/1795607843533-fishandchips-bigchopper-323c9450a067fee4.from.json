@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795607843533-fishandchips-bigchopper-323c9450a067fee4",
+ "account": "FishAndChips",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 20,
+ "claim": "68433915-3429-4096-99f0-0380ccba9f1b",
+ "count": 0,
+ "ok": false,
+ "at": 1795608096595,
+ "detail": "trade claimed"
+}

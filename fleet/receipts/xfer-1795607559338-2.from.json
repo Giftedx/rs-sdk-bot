@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795607559338-2",
  "account": "SporranBulge",
  "partner": "Fatstack",
@@ -10,8 +10,18 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "a7bc9d7c-b24d-4d67-a812-e8a97b12b074",
- "count": 0,
- "ok": false,
- "at": 1795607782320,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795608032251,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 4
+ },
+ "logout": {
+  "attemptId": "1795607782329-0000017652-0000000001",
+  "at": 1795608032238,
+  "sha256": "41f8d2d81d1fecbc302d09f9a2a50dd5de7cec39b942133bf8c390af2409f33d"
+ },
+ "screen": true
 }

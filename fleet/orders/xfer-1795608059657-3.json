@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795608059657-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "TheFullMonty",
+  "item": "Swamp toad",
+  "count": 5,
+  "itemId": 2150,
+  "start": 1795608059657,
+  "end": 1795608959657,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
