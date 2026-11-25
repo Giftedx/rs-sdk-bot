@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795603929804-3",
  "account": "SporranBulge",
  "partner": "Woodpecker",
@@ -12,6 +12,16 @@
  "claim": "a399d664-03d7-43c9-a602-4b25d09ebd2d",
  "count": 0,
  "ok": false,
- "at": 1795604355893,
- "detail": "trade claimed"
+ "at": 1795604469574,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795604453656
+ },
+ "logout": {
+  "attemptId": "1795604355902-0000027144-0000000001",
+  "at": 1795604469564,
+  "sha256": "d64c701a944d4b2f3ff6a2b47f7ac20638dab7f93ee6acc14122860600612656"
+ },
+ "screen": false
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795604251015-1",
  "account": "mmthv2350",
  "partner": "Stirmypot",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "16cfe320-d405-4676-b64e-dbf44c7e76dd",
- "count": 0,
- "ok": false,
- "at": 1795604366896,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795604455168,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795604374862
+ },
+ "logout": {
+  "attemptId": "1795604366905-0000027700-0000000001",
+  "at": 1795604455150,
+  "sha256": "d25460bf786ae5b0dce692af0e3d2c9d669e4a044e8c6613961850b88adf9a44"
+ },
+ "screen": true
 }
