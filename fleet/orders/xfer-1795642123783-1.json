@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795642123783-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "YewGotWood",
+  "item": "Rune axe",
+  "count": 1,
+  "itemId": 1359,
+  "start": 1795642123783,
+  "end": 1795643023783,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
