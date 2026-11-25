@@ -85,11 +85,12 @@ export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
-// 15 slots exact: Amulet of glory(4) (+10 Ranged atk), Yew shortbow bridge (40->49), and Shark walk sustain (no 11 Dragon bones).
+// 17 slots exact: Amulet of glory(4) (+10 Ranged atk), Yew shortbow bridge (40->49), 2x Ranging potion(4), and Shark walk sustain (no 11 Dragon bones).
 export const RANGED_PVP_GLORY_KIT: readonly KitSpecItem[] = [
     ...RANGED_PVP_SPECIALIST_KIT.filter(item => item.id !== 1478 && item.id !== 536),
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 857, name: 'Yew shortbow', count: 1, stackable: false },
+    { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
 ] as const;
 
 export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
@@ -1200,11 +1201,17 @@ export function selectRangedPvpUpgradeIds(
     return want.filter(id => held.has(id) && !equipped.has(id));
 }
 
+const RANGING_POT_DOSE_LEVELS = [92, 85, 77, 67, 55, 40, 20, 1] as const;
+
 async function ensureRangedPvpGear(sess: Session): Promise<void> {
     const rStat = skillInfo(sess, 'Ranged');
     const inv = sess.sdk.getInventory() as InvItem[];
     const worn = sess.sdk.getEquipment() as WornItem[];
-    const potItem = rStat.level <= rStat.baseLevel + Math.max(1, Math.floor((4 + Math.floor(rStat.baseLevel * 0.1)) / 2))
+    const remainingDoses = totalDoses(inv, ITEM_IDS.rangingPot);
+    const minBase = RANGING_POT_DOSE_LEVELS[Math.max(0, Math.min(RANGING_POT_DOSE_LEVELS.length - 1, remainingDoses - 1))] ?? 1;
+    const potItem = remainingDoses > 0
+        && rStat.baseLevel >= minBase
+        && rStat.level < rStat.baseLevel + 4 + Math.floor(rStat.baseLevel * 0.1) - 1
         ? ITEM_IDS.rangingPot.map(id => inv.find(i => i.id === id)).find((x): x is InvItem => !!x && x.slot !== undefined)
         : undefined;
     // Cap total pre-swing actions at 3 per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.

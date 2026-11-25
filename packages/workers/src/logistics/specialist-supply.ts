@@ -334,6 +334,7 @@ export const RANGED_PVP_GLORY_KIT: readonly KitSpecItem[] = [
     ...RANGED_PVP_SPECIALIST_KIT.filter(item => item.id !== 1478 && item.id !== 536),
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 857, name: 'Yew shortbow', count: 1, stackable: false },
+    { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
 ] as const;
 
 export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [

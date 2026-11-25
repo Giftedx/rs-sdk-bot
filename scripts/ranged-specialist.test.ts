@@ -425,7 +425,7 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
 test('RANGED_PVP_SPECIALIST_KIT and RANGED_PVP_GLORY_KIT fit <=28 tradeable cataloged slots and parseSpecialistArgs supports pvp modes', async () => {
     const { RANGED_PVP_GLORY_KIT } = await import('./ranged-specialist');
     expect(kitSlotTotal(RANGED_PVP_SPECIALIST_KIT)).toBe(25);
-    expect(kitSlotTotal(RANGED_PVP_GLORY_KIT)).toBe(15);
+    expect(kitSlotTotal(RANGED_PVP_GLORY_KIT)).toBe(17);
     expect(RANGED_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
     expect(RANGED_PVP_GLORY_KIT.some(k => k.id === 3016)).toBe(false);
     expect(RANGED_PVP_GLORY_KIT.some(k => k.id === 536)).toBe(false);
