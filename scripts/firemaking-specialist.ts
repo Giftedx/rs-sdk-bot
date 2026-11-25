@@ -597,18 +597,10 @@ if (import.meta.main) {
             } as const;
             const sentTick = main.tick();
             const isGroundStep = i >= wave0.length;
-            const nextStep = plan[i + 1];
-            const turnNext = isGroundStep && !!nextStep && (nextStep.x !== step.x - 1 || nextStep.z !== step.z);
-            let onTile = false;
 
             while (!isStopped() && (main.sdk.getSkillXp('Firemaking') ?? 0) === beforeXp) {
                 await waitTicks(main, 1);
                 if ((main.sdk.getSkillXp('Firemaking') ?? 0) !== beforeXp) break;
-                const pNow = main.sdk.getState()?.player;
-                if (turnNext && pNow) {
-                    if (pNow.worldX === step.x && pNow.worldZ === step.z) onTile = true;
-                    else if (onTile) break;
-                }
                 const dlgOpen = !!(main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen);
                 const elapsed = main.tick() - sentTick;
                 if (elapsed === 12) {

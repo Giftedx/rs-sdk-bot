@@ -330,7 +330,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/crafting-specialist.ts',
         env: { CAP: '2500', CRAFTING_MODE: 'cw' },
         suppliers: () => {
-            const batch = loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_CW_BATCH;
+            const batch = loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_CW_NOTED_BATCH;
             return [{
                 script: 'scripts/aio-logistics.ts',
                 args: ['specialist-supplier', '{ACTOR}', '--kit=crafting-cw', '3000'],

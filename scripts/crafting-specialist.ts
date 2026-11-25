@@ -829,17 +829,54 @@ async function craftAtCastleWarsBank(
   : 0;
  const emerInC0 = hasUnnotedEarly && emerCount > 0 ? Math.min(emerCount, Math.max(1, needFor43, needFor55)) : emerCount;
  const emerRem = Math.max(0, emerCount - emerInC0);
- const cycles = packCwCycles([
+ // Pack remaining high-tier gems with cap=25 when carryOver=2 leaves 2 uncut gems at each chest open.
+ const lowQueues: { id: number; count: number }[] = [
   ...(hasUnnotedEarly ? [] : [
    { id: ITEM_IDS.uncut_opal, count: opalCount },
    { id: ITEM_IDS.uncut_sapphire, count: sapphCount },
   ]),
   { id: ITEM_IDS.uncut_emerald, count: emerInC0 },
   { id: ITEM_IDS.uncut_ruby, count: rubyCount },
-  { id: ITEM_IDS.uncut_diamond, count: diaCount },
-  { id: ITEM_IDS.uncut_dragonstone, count: dstoneCount },
-  { id: ITEM_IDS.uncut_emerald, count: emerRem },
- ]);
+  { id: ITEM_IDS.uncut_diamond, count: hasDragonstone ? diaCount : 0 },
+ ];
+ const highId = hasDragonstone ? ITEM_IDS.uncut_dragonstone : ITEM_IDS.uncut_diamond;
+ const highTotal = hasDragonstone ? dstoneCount : diaCount;
+ let highLeft = highTotal;
+ const cycles: { id: number; count: number }[][] = [];
+ for (const cyc of packCwCycles(lowQueues, 27)) {
+  const used = cyc.reduce((s, g) => s + g.count, 0);
+  if (used < 27 && highLeft > 0 && emerRem === 0) {
+   const fill = Math.min(27 - used, highLeft);
+   highLeft -= fill;
+   cycles.push([...cyc, { id: highId, count: fill }]);
+  } else {
+   cycles.push([...cyc]);
+  }
+ }
+ if (emerRem === 0 && highLeft > 0) {
+  let carry = 0;
+  if (cycles.length > 0 && highLeft > 27) {
+   // Previous cycle can leave 2 high-tier gems in inv (if it had >= 2 of them) so every following cycle withdraws 25 in 6t.
+   const lastHigh = cycles[cycles.length - 1]!.find(g => g.id === highId)?.count ?? 0;
+   if (lastHigh >= 2) carry = 2;
+  }
+  if (carry === 0 && highLeft > 27) {
+   const firstTake = Math.min(27, highLeft);
+   highLeft -= firstTake;
+   cycles.push([{ id: highId, count: firstTake }]);
+   carry = highLeft > 0 ? 2 : 0;
+  }
+  while (highLeft > 0) {
+   const cap = carry > 0 ? 27 - carry : 27;
+   const take = Math.min(cap, highLeft);
+   highLeft -= take;
+   cycles.push([{ id: highId, count: take + carry }]);
+  }
+ } else {
+  for (const cyc of packCwCycles([{ id: highId, count: highLeft }, { id: ITEM_IDS.uncut_emerald, count: emerRem }], 27)) {
+   cycles.push([...cyc]);
+  }
+ }
 
  for (let idx = 0; idx < cycles.length && skillLevel(spec, 'Crafting') < target; idx++) {
   const isFinal = idx === cycles.length - 1;
@@ -989,9 +1026,9 @@ function resolveCraftingMode(opts?: { mode?: CraftingMode; cw?: boolean; cwDiamo
 }
 
 function resolveCwPlan(mode: CraftingMode | undefined): { batch: CraftingBatchPlan; bill: readonly SupplyEntry[] } {
- if (mode === 'cw-diamond') return { batch: CRAFTING_CW_DIAMOND_BATCH, bill: CRAFTING_CW_DIAMOND_SUPPLY_BILL };
- if (mode === 'cw-hybrid') return { batch: CRAFTING_CW_HYBRID_BATCH, bill: CRAFTING_CW_HYBRID_SUPPLY_BILL };
- return { batch: CRAFTING_CW_BATCH, bill: CRAFTING_CW_SUPPLY_BILL };
+ if (mode === 'cw-diamond') return { batch: CRAFTING_CW_DIAMOND_NOTED_BATCH, bill: CRAFTING_CW_DIAMOND_SUPPLY_BILL };
+ if (mode === 'cw-hybrid') return { batch: CRAFTING_CW_HYBRID_NOTED_BATCH, bill: CRAFTING_CW_HYBRID_SUPPLY_BILL };
+ return { batch: CRAFTING_CW_NOTED_BATCH, bill: CRAFTING_CW_SUPPLY_BILL };
 }
 
 function resolveMultiPlan(
@@ -1038,7 +1075,7 @@ export async function runCraftingSpecialist(
      fastInProcessBatchTrade(spec, helpers[0]!, {
       giveIds: cwPlan.batch.give.map(g => g.id),
       returnIds: [],
-      dropUnwanted: new Set<number>(),
+      dropUnwanted: cwPlan.batch.give.length > 10 ? new Set<number>() : undefined,
       deadlineTick: deadline,
      }),
     false,
@@ -1098,12 +1135,19 @@ export async function runCraftingExternal(
  const start = spec.tick();
  const deadline = start + opts.cap;
  if (cwForced) {
-  return executeCraftingCastleWars(spec, target, start, deadline, async () => {
-   await fastTradeExternalReceive(spec, supplierNames, {
-    acceptOffer: offer => CW_ACCEPTABLE_BATCHES.some(b => b.give.every(g => countItem(offer, g.id) >= g.count)),
-    deadlineTick: deadline,
-   });
-  });
+  return executeCraftingCastleWars(
+   spec,
+   target,
+   start,
+   deadline,
+   async () => {
+    await fastTradeExternalReceive(spec, supplierNames, {
+     acceptOffer: offer => CW_ACCEPTABLE_BATCHES.some(b => b.give.every(g => countItem(offer, g.id) >= g.count)),
+     deadlineTick: deadline,
+    });
+   },
+   false,
+  );
  }
  await skipTutorial2Ticks(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
