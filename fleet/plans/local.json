@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795639135969,
+ "at": 1795639165585,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,34 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
-    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
-   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -260,6 +232,19 @@
   },
   {
    "account": "Pocketrocket",
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dwarfcannon",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
    "script": "scripts/generated/quest-ikov.ts",
    "args": [],
    "env": {
@@ -269,19 +254,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:ikov",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
@@ -317,16 +289,16 @@
    "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/generated/quest-junglepotion.ts --",
-    "scripts/aio-skiller.ts TARGET_LEVEL=32 TRAIN_SKILL=Agility -- agility order gnome 32",
-    "scripts/generated/quest-zombiequeen.ts DEMAND_ID=goal:quest_board:zombiequeen BATCH_UNITS=1 --"
+    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
+    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:zombiequeen",
+   "goal": "goal:quest_board:itwatchtower",
    "role": "army"
   },
   {
@@ -379,15 +351,15 @@
    "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/generated/quest-merlin.ts --",
-    "scripts/generated/quest-grail.ts DEMAND_ID=goal:quest_board:grail BATCH_UNITS=1 --"
+    "scripts/aio-skiller.ts TARGET_LEVEL=32 TRAIN_SKILL=Agility -- agility order gnome 32",
+    "scripts/generated/quest-zombiequeen.ts DEMAND_ID=goal:quest_board:zombiequeen BATCH_UNITS=1 --"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:grail",
+   "goal": "goal:quest_board:zombiequeen",
    "role": "army"
   },
   {
@@ -435,10 +407,12 @@
   "hocuspokeus",
   "mineyourbiz",
   "mmthv2350",
+  "moneyshot",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "thefullmonty",
+  "undermykilt",
   "yewfirst"
  ],
  "builds": {
