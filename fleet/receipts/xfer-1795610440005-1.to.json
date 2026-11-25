@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795610440005-1",
  "account": "Moneyshot",
  "partner": "OreElse",
@@ -12,6 +12,12 @@
  "claim": "cf8dbe09-8d3c-44fb-9209-02e51a69a73e",
  "count": 0,
  "ok": false,
- "at": 1795611047717,
- "detail": "trade claimed"
+ "at": 1795611249277,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795611047726-0000028692-0000000001",
+  "at": 1795611249265,
+  "sha256": "586527d94f1274788bccdddb7fa1d758d44fa1e4f0d121f31173b29028df6425"
+ },
+ "screen": false
 }
