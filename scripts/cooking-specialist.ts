@@ -148,14 +148,18 @@ if (import.meta.main) {
         const inv = main.sdk.getInventory();
         const bases = inv.filter(i => i.id === OBJ_UNFINISHED_FRUIT_BLAST).map(i => i.slot);
         const slices = inv.filter(i => i.id === OBJ_LEMON_SLICES).map(i => i.slot);
-        const mixCount = Math.min(COOKING_SPECIALIST_COCKTAILS, bases.length, slices.length);
-        if (mixCount > 0) {
-            const mixActs: Promise<unknown>[] = [];
-            for (let i = 0; i < mixCount; i++) {
-                mixActs.push(main.direct({ type: 'useItemOnItem', sourceSlot: slices[i]!, targetSlot: bases[i]!, reason: 'SDK' }));
+        let mixCount = 0;
+        const already99 = (main.sdk.getSkill('Cooking')?.baseLevel ?? 1) >= 99 || (main.sdk.getSkillXp('Cooking') ?? 0) >= xpForLevel(99);
+        if (!already99) {
+            mixCount = Math.min(COOKING_SPECIALIST_COCKTAILS, bases.length, slices.length);
+            if (mixCount > 0) {
+                const mixActs: Promise<unknown>[] = [];
+                for (let i = 0; i < mixCount; i++) {
+                    mixActs.push(main.direct({ type: 'useItemOnItem', sourceSlot: slices[i]!, targetSlot: bases[i]!, reason: 'SDK' }));
+                }
+                await Promise.all(mixActs);
+                await waitTicks(main, 1);
             }
-            await Promise.all(mixActs);
-            await waitTicks(main, 1);
         }
 
         while (!isStopped()) {
