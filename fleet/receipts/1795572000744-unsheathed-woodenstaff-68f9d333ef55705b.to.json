@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795572000744-unsheathed-woodenstaff-68f9d333ef55705b",
  "account": "Woodenstaff",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Amulet of strength",
  "requested": 1,
  "claim": "c319922b-dfad-4f88-aa32-1ba22ed72c5e",
- "count": 0,
- "ok": false,
- "at": 1795572117389,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795572127810,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795572127089
+ },
+ "logout": {
+  "attemptId": "1795572117399-0000029332-0000000001",
+  "at": 1795572127798,
+  "sha256": "64a495d06253872543bb9d44204e90dbe6876b2402aa9ffa8f9e3934da24156f"
+ },
+ "screen": true
 }
