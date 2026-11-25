@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795599979075-2",
  "account": "TrouserSnake",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 1,
  "claim": "fe08b67e-1ece-4bd1-8175-826eff7fbf57",
- "count": 0,
- "ok": false,
- "at": 1795600641127,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795600684915,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795600684226
+ },
+ "logout": {
+  "attemptId": "1795600641135-0000029144-0000000001",
+  "at": 1795600684899,
+  "sha256": "86579eca3381de7210292154ac2362b074b2f89571c2c62be572dfca8d814acc"
+ },
+ "screen": true
 }
