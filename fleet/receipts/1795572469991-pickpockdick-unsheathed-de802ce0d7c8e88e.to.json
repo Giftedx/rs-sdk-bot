@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795572469991-pickpockdick-unsheathed-de802ce0d7c8e88e",
  "account": "Unsheathed",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 70,
  "claim": "57636f08-2ca1-46d2-b5aa-17b8fbba3b3c",
- "count": 0,
- "ok": false,
- "at": 1795572665472,
- "detail": "trade claimed"
+ "count": 70,
+ "ok": true,
+ "at": 1795573216560,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 70
+ },
+ "bank": {
+  "count": 70,
+  "at": 1795573215871
+ },
+ "logout": {
+  "attemptId": "1795572665482-0000011324-0000000001",
+  "at": 1795573216550,
+  "sha256": "a2db714a0f1ca40a4a55fc23d0ba20204c1627e00e5246bf1d7fe935f2132820"
+ },
+ "screen": true
 }

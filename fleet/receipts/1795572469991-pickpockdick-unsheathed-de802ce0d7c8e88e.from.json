@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795572469991-pickpockdick-unsheathed-de802ce0d7c8e88e",
+ "account": "PickpockDick",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 70,
+ "claim": "79511980-1980-4613-acc8-8d905affeba5",
+ "count": 70,
+ "ok": true,
+ "at": 1795573214983,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 70,
+  "after": 0
+ },
+ "bank": {
+  "count": 70,
+  "at": 1795573206646
+ },
+ "logout": {
+  "attemptId": "1795573198036-0000026108-0000000001",
+  "at": 1795573214970,
+  "sha256": "074c1f99f2554fb4e23d0be65483b7693a8ab1e5386dcef5052b06adac934f6f"
+ },
+ "screen": true
+}

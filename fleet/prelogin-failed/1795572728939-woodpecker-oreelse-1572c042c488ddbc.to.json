@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795572728939-woodpecker-oreelse-1572c042c488ddbc",
+ "role": "to",
+ "account": "OreElse",
+ "partner": "Woodpecker",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795573206643,
+ "detail": "Error: account logout is not confirmed: OreElse ended stopped"
+}
