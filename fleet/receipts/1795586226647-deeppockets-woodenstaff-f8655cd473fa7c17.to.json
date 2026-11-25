@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795586226647-deeppockets-woodenstaff-f8655cd473fa7c17",
+ "account": "Woodenstaff",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "a2017ff4-5ab6-4205-bbb8-c0591feeae30",
+ "count": 1,
+ "ok": true,
+ "at": 1795586850844,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795586850114
+ },
+ "logout": {
+  "attemptId": "1795586831904-0000025436-0000000001",
+  "at": 1795586850815,
+  "sha256": "87e4d5808c63d0af3d3eefdd525d5d71f955b8c41763da95c3d2b544d8210bc8"
+ },
+ "screen": true
+}

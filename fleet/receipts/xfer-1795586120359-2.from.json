@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795586120359-2",
+ "account": "Knightstick",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "d9f0130a-4362-4917-b477-0a0f33d1ff8f",
+ "count": 0,
+ "ok": false,
+ "at": 1795586835607,
+ "detail": "trade claimed"
+}

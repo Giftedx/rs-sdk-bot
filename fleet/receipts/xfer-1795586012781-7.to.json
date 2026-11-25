@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795586012781-7",
+ "account": "Moneyshot",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune pickaxe",
+ "requested": 1,
+ "claim": "3a8d6d1d-56ce-4735-84fe-77b60c0d351a",
+ "count": 1,
+ "ok": true,
+ "at": 1795586785264,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795586784520
+ },
+ "logout": {
+  "attemptId": "1795586768177-0000006684-0000000001",
+  "at": 1795586785249,
+  "sha256": "59ea99ece338fd43cb6b8638d9077b36fc8e51ddd28410b0197795fa340ec730"
+ },
+ "screen": true
+}

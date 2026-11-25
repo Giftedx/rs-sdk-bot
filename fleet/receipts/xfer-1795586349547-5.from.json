@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795586349547-5",
+ "account": "Kiltlifter",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "7b3ba446-9e3e-48bd-925a-e38d04b5e31a",
+ "count": 0,
+ "ok": false,
+ "at": 1795586795344,
+ "detail": "trade claimed"
+}

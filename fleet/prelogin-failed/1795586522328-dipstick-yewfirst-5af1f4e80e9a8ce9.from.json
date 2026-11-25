@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795586522328-dipstick-yewfirst-5af1f4e80e9a8ce9",
+ "role": "from",
+ "account": "Dipstick",
+ "partner": "YewFirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795586737230,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}

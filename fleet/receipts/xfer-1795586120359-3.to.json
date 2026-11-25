@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795586120359-3",
+ "account": "SporranDip",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "cf1f0d24-c927-4bf3-84de-9cc8cfe48439",
+ "count": 2,
+ "ok": true,
+ "at": 1795586716857,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795586716086
+ },
+ "logout": {
+  "attemptId": "1795586697314-0000008212-0000000001",
+  "at": 1795586716842,
+  "sha256": "619003a2ede9442aac11d92af36114de51d8691e268a45768e3a6f778457f87a"
+ },
+ "screen": true
+}

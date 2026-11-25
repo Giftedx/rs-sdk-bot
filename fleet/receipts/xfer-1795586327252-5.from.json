@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795586327252-5",
+ "account": "NabTheKnob",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 23,
+ "claim": "a8a9f71a-2826-4d4d-9f4a-7d342eee5c30",
+ "count": 0,
+ "ok": false,
+ "at": 1795586755153,
+ "detail": "trade claimed"
+}

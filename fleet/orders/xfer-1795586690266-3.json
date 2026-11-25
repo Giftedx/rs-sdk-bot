@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795586690266-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "Fatstack",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 205,
+  "start": 1795586690266,
+  "end": 1795587590266,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

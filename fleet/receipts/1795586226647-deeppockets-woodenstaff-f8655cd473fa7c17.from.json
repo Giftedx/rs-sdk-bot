@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795586226647-deeppockets-woodenstaff-f8655cd473fa7c17",
  "account": "Deeppockets",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "38803796-c3cf-4745-93ca-9053124bbfae",
- "count": 0,
- "ok": false,
- "at": 1795586338374,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795586849262,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795586348531
+ },
+ "logout": {
+  "attemptId": "1795586338383-0000023996-0000000001",
+  "at": 1795586849248,
+  "sha256": "f92173aae4bac9a60577fdab1b234cd4823632eda79df4a31a44d0259251dcd9"
+ },
+ "screen": true
 }
