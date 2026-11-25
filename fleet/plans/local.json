@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795622617764,
+ "at": 1795622635725,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "249",
+    "MAX_ITEMS": "220",
     "COIN_RESERVE": "1000",
-    "FLOAT": "51800",
+    "FLOAT": "46000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "249"
+    "BATCH_UNITS": "220"
    },
    "enabled": true,
    "repeat": false,
@@ -180,6 +180,27 @@
    "role": "helper"
   },
   {
+   "account": "SporranDip",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1617-11-p28750",
+    "ITEM_ID": "1617",
+    "QUANTITY": "11",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "28750",
+    "DEMAND_ID": "campaign:haggis:item:1617",
+    "BATCH_UNITS": "11"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1617",
+   "role": "army"
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -202,6 +223,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "214",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "44800",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "214"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -228,31 +274,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "helper"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "214",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "44800",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "214"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:44",
-   "role": "army"
   },
   {
    "account": "Shaftmaker",
@@ -360,24 +381,6 @@
    "role": "army"
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "imp"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1470",
-    "BATCH_UNITS": "13"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "army",
-   "resources": [
-    "ardougne-imps"
-   ]
-  },
-  {
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
@@ -399,12 +402,12 @@
     "imp"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1472",
+    "DEMAND_ID": "campaign:haggis:item:1470",
     "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1472",
+   "goal": "campaign:haggis:item:1470",
    "role": "army",
    "resources": [
     "ardougne-imps"
@@ -453,7 +456,7 @@
   "mmthv2350",
   "pocketpython",
   "pocketrocket",
-  "sporrandip",
+  "sausagefest",
   "swordinhand",
   "undermykilt",
   "yewfirst"

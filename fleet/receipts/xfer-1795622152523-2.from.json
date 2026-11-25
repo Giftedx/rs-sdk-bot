@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795622152523-2",
  "account": "Billionaire",
  "partner": "SporranDip",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "bbd947a9-3ae4-40f4-b22f-cfbf07d756ee",
- "count": 0,
- "ok": false,
- "at": 1795622600215,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795622625958,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1540,
+  "after": 1480
+ },
+ "logout": {
+  "attemptId": "1795622600224-0000021072-0000000001",
+  "at": 1795622625946,
+  "sha256": "fb9645b4e682dd412c8dd5162ed155e9f4f1cb459877c7fb61f634a2122b0946"
+ },
+ "screen": true
 }
