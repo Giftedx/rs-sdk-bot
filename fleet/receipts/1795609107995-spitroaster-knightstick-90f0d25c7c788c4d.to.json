@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795609107995-spitroaster-knightstick-90f0d25c7c788c4d",
+ "account": "Knightstick",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "dcf28112-ca77-49be-95ee-b12b936daf25",
+ "count": 0,
+ "ok": false,
+ "at": 1795609721603,
+ "detail": "trade claimed"
+}
