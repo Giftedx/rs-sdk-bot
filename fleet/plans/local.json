@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795630461211,
+ "at": 1795630477318,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -150,6 +150,21 @@
    ]
   },
   {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/generated/quest-barcrawl.ts DEMAND_ID=goal:quest_board:barcrawl BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -294,15 +309,15 @@
   },
   {
    "account": "Packhorse",
-   "script": "scripts/generated/quest-barcrawl.ts",
+   "script": "scripts/generated/quest-ball.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "DEMAND_ID": "goal:quest_board:ball",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
+   "goal": "goal:quest_board:ball",
    "role": "helper"
   },
   {
@@ -382,19 +397,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Abracadickra",
-   "role": "auto"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/generated/quest-ball.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ball",
    "role": "auto"
   }
  ],
