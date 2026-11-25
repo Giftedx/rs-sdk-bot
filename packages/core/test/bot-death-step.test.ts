@@ -35,7 +35,7 @@ test('after a death that the caller handles, a stop file, a lost lease and a sta
     expect(afterDeath({})).toBeNull();
     expect(afterDeath({ stopFile: () => true })).toBe('stop file');
     expect(afterDeath({ leaseLost: () => true })).toBe('fleet controller lease unavailable');
-    expect(afterDeath({ stopTicks: 50, stalled: () => true })).toBe('no progress: 3000 ticks without xp, items, dialog or a journey');
+    expect(afterDeath({ stopTicks: 50, stalled: () => true })).toBe('no progress: 3000 ticks without xp, items, a new dialog or a journey');
     // The checks run every 25 and 50 ticks only; a death is a stop in the default case.
     expect(afterDeath({ stopTicks: 24, stopFile: () => true })).toBeNull();
     expect(afterDeath({ stopTicks: 25, stalled: () => true })).toBeNull();

@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { classifyTick, idleWhy, summarize, startLedger, formatLedger, stalled, type TickRow, type TickKind } from '../src/ledger';
+import { classifyTick, idleWhy, summarize, startLedger, formatLedger, stalled, DIALOG_TICKS, type TickRow, type TickKind } from '../src/ledger';
 
 // The summary as it was computed over every row: the reference for the counters.
 function summarizeAllRows(rows: TickRow[], xpGain = 0) {
@@ -153,7 +153,7 @@ test('startLedger copies reused inventory objects and reports inventory separate
     expect(formatLedger(result)).toContain('inventory=1');
 });
 
-test('a session is stalled after a window with no xp, item change or dialog', async () => {
+test('a session is stalled after a window with no xp, item change or new dialog', async () => {
     const { stalled } = await import('../src/ledger');
     const row = (kind: any, tick: number) => ({ tick, kind, at: '0,0' });
     const walking = Array.from({ length: 900 }, (_, i) => row(i % 2 ? 'move' : 'idle', i));
@@ -167,4 +167,72 @@ test('a session is stalled after a window with no xp, item change or dialog', as
     expect(stalled(journey, 900)).toBe(false);
     const pacing = Array.from({ length: 900 }, (_, i) => ({ tick: i, kind: 'move' as any, at: `${3013 + (i % 19)},3207` }));
     expect(stalled(pacing, 900)).toBe(true);
+});
+
+// A ledger on a fake session. `at(t)` gives the dialog, xp, x and inventory of tick t.
+function dialogRun(ticks: number, at: (t: number) => { dialog?: any; xp?: number; x?: number; inv?: number }, window = 900) {
+    let t = 0;
+    const cbs: (() => void)[] = [];
+    const stateOf = (tick: number) => {
+        const o = at(tick);
+        return {
+            tick, player: { worldX: 2817 + (o.x ?? 0), worldZ: 3443, level: 0, animId: -1, combat: { inCombat: false, lastDamageTick: -1 } },
+            skills: [{ name: 'Cooking', experience: o.xp ?? 0 }], inventory: [{ id: 379, count: o.inv ?? 27 }],
+            dialog: o.dialog ?? { isOpen: false, options: [], isWaiting: false },
+        };
+    };
+    let state: any = stateOf(0);
+    const led = startLedger({ sdk: { getState: () => state }, onTick: cb => { cbs.push(cb); return () => {}; }, tick: () => t }, () => null, window);
+    const stalls: boolean[] = [];
+    for (let i = 0; i < ticks; i++) {
+        t++;
+        state = stateOf(t);
+        for (const cb of cbs) cb();
+        stalls.push(stalled(led.rows, window));
+    }
+    return { rows: led.rows, stalls };
+}
+// The server message box that a cook step at Cooking 30 gets every 10 ticks when it uses lobsters (level 40) on a
+// range: the same words each time, with a new pageId each time (the MineYourBiz aio-skiller tick record).
+const levelBox = (t: number) => ({
+    isOpen: true, isWaiting: false, pageId: `s:${Math.floor(t / 10)}`,
+    options: [{ index: 1, text: 'Click here to continue', componentId: 358, buttonType: 6 }],
+    allComponents: [{ id: 357, text: 'You need a Cooking level of 40 to cook lobsters.' }],
+});
+// One page of an NPC talk: new words every 3 ticks.
+const talkPage = (t: number) => ({
+    isOpen: true, isWaiting: false, pageId: `q:${Math.floor(t / 3)}`,
+    options: [{ index: 1, text: 'Click here to continue' }],
+    allComponents: [{ id: 241, text: `Line ${Math.floor(t / 3)} of the quest talk.` }],
+});
+
+test('a dialog that shows the same words for the whole window is a stall, even with a new pageId on each send', () => {
+    const { rows, stalls } = dialogRun(1300, t => ({ dialog: levelBox(t) }));
+    expect(rows.every(r => r.kind === 'dialog')).toBe(true);
+    // The first DIALOG_TICKS ticks of the same words count as progress, so the stall comes DIALOG_TICKS + 900 ticks in.
+    expect(DIALOG_TICKS).toBe(300);
+    expect(stalls.indexOf(true)).toBe(DIALOG_TICKS + 900 - 1);
+    expect(stalls.slice(DIALOG_TICKS + 900 - 1).every(Boolean)).toBe(true);
+    // A dialog that closes for a tick and opens again with the same words keeps its count.
+    const blink = dialogRun(1300, t => ({ dialog: t % 10 === 0 ? undefined : levelBox(t) }));
+    expect(blink.stalls.indexOf(true)).toBeGreaterThan(0);
+    expect(blink.stalls.at(-1)).toBe(true);
+});
+
+test('the same dialog beside xp, an item change or a long walk is not a stall', () => {
+    expect(dialogRun(1300, t => ({ dialog: levelBox(t), xp: Math.floor(t / 400) * 30 })).stalls.some(Boolean)).toBe(false);
+    expect(dialogRun(1300, t => ({ dialog: levelBox(t), inv: 27 - Math.floor(t / 400) })).stalls.some(Boolean)).toBe(false);
+    // A walk of FAR_WALK tiles or more inside each window, one tile every 30 ticks.
+    expect(dialogRun(1300, t => ({ dialog: levelBox(t), x: Math.floor(t / 30) })).stalls.some(Boolean)).toBe(false);
+});
+
+test('a short dialog and a long talk with new words on each page are not a stall', () => {
+    // DIALOG_TICKS ticks of the same words, then 600 ticks of nothing: the dialog ticks still count.
+    const short = dialogRun(900, t => ({ dialog: t <= DIALOG_TICKS ? levelBox(t) : undefined }));
+    expect(short.stalls.some(Boolean)).toBe(false);
+    // A quest talk longer than the window: each page has new words.
+    expect(dialogRun(2000, t => ({ dialog: talkPage(t) })).stalls.some(Boolean)).toBe(false);
+    // Hand-built rows with no dialogTicks count as a new dialog.
+    const row = (kind: any, tick: number) => ({ tick, kind, at: '0,0' });
+    expect(stalled(Array.from({ length: 900 }, (_, i) => row('dialog', i)), 900)).toBe(false);
 });
