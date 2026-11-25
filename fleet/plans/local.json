@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795635246559,
+ "at": 1795635322161,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -339,39 +339,6 @@
    "repeat": false,
    "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/generated/quest-merlin.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:merlin",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:merlin",
-   "role": "helper"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:FishAndChips",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:FishAndChips",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
   }
  ],
  "army": [

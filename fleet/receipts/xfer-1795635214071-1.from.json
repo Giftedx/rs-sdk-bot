@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795635214071-1",
+ "account": "Fatstack",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 2,
+ "claim": "b3bbbeb8-c3d4-4156-bded-34a87d479406",
+ "count": 0,
+ "ok": false,
+ "at": 1795635256112,
+ "detail": "trade claimed"
+}

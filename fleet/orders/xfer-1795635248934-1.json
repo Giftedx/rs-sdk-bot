@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795635248934-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Moneyshot",
+  "item": "Rune pickaxe",
+  "count": 1,
+  "itemId": 1275,
+  "start": 1795635248934,
+  "end": 1795636148934,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
