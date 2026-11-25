@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795581453202-knightrider-yewfirst-b9ff5d8a1a3139bf",
+ "account": "KnightRider",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 745,
+ "claim": "3ac90f77-b5e4-4316-8a9d-ecc5227a3d50",
+ "count": 0,
+ "ok": false,
+ "at": 1795581529443,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Adamant arrowtips",
+   "requested": 495,
+   "count": 0
+  },
+  {
+   "item": "Coins",
+   "requested": 100000,
+   "count": 0
+  }
+ ]
+}
