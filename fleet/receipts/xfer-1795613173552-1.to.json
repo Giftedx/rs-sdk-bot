@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795613173552-1",
+ "account": "mmsmk1232",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "9cf3a505-e2bb-4866-a231-362fe15a1fa3",
+ "count": 0,
+ "ok": false,
+ "at": 1795613427547,
+ "detail": "trade claimed"
+}
