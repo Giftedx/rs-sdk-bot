@@ -12,21 +12,19 @@ import {
     settleHelper,
     rubTeleport,
     walkWaypointsSafe,
-    sailBrimhavenToArdougne,
     slotOfId,
-    itemQty,
-    OBJ_COINS,
-    OBJ_GLORY_4,
+    OBJ_DUELING_8,
+    RING_OF_DUELING_IDS,
     OBJ_KNIFE,
     OBJ_LOGS,
     SKILL_MULTI3_MAKE1_A,
 } from './gathering-specialist-lib';
 
-export { OBJ_KNIFE, OBJ_LOGS, OBJ_COINS };
+export { OBJ_KNIFE, OBJ_LOGS };
 export const OBJ_RUNE_AXE = 1359;
 export const OBJ_OAK_LOGS = 1521;
 export const OBJ_WILLOW_LOGS = 1519;
-export const KHAZARD_WILLOW_MIN_LVL = 73;
+export const KHAZARD_WILLOW_MIN_LVL = 30;
 export const OBJ_SHORTBOW = 841;
 export const OBJ_MONK_ROBE_BOTTOM = 542;
 export const OBJ_MONK_ROBE_TOP = 544;
@@ -38,34 +36,30 @@ export const OBJ_AIR_RUNE = 556;
 export const OBJ_MIND_RUNE = 558;
 export const PROTECT_FROM_MELEE_PRAYER = 14;
 
-export const WOODCUTTING_GLORY_IDS = [OBJ_GLORY_4, 1710, 1708, 1706] as const;
-
 // 25 items fit after 4-tick tutorial junk drop (keeping Shortbow + 25 supply slots = 26 occupied slots).
-// 11 Dragon bones (22t -> Prayer 43) + Monk's robes (+11) + Holy symbol (+8 = +19 Prayer bonus) + 30 coins (Brimhaven->Ardy ship to Khazard Willows).
+// 11 Dragon bones (22t -> Prayer 43) + Monk's robes (+11) + Holy symbol (+8 = +19 Prayer bonus) + Ring of duelling(8) (Castle Wars -> Khazard Willows).
 export const WOODCUTTING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_AXE]: 1,
     [OBJ_KNIFE]: 1,
     [OBJ_LOGS]: 1,
-    [OBJ_GLORY_4]: 1,
+    [OBJ_DUELING_8]: 1,
     [OBJ_MONK_ROBE_BOTTOM]: 1,
     [OBJ_MONK_ROBE_TOP]: 1,
     [OBJ_HOLY_SYMBOL]: 1,
-    [OBJ_COINS]: 30,
     [OBJ_AIR_RUNE]: 150,
     [OBJ_MIND_RUNE]: 150,
     [OBJ_DRAGON_BONES]: 11,
-    [OBJ_PRAYER_POTION_4]: 4,
+    [OBJ_PRAYER_POTION_4]: 5,
 };
 
-// Keep Rune axe, Knife, Logs (normal for 3t knife-reset), Glory, Shortbow, Monk robes, Holy symbol, coins, runes, bones, prayer pots.
+// Keep Rune axe, Knife, Logs (normal for 3t knife-reset), Ring of duelling, Shortbow, Monk robes, Holy symbol, runes, bones, prayer pots.
 const WC_KEEP_IDS = new Set<number>([
     OBJ_RUNE_AXE,
     OBJ_KNIFE,
     OBJ_LOGS,
     OBJ_OAK_LOGS,
     OBJ_WILLOW_LOGS,
-    OBJ_COINS,
-    ...WOODCUTTING_GLORY_IDS,
+    ...RING_OF_DUELING_IDS,
     OBJ_SHORTBOW,
     OBJ_MONK_ROBE_BOTTOM,
     OBJ_MONK_ROBE_TOP,
@@ -121,9 +115,6 @@ export function planWoodcuttingTotals(goalXp = xpForLevel(99)): {
 const WIND_STRIKE = componentId('magic:wind_strike');
 const AUTO_RETALIATE_ON_COMP = 150;
 
-const inDraynorJail = (p: { level: number; worldX: number; worldZ: number }): boolean =>
-    p.level === 0 && p.worldX >= 3075 && p.worldX <= 3135 && p.worldZ >= 3230 && p.worldZ <= 3260;
-
 type NearbyLoc = NonNullable<NonNullable<ReturnType<Session['sdk']['getState']>>['nearbyLocs']>[number];
 
 function treeSizeForLoc(locName: string): number {
@@ -166,14 +157,13 @@ function findBestTree(
                 ) && l.reachable !== false;
             }
             if (!wantOak) {
-                // Only chop normal tree2@(3115,3247) right beside (3117,3246..3247) so all courtyard guards stay locked on.
-                return l.x === 3115 && l.z === 3247 && l.reachable !== false;
+                return l.x >= 3194 && l.x <= 3206 && l.z >= 3236 && l.z <= 3250 && l.reachable !== false;
             }
-            // 3 Draynor Jail multiway courtyard oaks beside (3117,3246); keep all rolls inside the safe guard courtyard.
+            // Two adjacent Oaks west of Lumbridge (3203,3240 & 3203,3246) for fast 15->30 before teleporting to Khazard.
             return (
-                (l.x === 3115 && l.z === 3243)
-                || (l.x === 3118 && l.z === 3245)
-                || (l.x === 3115 && l.z === 3250)
+                (l.x === 3203 && l.z === 3240)
+                || (l.x === 3203 && l.z === 3246)
+                || (l.x === 3192 && l.z === 3213)
             ) && l.reachable !== false;
         });
     if (activeTree) {
@@ -182,7 +172,7 @@ function findBestTree(
     }
     const oakTier = (l: NearbyLoc): number => {
         if (inKhazard) return ((l.x === 2606 && l.z === 3059) || (l.x === 2607 && l.z === 3057)) ? 0 : 1;
-        if ((l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245)) return 0;
+        if ((l.x === 3203 && l.z === 3240) || (l.x === 3203 && l.z === 3246)) return 0;
         return 1;
     };
     return cands.sort((a, b) => {
@@ -207,8 +197,8 @@ function findReachableTreeStandTile(
     inKhazard = false,
 ): { x: number; z: number } | undefined {
     const p = s.sdk.getState()?.player;
-    const px = p?.worldX ?? (inKhazard ? KHAZARD_WILLOW_SPOT.x : DRAYNOR_JAIL_SPOT.x);
-    const pz = p?.worldZ ?? (inKhazard ? KHAZARD_WILLOW_SPOT.z : DRAYNOR_JAIL_SPOT.z);
+    const px = p?.worldX ?? (inKhazard ? KHAZARD_WILLOW_SPOT.x : 3201);
+    const pz = p?.worldZ ?? (inKhazard ? KHAZARD_WILLOW_SPOT.z : 3243);
     const perimeter: { x: number; z: number }[] = [];
     for (let i = 0; i < size; i++) {
         perimeter.push(
@@ -218,12 +208,10 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = inKhazard
-        ? perimeter.filter(t => t.x === 2606 && t.z === 3058)
-        : perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
+    const filtered = inKhazard ? perimeter.filter(t => t.x === 2606 && t.z === 3058) : perimeter;
     const pool = filtered.length > 0 ? filtered : perimeter;
-    const hx = inKhazard ? KHAZARD_WILLOW_SPOT.x : 3117;
-    const hz = inKhazard ? KHAZARD_WILLOW_SPOT.z : 3246;
+    const hx = inKhazard ? KHAZARD_WILLOW_SPOT.x : px;
+    const hz = inKhazard ? KHAZARD_WILLOW_SPOT.z : pz;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
@@ -417,7 +405,6 @@ if (import.meta.main) {
             WOODCUTTING_SPECIALIST_SUPPLIES,
             isStopped,
             arm,
-            { [OBJ_GLORY_4]: WOODCUTTING_GLORY_IDS },
         );
         const helperDone = settleHelper(helper).then(() => { helperSettled = true; }).catch(() => {});
 
@@ -428,18 +415,7 @@ if (import.meta.main) {
             OBJ_SHORTBOW,
             OBJ_HOLY_SYMBOL,
         ]);
-        await rubTeleport(main, WOODCUTTING_GLORY_IDS, /draynor/i, inDraynorJail, isStopped);
-        if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
-            // Double-toggle in one tick yields PrayerGuard (guard.ts:183) so it never resends interactNpc(jailGuard)
-            // during 3t knife or flinch gaps; Protect from Melee stays ON and is 1t-flicked directly in the loop.
-            const wasOn = isProtectMeleeOn(main.sdk.getState());
-            await Promise.all([
-                main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
-                main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
-                ...(!wasOn ? [main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' })] : []),
-            ]);
-        }
-        await walkWaypointsSafe(main, [[3117, 3246, 1]], isStopped);
+        await walkWaypointsSafe(main, [[3201, 3243, 2]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
@@ -472,7 +448,7 @@ if (import.meta.main) {
             nowTick: number,
             minGap = 2,
         ): Promise<unknown>[] => {
-            if ((main.sdk.getSkill('Prayer')?.level ?? 0) < 1 || (main.sdk.getSkill('Prayer')?.baseLevel ?? 1) < 43) {
+            if (!inKhazard || (main.sdk.getSkill('Prayer')?.level ?? 0) < 1 || (main.sdk.getSkill('Prayer')?.baseLevel ?? 1) < 43) {
                 return [];
             }
             if (!isProtectMeleeOn(stNow)) {
@@ -538,32 +514,35 @@ if (import.meta.main) {
                 await main.direct({ type: 'closeModal', reason: 'SDK' });
             }
 
-            // Transition at WC >= KHAZARD_WILLOW_MIN_LVL (73): Glory Karamja -> Brimhaven ship -> Khazard Shipyard 0-move Willows.
+            // Transition at WC >= KHAZARD_WILLOW_MIN_LVL (30): Ring of duelling Castle Wars -> Khazard Shipyard 0-move Willows.
             if (!inKhazard && wcLvl >= KHAZARD_WILLOW_MIN_LVL && slotOfId(main, OBJ_LOGS) !== undefined) {
-                if (isProtectMeleeOn(main.sdk.getState())) {
-                    await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
-                }
                 await rubTeleport(
                     main,
-                    WOODCUTTING_GLORY_IDS,
-                    /karamja/i,
-                    p => p.level === 0 && p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
+                    RING_OF_DUELING_IDS,
+                    /castle wars/i,
+                    p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
                     isStopped,
                 );
-                await walkWaypointsSafe(main, [[2890, 3175, 4], [2850, 3175, 4], [2818, 3188, 4], [2788, 3212, 4], [2774, 3228, 3]], isStopped);
-                await sailBrimhavenToArdougne(main, isStopped);
-                await walkWaypointsSafe(
-                    main,
-                    [[2673, 3275, 4], [2657, 3273, 4], [2639, 3263, 4], [2638, 3231, 4], [2633, 3195, 4], [2625, 3171, 4], [2624, 3102, 4], [2606, 3058, 1]],
-                    isStopped,
-                );
+                await walkWaypointsSafe(main, [[2470, 3100, 4], [2545, 3115, 4], [2585, 3115, 4]], isStopped);
                 const prePts = main.sdk.getSkill('Prayer')?.level ?? 0;
-                if (prePts <= 15) {
+                if (prePts <= 20) {
                     const potAct = tryDrinkPrayerPotion(main, 99);
                     if (potAct) await potAct;
                 }
+                if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
+                    // Double-toggle yields PrayerGuard; wait 1 tick so isProtectMeleeOn(st) reflects ON before flicking.
+                    const wasOn = isProtectMeleeOn(main.sdk.getState());
+                    await Promise.all([
+                        main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                        main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                        ...(!wasOn ? [main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' })] : []),
+                    ]);
+                    await waitTicks(main, 1);
+                }
+                await walkWaypointsSafe(main, [[2606, 3058, 1]], isStopped);
                 if (!isProtectMeleeOn(main.sdk.getState()) && (main.sdk.getSkill('Prayer')?.level ?? 0) >= 1) {
                     await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
+                    await waitTicks(main, 1);
                 }
                 lastFlickTick = main.tick();
                 npcLastHit.clear();
@@ -592,8 +571,8 @@ if (import.meta.main) {
 
             const wantOak = wcLvl >= 15 && !inKhazard;
             const prayPts = main.sdk.getSkill('Prayer')?.level ?? 0;
-            const outOfPrayer = prayPts === 0 && findPrayerPotionSlot(main) === undefined;
-            if (!outOfPrayer && !isProtectMeleeOn(st) && prayPts === 0 && (main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
+            const outOfPrayer = !inKhazard || (prayPts === 0 && findPrayerPotionSlot(main) === undefined);
+            if (inKhazard && !outOfPrayer && !isProtectMeleeOn(st) && prayPts === 0 && (main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
                 const potAct = tryDrinkPrayerPotion(main, 99);
                 if (potAct) {
                     await potAct;
@@ -604,16 +583,16 @@ if (import.meta.main) {
             }
 
             // playerhit_n_retaliate sets %action_delay = map_clock + 1 when busy2 = false and %action_delay < map_clock.
-            const validFlinchHit = !outOfPrayer && hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
-            if (!outOfPrayer && hitTick === now && !validFlinchHit) {
+            const validFlinchHit = inKhazard && !outOfPrayer && hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
+            if (inKhazard && !outOfPrayer && hitTick === now && !validFlinchHit) {
                 if (now < actionDelayApprox) hitDelayBlock++;
                 else if (clearSentForTick !== now) hitNoClear++;
             }
-            const gobs = !outOfPrayer && (wantOak || inKhazard) ? countAttackingGoblins(main, inKhazard) : 0;
-            const needNormalLog = (wantOak || inKhazard) && !inKhazard && slotOfId(main, OBJ_LOGS) === undefined;
+            const gobs = inKhazard && !outOfPrayer ? countAttackingGoblins(main, true) : 0;
+            const needNormalLog = slotOfId(main, OBJ_LOGS) === undefined;
             const tree: NearbyLoc | undefined = (needNormalLog ? findBestTree(main, false, null, false) : undefined)
                 ?? findBestTree(main, wantOak, activeTree, inKhazard)
-                ?? (wantOak ? findBestTree(main, false, activeTree, false) : undefined);
+                ?? (wantOak && !inKhazard ? findBestTree(main, false, activeTree, false) : undefined);
             activeTree = tree ? { x: tree.x, z: tree.z } : null;
 
             if (!tree) {

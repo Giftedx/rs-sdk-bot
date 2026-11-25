@@ -90,7 +90,7 @@ describe('gathering specialists supply & progression plans', () => {
 
         expect(fletchSlots).toBe(7);
         expect(fishSlots).toBeLessThanOrEqual(16);
-        expect(mineSlots).toBe(25);
+        expect(mineSlots).toBe(18);
         expect(thieveSlots).toBe(28);
         expect(THIEVING_PIZZAS).toBe(25);
         expect(THIEVING_SPECIALIST_SUPPLIES[OBJ_PINEAPPLE_PIZZA]).toBe(25);
@@ -186,7 +186,7 @@ describe('bench registration and catalog integration', () => {
             firemaking: FIREMAKING_SPECIALIST_SUPPLIES,
         } as const;
         expect(expandSupplyInventory(WOODCUTTING_SPECIALIST_SUPPLIES).length).toBe(25);
-        expect(expandSupplyInventory(MINING_SPECIALIST_SUPPLIES).length).toBe(25);
+        expect(expandSupplyInventory(MINING_SPECIALIST_SUPPLIES).length).toBe(18);
         expect(MINING_SPECIALIST_LIVE_SUPPLIES).toEqual(MINING_SPECIALIST_SUPPLIES);
         expect(parseKitArg(['--kit=fletching-live'])).toBe('fletching-live');
         expect(resolveSupplierKitPlan('fletching-live').combined).toBe(FLETCHING_SPECIALIST_LIVE_KIT);
