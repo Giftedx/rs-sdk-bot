@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795639597949,
+ "at": 1795639616517,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -178,6 +178,195 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "AFKnight",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "helper"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-564-2-p861 ITEM_ID=564 QUANTITY=2 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
+    "scripts/aio-logistics.ts ITEM_ID=1639 QUANTITY=1 \"ITEM_NAME=Emerald ring\" -- loadout",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=2 -- magic items enchant:emerald_ring - 1 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:mmtha0205 BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:mmtha0205",
+   "role": "army"
+  },
+  {
+   "account": "PackageDeal",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=1973 QUANTITY=1 \"ITEM_NAME=Chocolate bar\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "helper"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Stirmypot",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Stirmypot",
+   "role": "auto"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1022 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1022 -- ge-buy",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Abracadickra BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Abracadickra",
+   "role": "auto"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1022 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1022 -- ge-buy",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:225",
+   "role": "army"
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dwarfcannon",
+   "role": "helper"
   }
  ],
  "army": [
@@ -192,24 +381,19 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
-  "kiltlifter",
   "knightrider",
   "mineyourbiz",
-  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "oreelse",
-  "pickpockdick",
   "pocketpool",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {
