@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795632383687-2",
  "account": "RearEntry",
  "partner": "Fingerblastr",
@@ -12,6 +12,16 @@
  "claim": "bdb1ebe9-3ba5-413e-9e5e-43238459486b",
  "count": 0,
  "ok": false,
- "at": 1795632835346,
- "detail": "trade claimed"
+ "at": 1795632853931,
+ "detail": "Error: transfer requires reconciliation: declined: Trade screen closed before completion",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795632835355-0000015096-0000000001",
+  "at": 1795632853919,
+  "sha256": "10f09fa0b62874d5546acc296fd8f32713d66a1256e940ba5efee983ae78f4a0"
+ },
+ "screen": true
 }
