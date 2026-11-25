@@ -356,7 +356,21 @@ export async function waitNearPlayer(
  throw Error(`helper ${mover.name} failed to reach ${target.name}`);
 }
 
- export interface BurstTradeSpec {
+export type ClaimGate = { wait(): Promise<void>; release(): void };
+
+export function createClaimGate(): ClaimGate {
+ let wake: (() => void) | null = null;
+ return {
+  wait: () => new Promise<void>(r => { wake = r; }),
+  release: () => {
+   const fn = wake;
+   wake = null;
+   fn?.();
+  },
+ };
+}
+
+export interface BurstTradeSpec {
   giveIds?: readonly number[];
   giveCounts?: ReadonlyMap<number, number> | Readonly<Record<number, number>>;
   returnIds?: readonly number[];
@@ -562,8 +576,9 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   if (specCanAccept && (st.myAccepted || (!multiTickOffer && sOffers.length <= 3 && hOffers.length <= 3))) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
-  if (hMainActs.length) await Promise.all(hMainActs);
-  if (sMainActs.length) await Promise.all(sMainActs);
+  if (hMainActs.length || sMainActs.length) {
+   await Promise.all([...hMainActs, ...sMainActs]);
+  }
 
   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
  }
