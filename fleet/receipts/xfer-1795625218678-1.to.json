@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795625218678-1",
+ "account": "Abracadickra",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "477dde00-93d9-4289-a7e8-b32a4521b115",
+ "count": 0,
+ "ok": false,
+ "at": 1795626093419,
+ "detail": "trade claimed"
+}

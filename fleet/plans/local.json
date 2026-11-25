@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795626086022,
+ "at": 1795626099560,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -85,23 +85,40 @@
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "magic",
-    "teleport",
-    "varrock",
-    "50",
-    "1200"
+    "shop-buy",
+    "runeshop",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Spitroaster",
-    "BATCH_UNITS": "250"
+    "ITEM_ID": "560",
+    "ITEMS": "Death rune",
+    "MAX_ITEMS": "72",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:560",
+    "BATCH_UNITS": "72"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
+   "goal": "campaign:haggis:item:560",
+   "role": "auto"
+  },
+  {
+   "account": "Earlyshooter",
+   "script": "scripts/generated/quest-arena.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
    "role": "auto"
   },
   {
@@ -230,31 +247,6 @@
    "role": "army"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "runeshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "560",
-    "ITEMS": "Death rune",
-    "MAX_ITEMS": "72",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "72"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:560",
-   "role": "helper"
-  },
-  {
    "account": "Shaftmaker",
    "script": "scripts/aio-market.ts",
    "args": [
@@ -297,7 +289,7 @@
    "role": "auto"
   },
   {
-   "account": "Earlyshooter",
+   "account": "SporranBulge",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -319,7 +311,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:562",
-   "role": "auto"
+   "role": "helper"
   }
  ],
  "army": [
