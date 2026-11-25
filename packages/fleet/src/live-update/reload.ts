@@ -9,7 +9,7 @@ import { applyUpdate } from './adopt';
 import { gitHash, gitIn, importClosure, LIVE_UPDATE_GIT_TIMEOUT_MS, mergedDeliveryCopies, mergeText, readCheckout, readRebased, rebasableDeliveryEdits, REBASED_FILE } from './inspect';
 import { coordinatorHolds, LIVE_SERVER, liveRuns, planUpdate, releaseClosure, type LiveRunsOptions } from './plan';
 import { few } from './inspect';
-import { clearPendingUpdate, writePendingUpdate } from './pending';
+import { clearPendingUpdate, readPendingUpdate, renewedPendingUpdate, writePendingUpdate } from './pending';
 import { patchCollisions, resetVendor, SDK, SDK_PATCH, vendorExact, vendorReleaseFiles, vendorState } from './vendor';
 
 export const DAEMONS: Record<string, string[]> = {
@@ -103,7 +103,8 @@ export async function runLiveUpdateCli(
         if (!dry) {
             if (plan.action === 'wait' && plan.drain?.length) {
                 const head = git('rev-parse', target);
-                writePendingUpdate(root, { at: Date.now(), target: head.ok ? head.out : target, files: plan.drain, others: plan.others ?? [] });
+                const now = Date.now();
+                writePendingUpdate(root, renewedPendingUpdate(readPendingUpdate(root, now), { at: now, target: head.ok ? head.out : target, files: plan.drain, others: plan.others ?? [] }));
             } else clearPendingUpdate(root);
         }
         if (plan.action === 'none' && plan.reason === 'current') {

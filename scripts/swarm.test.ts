@@ -1200,3 +1200,35 @@ test('an unregistered specialist failure clears with a fresh 404 snapshot, never
         expect(applyEndRepair(req(), ended(), [], proofs()).reason).toBe('specialist snapshot hash changed');
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+test('a drain that waited DRAIN_STOP_MS asks only the swarm runs that hold it to log out', async () => {
+    const { drainStopAccounts } = await import('./swarm');
+    const { DRAIN_STOP_MS } = await import('../packages/core/src/live-update-pending');
+    const now = 1_795_640_000_000, files = ['packages/core/src/gather.ts'];
+    const run = (accounts: string[], over: Partial<{ host: boolean; standing: boolean; trade: boolean; drained: string[] }> = {}) =>
+        ({ accounts, host: false, standing: false, trade: false, drained: files, ...over });
+    const runs = [
+        run(['MineYourBiz']), run(['Walker'], { drained: [] }), run(['Trader'], { trade: true }), run(['Standing'], { standing: true }),
+        run(['HostA', 'HostB'], { host: true }), run(['Recovering']), run(['haggis']),
+    ];
+    const mark = (since: number) => ({ at: now, target: 't', files, since });
+    expect(drainStopAccounts(mark(now - DRAIN_STOP_MS), now, runs, ['recovering'])).toEqual(['MineYourBiz']);
+    // A younger drain, no drain, and a mark from a writer with no `since` (its renewal time stands in) stop nothing.
+    expect(drainStopAccounts(mark(now - DRAIN_STOP_MS + 1), now, runs, [])).toEqual([]);
+    expect(drainStopAccounts(null, now, runs, [])).toEqual([]);
+    expect(drainStopAccounts({ at: now, target: 't', files }, now, runs, [])).toEqual([]);
+});
+test('a drain stop clears once its run has ended, and no other stop text is touched', async () => {
+    const { clearDrainStops, SWARM_STOP } = await import('./swarm');
+    const { mkdtempSync, writeFileSync, existsSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const dir = mkdtempSync(join(tmpdir(), 'drain-stop-'));
+    try {
+        writeFileSync(join(dir, 'stop-Ended'), `${SWARM_STOP.drain}\n`);
+        writeFileSync(join(dir, 'stop-Running'), SWARM_STOP.drain);
+        writeFileSync(join(dir, 'stop-Owner'), 'owner stop: hold for review');
+        writeFileSync(join(dir, 'stop-Removed'), SWARM_STOP.removed);
+        expect(clearDrainStops([dir, join(dir, 'missing')], new Set(['running']))).toEqual(['Ended']);
+        expect(['Ended', 'Running', 'Owner', 'Removed'].map(a => existsSync(join(dir, `stop-${a}`)))).toEqual([false, true, true, true]);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});

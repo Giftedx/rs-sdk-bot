@@ -29,7 +29,7 @@ import {
     type UpdateInput,
 } from '../src/live-update';
 import { daemonFiles, runLiveUpdateCli } from '../src/live-update/reload';
-import { workerDrain } from '../src/live-update/pending';
+import { renewedPendingUpdate, workerDrain } from '../src/live-update/pending';
 import { AGENT_SUBPROCESS_TIMEOUT_MS, tradeDrainHold } from '../src/fleet-agent';
 import { statusReadDirs } from '../../core/src/practice-paths';
 
@@ -157,6 +157,22 @@ describe('fleet live-update facade', () => {
         expect(readPendingUpdate(root, now)).toEqual({ at: now, target: 't', files: ['a.ts'], others: ['Ballspinner'] });
         writeFileSync(pendingUpdateFile(root), JSON.stringify({ at: now, target: 't', files: ['a.ts'], others: [7] }));
         expect(readPendingUpdate(root, now)).toEqual({ at: now, target: 't', files: ['a.ts'] });
+    });
+
+    test('a renewed pending mark keeps the time its drain began', () => {
+        const root = scratch(), t0 = Date.now() - 600_000;
+        const first = renewedPendingUpdate(null, { at: t0, target: 'a', files: ['x.ts'] });
+        expect(first.since).toBe(t0);
+        writePendingUpdate(root, first);
+        // A later merge changes the target; the drain goes on, so `since` stays.
+        const later = renewedPendingUpdate(readPendingUpdate(root, t0 + 60_000), { at: t0 + 60_000, target: 'b', files: ['x.ts', 'y.ts'] });
+        expect(later).toEqual({ at: t0 + 60_000, target: 'b', files: ['x.ts', 'y.ts'], since: t0 });
+        // A mark from a writer with no `since` gives its own time; an expired mark starts a new drain.
+        expect(renewedPendingUpdate({ at: t0, target: 'a', files: [] }, { at: t0 + 5, target: 'a', files: [] }).since).toBe(t0);
+        expect(renewedPendingUpdate(readPendingUpdate(root, t0 + PENDING_MAX_AGE_MS), { at: t0 + PENDING_MAX_AGE_MS, target: 'c', files: [] }).since).toBe(t0 + PENDING_MAX_AGE_MS);
+        // A `since` after the renewal time is not a drain start.
+        writeFileSync(pendingUpdateFile(root), JSON.stringify({ at: t0, target: 'a', files: [], since: t0 + 1 }));
+        expect(readPendingUpdate(root, t0)?.since).toBeUndefined();
     });
 
     test('a supervised live worker sees the pending files its next run would load', () => {
