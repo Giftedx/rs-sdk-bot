@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795605983421-1",
  "account": "Bigchopper",
  "partner": "TheFullMonty",
@@ -12,6 +12,16 @@
  "claim": "3a067554-f9c0-4141-8768-3ed2f2377c6b",
  "count": 0,
  "ok": false,
- "at": 1795606652473,
- "detail": "trade claimed"
+ "at": 1795606883856,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795606652482-0000006180-0000000001",
+  "at": 1795606883845,
+  "sha256": "24109a9979829667f8a117561e26946922e491be868fcb5ddc2979c5a963725e"
+ },
+ "screen": false
 }

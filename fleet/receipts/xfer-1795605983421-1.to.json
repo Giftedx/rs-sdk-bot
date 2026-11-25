@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795605983421-1",
  "account": "TheFullMonty",
  "partner": "Bigchopper",
@@ -12,6 +12,12 @@
  "claim": "fe6e73ed-34c2-4dc9-b1c5-c5d12f653664",
  "count": 0,
  "ok": false,
- "at": 1795606842250,
- "detail": "trade claimed"
+ "at": 1795606883869,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795606842259-0000025328-0000000001",
+  "at": 1795606883860,
+  "sha256": "9b07fa43a21cd7ffa9a2bbc268e7b1c951b12c3f6d42a36ce8dfcbe2c2b78664"
+ },
+ "screen": false
 }

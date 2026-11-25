@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795606894577-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftmaker",
+  "to": "Billionaire",
+  "item": "Arrow shaft",
+  "count": 925,
+  "itemId": 52,
+  "start": 1795606894577,
+  "end": 1795607794577,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
