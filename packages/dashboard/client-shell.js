@@ -1427,7 +1427,22 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function infoboxes(){
     const el=hud.querySelector('.game-infoboxes'),b=account();
     if(typeof aggroTrack==='function'){const now=Date.now();for(const x of S?.bots||[]){aggroTrack(x,now);regenTrack(x,now);}}
-    const set=html=>{if(el._h!==html){el._h=html;el.innerHTML=html;}};
+    // The session clock moves the markup at every render. When the boxes keep their pictures, each box takes its new
+    // attributes and text in place, so no <img> is made again; a change of pictures writes the boxes anew.
+    const set=html=>{
+      if(el._h===html)return;el._h=html;
+      if(typeof document==='undefined'||typeof el.replaceChildren!=='function'){el.innerHTML=html;return;}
+      const t=document.createElement('template');t.innerHTML=html;
+      const next=[...t.content.children],cur=[...el.children],pics=list=>list.map(x=>x.tagName+'|'+(x.querySelector('img')?.getAttribute('src')??'')+'|'+x.children.length).join(',');
+      if(pics(next)!==pics(cur)){el.replaceChildren(...next);return;}
+      for(let i=0;i<next.length;i++){
+        const a=cur[i],n=next[i];
+        for(const at of [...a.attributes])if(!n.hasAttribute(at.name))a.removeAttribute(at.name);
+        for(const at of [...n.attributes])if(a.getAttribute(at.name)!==at.value)a.setAttribute(at.name,at.value);
+        const was=[...a.children],now=[...n.children];
+        for(let k=0;k<now.length;k++){const x=was[k],y=now[k];if(x.tagName!=='IMG'&&x.outerHTML!==y.outerHTML)x.replaceWith(y);}
+      }
+    };
     const box=(img,text,title,name)=>`<button class="infobox" title="${E(title)}" ${name?'data-xp-focus="'+E(name)+'"':''}>${img?`<img src="${img}" alt="">`:''}<span>${E(text)}</span></button>`;
     const short=ms=>ms==null?'':ms<3600e3?Math.floor(ms/6e4)+'m':Math.floor(ms/3600e3)+'h'+String(Math.floor(ms%3600e3/6e4)).padStart(2,'0');
     const sessionInfo=bot=>{
