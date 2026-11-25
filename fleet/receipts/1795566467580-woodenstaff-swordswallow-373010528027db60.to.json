@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795566467580-woodenstaff-swordswallow-373010528027db60",
+ "account": "Swordswallow",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 15,
+ "claim": "a3e635f3-8b0c-4842-b104-99a6ac85e65c",
+ "count": 0,
+ "ok": false,
+ "at": 1795567567131,
+ "detail": "trade claimed"
+}

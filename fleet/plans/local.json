@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795566753358,
+ "at": 1795567604593,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,25 +22,6 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "thieving",
-    "knights"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:hiltsdeep:item:995",
-    "BATCH_UNITS": "50"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:hiltsdeep:item:995",
-   "role": "army",
-   "resources": [
-    "ardougne-knights"
-   ]
   }
  ],
  "army": [
@@ -72,6 +53,7 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",

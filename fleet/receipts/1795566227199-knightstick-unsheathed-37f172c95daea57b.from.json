@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795566227199-knightstick-unsheathed-37f172c95daea57b",
  "account": "Knightstick",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 25000,
  "claim": "c1744076-db0f-4f4c-9438-0fb21e4a9f5d",
- "count": 0,
- "ok": false,
- "at": 1795566465097,
- "detail": "trade claimed"
+ "count": 25000,
+ "ok": true,
+ "at": 1795567600814,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 25000,
+  "after": 0
+ },
+ "bank": {
+  "count": 25000,
+  "at": 1795566470975
+ },
+ "logout": {
+  "attemptId": "1795566465107-0000024564-0000000001",
+  "at": 1795567600799,
+  "sha256": "43be65c8deb0d767f02f3a3fc1afdbaba054877eded2c162c0bf1724e32fb300"
+ },
+ "screen": true
 }
