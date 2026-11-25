@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795605027521-1",
  "account": "TheFullMonty",
  "partner": "Ballspinner",
@@ -12,6 +12,12 @@
  "claim": "bab89b4b-993b-4ff5-89ae-b00d8db93b2e",
  "count": 0,
  "ok": false,
- "at": 1795605809198,
- "detail": "trade claimed"
+ "at": 1795605883207,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795605809206-0000026040-0000000001",
+  "at": 1795605883089,
+  "sha256": "8c1cc2215fe685df52293b2bf0309149cc619ac170fc7761111508f57f9aa69c"
+ },
+ "screen": false
 }

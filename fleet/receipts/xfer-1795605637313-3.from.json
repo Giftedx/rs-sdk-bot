@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795605637313-3",
  "account": "SporranBulge",
  "partner": "Moneyshot",
@@ -12,6 +12,12 @@
  "claim": "fa7d02c8-27cc-4213-923f-a0d01b249a14",
  "count": 0,
  "ok": false,
- "at": 1795605817460,
- "detail": "trade claimed"
+ "at": 1795605881609,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795605817468-0000024504-0000000001",
+  "at": 1795605881492,
+  "sha256": "c1dd9b7694b0e29798a44f3cded14a764090a8afec75acdeda10ab83e49527d6"
+ },
+ "screen": false
 }
