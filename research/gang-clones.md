@@ -734,6 +734,8 @@ The cases `extra:clone-run1-unskulled-x1` and `extra:clone-run1-unskulled-prayer
 decides. Each `PK died to <name> after N ticks` line ends with ` skull=<0|1> keeps=<n> lost=<units> lostValue=<coins>`: the skull
 bit (head icon bit 1), the items that the death keeps and the units it loses, read on the last tick that the account was alive
 (the client clears the skull at the death itself). A gang account prints it with no tag; a squad member prints it with its tag.
+`keeps` counts Protect Item from the option of the fight loop (`protectItemNow` in `fight.ts`), not from the varp: a clone that
+asks for Protect Item has it off in about a third of its fight ticks ("Dagger mode" below), so a `keeps=1` death can drop the dagger.
 
 Hosted run 44437396087, seeds 1 to 8. Kills; clones dead; Hitpoints taken; the skull of the clone deaths (skull / keeps / lost):
 
@@ -901,6 +903,80 @@ kills=10 killReceipts=10 receiptDomain=live feedMatched=10 died=0 taken=987 trip
 
 Gap: the escort state file keeps only its last write, so no record shows whether the gate was clear during the hold, and
 no route went through the gate in a live run. The bench clones do not come back after a death.
+
+## Dagger mode
+
+A gang account drops its dragon dagger(p) only from a death that is skulled and has Protect Item off: death.rs2
+`pvp_death_lose_items` reads `%pk_skull` and `%prayer8` in the tick of the kill message, and the dagger (cost 24000) is the
+dearest item of the kit. Live squad run 4 made 10 kills and took 0 daggers. `SQUAD_DAGGER=1`
+(`packages/workers/src/pvp/squad-dagger.ts`, off by default) adds three rules to the squad:
+
+- **No first strike.** The squad does not start an attack on a gang account that is unskulled and has not attacked one of
+  ours (pk_skull.rs2 `deserves_pk_skull`). It still fights an account that attacks a member, and a skulled one.
+- **Kill timing.** A skulled target whose overhead stays off for `SQUAD_DAGGER_OFF_READS` reads in combat (default 6) has 0
+  prayer points, so Protect Item is off too; it comes first. The hold (`SQUAD_DAGGER_HOLD=<fraction>,<ticks>`, default 0.7,300)
+  stops the attacks on a skulled target with its overhead on from its first read at or below the fraction, and ends the
+  attack click, until its overhead goes off or the ticks pass.
+- **Pickup.** Over single-way ground or interlopers, a kill's pickup takes a dagger within 3 tiles. A kill whose message came
+  outside the account's own fight gets a pickup once that fight ends (`SQUAD dagger pickup after its fight` lines).
+
+**The bench clones and Protect Item.** Claim: a clone asks for Protect Item in each fight, but its varp is off in about a third
+of its fight ticks with prayer points left, so about half of its skulled deaths with points left drop the dagger. Conditions: the
+cases `extra:clone-run1-dagger-*` and `extra:clone-run1-drained-*` (the squad of run 1 with prayer points, the unskulled clones).
+Evidence: the line `SQUAD gang <name> died: skull= protectItem= prayer= ... fight= itemOff= longestOverheadOff=` of each clone
+death, read from the clone's varps in its last tick before the respawn. Hosted run 45677187196 (189 clone deaths): Protect
+Item off in 3,714 of 10,678 fight ticks with points left. Gap: the cause. Debug run 45677831660 shows the fight loop send Protect
+Item on in consecutive ticks while its view shows it off; no server script turns Protect Item off but a toggle, 0 points or a
+death. The live gang kept Protect Item on at 2 skulled kills with a pickup, so a bench dagger from a death with points left is
+a clone fault. The measure of a live dagger in the table below is a skulled clone death at 0 prayer points.
+
+**The prayer points of the clones.** A clone fights with Protect Item, Steel Skin and an overhead (drain effects 2 + 12 + 12,
+prayer bonus 11: `drainTicks` empties 99 points in 315 ticks), and its fights on the bench end sooner: with no hold no clone
+died at 0 points (0 of 43 in run 45679602530). `SQUAD_GANG_PRAYER=<points>` (bench) holds a clone's prayers on before its
+first fight until it has that many points, by the engine drain. A clone with points showed no overhead for at most 5 ticks in
+a row in combat (`longestOverheadOff`, 422 clone deaths of runs 45677187196, 45679602530 and 45679684438), so the drained read takes 6.
+
+Hosted runs 45679602530 and 45679684438 (head 400a002d23, `SQUAD_DAGGER_OFF_READS` 5), seeds 1 to 8, one seed on each
+runner, the squad on for 30 ticks after the gang is out (`SQUAD_GANG_OUT_GRACE=30`). 4 of ours against the 3 unskulled clones
+at full prayer points, and with 20 points (`drained`). Sums over the 8 seeds. "At 0 points" is the skulled clone deaths at 0
+prayer points (a live dagger); "picked" counts every dagger that the squad took, with the drops of the Protect Item fault:
+
+| Case | Kills | Clone deaths at 0 points | Daggers picked | Deaths of ours | Hitpoints taken | Ticks |
+|---|---|---|---|---|---|---|
+| off | 19 | 0 | 5 | 0 | 1219 | 3743 |
+| no hold | 24 | 0 | 13 | 0 | 818 | 2308 |
+| hold 0.3, 300 | 22 | 17 | 18 | 0 | 2067 | 3682 |
+| hold 0.5, 200 | 24 | 13 | 16 | 0 | 2677 | 3692 |
+| hold 0.5, 300 | 24 | 23 | 20 | 0 | 3034 | 4041 |
+| hold 0.5, 400 | 24 | 24 | 20 | 0 | 3093 | 4143 |
+| hold 0.7, 300 | 24 | 24 | 22 | 0 | 3144 | 3986 |
+| drained, off | 24 | 11 | 18 | 0 | 886 | 2594 |
+| drained, no hold | 24 | 10 | 13 | 0 | 698 | 2445 |
+| drained, hold 0.5, 300 | 24 | 24 | 21 | 0 | 1105 | 2897 |
+
+The defaults (`SQUAD_DAGGER=1`: 6 reads, hold 0.7 for 300 ticks), hosted run 45680710080 (head c81c9add7f), the same seeds,
+runners and grace:
+
+| Case | Kills | Clone deaths at 0 points | Daggers picked | Deaths of ours | Hitpoints taken | Ticks |
+|---|---|---|---|---|---|---|
+| off (`extra:clone-run1-dagger-off-x1`) | 20 | 1 | 8 | 0 | 1113 | 4110 |
+| on (`extra:clone-run1-dagger-on-x1`) | 24 | 24 | 21 | 0 | 3189 | 4042 |
+| drained, off (`extra:clone-run1-drained-off-x1`) | 24 | 11 | 19 | 0 | 881 | 2590 |
+| drained, on (`extra:clone-run1-drained-on-x1`) | 24 | 22 | 21 | 0 | 1162 | 2586 |
+
+- **The hold makes the live dagger.** At full prayer points no clone died at 0 points without the hold (0 of 43); the hold at
+  0.7 for 300 ticks took 24 of 24 there in both runs, at 3.8 times the Hitpoints taken of no hold (3144 against 818) and 1.7
+  times the ticks. Kills per seed by the defaults: 3 3 3 3 3 3 3 3; Hitpoints taken: 321 454 511 352 353 405 353 440.
+- **No first strike keeps the skull.** With dagger mode off 2 of 19 and 2 of 20 clone deaths were unskulled (a death that
+  keeps the dagger); with it on, 0 of every case. With dagger mode off seeds 1 and 2 took about 850 ticks for 1 or 2 kills.
+- **The pickup.** The squad took 21 of the 24 daggers of the defaults. The single-way and interloper rule of the pickup did
+  not run in these cases (no threat radar), so it has unit tests only (`daggerPickup`). The pickup after its fight ran once in
+  run 45680710080 (1 kill, 1 read, nothing taken).
+- **Two runs of one case differ.** The off case ran on two heads with the same off path: 19 and 20 kills, 1219 and 1113
+  Hitpoints taken, 3743 and 4110 ticks (seed 8: 341 and 832 ticks). A difference of that size between two cases is not
+  separated.
+- Not measured: a live run; a gang account that comes back after a death (a bench clone does not); a clone that holds
+  Protect Item steady; 5 of ours against the gang.
 
 ## Keep it true
 
