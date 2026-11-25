@@ -89,7 +89,7 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         Lochnessrod: 2924,
         Shaftshooter: 4379,
         PouchStuffed: 1845,
-        CutMyJewels: 182,
+        CutMyJewels: 134,
         GrindMyHerb: 415,
         CastMyLoad: 1236,
         BigBoner: 1143,
@@ -151,9 +151,8 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
     expect(prayer.suppliers).toHaveLength(PRAYER_RUNNER_COUNT);
 
     const crafting = resolveSpecialistSegment('CutMyJewels');
-    expect(crafting.suppliers).toHaveLength(12);
-    expect(crafting.suppliers![0]!.args).toContain('--batch=0');
-    expect(crafting.suppliers![11]!.args).toContain('--batch=11');
+    expect(crafting.suppliers).toHaveLength(1);
+    expect(crafting.suppliers![0]!.args).toContain('--kit=crafting-cw');
 
     const herb = resolveSpecialistSegment('GrindMyHerb');
     expect(herb.suppliers).toHaveLength(2);
@@ -183,9 +182,10 @@ test('account lookup is case-insensitive and rejects unknown accounts or invalid
     expect(lower.specialist).toBe('StickyFinger');
     expect(lower.env?.LIVE).toBe('1');
 
-    const ranged = resolveSpecialistSegment('shaftshooter', { planTicks: 4600 });
+    const ranged = resolveSpecialistSegment('shaftshooter', { planTicks: 4600, env: { SUPPLIER: 'Moneyshot' } });
     expect(ranged.plan!.ticks).toBe(4600);
     expect(ranged.env?.VARIANT).toBe('live');
+    expect(ranged.env?.SUPPLIER).toBe('Moneyshot');
 
     expect(lower.plan!.ticks).toBe(2142);
     expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(4660);
@@ -227,6 +227,11 @@ test('parseCliArgs handles flags and positional account cleanly', () => {
     expect(parseCliArgs(['StickyFinger', '--seeds', '7,8,9']).seeds).toEqual([7, 8, 9]);
     expect(parseCliArgs(['StickyFinger', '--seed=8']).seeds).toEqual([8]);
     expect(() => parseCliArgs(['StickyFinger', '--seeds', 'foo'])).toThrow('positive integers');
+    expect(parseCliArgs(['TipMyShaft', '--env', 'SUPPLIER=Moneyshot', '--env=CAP=150']).env).toEqual({
+        SUPPLIER: 'Moneyshot',
+        CAP: '150',
+    });
+    expect(() => parseCliArgs(['TipMyShaft', '--env', 'bad=1'])).toThrow('KEY=VALUE');
 });
 
 test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir, and reports receipt fields', async () => {

@@ -309,7 +309,6 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 954, name: 'Rope', count: 1, stackable: false },
     { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
     { id: 385, name: 'Shark', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 7, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
@@ -469,6 +468,26 @@ const CRAFTING_BATCHES = [
         returnIds: [SPECIALIST_ITEM_IDS.dragonstone],
     },
 ] as const;
+
+const CRAFTING_CW_NOTED_ITEMS = [
+    { id: SPECIALIST_ITEM_IDS.uncut_opal, certId: 1626, count: 18 },
+    { id: SPECIALIST_ITEM_IDS.uncut_sapphire, certId: 1624, count: 3 },
+    { id: SPECIALIST_ITEM_IDS.uncut_emerald, certId: 1622, count: 6 },
+    { id: SPECIALIST_ITEM_IDS.uncut_ruby, certId: 1620, count: 3 },
+    { id: SPECIALIST_ITEM_IDS.uncut_diamond, certId: 1618, count: 9 },
+    { id: SPECIALIST_ITEM_IDS.uncut_dragonstone, certId: 1632, count: 277 },
+] as const;
+
+export const CRAFTING_CW_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: SPECIALIST_ITEM_IDS.chisel, name: 'Chisel', count: 1, stackable: false },
+    { id: SPECIALIST_ITEM_IDS.uncut_opal, name: 'Uncut opal', count: 18, stackable: false },
+    { id: SPECIALIST_ITEM_IDS.uncut_sapphire, name: 'Uncut sapphire', count: 3, stackable: false },
+    { id: SPECIALIST_ITEM_IDS.uncut_emerald, name: 'Uncut emerald', count: 6, stackable: false },
+    { id: SPECIALIST_ITEM_IDS.uncut_ruby, name: 'Uncut ruby', count: 3, stackable: false },
+    { id: SPECIALIST_ITEM_IDS.uncut_diamond, name: 'Uncut diamond', count: 9, stackable: false },
+    { id: SPECIALIST_ITEM_IDS.uncut_dragonstone, name: 'Uncut dragonstone', count: 277, stackable: false },
+];
 
 export const CRAFTING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: SPECIALIST_ITEM_IDS.chisel, name: 'Chisel', count: 1, stackable: false },
@@ -660,6 +679,7 @@ export const SPECIALIST_KITS = {
     smithing: SMITHING_SPECIALIST_KIT,
     runecraft: RUNECRAFT_SPECIALIST_KIT,
     crafting: CRAFTING_SPECIALIST_KIT,
+    'crafting-cw': CRAFTING_CW_SPECIALIST_KIT,
     herblore: HERBLORE_SPECIALIST_KIT,
     magic: MAGIC_SPECIALIST_KIT,
 } as const satisfies Record<string, readonly KitSpecItem[]>;
@@ -719,7 +739,7 @@ const isNotedId = (id: number): boolean => resolveBaseId(id) !== id;
 function invSpec(id: number, count: number, altIds?: readonly number[]): KitSpecItem {
     return {
         id,
-        name: itemCatalogName(id) ?? `Item ${id}`,
+        name: itemCatalogName(id) ?? itemCatalogName(resolveBaseId(id)) ?? `Item ${id}`,
         count,
         stackable: STACKABLE_IDS.has(id) || isNotedId(id),
         ...(altIds?.length ? { altIds } : {}),
@@ -759,12 +779,24 @@ export function resolveSupplierKitPlan(kitName: string | undefined = process.env
             combined: SPECIALIST_KITS[name],
         };
     }
+    if (raw === 'crafting-cw') {
+        const notedGive = [
+            invSpec(2552, 1),
+            invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
+            ...CRAFTING_CW_NOTED_ITEMS.map(g => invSpec(g.certId, g.count)),
+        ];
+        return {
+            name: 'crafting-cw',
+            legs: [{ kit: notedGive, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK, noted: true }],
+            combined: SPECIALIST_KITS['crafting-cw'],
+        };
+    }
     if (raw === 'herblore') {
         return {
             name: 'herblore',
             legs: [
                 { kit: HERBLORE_STARTER_GIVE.map(g => invSpec(g.id, g.count)), handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK },
-                { kit: HERBLORE_NOTED_SUPPLIES.map(g => invSpec(g.id, g.count)), handoff: HERBLORE_BANK_HELPER_SPOT, bank: EDGEVILLE_BANK, noted: true },
+                { kit: HERBLORE_NOTED_SUPPLIES.map(g => invSpec(g.certId, g.count)), handoff: HERBLORE_BANK_HELPER_SPOT, bank: EDGEVILLE_BANK, noted: true },
             ],
             combined: SPECIALIST_KITS.herblore,
         };
@@ -1196,7 +1228,7 @@ export async function runSpecialistServe(args: readonly string[], env: Record<st
             }
         }
         const kitName = activePlan.name;
-        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic' && kitName !== 'firemaking' && kitName !== 'agility') {
+        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'crafting-cw' && kitName !== 'herblore' && kitName !== 'magic' && kitName !== 'firemaking' && kitName !== 'agility') {
             const peerRe = exactNameRe(specialist);
             for (let legIdx = 0; legIdx < activePlan.legs.length; legIdx++) {
                 const leg = activePlan.legs[legIdx]!;
@@ -1370,7 +1402,7 @@ export async function runSpecialistServe(args: readonly string[], env: Record<st
             }
         } else if (kitName === 'herblore') {
             const starterBatch = HERBLORE_STARTER_GIVE.map(g => invSpec(g.id, g.count));
-            const notedBatch = HERBLORE_NOTED_SUPPLIES.map(g => invSpec(g.id, g.count));
+            const notedBatch = HERBLORE_NOTED_SUPPLIES.map(g => invSpec(g.certId, g.count));
             if (parsed.batchIndex !== undefined && parsed.batchIndex > 1) throw Error(`herblore --batch=${parsed.batchIndex} out of range (0..1)`);
             let ok = true;
             if (parsed.batchIndex === undefined || parsed.batchIndex === 0) {
@@ -1386,6 +1418,16 @@ export async function runSpecialistServe(args: readonly string[], env: Record<st
                 ok = (await serveFastBatch(s, specialist, notedBatch, t0, CAP, stop)) === 'ok';
             }
             allDone = ok;
+        } else if (kitName === 'crafting-cw') {
+            const batch = [
+                invSpec(2552, 1),
+                invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
+                ...CRAFTING_CW_NOTED_ITEMS.map(g => invSpec(g.certId, g.count)),
+            ];
+            if (!hasExactKit(s.sdk.getInventory(), batch)) await withdrawExactKit(s, batch, bankTile, stop, true);
+            await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+            emitReady();
+            allDone = (await serveFastBatch(s, specialist, batch, t0, CAP, stop)) === 'ok';
         } else if (kitName === 'crafting') {
             const batchIndices = parsed.batchIndex !== undefined ? [parsed.batchIndex] : CRAFTING_BATCHES.map((_, i) => i);
             let ok = true;

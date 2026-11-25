@@ -1,11 +1,11 @@
 import {existsSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {ownerPlanPath} from './plan-lock';
-import {fleetStateFile, hasStopFile, lifecycleRootForRead, liveRoot, statusReadDirs} from './practice-paths';
+import {fleetStateFile, hasStopFile, liveRoot, statusReadDirs} from './practice-paths';
 import {processMatches} from './proc';
 import {fresh, localFile, MAX_LOGOUT_DRAIN_TICKS, readBound, sha, validateRehearsals, validateSupplies, type Binding, type SupplyRequirement} from './launch-evidence';
 import {missionSignature} from './session-admission';
-import {listAttempts, readLogoutProof, type AttemptReceipt} from './session-lifecycle';
+import {listAttempts, readLogoutProof, resolveLifecycleRoot, type AttemptReceipt} from './session-lifecycle';
 
 const jobAccounts = (job: any): string[] => (job?.accounts ?? [job?.account]).filter((n: unknown): n is string => typeof n === 'string');
 
@@ -112,7 +112,7 @@ export function assertSpecialistLogin(root:string, name:string, now:number, env:
         if(existsSync(join(runDir,'receipt.json')) || owner.runId!==token.runId
             || !Number.isSafeInteger(owner.pid) || owner.pid<=0 || !ownerMatches(owner.pid,token.runId))
             throw Error('specialist controller run is no longer active');
-        const options={root:lifecycleRootForRead(server,root)}, proof=readLogoutProof(account,server,options);
+        const options={root:resolveLifecycleRoot(account,server,root)}, proof=readLogoutProof(account,server,options);
         if(proof.state==='none'){
             if(now>=token.expiresAt)throw Error('first-login authorization expired');
             for(const ref of token.bindings)readBound(root,ref,[],false);

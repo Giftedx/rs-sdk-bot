@@ -1,11 +1,12 @@
 // Continuous fresh-clock Ranged 1->99 specialist route from Tutorial Island through Prayer 43, Dwarf Cannon, and Poison Spiders.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { accountOf, closeWithin, finish, getWorld, logoutSession, openBot } from '../packages/core/src/bot';
+import { accountOf, closeWithin, finish, getWorld, logoutSession, openBot, serverFromEnv } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
 import { messageTally } from '../packages/core/src/message-tally';
+import { simBotsDir } from '../packages/core/src/practice-paths';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, sessionWalker, walkPath, type PathPoint } from '../packages/core/src/walk';
@@ -273,9 +274,10 @@ export function shouldDrinkAntipoison(poisoned: boolean, ticksSinceDrink: number
 }
 
 function readServerHost(root: string, bot: string): string {
-    const p = join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env');
-    if (!existsSync(p)) return '';
-    return (readFileSync(p, 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+    for (const p of [join(simBotsDir(root), bot, 'bot.env'), join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env')]) {
+        if (existsSync(p)) return serverFromEnv(readFileSync(p, 'utf8'));
+    }
+    return '';
 }
 
 function posOf(s: Session) {
