@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795630421065,
+ "at": 1795630448462,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2200 TARGET_COUNT=220 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2190 TARGET_COUNT=219 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
    ],
    "env": {
@@ -72,6 +72,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:379",
    "role": "army"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "Fatstack",
@@ -112,7 +131,7 @@
    ]
   },
   {
-   "account": "Pullmybow",
+   "account": "WellHung",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -125,7 +144,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:440",
-   "role": "auto",
+   "role": "helper",
    "resources": [
     "varrock-se-mine"
    ]
@@ -259,7 +278,7 @@
    "role": "army"
   },
   {
-   "account": "SporranBulge",
+   "account": "Packhorse",
    "script": "scripts/generated/quest-barcrawl.ts",
    "args": [],
    "env": {
@@ -285,19 +304,6 @@
    "repeat": false,
    "goal": "goal:pk_army:mmtha0205",
    "role": "army"
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/generated/quest-ball.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ball",
-   "role": "helper"
   },
   {
    "account": "KnightRider",
@@ -331,32 +337,34 @@
    "role": "auto"
   },
   {
-   "account": "Bigpackage",
+   "account": "YewGotWood",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1022 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1022 -- ge-buy",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
+    "scripts/magic-order.ts TARGET_LEVEL=21 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:YewGotWood BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army"
+   "goal": "goal:pk_army:YewGotWood",
+   "role": "auto"
   },
   {
-   "account": "WellHung",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=21 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Abracadickra BATCH_UNITS=250 -- magic alch-train 90 3000"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
-   "role": "helper"
+   "goal": "goal:pk_army:Abracadickra",
+   "role": "auto"
   }
  ],
  "army": [

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795630109334-1",
+ "account": "Swordinhand",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "50375e3d-732f-4239-9916-2e23678a675c",
+ "count": 0,
+ "ok": false,
+ "at": 1795630440110,
+ "detail": "trade claimed"
+}
