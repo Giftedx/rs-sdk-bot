@@ -103,7 +103,7 @@ export async function runLiveUpdateCli(
         if (!dry) {
             if (plan.action === 'wait' && plan.drain?.length) {
                 const head = git('rev-parse', target);
-                writePendingUpdate(root, { at: Date.now(), target: head.ok ? head.out : target, files: plan.drain });
+                writePendingUpdate(root, { at: Date.now(), target: head.ok ? head.out : target, files: plan.drain, others: plan.others ?? [] });
             } else clearPendingUpdate(root);
         }
         if (plan.action === 'none' && plan.reason === 'current') {

@@ -10,7 +10,8 @@ import { few, touchesIncomingPath, type Dirty, type LiveRun, type UpdateInput } 
 import { SDK_PATCH } from './vendor';
 
 // drain: a wait that only the end of the live runs that load these incoming files resolves (live-update/pending.ts).
-export type UpdatePlan = { action: 'none' | 'wait'; reason: string; drain?: string[] } | { action: 'update'; adopt: Dirty[] };
+// others: with a drain, the live runs that hold the update and are not trades (a run whose files are unknown holds it too).
+export type UpdatePlan = { action: 'none' | 'wait'; reason: string; drain?: string[]; others?: string[] } | { action: 'update'; adopt: Dirty[] };
 export type LiveRunsOptions = {
     fleetDir?: string;
     side?: string;
@@ -42,7 +43,10 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
     for (const run of i.liveRuns ?? []) {
         if (run.unknown) return { action: 'wait', reason: `the live run of ${run.name} has an entry that this checkout cannot read: its files are not known` };
         const loaded = run.files.filter(f => incoming.has(f));
-        if (loaded.length) return { action: 'wait', reason: `the live run of ${run.name} loads ${few(loaded)}`, drain: [...i.incoming] };
+        if (loaded.length) {
+            const others = (i.liveRuns ?? []).filter(r => !r.trade && (r.unknown || r.files.some(f => incoming.has(f)))).map(r => r.name);
+            return { action: 'wait', reason: `the live run of ${run.name} loads ${few(loaded)}`, drain: [...i.incoming], others };
+        }
     }
     if (i.vendorRelease?.length && i.liveRuns?.length) return { action: 'wait', reason: `the live run of ${i.liveRuns[0]!.name} loads ${few(i.vendorRelease)} (changed by the SDK patch)` };
     const collisions = i.dirty.filter(d => !incoming.has(d.path) && touchesIncomingPath(d.path, incoming) && !d.sameAsTarget).map(d => d.path);
@@ -149,7 +153,11 @@ export function liveRuns(root: string, server: string, closure: (entries: string
             || tradePartnerBlocked(root, server, String(row.name), activeAccounts, now, options)
         )) continue;
         const files = closure(entries);
-        runs.push({ name: String(row.name), files, ...(entries.length && !files.length ? { unknown: true as const } : {}) });
+        runs.push({
+            name: String(row.name), files,
+            ...(entries.length && !files.length ? { unknown: true as const } : {}),
+            ...(entries.includes(TRADE_ENTRY) ? { trade: true as const } : {}),
+        });
     }
     return runs;
 }

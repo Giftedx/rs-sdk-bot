@@ -127,6 +127,9 @@ export function tradeStop(base: string, account: string, now = Date.now()): { he
 // trade whose worker loads a pending file, so the running trades end and the update lands. An order whose other side
 // has started (it runs this order here, or it wrote its receipt) is not held: one side must not wait alone for the
 // other. A partner busy with another order has not started this one.
+// While a live run that is not a trade holds the update (`others`), a held trade does not make it land sooner, and a
+// brain order lives 15 minutes (packages/brain/src/scheduler.ts transferOrderTtlMs): the trade starts. The agent
+// holds trades once the update waits on trades alone, which end within their order window.
 export function tradeDrainHold(
     order: Pick<Order, 'id' | 'from' | 'to'>,
     account: string,
@@ -134,8 +137,9 @@ export function tradeDrainHold(
     target: string,
     runningOrders: ReadonlyMap<string, string>,
     receipts: readonly Pick<Receipt, 'id' | 'role'>[],
+    others: readonly string[] = [],
 ): string | null {
-    if (!drained.length) return null;
+    if (!drained.length || others.length) return null;
     const role = order.from.toLowerCase() === account.toLowerCase() ? 'from' : 'to';
     const partner = role === 'from' ? order.to : order.from, otherRole = role === 'from' ? 'to' : 'from';
     if (runningOrders.get(partner.toLowerCase()) === order.id || receipts.some(r => r?.id === order.id && r.role === otherRole)) return null;
@@ -326,7 +330,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         for (const t of dueTrades(orders, receipts, side, owners, busy, new Set(running.keys()), now)) {
             if (ownerStop || stopping) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${ownerStop ?? 'agent stopping'})`); continue; }
             if (t.busy) { log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
-            const drainHold = pending ? tradeDrainHold(t.order, t.account, tradeDrained, pending.target, runningOrders, receipts) : null;
+            const drainHold = pending ? tradeDrainHold(t.order, t.account, tradeDrained, pending.target, runningOrders, receipts, pending.others) : null;
             if (drainHold) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${drainHold})`); continue; }
             const stop = tradeStop(base, t.account, now);
             if (stop.cleared) log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);

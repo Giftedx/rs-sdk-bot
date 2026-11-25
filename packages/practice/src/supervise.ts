@@ -9,6 +9,7 @@ import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-rel
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {unplacedCause} from '../../core/src/order-refusal';
 import {hasStopFile} from '../../core/src/practice-paths';
+import {workerDrain} from '../../fleet/src/live-update/pending';
 
 export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
     return ['bun',script,bot,...scriptArgs];
@@ -39,6 +40,17 @@ export interface SuperviseDeps {
     pause(ms: number): Promise<void>;
     maxRestarts: number;
     log?(line: string): void;
+    // The files of a waiting live update that the next run would load (packages/fleet/src/live-update/pending.ts workerDrain).
+    drained?(): readonly string[];
+}
+
+// A restart during a live-update drain loads the old files again, and the update waits on the new run too: live, one
+// failing chain job ran three times in one drain and held it for 26 minutes. The supervisor ends the job as release-paused
+// instead. The swarm starts it again once the update has landed (swarm.ts startable), and the brain does not count
+// the end as an outcome (brain-runtime.ts gateHeldRunEnd).
+export function drainPause(drained: readonly string[] | undefined): string | null {
+    if (!drained?.length) return null;
+    return `SUPERVISE pause: a waiting live update drains ${drained.slice(0, 2).join(', ')}${drained.length > 2 ? ` and ${drained.length - 2} more` : ''}`;
 }
 
 // Match failure text, not metrics such as stallTicks=0 or a successful run mentioning progress.
@@ -212,6 +224,8 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
     let fails = 0, held = 0, lastShape: string | null = null;
     for (let runs = 1; ; runs++) {
         if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
+        const pause = runs > 1 ? drainPause(d.drained?.()) : null;
+        if (pause) { d.log?.(pause); return { reason: 'release-paused', runs: runs - 1 }; }
         const r = await d.run();
         const result = lastMatchingLine(r.stdout, l => l.startsWith('RESULT')) ?? crashResult(r.stderr) ?? '(no RESULT)';
         d.log?.(`SUPERVISE run ${runs} exit ${r.exitCode}: ${result.slice(0, 200)}`);
@@ -266,6 +280,7 @@ if (import.meta.main) {
         pause: ms => Bun.sleep(ms),
         maxRestarts,
         log: l => console.log(l),
+        drained: () => workerDrain(process.cwd()),
     });
     console.log(`SUPERVISE end ${r.reason} after ${r.runs} runs`);
     process.exit(r.reason === 'done' ? 0 : 1);

@@ -13,9 +13,11 @@ import {
     patchChangedFiles,
     patchCollisions,
     patchSections,
+    LIVE_SERVER,
     PENDING_MAX_AGE_MS,
     clearPendingUpdate,
     drainedFiles,
+    liveRuns,
     pendingUpdateFile,
     pendingUpdateReader,
     planUpdate,
@@ -27,7 +29,9 @@ import {
     type UpdateInput,
 } from '../src/live-update';
 import { daemonFiles, runLiveUpdateCli } from '../src/live-update/reload';
+import { workerDrain } from '../src/live-update/pending';
 import { AGENT_SUBPROCESS_TIMEOUT_MS, tradeDrainHold } from '../src/fleet-agent';
+import { statusReadDirs } from '../../core/src/practice-paths';
 
 const dirs: string[] = [];
 const scratch = () => {
@@ -112,6 +116,64 @@ describe('fleet live-update facade', () => {
         expect(tradeDrainHold(order, 'Fatstack', drained, 't', new Map([['masterbaiter', 'o9']]), [])).not.toBeNull();
         // A receipt of another order, or of this side's own role, does not count as the partner's start.
         expect(tradeDrainHold(order, 'Masterbaiter', drained, 't', none, [{ id: 'o2', role: 'from' }, { id: 'o1', role: 'to' }])).not.toBeNull();
+    });
+
+    test('a trade is held only once the update waits on trades alone', () => {
+        const order = { id: 'o1', from: 'Fatstack', to: 'Masterbaiter' }, none = new Map<string, string>();
+        const drained = ['packages/workers/src/market/ge-buy.ts'];
+        // A skill run still holds the update: holding the trade does not land it sooner, so the trade starts.
+        expect(tradeDrainHold(order, 'Fatstack', drained, 't', none, [], ['Ballspinner'])).toBeNull();
+        // Only trades hold the update (or the mark is from a writer that does not name them): the trade waits.
+        expect(tradeDrainHold(order, 'Fatstack', drained, 't', none, [], [])).not.toBeNull();
+        expect(tradeDrainHold(order, 'Fatstack', drained, 't', none, [])).not.toBeNull();
+    });
+
+    test('a drain wait names the live runs that hold the update and are not trades', () => {
+        const geBuy = 'packages/workers/src/market/ge-buy.ts', incoming = [geBuy, 'docs/x.md'];
+        const trade = { name: 'CoinCock', files: [geBuy, 'scripts/aio-logistics.ts'], trade: true as const };
+        const skill = { name: 'Ballspinner', files: [geBuy, 'scripts/aio-skiller.ts'] };
+        const idle = { name: 'Walker', files: ['scripts/walk-to.ts'] };
+        const unread = { name: 'Odd', files: [], unknown: true as const };
+        expect(planUpdate({ ...baseInput, incoming, liveRuns: [trade, skill, idle] })).toMatchObject({ action: 'wait', drain: incoming, others: ['Ballspinner'] });
+        expect(planUpdate({ ...baseInput, incoming, liveRuns: [trade, idle] })).toMatchObject({ action: 'wait', drain: incoming, others: [] });
+        // A run whose files are unknown also holds the update.
+        expect(planUpdate({ ...baseInput, incoming, liveRuns: [trade, unread] })).toMatchObject({ action: 'wait', others: ['Odd'] });
+    });
+
+    test('liveRuns marks the runs of the trade worker', () => {
+        const root = scratch(), now = Date.now(), dir = statusReadDirs(root)[0]!;
+        mkdirSync(dir, { recursive: true });
+        const row = (name: string, workEntry: string) => writeFileSync(join(dir, `${name}.json`), JSON.stringify({ name, server: LIVE_SERVER, at: now, started: now, workEntry }));
+        row('CoinCock', join(root, 'scripts', 'aio-logistics.ts'));
+        row('Ballspinner', 'scripts/aio-skiller.ts');
+        const runs = liveRuns(root, LIVE_SERVER, entries => [...entries], now, { fleetDir: join(root, 'no-fleet') });
+        expect(runs.find(r => r.name === 'CoinCock')).toEqual({ name: 'CoinCock', files: ['scripts/aio-logistics.ts'], trade: true });
+        expect(runs.find(r => r.name === 'Ballspinner')).toEqual({ name: 'Ballspinner', files: ['scripts/aio-skiller.ts'] });
+    });
+
+    test('the pending mark keeps the names of the runs that are not trades', () => {
+        const root = scratch(), now = Date.now();
+        writePendingUpdate(root, { at: now, target: 't', files: ['a.ts'], others: ['Ballspinner'] });
+        expect(readPendingUpdate(root, now)).toEqual({ at: now, target: 't', files: ['a.ts'], others: ['Ballspinner'] });
+        writeFileSync(pendingUpdateFile(root), JSON.stringify({ at: now, target: 't', files: ['a.ts'], others: [7] }));
+        expect(readPendingUpdate(root, now)).toEqual({ at: now, target: 't', files: ['a.ts'] });
+    });
+
+    test('a supervised live worker sees the pending files its next run would load', () => {
+        const root = scratch(), now = Date.now(), smithing = 'packages/workers/src/bank-artisan/smithing.ts';
+        const closure = (entries: readonly string[]) => entries.includes('scripts/aio-skiller.ts') ? [smithing, 'scripts/aio-skiller.ts'] : ['scripts/walk-to.ts'];
+        const live = { DEMO_OK: '1', WORKER_ENTRY: 'scripts/aio-skiller.ts' };
+        expect(workerDrain(root, live, now, closure)).toEqual([]);
+        writePendingUpdate(root, { at: now, target: 't', files: [smithing, 'docs/x.md'] });
+        expect(workerDrain(root, live, now, closure)).toEqual([smithing]);
+        // An absolute entry (the fleet agent spells its trade worker that way) names the same files.
+        expect(workerDrain(root, { ...live, WORKER_ENTRY: join(root, 'scripts', 'aio-skiller.ts') }, now, closure)).toEqual([smithing]);
+        expect(workerDrain(root, { ...live, WORKER_ENTRY: 'scripts/walk-to.ts' }, now, closure)).toEqual([]);
+        // A standing job is not drained, a run without DEMO_OK is not a live swarm run, and an old mark holds nothing.
+        expect(workerDrain(root, { ...live, STANDING: '1' }, now, closure)).toEqual([]);
+        expect(workerDrain(root, { WORKER_ENTRY: 'scripts/aio-skiller.ts' }, now, closure)).toEqual([]);
+        expect(workerDrain(root, live, now + PENDING_MAX_AGE_MS, closure)).toEqual([]);
+        expect(workerDrain(root, { DEMO_OK: '1' }, now, closure)).toEqual([]);
     });
 
     test('the real release closure names files the way live-update names incoming files', () => {

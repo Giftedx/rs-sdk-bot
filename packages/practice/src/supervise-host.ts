@@ -8,10 +8,11 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { CLAIM_AUTHORITY_PAUSE_MS, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
+import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {hasStopFile} from '../../core/src/practice-paths';
+import {workerDrain} from '../../fleet/src/live-update/pending';
 
 export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused';
 
@@ -53,6 +54,8 @@ export interface SuperviseHostDeps {
     pause(ms: number): Promise<void>;
     maxRestarts: number;
     log?(line: string): void;
+    // The files of a waiting live update that the next host run would load (supervise.ts drainPause).
+    drained?(): readonly string[];
 }
 
 export async function superviseHost(accounts: string[], d: SuperviseHostDeps): Promise<{ ends: Record<string, AccountEnd>; runs: number }> {
@@ -94,6 +97,12 @@ export async function superviseHost(accounts: string[], d: SuperviseHostDeps): P
             retry++;
         }
         if (retry === 0) return { ends, runs };
+        const pause = drainPause(d.drained?.());
+        if (pause) {
+            d.log?.(pause);
+            for (const a of active) if (!ends[a]) end(a, 'release-paused', runs);
+            return { ends, runs };
+        }
         await d.pause(slowAuthority ? CLAIM_AUTHORITY_PAUSE_MS : 10_000);
     }
 }
@@ -148,6 +157,7 @@ if (import.meta.main) {
         pause: ms => Bun.sleep(ms),
         maxRestarts: parsed.maxRestarts,
         log: l => console.log(l),
+        drained: () => workerDrain(process.cwd()),
     });
     console.log(`SUPERVISE-HOST end after ${r.runs} runs ${JSON.stringify(r.ends)}`);
     process.exit(Object.values(r.ends).every(e => e === 'done') ? 0 : 1);
