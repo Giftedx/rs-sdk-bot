@@ -2728,3 +2728,41 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     configs. Evidence: `scripts/pk-live/live-pilot.test.ts`, `scripts/pvp-kit-stage.test.ts`,
     `scripts/pvp-standby.test.ts`, `scripts/measure/pvp-sweep.test.ts`. Gap: live pilot Wilderness run and multi-batch
     `pvp-sweep.ts --quick` remain unexecuted on live worlds.
+85. **A flick that keeps Protect Item on in place of the Defence prayer loses fights.** Claim: where a flick cannot
+    turn every prayer on again in its tick, `planPrayerTick` keeps the overhead and the Defence prayer on, and Protect
+    Item stays off for that tick. The plain flick turns 3 prayers off and 2 on in its 5 inputs; the zero-drain
+    step-down keeps 2. A skulled death in such a tick keeps no item (`death.rs2` `pvp_death_lose_items` reads
+    `%prayer8`). A rule that ranks Protect Item above the Defence prayer moves the off tick to the Defence prayer, and
+    that side takes more damage and dies more. Conditions: `SPAR_A=champion`, `SPAR_B=champion`, `SPAR_SWAP=1`,
+    `SPAR_CAP=500`, seeds 1 to 8, 64 fights a case; side A has the rule, side B the default. Ticks count only with
+    prayer points left.
+
+    | Case | Rule | Protect Item off | Defence prayer off | HP taken | Deaths | Side A score |
+    |---|---|---|---|---|---|---|
+    | `extra:spar-x8` (plain flick) | default | 6,338 of 31,803 | 939 | 19,716 | 0 | |
+    | | Protect Item first | 881 of 31,797 | 6,468 | 21,407 | 3 | mean -30.7, sd 91.3, t -2.69 |
+    | `extra:spar-kit-tribrid-combo-flick-x8` (zero-drain) | default | 5,983 of 31,637 | 64 | 21,694 | 4 | |
+    | | Protect Item first | 0 of 31,634 | 6,423 | 23,069 | 6 | mean -21.9, sd 131.8, t -1.33 |
+
+    In `extra:clone-run1-prayer-x1` (seeds 1 to 8) the squad profile `gang-hunter` has `protectItem: false`, so our
+    accounts pray no Protect Item in a fight. With `SQUAD_PROTECT_ITEM=on`, Protect Item is off in 1,496 of 5,645
+    fight ticks (plain flick) and 1,320 of 5,537 (`zeroDrainFlick`); with the rule, 83 and 44. Our accounts die in no
+    arm, so this case does not show the cost. Protect Item on doubles the prayer points that our accounts spend in a
+    fight on the plain flick (563 against 266 and 282) and nearly quadruples them on the zero-drain flick (1,887
+    against 498 and 507). Two runs of the same code and options differ by 3 kills and 5% of the HP taken: the case
+    does not repeat on its seed. Evidence: hosted runs 45690755380 and 45690762752 (spar), 45690728038, 45690734167,
+    45690740184, 45690745554, 45691208699, 45691213970, 45691218285 and 45691225791 (squad); the rule (fight option
+    `itemFirst`) and the per-fight trace are on branch `claude/protect-item-flick-trace`. Gap: a rule that puts
+    Protect Item first only in a tick in which the next hit can kill (skulled, Hitpoints at or below the attacker's max
+    hit) is not measured; a spar score gives no value to a kept item.
+86. **Between two squad fights no prayer guard flicks, and a skulled account with `SQUAD_PROTECT_ITEM=on` has Protect
+    Item off in about 3 ticks of 10.** Claim: the fight loop's own flick toggles one prayer twice in one tick, and the
+    session's prayer guard then stands down for the rest of the session (`guard.ts` `note`, `stats.yielded`). Between
+    fights the squad's survival helper (`createWildSurvival`) and the loop's own prayer inputs are the only senders.
+    Conditions: `extra:clone-run1-prayer-x1`, seeds 1 to 12, the code of PR 1502 (`77aec1c48b`); ticks between fights
+    in the Wilderness with prayer points left. Evidence: `PRAYER_GUARD` lines, `yielded: true` in 48 of 48 sessions of
+    our accounts in each run; with `SQUAD_PROTECT_ITEM=on`, Protect Item off in 2,550 of 8,808 skulled ticks (run
+    45693420666), and in 2,081 of 7,325 with the guard held from the helper's first prayer input (run 45693434227).
+    Gap: the cause of the off ticks is not traced. A candidate is the loop's prayers-off while it waits with no target
+    (`hold` in `packages/workers/src/pvp/squad.ts`, one input each 3 ticks) against the helper's Protect Item toggle,
+    also each 3 ticks. With the default `protectItem: false` of `gang-hunter`, the helper sends no Protect Item input.
