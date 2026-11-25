@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795634779412-1",
+ "account": "Shaftsinker",
+ "partner": "Pocketpython",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "8a8cf399-9f8b-4d8d-b64d-b888ac9efcf0",
+ "count": 0,
+ "ok": false,
+ "at": 1795634937989,
+ "detail": "trade claimed"
+}
