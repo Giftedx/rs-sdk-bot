@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601898487,
+ "at": 1795601915016,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,6 +22,22 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "PickpockDick",
@@ -107,14 +123,14 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1987 BATCH_UNITS=20 -- foraging grapes"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
+   "goal": "campaign:haggis:item:1987",
    "role": "army"
   },
   {
@@ -190,37 +206,21 @@
    "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "helper"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
     "crafting",
     "inventory",
-    "identify:ranarr_weed"
+    "strip:swamp-toad"
    ],
    "env": {
     "MAX_MAKE": "1",
     "CAP": "600",
     "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:257",
-    "BATCH_UNITS": "4"
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
+   "goal": "campaign:haggis:item:2152",
+   "role": "helper"
   }
  ],
  "army": [
