@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795601351085-1",
+ "account": "PickpockDick",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "fb254bb0-ddc5-4ea3-a16c-86e5ae14273f",
+ "count": 3,
+ "ok": true,
+ "at": 1795601611460,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795601610545
+ },
+ "logout": {
+  "attemptId": "1795601597840-0000016924-0000000001",
+  "at": 1795601611272,
+  "sha256": "9af8810532a9e2d64a300b2ad6711c824c0f0056a23d7e155875eb72d9890682"
+ },
+ "screen": true
+}

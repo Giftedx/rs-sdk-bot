@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795601476986-1",
+ "account": "Pocketpython",
+ "partner": "Stirmypot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "f71f50a9-8129-4a0f-b43b-629e3bbb0d98",
+ "count": 0,
+ "ok": false,
+ "at": 1795601553938,
+ "detail": "trade claimed"
+}

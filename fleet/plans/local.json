@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601519521,
+ "at": 1795601614187,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,35 +24,34 @@
    "role": "rehearsal"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
+   "account": "PickpockDick",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "InTheSack",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/quest-tree.ts DEMAND_ID=goal:quest_board:tree BATCH_UNITS=1 --"
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1987 BATCH_UNITS=20 -- foraging grapes"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:tree",
+   "goal": "campaign:haggis:item:1987",
    "role": "helper"
   },
   {
@@ -138,6 +137,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2152",
    "role": "helper"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/ranged-train.ts",
+   "args": [],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:mmtha0205",
+   "role": "army"
   }
  ],
  "army": [
@@ -164,7 +178,6 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
-  "pickpockdick",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
