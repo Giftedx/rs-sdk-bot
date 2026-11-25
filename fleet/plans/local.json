@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795629903543,
+ "at": 1795629963529,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -77,7 +77,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2070 TARGET_COUNT=207 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2060 TARGET_COUNT=206 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
    ],
    "env": {
@@ -361,19 +361,6 @@
    "repeat": false,
    "goal": "goal:quest_board:tree",
    "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/generated/quest-ball.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ball",
-   "role": "army"
   }
  ],
  "army": [
@@ -392,6 +379,7 @@
   "kiltlifter",
   "mineyourbiz",
   "mmthv2350",
+  "moneyshot",
   "oreelse",
   "pocketpython",
   "pocketrocket",
