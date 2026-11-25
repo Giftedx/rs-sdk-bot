@@ -1,5 +1,6 @@
 // Fresh-account 1-to-99 Magic specialist via Enchant ladder, East Ardougne lever, Kolodion, and 5-per-tick Charge.
 import type { Session } from '../packages/core/src/inprocess';
+import { prayerGuards } from '../packages/core/src/bot/monitors';
 import { componentId } from '../packages/core/src/logout';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import {
@@ -96,18 +97,18 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
   ],
   returnIds: [],
  },
- // Batch 4 (7 diamond -> 37 total Lv 68 + 17 dragonstone)
+ // Batch 4 (7 diamond -> 37 total + 14 dragonstone -> exact Lv 71 for Magic pot Fire Wave)
  {
   give: [
    { id: ITEM_IDS.diamond_ring, count: 7 },
-   { id: ITEM_IDS.dragonstone_ring, count: 17 },
+   { id: ITEM_IDS.dragonstone_ring, count: 14 },
   ],
   returnIds: [],
  },
- // Batch 5 (24 slots -> 28 on spec with 4 runes: 18 dragonstone enchanted during Kolodion + Mage Arena + Magic potion(4))
+ // Batch 5 (18 slots -> 24 on spec with 4 runes: 12 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
  {
   give: [
-   { id: ITEM_IDS.dragonstone_ring, count: 18 },
+   { id: ITEM_IDS.dragonstone_ring, count: 12 },
    { id: ITEM_IDS.lawrune, count: 10 },
    { id: ITEM_IDS.bloodrune, count: 750 },
    { id: ITEM_IDS.knife, count: 1 },
@@ -325,18 +326,18 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
 
  // East Ardougne Wilderness lever -> Deserted Keep
  const camelotWalker = await sessionWalker(spec);
+ logPhase(spec, start, 'magic_cam_tele');
  const ardyWalk = await walkPath(
   camelotWalker,
   [
-   { x: 2752, z: 3458, tol: 3 },
-   { x: 2712, z: 3451, tol: 4 },
-   { x: 2690, z: 3430, tol: 4 },
-   { x: 2664, z: 3406, tol: 4 },
-   { x: 2635, z: 3398, tol: 4 },
-   { x: 2612, z: 3393, tol: 3 },
-   { x: 2585, z: 3348, tol: 4 },
-   { x: 2580, z: 3321, tol: 3 },
-   { x: ARDOUGNE_LEVER.x, z: ARDOUGNE_LEVER.z, tol: 2 },
+   { x: 2749, z: 3458, tol: 2 },
+   { x: 2712, z: 3451, tol: 2 },
+   { x: 2690, z: 3430, tol: 2 },
+   { x: 2664, z: 3406, tol: 2 },
+   { x: 2612, z: 3393, tol: 2 },
+   { x: 2582, z: 3351, tol: 2 },
+   { x: 2580, z: 3321, tol: 2 },
+   { x: ARDOUGNE_LEVER.x, z: ARDOUGNE_LEVER.z, tol: 1 },
   ],
   { maxTicks: Math.max(10, Math.min(125, deadline - spec.tick())) },
  );
@@ -426,7 +427,7 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
   if (boss && sinceCast >= 4) {
    const spell = (spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) >= 75 ? fireWave : fireBlast;
    acts.push(spec.direct({ type: 'spellOnNpc', npcIndex: boss.index, spellComponent: spell, reason: 'SDK' }));
-  } else if (sinceCast >= 1 && sinceCast <= 2 && spec.tick() - lastEnchantSentTick >= 3 && skillLevel(spec, 'Magic') >= enchantLvl5.level) {
+  } else if (sinceCast === 1 && spec.tick() - lastEnchantSentTick >= 4 && skillLevel(spec, 'Magic') >= enchantLvl5.level) {
    const dRing = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.dragonstone_ring);
    if (dRing) {
     lastEnchantSentTick = spec.tick();
@@ -436,6 +437,7 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
   if (acts.length) await Promise.all(acts);
   await waitTicks(spec, 1);
  }
+ logPhase(spec, start, 'magic_kolodion_done');
 
  // Disable Protect from Magic once returned to cellar
  if (spec.sdk.getState()?.prayers?.activePrayers?.[PROTECT_FROM_MAGIC_INDEX]) {
@@ -455,6 +457,7 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
   }
   await waitTicks(spec, 1);
  }
+ logPhase(spec, start, 'magic_pool_done');
 
  // Path inside Chamber from Sparkling Pool (2509,4689) to Zamorak statue (2516,4720), then pray & pick up cape (2414).
  const chamberWalker = await sessionWalker(spec);
@@ -541,6 +544,8 @@ async function executeMagicLoop(
  receiveBatch: (batch: MagicBatchPlan, index: number) => Promise<void>,
  useSafeFoyer = false,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
+ // Mage Arena fight sends spellOnNpc/spellOnItem every tick under explicit Protect from Magic; stop auto-PrayerGuard holds.
+ prayerGuards.get(spec)?.stop();
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
  if (((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) !== 1) {
@@ -704,6 +709,7 @@ export async function runMagicExternal(
 }
 
 if (import.meta.main) {
+ process.env.PRAYER_GUARD ??= '0';
  const cfg = parseSpecialistArgs(process.argv.slice(2), process.env, {
   cap: 1300,
   target: 99,

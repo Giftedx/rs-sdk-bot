@@ -467,7 +467,7 @@ export async function runArdougneStunRelogThieving(opts: {
                             .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))
                             .filter(t => !watched(t.x, t.z)),
                     ).sort((a, b) => chebDist(a, { x: st.player!.worldX, z: st.player!.worldZ }) - chebDist(b, { x: st.player!.worldX, z: st.player!.worldZ }))[0];
-                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= 6) {
+                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= (lvl < 25 ? 12 : 6)) {
                         pickedStall = tile;
                         break;
                     }
@@ -493,9 +493,11 @@ export async function runArdougneStunRelogThieving(opts: {
                         continue;
                     }
                 }
-                // Stay on Ardougne Market stalls through Lv 54 (0 stun, 0 food) instead of burning food on Guards/Warriors.
-                await waitTicks(main, 1);
-                continue;
+                // Wait on Baker/Silk stalls only while below Lv 25; at Lv 25..54 steal ready stalls opportunistically and otherwise pickpocket Warrior/Guard.
+                if (lvl < 25) {
+                    await waitTicks(main, 1);
+                    continue;
+                }
             }
         }
 
