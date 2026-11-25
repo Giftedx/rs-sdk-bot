@@ -1,0 +1,29 @@
+{
+ "id": "1795638492980-moneyshot-masterbaiter-668192f2ff2cd9e0",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "Masterbaiter",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795638492980,
+ "end": 1795643892980,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Water rune",
+   "count": 30
+  }
+ ],
+ "takerWaits": true
+}

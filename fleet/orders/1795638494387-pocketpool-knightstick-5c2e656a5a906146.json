@@ -1,0 +1,23 @@
+{
+ "id": "1795638494387-pocketpool-knightstick-5c2e656a5a906146",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PocketPool",
+ "to": "Knightstick",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1795638494387,
+ "end": 1795643894387,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

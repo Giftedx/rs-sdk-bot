@@ -1,0 +1,23 @@
+{
+ "id": "1795638493506-moneyshot-bigchopper-b9d82071603e0918",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "Bigchopper",
+ "item": "Water rune",
+ "count": 30,
+ "start": 1795638493506,
+ "end": 1795643893506,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

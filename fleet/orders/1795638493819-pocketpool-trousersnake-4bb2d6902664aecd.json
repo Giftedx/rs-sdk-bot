@@ -1,0 +1,23 @@
+{
+ "id": "1795638493819-pocketpool-trousersnake-4bb2d6902664aecd",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PocketPool",
+ "to": "TrouserSnake",
+ "item": "Nature rune",
+ "count": 20,
+ "start": 1795638493819,
+ "end": 1795643893819,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
