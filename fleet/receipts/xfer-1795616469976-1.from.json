@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795616469976-1",
  "account": "Ballspinner",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Fishing bait",
  "requested": 2,
  "claim": "d1ea53cb-5d4a-4a0c-a6dc-2a687dffbf85",
- "count": 0,
- "ok": false,
- "at": 1795617055190,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795617287411,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795617204242
+ },
+ "logout": {
+  "attemptId": "1795617055203-0000016320-0000000001",
+  "at": 1795617287388,
+  "sha256": "747e670aff01a19abe16a10a5be0cbb4c6fc2e2dcc6d980a0ad17f0245402619"
+ },
+ "screen": true
 }

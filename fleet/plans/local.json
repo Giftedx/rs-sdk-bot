@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795617184453,
+ "at": 1795617294457,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -208,7 +208,7 @@
    "role": "helper"
   },
   {
-   "account": "Spitroaster",
+   "account": "Woodenstaff",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy"
@@ -223,24 +223,23 @@
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
+   "goal": "goal:pk_army:Woodenstaff",
    "role": "auto"
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=12 \"ITEM_NAME=Dragon bones\" -- loadout",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=34 -- prayer bury"
    ],
    "env": {
-    "DEMAND_ID": "campaign:hiltsdeep:item:556",
-    "BATCH_UNITS": "902"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:hiltsdeep:item:556",
-   "role": "army"
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
   }
  ],
  "army": [
@@ -266,6 +265,7 @@
   "moneyshot",
   "pocketpython",
   "pocketrocket",
+  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
