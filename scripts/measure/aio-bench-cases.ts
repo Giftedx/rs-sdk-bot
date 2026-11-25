@@ -409,6 +409,27 @@ const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: Clone
     scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=8', 'STALL_TICKS=3000', 'SQUAD_GANG_HUNT=1', `SPAR_B_OPTS=${JSON.stringify({...pooledProfile(mode), ...(o.gang ?? {})})}`, ...(o.prey ? [`SQUAD_GANG_PREY=${o.prey}`] : []), ...(o.args ?? [])],
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? member(i + 1) : cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z, o.unskulled ? 'ganker-dds' : 'ganker-dds-skull')}))};
 };
+// The escort (packages/workers/src/pvp/escort.ts, scripts/measure/pk-squad-escort.ts): `n` of ours from the Edgeville bank in
+// the kit of the climb's winner hold the post with ESCORT_HOLD=1 against the three clones. The walker, a melee account of
+// combat 101 at the Ardougne north bank, waits at the gate of the lever until the escort state says the gang is suppressed,
+// stands on the Keep post (3155, 3924) for `stand` ticks and releases the squad. Pass: the gate opened, no player hit the
+// walker, and neither the walker nor a member of the squad died.
+const ESCORT_WALKER: SaveConfig = {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 70, Strength: 99, Defence: 60, Hitpoints: 99, Prayer: 52},
+  inventory: [], equipment: [{id: 1333, count: 1, slot: 3}], bank: []};
+export const escortPass = (s: string) => {
+  const line = s.match(/^RESULT .*$/gm)?.at(-1) ?? '';
+  return /^RESULT ok escort gate=open /.test(line) && / walkerHits=0 /.test(line) && / walkerDied=false /.test(line) && / squadDied=0 /.test(line)
+    && /ESCORT clear after \d+ ticks/.test(s);
+};
+const escortCase = (key: string, n: number, stand: number, args: string[] = []): BenchCase => {
+  const base = cloneSquad(key, 'live-walker-iron-rune-chain-bind', n, ['SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']);
+  const members = [{preset: base.preset, presetConfig: base.presetConfig}, ...base.companions!];
+  const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, members.length).split('');
+  return {key, engineEnv: base.engineEnv, script: 'scripts/measure/pk-squad-escort.ts', preset: 'fresh_lumbridge', presetConfig: ESCORT_WALKER, pass: escortPass,
+    output: /\benteredAt=(\d+)/, timeoutMs: 600_000, companions: members.map((m, i) => ({suffix: letters[i]!, preset: m.preset, presetConfig: m.presetConfig})),
+    scriptArgs: [...letters.map(l => `{bot:${l}}`), ...base.scriptArgs.filter(a => !/^\{bot:/.test(a) && a !== 'squad' && !/^(MAX_MINUTES|STALL_TICKS)=/.test(a)),
+      'MAX_MINUTES=20', 'STALL_TICKS=0', `ESCORT_WALK_TICKS=${stand}`, 'ESCORT_WAIT_TICKS=1500', ...args]};
+};
 // A change of the pack of the first `members` of ours in a clone squad case (all by default): lobsters for the sharks
 // (the fleet holds lobsters), or no bow and no arrows (an account with an unstrung bow).
 const SHARK = 385, LOBSTER = 379, MAGIC_SHORTBOW = 861, IRON_ARROW = 884;
@@ -1387,6 +1408,8 @@ return [
   // snare runes (rune), dragonhide (dhide).
   ...([3, 4, 5, 6] as const).flatMap(n => ([['chainbind', 'live-walker-iron-rune-chain-bind'], ['chainbare', 'live-walker-iron-rune-chain-bare'], ['rune', 'live-walker-iron-snare-rune-nopot'], ['dhide', 'tribrid-snare-dhide']] as const)
     .map(([tag, kit]) => cloneSquad(`extra:clone-squad-${n}-${tag}-x1`, kit, n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']))),
+  // The escort hold of the climb's winner (five of ours) and one walker to the Keep post.
+  escortCase('extra:escort-keep-5-x1', 5, 300),
   // Wave A scaled maxed tribrid benches (4, 6, 8, 10, 12, 16) vs full per-clone Goondelf, Ligma, Sugma (0 deaths required).
   ...([4, 6, 8, 10, 12, 16] as const).map(n =>
     cloneTribridSquad(`extra:clone-tribrid-${n}-x1`, 'tribrid-snare', n, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),

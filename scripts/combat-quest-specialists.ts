@@ -12,6 +12,7 @@ import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { createTickRecorder } from '../packages/core/src/tick-record';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
+import { escortGate } from '../packages/workers/src/pvp/escort';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 
 export interface SpecialistBoardTarget {
@@ -709,6 +710,8 @@ export async function pullArdougneLeverToWildy(s: Session, stop: StopFn): Promis
     } else if (d8({ x: p0.worldX, z: p0.worldZ }, ARDY_LEVER) > 1) {
         await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 200, stop, 'walk to ardougne lever');
     }
+    // ESCORT_STATE set: wait at the lever until the squad's escort state says the gang is suppressed (escort.ts).
+    await escortGate(s, stop);
     const deadline = s.tick() + 50;
     while (!stop() && s.tick() < deadline) {
         const p = posOf(s);

@@ -23,7 +23,12 @@ export function readGangRecord(dir = resolve(REPO_ROOT, 'scripts', 'pk-gang-reco
     try { return JSON.parse(readFileSync(join(dir, 'group.json'), 'utf8')); } catch { return null; }
 }
 
-/** Applies the computed squad stall bound into `env.STALL_TICKS` when unset. */
-export function applySquadStallTicks(env: Record<string, string | undefined> = process.env): void {
-    env.STALL_TICKS ??= String(squadStallTicks(readGangRecord()));
+/**
+ * Applies the computed squad stall bound into `env.STALL_TICKS` when unset. The escort hold (ESCORT_HOLD=1 in the
+ * environment or the arguments) stands at the post with no fight by design, so its bound is 0 (no stall check): the hold
+ * ends at MAX_MINUTES or at the release file.
+ */
+export function applySquadStallTicks(env: Record<string, string | undefined> = process.env, argv: readonly string[] = process.argv): void {
+    const hold = env.ESCORT_HOLD === '1' || argv.includes('ESCORT_HOLD=1');
+    env.STALL_TICKS ??= hold ? '0' : String(squadStallTicks(readGangRecord()));
 }
