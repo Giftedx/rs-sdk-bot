@@ -48,6 +48,7 @@ import {
     runOwnedLoadout,
     runOwnedLoadoutCured,
     LOADOUT_HP_FELL,
+    cureWithAntipoison,
     runPreservedWine,
     sortBankRows,
     stagedBoat,
@@ -676,6 +677,41 @@ test('a loadout that a Hitpoints drop stopped drinks one antipoison and runs the
     const stopped = await runOwnedLoadoutCured({} as any, kitJob, () => true, deps([result(false, fell)], { ok: true, detail: '' }));
     expect(stopped).toMatchObject({ ok: false, cure: null });
     expect([runs.length, cures.length]).toEqual([2, 0]);
+});
+
+// The cure inside a loadout drinks where the account stands. The Varrock West kit bank (3185,3436) is 4 tiles from that
+// bank's meeting tile (3183,3440), past the loadout's 3-tile rule, so a walk there would fail the second run at once.
+test('an in-place cure opens the bank where the account stands and does not walk', async () => {
+    let opened = 0;
+    const inv: any[] = [], bank = [{ id: 175, count: 3, slot: 0, name: 'Antipoison(3)' }];
+    const s: any = {
+        sdk: {
+            getState: () => ({ player: { worldX: 3185, worldZ: 3436, level: 0, hp: 38 } }), getInventory: () => inv, getBankItems: () => bank,
+            sendUseItem: async (slot: number) => { inv.splice(inv.findIndex(i => i.slot === slot), 1); return { success: true }; },
+        },
+        bot: {
+            openBank: async () => { opened++; return { success: true }; }, closeBank: async () => ({ success: true }),
+            withdrawItem: async (row: any, n: number) => { row.count -= n; inv.push({ id: row.id, count: n, slot: 0, name: row.name, optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] }); return { success: true }; },
+        },
+    };
+    const r = await cureWithAntipoison(s, { inPlace: true });
+    expect(r).toMatchObject({ ok: true });
+    expect(r.detail).toContain('from the bank');
+    expect(opened).toBe(1);
+});
+
+// Poison can hit after the weapon comes off with style 3 on: the unarmed clamp sets style 2 and the failed run does not
+// restore it. The second run restores the style that the first run found, not the clamped one.
+test('the retry after a cure restores the combat style that the first run found', async () => {
+    const f = loadoutModel(); f.control.style = 3;
+    const unequip = f.s.bot.unequipItem;
+    let hit = false;
+    f.s.bot.unequipItem = async (item: any) => { const r = await unequip(item); if (!hit) { hit = true; f.control.hp = 98; } return r; };
+    const cures: string[] = [];
+    const r = await runOwnedLoadoutCured(f.s, kitJob, () => false, { run: runOwnedLoadout, cure: async () => { cures.push('cure'); return { ok: true, detail: 'drank Antipoison(3) from the pack' }; } });
+    expect(cures).toHaveLength(1);
+    expect(r).toMatchObject({ ok: true, controlsPreserved: true });
+    expect(f.control.style).toBe(3);
 });
 
 test('native unarmed style3 clamp is restored only after the final compatible weapon is observed', async () => {

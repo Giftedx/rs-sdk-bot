@@ -113,14 +113,16 @@ export function nearestBank(at: { x: number; z: number }) {
     return best;
 }
 
-export async function cureWithAntipoison(s: Session): Promise<{ ok: boolean; detail: string }> {
+// inPlace: the account already stands at a bank (a loadout's bank tile), so the bank opens where it stands. A walk to the
+// bank's meeting tile can leave the loadout's 3-tile radius (Varrock West: kit tile 3185,3436, meeting tile 3183,3440).
+export async function cureWithAntipoison(s: Session, options: { inPlace?: boolean } = {}): Promise<{ ok: boolean; detail: string }> {
     const hp = () => s.sdk.getState()?.player?.hp ?? 0;
     const held = (id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
     let choice = chooseAntipoison(s.sdk.getInventory(), []);
     if (!choice) {
         const p = s.sdk.getState()?.player, bank = nearestBank({ x: p?.worldX ?? 0, z: p?.worldZ ?? 0 });
         const meet = bank.meet[0];
-        if (!p || p.level !== meet.level || p.worldX !== meet.x || p.worldZ !== meet.z) {
+        if (!options.inPlace && (!p || p.level !== meet.level || p.worldX !== meet.x || p.worldZ !== meet.z)) {
             const walk = await walkTarget(s, meet, false) as { ok: boolean; reason?: string; detail?: string };
             if (!walk.ok) return { ok: false, detail: `walk to the ${bank.bank} bank: ${walk.reason ?? ''} ${walk.detail ?? ''}`.trim() };
         }
