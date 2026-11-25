@@ -110,23 +110,48 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
         }
     });
 
-    test('matches exact authoritative supply bills & staging holders converted from .practice/specialist-launch/', () => {
+    test('matches exact authoritative supply bills & staging holders for current PvP and fast-skill routes', () => {
         const hiltsdeep = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('hiltsdeep')!;
-        expect(hiltsdeep.planTicks).toBe(3815);
+        expect(hiltsdeep.planTicks).toBe(1936);
         expect(hiltsdeep.defaultStagingHolder).toBe('Quickhandjob');
+        expect(hiltsdeep.requiredSupplies.find((s) => s.itemId === 1319)?.count).toBe(1);
         expect(hiltsdeep.requiredSupplies.find((s) => s.itemId === 536)?.count).toBe(11);
-        expect(hiltsdeep.requiredSupplies.find((s) => s.itemId === 556)?.count).toBe(1300);
+        expect(hiltsdeep.requiredSupplies.find((s) => s.itemId === 556)?.count).toBe(6);
+
+        const rocksolid = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('rocksolid')!;
+        expect(rocksolid.planTicks).toBe(2278);
+        expect(rocksolid.requiredSupplies.find((s) => s.itemId === 1319)?.count).toBe(1);
+
+        const bigswinger = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('bigswinger')!;
+        expect(bigswinger.planTicks).toBe(1907);
+        expect(bigswinger.requiredSupplies.find((s) => s.itemId === 1319)?.count).toBe(1);
 
         const shaftshooter = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('shaftshooter')!;
-        expect(shaftshooter.planTicks).toBe(4660);
+        expect(shaftshooter.planTicks).toBe(1447);
         expect(shaftshooter.defaultStagingHolder).toBe('Shaftsinker');
-        expect(shaftshooter.requiredSupplies.find((s) => s.itemId === 2)?.count).toBe(1500);
-        expect(shaftshooter.requiredSupplies.find((s) => s.itemId === 892)?.count).toBe(1000);
+        expect(shaftshooter.requiredSupplies.find((s) => s.itemId === 2)).toBeUndefined();
+        expect(shaftshooter.requiredSupplies.find((s) => s.itemId === 857)?.count).toBe(1);
+        expect(shaftshooter.requiredSupplies.find((s) => s.itemId === 892)?.count).toBe(1500);
+        expect(shaftshooter.requiredSupplies.find((s) => s.itemId === 1712)?.count).toBe(1);
 
         const fullblooded = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('fullblooded')!;
-        expect(fullblooded.planTicks).toBe(8900);
+        expect(fullblooded.planTicks).toBe(3367);
         expect(fullblooded.defaultStagingHolder).toBe('Woodenstaff');
-        expect(fullblooded.requiredSupplies.find((s) => s.itemId === 2435)?.count).toBe(18);
+        expect(fullblooded.requiredSupplies.find((s) => s.itemId === 2435)).toBeUndefined();
+        expect(fullblooded.requiredSupplies.find((s) => s.itemId === 556)?.count).toBe(6);
+        expect(fullblooded.requiredSupplies.find((s) => s.itemId === 1319)?.count).toBe(1);
+
+        const grindmyherb = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('grindmyherb')!;
+        expect(grindmyherb.planTicks).toBe(383);
+        expect(grindmyherb.requiredSupplies.find((s) => s.itemId === 111)?.count).toBe(170);
+
+        const tipmyshaft = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('tipmyshaft')!;
+        expect(tipmyshaft.planTicks).toBe(54);
+        expect(tipmyshaft.requiredSupplies.find((s) => s.itemId === 53)?.count).toBe(3600);
+
+        const polevaulter = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('polevaulter')!;
+        expect(polevaulter.planTicks).toBe(5913);
+        expect(polevaulter.requiredSupplies.find((s) => s.itemId === 3032)?.count).toBe(6);
 
         const lochnessrod = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('lochnessrod')!;
         expect(lochnessrod.planTicks).toBe(2915);
@@ -339,7 +364,70 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
         const hilts = manifests.find((c) => c.account === 'hiltsdeep')!;
         expect(hilts.state).toBe('staging');
         expect(hilts.hiscoreMargin?.rivalTicks).toBe(2607);
-        expect(hilts.hiscoreMargin?.meetsMargin).toBe(false);
+        expect(hilts.hiscoreMargin?.meetsMargin).toBe(true);
+    });
+
+    test('auto-discovers fresh .practice/hosted-rehearse/<account>/*.receipt.json when no manifest exists', () => {
+        const launchDir = join(tempRoot, '.practice', 'specialist-launch');
+        writeJson(join(launchDir, 'hiscores.json'), {
+            takenAt: new Date(NOW - 60_000).toISOString(),
+            boards: [
+                { board: 'Fletching', category: 10, rows: [{ rank: 1, name: 'RivalFletch', level: 99, ticks: 56 }] },
+                { board: 'Strength', category: 3, rows: [{ rank: 1, name: 'RivalStr', level: 99, ticks: 3288 }] },
+            ],
+        });
+
+        const tipDir = join(tempRoot, '.practice', 'hosted-rehearse', 'tipmyshaft');
+        // Stale (>7d) and failed receipts should be ignored; newest valid receipt wins.
+        writeJson(join(tipDir, 'tipmyshaft-fletching-old.receipt.json'), {
+            ok: true,
+            died: false,
+            logout: 'logged-out',
+            at: NOW - 8 * 86_400_000,
+            context: 'oldctx',
+            boardTicks: { Fletching: 54 },
+        });
+        writeJson(join(tipDir, 'tipmyshaft-fletching-fail.receipt.json'), {
+            ok: false,
+            died: false,
+            logout: 'logged-out',
+            at: NOW - 5_000,
+            context: 'failctx',
+            boardTicks: { Fletching: 54 },
+        });
+        writeJson(join(tipDir, 'tipmyshaft-fletching.receipt.json'), {
+            ok: true,
+            died: false,
+            logout: 'logged-out',
+            at: NOW - 15_000,
+            context: 'freshctx',
+            boardTicks: { Fletching: 54 },
+        });
+
+        // Stale-only directory leaves rehearsalProof null.
+        writeJson(join(tempRoot, '.practice', 'hosted-rehearse', 'bigswinger', 'bigswinger-strength.receipt.json'), {
+            ok: true,
+            died: false,
+            logout: 'logged-out',
+            at: NOW - 10 * 86_400_000,
+            context: 'stalectx',
+            boardTicks: { Strength: 1907 },
+        });
+
+        const manifests = loadCampaignManifests({ root: tempRoot, now: NOW });
+        const tip = manifests.find((c) => c.account === 'tipmyshaft')!;
+        expect(tip.rehearsalProof).toEqual({
+            verified: true,
+            ticks: 54,
+            contextSha256: 'freshctx',
+            verifiedAt: NOW - 15_000,
+            reportPath: '.practice/hosted-rehearse/tipmyshaft/tipmyshaft-fletching.receipt.json',
+        });
+        expect(tip.state).toBe('ready');
+
+        const big = manifests.find((c) => c.account === 'bigswinger')!;
+        expect(big.rehearsalProof).toBeNull();
+        expect(big.state).toBe('staging');
     });
 
     test('uses active Haggis route (25,674 ticks, no boards-sum inflation) and computes specialist margins from repo hiscores', () => {

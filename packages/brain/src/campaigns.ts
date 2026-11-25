@@ -334,11 +334,18 @@ function computeHiscoreMargin(
     };
 }
 
+interface HostedRehearseAccountIndex {
+    readonly dirName: string;
+    readonly receiptFiles: readonly string[];
+}
+
 interface CampaignFsIndex {
     readonly liveLaunchDir: string;
     readonly pracLaunchDir: string;
+    readonly hostedRehearseDir: string;
     readonly liveLaunchFiles: ReadonlySet<string>;
     readonly pracLaunchFiles: ReadonlySet<string>;
+    readonly hostedRehearseByAccount: ReadonlyMap<string, HostedRehearseAccountIndex>;
     readonly liveRootFiles: ReadonlySet<string>;
     readonly pracRootFiles: ReadonlySet<string>;
     readonly isOwnerStopped: (account: string) => boolean;
@@ -352,6 +359,30 @@ function listDirSet(dir: string): Set<string> {
     }
 }
 
+function buildHostedRehearseIndex(hostedRehearseDir: string): Map<string, HostedRehearseAccountIndex> {
+    const byAccount = new Map<string, HostedRehearseAccountIndex>();
+    try {
+        for (const entry of readdirSync(hostedRehearseDir, { withFileTypes: true })) {
+            if (!entry.isDirectory()) continue;
+            const subDir = join(hostedRehearseDir, entry.name);
+            let receiptFiles: string[] = [];
+            try {
+                receiptFiles = readdirSync(subDir).filter((f) => f.endsWith('.receipt.json')).sort();
+            } catch {
+                continue;
+            }
+            if (receiptFiles.length === 0) continue;
+            const key = entry.name.toLowerCase();
+            if (!byAccount.has(key)) {
+                byAccount.set(key, { dirName: entry.name, receiptFiles });
+            }
+        }
+    } catch {
+        return byAccount;
+    }
+    return byAccount;
+}
+
 function buildCampaignFsIndex(root: string): CampaignFsIndex {
     const lRoot = liveRoot(root);
     const pRoot = practiceRoot(root);
@@ -359,8 +390,12 @@ function buildCampaignFsIndex(root: string): CampaignFsIndex {
     const pracRootFiles = listDirSet(pRoot);
     const liveLaunchDir = join(lRoot, 'specialist-launch');
     const pracLaunchDir = join(pRoot, 'specialist-launch');
+    const hostedRehearseDir = join(pRoot, 'hosted-rehearse');
     const liveLaunchFiles = liveRootFiles.has('specialist-launch') ? listDirSet(liveLaunchDir) : new Set<string>();
     const pracLaunchFiles = pracRootFiles.has('specialist-launch') ? listDirSet(pracLaunchDir) : new Set<string>();
+    const hostedRehearseByAccount = pracRootFiles.has('hosted-rehearse')
+        ? buildHostedRehearseIndex(hostedRehearseDir)
+        : new Map<string, HostedRehearseAccountIndex>();
 
     const stopDirs: { dir: string; exact: Set<string>; byLower: Map<string, string> }[] = [];
     for (const [dir, entries] of [
@@ -414,8 +449,10 @@ function buildCampaignFsIndex(root: string): CampaignFsIndex {
     return {
         liveLaunchDir,
         pracLaunchDir,
+        hostedRehearseDir,
         liveLaunchFiles,
         pracLaunchFiles,
+        hostedRehearseByAccount,
         liveRootFiles,
         pracRootFiles,
         isOwnerStopped,
@@ -620,6 +657,73 @@ function buildHaggisCampaign(
     };
 }
 
+const REHEARSAL_RECEIPT_MAX_AGE_MS = 7 * 86_400_000;
+
+function parseRehearsalProofSummary(
+    rJson: unknown,
+    boardName: string,
+    reportPath: string,
+    opts: { readonly requireFresh?: boolean; readonly now?: number } = {},
+): RehearsalProofSummary | null {
+    if (!isPlainRecord(rJson)) return null;
+    const ok = rJson.ok === true && rJson.died === false && rJson.logout === 'logged-out';
+    const boardTicks =
+        isPlainRecord(rJson.boardTicks) &&
+        typeof rJson.boardTicks[boardName] === 'number' &&
+        Number.isFinite(rJson.boardTicks[boardName]) &&
+        (rJson.boardTicks[boardName] as number) > 0
+            ? (rJson.boardTicks[boardName] as number)
+            : undefined;
+    if (opts.requireFresh) {
+        const now = opts.now ?? 0;
+        if (
+            !ok ||
+            boardTicks === undefined ||
+            typeof rJson.at !== 'number' ||
+            !Number.isFinite(rJson.at) ||
+            rJson.at <= 0 ||
+            rJson.at > now ||
+            now - rJson.at >= REHEARSAL_RECEIPT_MAX_AGE_MS
+        ) {
+            return null;
+        }
+    }
+    return {
+        verified: ok,
+        ...(typeof boardTicks === 'number' ? { ticks: boardTicks } : {}),
+        ...(typeof rJson.context === 'string' ? { contextSha256: rJson.context } : {}),
+        ...(typeof rJson.at === 'number' ? { verifiedAt: rJson.at } : {}),
+        reportPath,
+    };
+}
+
+function discoverHostedRehearsalProof(
+    fsIdx: CampaignFsIndex,
+    lower: string,
+    boardName: string,
+    now: number,
+): RehearsalProofSummary | null {
+    const entry = fsIdx.hostedRehearseByAccount.get(lower);
+    if (!entry) return null;
+    let best: RehearsalProofSummary | null = null;
+    for (const file of entry.receiptFiles) {
+        const rJson = readJsonSafe(join(fsIdx.hostedRehearseDir, entry.dirName, file));
+        const parsed = parseRehearsalProofSummary(
+            rJson,
+            boardName,
+            `.practice/hosted-rehearse/${entry.dirName}/${file}`,
+            { requireFresh: true, now },
+        );
+        if (!parsed) continue;
+        const parsedAt = parsed.verifiedAt ?? 0;
+        const bestAt = best?.verifiedAt ?? -1;
+        if (!best || parsedAt > bestAt || (parsedAt === bestAt && parsed.reportPath! > (best.reportPath ?? ''))) {
+            best = parsed;
+        }
+    }
+    return best;
+}
+
 function buildSpecialistCampaign(
     root: string,
     account: string,
@@ -672,21 +776,7 @@ function buildSpecialistCampaign(
 
         if (isPlainRecord(manifest.rehearsal) && typeof manifest.rehearsal.path === 'string') {
             const rPath = resolve(root, manifest.rehearsal.path);
-            const rJson = readJsonSafe(rPath);
-            if (isPlainRecord(rJson)) {
-                const ok = rJson.ok === true && rJson.died === false && rJson.logout === 'logged-out';
-                const boardTicks =
-                    isPlainRecord(rJson.boardTicks) && typeof rJson.boardTicks[board.name] === 'number'
-                        ? (rJson.boardTicks[board.name] as number)
-                        : undefined;
-                rehearsalProof = {
-                    verified: ok,
-                    ...(typeof boardTicks === 'number' ? { ticks: boardTicks } : {}),
-                    ...(typeof rJson.context === 'string' ? { contextSha256: rJson.context } : {}),
-                    ...(typeof rJson.at === 'number' ? { verifiedAt: rJson.at } : {}),
-                    reportPath: manifest.rehearsal.path,
-                };
-            }
+            rehearsalProof = parseRehearsalProofSummary(readJsonSafe(rPath), board.name, manifest.rehearsal.path);
         }
 
         if (isPlainRecord(manifest.staging) && typeof manifest.staging.path === 'string') {
@@ -703,25 +793,19 @@ function buildSpecialistCampaign(
                 }
             }
         }
-    } else if (
-        declarative?.defaultRehearsalReportPath
-        && (fsIdx.pracLaunchFiles.size > 0 || fsIdx.liveLaunchFiles.size > 0 || !declarative.defaultRehearsalReportPath.startsWith('.practice/specialist-launch/'))
-    ) {
-        const rPath = resolve(root, declarative.defaultRehearsalReportPath);
-        const rJson = readJsonSafe(rPath);
-        if (isPlainRecord(rJson)) {
-            const ok = rJson.ok === true && rJson.died === false && rJson.logout === 'logged-out';
-            const boardTicks =
-                isPlainRecord(rJson.boardTicks) && typeof rJson.boardTicks[board.name] === 'number'
-                    ? (rJson.boardTicks[board.name] as number)
-                    : undefined;
-            rehearsalProof = {
-                verified: ok,
-                ...(typeof boardTicks === 'number' ? { ticks: boardTicks } : {}),
-                ...(typeof rJson.context === 'string' ? { contextSha256: rJson.context } : {}),
-                ...(typeof rJson.at === 'number' ? { verifiedAt: rJson.at } : {}),
-                reportPath: declarative.defaultRehearsalReportPath,
-            };
+    } else {
+        rehearsalProof = discoverHostedRehearsalProof(fsIdx, lower, board.name, now);
+        if (
+            !rehearsalProof &&
+            declarative?.defaultRehearsalReportPath &&
+            (fsIdx.pracLaunchFiles.size > 0 || fsIdx.liveLaunchFiles.size > 0 || !declarative.defaultRehearsalReportPath.startsWith('.practice/specialist-launch/'))
+        ) {
+            const rPath = resolve(root, declarative.defaultRehearsalReportPath);
+            rehearsalProof = parseRehearsalProofSummary(
+                readJsonSafe(rPath),
+                board.name,
+                declarative.defaultRehearsalReportPath,
+            );
         }
     }
 
