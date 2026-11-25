@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795609107349-fishandchips-deeppockets-b119eb6198833d74",
  "account": "FishAndChips",
  "partner": "Deeppockets",
@@ -10,8 +10,22 @@
  "item": "Lobster",
  "requested": 21,
  "claim": "9354bddb-49a1-4900-b096-1b5d04ee963f",
- "count": 0,
- "ok": false,
- "at": 1795609117155,
- "detail": "trade claimed"
+ "count": 21,
+ "ok": true,
+ "at": 1795609153742,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 21,
+  "after": 0
+ },
+ "bank": {
+  "count": 21,
+  "at": 1795609128613
+ },
+ "logout": {
+  "attemptId": "1795609117164-0000004316-0000000001",
+  "at": 1795609153734,
+  "sha256": "7ec334a75ab00a8615d90d5721a1caa8f2330b93d50dd280d8cb1886bd3accf4"
+ },
+ "screen": true
 }

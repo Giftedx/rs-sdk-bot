@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795607892307-nabtheknob-trousersnake-95ad46f1449a4b7a",
  "account": "NabTheKnob",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Adamant platelegs",
  "requested": 1,
  "claim": "7fc47119-9bc4-4b2d-899f-faf2f1a05d41",
- "count": 0,
- "ok": false,
- "at": 1795608992069,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795609163753,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795609139806
+ },
+ "logout": {
+  "attemptId": "1795608992078-0000026972-0000000001",
+  "at": 1795609163742,
+  "sha256": "090c36e276c8b1d53605ea63b7620b6278aec814e4b7f976af318f3eaf2037f4"
+ },
+ "screen": true
 }
