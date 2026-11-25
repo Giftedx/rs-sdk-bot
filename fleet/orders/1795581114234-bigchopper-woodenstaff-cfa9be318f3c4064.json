@@ -1,0 +1,25 @@
+{
+ "id": "1795581114234-bigchopper-woodenstaff-cfa9be318f3c4064",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "Woodenstaff",
+ "item": "Rope",
+ "count": 4,
+ "start": 1795581114234,
+ "end": 1795584714234,
+ "extra": [
+  {
+   "item": "Water rune",
+   "count": 24
+  },
+  {
+   "item": "Air rune",
+   "count": 24
+  },
+  {
+   "item": "Earth rune",
+   "count": 24
+  }
+ ],
+ "takerWaits": true
+}
