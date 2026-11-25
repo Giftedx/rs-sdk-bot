@@ -17,6 +17,8 @@
 //   FOLLOW=1 (march to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30)  MARCH=1 STEP=12 (move together)
 //   PULL=1 (attacked on a single-way tile with a multi-way post: walk on into multi-way)
 //   RESCUE=1 (a dropped account logs in again at once and leaves the Wilderness while the others fight on)
+//   ESCORT_HOLD=1 ESCORT_STATE=<file> (the escort hold, escort.ts: hold the post to MAX_MINUTES or the release file ESCORT_RELEASE,
+//   default <file>.release, and write the escort state each ESCORT_EVERY=5 ticks; ESCORT_MIN_SQUAD=4 members hold for a clear signal)
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
@@ -37,6 +39,7 @@ import { killFeed, settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './hunt-kits';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../../../core/src/pvp-deaths';
 import { attackStyleOfAnim, holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch, threatOptions } from './pk-threat';
+import { clearEscortRelease, createEscortTracker, ESCORT_EVERY_TICKS, ESCORT_MIN_SQUAD, escortHolding, escortReleased, escortReleasePath, writeEscortState } from './escort';
 type CombatStyle = NonNullable<ReturnType<typeof protectOf>>;
 import { accountServer, accountServerBeforeLogin, connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './wild-rules';
 import { GOD_LOADOUTS } from '../../../core/src/pk-kits/god-specs';
@@ -237,6 +240,7 @@ export function squadStopHandlers(halt: (detail: string) => void, dropped: Map<s
 }
 // A kill line of the fight loop, not its proof lines (`PK kill receipt ...`, `PK kill feed ...`).
 export const isKillLine = (line: string) => /PK kill (?!receipt |feed )\S+ after \d+ ticks/.test(line);
+export const killLineVictim = (line: string): string | null => /PK kill (?!receipt |feed )(\S+) after \d+ ticks/.exec(line)?.[1] ?? null;
 export const squadPaused = (name: string, exists: (path: string) => boolean = existsSync) => exists('.practice/stop-pk-squad') || exists(`.practice/stop-${name}`);
 
 // Connected members share one monotonic coordination clock after a member disconnects.
@@ -1335,9 +1339,10 @@ export function squadKitFightDefaults(
 // `RESULT fail died` as a death and does not start the squad again with an account that holds no kit (packages/practice/src/supervise.ts and
 // supervise-host.ts classify), and scripts/squad-watch.ts reads it as a death. `diedAccounts=A,B` names the accounts that died, early in the line
 // (the supervisor logs 200 characters of it): scripts/swarm.ts gives the died end to those accounts only.
-export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number; interlopers?: number; diedAccounts?: readonly string[] }): { ok: boolean; detail: string } {
-    const ok = o.halted === undefined && o.stranded.length === 0 && o.fights > 0 && o.deaths === 0;
-    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts}${o.deaths > 0 && o.diedAccounts?.length ? ` diedAccounts=${o.diedAccounts.map(n => n.replace(/ /g, '_')).join(',')}` : ''} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''}${o.interlopers !== undefined ? ` attackerKills=${o.interlopers}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
+// `hold` (the escort hold, ESCORT_HOLD=1): a hold with no fight is a result too, since the gang need not come.
+export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number; interlopers?: number; diedAccounts?: readonly string[]; hold?: boolean }): { ok: boolean; detail: string } {
+    const ok = o.halted === undefined && o.stranded.length === 0 && (o.fights > 0 || o.hold === true) && o.deaths === 0;
+    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts}${o.deaths > 0 && o.diedAccounts?.length ? ` diedAccounts=${o.diedAccounts.map(n => n.replace(/ /g, '_')).join(',')}` : ''} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''}${o.interlopers !== undefined ? ` attackerKills=${o.interlopers}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.hold ? ' hold=1' : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
 }
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
 export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean; tripping?: Set<string>;
@@ -2034,6 +2039,11 @@ export async function runPkSquadCli(
     if (wildernessLevel(post.z) === 0 || (!isMulti(post.x, post.z) && get('ALLOW_SINGLE', '0') !== '1')) { console.log(`RESULT fail post ${post.x},${post.z} is not a multi-way Wilderness tile (ALLOW_SINGLE=1 for a single-way one)`); return 2; }
     const targetCount = Number(get('SQUAD_TARGET_COUNT', '-1'));
     const targets = new Set((gangSize ? (targetCount >= 0 ? gangNames.slice(0, targetCount) : gangNames) : get('TARGETS', GANG.join(',')).split(',')).map(t => t.trim().toLowerCase()).filter(Boolean));
+    // ESCORT_HOLD=1: the escort hold (escort.ts). The squad holds the post to MAX_MINUTES or until the release file exists
+    // (ESCORT_RELEASE, default <ESCORT_STATE>.release), also when the gang is out, and writes ESCORT_STATE each ESCORT_EVERY ticks.
+    const holdMode = get('ESCORT_HOLD', '0') === '1', escortPath = get('ESCORT_STATE', '');
+    if (holdMode && !escortPath) { console.log('RESULT fail ESCORT_HOLD=1 needs ESCORT_STATE=<file>'); return 2; }
+    const releasePath = holdMode ? get('ESCORT_RELEASE', escortReleasePath(escortPath, {})) : '';
     let squadServer = '';
     try { squadServer = accountServerBeforeLogin(ours[0]!); } catch (e) { console.log(`RESULT fail no server for ${ours[0]}: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`); return 2; }
     const runDeaths = { deaths: 0, limit: pvpDeathLimits().perRun };
@@ -2092,8 +2102,10 @@ export async function runPkSquadCli(
     const gangLife = new Map(gang.map(g => [g, g.sdk.getState()?.player?.lifeId] as const));
     const gangDead = (g: Session) => { const p = g.sdk.getState()?.player; return !!p && ((gangLife.get(g) !== undefined && p.lifeId !== gangLife.get(g)) || Math.max(Math.abs(p.worldX - 3222), Math.abs(p.worldZ - 3218)) <= 40); };
     const gangOut = () => gang.length > 0 && gang.every(g => { const p = g.sdk.getState()?.player; return !p || gangDead(g) || wildernessLevel(p.worldZ) === 0; });
-    let squadDone = false;
-    const stopped = () => squadDone || halted !== undefined || existsSync('.practice/stop-pk-squad') || gangOut();
+    let squadDone = false, released = false;
+    // A stale release file of an earlier hold would end this one at once.
+    if (holdMode) clearEscortRelease(releasePath);
+    const stopped = () => squadDone || halted !== undefined || existsSync('.practice/stop-pk-squad') || (holdMode ? released : gangOut());
     const deadline = squad[0]!.tick() + Math.round(Number(get('MAX_MINUTES', '30')) * 100);
     const maxKills = Number(get('MAX_KILLS', '0'));
     let kills = 0;
@@ -2299,6 +2311,34 @@ export async function runPkSquadCli(
         }
     };
     const explicitRotation = Object.prototype.hasOwnProperty.call(explicitOpts, 'rotation');
+    // The escort state: each tick the gang accounts in the view of a member and the release file, each ESCORT_EVERY ticks a write.
+    // The world feed gives where a gang account is out of view (on the bench the gang sessions feed it, as FOLLOW=1 does).
+    const escort = holdMode ? createEscortTracker([...targets], { minSquad: Number(get('ESCORT_MIN_SQUAD', String(ESCORT_MIN_SQUAD))) }) : undefined;
+    let unwatchEscort: (() => void) | undefined, closeEscortRadar: (() => void) | undefined, unwatchEscortRadar: (() => void) | undefined;
+    const escortRadar = new Radar();
+    const writeEscort = (tick: number, holding: boolean) => {
+        if (!escort) return;
+        const alive = squad.filter(q => { const p = q.sdk.getState()?.player; return !dropped.has(q.name) && !finished.has(q.name) && !!p && p.hp > 0 && wildernessLevel(p.worldZ) > 0; }).length;
+        try {
+            writeEscortState(escortPath, escort.state({ at: Date.now(), tick, post: { ...post }, squad: { size: squad.length, alive }, kills, holding,
+                radar: { fresh: escortRadar.fresh(), at: name => { const t = escortRadar.tracks.get(name); return t ? { x: t.x, z: t.z } : null; } } }));
+        } catch (error) { log(`SQUAD escort state write failed: ${String(error)}`); }
+    };
+    if (escort) {
+        if (gang.length) unwatchEscortRadar = watchSquadTicks(squad, name => dropped.has(name), tick => escortRadar.accept({ t: 'roster', k: tick, p: gang.flatMap((g, i) => { const q = g.sdk.getState()?.player; return q ? [[i, g.name, q.worldX, q.worldZ, 0, q.combatLevel] as [number, string, number, number, number, number]] : []; }) }));
+        else closeEscortRadar = connectRadar(squadServer, escortRadar);
+        const every = Math.max(1, Number(get('ESCORT_EVERY', String(ESCORT_EVERY_TICKS))));
+        unwatchEscort = watchSquadTicks(squad, name => dropped.has(name), tick => {
+            released ||= escortReleased(releasePath);
+            for (const q of squad) {
+                if (dropped.has(q.name)) continue;
+                for (const p of q.sdk.getState()?.nearbyPlayers ?? []) if (targets.has(p.name.toLowerCase())) escort.sight(p.name, p.x, p.z, tick, 'view');
+            }
+            if (tick % every === 0) writeEscort(tick, escortHolding(stopped(), tick, deadline));
+        });
+        writeEscort(squad[0]!.tick(), true);
+        log(`SQUAD escort hold: state ${escortPath}, release ${releasePath}`);
+    }
     const results = await Promise.all(squad.map(s => {
         const stNow = s.sdk.getState();
         const kit = kitFrom(stNow?.equipment ?? [], stNow?.inventory ?? []);
@@ -2322,10 +2362,13 @@ export async function runPkSquadCli(
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup, pull: get('PULL', '1') === '1', tripping, aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             locs: squadLocs.get(s),
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
-            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), exitStopped: () => halted !== undefined || dropped.has(s.name) || existsSync('.practice/stop-pk-squad') || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (isKillLine(l)) kills++; log(l); },
+            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), exitStopped: () => halted !== undefined || dropped.has(s.name) || existsSync('.practice/stop-pk-squad') || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (isKillLine(l)) { kills++; const victim = killLineVictim(l); if (victim) escort?.kill(victim, s.tick()); } log(l); },
         }).finally(() => { finished.add(s.name); });
     }));
     squadDone = true;
+    // The last write says the hold ended, so a route that waits at its entry does not go in.
+    unwatchEscort?.(); unwatchEscortRadar?.(); closeEscortRadar?.();
+    writeEscort(Math.max(...squad.map(s => s.tick())), false);
     await Promise.all(gangRuns);
     unwatchMarch(); unwatchRadar?.(); unwatchFollow?.();
     closeRadar?.(); closeThreatRadar?.();
@@ -2345,7 +2388,7 @@ export async function runPkSquadCli(
     if (get('RESCUE', '1') === '1') { for (const name of dropped.keys()) startRescue(name); stranded.push(...(await Promise.all(rescues)).flat()); }
     else stranded.push(...dropped.keys());
     const end = squadEnd({ accounts: results.length, kills: sum(r => r.kills), gangDied: gang.length ? gang.filter(gangDead).length : undefined, deaths: results.filter(r => r.died).length,
-        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), ...(threats ? { interlopers: results.reduce((n, r) => n + (r.interlopers ?? 0), 0) } : {}), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name) });
+        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), ...(threats ? { interlopers: results.reduce((n, r) => n + (r.interlopers ?? 0), 0) } : {}), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name), hold: holdMode });
     await settleKillFeed();
     if (gang.length) await settleBenchLogout(all.filter(s => !dropped.has(s.name)));
     await finish(all, end.ok, end.detail);

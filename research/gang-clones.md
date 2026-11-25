@@ -813,6 +813,41 @@ deviation (sd) of one seed; the paired difference tank minus faced by seed (mean
 - **With no prayer points the tank lock takes 36% more Hitpoints** (8977 against 6594; paired +79, standard error 24) for 3 more
   kills (+0.10, standard error 0.23). The Hitpoints gap is the one difference in this table that is above 3 standard errors.
 
+## The escort hold
+
+`scripts/pk-squad.ts` with `ESCORT_HOLD=1 ESCORT_STATE=<file>` holds the post after the gang is out and writes the escort
+state (`packages/workers/src/pvp/escort.ts`). `pullArdougneLeverToWildy` waits at the lever until the state says that the
+gang is suppressed. The case `extra:escort-keep-5-x1` (`scripts/measure/pk-squad-escort.ts`) runs the hold of the climb's
+winner (five of ours in `gang-chain-bind` from the Edgeville bank) against the three clones, and one walker of combat 101
+that waits at the lever and then stands on the Keep post (3155, 3924) for 764 ticks.
+
+Hosted run 45613814590 (head 3fe200be6a), seeds 1 to 10: 10 of 10 pass. No player hit the walker, and no account died.
+The gate wait is the ticks from the walker's arrival at the lever to the clear signal.
+
+| Seed | Ticks | Gate wait | Kills | Clones at the clear | Hitpoints taken by the squad | Trips |
+|---|---|---|---|---|---|---|
+| 1 | 1547 | 710 | 1 | 1 dead, 2 away | 91 | 7 |
+| 2 | 1519 | 685 | 3 | 3 dead | 106 | 7 |
+| 3 | 1036 | 200 | 3 | 3 dead | 55 | 5 |
+| 4 | 1024 | 190 | 3 | 3 dead | 67 | 5 |
+| 5 | 1525 | 689 | 1 | 1 dead, 2 away | 87 | 7 |
+| 6 | 1076 | 240 | 3 | 3 dead | 111 | 5 |
+| 7 | 1078 | 244 | 3 | 3 dead | 70 | 5 |
+| 8 | 1085 | 250 | 3 | 3 dead | 101 | 6 |
+| 9 | 1515 | 680 | 1 | 1 dead, 2 away | 163 | 7 |
+| 10 | 1048 | 215 | 2 | 2 dead, 1 away | 59 | 5 |
+
+- **The member floor sets the long waits.** In seeds 1, 2, 5 and 9 no clone was present after gate wait 110 to 135, and the
+  gate then read `squad 3 of 5 hold, 4 needed` for 565 to 575 ticks, until the members that left on a bank trip or a
+  teleport came back. `ESCORT_MIN_SQUAD=3` cuts that wait. Three of ours lost an account in the climb.
+- **The gate holds a route back while a clone is alive in the Wilderness.** Seed 2 of run 45612401043 (head 61ad844c99,
+  a stand of 300 ticks): no clone died, and clone `g` stopped at (3069, 3524), Wilderness level 1, after its walk-out (a
+  bench clone ends its loop after an escape). The state said `g present` to the end, the gate threw after 1,500 ticks,
+  and the walker took no hit at the lever. The other 9 seeds of runs 45612401043 and 45612965131 passed.
+- Not measured: a gang account that comes back while a route stands at the Keep (a dead clone does not come back, and
+  the clones hunt the squad only), the hold on a live run, and the world feed as the source of `away` (the bench feeds
+  the radar from the gang sessions).
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:
