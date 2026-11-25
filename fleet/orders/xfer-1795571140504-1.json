@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795571140504-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigchopper",
+  "to": "Shaftsinker",
+  "item": "Rune arrow",
+  "count": 45,
+  "itemId": 892,
+  "start": 1795571140504,
+  "end": 1795572040504,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
