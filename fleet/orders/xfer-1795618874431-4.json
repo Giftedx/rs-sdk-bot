@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795618874431-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "mmthv2350",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "start": 1795618874431,
+  "end": 1795619774431,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
