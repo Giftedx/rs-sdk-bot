@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795615258867-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "TheFullMonty",
+  "item": "Herb",
+  "count": 7,
+  "itemId": 215,
+  "start": 1795615258867,
+  "end": 1795616158867,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
