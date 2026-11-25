@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795640413783-3",
  "account": "Woodpecker",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "76f7007e-3741-4c9f-9fd3-6366063b3d71",
- "count": 0,
- "ok": false,
- "at": 1795640631705,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795641015180,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795640807228
+ },
+ "logout": {
+  "attemptId": "1795640631712-0000029280-0000000001",
+  "at": 1795641015162,
+  "sha256": "a35bdcd57604910fbaf53ba4d0158fb348280ae0cd1d2c4e3c0fcee4bb092489"
+ },
+ "screen": true
 }

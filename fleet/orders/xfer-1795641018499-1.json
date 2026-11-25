@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795641018499-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Stirmypot",
+  "to": "MineYourBiz",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "start": 1795641018499,
+  "end": 1795641918499,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
