@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795644662854,
+ "at": 1795644680191,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,7 +63,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=2310 TARGET_COUNT=231 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2300 TARGET_COUNT=230 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -257,6 +257,21 @@
    "repeat": false,
    "goal": "goal:quest_board:crest",
    "role": "army"
+  },
+  {
+   "account": "Wandwanker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Wandwanker BATCH_UNITS=250 -- ranged-starter"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Wandwanker",
+   "role": "auto"
   }
  ],
  "army": [
