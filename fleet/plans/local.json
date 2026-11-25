@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795586893746,
+ "at": 1795586927526,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,26 +75,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:irit_leaf"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "TRAIN_SKILL": "Herblore",
-    "TARGET_LEVEL": "48"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:261",
-   "role": "army"
   }
  ],
  "army": [
@@ -129,6 +109,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker",
