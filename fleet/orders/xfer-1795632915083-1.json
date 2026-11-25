@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795632915083-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "PocketPool",
+  "item": "Cosmic rune",
+  "count": 1,
+  "itemId": 564,
+  "start": 1795632915083,
+  "end": 1795633815083,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
