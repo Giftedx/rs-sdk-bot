@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795607463349-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Unsheathed",
+  "item": "Rune scimitar",
+  "count": 1,
+  "itemId": 1333,
+  "start": 1795607463349,
+  "end": 1795608363349,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

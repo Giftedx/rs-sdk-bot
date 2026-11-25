@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795606563016-1",
  "account": "BoneToPick",
  "partner": "Woodenstaff",
@@ -12,6 +12,20 @@
  "claim": "87fe7b75-7af1-4ff1-8d9a-20371f4b6fc9",
  "count": 0,
  "ok": false,
- "at": 1795607025765,
- "detail": "trade claimed"
+ "at": 1795607463449,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 5,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795607031494
+ },
+ "logout": {
+  "attemptId": "1795607025782-0000014828-0000000001",
+  "at": 1795607463433,
+  "sha256": "ff0f151fecda579f6dff3d1e5d63c942c89f0a03d5fa2abfb484f53068c94dea"
+ },
+ "screen": false
 }

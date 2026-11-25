@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795607384394,
+ "at": 1795607470455,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,19 +59,18 @@
    "role": "pvp"
   },
   {
-   "account": "Fingerblastr",
+   "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1022 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1022 -- ge-buy",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Defence TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Unsheathed BATCH_UNITS=250 BANK_PACK=1 -- giant"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1975",
+   "goal": "goal:pk_army:Unsheathed",
    "role": "army"
   },
   {
@@ -166,28 +165,42 @@
     "MAX_MAKE": "1",
     "CAP": "600",
     "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "goal:supply_chain:2152",
+    "BATCH_UNITS": "5"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2152",
+   "goal": "goal:supply_chain:2152",
    "role": "helper"
   },
   {
-   "account": "Billionaire",
+   "account": "Fingerblastr",
+   "script": "scripts/generated/quest-priestperil.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:priestperil",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:priestperil",
+   "role": "army"
+  },
+  {
+   "account": "WellHung",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=52 QUANTITY=300 \"ITEM_NAME=Arrow shaft\" -- loadout",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=1225 -- fletching arrows"
+    "scripts/generated/quest-priest.ts --",
+    "scripts/generated/quest-priestperil.ts --",
+    "scripts/generated/quest-druidspirit.ts DEMAND_ID=goal:quest_board:druidspirit BATCH_UNITS=1 --"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:53",
-   "role": "army"
+   "goal": "goal:quest_board:druidspirit",
+   "role": "helper"
   }
  ],
  "army": [
@@ -199,6 +212,7 @@
   "mmsmk1232",
   "ballspinner",
   "bigpackage",
+  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
