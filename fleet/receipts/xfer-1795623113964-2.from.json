@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795623113964-2",
  "account": "Shaftmaker",
  "partner": "Magicwanda",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 300,
  "claim": "2ea8be1c-7905-4138-8b21-bcb42f985b04",
- "count": 0,
- "ok": false,
- "at": 1795623401539,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795623669549,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 240000,
+  "after": 239700
+ },
+ "logout": {
+  "attemptId": "1795623401548-0000019356-0000000001",
+  "at": 1795623669523,
+  "sha256": "21d355f010d96461efc99a7a88025db60c31bb34ed76d42a1403298a17f0841d"
+ },
+ "screen": true
 }
