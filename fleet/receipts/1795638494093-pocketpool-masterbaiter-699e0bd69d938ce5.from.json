@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795638494093-pocketpool-masterbaiter-699e0bd69d938ce5",
  "account": "PocketPool",
  "partner": "Masterbaiter",
@@ -12,13 +12,27 @@
  "claim": "eef169cc-a216-4e14-9953-557d595a9eda",
  "count": 0,
  "ok": false,
- "at": 1795639372055,
- "detail": "trade claimed",
+ "at": 1795639398840,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Bronze arrow",
    "requested": 300,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 300,
+    "at": 1795639382490
+   }
   }
- ]
+ ],
+ "bank": {
+  "count": 20,
+  "at": 1795639381683
+ },
+ "logout": {
+  "attemptId": "1795639372078-0000003704-0000000001",
+  "at": 1795639398827,
+  "sha256": "ce76fc069aab667d321ef596f59fc099444f19a4a1b6fc9f7c235b88bc7d0da9"
+ },
+ "screen": false
 }
