@@ -102,8 +102,8 @@ export function countAntipoisonDoses(items: readonly { id: number; baseId?: numb
     return doses;
 }
 
-// Waterfall (83 Atk/Str) + 1-tick Rune 2h relog Keep PvP.
-export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
+// 21 slots: Waterfall (83 Atk/Str) + 1-tick Rune 2h relog Keep PvP (infinite run enabled -> no Super energy(4)).
+export const MELEE_PVP_CORE_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
     { id: 555, name: 'Water rune', count: 6, stackable: true },
@@ -116,8 +116,11 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
+export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_CORE_KIT;
+
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
+export const HITPOINTS_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_CORE_KIT;
 
 export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
     hitpoints: HP_SPECIALIST_KIT,
@@ -719,6 +722,9 @@ export function rankKeepRelogTanks<T extends { index: number; name?: string; x?:
     lastHitSeq?: ReadonlyMap<string, number>,
 ): T[] {
     const tankRes = tankNames.map(exactNameRe);
+    const manhattan = (p: T) =>
+        Math.abs((p.x ?? p.worldX ?? 0) - KEEP_SPECIALIST_POST.x) +
+        Math.abs((p.z ?? p.worldZ ?? 0) - KEEP_SPECIALIST_POST.z);
     return players
         .filter(p => {
             if (!tankRes.some(re => re.test(p.name ?? ''))) return false;
@@ -728,6 +734,10 @@ export function rankKeepRelogTanks<T extends { index: number; name?: string; x?:
             return d8({ x: p.x ?? p.worldX ?? 0, z }, KEEP_SPECIALIST_POST) <= 1;
         })
         .sort((a, b) => {
+            // Cardinal adjacent tanks (d1=1) allow zero-step 1-tick melee swings; diagonal/same-tile tanks step first.
+            const ca = manhattan(a) === 1 ? 0 : 1;
+            const cb = manhattan(b) === 1 ? 0 : 1;
+            if (ca !== cb) return ca - cb;
             const sa = lastHitSeq?.get((a.name ?? '').toLowerCase()) ?? 0;
             const sb = lastHitSeq?.get((b.name ?? '').toLowerCase()) ?? 0;
             if (sa !== sb) return sa - sb;
@@ -772,16 +782,27 @@ export async function runWildyPvpRelogLoop(
     initSess: Session,
     opts: {
         botName: string;
-        board: 'strength' | 'defence';
-        skill: 'Strength' | 'Defence';
+        board: 'attack' | 'strength' | 'defence' | 'hitpoints' | 'ranged';
+        skill: 'Attack' | 'Strength' | 'Defence' | 'Hitpoints' | 'Ranged';
         targetLevel: number;
         tankNames: readonly string[];
         setupTicks: number;
         cap: number;
         shouldStop: () => boolean;
         onRetireSession?: (s: Session) => void;
+        useMeleePrayers?: boolean;
+        requiredWeaponId?: number;
+        styleForState?: (s: Session) => number | null;
+        onPrepareSwing?: (s: Session) => Promise<void>;
     },
-): Promise<{ session: Session; totalTicks: number; swings: number }> {
+): Promise<{
+    session: Session;
+    totalTicks: number;
+    swings: number;
+    nonZeroDtSwings: number;
+    timeoutSwings: number;
+    recenterSwings: number;
+}> {
     const root = resolve(import.meta.dir, '..');
     const creds = readRelogCredentials(root, opts.botName);
     const members = isLocalServer(creds.server) || process.env.NODE_MEMBERS === 'true' ? true : undefined;
@@ -789,10 +810,16 @@ export async function runWildyPvpRelogLoop(
     const logoutCom = componentId('logout:try_logout');
     const ultStrCom = componentId('prayer:prayer_ultimatestrength');
     const incRefCom = componentId('prayer:prayer_incrediblereflexes');
-    const styleCom = componentId(opts.board === 'strength' ? 'combat_heavysword:heavy1' : 'combat_heavysword:heavy3');
+    const aggressiveStyleCom = componentId('combat_heavysword:heavy1');
+    const defensiveStyleCom = componentId('combat_heavysword:heavy3');
+    const useMeleePrayers = opts.useMeleePrayers ?? opts.board !== 'ranged';
+    const requiredWeaponId = opts.requiredWeaponId ?? (opts.board === 'ranged' ? undefined : 1319);
 
     let totalTicks = opts.setupTicks;
     let swings = 0;
+    let nonZeroDtSwings = 0;
+    let timeoutSwings = 0;
+    let recenterSwings = 0;
     const lastHitSeq = new Map<string, number>();
 
     opts.onRetireSession?.(initSess);
@@ -827,18 +854,23 @@ export async function runWildyPvpRelogLoop(
 
                 const finalSess = await openBot(opts.botName, { log: () => {} });
                 await dismissContinueDialogs(finalSess, () => true, 4);
-                return { session: finalSess, totalTicks, swings };
+                return { session: finalSess, totalTicks, swings, nonZeroDtSwings, timeoutSwings, recenterSwings };
             }
 
             if (!p0 || p0.worldZ < 3900) {
+                recenterSwings++;
                 if (!p0 || p0.worldZ < 3800) await pullArdougneLeverToWildy(sess, opts.shouldStop);
                 await walkWaypoints(sess, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.shouldStop, 'walk keep relog');
             } else if (d8({ x: p0.worldX, z: p0.worldZ }, KEEP_SPECIALIST_POST) > 0) {
+                recenterSwings++;
                 await walkWaypoints(sess, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 15, opts.shouldStop, 'recenter keep relog');
             }
 
-            if (!sess.sdk.getEquipment().some(e => e.id === 1319)) {
-                await equipItemById(sess, 1319, opts.shouldStop, 'Rune 2h sword');
+            if (requiredWeaponId !== undefined && !sess.sdk.getEquipment().some(e => e.id === requiredWeaponId)) {
+                await equipItemById(sess, requiredWeaponId, opts.shouldStop, `weapon ${requiredWeaponId}`);
+            }
+            if (opts.onPrepareSwing) {
+                await opts.onPrepareSwing(sess);
             }
 
             let target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
@@ -846,7 +878,7 @@ export async function runWildyPvpRelogLoop(
                 await waitUntil(
                     sess,
                     st => rankKeepRelogTanks(st?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq).length > 0 || opts.shouldStop(),
-                    { timeoutTicks: 40 },
+                    { timeoutTicks: 40, idleMs: 60_000 },
                 );
                 target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
             }
@@ -861,18 +893,30 @@ export async function runWildyPvpRelogLoop(
 
             const prayPts = sess.sdk.getState()?.prayers?.prayerPoints ?? 0;
             const prayBase = skillInfo(sess, 'Prayer').baseLevel;
+            const styleCom = opts.styleForState
+                ? opts.styleForState(sess)
+                : opts.board === 'strength'
+                  ? aggressiveStyleCom
+                  : opts.board === 'defence'
+                    ? defensiveStyleCom
+                    : opts.board === 'hitpoints'
+                      ? (skillInfo(sess, 'Strength').baseLevel < 99 ? aggressiveStyleCom : null)
+                      : null;
             lastHitSeq.set((target.name ?? '').toLowerCase(), swings + 1);
-            if (prayPts > 0 && prayBase >= 31) void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
-            if (prayPts > 0 && prayBase >= 34) void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
-            void sess.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });
+            if (useMeleePrayers && prayPts > 0 && prayBase >= 31) void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
+            if (useMeleePrayers && prayPts > 0 && prayBase >= 34) void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+            if (styleCom !== null) void sess.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });
             void sess.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 2, reason: 'SDK' });
             void sess.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' });
 
             const endReason = await Promise.race([
                 sess.ended.then(e => e.reason),
-                waitTicks(sess, 4).then(() => 'timeout'),
+                waitTicks(sess, 4, { idleMs: 60_000 }).then(() => 'timeout'),
             ]);
-            if (endReason === 'timeout') await logoutSession(sess);
+            if (endReason === 'timeout') {
+                timeoutSwings++;
+                await logoutSession(sess);
+            }
             const endTick = sess.tick();
             const deadAfter = posOf(sess)?.isDead === true;
             await closeWithin([sess], 5000);
@@ -882,7 +926,13 @@ export async function runWildyPvpRelogLoop(
                 throw Error(`${opts.skill} relog PvP unexpected session end: ${endReason}`);
             }
             swings++;
-            totalTicks += Math.max(0, endTick - tick0) + 1;
+            const dt = Math.max(0, endTick - tick0);
+            if (dt > 0) nonZeroDtSwings++;
+            const swingTicks = dt + 1;
+            totalTicks += swingTicks;
+            if (swings <= 3) {
+                console.log(`PVP_RELOG_SAMPLE swing=${swings} dt=${endTick - tick0} swingTicks=${swingTicks} totalTicks=${totalTicks} xp=${curStat.experience} pray=${prayPts}`);
+            }
 
             if (swings % 100 === 0) {
                 console.log(`PVP_RELOG_PROGRESS tick=${totalTicks} ${opts.skill}=${curStat.baseLevel} xp=${curStat.experience} swings=${swings}`);
@@ -900,8 +950,43 @@ export async function runWildyPvpRelogLoop(
     throw Error(`${opts.skill} relog PvP stopped/capped at totalTicks=${totalTicks} swings=${swings}`);
 }
 
+export const TANK_FOOD_ITEMS = [
+    { id: 391, name: 'Manta ray' },
+    { id: 385, name: 'Shark' },
+] as const;
+
+export function planTankFoodWithdrawals(
+    bankItems: readonly { id: number; count: number }[],
+    needed: number,
+): { id: number; name: string; count: number }[] {
+    if (needed <= 0) return [];
+    const out: { id: number; name: string; count: number }[] = [];
+    let rem = needed;
+    for (const food of TANK_FOOD_ITEMS) {
+        if (rem <= 0) break;
+        const avail = bankItems.find(i => i.id === food.id)?.count ?? 0;
+        if (avail <= 0) continue;
+        const take = Math.min(rem, avail);
+        out.push({ id: food.id, name: food.name, count: take });
+        rem -= take;
+    }
+    if (rem > 0) {
+        const have = TANK_FOOD_ITEMS.map(f => `${f.name}:${bankItems.find(i => i.id === f.id)?.count ?? 0}`).join(', ');
+        throw Error(`missing bank tank food stock: need ${needed} (${have})`);
+    }
+    return out;
+}
+
+async function withdrawTankFood(s: Session, needed: number, stop: StopFn): Promise<void> {
+    if (needed <= 0) return;
+    const plan = planTankFoodWithdrawals(s.sdk.getState()?.bank?.items ?? [], needed);
+    for (const step of plan) {
+        await withdrawExactCount(s, step.id, step.count, stop, step.name);
+    }
+}
+
 async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
-    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays, Camelot -> Lever.
+    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays / Sharks, Camelot -> Lever.
     const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
     if (!hasInvRing()) {
         const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
@@ -921,7 +1006,7 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
         await withdrawExactCount(s, 563, 1, stop, 'Law rune');
     }
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
-    if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
+    await withdrawTankFood(s, freeSlots, stop);
     await closeBankClean(s, stop);
     if (s.sdk.getInventory().some(i => i.id === 2552)) {
         await equipItemById(s, 2552, stop, 'Ring of dueling(8)');
@@ -955,7 +1040,7 @@ async function pullKeepLeverOutAndRebank(s: Session, stop: StopFn): Promise<bool
     await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, stop, 'ardougne north bank');
     await openFreshBank(s, stop);
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
-    if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
+    await withdrawTankFood(s, freeSlots, stop);
     await closeBankClean(s, stop);
     await pullArdougneLeverToWildy(s, stop);
     return true;
@@ -966,7 +1051,7 @@ export async function runCompanionRole(
     opts: {
         role: 'supplier' | 'supplier-tank' | 'tank';
         specialistName: string;
-        board?: 'hitpoints' | 'strength' | 'defence';
+        board?: 'attack' | 'hitpoints' | 'strength' | 'defence';
         kit?: readonly KitSpecItem[];
         postTileOffsetX?: number;
         stopFile?: string;
@@ -1018,12 +1103,12 @@ export async function runCompanionRole(
         console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
     }
 
-    // Specialist stands at (3155,3924); tanks occupy (3154,3924), (3155,3923), and (3154,3923), all d8=1 from specialist.
+    // Specialist stands at (3155,3924); tanks occupy cardinal tiles (3154,3924), (3155,3923), and (3155,3925).
     const postTile = opts.postTileOffsetX === 0
         ? { x: 3154, z: 3924, level: 0 }
         : opts.postTileOffsetX === 1
             ? { x: 3155, z: 3923, level: 0 }
-            : { x: 3154, z: 3923, level: 0 };
+            : { x: 3155, z: 3925, level: 0 };
     const specialistRe = exactNameRe(opts.specialistName);
     let lastEatTick = -10;
     try {
@@ -1042,21 +1127,21 @@ export async function runCompanionRole(
             if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
                 await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stop, 'tank step to post');
             }
-            const mantaCount = countById(s.sdk.getInventory(), 391);
+            const foodCount = countById(s.sdk.getInventory(), 391) + countById(s.sdk.getInventory(), 385);
             const hp = skillInfo(s, 'Hitpoints').level;
             const otherTanksAtPost = (s.sdk.getState()?.nearbyPlayers ?? []).filter((np: any) =>
                 !specialistRe.test(np.name ?? '') &&
                 d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1 &&
                 (np.hp === undefined || np.hp === null || np.hp > 0),
             ).length;
-            if (hp > 0 && hp <= 77 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
-                const food = s.sdk.getInventory().find(i => i.id === 391);
+            if (hp > 0 && hp <= 77 && foodCount > 0 && s.tick() - lastEatTick >= 3) {
+                const food = s.sdk.getInventory().find(i => i.id === 391) ?? s.sdk.getInventory().find(i => i.id === 385);
                 if (food) {
                     lastEatTick = s.tick();
                     await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
                 }
             }
-            if ((mantaCount <= 10 && otherTanksAtPost >= 2) || (mantaCount <= 5 && otherTanksAtPost >= 1) || mantaCount <= 1) {
+            if ((foodCount <= 10 && otherTanksAtPost >= 2) || (foodCount <= 5 && otherTanksAtPost >= 1) || foodCount <= 1) {
                 if (await pullKeepLeverOutAndRebank(s, stop)) continue;
             }
             await waitTicks(s, 1);
@@ -1086,10 +1171,20 @@ function createPfmSustainer(s: Session): (want: boolean) => void {
     };
 }
 
+export interface SpecialistWaterfallOptions {
+    onEnergy?: () => void;
+    /** Optional hook run right after obtaining Glarial's pebble and climbing out of Golrie's cellar. */
+    afterGolrie?: () => Promise<void>;
+    /** Skip Castle Wars teleport and walk directly from current Khazard position to Glarial's tomb. */
+    skipCwTeleportToTomb?: boolean;
+    /** Extra item IDs to drop alongside Waterfall runes before entering Glarial's tomb (e.g., Staff of fire, Law/Chaos runes). */
+    extraTombDropIds?: readonly number[];
+}
+
 export async function runSpecialistWaterfall(
     s: Session,
     stop: StopFn,
-    opts: { onEnergy?: () => void } = {},
+    opts: SpecialistWaterfallOptions = {},
 ): Promise<{ attackXp: number; strengthXp: number }> {
     const LOC = {
         raft: { id: 1987, x: 2509, z: 3493 },
@@ -1283,25 +1378,47 @@ export async function runSpecialistWaterfall(
         await converse([], gotPebble, 30);
     }, gotPebble, 3, 2);
 
-    // Teleport out of Golrie's room straight to Castle Wars, pre-arming PFM so guardWalk skips the Observatory detour.
-    await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
-    await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
-    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    if (opts.afterGolrie) {
+        await stepAct('golrie gate exit', () => opLoc(LOC.golrieGate), () => !inBox(2502, 9576, 2523, 9593), 10, 6);
+        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+        await walkFast([{ x: 2533, z: 9556, tol: 1 }], 40, 'to golrie cellar ladder', () => syncWaterfallPfm(true));
+        await climb('cellar up', 2533, 9555, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
+        await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+        await opts.afterGolrie();
+    }
+
+    if (opts.skipCwTeleportToTomb) {
+        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+        await walkFast([{ x: 2557, z: 3444, tol: 2 }], 300, 'to glarial tomb', khazardPfm(3270));
+        await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    } else {
+        // Teleport out of Golrie's room straight to Castle Wars, pre-arming PFM so guardWalk skips the Observatory detour.
+        await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
+        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+        await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
+        await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    }
 
     // 3. Tomb: drop only banned weapons/runes (keep Ring, Amulet, and all potions).
-    const wornWeapon = s.sdk.getEquipment().find(e => e.id === ITEM.scim);
-    if (wornWeapon) {
-        await s.bot.unequipItem(wornWeapon);
-        await waitUntil(s, () => has(ITEM.scim) || stop(), { timeoutTicks: 5 });
+    const tombDropIds = Array.from(new Set([...RUNES, ITEM.scim, ...(opts.extraTombDropIds ?? [])]));
+    for (const eq of s.sdk.getEquipment()) {
+        if (tombDropIds.includes(eq.id)) {
+            await s.bot.unequipItem(eq);
+            await waitUntil(s, () => !s.sdk.getEquipment().some(e => e.id === eq.id) || stop(), { timeoutTicks: 5 });
+        }
     }
-    const tombDropIds = [...RUNES, ITEM.scim] as const;
-    const targetDropCount = new Map(tombDropIds.map(id => [id, id === ITEM.scim ? 1 : 6]));
-    for (let i = 0; i < 4 && tombDropIds.some(has) && !stop(); i++) {
-        await Promise.all(inv().filter(x => (tombDropIds as readonly number[]).includes(x.id)).map(r => s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' })));
-        await waitUntil(s, () => !tombDropIds.some(has) || stop(), { timeoutTicks: 2 });
+    const targetDropCount = new Map<number, number>();
+    for (const id of tombDropIds) {
+        const have = cnt(id);
+        if (have > 0) targetDropCount.set(id, have);
     }
-    if (tombDropIds.some(has)) throw Error('failed dropping banned Tomb items');
+    const activeDropIds = [...targetDropCount.keys()];
+    for (let i = 0; i < 8 && activeDropIds.some(has) && !stop(); i++) {
+        const batch = inv().filter(x => activeDropIds.includes(x.id)).slice(0, 4);
+        await Promise.all(batch.map(r => s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' })));
+        await waitUntil(s, () => batch.every(b => inv().every(x => x.slot !== b.slot || x.id !== b.id)) || stop(), { timeoutTicks: 2 });
+    }
+    if (activeDropIds.some(has)) throw Error(`failed dropping banned Tomb items: ${activeDropIds.filter(has).join(',')}`);
 
     const inTomb = () => inBox(2520, 9795, 2560, 9850);
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
@@ -1323,15 +1440,15 @@ export async function runSpecialistWaterfall(
     await climb('tomb up', 2556, 9844, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
-    for (let i = 0; i < 20 && tombDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
+    for (let i = 0; i < 24 && activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
         opts.onEnergy?.();
-        const id = tombDropIds.find(r => cnt(r) < (targetDropCount.get(r) ?? 1))!;
+        const id = activeDropIds.find(r => cnt(r) < (targetDropCount.get(r) ?? 1))!;
         const g = (s.sdk.getState()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
         if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
         await waitUntil(s, () => cnt(id) >= (targetDropCount.get(id) ?? 1) || stop(), { timeoutTicks: 3 });
     }
-    if (tombDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1))) {
-        throw Error(`failed recovering Tomb drops: ${tombDropIds.map(cnt).join('/')}`);
+    if (activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1))) {
+        throw Error(`failed recovering Tomb drops: ${activeDropIds.map(id => `${id}:${cnt(id)}/${targetDropCount.get(id)}`).join(' ')}`);
     }
 
     // 4. Waterfall Dungeon -> Baxtorian key -> Puzzle room -> Pillars -> Statue -> Chalice -> Exit.
@@ -1372,6 +1489,7 @@ export async function runSpecialistWaterfall(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
     // Apply all 18 runes on the exact 2-tick p_delay(0) rhythm without extra waitTicks waste.
+    const runesBeforePillars = new Map(RUNES.map(id => [id, cnt(id)]));
     for (const [px, pz] of PILLARS) {
         for (const id of RUNES) {
             const before = cnt(id);
@@ -1381,7 +1499,9 @@ export async function runSpecialistWaterfall(
             while (s.tick() < sentAt + 2 && !stop()) await waitTicks(s, 1);
         }
     }
-    if (RUNES.some(has)) throw Error(`runes remained after pillars: ${RUNES.map(cnt).join('/')}`);
+    if (RUNES.some(id => cnt(id) > (runesBeforePillars.get(id) ?? 0) - 6)) {
+        throw Error(`pillar runes not consumed as expected: ${RUNES.map(id => `${id}:${cnt(id)}/${runesBeforePillars.get(id)}`).join(' ')}`);
+    }
 
     await stepAct('statue', () => useOnLoc(ITEM.amulet, LOC.statue), () => inBox(2598, 9895, 2610, 9920), 10, 4);
 
@@ -1395,7 +1515,8 @@ export async function runSpecialistWaterfall(
     }
     if (inv().length > 23) throw Error(`needs 5 free slots for Chalice reward, has ${28 - inv().length}`);
 
-    await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atk0 >= 300_000, 10, 4);
+    const atkBeforeChalice = skillInfo(s, 'Attack').experience;
+    await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atkBeforeChalice >= 300_000, 10, 4);
 
     // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
@@ -1419,7 +1540,7 @@ export async function runMeleePvpSpecialist(
     s: Session,
     opts: {
         botName?: string;
-        board: 'strength' | 'defence';
+        board: 'attack' | 'strength' | 'defence' | 'hitpoints';
         supplierName: string;
         tankNames: readonly string[];
         cap: number;
@@ -1429,27 +1550,16 @@ export async function runMeleePvpSpecialist(
         runWaterfallFn?: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
 ): Promise<{ session: Session; message: string }> {
-    const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
-    const kit = KIT_BY_BOARD[opts.board];
-    const target = SPECIALIST_TARGETS[opts.board];
+    const skill = opts.board === 'attack' ? 'Attack' : opts.board === 'strength' ? 'Strength' : opts.board === 'defence' ? 'Defence' : 'Hitpoints';
+    const kit = MELEE_PVP_CORE_KIT;
+    const targetTicks = opts.board === 'attack' ? 2554 : SPECIALIST_TARGETS[opts.board].targetTicks;
     const elapsed = () => s.tick() - opts.t0;
     const milestone = (step: string, extra = '') => {
         console.log(`MILESTONE ${step} tick=${elapsed()}${extra ? ' ' + extra : ''}`);
     };
 
-    let lastEnergyTick = -10;
     const syncCwPfm = createPfmSustainer(s);
     const ensureRunAndEnergy = () => {
-        const p: any = posOf(s);
-        const energy = p?.runEnergy ?? 100;
-        if (energy <= 78 && s.tick() - lastEnergyTick >= 3) {
-            const ep = s.sdk.getInventory().find(i => (SUPER_ENERGY_IDS as readonly number[]).includes(i.id));
-            if (ep) {
-                lastEnergyTick = s.tick();
-                void s.direct({ type: 'useInventoryItem', slot: ep.slot, optionIndex: 1, reason: 'SDK' });
-                return;
-            }
-        }
         const vial = s.sdk.getInventory().find(i => i.id === 229);
         if (vial) void s.direct({ type: 'dropItem', slot: vial.slot, reason: 'SDK' });
     };
@@ -1458,7 +1568,9 @@ export async function runMeleePvpSpecialist(
     await startAndExitTutorial(s, new Set(), opts.stop);
     milestone('tutorial');
 
-    await receiveSupplyKit(s, opts.supplierName, kit, opts.stop);
+    await receiveSupplyKit(s, opts.supplierName, kit, opts.stop, {
+        altSlots: new Map([[3016, { allowedIds: SUPER_ENERGY_IDS, satisfied: () => true }]]),
+    });
     milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
@@ -1534,13 +1646,21 @@ export async function runMeleePvpSpecialist(
     await equipItemById(s, 1319, opts.stop, 'Rune 2h sword');
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
 
-    const { session: finalSess, totalTicks } = await runWildyPvpRelogLoop(s, {
+    const setupTicks = elapsed();
+    const {
+        session: finalSess,
+        totalTicks,
+        swings,
+        nonZeroDtSwings,
+        timeoutSwings,
+        recenterSwings,
+    } = await runWildyPvpRelogLoop(s, {
         botName: opts.botName ?? s.name,
         board: opts.board,
         skill,
         targetLevel: 99,
         tankNames: opts.tankNames,
-        setupTicks: elapsed(),
+        setupTicks,
         cap: opts.cap,
         shouldStop: opts.stop,
         onRetireSession: opts.onRetireSession,
@@ -1549,11 +1669,11 @@ export async function runMeleePvpSpecialist(
     try {
         await finalSess.bot.dismissBlockingUI();
         const sk = skillInfo(finalSess, skill);
-        console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${target.targetTicks}`);
+        console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${targetTicks}`);
         if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
         return {
             session: finalSess,
-            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${target.targetTicks}`,
+            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings} to=${timeoutSwings} rec=${recenterSwings}`,
         };
     } catch (err) {
         await logoutSession(finalSess).catch(() => {});

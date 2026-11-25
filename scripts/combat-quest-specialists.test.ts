@@ -177,13 +177,15 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             [
                 { index: 1, name: 'tankA', x: 3154, z: 3924, hp: 99 },
                 { index: 2, name: 'tankB', x: 3155, z: 3923, hp: 99 },
-                { index: 3, name: 'tankFar', x: 3157, z: 3924, hp: 99 },
-                { index: 4, name: 'tankDead', x: 3154, z: 3923, hp: 0 },
+                { index: 3, name: 'tankDiag', x: 3154, z: 3923, hp: 99 },
+                { index: 4, name: 'tankNorth', x: 3155, z: 3925, hp: 99 },
+                { index: 5, name: 'tankFar', x: 3157, z: 3924, hp: 99 },
+                { index: 6, name: 'tankDead', x: 3154, z: 3923, hp: 0 },
             ],
-            ['tankA', 'tankB', 'tankFar', 'tankDead'],
+            ['tankA', 'tankB', 'tankDiag', 'tankNorth', 'tankFar', 'tankDead'],
             new Map([['tanka', 5], ['tankb', 2]]),
         );
-        expect(ranked.map(r => r.name)).toEqual(['tankB', 'tankA']);
+        expect(ranked.map(r => r.name)).toEqual(['tankNorth', 'tankB', 'tankA', 'tankDiag']);
     });
 });
 
@@ -372,5 +374,25 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
             async () => { throw Error('should not sleep when stopped'); },
         )).rejects.toThrow('Try again later');
         expect(stoppedCalls).toBe(1);
+    });
+
+    test('HP PvP kit constant matches MELEE_PVP_CORE_KIT 21-slot no-energy contract', async () => {
+        const { HITPOINTS_PVP_SPECIALIST_KIT } = await import('./hp-specialist');
+        const { MELEE_PVP_CORE_KIT, planTankFoodWithdrawals } = await import('./combat-quest-specialists');
+        expect(HITPOINTS_PVP_SPECIALIST_KIT).toEqual(MELEE_PVP_CORE_KIT);
+        expect(kitSlotTotal(HITPOINTS_PVP_SPECIALIST_KIT)).toBe(21);
+        expect(HITPOINTS_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
+
+        expect(planTankFoodWithdrawals([{ id: 391, count: 50 }], 27)).toEqual([
+            { id: 391, name: 'Manta ray', count: 27 },
+        ]);
+        expect(planTankFoodWithdrawals([{ id: 385, count: 50 }], 27)).toEqual([
+            { id: 385, name: 'Shark', count: 27 },
+        ]);
+        expect(planTankFoodWithdrawals([{ id: 391, count: 10 }, { id: 385, count: 40 }], 27)).toEqual([
+            { id: 391, name: 'Manta ray', count: 10 },
+            { id: 385, name: 'Shark', count: 17 },
+        ]);
+        expect(() => planTankFoodWithdrawals([{ id: 385, count: 10 }], 27)).toThrow(/missing bank tank food stock/);
     });
 });
