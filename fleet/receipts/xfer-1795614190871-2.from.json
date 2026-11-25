@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795614190871-2",
  "account": "FishAndChips",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Fishing bait",
  "requested": 2,
  "claim": "45a6edaf-a68b-4ede-9d75-7023504f2e00",
- "count": 0,
- "ok": false,
- "at": 1795614309658,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795614405527,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795614315596
+ },
+ "logout": {
+  "attemptId": "1795614309668-0000030268-0000000001",
+  "at": 1795614405516,
+  "sha256": "7e4d326220f97693470ac2bd66e280fed5c06f5e4099cd055ade504cb3fdce3a"
+ },
+ "screen": true
 }

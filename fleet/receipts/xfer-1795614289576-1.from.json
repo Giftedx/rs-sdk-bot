@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795614289576-1",
+ "account": "Bigpackage",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 1,
+ "claim": "8b417dfa-09c5-41cd-b609-264264560426",
+ "count": 0,
+ "ok": false,
+ "at": 1795614403294,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795614190871-2",
+ "account": "Moneyshot",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fishing bait",
+ "requested": 2,
+ "claim": "5ed7e128-f5cb-4319-88ae-9a019045498f",
+ "count": 2,
+ "ok": true,
+ "at": 1795614407099,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795614406390
+ },
+ "logout": {
+  "attemptId": "1795614393644-0000030416-0000000001",
+  "at": 1795614407087,
+  "sha256": "92b850e8009502384e791f68a2857aba627435d31836ee1b4701dfd6d9581336"
+ },
+ "screen": true
+}
