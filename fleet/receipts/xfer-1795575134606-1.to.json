@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795575134606-1",
  "account": "Shaftsinker",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Dragon vambraces",
  "requested": 1,
  "claim": "cd2e1d75-35ae-4438-9e58-9b46bf4a5faf",
- "count": 0,
- "ok": false,
- "at": 1795575795654,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795575854876,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795575854117
+ },
+ "logout": {
+  "attemptId": "1795575795664-0000029552-0000000001",
+  "at": 1795575854863,
+  "sha256": "015780d07fbb15c7ff1d6d7b3af3660ca9658eb94e184b49fd534dcc7bcfe26a"
+ },
+ "screen": true
 }
