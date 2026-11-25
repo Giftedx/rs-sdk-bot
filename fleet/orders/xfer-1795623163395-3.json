@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795623163395-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "NabTheKnob",
+  "to": "Magicwanda",
+  "item": "Staff of fire",
+  "count": 1,
+  "itemId": 1387,
+  "start": 1795623163395,
+  "end": 1795624063395,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
