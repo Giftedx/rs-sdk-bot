@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795625158732-1",
  "account": "Abracadickra",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Uncut diamond",
  "requested": 10,
  "claim": "5eb8da87-8883-4bf2-9afd-7b213d98447e",
- "count": 0,
- "ok": false,
- "at": 1795625808383,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795625907807,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795625907095
+ },
+ "logout": {
+  "attemptId": "1795625808391-0000011400-0000000001",
+  "at": 1795625907797,
+  "sha256": "8da3ee2c8d9436496f305b5d7d5427f59138ef596d4b8d196a2fa2dec6485666"
+ },
+ "screen": true
 }
