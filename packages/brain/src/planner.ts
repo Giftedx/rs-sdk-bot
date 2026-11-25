@@ -10,12 +10,12 @@ import { trustMeetsMinimum } from '../../workers/src/contracts';
 import { readJsonStatCached } from './json-cache';
 import {
     DEFAULT_OPERATING_COIN_FLOAT,
-    HUB_BANKER_LOCATIONS,
     MAX_ACCOUNT_PLAN_STEPS,
     isCampaignLaunchReady,
     isHoldActive,
     isProtectedAccountName,
     marketCooldownKey,
+    nearestHubBank,
     type AccountPlan,
     type AccountState,
     type AcquireSourceKind,
@@ -544,19 +544,7 @@ export function canProtectedAccountLaunch(
     return { allowed: true, campaign };
 }
 
-function nearestHub(pos: AccountState['pos']): HubBankId {
-    if (!pos) return 'varrock_west';
-    let best: HubBankId = 'varrock_west';
-    let bestDist = Infinity;
-    for (const [id, spec] of Object.entries(HUB_BANKER_LOCATIONS) as [HubBankId, (typeof HUB_BANKER_LOCATIONS)[HubBankId]][]) {
-        const d = Math.max(Math.abs(pos.x - spec.bankTile.x), Math.abs(pos.z - spec.bankTile.z));
-        if (d < bestDist) {
-            bestDist = d;
-            best = id;
-        }
-    }
-    return best;
-}
+const nearestHub = (pos: AccountState['pos']): HubBankId => nearestHubBank(pos);
 
 function isActivityQuarantined(
     activityId: string,

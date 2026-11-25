@@ -86,6 +86,13 @@ const { edges, unmatchedAngles } = buildTransports(handlers, locSpawns, locPack,
 // A diagonal door (shape 9, the north door of Juliet's house at 3160,3440) blocks its whole tile; the export
 // leaves it out, so it is kept here with its shape and core/src/pathcache.ts opens it.
 const locIds=new Map([...locPack].map(([id,name])=>[name,id]));
+// Quest stage constants (`^priestperil_find_drezel_key = 5`): door thresholds and the quest table read them.
+const questFile = 'scripts/general/configs/quest.constant';
+const questConstants = parseConstants(read(questFile), questFile);
+for (const cf of filesByExt.get('.constant')!) {
+    if (cf === questFile) continue;
+    for (const [k, v] of parseConstants(read(cf), cf)) if (!questConstants.has(k)) questConstants.set(k, v);
+}
 const doorMetaCache = new Map<string, { c: ReturnType<typeof classifyDoor>; openName?: string; openId?: number } | null>();
 const doorMetaFor = (name: string) => {
     let cached = doorMetaCache.get(name);
@@ -100,7 +107,7 @@ const doorMetaFor = (name: string) => {
         }
     }
     if (!hasOpen) { doorMetaCache.set(name, null); return null; }
-    const c = classifyDoor(name, cfg.props.category?.[0], triggers);
+    const c = classifyDoor(name, cfg.props.category?.[0], triggers, questConstants);
     const openName = cfg.props.param?.find(p => p.startsWith('next_loc_stage,'))?.split(',')[1]?.trim();
     const openId = openName ? locIds.get(openName) : undefined;
     cached = { c, openName, openId };
@@ -148,12 +155,6 @@ for (const s of scriptFiles) {
     let list = questScripts.get(k);
     if (!list) questScripts.set(k, list = []);
     list.push(s);
-}
-const questFile = 'scripts/general/configs/quest.constant';
-const questConstants = parseConstants(read(questFile), questFile);
-for (const cf of filesByExt.get('.constant')!) {
-    if (cf === questFile) continue;
-    for (const [k, v] of parseConstants(read(cf), cf)) if (!questConstants.has(k)) questConstants.set(k, v);
 }
 const procFile = 'scripts/general/scripts/quests.rs2';
 const quests = buildQuests({ constants: questConstants, proc: { text: readScript(procFile), file: procFile }, varpFolders: questVarpFolders, folderScripts: questScripts });

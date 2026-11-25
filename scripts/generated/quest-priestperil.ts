@@ -7,6 +7,7 @@
 // Server truth: areas/area_varrock/scripts/king_roald.rs2:39-81, quests/quest_priestperil/scripts/temple_doors.rs2,
 // trapped_drezel.rs2, evil_monks.rs2:52-56 (the golden key drop), vampire_coffin.rs2, areas/area_mausoleum/scripts/
 // temple_guardian.rs2, gates.rs2, monuments.rs2, well.rs2, drezel.rs2.
+import { priestPerilJournalStage } from '../../packages/core/src/guild-facts';
 import { openQuest, readQuestJournalStage, type JournalQuestReader } from './quest-lib';
 
 const ROALD = { x: 3218, z: 3475 };                        // he stands west of the throne room wall (spawn 3222,3476)
@@ -20,23 +21,8 @@ export function inPaterdomusTemple(x: number, z: number, level = 0): boolean {
     return x === 3408 && (z < 3488 || z > 3489);
 }
 
-// Parses %priestperil (302) stage from priestperil_journal.rs2 text ordered from highest stage down.
-export function priestPerilJournalStage(body: string): number | undefined {
-    const text = body.replace(/@[a-z0-9]+@/gi, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
-    if (/QUEST COMPLETE!/i.test(text)) return 60;
-    if (/I need to bring Drezel fifty rune essences/i.test(text)) return 10;
-    if (/I should head downstairs to the monument like Drezel asked/i.test(text)) return 8;
-    if (/I should speak to Drezel again/i.test(text)) return 7;
-    if (/but I still have to do something about that vampire/i.test(text)) return 6;
-    if (/I need to find the key to his cell and free him/i.test(text)) return 5;
-    if (/I must return to the temple and find out what happened to the real Drezel/i.test(text)) return 4;
-    if (/I should tell King Roald everything's fine with Drezel now I have killed that dog/i.test(text)) return 3;
-    if (/He told me that there was an annoying dog below the temple, and has asked me to kill it for him/i.test(text)) return 2;
-    if (/I spoke to King Roald who asked me to investigate why his friend Priest Drezel has stopped communicating with him/i.test(text)
-        && /Drezel lives in a temple to the east of Varrock Palace/i.test(text)) return 1;
-    if (/I can start this quest by speaking to King Roald/i.test(text)) return 0;
-    return undefined;
-}
+// The journal parser lives in core: the walker reads the same journal for the Paterdomus gates.
+export { priestPerilJournalStage };
 
 // Reads the live %priestperil stage from PRIEST_FROM env override or the questlist:priestperil journal.
 export async function readPriestPerilStage(q: JournalQuestReader): Promise<number> {

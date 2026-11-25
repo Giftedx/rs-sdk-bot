@@ -12,10 +12,10 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - npcSpawns: 8142
 - shops: 126
 - shopStockLines: 1120
-- transportHandlers: 86
-- transportEdges: 981
-- transportPhysicalEdges: 979
-- transportInteractionGeometry: 979
+- transportHandlers: 87
+- transportEdges: 983
+- transportPhysicalEdges: 981
+- transportInteractionGeometry: 981
 - transportInteractionUnknown: 0
 - transportDynamic: 1
 - transportSuperseded: 2

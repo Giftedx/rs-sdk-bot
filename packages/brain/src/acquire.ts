@@ -19,6 +19,7 @@ import {
     isCooldownActive,
     isProtectedAccountName,
     marketCooldownKey,
+    nearestHubBank,
     type AccountState,
     type AcquireSourceKind,
     type AcquireStep,
@@ -307,20 +308,7 @@ function isVenueOnCooldown(
     return false;
 }
 
-function nearestHub(pos: AccountState['pos'], fallback?: HubBankId): HubBankId {
-    if (!pos) return fallback ?? 'varrock_west';
-    let bestHub: HubBankId = fallback ?? 'varrock_west';
-    let bestDist = Infinity;
-    for (const [id, spec] of Object.entries(HUB_BANKER_LOCATIONS) as [HubBankId, (typeof HUB_BANKER_LOCATIONS)[HubBankId]][]) {
-        const d = Math.max(Math.abs(pos.x - spec.bankTile.x), Math.abs(pos.z - spec.bankTile.z))
-            + Math.abs(pos.level - spec.bankTile.level) * 100;
-        if (d < bestDist) {
-            bestDist = d;
-            bestHub = id;
-        }
-    }
-    return bestHub;
-}
+const nearestHub = (pos: AccountState['pos'], fallback?: HubBankId): HubBankId => nearestHubBank(pos, fallback);
 
 function shopIsAccessible(
     acct: AccountState,

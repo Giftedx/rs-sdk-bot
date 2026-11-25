@@ -4,6 +4,7 @@ import { walkLeg } from './walk-leg';
 import {
     cleanGuildText as clean,
     guildActorFacts,
+    JOURNAL_STAGES,
     journalGuildStage,
     savedGuildEvidence as saved,
     type GuildRefreshResult,
@@ -11,8 +12,11 @@ import {
 export {
     completedQuestUnlocks,
     guildActorFacts,
+    JOURNAL_STAGES,
     journalGuildStage,
+    priestPerilJournalStage,
     questFinals,
+    startedJournalQuests,
     questFolder,
     type GuildActorFacts,
     type GuildRefreshResult,
@@ -33,7 +37,8 @@ export async function refreshGuildEvidence(s: Session, requested: string[]): Pro
             await refreshPrayer(s, c);
             continue;
         }
-        const button = key === 'mcannon' || key === 'dwarf-tower' ? 7356 : key === 'legendsquest' ? 7366 : undefined;
+        const journal = JOURNAL_STAGES.find(j => j.varp === key);
+        const button = key === 'mcannon' || key === 'dwarf-tower' ? 7356 : key === 'legendsquest' ? 7366 : journal?.questId;
         if (button === undefined) continue;
         if (s.sdk.getDialog()?.isOpen || ![-1,8134].includes(c.mainModalId)) continue;
         if (c.mainModalId !== -1) {
@@ -41,7 +46,7 @@ export async function refreshGuildEvidence(s: Session, requested: string[]): Pro
             if (!await waitUntil(s, () => c.mainModalId === -1, { timeoutTicks: 5 })) continue;
         }
         await s.direct({ type: 'clickComponent', componentId: button, reason: 'SDK' });
-        const expected = button === 7356 ? 'Dwarf Cannon' : 'The Legends Quest';
+        const expected = button === 7356 ? 'Dwarf Cannon' : button === 7366 ? 'The Legends Quest' : journal!.title;
         if (!await waitUntil(s, () => c.mainModalId === 8134 && clean(c.ifType(8144)?.text) === expected, { timeoutTicks: 8 })) continue;
         const body = Array.from({length:50}, (_,i) => c.ifType(8145+i+(i > 0 ? 1 : 0))?.text ?? '').join(' ');
         const found = journalGuildStage(clean(c.ifType(8144)?.text), body);
