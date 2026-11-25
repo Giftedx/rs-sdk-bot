@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601643094,
+ "at": 1795601667430,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -39,20 +39,35 @@
    "role": "army"
   },
   {
-   "account": "TrouserSnake",
-   "script": "scripts/aio-skiller.ts",
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
    "args": [
-    "foraging",
-    "grapes"
+    "scripts/aio-logistics.ts ITEM_ID=207 QUANTITY=3 ITEM_NAME=Herb -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=6 -- crafting inventory identify:ranarr_weed"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
+   "goal": "goal:supply_chain:257",
    "role": "army"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Wandwaver",
@@ -122,36 +137,17 @@
    "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
+    "foraging",
+    "grapes"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2152",
+   "goal": "campaign:haggis:item:1987",
    "role": "helper"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=207 QUANTITY=3 ITEM_NAME=Herb -- loadout",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=6 -- crafting inventory identify:ranarr_weed"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:257",
-   "role": "army"
   }
  ],
  "army": [
