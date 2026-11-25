@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795644244525,
+ "at": 1795644299376,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,12 +59,32 @@
    "role": "pvp"
   },
   {
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army",
+   "resources": [
+    "ardougne-cows"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=2210 TARGET_COUNT=221 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=224 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2310 TARGET_COUNT=231 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -75,18 +95,52 @@
    "role": "army"
   },
   {
+   "account": "Ballspinner",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:supply_chain:207",
+    "BATCH_UNITS": "34",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:207",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
    "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
+    "scripts/aio-fighter.ts DEMAND_ID=goal:supply_chain:207 BATCH_UNITS=34 BANK_PACK=1 -- druid"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
+   "goal": "goal:supply_chain:207",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-fighter.ts DEMAND_ID=goal:supply_chain:207 BATCH_UNITS=34 BANK_PACK=1 -- druid"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:207",
    "role": "army"
   },
   {
@@ -123,33 +177,24 @@
    ]
   },
   {
-   "account": "OreElse",
-   "script": "scripts/generated/quest-crest.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:crest",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:crest",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
+   "account": "Shaftsinker",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
+    "cow"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftsinker",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army"
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   },
   {
    "account": "Unsheathed",
@@ -164,34 +209,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:zombiequeen",
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/generated/quest-ikov.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ikov",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ikov",
    "role": "army"
   },
   {
@@ -259,75 +276,45 @@
    "role": "helper"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
+   "account": "Fingerblastr",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "cow"
+    "shop-buy",
+    "craftingshop2",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
+    "ITEM_ID": "1592",
+    "ITEMS": "Ring mould",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
+   "goal": "campaign:haggis:item:1643",
+   "role": "army"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:225",
+    "BATCH_UNITS": "30",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:225",
    "role": "army",
    "resources": [
-    "ardougne-cows"
-   ]
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/quest-druid.ts --",
-    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "auto"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=5 -- fletching shafts",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=30 -- ranged-gather",
-    "scripts/generated/quest-chompybird.ts DEMAND_ID=goal:quest_board:chompybird BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:chompybird",
-   "role": "auto"
-  },
-  {
-   "account": "Wandwanker",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Wandwanker",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Wandwanker",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
+    "hill-giants"
    ]
   }
  ],
@@ -341,13 +328,13 @@
   "bigpackage",
   "billionaire",
   "dipstick",
-  "fingerblastr",
+  "fatstack",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "mmtha0205",
-  "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
