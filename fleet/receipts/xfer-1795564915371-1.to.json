@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795564915371-1",
+ "account": "Shaftsinker",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 4,
+ "claim": "dad4b8ee-ce29-4303-8a17-9d666cb43fef",
+ "count": 0,
+ "ok": false,
+ "at": 1795565188733,
+ "detail": "trade claimed"
+}

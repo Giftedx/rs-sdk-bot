@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795564955618-1",
+ "account": "UnderMyKilt",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 109,
+ "claim": "451e020c-655a-4e5c-97e1-b2b5a83f65d8",
+ "count": 0,
+ "ok": false,
+ "at": 1795565184997,
+ "detail": "trade claimed"
+}
