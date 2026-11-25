@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795616531819-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmthv2350",
+  "to": "Woodenstaff",
+  "item": "Shark",
+  "count": 1,
+  "itemId": 385,
+  "start": 1795616531819,
+  "end": 1795617431819,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
