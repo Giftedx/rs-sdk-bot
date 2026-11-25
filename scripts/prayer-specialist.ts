@@ -119,7 +119,7 @@ export async function runPrayerSpecialist(
 
  try {
   await skipTutorialFast(spec, deadline);
-  let firstPreDropSlots: number[] | undefined = await dropItemsFast(spec, new Set(), deadline, 3);
+  await dropItemsFast(spec, new Set(), deadline);
   logPhase(spec, start, 'prayer_ready');
 
   while (skillLevel(spec, 'Prayer') < target && spec.tick() < deadline) {
@@ -132,12 +132,9 @@ export async function runPrayerSpecialist(
     if (!next) throw Error('prayer runners exhausted before target');
     next.claimed = true;
     next.ready = false;
-    const preDropSlots = firstPreDropSlots;
-    firstPreDropSlots = undefined;
     try {
      await burstTradeHost(spec, next.session, {
       giveIds: [ITEM_IDS.dragon_bones],
-      preDropSlots,
       deadlineTick: deadline,
      });
     } finally {
