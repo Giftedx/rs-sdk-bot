@@ -401,8 +401,18 @@ async function cutUnlockedGems(
   const stNow = spec.sdk.getState();
   const { gems, batch, willLevel } = selectCutGemBatch(inv, curBase, skillXp(spec, 'Crafting'), 5);
   if (!batch.length) return { preRequested, pendingDialogs };
-  if (leaveGems > 0 && stNow?.bank?.isOpen && gems.length <= leaveGems) {
-   return { preRequested, pendingDialogs };
+  if (leaveGems > 0 && gems.length <= leaveGems) {
+   if (stNow?.bank?.isOpen || !openBankOnFinal) return { preRequested, pendingDialogs };
+   await spec.direct({
+    type: 'interactLoc',
+    x: CRAFTING_CW_BANK_CHEST.x,
+    z: CRAFTING_CW_BANK_CHEST.z,
+    locId: CRAFTING_CW_BANK_CHEST.id,
+    optionIndex: CRAFTING_CW_BANK_CHEST.optionIndex,
+    reason: 'SDK',
+   });
+   await waitTicks(spec, 1);
+   continue;
   }
   if (stNow?.bank?.isOpen) {
    // MoveClickHandler closes any open modal immediately in processClientsIn, so walk-here + 4 cuts avoids a separate closeModal tick.
@@ -704,8 +714,11 @@ async function craftAtCastleWarsBank(
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  const initialInv = spec.sdk.getInventory();
  const hasUnnotedEarly = countItem(initialInv, ITEM_IDS.uncut_opal) > 0 && countItem(initialInv, 1626) === 0;
+ const hasUnnotedSapphire = countItem(initialInv, ITEM_IDS.uncut_sapphire) > 0 && countItem(initialInv, 1624) === 0;
  const deferSurplusOpals = hasUnnotedEarly && countItem(initialInv, 1632) >= 200;
- const cycle0Notes = new Set<number>(hasUnnotedEarly ? [1622, 1620, 1618, 1632] : [1626, 1624, 1622]);
+ const cycle0Notes = new Set<number>(
+  hasUnnotedEarly ? (hasUnnotedSapphire ? [1622, 1620, 1618, 1632] : [1624, 1622, 1620, 1618, 1632]) : [1626, 1624, 1622],
+ );
  let walkingSent = false;
  let lastRubTick = -10;
  let cwChosen = false;
@@ -729,7 +742,7 @@ async function craftAtCastleWarsBank(
    if (deferSurplusOpals) {
     const opalsInInv = inv.filter(i => i.id === ITEM_IDS.uncut_opal);
     const needOpalsTo20 = Math.ceil(Math.max(0, 3105 - curXpVal) / 375);
-    const cutOpalsCount = Math.min(opalsInInv.length, curLvl >= 20 ? 0 : needOpalsTo20);
+    const cutOpalsCount = Math.min(opalsInInv.length, curLvl >= 20 ? 0 : needOpalsTo20 >= 2 ? needOpalsTo20 + 1 : needOpalsTo20);
     if (cutOpalsCount < opalsInInv.length) {
      const skipSlots = new Set(opalsInInv.slice(cutOpalsCount).map(i => i.slot));
      cutInv = inv.filter(i => !skipSlots.has(i.slot));
@@ -846,10 +859,14 @@ async function craftAtCastleWarsBank(
  const emerRem = Math.max(0, emerCount - emerInC0);
  // Pack remaining high-tier gems with cap=25 when carryOver=2 leaves 2 uncut gems at each chest open.
  const lowQueues: { id: number; count: number }[] = [
-  ...(hasUnnotedEarly ? [] : [
-   { id: ITEM_IDS.uncut_opal, count: opalCount },
-   { id: ITEM_IDS.uncut_sapphire, count: sapphCount },
-  ]),
+  ...(hasUnnotedEarly
+   ? hasUnnotedSapphire
+     ? []
+     : [{ id: ITEM_IDS.uncut_sapphire, count: sapphCount }]
+   : [
+      { id: ITEM_IDS.uncut_opal, count: opalCount },
+      { id: ITEM_IDS.uncut_sapphire, count: sapphCount },
+     ]),
   { id: ITEM_IDS.uncut_emerald, count: emerInC0 },
   { id: ITEM_IDS.uncut_ruby, count: rubyCount },
   { id: ITEM_IDS.uncut_diamond, count: hasDragonstone ? diaCount : 0 },
@@ -1105,31 +1122,39 @@ export async function runCraftingSpecialist(
  const start = spec.tick();
  const deadline = start + opts.cap;
  let done = false;
- const keepers = helpers.map(h =>
-  (async () => {
-   while (!done && h.tick() < deadline) {
-    await waitTicks(h, 1);
-   }
-  })(),
- );
+ const keepers: Promise<void>[] = [];
+ const startKeepers = () => {
+  if (keepers.length) return;
+  for (const h of helpers) {
+   keepers.push(
+    (async () => {
+     while (!done && h.tick() < deadline) {
+      await waitTicks(h, 1);
+     }
+    })(),
+   );
+  }
+ };
 
  try {
   if (cwMode) {
-   return await executeCraftingCastleWars(
-    spec,
-    target,
-    start,
-    deadline,
-    () =>
-     fastInProcessBatchTrade(spec, helpers[0]!, {
-      giveIds: cwPlan.batch.give.map(g => g.id),
-      returnIds: [],
-      dropUnwanted: new Set<number>(),
-      deadlineTick: deadline,
-     }),
-    false,
-   );
+   const p0 = playerPos(spec);
+   const onTut = !p0 || p0.worldX < 3160 || p0.worldZ < 3180;
+   await Promise.all([
+    skipTutorial2Ticks(spec, deadline),
+    ...(onTut ? [waitTicks(helpers[0]!, 2)] : []),
+   ]);
+   await fastInProcessBatchTrade(spec, helpers[0]!, {
+    giveIds: cwPlan.batch.give.map(g => g.id),
+    returnIds: [],
+    dropUnwanted: new Set<number>(),
+    deadlineTick: deadline,
+   });
+   startKeepers();
+   logPhase(spec, start, 'crafting_cw_traded');
+   return await craftAtCastleWarsBank(spec, target, start, deadline);
   }
+  startKeepers();
   await skipTutorial2Ticks(spec, deadline);
   let preReq = false;
 
@@ -1191,11 +1216,12 @@ export async function runCraftingExternal(
    deadline,
    async () => {
     await fastTradeExternalReceive(spec, supplierNames, {
+     dropUnwanted: new Set<number>(),
      acceptOffer: offer => CW_ACCEPTABLE_BATCHES.some(b => b.give.every(g => countItem(offer, g.id) >= g.count)),
      deadlineTick: deadline,
     });
    },
-   true,
+   false,
   );
  }
  await skipTutorial2Ticks(spec, deadline);

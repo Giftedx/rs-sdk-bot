@@ -1473,7 +1473,7 @@ export async function runSpecialistServe(args: readonly string[], env: Record<st
             if (!hasExactKit(s.sdk.getInventory(), batch)) await withdrawExactKit(s, earlyUnnotedBatch, bankTile, stop, false);
             await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
             emitReady();
-            allDone = (await serveFastBatch(s, specialist, batch, t0, CAP, stop)) === 'ok';
+            allDone = (await serveFastBatch(s, specialist, batch, t0, CAP, stop, { primeOnArrival: true })) === 'ok';
         } else if (kitName === 'crafting') {
             const batchIndices = parsed.batchIndex !== undefined ? [parsed.batchIndex] : CRAFTING_BATCHES.map((_, i) => i);
             let ok = true;
