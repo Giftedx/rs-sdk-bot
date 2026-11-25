@@ -140,10 +140,11 @@ async function runEnchant7To43(s: Session): Promise<string> {
         }
     }
     const ticks = s.tick() - t0;
-    const gained = xp(s, 'Magic') - xp0;
+    const totalXp = xp(s, 'Magic');
+    const gained = totalXp - xp0;
     const lvl = level(s, 'Magic');
-    if (lvl < 43 || gained < targetXp) {
-        throw Error(`magic-enchant-7-43 incomplete: level=${lvl} xp=${gained} casts=${casts} ticks=${ticks}`);
+    if (lvl < 43 || totalXp < targetXp) {
+        throw Error(`magic-enchant-7-43 incomplete: level=${lvl} xp=${gained} totalXp=${totalXp} casts=${casts} ticks=${ticks}`);
     }
     return `mode=magic-enchant-7-43 ticks=${ticks} casts=${casts} level=${lvl} xp=${gained} xpPerTick=${(gained / Math.max(1, ticks)).toFixed(1)}`;
 }
