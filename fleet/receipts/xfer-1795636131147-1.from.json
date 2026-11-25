@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795636131147-1",
  "account": "Ballspinner",
  "partner": "Unsheathed",
@@ -12,6 +12,12 @@
  "claim": "7bd95564-ed09-4a2e-83ed-ddd4f0dda588",
  "count": 0,
  "ok": false,
- "at": 1795636331443,
- "detail": "trade claimed"
+ "at": 1795636353763,
+ "detail": "Error: route to 2618, 3333: precondition bank stop at 3094,3491: withdraw outcome unknown 556:0/3",
+ "logout": {
+  "attemptId": "1795636331454-0000024624-0000000001",
+  "at": 1795636353743,
+  "sha256": "6dea78769a88fbe7f671f6979afece357b51817fef8b6c8ddd46c769d6a97fd7"
+ },
+ "screen": false
 }
