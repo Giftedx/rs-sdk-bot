@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795584002198-1",
+ "account": "TheFullMonty",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "e63f62eb-5cf0-41ff-9016-6f9ce25f1050",
+ "count": 0,
+ "ok": false,
+ "at": 1795584902546,
+ "detail": "Error: order window ended during work",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795584608961-0000008132-0000000001",
+  "at": 1795584902530,
+  "sha256": "8193c6c4f14d4f6bb89c1586d80069d21e4f5faa0dadde850aeba8d8943bc853"
+ },
+ "screen": false
+}

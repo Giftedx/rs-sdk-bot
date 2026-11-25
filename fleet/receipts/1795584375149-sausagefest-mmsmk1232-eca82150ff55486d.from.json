@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795584375149-sausagefest-mmsmk1232-eca82150ff55486d",
+ "account": "Sausagefest",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 350000,
+ "claim": "d4fd2e55-4de5-4b2b-97ff-7e7c5d1a231e",
+ "count": 0,
+ "ok": false,
+ "at": 1795584858707,
+ "detail": "trade claimed"
+}

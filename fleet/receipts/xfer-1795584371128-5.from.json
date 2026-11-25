@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795584371128-5",
+ "account": "Pocketpython",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "7655d49a-f546-4831-bc7b-1fe9dd378c6e",
+ "count": 2,
+ "ok": true,
+ "at": 1795584651346,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795584632177
+ },
+ "logout": {
+  "attemptId": "1795584624588-0000013948-0000000001",
+  "at": 1795584651327,
+  "sha256": "690b825720ca4c2de9e285b9b9ed2c03f0eebaa5887519d7cf5e028296c6bca6"
+ },
+ "screen": true
+}

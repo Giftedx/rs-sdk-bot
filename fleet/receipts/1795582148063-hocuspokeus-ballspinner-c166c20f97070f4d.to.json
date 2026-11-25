@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795582148063-hocuspokeus-ballspinner-c166c20f97070f4d",
+ "account": "Ballspinner",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 20,
+ "claim": "36029a55-b5fe-4d02-b9b5-8384812376f9",
+ "count": 0,
+ "ok": false,
+ "at": 1795584875659,
+ "detail": "trade claimed"
+}

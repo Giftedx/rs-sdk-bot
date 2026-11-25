@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795584542859,
+ "at": 1795584902987,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,72 +24,25 @@
    "role": "rehearsal"
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-logistics.ts",
+   "account": "Packhorse",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0"
+    "shop-buy",
+    "catherby",
+    "2500"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "ITEM_ID": "44",
+    "ITEMS": "^Rune arrowtips$",
+    "STOCK_TARGET": "2600",
+    "MAX_ITEMS": "300",
+    "COIN_RESERVE": "0",
+    "NO_BUY_TICKS": "120"
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "helper"
-  },
-  {
-   "account": "InTheSack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:2152",
-    "BATCH_UNITS": "10"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:2152",
-   "role": "helper"
+   "goal": "Buy Rune arrowtips at Catherby for TipMyShaft",
+   "role": "supply"
   }
  ],
  "army": [
@@ -108,6 +61,7 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
+  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "knightstick",
@@ -117,6 +71,7 @@
   "moneyshot",
   "oreelse",
   "pickpockdick",
+  "pocketpool",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",

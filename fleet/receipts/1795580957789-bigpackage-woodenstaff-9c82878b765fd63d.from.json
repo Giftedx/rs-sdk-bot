@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795580957789-bigpackage-woodenstaff-9c82878b765fd63d",
  "account": "Bigpackage",
  "partner": "Woodenstaff",
@@ -12,23 +12,41 @@
  "claim": "d461f55a-c383-42e8-b7ef-407488e07a89",
  "count": 0,
  "ok": false,
- "at": 1795583421123,
- "detail": "trade claimed",
+ "at": 1795584558347,
+ "detail": "Error: order window ended during work",
  "lines": [
   {
    "item": "Air rune",
    "requested": 24,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 24,
+    "at": 1795583429862
+   }
   },
   {
    "item": "Earth rune",
    "requested": 24,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 24,
+    "at": 1795583430696
+   }
   },
   {
    "item": "Dragon bones",
    "requested": 6,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 6,
+    "at": 1795583431440
+   }
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795583421133-0000000164-0000000001",
+  "at": 1795584558143,
+  "sha256": "65b77defb4490a1ec5b4d9f3cbea33b2870209555672ac9819a52b5aed619832"
+ },
+ "screen": false
 }

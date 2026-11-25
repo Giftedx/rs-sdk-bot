@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795584555050-5",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MineYourBiz",
+  "to": "Unsheathed",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 211,
+  "start": 1795584555050,
+  "end": 1795585455050,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

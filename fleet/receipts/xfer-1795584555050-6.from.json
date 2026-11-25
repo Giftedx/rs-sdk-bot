@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795584555050-6",
+ "account": "FishAndChips",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 5,
+ "claim": "5aac401c-4e34-4b7e-a312-d64e85d9ab09",
+ "count": 0,
+ "ok": false,
+ "at": 1795584871930,
+ "detail": "trade claimed"
+}

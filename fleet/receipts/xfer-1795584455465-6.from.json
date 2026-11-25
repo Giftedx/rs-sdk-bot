@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795584455465-6",
+ "account": "MineYourBiz",
+ "partner": "Kiltlifter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "ddc8d8cb-b64b-44ed-9ed3-22f8c9d4c5fb",
+ "count": 1,
+ "ok": true,
+ "at": 1795584786529,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795584717388
+ },
+ "logout": {
+  "attemptId": "1795584708611-0000006216-0000000001",
+  "at": 1795584786517,
+  "sha256": "da07654adf0871b14ddb58143148d7cdc40c4ca4e7e68313fb69ea5b067d77d0"
+ },
+ "screen": true
+}
