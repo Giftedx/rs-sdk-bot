@@ -1,5 +1,6 @@
 // Fresh-account 1-to-99 Smithing specialist via Glory-to-Edgeville, Varrock West bank runners, and platebody burst smithing.
 import type { Session } from '../packages/core/src/inprocess';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { smithRecipe } from '../packages/workers/src/bank-artisan';
 import {
  assertCatalogItems,
@@ -37,6 +38,7 @@ export const SMITH_PRODUCTS = {
  bronze_dagger: 1205,
  bronze_warhammer: 1337,
  iron_dagger: 1203,
+ iron_scimitar: 1323,
  iron_warhammer: 1335,
  iron_platebody: 1115,
  steel_platebody: 1119,
@@ -75,11 +77,11 @@ type SmithRunnerState = {
 
 function selectProductForInventory(lvl: number, inv: readonly { id: number; count: number }[]): number | null {
  const bronze = countItem(inv, ITEM_IDS.bronze_bar);
- if (bronze >= 3 && lvl >= 9) return SMITH_PRODUCTS.bronze_warhammer;
- if (bronze >= 1) return SMITH_PRODUCTS.bronze_dagger;
+ if (bronze >= 1 && lvl < 15) return SMITH_PRODUCTS.bronze_dagger;
  const iron = countItem(inv, ITEM_IDS.iron_bar);
  if (iron >= 5 && lvl >= 33) return SMITH_PRODUCTS.iron_platebody;
  if (iron >= 3 && lvl >= 24 && lvl < 33) return SMITH_PRODUCTS.iron_warhammer;
+ if (iron >= 2 && lvl >= 20 && lvl < 24) return SMITH_PRODUCTS.iron_scimitar;
  if (iron >= 1 && (lvl < 33 || lvl >= 48 || iron < 5)) return SMITH_PRODUCTS.iron_dagger;
  if (countItem(inv, ITEM_IDS.steel_bar) >= 5 && lvl >= 48) return SMITH_PRODUCTS.steel_platebody;
  if (countItem(inv, ITEM_IDS.mithril_bar) >= 5 && lvl >= 68) return SMITH_PRODUCTS.mithril_platebody;
@@ -164,12 +166,17 @@ async function runVarrockSmithRunner(
  }
 }
 
-async function smithHeldBars(spec: Session, target: number, deadline: number): Promise<void> {
+async function smithHeldBars(
+ spec: Session,
+ target: number,
+ deadline: number,
+ keepSet?: ReadonlySet<number>,
+): Promise<number> {
  while (spec.tick() < deadline) {
-  if (skillLevel(spec, 'Smithing') >= target) return;
+  if (skillLevel(spec, 'Smithing') >= target) return spec.tick();
   const inv = spec.sdk.getInventory();
   const product = selectProductForInventory(skillLevel(spec, 'Smithing'), inv);
-  if (product === null) return;
+  if (product === null) return spec.tick();
   const r = smithRecipe(product);
   const st = () => spec.sdk.getState();
   const ifaceOpen = () => !!st()?.interface?.isOpen && st()?.interface?.interfaceId === SMITHING_INTERFACE;
@@ -179,34 +186,69 @@ async function smithHeldBars(spec: Session, target: number, deadline: number): P
    const bar = spec.sdk.getInventory().find(i => i.id === r.bar);
    if (!anvil || !bar) throw Error(`smithing anvil or bar ${r.bar} missing`);
    const sentTick = spec.tick();
-   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
-    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   const openActs: Promise<unknown>[] = [];
+   if (keepSet) {
+    for (const extra of spec.sdk.getInventory()) {
+     if (!keepSet.has(extra.id) && openActs.length < 3) {
+      openActs.push(spec.direct({ type: 'dropItem', slot: extra.slot, reason: 'SDK' }));
+     }
+    }
    }
-   await spec.direct({ type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil.x, z: anvil.z, locId: anvil.id, reason: 'SDK' });
+   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
+    openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+   }
+   openActs.push(spec.direct({ type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil.x, z: anvil.z, locId: anvil.id, reason: 'SDK' }));
+   await Promise.all(openActs);
    await waitUntil(spec, () => spec.tick() > sentTick && (ifaceOpen() || !!st()?.dialog?.isOpen), { timeoutTicks: 8 });
    if (!ifaceOpen()) continue;
   }
 
-  const useMake5 = r.bars === 5 || product === SMITH_PRODUCTS.bronze_warhammer;
   const beforeBars = countItem(spec.sdk.getInventory(), r.bar);
+  const lvl = skillLevel(spec, 'Smithing');
+  const useMake10 = product === SMITH_PRODUCTS.bronze_dagger && beforeBars >= 9;
+  const useMake5 =
+   !useMake10 &&
+   (r.bars === 5 || product === SMITH_PRODUCTS.bronze_warhammer || (product === SMITH_PRODUCTS.iron_warhammer && beforeBars >= 9 && lvl < 33));
+  const optionIndex = useMake10 ? 3 : useMake5 ? 2 : 1;
   const sentTick = spec.tick();
   await spec.direct({
    type: 'clickComponentWithOption',
    componentId: r.component,
-   optionIndex: useMake5 ? 2 : 1,
+   optionIndex,
    slot: r.slot,
    reason: 'SDK',
   });
+  let delayUntil = spec.tick();
   await waitUntil(
    spec,
    () => {
     if (spec.tick() <= sentTick) return false;
-    if (skillLevel(spec, 'Smithing') >= target || st()?.dialog?.isOpen) return true;
+    if (skillLevel(spec, 'Smithing') >= target) return true;
     const nowBars = countItem(spec.sdk.getInventory(), r.bar);
-    return useMake5 ? nowBars < r.bars : nowBars < beforeBars;
+    if (useMake10) {
+     if (nowBars === 0) { delayUntil = spec.tick() + 3; return true; }
+     return false;
+    }
+    if (useMake5) {
+     const done =
+      product === SMITH_PRODUCTS.iron_warhammer
+       ? skillLevel(spec, 'Smithing') >= 33 || nowBars < r.bars
+       : nowBars < r.bars;
+     if (done) { delayUntil = spec.tick() + 3; return true; }
+     return false;
+    }
+    if (nowBars < beforeBars) { delayUntil = spec.tick() + 3; return true; }
+    return false;
    },
-   { timeoutTicks: useMake5 ? 30 : 8 },
+   { timeoutTicks: useMake10 ? 50 : useMake5 ? 30 : 8 },
   );
+  if (skillLevel(spec, 'Smithing') >= target) return delayUntil;
+  if (selectProductForInventory(skillLevel(spec, 'Smithing'), spec.sdk.getInventory()) === null) {
+   return delayUntil;
+  }
+  while (spec.tick() < delayUntil) {
+   await waitTicks(spec, 1);
+  }
  }
  throw Error('smithing loop exceeded cap');
 }
@@ -283,11 +325,29 @@ export async function runSmithingSpecialist(
   );
   logPhase(spec, start, 'smithing_glory_edgeville');
 
-  await navigateWorld(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0, Math.max(10, deadline - spec.tick()));
+  const walkEdgeToVarrock = await sessionWalker(spec);
+  if (((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) !== 1) {
+   await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+  }
+  const vWalk = await walkPath(
+   walkEdgeToVarrock,
+   [
+    { x: 3080, z: 3467, tol: 4 },
+    { x: 3090, z: 3444, tol: 4 },
+    { x: 3100, z: 3421, tol: 3 },
+    { x: 3158, z: 3418, tol: 4 },
+    { x: 3181, z: 3426, tol: 2 },
+    { x: 3187, z: 3426, tol: 0 },
+   ],
+   { maxTicks: Math.max(10, Math.min(95, deadline - spec.tick())) },
+  );
+  if (!vWalk.ok && !nearTile(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 2)) {
+   await navigateWorld(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0, Math.max(10, deadline - spec.tick()));
+  }
   logPhase(spec, start, 'smithing_at_anvil');
-  await smithHeldBars(spec, target, deadline);
-  await dropItemsFast(spec, keepSet, deadline);
+  let delayUntil = await smithHeldBars(spec, target, deadline, keepSet);
 
+  const anvilLoc = spec.sdk.findNearbyLoc(/^anvil$/i) ?? { x: 3188, z: 3426, id: 2783 };
   let lastRunnerIdx = runners.length - 1;
   while (skillLevel(spec, 'Smithing') < target && spec.tick() < deadline) {
    const wantBar = nextWantedBarId(skillLevel(spec, 'Smithing'));
@@ -309,16 +369,29 @@ export async function runSmithingSpecialist(
     return undefined;
    };
    let next = pickRunner();
-   while (!next && spec.tick() < deadline) {
+   while ((!next || spec.tick() < delayUntil) && spec.tick() < deadline) {
+    if (spec.sdk.getState()?.dialog?.isOpen && !spec.sdk.getState()?.trade?.isOpen) {
+     await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    }
     await waitTicks(spec, 1);
-    next = pickRunner();
+    if (!next) next = pickRunner();
    }
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
+   // Drop up to 3 finished products alongside OPPLAYER4 inside burstTradeHost T0; keep <= 2 platebodies + hammer so 25 bars fit.
+   const dropSlots = spec.sdk.getInventory().filter(i => !keepSet.has(i.id) || (i.id === ITEM_IDS.bronze_bar && skillLevel(spec, 'Smithing') >= 15)).map(i => i.slot);
+   let preDropSlots: number[] | undefined;
+   if (dropSlots.length > 6) {
+    // Batch 0 leftover daggers/warhammers/excess bronze bars (>6 slots) need dropItemsFast before trading.
+    await dropItemsFast(spec, new Set([ITEM_IDS.hammer]), deadline);
+   } else if (dropSlots.length > 2) {
+    preDropSlots = dropSlots.slice(0, dropSlots.length - 2);
+   }
    next.claimed = true;
    next.ready = false;
    try {
     await burstTradeHost(spec, next.session, {
      giveIds: [wantBar],
+     preDropSlots,
      deadlineTick: deadline,
      canStand: anvilRoomOk,
     });
@@ -326,10 +399,7 @@ export async function runSmithingSpecialist(
    } finally {
     next.claimed = false;
    }
-   await smithHeldBars(spec, target, deadline);
-   if (skillLevel(spec, 'Smithing') < target) {
-    await dropItemsFast(spec, keepSet, deadline);
-   }
+   delayUntil = await smithHeldBars(spec, target, deadline, keepSet);
   }
 
   const level = skillLevel(spec, 'Smithing');

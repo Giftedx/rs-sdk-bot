@@ -1135,7 +1135,7 @@ export async function runCompanionRole(
     opts: {
         role: 'supplier' | 'supplier-tank' | 'tank';
         specialistName: string;
-        board?: 'attack' | 'hitpoints' | 'strength' | 'defence';
+        board?: 'attack' | 'hitpoints' | 'strength' | 'defence' | 'ranged';
         kit?: readonly KitSpecItem[];
         postTileOffsetX?: number;
         stopFile?: string;
@@ -1749,8 +1749,6 @@ export async function runMeleePvpSpecialist(
     // Drop Waterfall rewards and equip Keep melee gear while running from barrel (2527,3413) to Ardougne lever.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
-    let drankSuperAtk = false;
-    let drankSuperStr = false;
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
         ignoreLiveHunters: true,
         onTickExtra: () => {
@@ -1761,22 +1759,6 @@ export async function runMeleePvpSpecialist(
                     const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
                     preEquippedWait = s.tick();
                     void s.direct({ type: 'useInventoryItem', slot: gear.slot, optionIndex: wieldOp, reason: 'SDK' });
-                }
-            }
-            if (!drankSuperAtk) {
-                const pot = s.sdk.getInventory().find(i => i.id === 2436 || i.id === 145 || i.id === 147 || i.id === 149);
-                if (pot) {
-                    drankSuperAtk = true;
-                    const op = (pot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
-                    void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: op, reason: 'SDK' });
-                }
-            }
-            if (!drankSuperStr) {
-                const pot = s.sdk.getInventory().find(i => i.id === 2440 || i.id === 157 || i.id === 159 || i.id === 161);
-                if (pot) {
-                    drankSuperStr = true;
-                    const op = (pot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
-                    void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: op, reason: 'SDK' });
                 }
             }
             const junk = s.sdk.getInventory().find(i => postWaterfallJunk.has(i.id));

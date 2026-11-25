@@ -1,5 +1,6 @@
 // Fresh-account 1-to-99 Runecraft specialist via Glory Air altar 1-to-20 and 22 Body altar runners.
 import type { Session } from '../packages/core/src/inprocess';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import {
  assertCatalogItems,
  burstTradeHost,
@@ -41,7 +42,7 @@ export const RUNECRAFT_SUPPLY_BILL: readonly SupplyEntry[] = [
  { itemId: ITEM_IDS.amulet_of_glory_4, item: 'Amulet of glory(4)', count: 1 },
  { itemId: ITEM_IDS.air_talisman, item: 'Air talisman', count: 1 },
  { itemId: ITEM_IDS.body_talisman, item: 'Body talisman', count: 1 },
- { itemId: ITEM_IDS.blankrune, item: 'Rune essence', count: 25 + 205 * 26 },
+ { itemId: ITEM_IDS.blankrune, item: 'Rune essence', count: 25 + 22 * 26 + 177 * 27 },
 ];
 
 type RcRunnerState = {
@@ -119,7 +120,7 @@ async function runBodyEssenceRunner(
 
   runner.ready = false;
   if (heldEss < 26) {
-   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 26, keep, done, deadline, signal);
+   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 27, keep, done, deadline, signal);
   }
   if (done() || signal.aborted || s.tick() >= deadline) break;
 
@@ -133,9 +134,30 @@ async function runBodyEssenceRunner(
  }
 }
 
-async function craftAtAltar(spec: Session, altarId: number, deadline: number): Promise<void> {
+async function craftAtAltar(spec: Session, altarId: number, deadline: number, preSentCraft = false): Promise<void> {
+ const drainDelayAndDialogs = async (minTicks: number) => {
+  for (let i = 0; i < minTicks && spec.tick() < deadline; i++) {
+   if (spec.sdk.getState()?.dialog?.isOpen) {
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
+   await waitTicks(spec, 1);
+  }
+  while (spec.tick() < deadline && spec.sdk.getState()?.dialog?.isOpen) {
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   await waitTicks(spec, 1);
+  }
+ };
+
+ if (preSentCraft && countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
+  // Trade-confirm tick T already executed runecraft.rs2 (p_delay(3) -> delayedUntil = T+4); burstTradeHost returns at T+1, so drain 3 ticks.
+  await drainDelayAndDialogs(3);
+  return;
+ }
  while (spec.tick() < deadline) {
-  if (countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) return;
+  if (countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
+   await drainDelayAndDialogs(0);
+   return;
+  }
   const st = spec.sdk.getState();
   if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
    await spec.direct({ type: 'closeModal', reason: 'SDK' });
@@ -152,13 +174,8 @@ async function craftAtAltar(spec: Session, altarId: number, deadline: number): P
     { timeoutTicks: 6 },
    );
    if (crafted && countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
-    // runecraft.rs2 finishes with p_delay(3) after inv_del (delayedUntil = currentTick + 4); drain level-up modals while waiting.
-    for (let i = 0; i < 4; i++) {
-     if (spec.sdk.getState()?.dialog?.isOpen) {
-      await spec.direct({ type: 'closeModal', reason: 'SDK' });
-     }
-     await waitTicks(spec, 1);
-    }
+    // runecraft.rs2 finishes with p_delay(3) after inv_del; finish the remaining delay ticks and all queued level-up modals.
+    await drainDelayAndDialogs(4);
     return;
    }
   } else {
@@ -196,6 +213,9 @@ export async function runRunecraftSpecialist(
  try {
   await skipTutorialFast(spec, deadline);
   await dropItemsFast(spec, new Set(), deadline);
+  if (((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) !== 1) {
+   await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+  }
 
   await burstTradeHost(spec, starterHelper!, {
    giveIds: [ITEM_IDS.amulet_of_glory_4, ITEM_IDS.air_talisman, ITEM_IDS.body_talisman, ITEM_IDS.blankrune],
@@ -214,7 +234,20 @@ export async function runRunecraftSpecialist(
   );
   logPhase(spec, start, 'rc_glory_draynor');
 
-  await navigateWorld(spec, AIR_RUINS.x, AIR_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
+  const draynorWalker = await sessionWalker(spec);
+  const airWalk = await walkPath(
+   draynorWalker,
+   [
+    { x: 3074, z: 3265, tol: 4 },
+    { x: 3034, z: 3276, tol: 4 },
+    { x: 3003, z: 3287, tol: 4 },
+    { x: AIR_RUINS.x, z: AIR_RUINS.z, tol: 1 },
+   ],
+   { maxTicks: Math.max(10, Math.min(80, deadline - spec.tick())) },
+  );
+  if (!airWalk.ok && !nearTile(spec, AIR_RUINS.x, AIR_RUINS.z, 2)) {
+   await navigateWorld(spec, AIR_RUINS.x, AIR_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
+  }
   await enterAltarWithTalisman(
    spec,
    ITEM_IDS.air_talisman,
@@ -239,7 +272,20 @@ export async function runRunecraftSpecialist(
    deadline,
   );
 
-  await navigateWorld(spec, BODY_RUINS.x, BODY_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
+  const edgeWalker = await sessionWalker(spec);
+  const bodyWalk = await walkPath(
+   edgeWalker,
+   [
+    { x: 3080, z: 3467, tol: 4 },
+    { x: 3071, z: 3420, tol: 4 },
+    { x: 3061, z: 3423, tol: 3 },
+    { x: BODY_RUINS.x, z: BODY_RUINS.z, tol: 1 },
+   ],
+   { maxTicks: Math.max(10, Math.min(60, deadline - spec.tick())) },
+  );
+  if (!bodyWalk.ok && !nearTile(spec, BODY_RUINS.x, BODY_RUINS.z, 2)) {
+   await navigateWorld(spec, BODY_RUINS.x, BODY_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
+  }
   await enterAltarWithTalisman(
    spec,
    ITEM_IDS.body_talisman,
@@ -251,45 +297,53 @@ export async function runRunecraftSpecialist(
    deadline,
   );
 
-  await dropItemsFast(spec, new Set([ITEM_IDS.bodyrune, ...GLORY_IDS]), deadline);
-  await navigateWorld(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, Math.max(10, deadline - spec.tick()));
-  if (!nearTile(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0)) {
-   await runTo(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, 20);
-  }
-  logPhase(spec, start, 'rc_at_body_altar');
-
-  const pickReady = () =>
-   runners
-    .filter(
-     r =>
-      r.ready &&
-      !r.claimed &&
-      nearTile(r.session, BODY_ALTAR_STAND.x, BODY_ALTAR_STAND.z, 3) &&
-      countItem(r.session.sdk.getInventory(), ITEM_IDS.blankrune) >= 26,
-    )
-    .sort((a, b) => a.lastUsedTick - b.lastUsedTick)[0];
-
-  while (skillLevel(spec, 'Runecraft') < target && spec.tick() < deadline) {
-   let next = pickReady();
-   while (!next && spec.tick() < deadline) {
-    await waitTicks(spec, 1);
-    next = pickReady();
+   // Drop Glory, talismans, and Air runes in parallel while running to the Body altar stand so 27 slots stay free.
+   const preJunk = spec.sdk.getInventory().filter(i => i.id !== ITEM_IDS.bodyrune).slice(0, 4);
+   await Promise.all([
+    spec.direct({ type: 'walkTo', x: BODY_ALTAR_CRAFTER.x, z: BODY_ALTAR_CRAFTER.z, running: true, reason: 'SDK' }),
+    ...preJunk.map(i => spec.direct({ type: 'dropItem', slot: i.slot, reason: 'SDK' })),
+   ]);
+   if (!nearTile(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0)) {
+    await runTo(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, 20);
    }
-   if (!next) throw Error('runecraft Body altar runners exhausted');
-   next.claimed = true;
-   next.ready = false;
-   try {
-    await burstTradeHost(spec, next.session, {
-     giveIds: [ITEM_IDS.blankrune],
-     deadlineTick: deadline,
-     allowHelperOnSingleModal: true,
-    });
-   } finally {
-    next.lastUsedTick = spec.tick();
-    next.claimed = false;
+   await dropItemsFast(spec, new Set([ITEM_IDS.bodyrune]), deadline);
+   logPhase(spec, start, 'rc_at_body_altar');
+
+   const bodyAltar = findLocBy(spec, l => l.id === 2483) ?? { x: 2524, z: 4832, id: 2483 };
+   const pickReady = () =>
+    runners
+     .filter(
+      r =>
+       r.ready &&
+       !r.claimed &&
+       nearTile(r.session, BODY_ALTAR_STAND.x, BODY_ALTAR_STAND.z, 0) &&
+       countItem(r.session.sdk.getInventory(), ITEM_IDS.blankrune) >= 26,
+     )
+     .sort((a, b) => a.lastUsedTick - b.lastUsedTick)[0];
+
+   while (skillLevel(spec, 'Runecraft') < target && spec.tick() < deadline) {
+    let next = pickReady();
+    while (!next && spec.tick() < deadline) {
+     await waitTicks(spec, 1);
+     next = pickReady();
+    }
+    if (!next) throw Error('runecraft Body altar runners exhausted');
+    next.claimed = true;
+    next.ready = false;
+    try {
+     await burstTradeHost(spec, next.session, {
+      giveIds: [ITEM_IDS.blankrune],
+      deadlineTick: deadline,
+      allowHelperOnSingleModal: true,
+      onConfirmSend: () =>
+       spec.direct({ type: 'interactLoc', x: bodyAltar.x, z: bodyAltar.z, locId: bodyAltar.id, optionIndex: 1, reason: 'SDK' }),
+     });
+    } finally {
+     next.lastUsedTick = spec.tick();
+     next.claimed = false;
+    }
+    await craftAtAltar(spec, 2483, deadline, true);
    }
-   await craftAtAltar(spec, 2483, deadline);
-  }
 
   const level = skillLevel(spec, 'Runecraft');
   const xp = skillXp(spec, 'Runecraft');

@@ -220,6 +220,8 @@ test('parseSpecialistArgs and bench cases validate cleanly', () => {
         'fighter:ranged-specialist',
         'extra:ranged-specialist-msb',
         'extra:ranged-specialist-live',
+        'extra:ranged-specialist-pvp',
+        'extra:ranged-specialist-pvp-glory',
     ]);
 });
 
@@ -420,11 +422,16 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
     expect(() => parseRangedLivePrepArgs(['Moneyshot', '--mode=bogus'])).toThrow('unknown --mode');
 });
 
-test('RANGED_PVP_SPECIALIST_KIT fits 25 tradeable cataloged slots without Super energy and parseSpecialistArgs supports VARIANT=pvp', () => {
+test('RANGED_PVP_SPECIALIST_KIT and RANGED_PVP_GLORY_KIT fit <=28 tradeable cataloged slots and parseSpecialistArgs supports pvp modes', async () => {
+    const { RANGED_PVP_GLORY_KIT } = await import('./ranged-specialist');
     expect(kitSlotTotal(RANGED_PVP_SPECIALIST_KIT)).toBe(25);
+    expect(kitSlotTotal(RANGED_PVP_GLORY_KIT)).toBe(25);
     expect(RANGED_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
+    expect(RANGED_PVP_GLORY_KIT.some(k => k.id === 3016)).toBe(false);
+    expect(RANGED_PVP_SPECIALIST_KIT.find(k => k.id === 892)?.count).toBeGreaterThanOrEqual(1500);
+    expect(RANGED_PVP_GLORY_KIT.find(k => k.id === 892)?.count).toBeGreaterThanOrEqual(1500);
     const byId = new Map(ITEMS.map(item => [item.id, item]));
-    for (const spec of RANGED_PVP_SPECIALIST_KIT) {
+    for (const spec of [...RANGED_PVP_SPECIALIST_KIT, ...RANGED_PVP_GLORY_KIT]) {
         const entry = byId.get(spec.id);
         expect(entry).toBeDefined();
         expect(entry!.tradeable).toBe(true);
@@ -435,6 +442,11 @@ test('RANGED_PVP_SPECIALIST_KIT fits 25 tradeable cataloged slots without Super 
         cap: 3000,
         variant: 'pvp',
         tanks: ['tank1', 'tank2'],
+    });
+    expect(parseSpecialistArgs(['Moneyshot', '3000', 'VARIANT=pvp-glory'])).toMatchObject({
+        bot: 'Moneyshot',
+        cap: 3000,
+        variant: 'pvp-glory',
     });
 });
 
