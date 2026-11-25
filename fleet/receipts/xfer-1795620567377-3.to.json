@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795620567377-3",
  "account": "UnderMyKilt",
  "partner": "FishAndChips",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "254351c7-7233-40ef-a821-64600eb56984",
- "count": 0,
- "ok": false,
- "at": 1795621172088,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795621312834,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795621312077
+ },
+ "logout": {
+  "attemptId": "1795621172096-0000032156-0000000001",
+  "at": 1795621312819,
+  "sha256": "e63e59b8611e4106ba92f7f4a33fe0dbe1e797d736f8936053abf99c0f2981d2"
+ },
+ "screen": true
 }
