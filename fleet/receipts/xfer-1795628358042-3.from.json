@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795628358042-3",
+ "account": "OreElse",
+ "partner": "Porksword",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "4ec8e9d3-f401-43d1-ba2d-358da3874c64",
+ "count": 0,
+ "ok": false,
+ "at": 1795629258523,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795629230402-0000032544-0000000001",
+  "at": 1795629258510,
+  "sha256": "f9c74bed57a6c21e3f2b7553f6259b5785266a410c76424b39a1b0506574b5ba"
+ },
+ "screen": false
+}

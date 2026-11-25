@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795628386186-1",
  "account": "UnderMyKilt",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Marrentill",
  "requested": 1,
  "claim": "badcf4c7-81a7-4ba8-b70e-8651fa673141",
- "count": 0,
- "ok": false,
- "at": 1795629000717,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795629236875,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795629236165
+ },
+ "logout": {
+  "attemptId": "1795629000726-0000031100-0000000001",
+  "at": 1795629236863,
+  "sha256": "de05aac37003d14279635ed4934fd7381fb8fdf22b67db9e1c8fc68372baf960"
+ },
+ "screen": true
 }

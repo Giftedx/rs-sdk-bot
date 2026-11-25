@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795628358042-3",
  "account": "Porksword",
  "partner": "OreElse",
@@ -12,6 +12,12 @@
  "claim": "7dbbfc4c-f93f-48f9-9de9-344239b26dd2",
  "count": 0,
  "ok": false,
- "at": 1795628971231,
- "detail": "trade claimed"
+ "at": 1795629258472,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795628971242-0000027736-0000000001",
+  "at": 1795629258464,
+  "sha256": "903e7c15b3a380d29c33a14f9099e827e6f7289ae41a8fb72383a11363b7e145"
+ },
+ "screen": false
 }

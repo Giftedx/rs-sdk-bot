@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795628386186-1",
+ "account": "Fatstack",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "3844f95e-52c1-4fcf-b5d4-d9c3da10d4ab",
+ "count": 1,
+ "ok": true,
+ "at": 1795629235354,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795629227322
+ },
+ "logout": {
+  "attemptId": "1795629219432-0000017940-0000000001",
+  "at": 1795629235264,
+  "sha256": "087c8b38a58eefb6fc73c19e7e7a6ef01ac26ebf580f2b3c9b41886b0848844b"
+ },
+ "screen": true
+}

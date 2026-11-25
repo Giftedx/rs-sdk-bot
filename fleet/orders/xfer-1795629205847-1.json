@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795629205847-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "SporranBulge",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795629205847,
+  "end": 1795630105847,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
