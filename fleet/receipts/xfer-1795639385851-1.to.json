@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795639385851-1",
+ "account": "Ballspinner",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 2,
+ "claim": "f3f14a1c-c72e-4d7b-81b4-68a18ba9b3dc",
+ "count": 0,
+ "ok": false,
+ "at": 1795639644125,
+ "detail": "Error: route to 3182, 3440: precondition bank stop at 3094,3491: withdraw outcome unknown 554:0/1",
+ "logout": {
+  "attemptId": "1795639630551-0000031960-0000000001",
+  "at": 1795639644016,
+  "sha256": "efef315dd89894e0ad5dddb90a08d5873846fd947d31ad8aef922d5470925f8d"
+ },
+ "screen": false
+}
