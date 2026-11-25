@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795633066204-1",
+ "account": "Kiltlifter",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "4b619bcf-ac64-4864-bf33-e9011b4b5c0c",
+ "count": 10,
+ "ok": true,
+ "at": 1795633207939,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795633206759
+ },
+ "logout": {
+  "attemptId": "1795633197212-0000006368-0000000001",
+  "at": 1795633207897,
+  "sha256": "c9af7cff0675b808809b7c2e7fa8a4ac80ec7341d2ffb64a69fb382bd8b88ede"
+ },
+ "screen": true
+}

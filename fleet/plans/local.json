@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795633086636,
+ "at": 1795633211549,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -88,21 +88,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:225",
    "role": "army"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/quest-chompybird.ts DEMAND_ID=goal:quest_board:chompybird BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:chompybird",
-   "role": "auto"
   },
   {
    "account": "PickpockDick",
@@ -249,6 +234,21 @@
    "repeat": false,
    "goal": "goal:pk_army:Pocketpython",
    "role": "army"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=40 -- crafting inventory",
+    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
+   "role": "auto"
   },
   {
    "account": "Swordinhand",
