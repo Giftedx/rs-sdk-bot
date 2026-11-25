@@ -2367,7 +2367,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!done)cam.raf=requestAnimationFrame(camStep);
   }
   function camUpdate(){camTarget();if(!cam.raf)cam.raf=requestAnimationFrame(camStep);}
-  window.atlasCamera={goto(x,z){window.atlasFreeCamera=true;window.atlasDestination={x,z};cam.user=false;camUpdate();},reset(){window.atlasFreeCamera=true;cam.user=false;cam.userPpt=null;window.atlasDestination=null;camUpdate();},state:()=>({...cam})};
+  window.atlasCamera={goto(x,z){window.atlasFreeCamera=true;window.atlasDestination={x,z};cam.user=false;camUpdate();},reset(){window.atlasFreeCamera=true;window.atlasFreeFor=null;cam.user=false;cam.userPpt=null;window.atlasDestination=null;camUpdate();},state:()=>({...cam})};
   {
     const map=document.getElementById('map');
     if(map){
@@ -2379,7 +2379,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
         if(window.atlasFreeCamera||!account()){cam.tx=cam.cx;cam.tz=cam.cz;}cam.tppt=after;window.atlasCam={cx:cam.cx,cz:cam.cz,ppt:cam.ppt};drawMap();},{passive:false});
       let drag=null,dragged=false;
       map.addEventListener('pointerdown',e=>{if(e.button!==0)return;drag={x:e.clientX,z:e.clientY,cx:cam.cx,cz:cam.cz};dragged=false;map.setPointerCapture(e.pointerId);});
-      map.addEventListener('pointermove',e=>{if(!drag||cam.ppt==null)return;const dx=e.clientX-drag.x,dz=e.clientY-drag.z;if(!dragged&&Math.hypot(dx,dz)<4)return;dragged=true;window.atlasFreeCamera=true;window.atlasDestination=null;cam.user=true;cam.cx=drag.cx-dx/cam.ppt;cam.cz=drag.cz+dz/cam.ppt;cam.tx=cam.cx;cam.tz=cam.cz;cam.tppt=cam.ppt;window.atlasCam={cx:cam.cx,cz:cam.cz,ppt:cam.ppt};drawMap();});
+      map.addEventListener('pointermove',e=>{if(!drag||cam.ppt==null)return;const dx=e.clientX-drag.x,dz=e.clientY-drag.z;if(!dragged&&Math.hypot(dx,dz)<4)return;dragged=true;window.atlasFreeCamera=true;window.atlasFreeFor=null;window.atlasDestination=null;cam.user=true;cam.cx=drag.cx-dx/cam.ppt;cam.cz=drag.cz+dz/cam.ppt;cam.tx=cam.cx;cam.tz=cam.cz;cam.tppt=cam.ppt;window.atlasCam={cx:cam.cx,cz:cam.cz,ppt:cam.ppt};drawMap();});
       map.addEventListener('pointerup',()=>{drag=null;if(dragged)refresh();});map.addEventListener('pointercancel',()=>{drag=null;});
       map.addEventListener('click',e=>{if(dragged){dragged=false;e.stopImmediatePropagation();}},true);
     }
@@ -2486,7 +2486,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(to===from)return;
     flightTo=shown;focus.classList.add('flying');focusNote.classList.add('flying');focusSay('Flying to '+shown,15000);
   }
-  const focusFree=(name=null)=>{linkRead=true;sel=name;picked=true;window.atlasFreeCamera=true;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
+  const focusFree=(name=null)=>{linkRead=true;sel=name;picked=true;window.atlasFreeCamera=true;window.atlasFreeFor=null;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
   // The viewer loads these places while it is idle, so a swap to them has nothing to wait for. The [ and ] neighbours come
   // first, and a row under the pointer goes before them. One place stands for the accounts in the same 32-tile cell.
   let warmSent='';
