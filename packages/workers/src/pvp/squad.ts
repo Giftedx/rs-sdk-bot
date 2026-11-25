@@ -34,6 +34,7 @@ import type { Session } from '../../../core/src/inprocess';
 import { closeWithin } from '../../../core/src/bot';
 import { killReceiptProof, type KillHead, type KillItem } from '../../../core/src/kill-receipt';
 import { RETALIATE_OFF } from '../../../core/src/combat-end';
+import { holdSessionPrayer } from '../../../core/src/prayer-guard';
 import { bindActionScope } from '../../../core/src/action-scope';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, emitKillReceipt, escapeCastable, extractKillVictim, fightPlayer, getObjNames, ITEMS, isMulti, newVolley, nextTick, noteGround, noteHeads, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillGround, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions, type VolleyState } from './fight';
@@ -295,7 +296,7 @@ export const pullTicks = (distance: number) => Math.min(PULL_MAX_TICKS, 20 + Mat
 
 // Keeps a squad member alive in Wilderness outside `fightPlayer` (retreat, bank return, pickup, pulling, idle walks)
 // by keeping protect overhead prayers and food/karambwan healing active every tick.
-function createWildSurvival(
+export function createWildSurvival(
     s: Session,
     opts: {
         protect?: () => CombatStyle | null;
@@ -305,8 +306,15 @@ function createWildSurvival(
         protectItem?: () => boolean;
         canEat?: () => boolean;
     } = {},
-): { step: (now: number) => boolean; prayStep: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number; didEat: (now: number) => boolean } {
+): { step: (now: number) => boolean; prayStep: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number; didEat: (now: number) => boolean; holdGuard: () => void; release: () => void } {
     let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100, ateAt = -10;
+    // The helper and the session's prayer guard both send prayer inputs. A flick of the guard with three prayers on
+    // turns the last ones on in its second tick; the helper sees one of them off in that tick and turns it on too, and
+    // the two toggles leave it off (packages/workers/test/pvp-survival-prayer.test.ts). From the helper's first prayer
+    // input (`holdGuard`, also for the caller's own prayer inputs) the guard sends none (prayer-guard/hold.ts). Before
+    // it, the guard keeps its own protection. The caller ends the hold with `release`.
+    let guardHold: { release(): void } | null = null;
+    const holdGuard = () => { guardHold ??= holdSessionPrayer(s.sdk); };
     const wildMe = () => {
         const st = s.sdk.getState(), me = st?.player;
         return st && me && !me.isDead && me.hp > 0 && wildernessLevel(me.worldZ) > 0 ? { st, me } : null;
@@ -358,12 +366,14 @@ function createWildSurvival(
         if (prayers && prayers.prayerPoints > 0) {
             const style = opts.protect?.() ?? (now - hitAt <= 8 ? hitStyle : null);
             if (style && now - prayAt >= 3) {
+                holdGuard();
                 holdProtect(s, style, 0);
                 prayAt = now;
                 acted = true;
             }
             const active = prayers.activePrayers ?? [];
             if (opts.protectItem?.() && (s.sdk.getSkill?.('Prayer')?.baseLevel ?? 1) >= 25 && !active[PRAYER.item] && now - itemAt >= 3 && typeof s.sdk.sendTogglePrayer === 'function') {
+                holdGuard();
                 void s.sdk.sendTogglePrayer(PRAYER.item);
                 itemAt = now;
                 acted = true;
@@ -374,6 +384,8 @@ function createWildSurvival(
     return {
         tryEat,
         prayStep,
+        holdGuard,
+        release: () => { guardHold?.release(); guardHold = null; },
         foodWait: (now: number) => Math.max(0, foodReady - now),
         didEat: (now: number) => ateAt === now,
         step: (now: number) => {
@@ -591,6 +603,20 @@ export async function rescue(
     settleStart = true,
     opts: { protect?: () => CombatStyle | null; protectItem?: () => boolean } = {},
 ): Promise<Session | null> {
+    // The survival helper's hold of the prayer guard ends with the rescue, on each of its returns.
+    const helpers: { release(): void }[] = [];
+    try { return await rescueRun(s, log, stopped, settleStart, opts, helpers); }
+    finally { for (const h of helpers) h.release(); }
+}
+
+async function rescueRun(
+    s: Session,
+    log: (l: string) => void,
+    stopped: () => boolean,
+    settleStart: boolean,
+    opts: { protect?: () => CombatStyle | null; protectItem?: () => boolean },
+    helpers: { release(): void }[],
+): Promise<Session | null> {
     const me = () => s.sdk.getState()?.player;
     const tick = async () => !stopped() && await nextTick(s) && !stopped();
     for (let i = 0; i < 3 && (settleStart || !me()); i++) if (!await tick()) return null;
@@ -607,6 +633,7 @@ export async function rescue(
             useDirect: true,
             canEat: () => !s.sdk.getState()?.dialog?.isOpen && (!suppressEat || (me()?.hp ?? start.maxHp) <= 52),
         });
+        helpers.push(survival);
         const hasChargedGlory = () => {
             const st = s.sdk.getState(), inv = s.sdk.getInventory?.() ?? [], eq = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment) ?? [];
             return [...inv, ...eq].some(i => (ITEMS.glory as readonly number[]).includes(i.id));
@@ -1901,7 +1928,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     singleUntil = now + 120;
                     if (needsSingleWayMove(p, single.to) && !fallbackDue()) {
                         o.threats!.acted(now);
-                        if (protect && now - holdPrayAt >= 3) { holdProtect(s, protect, 0); holdPrayAt = now; }
+                        if (protect && now - holdPrayAt >= 3) { wildSurvival.holdGuard(); holdProtect(s, protect, 0); holdPrayAt = now; }
                         o.log(`[${s.name}] SQUAD threat single-way: ${single.reason}, to ${single.to.x},${single.to.z}`);
                         let stuckTicks = 0, lastX = p.worldX, lastZ = p.worldZ, checkedTick = s.tick();
                         const walkDist = Math.max(Math.abs(p.worldX - single.to.x), Math.abs(p.worldZ - single.to.z));
@@ -1969,10 +1996,11 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // in the last 10 ticks (`keepPrayer`).
                 const holdNow = s.tick();
                 if (protect) {
-                    if (holdNow - holdPrayAt >= 3) { holdProtect(s, protect, 0); holdPrayAt = holdNow; }
+                    if (holdNow - holdPrayAt >= 3) { wildSurvival.holdGuard(); holdProtect(s, protect, 0); holdPrayAt = holdNow; }
                 } else if (!keepPrayer({ view, targets: o.targets, now: holdNow, damagedAt, points: s.sdk.getSkill('Prayer')?.level, base: s.sdk.getSkill('Prayer')?.baseLevel }) && holdNow - holdPrayAt >= 3) {
                     const activePrayers = s.sdk.getState()?.prayers.activePrayers ?? [];
                     if (activePrayers.some(Boolean)) {
+                        wildSurvival.holdGuard();
                         for (const [i, on] of activePrayers.entries()) if (on) void s.sdk.sendTogglePrayer(i);
                         holdPrayAt = holdNow;
                     }
@@ -2160,6 +2188,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         const qEnd = me();
         if (!stats.died && qEnd && diedNow(qEnd)) stats.died = true;
         unwatch();
+        wildSurvival.release();
         flushGround(s.tick(), true);
         o.cohesion?.remove(s.name);
         if (origSendUseItem) s.sdk.sendUseItem = origSendUseItem;
@@ -2198,6 +2227,7 @@ export async function leaveWilderness(s: Session, diedBefore: boolean): Promise<
         r = died() ? null : await walkPath(await sessionWalker(s), [{ ...bankNear(me()?.worldX ?? p.worldX), tol: 2 }], { maxTicks: 400, idleMs: 9000, stop: died });
     } finally {
         unwatchExit();
+        exitSurvival.release();
     }
     if (died()) return { died: true, why: 'died walking out of the Wilderness' };
     const q = me();
