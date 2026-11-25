@@ -368,6 +368,8 @@ if(import.meta.main){
  for(;;){
   if(!once&&reloadDue(root,'dashboard-publish',startedAt)){
    release();
+   // respawnDaemon passes process.env on, so a successor of a foreground run writes its own lines too.
+   process.env.PUBLISH_LOG_DIRECT='1';
    const pid=respawnDaemon(root,[join(root,'packages/dashboard/publish.ts'),...process.argv.slice(2)],join(prac,'dashboard-publish.log'));
    log(`PUBLISH reload after a live update: successor pid ${pid}`);
    process.exit(0);
