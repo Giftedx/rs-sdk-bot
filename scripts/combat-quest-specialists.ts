@@ -1179,8 +1179,6 @@ export interface SpecialistWaterfallOptions {
     skipCwTeleportToTomb?: boolean;
     /** Extra item IDs to drop alongside Waterfall runes before entering Glarial's tomb (e.g., Staff of fire, Law/Chaos runes). */
     extraTombDropIds?: readonly number[];
-    /** Stop right after claiming the Chalice XP so callers can teleport straight out with Ring of dueling. */
-    skipExitWalk?: boolean;
 }
 
 export async function runSpecialistWaterfall(
@@ -1520,13 +1518,6 @@ export async function runSpecialistWaterfall(
     const atkBeforeChalice = skillInfo(s, 'Attack').experience;
     await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atkBeforeChalice >= 300_000, 10, 4);
 
-    if (opts.skipExitWalk) {
-        return {
-            attackXp: skillInfo(s, 'Attack').experience - atk0,
-            strengthXp: skillInfo(s, 'Strength').experience - str0,
-        };
-    }
-
     // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
     await walkFast([{ x: 2604, z: 9901, tol: 1 }], 25, 'raised room exit', () => syncWaterfallPfm(true));
@@ -1625,30 +1616,18 @@ export async function runMeleePvpSpecialist(
             superEnergy: true,
         });
     } else {
-        await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy, skipExitWalk: true });
+        await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy });
     }
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     const tWaterfall = elapsed();
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    // Teleport straight from Chalice to Castle Wars when skipping dungeon exit, and equip/drop junk along the way.
+    // Drop Waterfall rewards and equip Keep melee gear while running from barrel (2527,3413) to Ardougne lever.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
-    if (!opts.runWaterfallFn) {
-        await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, opts.stop);
-        await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
-    }
-    const leverWaypoints = opts.runWaterfallFn
-        ? [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }]
-        : [{ x: 2470, z: 3170, tol: 4 }, { x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }];
-    await walkWaypoints(s, leverWaypoints, 240, opts.stop, 'waterfall to ardougne lever', {
-        ignoreMeleeHunters: true,
+    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
         onTickExtra: () => {
             ensureRunAndEnergy();
-            if (!opts.runWaterfallFn) {
-                const p = posOf(s);
-                syncCwPfm(!!p && p.worldZ <= 3265);
-            }
             if (s.tick() - preEquippedWait >= 2) {
                 const gear = s.sdk.getInventory().find(i => i.id === 1319);
                 if (gear) {
@@ -1661,7 +1640,6 @@ export async function runMeleePvpSpecialist(
             if (junk) void s.direct({ type: 'dropItem', slot: junk.slot, reason: 'SDK' });
         },
     });
-    await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     await pullArdougneLeverToWildy(s, opts.stop);
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
