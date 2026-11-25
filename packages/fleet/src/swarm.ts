@@ -135,9 +135,8 @@ export function resultLineOf(line: string, result: string, lastFull: string | un
 }
 
 // The activity a finished run is charged to. A one-round chain stops at its first failed step and ends with
-// "chain rounds=1 ok=N failed=1" (packages/core/src/chain-step.ts), so step N failed. Charging the first work step
-// instead quarantined five of Bigpackage's per-product smithing rows when the Smithing unlock step before them refused.
-// A failed step with no activity (a walk to the spot) charges none.
+// "chain rounds=1 ok=N failed=1" (packages/core/src/chain-step.ts), so step N failed and takes the outcome, not the
+// first work step after it. A failed step with no activity (a walk to the spot) charges none.
 export function chainOutcomeActivity(chainActivityIds: readonly string[] | undefined, lastResultLine: string | undefined, fallback: string | undefined): string | undefined {
     if (!chainActivityIds?.length || lastResultLine === undefined) return fallback;
     const m = /\bchain rounds=1 ok=(\d+) failed=1\b/.exec(lastResultLine);

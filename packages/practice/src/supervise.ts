@@ -96,9 +96,8 @@ function lastMatchingLine(text: string, test: (line: string) => boolean): string
 
 // Real work in a run: the LEDGER line every worker prints at finish (packages/core/src/ledger.ts) with at least
 // PROGRESS_TICKS game ticks, not all of them idle. A failed login or a session dropped at once prints none, so a dead
-// server still gives up. A run that stood still for its whole session is no work: a black knight job at Falador bank
-// banked every 3 ticks with nothing to bank (LEDGER ticks=904 ... idle=904) for 43 runs, each one counted as work, so
-// the streak never grew and the same failure never ended the job.
+// server still gives up. A session that was idle on every tick (idle= equal to ticks=) is no work: it adds to the streak
+// and its failure can repeat, so a worker that stands still ends instead of logging in again.
 export const PROGRESS_TICKS = 300;
 const LEDGER_TICKS_RE = /^LEDGER ticks=(\d+)/;
 const LEDGER_IDLE_RE = /\bidle=(\d+)\b/;
@@ -111,9 +110,8 @@ export function madeProgress(stdout: string): boolean {
 }
 
 // openBot prints `DEATH at=...` for every death of the account (packages/core/src/death-recovery.ts deathLine), also
-// inside a chain step (`  | DEATH at=...`). A worker can fail after the death without naming it: 18 deaths of
-// gather-combat.ts ended "RESULT fail Error: combat bank return unavailable", and the restart walked Shaftsinker back to
-// the black knights, where it died again.
+// inside a chain step (`  | DEATH at=...`). A worker can fail after the death without naming it in its RESULT, so a
+// failed run with a DEATH line ends as died: a restart would walk the account back into the same danger.
 const DEATH_LINE_RE = /^(?:\s*\|\s*)?DEATH at=/;
 export const isDeathLine = (line: string) => DEATH_LINE_RE.test(line);
 export const diedInRun = (stdout: string) => lastMatchingLine(stdout, isDeathLine) !== undefined;
@@ -199,9 +197,8 @@ export async function keepOutput(stdout: ReadableStream<Uint8Array>, match: (lin
 }
 
 // A worker that throws past its own RESULT handler prints no RESULT line. Bun writes the uncaught error to stderr as
-// `error: <message>` (an Error) or `<Name>Error: <message>` (a subclass). Without this, every such crash read as
-// "(no RESULT)": a release hold thrown at login (no worker progress: release peer state unknown) and an argument refusal
-// (invalid tickCap) matched no rule, so the job logged in again maxRestarts times and ended as gave-up.
+// `error: <message>` (an Error) or `<Name>Error: <message>` (a subclass). The supervisor reads that line as the run's
+// result, so the rules for a printed failure (a release hold, a stop, a prerequisite, a repeat) also apply to a crash.
 const UNCAUGHT_ERROR_RE = /^(?:error|[A-Z][A-Za-z]*Error): \S/;
 export const isUncaughtErrorLine = (line: string) => UNCAUGHT_ERROR_RE.test(line);
 // The RESULT a crash would have printed had the worker caught the error: `RESULT fail ${String(e)}`.

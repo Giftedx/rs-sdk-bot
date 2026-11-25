@@ -452,7 +452,7 @@ test('the real Bun stderr of an uncaught throw yields that crash result', async 
 
 test('a crash with no RESULT line follows the same rules as a printed failure', async () => {
     const crash = (stderr: string) => async () => ({ stdout: '', stderr, exitCode: 1 });
-    // A release hold thrown at login pauses at once: no 21 logins, no gave-up for the planner to quarantine.
+    // A release hold thrown at login pauses at once, with no second login.
     const hold = await supervise({ run: crash('error: no worker progress: release peer state unknown; verify offline before rollout\n      at assertCompatibleWorkers (peers.ts:30:15)'),
         stopped: () => false, pause: async () => { throw Error('must not retry'); }, maxRestarts: 20 });
     expect(hold).toEqual({ reason: 'release-paused', runs: 1 });

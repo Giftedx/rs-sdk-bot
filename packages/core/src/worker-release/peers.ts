@@ -93,9 +93,9 @@ export const LOST_SESSION_DROP_MS = 200_000;
 // with no live owner either, and neither ever confirms logout, while the server dropped the session 200 s after its
 // client went. A held attempt whose owner still runs, or whose receipt is younger than the drop (its session may still
 // stand on the server), holds the row. A live PID whose process started after the attempt was created is a later process
-// (the owner wrote createdAt itself, so it started before it): a killed worker's id taken by svchost.exe, whose command
-// line reads as empty, held KnightRider's row and with it every live start on the server. A start time that cannot be
-// read proves nothing; then an unreadable command line or missing producer script cannot prove a live PID changed owner.
+// (the owner wrote createdAt itself, so it started before it), also when its command line reads as empty, as a system
+// process's does. A start time that cannot be read proves nothing; then an unreadable command line or missing producer
+// script cannot prove a live PID changed owner.
 export function closedSessionRow(row: any, server: string, opts: { root?: string; commandLine?: (pid: number) => string | null; starts?: (pids: readonly number[]) => ReadonlyMap<number, number> | null } = {}, alive: (pid: number) => boolean = pidAlive, now = Date.now()): boolean {
     if (typeof row?.name !== 'string' || typeof row.sessionAttemptId !== 'string' || !row.sessionAttemptId) return false;
     let latest: LogoutProof; try { latest = readLogoutProof(row.name, server, opts); } catch { return false; }

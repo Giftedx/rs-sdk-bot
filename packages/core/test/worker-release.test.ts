@@ -336,7 +336,7 @@ test('a reused PID whose command line reads as empty does not hold the row once 
  const {beginSessionAttempt,listAttempts}=await import('../src/session-lifecycle');
  const root=mkdtempSync(join(tmpdir(),'release-svchost-pid-')),server='rs-sdk-demo.fly.dev',pin='a'.repeat(64);
  try{
-  // KnightRider: the worker was killed after ready, so its attempt stays held; its id now belongs to svchost.exe.
+  // A worker killed after ready leaves its attempt held; a later system process with an empty command line holds its id.
   const attempt=beginSessionAttempt({account:'Knight',server},{root,owner:{pid:10696,coordinatorRunId:null,workerRelease:null,script:'scripts/aio-logistics.ts',role:null,participants:null}});
   attempt.record('connecting');attempt.record('connected');attempt.record('ready');
   const createdAt=listAttempts('Knight',server,{root}).find(a=>a.attemptId===attempt.attemptId)!.receipt!.createdAt;

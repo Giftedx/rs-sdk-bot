@@ -6,12 +6,10 @@ import { chickenCliOptions } from '../../workers/src/combat/chickens';
 import { bloodOptions } from '../../workers/src/gather/thieving';
 import { dispatchPlannedStep } from '../src/worker-dispatch';
 
-// The planner launches a catalog activity with only the args and env that the catalog and the router give. Five
-// activities had an AIO route whose bench case passes because the case names the order (PRODUCT_ID, a spell and NPC, a
-// job file, a tick cap), so they counted as practice_passed, while the worker refused every catalog launch at once:
-// "smith refused ... PRODUCT_ID ... required", "account, native spell and NPC ID required", "invalid tickCap",
-// "usage: ... job.json" and, for chicken unlocks of Attack, Defence and Hitpoints, "training accepts an explicit
-// Strength target1..99". This runs each worker's own argument check on every launch the planner can make.
+// The planner launches a catalog activity with only the args and env that the catalog and the router give. A route's
+// bench case can pass because the case names the order (PRODUCT_ID, a spell and NPC, a job file, a tick cap) while a
+// catalog launch of the same route lacks it. This runs each worker's own argument check on every launch the planner can
+// make of a trusted activity.
 type Launch = { script: string; args: string[]; env: Record<string, string> };
 
 function launches(act: ActivityDefinition): { tag: string; launch: Launch }[] {
