@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795582148597-hocuspokeus-undermykilt-c68a598556959999",
+ "account": "Hocuspokeus",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 10,
+ "claim": "17597451-93fb-4893-8039-2d876512049b",
+ "count": 10,
+ "ok": true,
+ "at": 1795585716078,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795585707345
+ },
+ "logout": {
+  "attemptId": "1795585701899-0000012348-0000000001",
+  "at": 1795585716063,
+  "sha256": "46b566dc424398b7c4d366cd50ee229cf99dfbba47782cdbb9323a85794d874f"
+ },
+ "screen": true
+}

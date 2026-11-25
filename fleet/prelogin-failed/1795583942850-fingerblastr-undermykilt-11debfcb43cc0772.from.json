@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795583942850-fingerblastr-undermykilt-11debfcb43cc0772",
+ "role": "from",
+ "account": "Fingerblastr",
+ "partner": "UnderMyKilt",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795585632399,
+ "detail": "Error: fleet trade claim held for order 1795583942604-fingerblastr-ballspinner-140b13614f0c2646"
+}

@@ -1,0 +1,22 @@
+{
+ "id": "1795585630736-abracadickra-yewfirst-5d60afd40f4184f9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 64,
+ "start": 1795585630736,
+ "end": 1795589230736,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795585428624-5",
+ "account": "Shaftsinker",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "422fe32d-199e-43e9-ad17-67f4076cde13",
+ "count": 0,
+ "ok": false,
+ "at": 1795585552832,
+ "detail": "trade claimed"
+}
