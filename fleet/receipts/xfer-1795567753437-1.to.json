@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795567753437-1",
+ "account": "Woodenstaff",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 15,
+ "claim": "6e432d10-e856-4dfe-98a9-fcac8b5e2ff1",
+ "count": 0,
+ "ok": false,
+ "at": 1795567925079,
+ "detail": "trade claimed"
+}
