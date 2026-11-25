@@ -240,7 +240,7 @@ test('facades preserve every external/test export and keep internal-only helpers
         'workerSourceRoots', 'sourceScans', 'forgetSourceScans', 'workerSourceRevision',
         'runtimeTrees', 'workerLaunchers', 'releaseFiles', 'releaseRevision', 'workerEntries',
         'capabilityRevision', 'launchRevision', 'releaseEntries', 'forgetReleaseMemory',
-        'cachedReleaseFor', 'cachedLaunchRevision', 'assertWorkerRelease', 'standingPeer',
+        'cachedReleaseFor', 'cachedReleaseFiles', 'cachedLaunchRevision', 'assertWorkerRelease', 'standingPeer',
         'assertCompatibleWorkers', 'standingAccounts', 'isWorkerReleaseHold', 'crashResidue',
         'assertLiveWorkerRelease', 'LOST_SESSION_DROP_MS', 'closedSessionRow',
     ];

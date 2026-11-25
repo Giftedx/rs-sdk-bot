@@ -8,6 +8,7 @@ import { applyUpdate } from './adopt';
 import { gitHash, gitIn, importClosure, LIVE_UPDATE_GIT_TIMEOUT_MS, mergedDeliveryCopies, mergeText, readCheckout, readRebased, rebasableDeliveryEdits, REBASED_FILE } from './inspect';
 import { coordinatorHolds, LIVE_SERVER, liveRuns, planUpdate, releaseClosure, type LiveRunsOptions } from './plan';
 import { few } from './inspect';
+import { clearPendingUpdate, writePendingUpdate } from './pending';
 import { patchCollisions, resetVendor, SDK, SDK_PATCH, vendorExact, vendorReleaseFiles, vendorState } from './vendor';
 
 export const DAEMONS: Record<string, string[]> = {
@@ -88,6 +89,12 @@ export async function runLiveUpdateCli(
         const liveOpts: LiveRunsOptions | undefined = env.FLEET_DIR ? { fleetDir: resolve(env.FLEET_DIR) } : undefined;
         const runs = () => liveRuns(root, LIVE_SERVER, releaseClosure(root), Date.now(), liveOpts);
         const plan = planUpdate({ ...checkout, vendorRelease, ...(checkout.behind ? { ...holds(), liveRuns: runs() } : { holds: [], heldFiles: [] }) });
+        if (!dry) {
+            if (plan.action === 'wait' && plan.drain?.length) {
+                const head = git('rev-parse', target);
+                writePendingUpdate(root, { at: Date.now(), target: head.ok ? head.out : target, files: plan.drain });
+            } else clearPendingUpdate(root);
+        }
         if (plan.action === 'none' && plan.reason === 'current') {
             const state = vendorState(root), held = holds();
             if (state === 'clean' && !dry && !held.holds.length && !held.qualifications.length) {
