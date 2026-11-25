@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795639412333-1",
+ "role": "to",
+ "account": "Unsheathed",
+ "partner": "KnightRider",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795639571656,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] a702a3f7513e9918440c114d856dca1c53ce99fd -> fleet-trade-claim/unsheathed (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795638495236-masterbaiter-deeppockets-c25f3d91bbf2976d",
+ "role": "from",
+ "account": "Masterbaiter",
+ "partner": "Deeppockets",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795639500764,
+ "detail": "Error: account logout is not confirmed: Masterbaiter ended disconnected"
+}

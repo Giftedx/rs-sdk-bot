@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795639412333-1",
+ "account": "KnightRider",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 1,
+ "claim": "439627c7-5dfe-4b5f-a4c1-f34d0786fff4",
+ "count": 0,
+ "ok": false,
+ "at": 1795639581328,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795639534475
+ },
+ "logout": {
+  "attemptId": "1795639524417-0000025012-0000000001",
+  "at": 1795639581078,
+  "sha256": "2619f67c344ef1f440399f0b1d58eef2411625ce4469e0432119183efc15b878"
+ },
+ "screen": false
+}
