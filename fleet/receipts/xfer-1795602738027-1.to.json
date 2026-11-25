@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795602738027-1",
+ "account": "Fatstack",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 7,
+ "claim": "255835d7-f423-4bac-b10a-c8fc70fbd2d6",
+ "count": 7,
+ "ok": true,
+ "at": 1795603351997,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 7
+ },
+ "bank": {
+  "count": 7,
+  "at": 1795603351267
+ },
+ "logout": {
+  "attemptId": "1795603334276-0000022744-0000000001",
+  "at": 1795603351989,
+  "sha256": "4200a1f744bb4c270ffd7992a0b2e70ef4be0b74ef7522ee3009845ea9de52e5"
+ },
+ "screen": true
+}

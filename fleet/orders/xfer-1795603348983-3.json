@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795603348983-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BoneToPick",
+  "to": "Bigchopper",
+  "item": "Swamp toad",
+  "count": 8,
+  "itemId": 2150,
+  "start": 1795603348983,
+  "end": 1795604248983,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
