@@ -132,8 +132,11 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
     }
 
     for (const c of CONTROLLERS) {
-        // A process that got the id of an ended controller does not keep the controller down for the lease lifetime.
-        if (controllerState(base, c, { now, reused: deps.reused ?? pidStartedAfter }).state !== 'down') continue;
+        // A process that got the id of an ended fleet agent does not keep the fleet agent down for the lease lifetime.
+        // Only a controller whose own takeLease makes the same check gets it: a restarted swarm would still find the
+        // reused id live in its takeLease and exit, and the watchdog would start it again on each pass.
+        const reused = c.name === 'fleet-agent' ? deps.reused ?? pidStartedAfter : undefined;
+        if (controllerState(base, c, { now, reused }).state !== 'down') continue;
         const launch = readLaunch(join(base, c.launch));
         if (!launch) continue;
         const start = restartCommand(c.name, launch, p => existsSync(resolve(base, p)));

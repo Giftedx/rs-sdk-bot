@@ -90,9 +90,14 @@ describe('fleet watchdog', () => {
             mkdirSync(join(root, '.practice', 'fleet'), { recursive: true });
             writeFileSync(join(root, '.practice', 'fleet-agent.launch.json'), JSON.stringify({ args: [], env: { FLEET_SIDE: 'local' } }));
             // The id is this test process, so it is alive. The heartbeat is one minute old, so the lease is fresh.
-            const lock = join(root, '.practice', 'fleet-agent.lock');
-            writeFileSync(lock, String(process.pid));
-            utimesSync(lock, (now - 60_000) / 1000, (now - 60_000) / 1000);
+            // The swarm has the same kind of lease, but its own takeLease has no reuse check, so it is not restarted.
+            writeFileSync(join(root, 'plan.json'), '{}');
+            writeFileSync(join(root, '.practice', 'swarm.launch.json'), JSON.stringify({ args: ['plan.json'], env: {} }));
+            for (const name of ['fleet-agent.lock', 'swarm.lock']) {
+                const lock = join(root, '.practice', name);
+                writeFileSync(lock, String(process.pid));
+                utimesSync(lock, (now - 60_000) / 1000, (now - 60_000) / 1000);
+            }
             const restarted: string[] = [], asked: [number, number][] = [];
             await runWatchdogPass(root, {
                 now: () => now,
@@ -108,7 +113,9 @@ describe('fleet watchdog', () => {
         const held = await pass(false);
         expect(held.restarted).toEqual([]);
         expect(held.asked).toEqual([[process.pid, now - 60_000]]);
-        expect((await pass(true)).restarted).toEqual(['fleet-agent']);
+        const reusedPass = await pass(true);
+        expect(reusedPass.restarted).toEqual(['fleet-agent']);
+        expect(reusedPass.asked).toEqual([[process.pid, now - 60_000]]);
     });
 
     test('restarts down controllers from saved launch record and invokes standalone recovery with zero coordinator source reference', async () => {
