@@ -130,10 +130,11 @@ export function assessRecoveryEligibility(v: {
             return { eligible: false, reason: 'no held fleet account claim', log: false };
         }
     } else {
-        if (v.claim.kind !== 'swarm') return { eligible: false, reason: 'claim is held by a trade order', log: true };
-        if (v.claim.host === v.host && typeof v.claim.pid === 'number' && v.pidAlive(v.claim.pid)) {
-            return { eligible: false, reason: 'worker still alive', log: false };
-        }
+        const ownerAlive = v.claim.host === v.host && typeof v.claim.pid === 'number' && v.pidAlive(v.claim.pid);
+        // A trade worker that still runs holds its claim by design, so that refusal is not logged. A held trade claim
+        // with no live worker on this host is logged: it can block the account until its trade is reconciled.
+        if (v.claim.kind !== 'swarm') return { eligible: false, reason: 'claim is held by a trade order', log: !ownerAlive };
+        if (ownerAlive) return { eligible: false, reason: 'worker still alive', log: false };
     }
     if (!v.end) return { eligible: false, reason: 'end record gone; manual diagnosis required', log: true };
     const started = /^\d{13}-/.test(v.proof.attemptId) ? Number(v.proof.attemptId.slice(0, 13)) : NaN;

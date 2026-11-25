@@ -84,6 +84,19 @@ describe('fleet standalone session recovery', () => {
         })).toEqual({ eligible: true, endedAt: end.at });
     });
 
+    test('a held trade claim is always refused, and the refusal is logged only when no live trade worker of this host holds it', () => {
+        const proof = { state: 'held' as const, account: 'worker1', server: 'rs-sdk-demo.fly.dev', domain: 'live' as const, attemptId: '1700000001000-pid-nonce', reason: 'disconnect' };
+        const trade = { phase: 'held' as const, orderId: 'o1', host: 'box-a', pid: 24460 };
+        const refuse = (claim: typeof trade | Omit<typeof trade, 'pid'>, alive: boolean, host = 'box-a') => assessRecoveryEligibility({
+            proof, claim, end: { at: 1_700_000_002_000, reason: 'exit unknown' }, stopText: undefined, pidAlive: pid => alive && pid === 24460, host,
+        });
+        // A live trade worker of this host holds the claim: the refusal is not logged.
+        expect(refuse(trade, true)).toEqual({ eligible: false, reason: 'claim is held by a trade order', log: false });
+        expect(refuse(trade, false)).toEqual({ eligible: false, reason: 'claim is held by a trade order', log: true });
+        expect(refuse(trade, true, 'box-b')).toEqual({ eligible: false, reason: 'claim is held by a trade order', log: true });
+        expect(refuse({ phase: 'held', orderId: 'o1', host: 'box-a' }, true)).toEqual({ eligible: false, reason: 'claim is held by a trade order', log: true });
+    });
+
     test('runs standalone recovery without coordinator proposals, preserves attempt budget on infra faults, and archives stale leases', async () => {
         const root = scratch();
         const server = 'rs-sdk-demo.fly.dev';

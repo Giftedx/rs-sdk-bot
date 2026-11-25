@@ -12,7 +12,7 @@ const g = (cwd: string, ...args: string[]) => execFileSync('git', ['-c', 'user.n
 const nonce = '031e494c-b42e-4ce8-908c-36b32c7e0ac8';
 const claim = (orderId: string, phase: 'held' | 'released' = 'held'): FleetTradeClaim =>
     ({ account: 'woodenstaff', server: 'rs-sdk-demo.fly.dev', side: 'local', orderId, role: 'from', nonce, phase, at: 1795587739966 });
-// The order and the receipt of the trade whose claim stayed held after a sync deleted its order file.
+// An order and the receipt of its giver: reconcile, count 0, no trade screen, and a logout after the claim.
 const order = {
     id: 'xfer-1795587227524-3', server: 'rs-sdk-demo.fly.dev', from: 'Woodenstaff', to: 'Moneyshot', item: 'Ring of dueling(8)', count: 1, itemId: 2552,
     start: 1795587227524, end: 1795588127524, meet: [{ x: 3183, z: 3440, level: 0 }, { x: 3182, z: 3440, level: 0 }], takerWaits: true,
@@ -47,7 +47,7 @@ test('a sync puts back a deleted order file that a held claim names, also when g
         const withdrawn = { ...order, id: '1795584021244-dipstick-yewfirst-2ad00dbbd11b7d21', from: 'Dipstick', to: 'YewFirst' };
         put(dir, `orders/${order.id}.json`, order); put(dir, `orders/${withdrawn.id}.json`, withdrawn);
         g(dir, 'add', '--', 'fleet'); g(dir, 'commit', '-qm', 'orders');
-        // The commit that lost the order: its file is gone, and a similar new order makes git show a rename (R056).
+        // Both order files are gone from the worktree, and a similar new order makes git show a rename.
         unlinkSync(join(dir, 'fleet', 'orders', `${order.id}.json`)); unlinkSync(join(dir, 'fleet', 'orders', `${withdrawn.id}.json`));
         put(dir, 'orders/xfer-1795587767686-2.json', { ...order, id: 'xfer-1795587767686-2', from: 'Ballspinner', item: 'Fishing bait', count: 2 });
         g(dir, 'add', '--', 'fleet');
