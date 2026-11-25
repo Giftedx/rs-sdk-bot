@@ -1,0 +1,23 @@
+{
+ "id": "1795634237223-moneyshot-trousersnake-d7640bb6c14abb2b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "TrouserSnake",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795634237223,
+ "end": 1795638437223,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795633261674-1",
+ "account": "TheFullMonty",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "b5fbc8b3-bbcb-4c25-8156-d0a887b30746",
+ "count": 10,
+ "ok": true,
+ "at": 1795633394734,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795633350755
+ },
+ "logout": {
+  "attemptId": "1795633342854-0000020136-0000000001",
+  "at": 1795633394682,
+  "sha256": "0636901f227164639a1d7caca38390b213137022dcfea44c451d1764e0786a95"
+ },
+ "screen": true
+}

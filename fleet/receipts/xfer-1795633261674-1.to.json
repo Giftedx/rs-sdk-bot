@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795633261674-1",
+ "account": "Dipstick",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "c2e02644-6403-4f41-bd7c-4fa04481bab5",
+ "count": 0,
+ "ok": false,
+ "at": 1795633382099,
+ "detail": "trade claimed"
+}
