@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795636150716-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Fatstack",
+  "item": "Sapphire",
+  "count": 2,
+  "itemId": 1607,
+  "start": 1795636150716,
+  "end": 1795637050716,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

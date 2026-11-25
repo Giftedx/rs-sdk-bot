@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795635790505-1",
  "account": "Fatstack",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 6,
  "claim": "9da12896-5905-4f15-a5a0-1a5e09da61a8",
- "count": 0,
- "ok": false,
- "at": 1795636129876,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795636141828,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795636141024
+ },
+ "logout": {
+  "attemptId": "1795636129885-0000011472-0000000001",
+  "at": 1795636141809,
+  "sha256": "21739a27f03deac019d085c031d9205a672d16c3ddc872dd6ed20b957d85a880"
+ },
+ "screen": true
 }
