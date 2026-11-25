@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795644364200,
+ "at": 1795644398880,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,7 +63,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=2330 TARGET_COUNT=233 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2310 TARGET_COUNT=231 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -73,6 +73,48 @@
    "repeat": false,
    "goal": "campaign:haggis:item:379",
    "role": "army"
+  },
+  {
+   "account": "Quiverfull",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "wizard"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Quiverfull",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Quiverfull",
+   "role": "auto",
+   "resources": [
+    "wizards-tower"
+   ]
+  },
+  {
+   "account": "Porksword",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "wizard"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Porksword",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Porksword",
+   "role": "auto",
+   "resources": [
+    "wizards-tower"
+   ]
   },
   {
    "account": "Fingersmith",
@@ -89,21 +131,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:225",
    "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "helper"
   },
   {
    "account": "Shaftsinker",
@@ -218,27 +245,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Quiverfull",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "wizard"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Quiverfull",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Quiverfull",
-   "role": "auto",
-   "resources": [
-    "wizards-tower"
-   ]
   }
  ],
  "army": [
