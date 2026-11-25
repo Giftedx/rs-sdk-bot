@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795603869637,
+ "at": 1795603883678,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -25,6 +25,22 @@
   },
   {
    "account": "Bigpackage",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Fatstack",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -154,26 +170,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2152",
    "role": "helper"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_ranarr_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:99",
-    "BATCH_UNITS": "4"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:99",
-   "role": "army"
   }
  ],
  "army": [
