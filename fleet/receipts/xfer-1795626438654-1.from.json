@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795626438654-1",
+ "account": "Quickhandjob",
+ "partner": "YewGotWood",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "dd2e5cde-5451-48ef-b296-84d30d64d894",
+ "count": 0,
+ "ok": false,
+ "at": 1795626763199,
+ "detail": "trade claimed"
+}
