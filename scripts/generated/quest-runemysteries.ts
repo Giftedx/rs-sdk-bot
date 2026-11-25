@@ -3,6 +3,7 @@
 // Server truth: areas/area_lumbridge/scripts/duke_horacio.rs2, areas/area_wizard_tower/scripts/sedridor.rs2,
 // areas/area_varrock/scripts/aubury.rs2.
 import { openQuest } from './quest-lib';
+import { castable } from '../teleport-runes';
 import type {Session} from '../../packages/core/src/inprocess';
 import {walkRuneMysteries,runeMysteriesStartProblem,exitRuneTower,runeMysteriesDecision,sedridorOutcome,nearestBankTile,RUNE_MYSTERIES_ITEMS} from '../../packages/workers/src/runecraft';
 import travel from '../../packages/planner/src/haggis-travel.json';
@@ -17,7 +18,7 @@ const AUBURY = { x: 3253, z: 3402 };
 const ITEM = { talisman: 1438, pack: 290, notes: 291 };   // research_notes is named "Notes"
 
 export async function runRuneMysteries(s:Session,options:{cap?:number;stop?:()=>boolean;food?:number[];eatAt?:number}={}) {
-const q = await openQuest({ session:s, cap:options.cap??4000, stop:options.stop, food:options.food??[379], eatAt:options.eatAt??40, lumbridgeOk: true });
+const q = await openQuest({ session:s, cap:options.cap??4000, stop:options.stop, food:options.food??[379], eatAt:options.eatAt??40, lumbridgeOk: true, burst: true });
 try {
     const questState=()=>questFlags((q.s as any).client)?.find(f=>f.name==='Rune Mysteries Quest')?.state??'unknown';
     await waitUntil(q.s,()=>questState()!=='unknown',{timeoutTicks:15});
@@ -42,7 +43,12 @@ try {
             await exitRuneTower({waitForLanding:()=>waitUntil(q.s,()=>!!q.locAt(LADDER_TOP.x,LADDER_TOP.z),{timeoutTicks:15}),openDoor:q.openDoor,dash:q.dash},label);
     };
 
+    const magicLevel = () => q.s.sdk.getState()?.skills?.find((k: any) => k.name === 'Magic')?.level ?? 1;
     const tryTeleport = async (label: string, comp: string, x: number, z: number) => {
+        if (castable(comp, q.cnt, (q.st()?.equipment ?? []).map((i: any) => i.id), magicLevel())) {
+            await q.teleport(label, comp, x, z);
+            return;
+        }
         await leaveSedridor(label);
         await walkRuneMysteries(q.pos(), { x, z, tol: 2 }, point=>q.walk(`walk fallback ${label}`, [point]));
     };

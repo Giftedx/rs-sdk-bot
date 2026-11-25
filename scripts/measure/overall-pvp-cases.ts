@@ -16,6 +16,7 @@ function pvpTankPresetConfig(index: number): SaveConfig {
     return {
         position: index % 2 === 0 ? { x: 3155, z: 3924, level: 0 } : { x: 3154, z: 3923, level: 0 },
         skills: PVP_TANK_SKILLS,
+        varps: { 172: 1 }, // Disable auto-retaliate so wave tanks never counter-attack.
         inventory: [
             { id: 3016, count: 1 }, // Super energy(4)
             ...Array.from({ length: 27 }, () => ({ id: 391, count: 1 })), // Manta ray
@@ -41,31 +42,33 @@ const MELEE_PVP_INV: SaveConfig['inventory'] = [
     { id: 3105, count: 1 }, // Climbing boots
 ];
 
+const RANGED_PVP_EQUIP: SaveConfig['equipment'] = [
+    { id: 837, count: 1, slot: 3 },    // Crossbow (1->39; no Ranged lvl req)
+    { id: 881, count: 5000, slot: 13 }, // Barbed bolts (+46 rangeStr)
+    { id: 1704, count: 1, slot: 2 },   // Amulet of glory
+    { id: 1167, count: 1, slot: 0 },   // Leather cowl
+    { id: 1129, count: 1, slot: 4 },   // Leather body
+    { id: 1061, count: 1, slot: 10 },  // Leather boots
+    { id: 1063, count: 1, slot: 9 },   // Leather vambraces
+    { id: 1095, count: 1, slot: 7 },   // Leather chaps
+];
+
 const RANGED_PVP_INV: SaveConfig['inventory'] = [
-    { id: 841, count: 1 }, // Shortbow
-    { id: 843, count: 1 }, // Oak shortbow
-    { id: 849, count: 1 }, // Willow shortbow
-    { id: 853, count: 1 }, // Maple shortbow
-    { id: 857, count: 1 }, // Yew shortbow
-    { id: 861, count: 1 }, // Magic shortbow
-    { id: 884, count: 500 }, // Iron arrow
-    { id: 886, count: 500 }, // Steel arrow
-    { id: 888, count: 500 }, // Mithril arrow
-    { id: 890, count: 500 }, // Adamant arrow
-    { id: 892, count: 5000 }, // Rune arrow
-    { id: 1167, count: 1 }, // Leather cowl
+    { id: 857, count: 1 }, // Yew shortbow (lvl 40)
+    { id: 861, count: 1 }, // Magic shortbow (lvl 50)
+    { id: 892, count: 5000 }, // Rune arrow (lvl 40)
     { id: 1169, count: 1 }, // Coif
-    { id: 1061, count: 1 }, // Leather boots
-    { id: 1704, count: 1 }, // Amulet of glory
-    { id: 1063, count: 1 }, // Leather vambraces
+    { id: 1133, count: 1 }, // Studded body
     { id: 1065, count: 1 }, // Green d'hide vambraces
     { id: 2487, count: 1 }, // Blue d'hide vambraces
+    { id: 2489, count: 1 }, // Red d'hide vambraces
     { id: 2491, count: 1 }, // Black d'hide vambraces
-    { id: 1095, count: 1 }, // Leather chaps
     { id: 1099, count: 1 }, // Green d'hide chaps
     { id: 2493, count: 1 }, // Blue d'hide chaps
+    { id: 2495, count: 1 }, // Red d'hide chaps
     { id: 2497, count: 1 }, // Black d'hide chaps
     { id: 2499, count: 1 }, // Blue d'hide body
+    { id: 2501, count: 1 }, // Red d'hide body
     { id: 2503, count: 1 }, // Black d'hide body
 ];
 
@@ -93,6 +96,7 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         presetConfig: {
             position: { x: 3154, z: 3924, level: 0 },
             skills: { Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10, Prayer: 43, Magic: 80, Ranged: 1 },
+            varps: { 172: 1 },
             inventory: MELEE_PVP_INV,
         },
         companions: companionsOf(['t', 'u', 'v', 'w', 'x']),
@@ -109,6 +113,7 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         presetConfig: {
             position: { x: 3154, z: 3924, level: 0 },
             skills: { Attack: 40, Strength: 1, Defence: 1, Hitpoints: 40, Prayer: 43, Magic: 80, Ranged: 1 },
+            varps: { 172: 1 },
             inventory: MELEE_PVP_INV,
         },
         companions: companionsOf(['t', 'u', 'v', 'w', 'x']),
@@ -125,6 +130,7 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         presetConfig: {
             position: { x: 3154, z: 3924, level: 0 },
             skills: { Attack: 1, Strength: 99, Defence: 1, Hitpoints: 80, Prayer: 43, Magic: 80, Ranged: 1 },
+            varps: { 172: 1 },
             inventory: MELEE_PVP_INV,
         },
         companions: companionsOf(['t', 'u', 'v', 'w', 'x']),
@@ -141,6 +147,7 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         presetConfig: {
             position: { x: 3154, z: 3924, level: 0 },
             skills: { Attack: 99, Strength: 99, Defence: 1, Hitpoints: 80, Prayer: 43, Magic: 80, Ranged: 1 },
+            varps: { 172: 1 },
             inventory: MELEE_PVP_INV,
         },
         companions: companionsOf(['t', 'u', 'v', 'w', 'x']),
@@ -157,10 +164,12 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         presetConfig: {
             position: { x: 3154, z: 3924, level: 0 },
             skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 88, Prayer: 43, Magic: 80, Ranged: 1 },
+            varps: { 172: 1 },
+            equipment: RANGED_PVP_EQUIP,
             inventory: RANGED_PVP_INV,
         },
         companions: companionsOf(['t', 'u', 'v', 'w', 'x']),
-        scriptArgs: ['ranged', '99', 'TANKS={bot}t,{bot}u,{bot}v,{bot}w,{bot}x', '--own-tanks', 'CAP=2500'],
+        scriptArgs: ['ranged', '99', 'TANKS={bot}t,{bot}u,{bot}v,{bot}w,{bot}x', '--own-tanks', 'CAP=2000'],
         timeoutMs: 900_000,
         output: /\btotalTicks=(\d+)/,
         pass: passPvp('Ranged', 99),
