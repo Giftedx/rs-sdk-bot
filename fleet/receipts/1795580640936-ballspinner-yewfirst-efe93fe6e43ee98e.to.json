@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795580640936-ballspinner-yewfirst-efe93fe6e43ee98e",
+ "account": "YewFirst",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 439,
+ "claim": "cfd3ab4c-01e3-457c-aeca-2bce28752865",
+ "count": 0,
+ "ok": false,
+ "at": 1795581083147,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Adamant arrowtips",
+   "requested": 500,
+   "count": 0
+  }
+ ]
+}
