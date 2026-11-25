@@ -200,6 +200,8 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
         if (profile.realm || profile.dialogBuy) continue;
         const level = profile.npcSpot.level ?? 0;
         const tile = { x: profile.npcSpot.x, z: profile.npcSpot.z, level };
+        // The walker has no route to Entrana (core/src/travel.ts leaves its boats out), so no seller there is a source.
+        if (isEntranaTile(tile)) continue;
         // Match profile against shops.json rows whose NPC matches or whose stock covers all profile items.
         const matchingShops = ordinaryShops.filter((s) => {
             const npcs = sources.shopNpcs.filter((n) => n.shop === s.inv).map((n) => n.npc.replace(/_/g, ' '));
@@ -465,21 +467,22 @@ export function resolveAcquireItem(
                     if (!skipDiag) shopRejectReason = `insufficient spendable coins ${coinBalance.spendable} (after ${operatingFloat} gp float) for cost ${totalCost}`;
                     continue;
                 }
-                let travelTicks = 40;
-                let travelCoins = 0;
-                if (shop.tile) {
-                    const reach = evaluateTileReachability(acct, shop.tile, world, {
-                        spendableCoins: effectiveTotalUnreserved,
-                        allowUnknownPos: true,
-                        _acctCache: acctCache,
-                    });
-                    if (!reach.reachable) {
-                        if (!skipDiag) shopRejectReason = reach.message ?? `shop ${shop.shop} unreachable`;
-                        continue;
-                    }
-                    travelTicks = reach.travelTicks;
-                    travelCoins = reach.travelCoins;
+                // A shop with no seller tile has no reachability check and no travel estimate, so it is no source.
+                if (!shop.tile) {
+                    if (!skipDiag) shopRejectReason = `shop ${shop.shop} has no seller tile`;
+                    continue;
                 }
+                const reach = evaluateTileReachability(acct, shop.tile, world, {
+                    spendableCoins: effectiveTotalUnreserved,
+                    allowUnknownPos: true,
+                    _acctCache: acctCache,
+                });
+                if (!reach.reachable) {
+                    if (!skipDiag) shopRejectReason = reach.message ?? `shop ${shop.shop} unreachable`;
+                    continue;
+                }
+                const travelTicks = reach.travelTicks;
+                const travelCoins = reach.travelCoins;
                 // Spending must preserve the operating coin float (~1,000 gp) for ferry fares.
                 if (effectiveTotalUnreserved < totalCost + travelCoins) {
                     if (!skipDiag) shopRejectReason = `insufficient spendable coins ${coinBalance.spendable} (after ${operatingFloat} gp float) for cost ${totalCost}`;

@@ -533,3 +533,36 @@ test('AcquireItem rejects shallow GE sell depth for full requests and caps allow
     expect(partialGe.step?.quantity).toBe(3);
     expect(partialGe.step?.estimatedCoinCost).toBe(18_000);
 });
+
+test('no shop source is on Entrana, where the walker has no route', async () => {
+    const { offMap } = await import('../../core/src/shop-index');
+    // Frincos (herbloreshop2, 2808,3342) is the only seller of his shop and stands on Entrana.
+    expect(derivedProfile('herbloreshop2')).toBeUndefined();
+    expect(derivedProfile('herbloreshop')?.npcSpot).toEqual({ x: 2899, z: 3427 });
+    for (const list of loadShopCatalogByItem().values()) {
+        for (const e of list) {
+            expect(e.tile).toBeDefined();
+            expect(offMap(e.tile!)).toBe(false);
+        }
+    }
+    expect((loadShopCatalogByItem().get(233) ?? []).map((e) => e.shop)).not.toContain('herbloreshop2');
+});
+
+test('a pestle and mortar buy from Ardougne goes to a mainland seller', () => {
+    const acct = makeAcct({ name: 'Fingerblastr', pos: { x: 2619, z: 3332, level: 0 }, inventory: { 995: 20_000 }, bank: { items: { 995: 20_000 }, observedAt: NOW - 10_000, trusted: true } });
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Fingerblastr: acct } };
+    const r = resolveAcquireItem(acct, { itemId: 233, quantity: 1, allowedSources: ['npc_shop'] }, { world });
+    expect(r.ok).toBe(true);
+    expect(r.step?.source).toBe('npc_shop');
+    expect(r.step?.shopId).not.toBe('herbloreshop2');
+});
+
+test('a shop with no seller tile is no source', () => {
+    const acct = makeAcct();
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: acct } };
+    const shop = { shop: 'tileless_test_shop', itemId: 1931, stock: 30, restockTicks: 10, cost: 1 };
+    const r = resolveAcquireItem(acct, { itemId: 1931, quantity: 1, allowedSources: ['npc_shop'] }, { world, customShops: [shop] });
+    expect(r.step?.shopId).not.toBe('tileless_test_shop');
+    const tiled = resolveAcquireItem(acct, { itemId: 1931, quantity: 1, allowedSources: ['npc_shop'] }, { world, customShops: [{ ...shop, tile: { x: 3093, z: 3245, level: 0 } }] });
+    expect(tiled.step?.shopId).toBe('tileless_test_shop');
+});

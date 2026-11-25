@@ -2019,6 +2019,11 @@ return [
   {key: 'extra:shop-jiminua', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jiminua', '6000', 'ITEMS=antipoison', 'STOCK_TARGET=10', 'STOP_AT_TARGET=1', 'MAX_ITEMS=10', 'MAX_SPEND=10000', 'COIN_RESERVE=1000', 'NO_BUY_TICKS=40'],
     pass: s => ok(s) && /boughtTotal=10 bankedTotal=10 /.test(s), timeoutMs: 600_000,
     presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, bank: [{id: 995, count: 20000}]}},
+  // One pestle and mortar as the brain buys it from the Ardougne North bank: Jiminua is the nearest seller the walker can
+  // reach (Frincos on Entrana has no route).
+  {key: 'extra:shop-jiminua-pestle', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jiminua', '6000', 'ITEMS=pestle and mortar', 'STOCK_TARGET=1', 'STOP_AT_TARGET=1', 'MAX_ITEMS=1', 'MAX_SPEND=10000', 'COIN_RESERVE=1000', 'NO_BUY_TICKS=40'],
+    pass: s => ok(s) && /boughtTotal=1 bankedTotal=1 /.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, bank: [{id: 995, count: 20000}]}},
   // The same trip for a shelf that other players empty: 12 potions from a shelf of 10, so the account waits at the
   // shelf for two units that come back (one each 150 ticks) and sends a buy request each tick (BLIND_BUY=1).
   {key: 'extra:shop-jiminua-restock', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jiminua', '6000', 'ITEMS=antipoison', 'STOCK_TARGET=12', 'STOP_AT_TARGET=1', 'MAX_ITEMS=12', 'MAX_SPEND=10000', 'COIN_RESERVE=1000', 'NO_BUY_TICKS=400', 'STALL_TICKS=0', 'BLIND_BUY=1'],

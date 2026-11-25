@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { offMap } from '../../../core/src/shop-index';
 import { knownBanks } from '../../../core/src/trip';
 import type { ShopProfile } from './types';
 
@@ -58,7 +59,9 @@ export function derivedProfile(shop: string): ShopProfile | undefined {
     }
     const t = load();
     const stock = t.shops.get(shop);
-    const at = t.spawns.get(shop)?.find(s => s.level === 0);
+    // A seller off the walker's map (Entrana: shop-index offMap) has no route, so it gives no profile; a shop with a
+    // seller elsewhere is bought there.
+    const at = t.spawns.get(shop)?.find(s => s.level === 0 && !offMap(s));
     const name = at && t.npcs.get(at.npc);
     if (!stock?.length || !at || !name) {
         derivedProfileCache.set(shop, null);
