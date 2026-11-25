@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795614725247-2",
+ "account": "Hocuspokeus",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "832593e0-0728-4284-a62d-cb2752a2e869",
+ "count": 0,
+ "ok": false,
+ "at": 1795614814673,
+ "detail": "trade claimed"
+}
