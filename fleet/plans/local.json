@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795627564051,
+ "at": 1795627593076,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -81,15 +81,15 @@
    "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 -- crafting inventory identify:guam_leaf",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
+   "goal": "campaign:haggis:item:91",
    "role": "army"
   },
   {
@@ -301,19 +301,17 @@
    "role": "auto"
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
-   ],
+   "account": "BoneToPick",
+   "script": "scripts/generated/quest-barcrawl.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
   }
  ],
  "army": [
@@ -338,6 +336,7 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
+  "sporrandip",
   "woodpecker",
   "yewfirst"
  ],
