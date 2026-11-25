@@ -31,9 +31,8 @@ export const botsInThisProcess = () => botsInProcess;
 // bot only when it logs in: the first bot of a host logs in before its second bot starts. So only a process that is
 // declared to hold one bot may wait. A process with no declaration (a manual run, a fleet trade) does not wait.
 // A caller whose other bots stand idle while it logs in may ask for the wait (patientClaim): the startup of a squad
-// opens its members one at a time before any fight (packages/workers/src/pvp/squad.ts openSquad), and one short window
-// for each of its five claims ended live squad starts with `spawnSync git ETIMEDOUT`. A slow Git call then stalls the
-// members that stand at the bank for its length, which a start that fails costs anyway.
+// opens its members one at a time before any fight (packages/workers/src/pvp/squad.ts openSquad). A slow Git call then
+// stalls the members that stand at the bank for its length.
 export const soloProcess = (env: Record<string, string | undefined> = process.env) => env.SWARM_BOTS === '1';
 
 export async function connectInProcess(opts: {
