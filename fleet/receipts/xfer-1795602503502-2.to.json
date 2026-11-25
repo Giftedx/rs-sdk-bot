@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795602503502-2",
  "account": "TrouserSnake",
  "partner": "Stirmypot",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "94ba6c2a-69a6-4762-90c9-d446eb4ae801",
- "count": 0,
- "ok": false,
- "at": 1795603154555,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795603391242,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795603390496
+ },
+ "logout": {
+  "attemptId": "1795603154564-0000028504-0000000001",
+  "at": 1795603391233,
+  "sha256": "4dc3053611ebc32145a143b80cc2863a25958da9a876723d34b6fab6814422af"
+ },
+ "screen": true
 }
