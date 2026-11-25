@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795602808931-1",
+ "account": "Magicwanda",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 11,
+ "claim": "bcd61c60-86f3-4ad3-8eb5-0761c47ee966",
+ "count": 0,
+ "ok": false,
+ "at": 1795603663371,
+ "detail": "trade claimed"
+}
