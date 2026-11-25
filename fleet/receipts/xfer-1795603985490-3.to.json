@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795603985490-3",
+ "account": "Fatstack",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "1defb4ab-5a01-4127-9f2c-7310fc4bc5ef",
+ "count": 1,
+ "ok": true,
+ "at": 1795604446374,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795604445616
+ },
+ "logout": {
+  "attemptId": "1795604434217-0000029372-0000000001",
+  "at": 1795604446361,
+  "sha256": "6e8c274f7f215626972e8449feb15ab0b01d907dbf8a0066bf1021721e3a6632"
+ },
+ "screen": true
+}
