@@ -1,0 +1,23 @@
+{
+ "id": "1795617269052-woodenstaff-trousersnake-3b85054e3a603815",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "TrouserSnake",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795617269052,
+ "end": 1795620869052,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
