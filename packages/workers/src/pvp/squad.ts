@@ -1271,6 +1271,28 @@ export function squadFallbackPlan(opts: {
     return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
 }
 
+// Ends the attack click of a member: the server attacks the clicked player again on each turn until the account walks,
+// and a fight loop that stops sends nothing (fight.ts `PK stopped`). A walk to the account's own tile ends the click, as
+// the kill path of the fight loop does.
+export function cancelAttack(s: { sdk: { getState: () => { player?: { worldX: number; worldZ: number } | null } | null | undefined; sendWalk?: (x: number, z: number) => unknown } }): boolean {
+    const p = s.sdk.getState()?.player;
+    if (!p || typeof s.sdk.sendWalk !== 'function') return false;
+    void s.sdk.sendWalk(p.worldX, p.worldZ);
+    return true;
+}
+// Dagger mode: the target that shows 0 prayer points (DaggerWatch drained) that this member would pick in place of
+// `current`, by the same filters as the target choice (pickSquadFocus: the skip set, the combat-level gap, a busy
+// single-way fight). Undefined: the member keeps its fight.
+export function drainedSwitch<P extends { name: string; index: number; distance: number; x?: number; z?: number; combatLevel?: number; inCombat?: boolean; combatTargetType?: string; combatTargetIndex?: number }>(o: {
+    current: string; watch: Pick<DaggerWatch, 'drained'>; targets: ReadonlySet<string>;
+    focus: { view: readonly P[]; health: (p: P) => number; skip?: ReadonlySet<string>; me?: { x: number; z: number; combatLevel: number }; inMulti?: boolean; preferMulti?: boolean; stunned?: ReadonlySet<string>; selfIndex?: number };
+}): P | undefined {
+    const cur = o.current.toLowerCase();
+    if (o.watch.drained(cur)) return undefined;
+    const drained = new Set(o.focus.view.map(q => q.name.toLowerCase()).filter(n => n !== cur && o.targets.has(n) && o.watch.drained(n)));
+    return drained.size ? pickSquadFocus({ ...o.focus, targets: drained }) : undefined;
+}
+
 /** Whether a member must still move to reach single-way safety for a radar action. */
 export function needsSingleWayMove(pos: { worldX: number; worldZ: number }, to: { x: number; z: number }): boolean {
     if (pos.worldX === to.x && pos.worldZ === to.z) return false;
@@ -2007,15 +2029,21 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 if (curSeen && curSeen.totalHealth > 0 && curSeen.health <= 0) return false;
                 if (o.pull !== false && s.tick() > began && splitFor(pos, curView, curTarget, allTargets)) return true;
                 if (o.dagger && o.targets.has(target.name.toLowerCase())) {
-                    // The hold: the fight stops at the fraction while the target keeps its overhead on.
+                    // The hold: the fight stops at the fraction while the target keeps its overhead on, and the attack click ends.
                     if (o.dagger.held(target.name, s.tick())) {
                         o.log(`[${s.name}] SQUAD dagger hold ${target.name}: skulled, overhead on, health ${curSeen && curSeen.totalHealth > 0 ? (curSeen.health / curSeen.totalHealth).toFixed(2) : '-'}`);
                         o.focus?.clear(target.name);
+                        cancelAttack(s);
                         return true;
                     }
-                    // A target that shows 0 prayer points comes first: a member on another one goes to it.
-                    if (!o.dagger.drained(target.name) && s.tick() - began >= 2 && curView.some(q => q.name.toLowerCase() !== target.name.toLowerCase() && o.targets.has(q.name.toLowerCase()) && o.dagger!.drained(q.name)
-                        && attackable({ z: pos.worldZ, combatLevel: pos.combatLevel }, { z: q.z, combatLevel: q.combatLevel }))) return true;
+                    // A target that shows 0 prayer points comes first: a member on another one goes to it when the target
+                    // choice would take it.
+                    const tNow = s.tick();
+                    if (tNow - began >= 2 && drainedSwitch({ current: target.name, watch: o.dagger, targets: o.targets, focus: {
+                        view: o.pull !== false && aimInMulti && tNow >= singleUntil ? curView.filter(q => !allTargets.has(q.name.toLowerCase()) || !splitFor(pos, curView, q, allTargets)) : curView,
+                        health, skip: daggerSkip(curView, tNow), me: { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel }, inMulti: isMulti(pos.worldX, pos.worldZ),
+                        preferMulti: aimInMulti && tNow >= singleUntil, selfIndex: selfSlotIndex(),
+                    } })) return true;
                 }
                 if (!o.focus) return false;
                 const snap = o.focus.snapshot(s.tick());
@@ -2287,17 +2315,27 @@ export async function runPkSquadCli(
         // The death line of a gang account: its skull, Protect Item and prayer points in the last tick before the respawn.
         // death.rs2 pvp_death_lose_items reads %pk_skull and %prayer8 in the tick of the kill message, 4 ticks after the
         // Hitpoints reach 0, and the respawn follows in that tick (fight.ts `PK died` gives the loop's intent, not the varp).
+        // `fight`: the ticks in combat with prayer points left, and of those the ticks with Protect Item off and with no
+        // overhead protect prayer on, and the longest run of ticks with no overhead.
         let lastAlive: { tick: number; skull: boolean | null; item: boolean; points: number; hp: number } | null = null, deathLogged = false, gangDied = false;
+        const fight = { ticks: 0, itemOff: 0, overheadOff: 0, overheadRun: 0, longestOverheadOff: 0 };
         const unwatchGang = g.onTick(() => {
             if (deathLogged) return;
             const stG = g.sdk.getState(), q = stG?.player;
             if (!q) return;
             if (gangDead(g)) {
                 deathLogged = true;
-                log(`SQUAD gang ${g.name} died: ${lastAlive ? `skull=${lastAlive.skull ? 1 : 0} protectItem=${lastAlive.item ? 1 : 0} prayer=${lastAlive.points} at tick ${lastAlive.tick}` : 'no view'}`);
+                log(`SQUAD gang ${g.name} died: ${lastAlive ? `skull=${lastAlive.skull ? 1 : 0} protectItem=${lastAlive.item ? 1 : 0} prayer=${lastAlive.points} at tick ${lastAlive.tick}` : 'no view'} fight=${fight.ticks} itemOff=${fight.itemOff} overheadOff=${fight.overheadOff} longestOverheadOff=${fight.longestOverheadOff}`);
                 return;
             }
-            lastAlive = { tick: g.tick(), skull: ownSkull(g.client), item: !!stG?.prayers?.activePrayers?.[PRAYER.item], points: stG?.prayers?.prayerPoints ?? -1, hp: q.hp };
+            const active = stG?.prayers?.activePrayers ?? [], points = stG?.prayers?.prayerPoints ?? -1;
+            lastAlive = { tick: g.tick(), skull: ownSkull(g.client), item: !!active[PRAYER.item], points, hp: q.hp };
+            if (q.hp > 0 && points > 0 && q.combat?.inCombat) {
+                fight.ticks++;
+                if (!active[PRAYER.item]) fight.itemOff++;
+                if (![PRAYER.magic, PRAYER.missiles, PRAYER.melee].some(p => active[p])) { fight.overheadOff++; fight.overheadRun++; fight.longestOverheadOff = Math.max(fight.longestOverheadOff, fight.overheadRun); }
+                else fight.overheadRun = 0;
+            }
         });
         // SQUAD_GANG_PRAYER=<points>: before its first fight each gang account holds its prayers on until it has at most that
         // many prayer points, and the engine drains them (prayer.rs2 prayer_drain: the counter gains the sum of the drain

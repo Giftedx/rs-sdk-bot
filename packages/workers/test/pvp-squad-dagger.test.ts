@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createDaggerWatch, DAGGER_DEFAULTS, DAGGER_IDS, daggerOptionsOf, daggerPickup, drainTicks, type DaggerOptions } from '../src/pvp/squad-dagger';
-import { GANG_DRAIN_PRAYERS, pickSquadFocus } from '../src/pvp/squad';
+import { cancelAttack, drainedSwitch, GANG_DRAIN_PRAYERS, pickSquadFocus } from '../src/pvp/squad';
 import { PRAYER } from '../src/pvp/fight';
 import { contentRoot } from '../../knowledge/src/paths';
 
@@ -131,6 +131,39 @@ describe('rule b: kill timing', () => {
         expect(drainTicks(99, 2 + 12 + 12, 6 + 5)).toBe(315);
         expect(drainTicks(90, 2 + 12 + 12, 6 + 5)).toBe(285);
         expect(drainTicks(10, 0, 11)).toBe(Infinity);
+    });
+});
+
+describe('the hold ends the attack click', () => {
+    test('cancelAttack walks the member to its own tile, as the kill path of the fight loop does', () => {
+        const walks: [number, number][] = [];
+        const s = { sdk: { getState: () => ({ player: { worldX: 3067, worldZ: 3640 } }), sendWalk: (x: number, z: number) => { walks.push([x, z]); } } };
+        expect(cancelAttack(s)).toBe(true);
+        expect(walks).toEqual([[3067, 3640]]);
+        expect(cancelAttack({ sdk: { getState: () => ({ player: null }), sendWalk: () => { walks.push([0, 0]); } } })).toBe(false);
+        expect(walks).toHaveLength(1);
+    });
+});
+
+describe('rule b: the switch to a drained target uses the filters of the target choice', () => {
+    // Our member (client index 3) fights Goondelf; Ligma shows 0 prayer points.
+    const watch = createDaggerWatch(on);
+    for (let t = 1; t <= 3; t++) { watch.read('Goondelf', t, read({ skulled: true })); watch.read('Ligma', t, read({ skulled: true, overhead: false })); }
+    const targets = new Set(['goondelf', 'ligma']);
+    const me = { x: 3078, z: 3641, combatLevel: 110 };
+    const ligma = { name: 'Ligma', index: 2, distance: 1, x: 3078, z: 3640, combatLevel: 126 };
+    const goon = { name: 'Goondelf', index: 1, distance: 1, x: 3079, z: 3641, combatLevel: 126 };
+    const sw = (view: (typeof ligma & { inCombat?: boolean; combatTargetType?: string; combatTargetIndex?: number })[], o: { skip?: Set<string>; inMulti: boolean; meAt?: { x: number; z: number } }) =>
+        drainedSwitch({ current: 'Goondelf', watch, targets, focus: { view, health: () => 0.5, skip: o.skip, me: { ...me, ...(o.meAt ?? {}) }, inMulti: o.inMulti, selfIndex: 3 } })?.name;
+    test('single-way: a drained target that fights another member is no switch (pickSquadFocus engagedByOther)', () => {
+        expect(sw([goon, { ...ligma, inCombat: true, combatTargetType: 'player', combatTargetIndex: 7 }], { inMulti: false })).toBeUndefined();
+        expect(sw([goon, { ...ligma, inCombat: true, combatTargetType: 'player', combatTargetIndex: 3 }], { inMulti: false })).toBe('Ligma');
+    });
+    test('multi-way: the same drained target is a switch; one in the skip set is not; a drained current target keeps its fight', () => {
+        const multi = { ...ligma, x: 3067, z: 3640, inCombat: true, combatTargetType: 'player', combatTargetIndex: 7 };
+        expect(sw([{ ...goon, x: 3068, z: 3641 }, multi], { inMulti: true, meAt: { x: 3067, z: 3641 } })).toBe('Ligma');
+        expect(sw([{ ...goon, x: 3068, z: 3641 }, multi], { inMulti: true, meAt: { x: 3067, z: 3641 }, skip: new Set(['ligma']) })).toBeUndefined();
+        expect(drainedSwitch({ current: 'Ligma', watch, targets, focus: { view: [goon, multi], health: () => 0.5, me, inMulti: true } })).toBeUndefined();
     });
 });
 
