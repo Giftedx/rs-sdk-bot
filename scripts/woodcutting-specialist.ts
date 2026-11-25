@@ -13,6 +13,7 @@ import {
     rubTeleport,
     walkWaypointsSafe,
     slotOfId,
+    itemQty,
     OBJ_DUELING_8,
     RING_OF_DUELING_IDS,
     OBJ_KNIFE,
@@ -523,7 +524,7 @@ if (import.meta.main) {
                     p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
                     isStopped,
                 );
-                await walkWaypointsSafe(main, [[2470, 3100, 4], [2545, 3115, 4], [2585, 3115, 4]], isStopped);
+                await walkWaypointsSafe(main, [[2585, 3082, 3]], isStopped);
                 const prePts = main.sdk.getSkill('Prayer')?.level ?? 0;
                 if (prePts <= 20) {
                     const potAct = tryDrinkPrayerPotion(main, 99);
