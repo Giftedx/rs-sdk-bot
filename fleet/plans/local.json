@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795635792345,
+ "at": 1795635821708,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -184,7 +184,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:225",
-    "BATCH_UNITS": "20",
+    "BATCH_UNITS": "30",
     "BANK_PACK": "1"
    },
    "enabled": true,
@@ -248,18 +248,18 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
+   "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=1 -- crafting inventory brew:unf_tarromin_potion"
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:mmtha0205 BATCH_UNITS=250 -- cannon"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:95",
+   "goal": "goal:pk_army:mmtha0205",
    "role": "army"
   },
   {
@@ -303,7 +303,7 @@
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
-  "mmtha0205",
+  "knightrider",
   "mmthv2350",
   "oreelse",
   "pocketpool",
