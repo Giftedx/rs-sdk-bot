@@ -223,7 +223,22 @@ function buildCwBatch(
  };
 }
 
-export const CRAFTING_CW_BATCH: CraftingBatchPlan = buildCwBatch(CRAFTING_CW_NOTED_SUPPLIES);
+export const CRAFTING_CW_BATCH: CraftingBatchPlan = {
+ give: [
+  { id: ITEM_IDS.ring_of_dueling_8, count: 1 },
+  { id: ITEM_IDS.chisel, count: 1 },
+  { id: ITEM_IDS.uncut_opal, count: 15 },
+  { id: 1626, count: 3 },
+  { id: 1624, count: 3 },
+  { id: 1622, count: 6 },
+  { id: 1620, count: 3 },
+  { id: 1618, count: 9 },
+  { id: 1632, count: 277 },
+ ],
+ returnIds: [],
+};
+
+export const CRAFTING_CW_LEGACY_EARLY_BATCH: CraftingBatchPlan = buildCwBatch(CRAFTING_CW_NOTED_SUPPLIES);
 
 export const CRAFTING_CW_NOTED_BATCH: CraftingBatchPlan = buildCwBatch(CRAFTING_CW_NOTED_SUPPLIES, new Set());
 
@@ -380,6 +395,7 @@ async function cutUnlockedGems(
  deadlineTick: number,
  nextHelper?: Session,
  openBankOnFinal = false,
+ leaveGems = 0,
 ): Promise<{ preRequested: boolean; pendingDialogs: number }> {
  let preRequested = false;
  let pendingDialogs = 0;
@@ -400,6 +416,19 @@ async function cutUnlockedGems(
   const stNow = spec.sdk.getState();
   const { gems, batch, willLevel } = selectCutGemBatch(inv, curBase, skillXp(spec, 'Crafting'), 5);
   if (!batch.length) return { preRequested, pendingDialogs };
+  if (leaveGems > 0 && gems.length <= leaveGems) {
+   if (stNow?.bank?.isOpen || !openBankOnFinal) return { preRequested, pendingDialogs };
+   await spec.direct({
+    type: 'interactLoc',
+    x: CRAFTING_CW_BANK_CHEST.x,
+    z: CRAFTING_CW_BANK_CHEST.z,
+    locId: CRAFTING_CW_BANK_CHEST.id,
+    optionIndex: CRAFTING_CW_BANK_CHEST.optionIndex,
+    reason: 'SDK',
+   });
+   await waitTicks(spec, 1);
+   continue;
+  }
   if (stNow?.bank?.isOpen) {
    // MoveClickHandler closes any open modal immediately in processClientsIn, so walk-here + 4 cuts avoids a separate closeModal tick.
    const pNow = playerPos(spec);
@@ -427,12 +456,16 @@ async function cutUnlockedGems(
    !willLevel &&
    pendingDialogs <= (dialogOpen ? 1 : 0);
 
+  // interactLoc sends MoveClick + OpLoc (2 USER_EVENT packets), so keep <= 3 cuts on the bank-open tick to fit the 5/tick limit.
+  const maxCutWithOpen = Math.max(0, totalRemaining - leaveGems);
+  const canOpenThisTick = openBankOnFinal && maxCutWithOpen <= 3 && batch.length >= maxCutWithOpen && (totalRemaining > 0);
+  const cutBatch = canOpenThisTick ? batch.slice(0, maxCutWithOpen) : batch;
   const actions: Promise<unknown>[] = [];
-  for (const gem of batch) {
+  for (const gem of cutBatch) {
    actions.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
   }
   const helperActs: Promise<unknown>[] = [];
-  if (openBankOnFinal && totalRemaining <= 4 && batch.length === totalRemaining) {
+  if (canOpenThisTick) {
    actions.push(
     spec.direct({
      type: 'interactLoc',
@@ -475,6 +508,7 @@ async function fastInProcessBatchTrade(
   giveIds: readonly number[];
   returnIds: readonly number[];
   dropUnwanted?: ReadonlySet<number>;
+  minFreeSlots?: number;
   deadlineTick: number;
   alreadyRequested?: boolean;
  },
@@ -488,17 +522,26 @@ async function fastInProcessBatchTrade(
  let sawConfirm = false;
  let lastReqTick = -10;
  let lastHelperPreReqTick = -10;
+ let helperPipelined = false;
+ let lastHelperAcceptTick = -10;
+ let lastSpecAcceptTick = -10;
 
  while (spec.tick() < opts.deadlineTick) {
   const st = spec.sdk.getTradeState();
   const ht = helper.sdk.getTradeState();
 
   if (!st.isOpen && !ht.isOpen) {
+   helperPipelined = false;
    if (sawConfirm || opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
     return;
    }
-   const dropSlots = keepSet ? spec.sdk.getInventory().filter(i => !keepSet.has(i.id)).map(i => i.slot) : [];
+   const dropSlots = (() => {
+    if (!keepSet) return [];
+    const curInv = spec.sdk.getInventory();
+    const limit = opts.minFreeSlots !== undefined ? Math.max(0, curInv.length - (28 - opts.minFreeSlots)) : curInv.length;
+    return limit <= 0 ? [] : curInv.filter(i => !keepSet.has(i.id)).map(i => i.slot).slice(0, limit);
+   })();
    const dlgOpen = !!spec.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperLower);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);
@@ -509,8 +552,8 @@ async function fastInProcessBatchTrade(
     for (const slot of dropSlots.slice(0, 5)) {
      sActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     }
-    // Pre-send helper's trade request on the tick before drops finish to avoid same-tick OPPLAYER4 collision.
-    if (dropSlots.length <= 9 && sTarget && spec.tick() - lastHelperPreReqTick >= 3) {
+    // Pre-send helper's trade request on the tick before drops finish (dropSlots <= 8) to open on the next tick.
+    if (dropSlots.length <= 8 && sTarget && spec.tick() - lastHelperPreReqTick >= 3) {
      lastHelperPreReqTick = spec.tick();
      hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
     }
@@ -528,8 +571,7 @@ async function fastInProcessBatchTrade(
      sActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
     }
    }
-   if (hActs.length) await Promise.all(hActs);
-   if (sActs.length) await Promise.all(sActs);
+   await Promise.all([...hActs, ...sActs]);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
   }
@@ -544,8 +586,7 @@ async function fastInProcessBatchTrade(
    if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
     sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
-   if (hActs.length) await Promise.all(hActs);
-   if (sActs.length) await Promise.all(sActs);
+   await Promise.all([...sActs, ...hActs]);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    if (!spec.sdk.getTradeState().isOpen && !helper.sdk.getTradeState().isOpen && opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
@@ -571,6 +612,41 @@ async function fastInProcessBatchTrade(
    }
   }
 
+  // When spec returns nothing, pipeline up to 5 helper offers/accept per tick cleanly within USER_EVENT.limit=5.
+  if (returnSet.size === 0 && ht.isOpen && ht.screen === 'offer') {
+   if (!helperPipelined && hSlots.size > 0 && hSlots.size <= 4) {
+    helperPipelined = true;
+    for (const slot of hSlots.values()) {
+     hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+    }
+    if (!ht.myAccepted) {
+     lastHelperAcceptTick = spec.tick();
+     hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+    }
+   } else if (hSlots.size > 0) {
+    for (const slot of [...hSlots.values()].slice(0, hSlots.size > 4 ? 5 : 4)) {
+     hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+    }
+    if (hSlots.size <= 4 && !ht.myAccepted) {
+     lastHelperAcceptTick = spec.tick();
+     hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+    }
+   } else if (!ht.myAccepted && spec.tick() - lastHelperAcceptTick >= 2) {
+    lastHelperAcceptTick = spec.tick();
+    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+   }
+   const theirIds = new Set(st.theirOffer.map(o => o.id));
+   const allGiveOffered = opts.giveIds.every(id => theirIds.has(id));
+   if (st.isOpen && st.screen === 'offer' && !st.myAccepted && (ht.myAccepted || allGiveOffered) && spec.tick() - lastSpecAcceptTick >= 2) {
+    lastSpecAcceptTick = spec.tick();
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   await Promise.all([...sActs, ...hActs]);
+   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+   continue;
+  }
+
   const hAllOffered = hSlots.size === 0 || [...hSlots.keys()].length <= 4;
   const sAllOffered = sSlots.size === 0 || [...sSlots.keys()].length <= 4;
   const hToOffer = [...hSlots.values()].slice(0, hSlots.size > 4 ? 5 : 4);
@@ -594,15 +670,12 @@ async function fastInProcessBatchTrade(
    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
-  if (sAllOffered && sToOffer.length === 0 && !st.myAccepted && st.isOpen && hAllOffered && (ht.myAccepted || hToOffer.length === 0)) {
+  if (sAllOffered && sToOffer.length === 0 && !st.myAccepted && st.isOpen && hAllOffered && ht.myAccepted) {
    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
-   if (ht.myAccepted || hToOffer.length > 0) {
-    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
-   }
+   sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
-  if (hActs.length) await Promise.all(hActs);
-  if (sActs.length) await Promise.all(sActs);
+  await Promise.all([...hActs, ...sActs]);
   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
  }
  throw Error(`fastInProcessBatchTrade with ${helper.name} exceeded cap`);
@@ -661,8 +734,12 @@ async function craftAtCastleWarsBank(
  deadline: number,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  const initialInv = spec.sdk.getInventory();
- const hasUnnotedEarly = countItem(initialInv, ITEM_IDS.uncut_opal) > 0 && countItem(initialInv, 1626) === 0;
- const cycle0Notes = new Set<number>(hasUnnotedEarly ? [1622, 1620, 1618, 1632] : [1626, 1624, 1622]);
+ const hasUnnotedEarly = countItem(initialInv, ITEM_IDS.uncut_opal) > 0;
+ const hasUnnotedSapphire = countItem(initialInv, ITEM_IDS.uncut_sapphire) > 0 && countItem(initialInv, 1624) === 0;
+ const deferSurplusOpals = hasUnnotedEarly && countItem(initialInv, 1632) >= 200;
+ const cycle0Notes = new Set<number>(
+  hasUnnotedEarly ? (hasUnnotedSapphire ? [1622, 1620, 1618, 1632] : [1626, 1624, 1622, 1620, 1618, 1632]) : [1626, 1624, 1622],
+ );
  let walkingSent = false;
  let lastRubTick = -10;
  let cwChosen = false;
@@ -680,7 +757,19 @@ async function craftAtCastleWarsBank(
     !!p &&
     Math.max(Math.abs(p.worldX - CRAFTING_CW_BANK_CHEST.x), Math.abs(p.worldZ - CRAFTING_CW_BANK_CHEST.z)) <= 1;
    const needWalk = !nearChest && !walkingSent;
-   const { gems, batch } = selectCutGemBatch(inv, skillLevel(spec, 'Crafting'), skillXp(spec, 'Crafting'), needWalk ? 4 : 5);
+   const curLvl = skillLevel(spec, 'Crafting');
+   const curXpVal = skillXp(spec, 'Crafting');
+   let cutInv = inv;
+   if (deferSurplusOpals) {
+    const opalsInInv = inv.filter(i => i.id === ITEM_IDS.uncut_opal);
+    const needOpalsTo20 = Math.ceil(Math.max(0, 3105 - curXpVal) / 375);
+    const cutOpalsCount = Math.min(opalsInInv.length, curLvl >= 20 ? 0 : needOpalsTo20 >= 2 ? needOpalsTo20 + 2 : needOpalsTo20);
+    if (cutOpalsCount < opalsInInv.length) {
+     const skipSlots = new Set(opalsInInv.slice(cutOpalsCount).map(i => i.slot));
+     cutInv = inv.filter(i => !skipSlots.has(i.slot));
+    }
+   }
+   const { gems, batch } = selectCutGemBatch(cutInv, curLvl, curXpVal, needWalk ? 4 : 5);
    if (batch.length > 0) {
     const acts: Promise<unknown>[] = [];
     if (needWalk) {
@@ -704,8 +793,14 @@ async function craftAtCastleWarsBank(
    }
    if (gems.length > 0) break;
    // Drop cut early gems / ring while level-up dialogs drain so CW chest opens with chisel + noted stacks only.
+   const dropSurplusOpals = curLvl >= 20 && curXpVal >= 3105 && countItem(initialInv, 1632) >= 277 && countItem(initialInv, 1624) >= 3;
    const dropSlots = inv
-    .filter(i => i.id !== ITEM_IDS.chisel && !cycle0Notes.has(i.id) && !GEM_TIER_IDS.has(i.id))
+    .filter(
+     i =>
+      i.id !== ITEM_IDS.chisel &&
+      (!cycle0Notes.has(i.id) || (dropSurplusOpals && i.id === 1626)) &&
+      (!GEM_TIER_IDS.has(i.id) || (dropSurplusOpals && i.id === ITEM_IDS.uncut_opal)),
+    )
     .map(i => i.slot);
    if (!dropSlots.length) break;
    const acts: Promise<unknown>[] = dropSlots
@@ -736,19 +831,12 @@ async function craftAtCastleWarsBank(
    const inv = spec.sdk.getInventory();
    const ring = inv.find(i => RING_OF_DUELING_SET.has(i.id));
    if (!ring) throw Error('ring of dueling missing after CW trade');
-   const acts: Promise<unknown>[] = [];
-   if (hasUnnotedEarly && lastRubTick < 0) {
-    const chisel = inv.find(i => i.id === ITEM_IDS.chisel);
-    if (chisel) {
-     const { batch } = selectCutGemBatch(inv, skillLevel(spec, 'Crafting'), skillXp(spec, 'Crafting'), 4);
-     for (const gem of batch) {
-      acts.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
-     }
-    }
-   }
    lastRubTick = spec.tick();
-   acts.push(spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' }));
-   await Promise.all(acts);
+   // Avoid cutting on the rub tick so [advancestat] cannot interrupt the teleport before Castle Wars.
+   await Promise.all([
+    spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' }),
+    spec.direct({ type: 'clickComponent', componentId: 2462, reason: 'SDK' }),
+   ]);
   }
   await waitTicks(spec, 1);
  }
@@ -784,24 +872,103 @@ async function craftAtCastleWarsBank(
  const opalCount = bankCount(ITEM_IDS.uncut_opal);
  const hasDragonstone = dstoneCount > 0;
  const cwModeLabel = hasDragonstone ? (diaCount > 20 ? 'cw-hybrid' : 'cw') : 'cw-diamond';
+ const curCraftLevel = skillLevel(spec, 'Crafting');
  const curCraftXp = skillXp(spec, 'Crafting');
+ const minOpalsSafe20 = Math.ceil(Math.max(0, 3105 - curCraftXp) / 95);
+ const idx0Opals =
+  hasUnnotedEarly && curCraftLevel < 20 && opalCount > 0
+   ? Math.min(opalCount, 6, Math.max(2, minOpalsSafe20))
+   : 0;
  const needFor43 = Math.ceil(Math.max(0, 19684 - curCraftXp - rubyCount * 2125) / 1687.5);
  const needFor55 = hasDragonstone
   ? Math.ceil(Math.max(0, 46534 - curCraftXp - rubyCount * 2125 - diaCount * 2687.5) / 1687.5)
   : 0;
- const emerInC0 = hasUnnotedEarly && emerCount > 0 ? Math.min(emerCount, Math.max(1, needFor43, needFor55)) : emerCount;
+ const emerInC0 =
+  hasUnnotedEarly && emerCount > 0
+   ? emerCount <= 12
+     ? emerCount
+     : Math.min(emerCount, Math.max(1, needFor43, needFor55))
+   : emerCount;
  const emerRem = Math.max(0, emerCount - emerInC0);
- const cycles = packCwCycles([
-  ...(hasUnnotedEarly ? [] : [
-   { id: ITEM_IDS.uncut_opal, count: opalCount },
-   { id: ITEM_IDS.uncut_sapphire, count: sapphCount },
-  ]),
+ // Pack remaining high-tier gems with cap=25 when carryOver=2 leaves 2 uncut gems at each chest open.
+ const lowQueues: { id: number; count: number }[] = [
+  ...(hasUnnotedEarly
+   ? [
+      ...(idx0Opals > 0 ? [{ id: ITEM_IDS.uncut_opal, count: idx0Opals }] : []),
+      ...(hasUnnotedSapphire ? [] : [{ id: ITEM_IDS.uncut_sapphire, count: sapphCount }]),
+     ]
+   : [
+      { id: ITEM_IDS.uncut_opal, count: opalCount },
+      { id: ITEM_IDS.uncut_sapphire, count: sapphCount },
+     ]),
   { id: ITEM_IDS.uncut_emerald, count: emerInC0 },
   { id: ITEM_IDS.uncut_ruby, count: rubyCount },
-  { id: ITEM_IDS.uncut_diamond, count: diaCount },
-  { id: ITEM_IDS.uncut_dragonstone, count: dstoneCount },
-  { id: ITEM_IDS.uncut_emerald, count: emerRem },
- ]);
+  { id: ITEM_IDS.uncut_diamond, count: hasDragonstone ? diaCount : 0 },
+ ];
+ const highId = hasDragonstone ? ITEM_IDS.uncut_dragonstone : ITEM_IDS.uncut_diamond;
+ const highTotal = hasDragonstone ? dstoneCount : diaCount;
+ let highLeft = highTotal;
+ const cycles: { id: number; count: number }[][] = [];
+ for (const cyc of packCwCycles(lowQueues, 27)) {
+  const used = cyc.reduce((s, g) => s + g.count, 0);
+  if (used < 27 && highLeft > 0 && emerRem === 0 && cyc.length < 4) {
+   const maxFill = 27 - used;
+   const fill =
+    hasDragonstone && hasUnnotedEarly && highLeft >= 5 && maxFill >= 9 && highLeft - 5 <= 11 * 25
+     ? 5
+     : Math.min(maxFill, highLeft);
+   highLeft -= fill;
+   cycles.push([...cyc, { id: highId, count: fill }]);
+  } else {
+   cycles.push([...cyc]);
+  }
+ }
+ if (emerRem === 0 && highLeft > 0) {
+  let carry = 0;
+  if (cycles.length > 0 && highLeft > 27) {
+   // Previous cycle can leave 2 high-tier gems in inv (if it had >= 2 of them) so every following cycle withdraws 25 in 6t.
+   const lastHigh = cycles[cycles.length - 1]!.find(g => g.id === highId)?.count ?? 0;
+   if (lastHigh >= 2) carry = 2;
+  }
+  if (carry === 0 && highLeft > 27) {
+   const firstTake = Math.min(27, highLeft);
+   highLeft -= firstTake;
+   cycles.push([{ id: highId, count: firstTake }]);
+   carry = highLeft > 0 ? 2 : 0;
+  }
+  while (highLeft > 0) {
+   const cap = carry > 0 ? 27 - carry : 27;
+   const take = Math.min(cap, highLeft);
+   highLeft -= take;
+   cycles.push([{ id: highId, count: take + carry }]);
+  }
+ } else {
+  for (const cyc of packCwCycles([{ id: highId, count: highLeft }, { id: ITEM_IDS.uncut_emerald, count: emerRem }], 27)) {
+   cycles.push([...cyc]);
+  }
+ }
+ const remOpals = Math.max(0, opalCount - idx0Opals);
+ if (hasUnnotedEarly && remOpals > 0) {
+  const plannedGemXp =
+   curCraftXp +
+   idx0Opals * 95 +
+   (!hasUnnotedSapphire ? sapphCount * 1250 : 0) +
+   emerCount * 1687.5 +
+   rubyCount * 2125 +
+   diaCount * 2687.5 +
+   dstoneCount * 3437.5;
+  const extraOpalsNeeded = Math.min(remOpals, Math.ceil(Math.max(0, goalXp() - plannedGemXp) / 375));
+  const withdrawOpals = extraOpalsNeeded > 0 ? Math.min(remOpals, extraOpalsNeeded + 1) : 0;
+  if (withdrawOpals > 0) {
+   const lastCyc = cycles[cycles.length - 1];
+   const lastUsed = lastCyc ? lastCyc.reduce((s, g) => s + g.count, 0) : 27;
+   if (lastCyc && lastUsed + withdrawOpals <= 27) {
+    lastCyc.push({ id: ITEM_IDS.uncut_opal, count: withdrawOpals });
+   } else {
+    cycles.push([{ id: ITEM_IDS.uncut_opal, count: withdrawOpals }]);
+   }
+  }
+ }
 
  for (let idx = 0; idx < cycles.length && skillLevel(spec, 'Crafting') < target; idx++) {
   const isFinal = idx === cycles.length - 1;
@@ -823,8 +990,6 @@ async function craftAtCastleWarsBank(
       })
     : rawCycle;
    if (cycle.every(g => countItem(inv, g.id) >= g.count)) {
-    await spec.direct({ type: 'closeModal', reason: 'SDK' });
-    await waitTicks(spec, 1);
     break;
    }
    if (!cycle.every(g => {
@@ -852,7 +1017,7 @@ async function craftAtCastleWarsBank(
      const need = g.count - have;
      const row = bankItems.find((b: any) => b.id === g.id);
      if (need > 0 && row) {
-      if (cycle.length === 1 && depCount <= 4 && need === freeAfterDep && row.count >= need) {
+      if (cycle.length === 1 && depCount <= 4 && (need === freeAfterDep || row.count <= freeAfterDep) && row.count >= need) {
        acts.push({ type: 'bankWithdraw', slot: row.slot, amount: -1, reason: 'SDK' });
       } else {
        pushCwWithdraw(acts, row.slot, need, row.count);
@@ -861,13 +1026,59 @@ async function craftAtCastleWarsBank(
     }
    }
    const tickActs = acts.slice(0, 5);
+   const pNow = playerPos(spec);
+   // When deposit+withdraw fits in <=2 packets for a single-tier cycle, close via walkTo and cut 2 gems in the same tick.
+   const canInstantCut =
+    !!pNow &&
+    cycle.length === 1 &&
+    acts.length <= 2 &&
+    acts.every(a => a.type !== 'bankWithdraw' || a.amount === -1) &&
+    skillLevel(spec, 'Crafting') >= (GEM_LEVEL_BY_ID.get(cycle[0]!.id) ?? 99);
+   if (canInstantCut) {
+    const gemId = cycle[0]!.id;
+    const chiselItem = inv.find(i => i.id === ITEM_IDS.chisel);
+    const keepSlots = new Set<number>(inv.filter(i => i.id === ITEM_IDS.chisel || i.id === gemId).map(i => i.slot));
+    const freeSlots: number[] = [];
+    for (let s = 0; s < 28 && freeSlots.length < 2; s++) {
+     if (!keepSlots.has(s)) freeSlots.push(s);
+    }
+    const targetSlots = [...inv.filter(i => i.id === gemId).map(i => i.slot), ...freeSlots].slice(0, 2);
+    if (chiselItem && targetSlots.length === 2) {
+     await Promise.all([
+      ...tickActs.map(a => spec.direct(a)),
+      spec.direct({ type: 'walkTo', x: pNow.worldX, z: pNow.worldZ, running: true, reason: 'SDK' }),
+      ...targetSlots.map(slot => spec.direct({ type: 'useItemOnItem', sourceSlot: chiselItem.slot, targetSlot: slot, reason: 'SDK' })),
+     ]);
+     await waitTicks(spec, 1);
+     break;
+    }
+   }
+   if (tickActs.length <= 3 && pNow && acts.length === tickActs.length && cycle.length > 1) {
+    const chiselItem = inv.find(i => i.id === ITEM_IDS.chisel);
+    const curLvl = skillLevel(spec, 'Crafting');
+    const firstUnlocked = cycle.find(g => curLvl >= (GEM_LEVEL_BY_ID.get(g.id) ?? 99));
+    const existingSlot = firstUnlocked ? inv.find(i => i.id === firstUnlocked.id)?.slot : undefined;
+    const openSlot = inv.find(i => i.id !== ITEM_IDS.chisel && !wantSet.has(i.id))?.slot ?? [1, 2, 3].find(s => s !== chiselItem?.slot);
+    const cutSlot = existingSlot ?? openSlot;
+    if (chiselItem && cutSlot !== undefined) {
+     await Promise.all([
+      ...tickActs.map(a => spec.direct(a)),
+      spec.direct({ type: 'walkTo', x: pNow.worldX, z: pNow.worldZ, running: true, reason: 'SDK' }),
+      spec.direct({ type: 'useItemOnItem', sourceSlot: chiselItem.slot, targetSlot: cutSlot, reason: 'SDK' }),
+     ]);
+     await waitTicks(spec, 1);
+     break;
+    }
+   }
    if (tickActs.length <= 4) {
     tickActs.push({ type: 'closeModal', reason: 'SDK' });
    }
    if (tickActs.length) await Promise.all(tickActs.map(a => spec.direct(a)));
    await waitTicks(spec, 1);
   }
-  await cutUnlockedGems(spec, target, deadline, undefined, idx < cycles.length - 1);
+  const nextHighId = idx + 1 < cycles.length ? cycles[idx + 1]!.find(g => g.id === highId && g.count > 2)?.id : undefined;
+  const leaveGems = nextHighId !== undefined && rawCycle.some(g => g.id === nextHighId) ? 2 : 0;
+  await cutUnlockedGems(spec, target, deadline, undefined, idx < cycles.length - 1, leaveGems);
  }
 
  const level = skillLevel(spec, 'Crafting');
@@ -904,6 +1115,7 @@ type CraftingMode = 'cw' | 'cw-hybrid' | 'cw-diamond' | 'multi' | 'hybrid' | 'di
 
 const CW_ACCEPTABLE_BATCHES: readonly CraftingBatchPlan[] = [
  CRAFTING_CW_BATCH,
+ CRAFTING_CW_LEGACY_EARLY_BATCH,
  CRAFTING_CW_NOTED_BATCH,
  CRAFTING_CW_HYBRID_BATCH,
  CRAFTING_CW_HYBRID_NOTED_BATCH,
@@ -953,31 +1165,40 @@ export async function runCraftingSpecialist(
  const start = spec.tick();
  const deadline = start + opts.cap;
  let done = false;
- const keepers = helpers.map(h =>
-  (async () => {
-   while (!done && h.tick() < deadline) {
-    await waitTicks(h, 1);
-   }
-  })(),
- );
+ const keepers: Promise<void>[] = [];
+ const startKeepers = () => {
+  if (keepers.length) return;
+  for (const h of helpers) {
+   keepers.push(
+    (async () => {
+     while (!done && h.tick() < deadline) {
+      await waitTicks(h, 1);
+     }
+    })(),
+   );
+  }
+ };
 
  try {
   if (cwMode) {
-   return await executeCraftingCastleWars(
-    spec,
-    target,
-    start,
-    deadline,
-    () =>
-     fastInProcessBatchTrade(spec, helpers[0]!, {
-      giveIds: cwPlan.batch.give.map(g => g.id),
-      returnIds: [],
-      dropUnwanted: new Set<number>(),
-      deadlineTick: deadline,
-     }),
-    false,
-   );
+   const p0 = playerPos(spec);
+   const onTut = !p0 || p0.worldX < 3160 || p0.worldZ < 3180;
+   await Promise.all([
+    skipTutorial2Ticks(spec, deadline),
+    ...(onTut ? [waitTicks(helpers[0]!, 2)] : []),
+   ]);
+   await fastInProcessBatchTrade(spec, helpers[0]!, {
+    giveIds: cwPlan.batch.give.map(g => g.id),
+    returnIds: [],
+    dropUnwanted: new Set<number>(),
+    minFreeSlots: cwPlan.batch.give.reduce((sum, g) => sum + (g.id === ITEM_IDS.uncut_opal || g.id === ITEM_IDS.uncut_sapphire ? g.count : 1), 0),
+    deadlineTick: deadline,
+   });
+   startKeepers();
+   logPhase(spec, start, 'crafting_cw_traded');
+   return await craftAtCastleWarsBank(spec, target, start, deadline);
   }
+  startKeepers();
   await skipTutorial2Ticks(spec, deadline);
   let preReq = false;
 
@@ -1032,12 +1253,21 @@ export async function runCraftingExternal(
  const start = spec.tick();
  const deadline = start + opts.cap;
  if (cwForced) {
-  return executeCraftingCastleWars(spec, target, start, deadline, async () => {
-   await fastTradeExternalReceive(spec, supplierNames, {
-    acceptOffer: offer => CW_ACCEPTABLE_BATCHES.some(b => b.give.every(g => countItem(offer, g.id) >= g.count)),
-    deadlineTick: deadline,
-   });
-  });
+  return executeCraftingCastleWars(
+   spec,
+   target,
+   start,
+   deadline,
+   async () => {
+    await fastTradeExternalReceive(spec, supplierNames, {
+     dropUnwanted: new Set<number>(),
+     minFreeSlots: cwPlan.batch.give.reduce((sum, g) => sum + (g.id === ITEM_IDS.uncut_opal || g.id === ITEM_IDS.uncut_sapphire ? g.count : 1), 0),
+     acceptOffer: offer => CW_ACCEPTABLE_BATCHES.some(b => b.give.every(g => countItem(offer, g.id) >= g.count)),
+     deadlineTick: deadline,
+    });
+   },
+   false,
+  );
  }
  await skipTutorial2Ticks(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);

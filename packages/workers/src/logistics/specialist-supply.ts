@@ -810,14 +810,16 @@ export function resolveSupplierKitPlan(kitName: string | undefined = process.env
         };
     }
     if (raw === 'crafting-cw') {
-        const notedGive = [
+        const earlyUnnotedGive = [
             invSpec(2552, 1),
             invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
-            ...CRAFTING_CW_NOTED_ITEMS.map(g => invSpec(g.certId, g.count)),
+            invSpec(SPECIALIST_ITEM_IDS.uncut_opal, 15),
+            invSpec(1626, 3),
+            ...CRAFTING_CW_NOTED_ITEMS.filter(g => g.id !== SPECIALIST_ITEM_IDS.uncut_opal).map(g => invSpec(g.certId, g.count)),
         ];
         return {
             name: 'crafting-cw',
-            legs: [{ kit: notedGive, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK, noted: true }],
+            legs: [{ kit: earlyUnnotedGive, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK, noted: false }],
             combined: SPECIALIST_KITS['crafting-cw'],
         };
     }
@@ -962,7 +964,19 @@ export function resolveConcreteKit(kit: readonly KitSpecItem[], items: readonly 
 export function hasExactKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): boolean {
     const allowed = new Set(kit.flatMap(k => specIds(k).map(resolveBaseId)));
     if (items.some(i => !allowed.has(i.baseId ?? resolveBaseId(i.id)))) return false;
-    return kit.every(spec => countForSpec(items, spec) === spec.count && (!isNotedId(spec.id) || items.some(i => i.id === spec.id && (i.count ?? 0) >= spec.count)));
+    const baseEntries = new Map<number, number>();
+    for (const k of kit) {
+        const base = resolveBaseId(k.id);
+        baseEntries.set(base, (baseEntries.get(base) ?? 0) + 1);
+    }
+    return kit.every(spec => {
+        if ((baseEntries.get(resolveBaseId(spec.id)) ?? 0) > 1) {
+            let exact = 0;
+            for (const i of items) if (i.id === spec.id) exact += i.count ?? 0;
+            return exact === spec.count;
+        }
+        return countForSpec(items, spec) === spec.count && (!isNotedId(spec.id) || items.some(i => i.id === spec.id && (i.count ?? 0) >= spec.count));
+    });
 }
 
 export function hasAtLeastKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): boolean {
@@ -1449,15 +1463,23 @@ export async function runSpecialistServe(args: readonly string[], env: Record<st
             }
             allDone = ok;
         } else if (kitName === 'crafting-cw') {
-            const batch = [
+            const earlyUnnotedBatch = [
+                invSpec(2552, 1),
+                invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
+                invSpec(SPECIALIST_ITEM_IDS.uncut_opal, 15),
+                invSpec(1626, 3),
+                ...CRAFTING_CW_NOTED_ITEMS.filter(g => g.id !== SPECIALIST_ITEM_IDS.uncut_opal).map(g => invSpec(g.certId, g.count)),
+            ];
+            const notedBatch = [
                 invSpec(2552, 1),
                 invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
                 ...CRAFTING_CW_NOTED_ITEMS.map(g => invSpec(g.certId, g.count)),
             ];
-            if (!hasExactKit(s.sdk.getInventory(), batch)) await withdrawExactKit(s, batch, bankTile, stop, true);
+            const batch = hasExactKit(s.sdk.getInventory(), notedBatch) ? notedBatch : earlyUnnotedBatch;
+            if (!hasExactKit(s.sdk.getInventory(), batch)) await withdrawExactKit(s, earlyUnnotedBatch, bankTile, stop, false);
             await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
             emitReady();
-            allDone = (await serveFastBatch(s, specialist, batch, t0, CAP, stop)) === 'ok';
+            allDone = (await serveFastBatch(s, specialist, batch, t0, CAP, stop, { primeOnArrival: true })) === 'ok';
         } else if (kitName === 'crafting') {
             const batchIndices = parsed.batchIndex !== undefined ? [parsed.batchIndex] : CRAFTING_BATCHES.map((_, i) => i);
             let ok = true;

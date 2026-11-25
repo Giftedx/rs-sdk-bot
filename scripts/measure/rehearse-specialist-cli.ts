@@ -340,8 +340,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 }),
             }];
         },
-        planTicks: 96,
-        planSource: '400ms Castle Wars Bank Chest single-trade CW route (~96t vs #1 137t)',
+        planTicks: 132,
+        planSource: 'hosted rehearsal CutMyJewels 131-134t whole-clock / 130-133t board across seeds 7,8,9 (<=134t vs #1 137t)',
         targetCap: 134,
     },
     {
@@ -371,9 +371,9 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 },
             ];
         },
-        planTicks: 411,
-        planSource: 'hosted-bench skiller:herblore:specialist 410-411t (<=415t vs #1 424t)',
-        targetCap: 415,
+        planTicks: 383,
+        planSource: 'hosted rehearsal GrindMyHerb 383t (<=384t vs #1 392t)',
+        targetCap: 384,
     },
     {
         account: 'CastMyLoad',

@@ -732,6 +732,8 @@ export interface FastExternalReceiveOpts {
  acceptOffer: (offer: readonly { id: number; count: number }[]) => boolean;
  deadlineTick: number;
  returnIds?: readonly number[];
+ dropUnwanted?: ReadonlySet<number>;
+ minFreeSlots?: number;
  allowSingleModal?: boolean;
  maxDistance?: number;
  cooldownTicks?: number;
@@ -875,16 +877,27 @@ export async function fastTradeExternalReceive(
     }
    }
 
+   const dropSlots = (() => {
+    if (!opts.dropUnwanted) return [];
+    const curInv = spec.sdk.getInventory();
+    const limit = opts.minFreeSlots !== undefined ? Math.max(0, curInv.length - (28 - opts.minFreeSlots)) : curInv.length;
+    return limit <= 0 ? [] : curInv.filter(i => !opts.dropUnwanted!.has(i.id)).map(i => i.slot).slice(0, limit);
+   })();
+   if (dropSlots.length > 4) {
+    await Promise.all(dropSlots.slice(0, 5).map(slot => spec.direct({ type: 'dropItem', slot, reason: 'SDK' })));
+    await waitTicks(spec, 1);
+    continue;
+   }
    const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
+   const reqActs: Promise<unknown>[] = dropSlots.map(slot => spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
    if (target && spec.tick() - lastOpenReqTick >= 3) {
     lastOpenReqTick = spec.tick();
-    const reqActs: Promise<unknown>[] = [];
-    if (specDlg && !opts.allowSingleModal) reqActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+    if (specDlg && !opts.allowSingleModal && reqActs.length <= 3) reqActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
     reqActs.push(spec.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 4, reason: 'SDK' }));
-    await Promise.all(reqActs);
-   } else if (specDlg) {
-    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   } else if (specDlg && reqActs.length <= 4) {
+    reqActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
    }
+   if (reqActs.length) await Promise.all(reqActs);
 
    await waitTicks(spec, 1);
    continue;

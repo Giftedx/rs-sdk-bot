@@ -27,8 +27,9 @@ import {
     RING_OF_DUELING_IDS,
     OBJ_PINEAPPLE_PIZZA,
 } from './gathering-specialist-lib';
-import type { Session } from '../packages/core/src/inprocess';
+import { ClientProt } from '../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
+import type { Session } from '../packages/core/src/inprocess';
 
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
@@ -233,7 +234,7 @@ export function selectPickpocketTarget<T extends {
         n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= 7,
     );
     const sticky = stickyIndex >= 0
-        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 1 && n.reachable !== false)
+        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 2 && n.reachable !== false)
         : undefined;
     if (sticky) return { target: sticky, blocked: undefined };
     const pool = (nearAnchor.length > 0 ? nearAnchor : matching).sort((a, b) => a.distance - b.distance);
@@ -491,6 +492,123 @@ export async function runArdougneStunRelogThieving(opts: {
     };
 }
 
+async function walkDirectNoDetour(
+    main: Session,
+    points: readonly [number, number, number][],
+    stop: () => boolean,
+    earlyStop?: () => boolean,
+): Promise<void> {
+    const base = await sessionWalker(main);
+    const runEnabled = () => ((main.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) === 1;
+    let lastRunClickTick = -10;
+    const deps = {
+        ...base,
+        hunters: () => [],
+        runOn: async () => {
+            const t = main.tick();
+            if (!runEnabled() && t - lastRunClickTick >= 2) {
+                lastRunClickTick = t;
+                await main.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+            }
+        },
+    };
+    const pathPts = points.map(([x, z, tol]) => ({ x, z, tol }));
+    const res = await walkPath(deps, pathPts, {
+        maxTicks: Math.max(220, points.length * 140),
+        reclickAt: 10,
+        look: 22,
+        stop: () => stop() || !!earlyStop?.(),
+    });
+    if (!res.ok && !earlyStop?.() && !stop()) {
+        await walkWaypointsSafe(main, points, stop);
+    }
+}
+
+async function sailBrimhavenFast(main: Session, stop: () => boolean): Promise<void> {
+    const ardyDeck = { x: 2683, z: 3268 };
+    const landed = () => {
+        const p = main.sdk.getState()?.player;
+        return !!p && p.level === 1 && chebDist(ardyDeck, { x: p.worldX, z: p.worldZ }) <= 8;
+    };
+    const sendBurst = (tokens: readonly ('R' | number)[]): boolean => {
+        const c = main.client as {
+            chatModalId?: number;
+            resumedPauseButton?: boolean;
+            dialogInputOpen?: boolean;
+            writeOpcode?: (op: number) => void;
+            out?: { p2(v: number): void };
+            flush?: () => void;
+        } | undefined;
+        if (!c?.writeOpcode || !c.out || typeof c.chatModalId !== 'number' || c.chatModalId === -1 || c.dialogInputOpen) {
+            return false;
+        }
+        const modalId = c.chatModalId;
+        for (const tok of tokens.slice(0, 5)) {
+            if (tok === 'R') {
+                c.writeOpcode(ClientProt.RESUME_PAUSEBUTTON);
+                c.out.p2(modalId);
+            } else {
+                c.writeOpcode(ClientProt.IF_BUTTON);
+                c.out.p2(tok);
+            }
+        }
+        c.flush?.();
+        c.resumedPauseButton = tokens[tokens.length - 1] === 'R';
+        return true;
+    };
+    const bursts: readonly (readonly ('R' | number)[])[] = [
+        ['R', 2461, 'R', 'R', 2472],
+        ['R', 'R', 2461, 'R'],
+    ];
+    let burstIdx = 0;
+    let talked = false;
+    for (let i = 0; i < 40 && !stop() && !landed(); i++) {
+        const d = main.sdk.getDialog();
+        if (d?.isOpen && !d.isWaiting) {
+            if (burstIdx < bursts.length && sendBurst(bursts[burstIdx]!)) {
+                burstIdx++;
+            } else {
+                const pats = [/journey on this ship/i, /search away/i, /^ok\.?$/i];
+                const opt = d.options.find(o => pats.some(re => re.test(o.text)));
+                await main.direct({ type: 'clickDialogOption', optionIndex: opt ? opt.index : 0, reason: 'SDK' });
+            }
+        } else if (!talked || i % 6 === 0) {
+            const npc = main.sdk.getState()?.nearbyNpcs.find(n => /^customs officer$/i.test(n.name));
+            const op = npc?.optionsWithIndex.find(o => /^talk-to$/i.test(o.text))?.opIndex ?? 1;
+            if (npc) {
+                talked = true;
+                await main.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op, reason: 'SDK' });
+            } else {
+                await sailBrimhavenToArdougne(main, stop);
+                return;
+            }
+        }
+        await waitTicks(main, 1);
+    }
+    if (!landed()) {
+        await sailBrimhavenToArdougne(main, stop);
+        return;
+    }
+    for (let i = 0; i < 8 && !stop(); i++) {
+        if (main.sdk.getState()?.player?.level === 0) return;
+        const d = main.sdk.getDialog();
+        if (d?.isOpen && !d.isWaiting) {
+            await main.direct({ type: 'clickDialogOption', optionIndex: 0, reason: 'SDK' });
+            await waitTicks(main, 1);
+            continue;
+        }
+        const plank = main.sdk.findNearbyLoc(/^gangplank$/i);
+        const op = plank?.optionsWithIndex.find(o => /cross/i.test(o.text))?.opIndex ?? 1;
+        if (plank) {
+            await main.direct({ type: 'interactLoc', x: plank.x, z: plank.z, locId: plank.id, optionIndex: op, reason: 'SDK' });
+        }
+        await waitTicks(main, 1);
+    }
+    if (main.sdk.getState()?.player?.level !== 0) {
+        await sailBrimhavenToArdougne(main, stop);
+    }
+}
+
 if (import.meta.main) {
     // Explicit food and stunned-relog management replaces ambient EAT_GUARD/FLEE_GUARD/PRAYER_GUARD overhead.
     process.env.EAT_GUARD ??= '0';
@@ -592,7 +710,7 @@ if (import.meta.main) {
             }
 
             if (THIEVING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
-                // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
+                // Travel via Karamja Glory -> Brimhaven dock (direct path, no spider/scorpion detours) -> Ardougne dock -> Market.
                 await rubTeleport(
                     main,
                     THIEVING_GLORY_IDS,
@@ -605,36 +723,19 @@ if (import.meta.main) {
                 if (glorySlot !== undefined) {
                     void main.direct({ type: 'dropItem', slot: glorySlot, reason: 'SDK' });
                 }
-                const karWalker = await sessionWalker(main);
-                const brimWalk = await walkPath(
-                    karWalker,
-                    [
-                        { x: 2879, z: 3167, tol: 4 },
-                        { x: 2841, z: 3194, tol: 4 },
-                        { x: 2806, z: 3183, tol: 4 },
-                        { x: 2790, z: 3208, tol: 4 },
-                        { x: 2774, z: 3228, tol: 2 },
-                    ],
-                    { maxTicks: Math.max(10, Math.min(100, cap - elapsedNow())) },
+                await walkDirectNoDetour(
+                    main,
+                    [[2772, 3234, 2]],
+                    isStopped,
+                    () => !!main.sdk.getState()?.nearbyNpcs.find(n => /^customs officer$/i.test(n.name) && n.distance <= 4),
                 );
-                if (!brimWalk.ok) {
-                    await walkWaypointsSafe(main, [[2774, 3228, 3]], isStopped);
-                }
-                await sailBrimhavenToArdougne(main, isStopped);
-                const ardyWalker = await sessionWalker(main);
-                const mktWalk = await walkPath(
-                    ardyWalker,
-                    [
-                        { x: 2668, z: 3280, tol: 3 },
-                        { x: 2660, z: 3289, tol: 3 },
-                        { x: 2629, z: 3296, tol: 2 },
-                        { x: 2621, z: 3293, tol: 2 },
-                    ],
-                    { maxTicks: Math.max(10, Math.min(50, cap - elapsedNow())) },
+                await sailBrimhavenFast(main, isStopped);
+                await walkDirectNoDetour(
+                    main,
+                    [[2654, 3296, 3]],
+                    isStopped,
+                    () => !!main.sdk.getState()?.nearbyNpcs.find(n => /^(man|woman)$/i.test(n.name) && n.reachable !== false && n.distance <= 3),
                 );
-                if (!mktWalk.ok) {
-                    await walkWaypointsSafe(main, [[2621, 3293, 2]], isStopped);
-                }
             } else {
                 await rubTeleport(
                     main,
@@ -648,7 +749,7 @@ if (import.meta.main) {
                 if (ringSlot !== undefined) {
                     await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
                 }
-                await walkWaypointsSafe(main, THIEVING_DIRECT_CWARS_WAYPOINTS, isStopped);
+                await walkDirectNoDetour(main, THIEVING_DIRECT_CWARS_WAYPOINTS, isStopped);
             }
             travelTicks = elapsedNow();
         }
