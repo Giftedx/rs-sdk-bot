@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795603729505,
+ "at": 1795603772999,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,22 +22,6 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
   },
   {
    "account": "Fingerblastr",
@@ -154,6 +138,19 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
    "role": "army"
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/generated/quest-barcrawl.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
   }
  ],
  "army": [
@@ -168,6 +165,7 @@
   "bowbeforeme",
   "deeppockets",
   "dipstick",
+  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
