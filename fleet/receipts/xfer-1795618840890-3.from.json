@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795618840890-3",
  "account": "YewGotWood",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 200,
  "claim": "05c84c25-0fce-4445-a17a-fb8ebb886b1e",
- "count": 0,
- "ok": false,
- "at": 1795619258013,
- "detail": "trade claimed"
+ "count": 200,
+ "ok": true,
+ "at": 1795619281825,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 200,
+  "after": 0
+ },
+ "bank": {
+  "count": 140,
+  "at": 1795619264552
+ },
+ "logout": {
+  "attemptId": "1795619258023-0000024908-0000000001",
+  "at": 1795619281709,
+  "sha256": "72e225d54ba8f391dfca1754b79e1364da74abae540a036000f441bf40ac6731"
+ },
+ "screen": true
 }

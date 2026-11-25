@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795619283713-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Spitroaster",
+  "to": "Quickhandjob",
+  "item": "Law rune",
+  "count": 22,
+  "itemId": 563,
+  "start": 1795619283713,
+  "end": 1795620183713,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

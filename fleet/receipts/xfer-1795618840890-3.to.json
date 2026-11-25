@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795618840890-3",
+ "account": "Quickhandjob",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 200,
+ "claim": "85bab930-c1f0-4581-8c49-b0eaa485a14a",
+ "count": 200,
+ "ok": true,
+ "at": 1795619283397,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 200
+ },
+ "bank": {
+  "count": 200,
+  "at": 1795619282554
+ },
+ "logout": {
+  "attemptId": "1795619273639-0000009184-0000000001",
+  "at": 1795619283268,
+  "sha256": "0f9c733b9aca96a759c087fb60c659b41963fe7dae784e831ba0182794ee73dd"
+ },
+ "screen": true
+}

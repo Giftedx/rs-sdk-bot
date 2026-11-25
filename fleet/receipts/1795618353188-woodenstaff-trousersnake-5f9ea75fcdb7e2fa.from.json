@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795618353188-woodenstaff-trousersnake-5f9ea75fcdb7e2fa",
  "account": "Woodenstaff",
  "partner": "TrouserSnake",
@@ -12,6 +12,12 @@
  "claim": "8edbb653-93be-4e87-8928-f34ec228a59d",
  "count": 0,
  "ok": false,
- "at": 1795619237214,
- "detail": "trade claimed"
+ "at": 1795619276099,
+ "detail": "Error: route to 3183, 3440: precondition bank stop at 3092,3243: withdraw short {\"554\":1}",
+ "logout": {
+  "attemptId": "1795619237223-0000020988-0000000001",
+  "at": 1795619276090,
+  "sha256": "f0d7b2aeec4d16ee0075469ba81b7fdbb234a2ab414b1b697448b0920cfba1f9"
+ },
+ "screen": false
 }
