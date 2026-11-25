@@ -128,6 +128,10 @@ test('the receipt takes the victim view from before the kill message, and the gr
     const stacks = new Map();
     const ground = [{ id: 1231, name: 'dragon_dagger_p', count: 1, x: 3095, z: 3555, distance: 1 }, { id: 882, count: 3, x: 3094, z: 3555, distance: 0 }, { id: 882, count: 2, x: 3096, z: 3556, distance: 2 }, { id: 526, count: 1, x: 3098, z: 3555, distance: 4 }];
     noteGround(ground, stacks); noteGround(ground, stacks);
+    // Around a center tile the account's own distance does not count: the bones at 3098 are 3 tiles from 3095.
+    const around = new Map();
+    noteGround(ground, around, 3, { x: 3095, z: 3555 });
+    expect([...around.keys()].sort()).toEqual(['1231@3095,3555', '526@3098,3555', '882@3094,3555', '882@3096,3556']);
     recordKillGround(res.receipt, 14, stacks, 'skipped: escape');
     expect(JSON.parse(readFileSync(res.receipt!, 'utf8')).ground).toEqual({ tick: 14, items: [{ id: 882, count: 5 }, { id: 1231, name: 'dragon_dagger_p', count: 1 }], pickup: 'skipped: escape' });
     recordKillGround(undefined, 14, stacks, 'ran: 1 reads');

@@ -19,7 +19,8 @@ export type KillFeedMatch = { matched: true; feedTick: number; deltaMs: number |
 // pvp_death_lose_items reads %pk_skull and %prayer8 (Protect Item) in the tick of that message: a skulled death keeps 0
 // items, or its dearest one with Protect Item. Protect Item has no head icon.
 export type KillHead = { skulled: boolean; protect: string[]; tick: number };
-// The stacks within 3 tiles of the killer after the kill, added up by id over each read, and what the pickup did:
+// The stacks within 3 tiles of the victim's tile 6 ticks after the kill message and in each pickup read, added up by id,
+// and what the pickup did:
 // `ran`, `skipped: <reason>` or `none: <reason>`.
 export type KillGround = { tick: number; items: KillItem[]; pickup: string };
 export type KillReceipt = {

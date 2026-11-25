@@ -1497,9 +1497,21 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const holdStartTick = s.tick();
     const seenKillKeys = new Set<string>();
     const heads = new Map<string, KillHead>();
-    // Kills whose message came outside this account's own fight with the victim: no pickup runs for them, and the
-    // receipt takes the ground 2 ticks after the message.
-    const groundDue: { file: string; tick: number }[] = [];
+    // The ground of each kill goes in its receipt GROUND_TICKS after the kill message, read within 3 tiles of the victim's
+    // tile (or of the killer's tile when the victim was out of view), with the stacks that its pickup read. The pickup
+    // waits 6 ticks for a first stack (pk-gang.ts pickUp), and a read at the same delay sees each stack that it can see.
+    // The end of the account's part writes each read that is still due.
+    const GROUND_TICKS = 6;
+    const groundDue: { file: string; tick: number; center: { x: number; z: number }; stacks: Map<string, KillItem>; pickup: string }[] = [];
+    const flushGround = (tickNow: number, all: boolean) => {
+        for (let i = groundDue.length - 1; i >= 0; i--) {
+            const due = groundDue[i]!;
+            if (!all && tickNow - due.tick < GROUND_TICKS) continue;
+            noteGround(s.sdk.getState()?.groundItems ?? [], due.stacks, 3, due.center);
+            recordKillGround(due.file, tickNow, due.stacks, due.pickup);
+            groundDue.splice(i, 1);
+        }
+    };
     const targetFirstBegan = new Map<string, number>();
     const singleFoodFloor = Number(process.env.SQUAD_SINGLE_FOOD_FLOOR ?? '0');
     const singleHpFloor = Number(process.env.SQUAD_SINGLE_HP_FLOOR ?? '0');
@@ -1538,7 +1550,11 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 killReceiptRoot: o.options.killReceiptRoot, feedWatch: squadFeedWatch, victimHead: heads.get(victimLower) ?? null,
                 log: l => o.log(`[${s.name}] ${l}`),
             });
-            if (receipt) { stats.receipts.push(receipt); groundDue.push({ file: receipt, tick }); }
+            if (receipt) {
+                stats.receipts.push(receipt);
+                const center = victimPlayer ? { x: victimPlayer.x, z: victimPlayer.z } : { x: posNow.worldX, z: posNow.worldZ };
+                groundDue.push({ file: receipt, tick, center, stacks: new Map(), pickup: 'none: kill message outside its fight' });
+            }
         }
     };
     const scanKillMessages = (tick: number) => {
@@ -1712,14 +1728,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         if (!inFight && activeGoing) scanKillMessages(tickNow);
         // In a fight, fightPlayer notes the heads after its own message read.
         if (!inFight && stTick) noteHeads(s.client, stTick.nearbyPlayers ?? [], tickNow, heads);
-        for (let i = groundDue.length - 1; i >= 0; i--) {
-            const due = groundDue[i]!;
-            if (tickNow - due.tick < 2) continue;
-            const stacks = new Map<string, KillItem>();
-            noteGround(stTick?.groundItems ?? [], stacks);
-            recordKillGround(due.file, tickNow, stacks, 'none: kill message outside its fight');
-            groundDue.splice(i, 1);
-        }
+        flushGround(tickNow, false);
     });
     try {
         await disableAutoRetaliate(s);
@@ -1978,6 +1987,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     o.log(`[${s.name}] ${l}`);
                 },
             }).finally(() => { inFight = false; });
+            // fightPlayer returns in the tick of the kill message.
+            const foughtAt = s.tick(), tileAtEnd = me();
             scanKillMessages(s.tick());
             freezesCast += r.freezes ?? 0;
             if (r.outcome === 'escaped') escapes++;
@@ -1991,15 +2002,21 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (r.receipt) stats.receipts.push(r.receipt);
             const activeInterlopers = o.threats?.act ? o.threats.step(s.tick()).interlopers.length : 0;
             const pickupSkip = !o.pickup ? 'off' : urgentEscape ? 'escape' : s.tick() < singleUntil ? 'single-way' : activeInterlopers > 0 ? `${activeInterlopers} interlopers` : null;
-            const stacks = new Map<string, KillItem>();
+            const killDue = r.outcome === 'kill' && r.receipt ? {
+                file: r.receipt, tick: foughtAt, stacks: new Map<string, KillItem>(), pickup: pickupSkip ? `skipped: ${pickupSkip}` : '',
+                center: r.targetAt ?? (tileAtEnd ? { x: tileAtEnd.worldX, z: tileAtEnd.worldZ } : { x: 0, z: 0 }),
+            } : null;
             let reads = 0;
-            if (r.outcome === 'kill') noteGround(s.sdk.getState()?.groundItems ?? [], stacks);
             if (!pickupSkip && (r.outcome === 'kill' || gone)) {
-                const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, onScan: g => { reads++; noteGround(g, stacks); }, stop: () => o.stopped() || fallbackDue() || radarMove() || (me()?.hp ?? 99) <= 65 });
+                const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, onScan: g => { reads++; if (killDue) noteGround(g, killDue.stacks); }, stop: () => o.stopped() || fallbackDue() || radarMove() || (me()?.hp ?? 99) <= 65 });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
             }
-            if (r.outcome === 'kill') recordKillGround(r.receipt, s.tick(), stacks, pickupSkip ? `skipped: ${pickupSkip}` : reads ? `ran: ${reads} reads` : 'ran: stopped before its first read');
+            if (killDue) {
+                if (!pickupSkip) killDue.pickup = reads ? `ran: ${reads} reads` : 'ran: stopped before its first read';
+                groundDue.push(killDue);
+                flushGround(s.tick(), false);
+            }
             if (r.outcome === 'died') { if (await recover()) continue; stats.died = true; break; }
             const qAfter = me();
             if (qAfter && diedNow(qAfter)) { if (await recover()) continue; stats.died = true; break; }
@@ -2020,6 +2037,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         const qEnd = me();
         if (!stats.died && qEnd && diedNow(qEnd)) stats.died = true;
         unwatch();
+        flushGround(s.tick(), true);
         o.cohesion?.remove(s.name);
         if (origSendUseItem) s.sdk.sendUseItem = origSendUseItem;
         if (origDirect) s.direct = origDirect;

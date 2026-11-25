@@ -583,9 +583,13 @@ export function noteHeads(client: unknown, players: readonly { name: string; ind
         heads.set(p.name.toLowerCase(), { skulled: h.skulled, protect: [...h.protect], tick });
     }
 }
-// Adds the ground stacks within `radius` tiles of the account, by id, to `into` (a map by `id@x,z`, so a stack read twice counts once).
-export function noteGround(ground: readonly { id: number; name?: string; count: number; x: number; z: number; distance: number }[], into: Map<string, KillItem>, radius = 3): void {
-    for (const g of ground) if (g.distance <= radius) into.set(`${g.id}@${g.x},${g.z}`, { id: g.id, ...(g.name ? { name: g.name } : {}), count: g.count });
+// Adds the ground stacks within `radius` tiles of `center` (Chebyshev), or of the account without a center, to `into`
+// (a map by `id@x,z`, so a stack read twice counts once).
+export function noteGround(ground: readonly { id: number; name?: string; count: number; x: number; z: number; distance: number }[], into: Map<string, KillItem>, radius = 3, center?: { x: number; z: number }): void {
+    for (const g of ground) {
+        const d = center ? Math.max(Math.abs(g.x - center.x), Math.abs(g.z - center.z)) : g.distance;
+        if (d <= radius) into.set(`${g.id}@${g.x},${g.z}`, { id: g.id, ...(g.name ? { name: g.name } : {}), count: g.count });
+    }
 }
 // Writes the ground that a kill left near the killer and what its pickup did to the receipt of that kill.
 export function recordKillGround(file: string | undefined, tick: number, stacks: ReadonlyMap<string, KillItem>, pickup: string): void {
