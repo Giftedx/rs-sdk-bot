@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795583657066-shaftmaker-sausagefest-4e0ffad9064d5e34",
+ "account": "Sausagefest",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 350000,
+ "claim": "3ad4eea5-4d67-4a13-9191-5fe4a07841cb",
+ "count": 0,
+ "ok": false,
+ "at": 1795583796605,
+ "detail": "trade claimed"
+}
