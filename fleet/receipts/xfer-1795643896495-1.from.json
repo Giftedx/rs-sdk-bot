@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795643896495-1",
+ "account": "PocketPool",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "f52e0567-e29f-4767-8889-23990aafd3a6",
+ "count": 0,
+ "ok": false,
+ "at": 1795644195841,
+ "detail": "trade claimed"
+}

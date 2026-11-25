@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795643331423-1",
+ "account": "mmthv2350",
+ "partner": "Stirmypot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "f3e723e1-582a-4ba6-a419-dc6e853ae284",
+ "count": 0,
+ "ok": false,
+ "at": 1795644168974,
+ "detail": "trade claimed"
+}

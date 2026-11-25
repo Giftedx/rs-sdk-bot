@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795643902996-2",
+ "account": "TossTheCaber",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "da19ed39-8b6f-4cda-ab27-75fe3e0d6108",
+ "count": 1,
+ "ok": true,
+ "at": 1795644201429,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795644200727
+ },
+ "logout": {
+  "attemptId": "1795644190926-0000032328-0000000001",
+  "at": 1795644201414,
+  "sha256": "5c30827811beed550e4ccc78d12b6fd3bca6e210a4b39a6ba8b9562ce4dc0bb6"
+ },
+ "screen": true
+}
