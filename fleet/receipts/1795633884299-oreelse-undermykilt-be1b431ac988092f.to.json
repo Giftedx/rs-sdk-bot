@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795633884299-oreelse-undermykilt-be1b431ac988092f",
+ "account": "UnderMyKilt",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nails",
+ "requested": 12,
+ "claim": "ea841a9d-bed1-4f96-81cd-bdfa6da5639b",
+ "count": 12,
+ "ok": true,
+ "at": 1795633913870,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 12
+ },
+ "bank": {
+  "count": 12,
+  "at": 1795633913140
+ },
+ "logout": {
+  "attemptId": "1795633888335-0000019028-0000000001",
+  "at": 1795633913860,
+  "sha256": "ea9812123afa703373869394de960a4c4e087a82a578358de32ae064b7774376"
+ },
+ "screen": true
+}
