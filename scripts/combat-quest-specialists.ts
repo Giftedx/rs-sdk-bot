@@ -257,9 +257,6 @@ export async function walkWaypoints(
     try {
         const r = await walkPath(walker, pts, { maxTicks, stop, look: opts.look ?? 20 });
         if (!r.ok) throw Error(`walk failed (${label}): ${r.detail ?? JSON.stringify(r)}`);
-        if (r.ticks >= 30) {
-            console.log(`WALK_STATS ${label} ticks=${r.ticks} still=${r.still} doors=${r.doors} repaths=${r.repaths} clicks=${r.clicks}`);
-        }
     } finally {
         offDialog();
     }
@@ -605,17 +602,13 @@ export async function rubRingOfDueling(
     stop: StopFn,
     radius = 8,
 ): Promise<void> {
-    const startTick = s.tick();
-    const deadline = startTick + 40;
+    const deadline = s.tick() + 40;
     const arrived = () => {
         const p = posOf(s);
         return !!p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, destTile) <= radius;
     };
     while (!stop() && s.tick() < deadline) {
-        if (arrived()) {
-            console.log(`RUB_RING ticks=${s.tick() - startTick} to=${destTile.x},${destTile.z}`);
-            return;
-        }
+        if (arrived()) return;
         const loopTick = s.tick();
         const d: any = s.sdk.getDialog();
         const pick = d?.isOpen && !d.isWaiting
