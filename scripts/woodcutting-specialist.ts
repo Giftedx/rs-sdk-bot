@@ -73,12 +73,12 @@ const WC_KEEP_IDS = new Set<number>([
 export const WC_NORMAL_XP_25X = 625;
 export const WC_OAK_XP_25X = 937.5;
 
-// Draynor Jail multiway courtyard: (3118,3244) touches oakMid (3115,3243) and oakHub (3118,3245) inside <=7 maxrange of se(3120,3238) and nw(3121,3249).
-export const DRAYNOR_JAIL_SPOT = { x: 3118, z: 3244 } as const;
+// Draynor Jail southern courtyard: (3115,3242) touches oakSW (3114,3239) and oakMid (3115,3243) inside maxrange=7 of sw(3109,3237), se(3120,3238), and nw(3121,3249).
+export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3242 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
+    [3114, 3239],
     [3115, 3243],
     [3118, 3245],
-    [3114, 3239],
     [3115, 3250],
 ];
 
@@ -151,21 +151,21 @@ function findBestTree(
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (!wantOak) {
-                // Inner normal trees beside (3118,3244) keep arrival transition to Oak 15 near zero-walk.
-                return l.x >= 3112 && l.x <= 3119 && l.z >= 3238 && l.z <= 3251 && l.reachable !== false;
+                // Normal trees beside (3115,3242) keep transition to Oak 15 within 1-2 steps.
+                return l.x >= 3111 && l.x <= 3118 && l.z >= 3238 && l.z <= 3249 && l.reachable !== false;
             }
-            // Draynor Jail southern courtyard oaks keeping se(3120,3238) and nw(3121,3249) within maxrange=7.
+            // Draynor Jail southern oaks keeping sw(3109,3237), se(3120,3238), and nw(3121,3249) within maxrange=7.
             return (
-                (l.x === 3115 && l.z === 3243)
+                (l.x === 3114 && l.z === 3239)
+                || (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
-                || (l.x === 3114 && l.z === 3239)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
+    const isHubOak = (l: NearbyLoc) => (l.x === 3114 && l.z === 3239) || (l.x === 3115 && l.z === 3243);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
@@ -198,18 +198,18 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3119 && t.z >= 3242 && t.z <= 3246);
+    const filtered = perimeter.filter(t => t.x >= 3114 && t.x <= 3118 && t.z >= 3242 && t.z <= 3245);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3118,3244) touching oakMid+oakHub with clear paths to se(3120,3238) and nw(3121,3249).
-        const hub = (t.x === 3118 && t.z === 3244)
+        // Prefer exact (3115,3242) touching oakSW+oakMid inside maxrange=7 of sw(3109,3237), se(3120,3238), nw(3121,3249).
+        const hub = (t.x === 3115 && t.z === 3242)
             ? 0
-            : (t.x === 3117 && t.z === 3246)
+            : (t.x === 3116 && t.z === 3242)
                 ? 1
-                : 2 + Math.max(Math.abs(t.x - 3118), Math.abs(t.z - 3244));
+                : 2 + Math.max(Math.abs(t.x - 3115), Math.abs(t.z - 3242));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -242,7 +242,8 @@ function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, n
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
         if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 10) return false;
-        if (n.x < 3107 || n.x > 3128 || n.z < 3235 || n.z > 3253) return false;
+        // Exclude jailguard@(3127,3248) behind the stone jail building wall (x>=3121, z=3240..3246).
+        if (n.x < 3108 || n.x > 3122 || n.z < 3236 || n.z > 3251) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
         if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
@@ -389,7 +390,7 @@ if (import.meta.main) {
             // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
             await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
         }
-        await walkWaypointsSafe(main, [[3118, 3244, 1]], isStopped);
+        await walkWaypointsSafe(main, [[3115, 3242, 0]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
