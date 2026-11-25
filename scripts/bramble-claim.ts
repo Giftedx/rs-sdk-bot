@@ -226,6 +226,26 @@ async function findPartner(s: Session, world: Awaited<ReturnType<typeof getWorld
     return null;
 }
 
+const OVERLAND_WAYPOINTS = [
+    { minX: 2740, tile: { x: 2727, z: 3493, level: 0 } }, // Seers Bank
+    { minX: 2830, tile: { x: 2809, z: 3441, level: 0 } }, // Catherby Bank
+    { minX: 2960, tile: { x: 2946, z: 3368, level: 0 } }, // Falador West Bank
+] as const;
+
+async function travelToVarrockWestBank(s: Session, world: Awaited<ReturnType<typeof getWorld>>): Promise<void> {
+    const start = posOf(s);
+    if (start && start.level === 0 && start.z < 6400 && d8(start, VWB_BANK) > 220) {
+        for (const wp of OVERLAND_WAYPOINTS) {
+            const cur = posOf(s);
+            if (!cur || cur.level !== 0 || cur.z >= 6400 || cur.x >= wp.minX) continue;
+            const hop = await goTo(s, world, wp.tile, accountOf(s), { maxRetriesPerLeg: 3, legTimeoutTicks: 150, planBudgetMs: 90_000 });
+            if (!hop.ok) throw Error(`route to Varrock West Bank failed at ${wp.tile.x},${wp.tile.z}: ${hop.reason} ${hop.detail}`);
+        }
+    }
+    const route = await goTo(s, world, VWB_BANK, accountOf(s), { maxRetriesPerLeg: 3, legTimeoutTicks: 150, planBudgetMs: 90_000 });
+    if (!route.ok) throw Error(`route to Varrock West Bank failed: ${route.reason} ${route.detail}`);
+}
+
 async function acceptOfferAndConfirm(s: Session, requireCoinsAtLeast: number, timeoutTicks: number): Promise<'completed' | 'declined' | 'mismatch' | 'timeout'> {
     for (let i = 0; i < timeoutTicks; i++) {
         const t = s.sdk.getTradeState();
@@ -296,8 +316,7 @@ async function claimAccount(rawName: string, partner: string, argv: string[]): P
     let settleOk = false;
     try {
         const world = await getWorld();
-        const route = await goTo(session, world, VWB_BANK, accountOf(session), { maxRetriesPerLeg: 3, legTimeoutTicks: 150 });
-        if (!route.ok) throw Error(`route to Varrock West Bank failed: ${route.reason} ${route.detail}`);
+        await travelToVarrockWestBank(session, world);
 
         const bankBefore = await openFreshBank(session);
         beforeCoins = countCoins(bankBefore.items) + countCoins(session.sdk.getInventory());
