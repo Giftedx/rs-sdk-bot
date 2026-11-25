@@ -704,7 +704,7 @@ export function pickOrder(orders: readonly Order[], receipts: readonly Receipt[]
         const role = order.from.toLowerCase() === me ? 'from' : order.to.toLowerCase() === me ? 'to' : null;
         if (!role || now >= order.end || order.start - now > lead) continue;
         const other: TradeRole = role === 'from' ? 'to' : 'from';
-        if (receipts.some(r => r.id === order.id && (r.role === role || (r.role === other && r.version === 2 && r.state === 'failed')))) continue;
+        if (receipts.some(r => r.id === order.id && (r.role === role || (r.role === other && r.version === 2 && (r.state === 'failed' || r.state === 'reconcile'))))) continue;
         return { order, role };
     }
     return null;
@@ -816,7 +816,7 @@ export function partnerFailed(dir: string, order: Order, role: TradeRole, prelog
     const other: TradeRole = role === 'from' ? 'to' : 'from';
     try {
         const receipt = JSON.parse(readFileSync(join(dir, `${order.id}.${other}.json`), 'utf8'));
-        if (receipt?.version === 2 && receipt.id === order.id && receipt.state === 'failed') return true;
+        if (receipt?.version === 2 && receipt.id === order.id && (receipt.state === 'failed' || receipt.state === 'reconcile')) return true;
     } catch { /* absent or unreadable */ }
     return readPreloginFailure(preloginDir, order, other) !== null;
 }

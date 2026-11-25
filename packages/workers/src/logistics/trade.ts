@@ -7,7 +7,7 @@ import { accountOf, assertServerAllowed, countItems, finish, getWorld, openBot, 
 import { cargoDir, exactItem, type Cargo } from '../../../core/src/cargo';
 import { depositObserved } from '../../../core/src/deposit';
 import { FLEET_DIR } from '../../../core/src/fleet';
-import { clearPreloginFailure, validOrder, writePreloginFailure, writeTradeReceipt, type OrderLine, type TradeReceipt } from '../../../core/src/fleet-trade-settlement';
+import { clearPreloginFailure, orderLines, validOrder, writePreloginFailure, writeTradeReceipt, type Order, type OrderLine, type TradeReceipt } from '../../../core/src/fleet-trade-settlement';
 export type { OrderLine };
 import type { Outcome } from '../../../core/src/act';
 import type { Session } from '../../../core/src/inprocess';
@@ -25,7 +25,7 @@ import {
     ARDY_BANK, BOAT_FARES_OUT, BOAT_FARES_ROUND, assertTradeAdmission, coinTradeObservation, courierCargo, courierFoodAllocation,
     courierIslandProblem, courierRecord, deliveryRecipientAtBank, deliveryResume, draynorApproach, exactCoinDelta,
     featherBatchAmount, featherPurchaseAmount, featherPurchaseEffect, fleetTradeOutcome, fleetTradeRecord,
-    giverReadyFile, heldItems, markGiverReady, NORTH_BANK, NORTH_TO_SOUTH, noteCourierOwned, noteCourierPreflight,
+    giverReadyFile, heldItems, itemDefinition, markGiverReady, NORTH_BANK, NORTH_TO_SOUTH, noteCourierOwned, noteCourierPreflight,
     onKaramja, outboundStart, parseCoins, parseFanin, parseFanout, partnerFailed, performFleetTransfer, pickOrder,
     prepareCoinSlot, releaseWatch, requestCourierFunding, runOrderWork, SARIM, separateTroutNotes,
     waitForGiver, watchTradeScreen, type CoinState, type FleetTradeProgress,
@@ -936,6 +936,142 @@ export async function runFoodChain(args: readonly string[], env: Record<string, 
     }
 }
 
+export async function prepareFleetSender(
+    s: Session,
+    order: Order,
+    progress: FleetTradeProgress,
+    wait: typeof waitUntil = waitUntil,
+): Promise<void> {
+    if (!validOrder(order)) return;
+    const orderLineMatches = (r: { id: number; name: string }, re: RegExp, itemId?: number) => {
+        if (!re.test(r.name)) return false;
+        if (itemId === undefined) return true;
+        const def = itemDefinition(s, r.id);
+        const base = def && typeof def.certtemplate === 'number' && def.certtemplate !== -1 && typeof def.certlink === 'number' && def.certlink >= 0 ? def.certlink : r.id;
+        return base === itemId;
+    };
+    const allLines = orderLines(order);
+    const prep = allLines
+        .map((line, i) => {
+            const item = exactItem(line.item);
+            const wrongId = line.itemId !== undefined && s.sdk.getInventory().some(r => item.test(r.name) && !orderLineMatches(r, item, line.itemId));
+            const heldTotal = line.itemId === undefined
+                ? countItems(s, item)
+                : s.sdk.getInventory().filter(r => orderLineMatches(r, item, line.itemId)).reduce((n, r) => n + r.count, 0);
+            return { line, i, item, wrongId, need: heldTotal < line.count };
+        })
+        .filter(l => l.need || l.wrongId);
+    if (!prep.length) return;
+
+    if (!(await s.bot.openBank()).success || !await wait(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) {
+        throw Error('bank did not open');
+    }
+
+    const depositRow = async (
+        row: Parameters<Session['bot']['depositItem']>[0],
+        done: () => boolean,
+        errorDetail: string,
+    ) => {
+        const generation = s.bankObservation?.()?.generation ?? -1;
+        progress.uncertain = true;
+        await s.bot.depositItem(row, -1);
+        if (!await wait(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && done(), { timeoutTicks: 10 })) {
+            throw Error(errorDetail);
+        }
+        progress.uncertain = false;
+    };
+
+    const matchesAnyOrderLine = (r: { id: number; name: string }) =>
+        allLines.some(l => orderLineMatches(r, exactItem(l.item), l.itemId));
+
+    for (const { line, i, item } of prep) {
+        const held = () => line.itemId === undefined
+            ? countItems(s, item)
+            : s.sdk.getInventory().filter(r => orderLineMatches(r, item, line.itemId)).reduce((n, r) => n + r.count, 0);
+
+        if (line.itemId !== undefined) {
+            for (const wrong of [...new Map(s.sdk.getInventory().filter(r => item.test(r.name) && !orderLineMatches(r, item, line.itemId)).map(r => [r.id, r])).values()]) {
+                await depositRow(
+                    wrong,
+                    () => !s.sdk.getInventory().some(r => r.id === wrong.id),
+                    `sender conflicting ${line.item}#${wrong.id} deposit not confirmed`,
+                );
+            }
+        }
+        const loose = s.sdk.getInventory().filter(r => orderLineMatches(r, item, line.itemId) && r.count === 1);
+        if (line.count > 1 && !/^coins$/i.test(line.item) && loose.length) {
+            await depositRow(
+                loose[0]!,
+                () => !s.sdk.getInventory().some(r => orderLineMatches(r, item, line.itemId) && r.count === 1),
+                `sender loose ${line.item} deposit not confirmed`,
+            );
+        }
+        if (held() >= line.count) continue;
+
+        const bankBefore = s.bankObservation?.();
+        const row = bankBefore?.items.find(r => orderLineMatches(r, item, line.itemId));
+        const amount = line.count - held(), bankCount = row?.count ?? 0;
+        if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${line.item} ${bankCount} banked + ${held()} held < ${line.count}`);
+        const target = s.sdk.getState()?.bank.items.find(r => r.id === row.id);
+        if (!target) throw Error(`sender bank item is unavailable: ${line.item}`);
+
+        const stack = s.sdk.getInventory().find(r => orderLineMatches(r, item, line.itemId));
+        const rowDef = itemDefinition(s, row.id);
+        const inherentlyStackable = /^coins$/i.test(line.item)
+            || rowDef?.stackable === true
+            || (!!stack && stack.id === row.id && stack.count > 1);
+        const unnoteable = rowDef !== undefined && typeof rowDef.certlink === 'number' && rowDef.certlink === -1;
+        const asNote = amount > 1 && !inherentlyStackable && !unnoteable;
+        const neededSlots = inherentlyStackable
+            ? (stack ? 0 : 1)
+            : asNote
+                ? (stack && stack.id !== row.id ? 0 : 1)
+                : amount;
+
+        if (28 - s.sdk.getInventory().length < neededSlots) {
+            const unrelated = s.sdk.getInventory().filter(r => !matchesAnyOrderLine(r));
+            // Free non-coin multi-slot items first so full packs clear in minimal bank calls.
+            const slotCounts = new Map<number, number>();
+            for (const r of unrelated) slotCounts.set(r.id, (slotCounts.get(r.id) ?? 0) + 1);
+            const sortedIds = [...new Set(unrelated.map(r => r.id))].sort((a, b) => {
+                if (a === 995) return 1;
+                if (b === 995) return -1;
+                return (slotCounts.get(b) ?? 0) - (slotCounts.get(a) ?? 0);
+            });
+            for (const id of sortedIds) {
+                if (28 - s.sdk.getInventory().length >= neededSlots) break;
+                const candidate = s.sdk.getInventory().find(r => r.id === id);
+                if (!candidate) continue;
+                await depositRow(
+                    candidate,
+                    () => !s.sdk.getInventory().some(r => r.id === id),
+                    `sender pack space deposit not confirmed: ${candidate.name}`,
+                );
+            }
+            const freeAfter = 28 - s.sdk.getInventory().length;
+            if (freeAfter < neededSlots) {
+                throw Error(`sender pack full: need ${neededSlots} slots for ${line.item}, ${freeAfter} free`);
+            }
+        }
+
+        progress.uncertain = true;
+        await s.bot.withdrawItem(target, amount, { asNote });
+        const confirmed = () => {
+            const after = s.bankObservation?.();
+            const remaining = after?.items.filter(r => r.id === row.id).reduce((n, r) => n + r.count, 0);
+            return after && after.generation > bankBefore.generation && remaining === bankCount - amount && held() === line.count ? after : null;
+        };
+        if (!await wait(s, () => !!confirmed(), { timeoutTicks: 10 })) throw Error(`sender withdrawal debit or pack credit not confirmed: ${line.item}`);
+        const bankAfter = confirmed();
+        if (!bankAfter) throw Error('sender withdrawal observation changed');
+        const bank = { count: amount, at: bankAfter.at };
+        if (i === 0) progress.bank = bank;
+        else (progress.lines ??= [])[i - 1] = { count: 0, bank };
+    }
+    await s.bot.closeBank();
+    progress.uncertain = false;
+}
+
 export async function runFleetTrade(account: string, onlyId?: string, env: Record<string, string | undefined> = process.env): Promise<void> {
     const readJson = (dirPath: string) =>
         existsSync(dirPath) ? readdirSync(dirPath).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dirPath, f), 'utf8'))]; } catch { return []; } }) : [];
@@ -1012,72 +1148,7 @@ export async function runFleetTrade(account: string, onlyId?: string, env: Recor
             const there = await walkTarget(s, tile, false, undefined, { noJewelry: true }) as Outcome;
             if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
             await s.bot.walkTo(tile.x, tile.z, 0);
-            const orderLineMatches = (r: { id: number; name: string }, re: RegExp, itemId?: number) => {
-                if (!re.test(r.name)) return false;
-                if (itemId === undefined) return true;
-                const def = (s.client as { objType?: (id: number) => { certtemplate?: number; certlink?: number } } | undefined)?.objType?.(r.id);
-                const base = def && typeof def.certtemplate === 'number' && def.certtemplate !== -1 && typeof def.certlink === 'number' && def.certlink >= 0 ? def.certlink : r.id;
-                return base === itemId;
-            };
-            const prep = role === 'from'
-                ? validOrder(order) && (order.extra?.length ? [{ item: order.item, count: order.count, itemId: order.itemId }, ...order.extra] : [{ item: order.item, count: order.count, itemId: order.itemId }])
-                    .map((line, i) => {
-                        const item = exactItem(line.item);
-                        const wrongId = line.itemId !== undefined && s.sdk.getInventory().some(r => item.test(r.name) && !orderLineMatches(r, item, line.itemId));
-                        const heldTotal = line.itemId === undefined ? countItems(s, item) : s.sdk.getInventory().filter(r => orderLineMatches(r, item, line.itemId)).reduce((n, r) => n + r.count, 0);
-                        return { line, i, item, wrongId, need: heldTotal < line.count };
-                    }).filter(l => l.need || l.wrongId)
-                : [];
-            if (prep && prep.length) {
-                if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) throw Error('bank did not open');
-                for (const { line, i, item } of prep) {
-                    const held = () => line.itemId === undefined ? countItems(s, item) : s.sdk.getInventory().filter(r => orderLineMatches(r, item, line.itemId)).reduce((n, r) => n + r.count, 0);
-                    if (line.itemId !== undefined) {
-                        for (const wrong of [...new Map(s.sdk.getInventory().filter(r => item.test(r.name) && !orderLineMatches(r, item, line.itemId)).map(r => [r.id, r])).values()]) {
-                            const generation = s.bankObservation?.()?.generation ?? -1;
-                            progress.uncertain = true;
-                            await s.bot.depositItem(wrong, -1);
-                            if (!await waitUntil(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && !s.sdk.getInventory().some(r => r.id === wrong.id), { timeoutTicks: 10 })) {
-                                throw Error(`sender conflicting ${line.item}#${wrong.id} deposit not confirmed`);
-                            }
-                            progress.uncertain = false;
-                        }
-                    }
-                    const loose = s.sdk.getInventory().filter(r => orderLineMatches(r, item, line.itemId) && r.count === 1);
-                    if (line.count > 1 && !/^coins$/i.test(line.item) && loose.length) {
-                        const generation = s.bankObservation?.()?.generation ?? -1;
-                        progress.uncertain = true;
-                        await s.bot.depositItem(loose[0]!, -1);
-                        if (!await waitUntil(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && !s.sdk.getInventory().some(r => orderLineMatches(r, item, line.itemId) && r.count === 1), { timeoutTicks: 10 })) {
-                            throw Error(`sender loose ${line.item} deposit not confirmed`);
-                        }
-                        progress.uncertain = false;
-                    }
-                    if (held() >= line.count) continue;
-                    const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(r => orderLineMatches(r, item, line.itemId));
-                    const amount = line.count - held(), bankCount = row?.count ?? 0;
-                    if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${line.item} ${bankCount} banked + ${held()} held < ${line.count}`);
-                    const target = s.sdk.getState()?.bank.items.find(r => r.id === row.id);
-                    if (!target) throw Error(`sender bank item is unavailable: ${line.item}`);
-                    const stack = s.sdk.getInventory().find(r => orderLineMatches(r, item, line.itemId));
-                    const asNote = amount > 1 && !/^coins$/i.test(line.item) && !(stack && stack.count > 1);
-                    progress.uncertain = true;
-                    await s.bot.withdrawItem(target, amount, { asNote });
-                    const confirmed = () => {
-                        const after = s.bankObservation?.();
-                        const remaining = after?.items.filter(r => r.id === row.id).reduce((n, r) => n + r.count, 0);
-                        return after && after.generation > bankBefore.generation && remaining === bankCount - amount && held() === line.count ? after : null;
-                    };
-                    if (!await waitUntil(s, () => !!confirmed(), { timeoutTicks: 10 })) throw Error(`sender withdrawal debit or pack credit not confirmed: ${line.item}`);
-                    const bankAfter = confirmed();
-                    if (!bankAfter) throw Error('sender withdrawal observation changed');
-                    const bank = { count: amount, at: bankAfter.at };
-                    if (i === 0) progress.bank = bank;
-                    else (progress.lines ??= [])[i - 1] = { count: 0, bank };
-                }
-                await s.bot.closeBank();
-                progress.uncertain = false;
-            }
+            if (role === 'from') await prepareFleetSender(s, order, progress);
             if (role === 'from' && order.takerWaits) markGiverReady(REPO_ROOT, order.id);
             await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role, preloginDir) || releaseMoved() });
         });
