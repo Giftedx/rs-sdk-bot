@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601689104,
+ "at": 1795601703595,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,36 +24,20 @@
    "role": "rehearsal"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "TrouserSnake",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "grapes"
+   ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:1987",
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -104,49 +88,71 @@
    "role": "helper"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-93-p94 ITEM_ID=440 QUANTITY=93 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=94 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-186-p517 ITEM_ID=453 QUANTITY=186 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=93 ORE_RESERVE=0 -- smithing smelt"
+    "smithing",
+    "anvil",
+    "1500"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "1359",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1359",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1359",
+   "role": "army"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "brew:3dose2antipoison"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "1200",
+    "MEMBERS": "1",
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "67"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:2481",
+   "role": "army"
   },
   {
    "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "foraging",
-    "grapes"
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
+   "goal": "campaign:haggis:item:2152",
    "role": "helper"
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-gather"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250"
-   },
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
+   "env": {},
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:mmtha0205",
@@ -176,7 +182,7 @@
   "mineyourbiz",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
+  "pickpockdick",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
@@ -184,7 +190,6 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "undermykilt",
   "woodpecker",
   "yewfirst"
  ],
