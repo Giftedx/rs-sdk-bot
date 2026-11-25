@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795640103986,
+ "at": 1795640117055,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,7 +84,7 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2200 TARGET_COUNT=220 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2190 TARGET_COUNT=219 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=224 -- cooking food"
    ],
    "env": {
@@ -99,7 +99,7 @@
    "account": "Stirmypot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=53 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=60 \"ITEM_NAME=Nature rune\" -- loadout",
     "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Stirmypot BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
