@@ -16,7 +16,7 @@ import { xpForLevel } from '../../../planner/src/curve';
 import { ownerOfIn } from '../../../core/src/fleet-snapshots';
 import { isLocalServer } from '../../../core/src/localserver';
 import { findStopFile, fleetStateFile } from '../../../core/src/practice-paths';
-import { cached, dashboardDir, every, FILES, fleetList, getMapBytes, liveAccounts, MAIN, MAP, NL, OBJS, PAGE_FILE, practice, remoteNames, ROLE_SKILL, root, SCRIPT_ROLE, shortPhase, snapshotFiles, type Status } from '../config';
+import { cached, dashboardDir, every, FILES, fleetList, getMapBytes, goalTraining, liveAccounts, MAIN, MAP, NL, OBJS, PAGE_FILE, practice, remoteNames, ROLE_SKILL, root, SCRIPT_ROLE, shortPhase, snapshotFiles, type Status } from '../config';
 import { getItemPrices, getPricesAt, icons, itemExamines, keySupplyIds, marketById, npcLootPrices, vault } from '../market';
 import { boardTops, EXTRA, extraBoards, firstSeen, fmtTicks, inferRole, liveTop, NO_ROLE, parseTime, rankDelta, ranks, roster, serverTick, SKILL_BOARDS, snapshot, topOf, valueRanks, world } from '../world';
 import { getBuildMs, getCpuPct, getPrRows, procs, viewerTimings } from './host';
@@ -104,10 +104,11 @@ function buildState() {
         const s = byHand ? { ...s0, role: byHand.role, goal: byHand.goal } : s0;
         const rankRows = [...(ranks.get(name)?.rows ?? []), ...valueRanks(name)];
         const guess = NO_ROLE.has(s.role) && name !== MAIN ? inferRole(s, rankRows) : null;
-        const skill = byHand ? byHand.skill ?? null : ROLE_SKILL[s.role] ?? (guess && (s.skills ?? []).some((k: any) => k.name === guess) ? guess : null);
+        const training = byHand ? null : goalTraining(s.goal);
+        const skill = byHand ? byHand.skill ?? null : training?.skill ?? ROLE_SKILL[s.role] ?? (guess && (s.skills ?? []).some((k: any) => k.name === guess) ? guess : null);
         const sk = skill ? (s.skills ?? []).find((k: any) => k.name === skill) : null;
         // TARGET is a level only when it is a whole number from 2 to 99; some scripts use it for a count or a name.
-        const targetRaw = Number(s.env?.target), target = Number.isInteger(targetRaw) && targetRaw >= 2 && targetRaw <= 99 ? targetRaw : 99;
+        const targetRaw = Number(s.env?.target), target = Number.isInteger(targetRaw) && targetRaw >= 2 && targetRaw <= 99 ? targetRaw : training?.level ?? 99;
         const r = fresh ? rate(name, skill) : null;
         // XP left to this run's TARGET level on this server's curve (packages/planner/src/curve.ts), not always 99.
         const xpLeft = sk && Number.isFinite(sk.xp) ? Math.max(0, cachedXpForLevel(target) - sk.xp) : null;
@@ -135,8 +136,10 @@ function buildState() {
         const production = productionGoal(currentGoal, jobBeforeStatus?.script);
         const reservedEntry = mine.some(j => !j.script || j.state === 'reserved');
         const res = String(s.result ?? '');
+        // Floor items are what the account saw at its last status: once it is out of the world and its status is old,
+        // they are days-old sightings, and the map would draw them as current.
         return {
-            ...s, ground: name === MAIN ? [] : s.ground ?? [], flow: name === MAIN || s.snapshotOnly ? null : flowView(flows, name), name, fresh, inWorld, processActive, currentGoal, production, operation: s.snapshotOnly ? (inWorld ? 'unobserved' : 'offline') : operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
+            ...s, ground: name === MAIN || !(fresh || inWorld) ? [] : s.ground ?? [], flow: name === MAIN || s.snapshotOnly ? null : flowView(flows, name), name, fresh, inWorld, processActive, currentGoal, production, operation: s.snapshotOnly ? (inWorld ? 'unobserved' : 'offline') : operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(nameLower),
             practice: isLocalServer(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,

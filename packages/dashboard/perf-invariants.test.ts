@@ -320,7 +320,7 @@ describe('dashboard perf invariants', () => {
         expect(rosterView(roster, now)).toHaveLength(2);
         const wild = wildernessView(roster, fleet, now);
         expect(wild.map(w => w.name)).toEqual(['Rival1', 'Bot1']);
-        const spots = contentionView([{ side: 'local', resources: ['spot:3095,3530'] }], roster, fleet, now);
+        const spots = contentionView([{ side: 'local', at: now, resources: ['spot:3095,3530'] }], roster, fleet, now);
         expect(spots[0]?.others).toEqual(['Rival1']);
         expect(spots[0]?.ours).toEqual(['Bot1']);
     });

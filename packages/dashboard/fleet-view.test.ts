@@ -117,6 +117,13 @@ test('other sides become fleet rows with snapshot levels and items, a world-feed
  expect(moved.map(r=>[r.name,r.side,r.skills[0]?.level])).toEqual([['mover','cloud-2',9],['Stay','cloud',undefined]]);
  const late=remoteBots(snaps,new Set(),new Map([['tossthecaber',{x:1,z:2,level:0,combat:3,seen:now-60_000}]]),new Map(),now);
  expect(late.find(x=>x.name==='TossTheCaber').fresh).toBe(false);expect(late.find(x=>x.name==='TossTheCaber').pos).toEqual({x:1,z:2,level:0});
+ // Last seen is the newer of the snapshot time and the feed sighting, never "never" for an account a snapshot dates.
+ expect(remoteBots(snaps,new Set(),new Map(),new Map(),now).find(x=>x.name==='TossTheCaber').lastSeen).toBe(now-6000);
+ expect(rows[0].lastSeen).toBe(now-1000);
+});
+test('a side total counts real skills only, not the Overall row or the unused Stat18 and Stat19 slots',()=>{
+ const v=fleetSidesView([{side:'local',at:1,accounts:[{name:'A',skills:[{name:'Overall',level:3},{name:'Attack',level:2},{name:'Stat18',level:1},{name:'Stat19',level:1},{name:'Mining',level:1}]}]}],[],2);
+ expect(v.sides[0].accounts[0].total).toBe(3);
 });
 
 test('remote observations retain skill detail, worn slots, journal and bank ages without proving an online session',()=>{

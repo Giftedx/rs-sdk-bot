@@ -101,6 +101,10 @@ describe('hosted views',()=>{
   expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,text:'coins'}]);expect(p.events).toEqual([]);
   expect(JSON.stringify(p)).not.toMatch(/banked|packCoins|15000/);
  });
+ test('a specialist run id reads as the skill specialist, not as the account name',()=>{
+  const p=publicView({bots:[{name:'NockAndLoad',goal:'run-nockandload-fletching-specialist-1795166115412 [task-1a2b]'},{name:'Mineshafted',currentGoal:'run-mineshafted-mining-specialist-1795166115999'}]});
+  expect(p.bots[0].goal).toBe('Fletching specialist');expect(p.bots[1].currentGoal).toBe('Mining specialist');
+ });
 });
 
 describe('withSides',()=>{
@@ -298,4 +302,9 @@ test('relay Views strip redundant defaults, raw collector blobs, unused vault ta
  expect(ctl.fleetSides.orders).toEqual([{end:20,from:'A',to:'B',item:'Coins',count:100,state:'open'}]);
  expect(ctl.control.capabilities[0].checks).toEqual([{id:'unit',phase:'regression',timeoutMs:5000}]);
  expect(Object.keys(ctl.icons).sort()).toEqual(['Coins','Lobster','Rune scimitar','Shark','Whip']);
+});
+
+test('an account with no status time and no skills (credentials only, never logged in) is not a public row',()=>{
+ const p=publicView({bots:[{name:'Fresh',at:0,skills:[],role:'unknown'},{name:'Worker',at:5,skills:[]},{name:'Seen',at:0,skills:[],inWorld:true}]});
+ expect(p.bots.map((b:any)=>b.name)).toEqual(['Worker','Seen']);
 });

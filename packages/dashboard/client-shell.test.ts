@@ -2262,6 +2262,10 @@ test('Gear Advisor handles rev 289 ID tiers, quests, tools, operator privacy and
  const rangeAdvice=setup(rangeBot,true).gearAdvisorFor(rangeBot);
  expect(rangeAdvice.rows.find((r:any)=>r.id==='body-ranged')).toMatchObject({status:'locked',target:{id:2501,name:'Dragonhide body (Red)'},reason:'Needs Ranged 60'});
  expect(rangeAdvice.rows.find((r:any)=>r.id==='legs-ranged')).toMatchObject({status:'ready',target:{id:2493,name:'Dragonhide chaps (Blue)'}});
+ // A tier below the worn one is never the next target, even when its quest is not done.
+ const chainBot={...meleeBot,skills:[...meleeBot.skills.filter(s=>s.name!=='Defence'),{name:'Defence',level:70}],equipment:[{slot:4,id:3140,name:'Dragon chainbody'}],quests:[{name:'Dragon Slayer',state:'not started'}]};
+ const chainRow=setup(chainBot,true).gearAdvisorFor(chainBot).rows.find((r:any)=>r.id==='body-melee');
+ expect(chainRow.current?.name).toBe('Dragon chainbody');expect(chainRow.target?.name).not.toBe('Rune platebody');expect(chainRow.reason).not.toContain('Dragon Slayer');
  // Populated /api/gear-catalog with empty requires.skills:{} must NEVER wipe tier.skills; Dragon halberd keeps Strength 30.
  const harness=setup(rangerBot,true);
  harness.win.atlasGearCatalog([

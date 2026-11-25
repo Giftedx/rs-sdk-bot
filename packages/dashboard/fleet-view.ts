@@ -28,7 +28,7 @@ export function fleetSidesView(snapshots:any[],orders:any[],now:number,receipts:
  const sides=snapshots.filter(s=>s&&typeof s.side==='string'&&Array.isArray(s.accounts)).map(s=>({
   side:s.side,at:Number.isFinite(s.at)?s.at:null,late:!Number.isFinite(s.at)||now-s.at>3*SIDE_SYNC_MS,
   accounts:s.accounts.filter((a:any)=>a&&typeof a==='object').map((a:any)=>({name:String(a.name),at:Number.isFinite(a.at)?a.at:null,
-   total:Array.isArray(a.skills)?a.skills.filter((k:any)=>k?.name!=='Overall').reduce((n:number,k:any)=>n+(Number(k.level)||0),0):null,
+   total:Array.isArray(a.skills)?a.skills.filter((k:any)=>k?.name!=='Overall'&&!/^Stat\d+$/.test(String(k?.name))).reduce((n:number,k:any)=>n+(Number(k.level)||0),0):null,
    coins:coinsIn(a.bank)+coinsIn(a.inventory)})).sort((x:any,y:any)=>x.name.localeCompare(y.name))}))
   .sort((a,b)=>(a.side==='local'?-1:b.side==='local'?1:a.side.localeCompare(b.side)));
  const receiptsByOrder=new Map<string,any[]>();
@@ -175,7 +175,7 @@ export function remoteBots(snapshots:any[],localNames:ReadonlySet<string>,roster
     role:null,goal:null,planJob,currentGoal:planJob?.goal?`${planJob.enabled?'Planned':'Disabled'}: ${planJob.goal}`:'',
     pos:useFeed?{x:live!.x,z:live!.z,level:live!.level}:pos,live:inWorld?live:null,combat:useFeed?live!.combat:observation.combat,
     fresh:inWorld,inWorld,operation:inWorld?'observed':'offline',practice:false,reserved:false,
-    seenInFeed:firstSeen.has(name.toLowerCase()),lastSeen:live?.seen??null};
+    seenInFeed:firstSeen.has(name.toLowerCase()),lastSeen:Math.max(at??0,dated(live?.seen,now)?live!.seen:0)||null};
    const index=place.get(name.toLowerCase());
    if(index===undefined){place.set(name.toLowerCase(),rows.length);rows.push(row);}else if(time(row)>time(rows[index]))rows[index]=row;
   }

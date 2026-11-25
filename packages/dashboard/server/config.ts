@@ -45,7 +45,15 @@ export const SCRIPT_ROLE: Record<string, { role: string; skill?: string; goal: s
     'banker.ts': { role: 'bank', goal: 'bank' },
     'give-to-banker.ts': { role: 'give', goal: 'give to the bank' },
 };
-export const ROLE_SKILL: Record<string, string> = { thieving: 'Thieving', fishing: 'Fishing', woodcutting: 'Woodcutting', mining: 'Mining', runecraft: 'Runecraft', cooking: 'Cooking', crafting: 'Crafting', combat: 'Attack' };
+const TRAINED_SKILLS = ['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
+// A role named after a skill trains that skill; the combat role trains Attack.
+export const ROLE_SKILL: Record<string, string> = { ...Object.fromEntries(TRAINED_SKILLS.map(s => [s.toLowerCase(), s])), combat: 'Attack' };
+// A goal such as "train Prayer to 99 burying trooper bones" names its skill and level, and wins over the role.
+export function goalTraining(goal: unknown): { skill: string; level: number } | null {
+    const m = String(goal ?? '').match(/^train (\w+) to (\d{1,2})\b/i);
+    const skill = m ? TRAINED_SKILLS.find(s => s.toLowerCase() === m[1]!.toLowerCase()) : undefined, level = m ? Number(m[2]) : NaN;
+    return skill && level >= 2 && level <= 99 ? { skill, level } : null;
+}
 export const NL = String.fromCharCode(10);
 
 export type Status = Record<string, any> & { name: string; at: number; server: string };

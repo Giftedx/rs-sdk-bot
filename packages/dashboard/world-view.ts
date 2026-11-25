@@ -118,7 +118,9 @@ export function wildernessView(roster: ReadonlyMap<string, Seen & { name?: strin
 }
 
 // Players near each claimed resource with a tile ("knight:2582,3297") or named spot ("shop:aubury"): ours and others,
-// within SPOT_RADIUS tiles on that plane.
+// within SPOT_RADIUS tiles on that plane. A side rewrites its claim file every sync (10 minutes); a file older than
+// CLAIM_MAX_MS is from a side that stopped, so its spots are not ours now.
+export const CLAIM_MAX_MS = 30 * 60_000;
 export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen & { name?: string }>, fleet: ReadonlySet<string>, now: number, radius = SPOT_RADIUS) {
     const online: { name: string; x: number; z: number; level: number; isFleet: boolean }[] = [];
     for (const [n, p] of roster) {
@@ -130,6 +132,7 @@ export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen &
     const listed = new Set<string>();
     for (const c of claims) {
         if (!c || typeof c.side !== 'string' || !Array.isArray(c.resources)) continue;
+        if (!(Number.isFinite(c.at) && now - c.at < CLAIM_MAX_MS)) continue;
         // A shared knight spot is listed once per farmer, in one claim or in several; the view shows the spot once.
         for (const resource of new Set(c.resources)) {
             const key = c.side + ' ' + resource;
@@ -187,7 +190,8 @@ export function farmsView(roster: ReadonlyMap<string, Seen & { name?: string }>,
     return [...groups.values()].filter(g => g.names.length >= min).map(g => {
         const members = new Set(g.names);
         return { key: g.key, label: g.label, count: g.names.length, names: g.names.sort(), range: g.numbers.length ? [Math.min(...g.numbers), Math.max(...g.numbers)] as [number, number] : null, tiles: g.tiles,
-            atSpots: spots.map(s => ({ resource: s.resource, count: s.others.filter(o => members.has(o)).length })).filter(s => s.count > 0) };
+            // Two sides can claim one spot; the farm counts that spot once.
+            atSpots: [...new Map(spots.map(s => [s.resource, s])).values()].map(s => ({ resource: s.resource, count: s.others.filter(o => members.has(o)).length })).filter(s => s.count > 0) };
     }).sort((a, b) => b.atSpots.reduce((n, s) => n + s.count, 0) - a.atSpots.reduce((n, s) => n + s.count, 0) || b.count - a.count);
 }
 

@@ -17,18 +17,20 @@ import { createFetchHandler } from './server/routes';
 import { clients, startStateBackground } from './server/state';
 import { startHiscoresRefresh, startWorldFeed } from './server/world';
 
-startMapBuild();
-startWorldFeed();
-startHiscoresRefresh();
-startMarketRefresh();
-startStateBackground();
-
+// Bind first: a second start that loses the port exits before it opens a world-feed socket or reads the hiscores and
+// the market. The state builds on demand, so a request before the collectors' first pass still gets an answer.
 const dashboardServer = await bindRetry(() => Bun.serve({
     hostname: HOST,
     port: PORT,
     idleTimeout: 0,
     fetch: createFetchHandler(),
 }), { log: console.log });
+
+startMapBuild();
+startWorldFeed();
+startHiscoresRefresh();
+startMarketRefresh();
+startStateBackground();
 
 // Reload the collector's imported code as well as the files the browser reads from disk.
 const reloadTimer = setInterval(async () => {
