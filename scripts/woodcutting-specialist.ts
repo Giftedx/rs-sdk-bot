@@ -386,9 +386,15 @@ if (import.meta.main) {
             OBJ_HOLY_SYMBOL,
         ]);
         await rubTeleport(main, WOODCUTTING_GLORY_IDS, /draynor/i, inDraynorJail, isStopped);
-        if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && !isProtectMeleeOn(main.sdk.getState())) {
-            // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
-            await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
+        if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
+            // Double-toggle in one tick yields PrayerGuard (guard.ts:183) so it never resends interactNpc(jailGuard)
+            // during 3t knife or flinch gaps; Protect from Melee stays ON and is 1t-flicked directly in the loop.
+            const wasOn = isProtectMeleeOn(main.sdk.getState());
+            await Promise.all([
+                main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                ...(!wasOn ? [main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' })] : []),
+            ]);
         }
         await walkWaypointsSafe(main, [[3115, 3242, 0]], isStopped);
         const arriveTick = main.tick() - t0;
@@ -398,6 +404,7 @@ if (import.meta.main) {
         let knifeRolls = 0;
         let lastHitTick = -99;
         let lastTagTick = -99;
+        let lastFlickTick = -99;
         let tagCount = 0;
         let actionDelayApprox = 0;
         let lastRollServerTick = -99;
@@ -408,6 +415,27 @@ if (import.meta.main) {
         const recentHitTicks: number[] = [];
         const npcLastHit = new Map<number, { tick: number; period: number }>();
         let hitEventsTotal = 0;
+        const prayerFlickActs = (
+            stNow: ReturnType<Session['sdk']['getState']>,
+            nowTick: number,
+            minGap = 2,
+        ): Promise<unknown>[] => {
+            if ((main.sdk.getSkill('Prayer')?.level ?? 0) < 1 || (main.sdk.getSkill('Prayer')?.baseLevel ?? 1) < 43) {
+                return [];
+            }
+            if (!isProtectMeleeOn(stNow)) {
+                lastFlickTick = nowTick;
+                return [main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' })];
+            }
+            if (nowTick - lastFlickTick >= minGap) {
+                lastFlickTick = nowTick;
+                return [
+                    main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                    main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                ];
+            }
+            return [];
+        };
 
         const drainHitEvents = (st: ReturnType<Session['sdk']['getState']>): number => {
             let maxHitTick = -1;
@@ -525,7 +553,7 @@ if (import.meta.main) {
 
             if (validFlinchHit && !needNormalLog) {
                 // playerhit_n_retaliate set %action_delay = now + 1; interactLoc runs in processClientsIn of now + 1 and rolls immediately!
-                const acts: Promise<unknown>[] = [];
+                const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
                 if (potAct) acts.push(potAct);
                 if (!potAct && main.sdk.getInventory().length >= 26) {
@@ -547,7 +575,9 @@ if (import.meta.main) {
             }
 
             if (now < actionDelayApprox) {
-                // Pending 3-tick knife roll: never send dropItem/drink (OpHeldHandler calls clearPendingAction and cancels p_oploc).
+                // Pending 3-tick knife roll: togglePrayer only calls if_close (not clearPendingAction), so 1t-flicking keeps woodcut intact.
+                const flick = prayerFlickActs(st, now, 3);
+                if (flick.length > 0) await Promise.all(flick);
                 await waitTicks(main, 1);
                 continue;
             }
@@ -577,10 +607,10 @@ if (import.meta.main) {
                 && wantOak
                 && !needNormalLog
                 && !activeHitIn1t
-                && tagCount < 48
-                && gobs < 3
+                && tagCount < 24
+                && gobs < 2
                 && (nextHitEta === Infinity || nextHitEta === 3)
-                && now - lastTagTick >= 12
+                && now - lastTagTick >= 15
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -592,6 +622,7 @@ if (import.meta.main) {
                     taggedAt.set(target.index, now);
                     actionDelayApprox = now + 3;
                     const acts: Promise<unknown>[] = [
+                        ...prayerFlickActs(st, now, 2),
                         main.direct({ type: 'spellOnNpc', npcIndex: target.index, spellComponent: WIND_STRIKE, reason: 'SDK' }),
                     ];
                     const potAct = tryDrinkPrayerPotion(main, 15);
@@ -607,16 +638,19 @@ if (import.meta.main) {
             const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && activeHitIn1t;
             if (!keepFlinchWindow) {
                 if (!outOfPrayer && wantOak && !needNormalLog && nextHitEta === 2) {
+                    const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
                     if (main.sdk.getInventory().length >= 25) {
-                        await dropExcessOaks(main, 22);
+                        const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, 3);
+                        for (const slot of oakSlots) acts.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
                     }
+                    if (acts.length > 0) await Promise.all(acts);
                     await waitTicks(main, 1);
                     continue;
                 }
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
                 if (knifeSlot !== undefined && logSlot !== undefined && !needNormalLog) {
-                    // Strictly 3 inputs (+ up to 2 PrayerGuard toggles = 5 USER_EVENT limit) so interactLoc never splits across ticks.
+                    // Flick prayers BEFORE useItemOnItem so if_close never closes skill_multi3; total <= 5 inputs.
                     if (main.sdk.getInventory().length >= 28) {
                         const dropped = await dropExcessOaks(main, 24);
                         if (dropped) {
@@ -625,6 +659,7 @@ if (import.meta.main) {
                         }
                     }
                     await Promise.all([
+                        ...prayerFlickActs(st, now, 2),
                         main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
                         main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
                         main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' }),
@@ -659,11 +694,13 @@ if (import.meta.main) {
             if (oakDropSlot !== undefined) {
                 // OpHeldHandler calls clearPendingAction(), clearing busy2 while dropping a log in 1 input.
                 await Promise.all([
+                    ...prayerFlickActs(st, now, 2),
                     ...(potAct ? [potAct] : []),
                     main.direct({ type: 'dropItem', slot: oakDropSlot, reason: 'SDK' }),
                 ]);
             } else {
                 await Promise.all([
+                    ...prayerFlickActs(st, now, 2),
                     ...(potAct ? [potAct] : []),
                     clearInteraction(main),
                 ]);
