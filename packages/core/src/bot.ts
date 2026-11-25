@@ -10,6 +10,7 @@ export {
     stopReasonOf,
     watchUnexpectedEnd,
     type BotRecord,
+    type OpenBotOptions,
     type SettlementOptions,
 } from './bot/rules';
 export {

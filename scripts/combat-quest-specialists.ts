@@ -1598,6 +1598,7 @@ export async function runMeleePvpSpecialist(
         },
     );
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
+    const tAlmera = elapsed();
     milestone('almera');
 
     if (opts.runWaterfallFn) {
@@ -1618,9 +1619,10 @@ export async function runMeleePvpSpecialist(
         await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy });
     }
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
+    const tWaterfall = elapsed();
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    // Drop Waterfall rewards and equip Keep melee gear while running to Ardougne lever.
+    // Drop Waterfall rewards and equip Keep melee gear while running from barrel (2527,3413) to Ardougne lever.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
@@ -1673,7 +1675,7 @@ export async function runMeleePvpSpecialist(
         if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
         return {
             session: finalSess,
-            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings} to=${timeoutSwings} rec=${recenterSwings}`,
+            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} alm=${tAlmera} wf=${tWaterfall - tAlmera} lev=${setupTicks - tWaterfall} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings} to=${timeoutSwings} rec=${recenterSwings}`,
         };
     } catch (err) {
         await logoutSession(finalSess).catch(() => {});

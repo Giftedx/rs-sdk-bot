@@ -42,6 +42,7 @@ export async function connectInProcess(opts: {
     lockPlan?: boolean;
     recoverSwarm?: RecoveryConnectionAdmission;
     trade?: TradeAdmission;
+    allowTradePartners?: readonly string[];
 }): Promise<Session> {
     if (opts.lifecycleRoot && !isLocalServer(opts.server ?? 'localhost:8888')) throw Error('lifecycle root override is local-only');
     const server = opts.server ?? 'localhost:8888';
@@ -98,7 +99,7 @@ export async function connectInProcess(opts: {
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(
-    opts: { name: string; password: string; server?: string; members?: boolean },
+    opts: { name: string; password: string; server?: string; members?: boolean; allowTradePartners?: readonly string[] },
     deps: {
         startSession: StartSession;
         sdk: BotSDK;
@@ -181,10 +182,13 @@ export async function startInProcessSession(
             cacheDir,
             quiet: true,
             onClient: (client: ClientLike) => {
+                const extraTradePartners = (opts.allowTradePartners ?? []).map(n => n.trim().toLowerCase()).filter(Boolean);
                 const created = createShim(client, sdk, action => {
                     const a = action as any;
                     const trading = a.type === 'interactPlayer' && a.optionIndex === 4 || ['clickComponent', 'clickComponentWithOption'].includes(a.type) && [3420, 3546].includes(a.componentId);
-                    return trading ? tradeRefusal(a, sdk.getState(), tradePartners(host)) : null;
+                    if (!trading) return null;
+                    const allowed = extraTradePartners.length ? new Set([...tradePartners(host), ...extraTradePartners]) : tradePartners(host);
+                    return tradeRefusal(a, sdk.getState(), allowed);
                 });
                 shim = created;
                 created.start();

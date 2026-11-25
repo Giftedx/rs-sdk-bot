@@ -90,10 +90,9 @@ describe('gathering specialists supply & progression plans', () => {
 
         expect(fletchSlots).toBe(7);
         expect(fishSlots).toBeLessThanOrEqual(16);
-        expect(mineSlots).toBe(21);
+        expect(mineSlots).toBe(19);
         expect(thieveSlots).toBe(28);
         expect(MINING_SPECIALIST_SUPPLIES[OBJ_GAMES_8]).toBe(1);
-        expect(MINING_SPECIALIST_SUPPLIES[OBJ_SUPER_ENERGY_4]).toBe(2);
         expect(THIEVING_PIZZAS).toBe(25);
         expect(THIEVING_SPECIALIST_SUPPLIES[OBJ_PINEAPPLE_PIZZA]).toBe(25);
         // 18 tutorial slots -> main drops 0 (fletch), 15 (fish, keeps tinderbox), 13 (mine), 18 (thieve).

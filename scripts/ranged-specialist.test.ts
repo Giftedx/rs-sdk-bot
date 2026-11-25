@@ -437,3 +437,12 @@ test('RANGED_PVP_SPECIALIST_KIT fits 25 tradeable cataloged slots without Super 
         tanks: ['tank1', 'tank2'],
     });
 });
+
+test('selectRangedPvpUpgradeIds upgrades Crossbow->MSB, Rune arrows, and dhide tiers in priority order', async () => {
+    const { selectRangedPvpUpgradeIds } = await import('./ranged-specialist');
+    const inv = [837, 881, 861, 892, 2581, 2577, 1099, 1065, 2497, 2491].map((id, slot) => ({ id, slot, name: `item-${id}`, count: 1 }));
+    expect(selectRangedPvpUpgradeIds(1, inv, [])).toEqual([837, 881]);
+    expect(selectRangedPvpUpgradeIds(40, inv, [{ id: 837, slot: 3, count: 1 }, { id: 881, slot: 13, count: 1 }])).toEqual([2581, 2577, 1099, 1065]);
+    expect(selectRangedPvpUpgradeIds(50, inv, [])).toEqual([861, 892, 2581, 2577, 1099, 1065]);
+    expect(selectRangedPvpUpgradeIds(70, inv, [{ id: 861, slot: 3, count: 1 }, { id: 892, slot: 13, count: 1 }])).toEqual([2581, 2577, 2497, 2491]);
+});
