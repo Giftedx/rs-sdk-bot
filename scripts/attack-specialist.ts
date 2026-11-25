@@ -619,7 +619,13 @@ async function exitMazeAndClearArenaGear(s: Session, stop: StopFn): Promise<void
 
 async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
     await teleportTo(s, SPELLS.lumbridgeTeleport, p => p.worldX >= 3205 && p.worldX <= 3240 && p.worldZ >= 3205 && p.worldZ <= 3235, stop, 'Lumbridge teleport');
-    await walkWaypoints(s, [{ x: 3108, z: 3352, tol: 1 }], 180, stop, 'lumbridge to draynor manor');
+    await walkWaypoints(
+        s,
+        [{ x: 3165, z: 3270, tol: 6 }, { x: 3109, z: 3328, tol: 2 }, { x: 3108, z: 3352, tol: 1 }],
+        180,
+        stop,
+        'lumbridge to draynor manor',
+    );
 
     const inManor = () => {
         const p = posOf(s);
