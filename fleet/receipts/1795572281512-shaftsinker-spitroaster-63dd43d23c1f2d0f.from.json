@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795572281512-shaftsinker-spitroaster-63dd43d23c1f2d0f",
  "account": "Shaftsinker",
  "partner": "Spitroaster",
@@ -12,6 +12,20 @@
  "claim": "e9d50ba0-7d7f-4317-9320-2f4a89e87525",
  "count": 0,
  "ok": false,
- "at": 1795572753509,
- "detail": "trade claimed"
+ "at": 1795573312163,
+ "detail": "Error: transfer requires reconciliation: declined: Other player declined trade.",
+ "inventory": {
+  "before": 2000,
+  "after": 2000
+ },
+ "bank": {
+  "count": 2000,
+  "at": 1795572760259
+ },
+ "logout": {
+  "attemptId": "1795572753520-0000028024-0000000001",
+  "at": 1795573312152,
+  "sha256": "8aca15352f26d08abb292ef56dc13ba69ff00b63724317e8cb92b1199c5131fb"
+ },
+ "screen": true
 }

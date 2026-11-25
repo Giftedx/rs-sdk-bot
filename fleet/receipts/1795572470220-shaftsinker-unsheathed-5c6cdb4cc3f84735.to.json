@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572470220-shaftsinker-unsheathed-5c6cdb4cc3f84735",
+ "account": "Unsheathed",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 2000,
+ "claim": "c4dd4341-e11d-49e2-94c6-063c0ac039de",
+ "count": 0,
+ "ok": false,
+ "at": 1795573336815,
+ "detail": "trade claimed"
+}
