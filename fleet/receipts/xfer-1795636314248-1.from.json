@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795636314248-1",
+ "account": "Shaftsinker",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "58a244eb-2d6f-4720-ad58-beb007812dd2",
+ "count": 0,
+ "ok": false,
+ "at": 1795636428812,
+ "detail": "trade claimed"
+}
