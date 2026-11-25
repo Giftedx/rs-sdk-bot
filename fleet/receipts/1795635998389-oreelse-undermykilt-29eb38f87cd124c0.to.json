@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795635998389-oreelse-undermykilt-29eb38f87cd124c0",
  "account": "UnderMyKilt",
  "partner": "OreElse",
@@ -12,6 +12,12 @@
  "claim": "33aaca91-400d-4797-bd79-50230b701e50",
  "count": 0,
  "ok": false,
- "at": 1795636004552,
- "detail": "trade claimed"
+ "at": 1795636046323,
+ "detail": "fled at low hitpoints: flee_guard id=100 at=3240,3264 ticks=5",
+ "logout": {
+  "attemptId": "1795636004562-0000021928-0000000001",
+  "at": 1795636045769,
+  "sha256": "854b2f452ed75d3a3df496806926562f37f7e524ac7aa01f91502487853f9d81"
+ },
+ "screen": false
 }
