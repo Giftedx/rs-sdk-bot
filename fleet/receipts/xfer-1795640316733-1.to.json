@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795640316733-1",
+ "account": "Wandwaver",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "816ae25b-f73e-4de9-8f97-178ea895522e",
+ "count": 0,
+ "ok": false,
+ "at": 1795640613536,
+ "detail": "trade claimed"
+}

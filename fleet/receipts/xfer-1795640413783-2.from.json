@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795640413783-2",
+ "account": "Pocketpython",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "77eb657b-4429-4120-aaf8-80ac87bd2f9a",
+ "count": 60,
+ "ok": true,
+ "at": 1795640605251,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795640546033
+ },
+ "logout": {
+  "attemptId": "1795640537717-0000024820-0000000001",
+  "at": 1795640605237,
+  "sha256": "9569bf3c575483eaedbb59bbd1dc51ba372b6e305e0d13e56b4310ea86ee8c06"
+ },
+ "screen": true
+}

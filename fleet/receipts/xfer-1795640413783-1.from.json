@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795640413783-1",
+ "account": "Shaftmaker",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 48,
+ "claim": "e3d76376-c649-4deb-94d4-76f452ca8ce6",
+ "count": 0,
+ "ok": false,
+ "at": 1795640596775,
+ "detail": "Error: sender pack full: need 48 slots for Raw lobster, 28 free",
+ "logout": {
+  "attemptId": "1795640513738-0000031724-0000000001",
+  "at": 1795640596760,
+  "sha256": "5f49aa2c65687f61593a23bfab5285c04675ec798620e397b5e9608fc9de70a4"
+ },
+ "screen": false
+}

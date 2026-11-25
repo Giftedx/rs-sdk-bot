@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795640158425-1",
+ "account": "MineYourBiz",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 36,
+ "claim": "0a064eb6-8d4d-44c4-b147-27e970a2522b",
+ "count": 36,
+ "ok": true,
+ "at": 1795640581594,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 36,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795640550695-0000023876-0000000001",
+  "at": 1795640581582,
+  "sha256": "b1c964c2181f59681afa2eaed28470599c40287d03d79e326b6960beb33ea1a7"
+ },
+ "screen": true
+}

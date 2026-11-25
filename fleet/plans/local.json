@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795640461638,
+ "at": 1795640620429,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -100,25 +100,6 @@
    ]
   },
   {
-   "account": "Stirmypot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -199,7 +180,22 @@
    "role": "army"
   },
   {
-   "account": "FishAndChips",
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/waterfall.ts --",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- fire-combat"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -215,23 +211,7 @@
    "role": "auto"
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "Abracadickra",
+   "account": "FishAndChips",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -247,22 +227,66 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
+   "account": "mmthv2350",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
+    "giant"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:225",
+    "BATCH_UNITS": "30",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:225",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   },
   {
-   "account": "Packhorse",
+   "account": "Stirmypot",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Stirmypot",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Stirmypot",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Abracadickra",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Abracadickra",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
    "script": "scripts/generated/quest-grandtree.ts",
    "args": [],
    "env": {
@@ -272,7 +296,26 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:grandtree",
-   "role": "helper"
+   "role": "army"
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:mineshafted:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:mineshafted:item:440",
+   "role": "helper",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
    "account": "TossTheCaber",
@@ -367,7 +410,6 @@
   "moneyshot",
   "oreelse",
   "pocketpool",
-  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
