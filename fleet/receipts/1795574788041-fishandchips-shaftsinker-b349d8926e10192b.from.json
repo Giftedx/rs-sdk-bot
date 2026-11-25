@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795574788041-fishandchips-shaftsinker-b349d8926e10192b",
+ "account": "FishAndChips",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 200,
+ "claim": "d2ee3489-18e4-4b0f-9762-80954e0acc72",
+ "count": 0,
+ "ok": false,
+ "at": 1795574927253,
+ "detail": "trade claimed"
+}
