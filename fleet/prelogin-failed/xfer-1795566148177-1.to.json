@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795566148177-1",
+ "role": "to",
+ "account": "Quickhandjob",
+ "partner": "Woodenstaff",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795566749815,
+ "detail": "Error: fleet trade: account has an enabled swarm job"
+}

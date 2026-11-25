@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795566712851,
+ "at": 1795566753358,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -27,17 +27,20 @@
    "account": "Quickhandjob",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "runecraft",
-    "supply"
+    "thieving",
+    "knights"
    ],
    "env": {
-    "DEMAND_ID": "campaign:hiltsdeep:item:556",
-    "BATCH_UNITS": "923"
+    "DEMAND_ID": "campaign:hiltsdeep:item:995",
+    "BATCH_UNITS": "50"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:hiltsdeep:item:556",
-   "role": "army"
+   "goal": "campaign:hiltsdeep:item:995",
+   "role": "army",
+   "resources": [
+    "ardougne-knights"
+   ]
   }
  ],
  "army": [
