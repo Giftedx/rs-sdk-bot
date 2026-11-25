@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795602611861,
+ "at": 1795602627114,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -188,19 +188,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1987",
-   "role": "helper"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/generated/quest-death.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:death",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:death",
    "role": "helper"
   }
  ],
