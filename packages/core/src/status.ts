@@ -7,9 +7,9 @@ import type { BankObservation } from './session-types';
 import { questFlags, questDefinitions, type QuestFlag } from './quest-status';
 import {guildActorFacts} from './guild-facts';
 import {equipmentObserved} from './container-observation';
-import {readLogoutProof} from './session-lifecycle';
+import {readLogoutProof, resolveLifecycleRoot} from './session-lifecycle';
 import {observedDoorStates} from './door-policy';
-import {lifecycleRootForRead, statusDirForServer} from './practice-paths';
+import {statusDirForServer} from './practice-paths';
 
 // Live status for the dashboard (packages/dashboard): live bots write .practice/live/status/<name>.json
 // and practice bots write .practice/sim/status/<name>.json every few ticks.
@@ -261,7 +261,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
         }
         // Logout clears live container readiness. Retain only this session's actual matching saved kit.
         if (inGame !== false || observedEquipment === null || rows === null || JSON.stringify(rows) !== observedEquipment) return false;
-        const proof = readLogoutProof(s.name, server, { root: opts.lifecycleRoot ?? lifecycleRootForRead(server) });
+        const proof = readLogoutProof(s.name, server, { root: opts.lifecycleRoot ?? resolveLifecycleRoot(s.name, server) });
         return proof.state === 'confirmed' && proof.attemptId === (s as {lifecycle?:{attemptId?:unknown}}).lifecycle?.attemptId;
     };
     let lastBankGeneration = 0;

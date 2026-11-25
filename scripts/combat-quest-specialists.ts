@@ -102,7 +102,7 @@ export function countAntipoisonDoses(items: readonly { id: number; baseId?: numb
     return doses;
 }
 
-// 21 slots (infinite run enabled -> no Super energy(4) needed).
+// 21 slots: Waterfall (83 Atk/Str) + 1-tick Rune 2h relog Keep PvP (infinite run enabled -> no Super energy(4)).
 export const MELEE_PVP_CORE_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
@@ -116,11 +116,7 @@ export const MELEE_PVP_CORE_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
-export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
-    ...MELEE_PVP_CORE_KIT.slice(0, 9),
-    { id: 3016, name: 'Super energy(4)', count: 7, stackable: false },
-    ...MELEE_PVP_CORE_KIT.slice(9),
-] as const;
+export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_CORE_KIT;
 
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;

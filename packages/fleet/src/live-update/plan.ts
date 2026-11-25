@@ -2,9 +2,9 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { loadOwners, mySide, sideOf } from '../../../core/src/fleet';
 import { readPreloginFailure, validOrder, type Order, type TradeRole } from '../../../core/src/fleet-trade-settlement';
-import { hasStopFile, lifecycleRootForRead, resolveFleetDataDir, statusReadDirs } from '../../../core/src/practice-paths';
+import { hasStopFile, resolveFleetDataDir, statusReadDirs } from '../../../core/src/practice-paths';
 import { liveLogoutRef } from '../../../core/src/session-admission';
-import { readLogoutProof } from '../../../core/src/session-lifecycle';
+import { readLogoutProof, resolveLifecycleRoot } from '../../../core/src/session-lifecycle';
 import { releaseEntries, releaseFiles, standingAccounts, standingPeer, workerLaunchers, workerSourceRoots } from '../../../core/src/worker-release';
 import { few, touchesIncomingPath, type Dirty, type LiveRun, type UpdateInput } from './inspect';
 import { SDK_PATCH } from './vendor';
@@ -116,7 +116,7 @@ function tradePartnerBlocked(root: string, server: string, account: string, acti
     if (hasStopFile('swarm', root) || hasStopFile(partner, root)) return true;
     const checkLogout = options?.checkLogout ?? ((name: string) => {
         if (server === LIVE_SERVER) { liveLogoutRef(name, root, false, now); return; }
-        const proof = readLogoutProof(name, server, { root: lifecycleRootForRead(server, root) });
+        const proof = readLogoutProof(name, server, { root: resolveLifecycleRoot(name, server, root) });
         if (proof.state !== 'none' && proof.state !== 'confirmed') throw Error('account logout is not confirmed');
     });
     try { checkLogout(partner); return false; } catch { return true; }

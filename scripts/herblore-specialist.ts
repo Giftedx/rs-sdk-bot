@@ -1,9 +1,9 @@
-// Fresh-account 1-to-99 Herblore specialist via Games necklace Druidic Ritual (+6,250 XP) and Edgeville 4-tick 10-potion bank cycles.
+// Fresh-account 1-to-99 Herblore specialist via Games necklace Druidic Ritual (+6,250 XP) and Edgeville 4-tick 13-potion bank cycles.
 import type { Session } from '../packages/core/src/inprocess';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
+import { ClientProt } from '../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import {
  assertCatalogItems,
- burstTradeHost,
  countItem,
  dropItemsFast,
  fastTradeExternalReceive,
@@ -20,11 +20,13 @@ import {
  parseExternalSuppliers,
  parseSpecialistArgs,
  playerPos,
- rubJewelryTeleport,
- skipTutorialFast,
  skillLevel,
  skillXp,
+ TRADE_CONFIRM_ACCEPT,
+ TRADE_MAIN_ACCEPT,
+ TRADE_OFFER_INV,
  waitTicks,
+ waitUntil,
  withSingleSpecialist,
  withSpecialistFleet,
  type SupplyEntry,
@@ -231,6 +233,80 @@ async function climbLoc(spec: Session, locId: number, x: number, z: number, opRe
  throw Error(`climbLoc(${locId} at ${x},${z}) exceeded cap`);
 }
 
+const ON_STARTER_ISLAND = (p: { worldX: number; worldZ: number } | null | undefined): boolean =>
+ !!p && p.worldX >= 3050 && p.worldX <= 3160 && p.worldZ >= 3050 && p.worldZ <= 3140;
+
+async function skipTutorial2Ticks(spec: Session, deadlineTick: number): Promise<void> {
+ const ready = await waitUntil(spec, () => !!playerPos(spec), { timeoutTicks: 20 });
+ if (!ready) throw Error('tutorial start player state unobserved');
+ let designSent = false;
+ let guideClicked = false;
+ while (spec.tick() < deadlineTick) {
+  const st = spec.sdk.getState();
+  const p = st?.player;
+  if (p && !ON_STARTER_ISLAND(p) && !st?.dialog?.isOpen && !st?.modalOpen) return;
+  if (st?.modalOpen && st.modalInterface === 3559 && !designSent) {
+   designSent = true;
+   await spec.direct({ type: 'acceptCharacterDesign', reason: 'SDK' });
+   const guide = st.nearbyNpcs.find(n => /^runescape guide$/i.test(n.name));
+   const op = guide?.optionsWithIndex.find(o => /^talk-to$/i.test(o.text));
+   if (guide && op) {
+    guideClicked = true;
+    await spec.direct({ type: 'interactNpc', npcIndex: guide.index, optionIndex: op.opIndex, reason: 'SDK' });
+   }
+  } else if (p && ON_STARTER_ISLAND(p)) {
+   const dlg = spec.sdk.getDialog();
+   if (dlg?.isOpen && !dlg.isWaiting) {
+    const yes = dlg.options.find((o: any) => /^yes please[.]?$/i.test(o.text));
+    if (yes && dlg.options.every((o: any) => /^(yes please|no, thank you)[.]?$/i.test(o.text))) {
+     await spec.direct({ type: 'clickDialogOption', optionIndex: yes.index, reason: 'SDK' });
+    } else if (dlg.options.length === 0 || (dlg.options.length === 1 && dlg.options[0]!.buttonType === 6)) {
+     await spec.direct({ type: 'clickDialogOption', optionIndex: 0, reason: 'SDK' });
+     await spec.direct({ type: 'clickComponent', componentId: 2461, reason: 'SDK' });
+    }
+   } else if (!guideClicked && designSent) {
+    const guide = st?.nearbyNpcs.find(n => /^runescape guide$/i.test(n.name));
+    const op = guide?.optionsWithIndex.find(o => /^talk-to$/i.test(o.text));
+    if (guide && op) {
+     guideClicked = true;
+     await spec.direct({ type: 'interactNpc', npcIndex: guide.index, optionIndex: op.opIndex, reason: 'SDK' });
+    }
+   }
+  }
+  await waitTicks(spec, 1);
+ }
+ throw Error('tutorial skip exceeded cap');
+}
+
+type BurstToken = 'R' | number;
+
+function sendDialogBurst(spec: Session, tokens: readonly BurstToken[]): boolean {
+ const c = spec.client as {
+  chatModalId?: number;
+  resumedPauseButton?: boolean;
+  dialogInputOpen?: boolean;
+  writeOpcode?: (op: number) => void;
+  out?: { p2(v: number): void };
+  flush?: () => void;
+ } | undefined;
+ if (!c?.writeOpcode || !c.out || typeof c.chatModalId !== 'number' || c.chatModalId === -1 || c.dialogInputOpen) {
+  return false;
+ }
+ const modalId = c.chatModalId;
+ for (const tok of tokens.slice(0, 5)) {
+  if (tok === 'R') {
+   c.writeOpcode(ClientProt.RESUME_PAUSEBUTTON);
+   c.out.p2(modalId);
+  } else {
+   c.writeOpcode(ClientProt.IF_BUTTON);
+   c.out.p2(tok);
+  }
+ }
+ c.flush?.();
+ c.resumedPauseButton = tokens[tokens.length - 1] === 'R';
+ return true;
+}
+
 async function talkQuestNpc(
  spec: Session,
  nameRe: RegExp,
@@ -238,15 +314,25 @@ async function talkQuestNpc(
  done: () => boolean,
  anchor: { x: number; z: number },
  deadline: number,
+ burstBatches?: readonly (readonly BurstToken[])[],
+ afterBurst?: () => Promise<void>,
 ): Promise<void> {
+ let batchIdx = 0;
  while (spec.tick() < deadline) {
   if (done()) return;
   await eatIfHurt(spec);
   const d = spec.sdk.getDialog();
   if (d?.isOpen) {
    if (!d.isWaiting) {
-    const pick = d.options.find((o: any) => optRes.some(r => r.test(o.text)));
-    await spec.direct({ type: 'clickDialogOption', optionIndex: pick?.index ?? d.options[0]?.index ?? 0, reason: 'SDK' });
+    if (burstBatches && batchIdx < burstBatches.length && sendDialogBurst(spec, burstBatches[batchIdx]!)) {
+     batchIdx++;
+     if (batchIdx >= burstBatches.length && afterBurst) {
+      await afterBurst();
+     }
+    } else {
+     const pick = d.options.find((o: any) => optRes.some(r => r.test(o.text)));
+     await spec.direct({ type: 'clickDialogOption', optionIndex: pick?.index ?? d.options[0]?.index ?? 0, reason: 'SDK' });
+    }
    }
   } else {
    const npc = findNpcBy(spec, n => nameRe.test(n.name));
@@ -282,6 +368,39 @@ async function walkDirect(
  }
 }
 
+async function rubChainedTeleport(
+ spec: Session,
+ itemIds: readonly number[],
+ choiceRe: RegExp,
+ componentId: number,
+ arrived: () => boolean,
+ deadline: number,
+): Promise<void> {
+ let chained = false;
+ while (spec.tick() < deadline) {
+  if (arrived()) return;
+  const st = spec.sdk.getState();
+  const d = spec.sdk.getDialog();
+  const opt = d?.isOpen && !d.isWaiting ? d.options.find((o: any) => choiceRe.test(o.text)) : undefined;
+  if (opt) {
+   await spec.direct({ type: 'clickDialogOption', optionIndex: opt.index, reason: 'SDK' });
+  } else {
+   const item = spec.sdk.getInventory().find(i => itemIds.includes(i.id));
+   if (item && !chained) {
+    chained = true;
+    await spec.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
+    await spec.direct({ type: 'clickComponent', componentId, reason: 'SDK' });
+   } else if (item) {
+    await spec.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
+   } else if (d?.isOpen || st?.interface?.isOpen) {
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
+  }
+  await waitTicks(spec, 1);
+ }
+ throw Error(`rubChainedTeleport(${componentId}) exceeded cap`);
+}
+
 async function completeDruidicRitual(spec: Session, start: number, deadline: number): Promise<string> {
  const eatGuard = { lastTick: -1 };
  const offEat = spec.onTick(() => {
@@ -289,10 +408,11 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  });
  try {
  // Games necklace -> Burthorpe Games Room (2207,4940,0) -> west stairs 4622 -> stairs 4627 -> Burthorpe (2899,3564,0)
- await rubJewelryTeleport(
+ await rubChainedTeleport(
   spec,
   GAMES_NECKLACE_IDS,
   /burthorpe/i,
+  2461,
   () => {
    const p = playerPos(spec);
    return !!p && p.worldZ > 4500;
@@ -326,9 +446,16 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   spec,
   /^kaqemeex$/i,
   [/search of a quest/i, /will try and help/i],
-  () => dialogSawText(spec, /excellent\. go to the village south|fellow.*sanfew|village south/i),
+  () => dialogSawText(spec, /excellent\. go to the village south|fellow.*sanfew|village south|will do\./i),
   { x: 2924, z: 3486 },
   deadline,
+  [
+   ['R', 'R', 2472, 'R', 'R'],
+   ['R', 'R', 2471, 'R'],
+  ],
+  async () => {
+   await spec.direct({ type: 'walkTo', x: 2905, z: 3466, running: true, reason: 'SDK' });
+  },
  );
  const tKaq1 = spec.tick() - start;
 
@@ -346,6 +473,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
    dialogSawText(spec, /well thank you very much|ok, i'll do that then|where can i find/i),
   { x: 2897, z: 3426 },
   deadline,
+  [['R', 2461, 'R', 'R', 'R']],
  );
  const tSan1 = spec.tick() - start;
 
@@ -389,7 +517,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   const pending = meatPairs.filter(m => countItem(inv, m.ench) === 0);
   if (!pending.length) break;
   const p = playerPos(spec);
-  const adjacent = !!p && Math.max(Math.abs(p.worldX - 2893), Math.abs(p.worldZ - 9831)) <= 2;
+  const adjacent = !!p && Math.max(Math.abs(p.worldX - 2893), Math.abs(p.worldZ - 9831)) <= 1;
   if (!adjacent) {
    await spec.direct({ type: 'walkTo', x: 2892, z: 9831, running: true, reason: 'SDK' });
   } else {
@@ -431,6 +559,14 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   () => [522, 523, 524, 525].every(id => countItem(spec.sdk.getInventory(), id) === 0),
   { x: 2897, z: 3426 },
   deadline,
+  [['R', 'R', 'R']],
+  async () => {
+   const st1 = findLocBy(spec, l => l.id === 1740 || (l.x === 2898 && l.z === 3428));
+   if (st1) {
+    const op = st1.optionsWithIndex?.find(o => /climb-down/i.test(o.text))?.opIndex ?? 1;
+    await spec.direct({ type: 'interactLoc', x: st1.x, z: st1.z, locId: st1.id, optionIndex: op, reason: 'SDK' });
+   }
+  },
  );
  const tSan2 = spec.tick() - start;
 
@@ -463,6 +599,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   () => skillXp(spec, 'Herblore') >= 6250,
   { x: 2924, z: 3486 },
   deadline,
+  [['R']],
  );
  logPhase(spec, start, `herb_druid_done lvl=${skillLevel(spec, 'Herblore')}`);
  return `k1=${tKaq1},s1=${tSan1},dg=${tDung},cl=${tCaul},s2=${tSan2}`;
@@ -472,33 +609,23 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
 }
 
 async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): Promise<void> {
+ // Amulet of glory has no p_delay before p_choice5_header; send rub + Edgeville (2494) in one tick.
+ await rubChainedTeleport(
+  spec,
+  GLORY_IDS,
+  /edgeville/i,
+  2494,
+  () => {
+   const p = playerPos(spec);
+   return !!p && p.worldX > 3060 && p.worldZ > 3460 && p.worldZ < 4000;
+  },
+  deadline,
+ );
+ // Walk to Edgeville bank; the spent Glory stays in inventory and is deposited into bank cleanly.
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
-  if (p && p.worldX > 3060 && p.worldZ > 3460 && p.worldZ < 4000) break;
-  const st = spec.sdk.getState();
-  const d = spec.sdk.getDialog();
-  const edgeOpt = d?.isOpen && !d.isWaiting ? d.options.find((o: any) => /edgeville/i.test(o.text)) : undefined;
-  if (edgeOpt) {
-   await spec.direct({ type: 'clickDialogOption', optionIndex: edgeOpt.index, reason: 'SDK' });
-  } else {
-   const glory = spec.sdk.getInventory().find(i => GLORY_SET.has(i.id));
-   // OpHeldHandler calls clearPendingAction() -> closeModal(); avoid sending closeModal alongside rub so requestModalClose does not close the teleport menu.
-   if (glory) await spec.direct({ type: 'useInventoryItem', slot: glory.slot, optionIndex: 4, reason: 'SDK' });
-   else if (d?.isOpen || st?.interface?.isOpen) await spec.direct({ type: 'closeModal', reason: 'SDK' });
-  }
-  await waitTicks(spec, 1);
- }
- // Walk to Edgeville bank while dropping the spent Glory in parallel on the first tick.
- while (spec.tick() < deadline) {
-  const p = playerPos(spec);
-  const glories = spec.sdk.getInventory().filter(i => GLORY_SET.has(i.id));
-  if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0) && glories.length === 0) break;
-  const acts: Promise<unknown>[] = [];
-  for (const g of glories) acts.push(spec.direct({ type: 'dropItem', slot: g.slot, reason: 'SDK' }));
-  if (!p || !nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) {
-   acts.push(spec.direct({ type: 'walkTo', x: HERBLORE_BANK_SPOT.x, z: HERBLORE_BANK_SPOT.z, running: true, reason: 'SDK' }));
-  }
-  if (acts.length) await Promise.all(acts);
+  if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) break;
+  await spec.direct({ type: 'walkTo', x: HERBLORE_BANK_SPOT.x, z: HERBLORE_BANK_SPOT.z, running: true, reason: 'SDK' });
   await waitTicks(spec, 1);
  }
 }
@@ -510,7 +637,6 @@ async function openEdgevilleBank(spec: Session, deadline: number): Promise<void>
   const booth = findLocBy(spec, l => /bank booth/i.test(l.name) && !!l.optionsWithIndex?.some(o => /use-quickly/i.test(o.text)));
   const op = booth?.optionsWithIndex?.find(o => /use-quickly/i.test(o.text))?.opIndex ?? 2;
   if (booth) {
-   // OpLocHandler calls player.clearPendingAction() -> closeModal(); sending closeModal sets requestModalClose=true and closes the opened bank.
    await spec.direct({ type: 'interactLoc', x: booth.x, z: booth.z, locId: booth.id, optionIndex: op, reason: 'SDK' });
   } else if (st?.dialog?.isOpen || st?.interface?.isOpen) {
    await spec.direct({ type: 'closeModal', reason: 'SDK' });
@@ -520,7 +646,7 @@ async function openEdgevilleBank(spec: Session, deadline: number): Promise<void>
  throw Error('openEdgevilleBank exceeded cap');
 }
 
-async function brewCyclePotions(spec: Session, unfId: number, secId: number, target: number, deadline: number): Promise<void> {
+async function brewCyclePotions(spec: Session, unfId: number, secId: number, target: number, deadline: number, openBankAtEnd = false): Promise<void> {
  while (spec.tick() < deadline) {
   if (skillLevel(spec, 'Herblore') >= target) return;
   const inv = spec.sdk.getInventory();
@@ -532,11 +658,160 @@ async function brewCyclePotions(spec: Session, unfId: number, secId: number, tar
   for (let k = 0; k < pairCount; k++) {
    acts.push(spec.direct({ type: 'useItemOnItem', sourceSlot: unfs[k]!.slot, targetSlot: secs[k]!.slot, reason: 'SDK' }));
   }
+  const willFinishInv = unfs.length === pairCount || secs.length === pairCount;
+  if (openBankAtEnd && willFinishInv && pairCount <= 4) {
+   const booth = findLocBy(spec, l => /bank booth/i.test(l.name) && !!l.optionsWithIndex?.some(o => /use-quickly/i.test(o.text)));
+   const op = booth?.optionsWithIndex?.find(o => /use-quickly/i.test(o.text))?.opIndex ?? 2;
+   if (booth) {
+    acts.push(spec.direct({ type: 'interactLoc', x: booth.x, z: booth.z, locId: booth.id, optionIndex: op, reason: 'SDK' }));
+   }
+  }
   await Promise.all(acts);
   await waitTicks(spec, 1);
  }
  throw Error('herblore brewing exceeded cap');
 }
+
+interface BankBrewPlanStep {
+ readonly unf: number;
+ readonly sec: number;
+ readonly count: number;
+ readonly openBankAtEnd: boolean;
+}
+
+const FAST_HERB_STEPS: readonly BankBrewPlanStep[] = [
+ { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 10, openBankAtEnd: true },
+ // Weapon poison x20 as 10 + 10 (no leftover slots).
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
+ // Antifire x30 as 13 + 13 + 4 (10 ticks total, 0 leftovers).
+ { unf: ITEM_IDS.lantadymevial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
+ { unf: ITEM_IDS.lantadymevial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
+ { unf: ITEM_IDS.lantadymevial, sec: ITEM_IDS.dragon_scale_dust, count: 4, openBankAtEnd: true },
+ // Zamorak brew x170 as 13x13 (hits 99 on 12th of cycle 13).
+ ...Array.from({ length: 13 }, (_, idx): BankBrewPlanStep => ({
+  unf: ITEM_IDS.torstolvial,
+  sec: ITEM_IDS.jangerberries,
+  count: 13,
+  openBankAtEnd: idx < 12,
+ })),
+];
+
+ function pushExactWithdraw(acts: Promise<unknown>[], spec: Session, slot: number, need: number, bankCount: number): void {
+  if (need <= 0) return;
+  if (need >= bankCount) {
+   acts.push(spec.direct({ type: 'bankWithdraw', slot, amount: -1, reason: 'SDK' }));
+   return;
+  }
+  let rem = need;
+  while (rem >= 10) {
+   acts.push(spec.direct({ type: 'bankWithdraw', slot, amount: 10, reason: 'SDK' }));
+   rem -= 10;
+  }
+  while (rem >= 5) {
+   acts.push(spec.direct({ type: 'bankWithdraw', slot, amount: 5, reason: 'SDK' }));
+   rem -= 5;
+  }
+  while (rem >= 1) {
+   acts.push(spec.direct({ type: 'bankWithdraw', slot, amount: 1, reason: 'SDK' }));
+   rem -= 1;
+  }
+ }
+
+ async function fastInProcessHerbloreTrade(
+  spec: Session,
+  helper: Session,
+  giveIds: readonly number[],
+  deadlineTick: number,
+ ): Promise<void> {
+  const begin = spec.tick();
+  const helperLower = helper.name.toLowerCase();
+  const specLower = spec.name.toLowerCase();
+  const giveSet = new Set(giveIds);
+  let sawConfirm = false;
+  let lastReqTick = -10;
+
+  while (spec.tick() < deadlineTick) {
+   const st = spec.sdk.getTradeState();
+   const ht = helper.sdk.getTradeState();
+
+   if (!st.isOpen && !ht.isOpen) {
+    if (sawConfirm || giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
+     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+     return;
+    }
+    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperLower);
+    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);
+    const acts: Promise<unknown>[] = [];
+    if (sTarget && hTarget && spec.tick() - lastReqTick >= 2) {
+     lastReqTick = spec.tick();
+     acts.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+     acts.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+    } else if (!sTarget || !hTarget) {
+     const tp = playerPos(spec);
+     if (tp) acts.push(helper.direct({ type: 'walkTo', x: tp.worldX + 1, z: tp.worldZ, running: true, reason: 'SDK' }));
+    }
+    if (acts.length) await Promise.all(acts);
+    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+    continue;
+   }
+
+   if (st.screen === 'confirm' || ht.screen === 'confirm') {
+    sawConfirm = true;
+    const acts: Promise<unknown>[] = [];
+    if (ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted) {
+     acts.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+    if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
+     acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+    if (acts.length) await Promise.all(acts);
+    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+    if (!spec.sdk.getTradeState().isOpen && !helper.sdk.getTradeState().isOpen && giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
+     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+     return;
+    }
+    continue;
+   }
+
+   const hActs: Promise<unknown>[] = [];
+   const sActs: Promise<unknown>[] = [];
+   const alreadyOffered = new Set(ht.myOffer.map(o => o.id));
+   const remaining: number[] = [];
+   const seenRem = new Set<number>();
+   for (const item of helper.sdk.getInventory()) {
+    if (giveSet.has(item.id) && !alreadyOffered.has(item.id) && !seenRem.has(item.id)) {
+     seenRem.add(item.id);
+     remaining.push(item.slot);
+    }
+   }
+   const maxOffer = remaining.length > 4 ? 5 : 4;
+   const batchOffer = remaining.slice(0, maxOffer);
+   for (const slot of batchOffer) {
+    hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+   }
+   const allOffered = remaining.length <= batchOffer.length;
+   if (allOffered && batchOffer.length <= 4 && !ht.myAccepted) {
+    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+   }
+   if (allOffered && batchOffer.length === 0 && ht.myAccepted) {
+    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   const seenUnique = new Set(st.theirOffer.map(x => x.id)).size;
+   if (allOffered && batchOffer.length === 0 && !st.myAccepted && seenUnique >= giveIds.length) {
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+    if (ht.myAccepted) {
+     sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+   }
+   if (hActs.length) await Promise.all(hActs);
+   if (sActs.length) await Promise.all(sActs);
+   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+  }
+  throw Error(`fastInProcessHerbloreTrade(${helper.name}) exceeded cap`);
+ }
 
 async function executeHerbloreLoop(
  spec: Session,
@@ -546,7 +821,7 @@ async function executeHerbloreLoop(
  receiveStarter: () => Promise<void>,
  receiveNoted: () => Promise<void>,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
- await skipTutorialFast(spec, deadline);
+ await skipTutorial2Ticks(spec, deadline);
  if (spec.sdk.getInventory().length > 19) {
   await dropItemsFast(spec, new Set(), deadline);
  }
@@ -565,15 +840,18 @@ async function executeHerbloreLoop(
  let bankRefused = 0;
  let bankOpenTicks = 0;
  let depositedNotes = false;
- for (let c = 0; c < HERBLORE_BANK_CYCLES.length && skillLevel(spec, 'Herblore') < target; c++) {
-  const cyc = HERBLORE_BANK_CYCLES[c]!;
+
+ for (let c = 0; c < FAST_HERB_STEPS.length && skillLevel(spec, 'Herblore') < target; c++) {
+  const step = FAST_HERB_STEPS[c]!;
   const b0 = spec.tick();
-  const o0 = spec.tick();
-  await openEdgevilleBank(spec, deadline);
-  bankOpenTicks += spec.tick() - o0;
+  if (!spec.sdk.getState()?.bank?.isOpen) {
+   const o0 = spec.tick();
+   await openEdgevilleBank(spec, deadline);
+   bankOpenTicks += spec.tick() - o0;
+  }
   if (!depositedNotes) {
    while (spec.tick() < deadline) {
-    const inv = spec.sdk.getInventory();
+    const inv = spec.sdk.getInventory().filter(i => !GLORY_SET.has(i.id));
     if (!inv.length) break;
     const acts: Promise<unknown>[] = [];
     for (const item of inv.slice(0, 5)) {
@@ -585,10 +863,13 @@ async function executeHerbloreLoop(
    }
    depositedNotes = true;
   }
+
   while (spec.tick() < deadline) {
    const st = spec.sdk.getState();
    const inv = spec.sdk.getInventory();
-   if (!st?.bank?.isOpen && countItem(inv, cyc.unf) >= 10 && countItem(inv, cyc.sec) >= 10) break;
+   const haveUnf = countItem(inv, step.unf);
+   const haveSec = countItem(inv, step.sec);
+   if (!st?.bank?.isOpen && haveUnf >= step.count && haveSec >= step.count) break;
    if (!st?.bank?.isOpen) {
     const o1 = spec.tick();
     await openEdgevilleBank(spec, deadline);
@@ -596,21 +877,39 @@ async function executeHerbloreLoop(
     continue;
    }
    const bankItems = st.bank.items ?? [];
-   const unfBank = bankItems.find((i: any) => i.id === cyc.unf && i.count >= 10);
-   const secBank = bankItems.find((i: any) => i.id === cyc.sec && i.count >= 10);
+   const unfBank = bankItems.find((i: any) => i.id === step.unf);
+   const secBank = bankItems.find((i: any) => i.id === step.sec);
    if (!unfBank || !secBank) {
     await waitTicks(spec, 1);
     continue;
    }
+
    const acts: Promise<unknown>[] = [];
-   const seenOut = new Set<number>();
+   const seenDrop = new Set<number>();
    for (const item of inv) {
-    if (item.id === cyc.unf || item.id === cyc.sec || seenOut.has(item.id)) continue;
-    seenOut.add(item.id);
+    if (item.id === step.unf || item.id === step.sec || seenDrop.has(item.id)) continue;
+    seenDrop.add(item.id);
     acts.push(spec.direct({ type: 'bankDeposit', slot: item.slot, amount: -1, reason: 'SDK' }));
    }
-   if (countItem(inv, cyc.unf) < 10) acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: 10, reason: 'SDK' }));
-   if (countItem(inv, cyc.sec) < 10) acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: 10, reason: 'SDK' }));
+
+   if (step.count === 13) {
+    // Keep 2 leftover items from the previous 15+13 cycle when switching between unf and sec.
+    if (haveUnf > 0 && haveUnf < 13) {
+     pushExactWithdraw(acts, spec, unfBank.slot, 13 - haveUnf, unfBank.count);
+     acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: -1, reason: 'SDK' }));
+    } else if (haveSec > 0 && haveSec < 13) {
+     pushExactWithdraw(acts, spec, secBank.slot, 13 - haveSec, secBank.count);
+     acts.push(spec.direct({ type: 'bankWithdraw', slot: unfBank.slot, amount: -1, reason: 'SDK' }));
+    } else {
+     // Empty inv (28 free): 10 + 5 = 15 unf, then Withdraw-All (-1) fills remaining 13 with sec.
+     pushExactWithdraw(acts, spec, unfBank.slot, 15, unfBank.count);
+     acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: -1, reason: 'SDK' }));
+    }
+   } else {
+    pushExactWithdraw(acts, spec, unfBank.slot, step.count - haveUnf, unfBank.count);
+    pushExactWithdraw(acts, spec, secBank.slot, step.count - haveSec, secBank.count);
+   }
+
    const results = acts.length ? ((await Promise.all(acts)) as Array<{ success?: boolean } | undefined>) : [];
    const okActs = results.every(r => r?.success !== false);
    if (!okActs) bankRefused++;
@@ -621,7 +920,7 @@ async function executeHerbloreLoop(
   }
   bankTicks += spec.tick() - b0;
   const p0 = spec.tick();
-  await brewCyclePotions(spec, cyc.unf, cyc.sec, target, deadline);
+  await brewCyclePotions(spec, step.unf, step.sec, target, deadline, step.openBankAtEnd);
   brewTicks += spec.tick() - p0;
  }
 
@@ -650,22 +949,27 @@ export async function runHerbloreSpecialist(
  const target = opts.target ?? 99;
  const start = spec.tick();
  const deadline = start + opts.cap;
- return executeHerbloreLoop(
-  spec,
-  target,
-  start,
-  deadline,
-  () =>
-   burstTradeHost(spec, helpers[0]!, {
-    giveIds: HERBLORE_STARTER_BATCH.give.map(g => g.id),
-    deadlineTick: deadline,
-   }),
-  () =>
-   burstTradeHost(spec, helpers[1]!, {
-    giveIds: HERBLORE_NOTED_BATCH.give.map(g => g.id),
-    deadlineTick: deadline,
-   }),
+ let done = false;
+ const keepers = helpers.map(h =>
+  (async () => {
+   while (!done && h.tick() < deadline) {
+    await waitTicks(h, 1);
+   }
+  })(),
  );
+ try {
+  return await executeHerbloreLoop(
+   spec,
+   target,
+   start,
+   deadline,
+   () => fastInProcessHerbloreTrade(spec, helpers[0]!, HERBLORE_STARTER_BATCH.give.map(g => g.id), deadline),
+   () => fastInProcessHerbloreTrade(spec, helpers[1]!, HERBLORE_NOTED_BATCH.give.map(g => g.id), deadline),
+  );
+ } finally {
+  done = true;
+  await Promise.allSettled(keepers);
+ }
 }
 
 export async function runHerbloreExternal(
