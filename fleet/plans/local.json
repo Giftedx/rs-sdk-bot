@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795645036578,
+ "at": 1795645053120,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -150,6 +150,22 @@
    "role": "army"
   },
   {
+   "account": "Stirmypot",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -250,26 +266,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Stirmypot",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chicken"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Stirmypot",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Stirmypot",
-   "role": "auto",
-   "resources": [
-    "chickens"
-   ]
   }
  ],
  "army": [
