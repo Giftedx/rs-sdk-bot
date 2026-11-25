@@ -4,6 +4,8 @@ import { workspaceRoot } from '../../../core/src/build-workspace-root';
 import { writeLiveUpdate, type LiveUpdateMark } from '../../../core/src/live-reload';
 import { hasStopFile } from '../../../core/src/practice-paths';
 import { spawnSyncTimed } from '../../../core/src/proc';
+import { releaseFiles } from '../../../core/src/worker-release/closure';
+import { launchEntries } from '../../../core/src/worker-release/paths';
 import { applyUpdate } from './adopt';
 import { gitHash, gitIn, importClosure, LIVE_UPDATE_GIT_TIMEOUT_MS, mergedDeliveryCopies, mergeText, readCheckout, readRebased, rebasableDeliveryEdits, REBASED_FILE } from './inspect';
 import { coordinatorHolds, LIVE_SERVER, liveRuns, planUpdate, releaseClosure, type LiveRunsOptions } from './plan';
@@ -18,7 +20,17 @@ export const DAEMONS: Record<string, string[]> = {
     'dashboard-publish': ['packages/dashboard/publish.ts'],
 };
 
-// The daemons whose import closure holds a changed file.
+// The files that make a daemon stale: its import closure. The swarm records the launch release as its source and pins
+// it (swarm.ts pinControllerRelease), and controlled recovery runs only while that is the current launch release
+// (session-recovery.ts executeControlledLiveRecovery). The launch release also holds files that the swarm does not
+// import (the recovery runner, the files that its sources name), so the swarm also reloads when one of them changes.
+export function daemonFiles(name: string, starts: readonly string[], root: string,
+    imports: (starts: readonly string[], root: string) => readonly string[] = importClosure,
+    launch: (root: string) => readonly string[] = r => releaseFiles(launchEntries, r)): string[] {
+    return name === 'swarm' ? [...imports(starts, root), ...launch(root)] : [...imports(starts, root)];
+}
+
+// The daemons whose files hold a changed file.
 export function reloadsFor(incoming: readonly string[], closures: Readonly<Record<string, readonly string[]>>): string[] {
     const changed = new Set(incoming);
     return Object.keys(closures).filter(name => closures[name]!.some(f => changed.has(f))).sort();
@@ -108,7 +120,7 @@ export async function runLiveUpdateCli(
         if (plan.action !== 'update') return finish(`RESULT ok live-update ${plan.action}: ${plan.reason}${plan.action === 'wait' ? ` (behind ${checkout.behind})` : ''}`);
         if (dry) return finish(`RESULT ok live-update dry: would move ${checkout.behind} commits, ${checkout.incoming.length} files, adopt ${plan.adopt.length}${patchMoves ? (resets ? `, apply the SDK patch to ${SDK}` : `, keep ${SDK} as it is`) : ''}`);
         const from = git('rev-parse', '--short', 'HEAD').out;
-        const before = Object.fromEntries(Object.entries(DAEMONS).map(([name, starts]) => [name, importClosure(starts, root)]));
+        const before = Object.fromEntries(Object.entries(DAEMONS).map(([name, starts]) => [name, daemonFiles(name, starts, root)]));
         const applied = applyUpdate(git, root, target, plan.adopt);
         if (!applied.ok) return finish(`RESULT fail live-update ${applied.detail}`, 1);
         const rebased = plan.adopt.filter(d => d.rebase !== undefined);
@@ -121,7 +133,7 @@ export async function runLiveUpdateCli(
             }
             try { writeFileSync(join(root, REBASED_FILE), JSON.stringify(marks, null, 1)); } catch { /* the next update then waits on these files */ }
         }
-        const closures = Object.fromEntries(Object.entries(DAEMONS).map(([name, starts]) => [name, [...before[name]!, ...importClosure(starts, root)]]));
+        const closures = Object.fromEntries(Object.entries(DAEMONS).map(([name, starts]) => [name, [...before[name]!, ...daemonFiles(name, starts, root)]]));
         const reload = reloadsFor(checkout.incoming, closures), to = git('rev-parse', '--short', 'HEAD').out;
         const mark: LiveUpdateMark = { at: Date.now(), from, to, files: checkout.incoming.length, reload };
         writeLiveUpdate(root, mark);

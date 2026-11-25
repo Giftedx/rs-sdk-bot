@@ -26,7 +26,7 @@ import {
     writePendingUpdate,
     type UpdateInput,
 } from '../src/live-update';
-import { runLiveUpdateCli } from '../src/live-update/reload';
+import { daemonFiles, runLiveUpdateCli } from '../src/live-update/reload';
 import { AGENT_SUBPROCESS_TIMEOUT_MS, tradeDrainHold } from '../src/fleet-agent';
 
 const dirs: string[] = [];
@@ -161,6 +161,14 @@ describe('fleet live-update facade', () => {
         };
         expect(reloadsFor(['scripts/fleet-agent.ts'], closures)).toEqual(['fleet-agent']);
         expect(reloadsFor(['packages/fleet/src/live-update/reload.ts'], closures)).toEqual([]);
+        // The recovery runner is in the launch release that the swarm records as its source, though the swarm does not
+        // import it: a change to it reloads the swarm and no other daemon.
+        const imports = (starts: readonly string[]) => starts.map(s => s);
+        const launch = () => ['scripts/swarm.ts', 'packages/fleet/src/session-recovery.ts', 'knowledge/items.json'];
+        const files = Object.fromEntries(['swarm', 'fleet-agent'].map(name => [name, daemonFiles(name, closures[name as keyof typeof closures], '.', imports, launch)]));
+        expect(files).toEqual({ swarm: ['scripts/swarm.ts', 'scripts/swarm.ts', 'packages/fleet/src/session-recovery.ts', 'knowledge/items.json'], 'fleet-agent': ['scripts/fleet-agent.ts'] });
+        expect(reloadsFor(['packages/fleet/src/session-recovery.ts'], files)).toEqual(['swarm']);
+        expect(reloadsFor(['packages/fleet/src/watchdog.ts'], files)).toEqual([]);
 
         const none = planUpdate({ ...baseInput, behind: 0, incoming: [] });
         expect(none.action).toBe('none');
