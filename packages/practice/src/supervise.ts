@@ -95,13 +95,19 @@ function lastMatchingLine(text: string, test: (line: string) => boolean): string
 }
 
 // Real work in a run: the LEDGER line every worker prints at finish (packages/core/src/ledger.ts) with at least
-// PROGRESS_TICKS game ticks. A failed login or a session dropped at once prints none, so a dead server still gives up.
+// PROGRESS_TICKS game ticks, not all of them idle. A failed login or a session dropped at once prints none, so a dead
+// server still gives up. A run that stood still for its whole session is no work: a black knight job at Falador bank
+// banked every 3 ticks with nothing to bank (LEDGER ticks=904 ... idle=904) for 43 runs, each one counted as work, so
+// the streak never grew and the same failure never ended the job.
 export const PROGRESS_TICKS = 300;
 const LEDGER_TICKS_RE = /^LEDGER ticks=(\d+)/;
+const LEDGER_IDLE_RE = /\bidle=(\d+)\b/;
 export function madeProgress(stdout: string): boolean {
     const line = lastMatchingLine(stdout, l => l.startsWith('LEDGER ticks=') && LEDGER_TICKS_RE.test(l));
     const m = line ? LEDGER_TICKS_RE.exec(line) : null;
-    return !!m && Number(m[1]) >= PROGRESS_TICKS;
+    if (!m || Number(m[1]) < PROGRESS_TICKS) return false;
+    const idle = LEDGER_IDLE_RE.exec(line!);
+    return !idle || Number(idle[1]) < Number(m[1]);
 }
 
 export function isEntryRefusal(result: string): boolean {

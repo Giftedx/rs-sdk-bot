@@ -404,6 +404,17 @@ test('parseSuperviseArgs validates bot, script, and non-negative integer maxRest
  expect(() => parseSuperviseArgs(['Bot1', 'scripts/a.ts', '1.5'])).toThrow(/maxRestarts/);
 });
 
+test('a run that was idle for its whole session is not work: the same failure twice ends as blocked', async () => {
+    const idleRun = (ticks: number) => out([`LEDGER ticks=${ticks} xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=${ticks} idlePct=100.0 xpGain=0 longestIdle=${ticks}@t10(2945,3368) idleBy=after:closeModal:598,bank:303 bot=Magicwanda`,
+        `RESULT fail ticks=${ticks} kills=0 looted=0 bankTrips=299 walkTicks=0 hp=60 actionsPer1kTicks=0.00 targetMet=false maximum=40`], 1);
+    expect(madeProgress('LEDGER ticks=904 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=904 idlePct=100.0 xpGain=0')).toBe(false);
+    expect(madeProgress('LEDGER ticks=904 xp=40 inventory=2 move=300 anim=100 dialog=0 stun=0 idle=462 idlePct=51.1 xpGain=900')).toBe(true);
+    expect(madeProgress('LEDGER ticks=904 xp=0 inventory=0 move=1 anim=0 dialog=0 stun=0 idle=903 idlePct=99.9 xpGain=0')).toBe(true);
+    let n = 0;
+    const r = await supervise({ run: () => { n++; return idleRun(900 + n)(); }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(r).toEqual({ reason: 'blocked', runs: 2 });
+});
+
 test('crashResult turns the uncaught error Bun prints into the RESULT the worker would have printed', async () => {
     const { crashResult } = await import('../src/supervise');
     const frame = ['1174 |         if (n === undefined) throw Error(`invalid ${k}`);', '                         ^'];
