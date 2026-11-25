@@ -1,0 +1,29 @@
+{
+ "id": "1795582344826-coincock-yewfirst-1f667fddf7b4f32e",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "CoinCock",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 500,
+ "start": 1795582344826,
+ "end": 1795585944826,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Adamant arrowtips",
+   "count": 500
+  }
+ ],
+ "takerWaits": true
+}
