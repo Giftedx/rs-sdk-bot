@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795633254388-1",
+ "account": "Pocketrocket",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "0fc849a8-612a-4625-9a8b-8dee9e6e5749",
+ "count": 0,
+ "ok": false,
+ "at": 1795633531115,
+ "detail": "trade claimed"
+}
