@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572281287-pickpockdick-spitroaster-fbe62bfabe76c77b",
+ "account": "Spitroaster",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 70,
+ "claim": "4010ab54-ec30-4054-8c31-987aba039d8a",
+ "count": 0,
+ "ok": false,
+ "at": 1795573072286,
+ "detail": "trade claimed"
+}
