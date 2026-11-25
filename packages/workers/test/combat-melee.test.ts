@@ -38,6 +38,7 @@ import {
     cowReleased,
     cowRoutePoints,
     combatBankWalk,
+    combatStallWords,
     combatStopEnd,
     cowStopControl,
     cowTraining,
@@ -70,6 +71,7 @@ import { questDefinitions } from '../../../packages/core/src/quest-status';
 import { waitTicks } from '../../../packages/core/src/ticks';
 import { gearById } from '../../../packages/planner/src/gear-progression';
 import { mixedOreCombatProblem } from '../src/gather';
+import { isNoProgressFailure } from '../../practice/src/supervise';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -598,6 +600,26 @@ test('a flee-guard stop skips the bank return that the guard holds, and the resu
  expect(walks).toBe(0);expect(r.ok).toBe(false);expect(r.detail).toContain('fled=true');expect(r.detail).not.toContain('travel ground arrival missing');
  expect(combatStopEnd('fled at low hitpoints: flee_guard id=117')).toBe('fled');expect(combatStopEnd('died')).toBe('died');
  for(const other of [undefined,'stop file','lease lost','no progress: 900 ticks'])expect(combatStopEnd(other)).toBeUndefined();
+});
+
+test('a session stall stop names the stall in the result, so the supervisor blocks the job instead of a new login',async()=>{
+ const stall='no progress: 900 ticks without xp, items, dialog or a journey';
+ // A finite job (such as taverley_black_knight maximum=40) and an open-ended job.
+ for(const finite of [{maximum:5},{}]){
+  const g=genericCombat();
+  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,...finite,env:{},walk:async()=>false,stop:()=>true,stopReason:()=>stall});
+  expect(r.ok).toBe(false);expect(r.detail).toContain('stalled=true');expect(r.detail).toContain(stall);
+  expect(isNoProgressFailure(`RESULT fail ${r.detail}`)).toBe(true);
+ }
+ // runMeleeGatherCli adds the same words from its stop owner (cowStopControl reason).
+ expect(combatStallWords(stall)).toBe(` stalled=true ${stall}`);
+ for(const other of [undefined,'died','fled at low hitpoints: flee_guard id=117','stop file','fleet controller lease unavailable'])expect(combatStallWords(other)).toBe('');
+ // The other stop reasons keep their own words and add no stall word.
+ for(const other of ['died','fled at low hitpoints: flee_guard id=117','stop file']){
+  const g=genericCombat();
+  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,maximum:5,env:{},walk:async()=>false,stop:()=>true,stopReason:()=>other});
+  expect(r.detail).not.toContain('stalled=true');
+ }
 });
 
 test('the tick cap that stops a full-pack bank walk ends the run as capped, not as a throw',async()=>{
