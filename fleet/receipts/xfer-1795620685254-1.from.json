@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795620685254-1",
  "account": "Unsheathed",
  "partner": "OreElse",
@@ -12,6 +12,12 @@
  "claim": "6bee944b-15db-4cb7-993f-fe3c0eac9484",
  "count": 0,
  "ok": false,
- "at": 1795621505264,
- "detail": "trade claimed"
+ "at": 1795621585965,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795621505274-0000032416-0000000001",
+  "at": 1795621585644,
+  "sha256": "4ada08ce48ea2809420a45c6d34ebed1abb7b97890b6bafe2fe8142fa012a678"
+ },
+ "screen": false
 }
