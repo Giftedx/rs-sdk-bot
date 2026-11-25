@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795582908012-yewgotwood-dipstick-86d7fdb51ed3d5d6",
+ "account": "YewGotWood",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 400000,
+ "claim": "49e251ef-61ce-42b0-977c-67a29b74877a",
+ "count": 0,
+ "ok": false,
+ "at": 1795583147320,
+ "detail": "trade claimed"
+}
