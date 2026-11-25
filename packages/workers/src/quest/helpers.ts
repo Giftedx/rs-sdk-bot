@@ -205,7 +205,25 @@ export async function walkQuestCorridor(
         cursor += r.next;
         if (cursor === points.length) return { ok: false, detail: 'quest corridor arrival unobserved' };
     }
-    return { ok: false, detail: 'quest corridor exhausted bounded retries' };
+    return { ok: false, detail: QUEST_CORRIDOR_EXHAUSTED };
+}
+export const QUEST_CORRIDOR_EXHAUSTED = 'quest corridor exhausted bounded retries';
+
+// A quest job that restarts after a failure starts where the last run stopped: underground, upstairs or away from the
+// corridor's first leg. walkPath keeps to one floor and its local plan, so from there the corridor gets no further.
+// Then one routed walk (the world router knows the ladders, stairs and doors) takes the account to the corridor's
+// first point, and the corridor runs again whole: the corridor itself still never skips a bend.
+export async function walkQuestCorridorRecovering(
+    io: Parameters<typeof walkQuestCorridor>[0] & { route?: (to: PathPoint) => Promise<boolean> },
+    points: PathPoint[],
+    deadline: number,
+): Promise<{ ok: boolean; detail?: string; routed?: boolean }> {
+    const first = await walkQuestCorridor(io, points, deadline);
+    if (first.ok || !io.route || first.detail !== QUEST_CORRIDOR_EXHAUSTED || io.stop() || io.tick() >= deadline) return first;
+    const reached = await io.route(points[0]!);
+    if (!reached || io.stop() || io.tick() >= deadline) return { ok: false, detail: `${QUEST_CORRIDOR_EXHAUSTED}; the routed walk to its start did not arrive`, routed: true };
+    const again = await walkQuestCorridor(io, points, deadline);
+    return { ...again, routed: true };
 }
 
 export const DUSTY_KEY = 1590;

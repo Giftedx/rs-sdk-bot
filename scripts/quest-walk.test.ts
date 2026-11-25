@@ -1,5 +1,5 @@
 import {beforeAll,expect,test} from 'bun:test';
-import {walkQuestCorridor,walkClockTowerTrough,CLOCK_TROUGH,openKojoDoor,KOJO_DOOR} from './quest-walk';
+import {walkQuestCorridor,walkQuestCorridorRecovering,QUEST_CORRIDOR_EXHAUSTED,walkClockTowerTrough,CLOCK_TROUGH,openKojoDoor,KOJO_DOOR} from './quest-walk';
 import * as pf from '../vendor/rs-sdk/sdk/pathfinding';
 import * as grid from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import {withDoorPolicy} from '../packages/core/src/door-policy';
@@ -18,6 +18,26 @@ test('failed corridor resumes its first unfinished point and preserves every rem
 test('a route that never advances repeats the same corridor, then fails without a direct fallback',async()=>{
  const calls:any[]=[];const r=await walkQuestCorridor({tick:()=>0,stop:()=>false,near:()=>false,walk:async p=>{calls.push(p);return result(0);}},points,20);
  expect(r.ok).toBe(false);expect(calls).toEqual([points,points,points]);
+});
+test('a corridor that cannot start where a restart left the account routes to its first point, then runs whole',async()=>{
+ // Upstairs or underground: walkPath gets nowhere until the routed walk brings the account down to the corridor start.
+ let routed=false,atGoal=false;const calls:any[]=[],routes:any[]=[];
+ const io={tick:()=>0,stop:()=>false,near:()=>atGoal,walk:async(p:any)=>{calls.push(p);if(!routed)return result(0);atGoal=true;return result(p.length,true);},
+  route:async(to:any)=>{routes.push(to);routed=true;return true;}};
+ const r=await walkQuestCorridorRecovering(io,points,20);
+ expect(r).toEqual({ok:true,routed:true});
+ expect(routes).toEqual([points[0]]);
+ expect(calls).toEqual([points,points,points,points]);
+ // A routed walk that does not arrive ends the walk with both causes named.
+ const failed=await walkQuestCorridorRecovering({...io,near:()=>false,walk:async()=>result(0),route:async()=>false},points,20);
+ expect(failed.ok).toBe(false);expect(failed.detail).toContain(QUEST_CORRIDOR_EXHAUSTED);expect(failed.detail).toContain('routed walk');
+ // Without a router, and for every other corridor failure, it is the plain corridor walk.
+ let routedAgain=0;const count=async()=>{routedAgain++;return true;};
+ expect(await walkQuestCorridorRecovering({tick:()=>0,stop:()=>false,near:()=>false,walk:async()=>result(0)},points,20)).toEqual({ok:false,detail:QUEST_CORRIDOR_EXHAUSTED});
+ expect((await walkQuestCorridorRecovering({tick:()=>0,stop:()=>false,near:()=>false,walk:async()=>result(-1),route:count},points,20)).detail).toContain('cursor');
+ expect((await walkQuestCorridorRecovering({tick:()=>0,stop:()=>false,near:()=>false,walk:async()=>({...result(0),detail:'tick stream stalled: no new game tick for 30000ms'}),route:count},points,20)).detail).toContain('tick stream stalled');
+ let stopped=false;expect((await walkQuestCorridorRecovering({tick:()=>0,stop:()=>stopped,near:()=>false,walk:async()=>{stopped=true;return result(0);},route:count},points,20)).detail).toContain('stopped');
+ expect(routedAgain).toBe(0);
 });
 test('cancellation or exhausted global deadline stops before another route attempt',async()=>{
  let tick=0,calls=0,stopped=false;

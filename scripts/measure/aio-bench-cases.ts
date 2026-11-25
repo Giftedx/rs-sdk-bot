@@ -2016,6 +2016,11 @@ return [
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
   {key: 'extra:smith-rune-platelegs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1079', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
+  // A quest restart that begins upstairs in the Burthorpe pub (2905,3536,1), where a failed run can leave the account:
+  // the first talk's walk to Denulth cannot leave the floor, so the routed walk takes it down and the quest goes on.
+  {key: 'extra:quest-death-from-upstairs', script: 'scripts/aio-quester.ts', preset: 'quest_death', scriptArgs: ['death'], timeoutMs: 900_000,
+    pass: s => ok(s) && /QUEST_CORRIDOR_ROUTE \{[^\n]*"ok":true/.test(s),
+    presetConfig: {...PRESETS.quest_death!, position: {x: 2905, z: 3536, level: 1}}},
   // A bronze order that starts where the Grand Exchange buy steps leave the account (Varrock West bank), not at the
   // Al Kharid bank: the smelt batch walks there, smelts and banks the bars.
   {key: 'extra:smelt-bronze-from-varrock', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'smelt', '900', 'bronze', 'MAX_MAKE=5', 'ORE_RESERVE=0'],

@@ -6,7 +6,7 @@ import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { startQuestSustain, selectQuestFood, questFoodDefinitions, defaultEatAt } from '../quest-sustain';
 import { holdSessionEater } from '../../packages/core/src/sustain';
-import { walkQuestCorridor } from '../quest-walk';
+import { walkQuestCorridorRecovering } from '../quest-walk';
 import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
 import { messageTally } from '../../packages/core/src/message-tally';
@@ -690,15 +690,36 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const walker = await sessionWalker(s as any);
     // A locked door the SDK plans through (collision treats doors as open) becomes a wall for this session.
     const blockDoor = (level: number, x: number, z: number): boolean => !!(s.sdk as any).blockDoorTemporarily?.(level, x, z, 3_600_000);
+    // The corridor start is routed to on the ground only for the walk a restart begins with: no corridor walk of this
+    // run has arrived yet, and the account still stands on the floor it logged in on. A quest that climbs on purpose
+    // (Black Knights' Fortress walks its secret-wall corridor upstairs) has changed floor or walked by then.
+    const loginLevel = lvl();
+    let corridorArrived = false;
     // log: walkPath's input and re-plan lines and each attempt's result, for a walk under diagnosis.
     const walk = async (label: string, pts: PathPoint[], log?: (line: string) => void): Promise<void> => {
         await guard(label);
-        const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||retreating||!!sustain.failure(),
+        const restartStart = !corridorArrived && lvl() === loginLevel;
+        const result=await walkQuestCorridorRecovering({tick:()=>s.tick(),stop:()=>stats.died||retreating||!!sustain.failure(),
             near:(point,tolerance)=>near(point.x,point.z,tolerance),walk:(points,options)=>walkPath(walker,points,log?{...options,log}:options),
             onAttempt:(attempt,result)=>{stats.walkTicks+=result.ticks;if(attempt>0)stats.retries++;log?.(`attempt ${attempt} ${JSON.stringify(result)}`);},
+            // As in teleport() below: the world router can cast a teleport on the way, so a landing by Lumbridge
+            // during this walk is not a respawn, and the quest guards abort it between and inside its legs.
+            route:restartStart ? async to=>{
+                const t1=T(),ac=new AbortController();
+                routing=true;
+                const stopOff=s.onTick(()=>{if(stats.died||retreating||sustain.failure()||T()>CAP)ac.abort('quest guard');});
+                let routed:{ok:boolean;reason?:string};
+                try{routed=await walkFar(s,await getWorld(),{x:to.x,z:to.z,level:0},150,{signal:ac.signal});}
+                catch(e){routed={ok:false,reason:String(e)};}
+                finally{stopOff();routing=false;lastCastAt=T();stats.walkTicks+=T()-t1;}
+                const at=pos();
+                console.log(`QUEST_CORRIDOR_ROUTE ${JSON.stringify({label,to:{x:to.x,z:to.z},ok:routed.ok,reason:routed.ok?undefined:routed.reason,at:at&&{x:at.worldX,z:at.worldZ,level:at.level}})}`);
+                return routed.ok&&lvl()===0&&near(to.x,to.z,Math.max(4,to.tol??2));
+            } : undefined,
         },pts,t0+CAP);
         await guard(label);
         if(!result.ok)await fail(`walk ${label}: ${result.detail}`);
+        corridorArrived = true;
     };
 
     // Talk until ok(); then wait until the dialog closes (3 shut ticks). The NPC list covers about 15 tiles, so the
