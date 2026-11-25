@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795628073611-2",
+ "account": "Fingerblastr",
+ "partner": "Swordswallow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "efc4b528-8727-4596-883b-3c269c815e48",
+ "count": 0,
+ "ok": false,
+ "at": 1795628609698,
+ "detail": "trade claimed"
+}

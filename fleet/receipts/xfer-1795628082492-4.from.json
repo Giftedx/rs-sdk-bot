@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795628082492-4",
+ "account": "Fatstack",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "3ca23b9b-6652-4498-a416-e003a171d1aa",
+ "count": 0,
+ "ok": false,
+ "at": 1795628603816,
+ "detail": "trade claimed"
+}

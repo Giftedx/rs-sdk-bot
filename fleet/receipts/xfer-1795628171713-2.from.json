@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795628171713-2",
+ "account": "OreElse",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "2661d971-f932-47c0-8e42-f6a2c6badc7a",
+ "count": 0,
+ "ok": false,
+ "at": 1795628616845,
+ "detail": "trade claimed"
+}

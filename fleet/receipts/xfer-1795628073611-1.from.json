@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795628073611-1",
+ "account": "Shaftsinker",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "d1ca7ee9-690e-4e1e-a294-bb2b8e7d5616",
+ "count": 1,
+ "ok": true,
+ "at": 1795628659309,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795628573075-0000027632-0000000001",
+  "at": 1795628659299,
+  "sha256": "5f2654ef013938c35aa627b1c4a56937888583cdeccdebf8583e2fdc866c6be3"
+ },
+ "screen": true
+}

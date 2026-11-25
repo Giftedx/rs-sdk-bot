@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795628358042-1",
+ "account": "Dipstick",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "e013bfb1-a607-4e08-87b9-f4ed0eccddcb",
+ "count": 0,
+ "ok": false,
+ "at": 1795628634113,
+ "detail": "Error: stock short: Staff of fire 0 banked + 0 held < 1",
+ "lines": [
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 0
+  }
+ ],
+ "bank": {
+  "count": 60,
+  "at": 1795628633742
+ },
+ "logout": {
+  "attemptId": "1795628627666-0000008596-0000000001",
+  "at": 1795628634101,
+  "sha256": "7cf5938998c793ef01809232998e82f4de69a5083dba30cef03d1e93bf5d024a"
+ },
+ "screen": false
+}
