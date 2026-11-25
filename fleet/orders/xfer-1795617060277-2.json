@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795617060277-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "NabTheKnob",
+  "to": "Shaftsinker",
+  "item": "Iron arrow",
+  "count": 105,
+  "itemId": 884,
+  "start": 1795617060277,
+  "end": 1795617960277,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

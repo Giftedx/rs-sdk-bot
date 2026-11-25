@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795616139700-2",
+ "role": "to",
+ "account": "Shaftsinker",
+ "partner": "FishAndChips",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795617039779,
+ "detail": "Error: fleet trade: outside order window"
+}

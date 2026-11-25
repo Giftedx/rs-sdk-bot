@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795616942312,
+ "at": 1795617074119,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -240,7 +240,7 @@
    ]
   },
   {
-   "account": "Dipstick",
+   "account": "Abracadickra",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
@@ -253,14 +253,14 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
+   "role": "auto"
   },
   {
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=27 \"ITEM_NAME=Dragon bones\" -- loadout",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=49 -- prayer bury"
+    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=11 \"ITEM_NAME=Dragon bones\" -- loadout",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=33 -- prayer bury"
    ],
    "env": {
     "ROUNDS": "1"
@@ -298,6 +298,7 @@
   "bigpackage",
   "billionaire",
   "bowbeforeme",
+  "dipstick",
   "fatstack",
   "fingersmith",
   "hocuspokeus",
