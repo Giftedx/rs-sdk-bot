@@ -183,13 +183,26 @@ export function resolveActivityWorkerRoute(
             if (activity.family === 'bank-artisan' && !standaloneScript) {
                 if (routeParts[1] === 'skill-action' && typeof cfg.method !== 'string') {
                     if (skill === 'smithing') {
-                        rawMethod = 'anvil';
-                        const productId = typeof cfg.productId === 'number' ? cfg.productId : undefined;
-                        if (productId !== undefined && env.PRODUCT_ID === undefined) {
-                            env.PRODUCT_ID = String(productId);
+                        const table = typeof cfg.table === 'string' ? cfg.table : undefined;
+                        const row = typeof cfg.row === 'string' ? cfg.row : undefined;
+                        if (table === 'smelting.struct' && row) {
+                            rawMethod = 'smelt';
+                            const bar = row.replace(/^smelting_/, '').replace(/_bar$/, '');
+                            if (env.BAR_TYPE === undefined) env.BAR_TYPE = bar;
+                            args = [skill, rawMethod, extraEnv.CAP ?? '1500', bar];
+                        } else {
+                            rawMethod = 'anvil';
+                            const productId = typeof cfg.productId === 'number' ? cfg.productId : undefined;
+                            if (productId !== undefined && env.PRODUCT_ID === undefined) {
+                                env.PRODUCT_ID = String(productId);
+                            }
+                            if (env.ORDER_ACTION === undefined) env.ORDER_ACTION = 'smith';
+                            args = [skill, rawMethod, ...(explicitArgs.length > 0 ? explicitArgs : [extraEnv.CAP ?? '1500'])];
                         }
-                        if (env.ORDER_ACTION === undefined) env.ORDER_ACTION = 'smith';
-                        args = [skill, rawMethod, ...(explicitArgs.length > 0 ? explicitArgs : [extraEnv.CAP ?? '1500'])];
+                    } else if (skill === 'crafting' && typeof cfg.table === 'string' && cfg.table === 'gem_cutting_table' && typeof cfg.row === 'string') {
+                        rawMethod = 'inventory';
+                        const gem = cfg.row.replace(/_cutting$/, '');
+                        args = [skill, rawMethod, `cut-${gem}`];
                     } else if (skill === 'herblore') {
                         const row = typeof cfg.row === 'string' ? cfg.row : undefined;
                         if (row && /^(?:unf_|3dose)/.test(row)) {
@@ -210,9 +223,24 @@ export function resolveActivityWorkerRoute(
                         env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
                     }
                     if (extraEnv.CAP && args.length >= 3) args[2] = extraEnv.CAP;
+                } else if (skill === 'smithing' && rawMethod === 'smelt') {
+                    if (env.ORE_RESERVE === undefined) env.ORE_RESERVE = '0';
+                    if (extraEnv.TARGET_COUNT) {
+                        env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
+                    }
+                    if (extraEnv.CAP && args.length >= 3) args[2] = extraEnv.CAP;
                 } else if (skill === 'crafting' && rawMethod === 'inventory') {
                     if (extraEnv.TARGET_COUNT) {
                         env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
+                    }
+                } else if (skill === 'crafting' && rawMethod === 'jewellery-trip') {
+                    if (extraEnv.TARGET_COUNT) {
+                        env.TARGET = extraEnv.TARGET ?? extraEnv.TARGET_COUNT;
+                    }
+                    if (extraEnv.CAP) {
+                        const retTicks = Number(env.RETURN_TICKS ?? 100);
+                        const capNum = Math.max(retTicks + 150, Number(extraEnv.CAP));
+                        env.CAP = String(capNum);
                     }
                 } else if (skill === 'magic' && rawMethod === 'items' && args.length >= 4) {
                     if (extraEnv.TARGET_COUNT) args[4] = extraEnv.TARGET_COUNT;

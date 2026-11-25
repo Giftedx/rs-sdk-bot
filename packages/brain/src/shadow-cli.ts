@@ -516,6 +516,9 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
     const missions = provider?.loadMissions
         ? provider.loadMissions({ root, world })
         : loadMissionManifests({ root, now });
+    const marketQuotes = provider?.loadMarketQuotes
+        ? provider.loadMarketQuotes({ root })
+        : loadMarketQuotesFromRoot(root, now);
     const demands = provider
         ? provider.loadDemands({ root, world, campaigns, missions })
         : createDemandEngine({
@@ -524,10 +527,7 @@ export function runShadowVerification(options: RunShadowOptions = {}): ShadowVer
             campaigns,
             missions,
             root,
-        }).activeDemands(world);
-    const marketQuotes = provider?.loadMarketQuotes
-        ? provider.loadMarketQuotes({ root })
-        : loadMarketQuotesFromRoot(root, now);
+        }).activeDemands(world, { marketQuotes });
     const logoutProofs = diagnostics
         ? loadConfirmedLogoutProofs(diagnostics)
         : undefined;

@@ -504,4 +504,63 @@ test('craft_gather routing compiles runnable enchant, charge-glory, decant, smit
     });
     expect(legacyHerb.routeKey).toBe('crafting:inventory');
     expect(legacyHerb.args).toEqual(['crafting', 'inventory', 'brew:3dose1agility']);
+
+    const smeltRunite = resolvePlannedStepWorkerRoute(
+        'BarSmelter',
+        {
+            stepKind: 'acquire',
+            source: 'craft_gather',
+            itemId: 2363,
+            quantity: 3,
+            estimatedTicks: 50,
+            estimatedCoinCost: 0,
+            coinFloatPreserved: 1000,
+            activityId: 'bank-artisan:skill:smelting.struct:smelting_runite_bar',
+        },
+        ctx,
+    );
+    expect(smeltRunite.routeKey).toBe('smithing:smelt');
+    expect(smeltRunite.args).toEqual(['smithing', 'smelt', '1000', 'runite']);
+    expect(smeltRunite.env.BAR_TYPE).toBe('runite');
+    expect(smeltRunite.env.MAX_MAKE).toBe('3');
+
+    const jewelEmerald = resolvePlannedStepWorkerRoute(
+        'RingCaster',
+        {
+            stepKind: 'acquire',
+            source: 'craft_gather',
+            itemId: 1639,
+            quantity: 4,
+            estimatedTicks: 40,
+            estimatedCoinCost: 0,
+            coinFloatPreserved: 1000,
+            activityId: 'bank-artisan:jewellery-emerald_ring',
+        },
+        ctx,
+    );
+    expect(jewelEmerald.routeKey).toBe('crafting:jewellery-trip');
+    expect(jewelEmerald.args).toEqual(['crafting', 'jewellery-trip']);
+    expect(jewelEmerald.env.RECIPE).toBe('emerald_ring');
+    expect(jewelEmerald.env.TARGET).toBe('4');
+    expect(jewelEmerald.env.CAP).toBe('1000');
+
+    const legacySmelt = resolveActivityWorkerRoute({
+        id: 'bank-artisan:skill:smelting.struct:smelting_gold_bar',
+        family: 'bank-artisan',
+        kind: 'produce',
+        skill: 'Smithing',
+        config: { aioRoute: 'smithing:skill-action', table: 'smelting.struct', row: 'smelting_gold_bar' },
+    });
+    expect(legacySmelt.routeKey).toBe('smithing:smelt');
+    expect(legacySmelt.env.BAR_TYPE).toBe('gold');
+
+    const legacyGem = resolveActivityWorkerRoute({
+        id: 'bank-artisan:skill:gem_cutting_table:dragonstone_cutting',
+        family: 'bank-artisan',
+        kind: 'produce',
+        skill: 'Crafting',
+        config: { aioRoute: 'crafting:skill-action', table: 'gem_cutting_table', row: 'dragonstone_cutting' },
+    });
+    expect(legacyGem.routeKey).toBe('crafting:inventory');
+    expect(legacyGem.args).toEqual(['crafting', 'inventory', 'cut-dragonstone']);
 });

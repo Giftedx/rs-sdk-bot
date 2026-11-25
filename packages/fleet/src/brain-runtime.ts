@@ -865,10 +865,10 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
     const worldWithOutcomes = classifier.applyToSnapshot(diagnostics.snapshot, now);
     const world = applyAccountOverridesToWorld(worldWithOutcomes, overrides);
 
-    const demands = demandEngine.activeDemands(world);
     const defects = classifier.quarantinedDefects(now);
     const infraState = combineInfraState(classifier, infraBreaker, now);
     const marketQuotes = opts.marketQuotes ?? loadMarketQuotesFromRoot(root, now);
+    const demands = demandEngine.activeDemands(world, { marketQuotes });
     const logoutProofs = loadConfirmedLogoutProofs(diagnostics);
     const maxBots = resolveSwarmMaxBots(root, opts.maxBots);
     const minTrust: TrustTier = opts.minTrust ?? 'practice_passed';

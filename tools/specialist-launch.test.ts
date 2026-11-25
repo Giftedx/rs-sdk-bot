@@ -465,4 +465,63 @@ describe('tools/specialist-launch CLI', () => {
         ).toThrow(/differs from master/);
         expect(existsSync(join(REPO_ROOT, 'tools', 'specialist-launch.ts'))).toBe(true);
     });
+
+    test('--tanks forwards comma-separated TANKS into swarm.json env and jobMissionHash for assertSpecialistLogin', () => {
+        const fx = setupWorkerTree(tempRoot, 'tipmyshaft');
+        writeHiscoresFixture(tempRoot, { account: 'tipmyshaft', board: 'Fletching', category: 10, leaderTicks: 56 });
+        writeFullRehearsalFixture(tempRoot, {
+            account: 'tipmyshaft',
+            context: fx.context,
+            board: 'Fletching',
+            planTicks: 54,
+            boardTick: 54,
+            requirements: fx.requirements,
+        });
+        writeHolderStagingInputs(tempRoot, 'YewFirst', 'Dipstick', fx.requirements);
+        writeJsonRel(tempRoot, 'swarm.json', { maxBots: 17, minFreeGB: 4, jobs: [] });
+
+        expect(() =>
+            runSpecialistLaunch(['tipmyshaft', '--holder', 'YewFirst', '--tanks', 'RockSolid', '--skip-hiscores'], {
+                root: tempRoot,
+                now: NOW,
+                log: () => {},
+            }),
+        ).toThrow(/reserved account/);
+
+        const res = runSpecialistLaunch(
+            ['tipmyshaft', '--holder', 'YewFirst', '--tanks', 'TankOne, TankTwo,TankOne', '--skip-hiscores', '--launch', '--run-id', 'launch-tanks-1'],
+            { root: tempRoot, now: NOW, log: () => {} },
+        );
+        expect(res.tanks).toBe('TankOne,TankTwo');
+
+        const swarm = JSON.parse(readFileSync(join(tempRoot, 'swarm.json'), 'utf8'));
+        expect(swarm.jobs[0].env).toMatchObject({
+            CAP: '200',
+            SUPPLIER: 'YewFirst',
+            TANKS: 'TankOne,TankTwo',
+            FLEET_RUN_ID: 'launch-tanks-1',
+        });
+
+        const launchToken = JSON.parse(readFileSync(join(tempRoot, specialistTokenPath('tipmyshaft')), 'utf8'));
+        writeJsonRel(tempRoot, '.practice/live/fleet-runs/launch-tanks-1/owner.json', {
+            runId: 'launch-tanks-1',
+            pid: process.pid,
+            mission: launchToken.mission,
+            source: launchToken.source,
+        });
+        expect(
+            assertSpecialistLogin(
+                tempRoot,
+                'TipMyShaft',
+                NOW + 5_000,
+                {
+                    FLEET_RUN_ID: 'launch-tanks-1',
+                    WORKER_RELEASE: launchToken.source,
+                    SWARM_MISSION_HASH: launchToken.mission,
+                },
+                'rs-sdk-demo.fly.dev',
+                (pid, marker) => pid === process.pid && marker === 'launch-tanks-1',
+            ),
+        ).toMatch(/^[a-f0-9]{64}$/);
+    });
 });

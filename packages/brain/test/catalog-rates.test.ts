@@ -271,5 +271,39 @@ describe('ActivityCatalog & RateStore', () => {
 
         // Unimplemented quest mixtures remain experimental.
         expect(catalog.require('bank-artisan:skill:brew_potion.struct:blamish_oil').trust).toBe('experimental');
+
+        const gamesNeck = catalog.findByOutputItem(3853).find((a) => a.id === 'bank-artisan:magic-enchant-sapphire_necklace');
+        expect(gamesNeck?.trust).toBe('practice_passed');
+
+        const emeraldRing = catalog.findByOutputItem(1639).find((a) => a.id === 'bank-artisan:jewellery-emerald_ring');
+        expect(emeraldRing?.trust).toBe('practice_passed');
+        expect(emeraldRing?.config.aioRoute).toBe('crafting:jewellery-trip');
+        expect(emeraldRing?.inputs).toEqual([{ itemId: 2357, countPerUnit: 1 }, { itemId: 1605, countPerUnit: 1 }]);
+
+        const unstrungGlory = catalog.findByOutputItem(1683).find((a) => a.id === 'bank-artisan:jewellery-unstrung_dragonstone_amulet');
+        expect(unstrungGlory?.trust).toBe('practice_passed');
+        expect((unstrungGlory?.config.defaultEnv as Record<string, string> | undefined)?.MEMBERS).toBe('1');
+
+        const strungGlory = catalog.findByOutputItem(1702).find((a) => a.id === 'bank-artisan:string-dragonstone-amulet');
+        expect(strungGlory?.trust).toBe('practice_passed');
+        expect(strungGlory?.inputs).toEqual([{ itemId: 1759, countPerUnit: 1 }, { itemId: 1683, countPerUnit: 1 }]);
+
+        const cutDstone = catalog.findByOutputItem(1615).find((a) => a.id === 'bank-artisan:skill:gem_cutting_table:dragonstone_cutting');
+        expect(cutDstone?.trust).toBe('practice_passed');
+        expect(cutDstone?.config.aioRoute).toBe('crafting:inventory');
+        expect(cutDstone?.config.requiredTools).toEqual([1755]);
+
+        const runiteBar = catalog.findByOutputItem(2363).find((a) => a.id === 'bank-artisan:skill:smelting.struct:smelting_runite_bar');
+        expect(runiteBar?.trust).toBe('practice_passed');
+        expect(runiteBar?.config.aioRoute).toBe('smithing:smelt');
+        expect(runiteBar?.inputs).toEqual([{ itemId: 451, countPerUnit: 1 }, { itemId: 453, countPerUnit: 8 }]);
+
+        const goldBar = catalog.findByOutputItem(2357).find((a) => a.id === 'bank-artisan:skill:smelting.struct:smelting_gold_bar');
+        expect(goldBar?.trust).toBe('practice_passed');
+        expect(goldBar?.inputs).toEqual([{ itemId: 444, countPerUnit: 1 }]);
+
+        expect(catalog.findByOutputItem(241).some((a) => a.id === 'bank-artisan:grind-blue_dragon_scale' && a.trust === 'practice_passed')).toBe(true);
+        expect(catalog.findByOutputItem(257).some((a) => a.id === 'bank-artisan:identify-ranarr_weed' && a.trust === 'practice_passed')).toBe(true);
+        expect(catalog.findByOutputItem(2152).some((a) => a.id === 'bank-artisan:strip-swamp-toad' && a.trust === 'practice_passed')).toBe(true);
     });
 });

@@ -1,5 +1,5 @@
 // Deterministic specialist launch CLI: refreshes hiscores, validates a hosted rehearsal receipt against WORKER_RELEASE and 2% margin, builds exact staging JSON from live holder bank/inventory, and writes .practice/specialist-launch/<acct>.json and .go.json.
-// Usage: bun tools/specialist-launch.ts <account> --holder <holder> [--dry-run] [--launch] [--receipt <path>] [--bank <path>] [--delivery <path>] [--run-id <id>] [--skip-hiscores]
+// Usage: bun tools/specialist-launch.ts <account> --holder <holder> [--tanks <tank1,tank2,...>] [--dry-run] [--launch] [--receipt <path>] [--bank <path>] [--delivery <path>] [--run-id <id>] [--skip-hiscores]
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { getSpecialistCampaignSpec, isReservedSpecialistAccount } from '../packages/brain/src/campaigns/specialists';
@@ -27,6 +27,7 @@ const RUN_ID_RE = /^[a-z0-9-]{1,96}$/;
 export interface SpecialistLaunchCliArgs {
     readonly account: string;
     readonly holder?: string;
+    readonly tanks?: string;
     readonly dryRun: boolean;
     readonly launch: boolean;
     readonly skipHiscores: boolean;
@@ -50,6 +51,7 @@ const defaultSpawnSync: SpawnSyncFn = (cmd, cwd) => {
 export function parseSpecialistLaunchArgs(argv: readonly string[]): SpecialistLaunchCliArgs {
     let account = '';
     let holder: string | undefined;
+    let tanksRaw: string | undefined;
     let dryRun = false;
     let launch = false;
     let skipHiscores = false;
@@ -76,6 +78,10 @@ export function parseSpecialistLaunchArgs(argv: readonly string[]): SpecialistLa
         else if (arg === '--holder' || arg.startsWith('--holder=')) {
             const { val, nextIdx } = takeValue('--holder', arg.startsWith('--holder=') ? arg.slice(9) : undefined, i);
             holder = val;
+            i = nextIdx;
+        } else if (arg === '--tanks' || arg.startsWith('--tanks=')) {
+            const { val, nextIdx } = takeValue('--tanks', arg.startsWith('--tanks=') ? arg.slice(8) : undefined, i);
+            tanksRaw = val;
             i = nextIdx;
         } else if (arg === '--receipt' || arg.startsWith('--receipt=')) {
             const { val, nextIdx } = takeValue('--receipt', arg.startsWith('--receipt=') ? arg.slice(10) : undefined, i);
@@ -113,6 +119,16 @@ export function parseSpecialistLaunchArgs(argv: readonly string[]): SpecialistLa
         if (!ACCOUNT_NAME_RE.test(holder)) throw Error(`specialist-launch: invalid --holder "${holder}"`);
         if (isReservedSpecialistAccount(holder)) throw Error(`specialist-launch: --holder "${holder}" is a reserved account`);
     }
+    let tanks: string | undefined;
+    if (tanksRaw !== undefined) {
+        const list = tanksRaw.split(',').map((t) => t.trim()).filter(Boolean);
+        if (list.length === 0) throw Error('specialist-launch: --tanks requires at least one account');
+        for (const t of list) {
+            if (!ACCOUNT_NAME_RE.test(t)) throw Error(`specialist-launch: invalid tank account "${t}"`);
+            if (isReservedSpecialistAccount(t)) throw Error(`specialist-launch: tank "${t}" is a reserved account`);
+        }
+        tanks = [...new Set(list)].join(',');
+    }
     if (runId !== undefined && !RUN_ID_RE.test(runId)) {
         throw Error(`specialist-launch: --run-id must match /^[a-z0-9-]{1,96}$/ (got "${runId}")`);
     }
@@ -120,6 +136,7 @@ export function parseSpecialistLaunchArgs(argv: readonly string[]): SpecialistLa
     return {
         account: lower,
         holder,
+        tanks,
         dryRun,
         launch,
         skipHiscores,
@@ -304,6 +321,7 @@ export function validateHostedRehearsalReceipt(
     opts: {
         readonly receiptPath?: string;
         readonly holder?: string;
+        readonly tanks?: string;
         readonly checkMaster?: boolean;
         readonly spawn?: SpawnSyncFn;
     } = {},
@@ -397,6 +415,7 @@ export function validateHostedRehearsalReceipt(
             env: {
                 ...env,
                 ...(opts.holder ? { SUPPLIER: opts.holder } : {}),
+                ...(opts.tanks ? { TANKS: opts.tanks } : {}),
                 FLEET_RUN_ID: runId,
             },
         }),
@@ -950,6 +969,7 @@ function activateLaunchInController(
     root: string,
     account: string,
     holder: string | undefined,
+    tanks: string | undefined,
     rehearsal: ValidatedRehearsal,
     runId: string,
     now: number,
@@ -992,6 +1012,7 @@ function activateLaunchInController(
             env: {
                 ...rehearsal.env,
                 ...(holder ? { SUPPLIER: holder } : {}),
+                ...(tanks ? { TANKS: tanks } : {}),
                 FLEET_RUN_ID: runId,
             },
         };
@@ -1009,6 +1030,7 @@ export interface SpecialistLaunchResult {
     readonly account: string;
     readonly board: string;
     readonly holder?: string;
+    readonly tanks?: string;
     readonly runId: string;
     readonly source: string;
     readonly planTicks: number;
@@ -1065,6 +1087,7 @@ export function runSpecialistLaunch(
     const rehearsal = validateHostedRehearsalReceipt(root, account, hiscores.leader, runId, now, {
         receiptPath: parsed.receiptPath,
         holder: parsed.holder,
+        tanks: parsed.tanks,
         checkMaster: opts.checkMaster,
         spawn,
     });
@@ -1117,7 +1140,7 @@ export function runSpecialistLaunch(
         expiresAt = token.expiresAt;
 
         if (parsed.launch) {
-            activateLaunchInController(root, account, parsed.holder, rehearsal, runId, now);
+            activateLaunchInController(root, account, parsed.holder, parsed.tanks, rehearsal, runId, now);
         }
     }
 
@@ -1128,6 +1151,7 @@ export function runSpecialistLaunch(
         account,
         board: board.name,
         ...(parsed.holder ? { holder: parsed.holder } : {}),
+        ...(parsed.tanks ? { tanks: parsed.tanks } : {}),
         runId,
         source: rehearsal.source,
         planTicks: rehearsal.planTicks,
