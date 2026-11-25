@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795583657066-shaftmaker-sausagefest-4e0ffad9064d5e34",
  "account": "Shaftmaker",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 350000,
  "claim": "75b5a492-89ab-40f6-a121-ae06b4aa4e68",
- "count": 0,
- "ok": false,
- "at": 1795583732874,
- "detail": "trade claimed"
+ "count": 350000,
+ "ok": true,
+ "at": 1795583952981,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 350000,
+  "after": 0
+ },
+ "bank": {
+  "count": 350000,
+  "at": 1795583741040
+ },
+ "logout": {
+  "attemptId": "1795583732885-0000013516-0000000001",
+  "at": 1795583952967,
+  "sha256": "56be95e63e1a46e072aebe42813bcf910764488e5975ec13467bb873138f934b"
+ },
+ "screen": true
 }
