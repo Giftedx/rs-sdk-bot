@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795572470220-shaftsinker-unsheathed-5c6cdb4cc3f84735",
  "account": "Unsheathed",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "c4dd4341-e11d-49e2-94c6-063c0ac039de",
  "count": 0,
  "ok": false,
- "at": 1795573336815,
- "detail": "trade claimed"
+ "at": 1795573485835,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795573336825-0000022076-0000000001",
+  "at": 1795573485805,
+  "sha256": "78b28c514c07027a69cd87f3bb3721b78d6e319138a56edc56d77ad87f2aab14"
+ },
+ "screen": false
 }

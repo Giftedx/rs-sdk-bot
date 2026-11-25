@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795572470220-shaftsinker-unsheathed-5c6cdb4cc3f84735",
+ "role": "from",
+ "account": "Shaftsinker",
+ "partner": "Unsheathed",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795573485105,
+ "detail": "Error: fleet trade claim held for order 1795572281512-shaftsinker-spitroaster-63dd43d23c1f2d0f"
+}
