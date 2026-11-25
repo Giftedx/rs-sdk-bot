@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795567604593,
+ "at": 1795571057505,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,6 +22,22 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "helper"
   }
  ],
  "army": [
