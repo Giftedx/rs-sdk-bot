@@ -161,8 +161,9 @@ const CRAFTING_CW_CYCLES: readonly (readonly { id: number; count: number }[])[] 
   { id: ITEM_IDS.uncut_diamond, count: 9 },
   { id: ITEM_IDS.uncut_dragonstone, count: 15 },
  ],
- ...Array.from({ length: 9 }, () => [{ id: ITEM_IDS.uncut_dragonstone, count: 27 }] as const),
- [{ id: ITEM_IDS.uncut_dragonstone, count: 19 }],
+ // 26 gems/cycle fits 1 deposit + 4 withdraws (10+10+5+1) in a single 5-packet bank tick.
+ ...Array.from({ length: 10 }, () => [{ id: ITEM_IDS.uncut_dragonstone, count: 26 }] as const),
+ [{ id: ITEM_IDS.uncut_dragonstone, count: 2 }],
 ];
 
 const CRAFTING_CW_DIAMOND_CYCLES: readonly (readonly { id: number; count: number }[])[] = [
@@ -175,8 +176,7 @@ const CRAFTING_CW_DIAMOND_CYCLES: readonly (readonly { id: number; count: number
   { id: ITEM_IDS.uncut_ruby, count: 3 },
   { id: ITEM_IDS.uncut_diamond, count: 24 },
  ],
- ...Array.from({ length: 12 }, () => [{ id: ITEM_IDS.uncut_diamond, count: 27 }] as const),
- [{ id: ITEM_IDS.uncut_diamond, count: 14 }],
+ ...Array.from({ length: 13 }, () => [{ id: ITEM_IDS.uncut_diamond, count: 26 }] as const),
 ];
 
 const GEM_XP_BY_ID = new Map<number, number>(CRAFTING_GEMS.map(g => [g.id, g.xp]));
@@ -515,8 +515,7 @@ async function craftAtCastleWarsBank(
  start: number,
  deadline: number,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
- // Rub Ring of dueling(8) and pick option 2 (2462 = Castle Wars) in a single tick.
- let rubChained = false;
+ // Rub Ring of dueling(8) (1-tick delay before 3-option dialog), then pick Castle Wars Arena.
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
   if (inCastleWars(p)) break;
@@ -524,16 +523,10 @@ async function craftAtCastleWarsBank(
   const cwOpt = dlg?.isOpen && !dlg.isWaiting ? dlg.options.find((o: any) => /castle wars/i.test(o.text)) : undefined;
   if (cwOpt) {
    await spec.direct({ type: 'clickDialogOption', optionIndex: cwOpt.index, reason: 'SDK' });
-  } else {
+  } else if (!dlg?.isOpen) {
    const ring = spec.sdk.getInventory().find(i => RING_OF_DUELING_SET.has(i.id));
    if (!ring) throw Error('ring of dueling missing after CW trade');
-   if (!rubChained) {
-    rubChained = true;
-    await spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' });
-    await spec.direct({ type: 'clickComponent', componentId: 2462, reason: 'SDK' });
-   } else {
-    await spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' });
-   }
+   await spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' });
   }
   await waitTicks(spec, 1);
  }
@@ -631,10 +624,10 @@ async function executeCraftingCastleWars(
  start: number,
  deadline: number,
  receiveCwKit: () => Promise<void>,
+ dropBeforeTrade = true,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  await skipTutorial2Ticks(spec, deadline);
- // Fresh tutorial inventory leaves >= 10 free slots, fitting all 8 stackable CW kit items without dropping.
- if (spec.sdk.getInventory().length > 20) {
+ if (dropBeforeTrade && spec.sdk.getInventory().length > 10) {
   await dropItemsFast(spec, new Set(), deadline);
  }
  await receiveCwKit();
@@ -668,12 +661,19 @@ export async function runCraftingSpecialist(
  try {
   if (cwMode) {
    const cwBatch = diamondMode ? CRAFTING_CW_DIAMOND_BATCH : CRAFTING_CW_BATCH;
-   return await executeCraftingCastleWars(spec, target, start, deadline, () =>
-    fastInProcessBatchTrade(spec, helpers[0]!, {
-     giveIds: cwBatch.give.map(g => g.id),
-     returnIds: [],
-     deadlineTick: deadline,
-    }),
+   return await executeCraftingCastleWars(
+    spec,
+    target,
+    start,
+    deadline,
+    () =>
+     fastInProcessBatchTrade(spec, helpers[0]!, {
+      giveIds: cwBatch.give.map(g => g.id),
+      returnIds: [],
+      dropUnwanted: new Set<number>(),
+      deadlineTick: deadline,
+     }),
+    false,
    );
   }
   await skipTutorial2Ticks(spec, deadline);
