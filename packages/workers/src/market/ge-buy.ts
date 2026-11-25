@@ -241,8 +241,11 @@ export async function runOwnedItem(
         if (cancel) throw Error('cannot cancel unsubmitted rescue order');
         entryJournal = await rescueMarketEntry(s, request, journalPath, stop, rescueControl);
     }
-    await leaveBattlefield(s, () => stop() || Date.now() >= request.deadline);
-    await prepareMarketEntry(s, () => stop() || Date.now() >= request.deadline);
+    // A submitted offer may travel back after its deadline to cancel and collect. Only a new submission stops at the deadline.
+    const submitted = !!entryJournal && ['open', 'cancelling', 'collecting'].includes(entryJournal.phase);
+    const travelStop = () => stop() || (!submitted && Date.now() >= request.deadline);
+    await leaveBattlefield(s, travelStop);
+    await prepareMarketEntry(s, travelStop);
     const state = () => s.sdk.getState();
     const held = (id: number) => {
         const inv = s.sdk.getInventory();

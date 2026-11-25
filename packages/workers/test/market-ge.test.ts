@@ -390,12 +390,12 @@ else{
  mock.module('../../core/src/walk',()=>({
   goTo:async()=>{throw Error('unexpected remote travel in bank fixture');},
   sessionWalker:async(s:any)=>({s,plan:()=>[]}),expandPath:()=>[],
-  walkPath:async(d:any,points:any[])=>{const p=points[0];Object.assign(d.s.sdk.getState().player,{worldX:p.x,worldZ:p.z});return{ok:true};},
+  walkPath:async(d:any,points:any[])=>{const p=points.at(-1);Object.assign(d.s.sdk.getState().player,{worldX:p.x,worldZ:p.z});return{ok:true};},
  }));
  const {runOwnedItem}=await import('../src/market');
  type Row={id:number;name:string;count:number;slot:number};
  async function fixture(filled:number,phase?:ItemOrder['phase'],applied=false,options:{fillWait?:number;noCollection?:boolean;noDeposit?:boolean;exactBudget?:boolean;lowHp?:boolean;noFood?:boolean;noHeal?:boolean;guardEats?:boolean;replayBankState?:boolean;prepared?:boolean;partialThenFull?:boolean;expireAfterCollect?:boolean;uncertain?:boolean;throwPlacementBefore?:boolean;throwPlacementAfter?:boolean;throwCollectionBefore?:boolean;throwCollectionAfter?:boolean;shortCash?:boolean;ownedStock?:boolean;topUp?:{owned:number;expected?:number};
-  rest?:boolean;startResting?:boolean;startDrift?:number;between?:(h:{bank:Row[];offers:()=>GEOffer[];setOffers:(o:GEOffer[])=>void;setNow:(t:number)=>void;deadline:number})=>void}={}){
+  rest?:boolean;startResting?:boolean;startDrift?:number;startAt?:{x:number;z:number};pastDeadline?:boolean;between?:(h:{bank:Row[];offers:()=>GEOffer[];setOffers:(o:GEOffer[])=>void;setNow:(t:number)=>void;deadline:number})=>void}={}){
   const dir=mkdtempSync(join(tmpdir(),'ge-worker-')),path=join(dir,'journal.json');
   const originalNow=Date.now;let now=originalNow();Date.now=()=>now;
   const req:ItemOrder['request']={...bulkRequest,createdAt:Date.now(),reviewAt:Date.now()+10000,deadline:Date.now()+20000};
@@ -426,6 +426,8 @@ else{
    if(options.startDrift)state.bank.items[0]!.count+=options.startDrift;
    writeFileSync(path,JSON.stringify(j));
   }
+  if(options.startAt)Object.assign(state.player,{worldX:options.startAt.x,worldZ:options.startAt.z});
+  if(options.pastDeadline)now=req.deadline;
   state.bank.items.push({...row(1351,1),name:'Bronze axe'});
   const sdk={getState:()=>state,getStateAge:()=>0,getInventory:()=>state.inventory,getEquipment:()=>[],getSkill:()=>({level:hp}),
    findBankItem:()=>state.bank.items.find(i=>i.id===995),getGEState:()=>({offers})};
@@ -561,6 +563,14 @@ else{
   }});
   expect(r.second).toMatchObject({ok:false,resting:false,phase:'settled',acquired:120,spent:360,refund:1140,conserved:true,banked:true});
   expect(r.second.failure).toContain('deadline');expect(r.cancels).toBe(1);expect(r.collections).toBe(1);
+ });
+ test('worker: a resting offer past its deadline travels back from away, then cancels and collects the part fill',async()=>{
+  const r=await fixture(120,'open',false,{startResting:true,startAt:{x:3165,z:3487},pastDeadline:true});
+  expect(r.first).toMatchObject({phase:'settled',acquired:120,spent:360,refund:1140,conserved:true,banked:true});
+  expect(r.first.failure).toContain('deadline');expect(r.cancels).toBe(1);expect(r.collections).toBe(1);expect(r.placements).toBe(0);
+ });
+ test('worker: a new order away from the market does not travel after its deadline',async()=>{
+  await expect(fixture(300,undefined,false,{startAt:{x:3165,z:3487},pastDeadline:true})).rejects.toThrow('market trip health/stop/tick budget');
  });
  test('worker: coin drift on an open offer that did not rest still refuses before any mutation',async()=>{
   const r=await fixture(120,'open',false,{startDrift:50});
