@@ -198,7 +198,8 @@ test('verifyStaticBundle enforces sibling import-page contracts including relati
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
-// A page comment that named shim.js once made import-page.ts leave both script tags out; that page shows no data.
+// A hosted page without the config.js and shim.js tags shows no data. A comment that names those files loads nothing,
+// so the audit looks for the tags themselves.
 test('verifyStaticBundle refuses an imported page that does not load config.js and shim.js',()=>{
  const dir=mkdtempSync(join(tmpdir(),'dash-noshim-'));
  try{

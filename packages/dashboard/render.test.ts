@@ -305,7 +305,7 @@ test('prsPanel rejects non-HTTP(S) PR URLs while rendering valid GitHub links',(
 });
 
 // A shared link names its account, Watch or free camera; until the page reads it, the first viewer address follows nobody.
-// Following the account chosen before the link resolved made the viewer report that account back, which replaced the link.
+// A follow of the account picked before the link is read makes the viewer report that account back, which replaces the link.
 test('the first viewer address follows nobody while a shared link is still unread',()=>{
  const helpers=html.slice(html.indexOf('function viewerFrameUrl('),html.indexOf('function viewerMessage('));
  const sync=html.slice(html.indexOf('function syncWorld(){'),html.indexOf('// Ground items:'));
@@ -317,7 +317,7 @@ test('the first viewer address follows nobody while a shared link is still unrea
 });
 
 // The published file can be 10 minutes old, so a link or a pick can find an account out of the world that the live feed
-// shows a moment later. The free camera stood only for that absence: the page follows the account once the feed has it.
+// shows a moment later. That free camera stands only for the absence: the page follows the account once the feed has it.
 test('a free camera chosen for an account out of the world becomes a follow when the live feed shows it',()=>{
  const code=html.slice(html.indexOf('function liveRosterIn(r){'),html.indexOf('window.atlasRosterIn=liveRosterIn;'));
  const pickLine=html.split('\n').find(l=>l.startsWith('function pick(n){'))!;
