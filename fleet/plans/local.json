@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795606896243,
+ "at": 1795607295580,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -123,22 +123,6 @@
    ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -201,26 +185,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2152",
-   "role": "helper"
   }
  ],
  "army": [
@@ -251,7 +215,8 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "undermykilt"
+  "undermykilt",
+  "woodpecker"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
