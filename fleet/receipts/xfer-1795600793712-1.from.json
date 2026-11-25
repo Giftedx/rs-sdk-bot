@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795600793712-1",
  "account": "UnderMyKilt",
  "partner": "Unsheathed",
@@ -12,6 +12,16 @@
  "claim": "aa3ff367-1d72-480f-bceb-6ee49ea59d28",
  "count": 0,
  "ok": false,
- "at": 1795601292721,
- "detail": "trade claimed"
+ "at": 1795601340121,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795601308973
+ },
+ "logout": {
+  "attemptId": "1795601292729-0000029032-0000000001",
+  "at": 1795601340097,
+  "sha256": "e83e9466f9a3b5ca3d6508edd73e619a99f6a99a16d862f275e9c34284295bb3"
+ },
+ "screen": false
 }

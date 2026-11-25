@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601332048,
+ "at": 1795601370026,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,36 +24,30 @@
    "role": "rehearsal"
   },
   {
-   "account": "Knightstick",
-   "script": "scripts/generated/woodcutting.ts",
+   "account": "TheFullMonty",
+   "script": "scripts/generated/quest-dragon.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "goal:quest_board:dragon",
+   "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/generated/woodcutting.ts",
+   "account": "Knightstick",
+   "script": "scripts/generated/quest-arena.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "goal:quest_board:arena",
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -102,6 +96,58 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-440-93-p94 ITEM_ID=440 QUANTITY=93 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=94 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-186-p517 ITEM_ID=453 QUANTITY=186 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=93 ORE_RESERVE=0 -- smithing smelt"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:2152",
+    "BATCH_UNITS": "10"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:2152",
+   "role": "helper"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "herblore",
+    "potions"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "67"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:2481",
+   "role": "army"
   }
  ],
  "army": [
@@ -128,7 +174,6 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
-  "pickpockdick",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
