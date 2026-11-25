@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795621073387,
+ "at": 1795621105197,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -139,22 +139,6 @@
    "role": "helper"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=2 \"ITEM_NAME=Gold bar\" -- loadout",
-    "scripts/aio-logistics.ts ITEM_ID=1601 QUANTITY=2 ITEM_NAME=Diamond -- loadout",
-    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=5 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
@@ -182,6 +166,7 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",

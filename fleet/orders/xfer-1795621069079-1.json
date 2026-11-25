@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795621069079-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fatstack",
+  "to": "OreElse",
+  "item": "Diamond",
+  "count": 3,
+  "itemId": 1601,
+  "start": 1795621069079,
+  "end": 1795621969079,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
