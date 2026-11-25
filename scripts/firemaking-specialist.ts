@@ -45,14 +45,24 @@ export const FIREMAKING_TIERS: readonly FiremakingTier[] = [
     { name: 'magic', itemId: OBJ_MAGIC_LOGS, reqLevel: 75, xp25x: 7595 },
 ];
 
-// 160 distinct active-loc-free, danger-free tiles north of Lumbridge castle, BFS-verified door-free from (3222,3222)
-// against collision-data.json WALK_BLOCKED, active locs (map_locaddunsafe), and aggressive NPC hunt ranges.
+// 159 distinct active-loc-free, danger-free tiles north of Lumbridge castle, BFS-verified door-free from (3222,3222)
+// with <=2t cooldown-masked transitions across all rows after leaving Lumbridge Castle courtyard.
+function expandEwRun(xStart: number, xEnd: number, z: number): [number, number][] {
+    const out: [number, number][] = [];
+    for (let x = xStart; x >= xEnd; x--) out.push([x, z]);
+    return out;
+}
+
 export const LUMBRIDGE_FM_PATH: readonly [number, number][] = [
-    [3222, 3222], [3221, 3222], [3220, 3222], [3219, 3222],
-    [3228, 3254], [3227, 3254], [3226, 3254], [3225, 3254], [3224, 3254], [3223, 3254], [3222, 3254], [3221, 3254], [3220, 3254], [3219, 3254], [3218, 3254], [3217, 3254], [3216, 3254], [3215, 3254], [3214, 3254], [3213, 3254], [3212, 3254], [3211, 3254], [3210, 3254], [3209, 3254], [3208, 3254], [3207, 3254], [3206, 3254], [3205, 3254], [3204, 3254], [3203, 3254], [3202, 3254], [3201, 3254], [3200, 3254], [3199, 3254], [3198, 3254], [3197, 3254], [3196, 3254], [3195, 3254], [3194, 3254], [3193, 3254], [3192, 3254], [3191, 3254], [3190, 3254], [3189, 3254],
-    [3192, 3263], [3191, 3263], [3190, 3263], [3189, 3263], [3188, 3263], [3187, 3263], [3186, 3263], [3185, 3263], [3184, 3263], [3183, 3263], [3182, 3263], [3181, 3263], [3180, 3263], [3179, 3263], [3178, 3263], [3177, 3263], [3176, 3263], [3175, 3263], [3174, 3263], [3173, 3263], [3172, 3263], [3171, 3263], [3170, 3263], [3169, 3263], [3168, 3263], [3167, 3263], [3166, 3263], [3165, 3263], [3164, 3263], [3163, 3263], [3162, 3263], [3161, 3263], [3160, 3263], [3159, 3263], [3158, 3263], [3157, 3263], [3156, 3263], [3155, 3263], [3154, 3263], [3153, 3263], [3152, 3263], [3151, 3263], [3150, 3263], [3149, 3263],
-    [3148, 3264], [3147, 3264], [3146, 3264], [3145, 3264], [3144, 3264], [3143, 3264], [3142, 3264], [3141, 3264], [3140, 3264], [3139, 3264], [3138, 3264], [3137, 3264], [3136, 3264], [3135, 3264], [3134, 3264], [3133, 3264], [3132, 3264], [3131, 3264], [3130, 3264], [3129, 3264], [3128, 3264], [3127, 3264], [3126, 3264], [3125, 3264], [3124, 3264], [3123, 3264], [3122, 3264], [3121, 3264], [3120, 3264], [3119, 3264], [3118, 3264], [3117, 3264], [3116, 3264], [3115, 3264], [3114, 3264], [3113, 3264], [3112, 3264], [3111, 3264], [3110, 3264], [3109, 3264], [3108, 3264], [3107, 3264], [3106, 3264], [3105, 3264], [3104, 3264], [3103, 3264], [3102, 3264], [3101, 3264], [3100, 3264], [3099, 3264], [3098, 3264], [3097, 3264], [3096, 3264], [3095, 3264], [3094, 3264], [3093, 3264], [3092, 3264], [3091, 3264], [3090, 3264], [3089, 3264],
-    [3104, 3262], [3103, 3262], [3102, 3262], [3101, 3262], [3100, 3262], [3099, 3262], [3098, 3262], [3097, 3262], [3096, 3262], [3095, 3262], [3094, 3262], [3093, 3262],
+    ...expandEwRun(3222, 3219, 3222),
+    ...expandEwRun(3226, 3201, 3237),
+    ...expandEwRun(3200, 3189, 3233),
+    ...expandEwRun(3190, 3159, 3232),
+    ...expandEwRun(3160, 3142, 3233),
+    ...expandEwRun(3143, 3120, 3231),
+    ...expandEwRun(3121, 3108, 3228),
+    ...expandEwRun(3109, 3089, 3226),
+    ...expandEwRun(3095, 3089, 3225),
 ];
 
 export interface FiremakingPlanStep {
@@ -136,12 +146,8 @@ export function buildFiremakingSupplierConfigs(goalXp = xpForLevel(99)): Firemak
         const rest = mine.slice(1).flat().map(s => s.itemId);
         const inventory = first.map(s => ({ id: s.itemId, count: 1 }));
         inventory.push({ id: OBJ_GLORY_IDS[0], count: 1 });
-        if (role === 'runner' && inventory.length < 28) {
-            inventory.push({ id: OBJ_ENERGY_IDS[0], count: 1 });
-        }
         const bank = aggregateItems(rest);
         bank.push({ id: OBJ_GLORY_IDS[0], count: 1 });
-        bank.push({ id: OBJ_ENERGY_IDS[0], count: 2 });
         return {
             role,
             position: { x: 3223 + rIdx, z: 3222, level: 0 },
@@ -525,8 +531,10 @@ if (import.meta.main) {
                     if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
                         await main.direct({ type: 'closeModal', reason: 'SDK' });
                     }
-                    // On consecutive West steps, ~push_player moves spec onto step.x during the p_delay(0) tick.
-                    if (prevStep && prevStep.x - 1 === step.x && prevStep.z === step.z && p?.worldX === prevStep.x && p?.worldZ === prevStep.z) {
+                    // On consecutive West steps, ~push_player moves spec onto step.x during the p_delay(0) tick; on jumps wait out p_delay(0) first.
+                    if (prevStep && (prevStep.x - 1 === step.x && prevStep.z === step.z
+                        ? (p?.worldX === prevStep.x && p?.worldZ === prevStep.z)
+                        : (p?.worldX === prevStep.x - 1 && p?.worldZ === prevStep.z))) {
                         await waitTicks(main, 1);
                         continue;
                     }

@@ -185,6 +185,12 @@ async function smithHeldBars(
    const anvil = spec.sdk.findNearbyLoc(/^anvil$/i);
    const bar = spec.sdk.getInventory().find(i => i.id === r.bar);
    if (!anvil || !bar) throw Error(`smithing anvil or bar ${r.bar} missing`);
+   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
+    // CloseModal sets requestModalClose=true on the same tick; clear modals first so useItemOnLoc's interface stays open.
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    await waitTicks(spec, 1);
+    continue;
+   }
    const sentTick = spec.tick();
    const openActs: Promise<unknown>[] = [];
    if (keepSet) {
@@ -193,9 +199,6 @@ async function smithHeldBars(
       openActs.push(spec.direct({ type: 'dropItem', slot: extra.slot, reason: 'SDK' }));
      }
     }
-   }
-   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
-    openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
    }
    openActs.push(spec.direct({ type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil.x, z: anvil.z, locId: anvil.id, reason: 'SDK' }));
    await Promise.all(openActs);
@@ -219,34 +222,36 @@ async function smithHeldBars(
    reason: 'SDK',
   });
   let delayUntil = spec.tick();
-  await waitUntil(
-   spec,
-   () => {
-    if (spec.tick() <= sentTick) return false;
-    if (skillLevel(spec, 'Smithing') >= target) return true;
-    const nowBars = countItem(spec.sdk.getInventory(), r.bar);
-    if (useMake10) {
-     if (nowBars === 0) { delayUntil = spec.tick() + 3; return true; }
-     return false;
-    }
-    if (useMake5) {
-     const done =
-      product === SMITH_PRODUCTS.iron_warhammer
-       ? skillLevel(spec, 'Smithing') >= 33 || nowBars < r.bars
-       : nowBars < r.bars;
-     if (done) { delayUntil = spec.tick() + 3; return true; }
-     return false;
-    }
-    if (nowBars < beforeBars) { delayUntil = spec.tick() + 3; return true; }
-    return false;
-   },
-   { timeoutTicks: useMake10 ? 50 : useMake5 ? 30 : 8 },
-  );
+  const maxWait = useMake10 ? 50 : useMake5 ? 30 : 8;
+  while (spec.tick() < sentTick + maxWait && spec.tick() < deadline) {
+   await waitTicks(spec, 1);
+   if (skillLevel(spec, 'Smithing') >= target) break;
+   const nowBars = countItem(spec.sdk.getInventory(), r.bar);
+   if (useMake10) {
+    if (nowBars === 0) { delayUntil = spec.tick() + 3; break; }
+   } else if (useMake5) {
+    const done =
+     product === SMITH_PRODUCTS.iron_warhammer
+      ? skillLevel(spec, 'Smithing') >= 33 || nowBars < r.bars
+      : nowBars < r.bars;
+    if (done) { delayUntil = spec.tick() + 3; break; }
+   } else if (nowBars < beforeBars) {
+    delayUntil = spec.tick() + 3;
+    break;
+   }
+   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
+    // Dismiss level-up modals while p_delay is ticking so none remain queued when the batch completes.
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
+  }
   if (skillLevel(spec, 'Smithing') >= target) return delayUntil;
   if (selectProductForInventory(skillLevel(spec, 'Smithing'), spec.sdk.getInventory()) === null) {
    return delayUntil;
   }
   while (spec.tick() < delayUntil) {
+   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
    await waitTicks(spec, 1);
   }
  }
@@ -306,10 +311,11 @@ export async function runSmithingSpecialist(
 
  try {
   await skipTutorialFast(spec, deadline);
-  await dropItemsFast(spec, new Set(), deadline);
+  const starterPreDrop = await dropItemsFast(spec, new Set(), deadline, 3);
 
   await burstTradeHost(spec, starterHelper, {
    giveIds: [ITEM_IDS.hammer, ITEM_IDS.amulet_of_glory_4, ITEM_IDS.bronze_bar, ITEM_IDS.iron_bar],
+   preDropSlots: starterPreDrop.length ? starterPreDrop : undefined,
    deadlineTick: deadline,
   });
 
@@ -332,11 +338,11 @@ export async function runSmithingSpecialist(
   const vWalk = await walkPath(
    walkEdgeToVarrock,
    [
-    { x: 3080, z: 3467, tol: 4 },
-    { x: 3090, z: 3444, tol: 4 },
-    { x: 3100, z: 3421, tol: 3 },
-    { x: 3158, z: 3418, tol: 4 },
-    { x: 3181, z: 3426, tol: 2 },
+    { x: 3083, z: 3467, tol: 4 },
+    { x: 3094, z: 3439, tol: 4 },
+    { x: 3099, z: 3421, tol: 3 },
+    { x: 3157, z: 3417, tol: 4 },
+    { x: 3175, z: 3426, tol: 2 },
     { x: 3187, z: 3426, tol: 0 },
    ],
    { maxTicks: Math.max(10, Math.min(95, deadline - spec.tick())) },
