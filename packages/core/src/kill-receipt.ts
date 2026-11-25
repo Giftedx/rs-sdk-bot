@@ -15,6 +15,14 @@ export type KillDomain = 'practice' | 'live';
 export type KillItem = { id: number; name?: string; count: number };
 // The world-feed death of the victim near the kill, or the reason that no match exists.
 export type KillFeedMatch = { matched: true; feedTick: number; deltaMs: number | null; source: string } | { matched: false; reason: string; source?: string };
+// The skull and overhead prayers of the victim in the last tick that the killer saw it before the kill message. death.rs2
+// pvp_death_lose_items reads %pk_skull and %prayer8 (Protect Item) in the tick of that message: a skulled death keeps 0
+// items, or its dearest one with Protect Item. Protect Item has no head icon.
+export type KillHead = { skulled: boolean; protect: string[]; tick: number };
+// The stacks within 3 tiles of the victim's tile 6 ticks after the kill message and in each pickup read, added up by id,
+// and what the pickup did:
+// `ran`, `skipped: <reason>` or `none: <reason>`.
+export type KillGround = { tick: number; items: KillItem[]; pickup: string };
 export type KillReceipt = {
     schema: typeof KILL_SCHEMA; id: string; account: string; victim: string; server: string; domain: KillDomain; practice: boolean;
     // `at` is the wall clock of the writer in ms. `tick` is the session tick of the killer, which starts at its login.
@@ -27,11 +35,13 @@ export type KillReceipt = {
     loot: KillItem[] | null; lootAt: number | null;
     // null: no feed check ran for this kill.
     feed: KillFeedMatch | null;
+    // null or absent: no view of the victim, or no ground read.
+    victimHead?: KillHead | null; ground?: KillGround | null;
     owner: { pid: number; script: string | null; coordinatorRunId: string | null; workerRelease: string | null };
 };
 // The session identity of the killer (Session.lifecycle). With no session identity the receipt is a practice receipt.
 export type KillSession = { server: string; attemptId?: string } | null | undefined;
-export type KillInput = Omit<KillReceipt, 'schema' | 'id' | 'server' | 'domain' | 'practice' | 'at' | 'attemptId' | 'loot' | 'lootAt' | 'feed' | 'owner'> & { session: KillSession };
+export type KillInput = Omit<KillReceipt, 'schema' | 'id' | 'server' | 'domain' | 'practice' | 'at' | 'attemptId' | 'loot' | 'lootAt' | 'feed' | 'ground' | 'owner'> & { session: KillSession };
 
 // The killer's message for a PvP death, with the loser's display name (skill_combat/scripts/pvp/pvp_combat.rs2
 // pvp_death_message).
@@ -81,6 +91,7 @@ export function writeKillReceipt(input: KillInput, opts: { root?: string; now?: 
         schema: KILL_SCHEMA, id, account: body.account, victim: body.victim, server, domain, practice: domain !== 'live', at, tick: body.tick,
         attemptId: session?.attemptId ?? null, tile: body.tile, wilderness: body.wilderness, multi: body.multi, message: body.message,
         victimCombat: body.victimCombat, victimTile: body.victimTile, kit: body.kit, fight: body.fight, loot: null, lootAt: null, feed: null,
+        victimHead: body.victimHead ?? null, ground: null,
         owner: { pid: process.pid, script: opts.script ?? null, coordinatorRunId: env.FLEET_RUN_ID || env.COORDINATOR_RUN_ID || null, workerRelease: env.WORKER_RELEASE || null },
     };
     const dir = join(opts.root ?? DEFAULT_KILL_ROOT, domain, serverKey(server), accountKey(body.account));
@@ -91,7 +102,7 @@ export function writeKillReceipt(input: KillInput, opts: { root?: string; now?: 
 }
 
 // Adds picked-up items or the feed match to a receipt. Loot counts add to the loot that the file holds.
-export function amendKillReceipt(file: string, patch: { loot?: readonly KillItem[]; feed?: KillFeedMatch }, now: () => number = Date.now): KillReceipt {
+export function amendKillReceipt(file: string, patch: { loot?: readonly KillItem[]; feed?: KillFeedMatch; ground?: KillGround }, now: () => number = Date.now): KillReceipt {
     const receipt = JSON.parse(readFileSync(file, 'utf8')) as KillReceipt;
     if (receipt?.schema !== KILL_SCHEMA) throw new Error('not a kill receipt');
     if (patch.loot) {
@@ -105,6 +116,7 @@ export function amendKillReceipt(file: string, patch: { loot?: readonly KillItem
         receipt.lootAt = now();
     }
     if (patch.feed) receipt.feed = patch.feed;
+    if (patch.ground) receipt.ground = patch.ground;
     writeAtomic(file, JSON.stringify(receipt, null, 1) + '\n');
     return receipt;
 }

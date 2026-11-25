@@ -258,6 +258,8 @@ export type FightOptions = {
     seenKillKeys?: Set<string>;
     // Invoked when a PvP death message for a player other than the current `targetName` arrives during combat (e.g. recoil, poison, or post-switch).
     onOtherKill?: (victim: string, info: { text: string; tick: number }) => void;
+    // The skull and overhead prayers of each player in view by lower-case name, shared across fight calls (fight.ts noteHeads).
+    heads?: Map<string, { skulled: boolean; protect: string[]; tick: number }>;
     maxWild?: number;
     maxDistance?: number;
     stop?: () => boolean;

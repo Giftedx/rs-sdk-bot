@@ -10,9 +10,9 @@ import { loadGear } from '../../../knowledge/src/gear-query';
 import { readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import type { Session } from '../../../core/src/inprocess';
-import { amendKillReceipt, KILL_MESSAGES, killMessage, killReceiptProof, writeKillReceipt } from '../../../core/src/kill-receipt';
+import { amendKillReceipt, KILL_MESSAGES, killMessage, killReceiptProof, writeKillReceipt, type KillHead, type KillItem } from '../../../core/src/kill-receipt';
 import { componentId } from '../../../core/src/logout';
-import { weaponNameStyle } from '../../../core/src/opponent';
+import { decodeHeadicons, weaponNameStyle } from '../../../core/src/opponent';
 import { questFlags } from '../../../core/src/quest-status';
 import { holdSessionEater } from '../../../core/src/sustain';
 import { tickWaits } from '../../../core/src/tick-stream';
@@ -544,6 +544,7 @@ export function emitKillReceipt(o: {
     fight: { ticks: number; dealt: number; taken: number; eaten: number; specs: number };
     killReceiptRoot?: string;
     feedWatch?: ReturnType<typeof killFeed>;
+    victimHead?: KillHead | null;
     log: (line: string) => void;
 }): string | undefined {
     if (!o.s.lifecycle && !o.killReceiptRoot) return undefined;
@@ -554,9 +555,10 @@ export function emitKillReceipt(o: {
             wilderness: wildernessLevel(o.at.z), multi: isMulti(o.at.x, o.at.z), message: o.messageText,
             victimCombat: o.victimCombat, victimTile: o.victimTile,
             kit: { worn: o.equipment.map(e => ({ slot: e.slot, id: e.id, name: e.name })), switches: { magic: [...(o.kit.magic ?? [])], ranged: [...(o.kit.ranged ?? [])], melee: [...(o.kit.melee ?? [])] } },
-            fight: o.fight,
+            fight: o.fight, victimHead: o.victimHead ?? null,
         }, { script: KILL_SCRIPT, ...(o.killReceiptRoot ? { root: o.killReceiptRoot } : {}) });
-        o.log(`PK kill receipt ${receipt.domain} ${receipt.id} wilderness ${receipt.wilderness} ${receipt.multi ? 'multi' : 'single'}`);
+        const head = receipt.victimHead;
+        o.log(`PK kill receipt ${receipt.domain} ${receipt.id} wilderness ${receipt.wilderness} ${receipt.multi ? 'multi' : 'single'} victim ${head ? `skull=${head.skulled ? 1 : 0} protect=${head.protect.join('+') || '-'} seen ${o.tick - head.tick} ticks before` : 'not seen'}`);
         if (o.feedWatch) checkKillFeed(o.feedWatch, receipt.victim, receipt.at, match => {
             amendKillReceipt(file, { feed: match });
             o.log(`PK kill feed ${match.matched ? `matched at feed tick ${match.feedTick}` : `no match: ${match.reason}`}`);
@@ -570,6 +572,32 @@ export function recordKillLoot(r: Pick<FightResult, 'receipt'>, picked: Record<s
     if (!r.receipt) return;
     try { amendKillReceipt(r.receipt, { loot: Object.entries(picked).map(([id, count]) => ({ id: Number(id), name: names.get(Number(id)), count })) }); }
     catch (e) { console.error(`[pk] kill receipt loot update failed: ${String(e)}`); }
+}
+// The skull and overhead prayers of each player in view, by lower-case name. A caller reads a kill's entry before it
+// notes the tick of the kill message, because the client can clear the icons in that tick.
+export function noteHeads(client: unknown, players: readonly { name: string; index: number }[], tick: number, heads: Map<string, KillHead>): void {
+    for (const p of players) {
+        const seen = observePlayer(client, p.index);
+        if (!seen) continue;
+        const h = decodeHeadicons(seen.headicons);
+        heads.set(p.name.toLowerCase(), { skulled: h.skulled, protect: [...h.protect], tick });
+    }
+}
+// Adds the ground stacks within `radius` tiles of `center` (Chebyshev), or of the account without a center, to `into`
+// (a map by `id@x,z`, so a stack read twice counts once).
+export function noteGround(ground: readonly { id: number; name?: string; count: number; x: number; z: number; distance: number }[], into: Map<string, KillItem>, radius = 3, center?: { x: number; z: number }): void {
+    for (const g of ground) {
+        const d = center ? Math.max(Math.abs(g.x - center.x), Math.abs(g.z - center.z)) : g.distance;
+        if (d <= radius) into.set(`${g.id}@${g.x},${g.z}`, { id: g.id, ...(g.name ? { name: g.name } : {}), count: g.count });
+    }
+}
+// Writes the ground that a kill left near the killer and what its pickup did to the receipt of that kill.
+export function recordKillGround(file: string | undefined, tick: number, stacks: ReadonlyMap<string, KillItem>, pickup: string): void {
+    if (!file) return;
+    const total = new Map<number, KillItem>();
+    for (const i of stacks.values()) { const held = total.get(i.id); if (held) held.count += i.count; else total.set(i.id, { ...i }); }
+    try { amendKillReceipt(file, { ground: { tick, items: [...total.values()].sort((a, b) => a.id - b.id), pickup } }); }
+    catch (e) { console.error(`[pk] kill receipt ground update failed: ${String(e)}`); }
 }
 // The items that a pack gained between two reads, by object id: the loot of a pickup that reports no items.
 export function packGain(before: readonly { id: number; count: number }[], after: readonly { id: number; count: number }[]): Record<string, number> {
@@ -1007,7 +1035,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const rotation = kitRotation(o.rotation, o.kit);
     const eatAt = o.eatAt ?? 50, restoreAt = o.restorePrayerAt ?? 20, cap = o.cap ?? 600;
     const result: FightResult = { outcome: 'timeout', ticks: 0, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: 0 }, freezes: 0, specs: 0 };
-    const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase();
+    const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase(), heads = o.heads ?? new Map<string, KillHead>();
     const startLife = sdk.getState()?.player?.lifeId;
     // The feed watch starts with the fight, so that it holds the victim's records when the kill comes.
     const feedWatch = killFeed(s.lifecycle?.server);
@@ -1151,7 +1179,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     victimTile: victim ? { x: victim.x, z: victim.z } : result.targetAt ?? null,
                     equipment: state.equipment, kit: o.kit,
                     fight: { ticks: result.ticks, dealt: result.dealt, taken: result.taken, eaten: result.eaten, specs: result.specs },
-                    killReceiptRoot: o.killReceiptRoot, feedWatch, log,
+                    killReceiptRoot: o.killReceiptRoot, feedWatch, victimHead: heads.get(want) ?? null, log,
                 });
                 return result;
             }
@@ -1174,6 +1202,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (/already under attack/i.test(m.text)) pjedByNpc = true;
         }
         seenMessage = maxMessage;
+        noteHeads(s.client, state.nearbyPlayers, now, heads);
         if ((rubbed >= 0 || ranAt >= 0) && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
         if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks${deathSkullFields(aliveView, itemCostOf)}`); return result; }
         if (o.stop?.()) { log(`PK stopped against ${targetName}`); return result; }
