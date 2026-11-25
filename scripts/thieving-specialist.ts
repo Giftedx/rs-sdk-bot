@@ -460,13 +460,9 @@ export async function runArdougneStunRelogThieving(opts: {
                         l => spec.locPattern.test(l.name) && l.x <= spec.maxX && l.optionsWithIndex.some(o => /steal/i.test(o.text)),
                     );
                     if (!locs.length) continue;
-                    const guardPad = (x: number, z: number) => st.nearbyNpcs.some(
-                        n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name)
-                            && chebDist({ x: n.x, z: n.z }, { x, z }) <= 6,
-                    );
-                    const watched = (x: number, z: number) => (recipe && sight
+                    const watched = (x: number, z: number) => recipe && sight
                         ? stallWatched(recipe, { worldX: x, worldZ: z, level: st.player!.level ?? 0 }, st.nearbyNpcs.map(n => ({ ...n, inCombat: false })), sight)
-                        : false) || guardPad(x, z);
+                        : st.nearbyNpcs.some(n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x, z }) <= 5);
                     const tile = locs.flatMap(stall =>
                         spec.offsets.map(([dx, dz]) => ({ stall, x: stall.x + dx, z: stall.z + dz }))
                             .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))

@@ -328,7 +328,6 @@ export async function runRunecraftSpecialist(
       giveIds: [ITEM_IDS.blankrune],
       deadlineTick: deadline,
       allowHelperOnSingleModal: true,
-      confirmOverlapOnHelper: true,
       onConfirmSend: () =>
        spec.direct({ type: 'interactLoc', x: bodyAltar.x, z: bodyAltar.z, locId: bodyAltar.id, optionIndex: 1, reason: 'SDK' }),
      });

@@ -137,8 +137,6 @@ export async function runPrayerSpecialist(
       giveIds: [ITEM_IDS.dragon_bones],
       deadlineTick: deadline,
       allowHelperOnSingleModal: true,
-      confirmOverlapOnHelper: true,
-      onConfirmSend: () => spec.direct({ type: 'useInventoryItem', slot: 0, optionIndex: 1, reason: 'SDK' }),
      });
     } finally {
      next.claimed = false;

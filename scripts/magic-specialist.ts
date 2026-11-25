@@ -97,20 +97,20 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
   ],
   returnIds: [],
  },
- // Batch 4 (7 diamond -> 37 total + 14 dragonstone -> exact Lv 71 for Magic pot Fire Wave)
+ // Batch 4 (7 diamond -> 37 total + 17 dragonstone -> Lv 72 before Arena)
  {
   give: [
    { id: ITEM_IDS.diamond_ring, count: 7 },
-   { id: ITEM_IDS.dragonstone_ring, count: 14 },
+   { id: ITEM_IDS.dragonstone_ring, count: 17 },
   ],
   returnIds: [],
  },
- // Batch 5 (20 slots -> 24 on spec with 4 runes: 14 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
+ // Batch 5 (24 slots -> 28 on spec with 4 runes: 18 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
  {
   give: [
-   { id: ITEM_IDS.dragonstone_ring, count: 14 },
+   { id: ITEM_IDS.dragonstone_ring, count: 18 },
    { id: ITEM_IDS.lawrune, count: 10 },
-   { id: ITEM_IDS.bloodrune, count: 850 },
+   { id: ITEM_IDS.bloodrune, count: 1000 },
    { id: ITEM_IDS.knife, count: 1 },
    { id: ITEM_IDS.prayer_potion_4, count: 1 },
    { id: ITEM_IDS.magic_potion_4, count: 1 },

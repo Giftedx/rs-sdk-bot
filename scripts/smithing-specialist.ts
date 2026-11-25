@@ -206,7 +206,9 @@ async function smithHeldBars(
   const beforeBars = countItem(spec.sdk.getInventory(), r.bar);
   const lvl = skillLevel(spec, 'Smithing');
   const useMake10 = product === SMITH_PRODUCTS.bronze_dagger && beforeBars >= 9;
-  const useMake5 = !useMake10 && (r.bars === 5 || product === SMITH_PRODUCTS.bronze_warhammer || (product === SMITH_PRODUCTS.iron_dagger && beforeBars >= 17 && lvl < 24));
+  const useMake5 =
+   !useMake10 &&
+   (r.bars === 5 || product === SMITH_PRODUCTS.bronze_warhammer || (product === SMITH_PRODUCTS.iron_warhammer && beforeBars >= 9 && lvl < 33));
   const optionIndex = useMake10 ? 3 : useMake5 ? 2 : 1;
   const sentTick = spec.tick();
   await spec.direct({
@@ -228,7 +230,10 @@ async function smithHeldBars(
      return false;
     }
     if (useMake5) {
-     const done = product === SMITH_PRODUCTS.iron_dagger ? beforeBars - nowBars >= 5 || nowBars === 0 : nowBars < r.bars;
+     const done =
+      product === SMITH_PRODUCTS.iron_warhammer
+       ? skillLevel(spec, 'Smithing') >= 33 || nowBars < r.bars
+       : nowBars < r.bars;
      if (done) { delayUntil = spec.tick() + 3; return true; }
      return false;
     }
@@ -240,6 +245,9 @@ async function smithHeldBars(
   if (skillLevel(spec, 'Smithing') >= target) return delayUntil;
   if (selectProductForInventory(skillLevel(spec, 'Smithing'), spec.sdk.getInventory()) === null) {
    return delayUntil;
+  }
+  while (spec.tick() < delayUntil) {
+   await waitTicks(spec, 1);
   }
  }
  throw Error('smithing loop exceeded cap');
@@ -393,7 +401,6 @@ export async function runSmithingSpecialist(
     await burstTradeHost(spec, next.session, {
      giveIds: [wantBar],
      deadlineTick: deadline,
-     allowHelperOnSingleModal: true,
      canStand: anvilRoomOk,
     });
     next.task = null;
