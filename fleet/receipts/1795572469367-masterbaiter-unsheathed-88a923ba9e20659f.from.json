@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572469367-masterbaiter-unsheathed-88a923ba9e20659f",
+ "account": "Masterbaiter",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 150,
+ "claim": "d1baea58-2236-48f7-9082-e662588f5ffd",
+ "count": 0,
+ "ok": false,
+ "at": 1795572566695,
+ "detail": "trade claimed"
+}
