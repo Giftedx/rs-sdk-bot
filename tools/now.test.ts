@@ -3,6 +3,7 @@ import {mkdirSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {age,isPortUnbound,nowLines,procRows,readSwarmStops,resolveSyncedLeasesDir,scriptsOf,type Checkout,type DashState,type Local} from './now';
+import type {ProgressReport} from './progress';
 import {coordinationView} from '../packages/dashboard/coordination';
 import {scoreboardView} from '../packages/dashboard/fleet-view';
 
@@ -135,6 +136,18 @@ test('the loops line names each fast-fail loop, says none, or is left out when n
     expect(lines).toContain('  loop  Shaftmaker 6x 3 s: headless arrows | Error: bank did not open');
     expect(nowLines(state(), local({ loops: [] }), NOW)).toContain('loops   none in 2.0 h');
     expect(nowLines(state(), local(), NOW).some(l => l.startsWith('loops'))).toBe(false);
+});
+
+test('the progress line prints the game progress, says when it was not read, and is left out when not asked for', () => {
+    const progress: ProgressReport = { hours: 24, since: NOW - 24 * 3_600_000, now: NOW, maxBots: 25,
+        sessions: { botMs: 12 * 3_600_000, logins: 40, shortLogins: 30, failedLogins: 0, open: 0, byScript: [] },
+        runs: { ok: 5, failed: 2, runMs: 3_600_000, byGoal: [], failClasses: [], topErrors: [] },
+        gains: null, work: { at: NOW, withWork: 3, idle: [] }, errors: ['gains: no snapshot'] };
+    const lines = nowLines(null, local({ progress }), NOW);
+    // It comes from the main checkout's records, so it prints with no dashboard too.
+    expect(lines).toContain('progress 24 h: 12.0 bot-hours online (average 0.5 bots, 2% of 25 maxBots), 40 logins (30 under 5 min); runs 5 ok, 2 failed; gains not known; 3 accounts with work (bun tools/progress.ts)');
+    expect(nowLines(state(), local({ progress: null }), NOW)).toContain('progress not known: tools/progress.ts did not finish');
+    expect(nowLines(state(), local(), NOW).some(l => l.startsWith('progress'))).toBe(false);
 });
 
 test('readSwarmStops and resolveSyncedLeasesDir prefer .practice/live/ and fall back to legacy paths', () => {

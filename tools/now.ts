@@ -1,7 +1,8 @@
 // Prints the state of this PC and the fleet on one screen. A session reads it first, so that it starts from the
 // facts: free memory, the heavy jobs, stop files, the controllers, the swarm, Fleet Brain, alerts, the
-// board, the fleet sides, the open pull requests, the fast-fail loops of the main checkout's results
-// (tools/fail-loops.ts), and this checkout and the main checkout against origin/master.
+// board, the fleet sides, the open pull requests, the game progress of the last 24 h (tools/progress.ts), the
+// fast-fail loops of the main checkout's results (tools/fail-loops.ts), and this checkout and the main checkout
+// against origin/master.
 // It reads the local dashboard (http://127.0.0.1:<DASH_PORT>/api/state) for the fleet. It reads by itself what must
 // be fresh or what the dashboard does not hold: the process list, the stop files, the git state and the SDK patch.
 // It changes nothing.
@@ -11,6 +12,7 @@ import {existsSync,readdirSync,readFileSync,statSync} from 'node:fs';
 import {uptime} from 'node:os';
 import {join,resolve} from 'node:path';
 import {failLoops,loopLines,readRecentResults,LOOP_WINDOW_MS,type FailLoop} from './fail-loops';
+import {progressLine,readProgress,type ProgressReport} from './progress';
 import {LEASE_MAX_AGE_MS,SIDE_NAME} from '../packages/core/src/fleet';
 import {findStopFile,resolveFleetDataDir} from '../packages/core/src/practice-paths';
 
@@ -35,8 +37,9 @@ export type Proc={scripts:string[];up:number};
 export type Checkout={path:string;branch:string;head:string;dirty:number;behind:number|null;ahead:number|null;fetchedAt:number|null;patch:'applied'|'not applied'|'no vendor/rs-sdk'};
 // `procs` is null when the process scan failed. Then the heavy jobs and the controllers are not known.
 // `loops`: the fast-fail loops of the main checkout's results (tools/fail-loops.ts); null when they were not read.
+// `progress`: the game progress of the main checkout's records (tools/progress.ts); null when it was not read.
 export type SyncedLease={side:string;pid:number|null;at:number|null};
-export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;syncedLeases?:SyncedLease[]|null};
+export type Local={uptimeSec:number;procs:Proc[]|null;stops:{file:string;text:string}[];here:Checkout;main:Checkout|null;loops?:FailLoop[]|null;syncedLeases?:SyncedLease[]|null;progress?:ProgressReport|null};
 
 // Fleet-data mirrors are a saved observation, not a remote process or network health check.
 export function readSyncedLeases(dir:string):SyncedLease[]|null{
@@ -149,6 +152,7 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
             return `prs     ${prs.length} open`+(prs.length?': '+prs.map(p=>`${p.number} ${p.branch}${p.draft?' (draft)':''}`).join(', '):'');
         });
     }else out.push('dashboard: no answer, so the fleet lines are missing. The other lines come from this PC.');
+    add('progress',()=>local.progress===undefined?null:local.progress===null?'progress not known: tools/progress.ts did not finish':progressLine(local.progress));
     add('loops',()=>{
         const loops=local.loops;
         if(loops==null)return null;
@@ -281,6 +285,7 @@ if(import.meta.main){
     let loops:FailLoop[]|null=null;
     try{loops=failLoops(readRecentResults(join(main,'.practice','results.jsonl')),now);}catch{/* an unreadable results file hides only this line */}
     const syncedLeases=readSyncedLeases(resolveSyncedLeasesDir(main));
-    const [state,procs,hereCheckout,mainCheckout]=await Promise.all([statePromise,procsPromise,herePromise,mainPromise]);
-    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,syncedLeases},Date.now()))console.log(line);
+    const progressPromise=readProgress(main,24,now).catch(()=>null);
+    const [state,procs,hereCheckout,mainCheckout,progress]=await Promise.all([statePromise,procsPromise,herePromise,mainPromise,progressPromise]);
+    for(const line of nowLines(state,{uptimeSec:uptime(),procs,stops,here:hereCheckout,main:mainCheckout,loops,syncedLeases,progress},Date.now()))console.log(line);
 }
