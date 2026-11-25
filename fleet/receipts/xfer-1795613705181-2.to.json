@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795613705181-2",
  "account": "Woodpecker",
  "partner": "Bigpackage",
@@ -10,8 +10,22 @@
  "item": "Sapphire necklace",
  "requested": 1,
  "claim": "a13bac1b-08f1-4415-bcea-6ddcb4592ffd",
- "count": 0,
- "ok": false,
- "at": 1795613981524,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795614041523,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795614040802
+ },
+ "logout": {
+  "attemptId": "1795613981695-0000006908-0000000001",
+  "at": 1795614041515,
+  "sha256": "91aaefd3db8be7393aea140fb4cd17416991ceb6550154c2558e3efdf1c8b530"
+ },
+ "screen": true
 }
