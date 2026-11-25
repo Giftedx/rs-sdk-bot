@@ -2264,6 +2264,23 @@ return [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 7}, equipment: [{id: 1381, count: 1, slot: 3}], inventory: [{id: 564, count: 50}, {id: 555, count: 50}], bank: [{id: 1637, count: 14}, {id: 1639, count: 18}]}},
   {key: 'extra:haggis-smith-20', engineEnv: {NODE_MEMBERS: 'true'}, script: 'scripts/measure/haggis-tt-prep.ts', preset: 'tutorial_done', scriptArgs: ['smith-20'], pass: ok, output: /\bticks=(\d+)/,
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 43, Smithing: 1}, equipment: [{id: 1387, count: 1, slot: 3}], inventory: [{id: 561, count: 20}], bank: [{id: 436, count: 14}, {id: 438, count: 14}, {id: 440, count: 6}]}},
+  // Ice gloves on one account for Heroes' Quest (scripts/generated/quest-herogloves-owned.ts; questCases skips `-owned`
+  // scripts): the rockslide, the ladder maze, the Ice Queen by Fire Blast, Camelot Teleport and the gloves banked at Seers.
+  {key: 'extra:herogloves-owned', script: 'scripts/aio-quester.ts', preset: 'quest_herogloves-owned', scriptArgs: ['herogloves-owned'], pass: ok, timeoutMs: 900_000},
+  // The live entry: the sweep at the Seers bank stages the kit from the bank, banks the worn rune armour (BARE), walks to
+  // the rockslide and runs the same script.
+  {key: 'extra:herogloves-owned-sweep', script: 'scripts/aio-quester.ts', preset: 'quest_herogloves-owned', scriptArgs: ['sweep', 'herogloves-owned'], pass: ok, timeoutMs: 900_000,
+    presetConfig: {...PRESETS['quest_herogloves-owned']!, position: {x: 2726, z: 3492, level: 0}, inventory: [], bank: PRESETS['quest_herogloves-owned']!.inventory,
+      equipment: [{id: 1163, count: 1, slot: 0}, {id: 1127, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}]}},
+  // Runite at the Heroes' Guild, the only runite rocks outside the Wilderness (maps/m45_154.jm2: 2937,9882 and 2941,9884):
+  // a mining bank job from the Falador West bank through the guild door (%heroquest 15, knowledge/doors.json) and down
+  // the guild cellar ladder (2892,3507 to 2892,9907, knowledge/transports.json). The job mines at the rock by 2940,9884;
+  // a second ore waits out the respawn (mining.rs2:161), so the case takes one.
+  {key: 'extra:bank-job-heroes-runite', engineEnv: {NODE_MEMBERS: 'true'}, script: 'scripts/aio-skiller.ts', preset: 'tutorial_done',
+    scriptArgs: ['bank-job', `--job=${encodeURIComponent(JSON.stringify({family: 'mining', recipe: 'runite_rock_table', target: 1, batch: 13, cap: 6000, returnTicks: 300, members: true, reserve: 0,
+      tool: 1275, bank: {x: 2946, z: 3368, level: 0}, site: {x: 2939, z: 9883, level: 0}}))}`],
+    pass: ok, timeoutMs: 900_000,
+    presetConfig: {position: {x: 2946, z: 3368, level: 0}, skills: {Mining: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, varps: {188: 15}, bank: [{id: 1275, count: 1}]}},
 ];
 }
 

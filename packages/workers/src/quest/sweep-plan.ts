@@ -44,7 +44,9 @@ export function presetFor(quest: string): SaveConfig & { position: Tile } {
 
 export const FOOD = new Set([329, 333, 361, 365, 373, 379, 385, 1891, 1893, 1895, 2309, 554, 555, 556, 557, 563]);
 export const COINS = 995;
-export const QUEST_ITEMS_AMONG_FOOD: Record<string, number[]> = { merlin: [2309] };
+// herogloves-owned: the fire and air runes are the Fire Blasts at the Ice Queen, and the law rune with 5 air is the Camelot
+// Teleport out of the lair.
+export const QUEST_ITEMS_AMONG_FOOD: Record<string, number[]> = { merlin: [2309], 'herogloves-owned': [554, 556, 563] };
 export const OPTIONAL = new Set([2446]);
 export const QUEST_OPTIONAL: Record<string, number[]> = { druidspirit: [2952] };
 
@@ -270,7 +272,9 @@ export const BUILD_MEALS: Record<string, number> = { upass: 12, regicide: 8 };
 export const buildPack = (quest: string, level: (skill: string) => number): Item[] =>
     level('Defence') < 40 && level('Ranged') >= 50 && level('Ranged') > level('Attack') ? BUILD_PACK[quest] ?? [] : [];
 
-export const BARE = new Set(['zanaris', 'grail', 'viking', 'ikov']);
+// herogloves-owned: the Ice Queen falls to Fire Blast, and worn melee armour lowers Magic attack (a rune full helm,
+// platebody, platelegs and kiteshield total -65, knowledge/gear.json).
+export const BARE = new Set(['zanaris', 'grail', 'viking', 'ikov', 'herogloves-owned']);
 
 export function ikovExcessMeals(
     pack: readonly Item[],
