@@ -85,10 +85,11 @@ export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
-// 25 slots exact: Amulet of glory(4) (+10 Ranged atk) in place of Amulet of accuracy (+4).
+// 15 slots exact: Amulet of glory(4) (+10 Ranged atk), Yew shortbow bridge (40->49), and Shark walk sustain (no 11 Dragon bones).
 export const RANGED_PVP_GLORY_KIT: readonly KitSpecItem[] = [
-    ...RANGED_PVP_SPECIALIST_KIT.filter(item => item.id !== 1478),
+    ...RANGED_PVP_SPECIALIST_KIT.filter(item => item.id !== 1478 && item.id !== 536),
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 857, name: 'Yew shortbow', count: 1, stackable: false },
 ] as const;
 
 export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
@@ -128,6 +129,7 @@ export const ITEM_IDS = {
     ironArrow: 884,
     ironKnife: 863,
     runeKnife: 868,
+    yewShortbow: 857,
     msb: MSB,
     runeArrow: 892,
     leatherBody: 1129,
@@ -1183,11 +1185,15 @@ export function selectRangedPvpUpgradeIds(
     inv: readonly InvItem[],
     worn: readonly WornItem[],
 ): number[] {
-    const want = rangedLevel >= 50 ? [ITEM_IDS.msb, ITEM_IDS.runeArrow] : [837, 881];
+    const held = new Set(inv.map(i => i.id));
+    const want = rangedLevel >= 50
+        ? [ITEM_IDS.msb, ITEM_IDS.runeArrow]
+        : rangedLevel >= 40 && held.has(ITEM_IDS.yewShortbow)
+          ? [ITEM_IDS.yewShortbow, ITEM_IDS.runeArrow]
+          : [837, 881];
     if (rangedLevel >= 40) want.push(ITEM_IDS.robinHood, ITEM_IDS.rangerBoots);
     if (rangedLevel >= 70) want.push(ITEM_IDS.blackChaps, ITEM_IDS.blackVambs);
     else if (rangedLevel >= 40) want.push(1099, 1065);
-    const held = new Set(inv.map(i => i.id));
     const equipped = new Set(worn.map(w => w.id));
     return want.filter(id => held.has(id) && !equipped.has(id));
 }
@@ -1273,6 +1279,7 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
         const startGearItems = startGearIds
             .map(id => (s.sdk.getInventory() as InvItem[]).find(i => i.id === id))
             .filter((x): x is InvItem => !!x && x.slot !== undefined);
+        const hasBones = countById(s.sdk.getInventory(), ITEM_IDS.bones) > 0;
         if (startGearItems.length > 0) {
             await Promise.all(
                 startGearItems.map(item => {
@@ -1280,31 +1287,49 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
                     return s.direct({ type: 'useInventoryItem', slot: item.slot!, optionIndex: op, reason: 'SDK' });
                 }),
             );
-            await waitUntil(
-                s,
-                () => startGearIds.every(id => (s.sdk.getEquipment() as WornItem[]).some(e => e.id === id)) || stop(),
-                { timeoutTicks: 5 },
-            );
+            if (hasBones) {
+                await waitUntil(
+                    s,
+                    () => startGearIds.every(id => (s.sdk.getEquipment() as WornItem[]).some(e => e.id === id)) || stop(),
+                    { timeoutTicks: 5 },
+                );
+            }
         }
-        const boneDeadline = s.tick() + 60;
-        while (!stop() && (s.sdk.getInventory() as InvItem[]).some(i => i.id === ITEM_IDS.bones)) {
-            if (s.tick() >= boneDeadline) throw Error('stalled burying Dragon bones');
-            const before = countById(s.sdk.getInventory(), ITEM_IDS.bones);
-            const bone = (s.sdk.getInventory() as InvItem[]).find(i => i.id === ITEM_IDS.bones);
-            if (!bone) break;
-            await s.direct({ type: 'useInventoryItem', slot: bone.slot, optionIndex: 1, reason: 'SDK' });
-            await waitUntil(s, () => countById(s.sdk.getInventory(), ITEM_IDS.bones) < before || stop(), { timeoutTicks: 5 });
+        if (hasBones) {
+            const boneDeadline = s.tick() + 60;
+            while (!stop() && (s.sdk.getInventory() as InvItem[]).some(i => i.id === ITEM_IDS.bones)) {
+                if (s.tick() >= boneDeadline) throw Error('stalled burying Dragon bones');
+                const before = countById(s.sdk.getInventory(), ITEM_IDS.bones);
+                const bone = (s.sdk.getInventory() as InvItem[]).find(i => i.id === ITEM_IDS.bones);
+                if (!bone) break;
+                await s.direct({ type: 'useInventoryItem', slot: bone.slot, optionIndex: 1, reason: 'SDK' });
+                await waitUntil(s, () => countById(s.sdk.getInventory(), ITEM_IDS.bones) < before || stop(), { timeoutTicks: 5 });
+            }
+            milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
         }
-        milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
         await rubJewellery(s, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars pvp');
-        await setProtectMelee(s, true, stop);
-        await walkKeepWaypoints(s, [{ x: 2470, z: 3170, tol: 4 }, { x: 2561, z: 3311, tol: 1 }], 220, stop, 'cw to ardougne lever', {
+        const useProtect = skillInfo(s, 'Prayer').baseLevel >= 37;
+        if (useProtect) await setProtectMelee(s, true, stop);
+        let lastWalkEat = -10;
+        await walkKeepWaypoints(s, [{ x: 2561, z: 3311, tol: 1 }], 220, stop, 'cw to ardougne lever', {
             ignoreMeleeHunters: true,
             ignoreLiveHunters: true,
             skipGuardWalk: true,
+            onTickExtra: useProtect
+                ? undefined
+                : () => {
+                    const hp = skillInfo(s, 'Hitpoints').level;
+                    if (hp > 0 && hp <= 7 && s.tick() - lastWalkEat >= 3) {
+                        const shark = (s.sdk.getInventory() as InvItem[]).find(i => i.id === 385);
+                        if (shark?.slot !== undefined) {
+                            lastWalkEat = s.tick();
+                            void s.direct({ type: 'useInventoryItem', slot: shark.slot, optionIndex: 1, reason: 'SDK' });
+                        }
+                    }
+                },
         });
-        await setProtectMelee(s, false, stop);
+        if (useProtect) await setProtectMelee(s, false, stop);
         await pullArdougneLeverToWildy(s, stop);
         await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, stop, 'step to keep post');
         await setAutoRetaliate(s, false);
