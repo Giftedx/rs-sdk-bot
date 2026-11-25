@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795630186279,
+ "at": 1795630212635,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,25 +60,6 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Fingersmith",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -304,6 +285,25 @@
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
    "role": "auto"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:225",
+    "BATCH_UNITS": "30",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:225",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   }
  ],
  "army": [
@@ -318,10 +318,10 @@
   "billionaire",
   "bowbeforeme",
   "fingerblastr",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
-  "mineyourbiz",
   "mmthv2350",
   "moneyshot",
   "pocketpython",
