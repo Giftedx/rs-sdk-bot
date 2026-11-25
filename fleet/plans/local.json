@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795584188334,
+ "at": 1795584203303,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,7 +24,7 @@
    "role": "rehearsal"
   },
   {
-   "account": "Packhorse",
+   "account": "Sausagefest",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -35,9 +35,9 @@
     "ITEM_ID": "44",
     "ITEMS": "^Rune arrowtips$",
     "STOCK_TARGET": "2600",
-    "MAX_ITEMS": "300",
+    "MAX_ITEMS": "1100",
     "COIN_RESERVE": "0",
-    "NO_BUY_TICKS": "120"
+    "NO_BUY_TICKS": "180"
    },
    "enabled": true,
    "repeat": false,
@@ -121,7 +121,6 @@
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
-  "sausagefest",
   "sporrandip",
   "swordinhand",
   "thefullmonty",

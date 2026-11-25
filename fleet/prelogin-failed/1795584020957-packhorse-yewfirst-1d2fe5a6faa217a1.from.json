@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795584020957-packhorse-yewfirst-1d2fe5a6faa217a1",
+ "role": "from",
+ "account": "Packhorse",
+ "partner": "YewFirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795584195079,
+ "detail": "Error: fleet trade: account has an enabled swarm job"
+}
