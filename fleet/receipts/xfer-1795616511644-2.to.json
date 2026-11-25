@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795616511644-2",
+ "account": "Fatstack",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "6f0c6475-fcfe-4187-8e83-fc3fe9e1564c",
+ "count": 0,
+ "ok": false,
+ "at": 1795617118713,
+ "detail": "trade claimed"
+}
