@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795564822523-pocketpool-oreelse-a42429822600c7ce",
+ "role": "from",
+ "account": "PocketPool",
+ "partner": "OreElse",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795564957117,
+ "detail": "Error: account logout is not confirmed: PocketPool session active or outcome unknown"
+}

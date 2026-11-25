@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795563217122-tossthecaber-knightrider-2c41092dc25efb7f",
+ "account": "KnightRider",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 125000,
+ "claim": "11843761-9ee2-4aec-bb80-ab5f65d187bf",
+ "count": 125000,
+ "ok": true,
+ "at": 1795564954439,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 11000,
+  "after": 136000
+ },
+ "bank": {
+  "count": 125000,
+  "at": 1795564953388
+ },
+ "logout": {
+  "attemptId": "1795564931624-0000023192-0000000001",
+  "at": 1795564954181,
+  "sha256": "044abbd201e88cf4ce1c7e391fbb14da3b4b316d7bb4e312ac9272f339b97657"
+ },
+ "screen": true
+}

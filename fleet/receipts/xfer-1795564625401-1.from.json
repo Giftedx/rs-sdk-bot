@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795564625401-1",
+ "account": "UnderMyKilt",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon vambraces",
+ "requested": 1,
+ "claim": "3d67760c-9505-41e3-996f-db7e5530ee5e",
+ "count": 1,
+ "ok": true,
+ "at": 1795564913427,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795564895402
+ },
+ "logout": {
+  "attemptId": "1795564890281-0000010396-0000000001",
+  "at": 1795564913327,
+  "sha256": "ba72af3a924b002b7365d2b18aefbb786771f4af6d10f8447b4c8d65d80e413c"
+ },
+ "screen": true
+}

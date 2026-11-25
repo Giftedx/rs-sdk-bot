@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795563217122-tossthecaber-knightrider-2c41092dc25efb7f",
  "account": "TossTheCaber",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 125000,
  "claim": "fafeb288-a8f5-4682-953c-3c66cad811c5",
- "count": 0,
- "ok": false,
- "at": 1795564495007,
- "detail": "trade claimed"
+ "count": 125000,
+ "ok": true,
+ "at": 1795564952539,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 125000,
+  "after": 0
+ },
+ "bank": {
+  "count": 100350,
+  "at": 1795564525821
+ },
+ "logout": {
+  "attemptId": "1795564495019-0000007568-0000000001",
+  "at": 1795564952524,
+  "sha256": "e800fdd877ed81ecb11526dea95f591c9df41c536357b84df742ba2fa78fd097"
+ },
+ "screen": true
 }

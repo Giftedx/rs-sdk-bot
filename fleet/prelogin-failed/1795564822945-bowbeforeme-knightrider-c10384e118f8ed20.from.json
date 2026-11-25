@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795564822945-bowbeforeme-knightrider-c10384e118f8ed20",
+ "role": "from",
+ "account": "BowBeforeMe",
+ "partner": "KnightRider",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795564850051,
+ "detail": "Error: account logout is not confirmed: BowBeforeMe session active or outcome unknown"
+}
