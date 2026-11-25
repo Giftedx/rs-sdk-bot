@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795605487081-3",
+ "account": "PickpockDick",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "3c8aa102-d23d-4e5a-8777-f60744cb3e96",
+ "count": 1,
+ "ok": true,
+ "at": 1795605635885,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795605635145
+ },
+ "logout": {
+  "attemptId": "1795605622814-0000014312-0000000001",
+  "at": 1795605635874,
+  "sha256": "04cb5e230f680e58a978923e92ab46a81d585389493e02d058c99bf66af08353"
+ },
+ "screen": true
+}

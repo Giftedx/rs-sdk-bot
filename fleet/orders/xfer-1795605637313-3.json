@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795605637313-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranBulge",
+  "to": "Moneyshot",
+  "item": "Swamp toad",
+  "count": 6,
+  "itemId": 2150,
+  "start": 1795605637313,
+  "end": 1795606537313,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

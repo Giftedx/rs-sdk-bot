@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795604726479-1",
+ "role": "to",
+ "account": "OreElse",
+ "partner": "TheFullMonty",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795605630461,
+ "detail": "Error: fleet trade: outside order window"
+}
