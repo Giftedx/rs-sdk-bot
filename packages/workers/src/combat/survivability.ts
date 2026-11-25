@@ -736,8 +736,10 @@ export function combatPotionSession(s: CombatSession, stop: () => boolean, cap: 
                 : value;
         },
     });
-    const view = Object.create(s) as CombatSession & { withCombatPotionCleanup: (task: () => Promise<void>) => Promise<void> };
+    const view = Object.create(s) as CombatSession & { withCombatPotionCleanup: (task: () => Promise<void>) => Promise<void>; lifeEnded: () => boolean };
     Object.defineProperties(view, {
+        // True after a death: check() refuses every input of the new life.
+        lifeEnded: { value: () => sessionDied({ lifeId: life, respawnCount: respawns }, s.sdk.getState()?.player) },
         sdk: { value: sdk },
         bot: { value: new BotActions(sdk) },
         direct: {
@@ -761,23 +763,35 @@ export function combatPotionSession(s: CombatSession, stop: () => boolean, cap: 
     return view;
 }
 
+// The bank recovery of a generic combat job, at most once. It makes no bank walk after a death of the scope's life, or
+// when `skip` gives a reason (a flee-guard stop): it returns that reason, `died` for a death.
 export function combatPotionRecovery(
-    scope: { withCombatPotionCleanup: (task: () => Promise<void>) => Promise<void> },
+    scope: { withCombatPotionCleanup: (task: () => Promise<void>) => Promise<void>; lifeEnded?: () => boolean },
     blocked: () => boolean,
-    bank: () => Promise<void>,
+    bank: () => Promise<unknown>,
     setRecovering: (active: boolean) => void,
+    skip: () => string | undefined = () => undefined,
 ) {
     let attempted = false;
-    return async () => {
-        if (attempted) return;
+    let skipped: string | undefined;
+    return async (): Promise<string | undefined> => {
+        if (attempted) return skipped;
+        skipped = scope.lifeEnded?.() ? 'died' : skip();
+        if (skipped) {
+            attempted = true;
+            return skipped;
+        }
         if (blocked()) throw Error('combat potion unresolved input parks bank recovery');
         attempted = true;
         setRecovering(true);
         try {
-            await scope.withCombatPotionCleanup(bank);
+            await scope.withCombatPotionCleanup(async () => {
+                await bank();
+            });
         } finally {
             setRecovering(false);
         }
+        return undefined;
     };
 }
 

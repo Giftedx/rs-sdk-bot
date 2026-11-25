@@ -88,6 +88,16 @@ test('explicit stopped cleanup permits owned movement but refuses new attack/pot
 
 test('generic recovery callback banks once after stop, parks unknown consumption, and never retries failed recovery',async()=>{for(const mode of ['known','unknown','foreign']){const a=actor();let stopped=false,banks=0,recovering=false;const scope=combatPotionSession(a.s,()=>stopped,100),recover=combatPotionRecovery(scope,()=>mode==='unknown',async()=>{banks++;if(mode==='foreign')a.player.lifeId++;await scope.direct({type:'walk',x:1,z:1,reason:'bounded bank recovery'});},active=>{recovering=active;});stopped=true;if(mode==='known'){await recover();await recover();expect(banks).toBe(1);}else{await expect(recover()).rejects.toThrow();if(mode==='foreign')await recover();expect(banks).toBe(mode==='unknown'?0:1);}expect(recovering).toBe(false);}});
 
+test('generic recovery makes no bank walk after a death or a skip reason, and names why',async()=>{
+ for(const death of ['life','respawn','dead'] as const){const a=actor();let banks=0;const scope=combatPotionSession(a.s,()=>true,100),recover=combatPotionRecovery(scope,()=>true,async()=>{banks++;},()=>{});
+  expect(scope.lifeEnded()).toBe(false);if(death==='life')a.player.lifeId++;else if(death==='respawn')a.player.respawnCount++;else a.player.isDead=true;
+  expect(scope.lifeEnded()).toBe(true);expect(await recover()).toBe('died');expect(await recover()).toBe('died');expect(banks).toBe(0);}
+ const a=actor();let banks=0;const scope=combatPotionSession(a.s,()=>true,100),recover=combatPotionRecovery(scope,()=>false,async()=>{banks++;},()=>{},()=>'fled');
+ expect(await recover()).toBe('fled');expect(banks).toBe(0);
+ const b=actor();let walks=0;const live=combatPotionSession(b.s,()=>true,100),again=combatPotionRecovery(live,()=>false,async()=>{walks++;},()=>{},()=>undefined);
+ expect(await again()).toBeUndefined();expect(walks).toBe(1);
+});
+
 test('generic potion job owns the core stop callback until its bounded bank recovery settles',async()=>{
  const a=actor(),control=cowStopControl('druid',()=>false,true),onStop=(control.options as {onStop?:(s:unknown,why:string)=>Promise<unknown>}).onStop;
  expect(typeof onStop).toBe('function');const scope=combatPotionSession(a.s,control.stop,100);let banks=0;
