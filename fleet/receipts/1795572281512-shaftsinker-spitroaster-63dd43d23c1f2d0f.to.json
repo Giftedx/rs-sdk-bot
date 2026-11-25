@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795572281512-shaftsinker-spitroaster-63dd43d23c1f2d0f",
  "account": "Spitroaster",
  "partner": "Shaftsinker",
@@ -12,6 +12,16 @@
  "claim": "8ccffd7b-60e2-4232-8c15-38102647f95b",
  "count": 0,
  "ok": false,
- "at": 1795573236262,
- "detail": "trade claimed"
+ "at": 1795573252990,
+ "detail": "Error: transfer requires reconciliation: declined: Trade screen closed before completion",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795573236277-0000026936-0000000001",
+  "at": 1795573252977,
+  "sha256": "5863060640d955ade71d796d1d5ca6ea682df0a319894f893b29758f5ce21ad5"
+ },
+ "screen": true
 }
