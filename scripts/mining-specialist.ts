@@ -156,6 +156,9 @@ const EAST_IRON_ROCK_COORDS = new Set<string>([
     '3100,3766',
     '3101,3765',
     '3100,3765',
+]);
+const FALLBACK_EAST_ROCK_COORDS = new Set<string>([
+    ...EAST_IRON_ROCK_COORDS,
     '3099,3765',
 ]);
 
@@ -233,9 +236,9 @@ function countAttackingHobgoblins(s: Session): number {
 
 function findUntaggedHobgoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
     const cands = (s.sdk.getState()?.nearbyNpcs ?? []).filter(n => {
-        if (!/^hobgoblin$/i.test(n.name) || n.hp === 0 || n.distance > 12) return false;
+        if (!/^hobgoblin$/i.test(n.name) || n.hp === 0 || n.distance > 6) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
-        if ((taggedAt.get(n.index) ?? -999) >= now - 16) return false;
+        if ((taggedAt.get(n.index) ?? -999) >= now - 25) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
         return n.targetIndex < 0;
     });
@@ -386,6 +389,8 @@ if (import.meta.main) {
         if (!wildySite) throw Error('missing wilderness-hobgoblin-iron site');
         const rockTiles = siteTiles(ironProfile, wildySite).filter(t => EAST_IRON_ROCK_COORDS.has(`${t.x},${t.z}`));
         const rockCoords = new Set(rockTiles.map(t => `${t.x},${t.z}`));
+        const fallbackRockTiles = siteTiles(ironProfile, wildySite).filter(t => FALLBACK_EAST_ROCK_COORDS.has(`${t.x},${t.z}`));
+        const fallbackRockCoords = new Set(fallbackRockTiles.map(t => `${t.x},${t.z}`));
         const allWildyRockCoords = new Set(siteTiles(ironProfile, wildySite).map(t => `${t.x},${t.z}`));
         const rockIds = new Set(ironProfile.rocks);
 
@@ -400,6 +405,7 @@ if (import.meta.main) {
         let droppedBronze = false;
         const taggedAt = new Map<number, number>();
         const seenHitKeys = new Set<string>();
+        const recentHitTicks: number[] = [];
         const npcLastHit = new Map<number, { tick: number; period: number }>();
         let hitEventsTotal = 0;
 
@@ -417,6 +423,7 @@ if (import.meta.main) {
                 seenHitKeys.add(k);
                 hitEventsTotal++;
                 if (typeof e.tick === 'number') {
+                    if (!recentHitTicks.includes(e.tick)) recentHitTicks.push(e.tick);
                     if (typeof e.sourceIndex === 'number') {
                         const prev = npcLastHit.get(e.sourceIndex);
                         const npc = npcs.find(n => n.index === e.sourceIndex);
@@ -469,7 +476,8 @@ if (import.meta.main) {
             }
 
             const validFlinchHit = !outOfPrayer && hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
-            const avail = findAvailableRocks(main, rockCoords, rockIds);
+            let avail = findAvailableRocks(main, rockCoords, rockIds);
+            if (!avail.length) avail = findAvailableRocks(main, fallbackRockCoords, rockIds);
             const p = st?.player;
             if (!avail.length || !p) {
                 const acts: Promise<unknown>[] = [];
@@ -524,13 +532,18 @@ if (import.meta.main) {
                 continue;
             }
 
+            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 10) recentHitTicks.shift();
+            const recentHitsIn6 = recentHitTicks.filter(h => now - h <= 6);
+            const nearbyNpcs = st?.nearbyNpcs ?? [];
             let activeHitIn1t = false;
             for (const [npcIdx, info] of npcLastHit) {
-                if (now - info.tick > 12) {
+                if (now - info.tick > 10) {
                     npcLastHit.delete(npcIdx);
                     continue;
                 }
-                if ((now + 1 - info.tick) % info.period === 0) {
+                const npc = nearbyNpcs.find(n => n.index === npcIdx);
+                if (!npc || npc.hp === 0 || npc.distance > 2 || !targetsPlayer(main, npc.targetIndex)) continue;
+                if (now + 1 - info.tick === info.period || now + 1 - info.tick === info.period * 2) {
                     activeHitIn1t = true;
                     break;
                 }
@@ -538,9 +551,10 @@ if (import.meta.main) {
 
             const gobs = !outOfPrayer ? countAttackingHobgoblins(main) : 0;
             const canTag = !outOfPrayer
-                && tagCount < 140
-                && gobs < 3
-                && now - lastTagTick >= 5
+                && tagCount < 35
+                && gobs < 2
+                && recentHitsIn6.length === 0
+                && now - lastTagTick >= 10
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -568,17 +582,19 @@ if (import.meta.main) {
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
                 if (knifeSlot !== undefined && logSlot !== undefined) {
-                    const acts: Promise<unknown>[] = [];
-                    if (main.sdk.getInventory().length >= 25) {
-                        const oreSlot = slotOfId(main, OBJ_IRON_ORE) ?? slotOfId(main, OBJ_TIN_ORE);
-                        if (oreSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: oreSlot, reason: 'SDK' }));
+                    if (main.sdk.getInventory().length >= 28) {
+                        const oreSlots = main.sdk.getInventory().filter(i => i.id === OBJ_IRON_ORE || i.id === OBJ_TIN_ORE).slice(0, 4);
+                        if (oreSlots.length > 0) {
+                            await Promise.all(oreSlots.map(it => main.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' })));
+                            await waitTicks(main, 1);
+                            continue;
+                        }
                     }
-                    acts.push(
+                    await Promise.all([
                         main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
                         main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
                         main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: rock.op, reason: 'SDK' }),
-                    );
-                    await Promise.all(acts);
+                    ]);
                     knifeRolls++;
                     rolls++;
                     actionDelayApprox = now + 3;
@@ -588,7 +604,7 @@ if (import.meta.main) {
                 }
             }
 
-            const oreDropSlot = main.sdk.getInventory().length >= 12
+            const oreDropSlot = main.sdk.getInventory().length >= 10
                 ? (slotOfId(main, OBJ_IRON_ORE) ?? slotOfId(main, OBJ_TIN_ORE))
                 : undefined;
             const potAct = tryDrinkPrayerPotion(main, 15);

@@ -1329,16 +1329,23 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await walkNear(s, { x: 3275, z: 9459 }, 3, 60, { ignoreHunters: true });
         await walkNear(s, { x: 3280, z: 9415 }, 1, 80, { ignoreHunters: true });
         await q.guard('to cave guard');
-        for (let talkTry = 0; talkTry < 5; talkTry++) {
+        for (let talkTry = 0; talkTry < 4; talkTry++) {
             // Do not equip Fire staff near west-cave Mercenaries (equip.rs2:20 jails in x <= 3283); let PrayerGuard settle first.
             await clearAllDialogs(s, 2);
             await q.waitUntil(() => !q.st()?.prayers?.activePrayers?.[PRAYER_MELEE], 6);
-            if (talkTry >= 2) await walkNear(s, { x: 3282, z: 9415 }, 1, 15, { ignoreHunters: true });
+            if (talkTry >= 1) {
+                const cg = (q.st()?.nearbyNpcs ?? [])
+                    .filter((n: any) => /^mercenary$/i.test(n.name) && n.x >= 3274 && n.x <= 3286 && n.z >= 9412 && n.z <= 9424)
+                    .sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+                await walkNear(s, cg ? { x: cg.x, z: cg.z } : { x: 3280, z: 9415 }, 2, 12, { ignoreHunters: true }).catch(() => {});
+            }
             try {
-                await q.talk('cave guard', /^mercenary$/i, [/mine in a different area/i, /you're quite right sir/i, /we understand each other perfectly/i], () => q.sawText(/winks at you knowingly/i), { x: 3280, z: 9415 }, 60);
+                // Disable dialogue burster (stopOpen=true) so it cannot pick option 0 ("Er nothing really.") on @multi2/@multi3.
+                await q.talk('cave guard', /^mercenary$/i, [/mine in a different area/i, /you're quite right sir/i, /understand each other perfectly/i], () => q.sawText(/winks at you knowingly/i), { x: 3280, z: 9415 }, 60, true);
                 break;
             } catch (e) {
-                if (talkTry === 4 || q.sawText(/winks at you knowingly/i)) { if (q.sawText(/winks at you knowingly/i)) break; throw e; }
+                if (q.sawText(/winks at you knowingly/i)) break;
+                if (talkTry === 3) throw e;
             }
         }
         await mineOut();

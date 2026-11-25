@@ -239,8 +239,8 @@ function countAttackingGoblins(s: Session): number {
 function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
-        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 12) return false;
-        if (n.x < 3105 || n.x > 3130 || n.z < 3234 || n.z > 3255) return false;
+        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 8) return false;
+        if (n.x < 3112 || n.x > 3123 || n.z < 3238 || n.z > 3251) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
         if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
@@ -403,6 +403,7 @@ if (import.meta.main) {
         const taggedAt = new Map<number, number>();
         const seenHitKeys = new Set<string>();
         const recentHitTicks: number[] = [];
+        const npcLastHit = new Map<number, { tick: number; period: number }>();
         let hitEventsTotal = 0;
 
         const drainHitEvents = (st: ReturnType<Session['sdk']['getState']>): number => {
@@ -410,6 +411,7 @@ if (import.meta.main) {
             const events = (st as {
                 combatEvents?: Array<{ observationId?: number; tick?: number; type?: string; sourceType?: string; targetType?: string; sourceIndex?: number; damage?: number }>;
             } | undefined)?.combatEvents ?? [];
+            const npcs = st?.nearbyNpcs ?? [];
             for (const e of events) {
                 if (e.type !== 'damage_taken' || e.sourceType !== 'npc') continue;
                 if (e.targetType && e.targetType !== 'player') continue;
@@ -420,6 +422,19 @@ if (import.meta.main) {
                 if (typeof e.tick === 'number') {
                     if (!recentHitTicks.includes(e.tick)) {
                         recentHitTicks.push(e.tick);
+                    }
+                    if (typeof e.sourceIndex === 'number') {
+                        const prev = npcLastHit.get(e.sourceIndex);
+                        const npc = npcs.find(n => n.index === e.sourceIndex);
+                        const defaultPeriod = npc && npc.combatLevel < 20 ? 6 : 5;
+                        let period = prev?.period ?? defaultPeriod;
+                        if (prev) {
+                            const diff = e.tick - prev.tick;
+                            if (diff >= 4 && diff <= 6) period = diff;
+                        }
+                        if (!prev || e.tick > prev.tick) {
+                            npcLastHit.set(e.sourceIndex, { tick: e.tick, period });
+                        }
                     }
                     if (e.tick > maxHitTick) maxHitTick = e.tick;
                 }
@@ -534,20 +549,31 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Track active mod-5 guard swing phases from the last 6 ticks (covers attackrate=5 even during busy2/knife3).
+            // Only clear busy2 for a 2t flinch when an adjacent attacking guard/goblin is due on now+1.
             while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 11) recentHitTicks.shift();
             const recentHitsIn6 = recentHitTicks.filter(h => now - h <= 6);
-            const activeHitMod5 = new Set<number>(recentHitsIn6.map(h => ((h % 5) + 5) % 5));
-            const nextMod1 = ((now + 1) % 5 + 5) % 5;
-            const activeHitIn1t = activeHitMod5.has(nextMod1);
+            const nearbyNpcs = st?.nearbyNpcs ?? [];
+            let activeHitIn1t = false;
+            for (const [npcIdx, info] of npcLastHit) {
+                if (now - info.tick > 10) {
+                    npcLastHit.delete(npcIdx);
+                    continue;
+                }
+                const npc = nearbyNpcs.find(n => n.index === npcIdx);
+                if (!npc || npc.hp === 0 || npc.distance > 2 || !targetsPlayer(main, npc.targetIndex)) continue;
+                if (now + 1 - info.tick === info.period || now + 1 - info.tick === info.period * 2) {
+                    activeHitIn1t = true;
+                    break;
+                }
+            }
 
             const canTag = !outOfPrayer
                 && wantOak
                 && !needNormalLog
-                && tagCount < 120
-                && gobs < 4
-                && (!activeHitIn1t || gobs < 2)
-                && now - lastTagTick >= 10
+                && tagCount < 24
+                && gobs < 3
+                && recentHitsIn6.length === 0
+                && now - lastTagTick >= 15
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -576,18 +602,19 @@ if (import.meta.main) {
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
                 if (knifeSlot !== undefined && logSlot !== undefined && !needNormalLog) {
-                    // Drop 1 excess oak log before knife+make1+chop (4 inputs <= 5 USER_EVENT limit) so inventory never stalls.
-                    const acts: Promise<unknown>[] = [];
-                    if (main.sdk.getInventory().length >= 26) {
-                        const dropSlot = main.sdk.getInventory().find(i => i.id === OBJ_OAK_LOGS || i.id === 1519)?.slot;
-                        if (dropSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: dropSlot, reason: 'SDK' }));
+                    // Strictly 3 inputs (+ up to 2 PrayerGuard toggles = 5 USER_EVENT limit) so interactLoc never splits across ticks.
+                    if (main.sdk.getInventory().length >= 28) {
+                        const dropped = await dropExcessOaks(main, 24);
+                        if (dropped) {
+                            await waitTicks(main, 1);
+                            continue;
+                        }
                     }
-                    acts.push(
+                    await Promise.all([
                         main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
                         main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
                         main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' }),
-                    );
-                    await Promise.all(acts);
+                    ]);
                     knifeRolls++;
                     rolls++;
                     lastRollServerTick = now + 3;
@@ -613,7 +640,7 @@ if (import.meta.main) {
                 continue;
             }
 
-            const oakDropSlot = main.sdk.getInventory().length >= 16 ? slotOfId(main, OBJ_OAK_LOGS) : undefined;
+            const oakDropSlot = main.sdk.getInventory().length >= 10 ? slotOfId(main, OBJ_OAK_LOGS) : undefined;
             const potAct = tryDrinkPrayerPotion(main, 15);
             if (oakDropSlot !== undefined) {
                 // OpHeldHandler calls clearPendingAction(), clearing busy2 while dropping a log in 1 input.
