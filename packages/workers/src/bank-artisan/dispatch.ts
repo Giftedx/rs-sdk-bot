@@ -52,12 +52,12 @@ export async function runArtisan(
     try {
         switch (cfg.skill) {
             case 'cooking': {
-                const { cookingRecipes, runCookingBatch, runCookFood, runCookStock, runGeCooking, runMixedWine, runWineSession, validateGeCookingOrder } = await import('./cooking');
+                const { cookingRecipes, DEFAULT_FOOD_TYPE, runCookingBatch, runCookFood, runCookStock, runGeCooking, runMixedWine, runWineSession, validateGeCookingOrder } = await import('./cooking');
                 if (cfg.method === 'food') {
                     const cap = Number(cfg.args[0] ?? setting('CAP', '15000'));
-                    const foodType = (setting('FOOD_TYPE', cfg.args[1]) ?? 'lobster').toLowerCase();
+                    const foodType = (setting('FOOD_TYPE', cfg.args[1]) ?? DEFAULT_FOOD_TYPE).toLowerCase();
                     const r = await runCookFood(s, foodType, cap, halted);
-                    return { ok: r.ok, summary: `cooked=${r.cookedTotal}`, ticks: r.ticks, produced: r.cookedTotal, failure: r.ok ? undefined : 'cook-food incomplete' };
+                    return { ok: r.ok, summary: `cooked=${r.cookedTotal}`, ticks: r.ticks, produced: r.cookedTotal, failure: r.ok ? undefined : r.failure ?? 'cook-food incomplete' };
                 }
                 if (cfg.method === 'stock') {
                     const cap = Number(cfg.args[0] ?? setting('CAP', '15000'));

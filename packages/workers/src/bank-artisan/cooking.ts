@@ -303,41 +303,68 @@ export async function cookSharks(s: Session, stop: () => boolean) {
     return before.raw ? sharkCookDelta(before, counts()) : { raw: 0, cooked: 0, burnt: 0 };
 }
 
-export const FOOD_RULES: Readonly<Record<string, { rawId: number; level: number }>> = {
-    shrimp: { rawId: 317, level: 1 },
-    chicken: { rawId: 2138, level: 1 },
-    anchovies: { rawId: 321, level: 1 },
-    sardine: { rawId: 327, level: 1 },
-    herring: { rawId: 345, level: 5 },
-    trout: { rawId: 335, level: 15 },
-    pike: { rawId: 349, level: 20 },
-    salmon: { rawId: 331, level: 25 },
-    tuna: { rawId: 359, level: 30 },
-    lobster: { rawId: 377, level: 40 },
-    bass: { rawId: 363, level: 43 },
-    swordfish: { rawId: 371, level: 45 },
-    shark: { rawId: 383, level: 80 },
-};
+// The food cooker cooks this food when the step names none.
+export const DEFAULT_FOOD_TYPE = 'lobster';
 
-export function foodRule(foodType: string): { rawId: number; level: number } {
+// The raw item, the cooked item and the Cooking level of a food come from its server cook row
+// cooking_generic_<food> (data=levelrequired in the table that cookingRecipes reads).
+export function foodRecipe(foodType: string): CookRecipe | undefined {
     const key = foodType.trim().toLowerCase();
-    const direct = FOOD_RULES[key];
-    if (direct) return direct;
-    const rawName = `raw ${key}`;
-    const rawId = packMap('obj').get(rawName.replaceAll(' ', '_'));
-    const recipe = cookingRecipes().recipes.find(r => r.name.endsWith(`_${key}`) || rawId === r.raw);
-    if (recipe) return { rawId: recipe.raw, level: recipe.level };
-    return { rawId: FOOD_RULES.lobster!.rawId, level: 1 };
+    const { recipes } = cookingRecipes();
+    const exact = recipes.find(r => r.name === `cooking_generic_${key.replaceAll(' ', '_')}`);
+    if (exact) return exact;
+    const rawId = packMap('obj').get(`raw_${key.replaceAll(' ', '_')}`);
+    return recipes.find(r => r.name.endsWith(`_${key}`) || rawId === r.raw);
 }
+
+export function foodRule(foodType: string): { rawId: number; cookedId?: number; level: number } {
+    const recipe = foodRecipe(foodType);
+    if (recipe) return { rawId: recipe.raw, cookedId: recipe.products[0], level: recipe.level };
+    return { rawId: foodRecipe(DEFAULT_FOOD_TYPE)!.raw, level: 1 };
+}
+
+// The fail words match isNoProgressFailure (packages/practice/src/supervise.ts): a new login does not raise the level.
+export function cookLevelShortfall(foodType: string, cookingLevel: number): string | null {
+    const need = foodRule(foodType).level;
+    return cookingLevel >= need ? null : `no cooking progress: Cooking ${cookingLevel} is below level ${need} for ${foodType}`;
+}
+
+// Below the level the server opens a message box and cooks nothing (cooking.rs2: ~mesbox($levelrequired_message)).
+const COOK_LEVEL_REFUSAL = /You need a Cooking level of (\d+)/i;
+
+export interface CookRefusalView {
+    dialog?: { isOpen?: boolean; text?: string; allComponents?: readonly { text: string }[] };
+    gameMessages?: readonly { text: string; tick: number }[];
+}
+
+// The level that the server asked for, from the open dialog or from a game message at or after sinceTick.
+export function cookLevelRefusal(state: CookRefusalView | null | undefined, sinceTick: number): number | null {
+    const dialog = state?.dialog?.isOpen ? state.dialog : undefined;
+    const texts = [
+        dialog?.text,
+        ...(dialog?.allComponents ?? []).map(c => c.text),
+        ...(state?.gameMessages ?? []).filter(m => m.tick >= sinceTick).map(m => m.text),
+    ];
+    for (const text of texts) {
+        const m = text?.match(COOK_LEVEL_REFUSAL);
+        if (m) return Number(m[1]);
+    }
+    return null;
+}
+
+export const cookedFoodPattern = (food: string) => new RegExp(`^${food}$`, 'i');
+// The cooked food and any burnt item, not a tool such as a lobster pot.
+export const foodDepositPattern = (food: string) => new RegExp(`^(?:${food}|burnt .+)$`, 'i');
 
 const CATHERBY_RANGE = { x: 2816, z: 3443 };
 const CATHERBY_BANK = { x: 2809, z: 3441 };
 
-export async function runCookFood(s: Session, foodTypeInput = 'lobster', cap = 15000, stop: () => boolean = () => false) {
+export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE, cap = 15000, stop: () => boolean = () => false) {
     const FOOD_TYPE = foodTypeInput.toLowerCase();
     const pos = () => s.sdk.getState()?.player;
     const rawRe = new RegExp(`^raw ${FOOD_TYPE}`, 'i');
-    const cookedRe = new RegExp(`^${FOOD_TYPE}`, 'i');
+    // Exact name: a lobster pot is not a cooked lobster.
+    const cookedRe = cookedFoodPattern(FOOD_TYPE);
     const rawCount = () => countItems(s, rawRe);
     const cookedCount = () => countItems(s, cookedRe);
     const t0 = s.tick();
@@ -373,7 +400,7 @@ export async function runCookFood(s: Session, foodTypeInput = 'lobster', cap = 1
             await waitTicks(s, 2);
             return 'failed';
         }
-        await s.bot.depositItem(new RegExp(`(${FOOD_TYPE}|burnt)`, 'i'), -1);
+        await s.bot.depositItem(foodDepositPattern(FOOD_TYPE), -1);
         await waitTicks(s, 1);
         const loaded = await waitUntil(s, () => (s.sdk.getState()?.bank?.items?.length ?? 0) > 0, { timeoutTicks: 5 });
         const empty = loaded && !(s.sdk.getState()?.bank?.items ?? []).some((i: { name: string; count: number }) => rawRe.test(i.name) && i.count > 0);
@@ -385,7 +412,13 @@ export async function runCookFood(s: Session, foodTypeInput = 'lobster', cap = 1
     };
 
     console.log(`START food cooker ${s.name} at=${pos()?.worldX},${pos()?.worldZ} food=${FOOD_TYPE}`);
-    while (!over()) {
+    const cookingLevel = () => s.sdk.getSkill('Cooking')?.level ?? 0;
+    let failure: string | undefined;
+    if (await waitUntil(s, () => cookingLevel() > 0, { timeoutTicks: 15 })) {
+        failure = cookLevelShortfall(FOOD_TYPE, cookingLevel()) ?? undefined;
+    }
+    if (failure) console.log(`STOP ${failure}`);
+    while (!failure && !over()) {
         if (rawCount() === 0) {
             const banked = await bank();
             if (banked === 'empty' && rawCount() === 0) {
@@ -411,16 +444,23 @@ export async function runCookFood(s: Session, foodTypeInput = 'lobster', cap = 1
         const rawItem = s.sdk.getInventory().find(i => rawRe.test(i.name));
         if (!rawItem) continue;
         const before = cookedCount();
+        const sentTick = s.tick();
         await s.sdk.sendUseItemOnLoc(rawItem.slot, range.x, range.z, range.id);
-        await waitUntil(s, () => cookedCount() > before || rawCount() === 0, { timeoutTicks: 10 });
+        await waitUntil(s, () => cookedCount() > before || rawCount() === 0 || cookLevelRefusal(s.sdk.getState(), sentTick) !== null, { timeoutTicks: 10 });
         const gained = cookedCount() - before;
         if (gained > 0) cookedTotal += gained;
+        const refused = cookLevelRefusal(s.sdk.getState(), sentTick);
+        if (refused !== null && gained <= 0) {
+            failure = `no cooking progress: the server needs Cooking ${refused} for ${FOOD_TYPE} and the account has ${cookingLevel()}`;
+            console.log(`STOP ${failure}`);
+        }
     }
 
     const total = cookedTotal + cookedCount();
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
-    const summary = `ticks=${used()} ${counters()} cookedPer1kTicks=${perK}`;
-    return { ok: total > 0, summary, total, cookedTotal, ticks: used() };
+    const counts = `ticks=${used()} ${counters()} cookedPer1kTicks=${perK}`;
+    const summary = failure ? `${failure} ${counts}` : counts;
+    return { ok: !failure && total > 0, summary, total, cookedTotal, ticks: used(), ...(failure ? { failure } : {}) };
 }
 
 // ---- Banked stock cooking (cook-stock.ts) ----
@@ -1038,7 +1078,7 @@ export async function runCookingCli(
     }
     if (method === 'food') {
         const cap = Number(args[0] ?? env.CAP ?? 15000);
-        const foodType = args[1] ?? env.FOOD_TYPE ?? 'lobster';
+        const foodType = args[1] ?? env.FOOD_TYPE ?? DEFAULT_FOOD_TYPE;
         let stopped = false;
         const s = await openBot(account, { onStop: async () => { stopped = true; } }).catch(e => finish([], false, `login: ${String(e)}`));
         try {
