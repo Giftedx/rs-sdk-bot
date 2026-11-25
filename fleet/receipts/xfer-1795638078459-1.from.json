@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795638078459-1",
+ "account": "Ballspinner",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 6,
+ "claim": "24263698-fadc-4e75-8f90-9b7bb4c377fb",
+ "count": 0,
+ "ok": false,
+ "at": 1795638296105,
+ "detail": "Error: route to 2618, 3333: precondition bank stop at 3094,3491: withdraw outcome unknown 556:0/3",
+ "logout": {
+  "attemptId": "1795638279753-0000031956-0000000001",
+  "at": 1795638296093,
+  "sha256": "ef4c3f6c47941a255fc3adc61670cc6f660c93ec1be1bc7020d28978071c7e44"
+ },
+ "screen": false
+}
