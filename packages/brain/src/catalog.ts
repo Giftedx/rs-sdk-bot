@@ -14,9 +14,10 @@ import {
     type WorkerKind,
     type WorkerTile,
 } from '../../workers/src/contracts';
+import { jewelleryRecipes } from '../../workers/src/bank-artisan/crafting';
 import { inventoryRecipes, type InventoryRecipe } from '../../workers/src/bank-artisan/crafting-production';
 import { itemMagicRecipe } from '../../workers/src/bank-artisan/magic';
-import { smithRecipe } from '../../workers/src/bank-artisan/smithing';
+import { smeltRecipe, smithRecipe } from '../../workers/src/bank-artisan/smithing';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
 import { fileStatStamp, readJsonStatCached } from './json-cache';
 import type { CombatSurvivabilityFloor } from './preflight';
@@ -611,6 +612,7 @@ const LOGISTICS_SPECS: readonly {
 
 const ENCHANT_PRODUCE_SPECS: readonly { mode: string; label: string; xpPerTick: number }[] = [
     { mode: 'enchant:sapphire_ring', label: 'Enchant sapphire ring into Ring of recoil', xpPerTick: 109 },
+    { mode: 'enchant:sapphire_necklace', label: 'Enchant sapphire necklace into Games necklace(8)', xpPerTick: 109 },
     { mode: 'enchant:emerald_ring', label: 'Enchant emerald ring into Ring of dueling(8)', xpPerTick: 231 },
     { mode: 'enchant:ruby_ring', label: 'Enchant ruby ring into Ring of forging', xpPerTick: 369 },
     { mode: 'enchant:diamond_ring', label: 'Enchant diamond ring into Ring of life', xpPerTick: 419 },
@@ -820,8 +822,8 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         let minBatchUnits = row.table === 'fletching_table'
             ? 100
             : row.table === 'gem_cutting_table'
-                ? 27
-                : row.table === 'smithing' || row.table === 'brew_potion.struct'
+                ? 1
+                : row.table === 'smithing' || row.table === 'smelting.struct' || row.table === 'brew_potion.struct'
                     ? 1
                     : 14;
         let location: WorkerTile | undefined;
@@ -889,6 +891,63 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                     defaultEnv: {
                         MAX_MAKE: '1',
                         CAP: '1200',
+                        ...(invRecipe.members ? { MEMBERS: '1' } : {}),
+                    },
+                };
+            }
+        } else if (row.table === 'smelting.struct') {
+            const barName = row.row.replace(/^smelting_/, '').replace(/_bar$/, '');
+            try {
+                const recipe = smeltRecipe(barName);
+                const prodUnits = recipe.productUnits ?? 1;
+                inputs = recipe.ingredients.map((i) => ({ itemId: i.id, countPerUnit: i.units }));
+                inputsMap = Object.fromEntries(inputs.map((i) => [i.itemId, i.countPerUnit]));
+                outputs = [{ itemId: recipe.product, countPerUnit: prodUnits }];
+                outputsMap = { [recipe.product]: prodUnits };
+                location = HUB_TILES.alkharid;
+                aioKey = 'skiller:smithing:smelt';
+                routeConfig = {
+                    aioCategory: 'skiller',
+                    aioRoute: 'smithing:smelt',
+                    script: 'scripts/aio-skiller.ts',
+                    skill: 'smithing',
+                    method: 'smelt',
+                    table: row.table,
+                    row: row.row,
+                    requiredLevel: Math.max(1, recipe.level),
+                    defaultArgs: ['1500', barName],
+                    defaultEnv: {
+                        BAR_TYPE: barName,
+                        MAX_MAKE: '28',
+                        ORE_RESERVE: '0',
+                    },
+                };
+            } catch { /* keep unsupported bars like perfect_gold experimental */ }
+        } else if (row.table === 'gem_cutting_table') {
+            const gem = row.row.replace(/_cutting$/, '');
+            const invRecipe = invRecipeByName.get(`cut-${gem}`);
+            if (invRecipe) {
+                inputs = invRecipe.inputs.map((i) => ({ itemId: i.id, countPerUnit: i.units }));
+                inputsMap = Object.fromEntries(inputs.map((i) => [i.itemId, i.countPerUnit]));
+                const prodUnits = invRecipe.productUnits ?? 1;
+                outputs = [{ itemId: invRecipe.product, countPerUnit: prodUnits }];
+                outputsMap = { [invRecipe.product]: prodUnits };
+                location = HUB_TILES.draynor;
+                aioKey = 'skiller:crafting:inventory';
+                routeConfig = {
+                    aioCategory: 'skiller',
+                    aioRoute: 'crafting:inventory',
+                    script: 'scripts/aio-skiller.ts',
+                    skill: 'crafting',
+                    method: 'inventory',
+                    table: row.table,
+                    row: row.row,
+                    requiredLevel: Math.max(1, invRecipe.level),
+                    ...(invRecipe.tools.length > 0 ? { requiredTools: invRecipe.tools } : {}),
+                    defaultArgs: [invRecipe.name],
+                    defaultEnv: {
+                        MAX_MAKE: '1',
+                        CAP: '600',
                         ...(invRecipe.members ? { MEMBERS: '1' } : {}),
                     },
                 };
@@ -969,19 +1028,28 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         });
     }
 
+    const isExposedInventoryRecipe = (name: string): boolean =>
+        name.startsWith('decant:')
+        || name === 'string-dragonstone-amulet'
+        || name.startsWith('grind:')
+        || name.startsWith('identify:')
+        || name === 'strip:swamp-toad';
+
     for (const r of inventoryRecipes()) {
-        if (!r.name.startsWith('decant:')) continue;
-        const id = `bank-artisan:${r.name.replace(':', '-')}`;
+        if (!isExposedInventoryRecipe(r.name)) continue;
+        const id = `bank-artisan:${r.name.replace(/:/g, '-')}`;
+        if (activities.has(id)) continue;
         const inputs = r.inputs.map((i) => ({ itemId: i.id, countPerUnit: i.units }));
         const inputsMap = Object.fromEntries(inputs.map((i) => [i.itemId, i.countPerUnit]));
         const outUnits = r.productUnits ?? 1;
         const outputs = [{ itemId: r.product, countPerUnit: outUnits }];
+        const reqQuests = r.skill === 'Herblore' && r.name.startsWith('identify:') && r.level >= 3 ? ['druid'] : undefined;
         register({
             id,
             workerId: 'bank-artisan',
             family: 'bank-artisan',
             kind: 'produce',
-            label: `Decant ${r.name.slice('decant:'.length).replace(/_/g, ' ')} to 4-dose`,
+            label: `${r.skill}: ${r.name.replace(/[:_-]/g, ' ')}`,
             skill: r.skill,
             skills: [r.skill],
             config: {
@@ -991,6 +1059,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 skill: 'crafting',
                 method: 'inventory',
                 requiredLevel: r.level,
+                ...(reqQuests ? { requiredQuests: reqQuests } : {}),
                 ...(r.tools.length > 0 ? { requiredTools: r.tools } : {}),
                 defaultArgs: [r.name],
                 defaultEnv: {
@@ -1000,7 +1069,8 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 },
             },
             baselineRate: {
-                xpPerTick: 0,
+                xpPerTick: r.xp ? 150 : 0,
+                ...(r.xp ? { skillXpPerTick: { [r.skill]: 150 } } : {}),
                 unitsPerTick: 0.4,
                 gpPerTick: 0,
                 setupTicks: 8,
@@ -1013,6 +1083,57 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
             outputs,
             location: HUB_TILES.draynor,
             trust: trustFor(id, 'skiller:crafting:inventory'),
+            protectedAllowed: opts.launchQualifiedIds?.has(id) ?? false,
+        });
+    }
+
+    for (const r of jewelleryRecipes()) {
+        const id = `bank-artisan:jewellery-${r.name}`;
+        if (activities.has(id)) continue;
+        const inputs = r.inputs.map((i) => ({ itemId: i.id, countPerUnit: i.units }));
+        const inputsMap = Object.fromEntries(inputs.map((i) => [i.itemId, i.countPerUnit]));
+        const outputs = [{ itemId: r.product, countPerUnit: 1 }];
+        register({
+            id,
+            workerId: 'bank-artisan',
+            family: 'bank-artisan',
+            kind: 'produce',
+            label: `Craft ${r.name.replace(/_/g, ' ')} at Al Kharid furnace`,
+            skill: 'Crafting',
+            skills: ['Crafting'],
+            config: {
+                aioCategory: 'skiller',
+                aioRoute: 'crafting:jewellery-trip',
+                script: 'scripts/aio-skiller.ts',
+                skill: 'crafting',
+                method: 'jewellery-trip',
+                requiredLevel: r.level,
+                ...(r.tools.length > 0 ? { requiredTools: r.tools } : {}),
+                defaultEnv: {
+                    RECIPE: r.name,
+                    TARGET: '1',
+                    BATCH: '13',
+                    CAP: '1500',
+                    RETURN_TICKS: '100',
+                    RESERVE: '0',
+                    ...(r.members ? { MEMBERS: '1' } : {}),
+                },
+            },
+            baselineRate: {
+                xpPerTick: 160,
+                skillXpPerTick: { Crafting: 160 },
+                unitsPerTick: 0.2,
+                gpPerTick: 0,
+                setupTicks: 12,
+                minBatchUnits: 1,
+                confidence: 'model',
+                inputsPerUnit: inputsMap,
+                outputsPerUnit: { [r.product]: 1 },
+            },
+            inputs,
+            outputs,
+            location: HUB_TILES.alkharid,
+            trust: trustFor(id, 'skiller:crafting:jewellery-trip'),
             protectedAllowed: opts.launchQualifiedIds?.has(id) ?? false,
         });
     }

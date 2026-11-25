@@ -644,4 +644,88 @@ describe('Campaigns, Missions & DemandEngine', () => {
         // 450+ ticks at 400ms/tick = >= 0.05 hours (prevents 4x inflation over quests/combat).
         expect(hours).toBeGreaterThanOrEqual(0.05);
     });
+
+    test('DemandEngine propagates finite multi-hop supply-chain demands when intermediate items have GE sell=0 and 0 fleet stock', () => {
+        const catalog = defaultActivityCatalog();
+        const heroHelper = makeAccount('HeroHelper', {
+            role: 'helper',
+            quests: { hero: 'complete' },
+            bank: { items: {}, observedAt: NOW - 1000, trusted: true },
+        });
+        const snap = makeSnapshot({ HeroHelper: heroHelper });
+
+        const campaign: Campaign = {
+            id: 'campaign:rocksolid',
+            account: 'rocksolid',
+            protectedClock: true,
+            board: 'Defence',
+            state: 'staging',
+            weight: 1.0,
+            stagingHolder: 'HeroHelper',
+            rehearsalProof: null,
+            hiscoreMargin: null,
+            requiredSupplies: [
+                { itemId: 2552, itemName: 'Ring of dueling(8)', count: 2, stage: 'Defence' },
+                { itemId: 1712, itemName: 'Amulet of glory(4)', count: 1, stage: 'Defence' },
+                { itemId: 1319, itemName: 'Rune 2h sword', count: 1, stage: 'Defence' },
+            ],
+        };
+
+        const engine = createDemandEngine({
+            catalog,
+            campaigns: [campaign],
+            missions: [],
+            goalWeights: { gear_collection: 0 },
+        });
+
+        // Without marketQuotes, legacy behavior omits synthetic supply_chain demands.
+        expect(engine.activeDemands(snap).some((d) => d.id.startsWith('goal:supply_chain:'))).toBe(false);
+
+        const quotes = {
+            2552: { ask: 50000, sell: 0, trades: 0 },
+            1639: { ask: null, sell: 0, trades: 0 },
+            1605: { ask: 2000, sell: 50, trades: 1 },
+            2357: { ask: 400, sell: 500, trades: 10 },
+            1712: { ask: 4000000, sell: 0, trades: 0 },
+            1704: { ask: 3000000, sell: 0, trades: 0 },
+            1702: { ask: null, sell: 0, trades: 0 },
+            1683: { ask: null, sell: 0, trades: 0 },
+            1615: { ask: null, sell: 0, trades: 0 },
+            1631: { ask: 1000000, sell: 20, trades: 5 },
+            1759: { ask: 250, sell: 100, trades: 5 },
+            1319: { ask: null, sell: 0, trades: 0 },
+            2363: { ask: null, sell: 0, trades: 0 },
+            451: { ask: null, sell: 0, trades: 0 },
+            453: { ask: 449, sell: 1000, trades: 10 },
+        };
+        const demands = engine.activeDemands(snap, { marketQuotes: quotes });
+        const byItem = new Map(
+            demands
+                .filter((d) => d.id.startsWith('goal:supply_chain:') && d.target.kind === 'item')
+                .map((d) => [(d.target as { itemId: number }).itemId, d]),
+        );
+
+        // Multi-hop intermediates propagate with exact finite shortfalls and stop before GE-stocked leaves.
+        expect(byItem.get(1639)?.remaining).toBe(2);   // Emerald ring for 2x Ring of dueling(8)
+        expect(byItem.get(1704)?.remaining).toBe(1);   // Amulet of glory (uncharged)
+        expect(byItem.get(1702)?.remaining).toBe(1);   // Dragonstone amulet (strung)
+        expect(byItem.get(1683)?.remaining).toBe(1);   // Dragonstone amulet (unstrung)
+        expect(byItem.get(1615)?.remaining).toBe(1);   // Dragonstone (cut)
+        expect(byItem.get(2363)?.remaining).toBe(3);   // Runite bars (3x for 1x Rune 2h sword)
+        expect(byItem.has(1605)).toBe(false);          // Emerald has GE sell=50
+        expect(byItem.has(2357)).toBe(false);          // Gold bar has GE sell=500
+        expect(byItem.has(1631)).toBe(false);          // Uncut dragonstone has GE sell=20
+        expect(byItem.has(451)).toBe(false);           // Runite ore has no practice_passed producer
+
+        // Once 2x Runite bar is already held by HeroHelper, remaining shrinks to 1.
+        const stockedHero = makeAccount('HeroHelper', {
+            role: 'helper',
+            quests: { hero: 'complete' },
+            bank: { items: { 2363: 2 }, observedAt: NOW - 1000, trusted: true },
+        });
+        const stockedDemands = engine.activeDemands(makeSnapshot({ HeroHelper: stockedHero }), { marketQuotes: quotes });
+        const barDemand = stockedDemands.find((d) => d.id === 'goal:supply_chain:2363');
+        expect(barDemand?.fulfilled).toBe(2);
+        expect(barDemand?.remaining).toBe(1);
+    });
 });

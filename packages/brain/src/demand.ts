@@ -25,13 +25,20 @@ import {
 } from './contracts';
 import { evaluateMissions, loadMissionManifests, type MissionEvaluation } from './missions';
 import { fileStatStamp, readJsonStatCached } from './json-cache';
-import { hasCompletedQuest, questCandidateKeys } from './preflight';
+import {
+    isValidGeAskQuote,
+    loadShopCatalogByItem,
+    type MarketQuotesMap,
+    type ShopCatalogEntry,
+} from './acquire';
+import { hasCompletedQuest, loadItemsMap, questCandidateKeys } from './preflight';
 import type { RateStore } from './rate-store';
 
 export const TICK_MS = 400;
 export const TICKS_PER_HOUR = 3_600_000 / TICK_MS;
 export const DEFAULT_MIN_DEMAND_HOURS = 1 / 60;
 export const DEFAULT_COIN_RESERVE_FLOOR = 500_000;
+export const MAX_SUPPLY_CHAIN_HOPS = 6;
 
 export const GOAL_BASE_WEIGHTS: Readonly<Record<GoalKind, number>> = {
     main_supply: 1.5,
@@ -722,9 +729,238 @@ export class DemandEngine {
         ];
     }
 
+    private emitSupplyChainDemands(
+        snapshot: WorldSnapshot,
+        seedDemands: readonly GoalDemand[],
+        marketQuotes: MarketQuotesMap,
+    ): GoalDemand[] {
+        const activeAccounts = Object.values(snapshot.accounts).filter(
+            (a) =>
+                !a.protectedClock
+                && a.lifecycle !== 'paused_owner'
+                && a.lifecycle !== 'dead'
+                && a.side === snapshot.side,
+        );
+        const remainingStock = new Map<number, number>();
+        const initialStock = new Map<number, number>();
+        for (const acct of activeAccounts) {
+            const rawOwned = new Map<number, number>();
+            for (const [idStr, cnt] of Object.entries(acct.inventory)) {
+                if (cnt > 0) rawOwned.set(Number(idStr), (rawOwned.get(Number(idStr)) ?? 0) + cnt);
+            }
+            for (const [idStr, cnt] of Object.entries(acct.bank.items)) {
+                if (cnt > 0) rawOwned.set(Number(idStr), (rawOwned.get(Number(idStr)) ?? 0) + cnt);
+            }
+            const worldRes = snapshot.reserves?.[acct.name] ?? snapshot.reserves?.[acct.name.toLowerCase()];
+            for (const [itemId, owned] of rawOwned) {
+                const res = Math.max(acct.reserves?.[itemId] ?? 0, worldRes?.[itemId] ?? 0);
+                const free = Math.max(0, owned - res);
+                if (free > 0) {
+                    const next = (initialStock.get(itemId) ?? 0) + free;
+                    initialStock.set(itemId, next);
+                    remainingStock.set(itemId, next);
+                }
+            }
+        }
+        if (snapshot.globalReserves) {
+            for (const [idStr, res] of Object.entries(snapshot.globalReserves)) {
+                const itemId = Number(idStr);
+                if (res > 0 && initialStock.has(itemId)) {
+                    const adj = Math.max(0, initialStock.get(itemId)! - res);
+                    initialStock.set(itemId, adj);
+                    remainingStock.set(itemId, adj);
+                }
+            }
+        }
+
+        const shopCatalog = loadShopCatalogByItem();
+        const itemsMap = loadItemsMap();
+        const completedQuests = new Set<string>();
+        for (const acct of activeAccounts) {
+            for (const [qSlug, qState] of Object.entries(acct.quests)) {
+                if (qState !== 'complete') continue;
+                completedQuests.add(qSlug.toLowerCase());
+                for (const ck of questCandidateKeys(qSlug)) completedQuests.add(ck);
+            }
+        }
+
+        const canQuestUnlockOrHold = (act: ActivityDefinition): boolean => {
+            const reqQuests = act.config?.requiredQuests;
+            if (!Array.isArray(reqQuests) || reqQuests.length === 0) return true;
+            return reqQuests.every((q) => {
+                if (typeof q !== 'string' || !q.trim()) return true;
+                const lower = q.toLowerCase();
+                if (completedQuests.has(lower)) return true;
+                for (const ck of questCandidateKeys(q)) {
+                    if (completedQuests.has(ck)) return true;
+                }
+                return this.catalog.findByQuest(q).some((qa) => qa.trust !== 'experimental');
+            });
+        };
+
+        const remainingGeSell = new Map<number, number>();
+        for (const [idStr, quote] of Object.entries(marketQuotes)) {
+            const itemId = Number(idStr);
+            const cost = this.itemValuesGp[itemId] ?? itemsMap.get(itemId)?.cost ?? 1;
+            if (isValidGeAskQuote(quote, cost, 1)) {
+                remainingGeSell.set(itemId, Math.max(0, quote?.sell ?? 0));
+            }
+        }
+
+        const hasShop = (itemId: number): boolean =>
+            Boolean((shopCatalog.get(itemId) as readonly ShopCatalogEntry[] | undefined)?.length);
+
+        const consumeGeFor = (itemId: number, needed: number): number => {
+            if (hasShop(itemId)) return needed;
+            const avail = remainingGeSell.get(itemId) ?? 0;
+            if (avail <= 0) return 0;
+            const take = Math.min(needed, avail);
+            remainingGeSell.set(itemId, avail - take);
+            return take;
+        };
+
+        const consumeStockFor = (itemId: number, needed: number): number => {
+            const avail = remainingStock.get(itemId) ?? 0;
+            if (avail <= 0) return 0;
+            const take = Math.min(needed, avail);
+            remainingStock.set(itemId, avail - take);
+            return take;
+        };
+
+        const pickProducer = (itemId: number): ActivityDefinition | undefined => {
+            const nonExp = this.catalog.findByOutputItem(itemId).filter((a) => a.trust !== 'experimental');
+            if (nonExp.length === 0) return undefined;
+            if (nonExp.some((a) => !a.inputs || a.inputs.length === 0)) return undefined;
+            const runnable = nonExp.filter(canQuestUnlockOrHold);
+            if (runnable.length === 0) return undefined;
+            return [...runnable].sort((a, b) => {
+                const satScore = (act: ActivityDefinition): number => {
+                    let hits = 0;
+                    for (const inp of act.inputs ?? []) {
+                        if (hasShop(inp.itemId)
+                            || (remainingStock.get(inp.itemId) ?? 0) >= inp.countPerUnit
+                            || (remainingGeSell.get(inp.itemId) ?? 0) >= inp.countPerUnit) {
+                            hits++;
+                        }
+                    }
+                    return hits;
+                };
+                return satScore(b) - satScore(a)
+                    || b.baselineRate.unitsPerTick - a.baselineRate.unitsPerTick
+                    || a.id.localeCompare(b.id);
+            })[0];
+        };
+
+        interface WaveNeed {
+            needed: number;
+            goalKind: GoalKind;
+            valueScore: number;
+            priorityWeight: number;
+        }
+        let frontier = new Map<number, WaveNeed>();
+        const expandedItems = new Set<number>();
+        for (const d of seedDemands) {
+            if (!d.active || d.remaining <= 0 || d.target.kind !== 'item') continue;
+            const itemId = d.target.itemId;
+            expandedItems.add(itemId);
+            const prev = frontier.get(itemId);
+            frontier.set(itemId, {
+                needed: (prev?.needed ?? 0) + d.remaining,
+                goalKind: prev && this.goalWeights[prev.goalKind] >= this.goalWeights[d.goalKind] ? prev.goalKind : d.goalKind,
+                valueScore: Math.max(prev?.valueScore ?? 0, d.valueScore),
+                priorityWeight: Math.max(prev?.priorityWeight ?? 0, d.priorityWeight),
+            });
+        }
+
+        const totalsByItem = new Map<number, {
+            grossNeed: number;
+            fulfilledFromStock: number;
+            remainingCraft: number;
+            goalKind: GoalKind;
+            valueScore: number;
+            priorityWeight: number;
+        }>();
+
+        for (let depth = 0; depth < MAX_SUPPLY_CHAIN_HOPS && frontier.size > 0; depth++) {
+            const nextRaw = new Map<number, WaveNeed>();
+            for (const [itemId, info] of frontier) {
+                const geUsed = consumeGeFor(itemId, info.needed);
+                const craftNeeded = Math.max(0, info.needed - geUsed);
+                if (craftNeeded <= 0) continue;
+
+                const producer = pickProducer(itemId);
+                if (!producer || !producer.inputs || producer.inputs.length === 0) continue;
+
+                const outPerUnit = producer.outputs?.find((o) => o.itemId === itemId)?.countPerUnit
+                    ?? producer.baselineRate.outputsPerUnit?.[itemId]
+                    ?? 1;
+                const batches = Math.ceil(craftNeeded / Math.max(0.01, outPerUnit));
+
+                for (const inp of producer.inputs) {
+                    if (expandedItems.has(inp.itemId) || inp.itemId === itemId) continue;
+                    const addNeed = Math.ceil(batches * inp.countPerUnit);
+                    if (addNeed <= 0) continue;
+                    const prev = nextRaw.get(inp.itemId);
+                    nextRaw.set(inp.itemId, {
+                        needed: (prev?.needed ?? 0) + addNeed,
+                        goalKind: prev && this.goalWeights[prev.goalKind] >= this.goalWeights[info.goalKind] ? prev.goalKind : info.goalKind,
+                        valueScore: Math.max(prev?.valueScore ?? 0, Math.max(10, Math.round(info.valueScore * 0.95))),
+                        priorityWeight: Math.max(prev?.priorityWeight ?? 0, info.priorityWeight),
+                    });
+                }
+            }
+
+            const nextFrontier = new Map<number, WaveNeed>();
+            for (const [inpId, info] of nextRaw) {
+                expandedItems.add(inpId);
+                const stockUsed = consumeStockFor(inpId, info.needed);
+                const afterStock = Math.max(0, info.needed - stockUsed);
+                const geUsed = consumeGeFor(inpId, afterStock);
+                const netCraft = Math.max(0, afterStock - geUsed);
+                if (netCraft <= 0) continue;
+                if (!this.catalog.findByOutputItem(inpId).some((a) => a.trust !== 'experimental')) continue;
+
+                const prevTotal = totalsByItem.get(inpId);
+                totalsByItem.set(inpId, {
+                    grossNeed: (prevTotal?.grossNeed ?? 0) + info.needed,
+                    fulfilledFromStock: (prevTotal?.fulfilledFromStock ?? 0) + stockUsed,
+                    remainingCraft: (prevTotal?.remainingCraft ?? 0) + netCraft,
+                    goalKind: prevTotal && this.goalWeights[prevTotal.goalKind] >= this.goalWeights[info.goalKind] ? prevTotal.goalKind : info.goalKind,
+                    valueScore: Math.max(prevTotal?.valueScore ?? 0, info.valueScore),
+                    priorityWeight: Math.max(prevTotal?.priorityWeight ?? 0, info.priorityWeight),
+                });
+                nextFrontier.set(inpId, { ...info, needed: netCraft });
+            }
+            frontier = nextFrontier;
+        }
+
+        const out: GoalDemand[] = [];
+        for (const [itemId, info] of totalsByItem) {
+            if (info.remainingCraft <= 0) continue;
+            const itemName = itemsMap.get(itemId)?.name;
+            out.push({
+                id: `goal:supply_chain:${itemId}`,
+                goalKind: info.goalKind,
+                sourceId: 'owner:supply_chain',
+                valueScore: info.valueScore,
+                target: {
+                    kind: 'item',
+                    itemId,
+                    ...(itemName ? { itemName } : {}),
+                    count: Math.max(1, Math.ceil(info.grossNeed)),
+                },
+                fulfilled: info.fulfilledFromStock,
+                remaining: info.remainingCraft,
+                priorityWeight: info.priorityWeight,
+                active: true,
+            });
+        }
+        return out;
+    }
+
     evaluate(
         snapshot: WorldSnapshot,
-        opts: { readonly includeInactive?: boolean } = {},
+        opts: { readonly includeInactive?: boolean; readonly marketQuotes?: MarketQuotesMap } = {},
     ): DemandReport {
         const includeInactive = opts.includeInactive === true;
         const campaignEvaluations = evaluateCampaigns(this.campaigns(), snapshot, {
@@ -765,6 +1001,9 @@ export class DemandEngine {
         rawDemands.push(...this.emitPkArmyDemands(snapshot));
         rawDemands.push(...this.emitSkillDemands(snapshot));
         rawDemands.push(...this.emitCoinFundDemands(snapshot));
+        if (opts.marketQuotes !== undefined) {
+            rawDemands.push(...this.emitSupplyChainDemands(snapshot, rawDemands, opts.marketQuotes));
+        }
 
         const scored: GoalDemand[] = [];
         for (const item of rawDemands) {
@@ -802,12 +1041,18 @@ export class DemandEngine {
         };
     }
 
-    activeDemands(snapshot: WorldSnapshot): readonly GoalDemand[] {
-        return this.evaluate(snapshot, { includeInactive: false }).activeDemands;
+    activeDemands(
+        snapshot: WorldSnapshot,
+        opts: { readonly marketQuotes?: MarketQuotesMap } = {},
+    ): readonly GoalDemand[] {
+        return this.evaluate(snapshot, { includeInactive: false, marketQuotes: opts.marketQuotes }).activeDemands;
     }
 
-    allDemands(snapshot: WorldSnapshot): readonly GoalDemand[] {
-        return this.evaluate(snapshot, { includeInactive: true }).demands;
+    allDemands(
+        snapshot: WorldSnapshot,
+        opts: { readonly marketQuotes?: MarketQuotesMap } = {},
+    ): readonly GoalDemand[] {
+        return this.evaluate(snapshot, { includeInactive: true, marketQuotes: opts.marketQuotes }).demands;
     }
 }
 
