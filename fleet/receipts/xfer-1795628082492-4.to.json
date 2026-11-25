@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795628082492-4",
+ "account": "Abracadickra",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "52e81869-43b2-4644-b47c-9b7324940aad",
+ "count": 1,
+ "ok": true,
+ "at": 1795628930962,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795628930145
+ },
+ "logout": {
+  "attemptId": "1795628913712-0000003332-0000000001",
+  "at": 1795628930880,
+  "sha256": "40df4ff422cde7503ccc51310f79ebae4e648cede7cb22bc200239b6362fc5fd"
+ },
+ "screen": true
+}

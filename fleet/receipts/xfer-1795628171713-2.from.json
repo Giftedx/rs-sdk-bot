@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795628171713-2",
  "account": "OreElse",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "2661d971-f932-47c0-8e42-f6a2c6badc7a",
- "count": 0,
- "ok": false,
- "at": 1795628616845,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795628904503,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795628816945
+ },
+ "logout": {
+  "attemptId": "1795628616854-0000022640-0000000001",
+  "at": 1795628904492,
+  "sha256": "55174d2a6b3b89a102a25dc773564f929268f90275ebd2b8216b43ad336b35f3"
+ },
+ "screen": true
 }

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795628358042-3",
+ "account": "Porksword",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "7dbbfc4c-f93f-48f9-9de9-344239b26dd2",
+ "count": 0,
+ "ok": false,
+ "at": 1795628971231,
+ "detail": "trade claimed"
+}

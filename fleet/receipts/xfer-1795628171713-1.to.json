@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795628171713-1",
+ "account": "Moneyshot",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "7728e03d-0fc2-4e4e-8905-b1d4955961a6",
+ "count": 0,
+ "ok": false,
+ "at": 1795628974825,
+ "detail": "trade claimed"
+}

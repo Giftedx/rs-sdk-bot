@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795628073611-2",
+ "account": "Swordswallow",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "aef41c6c-caef-4008-b34c-ef153934fc83",
+ "count": 1,
+ "ok": true,
+ "at": 1795628920869,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795628920113
+ },
+ "logout": {
+  "attemptId": "1795628904477-0000020960-0000000001",
+  "at": 1795628920861,
+  "sha256": "34d7ea2b6ccf9f66afd627cf675f8ec09f7bc3809fca6df46d6c266b6b1bfbe7"
+ },
+ "screen": true
+}

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795628073611-3",
+ "account": "Quickhandjob",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 3,
+ "claim": "93a6f4b0-a11a-4ebe-9d59-9eee58472389",
+ "count": 0,
+ "ok": false,
+ "at": 1795628974090,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795628922677-0000018244-0000000001",
+  "at": 1795628974079,
+  "sha256": "2c2d23d4598d25cb5554be0f08c69a348698196b75cdc8cd580323ff19260435"
+ },
+ "screen": false
+}

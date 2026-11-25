@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795628171713-2",
+ "account": "Shaftsinker",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "10b47685-8a8d-4de8-bf30-1f3bed3f8325",
+ "count": 1,
+ "ok": true,
+ "at": 1795628906066,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795628905363
+ },
+ "logout": {
+  "attemptId": "1795628896183-0000032408-0000000001",
+  "at": 1795628906057,
+  "sha256": "13dc34b788ead759099ace70fe92cb4e6f0bad2a8724dcc8458fa904b1af6bfd"
+ },
+ "screen": true
+}

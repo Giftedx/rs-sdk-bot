@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795628082492-2",
  "account": "SporranBulge",
  "partner": "Quickhandjob",
@@ -12,6 +12,16 @@
  "claim": "3da21af2-c497-4a45-b2b5-4e72f18bf26a",
  "count": 0,
  "ok": false,
- "at": 1795628688999,
- "detail": "trade claimed"
+ "at": 1795628982890,
+ "detail": "Error: order window ended during work",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795628689008-0000003820-0000000001",
+  "at": 1795628982877,
+  "sha256": "8e2ed02d34216d991042f5b532bd047817216c5bf1b36df48f7f605d877281c1"
+ },
+ "screen": false
 }

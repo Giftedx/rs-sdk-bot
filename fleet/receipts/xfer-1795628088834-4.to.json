@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795628088834-4",
  "account": "BoneToPick",
  "partner": "SporranDip",
@@ -10,15 +10,37 @@
  "item": "Coins",
  "requested": 60,
  "claim": "35f9db07-569d-4553-8de9-3f21e7457c36",
- "count": 0,
- "ok": false,
- "at": 1795628701210,
- "detail": "trade claimed",
+ "count": 60,
+ "ok": true,
+ "at": 1795628869711,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Staff of fire",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795628868953
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795628868550
+ },
+ "logout": {
+  "attemptId": "1795628701218-0000017864-0000000001",
+  "at": 1795628869700,
+  "sha256": "04d577057d5c1cbe13fef52909edc84a6f75b139319c5134d56da62c8cc11157"
+ },
+ "screen": true
 }

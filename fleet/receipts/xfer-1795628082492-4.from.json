@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795628082492-4",
  "account": "Fatstack",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "3ca23b9b-6652-4498-a416-e003a171d1aa",
- "count": 0,
- "ok": false,
- "at": 1795628603816,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795628929273,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795628623736
+ },
+ "logout": {
+  "attemptId": "1795628603825-0000009280-0000000001",
+  "at": 1795628929262,
+  "sha256": "7db62f2aef8d52372f1e1ce50154e1800a0506d93d8d3b484763d37a65f229bc"
+ },
+ "screen": true
 }

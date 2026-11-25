@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795628133617-masterbaiter-knightstick-c6e0f125d72062a1",
+ "account": "Knightstick",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 25,
+ "claim": "87ab1f83-e4a2-4006-a995-368f4cc3f0b1",
+ "count": 0,
+ "ok": false,
+ "at": 1795628978025,
+ "detail": "trade claimed"
+}
