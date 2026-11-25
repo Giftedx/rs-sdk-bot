@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795636314248-1",
  "account": "MeatNTwoVeg",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "d820e569-e062-49a7-850f-6cc8a6cb21bc",
  "count": 0,
  "ok": false,
- "at": 1795636483463,
- "detail": "trade claimed"
+ "at": 1795636535366,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795636483476-0000006996-0000000001",
+  "at": 1795636535355,
+  "sha256": "b5b0f13c059263f59b6bee46fea5a05fe5be06c575c405d830f0757e34273e4d"
+ },
+ "screen": false
 }
