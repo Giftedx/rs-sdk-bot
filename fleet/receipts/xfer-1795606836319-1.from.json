@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795606836319-1",
  "account": "Bigpackage",
  "partner": "Fatstack",
@@ -12,6 +12,12 @@
  "claim": "5011c177-bd58-4d60-94c9-7e2c087ffd86",
  "count": 0,
  "ok": false,
- "at": 1795607608680,
- "detail": "trade claimed"
+ "at": 1795607737055,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795607608694-0000017308-0000000001",
+  "at": 1795607737043,
+  "sha256": "0bb67553c818c17c3ee3aa57f97fd1686298151d551d1e0ce5bf3a1119ee4e74"
+ },
+ "screen": false
 }

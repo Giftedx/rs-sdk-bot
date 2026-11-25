@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795607546478-woodenstaff-masterbaiter-1b7b14049f0f52a4",
+ "role": "from",
+ "account": "Woodenstaff",
+ "partner": "Masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795607799645,
+ "detail": "Error: fleet trade claim held for order xfer-1795587227524-3"
+}

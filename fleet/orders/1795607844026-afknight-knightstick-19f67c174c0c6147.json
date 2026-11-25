@@ -1,0 +1,23 @@
+{
+ "id": "1795607844026-afknight-knightstick-19f67c174c0c6147",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "AFKnight",
+ "to": "Knightstick",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1795607844026,
+ "end": 1795609044026,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
