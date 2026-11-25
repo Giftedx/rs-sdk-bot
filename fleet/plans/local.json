@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795637757247,
+ "at": 1795637948532,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -356,36 +356,6 @@
    "repeat": false,
    "goal": "goal:quest_board:ikov",
    "role": "army"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=45 -- crafting inventory identify:marentill",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=5 -- crafting inventory brew:unf_irit_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:101",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/quest-grandtree.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
   }
  ],
  "army": [
@@ -406,6 +376,7 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
+  "swordinhand",
   "thefullmonty",
   "yewfirst"
  ],

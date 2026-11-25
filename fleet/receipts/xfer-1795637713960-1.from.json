@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795637713960-1",
+ "account": "Unsheathed",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 2,
+ "claim": "59a7f399-af56-46a5-a29b-fc2ef25a5082",
+ "count": 2,
+ "ok": true,
+ "at": 1795637920120,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795637884092-0000026660-0000000001",
+  "at": 1795637920103,
+  "sha256": "98c47c36cdd196f8f4338e8718ff541305e76cc9af94266986a920c1f553c3c6"
+ },
+ "screen": true
+}
