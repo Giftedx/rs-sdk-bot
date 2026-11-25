@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795631068910-1",
  "account": "SporranDip",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 3,
  "claim": "1b6585d7-118d-484b-8834-9bb9cbd2d84c",
- "count": 0,
- "ok": false,
- "at": 1795631898368,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795631941166,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795631940421
+ },
+ "logout": {
+  "attemptId": "1795631898377-0000018668-0000000001",
+  "at": 1795631941150,
+  "sha256": "a70aac69f41d3411765e73face7198c17f72c2f39033af771abe1d56c0286c5f"
+ },
+ "screen": true
 }

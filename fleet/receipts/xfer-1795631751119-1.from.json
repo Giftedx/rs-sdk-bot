@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795631751119-1",
+ "account": "Stirmypot",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "7370116a-c79d-431d-8e29-386b3fa57aab",
+ "count": 60,
+ "ok": true,
+ "at": 1795631941968,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 190
+ },
+ "logout": {
+  "attemptId": "1795631921048-0000032216-0000000001",
+  "at": 1795631941957,
+  "sha256": "718a190065c39da49833c9fffaca550d47704ab4cea95ee6e40b38c60db00b7f"
+ },
+ "screen": true
+}
