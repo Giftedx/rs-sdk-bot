@@ -1713,6 +1713,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             isInterloper: !!cand.name && curInterlopers.has(cand.name.toLowerCase()),
         });
     };
+    let hOut = 0, hItemWant = 0, hItemOff = 0;
     const unwatch = s.onTick(() => {
         const stTick = s.sdk.getState();
         const pos = stTick?.player;
@@ -1730,6 +1731,12 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             }
         }
         const activeGoing = going();
+        // DEBUG (scratch branch, not for merge): ticks between fights in the Wilderness with prayer points left, and of
+        // those the ticks in which the helper wants Protect Item (skulled) and the ones with it off.
+        if (!inFight && !inRescue && activeGoing && pos && !pos.isDead && pos.hp > 0 && wildernessLevel(pos.worldZ) > 0 && (stTick?.prayers?.prayerPoints ?? 0) > 0) {
+            hOut++;
+            if (o.options.protectItem !== false && ownSkull(s.client) === true) { hItemWant++; if (!stTick!.prayers!.activePrayers[PRAYER.item]) hItemOff++; }
+        }
         if (!inFight && !inRescue && activeGoing) wildSurvival.step(tickNow);
         if (pos && o.cohesion) {
             const curSelf = { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel };
@@ -2065,6 +2072,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         const qEnd = me();
         if (!stats.died && qEnd && diedNow(qEnd)) stats.died = true;
         unwatch();
+        console.log(`HTRACE ${s.name} out=${hOut} itemWant=${hItemWant} itemOff=${hItemOff}`);
         wildSurvival.release();
         flushGround(s.tick(), true);
         o.cohesion?.remove(s.name);
