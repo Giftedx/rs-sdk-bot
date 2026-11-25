@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795635248934-1",
  "account": "OreElse",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Rune pickaxe",
  "requested": 1,
  "claim": "8bfe5b6c-0116-42a9-a0c4-df4324277bdb",
- "count": 0,
- "ok": false,
- "at": 1795635388271,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795635436599,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795635400262
+ },
+ "logout": {
+  "attemptId": "1795635388286-0000013380-0000000001",
+  "at": 1795635436588,
+  "sha256": "584e5ba3d5d21fd04fc7cdc55b836aad16ba000d6b481c8dffb906db37f364eb"
+ },
+ "screen": true
 }

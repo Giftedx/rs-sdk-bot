@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795635248934-1",
+ "account": "Moneyshot",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune pickaxe",
+ "requested": 1,
+ "claim": "781328b8-48dd-4dfa-bc96-ff788c3fb414",
+ "count": 1,
+ "ok": true,
+ "at": 1795635438893,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795635437456
+ },
+ "logout": {
+  "attemptId": "1795635409044-0000012380-0000000001",
+  "at": 1795635438653,
+  "sha256": "64f0fcc2621169f2c51f78cad537aad1f0ad44efd52ae71eaf907b19c9ab5d70"
+ },
+ "screen": true
+}
