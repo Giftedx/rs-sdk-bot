@@ -330,9 +330,11 @@ export function buildPlannerSharedIndex(params: {
     const now = params.world.at;
     const minTrust: TrustTier = params.minTrust ?? 'practice_passed';
     const defects = params.defects ?? [];
+    // The shared index serves every account, so it drops only fleet-wide defects. Each account's own
+    // first-failure defects are excluded in planAccountWithCandidates.
     const quarantinedIds = new Set<string>();
     for (const d of defects) {
-        if (d.quarantined && (d.expiresAt === undefined || now < d.expiresAt)) {
+        if (isDefectActive(d, now) && isFleetWideDefect(d)) {
             quarantinedIds.add(d.activityId);
         }
     }
@@ -546,16 +548,47 @@ export function canProtectedAccountLaunch(
 
 const nearestHub = (pos: AccountState['pos']): HubBankId => nearestHubBank(pos);
 
+/** Failures of one fault signature before a worker defect holds the activity for every account. */
+export const FLEET_QUARANTINE_MIN_COUNT = 2;
+
+function isDefectActive(d: DefectRecord, now: number): boolean {
+    return d.quarantined && (d.expiresAt === undefined || now < d.expiresAt);
+}
+
+/**
+ * A death, or a fault signature seen FLEET_QUARANTINE_MIN_COUNT times, holds the activity for every account.
+ * A first worker defect holds it only for the account that failed: one account's missing food, bad position
+ * or lost session must not idle the fleet for the defect lifetime.
+ */
+export function isFleetWideDefect(d: DefectRecord): boolean {
+    return d.outcomeKind === 'death' || (d.count ?? 1) >= FLEET_QUARANTINE_MIN_COUNT;
+}
+
+export function defectBlocksAccount(d: DefectRecord, account: string, now: number): boolean {
+    if (!isDefectActive(d, now)) return false;
+    return isFleetWideDefect(d) || d.account.toLowerCase() === account.toLowerCase();
+}
+
 function isActivityQuarantined(
     activityId: string,
     defects: readonly DefectRecord[],
     now: number,
+    account: string,
 ): boolean {
-    return defects.some(
-        (d) => d.activityId === activityId
-            && d.quarantined
-            && (d.expiresAt === undefined || now < d.expiresAt),
-    );
+    return defects.some((d) => d.activityId === activityId && defectBlocksAccount(d, account, now));
+}
+
+function accountOnlyQuarantinedIds(
+    defects: readonly DefectRecord[],
+    account: string,
+    now: number,
+): ReadonlySet<string> {
+    const ids = new Set<string>();
+    const lower = account.toLowerCase();
+    for (const d of defects) {
+        if (isDefectActive(d, now) && !isFleetWideDefect(d) && d.account.toLowerCase() === lower) ids.add(d.activityId);
+    }
+    return ids;
 }
 
 function hasBlockingSystemHold(acct: AccountState, now: number): string | null {
@@ -1158,9 +1191,13 @@ function planAccountCore(
     const acctCache = reuse ? reuse.acctCache : createAccountLookupCache(acct, world, DEFAULT_OPERATING_COIN_FLOAT);
     const profile = reuse ? reuse.profile : summarizeAccountProfile(acct, acctCache);
     const isProtected = Boolean(acct.protectedClock || isProtectedAccountName(acct.name));
-    const hasActExclusions = Boolean(input.excludedActivityIds?.size || input.excludedSpotIds?.size);
+    const ownQuarantinedIds = accountOnlyQuarantinedIds(defects, acct.name, now);
+    const excludedActivityIds: ReadonlySet<string> | undefined = ownQuarantinedIds.size === 0
+        ? input.excludedActivityIds
+        : new Set([...(input.excludedActivityIds ?? []), ...ownQuarantinedIds]);
+    const hasActExclusions = Boolean(excludedActivityIds?.size || input.excludedSpotIds?.size);
     const isActAllowed = (act: ActivityDefinition): boolean =>
-        (!input.excludedActivityIds || !input.excludedActivityIds.has(act.id))
+        (!excludedActivityIds || !excludedActivityIds.has(act.id))
         && (!act.spotId || !input.excludedSpotIds || !input.excludedSpotIds.has(act.spotId));
 
     const shared = input._sharedIndex && !isProtected && (!input.allowExperimentalFallback || !hasActExclusions)
@@ -1205,7 +1242,7 @@ function planAccountCore(
     } else {
         const candidateActivities = input.activities.filter((act) => {
             if (!isActAllowed(act)) return false;
-            if (isActivityQuarantined(act.id, defects, now)) return false;
+            if (isActivityQuarantined(act.id, defects, now, acct.name)) return false;
             if (!trustMeetsMinimum(act.trust, minTrust)) {
                 if (!input.allowExperimentalFallback) return false;
             }
