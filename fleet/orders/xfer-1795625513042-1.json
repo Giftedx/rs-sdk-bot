@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795625513042-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Earlyshooter",
+  "to": "Moneyshot",
+  "item": "Uncut diamond",
+  "count": 1,
+  "itemId": 1617,
+  "start": 1795625513042,
+  "end": 1795626413042,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
