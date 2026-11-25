@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795605752528-1",
+ "account": "OreElse",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 1,
+ "claim": "41854b06-f6b1-4c4c-98c0-b49aefffbae4",
+ "count": 0,
+ "ok": false,
+ "at": 1795606653467,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795606641747-0000013548-0000000001",
+  "at": 1795606653454,
+  "sha256": "cb0947b0e33110a8b644cf5ec31ed3141f1aefa69153e33ec024616f442ec40d"
+ },
+ "screen": false
+}

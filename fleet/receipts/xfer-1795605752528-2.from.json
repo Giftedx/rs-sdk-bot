@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795605752528-2",
  "account": "SporranBulge",
  "partner": "Woodpecker",
@@ -12,6 +12,16 @@
  "claim": "571df57d-791d-4a1d-ae1a-562ffa4a4013",
  "count": 0,
  "ok": false,
- "at": 1795606049112,
- "detail": "trade claimed"
+ "at": 1795606653068,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 5,
+  "at": 1795606095534
+ },
+ "logout": {
+  "attemptId": "1795606049142-0000026252-0000000001",
+  "at": 1795606653052,
+  "sha256": "e262ed8c42eaa12a335d0ddee6432f21b6cc4b38cd045c7b05b0912f8ecb26f5"
+ },
+ "screen": false
 }
