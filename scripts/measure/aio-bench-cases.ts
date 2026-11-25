@@ -1872,6 +1872,19 @@ return [
     presetConfig: {position: {x: 2602, z: 3476, level: 0}, skills: {Agility: 25, Hitpoints: 43, Prayer: 99, Magic: 74, Attack: 99}}},
   {key: 'extra:walk-out-of-doric', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3014', '3356', '0'], pass: ok,
     presetConfig: {position: {x: 2952, z: 3453, level: 0}}},
+  // Quest areas that a failed quest run leaves an account in. The Witch's House basement: up the ladder, and out of the
+  // front door, which opens to a player leaving with no key (quest_ball.rs2 witchhousedoor).
+  {key: 'extra:walk-out-of-witch-basement', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2900', '3480', '0'], pass: ok, timeoutMs: 300_000,
+    presetConfig: {position: {x: 2907, z: 9873, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}}},
+  // The pocket that the Ikov dark stairs drop a player with no light in: up ikov_darkstairs, through the dungeon and up
+  // to the Ardougne north bank.
+  {key: 'extra:walk-out-of-ikov-pocket', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2619', '3332', '0'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {position: {x: 2639, z: 9737, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99, Magic: 99, Ranged: 99}}},
+  // The room between the Paterdomus gates at %priestperil 5 (varp 302): the walk finds no route, reads the Priest in Peril
+  // journal, plans again with stage 5 and leaves through pip_underground_door1 and the cellar ladder.
+  {key: 'extra:walk-out-of-paterdomus', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3405', '3505', '0'], timeoutMs: 300_000,
+    pass: s => ok(s) && /WALK_JOURNAL_REPLAN \{[^\n]*"priestperil":5\}[^\n]*"ok":true/.test(s),
+    presetConfig: {position: {x: 3428, z: 9891, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, varps: {302: 5}}},
 ];
 }
 

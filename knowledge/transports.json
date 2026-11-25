@@ -14253,6 +14253,62 @@
   }
  },
  {
+  "locName": "ikov_darkstairs",
+  "option": "op1",
+  "from": {
+   "x": 2638,
+   "z": 9740,
+   "level": 0
+  },
+  "to": {
+   "x": 2654,
+   "z": 9809,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m41_152.jm2:4547",
+  "toSrc": "scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2:85",
+  "handler": "scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2:84",
+  "interaction": {
+   "id": 96,
+   "shape": 10,
+   "angle": 3,
+   "width": 2,
+   "height": 3,
+   "blockAccessFlags": 0,
+   "src": "maps/m41_152.jm2:4547",
+   "configSrc": "scripts/quests/quest_ikov/configs/quest_ikov.loc:92"
+  }
+ },
+ {
+  "locName": "ikov_darkstairs",
+  "option": "op1",
+  "from": {
+   "x": 2638,
+   "z": 9763,
+   "level": 0
+  },
+  "to": {
+   "x": 2654,
+   "z": 9809,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m41_152.jm2:4556",
+  "toSrc": "scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2:85",
+  "handler": "scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2:84",
+  "interaction": {
+   "id": 96,
+   "shape": 10,
+   "angle": 3,
+   "width": 2,
+   "height": 3,
+   "blockAccessFlags": 0,
+   "src": "maps/m41_152.jm2:4556",
+   "configSrc": "scripts/quests/quest_ikov/configs/quest_ikov.loc:92"
+  }
+ },
+ {
   "locName": "ladder_from_cellar",
   "option": "op1",
   "from": {

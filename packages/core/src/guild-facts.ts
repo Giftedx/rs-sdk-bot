@@ -69,8 +69,42 @@ export function guildActorFacts(client: any, state?: any): GuildActorFacts {
     return facts;
 }
 
+// Parses the %priestperil (302) stage from priestperil_journal.rs2 text, checked from the highest stage down.
+export function priestPerilJournalStage(body: string): number | undefined {
+    const text = body.replace(/@[a-z0-9]+@/gi, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+    if (/QUEST COMPLETE!/i.test(text)) return 60;
+    if (/I need to bring Drezel fifty rune essences/i.test(text)) return 10;
+    if (/I should head downstairs to the monument like Drezel asked/i.test(text)) return 8;
+    if (/I should speak to Drezel again/i.test(text)) return 7;
+    if (/but I still have to do something about that vampire/i.test(text)) return 6;
+    if (/I need to find the key to his cell and free him/i.test(text)) return 5;
+    if (/I must return to the temple and find out what happened to the real Drezel/i.test(text)) return 4;
+    if (/I should tell King Roald everything's fine with Drezel now I have killed that dog/i.test(text)) return 3;
+    if (/He told me that there was an annoying dog below the temple, and has asked me to kill it for him/i.test(text)) return 2;
+    if (/I spoke to King Roald who asked me to investigate why his friend Priest Drezel has stopped communicating with him/i.test(text)
+        && /Drezel lives in a temple to the east of Varrock Palace/i.test(text)) return 1;
+    if (/I can start this quest by speaking to King Roald/i.test(text)) return 0;
+    return undefined;
+}
+
+// Quests whose journal names the stage that their gates test (quest varps never reach the client). A walk with no route
+// reads the journal of each one that the quest list shows started, and plans again with the stage as a lower bound:
+// an account between the Paterdomus gates (gates.rs2) has a route out only from %priestperil 5.
+export const JOURNAL_STAGES: readonly { varp: string; questId: number; title: string; stage: (body: string) => number | undefined }[] = [
+    { varp: 'priestperil', questId: 8115, title: 'Priest in Peril', stage: priestPerilJournalStage },
+];
+export function startedJournalQuests(client: any): string[] {
+    const flags = questFlags(client) ?? [];
+    return JOURNAL_STAGES.filter(j => flags.some(q => q.id === j.questId && q.state === 'started')).map(j => j.varp);
+}
+
 export function journalGuildStage(title: string, body: string): { key: string; lowerBound: number } | null {
     title = cleanGuildText(title); body = cleanGuildText(body);
+    for (const j of JOURNAL_STAGES) {
+        if (title !== j.title) continue;
+        const stage = j.stage(body);
+        return stage === undefined ? null : { key: j.varp, lowerBound: stage };
+    }
     if (title === 'Dwarf Cannon') {
         if (/The Commander has asked me to check up on his guards at the watchtower to the South of his camp\./.test(body)
             || /I went to the watchtower where I found some dwarf remains\./.test(body)) return { key: 'mcannon', lowerBound: 2 };

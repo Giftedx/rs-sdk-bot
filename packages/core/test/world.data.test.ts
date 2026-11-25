@@ -36,3 +36,31 @@ test('Lumbridge to Varrock square is one walk under 400 tiles', async () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.cost).toBeLessThan(400);
 }, 120_000);
+
+// Quest areas that quest jobs leave accounts in. Each needs one table fact: a door rule, a gate stage or a named ladder.
+const maxed: Account = { ...acct, skills: { attack: 99, strength: 99, defence: 99, hitpoints: 99, prayer: 99, ranged: 99, magic: 99 } };
+const legsOf = (r: ReturnType<ReturnType<typeof createWorld>['route']>) => r.ok ? r.legs.map(l => l.kind === 'transport' ? l.loc : l.kind).join(' ') : r.reason;
+
+test('the Witch\'s House basement has a route out without the key, and the house stays shut to a player outside', async () => {
+    const w = createWorld({ pathLength: await rsPathLength() });
+    const out = w.route({ x: 2907, z: 9873, level: 0 }, { x: 3185, z: 3436, level: 0 }, maxed);
+    console.log(`witch basement->varrock: ${legsOf(out)}`);
+    expect(out.ok).toBe(true);
+    expect(w.route({ x: 2900, z: 3480, level: 0 }, { x: 2907, z: 3475, level: 0 }, maxed).ok).toBe(false);
+}, 120_000);
+
+test('the pocket below the Ikov dark stairs has a route out up those stairs', async () => {
+    const w = createWorld({ pathLength: await rsPathLength() });
+    const r = w.route({ x: 2639, z: 9737, level: 0 }, { x: 2619, z: 3332, level: 0 }, maxed);
+    console.log(`ikov pocket->ardougne: ${legsOf(r)}`);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.legs.some(l => l.kind === 'transport' && l.loc === 'ikov_darkstairs')).toBe(true);
+}, 120_000);
+
+test('the room between the Paterdomus gates has a route out from priestperil stage 5 only', async () => {
+    const w = createWorld({ pathLength: await rsPathLength() });
+    const at = (stage: number | undefined) => w.route({ x: 3428, z: 9891, level: 0 }, { x: 3185, z: 3436, level: 0 }, { ...maxed, questStages: stage === undefined ? {} : { priestperil: stage } });
+    expect(at(undefined).ok).toBe(false);
+    expect(at(4).ok).toBe(false);
+    expect(at(5).ok).toBe(true);
+}, 120_000);

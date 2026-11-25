@@ -53,7 +53,31 @@ function expand(body: string, t: Triggers): string {
     return out;
 }
 
-export function classifyDoor(loc: string, category: string | undefined, t: Triggers): { kind: DoorKind; need?: DoorNeed; trigger: string } {
+export type StageConstants = ReadonlyMap<string, { value: number }>;
+const thresholdValue = (text: string | undefined, constants: StageConstants | undefined): number | undefined => {
+    const m = text?.trim().match(/^(?:\^(\w+)|(\d+))$/);
+    return m?.[1] !== undefined ? constants?.get(m[1])?.value : m?.[2] !== undefined ? Number(m[2]) : undefined;
+};
+const gateOpens = (varp: string, rhs: string) => new RegExp(`if\\s*\\(\\s*%${varp}\\s*>=\\s*${rhs}\\s*\\)\\s*\\{\\s*~\\w*open\\w*\\(`);
+
+// The stage from which a quest gate opens: `if (%v >= ^stage) { ~open...` in the trigger, or the same test on a
+// parameter of the proc that the trigger calls with the stage (Paterdomus gates.rs2: pip_underground_door1 calls
+// ~check_priest_peril_gate(^priestperil_find_drezel_key), and the proc opens `if (%priestperil >= $required_progress)`).
+// Only a varp that the body names once: any other test of it could refuse at a stage this test admits.
+function gateMinimum(trigBody: string, body: string, varp: string, t: Triggers, constants: StageConstants | undefined): number | undefined {
+    if ((body.match(new RegExp(`%${varp}\\b`, 'g')) ?? []).length !== 1) return undefined;
+    const direct = body.match(gateOpens(varp, '(\\^\\w+|\\d+)'));
+    if (direct) return thresholdValue(direct[1], constants);
+    for (const call of trigBody.matchAll(/~(\w+)\(([^;]*)\)\s*;/g)) {
+        const proc = t.get(`proc,${call[1]}`);
+        const params = proc?.body.match(/^\(([^)]*)\)/)?.[1]?.split(',').map(p => p.trim().split(/\s+/).pop()!) ?? [];
+        const index = params.findIndex(p => proc && gateOpens(varp, `\\${p}`).test(proc.body));
+        if (index >= 0) return thresholdValue(call[2]!.split(',')[index], constants);
+    }
+    return undefined;
+}
+
+export function classifyDoor(loc: string, category: string | undefined, t: Triggers, constants?: StageConstants): { kind: DoorKind; need?: DoorNeed; trigger: string } {
     const trig = t.get(`oploc1,${loc}`) ?? (category ? t.get(`oploc1,_${category}`) : undefined);
     const useTrig = t.get(`oplocu,${loc}`);
     if (!trig && !useTrig) return { kind: 'unknown', trigger: '' };
@@ -80,12 +104,17 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     if(/^keepgate_closed(?:_left)?$/.test(loc)&&/%itkeepgatelock\s*=\s*0\s*&\s*coordz\(coord\)\s*>\s*coordz\(loc_coord\)/.test(body))return {kind:'quest',need:{varp:'itkeepgatelock',minimum:1,whenAxis:false},trigger:src};
 
     if (useTrig && /last_useitem|inv_total/.test(useTrig.body)) {
-        const item = [...useTrig.body.matchAll(/case\s+(\w+)\s*:/g)].map(m => m[1]!).find(c => c !== 'default');
         // The Phoenix hideout door (quest_blackarmgang.rs2 unlock_weaponstore_door) sets `$leaving = ~check_axis(...)`
         // and refuses only `if($leaving = false & $key_used = false)`: the leaving side opens with no key.
         const alias = body.match(/def_boolean\s+\$(\w+)\s*=\s*~check_axis(?:_locactive)?\([^;]+\);/);
         const guard = alias ? body.match(new RegExp('if\\s*\\(\\s*\\$' + alias[1] + '\\s*=\\s*(true|false)\\s*&[^)]*\\)\\s*\\{\\s*mes\\("[^"]*locked')) : null;
-        const need: DoorNeed = { ...(item ? { item } : {}), ...(guard ? { whenAxis: guard[1] === 'true' } : {}) };
+        // The Witch's House front door (quest_ball.rs2 witchhousedoor) opens on Open `if(inv_total(inv, witches_doorkey)
+        // > 0 | $leaving = true)`: the holder of the key passes, and the side named after `|` passes with no key, so the
+        // refused side is the other one. The walker passes doors with Open, so only Open's own item test names the key.
+        const free = !guard && alias ? body.match(new RegExp('if\\s*\\(\\s*inv_total\\(inv,\\s*(\\w+)\\)\\s*>\\s*0\\s*\\|\\s*\\$' + alias[1] + '\\s*=\\s*(true|false)\\s*\\)\\s*\\{')) : null;
+        const item = [...useTrig.body.matchAll(/case\s+(\w+)\s*:/g)].map(m => m[1]!).find(c => c !== 'default') ?? free?.[1];
+        const whenAxis = guard ? guard[1] === 'true' : free ? free[2] !== 'true' : undefined;
+        const need: DoorNeed = { ...(item ? { item } : {}), ...(whenAxis !== undefined ? { whenAxis } : {}) };
         return { kind: 'key', need: Object.keys(need).length ? need : undefined, trigger: src };
     }
     const skill = body.match(/stat\((\w+)\)\s*<\s*(\d+)/);
@@ -100,7 +129,10 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     const varp = body.match(/%(\w+)/);
     // A quest check inside `if (~check_axis(...) = true)` refuses only the entering side (sheepherder_gate.rs2:
     // leaving the plague-sheep pen is never checked); whenAxis lets the route keep it shut one way only.
-    if (varp && REFUSAL.test(body)) return { kind: 'quest', need: { varp: varp[1], ...(/if\s*\(\s*~check_axis\([^)]*\)\s*=\s*true\s*\)/.test(body) ? { whenAxis: true } : {}) }, trigger: src };
+    if (varp && REFUSAL.test(body)) {
+        const minimum = trig ? gateMinimum(trig.body, body, varp[1]!, t, constants) : undefined;
+        return { kind: 'quest', need: { varp: varp[1], ...(minimum !== undefined ? { minimum } : {}), ...(/if\s*\(\s*~check_axis\([^)]*\)\s*=\s*true\s*\)/.test(body) ? { whenAxis: true } : {}) }, trigger: src };
+    }
     const side = body.match(/coord([xz])\(coord\)\s*([<>]=?)\s*coord[xz]\(loc_coord\)/);
     if (side && REFUSAL.test(body)) return { kind: 'one_way', need: { side: `refuses when player ${side[1]} ${side[2]} door ${side[1]}` }, trigger: src };
     if (!useTrig && !/%|\bstat\(/.test(body) && OPEN_PROC.test(body) && REFUSAL.test(body)) {

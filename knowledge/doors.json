@@ -3726,7 +3726,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "ikov"
+   "varp": "ikov",
+   "minimum": 30
   },
   "trigger": "scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2:170",
   "src": "maps/m41_154.jm2:5927"
@@ -6994,7 +6995,13 @@
   "x": 2901,
   "z": 3473,
   "level": 0,
+  "angle": 0,
+  "shape": 0,
   "kind": "key",
+  "need": {
+   "item": "witches_doorkey",
+   "whenAxis": false
+  },
   "trigger": "scripts/quests/quest_ball/scripts/quest_ball.rs2:10",
   "src": "maps/m45_54.jm2:5153"
  },
@@ -7094,7 +7101,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "death_equiproom"
+   "varp": "death_equiproom",
+   "minimum": 70
   },
   "trigger": "scripts/quests/quest_death/scripts/quest_death.rs2:73",
   "src": "maps/m45_55.jm2:5335"
@@ -25238,7 +25246,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "blackarmgang"
+   "varp": "blackarmgang",
+   "minimum": 3
   },
   "trigger": "scripts/quests/quest_blackarmgang/scripts/quest_blackarmgang.rs2:99",
   "src": "maps/m49_52.jm2:7661"
@@ -25484,7 +25493,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "ikov"
+   "varp": "ikov",
+   "minimum": 10
   },
   "trigger": "scripts/quests/quest_ikov/scripts/quest_ikov.rs2:1",
   "src": "maps/m49_54.jm2:5288"
@@ -27310,7 +27320,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "priestperil"
+   "varp": "priestperil",
+   "minimum": 5
   },
   "trigger": "scripts/areas/area_mausoleum/scripts/gates.rs2:1",
   "src": "maps/m53_154.jm2:4168"
@@ -27323,7 +27334,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "priestperil"
+   "varp": "priestperil",
+   "minimum": 8
   },
   "trigger": "scripts/areas/area_mausoleum/scripts/gates.rs2:4",
   "src": "maps/m53_154.jm2:4379"

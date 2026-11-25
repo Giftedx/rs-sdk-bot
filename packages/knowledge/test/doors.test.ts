@@ -138,3 +138,51 @@ test('real rev-289 door fixes classify Varrock SE gate, Rellekka doors, curtains
     expect(classifyDoor('viking_fencegate_l', undefined, t)).toMatchObject({ kind: 'quest', need: { varp: 'viking', minimum: 10 } });
     expect(classifyDoor('barbariangatel', 'outpost_gate', t)).toMatchObject({ kind: 'quest', need: { varp: 'barcrawl', minimum: 2 } });
 });
+
+const realTriggers = (files: string[]) => {
+    const contentRoot = resolve(import.meta.dir, '../../../vendor/rs-sdk/server/content');
+    return parseTriggers(files.map(file => ({ file, text: readFileSync(resolve(contentRoot, file), 'utf8') })));
+};
+
+test('a key door whose Open admits the key holder or the leaving side names the key and shuts one way', () => {
+    const t = realTriggers(['scripts/quests/quest_ball/scripts/quest_ball.rs2', 'scripts/doors/scripts/door_procs.rs2']);
+    expect(classifyDoor('witchhousedoor', undefined, t)).toMatchObject({ kind: 'key', need: { item: 'witches_doorkey', whenAxis: false } });
+});
+
+test('a key test that refuses the holder is not a key', () => {
+    // golrie_gate_waterfall_quest: Open with Glarial's pebble says "Golrie has locked himself in."
+    const t = realTriggers(['scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2', 'scripts/doors/scripts/door_procs.rs2']);
+    expect(classifyDoor('golrie_gate_waterfall_quest', undefined, t).need?.item).toBeUndefined();
+});
+
+test('a quest gate takes its stage from the constant passed to the proc that tests it', () => {
+    const t = realTriggers(['scripts/areas/area_mausoleum/scripts/gates.rs2', 'scripts/doors/scripts/door_procs.rs2']);
+    const constants = new Map([['priestperil_find_drezel_key', { value: 5 }], ['priestperil_meet_in_mausoleum', { value: 8 }]]);
+    expect(classifyDoor('pip_underground_door1', undefined, t, constants)).toMatchObject({ kind: 'quest', need: { varp: 'priestperil', minimum: 5 } });
+    expect(classifyDoor('pip_underground_door2', undefined, t, constants)).toMatchObject({ kind: 'quest', need: { varp: 'priestperil', minimum: 8 } });
+    // Without the constant the stage is unknown, and the gate stays shut for every account.
+    expect(classifyDoor('pip_underground_door1', undefined, t).need?.minimum).toBeUndefined();
+});
+
+test('a quest gate takes its stage from a direct test, and only when the varp is tested once', () => {
+    const t = parseTriggers([{ file: 'g.rs2', text: `[oploc1,onegate]
+if(%q >= ^q_started) {
+    ~open_and_close_door2(loc_1538, ~check_axis_locactive(coord), door_open);
+    return;
+}
+mes("The door is locked.");
+[oploc1,twogate]
+if(%q = 3) {
+    mes("The door is locked.");
+    return;
+}
+if(%q >= 2) {
+    ~open_and_close_door2(loc_1538, ~check_axis_locactive(coord), door_open);
+    return;
+}
+mes("The door is locked.");
+` }]);
+    const constants = new Map([['q_started', { value: 1 }]]);
+    expect(classifyDoor('onegate', undefined, t, constants)).toMatchObject({ kind: 'quest', need: { varp: 'q', minimum: 1 } });
+    expect(classifyDoor('twogate', undefined, t, constants).need?.minimum).toBeUndefined();
+});

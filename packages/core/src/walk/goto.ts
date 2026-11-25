@@ -83,11 +83,30 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     ]);
     const rawStock = hasBank ? bankStock(name!, { server: walkerServer(s) }) : undefined;
     const stock = opts.noJewelry && rawStock ? { coins: rawStock.coins, items: Object.fromEntries(Object.entries(rawStock.items ?? {}).filter(([k]) => !TELEPORT_JEWELRY_RE.test(k))) } : rawStock;
-    const budgetMs = opts.planBudgetMs ?? ROUTE_BUDGET_MS, planStart = performance.now(), deadline = planStart + budgetMs;
+    const budgetMs = opts.planBudgetMs ?? ROUTE_BUDGET_MS, planStart = performance.now();
     let why = '';
-    const r: TripPlan | null = routePlanMod ? await routePlanMod.planTripOffThread(from, to, acct, stock, budgetMs)
-        : stock ? planTrip(world, from, to, acct, stock, undefined, undefined, { deadline })
-        : (() => { const d = world.route(from, to, acct, { deadline }); if (!d.ok) why = d.reason; return d.ok ? { cost: d.cost, legs: d.legs } as TripPlan : null; })();
+    const plan = async (a: Account): Promise<TripPlan | null> => {
+        const deadline = performance.now() + budgetMs;
+        why = '';
+        return routePlanMod ? await routePlanMod.planTripOffThread(from, to, a, stock, budgetMs)
+            : stock ? planTrip(world, from, to, a, stock, undefined, undefined, { deadline })
+            : (() => { const d = world.route(from, to, a, { deadline }); if (!d.ok) why = d.reason; return d.ok ? { cost: d.cost, legs: d.legs } as TripPlan : null; })();
+    };
+    let r = await plan(acct);
+    // Quest varps never reach the client, so a gate that opens from a quest stage stays shut while the stage is unknown.
+    // With no route, the journals that name such a stage (guild-facts.ts JOURNAL_STAGES) are read and the trip planned once more.
+    if (!r && s.client) {
+        const { refreshGuildEvidence, startedJournalQuests } = await import('../guild-observation');
+        const quests = startedJournalQuests(s.client);
+        if (quests.length) {
+            await refreshGuildEvidence(s as any, quests);
+            acct = accountForSdk(s.sdk);
+            if (opts.noJewelry) acct = withoutJewelry(acct);
+            r = await plan(acct);
+            const seen = acct.questStages ?? {};
+            console.log(`WALK_JOURNAL_REPLAN ${JSON.stringify({ quests, stages: Object.fromEntries(quests.map(q => [q, seen[q] ?? null])), ok: !!r })}`);
+        }
+    }
     if (!r) {
         // What the failed search started from: a live "no route" names only its target otherwise.
         console.log(`WALK_NO_ROUTE ${JSON.stringify({ from, to, ms: Math.round(performance.now() - planStart), budgetMs, bank: !!stock, coins: acct.coins ?? 0 })}`);

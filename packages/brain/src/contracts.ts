@@ -335,6 +335,21 @@ export const HUB_BANKER_LOCATIONS = {
 } as const;
 export type HubBankId = keyof typeof HUB_BANKER_LOCATIONS;
 
+// The map keeps each dungeon 6400 tiles north of the land above it (Taverley Dungeon 2884,9798 under 2884,3398).
+export const UNDERGROUND_Z_OFFSET = 6400;
+// The hub bank nearest a tile: Chebyshev distance plus 100 a floor. A dungeon tile counts as the land tile above it;
+// its raw z is about 6400 from every bank, which would make the bank with the largest z the nearest to every dungeon.
+export function nearestHubBank(pos: { x: number; z: number; level: number } | null | undefined, fallback: HubBankId = 'varrock_west'): HubBankId {
+    if (!pos) return fallback;
+    const z = pos.z >= UNDERGROUND_Z_OFFSET ? pos.z - UNDERGROUND_Z_OFFSET : pos.z;
+    let best = fallback, bestDist = Infinity;
+    for (const [id, spec] of Object.entries(HUB_BANKER_LOCATIONS) as [HubBankId, (typeof HUB_BANKER_LOCATIONS)[HubBankId]][]) {
+        const d = Math.max(Math.abs(pos.x - spec.bankTile.x), Math.abs(z - spec.bankTile.z)) + Math.abs(pos.level - spec.bankTile.level) * 100;
+        if (d < bestDist) { bestDist = d; best = id; }
+    }
+    return best;
+}
+
 export interface AcquireStep {
     readonly stepKind: 'acquire';
     readonly source: AcquireSourceKind;

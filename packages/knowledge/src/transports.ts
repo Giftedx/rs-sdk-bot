@@ -66,6 +66,8 @@ export const NAMED_TRANSPORT_FILES: Record<string, string[]> = {
     'scripts/quests/quest_horror/scripts/quest_horror.rs2': ['horror_lighthouse_spiralstairs_base', 'horror_ladder_top2', 'horror_ladder_base2'],
     'scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2': ['baxtorian_door_waterfall_quest'],
     'scripts/quests/quest_dragon/scripts/melzars_maze.rs2': ['funladdertop'],
+    // The dark stairs down drop a player with no light in a pocket at 2641,9741; these stairs up are its one way out.
+    'scripts/quests/quest_ikov/scripts/ikov_dungeon.rs2': ['ikov_darkstairs'],
 };
 
 // Small adapters for the pinned dynamic handlers. Every adapter validates the
