@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795621069079-4",
+ "account": "mmthv2350",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "aeb965db-36dd-443a-80b5-5f5231b81c3f",
+ "count": 0,
+ "ok": false,
+ "at": 1795621551552,
+ "detail": "trade claimed"
+}
