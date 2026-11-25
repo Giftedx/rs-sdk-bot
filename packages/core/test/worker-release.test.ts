@@ -331,6 +331,27 @@ test('a reused PID does not hold an expired peer row; matching or unknown owners
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 
+test('a reused PID whose command line reads as empty does not hold the row once its start time is after the attempt',async()=>{
+ const {closedSessionRow,LOST_SESSION_DROP_MS}=await import('../src/worker-release');
+ const {beginSessionAttempt,listAttempts}=await import('../src/session-lifecycle');
+ const root=mkdtempSync(join(tmpdir(),'release-svchost-pid-')),server='rs-sdk-demo.fly.dev',pin='a'.repeat(64);
+ try{
+  // KnightRider: the worker was killed after ready, so its attempt stays held; its id now belongs to svchost.exe.
+  const attempt=beginSessionAttempt({account:'Knight',server},{root,owner:{pid:10696,coordinatorRunId:null,workerRelease:null,script:'scripts/aio-logistics.ts',role:null,participants:null}});
+  attempt.record('connecting');attempt.record('connected');attempt.record('ready');
+  const createdAt=listAttempts('Knight',server,{root}).find(a=>a.attemptId===attempt.attemptId)!.receipt!.createdAt;
+  const now=Date.now()+LOST_SESSION_DROP_MS,row={name:'Knight',server,result:'',at:now-LOST_SESSION_DROP_MS-100_000,workRevision:pin,sessionAttemptId:attempt.attemptId};
+  const closed=(starts:(pids:readonly number[])=>ReadonlyMap<number,number>|null)=>(r:any)=>closedSessionRow(r,server,{root,commandLine:()=>null,starts},()=>true,now);
+  expect(closed(()=>new Map([[10696,createdAt+900_000]]))(row)).toBe(true);
+  expect(()=>assertCompatibleWorkers(pin,server,[row],now,closed(()=>new Map([[10696,createdAt+900_000]])))).not.toThrow();
+  // The owner itself started before its attempt, an unread start time proves nothing, and a start within the slack is the owner.
+  for(const starts of [()=>new Map([[10696,createdAt-1000]]),()=>null,()=>new Map([[10696,createdAt+1000]])]){
+   expect(closed(starts)(row)).toBe(false);
+   expect(()=>assertCompatibleWorkers(pin,server,[row],now,closed(starts))).toThrow('peer state unknown');
+  }
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
 test('the cached launch release rehashes only when a release file or folder changes',()=>{
  const root=fixture();
  try{
