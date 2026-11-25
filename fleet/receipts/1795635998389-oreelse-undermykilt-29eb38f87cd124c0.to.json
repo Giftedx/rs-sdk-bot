@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795635998389-oreelse-undermykilt-29eb38f87cd124c0",
+ "account": "UnderMyKilt",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nails",
+ "requested": 12,
+ "claim": "33aaca91-400d-4797-bd79-50230b701e50",
+ "count": 0,
+ "ok": false,
+ "at": 1795636004552,
+ "detail": "trade claimed"
+}
