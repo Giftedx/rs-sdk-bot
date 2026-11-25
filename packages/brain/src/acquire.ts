@@ -662,10 +662,12 @@ export function resolveAcquireItem(
                     includeBank: true,
                     requireTrustedBank: true,
                 });
+                // The trade worker gives from the bank and the pack only, never a worn item.
+                const unworn = Math.max(0, stock.owned - (donor.equipment[req.itemId] ?? 0));
                 // Preserve operating coin float on the donor when transferring coins.
                 const donorSurplus = req.itemId === COINS_ITEM_ID
                     ? availableSpendableCoins(donor, world, operatingFloat, { includeBank: true, requireTrustedBank: true }).spendable
-                    : stock.available;
+                    : Math.min(stock.available, unworn);
                 const transferQty = req.allowPartial === true
                     ? Math.min(req.quantity, Math.floor(donorSurplus))
                     : req.quantity;

@@ -153,6 +153,52 @@ test('AcquireItem preserves operating coin float (~1,000 gp) and falls through w
     expect(res.candidates.map((c) => c.source)).toEqual(['hub_banker', 'craft_gather']);
 });
 
+test('hub_banker never picks a donor whose only copy is worn', () => {
+    // The trade worker gives from the bank and the pack only (`stock short: <item> 0 banked + 0 held`).
+    const RUNE_SCIMITAR = 1333;
+    const recipient = makeAcct({
+        inventory: { 995: 1050 },
+        bank: { items: {}, observedAt: NOW - 10_000, trusted: true },
+    });
+    const wearer = makeAcct({
+        name: 'Awearer',
+        pos: { x: 3185, z: 3436, level: 0 },
+        equipment: { [RUNE_SCIMITAR]: 1 },
+        bank: { items: { 995: 5000 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const banker = makeAcct({
+        name: 'Bbanker',
+        pos: { x: 3185, z: 3436, level: 0 },
+        bank: { items: { [RUNE_SCIMITAR]: 1, 995: 5000 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const req = { itemId: RUNE_SCIMITAR, quantity: 1, operatingCoinFloat: 1000 };
+    const quotes = { [RUNE_SCIMITAR]: { ask: 20_000, sell: 19_000, trades: 20 } };
+    const world = (accounts: Record<string, AccountState>): WorldSnapshot => ({
+        schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts,
+    });
+
+    const both = resolveAcquireItem(recipient, req, {
+        world: world({ Packhorse: recipient, Awearer: wearer, Bbanker: banker }),
+        marketQuotes: quotes,
+    });
+    expect(both.step?.source).toBe('hub_banker');
+    expect(both.step?.donorAccount).toBe('Bbanker');
+
+    const wearerOnly = resolveAcquireItem(recipient, req, {
+        world: world({ Packhorse: recipient, Awearer: wearer }),
+        marketQuotes: quotes,
+    });
+    expect(wearerOnly.candidates.map((c) => c.source)).not.toContain('hub_banker');
+
+    // A worn copy plus a banked copy leaves the banked one to give.
+    const both2 = makeAcct({ ...wearer, bank: { items: { [RUNE_SCIMITAR]: 1, 995: 5000 }, observedAt: NOW - 10_000, trusted: true } });
+    const spare = resolveAcquireItem(recipient, req, {
+        world: world({ Packhorse: recipient, Awearer: both2 }),
+        marketQuotes: quotes,
+    });
+    expect(spare.step?.donorAccount).toBe('Awearer');
+});
+
 test('AcquireItem respects (item, venue) TTL cooldowns across account and world cooldown maps', () => {
     const acct = makeAcct({
         cooldowns: {
