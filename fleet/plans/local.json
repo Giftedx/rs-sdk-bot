@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795642369955,
+ "at": 1795643037062,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -229,6 +229,22 @@
    "role": "army"
   },
   {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/woodcutting.ts TRAIN_SKILL=Woodcutting TARGET_LEVEL=40 --",
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=25 -- fletching shafts",
+    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
+   "role": "army"
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -279,31 +295,100 @@
    "role": "army"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/generated/quest-grandtree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:hiltsdeep:item:563",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:563",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army",
+   "resources": [
+    "ardougne-cows"
+   ]
+  },
+  {
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=25 -- fletching shafts",
-    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=5 -- fletching shafts",
+    "scripts/generated/quest-chompybird.ts DEMAND_ID=goal:quest_board:chompybird BATCH_UNITS=1 --"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:viking",
+   "goal": "goal:quest_board:chompybird",
+   "role": "army"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/quest-merlin.ts --",
+    "scripts/generated/quest-grail.ts DEMAND_ID=goal:quest_board:grail BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grail",
    "role": "army"
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/generated/quest-chompybird.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy gemshop2 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:castmyload:item:1637 BATCH_UNITS=1 -- crafting jewellery-trip"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:chompybird",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:chompybird",
+   "goal": "campaign:castmyload:item:1637",
    "role": "army"
   },
   {
@@ -340,6 +425,62 @@
    "repeat": false,
    "goal": "goal:pk_army:Shaftmaker",
    "role": "auto"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/quest-druid.ts --",
+    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:91",
+   "role": "auto"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:CoinCock",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Stirmypot",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Stirmypot",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   }
  ],
  "army": [
@@ -353,14 +494,10 @@
   "billionaire",
   "dipstick",
   "fingerblastr",
-  "hocuspokeus",
   "kiltlifter",
-  "mineyourbiz",
   "moneyshot",
   "oreelse",
   "pocketpool",
-  "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
