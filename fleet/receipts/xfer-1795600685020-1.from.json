@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795600685020-1",
+ "account": "TrouserSnake",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "d473a2ff-8978-431e-8ac6-d9c385c8d217",
+ "count": 0,
+ "ok": false,
+ "at": 1795600929418,
+ "detail": "trade claimed"
+}

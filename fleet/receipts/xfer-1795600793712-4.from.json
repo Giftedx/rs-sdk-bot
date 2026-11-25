@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795600793712-4",
+ "account": "Deeppockets",
+ "partner": "Swordswallow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "51f7e3d7-161f-4acb-a5b4-4cbe2e2f5c8c",
+ "count": 0,
+ "ok": false,
+ "at": 1795600940068,
+ "detail": "trade claimed"
+}

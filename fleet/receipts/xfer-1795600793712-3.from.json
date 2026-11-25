@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795600793712-3",
+ "account": "Bigpackage",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "f73d07f4-20a6-4a01-8728-3284a6cab226",
+ "count": 0,
+ "ok": false,
+ "at": 1795600964670,
+ "detail": "trade claimed"
+}
