@@ -378,9 +378,21 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
 
     test('HP PvP kit constant matches MELEE_PVP_CORE_KIT 21-slot no-energy contract', async () => {
         const { HITPOINTS_PVP_SPECIALIST_KIT } = await import('./hp-specialist');
-        const { MELEE_PVP_CORE_KIT } = await import('./combat-quest-specialists');
+        const { MELEE_PVP_CORE_KIT, planTankFoodWithdrawals } = await import('./combat-quest-specialists');
         expect(HITPOINTS_PVP_SPECIALIST_KIT).toEqual(MELEE_PVP_CORE_KIT);
         expect(kitSlotTotal(HITPOINTS_PVP_SPECIALIST_KIT)).toBe(21);
         expect(HITPOINTS_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
+
+        expect(planTankFoodWithdrawals([{ id: 391, count: 50 }], 27)).toEqual([
+            { id: 391, name: 'Manta ray', count: 27 },
+        ]);
+        expect(planTankFoodWithdrawals([{ id: 385, count: 50 }], 27)).toEqual([
+            { id: 385, name: 'Shark', count: 27 },
+        ]);
+        expect(planTankFoodWithdrawals([{ id: 391, count: 10 }, { id: 385, count: 40 }], 27)).toEqual([
+            { id: 391, name: 'Manta ray', count: 10 },
+            { id: 385, name: 'Shark', count: 17 },
+        ]);
+        expect(() => planTankFoodWithdrawals([{ id: 385, count: 10 }], 27)).toThrow(/missing bank tank food stock/);
     });
 });

@@ -954,8 +954,43 @@ export async function runWildyPvpRelogLoop(
     throw Error(`${opts.skill} relog PvP stopped/capped at totalTicks=${totalTicks} swings=${swings}`);
 }
 
+export const TANK_FOOD_ITEMS = [
+    { id: 391, name: 'Manta ray' },
+    { id: 385, name: 'Shark' },
+] as const;
+
+export function planTankFoodWithdrawals(
+    bankItems: readonly { id: number; count: number }[],
+    needed: number,
+): { id: number; name: string; count: number }[] {
+    if (needed <= 0) return [];
+    const out: { id: number; name: string; count: number }[] = [];
+    let rem = needed;
+    for (const food of TANK_FOOD_ITEMS) {
+        if (rem <= 0) break;
+        const avail = bankItems.find(i => i.id === food.id)?.count ?? 0;
+        if (avail <= 0) continue;
+        const take = Math.min(rem, avail);
+        out.push({ id: food.id, name: food.name, count: take });
+        rem -= take;
+    }
+    if (rem > 0) {
+        const have = TANK_FOOD_ITEMS.map(f => `${f.name}:${bankItems.find(i => i.id === f.id)?.count ?? 0}`).join(', ');
+        throw Error(`missing bank tank food stock: need ${needed} (${have})`);
+    }
+    return out;
+}
+
+async function withdrawTankFood(s: Session, needed: number, stop: StopFn): Promise<void> {
+    if (needed <= 0) return;
+    const plan = planTankFoodWithdrawals(s.sdk.getState()?.bank?.items ?? [], needed);
+    for (const step of plan) {
+        await withdrawExactCount(s, step.id, step.count, stop, step.name);
+    }
+}
+
 async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
-    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays, Camelot -> Lever.
+    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays / Sharks, Camelot -> Lever.
     const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
     if (!hasInvRing()) {
         const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
@@ -975,7 +1010,7 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
         await withdrawExactCount(s, 563, 1, stop, 'Law rune');
     }
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
-    if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
+    await withdrawTankFood(s, freeSlots, stop);
     await closeBankClean(s, stop);
     if (s.sdk.getInventory().some(i => i.id === 2552)) {
         await equipItemById(s, 2552, stop, 'Ring of dueling(8)');
@@ -1009,7 +1044,7 @@ async function pullKeepLeverOutAndRebank(s: Session, stop: StopFn): Promise<bool
     await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, stop, 'ardougne north bank');
     await openFreshBank(s, stop);
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
-    if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
+    await withdrawTankFood(s, freeSlots, stop);
     await closeBankClean(s, stop);
     await pullArdougneLeverToWildy(s, stop);
     return true;
@@ -1096,21 +1131,21 @@ export async function runCompanionRole(
             if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
                 await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stop, 'tank step to post');
             }
-            const mantaCount = countById(s.sdk.getInventory(), 391);
+            const foodCount = countById(s.sdk.getInventory(), 391) + countById(s.sdk.getInventory(), 385);
             const hp = skillInfo(s, 'Hitpoints').level;
             const otherTanksAtPost = (s.sdk.getState()?.nearbyPlayers ?? []).filter((np: any) =>
                 !specialistRe.test(np.name ?? '') &&
                 d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1 &&
                 (np.hp === undefined || np.hp === null || np.hp > 0),
             ).length;
-            if (hp > 0 && hp <= 77 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
-                const food = s.sdk.getInventory().find(i => i.id === 391);
+            if (hp > 0 && hp <= 77 && foodCount > 0 && s.tick() - lastEatTick >= 3) {
+                const food = s.sdk.getInventory().find(i => i.id === 391) ?? s.sdk.getInventory().find(i => i.id === 385);
                 if (food) {
                     lastEatTick = s.tick();
                     await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
                 }
             }
-            if ((mantaCount <= 10 && otherTanksAtPost >= 2) || (mantaCount <= 5 && otherTanksAtPost >= 1) || mantaCount <= 1) {
+            if ((foodCount <= 10 && otherTanksAtPost >= 2) || (foodCount <= 5 && otherTanksAtPost >= 1) || foodCount <= 1) {
                 if (await pullKeepLeverOutAndRebank(s, stop)) continue;
             }
             await waitTicks(s, 1);
