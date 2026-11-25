@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795566227601-nabtheknob-unsheathed-a0c73c3ef038192f",
  "account": "Unsheathed",
  "partner": "NabTheKnob",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 12000,
  "claim": "67b65fc6-9523-4bff-ba98-98560be04878",
- "count": 0,
- "ok": false,
- "at": 1795567761541,
- "detail": "trade claimed"
+ "count": 12000,
+ "ok": true,
+ "at": 1795567782807,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 12000
+ },
+ "bank": {
+  "count": 12000,
+  "at": 1795567782053
+ },
+ "logout": {
+  "attemptId": "1795567761769-0000030300-0000000001",
+  "at": 1795567782795,
+  "sha256": "76e2164f9c895846df2a13536f80f41332954b94662ed1ee5065c37ffe4ce594"
+ },
+ "screen": true
 }
