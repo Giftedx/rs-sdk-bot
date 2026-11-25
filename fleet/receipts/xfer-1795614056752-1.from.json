@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795614056752-1",
  "account": "Fatstack",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Uncut diamond",
  "requested": 10,
  "claim": "43a9473d-e2b6-4b36-942d-e8ce241bf64b",
- "count": 0,
- "ok": false,
- "at": 1795614289643,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795614450737,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795614435965
+ },
+ "logout": {
+  "attemptId": "1795614289856-0000030304-0000000001",
+  "at": 1795614450729,
+  "sha256": "f7f4c6047ae9f00203cec72ac65d77978482c70eec780c04ded9fa972c8aad63"
+ },
+ "screen": true
 }

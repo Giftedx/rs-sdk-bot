@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795614056752-1",
+ "account": "Woodpecker",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "652e211a-e51c-483b-8c18-db2aa2e8f4ea",
+ "count": 10,
+ "ok": true,
+ "at": 1795614452332,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795614451585
+ },
+ "logout": {
+  "attemptId": "1795614441524-0000014232-0000000001",
+  "at": 1795614452324,
+  "sha256": "e8c79dcdcd0a092d914de961177909c3a5edb50595425e6a7698cccddda47027"
+ },
+ "screen": true
+}
