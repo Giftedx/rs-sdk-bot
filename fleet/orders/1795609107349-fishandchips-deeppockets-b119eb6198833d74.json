@@ -1,0 +1,23 @@
+{
+ "id": "1795609107349-fishandchips-deeppockets-b119eb6198833d74",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Deeppockets",
+ "item": "Lobster",
+ "count": 21,
+ "start": 1795609107349,
+ "end": 1795610607349,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795610616283-tossthecaber-deeppockets-67cf10d827bc7646",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "Deeppockets",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795610616283,
+ "end": 1795612116283,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

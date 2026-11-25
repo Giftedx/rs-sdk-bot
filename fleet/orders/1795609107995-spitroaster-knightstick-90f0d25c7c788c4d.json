@@ -1,0 +1,23 @@
+{
+ "id": "1795609107995-spitroaster-knightstick-90f0d25c7c788c4d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "Knightstick",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795609107995,
+ "end": 1795610607995,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

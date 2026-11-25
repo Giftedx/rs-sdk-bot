@@ -1,0 +1,24 @@
+{
+ "id": "1795609107561-afknight-masterbaiter-316a9006e3ddc1ba",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "AFKnight",
+ "to": "Masterbaiter",
+ "item": "Shortbow",
+ "count": 1,
+ "itemId": 841,
+ "start": 1795609107561,
+ "end": 1795610607561,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795607470455,
+ "at": 1795607504260,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -90,6 +90,19 @@
    "role": "army"
   },
   {
+   "account": "Ballbag",
+   "script": "scripts/generated/quest-priestperil.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:priestperil",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:priestperil",
+   "role": "helper"
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -175,32 +188,16 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/generated/quest-priestperil.ts",
+   "script": "scripts/generated/quest-ikov.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:priestperil",
+    "DEMAND_ID": "goal:quest_board:ikov",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:priestperil",
+   "goal": "goal:quest_board:ikov",
    "role": "army"
-  },
-  {
-   "account": "WellHung",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/quest-priest.ts --",
-    "scripts/generated/quest-priestperil.ts --",
-    "scripts/generated/quest-druidspirit.ts DEMAND_ID=goal:quest_board:druidspirit BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:druidspirit",
-   "role": "helper"
   }
  ],
  "army": [

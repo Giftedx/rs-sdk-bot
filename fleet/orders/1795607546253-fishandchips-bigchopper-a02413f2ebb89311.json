@@ -1,0 +1,23 @@
+{
+ "id": "1795607546253-fishandchips-bigchopper-a02413f2ebb89311",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Bigchopper",
+ "item": "Lobster",
+ "count": 20,
+ "start": 1795607546253,
+ "end": 1795609046253,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

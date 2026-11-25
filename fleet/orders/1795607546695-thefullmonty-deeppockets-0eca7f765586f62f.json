@@ -1,0 +1,23 @@
+{
+ "id": "1795607546695-thefullmonty-deeppockets-0eca7f765586f62f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "Deeppockets",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1795607546695,
+ "end": 1795609046695,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

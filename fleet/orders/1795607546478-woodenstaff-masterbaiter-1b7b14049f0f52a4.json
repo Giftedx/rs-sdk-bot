@@ -1,0 +1,29 @@
+{
+ "id": "1795607546478-woodenstaff-masterbaiter-1b7b14049f0f52a4",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "Masterbaiter",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1795607546478,
+ "end": 1795609046478,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 2
+  }
+ ],
+ "takerWaits": true
+}

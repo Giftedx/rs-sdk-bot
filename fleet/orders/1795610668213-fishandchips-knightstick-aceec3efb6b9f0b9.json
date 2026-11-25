@@ -1,0 +1,23 @@
+{
+ "id": "1795610668213-fishandchips-knightstick-aceec3efb6b9f0b9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Knightstick",
+ "item": "Lobster",
+ "count": 23,
+ "start": 1795610668213,
+ "end": 1795612168213,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

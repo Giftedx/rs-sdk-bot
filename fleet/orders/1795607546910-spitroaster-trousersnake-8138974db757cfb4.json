@@ -1,0 +1,29 @@
+{
+ "id": "1795607546910-spitroaster-trousersnake-8138974db757cfb4",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "TrouserSnake",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795607546910,
+ "end": 1795609046910,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Shark",
+   "count": 17
+  }
+ ],
+ "takerWaits": true
+}
