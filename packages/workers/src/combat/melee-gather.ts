@@ -113,6 +113,13 @@ export function combatStopEnd(reason: string | undefined): 'died' | 'fled' | und
     return undefined;
 }
 
+// The words that a failed generic combat run adds for the openBot stall stop (`no progress: <n> ticks without ...`).
+// The supervisor blocks a RESULT fail line with these words (packages/practice/src/supervise.ts isNoProgressFailure),
+// so a stalled job does not log in again to stall the same way.
+export function combatStallWords(reason: string | undefined): string {
+    return reason?.startsWith('no progress') ? ` stalled=true ${reason}` : '';
+}
+
 // The walk to the bank of a generic combat run. When the tick cap stops it (`capped`), the loot stays in the pack and
 // the run ends as capped. Any other failed walk is a fault. A travel that throws on its stop (createEdgevilleTravel)
 // counts as capped too when the cap is the cause.
@@ -1971,6 +1978,7 @@ export async function runGenericCombatSession(
     const cleanupScope = potionPolicy || maximum !== undefined ? combatPotionSession(ownedSession, stopCheck, CAP) : undefined;
     const s = cleanupScope ?? ownedSession;
     const stopEnd = () => combatStopEnd(opts.stopReason?.());
+    const stallWords = () => combatStallWords(opts.stopReason?.());
     const runEnd = () => (cleanupScope?.lifeEnded() ? 'died' : undefined) ?? stopEnd();
     let combatRecovery: (() => Promise<string | undefined>) | undefined;
     let kills = 0;
@@ -2196,7 +2204,7 @@ export async function runGenericCombatSession(
         if (combatRecovery && (!targetConf.gatherOnly || potions || alch || s.sdk.getInventory().some(i => conf.drops.test(i.name)))) await combatRecovery();
         const end = runEnd();
         if (end) {
-            return { ok: false, kills, itemsLooted, bankTrips, walkTicks, detail: `ticks=${used()} ${counters()} maximum=${maximum ?? '-'} ${end}=true` };
+            return { ok: false, kills, itemsLooted, bankTrips, walkTicks, detail: `ticks=${used()} ${counters()} maximum=${maximum ?? '-'} ${end}=true${stallWords()}` };
         }
         let untilHeld: boolean | undefined;
         if (untilItem) {
@@ -2207,14 +2215,15 @@ export async function runGenericCombatSession(
         const total = kills + itemsLooted;
         const perK = ((total * 1000) / Math.max(1, used())).toFixed(2);
         const targetMet = untilItem ? !!untilHeld : maximum === undefined || ((targetConf.gatherOnly ? itemsLooted === maximum : kills === maximum) && !stopCheck());
+        const ok = total > 0 && targetMet;
         return {
-            ok: total > 0 && targetMet,
+            ok,
             kills,
             itemsLooted,
             bankTrips,
             walkTicks,
             untilHeld,
-            detail: `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${opts.untilItemName} held=${untilHeld}` : ''}${capped ? ' capped=true' : ''}`,
+            detail: `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${opts.untilItemName} held=${untilHeld}` : ''}${capped ? ' capped=true' : ''}${ok ? '' : stallWords()}`,
         };
     } catch (e) {
         let detail = String(e);
@@ -2226,7 +2235,7 @@ export async function runGenericCombatSession(
             }
         }
         const end = runEnd();
-        return { ok: false, kills, itemsLooted, bankTrips, walkTicks, detail: end ? `${detail} ${end}=true` : detail };
+        return { ok: false, kills, itemsLooted, bankTrips, walkTicks, detail: `${end ? `${detail} ${end}=true` : detail}${stallWords()}` };
     }
 }
 
@@ -2411,6 +2420,7 @@ export async function runMeleeGatherCli(
     }
 
     const stopEnd = () => combatStopEnd(cowStop.reason());
+    const stallWords = () => combatStallWords(cowStop.reason());
     const runEnd = () => (cleanupScope?.lifeEnded() ? 'died' : undefined) ?? stopEnd();
     let combatRecovery: (() => Promise<string | undefined>) | undefined;
     try {
@@ -2653,7 +2663,7 @@ export async function runMeleeGatherCli(
         }
         const end = runEnd();
         if (end) {
-            await finishCombat(ownedSession, false, `ticks=${used()} ${counters()} maximum=${maximum ?? '-'} ${end}=true`);
+            await finishCombat(ownedSession, false, `ticks=${used()} ${counters()} maximum=${maximum ?? '-'} ${end}=true${stallWords()}`);
             return;
         }
         if (alch) {
@@ -2685,10 +2695,11 @@ export async function runMeleeGatherCli(
         const targetMet = untilItem
             ? !!untilHeld
             : maximum === undefined || ((targetConf.gatherOnly ? itemsLooted === maximum : kills === maximum) && !cowStop.stop());
+        const ok = total > 0 && targetMet;
         await finishCombat(
             ownedSession,
-            total > 0 && targetMet,
-            `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${env.UNTIL_ITEM} held=${untilHeld}` : ''}${capped ? ' capped=true' : ''}`,
+            ok,
+            `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${env.UNTIL_ITEM} held=${untilHeld}` : ''}${capped ? ' capped=true' : ''}${ok ? '' : stallWords()}`,
         );
     } catch (e) {
         let detail = String(e);
@@ -2700,6 +2711,6 @@ export async function runMeleeGatherCli(
             }
         }
         const end = runEnd();
-        await finishCombat(ownedSession, false, end ? `${detail} ${end}=true` : detail);
+        await finishCombat(ownedSession, false, `${end ? `${detail} ${end}=true` : detail}${stallWords()}`);
     }
 }

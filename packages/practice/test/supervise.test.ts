@@ -126,6 +126,26 @@ for (const detail of ['no ore progress for 220 ticks', 'no wood progress for 220
     });
 }
 
+// The generic combat worker names the openBot stall stop (packages/workers/src/combat/melee-gather.ts combatStallWords).
+// A stalled finite combat job ends in one of two shapes: the counted end or a cleanup throw. Without the stall words
+// neither shape blocks, and the supervisor logs the job in again.
+const combatStall = ' stalled=true no progress: 900 ticks without xp, items, dialog or a journey endTicks=0 endUnderAttack=false endLeft=false endQuiet=true endTiles=0 endEats=0 logout=confirmed logoutTries=1';
+for (const detail of ['ticks=903 kills=0 looted=0 bankTrips=300 walkTicks=0 hp=60 actionsPer1kTicks=0.00 targetMet=false maximum=40',
+    'Error: combat potion consumer original owner/life/stop; cleanup Error: combat fresh bank unavailable']) {
+    test(`a combat stall stop blocks without another login: ${detail.slice(0, 40)}`, async () => {
+        const result = `RESULT fail ${detail}${combatStall}`;
+        expect([isNoProgressFailure(result), isTransportStall(result)]).toEqual([true, false]);
+        let calls = 0;
+        const r = await supervise({
+            run: async () => { calls++; return { stdout: result, exitCode: 1 }; },
+            stopped: () => false, pause: async () => { throw new Error('unexpected retry'); }, maxRestarts: 20,
+        });
+        expect(r).toEqual({ reason: 'blocked', runs: 1 });
+        expect(calls).toBe(1);
+        expect(isNoProgressFailure(`RESULT fail ${detail}`)).toBe(false);
+    });
+}
+
 test('progress metrics do not block success or transient login retries', async () => {
     let calls = 0, pauses = 0;
     const result = await supervise({
