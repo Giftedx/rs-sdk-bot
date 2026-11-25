@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795634779412-1",
  "account": "Shaftsinker",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "8a8cf399-9f8b-4d8d-b64d-b888ac9efcf0",
- "count": 0,
- "ok": false,
- "at": 1795634937989,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795635030286,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795634943890
+ },
+ "logout": {
+  "attemptId": "1795634937998-0000032360-0000000001",
+  "at": 1795635030199,
+  "sha256": "3498234c5651d04c5860c8a6b3638856879ee9bc0ef6844af71016b1bb7dbcf8"
+ },
+ "screen": true
 }
