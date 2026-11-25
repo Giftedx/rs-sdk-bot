@@ -21,6 +21,7 @@ import {
     backoffUntil,
     transferEvent,
     transferMemory,
+    uniqueTradeableItemId,
 } from '../src/transfer-memory';
 
 const NOW = 1_800_000_000_000;
@@ -119,6 +120,15 @@ describe('transferMemory', () => {
         expect(fresh.recentTransfers[0]).toMatchObject({ to: 'Taker', state: 'settled', recipientLogoutConfirmedAt: NOW - 70 * MIN, items: [{ itemId: 383, count: 10 }] });
         const stale = transferMemory([{ kind: 'received', at: NOW - RECEIVED_ITEM_HOLD_MS - MIN, order: order() }], NOW);
         expect(stale.recentTransfers).toHaveLength(0);
+    });
+
+    test('resolves a name-only order line when one tradeable item has the name', () => {
+        expect(uniqueTradeableItemId('Raw shark')).toBe(383);
+        expect(uniqueTradeableItemId('Coins')).toBe(995);
+        expect(uniqueTradeableItemId('Herb')).toBeUndefined();
+        const named = order({ itemId: undefined, extra: [{ item: 'Herb', count: 5 }] });
+        const mem = transferMemory([{ kind: 'received', at: NOW - 5 * MIN, order: named }], NOW);
+        expect(mem.recentTransfers[0]?.items.map((l) => l.itemId)).toEqual([383]);
     });
 
     test('does not hold received coins', () => {

@@ -16,7 +16,7 @@ import {
     type TransferOrder,
     type TransferOrderLine,
 } from './contracts';
-import { COINS_ITEM_ID } from './preflight';
+import { COINS_ITEM_ID, loadItemsMap } from './preflight';
 
 export const RECEIVED_ITEM_HOLD_MS = 2 * 3_600_000;
 export const TRANSFER_FAILURE_LOOKBACK_MS = 24 * 3_600_000;
@@ -98,14 +98,30 @@ export function transferEvent(order: Order, receipts: readonly Receipt[], now: n
     return { kind: 'failed', at, order, donorFault, recipientFault };
 }
 
+// scripts/fleet-order.ts makes orders with an item name and no id (scripts/route-stage.ts). A name that exactly one
+// tradeable item has gives that id. A name that several tradeable items share (Herb) gives none.
+let tradeableIdByName: Map<string, number | null> | undefined;
+export function uniqueTradeableItemId(name: string): number | undefined {
+    if (!tradeableIdByName) {
+        tradeableIdByName = new Map();
+        for (const meta of loadItemsMap().values()) {
+            if (!meta.tradeable || typeof meta.name !== 'string') continue;
+            const key = meta.name.trim().toLowerCase();
+            tradeableIdByName.set(key, tradeableIdByName.has(key) ? null : meta.id);
+        }
+    }
+    return tradeableIdByName.get(name.trim().toLowerCase()) ?? undefined;
+}
+
 const linesWithIds = (order: Order): TransferOrderLine[] => {
     const out: TransferOrderLine[] = [];
     const seen = new Set<number>();
     for (const line of orderLines(order)) {
-        if (typeof line.itemId !== 'number' || !Number.isSafeInteger(line.itemId) || line.itemId < 0) continue;
-        if (!Number.isSafeInteger(line.count) || line.count <= 0 || seen.has(line.itemId)) continue;
-        seen.add(line.itemId);
-        out.push({ itemId: line.itemId, itemName: line.item, count: line.count });
+        const itemId = line.itemId ?? uniqueTradeableItemId(line.item);
+        if (typeof itemId !== 'number' || !Number.isSafeInteger(itemId) || itemId < 0) continue;
+        if (!Number.isSafeInteger(line.count) || line.count <= 0 || seen.has(itemId)) continue;
+        seen.add(itemId);
+        out.push({ itemId, itemName: line.item, count: line.count });
     }
     return out;
 };
