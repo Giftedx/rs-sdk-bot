@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795580727567-packagedeal-woodenstaff-fd41c4839f517c11",
+ "account": "PackageDeal",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "3c5c08ad-5d9e-4009-8994-56b59866d805",
+ "count": 0,
+ "ok": false,
+ "at": 1795580961136,
+ "detail": "trade claimed"
+}

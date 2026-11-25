@@ -1,0 +1,23 @@
+{
+ "id": "1795580950947-bonetopick-yewfirst-b4e7b4f82b2e402c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "BoneToPick",
+ "to": "YewFirst",
+ "item": "Chocolate bar",
+ "count": 2,
+ "start": 1795580950947,
+ "end": 1795584550947,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

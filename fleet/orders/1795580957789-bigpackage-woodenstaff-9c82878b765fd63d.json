@@ -1,0 +1,25 @@
+{
+ "id": "1795580957789-bigpackage-woodenstaff-9c82878b765fd63d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "Woodenstaff",
+ "item": "Rope",
+ "count": 4,
+ "start": 1795580957789,
+ "end": 1795584557789,
+ "extra": [
+  {
+   "item": "Air rune",
+   "count": 24
+  },
+  {
+   "item": "Earth rune",
+   "count": 24
+  },
+  {
+   "item": "Dragon bones",
+   "count": 6
+  }
+ ],
+ "takerWaits": true
+}
