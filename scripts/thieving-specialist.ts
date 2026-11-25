@@ -154,7 +154,7 @@ export const ARDOUGNE_PICKPOCKET_TIERS: readonly PickpocketTier[] = [
     { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2621, z: 3293 } },
     { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2630, z: 3296 } },
     { name: 'guard', minLevel: 40, stunDamage: 2, pattern: /^guard$/i, anchor: { x: 2662, z: 3305 } },
-    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2660, z: 3301 } },
+    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2654, z: 3298 } },
 ];
 
 export function selectPickpocketTier(level: number): PickpocketTier {
@@ -182,13 +182,14 @@ export function selectPickpocketTarget<T extends {
     const nearAnchor = matching.filter(
         n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= 9,
     );
+    const pool = (nearAnchor.length > 0 ? nearAnchor : matching).sort((a, b) => a.distance - b.distance);
+    const closest = pool.find(n => n.reachable !== false);
     const sticky = stickyIndex >= 0
-        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 3 && n.reachable !== false)
+        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 2 && n.reachable !== false && (!closest || n.distance <= closest.distance))
         : undefined;
     if (sticky) return { target: sticky, blocked: undefined };
-    const pool = (nearAnchor.length > 0 ? nearAnchor : matching).sort((a, b) => a.distance - b.distance);
     return {
-        target: pool.find(n => n.reachable !== false),
+        target: closest,
         blocked: pool.find(n => n.reachable === false),
     };
 }
@@ -301,9 +302,7 @@ export async function runArdougneStunRelogThieving(opts: {
                 continue;
             }
             // Keep >= 1 emergency bite in inventory so randomevents flee_guard never triggers on 0-food HP<=3 stuns.
-            const hasCakeBite = main.sdk.getInventory().some(i => i.id === 1897 || i.id === 1899 || i.id === 1901);
-            const preRelogEatThreshold = hasCakeBite ? Math.max(4, (st.player.maxHp ?? 10) - 5) : tier.stunDamage;
-            if (bites >= 2 && st.player.hp <= preRelogEatThreshold) {
+            if (bites >= 2 && st.player.hp <= tier.stunDamage) {
                 await eatAnyFood(main);
             }
             totalTicks += Math.max(1, main.tick() - sessStart) + 1;
@@ -325,9 +324,9 @@ export async function runArdougneStunRelogThieving(opts: {
 
         // Restock from Baker's stall when down to 1 reserve bite (skip trip at lv>=98 while hp still >= stun+3).
         const bites = foodBitesCount(main);
-        const needRestock = bites === 0 || (bites <= 1 && (lvl < 98 || st.player.hp <= tier.stunDamage + 3));
+        const needRestock = bites === 0 || (bites <= 1 && st.player.hp <= tier.stunDamage + 3 && lvl < 98);
         if (needRestock && elapsedNow() >= stallCooldownUntil) {
-            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 12, 4);
+            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 4, 2);
             if (!restocked) {
                 stallCooldownUntil = elapsedNow() + 6;
             }
@@ -358,12 +357,11 @@ export async function runArdougneStunRelogThieving(opts: {
 
         if (!npc) {
             if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 4) {
-                await main.bot.walkTo(tier.anchor.x, tier.anchor.z, 2);
+                await main.direct({ type: 'walkTo', x: tier.anchor.x, z: tier.anchor.z, running: true, reason: 'SDK' });
             } else if (blocked) {
-                await main.bot.walkTo(blocked.x, blocked.z, 1);
-            } else {
-                await waitTicks(main, 1);
+                await main.direct({ type: 'walkTo', x: blocked.x, z: blocked.z, running: true, reason: 'SDK' });
             }
+            await waitTicks(main, 1);
             continue;
         }
 
