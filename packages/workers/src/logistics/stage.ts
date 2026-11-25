@@ -198,13 +198,16 @@ export const loadoutHpFatal = (atStart: number, now: number): boolean => atStart
 // drinks an antipoison: runOwnedLoadoutCured reads this failure.
 export const LOADOUT_HP_FELL = /owned loadout hitpoints fell \d+ to \d+/;
 
-export async function runOwnedLoadout(s: Session, value: unknown, requestStop: () => boolean = () => false) {
+// options.style: the combat style to keep, when it is not the one on now. A retry after a cure passes the style that the
+// first run found, because a weapon taken off with style 3 on clamps it to 2 and the failed run did not restore it.
+export async function runOwnedLoadout(s: Session, value: unknown, requestStop: () => boolean = () => false, options: { style?: number } = {}) {
     const j = validateOwnedKit(value), start = s.tick(), state = () => s.sdk.getState(), inv = () => s.sdk.getInventory(), gear = () => s.sdk.getEquipment(), first = state()?.player;
     const life = first?.lifeId, respawns = first?.respawnCount ?? 0, hp = s.sdk.getSkill('Hitpoints')?.level ?? 0, client = s.client as any, executor = client.executeBotAction;
     const xpView = () => state()?.skills.map(i => ({ name: i.name, experience: i.experience, baseLevel: i.baseLevel }));
     const xp = JSON.stringify(xpView());
     const controls = () => ({ retaliate: state()?.autoRetaliateEnabled, prayers: state()?.prayers?.activePrayers, style: state()?.combatStyle?.currentStyle });
     const initialControls = JSON.parse(JSON.stringify(controls())), initialWear = wornView(gear());
+    if (Number.isSafeInteger(options.style)) initialControls.style = options.style;
     let ended = false, moves = 0, uncertain = false, baseline: Count[] | undefined, bankGeneration = -1, changed = false, failure = '', recovered = false, noOp = false, initialNote: boolean | undefined, bankModeRestored = false;
     void s.ended?.then(() => { ended = true; });
     const held = (id: number) => inv().filter(i => i.id === id).reduce((a, i) => a + i.count, 0);
@@ -332,7 +335,7 @@ export async function runOwnedLoadout(s: Session, value: unknown, requestStop: (
         if ([...j.pack, ...j.wear].some(i => nativeKitItem(i.id).members && client.membersAccount !== 1)) throw Error('owned loadout member item requires observed member account');
         const targetWeapon = j.wear.find(i => i.slot === 3), targetStyles = targetWeapon ? nativeKitItem(targetWeapon.id).styleIndices : [0, 1, 2];
         if (!targetStyles.includes(initialControls.style)) throw Error('owned loadout original style incompatible with target native weapon table');
-        noOp = same(canonical(inv()), canonical(j.pack)) && same(wornView(gear()), wornView(j.wear));
+        noOp = same(canonical(inv()), canonical(j.pack)) && same(wornView(gear()), wornView(j.wear)) && controls().style === initialControls.style;
         if (!noOp) {
             await deposit();
             await removeAll();
@@ -381,25 +384,26 @@ export async function runOwnedLoadout(s: Session, value: unknown, requestStop: (
     try { if (state()?.bank.isOpen && s.bankObservation?.() && baseline) balanced = conserved(); } catch { /* ignore */ }
     const exactPack = same(canonical(inv()), canonical(j.pack)), exactWear = same(wornView(gear()), wornView(j.wear)), controlsPreserved = same(controls(), initialControls);
     try { if (!fatal() && state()?.bank.isOpen) await close(true); } catch (e) { failure ||= String(e); }
-    return { ok: !failure && !uncertain && balanced && exactPack && exactWear && controlsPreserved && bankModeRestored, failure, exactPack, exactWear, balanced, controlsPreserved, bankModeRestored, noOp, recovered, recoveryDeferred: uncertain, moves, ticks: s.tick() - start, scope: 'one declared owned exact bank kit, including native notes; no travel or acquisition' };
+    return { ok: !failure && !uncertain && balanced && exactPack && exactWear && controlsPreserved && bankModeRestored, failure, exactPack, exactWear, balanced, controlsPreserved, bankModeRestored, noOp, recovered, recoveryDeferred: uncertain, moves, ticks: s.tick() - start, style: initialControls.style as number | undefined, scope: 'one declared owned exact bank kit, including native notes; no travel or acquisition' };
 }
 
 // A loadout that a Hitpoints drop stopped (LOADOUT_HP_FELL): the account stands at its bank, so it drinks one antipoison
 // from the pack or the bank and runs the kit once more. The second run reads a new baseline, so a kit that the first run
-// left half done starts again from what the account holds. A cure that finds no antipoison comes back in `cure`, for the
-// caller to report the missing supply. Any other failure, and a stop, return at once.
+// left half done starts again from what the account holds, and keeps the combat style that the first run found. The cure
+// drinks where the account stands (cureWithAntipoison inPlace), inside the loadout's 3-tile radius. A cure that finds no
+// antipoison comes back in `cure`, for the caller to report the missing supply. Any other failure, and a stop, return at once.
 type LoadoutCure = { ok: boolean; detail: string };
 export async function runOwnedLoadoutCured(
     s: Session,
     value: unknown,
     requestStop: () => boolean = () => false,
-    deps: { run: typeof runOwnedLoadout; cure: (s: Session) => Promise<LoadoutCure> } = { run: runOwnedLoadout, cure: async x => (await import('./recover')).cureWithAntipoison(x) },
+    deps: { run: typeof runOwnedLoadout; cure: (s: Session) => Promise<LoadoutCure> } = { run: runOwnedLoadout, cure: async x => (await import('./recover')).cureWithAntipoison(x, { inPlace: true }) },
 ) {
     const first = await deps.run(s, value, requestStop);
     if (first.ok || !LOADOUT_HP_FELL.test(first.failure) || requestStop()) return { ...first, cure: null as LoadoutCure | null };
     const cure = await deps.cure(s);
     if (!cure.ok) return { ...first, cure };
-    const second = await deps.run(s, value, requestStop);
+    const second = await deps.run(s, value, requestStop, { style: first.style });
     return { ...second, moves: first.moves + second.moves, cure };
 }
 
