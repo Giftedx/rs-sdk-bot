@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795620306568-3",
+ "account": "Billionaire",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shortbow",
+ "requested": 1,
+ "claim": "c79fd43f-114f-450f-a73a-6c20014abfc4",
+ "count": 0,
+ "ok": false,
+ "at": 1795620702558,
+ "detail": "trade claimed"
+}

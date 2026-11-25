@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795619893149-2",
  "account": "SporranDip",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 2,
  "claim": "25f8e72d-f3a9-497a-a17d-8ed7fd4734b5",
- "count": 0,
- "ok": false,
- "at": 1795620678213,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795620689239,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795620688484
+ },
+ "logout": {
+  "attemptId": "1795620678222-0000023076-0000000001",
+  "at": 1795620689228,
+  "sha256": "e0ed1c45de96d72602ae78178db12941fe66938d9b8973339419a36d9b7e77f9"
+ },
+ "screen": true
 }

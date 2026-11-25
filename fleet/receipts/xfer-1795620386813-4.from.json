@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795620386813-4",
  "account": "Swordinhand",
  "partner": "Quickhandjob",
@@ -12,6 +12,12 @@
  "claim": "5bf36367-5c87-4b89-b644-b2a87503948f",
  "count": 0,
  "ok": false,
- "at": 1795620685171,
- "detail": "trade claimed"
+ "at": 1795620691640,
+ "detail": "Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 0",
+ "logout": {
+  "attemptId": "1795620685182-0000013552-0000000001",
+  "at": 1795620691631,
+  "sha256": "e4c78750f8de2ad00aedf3a69d6c974b1e04593f0358bb36b54bf3672e312257"
+ },
+ "screen": false
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795619793540-4",
  "account": "Woodenstaff",
  "partner": "mmthv2350",
@@ -12,6 +12,16 @@
  "claim": "903beb30-47b3-40df-8ec3-174bb88fc9dc",
  "count": 0,
  "ok": false,
- "at": 1795620440771,
- "detail": "trade claimed"
+ "at": 1795620694035,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 10,
+  "at": 1795620580511
+ },
+ "logout": {
+  "attemptId": "1795620440781-0000011120-0000000001",
+  "at": 1795620694026,
+  "sha256": "caf717296d22b821cab7ef440f0d4a0bfcb4bf66f23cd973172213cbd2156dcc"
+ },
+ "screen": false
 }

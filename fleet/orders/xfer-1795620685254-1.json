@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795620685254-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "OreElse",
+  "item": "Diamond",
+  "count": 2,
+  "itemId": 1601,
+  "start": 1795620685254,
+  "end": 1795621585254,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
