@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572728154-undermykilt-shaftsinker-5d4664e43ecfe9bf",
+ "account": "Shaftsinker",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "0875b469-c112-4c8f-808d-bf735ca048ca",
+ "count": 0,
+ "ok": false,
+ "at": 1795574790751,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795574788041-fishandchips-shaftsinker-b349d8926e10192b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Shaftsinker",
+ "item": "Shark",
+ "count": 200,
+ "start": 1795574788041,
+ "end": 1795577188041,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
