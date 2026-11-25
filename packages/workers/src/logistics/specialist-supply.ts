@@ -240,14 +240,12 @@ export const MINING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
 export const THIEVING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 995, name: 'Coins', count: 200, stackable: true },
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
-    { id: 2301, name: 'Pineapple pizza', count: 25, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
+    { id: 2301, name: 'Pineapple pizza', count: 26, stackable: false },
 ] as const;
 
 export const THIEVING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
-    { id: 1897, name: 'Chocolate cake', count: 26, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 27, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
 ] as const;
 
 export const COOKING_SPECIALIST_KIT: readonly KitSpecItem[] = [
