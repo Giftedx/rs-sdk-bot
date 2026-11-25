@@ -444,6 +444,9 @@ if (import.meta.main) {
         let knifeRolls = 0;
         let lastXp = main.sdk.getSkillXp('Mining') ?? 0;
         let traceCount = 0;
+        let lateTraceCount = 0;
+        let lastAct = '-';
+        let lastMsgCount = (main.sdk.getState() as { gameMessages?: unknown[] } | undefined)?.gameMessages?.length ?? 0;
 
         // 8t cycle (2.67t/ore): keep autoRetaliate ON (busy2 blocks retaliate on T=4 during active knife,
         // and retaliate on T=8 sets %action_delay=T+1 for T=9 instant flinch).
@@ -466,15 +469,20 @@ if (import.meta.main) {
             const modalOpen = Boolean(st?.dialog?.isOpen || st?.modalOpen);
             const liveRocks = findLiveRocks(main, HOBGOBLIN_ROCK_SET);
 
-            if (traceCount < 28) {
-                traceCount++;
-                console.log(`MINING_TRACE t=${now - t0} srv=${now} pos=${px},${pz} xp=${xp}(+${xpDelta}) hit=${hitTick === now ? 1 : 0} clr=${clearSentForTick === now ? 1 : 0} dly=${actionDelayApprox - now} pray=${main.sdk.getSkill('Prayer')?.level} inv=${main.sdk.getInventory().length}`);
+            const allMsgs = ((st as { gameMessages?: Array<{ text?: string } | string> } | undefined)?.gameMessages ?? []);
+            const newMsgs = allMsgs.slice(lastMsgCount).map(m => (typeof m === 'string' ? m : m?.text ?? '')).join('|');
+            lastMsgCount = allMsgs.length;
+            if (traceCount < 28 || (now - t0 >= 1200 && lateTraceCount < 20)) {
+                if (now - t0 >= 1200) lateTraceCount++;
+                else traceCount++;
+                console.log(`MINING_TRACE t=${now - t0} srv=${now} pos=${px},${pz} lvl=${lvl} xp=${xp}(+${xpDelta}) hit=${hitTick === now ? 1 : 0} clr=${clearSentForTick === now ? 1 : 0} dly=${actionDelayApprox - now} act=${lastAct} pray=${main.sdk.getSkill('Prayer')?.level} inv=${main.sdk.getInventory().length} msg=${newMsgs}`);
             }
 
             if ((main.sdk.getSkill('Prayer')?.level ?? 0) === 0) {
                 const urgentPot = tryDrinkPrayerPotion(main, 99);
                 if (urgentPot) {
                     await urgentPot;
+                    lastAct = 'pot0';
                     clearSentForTick = -99;
                     await waitTicks(main, 1);
                     continue;
@@ -496,6 +504,7 @@ if (import.meta.main) {
                     acts.push(main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: 1, reason: 'SDK' }));
                     await Promise.all(acts);
                     flinchRolls++;
+                    lastAct = `flinch(${rock.x},${rock.z})`;
                     actionDelayApprox = now + 1;
                     clearSentForTick = -99;
                     await waitTicks(main, 1);
@@ -504,6 +513,7 @@ if (import.meta.main) {
             }
 
             if (now < actionDelayApprox) {
+                lastAct = 'dlyWait';
                 await waitTicks(main, 1);
                 continue;
             }
@@ -517,13 +527,9 @@ if (import.meta.main) {
                 }
                 const npc = nearbyNpcs.find(n => n.index === npcIdx);
                 if (!npc || npc.hp === 0 || npc.distance > 4 || npc.targetIndex < 32768) continue;
-                for (let k = 1; k <= 2; k++) {
-                    const rawEta = info.tick + k * info.period - now;
-                    const eta = rawEta === 0 && npc.distance <= 2 ? 1 : rawEta;
-                    if (eta >= 1 && eta < nextHitEta) {
-                        nextHitEta = eta;
-                        break;
-                    }
+                const eta = info.tick + info.period - now;
+                if (eta >= 1 && eta < nextHitEta) {
+                    nextHitEta = eta;
                 }
             }
 
@@ -555,6 +561,7 @@ if (import.meta.main) {
                 } else {
                     await Promise.all(acts);
                 }
+                lastAct = 'eta1';
                 clearSentForTick = now + 1;
                 await waitTicks(main, 1);
                 continue;
@@ -568,6 +575,7 @@ if (import.meta.main) {
                     acts.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
                 }
                 await Promise.all(acts);
+                lastAct = 'drop';
                 clearSentForTick = -99;
                 await waitTicks(main, 1);
                 continue;
@@ -578,6 +586,7 @@ if (import.meta.main) {
             const logSlot = slotOfId(main, OBJ_LOGS);
             if (!rock || knifeSlot === undefined || logSlot === undefined) {
                 if (modalOpen) await main.direct({ type: 'closeModal', reason: 'SDK' });
+                lastAct = 'noRock';
                 await waitTicks(main, 1);
                 continue;
             }
@@ -590,6 +599,7 @@ if (import.meta.main) {
                 main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: 1, reason: 'SDK' }),
             ]);
             knifeRolls++;
+            lastAct = `knife(${rock.x},${rock.z})`;
             actionDelayApprox = now + 3;
             clearSentForTick = -99;
             await waitTicks(main, 1);

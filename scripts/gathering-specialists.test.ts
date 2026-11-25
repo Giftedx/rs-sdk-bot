@@ -183,10 +183,9 @@ describe('bench registration and catalog integration', () => {
             'thieving-live': THIEVING_SPECIALIST_LIVE_SUPPLIES,
             cooking: COOKING_SPECIALIST_SUPPLIES,
             'cooking-live': COOKING_SPECIALIST_SUPPLIES,
-            woodcutting: WOODCUTTING_SPECIALIST_SUPPLIES,
-            'woodcutting-live': WOODCUTTING_SPECIALIST_SUPPLIES,
             firemaking: FIREMAKING_SPECIALIST_SUPPLIES,
         } as const;
+        expect(expandSupplyInventory(WOODCUTTING_SPECIALIST_SUPPLIES).length).toBe(25);
         expect(expandSupplyInventory(MINING_SPECIALIST_SUPPLIES).length).toBe(25);
         expect(MINING_SPECIALIST_LIVE_SUPPLIES).toEqual(MINING_SPECIALIST_SUPPLIES);
         expect(parseKitArg(['--kit=fletching-live'])).toBe('fletching-live');

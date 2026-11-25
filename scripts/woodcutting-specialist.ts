@@ -12,17 +12,21 @@ import {
     settleHelper,
     rubTeleport,
     walkWaypointsSafe,
+    sailBrimhavenToArdougne,
     slotOfId,
     itemQty,
+    OBJ_COINS,
     OBJ_GLORY_4,
     OBJ_KNIFE,
     OBJ_LOGS,
     SKILL_MULTI3_MAKE1_A,
 } from './gathering-specialist-lib';
 
-export { OBJ_KNIFE, OBJ_LOGS };
+export { OBJ_KNIFE, OBJ_LOGS, OBJ_COINS };
 export const OBJ_RUNE_AXE = 1359;
 export const OBJ_OAK_LOGS = 1521;
+export const OBJ_WILLOW_LOGS = 1519;
+export const KHAZARD_WILLOW_MIN_LVL = 73;
 export const OBJ_SHORTBOW = 841;
 export const OBJ_MONK_ROBE_BOTTOM = 542;
 export const OBJ_MONK_ROBE_TOP = 544;
@@ -36,8 +40,8 @@ export const PROTECT_FROM_MELEE_PRAYER = 14;
 
 export const WOODCUTTING_GLORY_IDS = [OBJ_GLORY_4, 1710, 1708, 1706] as const;
 
-// 24 items fit after 4-tick tutorial junk drop (keeping Shortbow + 24 supply slots = 25 occupied slots).
-// 11 Dragon bones (22t -> Prayer 43) + Monk's robes (+11) + Holy symbol (+8 = +19 Prayer bonus) + Protect from Melee = 0 melee dmg.
+// 25 items fit after 4-tick tutorial junk drop (keeping Shortbow + 25 supply slots = 26 occupied slots).
+// 11 Dragon bones (22t -> Prayer 43) + Monk's robes (+11) + Holy symbol (+8 = +19 Prayer bonus) + 30 coins (Brimhaven->Ardy ship to Khazard Willows).
 export const WOODCUTTING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_AXE]: 1,
     [OBJ_KNIFE]: 1,
@@ -46,18 +50,21 @@ export const WOODCUTTING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> =
     [OBJ_MONK_ROBE_BOTTOM]: 1,
     [OBJ_MONK_ROBE_TOP]: 1,
     [OBJ_HOLY_SYMBOL]: 1,
+    [OBJ_COINS]: 30,
     [OBJ_AIR_RUNE]: 150,
     [OBJ_MIND_RUNE]: 150,
     [OBJ_DRAGON_BONES]: 11,
     [OBJ_PRAYER_POTION_4]: 4,
 };
 
-// Keep Rune axe, Knife, Logs (normal for 3t knife-reset), Glory, Shortbow, Monk robes, Holy symbol, runes, bones, prayer pots.
+// Keep Rune axe, Knife, Logs (normal for 3t knife-reset), Glory, Shortbow, Monk robes, Holy symbol, coins, runes, bones, prayer pots.
 const WC_KEEP_IDS = new Set<number>([
     OBJ_RUNE_AXE,
     OBJ_KNIFE,
     OBJ_LOGS,
     OBJ_OAK_LOGS,
+    OBJ_WILLOW_LOGS,
+    OBJ_COINS,
     ...WOODCUTTING_GLORY_IDS,
     OBJ_SHORTBOW,
     OBJ_MONK_ROBE_BOTTOM,
@@ -79,10 +86,8 @@ export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
     [3115, 3243],
     [3115, 3250],
     [3118, 3245],
-    [3119, 3256],
-    [3124, 3254],
-    [3129, 3255],
 ];
+export const KHAZARD_WILLOW_SPOT = { x: 2606, z: 3058 } as const;
 
 export const BARB_VILLAGE_SPOT = { x: 3126, z: 3434 } as const;
 export const BARB_NORMAL_CENTERS: readonly [number, number][] = [
@@ -142,28 +147,33 @@ function findBestTree(
     s: Session,
     wantOak: boolean,
     activeTree: { x: number; z: number } | null,
+    inKhazard = false,
 ): NearbyLoc | undefined {
     const st = s.sdk.getState();
-    const px = st?.player?.worldX ?? DRAYNOR_JAIL_SPOT.x;
-    const pz = st?.player?.worldZ ?? DRAYNOR_JAIL_SPOT.z;
+    const px = st?.player?.worldX ?? (inKhazard ? KHAZARD_WILLOW_SPOT.x : DRAYNOR_JAIL_SPOT.x);
+    const pz = st?.player?.worldZ ?? (inKhazard ? KHAZARD_WILLOW_SPOT.z : DRAYNOR_JAIL_SPOT.z);
     const locs = st?.nearbyLocs ?? [];
-    const nameRe = wantOak ? /^oak$/i : /^tree$/i;
+    const nameRe = inKhazard ? /^willow$/i : (wantOak ? /^oak$/i : /^tree$/i);
     const cands = locs
         .filter(l => {
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
+            if (inKhazard) {
+                return (
+                    (l.x === 2606 && l.z === 3059)
+                    || (l.x === 2607 && l.z === 3057)
+                    || (l.x === 2604 && l.z === 3054)
+                ) && l.reachable !== false;
+            }
             if (!wantOak) {
                 // Only chop normal tree2@(3115,3247) right beside (3117,3246..3247) so all courtyard guards stay locked on.
                 return l.x === 3115 && l.z === 3247 && l.reachable !== false;
             }
-            // Safe Draynor Jail multiway courtyard oaks (3 hub oaks around 3117,3246 + 3 north oaks when hub depletes).
+            // 3 Draynor Jail multiway courtyard oaks beside (3117,3246); keep all rolls inside the safe guard courtyard.
             return (
                 (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
                 || (l.x === 3115 && l.z === 3250)
-                || (l.x === 3119 && l.z === 3256)
-                || (l.x === 3124 && l.z === 3254)
-                || (l.x === 3129 && l.z === 3255)
             ) && l.reachable !== false;
         });
     if (activeTree) {
@@ -171,16 +181,16 @@ function findBestTree(
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
     const oakTier = (l: NearbyLoc): number => {
+        if (inKhazard) return ((l.x === 2606 && l.z === 3059) || (l.x === 2607 && l.z === 3057)) ? 0 : 1;
         if ((l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245)) return 0;
-        if (l.x === 3115 && l.z === 3250) return 1;
-        return 2;
+        return 1;
     };
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
         const adjDiff = (isBesideTree(px, pz, a.x, a.z, sizeA) ? 0 : 1) - (isBesideTree(px, pz, b.x, b.z, sizeB) ? 0 : 1);
         if (adjDiff !== 0) return adjDiff;
-        if (wantOak) {
+        if (wantOak || inKhazard) {
             const tierDiff = oakTier(a) - oakTier(b);
             if (tierDiff !== 0) return tierDiff;
         }
@@ -194,10 +204,11 @@ function findReachableTreeStandTile(
     s: Session,
     tree: NearbyLoc,
     size: number,
+    inKhazard = false,
 ): { x: number; z: number } | undefined {
     const p = s.sdk.getState()?.player;
-    const px = p?.worldX ?? DRAYNOR_JAIL_SPOT.x;
-    const pz = p?.worldZ ?? DRAYNOR_JAIL_SPOT.z;
+    const px = p?.worldX ?? (inKhazard ? KHAZARD_WILLOW_SPOT.x : DRAYNOR_JAIL_SPOT.x);
+    const pz = p?.worldZ ?? (inKhazard ? KHAZARD_WILLOW_SPOT.z : DRAYNOR_JAIL_SPOT.z);
     const perimeter: { x: number; z: number }[] = [];
     for (let i = 0; i < size; i++) {
         perimeter.push(
@@ -207,16 +218,19 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
+    const filtered = inKhazard
+        ? perimeter.filter(t => t.x === 2606 && t.z === 3058)
+        : perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
     const pool = filtered.length > 0 ? filtered : perimeter;
+    const hx = inKhazard ? KHAZARD_WILLOW_SPOT.x : 3117;
+    const hz = inKhazard ? KHAZARD_WILLOW_SPOT.z : 3246;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3117,3246) inside the courtyard to stay adjacent to both southern hub oaks and guard nw(3121,3249).
-        const hub = (t.x === 3117 && t.z === 3246)
+        const hub = (t.x === hx && t.z === hz)
             ? 0
-            : 1 + Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3246));
+            : 1 + Math.max(Math.abs(t.x - hx), Math.abs(t.z - hz));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -235,28 +249,37 @@ function targetsPlayer(s: Session, targetIndex: number): boolean {
     return !otherPlayers.has(targetIndex - 32768);
 }
 
-function countAttackingGoblins(s: Session): number {
+function countAttackingGoblins(s: Session, inKhazard = false): number {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
+    const nameRe = inKhazard ? /^dwarf$/i : /^(jail guard|goblin)$/i;
     let count = 0;
     for (const n of npcs) {
-        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0) continue;
+        if (!nameRe.test(n.name) || n.hp === 0) continue;
         if (targetsPlayer(s, n.targetIndex) || (n.inCombat && n.distance <= 2)) count++;
     }
     return count;
 }
 
-function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
+function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number, inKhazard = false) {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
+    const nameRe = inKhazard ? /^dwarf$/i : /^(jail guard|goblin)$/i;
     const candidates = npcs.filter(n => {
-        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 8) return false;
-        if (n.x < 3112 || n.x > 3130 || n.z < 3238 || n.z > 3258) return false;
+        if (!nameRe.test(n.name) || n.hp === 0 || n.distance > 8) return false;
+        if (inKhazard) {
+            if (n.x < 2594 || n.x > 2616 || n.z < 3048 || n.z > 3068) return false;
+        } else {
+            if (n.x < 3112 || n.x > 3123 || n.z < 3238 || n.z > 3251) return false;
+        }
         if ((n as { reachable?: boolean }).reachable === false) return false;
         if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
         return n.targetIndex < 0;
     });
-    // Prefer level 26 Jail guards (aggressive_melee, attackrate 5, 32 HP).
-    candidates.sort((a, b) => (b.combatLevel - a.combatLevel) || (a.distance - b.distance));
+    if (inKhazard) {
+        candidates.sort((a, b) => a.distance - b.distance);
+    } else {
+        candidates.sort((a, b) => (b.combatLevel - a.combatLevel) || (a.distance - b.distance));
+    }
     return candidates[0];
 }
 
@@ -345,7 +368,7 @@ function droppableWcSlots(s: Session): number[] {
     let keptNormalLog = false;
     const slots: number[] = [];
     for (const i of s.sdk.getInventory()) {
-        if (i.id === OBJ_OAK_LOGS) {
+        if (i.id === OBJ_OAK_LOGS || i.id === OBJ_WILLOW_LOGS) {
             slots.push(i.slot);
         } else if (i.id === OBJ_LOGS) {
             if (!keptNormalLog) keptNormalLog = true;
@@ -437,6 +460,8 @@ if (import.meta.main) {
         let lastRollServerTick = -99;
         let clearSentForTick = -99;
         let activeTree: { x: number; z: number } | null = null;
+        let inKhazard = false;
+        let khazardArriveTick = -1;
         const taggedAt = new Map<number, number>();
         const seenHitKeys = new Set<string>();
         const recentHitTicks: number[] = [];
@@ -484,7 +509,7 @@ if (import.meta.main) {
                     if (typeof e.sourceIndex === 'number') {
                         const prev = npcLastHit.get(e.sourceIndex);
                         const npc = npcs.find(n => n.index === e.sourceIndex);
-                        const defaultPeriod = npc && npc.combatLevel < 20 ? 6 : 5;
+                        const defaultPeriod = npc && !/^dwarf$/i.test(npc.name) && npc.combatLevel < 20 ? 6 : 5;
                         let period = prev?.period ?? defaultPeriod;
                         if (prev) {
                             const diff = e.tick - prev.tick;
@@ -513,6 +538,46 @@ if (import.meta.main) {
                 await main.direct({ type: 'closeModal', reason: 'SDK' });
             }
 
+            // Transition at WC >= KHAZARD_WILLOW_MIN_LVL (73): Glory Karamja -> Brimhaven ship -> Khazard Shipyard 0-move Willows.
+            if (!inKhazard && wcLvl >= KHAZARD_WILLOW_MIN_LVL && slotOfId(main, OBJ_LOGS) !== undefined) {
+                if (isProtectMeleeOn(main.sdk.getState())) {
+                    await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
+                }
+                await rubTeleport(
+                    main,
+                    WOODCUTTING_GLORY_IDS,
+                    /karamja/i,
+                    p => p.level === 0 && p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
+                    isStopped,
+                );
+                await walkWaypointsSafe(main, [[2890, 3175, 4], [2850, 3175, 4], [2818, 3188, 4], [2788, 3212, 4], [2774, 3228, 3]], isStopped);
+                await sailBrimhavenToArdougne(main, isStopped);
+                await walkWaypointsSafe(
+                    main,
+                    [[2673, 3275, 4], [2657, 3273, 4], [2639, 3263, 4], [2638, 3231, 4], [2633, 3195, 4], [2625, 3171, 4], [2624, 3102, 4], [2606, 3058, 1]],
+                    isStopped,
+                );
+                const prePts = main.sdk.getSkill('Prayer')?.level ?? 0;
+                if (prePts <= 15) {
+                    const potAct = tryDrinkPrayerPotion(main, 99);
+                    if (potAct) await potAct;
+                }
+                if (!isProtectMeleeOn(main.sdk.getState()) && (main.sdk.getSkill('Prayer')?.level ?? 0) >= 1) {
+                    await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
+                }
+                lastFlickTick = main.tick();
+                npcLastHit.clear();
+                recentHitTicks.length = 0;
+                taggedAt.clear();
+                clearSentForTick = -99;
+                actionDelayApprox = 0;
+                activeTree = null;
+                inKhazard = true;
+                khazardArriveTick = main.tick() - t0;
+                drainHitEvents(main.sdk.getState());
+                continue;
+            }
+
             const now = main.tick();
             const st = main.sdk.getState();
             const hitTick = drainHitEvents(st);
@@ -522,10 +587,10 @@ if (import.meta.main) {
                     .filter(n => /^jail guard$/i.test(n.name))
                     .map(n => `${n.index}@${n.x},${n.z}(d${n.distance},tgt${n.targetIndex},ic${n.inCombat ? 1 : 0})`)
                     .join(' ');
-                console.log(`WC_TRACE state t=${now - t0} pos=${st?.player?.worldX},${st?.player?.worldZ} lvl=${main.sdk.getSkill('Woodcutting')?.baseLevel} rolls=${rolls}(f${flinchRolls}/k${knifeRolls}) hits=${hitEventsTotal} gobs=${countAttackingGoblins(main)} guards=[${guardsLog}]`);
+                console.log(`WC_TRACE state t=${now - t0} pos=${st?.player?.worldX},${st?.player?.worldZ} lvl=${main.sdk.getSkill('Woodcutting')?.baseLevel} rolls=${rolls}(f${flinchRolls}/k${knifeRolls}) hits=${hitEventsTotal} gobs=${countAttackingGoblins(main, inKhazard)} guards=[${guardsLog}]`);
             }
 
-            const wantOak = wcLvl >= 15;
+            const wantOak = wcLvl >= 15 && !inKhazard;
             const prayPts = main.sdk.getSkill('Prayer')?.level ?? 0;
             const outOfPrayer = prayPts === 0 && findPrayerPotionSlot(main) === undefined;
             if (!outOfPrayer && !isProtectMeleeOn(st) && prayPts === 0 && (main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
@@ -544,11 +609,11 @@ if (import.meta.main) {
                 if (now < actionDelayApprox) hitDelayBlock++;
                 else if (clearSentForTick !== now) hitNoClear++;
             }
-            const gobs = !outOfPrayer && wantOak ? countAttackingGoblins(main) : 0;
-            const needNormalLog = wantOak && slotOfId(main, OBJ_LOGS) === undefined;
-            const tree: NearbyLoc | undefined = (needNormalLog ? findBestTree(main, false, null) : undefined)
-                ?? findBestTree(main, wantOak, activeTree)
-                ?? (wantOak ? findBestTree(main, false, activeTree) : undefined);
+            const gobs = !outOfPrayer && (wantOak || inKhazard) ? countAttackingGoblins(main, inKhazard) : 0;
+            const needNormalLog = (wantOak || inKhazard) && !inKhazard && slotOfId(main, OBJ_LOGS) === undefined;
+            const tree: NearbyLoc | undefined = (needNormalLog ? findBestTree(main, false, null, false) : undefined)
+                ?? findBestTree(main, wantOak, activeTree, inKhazard)
+                ?? (wantOak ? findBestTree(main, false, activeTree, false) : undefined);
             activeTree = tree ? { x: tree.x, z: tree.z } : null;
 
             if (!tree) {
@@ -571,7 +636,7 @@ if (import.meta.main) {
 
             if (!besideTree) {
                 missMove++;
-                const standTile = findReachableTreeStandTile(main, tree, treeSize);
+                const standTile = findReachableTreeStandTile(main, tree, treeSize, inKhazard);
                 const destX = standTile?.x ?? tree.x;
                 const destZ = standTile?.z ?? tree.z;
                 const moveDist = meNow ? Math.max(Math.abs(destX - meNow.worldX), Math.abs(destZ - meNow.worldZ)) : 99;
@@ -617,7 +682,7 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Predict earliest next hit ETA across active attacking guards so 3t knife never clobbers a 2t flinch window.
+            // Predict earliest next hit ETA across active attacking NPCs so 3t knife never clobbers a 2t flinch window.
             while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 11) recentHitTicks.shift();
             const nearbyNpcs = st?.nearbyNpcs ?? [];
             let nextHitEta = Infinity;
@@ -632,7 +697,7 @@ if (import.meta.main) {
                 activeHitters++;
                 for (let k = 1; k <= 2; k++) {
                     const rawEta = info.tick + k * info.period - now;
-                    // Guard hits that slip 1 tick (rawEta === 0) must still hold knife3 for now+1 instead of wrapping to k=2.
+                    // Hits that slip 1 tick (rawEta === 0) must still hold knife3 for now+1 instead of wrapping to k=2.
                     const eta = rawEta === 0 && npc.distance <= 2 ? 1 : rawEta;
                     if (eta >= 1 && eta < nextHitEta) {
                         nextHitEta = eta;
@@ -643,7 +708,7 @@ if (import.meta.main) {
             const activeHitIn1t = nextHitEta === 1;
 
             const canTag = !outOfPrayer
-                && wantOak
+                && (wantOak || inKhazard)
                 && !needNormalLog
                 && !activeHitIn1t
                 && tagCount < 24
@@ -655,7 +720,7 @@ if (import.meta.main) {
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
             if (canTag) {
-                const target = findUntaggedGoblin(main, taggedAt, now);
+                const target = findUntaggedGoblin(main, taggedAt, now, inKhazard);
                 if (target) {
                     lastTagTick = now;
                     tagCount++;
@@ -675,9 +740,9 @@ if (import.meta.main) {
             }
 
             // Clear busy2 when hit arrives on now+1; wait if hit arrives on now+2..now+3 (because knife3 rolls at now+3 and p_opnpc(2) cancels it).
-            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && activeHitIn1t;
+            const keepFlinchWindow = !outOfPrayer && (wantOak || inKhazard) && !needNormalLog && activeHitIn1t;
             if (!keepFlinchWindow) {
-                if (!outOfPrayer && wantOak && !needNormalLog && nextHitEta <= 3) {
+                if (!outOfPrayer && (wantOak || inKhazard) && !needNormalLog && nextHitEta <= 3) {
                     missEtaWait++;
                     const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
                     if (main.sdk.getInventory().length >= 25) {
@@ -755,12 +820,17 @@ if (import.meta.main) {
         if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
             await main.direct({ type: 'closeModal', reason: 'SDK' });
         }
-        // Step west out of Draynor Jail guard range and clear combat_preventlogout before finish() logs out.
+        // Step out of aggressive Guard / tagged Dwarf range and clear combat_preventlogout before finish() logs out.
         const endPos = main.sdk.getState()?.player;
         if (endPos && endPos.worldX >= 3112 && endPos.worldX <= 3130 && endPos.worldZ >= 3236 && endPos.worldZ <= 3258) {
             const safePot = tryDrinkPrayerPotion(main, 15);
             if (safePot) await safePot;
             await main.bot.walkTo(3105, 3250, 2);
+            await waitTicks(main, 16);
+        } else if (endPos && inKhazard) {
+            const safePot = tryDrinkPrayerPotion(main, 15);
+            if (safePot) await safePot;
+            await main.bot.walkTo(2626, 3060, 2);
             await waitTicks(main, 16);
         }
         if (!helperSettled) await Promise.race([helperDone, waitTicks(main, 4)]);
@@ -768,7 +838,7 @@ if (import.meta.main) {
         const finalLvl = main.sdk.getSkill('Woodcutting')?.baseLevel ?? 0;
         const finalXp = main.sdk.getSkillXp('Woodcutting') ?? 0;
         ok = ok && finalLvl >= 99;
-        detail = `level=${finalLvl} xp=${finalXp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} arrive=${arriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal} tags=${tagCount} hp=${main.sdk.getState()?.player?.hp ?? '?'} miss=[tree:${missNoTree},move:${missMove},delay:${missDelayWait},eta:${missEtaWait},clear:${missKeepClear},hNoClr:${hitNoClear},hDly:${hitDelayBlock}]`;
+        detail = `level=${finalLvl} xp=${finalXp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} arrive=${arriveTick} khazard=${khazardArriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal} tags=${tagCount} hp=${main.sdk.getState()?.player?.hp ?? '?'} miss=[tree:${missNoTree},move:${missMove},delay:${missDelayWait},eta:${missEtaWait},clear:${missKeepClear},hNoClr:${hitNoClear},hDly:${hitDelayBlock}]`;
     } catch (error) {
         detail = String(error);
     } finally {
