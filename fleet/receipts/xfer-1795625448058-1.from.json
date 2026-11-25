@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795625448058-1",
  "account": "Fatstack",
  "partner": "UnderMyKilt",
@@ -12,6 +12,16 @@
  "claim": "29cb5648-94d8-49be-8240-1088fb384181",
  "count": 0,
  "ok": false,
- "at": 1795626240135,
- "detail": "trade claimed"
+ "at": 1795626348596,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795626248324
+ },
+ "logout": {
+  "attemptId": "1795626240148-0000026392-0000000001",
+  "at": 1795626348584,
+  "sha256": "f49bfa3ea09d468bb8a48d142cd565afb354d570f93c06e8b936dbc20dcbfa4a"
+ },
+ "screen": false
 }

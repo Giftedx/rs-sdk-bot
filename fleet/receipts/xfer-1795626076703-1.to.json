@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795626076703-1",
+ "account": "mmsmk1232",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "b2241479-85a7-449c-b457-3edc750043d4",
+ "count": 0,
+ "ok": false,
+ "at": 1795626395081,
+ "detail": "trade claimed"
+}

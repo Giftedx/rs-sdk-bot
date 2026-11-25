@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795626242338-2",
+ "account": "Fingerblastr",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 1,
+ "claim": "c416afd7-d73f-48c7-9735-3c91958abe1d",
+ "count": 0,
+ "ok": false,
+ "at": 1795626369829,
+ "detail": "trade claimed"
+}

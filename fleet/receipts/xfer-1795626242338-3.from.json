@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795626242338-3",
+ "account": "TheFullMonty",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 6,
+ "claim": "420e7520-c028-46a3-b714-c3e8f78685db",
+ "count": 0,
+ "ok": false,
+ "at": 1795626348249,
+ "detail": "trade claimed"
+}

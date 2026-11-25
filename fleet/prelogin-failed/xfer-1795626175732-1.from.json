@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795626175732-1",
+ "role": "from",
+ "account": "OreElse",
+ "partner": "Abracadickra",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795626386860,
+ "detail": "Error: fleet trade: account has an unsettled swarm worker"
+}
