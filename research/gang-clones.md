@@ -848,6 +848,46 @@ The gate wait is the ticks from the walker's arrival at the lever to the clear s
   the clones hunt the squad only), the hold on a live run, and the world feed as the source of `away` (the bench feeds
   the radar from the gang sessions).
 
+## The fallback cascade
+
+Claim: with the plain focus fractions of `squadFallbackPlan` (`packages/workers/src/pvp/squad.ts`), a gang that piles all
+three accounts on one member drives that member out at 68 to 84 HP, and then the next one, so the squad leaves the
+gang one member at a time. While the squad holds its numbers (the member and its allies in view at least as many as the
+enemies in view), the held fractions `HELD_FOCUS` (focus pile 0.60, heavy focus 0.50) keep the member in the fight.
+`SQUAD_HELD_FOCUS=<pile>,<heavy>` sets other fractions and `SQUAD_HELD_FOCUS=off` gives the plain fractions.
+
+The live hold (live squad run 3, log `.practice/squad-kit/logs/hold-test-3.out` in the main checkout): five of ours in the
+kit rule `gang-chain-bind`, `ESCORT_HOLD=1`, about 15 minutes. `RESULT ok squad accounts=5 kills=2 killReceipts=2
+receiptDomain=live feedMatched=2 died=0 taken=603 trips=13`.
+
+- The gang met the squad on its march at Wilderness level 11 to 13, on multi-way tiles, before the squad reached the post.
+  All three hit the members of the squad there (the `THREAT` records name the tile as multi).
+- Seven `coordinated fallback (teleport)` lines, each at 68 to 84 HP: hp=72 enemies=3 allies=4, hp=84 3/3, hp=72 3/3,
+  hp=73 3/2, hp=70 3/2, hp=68 2/1, hp=83 3/0. Each member that left took one ally from the next count.
+- Both kills were Sugma, 3 minutes 41 seconds apart (about 550 ticks), against the return of 1,130 to 1,430 ticks in
+  "The gang in a long fight".
+- The escort state said `suppressed: false` at each read (`squad 0 of 5 hold`, then `squad 3 of 5 hold, 4 needed`, all
+  three gang accounts present on a fresh world feed). The state file keeps only its last write.
+
+The pile replay, `extra:clone-run1-pile-prayer-x1`: the four members of run 1 with full prayer points, all three clones on
+member 0, and on the next member when member 0 leaves. Hosted runs 45630562005, 45630563507, 45630562382 and 45630562613,
+seeds 1 to 8, kills of 24 (8 seeds of 3 clones):
+
+| Focus fractions (pile, heavy) | Pile replay | `clone-run1-prayer-x1` (gang on members 0 and 1) | `clone-run1-x1` (no prayer points) | Deaths of ours |
+|---|---|---|---|---|
+| plain (0.86, 0.76) | 7 | 13 | 24 | 0 |
+| 0.70, 0.60 | 14 | 20 | 24 | 0 |
+| 0.60, 0.50 | 19 | 21 | 24 | 0 |
+| 0.50, 0.40 | 17 | 17 | 24 | 0 |
+
+Kills by seed at 0.60, 0.50: pile 3 2 3 1 2 2 3 3, gang on members 0 and 1: 3 2 3 3 3 2 2 3. With the plain fractions:
+pile 1 1 2 0 0 1 1 1. At 0.50, 0.40 a member leaves later and its recovery takes longer, so the kills fall. In the same
+runs `extra:escort-keep-5-x1` passed 7 of 8 seeds with the plain fractions and 6 of 8 at 0.60, 0.50. Each fail is the
+gate: a clone stayed present (`escort not clear after 1500 ticks`), and the walker took no hit in any seed.
+
+Gap: no live run with the held fractions. The bench clones do not come back after a death, so the bench does not show
+a squad that holds the post against a returning gang.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:
@@ -870,7 +910,6 @@ Each unknown has the observation that closes it in its data file (`closes`).
 |---|---|
 | The pack: the number of sharks, potions, runes | A tick record of a squad run that takes a gang account to its retreat: the eats of one fight are its pack |
 | The prayer points, and the prayers with no head icon | A tick record of a long fight: the tick at which the head icon goes off for good under attack |
-| Whether the gang attacks a squad on a multi-way tile | A tick record of a squad run on the multi-way tiles west of the post |
 | What a gang account does under Bind | A squad run with Bind runes, or a freeze impact on a gang account in a collector file |
 | The rule that picks one of several players | More trips with two or more players in range in the collector files |
 | The rule that picks retreat or a fight to the death | More fights that take a gang account to 40 Hitpoints or less |
