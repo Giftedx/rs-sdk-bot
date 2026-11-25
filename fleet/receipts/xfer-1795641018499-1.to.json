@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795641018499-1",
  "account": "MineYourBiz",
  "partner": "Stirmypot",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "c6aaa37d-6205-4b98-9b9d-b996cd95ae4f",
- "count": 0,
- "ok": false,
- "at": 1795641264845,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795641276760,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795641276003
+ },
+ "logout": {
+  "attemptId": "1795641264853-0000032272-0000000001",
+  "at": 1795641276749,
+  "sha256": "94373e4459bca2b520a1f1ba7487252c553ba19247bd4944472c7e3093c5bba4"
+ },
+ "screen": true
 }
