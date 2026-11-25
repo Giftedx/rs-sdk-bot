@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795626689342,
+ "at": 1795626703870,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -106,11 +106,10 @@
    "role": "army"
   },
   {
-   "account": "Fatstack",
+   "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 -- thieving knights",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
     "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
    ],
    "env": {
@@ -122,10 +121,11 @@
    "role": "army"
   },
   {
-   "account": "Woodpecker",
+   "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing fishcook",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 -- thieving knights",
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
     "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
    ],
    "env": {
