@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795619779590-3",
  "account": "Quickhandjob",
  "partner": "FishAndChips",
@@ -10,8 +10,22 @@
  "item": "Raw lobster",
  "requested": 28,
  "claim": "82118495-32db-43ee-af86-a7152735feed",
- "count": 0,
- "ok": false,
- "at": 1795620388736,
- "detail": "trade claimed"
+ "count": 28,
+ "ok": true,
+ "at": 1795620525659,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 28
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795620524912
+ },
+ "logout": {
+  "attemptId": "1795620388972-0000018232-0000000001",
+  "at": 1795620525644,
+  "sha256": "e99cbdc90800526c294e8489061cf984822decb2c69dc845d5ca26c40518350c"
+ },
+ "screen": true
 }

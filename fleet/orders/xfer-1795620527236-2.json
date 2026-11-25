@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795620527236-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "Unsheathed",
+  "item": "Gold bar",
+  "count": 1,
+  "itemId": 2357,
+  "start": 1795620527236,
+  "end": 1795621427236,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
