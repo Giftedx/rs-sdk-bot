@@ -420,7 +420,7 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
   const boss = spec.sdk.getNearbyNpcs().find(n => [907, 908, 909, 910, 911].includes(n.id) || (/kolodion/i.test(n.name) && n.optionsWithIndex.some(o => /attack/i.test(o.text))));
   const sinceCast = spec.tick() - lastCastXpTick;
   if (boss && sinceCast >= 4) {
-   const spell = skillLevel(spec, 'Magic') >= 75 ? fireWave : fireBlast;
+   const spell = (spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) >= 75 ? fireWave : fireBlast;
    acts.push(spec.direct({ type: 'spellOnNpc', npcIndex: boss.index, spellComponent: spell, reason: 'SDK' }));
   } else if (sinceCast >= 1 && sinceCast <= 2 && spec.tick() - lastEnchantSentTick >= 3 && skillLevel(spec, 'Magic') >= enchantLvl5.level) {
    const dRing = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.dragonstone_ring);
@@ -573,7 +573,7 @@ async function executeMagicLoop(
   enchantTicks += spec.tick() - ePost0;
  }
  if (skillLevel(spec, 'Magic') >= 76 && (spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) < 80) {
-  const magicPot = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.magic_potion_4);
+  const magicPot = spec.sdk.getInventory().find(i => [ITEM_IDS.magic_potion_4, 3042, 3044, 3046].includes(i.id));
   if (magicPot) {
    await spec.direct({ type: 'useInventoryItem', slot: magicPot.slot, optionIndex: 1, reason: 'SDK' });
    await waitTicks(spec, 1);

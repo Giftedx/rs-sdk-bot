@@ -555,6 +555,7 @@ if (import.meta.main) {
                 } else {
                     await main.direct(lightInvOp);
                 }
+                if (i === wave0.length - 1) console.log(`PHASE fm_wave0_end tick=${main.tick() - t0}`);
             } else {
                 while (!groundHas() && !isStopped()) {
                     waitLogs++;

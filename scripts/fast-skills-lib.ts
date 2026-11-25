@@ -415,14 +415,12 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
    // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
-   const canRequestBoth = !specDlg && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
-   const canPreClearSpec = specDlg && !!opts.allowHelperOnSingleModal && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
+   const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
    if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
-   if (specDlg && !(canPreClearSpec && hTarget)) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-   if (canPreClearSpec && hTarget) {
-    // Clear spec's modal via OPPLAYER4 first so helper (processed earlier in playerLoop) does not hit .busy = true.
-    openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
-   } else if (canRequestBoth && sTarget && hTarget) {
+   // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
+   if (specDlg && !(canRequest && sTarget && hTarget)) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+   // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
+   if (canRequest && sTarget && hTarget) {
     lastOpenReqTick = spec.tick();
     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
     openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
@@ -449,7 +447,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    if (specNeedsConfirm) {
     confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
-   if (opts.onConfirmSend && (((ht.myAccepted || !ht.isOpen) && specNeedsConfirm) || (st.myAccepted && helperConfirmingNow && !specNeedsConfirm))) {
+   if (opts.onConfirmSend && (ht.myAccepted || !ht.isOpen) && specNeedsConfirm) {
     confirmActs.push(opts.onConfirmSend());
    }
    if (confirmActs.length) await Promise.all(confirmActs);

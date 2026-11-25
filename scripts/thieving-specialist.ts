@@ -309,6 +309,7 @@ export async function runArdougneStunRelogThieving(opts: {
     let lastPickDist = 99;
     let lastPickTarget = -1;
     let stallCooldownUntil = 0;
+    let prevHp = main.sdk.getState()?.player?.hp ?? 10;
     const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
 
     // Lazy-init stall LoS + pathfinding cache for Lv 5..54 Market stall stealing (0 stun, 0 relog).
@@ -358,11 +359,13 @@ export async function runArdougneStunRelogThieving(opts: {
             ? { ...selectPickpocketTier(lvl), anchor: { x: 3222, z: 3222 } }
             : selectPickpocketTier(lvl);
 
-        // Detect new stun messages via monotonic message watermark (immune to ring-buffer length caps).
+        // Detect new stun/guard-alert messages or unexpected HP loss during Market stalls via monotonic watermark.
         const msgs = st.gameMessages ?? [];
         const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
         lastMsgMark = latestMark(msgs, lastMsgMark);
-        if (newMsgs.some(m => /you fail to pick|you've been stunned|hands off there|during combat/i.test(m.text))) {
+        const stallHit = lvl >= 5 && lvl < 55 && st.player.hp < prevHp;
+        prevHp = st.player.hp;
+        if (stallHit || newMsgs.some(m => /you fail to pick|you've been stunned|hands off there|you're the one who stole|guards guards|during combat/i.test(m.text))) {
             stuns++;
             const bites = foodBitesCount(main);
             if (st.player.hp <= Math.max(4, tier.stunDamage) && bites === 0) {
@@ -372,7 +375,7 @@ export async function runArdougneStunRelogThieving(opts: {
                 continue;
             }
             // Eat when HP drops to guard/stun danger threshold so we never die at Lv 5..54 stalls or Knight stuns.
-            if (bites >= 2 && st.player.hp <= Math.max(4, tier.stunDamage)) {
+            if (bites >= 2 && st.player.hp <= Math.max(lvl < 55 ? 6 : 4, tier.stunDamage)) {
                 await eatAnyFood(main);
             }
             totalTicks += Math.max(1, main.tick() - sessStart) + 1;
@@ -380,6 +383,7 @@ export async function runArdougneStunRelogThieving(opts: {
             main = await opts.relogSession(main);
             sessStart = main.tick();
             lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
+            prevHp = main.sdk.getState()?.player?.hp ?? 10;
             lastPickTick = -99;
             lastPickDist = 99;
             lastPickTarget = -1;
@@ -408,9 +412,10 @@ export async function runArdougneStunRelogThieving(opts: {
         }
 
         // Safety guard: never attempt a pickpocket/stall steal while HP <= danger threshold.
-        if (st.player.hp <= Math.max(4, tier.stunDamage)) {
+        const minSafeHp = lvl < 55 ? 6 : Math.max(4, tier.stunDamage);
+        if (st.player.hp <= minSafeHp) {
             await eatAnyFood(main);
-            if ((main.sdk.getState()?.player?.hp ?? 0) <= Math.max(4, tier.stunDamage)) {
+            if ((main.sdk.getState()?.player?.hp ?? 0) <= minSafeHp) {
                 stallCooldownUntil = 0;
                 await waitTicks(main, 1);
                 continue;
