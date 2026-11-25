@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795615742711-sausagefest-masterbaiter-7c87680219e7a94d",
  "account": "Sausagefest",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 30,
  "claim": "8161b98a-8b05-463e-8781-4f2e8bad832a",
- "count": 0,
- "ok": false,
- "at": 1795615861381,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795615921066,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 0
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795615904717
+ },
+ "logout": {
+  "attemptId": "1795615861390-0000024460-0000000001",
+  "at": 1795615921048,
+  "sha256": "f6e2948c28d5df6ca65b4d17c81c3b29fed17abdcd145d142fce599bfefb72e7"
+ },
+ "screen": true
 }
