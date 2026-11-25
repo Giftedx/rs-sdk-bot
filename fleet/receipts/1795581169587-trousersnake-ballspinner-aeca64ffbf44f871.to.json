@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795581169587-trousersnake-ballspinner-aeca64ffbf44f871",
+ "account": "Ballspinner",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "5bf10de0-e496-4d3f-b37a-1288d576fb9e",
+ "count": 1,
+ "ok": true,
+ "at": 1795581413574,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795581412742
+ },
+ "logout": {
+  "attemptId": "1795581398376-0000004724-0000000001",
+  "at": 1795581413558,
+  "sha256": "550d42d20f9792b42921e17c1dc69861b1fa880b00c09a4933d49e8424285051"
+ },
+ "screen": true
+}

@@ -1,0 +1,44 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795580950665-dipstick-yewfirst-90ed038be27138fc",
+ "account": "YewFirst",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 241,
+ "claim": "5689349a-f613-4c43-a4ac-8f58e7bde1d1",
+ "count": 0,
+ "ok": false,
+ "at": 1795581407109,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Adamant arrowtips",
+   "requested": 128,
+   "count": 0
+  },
+  {
+   "item": "Mithril arrowtips",
+   "requested": 225,
+   "count": 0
+  },
+  {
+   "item": "Steel arrowtips",
+   "requested": 135,
+   "count": 0
+  },
+  {
+   "item": "Iron arrowtips",
+   "requested": 90,
+   "count": 0
+  },
+  {
+   "item": "Bronze arrowtips",
+   "requested": 60,
+   "count": 0
+  }
+ ]
+}

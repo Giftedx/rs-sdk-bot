@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795581169587-trousersnake-ballspinner-aeca64ffbf44f871",
  "account": "TrouserSnake",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "fca34996-7e02-45fc-9b26-50261eb33569",
- "count": 0,
- "ok": false,
- "at": 1795581348345,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795581411869,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795581391129
+ },
+ "logout": {
+  "attemptId": "1795581348356-0000010500-0000000001",
+  "at": 1795581411849,
+  "sha256": "9c67ec3ce5afb2b374048271e2e6a7560a256c4dcf6706904bd33d5ee7fb07db"
+ },
+ "screen": true
 }
