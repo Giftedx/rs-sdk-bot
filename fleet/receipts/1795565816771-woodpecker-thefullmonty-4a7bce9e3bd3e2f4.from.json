@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795565816771-woodpecker-thefullmonty-4a7bce9e3bd3e2f4",
+ "account": "Woodpecker",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 25000,
+ "claim": "1ff78efe-4429-4789-8a5b-e9e4395b4581",
+ "count": 0,
+ "ok": false,
+ "at": 1795565954020,
+ "detail": "trade claimed"
+}
