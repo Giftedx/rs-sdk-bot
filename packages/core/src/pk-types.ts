@@ -54,6 +54,10 @@ export type FightOptions = {
     // 'skulled': Protect Item only while our own skull shows. A skulled account keeps no item without it, so it is the one
     // item that the prayer saves; an account with no skull keeps three without it and the prayer saves a fourth (deathRisk).
     protectItem?: boolean | 'skulled';
+    // Where a prayer flick cannot turn every prayer on again in its tick, Protect Item comes back with the overhead and
+    // the Defence prayer one tick later (default), so a death in that tick keeps the item. false: the Defence prayer
+    // comes back first, and the zero-drain step-down turns Protect Item off in place of the Defence prayer.
+    itemFirst?: boolean;
     // Read the opponent, as a skilled player does. All off by default.
     // predictPrayer: pray against the style the opponent will use next, learnt from the order of its weapons, in place
     // of the weapon it holds now (which is its last attack, one step behind).
@@ -92,7 +96,7 @@ export type FightOptions = {
     // Prayer flick: prayer points drain on a 5-tick timer that starts when the first prayer goes on and is cleared when
     // none is on (skill_prayer/scripts/prayer.rs2:30-43). Every 4 ticks, on a cooldown tick, the loop turns every
     // active prayer off and on again in one tick, so the timer never fires and the prayers cost no points. One tick
-    // holds 5 inputs: with three prayers on, the third comes back on the next tick. false turns the flick off.
+    // holds 5 inputs: with three prayers on, the third comes back on the next tick (see itemFirst). false turns the flick off.
     prayerFlick?: boolean;
     // zeroDrainFlick: track prayer_drain timer start (prayer.rs2:30-43) and step down from 5 active prayers before
     // cycling off+on so overhead protection stays up at the end of every tick with zero drain.

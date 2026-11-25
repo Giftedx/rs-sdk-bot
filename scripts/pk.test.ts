@@ -609,6 +609,44 @@ test('planPrayerTick handles zeroDrainFlick (non-truncating step-down preserving
     expect(preOn.toggles).toContain(PRAYER.incredibleReflexes);
 });
 
+test('planPrayerTick with itemFirst keeps Protect Item on through both flicks while protectItem holds', () => {
+    const on = (ps: number[]) => { const a = new Array(15).fill(false); for (const p of ps) a[p] = true; return a; };
+    const after = (start: boolean[], toggles: number[]) => { const a = [...start]; for (const p of toggles) a[p] = !a[p]; return a; };
+    const three = on([PRAYER.item, PRAYER.steelSkin, PRAYER.melee]);
+    const plain = (itemFirst: boolean | undefined, protectItem = true) => planPrayerTick({
+        now: 14, nextAttack: 18, lastAttackAt: 13, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
+        activePrayers: three, prayerDrainAt: 10, flickAt: 10, flickEvery: 4,
+        zeroDrainFlick: false, prayerFlick: true, offensiveFlick: false,
+        upcomingStyle: 'ranged', specMeleeLikely: false, defencePrayer: true, protectItem, itemFirst, budget: 5,
+    });
+    // The plain flick: 3 off, then 2 on in 5 inputs. The one that stays off for a tick is Steel Skin with itemFirst,
+    // Protect Item without it.
+    const withRule = plain(true), oldRule = plain(undefined);
+    expect(withRule.didFlick).toBe(true);
+    expect(withRule.toggles).toEqual([PRAYER.melee, PRAYER.item, PRAYER.steelSkin, PRAYER.melee, PRAYER.item]);
+    expect(after(three, withRule.toggles)[PRAYER.item]).toBe(true);
+    expect(after(three, withRule.toggles)[PRAYER.steelSkin]).toBe(false);
+    expect(oldRule.toggles).toEqual([PRAYER.melee, PRAYER.steelSkin, PRAYER.item, PRAYER.melee, PRAYER.steelSkin]);
+    expect(after(three, oldRule.toggles)[PRAYER.item]).toBe(false);
+    // Protect Item not wanted (no skull with 'skulled'): the rule does not apply.
+    expect(plain(true, false).toggles).toEqual(oldRule.toggles);
+
+    // The zero-drain step-down from 5 prayers to the 2 that a full off+on cycle holds keeps the overhead and Protect Item.
+    const five = on([PRAYER.item, PRAYER.steelSkin, PRAYER.melee, PRAYER.ultimateStrength, PRAYER.incredibleReflexes]);
+    const stepDown = (itemFirst: boolean) => planPrayerTick({
+        now: 13, nextAttack: 20, lastAttackAt: 9, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
+        activePrayers: five, prayerDrainAt: 10, flickAt: 10, flickEvery: 4,
+        zeroDrainFlick: true, prayerFlick: true, offensiveFlick: false,
+        upcomingStyle: 'melee', specMeleeLikely: false, defencePrayer: true, protectItem: true, itemFirst, budget: 5,
+    });
+    const kept = after(five, stepDown(true).toggles);
+    expect(kept.flatMap((a, p) => (a ? [p] : [])).sort((a, b) => a - b)).toEqual([PRAYER.item, PRAYER.melee].sort((a, b) => a - b));
+    // The offensive prayers go before the Defence prayer.
+    expect(stepDown(true).toggles.indexOf(PRAYER.steelSkin)).toBe(2);
+    expect(after(five, stepDown(false).toggles)[PRAYER.item]).toBe(false);
+    expect(after(five, stepDown(false).toggles)[PRAYER.steelSkin]).toBe(true);
+});
+
 test('defaultSpec/defaultStunSpec/meleeWeaponDelay cover all 3 dragon spears and rev-289 weapon speeds', () => {
     const names = new Map([
         [1231, 'dragon_dagger_p'], [1201, 'rune_kiteshield'],
