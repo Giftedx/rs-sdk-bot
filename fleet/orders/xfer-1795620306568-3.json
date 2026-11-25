@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795620306568-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "Shaftsinker",
+  "item": "Shortbow",
+  "count": 1,
+  "itemId": 841,
+  "start": 1795620306568,
+  "end": 1795621206568,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

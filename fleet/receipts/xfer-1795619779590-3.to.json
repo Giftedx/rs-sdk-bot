@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795619779590-3",
+ "account": "Quickhandjob",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Raw lobster",
+ "requested": 28,
+ "claim": "82118495-32db-43ee-af86-a7152735feed",
+ "count": 0,
+ "ok": false,
+ "at": 1795620388736,
+ "detail": "trade claimed"
+}

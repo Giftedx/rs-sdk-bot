@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795619510071-unsheathed-knightstick-13619272a94a1d83",
+ "account": "Knightstick",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "e8fd5435-afdf-4d0b-be02-63408d9a5f03",
+ "count": 2,
+ "ok": true,
+ "at": 1795620449686,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Air rune",
+   "requested": 8,
+   "count": 8,
+   "inventory": {
+    "before": 2,
+    "after": 10
+   },
+   "bank": {
+    "count": 8,
+    "at": 1795620448520
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795620448904
+ },
+ "logout": {
+  "attemptId": "1795620425372-0000031908-0000000001",
+  "at": 1795620449661,
+  "sha256": "af1c7c340697c401a135248faa86b603af356cb4d8a28540ee7f0777b5fd807c"
+ },
+ "screen": true
+}

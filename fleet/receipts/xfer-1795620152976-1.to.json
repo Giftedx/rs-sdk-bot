@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795620152976-1",
+ "account": "OreElse",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 3,
+ "claim": "f6f56396-6524-4ee6-8c93-e1626c2bf8af",
+ "count": 3,
+ "ok": true,
+ "at": 1795620418108,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795620417294
+ },
+ "logout": {
+  "attemptId": "1795620405494-0000017652-0000000001",
+  "at": 1795620418085,
+  "sha256": "e1cc63a207a1ca040a8b620b698ea27ab554f244d0b8d88963b092c944641a2e"
+ },
+ "screen": true
+}

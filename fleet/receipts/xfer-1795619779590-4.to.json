@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795619779590-4",
+ "account": "mmthv2350",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "d467e89c-f589-4d97-85af-56c2ba8de47d",
+ "count": 0,
+ "ok": false,
+ "at": 1795620384390,
+ "detail": "trade claimed"
+}
