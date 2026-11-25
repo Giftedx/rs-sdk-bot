@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795584543005-4",
+ "account": "Porksword",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "7487a09f-4892-4626-aaf9-7da4cb65e12b",
+ "count": 0,
+ "ok": false,
+ "at": 1795584915623,
+ "detail": "trade claimed"
+}

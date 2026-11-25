@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795582148063-hocuspokeus-ballspinner-c166c20f97070f4d",
  "account": "Ballspinner",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Cosmic rune",
  "requested": 20,
  "claim": "36029a55-b5fe-4d02-b9b5-8384812376f9",
- "count": 0,
- "ok": false,
- "at": 1795584875659,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1795584921336,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795584920578
+ },
+ "logout": {
+  "attemptId": "1795584875670-0000007648-0000000001",
+  "at": 1795584921318,
+  "sha256": "0d1478e056c7d44a91a0f2fd191cadd1917718f328dce550e4cd87d99a596e9f"
+ },
+ "screen": true
 }
