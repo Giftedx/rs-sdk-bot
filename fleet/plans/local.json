@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795633272069,
+ "at": 1795633559218,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,19 +60,22 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+    "druid"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:supply_chain:207",
+    "BATCH_UNITS": "28",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:235",
-   "role": "army"
+   "goal": "goal:supply_chain:207",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
   },
   {
    "account": "MineYourBiz",
@@ -154,24 +157,85 @@
    "role": "helper"
   },
   {
-   "account": "SporranBulge",
+   "account": "BowBeforeMe",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "crafting",
-    "inventory",
-    "strip:swamp-toad"
+    "jewellery-trip"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
+    "RECIPE": "sapphire_ring",
+    "TARGET": "1",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1637",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p861 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "army"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2152",
-   "role": "helper"
+   "goal": "goal:quest_board:dwarfcannon",
+   "role": "army"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=25 -- fletching shafts",
+    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
+   "role": "army"
   },
   {
    "account": "mmtha0205",
@@ -205,23 +269,17 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
+   "account": "Shaftmaker",
+   "script": "scripts/generated/quest-chompybird.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "28",
-    "BANK_PACK": "1"
+    "DEMAND_ID": "goal:quest_board:chompybird",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:207",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
+   "goal": "goal:quest_board:chompybird",
+   "role": "auto"
   },
   {
    "account": "Swordinhand",
@@ -240,34 +298,32 @@
   },
   {
    "account": "PackageDeal",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=1973 QUANTITY=1 \"ITEM_NAME=Chocolate bar\" -- loadout",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1975",
-   "role": "helper"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/generated/dwarfcannon.ts",
+   "script": "scripts/generated/quest-grandtree.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "DEMAND_ID": "goal:quest_board:grandtree",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
+   "goal": "goal:quest_board:grandtree",
+   "role": "helper"
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/generated/quest-ikov.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:ikov",
    "role": "army"
   },
   {
-   "account": "BoneToPick",
+   "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "cow"
@@ -275,13 +331,13 @@
    "env": {
     "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto",
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army",
    "resources": [
     "ardougne-cows"
    ]
@@ -295,7 +351,7 @@
   "Wandwaver",
   "mmsmk1232",
   "bigpackage",
-  "bowbeforeme",
+  "billionaire",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -303,16 +359,12 @@
   "hocuspokeus",
   "kiltlifter",
   "mmthv2350",
-  "moneyshot",
   "oreelse",
-  "pocketpool",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {

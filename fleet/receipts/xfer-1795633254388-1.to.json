@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795633254388-1",
  "account": "Pocketrocket",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "0fc849a8-612a-4625-9a8b-8dee9e6e5749",
- "count": 0,
- "ok": false,
- "at": 1795633531115,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795633545076,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795633544403
+ },
+ "logout": {
+  "attemptId": "1795633531124-0000011132-0000000001",
+  "at": 1795633545067,
+  "sha256": "571feac1421e41ca6a45c6d0c54e12f697491469bbcb4680e1c0734021ea8d13"
+ },
+ "screen": true
 }
