@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795643035947-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Unsheathed",
+  "item": "Diamond",
+  "count": 2,
+  "itemId": 1601,
+  "start": 1795643035947,
+  "end": 1795643935947,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
