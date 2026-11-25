@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795615961425-5",
+ "account": "YewGotWood",
+ "partner": "mmthv2350",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "0352015d-ff5d-4a08-9834-c1ba8de7a1bb",
+ "count": 0,
+ "ok": false,
+ "at": 1795616183595,
+ "detail": "trade claimed"
+}

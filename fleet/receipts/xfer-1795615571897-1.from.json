@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795615571897-1",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "eb864196-9c98-4960-b253-2e2ea147fe50",
+ "count": 0,
+ "ok": false,
+ "at": 1795616137909,
+ "detail": "Error: stock short: Uncut diamond 0 banked + 0 held < 10",
+ "logout": {
+  "attemptId": "1795616129217-0000018776-0000000001",
+  "at": 1795616137827,
+  "sha256": "4f4278c8dd7024e445ebc964131ba0811b229267590461f04e94421d1c618cdb"
+ },
+ "screen": false
+}

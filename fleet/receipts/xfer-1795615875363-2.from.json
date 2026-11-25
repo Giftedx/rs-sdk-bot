@@ -1,0 +1,22 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795615875363-2",
+ "account": "Pocketrocket",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannonball",
+ "requested": 688,
+ "claim": "7f47dfab-ac7b-4684-8a5f-ac7f439c5a5d",
+ "count": 0,
+ "ok": false,
+ "at": 1795616126951,
+ "detail": "session ended: disconnected",
+ "bank": {
+  "count": 688,
+  "at": 1795616099917
+ },
+ "screen": false
+}
