@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795626582524-2",
  "account": "Ballspinner",
  "partner": "Fatstack",
@@ -12,6 +12,16 @@
  "claim": "2a9b48a9-7501-490b-9d1c-dd947735df5e",
  "count": 0,
  "ok": false,
- "at": 1795626782910,
- "detail": "trade claimed"
+ "at": 1795627482942,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795626782988-0000020344-0000000001",
+  "at": 1795627482933,
+  "sha256": "d6fb177582ea33a6527be0f35720aaf48b50c331d4d2043acadce748a29430a4"
+ },
+ "screen": false
 }

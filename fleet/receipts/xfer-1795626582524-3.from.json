@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795626582524-3",
  "account": "Quickhandjob",
  "partner": "Fatstack",
@@ -12,6 +12,16 @@
  "claim": "e69ca5e5-51d9-4671-b90b-6c6508b8b285",
  "count": 0,
  "ok": false,
- "at": 1795626992717,
- "detail": "trade claimed"
+ "at": 1795627483421,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 3,
+  "at": 1795626999806
+ },
+ "logout": {
+  "attemptId": "1795626992906-0000024404-0000000001",
+  "at": 1795627483403,
+  "sha256": "281d4fa14ea88f3c1de27d2c64bb712f419c5ac100b19951f22a3bf320ea1ec9"
+ },
+ "screen": false
 }

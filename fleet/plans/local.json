@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795627426845,
+ "at": 1795627497972,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,27 +59,26 @@
    "role": "pvp"
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/aio-skiller.ts",
+   "account": "UnderMyKilt",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "identify:tarromin"
+    "giant"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:253",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:225",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:253",
-   "role": "army"
+   "goal": "campaign:haggis:item:225",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   },
   {
-   "account": "UnderMyKilt",
+   "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 -- crafting inventory identify:guam_leaf",
@@ -173,13 +172,54 @@
    "role": "army"
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/generated/quest-druid.ts",
-   "args": [],
-   "env": {},
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:tarromin"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "70"
+   },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:257",
+   "goal": "goal:supply_chain:267",
+   "role": "army"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 -- crafting inventory grind:chocolate_bar"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1975",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=48 -- crafting inventory identify:ranarr_weed",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:261 BATCH_UNITS=6 -- crafting inventory identify:avantoe"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:261",
    "role": "army"
   },
   {
@@ -198,20 +238,6 @@
    "role": "army"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/magic-order.ts",
-   "args": [],
-   "env": {
-    "TARGET_LEVEL": "56",
-    "CAP": "3000",
-    "TRAIN_SKILL": "Magic"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
-  },
-  {
    "account": "Stirmypot",
    "script": "scripts/chain.ts",
    "args": [
@@ -227,18 +253,37 @@
    "role": "auto"
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
+   "account": "Unsheathed",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+    "druid"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1975",
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/generated/quest-arena.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
    "role": "army"
   },
   {
@@ -254,6 +299,19 @@
    "repeat": false,
    "goal": "goal:pk_army:CoinCock",
    "role": "auto"
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/generated/quest-barcrawl.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
   }
  ],
  "army": [
@@ -268,11 +326,9 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mineyourbiz",
   "mmthv2350",
   "oreelse",
@@ -281,7 +337,7 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "thefullmonty",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {
