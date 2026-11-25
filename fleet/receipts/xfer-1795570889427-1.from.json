@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795570889427-1",
+ "account": "Fatstack",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 56,
+ "claim": "8b170808-ac50-49fb-bad7-64dbf300283c",
+ "count": 0,
+ "ok": false,
+ "at": 1795570993565,
+ "detail": "trade claimed"
+}
