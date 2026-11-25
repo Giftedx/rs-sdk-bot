@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795617333589,
+ "at": 1795617359162,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -188,17 +188,13 @@
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/aio-market.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "ge-buy"
+    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=27 \"ITEM_NAME=Dragon bones\" -- loadout",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=49 -- prayer bury"
    ],
    "env": {
-    "ORDER_KEY": "brain-564-1-p861",
-    "ITEM_ID": "564",
-    "QUANTITY": "1",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "861"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
