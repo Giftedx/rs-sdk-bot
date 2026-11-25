@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795603910175,
+ "at": 1795603944916,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -54,22 +54,6 @@
    "resources": [
     "draynor-willows"
    ]
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -152,7 +136,7 @@
    "role": "army"
   },
   {
-   "account": "Bigchopper",
+   "account": "Fingerblastr",
    "script": "scripts/generated/quest-barcrawl.ts",
    "args": [],
    "env": {
@@ -163,6 +147,19 @@
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
    "role": "army"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/generated/quest-death.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:death",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:death",
+   "role": "army"
   }
  ],
  "army": [
@@ -172,7 +169,6 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
-  "ballspinner",
   "billionaire",
   "bowbeforeme",
   "deeppockets",

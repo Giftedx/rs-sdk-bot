@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795603690124-1",
  "account": "Ballspinner",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "d1aea97e-55df-4fd7-988f-2054249dc330",
- "count": 0,
- "ok": false,
- "at": 1795603858401,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795603927990,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795603914434
+ },
+ "logout": {
+  "attemptId": "1795603858410-0000029296-0000000001",
+  "at": 1795603927979,
+  "sha256": "23b91b146c7bc418db070ba934233b5ccde4af02e6fc43d3b18df21f6b9407e4"
+ },
+ "screen": true
 }

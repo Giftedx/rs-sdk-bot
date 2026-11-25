@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795603690124-1",
+ "account": "Unsheathed",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "7ee0f2ed-c440-438f-8be6-146deebede1e",
+ "count": 1,
+ "ok": true,
+ "at": 1795603929579,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795603928877
+ },
+ "logout": {
+  "attemptId": "1795603919749-0000018040-0000000001",
+  "at": 1795603929569,
+  "sha256": "1970b2935d498ae7dc130369d7b24f0c66151b5be6a06dcfc3d891fe047611c3"
+ },
+ "screen": true
+}
