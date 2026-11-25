@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795586852271-3",
  "account": "mmsmk1232",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 5,
  "claim": "65ea8a4f-c097-4c76-af7f-52feb2be886a",
- "count": 0,
- "ok": false,
- "at": 1795587234187,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795587283208,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795587242868
+ },
+ "logout": {
+  "attemptId": "1795587234197-0000009940-0000000001",
+  "at": 1795587283198,
+  "sha256": "7f80b486437f6958eb5c7d18eed8361cd95df312ea1053d4ab0f26be7f014785"
+ },
+ "screen": true
 }

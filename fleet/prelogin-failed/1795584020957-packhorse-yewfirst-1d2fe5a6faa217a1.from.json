@@ -5,6 +5,6 @@
  "account": "Packhorse",
  "partner": "YewFirst",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795584195079,
+ "at": 1795587277350,
  "detail": "Error: fleet trade: account has an enabled swarm job"
 }

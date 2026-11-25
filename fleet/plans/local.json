@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795587252937,
+ "at": 1795587288628,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,6 +22,43 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "catherby",
+    "2500"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "^Rune arrowtips$",
+    "STOCK_TARGET": "2600",
+    "MAX_ITEMS": "300",
+    "COIN_RESERVE": "0",
+    "NO_BUY_TICKS": "120"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Buy Rune arrowtips at Catherby for TipMyShaft",
+   "role": "supply"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "feathers"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:lochnessrod:item:314",
+    "BATCH_UNITS": "1500"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:lochnessrod:item:314",
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -95,7 +132,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "oreelse",
   "pickpockdick",
   "pocketpython",
