@@ -279,6 +279,13 @@ export function keepPrayer(o: { view: readonly { name: string; distance: number 
     return o.now - o.damagedAt <= KEEP_PRAYER_TICKS || o.view.some(q => o.targets.has(q.name.toLowerCase()) && q.distance <= KEEP_PRAYER_RANGE);
 }
 
+// The prayers that an idle member turns off: each active prayer, but not Protect Item while the survival helper keeps it on
+// (`keepItem`: skulled and `protectItem` not off). Without that exception the two senders toggle it in turn, and Protect Item is
+// off in about 3 ticks of 10 between fights (research/pvp-fight-loop.md finding 86). Its drain is 2, an overhead prayer's 12 (prayers.enum).
+export function idlePrayersOff(active: readonly boolean[], keepItem: boolean): number[] {
+    return active.flatMap((on, i) => (on && !(keepItem && i === PRAYER.item) ? [i] : []));
+}
+
 // The memory gate of a live squad start: the fleet's floor and one GiB for each squad bot (the swarm admits a bot the same way,
 // scripts/swarm.ts START_BUDGET_GB).
 export const SQUAD_BOT_GB = 1;
@@ -1966,14 +1973,14 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // our prayer ran out at about tick 730), and the fight loop puts them on again. One input each 3 ticks.
                 // A threat that can hit us keeps the protect prayer of its style on (holdProtect), at the cost of the drain.
                 // The protect prayer stays on while a target of the squad stands within reach (a skipped gang member next to us) or we took damage
-                // in the last 10 ticks (`keepPrayer`).
+                // in the last 10 ticks (`keepPrayer`). Protect Item stays on while the survival helper keeps it on (`idlePrayersOff`).
                 const holdNow = s.tick();
                 if (protect) {
                     if (holdNow - holdPrayAt >= 3) { holdProtect(s, protect, 0); holdPrayAt = holdNow; }
                 } else if (!keepPrayer({ view, targets: o.targets, now: holdNow, damagedAt, points: s.sdk.getSkill('Prayer')?.level, base: s.sdk.getSkill('Prayer')?.baseLevel }) && holdNow - holdPrayAt >= 3) {
-                    const activePrayers = s.sdk.getState()?.prayers.activePrayers ?? [];
-                    if (activePrayers.some(Boolean)) {
-                        for (const [i, on] of activePrayers.entries()) if (on) void s.sdk.sendTogglePrayer(i);
+                    const off = idlePrayersOff(s.sdk.getState()?.prayers.activePrayers ?? [], rescueOpts.protectItem());
+                    if (off.length) {
+                        for (const i of off) void s.sdk.sendTogglePrayer(i);
                         holdPrayAt = holdNow;
                     }
                 }

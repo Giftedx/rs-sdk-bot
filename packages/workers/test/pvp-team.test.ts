@@ -97,6 +97,23 @@ test('an idle member keeps its prayer on near a target of the squad or after dam
     expect(keepPrayer({ view: [], targets, now: 100, damagedAt: 89 })).toBe(false);
 });
 
+test('an idle member turns off every active prayer but Protect Item while the survival helper keeps it on', async () => {
+    const { idlePrayersOff } = await import('../src/pvp/squad');
+    const { PRAYER } = await import('../src/pvp/fight');
+    const active: boolean[] = [];
+    active[PRAYER.item] = true;
+    active[PRAYER.melee] = true;
+    active[PRAYER.steelSkin] = true;
+    const all = active.flatMap((on, i) => (on ? [i] : []));
+    expect(idlePrayersOff(active, false)).toEqual(all);
+    expect(idlePrayersOff(active, true)).toEqual(all.filter(i => i !== PRAYER.item));
+    // Protect Item alone: no input, so the hold does not toggle it against the helper.
+    const itemOnly: boolean[] = [];
+    itemOnly[PRAYER.item] = true;
+    expect(idlePrayersOff(itemOnly, true)).toEqual([]);
+    expect(idlePrayersOff(itemOnly, false)).toEqual([PRAYER.item]);
+});
+
 test('squadTarget leaves out a target the game will not let it attack', async () => {
     const { squadTarget } = await import('../src/pvp/squad');
     const view = [{ name: 'Goondelf', index: 1, distance: 3, z: 3515, combatLevel: 126 }, { name: 'Ligma', index: 2, distance: 5, z: 3640, combatLevel: 125 }];
