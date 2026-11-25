@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795639707277,
+ "at": 1795639729914,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2310 TARGET_COUNT=231 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2300 TARGET_COUNT=230 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -93,7 +93,7 @@
    ]
   },
   {
-   "account": "PackageDeal",
+   "account": "Kiltlifter",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -106,7 +106,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:440",
-   "role": "helper",
+   "role": "army",
    "resources": [
     "varrock-se-mine"
    ]
@@ -132,22 +132,18 @@
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "mining",
-    "ore"
+    "scripts/aio-logistics.ts ITEM_ID=237 QUANTITY=1 \"ITEM_NAME=Unicorn horn\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -214,20 +210,20 @@
    "role": "helper"
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
+   "account": "PackageDeal",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-564-2-p861 ITEM_ID=564 QUANTITY=2 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
-    "scripts/aio-logistics.ts ITEM_ID=1639 QUANTITY=1 \"ITEM_NAME=Emerald ring\" -- loadout",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=2 -- magic items enchant:emerald_ring - 1 1200"
+    "runecraft",
+    "air"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "50"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2552",
-   "role": "army"
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   },
   {
    "account": "mmtha0205",
@@ -252,92 +248,49 @@
    ]
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "helper",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "SporranDip",
+   "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=3 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "Stirmypot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Stirmypot",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Stirmypot",
+   "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
   },
   {
-   "account": "Bigpackage",
+   "account": "Dipstick",
+   "script": "scripts/generated/quest-ikov.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
+   "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
+    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:235",
+   "goal": "goal:quest_board:itwatchtower",
    "role": "army"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Abracadickra",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Abracadickra",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
   }
  ],
  "army": [
@@ -348,8 +301,8 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "bigpackage",
   "billionaire",
-  "dipstick",
   "fatstack",
   "fingerblastr",
   "fingersmith",
@@ -363,7 +316,7 @@
   "pocketpython",
   "quickhandjob",
   "sausagefest",
-  "swordinhand",
+  "sporrandip",
   "thefullmonty",
   "undermykilt",
   "yewfirst"
