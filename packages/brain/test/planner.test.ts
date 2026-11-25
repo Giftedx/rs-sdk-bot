@@ -9,8 +9,11 @@ import {
     type WorldSnapshot,
 } from '../src/contracts';
 import {
+    buildPlannerSharedIndex,
     canProtectedAccountLaunch,
+    defectBlocksAccount,
     evaluateBestGearUpgrade,
+    FLEET_QUARANTINE_MIN_COUNT,
     planAccount,
     xpForLevel,
 } from '../src/planner';
@@ -1491,4 +1494,77 @@ test('planner prefers deterministic npc_shop (zaff Staff of air) over higher-cos
         activityId: 'market:ge-buy',
         config: { mode: 'ge-buy', itemId: 536, quantity: 7 },
     });
+});
+
+test('a first worker defect holds the activity only for the account that failed; a repeat or a death holds it for the fleet', () => {
+    const acct = makeAcct({
+        skills: { Herblore: { level: 1, xp: 0 }, Mining: { level: 1, xp: 0 } },
+        quests: {},
+        bank: { items: { 995: 50_000, 91: 50, 221: 50 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { Packhorse: acct },
+    };
+    const demand: GoalDemand = {
+        id: 'd:herb-train',
+        goalKind: 'specialist_prep',
+        valueScore: 10,
+        valuePerHour: 10,
+        target: { kind: 'skill', account: 'Packhorse', skill: 'Herblore', targetLevel: 20 },
+        fulfilled: 0,
+        remaining: 1,
+        priorityWeight: 1,
+        assignedAccount: 'Packhorse',
+        active: true,
+    };
+    const druidDefect = (account: string, count: number, outcomeKind: DefectRecord['outcomeKind'] = 'worker_defect'): DefectRecord => ({
+        id: `defect:quest:sweep-druid:${account}:${count}:${outcomeKind}`,
+        activityId: 'quest:sweep-druid',
+        faultSignature: 'exit unknown',
+        outcomeKind,
+        account,
+        observedAt: NOW - 1000,
+        quarantinedAt: NOW - 1000,
+        expiresAt: NOW + 60_000,
+        quarantined: true,
+        logPath: '.practice/live/logs/test.log',
+        detail: 'exit unknown',
+        count,
+    });
+    const plan = (defects: DefectRecord[], shared: boolean) => planAccount(acct, {
+        world,
+        activities: ACTIVITIES,
+        demands: [demand],
+        defects,
+        ...(shared ? { _sharedIndex: buildPlannerSharedIndex({ world, activities: ACTIVITIES, defects }) } : {}),
+    });
+    const usesDruid = (p: ReturnType<typeof planAccount>) =>
+        p.steps.some((s) => s.stepKind === 'unlock' && s.questSlug?.toLowerCase() === 'druid');
+
+    for (const shared of [false, true]) {
+        // Another account's single failure leaves the Druidic Ritual unlock open to this account.
+        expect(usesDruid(plan([druidDefect('Ballspinner', 1)], shared))).toBe(true);
+        // This account's own failure holds the activity for this account.
+        expect(usesDruid(plan([druidDefect('Packhorse', 1)], shared))).toBe(false);
+        expect(usesDruid(plan([druidDefect('packhorse', 1)], shared))).toBe(false);
+        // A repeated fault signature holds it for every account.
+        expect(usesDruid(plan([druidDefect('Ballspinner', FLEET_QUARANTINE_MIN_COUNT)], shared))).toBe(false);
+        // A death holds it for every account at the first occurrence.
+        expect(usesDruid(plan([druidDefect('Ballspinner', 1, 'death')], shared))).toBe(false);
+        // An expired or released defect holds nothing.
+        expect(usesDruid(plan([{ ...druidDefect('Packhorse', 3), expiresAt: NOW - 1 }], shared))).toBe(true);
+        expect(usesDruid(plan([{ ...druidDefect('Packhorse', 3), quarantined: false }], shared))).toBe(true);
+    }
+
+    expect(defectBlocksAccount(druidDefect('Ballspinner', 1), 'Packhorse', NOW)).toBe(false);
+    expect(defectBlocksAccount(druidDefect('Ballspinner', 1), 'BALLSPINNER', NOW)).toBe(true);
+    expect(defectBlocksAccount(druidDefect('Ballspinner', 2), 'Packhorse', NOW)).toBe(true);
+    const sharedIndex = buildPlannerSharedIndex({ world, activities: ACTIVITIES, defects: [druidDefect('Ballspinner', 1)] });
+    expect(sharedIndex.eligibleActivities.some((a) => a.id === 'quest:sweep-druid')).toBe(true);
+    const fleetIndex = buildPlannerSharedIndex({ world, activities: ACTIVITIES, defects: [druidDefect('Ballspinner', 2)] });
+    expect(fleetIndex.eligibleActivities.some((a) => a.id === 'quest:sweep-druid')).toBe(false);
 });

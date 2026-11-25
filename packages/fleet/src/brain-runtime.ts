@@ -31,6 +31,7 @@ import {
     createDemandEngine,
     createRateStore,
     defaultActivityCatalog,
+    defectBlocksAccount,
     inspectWorldSnapshot,
     isProtectedAccountName,
     loadCampaignManifests,
@@ -716,11 +717,8 @@ export function applyActivityOverridesToPlan(
         return donors;
     };
     const assignedIdleDonors = collectAssignedIdleDonors(plan.transferOrders);
-    const quarantinedActivityIds = new Set(
-        input.defects
-            .filter((d) => d.quarantined && (d.expiresAt === undefined || input.world.at < d.expiresAt))
-            .map((d) => d.activityId),
-    );
+    const quarantinedFor = (activityId: string, account: string): boolean =>
+        input.defects.some((d) => d.activityId === activityId && defectBlocksAccount(d, account, input.world.at));
     const reservedSlotCount = inTradeAccounts.size + assignedIdleDonors.size;
     let usedSlots = reservedSlotCount + Object.values(nextAccountPlans).filter((p) => p.steps.length > 0).length;
     const overriddenRecipients = new Set<string>();
@@ -746,7 +744,7 @@ export function applyActivityOverridesToPlan(
         const act = input.catalog.get(ov.activityId);
         if (!act) continue;
         if ((acct.protectedClock || isProtectedAccountName(acct.name)) && act.protectedAllowed !== true) continue;
-        if (quarantinedActivityIds.has(act.id)) continue;
+        if (quarantinedFor(act.id, acct.name)) continue;
         if (!spotHasCapacity(act, acct.name)) continue;
 
         const planned = planAccount(acct, {
