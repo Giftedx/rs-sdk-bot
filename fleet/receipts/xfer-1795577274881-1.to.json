@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795577274881-1",
  "account": "Shaftsinker",
  "partner": "TheFullMonty",
@@ -12,6 +12,16 @@
  "claim": "3bfebbfa-e002-4cb1-9167-df6ae78fb712",
  "count": 0,
  "ok": false,
- "at": 1795577881113,
- "detail": "trade claimed"
+ "at": 1795578175176,
+ "detail": "Error: no matching trade completed: player_not_found: Player not found nearby: /^TheFullMonty$/i",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795577881467-0000027912-0000000001",
+  "at": 1795578175163,
+  "sha256": "34059b37f2bb388ecb579b5f9dee17f70b40b321eaaeda97e45214e0ee09f34e"
+ },
+ "screen": false
 }
