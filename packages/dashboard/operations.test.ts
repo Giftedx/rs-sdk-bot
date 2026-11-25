@@ -442,3 +442,17 @@ test('the fleet goal meter counts XP on the server curve, not the level ratio',(
  expect(share({goalNow:99,goalLevel:99,goalXp:998_458})).toBeNull();
  expect(new Function('globalThis',`${code};return goalShare;`)({})({goalNow:50,goalLevel:99,goalXp:40_000})).toBeCloseTo(50.5,1);
 });
+
+test('desk commands put their fields at the envelope top level; a queued task stays under task',async()=>{
+ const start=operations.indexOf(' async function command(');
+ const code=operations.slice(start,operations.indexOf('\n }',start)+3);
+ const sent:any[]=[];
+ const fetch=async(_url:string,init:any)=>{sent.push(JSON.parse(init.body));return {ok:true,status:200,json:async()=>({status:'submitted'})};};
+ const command=new Function('meta','loadMeta','fetch','crypto',`${code};return command;`)({nonce:'n'},async()=>{},fetch,{randomUUID:()=>'uuid-1'});
+ await command('override-account',{id:'operator-abc',account:'Worker',activityId:'mine:iron',durationMin:15,reason:'focus'}).catch(()=>{});
+ expect(sent[0]).toEqual({id:'abc',action:'override-account',account:'Worker',activityId:'mine:iron',durationMin:15,reason:'focus'});
+ await command('queue',{id:'task-7',goal:'Cook sharks'},{entry:'scripts/cook.ts'}).catch(()=>{});
+ expect(sent[1]).toEqual({id:'task-7',action:'queue',task:{id:'task-7',goal:'Cook sharks'},definition:{entry:'scripts/cook.ts'}});
+ await command('pause').catch(()=>{});
+ expect(sent[2]).toEqual({id:'uuid-1',action:'pause'});
+});
