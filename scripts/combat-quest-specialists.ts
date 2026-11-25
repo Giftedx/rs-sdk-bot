@@ -800,6 +800,9 @@ export async function runWildyPvpRelogLoop(
     totalTicks: number;
     swings: number;
     nonZeroDtSwings: number;
+    nzLvlCount: number;
+    nzWaitCount: number;
+    nzSamples: string[];
     timeoutSwings: number;
     recenterSwings: number;
 }> {
@@ -818,6 +821,9 @@ export async function runWildyPvpRelogLoop(
     let totalTicks = opts.setupTicks;
     let swings = 0;
     let nonZeroDtSwings = 0;
+    let nzLvlCount = 0;
+    let nzWaitCount = 0;
+    const nzSamples: string[] = [];
     let timeoutSwings = 0;
     let recenterSwings = 0;
     const lastHitSeq = new Map<string, number>();
@@ -845,6 +851,7 @@ export async function runWildyPvpRelogLoop(
 
             const tick0 = sess.tick();
             const curStat = skillInfo(sess, opts.skill);
+            const curHp = skillInfo(sess, 'Hitpoints');
             if (curStat.baseLevel >= opts.targetLevel) {
                 await logoutSession(sess);
                 const doneTick = sess.tick();
@@ -854,7 +861,7 @@ export async function runWildyPvpRelogLoop(
 
                 const finalSess = await openBot(opts.botName, { log: () => {} });
                 await dismissContinueDialogs(finalSess, () => true, 4);
-                return { session: finalSess, totalTicks, swings, nonZeroDtSwings, timeoutSwings, recenterSwings };
+                return { session: finalSess, totalTicks, swings, nonZeroDtSwings, nzLvlCount, nzWaitCount, nzSamples, timeoutSwings, recenterSwings };
             }
 
             if (!p0 || p0.worldZ < 3900) {
@@ -891,6 +898,7 @@ export async function runWildyPvpRelogLoop(
                 continue;
             }
 
+            const tWait = sess.tick() - tick0;
             const prayPts = sess.sdk.getState()?.prayers?.prayerPoints ?? 0;
             const prayBase = skillInfo(sess, 'Prayer').baseLevel;
             const styleCom = opts.styleForState
@@ -918,6 +926,9 @@ export async function runWildyPvpRelogLoop(
                 await logoutSession(sess);
             }
             const endTick = sess.tick();
+            const postStat = skillInfo(sess, opts.skill);
+            const postHp = skillInfo(sess, 'Hitpoints');
+            const endDlg = sess.sdk.getDialog()?.isOpen ? 1 : 0;
             const deadAfter = posOf(sess)?.isDead === true;
             await closeWithin([sess], 5000);
             if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
@@ -927,7 +938,16 @@ export async function runWildyPvpRelogLoop(
             }
             swings++;
             const dt = Math.max(0, endTick - tick0);
-            if (dt > 0) nonZeroDtSwings++;
+            if (dt > 0) {
+                nonZeroDtSwings++;
+                if (postStat.baseLevel > curStat.baseLevel || postHp.baseLevel > curHp.baseLevel) nzLvlCount++;
+                if (tWait > 0) nzWaitCount++;
+                if (nzSamples.length < 8) {
+                    const tx = target.x ?? target.worldX ?? 0;
+                    const tz = target.z ?? target.worldZ ?? 0;
+                    nzSamples.push(`${swings}:dt=${dt}:w=${tWait}:r=${endReason[0]}:dl=${endDlg}:lvl=${curStat.baseLevel}-${postStat.baseLevel}:hp=${curHp.baseLevel}-${postHp.baseLevel}:xp=${postStat.experience - curStat.experience}:t=${target.name}@${tx},${tz}`);
+                }
+            }
             const swingTicks = dt + 1;
             totalTicks += swingTicks;
             if (swings <= 3) {
@@ -1181,11 +1201,22 @@ export interface SpecialistWaterfallOptions {
     extraTombDropIds?: readonly number[];
 }
 
+export interface WaterfallPhases {
+    alm: number;
+    had: number;
+    gol: number;
+    cw: number;
+    tomb: number;
+    pick: number;
+    falls: number;
+    exit: number;
+}
+
 export async function runSpecialistWaterfall(
     s: Session,
     stop: StopFn,
     opts: SpecialistWaterfallOptions = {},
-): Promise<{ attackXp: number; strengthXp: number }> {
+): Promise<{ attackXp: number; strengthXp: number; phases: WaterfallPhases }> {
     const LOC = {
         raft: { id: 1987, x: 2509, z: 3493 },
         bookcase: { id: 1989, x: 2520, z: 3426 },
@@ -1289,6 +1320,13 @@ export async function runSpecialistWaterfall(
 
     const atk0 = skillInfo(s, 'Attack').experience;
     const str0 = skillInfo(s, 'Strength').experience;
+    let phaseTick = s.tick();
+    const markPhase = () => {
+        const now = s.tick();
+        const dt = now - phaseTick;
+        phaseTick = now;
+        return dt;
+    };
 
     // 1. Almera -> Raft -> Hudon -> Rock -> Tree -> Barrel -> Hadley bookcase.
     let almeraErr = 'Dialog did not open';
@@ -1310,6 +1348,7 @@ export async function runSpecialistWaterfall(
     if (!s.sdk.getDialog()?.isOpen) throw Error(`talk Almera failed: ${almeraErr}`);
     const almeraDone = await converse([/how can i help/i], () => sawDialog(/small raft out back|you are kind/i) && !s.sdk.getDialog()?.isOpen, 40);
     if (!almeraDone) throw Error('Almera dialogue incomplete');
+    const phAlm = markPhase();
 
     const onIsland = () => inBox(2510, 3476, 2514, 3481);
     const crossToLedge = async (withHudon: boolean) => {
@@ -1349,6 +1388,7 @@ export async function runSpecialistWaterfall(
     if (!readDone) throw Error('failed reading Book on Baxtorian');
     await s.direct({ type: 'closeModal', reason: 'SDK' });
     await climb('hadley down', 2518, 3429, /climb-down/i, () => posOf(s)?.level === 0);
+    const phHad = markPhase();
 
     // 2. Hadley -> Golrie cellar -> Pebble -> Ring of dueling directly to CW -> Tomb.
     const syncWaterfallPfm = createPfmSustainer(s);
@@ -1386,6 +1426,7 @@ export async function runSpecialistWaterfall(
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
         await opts.afterGolrie();
     }
+    const phGol = markPhase();
 
     if (opts.skipCwTeleportToTomb) {
         await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
@@ -1398,6 +1439,7 @@ export async function runSpecialistWaterfall(
         await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     }
+    const phCw = markPhase();
 
     // 3. Tomb: drop only banned weapons/runes (keep Ring, Amulet, and all potions).
     const tombDropIds = Array.from(new Set([...RUNES, ITEM.scim, ...(opts.extraTombDropIds ?? [])]));
@@ -1439,6 +1481,7 @@ export async function runSpecialistWaterfall(
     await walkFast([{ x: 2555, z: 9844, tol: 1 }], 45, 'to tomb ladder', () => syncWaterfallPfm(true));
     await climb('tomb up', 2556, 9844, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    const phTomb = markPhase();
 
     for (let i = 0; i < 24 && activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
         opts.onEnergy?.();
@@ -1456,6 +1499,7 @@ export async function runSpecialistWaterfall(
     const inFalls = () => inBox(2555, 9860, 2615, 9925);
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
     await stepAct('ledge door', () => opLoc(LOC.ledgeDoor), inFalls, 10, 4);
+    const phPick = markPhase();
 
     await walkFast([{ x: 2574, z: 9873, tol: 2 }, { x: 2584, z: 9876, tol: 2 }, { x: 2589, z: 9887, tol: 1 }], 60, 'falls crate', () => syncWaterfallPfm(true));
     await stepAct('falls crate', () => { syncWaterfallPfm(true); return opLoc(LOC.baxCrate); }, () => has(ITEM.baxKey), 10, 4);
@@ -1517,6 +1561,7 @@ export async function runSpecialistWaterfall(
 
     const atkBeforeChalice = skillInfo(s, 'Attack').experience;
     await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atkBeforeChalice >= 300_000, 10, 4);
+    const phFalls = markPhase();
 
     // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
@@ -1529,10 +1574,12 @@ export async function runSpecialistWaterfall(
     await stepAct('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511, 3463, 3), 10, 4);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
+    const phExit = markPhase();
 
     return {
         attackXp: skillInfo(s, 'Attack').experience - atk0,
         strengthXp: skillInfo(s, 'Strength').experience - str0,
+        phases: { alm: phAlm, had: phHad, gol: phGol, cw: phCw, tomb: phTomb, pick: phPick, falls: phFalls, exit: phExit },
     };
 }
 
@@ -1566,15 +1613,18 @@ export async function runMeleePvpSpecialist(
 
     milestone('start');
     await startAndExitTutorial(s, new Set(), opts.stop);
+    const tTut = elapsed();
     milestone('tutorial');
 
     await receiveSupplyKit(s, opts.supplierName, kit, opts.stop, {
         altSlots: new Map([[3016, { allowedIds: SUPER_ENERGY_IDS, satisfied: () => true }]]),
     });
+    const tKit = elapsed();
     milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
     await buryBonesTo43(s, opts.stop);
+    const tPray = elapsed();
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
@@ -1601,6 +1651,7 @@ export async function runMeleePvpSpecialist(
     const tAlmera = elapsed();
     milestone('almera');
 
+    let wfPhases: WaterfallPhases | undefined;
     if (opts.runWaterfallFn) {
         await opts.runWaterfallFn({
             session: s,
@@ -1616,7 +1667,7 @@ export async function runMeleePvpSpecialist(
             superEnergy: true,
         });
     } else {
-        await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy });
+        wfPhases = (await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy })).phases;
     }
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     const tWaterfall = elapsed();
@@ -1654,6 +1705,9 @@ export async function runMeleePvpSpecialist(
         totalTicks,
         swings,
         nonZeroDtSwings,
+        nzLvlCount,
+        nzWaitCount,
+        nzSamples,
         timeoutSwings,
         recenterSwings,
     } = await runWildyPvpRelogLoop(s, {
@@ -1673,9 +1727,13 @@ export async function runMeleePvpSpecialist(
         const sk = skillInfo(finalSess, skill);
         console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${targetTicks}`);
         if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
+        const almStep = `tut${tTut}/kit${tKit - tTut}/pry${tPray - tKit}/cwa${tAlmera - tPray}`;
+        const wfStep = wfPhases
+            ? ` wfStep=a${wfPhases.alm}/h${wfPhases.had}/g${wfPhases.gol}/c${wfPhases.cw}/t${wfPhases.tomb}/p${wfPhases.pick}/f${wfPhases.falls}/e${wfPhases.exit}`
+            : '';
         return {
             session: finalSess,
-            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} alm=${tAlmera} wf=${tWaterfall - tAlmera} lev=${setupTicks - tWaterfall} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings} to=${timeoutSwings} rec=${recenterSwings}`,
+            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} alm=${tAlmera} almStep=${almStep} wf=${tWaterfall - tAlmera}${wfStep} lev=${setupTicks - tWaterfall} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings}(lvl=${nzLvlCount},w=${nzWaitCount}) nz=[${nzSamples.join(';')}] to=${timeoutSwings} rec=${recenterSwings}`,
         };
     } catch (err) {
         await logoutSession(finalSess).catch(() => {});
