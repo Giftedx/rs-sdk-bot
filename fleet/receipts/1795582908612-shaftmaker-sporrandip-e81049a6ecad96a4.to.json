@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795582908612-shaftmaker-sporrandip-e81049a6ecad96a4",
+ "account": "SporranDip",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 400000,
+ "claim": "42c055aa-72a5-49c8-997f-a8fffe3a0387",
+ "count": 400000,
+ "ok": true,
+ "at": 1795583099511,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 400000
+ },
+ "bank": {
+  "count": 400000,
+  "at": 1795583098663
+ },
+ "logout": {
+  "attemptId": "1795583085573-0000013004-0000000001",
+  "at": 1795583099425,
+  "sha256": "b645af6ed1c47c27c7f28e164f2e8429a037db884f12fdcc498e69325da87f9b"
+ },
+ "screen": true
+}

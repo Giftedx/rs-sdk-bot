@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795582967382,
+ "at": 1795583138999,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -93,40 +93,19 @@
    "role": "helper"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "1359",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1359",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1359",
-   "role": "army"
-  },
-  {
-   "account": "Bigpackage",
+   "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith TRAIN_SKILL=Smithing TARGET_LEVEL=35 BAR_RESERVE=0 -- smithing anvil",
-    "scripts/aio-market.ts ORDER_KEY=brain-2353-8-p748 ITEM_ID=2353 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=748 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=41 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:41 BATCH_UNITS=8 -- smithing anvil 1500"
+    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:41",
+   "goal": "campaign:haggis:item:91",
    "role": "army"
   }
  ],
@@ -138,6 +117,7 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
+  "bigpackage",
   "billionaire",
   "bowbeforeme",
   "deeppockets",
@@ -152,12 +132,12 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "thefullmonty",
   "trousersnake",
