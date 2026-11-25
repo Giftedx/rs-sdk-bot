@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795619436873,
+ "at": 1795619843500,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -139,7 +139,7 @@
    "role": "helper"
   },
   {
-   "account": "TheFullMonty",
+   "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
@@ -171,7 +171,6 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
@@ -183,6 +182,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "woodpecker",
   "yewfirst"
