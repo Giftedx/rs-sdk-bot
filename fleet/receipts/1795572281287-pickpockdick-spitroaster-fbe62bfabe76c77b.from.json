@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795572281287-pickpockdick-spitroaster-fbe62bfabe76c77b",
  "account": "PickpockDick",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 70,
  "claim": "aa833a89-5ca0-49fd-ab6a-6912e4b1c13b",
- "count": 0,
- "ok": false,
- "at": 1795572422202,
- "detail": "trade claimed"
+ "count": 70,
+ "ok": true,
+ "at": 1795573090218,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 70,
+  "after": 0
+ },
+ "bank": {
+  "count": 70,
+  "at": 1795572432667
+ },
+ "logout": {
+  "attemptId": "1795572422211-0000025352-0000000001",
+  "at": 1795573090204,
+  "sha256": "63e14611df1bfa13ec936b83ece92c506e0e46b527a917f0a79ad5632380c3d0"
+ },
+ "screen": true
 }
