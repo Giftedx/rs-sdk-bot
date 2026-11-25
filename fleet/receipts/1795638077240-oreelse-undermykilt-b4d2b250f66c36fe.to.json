@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795638077240-oreelse-undermykilt-b4d2b250f66c36fe",
  "account": "UnderMyKilt",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Nails",
  "requested": 12,
  "claim": "9c2b3797-1833-4c19-9b83-feedd869cd1b",
- "count": 0,
- "ok": false,
- "at": 1795638081591,
- "detail": "trade claimed"
+ "count": 12,
+ "ok": true,
+ "at": 1795638451689,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 12
+ },
+ "bank": {
+  "count": 12,
+  "at": 1795638450942
+ },
+ "logout": {
+  "attemptId": "1795638081600-0000017620-0000000001",
+  "at": 1795638451674,
+  "sha256": "92aab5d744b11da147f5bf03a1820bc382c4bc2420148a728716af10a04becea"
+ },
+ "screen": true
 }
