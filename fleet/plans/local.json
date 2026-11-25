@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795602020247,
+ "at": 1795602056376,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,6 +24,21 @@
    "role": "rehearsal"
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
+  },
+  {
    "account": "BackdoorMan",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -40,22 +55,6 @@
    "role": "helper"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
-  },
-  {
    "account": "Unsheathed",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -69,23 +68,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1987",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
    "role": "army"
   },
   {
@@ -192,6 +174,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2152",
    "role": "helper"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:mmtha0205 BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:mmtha0205",
+   "role": "army"
   },
   {
    "account": "Knightstick",
