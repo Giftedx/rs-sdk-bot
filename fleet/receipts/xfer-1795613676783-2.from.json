@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795613676783-2",
  "account": "Hocuspokeus",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "2d4d57f6-10ed-4bcb-8df6-07bcc12294f8",
- "count": 0,
- "ok": false,
- "at": 1795613822793,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795614046735,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795613831588
+ },
+ "logout": {
+  "attemptId": "1795613822802-0000022700-0000000001",
+  "at": 1795614046725,
+  "sha256": "c41f6672bbbe4b4bb90e4e181e52ae55256c5d3c8c30b4015e8e0ccaf9154db6"
+ },
+ "screen": true
 }
