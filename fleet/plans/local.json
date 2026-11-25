@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795624453020,
+ "at": 1795624543631,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -374,12 +374,12 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1515-25-p486",
+    "ORDER_KEY": "brain-1515-25-p487",
     "ITEM_ID": "1515",
     "QUANTITY": "25",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "486",
+    "LIMIT_PRICE": "487",
     "DEMAND_ID": "campaign:haggis:item:1515",
     "BATCH_UNITS": "25"
    },
