@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795617787381,
+ "at": 1795617855581,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,39 +59,7 @@
    "role": "pvp"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "Woodpecker",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "YewFirst",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -201,6 +169,21 @@
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/quest-junglepotion.ts --",
+    "scripts/generated/quest-zombiequeen.ts DEMAND_ID=goal:quest_board:zombiequeen BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:zombiequeen",
+   "role": "army"
   }
  ],
  "army": [
@@ -232,7 +215,8 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "undermykilt"
+  "undermykilt",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
