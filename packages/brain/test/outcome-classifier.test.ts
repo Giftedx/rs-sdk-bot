@@ -57,6 +57,19 @@ afterEach(() => {
 });
 
 describe('OutcomeClassifier & classifyRawWorkerExit', () => {
+    test('a died=false or "died":false field is not a death; a true flag or a death in words is', () => {
+        const run = (stdout: string, status = 'fail', exitCode = 1) => classifyRawWorkerExit({ activityId: 'quest:dragon', account: 'Bot1', exitCode, status, reason: 'blocked after 3 runs', stdout }).kind;
+        expect(run('RESULT fail walk guildmaster approach: quest corridor exhausted bounded retries  xp= at=3047,9757,0 ticks=9 hpMin=99 eats=0 walkTicks=6 retries=2 died=false milestones= jumps=')).toBe('worker_defect');
+        expect(run('RESULT ok {"ok":true,"conserved":true,"hpMin":76,"died":false,"damaged":false}', 'ok', 0)).toBe('target_met');
+        expect(run('RESULT ok {"totalBanked":27,"held":0,"trips":1,"died": false,"failure":"-"}', 'ok', 0)).toBe('target_met');
+        expect(run('RESULT fail level=60 xp=273000 totalTicks=900 relogs=2 stop=died')).toBe('death');
+        expect(run('RESULT fail died at 3094,3488 after 2 eats')).toBe('death');
+        expect(run('RESULT fail quest-sweep travel died=true at=3070,3650,0')).toBe('death');
+        expect(run('RESULT fail {"ok":false,"died":true}')).toBe('death');
+        expect(run('DEATH at=2934,9826,0 wild=0 hp=1/84 by=Black_Knight#179')).toBe('death');
+        expect(run('RESULT fail Oh dear, you are dead!')).toBe('death');
+    });
+
     test('classifyRawWorkerExit maps raw process exits to all 8 valid RunOutcome kinds', () => {
         const cases: Array<Parameters<typeof classifyRawWorkerExit>[0]> = [
             { activityId: 'a:1', account: 'Bot1', exitCode: 0, status: 'done', ticksElapsed: 100, unitsCompleted: 20, xpGained: { Woodcutting: 500 } },

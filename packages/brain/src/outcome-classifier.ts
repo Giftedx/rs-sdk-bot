@@ -186,7 +186,10 @@ const INFRA_DRAIN_RE = /(?:server.?drain|world.?update|restarting|maintenance|en
 const INFRA_CLAIM_RE = /(?:remote.?git|push.*rejected|non-fast-forward|git.*lock|fleet-data.*sync|claim.?authority)/i;
 const INFRA_NETWORK_RE = /(?:websocket|gateway|connect|network|socket).*(?:timeout|timed out|etimedout)/i;
 const INFRA_GENERIC_RE = /(?:\binfra.?fault\b|circuit.?breaker|rate.?limit)/i;
-const DEATH_TEXT_RE = /\bdied\b|\bdeath\b|you are dead|oh dear/i;
+// A death in words ("stop=died", "RESULT fail died") or a true flag. A field name with its value (died=false,
+// "died":false, death=0) is a report, not a death: worker RESULT lines carry died=false on every run.
+const DEATH_TEXT_RE = /\b(?:died|death)\b(?!\s*(?:=|"?\s*:))|\bdied(?:=|"\s*:\s*)true\b|you are dead|oh dear/i;
+export const deathText = (text: string) => DEATH_TEXT_RE.test(text);
 const SESSION_UNSETTLED_RE = /session.?unsettled|logout.?proof|still.?logged.?in|already logged in|session.?held|world.?switch.?failed|not logged out/i;
 const LOCATION_STRANDED_RE = /location.?stranded|stranded|no path to|cannot reach|unreachable bank|stuck.*(?:upstairs|basement|dungeon|island)/i;
 const MARKET_UNAVAILABLE_RE = /market.?unavailable|out of stock|no ge offers|ge.*unavailable|shop.*empty|buy limit|no sellers|not sold here/i;
