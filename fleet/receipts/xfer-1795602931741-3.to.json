@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795602931741-3",
+ "account": "Bigchopper",
+ "partner": "Ballbag",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 2,
+ "claim": "3c43d005-c788-44fe-860a-99982c69faa2",
+ "count": 0,
+ "ok": false,
+ "at": 1795603544018,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795603536157-0000003124-0000000001",
+  "at": 1795603544003,
+  "sha256": "7434878ce81c06624d115eee18f84cc1ff1f66ee8801e9d66249fae1d7091d9b"
+ },
+ "screen": false
+}

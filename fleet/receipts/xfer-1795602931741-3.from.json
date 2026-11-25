@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795602931741-3",
+ "account": "Ballbag",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 2,
+ "claim": "c14bcd8a-ee31-4b01-aebd-09bafbd1a121",
+ "count": 0,
+ "ok": false,
+ "at": 1795603539204,
+ "detail": "Error: stock short: Swamp toad 0 banked + 0 held < 2",
+ "logout": {
+  "attemptId": "1795603532533-0000011984-0000000001",
+  "at": 1795603539189,
+  "sha256": "ab5fabf87a32ab2c1e30baad9f34bf39c2363ee66e07b05e737b25835c99b1ce"
+ },
+ "screen": false
+}
