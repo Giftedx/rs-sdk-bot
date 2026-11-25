@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795587773702-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "TheFullMonty",
+  "item": "Vial of water",
+  "count": 1,
+  "itemId": 227,
+  "start": 1795587773702,
+  "end": 1795588673702,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

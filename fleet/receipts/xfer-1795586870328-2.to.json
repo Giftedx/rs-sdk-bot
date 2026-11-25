@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795586870328-2",
  "account": "TheFullMonty",
  "partner": "MineYourBiz",
@@ -12,6 +12,12 @@
  "claim": "b3d9ab4f-1dd3-4b6e-8cca-6d4901311687",
  "count": 0,
  "ok": false,
- "at": 1795587583308,
- "detail": "trade claimed"
+ "at": 1795587770787,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795587583319-0000022124-0000000001",
+  "at": 1795587770773,
+  "sha256": "fdf653820256ef5c967678a567feb037f7b95969ae948cbfd49c762f87ed2e0b"
+ },
+ "screen": false
 }
