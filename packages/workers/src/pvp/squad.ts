@@ -2077,12 +2077,12 @@ export async function runPkSquadCli(
         const { tickWaits } = await import('../../../core/src/tick-stream');
         tickWaits.active++;
         try {
-            all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
+            all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true, patientClaim: true }), (sessions, detail) => finish(sessions, false, detail));
         } finally {
             tickWaits.active--;
         }
     } else {
-        all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
+        all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true, patientClaim: true }), (sessions, detail) => finish(sessions, false, detail));
     }
     const squad = all.slice(0, ours.length).map(squadWorkSession), gang = all.slice(ours.length).map(squadWorkSession);
     const pickup = get('PICKUP', '1') === '1';
