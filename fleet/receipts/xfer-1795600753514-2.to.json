@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795600753514-2",
+ "account": "PickpockDick",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "9748d219-2117-494a-a113-df461dd754b6",
+ "count": 0,
+ "ok": false,
+ "at": 1795601334337,
+ "detail": "trade claimed"
+}

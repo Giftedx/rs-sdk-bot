@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795601107095-2",
  "account": "BoneToPick",
  "partner": "Kiltlifter",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "bd9269d1-4e22-441f-987d-b01b6603d404",
- "count": 0,
- "ok": false,
- "at": 1795601319873,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795601334095,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795601333336
+ },
+ "logout": {
+  "attemptId": "1795601319882-0000025400-0000000001",
+  "at": 1795601334083,
+  "sha256": "3505f1b144a6559b2d80774442e81cf8be90fce5f1896196269a58a7a509d760"
+ },
+ "screen": true
 }
