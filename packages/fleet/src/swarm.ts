@@ -87,7 +87,7 @@ export type Job = {
     demandId?: string;
 };
 
-type Plan ={ maxBots: number; minFreeGB: number; jobs: Job[]; boundedRecovery?: boolean; boundedInspection?: boolean };
+type Plan = { maxBots: number; minFreeGB: number; jobs: Job[]; boundedRecovery?: boolean; boundedInspection?: boolean };
 
 type Run = {
     pid: number;
