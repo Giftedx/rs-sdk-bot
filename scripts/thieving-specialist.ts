@@ -439,65 +439,6 @@ export async function runArdougneStunRelogThieving(opts: {
             }
         }
 
-        // Lv 35..54: steal nearby Market Silver/Fur/Silk stalls when immediately nearby & unwatched to cut Guard relogs.
-        const inMarket = st.player.worldX >= 2648 && st.player.worldX <= 2678 && st.player.worldZ >= 3290 && st.player.worldZ <= 3322;
-        if (lvl >= 35 && lvl < 55 && inMarket) {
-            const junkSlot = main.sdk.getInventory().find(
-                i => MARKET_STALL_LOOT_IDS.has(i.id) || i.id === OBJ_SUPER_ENERGY_4 || i.id === 229,
-            )?.slot;
-            if (junkSlot !== undefined && main.sdk.getInventory().length >= 28) {
-                await main.direct({ type: 'dropItem', slot: junkSlot, reason: 'SDK' });
-            }
-            if (main.sdk.getInventory().length < 28) {
-                const { stallWatched } = await import('../packages/workers/src/gather');
-                const { pf, recipes, sightMap } = await getStallCtx();
-                let pickedStall: { stall: NonNullable<typeof st.nearbyLocs>[number]; x: number; z: number } | undefined;
-                for (const spec of MARKET_STALLS) {
-                    if (lvl < spec.minLevel) continue;
-                    const recipe = recipes.get(spec.recipeName);
-                    const sight = sightMap.get(spec.recipeName);
-                    const locs = st.nearbyLocs.filter(
-                        l => spec.locPattern.test(l.name) && l.x <= spec.maxX && l.optionsWithIndex.some(o => /steal/i.test(o.text)),
-                    );
-                    if (!locs.length) continue;
-                    const watched = (x: number, z: number) => recipe && sight
-                        ? stallWatched(recipe, { worldX: x, worldZ: z, level: st.player!.level ?? 0 }, st.nearbyNpcs.map(n => ({ ...n, inCombat: false })), sight)
-                        : st.nearbyNpcs.some(n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x, z }) <= 5);
-                    const tile = locs.flatMap(stall =>
-                        spec.offsets.map(([dx, dz]) => ({ stall, x: stall.x + dx, z: stall.z + dz }))
-                            .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))
-                            .filter(t => !watched(t.x, t.z)),
-                    ).sort((a, b) => chebDist(a, { x: st.player!.worldX, z: st.player!.worldZ }) - chebDist(b, { x: st.player!.worldX, z: st.player!.worldZ }))[0];
-                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= 8) {
-                        pickedStall = tile;
-                        break;
-                    }
-                }
-                if (pickedStall) {
-                    if (st.player.worldX !== pickedStall.x || st.player.worldZ !== pickedStall.z) {
-                        await main.direct({ type: 'walkTo', x: pickedStall.x, z: pickedStall.z, running: true, reason: 'SDK' });
-                        await waitTicks(main, 1);
-                        continue;
-                    }
-                    const op = pickedStall.stall.optionsWithIndex.find(o => /steal/i.test(o.text));
-                    if (op) {
-                        const beforeXp = main.sdk.getSkillXp('Thieving') ?? 0;
-                        await main.direct({ type: 'interactLoc', x: pickedStall.stall.x, z: pickedStall.stall.z, locId: pickedStall.stall.id, optionIndex: op.opIndex, reason: 'SDK' });
-                        for (let w = 0; w < 3 && !opts.isStopped() && (main.sdk.getSkillXp('Thieving') ?? 0) === beforeXp; w++) {
-                            await waitTicks(main, 1);
-                        }
-                        const dropLoot = main.sdk.getInventory().find(i => MARKET_STALL_LOOT_IDS.has(i.id))?.slot;
-                        if (dropLoot !== undefined) {
-                            void main.direct({ type: 'dropItem', slot: dropLoot, reason: 'SDK' });
-                        }
-                        lastPickTick = -99;
-                        pickPending = false;
-                        continue;
-                    }
-                }
-            }
-        }
-
         const { target: npc, blocked } = selectPickpocketTarget(st.nearbyNpcs, tier, lastPickTarget);
 
         if (!npc) {

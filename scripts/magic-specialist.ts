@@ -1,6 +1,6 @@
 // Fresh-account 1-to-99 Magic specialist via Enchant ladder, East Ardougne lever, Kolodion, and 5-per-tick Charge.
 import type { Session } from '../packages/core/src/inprocess';
-import { prayerGuards } from '../packages/core/src/bot/monitors';
+import { releasePrayerGuard } from '../packages/core/src/bot';
 import { componentId } from '../packages/core/src/logout';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import {
@@ -97,18 +97,25 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
   ],
   returnIds: [],
  },
- // Batch 4 (7 diamond -> 37 total + 17 dragonstone -> Lv 72 before Arena)
+ // Batch 4 (7 diamond -> 37 total + 10 dragonstone)
  {
   give: [
    { id: ITEM_IDS.diamond_ring, count: 7 },
-   { id: ITEM_IDS.dragonstone_ring, count: 17 },
+   { id: ITEM_IDS.dragonstone_ring, count: 10 },
   ],
   returnIds: [],
  },
- // Batch 5 (24 slots -> 28 on spec with 4 runes: 18 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
+ // Batch 5 (12 dragonstone -> 22 enchanted before Mage Arena)
  {
   give: [
-   { id: ITEM_IDS.dragonstone_ring, count: 18 },
+   { id: ITEM_IDS.dragonstone_ring, count: 12 },
+  ],
+  returnIds: [],
+ },
+ // Batch 6 (19 slots -> 23 on spec with 4 runes: 13 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
+ {
+  give: [
+   { id: ITEM_IDS.dragonstone_ring, count: 13 },
    { id: ITEM_IDS.lawrune, count: 10 },
    { id: ITEM_IDS.bloodrune, count: 1000 },
    { id: ITEM_IDS.knife, count: 1 },
@@ -544,7 +551,7 @@ async function executeMagicLoop(
  useSafeFoyer = false,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  // Mage Arena fight sends spellOnNpc/spellOnItem every tick under explicit Protect from Magic; stop auto-PrayerGuard holds.
- prayerGuards.get(spec)?.stop();
+ await releasePrayerGuard(spec);
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
  if (((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) !== 1) {
