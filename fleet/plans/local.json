@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601877822,
+ "at": 1795601898487,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -56,6 +56,22 @@
    ]
   },
   {
+   "account": "Wandwanker",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
    "account": "Unsheathed",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -85,21 +101,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "army"
-  },
-  {
-   "account": "Wandwanker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto"
   },
   {
    "account": "TrouserSnake",
