@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795624570556-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Fingerblastr",
+  "to": "Woodpecker",
+  "item": "Coal",
+  "count": 40,
+  "itemId": 453,
+  "start": 1795624570556,
+  "end": 1795625470556,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
