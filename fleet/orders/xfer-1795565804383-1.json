@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795565804383-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Shaftsinker",
+  "item": "Magic shortbow",
+  "count": 1,
+  "itemId": 861,
+  "start": 1795565804383,
+  "end": 1795566704383,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

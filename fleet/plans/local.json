@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795565723309,
+ "at": 1795565812645,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -27,7 +27,7 @@
    "account": "FishAndChips",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=19 -- fishing cage cage",
+    "scripts/aio-logistics.ts ITEM_ID=377 QUANTITY=11 \"ITEM_NAME=Raw lobster\" -- loadout",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=28 -- cooking food"
    ],
    "env": {
@@ -37,6 +37,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:379",
    "role": "auto"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=28 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=28 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "army"
   }
  ],
  "army": [

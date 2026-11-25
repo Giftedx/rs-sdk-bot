@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "1795565112729-masterbaiter-shaftsinker-6f8a52657be4cb01",
+ "account": "Shaftsinker",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 20,
+ "claim": "14db1318-cee1-418f-9079-ad65616bcf6c",
+ "count": 0,
+ "ok": false,
+ "at": 1795565778533,
+ "detail": "Error: transfer requires reconciliation: declined: Trade screen closed before completion",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795565760814-0000027808-0000000001",
+  "at": 1795565778521,
+  "sha256": "7a6fbe9b6a5f8942742960cd27f25d491b3f0501c54da14aa9695cd5463011f6"
+ },
+ "screen": true
+}

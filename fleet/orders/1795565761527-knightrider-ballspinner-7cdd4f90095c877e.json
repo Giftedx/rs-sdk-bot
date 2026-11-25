@@ -1,0 +1,12 @@
+{
+ "id": "1795565761527-knightrider-ballspinner-7cdd4f90095c877e",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Ballspinner",
+ "item": "Coins",
+ "count": 100000,
+ "itemId": 995,
+ "start": 1795565761527,
+ "end": 1795567561527,
+ "takerWaits": true
+}

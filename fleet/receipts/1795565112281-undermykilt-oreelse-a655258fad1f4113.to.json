@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795565112281-undermykilt-oreelse-a655258fad1f4113",
+ "account": "OreElse",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "e105d3a2-18fb-4dbb-899d-0ebdb82657c3",
+ "count": 0,
+ "ok": false,
+ "at": 1795565809275,
+ "detail": "trade claimed"
+}
