@@ -371,9 +371,9 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 },
             ];
         },
-        planTicks: 411,
-        planSource: 'hosted-bench skiller:herblore:specialist 410-411t (<=415t vs #1 424t)',
-        targetCap: 415,
+        planTicks: 383,
+        planSource: 'hosted rehearsal GrindMyHerb 383t (<=384t vs #1 392t)',
+        targetCap: 384,
     },
     {
         account: 'CastMyLoad',

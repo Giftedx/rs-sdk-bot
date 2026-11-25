@@ -99,7 +99,7 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         Shaftshooter: 1663,
         PouchStuffed: 1845,
         CutMyJewels: 134,
-        GrindMyHerb: 415,
+        GrindMyHerb: 384,
         CastMyLoad: 1236,
         BigBoner: 1143,
         SteelRod: 1255,

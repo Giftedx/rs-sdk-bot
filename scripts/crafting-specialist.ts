@@ -380,6 +380,7 @@ async function cutUnlockedGems(
  deadlineTick: number,
  nextHelper?: Session,
  openBankOnFinal = false,
+ leaveGems = 0,
 ): Promise<{ preRequested: boolean; pendingDialogs: number }> {
  let preRequested = false;
  let pendingDialogs = 0;
@@ -400,6 +401,9 @@ async function cutUnlockedGems(
   const stNow = spec.sdk.getState();
   const { gems, batch, willLevel } = selectCutGemBatch(inv, curBase, skillXp(spec, 'Crafting'), 5);
   if (!batch.length) return { preRequested, pendingDialogs };
+  if (leaveGems > 0 && stNow?.bank?.isOpen && gems.length <= leaveGems) {
+   return { preRequested, pendingDialogs };
+  }
   if (stNow?.bank?.isOpen) {
    // MoveClickHandler closes any open modal immediately in processClientsIn, so walk-here + 4 cuts avoids a separate closeModal tick.
    const pNow = playerPos(spec);
@@ -427,12 +431,16 @@ async function cutUnlockedGems(
    !willLevel &&
    pendingDialogs <= (dialogOpen ? 1 : 0);
 
+  // interactLoc sends MoveClick + OpLoc (2 USER_EVENT packets), so keep <= 3 cuts on the bank-open tick to fit the 5/tick limit.
+  const maxCutWithOpen = Math.max(0, totalRemaining - leaveGems);
+  const canOpenThisTick = openBankOnFinal && maxCutWithOpen <= 3 && batch.length >= maxCutWithOpen && (totalRemaining > 0);
+  const cutBatch = canOpenThisTick ? batch.slice(0, maxCutWithOpen) : batch;
   const actions: Promise<unknown>[] = [];
-  for (const gem of batch) {
+  for (const gem of cutBatch) {
    actions.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
   }
   const helperActs: Promise<unknown>[] = [];
-  if (openBankOnFinal && totalRemaining <= 4 && batch.length === totalRemaining) {
+  if (canOpenThisTick) {
    actions.push(
     spec.direct({
      type: 'interactLoc',
@@ -488,12 +496,16 @@ async function fastInProcessBatchTrade(
  let sawConfirm = false;
  let lastReqTick = -10;
  let lastHelperPreReqTick = -10;
+ let helperPipelined = false;
+ let lastHelperAcceptTick = -10;
+ let lastSpecAcceptTick = -10;
 
  while (spec.tick() < opts.deadlineTick) {
   const st = spec.sdk.getTradeState();
   const ht = helper.sdk.getTradeState();
 
   if (!st.isOpen && !ht.isOpen) {
+   helperPipelined = false;
    if (sawConfirm || opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
     return;
@@ -509,8 +521,8 @@ async function fastInProcessBatchTrade(
     for (const slot of dropSlots.slice(0, 5)) {
      sActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     }
-    // Pre-send helper's trade request on the tick before drops finish to avoid same-tick OPPLAYER4 collision.
-    if (dropSlots.length <= 9 && sTarget && spec.tick() - lastHelperPreReqTick >= 3) {
+    // Pre-send helper's trade request on the tick before drops finish (dropSlots <= 8) to open on the next tick.
+    if (dropSlots.length <= 8 && sTarget && spec.tick() - lastHelperPreReqTick >= 3) {
      lastHelperPreReqTick = spec.tick();
      hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
     }
@@ -528,8 +540,7 @@ async function fastInProcessBatchTrade(
      sActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
     }
    }
-   if (hActs.length) await Promise.all(hActs);
-   if (sActs.length) await Promise.all(sActs);
+   await Promise.all([...hActs, ...sActs]);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
   }
@@ -544,8 +555,7 @@ async function fastInProcessBatchTrade(
    if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
     sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
-   if (hActs.length) await Promise.all(hActs);
-   if (sActs.length) await Promise.all(sActs);
+   await Promise.all([...sActs, ...hActs]);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    if (!spec.sdk.getTradeState().isOpen && !helper.sdk.getTradeState().isOpen && opts.giveIds.every(id => countItem(helper.sdk.getInventory(), id) === 0)) {
     console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
@@ -571,6 +581,35 @@ async function fastInProcessBatchTrade(
    }
   }
 
+  // When spec returns nothing, pipeline all helper offers + main/confirm accepts together across the 5/tick decoder.
+  if (returnSet.size === 0 && ht.isOpen && ht.screen === 'offer') {
+   if (!helperPipelined && hSlots.size > 0) {
+    helperPipelined = true;
+    for (const slot of hSlots.values()) {
+     hActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+    }
+    if (!ht.myAccepted) {
+     lastHelperAcceptTick = spec.tick();
+     hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+     hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+   } else if (hSlots.size === 0 && !ht.myAccepted && spec.tick() - lastHelperAcceptTick >= 2) {
+    lastHelperAcceptTick = spec.tick();
+    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   const theirIds = new Set(st.theirOffer.map(o => o.id));
+   const allGiveOffered = opts.giveIds.every(id => theirIds.has(id));
+   if (st.isOpen && st.screen === 'offer' && !st.myAccepted && (ht.myAccepted || allGiveOffered) && spec.tick() - lastSpecAcceptTick >= 2) {
+    lastSpecAcceptTick = spec.tick();
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   await Promise.all([...sActs, ...hActs]);
+   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
+   continue;
+  }
+
   const hAllOffered = hSlots.size === 0 || [...hSlots.keys()].length <= 4;
   const sAllOffered = sSlots.size === 0 || [...sSlots.keys()].length <= 4;
   const hToOffer = [...hSlots.values()].slice(0, hSlots.size > 4 ? 5 : 4);
@@ -594,15 +633,12 @@ async function fastInProcessBatchTrade(
    hActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
-  if (sAllOffered && sToOffer.length === 0 && !st.myAccepted && st.isOpen && hAllOffered && (ht.myAccepted || hToOffer.length === 0)) {
+  if (sAllOffered && sToOffer.length === 0 && !st.myAccepted && st.isOpen && hAllOffered && ht.myAccepted) {
    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
-   if (ht.myAccepted || hToOffer.length > 0) {
-    sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
-   }
+   sActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
-  if (hActs.length) await Promise.all(hActs);
-  if (sActs.length) await Promise.all(sActs);
+  await Promise.all([...hActs, ...sActs]);
   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
  }
  throw Error(`fastInProcessBatchTrade with ${helper.name} exceeded cap`);
@@ -740,7 +776,8 @@ async function craftAtCastleWarsBank(
    if (hasUnnotedEarly && lastRubTick < 0) {
     const chisel = inv.find(i => i.id === ITEM_IDS.chisel);
     if (chisel) {
-     const { batch } = selectCutGemBatch(inv, skillLevel(spec, 'Crafting'), skillXp(spec, 'Crafting'), 4);
+     // Keep to 3 cuts + rub + clickComponent(2462) = 5 USER_EVENT packets so teleport runs on this tick.
+     const { batch } = selectCutGemBatch(inv, skillLevel(spec, 'Crafting'), skillXp(spec, 'Crafting'), 3);
      for (const gem of batch) {
       acts.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
      }
@@ -748,6 +785,7 @@ async function craftAtCastleWarsBank(
    }
    lastRubTick = spec.tick();
    acts.push(spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' }));
+   acts.push(spec.direct({ type: 'clickComponent', componentId: 2462, reason: 'SDK' }));
    await Promise.all(acts);
   }
   await waitTicks(spec, 1);
@@ -852,7 +890,7 @@ async function craftAtCastleWarsBank(
      const need = g.count - have;
      const row = bankItems.find((b: any) => b.id === g.id);
      if (need > 0 && row) {
-      if (cycle.length === 1 && depCount <= 4 && need === freeAfterDep && row.count >= need) {
+      if (cycle.length === 1 && depCount <= 4 && (need === freeAfterDep || row.count <= freeAfterDep) && row.count >= need) {
        acts.push({ type: 'bankWithdraw', slot: row.slot, amount: -1, reason: 'SDK' });
       } else {
        pushCwWithdraw(acts, row.slot, need, row.count);
@@ -861,13 +899,41 @@ async function craftAtCastleWarsBank(
     }
    }
    const tickActs = acts.slice(0, 5);
+   const pNow = playerPos(spec);
+   // When deposit+withdraw fits in <=2 packets for a single-tier cycle, close via walkTo and cut 2 gems in the same tick.
+   const canInstantCut =
+    !!pNow &&
+    cycle.length === 1 &&
+    acts.length <= 2 &&
+    acts.every(a => a.type !== 'bankWithdraw' || a.amount === -1) &&
+    skillLevel(spec, 'Crafting') >= (GEM_LEVEL_BY_ID.get(cycle[0]!.id) ?? 99);
+   if (canInstantCut) {
+    const gemId = cycle[0]!.id;
+    const chiselItem = inv.find(i => i.id === ITEM_IDS.chisel);
+    const keepSlots = new Set<number>(inv.filter(i => i.id === ITEM_IDS.chisel || i.id === gemId).map(i => i.slot));
+    const freeSlots: number[] = [];
+    for (let s = 0; s < 28 && freeSlots.length < 2; s++) {
+     if (!keepSlots.has(s)) freeSlots.push(s);
+    }
+    const targetSlots = [...inv.filter(i => i.id === gemId).map(i => i.slot), ...freeSlots].slice(0, 2);
+    if (chiselItem && targetSlots.length === 2) {
+     await Promise.all([
+      ...tickActs.map(a => spec.direct(a)),
+      spec.direct({ type: 'walkTo', x: pNow.worldX, z: pNow.worldZ, running: true, reason: 'SDK' }),
+      ...targetSlots.map(slot => spec.direct({ type: 'useItemOnItem', sourceSlot: chiselItem.slot, targetSlot: slot, reason: 'SDK' })),
+     ]);
+     await waitTicks(spec, 1);
+     break;
+    }
+   }
    if (tickActs.length <= 4) {
     tickActs.push({ type: 'closeModal', reason: 'SDK' });
    }
    if (tickActs.length) await Promise.all(tickActs.map(a => spec.direct(a)));
    await waitTicks(spec, 1);
   }
-  await cutUnlockedGems(spec, target, deadline, undefined, idx < cycles.length - 1);
+  const leaveGems = idx + 1 < cycles.length && cycles[idx + 1]!.length === 1 ? 2 : 0;
+  await cutUnlockedGems(spec, target, deadline, undefined, idx < cycles.length - 1, leaveGems);
  }
 
  const level = skillLevel(spec, 'Crafting');
