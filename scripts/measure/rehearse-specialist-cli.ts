@@ -513,8 +513,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '5000', VARIANT: 'pvp' },
         suppliers: () => combatPvpSuppliers('attack-pvp'),
         defaultSeed: 7,
-        planTicks: 2013,
-        planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2013t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        planTicks: 2039,
+        planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2013t..2065t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 2554,
     },
     {
@@ -524,8 +524,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '7500' },
         suppliers: () => combatPvpSuppliers('defence'),
         defaultSeed: 7,
-        planTicks: 2438,
-        planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2438t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        planTicks: 2385,
+        planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2332t..2438t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 3937,
     },
     {
