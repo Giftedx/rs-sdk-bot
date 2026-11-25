@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795621979939,
+ "at": 1795622155515,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -67,6 +67,31 @@
     "3000"
    ],
    "env": {
+    "ITEM_ID": "42",
+    "ITEMS": "Mithril arrowtips",
+    "MAX_ITEMS": "240",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:42",
+    "BATCH_UNITS": "240"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:42",
+   "role": "army"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop2",
+    "3000"
+   ],
+   "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
     "MAX_ITEMS": "95",
@@ -84,7 +109,7 @@
    "role": "army"
   },
   {
-   "account": "mmsmk1232",
+   "account": "Woodpecker",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
@@ -94,14 +119,14 @@
    "env": {
     "ITEM_ID": "562",
     "ITEMS": "Chaos rune",
-    "MAX_ITEMS": "48",
+    "MAX_ITEMS": "54",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:562",
-    "BATCH_UNITS": "48"
+    "BATCH_UNITS": "54"
    },
    "enabled": true,
    "repeat": false,
@@ -109,7 +134,7 @@
    "role": "army"
   },
   {
-   "account": "Magicwanda",
+   "account": "Quickhandjob",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -119,13 +144,13 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "auto",
+   "role": "army",
    "resources": [
     "draynor-willows"
    ]
   },
   {
-   "account": "Quickhandjob",
+   "account": "Unsheathed",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -205,28 +230,38 @@
    "role": "helper"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-market.ts",
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
+    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=1 \"ITEM_NAME=Gold bar\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=1601 QUANTITY=1 ITEM_NAME=Diamond -- loadout",
+    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=4 -- crafting jewellery-trip"
    ],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "144",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "30800",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "144"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "campaign:haggis:item:1643",
+   "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "splash-coop",
+    "25",
+    "3000"
+   ],
+   "env": {
+    "SPLASH_SITE": "coop",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "25"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Abracadickra",
    "role": "auto"
   },
   {
@@ -240,14 +275,14 @@
    "env": {
     "ITEM_ID": "560",
     "ITEMS": "Death rune",
-    "MAX_ITEMS": "72",
+    "MAX_ITEMS": "74",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:560",
-    "BATCH_UNITS": "72"
+    "BATCH_UNITS": "74"
    },
    "enabled": true,
    "repeat": false,
@@ -261,14 +296,14 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-2353-83-p748",
+    "ORDER_KEY": "brain-2353-84-p748",
     "ITEM_ID": "2353",
-    "QUANTITY": "83",
+    "QUANTITY": "84",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "748",
     "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "83"
+    "BATCH_UNITS": "84"
    },
    "enabled": true,
    "repeat": false,
@@ -295,34 +330,41 @@
    ]
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
+   "account": "Magicwanda",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=1 \"ITEM_NAME=Gold bar\" -- loadout",
-    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=2 -- crafting jewellery-trip"
+    "magic",
+    "splash-coop",
+    "25",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "SPLASH_SITE": "coop",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "25"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
+   "goal": "goal:pk_army:Magicwanda",
+   "role": "auto"
   },
   {
    "account": "CoinCock",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "foraging",
-    "grapes"
+    "magic",
+    "splash-coop",
+    "25",
+    "3000"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "SPLASH_SITE": "coop",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "25"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
+   "goal": "goal:pk_army:CoinCock",
    "role": "auto"
   },
   {
@@ -345,27 +387,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
    "role": "helper"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1513-97-p2527",
-    "ITEM_ID": "1513",
-    "QUANTITY": "97",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "2527",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "97"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "auto"
   }
  ],
  "army": [
@@ -380,7 +401,6 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
@@ -395,7 +415,6 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {

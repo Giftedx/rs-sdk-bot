@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795621248257-1",
  "account": "SporranDip",
  "partner": "TheFullMonty",
@@ -12,6 +12,12 @@
  "claim": "0fb792b2-9a2d-41ec-adb5-f1b2529d23da",
  "count": 0,
  "ok": false,
- "at": 1795621854764,
- "detail": "trade claimed"
+ "at": 1795622148789,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795621854798-0000027928-0000000001",
+  "at": 1795622148777,
+  "sha256": "e2ff654711c9a2c3ec4e6759e3db7d51d17dab10add5bc71e00d6ce5bdf2c2ab"
+ },
+ "screen": false
 }
