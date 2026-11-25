@@ -510,7 +510,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   deadline,
   [
    ['R', 'R', 2472, 'R', 'R'],
-   ['R', 'R', 2471],
+   ['R', 'R', 2471, 'R'],
   ],
   async () => {
    await spec.direct({ type: 'walkTo', x: 2931, z: 3481, running: true, reason: 'SDK' });
@@ -694,7 +694,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  }
 }
 
-async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number, notedHelper?: Session): Promise<void> {
+async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): Promise<void> {
  // Amulet of glory has no p_delay before p_choice5_header; send rub + Edgeville (2494) in one tick.
  await rubChainedTeleport(
   spec,
@@ -709,8 +709,6 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number, no
   true,
  );
  let gloryDropped = false;
- let helperPreReq = false;
- const specLower = spec.name.toLowerCase();
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
   if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) return;
@@ -722,13 +720,6 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number, no
    if (glory) {
     gloryDropped = true;
     acts.push(spec.direct({ type: 'dropItem', slot: glory.slot, reason: 'SDK' }));
-   }
-  }
-  if (notedHelper && !helperPreReq && p && Math.max(Math.abs(p.worldX - HERBLORE_BANK_SPOT.x), Math.abs(p.worldZ - HERBLORE_BANK_SPOT.z)) <= 2) {
-   const sTarget = notedHelper.sdk.getNearbyPlayers().find(n => n.name.toLowerCase() === specLower);
-   if (sTarget) {
-    helperPreReq = true;
-    acts.push(notedHelper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
    }
   }
   await Promise.all(acts);
@@ -970,7 +961,7 @@ async function executeHerbloreLoop(
  const druidTrace = await completeDruidicRitual(spec, start, deadline);
  const druidTicks = spec.tick() - start;
 
- await teleportEdgevilleAndDropGlory(spec, deadline, notedHelper);
+ await teleportEdgevilleAndDropGlory(spec, deadline);
  const tTrade0 = spec.tick();
  await receiveNoted();
  const tradeTicks = spec.tick() - tTrade0;
