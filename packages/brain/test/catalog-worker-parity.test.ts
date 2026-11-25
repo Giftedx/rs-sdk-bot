@@ -3,7 +3,7 @@ import { resolveAcquireItem } from '../src/acquire';
 import { createActivityCatalog } from '../src/catalog';
 import { activityPreflightFromConfig } from '../src/preflight';
 import { resolveActivityWorkerRoute, resolvePlannedStepWorkerRoute } from '../src/worker-routing';
-import type { AccountState, WorldSnapshot } from '../src/contracts';
+import { validateActivityDefinition, type AccountState, type WorldSnapshot } from '../src/contracts';
 
 const NOW = 1_800_000_000_000;
 
@@ -47,6 +47,35 @@ describe('catalog-worker parity', () => {
         expect(blocked.missingItems?.map(m => m.itemId)).toContain(561);
         const ready = makeTestAccount({ skills: { Magic: { level: 50, xp: 101_000 } }, bank: { items: { 995: 5000, 314: 500, 561: 500 }, observedAt: NOW - 5_000, trusted: true } });
         expect(activityPreflightFromConfig(ready, act, world, 50).ok).toBe(true);
+    });
+
+    test('bank-artisan:prayer-bury needs the worker bone reserve on top of the batch, for the bone the worker buries', () => {
+        // The worker keeps BONE_RESERVE (default and minimum 6) bones banked and buries none of them
+        // (workers/src/bank-artisan/prayer.ts planPrayer). With 6 bones banked it buries 0.
+        const act = createActivityCatalog().require('bank-artisan:prayer-bury');
+        const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: {} };
+        const bone = act.inputs?.[0];
+        expect(bone).toMatchObject({ itemId: 536, countPerUnit: 1, reserve: 6 });
+        expect(resolveActivityWorkerRoute(act).env.BONE_ID).toBe(String(bone!.itemId));
+        const banked = (n: number) => makeTestAccount({
+            pos: act.location!,
+            skills: { Prayer: { level: 1, xp: 0 } },
+            bank: { items: { 995: 5000, [bone!.itemId]: n }, observedAt: NOW - 5_000, trusted: true },
+        });
+        const six = activityPreflightFromConfig(banked(6), act, world, 1);
+        expect(six.ok).toBe(false);
+        expect(six.missingItems).toEqual([{ itemId: 536, count: 1 }]);
+        expect(activityPreflightFromConfig(banked(7), act, world, 1).ok).toBe(true);
+        expect(activityPreflightFromConfig(banked(33), act, world, 28).missingItems).toEqual([{ itemId: 536, count: 1 }]);
+        expect(activityPreflightFromConfig(banked(34), act, world, 28).ok).toBe(true);
+    });
+
+    test('ActivityDefinition input reserve must be a non-negative integer', () => {
+        const act = createActivityCatalog().require('bank-artisan:prayer-bury');
+        expect(validateActivityDefinition(act)).toEqual([]);
+        expect(validateActivityDefinition({ ...act, inputs: [{ itemId: 536, countPerUnit: 1, reserve: -1 }] })).toContain('inputs[0] invalid');
+        expect(validateActivityDefinition({ ...act, inputs: [{ itemId: 536, countPerUnit: 1, reserve: 1.5 }] })).toContain('inputs[0] invalid');
+        expect(validateActivityDefinition({ ...act, outputs: [{ itemId: 536, countPerUnit: 1, reserve: 6 }] })).toContain('outputs[0] invalid');
     });
 
     test('bank-artisan:magic-earth-production enforces Runecraft 9, Rune Mysteries, talisman, essence, and routes craft mode', () => {

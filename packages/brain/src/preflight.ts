@@ -27,6 +27,7 @@ import {
     type WorkerWorldView,
 } from '../../workers/src/contracts';
 import { isCooldownActive } from './contracts';
+import { ferryFallbackFare } from './ferry-fare';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 export const COINS_ITEM_ID = 995;
@@ -815,6 +816,8 @@ function evaluateTileReachabilityUncached(
     if (isInAlKharidRegion(target) !== isInAlKharidRegion(acct.pos) && !cachedHasCompletedQuest(acct, 'Prince Ali Rescue', cache)) {
         fare = Math.max(fare, 10);
     }
+    // Between the east mainland and Ardougne the worker's walk needs both boat fares before it moves (./ferry-fare.ts).
+    fare = Math.max(fare, ferryFallbackFare(acct.pos, target));
 
     const sameBand = (acct.pos.z >= 6400) === (target.z >= 6400);
     const normZ = (z: number) => (z >= 6400 ? z - 6400 : z);
@@ -1370,7 +1373,7 @@ export function activityPreflightFromConfig(
         readonly maxConcurrentAccounts?: number;
         readonly location?: WorkerTile;
         readonly protectedAllowed?: boolean;
-        readonly inputs?: readonly { readonly itemId: number; readonly countPerUnit: number }[];
+        readonly inputs?: readonly { readonly itemId: number; readonly countPerUnit: number; readonly reserve?: number }[];
         readonly config?: Readonly<Record<string, unknown>>;
     },
     world: WorkerWorldView,
@@ -1383,7 +1386,7 @@ export function activityPreflightFromConfig(
         const clampedBatch = Math.max(1, batchUnits);
         const mutableItems: RequiredItemSpec[] = [...base.staticRequiredItems];
         for (const io of activity.inputs) {
-            const count = Math.max(1, Math.ceil(io.countPerUnit * clampedBatch));
+            const count = Math.max(1, Math.ceil(io.countPerUnit * clampedBatch)) + Math.max(0, io.reserve ?? 0);
             mutableItems.push({ itemId: io.itemId, count });
         }
         requiredItems = mutableItems;

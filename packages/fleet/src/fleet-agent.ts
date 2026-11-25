@@ -9,14 +9,15 @@ import { FLEET_DIR, loadOwners, mySide, sideOf } from '../../core/src/fleet';
 import { validOrder, type Order, type Receipt } from '../../core/src/fleet-trade-settlement';
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from '../../core/src/market-cache';
-import { findStopFile, liveRoot, repoRoot, statusReadDirs } from '../../core/src/practice-paths';
+import { findStopFile, liveRoot, readStopFile, repoRoot, statusReadDirs } from '../../core/src/practice-paths';
 import { spawnSyncTimed } from '../../core/src/proc';
 import { lastResult } from '../../core/src/run-child';
 import { capabilityRevision } from '../../core/src/worker-release';
 import { brainPlannedJobs } from './fleet-sync';
 import { InfraCircuitBreaker, classifyInfraFault } from './infra-circuit-breaker';
-import { clearSwarmStop, swarmWroteStop } from './swarm';
+import { clearSwarmStop, SWARM_STOP, swarmWroteStop, writeSwarmStop } from './swarm';
 import { buildOrderPicker, readAgentJobs, swarmBusy } from './trade-plan';
+import { askWorkersToLogOut } from './worker-stop';
 
 const root = repoRoot;
 export const AGENT_SUBPROCESS_TIMEOUT_MS = 180_000;
@@ -119,6 +120,47 @@ export function tradeStop(base: string, account: string, now = Date.now()): { he
     return { cleared };
 }
 
+// A stop for the whole fleet side: .practice/stop-fleet-agent, or .practice/stop-swarm with owner text. The swarm stops
+// only its own runs, so trades of this agent stop only when this agent asks them.
+export function fleetOwnerStop(base: string): string | null {
+    if (findStopFile('fleet-agent', base)) return 'stop-fleet-agent';
+    const text = readStopFile('swarm', base);
+    return text !== undefined && !swarmWroteStop(text) ? 'owner stop-swarm' : null;
+}
+
+const tradeStopFile = (base: string, account: string) => join(base, '.practice', `stop-${account}`);
+const writeTradeStop = (base: string, account: string) => writeSwarmStop(tradeStopFile(base, account), SWARM_STOP.all);
+
+// While a fleet owner stop stands, asks each running trade to log out with its stop file, once per account.
+// Returns the accounts asked in this call.
+export function askTradesToStop(base: string, running: ReadonlyMap<string, string>, asked: Set<string>): string[] {
+    if (running.size === 0 || !fleetOwnerStop(base)) return [];
+    const now: string[] = [];
+    for (const [key, account] of running) {
+        if (asked.has(key)) continue;
+        writeTradeStop(base, account);
+        asked.add(key);
+        now.push(account);
+    }
+    return now;
+}
+
+// Ends the agent after its running trades log out, or after the grace. A trade is an attached child, so it dies with
+// this process; without the stop file first its session would stay open on the server for 200 s.
+export async function stopTradesThenExit(
+    base: string,
+    running: ReadonlyMap<string, string>,
+    why: string,
+    o: { graceMs?: number; now?: () => number; sleep?: (ms: number) => Promise<void>; exit?: (code: number) => void; log?: (line: string) => void } = {},
+): Promise<void> {
+    const log = o.log ?? console.log;
+    const workers = [...running].map(([key, account]) => ({ account, ended: () => !running.has(key) }));
+    if (workers.length > 0) log(`FLEET_AGENT ${why}: asking ${workers.map(w => w.account).join(',')} to log out before exit`);
+    const left = await askWorkersToLogOut(workers, { writeStop: a => writeTradeStop(base, a), graceMs: o.graceMs, now: o.now, sleep: o.sleep });
+    if (left.length > 0) log(`FLEET_AGENT ${why}: ${left.join(',')} did not end in the grace; they end with this process`);
+    (o.exit ?? process.exit)(0);
+}
+
 export function recordAgentInfraResult(breaker: InfraCircuitBreaker, output: string, exitCode: number | null): boolean {
     const kind = classifyInfraFault(output);
     if (kind) {
@@ -153,9 +195,20 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     const held = { alive: (pid: number) => agentAlive(pid), ...(procCmdline(process.pid) === undefined ? {} : { staleMs: Infinity }) };
     if (!takeLease(lock, process.pid, held)) { console.log(`FLEET_AGENT already running pid ${leaseHolder(lock, held)}`); process.exit(0); }
     const release = () => releaseLease(lock);
-    process.on('exit', release); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));
+    // Running trades by lower-case account, with the account name as the order spells it.
+    const running = new Map<string, string>(), once = argv.includes('--once');
+    let stopping = false;
+    const onSignal = (why: string) => {
+        if (stopping) process.exit(0); // a second signal does not wait
+        stopping = true;
+        void stopTradesThenExit(base, running, why);
+    };
+    process.on('exit', release); process.on('SIGINT', () => onSignal('SIGINT')); process.on('SIGTERM', () => onSignal('SIGTERM'));
     setInterval(() => { renewLease(lock); }, 60_000).unref();
-    const running = new Set<string>(), once = argv.includes('--once');
+    const askedToStop = new Set<string>();
+    setInterval(() => {
+        for (const a of askTradesToStop(base, running, askedToStop)) console.log(`FLEET_AGENT owner stop: asked ${a} to log out`);
+    }, 2_000).unref();
     if (!once) saveLaunch(join(base, controllerNamed('fleet-agent').launch), []);
     const infraBreaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(base), 'infra-circuit-breaker.json') });
     const sync = () => {
@@ -174,6 +227,8 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     const startedAt = Date.now();
     let marketRefresh: ReturnType<typeof spawn> | null = null;
     for (;;) {
+        // While a signal stop waits for the trades, the agent starts nothing, and it does not update or respawn itself.
+        if (stopping) { await Bun.sleep(1_000); continue; }
         if (!renewLease(lock)) {
             console.log(`FLEET_AGENT lost its lease to another agent${running.size ? ': it ends when its trade ends' : ''} at ${new Date().toISOString()}`);
             if (!running.size) process.exit(0);
@@ -217,13 +272,16 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
         const handJobs = readAgentJobs();
         const busy = swarmBusy([...handJobs, ...brainPlannedJobs(base, handJobs, now)]);
-        for (const t of dueTrades(orders, receipts, side, owners, busy, running, now)) {
+        const ownerStop = fleetOwnerStop(base);
+        for (const t of dueTrades(orders, receipts, side, owners, busy, new Set(running.keys()), now)) {
+            if (ownerStop || stopping) { console.log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${ownerStop ?? 'agent stopping'})`); continue; }
             if (t.busy) { console.log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
             const stop = tradeStop(base, t.account, now);
             if (stop.cleared) console.log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
             if (stop.held) { console.log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
             const accountKey = t.account.toLowerCase();
-            running.add(accountKey);
+            running.set(accountKey, t.account);
+            askedToStop.delete(accountKey);
             console.log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
             try {
                 const p = Bun.spawn([process.execPath, TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], {

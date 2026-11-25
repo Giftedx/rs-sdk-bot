@@ -365,7 +365,7 @@ interface SkillerSeed {
     readonly requiredQuests?: readonly string[];
     readonly requiredTools?: readonly number[];
     readonly outputs?: readonly { itemId: number; countPerUnit: number }[];
-    readonly inputs?: readonly { itemId: number; countPerUnit: number }[];
+    readonly inputs?: readonly ActivityIO[];
     readonly coinsRequired?: number;
     readonly defaultArgs?: readonly string[];
     readonly defaultEnv?: Readonly<Record<string, string>>;
@@ -455,7 +455,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'magic', method: 'splash-coop', script: 'scripts/aio-skiller.ts', label: 'Lumbridge chicken coop Wind Strike/Confuse splash', location: HUB_TILES.lumbridge, spotId: 'lumbridge-coop', maxConcurrentAccounts: 4, xpPerTick: 110, unitsPerTick: 0.2, gpPerTick: -1, minBatchUnits: 50, requiredLevel: 1, defaultArgs: ['19', '3000'], defaultEnv: { SPLASH_SITE: 'coop' } },
     { skill: 'magic', method: 'specialist', script: 'scripts/magic-specialist.ts', label: 'Magic 1-99 specialist route', location: HUB_TILES.varrock_west, xpPerTick: 1400, unitsPerTick: 0.6, gpPerTick: 0, minBatchUnits: 50, requiredLevel: 1 },
     // Prayer
-    { skill: 'prayer', method: 'bury', script: 'scripts/aio-skiller.ts', label: 'Bury banked bones for Prayer XP', location: HUB_TILES.varrock_west, xpPerTick: 600, unitsPerTick: 0.45, gpPerTick: -10, minBatchUnits: 28, requiredLevel: 1, inputs: [{ itemId: 536, countPerUnit: 1 }] },
+    { skill: 'prayer', method: 'bury', script: 'scripts/aio-skiller.ts', label: 'Bury banked bones for Prayer XP', location: HUB_TILES.varrock_west, xpPerTick: 600, unitsPerTick: 0.45, gpPerTick: -10, minBatchUnits: 28, requiredLevel: 1, inputs: [{ itemId: 536, countPerUnit: 1, reserve: 6 }], defaultEnv: { BONE_ID: '536' } },
     { skill: 'prayer', method: 'flick', script: 'scripts/aio-skiller.ts', label: '1-tick prayer flicking upkeep', location: HUB_TILES.ardougne_south, xpPerTick: 0, unitsPerTick: 0.5, gpPerTick: 0, minBatchUnits: 10, requiredLevel: 43 },
     { skill: 'prayer', method: 'specialist', script: 'scripts/prayer-specialist.ts', label: 'Prayer 1-99 specialist route', location: HUB_TILES.draynor, xpPerTick: 1800, unitsPerTick: 0.5, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1 },
     // Agility
