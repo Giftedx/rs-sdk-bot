@@ -1040,9 +1040,35 @@ async function withdrawTankFood(s: Session, needed: number, stop: StopFn): Promi
     }
 }
 
+/** Fast Castle Wars + Camelot Keep return requires Magic 45 and a charged Ring of dueling. */
+export function canUseFastKeepRebank(magicLevel: number, hasDuelingRing: boolean): boolean {
+    return magicLevel >= 45 && hasDuelingRing;
+}
+
 async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
-    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays / Sharks, Camelot -> Lever.
+    // Fast path: teleport via Ring of dueling -> Castle Wars Chest, stock 1 Law + food, Camelot -> Lever.
+    // Overland fallback: walk to Ardougne North Bank -> stock food -> Lever (works at Magic 1 with 0 rings).
     const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
+    const hasWornRing = () => s.sdk.getEquipment().some(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
+    if (!canUseFastKeepRebank(skillInfo(s, 'Magic').baseLevel, hasInvRing() || hasWornRing())) {
+        const p0 = posOf(s);
+        if (!p0 || p0.level !== 0 || d8({ x: p0.worldX, z: p0.worldZ }, ARDY_NORTH_BANK) > 32) {
+            const world = await getWorld();
+            const r = await goTo(s, world, { ...ARDY_NORTH_BANK, level: 0 }, accountOf(s), {
+                planBudgetMs: 90_000,
+                legTimeoutTicks: 240,
+            });
+            if (!r.ok) throw Error(`walk to ardougne north bank failed: ${r.detail}`);
+        } else {
+            await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, stop, 'ardougne north bank');
+        }
+        await openFreshBank(s, stop);
+        const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
+        await withdrawTankFood(s, freeSlots, stop);
+        await closeBankClean(s, stop);
+        await pullArdougneLeverToWildy(s, stop);
+        return;
+    }
     if (!hasInvRing()) {
         const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
         if (wornRing) {
