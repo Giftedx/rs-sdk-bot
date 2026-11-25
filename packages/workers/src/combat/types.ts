@@ -65,6 +65,24 @@ export type CombatMode = (typeof ORDINARY_COMBAT_MODES)[number];
 
 export const COMBAT_MODE_SET: ReadonlySet<string> = new Set(ORDINARY_COMBAT_MODES);
 
+// The modes of the generic combat loop (module.ts; melee-gather.ts runGenericCombatSession and runMeleeGatherCli),
+// whose bank trips bank an earlier job's items with BANK_PACK=1. A giant or trooper job with a training goal runs
+// runGiants, which reads no BANK_PACK.
+export const GENERIC_COMBAT_MODES: ReadonlySet<string> = new Set<CombatMode>([
+    'druid',
+    'unicorn',
+    'wizard',
+    'giant',
+    'trooper',
+    'taverley_druid',
+    'taverley_black_knight',
+    'taverley_scales',
+    'taverley_blue_dragon',
+    'taverley_black_dragon',
+    'taverley_giant',
+    'chaos_wine',
+]);
+
 export interface CombatConfig {
     readonly mode: CombatMode;
     readonly account?: string;

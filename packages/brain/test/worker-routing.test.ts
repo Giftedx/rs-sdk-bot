@@ -223,6 +223,14 @@ test('resolvePlannedStepWorkerRoute and resolveAccountWorkerPlan handle recover,
     expect(blueDragonRoute.family).toBe('combat');
     expect(blueDragonRoute.routeKey).toBe('boss:blue-dragon');
     expect(blueDragonRoute.args).toEqual(['blue-dragon']);
+    expect(blueDragonRoute.env.BANK_PACK).toBeUndefined();
+
+    // A generic combat job banks the leftovers of an earlier job (melee-gather.ts BANK_PACK); other combat jobs do not.
+    const blackKnights = resolveActivityWorkerRoute({ id: 'combat:taverley_black_knight', family: 'combat', kind: 'gather', config: {} });
+    expect(blackKnights.routeKey).toBe('taverley_black_knight');
+    expect(blackKnights.env.BANK_PACK).toBe('1');
+    expect(resolveActivityWorkerRoute({ id: 'combat:cow', family: 'combat', kind: 'train', config: {} }).env.BANK_PACK).toBeUndefined();
+    expect(resolveActivityWorkerRoute({ id: 'combat:druid', family: 'combat', kind: 'train', config: { defaultEnv: { BANK_PACK: '0' } } }).env.BANK_PACK).toBe('0');
     expect(resolved.steps[1]?.env.EQUIP).toBe('1');
 
     const shopAcquire = resolvePlannedStepWorkerRoute('Shopper', {
