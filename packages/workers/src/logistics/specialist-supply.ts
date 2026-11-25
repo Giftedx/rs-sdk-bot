@@ -813,8 +813,8 @@ export function resolveSupplierKitPlan(kitName: string | undefined = process.env
         const earlyUnnotedGive = [
             invSpec(2552, 1),
             invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
-            invSpec(SPECIALIST_ITEM_IDS.uncut_opal, 11),
-            invSpec(1626, 7),
+            invSpec(SPECIALIST_ITEM_IDS.uncut_opal, 15),
+            invSpec(1626, 3),
             ...CRAFTING_CW_NOTED_ITEMS.filter(g => g.id !== SPECIALIST_ITEM_IDS.uncut_opal).map(g => invSpec(g.certId, g.count)),
         ];
         return {
@@ -1466,8 +1466,8 @@ export async function runSpecialistServe(args: readonly string[], env: Record<st
             const earlyUnnotedBatch = [
                 invSpec(2552, 1),
                 invSpec(SPECIALIST_ITEM_IDS.chisel, 1),
-                invSpec(SPECIALIST_ITEM_IDS.uncut_opal, 11),
-                invSpec(1626, 7),
+                invSpec(SPECIALIST_ITEM_IDS.uncut_opal, 15),
+                invSpec(1626, 3),
                 ...CRAFTING_CW_NOTED_ITEMS.filter(g => g.id !== SPECIALIST_ITEM_IDS.uncut_opal).map(g => invSpec(g.certId, g.count)),
             ];
             const notedBatch = [

@@ -227,8 +227,8 @@ export const CRAFTING_CW_BATCH: CraftingBatchPlan = {
  give: [
   { id: ITEM_IDS.ring_of_dueling_8, count: 1 },
   { id: ITEM_IDS.chisel, count: 1 },
-  { id: ITEM_IDS.uncut_opal, count: 11 },
-  { id: 1626, count: 7 },
+  { id: ITEM_IDS.uncut_opal, count: 15 },
+  { id: 1626, count: 3 },
   { id: 1624, count: 3 },
   { id: 1622, count: 6 },
   { id: 1620, count: 3 },
@@ -763,7 +763,7 @@ async function craftAtCastleWarsBank(
    if (deferSurplusOpals) {
     const opalsInInv = inv.filter(i => i.id === ITEM_IDS.uncut_opal);
     const needOpalsTo20 = Math.ceil(Math.max(0, 3105 - curXpVal) / 375);
-    const cutOpalsCount = Math.min(opalsInInv.length, curLvl >= 20 ? 0 : needOpalsTo20 >= 2 ? needOpalsTo20 + 1 : needOpalsTo20);
+    const cutOpalsCount = Math.min(opalsInInv.length, curLvl >= 20 ? 0 : needOpalsTo20 >= 2 ? needOpalsTo20 + 2 : needOpalsTo20);
     if (cutOpalsCount < opalsInInv.length) {
      const skipSlots = new Set(opalsInInv.slice(cutOpalsCount).map(i => i.slot));
      cutInv = inv.filter(i => !skipSlots.has(i.slot));
