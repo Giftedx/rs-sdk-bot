@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795602816969-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Moneyshot",
+  "item": "Uncut diamond",
+  "count": 11,
+  "itemId": 1617,
+  "start": 1795602816969,
+  "end": 1795603716969,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

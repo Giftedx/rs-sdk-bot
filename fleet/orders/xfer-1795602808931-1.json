@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795602808931-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Magicwanda",
+  "item": "Uncut diamond",
+  "count": 11,
+  "itemId": 1617,
+  "start": 1795602808931,
+  "end": 1795603708931,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

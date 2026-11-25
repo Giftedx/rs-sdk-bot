@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795602799829,
+ "at": 1795602842598,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -40,7 +40,23 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "Magicwanda",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "grapes"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1987",
+   "role": "auto"
+  },
+  {
+   "account": "PickpockDick",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
@@ -72,7 +88,7 @@
    "role": "army"
   },
   {
-   "account": "Wandwanker",
+   "account": "Woodpecker",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
@@ -85,7 +101,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1987",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -136,110 +152,33 @@
    "role": "helper"
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/aio-market.ts",
+   "account": "Fatstack",
+   "script": "scripts/aio-logistics.ts",
    "args": [
-    "shop-buy",
-    "generalshop2",
-    "3000"
+    "loadout"
    ],
    "env": {
-    "ITEM_ID": "1755",
-    "ITEMS": "Chisel",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1"
+    "ITEM_ID": "257",
+    "QUANTITY": "1",
+    "ITEM_NAME": "Ranarr weed"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1601",
+   "goal": "campaign:haggis:item:99",
    "role": "army"
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
+   "account": "Bigchopper",
+   "script": "scripts/generated/quest-dragon.ts",
+   "args": [],
    "env": {
-    "ORDER_KEY": "brain-440-2-p94",
-    "ITEM_ID": "440",
-    "QUANTITY": "2",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "94",
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-2351-35-p224",
-    "ITEM_ID": "2351",
-    "QUANTITY": "35",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "224",
-    "DEMAND_ID": "campaign:haggis:item:2351",
-    "BATCH_UNITS": "35"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2351",
+   "goal": "goal:quest_board:dragon",
    "role": "army"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:harralander"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:255",
-    "BATCH_UNITS": "6"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:255",
-   "role": "army"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1513-97-p2527",
-    "ITEM_ID": "1513",
-    "QUANTITY": "97",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "2527",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "97"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "auto"
   }
  ],
  "army": [
@@ -254,7 +193,6 @@
   "bowbeforeme",
   "deeppockets",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -264,6 +202,8 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "moneyshot",
+  "oreelse",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
