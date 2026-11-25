@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795566467580-woodenstaff-swordswallow-373010528027db60",
  "account": "Woodenstaff",
  "partner": "Swordswallow",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 15,
  "claim": "af256b3e-8c23-4f50-ba7e-fce69121323a",
- "count": 0,
- "ok": false,
- "at": 1795567391216,
- "detail": "trade claimed"
+ "count": 15,
+ "ok": true,
+ "at": 1795567746411,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 15,
+  "after": 0
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795567560879
+ },
+ "logout": {
+  "attemptId": "1795567391224-0000010860-0000000001",
+  "at": 1795567746399,
+  "sha256": "097781d1bf00085811f90372bc6b97121164a9e7e209d5565218cba9270b38ca"
+ },
+ "screen": true
 }
