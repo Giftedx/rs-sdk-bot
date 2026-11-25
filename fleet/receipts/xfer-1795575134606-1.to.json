@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795575134606-1",
+ "account": "Shaftsinker",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon vambraces",
+ "requested": 1,
+ "claim": "cd2e1d75-35ae-4438-9e58-9b46bf4a5faf",
+ "count": 0,
+ "ok": false,
+ "at": 1795575795654,
+ "detail": "trade claimed"
+}
