@@ -362,17 +362,17 @@ export async function runArdougneStunRelogThieving(opts: {
         const msgs = st.gameMessages ?? [];
         const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
         lastMsgMark = latestMark(msgs, lastMsgMark);
-        if (newMsgs.some(m => /you fail to pick|you've been stunned/i.test(m.text))) {
+        if (newMsgs.some(m => /you fail to pick|you've been stunned|hands off there|during combat/i.test(m.text))) {
             stuns++;
             const bites = foodBitesCount(main);
-            if (st.player.hp <= Math.max(3, tier.stunDamage) && bites === 0) {
+            if (st.player.hp <= Math.max(4, tier.stunDamage) && bites === 0) {
                 // Never call logoutSession at <= FLEE_HP with no food: flee_guard holds clickComponent until timeout.
                 await waitTicks(main, 2);
                 lastPickTick = -99;
                 continue;
             }
-            // Only eat at hp <= tier.stunDamage so 11-HP Pineapple pizza bites recover 7-9 HP instead of wasting 5-6 HP.
-            if (bites >= 2 && st.player.hp <= tier.stunDamage) {
+            // Eat when HP drops to guard/stun danger threshold so we never die at Lv 5..54 stalls or Knight stuns.
+            if (bites >= 2 && st.player.hp <= Math.max(4, tier.stunDamage)) {
                 await eatAnyFood(main);
             }
             totalTicks += Math.max(1, main.tick() - sessStart) + 1;
@@ -407,10 +407,10 @@ export async function runArdougneStunRelogThieving(opts: {
             continue;
         }
 
-        // Safety guard: never attempt a pickpocket while HP <= stunDamage.
-        if (st.player.hp <= tier.stunDamage) {
+        // Safety guard: never attempt a pickpocket/stall steal while HP <= danger threshold.
+        if (st.player.hp <= Math.max(4, tier.stunDamage)) {
             await eatAnyFood(main);
-            if ((main.sdk.getState()?.player?.hp ?? 0) <= tier.stunDamage) {
+            if ((main.sdk.getState()?.player?.hp ?? 0) <= Math.max(4, tier.stunDamage)) {
                 stallCooldownUntil = 0;
                 await waitTicks(main, 1);
                 continue;
@@ -440,7 +440,7 @@ export async function runArdougneStunRelogThieving(opts: {
                     if (!locs.length) continue;
                     const watched = (x: number, z: number) => recipe && sight
                         ? stallWatched(recipe, { worldX: x, worldZ: z, level: st.player!.level ?? 0 }, st.nearbyNpcs, sight)
-                        : st.nearbyNpcs.some(n => /^(guard|baker|knight of ardougne)$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x, z }) <= 5);
+                        : st.nearbyNpcs.some(n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x, z }) <= 5);
                     const tile = locs.flatMap(stall =>
                         spec.offsets.map(([dx, dz]) => ({ stall, x: stall.x + dx, z: stall.z + dz }))
                             .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))

@@ -303,6 +303,10 @@ async function keepProtectedInArena(spec: Session): Promise<void> {
   const shark = inv.find(i => i.id === ITEM_IDS.shark);
   if (shark) await spec.direct({ type: 'useInventoryItem', slot: shark.slot, optionIndex: 1, reason: 'SDK' });
  }
+ if ((spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) < 75) {
+  const mPot = inv.find(i => [ITEM_IDS.magic_potion_4, 3042, 3044, 3046].includes(i.id));
+  if (mPot) await spec.direct({ type: 'useInventoryItem', slot: mPot.slot, optionIndex: 1, reason: 'SDK' });
+ }
 }
 
 async function completeMageArena(spec: Session, start: number, deadline: number): Promise<void> {
@@ -321,9 +325,21 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
 
  // East Ardougne Wilderness lever -> Deserted Keep
  const camelotWalker = await sessionWalker(spec);
- const ardyWalk = await walkPath(camelotWalker, [{ x: ARDOUGNE_LEVER.x, z: ARDOUGNE_LEVER.z, tol: 2 }], {
-  maxTicks: Math.max(10, Math.min(130, deadline - spec.tick())),
- });
+ const ardyWalk = await walkPath(
+  camelotWalker,
+  [
+   { x: 2752, z: 3458, tol: 3 },
+   { x: 2712, z: 3451, tol: 4 },
+   { x: 2690, z: 3430, tol: 4 },
+   { x: 2664, z: 3406, tol: 4 },
+   { x: 2635, z: 3398, tol: 4 },
+   { x: 2612, z: 3393, tol: 3 },
+   { x: 2585, z: 3348, tol: 4 },
+   { x: 2580, z: 3321, tol: 3 },
+   { x: ARDOUGNE_LEVER.x, z: ARDOUGNE_LEVER.z, tol: 2 },
+  ],
+  { maxTicks: Math.max(10, Math.min(125, deadline - spec.tick())) },
+ );
  if (!ardyWalk.ok && !nearTile(spec, ARDOUGNE_LEVER.x, ARDOUGNE_LEVER.z, 2)) {
   await navigateWorld(spec, ARDOUGNE_LEVER.x, ARDOUGNE_LEVER.z, 0, Math.max(10, deadline - spec.tick()));
  }
@@ -346,9 +362,15 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
  const keepWalker = await sessionWalker(spec);
  await walkPath(keepWalker, [{ x: 3158, z: 3950, tol: 1 }], { maxTicks: Math.max(10, Math.min(40, deadline - spec.tick())) });
  await slashWebAt(spec, 3158, 3951, 3158, 3952, () => (playerPos(spec)?.worldZ ?? 0) >= 3952, deadline);
- const arenaWalk = await walkPath(keepWalker, [{ x: MAGE_ARENA_DOOR_AREA.x, z: MAGE_ARENA_DOOR_AREA.z, tol: 1 }], {
-  maxTicks: Math.max(10, Math.min(55, deadline - spec.tick())),
- });
+ const arenaWalk = await walkPath(
+  keepWalker,
+  [
+   { x: 3129, z: 3957, tol: 2 },
+   { x: 3111, z: 3955, tol: 2 },
+   { x: MAGE_ARENA_DOOR_AREA.x, z: MAGE_ARENA_DOOR_AREA.z, tol: 1 },
+  ],
+  { maxTicks: Math.max(10, Math.min(40, deadline - spec.tick())) },
+ );
  if (!arenaWalk.ok && !nearTile(spec, MAGE_ARENA_DOOR_AREA.x, MAGE_ARENA_DOOR_AREA.z, 2)) {
   await navigateWorld(spec, MAGE_ARENA_DOOR_AREA.x, MAGE_ARENA_DOOR_AREA.z, 0, Math.max(10, deadline - spec.tick()));
  }
@@ -606,6 +628,7 @@ export async function runMagicSpecialist(
     giveIds: batch.give.map(g => g.id),
     returnIds: batch.returnIds,
     deadlineTick: deadline,
+    allowHelperOnSingleModal: true,
    }),
   );
  } finally {

@@ -1,5 +1,6 @@
 // Fresh-account 1-to-99 Runecraft specialist via Glory Air altar 1-to-20 and 22 Body altar runners.
 import type { Session } from '../packages/core/src/inprocess';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import {
  assertCatalogItems,
  burstTradeHost,
@@ -212,6 +213,9 @@ export async function runRunecraftSpecialist(
  try {
   await skipTutorialFast(spec, deadline);
   await dropItemsFast(spec, new Set(), deadline);
+  if (((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) !== 1) {
+   await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+  }
 
   await burstTradeHost(spec, starterHelper!, {
    giveIds: [ITEM_IDS.amulet_of_glory_4, ITEM_IDS.air_talisman, ITEM_IDS.body_talisman, ITEM_IDS.blankrune],
@@ -230,7 +234,20 @@ export async function runRunecraftSpecialist(
   );
   logPhase(spec, start, 'rc_glory_draynor');
 
-  await navigateWorld(spec, AIR_RUINS.x, AIR_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
+  const draynorWalker = await sessionWalker(spec);
+  const airWalk = await walkPath(
+   draynorWalker,
+   [
+    { x: 3074, z: 3265, tol: 4 },
+    { x: 3034, z: 3276, tol: 4 },
+    { x: 3003, z: 3287, tol: 4 },
+    { x: AIR_RUINS.x, z: AIR_RUINS.z, tol: 1 },
+   ],
+   { maxTicks: Math.max(10, Math.min(80, deadline - spec.tick())) },
+  );
+  if (!airWalk.ok && !nearTile(spec, AIR_RUINS.x, AIR_RUINS.z, 2)) {
+   await navigateWorld(spec, AIR_RUINS.x, AIR_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
+  }
   await enterAltarWithTalisman(
    spec,
    ITEM_IDS.air_talisman,
@@ -255,7 +272,20 @@ export async function runRunecraftSpecialist(
    deadline,
   );
 
-  await navigateWorld(spec, BODY_RUINS.x, BODY_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
+  const edgeWalker = await sessionWalker(spec);
+  const bodyWalk = await walkPath(
+   edgeWalker,
+   [
+    { x: 3080, z: 3467, tol: 4 },
+    { x: 3071, z: 3420, tol: 4 },
+    { x: 3061, z: 3423, tol: 3 },
+    { x: BODY_RUINS.x, z: BODY_RUINS.z, tol: 1 },
+   ],
+   { maxTicks: Math.max(10, Math.min(60, deadline - spec.tick())) },
+  );
+  if (!bodyWalk.ok && !nearTile(spec, BODY_RUINS.x, BODY_RUINS.z, 2)) {
+   await navigateWorld(spec, BODY_RUINS.x, BODY_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
+  }
   await enterAltarWithTalisman(
    spec,
    ITEM_IDS.body_talisman,
@@ -268,10 +298,7 @@ export async function runRunecraftSpecialist(
   );
 
    await dropItemsFast(spec, new Set([ITEM_IDS.bodyrune, ...GLORY_IDS]), deadline);
-   await navigateWorld(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, Math.max(10, deadline - spec.tick()));
-   if (!nearTile(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0)) {
-    await runTo(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, 20);
-   }
+   await runTo(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, 20);
    logPhase(spec, start, 'rc_at_body_altar');
 
    const bodyAltar = findLocBy(spec, l => l.id === 2483) ?? { x: 2524, z: 4832, id: 2483 };

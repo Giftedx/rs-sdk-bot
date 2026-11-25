@@ -301,11 +301,11 @@ export async function runSmithingSpecialist(
     { x: 3100, z: 3421, tol: 3 },
     { x: 3158, z: 3418, tol: 4 },
     { x: 3181, z: 3426, tol: 2 },
-    { x: VARROCK_WEST_ANVIL.x, z: VARROCK_WEST_ANVIL.z, tol: 0 },
+    { x: 3187, z: 3426, tol: 0 },
    ],
    { maxTicks: Math.max(10, Math.min(95, deadline - spec.tick())) },
   );
-  if (!vWalk.ok && !nearTile(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0)) {
+  if (!vWalk.ok && !nearTile(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 2)) {
    await navigateWorld(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0, Math.max(10, deadline - spec.tick()));
   }
   logPhase(spec, start, 'smithing_at_anvil');
@@ -347,6 +347,7 @@ export async function runSmithingSpecialist(
     await burstTradeHost(spec, next.session, {
      giveIds: [wantBar],
      deadlineTick: deadline,
+     allowHelperOnSingleModal: true,
      canStand: anvilRoomOk,
      onConfirmSend: barSlot >= 0
       ? () => spec.direct({ type: 'useItemOnLoc', itemSlot: barSlot, x: anvilLoc.x, z: anvilLoc.z, locId: anvilLoc.id, reason: 'SDK' })
