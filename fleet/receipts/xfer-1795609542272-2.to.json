@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795609542272-2",
+ "account": "OreElse",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "b12fa0e2-e9b2-4080-90db-f8f1846d885c",
+ "count": 10,
+ "ok": true,
+ "at": 1795610061322,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795610060567
+ },
+ "logout": {
+  "attemptId": "1795610051043-0000010000-0000000001",
+  "at": 1795610061310,
+  "sha256": "2ebc980ddccc10c5bf7c878552622fbd0118cd785d0c87ae4fe89d114355a686"
+ },
+ "screen": true
+}

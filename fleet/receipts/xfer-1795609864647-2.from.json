@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795609864647-2",
+ "account": "TheFullMonty",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 2,
+ "claim": "70487b44-334f-4c45-aa5c-9f6f41c986f0",
+ "count": 0,
+ "ok": false,
+ "at": 1795610010652,
+ "detail": "trade claimed"
+}
