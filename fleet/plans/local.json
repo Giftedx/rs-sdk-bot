@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795611999404,
+ "at": 1795612021474,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -107,21 +107,6 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
-    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
-   "role": "army"
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -216,6 +201,26 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army",
+   "resources": [
+    "chickens"
+   ]
   }
  ],
  "army": [
@@ -244,6 +249,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "woodpecker"
  ],
