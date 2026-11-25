@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795602565770,
+ "at": 1795602611861,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -25,19 +25,68 @@
   },
   {
    "account": "BackdoorMan",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "helper"
+   "goal": "campaign:haggis:item:1519",
+   "role": "helper",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chompy"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:TossTheCaber",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:TossTheCaber",
+   "role": "auto"
   },
   {
    "account": "mmtha0205",
@@ -129,78 +178,30 @@
    "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
+    "foraging",
+    "grapes"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2152",
+   "goal": "campaign:haggis:item:1987",
    "role": "helper"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:harralander"
-   ],
+   "account": "Ballbag",
+   "script": "scripts/generated/quest-death.ts",
+   "args": [],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:255",
-    "BATCH_UNITS": "11"
+    "DEMAND_ID": "goal:quest_board:death",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:255",
-   "role": "army"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:ranarr_weed"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "TRAIN_SKILL": "Herblore",
-    "TARGET_LEVEL": "40"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:259",
-   "role": "army"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:TossTheCaber",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
-   "role": "auto"
+   "goal": "goal:quest_board:death",
+   "role": "helper"
   }
  ],
  "army": [
