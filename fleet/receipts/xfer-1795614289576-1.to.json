@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795614289576-1",
+ "account": "Woodenstaff",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 1,
+ "claim": "cc69d680-b9e7-4d29-9f85-bb5dcf7477bb",
+ "count": 1,
+ "ok": true,
+ "at": 1795614426320,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795614425182
+ },
+ "logout": {
+  "attemptId": "1795614416666-0000030816-0000000001",
+  "at": 1795614426310,
+  "sha256": "ababb2749dff59d39ee105e1a3cf30048090d79c13ff67ca2f88ed34f20b8fa0"
+ },
+ "screen": true
+}
