@@ -617,15 +617,38 @@ async function exitMazeAndClearArenaGear(s: Session, stop: StopFn): Promise<void
     await walkWaypoints(s, [{ x: 2566, z: 3201, tol: 2 }], 120, stop, 'elkoy out to lady servil', { ignoreMeleeHunters: true });
 }
 
+async function openShutDoorAt(
+    s: Session,
+    match: (loc: { x: number; z: number; id: number; name?: string }) => boolean,
+    label: string,
+    stop: StopFn,
+): Promise<void> {
+    const findShut = () =>
+        (s.sdk.getState()?.nearbyLocs ?? []).find(
+            (l: any) => match(l) && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
+        );
+    for (let i = 0; i < 6 && !stop(); i++) {
+        const shut = findShut();
+        if (!shut) return;
+        const op = shut.optionsWithIndex.find((o: any) => /^open$/i.test(o.text ?? ''));
+        await s.sdk.sendInteractLoc(shut.x, shut.z, shut.id, op?.opIndex ?? 1);
+        await waitTicks(s, 2);
+    }
+    const still = findShut();
+    if (still) throw Error(`failed opening ${label} at ${still.x},${still.z}`);
+}
+
 async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
     await teleportTo(s, SPELLS.lumbridgeTeleport, p => p.worldX >= 3205 && p.worldX <= 3240 && p.worldZ >= 3205 && p.worldZ <= 3235, stop, 'Lumbridge teleport');
     await walkWaypoints(
         s,
-        [{ x: 3165, z: 3270, tol: 6 }, { x: 3109, z: 3328, tol: 2 }, { x: 3108, z: 3352, tol: 1 }],
-        180,
+        [{ x: 3165, z: 3270, tol: 6 }, { x: 3109, z: 3328, tol: 1 }],
+        140,
         stop,
-        'lumbridge to draynor manor',
+        'lumbridge to draynor manor gate',
     );
+    await openShutDoorAt(s, l => l.z === 3330 && l.x >= 3108 && l.x <= 3112, 'draynor manor south gate', stop);
+    await walkWaypoints(s, [{ x: 3108, z: 3352, tol: 1 }], 50, stop, 'manor gate to front door');
 
     const inManor = () => {
         const p = posOf(s);
@@ -638,21 +661,8 @@ async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
     }
     if (!inManor()) throw Error('failed entering Draynor Manor front door');
 
-    const openShutDoor = async (x: number, z: number, label: string) => {
-        for (let i = 0; i < 6 && !stop(); i++) {
-            const shut = (s.sdk.getState()?.nearbyLocs ?? []).find(
-                (l: any) => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
-            );
-            if (!shut) return;
-            const op = shut.optionsWithIndex.find((o: any) => /^open$/i.test(o.text ?? ''));
-            await s.sdk.sendInteractLoc(shut.x, shut.z, shut.id, op?.opIndex ?? 1);
-            await waitTicks(s, 2);
-        }
-        const still = (s.sdk.getState()?.nearbyLocs ?? []).find(
-            (l: any) => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
-        );
-        if (still) throw Error(`failed opening ${label} at ${x},${z}`);
-    };
+    const openShutDoor = (x: number, z: number, label: string) =>
+        openShutDoorAt(s, l => l.x === x && l.z === z, label, stop);
     const dash = async (x: number, z: number, tol: number, label: string) => {
         for (let i = 0; i < 12 && !stop(); i++) {
             const p = posOf(s);
@@ -727,19 +737,7 @@ async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
 }
 
 async function openShutArenaDoor(s: Session, x: number, z: number, label: string, stop: StopFn): Promise<void> {
-    for (let i = 0; i < 6 && !stop(); i++) {
-        const shut = (s.sdk.getState()?.nearbyLocs ?? []).find(
-            (l: any) => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
-        );
-        if (!shut) return;
-        const op = shut.optionsWithIndex.find((o: any) => /^open$/i.test(o.text ?? ''));
-        await s.sdk.sendInteractLoc(shut.x, shut.z, shut.id, op?.opIndex ?? 1);
-        await waitTicks(s, 2);
-    }
-    const still = (s.sdk.getState()?.nearbyLocs ?? []).find(
-        (l: any) => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
-    );
-    if (still) throw Error(`failed opening ${label} at ${x},${z}`);
+    return openShutDoorAt(s, l => l.x === x && l.z === z, label, stop);
 }
 
 async function passArenaGuardDoor(
