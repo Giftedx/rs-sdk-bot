@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795609107763-stirmypot-trousersnake-99060af52aa0fd87",
  "account": "Stirmypot",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 20,
  "claim": "7903f2eb-2465-479b-8730-cc1383f6da55",
- "count": 0,
- "ok": false,
- "at": 1795609113534,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1795609418959,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795609122212
+ },
+ "logout": {
+  "attemptId": "1795609113543-0000025356-0000000001",
+  "at": 1795609418943,
+  "sha256": "a60a8044af1fb7bf09691cde414cb11f092bc92a080de1823d0216ff35e55602"
+ },
+ "screen": true
 }
