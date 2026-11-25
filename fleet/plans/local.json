@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795602842598,
+ "at": 1795602859606,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -40,6 +40,22 @@
    "role": "army"
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "grapes"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1987",
+   "role": "army"
+  },
+  {
    "account": "Magicwanda",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -57,6 +73,22 @@
   },
   {
    "account": "PickpockDick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "foraging",
+    "grapes"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1987",
+   "role": "army"
+  },
+  {
+   "account": "Quickhandjob",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
@@ -152,22 +184,6 @@
    "role": "helper"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "loadout"
-   ],
-   "env": {
-    "ITEM_ID": "257",
-    "QUANTITY": "1",
-    "ITEM_NAME": "Ranarr weed"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:99",
-   "role": "army"
-  },
-  {
    "account": "Bigchopper",
    "script": "scripts/generated/quest-dragon.ts",
    "args": [],
@@ -206,7 +222,6 @@
   "oreelse",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
