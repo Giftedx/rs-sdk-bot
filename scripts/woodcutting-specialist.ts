@@ -586,6 +586,7 @@ if (import.meta.main) {
             while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 11) recentHitTicks.shift();
             const nearbyNpcs = st?.nearbyNpcs ?? [];
             let nextHitEta = Infinity;
+            let activeHitters = 0;
             for (const [npcIdx, info] of npcLastHit) {
                 if (now - info.tick > 10) {
                     npcLastHit.delete(npcIdx);
@@ -593,6 +594,7 @@ if (import.meta.main) {
                 }
                 const npc = nearbyNpcs.find(n => n.index === npcIdx);
                 if (!npc || npc.hp === 0 || npc.distance > 2 || !targetsPlayer(main, npc.targetIndex)) continue;
+                activeHitters++;
                 for (let k = 1; k <= 2; k++) {
                     const eta = info.tick + k * info.period - now;
                     if (eta >= 1 && eta < nextHitEta) {
@@ -608,8 +610,9 @@ if (import.meta.main) {
                 && !needNormalLog
                 && !activeHitIn1t
                 && tagCount < 24
-                && gobs < 2
-                && (nextHitEta === Infinity || nextHitEta === 3)
+                && activeHitters < 2
+                && gobs < 3
+                && (nextHitEta === Infinity || nextHitEta >= 4)
                 && now - lastTagTick >= 15
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
@@ -634,10 +637,10 @@ if (import.meta.main) {
                 }
             }
 
-            // Clear busy2 when hit arrives on now+1; hold 1 tick if hit arrives on now+2 (rolling now+3, same as knife3 without breaking flinch phase).
+            // Clear busy2 when hit arrives on now+1; wait if hit arrives on now+2..now+3 (because knife3 rolls at now+3 and p_opnpc(2) cancels it).
             const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && activeHitIn1t;
             if (!keepFlinchWindow) {
-                if (!outOfPrayer && wantOak && !needNormalLog && nextHitEta === 2) {
+                if (!outOfPrayer && wantOak && !needNormalLog && nextHitEta <= 3) {
                     const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
                     if (main.sdk.getInventory().length >= 25) {
                         const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, 3);
