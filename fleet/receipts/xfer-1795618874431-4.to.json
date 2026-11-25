@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795618874431-4",
+ "account": "mmthv2350",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "79e84d92-14c8-48fd-80bb-3ce254be2b94",
+ "count": 60,
+ "ok": true,
+ "at": 1795619699684,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795619698945
+ },
+ "logout": {
+  "attemptId": "1795619681441-0000013732-0000000001",
+  "at": 1795619699673,
+  "sha256": "f379f85712f7f44a861f3fa0daad226ca8cea1c2a65ddd3be811d8b0dbf87c2e"
+ },
+ "screen": true
+}

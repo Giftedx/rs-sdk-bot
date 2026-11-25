@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795618874431-4",
  "account": "Fingerblastr",
  "partner": "mmthv2350",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "d14f7640-f953-4e31-80ce-7bada8703652",
- "count": 0,
- "ok": false,
- "at": 1795619204463,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795619698091,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20000,
+  "after": 19940
+ },
+ "logout": {
+  "attemptId": "1795619204472-0000020916-0000000001",
+  "at": 1795619698078,
+  "sha256": "9059440009bf20617d0b77ad1800cc26448c93ca860acb47d630fcc229803bc8"
+ },
+ "screen": true
 }
