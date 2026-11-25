@@ -461,7 +461,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
     if (specNeedsConfirm) {
      confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
     }
-    if (opts.onConfirmSend && specNeedsConfirm && (ht.myAccepted || !ht.isOpen || helperConfirmingNow)) {
+    if (opts.onConfirmSend && (ht.myAccepted || !ht.isOpen) && specNeedsConfirm) {
      confirmActs.push(opts.onConfirmSend());
     }
     if (confirmActs.length) await Promise.all(confirmActs);
@@ -503,7 +503,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   if (specCanAccept && !st.myAccepted && sOffers.length <= 4) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (specCanAccept && (st.myAccepted || (!multiTickOffer && sOffers.length <= 3 && hOffers.length <= 3 && !opts.onConfirmSend))) {
+  if (specCanAccept && (st.myAccepted || (!multiTickOffer && sOffers.length <= 3 && hOffers.length <= 3))) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
   if (hMainActs.length) await Promise.all(hMainActs);

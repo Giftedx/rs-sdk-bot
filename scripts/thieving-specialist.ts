@@ -439,7 +439,7 @@ export async function runArdougneStunRelogThieving(opts: {
             }
         }
 
-        // Lv 35..54: steal nearby Market Fur/Silver stalls only when immediately adjacent & unwatched; never stall-wait at Lv 5..34.
+        // Lv 35..54: steal nearby Market Silver/Fur/Silk stalls when immediately nearby & unwatched to cut Guard relogs.
         const inMarket = st.player.worldX >= 2648 && st.player.worldX <= 2678 && st.player.worldZ >= 3290 && st.player.worldZ <= 3322;
         if (lvl >= 35 && lvl < 55 && inMarket) {
             const junkSlot = main.sdk.getInventory().find(
@@ -468,7 +468,7 @@ export async function runArdougneStunRelogThieving(opts: {
                             .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))
                             .filter(t => !watched(t.x, t.z)),
                     ).sort((a, b) => chebDist(a, { x: st.player!.worldX, z: st.player!.worldZ }) - chebDist(b, { x: st.player!.worldX, z: st.player!.worldZ }))[0];
-                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= 4) {
+                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= 8) {
                         pickedStall = tile;
                         break;
                     }

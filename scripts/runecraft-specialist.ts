@@ -297,9 +297,16 @@ export async function runRunecraftSpecialist(
    deadline,
   );
 
-   // Drop Glory, talismans, and Air runes while walking to the Body altar stand so 27 inventory slots stay free.
+   // Drop Glory, talismans, and Air runes in parallel while running to the Body altar stand so 27 slots stay free.
+   const preJunk = spec.sdk.getInventory().filter(i => i.id !== ITEM_IDS.bodyrune).slice(0, 4);
+   await Promise.all([
+    spec.direct({ type: 'walkTo', x: BODY_ALTAR_CRAFTER.x, z: BODY_ALTAR_CRAFTER.z, running: true, reason: 'SDK' }),
+    ...preJunk.map(i => spec.direct({ type: 'dropItem', slot: i.slot, reason: 'SDK' })),
+   ]);
+   if (!nearTile(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0)) {
+    await runTo(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, 20);
+   }
    await dropItemsFast(spec, new Set([ITEM_IDS.bodyrune]), deadline);
-   await runTo(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, 20);
    logPhase(spec, start, 'rc_at_body_altar');
 
    const bodyAltar = findLocBy(spec, l => l.id === 2483) ?? { x: 2524, z: 4832, id: 2483 };
