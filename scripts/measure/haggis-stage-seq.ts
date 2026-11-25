@@ -301,18 +301,25 @@ export async function runHaggisStageSeq(
     plan: StageSeqPlan,
     wineCount = DEFAULT_WINE_COUNT,
 ): Promise<StageSeqPhases> {
-    const stage1 = (await runHaggisFirstFive(accounts.mainName, accounts.stage1HelperName, {
+    const timed = async <T>(name: string, fn: () => Promise<T>, ticksOf: (v: T) => number): Promise<T> => {
+        const startMs = Date.now();
+        console.log(`STAGE_SEQ start step=${name}`);
+        const out = await fn();
+        console.log(`STAGE_SEQ done step=${name} ticks=${ticksOf(out)} wallMs=${Date.now() - startMs}`);
+        return out;
+    };
+    const stage1 = (await timed('s1', () => runHaggisFirstFive(accounts.mainName, accounts.stage1HelperName, {
         wineCount,
         savePort: ISOLATED.save,
         cap: 600,
-    })).phases;
-    const stage1To2Ticks = await transitionStage1To2(accounts.mainName, accounts.bankerNames, plan);
-    const stage2 = (await runHaggisStage2(accounts.mainName)).phases;
-    const stage3 = (await runHaggisStage3(accounts.mainName)).phases;
-    const stage4 = (await runHaggisStage4(accounts.mainName)).phases;
-    const stage5 = (await runHaggisStage5(accounts.mainName)).phases;
-    const stage6 = (await runHaggisStage6(accounts.mainName)).phases;
-    const stage7 = (await runHaggisStage7(accounts.mainName)).phases;
+    }), r => r.phases.totalElapsedTicks)).phases;
+    const stage1To2Ticks = await timed('s1To2', () => transitionStage1To2(accounts.mainName, accounts.bankerNames, plan), t => t);
+    const stage2 = (await timed('s2', () => runHaggisStage2(accounts.mainName), r => r.phases.totalElapsedTicks)).phases;
+    const stage3 = (await timed('s3', () => runHaggisStage3(accounts.mainName), r => r.phases.totalElapsedTicks)).phases;
+    const stage4 = (await timed('s4', () => runHaggisStage4(accounts.mainName), r => r.phases.totalElapsedTicks)).phases;
+    const stage5 = (await timed('s5', () => runHaggisStage5(accounts.mainName), r => r.phases.totalElapsedTicks)).phases;
+    const stage6 = (await timed('s6', () => runHaggisStage6(accounts.mainName), r => r.phases.totalElapsedTicks)).phases;
+    const stage7 = (await timed('s7', () => runHaggisStage7(accounts.mainName), r => r.phases.totalElapsedTicks)).phases;
     const sumStageTicks = stage1.totalElapsedTicks
         + stage1To2Ticks
         + stage2.totalElapsedTicks
@@ -332,6 +339,7 @@ async function runIsolated(): Promise<void> {
     }
     ensurePackedGameAssets();
     process.env.SIM_LOCKSTEP = '1';
+    process.env.REHEARSE_TICK_MS ??= '25';
     process.env.RANDOM_EVENTS ??= '0';
     process.env.DEMO_OK = '';
 
