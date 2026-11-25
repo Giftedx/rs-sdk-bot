@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795604056732-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "PickpockDick",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 209,
+  "start": 1795604056732,
+  "end": 1795604956732,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
