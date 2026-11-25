@@ -399,7 +399,9 @@ function syncWorld(){
     url.searchParams.set('embed','0');url.searchParams.set('client','1');url.searchParams.set('fps','20');url.searchParams.set('scale',String(window.atlasQuality||1));
     url.searchParams.set('hideNamesFrom',new URL('api/hidden-names',document.baseURI).href);url.searchParams.set('highlightFrom',new URL('api/our-names',document.baseURI).href);
     if(Q.get('flight')==='0')url.searchParams.set('flight','0');if(Q.get('cache')==='0')url.searchParams.set('cache','0');
-    const target=window.atlasFollowOther||sel;if(target&&!window.atlasFreeCamera)url.searchParams.set('follow',target);rswFor=sel;sentMaxLevel=viewerMaxLevel();url.searchParams.set('ml',String(sentMaxLevel));f.src=url.href;
+    // An unread shared link chooses its own account or camera: following the account picked before it would make the
+    // viewer report that account back and replace the link.
+    const target=window.atlasFollowOther||sel;if(target&&!window.atlasFreeCamera&&!window.atlasLinkPending?.())url.searchParams.set('follow',target);rswFor=sel;sentMaxLevel=viewerMaxLevel();url.searchParams.set('ml',String(sentMaxLevel));f.src=url.href;
   }else if(rswFor!==sel&&sel&&!window.atlasFreeCamera&&!window.atlasFollowOther&&!window.atlasWallOn?.()){rswFor=sel;f.contentWindow?.postMessage({follow:sel},VIEWER.origin);}
   syncGround(f);
 }
@@ -572,7 +574,7 @@ function liveRosterIn(r){
   if(SNAPSHOT){S=withLiveRoster(SNAPSHOT,LIVE_ROSTER,Date.now());render();}
   const here=!!sel&&r.players.some(p=>String(p[0]).toLowerCase()===sel.toLowerCase());
   if(!here)followedLive=null;
-  else if(followedLive!==sel&&mode==='3d'&&VIEWER.state==='ready'&&!window.atlasFreeCamera&&!window.atlasFollowOther&&!window.atlasWallOn?.()){followedLive=sel;rswFor=sel;$('#rsw').contentWindow?.postMessage({follow:sel},VIEWER.origin);}
+  else if(followedLive!==sel&&mode==='3d'&&VIEWER.state==='ready'&&!window.atlasFreeCamera&&!window.atlasFollowOther&&!window.atlasLinkPending?.()&&!window.atlasWallOn?.()){followedLive=sel;rswFor=sel;$('#rsw').contentWindow?.postMessage({follow:sel},VIEWER.origin);}
 }
 window.atlasRosterIn=liveRosterIn;
 // A published state can hold one account twice, from two machines: the page keeps the row with the newer time.

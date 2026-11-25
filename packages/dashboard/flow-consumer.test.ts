@@ -52,7 +52,7 @@ test('observed flow identities reach activity value, screenshots and logout whil
  watched.name='Legacy';watched.flow={...legacy,loot:[]};lootShots();watched.flow=legacy;lootShots();expect(shots.length).toBe(1);
 
  const sessionSource=shell.slice(shell.indexOf('  function sessionText(name){'),shell.indexOf('  function moments(){'));
- const sessionText=new Function('sessionXp','sessionLast','price','nf','gp','dur',`${sessionSource};return sessionText;`)
-  (new Map([['Exact',{}],['Legacy',{}]]),new Map([['Exact',{xp:{},loot:exact.loot}],['Legacy',{xp:{},loot:legacy.loot}]]),browser.price,String,String,String);
+ const sessionText=new Function('sessionXp','sessionLast','sessionIn','price','nf','gp','dur',`${sessionSource};return sessionText;`)
+  (new Map([['Exact',{}],['Legacy',{}]]),new Map([['Exact',{xp:{},loot:exact.loot}],['Legacy',{xp:{},loot:legacy.loot}]]),new Map(),browser.price,String,String,String);
  expect(sessionText('Exact')).toBe(': 3 Ring, ≈ 2100 gp of loot');expect(sessionText('Legacy')).toBe(': 4 Ring, ≈ 0 gp of loot + 1 unpriced');
 });

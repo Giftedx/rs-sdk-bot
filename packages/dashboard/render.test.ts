@@ -303,3 +303,15 @@ test('prsPanel rejects non-HTTP(S) PR URLs while rendering valid GitHub links',(
  expect(htmlOut).not.toContain('javascript:');
  expect(htmlOut).toContain('Bad PR');
 });
+
+// A shared link names its account, Watch or free camera; until the page reads it, the first viewer address follows nobody.
+// Following the account chosen before the link resolved made the viewer report that account back, which replaced the link.
+test('the first viewer address follows nobody while a shared link is still unread',()=>{
+ const helpers=html.slice(html.indexOf('function viewerFrameUrl('),html.indexOf('function viewerMessage('));
+ const sync=html.slice(html.indexOf('function syncWorld(){'),html.indexOf('// Ground items:'));
+ const src=(pending:boolean)=>{const frame={getAttribute:()=>null,src:''},follow={textContent:''};
+  new Function('$','URL','location','viewer','window',`const S={bots:[{name:'Worker',at:1}]},sel='Worker',mode='3d',Q=new URLSearchParams(),VIEWER={url:viewer},document={baseURI:location.origin},age=()=>'',showViewerStatus=()=>{},viewerMaxLevel=()=>3,syncGround=()=>{};let rswFor,sentMaxLevel;${helpers};${sync};syncWorld();`)
+   ((id:string)=>id==='#rsw'?frame:follow,URL,{origin:'http://127.0.0.1:3100'},'/viewer/',{atlasLinkPending:()=>pending});
+  return new URL(frame.src,'http://127.0.0.1:3100').searchParams.get('follow');};
+ expect(src(false)).toBe('Worker');expect(src(true)).toBeNull();
+});

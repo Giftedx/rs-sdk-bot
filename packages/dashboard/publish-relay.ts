@@ -168,13 +168,38 @@ export function controlView(state:any,controlMeta:any,main=MAIN_ACCOUNT){
 const PUBLIC_BOT=['name','server','side','remote','practice','reserved','at','started','fresh','inWorld','operation','pos','live','hp','hpAt','combat','questPoints',
  'skills','quests','questsDone','questsStarted','questsUnknown','questsAt','equipment','equipmentObserved','inventory','ranks','ranksAt','role','goal','currentGoal','goalSkill','goalLevel',
  'goalNow','goalXp','xpPerTick','xpPerHour','xpLeft','eta','rateSkill','spark','uptime','action','death','seenInFeed','lastSeen','outcome','training','snapshotAt','ground','roleInferred'] as const;
-const PUBLIC_KEYS=['now','questList','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','snapshotAt','liveTopsAt','liveTops'] as const;
+// The state's own snapshotAt is the date of the fixed hiscores file that board tops fall back to (world.ts), not the
+// age of anything the page shows, so it stays out.
+const PUBLIC_KEYS=['now','questList','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','liveTopsAt','liveTops'] as const;
 // Goal texts can carry an internal task tag ("run-x [task-1a2b]") and, after a colon or in brackets, stock counts
 // ("Smithing from banked ore: 1630 bronze and 571 iron", "cooked lobsters (607 short)"): the public keeps the headline.
 // A run id ("run-ranged-<account>-band50") is a file name, not a goal: the public text names its kind.
 const RUN_KIND:Record<string,string>={ranged:'Ranged training',ge:'Grand Exchange trade',handoff:'item hand-off',quest:'quests'};
-const publicGoal=(g:any)=>{
+// A Brain goal id is the job goal of a Brain chain (packages/fleet/src/fleet-sync.ts): "goal:<kind>:<key>", such as
+// "goal:pk_army:<account>", "goal:supply_chain:<item id>" and "goal:quest_board:<quest key>", or
+// "campaign:<account>:item:<item id>". The public text names the kind and its quest or item, never the account.
+const BRAIN_KIND:Record<string,string>={pk_army:'PK army',supply_chain:'supply chain',quest_board:'quests'};
+type ItemNamer=(id:number)=>string|null;
+function brainGoal(g:string,itemName:ItemNamer):string|null{
+ const campaign=/^campaign:[^:]*:item:(\d+)$/.exec(g);
+ if(campaign){const item=itemName(Number(campaign[1]));return item?'campaign: '+item:'item campaign';}
+ const goal=/^goal:([a-z_]+):(.*)$/.exec(g);
+ if(!goal)return null;
+ const [,kind,key]=goal as unknown as [string,string,string];
+ if(kind==='supply_chain'&&/^\d+$/.test(key)){const item=itemName(Number(key));if(item)return 'supply: '+item;}
+ if(kind==='quest_board'&&/^[a-z0-9_]+$/.test(key))return 'quest: '+key.replace(/_/g,' ');
+ return BRAIN_KIND[kind]??kind.replace(/_/g,' ');
+}
+// Item names by id from the market state: its prices first, then its supply rows.
+function itemNamer(s:any):ItemNamer{
+ const byId=s?.economy?.itemPricesById,supplies=new Map<number,string>();
+ if(Array.isArray(s?.economy?.supplies))for(const x of s.economy.supplies)if(Number.isSafeInteger(x?.id)&&typeof x?.name==='string')supplies.set(x.id,x.name);
+ return id=>{const n=byId&&Object.hasOwn(byId,id)?byId[id]?.name:supplies.get(id);return typeof n==='string'&&n.trim()?n.trim():null;};
+}
+const publicGoal=(g:any,itemName:ItemNamer=()=>null)=>{
  if(typeof g!=='string')return g;
+ const brain=brainGoal(g.trim(),itemName);
+ if(brain)return brain;
  // A specialist run id names the account, then the skill: "run-nockandload-fletching-specialist-1795166115412".
  const specialist=/^run-[a-z0-9]+-([a-z]+)-specialist\b/i.exec(g.trim());
  if(specialist)return specialist[1]![0]!.toUpperCase()+specialist[1]!.slice(1).toLowerCase()+' specialist';
@@ -263,12 +288,13 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  // private main account, which the public file never holds, so the flag goes.
  // An account with credentials but no status, job or skills yet (never logged in) is an empty row: it stays private.
  const empty=(b:any)=>b?.at===0&&Array.isArray(b?.skills)&&b.skills.length===0&&b?.inWorld!==true;
+ const itemName=itemNamer(s);
  const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.practice&&!empty(b)).map((b:any)=>{
   const copy:any=compactBotCommon(pick(b,PUBLIC_BOT));
   delete copy.reserved;
   if(Object.hasOwn(b,'hpAt')){const at=observedAt(copy.hpAt,s.now),accountAt=observedAt(copy.at,s.now);copy.hpAt=at!==null&&accountAt!==null&&at<=accountAt?at:null;}else delete copy.hpAt;
   if(Object.hasOwn(b,'questPoints'))copy.questPoints=publicQuestPoints(copy.questPoints,s.now);else delete copy.questPoints;
-  for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);
+  for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k],itemName);
   if(copy.death)copy.death={at:copy.death.at,text:'died'};
   return copy;
  });
@@ -277,7 +303,7 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  if(s.stateError)out.stateError='Fleet data could not be refreshed; showing the last snapshot.';
  out.bots=bots;
  // A finished or stopped run, by its goal: the run's counters (coins banked, items bought) are the owner's.
- out.results=(s.results??[]).filter((r:any)=>!isMain(r?.name)&&!r?.practice).map((r:any)=>({at:r.at,name:r.name,ok:r.ok,text:publicGoal(r.goal)??''}));
+ out.results=(s.results??[]).filter((r:any)=>!isMain(r?.name)&&!r?.practice).map((r:any)=>({at:r.at,name:r.name,ok:r.ok,text:publicGoal(r.goal,itemName)??''}));
  out.events=[];out.alerts=[];
  // Market prices are public; the fleet's income and its farmers are the owner's.
  // Item values only for what a public bot carries or wears: the bank's item list is the owner's.
@@ -314,14 +340,17 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  const itemExamine:Record<string,unknown>={};
  if(s.economy?.itemExamine)for(const n in s.economy.itemExamine)if(Object.prototype.hasOwnProperty.call(s.economy.itemExamine,n)&&carried.has(n))itemExamine[n]=s.economy.itemExamine[n];
  out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues,itemExamine,...prices,...examines,goldPerTick:0,farmers:[],trend:[]}:null;
- // The queue's counts and agents stay; the task texts are the agents' working notes.
- out.coordination=s.coordination&&typeof s.coordination==='object'?{available:s.coordination.available,fresh:s.coordination.fresh,paused:s.coordination.paused,counts:s.coordination.counts,agents:s.coordination.agents,tasks:[]}:null;
+ // The queue's counts and agents stay; the task texts and ids are the agents' working notes, so an agent shows only how
+ // many tasks it runs.
+ const agents=Array.isArray(s.coordination?.agents)?s.coordination.agents.map((a:any)=>({name:a?.name,planning:a?.planning,fresh:a?.fresh,paused:a?.paused,running:Array.isArray(a?.tasks)?a.tasks.length:0})):s.coordination?.agents;
+ out.coordination=s.coordination&&typeof s.coordination==='object'?{available:s.coordination.available,fresh:s.coordination.fresh,paused:s.coordination.paused,counts:s.coordination.counts,agents,tasks:[]}:null;
  // Other sides' accounts and sync times are public; their coins are bank stock.
  out.fleetSides=s.fleetSides&&Array.isArray(s.fleetSides.sides)?{at:s.fleetSides.at??null,sides:s.fleetSides.sides.map((side:any)=>({...side,accounts:(side.accounts??[]).filter((a:any)=>!isMain(a?.name)).map(({coins:_coins,...a}:any)=>a)}))}:null;
  // Other players are public game data (world feed, hiscores); the main account leaves every list.
  if(Array.isArray(out.roster))out.roster=out.roster.filter((r:any)=>!isMain(r?.[0]));
  if(Array.isArray(out.rivals))out.rivals=out.rivals.map((b:any)=>({...b,ours:isMain(b?.ours?.name)?null:b?.ours??null,rows:(b.rows??[]).filter((r:any)=>!isMain(r?.name))}));
- if(Array.isArray(out.contention))out.contention=out.contention.map((c:any)=>({...c,others:(c.others??[]).filter((n:any)=>!isMain(n)),ours:(c.ours??[]).filter((n:any)=>!isMain(n))}));
+ // A claim with no tile has no place on the public map or the World panel's spot list (the owner's view names it).
+ if(Array.isArray(out.contention))out.contention=out.contention.filter((c:any)=>c&&c.x!==null&&c.z!==null).map((c:any)=>({...c,others:(c.others??[]).filter((n:any)=>!isMain(n)),ours:(c.ours??[]).filter((n:any)=>!isMain(n))}));
  if(out.lookups&&typeof out.lookups==='object'){
   const cleanLookups:Record<string,unknown>={};
   const lookups=out.lookups as Record<string,any>;

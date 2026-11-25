@@ -1426,8 +1426,8 @@ test('loot screenshots and logout value use existing exact IDs and retain unknow
  b.flow.loot=[{id:1,name:'Ring',count:2},{id:2,name:'Ring',count:1}];lootShots();expect(shots).toEqual(['Ring (900)']);
  b.flow.loot.push({name:'Ring',count:100});lootShots();expect(shots.length).toBe(1);
  const session=shell.slice(shell.indexOf('  function sessionText(name){'),shell.indexOf('  function moments(){'));
- const sessionText=new Function('sessionXp','sessionLast','price','nf','gp','dur',`${session};return sessionText;`)
-  (new Map([['Worker',{}]]),new Map([['Worker',{xp:{},loot:b.flow.loot}]]),pricing(S).price,String,String,String);
+ const sessionText=new Function('sessionXp','sessionLast','sessionIn','price','nf','gp','dur',`${session};return sessionText;`)
+  (new Map([['Worker',{}]]),new Map([['Worker',{xp:{},loot:b.flow.loot}]]),new Map(),pricing(S).price,String,String,String);
  expect(sessionText('Worker')).toBe(': 100 Ring, ≈ 1100 gp of loot + 1 unpriced');
 });
 
@@ -1612,8 +1612,8 @@ test('queued depletion reports cannot repopulate an unloaded or loading viewer b
  ui.feed(true);deliver();expect(ui.value().depletedNow.list).toEqual(report);
 });
 test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
- const line=shell.split('\n').find(l=>l.includes("live.sort(xpSort==='waste'"))!.trim();
- const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','xpSort','idle',line)(live,xpSort,idle);return live.map(x=>x.name).join('');};
+ const line=shell.split('\n').find(l=>l.includes("live.sort(waste?"))!.trim();
+ const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','waste','idle',line)(live,xpSort==='waste',idle);return live.map(x=>x.name).join('');};
  const window:any={efficiency:(t:string)=>t.split('').filter(c=>c==='i').length};
  expect(run('rate')).toBe('BAC');expect(run('waste')).toBe('BCA');
 });
@@ -1789,6 +1789,16 @@ test('GE exposes every matching item and resets its visible batch for search, so
  panel.sort('flip');expect(count()).toBe(80);panel.more();expect(count()).toBe(82);
  panel.sort('stock');panel.more();panel.all();expect(count()).toBe(80);expect(panel.geResults()[0]).toContain('Showing 80 of 82 items');
  panel.search('Unlisted');expect(count()).toBe(1);expect(panel.geResults()[0]).toContain('Showing 1 of 1 items');
+});
+
+// The game gives the four hides one name ("Dragonhide"), the four leathers another and every unfinished potion a third;
+// the item id tells them apart, as it does for "Herb".
+test('GE names each hide, leather and unfinished potion that shares a game name',()=>{
+ const rows=[[1753,'Dragonhide'],[1751,'Dragonhide'],[1749,'Dragonhide'],[1747,'Dragonhide'],[1745,'Dragon leather'],[2509,'Dragon leather'],[91,'Unfinished potion'],[3004,'Unfinished potion'],[199,'Herb']];
+ const panel=marketPanelHarness(rows.map(([id,name])=>({id,name,ask:10,bid:5,vwap:8,stock:1})));
+ const html=panel.geResults()[1];
+ for(const name of ['Green dragonhide','Blue dragonhide','Red dragonhide','Black dragonhide','Green dragon leather','Black dragon leather','Guam potion (unf)','Snapdragon potion (unf)','Herb (guam)'])expect(html).toContain('>'+name+'<');
+ panel.search('red dragonhide');expect([...panel.geResults()[1].matchAll(/data-ge-src=/g)].length).toBe(1);
 });
 
 test('GE preserves sort and offer-toggle keyboard focus when its head is replaced',()=>{
@@ -1987,6 +1997,19 @@ test('logout line: the session length, the most XP gained and the top loot with 
  b.inWorld=false;b.flow=null;moments();
  expect(chat.map(c=>c.text)).toEqual(['Alpha has logged out after 70m: +45,000 Woodcutting XP, 412 Yew logs, ≈ 82400 gp of loot + 1 unpriced.']);
 });
+// The published uptime runs from the worker's start, which can come long before its login, and it can be 10 minutes old;
+// a login the page saw gives the true length.
+test('logout line: a login the page saw sets the session length, not the published uptime',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
+ let clock=1_000_000;
+ const chat:any[]=[],b:any={name:'Beta',inWorld:false,uptime:767_000,skills:[],flow:{loot:[]}};
+ const env:any={S:{bots:[b],boards:[],economy:{itemValues:{}}},chat,renderChat:()=>{},safeName:String,nf:String,gp:String,dur:(ms:number)=>Math.round(ms/1000)+'s',Date:{now:()=>clock}};
+ const moments=new Function(...Object.keys(env),'price',`${code};return moments;`)(...Object.values(env),pricing(env.S).price);
+ moments();
+ b.inWorld=true;moments();
+ clock+=45_000;b.inWorld=false;moments();
+ expect(chat.map(c=>c.text)).toEqual(['Beta has logged in.','Beta has logged out after 45s.']);
+});
 test('rank lines: a move of the same account, and another account taking the best rank, never "up from" another account',()=>{
  const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
  const chat:any[]=[],S:any={bots:[],boards:[{board:'Overall',best:{name:'Alpha',rank:1619}}]};
@@ -2104,8 +2127,12 @@ test('Screenshot: a level-up, a death or valuable loot of the watched account as
  expect(posted.length).toBe(2);
 });
 test('wildernessWatchBox highlights rivals within attack range of our Wilderness accounts and counts overflow',()=>{
- const code=shell.slice(shell.indexOf('  function wildernessWatchBox()'),shell.indexOf('  // A new snapshot rewrites the panel'));
+ const code=shell.slice(shell.indexOf('  // The public file has no wilderness list.'),shell.indexOf('  // A new snapshot rewrites the panel'));
  const wildHelpers=shell.slice(shell.indexOf('  const wildLevel='),shell.indexOf('  function pvpState('));
+ // The public file has no wilderness list: the roster gives it, with our accounts marked and the rivals first.
+ const fromRoster=new Function('S','E','nameButtons','placeOf',`${wildHelpers}${code};return wildernessWatchBox();`)({bots:[{name:'OurRoamer',inWorld:true,pos:{x:3060,z:3880,level:0},combat:100}],roster:[['ThreatPker',3070,3880,0,120],['OurRoamer',3060,3880,0,100],['Lumbridger',3222,3218,0,40]]},String,(ns:string[])=>ns.join(','),()=>'Lava Maze');
+ expect(fromRoster).toContain('1 rival · 2 total');expect(fromRoster).toContain('can attack ours');expect(fromRoster).not.toContain('Lumbridger');
+ expect(fromRoster.indexOf('ThreatPker')).toBeLessThan(fromRoster.indexOf('OurRoamer'));
  const make=(wilderness:any[],bots:any[])=>new Function('S','E','nameButtons','placeOf',`${wildHelpers}${code};return wildernessWatchBox();`)({wilderness,bots},String,(ns:string[])=>ns.join(','),()=>'Lava Maze');
  const bots=[{name:'OurRoamer',inWorld:true,pos:{x:3060,z:3880,level:0},combat:100}];
  const html=make([
@@ -2456,4 +2483,25 @@ test('Prayer tab names, levels and drains are the values of the content prayer t
  expect<unknown>(table.map(([name,level,,d])=>[name,level,d])).toEqual(want);
  // prayers.enum:4-6: Thick Skin, Burst of Strength and Clarity of Thought drain 3.
  expect(table.slice(0,3).map(x=>x[3])).toEqual([3,3,3]);
+});
+
+// A run with no goal text ends as "stopped", not "stopped:" with nothing after it.
+test('chat: a run result with no goal text has no dangling colon',()=>{
+ const code=shell.slice(shell.indexOf('  function chatFeed(){'),shell.indexOf('  // Desktop notifications'));
+ const pushed:any[]=[];
+ const window:any={atlasOperator:()=>false,atlasHousekeeping:()=>false,atlasJobName:(t:any)=>String(t??'')};
+ const S:any={events:[],results:[{at:1,name:'Magicwanda',ok:false,text:''},{at:2,name:'Woodpecker',ok:true,text:'aio logistics'}]};
+ new Function('S','window','seen','safeName','toBrowserAt','pushChat',`let welcomed=true;${code};chatFeed();`)(S,window,new Set(),String,(n:number)=>n,(...items:any[])=>pushed.push(...items));
+ expect(pushed.map(i=>i.name+': '+i.text)).toEqual(['Magicwanda: stopped','Woodpecker: finished: aio logistics']);
+});
+
+test('XP Tracker offers the Most idle sort only when a playing bot has a tick timeline',()=>{
+ const start=shell.indexOf('      const live=botsList.filter(x=>x.fresh'),code=shell.slice(start,shell.indexOf('      put(panel,',start));
+ require('./xp-tracker.js');
+ const X=(globalThis as any).atlasXp;
+ const run=(botsList:any[],xpSort:string)=>new Function('botsList','xpSort','window',`${code};return {sort,order:live.map(x=>x.name)};`)(botsList,xpSort,{atlasXp:X});
+ const bots=[{name:'Fast',fresh:true,xpPerHour:900},{name:'Slow',fresh:true,xpPerHour:100}];
+ expect(run(bots,'waste')).toEqual({sort:'',order:['Fast','Slow']});
+ const timed=run([...bots,{name:'Lazy',fresh:true,xpPerHour:50,timeline:'iiiiiiiiii'}],'waste');
+ expect(timed.sort).toContain('data-xp-sort="waste">Most idle');expect(timed.order[0]).toBe('Lazy');
 });

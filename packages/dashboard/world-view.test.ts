@@ -34,6 +34,13 @@ test('spot contention counts other players near a claimed tile or named spot on 
     expect(v.find(s => s.resource === 'shop:aubury')).toEqual({ side: 'local', resource: 'shop:aubury', kind: 'shop', x: 3253, z: 3402, others: ['AuburyVisitor'], ours: [] });
     expect(v.find(s => s.resource === 'unknown:place')).toEqual({ side: 'local', resource: 'unknown:place', kind: 'unknown', x: null, z: null, others: [], ours: [] });
 });
+// The Brain claims its catalog spot ids (packages/brain/src/catalog.ts spotId), which have no "kind:x,z" form.
+test('spot contention checks a Brain spot id at its tile', () => {
+    const ext = new Map([...roster, ['willowman', { name: 'WillowMan', x: 3085, z: 3236, level: 0, combat: 20, seen: now - 500 }]]);
+    const v = contentionView([{ side: 'local', at: now, resources: ['draynor-willows', 'lava-maze-runite'] }], ext, fleet, now);
+    expect(v.find(s => s.resource === 'draynor-willows')).toEqual({ side: 'local', resource: 'draynor-willows', kind: 'draynor-willows', x: 3086, z: 3232, others: ['WillowMan'], ours: [] });
+    expect(v.find(s => s.resource === 'lava-maze-runite')).toMatchObject({ x: 3059, z: 3884 });
+});
 
 test('wildernessInfo computes wilderness level and combat bracket for surface and dungeon Wilderness tiles', () => {
     expect(wildernessInfo({ x: 3094, z: 3555, level: 0 }, 90)).toEqual({ wild: 5, minCombat: 85, maxCombat: 95 });
