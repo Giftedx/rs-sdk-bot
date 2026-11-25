@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795634178019-4",
  "account": "Kiltlifter",
  "partner": "BoneToPick",
@@ -10,8 +10,18 @@
  "item": "Nature rune",
  "requested": 247,
  "claim": "3d4dbcc6-4ab7-4278-acd7-526951d8ce85",
- "count": 0,
- "ok": false,
- "at": 1795634278245,
- "detail": "trade claimed"
+ "count": 247,
+ "ok": true,
+ "at": 1795634444249,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 247,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795634278255-0000029360-0000000001",
+  "at": 1795634444236,
+  "sha256": "1be2bbc1a98aa1c960ea7cf1cd7ba667d4475cb9b4d77a94390793ddf797f45b"
+ },
+ "screen": true
 }
