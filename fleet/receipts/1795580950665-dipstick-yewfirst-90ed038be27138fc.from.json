@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795580950665-dipstick-yewfirst-90ed038be27138fc",
  "account": "Dipstick",
  "partner": "YewFirst",
@@ -10,35 +10,89 @@
  "item": "Rune arrowtips",
  "requested": 241,
  "claim": "d520d461-27c5-438c-a9ed-6ce1574b3f6b",
- "count": 0,
- "ok": false,
- "at": 1795581041087,
- "detail": "trade claimed",
+ "count": 241,
+ "ok": true,
+ "at": 1795581573478,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Adamant arrowtips",
    "requested": 128,
-   "count": 0
+   "count": 128,
+   "inventory": {
+    "before": 128,
+    "after": 0
+   },
+   "bank": {
+    "count": 128,
+    "at": 1795581051563
+   }
   },
   {
    "item": "Mithril arrowtips",
    "requested": 225,
-   "count": 0
+   "count": 225,
+   "inventory": {
+    "before": 225,
+    "after": 0
+   },
+   "bank": {
+    "count": 225,
+    "at": 1795581052363
+   }
   },
   {
    "item": "Steel arrowtips",
    "requested": 135,
-   "count": 0
+   "count": 135,
+   "inventory": {
+    "before": 135,
+    "after": 0
+   },
+   "bank": {
+    "count": 135,
+    "at": 1795581053161
+   }
   },
   {
    "item": "Iron arrowtips",
    "requested": 90,
-   "count": 0
+   "count": 90,
+   "inventory": {
+    "before": 90,
+    "after": 0
+   },
+   "bank": {
+    "count": 90,
+    "at": 1795581053942
+   }
   },
   {
    "item": "Bronze arrowtips",
    "requested": 60,
-   "count": 0
+   "count": 60,
+   "inventory": {
+    "before": 60,
+    "after": 0
+   },
+   "bank": {
+    "count": 60,
+    "at": 1795581054807
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 241,
+  "after": 0
+ },
+ "bank": {
+  "count": 241,
+  "at": 1795581050758
+ },
+ "logout": {
+  "attemptId": "1795581041095-0000020928-0000000001",
+  "at": 1795581573459,
+  "sha256": "1f69d94d1b163c63687c96f1d93c42e4d1d5aed2121674f0021cfd2421d6f324"
+ },
+ "screen": true
 }
