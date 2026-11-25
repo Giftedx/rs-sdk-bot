@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795632303462-1",
+ "account": "BowBeforeMe",
+ "partner": "Stirmypot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "cdbd9130-03a7-43ab-b1b6-6e9fb4a05209",
+ "count": 0,
+ "ok": false,
+ "at": 1795632434408,
+ "detail": "trade claimed"
+}

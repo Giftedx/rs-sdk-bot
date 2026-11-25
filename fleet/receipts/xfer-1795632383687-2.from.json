@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795632383687-2",
+ "account": "Fingerblastr",
+ "partner": "RearEntry",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "118da558-89dd-4a35-a755-1ac011b4aeea",
+ "count": 0,
+ "ok": false,
+ "at": 1795632478998,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795632268564-1",
+ "account": "TheFullMonty",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Irit leaf",
+ "requested": 5,
+ "claim": "8e4743ad-21fe-407f-bee9-42a02de71060",
+ "count": 0,
+ "ok": false,
+ "at": 1795632457017,
+ "detail": "trade claimed"
+}

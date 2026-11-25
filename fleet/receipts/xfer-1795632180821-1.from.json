@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795632180821-1",
  "account": "Shaftsinker",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "3c765067-7822-4ee5-aacb-c7c388933468",
- "count": 0,
- "ok": false,
- "at": 1795632280350,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795632433953,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795632286803
+ },
+ "logout": {
+  "attemptId": "1795632280360-0000030628-0000000001",
+  "at": 1795632433940,
+  "sha256": "a131cd6f8af162ea76a08833518b2d7587126f3bb571b73fa6d8b253ec21c860"
+ },
+ "screen": true
 }
