@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795564822730-yewgotwood-ballspinner-5889d454393c4253",
+ "role": "from",
+ "account": "YewGotWood",
+ "partner": "Ballspinner",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795564985347,
+ "detail": "Error: account logout is not confirmed: YewGotWood ended disconnected"
+}
