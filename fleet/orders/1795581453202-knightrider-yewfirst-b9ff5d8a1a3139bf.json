@@ -1,0 +1,21 @@
+{
+ "id": "1795581453202-knightrider-yewfirst-b9ff5d8a1a3139bf",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 745,
+ "start": 1795581453202,
+ "end": 1795585053202,
+ "extra": [
+  {
+   "item": "Adamant arrowtips",
+   "count": 495
+  },
+  {
+   "item": "Coins",
+   "count": 100000
+  }
+ ],
+ "takerWaits": true
+}
