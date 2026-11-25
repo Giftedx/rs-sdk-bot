@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795604271331-1",
  "account": "BoneToPick",
  "partner": "Woodenstaff",
@@ -12,6 +12,16 @@
  "claim": "a85c1966-e957-40f8-9a15-5f51e958e867",
  "count": 0,
  "ok": false,
- "at": 1795604430012,
- "detail": "trade claimed"
+ "at": 1795605171956,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 2,
+  "at": 1795604437250
+ },
+ "logout": {
+  "attemptId": "1795604430021-0000001568-0000000001",
+  "at": 1795605171943,
+  "sha256": "259fa45132b304e73571334ef5adab91eba70299874777a0e0fa9ac169d4cd3b"
+ },
+ "screen": false
 }
