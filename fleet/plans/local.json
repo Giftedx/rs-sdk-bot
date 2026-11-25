@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795583447737,
+ "at": 1795583528926,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -66,11 +66,11 @@
    "role": "supply"
   },
   {
-   "account": "SporranDip",
+   "account": "Shaftmaker",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy-list",
-    ".practice/live-ops/sporrandip-ge.json"
+    ".practice/live-ops/shaftmaker-ge.json"
    ],
    "enabled": true,
    "repeat": false,
@@ -154,6 +154,7 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
+  "sporrandip",
   "swordinhand",
   "thefullmonty",
   "trousersnake",
