@@ -280,8 +280,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '2500', VARIANT: 'pvp-glory' },
         suppliers: () => combatPvpSuppliers('ranged-pvp-glory', true),
         defaultSeed: 7,
-        planTicks: 1452,
-        planSource: '400ms rehearsal SIM_SEED=7 1452t (<=1663t vs #1 1697t, 15-slot Glory/Yew shortbow/MSB Keep PvP)',
+        planTicks: 1450,
+        planSource: '400ms rehearsal SIM_SEED=7 1450t (<=1663t vs #1 1697t, 15-slot Glory/Yew shortbow/MSB Keep PvP)',
         targetCap: 1663,
     },
     {
@@ -513,8 +513,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '5000', VARIANT: 'pvp' },
         suppliers: () => combatPvpSuppliers('attack-pvp'),
         defaultSeed: 7,
-        planTicks: 1987,
-        planSource: '400ms rehearsals 1962..2012t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        planTicks: 1972,
+        planSource: '400ms rehearsal SIM_SEED=7 1972t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 2554,
     },
     {
@@ -524,8 +524,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '7500' },
         suppliers: () => combatPvpSuppliers('defence'),
         defaultSeed: 7,
-        planTicks: 2260,
-        planSource: '400ms rehearsal SIM_SEED=7 2253t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        planTicks: 2294,
+        planSource: '400ms rehearsal SIM_SEED=7 2294t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 3937,
     },
     {
@@ -536,7 +536,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         suppliers: () => combatPvpSuppliers('strength'),
         defaultSeed: 7,
         planTicks: 1910,
-        planSource: '400ms rehearsals 1889..1931t (<=3222t vs #1 3288t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        planSource: '400ms rehearsals 1877..1931t (<=3222t vs #1 3288t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 3222,
     },
     {
@@ -546,8 +546,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         env: { CAP: '6000', HP_MODE: 'pvp' },
         suppliers: () => combatPvpSuppliers('hp-pvp'),
         defaultSeed: 7,
-        planTicks: 3602,
-        planSource: '400ms rehearsals 3594..3609t (<=5263t vs #1 5371t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        planTicks: 3420,
+        planSource: '400ms rehearsals 3345..3594t (<=5263t vs #1 5371t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 5263,
     },
 ];
@@ -780,7 +780,7 @@ async function runSingleSeedRehearsal(
     const exitCode = await spawn(
         ['bun', 'packages/practice/src/rehearse.ts', '--specialist', segFile, '--start', '--out', normOut],
         root,
-        seed !== undefined ? { SIM_SEED: String(seed) } : undefined,
+        seed !== undefined ? { SIM_SEED: String(seed), SIM_SEED_ANCHOR: '^$' } : undefined,
     );
     const summary = collectRehearsalSummary(outAbs, seg);
     const boardKey = Object.keys(seg.expect.skills ?? {})[0] ?? '';
