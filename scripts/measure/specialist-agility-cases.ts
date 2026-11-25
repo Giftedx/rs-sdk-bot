@@ -63,15 +63,8 @@ export const SPECIALIST_AGILITY_CASES: BenchCase[] = [
         script: 'scripts/agility-specialist.ts',
         preset: 'fresh_lumbridge',
         presetConfig: FRESH_TUTORIAL_START,
-        scriptArgs: ['{bot:b}', 'AGI_ROUTE=monkeybars', 'AGI_POTION=1', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=0'],
-        companions: [{
-            suffix: 'b',
-            preset: 'fresh_lumbridge',
-            presetConfig: {
-                position: { x: 3222, z: 3219, level: 0 },
-                inventory: expandInventory(MONKEYBARS_TRADE_1),
-            },
-        }],
+        scriptArgs: ['{bot:b}', 'AGI_ROUTE=tourist', 'AGI_POTION=1', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=1'],
+        companions: [TOURIST_COMPANION],
         pass: ok,
         timeoutMs: 900_000,
     },

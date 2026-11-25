@@ -199,13 +199,6 @@ describe('bench registration and catalog integration', () => {
             const kit: readonly KitSpecItem[] = SPECIALIST_KITS[skill];
             expect(parsed!.kit).toBe(kit);
             const expanded = expandSupplyInventory(supplies);
-            // Mining and fishing supplies dropped Super energy(4) (3016) ahead of shared specialist-supply.ts integration.
-            if (skill === 'mining' || skill === 'fishing') {
-                const kitNoEnergy = kit.filter(k => k.id !== OBJ_SUPER_ENERGY_4);
-                expect(kitSlotTotal(kitNoEnergy)).toBe(expanded.length);
-                expect(hasExactKit(expanded, kitNoEnergy)).toBe(true);
-                continue;
-            }
             expect(kitSlotTotal(kit)).toBe(expanded.length);
             expect(hasExactKit(expanded, kit)).toBe(true);
             for (const spec of kit) {
@@ -222,7 +215,7 @@ describe('bench registration and catalog integration', () => {
     });
 
     test('fishing kit accepts charged glories with >=2 charges (4/3/2) and resolves concrete bank stock', () => {
-        const fishingKit = SPECIALIST_KITS.fishing.filter(item => item.id !== OBJ_SUPER_ENERGY_4);
+        const fishingKit = SPECIALIST_KITS.fishing;
         const expanded = expandSupplyInventory(FISHING_SPECIALIST_SUPPLIES);
         const withoutGlory = expanded.filter(item => item.id !== 1712);
 

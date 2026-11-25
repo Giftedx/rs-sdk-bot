@@ -185,7 +185,6 @@ export const AGILITY_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 2434, name: 'Prayer potion(4)', count: 3, stackable: false },
     { id: 3032, name: 'Agility potion(4)', count: 6, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 2, stackable: false },
     { id: 1897, name: 'Chocolate cake', count: 4, stackable: false },
 ] as const;
 
@@ -213,7 +212,6 @@ export const FISHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1521, name: 'Oak logs', count: 4, stackable: false },
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false, altIds: [1710, 1708] },
     { id: 1941, name: 'Swamp paste', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
 ] as const;
 
 export const MINING_SPECIALIST_KIT: readonly KitSpecItem[] = [
@@ -225,7 +223,6 @@ export const MINING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1275, name: 'Rune pickaxe', count: 1, stackable: false },
     { id: 1511, name: 'Logs', count: 2, stackable: false },
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 2, stackable: false },
     { id: 3853, name: 'Games necklace(8)', count: 1, stackable: false },
 ] as const;
 
@@ -314,6 +311,26 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
 
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
+export const ATTACK_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
+export const HITPOINTS_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
+
+export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 837, name: 'Crossbow', count: 1, stackable: false },
+    { id: 881, name: 'Barbed bolts', count: 1500, stackable: true },
+    { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
+    { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
+    { id: 1478, name: 'Amulet of accuracy', count: 1, stackable: false },
+    { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
+    { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
+    { id: 1129, name: 'Leather body', count: 1, stackable: false },
+    { id: 1099, name: 'Dragonhide chaps', count: 1, stackable: false },
+    { id: 1065, name: 'Dragon vambraces', count: 1, stackable: false },
+    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
+    { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 385, name: 'Shark', count: 1, stackable: false },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+] as const;
 
 export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
@@ -656,13 +673,16 @@ export const FIREMAKING_SPECIALIST_KIT: readonly KitSpecItem[] = [
 
 export const SPECIALIST_KITS = {
     attack: ATTACK_SPECIALIST_KIT,
+    'attack-pvp': ATTACK_PVP_SPECIALIST_KIT,
     agility: AGILITY_SPECIALIST_KIT,
     hitpoints: HP_SPECIALIST_KIT,
+    'hitpoints-pvp': HITPOINTS_PVP_SPECIALIST_KIT,
     strength: STRENGTH_SPECIALIST_KIT,
     defence: DEFENCE_SPECIALIST_KIT,
     ranged: RANGED_SPECIALIST_KIT,
     'ranged-msb': RANGED_SPECIALIST_MSB_KIT,
     'ranged-live': RANGED_SPECIALIST_LIVE_KIT,
+    'ranged-pvp': RANGED_PVP_SPECIALIST_KIT,
     fletching: FLETCHING_SPECIALIST_KIT,
     'fletching-live': FLETCHING_SPECIALIST_LIVE_KIT,
     fishing: FISHING_SPECIALIST_KIT,
@@ -687,11 +707,16 @@ export const SPECIALIST_KITS = {
 export type SpecialistKitName = keyof typeof SPECIALIST_KITS;
 export type SupplierKitName = SpecialistKitName;
 
+const normalizeKitAlias = (rawInput: string | undefined): string | undefined => {
+    const k = rawInput?.trim().toLowerCase();
+    return k === 'hp' ? 'hitpoints' : k === 'hp-pvp' ? 'hitpoints-pvp' : k;
+};
+
 export function parseKitOption(args: readonly string[]): { name: SpecialistKitName; kit: readonly KitSpecItem[] } | null;
 export function parseKitOption(args: readonly string[], defaultName: SpecialistKitName): { name: SpecialistKitName; kit: readonly KitSpecItem[] };
 export function parseKitOption(args: readonly string[], defaultName?: SpecialistKitName): { name: SpecialistKitName; kit: readonly KitSpecItem[] } | null {
     const rawInput = args.find(a => a.startsWith('--kit='))?.slice(6).trim().toLowerCase();
-    const raw = rawInput === 'hp' ? 'hitpoints' : rawInput;
+    const raw = normalizeKitAlias(rawInput);
     if (!raw) return defaultName ? { name: defaultName, kit: SPECIALIST_KITS[defaultName] } : null;
     if (!(raw in SPECIALIST_KITS)) throw Error(`specialist-supplier: unknown --kit=${rawInput}; expected ${Object.keys(SPECIALIST_KITS).join('|')}`);
     const name = raw as SpecialistKitName;
@@ -700,7 +725,7 @@ export function parseKitOption(args: readonly string[], defaultName?: Specialist
 
 export function parseKitArg(args: readonly string[], env: Record<string, string | undefined> = process.env): SpecialistKitName {
     const rawInput = (args.find(a => a.startsWith('--kit='))?.slice(6) ?? env.SUPPLIER_KIT ?? 'attack').trim().toLowerCase();
-    const raw = rawInput === 'hp' ? 'hitpoints' : rawInput;
+    const raw = normalizeKitAlias(rawInput) ?? '';
     if (raw in SPECIALIST_KITS) return raw as SpecialistKitName;
     throw Error(`unknown --kit: ${rawInput} (expected ${Object.keys(SPECIALIST_KITS).join('|')})`);
 }
@@ -761,7 +786,7 @@ export interface SupplierKitPlan {
 
 export function resolveSupplierKitPlan(kitName: string | undefined = process.env.SUPPLIER_KIT): SupplierKitPlan {
     const rawInput = (kitName ?? 'attack').trim().toLowerCase() || 'attack';
-    const raw = rawInput === 'hp' ? 'hitpoints' : rawInput;
+    const raw = normalizeKitAlias(rawInput) ?? 'attack';
     const rangedVariant = raw === 'ranged' || raw === 'ranged-knives' ? 'knives'
         : raw === 'ranged-msb' ? 'msb'
         : raw === 'ranged-live' ? 'live'
