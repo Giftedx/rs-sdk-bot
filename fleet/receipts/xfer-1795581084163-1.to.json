@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795581084163-1",
  "account": "Shaftsinker",
  "partner": "TheFullMonty",
@@ -12,6 +12,12 @@
  "claim": "6850e6ba-9a2b-4b51-b9c2-fd1512d0e048",
  "count": 0,
  "ok": false,
- "at": 1795581690877,
- "detail": "trade claimed"
+ "at": 1795581984720,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795581690886-0000006304-0000000001",
+  "at": 1795581984711,
+  "sha256": "477d8d878ef071346d4f4352dadb5f9865107535b8b2c9d19dda69327265a685"
+ },
+ "screen": false
 }
