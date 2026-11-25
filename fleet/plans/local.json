@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795616843162,
+ "at": 1795616926265,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -89,21 +89,6 @@
    "resources": [
     "draynor-willows"
    ]
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-boss.ts TRAIN_SKILL=Fishing TARGET_LEVEL=76 -- trawler",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:fullblooded:item:385 BATCH_UNITS=26 -- fishing shark"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:fullblooded:item:385",
-   "role": "auto"
   },
   {
    "account": "Wandwaver",
