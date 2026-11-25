@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795624367706,
+ "at": 1795624453020,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "OreElse",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=33 -- mining ore",
+    "scripts/aio-market.ts ORDER_KEY=brain-440-33-p97 ITEM_ID=440 QUANTITY=33 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
     "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=33 -- smithing smelt 1500 iron"
    ],
    "env": {
