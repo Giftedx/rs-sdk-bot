@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795585630736-abracadickra-yewfirst-5d60afd40f4184f9",
+ "account": "Abracadickra",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 64,
+ "claim": "be51b2a8-008c-4d8b-b9dc-a96ee255d4bc",
+ "count": 0,
+ "ok": false,
+ "at": 1795585966940,
+ "detail": "trade claimed"
+}

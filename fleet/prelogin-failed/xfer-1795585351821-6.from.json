@@ -5,6 +5,6 @@
  "account": "Kiltlifter",
  "partner": "SporranDip",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795585670667,
+ "at": 1795586074599,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }

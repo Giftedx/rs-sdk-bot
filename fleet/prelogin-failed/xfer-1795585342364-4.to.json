@@ -1,10 +1,10 @@
 {
  "version": 1,
- "id": "xfer-1795585342364-3",
- "role": "from",
- "account": "Pocketrocket",
- "partner": "Knightstick",
+ "id": "xfer-1795585342364-4",
+ "role": "to",
+ "account": "TheFullMonty",
+ "partner": "Woodenstaff",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795585575918,
+ "at": 1795585943652,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }

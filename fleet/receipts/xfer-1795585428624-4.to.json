@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795585428624-4",
+ "account": "TrouserSnake",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "492328c3-ee48-442c-9f8f-9ef01fdd4c5d",
+ "count": 0,
+ "ok": false,
+ "at": 1795586033206,
+ "detail": "trade claimed"
+}

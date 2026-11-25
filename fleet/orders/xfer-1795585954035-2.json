@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795585954035-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Ballspinner",
+  "to": "OreElse",
+  "item": "Hammer",
+  "count": 1,
+  "itemId": 2347,
+  "start": 1795585954035,
+  "end": 1795586854035,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795585778041-bowbeforeme-yewfirst-c68c223c19bc5331",
+ "account": "BowBeforeMe",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 360,
+ "claim": "2a8b8756-ffca-4fe1-ba3f-cd83c60c18fe",
+ "count": 0,
+ "ok": false,
+ "at": 1795585937508,
+ "detail": "trade claimed"
+}

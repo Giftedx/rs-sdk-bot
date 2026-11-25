@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795585558690-5",
+ "account": "MineYourBiz",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "5f9be4cc-446c-4717-8f07-919022ae9a01",
+ "count": 0,
+ "ok": false,
+ "at": 1795586036866,
+ "detail": "trade claimed"
+}

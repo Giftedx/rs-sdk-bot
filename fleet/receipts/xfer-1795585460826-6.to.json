@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795585460826-6",
+ "account": "Unsheathed",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "422f55bb-c1ad-437d-bce6-b4000abedab1",
+ "count": 0,
+ "ok": false,
+ "at": 1795586066467,
+ "detail": "trade claimed"
+}
