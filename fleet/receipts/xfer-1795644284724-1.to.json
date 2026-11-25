@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795644284724-1",
+ "account": "Fingerblastr",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "10303273-d0b8-4e68-81a6-4a2418ea09a3",
+ "count": 1,
+ "ok": true,
+ "at": 1795644731418,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795644730661
+ },
+ "logout": {
+  "attemptId": "1795644718067-0000028124-0000000001",
+  "at": 1795644731407,
+  "sha256": "3417e371f13cd56d0a2e104e61a35c4f7b1a7b7df2fb9eadbfb996b6bc424b6e"
+ },
+ "screen": true
+}

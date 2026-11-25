@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795644284724-1",
  "account": "Fatstack",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "a9a21a24-29d9-4e57-ba59-4ed8d1af608b",
- "count": 0,
- "ok": false,
- "at": 1795644510538,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795644730212,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795644709509
+ },
+ "logout": {
+  "attemptId": "1795644510547-0000011960-0000000001",
+  "at": 1795644730201,
+  "sha256": "600b462630b2637457a92f38cffe131ef9a79e335f1ae2301dd64aeb6c3ece46"
+ },
+ "screen": true
 }
