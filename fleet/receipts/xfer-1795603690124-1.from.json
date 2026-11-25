@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795603690124-1",
+ "account": "Ballspinner",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "d1aea97e-55df-4fd7-988f-2054249dc330",
+ "count": 0,
+ "ok": false,
+ "at": 1795603858401,
+ "detail": "trade claimed"
+}

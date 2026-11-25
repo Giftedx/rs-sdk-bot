@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795602911479-2",
  "account": "TheFullMonty",
  "partner": "Woodenstaff",
@@ -12,6 +12,12 @@
  "claim": "d274526f-f113-4d27-99ff-53d3e30e9377",
  "count": 0,
  "ok": false,
- "at": 1795603518087,
- "detail": "trade claimed"
+ "at": 1795603811994,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795603518095-0000004312-0000000001",
+  "at": 1795603811984,
+  "sha256": "0c91fea7c44a1b559db28702be4763059c7c2006cbe4ffc87e9ea60a9a8aa0e8"
+ },
+ "screen": false
 }
