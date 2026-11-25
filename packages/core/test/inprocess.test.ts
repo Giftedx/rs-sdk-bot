@@ -114,6 +114,57 @@ test('the action boundary blocks unowned trades through both queue and direct ca
     shim.stop('stopped');
 });
 
+test('startInProcessSession allows explicit allowTradePartners while keeping strangers blocked', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const { startInProcessSession } = await import('../src/inprocess');
+    const { BotActions } = await import('../../../vendor/rs-sdk/sdk/actions');
+    const dir = mkdtempSync(join(tmpdir(), 'allow-partners-'));
+    try {
+        const makeState = (tick: number) => ({
+            tick,
+            inGame: true,
+            player: { worldX: 3185, worldZ: 3436, level: 0 },
+            skills: [],
+            inventory: [],
+            nearbyPlayers: [
+                { index: 8, name: 'Bramble' },
+                { index: 9, name: 'RandomGuy' },
+            ],
+            trade: { isOpen: false, partner: 'Bramble', myOffer: [], theirOffer: [] },
+            opFeedback: { opRejectedCount: 0 },
+        });
+        const runCase = async (allowTradePartners?: readonly string[]) => {
+            const client: any = Object.assign(fakeClient(), {
+                collectBotState: (tick: number) => makeState(tick),
+            });
+            const sdk = newSdk();
+            const session = await startInProcessSession(
+                { name: 'fixture', password: 'x', ...(allowTradePartners ? { allowTradePartners } : {}) },
+                {
+                    startSession: async (o: any) => { o.onClient(client); client.fire(); return { client, stop() {}, stopped: Promise.resolve('stopped') }; },
+                    sdk,
+                    Actions: BotActions,
+                    cacheDir: dir,
+                    lifecycle: { root: dir },
+                },
+            );
+            const brambleReq = await session.sdk.sendTradeRequest(8);
+            const randomReq = await session.sdk.sendTradeRequest(9);
+            const confirmBramble = await session.direct({ type: 'clickComponent', componentId: 3546 });
+            await session.close();
+            return { brambleReq: brambleReq.success, randomReq: randomReq.success, confirmBramble: (confirmBramble as any).success, executed: client.executed.length };
+        };
+        const blocked = await runCase();
+        expect(blocked).toEqual({ brambleReq: false, randomReq: false, confirmBramble: false, executed: 0 });
+        const allowed = await runCase(['Bramble']);
+        expect(allowed).toEqual({ brambleReq: true, randomReq: false, confirmBramble: true, executed: 2 });
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
 function fakeClient() {
     let cb: (() => void) | null = null;
     const executed: any[] = [];
