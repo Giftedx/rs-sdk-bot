@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795632168867,
+ "at": 1795632183697,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -183,21 +183,6 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- fishing shark",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army"
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -321,6 +306,26 @@
    "repeat": false,
    "goal": "goal:pk_army:Shaftsinker",
    "role": "auto"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Abracadickra",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Abracadickra",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   }
  ],
  "army": [
@@ -347,6 +352,7 @@
   "quickhandjob",
   "sausagefest",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "yewfirst"
  ],
