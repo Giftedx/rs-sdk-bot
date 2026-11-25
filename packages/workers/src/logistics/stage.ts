@@ -193,6 +193,10 @@ async function withdrawObservedUnnoted(s: Session, id: number, amount: number) {
 // The Hitpoints rule of an owned loadout: a drop under the level at the start ends it (damage or poison at the bank), and so
 // does no level at all. A rise is the natural regeneration of a member that came back wounded, and the loadout goes on.
 export const loadoutHpFatal = (atStart: number, now: number): boolean => atStart < 1 || now < atStart;
+// A drop names itself in the failure. Poison costs one Hitpoint about every 30 ticks and each hit closes the bank
+// (poison.rs2: settimer(poison, 30), if_close), so a poisoned account fails every kit of more than a few moves until it
+// drinks an antipoison: runOwnedLoadoutCured reads this failure.
+export const LOADOUT_HP_FELL = /owned loadout hitpoints fell \d+ to \d+/;
 
 export async function runOwnedLoadout(s: Session, value: unknown, requestStop: () => boolean = () => false) {
     const j = validateOwnedKit(value), start = s.tick(), state = () => s.sdk.getState(), inv = () => s.sdk.getInventory(), gear = () => s.sdk.getEquipment(), first = state()?.player;
@@ -208,9 +212,13 @@ export async function runOwnedLoadout(s: Session, value: unknown, requestStop: (
     const here = () => { const p = state()?.player; return !!p && p.level === j.bank.level && Math.max(Math.abs(p.worldX - j.bank.x), Math.abs(p.worldZ - j.bank.z)) <= 3; };
     const fatal = () => ended || !first || !state()?.player || state()!.player!.isDead || state()!.player!.lifeId !== life || (state()!.player!.respawnCount ?? 0) !== respawns
         || !here() || loadoutHpFatal(hp, s.sdk.getSkill('Hitpoints')?.level ?? 0) || s.sdk.getStateAge() > 5000 || client.executeBotAction !== executor || !equipmentObserved(client) || JSON.stringify(xpView()) !== xp;
+    const lost = (general: string) => {
+        const now = s.sdk.getSkill('Hitpoints')?.level ?? 0;
+        return Error(hp >= 1 && now < hp ? `owned loadout hitpoints fell ${hp} to ${now}` : general);
+    };
     const guard = (cleanup = false) => {
         if (fatal() || s.tick() - start >= j.cap || moves >= j.maximumMoves || !cleanup && (loadoutStopRequested(s.name ?? '', requestStop) || s.tick() - start >= j.cap - 40 || moves >= j.maximumMoves - 32)) {
-            throw Error('owned loadout life/state/stop/budget');
+            throw lost('owned loadout life/state/stop/budget');
         }
     };
     const assets = () => {
@@ -230,7 +238,7 @@ export async function runOwnedLoadout(s: Session, value: unknown, requestStop: (
         guard(cleanup);
         if (state()?.bank.isOpen) await close(cleanup);
         const result = await s.bot.openBank();
-        if (!await waitUntil(s, () => { if (fatal()) throw Error('owned loadout lost original session'); return !!state()?.bank.isOpen && (s.bankObservation?.()?.generation ?? -1) > bankGeneration; }, { timeoutTicks: 12 }) || !state()?.bank.isOpen || !s.bankObservation?.()) {
+        if (!await waitUntil(s, () => { if (fatal()) throw lost('owned loadout lost original session'); return !!state()?.bank.isOpen && (s.bankObservation?.()?.generation ?? -1) > bankGeneration; }, { timeoutTicks: 12 }) || !state()?.bank.isOpen || !s.bankObservation?.()) {
             throw Error('owned loadout fresh bank generation unavailable ' + result.success);
         }
         bankGeneration = s.bankObservation!()!.generation;
@@ -246,7 +254,7 @@ export async function runOwnedLoadout(s: Session, value: unknown, requestStop: (
         try { await action(); } catch (e) { error = e; }
         const remaining = 10 - (s.tick() - at);
         if (!effect() && remaining > 0) {
-            await waitUntil(s, () => { if (fatal()) throw Error('owned loadout original life/input owner lost'); return effect(); }, { timeoutTicks: remaining });
+            await waitUntil(s, () => { if (fatal()) throw lost('owned loadout original life/input owner lost'); return effect(); }, { timeoutTicks: remaining });
         }
         if (!effect()) throw Error('owned loadout asset action unknown; no retry ' + String(error ?? ''));
         uncertain = false;
@@ -374,6 +382,25 @@ export async function runOwnedLoadout(s: Session, value: unknown, requestStop: (
     const exactPack = same(canonical(inv()), canonical(j.pack)), exactWear = same(wornView(gear()), wornView(j.wear)), controlsPreserved = same(controls(), initialControls);
     try { if (!fatal() && state()?.bank.isOpen) await close(true); } catch (e) { failure ||= String(e); }
     return { ok: !failure && !uncertain && balanced && exactPack && exactWear && controlsPreserved && bankModeRestored, failure, exactPack, exactWear, balanced, controlsPreserved, bankModeRestored, noOp, recovered, recoveryDeferred: uncertain, moves, ticks: s.tick() - start, scope: 'one declared owned exact bank kit, including native notes; no travel or acquisition' };
+}
+
+// A loadout that a Hitpoints drop stopped (LOADOUT_HP_FELL): the account stands at its bank, so it drinks one antipoison
+// from the pack or the bank and runs the kit once more. The second run reads a new baseline, so a kit that the first run
+// left half done starts again from what the account holds. A cure that finds no antipoison comes back in `cure`, for the
+// caller to report the missing supply. Any other failure, and a stop, return at once.
+type LoadoutCure = { ok: boolean; detail: string };
+export async function runOwnedLoadoutCured(
+    s: Session,
+    value: unknown,
+    requestStop: () => boolean = () => false,
+    deps: { run: typeof runOwnedLoadout; cure: (s: Session) => Promise<LoadoutCure> } = { run: runOwnedLoadout, cure: async x => (await import('./recover')).cureWithAntipoison(x) },
+) {
+    const first = await deps.run(s, value, requestStop);
+    if (first.ok || !LOADOUT_HP_FELL.test(first.failure) || requestStop()) return { ...first, cure: null as LoadoutCure | null };
+    const cure = await deps.cure(s);
+    if (!cure.ok) return { ...first, cure };
+    const second = await deps.run(s, value, requestStop);
+    return { ...second, moves: first.moves + second.moves, cure };
 }
 
 export interface SetupBindings {
