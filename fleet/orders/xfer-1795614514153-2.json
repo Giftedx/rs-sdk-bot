@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795614514153-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Unsheathed",
+  "to": "Moneyshot",
+  "item": "Iron ore",
+  "count": 2,
+  "itemId": 440,
+  "start": 1795614514153,
+  "end": 1795615414153,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
