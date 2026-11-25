@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795637921432-1",
+ "account": "Wandwaver",
+ "partner": "Packhorse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "121aca49-a695-435c-9948-cf34b2a0a076",
+ "count": 60,
+ "ok": true,
+ "at": 1795638157200,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795638155734
+ },
+ "logout": {
+  "attemptId": "1795638146576-0000032332-0000000001",
+  "at": 1795638157109,
+  "sha256": "cf5d1a7e70da03f7d7452d1db3a6eddac18f5083b161462c9025275c8d1b8014"
+ },
+ "screen": true
+}

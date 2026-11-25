@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795637948532,
+ "at": 1795638160767,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -158,7 +158,7 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
+   "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
@@ -170,21 +170,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1637",
-   "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
-    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:castmyload:item:1637 BATCH_UNITS=2 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:castmyload:item:1637",
    "role": "army"
   },
   {
@@ -222,21 +207,6 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=1 -- crafting inventory brew:unf_tarromin_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:95",
-   "role": "army"
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
@@ -267,72 +237,52 @@
    "role": "army"
   },
   {
-   "account": "Shaftmaker",
+   "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=40 -- crafting inventory",
-    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=45 -- crafting inventory identify:marentill",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:101 BATCH_UNITS=5 -- crafting inventory brew:unf_irit_potion"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:viking",
-   "role": "auto"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=5 -- fletching shafts",
-    "scripts/generated/quest-chompybird.ts DEMAND_ID=goal:quest_board:chompybird BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:chompybird",
+   "goal": "campaign:haggis:item:101",
    "role": "army"
   },
   {
-   "account": "Stirmypot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Stirmypot",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Stirmypot",
-   "role": "auto"
-  },
-  {
-   "account": "UnderMyKilt",
+   "account": "PackageDeal",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
-    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
+    "scripts/aio-logistics.ts ITEM_ID=1973 QUANTITY=1 \"ITEM_NAME=Chocolate bar\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
+   "goal": "campaign:haggis:item:1975",
+   "role": "helper"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=1 -- crafting inventory brew:unf_tarromin_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:95",
    "role": "army"
   },
   {
-   "account": "Pocketrocket",
+   "account": "PocketPool",
    "script": "scripts/generated/dwarfcannon.ts",
    "args": [],
    "env": {
@@ -343,19 +293,6 @@
    "repeat": false,
    "goal": "goal:quest_board:dwarfcannon",
    "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/generated/quest-ikov.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ikov",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ikov",
-   "role": "army"
   }
  ],
  "army": [
@@ -365,19 +302,22 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
+  "ballspinner",
   "bigpackage",
   "billionaire",
   "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "mmthv2350",
-  "pocketpool",
+  "oreelse",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "swordinhand",
   "thefullmonty",
+  "undermykilt",
   "yewfirst"
  ],
  "builds": {
