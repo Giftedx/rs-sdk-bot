@@ -1515,7 +1515,8 @@ export async function runSpecialistWaterfall(
     }
     if (inv().length > 23) throw Error(`needs 5 free slots for Chalice reward, has ${28 - inv().length}`);
 
-    await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atk0 >= 300_000, 10, 4);
+    const atkBeforeChalice = skillInfo(s, 'Attack').experience;
+    await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atkBeforeChalice >= 300_000, 10, 4);
 
     // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);

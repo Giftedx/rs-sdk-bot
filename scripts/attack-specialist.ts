@@ -639,6 +639,19 @@ async function openShutDoorAt(
 }
 
 async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
+    const dash = async (x: number, z: number, tol: number, label: string) => {
+        for (let i = 0; i < 12 && !stop(); i++) {
+            const p = posOf(s);
+            if (p && d8({ x: p.worldX, z: p.worldZ }, { x, z }) <= tol) return;
+            await s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' });
+            await waitUntil(s, () => {
+                const cur = posOf(s);
+                return (!!cur && d8({ x: cur.worldX, z: cur.worldZ }, { x, z }) <= tol) || stop();
+            }, { timeoutTicks: 4 });
+        }
+        throw Error(`failed dash inside Draynor Manor: ${label}`);
+    };
+
     await teleportTo(s, SPELLS.lumbridgeTeleport, p => p.worldX >= 3205 && p.worldX <= 3240 && p.worldZ >= 3205 && p.worldZ <= 3235, stop, 'Lumbridge teleport');
     await walkWaypoints(
         s,
@@ -650,7 +663,7 @@ async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
     await openShutDoorAt(s, l => l.z === 3330 && l.x >= 3108 && l.x <= 3112, 'draynor manor south gate', stop);
     await topUpPrayer(s, 20, stop);
     await setProtectMelee(s, true, stop);
-    await walkWaypoints(s, [{ x: 3108, z: 3352, tol: 1 }], 50, stop, 'manor gate to front door', { ignoreMeleeHunters: true });
+    await dash(3108, 3352, 1, 'manor gate to front door');
 
     const inManor = () => {
         const p = posOf(s);
@@ -665,18 +678,6 @@ async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
 
     const openShutDoor = (x: number, z: number, label: string) =>
         openShutDoorAt(s, l => l.x === x && l.z === z, label, stop);
-    const dash = async (x: number, z: number, tol: number, label: string) => {
-        for (let i = 0; i < 12 && !stop(); i++) {
-            const p = posOf(s);
-            if (p && d8({ x: p.worldX, z: p.worldZ }, { x, z }) <= tol) return;
-            await s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' });
-            await waitUntil(s, () => {
-                const cur = posOf(s);
-                return (!!cur && d8({ x: cur.worldX, z: cur.worldZ }, { x, z }) <= tol) || stop();
-            }, { timeoutTicks: 4 });
-        }
-        throw Error(`failed dash inside Draynor Manor: ${label}`);
-    };
 
     // Exact open route inside Draynor Manor avoiding locked closet_door 131 at 3107,3367.
     await openShutDoor(3109, 3358, 'manor hall door');
