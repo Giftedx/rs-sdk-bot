@@ -654,6 +654,17 @@ export async function runSpawn(
 const GRAPE_SPAWN = { x: 3144, z: 3450, level: 2 };
 const GRAPE_DOOR_OUT = { x: 3143, z: 3443 };
 const GRAPE_BANK = { x: 3185, z: 3436 };
+export const CHEFS_HAT = 1949;
+export const GUILD_COOKING = 32;
+
+// The guild door (`chefdoor`, skill_cooking/scripts/cooking_guild.rs2) opens from outside only when
+// stat(cooking) >= 32 and a chef's hat is worn. Without both, the walker routes through the masked door
+// and the client refuses every walk past it.
+export function grapeEntryProblem(cooking: number, hat: { worn: boolean; held: boolean; banked: boolean }): string | null {
+    if (cooking < GUILD_COOKING) return `guild requires Cooking ${GUILD_COOKING}, has ${cooking}`;
+    if (!hat.worn && !hat.held && !hat.banked) return `missing item ${CHEFS_HAT} Chef's hat for the guild door`;
+    return null;
+}
 
 export async function runGrapes(s: Session, opts: { cap?: number; bankAt?: number; stop?: () => boolean } = {}) {
     const CAP = opts.cap ?? 1500;
@@ -711,8 +722,37 @@ export async function runGrapes(s: Session, opts: { cap?: number; bankAt?: numbe
         walkTicks += s.tick() - a;
         return pos()?.level === toLevel;
     };
+    const hatWorn = () => s.sdk.getEquipment().some(i => i.id === CHEFS_HAT);
+    const hatHeld = () => s.sdk.getInventory().some(i => i.id === CHEFS_HAT);
+    const cooking = () => s.sdk.getSkill('Cooking')?.level ?? 0;
+    const wearHat = async () => {
+        const levelProblem = grapeEntryProblem(cooking(), { worn: true, held: true, banked: true });
+        if (levelProblem) fail(levelProblem);
+        if (hatWorn()) return;
+        if (!hatHeld()) {
+            if (!(await walk(GRAPE_BANK.x, GRAPE_BANK.z, 2))) fail('walk to bank for chef hat');
+            const o = await s.bot.openBank();
+            if (!o.success) fail(`openBank ${o.message}`);
+            await waitUntil(s, st => !!st?.bank?.isOpen, { timeoutTicks: 10 });
+            const item = s.sdk.getState()?.bank?.items.find(i => i.id === CHEFS_HAT && i.count > 0);
+            const problem = grapeEntryProblem(cooking(), { worn: false, held: false, banked: !!item });
+            if (problem || !item) {
+                await s.bot.closeInterface();
+                fail(problem ?? 'chef hat withdraw');
+            }
+            await s.bot.withdrawItem(item!, 1, { asNote: false });
+            await waitUntil(s, () => hatHeld(), { timeoutTicks: 8 });
+            await s.bot.closeInterface();
+            await waitTicks(s, 1);
+            if (!hatHeld()) fail('chef hat withdraw');
+        }
+        await s.bot.equipItem(/^chef's hat$/i);
+        await waitUntil(s, () => hatWorn(), { timeoutTicks: 4 });
+        if (!hatWorn()) fail('wear chef hat');
+    };
     const goUp = async () => {
         if ((pos()?.level ?? 0) === 0) {
+            await wearHat();
             if (!(await walk(GRAPE_DOOR_OUT.x, GRAPE_DOOR_OUT.z, 0))) fail('walk to guild door');
             if (!(await walk(3143, 3448, 1))) fail('enter guild');
             if (!(await climb(/^staircase$/i, 'Climb-up', 1))) fail('stairs up');
