@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795628237838-2",
  "account": "Stirmypot",
  "partner": "CoinCock",
@@ -12,6 +12,16 @@
  "claim": "d0929b71-7bcc-4e13-a0b5-c094cd0d8a52",
  "count": 0,
  "ok": false,
- "at": 1795628675880,
- "detail": "trade claimed"
+ "at": 1795629138091,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795628886941
+ },
+ "logout": {
+  "attemptId": "1795628675888-0000027548-0000000001",
+  "at": 1795629138078,
+  "sha256": "23a8f386a67b198d882bbff8f28e9face408d9b4a7353d745b0426cda72b578a"
+ },
+ "screen": false
 }
