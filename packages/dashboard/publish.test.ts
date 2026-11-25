@@ -4,7 +4,7 @@ import {mkdirSync,mkdtempSync,rmSync,writeFileSync,cpSync,existsSync,readFileSyn
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {checkPages,pageHash,PAGES_CHECK_MS,pushAuditedSite,pushPublicCommit,pushSingleCommit,run,verifyStaticBundle} from './publish';
+import {checkPages,pageHash,PAGES_CHECK_MS,pushAuditedSite,pushPublicCommit,pushSingleCommit,run,verifyStaticBundle,watchPush} from './publish';
 import {publicView} from './publish-relay';
 
 // A site folder as rs-fleet-command scripts/import-page.ts and export-viewer.ts make it: relative page links, webp
@@ -258,9 +258,12 @@ describe('the Pages build check after a site push',()=>{
  const GET='api repos/owner/dash/pages/builds/latest',POST='api -X POST repos/owner/dash/pages/builds';
  const build=(status:string,sha=commit,message:string|null=null)=>({ok:true,out:JSON.stringify({status,commit:sha,error:{message}})});
 
+ // One push, made one check period before now.
+ const one=(rebuilt=false)=>({pushes:[{commit,at:now-PAGES_CHECK_MS}],dueAt:now,rebuilt});
+
  test('asks nothing before the check is due, or with no push to check',async()=>{
   const {calls,api}=fake({});
-  const watch={commit,dueAt:now+1,rebuilt:false};
+  const watch={pushes:[{commit,at:now}],dueAt:now+1,rebuilt:false};
   expect(await checkPages(watch,now,api,repo)).toEqual({watch,note:''});
   expect(await checkPages(null,now,api,repo)).toEqual({watch:null,note:''});
   expect(calls).toEqual([]);
@@ -268,44 +271,66 @@ describe('the Pages build check after a site push',()=>{
 
  test('a built page costs one call and ends the check',async()=>{
   const {calls,api}=fake({[GET]:build('built')});
-  expect(await checkPages({commit,dueAt:now,rebuilt:false},now,api,repo)).toEqual({watch:null,note:' pages=built'});
+  expect(await checkPages(one(),now,api,repo)).toEqual({watch:null,note:' pages=built'});
   expect(calls).toEqual([GET]);
  });
 
  test('a build still running at the check is stuck: one rebuild request, then one more check',async()=>{
   const {calls,api}=fake({[GET]:build('building'),[POST]:{ok:true,out:'{"status":"queued"}'}});
-  const r=await checkPages({commit,dueAt:now,rebuilt:false},now,api,repo);
-  expect(r).toEqual({watch:{commit,dueAt:now+PAGES_CHECK_MS,rebuilt:true},note:' pages=stuck rebuild=requested'});
+  const r=await checkPages(one(),now,api,repo);
+  expect(r).toEqual({watch:{...one(),dueAt:now+PAGES_CHECK_MS,rebuilt:true},note:' pages=stuck rebuild=requested'});
   expect(calls).toEqual([GET,POST]);
  });
 
  test('an errored build gives its reason and gets a rebuild',async()=>{
   const {api}=fake({[GET]:build('errored',commit,'Deployment failed, try again later.'),[POST]:{ok:true,out:'{}'}});
-  const r=await checkPages({commit,dueAt:now,rebuilt:false},now,api,repo);
+  const r=await checkPages(one(),now,api,repo);
   expect(r.note).toBe(' pages=errored (Deployment failed, try again later.) rebuild=requested');
   expect(r.watch?.rebuilt).toBe(true);
  });
 
- test('a page built from an older commit is behind and gets a rebuild',async()=>{
+ test('a page built from a commit before the pushes is behind and gets a rebuild',async()=>{
   const {calls,api}=fake({[GET]:build('built','a'.repeat(40)),[POST]:{ok:true,out:'{}'}});
-  expect((await checkPages({commit,dueAt:now,rebuilt:false},now,api,repo)).note).toBe(' pages=behind rebuild=requested');
+  expect((await checkPages(one(),now,api,repo)).note).toBe(' pages=behind rebuild=requested');
   expect(calls).toEqual([GET,POST]);
  });
 
  test('after the one rebuild the check reports and stops',async()=>{
   const built=fake({[GET]:build('built')});
-  expect(await checkPages({commit,dueAt:now,rebuilt:true},now,built.api,repo)).toEqual({watch:null,note:' pages=built after rebuild'});
+  expect(await checkPages(one(true),now,built.api,repo)).toEqual({watch:null,note:' pages=built after rebuild'});
   const stuck=fake({[GET]:build('building')});
-  expect(await checkPages({commit,dueAt:now,rebuilt:true},now,stuck.api,repo)).toEqual({watch:null,note:' pages=stuck rebuild=spent'});
+  expect(await checkPages(one(true),now,stuck.api,repo)).toEqual({watch:null,note:' pages=stuck rebuild=spent'});
   expect(stuck.calls).toEqual([GET]);
  });
 
  test('a failed read or a refused rebuild ends the check with the reason',async()=>{
   const unread=fake({[GET]:{ok:false,out:'HTTP 503: Service Unavailable'}});
-  expect(await checkPages({commit,dueAt:now,rebuilt:false},now,unread.api,repo)).toEqual({watch:null,note:' pages=unread (HTTP 503: Service Unavailable)'});
+  expect(await checkPages(one(),now,unread.api,repo)).toEqual({watch:null,note:' pages=unread (HTTP 503: Service Unavailable)'});
   expect(unread.calls).toEqual([GET]);
   const refused=fake({[GET]:build('errored'),[POST]:{ok:false,out:'HTTP 403: Resource not accessible'}});
-  expect(await checkPages({commit,dueAt:now,rebuilt:false},now,refused.api,repo)).toEqual({watch:null,note:' pages=errored rebuild=refused (HTTP 403: Resource not accessible)'});
+  expect(await checkPages(one(),now,refused.api,repo)).toEqual({watch:null,note:' pages=errored rebuild=refused (HTTP 403: Resource not accessible)'});
+ });
+
+ test('pushes more often than the check period keep the first deadline, so the check still runs',async()=>{
+  // PUBLIC_EVERY_S=60: a push every cycle. Each later push joins the check; none of them moves its deadline.
+  const t0=now-PAGES_CHECK_MS,[a,b,c]=['a','b','c'].map(x=>x.repeat(40));
+  let watch=watchPush(null,a!,t0);
+  expect(watch).toEqual({pushes:[{commit:a,at:t0}],dueAt:now,rebuilt:false});
+  watch=watchPush(watch,b!,t0+60_000);watch=watchPush(watch,c!,t0+120_000);
+  expect(watch.dueAt).toBe(now);
+  // The newest push is 60 s old, so its running build is no fault.
+  const young=fake({[GET]:build('building',c)});
+  expect(await checkPages(watch,now,young.api,repo)).toEqual({watch:null,note:' pages=building'});
+  expect(young.calls).toEqual([GET]);
+  // A page built from an earlier push counts while every later push is still young.
+  const earlier=fake({[GET]:build('built',b)});
+  expect(await checkPages(watch,now,earlier.api,repo)).toEqual({watch:null,note:' pages=built'});
+  // Read later (as after a rebuild): a later push older than the check period with no build leaves the page behind.
+  const late=fake({[GET]:build('built',a),[POST]:{ok:true,out:'{}'}});
+  expect((await checkPages(watch,now+120_000,late.api,repo)).note).toBe(' pages=behind rebuild=requested');
+  // A build of an early push that still runs one check period after that push is stuck.
+  const hung=fake({[GET]:build('building',a),[POST]:{ok:true,out:'{}'}});
+  expect((await checkPages(watch,now,hung.api,repo)).note).toBe(' pages=stuck rebuild=requested');
  });
 });
 

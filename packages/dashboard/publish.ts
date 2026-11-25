@@ -332,11 +332,15 @@ export async function pushAuditedSite(site:string,push:(dir:string)=>Promise<str
 }
 
 // GitHub Pages deploys the site branch with a build that takes 20 to 50 s, and a build can fail or hang at `building`
-// (the live page then stays one push behind). One read of the latest build, PAGES_CHECK_MS after a push, tells. An
-// errored, hung or missing build gets one rebuild request and one more read. The publisher and the signed-in page share
-// one API rate limit, so a push whose page builds costs one call.
+// (the live page then stays one push behind). One read of the latest build, PAGES_CHECK_MS after a push, tells. A push
+// made before that read joins it and leaves its deadline, so pushes more often than PAGES_CHECK_MS cannot put the read
+// off. An errored, hung or missing build gets one rebuild request and one more read. The publisher and the signed-in
+// page share one API rate limit, so a push whose page builds costs at most one call.
 export const PAGES_CHECK_MS=180_000;
-export type PagesWatch={commit:string;dueAt:number;rebuilt:boolean};
+export type PagesWatch={pushes:{commit:string;at:number}[];dueAt:number;rebuilt:boolean};
+export function watchPush(watch:PagesWatch|null,commit:string,now:number):PagesWatch{
+ return watch?{...watch,pushes:[...watch.pushes,{commit,at:now}]}:{pushes:[{commit,at:now}],dueAt:now+PAGES_CHECK_MS,rebuilt:false};
+}
 type Api=(...args:string[])=>Promise<{ok:boolean;out:string}>;
 export async function checkPages(watch:PagesWatch|null,now:number,api:Api,repo:string):Promise<{watch:PagesWatch|null;note:string}>{
  if(!watch||now<watch.dueAt)return {watch,note:''};
@@ -344,13 +348,19 @@ export async function checkPages(watch:PagesWatch|null,now:number,api:Api,repo:s
  let build:{status?:string;commit?:string;error?:{message?:string|null}|null}|null=null;
  if(read.ok)try{build=JSON.parse(read.out);}catch{/* reported below */}
  if(!build)return {watch:null,note:` pages=unread (${read.out.slice(0,120)})`};
- const state=build.status==='errored'?'errored':build.status!=='built'?'stuck':build.commit!==watch.commit?'behind':'built';
- if(state==='built')return {watch:null,note:` pages=built${watch.rebuilt?' after rebuild':''}`};
+ // A push younger than PAGES_CHECK_MS may still be waiting for its build. The page is sound when the build is of one
+ // of these pushes, every later push is young, and a running build belongs to a young push.
+ const young=(p:{at:number}|undefined)=>!p||now-p.at<PAGES_CHECK_MS;
+ const i=watch.pushes.findIndex(p=>p.commit===build!.commit),later=watch.pushes[i+1];
+ const state=build.status==='errored'?'errored'
+  :build.status==='built'?(i>=0&&young(later)?'built':'behind')
+  :i>=0&&young(watch.pushes[i])?'building':'stuck';
+ if(state==='built'||state==='building')return {watch:null,note:` pages=${state}${watch.rebuilt?' after rebuild':''}`};
  const reason=build.error?.message?` (${String(build.error.message).slice(0,120)})`:'';
  if(watch.rebuilt)return {watch:null,note:` pages=${state}${reason} rebuild=spent`};
  const rebuild=await api('api','-X','POST',`repos/${repo}/pages/builds`);
  if(!rebuild.ok)return {watch:null,note:` pages=${state}${reason} rebuild=refused (${rebuild.out.slice(0,120)})`};
- return {watch:{commit:watch.commit,dueAt:now+PAGES_CHECK_MS,rebuilt:true},note:` pages=${state}${reason} rebuild=requested`};
+ return {watch:{...watch,dueAt:now+PAGES_CHECK_MS,rebuilt:true},note:` pages=${state}${reason} rebuild=requested`};
 }
 
 // True when the hosted page's index.html holds the expandQuests function of the packed quest state (quest-pack.ts).
@@ -399,7 +409,7 @@ async function cycle(){
    // A refused folder waits a whole push period too: the next try copies main's site/ again.
    const {result}=await pushAuditedSite(site);note+=` site=${result}`;lastSitePush=now;
    if(result==='pushed'||result==='unchanged'){lastPublic={stable:withoutClocksValue(pubObj),at:now};deployedPage=page;}
-   if(result==='pushed'){const head=await git(site,'rev-parse','HEAD');if(head.ok)pagesWatch={commit:head.out,dueAt:now+PAGES_CHECK_MS,rebuilt:false};}
+   if(result==='pushed'){const head=await git(site,'rev-parse','HEAD');if(head.ok)pagesWatch=watchPush(pagesWatch,head.out,now);}
   }
  }
  if(pub===null)throw pubError;
