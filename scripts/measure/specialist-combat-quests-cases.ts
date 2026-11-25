@@ -448,7 +448,7 @@ export function buildCombatSpecialistRehearsalSegment(
             env: { CAP: '7500', ...extraEnv },
             mode: 'defence',
             skill: 'Defence',
-            planTicks: override ?? 2326,
+            planTicks: override ?? 2382,
             planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3937t vs #1 4018t)',
         });
     }
@@ -460,7 +460,7 @@ export function buildCombatSpecialistRehearsalSegment(
             env: { CAP: '2500', VARIANT: 'pvp-glory', ...extraEnv },
             mode: 'ranged-pvp-glory',
             skill: 'Ranged',
-            planTicks: override ?? 1556,
+            planTicks: override ?? 1393,
             planSource: '15-slot Glory/Yew shortbow/MSB Keep PvP (<=1663t vs #1 1697t)',
             rangedTank: true,
         });

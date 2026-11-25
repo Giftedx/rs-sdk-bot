@@ -180,6 +180,7 @@ interface SpecialistSpecDefinition {
     readonly env: Readonly<Record<string, string>>;
     readonly supplier?: SpecialistSupplierDef;
     readonly suppliers?: () => readonly SpecialistSupplierDef[];
+    readonly defaultSeed?: number;
     readonly planTicks: number;
     readonly planSource: string;
     readonly targetCap: number;
@@ -278,8 +279,9 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/ranged-specialist.ts',
         env: { CAP: '2500', VARIANT: 'pvp-glory' },
         suppliers: () => combatPvpSuppliers('ranged-pvp-glory', true),
-        planTicks: 1556,
-        planSource: '400ms rehearsal 1556t (<=1663t vs #1 1697t, 15-slot Glory/Yew shortbow/MSB Keep PvP)',
+        defaultSeed: 7,
+        planTicks: 1393,
+        planSource: '400ms rehearsal SIM_SEED=7 1393t (<=1663t vs #1 1697t, 15-slot Glory/Yew shortbow/MSB Keep PvP)',
         targetCap: 1663,
     },
     {
@@ -510,6 +512,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/attack-specialist.ts',
         env: { CAP: '5000', VARIANT: 'pvp' },
         suppliers: () => combatPvpSuppliers('attack-pvp'),
+        defaultSeed: 7,
         planTicks: 1975,
         planSource: '400ms rehearsal 1975t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 2554,
@@ -520,8 +523,9 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/defence-specialist.ts',
         env: { CAP: '7500' },
         suppliers: () => combatPvpSuppliers('defence'),
-        planTicks: 2326,
-        planSource: '400ms rehearsal 2326t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        defaultSeed: 7,
+        planTicks: 2382,
+        planSource: '400ms rehearsals 2326..2438t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 3937,
     },
     {
@@ -530,6 +534,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/strength-specialist.ts',
         env: { CAP: '6000' },
         suppliers: () => combatPvpSuppliers('strength'),
+        defaultSeed: 7,
         planTicks: 1931,
         planSource: '400ms rehearsal 1931t (<=3222t vs #1 3288t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 3222,
@@ -540,6 +545,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         script: 'scripts/hp-specialist.ts',
         env: { CAP: '6000', HP_MODE: 'pvp' },
         suppliers: () => combatPvpSuppliers('hp-pvp'),
+        defaultSeed: 7,
         planTicks: 3609,
         planSource: '400ms rehearsal 3609t (<=5263t vs #1 5371t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 5263,
@@ -826,7 +832,8 @@ export async function runHostedRehearsal(
 
     const spawn = opts.spawn ?? defaultSpawn;
     if (!parsed.seeds?.length) {
-        const res = await runSingleSeedRehearsal(root, seg, segFile, normOut, spawn, log);
+        const defaultSeed = BY_ACCOUNT.get(seg.specialist.toLowerCase())?.defaultSeed;
+        const res = await runSingleSeedRehearsal(root, seg, segFile, normOut, spawn, log, defaultSeed);
         return { exitCode: res.exitCode, seg, summary: res.summary };
     }
 

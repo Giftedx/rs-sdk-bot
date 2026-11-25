@@ -211,7 +211,7 @@ test('account lookup is case-insensitive and rejects unknown accounts or invalid
     expect(ranged.env?.SUPPLIER).toBe('Moneyshot');
 
     expect(lower.plan!.ticks).toBe(2142);
-    expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(1556);
+    expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(1393);
     expect(resolveSpecialistSegment('HiltsDeep').suppliers).toHaveLength(3);
     expect(resolveSpecialistSegment('RockSolid').suppliers).toHaveLength(3);
     expect(resolveSpecialistSegment('BigSwinger').suppliers).toHaveLength(3);
@@ -379,6 +379,33 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
         expect(seenSeeds).toEqual(['7', '8', '9']);
         expect(batchRes.summaries).toHaveLength(3);
         expect(batchLogs.some(l => l.startsWith('HOSTED_REHEARSAL_BATCH '))).toBe(true);
+
+        let seenCombatSeed: string | undefined;
+        const combatRes = await runHostedRehearsal(['Shaftshooter', '--out', '.practice/hosted-rehearse/shaft-default-seed'], {
+            root,
+            log: () => {},
+            spawn: async (cmd, _cwd, extraEnv) => {
+                seenCombatSeed = extraEnv?.SIM_SEED;
+                const outArg = cmd[cmd.indexOf('--out') + 1]!;
+                const outDirCombat = resolve(root, outArg);
+                mkdirSync(outDirCombat, { recursive: true });
+                writeFileSync(join(outDirCombat, 'shaftshooter-ranged.json'), JSON.stringify({
+                    ok: true,
+                    checks: { exit: true, wholeClock: true },
+                    ticks: { used: 1393, enter: 4, leave: 1397, overPlan: 0 },
+                    scope: 'One practice rehearsal',
+                }));
+                writeFileSync(join(outDirCombat, 'shaftshooter-ranged.receipt.json'), JSON.stringify({
+                    endPlaytime: 1396,
+                    boardTicks: { Ranged: 1393 },
+                    externalSupplies: [],
+                    context: 'ctx',
+                }));
+                return 0;
+            },
+        });
+        expect(combatRes.exitCode).toBe(0);
+        expect(seenCombatSeed).toBe('7');
     } finally {
         rmSync(root, { recursive: true, force: true });
     }
