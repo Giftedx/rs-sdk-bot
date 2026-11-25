@@ -1,0 +1,22 @@
+{
+ "id": "1795586129205-knightrider-yewfirst-aec33b079a414d40",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 745,
+ "start": 1795586129205,
+ "end": 1795589729205,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

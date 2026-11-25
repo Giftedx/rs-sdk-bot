@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795585342364-2",
+ "account": "Hocuspokeus",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "00766eed-1317-4e81-a279-353d01c094bb",
+ "count": 0,
+ "ok": false,
+ "at": 1795586123050,
+ "detail": "trade claimed"
+}

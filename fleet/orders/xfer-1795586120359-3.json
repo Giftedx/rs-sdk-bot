@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795586120359-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketrocket",
+  "to": "SporranDip",
+  "item": "Herb",
+  "count": 2,
+  "itemId": 203,
+  "start": 1795586120359,
+  "end": 1795587020359,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
