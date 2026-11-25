@@ -1,0 +1,23 @@
+{
+ "id": "1795615742954-fishandchips-knightstick-5bce13a44f497cb0",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Knightstick",
+ "item": "Shark",
+ "count": 11,
+ "start": 1795615742954,
+ "end": 1795617842954,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

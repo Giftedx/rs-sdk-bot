@@ -1,0 +1,23 @@
+{
+ "id": "1795615742430-nabtheknob-trousersnake-3d7f9e43b5769c03",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "TrouserSnake",
+ "item": "Iron arrow",
+ "count": 300,
+ "start": 1795615742430,
+ "end": 1795617842430,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

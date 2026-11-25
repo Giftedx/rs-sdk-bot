@@ -1,0 +1,23 @@
+{
+ "id": "1795616643758-stirmypot-masterbaiter-b197f1c7692f1e74",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Stirmypot",
+ "to": "Masterbaiter",
+ "item": "Nature rune",
+ "count": 19,
+ "start": 1795616643758,
+ "end": 1795618743758,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

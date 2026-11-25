@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795615338830-1",
  "account": "MeatNTwoVeg",
  "partner": "Bigpackage",
@@ -12,6 +12,12 @@
  "claim": "36e6b9a0-e0d4-4fb7-8a6a-fcd203303267",
  "count": 0,
  "ok": false,
- "at": 1795615624607,
- "detail": "trade claimed"
+ "at": 1795615675452,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795615624617-0000015080-0000000001",
+  "at": 1795615675444,
+  "sha256": "4c27afe0d2343141a533e661be85127c88c153a130d1085fea7aa3df7dc54953"
+ },
+ "screen": false
 }

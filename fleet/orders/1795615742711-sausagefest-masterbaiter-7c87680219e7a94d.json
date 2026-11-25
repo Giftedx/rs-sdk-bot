@@ -1,0 +1,23 @@
+{
+ "id": "1795615742711-sausagefest-masterbaiter-7c87680219e7a94d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "Masterbaiter",
+ "item": "Water rune",
+ "count": 30,
+ "start": 1795615742711,
+ "end": 1795617842711,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
