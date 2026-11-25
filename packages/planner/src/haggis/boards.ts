@@ -221,11 +221,11 @@ export function haggisActivities(path = BOARDS_FILE): Activity[] {
 }
 
 const QP_SPECIALIST_OMITTED_IDS = new Set([
-    'att-40', 'att-top', 'str-top', 'def-top', 'hp-top', 'prayer', 'mine', 'runecraft',
+    'att-40', 'att-top', 'str-top', 'str-top-vampire', 'def-top', 'hp-top', 'prayer', 'mine', 'runecraft',
     'agility', 'agility-52', 'agility-gt', 'agility-tt', 'fish', 'fish-35', 'fish-53', 'fish-74',
     'herb', 'herb-drops', 'herb-unf', 'smith', 'smith-anvil', 'smith-trade',
     'crest', 'magic-43', 'smith-40', 'superheat', 'magic-top', 'magic-45', 'magic-anvil',
-    'mage-arena', 'charge', 'superheat-75', 'superheat-99', 'superheat-stun',
+    'mage-arena', 'charge', 'pvp-magic', 'superheat-75', 'superheat-99', 'superheat-stun',
     'ranged-entry', 'ranged-entry-melee', 'equip', 'bank-value', 'runite', 'wc-pray',
 ]);
 

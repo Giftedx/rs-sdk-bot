@@ -174,6 +174,7 @@ export async function openBot(name: string, opts: OpenBotOptions = {}): Promise<
         name, password, server, ...(trade ? {
             trade: { ...trade, check: srv => { assertSideOwns(name); trade.check(srv); } },
         } : {}),
+        ...(opts.allowTradePartners?.length ? { allowTradePartners: opts.allowTradePartners } : {}),
     });
     await awaitBotReady(s, log);
     const p = s.sdk.getState()!.player!;

@@ -198,8 +198,7 @@ describe('Route config, AIO catalog, and bench coverage', () => {
         });
         const plan = resolveSupplierKitPlan('agility');
         expect(plan.name).toBe('agility');
-        // specialist-supply.ts still retains Super energy(4) (3016) until shared kit sync.
-        expect(plan.combined.filter(i => i.id !== 3016)).toEqual(AGILITY_SPECIALIST_KIT.filter(i => i.id !== 3016));
+        expect(plan.combined).toEqual(AGILITY_SPECIALIST_KIT);
         expect(plan.legs.length).toBe(1);
     });
 });
