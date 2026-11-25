@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795641134783-2",
+ "account": "Shaftsinker",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "788221f8-b723-4c1c-a0de-eba5c1ac1c36",
+ "count": 60,
+ "ok": true,
+ "at": 1795641203154,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Shark",
+   "requested": 10,
+   "count": 10,
+   "inventory": {
+    "before": 10,
+    "after": 0
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795641186014
+   }
+  }
+ ],
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795641185605
+ },
+ "logout": {
+  "attemptId": "1795641180199-0000015616-0000000001",
+  "at": 1795641203141,
+  "sha256": "f685482894e553f1d44ef25d324df2ad247c6dae3d764a7b24a4424dad3694dd"
+ },
+ "screen": true
+}

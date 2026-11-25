@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795641134783-1",
+ "account": "Wandwaver",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "a03c9c54-023e-428a-946a-a239da27c536",
+ "count": 0,
+ "ok": false,
+ "at": 1795641236860,
+ "detail": "trade claimed"
+}
