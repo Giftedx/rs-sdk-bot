@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795615837011-3",
  "account": "Shaftsinker",
  "partner": "FishAndChips",
@@ -10,8 +10,22 @@
  "item": "Lobster",
  "requested": 5,
  "claim": "256e91e7-39c9-4ac9-ad53-f3fffde2c9ac",
- "count": 0,
- "ok": false,
- "at": 1795616443516,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795616598213,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795616597492
+ },
+ "logout": {
+  "attemptId": "1795616443726-0000018544-0000000001",
+  "at": 1795616598204,
+  "sha256": "6f475384cb1843ec85095cc396e5b37d346ae442bf7ff12a93e33c62b5e4a022"
+ },
+ "screen": true
 }
