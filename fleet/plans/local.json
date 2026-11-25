@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795605547648,
+ "at": 1795605574186,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -53,19 +53,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
-   "role": "army"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/generated/quest-priestperil.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:priestperil",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:priestperil",
    "role": "army"
   },
   {
@@ -131,6 +118,19 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/generated/quest-priestperil.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:priestperil",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:priestperil",
+   "role": "auto"
   }
  ],
  "army": [
@@ -164,6 +164,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker"
