@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601482873,
+ "at": 1795601519521,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,16 +24,20 @@
    "role": "rehearsal"
   },
   {
-   "account": "Knightstick",
-   "script": "scripts/generated/quest-arena.ts",
-   "args": [],
+   "account": "mmtha0205",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:arena",
+   "goal": "goal:pk_army:mmtha0205",
    "role": "army"
   },
   {
@@ -155,8 +159,8 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "knightstick",
   "mineyourbiz",
-  "mmtha0205",
   "mmthv2350",
   "moneyshot",
   "oreelse",
