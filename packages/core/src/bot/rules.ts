@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import type { connectInProcess, Session } from '../inprocess';
 import { isLocalServer } from '../localserver';
 
-// Ticks without xp, an item change, dialog or a walk of FAR_WALK tiles (ledger.ts) before a session counts as stalled
-// and stops (STALL_TICKS=0: never).
+// Ticks without xp, an item change, a new dialog (the same dialog words count for DIALOG_TICKS ticks) or a walk of
+// FAR_WALK tiles (ledger.ts stalled) before a session counts as stalled and stops (STALL_TICKS=0: never).
 export const STALL_TICKS = Number(process.env.STALL_TICKS ?? 900);
 export const repoRoot = resolve(import.meta.dir, '..', '..', '..', '..');
 
@@ -79,7 +79,7 @@ export function deathStep(born: LifeFields, now: LifeFields, keep: boolean, seen
 export function stopReasonOf(o: { died: boolean; stopTicks: number; stopFile: () => boolean; leaseLost: () => boolean; stalled: () => boolean; stallTicks: number }): string | null {
     return o.died ? 'died' : o.stopTicks % 25 === 0 && o.stopFile() ? 'stop file'
         : o.stopTicks % 25 === 0 && o.leaseLost() ? 'fleet controller lease unavailable'
-        : o.stopTicks % 50 === 0 && o.stalled() ? `no progress: ${o.stallTicks} ticks without xp, items, dialog or a journey` : null;
+        : o.stopTicks % 50 === 0 && o.stalled() ? `no progress: ${o.stallTicks} ticks without xp, items, a new dialog or a journey` : null;
 }
 
 export function watchUnexpectedEnd(

@@ -4,7 +4,8 @@
 //   inventory item ID/count totals changed (buy, bank, trade, consume or produce; not proof of net output)
 //   move    the player's tile changed
 //   anim    an animation is playing (skilling, stun, eating)
-//   dialog  a dialog is open (level-up, NPC chat): usually waste to close fast
+//   dialog  a dialog is open (level-up, NPC chat): usually waste to close fast; the row counts how long the same
+//           words stay open (dialogTicks), which the stall check reads
 //   stun    none of the above, inside the 8 ticks after "You've been stunned" (unavoidable wait)
 //   idle    none of the above
 // Attach with startLedger(session); call stop() to get the summary and print it with formatLedger.
@@ -14,7 +15,9 @@
 // `none` when it sent none). scripts/tick-waste.ts sums the reasons by script family.
 
 export type TickKind = 'xp' | 'inventory' | 'move' | 'anim' | 'dialog' | 'stun' | 'idle';
-export interface TickRow { tick: number; kind: TickKind; at: string; why?: string }
+// `dialogTicks`, on a dialog row of startLedger: the open-dialog ticks in a row that showed the same words, this one
+// included (see dialogWords; a closed tick does not reset the count).
+export interface TickRow { tick: number; kind: TickKind; at: string; why?: string; dialogTicks?: number }
 // Ticks after a hit on the player in which an idle tick with no fight counts as `hurt`.
 export const FIGHT_TICKS = 8;
 
@@ -119,6 +122,19 @@ export function summarize(rows: readonly TickRow[], xpGain = 0) {
 // Rows that a ledger keeps when the caller names no count: enough for the stall window (900 ticks) and the 300-tick timeline.
 export const LEDGER_KEEP = 1024;
 
+// The words that an open dialog shows: its text, the texts of its components and the texts of its options. The
+// pageId does not tell a new page: the client makes a new pageId each time the server sends a page, also the same page
+// again (vendor/rs-sdk/server/webclient/src/bot/dialog-page.ts). A cook step that uses lobsters on a range below
+// Cooking 40 gets the same "You need a Cooking level of 40" box every 10 ticks, each with a new pageId.
+function dialogWords(d: any): string {
+    let words = typeof d?.text === 'string' ? d.text : '';
+    const parts = d?.allComponents;
+    if (Array.isArray(parts)) for (let i = 0; i < parts.length; i++) words += '\u0001' + (parts[i]?.text ?? '');
+    const options = d?.options;
+    if (Array.isArray(options)) for (let i = 0; i < options.length; i++) words += '\u0002' + (options[i]?.text ?? '');
+    return words;
+}
+
 // `lastAction` returns the type of the last action the script sent, or null.
 // `keep` is the number of newest rows that `rows` holds (at least the stall window of `stalled`); older rows only
 // count in the tally. `rows` holds between `keep` and 2 x `keep` rows.
@@ -133,6 +149,7 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
         level: number;
         animId: number;
         dialogOpen: boolean;
+        dialogWords: string;
         hasInv: boolean;
         inv: Map<number, number>;
         fight: boolean;
@@ -161,7 +178,9 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
         } else {
             into.animId = -1;
         }
-        into.dialogOpen = !!(s.sdk.getDialog?.()?.isOpen ?? st?.dialog?.isOpen);
+        const dlg = s.sdk.getDialog?.();
+        into.dialogOpen = !!(dlg?.isOpen ?? st?.dialog?.isOpen);
+        into.dialogWords = into.dialogOpen ? dialogWords(dlg ?? st?.dialog) : '';
         into.hasInv = Array.isArray(st?.inventory);
         if (into.hasInv) fillInventoryTotals(st.inventory, into.inv);
         else into.inv.clear();
@@ -171,8 +190,8 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
         into.shop = !!st?.shop?.isOpen;
         into.window = !!st?.interface?.isOpen || !!st?.modalOpen;
     };
-    let last: SnapState = { xp: 0, hasPlayer: false, x: 0, z: 0, level: 0, animId: -1, dialogOpen: false, hasInv: false, inv: new Map(), fight: false, hurt: false, bank: false, shop: false, window: false };
-    let cur: SnapState = { xp: 0, hasPlayer: false, x: 0, z: 0, level: 0, animId: -1, dialogOpen: false, hasInv: false, inv: new Map(), fight: false, hurt: false, bank: false, shop: false, window: false };
+    let last: SnapState = { xp: 0, hasPlayer: false, x: 0, z: 0, level: 0, animId: -1, dialogOpen: false, dialogWords: '', hasInv: false, inv: new Map(), fight: false, hurt: false, bank: false, shop: false, window: false };
+    let cur: SnapState = { xp: 0, hasPlayer: false, x: 0, z: 0, level: 0, animId: -1, dialogOpen: false, dialogWords: '', hasInv: false, inv: new Map(), fight: false, hurt: false, bank: false, shop: false, window: false };
     readSnap(last);
     // Total XP over all skills at the start, so the summary can state the XP the run gained.
     const xpStart = last.xp;
@@ -183,9 +202,15 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
         if (mt > seenTick) seenTick = mt;
     }
     let stunUntil = -1;
+    // The words of the last open dialog and the open-dialog ticks that showed them in a row (TickRow.dialogTicks).
+    let shownWords: string | null = null, shownTicks = 0;
     const off = s.onTick(() => {
         readSnap(cur);
         const tick = s.tick();
+        if (cur.dialogOpen) {
+            shownTicks = cur.dialogWords === shownWords ? shownTicks + 1 : 1;
+            shownWords = cur.dialogWords;
+        }
         const msgs = s.sdk.getState()?.gameMessages;
         if (msgs?.length) {
             let maxTick = seenTick;
@@ -206,7 +231,7 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
             tick,
             kind,
             at: cur.hasPlayer ? `${cur.x},${cur.z}` : 'undefined,undefined',
-            ...(kind === 'idle' ? { why: idleWhy(cur, lastAction()) } : {}),
+            ...(kind === 'idle' ? { why: idleWhy(cur, lastAction()) } : kind === 'dialog' ? { dialogTicks: shownTicks } : {}),
         };
         tally.add(row);
         rows.push(row);
@@ -228,12 +253,17 @@ export function formatLedger(sum: ReturnType<typeof summarize>): string {
         + ` idleBy=${sum.idleBy.map(([why, n]) => `${why}:${n}`).join(',')}`;
 }
 
-// A session is stalled when its last `window` ticks hold no xp, no inventory change and no dialog: walking,
-// waiting or animating that long without gaining anything is a loop (a bank trip that cannot take food, a
+// A session is stalled when its last `window` ticks hold no xp, no inventory change, no new dialog and no journey:
+// walking, waiting or animating that long without gaining anything is a loop (a bank trip that cannot take food, a
 // chop with no logs), not work. bot.ts stops such a session.
-// A journey counts too: a tile FAR_WALK or more from the tile at the window's start is travel (quest-sweep walks
+// A journey counts: a tile FAR_WALK or more from the tile at the window's start is travel (quest-sweep walks
 // Port Sarim to the Sinclair Mansion in about 1,200 ticks with nothing else changing), while pacing near one tile is not.
+// A dialog tick counts while its words are new: for the first DIALOG_TICKS open-dialog ticks that show the same words
+// (TickRow.dialogTicks). A quest talk shows new words on each page every few ticks, so it does not stall. A dialog
+// that shows the same words for DIALOG_TICKS ticks and then a full window stalls: a cook step below the food's level
+// gets one "You need a Cooking level of 40" box for ever. A row without dialogTicks counts as a new dialog.
 export const FAR_WALK = 20;
+export const DIALOG_TICKS = 300;
 const tile = (at: string): [number, number] | null => {
     const comma = at.indexOf(',');
     if (comma <= 0 || comma >= at.length - 1) return null;
@@ -245,7 +275,8 @@ export function stalled(rows: readonly TickRow[], window: number): boolean {
     const start = tile(rows[rows.length - window]!.at);
     for (let i = rows.length - window; i < rows.length; i++) {
         const r = rows[i]!;
-        if (r.kind === 'xp' || r.kind === 'inventory' || r.kind === 'dialog') return false;
+        if (r.kind === 'xp' || r.kind === 'inventory') return false;
+        if (r.kind === 'dialog' && (r.dialogTicks ?? 1) <= DIALOG_TICKS) return false;
         const t = start && tile(r.at);
         if (t && Math.max(Math.abs(t[0] - start![0]), Math.abs(t[1] - start![1])) >= FAR_WALK) return false;
     }
