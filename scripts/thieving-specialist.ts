@@ -27,6 +27,8 @@ import {
     RING_OF_DUELING_IDS,
     OBJ_PINEAPPLE_PIZZA,
 } from './gathering-specialist-lib';
+import { ClientProt } from '../vendor/rs-sdk/server/webclient/src/io/ClientProt';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
 
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
@@ -259,6 +261,8 @@ export async function runArdougneStunRelogThieving(opts: {
     let lastPickTick = -99;
     let lastPickDist = 99;
     let lastPickTarget = -1;
+    let stunPending = false;
+    let stunPendingTick = -99;
     let stallCooldownUntil = 0;
     const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
 
@@ -276,12 +280,24 @@ export async function runArdougneStunRelogThieving(opts: {
 
         const tier = selectPickpocketTier(lvl);
 
-        // Detect new stun messages via monotonic message watermark (immune to ring-buffer length caps).
+        // Detect new pickpocket/stun messages via monotonic watermark (immune to ring-buffer length caps).
         const msgs = st.gameMessages ?? [];
         const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
         lastMsgMark = latestMark(msgs, lastMsgMark);
+        const justPicked = newMsgs.some(m => /^you pick the /i.test(m.text));
+        const justFailed = newMsgs.some(m => /^you fail to pick /i.test(m.text));
+        const justStarted = newMsgs.some(m => /^you attempt to pick /i.test(m.text));
+        if (justFailed) {
+            stunPending = true;
+            stunPendingTick = main.tick();
+        }
+        if (justStarted && !justPicked && !justFailed) {
+            lastPickTick = main.tick();
+            lastPickDist = 1;
+        }
         if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
             stuns++;
+            stunPending = false;
             const bites = foodBitesCount(main);
             if (st.player.hp <= Math.max(3, tier.stunDamage) && bites === 0) {
                 // Never call logoutSession at <= FLEE_HP with no food: flee_guard holds clickComponent until timeout.
@@ -291,7 +307,7 @@ export async function runArdougneStunRelogThieving(opts: {
             }
             // Keep >= 1 emergency bite in inventory so randomevents flee_guard never triggers on 0-food HP<=3 stuns.
             const hasCakeBite = main.sdk.getInventory().some(i => i.id === 1897 || i.id === 1899 || i.id === 1901);
-            const preRelogEatThreshold = hasCakeBite ? Math.max(4, (st.player.maxHp ?? 10) - 4) : Math.max(4, (st.player.maxHp ?? 10) - 5);
+            const preRelogEatThreshold = hasCakeBite ? Math.max(4, (st.player.maxHp ?? 10) - 5) : tier.stunDamage;
             if (bites >= 2 && st.player.hp <= preRelogEatThreshold) {
                 await eatAnyFood(main);
             }
@@ -303,12 +319,18 @@ export async function runArdougneStunRelogThieving(opts: {
             lastPickTick = -99;
             lastPickDist = 99;
             lastPickTarget = -1;
+            stunPending = false;
             continue;
         }
+        if (stunPending && main.tick() - stunPendingTick < 5) {
+            await waitTicks(main, 1);
+            continue;
+        }
+        stunPending = false;
 
-        // Proactive food restock when empty or down to 1 reserve bite (skip trip at lv>=98 while hp still >= stun+3).
+        // Restock from Baker's stall only once food is exhausted or down to the last reserve bite at lethal HP.
         const bites = foodBitesCount(main);
-        const needRestock = bites === 0 || (bites <= 1 && (lvl < 98 || st.player.hp <= tier.stunDamage + 3));
+        const needRestock = bites === 0 || (bites === 1 && st.player.hp <= tier.stunDamage);
         if (needRestock && elapsedNow() >= stallCooldownUntil) {
             const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 6, 4);
             if (!restocked) {
@@ -322,7 +344,7 @@ export async function runArdougneStunRelogThieving(opts: {
         }
 
         // Never pickpocket into <= 3 HP without at least 2 bites left (reserve 1 bite keeps flee_guard disarmed).
-        if (foodBitesCount(main) <= 1 && st.player.hp <= tier.stunDamage + 3) {
+        if (foodBitesCount(main) <= 1 && st.player.hp <= tier.stunDamage) {
             await waitTicks(main, 1);
             continue;
         }
@@ -355,7 +377,7 @@ export async function runArdougneStunRelogThieving(opts: {
         const approachWait = lastPickTarget === npc.index && npc.distance > 2 && lastPickDist > 2
             ? Math.min(4, Math.ceil(npc.distance / 2) + 1)
             : 2;
-        if (sincePick >= approachWait) {
+        if (justPicked || sincePick >= approachWait) {
             const op = npc.optionsWithIndex.find(o => /^pickpocket$/i.test(o.text));
             if (op) {
                 lastPickTick = main.tick();
@@ -381,6 +403,123 @@ export async function runArdougneStunRelogThieving(opts: {
         finalLevel,
         finalXp,
     };
+}
+
+async function walkDirectNoDetour(
+    main: Session,
+    points: readonly [number, number, number][],
+    stop: () => boolean,
+    earlyStop?: () => boolean,
+): Promise<void> {
+    const base = await sessionWalker(main);
+    const runEnabled = () => ((main.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) === 1;
+    let lastRunClickTick = -10;
+    const deps = {
+        ...base,
+        hunters: () => [],
+        runOn: async () => {
+            const t = main.tick();
+            if (!runEnabled() && t - lastRunClickTick >= 2) {
+                lastRunClickTick = t;
+                await main.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+            }
+        },
+    };
+    const pathPts = points.map(([x, z, tol]) => ({ x, z, tol }));
+    const res = await walkPath(deps, pathPts, {
+        maxTicks: Math.max(220, points.length * 140),
+        reclickAt: 10,
+        look: 22,
+        stop: () => stop() || !!earlyStop?.(),
+    });
+    if (!res.ok && !earlyStop?.() && !stop()) {
+        await walkWaypointsSafe(main, points, stop);
+    }
+}
+
+async function sailBrimhavenFast(main: Session, stop: () => boolean): Promise<void> {
+    const ardyDeck = { x: 2683, z: 3268 };
+    const landed = () => {
+        const p = main.sdk.getState()?.player;
+        return !!p && p.level === 1 && chebDist(ardyDeck, { x: p.worldX, z: p.worldZ }) <= 8;
+    };
+    const sendBurst = (tokens: readonly ('R' | number)[]): boolean => {
+        const c = main.client as {
+            chatModalId?: number;
+            resumedPauseButton?: boolean;
+            dialogInputOpen?: boolean;
+            writeOpcode?: (op: number) => void;
+            out?: { p2(v: number): void };
+            flush?: () => void;
+        } | undefined;
+        if (!c?.writeOpcode || !c.out || typeof c.chatModalId !== 'number' || c.chatModalId === -1 || c.dialogInputOpen) {
+            return false;
+        }
+        const modalId = c.chatModalId;
+        for (const tok of tokens.slice(0, 5)) {
+            if (tok === 'R') {
+                c.writeOpcode(ClientProt.RESUME_PAUSEBUTTON);
+                c.out.p2(modalId);
+            } else {
+                c.writeOpcode(ClientProt.IF_BUTTON);
+                c.out.p2(tok);
+            }
+        }
+        c.flush?.();
+        c.resumedPauseButton = tokens[tokens.length - 1] === 'R';
+        return true;
+    };
+    const bursts: readonly (readonly ('R' | number)[])[] = [
+        ['R', 2461, 'R', 'R', 2472],
+        ['R', 'R', 2461, 'R'],
+    ];
+    let burstIdx = 0;
+    let talked = false;
+    for (let i = 0; i < 40 && !stop() && !landed(); i++) {
+        const d = main.sdk.getDialog();
+        if (d?.isOpen && !d.isWaiting) {
+            if (burstIdx < bursts.length && sendBurst(bursts[burstIdx]!)) {
+                burstIdx++;
+            } else {
+                const pats = [/journey on this ship/i, /search away/i, /^ok\.?$/i];
+                const opt = d.options.find(o => pats.some(re => re.test(o.text)));
+                await main.direct({ type: 'clickDialogOption', optionIndex: opt ? opt.index : 0, reason: 'SDK' });
+            }
+        } else if (!talked || i % 6 === 0) {
+            const npc = main.sdk.getState()?.nearbyNpcs.find(n => /^customs officer$/i.test(n.name));
+            const op = npc?.optionsWithIndex.find(o => /^talk-to$/i.test(o.text))?.opIndex ?? 1;
+            if (npc) {
+                talked = true;
+                await main.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op, reason: 'SDK' });
+            } else {
+                await sailBrimhavenToArdougne(main, stop);
+                return;
+            }
+        }
+        await waitTicks(main, 1);
+    }
+    if (!landed()) {
+        await sailBrimhavenToArdougne(main, stop);
+        return;
+    }
+    for (let i = 0; i < 8 && !stop(); i++) {
+        if (main.sdk.getState()?.player?.level === 0) return;
+        const d = main.sdk.getDialog();
+        if (d?.isOpen && !d.isWaiting) {
+            await main.direct({ type: 'clickDialogOption', optionIndex: 0, reason: 'SDK' });
+            await waitTicks(main, 1);
+            continue;
+        }
+        const plank = main.sdk.findNearbyLoc(/^gangplank$/i);
+        const op = plank?.optionsWithIndex.find(o => /cross/i.test(o.text))?.opIndex ?? 1;
+        if (plank) {
+            await main.direct({ type: 'interactLoc', x: plank.x, z: plank.z, locId: plank.id, optionIndex: op, reason: 'SDK' });
+        }
+        await waitTicks(main, 1);
+    }
+    if (main.sdk.getState()?.player?.level !== 0) {
+        await sailBrimhavenToArdougne(main, stop);
+    }
 }
 
 if (import.meta.main) {
@@ -441,7 +580,7 @@ if (import.meta.main) {
                 });
 
             if (THIEVING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
-                // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
+                // Travel via Karamja Glory -> Brimhaven dock (direct path, no spider/scorpion detours) -> Ardougne dock -> Market.
                 await rubTeleport(
                     main,
                     THIEVING_GLORY_IDS,
@@ -449,13 +588,19 @@ if (import.meta.main) {
                     p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
                     isStopped,
                 );
-                await walkWaypointsSafe(
+                await walkDirectNoDetour(
                     main,
-                    [[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]],
+                    [[2772, 3234, 2]],
                     isStopped,
+                    () => !!main.sdk.getState()?.nearbyNpcs.find(n => /^customs officer$/i.test(n.name) && n.distance <= 4),
                 );
-                await sailBrimhavenToArdougne(main, isStopped);
-                await walkWaypointsSafe(main, [[2654, 3288, 3], [2621, 3293, 2]], isStopped);
+                await sailBrimhavenFast(main, isStopped);
+                await walkDirectNoDetour(
+                    main,
+                    [[2654, 3296, 3]],
+                    isStopped,
+                    () => !!main.sdk.getState()?.nearbyNpcs.find(n => /^(man|woman)$/i.test(n.name) && n.reachable !== false && n.distance <= 3),
+                );
             } else {
                 await rubTeleport(
                     main,
@@ -469,7 +614,7 @@ if (import.meta.main) {
                 if (ringSlot !== undefined) {
                     await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
                 }
-                await walkWaypointsSafe(main, THIEVING_DIRECT_CWARS_WAYPOINTS, isStopped);
+                await walkDirectNoDetour(main, THIEVING_DIRECT_CWARS_WAYPOINTS, isStopped);
             }
             travelTicks = elapsedNow();
         }
