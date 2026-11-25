@@ -616,6 +616,7 @@ export async function rubRingOfDueling(
             console.log(`RUB_RING ticks=${s.tick() - startTick} to=${destTile.x},${destTile.z}`);
             return;
         }
+        const loopTick = s.tick();
         const d: any = s.sdk.getDialog();
         const pick = d?.isOpen && !d.isWaiting
             ? (d.options ?? []).find((o: any) => optionRe.test(o.text ?? ''))
@@ -623,20 +624,24 @@ export async function rubRingOfDueling(
         if (pick) {
             await s.sdk.sendClickDialog(pick.index);
             await waitUntil(s, () => arrived() || stop(), { timeoutTicks: 8 });
-            continue;
+        } else {
+            if (d?.isOpen && !d.isWaiting) {
+                void s.direct({ type: 'closeModal', reason: 'SDK' });
+            }
+            const ring = s.sdk.getInventory().find(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
+            if (!ring) throw Error('missing Ring of dueling in inventory');
+            const rubOp = (ring.optionsWithIndex ?? []).find((o: any) => /rub/i.test(o.text ?? ''))?.opIndex ?? 4;
+            await s.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: rubOp, reason: 'SDK' });
+            await waitUntil(s, () => {
+                if (arrived() || stop()) return true;
+                if (s.tick() <= loopTick) return false;
+                const curD: any = s.sdk.getDialog();
+                return !!curD?.isOpen && !curD.isWaiting && (curD.options ?? []).some((o: any) => optionRe.test(o.text ?? ''));
+            }, { timeoutTicks: 4 });
         }
-        if (d?.isOpen && !d.isWaiting) {
-            void s.direct({ type: 'closeModal', reason: 'SDK' });
+        if (!arrived() && !stop() && s.tick() === loopTick) {
+            await waitTicks(s, 1);
         }
-        const ring = s.sdk.getInventory().find(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
-        if (!ring) throw Error('missing Ring of dueling in inventory');
-        const rubOp = (ring.optionsWithIndex ?? []).find((o: any) => /rub/i.test(o.text ?? ''))?.opIndex ?? 4;
-        await s.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: rubOp, reason: 'SDK' });
-        await waitUntil(s, () => {
-            if (arrived() || stop()) return true;
-            const curD: any = s.sdk.getDialog();
-            return !!curD?.isOpen && !curD.isWaiting;
-        }, { timeoutTicks: 4 });
     }
     const p = posOf(s);
     if (!p || d8({ x: p.worldX, z: p.worldZ }, destTile) > radius) {
