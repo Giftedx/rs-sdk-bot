@@ -970,7 +970,8 @@ runners and grace:
 - **No first strike keeps the skull.** With dagger mode off 2 of 19 and 2 of 20 clone deaths were unskulled (a death that
   keeps the dagger); with it on, 0 of every case. With dagger mode off seeds 1 and 2 took about 850 ticks for 1 or 2 kills.
 - **The pickup.** The squad took 21 of the 24 daggers of the defaults. The single-way and interloper rule of the pickup did
-  not run in these cases (no threat radar), so it has unit tests only (`daggerPickup`).
+  not run in these cases (no threat radar), so it has unit tests only (`daggerPickup`). The pickup after its fight ran once in
+  run 45680710080 (1 kill, 1 read, nothing taken).
 - **Two runs of one case differ.** The off case ran on two heads with the same off path: 19 and 20 kills, 1219 and 1113
   Hitpoints taken, 3743 and 4110 ticks (seed 8: 341 and 832 ticks). A difference of that size between two cases is not
   separated.
