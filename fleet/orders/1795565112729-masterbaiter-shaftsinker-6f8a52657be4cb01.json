@@ -1,0 +1,12 @@
+{
+ "id": "1795565112729-masterbaiter-shaftsinker-6f8a52657be4cb01",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "Shaftsinker",
+ "item": "Shark",
+ "count": 20,
+ "itemId": 385,
+ "start": 1795565112729,
+ "end": 1795566912729,
+ "takerWaits": true
+}
