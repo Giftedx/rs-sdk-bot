@@ -1,0 +1,23 @@
+{
+ "id": "1795628133291-masterbaiter-trousersnake-df096c0d8df936bb",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "TrouserSnake",
+ "item": "Lobster",
+ "count": 25,
+ "start": 1795628133291,
+ "end": 1795631733291,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795627489782-2",
+ "account": "Quickhandjob",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "b04b79f2-ba46-4b9a-9947-4adcdf8f3921",
+ "count": 0,
+ "ok": false,
+ "at": 1795628107736,
+ "detail": "trade claimed"
+}

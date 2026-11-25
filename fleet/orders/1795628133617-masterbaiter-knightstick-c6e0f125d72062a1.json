@@ -1,0 +1,23 @@
+{
+ "id": "1795628133617-masterbaiter-knightstick-c6e0f125d72062a1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "Knightstick",
+ "item": "Lobster",
+ "count": 25,
+ "start": 1795628133617,
+ "end": 1795631733617,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

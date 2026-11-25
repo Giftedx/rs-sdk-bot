@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795627789339-4",
+ "account": "Abracadickra",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 6,
+ "claim": "18e7bc41-46bf-480a-9bd2-54c86edfbb08",
+ "count": 0,
+ "ok": false,
+ "at": 1795628100720,
+ "detail": "trade claimed"
+}

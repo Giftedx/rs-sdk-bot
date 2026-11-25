@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795628088834-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "BoneToPick",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "extra": [
+    {
+      "item": "Staff of fire",
+      "count": 1,
+      "itemId": 1387
+    }
+  ],
+  "start": 1795628088834,
+  "end": 1795628988834,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
