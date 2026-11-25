@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795566990000-masterbaiter-shaftsinker-ec87e891c52413e8",
+ "account": "Shaftsinker",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 20,
+ "claim": "2f760722-ec34-4668-b86f-88b414d35352",
+ "count": 20,
+ "ok": true,
+ "at": 1795567184026,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795567183287
+ },
+ "logout": {
+  "attemptId": "1795567169168-0000029652-0000000001",
+  "at": 1795567184014,
+  "sha256": "27994cb1f110b48f48cab36db08f75156c660ea191f2694e719b5910de40298f"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795566433878-trousersnake-spitroaster-0a77b1f11d9b909c",
+ "account": "Spitroaster",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 20,
+ "claim": "cac604a5-d5fd-4a0e-a2d1-f359178256f3",
+ "count": 0,
+ "ok": false,
+ "at": 1795567182131,
+ "detail": "trade claimed"
+}
