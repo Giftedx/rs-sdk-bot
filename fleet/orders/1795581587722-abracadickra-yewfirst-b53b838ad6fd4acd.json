@@ -1,0 +1,17 @@
+{
+ "id": "1795581587722-abracadickra-yewfirst-b53b838ad6fd4acd",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 64,
+ "start": 1795581587722,
+ "end": 1795585187722,
+ "extra": [
+  {
+   "item": "Coins",
+   "count": 30000
+  }
+ ],
+ "takerWaits": true
+}

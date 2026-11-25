@@ -1,0 +1,25 @@
+{
+ "id": "1795581587184-woodpecker-undermykilt-0c353a96e25c515a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodpecker",
+ "to": "UnderMyKilt",
+ "item": "Chisel",
+ "count": 1,
+ "start": 1795581587184,
+ "end": 1795585187184,
+ "extra": [
+  {
+   "item": "Rope",
+   "count": 4
+  },
+  {
+   "item": "Dragon bones",
+   "count": 6
+  },
+  {
+   "item": "Coins",
+   "count": 15000
+  }
+ ],
+ "takerWaits": true
+}
