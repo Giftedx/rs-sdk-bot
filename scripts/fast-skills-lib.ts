@@ -371,11 +371,14 @@ export async function waitNearPlayer(
 // Executes a 3-to-4-tick trade: closes dialogs + sends requests together, then pipelines offer/accept/confirm within USER_EVENT.limit=5.
 export async function burstTradeHost(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
  const begin = spec.tick();
- await burstTradeInner(spec, helper, opts);
- console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+ const trace: string[] = [];
+ await burstTradeInner(spec, helper, opts, trace);
+ const elapsed = spec.tick() - begin;
+ console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${elapsed}`);
+ if (elapsed > 4) console.log(`TRADE_SLOW helper=${helper.name} at=${begin} ticks=${elapsed} trace=${trace.join(' ; ')}`);
 }
 
-async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
+async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeSpec, trace: string[]): Promise<void> {
  await waitNearPlayer(helper, spec, opts.deadlineTick, opts.canStand);
  const helperName = helper.name.toLowerCase();
  const specName = spec.name.toLowerCase();
@@ -429,14 +432,14 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
     const id = m.observationId ?? 0;
     if (m.observationId !== undefined ? id <= lastSpecObsId : m.tick <= startTick) continue;
     if (m.observationId !== undefined) lastSpecObsId = Math.max(lastSpecObsId, id);
-    if (/:tradereq:/i.test(m.text)) pendingSpecReply = true;
+    if (/(?::tradereq:|wishes to trade with you)/i.test(m.text)) pendingSpecReply = true;
     else if (/is busy at the moment/i.test(m.text)) gotBusy = true;
    }
    for (const m of getHMsgs()) {
     const id = m.observationId ?? 0;
     if (m.observationId !== undefined ? id <= lastHelperObsId : m.tick <= startTick) continue;
     if (m.observationId !== undefined) lastHelperObsId = Math.max(lastHelperObsId, id);
-    if (/:tradereq:/i.test(m.text)) pendingHelperReply = true;
+    if (/(?::tradereq:|wishes to trade with you)/i.test(m.text)) pendingHelperReply = true;
     else if (/is busy at the moment/i.test(m.text)) gotBusy = true;
    }
    if (gotBusy) lastOpenReqTick = -10;
@@ -445,6 +448,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    const helpDlg = !!helper.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
+   trace.push(`t${spec.tick()}:closed(sd=${+specDlg},hd=${+helpDlg},pr=${+pendingSpecReply}/${+pendingHelperReply},busy=${+gotBusy},st=${+!!sTarget},ht=${+!!hTarget})`);
    // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
    if (!didPreDrop && opts.preDropSlots?.length) {
@@ -496,6 +500,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   }
 
   if (st.screen === 'confirm' || ht.screen === 'confirm') {
+   trace.push(`t${spec.tick()}:conf(s=${st.isOpen ? `${st.screen}:${+st.myAccepted}` : 'no'},h=${ht.isOpen ? `${ht.screen}:${+ht.myAccepted}` : 'no'})`);
    sawConfirm = true;
    const helperConfirmingNow = ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted;
    const specNeedsConfirm = st.isOpen && st.screen === 'confirm' && !st.myAccepted;
@@ -525,6 +530,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   const hOfferOps = offerOpsForIds(helper.sdk.getInventory(), hWantSet, hWantCounts, ht.myOffer);
   const sReturnSet = opts.returnIds?.length ? new Set(opts.returnIds) : null;
   const sOfferOps = sReturnSet ? offerOpsForIds(spec.sdk.getInventory(), sReturnSet, null, st.myOffer) : [];
+  trace.push(`t${spec.tick()}:main(s=${st.isOpen ? `${st.screen}:${+st.myAccepted}:${st.myOffer.length}` : 'no'},h=${ht.isOpen ? `${ht.screen}:${+ht.myAccepted}:${ht.myOffer.length}` : 'no'},ho=${hOfferOps.length},so=${sOfferOps.length})`);
 
   const hMainActs: Promise<unknown>[] = [];
   const sMainActs: Promise<unknown>[] = [];
