@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import { resolveAcquireItem } from '../src/acquire';
 import { createActivityCatalog } from '../src/catalog';
 import { activityPreflightFromConfig } from '../src/preflight';
-import { resolveActivityWorkerRoute } from '../src/worker-routing';
+import { resolveActivityWorkerRoute, resolvePlannedStepWorkerRoute } from '../src/worker-routing';
 import type { AccountState, WorldSnapshot } from '../src/contracts';
 
 const NOW = 1_800_000_000_000;
@@ -167,5 +168,80 @@ describe('catalog-worker parity', () => {
         const mm = catalog.require('quest:mm');
         expect(mm.config.requiredQuests).toContain('grandtree');
         expect(mm.config.requiredQuests).toContain('tree');
+    });
+
+    test('falls back to craft_gather when GE sell=0 for dueling ring, glory(4), rune 2h, and agility(4)', () => {
+        const catalog = createActivityCatalog();
+        const activities = catalog.list();
+        const world: WorldSnapshot = {
+            schemaVersion: 1,
+            at: NOW,
+            side: 'local',
+            server: 'rs-sdk-demo.fly.dev',
+            accounts: {},
+        };
+        const artisanAcct = makeTestAccount({
+            name: 'MasterMaker',
+            skills: {
+                Magic: { level: 70, xp: 800_000 },
+                Smithing: { level: 99, xp: 14_000_000 },
+                Herblore: { level: 40, xp: 40_000 },
+            },
+            quests: { hero: 'complete', druid: 'complete' },
+            bank: {
+                items: {
+                    995: 10_000,
+                    1639: 2,  // Emerald ring
+                    564: 5,   // Cosmic rune
+                    556: 10,  // Air rune
+                    1704: 2,  // Uncharged Amulet of glory
+                    2347: 1,  // Hammer
+                    2363: 3,  // Runite bar
+                    3034: 2,  // Agility potion(3)
+                },
+                observedAt: NOW - 5_000,
+                trusted: true,
+            },
+        });
+        const zeroGe = {
+            2552: { ask: 2000, sell: 0, trades: 0 },
+            1712: { ask: 50000, sell: 0, trades: 0 },
+            1319: { ask: 40000, sell: 0, trades: 0 },
+            3032: { ask: 5000, sell: 0, trades: 0 },
+        };
+
+        const cases = [
+            { itemId: 2552, activityId: 'bank-artisan:magic-enchant-emerald_ring', routeKey: 'magic:items' },
+            { itemId: 1712, activityId: 'logistics:charge-glory', routeKey: 'charge-glory' },
+            { itemId: 1319, activityId: 'bank-artisan:skill:smithing:rune_2h_sword', routeKey: 'smithing:anvil' },
+            { itemId: 3032, activityId: 'bank-artisan:decant-agility_potion', routeKey: 'crafting:inventory' },
+        ] as const;
+
+        for (const c of cases) {
+            const res = resolveAcquireItem(
+                artisanAcct,
+                { itemId: c.itemId, quantity: 1 },
+                { world, activities, marketQuotes: zeroGe, requireMarketQuote: true },
+            );
+            expect(res.ok).toBe(true);
+            expect(res.step?.source).toBe('craft_gather');
+            expect(res.step?.activityId).toBe(c.activityId);
+
+            const routed = resolvePlannedStepWorkerRoute(artisanAcct.name, res.step!, { catalog });
+            expect(routed.warnings).toEqual([]);
+            expect(routed.routeKey).toBe(c.routeKey);
+        }
+
+        // Smithing Rune 2h rejects if only 1 Runite bar is present (requires 3 bars).
+        const shortBars = makeTestAccount({
+            ...artisanAcct,
+            bank: { items: { 995: 10_000, 2347: 1, 2363: 1 }, observedAt: NOW - 5_000, trusted: true },
+        });
+        const shortRes = resolveAcquireItem(
+            shortBars,
+            { itemId: 1319, quantity: 1 },
+            { world, activities, marketQuotes: zeroGe, requireMarketQuote: true },
+        );
+        expect(shortRes.ok).toBe(false);
     });
 });

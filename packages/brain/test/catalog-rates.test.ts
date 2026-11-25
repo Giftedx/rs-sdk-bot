@@ -225,4 +225,51 @@ describe('ActivityCatalog & RateStore', () => {
         const magicOrder = catalog.require('bank-artisan:magic-order');
         expect(Number(magicOrder.config.coinsRequired)).toBeGreaterThan(0);
     });
+
+    test('Catalog exposes runnable practice_passed craft/enchant/decant/smith/brew/charge-glory producers', () => {
+        const catalog = defaultActivityCatalog();
+
+        const dueling = catalog.findByOutputItem(2552);
+        expect(dueling.some((a) => a.id === 'bank-artisan:magic-enchant-emerald_ring' && a.trust === 'practice_passed')).toBe(true);
+        expect(catalog.require('bank-artisan:magic-enchant-emerald_ring').baselineRate.minBatchUnits).toBe(1);
+
+        const gloryUncharged = catalog.findByOutputItem(1704);
+        const gloryAct = gloryUncharged.find((a) => a.id === 'bank-artisan:magic-enchant-strung_dragonstone_amulet');
+        expect(gloryAct?.trust).toBe('practice_passed');
+        expect((gloryAct?.config.defaultEnv as Record<string, string> | undefined)?.MEMBERS).toBe('1');
+
+        const gloryCharged = catalog.findByOutputItem(1712);
+        const chargeAct = gloryCharged.find((a) => a.id === 'logistics:charge-glory');
+        expect(chargeAct?.trust).toBe('practice_passed');
+        expect(chargeAct?.inputs).toEqual([{ itemId: 1704, countPerUnit: 1 }]);
+        expect(chargeAct?.config.requiredQuests).toEqual(['hero']);
+
+        const agility4 = catalog.findByOutputItem(3032).find((a) => a.id === 'bank-artisan:decant-agility_potion');
+        expect(agility4?.trust).toBe('practice_passed');
+        expect(agility4?.inputs).toEqual([{ itemId: 3034, countPerUnit: 2 }]);
+        expect(agility4?.baselineRate.minBatchUnits).toBe(1);
+
+        const prayer4 = catalog.findByOutputItem(2434).find((a) => a.id === 'bank-artisan:decant-prayer_restore');
+        expect(prayer4?.trust).toBe('practice_passed');
+        expect(prayer4?.inputs).toEqual([{ itemId: 139, countPerUnit: 2 }]);
+
+        const r2h = catalog.findByOutputItem(1319).find((a) => a.id === 'bank-artisan:skill:smithing:rune_2h_sword');
+        expect(r2h?.trust).toBe('practice_passed');
+        expect(r2h?.inputs).toEqual([{ itemId: 2363, countPerUnit: 3 }]);
+        expect(r2h?.config.aioRoute).toBe('smithing:anvil');
+        expect(r2h?.config.requiredTools).toEqual([2347]);
+        expect(r2h?.baselineRate.minBatchUnits).toBe(1);
+
+        const agi3 = catalog.findByOutputItem(3034).find((a) => a.id === 'bank-artisan:skill:brew_potion.struct:3dose1agility');
+        expect(agi3?.trust).toBe('practice_passed');
+        expect(agi3?.config.aioRoute).toBe('crafting:inventory');
+        expect(agi3?.config.requiredQuests).toEqual(['druid']);
+
+        const unfTorstol = catalog.findByOutputItem(111).find((a) => a.id === 'bank-artisan:skill:brew_potion.struct:unf_torstol_potion');
+        expect(unfTorstol?.trust).toBe('practice_passed');
+        expect(unfTorstol?.config.aioRoute).toBe('crafting:inventory');
+
+        // Unimplemented quest mixtures remain experimental.
+        expect(catalog.require('bank-artisan:skill:brew_potion.struct:blamish_oil').trust).toBe('experimental');
+    });
 });

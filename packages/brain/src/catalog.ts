@@ -14,6 +14,9 @@ import {
     type WorkerKind,
     type WorkerTile,
 } from '../../workers/src/contracts';
+import { inventoryRecipes, type InventoryRecipe } from '../../workers/src/bank-artisan/crafting-production';
+import { itemMagicRecipe } from '../../workers/src/bank-artisan/magic';
+import { smithRecipe } from '../../workers/src/bank-artisan/smithing';
 import { validateActivityDefinition, type ActivityDefinition, type ActivityIO } from './contracts';
 import { fileStatStamp, readJsonStatCached } from './json-cache';
 import type { CombatSurvivabilityFloor } from './preflight';
@@ -562,7 +565,19 @@ const MARKET_SPECS: readonly { mode: string; script: string; kind: WorkerKind; l
     { mode: 'bank-seller', script: 'scripts/aio-market.ts', kind: 'shop', label: 'Liquidate banked surplus items on GE', location: HUB_TILES.varrock_west, gpPerTick: 18 },
 ];
 
-const LOGISTICS_SPECS: readonly { role: string; script: string; kind: WorkerKind; label: string; location?: WorkerTile; minBatchUnits?: number }[] = [
+const LOGISTICS_SPECS: readonly {
+    role: string;
+    script: string;
+    kind: WorkerKind;
+    label: string;
+    location?: WorkerTile;
+    minBatchUnits?: number;
+    unitsPerTick?: number;
+    setupTicks?: number;
+    requiredQuests?: readonly string[];
+    inputs?: readonly ActivityIO[];
+    outputs?: readonly ActivityIO[];
+}[] = [
     { role: 'coin-courier', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Deliver coins between owned accounts', location: HUB_TILES.varrock_west },
     { role: 'coin-fanout', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Distribute coin floats from treasury account', location: HUB_TILES.varrock_west },
     { role: 'item-fanin', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Consolidate produced items into holder bank', location: HUB_TILES.varrock_west },
@@ -586,12 +601,24 @@ const LOGISTICS_SPECS: readonly { role: string; script: string; kind: WorkerKind
     { role: 'walk-edge', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Walk to Edgeville bank safely', location: HUB_TILES.edgeville },
     { role: 'restore-prayer', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Restore drained Prayer at nearby altar', location: HUB_TILES.lumbridge },
     { role: 'cure-poison', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Drink antipoison from pack or nearest bank', location: HUB_TILES.varrock_west },
-    { role: 'charge-glory', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Recharge amulets of glory at Fountain of Heroes', location: HUB_TILES.falador_west },
+    { role: 'charge-glory', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Recharge amulets of glory at Fountain of Heroes', location: HUB_TILES.falador_west, minBatchUnits: 1, unitsPerTick: 0.03, setupTicks: 60, requiredQuests: ['hero'], inputs: [{ itemId: 1704, countPerUnit: 1 }], outputs: [{ itemId: 1712, countPerUnit: 1 }] },
     { role: 'relocate-bank', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Relocate account safely to nearest bank hub', location: HUB_TILES.varrock_west },
     { role: 'relocate-knight', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Relocate thieving account to Ardougne market', location: HUB_TILES.ardougne_north },
     { role: 'arrive-draynor', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Walk fresh account from Lumbridge to Draynor bank', location: HUB_TILES.draynor },
     { role: 'recover-location', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Recover stranded account back to a safe hub bank', location: HUB_TILES.varrock_west },
     { role: 'inspect', script: 'scripts/aio-logistics.ts', kind: 'recover', label: 'Inspect live account bank, inventory, and quests', location: HUB_TILES.draynor },
+];
+
+const ENCHANT_PRODUCE_SPECS: readonly { mode: string; label: string; xpPerTick: number }[] = [
+    { mode: 'enchant:sapphire_ring', label: 'Enchant sapphire ring into Ring of recoil', xpPerTick: 109 },
+    { mode: 'enchant:emerald_ring', label: 'Enchant emerald ring into Ring of dueling(8)', xpPerTick: 231 },
+    { mode: 'enchant:ruby_ring', label: 'Enchant ruby ring into Ring of forging', xpPerTick: 369 },
+    { mode: 'enchant:diamond_ring', label: 'Enchant diamond ring into Ring of life', xpPerTick: 419 },
+    { mode: 'enchant:dragonstone_ring', label: 'Enchant dragonstone ring into Ring of wealth', xpPerTick: 488 },
+    { mode: 'enchant:strung_emerald_amulet', label: 'Enchant emerald amulet into Amulet of defence', xpPerTick: 231 },
+    { mode: 'enchant:strung_ruby_amulet', label: 'Enchant ruby amulet into Amulet of strength', xpPerTick: 369 },
+    { mode: 'enchant:strung_diamond_amulet', label: 'Enchant diamond amulet into Amulet of power', xpPerTick: 419 },
+    { mode: 'enchant:strung_dragonstone_amulet', label: 'Enchant dragonstone amulet into Amulet of glory', xpPerTick: 488 },
 ];
 
 const PVP_SPECS: readonly { mode: string; script: string; label: string; location: WorkerTile; riskPerHour: number }[] = [
@@ -772,6 +799,11 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     }
 
     // 2. Knowledge skill actions (every row in knowledge/skills.json: zero dropped methods).
+    const invRecipeByName = new Map<string, InventoryRecipe>();
+    for (const r of inventoryRecipes()) {
+        invRecipeByName.set(r.name, r);
+    }
+
     for (const row of skills) {
         const family = tableFamily(row.table);
         const kind = tableKind(row.table);
@@ -779,13 +811,89 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         if (activities.has(id)) continue;
         const skillCap = titleCase(row.skill);
         const actionTicks = tableActionTicks(row.table);
-        const xpPerTick = row.xp !== null && row.xp > 0
+        let xpPerTick = row.xp !== null && row.xp > 0
             ? Math.round(((row.xp * XP_MULTIPLIER) / actionTicks) * 100) / 100
             : 0;
         const unitsPerTick = Math.round((1 / actionTicks) * 1000) / 1000;
-        const { io: inputs, map: inputsMap } = makeIOList(row.inputs, itemByDebug);
-        const { io: outputs, map: outputsMap } = makeIOList(row.outputs, itemByDebug);
-        const minBatchUnits = row.table === 'fletching_table' ? 100 : row.table === 'gem_cutting_table' ? 27 : 14;
+        let { io: inputs, map: inputsMap } = makeIOList(row.inputs, itemByDebug);
+        let { io: outputs, map: outputsMap } = makeIOList(row.outputs, itemByDebug);
+        let minBatchUnits = row.table === 'fletching_table'
+            ? 100
+            : row.table === 'gem_cutting_table'
+                ? 27
+                : row.table === 'smithing' || row.table === 'brew_potion.struct'
+                    ? 1
+                    : 14;
+        let location: WorkerTile | undefined;
+        let aioKey: string | null = null;
+        let routeConfig: Record<string, unknown> = {
+            aioCategory: 'skiller',
+            aioRoute: `${row.skill}:skill-action`,
+            table: row.table,
+            row: row.row,
+            requiredLevel: Math.max(1, row.level),
+        };
+
+        if (row.table === 'smithing' && outputs.length === 1) {
+            try {
+                const recipe = smithRecipe(outputs[0]!.itemId);
+                inputs = [{ itemId: recipe.bar, countPerUnit: recipe.bars }];
+                inputsMap = { [recipe.bar]: recipe.bars };
+                outputs = [{ itemId: recipe.product, countPerUnit: recipe.amount }];
+                outputsMap = { [recipe.product]: recipe.amount };
+                xpPerTick = Math.round(((recipe.xpPerBar * recipe.bars) / actionTicks) * 100) / 100;
+                location = HUB_TILES.varrock_west;
+                aioKey = 'skiller:smithing:anvil';
+                routeConfig = {
+                    aioCategory: 'skiller',
+                    aioRoute: 'smithing:anvil',
+                    script: 'scripts/aio-skiller.ts',
+                    skill: 'smithing',
+                    method: 'anvil',
+                    table: row.table,
+                    row: row.row,
+                    productId: recipe.product,
+                    requiredLevel: Math.max(1, recipe.level),
+                    requiredTools: [2347],
+                    ...(recipe.quest ? { requiredQuests: [recipe.quest] } : {}),
+                    defaultArgs: ['1500'],
+                    defaultEnv: {
+                        ORDER_ACTION: 'smith',
+                        PRODUCT_ID: String(recipe.product),
+                        MAX_MAKE: '1',
+                        BAR_RESERVE: '0',
+                    },
+                };
+            } catch { /* keep non-anvil smithing rows experimental */ }
+        } else if (row.table === 'brew_potion.struct') {
+            const invRecipe = invRecipeByName.get(`brew:${row.row}`);
+            if (invRecipe) {
+                inputs = invRecipe.inputs.map((i) => ({ itemId: i.id, countPerUnit: i.units }));
+                inputsMap = Object.fromEntries(inputs.map((i) => [i.itemId, i.countPerUnit]));
+                const prodUnits = invRecipe.productUnits ?? 1;
+                outputs = [{ itemId: invRecipe.product, countPerUnit: prodUnits }];
+                outputsMap = { [invRecipe.product]: prodUnits };
+                location = HUB_TILES.draynor;
+                aioKey = 'skiller:crafting:inventory';
+                routeConfig = {
+                    aioCategory: 'skiller',
+                    aioRoute: 'crafting:inventory',
+                    script: 'scripts/aio-skiller.ts',
+                    skill: 'crafting',
+                    method: 'inventory',
+                    table: row.table,
+                    row: row.row,
+                    requiredLevel: Math.max(1, invRecipe.level),
+                    requiredQuests: ['druid'],
+                    defaultArgs: [invRecipe.name],
+                    defaultEnv: {
+                        MAX_MAKE: '1',
+                        CAP: '1200',
+                        ...(invRecipe.members ? { MEMBERS: '1' } : {}),
+                    },
+                };
+            }
+        }
 
         register({
             id,
@@ -795,13 +903,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
             label: `${skillCap}: ${row.row.replace(/_/g, ' ')}`,
             skill: skillCap,
             skills: [skillCap],
-            config: {
-                aioCategory: 'skiller',
-                aioRoute: `${row.skill}:skill-action`,
-                table: row.table,
-                row: row.row,
-                requiredLevel: Math.max(1, row.level),
-            },
+            config: routeConfig,
             baselineRate: {
                 xpPerTick,
                 skillXpPerTick: { [skillCap]: xpPerTick },
@@ -815,7 +917,102 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
             },
             ...(inputs.length > 0 ? { inputs } : {}),
             ...(outputs.length > 0 ? { outputs } : {}),
-            trust: trustFor(id, null),
+            ...(location ? { location } : {}),
+            trust: trustFor(id, aioKey),
+            protectedAllowed: opts.launchQualifiedIds?.has(id) ?? false,
+        });
+    }
+
+    // 2b. Enchanting and potion-decanting recipe producers backed by bank-artisan workers.
+    for (const spec of ENCHANT_PRODUCE_SPECS) {
+        const recipe = itemMagicRecipe(spec.mode);
+        const id = `bank-artisan:magic-${spec.mode.replace(':', '-')}`;
+        const inputs = Object.entries(recipe.inputs).map(([itemId, countPerUnit]) => ({
+            itemId: Number(itemId),
+            countPerUnit,
+        }));
+        const outputs = [{ itemId: recipe.product, countPerUnit: recipe.output }];
+        register({
+            id,
+            workerId: 'bank-artisan',
+            family: 'bank-artisan',
+            kind: 'produce',
+            label: spec.label,
+            skill: 'Magic',
+            skills: ['Magic'],
+            config: {
+                aioCategory: 'skiller',
+                aioRoute: 'magic:items',
+                script: 'scripts/aio-skiller.ts',
+                skill: 'magic',
+                method: 'items',
+                requiredLevel: recipe.level,
+                defaultArgs: [spec.mode, '-', '1', '1200'],
+                ...(recipe.members ? { defaultEnv: { MEMBERS: '1' } } : {}),
+            },
+            baselineRate: {
+                xpPerTick: spec.xpPerTick,
+                skillXpPerTick: { Magic: spec.xpPerTick },
+                unitsPerTick: 0.25,
+                gpPerTick: 0,
+                setupTicks: 8,
+                minBatchUnits: 1,
+                confidence: 'model',
+                inputsPerUnit: recipe.inputs,
+                outputsPerUnit: { [recipe.product]: recipe.output },
+            },
+            inputs,
+            outputs,
+            location: HUB_TILES.draynor,
+            trust: trustFor(id, 'skiller:magic:items'),
+            protectedAllowed: opts.launchQualifiedIds?.has(id) ?? false,
+        });
+    }
+
+    for (const r of inventoryRecipes()) {
+        if (!r.name.startsWith('decant:')) continue;
+        const id = `bank-artisan:${r.name.replace(':', '-')}`;
+        const inputs = r.inputs.map((i) => ({ itemId: i.id, countPerUnit: i.units }));
+        const inputsMap = Object.fromEntries(inputs.map((i) => [i.itemId, i.countPerUnit]));
+        const outUnits = r.productUnits ?? 1;
+        const outputs = [{ itemId: r.product, countPerUnit: outUnits }];
+        register({
+            id,
+            workerId: 'bank-artisan',
+            family: 'bank-artisan',
+            kind: 'produce',
+            label: `Decant ${r.name.slice('decant:'.length).replace(/_/g, ' ')} to 4-dose`,
+            skill: r.skill,
+            skills: [r.skill],
+            config: {
+                aioCategory: 'skiller',
+                aioRoute: 'crafting:inventory',
+                script: 'scripts/aio-skiller.ts',
+                skill: 'crafting',
+                method: 'inventory',
+                requiredLevel: r.level,
+                ...(r.tools.length > 0 ? { requiredTools: r.tools } : {}),
+                defaultArgs: [r.name],
+                defaultEnv: {
+                    MAX_MAKE: '1',
+                    CAP: '600',
+                    ...(r.members ? { MEMBERS: '1' } : {}),
+                },
+            },
+            baselineRate: {
+                xpPerTick: 0,
+                unitsPerTick: 0.4,
+                gpPerTick: 0,
+                setupTicks: 8,
+                minBatchUnits: 1,
+                confidence: 'model',
+                inputsPerUnit: inputsMap,
+                outputsPerUnit: { [r.product]: outUnits },
+            },
+            inputs,
+            outputs,
+            location: HUB_TILES.draynor,
+            trust: trustFor(id, 'skiller:crafting:inventory'),
             protectedAllowed: opts.launchQualifiedIds?.has(id) ?? false,
         });
     }
@@ -1076,7 +1273,9 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     for (const spec of LOGISTICS_SPECS) {
         const aioKey = spec.role === 'recover-location' || spec.role === 'inspect' ? null : `logistics:${spec.role}`;
         const id = `logistics:${spec.role}`;
-        const setupTicks = estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 6;
+        const setupTicks = spec.setupTicks ?? (estimateTravelTicksFromNearestBank(spec.location, travelBanks) + 6);
+        const inputsMap = spec.inputs ? Object.fromEntries(spec.inputs.map((i) => [i.itemId, i.countPerUnit])) : {};
+        const outputsMap = spec.outputs ? Object.fromEntries(spec.outputs.map((o) => [o.itemId, o.countPerUnit])) : {};
         register({
             id,
             workerId: 'logistics',
@@ -1088,15 +1287,20 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 aioRoute: spec.role,
                 role: spec.role,
                 script: spec.script,
+                ...(spec.requiredQuests ? { requiredQuests: spec.requiredQuests } : {}),
             },
             baselineRate: {
                 xpPerTick: 0,
-                unitsPerTick: 0.2,
+                unitsPerTick: spec.unitsPerTick ?? 0.2,
                 gpPerTick: 0,
                 setupTicks,
                 minBatchUnits: spec.minBatchUnits ?? 1,
                 confidence: 'model',
+                ...(Object.keys(inputsMap).length > 0 ? { inputsPerUnit: inputsMap } : {}),
+                ...(Object.keys(outputsMap).length > 0 ? { outputsPerUnit: outputsMap } : {}),
             },
+            ...(spec.inputs ? { inputs: [...spec.inputs] } : {}),
+            ...(spec.outputs ? { outputs: [...spec.outputs] } : {}),
             ...(spec.location ? { location: spec.location } : {}),
             trust: spec.role === 'recover-location' ? 'practice_passed' : trustFor(id, aioKey),
             protectedAllowed: opts.launchQualifiedIds?.has(id) ?? false,

@@ -267,7 +267,7 @@ const LUMBER_YARD_CRATES = [
 ] as const;
 
 const mainRootCache = new Map<string, string>();
-const cachedLabelsByFile = new Map<string, { mtimeMs: number; size: number; key: string; context: { labels?: Labels; hubAreas?: ReadonlySet<number> } }>();
+const cachedLabelsByFile = new Map<string, { mtimeMs: number; size: number; key: string; header: string | null; context: { labels?: Labels; hubAreas?: ReadonlySet<number> } }>();
 
 function resolveMainRoot(fromDir: string): string {
     const cached = mainRootCache.get(fromDir);
@@ -282,7 +282,7 @@ function resolveMainRoot(fromDir: string): string {
     return resolved;
 }
 
-function readCompatibleHeaderSource(file: string, currentKey: string): string | null {
+function readLabelsHeaderBytes(file: string): string | null {
     let fd: number | undefined;
     try {
         fd = openSync(file, 'r');
@@ -292,7 +292,19 @@ function readCompatibleHeaderSource(file: string, currentKey: string): string | 
         if (hl <= 0 || hl > 65_536) return null;
         const headerBytes = Buffer.alloc(hl);
         if (readSync(fd, headerBytes, 0, hl, 4) !== hl) return null;
-        const hdr = JSON.parse(headerBytes.toString('utf8')) as { source?: string };
+        return headerBytes.toString('utf8');
+    } catch {
+        return null;
+    } finally {
+        if (fd !== undefined) closeSync(fd);
+    }
+}
+
+function readCompatibleHeaderSource(file: string, currentKey: string): string | null {
+    try {
+        const rawHeader = readLabelsHeaderBytes(file);
+        if (!rawHeader) return null;
+        const hdr = JSON.parse(rawHeader) as { source?: string };
         if (typeof hdr?.source !== 'string') return null;
         const cur = JSON.parse(currentKey) as { v?: number; wasm?: string; data?: string };
         const stored = JSON.parse(hdr.source) as { v?: number; wasm?: string; data?: string };
@@ -300,8 +312,6 @@ function readCompatibleHeaderSource(file: string, currentKey: string): string | 
         return null;
     } catch {
         return null;
-    } finally {
-        if (fd !== undefined) closeSync(fd);
     }
 }
 
@@ -329,14 +339,15 @@ export function loadRecoveryLocationContext(
         return {};
     }
     const key = pathfindingDataKey();
+    const header = readLabelsHeaderBytes(file);
     const cached = cachedLabelsByFile.get(file);
-    if (cached && cached.mtimeMs === mtimeMs && cached.size === size && cached.key === key) {
+    if (cached && cached.mtimeMs === mtimeMs && cached.size === size && cached.key === key && cached.header === header) {
         return cached.context;
     }
     const labels = loadCachedLabels(rootDir, key);
     if (!labels) {
         const empty = {};
-        cachedLabelsByFile.set(file, { mtimeMs, size, key, context: empty });
+        cachedLabelsByFile.set(file, { mtimeMs, size, key, header, context: empty });
         return empty;
     }
     const hubAreas = new Set<number>();
@@ -345,7 +356,7 @@ export function loadRecoveryLocationContext(
         if (id >= 0) hubAreas.add(id);
     }
     const context = { labels, hubAreas: hubAreas.size > 0 ? hubAreas : undefined };
-    cachedLabelsByFile.set(file, { mtimeMs, size, key, context });
+    cachedLabelsByFile.set(file, { mtimeMs, size, key, header, context });
     return context;
 }
 
