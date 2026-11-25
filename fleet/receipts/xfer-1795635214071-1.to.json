@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795635214071-1",
+ "account": "BowBeforeMe",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 2,
+ "claim": "f9c08da6-9d20-4d70-923b-475e33387952",
+ "count": 2,
+ "ok": true,
+ "at": 1795635500598,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795635499833
+ },
+ "logout": {
+  "attemptId": "1795635490033-0000006952-0000000001",
+  "at": 1795635500585,
+  "sha256": "bd9c8f37336502a97710d875fff75e4b8d2d11946afddd5ffed5b41e84d74553"
+ },
+ "screen": true
+}
