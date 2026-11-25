@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795602447229,
+ "at": 1795602494908,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -41,18 +41,19 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "foraging",
-    "grapes"
+    "chompy"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
+   "goal": "goal:pk_army:mmtha0205",
    "role": "army"
   },
   {
