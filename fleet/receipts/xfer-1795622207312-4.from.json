@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795622207312-4",
+ "account": "Kiltlifter",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 59,
+ "claim": "675c54b8-03e6-41a2-89ed-96a91c36c849",
+ "count": 0,
+ "ok": false,
+ "at": 1795622578964,
+ "detail": "trade claimed"
+}

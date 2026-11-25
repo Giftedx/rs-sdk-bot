@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795621865673-3",
+ "role": "from",
+ "account": "mmthv2350",
+ "partner": "CoinCock",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795622506873,
+ "detail": "Error: fleet trade claim authority unavailable or changed: remote: Internal Server Error ... da814df17dcae93bada91c6535 -> fleet-trade-claim/mmthv2350 (Internal Server Error) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

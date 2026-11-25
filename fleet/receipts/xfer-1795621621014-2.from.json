@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795621621014-2",
+ "account": "TheFullMonty",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 7,
+ "claim": "7f24592c-1f87-41d9-9312-2b2918458fe0",
+ "count": 0,
+ "ok": false,
+ "at": 1795622521583,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 7,
+  "at": 1795622502012
+ },
+ "logout": {
+  "attemptId": "1795622494406-0000023656-0000000001",
+  "at": 1795622521570,
+  "sha256": "4f0dc554605687903f283ce5addc68303a242d965045d5568803b36fa912f67b"
+ },
+ "screen": false
+}

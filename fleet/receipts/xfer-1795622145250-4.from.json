@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795622145250-4",
+ "account": "Sausagefest",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "382fa597-97c9-41f5-9969-7a1d6cd9ce2d",
+ "count": 0,
+ "ok": false,
+ "at": 1795622612307,
+ "detail": "trade claimed"
+}

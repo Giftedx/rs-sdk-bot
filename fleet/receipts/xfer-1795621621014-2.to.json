@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795621621014-2",
+ "account": "UnderMyKilt",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 7,
+ "claim": "e201ab2a-e7a7-4511-8ab8-fb26dccf443d",
+ "count": 0,
+ "ok": false,
+ "at": 1795622524363,
+ "detail": "Error: order window ended before work",
+ "logout": {
+  "attemptId": "1795622518613-0000032144-0000000001",
+  "at": 1795622524351,
+  "sha256": "d92f9fbe612de764cebdb757ca7336d9d0ddbbe21d411839f97f7906ccc4b94b"
+ },
+ "screen": false
+}

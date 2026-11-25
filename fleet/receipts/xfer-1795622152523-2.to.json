@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795622152523-2",
+ "account": "SporranDip",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "41af989f-7c0f-487e-9c56-adecd84943c0",
+ "count": 0,
+ "ok": false,
+ "at": 1795622618139,
+ "detail": "trade claimed"
+}
