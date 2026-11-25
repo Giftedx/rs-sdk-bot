@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795626438654-1",
+ "account": "YewGotWood",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "fced8d1f-fc01-48c2-afb7-85ade6e5a46c",
+ "count": 1,
+ "ok": true,
+ "at": 1795626900987,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795626900229
+ },
+ "logout": {
+  "attemptId": "1795626889888-0000032708-0000000001",
+  "at": 1795626900966,
+  "sha256": "79e7864f6bec0c18a8da3ce5599da236f80286198606ff4fb7e3d2a8abc3cf03"
+ },
+ "screen": true
+}

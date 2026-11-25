@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795626438654-1",
  "account": "Quickhandjob",
  "partner": "YewGotWood",
@@ -10,8 +10,18 @@
  "item": "Staff of air",
  "requested": 1,
  "claim": "dd2e5cde-5451-48ef-b296-84d30d64d894",
- "count": 0,
- "ok": false,
- "at": 1795626763199,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795626899367,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795626763208-0000022744-0000000001",
+  "at": 1795626899355,
+  "sha256": "ec56cbe33bfe87792d97f49832dcbf8c2e3e4e20789fda2bfbab4f2bf7720146"
+ },
+ "screen": true
 }
