@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795566227199-knightstick-unsheathed-37f172c95daea57b",
+ "account": "Unsheathed",
+ "partner": "Knightstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 25000,
+ "claim": "10843e81-bda4-40e8-afca-9f225d40025e",
+ "count": 0,
+ "ok": false,
+ "at": 1795567367649,
+ "detail": "trade claimed"
+}

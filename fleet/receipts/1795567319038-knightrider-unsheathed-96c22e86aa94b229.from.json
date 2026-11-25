@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795567319038-knightrider-unsheathed-96c22e86aa94b229",
+ "account": "KnightRider",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 55000,
+ "claim": "eb2d4217-e1ad-4c42-a995-7c3488b0dcb7",
+ "count": 0,
+ "ok": false,
+ "at": 1795567379826,
+ "detail": "trade claimed"
+}
