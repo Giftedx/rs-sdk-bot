@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795639517149-1",
+ "account": "mmthv2350",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "9a2b116b-2232-4663-a1fa-a1d9041911e5",
+ "count": 60,
+ "ok": true,
+ "at": 1795639946417,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795639945672
+ },
+ "logout": {
+  "attemptId": "1795639932037-0000006952-0000000001",
+  "at": 1795639946405,
+  "sha256": "4c59682ba00438536f87254202b4ce930b0b62a995068c14974fc4a8ae04605d"
+ },
+ "screen": true
+}

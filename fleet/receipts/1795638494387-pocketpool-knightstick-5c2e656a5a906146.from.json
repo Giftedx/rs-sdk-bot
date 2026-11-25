@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795638494387-pocketpool-knightstick-5c2e656a5a906146",
+ "account": "PocketPool",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "78033ef5-e0b4-4703-9d6e-aac30123e5fb",
+ "count": 0,
+ "ok": false,
+ "at": 1795640029262,
+ "detail": "trade claimed"
+}
