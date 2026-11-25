@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795630109334-2",
+ "account": "Fingerblastr",
+ "partner": "YewGotWood",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "d2af139a-fbea-453b-8712-1fb430ed1fe2",
+ "count": 0,
+ "ok": false,
+ "at": 1795630314098,
+ "detail": "trade claimed"
+}

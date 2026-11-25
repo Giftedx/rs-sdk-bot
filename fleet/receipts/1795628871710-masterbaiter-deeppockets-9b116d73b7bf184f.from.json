@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795628871710-masterbaiter-deeppockets-9b116d73b7bf184f",
  "account": "Masterbaiter",
  "partner": "Deeppockets",
@@ -10,8 +10,22 @@
  "item": "Lobster",
  "requested": 25,
  "claim": "8253e749-b68d-436a-8043-dd77e9212f9d",
- "count": 0,
- "ok": false,
- "at": 1795630105772,
- "detail": "trade claimed"
+ "count": 25,
+ "ok": true,
+ "at": 1795630339688,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 25,
+  "after": 0
+ },
+ "bank": {
+  "count": 25,
+  "at": 1795630114105
+ },
+ "logout": {
+  "attemptId": "1795630105782-0000022828-0000000001",
+  "at": 1795630339611,
+  "sha256": "ddbbe770940250db379b0eb5466302cee27851a3456e1b6066428d0afc74bfa1"
+ },
+ "screen": true
 }

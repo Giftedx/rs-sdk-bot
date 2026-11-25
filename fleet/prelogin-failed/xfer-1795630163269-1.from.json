@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795630163269-1",
+ "role": "from",
+ "account": "UnderMyKilt",
+ "partner": "Unsheathed",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795630299214,
+ "detail": "Error: account logout is not confirmed: UnderMyKilt session active or outcome unknown"
+}

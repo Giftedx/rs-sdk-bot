@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795630115463-1",
+ "account": "KnightRider",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "e02db68b-7be8-481d-9a1a-7f02c1bc7010",
+ "count": 250,
+ "ok": true,
+ "at": 1795630372429,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795630356083
+ },
+ "logout": {
+  "attemptId": "1795630349844-0000023704-0000000001",
+  "at": 1795630372417,
+  "sha256": "3359d783f2bcb443213b4628725990849dd6e93c1090e2027a1819575e510163"
+ },
+ "screen": true
+}

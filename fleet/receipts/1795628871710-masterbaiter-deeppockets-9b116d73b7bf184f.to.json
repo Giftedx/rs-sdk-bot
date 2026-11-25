@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795628871710-masterbaiter-deeppockets-9b116d73b7bf184f",
+ "account": "Deeppockets",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 25,
+ "claim": "5b84e080-a65f-43a2-aa3c-0644b851abe2",
+ "count": 25,
+ "ok": true,
+ "at": 1795630341281,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 25
+ },
+ "bank": {
+  "count": 25,
+  "at": 1795630340490
+ },
+ "logout": {
+  "attemptId": "1795630326382-0000024056-0000000001",
+  "at": 1795630341267,
+  "sha256": "945ba6266fbe51913c9340c4500ae37b4d0e8e137427b173896cfaceae2da890"
+ },
+ "screen": true
+}
