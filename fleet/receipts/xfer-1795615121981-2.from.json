@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795615121981-2",
+ "account": "Bigpackage",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 250,
+ "claim": "1678c006-4c88-4d58-9d82-1d1ce1c614a4",
+ "count": 0,
+ "ok": false,
+ "at": 1795615453268,
+ "detail": "trade claimed"
+}
