@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795622152523-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "SporranDip",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "start": 1795622152523,
+  "end": 1795623052523,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
