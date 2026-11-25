@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795609542272-1",
  "account": "OreElse",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Chisel",
  "requested": 1,
  "claim": "35b9610d-099d-4bd7-82b3-ba33f8ae14ef",
- "count": 0,
- "ok": false,
- "at": 1795609850021,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795609861313,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795609860591
+ },
+ "logout": {
+  "attemptId": "1795609850029-0000005676-0000000001",
+  "at": 1795609861303,
+  "sha256": "9ad014e68480c35b7cade06774d91c3b54fe0914968f9973979e3e6737af7566"
+ },
+ "screen": true
 }
