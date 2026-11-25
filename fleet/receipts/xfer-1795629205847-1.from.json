@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795629205847-1",
+ "account": "Shaftsinker",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "cdc6fedc-98c1-481f-9d13-f1c534b2a7a8",
+ "count": 10,
+ "ok": true,
+ "at": 1795629516866,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795629494955
+ },
+ "logout": {
+  "attemptId": "1795629487405-0000015256-0000000001",
+  "at": 1795629516855,
+  "sha256": "bdf5d0438cafab519f4ade95a819e5c669f5af170483adccb79ef5d5aa899b97"
+ },
+ "screen": true
+}

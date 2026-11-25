@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795629205847-2",
+ "account": "Fingerblastr",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "ef61e31e-0d60-4d47-b7b3-f8f97ed28152",
+ "count": 0,
+ "ok": false,
+ "at": 1795629555659,
+ "detail": "Error: stock short: Rune scimitar 0 banked + 0 held < 1",
+ "logout": {
+  "attemptId": "1795629550813-0000013508-0000000001",
+  "at": 1795629555648,
+  "sha256": "3c713f8205c651ff0378c67cbfa78666b8f018d8f90828c3e29d07d76ac0d171"
+ },
+ "screen": false
+}

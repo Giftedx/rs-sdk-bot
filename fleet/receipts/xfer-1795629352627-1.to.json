@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795629352627-1",
+ "account": "Abracadickra",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "adaded2e-bb76-4afa-b3a4-38fb931658ea",
+ "count": 1,
+ "ok": true,
+ "at": 1795629566556,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795629565705
+ },
+ "logout": {
+  "attemptId": "1795629555264-0000017052-0000000001",
+  "at": 1795629566467,
+  "sha256": "29b5e65c0c7c361621b5e7d3b8ea16034238235f168d52581675181c7ce85989"
+ },
+ "screen": true
+}

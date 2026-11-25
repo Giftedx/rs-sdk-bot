@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795628661749-1",
+ "account": "UnderMyKilt",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "01876350-f6d5-4fa1-ab92-0ef2ee971416",
+ "count": 0,
+ "ok": false,
+ "at": 1795629562078,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795629530157-0000020424-0000000001",
+  "at": 1795629562069,
+  "sha256": "c84a50d0c0ff97130df3d4355182294ce184a079a24886c2811537e0743ffb58"
+ },
+ "screen": false
+}
