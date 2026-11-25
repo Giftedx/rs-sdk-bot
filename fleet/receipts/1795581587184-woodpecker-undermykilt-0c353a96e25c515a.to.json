@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795581587184-woodpecker-undermykilt-0c353a96e25c515a",
  "account": "UnderMyKilt",
  "partner": "Woodpecker",
@@ -10,25 +10,63 @@
  "item": "Chisel",
  "requested": 1,
  "claim": "10a106dc-9113-48e9-9e4b-6ab4574af5be",
- "count": 0,
- "ok": false,
- "at": 1795581769312,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795581784272,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Rope",
    "requested": 4,
-   "count": 0
+   "count": 4,
+   "inventory": {
+    "before": 0,
+    "after": 4
+   },
+   "bank": {
+    "count": 4,
+    "at": 1795581782708
+   }
   },
   {
    "item": "Dragon bones",
    "requested": 6,
-   "count": 0
+   "count": 6,
+   "inventory": {
+    "before": 0,
+    "after": 6
+   },
+   "bank": {
+    "count": 6,
+    "at": 1795581783106
+   }
   },
   {
    "item": "Coins",
    "requested": 15000,
-   "count": 0
+   "count": 15000,
+   "inventory": {
+    "before": 0,
+    "after": 15000
+   },
+   "bank": {
+    "count": 15000,
+    "at": 1795581783535
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795581782312
+ },
+ "logout": {
+  "attemptId": "1795581769322-0000021920-0000000001",
+  "at": 1795581784261,
+  "sha256": "64e580bf7361af20256e6fa0330eee23ae3c922ae598d54054d87c4a5769fd1b"
+ },
+ "screen": true
 }
