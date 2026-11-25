@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795626220576-1",
  "account": "Spitroaster",
  "partner": "Swordswallow",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "04374243-1823-4c59-a023-4433d80876b3",
- "count": 0,
- "ok": false,
- "at": 1795626408393,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795626540635,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795626433442
+ },
+ "logout": {
+  "attemptId": "1795626408402-0000032308-0000000001",
+  "at": 1795626540619,
+  "sha256": "d58a7997edfe0307449dc1eea040343130600a48cb6461a9e234ee19b2f7c34a"
+ },
+ "screen": true
 }
