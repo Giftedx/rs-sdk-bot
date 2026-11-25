@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795609443317,
+ "at": 1795609551756,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -98,22 +98,6 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -162,6 +146,22 @@
    "role": "army"
   },
   {
+   "account": "Bigpackage",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "DropMyLoad",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -176,6 +176,22 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=1 \"ITEM_NAME=Gold bar\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=1601 QUANTITY=1 ITEM_NAME=Diamond -- loadout",
+    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=2 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1643",
+   "role": "army"
   },
   {
    "account": "TheFullMonty",
@@ -194,16 +210,19 @@
    "role": "army"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/generated/quest-crest.ts",
-   "args": [],
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:crest",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:crest",
+   "goal": "campaign:haggis:item:1975",
    "role": "army"
   }
  ],
@@ -218,7 +237,6 @@
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
@@ -227,14 +245,14 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "undermykilt",
-  "woodpecker"
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",

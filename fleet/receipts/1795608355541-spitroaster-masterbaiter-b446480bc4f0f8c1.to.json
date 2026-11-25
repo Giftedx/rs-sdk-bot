@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795608355541-spitroaster-masterbaiter-b446480bc4f0f8c1",
  "account": "Masterbaiter",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "2283df81-7a09-4645-afbc-3ecf641fd852",
- "count": 0,
- "ok": false,
- "at": 1795609510102,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795609529752,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795609528985
+ },
+ "logout": {
+  "attemptId": "1795609510112-0000012180-0000000001",
+  "at": 1795609529732,
+  "sha256": "a54e853dfad05a050b09ce5af9419d74135bdcc12c5af53b773a0a9eefdb0b86"
+ },
+ "screen": true
 }

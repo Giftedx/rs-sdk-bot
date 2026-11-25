@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795609132060-2",
  "account": "Woodpecker",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "fb916c7e-24e8-4d1d-ab54-96eade976a17",
- "count": 0,
- "ok": false,
- "at": 1795609521171,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795609544159,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795609529852
+ },
+ "logout": {
+  "attemptId": "1795609521227-0000022948-0000000001",
+  "at": 1795609544146,
+  "sha256": "168d0228b55fda59c16fa61d5eb0dfe5abd948ad4dd68747c8ceaf52c1e5043c"
+ },
+ "screen": true
 }
