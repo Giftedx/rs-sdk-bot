@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795565466962-1",
  "account": "Woodenstaff",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 21,
  "claim": "17f092db-3ee3-4deb-9beb-5208e7c70376",
- "count": 0,
- "ok": false,
- "at": 1795565616522,
- "detail": "trade claimed"
+ "count": 21,
+ "ok": true,
+ "at": 1795565628187,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 21
+ },
+ "bank": {
+  "count": 21,
+  "at": 1795565627359
+ },
+ "logout": {
+  "attemptId": "1795565616873-0000025220-0000000001",
+  "at": 1795565628175,
+  "sha256": "9004c12ebdbfb70367a4881638ce95911620a9212805748d25ee863e1877a884"
+ },
+ "screen": true
 }
