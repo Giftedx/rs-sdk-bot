@@ -80,12 +80,14 @@ export type Job = {
     activityId?: string;
     outcomeActivityId?: string;
     isMultiStepChain?: boolean;
+    // The activity of each chain step in order ('' for a step with none), so a failed chain charges the step that failed.
+    chainActivityIds?: string[];
     marketItemId?: number;
     marketVenue?: string;
     demandId?: string;
 };
 
-type Plan = { maxBots: number; minFreeGB: number; jobs: Job[]; boundedRecovery?: boolean; boundedInspection?: boolean };
+type Plan ={ maxBots: number; minFreeGB: number; jobs: Job[]; boundedRecovery?: boolean; boundedInspection?: boolean };
 
 type Run = {
     pid: number;
@@ -98,6 +100,7 @@ type Run = {
     activityId?: string;
     outcomeActivityId?: string;
     isMultiStepChain?: boolean;
+    chainActivityIds?: string[];
     marketItemId?: number;
     marketVenue?: string;
     demandId?: string;
@@ -118,9 +121,31 @@ export type SelectedBrainDispatch =
           readonly displayActivityId?: string;
           readonly attributedActivityId?: string;
           readonly isMultiStepChain: boolean;
+          readonly chainActivityIds?: readonly string[];
           readonly marketItemId?: number;
           readonly marketVenue?: string;
       };
+
+// The result a run log line gives, and the last full worker RESULT line. The supervisor echoes each run's result cut
+// to 200 characters ("SUPERVISE run N exit C: <result>"); when the worker printed that result in full, the full line
+// keeps its tail (the chain summary, the cause). A crash result exists only in the echo.
+export function resultLineOf(line: string, result: string, lastFull: string | undefined): [string, string | undefined] {
+    if (!/^SUPERVISE run \d+ exit /.test(line)) return [result, result];
+    return [lastFull !== undefined && lastFull.startsWith(result) ? lastFull : result, lastFull];
+}
+
+// The activity a finished run is charged to. A one-round chain stops at its first failed step and ends with
+// "chain rounds=1 ok=N failed=1" (packages/core/src/chain-step.ts), so step N failed. Charging the first work step
+// instead quarantined five of Bigpackage's per-product smithing rows when the Smithing unlock step before them refused.
+// A failed step with no activity (a walk to the spot) charges none.
+export function chainOutcomeActivity(chainActivityIds: readonly string[] | undefined, lastResultLine: string | undefined, fallback: string | undefined): string | undefined {
+    if (!chainActivityIds?.length || lastResultLine === undefined) return fallback;
+    const m = /\bchain rounds=1 ok=(\d+) failed=1\b/.exec(lastResultLine);
+    if (!m) return fallback;
+    const index = Number(m[1]);
+    if (index >= chainActivityIds.length) return fallback;
+    return chainActivityIds[index] || undefined;
+}
 
 export function selectBrainDispatchStep(
     dispatched: DispatchedAccountPlan,
@@ -154,6 +179,10 @@ export function selectBrainDispatchStep(
         ? firstWork.activityId
         : (firstActivityStep && 'activityId' in firstActivityStep ? firstActivityStep.activityId : firstStepActivityId);
     const attributedActivityId = !isMultiStepChain ? firstStepActivityId : undefined;
+    // dispatched.steps maps accountSteps one to one (resolveAccountWorkerPlan), and execSteps is their prefix.
+    const chainActivityIds = isMultiStepChain
+        ? execSteps.map((_, i) => { const s = accountSteps[i]; return s && 'activityId' in s && typeof s.activityId === 'string' ? s.activityId : ''; })
+        : undefined;
 
     let marketItemId: number | undefined;
     let marketVenue: string | undefined;
@@ -181,6 +210,7 @@ export function selectBrainDispatchStep(
         ...(displayActivityId ? { displayActivityId } : {}),
         ...(attributedActivityId ? { attributedActivityId } : {}),
         isMultiStepChain,
+        ...(chainActivityIds ? { chainActivityIds } : {}),
         ...(marketItemId !== undefined ? { marketItemId } : {}),
         ...(marketVenue ? { marketVenue } : {}),
     };
@@ -1286,10 +1316,11 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
 
     const follow = (key: string, run: Run, child?: { on(e: 'exit', f: (code: number | null) => void): unknown }) => {
         let tail = '', currentEnd: string | undefined, diedNames: string[] | undefined, lastResultLine: string | undefined, exitCode: number | null | undefined, done = false;
+        let lastFullResult: string | undefined;
         const consume = (line: string) => {
             observeSwarmInfraFault(infraBreaker, line);
             const resMatch = line.match(/(?:^|\s)(RESULT\s+(?:ok|fail)\s+.*)$/);
-            if (resMatch) lastResultLine = resMatch[1];
+            if (resMatch) [lastResultLine, lastFullResult] = resultLineOf(line, resMatch[1]!, lastFullResult);
             if (!run.host) { currentEnd = supervisorEndLine(line) ?? currentEnd; diedNames = diedAccountsOf(line) ?? diedNames; return; }
             const m = line.match(/^SUPERVISE-HOST account (.+?) ([\w-]+) after \d+ runs/);
             if (m) { ended.set(m[1]!, { at: Date.now(), reason: m[2]!, revision: run.revision }); console.log(`SWARM end ${m[1]} ${m[2]} (host)`); }
@@ -1321,7 +1352,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     const own = ends.get(account)!;
                     const diedRun = /^died\b/i.test(own);
                     let keepEnded = true;
-                    const outcomeActId = run.activityId ?? run.outcomeActivityId;
+                    const outcomeActId = chainOutcomeActivity(run.chainActivityIds, lastResultLine, run.activityId ?? run.outcomeActivityId);
                     if (outcomeActId && run.accounts.length === 1 && !gateHeldRunEnd(own, lastResultLine)) {
                         try {
                             const raw = extractWorkerOutcomeInput({
@@ -1433,6 +1464,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             ...(job.activityId ? { activityId: job.activityId } : {}),
             ...(job.outcomeActivityId ? { outcomeActivityId: job.outcomeActivityId } : {}),
             ...(job.isMultiStepChain ? { isMultiStepChain: true } : {}),
+            ...(job.chainActivityIds ? { chainActivityIds: job.chainActivityIds } : {}),
             ...(job.marketItemId !== undefined ? { marketItemId: job.marketItemId } : {}),
             ...(job.marketVenue ? { marketVenue: job.marketVenue } : {}),
             ...(job.demandId ? { demandId: job.demandId } : {}),
@@ -1595,6 +1627,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                             ...(selected.attributedActivityId ? { activityId: selected.attributedActivityId } : {}),
                             ...(outcomeActivityId ? { outcomeActivityId } : {}),
                             ...(selected.isMultiStepChain ? { isMultiStepChain: true } : {}),
+                            ...(selected.chainActivityIds ? { chainActivityIds: [...selected.chainActivityIds] } : {}),
                             ...(selected.marketItemId !== undefined ? { marketItemId: selected.marketItemId } : {}),
                             ...(selected.marketVenue ? { marketVenue: selected.marketVenue } : {}),
                             ...(dispatched.demandId ? { demandId: dispatched.demandId } : {}),
