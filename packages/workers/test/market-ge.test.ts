@@ -390,11 +390,12 @@ else{
  mock.module('../../core/src/walk',()=>({
   goTo:async()=>{throw Error('unexpected remote travel in bank fixture');},
   sessionWalker:async(s:any)=>({s,plan:()=>[]}),expandPath:()=>[],
-  walkPath:async(d:any,points:any[])=>{const p=points[0];Object.assign(d.s.sdk.getState().player,{worldX:p.x,worldZ:p.z});return{ok:true};},
+  walkPath:async(d:any,points:any[])=>{const p=points.at(-1);Object.assign(d.s.sdk.getState().player,{worldX:p.x,worldZ:p.z});return{ok:true};},
  }));
  const {runOwnedItem}=await import('../src/market');
  type Row={id:number;name:string;count:number;slot:number};
- async function fixture(filled:number,phase?:ItemOrder['phase'],applied=false,options:{fillWait?:number;noCollection?:boolean;noDeposit?:boolean;exactBudget?:boolean;lowHp?:boolean;noFood?:boolean;noHeal?:boolean;guardEats?:boolean;replayBankState?:boolean;prepared?:boolean;partialThenFull?:boolean;expireAfterCollect?:boolean;uncertain?:boolean;throwPlacementBefore?:boolean;throwPlacementAfter?:boolean;throwCollectionBefore?:boolean;throwCollectionAfter?:boolean;shortCash?:boolean;ownedStock?:boolean;topUp?:{owned:number;expected?:number}}={}){
+ async function fixture(filled:number,phase?:ItemOrder['phase'],applied=false,options:{fillWait?:number;noCollection?:boolean;noDeposit?:boolean;exactBudget?:boolean;lowHp?:boolean;noFood?:boolean;noHeal?:boolean;guardEats?:boolean;replayBankState?:boolean;prepared?:boolean;partialThenFull?:boolean;expireAfterCollect?:boolean;uncertain?:boolean;throwPlacementBefore?:boolean;throwPlacementAfter?:boolean;throwCollectionBefore?:boolean;throwCollectionAfter?:boolean;shortCash?:boolean;ownedStock?:boolean;topUp?:{owned:number;expected?:number};
+  rest?:boolean;startResting?:boolean;startDrift?:number;startAt?:{x:number;z:number};pastDeadline?:boolean;between?:(h:{bank:Row[];offers:()=>GEOffer[];setOffers:(o:GEOffer[])=>void;setNow:(t:number)=>void;deadline:number})=>void}={}){
   const dir=mkdtempSync(join(tmpdir(),'ge-worker-')),path=join(dir,'journal.json');
   const originalNow=Date.now;let now=originalNow();Date.now=()=>now;
   const req:ItemOrder['request']={...bulkRequest,createdAt:Date.now(),reviewAt:Date.now()+10000,deadline:Date.now()+20000};
@@ -421,8 +422,12 @@ else{
    }
    if(phase==='placing'){delete j.offerId;offers=[];state.bank.items=[row(995,1600)];if(options.prepared)j.submission='prepared';if(options.uncertain)j.submission='attempted';}
    if(phase==='settled'){j.acquired=filled;j.refund=1500-filled*3;offers=[];state.bank.items=[row(995,1600-filled*3),...(filled?[row(1987,filled)]:[])];}
+   if(options.startResting)j.resting=true;
+   if(options.startDrift)state.bank.items[0]!.count+=options.startDrift;
    writeFileSync(path,JSON.stringify(j));
   }
+  if(options.startAt)Object.assign(state.player,{worldX:options.startAt.x,worldZ:options.startAt.z});
+  if(options.pastDeadline)now=req.deadline;
   state.bank.items.push({...row(1351,1),name:'Bronze axe'});
   const sdk={getState:()=>state,getStateAge:()=>0,getInventory:()=>state.inventory,getEquipment:()=>[],getSkill:()=>({level:hp}),
    findBankItem:()=>state.bank.items.find(i=>i.id===995),getGEState:()=>({offers})};
@@ -439,8 +444,10 @@ else{
    bankObservation:()=>options.replayBankState?null:({generation,items:state.bank.items.map(i=>({...i})),at:Date.now()})};
   const timer=setInterval(()=>{tick++;for(const cb of [...callbacks])cb();},1);
   try{
-   const run=()=>runOwnedItem(session as any,req,path,()=>false,false,options.fillWait??0);
-   const first=await run(),before=JSON.stringify(state.bank.items),second=await run();
+   const run=()=>runOwnedItem(session as any,req,path,()=>false,false,options.fillWait??0,undefined,{leaveOpen:options.rest});
+   const first=await run();
+   options.between?.({bank:state.bank.items,offers:()=>offers,setOffers:o=>{offers=o;},setNow:t=>{now=t;},deadline:req.deadline});
+   const before=JSON.stringify(state.bank.items),second=await run();
    return{first,second,placements,collections,cancels,eats,commands,unchanged:before===JSON.stringify(state.bank.items),journal:existsSync(path)?JSON.parse(readFileSync(path,'utf8')):null};
   }finally{Date.now=originalNow;clearInterval(timer);rmSync(dir,{recursive:true,force:true});}
  }
@@ -533,6 +540,47 @@ else{
  });
  test('worker: a partial bank credit failure cannot authorize another placement',async()=>{
   const r=await fixture(120,undefined,false,{noDeposit:true});expect(r.first.ok).toBe(false);expect(r.first.banked).toBe(false);expect(r.placements).toBe(1);
+ });
+ test('worker: REST=1 leaves an unfilled offer open, banks the pack, and a rerun rests again without a second offer',async()=>{
+  const r=await fixture(0,undefined,false,{rest:true});
+  expect(r.first).toMatchObject({ok:true,resting:true,pending:true,phase:'open',targetMet:false,conserved:true,banked:true,reserveKept:true,escrow:1500,finalCoins:100,finalItems:0});
+  expect(r.second).toMatchObject({ok:true,resting:true,phase:'open',drift:[]});
+  expect(r.journal).toMatchObject({phase:'open',resting:true});expect(r.placements).toBe(1);expect(r.cancels).toBe(0);expect(r.collections).toBe(0);
+ });
+ test('worker: a rested offer filled offline is collected on the rerun after recording the coins another job added',async()=>{
+  const r=await fixture(0,undefined,false,{rest:true,between:h=>{
+   const o=h.offers()[0]!;h.setOffers([{...o,state:'completed',filled:300,remaining:0,items:300,gross:900,coins:600}]);
+   h.bank.find(i=>i.id===995)!.count+=50;
+  }});
+  expect(r.first).toMatchObject({ok:true,resting:true});
+  expect(r.second).toMatchObject({ok:true,resting:false,phase:'settled',targetMet:true,acquired:300,spent:900,refund:600,conserved:true,banked:true,finalCoins:750,finalItems:300});
+  expect(r.journal.drift).toHaveLength(1);expect(r.journal.drift[0]).toMatchObject({coins:50,items:0});expect(r.journal.coinsBefore).toBe(1650);
+  expect(r.placements).toBe(1);expect(r.cancels).toBe(0);expect(r.collections).toBe(1);
+ });
+ test('worker: a rested offer past its deadline is cancelled and its partial fill collected',async()=>{
+  const r=await fixture(0,undefined,false,{rest:true,between:h=>{
+   const o=h.offers()[0]!;h.setOffers([{...o,filled:120,remaining:180,items:120,gross:360}]);h.setNow(h.deadline);
+  }});
+  expect(r.second).toMatchObject({ok:false,resting:false,phase:'settled',acquired:120,spent:360,refund:1140,conserved:true,banked:true});
+  expect(r.second.failure).toContain('deadline');expect(r.cancels).toBe(1);expect(r.collections).toBe(1);
+ });
+ test('worker: a resting offer past its deadline travels back from away, then cancels and collects the part fill',async()=>{
+  const r=await fixture(120,'open',false,{startResting:true,startAt:{x:3165,z:3487},pastDeadline:true});
+  expect(r.first).toMatchObject({phase:'settled',acquired:120,spent:360,refund:1140,conserved:true,banked:true});
+  expect(r.first.failure).toContain('deadline');expect(r.cancels).toBe(1);expect(r.collections).toBe(1);expect(r.placements).toBe(0);
+ });
+ test('worker: a new order away from the market does not travel after its deadline',async()=>{
+  await expect(fixture(300,undefined,false,{startAt:{x:3165,z:3487},pastDeadline:true})).rejects.toThrow('market trip health/stop/tick budget');
+ });
+ test('worker: coin drift on an open offer that did not rest still refuses before any mutation',async()=>{
+  const r=await fixture(120,'open',false,{startDrift:50});
+  expect(r.first.ok).toBe(false);expect(r.first.failure).toContain('private order/escrow identity changed');
+  expect(r.cancels).toBe(0);expect(r.collections).toBe(0);expect(r.placements).toBe(0);
+ });
+ test('worker: drift on a resting journal is rebased, then the partial fill settles and the remainder is bought',async()=>{
+  const r=await fixture(120,'open',false,{startDrift:50,startResting:true});
+  expect(r.first).toMatchObject({ok:true,phase:'settled',acquired:300,spent:900,conserved:true,banked:true,finalCoins:750,finalItems:300});
+  expect(r.journal.drift[0]).toMatchObject({coins:50,items:0});
  });
  test('worker: a zero reserve permits spending the exact funded budget with no coin row left',async()=>{
   const r=await fixture(300,undefined,false,{exactBudget:true});expect(r.first).toMatchObject({ok:true,conserved:true,finalCoins:0,reserveKept:true,spent:900});expect(r.second.ok).toBe(true);

@@ -20,6 +20,7 @@ import {
     orderAccounting,
     orderEscrow,
     orderItemMatcher,
+    orderMatchesOffer,
     orderPaths,
     orderQuantity,
     orderRefusal,
@@ -213,6 +214,7 @@ export async function runOwnedItem(
     cancel: boolean,
     fillWaitTicks: number,
     rescueControl: RescueControl = { active: false, start: 0, lifeId: 0, respawnCount: 0 },
+    options: { leaveOpen?: boolean } = {},
 ) {
     validateRequest(request);
     const quantity = orderQuantity(request);
@@ -239,8 +241,11 @@ export async function runOwnedItem(
         if (cancel) throw Error('cannot cancel unsubmitted rescue order');
         entryJournal = await rescueMarketEntry(s, request, journalPath, stop, rescueControl);
     }
-    await leaveBattlefield(s, () => stop() || Date.now() >= request.deadline);
-    await prepareMarketEntry(s, () => stop() || Date.now() >= request.deadline);
+    // A submitted offer may travel back after its deadline to cancel and collect. Only a new submission stops at the deadline.
+    const submitted = !!entryJournal && ['open', 'cancelling', 'collecting'].includes(entryJournal.phase);
+    const travelStop = () => stop() || (!submitted && Date.now() >= request.deadline);
+    await leaveBattlefield(s, travelStop);
+    await prepareMarketEntry(s, travelStop);
     const state = () => s.sdk.getState();
     const held = (id: number) => {
         const inv = s.sdk.getInventory();
@@ -277,6 +282,7 @@ export async function runOwnedItem(
     let bankItems: readonly { id: number; name: string; count: number }[] = [];
     let baseline: Map<number, number> | undefined;
     let journal: ItemOrder | undefined = entryJournal;
+    let rested = false;
     const save = () => {
         if (!journal) throw Error('missing order journal');
         journal.at = Date.now();
@@ -492,6 +498,7 @@ export async function runOwnedItem(
                     previousIds: v.offers.map(o => o.id),
                     at: Date.now(),
                     rounds: [...(journal.rounds ?? []), round],
+                    ...(journal.drift ? { drift: journal.drift } : {}),
                 };
                 save();
             }
@@ -550,6 +557,19 @@ export async function runOwnedItem(
                 const find = (v: OrderView) => v.offers.find(o => o.id === journal!.offerId);
                 let v = view();
                 let offer = find(v);
+                if (journal.phase === 'open' && journal.resting && offer && orderMatchesOffer(journal, offer)) {
+                    // Other jobs may move this account's coins or the ordered item while the offer rests offline. The offer
+                    // holds its own escrow, so the difference from the owned baseline is theirs: record it and rebase.
+                    const expected = roundBaseline(journal);
+                    const coins = v.coins - (expected.coins - roundEscrow);
+                    const items = v.items - expected.items;
+                    if (coins !== 0 || items !== 0) {
+                        journal.coinsBefore += coins;
+                        journal.itemsBefore += items;
+                        journal.drift = [...(journal.drift ?? []), { at: Date.now(), coins, items }];
+                        save();
+                    }
+                }
                 if (offer?.state === 'open' && journal.phase === 'open' && !cancel && Date.now() < request.deadline && fillWaitTicks > 0 && !over()) {
                     await waitUntil(s, () => over() || Date.now() >= request.deadline || s.sdk.getGEState()?.offers.find(o => o.id === journal!.offerId)?.state !== 'open', {
                         timeoutTicks: fillWaitTicks,
@@ -560,6 +580,12 @@ export async function runOwnedItem(
                 if (!offer || !((o: typeof offer) => o.item === journal!.request.item && o.side === 'buy' && o.quantity === priorRounds(journal!).quantity && o.price === journal!.request.limit)(offer)
                     || v.coins !== roundBaseline(journal).coins - roundEscrow || v.items !== roundBaseline(journal).items) {
                     throw Error('private order/escrow identity changed');
+                }
+                if (offer.state === 'open' && journal.phase === 'open' && options.leaveOpen && !cancel && Date.now() < request.deadline && !terminal()) {
+                    journal.resting = true;
+                    save();
+                    rested = true;
+                    break;
                 }
                 if (offer.state === 'open') {
                     if (terminal() || s.tick() - start >= 580) throw Error('market settlement budget exhausted');
@@ -639,7 +665,8 @@ export async function runOwnedItem(
         failure = `exact order short: acquired ${acquired}/${quantity}; accounted stock and refund retained; ${Date.now() >= request.deadline ? 'deadline exhausted' : 'finite recovery/no-progress budget exhausted'}`;
     }
     if (!failure && (!banked || !reserveKept || !conserved || !unrelated)) failure = 'final bank/reserve/asset reconciliation failed';
-    const ok = !failure && !terminal() && !damaged && !stop() && unrelated && conserved && targetMet && banked && reserveKept;
+    const resting = rested && journal?.phase === 'open';
+    const ok = !failure && !terminal() && !damaged && !stop() && unrelated && conserved && (targetMet || resting) && banked && reserveKept;
     if (journal) {
         if (failure) journal.failure = failure;
         else if (ok) delete journal.failure;
@@ -650,6 +677,8 @@ export async function runOwnedItem(
         foodUsed,
         phase: journal?.phase ?? 'unplaced',
         pending: journal?.phase === 'open',
+        resting,
+        drift: journal?.drift ?? [],
         quantity,
         targetMet,
         banked,
