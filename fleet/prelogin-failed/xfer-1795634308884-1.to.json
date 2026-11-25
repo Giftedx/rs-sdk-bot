@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795634308884-1",
+ "role": "to",
+ "account": "Fatstack",
+ "partner": "TossTheCaber",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795634462437,
+ "detail": "Error: account plan writer waits for its existing owner"
+}

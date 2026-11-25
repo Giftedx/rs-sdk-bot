@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795634178019-1",
+ "account": "BowBeforeMe",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 1,
+ "claim": "a4a9f291-5fa5-418b-8559-4d209945df48",
+ "count": 1,
+ "ok": true,
+ "at": 1795634478236,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795634477493
+ },
+ "logout": {
+  "attemptId": "1795634469419-0000030208-0000000001",
+  "at": 1795634478226,
+  "sha256": "ef57a26964d271e7b4bca08020258bef332e64d87e92d348af0d0f5cae7c61b1"
+ },
+ "screen": true
+}

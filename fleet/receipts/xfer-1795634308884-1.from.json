@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795634308884-1",
  "account": "TossTheCaber",
  "partner": "Fatstack",
@@ -12,6 +12,16 @@
  "claim": "e347734d-d140-4053-9c46-d8a8f557d31e",
  "count": 0,
  "ok": false,
- "at": 1795634401354,
- "detail": "trade claimed"
+ "at": 1795634475879,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795634444716
+ },
+ "logout": {
+  "attemptId": "1795634401362-0000011644-0000000001",
+  "at": 1795634475864,
+  "sha256": "671835dbe0d8e9901d1335176ea5099e52b7f14b31f91b9e145952c690760815"
+ },
+ "screen": false
 }

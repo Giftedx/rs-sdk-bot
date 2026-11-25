@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795634178019-1",
  "account": "KnightRider",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Diamond",
  "requested": 1,
  "claim": "c891688e-2b67-4da6-b63d-ea71ee4b6126",
- "count": 0,
- "ok": false,
- "at": 1795634255091,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795634476640,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795634435903
+ },
+ "logout": {
+  "attemptId": "1795634255100-0000025848-0000000001",
+  "at": 1795634476629,
+  "sha256": "e9667da368bcc396bc5a508f9f246a455b92a8771e1d5b0e307e78da02dd1cc5"
+ },
+ "screen": true
 }
