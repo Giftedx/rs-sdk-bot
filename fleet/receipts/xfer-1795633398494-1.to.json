@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795633398494-1",
+ "account": "Dipstick",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 1,
+ "claim": "47d7ff3b-eb22-4853-9690-4f5ad014b198",
+ "count": 0,
+ "ok": false,
+ "at": 1795633683858,
+ "detail": "trade claimed"
+}
