@@ -11,6 +11,7 @@ import {
     accountOwnedItemCount,
 } from '../../workers/src/contracts';
 import { derivedProfile } from '../../workers/src/market/shop-profiles';
+import { PROFILES } from '../../workers/src/market/preflight';
 import {
     ACQUIRE_SOURCE_ORDER,
     DEFAULT_OPERATING_COIN_FLOAT,
@@ -53,8 +54,10 @@ export const DEFAULT_MAX_GE_ASK_FLOOR_GP = 25_000;
 export function isValidGeAskQuote(
     quote: MarketQuote | undefined,
     baseCost: number,
+    minSell = 1,
 ): quote is MarketQuote & { ask: number } {
-    if (!quote || quote.ask === null || quote.ask <= 0 || quote.sell <= 0 || quote.trades === 0) {
+    const requiredSell = Math.max(1, minSell);
+    if (!quote || quote.ask === null || quote.ask <= 0 || quote.sell < requiredSell || quote.trades === 0) {
         return false;
     }
     const safeBase = Math.max(1, baseCost);
@@ -130,6 +133,18 @@ export interface AcquireResolution {
     readonly skippedReasons: readonly { readonly source: AcquireSourceKind; readonly reason: string }[];
 }
 
+const PROFILE_GATES: Readonly<Record<string, { readonly requiresQuest?: string; readonly requiresSkill?: { readonly skill: string; readonly level: number }; readonly requiresQuestPoints?: number }>> = {
+    oziach: SHOP_GATES.runeplateshop!,
+    scavvo: SHOP_GATES.championshop!,
+    valaine: SHOP_GATES.championshop!,
+    skulgrimen: SHOP_GATES.viking_weapons_shop!,
+    siegfried: SHOP_GATES.legendsguildshop!,
+    helemos: SHOP_GATES.dragonaxeshop!,
+    jukat: SHOP_GATES.dragonswordshop!,
+    jukat_dagger: SHOP_GATES.dragonswordshop!,
+    tenzing: { requiresQuest: 'Death Plateau' },
+};
+
 let cachedShopIndex: Map<number, ShopCatalogEntry[]> | undefined;
 
 export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalogEntry[]> {
@@ -150,6 +165,12 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
     }
 
     const out = new Map<number, ShopCatalogEntry[]>();
+    const addEntry = (entry: ShopCatalogEntry) => {
+        const list = out.get(entry.itemId);
+        if (list) list.push(entry);
+        else out.set(entry.itemId, [entry]);
+    };
+
     for (const shop of shops) {
         if (/^(skill_guide_|smithing_|crafting_make_)|_free$/.test(shop.inv)) continue;
         if (!derivedProfile(shop.inv)) continue;
@@ -159,7 +180,7 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
             if (row.count <= 0) continue;
             const meta = byDebug.get(row.item);
             if (!meta) continue;
-            const entry: ShopCatalogEntry = {
+            addEntry({
                 shop: shop.inv,
                 itemId: meta.id,
                 stock: row.count,
@@ -167,12 +188,73 @@ export function loadShopCatalogByItem(): ReadonlyMap<number, readonly ShopCatalo
                 cost: Math.max(1, meta.cost),
                 ...(tile ? { tile } : {}),
                 ...(gate ?? {}),
-            };
-            const list = out.get(meta.id);
-            if (list) list.push(entry);
-            else out.set(meta.id, [entry]);
+            });
         }
     }
+
+    // Also index explicit verified PROFILES (e.g. zaff/Staff of air, jiminua/Antipoison(3))
+    // whose shops lack gear-sources spawns or exceed DATA_BANK_RANGE in derivedProfile.
+    const ordinaryShops = shops.filter((s) => !/^(skill_guide_|smithing_|crafting_make_)|_free$/.test(s.inv));
+    for (const [profileKey, profile] of Object.entries(PROFILES)) {
+        if (profile.realm || profile.dialogBuy) continue;
+        const level = profile.npcSpot.level ?? 0;
+        const tile = { x: profile.npcSpot.x, z: profile.npcSpot.z, level };
+        // Match profile against shops.json rows whose NPC matches or whose stock covers all profile items.
+        const matchingShops = ordinaryShops.filter((s) => {
+            const npcs = sources.shopNpcs.filter((n) => n.shop === s.inv).map((n) => n.npc.replace(/_/g, ' '));
+            const npcMatch = npcs.some((n) => profile.npc.test(n));
+            if (npcMatch) return true;
+            return profile.items.every((pi) =>
+                s.stock.some((row) => {
+                    const meta = byDebug.get(row.item);
+                    return meta ? pi.re.test(meta.name) : false;
+                }),
+            );
+        });
+        const gate = PROFILE_GATES[profileKey]
+            ?? (matchingShops.length === 1 ? SHOP_GATES[matchingShops[0]!.inv] : undefined)
+            ?? (profile.need ? { requiresSkill: profile.need } : undefined);
+        const mergedGate = gate && profile.need && !gate.requiresSkill ? { ...gate, requiresSkill: profile.need } : gate;
+
+        for (const itemRule of profile.items) {
+            let matchedMeta: ItemMeta | undefined;
+            let matchedStock = itemRule.shelf ?? 5;
+            let matchedRestock: number | null = 100;
+            for (const s of matchingShops) {
+                const row = s.stock.find((r) => {
+                    if (r.count <= 0) return false;
+                    const meta = byDebug.get(r.item);
+                    return meta ? itemRule.re.test(meta.name) : false;
+                });
+                if (row) {
+                    matchedMeta = byDebug.get(row.item);
+                    matchedStock = row.count;
+                    matchedRestock = row.restockTicks;
+                    break;
+                }
+            }
+            if (!matchedMeta) continue;
+            const existing = out.get(matchedMeta.id) ?? [];
+            const alreadyAtTile = existing.some(
+                (e) =>
+                    e.shop === profileKey
+                    || (e.tile
+                        && e.tile.level === tile.level
+                        && Math.max(Math.abs(e.tile.x - tile.x), Math.abs(e.tile.z - tile.z)) <= 2),
+            );
+            if (alreadyAtTile) continue;
+            addEntry({
+                shop: profileKey,
+                itemId: matchedMeta.id,
+                stock: matchedStock,
+                restockTicks: matchedRestock,
+                cost: Math.max(1, matchedMeta.cost),
+                tile,
+                ...(mergedGate ?? {}),
+            });
+        }
+    }
+
     cachedShopIndex = out;
     return out;
 }
@@ -457,11 +539,16 @@ export function resolveAcquireItem(
                 continue;
             }
             let unitPrice: number | null = null;
+            let geQty = req.quantity;
             if (ctx.marketQuotes) {
                 const quote = ctx.marketQuotes[req.itemId];
                 const baseCost = itemMeta?.cost ?? 1;
-                if (isValidGeAskQuote(quote, baseCost)) {
+                const minSell = req.allowPartial === true ? 1 : req.quantity;
+                if (isValidGeAskQuote(quote, baseCost, minSell)) {
                     unitPrice = Math.ceil(quote.ask);
+                    if (req.allowPartial === true) {
+                        geQty = Math.min(req.quantity, Math.floor(quote.sell));
+                    }
                 } else {
                     if (!skipDiag) skippedReasons.push({ source, reason: 'no valid GE ask quote in market cache' });
                     continue;
@@ -478,8 +565,8 @@ export function resolveAcquireItem(
                 continue;
             }
 
-            const totalCost = unitPrice * req.quantity;
-            const bufferedCost = Math.ceil(unitPrice * GE_LIMIT_BUFFER) * req.quantity;
+            const totalCost = unitPrice * geQty;
+            const bufferedCost = Math.ceil(unitPrice * GE_LIMIT_BUFFER) * geQty;
             if (coinBalance.spendable < bufferedCost) {
                 if (!skipDiag) {
                     skippedReasons.push({
@@ -509,7 +596,7 @@ export function resolveAcquireItem(
                     source: 'ge',
                     itemId: req.itemId,
                     ...(itemName ? { itemName } : {}),
-                    quantity: req.quantity,
+                    quantity: geQty,
                     estimatedTicks: Math.max(25, reach.travelTicks + 30),
                     estimatedCoinCost: totalCost,
                     coinFloatPreserved: operatingFloat,

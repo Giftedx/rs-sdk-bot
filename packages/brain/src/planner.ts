@@ -1496,21 +1496,26 @@ function planAccountCore(
             const targetItemId = effectiveDemand.target.itemId;
             const hasShop = Boolean(shopBuyActivity && (shopCatalog.has(targetItemId) || acquireCtx.customShops?.some((s) => s.itemId === targetItemId)));
             const itemMetaForGe = directGeBuyActivity ? itemsMap.get(targetItemId) : undefined;
+            const geQuote = input.marketQuotes?.[targetItemId];
             const hasGe = Boolean(
                 directGeBuyActivity
                 && (!itemMetaForGe || itemMetaForGe.tradeable)
-                && isValidGeAskQuote(input.marketQuotes?.[targetItemId], itemMetaForGe?.cost ?? 1),
+                && isValidGeAskQuote(geQuote, itemMetaForGe?.cost ?? 1, 1),
             );
             if (hasShop || hasGe) {
                 const allowedExternal: AcquireSourceKind[] = [];
                 if (shopBuyActivity) allowedExternal.push('npc_shop');
                 if (directGeBuyActivity) allowedExternal.push('ge');
-                const maxQty = Math.max(1, Math.min(Math.round(effectiveDemand.remaining), 2000));
+                const demandQty = Math.max(1, Math.min(Math.round(effectiveDemand.remaining), 2000));
+                const maxQty = !hasShop && hasGe && geQuote
+                    ? Math.max(1, Math.min(demandQty, Math.floor(geQuote.sell)))
+                    : demandQty;
                 let acq = resolveAcquireCached({
                     itemId: targetItemId,
                     itemName: effectiveDemand.target.itemName,
                     quantity: maxQty,
                     allowOwnBank: false,
+                    allowPartial: true,
                     allowedSources: allowedExternal,
                     operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
                 });
@@ -1532,8 +1537,7 @@ function planAccountCore(
                             }
                         }
                         if (hasGe && !input.excludedMarketVenues?.has(marketCooldownKey(targetItemId, 'ge'))) {
-                            const quote = input.marketQuotes?.[targetItemId]!;
-                            minUnitPrice = Math.min(minUnitPrice, Math.ceil(Math.ceil(quote.ask!) * GE_LIMIT_BUFFER));
+                            minUnitPrice = Math.min(minUnitPrice, Math.ceil(Math.ceil(geQuote!.ask!) * GE_LIMIT_BUFFER));
                         }
                         if (Number.isFinite(minUnitPrice) && minUnitPrice > 0) {
                             const affordableQty = Math.min(maxQty, Math.floor(spendable / minUnitPrice));
@@ -1543,6 +1547,7 @@ function planAccountCore(
                                     itemName: effectiveDemand.target.itemName,
                                     quantity: affordableQty,
                                     allowOwnBank: false,
+                                    allowPartial: true,
                                     allowedSources: allowedExternal,
                                     operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
                                 });
@@ -1550,8 +1555,14 @@ function planAccountCore(
                         }
                     }
                 }
+                const npcCand = acq.candidates.find((c) => c.source === 'npc_shop');
+                const geCand = acq.candidates.find((c) => c.source === 'ge');
+                const npcUnitCost = npcCand ? npcCand.step.estimatedCoinCost / Math.max(1, npcCand.step.quantity) : Infinity;
+                const geUnitCost = geCand ? geCand.step.estimatedCoinCost / Math.max(1, geCand.step.quantity) : Infinity;
                 for (const cand of acq.candidates) {
                     if (cand.source !== 'npc_shop' && cand.source !== 'ge') continue;
+                    // Prefer deterministic NPC shop over speculative GE when shop unit cost is <= GE unit cost.
+                    if (cand.source === 'ge' && npcCand && npcUnitCost <= geUnitCost) continue;
                     const marketAct = cand.source === 'npc_shop' ? shopBuyActivity : directGeBuyActivity;
                     if (!marketAct) continue;
                     const advMult = comparativeAdvantageMultiplier(acct, effectiveDemand, marketAct, profile, acctCache);
@@ -1627,14 +1638,19 @@ function planAccountCore(
             if (advMult <= 0) continue;
 
             const rate = getRate(activity);
-            const batchUnits = resolveBatchUnits(acct, effectiveDemand, activity, rate, xpRate, acctCache);
-            const preflight = getPreflight(activity, batchUnits);
+            let batchUnits = resolveBatchUnits(acct, effectiveDemand, activity, rate, xpRate, acctCache);
+            let preflight = getPreflight(activity, batchUnits);
 
-            const prepSteps: PlannedStep[] = [];
+            let prepSteps: PlannedStep[] = [];
             let committedCoins = 0;
             let chainFeasible = true;
+            for (let batchPass = 0; batchPass < 2; batchPass++) {
+                prepSteps = [];
+                committedCoins = 0;
+                chainFeasible = true;
+                let shrinkBatchTo: number | undefined;
 
-            if (!preflight.ok) {
+                if (!preflight.ok) {
                 // Resolve quest unlocks before skill requirements so quest XP rewards (e.g. Druidic Ritual -> Herblore 3)
                 // can satisfy downstream skill gates in the same 2-step chain.
                 const orderedBlockers = preflight.blockers.length <= 1
@@ -1793,6 +1809,25 @@ function planAccountCore(
                             committedCoinSpend: committedCoins,
                         });
                         if (!acq.ok || !acq.step) {
+                            if (batchPass === 0 && batchUnits > rate.minBatchUnits) {
+                                const partialAcq = resolveAcquireCached({
+                                    itemId: blocker.itemId,
+                                    itemName: blocker.itemName,
+                                    quantity: shortfall,
+                                    allowPartial: true,
+                                    operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                                    committedCoinSpend: committedCoins,
+                                });
+                                if (partialAcq.ok && partialAcq.step && partialAcq.step.quantity < shortfall) {
+                                    const perUnit = blocker.required / Math.max(1, batchUnits);
+                                    const capped = Math.floor((blocker.available + partialAcq.step.quantity) / Math.max(1e-6, perUnit));
+                                    if (capped >= rate.minBatchUnits && capped < batchUnits) {
+                                        shrinkBatchTo = capped;
+                                        chainFeasible = false;
+                                        break;
+                                    }
+                                }
+                            }
                             lastBlockerReason = `unresolvable_supply:${blocker.itemId}`;
                             chainFeasible = false;
                             break;
@@ -1862,6 +1897,13 @@ function planAccountCore(
                         }
                     }
                 }
+            }
+                if (shrinkBatchTo !== undefined) {
+                    batchUnits = shrinkBatchTo;
+                    preflight = getPreflight(activity, batchUnits);
+                    continue;
+                }
+                break;
             }
 
             if (!chainFeasible) continue;
