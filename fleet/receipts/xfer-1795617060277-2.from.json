@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795617060277-2",
+ "account": "NabTheKnob",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 105,
+ "claim": "5d610be3-993e-48c2-84ca-35925ea679cd",
+ "count": 0,
+ "ok": false,
+ "at": 1795617724963,
+ "detail": "trade claimed"
+}

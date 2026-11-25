@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795616816414-1",
+ "account": "Swordswallow",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron axe",
+ "requested": 1,
+ "claim": "0e0df023-4e0d-491f-b576-bf906da0f3e6",
+ "count": 0,
+ "ok": false,
+ "at": 1795617716981,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795617691780-0000003784-0000000001",
+  "at": 1795617716968,
+  "sha256": "70bbbb909d3c2a03e7948e05463eb63c48f5dcff4adc4d895a422df2ff431f4c"
+ },
+ "screen": false
+}

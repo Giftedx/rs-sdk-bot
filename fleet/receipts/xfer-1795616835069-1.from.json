@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795616835069-1",
+ "account": "Shaftsinker",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 4,
+ "claim": "b045b357-3545-4947-8126-399b450eadac",
+ "count": 0,
+ "ok": false,
+ "at": 1795617735791,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 4,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795617683817
+ },
+ "logout": {
+  "attemptId": "1795617676928-0000031368-0000000001",
+  "at": 1795617735777,
+  "sha256": "68a6725e71e594544ab1a41223ae1e79abe146a8c123da80c113a08045b7ef33"
+ },
+ "screen": false
+}
