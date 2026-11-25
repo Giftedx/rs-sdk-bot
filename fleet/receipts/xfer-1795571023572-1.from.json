@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795571023572-1",
+ "account": "PickpockDick",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 46,
+ "claim": "0ae27534-f43c-472d-b669-2870e152eba9",
+ "count": 0,
+ "ok": false,
+ "at": 1795571107925,
+ "detail": "trade claimed"
+}
