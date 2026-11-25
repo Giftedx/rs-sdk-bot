@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795584463793,
+ "at": 1795584480239,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -93,24 +93,24 @@
    "role": "helper"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/quest-druid.ts",
-   "args": [],
-   "env": {},
+   "account": "InTheSack",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:2152",
+    "BATCH_UNITS": "10"
+   },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:253",
-   "role": "army"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/generated/quest-druid.ts",
-   "args": [],
-   "env": {},
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:255",
-   "role": "army"
+   "goal": "goal:supply_chain:2152",
+   "role": "helper"
   }
  ],
  "army": [
@@ -129,6 +129,7 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
+  "kiltlifter",
   "knightrider",
   "knightstick",
   "mineyourbiz",
@@ -138,6 +139,7 @@
   "oreelse",
   "pickpockdick",
   "pocketpython",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
