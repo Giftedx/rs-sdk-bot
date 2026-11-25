@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795631962192-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "BowBeforeMe",
+  "to": "Swordswallow",
+  "item": "Coins",
+  "count": 360,
+  "itemId": 995,
+  "extra": [
+    {
+      "item": "Staff",
+      "count": 1,
+      "itemId": 1379
+    }
+  ],
+  "start": 1795631962192,
+  "end": 1795632862192,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
