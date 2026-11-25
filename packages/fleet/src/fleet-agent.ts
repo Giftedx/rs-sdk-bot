@@ -6,7 +6,7 @@ import { appendFileSync, closeSync, existsSync, openSync, readdirSync, readFileS
 import { join, resolve } from 'node:path';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../../core/src/controllers';
 import { FLEET_DIR, loadOwners, mySide, sideOf } from '../../core/src/fleet';
-import { validOrder, type Order, type Receipt } from '../../core/src/fleet-trade-settlement';
+import { validOrder, type Order, type Receipt, type TradeRole } from '../../core/src/fleet-trade-settlement';
 import { reloadDue, respawnDaemon } from '../../core/src/live-reload';
 import { BIDS_FILE, MARKET_CACHE_MS, MARKET_FILE } from '../../core/src/market-cache';
 import { findStopFile, liveRoot, readStopFile, repoRoot, statusReadDirs } from '../../core/src/practice-paths';
@@ -97,7 +97,8 @@ export function tradeEnvironment(
     return { ...env, FLEET_DIR: dir, WORKER_RELEASE: release, WORKER_ENTRY: TRADE_SCRIPT, STALL_TICKS: '0', LOOT_WATCH: '0', RANDOM_EVENTS: '0' };
 }
 
-export function tradeStop(base: string, account: string, now = Date.now()): { held?: string; cleared: boolean } {
+// With `clear` false the check removes nothing: a stop file of the swarm that a start would remove does not hold.
+export function tradeStop(base: string, account: string, now = Date.now(), clear = true): { held?: string; cleared: boolean } {
     let cleared = false;
     const seen = new Set<string>();
     for (const name of new Set([account, account.toLowerCase()])) {
@@ -116,7 +117,7 @@ export function tradeStop(base: string, account: string, now = Date.now()): { he
             if (found) break;
         }
         if (!stopClearable(status, now)) return { held: 'its last run is still ending', cleared };
-        if (clearSwarmStop(file)) cleared = true;
+        if (clear && clearSwarmStop(file)) cleared = true;
     }
     return { cleared };
 }
@@ -143,7 +144,100 @@ export function tradeDrainHold(
     const role = order.from.toLowerCase() === account.toLowerCase() ? 'from' : 'to';
     const partner = role === 'from' ? order.to : order.from, otherRole = role === 'from' ? 'to' : 'from';
     if (runningOrders.get(partner.toLowerCase()) === order.id || receipts.some(r => r?.id === order.id && r.role === otherRole)) return null;
-    return `live update to ${target.slice(0, 10)} drains ${drained.slice(0, 2).join(', ')}${drained.length > 2 ? ` and ${drained.length - 2} more` : ''}`;
+    return drainText(drained, target);
+}
+
+const drainText = (drained: readonly string[], target: string) =>
+    `live update to ${target.slice(0, 10)} drains ${drained.slice(0, 2).join(', ')}${drained.length > 2 ? ` and ${drained.length - 2} more` : ''}`;
+
+// The two parties of an order on this side start in the same pass. A side started alone logs in, stands at the meet
+// and waits for its partner until the order window ends (performFleetTransfer), and while a live update drains, that
+// run holds the update for the whole window. So a side starts only when its partner runs this order, or wrote its
+// side of it, or starts it in this pass: its first due order is this one and nothing holds it. Returns why the
+// partner cannot join, or null. A partner on another side starts there; this side cannot see it and does not wait.
+export function tradePartnerWait(
+    trade: { account: string; order: Pick<Order, 'id' | 'from' | 'to'> },
+    side: string,
+    owners: ReturnType<typeof loadOwners>,
+    due: ReadonlyMap<string, { order: Pick<Order, 'id'> }>,
+    waits: ReadonlyMap<string, string>,
+    runningOrders: ReadonlyMap<string, string>,
+    wrote: (id: string, role: TradeRole) => boolean,
+): string | null {
+    const { order } = trade, me = trade.account.toLowerCase();
+    const role: TradeRole = order.from.toLowerCase() === me ? 'from' : 'to';
+    const partner = role === 'from' ? order.to : order.from, key = partner.toLowerCase();
+    if (key === me || sideOf(partner, owners) !== side) return null;
+    if (runningOrders.get(key) === order.id || wrote(order.id, role === 'from' ? 'to' : 'from')) return null;
+    const other = runningOrders.get(key);
+    if (other) return `partner ${partner} runs order ${other}`;
+    const pick = due.get(key);
+    if (!pick) return `partner ${partner} has no due pick`;
+    if (pick.order.id !== order.id) return `partner ${partner} takes order ${pick.order.id} first`;
+    const wait = waits.get(key);
+    return wait ? `partner ${partner} waits: ${wait}` : null;
+}
+
+export type TradeWait = { account: string; order: Order; kind: 'held' | 'busy'; why: string };
+export type TradeEnd = { account: string; order: string; why: string };
+
+// One pass of the agent over the due orders: the trades to start, the trades that wait and why, and the running trades
+// to end early. `halt` is a fleet owner stop or the agent's own stop. `stopHeld` checks an account's stop file and
+// removes nothing. `wrote` says whether a receipt of that order and role exists; the agent reads the receipt file at
+// the time of the check, since a partner run writes its receipt before its process exits.
+// While a live update waits on trades alone, a running trade whose partner on this side cannot join it (the partner is
+// held, busy, or on another order) ends early: it logs out through its stop file instead of waiting out the order
+// window, and its receipt follows the usual rules.
+export function planTradePass(o: {
+    orders: readonly Order[];
+    receipts: readonly Receipt[];
+    side: string;
+    owners: ReturnType<typeof loadOwners>;
+    busy: ReadonlySet<string>;
+    running: ReadonlyMap<string, string>;
+    runningOrders: ReadonlyMap<string, string>;
+    now: number;
+    lead?: number;
+    halt?: string | null;
+    drain?: { drained: readonly string[]; target: string; others?: readonly string[] } | null;
+    stopHeld?: (account: string) => string | undefined;
+    wrote?: (id: string, role: TradeRole) => boolean;
+}): { starts: { account: string; order: Order }[]; waits: TradeWait[]; ends: TradeEnd[] } {
+    const due = dueTrades(o.orders, o.receipts, o.side, o.owners, o.busy, new Set(o.running.keys()), o.now, o.lead);
+    const drained = o.drain?.drained ?? [];
+    const wrote = (id: string, role: TradeRole) => o.receipts.some(r => r?.id === id && r.role === role) || (o.wrote?.(id, role) ?? false);
+    const own = new Map<string, Omit<TradeWait, 'account' | 'order'>>();
+    for (const t of due) {
+        const drainHold = o.drain ? tradeDrainHold(t.order, t.account, drained, o.drain.target, o.runningOrders, o.receipts, o.drain.others) : null;
+        const stopHeld = o.halt || t.busy || drainHold ? undefined : o.stopHeld?.(t.account);
+        const wait = o.halt ? { kind: 'held' as const, why: o.halt }
+            : t.busy ? { kind: 'busy' as const, why: 'enabled swarm job' }
+                : drainHold ? { kind: 'held' as const, why: drainHold }
+                    : stopHeld ? { kind: 'held' as const, why: stopHeld } : null;
+        if (wait) own.set(t.account.toLowerCase(), wait);
+    }
+    const dueBy = new Map(due.map(t => [t.account.toLowerCase(), t]));
+    const ownWhy = new Map([...own].map(([k, w]) => [k, w.why]));
+    const runs = new Map(o.runningOrders);
+    const starts: { account: string; order: Order }[] = [], waits: TradeWait[] = [], ends: TradeEnd[] = [];
+    for (const t of due) {
+        const key = t.account.toLowerCase(), wait = own.get(key);
+        if (wait) { waits.push({ account: t.account, order: t.order, ...wait }); continue; }
+        const partner = tradePartnerWait(t, o.side, o.owners, dueBy, ownWhy, runs, wrote);
+        if (partner) { waits.push({ account: t.account, order: t.order, kind: 'held', why: partner }); continue; }
+        starts.push({ account: t.account, order: t.order });
+        runs.set(key, t.order.id);
+    }
+    if (o.drain && drained.length && !o.drain.others?.length) {
+        const byId = new Map(o.orders.map(order => [order.id, order]));
+        for (const [key, account] of o.running) {
+            const order = byId.get(o.runningOrders.get(key) ?? '');
+            if (!order) continue;
+            const partner = tradePartnerWait({ account, order }, o.side, o.owners, dueBy, ownWhy, runs, wrote);
+            if (partner) ends.push({ account, order: order.id, why: `${partner}; ${drainText(drained, o.drain.target)}` });
+        }
+    }
+    return { starts, waits, ends };
 }
 const TRADE_ENTRY_REL = 'scripts/aio-logistics.ts';
 
@@ -255,7 +349,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     };
     process.on('exit', release); process.on('SIGINT', () => onSignal('SIGINT')); process.on('SIGTERM', () => onSignal('SIGTERM'));
     setInterval(() => { renewLease(lock); }, 60_000).unref();
-    const askedToStop = new Set<string>();
+    const askedToStop = new Set<string>(), endAsked = new Set<string>();
     setInterval(() => {
         for (const a of askTradesToStop(base, running, askedToStop)) log(`FLEET_AGENT owner stop: asked ${a} to log out`);
     }, 2_000).unref();
@@ -327,11 +421,22 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         const ownerStop = fleetOwnerStop(base);
         const pending = readPendingUpdate(base, now);
         const tradeDrained = pending ? drainedFiles(pending, [TRADE_ENTRY_REL], base) : [];
-        for (const t of dueTrades(orders, receipts, side, owners, busy, new Set(running.keys()), now)) {
-            if (ownerStop || stopping) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${ownerStop ?? 'agent stopping'})`); continue; }
-            if (t.busy) { log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
-            const drainHold = pending ? tradeDrainHold(t.order, t.account, tradeDrained, pending.target, runningOrders, receipts, pending.others) : null;
-            if (drainHold) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${drainHold})`); continue; }
+        const pass = planTradePass({
+            orders, receipts, side, owners, busy, running, runningOrders, now,
+            halt: ownerStop ?? (stopping ? 'agent stopping' : null),
+            drain: pending ? { drained: tradeDrained, target: pending.target, others: pending.others } : null,
+            stopHeld: account => tradeStop(base, account, now, false).held,
+            wrote: (id, role) => existsSync(join(dir, 'receipts', `${id}.${role}.json`)),
+        });
+        for (const w of pass.waits) log(`FLEET_AGENT ${w.kind} ${w.account}: order ${w.order.id} waits (${w.why})`);
+        for (const e of pass.ends) {
+            const key = e.account.toLowerCase();
+            if (endAsked.has(key)) continue;
+            endAsked.add(key);
+            writeTradeStop(base, e.account);
+            log(`FLEET_AGENT end ${e.account}: order ${e.order} ends early (${e.why})`);
+        }
+        for (const t of pass.starts) {
             const stop = tradeStop(base, t.account, now);
             if (stop.cleared) log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
             if (stop.held) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
@@ -339,6 +444,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
             running.set(accountKey, t.account);
             runningOrders.set(accountKey, t.order.id);
             askedToStop.delete(accountKey);
+            endAsked.delete(accountKey);
             log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
             try {
                 const p = Bun.spawn([process.execPath, TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], {
@@ -360,6 +466,8 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
                     } finally {
                         running.delete(accountKey);
                         runningOrders.delete(accountKey);
+                        // The stop file of an early end served this run only.
+                        if (endAsked.delete(accountKey)) clearSwarmStop(tradeStopFile(base, t.account));
                         if (renewLease(lock)) sync();
                     }
                 })();
