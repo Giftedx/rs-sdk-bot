@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795601107095-2",
+ "account": "BoneToPick",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "bd9269d1-4e22-441f-987d-b01b6603d404",
+ "count": 0,
+ "ok": false,
+ "at": 1795601319873,
+ "detail": "trade claimed"
+}

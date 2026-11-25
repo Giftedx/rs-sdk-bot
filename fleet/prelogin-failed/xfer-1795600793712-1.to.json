@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795600793712-1",
+ "role": "to",
+ "account": "Unsheathed",
+ "partner": "UnderMyKilt",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795601325838,
+ "detail": "Error: account plan writer waits for its existing owner"
+}

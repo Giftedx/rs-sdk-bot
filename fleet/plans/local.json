@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601318390,
+ "at": 1795601332048,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -56,27 +56,6 @@
    ]
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "teleport",
-    "varrock",
-    "50",
-    "1200"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
-   "role": "auto"
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -107,6 +86,22 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "helper"
   }
  ],
  "army": [

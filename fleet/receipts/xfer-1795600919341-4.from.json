@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795600919341-4",
  "account": "Fatstack",
  "partner": "Porksword",
@@ -12,6 +12,16 @@
  "claim": "7b607c7b-5702-436f-9e9b-f9945aad5aec",
  "count": 0,
  "ok": false,
- "at": 1795601112503,
- "detail": "trade claimed"
+ "at": 1795601330126,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795601118543
+ },
+ "logout": {
+  "attemptId": "1795601112514-0000010404-0000000001",
+  "at": 1795601330101,
+  "sha256": "b2567fd6678d0a0b1ae0b09e2cbc1a47854a075f2b234f66ad794974dfac595e"
+ },
+ "screen": false
 }
