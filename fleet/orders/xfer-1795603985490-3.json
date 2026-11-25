@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795603985490-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "Fatstack",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 201,
+  "start": 1795603985490,
+  "end": 1795604885490,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

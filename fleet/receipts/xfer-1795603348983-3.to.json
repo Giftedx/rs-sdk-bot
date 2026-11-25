@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795603348983-3",
+ "account": "Bigchopper",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 8,
+ "claim": "59b8e6e5-4030-4ff5-b866-702d9ca8a755",
+ "count": 0,
+ "ok": false,
+ "at": 1795603959550,
+ "detail": "trade claimed"
+}
