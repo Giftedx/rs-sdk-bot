@@ -29,6 +29,14 @@ test('a release for an offline account is replayed once when the 3D frame become
  const v=viewerReady({atlasFreeCamera:true},'Away');v.ready();v.ready();expect(v.sent).toEqual([{atlasFreeCamera:true}]);
 });
 
+// Each feed socket of each wall view opens and closes with a viewer status message: a release on each of them made the
+// bridge release the follow again each time.
+test('free camera with no account selected sends the release once, not again on each viewer status',()=>{
+ const v=viewerReady({atlasFreeCamera:true},null);
+ v.ready();v.ready();v.ready();
+ expect(v.sent).toEqual([{atlasFreeCamera:true}]);
+});
+
 test('a follow chosen during loading is replayed once when the 3D frame becomes ready',()=>{
  const v=viewerReady({},'Worker');v.ready();v.ready();expect(v.sent).toEqual([{follow:'Worker'}]);
 });
