@@ -154,29 +154,35 @@ function findBestTree(
                 // Inner normal trees beside (3117,3246) keep arrival transition to Oak 15 near zero-walk.
                 return l.x >= 3113 && l.x <= 3119 && l.z >= 3244 && l.z <= 3251 && l.reachable !== false;
             }
-            // 3 Draynor Jail multiway courtyard oaks beside (3117,3246); keep all rolls inside the guard courtyard.
+            // 4 Draynor Jail multiway courtyard oaks; prefer upper 3 beside (3117,3246), using (3114,3239) from (3115,3242) when depleted.
             return (
                 (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
                 || (l.x === 3115 && l.z === 3250)
+                || (l.x === 3114 && l.z === 3239)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
+    const oakPriority = (l: NearbyLoc) =>
+        (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245)
+            ? 0
+            : (l.x === 3115 && l.z === 3250)
+                ? 1
+                : 2;
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
         const adjDiff = (isBesideTree(px, pz, a.x, a.z, sizeA) ? 0 : 1) - (isBesideTree(px, pz, b.x, b.z, sizeB) ? 0 : 1);
         if (adjDiff !== 0) return adjDiff;
+        if (wantOak) {
+            const priDiff = oakPriority(a) - oakPriority(b);
+            if (priDiff !== 0) return priDiff;
+        }
         const distDiff = treeFootprintDist(px, pz, a.x, a.z, sizeA) - treeFootprintDist(px, pz, b.x, b.z, sizeB);
         if (distDiff !== 0) return distDiff;
-        if (wantOak) {
-            const hubDiff = (isHubOak(a) ? 0 : 1) - (isHubOak(b) ? 0 : 1);
-            if (hubDiff !== 0) return hubDiff;
-        }
         return a.distance - b.distance;
     })[0];
 }
@@ -198,7 +204,7 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
+    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3242 && t.z <= 3249);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
@@ -524,7 +530,8 @@ if (import.meta.main) {
             const gobs = !outOfPrayer && wantOak ? countAttackingGoblins(main) : 0;
             const needNormalLog = wantOak && slotOfId(main, OBJ_LOGS) === undefined;
             const tree: NearbyLoc | undefined = (needNormalLog ? findBestTree(main, false, null) : undefined)
-                ?? findBestTree(main, wantOak, activeTree);
+                ?? findBestTree(main, wantOak, activeTree)
+                ?? (wantOak ? findBestTree(main, false, activeTree) : undefined);
             activeTree = tree ? { x: tree.x, z: tree.z } : null;
 
             if (!tree) {
