@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795583943102-fingerblastr-oreelse-d6622f3103ceac3c",
+ "account": "OreElse",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coal",
+ "requested": 40,
+ "claim": "c800670f-6b7c-4f34-809d-0443e3e35047",
+ "count": 0,
+ "ok": false,
+ "at": 1795584140208,
+ "detail": "trade claimed"
+}

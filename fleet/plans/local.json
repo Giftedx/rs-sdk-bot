@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795584038099,
+ "at": 1795584188334,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,15 +24,24 @@
    "role": "rehearsal"
   },
   {
-   "account": "Sausagefest",
+   "account": "Packhorse",
    "script": "scripts/aio-market.ts",
    "args": [
-    "ge-buy-list",
-    ".practice/live-ops/sausagefest-ge.json"
+    "shop-buy",
+    "catherby",
+    "2500"
    ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "^Rune arrowtips$",
+    "STOCK_TARGET": "2600",
+    "MAX_ITEMS": "300",
+    "COIN_RESERVE": "0",
+    "NO_BUY_TICKS": "120"
+   },
    "enabled": true,
    "repeat": false,
-   "goal": "Buy Runite ore, Rune 2h sword, Dragon bones on GE for BigSwinger/RockSolid",
+   "goal": "Buy Rune arrowtips at Catherby for TipMyShaft",
    "role": "supply"
   },
   {
@@ -112,6 +121,7 @@
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
+  "sausagefest",
   "sporrandip",
   "swordinhand",
   "thefullmonty",

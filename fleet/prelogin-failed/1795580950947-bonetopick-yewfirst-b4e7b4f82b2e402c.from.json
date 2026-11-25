@@ -5,6 +5,6 @@
  "account": "BoneToPick",
  "partner": "YewFirst",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795583806517,
+ "at": 1795584180294,
  "detail": "Error: account logout is not confirmed: BoneToPick session active or outcome unknown"
 }

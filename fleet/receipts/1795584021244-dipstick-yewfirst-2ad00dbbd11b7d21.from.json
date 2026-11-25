@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795584021244-dipstick-yewfirst-2ad00dbbd11b7d21",
+ "account": "Dipstick",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 138,
+ "claim": "a0bfd268-6914-49f1-8386-4882b8b83162",
+ "count": 0,
+ "ok": false,
+ "at": 1795584155042,
+ "detail": "trade claimed"
+}

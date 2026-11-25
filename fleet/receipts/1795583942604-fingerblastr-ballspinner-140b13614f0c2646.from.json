@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795583942604-fingerblastr-ballspinner-140b13614f0c2646",
+ "account": "Fingerblastr",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 20,
+ "claim": "0cdd9176-b281-4727-853c-720a22e1ffc6",
+ "count": 0,
+ "ok": false,
+ "at": 1795584111406,
+ "detail": "trade claimed"
+}
