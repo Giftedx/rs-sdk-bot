@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795638493819-pocketpool-trousersnake-4bb2d6902664aecd",
  "account": "TrouserSnake",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 20,
  "claim": "0f2ab114-fb10-423d-ac6c-8835792aedd0",
- "count": 0,
- "ok": false,
- "at": 1795638868160,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1795638982457,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795638981308
+ },
+ "logout": {
+  "attemptId": "1795638868284-0000023932-0000000001",
+  "at": 1795638982444,
+  "sha256": "334f892d5ca9c811103fc04e1c82b4964e14353c137802a3f8912a51dc6f7ebb"
+ },
+ "screen": true
 }

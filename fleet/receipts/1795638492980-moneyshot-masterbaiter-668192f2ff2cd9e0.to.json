@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795638492980-moneyshot-masterbaiter-668192f2ff2cd9e0",
+ "account": "Masterbaiter",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "c9ec3d9f-fb65-402f-9995-4b9a376b07c1",
+ "count": 0,
+ "ok": false,
+ "at": 1795638972421,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Water rune",
+   "requested": 30,
+   "count": 0
+  }
+ ]
+}
