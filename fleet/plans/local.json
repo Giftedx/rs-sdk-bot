@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795627398135,
+ "at": 1795627426845,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -243,14 +243,12 @@
   },
   {
    "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/magic-order.ts TARGET_LEVEL=56 CAP=3000 TRAIN_SKILL=Magic --",
-    "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
-    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- magic orbs water 27 3000"
-   ],
+   "script": "scripts/magic-order.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "TARGET_LEVEL": "56",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic"
    },
    "enabled": true,
    "repeat": false,
