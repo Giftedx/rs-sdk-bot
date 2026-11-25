@@ -12,7 +12,7 @@ import { loadPathfinding, pathfindingSnapshotUsable } from '../pathcache';
 import { planLockDir, withPlanWrite } from '../plan-lock';
 import { hasStopFile, lifecycleRootForServer } from '../practice-paths';
 import { beginSessionAttempt, lifecycleOwner, type SessionAttempt } from '../session-lifecycle';
-import { assertSpentRecoveryConnection, type RecoveryConnectionAdmission } from '../session-recovery-permit';
+import { assertSpentRecoveryConnection, waitOutStaleHeartbeat, type RecoveryConnectionAdmission } from '../session-recovery-permit';
 import { recordOwnedAccount, tradePartners, tradeRefusal } from '../tradeguard';
 import { gameDialAddress, installGameWebSocketProxy } from '../websocket-proxy';
 import { assertWorkerRelease } from '../worker-release';
@@ -80,8 +80,9 @@ export async function connectInProcess(opts: {
         if (live && (hasStopFile(opts.name, repoRoot) || (swarm && hasStopFile('swarm', repoRoot)))) {
             throw Error('live admission paused by stop file');
         }
-        if (live && opts.recoverSwarm) assertSpentRecoveryConnection(opts.recoverSwarm, opts.name, server, repoRoot);
-        opts.beforeConnect?.();
+        const recovery = live ? opts.recoverSwarm : undefined;
+        if (recovery) waitOutStaleHeartbeat(() => { assertSpentRecoveryConnection(recovery, opts.name, server, repoRoot); opts.beforeConnect?.(); });
+        else opts.beforeConnect?.();
         if (currentTicket) {
             assertWorkerRelease();
             lifecycle.owner = { ...lifecycleOwner(), specialistAuthorization: { ticket: currentTicket, mission: process.env.SWARM_MISSION_HASH! } };

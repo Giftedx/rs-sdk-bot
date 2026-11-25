@@ -17,12 +17,19 @@ import {
     findAccountStatus,
     findCurrentNativeRecoveryQualification,
     readStandaloneHistory,
+    recordStandaloneAttempt,
+    passAhead,
     recoveryLeaseState,
+    recoveryPassDir,
+    refundStandaloneAttempts,
     runControlledDispatchOne,
     runLocalRecoveryDirect,
     runStandaloneRecoveryPass,
+    spentAttemptsByEnd,
     spentStandaloneAttempts,
     swarmWroteStopText,
+    triedEnds,
+    type StandaloneRecoveryRecord,
 } from '../src/session-recovery';
 import { liveRoot } from '../../core/src/practice-paths';
 import { beginSessionAttempt } from '../../core/src/session-lifecycle';
@@ -39,12 +46,86 @@ afterEach(() => {
 });
 
 describe('fleet standalone session recovery', () => {
+    test('a refund gives back the attempts an end spent, later failures count again, and infrastructure faults never count', () => {
+        const h: StandaloneRecoveryRecord[] = [
+            { at: 1, account: 'Worker1', endedAt: 10, ok: false, reason: 'a' },
+            { at: 2, account: 'worker1', endedAt: 10, ok: false, infraFault: true, reason: 'b' },
+            { at: 3, account: 'worker1', endedAt: 10, ok: false, reason: 'c' },
+            { at: 4, account: 'worker2', endedAt: 10, ok: false, reason: 'd' },
+        ];
+        expect(spentStandaloneAttempts(h, 'worker1', 10)).toBe(2);
+        h.push({ at: 5, account: 'worker1', endedAt: 10, ok: true, refund: true, reason: 'refund of 2' });
+        expect(spentStandaloneAttempts(h, 'worker1', 10)).toBe(0);
+        expect(spentStandaloneAttempts(h, 'worker2', 10)).toBe(1);
+        h.push({ at: 6, account: 'worker1', endedAt: 10, ok: false, reason: 'e' });
+        expect(spentAttemptsByEnd(h).get('worker1|10')).toBe(1);
+        // A refund of another end gives nothing back for this one.
+        h.push({ at: 7, account: 'worker1', endedAt: 11, ok: true, refund: true, reason: 'other end' });
+        expect(spentStandaloneAttempts(h, 'worker1', 10)).toBe(1);
+        // A refund keeps the fact of a try: an end whose recovery left a newer producer attempt stays retryable.
+        const refunded: StandaloneRecoveryRecord[] = [
+            { at: 1, account: 'worker3', endedAt: 20, ok: false, reason: 'recovery child held' },
+            { at: 2, account: 'worker3', endedAt: 20, ok: true, refund: true, reason: 'refund of 1' },
+        ];
+        expect(spentStandaloneAttempts(refunded, 'worker3', 20)).toBe(0);
+        expect(triedEnds(refunded).has('worker3|20')).toBe(true);
+        expect(triedEnds([{ at: 1, account: 'worker4', endedAt: 30, ok: true, reason: 'controlled recovery confirmed' }]).size).toBe(0);
+    });
+
+    test('the owner refund writes one record for a held account with spent attempts, and refuses any other', () => {
+        const root = scratch(), server = 'rs-sdk-demo.fly.dev', lRoot = join(liveRoot(root), 'session-lifecycle');
+        const endedAt = Date.now() - 60_000;
+        mkdirSync(join(root, '.practice'), { recursive: true });
+        writeFileSync(join(root, '.practice', 'swarm-deaths.json'), JSON.stringify({ worker1: { at: endedAt, reason: 'stopped after 1 runs' } }));
+        expect(() => refundStandaloneAttempts(root, 'worker1', 'heartbeat stall')).toThrow('logout proof is none, not held');
+        beginSessionAttempt({ account: 'worker1', server }, { root: lRoot, now: () => endedAt - 2_000 }).record('ready');
+        expect(() => refundStandaloneAttempts(root, 'worker1', 'heartbeat stall')).toThrow('has spent no attempt for its end');
+        recordStandaloneAttempt(root, { at: endedAt + 1, account: 'worker1', endedAt, ok: false, reason: 'repair lease busy' });
+        recordStandaloneAttempt(root, { at: endedAt + 2, account: 'worker1', endedAt, ok: false, reason: 'recovery child held' });
+        expect(() => refundStandaloneAttempts(root, 'worker1', ' ')).toThrow('a reason is required');
+        expect(() => refundStandaloneAttempts(root, 'nobody', 'x')).toThrow('has no recorded end');
+        expect(refundStandaloneAttempts(root, 'Worker1', 'stale swarm heartbeat during a lease renewal', endedAt + 3)).toEqual({
+            at: endedAt + 3, account: 'worker1', endedAt, ok: true, refund: true, reason: 'refund of 2: stale swarm heartbeat during a lease renewal',
+        });
+        expect(spentStandaloneAttempts(readStandaloneHistory(root), 'worker1', endedAt)).toBe(0);
+    });
+
+    test('recovery pass admission: a running pass and a choosing one hold a new pass back, dead records go, and alone it runs', async () => {
+        // Ahead means a lower ticket, then a lower pid: of two passes with one ticket, exactly one runs.
+        expect(passAhead({ pid: 9, ticket: 5 }, { pid: 3, ticket: 6 })).toBe(true);
+        expect(passAhead({ pid: 3, ticket: 6 }, { pid: 9, ticket: 6 })).toBe(true);
+        expect(passAhead({ pid: 9, ticket: 6 }, { pid: 3, ticket: 6 })).toBe(false);
+        const root = scratch(), dir = recoveryPassDir(root), now = Date.now();
+        mkdirSync(dir, { recursive: true });
+        const put = (pid: number, rec: object) => writeFileSync(join(dir, `${pid}-${now}.json`), JSON.stringify({ pid, at: now, ...rec }));
+        const logs: string[] = [];
+        const opts = { root, side: 'local', owners: new Map<string, { side: string; server: string }>(), log: (l: string) => logs.push(l), processStarts: () => new Map<number, number>(), passChoosingWaitMs: 50 };
+        // A pass that runs holds ticket 7. A newcomer takes ticket 8, even one that read the clock first, and defers.
+        put(4242, { choosing: false, ticket: 7 });
+        expect((await runStandaloneRecoveryPass({ ...opts, pidAlive: pid => pid === 4242 })).blockedByPass).toBe(4242);
+        expect(logs.at(-1)).toBe('deferred: recovery pass pid 4242 still running');
+        // A pass that is still taking its ticket holds a newcomer back until the wait ends.
+        rmSync(join(dir, `4242-${now}.json`));
+        put(4343, { choosing: true, ticket: 0 });
+        expect((await runStandaloneRecoveryPass({ ...opts, pidAlive: pid => pid === 4343 })).blockedByPass).toBe(4343);
+        expect(logs.at(-1)).toBe('deferred: recovery pass pid 4343 still choosing');
+        // The records of dead passes go, and a pass alone runs.
+        const ran = await runStandaloneRecoveryPass({ ...opts, pidAlive: () => false });
+        expect(ran.ok).toBe(true);
+        expect(ran.blockedByPass).toBeUndefined();
+        expect(readdirSync(dir)).toEqual([]);
+    });
+
     test('a setup refusal for the controller state waits and spends no attempt; an account-side refusal spends one', () => {
         const refused = 'recovery setup refused; no lease issued; no retry';
         for (const cause of ['recovery admission waiting: memory', 'recovery admission waiting: maxBots', 'recovery waits for runtime source owner',
             'no worker progress: release pin missing; live starts paused', 'no worker progress: release source changed; live starts paused']) {
             expect(dispatchRefusalWaits(refused, cause)).toBe(true);
         }
+        // A swarm heartbeat that a slow Git push held back, or a controller that just restarted.
+        expect(dispatchRefusalWaits(refused, 'recovery fleet ownership unresolved: stale')).toBe(true);
+        expect(dispatchRefusalWaits(refused, 'recovery fleet ownership unresolved: controller')).toBe(true);
+        expect(dispatchRefusalWaits(refused, 'recovery fleet ownership unresolved: account-active')).toBe(false);
         expect(dispatchRefusalWaits('existing recovery lease held; request preserved', '')).toBe(true);
         for (const cause of ['recovery account still active', 'recovery owner stopped', 'recovery task owner changed']) expect(dispatchRefusalWaits(refused, cause)).toBe(false);
         expect(dispatchRefusalWaits('recovery setup failed after issuance; account lease held; no retry', 'recovery admission waiting: memory')).toBe(false);

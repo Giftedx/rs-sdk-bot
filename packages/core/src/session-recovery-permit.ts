@@ -21,11 +21,13 @@ export {
 export { bindRecoveryChild, issueRecoveryPermit } from './session-recovery-permit/authority';
 export type { RecoveryConnectionAdmission } from './session-recovery-permit/connection';
 export {
+    STALE_HEARTBEAT_WAIT_MS,
     assertSpentRecoveryConnection,
     consumeRecoveryConnection,
     consumeRecoveryPermit,
     spendRecoveryConnection,
     waitForRecoveryChildBinding,
+    waitOutStaleHeartbeat,
 } from './session-recovery-permit/connection';
 export {
     finishRecoveryPermit,

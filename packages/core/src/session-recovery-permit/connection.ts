@@ -77,6 +77,23 @@ export function spendRecoveryConnection(admission: unknown, r: RecoveryRequest) 
     entry.spent = true; entry.guard();
 }
 
+// A swarm that waits on a slow Git push (a lease renewal) writes no heartbeat, and after FLEET_HEARTBEAT_MAX_MS the
+// admission guard reads its state as stale. Before the login, and only there (inprocess/connect.ts beforeConnect), the
+// guard waits out a stale heartbeat for a bounded time; any other refusal, and a stale heartbeat past the wait, stands.
+// No session is open yet, so the blocked loop costs nothing.
+export const STALE_HEARTBEAT_WAIT_MS = 30_000;
+export function waitOutStaleHeartbeat(guard: () => void, { waitMs = STALE_HEARTBEAT_WAIT_MS, stepMs = 1000, now = Date.now, sleep = (ms: number) => Bun.sleepSync(ms) }:
+    { waitMs?: number; stepMs?: number; now?: () => number; sleep?: (ms: number) => void } = {}): void {
+    const until = now() + waitMs;
+    for (;;) {
+        try { guard(); return; }
+        catch (error) {
+            if (!(error instanceof Error) || error.message !== 'recovery fleet ownership unresolved: stale' || now() >= until) throw error;
+            sleep(stepMs);
+        }
+    }
+}
+
 export function assertSpentRecoveryConnection(admission: RecoveryConnectionAdmission, account: string, server: string, base?: string) {
     const entry = admissions.get(admission);
     if (!entry?.spent || entry.pid !== process.pid || !same(entry.request.account, account) || entry.request.server !== server || entry.nativeFixture || base && realpathSync(base) !== entry.base)

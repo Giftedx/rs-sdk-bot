@@ -1,7 +1,7 @@
 // Standalone automatic session-recovery orchestration wrapping core recovery primitives without coordinator proposal queues.
 // Evaluates held live sessions, honors owner pauses and global infra circuit-breaker backoff, archives stale recovery
 // leases, and runs direct session cleanup retries with bounded per-end attempt tracking.
-// Usage: bun packages/fleet/src/session-recovery.ts [--dry] [--json] [--root=<dir>]
+// Usage: bun packages/fleet/src/session-recovery.ts [--dry] [--json] [--root=<dir>] | --refund=<account> --reason=<text>
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { appendFileSync, closeSync, existsSync, linkSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -65,12 +65,15 @@ export type ClaimView = { phase: 'held' | 'released'; kind?: string; orderId?: s
 export type Eligibility = { eligible: true; endedAt: number } | { eligible: false; reason: string; log: boolean };
 export type LeaseState = 'none' | 'held' | 'stale';
 
+// `refund`: the owner gave back the attempts that this end spent so far (session-recovery.ts --refund). It carries
+// `ok: true`, so an older reader does not count it as a failure.
 export type StandaloneRecoveryRecord = {
     at: number;
     account: string;
     endedAt: number;
     ok: boolean;
     infraFault?: boolean;
+    refund?: true;
     reason: string;
 };
 
@@ -190,14 +193,44 @@ export function recordStandaloneAttempt(root: string, entry: StandaloneRecoveryR
     appendFileSync(file, JSON.stringify(entry) + '\n');
 }
 
-export function spentStandaloneAttempts(history: readonly StandaloneRecoveryRecord[], account: string, endedAt: number): number {
-    const key = account.toLowerCase();
-    let count = 0;
-    for (let i = 0; i < history.length; i++) {
-        const r = history[i]!;
-        if (!r.ok && !r.infraFault && r.endedAt === endedAt && r.account.toLowerCase() === key) count++;
+// The spent attempts of each `account|endedAt`: the failures that were no infrastructure fault, after its newest refund.
+export function spentAttemptsByEnd(history: readonly StandaloneRecoveryRecord[]): Map<string, number> {
+    const spent = new Map<string, number>();
+    for (const r of history) {
+        const key = `${r.account.toLowerCase()}|${r.endedAt}`;
+        if (r.refund === true) spent.delete(key);
+        else if (!r.ok && !r.infraFault) spent.set(key, (spent.get(key) ?? 0) + 1);
     }
-    return count;
+    return spent;
+}
+
+// The `account|endedAt` keys that a recovery was tried for, with any outcome. A recovery can leave a producer attempt
+// newer than the end (assessRecoveryEligibility `retried`), and a refund gives back attempts, not the fact of a try.
+export function triedEnds(history: readonly StandaloneRecoveryRecord[]): Set<string> {
+    const tried = new Set<string>();
+    for (const r of history) if (!r.ok || r.refund === true) tried.add(`${r.account.toLowerCase()}|${r.endedAt}`);
+    return tried;
+}
+
+export function spentStandaloneAttempts(history: readonly StandaloneRecoveryRecord[], account: string, endedAt: number): number {
+    return spentAttemptsByEnd(history).get(`${account.toLowerCase()}|${endedAt}`) ?? 0;
+}
+
+// Gives back the attempts that the account's current end spent, for a fault the budget should not have counted. The
+// account must still be held and its end recorded; the reason is written beside the refund.
+export function refundStandaloneAttempts(root: string, account: string, reason: string, now = Date.now(), server = LIVE_SERVER): StandaloneRecoveryRecord {
+    const lower = account.trim().toLowerCase();
+    if (!/^[a-z0-9_ -]{1,12}$/.test(lower)) throw Error('refund: invalid account');
+    if (!reason.trim()) throw Error('refund: a reason is required');
+    const end = loadEndedRecords(join(root, '.practice', 'swarm-deaths.json')).get(lower);
+    if (!end) throw Error(`refund: ${lower} has no recorded end`);
+    const proof = readLogoutProof(lower, server, { root: resolveLifecycleRoot(lower, server, root) });
+    if (proof.state !== 'held') throw Error(`refund: ${lower} logout proof is ${proof.state}, not held`);
+    const spent = spentStandaloneAttempts(readStandaloneHistory(root), lower, end.at);
+    if (spent === 0) throw Error(`refund: ${lower} has spent no attempt for its end`);
+    const record: StandaloneRecoveryRecord = { at: now, account: lower, endedAt: end.at, ok: true, refund: true, reason: `refund of ${spent}: ${reason.trim().slice(0, 300)}` };
+    recordStandaloneAttempt(root, record);
+    return record;
 }
 
 export function findAccountStatus(root: string, account: string, server?: string): any {
@@ -247,6 +280,8 @@ export type StandaloneRecoveryPassOptions = {
     readClaim?: (account: string) => ClaimView;
     executeRecovery?: (target: { account: string; endedAt: number; server: string }) => Promise<{ ok: boolean; detail: string; deferred?: boolean }>;
     log?: (line: string) => void;
+    processStarts?: ProcessStarts;
+    passChoosingWaitMs?: number;
 };
 
 export type StandaloneRecoveryPassResult = {
@@ -254,13 +289,61 @@ export type StandaloneRecoveryPassResult = {
     dry: boolean;
     blockedByStop?: string;
     blockedByCircuit?: string;
+    blockedByPass?: number;
     targets: { account: string; endedAt: number }[];
     recovered: string[];
     failed: string[];
     skipped: { account: string; reason: string }[];
 };
 
+// One pass at a time. A pass with several recoveries (about 70 s each) outlives the watchdog's five-minute interval, and
+// a second pass then meets the first one's repair lease and its recoveries. Admission is Lamport's bakery over one
+// record per pass in this folder, each written atomically under its own name: a pass marks itself `choosing`, takes a
+// ticket one above every live ticket it reads, clears `choosing`, waits a bounded time while another live pass is
+// choosing, and runs only if no live pass is still choosing or holds a lower ticket (a tie goes to the lower pid). A
+// pass that started late, or was delayed before its record, reads the ticket of the pass that runs and takes a higher
+// one, so it defers. A record whose process is gone is removed; no pass removes a live one. Deferring never waits for
+// a whole pass: the next watchdog pass tries again.
+export const recoveryPassDir = (root: string): string => join(liveRoot(root), 'session-recovery', 'passes');
+export const PASS_CHOOSING_WAIT_MS = 10_000;
+type PassRecord = { pid: number; at: number; choosing: boolean; ticket: number };
+export const passAhead = (other: Pick<PassRecord, 'pid' | 'ticket'>, mine: Pick<PassRecord, 'pid' | 'ticket'>): boolean =>
+    other.ticket < mine.ticket || (other.ticket === mine.ticket && other.pid < mine.pid);
+
 export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOptions = {}): Promise<StandaloneRecoveryPassResult> {
+    if (opts.dry === true) return runOneRecoveryPass(opts);
+    const root = resolve(opts.root ?? resolve(import.meta.dir, '../../..'));
+    const log = opts.log ?? ((line: string) => console.log(`FLEET_RECOVERY ${line}`));
+    const alive = opts.pidAlive ?? pidAlive;
+    const dir = recoveryPassDir(root), at = Date.now(), own = join(dir, `${process.pid}-${at}.json`);
+    const others = (): PassRecord[] => readdirSync(dir).flatMap(name => {
+        const path = join(dir, name);
+        if (!name.endsWith('.json') || path === own) return [];
+        const r = readJson(path, null);
+        if (!Number.isSafeInteger(r?.pid) || r.pid <= 0 || !Number.isFinite(r?.at) || typeof r?.choosing !== 'boolean' || !Number.isSafeInteger(r?.ticket)) return [];
+        if (!savedProcessAlive(r.pid, r.at, opts.processStarts, alive)) { rmSync(path, { force: true }); return []; }
+        return [r as PassRecord];
+    });
+    mkdirSync(dir, { recursive: true });
+    atomicJson(own, { pid: process.pid, at, choosing: true, ticket: 0 } satisfies PassRecord);
+    try {
+        const mine: PassRecord = { pid: process.pid, at, choosing: false, ticket: 1 + Math.max(0, ...others().map(o => o.ticket)) };
+        atomicJson(own, mine);
+        const until = Date.now() + (opts.passChoosingWaitMs ?? PASS_CHOOSING_WAIT_MS);
+        let seen = others();
+        while (seen.some(o => o.choosing) && Date.now() < until) { await Bun.sleep(200); seen = others(); }
+        const ahead = seen.find(o => o.choosing || passAhead(o, mine));
+        if (ahead) {
+            log(`deferred: recovery pass pid ${ahead.pid} ${ahead.choosing ? 'still choosing' : 'still running'}`);
+            return { ok: true, dry: false, blockedByPass: ahead.pid, targets: [], recovered: [], failed: [], skipped: [] };
+        }
+        return await runOneRecoveryPass(opts);
+    } finally {
+        rmSync(own, { force: true });
+    }
+}
+
+async function runOneRecoveryPass(opts: StandaloneRecoveryPassOptions): Promise<StandaloneRecoveryPassResult> {
     const root = resolve(opts.root ?? resolve(import.meta.dir, '../../..'));
     const dry = opts.dry === true;
     const nowFn = opts.now ?? Date.now;
@@ -300,13 +383,7 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
 
     const accountFilter = opts.account?.trim().toLowerCase();
     const serverLower = server.toLowerCase();
-    const spentAttemptCounts = new Map<string, number>();
-    for (let i = 0; i < history.length; i++) {
-        const r = history[i]!;
-        if (r.ok || r.infraFault) continue;
-        const k = `${r.account.toLowerCase()}|${r.endedAt}`;
-        spentAttemptCounts.set(k, (spentAttemptCounts.get(k) ?? 0) + 1);
-    }
+    const spentAttemptCounts = spentAttemptsByEnd(history), tried = triedEnds(history);
     let heldRecoverySet: Set<string> | null = null;
     const isRecoveryLeaseHeld = (account: string): boolean => {
         if (!existsSync(leaseFile(root, account))) return false;
@@ -352,7 +429,7 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
             stopText,
             pidAlive: alive,
             host,
-            retried: attempts > 0,
+            retried: end !== undefined && tried.has(`${lower}|${end.at}`),
         });
         if (!e.eligible) {
             if (e.log) {
@@ -680,14 +757,17 @@ export type ControlledDispatchOneOptions = {
 };
 
 // Setup refusals that issue no lease, leave the account untouched and clear by themselves: the controller's capacity,
-// its runtime source owner, or its own release pin (missing until it restarts on the fix, or behind a newer source until
-// it reloads). They defer the recovery and spend none of its attempts.
+// its runtime source owner, its own release pin (missing until it restarts on the fix, or behind a newer source until
+// it reloads), or a swarm heartbeat that a slow Git push held back or a restart changed. They defer the recovery and
+// spend none of its attempts.
 const DISPATCH_WAIT_CAUSES = new Set([
     'recovery admission waiting: memory',
     'recovery admission waiting: maxBots',
     'recovery waits for runtime source owner',
     'no worker progress: release pin missing; live starts paused',
     'no worker progress: release source changed; live starts paused',
+    'recovery fleet ownership unresolved: stale',
+    'recovery fleet ownership unresolved: controller',
 ]);
 
 export function dispatchRefusalWaits(reason: string, cause: string): boolean {
@@ -765,7 +845,8 @@ export async function runControlledDispatchOne(
     } catch (err) {
         try { holderProc?.kill(); } catch { /* ignore */ }
         atomicJson(join(runDir, 'recovery.json'), { ...recoveryRecord, status: 'failed' });
-        return { ok: false, detail: `repair lease busy: ${String(err).slice(0, 120)}` };
+        // Another recovery holds the one repair lease: this account was not touched, so the attempt waits for a later pass.
+        return { ok: false, deferred: true, detail: `repair lease busy: ${String(err).slice(0, 120)}` };
     }
 
     let finalStatus: 'succeeded' | 'failed' = 'failed';
@@ -999,9 +1080,21 @@ if (import.meta.main) {
             process.exit(1);
         }
     }
+    // The owner's refund of one account's spent attempts: it writes one history record and recovers nothing.
+    if (argv.some(a => a.startsWith('--refund='))) {
+        const extra = argv.find(a => !a.startsWith('--refund=') && !a.startsWith('--reason=') && !a.startsWith('--root='));
+        const who = argVal('--refund=') ?? '', why = argVal('--reason=') ?? '';
+        if (extra || !who || !why) {
+            console.error('usage: bun packages/fleet/src/session-recovery.ts --refund=<account> --reason=<why the budget should not have counted it> [--root=<dir>]');
+            process.exit(2);
+        }
+        try { console.log('FLEET_RECOVERY refunded ' + JSON.stringify(refundStandaloneAttempts(resolve(argVal('--root=') ?? resolve(import.meta.dir, '../../..')), who, why))); }
+        catch (error) { console.error(`FLEET_RECOVERY ${String(error).slice(0, 200)}`); process.exit(1); }
+        process.exit(0);
+    }
     const unknown = argv.find(a => a !== '--dry' && a !== '--json' && !a.startsWith('--root=') && !a.startsWith('--account='));
     if (unknown) {
-        console.error(`usage: bun packages/fleet/src/session-recovery.ts [--dry] [--json] [--root=<dir>] [--account=<name>] (unexpected ${unknown})`);
+        console.error(`usage: bun packages/fleet/src/session-recovery.ts [--dry] [--json] [--root=<dir>] [--account=<name>] | --refund=<account> --reason=<text> (unexpected ${unknown})`);
         process.exit(2);
     }
     const dry = argv.includes('--dry');

@@ -223,7 +223,7 @@ test('facades preserve every external/test export and keep internal-only helpers
         'assertNativeFixtureRoot', 'assertRecoveryNotStopped', 'validateRecoveryRequest', 'recoveryLifecycleRoot', 'recoveryPermitPaths', 'assertNoRecoveryLease',
         'NATIVE_RECOVERY_CHECKS', 'verifyNativeRecoveryProof', 'FLEET_REFUSALS', 'assertFleetResolved',
         'issueRecoveryPermit', 'bindRecoveryChild', 'waitForRecoveryChildBinding', 'consumeRecoveryPermit',
-        'consumeRecoveryConnection', 'spendRecoveryConnection', 'assertSpentRecoveryConnection',
+        'consumeRecoveryConnection', 'spendRecoveryConnection', 'assertSpentRecoveryConnection', 'STALE_HEARTBEAT_WAIT_MS', 'waitOutStaleHeartbeat',
         'recoveryStatePreserved', 'finishRecoveryPermit', 'launchObservations', 'launchPermittedRecovery', 'recoveredSessionForRun',
         'releaseExpiredRecoveryLease', 'releaseExpiredRecoveryLeases', 'cachedProcessStarts', 'heldRecoveryOwners',
     ];
