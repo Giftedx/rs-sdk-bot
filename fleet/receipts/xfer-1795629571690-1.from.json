@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795629571690-1",
  "account": "Fatstack",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Tarromin",
  "requested": 1,
  "claim": "d1c186de-27a6-417d-99b9-9a824169db84",
- "count": 0,
- "ok": false,
- "at": 1795629824662,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795629867262,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795629830551
+ },
+ "logout": {
+  "attemptId": "1795629824671-0000002724-0000000001",
+  "at": 1795629867244,
+  "sha256": "6390e025247349e1935a90ae054198f80bc891e309bf4ad1dce00805650b14a3"
+ },
+ "screen": true
 }
