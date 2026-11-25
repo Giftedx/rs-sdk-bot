@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795611221842,
+ "at": 1795611275611,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -201,6 +201,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "auto"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=2150 QUANTITY=1 \"ITEM_NAME=Swamp toad\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:2152 BATCH_UNITS=2 -- crafting inventory strip:swamp-toad"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2152",
+   "role": "army"
   }
  ],
  "army": [
@@ -211,7 +226,6 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
-  "billionaire",
   "bowbeforeme",
   "dipstick",
   "fatstack",
