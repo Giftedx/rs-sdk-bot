@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795577800207-1",
+ "account": "Woodenstaff",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "d75e62c4-7c11-4b1c-8d76-0e6cafb4f85d",
+ "count": 0,
+ "ok": false,
+ "at": 1795577897439,
+ "detail": "trade claimed"
+}
