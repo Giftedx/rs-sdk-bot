@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795628133617-masterbaiter-knightstick-c6e0f125d72062a1",
  "account": "Knightstick",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Lobster",
  "requested": 25,
  "claim": "87ab1f83-e4a2-4006-a995-368f4cc3f0b1",
- "count": 0,
- "ok": false,
- "at": 1795628978025,
- "detail": "trade claimed"
+ "count": 25,
+ "ok": true,
+ "at": 1795629009284,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 25
+ },
+ "bank": {
+  "count": 25,
+  "at": 1795629008549
+ },
+ "logout": {
+  "attemptId": "1795628978033-0000002724-0000000001",
+  "at": 1795629009274,
+  "sha256": "295f42001b017a04aff79122c12b2ee51d69acd797273c25cfa3893d23be3155"
+ },
+ "screen": true
 }

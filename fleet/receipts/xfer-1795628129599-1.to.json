@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795628129599-1",
  "account": "CoinCock",
  "partner": "Fingerblastr",
@@ -12,6 +12,12 @@
  "claim": "4e2d9fd2-1032-4cf3-a47f-bf8c0d919739",
  "count": 0,
  "ok": false,
- "at": 1795628740248,
- "detail": "trade claimed"
+ "at": 1795629030093,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795628740257-0000026520-0000000001",
+  "at": 1795629030079,
+  "sha256": "2be3d556012c7997c38e89ec4755fb2c99824292f9dc1ce3d594e3c7cd0caa29"
+ },
+ "screen": false
 }
