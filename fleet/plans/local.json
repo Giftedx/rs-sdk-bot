@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795644778399,
+ "at": 1795644931251,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,21 @@
    "role": "pvp"
   },
   {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2340 TARGET_COUNT=234 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
    "account": "Ballspinner",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -97,6 +112,25 @@
    ]
   },
   {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
    "account": "Pocketrocket",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -116,23 +150,20 @@
    ]
   },
   {
-   "account": "Shaftsinker",
+   "account": "PackageDeal",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "mining",
-    "ore"
+    "runecraft",
+    "supply"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "campaign:haggis:item:556",
+    "BATCH_UNITS": "338"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
+   "goal": "campaign:haggis:item:556",
+   "role": "helper"
   },
   {
    "account": "PickpockDick",
@@ -197,38 +228,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=1 \"ITEM_NAME=Gold bar\" -- loadout",
-    "scripts/aio-logistics.ts ITEM_ID=1601 QUANTITY=1 ITEM_NAME=Diamond -- loadout",
-    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=3 -- crafting jewellery-trip"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "helper",
-   "resources": [
-    "draynor-willows"
-   ]
   }
  ],
  "army": [
@@ -240,6 +239,7 @@
   "mmsmk1232",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -250,7 +250,6 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pocketpool",
   "pocketpython",
   "quickhandjob",

@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795644719747-1",
+ "account": "Swordswallow",
+ "partner": "mmthv2350",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "eba200b5-7fc2-4ea4-b2a9-e8699f98695a",
+ "count": 1,
+ "ok": true,
+ "at": 1795644840603,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795644812771-0000024332-0000000001",
+  "at": 1795644840589,
+  "sha256": "68e01bdf47e5ece267b6581d8e2fa72ed9c4b95bbca64f868ae66f501d307479"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795644702524-1",
+ "account": "Woodpecker",
+ "partner": "Wandwanker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "e2524069-9ba7-4f99-95f4-0c430acf62ec",
+ "count": 0,
+ "ok": false,
+ "at": 1795644902954,
+ "detail": "trade claimed"
+}

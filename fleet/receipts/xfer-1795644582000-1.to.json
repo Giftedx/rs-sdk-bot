@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795644582000-1",
+ "account": "Wandwaver",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "4637f729-9a47-4451-9005-33f955ce5776",
+ "count": 0,
+ "ok": false,
+ "at": 1795644930761,
+ "detail": "trade claimed"
+}

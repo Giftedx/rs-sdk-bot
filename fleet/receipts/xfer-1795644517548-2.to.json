@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795644517548-2",
+ "account": "Quickhandjob",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "fe698b92-462c-4b2d-8c94-b5a7e9d2a0ed",
+ "count": 1,
+ "ok": true,
+ "at": 1795644907406,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Sapphire necklace",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795644906634
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795644906252
+ },
+ "logout": {
+  "attemptId": "1795644893558-0000033020-0000000001",
+  "at": 1795644907394,
+  "sha256": "4fe7e4cfa7c61d2147050f1ed9e1d1b4320eaa7668f5f7cb8ab2a111a953a9c1"
+ },
+ "screen": true
+}

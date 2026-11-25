@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795644517548-1",
+ "account": "Abracadickra",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 6,
+ "claim": "8963b159-2217-4530-8cca-f358b1bb44c4",
+ "count": 6,
+ "ok": true,
+ "at": 1795644853865,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795644853050
+ },
+ "logout": {
+  "attemptId": "1795644843740-0000021888-0000000001",
+  "at": 1795644853781,
+  "sha256": "b5a8ccc380b4902b3e0919ef06b5366eb3580feddb8460e789252dd049fd143a"
+ },
+ "screen": true
+}
