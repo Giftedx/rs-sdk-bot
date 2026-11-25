@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795581587184-woodpecker-undermykilt-0c353a96e25c515a",
+ "account": "UnderMyKilt",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "10a106dc-9113-48e9-9e4b-6ab4574af5be",
+ "count": 0,
+ "ok": false,
+ "at": 1795581769312,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Rope",
+   "requested": 4,
+   "count": 0
+  },
+  {
+   "item": "Dragon bones",
+   "requested": 6,
+   "count": 0
+  },
+  {
+   "item": "Coins",
+   "requested": 15000,
+   "count": 0
+  }
+ ]
+}
