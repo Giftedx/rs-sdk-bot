@@ -2770,10 +2770,12 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `claude/squad-protect-item-idle-trace`, run 45695320544): Protect Item off in 4,327 of 14,234 ticks; 4,288 of
     them follow the hold's prayers-off input and 39 follow a fight. The lines alternate each 3 ticks, as in seed 11:
     `t=284 idx=8 itemOn=1 ... from=squad.ts:2000` (the hold) and `t=285 idx=8 itemOn=0 ... from=squad.ts:367` (the
-    helper). The same trace on the fix (branch `claude/squad-protect-item-idle-trace2`, run 45696144237): Protect Item
-    off in 27 of 9,790 ticks, each in the first ticks after a fight.
+    helper). A hold of the guard from the helper's first prayer input (PR 1510) leaves it off in 2,081 of 7,325
+    (run 45693434227). The same trace on the fix (branch `claude/squad-protect-item-idle-trace2`, run 45696144237):
+    Protect Item off in 27 of 9,790 ticks, each in the first ticks after a fight.
 
-    Bench of `SQUAD_PROTECT_ITEM` with the fix, seeds 1 to 16, totals over the seeds:
+    Bench of `SQUAD_PROTECT_ITEM`, seeds 1 to 16, totals over the seeds. "Master" is `a4de3aee8e`, "fix" is the fix on
+    it (`510dffabc2`):
 
     | Case | Code, option | Kills | Deaths of ours | HP taken | Run |
     |---|---|---|---|---|---|
@@ -2781,13 +2783,16 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     | | fix, default (`off`), again | 34 | 0 | 2,242 | 45696462370 |
     | | fix, `skulled` | 35 | 0 | 2,310 | 45696461017 |
     | | master, `skulled` | 37 | 0 | 2,509 | 45696463620 |
+    | | fix, `on` | 34 | 0 | 2,285 | 45697041157 |
+    | | master, `on` | 37 | 0 | 2,356 | 45697044056 |
     | `extra:attack-team5-pile-six-x1` | fix, default (`off`) | 30 | 2 | 12,796 | 45696459800 |
     | | fix, `skulled` | 34 | 2 | 15,541 | 45696461017 |
 
     Two runs of the same code and option differ by 3 kills and 355 HP taken (14%); a seed does not repeat, and the
     paired difference of HP taken has sd 74 a seed. Against that noise, `skulled` against `off` (kills -0.13 a seed,
-    t -0.56; HP -18, t -0.89) and the fix against master with `skulled` (kills -0.13, t -0.52; HP -12, t -1.10) show
-    no change in the clone case. In the attack case `skulled` takes 21% more HP (t 1.79, no repeat arm). Each of the
-    4 deaths of ours is member 1, unskulled (`PK skull off: a death keeps 3 items`), after its escape teleport
-    (`SQUAD died on a bank trip`, near 2758,3476), so no arm shows the item that Protect Item keeps at a skulled
-    death. Gap: a case in which a skulled account of ours dies in the Wilderness.
+    t -0.56; HP -18, t -0.89) and the fix against master with `skulled` (kills -0.13, t -0.52; HP -12, t -1.10) and
+    with `on` (kills -0.19, t -0.82; HP -4, t -0.36) show no change in the clone case. In the attack case `skulled`
+    takes 21% more HP (t 1.79, no repeat arm). Each of the 4 deaths of ours is member 1, unskulled (`PK skull off: a
+    death keeps 3 items`), after its escape teleport (`SQUAD died on a bank trip`, near 2758,3476), so no arm shows
+    the item that Protect Item keeps at a skulled death. Gap: a case in which a skulled account of ours dies in the
+    Wilderness; a repeat arm of the attack case.
