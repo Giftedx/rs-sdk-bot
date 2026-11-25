@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795604561151-1",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "fa37150a-91bf-477e-8f43-6fff202b2974",
+ "count": 1,
+ "ok": true,
+ "at": 1795605026023,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795605025210
+ },
+ "logout": {
+  "attemptId": "1795605013041-0000020692-0000000001",
+  "at": 1795605026002,
+  "sha256": "b0abefe603995193566f3745cfa22b27808a6dbced515219b12c726d5440a40a"
+ },
+ "screen": true
+}

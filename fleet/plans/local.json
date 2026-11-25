@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795604956099,
+ "at": 1795605035556,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,35 +24,19 @@
    "role": "rehearsal"
   },
   {
-   "account": "OreElse",
+   "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=2347 ITEMS=Hammer MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy generalshop1 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-2353-3-p748 ITEM_ID=2353 QUANTITY=3 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=748 -- ge-buy",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1022 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1022 -- ge-buy",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Unsheathed BATCH_UNITS=250 -- cannon"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1311",
-   "role": "army"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1975",
+   "goal": "goal:pk_army:Unsheathed",
    "role": "army"
   },
   {
@@ -72,40 +56,43 @@
    "role": "army"
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/generated/quest-barcrawl.ts",
+   "account": "Spitroaster",
+   "script": "scripts/generated/quest-priestperil.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "DEMAND_ID": "goal:quest_board:priestperil",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "army"
+   "goal": "goal:quest_board:priestperil",
+   "role": "auto"
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "splash",
-    "90",
-    "3000"
-   ],
+   "account": "Moneyshot",
+   "script": "scripts/generated/quest-tree.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
+   "goal": "goal:quest_board:tree",
+   "role": "army"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/generated/quest-squire.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:squire",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:squire",
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -156,16 +143,41 @@
    "role": "helper"
   },
   {
-   "account": "Bigchopper",
-   "script": "scripts/generated/quest-priestperil.ts",
-   "args": [],
+   "account": "Ballspinner",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "arheinstore",
+    "3000"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:priestperil",
-    "BATCH_UNITS": "1"
+    "ITEM_ID": "1755",
+    "ITEMS": "Chisel",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:priestperil",
+   "goal": "goal:supply_chain:1601",
+   "role": "army"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=2150 QUANTITY=1 \"ITEM_NAME=Swamp toad\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:2152 BATCH_UNITS=2 -- crafting inventory strip:swamp-toad"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2152",
    "role": "army"
   }
  ],
@@ -180,7 +192,6 @@
   "bowbeforeme",
   "deeppockets",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -190,7 +201,7 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpython",
   "pocketrocket",
