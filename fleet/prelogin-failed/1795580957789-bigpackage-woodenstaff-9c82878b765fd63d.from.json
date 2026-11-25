@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795580957789-bigpackage-woodenstaff-9c82878b765fd63d",
+ "role": "from",
+ "account": "Bigpackage",
+ "partner": "Woodenstaff",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795581051837,
+ "detail": "Error: fleet trade claim held for order 1795580726603-bigpackage-woodenstaff-fcb6755131009f0f"
+}
