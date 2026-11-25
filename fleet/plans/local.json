@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601115932,
+ "at": 1795601147204,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -37,6 +37,19 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Unsheathed",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/generated/quest-dragon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dragon",
    "role": "army"
   },
   {
@@ -172,7 +185,6 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker"

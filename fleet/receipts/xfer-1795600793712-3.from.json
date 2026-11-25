@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795600793712-3",
  "account": "Bigpackage",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 10,
  "claim": "f73d07f4-20a6-4a01-8728-3284a6cab226",
- "count": 0,
- "ok": false,
- "at": 1795600964670,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795601131708,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795600973340
+ },
+ "logout": {
+  "attemptId": "1795600964680-0000002132-0000000001",
+  "at": 1795601131698,
+  "sha256": "fba4db6b4a66fd4e6e6ab49b31c78cf87b50228898fc6799cbfef7e52c27efc8"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795600793712-3",
+ "account": "OreElse",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10,
+ "claim": "3d2fbcde-75e4-4b32-8bd2-cdd53844e8d4",
+ "count": 10,
+ "ok": true,
+ "at": 1795601133777,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795601132631
+ },
+ "logout": {
+  "attemptId": "1795601124214-0000007928-0000000001",
+  "at": 1795601133691,
+  "sha256": "d4cce2c1a1c977d4a86957b13dd9ff12115dcb175eac911d3ae2846279dff3c1"
+ },
+ "screen": true
+}
