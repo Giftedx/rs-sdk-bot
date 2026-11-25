@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795611932370-2",
  "account": "Bigpackage",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "3a9098e6-21ef-4b2a-bf8b-900552329d3c",
- "count": 0,
- "ok": false,
- "at": 1795612194524,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795612256004,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795612255309
+ },
+ "logout": {
+  "attemptId": "1795612194532-0000025204-0000000001",
+  "at": 1795612255996,
+  "sha256": "32469474e7a3f4b8708571813bd9bf955a8cf7158dea7d5130ff1bf0a872150a"
+ },
+ "screen": true
 }

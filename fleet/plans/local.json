@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795612247290,
+ "at": 1795612270750,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -184,6 +184,42 @@
    "role": "helper"
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=2357 QUANTITY=1 \"ITEM_NAME=Gold bar\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=4 CAP=1000 TARGET_COUNT=4 -- crafting inventory cut-diamond",
+    "scripts/aio-skiller.ts RECIPE=diamond_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1643 BATCH_UNITS=4 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1643",
+   "role": "army"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2152",
+   "role": "army"
+  },
+  {
    "account": "Moneyshot",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -208,11 +244,9 @@
   "Wandwaver",
   "mmsmk1232",
   "ballspinner",
-  "bigpackage",
   "billionaire",
   "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
