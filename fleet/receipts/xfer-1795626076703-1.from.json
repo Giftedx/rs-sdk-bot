@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795626076703-1",
  "account": "Unsheathed",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "3bfa903a-c65a-4d7e-9059-7d47d07818cb",
- "count": 0,
- "ok": false,
- "at": 1795626205189,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795626456628,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795626251844
+ },
+ "logout": {
+  "attemptId": "1795626205198-0000030700-0000000001",
+  "at": 1795626456616,
+  "sha256": "ddc56df1c57043a20453c0e9a2d0b7deab21db66e94ca01136fa8f18ce5a4f6b"
+ },
+ "screen": true
 }
