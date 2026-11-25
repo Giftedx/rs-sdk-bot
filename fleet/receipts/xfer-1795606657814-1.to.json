@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795606657814-1",
  "account": "Fatstack",
  "partner": "Woodpecker",
@@ -12,6 +12,12 @@
  "claim": "832bbc94-4166-4f42-b65d-1bcf7deff42a",
  "count": 0,
  "ok": false,
- "at": 1795607264005,
- "detail": "trade claimed"
+ "at": 1795607345043,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795607264015-0000007456-0000000001",
+  "at": 1795607345028,
+  "sha256": "ec5318e35334913729bf8c0df7acd1d83972c1fed58cfecb1b7d3396b8c7509f"
+ },
+ "screen": false
 }

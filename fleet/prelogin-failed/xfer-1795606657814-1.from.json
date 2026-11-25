@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795606657814-1",
+ "role": "from",
+ "account": "Woodpecker",
+ "partner": "Fatstack",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795607344347,
+ "detail": "Error: fleet trade claim authority unavailable or changed: warning: unable to access '.git/config': Permission denied fatal: unknown error occurred while reading the configuration files"
+}
