@@ -103,19 +103,18 @@ export const HERBLORE_NOTED_SUPPLIES: readonly HerbloreNotedSupply[] = [
  { id: ITEM_IDS.jangerberries, certId: 248, count: 170 },
 ];
 
-// Live-affordable drop-herbs route (Chaos Druids / Sinister keys: Kwuarm + Cadantine + Dwarf weed, zero Torstol/Lantadyme).
+// Live-affordable drop-herbs route (Chaos Druids / Sinister keys: Kwuarm + Cadantine + Dwarf weed, zero Torstol/Lantadyme/Dragon scale dust).
 export const HERBLORE_DROP_NOTED_SUPPLIES: readonly HerbloreNotedSupply[] = [
  { id: ITEM_IDS.harralandervial, certId: 98, count: 13 },
  { id: ITEM_IDS.chocolate_dust, certId: 1976, count: 13 },
  { id: ITEM_IDS.iritvial, certId: 102, count: 13 },
  { id: ITEM_IDS.eye_of_newt, certId: 222, count: 13 },
- { id: ITEM_IDS.kwuarmvial, certId: 106, count: 26 },
+ { id: ITEM_IDS.kwuarmvial, certId: 106, count: 13 },
  { id: ITEM_IDS.limpwurt_root, certId: 226, count: 13 },
- { id: ITEM_IDS.dragon_scale_dust, certId: 242, count: 13 },
- { id: ITEM_IDS.cadantinevial, certId: 108, count: 13 },
- { id: ITEM_IDS.white_berries, certId: 240, count: 13 },
- { id: ITEM_IDS.dwarfweedvial, certId: 110, count: 198 },
- { id: ITEM_IDS.wine_of_zamorak, certId: 246, count: 198 },
+ { id: ITEM_IDS.cadantinevial, certId: 108, count: 14 },
+ { id: ITEM_IDS.white_berries, certId: 240, count: 14 },
+ { id: ITEM_IDS.dwarfweedvial, certId: 110, count: 208 },
+ { id: ITEM_IDS.wine_of_zamorak, certId: 246, count: 208 },
 ];
 
 export const HERBLORE_BANK_CYCLES: readonly { unf: number; sec: number; out: number }[] = [
@@ -214,6 +213,10 @@ function dialogSawText(spec: Session, re: RegExp): boolean {
   if (re.test(txt)) return true;
  }
  return (st?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
+}
+
+function druidQuestVarp(spec: Session): number {
+ return (spec.client as { var?: number[] } | undefined)?.var?.[80] ?? 0;
 }
 
 function isRunEnabled(spec: Session): boolean {
@@ -502,7 +505,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   spec,
   /^kaqemeex$/i,
   [/search of a quest/i, /will try and help/i],
-  () => dialogSawText(spec, /excellent\. go to the village south|fellow.*sanfew|village south|will do\./i),
+  () => druidQuestVarp(spec) >= 1 || dialogSawText(spec, /excellent\. go to the village south|fellow.*sanfew|village south|will do\./i),
   { x: 2924, z: 3486 },
   deadline,
   [
@@ -525,17 +528,25 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   /^sanfew$/i,
   [/sent to help purify/i, /i'll do that then/i],
   () =>
+   druidQuestVarp(spec) >= 2 ||
    (spec.sdk.getDialog()?.options?.some((o: any) => /where can i find/i.test(o.text)) ?? false) ||
    dialogSawText(spec, /well thank you very much|ok, i'll do that then|where can i find/i),
   { x: 2897, z: 3426 },
   deadline,
   [['R', 2461, 'R', 'R', 'R']],
+  async () => {
+   const st1 = findLocBy(spec, l => l.id === 1740 || (l.x === 2898 && l.z === 3428));
+   if (st1) {
+    const op = st1.optionsWithIndex?.find(o => /climb-down/i.test(o.text))?.opIndex ?? 1;
+    await spec.direct({ type: 'interactLoc', x: st1.x, z: st1.z, locId: st1.id, optionIndex: op, reason: 'SDK' });
+   }
+  },
  );
  const tSan1 = spec.tick() - start;
 
  await climbLoc(spec, 1740, 2898, 3428, /climb-down/i, () => (playerPos(spec)?.level ?? 1) === 0, deadline);
  logPhase(spec, start, 'herb_down_sanfew1');
- await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6), walker);
+ await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 2), walker);
  await climbLoc(spec, 1759, 2884, 3397, /climb-down/i, () => (playerPos(spec)?.worldZ ?? 0) > 9000, deadline);
  const tDung = spec.tick() - start;
  logPhase(spec, start, 'herb_in_dungeon');
@@ -546,23 +557,15 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  };
  const findOpenableCaulDoor = () =>
   findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889 && !!l.optionsWithIndex?.some(o => /open/i.test(o.text)));
- await walkDirect(spec, 2888, 9831, 1, deadline, () => (playerPos(spec)?.worldZ ?? 0) >= 9830);
- logPhase(spec, start, 'herb_at_caul_door');
-
- while (spec.tick() < deadline && !insideRoom()) {
-  await eatIfHurt(spec, eatGuard);
-  const door = findOpenableCaulDoor();
-  if (door) {
-   const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
-   await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
-  } else {
-   await spec.direct({ type: 'walkTo', x: 2892, z: 9831, running: true, reason: 'SDK' });
-   await waitTicks(spec, 1);
-   break;
-  }
-  await waitTicks(spec, 1);
+ const caulInRes = await walkPath(
+  walker,
+  [{ x: 2885, z: 9828, tol: 1 }, { x: 2888, z: 9831, tol: 0 }],
+  { maxTicks: Math.max(10, Math.min(40, deadline - spec.tick())), reclickAt: 10, stop: () => (playerPos(spec)?.worldZ ?? 0) >= 9830 && (playerPos(spec)?.worldX ?? 0) >= 2887 },
+ );
+ if (!caulInRes.ok && (playerPos(spec)?.worldZ ?? 0) < 9830) {
+  await walkDirect(spec, 2888, 9831, 1, deadline, () => (playerPos(spec)?.worldZ ?? 0) >= 9830);
  }
- logPhase(spec, start, 'herb_inside_caul');
+ logPhase(spec, start, 'herb_at_caul_door');
 
  const meatPairs = [
   { raw: ITEM_IDS.raw_beef, ench: 522 },
@@ -570,6 +573,21 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   { raw: ITEM_IDS.raw_bear_meat, ench: 524 },
   { raw: ITEM_IDS.raw_chicken, ench: 525 },
  ] as const;
+ while (spec.tick() < deadline && !insideRoom()) {
+  await eatIfHurt(spec, eatGuard);
+  const door = findOpenableCaulDoor();
+  if (door) {
+   const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
+   await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
+   await waitTicks(spec, 1);
+  } else {
+   await spec.direct({ type: 'walkTo', x: 2892, z: 9831, running: true, reason: 'SDK' });
+   await waitTicks(spec, 1);
+   break;
+  }
+ }
+ logPhase(spec, start, 'herb_inside_caul');
+
  while (spec.tick() < deadline) {
   await eatIfHurt(spec, eatGuard);
   const inv = spec.sdk.getInventory();
@@ -580,12 +598,11 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   if (!adjacent) {
    await spec.direct({ type: 'walkTo', x: 2892, z: 9831, running: true, reason: 'SDK' });
   } else {
-   const acts: Promise<unknown>[] = [];
-   for (const m of pending) {
-    const slotItem = inv.find(i => i.id === m.raw);
-    if (slotItem) acts.push(spec.direct({ type: 'useItemOnLoc', itemSlot: slotItem.slot, x: 2893, z: 9831, locId: 2142, reason: 'SDK' }));
+   const first = pending[0]!;
+   const slotItem = inv.find(i => i.id === first.raw);
+   if (slotItem) {
+    await spec.direct({ type: 'useItemOnLoc', itemSlot: slotItem.slot, x: 2893, z: 9831, locId: 2142, reason: 'SDK' });
    }
-   if (acts.length) await Promise.all(acts);
   }
   await waitTicks(spec, 1);
  }
@@ -597,17 +614,24 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   if (door) {
    const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
    await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
+   await waitTicks(spec, 1);
   } else {
-   await spec.direct({ type: 'walkTo', x: 2884, z: 9828, running: true, reason: 'SDK' });
+   await spec.direct({ type: 'walkTo', x: 2886, z: 9810, running: true, reason: 'SDK' });
    await waitTicks(spec, 1);
    break;
   }
-  await waitTicks(spec, 1);
  }
  const tCaul = spec.tick() - start;
 
  logPhase(spec, start, 'herb_out_of_room');
- await walkDirect(spec, 2884, 9798, 1, deadline, () => (playerPos(spec)?.worldZ ?? 9999) <= 9808);
+ const caulOutRes = await walkPath(
+  walker,
+  [{ x: 2886, z: 9810, tol: 1 }, { x: 2884, z: 9798, tol: 1 }],
+  { maxTicks: Math.max(10, Math.min(40, deadline - spec.tick())), reclickAt: 10, stop: () => (playerPos(spec)?.worldZ ?? 9999) <= 9802 },
+ );
+ if (!caulOutRes.ok && (playerPos(spec)?.worldZ ?? 9999) > 9808) {
+  await walkDirect(spec, 2884, 9798, 1, deadline, () => (playerPos(spec)?.worldZ ?? 9999) <= 9808);
+ }
  await climbLoc(spec, 1755, 2884, 9797, /climb-up/i, () => (playerPos(spec)?.worldZ ?? 9999) < 9000, deadline);
  logPhase(spec, start, 'herb_out_of_dungeon');
  await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
@@ -617,10 +641,10 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   spec,
   /^sanfew$/i,
   [],
-  () => [522, 523, 524, 525].every(id => countItem(spec.sdk.getInventory(), id) === 0),
+  () => druidQuestVarp(spec) >= 3 || [522, 523, 524, 525].every(id => countItem(spec.sdk.getInventory(), id) === 0),
   { x: 2897, z: 3426 },
   deadline,
-  [['R', 'R', 'R']],
+  [['R', 'R', 'R', 'R']],
   async () => {
    const st1 = findLocBy(spec, l => l.id === 1740 || (l.x === 2898 && l.z === 3428));
    if (st1) {
@@ -796,15 +820,13 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
  { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 13, openBankAtEnd: true },
  { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 13, openBankAtEnd: true },
  { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 13, openBankAtEnd: true },
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
- { unf: ITEM_IDS.cadantinevial, sec: ITEM_IDS.white_berries, count: 13, openBankAtEnd: true },
- ...Array.from({ length: 15 }, (): BankBrewPlanStep => ({
+ { unf: ITEM_IDS.cadantinevial, sec: ITEM_IDS.white_berries, count: 14, openBankAtEnd: true },
+ ...Array.from({ length: 16 }, (_, idx): BankBrewPlanStep => ({
   unf: ITEM_IDS.dwarfweedvial,
   sec: ITEM_IDS.wine_of_zamorak,
   count: 13,
-  openBankAtEnd: true,
+  openBankAtEnd: idx < 15,
  })),
- { unf: ITEM_IDS.dwarfweedvial, sec: ITEM_IDS.wine_of_zamorak, count: 3, openBankAtEnd: false },
 ];
 
  function pushExactWithdraw(acts: Promise<unknown>[], spec: Session, slot: number, need: number, bankCount: number): void {
@@ -928,6 +950,7 @@ async function executeHerbloreLoop(
  deadline: number,
  receiveStarter: () => Promise<void>,
  receiveNoted: () => Promise<void>,
+ notedHelper?: Session,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  await skipTutorial2Ticks(spec, deadline);
  if (spec.sdk.getInventory().length > 19) {
@@ -962,20 +985,30 @@ async function executeHerbloreLoop(
    bankOpenTicks += spec.tick() - o0;
   }
   if (!depositedNotes) {
-   while (spec.tick() < deadline) {
-    // Deposit step 0 mats (harralander/chocolate) in the first batch so partial note-deposit can overlap with step 0 withdrawal.
+   if (step.count === 10) {
+    // Deposit step 0 notes + 3 others first; remaining notes overlap with step 0 withdrawal.
     const inv = spec.sdk
      .getInventory()
      .filter(i => !GLORY_SET.has(i.id))
      .sort((a, b) => Number(b.id === 98 || b.id === 1976) - Number(a.id === 98 || a.id === 1976));
-    if (inv.length <= 1) break;
-    const acts: Promise<unknown>[] = [];
-    for (const item of inv.slice(0, 5)) {
-     acts.push(spec.direct({ type: 'bankDeposit', slot: item.slot, amount: -1, reason: 'SDK' }));
+    if (inv.length > 5) {
+     const acts = inv.slice(0, 5).map(item => spec.direct({ type: 'bankDeposit', slot: item.slot, amount: -1, reason: 'SDK' }));
+     const res = (await Promise.all(acts)) as Array<{ success?: boolean } | undefined>;
+     if (res.some(r => r?.success === false)) bankRefused++;
+     await waitTicks(spec, 1);
     }
-    const res = (await Promise.all(acts)) as Array<{ success?: boolean } | undefined>;
-    if (res.some(r => r?.success === false)) bankRefused++;
-    await waitTicks(spec, 1);
+   } else {
+    while (spec.tick() < deadline) {
+     const inv = spec.sdk
+      .getInventory()
+      .filter(i => !GLORY_SET.has(i.id))
+      .sort((a, b) => Number(b.id === 98 || b.id === 1976) - Number(a.id === 98 || a.id === 1976));
+     if (inv.length === 0) break;
+     const acts = inv.slice(0, 5).map(item => spec.direct({ type: 'bankDeposit', slot: item.slot, amount: -1, reason: 'SDK' }));
+     const res = (await Promise.all(acts)) as Array<{ success?: boolean } | undefined>;
+     if (res.some(r => r?.success === false)) bankRefused++;
+     await waitTicks(spec, 1);
+    }
    }
    depositedNotes = true;
   }
@@ -1021,6 +1054,15 @@ async function executeHerbloreLoop(
      pushExactWithdraw(acts, spec, unfBank.slot, 15, unfBank.count);
      acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: -1, reason: 'SDK' }));
     }
+   } else if (c === 0 && step.count === 10 && acts.length >= 4) {
+    // Keep up to 2 leftover notes in inv on C0 so bankDeposit(3) + withdraw(10) + withdraw(10) fits in 1 tick.
+    acts.length = 3;
+    pushExactWithdraw(acts, spec, unfBank.slot, step.count - haveUnf, unfBank.count);
+    pushExactWithdraw(acts, spec, secBank.slot, step.count - haveSec, secBank.count);
+   } else if (step.count === 14 && haveSec === 0) {
+    // Withdraw remaining unf (10+1+1+1+1) then Withdraw-All (-1) for sec across 2 ticks (leaving 0 leftovers).
+    pushExactWithdraw(acts, spec, unfBank.slot, step.count - haveUnf, unfBank.count);
+    acts.push(spec.direct({ type: 'bankWithdraw', slot: secBank.slot, amount: -1, reason: 'SDK' }));
    } else {
     pushExactWithdraw(acts, spec, unfBank.slot, step.count - haveUnf, unfBank.count);
     pushExactWithdraw(acts, spec, secBank.slot, step.count - haveSec, secBank.count);
@@ -1085,6 +1127,7 @@ export async function runHerbloreSpecialist(
    deadline,
    () => fastInProcessHerbloreTrade(spec, helpers[0]!, HERBLORE_STARTER_BATCH.give.map(g => g.id), deadline),
    () => fastInProcessHerbloreTrade(spec, helpers[1]!, notedBatch.give.map(g => g.id), deadline),
+   helpers[1],
   );
  } finally {
   done = true;
