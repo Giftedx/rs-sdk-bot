@@ -197,7 +197,10 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
                 intentionalRelog = true;
                 if (skill !== 'Ranged') {
                     void att.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
-                    void att.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+                    // Attack has styleCom === null so it fits incRef within USER_EVENT.limit=5; Strength/Defence have 4 total events.
+                    if (styleCom === null) {
+                        void att.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+                    }
                 }
                 if (styleCom !== null) {
                     void att.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });

@@ -85,8 +85,12 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
         await makeBot(mageName, {
             position: { ...KEEP_SPOT },
             skills: { Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10, Prayer: 43, Magic: 44 },
+            equipment: [
+                { id: 1387, count: 1, slot: 3 }, // Staff of fire (unlimited fire runes + +10 magic attack)
+                { id: 579, count: 1, slot: 0 },  // Wizard hat (+2 magic attack)
+                { id: 1727, count: 1, slot: 2 }, // Amulet of magic (+10 magic attack)
+            ],
             inventory: [
-                { id: 554, count: 5000 }, // Fire
                 { id: 556, count: 5000 }, // Air
                 { id: 555, count: 5000 }, // Water
                 { id: 557, count: 5000 }, // Earth

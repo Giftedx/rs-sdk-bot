@@ -3282,10 +3282,10 @@
        "skill": "attack",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 1163.8,
-        "realistic": 1013.9,
+        "floor": 1379.6,
+        "realistic": 1379.6,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-attack seeds 7/8/9: 998,567/858=1163.8, 998,675/926=1078.5, 999,750/986=1013.9 XP/tick (1->99 full run with Strength 99, Rune 2h, 5 Combat-75 tanks)"
+        "source": "hosted CI 45515236383 scripts/measure/haggis-stage-pvp-combat.ts attack=640t (Attack 68->99, 583 swings, 882,970 XP, 1,379.6 XP/t, Rune 2h + Ultimate Strength + Incredible Reflexes across 5 Combat-101 1-Def tanks at Deserted Keep)"
        },
        "side": {
         "hitpoints": 0.333

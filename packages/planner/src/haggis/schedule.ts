@@ -248,6 +248,10 @@ export function scheduleOverall(boards: Board[], activities: Activity[], opts: S
     pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, false, undefined, true);
     pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, true);
     pushIfNew(allSkillsChoice.route, OVERALL_ALL_SKILLS, true, undefined, true);
+    pushIfNew(best.route, OVERALL_ALL_SKILLS, false, undefined, false, false);
+    pushIfNew(best.route, OVERALL_ALL_SKILLS, false);
+    pushIfNew(best.route, OVERALL_ALL_SKILLS, false, undefined, true, false);
+    pushIfNew(best.route, OVERALL_ALL_SKILLS, false, undefined, true);
     pushIfNew(best.route, OVERALL_ALL_SKILLS, true);
     pushIfNew(best.route, OVERALL_ALL_SKILLS, true, undefined, true);
     for (const c of candidates) if (finish(c) < finish(best)) best = c;

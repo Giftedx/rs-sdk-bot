@@ -18,6 +18,8 @@ import { burstTradeHost, countItem, findLocBy, ITEM_IDS, waitUntil } from '../fa
 
 const NATURE_STAND = { x: 2400, z: 4838, level: 0 } as const;
 const NATURE_ALTAR_ID = 2486;
+const LAW_STAND = { x: 2464, z: 4830, level: 0 } as const;
+const LAW_ALTAR_ID = 2485;
 const PACKS = 6;
 
 function ensurePackedGameAssets(): void {
@@ -28,7 +30,7 @@ function ensurePackedGameAssets(): void {
     if (res.exitCode !== 0 || !existsSync(packed)) throw Error(`failed packing rs-sdk game assets (exit=${res.exitCode})`);
 }
 
-async function craftNatureAltar(spec: Session, deadlineTick: number): Promise<void> {
+async function craftAltar(spec: Session, altarId: number, deadlineTick: number): Promise<void> {
     while (spec.tick() < deadlineTick) {
         if (countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) return;
         const st = spec.sdk.getState();
@@ -37,7 +39,7 @@ async function craftNatureAltar(spec: Session, deadlineTick: number): Promise<vo
             await tick(spec, 1);
             continue;
         }
-        const altar = findLocBy(spec, l => l.id === NATURE_ALTAR_ID || /altar/i.test(l.name));
+        const altar = findLocBy(spec, l => l.id === altarId || /altar/i.test(l.name));
         if (altar) {
             const sentTick = spec.tick();
             await spec.direct({ type: 'interactLoc', x: altar.x, z: altar.z, locId: altar.id, optionIndex: 1, reason: 'SDK' });
@@ -59,21 +61,18 @@ async function craftNatureAltar(spec: Session, deadlineTick: number): Promise<vo
             await tick(spec, 1);
         }
     }
-    throw Error('craftNatureAltar exceeded cap');
+    throw Error(`craftAltar(${altarId}) exceeded cap`);
 }
 
-async function main(): Promise<void> {
-    const freeGiB = freemem() / 2 ** 30;
-    if (freeGiB < PRACTICE_STARTUP_GB) {
-        throw Error(`haggis-stage-rc needs ${PRACTICE_STARTUP_GB} GiB free (currently ${freeGiB.toFixed(1)} GiB)`);
-    }
-    ensurePackedGameAssets();
-    process.env.SIM_LOCKSTEP = '1';
-    configureSpecialistGuardEnv();
-    process.env.DEMO_OK = '';
-
-    const crafterName = runBotName('hrc', 1);
-    const runnerNames = Array.from({ length: PACKS }, (_, i) => runBotName('hrc', i + 2));
+async function measureAltar(
+    label: string,
+    stand: { x: number; z: number; level: number },
+    altarId: number,
+    rcLevel: number,
+): Promise<{ ticks: number; tPerPack: number; xpGained: number; xpPerTick: number }> {
+    const tag = label.slice(0, 3).toLowerCase();
+    const crafterName = runBotName(`hrc${tag}`, 1);
+    const runnerNames = Array.from({ length: PACKS }, (_, i) => runBotName(`hrc${tag}`, i + 2));
     const allNames = [crafterName, ...runnerNames];
     const botsDir = join(rsSdkRoot(), 'bots');
     const cleanup = () => {
@@ -83,8 +82,6 @@ async function main(): Promise<void> {
         }
     };
     cleanup();
-
-    const stack = await startIsolatedStack();
     const sessions: Session[] = [];
     try {
         const makeBot = async (name: string, preset: Parameters<typeof applyPreset>[1]) => {
@@ -92,20 +89,18 @@ async function main(): Promise<void> {
             pointBotAt(created.envPath, ISOLATED.engine, ISOLATED.gateway, 'localhost');
             await applyPreset(name, { varps: { 29: 2, 31: 100, 159: 12, 173: 1, 281: 1000 }, ...preset });
         };
-
         await makeBot(crafterName, {
-            position: { ...NATURE_STAND },
-            skills: { Runecraft: 44 },
+            position: { ...stand },
+            skills: { Runecraft: rcLevel },
             inventory: [],
         });
         for (let i = 0; i < runnerNames.length; i++) {
             await makeBot(runnerNames[i]!, {
-                position: { x: NATURE_STAND.x + (i % 2 === 0 ? 1 : -1), z: NATURE_STAND.z, level: 0 },
-                skills: { Runecraft: 44 },
+                position: { x: stand.x + (i % 2 === 0 ? 1 : -1), z: stand.z, level: 0 },
+                skills: { Runecraft: rcLevel },
                 inventory: Array.from({ length: 27 }, () => ({ id: ITEM_IDS.blankrune, count: 1 })),
             });
         }
-
         const openQuiet = (n: string) => openBot(n, { onStop: async () => {}, onSessionEnd: async () => {} });
         const crafter = await openQuiet(crafterName);
         sessions.push(crafter);
@@ -126,22 +121,44 @@ async function main(): Promise<void> {
                 giveIds: [ITEM_IDS.blankrune],
                 deadlineTick: deadline,
             });
-            await craftNatureAltar(crafter, deadline);
-            console.log(`PHASE rc pack=${i + 1} ticks=${crafter.tick() - t0} xp=${xp(crafter, 'Runecraft') - xp0}`);
+            await craftAltar(crafter, altarId, deadline);
         }
 
         const ticks = crafter.tick() - t0;
         const xpGained = xp(crafter, 'Runecraft') - xp0;
-        const ticksPerPack = ticks / PACKS;
+        const tPerPack = ticks / PACKS;
         const xpPerTick = xpGained / Math.max(1, ticks);
-        console.log(
-            `STAGE_RC nature=${ticks}t(packs=${PACKS},tPerPack=${ticksPerPack.toFixed(2)},xp=${xpGained},xpPerTick=${xpPerTick.toFixed(2)})`,
-        );
         await Promise.all(sessions.map(s => logoutSession(s).catch(() => {})));
+        return { ticks, tPerPack, xpGained, xpPerTick };
     } finally {
         await closeWithin(sessions, 3000).catch(() => {});
-        await stack.stop().catch(() => {});
         cleanup();
+    }
+}
+
+async function main(): Promise<void> {
+    const freeGiB = freemem() / 2 ** 30;
+    if (freeGiB < PRACTICE_STARTUP_GB) {
+        throw Error(`haggis-stage-rc needs ${PRACTICE_STARTUP_GB} GiB free (currently ${freeGiB.toFixed(1)} GiB)`);
+    }
+    ensurePackedGameAssets();
+    process.env.SIM_LOCKSTEP = '1';
+    configureSpecialistGuardEnv();
+    process.env.DEMO_OK = '';
+
+    const stack = await startIsolatedStack();
+    try {
+        const nature = await measureAltar('nature', NATURE_STAND, NATURE_ALTAR_ID, 44);
+        console.log(`PHASE rc nature=${nature.ticks}t(packs=${PACKS},tPerPack=${nature.tPerPack.toFixed(2)},xp=${nature.xpGained},xpPerTick=${nature.xpPerTick.toFixed(2)})`);
+        const law = await measureAltar('law', LAW_STAND, LAW_ALTAR_ID, 54);
+        console.log(`PHASE rc law=${law.ticks}t(packs=${PACKS},tPerPack=${law.tPerPack.toFixed(2)},xp=${law.xpGained},xpPerTick=${law.xpPerTick.toFixed(2)})`);
+        console.log(
+            `STAGE_RC`
+            + ` nature=${nature.ticks}t(packs=${PACKS},tPerPack=${nature.tPerPack.toFixed(2)},xp=${nature.xpGained},xpPerTick=${nature.xpPerTick.toFixed(2)})`
+            + ` law=${law.ticks}t(packs=${PACKS},tPerPack=${law.tPerPack.toFixed(2)},xp=${law.xpGained},xpPerTick=${law.xpPerTick.toFixed(2)})`,
+        );
+    } finally {
+        await stack.stop().catch(() => {});
     }
 }
 
