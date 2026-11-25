@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-    clearEscortRelease, createEscortTracker, ESCORT_DEAD_TICKS, ESCORT_DEATH_GRACE, ESCORT_WAIT_TICKS, escortGate, escortGateCheck, escortReleased,
+    clearEscortRelease, createEscortTracker, ESCORT_DEAD_TICKS, ESCORT_DEATH_GRACE, ESCORT_WAIT_TICKS, escortGate, escortGateCheck, escortHolding, escortReleased,
     escortReleasePath, escortSuppression, gangStatus, readEscortState, releaseEscort, writeEscortState, type EscortState,
 } from '../src/pvp/escort';
 import { applySquadStallTicks } from '../src/pvp/pk-squad-stall';
@@ -167,5 +167,14 @@ describe('squad side of the hold', () => {
         const env4: Record<string, string | undefined> = {};
         applySquadStallTicks(env4, ['bun', 'scripts/pk-squad.ts', 'a']);
         expect(Number(env4.STALL_TICKS)).toBeGreaterThanOrEqual(900);
+    });
+});
+
+describe('escortHolding', () => {
+    test('the published hold ends at the hold deadline, before the retreat that follows it', () => {
+        expect(escortHolding(false, 99, 100)).toBe(true);
+        expect(escortHolding(false, 100, 100)).toBe(false);
+        expect(escortHolding(false, 140, 100)).toBe(false);
+        expect(escortHolding(true, 50, 100)).toBe(false);
     });
 });

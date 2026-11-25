@@ -43,6 +43,9 @@ export const ESCORT_MAX_AGE_MS = 30_000;
 // The longest wait of the gate. It stays under the 900-tick stall limit of a session (packages/core/src/bot/rules.ts).
 export const ESCORT_WAIT_TICKS = 750;
 
+/** The published hold. It ends at the hold deadline (MAX_MINUTES), not when the retreat after it ends: members still count as alive until they leave the Wilderness, so a later end would open the gate while the escort leaves. */
+export const escortHolding = (stopped: boolean, tick: number, deadline: number): boolean => !stopped && tick < deadline;
+
 /** The status of one gang account at `tick`: present when the view or a fresh world feed shows it in the Wilderness, dead after a kill line of ours, else away. */
 export function gangStatus(o: {
     tick: number; diedTick: number | null; view: EscortSighting | null; radar: { fresh: boolean; at: { x: number; z: number } | null };

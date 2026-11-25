@@ -39,7 +39,7 @@ import { killFeed, settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './hunt-kits';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../../../core/src/pvp-deaths';
 import { attackStyleOfAnim, holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch, threatOptions } from './pk-threat';
-import { clearEscortRelease, createEscortTracker, ESCORT_EVERY_TICKS, ESCORT_MIN_SQUAD, escortReleased, escortReleasePath, writeEscortState } from './escort';
+import { clearEscortRelease, createEscortTracker, ESCORT_EVERY_TICKS, ESCORT_MIN_SQUAD, escortHolding, escortReleased, escortReleasePath, writeEscortState } from './escort';
 type CombatStyle = NonNullable<ReturnType<typeof protectOf>>;
 import { accountServer, accountServerBeforeLogin, connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './wild-rules';
 import { GOD_LOADOUTS } from '../../../core/src/pk-kits/god-specs';
@@ -2334,7 +2334,7 @@ export async function runPkSquadCli(
                 if (dropped.has(q.name)) continue;
                 for (const p of q.sdk.getState()?.nearbyPlayers ?? []) if (targets.has(p.name.toLowerCase())) escort.sight(p.name, p.x, p.z, tick, 'view');
             }
-            if (tick % every === 0) writeEscort(tick, !stopped());
+            if (tick % every === 0) writeEscort(tick, escortHolding(stopped(), tick, deadline));
         });
         writeEscort(squad[0]!.tick(), true);
         log(`SQUAD escort hold: state ${escortPath}, release ${releasePath}`);
