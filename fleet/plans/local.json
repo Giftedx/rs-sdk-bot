@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795565856027,
+ "at": 1795566712851,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,6 +22,22 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:hiltsdeep:item:556",
+    "BATCH_UNITS": "923"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:556",
+   "role": "army"
   }
  ],
  "army": [
@@ -53,7 +69,6 @@
   "pocketpool",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
