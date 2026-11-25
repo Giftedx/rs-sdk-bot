@@ -1,0 +1,24 @@
+{
+ "id": "1795607892528-mmsmk1232-masterbaiter-cd637b69ae7cf49c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "Masterbaiter",
+ "item": "Dragonhide chaps",
+ "count": 1,
+ "itemId": 2497,
+ "start": 1795607892528,
+ "end": 1795612092528,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

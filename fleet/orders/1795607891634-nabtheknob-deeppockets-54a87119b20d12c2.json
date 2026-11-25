@@ -1,0 +1,24 @@
+{
+ "id": "1795607891634-nabtheknob-deeppockets-54a87119b20d12c2",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Deeppockets",
+ "item": "Adamant platelegs",
+ "count": 1,
+ "itemId": 1073,
+ "start": 1795607891634,
+ "end": 1795612091634,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

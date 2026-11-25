@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795607463349-2",
  "account": "Unsheathed",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "fbba37bc-57e4-40d6-a39c-26d1dc72a5dd",
- "count": 0,
- "ok": false,
- "at": 1795607755485,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795607815819,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795607815066
+ },
+ "logout": {
+  "attemptId": "1795607755853-0000009296-0000000001",
+  "at": 1795607815809,
+  "sha256": "43224d53eb51019995476dd44f8f96a84ac8e71fbbf9b18442c06674fb943e8b"
+ },
+ "screen": true
 }

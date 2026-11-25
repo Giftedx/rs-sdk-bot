@@ -1,0 +1,24 @@
+{
+ "id": "1795607892018-nabtheknob-knightstick-ea03c96246cda12c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Knightstick",
+ "item": "Adamant platelegs",
+ "count": 1,
+ "itemId": 1073,
+ "start": 1795607892018,
+ "end": 1795612092018,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
