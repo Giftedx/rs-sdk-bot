@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795623282543-4",
  "account": "CoinCock",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Staff of air",
  "requested": 1,
  "claim": "ed7a625c-6295-459d-bdf7-9a2df4bc0be7",
- "count": 0,
- "ok": false,
- "at": 1795623659385,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795623674084,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795623673182
+ },
+ "logout": {
+  "attemptId": "1795623659396-0000027620-0000000001",
+  "at": 1795623673912,
+  "sha256": "b8e9e2b900a5c43a956ace7cc2f0e0f61db0df8d70b25099d66b13153ad3d4c4"
+ },
+ "screen": true
 }
