@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795572280845-fishandchips-shaftsinker-b9b31764680d469f",
  "account": "FishAndChips",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "b4b6ac01-4a0e-4abd-be3a-6e0017279048",
  "count": 0,
  "ok": false,
- "at": 1795572448138,
- "detail": "trade claimed"
+ "at": 1795572647806,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795572448149-0000029584-0000000001",
+  "at": 1795572647792,
+  "sha256": "636324b9b1fb346b5a31b34ad957e82dbde07279c4e7654b53b61212768a6e41"
+ },
+ "screen": false
 }
