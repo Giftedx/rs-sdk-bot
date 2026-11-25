@@ -604,19 +604,10 @@ async function craftAtCastleWarsBank(
     continue;
    }
    if (gems.length > 0) break;
-   // Keep 1 cut opal, 1 cut sapphire, and the ring alongside chisel as 3 spacer slots so subsequent
-   // pure-dragonstone CW cycles fit 24 gems (6 ticks/cycle: 1 bank + 4x5 cuts + 4 cuts with openCwChest).
-   let keptOpal = false;
-   let keptSapph = false;
-   let keptRing = false;
-   const dropSlots: number[] = [];
-   for (const item of inv) {
-    if (item.id === ITEM_IDS.chisel || cycle0Notes.has(item.id) || GEM_TIER_IDS.has(item.id)) continue;
-    if (!keptOpal && item.id === ITEM_IDS.opal) { keptOpal = true; continue; }
-    if (!keptSapph && item.id === ITEM_IDS.sapphire) { keptSapph = true; continue; }
-    if (!keptRing && RING_OF_DUELING_SET.has(item.id)) { keptRing = true; continue; }
-    dropSlots.push(item.slot);
-   }
+   // Drop cut early gems / ring while level-up dialogs drain so CW chest opens with chisel + noted stacks only.
+   const dropSlots = inv
+    .filter(i => i.id !== ITEM_IDS.chisel && !cycle0Notes.has(i.id) && !GEM_TIER_IDS.has(i.id))
+    .map(i => i.slot);
    if (!dropSlots.length) break;
    const acts: Promise<unknown>[] = dropSlots
     .slice(0, dropSlots.length <= 4 ? dropSlots.length : 5)
@@ -669,35 +660,13 @@ async function craftAtCastleWarsBank(
  const hasDragonstone =
   countItem(preBankInv, 1632) > 0 ||
   preBankItems.some((b: any) => b.id === ITEM_IDS.uncut_dragonstone && b.count > 0);
- const keptSpacerIds = new Set<number>([ITEM_IDS.chisel]);
- if (hasUnnotedEarly) {
-  if (preBankInv.some(i => i.id === ITEM_IDS.opal)) keptSpacerIds.add(ITEM_IDS.opal);
-  if (preBankInv.some(i => i.id === ITEM_IDS.sapphire)) keptSpacerIds.add(ITEM_IDS.sapphire);
-  for (const rId of RING_OF_DUELING_SET) {
-   if (preBankInv.some(i => i.id === rId)) keptSpacerIds.add(rId);
-  }
- }
- const spacerSlots = preBankInv.filter(i => keptSpacerIds.has(i.id)).length;
- const cycleCap = Math.max(20, Math.min(27, 28 - spacerSlots));
- // Defer only the emerald beyond Lv 43 (diamond) and Lv 55 (dragonstone) unlocks so Cycle 0 never stalls below 55.
+ // Defer surplus emeralds beyond Lv 43 (diamond) and Lv 55 (dragonstone) unlocks to the final cycle.
  const curCraftXp = skillXp(spec, 'Crafting');
  const needFor43 = Math.ceil(Math.max(0, 19684 - curCraftXp - 3 * 2125) / 1687.5);
  const needFor55 = Math.ceil(Math.max(0, 46534 - curCraftXp - 3 * 2125 - 9 * 2687.5) / 1687.5);
  const emerInC0 = Math.min(6, Math.max(1, needFor43, needFor55));
  const emerRem = 6 - emerInC0;
- // Use 5 dragonstones in Cycle 0 when cycleCap === 24 so Cycle 0 takes 10 bank packets (2 ticks) and leaves 11x24 + 9.
- const dstoneInC0 = cycleCap <= 24 ? Math.min(5, cycleCap - emerInC0 - 3 - 9) : cycleCap - emerInC0 - 3 - 9;
- const remDstone = 277 - dstoneInC0;
- const fullDstoneCycs = Math.floor(remDstone / cycleCap);
- const tailDstone = remDstone - fullDstoneCycs * cycleCap;
- const tailDstoneWithEmer: { id: number; count: number }[] =
-  tailDstone + emerRem <= cycleCap
-   ? [
-      ...(tailDstone > 0 ? [{ id: ITEM_IDS.uncut_dragonstone, count: tailDstone }] : []),
-      ...(emerRem > 0 ? [{ id: ITEM_IDS.uncut_emerald, count: emerRem }] : []),
-     ]
-   : [{ id: ITEM_IDS.uncut_dragonstone, count: tailDstone }];
- const extraEmerCyc = tailDstone + emerRem > cycleCap && emerRem > 0 ? [[{ id: ITEM_IDS.uncut_emerald, count: emerRem }]] : [];
+ const dstoneInC0 = 15 - emerInC0;
  const optBCycles: readonly (readonly { id: number; count: number }[])[] = [
   [
    { id: ITEM_IDS.uncut_emerald, count: emerInC0 },
@@ -705,22 +674,20 @@ async function craftAtCastleWarsBank(
    { id: ITEM_IDS.uncut_diamond, count: 9 },
    { id: ITEM_IDS.uncut_dragonstone, count: dstoneInC0 },
   ],
-  ...Array.from({ length: fullDstoneCycs }, () => [{ id: ITEM_IDS.uncut_dragonstone, count: cycleCap }] as const),
-  ...(tailDstoneWithEmer.length ? [tailDstoneWithEmer] : []),
-  ...extraEmerCyc,
+  ...Array.from({ length: 9 }, () => [{ id: ITEM_IDS.uncut_dragonstone, count: 27 }] as const),
+  [
+   { id: ITEM_IDS.uncut_dragonstone, count: 277 - dstoneInC0 - 9 * 27 },
+   ...(emerRem > 0 ? [{ id: ITEM_IDS.uncut_emerald, count: emerRem }] : []),
+  ],
  ];
- const diaInC0 = Math.max(0, cycleCap - 6 - 3);
- const remDia = Math.max(0, 362 - diaInC0);
- const fullDiaCycs = Math.floor(remDia / cycleCap);
- const tailDia = remDia - fullDiaCycs * cycleCap;
  const diamondOptBCycles: readonly (readonly { id: number; count: number }[])[] = [
   [
    { id: ITEM_IDS.uncut_emerald, count: 6 },
    { id: ITEM_IDS.uncut_ruby, count: 3 },
-   ...(diaInC0 > 0 ? [{ id: ITEM_IDS.uncut_diamond, count: diaInC0 }] : []),
+   { id: ITEM_IDS.uncut_diamond, count: 18 },
   ],
-  ...Array.from({ length: fullDiaCycs }, () => [{ id: ITEM_IDS.uncut_diamond, count: cycleCap }] as const),
-  ...(tailDia > 0 ? [[{ id: ITEM_IDS.uncut_diamond, count: tailDia }]] : []),
+  ...Array.from({ length: 12 }, () => [{ id: ITEM_IDS.uncut_diamond, count: 27 }] as const),
+  [{ id: ITEM_IDS.uncut_diamond, count: 20 }],
  ];
  const cycles = hasDragonstone
   ? hasUnnotedEarly
@@ -729,11 +696,11 @@ async function craftAtCastleWarsBank(
   : hasUnnotedEarly
    ? diamondOptBCycles
    : CRAFTING_CW_DIAMOND_CYCLES;
- // Deposit any non-spacer items (including Cycle 0 notes) in 5/tick batches so bankItems is populated for Cycle 0.
+ // Deposit any non-chisel items (including Cycle 0 notes) in 5/tick batches so bankItems is populated for Cycle 0.
  while (spec.tick() < deadline) {
   const toDep = spec.sdk
    .getInventory()
-   .filter(i => !keptSpacerIds.has(i.id))
+   .filter(i => i.id !== ITEM_IDS.chisel)
    .sort((a, b) => Number(cycle0Notes.has(b.id)) - Number(cycle0Notes.has(a.id)));
   if (toDep.length === 0) break;
   const acts: Promise<unknown>[] = [];
@@ -785,14 +752,14 @@ async function craftAtCastleWarsBank(
    const seenDep = new Set<number>();
    const wantSet = new Set(cycle.map(g => g.id));
    for (const item of inv) {
-    if (keptSpacerIds.has(item.id) || wantSet.has(item.id) || seenDep.has(item.id)) continue;
+    if (item.id === ITEM_IDS.chisel || wantSet.has(item.id) || seenDep.has(item.id)) continue;
     seenDep.add(item.id);
     acts.push({ type: 'bankDeposit', slot: item.slot, amount: -1, reason: 'SDK' });
    }
    const depCount = acts.length;
    if (depCount < 5) {
-    // When all clutter fits in this tick's deposits and a single-tier cycle matches free slots (e.g. 24 or 27), Withdraw-All (-1) fetches exact count in 1 packet.
-    const freeAfterDep = 28 - inv.filter(i => keptSpacerIds.has(i.id) || wantSet.has(i.id)).length;
+    // When all clutter fits in this tick's deposits and a single-tier cycle matches free slots (e.g. 27), Withdraw-All (-1) fetches exact count in 1 packet.
+    const freeAfterDep = 28 - inv.filter(i => i.id === ITEM_IDS.chisel || wantSet.has(i.id)).length;
     for (const g of cycle) {
      const have = countItem(inv, g.id);
      const need = g.count - have;
@@ -813,7 +780,6 @@ async function craftAtCastleWarsBank(
    if (tickActs.length) await Promise.all(tickActs.map(a => spec.direct(a)));
    await waitTicks(spec, 1);
   }
-  logPhase(spec, start, `cw_cyc_${idx}_start`);
   await cutUnlockedGems(spec, target, deadline, undefined, idx < cycles.length - 1);
  }
 
