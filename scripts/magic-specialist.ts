@@ -1,5 +1,6 @@
 // Fresh-account 1-to-99 Magic specialist via Enchant ladder, East Ardougne lever, Kolodion, and 5-per-tick Charge.
 import type { Session } from '../packages/core/src/inprocess';
+import { releasePrayerGuard } from '../packages/core/src/bot';
 import { componentId } from '../packages/core/src/logout';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import {
@@ -48,6 +49,7 @@ export const ENCHANT_TIERS: readonly EnchantTier[] = [
  { spell: 'magic:enchant_lvl2', component: componentId('magic:enchant_lvl2'), level: 27, ringId: ITEM_IDS.emerald_ring, xp: 925 },
  { spell: 'magic:enchant_lvl3', component: componentId('magic:enchant_lvl3'), level: 49, ringId: ITEM_IDS.ruby_ring, xp: 1475 },
  { spell: 'magic:enchant_lvl4', component: componentId('magic:enchant_lvl4'), level: 57, ringId: ITEM_IDS.diamond_ring, xp: 1675 },
+ { spell: 'magic:enchant_lvl5', component: componentId('magic:enchant_lvl5'), level: 68, ringId: ITEM_IDS.dragonstone_ring, xp: 1950 },
 ];
 
 export interface MagicBatchPlan {
@@ -56,69 +58,72 @@ export interface MagicBatchPlan {
 }
 
 export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
- // Batch 0 (28 slots total): staff(1) + 5 runes + 12 sapphire + 9 emerald rings + 1 shark
+ // Batch 0 (28 slots): staff(1) + 5 runes + 8 dragon bones (buried during Wind Strike) + 12 sapphire + 1 emerald + 1 shark
  {
   give: [
    { id: ITEM_IDS.staff_of_fire, count: 1 },
    { id: ITEM_IDS.mindrune, count: 25 },
    { id: ITEM_IDS.cosmicrune, count: 150 },
-   { id: ITEM_IDS.waterrune, count: 20 },
+   { id: ITEM_IDS.waterrune, count: 650 },
    { id: ITEM_IDS.airrune, count: 1500 },
-   { id: ITEM_IDS.earthrune, count: 400 },
+   { id: ITEM_IDS.earthrune, count: 1050 },
+   { id: ITEM_IDS.dragon_bones, count: 8 },
    { id: ITEM_IDS.sapphire_ring, count: 12 },
-   { id: ITEM_IDS.emerald_ring, count: 9 },
+   { id: ITEM_IDS.emerald_ring, count: 1 },
    { id: ITEM_IDS.shark, count: 1 },
   ],
   returnIds: [],
  },
- // Batch 1 (18 emerald -> 27 total Lv 49 + 5 ruby; returns recoil/dueling)
+ // Batch 1 (24 emerald -> 25 emerald total)
  {
   give: [
-   { id: ITEM_IDS.emerald_ring, count: 18 },
-   { id: ITEM_IDS.ruby_ring, count: 5 },
+   { id: ITEM_IDS.emerald_ring, count: 24 },
   ],
-  returnIds: [ITEM_IDS.ring_of_recoil, ITEM_IDS.ring_of_dueling_8],
+  returnIds: [],
  },
- // Batch 2 (13 ruby -> 18 total Lv 57 + 10 diamond; returns dueling/forging)
+ // Batch 2 (2 emerald -> 27 total Lv 49 + 16 ruby -> Lv 57 + 6 diamond)
  {
   give: [
-   { id: ITEM_IDS.ruby_ring, count: 13 },
-   { id: ITEM_IDS.diamond_ring, count: 10 },
+   { id: ITEM_IDS.emerald_ring, count: 2 },
+   { id: ITEM_IDS.ruby_ring, count: 16 },
+   { id: ITEM_IDS.diamond_ring, count: 6 },
   ],
-  returnIds: [ITEM_IDS.ring_of_dueling_8, ITEM_IDS.ring_of_forging],
+  returnIds: [],
  },
- // Batch 3 (23 diamond -> 33 total; returns forging/life)
- {
-  give: [{ id: ITEM_IDS.diamond_ring, count: 23 }],
-  returnIds: [ITEM_IDS.ring_of_forging, ITEM_IDS.ring_of_life],
- },
- // Batch 4 (3 diamond -> 36 total Lv 68 + 21 ruby; returns life)
+ // Batch 3 (24 diamond -> 30 total)
  {
   give: [
-   { id: ITEM_IDS.diamond_ring, count: 3 },
-   { id: ITEM_IDS.ruby_ring, count: 21 },
+   { id: ITEM_IDS.diamond_ring, count: 24 },
   ],
-  returnIds: [ITEM_IDS.ring_of_life],
+  returnIds: [],
  },
- // Batch 5 (after dropping earth + life: 25 ruby; returns forging)
- {
-  give: [{ id: ITEM_IDS.ruby_ring, count: 25 }],
-  returnIds: [ITEM_IDS.ring_of_forging],
- },
- // Batch 6 (8 ruby -> 72 total ~197.3k XP Lv 75+ + Mage Arena combat & 38 Prayer kit = 25 slots; returns forging)
+ // Batch 4 (7 diamond -> 37 total + 10 dragonstone)
  {
   give: [
-   { id: ITEM_IDS.ruby_ring, count: 8 },
-   { id: ITEM_IDS.lawrune, count: 12 },
-   { id: ITEM_IDS.bloodrune, count: 850 },
+   { id: ITEM_IDS.diamond_ring, count: 7 },
+   { id: ITEM_IDS.dragonstone_ring, count: 10 },
+  ],
+  returnIds: [],
+ },
+ // Batch 5 (7 dragonstone -> 17 enchanted before Mage Arena)
+ {
+  give: [
+   { id: ITEM_IDS.dragonstone_ring, count: 7 },
+  ],
+  returnIds: [],
+ },
+ // Batch 6 (24 slots -> 28 on spec with 4 runes: 18 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
+ {
+  give: [
+   { id: ITEM_IDS.dragonstone_ring, count: 18 },
+   { id: ITEM_IDS.lawrune, count: 10 },
+   { id: ITEM_IDS.bloodrune, count: 1200 },
    { id: ITEM_IDS.knife, count: 1 },
-   { id: ITEM_IDS.dragon_bones, count: 8 },
-   { id: ITEM_IDS.prayer_potion_4, count: 2 },
+   { id: ITEM_IDS.prayer_potion_4, count: 1 },
+   { id: ITEM_IDS.magic_potion_4, count: 1 },
    { id: ITEM_IDS.amulet_of_magic, count: 1 },
-   { id: ITEM_IDS.super_energy_4, count: 1 },
-   { id: ITEM_IDS.shark, count: 2 },
   ],
-  returnIds: [ITEM_IDS.ring_of_forging],
+  returnIds: [],
  },
 ];
 
@@ -143,11 +148,12 @@ function aggregateMagicSupply(): SupplyEntry[] {
   [ITEM_IDS.emerald_ring, 'Emerald ring'],
   [ITEM_IDS.ruby_ring, 'Ruby ring'],
   [ITEM_IDS.diamond_ring, 'Diamond ring'],
+  [ITEM_IDS.dragonstone_ring, 'Dragonstone ring'],
   [ITEM_IDS.knife, 'Knife'],
   [ITEM_IDS.dragon_bones, 'Dragon bones'],
   [ITEM_IDS.prayer_potion_4, 'Prayer potion(4)'],
+  [ITEM_IDS.magic_potion_4, 'Magic potion(4)'],
   [ITEM_IDS.amulet_of_magic, 'Amulet of magic'],
-  [ITEM_IDS.super_energy_4, 'Super energy(4)'],
   [ITEM_IDS.shark, 'Shark'],
  ]);
  return [...counts.entries()].map(([itemId, count]) => ({
@@ -169,13 +175,28 @@ async function eatSharkIfLow(spec: Session): Promise<boolean> {
 async function castWindStrikeToLevel7(spec: Session, deadline: number): Promise<void> {
  const windStrike = componentId('magic:wind_strike');
  const isPassiveTarget = (name: string) => /^(chicken|rat|giant rat)$/i.test(name);
+ let prevCastXp = skillXp(spec, 'Magic');
+ let lastCastTick = -99;
  while (spec.tick() < deadline) {
   if (skillLevel(spec, 'Magic') >= 7) break;
+  const nowXp = skillXp(spec, 'Magic');
+  if (nowXp > prevCastXp) {
+   prevCastXp = nowXp;
+   lastCastTick = spec.tick() - 1;
+  }
   const npcs = spec.sdk.getNearbyNpcs();
   await eatSharkIfLow(spec);
   const st = spec.sdk.getState();
   if (st?.dialog?.isOpen) {
    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+  }
+  const bone = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.dragon_bones);
+  const sinceCast = spec.tick() - lastCastTick;
+  // Bury up to 2 dragon bones inside each 5-tick Wind Strike combat cooldown for zero extra Prayer 37 ticks.
+  if (bone && sinceCast >= 1 && sinceCast <= 3) {
+   await spec.direct({ type: 'useInventoryItem', slot: bone.slot, optionIndex: 1, reason: 'SDK' });
+   await waitTicks(spec, 1);
+   continue;
   }
   const candidates = npcs.filter(
    n =>
@@ -184,13 +205,23 @@ async function castWindStrikeToLevel7(spec: Session, deadline: number): Promise<
   );
   const reachable = candidates.filter(n => n.reachable !== false);
   const npc = (reachable.length ? reachable : candidates).sort(
-   (a, b) => (isPassiveTarget(a.name) ? 0 : 1) - (isPassiveTarget(b.name) ? 0 : 1) || a.distance - b.distance,
+   (a, b) => a.distance - b.distance || (isPassiveTarget(a.name) ? 0 : 1) - (isPassiveTarget(b.name) ? 0 : 1),
   )[0];
   if (npc) {
    await spec.direct({ type: 'spellOnNpc', npcIndex: npc.index, spellComponent: windStrike, reason: 'SDK' });
   } else {
-   await spec.direct({ type: 'walkTo', x: 3236, z: 3233, running: true, reason: 'SDK' });
+   await spec.direct({ type: 'walkTo', x: LUMBRIDGE_SAFE_SPOT.x, z: LUMBRIDGE_SAFE_SPOT.z, running: true, reason: 'SDK' });
   }
+  await waitTicks(spec, 1);
+ }
+ // Finish any remaining Batch 0 dragon bones before Batch 1 drops junk so Prayer reaches 37 for Protect from Magic.
+ while (spec.tick() < deadline) {
+  const bone = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.dragon_bones);
+  if (!bone) break;
+  const acts: Promise<unknown>[] = [];
+  if (spec.sdk.getState()?.dialog?.isOpen) acts.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+  acts.push(spec.direct({ type: 'useInventoryItem', slot: bone.slot, optionIndex: 1, reason: 'SDK' }));
+  await Promise.all(acts);
   await waitTicks(spec, 1);
  }
 }
@@ -280,21 +311,13 @@ async function keepProtectedInArena(spec: Session): Promise<void> {
   const shark = inv.find(i => i.id === ITEM_IDS.shark);
   if (shark) await spec.direct({ type: 'useInventoryItem', slot: shark.slot, optionIndex: 1, reason: 'SDK' });
  }
+ if ((spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) < 75) {
+  const mPot = inv.find(i => [ITEM_IDS.magic_potion_4, 3042, 3044, 3046].includes(i.id));
+  if (mPot) await spec.direct({ type: 'useInventoryItem', slot: mPot.slot, optionIndex: 1, reason: 'SDK' });
+ }
 }
 
 async function completeMageArena(spec: Session, start: number, deadline: number): Promise<void> {
- let lastEnergyTick = -10;
- const superEnergyIds = [ITEM_IDS.super_energy_4, 3018, 3020, 3022];
- const offEnergy = spec.onTick(() => {
-  if (spec.tick() - lastEnergyTick < 3) return;
-  const st = spec.sdk.getState();
-  if ((st?.player?.runEnergy ?? 100) >= 45 || st?.dialog?.isOpen) return;
-  const pot = spec.sdk.getInventory().find(i => superEnergyIds.includes(i.id));
-  if (!pot) return;
-  lastEnergyTick = spec.tick();
-  void spec.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' }).catch(() => {});
- });
- try {
  const camelot = componentId('magic:camelot_teleport');
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
@@ -310,9 +333,21 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
 
  // East Ardougne Wilderness lever -> Deserted Keep
  const camelotWalker = await sessionWalker(spec);
- const ardyWalk = await walkPath(camelotWalker, [{ x: ARDOUGNE_LEVER.x, z: ARDOUGNE_LEVER.z, tol: 2 }], {
-  maxTicks: Math.max(10, Math.min(130, deadline - spec.tick())),
- });
+ logPhase(spec, start, 'magic_cam_tele');
+ const ardyWalk = await walkPath(
+  camelotWalker,
+  [
+   { x: 2749, z: 3458, tol: 2 },
+   { x: 2712, z: 3451, tol: 2 },
+   { x: 2690, z: 3430, tol: 2 },
+   { x: 2664, z: 3406, tol: 2 },
+   { x: 2612, z: 3393, tol: 2 },
+   { x: 2582, z: 3351, tol: 2 },
+   { x: 2580, z: 3321, tol: 2 },
+   { x: ARDOUGNE_LEVER.x, z: ARDOUGNE_LEVER.z, tol: 1 },
+  ],
+  { maxTicks: Math.max(10, Math.min(125, deadline - spec.tick())) },
+ );
  if (!ardyWalk.ok && !nearTile(spec, ARDOUGNE_LEVER.x, ARDOUGNE_LEVER.z, 2)) {
   await navigateWorld(spec, ARDOUGNE_LEVER.x, ARDOUGNE_LEVER.z, 0, Math.max(10, deadline - spec.tick()));
  }
@@ -335,14 +370,24 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
  const keepWalker = await sessionWalker(spec);
  await walkPath(keepWalker, [{ x: 3158, z: 3950, tol: 1 }], { maxTicks: Math.max(10, Math.min(40, deadline - spec.tick())) });
  await slashWebAt(spec, 3158, 3951, 3158, 3952, () => (playerPos(spec)?.worldZ ?? 0) >= 3952, deadline);
- const arenaWalk = await walkPath(keepWalker, [{ x: MAGE_ARENA_DOOR_AREA.x, z: MAGE_ARENA_DOOR_AREA.z, tol: 1 }], {
-  maxTicks: Math.max(10, Math.min(55, deadline - spec.tick())),
- });
+ const arenaWalk = await walkPath(
+  keepWalker,
+  [
+   { x: 3129, z: 3957, tol: 2 },
+   { x: 3111, z: 3955, tol: 2 },
+   { x: MAGE_ARENA_DOOR_AREA.x, z: MAGE_ARENA_DOOR_AREA.z, tol: 1 },
+  ],
+  { maxTicks: Math.max(10, Math.min(40, deadline - spec.tick())) },
+ );
  if (!arenaWalk.ok && !nearTile(spec, MAGE_ARENA_DOOR_AREA.x, MAGE_ARENA_DOOR_AREA.z, 2)) {
   await navigateWorld(spec, MAGE_ARENA_DOOR_AREA.x, MAGE_ARENA_DOOR_AREA.z, 0, Math.max(10, deadline - spec.tick()));
  }
  await slashWebAt(spec, 3095, 3957, 3094, 3957, () => (playerPos(spec)?.worldX ?? 9999) <= 3094, deadline);
  await slashWebAt(spec, 3093, 3957, 3092, 3957, () => (playerPos(spec)?.worldX ?? 9999) <= 3092, deadline);
+ const knifeDropSlot = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.knife)?.slot;
+ if (knifeDropSlot !== undefined) {
+  void spec.direct({ type: 'dropItem', slot: knifeDropSlot, reason: 'SDK' });
+ }
 
  while (spec.tick() < deadline && (playerPos(spec)?.worldZ ?? 0) < 4500) {
   const ladder = findLocBy(spec, l => l.id === 2871 || /ladder/i.test(l.name));
@@ -366,17 +411,18 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
  }
  logPhase(spec, start, 'magic_kolodion_arena');
 
- // Fight all 5 Kolodion forms with Fire Wave + Protect from Magic
+ // Fight all 5 Kolodion forms with Fire Blast/Wave + Protect from Magic, enchanting rings inside the 5-tick cooldown.
  const fireWave = componentId('magic:fire_wave');
  const fireBlast = componentId('magic:fire_blast');
+ const enchantLvl5 = ENCHANT_TIERS[4]!;
  let prevCastXp = skillXp(spec, 'Magic');
  let lastCastXpTick = -99;
+ let lastEnchantSentTick = -99;
  while (spec.tick() < deadline && (playerPos(spec)?.worldZ ?? 0) < 4500) {
   await keepProtectedInArena(spec);
   const nowXp = skillXp(spec, 'Magic');
   if (nowXp > prevCastXp) {
    prevCastXp = nowXp;
-   // Observation XP updates 1 tick after cast execution, so subtract 1 tick to sustain exact 5-tick cadence.
    lastCastXpTick = spec.tick() - 1;
   }
   const acts: Promise<unknown>[] = [];
@@ -384,13 +430,21 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
    acts.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
   }
   const boss = spec.sdk.getNearbyNpcs().find(n => [907, 908, 909, 910, 911].includes(n.id) || (/kolodion/i.test(n.name) && n.optionsWithIndex.some(o => /attack/i.test(o.text))));
-  if (boss && spec.tick() - lastCastXpTick >= 4) {
-   const spell = skillLevel(spec, 'Magic') >= 75 ? fireWave : fireBlast;
+  const sinceCast = spec.tick() - lastCastXpTick;
+  if (boss && sinceCast >= 4) {
+   const spell = (spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) >= 75 ? fireWave : fireBlast;
    acts.push(spec.direct({ type: 'spellOnNpc', npcIndex: boss.index, spellComponent: spell, reason: 'SDK' }));
+  } else if (sinceCast === 1 && spec.tick() - lastEnchantSentTick >= 4 && skillLevel(spec, 'Magic') >= enchantLvl5.level) {
+   const dRing = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.dragonstone_ring);
+   if (dRing) {
+    lastEnchantSentTick = spec.tick();
+    acts.push(spec.direct({ type: 'spellOnItem', slot: dRing.slot, spellComponent: enchantLvl5.component, reason: 'SDK' }));
+   }
   }
   if (acts.length) await Promise.all(acts);
   await waitTicks(spec, 1);
  }
+ logPhase(spec, start, 'magic_kolodion_done');
 
  // Disable Protect from Magic once returned to cellar
  if (spec.sdk.getState()?.prayers?.activePrayers?.[PROTECT_FROM_MAGIC_INDEX]) {
@@ -410,10 +464,11 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
   }
   await waitTicks(spec, 1);
  }
+ logPhase(spec, start, 'magic_pool_done');
 
  // Path inside Chamber from Sparkling Pool (2509,4689) to Zamorak statue (2516,4720), then pray & pick up cape (2414).
- const chamberWalker = await sessionWalker(spec);
- await walkPath(chamberWalker, [{ x: 2516, z: 4718, tol: 2 }], { maxTicks: Math.max(10, Math.min(30, deadline - spec.tick())) });
+ await spec.direct({ type: 'walkTo', x: 2516, z: 4718, running: true, reason: 'SDK' });
+ await waitUntil(spec, () => nearTile(spec, 2516, 4718, 2, 0), { timeoutTicks: 25 });
 
  // Pray at Zamorak statue (2874 at 2516,4721) -> click mesbox continues -> pick up cape (2414) off ground
  while (spec.tick() < deadline && countItem(spec.sdk.getInventory(), 2414) === 0) {
@@ -423,7 +478,6 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
    await waitTicks(spec, 1);
    continue;
   }
-  await spec.sdk.scanGroundItems(5);
   const groundCape = spec.sdk.getState()?.groundItems?.find((g: any) => g.id === 2414);
   if (groundCape) {
    await spec.direct({ type: 'pickupItem', x: groundCape.x, z: groundCape.z, itemId: 2414, reason: 'SDK' });
@@ -436,15 +490,36 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
  }
 
  // Path back to Chamber Guardian (904 at 2508,4696) -> receive staff (2417, sets %magearena = 8)
- await walkPath(chamberWalker, [{ x: 2508, z: 4695, tol: 2 }], { maxTicks: Math.max(10, Math.min(30, deadline - spec.tick())) });
+ await spec.direct({ type: 'walkTo', x: 2508, z: 4695, running: true, reason: 'SDK' });
+ await waitUntil(spec, () => nearTile(spec, 2508, 4695, 2, 0), { timeoutTicks: 25 });
+ logPhase(spec, start, 'magic_guardian_start');
  while (spec.tick() < deadline && countItem(spec.sdk.getInventory(), 2417) === 0) {
+  const st = spec.sdk.getState();
   const d = spec.sdk.getDialog();
+  if (st?.interface?.isOpen) {
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   await waitTicks(spec, 1);
+   continue;
+  }
   if (d?.isOpen) {
-   if (!d.isWaiting) await spec.direct({ type: 'clickDialogOption', optionIndex: d.options[0]?.index ?? 0, reason: 'SDK' });
+   if (!d.isWaiting) {
+    const safeOpt = d.options.find((o: any) => /no thanks|charge/i.test(o.text));
+    if (d.options.some((o: any) => /what do you have to offer/i.test(o.text))) {
+     if (safeOpt) await spec.direct({ type: 'clickDialogOption', optionIndex: safeOpt.index, reason: 'SDK' });
+     else await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    } else {
+     await spec.direct({ type: 'clickDialogOption', optionIndex: d.options[0]?.index ?? 0, reason: 'SDK' });
+    }
+   }
   } else {
-   const guardian = findNpcBy(spec, n => n.id === 904 || /guardian/i.test(n.name));
-   if (guardian) await spec.direct({ type: 'interactNpc', npcIndex: guardian.index, optionIndex: 1, reason: 'SDK' });
-   else await spec.direct({ type: 'walkTo', x: 2508, z: 4695, running: true, reason: 'SDK' });
+   const groundStaff = spec.sdk.getState()?.groundItems?.find((g: any) => g.id === 2417);
+   if (groundStaff) {
+    await spec.direct({ type: 'pickupItem', x: groundStaff.x, z: groundStaff.z, itemId: 2417, reason: 'SDK' });
+   } else {
+    const guardian = findNpcBy(spec, n => n.id === 904 || /guardian/i.test(n.name));
+    if (guardian) await spec.direct({ type: 'interactNpc', npcIndex: guardian.index, optionIndex: 1, reason: 'SDK' });
+    else await spec.direct({ type: 'walkTo', x: 2508, z: 4695, running: true, reason: 'SDK' });
+   }
   }
   await waitTicks(spec, 1);
  }
@@ -452,9 +527,6 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
   await spec.direct({ type: 'closeModal', reason: 'SDK' });
  }
  logPhase(spec, start, 'magic_charge_unlocked');
- } finally {
-  offEnergy();
- }
 }
 
 async function spamChargeTo99(spec: Session, target: number, deadline: number): Promise<void> {
@@ -462,6 +534,10 @@ async function spamChargeTo99(spec: Session, target: number, deadline: number): 
  while (spec.tick() < deadline && skillLevel(spec, 'Magic') < target) {
   // charge.rs2 calls if_close on click and has zero p_delay: all 5 casts/tick resolve even over levelup modals.
   const acts: Promise<unknown>[] = [];
+  if ((spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) < 80) {
+   const magicPot = spec.sdk.getInventory().find(i => [ITEM_IDS.magic_potion_4, 3042, 3044, 3046].includes(i.id));
+   if (magicPot) acts.push(spec.direct({ type: 'useInventoryItem', slot: magicPot.slot, optionIndex: 1, reason: 'SDK' }));
+  }
   for (let i = 0; i < 5; i++) {
    acts.push(spec.direct({ type: 'clickComponent', componentId: charge, reason: 'SDK' }));
   }
@@ -476,25 +552,28 @@ async function executeMagicLoop(
  start: number,
  deadline: number,
  receiveBatch: (batch: MagicBatchPlan, index: number) => Promise<void>,
+ useSafeFoyer = false,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
+ // Mage Arena fight sends spellOnNpc/spellOnItem every tick under explicit Protect from Magic; stop auto-PrayerGuard holds.
+ await releasePrayerGuard(spec);
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
+ if (((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) !== 1) {
+  await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+ }
 
  let windTicks = 0;
  let tradeTicks = 0;
  let enchantTicks = 0;
  for (let i = 0; i < MAGIC_BATCHES.length; i++) {
   const batch = MAGIC_BATCHES[i]!;
-  if (i === 1) {
-   // Drop leftover mind/water runes and Batch 0 shark; retain ring_of_recoil and ring_of_dueling_8 to return in Batch 1.
+  if (i >= 1) {
+   // Drop finished jewellery and Batch 0 leftovers (mindrune/shark) at 5/tick so Batch 1..4 (24 rings + 4 runes) fit in 28 slots.
    await dropItemsFast(
     spec,
-    new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.earthrune, ITEM_IDS.ring_of_recoil, ITEM_IDS.ring_of_dueling_8]),
+    new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.waterrune, ITEM_IDS.earthrune]),
     deadline,
    );
-  } else if (i === 5) {
-   // Drop Earth runes and Ring of life once all 36 Diamond rings finish so Batch 5 fits 25 Ruby rings.
-   await dropItemsFast(spec, new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.ring_of_forging]), deadline);
   }
   const tr0 = spec.tick();
   await receiveBatch(batch, i);
@@ -505,16 +584,28 @@ async function executeMagicLoop(
    const w0 = spec.tick();
    await castWindStrikeToLevel7(spec, deadline);
    windTicks = spec.tick() - w0;
-   if (!nearTile(spec, LUMBRIDGE_SAFE_SPOT.x, LUMBRIDGE_SAFE_SPOT.z, 2, LUMBRIDGE_SAFE_SPOT.level)) {
-    const courtyardWalker = await sessionWalker(spec);
+   const courtyardWalker = await sessionWalker(spec);
+   if (useSafeFoyer) {
+    // Move inside Lumbridge Castle foyer (3210,3218) so wandering Giant spiders cannot interrupt Batch 1..5 trades.
+    await walkPath(
+     courtyardWalker,
+     [
+      { x: 3215, z: 3219, tol: 1 },
+      { x: 3210, z: 3218, tol: 0 },
+     ],
+     { maxTicks: Math.max(10, Math.min(25, deadline - spec.tick())) },
+    );
+   } else if (!nearTile(spec, LUMBRIDGE_SAFE_SPOT.x, LUMBRIDGE_SAFE_SPOT.z, 2, LUMBRIDGE_SAFE_SPOT.level)) {
     await walkPath(courtyardWalker, [{ x: LUMBRIDGE_SAFE_SPOT.x, z: LUMBRIDGE_SAFE_SPOT.z, tol: 1 }], {
      maxTicks: Math.max(10, Math.min(25, deadline - spec.tick())),
     });
    }
   }
-  const e0 = spec.tick();
-  await enchantHeldRings(spec, target, deadline, `batch${i}`);
-  enchantTicks += spec.tick() - e0;
+  if (i < MAGIC_BATCHES.length - 1) {
+   const e0 = spec.tick();
+   await enchantHeldRings(spec, target, deadline, `batch${i}`);
+   enchantTicks += spec.tick() - e0;
+  }
  }
 
  const amulet = spec.sdk.getInventory().find(x => x.id === ITEM_IDS.amulet_of_magic);
@@ -523,16 +614,31 @@ async function executeMagicLoop(
  const preArenaTicks = spec.tick() - start;
  logPhase(spec, start, `magic_pre_arena lvl=${skillLevel(spec, 'Magic')} pray=${skillLevel(spec, 'Prayer')}`);
 
- if (skillLevel(spec, 'Magic') < 75) throw Error(`magic < 75 (${skillLevel(spec, 'Magic')}) before Mage Arena`);
+ if (skillLevel(spec, 'Magic') < 60) throw Error(`magic < 60 (${skillLevel(spec, 'Magic')}) before Mage Arena`);
  await completeMageArena(spec, start, deadline);
  const arenaDoneTicks = spec.tick() - start;
- // If fast Kolodion damage rolls leave Magic slightly under 80, Camelot Teleports bridge the final XP cleanly.
+ // Finish any remaining dragonstone rings if Kolodion ended before Lv 76, then drink Magic potion(+4) for Charge at 80.
+ if (skillLevel(spec, 'Magic') < 76) {
+  const ePost0 = spec.tick();
+  await enchantHeldRings(spec, 76, deadline, 'postArena');
+  enchantTicks += spec.tick() - ePost0;
+ }
+ if (skillLevel(spec, 'Magic') >= 76 && (spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) < 80) {
+  const magicPot = spec.sdk.getInventory().find(i => [ITEM_IDS.magic_potion_4, 3042, 3044, 3046].includes(i.id));
+  if (magicPot) {
+   await spec.direct({ type: 'useInventoryItem', slot: magicPot.slot, optionIndex: 1, reason: 'SDK' });
+   await waitTicks(spec, 1);
+  }
+ }
+ // Fallback if still below boosted 80 Magic.
  const camelotFallback = componentId('magic:camelot_teleport');
- while (spec.tick() < deadline && skillLevel(spec, 'Magic') < 80) {
+ while (spec.tick() < deadline && (spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) < 80) {
   await spec.direct({ type: 'clickComponent', componentId: camelotFallback, reason: 'SDK' });
   await waitTicks(spec, 4);
  }
- if (skillLevel(spec, 'Magic') < 80) throw Error(`magic < 80 (${skillLevel(spec, 'Magic')}) before Charge`);
+ if ((spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) < 80) {
+  throw Error(`magic < 80 (${spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')}) before Charge`);
+ }
  await spamChargeTo99(spec, target, deadline);
 
  const level = skillLevel(spec, 'Magic');
@@ -561,19 +667,30 @@ export async function runMagicSpecialist(
  const start = spec.tick();
  const deadline = start + opts.cap;
  let done = false;
- const keepers = helpers.map(h =>
+ const keepers = helpers.map((h, idx) =>
   (async () => {
+   if (idx >= 1) {
+    const hw = await sessionWalker(h);
+    await walkPath(hw, [{ x: 3215, z: 3219, tol: 1 }, { x: 3211, z: 3218, tol: 1 }], { maxTicks: 25 }).catch(() => {});
+   }
    while (!done && h.tick() < deadline) await waitTicks(h, 1);
   })(),
  );
 
  try {
-  return await executeMagicLoop(spec, target, start, deadline, (batch, i) =>
-   burstTradeHost(spec, helpers[i]!, {
-    giveIds: batch.give.map(g => g.id),
-    returnIds: batch.returnIds,
-    deadlineTick: deadline,
-   }),
+  return await executeMagicLoop(
+   spec,
+   target,
+   start,
+   deadline,
+   (batch, i) =>
+    burstTradeHost(spec, helpers[i]!, {
+     giveIds: batch.give.map(g => g.id),
+     returnIds: batch.returnIds,
+     deadlineTick: deadline,
+     allowHelperOnSingleModal: true,
+    }),
+   true,
   );
  } finally {
   done = true;
@@ -602,6 +719,7 @@ export async function runMagicExternal(
 }
 
 if (import.meta.main) {
+ process.env.PRAYER_GUARD ??= '0';
  const cfg = parseSpecialistArgs(process.argv.slice(2), process.env, {
   cap: 1300,
   target: 99,

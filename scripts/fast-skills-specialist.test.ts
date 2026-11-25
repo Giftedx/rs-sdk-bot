@@ -136,7 +136,7 @@ test('supply bill quantities cover 1-to-99 XP and Smithing runner queue totals m
     expect(smithingById.get(ITEM_IDS.adamantite_bar)).toBe(barTotals.get(ITEM_IDS.adamantite_bar));
 
     const rcEss = RUNECRAFT_SUPPLY_BILL.find(b => b.itemId === ITEM_IDS.blankrune);
-    expect(rcEss?.count).toBe(25 + 205 * 26);
+    expect(rcEss?.count).toBe(25 + 22 * 26 + 177 * 27);
 
     const dropCounts = new Map(HERBLORE_DROP_SUPPLY_BILL.map(b => [b.itemId, b.count]));
     const dropXp =

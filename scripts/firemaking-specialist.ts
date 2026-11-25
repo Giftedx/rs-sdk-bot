@@ -45,30 +45,14 @@ export const FIREMAKING_TIERS: readonly FiremakingTier[] = [
     { name: 'magic', itemId: OBJ_MAGIC_LOGS, reqLevel: 75, xp25x: 7595 },
 ];
 
-// 165 distinct safe tiles around Lumbridge spawn (3222,3222), BFS-verified door-free from (3222,3222)
-// against collision-data.json WALK_BLOCKED and all shape !== 22 locs.
+// 160 distinct active-loc-free, danger-free tiles north of Lumbridge castle, BFS-verified door-free from (3222,3222)
+// against collision-data.json WALK_BLOCKED, active locs (map_locaddunsafe), and aggressive NPC hunt ranges.
 export const LUMBRIDGE_FM_PATH: readonly [number, number][] = [
-    [3222, 3222], [3221, 3222], [3220, 3222], [3219, 3222], [3218, 3222], [3222, 3220], [3221, 3220], [3222, 3217],
-    [3221, 3217], [3225, 3216], [3224, 3216], [3223, 3216], [3222, 3216], [3221, 3216], [3220, 3216], [3219, 3216],
-    [3218, 3216], [3220, 3211], [3219, 3211], [3218, 3211], [3220, 3210], [3219, 3210], [3218, 3210], [3217, 3207],
-    [3217, 3206], [3217, 3205], [3220, 3204], [3219, 3204], [3218, 3204], [3217, 3204], [3221, 3205], [3222, 3206],
-    [3223, 3207], [3222, 3207], [3221, 3207], [3224, 3208], [3223, 3208], [3222, 3208], [3221, 3208], [3220, 3208],
-    [3219, 3208], [3218, 3208], [3217, 3208], [3225, 3209], [3224, 3209], [3223, 3209], [3222, 3209], [3221, 3209],
-    [3220, 3209], [3219, 3209], [3218, 3209], [3217, 3209], [3225, 3212], [3224, 3212], [3223, 3212], [3222, 3212],
-    [3221, 3212], [3220, 3212], [3219, 3212], [3218, 3212], [3225, 3213], [3224, 3213], [3223, 3213], [3222, 3213],
-    [3221, 3213], [3220, 3213], [3219, 3213], [3218, 3213], [3225, 3214], [3224, 3214], [3223, 3214], [3222, 3214],
-    [3221, 3214], [3220, 3214], [3219, 3214], [3218, 3214], [3225, 3215], [3224, 3215], [3223, 3215], [3222, 3215],
-    [3221, 3215], [3220, 3215], [3219, 3215], [3218, 3215], [3225, 3210], [3224, 3210], [3223, 3210], [3225, 3211],
-    [3224, 3211], [3223, 3211], [3226, 3217], [3225, 3217], [3224, 3217], [3226, 3220], [3225, 3220], [3224, 3220],
-    [3225, 3221], [3224, 3221], [3223, 3221], [3222, 3221], [3221, 3221], [3220, 3221], [3219, 3221], [3218, 3221],
-    [3225, 3222], [3224, 3222], [3223, 3222], [3223, 3223], [3222, 3223], [3221, 3223], [3220, 3223], [3219, 3223],
-    [3218, 3223], [3220, 3226], [3219, 3226], [3218, 3226], [3220, 3227], [3219, 3227], [3218, 3227], [3219, 3228],
-    [3218, 3228], [3217, 3228], [3219, 3229], [3218, 3229], [3217, 3229], [3219, 3230], [3218, 3230], [3217, 3230],
-    [3223, 3224], [3222, 3224], [3221, 3224], [3220, 3224], [3219, 3224], [3218, 3224], [3223, 3225], [3222, 3225],
-    [3221, 3225], [3220, 3225], [3219, 3225], [3218, 3225], [3229, 3218], [3228, 3218], [3227, 3218], [3226, 3218],
-    [3225, 3218], [3224, 3218], [3223, 3218], [3222, 3218], [3221, 3218], [3220, 3218], [3219, 3218], [3218, 3218],
-    [3230, 3219], [3229, 3219], [3228, 3219], [3227, 3219], [3226, 3219], [3225, 3219], [3224, 3219], [3223, 3219],
-    [3222, 3219], [3221, 3219], [3220, 3219], [3219, 3219], [3218, 3219],
+    [3222, 3222], [3221, 3222], [3220, 3222], [3219, 3222],
+    [3228, 3254], [3227, 3254], [3226, 3254], [3225, 3254], [3224, 3254], [3223, 3254], [3222, 3254], [3221, 3254], [3220, 3254], [3219, 3254], [3218, 3254], [3217, 3254], [3216, 3254], [3215, 3254], [3214, 3254], [3213, 3254], [3212, 3254], [3211, 3254], [3210, 3254], [3209, 3254], [3208, 3254], [3207, 3254], [3206, 3254], [3205, 3254], [3204, 3254], [3203, 3254], [3202, 3254], [3201, 3254], [3200, 3254], [3199, 3254], [3198, 3254], [3197, 3254], [3196, 3254], [3195, 3254], [3194, 3254], [3193, 3254], [3192, 3254], [3191, 3254], [3190, 3254], [3189, 3254],
+    [3192, 3263], [3191, 3263], [3190, 3263], [3189, 3263], [3188, 3263], [3187, 3263], [3186, 3263], [3185, 3263], [3184, 3263], [3183, 3263], [3182, 3263], [3181, 3263], [3180, 3263], [3179, 3263], [3178, 3263], [3177, 3263], [3176, 3263], [3175, 3263], [3174, 3263], [3173, 3263], [3172, 3263], [3171, 3263], [3170, 3263], [3169, 3263], [3168, 3263], [3167, 3263], [3166, 3263], [3165, 3263], [3164, 3263], [3163, 3263], [3162, 3263], [3161, 3263], [3160, 3263], [3159, 3263], [3158, 3263], [3157, 3263], [3156, 3263], [3155, 3263], [3154, 3263], [3153, 3263], [3152, 3263], [3151, 3263], [3150, 3263], [3149, 3263],
+    [3148, 3264], [3147, 3264], [3146, 3264], [3145, 3264], [3144, 3264], [3143, 3264], [3142, 3264], [3141, 3264], [3140, 3264], [3139, 3264], [3138, 3264], [3137, 3264], [3136, 3264], [3135, 3264], [3134, 3264], [3133, 3264], [3132, 3264], [3131, 3264], [3130, 3264], [3129, 3264], [3128, 3264], [3127, 3264], [3126, 3264], [3125, 3264], [3124, 3264], [3123, 3264], [3122, 3264], [3121, 3264], [3120, 3264], [3119, 3264], [3118, 3264], [3117, 3264], [3116, 3264], [3115, 3264], [3114, 3264], [3113, 3264], [3112, 3264], [3111, 3264], [3110, 3264], [3109, 3264], [3108, 3264], [3107, 3264], [3106, 3264], [3105, 3264], [3104, 3264], [3103, 3264], [3102, 3264], [3101, 3264], [3100, 3264], [3099, 3264], [3098, 3264], [3097, 3264], [3096, 3264], [3095, 3264], [3094, 3264], [3093, 3264], [3092, 3264], [3091, 3264], [3090, 3264], [3089, 3264],
+    [3104, 3262], [3103, 3262], [3102, 3262], [3101, 3262], [3100, 3262], [3099, 3262], [3098, 3262], [3097, 3262], [3096, 3262], [3095, 3262], [3094, 3262], [3093, 3262],
 ];
 
 export interface FiremakingPlanStep {
@@ -195,22 +179,17 @@ export async function runFiremakingDropper(
     const countItem = (id: number) =>
         helper.sdk.getInventory().filter(i => i.id === id).reduce((a, b) => a + b.count, 0);
     const hasGlory = () => OBJ_GLORY_IDS.some(id => countItem(id) > 0);
-    const hasEnergyPot = () => OBJ_ENERGY_IDS.some(id => countItem(id) > 0);
 
     const dropChunk = async (chunk: readonly FiremakingPlanStep[], onFirstDrop?: () => void) => {
         for (let i = 0; i < chunk.length && !stop(); i++) {
             const step = chunk[i]!;
             const next = chunk[i + 1];
             if (step.index >= 38) {
-                while (!stop() && step.index - getLitIndex() > 26) {
+                while (!stop() && step.index - getLitIndex() > 52) {
                     const watchIdx = Math.min(plan.length - 1, Math.max(0, step.index - 22));
                     const watch = plan[watchIdx];
                     if (watch && (Math.abs(pos().x - watch.x) > 8 || Math.abs(pos().z - watch.z) > 8)) {
                         await helper.bot.walkTo(watch.x, watch.z, 3);
-                    }
-                    if ((helper.sdk.getState()?.player?.runEnergy ?? 100) < 60 && hasEnergyPot()) {
-                        const potSlot = OBJ_ENERGY_IDS.map(id => slotOfId(helper, id)).find(s => s !== undefined);
-                        if (potSlot !== undefined) await helper.direct({ type: 'useInventoryItem', slot: potSlot, reason: 'SDK' });
                     }
                     await waitTicks(helper, 1);
                 }
@@ -278,7 +257,7 @@ export async function runFiremakingDropper(
                 await helper.bot.walkTo(3269, 3167, 2);
             }
             await helper.bot.openBank();
-            const bankKeep = new Set<number>([...OBJ_GLORY_IDS, ...OBJ_ENERGY_IDS]);
+            const bankKeep = new Set<number>([...OBJ_GLORY_IDS]);
             for (const it of helper.sdk.getInventory()) {
                 if (!bankKeep.has(it.id) && !need.has(it.id)) {
                     await helper.bot.depositItem(it, it.count);
@@ -288,12 +267,6 @@ export async function runFiremakingDropper(
                 const gloryRow = OBJ_GLORY_IDS.map(id => helper.sdk.getState()?.bank?.items?.find(b => b.id === id)).find(Boolean);
                 if (gloryRow && gloryRow.count > 0) {
                     await helper.bot.withdrawItem(gloryRow, 1, { asNote: false });
-                }
-            }
-            if (!hasEnergyPot()) {
-                const potRow = OBJ_ENERGY_IDS.map(id => helper.sdk.getState()?.bank?.items?.find(b => b.id === id)).find(Boolean);
-                if (potRow && potRow.count > 0) {
-                    await helper.bot.withdrawItem(potRow, 1, { asNote: false });
                 }
             }
             for (const [id, qty] of need) {
@@ -318,10 +291,6 @@ export async function runFiremakingDropper(
             }
         }
         while (!stop() && (Math.abs(pos().x - firstStep.x) > 4 || Math.abs(pos().z - firstStep.z) > 4)) {
-            if ((helper.sdk.getState()?.player?.runEnergy ?? 100) < 60 && hasEnergyPot()) {
-                const potSlot = OBJ_ENERGY_IDS.map(id => slotOfId(helper, id)).find(s => s !== undefined);
-                if (potSlot !== undefined) await helper.direct({ type: 'useInventoryItem', slot: potSlot, reason: 'SDK' });
-            }
             await helper.bot.walkTo(firstStep.x, firstStep.z, 2);
             if (Math.abs(pos().x - firstStep.x) <= 4 && Math.abs(pos().z - firstStep.z) <= 4) break;
             await waitTicks(helper, 1);
@@ -532,13 +501,13 @@ if (import.meta.main) {
         };
         let waitLogs = 0;
 
+        await ensureRunOn();
         for (let i = 0; i < plan.length && !isStopped(); i++) {
             const lvl = main.sdk.getSkill('Firemaking')?.baseLevel ?? 1;
             if (lvl >= 99 || (main.sdk.getSkillXp('Firemaking') ?? 0) >= xpForLevel(99)) {
                 ok = true;
                 break;
             }
-            if (i === wave0.length) await ensureRunOn();
             const step = plan[i]!;
             litIdx = i;
 
@@ -549,11 +518,17 @@ if (import.meta.main) {
             const beforeXp = main.sdk.getSkillXp('Firemaking') ?? 0;
 
             if (i < wave0.length) {
+                const prevStep = i > 0 ? plan[i - 1]! : undefined;
                 while (!isStopped()) {
                     const p = main.sdk.getState()?.player;
                     if (p && p.worldX === step.x && p.worldZ === step.z) break;
                     if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
                         await main.direct({ type: 'closeModal', reason: 'SDK' });
+                    }
+                    // On consecutive West steps, ~push_player moves spec onto step.x during the p_delay(0) tick.
+                    if (prevStep && prevStep.x - 1 === step.x && prevStep.z === step.z && p?.worldX === prevStep.x && p?.worldZ === prevStep.z) {
+                        await waitTicks(main, 1);
+                        continue;
                     }
                     await main.bot.walkTo(step.x, step.z, 0);
                 }
@@ -577,6 +552,7 @@ if (import.meta.main) {
                 } else {
                     await main.direct(lightInvOp);
                 }
+                if (i === wave0.length - 1) console.log(`PHASE fm_wave0_end tick=${main.tick() - t0}`);
             } else {
                 while (!groundHas() && !isStopped()) {
                     waitLogs++;
@@ -625,7 +601,7 @@ if (import.meta.main) {
                     const st = main.sdk.getState() as { player?: { worldX: number; worldZ: number }; gameMessages?: { text: string }[] } | undefined;
                     console.log(`NOTE stall step=${step.index} at=(${step.x},${step.z}) me=(${st?.player?.worldX},${st?.player?.worldZ}) ground=${groundHas()} lvl=${main.sdk.getSkill('Firemaking')?.baseLevel} msgs=${(st?.gameMessages ?? []).slice(-3).map(m => m.text).join('|')}`);
                 }
-                const retryInvSlot = !groundHas() && !isGroundStep && elapsed >= 4 ? slotOfId(main, step.itemId) : undefined;
+                const retryInvSlot = !groundHas() && !isGroundStep && elapsed >= 1 ? slotOfId(main, step.itemId) : undefined;
                 const retryTboxSlot = retryInvSlot !== undefined ? slotOfId(main, OBJ_TINDERBOX) : undefined;
                 const retryOp = groundHas()
                     ? lightGroundOp
@@ -639,7 +615,7 @@ if (import.meta.main) {
                     ]);
                 } else if (dlgOpen) {
                     await main.direct({ type: 'closeModal', reason: 'SDK' });
-                } else if (elapsed >= 6 && elapsed % 4 === 0 && retryOp) {
+                } else if ((elapsed === 1 || (elapsed >= 3 && elapsed % 3 === 0)) && retryOp) {
                     await main.direct(retryOp);
                 }
             }
