@@ -10,7 +10,7 @@ import { componentId } from '../../../core/src/logout';
 import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
 import type { BotWorldState } from '../../../../vendor/rs-sdk/sdk/types';
-import { CONTENT_DIR, packMap } from './catalog';
+import { CONTENT_DIR, itemById, packMap } from './catalog';
 import { actionSessionOwner, finishActionSession, productionStopRequested } from './runtime';
 import { geFiremakingOptions, lineTiles, LOGS, runGeFiremaking, type LogKind } from './firemaking';
 
@@ -352,9 +352,21 @@ export function cookLevelRefusal(state: CookRefusalView | null | undefined, sinc
     return null;
 }
 
-export const cookedFoodPattern = (food: string) => new RegExp(`^${food}$`, 'i');
+const escapeName = (name: string) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Exact item names of the server row: "shrimp" cooks "Raw shrimps" into "Shrimps", "chicken" makes "Cooked chicken".
+// A lobster pot is not a cooked lobster.
+export function foodNames(food: string): { raw: string; cooked: string } {
+    const rule = foodRecipe(food) ? foodRule(food) : undefined;
+    const raw = rule ? itemById(rule.rawId)?.name : undefined;
+    const cooked = rule?.cookedId !== undefined ? itemById(rule.cookedId)?.name : undefined;
+    return { raw: raw ?? `raw ${food}`, cooked: cooked ?? food };
+}
+
+export const rawFoodPattern = (food: string) => new RegExp(`^${escapeName(foodNames(food).raw)}$`, 'i');
+export const cookedFoodPattern = (food: string) => new RegExp(`^${escapeName(foodNames(food).cooked)}$`, 'i');
 // The cooked food and any burnt item, not a tool such as a lobster pot.
-export const foodDepositPattern = (food: string) => new RegExp(`^(?:${food}|burnt .+)$`, 'i');
+export const foodDepositPattern = (food: string) => new RegExp(`^(?:${escapeName(foodNames(food).cooked)}|burnt .+)$`, 'i');
 
 const CATHERBY_RANGE = { x: 2816, z: 3443 };
 const CATHERBY_BANK = { x: 2809, z: 3441 };
@@ -362,8 +374,7 @@ const CATHERBY_BANK = { x: 2809, z: 3441 };
 export async function runCookFood(s: Session, foodTypeInput = DEFAULT_FOOD_TYPE, cap = 15000, stop: () => boolean = () => false) {
     const FOOD_TYPE = foodTypeInput.toLowerCase();
     const pos = () => s.sdk.getState()?.player;
-    const rawRe = new RegExp(`^raw ${FOOD_TYPE}`, 'i');
-    // Exact name: a lobster pot is not a cooked lobster.
+    const rawRe = rawFoodPattern(FOOD_TYPE);
     const cookedRe = cookedFoodPattern(FOOD_TYPE);
     const rawCount = () => countItems(s, rawRe);
     const cookedCount = () => countItems(s, cookedRe);

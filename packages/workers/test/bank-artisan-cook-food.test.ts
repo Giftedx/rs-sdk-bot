@@ -5,7 +5,9 @@ import {
     cookLevelRefusal,
     cookLevelShortfall,
     foodDepositPattern,
+    foodNames,
     foodRule,
+    rawFoodPattern,
     runCookFood,
 } from '../src/bank-artisan/cooking';
 
@@ -90,4 +92,15 @@ test('a lobster pot is neither cooked food nor deposited with it', () => {
     const deposit = foodDepositPattern('lobster');
     expect(['Lobster', 'Burnt lobster', 'Burnt fish'].every(n => deposit.test(n))).toBe(true);
     expect(['Lobster pot', 'Raw lobster'].some(n => deposit.test(n))).toBe(false);
+});
+
+test('food patterns use the item names of the server row, not the food word', () => {
+    expect(foodNames('shrimp')).toEqual({ raw: 'Raw shrimps', cooked: 'Shrimps' });
+    expect(rawFoodPattern('shrimp').test('Raw shrimps')).toBe(true);
+    expect(cookedFoodPattern('shrimp').test('Shrimps')).toBe(true);
+    expect(foodDepositPattern('shrimp').test('Shrimps')).toBe(true);
+    expect(foodNames('chicken')).toEqual({ raw: 'Raw chicken', cooked: 'Cooked chicken' });
+    expect(cookedFoodPattern('chicken').test('Cooked chicken')).toBe(true);
+    expect(rawFoodPattern('lobster').test('Raw lobster')).toBe(true);
+    expect(rawFoodPattern('lobster').test('Lobster pot')).toBe(false);
 });
