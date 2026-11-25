@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795628129599-1",
+ "account": "CoinCock",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "4e2d9fd2-1032-4cf3-a47f-bf8c0d919739",
+ "count": 0,
+ "ok": false,
+ "at": 1795628740248,
+ "detail": "trade claimed"
+}
