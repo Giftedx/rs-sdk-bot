@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795585353270,
+ "at": 1795585365662,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,29 +75,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "craftingshop2",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "1592",
-    "ITEMS": "Ring mould",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
   }
  ],
  "army": [
@@ -114,6 +91,7 @@
   "deeppockets",
   "dipstick",
   "fatstack",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
