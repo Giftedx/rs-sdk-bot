@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795607892018-nabtheknob-knightstick-ea03c96246cda12c",
+ "account": "Knightstick",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant platelegs",
+ "requested": 1,
+ "claim": "229f14cc-d458-4fbd-ac27-e97186c92f97",
+ "count": 1,
+ "ok": true,
+ "at": 1795608783772,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795608782628
+ },
+ "logout": {
+  "attemptId": "1795608774202-0000008032-0000000001",
+  "at": 1795608783737,
+  "sha256": "aef86325c55ecad742df2fee4dd8451ffe333a16654faebb5d6611bfe887c361"
+ },
+ "screen": true
+}

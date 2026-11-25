@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795607546478-woodenstaff-masterbaiter-1b7b14049f0f52a4",
+ "account": "Woodenstaff",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "f4eb314f-ba18-419c-b622-c3e108bf80f4",
+ "count": 0,
+ "ok": false,
+ "at": 1795608778233,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}

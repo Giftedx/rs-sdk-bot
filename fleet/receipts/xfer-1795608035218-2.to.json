@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795608035218-2",
+ "account": "Fatstack",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "e0dbb32a-cbd0-4dd3-a4da-7e14a50100be",
+ "count": 10,
+ "ok": true,
+ "at": 1795608751908,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795608751043
+ },
+ "logout": {
+  "attemptId": "1795608732741-0000024924-0000000001",
+  "at": 1795608751827,
+  "sha256": "0bb6ed93e79aea66cc7934d6cee39fc0376c93251789fbbd2856abb2d49b144d"
+ },
+ "screen": true
+}
