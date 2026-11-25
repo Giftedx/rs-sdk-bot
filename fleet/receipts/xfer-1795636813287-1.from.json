@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795636813287-1",
+ "account": "UnderMyKilt",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 1,
+ "claim": "3b0bd69a-9c12-45da-9cc2-88da6115507b",
+ "count": 0,
+ "ok": false,
+ "at": 1795636960954,
+ "detail": "fled at low hitpoints: flee_guard id=376 at=3019,3207 ticks=8",
+ "logout": {
+  "attemptId": "1795636909633-0000021144-0000000001",
+  "at": 1795636960918,
+  "sha256": "c64e6a0a5caaba0850e316a7ab6a34af8c50297bd8c4f139ce510b6948624c65"
+ },
+ "screen": false
+}
