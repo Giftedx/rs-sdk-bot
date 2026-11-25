@@ -318,7 +318,7 @@ export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 837, name: 'Crossbow', count: 1, stackable: false },
     { id: 881, name: 'Barbed bolts', count: 1500, stackable: true },
     { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
-    { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
+    { id: 892, name: 'Rune arrow', count: 1500, stackable: true },
     { id: 1478, name: 'Amulet of accuracy', count: 1, stackable: false },
     { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
     { id: 2577, name: 'Ranger boots', count: 1, stackable: false },

@@ -428,6 +428,8 @@ test('RANGED_PVP_SPECIALIST_KIT and RANGED_PVP_GLORY_KIT fit <=28 tradeable cata
     expect(kitSlotTotal(RANGED_PVP_GLORY_KIT)).toBe(25);
     expect(RANGED_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
     expect(RANGED_PVP_GLORY_KIT.some(k => k.id === 3016)).toBe(false);
+    expect(RANGED_PVP_SPECIALIST_KIT.find(k => k.id === 892)?.count).toBeGreaterThanOrEqual(1500);
+    expect(RANGED_PVP_GLORY_KIT.find(k => k.id === 892)?.count).toBeGreaterThanOrEqual(1500);
     const byId = new Map(ITEMS.map(item => [item.id, item]));
     for (const spec of [...RANGED_PVP_SPECIALIST_KIT, ...RANGED_PVP_GLORY_KIT]) {
         const entry = byId.get(spec.id);
