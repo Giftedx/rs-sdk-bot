@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795587233646-1",
+ "account": "Unsheathed",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "0d0fe647-3177-46e6-8fe4-49622e0fdea4",
+ "count": 2,
+ "ok": true,
+ "at": 1795588022007,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795588021248
+ },
+ "logout": {
+  "attemptId": "1795588010758-0000004904-0000000001",
+  "at": 1795588021995,
+  "sha256": "c9e0d7ffe0aff52e7d43ba57ac825dac88ca2bdb6b1b31a1b9e8ba5a4c46551c"
+ },
+ "screen": true
+}

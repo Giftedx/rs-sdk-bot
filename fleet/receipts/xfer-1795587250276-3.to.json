@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795587250276-3",
+ "account": "TrouserSnake",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "3aa4a631-6880-40d5-9ff1-f2de004d1d48",
+ "count": 1,
+ "ok": true,
+ "at": 1795588041208,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795588040436
+ },
+ "logout": {
+  "attemptId": "1795588022501-0000001796-0000000001",
+  "at": 1795588041194,
+  "sha256": "bfb1fb17da550ec529f39553ea7102f6323c9c47e6ba45f57d052933d0ef249a"
+ },
+ "screen": true
+}

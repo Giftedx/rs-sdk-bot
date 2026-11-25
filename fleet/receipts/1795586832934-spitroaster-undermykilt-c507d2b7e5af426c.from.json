@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795586832934-spitroaster-undermykilt-c507d2b7e5af426c",
  "account": "Spitroaster",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 3,
  "claim": "fcaade91-162b-4a0a-b71a-95a61ae9b02c",
- "count": 0,
- "ok": false,
- "at": 1795587247487,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795588053995,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795587257688
+ },
+ "logout": {
+  "attemptId": "1795587247497-0000013440-0000000001",
+  "at": 1795588053981,
+  "sha256": "5815a30b09214c8cc65e9110afa5726ed999c708e20993a51e83f0fea812e8d5"
+ },
+ "screen": true
 }

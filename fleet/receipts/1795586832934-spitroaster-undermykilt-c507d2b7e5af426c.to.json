@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795586832934-spitroaster-undermykilt-c507d2b7e5af426c",
+ "account": "UnderMyKilt",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 3,
+ "claim": "1012f4fb-04d7-4bcc-93a4-289f81819788",
+ "count": 3,
+ "ok": true,
+ "at": 1795588055629,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795588054853
+ },
+ "logout": {
+  "attemptId": "1795588035359-0000007968-0000000001",
+  "at": 1795588055597,
+  "sha256": "6b903544fb144ba51d9de2a9486c3559d54fbad3494a8a57ed23ae2b3a58cc81"
+ },
+ "screen": true
+}

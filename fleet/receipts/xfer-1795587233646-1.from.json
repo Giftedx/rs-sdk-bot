@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795587233646-1",
  "account": "Hocuspokeus",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "8e85684c-3b24-458e-87cf-24b143ab99d5",
- "count": 0,
- "ok": false,
- "at": 1795587755954,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795588020381,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795587764470
+ },
+ "logout": {
+  "attemptId": "1795587755962-0000013988-0000000001",
+  "at": 1795588020370,
+  "sha256": "85c6eff5153e62da0aa5510b7f08a7a0fbc62f22e72cc39f67d3287b35ea90aa"
+ },
+ "screen": true
 }

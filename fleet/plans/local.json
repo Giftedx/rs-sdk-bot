@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795587798567,
+ "at": 1795588099736,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -39,7 +39,7 @@
    "role": "auto"
   },
   {
-   "account": "PocketPool",
+   "account": "Wandwaver",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -55,7 +55,7 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
+   "account": "PocketPool",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -85,6 +85,21 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-536-28-p7074 ITEM_ID=536 QUANTITY=28 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=7074 -- ge-buy",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Shaftmaker BATCH_UNITS=28 -- prayer bury"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftmaker",
+   "role": "auto"
   }
  ],
  "army": [
