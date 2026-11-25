@@ -1401,6 +1401,14 @@ export function bronzeProgress(before: BronzeState, after: BronzeState) {
     return n > 0 && before.copper - after.copper === n && before.tin - after.tin === n && after.xp > before.xp ? n : 0;
 }
 
+// runBronze serves only an account that starts at the Al Kharid bank, and it does not travel. An account anywhere else
+// smelts bronze through runSmeltBatch, which walks to that bank first.
+export async function bronzeStartsStaged(s: Session): Promise<boolean> {
+    await waitUntil(s, () => !!s.sdk.getState()?.player, { timeoutTicks: 15 });
+    const p = s.sdk.getState()?.player;
+    return !!p && p.level === 0 && Math.max(Math.abs(p.worldX - BANK_SPOT.x), Math.abs(p.worldZ - BANK_SPOT.z)) <= 5;
+}
+
 export async function runBronze(
     raw: Session,
     options: { maximum: number; reserve: number; cap: number; stop?: () => boolean; keepPattern?: string },
@@ -2090,7 +2098,7 @@ export async function runSmeltBarsCli(
             await finishActionSession(owner, result.ok, `mode=smith ${JSON.stringify(result)}`);
             return;
         }
-        if (BAR_TYPE === 'bronze' && !smelt?.route && !smelt?.nearest) {
+        if (BAR_TYPE === 'bronze' && !smelt?.route && !smelt?.nearest && (await bronzeStartsStaged(s))) {
             const result = await runBronze(s, { maximum: Number(env.MAX_MAKE ?? 8), reserve: Number(env.ORE_RESERVE ?? 1), cap: CAP, stop: () => stopped });
             await finishActionSession(owner, result.ok, `mode=bronze ${JSON.stringify(result)}`);
             return;

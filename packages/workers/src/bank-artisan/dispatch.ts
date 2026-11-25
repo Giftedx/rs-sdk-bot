@@ -213,7 +213,7 @@ export async function runArtisan(
                 return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
             }
             case 'smithing': {
-                const { runBronze, runCannonballs, runSmeltBatch, runSmithBatch, smeltBonusFromEnv, smeltRouteFromEnv, validateSmeltOrder } = await import('./smithing');
+                const { bronzeStartsStaged, runBronze, runCannonballs, runSmeltBatch, runSmithBatch, smeltBonusFromEnv, smeltRouteFromEnv, validateSmeltOrder } = await import('./smithing');
                 const cap = Number(cfg.args[0] ?? setting('CAP', '1500'));
                 if (cfg.method === 'cannonballs') {
                     const r = await runCannonballs(s, {
@@ -241,7 +241,7 @@ export async function runArtisan(
                 const bonus = smeltBonusFromEnv(cfg.env);
                 const route = smeltRouteFromEnv(cfg.env);
                 const nearest = setting('SMELT_NEAREST') === '1';
-                if (bar === 'bronze' && !route && !nearest) {
+                if (bar === 'bronze' && !route && !nearest && (await bronzeStartsStaged(s))) {
                     const r = await runBronze(s, { maximum: Number(setting('MAX_MAKE', '8')), reserve: Number(setting('ORE_RESERVE', '1')), cap, stop: halted });
                     return { ok: r.ok, summary: `made=${r.made}`, ticks: r.ticks, produced: r.made, failure: r.ok ? undefined : r.failure };
                 }

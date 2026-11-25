@@ -1,6 +1,16 @@
 import {expect,test} from 'bun:test';
-import {planBronze,bronzeProgress,runBronze,smeltBonusFromEnv,smeltRouteFromEnv,smeltEntryRoute,validateSmeltOrder} from '../src/bank-artisan';
+import {planBronze,bronzeProgress,bronzeStartsStaged,runBronze,smeltBonusFromEnv,smeltRouteFromEnv,smeltEntryRoute,validateSmeltOrder} from '../src/bank-artisan';
 import {spawnSync} from 'node:child_process';
+
+test('only a start at the Al Kharid bank takes the staged bronze route; any other start smelts through the travelling batch',async()=>{
+ const at=(player:{worldX:number;worldZ:number;level:number}|undefined)=>{let tick=0;const listeners=new Set<()=>void>();const s:any={tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},ended:new Promise(()=>{}),sdk:{getState:()=>player?{player}:null}};const timer=setInterval(()=>{tick++;for(const f of listeners)f();},1);return bronzeStartsStaged(s).finally(()=>clearInterval(timer));};
+ expect(await at({worldX:3269,worldZ:3167,level:0})).toBe(true);
+ expect(await at({worldX:3272,worldZ:3170,level:0})).toBe(true);
+ // The Grand Exchange buy steps before a bronze order leave the account at Varrock West bank.
+ expect(await at({worldX:3185,worldZ:3436,level:0})).toBe(false);
+ expect(await at({worldX:3269,worldZ:3167,level:1})).toBe(false);
+ expect(await at(undefined)).toBe(false);
+});
 import {join} from 'node:path';
 
 test('bonus CLI is opt-in and validates owned finite ring policy before login',()=>{
