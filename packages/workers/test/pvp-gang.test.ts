@@ -208,7 +208,8 @@ test('plannedPickups takes the wanted stacks within the radius, nearest first', 
 });
 
 // The second visit of a gang bank trip: eat up with the food in the pack, then refill the pack from the bank (sharks, then lobsters).
-async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; equipment?: { id: number; count: number; slot: number }[]; hp: number; magic?: number; prayer?: { points: number; base: number }; altar?: boolean; prayerFails?: boolean; route?: boolean; minFood?: number; requireEscape?: boolean }) {
+async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; equipment?: { id: number; count: number; slot: number }[]; hp: number; magic?: number; prayer?: { points: number; base: number }; altar?: boolean; prayerFails?: boolean; route?: boolean; minFood?: number; requireEscape?: boolean;
+    halt?: () => boolean; returnStop?: () => boolean }) {
     // One slot for each piece of food, as in the game.
     const inventory: any[] = o.pack.flatMap(p => (p.id === 385 || p.id === 379
         ? Array.from({ length: p.count }, () => ({ id: p.id, name: p.name, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }))
@@ -239,14 +240,17 @@ async function runBankTrip(o: { pack: { id: number; count: number; name: string 
     pvpRuntime.prayAtAltar = async (_s: any, altar: any) => { prayedAt.push(altar.label); return { ok: !o.prayerFails, detail: 'mock failure' }; };
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
-        spyOn(walking, 'walkPath').mockImplementation(async (_d: any, points: any[]) => { walked.push(points.map(p => ({ x: p.x, z: p.z }))); return ({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }); }),
+        // The walk checks its stop once, as walkPath does on each tick.
+        spyOn(walking, 'walkPath').mockImplementation(async (_d: any, points: any[], opts?: any) => { walked.push(points.map(p => ({ x: p.x, z: p.z })));
+            return opts?.stop?.() ? { ok: false, detail: 'stopped', ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 0 } : { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }; }),
         spyOn(pk, 'nextTick').mockImplementation(async () => { tick++; return true; }),
         spyOn(hunt, 'restock').mockResolvedValue(null),
     ];
     try {
         const fresh = o.minFood === undefined && o.requireEscape === undefined ? !o.altar : false;
-        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, () => false, undefined, {
+        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, o.halt ?? (() => false), undefined, {
             altar: o.altar, minFood: o.minFood, requireEscape: o.requireEscape, log: (l: string) => logs.push(l),
+            ...(o.returnStop ? { returnStop: o.returnStop } : {}),
             ...(o.route ? { route: (from: { x: number; z: number }) => [{ x: 3071, z: 3519 }, { x: 3071, z: 3600 }, { x: 3070, z: 3640 }] } : {}),
         })(s, fresh);
         return { fault, withdrawals, eaten, hp: player.hp, inventory, prayedAt, logs, walked };
@@ -298,6 +302,27 @@ test('the walk back goes through the route of the squad: the edge, the entry and
     expect(routed.walked).toEqual([[{ x: 3094, z: 3492 }], [{ x: 3071, z: 3519 }, { x: 3071, z: 3600 }, { x: 3070, z: 3640 }]]);
     const plain = await runBankTrip({ ...base, prayer: { points: 99, base: 99 }, altar: true });
     expect(plain.walked).toEqual([[{ x: 3094, z: 3492 }], [{ x: 3070, z: 3640 }]]);
+});
+
+// Hosted bench extra:attack-team5-pile-six-x1, run 45703509395 seed 8 and run 45701974509 seed 16: a member escaped, banked and
+// walked back alone into the pile of 5. The walk stopped only on the end of the run, so the member took 14 hits in 40 ticks
+// (10 hits in 130 ticks) and died on the walk, with no escape.
+test('the walk back stops for an escape of the caller and ends the trip with no fault; the walk to the bank does not', async () => {
+    const base = { pack: [], bank: [], hp: 99, prayer: { points: 99, base: 99 }, altar: true };
+    let asked = 0;
+    const escape = await runBankTrip({ ...base, returnStop: () => { asked++; return true; } });
+    expect(escape.fault).toBeNull();
+    expect(escape.walked).toHaveLength(2);
+    expect(escape.logs).toEqual(['walk back stopped for an escape at 3094,3492 hp 99']);
+    // Only the walk back asks: a stop of the walk to the bank would leave the account short of its pack.
+    expect(asked).toBe(1);
+    // No escape due: the walk back goes on to the post.
+    const quiet = await runBankTrip({ ...base, returnStop: () => false });
+    expect([quiet.fault, quiet.logs]).toEqual([null, []]);
+    // The end of the run is still a fault, with an escape due or not.
+    let halted = false;
+    const ended = await runBankTrip({ ...base, halt: () => halted, returnStop: () => { halted = true; return true; } });
+    expect(ended.fault).toBe('no walk back: stopped');
 });
 
 test('packOf with minArrows and minRunes sets safe floors, merges inv+quiver arrows, and normalizes glory charges & prayer pots', () => {

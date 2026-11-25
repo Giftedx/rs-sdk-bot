@@ -1578,6 +1578,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                         }
                     },
                     skipReturn: isFresh => isFresh && !!o.useRally,
+                    // The walk back stops where the escape rule of the hold loop fires (the walk to the post between fights stops on
+                    // the same rule), and the hold loop does the escape. The trip ends there with no fault. A member that walked back
+                    // alone into the pile took 10 to 14 hits in 40 to 130 ticks and died on the walk (research/gang-clones.md, "The walk back").
+                    returnStop: () => fallbackDue() || radarMove(),
                 });
                 return await bankRun(a, fresh);
             });

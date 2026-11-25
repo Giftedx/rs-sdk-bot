@@ -32,6 +32,13 @@ describe('squadFallbackPlan with the held focus', () => {
         expect(at({ hp: 59, enemyCount: 3, allyCount: 3, targetingMe: 3, held: true })).toBe('teleport');
         expect(at({ hp: 49, enemyCount: 3, allyCount: 3, targetingMe: 2, held: true })).toBe('teleport');
     });
+    test('a member that walks back alone into a pile of 5 leaves at its first hits, and walks on at full HP', () => {
+        // The bank trip's walk back stops on this rule (squad.ts returnStop). Seed 16 of run 45701974509: the member stood at 75 to
+        // 90 HP in the pile for 130 ticks on its walk back and died. At 75 the rule sends it out.
+        expect(at({ hp: 75, enemyCount: 5, allyCount: 0, targetingMe: 2, held: true })).toBe('teleport');
+        expect(at({ hp: 87, enemyCount: 5, allyCount: 0, targetingMe: 0, held: true })).toBe('teleport');
+        expect(at({ hp: 95, enemyCount: 5, allyCount: 0, targetingMe: 2, held: true })).toBe('hold');
+    });
     test('an outnumbered squad keeps the plain fractions', () => {
         // 2 of ours against 3: no held fractions.
         expect(at({ hp: 75, enemyCount: 3, allyCount: 1, targetingMe: 2, held: true })).toBe('teleport');
