@@ -211,7 +211,7 @@ test('account lookup is case-insensitive and rejects unknown accounts or invalid
     expect(ranged.env?.SUPPLIER).toBe('Moneyshot');
 
     expect(lower.plan!.ticks).toBe(2142);
-    expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(1447);
+    expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(1556);
     expect(resolveSpecialistSegment('HiltsDeep').suppliers).toHaveLength(3);
     expect(resolveSpecialistSegment('RockSolid').suppliers).toHaveLength(3);
     expect(resolveSpecialistSegment('BigSwinger').suppliers).toHaveLength(3);

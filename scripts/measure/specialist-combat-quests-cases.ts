@@ -412,7 +412,7 @@ export function buildCombatSpecialistRehearsalSegment(
             env: { CAP: '5000', VARIANT: 'pvp', ...extraEnv },
             mode: 'attack-pvp',
             skill: 'Attack',
-            planTicks: override ?? 1936,
+            planTicks: override ?? 1975,
             planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=2554t vs #1 2607t)',
         });
     }
@@ -424,7 +424,7 @@ export function buildCombatSpecialistRehearsalSegment(
             env: { CAP: '6000', HP_MODE: 'pvp', ...extraEnv },
             mode: 'hp-pvp',
             skill: 'Hitpoints',
-            planTicks: override ?? 3367,
+            planTicks: override ?? 3609,
             planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=5263t vs #1 5371t)',
         });
     }
@@ -436,7 +436,7 @@ export function buildCombatSpecialistRehearsalSegment(
             env: { CAP: '6000', ...extraEnv },
             mode: 'strength',
             skill: 'Strength',
-            planTicks: override ?? 1907,
+            planTicks: override ?? 1931,
             planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3222t vs #1 3288t)',
         });
     }
@@ -448,7 +448,7 @@ export function buildCombatSpecialistRehearsalSegment(
             env: { CAP: '7500', ...extraEnv },
             mode: 'defence',
             skill: 'Defence',
-            planTicks: override ?? 2278,
+            planTicks: override ?? 2326,
             planSource: 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3937t vs #1 4018t)',
         });
     }
@@ -460,7 +460,7 @@ export function buildCombatSpecialistRehearsalSegment(
             env: { CAP: '2500', VARIANT: 'pvp-glory', ...extraEnv },
             mode: 'ranged-pvp-glory',
             skill: 'Ranged',
-            planTicks: override ?? 1447,
+            planTicks: override ?? 1556,
             planSource: '15-slot Glory/Yew shortbow/MSB Keep PvP (<=1663t vs #1 1697t)',
             rangedTank: true,
         });
