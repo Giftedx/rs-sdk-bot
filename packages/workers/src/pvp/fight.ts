@@ -13,6 +13,9 @@ import type { Session } from '../../../core/src/inprocess';
 import { amendKillReceipt, KILL_MESSAGES, killMessage, killReceiptProof, writeKillReceipt, type KillHead, type KillItem } from '../../../core/src/kill-receipt';
 import { componentId } from '../../../core/src/logout';
 import { decodeHeadicons, weaponNameStyle } from '../../../core/src/opponent';
+import { believedPrayers, intendToggle } from '../../../core/src/prayer-guard/choice';
+import { holdSessionPrayer } from '../../../core/src/prayer-guard/hold';
+import type { PrayerIntent } from '../../../core/src/prayer-guard/types';
 import { questFlags } from '../../../core/src/quest-status';
 import { holdSessionEater } from '../../../core/src/sustain';
 import { tickWaits } from '../../../core/src/tick-stream';
@@ -1027,7 +1030,10 @@ export function evaluateSpecPlan(i: SpecPlanInput) {
 const KILL_SCRIPT = process.argv[1] ? relative(REPO_ROOT, process.argv[1]).split(sep).join('/') : null;
 export async function fightPlayer(s: Session, targetName: string, o: FightOptions): Promise<FightResult> {
     const eater = holdSessionEater(s.sdk);
-    try { return await fightLoop(s, targetName, o, eater.ateAt + 3); } finally { eater.release(); }
+    // The loop sends every prayer input of the fight: the session's prayer guard sends none until the fight ends
+    // (packages/core/src/prayer-guard/hold.ts).
+    const prayer = holdSessionPrayer(s.sdk);
+    try { return await fightLoop(s, targetName, o, eater.ateAt + 3); } finally { prayer.release(); eater.release(); }
 }
 
 async function fightLoop(s: Session, targetName: string, o: FightOptions, guardFoodReady: number): Promise<FightResult> {
@@ -1071,8 +1077,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const protectItemNow = () => o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
     // Our skull and what a death would cost with it, logged at the start and at each change (the attacker takes a skull).
     let lastSkull: boolean | null | undefined;
-    // The skull, the items and Protect Item of the last tick that we were alive, for the death line (deathSkullFields).
+    // The skull, the items and the Protect Item varp (%prayer8) of the last tick that we were alive, for the death line
+    // (deathSkullFields). The death reads the varp (death.rs2 pvp_death_lose_items), not the loop's choice.
     let aliveView: { skull: boolean | null; units: { id: number; count: number }[]; protect: boolean } | null = null;
+    // Each prayer input of the last STATE_LAG ticks, until the state shows it (prayer-guard/choice.ts believedPrayers).
+    // A prayer button toggles: an input that the server reads a tick late (more than 5 inputs in a tick, engine
+    // NetworkPlayer.ts decodeIn, or a late network write) must not go out again, or the second toggle undoes it.
+    const intents = new Map<number, PrayerIntent>();
     // An account without Dragon Slayer cannot put its rune platebody back on after a cast ("You have not earned the
     // right to wear this yet."), so the loop leaves such a body on. The quest journal gives the state; where it does
     // not, the first refusal ends the removals.
@@ -1093,7 +1104,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (!state || !me || !at) continue;
         feedWatch?.aim(at.x, at.z);
         const skullNow = ownSkull(s.client);
-        if (!(me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife))) aliveView = { skull: skullNow, units: [...state.inventory, ...state.equipment], protect: protectItemNow() };
+        if (!(me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife))) aliveView = { skull: skullNow, units: [...state.inventory, ...state.equipment], protect: !!state.prayers?.activePrayers?.[PRAYER.item] };
         if (skullNow !== lastSkull) {
             lastSkull = skullNow;
             if (skullNow !== null) {
@@ -1400,6 +1411,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             continue;
         }
         const prayers = state.prayers;
+        // The prayers to plan from, and the one way that the loop sends a prayer input (see `intents`).
+        let believed = believedPrayers(state, intents, now);
+        const prayerOn = (p: number) => believed.includes(p);
+        const believedView = (): boolean[] => { const v = new Array<boolean>(prayers.activePrayers.length).fill(false); for (const p of believed) v[p] = true; return v; };
+        const togglePrayer = (p: number) => { void sdk.sendTogglePrayer(p); believed = intendToggle(intents, believed, p, now); };
         // Drinking a potion triggers p_delay(1) in processClientsIn (consume_effects.rs2:167), blocking client input on
         // now+1 and now+2 (ready on now+3). Drink non-emergency potions only when now+3 <= nextAttack.
         // The poison hitsplat on us is the sign that the message does not give (a carried or renewed poison); the state ends POISON_HOLD ticks after its last sign.
@@ -1685,7 +1701,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 const plan = planPrayerTick({
                     setupBudget: Math.max(0, budget - Number(stepDue) - Number(styleDue)),
                     now, nextAttack, lastAttackAt, walkingToMelee, prayerBase, overhead,
-                    activePrayers: prayers.activePrayers, prayerDrainAt, flickAt, flickEvery,
+                    activePrayers: believedView(), prayerDrainAt, flickAt, flickEvery,
                     zeroDrainFlick: o.zeroDrainFlick === true,
                     prayerFlick: o.prayerFlick !== false,
                     offensiveFlick: o.offensiveFlick === true,
@@ -1695,7 +1711,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     protectItem: protectItemNow(),
                     budget,
                 });
-                for (const p of plan.toggles) { void sdk.sendTogglePrayer(p); budget--; }
+                for (const p of plan.toggles) { togglePrayer(p); budget--; }
                 prayerDrainAt = plan.nextDrainAt;
                 flickAt = plan.nextFlickAt;
                 didFlick = plan.didFlick;
@@ -1796,9 +1812,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (prayers.prayerPoints > 0 && budget > 0) {
                 const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !stripBurstArmour, protectItemNow());
                 const orderedPray = [...wantPray].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
-                const hadPrayer = prayers.activePrayers.some(Boolean);
+                const hadPrayer = believed.length > 0;
                 let turnedOn = 0;
-                for (const p of orderedPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; turnedOn++; }
+                for (const p of orderedPray) if (!prayerOn(p) && budget > 0) { togglePrayer(p); budget--; turnedOn++; }
                 if (!hadPrayer && turnedOn > 0 && prayerDrainAt < 0) prayerDrainAt = now;
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
@@ -1894,10 +1910,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (prayers.prayerPoints > 0 && budget > 0) {
             const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee', o.defencePrayer !== false, protectItemNow());
             const orderedPray = [...wantPray].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
-            const hadPrayer = prayers.activePrayers.some(Boolean);
+            const hadPrayer = believed.length > 0;
             let turnedOn = 0;
-            for (const p of orderedPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; turnedOn++; }
-            if (o.offensiveFlick) for (const p of offPray) if (prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+            for (const p of orderedPray) if (!prayerOn(p) && budget > 0) { togglePrayer(p); budget--; turnedOn++; }
+            if (o.offensiveFlick) for (const p of offPray) if (prayerOn(p) && budget > 0) { togglePrayer(p); budget--; }
             if (!hadPrayer && turnedOn > 0 && prayerDrainAt < 0) prayerDrainAt = now;
         }
         for (const item of toWield) use(item, /^(Wield|Wear)$/i);

@@ -17,9 +17,16 @@
 // A script that sends its own prayer input chooses the prayers: from then on the guard turns no prayer on or off, and
 // only keeps the active prayers free. A script that turns one prayer off and on in one tick has its own flick: the
 // guard then sends nothing more in that session.
+//
+// A loop that sets its prayers in each tick holds the guard for its whole run (prayer-guard/hold.ts): the PvP fight
+// loop. The guard then sends no input. Without the hold, a flick of three prayers leaves some off for one tick, the
+// loop turns them on, and the second tick of the flick turns them on too: two toggles, and the prayer is off. The
+// guard's inputs also count toward the 5 inputs that the server reads in a tick, and the loop's last inputs then wait
+// for the next tick.
 
 export type { AttackStyle, GuardSession, Hunter, PrayerGuardOptions, PrayerGuardStats } from './prayer-guard/types';
 export { attackTarget, npcDead, wildernessLevel } from './prayer-guard/threats';
 export { afterToggle, PROTECT, protectByStyle } from './prayer-guard/choice';
 export { IDLE_TICKS, NEUTRAL } from './prayer-guard/interactions';
 export { startPrayerGuard } from './prayer-guard/guard';
+export { holdSessionPrayer } from './prayer-guard/hold';

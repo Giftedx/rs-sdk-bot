@@ -23,6 +23,7 @@ import {
     skillTarget,
     windowOpen,
 } from './interactions';
+import { registerSessionPrayer } from './hold';
 import { assessThreat, attackTarget, autoAttackOf, damageSourceName, npcDead } from './threats';
 import type { Action, GuardSession, Pending, PrayerGuardOptions, PrayerGuardStats, PrayerIntent } from './types';
 
@@ -75,6 +76,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const owned = new Map<number, number>(), keep = new Map<number, number>();
     // What a prayer input sent in the last STATE_LAG ticks makes of each prayer, until the state shows it.
     const intents = new Map<number, PrayerIntent>();
+    // Holds of a loop that sends its own prayers (hold.ts): while one is on, the guard sends no input.
+    let holders = 0;
     let stopped = false, flickAt = -Infinity, threatAt = -Infinity, threatNow = false;
     let scriptPrayerAt = -Infinity, scriptPrayers: number[] = [], inputTick = -1, inputs = 0;
     let pending: Pending = { kind: 'none' };
@@ -185,11 +188,13 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             scriptPrayerAt = now; stats.manual = true; owned.clear(); inputs++;
             // The script chose from the prayers before a flick in progress. The flick finishes first, so the script's
             // button acts on those prayers; two ticks later the repair turns on a chosen prayer the state shows off.
-            if (resume.length && !stats.yielded) finish(now);
+            if (resume.length && !stats.yielded && holders === 0) finish(now);
             const after = intendToggle(intents, expect ?? believedPrayers(s.sdk.getState(), intents, now), prayer, now);
             if (expect) { expect = after; expectAt = now; }
             return;
         }
+        // A held guard keeps no attack to send again after the hold.
+        if (holders > 0) { pending = { kind: 'none' }; retaliate = null; return; }
         // A click on the level-up message starts no action.
         if (NEUTRAL.has(a.type) || (a.type === 'clickDialogOption' && levelUpDialog(s.sdk.getState()))) { inputs++; return; }
         const attack = (a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState());
@@ -213,7 +218,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     if (client && observer) client.executeBotAction = observer;
 
     const off = s.onTick(() => {
-        if (stopped || stats.yielded) return;
+        if (stopped || stats.yielded || holders > 0) return;
         const st = s.sdk.getState(), p = st?.player, prayers = st?.prayers;
         if (!p || p.isDead || !prayers || !Array.isArray(prayers.activePrayers)) return;
         const now = s.tick();
@@ -411,6 +416,15 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             void s.ended?.then(() => { end(); done(); });
         });
     };
+    // A hold (hold.ts): the loop that holds the guard sends every prayer input. A flick of the guard that is in
+    // progress ends here, and the loop turns its prayers that are off on again.
+    const holdGuard = () => {
+        holders++;
+        resume = []; expect = null; owned.clear(); pending = { kind: 'none' }; retaliate = null;
+        let held = true;
+        return { release: () => { if (held) { held = false; holders--; } } };
+    };
+    registerSessionPrayer(s.sdk, holdGuard);
     void s.ended?.then(stop);
-    return { stop, release, stats: () => ({ ...stats, holdsBy: { ...stats.holdsBy }, takenFrom: { ...stats.takenFrom } }), note };
+    return { stop, release, hold: holdGuard, stats: () => ({ ...stats, holdsBy: { ...stats.holdsBy }, takenFrom: { ...stats.takenFrom } }), note };
 }
