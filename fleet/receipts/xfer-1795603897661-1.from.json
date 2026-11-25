@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795603897661-1",
+ "account": "OreElse",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "56b21ef5-7b7c-455f-84d9-1d1f88b7c599",
+ "count": 0,
+ "ok": false,
+ "at": 1795604144808,
+ "detail": "trade claimed"
+}

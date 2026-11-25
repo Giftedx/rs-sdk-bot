@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795604056732-4",
+ "role": "from",
+ "account": "Woodenstaff",
+ "partner": "PickpockDick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795604156436,
+ "detail": "Error: fleet trade claim held for order xfer-1795587227524-3"
+}
