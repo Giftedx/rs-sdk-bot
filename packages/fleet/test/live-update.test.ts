@@ -27,7 +27,7 @@ import {
     type UpdateInput,
 } from '../src/live-update';
 import { runLiveUpdateCli } from '../src/live-update/reload';
-import { AGENT_SUBPROCESS_TIMEOUT_MS } from '../src/fleet-agent';
+import { AGENT_SUBPROCESS_TIMEOUT_MS, tradeDrainHold } from '../src/fleet-agent';
 
 const dirs: string[] = [];
 const scratch = () => {
@@ -95,6 +95,20 @@ describe('fleet live-update facade', () => {
         expect(drainedFiles({ ...mark!, files: ['docs/not-code.md'] }, ['scripts/aio-skiller.ts'], root, closure)).toEqual([]);
         expect(drainedFiles(null, ['scripts/aio-skiller.ts'], root, closure)).toEqual([]);
         expect(drainedFiles(mark, [], root, closure)).toEqual([]);
+    });
+
+    test('the fleet agent holds a new trade while a live update drains, but never one whose partner has started', () => {
+        const order = { id: 'o1', from: 'Fatstack', to: 'Masterbaiter' };
+        const drained = ['packages/workers/src/quest/helpers.ts', 'scripts/generated/quest-lib.ts', 'x.ts'];
+        const held = tradeDrainHold(order, 'Fatstack', drained, '7c5a6bbe9694ec', new Set(), []);
+        expect(held).toBe('live update to 7c5a6bbe96 drains packages/workers/src/quest/helpers.ts, scripts/generated/quest-lib.ts and 1 more');
+        // Nothing pending to drain: the trade starts.
+        expect(tradeDrainHold(order, 'Fatstack', [], 't', new Set(), [])).toBeNull();
+        // The other side already runs here, or wrote its receipt: this side starts, so no order waits on one side alone.
+        expect(tradeDrainHold(order, 'Fatstack', drained, 't', new Set(['masterbaiter']), [])).toBeNull();
+        expect(tradeDrainHold(order, 'Masterbaiter', drained, 't', new Set(), [{ id: 'o1', role: 'from' }])).toBeNull();
+        // A receipt of another order, or of this side's own role, does not count as the partner's start.
+        expect(tradeDrainHold(order, 'Masterbaiter', drained, 't', new Set(), [{ id: 'o2', role: 'from' }, { id: 'o1', role: 'to' }])).not.toBeNull();
     });
 
     test('the real release closure names files the way live-update names incoming files', () => {
