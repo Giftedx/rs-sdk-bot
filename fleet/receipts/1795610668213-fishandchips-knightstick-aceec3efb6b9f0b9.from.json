@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795610668213-fishandchips-knightstick-aceec3efb6b9f0b9",
+ "account": "FishAndChips",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 23,
+ "claim": "2c52e82a-deb6-4bef-8f23-53c15ccf3e8e",
+ "count": 0,
+ "ok": false,
+ "at": 1795610672921,
+ "detail": "trade claimed"
+}
