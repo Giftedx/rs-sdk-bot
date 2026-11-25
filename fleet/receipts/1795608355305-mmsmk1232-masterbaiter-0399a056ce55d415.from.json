@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795608355305-mmsmk1232-masterbaiter-0399a056ce55d415",
+ "account": "mmsmk1232",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "940d2d99-0af9-4a52-b279-9b18b8dc71dc",
+ "count": 0,
+ "ok": false,
+ "at": 1795609283144,
+ "detail": "trade claimed"
+}
