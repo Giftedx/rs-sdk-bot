@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795611520773-1",
+ "account": "Woodenstaff",
+ "partner": "Bigpackage",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "2f38ac6f-b5e4-4dc5-bc12-76232e1fcad7",
+ "count": 0,
+ "ok": false,
+ "at": 1795611731176,
+ "detail": "trade claimed"
+}
