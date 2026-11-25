@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795617294457,
+ "at": 1795617333589,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -155,27 +155,6 @@
    "role": "helper"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "39",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:39",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:39",
-   "role": "army"
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/chain.ts",
    "args": [
@@ -208,7 +187,7 @@
    "role": "helper"
   },
   {
-   "account": "Woodenstaff",
+   "account": "Spitroaster",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy"
@@ -220,21 +199,6 @@
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "861"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Woodenstaff",
-   "role": "auto"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=12 \"ITEM_NAME=Dragon bones\" -- loadout",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=34 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -263,6 +227,7 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",

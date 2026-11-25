@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795616511644-2",
  "account": "YewGotWood",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "e2aafa9c-54dd-4176-b70f-1ff462b05210",
- "count": 0,
- "ok": false,
- "at": 1795617290531,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795617307805,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795617299446
+ },
+ "logout": {
+  "attemptId": "1795617290541-0000023432-0000000001",
+  "at": 1795617307793,
+  "sha256": "541f9ce1c3ae64aadb023d282f720529f6f4eaca43fcd34f48be53e6470d11cb"
+ },
+ "screen": true
 }

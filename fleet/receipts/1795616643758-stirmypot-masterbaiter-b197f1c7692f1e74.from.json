@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795616643758-stirmypot-masterbaiter-b197f1c7692f1e74",
+ "account": "Stirmypot",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 19,
+ "claim": "39fc15b0-e6c3-4272-856e-5b7e0ed30c0c",
+ "count": 0,
+ "ok": false,
+ "at": 1795617303718,
+ "detail": "trade claimed"
+}
