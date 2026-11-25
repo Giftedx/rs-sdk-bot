@@ -368,6 +368,15 @@ export function admitRecovery(
     release();
 }
 
+// The controller's own release pin, which admitRecovery and the inherited recoveries read (assertWorkerRelease): the
+// launch source it starts on. A restart from the launch record carries none (LAUNCH_ENV keeps no pin: a saved one goes
+// stale), and a live-reload respawn carries the old one, so the controller always pins the source it loaded. A later
+// source change still pauses its recovery admissions ('release source changed').
+export function pinControllerRelease(env: Record<string, string | undefined>, source: string): void {
+    env.WORKER_RELEASE = source;
+    delete env.WORKER_ENTRY;
+}
+
 export const RECOVERY_SLOT_HOLD_MS = 30_000;
 export const RECOVERY_SLOT_WAIT_MS = 600_000;
 export const RECOVERY_LEASE_MAX_MS = RECOVERY_SLOT_WAIT_MS + 300_000;
@@ -1268,10 +1277,12 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         saveLaunch(join(root, controllerNamed('swarm').launch), [planFile]);
     }
     const ownerFile = join(liveDir, 'swarm-owner.json');
+    const startSource = cachedLaunchRevision(root);
+    pinControllerRelease(process.env, startSource);
     atomicJson(ownerFile, {
         pid: process.pid,
         nonce,
-        source: cachedLaunchRevision(root),
+        source: startSource,
         plan: planFile,
         side,
         at: Date.now(),

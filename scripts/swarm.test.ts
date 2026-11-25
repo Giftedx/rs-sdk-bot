@@ -1,5 +1,18 @@
 import { test, expect, describe, afterEach } from 'bun:test';
-import { demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile } from './swarm';
+import { demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile,pinControllerRelease } from './swarm';
+import { assertWorkerRelease } from '../packages/core/src/worker-release';
+
+test('a controller restarted with no pin, or respawned with a stale one, pins the source it starts on',()=>{
+ // A restart from the launch record has no pin, and recovery admission refuses every account.
+ const restarted:Record<string,string|undefined>={DEMO_OK:'1'};
+ expect(()=>assertWorkerRelease(restarted)).toThrow('no worker progress: release pin missing; live starts paused');
+ pinControllerRelease(restarted,'a'.repeat(64));
+ expect(restarted).toEqual({DEMO_OK:'1',WORKER_RELEASE:'a'.repeat(64)});
+ // A live-reload respawn inherits the old controller's pin and any entry: both give way to the new start source.
+ const respawned:Record<string,string|undefined>={WORKER_RELEASE:'b'.repeat(64),WORKER_ENTRY:'scripts/aio-logistics.ts'};
+ pinControllerRelease(respawned,'c'.repeat(64));
+ expect(respawned).toEqual({WORKER_RELEASE:'c'.repeat(64)});
+});
 
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
