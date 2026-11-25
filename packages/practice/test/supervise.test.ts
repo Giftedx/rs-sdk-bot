@@ -50,7 +50,7 @@ test('Rune Mysteries qualification failures block instead of relogging an untrai
  expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
  expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
 });
-import { drainPause, supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, isClaimAuthorityFault, isNoProgressFailure, isEntryRefusal, CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
+import { drainPause, gainedInRun, supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, isClaimAuthorityFault, isNoProgressFailure, isEntryRefusal, CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
 
@@ -516,4 +516,28 @@ test('a waiting live update that drains the worker ends the job as release-pause
     expect(restarted).toEqual({ reason: 'done', runs: 2 });
     expect(drainPause(undefined)).toBeNull();
     expect(drainPause([])).toBeNull();
+});
+
+test('a run that walks to the same failure twice with no XP or item change ends as blocked', async () => {
+    const walked = 'LEDGER ticks=504 xp=0 inventory=0 move=442 anim=2 dialog=3 stun=0 idle=57 idlePct=11.3 xpGain=0';
+    const fail = 'RESULT fail dialogue click refused: Failed to click dialog option (continue; options ["No thanks","Ok then"])';
+    expect(madeProgress(walked)).toBe(true);
+    expect(gainedInRun(walked)).toBe(false);
+    let calls = 0;
+    const r = await supervise({ run: async () => { calls++; return { stdout: [walked, fail].join('\n'), exitCode: 1 }; }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(r).toEqual({ reason: 'blocked', runs: 2 });
+    expect(calls).toBe(2);
+    // A run that gained XP or changed an item keeps restarting on the same failure, as before.
+    for (const gained of ['LEDGER ticks=504 xp=3 inventory=0 move=400 idle=50', 'LEDGER ticks=504 xp=0 inventory=1 move=400 idle=50']) {
+        expect(gainedInRun(gained)).toBe(true);
+        let n = 0;
+        const again = await supervise({ run: async () => (++n < 3 ? { stdout: [gained, fail].join('\n'), exitCode: 1 } : { stdout: 'RESULT ok', exitCode: 0 }), stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+        expect(again).toEqual({ reason: 'done', runs: 3 });
+    }
+    // Two walks that fail in different ways keep restarting.
+    let k = 0;
+    const texts = [fail, 'RESULT fail talk bartender', 'RESULT ok'];
+    const moved = await supervise({ run: async () => ({ stdout: [walked, texts[k++]!].join('\n'), exitCode: k === 3 ? 0 : 1 }), stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(moved).toEqual({ reason: 'done', runs: 3 });
+    expect(gainedInRun('RESULT fail no ledger')).toBe(false);
 });

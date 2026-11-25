@@ -121,6 +121,15 @@ export function madeProgress(stdout: string): boolean {
     return !idle || Number(idle[1]) < Number(m[1]);
 }
 
+// A gain in a run: its last LEDGER line counts a tick on which XP rose or the items changed (`xp=` or `inventory=`
+// above 0). Walking, animations and dialogs alone are work with no gain.
+const LEDGER_GAIN_RE = /\bxp=(\d+)\b.*\binventory=(\d+)\b/;
+export function gainedInRun(stdout: string): boolean {
+    const line = lastMatchingLine(stdout, l => l.startsWith('LEDGER ticks='));
+    const m = line ? LEDGER_GAIN_RE.exec(line) : null;
+    return !!m && (Number(m[1]) > 0 || Number(m[2]) > 0);
+}
+
 // openBot prints `DEATH at=...` for every death of the account (packages/core/src/death-recovery.ts deathLine), also
 // inside a chain step (`  | DEATH at=...`). A worker can fail after the death without naming it in its RESULT, so a
 // failed run with a DEATH line ends as died: a restart would walk the account back into the same danger.
@@ -142,9 +151,11 @@ export const HELD_CLAIM_TRIES = 3;
 export const isHeldClaimRefusal = (result: string) => /^RESULT fail (?:login: )?(?:Error: )?fleet account claim held\b/.test(result);
 
 // The failure text of a run with its numbers masked. Two runs in a row that end with the same text, with no real work
-// in either, fail the same way on every next login, so the job ends as blocked after the second: a failure that no
-// rule above names (a "no route" or "feathers=2000 gained=0" result without its own rule) would otherwise log in
-// maxRestarts times. Failures that a later login can repair keep the retry streak: a login error, a dropped session,
+// or no gain (gainedInRun) in either, fail the same way on every next login, so the job ends as blocked after the
+// second. A run that walks to the same dialog and fails it again is work with no gain: without this rule its streak
+// restarts at each run and the job never ends, which also holds a live-update drain. A failure that no rule above
+// names (a "no route" or "feathers=2000 gained=0" result without its own rule) would otherwise log in maxRestarts
+// times. Failures that a later login can repair keep the retry streak: a login error, a dropped session,
 // a transport stall, a held claim (it has its own limit) and a claim authority that did not answer.
 // The Git authority of the login claim did not answer in its time (packages/core/src/fleet-trade-claim.ts). The account
 // did not log in, and a later login can pass. Such a result keeps the retry streak and never ends a job as blocked, and
@@ -242,7 +253,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         held = isHeldClaimRefusal(result) ? held + 1 : 0;
         if (held >= HELD_CLAIM_TRIES) return { reason: 'gave-up', runs };
         const worked = madeProgress(r.stdout);
-        const shape = !worked && repeatableFailure(result) ? failureShape(result) : null;
+        const shape = !(worked && gainedInRun(r.stdout)) && repeatableFailure(result) ? failureShape(result) : null;
         if (shape !== null && shape === lastShape) return { reason: 'blocked', runs };
         lastShape = shape;
         // A run with real work behind it is one failure, not one more: the streak toward gave-up restarts at it.
