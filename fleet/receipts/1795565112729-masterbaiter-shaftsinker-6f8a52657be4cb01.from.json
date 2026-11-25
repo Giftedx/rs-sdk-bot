@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795565112729-masterbaiter-shaftsinker-6f8a52657be4cb01",
  "account": "Masterbaiter",
  "partner": "Shaftsinker",
@@ -12,6 +12,20 @@
  "claim": "7d606550-6e63-4ceb-8c81-dab3ac2c11a0",
  "count": 0,
  "ok": false,
- "at": 1795565401885,
- "detail": "trade claimed"
+ "at": 1795565839309,
+ "detail": "Error: transfer requires reconciliation: declined: Other player declined trade.",
+ "inventory": {
+  "before": 20,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795565595851
+ },
+ "logout": {
+  "attemptId": "1795565401895-0000011896-0000000001",
+  "at": 1795565839295,
+  "sha256": "3e7bfa5ef2783bf5abf3f7fa12afb817f034bd5f5ffaa766f0f2ad6bfe6f5208"
+ },
+ "screen": true
 }
