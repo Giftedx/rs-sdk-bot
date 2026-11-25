@@ -20,6 +20,7 @@ import { createActivityCatalog } from '../src/catalog';
 import { loadItemsMap } from '../src/preflight';
 import { createRateStore } from '../src/rate-store';
 import { derivedProfile } from '../../workers/src/market/shop-profiles';
+import { resolveShopProfile } from '../../workers/src/market/preflight';
 
 const NOW = 1_700_000_000_000;
 
@@ -775,7 +776,7 @@ test('planner excludes quest activities from combat_readiness/skill, selects low
 
     for (const entries of loadShopCatalogByItem().values()) {
         for (const entry of entries) {
-            expect(Boolean(derivedProfile(entry.shop))).toBe(true);
+            expect(Boolean(resolveShopProfile(entry.shop))).toBe(true);
         }
     }
 
@@ -1397,5 +1398,97 @@ test('multi-skill combat activities unlock Defence skill prerequisites', () => {
     expect(plan.steps[1]).toMatchObject({
         stepKind: 'work',
         activityId: 'combat:def-gated',
+    });
+});
+
+test('planner prefers deterministic npc_shop (zaff Staff of air) over higher-cost GE and caps GE buys to quote.sell', () => {
+    const shopBuyAct: ActivityDefinition = {
+        id: 'market:shop-buy',
+        workerId: 'market',
+        family: 'market',
+        kind: 'shop',
+        label: 'Buy from shop',
+        location: { x: 3185, z: 3436, level: 0 },
+        config: { mode: 'shop-buy' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 4, gpPerTick: 0, setupTicks: 30, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const geBuyAct: ActivityDefinition = {
+        id: 'market:ge-buy',
+        workerId: 'market',
+        family: 'market',
+        kind: 'ge_buy',
+        label: 'Buy on GE',
+        location: { x: 3164, z: 3487, level: 0 },
+        config: { mode: 'ge-buy' },
+        baselineRate: { xpPerTick: 0, unitsPerTick: 4, gpPerTick: 0, setupTicks: 30, minBatchUnits: 1, confidence: 'practice' },
+        trust: 'practice_passed',
+    };
+    const buyer: AccountState = {
+        name: 'ShopBuyer',
+        side: 'local',
+        role: 'helper',
+        protectedClock: false,
+        lifecycle: 'idle',
+        skills: {},
+        quests: {},
+        pos: { x: 3185, z: 3436, level: 0 },
+        inventory: {},
+        equipment: {},
+        bank: { items: { 995: 500_000 }, observedAt: NOW - 1_000, trusted: true },
+    };
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { ShopBuyer: buyer },
+    };
+
+    const staffPlan = planAccount(buyer, {
+        world,
+        activities: [shopBuyAct, geBuyAct],
+        demands: [{
+            id: 'd:staff-of-air',
+            goalKind: 'main_supply',
+            valueScore: 500,
+            valuePerHour: 3000,
+            target: { kind: 'item', itemId: 1381, itemName: 'Staff of air', count: 3 },
+            fulfilled: 0,
+            remaining: 3,
+            priorityWeight: 1,
+            active: true,
+        }],
+        // Even if GE has a valid ask within 10x base (e.g. 12,000 gp), deterministic zaff shop (1,500 gp) must win.
+        marketQuotes: { 1381: { ask: 12_000, sell: 50, trades: 10 } },
+    });
+    expect(staffPlan.steps).toHaveLength(1);
+    expect(staffPlan.steps[0]).toMatchObject({
+        stepKind: 'work',
+        activityId: 'market:shop-buy',
+        config: { mode: 'shop-buy', shopId: 'zaff', itemId: 1381, quantity: 3 },
+    });
+
+    const shallowGePlan = planAccount(buyer, {
+        world,
+        activities: [shopBuyAct, geBuyAct],
+        demands: [{
+            id: 'd:dbones',
+            goalKind: 'main_supply',
+            valueScore: 500,
+            valuePerHour: 3000,
+            target: { kind: 'item', itemId: 536, itemName: 'Dragon bones', count: 20 },
+            fulfilled: 0,
+            remaining: 20,
+            priorityWeight: 1,
+            active: true,
+        }],
+        marketQuotes: { 536: { ask: 6_151, sell: 7, trades: 100 } },
+    });
+    expect(shallowGePlan.steps).toHaveLength(1);
+    expect(shallowGePlan.steps[0]).toMatchObject({
+        stepKind: 'work',
+        activityId: 'market:ge-buy',
+        config: { mode: 'ge-buy', itemId: 536, quantity: 7 },
     });
 });

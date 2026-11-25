@@ -887,6 +887,7 @@ export function runBrainCycle(opts: BrainCycleOptions = {}): BrainCycleResult {
         rateStore,
         infraCircuitBreaker: infraState,
         marketQuotes,
+        requireMarketQuote: true,
         logoutProofs,
         recentTransfers: opts.recentTransfers,
         stationedHubBankers: opts.stationedHubBankers,

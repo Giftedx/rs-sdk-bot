@@ -19,6 +19,7 @@ import {
     resolveAcquireItem,
 } from '../src/acquire';
 import { derivedProfile } from '../../workers/src/market/shop-profiles';
+import { resolveShopProfile } from '../../workers/src/market/preflight';
 
 const NOW = 1_700_000_000_000;
 
@@ -91,7 +92,7 @@ test('AcquireItem evaluates sources in strict Own Bank -> NPC Shop -> GE -> Hub 
     // Feather (314) is in own_bank, npc_shop (sarim/Gerrant), ge, hub_banker: own_bank wins first!
     const ownWin = resolveAcquireItem(acct, { itemId: 314, quantity: 100 }, {
         world,
-        marketQuotes: { 314: { ask: 5, sell: 4, trades: 10 } },
+        marketQuotes: { 314: { ask: 5, sell: 500, trades: 10 } },
     });
     expect(ownWin.ok).toBe(true);
     expect(ownWin.step?.source).toBe('own_bank');
@@ -107,7 +108,7 @@ test('AcquireItem evaluates sources in strict Own Bank -> NPC Shop -> GE -> Hub 
         { itemId: 314, quantity: 100 },
         {
             world: { ...world, accounts: { Packhorse: noOwnFeathers, Moneyshot: donor } },
-            marketQuotes: { 314: { ask: 5, sell: 4, trades: 10 } },
+            marketQuotes: { 314: { ask: 5, sell: 500, trades: 10 } },
         },
     );
     expect(shopWin.ok).toBe(true);
@@ -260,18 +261,23 @@ test('AcquireItem enforces untrusted bank, protectedClock, and anti-ping-pong ex
     expect(res.step).toBeNull();
 });
 
-test('loadShopCatalogByItem only emits runnable derivedProfile shops and excludes unreachable shops', () => {
+test('loadShopCatalogByItem emits runnable derivedProfile and PROFILES shops while excluding unreachable shops', () => {
     const catalog = loadShopCatalogByItem();
     expect(catalog.size).toBeGreaterThan(0);
     const allShops = new Set<string>();
     for (const entries of catalog.values()) {
         for (const entry of entries) {
             allShops.add(entry.shop);
-            expect(Boolean(derivedProfile(entry.shop))).toBe(true);
+            expect(Boolean(resolveShopProfile(entry.shop))).toBe(true);
         }
     }
+    expect(allShops.has('zaff')).toBe(true);
+    expect(allShops.has('jiminua')).toBe(true);
+    expect(catalog.get(1381)?.some((e) => e.shop === 'zaff' && e.cost === 1500)).toBe(true);
+    expect(catalog.get(175)?.some((e) => e.shop === 'jiminua' && e.cost === 288)).toBe(true);
     expect(allShops.has('cheapringshop')).toBe(false);
     expect(allShops.has('gnomeshop_gulluck')).toBe(false);
+    expect(Boolean(derivedProfile('2handedshop'))).toBe(true);
 });
 
 test('loadMarketQuotesFromRoot unwraps writeMarketCache { at, items } envelope and enforces MARKET_CACHE_MS freshness', () => {
@@ -496,4 +502,34 @@ test('AcquireItem hub_banker allowPartial consolidates largest partial surplus w
     expect(partialRes.step?.source).toBe('hub_banker');
     expect(partialRes.step?.donorAccount).toBe('DonorLarge');
     expect(partialRes.step?.quantity).toBe(75);
+});
+
+test('AcquireItem rejects shallow GE sell depth for full requests and caps allowPartial GE buys to quote.sell', () => {
+    const richAcct = makeAcct({
+        bank: { items: { 995: 500_000 }, observedAt: NOW - 5000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1,
+        at: NOW,
+        side: 'local',
+        server: 'rs-sdk-demo.fly.dev',
+        accounts: { Packhorse: richAcct },
+    };
+
+    const shallowFail = resolveAcquireItem(
+        richAcct,
+        { itemId: 536, quantity: 10, allowOwnBank: false, allowedSources: ['ge'] },
+        { world, marketQuotes: { 536: { ask: 6000, sell: 3, trades: 20 } } },
+    );
+    expect(shallowFail.ok).toBe(false);
+
+    const partialGe = resolveAcquireItem(
+        richAcct,
+        { itemId: 536, quantity: 10, allowOwnBank: false, allowPartial: true, allowedSources: ['ge'] },
+        { world, marketQuotes: { 536: { ask: 6000, sell: 3, trades: 20 } } },
+    );
+    expect(partialGe.ok).toBe(true);
+    expect(partialGe.step?.source).toBe('ge');
+    expect(partialGe.step?.quantity).toBe(3);
+    expect(partialGe.step?.estimatedCoinCost).toBe(18_000);
 });
