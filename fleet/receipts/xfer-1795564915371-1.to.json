@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795564915371-1",
  "account": "Shaftsinker",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Antipoison(3)",
  "requested": 4,
  "claim": "dad4b8ee-ce29-4303-8a17-9d666cb43fef",
- "count": 0,
- "ok": false,
- "at": 1795565188733,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795565201345,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795565200600
+ },
+ "logout": {
+  "attemptId": "1795565188851-0000016820-0000000001",
+  "at": 1795565201333,
+  "sha256": "53e3383aa96c999bf037bb6b746390da6069834fb2dfc4d49692e6d473358fb4"
+ },
+ "screen": true
 }
