@@ -457,6 +457,56 @@ async function rubChainedTeleport(
  throw Error(`rubChainedTeleport(${componentId}) exceeded cap`);
 }
 
+async function walkWaypoints(
+ spec: Session,
+ waypoints: readonly { x: number; z: number; tol?: number }[],
+ deadline: number,
+ stop?: () => boolean,
+): Promise<void> {
+ for (let i = 0; i < waypoints.length; i++) {
+  if (stop?.()) return;
+  const wp = waypoints[i]!;
+  await walkDirect(spec, wp.x, wp.z, wp.tol ?? 1, deadline, stop);
+ }
+}
+
+const BURTHORPE_TO_KAQ_WPS = [
+ { x: 2899, z: 3544, tol: 2 },
+ { x: 2913, z: 3517, tol: 2 },
+ { x: 2920, z: 3498, tol: 2 },
+ { x: KAQEMEEX_SPOT.x, z: KAQEMEEX_SPOT.z, tol: 2 },
+] as const;
+
+const KAQ_TO_SANFEW_WPS = [
+ { x: 2935, z: 3471, tol: 2 },
+ { x: 2936, z: 3456, tol: 2 },
+ { x: 2928, z: 3445, tol: 2 },
+ { x: 2916, z: 3432, tol: 2 },
+ { x: 2900, z: 3428, tol: 2 },
+ { x: 2898, z: 3427, tol: 1 },
+] as const;
+
+const SANFEW_TO_DUNG_WPS = [
+ { x: 2892, z: 3428, tol: 1 },
+ { x: 2890, z: 3410, tol: 2 },
+ { x: 2884, z: 3398, tol: 1 },
+] as const;
+
+const DUNG_TO_SANFEW_WPS = [
+ { x: 2890, z: 3408, tol: 2 },
+ { x: 2892, z: 3428, tol: 1 },
+ { x: 2898, z: 3427, tol: 1 },
+] as const;
+
+const SANFEW_TO_KAQ_WPS = [
+ { x: 2900, z: 3428, tol: 2 },
+ { x: 2921, z: 3439, tol: 2 },
+ { x: 2928, z: 3445, tol: 2 },
+ { x: 2936, z: 3456, tol: 2 },
+ { x: 2935, z: 3471, tol: 2 },
+ { x: KAQEMEEX_SPOT.x, z: KAQEMEEX_SPOT.z - 1, tol: 1 },
+] as const;
+
 async function completeDruidicRitual(spec: Session, start: number, deadline: number): Promise<string> {
  const eatGuard = { lastTick: -1 };
  const offEat = spec.onTick(() => {
@@ -492,8 +542,14 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  }
 
  const walker = await createRunSafeWalker(spec);
+ if (!isRunEnabled(spec)) {
+  await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+ }
 
- await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15), walker);
+ await walkWaypoints(spec, BURTHORPE_TO_KAQ_WPS, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15));
+ if (!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15)) {
+  await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15), walker);
+ }
  logPhase(spec, start, 'herb_at_kaqemeex');
 
  await talkQuestNpc(
@@ -508,12 +564,15 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
    ['R', 'R', 2471, 'R'],
   ],
   async () => {
-   await spec.direct({ type: 'walkTo', x: 2931, z: 3480, running: true, reason: 'SDK' });
+   await spec.direct({ type: 'walkTo', x: 2935, z: 3471, running: true, reason: 'SDK' });
   },
  );
  const tKaq1 = spec.tick() - start;
 
- await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
+ await walkWaypoints(spec, KAQ_TO_SANFEW_WPS, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 4));
+ if (!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 4)) {
+  await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
+ }
  logPhase(spec, start, 'herb_at_sanfew1_stairs');
  await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
  logPhase(spec, start, 'herb_up_sanfew1');
@@ -533,7 +592,10 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
 
  await climbLoc(spec, 1740, 2898, 3428, /climb-down/i, () => (playerPos(spec)?.level ?? 1) === 0, deadline);
  logPhase(spec, start, 'herb_down_sanfew1');
- await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6), walker);
+ await walkWaypoints(spec, SANFEW_TO_DUNG_WPS, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6));
+ if (!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6)) {
+  await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6), walker);
+ }
  await climbLoc(spec, 1759, 2884, 3397, /climb-down/i, () => (playerPos(spec)?.worldZ ?? 0) > 9000, deadline);
  const tDung = spec.tick() - start;
  logPhase(spec, start, 'herb_in_dungeon');
@@ -608,7 +670,10 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  await walkDirect(spec, 2884, 9798, 1, deadline, () => (playerPos(spec)?.worldZ ?? 9999) <= 9808);
  await climbLoc(spec, 1755, 2884, 9797, /climb-up/i, () => (playerPos(spec)?.worldZ ?? 9999) < 9000, deadline);
  logPhase(spec, start, 'herb_out_of_dungeon');
- await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
+ await walkWaypoints(spec, DUNG_TO_SANFEW_WPS, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 4));
+ if (!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 4)) {
+  await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
+ }
  await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
 
  await talkQuestNpc(
@@ -637,17 +702,13 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   for (const slot of slots) void spec.direct({ type: 'dropItem', slot, reason: 'SDK' });
  });
  try {
-  await walkLocal(
-   spec,
-   KAQEMEEX_SPOT.x,
-   KAQEMEEX_SPOT.z - 1,
-   1,
-   deadline,
-   () =>
-    spec.sdk.getInventory().every(i => GLORY_SET.has(i.id)) &&
-    !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15),
-   walker,
-  );
+  const readyForKaq = () =>
+   spec.sdk.getInventory().every(i => GLORY_SET.has(i.id)) &&
+   !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15);
+  await walkWaypoints(spec, SANFEW_TO_KAQ_WPS, deadline, readyForKaq);
+  if (!readyForKaq()) {
+   await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z - 1, 1, deadline, readyForKaq, walker);
+  }
  } finally {
   offDrop();
  }
@@ -668,11 +729,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  }
 }
 
-async function teleportEdgevilleAndDropGlory(
- spec: Session,
- deadline: number,
- preRequestHelper?: () => Promise<void>,
-): Promise<boolean> {
+async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): Promise<void> {
  // Amulet of glory has no p_delay before p_choice5_header; send rub + Edgeville (2494) in one tick.
  await rubChainedTeleport(
   spec,
@@ -687,10 +744,9 @@ async function teleportEdgevilleAndDropGlory(
   true,
  );
  let gloryDropped = false;
- let preRequested = false;
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
-  if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) return preRequested;
+  if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) return;
   const acts: Promise<unknown>[] = [
    spec.direct({ type: 'walkTo', x: HERBLORE_BANK_SPOT.x, z: HERBLORE_BANK_SPOT.z, running: true, reason: 'SDK' }),
   ];
@@ -701,14 +757,9 @@ async function teleportEdgevilleAndDropGlory(
     acts.push(spec.direct({ type: 'dropItem', slot: glory.slot, reason: 'SDK' }));
    }
   }
-  if (!preRequested && preRequestHelper && p && Math.max(Math.abs(p.worldX - HERBLORE_BANK_SPOT.x), Math.abs(p.worldZ - HERBLORE_BANK_SPOT.z)) <= 4) {
-   preRequested = true;
-   acts.push(preRequestHelper());
-  }
   await Promise.all(acts);
   await waitTicks(spec, 1);
  }
- return preRequested;
 }
 
 async function openEdgevilleBank(spec: Session, deadline: number): Promise<void> {
@@ -784,9 +835,9 @@ const FAST_HERB_STEPS: readonly BankBrewPlanStep[] = [
  { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 10, openBankAtEnd: true },
- // Weapon poison x20 as 13 + 7 (saves 1 cycle/bank tick vs 10 + 10).
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 7, openBankAtEnd: true },
+ // Weapon poison x20 as 10 + 10 (2 brew ticks each, no leftovers).
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
  // Antifire x30 as 13 + 13 + 4 (0 leftovers).
  { unf: ITEM_IDS.lantadymevial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
  { unf: ITEM_IDS.lantadymevial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
@@ -804,9 +855,9 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
  { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 10, openBankAtEnd: true },
- // Weapon poison x20 as 13 + 7 (saves 1 cycle/bank tick vs 10 + 10).
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 7, openBankAtEnd: true },
+ // Weapon poison x20 as 10 + 10 (2 brew ticks each, no leftovers).
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.cadantinevial, sec: ITEM_IDS.white_berries, count: 13, openBankAtEnd: true },
  ...Array.from({ length: 15 }, (): BankBrewPlanStep => ({
   unf: ITEM_IDS.dwarfweedvial,
@@ -843,7 +894,6 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
   helper: Session,
   giveIds: readonly number[],
   deadlineTick: number,
-  alreadyPreRequested = false,
  ): Promise<void> {
   const begin = spec.tick();
   const helperLower = helper.name.toLowerCase();
@@ -866,9 +916,7 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
     const acts: Promise<unknown>[] = [];
     if (sTarget && hTarget && spec.tick() - lastReqTick >= 2) {
      lastReqTick = spec.tick();
-     if (!alreadyPreRequested || spec.tick() > begin) {
-      acts.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
-     }
+     acts.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
      acts.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
     } else if (!sTarget || !hTarget) {
      const tp = playerPos(spec);
@@ -940,8 +988,7 @@ async function executeHerbloreLoop(
  start: number,
  deadline: number,
  receiveStarter: () => Promise<void>,
- receiveNoted: (preRequested: boolean) => Promise<void>,
- preRequestNoted?: () => Promise<void>,
+ receiveNoted: () => Promise<void>,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  await skipTutorial2Ticks(spec, deadline);
  if (spec.sdk.getInventory().length > 19) {
@@ -952,9 +999,9 @@ async function executeHerbloreLoop(
  const druidTrace = await completeDruidicRitual(spec, start, deadline);
  const druidTicks = spec.tick() - start;
 
- const preRequested = await teleportEdgevilleAndDropGlory(spec, deadline, preRequestNoted);
+ await teleportEdgevilleAndDropGlory(spec, deadline);
  const tTrade0 = spec.tick();
- await receiveNoted(preRequested);
+ await receiveNoted();
  const tradeTicks = spec.tick() - tTrade0;
 
  const invAfterTrade = spec.sdk.getInventory();
@@ -1092,20 +1139,13 @@ export async function runHerbloreSpecialist(
  );
  try {
   const notedBatch = useDrop ? HERBLORE_DROP_NOTED_BATCH : HERBLORE_NOTED_BATCH;
-  const notedHelper = helpers[1]!;
   return await executeHerbloreLoop(
    spec,
    target,
    start,
    deadline,
    () => fastInProcessHerbloreTrade(spec, helpers[0]!, HERBLORE_STARTER_BATCH.give.map(g => g.id), deadline),
-   preRequested => fastInProcessHerbloreTrade(spec, notedHelper, notedBatch.give.map(g => g.id), deadline, preRequested),
-   async () => {
-    const sTarget = notedHelper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === spec.name.toLowerCase());
-    if (sTarget) {
-     await notedHelper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' });
-    }
-   },
+   () => fastInProcessHerbloreTrade(spec, helpers[1]!, notedBatch.give.map(g => g.id), deadline),
   );
  } finally {
   done = true;
