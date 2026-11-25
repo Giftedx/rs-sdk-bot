@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795602433478,
+ "at": 1795602447229,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -40,22 +40,6 @@
    "role": "helper"
   },
   {
-   "account": "Knightstick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -73,14 +57,13 @@
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "foraging",
-    "grapes"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1987 BATCH_UNITS=20 -- foraging grapes"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -231,21 +214,6 @@
    "repeat": false,
    "goal": "goal:supply_chain:259",
    "role": "army"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/quest-tree.ts DEMAND_ID=goal:quest_board:tree BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:tree",
-   "role": "army"
   }
  ],
  "army": [
@@ -266,7 +234,9 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "knightstick",
   "mineyourbiz",
+  "mmthv2350",
   "moneyshot",
   "pocketpython",
   "pocketrocket",
