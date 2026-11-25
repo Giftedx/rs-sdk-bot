@@ -166,19 +166,60 @@ export function resolveActivityWorkerRoute(
         case 'gather':
         case 'bank-artisan': {
             const routeParts = aioRoute ? aioRoute.split(':') : [];
-            const skill = (
+            let skill = (
                 typeof cfg.skill === 'string'
                     ? cfg.skill
                     : routeParts[0] || activity.skill || inferred.skill || 'mining'
             ).toLowerCase();
-            const rawMethod = typeof cfg.method === 'string'
+            let rawMethod = typeof cfg.method === 'string'
                 ? cfg.method
                 : routeParts[1] && routeParts[1] !== 'skill-action'
                     ? routeParts[1]
                     : inferred.method;
-            const args = standaloneScript
-                ? explicitArgs
+            let args = standaloneScript
+                ? [...explicitArgs]
                 : [skill, ...(rawMethod ? [rawMethod] : []), ...explicitArgs];
+
+            if (activity.family === 'bank-artisan' && !standaloneScript) {
+                if (routeParts[1] === 'skill-action' && typeof cfg.method !== 'string') {
+                    if (skill === 'smithing') {
+                        rawMethod = 'anvil';
+                        const productId = typeof cfg.productId === 'number' ? cfg.productId : undefined;
+                        if (productId !== undefined && env.PRODUCT_ID === undefined) {
+                            env.PRODUCT_ID = String(productId);
+                        }
+                        if (env.ORDER_ACTION === undefined) env.ORDER_ACTION = 'smith';
+                        args = [skill, rawMethod, ...(explicitArgs.length > 0 ? explicitArgs : [extraEnv.CAP ?? '1500'])];
+                    } else if (skill === 'herblore') {
+                        const row = typeof cfg.row === 'string' ? cfg.row : undefined;
+                        if (row && /^(?:unf_|3dose)/.test(row)) {
+                            skill = 'crafting';
+                            rawMethod = 'inventory';
+                            if (env.MEMBERS === undefined) env.MEMBERS = '1';
+                            args = [skill, rawMethod, `brew:${row}`];
+                        } else {
+                            rawMethod = 'potions';
+                            args = [skill, rawMethod, ...explicitArgs];
+                        }
+                    }
+                }
+                if (skill === 'smithing' && rawMethod === 'anvil') {
+                    if (env.ORDER_ACTION === undefined) env.ORDER_ACTION = 'smith';
+                    if (env.BAR_RESERVE === undefined) env.BAR_RESERVE = '0';
+                    if (extraEnv.TARGET_COUNT) {
+                        env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
+                    }
+                    if (extraEnv.CAP && args.length >= 3) args[2] = extraEnv.CAP;
+                } else if (skill === 'crafting' && rawMethod === 'inventory') {
+                    if (extraEnv.TARGET_COUNT) {
+                        env.MAX_MAKE = extraEnv.MAX_MAKE ?? extraEnv.TARGET_COUNT;
+                    }
+                } else if (skill === 'magic' && rawMethod === 'items' && args.length >= 4) {
+                    if (extraEnv.TARGET_COUNT) args[4] = extraEnv.TARGET_COUNT;
+                    if (extraEnv.CAP) args[5] = extraEnv.CAP;
+                }
+            }
+
             const routeKey = rawMethod ? `${skill}:${rawMethod}` : skill;
             return {
                 family: activity.family,
@@ -361,6 +402,9 @@ export function resolveActivityWorkerRoute(
             const role = typeof cfg.role === 'string'
                 ? cfg.role
                 : aioRoute ?? inferred.method ?? 'walk-to';
+            if (role === 'charge-glory' && extraEnv.TARGET_COUNT) {
+                env.MAX_GLORIES = extraEnv.MAX_GLORIES ?? extraEnv.TARGET_COUNT;
+            }
             return {
                 family: 'logistics',
                 workerId: 'logistics',

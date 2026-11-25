@@ -367,3 +367,141 @@ test('catalog covers all 9 worker families with existing standalone scripts only
         expect(route.routeKey.length).toBeGreaterThan(0);
     }
 });
+
+test('craft_gather routing compiles runnable enchant, charge-glory, decant, smithing anvil, and brew inventory orders', () => {
+    const catalog = createActivityCatalog();
+    const ctx = { catalog };
+
+    const dueling = resolvePlannedStepWorkerRoute(
+        'RingMaker',
+        {
+            stepKind: 'acquire',
+            source: 'craft_gather',
+            itemId: 2552,
+            quantity: 4,
+            estimatedTicks: 30,
+            estimatedCoinCost: 0,
+            coinFloatPreserved: 1000,
+            activityId: 'bank-artisan:magic-enchant-emerald_ring',
+        },
+        ctx,
+    );
+    expect(dueling.routeKey).toBe('magic:items');
+    expect(dueling.args).toEqual(['magic', 'items', 'enchant:emerald_ring', '-', '4', '1000']);
+
+    const gloryUncharged = resolvePlannedStepWorkerRoute(
+        'GloryEnchanter',
+        {
+            stepKind: 'acquire',
+            source: 'craft_gather',
+            itemId: 1704,
+            quantity: 2,
+            estimatedTicks: 30,
+            estimatedCoinCost: 0,
+            coinFloatPreserved: 1000,
+            activityId: 'bank-artisan:magic-enchant-strung_dragonstone_amulet',
+        },
+        ctx,
+    );
+    expect(gloryUncharged.routeKey).toBe('magic:items');
+    expect(gloryUncharged.args).toEqual(['magic', 'items', 'enchant:strung_dragonstone_amulet', '-', '2', '1000']);
+    expect(gloryUncharged.env.MEMBERS).toBe('1');
+
+    const chargeGlory = resolvePlannedStepWorkerRoute(
+        'GloryCharger',
+        {
+            stepKind: 'acquire',
+            source: 'craft_gather',
+            itemId: 1712,
+            quantity: 3,
+            estimatedTicks: 160,
+            estimatedCoinCost: 0,
+            coinFloatPreserved: 1000,
+            activityId: 'logistics:charge-glory',
+        },
+        ctx,
+    );
+    expect(chargeGlory.family).toBe('logistics');
+    expect(chargeGlory.routeKey).toBe('charge-glory');
+    expect(chargeGlory.args).toEqual(['charge-glory']);
+    expect(chargeGlory.env.MAX_GLORIES).toBe('3');
+
+    const decantAgi = resolvePlannedStepWorkerRoute(
+        'Decanter',
+        {
+            stepKind: 'acquire',
+            source: 'craft_gather',
+            itemId: 3032,
+            quantity: 3,
+            estimatedTicks: 20,
+            estimatedCoinCost: 0,
+            coinFloatPreserved: 1000,
+            activityId: 'bank-artisan:decant-agility_potion',
+        },
+        ctx,
+    );
+    expect(decantAgi.routeKey).toBe('crafting:inventory');
+    expect(decantAgi.args).toEqual(['crafting', 'inventory', 'decant:agility_potion']);
+    expect(decantAgi.env.MAX_MAKE).toBe('3');
+    expect(decantAgi.env.MEMBERS).toBe('1');
+
+    const smithR2h = resolvePlannedStepWorkerRoute(
+        'MasterSmith',
+        {
+            stepKind: 'acquire',
+            source: 'craft_gather',
+            itemId: 1319,
+            quantity: 2,
+            estimatedTicks: 30,
+            estimatedCoinCost: 0,
+            coinFloatPreserved: 1000,
+            activityId: 'bank-artisan:skill:smithing:rune_2h_sword',
+        },
+        ctx,
+    );
+    expect(smithR2h.routeKey).toBe('smithing:anvil');
+    expect(smithR2h.args).toEqual(['smithing', 'anvil', '1000']);
+    expect(smithR2h.env.ORDER_ACTION).toBe('smith');
+    expect(smithR2h.env.PRODUCT_ID).toBe('1319');
+    expect(smithR2h.env.MAX_MAKE).toBe('2');
+
+    const brewAgi3 = resolvePlannedStepWorkerRoute(
+        'HerbBrewer',
+        {
+            stepKind: 'acquire',
+            source: 'craft_gather',
+            itemId: 3034,
+            quantity: 5,
+            estimatedTicks: 30,
+            estimatedCoinCost: 0,
+            coinFloatPreserved: 1000,
+            activityId: 'bank-artisan:skill:brew_potion.struct:3dose1agility',
+        },
+        ctx,
+    );
+    expect(brewAgi3.routeKey).toBe('crafting:inventory');
+    expect(brewAgi3.args).toEqual(['crafting', 'inventory', 'brew:3dose1agility']);
+    expect(brewAgi3.env.MAX_MAKE).toBe('5');
+    expect(brewAgi3.env.MEMBERS).toBe('1');
+
+    // Legacy skill-action configs still compile cleanly to runnable methods.
+    const legacySmith = resolveActivityWorkerRoute({
+        id: 'bank-artisan:skill:smithing:rune_2h_sword',
+        family: 'bank-artisan',
+        kind: 'produce',
+        skill: 'Smithing',
+        config: { aioRoute: 'smithing:skill-action', productId: 1319, row: 'rune_2h_sword' },
+    });
+    expect(legacySmith.routeKey).toBe('smithing:anvil');
+    expect(legacySmith.env.PRODUCT_ID).toBe('1319');
+
+    const legacyHerb = resolveActivityWorkerRoute({
+        id: 'bank-artisan:skill:brew_potion.struct:3dose1agility',
+        family: 'bank-artisan',
+        kind: 'produce',
+        skill: 'Herblore',
+        config: { aioRoute: 'herblore:skill-action', row: '3dose1agility' },
+    });
+    expect(legacyHerb.routeKey).toBe('crafting:inventory');
+    expect(legacyHerb.args).toEqual(['crafting', 'inventory', 'brew:3dose1agility']);
+});
