@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795609864647-2",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 2,
+ "claim": "191634ab-d9d1-46eb-9dbb-8687fcddd960",
+ "count": 2,
+ "ok": true,
+ "at": 1795610550509,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 3
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795610549755
+ },
+ "logout": {
+  "attemptId": "1795610532300-0000022276-0000000001",
+  "at": 1795610550497,
+  "sha256": "4cf15f6d87484e065ad6103b873dac4f042053e06c472459052862c8a4a52e27"
+ },
+ "screen": true
+}

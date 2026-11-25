@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795609864647-2",
  "account": "TheFullMonty",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Diamond",
  "requested": 2,
  "claim": "70487b44-334f-4c45-aa5c-9f6f41c986f0",
- "count": 0,
- "ok": false,
- "at": 1795610010652,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795610548901,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795610186180
+ },
+ "logout": {
+  "attemptId": "1795610010660-0000016736-0000000001",
+  "at": 1795610548888,
+  "sha256": "7b02be368c91e81e15cf7dec8104ac937f0bb471efab618c0c987d8701a35332"
+ },
+ "screen": true
 }

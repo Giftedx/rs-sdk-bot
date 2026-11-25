@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795610470582,
+ "at": 1795610552659,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -178,27 +178,20 @@
    "role": "helper"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-market.ts",
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
    "args": [
-    "shop-buy",
-    "generalshop2",
-    "3000"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-93-p94 ITEM_ID=440 QUANTITY=93 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=94 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-186-p517 ITEM_ID=453 QUANTITY=186 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=93 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
-    "ITEM_ID": "1755",
-    "ITEMS": "Chisel",
-    "MAX_ITEMS": "1",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:1601",
-   "role": "army"
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
   }
  ],
  "army": [
@@ -220,6 +213,7 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "moneyshot",
   "oreelse",
   "pocketpython",
   "pocketrocket",
