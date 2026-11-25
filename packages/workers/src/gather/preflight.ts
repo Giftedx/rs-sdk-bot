@@ -523,6 +523,10 @@ export function gatherPreflight(
                 if (full < 1 && Math.min(tooth, loop) < 1) {
                     requireItem(CRYSTAL_KEY, 1, 'Crystal key');
                 }
+            } else if (cfg.method === 'grapes') {
+                const { CHEFS_HAT, GUILD_COOKING } = loadForagingMod();
+                requireSkill('Cooking', GUILD_COOKING);
+                requireItem(CHEFS_HAT, 1, "Chef's hat");
             }
             break;
         }
@@ -892,10 +896,11 @@ export function toWorkerOutcome(
         };
     }
     if (/missing|exhausted|requires owned|no (crystal_key|fly fishing rod|small fishing net|owned)/i.test(outcome.detail)) {
+        const named = /\bmissing item (\d+)\b/i.exec(outcome.detail);
         return {
             kind: 'missing_supply',
             ...base,
-            missing: [{ itemId: 0, required: 1, available: 0, itemName: outcome.detail.slice(0, 80) }],
+            missing: [{ itemId: named ? Number(named[1]) : 0, required: 1, available: 0, itemName: outcome.detail.slice(0, 80) }],
         };
     }
     if (/route|walk|travel|unreachable|lost|stair|door|bank unavailable/i.test(outcome.detail)) {

@@ -16,6 +16,7 @@ import {
     gatherEstimate,
     gatherPreflight,
     gatherWorker,
+    grapeEntryProblem,
     normalizeGatherConfig,
     resolveSetting,
     toWorkerOutcome,
@@ -59,6 +60,7 @@ function makeAccount(over: Partial<WorkerAccountView> = {}): WorkerAccountView {
                 1359: 1, // Rune axe
                 1275: 1, // Rune pickaxe
                 1735: 1, // Shears
+                1949: 1, // Chef's hat
                 989: 2, // Crystal key
                 385: 10, // Shark
                 329: 10, // Salmon
@@ -198,6 +200,14 @@ test('gatherPreflight enforces invalid_config, protected_clock, level cap, plane
     const noKeyChest = makeAccount({ bank: { observedAt: 1, trusted: true, items: { 985: 1 } } });
     expect(gatherPreflight(noKeyChest, { skill: 'foraging', method: 'crystal-chest' }, makeWorld(noKeyChest)).blockers.map(b => b.kind)).toContain('missing_supply');
 
+    const grapes = { skill: 'foraging', method: 'grapes' } as const;
+    const noHat = makeAccount({ bank: { observedAt: 1, trusted: true, items: {} } });
+    expect(gatherPreflight(noHat, grapes, makeWorld(noHat)).blockers).toContainEqual(expect.objectContaining({ kind: 'missing_supply', itemId: 1949 }));
+    const lowCook = makeAccount({ skills: { ...base.skills, Cooking: { level: 30, xp: 13_363 } }, equipment: { 1949: 1 } });
+    expect(gatherPreflight(lowCook, grapes, makeWorld(lowCook)).blockers).toContainEqual(expect.objectContaining({ kind: 'skill_level', skill: 'Cooking', required: 32, current: 30 }));
+    const wornHat = makeAccount({ bank: { observedAt: 1, trusted: true, items: {} }, equipment: { 1949: 1 } });
+    expect(gatherPreflight(wornHat, grapes, makeWorld(wornHat)).ok).toBe(true);
+
     const crowded = makeWorld(base, { spotOccupancy: { iron_south: 4 } });
     expect(gatherPreflight(base, { skill: 'mining', method: 'ore', spot: 'iron_south' }, crowded).blockers.map(b => b.kind)).toContain('capacity_full');
 });
@@ -255,6 +265,14 @@ test('gatherWorker.run and toWorkerOutcome map success, refusal, death, missing_
     );
     expect(isRunOutcome(missing)).toBe(true);
     expect(missing.kind).toBe('missing_supply');
+
+    const noHat = toWorkerOutcome(
+        { ok: false, kind: 'failed', detail: "Error: missing item 1949 Chef's hat for the guild door at=3185,3436,0 ticks=40 lost=0", delta: { elapsedTicks: 40 } },
+        'Grapes',
+        normalizeGatherConfig({ skill: 'foraging', method: 'grapes' }),
+        40,
+    );
+    expect(noHat).toMatchObject({ kind: 'missing_supply', missing: [{ itemId: 1949, required: 1, available: 0 }] });
 
     const stranded = toWorkerOutcome(
         { ok: false, kind: 'failed', detail: 'walk to Catherby bank unreachable', delta: { elapsedTicks: 9 } },
@@ -391,4 +409,11 @@ test('woodcutting:loop and woodcut-supply honor caller stop signals without chop
     const supplyOut = await runWoodSupply(wcSession, 1, 0, 100, undefined, () => true);
     expect(supplyOut.ok).toBe(false);
     expect(chopCalls).toBe(0);
+});
+
+test("grapeEntryProblem names the Cooks' Guild door requirement that blocks entry", () => {
+    expect(grapeEntryProblem(30, { worn: true, held: false, banked: false })).toBe('guild requires Cooking 32, has 30');
+    expect(grapeEntryProblem(64, { worn: false, held: false, banked: false })).toBe("missing item 1949 Chef's hat for the guild door");
+    expect(grapeEntryProblem(32, { worn: false, held: false, banked: true })).toBeNull();
+    expect(grapeEntryProblem(32, { worn: true, held: false, banked: false })).toBeNull();
 });

@@ -118,6 +118,19 @@ describe('catalog-worker parity', () => {
         expect(route.args.slice(0, 3)).toEqual(['magic', 'earth-production', 'craft']);
     });
 
+    test('gather:foraging-grapes needs the Cooks\' Guild door: Cooking 32 and an owned chef\'s hat', () => {
+        // cooking_guild.rs2 [oploc1,chefdoor] refuses entry below stat(cooking) 32 or without a worn chefs_hat.
+        const act = createActivityCatalog().require('gather:foraging-grapes');
+        const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: {} };
+        const cook = (level: number) => ({ Cooking: { level, xp: 0 } });
+        const noHat = activityPreflightFromConfig(makeTestAccount({ skills: cook(64) }), act, world, 20);
+        expect(noHat.ok).toBe(false);
+        expect(noHat.missingItems?.map(m => m.itemId)).toContain(1949);
+        const lowCook = activityPreflightFromConfig(makeTestAccount({ skills: cook(30), equipment: { 1949: 1 } }), act, world, 20);
+        expect(lowCook.blockers).toContainEqual(expect.objectContaining({ kind: 'skill_level', skill: 'Cooking', required: 32, current: 30 }));
+        expect(activityPreflightFromConfig(makeTestAccount({ skills: cook(64), equipment: { 1949: 1 } }), act, world, 20).ok).toBe(true);
+    });
+
     test('quest prerequisites, multi-account quest blocks, specialist isolation, and combat survivability gates', () => {
         const catalog = createActivityCatalog();
         const world: WorldSnapshot = {
