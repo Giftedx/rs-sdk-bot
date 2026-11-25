@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795609301317,
+ "at": 1795609443317,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -192,6 +192,19 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1643",
    "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/generated/quest-crest.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:crest",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:crest",
+   "role": "army"
   }
  ],
  "army": [
@@ -214,7 +227,6 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
