@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795583403368-3",
  "account": "Masterbaiter",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "a685bb1b-d5ec-47a1-b95c-a8e5d921ece4",
  "count": 0,
  "ok": false,
- "at": 1795583615814,
- "detail": "trade claimed"
+ "at": 1795584303755,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795583615823-0000006980-0000000001",
+  "at": 1795584303742,
+  "sha256": "dcf47485a3d3441545caa67def66fd7f6b57544bec4921d446f8f8968b419883"
+ },
+ "screen": false
 }

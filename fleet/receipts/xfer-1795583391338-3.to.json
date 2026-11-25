@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795583391338-3",
  "account": "Shaftsinker",
  "partner": "UnderMyKilt",
@@ -12,6 +12,12 @@
  "claim": "106ee144-dfca-44c8-be04-3f71d62690de",
  "count": 0,
  "ok": false,
- "at": 1795583997796,
- "detail": "trade claimed"
+ "at": 1795584291755,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795583997808-0000017928-0000000001",
+  "at": 1795584291741,
+  "sha256": "471107e7c39198b295ff8fb6e1af4c5889319c031719862b8843ed006d9fcc2e"
+ },
+ "screen": false
 }
