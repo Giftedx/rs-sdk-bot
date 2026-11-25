@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795621055909-3",
  "account": "Shaftsinker",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Ring of dueling(8)",
  "requested": 1,
  "claim": "d43db630-0022-4644-aa1b-c91bd1f8be94",
- "count": 0,
- "ok": false,
- "at": 1795621238300,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795621250845,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795621250089
+ },
+ "logout": {
+  "attemptId": "1795621238309-0000023624-0000000001",
+  "at": 1795621250826,
+  "sha256": "600a92262c42298cc750257fb68439f5f216cc7a984420b036b65ed8d7358d45"
+ },
+ "screen": true
 }

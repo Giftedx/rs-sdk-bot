@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795620685254-1",
+ "account": "OreElse",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 2,
+ "claim": "88cefd53-9ff8-4c0b-adc7-c9d7028f37e6",
+ "count": 0,
+ "ok": false,
+ "at": 1795621291510,
+ "detail": "trade claimed"
+}

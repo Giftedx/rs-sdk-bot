@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795621255025-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Billionaire",
+  "to": "Moneyshot",
+  "item": "Feather",
+  "count": 1500,
+  "itemId": 314,
+  "start": 1795621255025,
+  "end": 1795622155025,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

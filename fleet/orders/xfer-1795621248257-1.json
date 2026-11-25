@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795621248257-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "SporranDip",
+  "item": "Tarromin",
+  "count": 2,
+  "itemId": 253,
+  "start": 1795621248257,
+  "end": 1795622148257,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

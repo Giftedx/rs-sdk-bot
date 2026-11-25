@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795620567377-3",
+ "account": "FishAndChips",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "3e17f35a-2264-4ef5-a9fe-dbcfa9887c5d",
+ "count": 0,
+ "ok": false,
+ "at": 1795621256807,
+ "detail": "trade claimed"
+}

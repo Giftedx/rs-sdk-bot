@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795620527236-2",
  "account": "Unsheathed",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Gold bar",
  "requested": 1,
  "claim": "18ab4d82-53e3-47b6-9fb2-f6201cf82227",
- "count": 0,
- "ok": false,
- "at": 1795621138518,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795621255644,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795621254887
+ },
+ "logout": {
+  "attemptId": "1795621138744-0000011592-0000000001",
+  "at": 1795621255631,
+  "sha256": "bf20bdd05a3924c0140f7311538c056dfed850841d9256cf775c1f976321ab20"
+ },
+ "screen": true
 }
