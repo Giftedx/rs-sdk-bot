@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795635502086-2",
+ "account": "mmtha0205",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "926e8d93-4e2c-44bc-9974-b6805a848f18",
+ "count": 0,
+ "ok": false,
+ "at": 1795635758886,
+ "detail": "trade claimed"
+}

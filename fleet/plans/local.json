@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795635546636,
+ "at": 1795635765230,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -177,7 +177,7 @@
    ]
   },
   {
-   "account": "Ballspinner",
+   "account": "Moneyshot",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "giant"
@@ -196,7 +196,7 @@
    ]
   },
   {
-   "account": "Bigpackage",
+   "account": "Ballspinner",
    "script": "scripts/generated/quest-prince.ts",
    "args": [],
    "env": {
@@ -209,7 +209,7 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
+   "account": "Pocketrocket",
    "script": "scripts/generated/quest-merlin.ts",
    "args": [],
    "env": {
@@ -265,7 +265,23 @@
    "role": "army"
   },
   {
-   "account": "Pocketrocket",
+   "account": "BoneToPick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=3 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto"
+  },
+  {
+   "account": "Bigpackage",
    "script": "scripts/generated/quest-ikov.ts",
    "args": [],
    "env": {
@@ -275,6 +291,19 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/generated/quest-grandtree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
@@ -307,7 +336,6 @@
   "hocuspokeus",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "oreelse",
   "pocketpool",
   "quickhandjob",

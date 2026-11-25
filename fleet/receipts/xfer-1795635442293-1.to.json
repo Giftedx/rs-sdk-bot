@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795635442293-1",
+ "account": "Moneyshot",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 1,
+ "claim": "b744e1d8-52f6-49fa-9874-d8e34add742f",
+ "count": 1,
+ "ok": true,
+ "at": 1795635757067,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795635756238
+ },
+ "logout": {
+  "attemptId": "1795635744166-0000029904-0000000001",
+  "at": 1795635756977,
+  "sha256": "a9dfa8fd0ffc343803fa8b3caea17cf2a1b9a651c1a3fe528b0b1ec700e4b420"
+ },
+ "screen": true
+}
