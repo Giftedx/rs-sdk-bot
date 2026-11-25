@@ -648,7 +648,9 @@ async function finishVampireSlayer(s: Session, stop: StopFn): Promise<void> {
         'lumbridge to draynor manor gate',
     );
     await openShutDoorAt(s, l => l.z === 3330 && l.x >= 3108 && l.x <= 3112, 'draynor manor south gate', stop);
-    await walkWaypoints(s, [{ x: 3108, z: 3352, tol: 1 }], 50, stop, 'manor gate to front door');
+    await topUpPrayer(s, 20, stop);
+    await setProtectMelee(s, true, stop);
+    await walkWaypoints(s, [{ x: 3108, z: 3352, tol: 1 }], 50, stop, 'manor gate to front door', { ignoreMeleeHunters: true });
 
     const inManor = () => {
         const p = posOf(s);
