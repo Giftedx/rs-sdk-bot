@@ -377,29 +377,21 @@ export async function runSmithingSpecialist(
     if (!next) next = pickRunner();
    }
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
-   // Drop finished products before trading so 25 bars fit cleanly without OPPLAYER4 request collisions.
+   // Drop up to 3 finished products alongside OPPLAYER4 inside burstTradeHost T0; keep <= 2 platebodies + hammer so 25 bars fit.
    const dropSlots = spec.sdk.getInventory().filter(i => !keepSet.has(i.id) || (i.id === ITEM_IDS.bronze_bar && skillLevel(spec, 'Smithing') >= 15)).map(i => i.slot);
-   if (dropSlots.length > 5) {
-    // Batch 0 leftover daggers/warhammers/excess bronze bars (>5 slots) need dropItemsFast before trading.
+   let preDropSlots: number[] | undefined;
+   if (dropSlots.length > 6) {
+    // Batch 0 leftover daggers/warhammers/excess bronze bars (>6 slots) need dropItemsFast before trading.
     await dropItemsFast(spec, new Set([ITEM_IDS.hammer]), deadline);
-   } else if (dropSlots.length > 3) {
-    // Keep at most 2 platebodies + hammer (= 3 occupied slots -> 25 free slots for bars); smithHeldBars drops the rest with anvil open.
-    const toDrop = dropSlots.slice(0, dropSlots.length - 2);
-    const dropActs: Promise<unknown>[] = toDrop.map(slot => spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
-    if (spec.sdk.getState()?.dialog?.isOpen) {
-     dropActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-    }
-    await Promise.all(dropActs);
-    await waitTicks(spec, 1);
-   }
-   if (spec.sdk.getInventory().filter(i => !keepSet.has(i.id)).length > 2) {
-    await dropItemsFast(spec, keepSet, deadline);
+   } else if (dropSlots.length > 2) {
+    preDropSlots = dropSlots.slice(0, dropSlots.length - 2);
    }
    next.claimed = true;
    next.ready = false;
    try {
     await burstTradeHost(spec, next.session, {
      giveIds: [wantBar],
+     preDropSlots,
      deadlineTick: deadline,
      canStand: anvilRoomOk,
     });

@@ -350,16 +350,17 @@ export async function waitNearPlayer(
  throw Error(`helper ${mover.name} failed to reach ${target.name}`);
 }
 
-export interface BurstTradeSpec {
- giveIds?: readonly number[];
- giveCounts?: ReadonlyMap<number, number> | Readonly<Record<number, number>>;
- returnIds?: readonly number[];
- deadlineTick: number;
- canStand?: (pos: NonNullable<ReturnType<typeof playerPos>>) => boolean;
- allowHelperOnSingleModal?: boolean;
- confirmOverlapOnHelper?: boolean;
- onConfirmSend?: () => Promise<unknown>;
-}
+ export interface BurstTradeSpec {
+  giveIds?: readonly number[];
+  giveCounts?: ReadonlyMap<number, number> | Readonly<Record<number, number>>;
+  returnIds?: readonly number[];
+  preDropSlots?: readonly number[];
+  deadlineTick: number;
+  canStand?: (pos: NonNullable<ReturnType<typeof playerPos>>) => boolean;
+  allowHelperOnSingleModal?: boolean;
+  confirmOverlapOnHelper?: boolean;
+  onConfirmSend?: () => Promise<unknown>;
+ }
 
 // Executes a 3-to-4-tick trade: closes dialogs + sends requests together, then pipelines offer/accept/confirm within USER_EVENT.limit=5.
 export async function burstTradeHost(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
@@ -398,6 +399,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
  const transferredGive = () =>
   !!opts.giveIds?.length && opts.giveIds.some(id => countItem(helper.sdk.getInventory(), id) < (initialHelperGive.get(id) ?? 0));
  let sawConfirm = false;
+ let didPreDrop = false;
  let lastOpenReqTick = -10;
 
  while (spec.tick() < opts.deadlineTick) {
@@ -416,6 +418,12 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
    // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
+   if (!didPreDrop && opts.preDropSlots?.length) {
+    didPreDrop = true;
+    for (const slot of opts.preDropSlots.slice(0, 4)) {
+     openActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+    }
+   }
    const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
    if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
    // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
@@ -453,7 +461,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
     if (specNeedsConfirm) {
      confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
     }
-    if (opts.onConfirmSend && (ht.myAccepted || !ht.isOpen) && specNeedsConfirm) {
+    if (opts.onConfirmSend && specNeedsConfirm && (ht.myAccepted || !ht.isOpen || helperConfirmingNow)) {
      confirmActs.push(opts.onConfirmSend());
     }
     if (confirmActs.length) await Promise.all(confirmActs);
@@ -495,7 +503,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   if (specCanAccept && !st.myAccepted && sOffers.length <= 4) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (specCanAccept && (st.myAccepted || (!multiTickOffer && sOffers.length <= 3 && hOffers.length <= 3))) {
+  if (specCanAccept && (st.myAccepted || (!multiTickOffer && sOffers.length <= 3 && hOffers.length <= 3 && !opts.onConfirmSend))) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
   if (hMainActs.length) await Promise.all(hMainActs);

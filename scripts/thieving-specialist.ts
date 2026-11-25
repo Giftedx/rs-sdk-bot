@@ -148,7 +148,7 @@ export interface PickpocketTier {
 }
 
 export const ARDOUGNE_PICKPOCKET_TIERS: readonly PickpocketTier[] = [
-    { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2661, z: 3306 } },
+    { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2621, z: 3293 } },
     { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2629, z: 3295 } },
     { name: 'guard', minLevel: 40, stunDamage: 2, pattern: /^guard$/i, anchor: { x: 2661, z: 3306 } },
     { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2661, z: 3306 } },
@@ -439,9 +439,9 @@ export async function runArdougneStunRelogThieving(opts: {
             }
         }
 
-        // Lv 5..54: steal Ardougne Market stalls (Silver/Fur/Silk/Baker) whenever unwatched; stay on stalls through Lv 39 to skip Warrior travel/stuns.
+        // Lv 35..54: steal nearby Market Fur/Silver stalls only when immediately adjacent & unwatched; never stall-wait at Lv 5..34.
         const inMarket = st.player.worldX >= 2648 && st.player.worldX <= 2678 && st.player.worldZ >= 3290 && st.player.worldZ <= 3322;
-        if (lvl >= 5 && lvl < 55 && inMarket) {
+        if (lvl >= 35 && lvl < 55 && inMarket) {
             const junkSlot = main.sdk.getInventory().find(
                 i => MARKET_STALL_LOOT_IDS.has(i.id) || i.id === OBJ_SUPER_ENERGY_4 || i.id === 229,
             )?.slot;
@@ -468,7 +468,7 @@ export async function runArdougneStunRelogThieving(opts: {
                             .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))
                             .filter(t => !watched(t.x, t.z)),
                     ).sort((a, b) => chebDist(a, { x: st.player!.worldX, z: st.player!.worldZ }) - chebDist(b, { x: st.player!.worldX, z: st.player!.worldZ }))[0];
-                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= (lvl < 40 ? 14 : 6)) {
+                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= 4) {
                         pickedStall = tile;
                         break;
                     }
@@ -494,11 +494,6 @@ export async function runArdougneStunRelogThieving(opts: {
                         pickPending = false;
                         continue;
                     }
-                }
-                // Wait on Baker/Silk/Fur stalls across Lv 5..39 to avoid Warrior walk & relogs; pickpocket Guards between Silver/Fur respawns at Lv 40..54.
-                if (lvl < 40) {
-                    await waitTicks(main, 1);
-                    continue;
                 }
             }
         }
@@ -662,10 +657,14 @@ if (import.meta.main) {
                     p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
                     isStopped,
                 );
-                // NODE_INFINITE_RUN=true on live & practice: drop Super energy(4) to free slot 28 for Market stalls.
+                // NODE_INFINITE_RUN=true on live & practice: drop Super energy(4) and spent Glory to free slots for coins & stall loot.
                 const energySlot = main.sdk.getInventory().find(i => i.id === OBJ_SUPER_ENERGY_4)?.slot;
                 if (energySlot !== undefined) {
                     void main.direct({ type: 'dropItem', slot: energySlot, reason: 'SDK' });
+                }
+                const glorySlot = main.sdk.getInventory().find(i => (THIEVING_GLORY_IDS as readonly number[]).includes(i.id))?.slot;
+                if (glorySlot !== undefined) {
+                    void main.direct({ type: 'dropItem', slot: glorySlot, reason: 'SDK' });
                 }
                 const karWalker = await sessionWalker(main);
                 const brimWalk = await walkPath(
@@ -688,13 +687,14 @@ if (import.meta.main) {
                     ardyWalker,
                     [
                         { x: 2668, z: 3280, tol: 3 },
-                        { x: 2662, z: 3295, tol: 2 },
-                        { x: 2661, z: 3306, tol: 2 },
+                        { x: 2660, z: 3289, tol: 3 },
+                        { x: 2629, z: 3296, tol: 2 },
+                        { x: 2621, z: 3293, tol: 2 },
                     ],
-                    { maxTicks: Math.max(10, Math.min(40, cap - elapsedNow())) },
+                    { maxTicks: Math.max(10, Math.min(50, cap - elapsedNow())) },
                 );
                 if (!mktWalk.ok) {
-                    await walkWaypointsSafe(main, [[2661, 3306, 2]], isStopped);
+                    await walkWaypointsSafe(main, [[2621, 3293, 2]], isStopped);
                 }
             } else {
                 await rubTeleport(
