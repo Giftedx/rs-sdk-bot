@@ -1170,31 +1170,35 @@ export interface RangedSpecialistOptions {
     spotCentre?: { x: number; z: number; level: number };
 }
 
-async function ensureRangedPvpGear(sess: Session, stop: StopFn): Promise<void> {
+export function selectRangedPvpUpgradeIds(
+    rangedLevel: number,
+    inv: readonly InvItem[],
+    worn: readonly WornItem[],
+): number[] {
+    const want = rangedLevel >= 50 ? [ITEM_IDS.msb, ITEM_IDS.runeArrow] : [837, 881];
+    if (rangedLevel >= 40) want.push(ITEM_IDS.robinHood, ITEM_IDS.rangerBoots);
+    if (rangedLevel >= 70) want.push(ITEM_IDS.blackChaps, ITEM_IDS.blackVambs);
+    else if (rangedLevel >= 40) want.push(1099, 1065);
+    const held = new Set(inv.map(i => i.id));
+    const equipped = new Set(worn.map(w => w.id));
+    return want.filter(id => held.has(id) && !equipped.has(id));
+}
+
+async function ensureRangedPvpGear(sess: Session): Promise<void> {
     const ranged = skillInfo(sess, 'Ranged').baseLevel;
-    const equipIfHeld = async (id: number, label: string) => {
-        if (sess.sdk.getEquipment().some(e => e.id === id)) return;
-        if (!sess.sdk.getInventory().some(i => i.id === id)) return;
-        await equipItemById(sess, id, stop, label);
-    };
-    if (ranged >= 50) {
-        await equipIfHeld(ITEM_IDS.msb, 'Magic shortbow');
-        await equipIfHeld(ITEM_IDS.runeArrow, 'Rune arrow');
-    } else {
-        await equipIfHeld(837, 'Crossbow');
-        await equipIfHeld(881, 'Barbed bolts');
-    }
-    if (ranged >= 40) {
-        await equipIfHeld(ITEM_IDS.robinHood, 'Robin hood hat');
-        await equipIfHeld(ITEM_IDS.rangerBoots, 'Ranger boots');
-    }
-    if (ranged >= 70) {
-        await equipIfHeld(ITEM_IDS.blackChaps, 'Black dhide chaps');
-        await equipIfHeld(ITEM_IDS.blackVambs, 'Black dhide vambraces');
-    } else if (ranged >= 40) {
-        await equipIfHeld(1099, 'Green dhide chaps');
-        await equipIfHeld(1065, 'Green dhide vambraces');
-    }
+    const inv = sess.sdk.getInventory() as InvItem[];
+    const worn = sess.sdk.getEquipment() as WornItem[];
+    // Cap at 3 equips per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
+    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, 3);
+    if (batch.length === 0) return;
+    await Promise.all(
+        batch.map(id => {
+            const item = inv.find(i => i.id === id);
+            if (!item || item.slot === undefined) return Promise.resolve();
+            const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+            return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+        }),
+    );
 }
 
 async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: string, CAP: number): Promise<void> {
@@ -1278,24 +1282,32 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
         await setAutoRetaliate(s, false);
         milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-        const { session: finalSess, totalTicks } = await runWildyPvpRelogLoop(s, {
+        const setupTicks = elapsed();
+        const {
+            session: finalSess,
+            totalTicks,
+            swings,
+            nonZeroDtSwings,
+            timeoutSwings,
+            recenterSwings,
+        } = await runWildyPvpRelogLoop(s, {
             botName: opts.bot,
             board: 'ranged',
             skill: 'Ranged',
             targetLevel: 99,
             tankNames,
-            setupTicks: elapsed(),
+            setupTicks,
             cap: CAP,
             shouldStop: stop,
             onRetireSession: sess => retired.add(sess),
             useMeleePrayers: false,
             styleForState: () => null,
-            onPrepareSwing: sess => ensureRangedPvpGear(sess, stop),
+            onPrepareSwing: sess => ensureRangedPvpGear(sess),
         });
 
         await finalSess.bot.dismissBlockingUI();
         const rStat = skillInfo(finalSess, 'Ranged');
-        const detail = `ranged=${rStat.baseLevel} rangedXp=${rStat.experience} variant=pvp ticks=${totalTicks}`;
+        const detail = `ranged=${rStat.baseLevel} rangedXp=${rStat.experience} variant=pvp ticks=${totalTicks} setup=${setupTicks} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings} to=${timeoutSwings} rec=${recenterSwings}`;
         milestone('complete', detail);
         await finish([finalSess], rStat.baseLevel >= 99, detail);
     } catch (e) {

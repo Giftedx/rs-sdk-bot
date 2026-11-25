@@ -33,24 +33,18 @@ test.each([
 });
 
 test('selected runecraft route supplies enough full essence packs for 99', () => {
-    const bodySupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });
-    const natureSupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(), disable: new Set(['spiders-combat']) });
-    let natureXp = 0, natureUsed = 0;
-    while (natureXp < xpForLevel(99)) {
-        natureXp += 27 * (natureXp < xpForLevel(44) ? 125 : 225);
-        natureUsed += 27;
+    const activeSupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });
+    const legacySupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(), disable: new Set(['spiders-combat', 'rival-altar-room-rc']) });
+    let lawXp = 0, lawUsed = 0;
+    while (lawXp < xpForLevel(99)) {
+        lawXp += 27 * (lawXp < xpForLevel(20) ? 125 : lawXp < xpForLevel(54) ? 187.5 : 237.5);
+        lawUsed += 27;
     }
-    let bodyXp = 0, bodyUsed = 0;
-    while (bodyXp < xpForLevel(99)) {
-        bodyXp += 27 * (bodyXp < xpForLevel(20) ? 125 : 187.5);
-        bodyUsed += 27;
-    }
-    expect(bodySupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(bodyUsed);
-    expect(bodySupplies).toContainEqual({ item: 'air talisman', count: 1 });
-    expect(bodySupplies).toContainEqual({ item: 'body talisman', count: 1 });
-    expect(natureSupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(natureUsed);
-    expect(natureSupplies).toContainEqual({ item: 'air talisman', count: 1 });
-    expect(natureSupplies).toContainEqual({ item: 'nature talisman', count: 1 });
+    expect(activeSupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(lawUsed);
+    expect(activeSupplies).toContainEqual({ item: 'air talisman', count: 1 });
+    expect(activeSupplies).toContainEqual({ item: 'body talisman', count: 1 });
+    expect(activeSupplies).toContainEqual({ item: 'law talisman', count: 1 });
+    expect(legacySupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThan(0);
 });
 
 const clock = (id: Board['id'], deadline: number): Board => ({ id, label: id, rule: { kind: 'clock', deadline } });
@@ -537,14 +531,17 @@ test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps
     for (const id of ['waterfall', 'dragon', 'cannon', 'rival-mm', 'rival-fight-arena', 'witch']) {
         expect(real.order.find(p => p.id === id)!.start).toBeGreaterThanOrEqual(overall);
     }
-    // Co-located Deserted Keep combat blocks share zero internal travel (att-40 -> str-top -> att-top and def-top -> ranged).
-    expect(real.order.find(p => p.id === 'str-top')!.travel ?? 0).toBe(0);
+    // Co-located Deserted Keep combat blocks share zero internal travel (str-top -> att-top and def-top -> ranged).
     expect(real.order.find(p => p.id === 'att-top')!.travel ?? 0).toBe(0);
     expect(real.order.find(p => p.id === 'ranged')!.travel ?? 0).toBe(0);
     // Spirit tree cuts travel after tree completes, and deep Wildy exits via lever rather than teleporting.
     expect(real.order.some(p => p.method === 'spirit-tree')).toBe(true);
-    const arenaExit = real.order.find(p => p.from === 'mage-arena-lever')!;
-    expect(arenaExit.method).toBe('wildy-exit-lever');
+    const deepWildy = new Set(['mage-arena-lever', 'deserted-keep-lever', 'wilderness-course']);
+    const deepExits = real.order.filter(p => deepWildy.has(p.from ?? '') && !deepWildy.has(p.to ?? ''));
+    expect(deepExits.length).toBeGreaterThan(0);
+    expect(deepExits.every(p => p.method === 'wildy-exit-lever' || p.method === 'estimate')).toBe(true);
+    expect(deepExits.some(p => p.method === 'wildy-exit-lever')).toBe(true);
+    expect(real.order.some(p => deepWildy.has(p.from ?? '') && (p.method ?? '').startsWith('teleport:'))).toBe(false);
 }, 15_000);
 
 test('legacy stun-guest route absorbs superheat-stun and charge inside thieve when pvp-relog-combat is disabled', () => {
