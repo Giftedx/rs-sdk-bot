@@ -1,0 +1,16 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795612890996-1",
+ "account": "Ballspinner",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "35ec8bcf-b0d0-42cf-b338-adb93109705e",
+ "count": 10,
+ "ok": true,
+ "at": 1795613152589,
+ "detail": "transfer observed"
