@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795565957348-1",
  "account": "TrouserSnake",
  "partner": "Shaftsinker",
@@ -12,6 +12,16 @@
  "claim": "90abe763-bde8-4022-9824-dcf729d3dc13",
  "count": 0,
  "ok": false,
- "at": 1795566077850,
- "detail": "trade claimed"
+ "at": 1795566800856,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795566087747
+ },
+ "logout": {
+  "attemptId": "1795566077859-0000003644-0000000001",
+  "at": 1795566800841,
+  "sha256": "ed97cd7544abb3ada98628a71d4cb9f1f0a3cb2a6abe4d030196d2ba44266d62"
+ },
+ "screen": false
 }
