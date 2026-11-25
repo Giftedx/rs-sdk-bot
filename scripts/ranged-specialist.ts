@@ -24,6 +24,14 @@ import {
     type TargetNpc,
 } from '../packages/workers/src/combat';
 import { runDwarfCannon } from './generated/dwarfcannon';
+import {
+    equipItemById,
+    KEEP_SPECIALIST_POST,
+    pullArdougneLeverToWildy,
+    runWildyPvpRelogLoop,
+    setAutoRetaliate,
+    walkWaypoints as walkKeepWaypoints,
+} from './combat-quest-specialists';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 
 import {
@@ -56,15 +64,36 @@ export {
     type KitSpecItem,
 };
 
-export type RangedKitVariant = 'knives' | 'msb' | 'live';
+export type RangedKitVariant = 'knives' | 'msb' | 'live' | 'pvp';
+
+// 25 slots exact: single-trade Keep 1-tick PvP relog kit (Crossbow + Barbed bolts 1->49, MSB + Rune arrows 50->99, Def-1 BiS; infinite run enabled).
+export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 837, name: 'Crossbow', count: 1, stackable: false },
+    { id: 881, name: 'Barbed bolts', count: 1500, stackable: true },
+    { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
+    { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
+    { id: 1478, name: 'Amulet of accuracy', count: 1, stackable: false },
+    { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
+    { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
+    { id: 1129, name: 'Leather body', count: 1, stackable: false },
+    { id: 1099, name: 'Dragonhide chaps', count: 1, stackable: false },
+    { id: 1065, name: 'Dragon vambraces', count: 1, stackable: false },
+    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
+    { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 385, name: 'Shark', count: 1, stackable: false },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+] as const;
 
 export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
+    if (variant === 'pvp') return { trade1: RANGED_PVP_SPECIALIST_KIT, trade2: [] };
     if (variant === 'msb') return { trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 };
     if (variant === 'live') return { trade1: RANGED_SPECIALIST_LIVE_TRADE1, trade2: RANGED_SPECIALIST_LIVE_TRADE2 };
     return { trade1: RANGED_SPECIALIST_TRADE1, trade2: RANGED_SPECIALIST_TRADE2 };
 }
 
 export function variantKit(variant: RangedKitVariant = 'knives'): readonly KitSpecItem[] {
+    if (variant === 'pvp') return RANGED_PVP_SPECIALIST_KIT;
     if (variant === 'msb') return RANGED_SPECIALIST_MSB_KIT;
     if (variant === 'live') return RANGED_SPECIALIST_LIVE_KIT;
     return RANGED_SPECIALIST_KIT;
@@ -1135,9 +1164,160 @@ export interface RangedSpecialistOptions {
     cap?: number;
     variant?: RangedKitVariant;
     supplier?: string;
+    tanks?: readonly string[];
     benchSupplier?: string;
     benchSupplier2?: string;
     spotCentre?: { x: number; z: number; level: number };
+}
+
+export function selectRangedPvpUpgradeIds(
+    rangedLevel: number,
+    inv: readonly InvItem[],
+    worn: readonly WornItem[],
+): number[] {
+    const want = rangedLevel >= 50 ? [ITEM_IDS.msb, ITEM_IDS.runeArrow] : [837, 881];
+    if (rangedLevel >= 40) want.push(ITEM_IDS.robinHood, ITEM_IDS.rangerBoots);
+    if (rangedLevel >= 70) want.push(ITEM_IDS.blackChaps, ITEM_IDS.blackVambs);
+    else if (rangedLevel >= 40) want.push(1099, 1065);
+    const held = new Set(inv.map(i => i.id));
+    const equipped = new Set(worn.map(w => w.id));
+    return want.filter(id => held.has(id) && !equipped.has(id));
+}
+
+async function ensureRangedPvpGear(sess: Session): Promise<void> {
+    const ranged = skillInfo(sess, 'Ranged').baseLevel;
+    const inv = sess.sdk.getInventory() as InvItem[];
+    const worn = sess.sdk.getEquipment() as WornItem[];
+    // Cap at 3 equips per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
+    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, 3);
+    if (batch.length === 0) return;
+    await Promise.all(
+        batch.map(id => {
+            const item = inv.find(i => i.id === id);
+            if (!item || item.slot === undefined) return Promise.resolve();
+            const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+            return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+        }),
+    );
+}
+
+async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: string, CAP: number): Promise<void> {
+    const serverHost = readServerHost(root, opts.bot);
+    const retired = new WeakSet<Session>();
+    let ended = false;
+    let stopRequested = false;
+    const s = await openBot(opts.bot, {
+        onStop: async (sess, detail) => {
+            if (retired.has(sess)) return;
+            stopRequested = true;
+            await finish([sess], false, detail);
+        },
+        onSessionEnd: async (sess, detail) => {
+            if (retired.has(sess)) return;
+            ended = true;
+            await finish([sess], false, detail);
+        },
+    });
+    if (!serverHost) {
+        await finish([s], false, `missing SERVER in bot.env for ${opts.bot}`);
+        return;
+    }
+
+    const t0 = s.tick();
+    const elapsed = () => s.tick() - t0;
+    const stop: StopFn = () =>
+        stopRequested
+        || ended
+        || (!retired.has(s) && elapsed() >= CAP)
+        || existsSync(join(root, '.practice', `stop-${opts.bot}`))
+        || (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
+    const milestone = (step: string, extra = '') => {
+        console.log(`MILESTONE ${step} tick=${elapsed()}${extra ? ' ' + extra : ''}`);
+    };
+
+    try {
+        const rawSuppliers = (opts.supplier || process.env.PRACTICE_SUPPLIER || process.env.SUPPLIER || '').trim();
+        const suppliers = rawSuppliers.split(',').map(x => x.trim()).filter(Boolean);
+        const supplierName = suppliers[0] ?? '';
+        if (!supplierName) throw Error('missing SUPPLIER / PRACTICE_SUPPLIER for Ranged PvP mode');
+        const tankNames = opts.tanks && opts.tanks.length > 0
+            ? [...opts.tanks]
+            : [...new Set((process.env.PRACTICE_TANKS ?? process.env.TANKS ?? rawSuppliers).split(',').map(x => x.trim()).filter(Boolean))];
+        if (tankNames.length === 0) throw Error('missing TANKS / PRACTICE_TANKS for Ranged PvP mode');
+
+        milestone('start', 'variant=pvp');
+        await leaveRuneStarter(s, stop);
+        if (onStarterIsland(posOf(s)) || posOf(s)?.level !== 0) {
+            throw Error('still on Tutorial Island after leaveRuneStarter');
+        }
+        const allowed = new Set(RANGED_PVP_SPECIALIST_KIT.map(k => k.id));
+        await dropItemsMatching(s, i => !allowed.has(i.id), stop, 'tutorial junk');
+        milestone('tutorial');
+
+        await receiveSupplyKit(s, supplierName, RANGED_PVP_SPECIALIST_KIT, stop, LUMBRIDGE_HANDOFF);
+        milestone('kit', `slots=${s.sdk.getInventory().length}`);
+
+        for (const [id, label] of [[837, 'Crossbow'], [881, 'Barbed bolts'], [1478, 'Amulet of accuracy'], [ITEM_IDS.leatherBody, 'Leather body']] as const) {
+            await equipItemById(s, id, stop, label);
+        }
+        const boneDeadline = s.tick() + 60;
+        while (!stop() && (s.sdk.getInventory() as InvItem[]).some(i => i.id === ITEM_IDS.bones)) {
+            if (s.tick() >= boneDeadline) throw Error('stalled burying Dragon bones');
+            const before = countById(s.sdk.getInventory(), ITEM_IDS.bones);
+            const bone = (s.sdk.getInventory() as InvItem[]).find(i => i.id === ITEM_IDS.bones);
+            if (!bone) break;
+            await s.direct({ type: 'useInventoryItem', slot: bone.slot, optionIndex: 1, reason: 'SDK' });
+            await waitUntil(s, () => countById(s.sdk.getInventory(), ITEM_IDS.bones) < before || stop(), { timeoutTicks: 5 });
+        }
+        milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
+
+        await rubJewellery(s, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars pvp');
+        await setProtectMelee(s, true, stop);
+        await walkKeepWaypoints(s, [{ x: 2470, z: 3170, tol: 4 }, { x: 2561, z: 3311, tol: 1 }], 220, stop, 'cw to ardougne lever', {
+            ignoreMeleeHunters: true,
+        });
+        await setProtectMelee(s, false, stop);
+        await pullArdougneLeverToWildy(s, stop);
+        await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, stop, 'step to keep post');
+        await setAutoRetaliate(s, false);
+        milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+
+        const setupTicks = elapsed();
+        const {
+            session: finalSess,
+            totalTicks,
+            swings,
+            nonZeroDtSwings,
+            timeoutSwings,
+            recenterSwings,
+        } = await runWildyPvpRelogLoop(s, {
+            botName: opts.bot,
+            board: 'ranged',
+            skill: 'Ranged',
+            targetLevel: 99,
+            tankNames,
+            setupTicks,
+            cap: CAP,
+            shouldStop: stop,
+            onRetireSession: sess => retired.add(sess),
+            useMeleePrayers: false,
+            styleForState: () => null,
+            onPrepareSwing: sess => ensureRangedPvpGear(sess),
+        });
+
+        await finalSess.bot.dismissBlockingUI();
+        const rStat = skillInfo(finalSess, 'Ranged');
+        const detail = `ranged=${rStat.baseLevel} rangedXp=${rStat.experience} variant=pvp ticks=${totalTicks} setup=${setupTicks} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings} to=${timeoutSwings} rec=${recenterSwings}`;
+        milestone('complete', detail);
+        await finish([finalSess], rStat.baseLevel >= 99, detail);
+    } catch (e) {
+        if (!retired.has(s)) {
+            await finish([s], false, String(e));
+        } else {
+            const errSess = await openBot(opts.bot, { log: () => {} }).catch(() => null);
+            await finish(errSess ? [errSess] : [], false, String(e));
+        }
+    }
 }
 
 export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promise<void> {
@@ -1147,11 +1327,16 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
     process.env.FLEE_GUARD ??= '0';
 
     const CAP = opts.cap ?? Number(process.env.CAP ?? 4800);
-    const variant: RangedKitVariant = opts.variant ?? (process.env.VARIANT === 'msb' ? 'msb' : 'knives');
+    const variantRaw = opts.variant ?? process.env.VARIANT;
+    const variant: RangedKitVariant = variantRaw === 'pvp' ? 'pvp' : variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
+    const root = resolve(import.meta.dir, '..');
+    if (variant === 'pvp') {
+        await runRangedPvpSpecialist(opts, root, CAP);
+        return;
+    }
     const kit = variantKit(variant);
     const { trade1, trade2 } = variantTrades(variant);
     const spotCentre = opts.spotCentre ?? SPIDERS_CENTRE;
-    const root = resolve(import.meta.dir, '..');
     const serverHost = readServerHost(root, opts.bot);
     const benchSupName = (opts.benchSupplier || process.env.BENCH_SUPPLIER || '').trim();
     const benchSup2Name = (opts.benchSupplier2 || process.env.BENCH_SUPPLIER2 || '').trim();
@@ -1316,7 +1501,9 @@ export function parseSpecialistArgs(argv: readonly string[]): RangedSpecialistOp
         }
     }
     const variantRaw = kv.get('VARIANT') ?? process.env.VARIANT;
-    const variant: RangedKitVariant = variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
+    const variant: RangedKitVariant = variantRaw === 'pvp' ? 'pvp' : variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
+    const tanksRaw = (kv.get('TANKS') ?? process.env.PRACTICE_TANKS ?? process.env.TANKS ?? '').trim();
+    const tanks = tanksRaw ? tanksRaw.split(',').map(x => x.trim()).filter(Boolean) : undefined;
     const sx = Number(kv.get('SPOT_X') ?? process.env.SPOT_X ?? SPIDERS_CENTRE.x);
     const sz = Number(kv.get('SPOT_Z') ?? process.env.SPOT_Z ?? SPIDERS_CENTRE.z);
     return {
@@ -1324,6 +1511,7 @@ export function parseSpecialistArgs(argv: readonly string[]): RangedSpecialistOp
         cap: cap ?? (kv.has('CAP') ? Number(kv.get('CAP')) : undefined),
         variant,
         supplier: kv.get('SUPPLIER'),
+        ...(tanks ? { tanks } : {}),
         benchSupplier: kv.get('BENCH_SUPPLIER'),
         benchSupplier2: kv.get('BENCH_SUPPLIER2'),
         spotCentre: { x: sx, z: sz, level: 0 },

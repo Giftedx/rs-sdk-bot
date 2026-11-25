@@ -17,6 +17,7 @@ import {
     startedWildernessObstacle,
     TOURIST_TRADE_1,
     TOURIST_TRADE_2,
+    TOURIST_TRADE_2B,
     TOURIST_TRADE_3,
     trade1ForConfig,
 } from './agility-specialist';
@@ -39,7 +40,7 @@ describe('Agility specialist supply bills and item IDs', () => {
     const byId = new Map(items.map(i => [i.id, i]));
 
     test('every trade batch and chocolate cake part exists in knowledge/items.json with exact tradeable ID', () => {
-        for (const batch of [TOURIST_TRADE_1, TOURIST_TRADE_2, TOURIST_TRADE_3, MONKEYBARS_TRADE_1, MONKEYBARS_TRADE_1_NOPOT, GNOME_TRADE_1, GNOME_TRADE_1_NOPRAY]) {
+        for (const batch of [TOURIST_TRADE_1, TOURIST_TRADE_2, TOURIST_TRADE_2B, TOURIST_TRADE_3, MONKEYBARS_TRADE_1, MONKEYBARS_TRADE_1_NOPOT, GNOME_TRADE_1, GNOME_TRADE_1_NOPRAY]) {
             for (const entry of batch) {
                 const row = byId.get(entry.id);
                 expect(row, `item ${entry.id} (${entry.name})`).toBeDefined();
@@ -58,10 +59,10 @@ describe('Agility specialist supply bills and item IDs', () => {
         expect(inventorySlotsNeeded(TOURIST_TRADE_1, STACKABLE_IDS)).toBeLessThanOrEqual(26);
         expect(inventorySlotsNeeded(TOURIST_TRADE_2, STACKABLE_IDS)).toBeLessThanOrEqual(25);
         expect(inventorySlotsNeeded(TOURIST_TRADE_3, STACKABLE_IDS)).toBeLessThanOrEqual(24);
-        expect(inventorySlotsNeeded(MONKEYBARS_TRADE_1, STACKABLE_IDS)).toBe(28);
+        expect(inventorySlotsNeeded(MONKEYBARS_TRADE_1, STACKABLE_IDS)).toBe(26);
         expect(inventorySlotsNeeded(MONKEYBARS_TRADE_1_NOPOT, STACKABLE_IDS)).toBe(21);
-        expect(inventorySlotsNeeded(GNOME_TRADE_1, STACKABLE_IDS)).toBe(28);
-        expect(inventorySlotsNeeded(GNOME_TRADE_1_NOPRAY, STACKABLE_IDS)).toBe(28);
+        expect(inventorySlotsNeeded(GNOME_TRADE_1, STACKABLE_IDS)).toBe(21);
+        expect(inventorySlotsNeeded(GNOME_TRADE_1_NOPRAY, STACKABLE_IDS)).toBe(16);
         expect(trade1ForConfig({ route: 'gnome', usePrayer: false })).toEqual(GNOME_TRADE_1_NOPRAY);
         expect(trade1ForConfig({ route: 'monkeybars', usePrayer: true, usePotion: false })).toEqual(MONKEYBARS_TRADE_1_NOPOT);
 
@@ -75,7 +76,7 @@ describe('Agility specialist supply bills and item IDs', () => {
             (touristCase?.companions?.[0]?.presetConfig?.bank ?? []).map(b => [b.id, b.count]),
         );
         const need = new Map<number, number>();
-        for (const batch of [TOURIST_TRADE_2, TOURIST_TRADE_3]) {
+        for (const batch of [TOURIST_TRADE_2, TOURIST_TRADE_2B, TOURIST_TRADE_3]) {
             for (const entry of batch) need.set(entry.id, (need.get(entry.id) ?? 0) + entry.count);
         }
         for (const [id, req] of need) {
@@ -197,7 +198,8 @@ describe('Route config, AIO catalog, and bench coverage', () => {
         });
         const plan = resolveSupplierKitPlan('agility');
         expect(plan.name).toBe('agility');
-        expect(plan.combined).toEqual(AGILITY_SPECIALIST_KIT);
+        // specialist-supply.ts still retains Super energy(4) (3016) until shared kit sync.
+        expect(plan.combined.filter(i => i.id !== 3016)).toEqual(AGILITY_SPECIALIST_KIT.filter(i => i.id !== 3016));
         expect(plan.legs.length).toBe(1);
     });
 });

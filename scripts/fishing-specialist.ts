@@ -1,9 +1,10 @@
 import { existsSync } from 'node:fs';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
+import { finish } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyNpc } from '../vendor/rs-sdk/sdk/types';
-import { runStagedFishing } from '../packages/workers/src/gather';
+import { runStagedFishing } from '../packages/workers/src/gather/fishing';
 import { runSeaSlugQuest } from './generated/quest-seaslug';
 import { LUMBRIDGE_FM_PATH, FM_LIGHT_OPOBJ, OBJ_TINDERBOX, OBJ_OAK_LOGS } from './firemaking-specialist';
 import {
@@ -15,15 +16,12 @@ import {
     rubTeleport,
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
-    drinkEnergyIfLow,
     slotOfId,
-    finish,
     SKILL_MULTI3_MAKE1_A,
     OBJ_COINS,
     OBJ_KNIFE,
     OBJ_LOGS,
     OBJ_GLORY_4,
-    OBJ_SUPER_ENERGY_4,
 } from './gathering-specialist-lib';
 
 export const OBJ_FLY_ROD = 309;
@@ -41,7 +39,6 @@ export const FISHING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_OAK_LOGS]: 4,
     [OBJ_GLORY_4]: 1,
     [OBJ_SWAMP_PASTE]: 1,
-    [OBJ_SUPER_ENERGY_4]: 1,
 };
 
 export const FISHING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
@@ -159,19 +156,13 @@ if (import.meta.main) {
         await walkWaypointsSafe(main, [[2890, 3175, 4], [2850, 3175, 4], [2818, 3188, 4], [2788, 3212, 4], [2774, 3228, 3]], isStopped);
         await sailBrimhavenToArdougne(main, isStopped);
         await walkWaypointsSafe(main, [[2716, 3302, 2]], isStopped);
-        await drinkEnergyIfLow(main, 75);
 
-        let lastQuestDrink = -10;
         let lastQuestRunClick = -10;
-        const offQuestEnergyWatch = main.onTick(() => {
+        const offQuestRunWatch = main.onTick(() => {
             if (isStopped()) return;
             const p = main.sdk.getState()?.player;
             if (!p) return;
             const now = main.tick();
-            if (p.runEnergy <= 65 && now - lastQuestDrink >= 4) {
-                lastQuestDrink = now;
-                void drinkEnergyIfLow(main, 65);
-            }
             const runOn = ((main.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) === 1;
             if (!runOn && p.runEnergy >= 10 && now - lastQuestRunClick >= 2) {
                 lastQuestRunClick = now;
@@ -187,7 +178,7 @@ if (import.meta.main) {
             });
             if (!done) throw Error('Sea Slug did not finish');
         } finally {
-            offQuestEnergyWatch();
+            offQuestRunWatch();
         }
         const questDone = main.tick() - t0;
 
@@ -207,7 +198,6 @@ if (import.meta.main) {
 
         let cachedWalker: Awaited<ReturnType<typeof sessionWalker>> | undefined;
         const stand = async (spot: NearbyNpc) => {
-            await drinkEnergyIfLow(main, 65);
             const p = main.sdk.getState()?.player;
             if (!p) return false;
             const tiles = [[1, 0], [-1, 0], [0, 1], [0, -1]]

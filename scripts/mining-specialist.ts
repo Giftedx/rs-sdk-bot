@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { xpForLevel } from '../packages/planner/src/curve';
-import { miningProfiles, incidentalMiningGems, runRotationMining, siteTiles, MINING_SITES } from '../packages/workers/src/gather';
+import { finish } from '../packages/core/src/bot';
+import { miningProfiles, MINING_SITES, incidentalMiningGems, runRotationMining, siteTiles } from '../packages/workers/src/gather';
 import {
     openHelperAndMain,
     skipTutorialFast,
@@ -14,9 +15,7 @@ import {
     sailBrimhavenToArdougne,
     isLiveSupplyVariant,
     itemQty,
-    finish,
     chebDist,
-    CWARS_TO_ARDY_ZOO_WAYPOINTS,
     SKILL_MULTI3_MAKE1_A,
     OBJ_KNIFE,
     OBJ_LOGS,
@@ -25,8 +24,6 @@ import {
     OBJ_DUELING_8,
     RING_OF_DUELING_IDS,
     OBJ_GAMES_8,
-    OBJ_SUPER_ENERGY_4,
-    ENERGY_POTION_IDS,
 } from './gathering-specialist-lib';
 
 export const OBJ_RUNE_PICKAXE = 1275;
@@ -35,8 +32,13 @@ export const OBJ_COPPER_ORE = 436;
 export const OBJ_IRON_ORE = 440;
 export const IRON_ORE_XP_25X = 875;
 
-export const MINING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
+export const MINING_GLORY_IDS = [OBJ_GLORY_4, 1710, 1708, 1706] as const;
 
+const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = [
+    [2470, 3100, 4], [2505, 3145, 4], [2540, 3185, 4], [2580, 3215, 4], [2603, 3234, 1],
+];
+
+// 19 supply slots (no Super energy(4) — NODE_INFINITE_RUN=true): Doric's Quest (Mining 1->49) + Ardougne Zoo 3t knife.
 export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_PICKAXE]: 1,
     [OBJ_KNIFE]: 1,
@@ -47,10 +49,8 @@ export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_COINS]: 150,
     [OBJ_GLORY_4]: 1,
     [OBJ_GAMES_8]: 1,
-    [OBJ_SUPER_ENERGY_4]: 2,
 };
 
-// Live-stockable variant: 0 Games necklace, 0 Super energy, 0 Coins (uses 1 GE-available Glory(4) + local Ring of dueling(8)).
 export const MINING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_PICKAXE]: 1,
     [OBJ_KNIFE]: 1,
@@ -67,10 +67,12 @@ async function exitGamesRoomToBurthorpe(main: Awaited<ReturnType<typeof openHelp
     let lastClickAt = -10;
     for (let i = 0; i < 30 && !stop(); i++) {
         const p = main.sdk.getState()?.player;
-        if (!p) { await waitTicks(main, 1); continue; }
+        if (!p) {
+            await waitTicks(main, 1);
+            continue;
+        }
         if (p.level === 0 && p.worldX >= 2890 && p.worldX <= 2910 && p.worldZ >= 3555 && p.worldZ <= 3575) return;
         const targetLocId = p.level === 0 ? 4622 : 4627;
-        // Level 0: the base stairs at (2207,4935) lead to the upper floor beside the Burthorpe exit stairs (1_34_77_29_7).
         const locs = (main.sdk.getState()?.nearbyLocs ?? [])
             .filter(l => l.id === targetLocId && (p.level !== 0 || l.x === 2207))
             .sort((a, b) => chebDist({ x: a.x, z: a.z }, { x: p.worldX, z: p.worldZ }) - chebDist({ x: b.x, z: b.z }, { x: p.worldX, z: p.worldZ }));
@@ -115,7 +117,6 @@ async function completeDoricQuest(main: Awaited<ReturnType<typeof openHelperAndM
         throw Error('could not talk to Doric');
     };
 
-    // Part 1: accept quest and exit immediately when dialog closes.
     await talkDoric();
     let part1Open = false;
     await converse(
@@ -128,7 +129,6 @@ async function completeDoricQuest(main: Awaited<ReturnType<typeof openHelperAndM
         25,
     );
 
-    // Part 2: hand in 6 clay, 4 copper ore, 2 iron ore -> 32,500 Mining XP (lvl 49).
     await talkDoric();
     await converse(
         [/have my materials/i, /yes/i],
@@ -160,13 +160,12 @@ if (import.meta.main) {
         const tutTicks = await skipTutorialFast(main, isStopped);
         await dropTutorialJunk(main, isStopped, 13);
         readyForTrade = true;
-        const tradeTicks = await receiveTradeFast(main, helper, supplies, isStopped, arm);
+        const tradeTicks = await receiveTradeFast(main, helper, supplies, isStopped, arm, { [OBJ_GLORY_4]: MINING_GLORY_IDS });
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
         });
 
         if (itemQty(main, OBJ_GAMES_8) > 0) {
-            // Games necklace option 1 -> Burthorpe Games Room -> climb 2 stairs to (2899,3564) -> walk to Doric (135 tiles).
             await rubTeleport(
                 main,
                 [OBJ_GAMES_8],
@@ -175,11 +174,7 @@ if (import.meta.main) {
                 isStopped,
             );
             await exitGamesRoomToBurthorpe(main, isStopped);
-            await walkWaypointsSafe(
-                main,
-                [[2952, 3451, 2]],
-                isStopped,
-            );
+            await walkWaypointsSafe(main, [[2952, 3451, 2]], isStopped);
         } else if (MINING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
             await rubTeleport(
                 main,
@@ -188,11 +183,7 @@ if (import.meta.main) {
                 p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
                 isStopped,
             );
-            await walkWaypointsSafe(
-                main,
-                [[3020, 3425, 4], [2952, 3451, 2]],
-                isStopped,
-            );
+            await walkWaypointsSafe(main, [[3020, 3425, 4], [2952, 3451, 2]], isStopped);
         } else {
             await walkWaypointsSafe(
                 main,
@@ -204,7 +195,8 @@ if (import.meta.main) {
         await completeDoricQuest(main, isStopped);
         const doricTicks = main.tick() - t0;
 
-        if (RING_OF_DUELING_IDS.some(id => itemQty(main, id) > 0)) {
+        const useLiveDueling = isLiveSupplyVariant() && RING_OF_DUELING_IDS.some(id => itemQty(main, id) > 0);
+        if (useLiveDueling) {
             await rubTeleport(
                 main,
                 RING_OF_DUELING_IDS,
@@ -214,7 +206,6 @@ if (import.meta.main) {
             );
             await walkWaypointsSafe(main, CWARS_TO_ARDY_ZOO_WAYPOINTS, isStopped);
         } else {
-            // Glory option 2 -> Karamja -> Brimhaven boat -> Ardougne dock -> Ardougne Zoo 6-rock iron.
             await rubTeleport(
                 main,
                 MINING_GLORY_IDS,
@@ -222,21 +213,17 @@ if (import.meta.main) {
                 p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
                 isStopped,
             );
-            await walkWaypointsSafe(
-                main,
-                [[2774, 3228, 3]],
-                isStopped,
-            );
+            await walkWaypointsSafe(main, [[2774, 3228, 3]], isStopped);
             await sailBrimhavenToArdougne(main, isStopped);
             await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
         }
 
-        const zooStart = main.tick() - t0;
+        const mineStart = main.tick() - t0;
         const ironProfile = miningProfiles().find(p => p.name === 'iron_rock_table');
         if (!ironProfile) throw Error('missing iron_rock_table profile');
-        const zooSite = MINING_SITES.find(s => s.key === 'ardougne-zoo-iron');
-        if (!zooSite) throw Error('missing ardougne-zoo-iron site');
-        const rocks = siteTiles(ironProfile, zooSite);
+        const site = MINING_SITES.find(s => s.key === 'ardougne-zoo-iron');
+        if (!site) throw Error('missing ardougne-zoo-iron site');
+        const rocks = siteTiles(ironProfile, site);
         const need = remainingIronOresTo99(main.sdk.getSkillXp('Mining') ?? 0);
 
         const rot = await runRotationMining(
@@ -249,7 +236,13 @@ if (import.meta.main) {
                 step: () => waitTicks(main, 1),
                 clearModal: () => main.direct({ type: 'closeModal', reason: 'SDK' }).then(() => {}),
                 send: async acts => {
-                    for (const a of acts) await main.direct({ ...a, reason: 'SDK' });
+                    const st = main.sdk.getState();
+                    const all: Array<{ type: string; [k: string]: unknown }> = [];
+                    if ((st?.dialog?.isOpen || st?.modalOpen) && !acts.some(a => a.type === 'closeModal') && acts.length < 5) {
+                        all.push({ type: 'closeModal', reason: 'SDK' });
+                    }
+                    for (const a of acts) all.push({ ...a, reason: 'SDK' });
+                    await Promise.all(all.map(a => main.direct(a)));
                 },
             },
             ironProfile,
@@ -262,7 +255,7 @@ if (import.meta.main) {
                 make1: SKILL_MULTI3_MAKE1_A,
                 rocks,
                 pick: 'roll',
-                keep: [OBJ_RUNE_PICKAXE, ...MINING_GLORY_IDS, ...RING_OF_DUELING_IDS, OBJ_COINS, ...ENERGY_POTION_IDS],
+                keep: [OBJ_RUNE_PICKAXE, ...MINING_GLORY_IDS, ...RING_OF_DUELING_IDS, OBJ_COINS],
             },
             2,
             incidentalMiningGems,
@@ -272,7 +265,7 @@ if (import.meta.main) {
         const lvl = main.sdk.getSkill('Mining')?.baseLevel ?? 0;
         const xp = main.sdk.getSkillXp('Mining') ?? 0;
         ok = lvl >= 99;
-        detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} doric=${doricTicks} zooStart=${zooStart} ores=${rot.made}`;
+        detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} doric=${doricTicks} mineStart=${mineStart} ores=${rot.made}`;
     } catch (error) {
         detail = String(error);
     } finally {

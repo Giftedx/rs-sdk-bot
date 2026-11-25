@@ -23,6 +23,7 @@ import {
     kitSlotTotal,
     LUMBRIDGE_HANDOFF,
     parseSpecialistArgs,
+    RANGED_PVP_SPECIALIST_KIT,
     RANGED_SPECIALIST_KIT,
     RANGED_SPECIALIST_LIVE_KIT,
     RANGED_SPECIALIST_LIVE_TRADE1,
@@ -417,4 +418,31 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
     });
     expect(() => parseRangedLivePrepArgs(['Shaftshooter'])).toThrow('refuses reserved account');
     expect(() => parseRangedLivePrepArgs(['Moneyshot', '--mode=bogus'])).toThrow('unknown --mode');
+});
+
+test('RANGED_PVP_SPECIALIST_KIT fits 25 tradeable cataloged slots without Super energy and parseSpecialistArgs supports VARIANT=pvp', () => {
+    expect(kitSlotTotal(RANGED_PVP_SPECIALIST_KIT)).toBe(25);
+    expect(RANGED_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
+    const byId = new Map(ITEMS.map(item => [item.id, item]));
+    for (const spec of RANGED_PVP_SPECIALIST_KIT) {
+        const entry = byId.get(spec.id);
+        expect(entry).toBeDefined();
+        expect(entry!.tradeable).toBe(true);
+        expect(entry!.name).toBe(spec.name);
+    }
+    expect(parseSpecialistArgs(['Moneyshot', '3000', 'VARIANT=pvp', 'TANKS=tank1,tank2'])).toMatchObject({
+        bot: 'Moneyshot',
+        cap: 3000,
+        variant: 'pvp',
+        tanks: ['tank1', 'tank2'],
+    });
+});
+
+test('selectRangedPvpUpgradeIds upgrades Crossbow->MSB, Rune arrows, and dhide tiers in priority order', async () => {
+    const { selectRangedPvpUpgradeIds } = await import('./ranged-specialist');
+    const inv = [837, 881, 861, 892, 2581, 2577, 1099, 1065, 2497, 2491].map((id, slot) => ({ id, slot, name: `item-${id}`, count: 1 }));
+    expect(selectRangedPvpUpgradeIds(1, inv, [])).toEqual([837, 881]);
+    expect(selectRangedPvpUpgradeIds(40, inv, [{ id: 837, slot: 3, count: 1 }, { id: 881, slot: 13, count: 1 }])).toEqual([2581, 2577, 1099, 1065]);
+    expect(selectRangedPvpUpgradeIds(50, inv, [])).toEqual([861, 892, 2581, 2577, 1099, 1065]);
+    expect(selectRangedPvpUpgradeIds(70, inv, [{ id: 861, slot: 3, count: 1 }, { id: 892, slot: 13, count: 1 }])).toEqual([2581, 2577, 2497, 2491]);
 });
