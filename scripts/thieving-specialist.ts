@@ -286,14 +286,9 @@ export async function runArdougneStunRelogThieving(opts: {
         lastMsgMark = latestMark(msgs, lastMsgMark);
         const justPicked = newMsgs.some(m => /^you pick the /i.test(m.text));
         const justFailed = newMsgs.some(m => /^you fail to pick /i.test(m.text));
-        const justStarted = newMsgs.some(m => /^you attempt to pick /i.test(m.text));
         if (justFailed) {
             stunPending = true;
             stunPendingTick = main.tick();
-        }
-        if (justStarted && !justPicked && !justFailed) {
-            lastPickTick = main.tick();
-            lastPickDist = 1;
         }
         if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
             stuns++;
@@ -328,11 +323,11 @@ export async function runArdougneStunRelogThieving(opts: {
         }
         stunPending = false;
 
-        // Restock from Baker's stall only once food is exhausted or down to the last reserve bite at lethal HP.
+        // Restock from Baker's stall when down to 1 reserve bite (skip trip at lv>=98 while hp still >= stun+3).
         const bites = foodBitesCount(main);
-        const needRestock = bites === 0 || (bites === 1 && st.player.hp <= tier.stunDamage);
+        const needRestock = bites === 0 || (bites <= 1 && (lvl < 98 || st.player.hp <= tier.stunDamage + 3));
         if (needRestock && elapsedNow() >= stallCooldownUntil) {
-            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 6, 4);
+            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 12, 4);
             if (!restocked) {
                 stallCooldownUntil = elapsedNow() + 6;
             }
@@ -344,7 +339,7 @@ export async function runArdougneStunRelogThieving(opts: {
         }
 
         // Never pickpocket into <= 3 HP without at least 2 bites left (reserve 1 bite keeps flee_guard disarmed).
-        if (foodBitesCount(main) <= 1 && st.player.hp <= tier.stunDamage) {
+        if (foodBitesCount(main) <= 1 && st.player.hp <= tier.stunDamage + 3) {
             await waitTicks(main, 1);
             continue;
         }
