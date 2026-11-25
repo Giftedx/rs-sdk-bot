@@ -1,0 +1,10 @@
+{
+ "id": "1795583657066-shaftmaker-sausagefest-4e0ffad9064d5e34",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "Sausagefest",
+ "item": "Coins",
+ "count": 350000,
+ "start": 1795583657066,
+ "end": 1795587257066
+}
