@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795611990427-1",
  "account": "Moneyshot",
  "partner": "Fatstack",
@@ -12,6 +12,12 @@
  "claim": "3f1a13a6-a75b-4277-80a8-4bc0bef2924e",
  "count": 0,
  "ok": false,
- "at": 1795612595411,
- "detail": "trade claimed"
+ "at": 1795612890803,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795612595420-0000008480-0000000001",
+  "at": 1795612890794,
+  "sha256": "88a42a776490ea2884376b9cfdcf87200746b68e997ada9754439aa8142b68b5"
+ },
+ "screen": false
 }
