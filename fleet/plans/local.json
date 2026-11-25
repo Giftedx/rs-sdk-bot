@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795582246307,
+ "at": 1795582313809,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,23 +24,29 @@
    "role": "rehearsal"
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/aio-logistics.ts",
+   "account": "PocketPool",
+   "script": "scripts/aio-pvp.ts",
    "args": [
-    "walk-to",
-    "3185",
-    "3436",
-    "0"
+    "escort-ore",
+    "OreElse"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "COORDINATOR_RUN_ID": "oreelse-runite-1",
+    "COORDINATOR_PARTICIPANTS": "[\"PocketPool\",\"OreElse\"]",
+    "WALK_TO_EDGEVILLE": "1",
+    "ESCORT_COMBAT": "any",
+    "MINER_COMBAT": "any",
+    "EXPECTED_BANK_ORE": "0",
+    "MAX_ORE": "1",
+    "CAP": "1800"
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
+   "goal": "Escort OreElse to mine Runite ore for 2x Rune 2h sword",
+   "role": "supply"
   },
   {
-   "account": "PocketPool",
+   "account": "Hocuspokeus",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795582095652-coincock-yewfirst-e79332ccff1d0d79",
  "account": "CoinCock",
  "partner": "YewFirst",
@@ -12,13 +12,19 @@
  "claim": "51b64117-d819-4542-8af3-f8fee7f57ed1",
  "count": 0,
  "ok": false,
- "at": 1795582171102,
- "detail": "trade claimed",
+ "at": 1795582278649,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
  "lines": [
   {
    "item": "Adamant arrowtips",
    "requested": 500,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795582171112-0000002356-0000000001",
+  "at": 1795582278637,
+  "sha256": "d4881a0c4439fbf4b9ff5351897f96075a589e90e1b3e94f066be3e0018ffcd6"
+ },
+ "screen": false
 }
