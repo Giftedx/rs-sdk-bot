@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795631365008-1",
+ "account": "Quickhandjob",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "de1ba751-84e2-4e6f-a04d-cbc8f47d2172",
+ "count": 60,
+ "ok": true,
+ "at": 1795632116366,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795632115625
+ },
+ "logout": {
+  "attemptId": "1795632103216-0000023668-0000000001",
+  "at": 1795632116353,
+  "sha256": "099f67e0784d3e5d96d4d9c11ebbbc0101bc8462f5825fa02e6df6e65d9d2590"
+ },
+ "screen": true
+}

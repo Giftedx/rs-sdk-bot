@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795630850588-tossthecaber-masterbaiter-cd31d8bba13ef6d2",
+ "account": "Masterbaiter",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "015b6e42-53ea-4539-8219-b6aba7099331",
+ "count": 2,
+ "ok": true,
+ "at": 1795632106369,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795632105620
+ },
+ "logout": {
+  "attemptId": "1795632095022-0000028092-0000000001",
+  "at": 1795632106357,
+  "sha256": "310ad2ff3aa87561fc1911826f3b1695ed4b3933dd3a5d3dba340cd009a49c16"
+ },
+ "screen": true
+}
