@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795644324918,
+ "at": 1795644342607,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,7 +63,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=2290 TARGET_COUNT=229 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2330 TARGET_COUNT=233 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -90,7 +90,7 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
+   "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
@@ -106,10 +106,9 @@
    "role": "army"
   },
   {
-   "account": "Fingersmith",
+   "account": "SporranBulge",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
     "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
    ],
@@ -119,7 +118,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:225",
-   "role": "army"
+   "role": "helper"
   },
   {
    "account": "Shaftsinker",
@@ -233,22 +232,6 @@
    },
    "enabled": true,
    "repeat": false,
-   "role": "helper"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=40 -- crafting inventory",
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=25 -- fletching shafts",
-    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:viking",
    "role": "helper"
   }
  ],
