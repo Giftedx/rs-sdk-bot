@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795632915083-1",
+ "account": "TheFullMonty",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "b76abb84-cd5d-4974-912c-1490a33175f2",
+ "count": 0,
+ "ok": false,
+ "at": 1795633018839,
+ "detail": "trade claimed"
+}
