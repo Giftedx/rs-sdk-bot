@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795610883742,
+ "at": 1795610934918,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,8 +69,8 @@
    "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=100 \"ITEM_NAME=Nature rune\" -- loadout",
-    "scripts/aio-logistics.ts ITEM_ID=314 QUANTITY=83 ITEM_NAME=Feather -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=107 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=314 QUANTITY=90 ITEM_NAME=Feather -- loadout",
     "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
