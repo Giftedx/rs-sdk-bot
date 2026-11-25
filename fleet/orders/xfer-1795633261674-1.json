@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795633261674-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Dipstick",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795633261674,
+  "end": 1795634161674,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

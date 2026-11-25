@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795633058918-1",
  "account": "KnightRider",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "80697a4c-bc83-4c6b-aad3-4985d5b7e9c7",
- "count": 0,
- "ok": false,
- "at": 1795633246631,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795633257914,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795633257159
+ },
+ "logout": {
+  "attemptId": "1795633246640-0000023640-0000000001",
+  "at": 1795633257892,
+  "sha256": "98e92d3e1d35901c11676fbb46e3f9b2b368f10eca104751d70cc2023cbfb7e7"
+ },
+ "screen": true
 }
