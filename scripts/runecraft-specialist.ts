@@ -118,8 +118,8 @@ async function runBodyEssenceRunner(
   }
 
   runner.ready = false;
-  if (heldEss < 27) {
-   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 27, keep, done, deadline, signal);
+  if (heldEss < 26) {
+   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 26, keep, done, deadline, signal);
   }
   if (done() || signal.aborted || s.tick() >= deadline) break;
 
@@ -299,6 +299,7 @@ export async function runRunecraftSpecialist(
      await burstTradeHost(spec, next.session, {
       giveIds: [ITEM_IDS.blankrune],
       deadlineTick: deadline,
+      allowHelperOnSingleModal: true,
       onConfirmSend: () =>
        spec.direct({ type: 'interactLoc', x: bodyAltar.x, z: bodyAltar.z, locId: bodyAltar.id, optionIndex: 1, reason: 'SDK' }),
      });

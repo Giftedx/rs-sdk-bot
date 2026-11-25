@@ -182,22 +182,17 @@ export async function runFiremakingDropper(
     const countItem = (id: number) =>
         helper.sdk.getInventory().filter(i => i.id === id).reduce((a, b) => a + b.count, 0);
     const hasGlory = () => OBJ_GLORY_IDS.some(id => countItem(id) > 0);
-    const hasEnergyPot = () => OBJ_ENERGY_IDS.some(id => countItem(id) > 0);
 
     const dropChunk = async (chunk: readonly FiremakingPlanStep[], onFirstDrop?: () => void) => {
         for (let i = 0; i < chunk.length && !stop(); i++) {
             const step = chunk[i]!;
             const next = chunk[i + 1];
             if (step.index >= 38) {
-                while (!stop() && step.index - getLitIndex() > 26) {
+                while (!stop() && step.index - getLitIndex() > 52) {
                     const watchIdx = Math.min(plan.length - 1, Math.max(0, step.index - 22));
                     const watch = plan[watchIdx];
                     if (watch && (Math.abs(pos().x - watch.x) > 8 || Math.abs(pos().z - watch.z) > 8)) {
                         await helper.bot.walkTo(watch.x, watch.z, 3);
-                    }
-                    if ((helper.sdk.getState()?.player?.runEnergy ?? 100) < 60 && hasEnergyPot()) {
-                        const potSlot = OBJ_ENERGY_IDS.map(id => slotOfId(helper, id)).find(s => s !== undefined);
-                        if (potSlot !== undefined) await helper.direct({ type: 'useInventoryItem', slot: potSlot, reason: 'SDK' });
                     }
                     await waitTicks(helper, 1);
                 }
@@ -265,7 +260,7 @@ export async function runFiremakingDropper(
                 await helper.bot.walkTo(3269, 3167, 2);
             }
             await helper.bot.openBank();
-            const bankKeep = new Set<number>([...OBJ_GLORY_IDS, ...OBJ_ENERGY_IDS]);
+            const bankKeep = new Set<number>([...OBJ_GLORY_IDS]);
             for (const it of helper.sdk.getInventory()) {
                 if (!bankKeep.has(it.id) && !need.has(it.id)) {
                     await helper.bot.depositItem(it, it.count);
@@ -275,12 +270,6 @@ export async function runFiremakingDropper(
                 const gloryRow = OBJ_GLORY_IDS.map(id => helper.sdk.getState()?.bank?.items?.find(b => b.id === id)).find(Boolean);
                 if (gloryRow && gloryRow.count > 0) {
                     await helper.bot.withdrawItem(gloryRow, 1, { asNote: false });
-                }
-            }
-            if (!hasEnergyPot()) {
-                const potRow = OBJ_ENERGY_IDS.map(id => helper.sdk.getState()?.bank?.items?.find(b => b.id === id)).find(Boolean);
-                if (potRow && potRow.count > 0) {
-                    await helper.bot.withdrawItem(potRow, 1, { asNote: false });
                 }
             }
             for (const [id, qty] of need) {
@@ -305,10 +294,6 @@ export async function runFiremakingDropper(
             }
         }
         while (!stop() && (Math.abs(pos().x - firstStep.x) > 4 || Math.abs(pos().z - firstStep.z) > 4)) {
-            if ((helper.sdk.getState()?.player?.runEnergy ?? 100) < 60 && hasEnergyPot()) {
-                const potSlot = OBJ_ENERGY_IDS.map(id => slotOfId(helper, id)).find(s => s !== undefined);
-                if (potSlot !== undefined) await helper.direct({ type: 'useInventoryItem', slot: potSlot, reason: 'SDK' });
-            }
             await helper.bot.walkTo(firstStep.x, firstStep.z, 2);
             if (Math.abs(pos().x - firstStep.x) <= 4 && Math.abs(pos().z - firstStep.z) <= 4) break;
             await waitTicks(helper, 1);
@@ -618,7 +603,7 @@ if (import.meta.main) {
                     const st = main.sdk.getState() as { player?: { worldX: number; worldZ: number }; gameMessages?: { text: string }[] } | undefined;
                     console.log(`NOTE stall step=${step.index} at=(${step.x},${step.z}) me=(${st?.player?.worldX},${st?.player?.worldZ}) ground=${groundHas()} lvl=${main.sdk.getSkill('Firemaking')?.baseLevel} msgs=${(st?.gameMessages ?? []).slice(-3).map(m => m.text).join('|')}`);
                 }
-                const retryInvSlot = !groundHas() && !isGroundStep && elapsed >= 4 ? slotOfId(main, step.itemId) : undefined;
+                const retryInvSlot = !groundHas() && !isGroundStep && elapsed >= 1 ? slotOfId(main, step.itemId) : undefined;
                 const retryTboxSlot = retryInvSlot !== undefined ? slotOfId(main, OBJ_TINDERBOX) : undefined;
                 const retryOp = groundHas()
                     ? lightGroundOp
@@ -632,7 +617,7 @@ if (import.meta.main) {
                     ]);
                 } else if (dlgOpen) {
                     await main.direct({ type: 'closeModal', reason: 'SDK' });
-                } else if (elapsed >= 3 && elapsed % 3 === 0 && retryOp) {
+                } else if ((elapsed === 1 || (elapsed >= 3 && elapsed % 3 === 0)) && retryOp) {
                     await main.direct(retryOp);
                 }
             }

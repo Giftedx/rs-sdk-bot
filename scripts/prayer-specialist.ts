@@ -132,6 +132,7 @@ export async function runPrayerSpecialist(
      await burstTradeHost(spec, next.session, {
       giveIds: [ITEM_IDS.dragon_bones],
       deadlineTick: deadline,
+      allowHelperOnSingleModal: true,
       onConfirmSend: () => spec.direct({ type: 'useInventoryItem', slot: 0, optionIndex: 1, reason: 'SDK' }),
      });
     } finally {

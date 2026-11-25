@@ -188,35 +188,31 @@ async function smithHeldBars(spec: Session, target: number, deadline: number): P
    if (!ifaceOpen()) continue;
   }
 
-  const useMake5 = r.bars === 5 || product === SMITH_PRODUCTS.bronze_warhammer;
   const beforeBars = countItem(spec.sdk.getInventory(), r.bar);
+  const lvl = skillLevel(spec, 'Smithing');
+  const useMake10 = product === SMITH_PRODUCTS.bronze_dagger && beforeBars >= 9;
+  const useMake5 = !useMake10 && (r.bars === 5 || product === SMITH_PRODUCTS.bronze_warhammer || (product === SMITH_PRODUCTS.iron_dagger && beforeBars >= 17 && lvl < 24));
+  const optionIndex = useMake10 ? 3 : useMake5 ? 2 : 1;
   const sentTick = spec.tick();
   await spec.direct({
    type: 'clickComponentWithOption',
    componentId: r.component,
-   optionIndex: useMake5 ? 2 : 1,
+   optionIndex,
    slot: r.slot,
    reason: 'SDK',
   });
-  let delTick = -1;
   await waitUntil(
    spec,
    () => {
     if (spec.tick() <= sentTick) return false;
     if (skillLevel(spec, 'Smithing') >= target) return true;
     const nowBars = countItem(spec.sdk.getInventory(), r.bar);
-    const doneNow = useMake5 ? nowBars < r.bars : nowBars < beforeBars;
-    if (doneNow && delTick < 0) delTick = spec.tick();
-    return doneNow;
+    if (useMake10) return nowBars === 0;
+    if (useMake5) return product === SMITH_PRODUCTS.iron_dagger ? beforeBars - nowBars >= 5 || nowBars === 0 : nowBars < r.bars;
+    return nowBars < beforeBars;
    },
-   { timeoutTicks: useMake5 ? 30 : 8 },
+   { timeoutTicks: useMake10 ? 50 : useMake5 ? 30 : 8 },
   );
-  // smithing.rs2 runs p_delay(2) after inv_del (delayedUntil = delTick + 3); wait until delay clears before dropping.
-  if (delTick >= 0 && countItem(spec.sdk.getInventory(), r.bar) < r.bars && skillLevel(spec, 'Smithing') < target) {
-   while (spec.tick() < delTick + 3 && spec.tick() < deadline) {
-    await waitTicks(spec, 1);
-   }
-  }
  }
  throw Error('smithing loop exceeded cap');
 }
@@ -300,12 +296,14 @@ export async function runSmithingSpecialist(
   const vWalk = await walkPath(
    walkEdgeToVarrock,
    [
-    { x: 3115, z: 3462, tol: 5 },
-    { x: 3155, z: 3428, tol: 3 },
-    { x: 3176, z: 3428, tol: 2 },
+    { x: 3080, z: 3467, tol: 4 },
+    { x: 3090, z: 3444, tol: 4 },
+    { x: 3100, z: 3421, tol: 3 },
+    { x: 3158, z: 3418, tol: 4 },
+    { x: 3181, z: 3426, tol: 2 },
     { x: VARROCK_WEST_ANVIL.x, z: VARROCK_WEST_ANVIL.z, tol: 0 },
    ],
-   { maxTicks: Math.max(10, Math.min(70, deadline - spec.tick())) },
+   { maxTicks: Math.max(10, Math.min(95, deadline - spec.tick())) },
   );
   if (!vWalk.ok && !nearTile(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0)) {
    await navigateWorld(spec, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0, Math.max(10, deadline - spec.tick()));

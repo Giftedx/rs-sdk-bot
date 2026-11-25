@@ -354,7 +354,9 @@ export async function runArdougneStunRelogThieving(opts: {
             continue;
         }
 
-        const tier = selectPickpocketTier(lvl);
+        const tier = lvl < 5 && st.player.worldX >= 3150
+            ? { ...selectPickpocketTier(lvl), anchor: { x: 3222, z: 3222 } }
+            : selectPickpocketTier(lvl);
 
         // Detect new stun messages via monotonic message watermark (immune to ring-buffer length caps).
         const msgs = st.gameMessages ?? [];
@@ -543,7 +545,7 @@ if (import.meta.main) {
     });
 
     let helperDone: Promise<void> | undefined;
-    const sessStart = main.tick();
+    let sessStart = main.tick();
     let relogs = 0;
     let tutTicks = 0;
     let tradeTicks = 0;
@@ -556,6 +558,29 @@ if (import.meta.main) {
     const supplies = isLiveSupplyVariant() ? THIEVING_SPECIALIST_LIVE_SUPPLIES : THIEVING_SPECIALIST_SUPPLIES;
     let readyForTrade = false;
     const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
+    const relogMainSession = async (current: Session) => {
+        intentionalRelog = true;
+        try {
+            const out = await logoutSession(current);
+            if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
+            await closeWithin([current], 5000);
+            const nextToken = ++activeMainToken;
+            for (let attempt = 0; ; attempt++) {
+                try {
+                    return await openBot(account, {
+                        onStop: async (_s, why) => { if (nextToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },
+                        onSessionEnd: onUnexpectedEnd,
+                    });
+                } catch (err) {
+                    if (attempt >= 3 || !/already logged in|try again|econnreset|timeout/i.test(String(err))) throw err;
+                    await Bun.sleep(100);
+                }
+            }
+        } finally {
+            intentionalRelog = false;
+        }
+    };
+
     try {
         if (resume) {
             for (let w = 0; w < 20 && !isStopped() && !main.sdk.getState()?.player; w++) {
@@ -575,6 +600,22 @@ if (import.meta.main) {
                 .catch(err => {
                     console.log(`WARN helper settle: ${String(err)}`);
                 });
+
+            // Reach Lv 5 on Lumbridge Man/Woman (Ardougne Market has no Man/Woman NPCs) before teleporting to Market stalls.
+            if ((main.sdk.getSkill('Thieving')?.baseLevel ?? 1) < 5) {
+                const starterRes = await runArdougneStunRelogThieving({
+                    main,
+                    cap,
+                    initialTicks: elapsedNow(),
+                    goalLevel: 5,
+                    isStopped: () => stopFlag,
+                    relogSession: relogMainSession,
+                });
+                main = starterRes.session;
+                totalTicks = starterRes.totalTicks;
+                relogs += starterRes.relogs;
+                sessStart = main.tick();
+            }
 
             if (THIEVING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
                 // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
@@ -623,28 +664,7 @@ if (import.meta.main) {
             cap,
             initialTicks: elapsedNow(),
             isStopped: () => stopFlag,
-            relogSession: async current => {
-                intentionalRelog = true;
-                try {
-                    const out = await logoutSession(current);
-                    if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
-                    await closeWithin([current], 5000);
-                    const nextToken = ++activeMainToken;
-                    for (let attempt = 0; ; attempt++) {
-                        try {
-                            return await openBot(account, {
-                                onStop: async (_s, why) => { if (nextToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },
-                                onSessionEnd: onUnexpectedEnd,
-                            });
-                        } catch (err) {
-                            if (attempt >= 3 || !/already logged in|try again|econnreset|timeout/i.test(String(err))) throw err;
-                            await Bun.sleep(100);
-                        }
-                    }
-                } finally {
-                    intentionalRelog = false;
-                }
-            },
+            relogSession: relogMainSession,
         });
         main = res.session;
         totalTicks = res.totalTicks;

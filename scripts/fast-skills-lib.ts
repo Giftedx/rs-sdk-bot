@@ -447,7 +447,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    if (specNeedsConfirm) {
     confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
-   if (opts.onConfirmSend && (ht.myAccepted || helperConfirmingNow || !ht.isOpen) && (st.myAccepted || specNeedsConfirm || !st.isOpen) && (helperConfirmingNow || specNeedsConfirm)) {
+   if (opts.onConfirmSend && (ht.myAccepted || !ht.isOpen) && specNeedsConfirm) {
     confirmActs.push(opts.onConfirmSend());
    }
    if (confirmActs.length) await Promise.all(confirmActs);

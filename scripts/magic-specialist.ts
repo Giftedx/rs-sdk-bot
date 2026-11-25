@@ -166,7 +166,7 @@ async function eatSharkIfLow(spec: Session): Promise<boolean> {
 
 async function castWindStrikeToLevel7(spec: Session, deadline: number): Promise<void> {
  const windStrike = componentId('magic:wind_strike');
- const isPassiveTarget = (name: string) => /^(chicken|rat|giant rat|man|woman)$/i.test(name);
+ const isPassiveTarget = (name: string) => /^(chicken|rat|giant rat)$/i.test(name);
  let prevCastXp = skillXp(spec, 'Magic');
  let lastCastTick = -99;
  while (spec.tick() < deadline) {
@@ -192,7 +192,7 @@ async function castWindStrikeToLevel7(spec: Session, deadline: number): Promise<
   }
   const candidates = npcs.filter(
    n =>
-    /^(man|woman|chicken|rat|giant rat|spider|giant spider|goblin|imp)$/i.test(n.name) &&
+    /^(chicken|rat|giant rat|spider|giant spider|goblin|imp)$/i.test(n.name) &&
     n.optionsWithIndex.some(o => /^attack$/i.test(o.text)),
   );
   const reachable = candidates.filter(n => n.reachable !== false);
@@ -495,6 +495,9 @@ async function executeMagicLoop(
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
+ if (((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) !== 1) {
+  await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+ }
 
  let windTicks = 0;
  let tradeTicks = 0;
