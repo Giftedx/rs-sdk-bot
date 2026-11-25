@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795581084163-1",
+ "account": "TheFullMonty",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "58f5288f-0dd7-4299-8d10-5a4eb691d086",
+ "count": 0,
+ "ok": false,
+ "at": 1795581195076,
+ "detail": "Error: sender withdrawal debit or pack credit not confirmed: Antipoison(3)",
+ "logout": {
+  "attemptId": "1795581178659-0000004464-0000000001",
+  "at": 1795581195064,
+  "sha256": "f938da8bd10484e91a08d4731a7513bca8b5eefdb7838526871a9c74a2e8fea8"
+ },
+ "screen": false
+}

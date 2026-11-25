@@ -1,0 +1,17 @@
+{
+ "id": "1795581169282-pickpockdick-undermykilt-fcafa53f2932fd53",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "UnderMyKilt",
+ "item": "Uncut ruby",
+ "count": 1,
+ "start": 1795581169282,
+ "end": 1795584769282,
+ "extra": [
+  {
+   "item": "Ball of wool",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
