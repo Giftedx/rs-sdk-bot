@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795620306568-3",
+ "account": "Shaftsinker",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shortbow",
+ "requested": 1,
+ "claim": "21aaeb05-18da-4012-941f-3af79da30fb6",
+ "count": 1,
+ "ok": true,
+ "at": 1795621052926,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795621052071
+ },
+ "logout": {
+  "attemptId": "1795621033886-0000010264-0000000001",
+  "at": 1795621052829,
+  "sha256": "b938a04b5c69df53feca886e59f70ec1d54501770db1b7ad88719da49390df59"
+ },
+ "screen": true
+}

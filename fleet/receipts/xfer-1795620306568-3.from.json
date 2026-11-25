@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795620306568-3",
  "account": "Billionaire",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Shortbow",
  "requested": 1,
  "claim": "c79fd43f-114f-450f-a73a-6c20014abfc4",
- "count": 0,
- "ok": false,
- "at": 1795620702558,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795621051249,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795620709678
+ },
+ "logout": {
+  "attemptId": "1795620702567-0000013072-0000000001",
+  "at": 1795621051236,
+  "sha256": "8e93e43f75d5e64106449f11e6fec86b8df11e1f99b1dedb5c9f76ffb407b5ae"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795620710941-3",
+ "account": "mmthv2350",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "c437e2a5-29e5-40a7-9451-f3f66312d0b5",
+ "count": 60,
+ "ok": true,
+ "at": 1795621068455,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795621067682
+ },
+ "logout": {
+  "attemptId": "1795621056878-0000005088-0000000001",
+  "at": 1795621068442,
+  "sha256": "1c7657839653f472dc8e1705913f11b5e467606b21ae91d144c07c25fb12bb38"
+ },
+ "screen": true
+}
