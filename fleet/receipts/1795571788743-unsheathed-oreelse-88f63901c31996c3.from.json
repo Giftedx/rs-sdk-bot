@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795571788743-unsheathed-oreelse-88f63901c31996c3",
+ "account": "Unsheathed",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coal",
+ "requested": 20,
+ "claim": "b2a6dd01-8eb0-47e3-9403-8735faaf0c99",
+ "count": 0,
+ "ok": false,
+ "at": 1795571877099,
+ "detail": "trade claimed"
+}
