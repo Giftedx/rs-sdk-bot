@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795582313809,
+ "at": 1795582341024,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,7 +24,7 @@
    "role": "rehearsal"
   },
   {
-   "account": "PocketPool",
+   "account": "TrouserSnake",
    "script": "scripts/aio-pvp.ts",
    "args": [
     "escort-ore",
@@ -32,7 +32,7 @@
    ],
    "env": {
     "COORDINATOR_RUN_ID": "oreelse-runite-1",
-    "COORDINATOR_PARTICIPANTS": "[\"PocketPool\",\"OreElse\"]",
+    "COORDINATOR_PARTICIPANTS": "[\"TrouserSnake\",\"OreElse\"]",
     "WALK_TO_EDGEVILLE": "1",
     "ESCORT_COMBAT": "any",
     "MINER_COMBAT": "any",
@@ -47,6 +47,22 @@
   },
   {
    "account": "Hocuspokeus",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "PocketPool",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -110,7 +126,6 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "trousersnake",
   "undermykilt",
   "woodpecker",
   "yewfirst"
