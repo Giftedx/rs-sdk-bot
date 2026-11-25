@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795617060277-2",
+ "account": "Shaftsinker",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 105,
+ "claim": "cce483d6-58a8-41c9-a911-4a096ee29a53",
+ "count": 105,
+ "ok": true,
+ "at": 1795617939753,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 105
+ },
+ "bank": {
+  "count": 105,
+  "at": 1795617938995
+ },
+ "logout": {
+  "attemptId": "1795617927300-0000026124-0000000001",
+  "at": 1795617939740,
+  "sha256": "eb33e2ba73754bbc035e7336bcac8d72514a7dcb5f04b413bdf8dd775f641641"
+ },
+ "screen": true
+}

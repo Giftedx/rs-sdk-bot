@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795617382747-4",
  "account": "mmsmk1232",
  "partner": "Moneyshot",
@@ -12,6 +12,12 @@
  "claim": "110d066a-f132-48cf-b9a8-fcf5fa33de99",
  "count": 0,
  "ok": false,
- "at": 1795617760441,
- "detail": "trade claimed"
+ "at": 1795617929763,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795617760453-0000009420-0000000001",
+  "at": 1795617929749,
+  "sha256": "13ee915060cea62b9888b6b51841b6d285692a757610aefbee7cc0c66115370a"
+ },
+ "screen": false
 }

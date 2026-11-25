@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795617033300-3",
  "account": "Quickhandjob",
  "partner": "FishAndChips",
@@ -12,6 +12,12 @@
  "claim": "56d81231-75d8-4cfc-9822-1efc50a60355",
  "count": 0,
  "ok": false,
- "at": 1795617712404,
- "detail": "trade claimed"
+ "at": 1795617933777,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795617712412-0000028300-0000000001",
+  "at": 1795617933761,
+  "sha256": "c057c964e83e01cd3b02b7f22597bdd647baaa4192fdf73734ba56de037b100d"
+ },
+ "screen": false
 }

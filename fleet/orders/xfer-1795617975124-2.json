@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795617975124-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "NabTheKnob",
+  "to": "Shaftsinker",
+  "item": "Dragon bones",
+  "count": 11,
+  "itemId": 536,
+  "start": 1795617975124,
+  "end": 1795618875124,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
