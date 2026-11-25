@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795625216257-1",
+ "account": "Spitroaster",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "53bfa473-51f0-4ca9-8c8c-86ca2100e440",
+ "count": 0,
+ "ok": false,
+ "at": 1795625822252,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795625777198,
+ "at": 1795625858599,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "348",
+    "MAX_ITEMS": "269",
     "COIN_RESERVE": "1000",
-    "FLOAT": "71600",
+    "FLOAT": "55800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "348"
+    "BATCH_UNITS": "269"
    },
    "enabled": true,
    "repeat": false,
@@ -94,14 +94,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "169",
+    "MAX_ITEMS": "167",
     "COIN_RESERVE": "1000",
-    "FLOAT": "35800",
+    "FLOAT": "35400",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "169"
+    "BATCH_UNITS": "167"
    },
    "enabled": true,
    "repeat": false,
@@ -113,18 +113,18 @@
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
-    "essence"
+    "ore"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1436",
-    "BATCH_UNITS": "121"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1436",
+   "goal": "campaign:haggis:item:440",
    "role": "army",
    "resources": [
-    "essence-mine"
+    "varrock-se-mine"
    ]
   },
   {
@@ -261,48 +261,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "helper"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-1513-95-p2507",
-    "ITEM_ID": "1513",
-    "QUANTITY": "95",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "2507",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "95"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
-    "ORDER_KEY": "brain-2353-78-p748",
-    "ITEM_ID": "2353",
-    "QUANTITY": "78",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "748",
-    "DEMAND_ID": "campaign:haggis:item:2353",
-    "BATCH_UNITS": "78"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "auto"
   }
  ],
  "army": [
