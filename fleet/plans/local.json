@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795645053120,
+ "at": 1795645068904,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -150,22 +150,6 @@
    "role": "army"
   },
   {
-   "account": "Stirmypot",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -181,26 +165,24 @@
    "role": "army"
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/aio-skiller.ts",
+   "account": "YewGotWood",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "magic",
-    "splash",
-    "90",
-    "3000"
+    "druid"
    ],
    "env": {
-    "TRAIN_SKILL": "Magic",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
+    "DEMAND_ID": "goal:pk_army:YewGotWood",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
+   "goal": "goal:pk_army:YewGotWood",
    "role": "auto",
    "resources": [
-    "ardougne-cows"
+    "chaos-druids"
    ]
   },
   {
@@ -266,6 +248,23 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-starter"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Stirmypot",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Stirmypot",
+   "role": "auto"
   }
  ],
  "army": [
