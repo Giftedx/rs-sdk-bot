@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795567319038-knightrider-unsheathed-96c22e86aa94b229",
  "account": "KnightRider",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 55000,
  "claim": "eb2d4217-e1ad-4c42-a995-7c3488b0dcb7",
- "count": 0,
- "ok": false,
- "at": 1795567379826,
- "detail": "trade claimed"
+ "count": 55000,
+ "ok": true,
+ "at": 1795568190389,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 55000,
+  "after": 0
+ },
+ "bank": {
+  "count": 55000,
+  "at": 1795567387280
+ },
+ "logout": {
+  "attemptId": "1795567379835-0000009956-0000000001",
+  "at": 1795568190373,
+  "sha256": "b12b1a0f83d7f4910397ce8ef81b216963eac86c28311633dfc2541e5cfb77d4"
+ },
+ "screen": true
 }
