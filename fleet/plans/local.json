@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795639729914,
+ "at": 1795639743435,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2300 TARGET_COUNT=230 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2290 TARGET_COUNT=229 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -107,6 +107,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:440",
    "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
+  },
+  {
+   "account": "PackageDeal",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "mining",
+    "ore"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:440",
+   "role": "helper",
    "resources": [
     "varrock-se-mine"
    ]
@@ -210,22 +229,6 @@
    "role": "helper"
   },
   {
-   "account": "PackageDeal",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "runecraft",
-    "air"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "50"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:556",
-   "role": "helper"
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -248,48 +251,70 @@
    ]
   },
   {
-   "account": "BoneToPick",
+   "account": "SporranBulge",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "helper",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=3 \"ITEM_NAME=Nature rune\" -- loadout",
-    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 -- magic alch-train 90 3000"
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1022 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1022 -- ge-buy",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto"
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/generated/quest-ikov.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:ikov",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:ikov",
+   "goal": "campaign:haggis:item:225",
    "role": "army"
   },
   {
-   "account": "Swordinhand",
+   "account": "Stirmypot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "alch-train",
+    "90",
+    "3000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Stirmypot",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Stirmypot",
+   "role": "auto"
+  },
+  {
+   "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
-    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
+   "goal": "campaign:haggis:item:1975",
    "role": "army"
   }
  ],
@@ -303,8 +328,8 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "dipstick",
   "fatstack",
-  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "knightrider",
@@ -316,7 +341,7 @@
   "pocketpython",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
+  "swordinhand",
   "thefullmonty",
   "undermykilt",
   "yewfirst"
