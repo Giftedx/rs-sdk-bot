@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795575950739-trousersnake-yewfirst-6304da1d710416fd",
+ "role": "from",
+ "account": "TrouserSnake",
+ "partner": "YewFirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795576077016,
+ "detail": "Error: fleet trade claim held for order 1795572729178-trousersnake-oreelse-c07644d233c841a8"
+}
