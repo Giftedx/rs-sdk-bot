@@ -498,7 +498,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
 
  const walker = await createRunSafeWalker(spec);
 
- await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 4), walker);
+ await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15), walker);
  logPhase(spec, start, 'herb_at_kaqemeex');
 
  await talkQuestNpc(
@@ -546,7 +546,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
 
  await climbLoc(spec, 1740, 2898, 3428, /climb-down/i, () => (playerPos(spec)?.level ?? 1) === 0, deadline);
  logPhase(spec, start, 'herb_down_sanfew1');
- await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6), walker);
+ await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 2), walker);
  await climbLoc(spec, 1759, 2884, 3397, /climb-down/i, () => (playerPos(spec)?.worldZ ?? 0) > 9000, deadline);
  const tDung = spec.tick() - start;
  logPhase(spec, start, 'herb_in_dungeon');
@@ -581,14 +581,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
    await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
    await waitTicks(spec, 1);
   } else {
-   const inv = spec.sdk.getInventory();
-   const first = meatPairs.find(m => countItem(inv, m.ench) === 0);
-   const slotItem = first ? inv.find(i => i.id === first.raw) : undefined;
-   if (slotItem) {
-    await spec.direct({ type: 'useItemOnLoc', itemSlot: slotItem.slot, x: 2893, z: 9831, locId: 2142, reason: 'SDK' });
-   } else {
-    await spec.direct({ type: 'walkTo', x: 2892, z: 9831, running: true, reason: 'SDK' });
-   }
+   await spec.direct({ type: 'walkTo', x: 2892, z: 9831, running: true, reason: 'SDK' });
    await waitTicks(spec, 1);
    break;
   }
@@ -673,12 +666,12 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   await walkLocal(
    spec,
    KAQEMEEX_SPOT.x,
-   KAQEMEEX_SPOT.z,
-   2,
+   KAQEMEEX_SPOT.z - 1,
+   1,
    deadline,
    () =>
     spec.sdk.getInventory().every(i => GLORY_SET.has(i.id)) &&
-    !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 4),
+    !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15),
    walker,
   );
  } finally {
@@ -731,7 +724,7 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number, no
     acts.push(spec.direct({ type: 'dropItem', slot: glory.slot, reason: 'SDK' }));
    }
   }
-  if (notedHelper && !helperPreReq && p && Math.max(Math.abs(p.worldX - HERBLORE_BANK_SPOT.x), Math.abs(p.worldZ - HERBLORE_BANK_SPOT.z)) <= 3) {
+  if (notedHelper && !helperPreReq && p && Math.max(Math.abs(p.worldX - HERBLORE_BANK_SPOT.x), Math.abs(p.worldZ - HERBLORE_BANK_SPOT.z)) <= 2) {
    const sTarget = notedHelper.sdk.getNearbyPlayers().find(n => n.name.toLowerCase() === specLower);
    if (sTarget) {
     helperPreReq = true;
