@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795636314248-1",
  "account": "Shaftsinker",
  "partner": "MeatNTwoVeg",
@@ -12,6 +12,16 @@
  "claim": "58a244eb-2d6f-4720-ad58-beb007812dd2",
  "count": 0,
  "ok": false,
- "at": 1795636428812,
- "detail": "trade claimed"
+ "at": 1795636542161,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795636435809
+ },
+ "logout": {
+  "attemptId": "1795636428849-0000018240-0000000001",
+  "at": 1795636542149,
+  "sha256": "c1a683382ac3d3100ddce9b848ddb012ce569c5eac120c8d560ced9d84131e51"
+ },
+ "screen": false
 }

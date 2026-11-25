@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795636321568-1",
  "account": "Swordswallow",
  "partner": "PocketPool",
@@ -12,6 +12,12 @@
  "claim": "8a458edc-b243-4c9b-a663-a22c696fb25f",
  "count": 0,
  "ok": false,
- "at": 1795636440177,
- "detail": "trade claimed"
+ "at": 1795636573445,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795636440226-0000025052-0000000001",
+  "at": 1795636573432,
+  "sha256": "b7b6aaf1a697ed418411fc4bc58815dc6c344e791a1ed55bc096c0797374ae4b"
+ },
+ "screen": false
 }
