@@ -8,8 +8,8 @@
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {unplacedCause} from '../../core/src/order-refusal';
-import {hasStopFile} from '../../core/src/practice-paths';
-import {workerDrain} from '../../core/src/live-update-pending';
+import {hasStopFile,readStopFile} from '../../core/src/practice-paths';
+import {DRAIN_STOP_TEXT,workerDrain} from '../../core/src/live-update-pending';
 
 export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
     return ['bun',script,bot,...scriptArgs];
@@ -34,6 +34,12 @@ export function participantsHaveStopFile(accounts:readonly string[],root=process
     return participantsStopped(accounts,account=>hasStopFile(account,root));
 }
 
+// The swarm asked a run that held a live-update drain too long to log out (DRAIN_STOP_TEXT). Such a stop is a release
+// pause, not an owner stop: the job starts again on the new code. Any other stop text stays a stop.
+export function participantsDrainStopped(accounts:readonly string[],root=process.cwd()):boolean{
+    return accounts.some(account=>readStopFile(account,root)?.trim()===DRAIN_STOP_TEXT);
+}
+
 export interface SuperviseDeps {
     run(): Promise<{ stdout: string; exitCode: number; stderr?: string }>;
     stopped(): boolean;
@@ -42,6 +48,8 @@ export interface SuperviseDeps {
     log?(line: string): void;
     // The files of a waiting live update that the next run would load (packages/core/src/live-update-pending.ts workerDrain).
     drained?(): readonly string[];
+    // The stop is the swarm's drain stop (participantsDrainStopped): the job ends as release-paused, not stopped.
+    drainStopped?(): boolean;
 }
 
 // A restart during a live-update drain loads the old files again, so the update also waits on the new run, and each
@@ -234,14 +242,14 @@ export function crashResult(stderr: string | undefined): string | undefined {
 export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused'; runs: number }> {
     let fails = 0, held = 0, lastShape: string | null = null;
     for (let runs = 1; ; runs++) {
-        if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
+        if (d.stopped()) return { reason: d.drainStopped?.() ? 'release-paused' : 'stopped', runs: runs - 1 };
         const pause = runs > 1 ? drainPause(d.drained?.()) : null;
         if (pause) { d.log?.(pause); return { reason: 'release-paused', runs: runs - 1 }; }
         const r = await d.run();
         const result = lastMatchingLine(r.stdout, l => l.startsWith('RESULT')) ?? crashResult(r.stderr) ?? '(no RESULT)';
         d.log?.(`SUPERVISE run ${runs} exit ${r.exitCode}: ${result.slice(0, 200)}`);
         if (r.exitCode === 0 && /^RESULT ok\b/.test(result)) return { reason: 'done', runs };
-        if (d.stopped() || /stop file/.test(result)) return { reason: 'stopped', runs };
+        if (d.stopped() || /stop file/.test(result)) return { reason: d.drainStopped?.() ? 'release-paused' : 'stopped', runs };
         // A death means the route or the food plan failed; a blind restart repeats it.
         if (/died=true|RESULT fail died/.test(result) || diedInRun(r.stdout)) return { reason: 'died', runs };
         // Out of food: a restart only logs in again and finds the same empty bank. A resupply job must run first.
@@ -292,6 +300,7 @@ if (import.meta.main) {
         maxRestarts,
         log: l => console.log(l),
         drained: () => workerDrain(process.cwd()),
+        drainStopped: () => participantsDrainStopped(participants, process.cwd()),
     });
     console.log(`SUPERVISE end ${r.reason} after ${r.runs} runs`);
     process.exit(r.reason === 'done' ? 0 : 1);

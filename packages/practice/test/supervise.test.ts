@@ -541,3 +541,32 @@ test('a run that walks to the same failure twice with no XP or item change ends 
     expect(moved).toEqual({ reason: 'done', runs: 3 });
     expect(gainedInRun('RESULT fail no ledger')).toBe(false);
 });
+
+test('a run that the swarm drain-stopped ends as release-paused; an owner stop stays a stop', async () => {
+    const { DRAIN_STOP_TEXT } = await import('../../core/src/live-update-pending');
+    const { participantsDrainStopped } = await import('../src/supervise');
+    const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const out = { stdout: 'LEDGER ticks=900 xp=5 inventory=2 move=10 idle=10\nRESULT fail stop file', exitCode: 1 };
+    // The run itself ended on the stop file.
+    const paused = await supervise({ run: async () => out, stopped: () => false, pause: async () => {}, maxRestarts: 20, drainStopped: () => true });
+    expect(paused).toEqual({ reason: 'release-paused', runs: 1 });
+    expect(await supervise({ run: async () => out, stopped: () => false, pause: async () => {}, maxRestarts: 20, drainStopped: () => false })).toEqual({ reason: 'stopped', runs: 1 });
+    // A stop that stands before the first run ends the job with no run, as before.
+    expect(await supervise({ run: async () => out, stopped: () => true, pause: async () => {}, maxRestarts: 20, drainStopped: () => true })).toEqual({ reason: 'release-paused', runs: 0 });
+    // A drain stop seen before a restart ends the job without another run.
+    let calls = 0, stop = false;
+    const before = await supervise({ run: async () => { calls++; stop = true; return { stdout: 'RESULT fail walk', exitCode: 1 }; }, stopped: () => stop, pause: async () => {}, maxRestarts: 20, drainStopped: () => stop });
+    expect(before).toEqual({ reason: 'release-paused', runs: 1 });
+    expect(calls).toBe(1);
+    const root = mkdtempSync(join(tmpdir(), 'drain-stopped-'));
+    try {
+        mkdirSync(join(root, '.practice'), { recursive: true });
+        writeFileSync(join(root, '.practice', 'stop-Fisher'), `${DRAIN_STOP_TEXT}\n`);
+        writeFileSync(join(root, '.practice', 'stop-Owned'), 'owner stop');
+        expect(participantsDrainStopped(['Fisher'], root)).toBe(true);
+        expect(participantsDrainStopped(['Owned'], root)).toBe(false);
+        expect(participantsDrainStopped(['Nobody'], root)).toBe(false);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});

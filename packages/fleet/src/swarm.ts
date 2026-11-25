@@ -38,7 +38,7 @@ import { RESERVED_ACCOUNTS, SPECIALIST_BOARDS } from '../../core/src/specialist-
 import { renameRetry } from '../../core/src/status';
 import { ownedAccounts } from '../../core/src/tradeguard';
 import { assertWorkerRelease, cachedLaunchRevision, cachedReleaseFor, workerEntries } from '../../core/src/worker-release';
-import { drainedFiles, pendingUpdateReader, type PendingUpdate } from './live-update/pending';
+import { DRAIN_STOP_MS, DRAIN_STOP_TEXT, drainedFiles, pendingUpdateReader, type PendingUpdate } from './live-update/pending';
 import {
     captureRunBaseline,
     extractWorkerOutcomeInput,
@@ -546,6 +546,7 @@ export const SWARM_STOP = {
     recovery: 'swarm recovery stopped',
     inherited: 'inherited recovery stopped',
     lease: 'fleet controller lease unavailable',
+    drain: DRAIN_STOP_TEXT,
 } as const;
 
 export function swarmWroteStop(text: string | undefined): boolean {
@@ -1024,6 +1025,44 @@ export function resolvedOrphanEnds(
         out.push({ account, reason: end.reason, confirmed: p.attemptId });
     }
     return out;
+}
+
+// A live update lands only when no live run loads its files, and a new live login refuses while a peer runs an older
+// release (worker-release/peers.ts assertCompatibleWorkers), so the update cannot land under a long run either. A
+// drain that has waited DRAIN_STOP_MS (from the mark's `since`) asks the swarm's own runs that hold it to log out
+// with DRAIN_STOP_TEXT. The supervisor ends such a job as release-paused, and the swarm starts it again on the new
+// code. Trades end within their order window, a host run ends per account, a standing job is not drained, and a
+// recovery or a protected account is never stopped here. Runs of other controllers and manual runs are not the
+// swarm's, so they are left as they are.
+export type DrainRun = { accounts: readonly string[]; host: boolean; standing: boolean; trade: boolean; drained: readonly string[] };
+export function drainStopAccounts(pending: PendingUpdate | null, now: number, runs: readonly DrainRun[], busy: readonly string[]): string[] {
+    if (!pending || now - (pending.since ?? pending.at) < DRAIN_STOP_MS) return [];
+    const skip = new Set(busy.map(b => b.toLowerCase())), out: string[] = [];
+    for (const r of runs) {
+        if (r.host || r.standing || r.trade || !r.drained.length) continue;
+        if (r.accounts.some(a => PROTECTED_ACCOUNTS.includes(a.toLowerCase()) || skip.has(a.toLowerCase()))) continue;
+        out.push(...r.accounts);
+    }
+    return out;
+}
+
+// Removes each drain stop (DRAIN_STOP_TEXT) whose account no run holds. Other stop texts stay.
+export function clearDrainStops(dirs: readonly string[], running: ReadonlySet<string>): string[] {
+    const cleared: string[] = [];
+    for (const dir of dirs) {
+        let names: string[];
+        try { names = readdirSync(dir); } catch { continue; }
+        for (const name of names) {
+            if (!name.toLowerCase().startsWith('stop-')) continue;
+            const account = name.slice(5), file = join(dir, name);
+            if (running.has(account.toLowerCase())) continue;
+            let text: string;
+            try { text = readFileSync(file, 'utf8'); } catch { continue; }
+            if (text.trim() !== DRAIN_STOP_TEXT) continue;
+            try { rmSync(file, { force: true }); cleared.push(account); } catch { /* kept until the next tick */ }
+        }
+    }
+    return cleared;
 }
 
 export function applyScriptQualification(request: any, holds: ScriptHold[], active: readonly string[], proofs: RepairProofs) {
@@ -1912,6 +1951,24 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         let endedByLower = endedMapByLower(ended);
         const buildLocked = existsSync(join(liveDir, 'build-lock.json'));
         const pendingUpdate = readPendingUpdateMark();
+        if (pendingUpdate) {
+            const drainRuns: DrainRun[] = [...runs].map(([key, run]) => {
+                const p = planned.find(x => x.key === key);
+                return {
+                    accounts: run.accounts, host: !!run.host, standing: !!p?.job.standing,
+                    trade: !!p && /(?:^|\/)aio-logistics\.ts$/.test(p.job.script), drained: p ? updateDrainOf(pendingUpdate, p.job) : [],
+                };
+            });
+            const busyRecovery = [...(recoveryDispatch.active ? [recoveryDispatch.active.account] : []), ...inheritedRecoveries.map(r => r.account)];
+            for (const a of drainStopAccounts(pendingUpdate, Date.now(), drainRuns, busyRecovery)) {
+                if (hasStopFile(a, root)) continue;
+                writeSwarmStop(stopFile(a), SWARM_STOP.drain);
+                console.log(`SWARM drain stop ${a}: the live update to ${pendingUpdate.target.slice(0, 10)} has waited ${Math.round((Date.now() - (pendingUpdate.since ?? pendingUpdate.at)) / 60_000)} min`);
+            }
+        }
+        for (const a of clearDrainStops([liveDir, prac], new Set([...runs.values()].flatMap(r => r.accounts.map(n => n.toLowerCase()))))) {
+            console.log(`SWARM drain stop cleared ${a}: its run has ended`);
+        }
         for (let rowIdx = 0; rowIdx < combinedJobs.length; rowIdx++) {
             const raw = combinedJobs[rowIdx]!;
             if (isReservation(raw)) {

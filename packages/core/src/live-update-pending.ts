@@ -10,7 +10,21 @@ import { cachedReleaseFiles, releaseEntries } from './worker-release';
 // `others`: the live runs that the update waits on and that are not trades (scripts/aio-logistics.ts). While one of
 // them runs, the update cannot land, so the fleet agent does not hold a trade for the drain (fleet-agent.ts
 // tradeDrainHold). A mark without the field holds every drained trade.
-export type PendingUpdate = { at: number; target: string; files: string[]; others?: string[] };
+// `since`: when the drain began. A renewal keeps it while the previous mark is fresh, also when a later merge changes
+// the target, so the swarm can end its own runs that hold a drain past DRAIN_STOP_MS (packages/fleet/src/swarm.ts).
+export type PendingUpdate = { at: number; target: string; files: string[]; others?: string[]; since?: number };
+
+// A drain that waits this long on a swarm run asks that run to log out (swarm.ts drainStopAccounts). Most capped runs
+// end within it; a run near its cap, a chain step or a long quest otherwise holds every new start for an hour or more.
+export const DRAIN_STOP_MS = 20 * 60_000;
+// The stop-file text of that request. The supervisor ends such a job as release-paused (supervise.ts), so the swarm
+// starts it again on the new code, and the swarm removes the file once the run has ended.
+export const DRAIN_STOP_TEXT = 'swarm stopped for a live update drain';
+
+// The mark that a renewal writes: `since` comes from a fresh previous mark, or the renewal starts the drain.
+export function renewedPendingUpdate(previous: PendingUpdate | null, mark: PendingUpdate): PendingUpdate {
+    return { ...mark, since: previous ? previous.since ?? previous.at : mark.at };
+}
 
 // live-update renews the mark on each fleet-agent pass while it waits. A quiet agent sleeps its whole CYCLE (10 min
 // by default, packages/fleet/src/fleet-agent.ts) between passes, so the mark lives three cycles; one this old has no
@@ -34,7 +48,8 @@ export function readPendingUpdate(root: string, now = Date.now()): PendingUpdate
         if (!Number.isFinite(v?.at) || typeof v.target !== 'string' || !Array.isArray(v.files) || !v.files.every((f: unknown) => typeof f === 'string')) return null;
         if (now - v.at >= PENDING_MAX_AGE_MS || v.at > now + 60_000) return null;
         const others = Array.isArray(v.others) && v.others.every((n: unknown) => typeof n === 'string') ? { others: v.others as string[] } : {};
-        return { at: v.at, target: v.target, files: v.files, ...others };
+        const since = Number.isFinite(v.since) && v.since <= v.at ? { since: v.since as number } : {};
+        return { at: v.at, target: v.target, files: v.files, ...others, ...since };
     } catch { return null; }
 }
 
