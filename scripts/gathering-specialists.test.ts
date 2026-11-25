@@ -7,15 +7,7 @@ import { COOKING_SPECIALIST_SUPPLIES } from './cooking-specialist';
 import { FIREMAKING_SPECIALIST_SUPPLIES } from './firemaking-specialist';
 import { planFletchingActionCounts, pickNextFletchTier, FLETCHING_SPECIALIST_SUPPLIES, OBJ_HEADLESS_ARROW } from './fletching-specialist';
 import { FISHING_SPECIALIST_SUPPLIES } from './fishing-specialist';
-import {
-    MINING_SPECIALIST_SUPPLIES,
-    MINING_SPECIALIST_LIVE_SUPPLIES,
-    remainingIronOresTo99,
-    IRON_ORE_XP_25X,
-    OBJ_RUNE_PICKAXE,
-    OBJ_DRAGON_BONES,
-    OBJ_PRAYER_POTION_4,
-} from './mining-specialist';
+import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES, remainingIronOresTo99, IRON_ORE_XP_25X } from './mining-specialist';
 import {
     isArdougneResumeState,
     parseThievingCliArgs,
@@ -98,17 +90,15 @@ describe('gathering specialists supply & progression plans', () => {
 
         expect(fletchSlots).toBe(7);
         expect(fishSlots).toBeLessThanOrEqual(16);
-        expect(mineSlots).toBe(25);
+        expect(mineSlots).toBe(19);
         expect(thieveSlots).toBe(28);
-        expect(MINING_SPECIALIST_SUPPLIES[OBJ_RUNE_PICKAXE]).toBe(1);
-        expect(MINING_SPECIALIST_SUPPLIES[OBJ_DRAGON_BONES]).toBe(11);
-        expect(MINING_SPECIALIST_SUPPLIES[OBJ_PRAYER_POTION_4]).toBe(4);
+        expect(MINING_SPECIALIST_SUPPLIES[OBJ_GAMES_8]).toBe(1);
         expect(THIEVING_PIZZAS).toBe(25);
         expect(THIEVING_SPECIALIST_SUPPLIES[OBJ_PINEAPPLE_PIZZA]).toBe(25);
-        // 18 tutorial slots -> main drops 0 (fletch), 15 (fish, keeps tinderbox), 16 (mine, keeps Bronze pickaxe + Shortbow), 18 (thieve).
+        // 18 tutorial slots -> main drops 0 (fletch), 15 (fish, keeps tinderbox), 13 (mine), 18 (thieve).
         expect(28 - 18).toBeGreaterThanOrEqual(fletchSlots);
         expect(28 - (18 - 15) - fishSlots).toBeGreaterThanOrEqual(1);
-        expect(28 - (18 - 16) - mineSlots).toBeGreaterThanOrEqual(1);
+        expect(28 - (18 - 13) - mineSlots).toBeGreaterThanOrEqual(1);
         expect(28 - (18 - 18) - thieveSlots).toBeGreaterThanOrEqual(0);
     });
 
@@ -209,9 +199,8 @@ describe('bench registration and catalog integration', () => {
             const kit: readonly KitSpecItem[] = SPECIALIST_KITS[skill];
             expect(parsed!.kit).toBe(kit);
             const expanded = expandSupplyInventory(supplies);
-            // Mining and fishing supplies updated ahead of shared specialist-supply.ts integration (dropped 3016 + Hobgoblin kit).
-            if (skill === 'mining' || skill === 'mining-live') continue;
-            if (skill === 'fishing') {
+            // Mining and fishing supplies dropped Super energy(4) (3016) ahead of shared specialist-supply.ts integration.
+            if (skill === 'mining' || skill === 'fishing') {
                 const kitNoEnergy = kit.filter(k => k.id !== OBJ_SUPER_ENERGY_4);
                 expect(kitSlotTotal(kitNoEnergy)).toBe(expanded.length);
                 expect(hasExactKit(expanded, kitNoEnergy)).toBe(true);
