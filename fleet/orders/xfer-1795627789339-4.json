@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795627789339-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Abracadickra",
+  "to": "Woodenstaff",
+  "item": "Air rune",
+  "count": 6,
+  "itemId": 556,
+  "start": 1795627789339,
+  "end": 1795628689339,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
