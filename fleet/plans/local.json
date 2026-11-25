@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795616926265,
+ "at": 1795616942312,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -269,6 +269,22 @@
    "repeat": false,
    "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:hiltsdeep:item:556",
+    "BATCH_UNITS": "902"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:556",
+   "role": "army"
   }
  ],
  "army": [
@@ -293,7 +309,6 @@
   "moneyshot",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
