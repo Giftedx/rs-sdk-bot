@@ -1544,6 +1544,9 @@ return [
   // The fidelity case of the replay: it passes only inside the band of run-1.json, so the clones cannot go soft unseen.
   {...run1Squad('extra:clone-run1-fidelity-x1', {prayer: false, prey: '0,1,0'}), pass: (s: string) => ok(s) && killReceiptsMatch(s) && run1Fidelity(s) === null},
   run1Squad('extra:clone-run1-prayer-x1', {prayer: true, prey: '0,1,0'}),
+  // The pile of live squad run 3 (research/gang-clones.md, "The fallback cascade"): all three clones on one member, full prayer points.
+  // A member that leaves frees the clones to the next member, as the live gang moved from member to member.
+  run1Squad('extra:clone-run1-pile-prayer-x1', {prayer: true, prey: '0,0,0'}),
   run1Squad('extra:clone-run1-nearest-x1', {prayer: false}),
   // The gang with no skull at the start (the skull test: who hits first is skulled, and an account hit first keeps 3 items at death). The
   // pair of the two cases above with the skulled gang; the `PK died` line holds skull=, keeps= and lost= of the last tick alive.

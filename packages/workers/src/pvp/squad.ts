@@ -1210,6 +1210,16 @@ export function shouldBreakSingleWayChase(o: {
     return targetDist > leash || (!o.self.inMulti && selfDist > leash);
 }
 
+/** SQUAD_HELD_FOCUS=<pile>,<heavy>: the focus HP fractions while the squad holds its numbers (squadFallbackPlan heldFocus). */
+export function heldFocusOf(raw: string | undefined): { pile: number; heavy: number } | undefined {
+    if (raw === undefined || raw === '') return undefined;
+    const [pile, heavy, ...rest] = raw.split(',').map(Number);
+    if (rest.length || ![pile, heavy].every(f => f !== undefined && Number.isFinite(f) && f > 0 && f <= 1)) {
+        throw new Error(`SQUAD_HELD_FOCUS must be <pile>,<heavy> with each in (0, 1], got ${raw}`);
+    }
+    return { pile: pile!, heavy: heavy! };
+}
+
 // Coordinated squad escape fallback when outnumbered in multi-combat or out of food below threshold.
 export function squadFallbackPlan(opts: {
     z: number;
@@ -1225,16 +1235,20 @@ export function squadFallbackPlan(opts: {
     targetingMe?: number;
     singleFoodFloor?: number;
     singleHpFloor?: number;
+    // The HP fractions of the focus pile (3 or more on this member) and the heavy focus (2 or more) while the squad holds its
+    // numbers: this member and its allies in view at least as many as the enemies in view. Unset: the fractions below.
+    heldFocus?: { pile: number; heavy: number };
 }): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
     const wild = wildernessLevel(opts.z);
     if (wild === 0) return 'out';
     const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3
         && (opts.hp <= opts.maxHp * 0.85 || opts.foodCount <= 6 || (opts.enemyCount >= 5 && (opts.hp <= opts.maxHp * 0.88 || ((opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * 0.91))));
     const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.78;
-    const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.86;
+    const held = opts.heldFocus && opts.allyCount + 1 >= opts.enemyCount ? opts.heldFocus : undefined;
+    const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * (held?.pile ?? 0.86);
     const instantEscape = !!opts.hasTeleport && wild <= 20;
     const outgunned = opts.enemyCount > opts.allyCount;
-    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * ((instantEscape || outgunned) ? 0.76 : 0.72);
+    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * (held?.heavy ?? ((instantEscape || outgunned) ? 0.76 : 0.72));
     const emergencyMulti = opts.inMulti && (((instantEscape || outgunned) && opts.enemyCount >= 6 && opts.hp <= opts.maxHp * 0.76) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * (outgunned ? 0.72 : 0.62)));
     const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.88;
     const lowSingleSupply = !opts.inMulti && opts.enemyCount >= 4 && (
@@ -1481,6 +1495,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const singleHpFloor = Number(process.env.SQUAD_SINGLE_HP_FLOOR ?? '0');
     if (!Number.isFinite(singleFoodFloor) || singleFoodFloor < 0) throw new Error(`SQUAD_SINGLE_FOOD_FLOOR must be >= 0, got ${process.env.SQUAD_SINGLE_FOOD_FLOOR}`);
     if (!Number.isFinite(singleHpFloor) || singleHpFloor < 0 || singleHpFloor > 1) throw new Error(`SQUAD_SINGLE_HP_FLOOR must be in [0, 1], got ${process.env.SQUAD_SINGLE_HP_FLOOR}`);
+    const heldFocus = heldFocusOf(process.env.SQUAD_HELD_FOCUS);
     const squadFeedWatch = s.lifecycle?.server ? killFeed(s.lifecycle.server) : undefined;
     const selfSlotIndex = () => {
         const clientView = s.client as { localPlayer?: unknown; players?: unknown[]; selfSlot?: number } | undefined;
@@ -1559,6 +1574,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             hasGlory: [...invNow, ...s.sdk.getEquipment()].some(i => /^amulet of glory\([1-4]\)$/i.test(i.name)),
             hasTeleport: !!squadEscapeSpell(pos.worldZ, invNow, s.sdk.getEquipment().map(e => e.id), s.sdk.getSkill('Magic')?.level ?? 1),
             singleFoodFloor, singleHpFloor,
+            ...(heldFocus ? { heldFocus } : {}),
         });
         return { plan, enemyCount, allyCount, foodCount };
     };
