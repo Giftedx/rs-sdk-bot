@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795627812837-2",
  "account": "Unsheathed",
  "partner": "Quickhandjob",
@@ -12,6 +12,20 @@
  "claim": "75ecff27-3e41-49f7-9349-a01ca082d6b8",
  "count": 0,
  "ok": false,
- "at": 1795628104143,
- "detail": "trade claimed"
+ "at": 1795628713291,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 10,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795628112571
+ },
+ "logout": {
+  "attemptId": "1795628104151-0000023576-0000000001",
+  "at": 1795628713277,
+  "sha256": "f0ab69e09535f8a48dc046c604d7a19759bddb7a26b713fa197ab846694437a5"
+ },
+ "screen": false
 }
