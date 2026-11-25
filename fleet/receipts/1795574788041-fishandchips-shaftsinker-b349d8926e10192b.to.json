@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795574788041-fishandchips-shaftsinker-b349d8926e10192b",
  "account": "Shaftsinker",
  "partner": "FishAndChips",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 200,
  "claim": "0254e90b-0492-4d44-ac5a-8341f9dad630",
- "count": 0,
- "ok": false,
- "at": 1795575634223,
- "detail": "trade claimed"
+ "count": 200,
+ "ok": true,
+ "at": 1795575687282,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 200
+ },
+ "bank": {
+  "count": 200,
+  "at": 1795575686532
+ },
+ "logout": {
+  "attemptId": "1795575634240-0000002160-0000000001",
+  "at": 1795575687266,
+  "sha256": "5c964dd9427a0767080f19a137228c2b6d59780e99a15f6cb7355990c4415812"
+ },
+ "screen": true
 }
