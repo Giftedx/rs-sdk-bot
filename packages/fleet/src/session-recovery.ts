@@ -280,6 +280,7 @@ export type StandaloneRecoveryPassOptions = {
     executeRecovery?: (target: { account: string; endedAt: number; server: string }) => Promise<{ ok: boolean; detail: string; deferred?: boolean }>;
     log?: (line: string) => void;
     processStarts?: ProcessStarts;
+    passChoosingWaitMs?: number;
 };
 
 export type StandaloneRecoveryPassResult = {
@@ -295,35 +296,44 @@ export type StandaloneRecoveryPassResult = {
 };
 
 // One pass at a time. A pass with several recoveries (about 70 s each) outlives the watchdog's five-minute interval, and
-// a second pass then meets the first one's repair lease and its recoveries. Each pass writes its own record to this
-// folder (atomically, under its own name), then reads the others: a live pass ahead of it (earlier start, then lower
-// pid) makes it defer to the next one. Two passes that start together each see the other's record, so exactly one runs.
-// A record whose process is gone is removed; no pass removes a live one.
+// a second pass then meets the first one's repair lease and its recoveries. Admission is Lamport's bakery over one
+// record per pass in this folder, each written atomically under its own name: a pass marks itself `choosing`, takes a
+// ticket one above every live ticket it reads, clears `choosing`, waits a bounded time while another live pass is
+// choosing, and runs only if no live pass is still choosing or holds a lower ticket (a tie goes to the lower pid). A
+// pass that started late, or was delayed before its record, reads the ticket of the pass that runs and takes a higher
+// one, so it defers. A record whose process is gone is removed; no pass removes a live one. Deferring never waits for
+// a whole pass: the next watchdog pass tries again.
 export const recoveryPassDir = (root: string): string => join(liveRoot(root), 'session-recovery', 'passes');
-type PassRecord = { pid: number; at: number };
-export const passAhead = (other: PassRecord, mine: PassRecord): boolean => other.at < mine.at || (other.at === mine.at && other.pid < mine.pid);
+export const PASS_CHOOSING_WAIT_MS = 10_000;
+type PassRecord = { pid: number; at: number; choosing: boolean; ticket: number };
+export const passAhead = (other: Pick<PassRecord, 'pid' | 'ticket'>, mine: Pick<PassRecord, 'pid' | 'ticket'>): boolean =>
+    other.ticket < mine.ticket || (other.ticket === mine.ticket && other.pid < mine.pid);
 
 export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOptions = {}): Promise<StandaloneRecoveryPassResult> {
     if (opts.dry === true) return runOneRecoveryPass(opts);
     const root = resolve(opts.root ?? resolve(import.meta.dir, '../../..'));
     const log = opts.log ?? ((line: string) => console.log(`FLEET_RECOVERY ${line}`));
     const alive = opts.pidAlive ?? pidAlive;
-    const dir = recoveryPassDir(root), mine: PassRecord = { pid: process.pid, at: Date.now() };
-    const own = join(dir, `${mine.pid}-${mine.at}.json`);
+    const dir = recoveryPassDir(root), at = Date.now(), own = join(dir, `${process.pid}-${at}.json`);
+    const others = (): PassRecord[] => readdirSync(dir).flatMap(name => {
+        const path = join(dir, name);
+        if (!name.endsWith('.json') || path === own) return [];
+        const r = readJson(path, null);
+        if (!Number.isSafeInteger(r?.pid) || r.pid <= 0 || !Number.isFinite(r?.at) || typeof r?.choosing !== 'boolean' || !Number.isSafeInteger(r?.ticket)) return [];
+        if (!savedProcessAlive(r.pid, r.at, opts.processStarts, alive)) { rmSync(path, { force: true }); return []; }
+        return [r as PassRecord];
+    });
     mkdirSync(dir, { recursive: true });
-    atomicJson(own, mine);
+    atomicJson(own, { pid: process.pid, at, choosing: true, ticket: 0 } satisfies PassRecord);
     try {
-        let ahead: PassRecord | undefined;
-        for (const name of readdirSync(dir)) {
-            const path = join(dir, name);
-            if (!name.endsWith('.json') || path === own) continue;
-            const other = readJson(path, null);
-            if (!Number.isSafeInteger(other?.pid) || other.pid <= 0 || !Number.isFinite(other?.at)) continue;
-            if (!savedProcessAlive(other.pid, other.at, opts.processStarts, alive)) { rmSync(path, { force: true }); continue; }
-            if (passAhead(other, mine) && (!ahead || passAhead(other, ahead))) ahead = { pid: other.pid, at: other.at };
-        }
+        const mine: PassRecord = { pid: process.pid, at, choosing: false, ticket: 1 + Math.max(0, ...others().map(o => o.ticket)) };
+        atomicJson(own, mine);
+        const until = Date.now() + (opts.passChoosingWaitMs ?? PASS_CHOOSING_WAIT_MS);
+        let seen = others();
+        while (seen.some(o => o.choosing) && Date.now() < until) { await Bun.sleep(200); seen = others(); }
+        const ahead = seen.find(o => o.choosing || passAhead(o, mine));
         if (ahead) {
-            log(`deferred: recovery pass pid ${ahead.pid} still running`);
+            log(`deferred: recovery pass pid ${ahead.pid} ${ahead.choosing ? 'still choosing' : 'still running'}`);
             return { ok: true, dry: false, blockedByPass: ahead.pid, targets: [], recovered: [], failed: [], skipped: [] };
         }
         return await runOneRecoveryPass(opts);

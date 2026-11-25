@@ -90,25 +90,30 @@ describe('fleet standalone session recovery', () => {
         expect(spentStandaloneAttempts(readStandaloneHistory(root), 'worker1', endedAt)).toBe(0);
     });
 
-    test('a recovery pass defers to a live pass ahead of it, removes the record of a dead one, and runs when none is ahead', async () => {
-        // Ahead means an earlier start, then a lower pid: of two passes that start together, exactly one runs.
-        expect(passAhead({ pid: 9, at: 5 }, { pid: 3, at: 6 })).toBe(true);
-        expect(passAhead({ pid: 3, at: 6 }, { pid: 9, at: 6 })).toBe(true);
-        expect(passAhead({ pid: 9, at: 6 }, { pid: 3, at: 6 })).toBe(false);
+    test('recovery pass admission: a running pass and a choosing one hold a new pass back, dead records go, and alone it runs', async () => {
+        // Ahead means a lower ticket, then a lower pid: of two passes with one ticket, exactly one runs.
+        expect(passAhead({ pid: 9, ticket: 5 }, { pid: 3, ticket: 6 })).toBe(true);
+        expect(passAhead({ pid: 3, ticket: 6 }, { pid: 9, ticket: 6 })).toBe(true);
+        expect(passAhead({ pid: 9, ticket: 6 }, { pid: 3, ticket: 6 })).toBe(false);
         const root = scratch(), dir = recoveryPassDir(root), now = Date.now();
         mkdirSync(dir, { recursive: true });
-        writeFileSync(join(dir, `4242-${now - 1_000}.json`), JSON.stringify({ pid: 4242, at: now - 1_000 }));
-        writeFileSync(join(dir, `4343-${now + 60_000}.json`), JSON.stringify({ pid: 4343, at: now + 60_000 }));
+        const put = (pid: number, rec: object) => writeFileSync(join(dir, `${pid}-${now}.json`), JSON.stringify({ pid, at: now, ...rec }));
         const logs: string[] = [];
-        const opts = { root, side: 'local', owners: new Map<string, { side: string; server: string }>(), log: (l: string) => logs.push(l), processStarts: () => new Map<number, number>() };
-        const blocked = await runStandaloneRecoveryPass({ ...opts, pidAlive: pid => pid === 4242 || pid === 4343 });
-        expect(blocked.blockedByPass).toBe(4242);
-        expect(logs).toContain('deferred: recovery pass pid 4242 still running');
-        // The pass behind it alone does not hold this one back, and the records of dead passes go.
-        const ran = await runStandaloneRecoveryPass({ ...opts, pidAlive: pid => pid === 4343 });
+        const opts = { root, side: 'local', owners: new Map<string, { side: string; server: string }>(), log: (l: string) => logs.push(l), processStarts: () => new Map<number, number>(), passChoosingWaitMs: 50 };
+        // A pass that runs holds ticket 7. A newcomer takes ticket 8, even one that read the clock first, and defers.
+        put(4242, { choosing: false, ticket: 7 });
+        expect((await runStandaloneRecoveryPass({ ...opts, pidAlive: pid => pid === 4242 })).blockedByPass).toBe(4242);
+        expect(logs.at(-1)).toBe('deferred: recovery pass pid 4242 still running');
+        // A pass that is still taking its ticket holds a newcomer back until the wait ends.
+        rmSync(join(dir, `4242-${now}.json`));
+        put(4343, { choosing: true, ticket: 0 });
+        expect((await runStandaloneRecoveryPass({ ...opts, pidAlive: pid => pid === 4343 })).blockedByPass).toBe(4343);
+        expect(logs.at(-1)).toBe('deferred: recovery pass pid 4343 still choosing');
+        // The records of dead passes go, and a pass alone runs.
+        const ran = await runStandaloneRecoveryPass({ ...opts, pidAlive: () => false });
         expect(ran.ok).toBe(true);
         expect(ran.blockedByPass).toBeUndefined();
-        expect(readdirSync(dir)).toEqual([`4343-${now + 60_000}.json`]);
+        expect(readdirSync(dir)).toEqual([]);
     });
 
     test('a setup refusal for the controller state waits and spends no attempt; an account-side refusal spends one', () => {
