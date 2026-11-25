@@ -3596,9 +3596,9 @@
        "toLevel": 99,
        "xpPerTick": {
         "floor": 814.8,
-        "realistic": 746.7,
+        "realistic": 768.2,
         "evidence": "MEASURED",
-        "source": "floor 814.8 hosted-bench 44864025475; realistic 746.7 hosted CI 45523836584 scripts/measure/haggis-stage-pvp-combat.ts ranged=1338t (1,237 swings, 999,130 XP, 746.7 XP/t, Crossbow+Barbed bolts 1->49, MSB+Rune arrows 50->99, Robin hood hat, Ranger boots, 5 Combat-101 1-Def tanks)"
+        "source": "floor 814.8 hosted-bench 44864025475; realistic 768.2 hosted CI 45526460695 scripts/measure/haggis-stage-pvp-combat.ts ranged=1300t (1,199 swings, 998,690 XP, 768.2 XP/t, Crossbow+Barbed bolts 1->39, Yew shortbow+Rune arrows 40->49, MSB+Rune arrows 50->99, Robin hood hat, Ranger boots, 5 Combat-101 1-Def tanks)"
        },
        "side": {
         "hitpoints": 0.333
@@ -4360,10 +4360,10 @@
        "skill": "defence",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 1328.2,
-        "realistic": 1328.2,
+        "floor": 1364.5,
+        "realistic": 1364.5,
         "evidence": "MEASURED",
-        "source": "hosted CI 45516948511 scripts/measure/haggis-stage-pvp-combat.ts defence=752t (Defence 1->99, 670 swings, 998,800 XP, 1,328.2 XP/t, Rune 2h + Ultimate Strength across 5 Combat-101 1-Def tanks at Deserted Keep)"
+        "source": "hosted CI 45526460695 scripts/measure/haggis-stage-pvp-combat.ts defence=732t (Defence 1->99, 648 swings, 998,800 XP, 1,364.5 XP/t, Rune 2h + Ultimate Strength across 5 Combat-101 1-Def tanks at Deserted Keep)"
        },
        "side": {
         "hitpoints": 0.333
@@ -4484,10 +4484,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 234,
-       "realistic": 237,
+       "floor": 170,
+       "realistic": 174,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"Shield of Arrav as a pair\": scripts/generated/quest-arrav.ts, presets quest_arrav (main, beside the tramp) and quest_arrav_helper (helper, beside Reldo), 3/3 PASS on practice: main 234/235/237 ticks from the tramp to the quest complete message (the trade of 2 Phoenix crossbows and the Phoenix half, the tramp, Katrine twice, the Black Arm cupboard, a Varrock teleport, the curator, King Roald); the helper's Phoenix part (371-400 ticks) is on another account before the main arrives, and the second certificate goes to the helper after the main's quest; floor = best run, realistic = worst run; the walk to the tramp is not counted; the rival burst run is not measured by us"
+       "source": "hosted-bench CI 45526463360 quester:quest:arrav (Q_BURST=1, seeds 7/8/9, 3/3 PASS, 0 capped): ledgerTicks 170 / 174 / 173 (mainTicks 151 / 153 / 152, helper prep 289 / 321 / 293 before arrival); floor = best seed, realistic = worst seed"
       }
      }
     }
