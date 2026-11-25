@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795629890503,
+ "at": 1795629903543,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -77,7 +77,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2080 TARGET_COUNT=208 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2070 TARGET_COUNT=207 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
    ],
    "env": {
@@ -242,6 +242,57 @@
    "role": "helper"
   },
   {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-440-84-p97 ITEM_ID=440 QUANTITY=84 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-168-p517 ITEM_ID=453 QUANTITY=168 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=84 ORE_RESERVE=0 -- smithing smelt"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2152",
+   "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 -- crafting inventory identify:tarromin",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=1 -- crafting inventory brew:unf_tarromin_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:95",
+   "role": "army"
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
@@ -257,30 +308,10 @@
    "role": "army"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2152",
-   "role": "auto"
-  },
-  {
-   "account": "Dipstick",
+   "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
     "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
    ],
@@ -293,26 +324,7 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "20",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:207",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
-  },
-  {
-   "account": "Moneyshot",
+   "account": "Shaftsinker",
    "script": "scripts/generated/quest-barcrawl.ts",
    "args": [],
    "env": {
@@ -322,25 +334,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "army"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
-    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftmaker BATCH_UNITS=250 -- magic orbs water 27 3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftmaker",
    "role": "auto"
   },
   {
-   "account": "Kiltlifter",
+   "account": "Abracadickra",
    "script": "scripts/generated/quest-elena.ts",
    "args": [],
    "env": {
@@ -350,29 +347,10 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:elena",
-   "role": "army"
+   "role": "auto"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "giant"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:225",
-    "BATCH_UNITS": "30",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
-  },
-  {
-   "account": "PackageDeal",
+   "account": "Billionaire",
    "script": "scripts/generated/quest-tree.ts",
    "args": [],
    "env": {
@@ -382,7 +360,20 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:tree",
-   "role": "helper"
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/generated/quest-ball.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:ball",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:ball",
+   "role": "army"
   }
  ],
  "army": [
@@ -398,14 +389,14 @@
   "fatstack",
   "fingerblastr",
   "hocuspokeus",
-  "knightrider",
+  "kiltlifter",
+  "mineyourbiz",
   "mmthv2350",
   "oreelse",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "woodpecker",
   "yewfirst"
