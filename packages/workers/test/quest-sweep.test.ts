@@ -1160,6 +1160,27 @@ test('Fishing Contest trains Fishing 10 with a small net; other quests and Fishi
  expect(questSkillTraining('imp',()=>1)).toBeNull();
 });
 
+test("Dragon Slayer: the unfired bowl is soft clay on a potter's wheel, made after the clay and its water",async()=>{
+ const {USE_SOURCES,COMBINE_SOURCES,BRONZE_PICKAXE,useMenuChoice}=await import('../../core/src/gather');
+ expect(USE_SOURCES[1791]).toMatchObject({uses:[1761],choice:'bowl'});
+ expect(USE_SOURCES[1791]!.tiles.some(t=>t.x>=2935&&t.x<=2938&&t.z>=3289&&t.z<=3291)).toBe(false); // the Crafting Guild's
+ const barbarian={x:3082,z:3420,level:0};
+ const seller=(id:number)=>id===1929?250:Infinity;
+ const plan=gatherPlan([{id:1791,count:1}],barbarian,()=>[],seller,()=>[],6,1,()=>[]);
+ expect(plan.gathers).toEqual([{id:434,count:1,how:'mine'},{id:1761,count:1,how:'combine'},{id:1791,count:1,how:'use'}]);
+ expect(plan.still).toEqual([{id:1929,count:1}]);expect(plan.tools).toEqual([{id:BRONZE_PICKAXE,count:1}]);
+ expect(COMBINE_SOURCES[1761]).toEqual([434,1929]);
+ // The wheel menu: Make X / Make 10 / Make 5 / <product> for pot, pie dish and bowl. The bowl's own button is taken.
+ const products=['Pot','Pie Dish','Bowl'];
+ const options=products.flatMap((p,k)=>['Make X','Make 10','Make 5',p].map((text,j)=>({index:k*4+j+1,text})));
+ expect(useMenuChoice({isOpen:true,options},null,'bowl')).toEqual({kind:'dialog',index:12});
+ expect(useMenuChoice({isOpen:true,options:[{index:1,text:'Click here to continue'}]},null,'bowl')).toBeNull();
+ expect(useMenuChoice({isOpen:true,options:options.filter(o=>o.text!=='Bowl')},null,'bowl')).toBeNull();
+ const iface={isOpen:true,options:[{text:'Pot',componentId:1},{text:'Bowl',componentId:3}]};
+ expect(useMenuChoice({isOpen:false,options:[]},iface,'bowl')).toEqual({kind:'interface',option:{text:'Bowl',componentId:3}});
+ expect(useMenuChoice(null,null,'bowl')).toBeNull();
+});
+
 test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent and bucket; bat bones from a giant bat by bow",async()=>{
  const {gatherPlan,USE_SOURCES,KILL_SOURCES}=await import('../../core/src/gather');
  const {spawnsByDistance}=await import('../../core/src/spawn-index');

@@ -37,4 +37,4 @@ export {
     type MagicKit,
 } from './gather/combat';
 export { gatherPlan } from './gather/plan';
-export { gatherItems } from './gather/execute';
+export { gatherItems, useMenuChoice } from './gather/execute';

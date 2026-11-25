@@ -6,6 +6,7 @@ import { locsByDistance, spawnsByDistance } from '../spawn-index';
 import { waitTicks, waitUntil } from '../ticks';
 import { goTo } from '../walk';
 import type { World } from '../world';
+import { resolveInterfaceOption, resolveSkillDialogProduct } from '../../../../vendor/rs-sdk/sdk/action-quantity';
 import { castsPerKill, killAttempts, magicKit, sharedDrops, type MagicKit } from './combat';
 import {
     ARROWS,
@@ -125,6 +126,24 @@ async function stepBurn(ctx: GatherCtx, g: Gather, before: number): Promise<Step
     return 'wait';
 }
 
+// The product button of a skill menu that a use opened: the dialog form (Make X / Make 10 / Make 5 / <product> per
+// product) or the interface form. Null when no menu is open or none of its buttons names the product.
+export function useMenuChoice(
+    dialog: { isOpen?: boolean; options?: readonly { index: number; text: string }[] } | null | undefined,
+    iface: { isOpen?: boolean; options?: readonly { text: string; componentId?: number }[] } | null | undefined,
+    product: string,
+): { kind: 'dialog'; index: number } | { kind: 'interface'; option: any } | null {
+    if (iface?.isOpen && iface.options?.length) {
+        const option = resolveInterfaceOption(iface.options as any, new RegExp(product, 'i'));
+        if (option) return { kind: 'interface', option };
+    }
+    if (dialog?.isOpen && dialog.options?.length) {
+        const target = resolveSkillDialogProduct(dialog.options as any, product);
+        if (target && target.text.toLowerCase().includes(product.toLowerCase())) return { kind: 'dialog', index: target.index };
+    }
+    return null;
+}
+
 async function stepUse(ctx: GatherCtx, g: Gather, at: Tile, before: number): Promise<StepOutcome> {
     const { s, st, held } = ctx;
     const src = USE_SOURCES[g.id]!, loc = () => (st()?.nearbyLocs ?? []).find((l: any) => l.x === at.x && l.z === at.z && src.option.test((l.optionsWithIndex ?? []).map((o: any) => o.text).join('|')));
@@ -139,11 +158,17 @@ async function stepUse(ctx: GatherCtx, g: Gather, at: Tile, before: number): Pro
             await waitTicks(s, 2);
             continue;
         }
-        // Each use answers with message boxes; they are clicked away before the next use.
+        // Each use answers with message boxes; they are clicked away before the next use. A use that opens a skill menu
+        // takes the source's product button once; the first option of that menu is another product.
+        let chosen = false;
         for (let t = 0; t < 12; t++) {
             await waitTicks(s, 1);
             const dlg: any = s.sdk.getDialog();
-            if (dlg?.isOpen && !dlg.isWaiting) await s.sdk.sendClickDialog(0);
+            const menu = src.choice && !chosen ? useMenuChoice(dlg, st()?.interface, src.choice) : null;
+            if (menu?.kind === 'dialog') { await s.sdk.sendClickDialog(menu.index); chosen = true; }
+            else if (menu?.kind === 'interface') { await s.sdk.clickInterfaceOption(menu.option); chosen = true; }
+            else if (src.choice && !chosen && (st()?.interface?.isOpen || (dlg?.options?.length ?? 0) > 1)) continue;
+            else if (dlg?.isOpen && !dlg.isWaiting) await s.sdk.sendClickDialog(0);
             else if (t >= 3) break;
         }
     }
