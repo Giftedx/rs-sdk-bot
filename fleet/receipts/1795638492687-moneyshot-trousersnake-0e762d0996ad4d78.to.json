@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795638492687-moneyshot-trousersnake-0e762d0996ad4d78",
  "account": "TrouserSnake",
  "partner": "Moneyshot",
@@ -12,6 +12,12 @@
  "claim": "8e9a8659-abef-4dc6-92ed-e302223722d1",
  "count": 0,
  "ok": false,
- "at": 1795638603773,
- "detail": "trade claimed"
+ "at": 1795638786480,
+ "detail": "Error: route to 3253, 3421: precondition no route to 3253,3421,0",
+ "logout": {
+  "attemptId": "1795638603790-0000014536-0000000001",
+  "at": 1795638786446,
+  "sha256": "405ab75f724c718428c414dad4d295c2663a9763f02288a068a424b8b17e248e"
+ },
+ "screen": false
 }
