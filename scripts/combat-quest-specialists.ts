@@ -226,10 +226,10 @@ export async function walkWaypoints(
     maxTicks: number,
     stop: StopFn,
     label: string,
-    opts: { ignoreMeleeHunters?: boolean; ignoreLiveHunters?: boolean; onTickExtra?: () => void; look?: number } = {},
+    opts: { ignoreMeleeHunters?: boolean; ignoreLiveHunters?: boolean; skipGuardWalk?: boolean; onTickExtra?: () => void; look?: number } = {},
 ): Promise<void> {
     const walker = await sessionWalker(s);
-    if (opts.ignoreMeleeHunters || opts.ignoreLiveHunters) {
+    if (opts.ignoreMeleeHunters || opts.ignoreLiveHunters || opts.skipGuardWalk) {
         const pf: any = await import('../vendor/rs-sdk/sdk/pathfinding');
         const grid = await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
         const { withDanger } = await import('../packages/core/src/danger');
@@ -237,7 +237,7 @@ export async function walkWaypoints(
         const baseHunters = walker.hunters;
         walker.hunters = () => (opts.ignoreLiveHunters || protectedFromMelee(s.sdk.getState()) ? [] : (baseHunters?.() ?? []));
         walker.plan = (level, from, to, avoid) => {
-            const pfm = protectedFromMelee(s.sdk.getState());
+            const pfm = opts.skipGuardWalk || protectedFromMelee(s.sdk.getState());
             if (!pfm) return basePlan(level, from, to, avoid);
             pf.initPathfinding();
             const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map(b =>
@@ -1320,6 +1320,7 @@ export async function runSpecialistWaterfall(
         walkWaypoints(s, pts, maxTicks, stop, label, {
             ignoreMeleeHunters: true,
             ignoreLiveHunters: true,
+            skipGuardWalk: true,
             onTickExtra: () => {
                 opts.onEnergy?.();
                 extra?.();
@@ -1659,6 +1660,7 @@ export async function runMeleePvpSpecialist(
         {
             ignoreMeleeHunters: true,
             ignoreLiveHunters: true,
+            skipGuardWalk: true,
             onTickExtra: () => {
                 ensureRunAndEnergy();
                 const p = posOf(s);
