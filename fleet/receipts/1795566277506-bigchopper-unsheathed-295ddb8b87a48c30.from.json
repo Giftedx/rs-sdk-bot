@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795566277506-bigchopper-unsheathed-295ddb8b87a48c30",
  "account": "Bigchopper",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 10000,
  "claim": "3a726095-0415-493f-95f9-76e5b84bfa2b",
- "count": 0,
- "ok": false,
- "at": 1795566976859,
- "detail": "trade claimed"
+ "count": 10000,
+ "ok": true,
+ "at": 1795568042808,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10000,
+  "after": 0
+ },
+ "bank": {
+  "count": 9940,
+  "at": 1795566998480
+ },
+ "logout": {
+  "attemptId": "1795566976868-0000023152-0000000001",
+  "at": 1795568042787,
+  "sha256": "62840c8175c2b771cb49b9ca11c7ff7ada3dbfa5846e15e2fa4209b3141a217f"
+ },
+ "screen": true
 }

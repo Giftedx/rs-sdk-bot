@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795566277506-bigchopper-unsheathed-295ddb8b87a48c30",
+ "account": "Unsheathed",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10000,
+ "claim": "81027fa2-9de9-413d-898f-0e8c1fc61512",
+ "count": 10000,
+ "ok": true,
+ "at": 1795568044436,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10000
+ },
+ "bank": {
+  "count": 10000,
+  "at": 1795568043700
+ },
+ "logout": {
+  "attemptId": "1795568022534-0000029072-0000000001",
+  "at": 1795568044363,
+  "sha256": "bea4c34be3108ba1fa791fd3323d4d6b0ac7f47274c11735eb89a6fd12d105f1"
+ },
+ "screen": true
+}
