@@ -9,6 +9,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { runChild } from '../packages/core/src/run-child';
 import { parseStep, runChainSteps as runChain, type Step } from '../packages/core/src/chain-step';
+import { workerDrain } from '../packages/core/src/live-update-pending';
 
 export { parseStep, runChain, type Step };
 
@@ -20,6 +21,7 @@ if (import.meta.main) {
     const stopped = () => existsSync(join(root, '.practice', `stop-${account}`));
     const result = await runChain(steps, rounds, { stopped, log: console.log,
         run: st => runChild([st.script, account, ...st.args], { ...process.env, ...st.env }),
+        drained: () => workerDrain(root),
     });
     console.log(result);
     process.exit(/^RESULT ok(?: |$)/.test(result) ? 0 : 1);
