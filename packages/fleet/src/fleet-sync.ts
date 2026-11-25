@@ -467,6 +467,53 @@ export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: str
     });
 }
 
+const ORDER_FILE = /^fleet\/orders\/([A-Za-z0-9_-]{1,64})\.json$/;
+
+// The staged order deletions to undo: each one that a held trade claim names. A held claim can be released only
+// against its order (releasePublishedTradeClaims, droppedTradeClaims). With no claim list (null: the claim refs
+// could not be read), every deletion is undone, and a later sync decides again.
+export function claimedOrderDeletions(deleted: readonly string[], held: readonly FleetTradeClaim[] | null): string[] {
+    const orders = deleted.filter(path => ORDER_FILE.test(path));
+    if (held === null) return orders;
+    const named = new Set(held.filter(claim => claim.phase === 'held').map(claim => claim.orderId.toLowerCase()));
+    return orders.filter(path => named.has(ORDER_FILE.exec(path)![1]!.toLowerCase()));
+}
+
+// Run after `git add -- fleet`. An order file that is gone from the worktree is a staged deletion, and the commit
+// would publish it. The deletion of a withdrawn order stays. The deletion of an order that a held claim names is
+// put back from HEAD, in the index and in the worktree.
+export function keepClaimedOrders(dir: string, readHeld: () => FleetTradeClaim[]): string[] {
+    const listed = git(dir, 'diff', '--cached', '--name-only', '--no-renames', '--diff-filter=D', '--', 'fleet/orders');
+    if (!listed.ok) throw Error(`staged order deletions: ${listed.out}`);
+    const deleted = listed.out.split(/\r?\n/).map(line => line.trim()).filter(path => ORDER_FILE.test(path));
+    if (!deleted.length) return [];
+    let held: FleetTradeClaim[] | null;
+    try { held = readHeld(); } catch { held = null; }
+    const keep = claimedOrderDeletions(deleted, held);
+    if (keep.length) {
+        const restored = git(dir, 'checkout', 'HEAD', '--', ...keep);
+        if (!restored.ok) throw Error(`keep claimed orders: ${restored.out}`);
+    }
+    return keep;
+}
+
+// Reads a committed fleet-data file (path below fleet/) at HEAD. An order is published one time and is never
+// changed, so an order file that a commit deleted is read from the parent of that commit.
+export function fleetDataReader(dir: string): (path: string) => any {
+    const cache = new Map<string, any>();
+    const parse = (shown: { ok: boolean; out: string }) => { try { return shown.ok ? JSON.parse(shown.out) : null; } catch { return null; } };
+    return (path: string) => {
+        if (cache.has(path)) return cache.get(path);
+        let parsed = parse(git(dir, 'show', 'HEAD:fleet/' + path));
+        if (parsed === null && ORDER_FILE.test('fleet/' + path)) {
+            const gone = git(dir, 'log', '-1', '--format=%H', '--no-renames', '--diff-filter=D', 'HEAD', '--', 'fleet/' + path);
+            if (gone.ok && /^[0-9a-f]{40}$/.test(gone.out)) parsed = parse(git(dir, 'show', `${gone.out}^:fleet/${path}`));
+        }
+        cache.set(path, parsed);
+        return parsed;
+    };
+}
+
 function releaseSyncedTrades(dir: string, side: string, base = root) {
     const receiptDir = join(dir, 'fleet', 'receipts');
     if (!existsSync(receiptDir)) return;
@@ -478,15 +525,7 @@ function releaseSyncedTrades(dir: string, side: string, base = root) {
         } catch { return []; }
     });
     if (!accounts.length) return;
-    const showCache = new Map<string, any>();
-    const read = (path: string) => {
-        if (showCache.has(path)) return showCache.get(path);
-        const committed = git(dir, 'show', 'HEAD:fleet/' + path);
-        let parsed: any = null;
-        try { parsed = committed.ok ? JSON.parse(committed.out) : null; } catch { parsed = null; }
-        showCache.set(path, parsed);
-        return parsed;
-    };
+    const read = fleetDataReader(dir);
     const held = readHeldFleetTradeClaims(base, [...new Set(accounts)]);
     releasePublishedTradeClaims(held, side, read, claim => releaseFleetTradeClaim(base, claim), Date.now(),
         (claim, receipt) => confirmedTradeLogout(base, claim, receipt), pair => { releaseFleetTradeClaims(base, pair); });
@@ -556,6 +595,7 @@ export function runSync(push = true, base = root): string {
 
     git(dir, 'add', '--', 'fleet');
     if (existsSync(join(dir, 'fleet', 'vault'))) git(dir, 'add', '-f', '--', 'fleet/vault');
+    const keptOrders = keepClaimedOrders(dir, () => readHeldFleetTradeClaims(base));
     const staged = !git(dir, 'diff', '--cached', '--quiet').ok;
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
@@ -566,7 +606,7 @@ export function runSync(push = true, base = root): string {
         try { adopted = ` adoption=${adoptionPass(dir, snap.side, capacity, base) || 'none'}`; }
         catch (e) { adopted = ` adoption=failed: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`; }
     }
-    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}${adopted}`;
+    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}${keptOrders.length ? ` kept-claimed-orders=${keptOrders.length}` : ''}${adopted}`;
 }
 
 export function sideCapacity(plan: any): number | null {
