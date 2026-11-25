@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795634178019-2",
+ "account": "Woodpecker",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 1,
+ "claim": "3cd499da-2a43-4822-b2c1-a21d23560233",
+ "count": 1,
+ "ok": true,
+ "at": 1795634304240,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795634303491
+ },
+ "logout": {
+  "attemptId": "1795634290446-0000019248-0000000001",
+  "at": 1795634304228,
+  "sha256": "cbf37306d13ac27cc031d104e417231e36b08897b7229ecff108e9b09fc4c4ea"
+ },
+ "screen": true
+}

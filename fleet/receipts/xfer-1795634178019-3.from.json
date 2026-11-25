@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795634178019-3",
+ "account": "Moneyshot",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 1,
+ "claim": "4f277146-9c88-4ede-9676-9d91681f8cba",
+ "count": 0,
+ "ok": false,
+ "at": 1795634267026,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795634178019-1",
+ "account": "KnightRider",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Diamond",
+ "requested": 1,
+ "claim": "c891688e-2b67-4da6-b63d-ea71ee4b6126",
+ "count": 0,
+ "ok": false,
+ "at": 1795634255091,
+ "detail": "trade claimed"
+}
