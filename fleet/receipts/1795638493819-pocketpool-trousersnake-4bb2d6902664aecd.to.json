@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795638493819-pocketpool-trousersnake-4bb2d6902664aecd",
+ "account": "TrouserSnake",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 20,
+ "claim": "0f2ab114-fb10-423d-ac6c-8835792aedd0",
+ "count": 0,
+ "ok": false,
+ "at": 1795638868160,
+ "detail": "trade claimed"
+}
