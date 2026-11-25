@@ -606,6 +606,45 @@ test('the tick cap that stops a full-pack bank walk ends the run as capped, not 
  expect(walks).toBe(1);expect(r.detail).toContain('capped=true');expect(r.detail).not.toContain('bank return unavailable');expect(r.bankTrips).toBe(0);
 });
 
+// A generic combat session at the Draynor bank (the wizard bank) with a bank that opens, takes deposits and holds no food.
+// The walk hook moves the player to the goal tile. Ticks advance on a timer.
+function bankingCombat(pack:{id:number;name:string}[]){
+ let tick=0,generation=0,open=false;const listeners=new Set<()=>void>(),bank:{id:number;name:string;count:number}[]=[];
+ const timer=setInterval(()=>{tick++;for(const f of listeners)f();},1);
+ const player:any={worldX:3092,worldZ:3243,level:0,lifeId:1,respawnCount:0,isDead:false,combat:{inCombat:false,targetType:'none',targetIndex:-1}};
+ const inventory=pack.map((p,slot)=>({...p,count:1,slot}));
+ const s:any={name:'full-pack',client:{selfSlot:1,executeBotAction:()=>({success:true}),npc:{}},tick:()=>tick,ended:new Promise(()=>{}),
+  onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bankObservation:()=>({generation,items:bank}),direct:async()=>({success:true}),
+  sdk:{getState:()=>({player,inventory,equipment:[],nearbyNpcs:[],nearbyLocs:[],groundItems:[],bank:{isOpen:open},interface:{isOpen:false}}),getInventory:()=>inventory,
+   getSkill:(name:string)=>name==='Hitpoints'?{name,level:50,baseLevel:50,experience:0}:undefined,getStateAge:()=>0,sendCloseModal:async()=>{open=false;}},
+  bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeInterface:async()=>{open=false;return{success:true};},
+   withdrawItem:async()=>({success:false}),pickupItem:async()=>({success:false}),
+   depositItem:async(row:{id:number;name:string})=>{let n=0;for(let i=inventory.length-1;i>=0;i--)if(inventory[i]!.id===row.id){n+=inventory[i]!.count;inventory.splice(i,1);}
+    bank.push({id:row.id,name:row.name,count:n});generation++;return{success:true};}}};
+ const walk=async(x:number,z:number)=>{player.worldX=x;player.worldZ=z;return true;};
+ return{s,walk,inventory,bank,stop:()=>clearInterval(timer)};
+}
+
+test('a bank trip that leaves the pack full of items that are not loot ends the job with a named refusal, not a bank loop',async()=>{
+ // Magicwanda's pack at the Falador bank: an Air talisman and 26 Rune essence from a runecraft job, 27 slots.
+ const g=bankingCombat([{id:1438,name:'Air talisman'},...Array.from({length:26},()=>({id:1436,name:'Rune essence'}))]);
+ try{
+  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:300,env:{},walk:g.walk,stop:()=>false});
+  expect(r.ok).toBe(false);expect(r.bankTrips).toBe(1);
+  expect(r.detail).toContain('no combat progress: pack full of non-loot items after a bank trip: 26 Rune essence, 1 Air talisman');
+  expect(g.inventory.length).toBe(27);expect(g.bank).toEqual([]);
+ }finally{g.stop();}
+});
+
+test('a bank trip that frees the pack goes on with the job',async()=>{
+ const g=bankingCombat(Array.from({length:27},()=>({id:1444,name:'Water talisman'})));
+ try{
+  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:120,env:{},walk:g.walk,stop:()=>false});
+  expect(r.bankTrips).toBe(1);expect(r.detail).not.toContain('no combat progress');
+  expect(g.inventory).toEqual([]);expect(g.bank).toEqual([{id:1444,name:'Water talisman',count:27}]);
+ }finally{g.stop();}
+});
+
 test('a bank walk that the cap stops is capped, also when the travel throws on its stop; other failures still throw',async()=>{
  const stopped=async()=>{throw Error('combat travel original owner/life/stop');};
  expect(await combatBankWalk(async()=>true,()=>true)).toBe(true);

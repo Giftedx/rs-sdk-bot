@@ -1107,6 +1107,14 @@ return [
     scriptArgs: ['-', 'druid', '1300', 'taverley_blue_dragon', 'MAX_KILLS=5'],
     pass: s => ok(s) && s.includes('COMBAT_BANK stale-close') && /cleanup Error: Dusty key \(1590\) required/.test(s) && !/fresh bank unavailable/.test(s) && loggedOutOnce(s),
     presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 2946, z: 3368, level: 0}, equipment: [...PRESETS.gather_combat_druid!.equipment!, {id: 1540, count: 1, slot: 5}]}},
+  // Taverley black knights from the Falador bank with the pack of a live job: an Air talisman (1438) and 26 Rune
+  // essence (1436) from a runecraft job, 27 slots. The bank trip deposits only loot, so the pack stays full. The job
+  // ends after that trip with a named refusal that the supervisor blocks, not with a bank trip each tick until the
+  // 900 tick stall stop.
+  {key: 'extra:combat-full-pack', script: 'scripts/measure/combat-end-probe.ts', preset: 'gather_combat_druid',
+    scriptArgs: ['-', 'druid', '1300', 'taverley_black_knight', 'MAX_KILLS=40'],
+    pass: s => ok(s) && /Error: no combat progress: pack full of non-loot items after a bank trip: 26 Rune essence, 1 Air talisman/.test(s) && !/COMBAT_STOP_OWNER no progress/.test(s) && loggedOutOnce(s),
+    presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 2946, z: 3368, level: 0}, inventory: [{id: 1438, count: 1}, ...Array.from({length: 26}, () => ({id: 1436, count: 1}))]}},
   // Iron at the Al Kharid mine at combat level 13, on the open tile west of two iron rocks (maps/m51_51.jm2): the
   // scorpions (level 14, hunt range 2) attack while the pick swings. A scorpion cannot reach the tile between the
   // three iron rocks at 3295,3310, so that tile tests no attack. With `--set PRAYER_GUARD=0` the worker dies here.

@@ -126,6 +126,18 @@ export async function combatBankWalk(walk: () => Promise<boolean>, capped: () =>
     throw Error('combat bank return unavailable');
 }
 
+// The refusal of a generic combat run when a bank trip leaves at most one free slot. The bank trip deposits only the
+// target's loot and the run's own outputs (bankCombatLoot). Items from an earlier job (a runecrafter's essence) stay,
+// so without this end the run banks again each tick until the stall stop. The run keeps items that it does not own,
+// as the prayer and cow jobs keep their kit, and names them for the planner. Undefined when a slot is free.
+export function combatPackFull(inventory: readonly { name: string; count: number }[]): string | undefined {
+    if (28 - inventory.length > 1) return undefined;
+    const counts = new Map<string, number>();
+    for (const i of inventory) counts.set(i.name, (counts.get(i.name) ?? 0) + i.count);
+    const items = [...counts].sort((a, b) => b[1] - a[1]).map(([name, n]) => `${n} ${name}`);
+    return `no combat progress: pack full of non-loot items after a bank trip: ${items.join(', ')}`;
+}
+
 export async function bankCombatLoot(s: CombatSession, drops: RegExp, extraIds: readonly number[] = []) {
     // openBank on an open interface answers "Bank already open" with no new observation
     // (vendor/rs-sdk/sdk/actions.ts _openBankOnce), so the generation never advances. Close a bank that an earlier
@@ -2089,6 +2101,8 @@ export async function runGenericCombatSession(
             const invSpace = 28 - s.sdk.getInventory().length;
             if (invSpace <= 1) {
                 await bankUntil();
+                const full = capped || untilDeposited ? undefined : combatPackFull(s.sdk.getInventory());
+                if (full) throw Error(full);
                 continue;
             }
             if (targetConf.requireTelegrab && needsBankPrep()) {
@@ -2538,6 +2552,8 @@ export async function runMeleeGatherCli(
             const invSpace = 28 - s.sdk.getInventory().length;
             if (invSpace <= 1) {
                 await bankUntil();
+                const full = capped || untilDeposited ? undefined : combatPackFull(s.sdk.getInventory());
+                if (full) throw Error(full);
                 continue;
             }
             if (targetConf.requireTelegrab && needsBankPrep()) {
