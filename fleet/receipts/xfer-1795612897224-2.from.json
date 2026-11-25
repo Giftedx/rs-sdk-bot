@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795612897224-2",
  "account": "SporranBulge",
  "partner": "mmsmk1232",
@@ -10,8 +10,18 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "4e69f8c8-60ae-4e52-968c-571ef6971766",
- "count": 0,
- "ok": false,
- "at": 1795612957937,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795613167152,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795612957946-0000013080-0000000001",
+  "at": 1795613167139,
+  "sha256": "e94e115036ee1b565a75b3f164d55625ee8a3824532ce8ffa47f3543b7a5c2c4"
+ },
+ "screen": true
 }

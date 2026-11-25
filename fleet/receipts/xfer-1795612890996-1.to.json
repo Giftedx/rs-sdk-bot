@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795612890996-1",
  "account": "Fatstack",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Uncut diamond",
  "requested": 10,
  "claim": "c9b81ad7-862e-43c7-bdaf-c989320a512f",
- "count": 0,
- "ok": false,
- "at": 1795613108365,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795613153989,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795613153241
+ },
+ "logout": {
+  "attemptId": "1795613108375-0000017556-0000000001",
+  "at": 1795613153973,
+  "sha256": "8b41ab4b1a5fd118799dca28b11343b0a53551e54637a849c154f4b458839253"
+ },
+ "screen": true
 }
