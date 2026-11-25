@@ -42,6 +42,7 @@ import {
     captureRunBaseline,
     extractWorkerOutcomeInput,
     recordWorkerOutcome,
+    gateHeldRunEnd,
     runBrainCycle,
     type BrainCycleResult,
     type RunTelemetryBaseline,
@@ -1321,7 +1322,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                     const diedRun = /^died\b/i.test(own);
                     let keepEnded = true;
                     const outcomeActId = run.activityId ?? run.outcomeActivityId;
-                    if (outcomeActId && run.accounts.length === 1) {
+                    if (outcomeActId && run.accounts.length === 1 && !gateHeldRunEnd(own, lastResultLine)) {
                         try {
                             const raw = extractWorkerOutcomeInput({
                                 root,

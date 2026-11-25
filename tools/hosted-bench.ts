@@ -236,7 +236,8 @@ if (import.meta.main) {
     const seeds = value('--seeds') ?? '', args = value('--args') ?? '', wait = !has('--no-wait');
     const noBatch = has('--no-batch'), cliBatch = value('--batch'), cliSeedJobs = value('--seed-jobs'), cliArms = value('--arms');
     const branch = Bun.spawnSync(['git', '-C', root, 'rev-parse', '--abbrev-ref', 'HEAD'], {stdout: 'pipe', windowsHide: true}).stdout.toString().trim();
-    const ref = value('--ref') ?? branch, workflowRef = value('--workflow-ref') ?? 'master';
+    // Runners check out from GitHub, which has no origin/<branch>: name the branch itself.
+    const ref = (value('--ref') ?? branch).replace(/^(?:refs\/remotes\/)?origin\//, ''), workflowRef = value('--workflow-ref') ?? 'master';
     if (!run) {
         if (argv.length !== 1 || argv[0]!.startsWith('--')) { console.error("usage: bun tools/hosted-bench.ts '<pattern> [<pattern> ...]' [--seeds 7,8,9] [--args '--profile'] [--seed-jobs 1..4] [--batch 1..8] [--no-batch] [--ref <branch>] [--workflow-ref <branch>] [--no-wait] | --run <id>"); process.exit(2); }
         const patternCount = argv[0]!.split(/\s+/).filter(Boolean).length;

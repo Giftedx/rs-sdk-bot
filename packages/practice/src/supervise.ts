@@ -34,7 +34,7 @@ export function participantsHaveStopFile(accounts:readonly string[],root=process
 }
 
 export interface SuperviseDeps {
-    run(): Promise<{ stdout: string; exitCode: number }>;
+    run(): Promise<{ stdout: string; exitCode: number; stderr?: string }>;
     stopped(): boolean;
     pause(ms: number): Promise<void>;
     maxRestarts: number;
@@ -170,18 +170,31 @@ export function lineKeeper(match: (line: string) => string | null) {
     };
 }
 
-// Copies a child's stdout to this process and returns only the lines that `match` keeps.
-export async function keepOutput(stdout: ReadableStream<Uint8Array>, match: (line: string) => string | null): Promise<string> {
+// Copies a child's output stream to `write` (this process's stdout by default) and returns only the lines that `match` keeps.
+export async function keepOutput(stdout: ReadableStream<Uint8Array>, match: (line: string) => string | null, write: (chunk: string) => unknown = c => process.stdout.write(c)): Promise<string> {
     const keep = lineKeeper(match), reader = stdout.getReader(), decoder = new TextDecoder();
     for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         const c = decoder.decode(value, { stream: true });
         keep.push(c);
-        process.stdout.write(c);
+        write(c);
     }
     keep.push(decoder.decode());
     return keep.text();
+}
+
+// A worker that throws past its own RESULT handler prints no RESULT line. Bun writes the uncaught error to stderr as
+// `error: <message>` (an Error) or `<Name>Error: <message>` (a subclass). Without this, every such crash read as
+// "(no RESULT)": a release hold thrown at login (no worker progress: release peer state unknown) and an argument refusal
+// (invalid tickCap) matched no rule, so the job logged in again maxRestarts times and ended as gave-up.
+const UNCAUGHT_ERROR_RE = /^(?:error|[A-Z][A-Za-z]*Error): \S/;
+export const isUncaughtErrorLine = (line: string) => UNCAUGHT_ERROR_RE.test(line);
+// The RESULT a crash would have printed had the worker caught the error: `RESULT fail ${String(e)}`.
+export function crashResult(stderr: string | undefined): string | undefined {
+    const line = stderr === undefined ? undefined : lastMatchingLine(stderr, isUncaughtErrorLine);
+    if (line === undefined) return undefined;
+    return `RESULT fail ${line.startsWith('error: ') ? `Error: ${line.slice('error: '.length)}` : line}`.trimEnd();
 }
 
 export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused'; runs: number }> {
@@ -189,7 +202,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
     for (let runs = 1; ; runs++) {
         if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
         const r = await d.run();
-        const result = lastMatchingLine(r.stdout, l => l.startsWith('RESULT')) ?? '(no RESULT)';
+        const result = lastMatchingLine(r.stdout, l => l.startsWith('RESULT')) ?? crashResult(r.stderr) ?? '(no RESULT)';
         d.log?.(`SUPERVISE run ${runs} exit ${r.exitCode}: ${result.slice(0, 200)}`);
         if (r.exitCode === 0 && /^RESULT ok\b/.test(result)) return { reason: 'done', runs };
         if (d.stopped() || /stop file/.test(result)) return { reason: 'stopped', runs };
@@ -231,9 +244,12 @@ if (import.meta.main) {
         run: async () => {
             // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
-            const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
-            const stdout = await keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null);
-            return { stdout, exitCode: await p.exited };
+            const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'pipe', env: process.env ,windowsHide:true});
+            const [stdout, stderr] = await Promise.all([
+                keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null),
+                keepOutput(p.stderr, l => isUncaughtErrorLine(l) ? 'ERROR' : null, c => process.stderr.write(c)),
+            ]);
+            return { stdout, stderr, exitCode: await p.exited };
         },
         stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsHaveStopFile(participants, process.cwd()),
         pause: ms => Bun.sleep(ms),

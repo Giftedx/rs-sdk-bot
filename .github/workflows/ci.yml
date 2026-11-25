@@ -202,6 +202,9 @@ jobs:
               else if (a === "--batch") { const v = argsList[++i] || ""; if (!/^[1-8]$/.test(v)) throw new Error("invalid --batch"); batch = Number(v); }
               else if (!["--profile", "--no-keep", "--all", "--smoke", "--wall-clock"].includes(a)) throw new Error(`argument not allowed: ${a}`);
             }
+            // A remote-tracking name (origin/master) exists only in a local clone: every runner checkout fails on it.
+            const ref = (process.env.BENCH_REF || "").trim();
+            if (/^(?:origin\/|refs\/remotes\/)/.test(ref)) throw new Error(`bench_ref ${ref} is a remote-tracking name: give the branch name without origin/`);
             const patterns = (process.env.BENCH_PATTERN || "").split(/\s+/).filter(Boolean);
             const seeds = ((process.env.BENCH_SEEDS || "").trim() || "7").split(",").map(s => s.trim());
             if (!patterns.length) throw new Error("no bench pattern");
@@ -228,6 +231,7 @@ jobs:
           BENCH_PATTERN: ${{ inputs.bench_pattern }}
           BENCH_SEEDS: ${{ inputs.bench_seeds }}
           BENCH_ARGS: ${{ inputs.bench_args }}
+          BENCH_REF: ${{ inputs.bench_ref }}
   bench-cases:
     needs: bench-plan
     runs-on: ubuntu-latest

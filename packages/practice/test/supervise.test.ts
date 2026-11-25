@@ -403,3 +403,45 @@ test('parseSuperviseArgs validates bot, script, and non-negative integer maxRest
  expect(() => parseSuperviseArgs(['Bot1', 'scripts/a.ts', '-1'])).toThrow(/maxRestarts/);
  expect(() => parseSuperviseArgs(['Bot1', 'scripts/a.ts', '1.5'])).toThrow(/maxRestarts/);
 });
+
+test('crashResult turns the uncaught error Bun prints into the RESULT the worker would have printed', async () => {
+    const { crashResult } = await import('../src/supervise');
+    const frame = ['1174 |         if (n === undefined) throw Error(`invalid ${k}`);', '                         ^'];
+    expect(crashResult([...frame, 'error: invalid tickCap', '      at read (thieving.ts:1174:86)', '', 'Bun v1.3.14 (Windows x64)'].join('\n'))).toBe('RESULT fail Error: invalid tickCap');
+    expect(crashResult("TypeError: null is not an object (evaluating 'o.x')\n      at x.ts:1:1")).toBe("RESULT fail TypeError: null is not an object (evaluating 'o.x')");
+    expect(crashResult('Pathfinding initialized in 8ms\nwarning: slow\n')).toBeUndefined();
+    expect(crashResult(undefined)).toBeUndefined();
+});
+
+test('the real Bun stderr of an uncaught throw yields that crash result', async () => {
+    const { crashResult, isUncaughtErrorLine } = await import('../src/supervise');
+    const p = Bun.spawn(['bun', '-e', "console.log('START 1 1 0'); throw Error('smith refused: integer CAP>=1 required')"], { stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    const [stdout, stderr] = await Promise.all([keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : null, () => {}), keepOutput(p.stderr, l => isUncaughtErrorLine(l) ? 'ERROR' : null, () => {})]);
+    expect(await p.exited).not.toBe(0);
+    expect(stdout).toBe('');
+    expect(crashResult(stderr)).toBe('RESULT fail Error: smith refused: integer CAP>=1 required');
+}, 30_000);
+
+test('a crash with no RESULT line follows the same rules as a printed failure', async () => {
+    const crash = (stderr: string) => async () => ({ stdout: '', stderr, exitCode: 1 });
+    // A release hold thrown at login pauses at once: no 21 logins, no gave-up for the planner to quarantine.
+    const hold = await supervise({ run: crash('error: no worker progress: release peer state unknown; verify offline before rollout\n      at assertCompatibleWorkers (peers.ts:30:15)'),
+        stopped: () => false, pause: async () => { throw Error('must not retry'); }, maxRestarts: 20 });
+    expect(hold).toEqual({ reason: 'release-paused', runs: 1 });
+    // The same argument refusal twice with no work between ends as blocked.
+    let n = 0;
+    const refusal = await supervise({ run: () => { n++; return crash('error: invalid tickCap')(); }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(refusal).toEqual({ reason: 'blocked', runs: 2 });
+    expect(n).toBe(2);
+    // An uncaught tick-stream stall is a transport loss: it keeps retrying to the limit.
+    let s = 0;
+    const stall = await supervise({ run: () => { s++; return crash('TickStallError: tick stream stalled: no new game tick for 30000ms')(); }, stopped: () => false, pause: async () => {}, maxRestarts: 3 });
+    expect(stall).toEqual({ reason: 'gave-up', runs: 4 });
+    // A run that ended with no RESULT and no error line (a killed process) still retries to the limit.
+    let k = 0;
+    const killed = await supervise({ run: () => { k++; return crash('')(); }, stopped: () => false, pause: async () => {}, maxRestarts: 3 });
+    expect(killed).toEqual({ reason: 'gave-up', runs: 4 });
+    // A printed RESULT wins over a stray error line on stderr.
+    const printed = await supervise({ run: async () => ({ stdout: 'RESULT ok done', stderr: 'error: late cleanup', exitCode: 0 }), stopped: () => false, pause: async () => {}, maxRestarts: 0 });
+    expect(printed).toEqual({ reason: 'done', runs: 1 });
+});
