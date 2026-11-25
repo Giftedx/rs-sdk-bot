@@ -1163,7 +1163,7 @@ test('Fishing Contest trains Fishing 10 with a small net; other quests and Fishi
 test('Dragon Slayer from Varrock West: the planks come from a spawn outside the Wilderness',async()=>{
  const {outsideWilderness}=await import('../../core/src/gather');
  const {spawnsByDistance}=await import('../../core/src/spawn-index');
- const {wildernessLevel}=await import('../../core/src/prayer-guard/threats');
+ const {wildernessLevel}=await import('../../core/src/prayer-guard');
  const varrock={x:3185,z:3437,level:0};
  // The nearest plank spawns to Varrock West lie at 3148,3671 (Wilderness 19), where a player killed UnderMyKilt.
  expect(wildernessLevel(spawnsByDistance(960,varrock)[0]!.x,spawnsByDistance(960,varrock)[0]!.z)).toBeGreaterThan(0);

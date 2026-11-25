@@ -1,7 +1,7 @@
 // Static item, loc, NPC, mining, firemaking, use, combine and kill source tables for gathering.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { wildernessLevel } from '../prayer-guard/threats';
+import { wildernessLevel } from '../prayer-guard';
 
 export type Item = { id: number; count: number };
 export type Tile = { x: number; z: number; level: number };
