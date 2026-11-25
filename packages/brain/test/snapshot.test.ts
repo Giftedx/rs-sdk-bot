@@ -407,6 +407,29 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
         expect(after.accounts.traderb!.lifecycle).toBe('idle');
     });
 
+    test('an open order that no party has claimed yet holds both parties in trade; a future one does not', () => {
+        const fleetDir = join(tempRoot, '.practice', 'live', 'fleet-data', 'fleet');
+        writeJson(join(fleetDir, 'owners.json'), {
+            accounts: {
+                TraderA: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                TraderB: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                TraderC: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                TraderD: { side: 'local', server: DEFAULT_LIVE_SERVER },
+            },
+        });
+        const base = { server: DEFAULT_LIVE_SERVER, item: 'Shark', itemId: 385, count: 10 };
+        writeJson(join(fleetDir, 'orders', 'fresh-1.json'), { ...base, id: 'fresh-1', from: 'TraderA', to: 'TraderB', start: NOW - 5_000, end: NOW + 900_000 });
+        writeJson(join(fleetDir, 'orders', 'later-1.json'), { ...base, id: 'later-1', from: 'TraderC', to: 'TraderD', start: NOW + 600_000, end: NOW + 1_500_000 });
+
+        const snap = loadWorldSnapshot({ root: tempRoot, now: NOW });
+        expect(validateWorldSnapshot(snap)).toEqual([]);
+        expect(snap.accounts.tradera!.lifecycle).toBe('in_trade');
+        expect(snap.accounts.traderb!.lifecycle).toBe('in_trade');
+        expect(snap.activeTransfers?.map((t) => t.id)).toEqual(['fresh-1']);
+        expect(snap.accounts.traderc!.lifecycle).toBe('idle');
+        expect(snap.accounts.traderd!.lifecycle).toBe('idle');
+    });
+
     test('spotOccupancy aggregates remote-side claims without double-counting local running Brain accounts', () => {
         const fleetDir = join(tempRoot, '.practice', 'live', 'fleet-data', 'fleet');
         writeJson(join(fleetDir, 'owners.json'), {

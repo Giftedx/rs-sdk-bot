@@ -584,7 +584,10 @@ function readOrdersAndReceipts(
         if (now >= order.end) continue;
         if (order.end < earliestOpenEnd) earliestOpenEnd = order.end;
         const settlement = tradeSettlement(order, orderReceipts, now);
-        if (settlement.state === 'pending') {
+        // An open order that no party has claimed yet has no receipt. It is pending all the same: without this, the
+        // next cycle plans its parties again, and a recipient gets a second order from another donor.
+        const unclaimed = settlement.state === 'legacy' && orderReceipts.length === 0 && now >= order.start;
+        if (settlement.state === 'pending' || unclaimed) {
             inTradeAccounts.add(order.from.toLowerCase());
             inTradeAccounts.add(order.to.toLowerCase());
             const hub = inferHubFromOrder(order);
