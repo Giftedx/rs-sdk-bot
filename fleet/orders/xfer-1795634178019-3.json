@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795634178019-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Moneyshot",
+  "to": "Woodpecker",
+  "item": "Emerald ring",
+  "count": 1,
+  "itemId": 1639,
+  "start": 1795634178019,
+  "end": 1795635078019,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
