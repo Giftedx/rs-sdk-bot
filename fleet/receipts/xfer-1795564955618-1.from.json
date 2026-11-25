@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795564955618-1",
  "account": "UnderMyKilt",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Rune arrow",
  "requested": 109,
  "claim": "451e020c-655a-4e5c-97e1-b2b5a83f65d8",
- "count": 0,
- "ok": false,
- "at": 1795565184997,
- "detail": "trade claimed"
+ "count": 109,
+ "ok": true,
+ "at": 1795565595729,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 109,
+  "after": 0
+ },
+ "bank": {
+  "count": 109,
+  "at": 1795565190208
+ },
+ "logout": {
+  "attemptId": "1795565185006-0000024724-0000000001",
+  "at": 1795565595715,
+  "sha256": "2f8366dd806490458ee7fcdd20631f7bb88ad47599ca392c61e9ff2b25b2e57f"
+ },
+ "screen": true
 }

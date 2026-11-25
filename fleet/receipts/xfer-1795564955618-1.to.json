@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795564955618-1",
+ "account": "Shaftsinker",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 109,
+ "claim": "0e117b50-68ee-445e-a91b-4ad59e1862ef",
+ "count": 109,
+ "ok": true,
+ "at": 1795565597390,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 109
+ },
+ "bank": {
+  "count": 109,
+  "at": 1795565596577
+ },
+ "logout": {
+  "attemptId": "1795565579003-0000028096-0000000001",
+  "at": 1795565597306,
+  "sha256": "306f81636f90f20fb83cfe851020cf0dd17e0ebaca44c61db79c17d690bcfa30"
+ },
+ "screen": true
+}
