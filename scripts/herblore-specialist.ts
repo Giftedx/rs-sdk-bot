@@ -103,6 +103,21 @@ export const HERBLORE_NOTED_SUPPLIES: readonly HerbloreNotedSupply[] = [
  { id: ITEM_IDS.jangerberries, certId: 248, count: 170 },
 ];
 
+// Live-affordable drop-herbs route (Chaos Druids / Sinister keys: Kwuarm + Cadantine + Dwarf weed, zero Torstol/Lantadyme).
+export const HERBLORE_DROP_NOTED_SUPPLIES: readonly HerbloreNotedSupply[] = [
+ { id: ITEM_IDS.harralandervial, certId: 98, count: 10 },
+ { id: ITEM_IDS.chocolate_dust, certId: 1976, count: 10 },
+ { id: ITEM_IDS.iritvial, certId: 102, count: 10 },
+ { id: ITEM_IDS.eye_of_newt, certId: 222, count: 10 },
+ { id: ITEM_IDS.kwuarmvial, certId: 106, count: 30 },
+ { id: ITEM_IDS.limpwurt_root, certId: 226, count: 10 },
+ { id: ITEM_IDS.dragon_scale_dust, certId: 242, count: 20 },
+ { id: ITEM_IDS.cadantinevial, certId: 108, count: 13 },
+ { id: ITEM_IDS.white_berries, certId: 240, count: 13 },
+ { id: ITEM_IDS.dwarfweedvial, certId: 110, count: 198 },
+ { id: ITEM_IDS.wine_of_zamorak, certId: 246, count: 198 },
+];
+
 export const HERBLORE_BANK_CYCLES: readonly { unf: number; sec: number; out: number }[] = [
  // C1: Energy x10 (6,250 -> 23,125, Lv 45)
  { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, out: POTION_OUTPUT_IDS.energy_3 },
@@ -153,16 +168,25 @@ export const HERBLORE_NOTED_BATCH: HerbloreBatchPlan = {
  returnIds: [],
 };
 
+export const HERBLORE_DROP_NOTED_BATCH: HerbloreBatchPlan = {
+ give: HERBLORE_DROP_NOTED_SUPPLIES.map(s => ({ id: s.certId, count: s.count })),
+ returnIds: [],
+};
+
 export const HERBLORE_BATCHES: readonly HerbloreBatchPlan[] = [HERBLORE_NOTED_BATCH];
 
 export const HERBLORE_ALL_BATCHES: readonly HerbloreBatchPlan[] = [HERBLORE_STARTER_BATCH, HERBLORE_NOTED_BATCH];
 
-export const HERBLORE_SUPPLY_BILL: readonly SupplyEntry[] = aggregateHerbloreSupply();
+export const HERBLORE_DROP_ALL_BATCHES: readonly HerbloreBatchPlan[] = [HERBLORE_STARTER_BATCH, HERBLORE_DROP_NOTED_BATCH];
 
-function aggregateHerbloreSupply(): SupplyEntry[] {
+export const HERBLORE_SUPPLY_BILL: readonly SupplyEntry[] = aggregateHerbloreSupply(HERBLORE_NOTED_SUPPLIES);
+
+export const HERBLORE_DROP_SUPPLY_BILL: readonly SupplyEntry[] = aggregateHerbloreSupply(HERBLORE_DROP_NOTED_SUPPLIES);
+
+function aggregateHerbloreSupply(supplies: readonly HerbloreNotedSupply[] = HERBLORE_NOTED_SUPPLIES): SupplyEntry[] {
  const counts = new Map<number, number>();
  for (const item of HERBLORE_STARTER_BATCH.give) counts.set(item.id, (counts.get(item.id) ?? 0) + item.count);
- for (const item of HERBLORE_NOTED_SUPPLIES) counts.set(item.id, (counts.get(item.id) ?? 0) + item.count);
+ for (const item of supplies) counts.set(item.id, (counts.get(item.id) ?? 0) + item.count);
  const catalog = loadItemCatalog();
  return [...counts.entries()].map(([itemId, count]) => ({
   itemId,
@@ -699,6 +723,22 @@ const FAST_HERB_STEPS: readonly BankBrewPlanStep[] = [
  })),
 ];
 
+const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
+ { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.cadantinevial, sec: ITEM_IDS.white_berries, count: 13, openBankAtEnd: true },
+ ...Array.from({ length: 15 }, (): BankBrewPlanStep => ({
+  unf: ITEM_IDS.dwarfweedvial,
+  sec: ITEM_IDS.wine_of_zamorak,
+  count: 13,
+  openBankAtEnd: true,
+ })),
+ { unf: ITEM_IDS.dwarfweedvial, sec: ITEM_IDS.wine_of_zamorak, count: 3, openBankAtEnd: false },
+];
+
  function pushExactWithdraw(acts: Promise<unknown>[], spec: Session, slot: number, need: number, bankCount: number): void {
   if (need <= 0) return;
   if (need >= bankCount) {
@@ -835,14 +875,18 @@ async function executeHerbloreLoop(
  await receiveNoted();
  const tradeTicks = spec.tick() - tTrade0;
 
+ const invAfterTrade = spec.sdk.getInventory();
+ const useDropRoute = countItem(invAfterTrade, 112) === 0 && countItem(invAfterTrade, 110) >= 198;
+ const brewSteps = useDropRoute ? DROP_HERB_STEPS : FAST_HERB_STEPS;
+
  let bankTicks = 0;
  let brewTicks = 0;
  let bankRefused = 0;
  let bankOpenTicks = 0;
  let depositedNotes = false;
 
- for (let c = 0; c < FAST_HERB_STEPS.length && skillLevel(spec, 'Herblore') < target; c++) {
-  const step = FAST_HERB_STEPS[c]!;
+ for (let c = 0; c < brewSteps.length && skillLevel(spec, 'Herblore') < target; c++) {
+  const step = brewSteps[c]!;
   const b0 = spec.tick();
   if (!spec.sdk.getState()?.bank?.isOpen) {
    const o0 = spec.tick();
@@ -930,7 +974,7 @@ async function executeHerbloreLoop(
  const ticks = spec.tick() - start;
  return {
   ok,
-  detail: `skill=herblore level=${level} xp=${xp} ticks=${ticks} druid=${druidTicks} tr=${tradeTicks} bank=${bankTicks}(open=${bankOpenTicks},ref=${bankRefused}) brew=${brewTicks} (${druidTrace})`,
+  detail: `skill=herblore route=${useDropRoute ? 'drop' : 'torstol'} level=${level} xp=${xp} ticks=${ticks} druid=${druidTicks} tr=${tradeTicks} bank=${bankTicks}(open=${bankOpenTicks},ref=${bankRefused}) brew=${brewTicks} (${druidTrace})`,
   ticks,
   level,
   xp,
@@ -940,11 +984,13 @@ async function executeHerbloreLoop(
 export async function runHerbloreSpecialist(
  spec: Session,
  helpers: readonly Session[],
- opts: { cap: number; target?: number },
+ opts: { cap: number; target?: number; dropRoute?: boolean },
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
- assertCatalogItems(HERBLORE_SUPPLY_BILL);
- if (helpers.length < HERBLORE_ALL_BATCHES.length) {
-  throw Error(`herblore specialist requires ${HERBLORE_ALL_BATCHES.length} helpers, got ${helpers.length}`);
+ const useDrop = !!opts.dropRoute || process.env.HERBLORE_ROUTE === 'drop';
+ assertCatalogItems(useDrop ? HERBLORE_DROP_SUPPLY_BILL : HERBLORE_SUPPLY_BILL);
+ const batches = useDrop ? HERBLORE_DROP_ALL_BATCHES : HERBLORE_ALL_BATCHES;
+ if (helpers.length < batches.length) {
+  throw Error(`herblore specialist requires ${batches.length} helpers, got ${helpers.length}`);
  }
  const target = opts.target ?? 99;
  const start = spec.tick();
@@ -958,13 +1004,14 @@ export async function runHerbloreSpecialist(
   })(),
  );
  try {
+  const notedBatch = useDrop ? HERBLORE_DROP_NOTED_BATCH : HERBLORE_NOTED_BATCH;
   return await executeHerbloreLoop(
    spec,
    target,
    start,
    deadline,
    () => fastInProcessHerbloreTrade(spec, helpers[0]!, HERBLORE_STARTER_BATCH.give.map(g => g.id), deadline),
-   () => fastInProcessHerbloreTrade(spec, helpers[1]!, HERBLORE_NOTED_BATCH.give.map(g => g.id), deadline),
+   () => fastInProcessHerbloreTrade(spec, helpers[1]!, notedBatch.give.map(g => g.id), deadline),
   );
  } finally {
   done = true;
@@ -975,9 +1022,10 @@ export async function runHerbloreSpecialist(
 export async function runHerbloreExternal(
  spec: Session,
  supplierNames: readonly string[],
- opts: { cap: number; target?: number },
+ opts: { cap: number; target?: number; dropRoute?: boolean },
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
- assertCatalogItems(HERBLORE_SUPPLY_BILL);
+ const useDrop = !!opts.dropRoute || process.env.HERBLORE_ROUTE === 'drop';
+ assertCatalogItems(useDrop ? HERBLORE_DROP_SUPPLY_BILL : HERBLORE_SUPPLY_BILL);
  if (!supplierNames.length) throw Error('herblore external mode requires at least 1 supplier');
  const target = opts.target ?? 99;
  const start = spec.tick();
@@ -996,7 +1044,9 @@ export async function runHerbloreExternal(
    }).then(() => {}),
   () =>
    fastTradeExternalReceive(spec, notedSuppliers, {
-    acceptOffer: offer => HERBLORE_NOTED_BATCH.give.every(g => countItem(offer, g.id) >= g.count),
+    acceptOffer: offer =>
+     HERBLORE_NOTED_BATCH.give.every(g => countItem(offer, g.id) >= g.count) ||
+     HERBLORE_DROP_NOTED_BATCH.give.every(g => countItem(offer, g.id) >= g.count),
     deadlineTick: deadline,
    }).then(() => {}),
  );

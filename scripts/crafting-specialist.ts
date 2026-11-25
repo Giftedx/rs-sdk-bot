@@ -106,14 +106,28 @@ export const CRAFTING_CW_NOTED_SUPPLIES: readonly { id: number; certId: number; 
  { id: ITEM_IDS.uncut_dragonstone, certId: 1632, count: 277 },
 ];
 
-export const CRAFTING_CW_BATCH: CraftingBatchPlan = {
- give: [
-  { id: ITEM_IDS.ring_of_dueling_8, count: 1 },
-  { id: ITEM_IDS.chisel, count: 1 },
-  ...CRAFTING_CW_NOTED_SUPPLIES.map(s => ({ id: s.certId, count: s.count })),
- ],
- returnIds: [],
-};
+export const CRAFTING_CW_DIAMOND_NOTED_SUPPLIES: readonly { id: number; certId: number; count: number }[] = [
+ { id: ITEM_IDS.uncut_opal, certId: 1626, count: 18 },
+ { id: ITEM_IDS.uncut_sapphire, certId: 1624, count: 3 },
+ { id: ITEM_IDS.uncut_emerald, certId: 1622, count: 6 },
+ { id: ITEM_IDS.uncut_ruby, certId: 1620, count: 3 },
+ { id: ITEM_IDS.uncut_diamond, certId: 1618, count: 362 },
+];
+
+function buildCwBatch(supplies: readonly { id: number; certId: number; count: number }[]): CraftingBatchPlan {
+ return {
+  give: [
+   { id: ITEM_IDS.ring_of_dueling_8, count: 1 },
+   { id: ITEM_IDS.chisel, count: 1 },
+   ...supplies.map(s => ({ id: s.certId, count: s.count })),
+  ],
+  returnIds: [],
+ };
+}
+
+export const CRAFTING_CW_BATCH: CraftingBatchPlan = buildCwBatch(CRAFTING_CW_NOTED_SUPPLIES);
+
+export const CRAFTING_CW_DIAMOND_BATCH: CraftingBatchPlan = buildCwBatch(CRAFTING_CW_DIAMOND_NOTED_SUPPLIES);
 
 export const CRAFTING_CW_SUPPLY_BILL: readonly SupplyEntry[] = [
  { itemId: ITEM_IDS.ring_of_dueling_8, item: 'Ring of dueling(8)', count: 1 },
@@ -124,6 +138,16 @@ export const CRAFTING_CW_SUPPLY_BILL: readonly SupplyEntry[] = [
  { itemId: ITEM_IDS.uncut_ruby, item: 'Uncut ruby', count: 3 },
  { itemId: ITEM_IDS.uncut_diamond, item: 'Uncut diamond', count: 9 },
  { itemId: ITEM_IDS.uncut_dragonstone, item: 'Uncut dragonstone', count: 277 },
+];
+
+export const CRAFTING_CW_DIAMOND_SUPPLY_BILL: readonly SupplyEntry[] = [
+ { itemId: ITEM_IDS.ring_of_dueling_8, item: 'Ring of dueling(8)', count: 1 },
+ { itemId: ITEM_IDS.chisel, item: 'Chisel', count: 1 },
+ { itemId: ITEM_IDS.uncut_opal, item: 'Uncut opal', count: 18 },
+ { itemId: ITEM_IDS.uncut_sapphire, item: 'Uncut sapphire', count: 3 },
+ { itemId: ITEM_IDS.uncut_emerald, item: 'Uncut emerald', count: 6 },
+ { itemId: ITEM_IDS.uncut_ruby, item: 'Uncut ruby', count: 3 },
+ { itemId: ITEM_IDS.uncut_diamond, item: 'Uncut diamond', count: 362 },
 ];
 
 const CRAFTING_CW_CYCLES: readonly (readonly { id: number; count: number }[])[] = [
@@ -139,6 +163,20 @@ const CRAFTING_CW_CYCLES: readonly (readonly { id: number; count: number }[])[] 
  ],
  ...Array.from({ length: 9 }, () => [{ id: ITEM_IDS.uncut_dragonstone, count: 27 }] as const),
  [{ id: ITEM_IDS.uncut_dragonstone, count: 19 }],
+];
+
+const CRAFTING_CW_DIAMOND_CYCLES: readonly (readonly { id: number; count: number }[])[] = [
+ [
+  { id: ITEM_IDS.uncut_opal, count: 18 },
+  { id: ITEM_IDS.uncut_sapphire, count: 3 },
+  { id: ITEM_IDS.uncut_emerald, count: 6 },
+ ],
+ [
+  { id: ITEM_IDS.uncut_ruby, count: 3 },
+  { id: ITEM_IDS.uncut_diamond, count: 24 },
+ ],
+ ...Array.from({ length: 12 }, () => [{ id: ITEM_IDS.uncut_diamond, count: 27 }] as const),
+ [{ id: ITEM_IDS.uncut_diamond, count: 14 }],
 ];
 
 const GEM_XP_BY_ID = new Map<number, number>(CRAFTING_GEMS.map(g => [g.id, g.xp]));
@@ -501,6 +539,12 @@ async function craftAtCastleWarsBank(
  }
 
  await openCwChest(spec, deadline);
+ const preBankInv = spec.sdk.getInventory();
+ const preBankItems = spec.sdk.getState()?.bank?.items ?? [];
+ const hasDragonstone =
+  countItem(preBankInv, 1632) > 0 ||
+  preBankItems.some((b: any) => b.id === ITEM_IDS.uncut_dragonstone && b.count > 0);
+ const cycles = hasDragonstone ? CRAFTING_CW_CYCLES : CRAFTING_CW_DIAMOND_CYCLES;
  // Deposit Cycle 0 notes first (within the first 5 items) so Cycle 0 withdraws overlap the remaining <=2 deposits.
  const cycle0Notes = new Set<number>([1626, 1624, 1622]);
  while (spec.tick() < deadline) {
@@ -522,8 +566,8 @@ async function craftAtCastleWarsBank(
  }
  logPhase(spec, start, 'crafting_cw_banked');
 
- for (let idx = 0; idx < CRAFTING_CW_CYCLES.length && skillLevel(spec, 'Crafting') < target; idx++) {
-  const cycle = CRAFTING_CW_CYCLES[idx]!;
+ for (let idx = 0; idx < cycles.length && skillLevel(spec, 'Crafting') < target; idx++) {
+  const cycle = cycles[idx]!;
   while (spec.tick() < deadline) {
    const st = spec.sdk.getState();
    const inv = spec.sdk.getInventory();
@@ -565,7 +609,7 @@ async function craftAtCastleWarsBank(
    if (tickActs.length) await Promise.all(tickActs);
    await waitTicks(spec, 1);
   }
-  await cutUnlockedGems(spec, target, deadline, undefined, idx < CRAFTING_CW_CYCLES.length - 1);
+  await cutUnlockedGems(spec, target, deadline, undefined, idx < cycles.length - 1);
  }
 
  const level = skillLevel(spec, 'Crafting');
@@ -574,7 +618,7 @@ async function craftAtCastleWarsBank(
  const ticks = spec.tick() - start;
  return {
   ok,
-  detail: `skill=crafting mode=cw level=${level} xp=${xp} ticks=${ticks}`,
+  detail: `skill=crafting mode=${hasDragonstone ? 'cw' : 'cw-diamond'} level=${level} xp=${xp} ticks=${ticks}`,
   ticks,
   level,
   xp,
@@ -601,10 +645,11 @@ async function executeCraftingCastleWars(
 export async function runCraftingSpecialist(
  spec: Session,
  helpers: readonly Session[],
- opts: { cap: number; target?: number },
+ opts: { cap: number; target?: number; cwDiamond?: boolean },
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  const cwMode = helpers.length === 1;
- assertCatalogItems(cwMode ? CRAFTING_CW_SUPPLY_BILL : CRAFTING_SUPPLY_BILL);
+ const diamondMode = cwMode && (!!opts.cwDiamond || process.env.CRAFTING_MODE === 'cw-diamond');
+ assertCatalogItems(diamondMode ? CRAFTING_CW_DIAMOND_SUPPLY_BILL : cwMode ? CRAFTING_CW_SUPPLY_BILL : CRAFTING_SUPPLY_BILL);
  if (!cwMode && helpers.length < CRAFTING_BATCHES.length) {
   throw Error(`crafting specialist requires ${CRAFTING_BATCHES.length} helpers (or 1 CW noted helper), got ${helpers.length}`);
  }
@@ -622,9 +667,10 @@ export async function runCraftingSpecialist(
 
  try {
   if (cwMode) {
+   const cwBatch = diamondMode ? CRAFTING_CW_DIAMOND_BATCH : CRAFTING_CW_BATCH;
    return await executeCraftingCastleWars(spec, target, start, deadline, () =>
     fastInProcessBatchTrade(spec, helpers[0]!, {
-     giveIds: CRAFTING_CW_BATCH.give.map(g => g.id),
+     giveIds: cwBatch.give.map(g => g.id),
      returnIds: [],
      deadlineTick: deadline,
     }),
@@ -671,10 +717,11 @@ export async function runCraftingSpecialist(
 export async function runCraftingExternal(
  spec: Session,
  supplierNames: readonly string[],
- opts: { cap: number; target?: number; cw?: boolean },
+ opts: { cap: number; target?: number; cw?: boolean; cwDiamond?: boolean },
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
- const cwForced = !!opts.cw || process.env.CRAFTING_MODE === 'cw';
- assertCatalogItems(cwForced ? CRAFTING_CW_SUPPLY_BILL : CRAFTING_SUPPLY_BILL);
+ const diamondForced = !!opts.cwDiamond || process.env.CRAFTING_MODE === 'cw-diamond';
+ const cwForced = diamondForced || !!opts.cw || process.env.CRAFTING_MODE === 'cw';
+ assertCatalogItems(diamondForced ? CRAFTING_CW_DIAMOND_SUPPLY_BILL : cwForced ? CRAFTING_CW_SUPPLY_BILL : CRAFTING_SUPPLY_BILL);
  if (!supplierNames.length) throw Error('crafting external mode requires at least 1 supplier');
  const target = opts.target ?? 99;
  const start = spec.tick();
@@ -682,7 +729,9 @@ export async function runCraftingExternal(
  if (cwForced) {
   return executeCraftingCastleWars(spec, target, start, deadline, async () => {
    await fastTradeExternalReceive(spec, supplierNames, {
-    acceptOffer: offer => CRAFTING_CW_BATCH.give.every(g => countItem(offer, g.id) >= g.count),
+    acceptOffer: offer =>
+     CRAFTING_CW_BATCH.give.every(g => countItem(offer, g.id) >= g.count) ||
+     CRAFTING_CW_DIAMOND_BATCH.give.every(g => countItem(offer, g.id) >= g.count),
     deadlineTick: deadline,
    });
   });
@@ -701,12 +750,14 @@ export async function runCraftingExternal(
    returnIds: i <= 2 ? [] : batch.returnIds,
    allowSingleModal: true,
    acceptOffer: offer =>
-    (i === 0 && CRAFTING_CW_BATCH.give.every(g => countItem(offer, g.id) >= g.count)) ||
+    (i === 0 &&
+     (CRAFTING_CW_BATCH.give.every(g => countItem(offer, g.id) >= g.count) ||
+      CRAFTING_CW_DIAMOND_BATCH.give.every(g => countItem(offer, g.id) >= g.count))) ||
     batch.give.every(g => countItem(offer, g.id) >= g.count),
    deadlineTick: deadline,
   });
   if (i === 0 && countItem(spec.sdk.getInventory(), ITEM_IDS.ring_of_dueling_8) > 0) {
-   assertCatalogItems(CRAFTING_CW_SUPPLY_BILL);
+   assertCatalogItems(countItem(spec.sdk.getInventory(), 1632) > 0 ? CRAFTING_CW_SUPPLY_BILL : CRAFTING_CW_DIAMOND_SUPPLY_BILL);
    return craftAtCastleWarsBank(spec, target, start, deadline);
   }
   await cutUnlockedGems(spec, target, deadline);
