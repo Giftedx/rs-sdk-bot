@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795621865673-1",
  "account": "Ballspinner",
  "partner": "UnderMyKilt",
@@ -12,6 +12,16 @@
  "claim": "719bfb8b-ef41-45e3-924c-0f5cc7b17654",
  "count": 0,
  "ok": false,
- "at": 1795622554868,
- "detail": "trade claimed"
+ "at": 1795622766378,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 10,
+  "at": 1795622677627
+ },
+ "logout": {
+  "attemptId": "1795622554879-0000011988-0000000001",
+  "at": 1795622766361,
+  "sha256": "22e5fd2e48b05f10d7dc41a7ef9bdb7a84f53088ae697b31e230c038fb65f6e6"
+ },
+ "screen": false
 }
