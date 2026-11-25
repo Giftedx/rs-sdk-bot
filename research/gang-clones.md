@@ -930,18 +930,38 @@ Wilderness at the fallback HP. The HP did not change during the windup, and the 
 fourth (seed 6), the account was alive at Camelot with 9 HP, then died there. The squad saw each death only after the
 respawn, so it logged `SQUAD died on a bank trip`.
 
-| Escapes with 4 or 5 enemies | Escapes | Deaths |
+On master at 648fda7b97 (runs 45701534679 and 45701552905, seeds 1 to 16 each), 3 more deaths of member 1 had the same
+form. They began the escape at 34, 40 and 54 HP. In one, the eat on the cast tick landed (the last HP alive was 54), and
+the windup still killed the account. All 4 runs, escapes with 4 or 5 enemies by the HP at the fallback:
+
+| Escape starts at | Escapes | Deaths |
 |---|---|---|
-| start at 27 to 36 HP | 6 | 4 |
-| start at 40 to 61 HP | about 30 | 0 |
+| under 40 HP | 8 | 5 |
+| 40 to 54 HP | 27 | 2 |
+| 55 to 69 HP | 63 | 0 |
+| 70 HP or more | 69 | 0 |
 
-The fix (`packages/workers/src/pvp/squad.ts`): `windupFloor` is 10 HP for each attacker that can hit the member, at most
-half of the maximum. Under it, the rescue eats alone and casts on the tick that the heal shows, or after
-`WINDUP_EAT_TICKS` tries. After the escape, the account eats on arrival when it is under the floor, before it turns
-auto-retaliate off. `squadDied` reads `isDead`, so a death in the windup shows at once.
+The fight loop reads the fallback rule each tick (`fight.ts`, `o.stop` after each `nextTick`), and `emergencyMulti` sends a
+member out at 61 HP with 4 or more enemies. The members under 55 HP fell past 61 in one tick: a volley of the pile.
 
-Gap: no trace shows which earlier eat refused the eat on the cast tick. The case logs show 4 sharks eaten by member 1
-before its death and no heal in the windup.
+An eat before the cast loses. The rescue ate alone under a floor of 10 HP for each attacker and cast when the heal showed
+(run 45701974509, master plus that rule, seeds 1 to 16). The eats landed, and 3 of the 7 accounts that took the rule still
+died in the windup with 40 to 48 HP. The wait moved the cast into the next volley.
+
+| Arm | Deaths of ours | Kills | HP taken |
+|---|---|---|---|
+| master, run 45701534679 | 1 | 23 | 11,681 |
+| master, run 45701552905 | 2 | 24 | 11,204 |
+| eat before the cast, run 45701974509 | 4 | 19 | 11,614 |
+
+The rule (`packages/workers/src/pvp/squad.ts`): with 4 or more enemies on a multi-way tile, `squadFallbackPlan` sends the
+member out while one more volley of the size it just took leaves it at `WINDUP_SAFE` (0.55) of its maximum or more. The
+volley is the largest loss of HP from one tick to the next in the last `VOLLEY_TICKS` (8) ticks (`volleyOf`). After the
+escape, the account eats on arrival under `windupFloor`, before it turns auto-retaliate off. `squadDied` reads `isDead`,
+so a death in the windup shows at once.
+
+Gap: the rule is measured only against the attackers of this bench case. Against a pile with smaller volleys, the rule
+sends a member out later. No live run shows the size of a live pile's volley.
 
 ## Dagger mode
 
