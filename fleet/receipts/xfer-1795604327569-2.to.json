@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795604327569-2",
+ "account": "TheFullMonty",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 6,
+ "claim": "7d48eceb-be13-43f3-b1ab-dbe36bee2caa",
+ "count": 6,
+ "ok": true,
+ "at": 1795604848104,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795604847192
+ },
+ "logout": {
+  "attemptId": "1795604833506-0000024136-0000000001",
+  "at": 1795604847942,
+  "sha256": "82ea1ca47355fbc488001f9b01e8c063b364afdb6795f098dc578a9607b1d5d5"
+ },
+ "screen": true
+}

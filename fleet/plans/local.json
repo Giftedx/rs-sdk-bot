@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795604801265,
+ "at": 1795604856772,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -40,6 +40,19 @@
    "role": "army"
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/generated/quest-barcrawl.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "army"
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
@@ -54,6 +67,19 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
    "role": "army"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/generated/quest-priestperil.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:priestperil",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:priestperil",
+   "role": "auto"
   },
   {
    "account": "Wandwaver",
@@ -104,6 +130,26 @@
    "role": "helper"
   },
   {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2152",
+   "role": "helper"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
@@ -116,6 +162,32 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:97",
+   "role": "army"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/generated/quest-tree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:tree",
+   "role": "army"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/generated/quest-squire.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:squire",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:squire",
    "role": "army"
   }
  ],
@@ -148,7 +220,6 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker",
