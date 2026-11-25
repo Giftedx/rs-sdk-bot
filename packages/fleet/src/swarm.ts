@@ -889,6 +889,10 @@ export function lifecycleAccounts(dir: string): string[] {
     });
 }
 
+const replaceablePriorEnd = (reason: string) =>
+    successfulEnd(reason)
+    || (reason !== 'stopped by owner' && /^(?:stopped|blocked|gave-up|release-paused)(?:\b|$)/.test(reason));
+
 export function orphanedSessionEnds(
     accounts: readonly string[],
     ended: ReadonlyMap<string, EndRecord>,
@@ -910,7 +914,7 @@ export function orphanedSessionEnds(
         if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt)) continue;
         const prior = [...ended].find(([name]) => name.toLowerCase() === key);
         const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt '), unknown = prior?.[1].reason === 'exit unknown';
-        if (prior && !unknown && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
+        if (prior && !unknown && !(orphan ? receipt.updatedAt > prior[1].at : replaceablePriorEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
         found.push({ end: [prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`], pid: receipt.pid, createdAt: receipt.createdAt, answers: alive(receipt.pid) });
     }
     const answering = found.filter(f => f.answers).map(f => f.pid), table = answering.length ? starts(answering) : null;
