@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795606444275,
+ "at": 1795606522898,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -56,23 +56,10 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/generated/quest-priestperil.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:priestperil",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:priestperil",
-   "role": "army"
-  },
-  {
    "account": "mmsmk1232",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop 3000",
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
     "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
    ],
@@ -85,17 +72,17 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/generated/quest-ikov.ts",
+   "account": "Ballbag",
+   "script": "scripts/generated/quest-priestperil.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:ikov",
+    "DEMAND_ID": "goal:quest_board:priestperil",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:ikov",
-   "role": "army"
+   "goal": "goal:quest_board:priestperil",
+   "role": "helper"
   },
   {
    "account": "Wandwaver",
@@ -160,19 +147,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Ballbag",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "helper"
   }
  ],
  "army": [
@@ -182,6 +156,7 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
+  "bigpackage",
   "billionaire",
   "bowbeforeme",
   "deeppockets",
@@ -204,6 +179,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker"
