@@ -28,12 +28,17 @@ const PERMANENT_EXCLUDES = new Set(['mightyrod']);
 export type ClaimStatus =
     | 'claimed'
     | 'already_claimed'
+    | 'free_loss'
     | 'no_coins'
     | 'offline_partner'
     | 'declined'
     | 'no_payout'
     | 'busy'
     | 'failed';
+
+function isBrambleLossChat(chat: readonly string[]): boolean {
+    return chat.some(line => /\[loss,\s*need\b/i.test(line));
+}
 
 export interface ClaimRecord {
     readonly account: string;
@@ -136,7 +141,17 @@ export function selectEligibleLocalAccounts(ledger: Record<string, ClaimRecord>)
         const display = displayNames.get(low) ?? low;
         if (hasStopFile(display, ROOT) || hasStopFile(low, ROOT)) continue;
         const prev = ledger[low];
-        if (prev && (prev.status === 'claimed' || prev.status === 'already_claimed')) continue;
+        if (
+            prev
+            && (
+                prev.status === 'claimed'
+                || prev.status === 'already_claimed'
+                || prev.status === 'free_loss'
+                || (prev.status === 'no_payout' && isBrambleLossChat(prev.chat))
+            )
+        ) {
+            continue;
+        }
         candidates.push({ name: display, dist: lastKnownDistToVwb(display) });
     }
     candidates.sort((a, b) => a.dist - b.dist || a.name.localeCompare(b.name));
@@ -382,11 +397,15 @@ async function claimAccount(rawName: string, partner: string, argv: string[]): P
                         maxTrades: 1,
                         timeout: 15_000,
                         tradeTimeout: 15_000,
+                        until: () => {
+                            collectRecentMessages(session, seenMsgs, chat, partnerLower);
+                            return isBrambleLossChat(chat);
+                        },
                         onTrade: () => ({ want: [{ item: 'Coins', amount: 100_000 }] }),
                     });
                     collectRecentMessages(session, seenMsgs, chat, partnerLower);
                     console.log(`SERVE_RETURN ${account} ok=${serve.success} msg=${serve.message}`);
-                    if (countCoins(session.sdk.getInventory()) < 100_000) {
+                    if (!isBrambleLossChat(chat) && countCoins(session.sdk.getInventory()) < 100_000) {
                         const retry2 = await session.bot.trade(partnerRe, {
                             want: [{ item: 'Coins', amount: 100_000 }],
                             requestTimeout: 12_000,
@@ -416,6 +435,10 @@ async function claimAccount(rawName: string, partner: string, argv: string[]): P
         if (delta >= EXPECTED_MIN_DELTA) {
             status = 'claimed';
             detail = `delta=${delta} (${beforeCoins} -> ${afterCoins})`;
+            settleOk = true;
+        } else if (isBrambleLossChat(chat)) {
+            status = 'free_loss';
+            detail = `free roll lost (${beforeCoins} -> ${afterCoins})`;
             settleOk = true;
         } else if (chatSaysAlready) {
             status = 'already_claimed';
@@ -495,7 +518,12 @@ async function main() {
             if (!isRetry) busyQueue.push(account);
             return true;
         }
-        if (rec.status === 'claimed' || rec.status === 'already_claimed' || rec.status === 'no_coins') {
+        if (
+            rec.status === 'claimed'
+            || rec.status === 'already_claimed'
+            || rec.status === 'free_loss'
+            || rec.status === 'no_coins'
+        ) {
             consecutiveNoPayout = 0;
         } else {
             consecutiveNoPayout++;
@@ -528,6 +556,7 @@ async function main() {
     const summary = {
         claimedCount: claimed.length,
         totalGain,
+        freeLoss: values.filter(r => r.status === 'free_loss').length,
         alreadyClaimed: values.filter(r => r.status === 'already_claimed').length,
         noCoins: values.filter(r => r.status === 'no_coins').length,
         busy: values.filter(r => r.status === 'busy').length,
@@ -535,7 +564,7 @@ async function main() {
         abortedReason: abortedReason || null,
     };
     console.log('BRAMBLE_SUMMARY ' + JSON.stringify(summary));
-    if (abortedReason || (!cli.all && targets.some(t => ledger[t.toLowerCase()]?.status !== 'claimed' && ledger[t.toLowerCase()]?.status !== 'already_claimed'))) {
+    if (abortedReason || (!cli.all && targets.some(t => !['claimed', 'already_claimed', 'free_loss'].includes(ledger[t.toLowerCase()]?.status ?? '')))) {
         process.exitCode = 1;
     }
 }
