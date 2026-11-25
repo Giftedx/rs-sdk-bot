@@ -404,6 +404,23 @@ test('parseSuperviseArgs validates bot, script, and non-negative integer maxRest
  expect(() => parseSuperviseArgs(['Bot1', 'scripts/a.ts', '1.5'])).toThrow(/maxRestarts/);
 });
 
+test('a failed run with a DEATH line ends as died even when its RESULT does not name the death', async () => {
+    const { diedInRun, isDeathLine } = await import('../src/supervise');
+    const death = 'DEATH at=2934,9826,0 wild=0 hp=1/84 by=Black_Knight#179 taken=8 hits=5 script=gather-combat.ts bot=Shaftsinker';
+    expect(isDeathLine(death)).toBe(true);
+    expect(isDeathLine('  | ' + death)).toBe(true);
+    expect(isDeathLine('DEATH_RECOVERY skip-too-far at=2934,9826 ticks=6')).toBe(false);
+    expect(diedInRun(['LEDGER ticks=900 xp=10 idle=0', death, 'RESULT fail Error: combat bank return unavailable'].join('\n'))).toBe(true);
+    let n = 0;
+    const r = await supervise({ run: async () => { n++; return { stdout: [death, 'LEDGER ticks=5956 xp=400 inventory=8 move=478 idle=900', 'RESULT fail Error: combat bank return unavailable endTicks=0'].join('\n'), exitCode: 1 }; },
+        stopped: () => false, pause: async () => { throw Error('must not log in again after a death'); }, maxRestarts: 20 });
+    expect(r).toEqual({ reason: 'died', runs: 1 });
+    expect(n).toBe(1);
+    // A run that met its goal after a death is still done, and a stop still wins.
+    expect(await supervise({ run: async () => ({ stdout: `${death}\nRESULT ok level=99`, exitCode: 0 }), stopped: () => false, pause: async () => {}, maxRestarts: 0 })).toEqual({ reason: 'done', runs: 1 });
+    expect(await supervise({ run: async () => ({ stdout: `${death}\nRESULT fail stop file`, exitCode: 1 }), stopped: () => false, pause: async () => {}, maxRestarts: 0 })).toEqual({ reason: 'stopped', runs: 1 });
+});
+
 test('a run that was idle for its whole session is not work: the same failure twice ends as blocked', async () => {
     const idleRun = (ticks: number) => out([`LEDGER ticks=${ticks} xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=${ticks} idlePct=100.0 xpGain=0 longestIdle=${ticks}@t10(2945,3368) idleBy=after:closeModal:598,bank:303 bot=Magicwanda`,
         `RESULT fail ticks=${ticks} kills=0 looted=0 bankTrips=299 walkTicks=0 hp=60 actionsPer1kTicks=0.00 targetMet=false maximum=40`], 1);

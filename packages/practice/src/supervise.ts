@@ -110,6 +110,14 @@ export function madeProgress(stdout: string): boolean {
     return !idle || Number(idle[1]) < Number(m[1]);
 }
 
+// openBot prints `DEATH at=...` for every death of the account (packages/core/src/death-recovery.ts deathLine), also
+// inside a chain step (`  | DEATH at=...`). A worker can fail after the death without naming it: 18 deaths of
+// gather-combat.ts ended "RESULT fail Error: combat bank return unavailable", and the restart walked Shaftsinker back to
+// the black knights, where it died again.
+const DEATH_LINE_RE = /^(?:\s*\|\s*)?DEATH at=/;
+export const isDeathLine = (line: string) => DEATH_LINE_RE.test(line);
+export const diedInRun = (stdout: string) => lastMatchingLine(stdout, isDeathLine) !== undefined;
+
 export function isEntryRefusal(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /\bticks=0\b/.test(result) && !/died=true/.test(result);
 }
@@ -213,7 +221,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         if (r.exitCode === 0 && /^RESULT ok\b/.test(result)) return { reason: 'done', runs };
         if (d.stopped() || /stop file/.test(result)) return { reason: 'stopped', runs };
         // A death means the route or the food plan failed; a blind restart repeats it.
-        if (/died=true|RESULT fail died/.test(result)) return { reason: 'died', runs };
+        if (/died=true|RESULT fail died/.test(result) || diedInRun(r.stdout)) return { reason: 'died', runs };
         // Out of food: a restart only logs in again and finds the same empty bank. A resupply job must run first.
         if (/RESULT fail no food/.test(result)) return { reason: 'stopped', runs };
         if (isWorkerReleaseHold(result)) return { reason: 'release-paused', runs };
@@ -252,7 +260,7 @@ if (import.meta.main) {
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
             const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'pipe', env: process.env ,windowsHide:true});
             const [stdout, stderr] = await Promise.all([
-                keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null),
+                keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : isDeathLine(l) ? 'DEATH' : null),
                 keepOutput(p.stderr, l => isUncaughtErrorLine(l) ? 'ERROR' : null, c => process.stderr.write(c)),
             ]);
             return { stdout, stderr, exitCode: await p.exited };
