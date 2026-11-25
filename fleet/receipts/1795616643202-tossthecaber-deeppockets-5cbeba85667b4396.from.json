@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795616643202-tossthecaber-deeppockets-5cbeba85667b4396",
+ "account": "TossTheCaber",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "6d990879-8bf1-4807-b749-9ec0f1134113",
+ "count": 0,
+ "ok": false,
+ "at": 1795616648431,
+ "detail": "trade claimed"
+}

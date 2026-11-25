@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795616589652,
+ "at": 1795616689527,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -232,21 +232,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
-   "role": "auto"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=27 \"ITEM_NAME=Dragon bones\" -- loadout",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=49 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
   }
  ],

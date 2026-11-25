@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795616643462-sausagefest-knightstick-31447b7ddf8a2470",
+ "account": "Sausagefest",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 29,
+ "claim": "4dbffc34-bb62-477b-8748-f27b0bf4b159",
+ "count": 0,
+ "ok": false,
+ "at": 1795616654631,
+ "detail": "trade claimed"
+}
