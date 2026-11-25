@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795603897661-2",
  "account": "OreElse",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Uncut diamond",
  "requested": 11,
  "claim": "d30a1a1c-d61f-4a8c-94b8-4833203faa3a",
- "count": 0,
- "ok": false,
- "at": 1795604399401,
- "detail": "trade claimed"
+ "count": 11,
+ "ok": true,
+ "at": 1795604556772,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 11,
+  "after": 0
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795604407604
+ },
+ "logout": {
+  "attemptId": "1795604399620-0000025400-0000000001",
+  "at": 1795604556753,
+  "sha256": "6429537a857c48879ca165f4e4cc8b45665c26be460847832c72f1c0218c3919"
+ },
+ "screen": true
 }
