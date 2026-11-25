@@ -14,14 +14,13 @@ import { atomicJson } from '../../core/src/plan-lock';
 import {
     findStopFile,
     hasStopFile,
-    lifecycleRootForRead,
     liveRoot,
     readStopFile,
     statusReadDirs,
 } from '../../core/src/practice-paths';
 import { processMatchesRecent, processStartTimes } from '../../core/src/proc';
 import { BOOTSTRAP_STATUS_AGE_MS } from '../../core/src/session-admission';
-import { attemptOutcome, listAttempts, readLogoutProof, type LogoutProof } from '../../core/src/session-lifecycle';
+import { attemptOutcome, listAttempts, readLogoutProof, resolveLifecycleRoot, type LogoutProof } from '../../core/src/session-lifecycle';
 import { savedProcessAlive, type ProcessStarts } from '../../core/src/session-takeover';
 import {
     RECOVERY_SCHEMA,
@@ -282,7 +281,6 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
     const owners = opts.owners ?? loadOwners();
     const ended = loadEndedRecords(join(root, '.practice', 'swarm-deaths.json'));
     const history = readStandaloneHistory(root);
-    const lRoot = lifecycleRootForRead(server, root);
     const cloud = side !== 'local';
     const readClaim = opts.readClaim ?? ((account: string) => readFleetAccountClaim(root, { account, server }) as ClaimView);
 
@@ -310,7 +308,7 @@ export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOpti
         if (owner.side !== side || owner.server.toLowerCase() !== serverLower) continue;
         if (NEVER_RECOVERED_SET.has(lower)) continue;
 
-        const proof = readLogoutProof(lower, server, { root: lRoot });
+        const proof = readLogoutProof(lower, server, { root: resolveLifecycleRoot(lower, server, root) });
         if (proof.state !== 'held') continue;
 
         const status = findAccountStatus(root, lower, server);
@@ -809,7 +807,7 @@ export async function runControlledDispatchOne(
             }
             return { ok: false, detail: reason };
         }
-        const proof = readLogoutProof(opts.account, opts.server, { root: lifecycleRootForRead(opts.server, resolvedRoot) });
+        const proof = readLogoutProof(opts.account, opts.server, { root: resolveLifecycleRoot(opts.account, opts.server, resolvedRoot) });
         if (proof.state !== 'confirmed') {
             return { ok: false, detail: `logout proof after recovery is ${proof.state}` };
         }

@@ -1,12 +1,13 @@
 // Run the fresh-clock Attack 99 specialist route from Tutorial Island through Tree Gnome Village, Grand Tree, and Fight Arena.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { finish, openBot } from '../packages/core/src/bot';
+import { finish, openBot, serverFromEnv } from '../packages/core/src/bot';
 import { protectedFromMelee } from '../packages/core/src/danger';
 import { withDoorPolicy } from '../packages/core/src/door-policy';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
+import { simBotsDir } from '../packages/core/src/practice-paths';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, sessionWalker, walkPath } from '../packages/core/src/walk';
 import { agilityOptions, runAgility } from '../packages/workers/src/agility';
@@ -40,8 +41,10 @@ type StopFn = () => boolean;
 type Point = { x: number; z: number; tol?: number };
 
 function readServerHost(root: string, bot: string): string {
-    const raw = readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env'), 'utf8');
-    return (raw.match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+    for (const p of [join(simBotsDir(root), bot, 'bot.env'), join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env')]) {
+        if (existsSync(p)) return serverFromEnv(readFileSync(p, 'utf8'));
+    }
+    return '';
 }
 
 function posOf(s: Session) {
