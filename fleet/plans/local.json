@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795640130898,
+ "at": 1795640145146,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -99,7 +99,7 @@
    "account": "Stirmypot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=65 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=71 \"ITEM_NAME=Nature rune\" -- loadout",
     "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Stirmypot BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
