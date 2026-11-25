@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795636603629,
+ "at": 1795636869203,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,14 +63,14 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
+    "scripts/aio-fighter.ts DEMAND_ID=goal:supply_chain:207 BATCH_UNITS=20 BANK_PACK=1 -- druid"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
+   "goal": "goal:supply_chain:207",
    "role": "army"
   },
   {
@@ -138,28 +138,6 @@
    "role": "helper"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "sapphire_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1637",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1637",
-   "role": "army"
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -177,6 +155,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1607 ITEMS=Sapphire MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy ardougnegemstall 3000",
+    "scripts/aio-skiller.ts RECIPE=sapphire_ring TARGET=1 BATCH=13 CAP=1500 RETURN_TICKS=100 RESERVE=0 DEMAND_ID=campaign:haggis:item:1637 BATCH_UNITS=2 -- crafting jewellery-trip"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1637",
    "role": "army"
   },
   {
@@ -199,19 +192,19 @@
    "account": "Dipstick",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "druid"
+    "giant"
    ],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "38",
+    "DEMAND_ID": "campaign:haggis:item:225",
+    "BATCH_UNITS": "30",
     "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:207",
+   "goal": "campaign:haggis:item:225",
    "role": "army",
    "resources": [
-    "chaos-druids"
+    "hill-giants"
    ]
   },
   {
@@ -227,6 +220,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:mineshafted:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=1 -- crafting inventory brew:unf_tarromin_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:95",
    "role": "army"
   },
   {
@@ -260,6 +268,47 @@
    "role": "army"
   },
   {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=40 -- crafting inventory",
+    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
+   "role": "auto"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dwarfcannon",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/generated/quest-ikov.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
    "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
@@ -273,75 +322,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:101",
    "role": "army"
-  },
-  {
-   "account": "PackageDeal",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
-   "role": "helper"
-  },
-  {
-   "account": "Porksword",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Porksword",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Porksword",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
-  },
-  {
-   "account": "Stirmypot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Stirmypot",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Stirmypot",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=5 -- fletching shafts",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=30 -- ranged-gather",
-    "scripts/generated/quest-chompybird.ts DEMAND_ID=goal:quest_board:chompybird BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:chompybird",
-   "role": "auto"
   }
  ],
  "army": [
@@ -354,15 +334,12 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
-  "kiltlifter",
-  "knightrider",
   "mmthv2350",
-  "oreelse",
   "pocketpool",
-  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
