@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795571023572-1",
+ "account": "Shaftsinker",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 46,
+ "claim": "7af08680-de10-40f2-8aa7-2f8d6bd9af86",
+ "count": 46,
+ "ok": true,
+ "at": 1795571135086,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 46
+ },
+ "bank": {
+  "count": 46,
+  "at": 1795571134342
+ },
+ "logout": {
+  "attemptId": "1795571124965-0000028388-0000000001",
+  "at": 1795571135073,
+  "sha256": "dd073180f8b5da4907c392dadb66e1af2ea102c420010c9e9e29f5399e34f4bc"
+ },
+ "screen": true
+}
