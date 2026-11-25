@@ -81,5 +81,17 @@ test('a login claim waits for a slow Git authority only in a process that is dec
         expect(last()).toEqual({ account: 'Hal', patient: false });
         await end(locked);
         expect(botsInThisProcess()).toBe(before);
+        // A squad start: its members log in one at a time while the others stand idle, and each asks for the wait
+        // (patientClaim), the second one too although two bots of the process are counted.
+        const squadStart = { ...host, patientClaim: true };
+        const m1 = await open('Ivy', squadStart);
+        expect(last()).toEqual({ account: 'Ivy', patient: true });
+        const m2 = await open('Jon', squadStart);
+        expect(last()).toEqual({ account: 'Jon', patient: true });
+        // The plan lock still wins: no long wait under the lock.
+        const lockedSquad = await open('Kim', { ...squadStart, planLock: join(base, 'plan') });
+        expect(last()).toEqual({ account: 'Kim', patient: false });
+        await end(m1); await end(m2); await end(lockedSquad);
+        expect(botsInThisProcess()).toBe(before);
     } finally { if (leaked) await end(leaked); rmSync(base, { recursive: true, force: true, maxRetries: 5 }); }
 }, 30_000);
