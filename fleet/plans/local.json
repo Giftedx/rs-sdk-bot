@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795581395101,
+ "at": 1795582173448,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,6 +22,22 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
   },
   {
    "account": "DropMyLoad",
@@ -56,7 +72,6 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
-  "hocuspokeus",
   "kiltlifter",
   "knightrider",
   "knightstick",

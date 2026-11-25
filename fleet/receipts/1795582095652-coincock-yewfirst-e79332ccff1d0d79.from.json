@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795582095652-coincock-yewfirst-e79332ccff1d0d79",
+ "account": "CoinCock",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "51b64117-d819-4542-8af3-f8fee7f57ed1",
+ "count": 0,
+ "ok": false,
+ "at": 1795582171102,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Adamant arrowtips",
+   "requested": 500,
+   "count": 0
+  }
+ ]
+}
