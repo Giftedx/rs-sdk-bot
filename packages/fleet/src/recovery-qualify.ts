@@ -16,7 +16,11 @@ import { findCurrentNativeRecoveryQualification } from './session-recovery';
 
 export const QUALIFY_SCRIPT = 'scripts/measure/session-recovery-qualify.ts';
 export const QUALIFY_RETRY_MS = 30 * 60_000;
-export type QualifyRun = { run: string; sha: string; source: string; at: number; state: 'dispatched' | 'imported' | 'failed' };
+// A dispatched run that cannot be read or imported this many passes in a row, or that has not finished this long after
+// its dispatch, counts as failed (an expired artifact, a deleted run), so a later pass can dispatch a fresh one.
+export const QUALIFY_FAULT_PASSES = 3;
+export const QUALIFY_RUN_MAX_MS = 2 * 3600_000;
+export type QualifyRun = { run: string; sha: string; source: string; at: number; state: 'dispatched' | 'imported' | 'failed'; faults?: number };
 export const qualifyStateFile = (base: string): string => join(liveRoot(base), 'session-recovery', 'qualify.json');
 export type Exec = (cmd: readonly string[], cwd: string) => { ok: boolean; out: string };
 export type QualifyDeps = { exec?: Exec; source?: () => string; qualified?: (base: string, source: string) => boolean; scratch?: () => string };
@@ -32,7 +36,7 @@ function readQualifyRun(file: string): QualifyRun | null {
     try {
         const v = JSON.parse(readFileSync(file, 'utf8'));
         return /^\d{1,20}$/.test(v?.run) && typeof v.sha === 'string' && typeof v.source === 'string' && Number.isSafeInteger(v.at)
-            && ['dispatched', 'imported', 'failed'].includes(v.state) ? v : null;
+            && ['dispatched', 'imported', 'failed'].includes(v.state) && (v.faults === undefined || Number.isSafeInteger(v.faults)) ? v : null;
     } catch { return null; }
 }
 
@@ -84,23 +88,40 @@ export function ensureHostedQualification(base: string, clock: () => number, log
     catch (e) { say(`source unreadable: ${String(e).slice(0, 160)}`); return; }
     let last = readQualifyRun(file);
     if (last?.state === 'dispatched') {
-        const view = exec(['gh', 'run', 'view', last.run, '--json', 'status,conclusion'], base);
+        const run = last;
+        // A fault keeps the run for the next pass, or counts it as failed: on the last of QUALIFY_FAULT_PASSES passes in a
+        // row, when `force` says it can never end well, or when the source moved on (the run cannot qualify it).
+        const fault = (what: string, force = false): boolean => {
+            const faults = (run.faults ?? 0) + 1;
+            const failed = force || faults >= QUALIFY_FAULT_PASSES || run.source !== source;
+            last = { ...run, faults, ...(failed ? { state: 'failed' as const } : {}) };
+            atomicJson(file, last);
+            say(`run ${run.run} ${what}${failed ? '; counted as failed' : ` (${faults} of ${QUALIFY_FAULT_PASSES})`}`);
+            return failed;
+        };
+        const view = exec(['gh', 'run', 'view', run.run, '--json', 'status,conclusion'], base);
         let v: { status?: string; conclusion?: string | null } = {};
-        try { v = JSON.parse(view.out); } catch { /* reported below */ }
-        if (!view.ok || typeof v.status !== 'string') { say(`run ${last.run} unreadable: ${view.out.trim().slice(-160)}`); return; }
-        if (v.status !== 'completed') { say(`run ${last.run} ${v.status}`); return; }
-        if (v.conclusion === 'success') {
-            let copied: string[];
-            try { copied = importQualifyRun(base, last.run, exec, deps.scratch ?? tmpdir); }
-            catch (e) { say(`run ${last.run} not imported: ${String(e).slice(0, 200)}`); return; }
-            atomicJson(file, { ...last, state: 'imported' } satisfies QualifyRun);
-            const ok = (deps.qualified ?? ((b, s) => findCurrentNativeRecoveryQualification(b, s) !== null))(base, source);
-            say(`run ${last.run} imported ${copied.length ? copied.join(', ') : 'nothing new'}; ${ok ? 'it qualifies' : 'it does not qualify'} for source ${source.slice(0, 12)}`);
-            return;
+        try { v = JSON.parse(view.out); } catch { /* a fault below */ }
+        if (!view.ok || typeof v.status !== 'string') {
+            if (!fault(`unreadable: ${view.out.trim().slice(-160)}`)) return;
+        } else if (v.status !== 'completed') {
+            if (clock() - run.at < QUALIFY_RUN_MAX_MS) { say(`run ${run.run} ${v.status}`); return; }
+            fault(`${v.status} ${Math.floor((clock() - run.at) / 60_000)} min after its dispatch`, true);
+        } else if (v.conclusion === 'success') {
+            let copied: string[] | null = null;
+            try { copied = importQualifyRun(base, run.run, exec, deps.scratch ?? tmpdir); }
+            catch (e) { if (!fault(`not imported: ${String(e).slice(0, 200)}`)) return; }
+            if (copied) {
+                atomicJson(file, { run: run.run, sha: run.sha, source: run.source, at: run.at, state: 'imported' } satisfies QualifyRun);
+                const ok = (deps.qualified ?? ((b, s) => findCurrentNativeRecoveryQualification(b, s) !== null))(base, source);
+                say(`run ${run.run} imported ${copied.length ? copied.join(', ') : 'nothing new'}; ${ok ? 'it qualifies' : 'it does not qualify'} for source ${source.slice(0, 12)}`);
+                return;
+            }
+        } else {
+            last = { ...run, state: 'failed' };
+            atomicJson(file, last);
+            say(`run ${run.run} ended ${v.conclusion ?? 'with no conclusion'}`);
         }
-        last = { ...last, state: 'failed' };
-        atomicJson(file, last);
-        say(`run ${last.run} ended ${v.conclusion ?? 'with no conclusion'}`);
     }
     const wait = qualifyDispatchWait(last, source, clock());
     if (wait) { say(`not dispatched: ${wait}`); return; }

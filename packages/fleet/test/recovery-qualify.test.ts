@@ -2,7 +2,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { QUALIFY_RETRY_MS, QUALIFY_SCRIPT, ensureHostedQualification, findDeliveries, qualifyDispatchWait, qualifyStateFile, type Exec, type QualifyRun } from '../src/recovery-qualify';
+import { QUALIFY_RETRY_MS, QUALIFY_RUN_MAX_MS, QUALIFY_SCRIPT, ensureHostedQualification, findDeliveries, qualifyDispatchWait, qualifyStateFile, type Exec, type QualifyRun } from '../src/recovery-qualify';
 
 const dirs: string[] = [];
 const scratch = () => { const d = mkdtempSync(join(tmpdir(), 'recovery-qualify-test-')); dirs.push(d); return d; };
@@ -91,4 +91,53 @@ test('the watchdog dispatches the qualify script to the CI measure job, then imp
     pass();
     expect(logs.at(-2)).toBe('recovery qualification: run 456 ended failure');
     expect(logs.at(-1)).toContain('(failed); next dispatch after 30 min');
+});
+
+test('a run that cannot be imported, read or finished counts as failed, so a fresh one can be dispatched', () => {
+    const base = scratch(), tmp = scratch(), source = 'c'.repeat(64);
+    let clock = 70_000_000, view: { ok: boolean; out: string } = { ok: true, out: JSON.stringify({ status: 'completed', conclusion: 'success' }) };
+    const logs: string[] = [], calls: string[] = [];
+    const exec: Exec = cmd => {
+        const line = cmd.join(' ');
+        calls.push(line);
+        if (line.startsWith('gh run view')) return view;
+        if (line.startsWith('gh run download')) return { ok: false, out: 'no valid artifacts found to download' };
+        if (line.startsWith('git rev-parse')) return { ok: true, out: SHA + '\n' };
+        if (line.startsWith('gh workflow run')) return { ok: true, out: 'https://github.com/o/r/actions/runs/789\n' };
+        return { ok: true, out: '' };
+    };
+    const state = () => JSON.parse(readFileSync(qualifyStateFile(base), 'utf8')) as QualifyRun;
+    const write = (v: QualifyRun) => { mkdirSync(join(qualifyStateFile(base), '..'), { recursive: true }); writeFileSync(qualifyStateFile(base), JSON.stringify(v)); };
+    const pass = (s = source) => ensureHostedQualification(base, () => clock, l => logs.push(l), { exec, source: () => s, qualified: () => true, scratch: () => tmp });
+
+    // An expired artifact: two passes keep the run, the third counts it as failed, and its source then waits for the retry time.
+    write(run('dispatched', source, clock));
+    pass();
+    expect(logs.at(-1)).toBe('recovery qualification: run 123 not imported: Error: download: no valid artifacts found to download (1 of 3)');
+    pass();
+    expect(state()).toMatchObject({ state: 'dispatched', faults: 2 });
+    pass();
+    expect(logs.at(-2)).toContain('not imported: Error: download: no valid artifacts found to download; counted as failed');
+    expect(logs.at(-1)).toContain('(failed); next dispatch after 30 min');
+    clock += QUALIFY_RETRY_MS;
+    pass();
+    expect(logs.at(-1)).toBe('recovery qualification: dispatched run 789 at ffffffffff for source cccccccccccc');
+
+    // A deleted run read after the source moved on: counted as failed at once, and the new source dispatches in the same pass.
+    write(run('dispatched', 'b'.repeat(64), clock));
+    view = { ok: false, out: 'HTTP 404: Not Found' };
+    pass();
+    expect(logs.at(-2)).toBe('recovery qualification: run 123 unreadable: HTTP 404: Not Found; counted as failed');
+    expect(logs.at(-1)).toBe('recovery qualification: dispatched run 789 at ffffffffff for source cccccccccccc');
+
+    // A run that never finishes is waited for up to QUALIFY_RUN_MAX_MS after its dispatch.
+    write(run('dispatched', source, clock));
+    view = { ok: true, out: JSON.stringify({ status: 'queued', conclusion: null }) };
+    clock += QUALIFY_RUN_MAX_MS - 1;
+    pass();
+    expect(logs.at(-1)).toBe('recovery qualification: run 123 queued');
+    clock += 1;
+    pass();
+    expect(logs.at(-2)).toBe('recovery qualification: run 123 queued 120 min after its dispatch; counted as failed');
+    expect(logs.at(-1)).toBe('recovery qualification: dispatched run 789 at ffffffffff for source cccccccccccc');
 });
