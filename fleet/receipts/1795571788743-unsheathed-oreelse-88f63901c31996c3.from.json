@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795571788743-unsheathed-oreelse-88f63901c31996c3",
  "account": "Unsheathed",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Coal",
  "requested": 20,
  "claim": "b2a6dd01-8eb0-47e3-9403-8735faaf0c99",
- "count": 0,
- "ok": false,
- "at": 1795571877099,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1795571898286,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795571883898
+ },
+ "logout": {
+  "attemptId": "1795571877108-0000003452-0000000001",
+  "at": 1795571898227,
+  "sha256": "d19e953f24b61a32ca8f1376fa81a6a3f60745e79aac08209800c5f69663ce96"
+ },
+ "screen": true
 }
