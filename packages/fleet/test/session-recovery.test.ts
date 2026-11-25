@@ -90,7 +90,7 @@ describe('fleet standalone session recovery', () => {
         const refuse = (claim: typeof trade | Omit<typeof trade, 'pid'>, alive: boolean, host = 'box-a') => assessRecoveryEligibility({
             proof, claim, end: { at: 1_700_000_002_000, reason: 'exit unknown' }, stopText: undefined, pidAlive: pid => alive && pid === 24460, host,
         });
-        // The Sausagefest case: a watchdog pass ran while its trade worker was logged in.
+        // A live trade worker of this host holds the claim: the refusal is not logged.
         expect(refuse(trade, true)).toEqual({ eligible: false, reason: 'claim is held by a trade order', log: false });
         expect(refuse(trade, false)).toEqual({ eligible: false, reason: 'claim is held by a trade order', log: true });
         expect(refuse(trade, true, 'box-b')).toEqual({ eligible: false, reason: 'claim is held by a trade order', log: true });
