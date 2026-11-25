@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795635109419,
+ "at": 1795635246559,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -158,28 +158,6 @@
    "role": "army"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "sapphire_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1637",
-    "BATCH_UNITS": "2"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1637",
-   "role": "army"
-  },
-  {
    "account": "Dipstick",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -197,22 +175,6 @@
    "resources": [
     "hill-giants"
    ]
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1975",
-   "role": "army"
   },
   {
    "account": "mmtha0205",
@@ -261,15 +223,17 @@
   },
   {
    "account": "PackageDeal",
-   "script": "scripts/generated/quest-prince.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=1973 QUANTITY=1 \"ITEM_NAME=Chocolate bar\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:prince",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:prince",
+   "goal": "campaign:haggis:item:1975",
    "role": "helper"
   },
   {
@@ -289,15 +253,15 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/generated/quest-merlin.ts",
+   "script": "scripts/generated/quest-prince.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:merlin",
+    "DEMAND_ID": "goal:quest_board:prince",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:merlin",
+   "goal": "goal:quest_board:prince",
    "role": "army"
   },
   {
@@ -361,20 +325,53 @@
    "role": "auto"
   },
   {
-   "account": "Shaftsinker",
+   "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=5 -- fletching shafts",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=30 -- ranged-gather",
-    "scripts/generated/quest-chompybird.ts DEMAND_ID=goal:quest_board:chompybird BATCH_UNITS=1 --"
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=3 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy fishingshop 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:BoneToPick BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:chompybird",
+   "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/generated/quest-merlin.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:merlin",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:merlin",
+   "role": "helper"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:FishAndChips",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:FishAndChips",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   }
  ],
  "army": [
@@ -387,6 +384,7 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "fatstack",
   "fingerblastr",
   "fingersmith",
@@ -394,6 +392,7 @@
   "kiltlifter",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
