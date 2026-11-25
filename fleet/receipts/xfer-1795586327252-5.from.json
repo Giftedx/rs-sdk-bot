@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795586327252-5",
  "account": "NabTheKnob",
  "partner": "Woodenstaff",
@@ -12,6 +12,12 @@
  "claim": "a8a9f71a-2826-4d4d-9f4a-7d342eee5c30",
  "count": 0,
  "ok": false,
- "at": 1795586755153,
- "detail": "trade claimed"
+ "at": 1795587227609,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795586755163-0000014584-0000000001",
+  "at": 1795587227594,
+  "sha256": "aeadcc4acece5948951e63a1bb3277a66f23a3ee61eec490e215207f9fdc7c92"
+ },
+ "screen": false
 }

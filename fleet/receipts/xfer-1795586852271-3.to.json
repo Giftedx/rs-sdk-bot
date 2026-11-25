@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795586852271-3",
+ "account": "Moneyshot",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Logs",
+ "requested": 5,
+ "claim": "a4d57b5e-011e-4a50-b638-12a52f638e08",
+ "count": 0,
+ "ok": false,
+ "at": 1795587251369,
+ "detail": "trade claimed"
+}

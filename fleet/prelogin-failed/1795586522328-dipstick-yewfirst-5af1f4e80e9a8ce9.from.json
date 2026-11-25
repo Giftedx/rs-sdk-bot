@@ -5,6 +5,6 @@
  "account": "Dipstick",
  "partner": "YewFirst",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795586737230,
+ "at": 1795587177186,
  "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795586327252-1",
+ "account": "UnderMyKilt",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "46f76b32-d1cf-4625-ad56-f2eaa3703b17",
+ "count": 0,
+ "ok": false,
+ "at": 1795587228044,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795587125883-0000012396-0000000001",
+  "at": 1795587228025,
+  "sha256": "44990c414a8ec31d0a8ae5b5f21f480c39ccce0a08c980ec52a8f8118cbd12fd"
+ },
+ "screen": false
+}

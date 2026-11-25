@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795586333268-3",
  "account": "TrouserSnake",
  "partner": "Hocuspokeus",
@@ -12,6 +12,12 @@
  "claim": "f16784d2-de62-4f2e-96d2-fc632fb2d51f",
  "count": 0,
  "ok": false,
- "at": 1795586938819,
- "detail": "trade claimed"
+ "at": 1795587233626,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795586938828-0000019764-0000000001",
+  "at": 1795587233613,
+  "sha256": "fdc32273694edf279a6314fbf09827ffa07a0ee8c0a5717e452e657d535a0b5a"
+ },
+ "screen": false
 }

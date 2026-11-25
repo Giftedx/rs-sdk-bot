@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795586832934-spitroaster-undermykilt-c507d2b7e5af426c",
+ "account": "Spitroaster",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 3,
+ "claim": "fcaade91-162b-4a0a-b71a-95a61ae9b02c",
+ "count": 0,
+ "ok": false,
+ "at": 1795587247487,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795587250276-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "TrouserSnake",
+  "item": "Vial of water",
+  "count": 1,
+  "itemId": 227,
+  "start": 1795587250276,
+  "end": 1795588150276,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

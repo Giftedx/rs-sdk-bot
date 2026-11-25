@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795586733669-1",
+ "account": "MineYourBiz",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "be7b3471-277d-4267-85ec-46e11105e0ac",
+ "count": 1,
+ "ok": true,
+ "at": 1795587188853,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795587167050-0000016736-0000000001",
+  "at": 1795587188839,
+  "sha256": "d11eaf9cce20f2a92bf2f5d50d67bc799a267594ae4f862aaa6c729c0abb0417"
+ },
+ "screen": true
+}
