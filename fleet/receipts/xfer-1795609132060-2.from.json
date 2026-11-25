@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795609132060-2",
+ "account": "Woodpecker",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "fb916c7e-24e8-4d1d-ab54-96eade976a17",
+ "count": 0,
+ "ok": false,
+ "at": 1795609521171,
+ "detail": "trade claimed"
+}
