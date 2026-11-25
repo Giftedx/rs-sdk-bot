@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795633705060,
+ "at": 1795634109490,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -66,7 +66,26 @@
    ],
    "env": {
     "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "28",
+    "BATCH_UNITS": "38",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:207",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:supply_chain:207",
+    "BATCH_UNITS": "38",
     "BANK_PACK": "1"
    },
    "enabled": true,
@@ -197,9 +216,24 @@
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p861 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:mineshafted:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:mineshafted:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
     "ROUNDS": "1"
@@ -207,22 +241,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts TARGET_LEVEL=25 TRAIN_SKILL=Agility -- agility order gnome 25",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
-    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
    "role": "army"
   },
   {
@@ -285,19 +303,6 @@
    "role": "army"
   },
   {
-   "account": "PackageDeal",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "helper"
-  },
-  {
    "account": "Shaftmaker",
    "script": "scripts/generated/quest-chompybird.ts",
    "args": [],
@@ -324,6 +329,19 @@
    "repeat": false,
    "goal": "campaign:haggis:item:101",
    "role": "army"
+  },
+  {
+   "account": "PackageDeal",
+   "script": "scripts/generated/quest-grandtree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
+   "role": "helper"
   },
   {
    "account": "PocketPool",
@@ -357,26 +375,6 @@
    "resources": [
     "ardougne-cows"
    ]
-  },
-  {
-   "account": "Porksword",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Porksword",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Porksword",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
   }
  ],
  "army": [
@@ -398,7 +396,6 @@
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "thefullmonty",
   "undermykilt",
   "yewfirst"
  ],
