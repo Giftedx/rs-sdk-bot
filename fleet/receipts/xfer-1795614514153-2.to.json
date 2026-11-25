@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795614514153-2",
+ "account": "Moneyshot",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 2,
+ "claim": "1cff7467-03c4-457d-b3fb-fd323cca45f8",
+ "count": 2,
+ "ok": true,
+ "at": 1795614796388,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795614795572
+ },
+ "logout": {
+  "attemptId": "1795614783645-0000027912-0000000001",
+  "at": 1795614796293,
+  "sha256": "8b739def2b3e5458a86f070ab81ed27db18c38f03137aa8445e07db80f3ccfee"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795614514153-2",
  "account": "Unsheathed",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Iron ore",
  "requested": 2,
  "claim": "7de85252-8274-4b67-a524-86194a8b2966",
- "count": 0,
- "ok": false,
- "at": 1795614598088,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795614794686,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795614603980
+ },
+ "logout": {
+  "attemptId": "1795614598097-0000029016-0000000001",
+  "at": 1795614794678,
+  "sha256": "ed73c5f140eac85fc01fc553efa31ccd49bcb2faaf955257c4c245edd4867419"
+ },
+ "screen": true
 }
