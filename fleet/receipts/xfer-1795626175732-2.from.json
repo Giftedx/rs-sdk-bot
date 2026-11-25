@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795626175732-2",
  "account": "Unsheathed",
  "partner": "Abracadickra",
@@ -12,6 +12,16 @@
  "claim": "c14e0734-8318-480f-81b3-824e8f32152a",
  "count": 0,
  "ok": false,
- "at": 1795626749841,
- "detail": "trade claimed"
+ "at": 1795627076186,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 2,
+  "at": 1795626755438
+ },
+ "logout": {
+  "attemptId": "1795626749864-0000031736-0000000001",
+  "at": 1795627076172,
+  "sha256": "29f3a35288779a28e9968e870b779462be1e0bf27a7bd5bf6ce85b54a1252b1d"
+ },
+ "screen": false
 }
