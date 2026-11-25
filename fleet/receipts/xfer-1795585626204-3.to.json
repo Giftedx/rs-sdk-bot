@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795585626204-3",
+ "account": "Fatstack",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "c56f3cb5-1e9b-4dc2-8a36-aa77f812fe69",
+ "count": 0,
+ "ok": false,
+ "at": 1795586234992,
+ "detail": "trade claimed"
+}

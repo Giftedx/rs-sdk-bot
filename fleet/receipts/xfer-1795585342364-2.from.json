@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795585342364-2",
  "account": "Hocuspokeus",
  "partner": "UnderMyKilt",
@@ -12,6 +12,16 @@
  "claim": "00766eed-1317-4e81-a279-353d01c094bb",
  "count": 0,
  "ok": false,
- "at": 1795586123050,
- "detail": "trade claimed"
+ "at": 1795586243271,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 2,
+  "at": 1795586130149
+ },
+ "logout": {
+  "attemptId": "1795586123060-0000012624-0000000001",
+  "at": 1795586243257,
+  "sha256": "a7f352a41691f2daa6e17df46a8e45d57e9895f35095e8aabe779d1d2324a830"
+ },
+ "screen": false
 }
