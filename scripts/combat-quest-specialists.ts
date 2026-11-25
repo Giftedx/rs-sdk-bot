@@ -35,6 +35,15 @@ export interface KitSpecItem {
 }
 
 export const DUELING_RING_IDS = [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566] as const;
+
+/** Prefer lowest remaining charges first so partially-used dueling rings are consumed before fresh ones. */
+export function pickBankDuelingRingId(bankItems: readonly { id: number; count: number }[]): number | null {
+    for (let i = DUELING_RING_IDS.length - 1; i >= 0; i--) {
+        const ringId = DUELING_RING_IDS[i]!;
+        if (bankItems.some(item => item.id === ringId && item.count > 0)) return ringId;
+    }
+    return null;
+}
 export const PRAYER_POT_IDS = [2434, 139, 141, 143] as const;
 export const SUPER_ENERGY_IDS = [3016, 3018, 3020, 3022] as const;
 
@@ -1031,9 +1040,35 @@ async function withdrawTankFood(s: Session, needed: number, stop: StopFn): Promi
     }
 }
 
+/** Fast Castle Wars + Camelot Keep return requires Magic 45 and a charged Ring of dueling. */
+export function canUseFastKeepRebank(magicLevel: number, hasDuelingRing: boolean): boolean {
+    return magicLevel >= 45 && hasDuelingRing;
+}
+
 async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
-    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays / Sharks, Camelot -> Lever.
+    // Fast path: teleport via Ring of dueling -> Castle Wars Chest, stock 1 Law + food, Camelot -> Lever.
+    // Overland fallback: walk to Ardougne North Bank -> stock food -> Lever (works at Magic 1 with 0 rings).
     const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
+    const hasWornRing = () => s.sdk.getEquipment().some(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
+    if (!canUseFastKeepRebank(skillInfo(s, 'Magic').baseLevel, hasInvRing() || hasWornRing())) {
+        const p0 = posOf(s);
+        if (!p0 || p0.level !== 0 || d8({ x: p0.worldX, z: p0.worldZ }, ARDY_NORTH_BANK) > 32) {
+            const world = await getWorld();
+            const r = await goTo(s, world, { ...ARDY_NORTH_BANK, level: 0 }, accountOf(s), {
+                planBudgetMs: 90_000,
+                legTimeoutTicks: 240,
+            });
+            if (!r.ok) throw Error(`walk to ardougne north bank failed: ${r.detail}`);
+        } else {
+            await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, stop, 'ardougne north bank');
+        }
+        await openFreshBank(s, stop);
+        const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
+        await withdrawTankFood(s, freeSlots, stop);
+        await closeBankClean(s, stop);
+        await pullArdougneLeverToWildy(s, stop);
+        return;
+    }
     if (!hasInvRing()) {
         const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
         if (wornRing) {
@@ -1045,8 +1080,11 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
     await walkWaypoints(s, [{ x: CASTLE_WARS_BANK.x, z: CASTLE_WARS_BANK.z, tol: 1 }], 40, stop, 'castle wars bank');
     await openFreshBank(s, stop);
     await depositIds(s, [...DUELING_RING_IDS], stop);
+    let withdrawnRingId: number | null = null;
     if (!s.sdk.getEquipment().some(e => (DUELING_RING_IDS as readonly number[]).includes(e.id))) {
-        await withdrawExactCount(s, 2552, 1, stop, 'Ring of dueling(8)');
+        withdrawnRingId = pickBankDuelingRingId(s.sdk.getState()?.bank?.items ?? []);
+        if (!withdrawnRingId) throw Error('missing banked Ring of dueling');
+        await withdrawExactCount(s, withdrawnRingId, 1, stop, 'Ring of dueling');
     }
     if (countById(s.sdk.getInventory(), 563) < 1) {
         await withdrawExactCount(s, 563, 1, stop, 'Law rune');
@@ -1054,8 +1092,8 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
     await withdrawTankFood(s, freeSlots, stop);
     await closeBankClean(s, stop);
-    if (s.sdk.getInventory().some(i => i.id === 2552)) {
-        await equipItemById(s, 2552, stop, 'Ring of dueling(8)');
+    if (withdrawnRingId && s.sdk.getInventory().some(i => i.id === withdrawnRingId)) {
+        await equipItemById(s, withdrawnRingId, stop, 'Ring of dueling');
     }
 
     for (let attempt = 0; attempt < 5 && !stop(); attempt++) {

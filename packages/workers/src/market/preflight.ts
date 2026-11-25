@@ -420,7 +420,10 @@ export const PROFILES: Record<string, ShopProfile> = {
         npc: /^zaff$/i,
         npcSpot: { x: 3203, z: 3433 },
         bankSpot: { x: 3185, z: 3436 },
-        items: [{ re: /^staff of fire$/i, buyPerTick: 1 }],
+        items: [
+            { re: /^staff of fire$/i, buyPerTick: 1 },
+            { re: /^staff of air$/i, buyPerTick: 1 },
+        ],
     },
     jukat: {
         npc: /^jakut$/i,
