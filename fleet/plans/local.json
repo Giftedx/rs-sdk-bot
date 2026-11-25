@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795626904719,
+ "at": 1795626921875,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -266,18 +266,18 @@
    "role": "army"
   },
   {
-   "account": "Pocketpython",
+   "account": "Swordswallow",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- ranged-camp"
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Swordswallow BATCH_UNITS=250 -- cannon"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
+   "goal": "goal:pk_army:Swordswallow",
    "role": "army"
   }
  ],
@@ -302,6 +302,7 @@
   "mmtha0205",
   "mmthv2350",
   "oreelse",
+  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
