@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795602790875-2",
  "account": "Unsheathed",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "8d372430-1d3e-49ff-93eb-0af11d5d04bb",
- "count": 0,
- "ok": false,
- "at": 1795603396553,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795603671594,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795603670870
+ },
+ "logout": {
+  "attemptId": "1795603396562-0000027060-0000000001",
+  "at": 1795603671584,
+  "sha256": "92948923a2638758db986e46fc2da3d2fcf2c0712a72b5f4abce3b4935fc62c0"
+ },
+ "screen": true
 }
