@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795624895083,
+ "at": 1795624980273,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,17 +60,27 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-33-p97 ITEM_ID=440 QUANTITY=33 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=33 -- smithing smelt 1500 iron"
+    "shop-buy",
+    "archeryshop2",
+    "3000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEM_ID": "44",
+    "ITEMS": "Rune arrowtips",
+    "MAX_ITEMS": "106",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "23200",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:44",
+    "BATCH_UNITS": "106"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2351",
+   "goal": "campaign:haggis:item:44",
    "role": "army"
   },
   {
@@ -155,27 +165,16 @@
   },
   {
    "account": "Abracadickra",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "archeryshop2",
-    "3000"
-   ],
+   "script": "scripts/magic-order.ts",
+   "args": [],
    "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "144",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "30800",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "144"
+    "TARGET_LEVEL": "25",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:44",
+   "goal": "goal:pk_army:Abracadickra",
    "role": "auto"
   },
   {
@@ -328,43 +327,24 @@
    "role": "army"
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=103 \"ITEM_NAME=Dragon bones\" -- loadout",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto"
-  },
-  {
    "account": "SporranBulge",
    "script": "scripts/aio-market.ts",
    "args": [
-    "shop-buy",
-    "clotheshop",
-    "3000"
+    "ge-buy"
    ],
    "env": {
-    "ITEM_ID": "1061",
-    "ITEMS": "Leather boots",
-    "MAX_ITEMS": "1",
+    "ORDER_KEY": "brain-2351-16-p224",
+    "ITEM_ID": "2351",
+    "QUANTITY": "16",
+    "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "FLOAT": "20000",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:1061",
-    "BATCH_UNITS": "1"
+    "LIMIT_PRICE": "224",
+    "DEMAND_ID": "campaign:haggis:item:2351",
+    "BATCH_UNITS": "16"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1061",
+   "goal": "campaign:haggis:item:2351",
    "role": "helper"
   },
   {
