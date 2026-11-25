@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795615678011-3",
  "account": "Hocuspokeus",
  "partner": "Woodenstaff",
@@ -12,6 +12,16 @@
  "claim": "d1c9198c-8ed4-4364-95c9-bd0b313aadc4",
  "count": 0,
  "ok": false,
- "at": 1795616172479,
- "detail": "trade claimed"
+ "at": 1795616578662,
+ "detail": "Error: order window ended during work",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795616172487-0000031396-0000000001",
+  "at": 1795616578652,
+  "sha256": "836aa724caf60113208c62216dbbfb3f0ada7f227b6ce28bb037d9849c28eea9"
+ },
+ "screen": true
 }
