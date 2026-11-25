@@ -35,6 +35,10 @@ export const READY_SPECIALIST_ACCOUNTS = [
     'SteelRod',
     'Mineshafted',
     'Polevaulter',
+    'HiltsDeep',
+    'RockSolid',
+    'BigSwinger',
+    'FullBlooded',
 ] as const;
 
 export type ReadySpecialistAccount = (typeof READY_SPECIALIST_ACCOUNTS)[number];
@@ -55,6 +59,7 @@ function getStackableSaveIds(): Set<number> {
         53, // Headless arrow
         313, // Fishing bait
         314, // Feather
+        881, // Barbed bolts
         884, // Iron arrow
         892, // Rune arrow
         995, // Coins
@@ -121,9 +126,50 @@ function smithingRunnerQueueSlice(runnerIdx: number, runnerCount: number): Pick<
 }
 
 interface SpecialistSupplierDef {
-    readonly script: 'scripts/aio-logistics.ts';
+    readonly script: 'scripts/aio-logistics.ts' | 'scripts/measure/specialist-combat-quests-cases.ts';
     readonly args: readonly string[];
+    readonly env?: Readonly<Record<string, string>>;
     readonly save: () => SaveConfig;
+}
+
+const PVP_COMPANION_GUARD_ENV: Readonly<Record<string, string>> = {
+    FLEE_GUARD: '0',
+    DEATH_RECOVERY: '0',
+    VALUE_GUARD: '0',
+    RANDOM_EVENTS: '0',
+};
+
+type CombatPvpMode = 'attack-pvp' | 'defence' | 'strength' | 'hp-pvp' | 'ranged-pvp-glory';
+
+function combatPvpSuppliers(mode: CombatPvpMode, rangedTank = false): readonly SpecialistSupplierDef[] {
+    const {
+        COMBAT_BENCH_MODES,
+        RANGED_TANK_SKILLS,
+        tankPostPresetConfig,
+        tankSupplierPresetConfig,
+    } = loadMod<typeof import('./specialist-combat-quests-cases')>('./specialist-combat-quests-cases');
+    const kit = COMBAT_BENCH_MODES[mode].kit;
+    const skills = rangedTank ? RANGED_TANK_SKILLS : undefined;
+    return [
+        {
+            script: 'scripts/measure/specialist-combat-quests-cases.ts',
+            args: ['--companion', '{ACTOR}', 'supplier-tank', mode, '1'],
+            env: PVP_COMPANION_GUARD_ENV,
+            save: () => tankSupplierPresetConfig(kit, skills),
+        },
+        {
+            script: 'scripts/measure/specialist-combat-quests-cases.ts',
+            args: ['--companion', '{ACTOR}', 'tank', mode, '0'],
+            env: PVP_COMPANION_GUARD_ENV,
+            save: () => tankPostPresetConfig(0, skills),
+        },
+        {
+            script: 'scripts/measure/specialist-combat-quests-cases.ts',
+            args: ['--companion', '{ACTOR}', 'tank', mode, '2'],
+            env: PVP_COMPANION_GUARD_ENV,
+            save: () => tankPostPresetConfig(2, skills),
+        },
+    ];
 }
 
 interface SpecialistSpecDefinition {
@@ -134,6 +180,7 @@ interface SpecialistSpecDefinition {
     readonly env: Readonly<Record<string, string>>;
     readonly supplier?: SpecialistSupplierDef;
     readonly suppliers?: () => readonly SpecialistSupplierDef[];
+    readonly defaultSeed?: number;
     readonly planTicks: number;
     readonly planSource: string;
     readonly targetCap: number;
@@ -230,22 +277,12 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         account: 'Shaftshooter',
         id: 'shaftshooter-ranged',
         script: 'scripts/ranged-specialist.ts',
-        env: { CAP: '5600', VARIANT: 'live' },
-        supplier: {
-            script: 'scripts/aio-logistics.ts',
-            args: ['specialist-supplier', '{ACTOR}', '--kit=ranged-live', '6000'],
-            save: () => {
-                const { RANGED_SPECIALIST_LIVE_TRADE1, RANGED_SPECIALIST_LIVE_TRADE2 } = loadMod<typeof import('../ranged-specialist')>('../ranged-specialist');
-                return {
-                    position: { x: 3223, z: 3222, level: 0 },
-                    inventory: expandKitToSave(RANGED_SPECIALIST_LIVE_TRADE1),
-                    bank: aggregateKitBank(RANGED_SPECIALIST_LIVE_TRADE2),
-                };
-            },
-        },
-        planTicks: 4660,
-        planSource: 'hosted-bench extra:ranged-specialist-live 4505-4774t (above targetCap 4379t vs #1 4469t; offline)',
-        targetCap: 4379,
+        env: { CAP: '2500', VARIANT: 'pvp-glory' },
+        suppliers: () => combatPvpSuppliers('ranged-pvp-glory', true),
+        defaultSeed: 7,
+        planTicks: 1575,
+        planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 1575t (<=1663t vs #1 1697t, 15-slot Glory/Yew shortbow/MSB Keep PvP)',
+        targetCap: 1663,
     },
     {
         account: 'PouchStuffed',
@@ -469,6 +506,50 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         planSource: '400ms rehearsal Polevaulter 5884t (hosted extra:specialist-agility 5795/5971/5931t; <=6031t vs #1 6155t)',
         targetCap: 6031,
     },
+    {
+        account: 'HiltsDeep',
+        id: 'hiltsdeep-attack',
+        script: 'scripts/attack-specialist.ts',
+        env: { CAP: '5000', VARIANT: 'pvp' },
+        suppliers: () => combatPvpSuppliers('attack-pvp'),
+        defaultSeed: 7,
+        planTicks: 2039,
+        planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2013t..2065t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        targetCap: 2554,
+    },
+    {
+        account: 'RockSolid',
+        id: 'rocksolid-defence',
+        script: 'scripts/defence-specialist.ts',
+        env: { CAP: '7500' },
+        suppliers: () => combatPvpSuppliers('defence'),
+        defaultSeed: 7,
+        planTicks: 2385,
+        planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2332t..2438t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        targetCap: 3937,
+    },
+    {
+        account: 'BigSwinger',
+        id: 'bigswinger-strength',
+        script: 'scripts/strength-specialist.ts',
+        env: { CAP: '6000' },
+        suppliers: () => combatPvpSuppliers('strength'),
+        defaultSeed: 7,
+        planTicks: 1994,
+        planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 1994t (<=3222t vs #1 3288t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        targetCap: 3222,
+    },
+    {
+        account: 'FullBlooded',
+        id: 'fullblooded-hitpoints',
+        script: 'scripts/hp-specialist.ts',
+        env: { CAP: '6000', HP_MODE: 'pvp' },
+        suppliers: () => combatPvpSuppliers('hp-pvp'),
+        defaultSeed: 7,
+        planTicks: 3856,
+        planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 3856t (<=5263t vs #1 5371t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
+        targetCap: 5263,
+    },
 ];
 
 const BY_ACCOUNT = new Map<string, SpecialistSpecDefinition>(
@@ -501,7 +582,7 @@ export function resolveSpecialistSegment(
         save: s.save(),
         script: s.script,
         args: [...s.args],
-        env: { ...SUPPLIER_GUARD_ENV },
+        env: s.env ? { ...SUPPLIER_GUARD_ENV, ...s.env } : { ...SUPPLIER_GUARD_ENV },
     });
     const seg: SpecialistSegmentSpec = {
         id: def.id,
@@ -699,7 +780,7 @@ async function runSingleSeedRehearsal(
     const exitCode = await spawn(
         ['bun', 'packages/practice/src/rehearse.ts', '--specialist', segFile, '--start', '--out', normOut],
         root,
-        seed !== undefined ? { SIM_SEED: String(seed) } : undefined,
+        seed !== undefined ? { SIM_SEED: String(seed), SIM_SEED_ANCHOR: '^$' } : undefined,
     );
     const summary = collectRehearsalSummary(outAbs, seg);
     const boardKey = Object.keys(seg.expect.skills ?? {})[0] ?? '';
@@ -751,7 +832,8 @@ export async function runHostedRehearsal(
 
     const spawn = opts.spawn ?? defaultSpawn;
     if (!parsed.seeds?.length) {
-        const res = await runSingleSeedRehearsal(root, seg, segFile, normOut, spawn, log);
+        const defaultSeed = BY_ACCOUNT.get(seg.specialist.toLowerCase())?.defaultSeed;
+        const res = await runSingleSeedRehearsal(root, seg, segFile, normOut, spawn, log, defaultSeed);
         return { exitCode: res.exitCode, seg, summary: res.summary };
     }
 
