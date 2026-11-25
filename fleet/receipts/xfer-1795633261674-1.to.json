@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795633261674-1",
  "account": "Dipstick",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "c2e02644-6403-4f41-bd7c-4fa04481bab5",
- "count": 0,
- "ok": false,
- "at": 1795633382099,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795633396302,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795633395536
+ },
+ "logout": {
+  "attemptId": "1795633382316-0000032060-0000000001",
+  "at": 1795633396284,
+  "sha256": "1aeccb6db95115c026fe59aa8d5729fcc1f7caea373a3cb6f989e2652e86fde7"
+ },
+ "screen": true
 }
