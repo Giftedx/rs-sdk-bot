@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795616643758-stirmypot-masterbaiter-b197f1c7692f1e74",
+ "account": "Masterbaiter",
+ "partner": "Stirmypot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 19,
+ "claim": "d32c018e-10b6-449d-983c-c26133cfc5f7",
+ "count": 19,
+ "ok": true,
+ "at": 1795617511378,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 20
+ },
+ "bank": {
+  "count": 19,
+  "at": 1795617510661
+ },
+ "logout": {
+  "attemptId": "1795617493815-0000027528-0000000001",
+  "at": 1795617511370,
+  "sha256": "e450469cc1ae3d3efcbd6d6f0d026f8de2c7558077b1a5bdb29ca92853315942"
+ },
+ "screen": true
+}
