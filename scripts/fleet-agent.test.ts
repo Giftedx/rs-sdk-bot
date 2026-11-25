@@ -1,9 +1,47 @@
 import {expect,test} from 'bun:test';
-import {existsSync,mkdirSync,mkdtempSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {closeSync,existsSync,mkdirSync,mkdtempSync,openSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {agentAlive,readAgentJobs,swarmBusy,syncResult,tradeEnvironment,tradeStop} from './fleet-agent';
+import {AGENT_LOG_DIRECT,agentAlive,agentDaemonEnv,agentLog,readAgentJobs,swarmBusy,syncResult,tradeEnvironment,tradeStop} from './fleet-agent';
 import {SWARM_STOP} from './swarm';
+
+test('a daemon agent writes each line to its log file and not also to the console; a foreground agent prints it',()=>{
+ const calls:string[]=[];
+ const io={append:(f:string,t:string)=>{calls.push(`append ${f} ${JSON.stringify(t)}`);},out:(l:string)=>{calls.push(`out ${l}`);},err:(t:string)=>{calls.push(`err ${JSON.stringify(t)}`);}};
+ const daemon=agentLog('/p/fleet-agent.log',true,io);
+ daemon('FLEET_AGENT sync RESULT ok');daemon('trade stderr','err');
+ expect(calls).toEqual(['append /p/fleet-agent.log "FLEET_AGENT sync RESULT ok\\n"','append /p/fleet-agent.log "trade stderr\\n"']);
+ calls.length=0;
+ const foreground=agentLog('/p/fleet-agent.log',false,io);
+ foreground('FLEET_AGENT start Fatstack order o1');foreground('trade stderr','err');
+ expect(calls).toEqual(['out FLEET_AGENT start Fatstack order o1','err "trade stderr\\n"']);
+ calls.length=0;
+ const refused=agentLog('/p/fleet-agent.log',true,{...io,append:()=>{throw new Error('EBUSY');}});
+ refused('FLEET_AGENT kept');
+ expect(calls).toEqual(['out FLEET_AGENT kept']);
+});
+
+test('the daemon child and its reload successors get the direct-log flag; the parent environment stays as it was',()=>{
+ const parent={FLEET_SIDE:'local'};
+ expect(agentDaemonEnv(parent)).toEqual({FLEET_SIDE:'local',[AGENT_LOG_DIRECT]:'1'});
+ expect(parent).toEqual({FLEET_SIDE:'local'});
+});
+
+test('a child whose stdout and stderr are the log file writes each line there once, with the flag and without it',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'fleet-agent-log-')),file=join(dir,'fleet-agent.log');
+ const code=`const {agentLog,AGENT_LOG_DIRECT}=await import(${JSON.stringify(join(import.meta.dir,'..','packages','fleet','src','fleet-agent.ts'))});
+const log=agentLog(${JSON.stringify(file)},process.env[AGENT_LOG_DIRECT]==='1');log('FLEET_AGENT one');log('FLEET_AGENT two','err');`;
+ const run=(env:NodeJS.ProcessEnv)=>{const fd=openSync(file,'a');try{return spawnSync(process.execPath,['-e',code],{stdio:['ignore',fd,fd],env,windowsHide:true,timeout:30_000});}finally{closeSync(fd);}};
+ try{
+  const without={...process.env};delete without[AGENT_LOG_DIRECT];
+  for(const env of [agentDaemonEnv(process.env),without]){
+   writeFileSync(file,'');
+   expect(run(env).status).toBe(0);
+   expect(readFileSync(file,'utf8').split(/\r?\n/).filter(Boolean)).toEqual(['FLEET_AGENT one','FLEET_AGENT two']);
+  }
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 
 test('agent refuses an unreadable custom plan instead of treating its accounts as idle',()=>{
  const dir=mkdtempSync(join(tmpdir(),'fleet-agent-plan-')),file=join(dir,'cloud.json');
