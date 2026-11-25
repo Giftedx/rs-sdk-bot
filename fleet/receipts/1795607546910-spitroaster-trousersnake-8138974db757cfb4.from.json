@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795607546910-spitroaster-trousersnake-8138974db757cfb4",
+ "account": "Spitroaster",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "ed3bc4a5-d001-4fa7-ba73-bc32a5ba0592",
+ "count": 0,
+ "ok": false,
+ "at": 1795607653982,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Shark",
+   "requested": 17,
+   "count": 0
+  }
+ ]
+}

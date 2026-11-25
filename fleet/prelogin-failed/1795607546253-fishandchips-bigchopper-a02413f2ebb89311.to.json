@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795607546253-fishandchips-bigchopper-a02413f2ebb89311",
+ "role": "to",
+ "account": "Bigchopper",
+ "partner": "FishAndChips",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795607662056,
+ "detail": "Error: fleet trade: reserved account"
+}
