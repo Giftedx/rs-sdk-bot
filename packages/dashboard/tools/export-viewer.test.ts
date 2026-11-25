@@ -1,10 +1,24 @@
 import { expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import vm from 'node:vm';
 import { VIEWER_FEATURES, VIEWER_MANIFEST_SHA256, checkViewerBundle, viewerEntry } from '../viewer';
-import { earlyCacheScript, hostedIndex, hostedScript, hostedStyle, nameHash } from './export-viewer';
+import { dropSourceMaps, earlyCacheScript, hostedIndex, hostedScript, hostedStyle, nameHash } from './export-viewer';
+
+test('the hosted viewer keeps no source map beside a script or a style', () => {
+    const viewer = mkdtempSync(join(tmpdir(), 'viewer-maps-'));
+    try {
+        for (const [dir, files] of [['js', ['main.1.js', 'main.1.js.map', '29.2.chunk.js.map']], ['css', ['main.3.css', 'main.3.css.map']]] as const) {
+            mkdirSync(join(viewer, 'static', dir), { recursive: true });
+            for (const f of files) writeFileSync(join(viewer, 'static', dir, f), '');
+        }
+        dropSourceMaps(viewer);
+        expect(readdirSync(join(viewer, 'static', 'js'))).toEqual(['main.1.js']);
+        expect(readdirSync(join(viewer, 'static', 'css'))).toEqual(['main.3.css']);
+    } finally { rmSync(viewer, { recursive: true, force: true }); }
+});
 
 test('the hosted viewer index loads relative files, the bridge first, and no service worker', () => {
     const html = hostedIndex('<!doctype html><html><head><script src="/coi-serviceworker.js"></script><link rel="icon" href="/favicon.ico"/><script defer="defer" src="/static/js/main.0123abcd.js"></script><link href="/static/css/main.4567cdef.css" rel="stylesheet"></head></html>');

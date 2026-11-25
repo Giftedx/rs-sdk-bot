@@ -44,6 +44,13 @@ export function hostedScript(main: boolean, text: string) {
     return text.replace(/\b([a-zA-Z_$][\w$]*)\.p="\/"/g, '$1.p=new URL("../../",self.location.href).pathname');
 }
 export const hostedStyle = (text: string) => text.replaceAll('url(/static/media/', 'url(../media/');
+// The hosted copy keeps no source maps: the build writes one beside each script and each style.
+export function dropSourceMaps(viewer: string) {
+    for (const dir of ['js', 'css']) {
+        const path = join(viewer, 'static', dir);
+        if (existsSync(path)) for (const f of readdirSync(path).filter(f => f.endsWith('.map'))) rmSync(join(path, f));
+    }
+}
 
 export function exportViewer(out: string, world: string, ownersFile: string | null) {
     const build = join(world, 'build'), caches = join(world, 'caches');
@@ -61,7 +68,7 @@ export function exportViewer(out: string, world: string, ownersFile: string | nu
     cpSync(join(build, 'static'), join(viewer, 'static'), { recursive: true });
     for (const f of readdirSync(join(viewer, 'static', 'js')).filter(f => f.endsWith('.js'))) writeFileSync(join(viewer, 'static', 'js', f), hostedScript(f === mainName, readFileSync(join(viewer, 'static', 'js', f), 'utf8')));
     for (const f of readdirSync(join(viewer, 'static', 'css')).filter(f => f.endsWith('.css'))) writeFileSync(join(viewer, 'static', 'css', f), hostedStyle(readFileSync(join(viewer, 'static', 'css', f), 'utf8')));
-    for (const f of readdirSync(join(viewer, 'static', 'js')).filter(f => f.endsWith('.map'))) rmSync(join(viewer, 'static', 'js', f));
+    dropSourceMaps(viewer);
     cpSync(caches, join(viewer, 'caches'), { recursive: true });
     writeFileSync(join(viewer, 'bridge.js'), viewerBridgeSource());
     cpSync(join(import.meta.dir, '..', 'client-viewer.css'), join(viewer, 'client-viewer.css'));
