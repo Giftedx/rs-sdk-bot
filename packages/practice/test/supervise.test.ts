@@ -50,7 +50,7 @@ test('Rune Mysteries qualification failures block instead of relogging an untrai
  expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
  expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
 });
-import { supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, isClaimAuthorityFault, isNoProgressFailure, isEntryRefusal, CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
+import { drainPause, supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, isClaimAuthorityFault, isNoProgressFailure, isEntryRefusal, CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
 
@@ -492,4 +492,28 @@ test('a crash with no RESULT line follows the same rules as a printed failure', 
     // A printed RESULT wins over a stray error line on stderr.
     const printed = await supervise({ run: async () => ({ stdout: 'RESULT ok done', stderr: 'error: late cleanup', exitCode: 0 }), stopped: () => false, pause: async () => {}, maxRestarts: 0 });
     expect(printed).toEqual({ reason: 'done', runs: 1 });
+});
+
+test('a waiting live update that drains the worker ends the job as release-paused instead of a restart', async () => {
+    const smithing = 'packages/workers/src/bank-artisan/smithing.ts';
+    let calls = 0, drain: string[] = [];
+    const lines: string[] = [];
+    const r = await supervise({
+        run: async () => { calls++; drain = [smithing, 'b.ts', 'c.ts']; return { stdout: 'RESULT fail walk', exitCode: 1 }; },
+        stopped: () => false, pause: async () => {}, maxRestarts: 20, log: l => lines.push(l), drained: () => drain,
+    });
+    expect(r).toEqual({ reason: 'release-paused', runs: 1 });
+    expect(calls).toBe(1);
+    expect(lines.at(-1)).toBe(`SUPERVISE pause: a waiting live update drains ${smithing}, b.ts and 1 more`);
+    // The first run is the swarm's own start, which the swarm already checks: the supervisor does not refuse it.
+    let first = 0;
+    const started = await supervise({ run: async () => { first++; return { stdout: 'RESULT ok', exitCode: 0 }; }, stopped: () => false, pause: async () => {}, maxRestarts: 0, drained: () => [smithing] });
+    expect(started).toEqual({ reason: 'done', runs: 1 });
+    expect(first).toBe(1);
+    // Nothing to drain: a failure restarts as before.
+    let again = 0;
+    const restarted = await supervise({ run: async () => (++again === 1 ? { stdout: 'RESULT fail walk', exitCode: 1 } : { stdout: 'RESULT ok', exitCode: 0 }), stopped: () => false, pause: async () => {}, maxRestarts: 5, drained: () => [] });
+    expect(restarted).toEqual({ reason: 'done', runs: 2 });
+    expect(drainPause(undefined)).toBeNull();
+    expect(drainPause([])).toBeNull();
 });

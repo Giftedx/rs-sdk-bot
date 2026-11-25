@@ -12,7 +12,8 @@ import { runtimeImports } from '../../../core/src/release-digest';
 // `rebase`: the merged text that the update writes after the move (rebasableDeliveryEdits).
 export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean; mergedDelivery?: boolean; rebase?: string };
 // `unknown`: the entry of the run gives no file here, so the files that the run loads are not known.
-export type LiveRun = { name: string; files: readonly string[]; unknown?: true };
+// `trade`: the run's worker is the trade worker (plan.ts TRADE_ENTRY).
+export type LiveRun = { name: string; files: readonly string[]; unknown?: true; trade?: true };
 // `vendorRelease`: the worker release files that the update changes through the SDK patch (vendorReleaseFiles).
 // `qualifications`: the running qualifications (`qualification <id> runs`); they hold only an update that changes a
 // file they can check (qualificationSource).

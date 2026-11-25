@@ -229,3 +229,13 @@ test('hostStopped honors stop files in .practice/live/ as well as root .practice
         rmSync(dir, { recursive: true, force: true });
     }
 });
+
+test('a waiting live update that drains the host ends its accounts as release-paused instead of a restart', async () => {
+    let calls = 0;
+    const r = await superviseHost(['a', 'b', 'c'], {
+        run: async () => { calls++; return { stdout: '[a] RESULT ok\n[b] RESULT fail walk\n[c] RESULT fail walk\n', exitCode: 1 }; },
+        stopped: () => false, pause: async () => { throw Error('must not retry'); }, maxRestarts: 5, drained: () => ['packages/workers/src/market/ge-buy.ts'],
+    });
+    expect(calls).toBe(1);
+    expect(r).toEqual({ ends: { a: 'done', b: 'release-paused', c: 'release-paused' }, runs: 1 });
+});
