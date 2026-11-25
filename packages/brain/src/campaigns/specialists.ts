@@ -245,9 +245,9 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
             supply(946, 'Knife', 1, 'Woodcutting'),
             supply(1359, 'Rune axe', 1, 'Woodcutting'),
             supply(1511, 'Logs', 1, 'Woodcutting'),
-            supply(1712, 'Amulet of glory(4)', 1, 'Woodcutting'),
             supply(1718, 'Holy symbol', 1, 'Woodcutting'),
-            supply(2434, 'Prayer potion(4)', 4, 'Woodcutting'),
+            supply(2434, 'Prayer potion(4)', 5, 'Woodcutting'),
+            supply(2552, 'Ring of dueling(8)', 1, 'Woodcutting'),
         ],
     },
     {

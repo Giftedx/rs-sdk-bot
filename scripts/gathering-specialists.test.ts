@@ -90,7 +90,7 @@ describe('gathering specialists supply & progression plans', () => {
 
         expect(fletchSlots).toBe(7);
         expect(fishSlots).toBeLessThanOrEqual(16);
-        expect(mineSlots).toBe(19);
+        expect(mineSlots).toBe(18);
         expect(thieveSlots).toBe(28);
         expect(MINING_SPECIALIST_SUPPLIES[OBJ_GAMES_8]).toBe(1);
         expect(THIEVING_PIZZAS).toBe(26);
@@ -193,6 +193,9 @@ describe('bench registration and catalog integration', () => {
             'woodcutting-live': WOODCUTTING_SPECIALIST_SUPPLIES,
             firemaking: FIREMAKING_SPECIALIST_SUPPLIES,
         } as const;
+        expect(expandSupplyInventory(WOODCUTTING_SPECIALIST_SUPPLIES).length).toBe(25);
+        expect(expandSupplyInventory(MINING_SPECIALIST_SUPPLIES).length).toBe(18);
+        expect(expandSupplyInventory(MINING_SPECIALIST_LIVE_SUPPLIES).length).toBe(18);
         expect(parseKitArg(['--kit=fletching-live'])).toBe('fletching-live');
         expect(resolveSupplierKitPlan('fletching-live').combined).toBe(FLETCHING_SPECIALIST_LIVE_KIT);
         for (const [skill, supplies] of Object.entries(suppliesBySkill) as [keyof typeof suppliesBySkill, Record<number, number>][]) {
