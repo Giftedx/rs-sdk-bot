@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795625175855-2",
+ "account": "Woodpecker",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 33,
+ "claim": "628c3ceb-c737-4cb3-8cee-55cec8aacb39",
+ "count": 0,
+ "ok": false,
+ "at": 1795625733023,
+ "detail": "Error: sender pack full: need 33 slots for Iron ore, 28 free",
+ "logout": {
+  "attemptId": "1795625722439-0000029600-0000000001",
+  "at": 1795625733008,
+  "sha256": "6d4b7f5821a865231932290d29a72091a722ad6d305522edcea0f65322554aec"
+ },
+ "screen": false
+}

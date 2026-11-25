@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795625183118-2",
+ "account": "CoinCock",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "b5543f74-1cd0-4e23-9bec-289bc055106f",
+ "count": 0,
+ "ok": false,
+ "at": 1795625713060,
+ "detail": "trade claimed"
+}
