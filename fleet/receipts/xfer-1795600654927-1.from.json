@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795600654927-1",
+ "account": "UnderMyKilt",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "fedb76f9-37c1-4e96-85db-52daa6bbd805",
+ "count": 0,
+ "ok": false,
+ "at": 1795600811444,
+ "detail": "trade claimed"
+}
