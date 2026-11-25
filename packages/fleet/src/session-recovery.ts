@@ -295,29 +295,40 @@ export type StandaloneRecoveryPassResult = {
 };
 
 // One pass at a time. A pass with several recoveries (about 70 s each) outlives the watchdog's five-minute interval, and
-// a second pass then meets the first one's repair lease and its recoveries. The second pass defers to the next one.
-export const recoveryPassFile = (root: string): string => join(liveRoot(root), 'session-recovery', 'pass.json');
+// a second pass then meets the first one's repair lease and its recoveries. Each pass writes its own record to this
+// folder (atomically, under its own name), then reads the others: a live pass ahead of it (earlier start, then lower
+// pid) makes it defer to the next one. Two passes that start together each see the other's record, so exactly one runs.
+// A record whose process is gone is removed; no pass removes a live one.
+export const recoveryPassDir = (root: string): string => join(liveRoot(root), 'session-recovery', 'passes');
+type PassRecord = { pid: number; at: number };
+export const passAhead = (other: PassRecord, mine: PassRecord): boolean => other.at < mine.at || (other.at === mine.at && other.pid < mine.pid);
 
 export async function runStandaloneRecoveryPass(opts: StandaloneRecoveryPassOptions = {}): Promise<StandaloneRecoveryPassResult> {
     if (opts.dry === true) return runOneRecoveryPass(opts);
     const root = resolve(opts.root ?? resolve(import.meta.dir, '../../..'));
     const log = opts.log ?? ((line: string) => console.log(`FLEET_RECOVERY ${line}`));
     const alive = opts.pidAlive ?? pidAlive;
-    const file = recoveryPassFile(root);
-    const blocked = (pid: number): StandaloneRecoveryPassResult => {
-        log(`deferred: recovery pass pid ${pid} still running`);
-        return { ok: true, dry: false, blockedByPass: pid, targets: [], recovered: [], failed: [], skipped: [] };
-    };
-    const held = readJson(file, null);
-    if (Number.isSafeInteger(held?.pid) && held.pid > 0 && held.pid !== process.pid
-        && savedProcessAlive(held.pid, Number.isFinite(held.at) ? held.at : 0, opts.processStarts, alive)) return blocked(held.pid);
-    mkdirSync(dirname(file), { recursive: true });
-    if (held !== null) rmSync(file, { force: true });
-    try { writeFileSync(file, JSON.stringify({ pid: process.pid, at: Date.now() }), { flag: 'wx' }); }
-    catch { return blocked(readJson(file, null)?.pid ?? 0); }
-    try { return await runOneRecoveryPass(opts); }
-    finally {
-        try { if (readJson(file, null)?.pid === process.pid) rmSync(file, { force: true }); } catch { /* the next pass reads a dead pid */ }
+    const dir = recoveryPassDir(root), mine: PassRecord = { pid: process.pid, at: Date.now() };
+    const own = join(dir, `${mine.pid}-${mine.at}.json`);
+    mkdirSync(dir, { recursive: true });
+    atomicJson(own, mine);
+    try {
+        let ahead: PassRecord | undefined;
+        for (const name of readdirSync(dir)) {
+            const path = join(dir, name);
+            if (!name.endsWith('.json') || path === own) continue;
+            const other = readJson(path, null);
+            if (!Number.isSafeInteger(other?.pid) || other.pid <= 0 || !Number.isFinite(other?.at)) continue;
+            if (!savedProcessAlive(other.pid, other.at, opts.processStarts, alive)) { rmSync(path, { force: true }); continue; }
+            if (passAhead(other, mine) && (!ahead || passAhead(other, ahead))) ahead = { pid: other.pid, at: other.at };
+        }
+        if (ahead) {
+            log(`deferred: recovery pass pid ${ahead.pid} still running`);
+            return { ok: true, dry: false, blockedByPass: ahead.pid, targets: [], recovered: [], failed: [], skipped: [] };
+        }
+        return await runOneRecoveryPass(opts);
+    } finally {
+        rmSync(own, { force: true });
     }
 }
 
