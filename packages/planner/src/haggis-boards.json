@@ -1396,6 +1396,22 @@
        }
       }
      }
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "label": "Enchant jewellery ladder to Magic 44 before 1-tick PvP relog Magic",
+      "train": {
+       "skill": "magic",
+       "toLevel": 44,
+       "xpPerTick": {
+        "floor": 585,
+        "realistic": 525,
+        "evidence": "CODE-READ",
+        "source": "enchant ladder to 44 (pvp-magic finishes 44 -> 80 at Deserted Keep)"
+       }
+      }
+     }
     }
    ],
    "at": "bank",
@@ -1404,6 +1420,47 @@
     "id": "magic-enchant",
     "role": "add"
    }
+  },
+  {
+   "id": "pvp-magic",
+   "label": "1-tick PvP relog Magic 44 -> 80 at Deserted Keep (5 tanks)",
+   "serves": [
+    "magic"
+   ],
+   "train": {
+    "skill": "magic",
+    "toLevel": 80,
+    "xpPerTick": {
+     "floor": 878.8,
+     "realistic": 878.8,
+     "evidence": "MEASURED",
+     "source": "hosted CI 45513849335 scripts/measure/haggis-stage-pvp-magic.ts combat44_80=282t (198 casts/relogs, 247,830 XP, 878.8 XP/t, Fire Bolt/Blast/Wave 44 -> 80 across 5 tanks)"
+    },
+    "side": {
+     "hitpoints": 0.33
+    }
+   },
+   "requires": [
+    "prayer-43",
+    "magic"
+   ],
+   "minLevel": {
+    "magic": 44
+   },
+   "lever": {
+    "id": "pvp-relog-combat",
+    "role": "add"
+   },
+   "evidence": "MEASURED",
+   "source": "hosted CI 45513849335 scripts/measure/haggis-stage-pvp-magic.ts combat44_80=282t (198 casts/relogs, 247,830 XP, 878.8 XP/t)",
+   "supplies": [
+    { "item": "fire rune", "count": 1000 },
+    { "item": "air rune", "count": 800 },
+    { "item": "chaos rune", "count": 120 },
+    { "item": "death rune", "count": 80 },
+    { "item": "blood rune", "count": 40 }
+   ],
+   "at": "deserted-keep-lever"
   },
   {
    "id": "magic-teleport",
@@ -1829,19 +1886,25 @@
       "supplies": [
        {
         "item": "rune essence",
-        "count": 5346
+        "count": 4671
        },
        {
         "item": "air talisman",
         "count": 1
        },
        {
-        "item": "body talisman",
+        "item": "nature talisman",
         "count": 1
        }
       ],
+      "ticks": {
+       "floor": 1384,
+       "realistic": 1384,
+       "evidence": "MEASURED",
+       "source": "Nature altar 44 -> 99 needs 156 packs of 27 essence (947,700 XP at MEASURED 6,075 XP/pack, hosted CI 45513853041 scripts/measure/haggis-stage-rc.ts nature=36,450/6), plus Air altar 1 -> 44 (17 packs, 57,375 XP) = 173 packs x MEASURED 8 ticks/pack (44485487430 tickTransfer)"
+      },
       "via": [
-       "body-ruins"
+       "nature-ruins"
       ]
      }
     }
@@ -2975,6 +3038,10 @@
    "requires": [
     "prayer-43"
    ],
+   "variant": {
+    "group": "att-unlock",
+    "option": "grind"
+   },
    "lever": {
     "id": "pvp-relog-combat",
     "role": "add"
@@ -2987,6 +3054,45 @@
     { "item": "black 2h sword", "itemId": 1313, "count": 1 },
     { "item": "mithril 2h sword", "itemId": 1315, "count": 1 },
     { "item": "adamant 2h sword", "itemId": 1317, "count": 1 }
+   ],
+   "at": "deserted-keep-lever"
+  },
+  {
+   "id": "str-top-vampire",
+   "label": "1-tick PvP relog Strength 1->99 at Deserted Keep (5 tanks, Attack via Vampire Slayer)",
+   "serves": [
+    "strength"
+   ],
+   "train": {
+    "skill": "strength",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 1049.9,
+     "realistic": 883.3,
+     "evidence": "MEASURED",
+     "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-strength seeds 7/8/9: 999,535/952=1049.9, 999,427/1024=976.0, 999,857/1132=883.3 XP/tick (Attack 40+, Rune 2h, Ultimate Strength, 5 Combat-75 tanks)"
+    },
+    "side": {
+     "hitpoints": 0.333
+    }
+   },
+   "requires": [
+    "vampire"
+   ],
+   "variant": {
+    "group": "att-unlock",
+    "option": "vampire"
+   },
+   "lever": {
+    "id": "pvp-relog-combat",
+    "role": "add"
+   },
+   "evidence": "MEASURED",
+   "source": "hosted-bench 44864025475 extra:overall-pvp-strength (Vampire Slayer Attack 68 unlocks Rune 2h)",
+   "supplies": [
+    { "item": "rune 2h sword", "itemId": 1319, "count": 1 },
+    { "item": "amulet of strength", "itemId": 1725, "count": 1 },
+    { "item": "climbing boots", "itemId": 3105, "count": 1 }
    ],
    "at": "deserted-keep-lever"
   },
@@ -3070,6 +3176,10 @@
      "set": {
       "label": "1-tick PvP relog Strength 1->99 at Deserted Keep (5 tanks)",
       "at": "deserted-keep-lever",
+      "variant": {
+       "group": "att-unlock",
+       "option": "grind"
+      },
       "requires": [
        "att-40"
       ],
@@ -3165,7 +3275,8 @@
       "label": "1-tick PvP relog Attack 40->99 at Deserted Keep (5 tanks)",
       "at": "deserted-keep-lever",
       "requires": [
-       "str-top"
+       "str-top",
+       "str-top-vampire"
       ],
       "train": {
        "skill": "attack",
@@ -4381,10 +4492,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 285,
-    "realistic": 285,
+    "floor": 310,
+    "realistic": 310,
     "evidence": "MEASURED",
-    "source": "hosted CI 45510045357 scripts/measure/haggis-stage-fast.ts vampire10hp=285 (10 HP, Attack 1, Protect from Melee, Fire Wave): 120,625 Attack XP, 3 QP"
+    "source": "hosted CI 45512262278 scripts/measure/haggis-stage-fast.ts vampireBolt=310 (10 HP, Attack 1, Protect from Melee, Fire Bolt at Magic 44, Sharks+Pray pot): 120,625 Attack XP (Attack 68), 3 QP"
    },
    "xp": {
     "attack": 120625
@@ -4397,10 +4508,10 @@
    ],
    "minLevel": {
     "prayer": 43,
-    "magic": 75
+    "magic": 35
    },
    "evidence": "MEASURED",
-   "source": "hosted CI 45510045357 scripts/measure/haggis-stage-fast.ts vampire10hp=285 (10 HP, Attack 1, Protect from Melee, Fire Wave): 120,625 Attack XP, 3 QP",
+   "source": "hosted CI 45512262278 scripts/measure/haggis-stage-fast.ts vampireBolt=310 (10 HP, Attack 1, Protect from Melee, Fire Bolt): 120,625 Attack XP, 3 QP",
    "supplies": [
     { "item": "beer", "count": 1 },
     { "item": "hammer", "count": 1 },

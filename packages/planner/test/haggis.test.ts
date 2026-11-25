@@ -33,24 +33,17 @@ test.each([
 });
 
 test('selected runecraft route supplies enough full essence packs for 99', () => {
-    const bodySupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });
-    const natureSupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(), disable: new Set(['spiders-combat']) });
+    const activeSupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });
+    const legacySupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(), disable: new Set(['spiders-combat', 'rival-altar-room-rc']) });
     let natureXp = 0, natureUsed = 0;
     while (natureXp < xpForLevel(99)) {
         natureXp += 27 * (natureXp < xpForLevel(44) ? 125 : 225);
         natureUsed += 27;
     }
-    let bodyXp = 0, bodyUsed = 0;
-    while (bodyXp < xpForLevel(99)) {
-        bodyXp += 27 * (bodyXp < xpForLevel(20) ? 125 : 187.5);
-        bodyUsed += 27;
-    }
-    expect(bodySupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(bodyUsed);
-    expect(bodySupplies).toContainEqual({ item: 'air talisman', count: 1 });
-    expect(bodySupplies).toContainEqual({ item: 'body talisman', count: 1 });
-    expect(natureSupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(natureUsed);
-    expect(natureSupplies).toContainEqual({ item: 'air talisman', count: 1 });
-    expect(natureSupplies).toContainEqual({ item: 'nature talisman', count: 1 });
+    expect(activeSupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(natureUsed);
+    expect(activeSupplies).toContainEqual({ item: 'air talisman', count: 1 });
+    expect(activeSupplies).toContainEqual({ item: 'nature talisman', count: 1 });
+    expect(legacySupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThan(0);
 });
 
 const clock = (id: Board['id'], deadline: number): Board => ({ id, label: id, rule: { kind: 'clock', deadline } });
