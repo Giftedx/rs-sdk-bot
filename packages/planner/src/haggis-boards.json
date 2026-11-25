@@ -3851,10 +3851,10 @@
     "skill": "fletching",
     "toLevel": 10,
     "xpPerTick": {
-     "floor": 500,
-     "realistic": 500,
-     "evidence": "CODE-READ",
-     "source": "1 arrow fletching set (19.5*25=487.5 XP per 15 headless+tips) + 1 bronze/iron fletch gives 980 XP = level 10 in 2 ticks"
+     "floor": 1007,
+     "realistic": 1007,
+     "evidence": "MEASURED",
+     "source": "hosted-bench 45554626073 extra:haggis-fletch-10 seeds 7/8/9: 1, 1, 1 ticks (1,007 XP to Fletching 10 via headless + bronze arrowtips)"
     }
    },
    "requires": [
@@ -3864,8 +3864,8 @@
     "group": "agility-route",
     "option": "tourist-trap"
    },
-   "evidence": "CODE-READ",
-   "source": "desertrescue_journal.rs2:9 Fletching 10 gate (980 XP on curve.ts)",
+   "evidence": "MEASURED",
+   "source": "hosted-bench 45554626073 extra:haggis-fletch-10 seeds 7/8/9: 1t (1,007 XP); desertrescue_journal.rs2:9 Fletching 10 gate",
    "at": "anywhere"
   },
   {
@@ -3878,10 +3878,10 @@
     "skill": "magic",
     "toLevel": 43,
     "xpPerTick": {
-     "floor": 200.9,
-     "realistic": 184.0,
-     "evidence": "ESTIMATE",
-     "source": "33 casts 1 -> 43 (5 Wind Strike, 12 Sapphire Enchant, 16 Emerald Enchant = 19,684 XP on curve.ts) at MEASURED 2.96 / 3.23 ticks/cast = 98 / 107 ticks"
+     "floor": 180.6,
+     "realistic": 177.4,
+     "evidence": "MEASURED",
+     "source": "hosted-bench 45554626073 seeds 7/8/9: extra:haggis-magic-wind-1-7 = 20, 22, 20 ticks + extra:haggis-magic-enchant-7-43 = 89, 89, 89 ticks (12 Sapphire + 15 Emerald enchants at Draynor bank, 19,125 XP) -> 109 / 111 ticks (19,684 XP / 109 = 180.6 floor, / 111 = 177.4 realistic)"
     }
    },
    "requires": [
@@ -3891,8 +3891,8 @@
     "group": "agility-route",
     "option": "tourist-trap"
    },
-   "evidence": "ESTIMATE",
-   "source": "33 casts 1 -> 43 at MEASURED 2.96 / 3.23 ticks/cast",
+   "evidence": "MEASURED",
+   "source": "hosted-bench 45554626073 extra:haggis-magic-wind-1-7 (20/22/20t) + extra:haggis-magic-enchant-7-43 (89/89/89t) = 109 / 111 ticks",
    "at": "bank"
   },
   {
@@ -3905,13 +3905,13 @@
     "skill": "smithing",
     "toLevel": 20,
     "xpPerTick": {
-     "floor": 64.7,
-     "realistic": 64.7,
-     "evidence": "CODE-READ",
-     "source": "12 bronze bars (156.25 XP each) + 4 iron bars (312.5 XP each) = 16 superheat casts (3,125 Smithing XP > 3,105 level 20 + 21,200 Magic XP -> lvl 52) at p_delay(1) = 3 ticks/cast = 48 ticks at bank (superheat.rs2:67)"
+     "floor": 47.85,
+     "realistic": 47.85,
+     "evidence": "MEASURED",
+     "source": "hosted-bench 45554626073 extra:haggis-smith-20 seeds 7/8/9: 65, 65, 65 ticks at Draynor bank (12 bronze + 4 iron superheat casts = 3,110 Smithing XP -> lvl 20, 21,200 Magic XP -> lvl 53)"
     },
     "side": {
-     "magic": 6.784
+     "magic": 6.817
     }
    },
    "requires": [
@@ -3924,8 +3924,8 @@
     "group": "agility-route",
     "option": "tourist-trap"
    },
-   "evidence": "CODE-READ",
-   "source": "desertrescue_journal.rs2:14 Smithing 20 + superheat.rs2:67",
+   "evidence": "MEASURED",
+   "source": "hosted-bench 45554626073 extra:haggis-smith-20 seeds 7/8/9: 65t (3,110 Smithing XP, 21,200 Magic XP); desertrescue_journal.rs2:14 Smithing 20",
    "at": "bank"
   },
   {
