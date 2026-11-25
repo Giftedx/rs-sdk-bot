@@ -6,7 +6,7 @@
 // the world feed (on the bench, the gang sessions in place of the feed, as FOLLOW=1 does).
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { writeAtomicFile } from '../../../core/src/atomic-file';
-import { wildernessLevel } from '../../../core/src/prayer-guard/threats';
+import { wildernessLevel } from '../../../core/src/prayer-guard';
 import { waitTicks, type TickSource } from '../../../core/src/ticks';
 
 export type GangStatus = 'dead' | 'present' | 'away';

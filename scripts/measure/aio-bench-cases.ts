@@ -428,7 +428,7 @@ const escortCase = (key: string, n: number, stand: number, args: string[] = []):
   return {key, engineEnv: base.engineEnv, script: 'scripts/measure/pk-squad-escort.ts', preset: 'fresh_lumbridge', presetConfig: ESCORT_WALKER, pass: escortPass,
     output: /\benteredAt=(\d+)/, timeoutMs: 600_000, companions: members.map((m, i) => ({suffix: letters[i]!, preset: m.preset, presetConfig: m.presetConfig})),
     scriptArgs: [...letters.map(l => `{bot:${l}}`), ...base.scriptArgs.filter(a => !/^\{bot:/.test(a) && a !== 'squad' && !/^(MAX_MINUTES|STALL_TICKS)=/.test(a)),
-      'MAX_MINUTES=20', 'STALL_TICKS=0', `ESCORT_WALK_TICKS=${stand}`, 'ESCORT_WAIT_TICKS=1500', ...args]};
+      'MAX_MINUTES=25', 'STALL_TICKS=0', `ESCORT_WALK_TICKS=${stand}`, 'ESCORT_WAIT_TICKS=1500', ...args]};
 };
 // A change of the pack of the first `members` of ours in a clone squad case (all by default): lobsters for the sharks
 // (the fleet holds lobsters), or no bow and no arrows (an account with an unstrung bow).
@@ -1408,8 +1408,9 @@ return [
   // snare runes (rune), dragonhide (dhide).
   ...([3, 4, 5, 6] as const).flatMap(n => ([['chainbind', 'live-walker-iron-rune-chain-bind'], ['chainbare', 'live-walker-iron-rune-chain-bare'], ['rune', 'live-walker-iron-snare-rune-nopot'], ['dhide', 'tribrid-snare-dhide']] as const)
     .map(([tag, kit]) => cloneSquad(`extra:clone-squad-${n}-${tag}-x1`, kit, n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']))),
-  // The escort hold of the climb's winner (five of ours) and one walker to the Keep post.
-  escortCase('extra:escort-keep-5-x1', 5, 300),
+  // The escort hold of the climb's winner (five of ours) and one walker to the Keep post for 764 ticks, the ticks that the
+  // Defence route spends in the gang's range at the Keep.
+  escortCase('extra:escort-keep-5-x1', 5, 764),
   // Wave A scaled maxed tribrid benches (4, 6, 8, 10, 12, 16) vs full per-clone Goondelf, Ligma, Sugma (0 deaths required).
   ...([4, 6, 8, 10, 12, 16] as const).map(n =>
     cloneTribridSquad(`extra:clone-tribrid-${n}-x1`, 'tribrid-snare', n, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
