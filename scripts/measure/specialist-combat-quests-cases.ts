@@ -11,14 +11,13 @@ import { ATTACK_PVP_SPECIALIST_KIT } from '../attack-specialist';
 import {
     DEFENCE_SPECIALIST_KIT,
     HP_SPECIALIST_KIT,
-    MELEE_PVP_BOOST_KIT,
     SPECIALIST_TARGETS,
     STRENGTH_SPECIALIST_KIT,
     runCompanionRole,
     type KitSpecItem,
 } from '../combat-quest-specialists';
 import { HITPOINTS_PVP_SPECIALIST_KIT } from '../hp-specialist';
-import { RANGED_PVP_BOOST_KIT, RANGED_PVP_SPECIALIST_KIT } from '../ranged-specialist';
+import { RANGED_PVP_GLORY_KIT, RANGED_PVP_SPECIALIST_KIT } from '../ranged-specialist';
 import type { BenchCase } from './bench-case-types';
 
 const ROOT = resolve(import.meta.dir, '..', '..');
@@ -51,6 +50,17 @@ const TANK_SKILLS = {
     Ranged: 99,
 } as const;
 
+// Ranged PvP starts at CB 8 (Ranged 1, HP 10, Prayer 43) in Wildy 51, so tanks stay <= CB 59 (CB 58 = 1.05x XP multiplier).
+export const RANGED_TANK_SKILLS = {
+    Attack: 52,
+    Strength: 52,
+    Defence: 1,
+    Hitpoints: 99,
+    Prayer: 1,
+    Magic: 45,
+    Ranged: 1,
+} as const;
+
 const TANK_BANK = [
     { id: 563, count: 100 },
     { id: 2552, count: 50 },
@@ -67,20 +77,23 @@ export function supplierPresetConfig(kit: readonly KitSpecItem[]): SaveConfig {
     };
 }
 
-export function tankSupplierPresetConfig(kit: readonly KitSpecItem[]): SaveConfig {
+export function tankSupplierPresetConfig(
+    kit: readonly KitSpecItem[],
+    skills: SaveConfig['skills'] = { ...TANK_SKILLS },
+): SaveConfig {
     return {
         position: { x: 3222, z: 3222, level: 0 },
-        skills: { ...TANK_SKILLS },
+        skills: { ...skills },
         inventory: kitToSaveInventory(kit),
         equipment: [{ id: 1381, count: 1, slot: 3 }, { id: 2552, count: 1, slot: 12 }],
         bank: [...TANK_BANK],
     };
 }
 
-export function tankPostPresetConfig(offsetX = 0): SaveConfig {
+export function tankPostPresetConfig(offsetX = 0, skills: SaveConfig['skills'] = { ...TANK_SKILLS }): SaveConfig {
     return {
         position: offsetX === 2 ? { x: 3154, z: 3923, level: 0 } : { x: 3154, z: 3924, level: 0 },
-        skills: { ...TANK_SKILLS },
+        skills: { ...skills },
         inventory: Array.from({ length: 28 }, () => ({ id: 391, count: 1 })),
         equipment: [{ id: 1381, count: 1, slot: 3 }, { id: 2552, count: 1, slot: 12 }],
         bank: [...TANK_BANK],
@@ -90,15 +103,11 @@ export function tankPostPresetConfig(offsetX = 0): SaveConfig {
 export type CombatBenchMode =
     | 'hp'
     | 'hp-pvp'
-    | 'hp-pvp-boost'
     | 'attack-pvp'
-    | 'attack-pvp-boost'
     | 'strength'
-    | 'strength-boost'
     | 'defence'
-    | 'defence-boost'
     | 'ranged-pvp'
-    | 'ranged-pvp-boost';
+    | 'ranged-pvp-glory';
 
 interface CombatModeSpec {
     readonly script: string;
@@ -110,15 +119,11 @@ interface CombatModeSpec {
 export const COMBAT_BENCH_MODES: Readonly<Record<CombatBenchMode, CombatModeSpec>> = {
     hp: { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: HP_SPECIALIST_KIT, env: {} },
     'hp-pvp': { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: HITPOINTS_PVP_SPECIALIST_KIT, env: { HP_MODE: 'pvp' } },
-    'hp-pvp-boost': { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: MELEE_PVP_BOOST_KIT, env: { HP_MODE: 'pvp', BOOST_POTS: '1' } },
     'attack-pvp': { script: 'scripts/attack-specialist.ts', board: 'attack', kit: ATTACK_PVP_SPECIALIST_KIT, env: { VARIANT: 'pvp' } },
-    'attack-pvp-boost': { script: 'scripts/attack-specialist.ts', board: 'attack', kit: MELEE_PVP_BOOST_KIT, env: { VARIANT: 'pvp', BOOST_POTS: '1' } },
     strength: { script: 'scripts/strength-specialist.ts', board: 'strength', kit: STRENGTH_SPECIALIST_KIT, env: {} },
-    'strength-boost': { script: 'scripts/strength-specialist.ts', board: 'strength', kit: MELEE_PVP_BOOST_KIT, env: { BOOST_POTS: '1' } },
     defence: { script: 'scripts/defence-specialist.ts', board: 'defence', kit: DEFENCE_SPECIALIST_KIT, env: {} },
-    'defence-boost': { script: 'scripts/defence-specialist.ts', board: 'defence', kit: MELEE_PVP_BOOST_KIT, env: { BOOST_POTS: '1' } },
     'ranged-pvp': { script: 'scripts/ranged-specialist.ts', board: 'ranged', kit: RANGED_PVP_SPECIALIST_KIT, env: { VARIANT: 'pvp' } },
-    'ranged-pvp-boost': { script: 'scripts/ranged-specialist.ts', board: 'ranged', kit: RANGED_PVP_BOOST_KIT, env: { VARIANT: 'pvp-boost', BOOST_POTS: '1' } },
+    'ranged-pvp-glory': { script: 'scripts/ranged-specialist.ts', board: 'ranged', kit: RANGED_PVP_GLORY_KIT, env: { VARIANT: 'pvp-glory' } },
 };
 
 const keepPvpCase = (key: string, mode: CombatBenchMode, statRe: RegExp, targetTicks: number): BenchCase => ({
@@ -150,11 +155,7 @@ export const SPECIALIST_COMBAT_QUESTS_CASES: BenchCase[] = [
     keepPvpCase('fighter:specialist-strength', 'strength', /strength=99\b/, SPECIALIST_TARGETS.strength.targetTicks),
     keepPvpCase('fighter:specialist-defence', 'defence', /defence=99\b/, SPECIALIST_TARGETS.defence.targetTicks),
     keepPvpCase('extra:specialist-attack-pvp', 'attack-pvp', /attack=99\b/, 2554),
-    keepPvpCase('extra:specialist-attack-pvp-boost', 'attack-pvp-boost', /attack=99\b/, 2554),
-    keepPvpCase('extra:specialist-strength-boost', 'strength-boost', /strength=99\b/, SPECIALIST_TARGETS.strength.targetTicks),
-    keepPvpCase('extra:specialist-defence-boost', 'defence-boost', /defence=99\b/, SPECIALIST_TARGETS.defence.targetTicks),
     keepPvpCase('extra:specialist-hp-pvp', 'hp-pvp', /hitpoints=99\b/, 5263),
-    keepPvpCase('extra:specialist-hp-pvp-boost', 'hp-pvp-boost', /hitpoints=99\b/, 5263),
 ];
 
 async function pumpPrefixed(

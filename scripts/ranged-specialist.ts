@@ -64,7 +64,7 @@ export {
     type KitSpecItem,
 };
 
-export type RangedKitVariant = 'knives' | 'msb' | 'live' | 'pvp' | 'pvp-boost';
+export type RangedKitVariant = 'knives' | 'msb' | 'live' | 'pvp' | 'pvp-glory';
 
 // 25 slots exact: single-trade Keep 1-tick PvP relog kit (Crossbow + Barbed bolts 1->49, MSB + Rune arrows 50->99, Def-1 BiS; infinite run enabled).
 export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
@@ -85,15 +85,14 @@ export const RANGED_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
-// 26 slots exact: Amulet of glory(4) (+10 Ranged atk) + 1x Ranging potion(4) scheduled across 1/25/50/75.
-export const RANGED_PVP_BOOST_KIT: readonly KitSpecItem[] = [
+// 25 slots exact: Amulet of glory(4) (+10 Ranged atk) in place of Amulet of accuracy (+4).
+export const RANGED_PVP_GLORY_KIT: readonly KitSpecItem[] = [
     ...RANGED_PVP_SPECIALIST_KIT.filter(item => item.id !== 1478),
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
-    { id: 2444, name: 'Ranging potion(4)', count: 1, stackable: false },
 ] as const;
 
 export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
-    if (variant === 'pvp-boost') return { trade1: RANGED_PVP_BOOST_KIT, trade2: [] };
+    if (variant === 'pvp-glory') return { trade1: RANGED_PVP_GLORY_KIT, trade2: [] };
     if (variant === 'pvp') return { trade1: RANGED_PVP_SPECIALIST_KIT, trade2: [] };
     if (variant === 'msb') return { trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 };
     if (variant === 'live') return { trade1: RANGED_SPECIALIST_LIVE_TRADE1, trade2: RANGED_SPECIALIST_LIVE_TRADE2 };
@@ -101,7 +100,7 @@ export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: r
 }
 
 export function variantKit(variant: RangedKitVariant = 'knives'): readonly KitSpecItem[] {
-    if (variant === 'pvp-boost') return RANGED_PVP_BOOST_KIT;
+    if (variant === 'pvp-glory') return RANGED_PVP_GLORY_KIT;
     if (variant === 'pvp') return RANGED_PVP_SPECIALIST_KIT;
     if (variant === 'msb') return RANGED_SPECIALIST_MSB_KIT;
     if (variant === 'live') return RANGED_SPECIALIST_LIVE_KIT;
@@ -1193,36 +1192,21 @@ export function selectRangedPvpUpgradeIds(
     return want.filter(id => held.has(id) && !equipped.has(id));
 }
 
-export function shouldDrinkRangedPvpBoost(baseLevel: number, curLevel: number, dosesLeft: number): boolean {
-    if (dosesLeft <= 0) return false;
-    if (dosesLeft >= 4) return curLevel <= baseLevel;
-    if (dosesLeft === 3) return baseLevel >= 25 && curLevel <= baseLevel;
-    if (dosesLeft === 2) return baseLevel >= 50 && curLevel <= baseLevel + 2;
-    return baseLevel >= 75 && curLevel <= baseLevel + 4;
-}
-
 async function ensureRangedPvpGear(sess: Session): Promise<void> {
-    const sk = skillInfo(sess, 'Ranged');
-    const ranged = sk.baseLevel;
+    const ranged = skillInfo(sess, 'Ranged').baseLevel;
     const inv = sess.sdk.getInventory() as InvItem[];
     const worn = sess.sdk.getEquipment() as WornItem[];
-    const rangePot = inv.find(i => ITEM_IDS.rangingPot.includes(i.id));
-    const dosesLeft = totalDoses(inv, ITEM_IDS.rangingPot);
-    const needBoost = !!rangePot && shouldDrinkRangedPvpBoost(ranged, sk.level, dosesLeft);
-    const maxEquips = needBoost ? 2 : 3;
-    // Cap actions per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
-    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, maxEquips);
-    const ops: Promise<unknown>[] = batch.map(id => {
-        const item = inv.find(i => i.id === id);
-        if (!item || item.slot === undefined) return Promise.resolve();
-        const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
-        return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
-    });
-    if (needBoost && rangePot && rangePot.slot !== undefined) {
-        const op = (rangePot.optionsWithIndex ?? []).find(o => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
-        ops.push(sess.direct({ type: 'useInventoryItem', slot: rangePot.slot, optionIndex: op, reason: 'SDK' }));
-    }
-    if (ops.length > 0) await Promise.all(ops);
+    // Cap at 3 equips per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
+    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, 3);
+    if (batch.length === 0) return;
+    await Promise.all(
+        batch.map(id => {
+            const item = inv.find(i => i.id === id);
+            if (!item || item.slot === undefined) return Promise.resolve();
+            const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+            return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+        }),
+    );
 }
 
 async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: string, CAP: number): Promise<void> {
@@ -1269,11 +1253,11 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
             : [...new Set((process.env.PRACTICE_TANKS ?? process.env.TANKS ?? rawSuppliers).split(',').map(x => x.trim()).filter(Boolean))];
         if (tankNames.length === 0) throw Error('missing TANKS / PRACTICE_TANKS for Ranged PvP mode');
 
-        const useBoost = opts.variant === 'pvp-boost' || process.env.BOOST_POTS === '1';
-        const kit = useBoost ? RANGED_PVP_BOOST_KIT : RANGED_PVP_SPECIALIST_KIT;
-        const neckId = useBoost ? 1712 : 1478;
+        const useGlory = opts.variant === 'pvp-glory' || process.env.RANGED_GLORY === '1';
+        const kit = useGlory ? RANGED_PVP_GLORY_KIT : RANGED_PVP_SPECIALIST_KIT;
+        const neckId = useGlory ? 1712 : 1478;
 
-        milestone('start', `variant=pvp${useBoost ? ' boost=1' : ''}`);
+        milestone('start', `variant=pvp${useGlory ? ' glory=1' : ''}`);
         await leaveRuneStarter(s, stop);
         if (onStarterIsland(posOf(s)) || posOf(s)?.level !== 0) {
             throw Error('still on Tutorial Island after leaveRuneStarter');
@@ -1372,8 +1356,8 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
 
     const CAP = opts.cap ?? Number(process.env.CAP ?? 4800);
     const variantRaw = opts.variant ?? process.env.VARIANT;
-    const variant: RangedKitVariant = variantRaw === 'pvp-boost' || (variantRaw === 'pvp' && process.env.BOOST_POTS === '1')
-        ? 'pvp-boost'
+    const variant: RangedKitVariant = variantRaw === 'pvp-glory' || (variantRaw === 'pvp' && process.env.RANGED_GLORY === '1')
+        ? 'pvp-glory'
         : variantRaw === 'pvp'
           ? 'pvp'
           : variantRaw === 'msb'
@@ -1382,7 +1366,7 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
               ? 'live'
               : 'knives';
     const root = resolve(import.meta.dir, '..');
-    if (variant === 'pvp' || variant === 'pvp-boost') {
+    if (variant === 'pvp' || variant === 'pvp-glory') {
         await runRangedPvpSpecialist(opts, root, CAP);
         return;
     }
@@ -1553,7 +1537,7 @@ export function parseSpecialistArgs(argv: readonly string[]): RangedSpecialistOp
         }
     }
     const variantRaw = kv.get('VARIANT') ?? process.env.VARIANT;
-    const variant: RangedKitVariant = variantRaw === 'pvp-boost' ? 'pvp-boost' : variantRaw === 'pvp' ? 'pvp' : variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
+    const variant: RangedKitVariant = variantRaw === 'pvp-glory' ? 'pvp-glory' : variantRaw === 'pvp' ? 'pvp' : variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
     const tanksRaw = (kv.get('TANKS') ?? process.env.PRACTICE_TANKS ?? process.env.TANKS ?? '').trim();
     const tanks = tanksRaw ? tanksRaw.split(',').map(x => x.trim()).filter(Boolean) : undefined;
     const sx = Number(kv.get('SPOT_X') ?? process.env.SPOT_X ?? SPIDERS_CENTRE.x);

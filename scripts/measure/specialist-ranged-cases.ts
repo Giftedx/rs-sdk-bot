@@ -4,7 +4,7 @@ import { PRESETS } from '../../packages/practice/src/presets';
 import { COOK_JOB_NATIVE_NULL_VARPS } from '../../packages/practice/src/quest-items-order-proof';
 import {
     kitSlotTotal,
-    RANGED_PVP_BOOST_KIT,
+    RANGED_PVP_GLORY_KIT,
     RANGED_PVP_SPECIALIST_KIT,
     RANGED_SPECIALIST_LIVE_TRADE1,
     RANGED_SPECIALIST_LIVE_TRADE2,
@@ -14,7 +14,7 @@ import {
     RANGED_SPECIALIST_TRADE2,
     type KitSpecItem,
 } from '../ranged-specialist';
-import { tankPostPresetConfig, tankSupplierPresetConfig } from './specialist-combat-quests-cases';
+import { RANGED_TANK_SKILLS, tankPostPresetConfig, tankSupplierPresetConfig } from './specialist-combat-quests-cases';
 
 const FRESH_NATIVE_LUMBRIDGE = {
     ...PRESETS.fresh_lumbridge!,
@@ -45,7 +45,7 @@ const rangedPvpPass = (s: string): boolean => {
         && logged[0]!.trim() === 'LOGOUT logged-out';
 };
 
-const rangedPvpCase = (key: string, mode: 'ranged-pvp' | 'ranged-pvp-boost', kit: readonly KitSpecItem[]): BenchCase => ({
+const rangedPvpCase = (key: string, mode: 'ranged-pvp' | 'ranged-pvp-glory', kit: readonly KitSpecItem[]): BenchCase => ({
     key,
     script: 'scripts/measure/specialist-combat-quests-cases.ts',
     preset: 'fresh_lumbridge',
@@ -55,9 +55,9 @@ const rangedPvpCase = (key: string, mode: 'ranged-pvp' | 'ranged-pvp-boost', kit
     timeoutMs: 900_000,
     output: /\brangedXp=(\d+)/,
     companions: [
-        { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(kit) },
-        { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0) },
-        { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2) },
+        { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(kit, RANGED_TANK_SKILLS) },
+        { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0, RANGED_TANK_SKILLS) },
+        { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2, RANGED_TANK_SKILLS) },
     ],
 });
 
@@ -156,5 +156,5 @@ export const SPECIALIST_RANGED_CASES: readonly BenchCase[] = [
         ],
     },
     rangedPvpCase('extra:ranged-specialist-pvp', 'ranged-pvp', RANGED_PVP_SPECIALIST_KIT),
-    rangedPvpCase('extra:ranged-specialist-pvp-boost', 'ranged-pvp-boost', RANGED_PVP_BOOST_KIT),
+    rangedPvpCase('extra:ranged-specialist-pvp-glory', 'ranged-pvp-glory', RANGED_PVP_GLORY_KIT),
 ];
