@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795614581897-1",
+ "account": "Ballspinner",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "ecf32ef4-c3b6-4143-9591-3392936e4d3d",
+ "count": 0,
+ "ok": false,
+ "at": 1795615187155,
+ "detail": "trade claimed"
+}
