@@ -1,5 +1,5 @@
 import {existsSync, readFileSync} from 'node:fs';
-import {join} from 'node:path';
+import {join, resolve} from 'node:path';
 import {ownerPlanPath} from './plan-lock';
 import {fleetStateFile, hasStopFile, liveRoot, statusReadDirs} from './practice-paths';
 import {processMatches} from './proc';
@@ -67,6 +67,17 @@ export function evaluateSpecialist(root:string, account:string, runId:string, so
     return {version:2, account:name, runId, source, at:now, expiresAt, bindings};
 }
 
+// A launch that the swarm runs from its plan (tools/specialist-launch.ts --launch) has no run process of its own: its
+// owner is the swarm that holds swarm-owner.json for this plan file and still runs. The active plan job with the
+// ticket's run and mission stays required, so a disabled job or a stop file still ends the authorization.
+function swarmRunsPlan(root:string, ownerMatches:(pid:number, marker:string)=>boolean):boolean{
+    try{
+        const rec=JSON.parse(readFileSync(join(liveRoot(root),'swarm-owner.json'),'utf8'));
+        return Number.isSafeInteger(rec?.pid) && rec.pid>0 && typeof rec.plan==='string'
+            && resolve(rec.plan)===resolve(ownerPlanPath(root)) && ownerMatches(rec.pid,'swarm.ts');
+    }catch{return false;}
+}
+
 export function assertSpecialistLogin(root:string, name:string, now:number, env:Record<string,string|undefined>,
     server=LIVE_SERVER, ownerMatches=processMatches){
     const account=name.toLowerCase();
@@ -109,8 +120,9 @@ export function assertSpecialistLogin(root:string, name:string, now:number, env:
         const jobAccount=job?jobAccounts(job)[0]:account;
         if(['coordinator','swarm',name,account,jobAccount].some(flag=>hasStopFile(flag,root)||existsSync(join(root,'.practice','stop-'+flag))))
             throw Error('specialist owner paused the run');
+        const swarmOwned=owner?.controller==='swarm' && planJobActive && swarmRunsPlan(root,ownerMatches);
         if(existsSync(join(runDir,'receipt.json')) || owner.runId!==token.runId
-            || !Number.isSafeInteger(owner.pid) || owner.pid<=0 || !ownerMatches(owner.pid,token.runId))
+            || (!swarmOwned && (!Number.isSafeInteger(owner.pid) || owner.pid<=0 || !ownerMatches(owner.pid,token.runId))))
             throw Error('specialist controller run is no longer active');
         const options={root:resolveLifecycleRoot(account,server,root)}, proof=readLogoutProof(account,server,options);
         if(proof.state==='none'){

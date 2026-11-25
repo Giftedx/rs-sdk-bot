@@ -6,12 +6,29 @@ import { sha } from '../packages/core/src/launch-evidence';
 import { missionSignature } from '../packages/core/src/session-admission';
 import { assertSpecialistLogin, specialistContext, specialistTokenPath } from '../packages/core/src/specialist-launch';
 import { capabilityRevision, workerEntries } from '../packages/core/src/worker-release';
+import { START_BUDGET_GB } from '../packages/fleet/src/swarm';
 import {
+    assertLaunchMemory,
     assertMatchesMasterWorkerRelease,
+    companionJobs,
     parseSpecialistLaunchArgs,
     runSpecialistLaunch,
+    supplierKitFor,
     type SpawnSyncFn,
 } from './specialist-launch';
+
+const MELEE_KIT_LINES = [
+    { item: 'Shark', count: 1, itemId: 385 },
+    { item: 'Dragon bones', count: 11, itemId: 536 },
+    { item: 'Water rune', count: 6, itemId: 555 },
+    { item: 'Air rune', count: 6, itemId: 556 },
+    { item: 'Earth rune', count: 6, itemId: 557 },
+    { item: 'Rope', count: 1, itemId: 954 },
+    { item: 'Rune 2h sword', count: 1, itemId: 1319 },
+    { item: 'Amulet of strength', count: 1, itemId: 1725 },
+    { item: 'Prayer potion(4)', count: 2, itemId: 2434 },
+    { item: 'Ring of dueling(8)', count: 1, itemId: 2552 },
+];
 
 const REPO_ROOT = resolve(import.meta.dir, '..');
 const NOW = 1_800_000_000_000;
@@ -411,11 +428,23 @@ describe('tools/specialist-launch CLI', () => {
         writeHolderStagingInputs(tempRoot, 'YewFirst', 'Dipstick', fx.requirements);
         writeJsonRel(tempRoot, 'swarm.json', { maxBots: 17, minFreeGB: 4, jobs: [] });
 
+        expect(() =>
+            runSpecialistLaunch(
+                ['tipmyshaft', '--holder', 'YewFirst', '--skip-hiscores', '--launch', '--run-id', 'launch-tip-2'],
+                { root: tempRoot, now: NOW, log: () => {}, freeGB: 5.5 },
+            ),
+        ).toThrow(/2 sessions need 6\.0 GiB/);
+        expect(existsSync(join(tempRoot, specialistTokenPath('tipmyshaft')))).toBe(false);
+
         const res = runSpecialistLaunch(
             ['tipmyshaft', '--holder', 'YewFirst', '--skip-hiscores', '--launch', '--run-id', 'launch-tip-2'],
-            { root: tempRoot, now: NOW, log: () => {} },
+            { root: tempRoot, now: NOW, log: () => {}, freeGB: 64 },
         );
         expect(res.launched).toBe(true);
+        expect(JSON.parse(readFileSync(join(tempRoot, '.practice/live/fleet-runs/launch-tip-2/owner.json'), 'utf8'))).toMatchObject({
+            runId: 'launch-tip-2',
+            controller: 'swarm',
+        });
 
         const cmdPath = join(tempRoot, '.practice/live/operator-commands', `launch-tipmyshaft-${NOW}.json`);
         expect(existsSync(cmdPath)).toBe(true);
@@ -425,15 +454,45 @@ describe('tools/specialist-launch CLI', () => {
         expect(cmd.state).toBe('running');
 
         const swarm = JSON.parse(readFileSync(join(tempRoot, 'swarm.json'), 'utf8'));
-        expect(swarm.jobs).toHaveLength(1);
+        expect(swarm.jobs).toHaveLength(2);
         expect(swarm.jobs[0]).toMatchObject({
             account: 'tipmyshaft',
             script: fx.script,
             enabled: true,
             env: { CAP: '200', SUPPLIER: 'YewFirst', FLEET_RUN_ID: 'launch-tip-2' },
         });
+        expect(swarm.jobs[1]).toEqual({
+            account: 'YewFirst',
+            script: 'scripts/aio-logistics.ts',
+            args: ['specialist-supplier', 'tipmyshaft', '--kit=fletching'],
+            role: 'specialist-supplier',
+            goal: 'Fletching specialist tipmyshaft: hand over the fletching kit',
+            enabled: true,
+            repeat: false,
+            env: { FLEET_RUN_ID: 'launch-tip-2' },
+        });
 
         const launchToken = JSON.parse(readFileSync(join(tempRoot, specialistTokenPath('tipmyshaft')), 'utf8'));
+
+        // The swarm that runs this plan owns the run: no run process, the live swarm owner record and the active job.
+        writeJsonRel(tempRoot, '.practice/live/swarm-owner.json', { pid: 4242, plan: join(tempRoot, 'swarm.json'), side: 'local', at: NOW });
+        const swarmLogin = (ownerMatches: (pid: number, marker: string) => boolean) =>
+            assertSpecialistLogin(
+                tempRoot,
+                'TipMyShaft',
+                NOW + 5_000,
+                { FLEET_RUN_ID: 'launch-tip-2', WORKER_RELEASE: launchToken.source, SWARM_MISSION_HASH: launchToken.mission },
+                'rs-sdk-demo.fly.dev',
+                ownerMatches,
+            );
+        expect(swarmLogin((pid, marker) => pid === 4242 && marker === 'swarm.ts')).toMatch(/^[a-f0-9]{64}$/);
+        expect(() => swarmLogin(() => false)).toThrow(/controller run is no longer active/);
+        writeJsonRel(tempRoot, '.practice/live/swarm-owner.json', { pid: 4242, plan: join(tempRoot, 'other.json'), side: 'local', at: NOW });
+        expect(() => swarmLogin(() => true)).toThrow(/controller run is no longer active/);
+        writeJsonRel(tempRoot, '.practice/live/swarm-owner.json', { pid: 4242, plan: join(tempRoot, 'swarm.json'), side: 'local', at: NOW });
+        writeJsonRel(tempRoot, 'swarm.json', { ...swarm, jobs: [{ ...swarm.jobs[0], enabled: false }, swarm.jobs[1]] });
+        expect(() => swarmLogin(() => true)).toThrow(/no longer active/);
+        writeJsonRel(tempRoot, 'swarm.json', swarm);
         writeJsonRel(tempRoot, '.practice/live/fleet-runs/launch-tip-2/owner.json', {
             runId: 'launch-tip-2',
             pid: process.pid,
@@ -490,11 +549,18 @@ describe('tools/specialist-launch CLI', () => {
 
         const res = runSpecialistLaunch(
             ['tipmyshaft', '--holder', 'YewFirst', '--tanks', 'TankOne, TankTwo,TankOne', '--skip-hiscores', '--launch', '--run-id', 'launch-tanks-1'],
-            { root: tempRoot, now: NOW, log: () => {} },
+            { root: tempRoot, now: NOW, log: () => {}, freeGB: 64 },
         );
         expect(res.tanks).toBe('TankOne,TankTwo');
 
         const swarm = JSON.parse(readFileSync(join(tempRoot, 'swarm.json'), 'utf8'));
+        expect(swarm.jobs.map((j: { account: string; script: string }) => `${j.account}:${j.script}`)).toEqual([
+            `tipmyshaft:${fx.script}`,
+            'YewFirst:scripts/aio-logistics.ts',
+            'TankOne:scripts/pvp-relog-combat.ts',
+            'TankTwo:scripts/pvp-relog-combat.ts',
+        ]);
+        expect(swarm.jobs[3].args).toEqual(['--companion-tank', 'tipmyshaft', '1', '200']);
         expect(swarm.jobs[0].env).toMatchObject({
             CAP: '200',
             SUPPLIER: 'YewFirst',
@@ -523,5 +589,62 @@ describe('tools/specialist-launch CLI', () => {
                 (pid, marker) => pid === process.pid && marker === 'launch-tanks-1',
             ),
         ).toMatch(/^[a-f0-9]{64}$/);
+    });
+
+    test('--launch refuses a companion that another enabled swarm.json job holds, before any ticket', () => {
+        const fx = setupWorkerTree(tempRoot, 'tipmyshaft');
+        writeHiscoresFixture(tempRoot, { account: 'tipmyshaft', board: 'Fletching', category: 10, leaderTicks: 56 });
+        writeFullRehearsalFixture(tempRoot, { account: 'tipmyshaft', context: fx.context, board: 'Fletching', planTicks: 54, boardTick: 54, requirements: fx.requirements });
+        writeHolderStagingInputs(tempRoot, 'YewFirst', 'Dipstick', fx.requirements);
+        writeJsonRel(tempRoot, 'swarm.json', { maxBots: 17, minFreeGB: 4, jobs: [{ account: 'YewFirst', script: 'scripts/aio-skiller.ts', enabled: true }] });
+        expect(() =>
+            runSpecialistLaunch(['tipmyshaft', '--holder', 'YewFirst', '--skip-hiscores', '--launch', '--run-id', 'launch-busy-1'], {
+                root: tempRoot,
+                now: NOW,
+                log: () => {},
+                freeGB: 64,
+            }),
+        ).toThrow(/companion YewFirst already has an enabled swarm\.json job \(scripts\/aio-skiller\.ts\)/);
+        expect(existsSync(join(tempRoot, specialistTokenPath('tipmyshaft')))).toBe(false);
+        expect(existsSync(join(tempRoot, '.practice/live/fleet-runs/launch-busy-1/owner.json'))).toBe(false);
+    });
+});
+
+describe('specialist launch companions', () => {
+    test('the supplier kit is the kit whose lines equal the rehearsed supplies, the board name first', () => {
+        expect(supplierKitFor('Strength', MELEE_KIT_LINES)).toBe('strength');
+        expect(supplierKitFor('Defence', MELEE_KIT_LINES)).toBe('defence');
+        expect(() => supplierKitFor('Strength', MELEE_KIT_LINES.slice(1))).toThrow(/no supplier kit matches the 9 rehearsed supply lines of Strength/);
+    });
+
+    test('the holder hands over the kit and each tank holds one Keep post for the specialist cap', () => {
+        const jobs = companionJobs({
+            account: 'bigswinger',
+            board: 'Strength',
+            holder: 'Woodenstaff',
+            tanks: 'Shaftsinker,Spitroaster,Unsheathed',
+            requirements: MELEE_KIT_LINES,
+            runId: 'specialist-bigswinger-1',
+            cap: '6000',
+        });
+        expect(jobs.map((j) => [j.account, j.script, ...j.args])).toEqual([
+            ['Woodenstaff', 'scripts/aio-logistics.ts', 'specialist-supplier', 'bigswinger', '--kit=strength'],
+            ['Shaftsinker', 'scripts/pvp-relog-combat.ts', '--companion-tank', 'bigswinger', '0', '6000'],
+            ['Spitroaster', 'scripts/pvp-relog-combat.ts', '--companion-tank', 'bigswinger', '1', '6000'],
+            ['Unsheathed', 'scripts/pvp-relog-combat.ts', '--companion-tank', 'bigswinger', '2', '6000'],
+        ]);
+        expect(jobs.every((j) => j.enabled && !j.repeat && j.env.FLEET_RUN_ID === 'specialist-bigswinger-1')).toBe(true);
+        expect(companionJobs({ account: 'x', board: 'Agility', requirements: [], runId: 'r', cap: '1' })).toEqual([]);
+        expect(() => companionJobs({ account: 'x', board: 'Strength', tanks: 'A,B,C,D', requirements: [], runId: 'r', cap: '1' })).toThrow(/at most 3 tanks/);
+        expect(() =>
+            companionJobs({ account: 'x', board: 'Strength', holder: 'Woodenstaff', tanks: 'woodenstaff', requirements: MELEE_KIT_LINES, runId: 'r', cap: '1' }),
+        ).toThrow(/cannot also be a tank/);
+    });
+
+    test('a launch needs the memory floor plus the swarm start budget for every session', () => {
+        expect(START_BUDGET_GB).toBe(1);
+        expect(() => assertLaunchMemory(5, 9.0, 4)).not.toThrow();
+        expect(() => assertLaunchMemory(5, 8.9, 4)).toThrow('host has 8.9 GiB free; 5 sessions need 9.0 GiB (floor 4 + 1 each), so the first-login window would expire');
+        expect(() => assertLaunchMemory(1, 5.5, 5)).toThrow(/need 6\.0 GiB \(floor 5/);
     });
 });

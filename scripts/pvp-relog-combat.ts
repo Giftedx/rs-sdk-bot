@@ -607,9 +607,18 @@ async function runAttackerMain(args: string[]): Promise<void> {
     await finish(tankSessions, false, `stopped/capped skill=${skill} totalTicks=${totalTicks} swings=${swings}`);
 }
 
+// The tank arguments: `--companion-tank <tank> <attacker> ...`, or `<tank> --companion-tank <attacker> ...` from a swarm
+// job (supervise puts the account first).
+export function companionTankArgs(args: readonly string[]): string[] | null {
+    if (args[0] === '--companion-tank') return args.slice(1);
+    if (args[1] === '--companion-tank' && args[0]) return [args[0], ...args.slice(2)];
+    return null;
+}
+
 if (import.meta.main) {
     const args = process.argv.slice(2);
-    const entry = args[0] === '--companion-tank' ? runCompanionMain(args.slice(1)) : runAttackerMain(args);
+    const tankArgs = companionTankArgs(args);
+    const entry = tankArgs ? runCompanionMain(tankArgs) : runAttackerMain(args);
     entry.catch(err => {
         console.log(`RESULT fail ${String(err instanceof Error ? err.message : err)}`);
         process.exit(1);

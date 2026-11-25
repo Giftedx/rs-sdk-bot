@@ -1,7 +1,11 @@
 // Deterministic specialist launch CLI: refreshes hiscores, validates a hosted rehearsal receipt against WORKER_RELEASE and 2% margin, builds exact staging JSON from live holder bank/inventory, and writes .practice/specialist-launch/<acct>.json and .go.json.
 // Usage: bun tools/specialist-launch.ts <account> --holder <holder> [--tanks <tank1,tank2,...>] [--dry-run] [--launch] [--receipt <path>] [--bank <path>] [--delivery <path>] [--run-id <id>] [--skip-hiscores]
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { freemem } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
+import { FREE_FLOOR_GB } from '../packages/core/src/memory';
+import { START_BUDGET_GB } from '../packages/fleet/src/swarm';
+import { resolveSupplierKitPlan, SPECIALIST_KITS } from '../packages/workers/src/logistics/specialist-supply';
 import { getSpecialistCampaignSpec, isReservedSpecialistAccount } from '../packages/brain/src/campaigns/specialists';
 import { writeAtomicFile } from '../packages/core/src/atomic-file';
 import { loadOwners } from '../packages/core/src/fleet';
@@ -965,6 +969,129 @@ function resolveRunId(root: string, account: string, explicitRunId: string | und
     return `specialist-${account}-${Math.floor(now / 1000)}`;
 }
 
+// The supplier kit whose items and counts equal the rehearsed external supplies: the kit that the holder hands over.
+export function supplierKitFor(board: string, requirements: readonly SupplyRequirement[]): string {
+    const key = (rows: readonly { id: number; count: number }[]) => {
+        const m = new Map<number, number>();
+        for (const r of rows) m.set(r.id, (m.get(r.id) ?? 0) + r.count);
+        return [...m.entries()].sort((a, b) => a[0] - b[0]).map(([id, n]) => `${id}x${n}`).join(',');
+    };
+    const want = key(requirements.map((r) => ({ id: r.itemId ?? -1, count: r.count })));
+    const matches = Object.keys(SPECIALIST_KITS)
+        .filter((name) => {
+            try {
+                return key(resolveSupplierKitPlan(name).combined) === want;
+            } catch {
+                return false;
+            }
+        })
+        .sort();
+    if (matches.length === 0) throw Error(`no supplier kit matches the ${requirements.length} rehearsed supply lines of ${board}`);
+    return matches.find((name) => name === board.toLowerCase()) ?? matches[0]!;
+}
+
+export interface CompanionJob {
+    readonly account: string;
+    readonly script: string;
+    readonly args: readonly string[];
+    readonly role: string;
+    readonly goal: string;
+    readonly enabled: true;
+    readonly repeat: false;
+    readonly env: Readonly<Record<string, string>>;
+}
+
+// The jobs that the route's other accounts run beside the specialist: the holder hands over the staged kit
+// (scripts/aio-logistics.ts specialist-supplier) and each tank holds one Deserted Keep post (scripts/pvp-relog-combat.ts).
+export function companionJobs(o: {
+    readonly account: string;
+    readonly board: string;
+    readonly holder?: string;
+    readonly tanks?: string;
+    readonly requirements: readonly SupplyRequirement[];
+    readonly runId: string;
+    readonly cap: string;
+}): CompanionJob[] {
+    const jobs: CompanionJob[] = [];
+    const tanks = o.tanks ? o.tanks.split(',') : [];
+    if (tanks.length > 3) throw Error(`at most 3 tanks hold the Keep posts (got ${tanks.length})`);
+    if (o.holder && tanks.some((t) => t.toLowerCase() === o.holder!.toLowerCase())) {
+        throw Error(`holder ${o.holder} cannot also be a tank: one account runs one job`);
+    }
+    if (o.holder && o.requirements.length > 0) {
+        const kit = supplierKitFor(o.board, o.requirements);
+        jobs.push({
+            account: o.holder,
+            script: 'scripts/aio-logistics.ts',
+            args: ['specialist-supplier', o.account, `--kit=${kit}`],
+            role: 'specialist-supplier',
+            goal: `${o.board} specialist ${o.account}: hand over the ${kit} kit`,
+            enabled: true,
+            repeat: false,
+            env: { FLEET_RUN_ID: o.runId },
+        });
+    }
+    tanks.forEach((tank, post) => {
+        jobs.push({
+            account: tank,
+            script: 'scripts/pvp-relog-combat.ts',
+            args: ['--companion-tank', o.account, String(post), o.cap],
+            role: 'specialist-tank',
+            goal: `${o.board} specialist ${o.account}: tank Keep post ${post}`,
+            enabled: true,
+            repeat: false,
+            env: { FLEET_RUN_ID: o.runId },
+        });
+    });
+    return jobs;
+}
+
+// The swarm starts a job only while free memory stays over the floor after a start budget for each new session
+// (admissionDecision in packages/fleet/src/swarm.ts). A ticket that the swarm cannot use expires in 10 minutes.
+export function assertLaunchMemory(sessions: number, freeGB: number, minFreeGB: number | undefined): void {
+    const floorGB = Math.max(FREE_FLOOR_GB, minFreeGB ?? 0);
+    const needGB = floorGB + START_BUDGET_GB * sessions;
+    if (freeGB < needGB) {
+        throw Error(
+            `host has ${freeGB.toFixed(1)} GiB free; ${sessions} sessions need ${needGB.toFixed(1)} GiB (floor ${floorGB} + ${START_BUDGET_GB} each), so the first-login window would expire`,
+        );
+    }
+}
+
+// Checked before the ticket is written: the companion jobs, their free accounts and the memory for every session.
+function planLaunchCompanions(
+    root: string,
+    account: string,
+    holder: string | undefined,
+    tanks: string | undefined,
+    rehearsal: ValidatedRehearsal,
+    runId: string,
+    freeGB: number,
+): CompanionJob[] {
+    const companions = companionJobs({
+        account,
+        board: SPECIALIST_BOARDS[account]!.name,
+        holder,
+        tanks,
+        requirements: rehearsal.requirements,
+        runId,
+        cap: rehearsal.env.CAP ?? '1600',
+    });
+    const swarmPath = join(root, 'swarm.json');
+    const swarm = existsSync(swarmPath)
+        ? (JSON.parse(readFileSync(swarmPath, 'utf8')) as { maxBots?: number; minFreeGB?: number; jobs?: Array<Record<string, unknown>> })
+        : undefined;
+    assertLaunchMemory(1 + companions.length, freeGB, swarm?.minFreeGB);
+    for (const c of companions) {
+        const other = (swarm?.jobs ?? []).find(
+            (j) => typeof j.account === 'string' && j.account.toLowerCase() === c.account.toLowerCase() && j.enabled === true
+                && !(isPlainRecord(j.env) && j.env.FLEET_RUN_ID === runId),
+        );
+        if (other) throw Error(`companion ${c.account} already has an enabled swarm.json job (${String(other.script)})`);
+    }
+    return companions;
+}
+
 function activateLaunchInController(
     root: string,
     account: string,
@@ -973,8 +1100,16 @@ function activateLaunchInController(
     rehearsal: ValidatedRehearsal,
     runId: string,
     now: number,
+    companions: readonly CompanionJob[],
 ): void {
     const spec = getSpecialistCampaignSpec(account)!;
+    writeJsonAtomic(join(liveRoot(root), 'fleet-runs', runId, 'owner.json'), {
+        runId,
+        controller: 'swarm',
+        mission: rehearsal.jobMissionHash,
+        source: rehearsal.source,
+        at: now,
+    });
     const cmdId = `launch-${account}-${now}`;
     const cmdDir = operatorCommandsDir(root);
     mkdirSync(cmdDir, { recursive: true });
@@ -1016,9 +1151,11 @@ function activateLaunchInController(
                 FLEET_RUN_ID: runId,
             },
         };
-        const idx = jobs.findIndex((j) => typeof j.account === 'string' && j.account.toLowerCase() === account);
-        if (idx >= 0) jobs[idx] = newJob;
-        else jobs.push(newJob);
+        for (const job of [newJob, ...companions]) {
+            const idx = jobs.findIndex((j) => typeof j.account === 'string' && j.account.toLowerCase() === job.account.toLowerCase());
+            if (idx >= 0) jobs[idx] = { ...job };
+            else jobs.push({ ...job });
+        }
         writeJsonAtomic(swarmPath, { ...swarm, jobs });
     }
 }
@@ -1053,6 +1190,7 @@ export function runSpecialistLaunch(
         readonly spawn?: SpawnSyncFn;
         readonly checkMaster?: boolean;
         readonly log?: (line: string) => void;
+        readonly freeGB?: number;
     } = {},
 ): SpecialistLaunchResult {
     const root = resolve(opts.root ?? resolve(import.meta.dir, '..'));
@@ -1121,6 +1259,9 @@ export function runSpecialistLaunch(
 
     let expiresAt: number | undefined;
     if (!parsed.dryRun) {
+        const companions = parsed.launch
+            ? planLaunchCompanions(root, account, parsed.holder, parsed.tanks, rehearsal, runId, opts.freeGB ?? freemem() / 2 ** 30)
+            : [];
         writeJsonAtomic(join(root, evidenceRel), evidenceDoc);
         const token = evaluateSpecialist(
             root,
@@ -1140,7 +1281,7 @@ export function runSpecialistLaunch(
         expiresAt = token.expiresAt;
 
         if (parsed.launch) {
-            activateLaunchInController(root, account, parsed.holder, parsed.tanks, rehearsal, runId, now);
+            activateLaunchInController(root, account, parsed.holder, parsed.tanks, rehearsal, runId, now, companions);
         }
     }
 

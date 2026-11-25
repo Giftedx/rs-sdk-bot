@@ -1,6 +1,13 @@
 import { expect, test } from 'bun:test';
 import { componentId } from '../packages/core/src/logout';
-import { RANGED_ARMOUR_TIERS, connectWithRetry, parsePvpSkill, rankTanksForSwing, selectMeleeWeapon, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
+import { RANGED_ARMOUR_TIERS, companionTankArgs, connectWithRetry, parsePvpSkill, rankTanksForSwing, selectMeleeWeapon, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
+
+test('companionTankArgs reads the tank role in both argument orders', () => {
+    expect(companionTankArgs(['--companion-tank', 'Shaftsinker', 'bigswinger', '0', '6000'])).toEqual(['Shaftsinker', 'bigswinger', '0', '6000']);
+    expect(companionTankArgs(['Shaftsinker', '--companion-tank', 'bigswinger', '0', '6000'])).toEqual(['Shaftsinker', 'bigswinger', '0', '6000']);
+    expect(companionTankArgs(['Shaftsinker', 'strength', '6000'])).toBeNull();
+    expect(companionTankArgs([])).toBeNull();
+});
 
 test('parsePvpSkill normalizes supported combat skills', () => {
     expect(parsePvpSkill('atk')).toBe('Attack');
