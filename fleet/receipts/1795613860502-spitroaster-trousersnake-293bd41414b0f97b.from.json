@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795613860502-spitroaster-trousersnake-293bd41414b0f97b",
+ "account": "Spitroaster",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "f9c462bc-3099-422c-ad74-a0b0f875d76d",
+ "count": 0,
+ "ok": false,
+ "at": 1795613940946,
+ "detail": "trade claimed"
+}
