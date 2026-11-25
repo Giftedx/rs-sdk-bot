@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795604251015-1",
+ "account": "mmthv2350",
+ "partner": "Stirmypot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "16cfe320-d405-4676-b64e-dbf44c7e76dd",
+ "count": 0,
+ "ok": false,
+ "at": 1795604366896,
+ "detail": "trade claimed"
+}

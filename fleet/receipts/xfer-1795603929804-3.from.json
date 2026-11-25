@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795603929804-3",
+ "account": "SporranBulge",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 2,
+ "claim": "a399d664-03d7-43c9-a602-4b25d09ebd2d",
+ "count": 0,
+ "ok": false,
+ "at": 1795604355893,
+ "detail": "trade claimed"
+}
