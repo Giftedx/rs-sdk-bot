@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795601690110-1",
  "account": "Swordswallow",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "478f8fed-db41-4a89-a2e8-249d878f7adb",
- "count": 0,
- "ok": false,
- "at": 1795601762616,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795601983622,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795601772552
+ },
+ "logout": {
+  "attemptId": "1795601762775-0000000412-0000000001",
+  "at": 1795601983271,
+  "sha256": "0e40455f1b31d0acd0ddef0e7b0f58736c33a325830b8e8aa75d9d7eb1a504f8"
+ },
+ "screen": true
 }

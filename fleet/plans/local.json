@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601915016,
+ "at": 1795601987753,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,7 +24,23 @@
    "role": "rehearsal"
   },
   {
-   "account": "Fatstack",
+   "account": "BackdoorMan",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "helper",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -35,54 +51,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
    "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "Wandwanker",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "auto",
    "resources": [
     "draynor-willows"
    ]
@@ -116,21 +84,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "army"
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1987 BATCH_UNITS=20 -- foraging grapes"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
    "role": "army"
   },
   {
@@ -206,20 +159,29 @@
    "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
+    "foraging",
+    "grapes"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "2"
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2152",
+   "goal": "campaign:haggis:item:1987",
+   "role": "helper"
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/generated/quest-death.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:death",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:death",
    "role": "helper"
   }
  ],
@@ -236,6 +198,7 @@
   "bowbeforeme",
   "deeppockets",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -246,12 +209,14 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "pickpockdick",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
   "thefullmonty",
+  "undermykilt",
   "woodpecker",
   "yewfirst"
  ],
