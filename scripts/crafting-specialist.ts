@@ -320,19 +320,13 @@ async function cutUnlockedGems(
   if (!chisel) throw Error('crafting chisel missing');
 
   const stNow = spec.sdk.getState();
+  const { gems, batch, willLevel } = selectCutGemBatch(inv, curBase, skillXp(spec, 'Crafting'), 5);
+  if (!batch.length) return { preRequested, pendingDialogs };
   if (stNow?.bank?.isOpen) {
    // MoveClickHandler closes any open modal immediately in processClientsIn, so walk-here + 4 cuts avoids a separate closeModal tick.
    const pNow = playerPos(spec);
    const { gems: bGems, batch: bBatch } = selectCutGemBatch(inv, curBase, skillXp(spec, 'Crafting'), 4);
-   if (pNow && bBatch.length > 0 && !openBankOnFinal) {
-    await Promise.all([
-     spec.direct({ type: 'walkTo', x: pNow.worldX, z: pNow.worldZ, running: true, reason: 'SDK' }),
-     ...bBatch.map(gem => spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' })),
-    ]);
-    await waitTicks(spec, 1);
-    continue;
-   }
-   if (pNow && bBatch.length > 0 && bGems.length > bBatch.length) {
+   if (pNow && bBatch.length > 0 && (!openBankOnFinal || bGems.length > bBatch.length)) {
     await Promise.all([
      spec.direct({ type: 'walkTo', x: pNow.worldX, z: pNow.worldZ, running: true, reason: 'SDK' }),
      ...bBatch.map(gem => spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' })),
@@ -344,8 +338,6 @@ async function cutUnlockedGems(
    await waitTicks(spec, 1);
    continue;
   }
-  const { gems, batch, willLevel } = selectCutGemBatch(inv, curBase, skillXp(spec, 'Crafting'), 5);
-  if (!batch.length) return { preRequested, pendingDialogs };
 
   const totalRemaining = gems.length;
   const dialogOpen = !!stNow?.dialog?.isOpen;
@@ -658,8 +650,19 @@ async function craftAtCastleWarsBank(
    const inv = spec.sdk.getInventory();
    const ring = inv.find(i => RING_OF_DUELING_SET.has(i.id));
    if (!ring) throw Error('ring of dueling missing after CW trade');
+   const acts: Promise<unknown>[] = [];
+   if (hasUnnotedEarly && lastRubTick < 0) {
+    const chisel = inv.find(i => i.id === ITEM_IDS.chisel);
+    if (chisel) {
+     const { batch } = selectCutGemBatch(inv, skillLevel(spec, 'Crafting'), skillXp(spec, 'Crafting'), 4);
+     for (const gem of batch) {
+      acts.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
+     }
+    }
+   }
    lastRubTick = spec.tick();
-   await spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' });
+   acts.push(spec.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: 4, reason: 'SDK' }));
+   await Promise.all(acts);
   }
   await waitTicks(spec, 1);
  }
@@ -670,9 +673,26 @@ async function craftAtCastleWarsBank(
  const hasDragonstone =
   countItem(preBankInv, 1632) > 0 ||
   preBankItems.some((b: any) => b.id === ITEM_IDS.uncut_dragonstone && b.count > 0);
+ // Defer surplus emeralds beyond Lv 34 unlock from Cycle 0 to the final Lv 97-99 cycle so they skip early level-up modals.
+ const emerInC0 = Math.min(6, Math.max(1, Math.ceil((10047 - skillXp(spec, 'Crafting')) / 1687.5)));
+ const emerRem = 6 - emerInC0;
+ const dstoneInC0 = 15 - emerInC0;
+ const optBCycles: readonly (readonly { id: number; count: number }[])[] = [
+  [
+   { id: ITEM_IDS.uncut_emerald, count: emerInC0 },
+   { id: ITEM_IDS.uncut_ruby, count: 3 },
+   { id: ITEM_IDS.uncut_diamond, count: 9 },
+   { id: ITEM_IDS.uncut_dragonstone, count: dstoneInC0 },
+  ],
+  ...Array.from({ length: 9 }, () => [{ id: ITEM_IDS.uncut_dragonstone, count: 27 }] as const),
+  [
+   { id: ITEM_IDS.uncut_dragonstone, count: 277 - dstoneInC0 - 9 * 27 },
+   ...(emerRem > 0 ? [{ id: ITEM_IDS.uncut_emerald, count: emerRem }] : []),
+  ],
+ ];
  const cycles = hasDragonstone
   ? hasUnnotedEarly
-   ? CRAFTING_CW_OPTB_CYCLES
+   ? optBCycles
    : CRAFTING_CW_CYCLES
   : hasUnnotedEarly
    ? CRAFTING_CW_DIAMOND_OPTB_CYCLES
