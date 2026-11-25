@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795632268564-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Swordinhand",
+  "item": "Irit leaf",
+  "count": 5,
+  "itemId": 259,
+  "start": 1795632268564,
+  "end": 1795633168564,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

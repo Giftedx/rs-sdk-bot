@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795631962192-1",
+ "account": "Swordswallow",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 360,
+ "claim": "a07c3b66-06ec-4041-9c71-fc0c02f4b0fa",
+ "count": 360,
+ "ok": true,
+ "at": 1795632300037,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Staff",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795632299188
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 360
+ },
+ "bank": {
+  "count": 360,
+  "at": 1795632298838
+ },
+ "logout": {
+  "attemptId": "1795632287204-0000011908-0000000001",
+  "at": 1795632300026,
+  "sha256": "acc1161a1d8416aa46a36f19f9f4fee37808b3c72ceb11fd98a72dafb5916498"
+ },
+ "screen": true
+}

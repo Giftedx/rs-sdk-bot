@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795632180821-1",
+ "account": "Woodpecker",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "8754f4c0-97e7-471a-a8bf-68d2a94f374e",
+ "count": 0,
+ "ok": false,
+ "at": 1795632303369,
+ "detail": "trade claimed"
+}
