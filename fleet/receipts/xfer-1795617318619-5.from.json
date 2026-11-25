@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795617318619-5",
  "account": "YewGotWood",
  "partner": "mmthv2350",
@@ -12,6 +12,16 @@
  "claim": "5031df8d-09c2-4d3f-ba26-d14f8099a49b",
  "count": 0,
  "ok": false,
- "at": 1795617999897,
- "detail": "trade claimed"
+ "at": 1795618218964,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 60,
+  "at": 1795618007815
+ },
+ "logout": {
+  "attemptId": "1795617999906-0000020336-0000000001",
+  "at": 1795618218942,
+  "sha256": "bf13ac76549627502c6ea7d31e34d79a166954111760a83fdb40445ef2127cc0"
+ },
+ "screen": false
 }
