@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795618550468-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "mmthv2350",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "start": 1795618550468,
+  "end": 1795619450468,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
