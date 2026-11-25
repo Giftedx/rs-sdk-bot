@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795634791589,
+ "at": 1795634833324,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -139,22 +139,33 @@
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "magic",
-    "items",
-    "enchant:emerald_ring",
-    "-",
-    "1",
-    "1200"
+    "scripts/aio-logistics.ts ITEM_ID=564 QUANTITY=1 \"ITEM_NAME=Cosmic rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=1639 QUANTITY=1 \"ITEM_NAME=Emerald ring\" -- loadout",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=2 -- magic items enchant:emerald_ring - 1 1200"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:2552",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p861 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:bigswinger:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:bigswinger:item:2552",
    "role": "army"
   },
   {
@@ -183,36 +194,16 @@
    "account": "OreElse",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "giant"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:225",
-    "BATCH_UNITS": "30",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
    "goal": "campaign:haggis:item:225",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
+   "role": "army"
   },
   {
    "account": "mmtha0205",
@@ -227,16 +218,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:mmtha0205",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
-   "env": {},
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
    "role": "army"
   },
   {
@@ -256,15 +237,17 @@
   },
   {
    "account": "PackageDeal",
-   "script": "scripts/generated/quest-prince.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=1973 QUANTITY=1 \"ITEM_NAME=Chocolate bar\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:prince",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:prince",
+   "goal": "campaign:haggis:item:1975",
    "role": "helper"
   },
   {
@@ -284,36 +267,31 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/generated/quest-merlin.ts",
+   "script": "scripts/generated/quest-prince.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:merlin",
+    "DEMAND_ID": "goal:quest_board:prince",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:merlin",
+   "goal": "goal:quest_board:prince",
    "role": "army"
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "cow"
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Swordswallow BATCH_UNITS=250 -- cannon"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Swordswallow",
-   "role": "army",
-   "resources": [
-    "ardougne-cows"
-   ]
+   "role": "army"
   },
   {
    "account": "Porksword",
@@ -373,6 +351,7 @@
   "kiltlifter",
   "mmthv2350",
   "moneyshot",
+  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
