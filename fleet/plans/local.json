@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795615634163,
+ "at": 1795615662715,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -185,6 +185,27 @@
    "role": "army"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "39",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:39",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:39",
+   "role": "army"
+  },
+  {
    "account": "Abracadickra",
    "script": "scripts/chain.ts",
    "args": [
@@ -218,18 +239,39 @@
   },
   {
    "account": "Shaftmaker",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "orbs",
+    "water",
+    "27",
+    "3000"
+   ],
+   "env": {
+    "ORB_TRIP": "1",
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Shaftmaker",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftmaker",
+   "role": "auto"
+  },
+  {
+   "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-87-p97 ITEM_ID=440 QUANTITY=87 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-174-p517 ITEM_ID=453 QUANTITY=174 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=87 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=27 \"ITEM_NAME=Dragon bones\" -- loadout",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=49 -- prayer bury"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
+   "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
   }
  ],
@@ -254,7 +296,6 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
-  "oreelse",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
