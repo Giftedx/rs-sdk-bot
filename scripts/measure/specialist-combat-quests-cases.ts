@@ -50,10 +50,10 @@ const TANK_SKILLS = {
     Ranged: 99,
 } as const;
 
-// Ranged PvP starts at CB 8 (Ranged 1, HP 10, Prayer 43) in Wildy 51, so tanks stay <= CB 59 (CB 58 = 1.05x XP multiplier).
+// Ranged PvP starts at CB 3 (Prayer 1) or CB 8 (Prayer 43) in Wildy 51, so CB 53 keeps |tank - attacker| <= 50 <= 51 at 1.05x XP multiplier.
 export const RANGED_TANK_SKILLS = {
-    Attack: 52,
-    Strength: 52,
+    Attack: 44,
+    Strength: 44,
     Defence: 1,
     Hitpoints: 99,
     Prayer: 1,

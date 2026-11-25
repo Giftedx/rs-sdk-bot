@@ -452,4 +452,25 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         expect(canUseFastKeepRebank(44, true)).toBe(false);
         expect(canUseFastKeepRebank(99, false)).toBe(false);
     });
+
+    test('RANGED_TANK_SKILLS stays within Wildy 51 combat range for both Prayer 1 (CB 3) and Prayer 43 (CB 8)', async () => {
+        const { RANGED_TANK_SKILLS } = await import('./measure/specialist-combat-quests-cases');
+        const { combatLevel } = await import('../packages/core/src/danger');
+        const tankCb = combatLevel({
+            attack: RANGED_TANK_SKILLS.Attack,
+            strength: RANGED_TANK_SKILLS.Strength,
+            defence: RANGED_TANK_SKILLS.Defence,
+            hitpoints: RANGED_TANK_SKILLS.Hitpoints,
+            prayer: RANGED_TANK_SKILLS.Prayer,
+            magic: RANGED_TANK_SKILLS.Magic,
+            ranged: RANGED_TANK_SKILLS.Ranged,
+        });
+        const cbPray1 = combatLevel({ hitpoints: 10, prayer: 1 });
+        const cbPray43 = combatLevel({ hitpoints: 10, prayer: 43 });
+        const cb99 = combatLevel({ hitpoints: 75, prayer: 1, ranged: 99 });
+        expect(tankCb).toBe(53);
+        expect(Math.abs(tankCb - cbPray1)).toBeLessThanOrEqual(51);
+        expect(Math.abs(tankCb - cbPray43)).toBeLessThanOrEqual(51);
+        expect(Math.abs(tankCb - cb99)).toBeLessThanOrEqual(51);
+    });
 });
