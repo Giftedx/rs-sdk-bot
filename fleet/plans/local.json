@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795565009222,
+ "at": 1795565051699,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,21 +22,6 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=1436 QUANTITY=620 \"ITEM_NAME=Rune essence\" -- loadout",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:557 BATCH_UNITS=2000 -- magic earth-production craft 2000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:557",
-   "role": "auto"
   }
  ],
  "army": [
