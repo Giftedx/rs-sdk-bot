@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795612770799-1",
+ "role": "to",
+ "account": "Woodpecker",
+ "partner": "Ballspinner",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795612978038,
+ "detail": "Error: live admission paused by stop file"
+}
