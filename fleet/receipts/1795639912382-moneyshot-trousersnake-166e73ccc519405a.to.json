@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795639912382-moneyshot-trousersnake-166e73ccc519405a",
  "account": "TrouserSnake",
  "partner": "Moneyshot",
@@ -12,6 +12,12 @@
  "claim": "1acedf19-2483-4bb3-b962-b2c7610aa014",
  "count": 0,
  "ok": false,
- "at": 1795641719361,
- "detail": "trade claimed"
+ "at": 1795643351897,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795641719370-0000015688-0000000001",
+  "at": 1795643351877,
+  "sha256": "c2a3dafcc989896edbcc2d432a332f6e738ea99f5b8f4047f2002d92541afc27"
+ },
+ "screen": false
 }
