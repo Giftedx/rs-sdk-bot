@@ -134,18 +134,29 @@ async function runBodyEssenceRunner(
 }
 
 async function craftAtAltar(spec: Session, altarId: number, deadline: number, preSentCraft = false): Promise<void> {
- if (preSentCraft && countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
-  // Trade-confirm tick already executed runecraft.rs2 (p_delay(3) -> delayedUntil = T+4); drain modals across 4 ticks.
-  for (let i = 0; i < 4; i++) {
+ const drainDelayAndDialogs = async (minTicks: number) => {
+  for (let i = 0; i < minTicks && spec.tick() < deadline; i++) {
    if (spec.sdk.getState()?.dialog?.isOpen) {
     await spec.direct({ type: 'closeModal', reason: 'SDK' });
    }
    await waitTicks(spec, 1);
   }
+  while (spec.tick() < deadline && spec.sdk.getState()?.dialog?.isOpen) {
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   await waitTicks(spec, 1);
+  }
+ };
+
+ if (preSentCraft && countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
+  // Trade-confirm tick already executed runecraft.rs2 (p_delay(3) -> delayedUntil = T+4); drain delay + queued modals.
+  await drainDelayAndDialogs(4);
   return;
  }
  while (spec.tick() < deadline) {
-  if (countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) return;
+  if (countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
+   await drainDelayAndDialogs(0);
+   return;
+  }
   const st = spec.sdk.getState();
   if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
    await spec.direct({ type: 'closeModal', reason: 'SDK' });
@@ -162,13 +173,8 @@ async function craftAtAltar(spec: Session, altarId: number, deadline: number, pr
     { timeoutTicks: 6 },
    );
    if (crafted && countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
-    // runecraft.rs2 finishes with p_delay(3) after inv_del (delayedUntil = currentTick + 4); drain level-up modals while waiting.
-    for (let i = 0; i < 4; i++) {
-     if (spec.sdk.getState()?.dialog?.isOpen) {
-      await spec.direct({ type: 'closeModal', reason: 'SDK' });
-     }
-     await waitTicks(spec, 1);
-    }
+    // runecraft.rs2 finishes with p_delay(3) after inv_del; finish the remaining delay ticks and all queued level-up modals.
+    await drainDelayAndDialogs(4);
     return;
    }
   } else {
@@ -293,7 +299,6 @@ export async function runRunecraftSpecialist(
      await burstTradeHost(spec, next.session, {
       giveIds: [ITEM_IDS.blankrune],
       deadlineTick: deadline,
-      allowHelperOnSingleModal: true,
       onConfirmSend: () =>
        spec.direct({ type: 'interactLoc', x: bodyAltar.x, z: bodyAltar.z, locId: bodyAltar.id, optionIndex: 1, reason: 'SDK' }),
      });

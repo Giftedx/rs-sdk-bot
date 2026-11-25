@@ -147,11 +147,62 @@ export interface PickpocketTier {
 }
 
 export const ARDOUGNE_PICKPOCKET_TIERS: readonly PickpocketTier[] = [
-    { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2621, z: 3293 } },
-    { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2630, z: 3296 } },
-    { name: 'guard', minLevel: 40, stunDamage: 2, pattern: /^guard$/i, anchor: { x: 2662, z: 3305 } },
-    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2660, z: 3301 } },
+    { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2661, z: 3306 } },
+    { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2655, z: 3306 } },
+    { name: 'guard', minLevel: 40, stunDamage: 2, pattern: /^guard$/i, anchor: { x: 2661, z: 3306 } },
+    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2661, z: 3306 } },
 ];
+
+interface MarketStallSpec {
+    readonly recipeName: string;
+    readonly minLevel: number;
+    readonly locPattern: RegExp;
+    readonly maxX: number;
+    readonly lootIds: readonly number[];
+    readonly anchor: { readonly x: number; readonly z: number };
+    readonly offsets: readonly [number, number][];
+}
+
+// Ardougne Market stalls unlocked across Lv 5..54 (0 stun, 0 relog, 3t cycle).
+const MARKET_STALLS: readonly MarketStallSpec[] = [
+    {
+        recipeName: 'stealing_silver_stall',
+        minLevel: 50,
+        locPattern: /^silver stall$/i,
+        maxX: 2675,
+        lootIds: [442], // silver ore
+        anchor: { x: 2657, z: 3314 },
+        offsets: [[1, 2], [0, 2], [2, 1], [2, 0], [-1, 1], [-1, 0], [0, -1], [1, -1]],
+    },
+    {
+        recipeName: 'stealing_fur_stall',
+        minLevel: 35,
+        locPattern: /^fur stall$/i,
+        maxX: 2675,
+        lootIds: [958], // grey wolf fur
+        anchor: { x: 2663, z: 3296 },
+        offsets: [[2, 0], [2, 1], [0, 2], [1, 2], [-1, 0], [-1, 1], [0, -1], [1, -1]],
+    },
+    {
+        recipeName: 'stealing_silk_stall',
+        minLevel: 20,
+        locPattern: /^silk stall$/i,
+        maxX: 2675,
+        lootIds: [950], // silk
+        anchor: { x: 2662, z: 3314 },
+        offsets: [[2, 0], [2, 1], [0, -1], [1, -1], [-1, 0], [-1, 1], [0, 2], [1, 2]],
+    },
+    {
+        recipeName: 'stealing_bakery_stall',
+        minLevel: 5,
+        locPattern: /^baker'?s stall$/i,
+        maxX: 2675,
+        lootIds: [1891, 2309, 1901], // cake, bread, chocolate slice
+        anchor: { x: 2667, z: 3310 },
+        offsets: [[2, 0], [2, 1], [-1, 0], [-1, 1], [0, -1], [1, -1], [0, 2], [1, 2]],
+    },
+];
+const MARKET_STALL_LOOT_IDS = new Set<number>(MARKET_STALLS.flatMap(s => s.lootIds));
 
 export function selectPickpocketTier(level: number): PickpocketTier {
     for (let i = ARDOUGNE_PICKPOCKET_TIERS.length - 1; i >= 0; i--) {
@@ -260,6 +311,37 @@ export async function runArdougneStunRelogThieving(opts: {
     let stallCooldownUntil = 0;
     const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
 
+    // Lazy-init stall LoS + pathfinding cache for Lv 5..54 Market stall stealing (0 stun, 0 relog).
+    let stallCtxPromise: Promise<{
+        pf: { isTileWalkable(level: number, x: number, z: number): boolean } | undefined;
+        recipes: Map<string, any>;
+        sightMap: Map<string, any>;
+    }> | undefined;
+    const getStallCtx = () => {
+        if (!stallCtxPromise) {
+            stallCtxPromise = (async () => {
+                const pf = await import('../vendor/rs-sdk/sdk/pathfinding').catch(() => undefined);
+                if (pf) {
+                    const { loadPathfinding } = await import('../packages/core/src/pathcache');
+                    await loadPathfinding();
+                }
+                const { stallRecipes, stallSight } = await import('../packages/workers/src/gather');
+                const recipes = new Map<string, any>();
+                const sightMap = new Map<string, any>();
+                for (const spec of MARKET_STALLS) {
+                    const r = stallRecipes().find(x => x.name === spec.recipeName);
+                    if (r) {
+                        recipes.set(spec.recipeName, r);
+                        const sg = await stallSight(main, r).catch(() => undefined);
+                        if (sg) sightMap.set(spec.recipeName, sg);
+                    }
+                }
+                return { pf, recipes, sightMap };
+            })();
+        }
+        return stallCtxPromise;
+    };
+
     while (!opts.isStopped() && elapsedNow() < opts.cap) {
         const st = main.sdk.getState();
         const lvl = main.sdk.getSkill('Thieving')?.baseLevel ?? 1;
@@ -333,10 +415,68 @@ export async function runArdougneStunRelogThieving(opts: {
             }
         }
 
+        // Lv 5..54: opportunistically steal Ardougne Market stalls (Silver/Fur/Silk/Baker) whenever present & unwatched.
+        const inMarket = st.player.worldX >= 2648 && st.player.worldX <= 2678 && st.player.worldZ >= 3290 && st.player.worldZ <= 3322;
+        if (lvl >= 5 && lvl < 55 && inMarket) {
+            const junkSlot = main.sdk.getInventory().find(
+                i => MARKET_STALL_LOOT_IDS.has(i.id) || i.id === OBJ_SUPER_ENERGY_4 || i.id === 229,
+            )?.slot;
+            if (junkSlot !== undefined && main.sdk.getInventory().length >= 28) {
+                await main.direct({ type: 'dropItem', slot: junkSlot, reason: 'SDK' });
+            }
+            if (main.sdk.getInventory().length < 28) {
+                const { stallWatched } = await import('../packages/workers/src/gather');
+                const { pf, recipes, sightMap } = await getStallCtx();
+                let pickedStall: { stall: NonNullable<typeof st.nearbyLocs>[number]; x: number; z: number } | undefined;
+                for (const spec of MARKET_STALLS) {
+                    if (lvl < spec.minLevel) continue;
+                    const recipe = recipes.get(spec.recipeName);
+                    const sight = sightMap.get(spec.recipeName);
+                    const locs = st.nearbyLocs.filter(
+                        l => spec.locPattern.test(l.name) && l.x <= spec.maxX && l.optionsWithIndex.some(o => /steal/i.test(o.text)),
+                    );
+                    if (!locs.length) continue;
+                    const watched = (x: number, z: number) => recipe && sight
+                        ? stallWatched(recipe, { worldX: x, worldZ: z, level: st.player!.level ?? 0 }, st.nearbyNpcs, sight)
+                        : st.nearbyNpcs.some(n => /^(guard|baker|knight of ardougne)$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x, z }) <= 5);
+                    const tile = locs.flatMap(stall =>
+                        spec.offsets.map(([dx, dz]) => ({ stall, x: stall.x + dx, z: stall.z + dz }))
+                            .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))
+                            .filter(t => !watched(t.x, t.z)),
+                    ).sort((a, b) => chebDist(a, { x: st.player!.worldX, z: st.player!.worldZ }) - chebDist(b, { x: st.player!.worldX, z: st.player!.worldZ }))[0];
+                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= 6) {
+                        pickedStall = tile;
+                        break;
+                    }
+                }
+                if (pickedStall) {
+                    if (st.player.worldX !== pickedStall.x || st.player.worldZ !== pickedStall.z) {
+                        await main.direct({ type: 'walkTo', x: pickedStall.x, z: pickedStall.z, running: true, reason: 'SDK' });
+                        await waitTicks(main, 1);
+                        continue;
+                    }
+                    const op = pickedStall.stall.optionsWithIndex.find(o => /steal/i.test(o.text));
+                    if (op) {
+                        const beforeXp = main.sdk.getSkillXp('Thieving') ?? 0;
+                        await main.direct({ type: 'interactLoc', x: pickedStall.stall.x, z: pickedStall.stall.z, locId: pickedStall.stall.id, optionIndex: op.opIndex, reason: 'SDK' });
+                        for (let w = 0; w < 3 && !opts.isStopped() && (main.sdk.getSkillXp('Thieving') ?? 0) === beforeXp; w++) {
+                            await waitTicks(main, 1);
+                        }
+                        const dropLoot = main.sdk.getInventory().find(i => MARKET_STALL_LOOT_IDS.has(i.id))?.slot;
+                        if (dropLoot !== undefined) {
+                            void main.direct({ type: 'dropItem', slot: dropLoot, reason: 'SDK' });
+                        }
+                        lastPickTick = -99;
+                        continue;
+                    }
+                }
+            }
+        }
+
         const { target: npc, blocked } = selectPickpocketTarget(st.nearbyNpcs, tier, lastPickTarget);
 
         if (!npc) {
-            if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 4) {
+            if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 6) {
                 await main.bot.walkTo(tier.anchor.x, tier.anchor.z, 2);
             } else if (blocked) {
                 await main.bot.walkTo(blocked.x, blocked.z, 1);
@@ -347,9 +487,9 @@ export async function runArdougneStunRelogThieving(opts: {
         }
 
         const sincePick = main.tick() - lastPickTick;
-        // Running covers <= 2 tiles inside the interact tick itself, so distance <= 2 completes on tick + 2.
+        // Running covers 2 tiles per tick; avoid extra +1 wait pad when closing on moving Ardougne Knights.
         const approachWait = lastPickTarget === npc.index && lastPickDist > 2
-            ? Math.min(4, Math.ceil(lastPickDist / 2) + 1)
+            ? Math.max(2, Math.min(3, Math.ceil(lastPickDist / 2)))
             : 2;
         if (sincePick >= approachWait) {
             const op = npc.optionsWithIndex.find(o => /^pickpocket$/i.test(o.text));
@@ -445,13 +585,18 @@ if (import.meta.main) {
                     p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
                     isStopped,
                 );
+                // NODE_INFINITE_RUN=true on live & practice: drop Super energy(4) to free slot 28 for Market stalls.
+                const energySlot = main.sdk.getInventory().find(i => i.id === OBJ_SUPER_ENERGY_4)?.slot;
+                if (energySlot !== undefined) {
+                    void main.direct({ type: 'dropItem', slot: energySlot, reason: 'SDK' });
+                }
                 await walkWaypointsSafe(
                     main,
                     [[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]],
                     isStopped,
                 );
                 await sailBrimhavenToArdougne(main, isStopped);
-                await walkWaypointsSafe(main, [[2654, 3288, 3], [2621, 3293, 2]], isStopped);
+                await walkWaypointsSafe(main, [[2661, 3306, 2]], isStopped);
             } else {
                 await rubTeleport(
                     main,

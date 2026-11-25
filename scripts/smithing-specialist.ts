@@ -203,7 +203,7 @@ async function smithHeldBars(spec: Session, target: number, deadline: number): P
    spec,
    () => {
     if (spec.tick() <= sentTick) return false;
-    if (skillLevel(spec, 'Smithing') >= target || st()?.dialog?.isOpen) return true;
+    if (skillLevel(spec, 'Smithing') >= target) return true;
     const nowBars = countItem(spec.sdk.getInventory(), r.bar);
     const doneNow = useMake5 ? nowBars < r.bars : nowBars < beforeBars;
     if (doneNow && delTick < 0) delTick = spec.tick();
@@ -294,11 +294,15 @@ export async function runSmithingSpecialist(
   logPhase(spec, start, 'smithing_glory_edgeville');
 
   const walkEdgeToVarrock = await sessionWalker(spec);
+  if (((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) !== 1) {
+   await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+  }
   const vWalk = await walkPath(
    walkEdgeToVarrock,
    [
     { x: 3115, z: 3462, tol: 5 },
-    { x: 3150, z: 3440, tol: 5 },
+    { x: 3155, z: 3428, tol: 3 },
+    { x: 3176, z: 3428, tol: 2 },
     { x: VARROCK_WEST_ANVIL.x, z: VARROCK_WEST_ANVIL.z, tol: 0 },
    ],
    { maxTicks: Math.max(10, Math.min(70, deadline - spec.tick())) },

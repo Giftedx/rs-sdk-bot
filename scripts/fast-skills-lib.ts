@@ -415,11 +415,11 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
    // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
-   const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 2;
+   const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
    if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
    // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
    if (specDlg && !(canRequest && sTarget && hTarget)) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-   // Send both OPPLAYER4 requests together once per 2-tick window so delayed packets cannot re-fire and close a newly opened trademain.
+   // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
    if (canRequest && sTarget && hTarget) {
     lastOpenReqTick = spec.tick();
     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
@@ -447,7 +447,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    if (specNeedsConfirm) {
     confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
-   if (opts.onConfirmSend && helperConfirmingNow && (st.myAccepted || specNeedsConfirm || !st.isOpen)) {
+   if (opts.onConfirmSend && (ht.myAccepted || helperConfirmingNow || !ht.isOpen) && (st.myAccepted || specNeedsConfirm || !st.isOpen) && (helperConfirmingNow || specNeedsConfirm)) {
     confirmActs.push(opts.onConfirmSend());
    }
    if (confirmActs.length) await Promise.all(confirmActs);
@@ -463,10 +463,10 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
 
   const hMainActs: Promise<unknown>[] = [];
   const sMainActs: Promise<unknown>[] = [];
-  const sMaxOffers = sOfferOps.length > 4 ? 5 : 4;
+  const sMaxOffers = 4;
   const sOffers = sOfferOps.slice(0, sMaxOffers);
   const specOfferComplete = sOfferOps.length <= sOffers.length;
-  const hMaxOffers = hOfferOps.length > 4 ? 5 : 4;
+  const hMaxOffers = 4;
   const hOffers = hOfferOps.slice(0, hMaxOffers);
   const helperOfferComplete = hOfferOps.length <= hOffers.length;
   for (const offer of hOffers) {

@@ -166,7 +166,7 @@ async function eatSharkIfLow(spec: Session): Promise<boolean> {
 
 async function castWindStrikeToLevel7(spec: Session, deadline: number): Promise<void> {
  const windStrike = componentId('magic:wind_strike');
- const isPassiveTarget = (name: string) => /^(chicken|rat|giant rat)$/i.test(name);
+ const isPassiveTarget = (name: string) => /^(chicken|rat|giant rat|man|woman)$/i.test(name);
  let prevCastXp = skillXp(spec, 'Magic');
  let lastCastTick = -99;
  while (spec.tick() < deadline) {
@@ -192,18 +192,28 @@ async function castWindStrikeToLevel7(spec: Session, deadline: number): Promise<
   }
   const candidates = npcs.filter(
    n =>
-    /^(chicken|rat|giant rat|spider|giant spider|goblin|imp)$/i.test(n.name) &&
+    /^(man|woman|chicken|rat|giant rat|spider|giant spider|goblin|imp)$/i.test(n.name) &&
     n.optionsWithIndex.some(o => /^attack$/i.test(o.text)),
   );
   const reachable = candidates.filter(n => n.reachable !== false);
   const npc = (reachable.length ? reachable : candidates).sort(
-   (a, b) => (isPassiveTarget(a.name) ? 0 : 1) - (isPassiveTarget(b.name) ? 0 : 1) || a.distance - b.distance,
+   (a, b) => a.distance - b.distance || (isPassiveTarget(a.name) ? 0 : 1) - (isPassiveTarget(b.name) ? 0 : 1),
   )[0];
   if (npc) {
    await spec.direct({ type: 'spellOnNpc', npcIndex: npc.index, spellComponent: windStrike, reason: 'SDK' });
   } else {
-   await spec.direct({ type: 'walkTo', x: 3236, z: 3233, running: true, reason: 'SDK' });
+   await spec.direct({ type: 'walkTo', x: LUMBRIDGE_SAFE_SPOT.x, z: LUMBRIDGE_SAFE_SPOT.z, running: true, reason: 'SDK' });
   }
+  await waitTicks(spec, 1);
+ }
+ // Finish any remaining Batch 0 dragon bones before Batch 1 drops junk so Prayer reaches 37 for Protect from Magic.
+ while (spec.tick() < deadline) {
+  const bone = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.dragon_bones);
+  if (!bone) break;
+  const acts: Promise<unknown>[] = [];
+  if (spec.sdk.getState()?.dialog?.isOpen) acts.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+  acts.push(spec.direct({ type: 'useInventoryItem', slot: bone.slot, optionIndex: 1, reason: 'SDK' }));
+  await Promise.all(acts);
   await waitTicks(spec, 1);
  }
 }
