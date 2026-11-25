@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795615961425-6",
  "account": "mmthv2350",
  "partner": "FishAndChips",
@@ -12,6 +12,12 @@
  "claim": "2f257150-aeab-4fca-8bb7-74a07bbea68b",
  "count": 0,
  "ok": false,
- "at": 1795616741843,
- "detail": "trade claimed"
+ "at": 1795616861811,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795616741853-0000005512-0000000001",
+  "at": 1795616861797,
+  "sha256": "b7ea3d0731991c0e90f5b4f6eb3b67fe62c52e392d43c957afed4d2b98f6b4ad"
+ },
+ "screen": false
 }
