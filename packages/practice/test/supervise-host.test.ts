@@ -239,3 +239,11 @@ test('a waiting live update that drains the host ends its accounts as release-pa
     expect(calls).toBe(1);
     expect(r).toEqual({ ends: { a: 'done', b: 'release-paused', c: 'release-paused' }, runs: 1 });
 });
+
+test('a hosted account that walks to the same failure twice with no gain ends as blocked', async () => {
+    const out = '[a] LEDGER ticks=504 xp=0 inventory=0 move=442 idle=57\n[a] RESULT fail talk bartender\n[b] LEDGER ticks=504 xp=5 inventory=0 move=400 idle=50\n[b] RESULT fail talk bartender\n';
+    let calls = 0;
+    const r = await superviseHost(['a', 'b'], { run: async () => { calls++; return { stdout: calls < 3 ? out : '[b] RESULT ok\n', exitCode: 1 }; }, stopped: () => false, pause: async () => {}, maxRestarts: 5 });
+    expect(r.ends).toEqual({ a: 'blocked', b: 'done' });
+    expect(calls).toBe(3);
+});

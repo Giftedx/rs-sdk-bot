@@ -8,7 +8,7 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
+import { CLAIM_AUTHORITY_PAUSE_MS, drainPause, gainedInRun, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 import {hasStopFile} from '../../core/src/practice-paths';
@@ -87,7 +87,7 @@ export async function superviseHost(accounts: string[], d: SuperviseHostDeps): P
             held.set(a, heldTries);
             if (heldTries >= HELD_CLAIM_TRIES) { end(a, 'gave-up', runs); continue; }
             const worked = madeProgress(ledgers.get(a) ?? '');
-            const shape = !worked && res && repeatableFailure(res) ? failureShape(res) : null;
+            const shape = !(worked && gainedInRun(ledgers.get(a) ?? '')) && res && repeatableFailure(res) ? failureShape(res) : null;
             if (shape !== null && shape === lastShape.get(a)) { end(a, 'blocked', runs); continue; }
             lastShape.set(a, shape);
             const failures = worked ? 1 : (fails.get(a) ?? 0) + 1;
