@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795608355305-mmsmk1232-masterbaiter-0399a056ce55d415",
  "account": "mmsmk1232",
  "partner": "Masterbaiter",
@@ -12,6 +12,12 @@
  "claim": "940d2d99-0af9-4a52-b279-9b18b8dc71dc",
  "count": 0,
  "ok": false,
- "at": 1795609283144,
- "detail": "trade claimed"
+ "at": 1795609291746,
+ "detail": "Error: stock short: Rune scimitar 0 banked + 0 held < 1",
+ "logout": {
+  "attemptId": "1795609283154-0000025376-0000000001",
+  "at": 1795609291735,
+  "sha256": "751fc8e6a52dda6defd53601a501b554e9a7889e01f3363a17276c3039656821"
+ },
+ "screen": false
 }
