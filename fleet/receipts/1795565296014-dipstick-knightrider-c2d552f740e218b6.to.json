@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795565296014-dipstick-knightrider-c2d552f740e218b6",
  "account": "KnightRider",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Rune arrowtips",
  "requested": 97,
  "claim": "e2edc9cd-3eb6-496d-b979-e15238a59d6d",
- "count": 0,
- "ok": false,
- "at": 1795565548090,
- "detail": "trade claimed"
+ "count": 97,
+ "ok": true,
+ "at": 1795565719323,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 97
+ },
+ "bank": {
+  "count": 97,
+  "at": 1795565718576
+ },
+ "logout": {
+  "attemptId": "1795565548445-0000022732-0000000001",
+  "at": 1795565719311,
+  "sha256": "e32f620fddc569851a75097ad0b721bd67aa0be2a0608c01f4d5d68be69aca9a"
+ },
+ "screen": true
 }
