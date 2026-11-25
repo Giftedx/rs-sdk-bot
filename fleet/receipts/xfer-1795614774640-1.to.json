@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795614774640-1",
+ "account": "Bigpackage",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "d93f5e65-22b0-427b-8d84-8c733d08b72d",
+ "count": 1,
+ "ok": true,
+ "at": 1795615087498,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795615086754
+ },
+ "logout": {
+  "attemptId": "1795615077153-0000024736-0000000001",
+  "at": 1795615087483,
+  "sha256": "c4b3fe75b9acedf8e86270bdb4663693c8a6259b0d7ecba0ad3913d1d3c5051f"
+ },
+ "screen": true
+}

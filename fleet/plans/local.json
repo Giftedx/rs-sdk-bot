@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795615031655,
+ "at": 1795615090100,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -155,6 +155,22 @@
    "role": "army"
   },
   {
+   "account": "Magicwanda",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "auto"
+  },
+  {
    "account": "DropMyLoad",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -174,9 +190,9 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-87-p97 ITEM_ID=440 QUANTITY=87 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-174-p517 ITEM_ID=453 QUANTITY=174 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=87 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-93-p97 ITEM_ID=440 QUANTITY=93 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-186-p517 ITEM_ID=453 QUANTITY=186 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=93 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
