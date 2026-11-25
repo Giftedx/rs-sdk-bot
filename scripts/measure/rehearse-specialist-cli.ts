@@ -139,7 +139,16 @@ const PVP_COMPANION_GUARD_ENV: Readonly<Record<string, string>> = {
     RANDOM_EVENTS: '0',
 };
 
-type CombatPvpMode = 'attack-pvp' | 'defence' | 'strength' | 'hp-pvp' | 'ranged-pvp-glory';
+type CombatPvpMode =
+    | 'attack-pvp'
+    | 'attack-pvp-scim'
+    | 'defence'
+    | 'defence-scim'
+    | 'strength'
+    | 'strength-scim'
+    | 'hp-pvp'
+    | 'hp-pvp-scim'
+    | 'ranged-pvp-glory';
 
 function combatPvpSuppliers(mode: CombatPvpMode, rangedTank = false): readonly SpecialistSupplierDef[] {
     const {
@@ -184,6 +193,11 @@ interface SpecialistSpecDefinition {
     readonly planTicks: number;
     readonly planSource: string;
     readonly targetCap: number;
+    readonly scimVariant?: {
+        readonly mode: CombatPvpMode;
+        readonly planTicks: number;
+        readonly planSource: string;
+    };
 }
 
 const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
@@ -516,6 +530,11 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         planTicks: 2039,
         planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2013t..2065t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 2554,
+        scimVariant: {
+            mode: 'attack-pvp-scim',
+            planTicks: 2200,
+            planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ (<=2554t vs #1 2607t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
+        },
     },
     {
         account: 'RockSolid',
@@ -527,6 +546,11 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         planTicks: 2385,
         planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2332t..2438t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 3937,
+        scimVariant: {
+            mode: 'defence-scim',
+            planTicks: 2650,
+            planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ (<=3937t vs #1 4018t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
+        },
     },
     {
         account: 'BigSwinger',
@@ -538,6 +562,11 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         planTicks: 1994,
         planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 1994t (<=3222t vs #1 3288t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 3222,
+        scimVariant: {
+            mode: 'strength-scim',
+            planTicks: 2170,
+            planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ (<=3222t vs #1 3288t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
+        },
     },
     {
         account: 'FullBlooded',
@@ -549,6 +578,11 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         planTicks: 3856,
         planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 3856t (<=5263t vs #1 5371t, Waterfall + 1-tick Rune 2h relog Keep PvP)',
         targetCap: 5263,
+        scimVariant: {
+            mode: 'hp-pvp-scim',
+            planTicks: 4550,
+            planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ (<=5263t vs #1 5371t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
+        },
     },
 ];
 
@@ -566,7 +600,7 @@ export function resolveSpecialistTargetCap(account: string): number {
 
 export function resolveSpecialistSegment(
     account: string,
-    opts?: { planTicks?: number; env?: Record<string, string> },
+    opts?: { planTicks?: number; env?: Record<string, string>; weapon?: number },
 ): SpecialistSegmentSpec {
     const key = account.trim().toLowerCase();
     const def = BY_ACCOUNT.get(key);
@@ -574,7 +608,16 @@ export function resolveSpecialistSegment(
     if (!def || !board) {
         throw Error(`rehearse-specialist-cli: unknown specialist "${account}" (expected ${READY_SPECIALIST_ACCOUNTS.join(', ')})`);
     }
-    const planTicks = opts?.planTicks ?? def.planTicks;
+    const envWeaponRaw = opts?.env?.WEAPON_ID;
+    const rawWeapon = opts?.weapon ?? (envWeaponRaw ? Number(envWeaponRaw) : undefined);
+    if (rawWeapon !== undefined && rawWeapon !== 1319 && rawWeapon !== 1333) {
+        throw Error(`rehearse-specialist-cli: invalid weapon ${rawWeapon} (expected 1319|1333)`);
+    }
+    if (rawWeapon === 1333 && !def.scimVariant) {
+        throw Error(`rehearse-specialist-cli: --weapon=1333 is only supported for melee combat specialists (got ${def.account})`);
+    }
+    const scim = rawWeapon === 1333 ? def.scimVariant! : undefined;
+    const planTicks = opts?.planTicks ?? scim?.planTicks ?? def.planTicks;
     if (!Number.isSafeInteger(planTicks) || planTicks <= 0) {
         throw Error(`rehearse-specialist-cli: invalid planTicks ${planTicks}`);
     }
@@ -584,19 +627,24 @@ export function resolveSpecialistSegment(
         args: [...s.args],
         env: s.env ? { ...SUPPLIER_GUARD_ENV, ...s.env } : { ...SUPPLIER_GUARD_ENV },
     });
+    const supplierDefs = scim
+        ? combatPvpSuppliers(scim.mode)
+        : def.suppliers
+          ? def.suppliers()
+          : undefined;
     const seg: SpecialistSegmentSpec = {
         id: def.id,
         specialist: def.account,
         start: { fresh: true },
         script: def.script,
         ...(def.args?.length ? { args: [...def.args] } : {}),
-        env: { ...def.env, ...(opts?.env ?? {}) },
-        ...(def.suppliers
-            ? { suppliers: def.suppliers().map(buildSupplier) }
+        env: { ...def.env, ...(scim ? { WEAPON_ID: '1333' } : {}), ...(opts?.env ?? {}) },
+        ...(supplierDefs
+            ? { suppliers: supplierDefs.map(buildSupplier) }
             : { supplier: buildSupplier(def.supplier!) }),
         plan: {
             ticks: planTicks,
-            source: def.planSource,
+            source: scim?.planSource ?? def.planSource,
         },
         expect: {
             skills: { [board]: 99 },
@@ -614,6 +662,7 @@ export interface ParsedCliArgs {
     readonly planTicks?: number;
     readonly seeds?: readonly number[];
     readonly env?: Readonly<Record<string, string>>;
+    readonly weapon?: number;
 }
 
 function parseSeedList(raw: string): number[] {
@@ -636,6 +685,7 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
     let out: string | undefined;
     let planTicks: number | undefined;
     let seeds: number[] | undefined;
+    let weapon: number | undefined;
     const env: Record<string, string> = {};
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]!;
@@ -643,7 +693,7 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
             dryRun = true;
         } else if (arg === '--out') {
             out = argv[++i];
-            if (!out) throw Error('usage: rehearse-specialist-cli.ts <specialistAccount> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--env KEY=VALUE] [--dry-run]');
+            if (!out) throw Error('usage: rehearse-specialist-cli.ts <specialistAccount> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--weapon <1319|1333>] [--env KEY=VALUE] [--dry-run]');
         } else if (arg.startsWith('--out=')) {
             out = arg.slice(6);
             if (!out) throw Error('usage: --out=<dir> requires a path');
@@ -661,6 +711,12 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
             seeds = parseSeedList(argv[++i] ?? '');
         } else if (arg.startsWith('--seeds=')) {
             seeds = parseSeedList(arg.slice(8));
+        } else if (arg === '--weapon') {
+            weapon = Number(argv[++i]);
+            if (weapon !== 1319 && weapon !== 1333) throw Error('usage: --weapon requires 1319 or 1333');
+        } else if (arg.startsWith('--weapon=')) {
+            weapon = Number(arg.slice(9));
+            if (weapon !== 1319 && weapon !== 1333) throw Error('usage: --weapon= requires 1319 or 1333');
         } else if (arg === '--env') {
             parseEnvEntry(argv[++i] ?? '', env);
         } else if (arg.startsWith('--env=')) {
@@ -674,7 +730,7 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
         }
     }
     if (!account) {
-        throw Error(`usage: rehearse-specialist-cli.ts <${READY_SPECIALIST_ACCOUNTS.join('|')}> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--env KEY=VALUE] [--dry-run]`);
+        throw Error(`usage: rehearse-specialist-cli.ts <${READY_SPECIALIST_ACCOUNTS.join('|')}> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--weapon <1319|1333>] [--env KEY=VALUE] [--dry-run]`);
     }
     return {
         account,
@@ -682,6 +738,7 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
         out,
         planTicks,
         ...(seeds ? { seeds } : {}),
+        ...(weapon !== undefined ? { weapon } : {}),
         ...(Object.keys(env).length ? { env } : {}),
     };
 }
@@ -813,7 +870,11 @@ export async function runHostedRehearsal(
     const root = opts.root ?? ROOT;
     const log = opts.log ?? console.log;
     const parsed = parseCliArgs(argv);
-    const seg = resolveSpecialistSegment(parsed.account, { planTicks: parsed.planTicks, env: parsed.env });
+    const seg = resolveSpecialistSegment(parsed.account, {
+        planTicks: parsed.planTicks,
+        env: parsed.env,
+        weapon: parsed.weapon,
+    });
     if (parsed.dryRun) {
         log(JSON.stringify(seg, null, 2));
         return { exitCode: 0, seg };

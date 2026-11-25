@@ -475,4 +475,43 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         expect(Math.abs(tankCb - cbPray43)).toBeLessThanOrEqual(51);
         expect(Math.abs(tankCb - cb99)).toBeLessThanOrEqual(51);
     });
+
+    test('resolveMeleeWeaponId, meleePvpCoreKit, meleeStyleComponent, and scimitar supplier kits support 1333 cleanly', async () => {
+        const {
+            DEFAULT_MELEE_WEAPON_ID,
+            MELEE_PVP_CORE_KIT,
+            MELEE_PVP_SCIM_KIT,
+            SCIMITAR_MELEE_WEAPON_ID,
+            meleePvpCoreKit,
+            meleeStyleComponent,
+            resolveMeleeWeaponId,
+        } = await import('./combat-quest-specialists');
+        const { componentId } = await import('../packages/core/src/logout');
+
+        expect(resolveMeleeWeaponId(undefined)).toBe(DEFAULT_MELEE_WEAPON_ID);
+        expect(resolveMeleeWeaponId('')).toBe(DEFAULT_MELEE_WEAPON_ID);
+        expect(resolveMeleeWeaponId('1319')).toBe(1319);
+        expect(resolveMeleeWeaponId('1333')).toBe(1333);
+        expect(() => resolveMeleeWeaponId('1303')).toThrow('invalid WEAPON_ID');
+
+        expect(meleePvpCoreKit(1319)).toEqual(MELEE_PVP_CORE_KIT);
+        expect(MELEE_PVP_SCIM_KIT.find(i => i.id === SCIMITAR_MELEE_WEAPON_ID)?.name).toBe('Rune scimitar');
+        expect(MELEE_PVP_SCIM_KIT.some(i => i.id === 1319)).toBe(false);
+        expect(kitSlotTotal(MELEE_PVP_SCIM_KIT)).toBe(21);
+
+        expect(meleeStyleComponent('attack', 1319, 83)).toBeNull();
+        expect(meleeStyleComponent('attack', 1333, 83)).toBeNull();
+        expect(meleeStyleComponent('strength', 1319, 83)).toBe(componentId('combat_heavysword:heavy1'));
+        expect(meleeStyleComponent('defence', 1319, 83)).toBe(componentId('combat_heavysword:heavy3'));
+        expect(meleeStyleComponent('strength', 1333, 83)).toBe(componentId('combat_hacksword:hack1'));
+        expect(meleeStyleComponent('defence', 1333, 83)).toBe(componentId('combat_hacksword:hack3'));
+        expect(meleeStyleComponent('hitpoints', 1333, 83)).toBe(componentId('combat_hacksword:hack1'));
+        expect(meleeStyleComponent('hitpoints', 1333, 99)).toBeNull();
+
+        for (const kitName of ['attack-pvp-scim', 'strength-scim', 'defence-scim', 'hitpoints-pvp-scim'] as const) {
+            const plan = resolveSupplierKitPlan(kitName);
+            expect(plan.combined).toEqual(MELEE_PVP_SCIM_KIT);
+        }
+        expect(resolveSupplierKitPlan('hp-pvp-scim')).toEqual(resolveSupplierKitPlan('hitpoints-pvp-scim'));
+    });
 });
