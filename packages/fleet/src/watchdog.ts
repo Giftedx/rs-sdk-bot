@@ -7,7 +7,8 @@ import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSyn
 import { join, resolve } from 'node:path';
 import { CONTROLLERS, controllerState, readLaunch, type Controller, type Launch } from '../../core/src/controllers';
 import { hasStopFile } from '../../core/src/practice-paths';
-import { runStandaloneRecoveryPass } from './session-recovery';
+import { ensureHostedQualification, type QualifyDeps } from './recovery-qualify';
+import { QUALIFICATION_MISSING, runStandaloneRecoveryPass, type StandaloneRecoveryPassResult } from './session-recovery';
 import { pruneStatus } from './status-prune';
 
 export const STALL_MS = 6 * 3600_000;
@@ -83,10 +84,11 @@ export function publisherRepo(remote: string): string | null {
 export type WatchdogDeps = {
     hasStop?: (flag: string) => boolean;
     prune?: (base: string, opts: { now: number }) => { moved: string[]; kept: number; failed: number };
-    recover?: () => Promise<void>;
+    recover?: () => Promise<Pick<StandaloneRecoveryPassResult, 'skipped'> | void>;
     restartController?: (c: Controller, start: string[], env: NodeJS.ProcessEnv) => void;
     log?: (line: string) => void;
     now?: () => number;
+    qualify?: QualifyDeps;
 };
 
 export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Promise<{ stoppedByOwner: boolean; pruned: number }> {
@@ -150,14 +152,13 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
 
     if ((process.env.FLEET_SIDE || 'local') === 'local' && !stopped('session-recovery')) {
         try {
-            if (deps.recover) {
-                await deps.recover();
-            } else {
-                await runStandaloneRecoveryPass({
+            const pass = deps.recover
+                ? await deps.recover()
+                : await runStandaloneRecoveryPass({
                     root: base,
                     log: msg => log(`session recovery: ${msg.slice(0, 400)}`),
                 });
-            }
+            if (pass && pass.skipped.some(s => s.reason.startsWith(QUALIFICATION_MISSING))) ensureHostedQualification(base, deps.now ?? Date.now, log, deps.qualify);
         } catch (e) {
             log(`session recovery failed: ${String(e).slice(0, 200)}`);
         }

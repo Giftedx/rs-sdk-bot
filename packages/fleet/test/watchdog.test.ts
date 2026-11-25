@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { QUALIFY_SCRIPT, qualifyStateFile } from '../src/recovery-qualify';
+import { QUALIFICATION_MISSING } from '../src/session-recovery';
 import {
     STALL_MS,
     publisherRepo,
@@ -145,6 +147,30 @@ describe('fleet watchdog', () => {
         expect(res.stoppedByOwner).toBe(false);
         expect(restarted).toEqual([['scripts/swarm.ts', 'custom-swarm.json']]);
         expect(logs.some(l => l.includes('session recovery failed: Error: transient recovery boom'))).toBe(true);
+    });
+
+    test('only a recovery deferred for a missing qualification asks for the hosted qualification, and nothing runs on the PC', async () => {
+        const root = scratch();
+        mkdirSync(join(root, '.practice', 'fleet'), { recursive: true });
+        let reason = `${QUALIFICATION_MISSING} for source cccccccccccc`;
+        const calls: string[] = [];
+        const pass = () => runWatchdogPass(root, {
+            now: () => 30_000_000,
+            hasStop: () => false,
+            prune: () => ({ moved: [], kept: 0, failed: 0 }),
+            restartController: () => {},
+            recover: async () => ({ skipped: [{ account: 'magicwanda', reason }] }),
+            log: () => {},
+            qualify: { source: () => 'c'.repeat(64), exec: cmd => { calls.push(cmd.join(' ')); return { ok: true, out: cmd[0] === 'git' ? 'x\n' : 'https://github.com/o/r/actions/runs/9\n' }; } },
+        });
+        await pass();
+        expect(calls).toContain(`gh workflow run CI --ref master -f measure_script=${QUALIFY_SCRIPT}`);
+        expect(calls.every(c => c.startsWith('git ') || c.startsWith('gh '))).toBe(true);
+        calls.length = 0;
+        reason = 'attempt budget reached (2/2)';
+        rmSync(qualifyStateFile(root));
+        await pass();
+        expect(calls).toEqual([]);
     });
 
     test('only a call without arguments runs a pass: --help shows the usage, and any other argument is refused', () => {
