@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601193586,
+ "at": 1795601241071,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,50 +24,6 @@
    "role": "rehearsal"
   },
   {
-   "account": "Pullmybow",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "items",
-    "enchant:sapphire_ring",
-    "-",
-    "50",
-    "1200"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pullmybow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pullmybow",
-   "role": "auto"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "items",
-    "enchant:sapphire_ring",
-    "-",
-    "50",
-    "1200"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:MeatNTwoVeg",
-   "role": "auto"
-  },
-  {
    "account": "TheFullMonty",
    "script": "scripts/generated/quest-dragon.ts",
    "args": [],
@@ -78,6 +34,19 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:dragon",
+   "role": "army"
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/generated/quest-arena.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
    "role": "army"
   },
   {
@@ -163,6 +132,27 @@
    "repeat": false,
    "goal": "goal:supply_chain:2152",
    "role": "helper"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "teleport",
+    "varrock",
+    "50",
+    "1200"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto"
   }
  ],
  "army": [
@@ -184,7 +174,6 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
-  "knightstick",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
