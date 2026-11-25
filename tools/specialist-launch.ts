@@ -303,6 +303,7 @@ export function validateHostedRehearsalReceipt(
     now: number,
     opts: {
         readonly receiptPath?: string;
+        readonly holder?: string;
         readonly checkMaster?: boolean;
         readonly spawn?: SpawnSyncFn;
     } = {},
@@ -393,7 +394,11 @@ export function validateHostedRehearsalReceipt(
             account,
             script,
             args,
-            env: { ...env, FLEET_RUN_ID: runId },
+            env: {
+                ...env,
+                ...(opts.holder ? { SUPPLIER: opts.holder } : {}),
+                FLEET_RUN_ID: runId,
+            },
         }),
     );
 
@@ -1059,6 +1064,7 @@ export function runSpecialistLaunch(
     const hiscores = validateHiscoreSnapshot(root, account, now);
     const rehearsal = validateHostedRehearsalReceipt(root, account, hiscores.leader, runId, now, {
         receiptPath: parsed.receiptPath,
+        holder: parsed.holder,
         checkMaster: opts.checkMaster,
         spawn,
     });

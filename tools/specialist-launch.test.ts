@@ -305,7 +305,7 @@ describe('tools/specialist-launch CLI', () => {
                     account: 'tipmyshaft',
                     script: fx.script,
                     enabled: true,
-                    env: { CAP: '200', FLEET_RUN_ID: 'launch-tip-1' },
+                    env: { CAP: '200', SUPPLIER: 'YewFirst', FLEET_RUN_ID: 'launch-tip-1' },
                 },
             ],
         });
@@ -432,6 +432,27 @@ describe('tools/specialist-launch CLI', () => {
             enabled: true,
             env: { CAP: '200', SUPPLIER: 'YewFirst', FLEET_RUN_ID: 'launch-tip-2' },
         });
+
+        const launchToken = JSON.parse(readFileSync(join(tempRoot, specialistTokenPath('tipmyshaft')), 'utf8'));
+        writeJsonRel(tempRoot, '.practice/live/fleet-runs/launch-tip-2/owner.json', {
+            runId: 'launch-tip-2',
+            pid: process.pid,
+            mission: launchToken.mission,
+            source: launchToken.source,
+        });
+        const launchTicket = assertSpecialistLogin(
+            tempRoot,
+            'TipMyShaft',
+            NOW + 5_000,
+            {
+                FLEET_RUN_ID: 'launch-tip-2',
+                WORKER_RELEASE: launchToken.source,
+                SWARM_MISSION_HASH: launchToken.mission,
+            },
+            'rs-sdk-demo.fly.dev',
+            (pid, marker) => pid === process.pid && marker === 'launch-tip-2',
+        );
+        expect(launchTicket).toMatch(/^[a-f0-9]{64}$/);
 
         // Verify assertMatchesMasterWorkerRelease rejects dirty/off-master worker closure when .git exists.
         mkdirSync(join(tempRoot, '.git'), { recursive: true });
