@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795616477217-1",
  "account": "TheFullMonty",
  "partner": "Ballspinner",
@@ -12,6 +12,16 @@
  "claim": "6b39873d-e82c-4ba1-979c-064f8c818807",
  "count": 0,
  "ok": false,
- "at": 1795616733588,
- "detail": "trade claimed"
+ "at": 1795617377809,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 10,
+  "at": 1795616742275
+ },
+ "logout": {
+  "attemptId": "1795616733943-0000024676-0000000001",
+  "at": 1795617377795,
+  "sha256": "bf1f77d02e540e28aea1276ebbdee6be7d92856c45107e506e1283b483bce7a1"
+ },
+ "screen": false
 }
