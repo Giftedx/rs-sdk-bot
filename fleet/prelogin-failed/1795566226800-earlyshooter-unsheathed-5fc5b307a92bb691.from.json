@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795566226800-earlyshooter-unsheathed-5fc5b307a92bb691",
+ "role": "from",
+ "account": "Earlyshooter",
+ "partner": "Unsheathed",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795567193261,
+ "detail": "Error: fleet trade claim held for order 1795565816467-earlyshooter-thefullmonty-ceb86a607c71ebcd"
+}

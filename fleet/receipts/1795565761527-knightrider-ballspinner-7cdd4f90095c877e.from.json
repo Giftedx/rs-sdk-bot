@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795565761527-knightrider-ballspinner-7cdd4f90095c877e",
  "account": "KnightRider",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 100000,
  "claim": "90aba9dc-b817-4c1c-8696-ff052b7b1d20",
- "count": 0,
- "ok": false,
- "at": 1795565957368,
- "detail": "trade claimed"
+ "count": 100000,
+ "ok": true,
+ "at": 1795567200062,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 100000,
+  "after": 0
+ },
+ "bank": {
+  "count": 100000,
+  "at": 1795565963788
+ },
+ "logout": {
+  "attemptId": "1795565957381-0000002780-0000000001",
+  "at": 1795567200025,
+  "sha256": "e39de26f45495e7468e17b7d3c30413b9c742e61847d6b05db0d9977f654fdbb"
+ },
+ "screen": true
 }
