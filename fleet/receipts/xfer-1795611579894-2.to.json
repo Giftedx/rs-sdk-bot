@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795611579894-2",
+ "account": "TheFullMonty",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 1,
+ "claim": "b97c066a-35c9-47a6-8691-0bdec2975b19",
+ "count": 0,
+ "ok": false,
+ "at": 1795612278682,
+ "detail": "trade claimed"
+}
