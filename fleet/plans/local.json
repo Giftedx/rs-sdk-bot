@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795583158160,
+ "at": 1795583238151,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -42,6 +42,27 @@
    "enabled": true,
    "repeat": false,
    "goal": "Buy Rune arrowtips at Catherby for TipMyShaft",
+   "role": "supply"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "dargaud",
+    "2500"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "^Rune arrowtips$",
+    "STOCK_TARGET": "2600",
+    "MAX_ITEMS": "1400",
+    "COIN_RESERVE": "0",
+    "NO_BUY_TICKS": "180"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Buy Rune arrowtips at Dargaud for TipMyShaft",
    "role": "supply"
   },
   {
@@ -105,7 +126,6 @@
   "billionaire",
   "bowbeforeme",
   "deeppockets",
-  "dipstick",
   "fatstack",
   "fingerblastr",
   "fingersmith",
