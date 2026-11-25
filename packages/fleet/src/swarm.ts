@@ -998,6 +998,34 @@ export function orphanedSessionEnds(
     return found.filter(f => !f.answers || laterProcessHolds(f.pid, f.createdAt, table)).map(f => f.end);
 }
 
+// An `exit orphaned` end waits for proof that the orphaned session ended. Session recovery runs only while the proof
+// is held (session-recovery.ts assessRecoveryEligibility). A later session that logs in and out cleanly, such as a
+// fleet-agent trade, leaves a confirmed proof, so recovery refuses the account and nothing else clears the end: the
+// swarm never starts its job again (endedForGood), and the brain keeps the account's plan slot (scheduler.ts
+// max_bots_limit). The server holds one session for each account, so a logout confirmed after the orphaned attempt
+// started shows that no session is open. ORPHAN_SETTLE_MS leaves the logout time to settle, as a standing retry does.
+// Returns each such end with the attempt whose logout is confirmed.
+export const ORPHAN_SETTLE_MS = 120_000;
+export function resolvedOrphanEnds(
+    ended: ReadonlyMap<string, EndRecord>,
+    busy: readonly string[],
+    proof: (a: string) => LogoutProof,
+    now: number,
+): { account: string; reason: string; confirmed: string }[] {
+    const out: { account: string; reason: string; confirmed: string }[] = [], busyKeys = new Set(busy.map(b => b.toLowerCase()));
+    for (const [account, end] of ended) {
+        const named = /^exit orphaned: attempt (\S+) /.exec(end.reason)?.[1], key = account.toLowerCase();
+        if (!named || PROTECTED_ACCOUNTS.includes(key) || busyKeys.has(key)) continue;
+        let p: LogoutProof;
+        try { p = proof(account); } catch { continue; }
+        if (p.state !== 'confirmed' || !Number.isFinite(p.loggedOutAt) || now - p.loggedOutAt < ORPHAN_SETTLE_MS) continue;
+        const started = /^\d{13}-/.test(named) ? Number(named.slice(0, 13)) : end.at;
+        if (p.loggedOutAt <= started) continue;
+        out.push({ account, reason: end.reason, confirmed: p.attemptId });
+    }
+    return out;
+}
+
 export function applyScriptQualification(request: any, holds: ScriptHold[], active: readonly string[], proofs: RepairProofs) {
     if (
         !request || request.kind !== 'script-qualified' || typeof request.account !== 'string' || !ACCOUNT.test(request.account)
@@ -1776,6 +1804,12 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
             }
+            const resolved = resolvedOrphanEnds(ended, busy, a => readLogoutProof(a, LIVE_SERVER, { base: root }), Date.now());
+            for (const r of resolved) {
+                ended.delete(r.account);
+                console.log(`SWARM end ${r.account} cleared: ${r.reason}; logout confirmed for attempt ${r.confirmed}`);
+            }
+            if (resolved.length) persistEnded(deathsFile, ended);
         }
 
         for (const r of runs.values()) {
