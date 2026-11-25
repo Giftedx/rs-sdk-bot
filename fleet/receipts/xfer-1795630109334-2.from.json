@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795630109334-2",
  "account": "Fingerblastr",
  "partner": "YewGotWood",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "d2af139a-fbea-453b-8712-1fb430ed1fe2",
- "count": 0,
- "ok": false,
- "at": 1795630314098,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795630398440,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795630320489
+ },
+ "logout": {
+  "attemptId": "1795630314107-0000009252-0000000001",
+  "at": 1795630398429,
+  "sha256": "530ae20cb852ef5bb1c74b288a88bfb6666f478bf41beeb1776d1041febd9448"
+ },
+ "screen": true
 }

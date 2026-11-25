@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795630109334-2",
+ "account": "YewGotWood",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "5dd8bc1f-250a-43f8-b8b2-09ce4df15b39",
+ "count": 250,
+ "ok": true,
+ "at": 1795630400055,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795630399291
+ },
+ "logout": {
+  "attemptId": "1795630389609-0000027584-0000000001",
+  "at": 1795630400036,
+  "sha256": "64a0e5791c635d92dc883c23ba7e100086ad68a9c09a93f8bd84d1ad39c6660d"
+ },
+ "screen": true
+}
