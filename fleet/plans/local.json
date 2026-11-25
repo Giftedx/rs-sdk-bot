@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795627553247,
+ "at": 1795627564051,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -79,15 +79,17 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/generated/quest-arena.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=20 BANK_PACK=1 -- giant"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:arena",
+   "goal": "campaign:haggis:item:225",
    "role": "army"
   },
   {
@@ -273,15 +275,15 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/generated/quest-barcrawl.ts",
+   "script": "scripts/generated/quest-arena.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "DEMAND_ID": "goal:quest_board:arena",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
+   "goal": "goal:quest_board:arena",
    "role": "army"
   },
   {
