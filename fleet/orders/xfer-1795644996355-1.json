@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795644996355-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "Woodpecker",
+  "item": "Lobster",
+  "count": 10,
+  "itemId": 379,
+  "start": 1795644996355,
+  "end": 1795645896355,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
