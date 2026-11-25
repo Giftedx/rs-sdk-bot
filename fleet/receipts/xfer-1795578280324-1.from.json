@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795578280324-1",
  "account": "Masterbaiter",
  "partner": "Shaftsinker",
@@ -12,6 +12,16 @@
  "claim": "a5679741-206d-46de-836d-9c9d3766281e",
  "count": 0,
  "ok": false,
- "at": 1795578390432,
- "detail": "trade claimed"
+ "at": 1795578723160,
+ "detail": "stop file",
+ "bank": {
+  "count": 5,
+  "at": 1795578396019
+ },
+ "logout": {
+  "attemptId": "1795578390440-0000008568-0000000001",
+  "at": 1795578723129,
+  "sha256": "725079aea2eaadd7fc70d620feaa84275ff893e3c88e1b43e856d386a9f157f6"
+ },
+ "screen": false
 }
