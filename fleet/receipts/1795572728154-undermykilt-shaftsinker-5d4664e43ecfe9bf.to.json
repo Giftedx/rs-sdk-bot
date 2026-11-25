@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795572728154-undermykilt-shaftsinker-5d4664e43ecfe9bf",
  "account": "Shaftsinker",
  "partner": "UnderMyKilt",
@@ -12,6 +12,16 @@
  "claim": "0875b469-c112-4c8f-808d-bf735ca048ca",
  "count": 0,
  "ok": false,
- "at": 1795574790751,
- "detail": "trade claimed"
+ "at": 1795575128511,
+ "detail": "Error: no matching trade completed: player_not_found: Player not found nearby: /^UnderMyKilt$/i",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795574791003-0000028080-0000000001",
+  "at": 1795575128498,
+  "sha256": "d54d87cccb897c49adb8b00c23cc5dc4a2149a6b733ec9ced1bdcd52c8574207"
+ },
+ "screen": false
 }
