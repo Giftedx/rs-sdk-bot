@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795614581897-1",
  "account": "Woodpecker",
  "partner": "Ballspinner",
@@ -12,6 +12,12 @@
  "claim": "b096879b-0b16-4910-a748-7c5e2dbc1aa5",
  "count": 0,
  "ok": false,
- "at": 1795615266066,
- "detail": "trade claimed"
+ "at": 1795615323886,
+ "detail": "Error: stock short: Uncut diamond 0 banked + 0 held < 10",
+ "logout": {
+  "attemptId": "1795615266077-0000030608-0000000001",
+  "at": 1795615323874,
+  "sha256": "65a275592babc05c5317394325051a8c871fd97cd112213c4f20c5a5b5dd9795"
+ },
+ "screen": false
 }
