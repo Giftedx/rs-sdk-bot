@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795621248257-1",
+ "account": "SporranDip",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Tarromin",
+ "requested": 2,
+ "claim": "0fb792b2-9a2d-41ec-adb5-f1b2529d23da",
+ "count": 0,
+ "ok": false,
+ "at": 1795621854764,
+ "detail": "trade claimed"
+}
