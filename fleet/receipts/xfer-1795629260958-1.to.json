@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795629260958-1",
  "account": "Swordswallow",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "08d696e2-27fc-46dc-8697-3775a33620fb",
- "count": 0,
- "ok": false,
- "at": 1795629583066,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795629593666,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795629592960
+ },
+ "logout": {
+  "attemptId": "1795629583337-0000008704-0000000001",
+  "at": 1795629593650,
+  "sha256": "a9f86aa561ed82961a1e332c4e0c51311f64f833d18fec74a5ace813631bca4f"
+ },
+ "screen": true
 }
