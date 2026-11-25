@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601614187,
+ "at": 1795601643094,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,35 +24,35 @@
    "role": "rehearsal"
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/generated/woodcutting.ts",
+   "account": "mmtha0205",
+   "script": "scripts/ranged-train.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "goal:pk_army:mmtha0205",
+   "role": "army"
   },
   {
-   "account": "InTheSack",
-   "script": "scripts/chain.ts",
+   "account": "TrouserSnake",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:1987 BATCH_UNITS=20 -- foraging grapes"
+    "foraging",
+    "grapes"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1987",
+    "BATCH_UNITS": "20"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1987",
-   "role": "helper"
+   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -139,18 +139,18 @@
    "role": "helper"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=207 QUANTITY=3 ITEM_NAME=Herb -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:257 BATCH_UNITS=6 -- crafting inventory identify:ranarr_weed"
+   ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
+   "goal": "goal:supply_chain:257",
    "role": "army"
   }
  ],
@@ -185,7 +185,6 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
-  "trousersnake",
   "undermykilt",
   "woodpecker",
   "yewfirst"

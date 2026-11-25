@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795601476986-1",
  "account": "Pocketpython",
  "partner": "Stirmypot",
@@ -10,8 +10,18 @@
  "item": "Nature rune",
  "requested": 250,
  "claim": "f71f50a9-8129-4a0f-b43b-629e3bbb0d98",
- "count": 0,
- "ok": false,
- "at": 1795601553938,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795601618277,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 448,
+  "after": 198
+ },
+ "logout": {
+  "attemptId": "1795601554149-0000012136-0000000001",
+  "at": 1795601618067,
+  "sha256": "4f3af4b5665e426bef3368941b6f144d9b1fe9d120fa413e100941224bcbdaa4"
+ },
+ "screen": true
 }
