@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795605487081-2",
+ "role": "to",
+ "account": "Woodpecker",
+ "partner": "Bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795606394664,
+ "detail": "Error: fleet trade: outside order window"
+}
