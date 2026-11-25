@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795602503502-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "YewFirst",
+  "to": "TrouserSnake",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 209,
+  "start": 1795602503502,
+  "end": 1795603403502,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

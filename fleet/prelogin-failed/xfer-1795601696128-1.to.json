@@ -5,6 +5,6 @@
  "account": "UnderMyKilt",
  "partner": "PickpockDick",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795602417573,
- "detail": "Error: live admission paused by stop file"
+ "at": 1795602520294,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
 }
