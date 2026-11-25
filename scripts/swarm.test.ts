@@ -683,6 +683,26 @@ test('a held session whose owner pid is gone gets an end record; live, busy or a
         (_a, id) => pids[id] ? { pid: pids[id]!, createdAt: 1, updatedAt: 2 } : undefined, pid => pid === 12);
     expect(out).toEqual([['Dead', 'exit orphaned: attempt id-Dead owner 11 gone']]);
 });
+test('an orphaned end clears once a logout after the orphaned attempt is confirmed and settled', async () => {
+    const { resolvedOrphanEnds, ORPHAN_SETTLE_MS } = await import('./swarm');
+    const attempt = '1795587676565-0000010696-0000000001', now = 1_795_630_000_000;
+    const orphan = { at: 1_795_599_982_000, reason: `exit orphaned: attempt ${attempt} owner 10696 gone` };
+    const confirmed = (a: string, loggedOutAt: number, attemptId = '1795630349844-0000023704-0000000001') =>
+        ({ state: 'confirmed' as const, account: a, server: 's', domain: 'live' as const, attemptId, loggedOutAt, ownerRun: null, receiptSha256: '' });
+    const ended = new Map([
+        ['KnightRider', orphan], ['Settling', orphan], ['Before', orphan], ['Held', orphan], ['Busy', orphan], ['haggis', orphan],
+        ['Blocked', { at: 1, reason: 'blocked after 2 runs' }],
+    ]);
+    const proof = (a: string) => a === 'Settling' ? confirmed(a, now - ORPHAN_SETTLE_MS + 1)
+        : a === 'Before' ? confirmed(a, Number(attempt.slice(0, 13)) - 1)
+        : a === 'Held' ? { state: 'held' as const, account: a, server: 's', domain: 'live' as const, attemptId: attempt, reason: 'session active or outcome unknown' }
+        : confirmed(a, now - ORPHAN_SETTLE_MS);
+    // A logout confirmed after the orphaned attempt began and settled clears the end. A logout still settling, one from
+    // before the attempt, a held proof, a busy account, a protected account and a non-orphan end stay.
+    expect(resolvedOrphanEnds(ended, ['busy'], proof, now)).toEqual([{ account: 'KnightRider', reason: orphan.reason, confirmed: '1795630349844-0000023704-0000000001' }]);
+    // An unreadable proof proves nothing.
+    expect(resolvedOrphanEnds(new Map([['KnightRider', orphan]]), [], () => { throw Error('unreadable'); }, now)).toEqual([]);
+});
 test('a held session whose owner pid a later process holds gets an end record, from one read of the process table', async () => {
     const { orphanedSessionEnds } = await import('./swarm');
     const held = (a: string) => ({ state: 'held' as const, account: a, server: 's', domain: 'live' as const, attemptId: 'id-' + a, reason: 'session active or outcome unknown' });
