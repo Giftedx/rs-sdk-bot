@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572000744-unsheathed-woodenstaff-68f9d333ef55705b",
+ "account": "Unsheathed",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Amulet of strength",
+ "requested": 1,
+ "claim": "fc349b62-8d86-4e8d-9cad-0dba9cf8d7c3",
+ "count": 0,
+ "ok": false,
+ "at": 1795572091073,
+ "detail": "trade claimed"
+}
