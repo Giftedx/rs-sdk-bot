@@ -321,6 +321,16 @@ export function pageHash(dir:string):string|null{
  return any?h.digest('hex').slice(0,16):null;
 }
 
+// The 3D viewer reads api/our-names beside the page for the gold nameplates of our accounts. export-viewer.ts writes that
+// file at a viewer import only, so each site push writes it again from the local server's /api/our-names (every live
+// account on this PC and every account another side publishes): an account made after the import still gets its
+// nameplate. Null keeps the imported file: no list, an empty one, or a list that is not names.
+export function ourNamesFile(names:unknown,main:string):string|null{
+ if(!Array.isArray(names))return null;
+ const keep=[...new Set(names.filter((n):n is string=>typeof n==='string'&&/^[A-Za-z0-9 _-]{1,12}$/.test(n)&&n.toLowerCase()!==main.toLowerCase()))].sort();
+ return keep.length?JSON.stringify(keep):null;
+}
+
 // The site folder goes out only when its page links resolve, the import contract holds and no file names the main
 // account. A refused folder stays unpushed: the live page keeps the last good push.
 export async function pushAuditedSite(site:string,push:(dir:string)=>Promise<string>=pushPublicCommit):Promise<{result:string;audit:BundleAudit}>{
@@ -406,6 +416,8 @@ async function cycle(){
    const page=pageHash(site);if(page!==pubObj.pageVersion){pubObj.pageVersion=page;pub=JSON.stringify(pubObj);}
    writeFileSync(join(site,'public.json'),pub);writeFileSync(join(site,'.nojekyll'),'');
    if(existsSync(join(DIR,'out','map.bin')))cpSync(join(DIR,'out','map.bin'),join(site,'map.bin'));
+   const names=ourNamesFile(await dash('/api/our-names',undefined,10_000).then(r=>r.ok?r.json():null).catch(()=>null),MAIN_ACCOUNT);
+   if(names){mkdirSync(join(site,'api'),{recursive:true});writeFileSync(join(site,'api','our-names'),names);}
    // A refused folder waits a whole push period too: the next try copies main's site/ again.
    const {result}=await pushAuditedSite(site);note+=` site=${result}`;lastSitePush=now;
    if(result==='pushed'||result==='unchanged'){lastPublic={stable:withoutClocksValue(pubObj),at:now};deployedPage=page;}

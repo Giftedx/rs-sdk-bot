@@ -101,6 +101,22 @@ describe('hosted views',()=>{
   expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,text:'coins'}]);expect(p.events).toEqual([]);
   expect(JSON.stringify(p)).not.toMatch(/banked|packCoins|15000/);
  });
+ test('a Brain goal id names its kind and its quest or item, never the account',()=>{
+  const p=publicView({economy:{itemPricesById:{257:{name:'Ranarr weed',value:1}},supplies:[{id:1975,name:'Chocolate dust'}]},
+   bots:[{name:'A',currentGoal:'goal:pk_army:Spitroaster'},{name:'B',currentGoal:'goal:supply_chain:257'},{name:'C',currentGoal:'goal:quest_board:barcrawl'},{name:'D',currentGoal:'campaign:⟦MAIN⟧:item:1975'},{name:'E',currentGoal:'goal:supply_chain:99999'},{name:'F',goal:'campaign:grindmyherb:item:42'},{name:'G',goal:'goal:new_kind:x'}],
+   results:[{at:1,name:'A',ok:true,goal:'goal:pk_army:Spitroaster'},{at:2,name:'D',ok:false,goal:'campaign:⟦MAIN⟧:item:1975'}]});
+  expect(p.bots.map((b:any)=>b.currentGoal??b.goal)).toEqual(['PK army','supply: Ranarr weed','quest: barcrawl','campaign: Chocolate dust','supply chain','item campaign','new kind']);
+  expect(p.results.map((r:any)=>r.text)).toEqual(['PK army','campaign: Chocolate dust']);
+  expect(JSON.stringify([p.bots,p.results])).not.toMatch(/Spitroaster|grindmyherb|⟦MAIN⟧/);
+ });
+ test('a claimed spot with no tile stays out of the public file: nothing there can draw it',()=>{
+  const p=publicView({contention:[{side:'local',resource:'mystery-spot',kind:'mystery-spot',x:null,z:null,others:[],ours:[]},{side:'local',resource:'draynor-willows',kind:'draynor-willows',x:3086,z:3232,others:['Zed'],ours:[]}]});
+  expect(p.contention.map((c:any)=>c.resource)).toEqual(['draynor-willows']);
+ });
+ test('the public queue keeps each agent and its state, not its task ids',()=>{
+  const p=publicView({coordination:{available:true,fresh:true,paused:false,counts:{running:2},agents:[{name:'brain',tasks:['chain:A:campaign:⟦MAIN⟧:item:1519','chain:B:goal:pk_army:B'],planning:true,fresh:true,paused:false}],tasks:[{id:'t'}]}});
+  expect(p.coordination).toEqual({available:true,fresh:true,paused:false,counts:{running:2},agents:[{name:'brain',planning:true,fresh:true,paused:false,running:2}],tasks:[]});
+ });
  test('a specialist run id reads as the skill specialist, not as the account name',()=>{
   const p=publicView({bots:[{name:'NockAndLoad',goal:'run-nockandload-fletching-specialist-1795166115412 [task-1a2b]'},{name:'Mineshafted',currentGoal:'run-mineshafted-mining-specialist-1795166115999'}]});
   expect(p.bots[0].goal).toBe('Fletching specialist');expect(p.bots[1].currentGoal).toBe('Mining specialist');

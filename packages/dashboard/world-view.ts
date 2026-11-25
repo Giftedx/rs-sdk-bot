@@ -93,6 +93,16 @@ const NAMED_SPOT_TILES: Readonly<Record<string, { x: number; z: number; level?: 
     'aio:air-altar': { x: 2985, z: 3292 },
     'aio:ardougne-blood-chests': { x: 2586, z: 9736 },
     'cave:taverley-black-dragons': { x: 2835, z: 9824 },
+    // Brain catalog spot ids (packages/brain/src/catalog.ts spotId) with a known tile: the stand tile of
+    // tree:draynor-willows:0 (knowledge/ubermouse/world.json), the Lava Maze runite rocks
+    // (packages/planner/src/haggis-boards.json places), and the named spots above for the same places.
+    'draynor-willows': { x: 3086, z: 3232 },
+    'lava-maze-runite': { x: 3059, z: 3884 },
+    'catherby-lobsters': { x: 2838, z: 3431 },
+    'seers-flax': { x: 2744, z: 3445 },
+    'essence-mine': { x: 2910, z: 4832 },
+    'khazard-troopers': { x: 2525, z: 3242 },
+    'taverley-black-dragons': { x: 2835, z: 9824 },
 };
 
 export function wildernessInfo(pos: { x: number; z: number; level?: number } | null | undefined, combat?: number | null) {

@@ -456,3 +456,19 @@ test('desk commands put their fields at the envelope top level; a queued task st
  await command('pause').catch(()=>{});
  expect(sent[2]).toEqual({id:'uuid-1',action:'pause'});
 });
+
+// A rate that rounds to a thousand thousands reads in millions, as gp() does.
+test('fleet rates switch to millions before they round up to 1000k',()=>{
+ const line=operations.split('\n').find(l=>l.startsWith(' const compactRate='))!;
+ const compactRate=new Function(`${line};return compactRate;`)();
+ expect([999_499,999_500,999_999,1_000_000,1_250_000,12_400].map(compactRate)).toEqual(['999k','1.0M','1.0M','1.0M','1.3M','12k']);
+});
+
+// A job line wider than the panel ends in an ellipsis (operations.css .fl-sub): the row's title holds the whole line.
+test('a public fleet row keeps its whole job line in a title',()=>{
+ const code=operations.slice(operations.indexOf(' function goalShare('),operations.indexOf(' function fleetRow(b){'))+operations.slice(operations.indexOf(' function publicRow('),operations.indexOf(' function fleet(){'));
+ const job='farm Taverley Dungeon Chaos druids for herbs, snape grass, law and nature runes';
+ const row=new Function('window','S','sel','st','overallRank','totalLevel','E','nf','compactRate','safeName','skillIcon','age',`${code};return publicRow;`)
+  ({atlasJobName:String},{results:[]},null,()=>['','observed'],()=>null,()=>288,String,String,String,String,()=>'/skill.png',String)({name:'BraveHardon',operation:'observed',inWorld:true,currentGoal:job});
+ expect(row).toContain('<span class="fl-sub" title="Total 288 · '+job+'">');
+});

@@ -11,7 +11,8 @@ const bot=(name:string)=>({name,inWorld:true,operation:'observed',fresh:true,pos
 // Only unrelated page painting, viewer geometry and browser I/O are replaced here.
 function linkedPage(hash:string,options:{restored?:boolean,state?:string}={}){
  const location={hash,pathname:'/dashboard',search:'?public=1',origin:'http://dashboard.test'},messages:any[]=[],moves:string[]=[],links:string[]=[];
- const window:any={atlasFreeCamera:false,atlasFollowOther:null,atlasDestination:null,atlasCamera:{goto:()=>{}}};
+ const handlers:Record<string,()=>void>={};
+ const window:any={atlasFreeCamera:false,atlasFollowOther:null,atlasDestination:null,atlasCamera:{goto:()=>{}},addEventListener:(type:string,fn:()=>void)=>{handlers[type]=fn;}};
  const frame={postMessage:(message:any)=>messages.push(message)},element={classList:{remove:()=>{},add:()=>{}},focus:()=>{},blur:()=>{}};
  const history={replaceState:(_state:unknown,_title:string,url:string)=>{links.push(url);location.hash=new URL(url,location.origin).hash;}};
  const code=[
@@ -54,8 +55,15 @@ function linkedPage(hash:string,options:{restored?:boolean,state?:string}={}){
    viewerReady:()=>{VIEWER.state='ready';setMode('3d',true);render();},
    state:()=>({sel,picked,read:linkRead,free:window.atlasFreeCamera,watch:window.atlasFollowOther,wall:wall&&{names:[...wall.names],layout:wall.layout,main:wall.main},hash:location.hash})};
  `)(...Object.values(env));
- return {...api,messages,moves,links,query:()=>Object.fromEntries(new URLSearchParams(location.hash.slice(1)))};
+ return {...api,messages,moves,links,query:()=>Object.fromEntries(new URLSearchParams(location.hash.slice(1))),
+  edit:(next:string)=>{location.hash=next;handlers.hashchange?.();}};
 }
+
+test('a link edited in an open tab opens its plugin and account',()=>{
+ const ui=linkedPage('#p=world&a=Target');ui.receive([bot('Target'),bot('Other')]);expect(ui.state().sel).toBe('Target');
+ ui.edit('#p=boards&a=Other');
+ expect(ui.state()).toMatchObject({sel:'Other',read:true});expect(ui.query()).toEqual({p:'boards',a:'Other'});expect(ui.moves).toEqual(['Target','Other']);
+});
 
 test('a restored plugin preserves the full pending link through empty snapshots and plugin changes',()=>{
  const ui=linkedPage('#p=world&a=Target&watch=Visitor&cam=free&wall=1&wl=main&wm=Target',{restored:false});

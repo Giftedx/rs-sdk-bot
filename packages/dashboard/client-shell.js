@@ -647,8 +647,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!b||!hasXpData){
       const botsList=typeof S!=='undefined'&&S&&Array.isArray(S.bots)?S.bots:[];
       const live=botsList.filter(x=>x.fresh&&!x.practice&&!x.reserved&&(!x.remote||x.xpPerHour>0)),idle=x=>window.atlasXp.efficiency(x.timeline)?.idle??-1;
-      live.sort(xpSort==='waste'?(x,y)=>idle(y)-idle(x):(x,y)=>(y.xpPerHour||0)-(x.xpPerHour||0));
-      const sort=live.length?`<div class="xp-buttons"><span class="xp-muted">Sort</span><button class="xp-reset${xpSort==='rate'?' on':''}" data-xp-sort="rate">XP/hr</button><button class="xp-reset${xpSort==='waste'?' on':''}" data-xp-sort="waste">Most idle</button></div>`:'';
+      // Most idle needs a tick timeline, which the public file never carries: with none, the sort is by XP/hr only.
+      const timed=live.some(x=>idle(x)>=0),waste=timed&&xpSort==='waste';
+      live.sort(waste?(x,y)=>idle(y)-idle(x):(x,y)=>(y.xpPerHour||0)-(x.xpPerHour||0));
+      const sort=live.length&&timed?`<div class="xp-buttons"><span class="xp-muted">Sort</span><button class="xp-reset${waste?'':' on'}" data-xp-sort="rate">XP/hr</button><button class="xp-reset${waste?' on':''}" data-xp-sort="waste">Most idle</button></div>`:'';
       put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>'+(b?E(safeName(b.name)):'XP Tracker')+'</span></div><span class="xp-muted">'+(!b?'Choose an account in the title bar, or one below.':window.atlasOperator()?'The '+E(b.side)+' side shares levels, not XP.':'No XP data for this account.')+'</span>'+sort+'</div>'+(live.map(x=>{const e=window.atlasXp.efficiency(x.timeline),ts=typeof trainedSkill==='function'?trainedSkill(x):X.activeSkill?.(x);return `<button class="xp-box xp-row xp-pick" data-xp-focus="${E(x.name)}"><img src="${asset(ts?'skill-'+skillFile(ts)+'.png':'rl-xp.png')}" alt=""><span class="xp-pick-main"><span class="xp-pick-line"><span class="xp-name">${E(safeName(x.name))}</span><span class="xp-gain">${x.xpPerHour?nf(Math.round(x.xpPerHour))+' XP/hr':'—'}</span></span>${e?tickStrip(x.timeline.slice(-100),'xp-ticks xp-ticks-small')+`<span class="xp-meta"><span class="${e.idle>=25?'xp-bad':''}">${Math.round(e.idle)}% idle</span><span>${e.waste?TICK_LABEL[e.waste.kind]+' '+Math.round(e.waste.share)+'%':''}</span></span>`:''}</span></button>`;}).join('')||(b?'':'<div class="xp-box"><span class="xp-muted">No account with XP data is playing now.</span></div>'))+'</div>');restore();return;}
     const store=xpStore(),prevBase=store[b.name];
     if(prevBase&&prevBase.started!==(b.started??null)&&prevBase.xp&&X.archiveSession){const entry=X.archiveSession(store,b,now,{tickMs});if(entry)store.__history=X.recordSessionHistory?.(store.__history,safeName(b.name),entry);}
@@ -1212,8 +1214,23 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!bandsHtml&&!hotspotsHtml&&!routes)return '';
     return `<div class="xp-box"><div class="xp-head" title="Rev 289 Wilderness danger cutoffs (Lvl 20 standard tele, Lvl 30 glory, Lvl 31+ blocked) and PvP/resource hotspots."><span>Wilderness hotspots &amp; bands</span><span class="xp-muted">click to pan 2D</span></div>${bandsHtml}${hotspotsHtml}${routes}</div>`;
   }
+  // The public file has no wilderness list. The roster (the live world feed while it is fresh) holds the same players,
+  // so the list comes from it, by the rule of world-view.ts wildernessView.
+  function wildernessList(){
+    if(Array.isArray(S.wilderness))return S.wilderness;
+    const ours=new Set((S.bots||[]).filter(b=>!b.practice).map(b=>String(b.name).toLowerCase())),out=[];
+    for(const r of S.roster||[]){
+      if(!Array.isArray(r))continue;
+      const [name,x,z,plane,combat]=r;
+      if(typeof name!=='string'||!Number.isFinite(x)||!Number.isFinite(z)||x<2944||x>3391)continue;
+      const south=z>=3520&&z<4000?3520:z>=9920&&z<10400?9920:0;if(!south)continue;
+      const wild=Math.floor((z-south)/8)+1,cb=Number.isFinite(combat)&&combat>=3?combat:null;
+      out.push({name,fleet:ours.has(name.toLowerCase()),x,z,plane:plane||0,combat,wild,minCombat:cb?Math.max(3,cb-wild):null,maxCombat:cb?Math.min(126,cb+wild):null});
+    }
+    return out.sort((a,b)=>Number(a.fleet)-Number(b.fleet)||b.wild-a.wild||a.name.localeCompare(b.name));
+  }
   function wildernessWatchBox(){
-    const list=S.wilderness||[];
+    const list=wildernessList();
     if(!list.length)return '';
     const rivals=list.filter(w=>!w.fleet),ourWild=(S.bots||[]).filter(b=>!b.practice&&!b.reserved&&b.inWorld&&wildLevel(b.pos));
     return `<div class="xp-box"><div class="xp-head" title="Online players spotted inside the Wilderness rectangle in the last 30 seconds."><span>Wilderness watch</span><span class="${rivals.length?'xp-bad':'xp-muted'}">${rivals.length} rival${rivals.length===1?'':'s'} · ${list.length} total</span></div>`+list.slice(0,12).map(w=>{const hit=!w.fleet&&ourWild.some(b=>canAttack({pos:{x:w.x,z:w.z,level:w.plane??0},combat:w.combat},b)),multi=inMulti({x:w.x,z:w.z,level:w.plane??0});return `<div class="xp-meta"><span class="spot-names">${nameButtons([w.name],1)}${w.fleet?' <i class="xp-muted">ours</i>':''}${hit?' <b class="xp-bad" title="Within combat bracket of our Wilderness account">· can attack ours</b>':''}</span><span>cb ${w.combat} · wildy ${w.wild}${multi?' · multi':''}${w.minCombat?' ('+w.minCombat+'-'+w.maxCombat+')':''} · ${E(placeOf(w.x,w.z))}</span></div>`;}).join('')+(list.length>12?`<div class="xp-meta"><span class="xp-muted">+${list.length-12} more in Wilderness</span></div>`:'')+'</div>';
@@ -1516,8 +1533,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // The head (counts and the price age) and the rows are written apart: a new age does not rebuild the rows.
   function geResults(){
     if(!S)return ['<p class="xp-muted" role="status">Waiting for market data…</p>',''];
-    // The game names every unidentified herb "Herb"; the item id says which one it is (obj.pack unidentified_*).
-    const HERBS={199:'guam',201:'marrentill',203:'tarromin',205:'harralander',207:'ranarr',209:'irit',211:'avantoe',213:'kwuarm',215:'cadantine',217:'dwarf weed',219:'torstol',2485:'lantadyme',3049:'toadflax',3051:'snapdragon'},geName=i=>i.name==='Herb'&&HERBS[i.id]?'Herb ('+HERBS[i.id]+')':i.name;
+    // The game names every unidentified herb "Herb", every hide "Dragonhide", every leather "Dragon leather" and every
+    // unfinished potion "Unfinished potion"; the item id says which one it is (obj.pack unidentified_*, dragonhide_*,
+    // dragon_leather*, *vial).
+    const HERBS={199:'guam',201:'marrentill',203:'tarromin',205:'harralander',207:'ranarr',209:'irit',211:'avantoe',213:'kwuarm',215:'cadantine',217:'dwarf weed',219:'torstol',2485:'lantadyme',3049:'toadflax',3051:'snapdragon'};
+    const SHARED={Dragonhide:{1753:'Green dragonhide',1751:'Blue dragonhide',1749:'Red dragonhide',1747:'Black dragonhide'},'Dragon leather':{1745:'Green dragon leather',2505:'Blue dragon leather',2507:'Red dragon leather',2509:'Black dragon leather'},'Unfinished potion':{91:'Guam potion (unf)',93:'Marrentill potion (unf)',95:'Tarromin potion (unf)',97:'Harralander potion (unf)',99:'Ranarr potion (unf)',101:'Irit potion (unf)',103:'Avantoe potion (unf)',105:'Kwuarm potion (unf)',107:'Cadantine potion (unf)',109:'Dwarf weed potion (unf)',111:'Torstol potion (unf)',2483:'Lantadyme potion (unf)',3002:'Toadflax potion (unf)',3004:'Snapdragon potion (unf)'}};
+    const geName=i=>i.name==='Herb'&&HERBS[i.id]?'Herb ('+HERBS[i.id]+')':SHARED[i.name]?.[i.id]||i.name;
     const supplies=S?.economy?.supplies||[];
     const offered=i=>i.ask!=null||i.bid!=null,owner=window.atlasOperator(),held=new Map(),nameOnly=new Map(),invalidNames=new Set();
     if(owner)for(const b of S.bots)if(!b.practice&&!b.reserved&&Array.isArray(b.bank))for(const it of b.bank){const {has,id,name}=priceIdentity(it);if(has&&id===null){invalidNames.add(name);continue;}const target=id!==null?held:nameOnly,key=id!==null?id:name;target.set(key,(target.get(key)||0)+(it.count||0));}
@@ -2217,7 +2238,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   hud.addEventListener('mouseout',e=>{if(e.target.closest('[data-skill]')&&!e.relatedTarget?.closest?.('[data-skill]'))hud.querySelector('.game-tip').hidden=true;});
   let welcomed=false;
   function chatFeed(){
-    const owner=window.atlasOperator(),rows=[...(S.events||[]).filter(e=>!e.practice).map(e=>({at:e.at,name:e.name,text:e.full||e.text,kind:'Game'})),...(S.results||[]).filter(r=>!r.practice&&(owner||!window.atlasHousekeeping(r.text))).map(r=>({at:r.at,name:r.name,text:(r.ok?'finished: ':'stopped: ')+(owner?String(r.text):window.atlasJobName(r.text)).slice(0,120),kind:r.ok||!owner?'Game':'Private'}))]
+    const owner=window.atlasOperator(),rows=[...(S.events||[]).filter(e=>!e.practice).map(e=>({at:e.at,name:e.name,text:e.full||e.text,kind:'Game'})),...(S.results||[]).filter(r=>!r.practice&&(owner||!window.atlasHousekeeping(r.text))).map(r=>{const job=(owner?String(r.text??''):window.atlasJobName(r.text)).slice(0,120).trim();return {at:r.at,name:r.name,text:(r.ok?'finished':'stopped')+(job?': '+job:''),kind:r.ok||!owner?'Game':'Private'};})]
       .sort((a,b)=>a.at-b.at).slice(-60);
     const items=[];
     for(const r of rows){const key=r.kind+'|'+r.at+'|'+r.name+'|'+r.text;if(seen.has(key))continue;seen.add(key);if(seen.size>800)seen.delete(seen.values().next().value);items.push({kind:r.kind,name:safeName(r.name),text:r.text,at:toBrowserAt(r.at)});}
@@ -2271,8 +2292,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Session summary on a logout line: while an account is in the world, its XP when this page first saw it in the world
   // (sessionXp) and its last uptime and loot (sessionLast). A logout line adds the session length, the skill with the
   // most XP gained and the top loot item with its GE value. A session that began before the page opened counts from
-  // the page's first sight of it.
-  const sessionXp=new Map(),sessionLast=new Map();
+  // the page's first sight of it. A login the page saw (sessionIn) gives the session length; the published uptime runs
+  // from the worker's start, which can come long before its login, and it is as old as the published file.
+  const sessionXp=new Map(),sessionLast=new Map(),sessionIn=new Map();
   function trackSession(b){
     if(!b.inWorld)return;
     const xp=Object.fromEntries((b.skills||[]).filter(k=>k&&k.name!=='Overall'&&Number.isFinite(k.xp)).map(k=>[k.name,k.xp]));
@@ -2280,17 +2302,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     sessionLast.set(b.name,{xp,uptime:b.uptime,loot:b.flow?.loot||[]});
   }
   function sessionText(name){
-    const start=sessionXp.get(name),last=sessionLast.get(name);sessionXp.delete(name);sessionLast.delete(name);
+    const start=sessionXp.get(name),last=sessionLast.get(name),inAt=sessionIn.get(name);sessionXp.delete(name);sessionLast.delete(name);sessionIn.delete(name);
     if(!start||!last)return '';
+    const length=Number.isFinite(inAt)?Date.now()-inAt:last.uptime;
     const gains=Object.entries(last.xp).map(([k,v])=>[k,v-(start[k]??v)]).filter(([,d])=>d>0).sort((a,b)=>b[1]-a[1]);
     const top=[...last.loot].sort((a,b)=>(b.count||0)-(a.count||0))[0],unpriced=last.loot.filter(i=>!price(i)).length;
     const value=last.loot.reduce((t,i)=>t+(price(i)?.value??0)*(i.count||0),0);
     const parts=[gains[0]?'+'+nf(Math.round(gains[0][1]))+' '+gains[0][0]+' XP':'',top&&top.count>0?nf(top.count)+' '+top.name:'',value>=1||unpriced?'≈ '+gp(Math.round(value))+' gp of loot'+(unpriced?' + '+unpriced+' unpriced':''):''].filter(Boolean);
-    return (last.uptime?' after '+dur(last.uptime):'')+(parts.length?': '+parts.join(', '):'');
+    return (length?' after '+dur(length):'')+(parts.length?': '+parts.join(', '):'');
   }
   function moments(){const queued=[];const say=(kind,text)=>{queued.push({kind,text,at:Date.now()});};
     const moved={in:[],out:[]};
-    for(const b of S.bots){if(b.practice)continue;const was=worldSeen.get(b.name),is=!!b.inWorld;worldSeen.set(b.name,is);if(momentsPrimed&&was!==undefined&&was!==is)moved[is?'in':'out'].push(is?safeName(b.name):{name:safeName(b.name),text:sessionText(b.name)});else if(!is){sessionXp.delete(b.name);sessionLast.delete(b.name);}trackSession(b);}
+    for(const b of S.bots){if(b.practice)continue;const was=worldSeen.get(b.name),is=!!b.inWorld;worldSeen.set(b.name,is);if(momentsPrimed&&was!==undefined&&was!==is){if(is)sessionIn.set(b.name,Date.now());moved[is?'in':'out'].push(is?safeName(b.name):{name:safeName(b.name),text:sessionText(b.name)});}else if(!is){sessionXp.delete(b.name);sessionLast.delete(b.name);sessionIn.delete(b.name);}trackSession(b);}
     for(const [k,names] of Object.entries(moved)){if(names.length>4)say('Private',names.length+' accounts have logged '+k+'.');else for(const name of names)say('Private',typeof name==='string'?name+' has logged '+k+'.':name.name+' has logged out'+name.text+'.');}
     // A board's best rank is one account's; a move is announced for the same account, and another account taking the best
     // rank is its own line (comparing two accounts' ranks made lines such as "up from" another account's rank).
@@ -2373,6 +2396,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return true;
   }
   let linkRead=false,wall=null,wallLinked=false;
+  // True while the link names an account, a Watch or a free camera that the page has not applied yet.
+  window.atlasLinkPending=()=>!linkRead&&/(?:^|&)(?:a|watch|cam)=/.test(location.hash.slice(1));
   function followLinkedAccount(){
     if(linkRead)return;
     const q=new URLSearchParams(location.hash.slice(1)),name=q.get('a');
@@ -2399,6 +2424,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     }
     const hash='#'+q;if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
   }
+  // A link pasted or edited in an open tab is read again, as at startup (writeLink's replaceState fires no hashchange).
+  function linkChanged(){linkRead=false;restoreLinkedPlugin();if(S)render();}
+  window.addEventListener?.('hashchange',linkChanged);
   let questAccount=null;
   function refresh(){if(!S)return;followLinkedAccount();wallSync();writeLink();
     const b=account(),name=b?.name??null;

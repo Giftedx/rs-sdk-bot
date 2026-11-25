@@ -4,7 +4,7 @@ import {mkdirSync,mkdtempSync,rmSync,writeFileSync,cpSync,existsSync,readFileSyn
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {checkPages,pageHash,PAGES_CHECK_MS,pushAuditedSite,pushPublicCommit,pushSingleCommit,run,verifyStaticBundle,watchPush} from './publish';
+import {checkPages,ourNamesFile,pageHash,PAGES_CHECK_MS,pushAuditedSite,pushPublicCommit,pushSingleCommit,run,verifyStaticBundle,watchPush} from './publish';
 import {publicView} from './publish-relay';
 
 // A site folder as rs-fleet-command scripts/import-page.ts and export-viewer.ts make it: relative page links, webp
@@ -50,6 +50,13 @@ test('the page hash follows the page files and ignores the data files beside the
   expect(pageHash(dir)).toBe(first);
   writeFileSync(join(dir,'shim.js'),'y');expect(pageHash(dir)).not.toBe(first);
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('each site push lists every current account for the viewer nameplates, never the main account',()=>{
+ expect(ourNamesFile(['Woodpecker','Hiltsdeep','Woodpecker','MainGuy','maingUY','bad name!','',42,'Abracadickra'],'MainGuy')).toBe(JSON.stringify(['Abracadickra','Hiltsdeep','Woodpecker']));
+ expect(ourNamesFile(null,'MainGuy')).toBeNull();
+ expect(ourNamesFile({names:['Woodpecker']},'MainGuy')).toBeNull();
+ expect(ourNamesFile(['MainGuy'],'MainGuy')).toBeNull();
 });
 
 test('a command that outlives its limit is stopped and reported as a failure',async()=>{

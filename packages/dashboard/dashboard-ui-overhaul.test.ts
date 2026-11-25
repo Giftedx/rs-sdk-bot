@@ -606,6 +606,17 @@ test('4. Fleet filter status counts strictly partition All in owner and public v
     expect(chipCounts.attention).toBe(2);
     expect(chipCounts.paused).toBe(1);
     expect(chipCounts.held).toBe(2);
+    expect(chipCounts.idle).toBe(1);
+    // With no tick timeline on any bot (the public file never carries one), a Most idle chip could only read 0.
+    const noTimeline = new Function(
+      'S', 'window', 'document', 'E', 'nf', 'age', 'dur', 'safeName',
+      `let fleetFilter='all',fleetQuery='',sel=null;${topOps}\n${fleetHelpers};return fleet();`,
+    )(
+      { now: 2000, bots: mixedBots.map(({ timeline: _t, ...b }: any) => b), world: { players: 12 }, results: [] },
+      { atlasOperator: () => isOwner, atlasXp: X },
+      doc, String, String, () => '1s', () => '1m', String,
+    );
+    expect(noTimeline).not.toContain('data-value="idle"');
 
     // Clicking each filter chip renders exact count of rows
     for (const [fk, expected] of Object.entries(chipCounts)) {
