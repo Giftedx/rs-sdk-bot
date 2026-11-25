@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795623707723,
+ "at": 1795623799412,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,34 +60,24 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-33-p97 ITEM_ID=440 QUANTITY=33 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=33 -- smithing smelt 1500 iron"
+    "ge-buy"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ORDER_KEY": "brain-2351-33-p224",
+    "ITEM_ID": "2351",
+    "QUANTITY": "33",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "224",
+    "DEMAND_ID": "campaign:haggis:item:2351",
+    "BATCH_UNITS": "33"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
    "role": "army"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
   },
   {
    "account": "Unsheathed",
@@ -167,6 +157,19 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/generated/quest-arena.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "army"
   },
   {
    "account": "Abracadickra",
