@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795581169282-pickpockdick-undermykilt-fcafa53f2932fd53",
+ "account": "UnderMyKilt",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut ruby",
+ "requested": 1,
+ "claim": "6d8e62d2-e66e-4a47-8c81-f0dd0aef1a69",
+ "count": 1,
+ "ok": true,
+ "at": 1795581377501,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Ball of wool",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795581376793
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795581376329
+ },
+ "logout": {
+  "attemptId": "1795581362915-0000015544-0000000001",
+  "at": 1795581377486,
+  "sha256": "20893ba6b8f930ea8f470cb5bfed41b202648bfdb210149b4135c8bf095daa8e"
+ },
+ "screen": true
+}
