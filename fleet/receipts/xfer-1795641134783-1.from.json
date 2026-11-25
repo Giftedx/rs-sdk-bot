@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795641134783-1",
  "account": "Wandwaver",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Marrentill",
  "requested": 1,
  "claim": "a03c9c54-023e-428a-946a-a239da27c536",
- "count": 0,
- "ok": false,
- "at": 1795641236860,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795641431160,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795641248016
+ },
+ "logout": {
+  "attemptId": "1795641236870-0000019192-0000000001",
+  "at": 1795641431148,
+  "sha256": "c13b70ea1ba95ed8a96aae5480f6f634f2f2c311fdd2597efcb2757392e947d8"
+ },
+ "screen": true
 }
