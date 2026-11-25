@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795567753437-1",
  "account": "Woodenstaff",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 15,
  "claim": "6e432d10-e856-4dfe-98a9-fcac8b5e2ff1",
- "count": 0,
- "ok": false,
- "at": 1795567925079,
- "detail": "trade claimed"
+ "count": 15,
+ "ok": true,
+ "at": 1795567935593,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 15
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795567934861
+ },
+ "logout": {
+  "attemptId": "1795567925092-0000029000-0000000001",
+  "at": 1795567935579,
+  "sha256": "90cdc20dbd3ae86a667692044b4b8d1d55b908e20549ba3d569315068eb1a2ba"
+ },
+ "screen": true
 }
