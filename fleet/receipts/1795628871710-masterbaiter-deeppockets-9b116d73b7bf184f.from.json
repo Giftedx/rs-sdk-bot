@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795628871710-masterbaiter-deeppockets-9b116d73b7bf184f",
+ "account": "Masterbaiter",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 25,
+ "claim": "8253e749-b68d-436a-8043-dd77e9212f9d",
+ "count": 0,
+ "ok": false,
+ "at": 1795630105772,
+ "detail": "trade claimed"
+}
