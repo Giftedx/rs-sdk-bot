@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795604034636-3",
+ "account": "Fatstack",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "e56ae69c-0144-4d35-b84c-de3e69ba84da",
+ "count": 0,
+ "ok": false,
+ "at": 1795604722109,
+ "detail": "trade claimed"
+}
