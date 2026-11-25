@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795606461389-1",
  "account": "Billionaire",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "07117f82-3b2c-43e3-aced-36cd0601a8cf",
- "count": 0,
- "ok": false,
- "at": 1795606720135,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795606732651,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795606731899
+ },
+ "logout": {
+  "attemptId": "1795606720144-0000018908-0000000001",
+  "at": 1795606732640,
+  "sha256": "16bebef43cb46bd5d4731c3d1e5a4a4e7ac581254eeaa7a447577609d77300b3"
+ },
+ "screen": true
 }
