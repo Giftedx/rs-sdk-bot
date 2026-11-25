@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795636150716-1",
+ "account": "BowBeforeMe",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire",
+ "requested": 2,
+ "claim": "e3279aef-2772-47ba-a085-fd5406fa226a",
+ "count": 0,
+ "ok": false,
+ "at": 1795636294358,
+ "detail": "trade claimed"
+}
