@@ -23,6 +23,7 @@ import {
     skillTarget,
     windowOpen,
 } from './interactions';
+import { registerSessionPrayer } from './hold';
 import { assessThreat, attackTarget, autoAttackOf, damageSourceName, npcDead } from './threats';
 import type { Action, GuardSession, Pending, PrayerGuardOptions, PrayerGuardStats, PrayerIntent } from './types';
 
@@ -75,6 +76,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const owned = new Map<number, number>(), keep = new Map<number, number>();
     // What a prayer input sent in the last STATE_LAG ticks makes of each prayer, until the state shows it.
     const intents = new Map<number, PrayerIntent>();
+    // Holds of a loop that sends its own prayers (hold.ts): while one is on, the guard sends no input.
+    let holders = 0;
     let stopped = false, flickAt = -Infinity, threatAt = -Infinity, threatNow = false;
     let scriptPrayerAt = -Infinity, scriptPrayers: number[] = [], inputTick = -1, inputs = 0;
     let pending: Pending = { kind: 'none' };
@@ -141,7 +144,11 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const st = s.sdk.getState(), prayers = st?.prayers;
         if (stats.yielded || !st?.player || st.player.isDead || !prayers || prayers.prayerPoints < 1 || windowOpen(st)) return;
         const now = s.tick();
-        if (resume.length) { finish(now); return; }
+        // The second tick of a flick comes before the script's input. In the flick's first tick the guard keeps one input
+        // for the script: the prayers that are still off come back in the next tick. With them in the first tick too,
+        // the tick had more than 5 inputs, one of them went to the next tick, and the repair then toggled that prayer
+        // a second time.
+        if (resume.length) { if (flickAt !== now) finish(now); return; }
         // The script's input takes one of the tick's inputs; the guard has the rest, less what it sent in this tick.
         const room = TICK_INPUTS - 1 - (sentAt === now ? sent : 0);
         if (inputs > 0 || flickAt === now || room <= 0) return;
@@ -185,11 +192,13 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             scriptPrayerAt = now; stats.manual = true; owned.clear(); inputs++;
             // The script chose from the prayers before a flick in progress. The flick finishes first, so the script's
             // button acts on those prayers; two ticks later the repair turns on a chosen prayer the state shows off.
-            if (resume.length && !stats.yielded) finish(now);
+            if (resume.length && !stats.yielded && holders === 0) finish(now);
             const after = intendToggle(intents, expect ?? believedPrayers(s.sdk.getState(), intents, now), prayer, now);
             if (expect) { expect = after; expectAt = now; }
             return;
         }
+        // A held guard keeps no attack to send again after the hold.
+        if (holders > 0) { pending = { kind: 'none' }; retaliate = null; return; }
         // A click on the level-up message starts no action.
         if (NEUTRAL.has(a.type) || (a.type === 'clickDialogOption' && levelUpDialog(s.sdk.getState()))) { inputs++; return; }
         const attack = (a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState());
@@ -213,7 +222,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     if (client && observer) client.executeBotAction = observer;
 
     const off = s.onTick(() => {
-        if (stopped || stats.yielded) return;
+        if (stopped || stats.yielded || holders > 0) return;
         const st = s.sdk.getState(), p = st?.player, prayers = st?.prayers;
         if (!p || p.isDead || !prayers || !Array.isArray(prayers.activePrayers)) return;
         const now = s.tick();
@@ -411,6 +420,15 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             void s.ended?.then(() => { end(); done(); });
         });
     };
+    // A hold (hold.ts): the loop that holds the guard sends every prayer input. A flick of the guard that is in
+    // progress ends here, and the loop turns its prayers that are off on again.
+    const holdGuard = () => {
+        holders++;
+        resume = []; expect = null; owned.clear(); pending = { kind: 'none' }; retaliate = null;
+        let held = true;
+        return { release: () => { if (held) { held = false; holders--; } } };
+    };
+    registerSessionPrayer(s.sdk, holdGuard);
     void s.ended?.then(stop);
-    return { stop, release, stats: () => ({ ...stats, holdsBy: { ...stats.holdsBy }, takenFrom: { ...stats.takenFrom } }), note };
+    return { stop, release, hold: holdGuard, stats: () => ({ ...stats, holdsBy: { ...stats.holdsBy }, takenFrom: { ...stats.takenFrom } }), note };
 }

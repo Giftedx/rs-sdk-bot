@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { afterToggle, protectByStyle, startPrayerGuard, wildernessLevel, PROTECT, type AttackStyle, type Hunter } from '../src/prayer-guard';
+import { afterToggle, holdSessionPrayer, protectByStyle, startPrayerGuard, wildernessLevel, PROTECT, type AttackStyle, type Hunter } from '../src/prayer-guard';
 
 // A model of the server rules the guard depends on (skill_prayer/scripts/prayer.rs2 and prayers/*.rs2): a prayer
 // button closes the open window and clears the interaction; the drain timer starts at 5 when the first prayer goes
@@ -111,6 +111,44 @@ test('two, three and four prayers cost no points; five are held', () => {
     five.advance(100);
     expect(five.w.toggles).toBe(0);
     expect(guard.stats().holds).toBeGreaterThan(0);
+});
+
+test('a script input in the first tick of a three-prayer flick: 5 inputs at most, and no prayer gets two toggles', () => {
+    // Protect Item, Steel Skin and Protect from Melee, and a script that walks each 3 ticks (fight.ts walks out so).
+    const { w, s, client, advance } = world({ prayers: [8, 9, PROTECT.melee] });
+    startPrayerGuard(s, { protect: false });
+    let itemOff = 0;
+    for (let i = 0; i < 120; i++) {
+        advance();
+        if (i % 3 === 0) client.executeBotAction({ type: 'walkTo', x: 3200, z: 3190, reason: 'SDK' });
+        if (!w.active[8]) itemOff++;
+    }
+    expect(w.most).toBeLessThanOrEqual(5);
+    expect(w.drains).toBe(0);
+    // A flick of three prayers has one tick in four with Protect Item off (backFirst: it comes back in the second tick).
+    expect(itemOff).toBeLessThanOrEqual(30);
+});
+
+test('a held guard sends no input, and flicks again once the hold ends', () => {
+    const { w, s, client, advance } = world({ prayers: [9, 10, PROTECT.melee] });
+    w.npcs = [cow(-1)];
+    const guard = startPrayerGuard(s, { protect: false });
+    advance(8);
+    expect(w.toggles).toBeGreaterThan(0);
+    const held = holdSessionPrayer(s.sdk);
+    // Inputs that the guard sent before the hold can still be in the server's queue.
+    advance(2);
+    const mark = w.toggles, flicks = guard.stats().flicks;
+    // An attack of the script while held: the guard sends nothing before it and keeps no attack to send again.
+    client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+    advance(40);
+    expect(w.toggles).toBe(mark);
+    expect(guard.stats()).toMatchObject({ flicks, resends: 0 });
+    held.release();
+    held.release();
+    advance(12);
+    expect(w.toggles).toBeGreaterThan(mark);
+    expect(guard.stats().flicks).toBeGreaterThan(flicks);
 });
 
 test('three and four prayers in an attack: 5 inputs at most in a tick, the attack stays', () => {
