@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795576310218-quickhandjob-yewfirst-b8fd2a62e166ab0e",
  "account": "YewFirst",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 2900,
  "claim": "e6901ebd-b31e-451f-a6a7-f851e77e4279",
- "count": 0,
- "ok": false,
- "at": 1795576671008,
- "detail": "trade claimed"
+ "count": 2900,
+ "ok": true,
+ "at": 1795576682914,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2900
+ },
+ "bank": {
+  "count": 2900,
+  "at": 1795576682133
+ },
+ "logout": {
+  "attemptId": "1795576671018-0000025672-0000000001",
+  "at": 1795576682831,
+  "sha256": "dd20ff83465bf2c7fa950f33fb824ab0d6861b90c797805e8ab6272da8b1c241"
+ },
+ "screen": true
 }
