@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795611842696-2",
  "account": "Ballspinner",
  "partner": "TheFullMonty",
@@ -12,6 +12,12 @@
  "claim": "0e627dbf-9de2-493b-8ffa-4b7eb1671b6c",
  "count": 0,
  "ok": false,
- "at": 1795612181736,
- "detail": "trade claimed"
+ "at": 1795612329632,
+ "detail": "Error: stock short: Uncut diamond 0 banked + 0 held < 10",
+ "logout": {
+  "attemptId": "1795612182083-0000024132-0000000001",
+  "at": 1795612329615,
+  "sha256": "b972ed4c7fa1aac82009c226775dc1320ba7a8b219db8b7f683f6fc0babc7164"
+ },
+ "screen": false
 }
