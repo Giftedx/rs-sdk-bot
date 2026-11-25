@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795640145146,
+ "at": 1795640177899,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -84,7 +84,7 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2170 TARGET_COUNT=217 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2140 TARGET_COUNT=214 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=224 -- cooking food"
    ],
    "env": {
@@ -99,7 +99,7 @@
    "account": "Stirmypot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=71 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=81 \"ITEM_NAME=Nature rune\" -- loadout",
     "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Stirmypot BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
@@ -203,10 +203,10 @@
    "role": "army"
   },
   {
-   "account": "Woodpecker",
+   "account": "Swordswallow",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=1 -- crafting inventory grind:chocolate_bar"
    ],
    "env": {
@@ -216,6 +216,25 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
    "role": "army"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:225",
+    "BATCH_UNITS": "30",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:225",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
   },
   {
    "account": "BoneToPick",
@@ -235,34 +254,16 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
-   ],
+   "script": "scripts/generated/quest-ikov.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:225",
+   "goal": "goal:quest_board:ikov",
    "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/quest-druid.ts --",
-    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "auto"
   },
   {
    "account": "Abracadickra",

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795640158425-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MineYourBiz",
+  "to": "Shaftsinker",
+  "item": "Rune arrow",
+  "count": 36,
+  "itemId": 892,
+  "start": 1795640158425,
+  "end": 1795641058425,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
