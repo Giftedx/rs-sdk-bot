@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795639655164-1",
+ "account": "Ballspinner",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 1,
+ "claim": "3e2b1f80-4bab-4e00-8169-a6942b9dfeca",
+ "count": 0,
+ "ok": false,
+ "at": 1795640282163,
+ "detail": "trade claimed"
+}

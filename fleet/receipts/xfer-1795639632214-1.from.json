@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795639632214-1",
  "account": "OreElse",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "35956bd7-41b8-4fb5-9932-ac0b49612ea0",
- "count": 0,
- "ok": false,
- "at": 1795639973769,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795640210412,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795640159256
+ },
+ "logout": {
+  "attemptId": "1795639973779-0000018732-0000000001",
+  "at": 1795640210402,
+  "sha256": "60d730517608c6084d85365b9de28b5ed3ba9e2bcc6de62c690835372eed0fa7"
+ },
+ "screen": true
 }
