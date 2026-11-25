@@ -960,6 +960,20 @@ volley is the largest loss of HP from one tick to the next in the last `VOLLEY_T
 escape, the account eats on arrival under `windupFloor`, before it turns auto-retaliate off. `squadDied` reads `isDead`,
 so a death in the windup shows at once.
 
+The rule against master, seeds 1 to 16, two runs each, master at 648fda7b97 and the rule at db8755d5ca (master plus
+the rule):
+
+| Arm | Deaths of ours | Deaths in the windup | Kills | HP taken | Fallbacks | Bank trips |
+|---|---|---|---|---|---|---|
+| master, runs 45701534679 and 45701552905 | 3 | 3 | 47 | 22,885 | 153 | 352 |
+| the rule, runs 45703509395 and 45703527610 | 2 | 1 | 59 | 22,694 | 140 | 342 |
+
+The windup death of the rule (run 45703509395, seed 10): one volley of 33 took the member from about 78 to 45 HP before
+the rule had seen a large volley, and the windup killed it with 65 HP after the eat on the cast tick. The other death
+(seed 8) came on the walk back to the post after an escape at 70 HP: the bank trip led the member into the pile at
+Wilderness level 15. The two runs of each arm give kills of 23 and 24 (master) and 35 and 24 (the rule), so the gain
+in kills and the drop in deaths are inside the spread of the runs.
+
 Gap: the rule is measured only against the attackers of this bench case. Against a pile with smaller volleys, the rule
 sends a member out later. No live run shows the size of a live pile's volley.
 
