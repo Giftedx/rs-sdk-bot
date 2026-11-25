@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { askTradesToStop, fleetOwnerStop, stopTradesThenExit } from '../src/fleet-agent';
-import { recoveryLogOutThenExit, SWARM_STOP } from '../src/swarm';
+import { recoveryLogOutThenExit, SWARM_STOP, swarmSignalStop } from '../src/swarm';
 import { askWorkersToLogOut } from '../src/worker-stop';
 
 const dirs: string[] = [];
@@ -94,4 +94,28 @@ test('a signal stops the swarm only after its attached recovery child ends or th
 
     await recoveryLogOutThenExit(undefined, () => true, () => { throw Error('no recovery to ask'); }, { exit: () => { exits++; } });
     expect(exits).toBe(3);
+});
+
+test('the first swarm signal stops new starts before the recovery wait; a second signal exits at once', async () => {
+    // The swarm tick returns while `stopping` is true (runSwarmCli). Without that, the 2 s tick could start new
+    // detached runs during the 90 s wait, and they would outlive the controller.
+    let alive = true, exits = 0;
+    const asked: string[] = [];
+    const clock = fakeClock(t => { if (t >= 1_000_000 + 30_000) alive = false; });
+    const stop = swarmSignalStop({
+        active: () => ({ account: 'Fixer', pid: 4242 }),
+        alive: () => alive,
+        writeStop: a => asked.push(a),
+        now: clock.now, sleep: clock.sleep, exit: () => { exits++; }, log: () => {},
+    });
+    expect(stop.stopping).toBe(false);
+    stop.onSignal();
+    expect(stop.stopping).toBe(true);
+    expect(asked).toEqual(['Fixer']);
+    expect(exits).toBe(0);
+    stop.onSignal();
+    expect(exits).toBe(1);
+    await new Promise(r => setTimeout(r, 20));
+    expect(alive).toBe(false);
+    expect(exits).toBe(2);
 });

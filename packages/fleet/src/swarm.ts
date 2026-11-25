@@ -568,6 +568,25 @@ export async function recoveryLogOutThenExit(
     (o.exit ?? process.exit)(0);
 }
 
+// The swarm's signal stop. `stopping` is true from the first signal, before the recovery logout wait, so the tick starts
+// nothing during the wait. Runs that already run are detached and stay as they are. A second signal exits at once.
+export function swarmSignalStop(o: {
+    active: () => { readonly account: string; readonly pid: number } | undefined;
+    alive: (pid: number) => boolean;
+    writeStop: (account: string) => void;
+    graceMs?: number; now?: () => number; sleep?: (ms: number) => Promise<void>; exit?: (code: number) => void; log?: (line: string) => void;
+}): { readonly stopping: boolean; onSignal: () => void } {
+    let stopping = false;
+    return {
+        get stopping() { return stopping; },
+        onSignal: () => {
+            if (stopping) { (o.exit ?? process.exit)(0); return; }
+            stopping = true;
+            void recoveryLogOutThenExit(o.active(), o.alive, o.writeStop, o);
+        },
+    };
+}
+
 export function clearSwarmStop(file: string): boolean {
     let text: string;
     try { text = readFileSync(file, 'utf8'); } catch { return false; }
@@ -1322,15 +1341,14 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
     const readPidStarts = () => { pidStartsAt = Date.now(); pidStarts = adopted.size ? processStartTimes([...adopted].map(r => r.pid)) : null; };
     const pidAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
     // Runs are detached and outlive this process. The session-recovery child is attached and dies with it, so a signal
-    // asks it to log out first (worker-stop.ts). A second signal exits at once.
-    let signalled = false;
-    const onSignal = () => {
-        if (signalled) process.exit(0);
-        signalled = true;
-        void recoveryLogOutThenExit(recoveryDispatch.active, pidAlive, a => writeSwarmStop(stopFile(a), SWARM_STOP.recovery));
-    };
-    process.on('SIGINT', onSignal);
-    process.on('SIGTERM', onSignal);
+    // asks it to log out first (worker-stop.ts).
+    const signalStop = swarmSignalStop({
+        active: () => recoveryDispatch.active,
+        alive: pidAlive,
+        writeStop: a => writeSwarmStop(stopFile(a), SWARM_STOP.recovery),
+    });
+    process.on('SIGINT', signalStop.onSignal);
+    process.on('SIGTERM', signalStop.onSignal);
     const saveRuns = () => {
         try {
             const tmp = `${runsFile}.tmp-${process.pid}`;
@@ -1517,7 +1535,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             renewAt = performance.now() + (landed || !lease.allows() ? FLEET_LEASE_RENEW_MS : FLEET_LEASE_RETRY_MS);
         }
         // While a signal waits for the recovery logout, the swarm keeps its leases and starts nothing.
-        if (signalled) return;
+        if (signalStop.stopping) return;
         if (!lease.allows()) {
             const accounts = new Set([...runs.values()].flatMap(r => r.accounts));
             if (recoveryDispatch.active) accounts.add(recoveryDispatch.active.account);
