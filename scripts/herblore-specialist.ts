@@ -701,7 +701,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  }
 }
 
-async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): Promise<void> {
+async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number, notedHelper?: Session): Promise<void> {
  // Amulet of glory has no p_delay before p_choice5_header; send rub + Edgeville (2494) in one tick.
  await rubChainedTeleport(
   spec,
@@ -716,6 +716,8 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): P
   true,
  );
  let gloryDropped = false;
+ let helperPreReq = false;
+ const specLower = spec.name.toLowerCase();
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
   if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) return;
@@ -727,6 +729,13 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): P
    if (glory) {
     gloryDropped = true;
     acts.push(spec.direct({ type: 'dropItem', slot: glory.slot, reason: 'SDK' }));
+   }
+  }
+  if (notedHelper && !helperPreReq && p && Math.max(Math.abs(p.worldX - HERBLORE_BANK_SPOT.x), Math.abs(p.worldZ - HERBLORE_BANK_SPOT.z)) <= 3) {
+   const sTarget = notedHelper.sdk.getNearbyPlayers().find(n => n.name.toLowerCase() === specLower);
+   if (sTarget) {
+    helperPreReq = true;
+    acts.push(notedHelper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
    }
   }
   await Promise.all(acts);
@@ -957,6 +966,7 @@ async function executeHerbloreLoop(
  deadline: number,
  receiveStarter: () => Promise<void>,
  receiveNoted: () => Promise<void>,
+ notedHelper?: Session,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  await skipTutorial2Ticks(spec, deadline);
  if (spec.sdk.getInventory().length > 19) {
@@ -967,7 +977,7 @@ async function executeHerbloreLoop(
  const druidTrace = await completeDruidicRitual(spec, start, deadline);
  const druidTicks = spec.tick() - start;
 
- await teleportEdgevilleAndDropGlory(spec, deadline);
+ await teleportEdgevilleAndDropGlory(spec, deadline, notedHelper);
  const tTrade0 = spec.tick();
  await receiveNoted();
  const tradeTicks = spec.tick() - tTrade0;
@@ -1133,6 +1143,7 @@ export async function runHerbloreSpecialist(
    deadline,
    () => fastInProcessHerbloreTrade(spec, helpers[0]!, HERBLORE_STARTER_BATCH.give.map(g => g.id), deadline),
    () => fastInProcessHerbloreTrade(spec, helpers[1]!, notedBatch.give.map(g => g.id), deadline),
+   helpers[1],
   );
  } finally {
   done = true;
