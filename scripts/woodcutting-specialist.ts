@@ -337,12 +337,26 @@ async function buryPrayerBones(s: Session, stop: () => boolean, targetLevel = 43
     }
 }
 
+function droppableWcSlots(s: Session): number[] {
+    let keptNormalLog = false;
+    const slots: number[] = [];
+    for (const i of s.sdk.getInventory()) {
+        if (i.id === OBJ_OAK_LOGS) {
+            slots.push(i.slot);
+        } else if (i.id === OBJ_LOGS) {
+            if (!keptNormalLog) keptNormalLog = true;
+            else slots.push(i.slot);
+        }
+    }
+    return slots;
+}
+
 async function dropExcessOaks(s: Session, maxKeep = 22): Promise<boolean> {
     const inv = s.sdk.getInventory();
     if (inv.length < maxKeep) return false;
-    const oakSlots = inv.filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, 4);
-    if (oakSlots.length === 0) return false;
-    await Promise.all(oakSlots.map(slot => s.direct({ type: 'dropItem', slot, reason: 'SDK' })));
+    const dropSlots = droppableWcSlots(s).slice(0, 4);
+    if (dropSlots.length === 0) return false;
+    await Promise.all(dropSlots.map(slot => s.direct({ type: 'dropItem', slot, reason: 'SDK' })));
     return true;
 }
 
@@ -575,8 +589,8 @@ if (import.meta.main) {
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
                 if (potAct) acts.push(potAct);
                 if (!potAct && main.sdk.getInventory().length >= 26) {
-                    const oakSlot = slotOfId(main, OBJ_OAK_LOGS);
-                    if (oakSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: oakSlot, reason: 'SDK' }));
+                    const dropSlot = droppableWcSlots(main)[0];
+                    if (dropSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: dropSlot, reason: 'SDK' }));
                 }
                 acts.push(main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' }));
                 await Promise.all(acts);
@@ -663,8 +677,9 @@ if (import.meta.main) {
                     missEtaWait++;
                     const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
                     if (main.sdk.getInventory().length >= 25) {
-                        const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, 3);
-                        for (const slot of oakSlots) acts.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+                        for (const slot of droppableWcSlots(main).slice(0, 3)) {
+                            acts.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+                        }
                     }
                     if (acts.length > 0) await Promise.all(acts);
                     await waitTicks(main, 1);
@@ -699,8 +714,8 @@ if (import.meta.main) {
                 }
                 // Plain chop (1-log normal tree replenishment or missing knife) without cancelling pending woodcut action.
                 if (main.sdk.getInventory().length >= 27) {
-                    const oakSlot = slotOfId(main, OBJ_OAK_LOGS);
-                    if (oakSlot !== undefined) await main.direct({ type: 'dropItem', slot: oakSlot, reason: 'SDK' });
+                    const dropSlot = droppableWcSlots(main)[0];
+                    if (dropSlot !== undefined) await main.direct({ type: 'dropItem', slot: dropSlot, reason: 'SDK' });
                 }
                 await main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' });
                 rolls++;
@@ -712,7 +727,7 @@ if (import.meta.main) {
             }
 
             missKeepClear++;
-            const oakDropSlot = main.sdk.getInventory().length >= 10 ? slotOfId(main, OBJ_OAK_LOGS) : undefined;
+            const oakDropSlot = main.sdk.getInventory().length >= 10 ? droppableWcSlots(main)[0] : undefined;
             const potAct = tryDrinkPrayerPotion(main, 15);
             if (oakDropSlot !== undefined) {
                 // OpHeldHandler calls clearPendingAction(), clearing busy2 while dropping a log in 1 input.

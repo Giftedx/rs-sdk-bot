@@ -419,9 +419,15 @@ if (import.meta.main) {
             if (validFlinchHit) {
                 const rock = pickHobgoblinRock(px, pz, liveRocks, true);
                 if (rock) {
+                    // Turn auto_retaliate OFF here (<= 5 USER_EVENT packets/tick) so subsequent knife ticks stay <= 5 events.
+                    const flicks = prayerFlickActs(st, now, 3);
+                    const offActs = st?.autoRetaliateEnabled !== false
+                        ? [main.direct({ type: 'clickComponent', componentId: AUTO_RETALIATE_OFF_COMP, reason: 'SDK' })]
+                        : [];
                     const acts: Promise<unknown>[] = [
-                        ...prayerFlickActs(st, now, 3),
-                        ...(modalOpen ? [main.direct({ type: 'closeModal', reason: 'SDK' })] : []),
+                        ...flicks,
+                        ...offActs,
+                        ...(modalOpen && offActs.length === 0 && flicks.length === 0 ? [main.direct({ type: 'closeModal', reason: 'SDK' })] : []),
                         main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: 1, reason: 'SDK' }),
                     ];
                     await Promise.all(acts);
@@ -462,9 +468,11 @@ if (import.meta.main) {
 
             if (nextHitEta === 1) {
                 const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 3)];
-                if (modalOpen) acts.push(main.direct({ type: 'closeModal', reason: 'SDK' }));
-                if (st?.autoRetaliateEnabled === false) {
+                const toggled = st?.autoRetaliateEnabled === false;
+                if (toggled) {
                     acts.push(main.direct({ type: 'clickComponent', componentId: AUTO_RETALIATE_ON_COMP, reason: 'SDK' }));
+                } else if (modalOpen && acts.length === 0) {
+                    acts.push(main.direct({ type: 'closeModal', reason: 'SDK' }));
                 }
                 const adjRock = pickHobgoblinRock(px, pz, liveRocks, true);
                 if (!adjRock) {
@@ -477,10 +485,11 @@ if (import.meta.main) {
                         if (dest) acts.push(main.direct({ type: 'walkTo', x: dest.x, z: dest.z, running: true, reason: 'SDK' }));
                     }
                 } else if (oreSlots.length > 0) {
-                    for (const slot of oreSlots.slice(0, 3)) {
+                    const maxDrop = Math.max(1, 5 - acts.length);
+                    for (const slot of oreSlots.slice(0, maxDrop)) {
                         acts.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
                     }
-                } else {
+                } else if (acts.length === 0) {
                     await clearPendingMiningAction(main);
                 }
                 if (acts.length > 0) await Promise.all(acts);
@@ -509,16 +518,11 @@ if (import.meta.main) {
                 continue;
             }
 
-            // When hit lands at now+2 or now+3, keep auto_retaliate OFF so p_opnpc(2) never aborts the now+3 knife roll.
-            // When hit lands at now+4 or later, arm auto_retaliate ON so the hit gives an immediate now+5 flinch.
-            const wantAutoRetaliate = nextHitEta >= 4;
-            const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 3)];
-            if (modalOpen) acts.push(main.direct({ type: 'closeModal', reason: 'SDK' }));
-            if (wantAutoRetaliate && st?.autoRetaliateEnabled === false) {
-                acts.push(main.direct({ type: 'clickComponent', componentId: AUTO_RETALIATE_ON_COMP, reason: 'SDK' }));
-            } else if (!wantAutoRetaliate && st?.autoRetaliateEnabled !== false) {
-                acts.push(main.direct({ type: 'clickComponent', componentId: AUTO_RETALIATE_OFF_COMP, reason: 'SDK' }));
-            }
+            // Keep knife ticks strictly <= 5 USER_EVENT packets (2 flicks + 3 knife/mine = 5, or 1 toggle + 3 = 4).
+            // Only flip auto_retaliate ON via nextHitEta===1 (so knife ticks stay free of extra clickComponent packets).
+            const flicks = prayerFlickActs(st, now, 3);
+            const acts: Promise<unknown>[] = flicks.length <= 2 ? [...flicks] : [];
+            if (modalOpen && acts.length === 0) acts.push(main.direct({ type: 'closeModal', reason: 'SDK' }));
             acts.push(
                 main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
                 main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
