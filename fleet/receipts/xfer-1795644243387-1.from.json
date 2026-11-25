@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795644243387-1",
  "account": "OreElse",
  "partner": "Woodenstaff",
@@ -12,6 +12,16 @@
  "claim": "8a3cb62f-c38a-4d71-9aad-ac8812404939",
  "count": 0,
  "ok": false,
- "at": 1795644531025,
- "detail": "trade claimed"
+ "at": 1795644613804,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795644537492
+ },
+ "logout": {
+  "attemptId": "1795644531033-0000025148-0000000001",
+  "at": 1795644613796,
+  "sha256": "d9bba733deaf54a71390af2d18f33ba116313a24cac231fe97c7b8b97941cb83"
+ },
+ "screen": false
 }
