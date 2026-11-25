@@ -1,0 +1,23 @@
+{
+ "id": "1795575950739-trousersnake-yewfirst-6304da1d710416fd",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "YewFirst",
+ "item": "Feather",
+ "count": 3000,
+ "start": 1795575950739,
+ "end": 1795578350739,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
