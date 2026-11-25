@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795636323205,
+ "at": 1795636337933,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -139,18 +139,14 @@
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "magic",
-    "items",
-    "enchant:emerald_ring",
-    "-",
-    "1",
-    "1200"
+    "scripts/aio-logistics.ts ITEM_ID=564 QUANTITY=1 \"ITEM_NAME=Cosmic rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=1639 QUANTITY=1 \"ITEM_NAME=Emerald ring\" -- loadout",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=2 -- magic items enchant:emerald_ring - 1 1200"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:2552",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -159,36 +155,32 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "giant"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:225",
-    "BATCH_UNITS": "30",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
-  },
-  {
-   "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ORDER_KEY=brain-564-1-p861 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:mineshafted:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:bigswinger:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:mineshafted:item:2552",
+   "goal": "campaign:bigswinger:item:2552",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p861 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:cutmyjewels:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:cutmyjewels:item:2552",
    "role": "army"
   },
   {
@@ -265,39 +257,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:95",
    "role": "army"
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
-   "role": "army"
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Swordswallow",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army",
-   "resources": [
-    "ardougne-cows"
-   ]
   }
  ],
  "army": [
@@ -318,6 +277,7 @@
   "kiltlifter",
   "mmthv2350",
   "oreelse",
+  "pocketpool",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",

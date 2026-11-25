@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795636321568-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Swordswallow",
+  "to": "PocketPool",
+  "item": "Shark",
+  "count": 10,
+  "itemId": 385,
+  "start": 1795636321568,
+  "end": 1795637221568,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
