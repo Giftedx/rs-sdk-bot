@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795633236886-2",
  "account": "Kiltlifter",
  "partner": "CoinCock",
@@ -12,6 +12,12 @@
  "claim": "3b167a00-de9d-451d-a00a-67b5dba950f9",
  "count": 0,
  "ok": false,
- "at": 1795633510151,
- "detail": "trade claimed"
+ "at": 1795633669880,
+ "detail": "Error: stock short: Rune scimitar 0 banked + 0 held < 1",
+ "logout": {
+  "attemptId": "1795633510159-0000028684-0000000001",
+  "at": 1795633669867,
+  "sha256": "4c73d2df64e74ae31dc7f6d0e28da31a1e6bea849b63465e2100f3812696cbc5"
+ },
+ "screen": false
 }
