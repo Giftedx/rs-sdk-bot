@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795607546910-spitroaster-trousersnake-8138974db757cfb4",
  "account": "TrouserSnake",
  "partner": "Spitroaster",
@@ -10,15 +10,37 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "c37a606d-2d7a-46c2-bcf3-9c69a038a729",
- "count": 0,
- "ok": false,
- "at": 1795607831281,
- "detail": "trade claimed",
+ "count": 2,
+ "ok": true,
+ "at": 1795607853473,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Shark",
    "requested": 17,
-   "count": 0
+   "count": 17,
+   "inventory": {
+    "before": 0,
+    "after": 17
+   },
+   "bank": {
+    "count": 17,
+    "at": 1795607852644
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795607852259
+ },
+ "logout": {
+  "attemptId": "1795607831292-0000026192-0000000001",
+  "at": 1795607853389,
+  "sha256": "99d91395e4600b1f856a56be8bd0daa63ae6c6abfba3f94844c9138c7b807ccf"
+ },
+ "screen": true
 }
