@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795625923195,
+ "at": 1795625947106,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -94,35 +94,19 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "199",
+    "MAX_ITEMS": "100",
     "COIN_RESERVE": "1000",
-    "FLOAT": "41800",
+    "FLOAT": "22000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "199"
+    "BATCH_UNITS": "100"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:44",
    "role": "army"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
   },
   {
    "account": "Wandwaver",
@@ -273,6 +257,27 @@
    "repeat": false,
    "goal": "campaign:haggis:item:560",
    "role": "helper"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-1513-95-p2507",
+    "ITEM_ID": "1513",
+    "QUANTITY": "95",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "2507",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "95"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1513",
+   "role": "auto"
   }
  ],
  "army": [
@@ -302,7 +307,8 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker"
+  "woodpecker",
+  "yewfirst"
  ],
  "builds": {
   "NabTheKnob": "pure-pray",
