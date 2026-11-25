@@ -104,8 +104,9 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
 
     const attackerInventory = skill === 'Ranged'
         ? [
+            { id: 857, count: 1 }, // Yew shortbow (lvl 40)
             { id: 861, count: 1 }, // Magic shortbow (lvl 50)
-            { id: 892, count: 5000 }, // Rune arrow (lvl 40, +49 rangeStr with MSB)
+            { id: 892, count: 5000 }, // Rune arrow (lvl 40, +49 rangeStr)
             { id: 1169, count: 1 }, // Coif (lvl 20)
             { id: 1133, count: 1 }, // Studded body (lvl 20)
             { id: 2581, count: 1 }, // Robin hood hat (lvl 40, +8 rangeAttack)
@@ -181,9 +182,12 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
                         const eqIds = new Set(att.sdk.getEquipment().map(i => i.id));
                         const held = new Set([...invIds, ...eqIds]);
                         const wantIds: number[] = [];
-                        // 1->49: Crossbow (837) + Barbed bolts (881); 50->99: Magic shortbow (861) + Rune arrow (892).
+                        // 1->39: Crossbow (837) + Barbed bolts (881); 40->49: Yew shortbow (857) + Rune arrow (892); 50->99: MSB (861).
                         if (curLvl >= 50) {
                             if (!eqIds.has(861) && invIds.has(861)) wantIds.push(861);
+                            if (!eqIds.has(892) && invIds.has(892)) wantIds.push(892);
+                        } else if (curLvl >= 40) {
+                            if (!eqIds.has(857) && invIds.has(857)) wantIds.push(857);
                             if (!eqIds.has(892) && invIds.has(892)) wantIds.push(892);
                         }
                         if (curLvl >= 40) {

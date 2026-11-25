@@ -107,6 +107,15 @@ async function withdrawStage5Pack(main: Session, extraLogs: number): Promise<voi
     if (!(await main.bot.openBank()).success || !await waitUntil(main, () => !!main.sdk.getState()?.bank?.isOpen, { timeoutTicks: 15 })) {
         throw Error('haggis-stage5: Edgeville bank did not open');
     }
+    if (inv(main).length > 0) {
+        const seen = new Set<number>();
+        for (const it of inv(main)) {
+            if (seen.has(it.id)) continue;
+            seen.add(it.id);
+            await send(main, m, { type: 'bankDeposit', slot: it.slot, amount: -1 });
+        }
+        await waitUntil(main, () => inv(main).length === 0, { timeoutTicks: 10 });
+    }
     const items: ReadonlyArray<readonly [number, number]> = [
         [OBJ_RUNE_PICKAXE, 1],
         [OBJ_KNIFE, 1],
