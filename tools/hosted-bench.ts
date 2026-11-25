@@ -13,7 +13,12 @@ import {copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync} 
 import {join, resolve} from 'node:path';
 
 export const MAX_JOBS = 40;
-export const POLL_MS = 2_000;
+export const INITIAL_POLL_WAIT_MS = 20_000;
+export const POLL_BACKOFF_MS = [15_000, 30_000] as const;
+
+export function pollDelayMs(pollIndex: number): number {
+    return POLL_BACKOFF_MS[Math.min(Math.max(0, Math.trunc(pollIndex)), POLL_BACKOFF_MS.length - 1)]!;
+}
 export type PlanRow = {id: string; pattern: string; seed: string; seeds?: string; seedJobs?: string; parallel?: string};
 export type PlanOptions = {batch?: number; seedJobs?: number};
 
@@ -226,6 +231,7 @@ if (import.meta.main) {
     }
     const gh = (args: string[]) => { const r = Bun.spawnSync(['gh', ...args], {cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true}); return {ok: r.exitCode === 0, out: r.stdout.toString(), err: r.stderr.toString()}; };
     const runArg = value('--run');
+    const startedFreshRun = runArg === undefined;
     let run = runArg !== undefined ? parseRunId(runArg) : undefined;
     const seeds = value('--seeds') ?? '', args = value('--args') ?? '', wait = !has('--no-wait');
     const noBatch = has('--no-batch'), cliBatch = value('--batch'), cliSeedJobs = value('--seed-jobs'), cliArms = value('--arms');
@@ -262,7 +268,9 @@ if (import.meta.main) {
     }
     // Wait for the bench jobs only: the other jobs of the workflow take longer and hold no bench result.
     const deadline = Date.now() + 40 * 60_000;
+    if (startedFreshRun) await Bun.sleep(INITIAL_POLL_WAIT_MS);
     let pollFailures = 0;
+    let pollIndex = 0;
     for (;;) {
         const res = gh(['run', 'view', run, '--json', 'status,jobs']);
         if (!res.ok) {
@@ -283,7 +291,7 @@ if (import.meta.main) {
             }
         }
         if (Date.now() > deadline) { console.error(`hosted-bench: run ${run} did not end in 40 minutes`); process.exit(2); }
-        await Bun.sleep(POLL_MS);
+        await Bun.sleep(pollDelayMs(pollIndex++));
     }
     const dir = join(root, '.practice', 'hosted-bench', run);
     rmSync(dir, {recursive: true, force: true}); mkdirSync(dir, {recursive: true});

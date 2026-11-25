@@ -132,7 +132,7 @@ async function run(directory:string){
   const task=async(f:Fixture,id:string)=>{
    const runId=`native-rcv-${id}-${stamp}`;
    const owner=Bun.spawn(sleeperCommand(runId),{cwd:root,stdout:'ignore',stderr:'ignore',windowsHide:true});children.push(owner);
-   tasks.set(runId,{status:'running',runId,pid:owner.pid,spec:{kind:'run',capability,account:f.name,...(f.completed?{env:{TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',CAP:'1500'}}:{}),repairs:[{account:f.name,endedAt:f.endedAt}],sessionRecovery:{account:f.name,endedAt:f.endedAt}}});
+   tasks.set(runId,{status:'running',runId,pid:owner.pid,spec:{kind:'run',capability,account:f.name,...(f.completed?{script:capability==='shark-supply-order'?'scripts/shark-supply.ts':'scripts/gather-combat.ts',env:{TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',CAP:'1500'}}:{}),repairs:[{account:f.name,endedAt:f.endedAt}],sessionRecovery:{account:f.name,endedAt:f.endedAt}}});
    put('.practice/live/fleet-runs/'+runId+'/owner.json',{pid:owner.pid,runId});writeState();
    return {runId,owner};
   };

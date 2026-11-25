@@ -2,7 +2,7 @@ import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {expect, test} from 'bun:test';
-import {autoPlanOptions, benchPlan, checkArgs, decodeSetB64, evaluatePollState, expandMultiSeedArtifacts, extractPlanOpts, MAX_JOBS, parseBoundedIntFlag, parseRunId, POLL_MS, resultLines} from './hosted-bench';
+import {autoPlanOptions, benchPlan, checkArgs, decodeSetB64, evaluatePollState, expandMultiSeedArtifacts, extractPlanOpts, INITIAL_POLL_WAIT_MS, MAX_JOBS, parseBoundedIntFlag, parseRunId, POLL_BACKOFF_MS, pollDelayMs, resultLines} from './hosted-bench';
 
 test('the plan gives one runner to each pattern and seed', () => {
     expect(benchPlan('^pvp:squad$  ^quester:quest:crest$', '7,8')).toEqual([
@@ -54,7 +54,12 @@ test('--set-b64 decodes standard and URL-safe base64 JSON payloads and rejects m
         expect(() => checkArgs(`--set-b64 ${bad}`)).toThrow();
     }
     expect(() => checkArgs('--set-b64')).toThrow();
-    expect(POLL_MS).toBe(2_000);
+    expect(INITIAL_POLL_WAIT_MS).toBe(20_000);
+    expect(POLL_BACKOFF_MS).toEqual([15_000, 30_000]);
+    expect(pollDelayMs(-1)).toBe(15_000);
+    expect(pollDelayMs(0)).toBe(15_000);
+    expect(pollDelayMs(1)).toBe(30_000);
+    expect(pollDelayMs(5)).toBe(30_000);
 });
 
 test('batching and multi-seed fan-out pack patterns and seeds cleanly onto 4-vCPU runners', () => {
