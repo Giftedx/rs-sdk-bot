@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795643896495-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "FishAndChips",
+  "to": "MeatNTwoVeg",
+  "item": "Feather",
+  "count": 250,
+  "itemId": 314,
+  "start": 1795643896495,
+  "end": 1795644796495,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
