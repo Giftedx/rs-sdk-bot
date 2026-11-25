@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795607844026-afknight-knightstick-19f67c174c0c6147",
  "account": "AFKnight",
  "partner": "Knightstick",
@@ -10,8 +10,18 @@
  "item": "Air rune",
  "requested": 10,
  "claim": "6138324d-e982-4275-bdc5-c9aa52d53925",
- "count": 0,
- "ok": false,
- "at": 1795608107504,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795608138196,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795608107513-0000007856-0000000001",
+  "at": 1795608138188,
+  "sha256": "38eead5e26dccd7d895fafb20af0a2b0448235b695bf16b56b29ef522bfd0f81"
+ },
+ "screen": true
 }
