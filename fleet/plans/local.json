@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795620596835,
+ "at": 1795620685659,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -139,7 +139,23 @@
    "role": "helper"
   },
   {
-   "account": "KnightRider",
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-440-92-p97 ITEM_ID=440 QUANTITY=92 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-184-p517 ITEM_ID=453 QUANTITY=184 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=92 ORE_RESERVE=0 -- smithing smelt"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
+  },
+  {
+   "account": "Packhorse",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
@@ -152,7 +168,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
+   "role": "helper"
   }
  ],
  "army": [
@@ -172,6 +188,7 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",

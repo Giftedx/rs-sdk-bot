@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795619893149-2",
+ "account": "SporranDip",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 2,
+ "claim": "25f8e72d-f3a9-497a-a17d-8ed7fd4734b5",
+ "count": 0,
+ "ok": false,
+ "at": 1795620678213,
+ "detail": "trade claimed"
+}

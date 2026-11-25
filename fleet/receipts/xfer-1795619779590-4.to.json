@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795619779590-4",
  "account": "mmthv2350",
  "partner": "Spitroaster",
@@ -12,6 +12,12 @@
  "claim": "d467e89c-f589-4d97-85af-56c2ba8de47d",
  "count": 0,
  "ok": false,
- "at": 1795620384390,
- "detail": "trade claimed"
+ "at": 1795620680069,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795620384399-0000019072-0000000001",
+  "at": 1795620680049,
+  "sha256": "0f2e70e55f49b9e16db57aa0b563f3e86af4c9e218a1068946c36fa9f96256ca"
+ },
+ "screen": false
 }
