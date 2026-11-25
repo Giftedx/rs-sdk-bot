@@ -1,6 +1,6 @@
 // BenchCase definitions for the 6 fresh-clock fast-skill specialist Rank #1 winners.
 import type { SaveConfig } from '../../vendor/rs-sdk/sdk/test/utils/save-generator';
-import { CRAFTING_BATCHES } from '../crafting-specialist';
+import { CRAFTING_CW_BATCH, CRAFTING_CW_NOTED_SUPPLIES } from '../crafting-specialist';
 import { ITEM_IDS } from '../fast-skills-lib';
 import {
  HERBLORE_BANK_HELPER_SPOT,
@@ -27,6 +27,7 @@ const STACKABLE_IDS = new Set<number>([
  ITEM_IDS.bodyrune,
  995,
  ...HERBLORE_NOTED_SUPPLIES.map(s => s.certId),
+ ...CRAFTING_CW_NOTED_SUPPLIES.map(s => s.certId),
 ]);
 
 export function expandInventory(items: readonly { id: number; count: number }[]): { id: number; count: number }[] {
@@ -183,13 +184,13 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
   script: 'scripts/aio-skiller.ts',
   preset: 'fresh_lumbridge',
   presetConfig: freshTutorialStart(),
-  scriptArgs: ['crafting', 'specialist', 'CAP=250', helperArg(CRAFTING_BATCHES.length)],
+  scriptArgs: ['crafting', 'specialist', 'CAP=250', 'CRAFTING_MODE=cw', helperArg(1)],
   pass: okSpecialist,
   output: /ticks=(\d+)/,
   timeoutMs: 600_000,
-  companions: CRAFTING_BATCHES.map((batch, i) =>
-   staticCompanion(i, { x: 3222, z: 3223, level: 0 }, batch.give),
-  ),
+  companions: [
+   staticCompanion(0, { x: 3222, z: 3223, level: 0 }, CRAFTING_CW_BATCH.give),
+  ],
  },
  {
   key: 'skiller:herblore:specialist',

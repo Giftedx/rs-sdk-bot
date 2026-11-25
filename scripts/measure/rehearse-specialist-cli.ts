@@ -69,6 +69,7 @@ function getStackableSaveIds(): Set<number> {
         ITEM_IDS.bloodrune,
         ITEM_IDS.bodyrune,
         ...HERBLORE_NOTED_SUPPLIES.map(s => s.certId),
+        ...loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_CW_NOTED_SUPPLIES.map(s => s.certId),
     ]);
     return stackableSaveIdsCache;
 }
@@ -290,18 +291,21 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         account: 'CutMyJewels',
         id: 'cutmyjewels-crafting',
         script: 'scripts/crafting-specialist.ts',
-        env: { CAP: '2500' },
-        suppliers: () => loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_BATCHES.map((batch, i): SpecialistSupplierDef => ({
-            script: 'scripts/aio-logistics.ts',
-            args: ['specialist-supplier', '{ACTOR}', '--kit=crafting', `--batch=${i}`, '3000'],
-            save: () => ({
-                position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(batch.give),
-            }),
-        })),
-        planTicks: 174,
-        planSource: '400ms rehearsals 172-175t; hosted-bench skiller:crafting:specialist 181t (<=182t vs #1 186t)',
-        targetCap: 182,
+        env: { CAP: '2500', CRAFTING_MODE: 'cw' },
+        suppliers: () => {
+            const batch = loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_CW_BATCH;
+            return [{
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=crafting-cw', '3000'],
+                save: () => ({
+                    position: { x: 3223, z: 3222, level: 0 },
+                    inventory: expandKitToSave(batch.give),
+                }),
+            }];
+        },
+        planTicks: 96,
+        planSource: '400ms Castle Wars Bank Chest single-trade CW route (~96t vs #1 137t)',
+        targetCap: 134,
     },
     {
         account: 'GrindMyHerb',
