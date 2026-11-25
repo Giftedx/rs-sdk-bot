@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795610834051-2",
+ "account": "TheFullMonty",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "5c41e044-0a4b-4e2c-8d25-1f1ef473d201",
+ "count": 1,
+ "ok": true,
+ "at": 1795610988893,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795610988129
+ },
+ "logout": {
+  "attemptId": "1795610975874-0000017808-0000000001",
+  "at": 1795610988872,
+  "sha256": "2c301ad572149b796c13f86cf9078081b1bd209851462cb267e7c70edd90d208"
+ },
+ "screen": true
+}
