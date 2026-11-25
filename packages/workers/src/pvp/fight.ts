@@ -1039,7 +1039,26 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     // The loop sends every prayer input of the fight: the session's prayer guard sends none until the fight ends
     // (packages/core/src/prayer-guard/hold.ts).
     const prayer = holdSessionPrayer(s.sdk);
-    try { return await fightLoop(s, targetName, o, eater.ateAt + 3); } finally { prayer.release(); eater.release(); }
+    // DEBUG (scratch branch, not for merge): fight ticks with prayer points left and Protect Item wanted, the ticks of
+    // those with Protect Item off and with no Defence prayer, and the points spent (drops only).
+    let pray = 0, itemOff = 0, defOff = 0, spent = 0, prevPts = -1;
+    const offTick = s.onTick(() => {
+        const st = s.sdk.getState(), pr = st?.prayers, me = st?.player;
+        if (!st || !pr || !me || me.isDead || me.hp <= 0) return;
+        if (prevPts >= 0 && pr.prayerPoints < prevPts) spent += prevPts - pr.prayerPoints;
+        prevPts = pr.prayerPoints;
+        const base = st.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 1;
+        const wantItem = o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
+        if (pr.prayerPoints <= 0 || !wantItem || base < 25) return;
+        pray++;
+        if (!pr.activePrayers[PRAYER.item]) itemOff++;
+        if (o.defencePrayer !== false && !pr.activePrayers.some((a, i) => a && isDefencePrayer(i))) defOff++;
+    });
+    try {
+        const r = await fightLoop(s, targetName, o, eater.ateAt + 3);
+        console.log(`PTRACE ${s.name} itemFirst=${o.itemFirst !== false} zd=${o.zeroDrainFlick === true} flick=${o.prayerFlick !== false} outcome=${r.outcome} ticks=${r.ticks} pray=${pray} itemOff=${itemOff} defOff=${defOff} spent=${spent} taken=${r.taken} dealt=${r.dealt}`);
+        return r;
+    } finally { offTick(); prayer.release(); eater.release(); }
 }
 
 async function fightLoop(s: Session, targetName: string, o: FightOptions, guardFoodReady: number): Promise<FightResult> {
