@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795626457827-2",
+ "role": "to",
+ "account": "UnderMyKilt",
+ "partner": "Unsheathed",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795627060340,
+ "detail": "Error: fleet trade: account has an enabled swarm job"
+}
