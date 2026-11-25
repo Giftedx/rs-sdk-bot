@@ -591,23 +591,10 @@ if (import.meta.main) {
             } as const;
             const sentTick = main.tick();
             const isGroundStep = i >= wave0.length;
-            const nextStep = plan[i + 1];
-            const turnNext = !!nextStep && (nextStep.z !== step.z || nextStep.x !== step.x - 1);
-            let wasOnTile = false;
 
             while (!isStopped() && (main.sdk.getSkillXp('Firemaking') ?? 0) === beforeXp) {
-                const p0 = main.sdk.getState()?.player;
-                if (p0 && p0.worldX === step.x && p0.worldZ === step.z) wasOnTile = true;
                 await waitTicks(main, 1);
                 if ((main.sdk.getSkillXp('Firemaking') ?? 0) !== beforeXp) break;
-                const pNow = main.sdk.getState()?.player;
-                if (isGroundStep && turnNext && wasOnTile && pNow && (pNow.worldX !== step.x || pNow.worldZ !== step.z)) {
-                    // ~push_player moves spec off step.x one tick before XP arrives; dispatch next row turn immediately.
-                    if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
-                        await main.direct({ type: 'closeModal', reason: 'SDK' });
-                    }
-                    break;
-                }
                 const dlgOpen = !!(main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen);
                 const elapsed = main.tick() - sentTick;
                 if (elapsed === 12) {

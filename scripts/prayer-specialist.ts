@@ -26,6 +26,7 @@ import {
 } from './fast-skills-lib';
 
 export const DRAYNOR_BANK = { x: 3092, z: 3243, level: 0 } as const;
+export const LUMBRIDGE_STAND = { x: 3222, z: 3223, level: 0 } as const;
 export const PRAYER_BONES_NEEDED = 555;
 export const PRAYER_RUNNER_COUNT = 8;
 
@@ -53,7 +54,7 @@ async function restockBonesAtDraynor(
    continue;
   }
   const held = countItem(s.sdk.getInventory(), ITEM_IDS.dragon_bones);
-  if (held >= 28 && nearTile(s, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 2)) {
+  if (held >= 28 && nearTile(s, LUMBRIDGE_STAND.x, LUMBRIDGE_STAND.z, 0)) {
    runner.ready = true;
    await waitTicks(s, 1);
    continue;
@@ -68,8 +69,11 @@ async function restockBonesAtDraynor(
    }
   }
   if (!done() && !signal.aborted && countItem(s.sdk.getInventory(), ITEM_IDS.dragon_bones) > 0) {
-   await navigateWorld(s, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 0, Math.max(10, deadline - s.tick()), signal);
-   runner.ready = nearTile(s, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 2);
+   await navigateWorld(s, LUMBRIDGE_STAND.x, LUMBRIDGE_STAND.z, 0, Math.max(10, deadline - s.tick()), signal);
+   if (!nearTile(s, LUMBRIDGE_STAND.x, LUMBRIDGE_STAND.z, 0) && !done() && !signal.aborted) {
+    await s.direct({ type: 'walkTo', x: LUMBRIDGE_STAND.x, z: LUMBRIDGE_STAND.z, running: true, reason: 'SDK' });
+   }
+   runner.ready = nearTile(s, LUMBRIDGE_STAND.x, LUMBRIDGE_STAND.z, 0);
   }
   if (done() || signal.aborted) break;
   await waitTicks(s, 1);

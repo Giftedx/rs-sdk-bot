@@ -29,6 +29,7 @@ import {
     OBJ_PINEAPPLE_PIZZA,
 } from './gathering-specialist-lib';
 import type { Session } from '../packages/core/src/inprocess';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
 
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
@@ -227,7 +228,7 @@ export function selectPickpocketTarget<T extends {
     const matching = npcs
         .filter(n => tier.pattern.test(n.name) && n.optionsWithIndex.some(o => /^pickpocket$/i.test(o.text)));
     const nearAnchor = matching.filter(
-        n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= 9,
+        n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= 7,
     );
     const sticky = stickyIndex >= 0
         ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 1 && n.reachable !== false)
@@ -308,8 +309,11 @@ export async function runArdougneStunRelogThieving(opts: {
     let lastPickTick = -99;
     let lastPickDist = 99;
     let lastPickTarget = -1;
+    let pickPending = false;
+    let pickXpBefore = -1;
     let stallCooldownUntil = 0;
     let prevHp = main.sdk.getState()?.player?.hp ?? 10;
+    const loggedLevels = new Set<number>();
     const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
 
     // Lazy-init stall LoS + pathfinding cache for Lv 5..54 Market stall stealing (0 stun, 0 relog).
@@ -346,6 +350,12 @@ export async function runArdougneStunRelogThieving(opts: {
     while (!opts.isStopped() && elapsedNow() < opts.cap) {
         const st = main.sdk.getState();
         const lvl = main.sdk.getSkill('Thieving')?.baseLevel ?? 1;
+        for (const milestone of [5, 25, 40, 55, 70, 80, 99]) {
+            if (lvl >= milestone && !loggedLevels.has(milestone)) {
+                loggedLevels.add(milestone);
+                console.log(`PHASE thieve_lvl_${milestone} tick=${elapsedNow()} relogs=${relogs} stuns=${stuns} attempts=${attempts}`);
+            }
+        }
         if (lvl >= goalLevel) {
             ok = true;
             break;
@@ -383,15 +393,14 @@ export async function runArdougneStunRelogThieving(opts: {
         }
         if (newMsgs.some(m => /you fail to pick|you've been stunned/i.test(m.text))) {
             stuns++;
+            pickPending = false;
             const bites = foodBitesCount(main);
             if (st.player.hp <= tier.stunDamage && bites === 0) {
                 await waitTicks(main, 2);
                 lastPickTick = -99;
                 continue;
             }
-            if (bites >= 1 && st.player.hp <= tier.stunDamage) {
-                await eatAnyFood(main);
-            }
+            // Pre-pick food guard ensures hp > stunDamage, and logging out on "You fail to pick" aborts before ~damage_self runs.
             totalTicks += Math.max(1, main.tick() - sessStart) + 1;
             relogs++;
             main = await opts.relogSession(main);
@@ -430,7 +439,7 @@ export async function runArdougneStunRelogThieving(opts: {
             }
         }
 
-        // Lv 5..54: opportunistically steal Ardougne Market stalls (Silver/Fur/Silk/Baker) whenever present & unwatched.
+        // Lv 5..54: steal Ardougne Market stalls (Silver/Fur/Silk/Baker) whenever unwatched; stay on stalls through Lv 39 to skip Warrior travel/stuns.
         const inMarket = st.player.worldX >= 2648 && st.player.worldX <= 2678 && st.player.worldZ >= 3290 && st.player.worldZ <= 3322;
         if (lvl >= 5 && lvl < 55 && inMarket) {
             const junkSlot = main.sdk.getInventory().find(
@@ -451,15 +460,19 @@ export async function runArdougneStunRelogThieving(opts: {
                         l => spec.locPattern.test(l.name) && l.x <= spec.maxX && l.optionsWithIndex.some(o => /steal/i.test(o.text)),
                     );
                     if (!locs.length) continue;
-                    const watched = (x: number, z: number) => recipe && sight
+                    const guardPad = (x: number, z: number) => st.nearbyNpcs.some(
+                        n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name)
+                            && chebDist({ x: n.x, z: n.z }, { x, z }) <= 6,
+                    );
+                    const watched = (x: number, z: number) => (recipe && sight
                         ? stallWatched(recipe, { worldX: x, worldZ: z, level: st.player!.level ?? 0 }, st.nearbyNpcs.map(n => ({ ...n, inCombat: false })), sight)
-                        : st.nearbyNpcs.some(n => /^(guard|baker|silk merchant|fur trader|silver merchant|knight of ardougne)$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x, z }) <= 5);
+                        : false) || guardPad(x, z);
                     const tile = locs.flatMap(stall =>
                         spec.offsets.map(([dx, dz]) => ({ stall, x: stall.x + dx, z: stall.z + dz }))
                             .filter(t => !pf || pf.isTileWalkable(st.player!.level ?? 0, t.x, t.z))
                             .filter(t => !watched(t.x, t.z)),
                     ).sort((a, b) => chebDist(a, { x: st.player!.worldX, z: st.player!.worldZ }) - chebDist(b, { x: st.player!.worldX, z: st.player!.worldZ }))[0];
-                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= (lvl < 25 ? 12 : 6)) {
+                    if (tile && chebDist(tile, { x: st.player.worldX, z: st.player.worldZ }) <= (lvl < 40 ? 14 : 6)) {
                         pickedStall = tile;
                         break;
                     }
@@ -482,11 +495,12 @@ export async function runArdougneStunRelogThieving(opts: {
                             void main.direct({ type: 'dropItem', slot: dropLoot, reason: 'SDK' });
                         }
                         lastPickTick = -99;
+                        pickPending = false;
                         continue;
                     }
                 }
-                // Wait on Baker/Silk stalls only while below Lv 25; at Lv 25..54 steal ready stalls opportunistically and otherwise pickpocket Warrior/Guard.
-                if (lvl < 25) {
+                // Wait on Baker/Silk/Fur stalls across Lv 5..39 to avoid Warrior walk & relogs; pickpocket Guards between Silver/Fur respawns at Lv 40..54.
+                if (lvl < 40) {
                     await waitTicks(main, 1);
                     continue;
                 }
@@ -496,6 +510,7 @@ export async function runArdougneStunRelogThieving(opts: {
         const { target: npc, blocked } = selectPickpocketTarget(st.nearbyNpcs, tier, lastPickTarget);
 
         if (!npc) {
+            pickPending = false;
             if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 6) {
                 await main.bot.walkTo(tier.anchor.x, tier.anchor.z, 2);
             } else if (blocked) {
@@ -506,17 +521,20 @@ export async function runArdougneStunRelogThieving(opts: {
             continue;
         }
 
+        const curXp = main.sdk.getSkillXp('Thieving') ?? 0;
+        if (pickPending && curXp > pickXpBefore) {
+            pickPending = false;
+        }
         const sincePick = main.tick() - lastPickTick;
-        // Running covers 2 tiles per tick; avoid extra +1 wait pad when closing on moving Ardougne Knights.
-        const approachWait = lastPickTarget === npc.index && lastPickDist > 2
-            ? Math.max(2, Math.min(3, Math.ceil(lastPickDist / 2)))
-            : 2;
-        if (sincePick >= approachWait) {
+        const staleTimeout = Math.max(4, Math.ceil(lastPickDist / 2) + 2);
+        if (!pickPending || sincePick >= staleTimeout) {
             const op = npc.optionsWithIndex.find(o => /^pickpocket$/i.test(o.text));
             if (op) {
                 lastPickTick = main.tick();
                 lastPickDist = npc.distance;
                 lastPickTarget = npc.index;
+                pickPending = true;
+                pickXpBefore = curXp;
                 attempts++;
                 await main.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op.opIndex, reason: 'SDK' });
             }
@@ -653,13 +671,35 @@ if (import.meta.main) {
                 if (energySlot !== undefined) {
                     void main.direct({ type: 'dropItem', slot: energySlot, reason: 'SDK' });
                 }
-                await walkWaypointsSafe(
-                    main,
-                    [[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]],
-                    isStopped,
+                const karWalker = await sessionWalker(main);
+                const brimWalk = await walkPath(
+                    karWalker,
+                    [
+                        { x: 2879, z: 3167, tol: 4 },
+                        { x: 2841, z: 3194, tol: 4 },
+                        { x: 2806, z: 3183, tol: 4 },
+                        { x: 2790, z: 3208, tol: 4 },
+                        { x: 2774, z: 3228, tol: 2 },
+                    ],
+                    { maxTicks: Math.max(10, Math.min(100, cap - elapsedNow())) },
                 );
+                if (!brimWalk.ok) {
+                    await walkWaypointsSafe(main, [[2774, 3228, 3]], isStopped);
+                }
                 await sailBrimhavenToArdougne(main, isStopped);
-                await walkWaypointsSafe(main, [[2661, 3306, 2]], isStopped);
+                const ardyWalker = await sessionWalker(main);
+                const mktWalk = await walkPath(
+                    ardyWalker,
+                    [
+                        { x: 2668, z: 3280, tol: 3 },
+                        { x: 2662, z: 3295, tol: 2 },
+                        { x: 2661, z: 3306, tol: 2 },
+                    ],
+                    { maxTicks: Math.max(10, Math.min(40, cap - elapsedNow())) },
+                );
+                if (!mktWalk.ok) {
+                    await walkWaypointsSafe(main, [[2661, 3306, 2]], isStopped);
+                }
             } else {
                 await rubTeleport(
                     main,

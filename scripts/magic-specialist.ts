@@ -105,12 +105,12 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
   ],
   returnIds: [],
  },
- // Batch 5 (18 slots -> 24 on spec with 4 runes: 12 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
+ // Batch 5 (20 slots -> 24 on spec with 4 runes: 14 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
  {
   give: [
-   { id: ITEM_IDS.dragonstone_ring, count: 12 },
+   { id: ITEM_IDS.dragonstone_ring, count: 14 },
    { id: ITEM_IDS.lawrune, count: 10 },
-   { id: ITEM_IDS.bloodrune, count: 750 },
+   { id: ITEM_IDS.bloodrune, count: 850 },
    { id: ITEM_IDS.knife, count: 1 },
    { id: ITEM_IDS.prayer_potion_4, count: 1 },
    { id: ITEM_IDS.magic_potion_4, count: 1 },

@@ -120,7 +120,7 @@ async function runBodyEssenceRunner(
 
   runner.ready = false;
   if (heldEss < 26) {
-   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 26, keep, done, deadline, signal);
+   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 27, keep, done, deadline, signal);
   }
   if (done() || signal.aborted || s.tick() >= deadline) break;
 
@@ -297,7 +297,8 @@ export async function runRunecraftSpecialist(
    deadline,
   );
 
-   await dropItemsFast(spec, new Set([ITEM_IDS.bodyrune, ...GLORY_IDS]), deadline);
+   // Drop Glory, talismans, and Air runes while walking to the Body altar stand so 27 inventory slots stay free.
+   await dropItemsFast(spec, new Set([ITEM_IDS.bodyrune]), deadline);
    await runTo(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, 20);
    logPhase(spec, start, 'rc_at_body_altar');
 
@@ -308,7 +309,7 @@ export async function runRunecraftSpecialist(
       r =>
        r.ready &&
        !r.claimed &&
-       nearTile(r.session, BODY_ALTAR_STAND.x, BODY_ALTAR_STAND.z, 3) &&
+       nearTile(r.session, BODY_ALTAR_STAND.x, BODY_ALTAR_STAND.z, 0) &&
        countItem(r.session.sdk.getInventory(), ITEM_IDS.blankrune) >= 26,
      )
      .sort((a, b) => a.lastUsedTick - b.lastUsedTick)[0];
@@ -327,6 +328,7 @@ export async function runRunecraftSpecialist(
       giveIds: [ITEM_IDS.blankrune],
       deadlineTick: deadline,
       allowHelperOnSingleModal: true,
+      confirmOverlapOnHelper: true,
       onConfirmSend: () =>
        spec.direct({ type: 'interactLoc', x: bodyAltar.x, z: bodyAltar.z, locId: bodyAltar.id, optionIndex: 1, reason: 'SDK' }),
      });

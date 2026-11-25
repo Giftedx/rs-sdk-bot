@@ -369,55 +369,32 @@ export async function runSmithingSpecialist(
     if (!next) next = pickRunner();
    }
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
-   // Drop up to 4 finished products (leaving <= 1 platebody + hammer so 25 bars fit) + send OPPLAYER4 on the exact tick p_delay(2) clears.
+   // Drop finished products before trading so 25 bars fit cleanly without OPPLAYER4 request collisions.
    const dropSlots = spec.sdk.getInventory().filter(i => !keepSet.has(i.id) || (i.id === ITEM_IDS.bronze_bar && skillLevel(spec, 'Smithing') >= 15)).map(i => i.slot);
    if (dropSlots.length > 5) {
     // Batch 0 leftover daggers/warhammers/excess bronze bars (>5 slots) need dropItemsFast before trading.
     await dropItemsFast(spec, new Set([ITEM_IDS.hammer]), deadline);
-   } else if (dropSlots.length > 0) {
-    const helperName = next.session.name.toLowerCase();
-    const specName = spec.name.toLowerCase();
-    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
-    const sTarget = next.session.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
-    const preActs: Promise<unknown>[] = dropSlots.slice(0, 4).map(slot => spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
-    if (hTarget && sTarget) {
-     preActs.push(next.session.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
-     preActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+   } else if (dropSlots.length > 3) {
+    // Keep at most 2 platebodies + hammer (= 3 occupied slots -> 25 free slots for bars); smithHeldBars drops the rest with anvil open.
+    const toDrop = dropSlots.slice(0, dropSlots.length - 2);
+    const dropActs: Promise<unknown>[] = toDrop.map(slot => spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+    if (spec.sdk.getState()?.dialog?.isOpen) {
+     dropActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
     }
-    await Promise.all(preActs);
-    await Promise.all([waitTicks(spec, 1), waitTicks(next.session, 1)]);
+    await Promise.all(dropActs);
+    await waitTicks(spec, 1);
    }
    if (spec.sdk.getInventory().filter(i => !keepSet.has(i.id)).length > 2) {
     await dropItemsFast(spec, keepSet, deadline);
    }
    next.claimed = true;
    next.ready = false;
-   const barSlot = spec.sdk.getInventory().every(i => i.id !== wantBar)
-    ? (() => {
-       const used = new Set(spec.sdk.getInventory().map(i => i.slot));
-       for (let sl = 0; sl < 28; sl++) if (!used.has(sl)) return sl;
-       return -1;
-      })()
-    : -1;
    try {
     await burstTradeHost(spec, next.session, {
      giveIds: [wantBar],
      deadlineTick: deadline,
      allowHelperOnSingleModal: true,
-     confirmOverlapOnHelper: true,
      canStand: anvilRoomOk,
-     onConfirmSend: barSlot >= 0
-      ? () => {
-         const acts: Promise<unknown>[] = [];
-         for (const extra of spec.sdk.getInventory()) {
-          if (!keepSet.has(extra.id) && acts.length < 3) {
-           acts.push(spec.direct({ type: 'dropItem', slot: extra.slot, reason: 'SDK' }));
-          }
-         }
-         acts.push(spec.direct({ type: 'useItemOnLoc', itemSlot: barSlot, x: anvilLoc.x, z: anvilLoc.z, locId: anvilLoc.id, reason: 'SDK' }));
-         return Promise.all(acts);
-        }
-      : undefined,
     });
     next.task = null;
    } finally {
