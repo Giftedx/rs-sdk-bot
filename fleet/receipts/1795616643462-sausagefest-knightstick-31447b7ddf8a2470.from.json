@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795616643462-sausagefest-knightstick-31447b7ddf8a2470",
  "account": "Sausagefest",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 29,
  "claim": "4dbffc34-bb62-477b-8748-f27b0bf4b159",
- "count": 0,
- "ok": false,
- "at": 1795616654631,
- "detail": "trade claimed"
+ "count": 29,
+ "ok": true,
+ "at": 1795616693841,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 29,
+  "after": 0
+ },
+ "bank": {
+  "count": 29,
+  "at": 1795616661082
+ },
+ "logout": {
+  "attemptId": "1795616654986-0000024000-0000000001",
+  "at": 1795616693815,
+  "sha256": "1c7a866327a01d719b590203807da713745e0f14cc9798d0765f73c0344444e3"
+ },
+ "screen": true
 }

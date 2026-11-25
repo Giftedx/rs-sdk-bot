@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795616119524-3",
+ "account": "OreElse",
+ "partner": "Stirmypot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "a891fb9e-a8fd-4c69-83a2-702ba5f63d30",
+ "count": 0,
+ "ok": false,
+ "at": 1795616727987,
+ "detail": "trade claimed"
+}

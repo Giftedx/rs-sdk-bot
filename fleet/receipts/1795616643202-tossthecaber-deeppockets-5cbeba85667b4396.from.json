@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795616643202-tossthecaber-deeppockets-5cbeba85667b4396",
  "account": "TossTheCaber",
  "partner": "Deeppockets",
@@ -10,8 +10,18 @@
  "item": "Antipoison(3)",
  "requested": 1,
  "claim": "6d990879-8bf1-4807-b749-9ec0f1134113",
- "count": 0,
- "ok": false,
- "at": 1795616648431,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795616725410,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 3
+ },
+ "logout": {
+  "attemptId": "1795616648441-0000021984-0000000001",
+  "at": 1795616725398,
+  "sha256": "1a4578522e7f6d9bbcee0d6bdb76019b8de81c03de61bddd7edda797897a6332"
+ },
+ "screen": true
 }

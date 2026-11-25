@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795616132820-1",
+ "account": "Ballspinner",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "69c7642f-e99a-48e1-befc-c0f53cfaadd4",
+ "count": 0,
+ "ok": false,
+ "at": 1795616787065,
+ "detail": "Error: stock short: Uncut diamond 0 banked + 0 held < 10",
+ "logout": {
+  "attemptId": "1795616782711-0000002800-0000000001",
+  "at": 1795616787003,
+  "sha256": "566fc8a7cee85bec1e3352c814e05315552e587b1ba077f08c8c3c1f9979f49a"
+ },
+ "screen": false
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795616119524-4",
+ "account": "Quickhandjob",
+ "partner": "YewGotWood",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 200,
+ "claim": "4c7d392d-1ddf-4d52-aef0-339a267cc88d",
+ "count": 0,
+ "ok": false,
+ "at": 1795616768236,
+ "detail": "trade claimed"
+}
