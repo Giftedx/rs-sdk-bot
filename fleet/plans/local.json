@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795582173448,
+ "at": 1795582246307,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -25,6 +25,22 @@
   },
   {
    "account": "Hocuspokeus",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "PocketPool",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -81,7 +97,6 @@
   "moneyshot",
   "oreelse",
   "pickpockdick",
-  "pocketpool",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
