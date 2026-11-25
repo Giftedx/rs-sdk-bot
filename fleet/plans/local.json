@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601472551,
+ "at": 1795601482873,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,7 +24,7 @@
    "role": "rehearsal"
   },
   {
-   "account": "Fingersmith",
+   "account": "Knightstick",
    "script": "scripts/generated/quest-arena.ts",
    "args": [],
    "env": {
@@ -34,19 +34,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:arena",
-   "role": "army"
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/generated/quest-barcrawl.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
    "role": "army"
   },
   {
@@ -147,19 +134,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2152",
    "role": "helper"
-  },
-  {
-   "account": "Stirmypot",
-   "script": "scripts/generated/quest-death.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:death",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:death",
-   "role": "auto"
   }
  ],
  "army": [
@@ -177,6 +151,7 @@
   "dipstick",
   "fatstack",
   "fingerblastr",
+  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
