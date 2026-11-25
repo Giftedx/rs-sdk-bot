@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795603057773,
+ "at": 1795603185052,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -40,7 +40,7 @@
    "role": "army"
   },
   {
-   "account": "Magicwanda",
+   "account": "mmsmk1232",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
@@ -53,7 +53,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1987",
-   "role": "auto"
+   "role": "army"
   },
   {
    "account": "Wandwaver",

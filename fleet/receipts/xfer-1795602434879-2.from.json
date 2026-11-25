@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795602434879-2",
  "account": "Stirmypot",
  "partner": "mmthv2350",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "d9f6fd3d-3d67-4ce4-b950-3f71118e073a",
- "count": 0,
- "ok": false,
- "at": 1795602996497,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795603155218,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 750,
+  "after": 690
+ },
+ "logout": {
+  "attemptId": "1795602996506-0000025904-0000000001",
+  "at": 1795603155206,
+  "sha256": "9d5248cecb83d08963e96cea1a63984e47d94d247c84e729b7d7d10d56742a29"
+ },
+ "screen": true
 }

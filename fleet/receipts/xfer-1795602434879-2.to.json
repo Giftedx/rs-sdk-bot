@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795602434879-2",
+ "account": "mmthv2350",
+ "partner": "Stirmypot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "3d057c1d-15b4-4d9b-8cae-848e129616d0",
+ "count": 60,
+ "ok": true,
+ "at": 1795603156879,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795603156071
+ },
+ "logout": {
+  "attemptId": "1795603146574-0000016120-0000000001",
+  "at": 1795603156793,
+  "sha256": "7eec184d053b20a2ef556b764f167a5f44923f3e2e40c64a39d0f42b16aca63a"
+ },
+ "screen": true
+}
