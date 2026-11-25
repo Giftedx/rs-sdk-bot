@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601370026,
+ "at": 1795601394568,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,30 +24,67 @@
    "role": "rehearsal"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/generated/quest-dragon.ts",
+   "account": "Knightstick",
+   "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dragon",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:dragon",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
-   "account": "Knightstick",
-   "script": "scripts/generated/quest-arena.ts",
+   "account": "PickpockDick",
+   "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "InTheSack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "helper"
   },
   {
    "account": "Wandwaver",
@@ -114,39 +151,24 @@
    "role": "auto"
   },
   {
-   "account": "SporranBulge",
+   "account": "Fingersmith",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
+    "smithing",
+    "smelt",
+    "1500",
+    "bronze"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:2152",
-    "BATCH_UNITS": "10"
+    "BAR_TYPE": "bronze",
+    "MAX_MAKE": "28",
+    "ORE_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:2349",
+    "BATCH_UNITS": "34"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:2152",
-   "role": "helper"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "herblore",
-    "potions"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Herblore",
-    "TARGET_LEVEL": "67"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:2481",
+   "goal": "campaign:haggis:item:2349",
    "role": "army"
   }
  ],
@@ -165,7 +187,6 @@
   "dipstick",
   "fatstack",
   "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
