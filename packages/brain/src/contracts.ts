@@ -124,6 +124,9 @@ export interface WorldSnapshot extends WorkerWorldView {
     readonly spotOccupancy?: Readonly<Record<string, number>>;
     readonly geEscrowCoins?: Readonly<Record<string, number>>;
     readonly activeTransfers?: readonly TransferOrder[];
+    // Settled trades inside the received-item hold (packages/brain/src/transfer-memory.ts): each recipient keeps
+    // what it received, and the scheduler does not plan it as a donor of those items.
+    readonly recentTransfers?: readonly TransferOrder[];
     readonly world?: World;
 }
 
@@ -1121,6 +1124,15 @@ export function validateWorldSnapshot(v: unknown): string[] {
             const list = v.activeTransfers;
             for (let i = 0; i < list.length; i++) {
                 pushTransferOrderErrors(list[i], errors, `activeTransfers[${i}]: `);
+            }
+        }
+    }
+    if (v.recentTransfers !== undefined) {
+        if (!Array.isArray(v.recentTransfers)) errors.push('recentTransfers must be an array');
+        else {
+            const list = v.recentTransfers;
+            for (let i = 0; i < list.length; i++) {
+                pushTransferOrderErrors(list[i], errors, `recentTransfers[${i}]: `);
             }
         }
     }

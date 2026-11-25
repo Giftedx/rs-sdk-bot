@@ -43,12 +43,14 @@ import {
     type ItemMeta,
 } from './preflight';
 import { readJsonStatCached } from './json-cache';
+import { RECEIVED_ITEM_HOLD_MS } from './transfer-memory';
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 const GE_TILE = { x: 3164, z: 3487, level: 0 } as const;
 const EMPTY_SHOPS: readonly ShopCatalogEntry[] = [];
 const EMPTY_DONORS: readonly AccountState[] = [];
-export const DEFAULT_ANTI_PING_PONG_MS = 10 * 60_000;
+// An account does not donate an item it received inside this window (packages/brain/src/transfer-memory.ts).
+export const DEFAULT_ANTI_PING_PONG_MS = RECEIVED_ITEM_HOLD_MS;
 export const GE_LIMIT_BUFFER = 1.15;
 export const DEFAULT_MAX_GE_ASK_FLOOR_GP = 25_000;
 
