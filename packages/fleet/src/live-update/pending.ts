@@ -9,8 +9,10 @@ import { cachedReleaseFiles } from '../../../core/src/worker-release';
 
 export type PendingUpdate = { at: number; target: string; files: string[] };
 
-// live-update renews the mark on each pass while it waits. A mark this old has no live writer: it holds nothing.
-export const PENDING_MAX_AGE_MS = 10 * 60_000;
+// live-update renews the mark on each fleet-agent pass while it waits. A quiet agent sleeps its whole CYCLE (10 min
+// by default, packages/fleet/src/fleet-agent.ts) between passes, so the mark lives three cycles; one this old has no
+// live writer and holds nothing. The watchdog restarts a stopped agent within 5 minutes.
+export const PENDING_MAX_AGE_MS = 30 * 60_000;
 export const pendingUpdateFile = (root: string) => join(liveRoot(root), 'live-update-pending.json');
 
 export function writePendingUpdate(root: string, mark: PendingUpdate): void {
