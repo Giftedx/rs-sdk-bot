@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { overallWins } from './haggis-gate';
 
 const act = (id: string, evidence: string) => ({ id, evidence, source: 'test' }) as any;
-const plan = (slack: number, order: { id: string; start: number; end: number }[]) => ({
+const plan = (slack: number, order: { id: string; start: number; end: number; landsAt?: number; ticks?: number }[]) => ({
     order,
     boards: [
         { id: 'overall', deadline: 35_000, finish: 35_000 - slack, slack, status: slack > 0 ? 'WIN' : 'LATE' },
@@ -26,4 +26,27 @@ test('activities that start before the Overall finish need MEASURED inputs, also
     expect(overallWins(plan(800, order.filter(p => p.id !== 'b')), acts)).toContain('with measured inputs');
     // Overall finishes at 34,200, inside this activity: its rate sets the finish, so it gates the launch.
     expect(() => overallWins(plan(800, [{ id: 'last', start: 30_000, end: 90_000 }]), [act('last', 'ESTIMATE')])).toThrow('lack MEASURED inputs: last');
+});
+
+test('overallWins ignores unmeasured inactive patches and 0-tick no-ops, while still gating background and absorbed activities', () => {
+    const withInactivePatch = {
+        ...act('a', 'MEASURED'),
+        patches: [{ lever: 'unused', set: { ticks: { floor: 1, realistic: 1, evidence: 'ESTIMATE' } } }],
+    };
+    const noopAct = act('noop', 'CODE-READ');
+    const bgAct = act('bg', 'ESTIMATE');
+    const guestAct = act('guest', 'CODE-READ');
+    const acts = [withInactivePatch, noopAct, bgAct, guestAct];
+    expect(overallWins(plan(800, [
+        { id: 'a', start: 0, end: 10_000, landsAt: 10_000, ticks: 10_000 },
+        { id: 'noop', start: 10_000, end: 10_000, landsAt: 10_000, ticks: 0 },
+    ]), acts)).toContain('with measured inputs');
+    expect(() => overallWins(plan(800, [
+        { id: 'a', start: 0, end: 10_000, landsAt: 10_000, ticks: 10_000 },
+        { id: 'bg', start: 10_000, end: 10_000, landsAt: 10_022, ticks: 0 },
+    ]), acts)).toThrow('lack MEASURED inputs: bg');
+    expect(() => overallWins(plan(800, [
+        { id: 'a', start: 0, end: 10_000, landsAt: 10_000, ticks: 10_000 },
+        { id: 'guest', start: 0, end: 10_000, landsAt: 10_000, ticks: 0 },
+    ]), acts)).toThrow('lack MEASURED inputs: guest');
 });

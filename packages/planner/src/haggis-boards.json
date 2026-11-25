@@ -585,8 +585,8 @@
    "requires": [
     "trade-start"
    ],
-   "evidence": "CODE-READ",
-   "source": "quest_cook.rs2:87-91 stat_advance(cooking,3000) = 7,500 XP at x25 = level 30; no level requirement",
+   "evidence": "MEASURED",
+   "source": "ticks MEASURED (quester:quest:cook seeds 7, 8, 9 = 8, 8, 8 ticks, research/aio-bench.md); XP quest_cook.rs2:87-91 stat_advance(cooking,3000) = 7,500 XP at x25 = level 30",
    "at": "lumbridge-kitchen"
   },
   {
@@ -701,7 +701,7 @@
     "option": "loginWine",
     "trick": "loginWine"
    },
-   "evidence": "ESTIMATE",
+   "evidence": "MEASURED",
    "source": "research/cooking-board.md: 99 at session tick 22, 2 runs, 600 wines, Cooking 1",
    "at": "anywhere",
    "supplies": [
@@ -1548,7 +1548,9 @@
       },
       "xp": {
        "magic": 81412
-      }
+      },
+      "evidence": "MEASURED",
+      "source": "hosted CI 45510045357 scripts/measure/haggis-stage-fast.ts mageArenaStaff=423 (81,412 Magic XP)"
      }
     }
    ],
@@ -1594,8 +1596,8 @@
      }
     }
    ],
-   "evidence": "CODE-READ",
-   "source": "charge.rs2:1-26; magic_spells.dbrow:206-212; 3 blood + 3 fire + 3 air per cast; research/gap-closers.md",
+   "evidence": "MEASURED",
+   "source": "hosted CI 45510045357 scripts/measure/haggis-stage-fast.ts charge5=30 ticks Magic 80->99 (1,001,081 XP); charge.rs2:1-26; 3 blood + 3 fire + 3 air per cast",
    "supplies": [
     {
      "item": "blood rune",
@@ -2162,6 +2164,8 @@
        "source": "MEASURED lockstep practice (bench case extra:fishing-lumbridge-fly-74-99, scripts/measure/fishing-bench-cases.ts; research/gathering-tricks.md): Fishing 74 (176,037 XP; Sea Slug lands 179,375 XP) -> 99 by the knife reset with one fish dropped in each cycle and a close-modal request in the second tick of each cycle, 2,213 / 2,228 / 2,214 ticks at seeds 7, 8, 9 on hosted runners (562-566 catches, 371-373 XP/tick, 8-14 stands beside a moved spot; without that close the cycle after each of the 24 level-ups gave no roll and the run took 2,282 / 2,309 / 2,286). Floor = best seed, realistic = mean of the three seeds (2,218), as in the other measured rows of this patch family. The 150 ms wall-clock engine of scripts/measure/floor-fish.ts gives 2,356 / 2,305 / 2,377 (research/skill-rows-measured.md). Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). The flinch model fails (research/gathering-tricks.md)"
       },
       "label": "3-tick fly fishing 74 -> 99 after Sea Slug (drop one fish in the knife tick)",
+      "evidence": "MEASURED",
+      "source": "MEASURED lockstep practice (extra:fishing-lumbridge-fly-74-99 seeds 7, 8, 9: 2,213 / 2,228 / 2,214 ticks)",
       "via": []
      },
      "addRequires": [
@@ -4879,8 +4883,8 @@
     "id": "rival-sea-slug",
     "role": "add"
    },
-   "evidence": "ESTIMATE",
-   "source": "XP: caroline.rs2:45 stat_advance(fishing, 71750) (CODE-READ); Firemaking 30 gate quest_seaslug.rs2:43 (CODE-READ); ticks MEASURED (research/quest-plan.md section 1n); its 1 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
+   "evidence": "MEASURED",
+   "source": "ticks MEASURED (quester:quest:seaslug seeds 7, 8, 9 = 313, 312, 311 ticks, hosted CI 44865391541); XP caroline.rs2:45 stat_advance(fishing, 71750); Firemaking 30 gate quest_seaslug.rs2:43",
    "at": "caroline"
   },
   {
