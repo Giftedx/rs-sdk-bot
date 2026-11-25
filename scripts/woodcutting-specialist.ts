@@ -73,13 +73,13 @@ const WC_KEEP_IDS = new Set<number>([
 export const WC_NORMAL_XP_25X = 625;
 export const WC_OAK_XP_25X = 937.5;
 
-// Draynor Jail West multiway hub (multiway.csv 0_48_50): 3 twin Oaks on x=3117 corridor beside Jail guard 4307.
-export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3244 } as const;
+// Draynor Jail multiway hub (multiway.csv 0_48_50): (3115,3242) touches both oakSW (3114,3239) and oakMid (3115,3243) inside <=7 maxrange of 3 Jail guards.
+export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3242 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
     [3114, 3239],
     [3115, 3243],
-    [3115, 3250],
     [3118, 3245],
+    [3115, 3250],
 ];
 
 export const BARB_VILLAGE_SPOT = { x: 3126, z: 3434 } as const;
@@ -151,12 +151,13 @@ function findBestTree(
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (!wantOak) {
-                // Inner normal trees beside (3117,3246) keep arrival transition to Oak 15 near zero-walk.
-                return l.x >= 3113 && l.x <= 3119 && l.z >= 3244 && l.z <= 3251 && l.reachable !== false;
+                // Inner normal trees beside (3115,3242) keep arrival transition to Oak 15 near zero-walk.
+                return l.x >= 3111 && l.x <= 3119 && l.z >= 3238 && l.z <= 3251 && l.reachable !== false;
             }
-            // 3 Draynor Jail multiway courtyard oaks beside (3117,3246); keep all rolls inside the guard courtyard.
+            // Draynor Jail multiway oaks beside (3115,3242) & (3118,3244); keep rolls inside 3-guard maxrange.
             return (
-                (l.x === 3115 && l.z === 3243)
+                (l.x === 3114 && l.z === 3239)
+                || (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
                 || (l.x === 3115 && l.z === 3250)
             ) && l.reachable !== false;
@@ -165,7 +166,7 @@ function findBestTree(
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
+    const isHubOak = (l: NearbyLoc) => (l.x === 3114 && l.z === 3239) || (l.x === 3115 && l.z === 3243);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
@@ -198,16 +199,18 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
+    const filtered = perimeter.filter(t => t.x >= 3113 && t.x <= 3119 && t.z >= 3242 && t.z <= 3247);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3117,3246) inside the courtyard to stay adjacent to both southern hub oaks and all 4 jail guards.
-        const hub = (t.x === 3117 && t.z === 3246)
+        // Prefer (3115,3242) touching oakSW+oakMid inside maxrange=7 of sw(3109,3237), se(3120,3238), and nw(3121,3249).
+        const hub = (t.x === 3115 && t.z === 3242)
             ? 0
-            : 1 + Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3246));
+            : (t.x === 3116 && t.z === 3242)
+                ? 1
+                : 2 + Math.max(Math.abs(t.x - 3115), Math.abs(t.z - 3242));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -239,8 +242,8 @@ function countAttackingGoblins(s: Session): number {
 function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
-        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 8) return false;
-        if (n.x < 3112 || n.x > 3123 || n.z < 3238 || n.z > 3251) return false;
+        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 10) return false;
+        if (n.x < 3107 || n.x > 3128 || n.z < 3235 || n.z > 3253) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
         if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
@@ -387,7 +390,7 @@ if (import.meta.main) {
             // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
             await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
         }
-        await walkWaypointsSafe(main, [[3117, 3246, 1]], isStopped);
+        await walkWaypointsSafe(main, [[3115, 3242, 1]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
@@ -549,11 +552,10 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Only clear busy2 for a 2t flinch when an adjacent attacking guard/goblin is due on now+1.
+            // Predict earliest next hit ETA across active attacking guards so 3t knife never clobbers a 2t flinch window.
             while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 11) recentHitTicks.shift();
-            const recentHitsIn6 = recentHitTicks.filter(h => now - h <= 6);
             const nearbyNpcs = st?.nearbyNpcs ?? [];
-            let activeHitIn1t = false;
+            let nextHitEta = Infinity;
             for (const [npcIdx, info] of npcLastHit) {
                 if (now - info.tick > 10) {
                     npcLastHit.delete(npcIdx);
@@ -561,11 +563,15 @@ if (import.meta.main) {
                 }
                 const npc = nearbyNpcs.find(n => n.index === npcIdx);
                 if (!npc || npc.hp === 0 || npc.distance > 2 || !targetsPlayer(main, npc.targetIndex)) continue;
-                if (now + 1 - info.tick === info.period || now + 1 - info.tick === info.period * 2) {
-                    activeHitIn1t = true;
-                    break;
+                for (let k = 1; k <= 2; k++) {
+                    const eta = info.tick + k * info.period - now;
+                    if (eta >= 1 && eta < nextHitEta) {
+                        nextHitEta = eta;
+                        break;
+                    }
                 }
             }
+            const activeHitIn1t = nextHitEta === 1;
 
             const canTag = !outOfPrayer
                 && wantOak
@@ -573,8 +579,8 @@ if (import.meta.main) {
                 && !activeHitIn1t
                 && tagCount < 24
                 && gobs < 3
-                && recentHitsIn6.length === 0
-                && now - lastTagTick >= 15
+                && (gobs === 0 || nextHitEta === 3)
+                && now - lastTagTick >= 12
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -597,9 +603,16 @@ if (import.meta.main) {
                 }
             }
 
-            // Clear busy2 only when an active guard is scheduled to swing on now+1 (flinch rolls at now+2); else 3t knife (now+3).
+            // Clear busy2 when hit arrives on now+1; hold 1 tick if hit arrives on now+2 (rolling now+3, same as knife3 without breaking flinch phase).
             const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && activeHitIn1t;
             if (!keepFlinchWindow) {
+                if (!outOfPrayer && wantOak && !needNormalLog && nextHitEta === 2) {
+                    if (main.sdk.getInventory().length >= 25) {
+                        await dropExcessOaks(main, 22);
+                    }
+                    await waitTicks(main, 1);
+                    continue;
+                }
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
                 if (knifeSlot !== undefined && logSlot !== undefined && !needNormalLog) {
