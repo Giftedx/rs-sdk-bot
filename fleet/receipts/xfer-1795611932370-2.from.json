@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795611932370-2",
+ "account": "Hocuspokeus",
+ "partner": "Bigpackage",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "13e21096-2095-46a8-be00-38a49a24dedc",
+ "count": 0,
+ "ok": false,
+ "at": 1795612097524,
+ "detail": "trade claimed"
+}

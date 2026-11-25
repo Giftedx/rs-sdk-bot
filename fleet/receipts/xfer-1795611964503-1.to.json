@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795611964503-1",
+ "account": "SporranBulge",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "dd5320ed-fcd5-406b-9c66-1db7d2138664",
+ "count": 60,
+ "ok": true,
+ "at": 1795612102034,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795612101275
+ },
+ "logout": {
+  "attemptId": "1795612091341-0000028796-0000000001",
+  "at": 1795612102016,
+  "sha256": "293d3e5973250a57d9284c9fab4854b4150805df9a84e9b90cd441802e2e9ef1"
+ },
+ "screen": true
+}
