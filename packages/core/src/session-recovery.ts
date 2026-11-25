@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {connectInProcess,clientTransportState,observeClientTransport,inProcessRuntimePaths,type Session} from './inprocess';
 import {logoutSession,closeWithin,serverFromEnv} from './bot';
 import {isLocalServer} from './localserver';
-import {lifecycleRootForServer} from './practice-paths';
+import {lifecycleRootForServer,resolveBotEnvPath} from './practice-paths';
 import {readLogoutProof,listAttemptsSince} from './session-lifecycle';
 import {cachedLaunchRevision} from './worker-release';
 import {waitUntil} from './ticks';
@@ -295,7 +295,7 @@ async function cli(){
   permitExpiresAt=permit.expiresAt;
  }
  await recoveryBoundary('stop',guard);
- const env=await recoveryBoundary('credentials-read',()=>readFileSync(join(repo,'vendor/rs-sdk/bots',request.account,'bot.env'),'utf8'));
+ const env=await recoveryBoundary('credentials-read',()=>readFileSync(resolveBotEnvPath(request.account,repo),'utf8'));
  await recoveryBoundary('server-selection',()=>{if(serverFromEnv(env)!==request.server)throw Error('recovery account server mismatch');});
  const password=await recoveryBoundary('credential-selection',()=>{const value=env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();if(!value)throw Error('recovery credential unavailable');return value;});
  await recoveryBoundary('output-request',()=>{mkdirSync(out!,{recursive:true});writeFileSync(join(out!,'request.json'),JSON.stringify(request,null,2),{flag:'wx'});});
