@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795605156308-2",
  "account": "Hocuspokeus",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Vial of water",
  "requested": 1,
  "claim": "a11db417-b48e-4041-acfb-5ee70d464042",
- "count": 0,
- "ok": false,
- "at": 1795605321008,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795605483578,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795605326394
+ },
+ "logout": {
+  "attemptId": "1795605321019-0000009300-0000000001",
+  "at": 1795605483558,
+  "sha256": "5df24561304d9362f35084158b092862e2b8ea6116e129ad0b70704cd1f2cde0"
+ },
+ "screen": true
 }
