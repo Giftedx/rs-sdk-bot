@@ -1,0 +1,23 @@
+{
+ "id": "1795628871470-masterbaiter-bigchopper-be5f5acf7c7e9af4",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "Bigchopper",
+ "item": "Lobster",
+ "count": 25,
+ "start": 1795628871470,
+ "end": 1795633071470,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

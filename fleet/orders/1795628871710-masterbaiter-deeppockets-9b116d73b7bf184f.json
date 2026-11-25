@@ -1,0 +1,23 @@
+{
+ "id": "1795628871710-masterbaiter-deeppockets-9b116d73b7bf184f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "Deeppockets",
+ "item": "Lobster",
+ "count": 25,
+ "start": 1795628871710,
+ "end": 1795633071710,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
