@@ -208,7 +208,7 @@ async function bankAndWithdrawKit(
             b = bankItems(main).find(x => x.id === req.id && x.count >= req.count - have);
         }
         if (!b) throw Error(`haggis-stage7: bank short of ${req.label} (${req.id}), need ${req.count}`);
-        if (req.all && have === 0 && b.count === req.count) {
+        if (req.all && have === 0) {
             await send(main, m, { type: 'bankWithdraw', slot: b.slot, amount: -1 });
         } else {
             await withdrawN(main, m, b.slot, req.count - have);
@@ -492,9 +492,15 @@ export async function runHaggisStage7(
 
     let stopFlag = false;
     let settling = false;
+    let sessionEndError: Error | null = null;
     const main = await openBot(cleanMain, {
         onStop: async () => { stopFlag = true; },
-        onSessionEnd: async (_s, detail) => { if (!settling) throw Error(`unexpected stage7 end: ${detail}`); },
+        onSessionEnd: async (_s, detail) => {
+            if (!settling) {
+                stopFlag = true;
+                sessionEndError = Error(`unexpected stage7 end: ${detail}`);
+            }
+        },
     });
     const t0 = main.tick();
     const isStopped = () => stopFlag || main.tick() - t0 >= cap;
