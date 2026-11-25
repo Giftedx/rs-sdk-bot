@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795628447347-2",
  "account": "KnightRider",
  "partner": "Fatstack",
@@ -12,6 +12,16 @@
  "claim": "9827f2a0-3800-4978-8b47-2afdf41683d1",
  "count": 0,
  "ok": false,
- "at": 1795629052365,
- "detail": "trade claimed"
+ "at": 1795629347742,
+ "detail": "Error: no matching trade completed: player_not_found: Player not found nearby: /^Fatstack$/i",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795629052374-0000021776-0000000001",
+  "at": 1795629347714,
+  "sha256": "cfa6c463dd685e2b3b9d7c26b6c11be9e33e49ccb960e45d16acf34698bada70"
+ },
+ "screen": false
 }

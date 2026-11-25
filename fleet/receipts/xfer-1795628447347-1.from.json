@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795628447347-1",
  "account": "SporranDip",
  "partner": "UnderMyKilt",
@@ -12,6 +12,12 @@
  "claim": "61d3aa13-34a7-4652-955b-a2148680483f",
  "count": 0,
  "ok": false,
- "at": 1795629261678,
- "detail": "trade claimed"
+ "at": 1795629348069,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795629261686-0000002804-0000000001",
+  "at": 1795629348058,
+  "sha256": "03b430d0e3578a9d2abeb32968e8d4ead0fb14545dbedad37171342fec0dc800"
+ },
+ "screen": false
 }
