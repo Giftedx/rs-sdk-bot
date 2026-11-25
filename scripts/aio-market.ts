@@ -476,7 +476,8 @@ export async function runAioMarket(account: string, args: readonly string[], env
                     const rescue: RescueControl = { active: false, start: 0, lifeId: 0, respawnCount: 0 };
                     s = await openOrderSession(account, request, rescue, () => { stopped = true; });
                     const stop = () => stopped || isStopFilePresent(account);
-                    const result = await runOwnedItem(s, request, journalPath, stop, merged.CANCEL === '1', fillWaitTicks, rescue);
+                    // REST=1 leaves an unfilled offer open until ORDER_MS ends; a rerun with the same ORDER_KEY collects it.
+                    const result = await runOwnedItem(s, request, journalPath, stop, merged.CANCEL === '1', fillWaitTicks, rescue, { leaveOpen: merged.REST === '1' });
                     console.log('OWNED_GE_ITEM ' + JSON.stringify(result));
                     return await settleResult([s], result.ok, JSON.stringify(result));
                 } catch (error) {

@@ -125,6 +125,10 @@ export interface ItemOrder {
     acquired?: number;
     refund?: number;
     failure?: string;
+    // The open offer was left on the exchange at the end of a session (REST=1). Offers match offline.
+    resting?: boolean;
+    // Coins and ordered items that other jobs moved while the offer rested; each entry shifts coinsBefore/itemsBefore.
+    drift?: { at: number; coins: number; items: number }[];
 }
 
 export interface SaleRequest {
