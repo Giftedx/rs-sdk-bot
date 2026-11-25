@@ -8,7 +8,7 @@ function page(bots: any[] = []) {
     const box = { removeAttribute() {} };
     const api = new Function('document', 'setTimeout', 'clearTimeout', '$', 'S', 'sel', `let VIEWER={state:'loading',detail:''},VIEWER_TIMER,VIEWER_REQUEST=1,rswFor=null,mode='3d',requests=0;
         const setMode=m=>{mode=m},request3D=()=>{requests++;VIEWER={...VIEWER,state:'loading'};mode='3d'};${code};
-        return {unavailable:viewerUnavailable,arm:armViewerTimer,state:()=>VIEWER,requests:()=>requests};`)(document, (fn: () => void, ms: number) => { timers.push({ fn, ms }); return timers.length; }, () => {}, () => box, { bots }, 'Bob');
+        return {unavailable:viewerUnavailable,arm:armViewerTimer,state:()=>VIEWER,requests:()=>requests,readyFor:ms=>{VIEWER_READY_AT=Date.now()-ms;}};`)(document, (fn: () => void, ms: number) => { timers.push({ fn, ms }); return timers.length; }, () => {}, () => box, { bots }, 'Bob');
     return { ...api, timers, document, show() { document.hidden = false; for (const fn of listeners) fn(); } };
 }
 
@@ -40,6 +40,22 @@ test('a failed 3D view tries three times, and a hidden page waits to come back f
     expect(p.requests()).toBe(3);
     p.unavailable('lost');
     expect(p.state().detail).toBe('lost');
+});
+test('a view that fails soon after each ready uses up its tries; one that stayed ready two minutes gets them all again', () => {
+    const p = page();
+    for (const ms of [5000, 30000, 120000]) {
+        p.readyFor(10_000);
+        p.unavailable('lost');
+        expect(p.timers.at(-1)!.ms).toBe(ms);
+        p.timers.at(-1)!.fn();
+    }
+    p.readyFor(10_000);
+    p.unavailable('lost');
+    expect(p.state().detail).toBe('lost');
+    p.readyFor(120_000);
+    p.unavailable('lost');
+    expect(p.state().detail).toBe('lost · trying again');
+    expect(p.timers.at(-1)!.ms).toBe(5000);
 });
 test('a practice account does not retry the live-only 3D view', () => {
     const p = page([{ name: 'Bob', practice: true }]);

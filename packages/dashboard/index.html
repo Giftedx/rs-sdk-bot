@@ -348,9 +348,12 @@ function setMode(m,preserve=false){
   showViewerStatus();if(S){syncWorld();drawMap();}
 }
 // A failed 3D view tries again after each of these waits. Each wait ends only while the page is in view.
-const VIEWER_RETRY_MS=[5000,30000,120000];let VIEWER_RETRIES=0,VIEWER_RETRY_TIMER,VIEWER_RETRY_DUE=false;
+// A view that stays ready for VIEWER_STABLE_MS earns a full set of tries again. One that fails soon after each ready uses
+// them up and stays on the 2D map, so a fault that comes back after every load does not reload the view without end.
+const VIEWER_RETRY_MS=[5000,30000,120000],VIEWER_STABLE_MS=120000;let VIEWER_RETRIES=0,VIEWER_RETRY_TIMER,VIEWER_RETRY_DUE=false,VIEWER_READY_AT=0;
 function retryViewer(){VIEWER_RETRY_DUE=true;if(document.hidden)return;VIEWER_RETRY_DUE=false;if(VIEWER.state==='unavailable'&&mode==='2d')request3D();}
 function viewerUnavailable(reason){
+  if(VIEWER_READY_AT&&Date.now()-VIEWER_READY_AT>=VIEWER_STABLE_MS)VIEWER_RETRIES=0;VIEWER_READY_AT=0;
   const retry=VIEWER_RETRIES<VIEWER_RETRY_MS.length&&!S?.bots?.find(b=>b.name===sel)?.practice;
   clearTimeout(VIEWER_TIMER);clearTimeout(VIEWER_RETRY_TIMER);VIEWER_RETRY_DUE=false;VIEWER={...VIEWER,state:'unavailable',detail:(String(reason||'viewer did not become ready').slice(0,180))+(retry?' · trying again':''),feed:null};
   $('#rsw').removeAttribute('src');rswFor=null;setMode('2d',true);
@@ -383,7 +386,7 @@ window.addEventListener('message',e=>{
   const v=viewerMessage(e,frame,VIEWER.origin);
   if(v&&mode==='3d'){
     if(v.state==='error'){viewerUnavailable(v.detail||'viewer reported an error');return;}
-    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);VIEWER_RETRIES=0;const first=VIEWER.state!=='ready',target=window.atlasFollowOther||(!window.atlasFreeCamera&&sel);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};if(first&&typeof groundReady==='function')groundReady();if(window.atlasFreeCamera&&!window.atlasFollowOther&&(first||!sel))frame?.postMessage({atlasFreeCamera:true},VIEWER.origin);else if(first&&target)frame?.postMessage({follow:target},VIEWER.origin);}
+    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);if(VIEWER.state!=='ready')VIEWER_READY_AT=Date.now();const first=VIEWER.state!=='ready',target=window.atlasFollowOther||(!window.atlasFreeCamera&&sel);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};if(first&&typeof groundReady==='function')groundReady();if(window.atlasFreeCamera&&!window.atlasFollowOther&&(first||!sel))frame?.postMessage({atlasFreeCamera:true},VIEWER.origin);else if(first&&target)frame?.postMessage({follow:target},VIEWER.origin);}
     else if(VIEWER.state==='loading'&&typeof v.detail==='string')VIEWER.detail=v.detail.slice(0,180);
     showViewerStatus();
   }
