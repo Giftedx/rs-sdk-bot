@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795582908012-yewgotwood-dipstick-86d7fdb51ed3d5d6",
  "account": "YewGotWood",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 400000,
  "claim": "49e251ef-61ce-42b0-977c-67a29b74877a",
- "count": 0,
- "ok": false,
- "at": 1795583147320,
- "detail": "trade claimed"
+ "count": 400000,
+ "ok": true,
+ "at": 1795583189411,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 400000,
+  "after": 0
+ },
+ "bank": {
+  "count": 397000,
+  "at": 1795583169068
+ },
+ "logout": {
+  "attemptId": "1795583147673-0000003780-0000000001",
+  "at": 1795583189395,
+  "sha256": "5894d37597bf07f9aa060b21274d40dadb2e72363d0ef7f271d1407e13413b31"
+ },
+ "screen": true
 }
