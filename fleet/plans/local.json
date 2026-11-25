@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795617125949,
+ "at": 1795617147618,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -206,6 +206,41 @@
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
    "role": "helper"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "ge-buy"
+   ],
+   "env": {
+    "ORDER_KEY": "brain-564-1-p861",
+    "ITEM_ID": "564",
+    "QUANTITY": "1",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "861"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "runecraft",
+    "supply"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:hiltsdeep:item:556",
+    "BATCH_UNITS": "902"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:hiltsdeep:item:556",
+   "role": "army"
   }
  ],
  "army": [
@@ -231,7 +266,6 @@
   "moneyshot",
   "pocketpython",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",

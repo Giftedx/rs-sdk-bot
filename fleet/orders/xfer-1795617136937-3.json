@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795617136937-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "Spitroaster",
+  "item": "Sapphire ring",
+  "count": 1,
+  "itemId": 1637,
+  "start": 1795617136937,
+  "end": 1795618036937,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
