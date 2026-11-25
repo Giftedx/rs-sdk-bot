@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795621069079-4",
  "account": "mmthv2350",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "aeb965db-36dd-443a-80b5-5f5231b81c3f",
- "count": 0,
- "ok": false,
- "at": 1795621551552,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795621570422,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 13
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795621569705
+ },
+ "logout": {
+  "attemptId": "1795621551562-0000030252-0000000001",
+  "at": 1795621570411,
+  "sha256": "e6c0ac26e2e2b8e227ffbfbd13851c19104f6709345e670e38d1695eb553477e"
+ },
+ "screen": true
 }
