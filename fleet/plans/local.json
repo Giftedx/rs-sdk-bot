@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795604473069,
+ "at": 1795604510606,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -133,23 +133,18 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
    "args": [
-    "crafting",
-    "inventory",
-    "identify:marentill"
+    "scripts/aio-logistics.ts ITEM_ID=2150 QUANTITY=1 \"ITEM_NAME=Swamp toad\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:2152 BATCH_UNITS=2 -- crafting inventory strip:swamp-toad"
    ],
    "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "goal:supply_chain:251",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:251",
+   "goal": "campaign:haggis:item:2152",
    "role": "army"
   }
  ],
@@ -164,6 +159,7 @@
   "bowbeforeme",
   "deeppockets",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
@@ -173,7 +169,6 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
   "oreelse",
   "pickpockdick",
   "pocketpython",
