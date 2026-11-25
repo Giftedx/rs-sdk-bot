@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795627363317-2",
  "account": "SporranDip",
  "partner": "Swordswallow",
@@ -12,6 +12,12 @@
  "claim": "871025c3-ea20-4a6c-b040-304b9c888b25",
  "count": 0,
  "ok": false,
- "at": 1795628128756,
- "detail": "trade claimed"
+ "at": 1795628263708,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795628128765-0000022284-0000000001",
+  "at": 1795628263690,
+  "sha256": "0e7f722c564689ad80f985289453be870737fdd4b2afb77bda475f00578d91c6"
+ },
+ "screen": false
 }

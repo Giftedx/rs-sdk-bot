@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795628271830-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "BoneToPick",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "extra": [
+    {
+      "item": "Staff of fire",
+      "count": 1,
+      "itemId": 1387
+    }
+  ],
+  "start": 1795628271830,
+  "end": 1795629171830,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

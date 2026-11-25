@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795628133291-masterbaiter-trousersnake-df096c0d8df936bb",
+ "account": "Masterbaiter",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 25,
+ "claim": "69d83e01-6116-44ff-9d54-8f8b482b89c5",
+ "count": 0,
+ "ok": false,
+ "at": 1795628351524,
+ "detail": "trade claimed"
+}

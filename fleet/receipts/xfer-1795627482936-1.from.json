@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795627482936-1",
+ "account": "Shaftsinker",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "3c538654-7093-41e8-bf69-b40767ac20ba",
+ "count": 0,
+ "ok": false,
+ "at": 1795628383307,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795628256133-0000018260-0000000001",
+  "at": 1795628383295,
+  "sha256": "a563fdbfe07a2790e19222859b70c1ceb83746877658bf2487cfc3c37ce188d9"
+ },
+ "screen": false
+}
