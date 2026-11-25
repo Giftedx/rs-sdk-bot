@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795631068910-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "UnderMyKilt",
+  "to": "SporranDip",
+  "item": "Herb",
+  "count": 3,
+  "itemId": 213,
+  "start": 1795631068910,
+  "end": 1795631968910,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

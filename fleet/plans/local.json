@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795630890171,
+ "at": 1795631074749,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -210,28 +210,44 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "druid"
+    "crafting",
+    "inventory",
+    "identify:tarromin"
    ],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "24",
-    "BANK_PACK": "1"
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "54"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:207",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
+   "goal": "goal:supply_chain:263",
+   "role": "army"
   },
   {
    "account": "Dipstick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
+    "scripts/aio-fighter.ts DEMAND_ID=goal:supply_chain:207 BATCH_UNITS=24 BANK_PACK=1 -- druid"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:207",
+   "role": "army"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
     "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
    ],
@@ -241,19 +257,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:235",
-   "role": "army"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/generated/quest-barcrawl.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
    "role": "helper"
   },
   {
@@ -288,15 +291,15 @@
   },
   {
    "account": "Packhorse",
-   "script": "scripts/generated/dwarfcannon.ts",
+   "script": "scripts/generated/quest-barcrawl.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "DEMAND_ID": "goal:quest_board:barcrawl",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
+   "goal": "goal:quest_board:barcrawl",
    "role": "helper"
   },
   {
@@ -336,15 +339,15 @@
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/generated/quest-ikov.ts",
+   "script": "scripts/generated/dwarfcannon.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:ikov",
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:ikov",
+   "goal": "goal:quest_board:dwarfcannon",
    "role": "army"
   },
   {
@@ -407,6 +410,22 @@
    "repeat": false,
    "goal": "goal:quest_board:itwatchtower",
    "role": "army"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=56 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto"
   }
  ],
  "army": [
