@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795628171713-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "Shaftsinker",
+  "item": "Staff of fire",
+  "count": 1,
+  "itemId": 1387,
+  "start": 1795628171713,
+  "end": 1795629071713,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

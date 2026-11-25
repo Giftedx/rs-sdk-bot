@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795627384137-3",
  "account": "Shaftsinker",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 1,
  "claim": "5ed0bdc0-7f6b-42a7-a00b-7581e30d5562",
- "count": 0,
- "ok": false,
- "at": 1795628083314,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795628162114,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795628090167
+ },
+ "logout": {
+  "attemptId": "1795628083480-0000031088-0000000001",
+  "at": 1795628162106,
+  "sha256": "bd208e6c3e3a85a2678b3f81e458637addd3ba2a6d93f50d2e4f476b955f8dcd"
+ },
+ "screen": true
 }

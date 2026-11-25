@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795628157299,
+ "at": 1795628178070,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -90,19 +90,18 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+   ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
   },
   {
    "account": "Bigpackage",
@@ -137,6 +136,21 @@
    ]
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army"
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/generated/quest-priestperil.ts",
    "args": [],
@@ -147,22 +161,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:priestperil",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
    "role": "army"
   },
   {
@@ -198,6 +196,22 @@
    "role": "army"
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "DropMyLoad",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -212,22 +226,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-564-2-p861 ITEM_ID=564 QUANTITY=2 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
-    "scripts/aio-logistics.ts ITEM_ID=1639 QUANTITY=1 \"ITEM_NAME=Emerald ring\" -- loadout",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=2 -- magic items enchant:emerald_ring - 1 1200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2552",
-   "role": "army"
   },
   {
    "account": "KnightRider",
@@ -260,6 +258,20 @@
    "role": "army"
   },
   {
+   "account": "Shaftsinker",
+   "script": "scripts/magic-order.ts",
+   "args": [],
+   "env": {
+    "TARGET_LEVEL": "56",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
+  },
+  {
    "account": "Pocketpython",
    "script": "scripts/chain.ts",
    "args": [
@@ -273,33 +285,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Pocketpython",
    "role": "army"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/magic-order.ts",
-   "args": [],
-   "env": {
-    "TARGET_LEVEL": "19",
-    "CAP": "3000",
-    "TRAIN_SKILL": "Magic"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto"
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/generated/quest-arena.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "auto"
   }
  ],
  "army": [
@@ -311,13 +296,13 @@
   "mmsmk1232",
   "billionaire",
   "bowbeforeme",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "mineyourbiz",
   "mmthv2350",
+  "moneyshot",
   "oreelse",
   "pocketrocket",
   "quickhandjob",
