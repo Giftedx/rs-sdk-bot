@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795606894577-2",
+ "account": "Billionaire",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 925,
+ "claim": "bad999ec-8aa7-4891-ab98-16674e104cd5",
+ "count": 0,
+ "ok": false,
+ "at": 1795607015519,
+ "detail": "trade claimed"
+}

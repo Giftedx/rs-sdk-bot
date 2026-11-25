@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795606215938-1",
+ "role": "from",
+ "account": "Bigchopper",
+ "partner": "Ballspinner",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795606983116,
+ "detail": "Error: fleet trade: reserved account"
+}
