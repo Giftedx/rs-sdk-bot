@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795625499781-1",
  "account": "Earlyshooter",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Uncut diamond",
  "requested": 1,
  "claim": "1fc1e4ba-f930-4b4b-864c-03e0669d2bab",
- "count": 0,
- "ok": false,
- "at": 1795625610561,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795626012630,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795625617071
+ },
+ "logout": {
+  "attemptId": "1795625610570-0000031636-0000000001",
+  "at": 1795626012616,
+  "sha256": "1369a70f69ca57c4fa2a0091efaa20b02bbc18ad9c63e5590e4b2b40ad1ed99a"
+ },
+ "screen": true
 }
