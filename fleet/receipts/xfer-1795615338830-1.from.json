@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795615338830-1",
+ "account": "Bigpackage",
+ "partner": "MeatNTwoVeg",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 250,
+ "claim": "9b0c09f8-08b0-4260-8f65-327089935c41",
+ "count": 0,
+ "ok": false,
+ "at": 1795615610586,
+ "detail": "trade claimed"
+}

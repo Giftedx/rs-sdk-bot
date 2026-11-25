@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795614656686-1",
  "account": "Fatstack",
  "partner": "Ballspinner",
@@ -12,6 +12,16 @@
  "claim": "8940a6cb-5c1b-43b9-aa63-7e714c76116b",
  "count": 0,
  "ok": false,
- "at": 1795614774073,
- "detail": "trade claimed"
+ "at": 1795615557092,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 10,
+  "at": 1795614780361
+ },
+ "logout": {
+  "attemptId": "1795614774082-0000022448-0000000001",
+  "at": 1795615557079,
+  "sha256": "032d1eeed9121b17bf4ea8c3bd5e73470a0a927db74fbaf5ae5a29fdb1888ec1"
+ },
+ "screen": false
 }

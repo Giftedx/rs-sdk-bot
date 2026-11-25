@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795615451176-3",
+ "account": "mmsmk1232",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "daba6297-3d20-4cf8-9e17-60ec19c84fd4",
+ "count": 0,
+ "ok": false,
+ "at": 1795615599063,
+ "detail": "trade claimed"
+}
