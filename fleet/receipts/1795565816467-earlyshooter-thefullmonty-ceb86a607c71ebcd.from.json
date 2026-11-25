@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795565816467-earlyshooter-thefullmonty-ceb86a607c71ebcd",
  "account": "Earlyshooter",
  "partner": "TheFullMonty",
@@ -12,6 +12,16 @@
  "claim": "f8e9d86b-d247-49c1-9ee5-7366a7980be0",
  "count": 0,
  "ok": false,
- "at": 1795565965335,
- "detail": "trade claimed"
+ "at": 1795566883626,
+ "detail": "stop file",
+ "bank": {
+  "count": 22010,
+  "at": 1795566144180
+ },
+ "logout": {
+  "attemptId": "1795565965345-0000025480-0000000001",
+  "at": 1795566883615,
+  "sha256": "c604a6bb51f4703ed61153aa449afaa40ac75c79002ba4fc8f5f694e2c5b6857"
+ },
+ "screen": false
 }
