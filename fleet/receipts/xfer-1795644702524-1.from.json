@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795644702524-1",
  "account": "Woodpecker",
  "partner": "Wandwanker",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 60,
  "claim": "e2524069-9ba7-4f99-95f4-0c430acf62ec",
- "count": 0,
- "ok": false,
- "at": 1795644902954,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795644990255,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1699,
+  "after": 1639
+ },
+ "logout": {
+  "attemptId": "1795644902963-0000032252-0000000001",
+  "at": 1795644990169,
+  "sha256": "12765a8fe0ff73528451d82c6e5dcdc85591a750e34478a6ec6b9049a37b0751"
+ },
+ "screen": true
 }
