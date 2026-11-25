@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795617269052-woodenstaff-trousersnake-3b85054e3a603815",
  "account": "Woodenstaff",
  "partner": "TrouserSnake",
@@ -12,6 +12,12 @@
  "claim": "9af839d1-3646-418b-879f-838ed8902eb0",
  "count": 0,
  "ok": false,
- "at": 1795617974145,
- "detail": "trade claimed"
+ "at": 1795618106197,
+ "detail": "Error: route to 3254, 3421: precondition no route to 3254,3421,0",
+ "logout": {
+  "attemptId": "1795617974155-0000031992-0000000001",
+  "at": 1795618106178,
+  "sha256": "9778c706fa6c6923c1e878b890fababf019dad1b3a13c5ec606965a39577d9d8"
+ },
+ "screen": false
 }
