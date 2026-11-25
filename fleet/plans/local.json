@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795632864017,
+ "at": 1795632876034,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -138,21 +138,6 @@
    "repeat": false,
    "goal": "goal:quest_board:chompybird",
    "role": "auto"
-  },
-  {
-   "account": "RearEntry",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/dwarfcannon.ts DEMAND_ID=goal:quest_board:dwarfcannon BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
-   "role": "helper"
   },
   {
    "account": "PickpockDick",
@@ -406,15 +391,15 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/generated/quest-ikov.ts",
+   "script": "scripts/generated/dwarfcannon.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:ikov",
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:ikov",
+   "goal": "goal:quest_board:dwarfcannon",
    "role": "army"
   },
   {
@@ -435,6 +420,26 @@
    "role": "auto",
    "resources": [
     "chickens"
+   ]
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
    ]
   }
  ],
