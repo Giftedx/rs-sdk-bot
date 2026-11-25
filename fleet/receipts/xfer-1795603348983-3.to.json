@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795603348983-3",
  "account": "Bigchopper",
  "partner": "BoneToPick",
@@ -12,6 +12,12 @@
  "claim": "59b8e6e5-4030-4ff5-b866-702d9ca8a755",
  "count": 0,
  "ok": false,
- "at": 1795603959550,
- "detail": "trade claimed"
+ "at": 1795604249589,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795603959559-0000026356-0000000001",
+  "at": 1795604249579,
+  "sha256": "414938baa686872ae8255ca2ae436f18fe0f699b386984677c891b4a1e1ae29f"
+ },
+ "screen": false
 }
