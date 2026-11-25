@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795609107995-spitroaster-knightstick-90f0d25c7c788c4d",
  "account": "Knightstick",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "dcf28112-ca77-49be-95ee-b12b936daf25",
- "count": 0,
- "ok": false,
- "at": 1795609721603,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795609738996,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795609738199
+ },
+ "logout": {
+  "attemptId": "1795609721611-0000002728-0000000001",
+  "at": 1795609738912,
+  "sha256": "7ca01127f9f0c09ef299d0e84093489cbf59b7f3741c3644a25088f96ca9bb5c"
+ },
+ "screen": true
 }
