@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795615949383-4",
  "account": "Quickhandjob",
  "partner": "Stirmypot",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 200,
  "claim": "2e36787b-5257-48a0-b404-d8b013c682ce",
- "count": 0,
- "ok": false,
- "at": 1795616221813,
- "detail": "trade claimed"
+ "count": 200,
+ "ok": true,
+ "at": 1795616328654,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 200
+ },
+ "bank": {
+  "count": 200,
+  "at": 1795616327909
+ },
+ "logout": {
+  "attemptId": "1795616221828-0000023492-0000000001",
+  "at": 1795616328631,
+  "sha256": "c8b1f65698d16cdb989ae6632b6f7ed3930170d8ec8dbd6bf55ccc19725c3f2c"
+ },
+ "screen": true
 }
