@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795625530028-2",
+ "account": "Quickhandjob",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "d317562f-4f3c-4e87-a8dd-6e350596d29b",
+ "count": 0,
+ "ok": false,
+ "at": 1795625581354,
+ "detail": "trade claimed"
+}
