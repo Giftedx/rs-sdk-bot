@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795621055909-3",
+ "account": "Moneyshot",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "eb91e0b0-e42d-43ce-a222-aaa9b6400733",
+ "count": 1,
+ "ok": true,
+ "at": 1795621248455,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795621222517-0000015468-0000000001",
+  "at": 1795621248421,
+  "sha256": "7232fccde95cd8f52eb9acff0fa9e5718d476f28a49cc0c820ebe71ca213e37f"
+ },
+ "screen": true
+}
