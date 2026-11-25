@@ -514,4 +514,38 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         }
         expect(resolveSupplierKitPlan('hp-pvp-scim')).toEqual(resolveSupplierKitPlan('hitpoints-pvp-scim'));
     });
+
+    test('rankKeepRelogTanks filters Wildy 51 bracket and prefers highest pvp_xp_multiplier tier', async () => {
+        const { rankKeepRelogTanks } = await import('./combat-quest-specialists');
+        const { RANGED_MID_TANK_SKILLS, TANK_SKILLS } = await import('./measure/specialist-combat-quests-cases');
+        const { combatLevel } = await import('../packages/core/src/danger');
+        expect(combatLevel({
+            attack: RANGED_MID_TANK_SKILLS.Attack,
+            strength: RANGED_MID_TANK_SKILLS.Strength,
+            defence: RANGED_MID_TANK_SKILLS.Defence,
+            hitpoints: RANGED_MID_TANK_SKILLS.Hitpoints,
+            prayer: RANGED_MID_TANK_SKILLS.Prayer,
+            magic: RANGED_MID_TANK_SKILLS.Magic,
+            ranged: RANGED_MID_TANK_SKILLS.Ranged,
+        })).toBe(80);
+        expect(combatLevel({
+            attack: TANK_SKILLS.Attack,
+            strength: TANK_SKILLS.Strength,
+            defence: TANK_SKILLS.Defence,
+            hitpoints: TANK_SKILLS.Hitpoints,
+            prayer: TANK_SKILLS.Prayer,
+            magic: TANK_SKILLS.Magic,
+            ranged: TANK_SKILLS.Ranged,
+        })).toBe(101);
+
+        const players = [
+            { index: 1, name: 'tank53', combatLevel: 53, x: 3154, z: 3924, hp: 99 },
+            { index: 2, name: 'tank80', combatLevel: 80, x: 3155, z: 3923, hp: 99 },
+            { index: 3, name: 'tank101', combatLevel: 101, x: 3155, z: 3925, hp: 99 },
+        ];
+        const names = ['tank53', 'tank80', 'tank101'];
+        expect(rankKeepRelogTanks(players, names, undefined, 3).map(p => p.name)).toEqual(['tank53']);
+        expect(rankKeepRelogTanks(players, names, undefined, 30).map(p => p.name)).toEqual(['tank80', 'tank53']);
+        expect(rankKeepRelogTanks(players, names, undefined, 50).map(p => p.name)).toEqual(['tank101', 'tank80', 'tank53']);
+    });
 });

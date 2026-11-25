@@ -766,21 +766,27 @@ export async function pullArdougneLeverToWildy(s: Session, stop: StopFn): Promis
     }
 }
 
-export function rankKeepRelogTanks<T extends { index: number; name?: string; x?: number; z?: number; worldX?: number; worldZ?: number; hp?: number | null }>(
+export function rankKeepRelogTanks<T extends { index: number; name?: string; combatLevel?: number; x?: number; z?: number; worldX?: number; worldZ?: number; hp?: number | null }>(
     players: readonly T[],
     tankNames: readonly string[],
     lastHitSeq?: ReadonlyMap<string, number>,
+    myCombatLevel?: number,
 ): T[] {
     const tankRes = tankNames.map(exactNameRe);
     const manhattan = (p: T) =>
         Math.abs((p.x ?? p.worldX ?? 0) - KEEP_SPECIALIST_POST.x) +
         Math.abs((p.z ?? p.worldZ ?? 0) - KEEP_SPECIALIST_POST.z);
+    const xpTier = (p: T) =>
+        p.combatLevel !== undefined ? Math.min(1125, 1000 + Math.floor(p.combatLevel / 20) * 25) : 0;
     return players
         .filter(p => {
             if (!tankRes.some(re => re.test(p.name ?? ''))) return false;
             const z = p.z ?? p.worldZ ?? 0;
             if (z < 3900) return false;
             if (p.hp !== undefined && p.hp !== null && p.hp <= 0) return false;
+            if (myCombatLevel !== undefined && p.combatLevel !== undefined && Math.abs(p.combatLevel - myCombatLevel) > 51) {
+                return false;
+            }
             return d8({ x: p.x ?? p.worldX ?? 0, z }, KEEP_SPECIALIST_POST) <= 1;
         })
         .sort((a, b) => {
@@ -788,6 +794,9 @@ export function rankKeepRelogTanks<T extends { index: number; name?: string; x?:
             const ca = manhattan(a) === 1 ? 0 : 1;
             const cb = manhattan(b) === 1 ? 0 : 1;
             if (ca !== cb) return ca - cb;
+            const tb = xpTier(b);
+            const ta = xpTier(a);
+            if (tb !== ta) return tb - ta;
             const sa = lastHitSeq?.get((a.name ?? '').toLowerCase()) ?? 0;
             const sb = lastHitSeq?.get((b.name ?? '').toLowerCase()) ?? 0;
             if (sa !== sb) return sa - sb;
@@ -950,14 +959,16 @@ export async function runWildyPvpRelogLoop(
                 await opts.onPrepareSwing(sess);
             }
 
-            let target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
+            const myCb = (sess.sdk.getState()?.player as { combatLevel?: number } | undefined)?.combatLevel;
+            let target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq, myCb)[0];
             if (!target) {
                 await waitUntil(
                     sess,
-                    st => rankKeepRelogTanks(st?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq).length > 0 || opts.shouldStop(),
+                    st => rankKeepRelogTanks(st?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq, (st?.player as { combatLevel?: number } | undefined)?.combatLevel).length > 0 || opts.shouldStop(),
                     { timeoutTicks: 40, idleMs: 60_000 },
                 );
-                target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
+                const latest = sess.sdk.getState();
+                target = rankKeepRelogTanks(latest?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq, (latest?.player as { combatLevel?: number } | undefined)?.combatLevel)[0];
             }
             if (!target) {
                 await logoutSession(sess);
