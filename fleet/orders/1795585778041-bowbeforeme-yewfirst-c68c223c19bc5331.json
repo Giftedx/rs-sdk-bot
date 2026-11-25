@@ -1,0 +1,22 @@
+{
+ "id": "1795585778041-bowbeforeme-yewfirst-c68c223c19bc5331",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "BowBeforeMe",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 360,
+ "start": 1795585778041,
+ "end": 1795589378041,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
