@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795571057505,
+ "at": 1795573801980,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -38,6 +38,32 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/generated/quest-prince.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:prince",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:prince",
+   "role": "army"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/generated/quest-merlin.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:merlin",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:merlin",
+   "role": "auto"
   }
  ],
  "army": [
@@ -73,7 +99,6 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker",
