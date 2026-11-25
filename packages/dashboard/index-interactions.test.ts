@@ -30,13 +30,13 @@ test('the retained snapshot returns when live roster updates expire during a non
  expect(page.renders()).toBe(2);
 });
 
-test('a stale file without a live roster shows its accounts in the world as status stale, not playing',()=>{
+test('a stale file without a live roster shows its accounts in the world as offline, not playing',()=>{
  const code=html.slice(html.indexOf('const LIVE_ROSTER_MS='),html.indexOf('// A published state can hold'));
  const run=new Function(`let S=null,sel=null;const mode='2d',VIEWER={},window={};${code};return withLiveRoster;`)();
  const bots=[{name:'Player',inWorld:true,fresh:true,operation:'observed',live:{x:1}},{name:'Idle',inWorld:false,operation:'offline'},{name:'Test',practice:true,inWorld:true,operation:'observed'}];
  const stale={now:1000,clockOffset:0,bots},current={now:100_000,clockOffset:0,bots};
  const out=run(stale,null,100_000);
- expect(out.bots[0]).toMatchObject({inWorld:false,fresh:false,live:null,operation:'unobserved'});
+ expect(out.bots[0]).toMatchObject({inWorld:false,fresh:false,live:null,operation:'offline'});
  expect(out.bots[1]).toBe(bots[1]);expect(out.bots[2]).toBe(bots[2]);
  expect(run(current,null,100_000)).toBe(current);
  expect(run({now:1000,bots:[bots[1]]},null,100_000).bots[0]).toBe(bots[1]);

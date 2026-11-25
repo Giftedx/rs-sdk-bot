@@ -556,11 +556,11 @@ function withLiveRoster(j,live,now){
   return {...j,bots,roster:live.players,worldPlayers:live.players.length,world:{...j.world,players:live.players.length,connected:true}};
 }
 // A file past its refresh period (the hosted page keeps S.now at the file's time then) holds presence that is old news:
-// without a live roster, its accounts in the world show as status stale, not as playing.
+// without a live roster, its accounts in the world show as offline, as the live roster shows an account it does not see.
 function withoutStalePresence(j,now){
   const lag=now+(Number.isFinite(j.clockOffset)?j.clockOffset:0)-j.now;
   if(!Array.isArray(j.bots)||!Number.isFinite(j.now)||!(lag>LIVE_ROSTER_MS))return j;
-  const bots=j.bots.map(b=>b.practice||!(b.inWorld||b.fresh||b.operation==='observed')?b:{...b,inWorld:false,fresh:false,live:null,operation:b.operation==='observed'?'unobserved':b.operation});
+  const bots=j.bots.map(b=>b.practice||!(b.inWorld||b.fresh||b.operation==='observed')?b:{...b,inWorld:false,fresh:false,live:null,operation:b.operation==='observed'?'offline':b.operation});
   return bots.some((b,i)=>b!==j.bots[i])?{...j,bots}:j;
 }
 window.atlasLiveRoster=()=>!!LIVE_ROSTER&&Date.now()-LIVE_ROSTER.at<=LIVE_ROSTER_MS;
