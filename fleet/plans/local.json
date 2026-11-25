@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795603567142,
+ "at": 1795603600750,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -38,22 +38,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1987",
    "role": "army"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "auto"
   },
   {
    "account": "Wandwaver",
@@ -118,6 +102,26 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "goal:supply_chain:2152",
+    "BATCH_UNITS": "8"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:2152",
+   "role": "helper"
   }
  ],
  "army": [
