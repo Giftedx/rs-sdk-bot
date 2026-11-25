@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795631074749,
+ "at": 1795631164633,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -207,26 +207,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "auto"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "identify:tarromin"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "TRAIN_SKILL": "Herblore",
-    "TARGET_LEVEL": "54"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
   },
   {
    "account": "Dipstick",
@@ -450,6 +430,7 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
+  "sporrandip",
   "swordinhand",
   "undermykilt",
   "yewfirst"
