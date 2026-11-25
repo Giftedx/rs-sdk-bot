@@ -65,7 +65,7 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
    { id: ITEM_IDS.mindrune, count: 25 },
    { id: ITEM_IDS.cosmicrune, count: 150 },
    { id: ITEM_IDS.waterrune, count: 650 },
-   { id: ITEM_IDS.airrune, count: 850 },
+   { id: ITEM_IDS.airrune, count: 1500 },
    { id: ITEM_IDS.earthrune, count: 1050 },
    { id: ITEM_IDS.dragon_bones, count: 8 },
    { id: ITEM_IDS.sapphire_ring, count: 12 },
@@ -105,19 +105,19 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
   ],
   returnIds: [],
  },
- // Batch 5 (12 dragonstone -> 22 enchanted before Mage Arena)
+ // Batch 5 (7 dragonstone -> 17 enchanted before Mage Arena)
  {
   give: [
-   { id: ITEM_IDS.dragonstone_ring, count: 12 },
+   { id: ITEM_IDS.dragonstone_ring, count: 7 },
   ],
   returnIds: [],
  },
- // Batch 6 (19 slots -> 23 on spec with 4 runes: 13 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
+ // Batch 6 (24 slots -> 28 on spec with 4 runes: 18 dragonstone enchanted during Kolodion cooldown + Mage Arena gear)
  {
   give: [
-   { id: ITEM_IDS.dragonstone_ring, count: 13 },
+   { id: ITEM_IDS.dragonstone_ring, count: 18 },
    { id: ITEM_IDS.lawrune, count: 10 },
-   { id: ITEM_IDS.bloodrune, count: 1000 },
+   { id: ITEM_IDS.bloodrune, count: 1200 },
    { id: ITEM_IDS.knife, count: 1 },
    { id: ITEM_IDS.prayer_potion_4, count: 1 },
    { id: ITEM_IDS.magic_potion_4, count: 1 },
@@ -534,6 +534,10 @@ async function spamChargeTo99(spec: Session, target: number, deadline: number): 
  while (spec.tick() < deadline && skillLevel(spec, 'Magic') < target) {
   // charge.rs2 calls if_close on click and has zero p_delay: all 5 casts/tick resolve even over levelup modals.
   const acts: Promise<unknown>[] = [];
+  if ((spec.sdk.getSkill('Magic')?.level ?? skillLevel(spec, 'Magic')) < 80) {
+   const magicPot = spec.sdk.getInventory().find(i => [ITEM_IDS.magic_potion_4, 3042, 3044, 3046].includes(i.id));
+   if (magicPot) acts.push(spec.direct({ type: 'useInventoryItem', slot: magicPot.slot, optionIndex: 1, reason: 'SDK' }));
+  }
   for (let i = 0; i < 5; i++) {
    acts.push(spec.direct({ type: 'clickComponent', componentId: charge, reason: 'SDK' }));
   }
