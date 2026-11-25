@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795603426006,
+ "at": 1795603444792,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -25,22 +25,6 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "Fingerblastr",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -102,6 +86,22 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "helper"
   }
  ],
  "army": [
@@ -117,6 +117,7 @@
   "deeppockets",
   "dipstick",
   "fatstack",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
