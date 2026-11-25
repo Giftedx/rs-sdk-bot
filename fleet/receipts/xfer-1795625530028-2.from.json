@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795625530028-2",
  "account": "Quickhandjob",
  "partner": "CoinCock",
@@ -12,6 +12,20 @@
  "claim": "d317562f-4f3c-4e87-a8dd-6e350596d29b",
  "count": 0,
  "ok": false,
- "at": 1795625581354,
- "detail": "trade claimed"
+ "at": 1795626430607,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795625588672
+ },
+ "logout": {
+  "attemptId": "1795625581365-0000024996-0000000001",
+  "at": 1795626430592,
+  "sha256": "650306f8c3d83c244766880cc6d8b74a450bd2dcb100d2f0b90b9c97480e13eb"
+ },
+ "screen": false
 }

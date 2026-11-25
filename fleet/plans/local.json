@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795626410805,
+ "at": 1795626431529,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -245,7 +245,7 @@
     "CAP": "600",
     "MEMBERS": "1",
     "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "2"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -253,34 +253,35 @@
    "role": "helper"
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
-   "env": {},
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/aio-market.ts",
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
    "args": [
-    "ge-buy"
+    "scripts/aio-logistics.ts ITEM_ID=253 QUANTITY=1 ITEM_NAME=Tarromin -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=227 QUANTITY=1 \"ITEM_NAME=Vial of water\" -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=2 -- crafting inventory brew:unf_tarromin_potion"
    ],
    "env": {
-    "ORDER_KEY": "brain-1511-5-p53",
-    "ITEM_ID": "1511",
-    "QUANTITY": "5",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "53",
-    "DEMAND_ID": "campaign:haggis:item:1511",
-    "BATCH_UNITS": "5"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1511",
+   "goal": "campaign:haggis:item:95",
+   "role": "army"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:235",
    "role": "army"
   }
  ],
@@ -293,9 +294,8 @@
   "mmsmk1232",
   "ballspinner",
   "bigpackage",
+  "billionaire",
   "bowbeforeme",
-  "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",

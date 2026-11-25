@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795625523662-2",
  "account": "CoinCock",
  "partner": "Fatstack",
@@ -12,6 +12,12 @@
  "claim": "98ebb5c7-2e83-4760-9920-7c49989c7cda",
  "count": 0,
  "ok": false,
- "at": 1795626253603,
- "detail": "trade claimed"
+ "at": 1795626424214,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795626253613-0000021144-0000000001",
+  "at": 1795626424204,
+  "sha256": "f497c2ca52b4403829dde4c5597193baef9e7b40bbac3f991f2024107e282ed0"
+ },
+ "screen": false
 }
