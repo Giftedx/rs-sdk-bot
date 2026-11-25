@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795586791020-1",
+ "account": "MineYourBiz",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "04437e51-ca74-4d95-8dcb-30c29751c60e",
+ "count": 0,
+ "ok": false,
+ "at": 1795587658435,
+ "detail": "Error: stock short: Herb 0 banked + 0 held < 1",
+ "logout": {
+  "attemptId": "1795587652805-0000003212-0000000001",
+  "at": 1795587658423,
+  "sha256": "4ce629e365b5e62bcfc1a7cfc2eb89fd5c4d4f1d86f481e432ec622b8462ff08"
+ },
+ "screen": false
+}

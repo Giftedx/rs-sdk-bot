@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795587682665-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranDip",
+  "to": "Shaftsinker",
+  "item": "Rune arrow",
+  "count": 22,
+  "itemId": 892,
+  "start": 1795587682665,
+  "end": 1795588582665,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

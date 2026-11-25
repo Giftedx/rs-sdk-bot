@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795586858289-3",
+ "account": "Ballspinner",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "d91527cc-f24b-439d-b6df-d620fa798360",
+ "count": 0,
+ "ok": false,
+ "at": 1795587758797,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795587700457
+ },
+ "logout": {
+  "attemptId": "1795587690421-0000016936-0000000001",
+  "at": 1795587758785,
+  "sha256": "ddb0437188aae44829e1fd86532f2c5f33351544ac602f72e4978a1ca6fce5cf"
+ },
+ "screen": false
+}

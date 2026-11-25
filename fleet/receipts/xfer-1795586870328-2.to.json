@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795586870328-2",
+ "account": "TheFullMonty",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "b3d9ab4f-1dd3-4b6e-8cca-6d4901311687",
+ "count": 0,
+ "ok": false,
+ "at": 1795587583308,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795587510902,
+ "at": 1795587759831,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,28 +24,7 @@
    "role": "rehearsal"
   },
   {
-   "account": "Packhorse",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "catherby",
-    "2500"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "^Rune arrowtips$",
-    "STOCK_TARGET": "2600",
-    "MAX_ITEMS": "300",
-    "COIN_RESERVE": "0",
-    "NO_BUY_TICKS": "120"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "Buy Rune arrowtips at Catherby for TipMyShaft",
-   "role": "supply"
-  },
-  {
-   "account": "Wandwaver",
+   "account": "PocketPool",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -61,7 +40,7 @@
    "role": "army"
   },
   {
-   "account": "PocketPool",
+   "account": "Wandwaver",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",

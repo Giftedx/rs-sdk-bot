@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795586721542-2",
+ "account": "PickpockDick",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 2,
+ "claim": "e58d1b1f-acbc-40b4-bf63-8ff4654aafe1",
+ "count": 0,
+ "ok": false,
+ "at": 1795587625322,
+ "detail": "Error: no matching trade completed: no_response: No response to trade request from Sporrandip",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795587595092-0000021140-0000000001",
+  "at": 1795587625286,
+  "sha256": "3474f37f5cd946f379728db813ca313ccb8014442f919e0475bf69779b02e54f"
+ },
+ "screen": false
+}

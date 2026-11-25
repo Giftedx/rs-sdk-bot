@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795586721542-2",
  "account": "SporranDip",
  "partner": "PickpockDick",
@@ -12,6 +12,16 @@
  "claim": "552cddc4-b009-49b6-8ca6-c800d462b4c9",
  "count": 0,
  "ok": false,
- "at": 1795587220623,
- "detail": "trade claimed"
+ "at": 1795587622503,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 2,
+  "at": 1795587228928
+ },
+ "logout": {
+  "attemptId": "1795587220632-0000012552-0000000001",
+  "at": 1795587622391,
+  "sha256": "edb19b8a413ed26186b4afc7c6193cd5d16244f17c8f4d3a0fecde69a1ecb2d1"
+ },
+ "screen": false
 }

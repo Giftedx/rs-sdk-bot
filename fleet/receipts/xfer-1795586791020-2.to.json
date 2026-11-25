@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795586791020-2",
+ "account": "Unsheathed",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "ceafc494-d936-46e1-802e-6f7c4a967c57",
+ "count": 0,
+ "ok": false,
+ "at": 1795587691617,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795587571851-0000010260-0000000001",
+  "at": 1795587691595,
+  "sha256": "da113926e133a7368087c1aaf25002fe9c8e114fff8531ccf55da94604d51945"
+ },
+ "screen": false
+}
