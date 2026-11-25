@@ -21,6 +21,7 @@ import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {canBind} from './ports';
 import {killTree,safeKill,sleeperCommand} from '../../core/src/proc';
 import {createBot} from './bots';
+import {practiceBotsRoot} from './paths';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
@@ -119,9 +120,10 @@ async function run(directory:string){
   let fixtureIndex=0;
   const fixture=async(server:string,preset:Parameters<typeof applyPreset>[1],completed=false)=>{
    let name=runBotName('flrcv',++fixtureIndex);
-   for(let tries=0;tries<40&&existsSync(join(root,'vendor/rs-sdk/bots',name));tries++)name=runBotName('flrcv',++fixtureIndex);
-   if(existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('fixture identity exists');
-   await createBot(name);const envPath=join(root,'vendor/rs-sdk/bots',name,'bot.env');
+   const botExists=(n:string)=>existsSync(join(practiceBotsRoot(),n))||existsSync(join(root,'vendor/rs-sdk/bots',n));
+   for(let tries=0;tries<40&&botExists(name);tries++)name=runBotName('flrcv',++fixtureIndex);
+   if(botExists(name))throw Error('fixture identity exists');
+   const {envPath}=await createBot(name);
    writeFileSync(envPath,readFileSync(envPath,'utf8').replace(/^SERVER=.*$/m,'SERVER='+server));
    const original=await applyPreset(name,preset),save=join(workspace,'data/players/main',name.toLowerCase()+'.sav');copyFileSync(original,save);
    const endedAt=Date.now();ends[name]={at:endedAt,reason:completed?'done after 1 runs':'blocked after 1 runs',...(completed?{revision:missionSignature({account:name,script:'scripts/retired-fixture.ts'})}:{})};jobs.push({account:name,script:'scripts/retired-fixture.ts',enabled:false});writeState();
