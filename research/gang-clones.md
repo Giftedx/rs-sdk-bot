@@ -885,8 +885,22 @@ pile 1 1 2 0 0 1 1 1. At 0.50, 0.40 a member leaves later and its recovery takes
 runs `extra:escort-keep-5-x1` passed 7 of 8 seeds with the plain fractions and 6 of 8 at 0.60, 0.50. Each fail is the
 gate: a clone stayed present (`escort not clear after 1500 ticks`), and the walker took no hit in any seed.
 
-Gap: no live run with the held fractions. The bench clones do not come back after a death, so the bench does not show
-a squad that holds the post against a returning gang.
+The live hold with the held fractions (live squad run 4, log `.practice/squad-kit/logs/hold-test-4.out` in the main
+checkout): the same five of ours, `ESCORT_HOLD=1`, the default `HELD_FOCUS`, about 15 minutes. `RESULT ok squad accounts=5
+kills=10 killReceipts=10 receiptDomain=live feedMatched=10 died=0 taken=987 trips=7`.
+
+- The kills: Goondelf 4, Sugma 3 and Ligma 3, each at Wilderness level 15 or 16 on the post, each matched on the world
+  feed. Masterbaiter made 6, Knightstick 2, Deeppockets 1 and TrouserSnake 1.
+- Two `coordinated fallback (teleport)` lines: hp=88 enemies=1 allies=4 and hp=83 enemies=1 allies=3. With 1 enemy at
+  that HP, the only rule of `squadFallbackPlan` that fits is `dry` (no food in the pack). The two members started with 11
+  and 16 lobsters: the kit rule `gang-chain-bind` accepts a pack with food in about half of its food slots (the floors
+  in `squad-ready.ts` were 10 of 20, 11 of 21 and 12 of 23).
+- The gang comes back to its post: from the kill of one account to its next kill took 3 minutes 26 seconds to 4 minutes
+  57 seconds (about 515 to 745 ticks). The escort calls an account `dead` for `ESCORT_DEAD_TICKS` (1,100 ticks) after a
+  kill line, unless the view or a fresh world feed shows it again, so the gate depends on that sighting.
+
+Gap: the escort state file keeps only its last write, so no record shows whether the gate was clear during the hold, and
+no route went through the gate in a live run. The bench clones do not come back after a death.
 
 ## Keep it true
 
