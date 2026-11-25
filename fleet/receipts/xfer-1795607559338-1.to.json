@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795607559338-1",
  "account": "Ballspinner",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Uncut diamond",
  "requested": 10,
  "claim": "0ac4f73c-a92a-41b3-8efc-dc4706ede8e7",
- "count": 0,
- "ok": false,
- "at": 1795607870548,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795607931015,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795607930261
+ },
+ "logout": {
+  "attemptId": "1795607870557-0000023572-0000000001",
+  "at": 1795607931006,
+  "sha256": "479e31aee616987924a14c05da173a004d505e4177ba55067a50044a5456f41c"
+ },
+ "screen": true
 }
