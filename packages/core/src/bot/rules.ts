@@ -27,6 +27,9 @@ export interface OpenBotOptions {
     record?: BotRecord;
     trade?: Parameters<typeof connectInProcess>[0]['trade'];
     allowTradePartners?: readonly string[];
+    // The login claim waits for a slow Git authority although other bots share the process: only for a caller whose
+    // other bots stand idle while it logs in (packages/core/src/inprocess/connect.ts soloProcess).
+    patientClaim?: boolean;
 }
 
 export type FinishDetail = string | ((ok: boolean) => string);

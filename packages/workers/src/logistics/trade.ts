@@ -1119,7 +1119,7 @@ export async function runFleetTrade(account: string, onlyId?: string, env: Recor
         trade: {
             orderId: order.id,
             role,
-            check: server => assertTradeAdmission(order, account, server, { receipts }),
+            check: server => assertTradeAdmission(order, account, server, { receipts, orders: join(dir, 'orders') }),
             prepare: claim => {
                 clearPreloginFailure(preloginDir, order.id, role);
                 prepared = {

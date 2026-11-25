@@ -30,6 +30,9 @@ export const botsInThisProcess = () => botsInProcess;
 // The swarm declares how many bots the job of a process holds (SWARM_BOTS, scripts/swarm.ts). The count above sees a
 // bot only when it logs in: the first bot of a host logs in before its second bot starts. So only a process that is
 // declared to hold one bot may wait. A process with no declaration (a manual run, a fleet trade) does not wait.
+// A caller whose other bots stand idle while it logs in may ask for the wait (patientClaim): the startup of a squad
+// opens its members one at a time before any fight (packages/workers/src/pvp/squad.ts openSquad). A slow Git call then
+// stalls the members that stand at the bank for its length.
 export const soloProcess = (env: Record<string, string | undefined> = process.env) => env.SWARM_BOTS === '1';
 
 export async function connectInProcess(opts: {
@@ -43,6 +46,7 @@ export async function connectInProcess(opts: {
     recoverSwarm?: RecoveryConnectionAdmission;
     trade?: TradeAdmission;
     allowTradePartners?: readonly string[];
+    patientClaim?: boolean;
 }): Promise<Session> {
     if (opts.lifecycleRoot && !isLocalServer(opts.server ?? 'localhost:8888')) throw Error('lifecycle root override is local-only');
     const server = opts.server ?? 'localhost:8888';
@@ -93,6 +97,7 @@ export async function connectInProcess(opts: {
         planLock: opts.lockPlan || ticket || opts.trade ? planLockDir : undefined,
         lifecycle,
         sharedAccount: live ? { root: repoRoot, side: mySide(), recover: !!opts.recoverSwarm, admission: opts.recoverSwarm, trade: opts.trade } : undefined,
+        ...(opts.patientClaim ? { patientClaim: true } : {}),
     });
 }
 
@@ -113,6 +118,7 @@ export async function startInProcessSession(
         claimSwarm?: typeof acquireFleetSwarmClaim;
         soloProcess?: boolean;
         countBots?: () => number;
+        patientClaim?: boolean;
     },
 ): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
@@ -134,13 +140,13 @@ export async function startInProcessSession(
             const { root, side, recover, admission, trade } = deps.sharedAccount;
             const target = { account: opts.name, server: host, side };
             if (trade) tradeClaim = acquireFleetTradeClaim(root, { ...target, orderId: trade.orderId, role: trade.role });
-            // The one bot of a process, outside the plan lock, waits for a slow Git authority (about 130 s at most).
-            // A bot of a process with several bots and a login under the lock keep the short window: the wait would
-            // stall the other bots or hold the lock.
+            // The one bot of a process, outside the plan lock, waits for a slow Git authority (about 130 s at most), and
+            // so does a login that asked for it (patientClaim). A bot of a process with several bots and a login under the
+            // lock keep the short window: the wait would stall the other bots or hold the lock.
             else sharedClaim = (deps.claimSwarm ?? acquireFleetSwarmClaim)(root, target, {
                 recover,
                 admission,
-                patient: !deps.planLock && (deps.soloProcess ?? soloProcess()) && (deps.countBots ?? botsInThisProcess)() === 1,
+                patient: !deps.planLock && (deps.patientClaim === true || ((deps.soloProcess ?? soloProcess()) && (deps.countBots ?? botsInThisProcess)() === 1)),
             });
             deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
             if (trade && tradeClaim) trade.prepare(tradeClaim);

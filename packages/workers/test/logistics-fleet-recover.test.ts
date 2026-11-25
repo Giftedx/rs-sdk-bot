@@ -633,12 +633,16 @@ test('each side picks its own open order once, in or near its window', () => {
 test('trade admission rereads pauses, assignments and producer ownership after the order wait', () => {
     const base = makeTempDir('fleet-trade-admission-');
     const practice = join(base, '.practice'), liveDir = join(practice, 'live');
-    const planFile = join(practice, 'cloud.json'), stateFile = join(liveDir, 'fleet-state.json'), receipts = join(base, 'receipts');
+    const planFile = join(practice, 'cloud.json'), stateFile = join(liveDir, 'fleet-state.json'), receipts = join(base, 'receipts'), orders = join(base, 'orders');
     const live = 'rs-sdk-demo.fly.dev', trade = order({ server: live });
     mkdirSync(liveDir, { recursive: true });
+    mkdirSync(orders);
     writeFileSync(planFile, '{"jobs":[]}');
-    const admit = (now = 2000, server = live) => assertTradeAdmission(trade, 'Giver', server, { base, planFile, receipts, now, starts: () => null });
+    const admit = (now = 2000, server = live) => assertTradeAdmission(trade, 'Giver', server, { base, planFile, receipts, orders, now, starts: () => null });
     expect(() => admit(999)).toThrow('order window');
+    // The order file is gone: scripts/fleet-order.ts --withdraw deleted it.
+    expect(() => admit()).toThrow('order withdrawn');
+    writeFileSync(join(orders, 'o1.json'), JSON.stringify(trade));
     expect(() => admit()).not.toThrow();
     const stop = join(practice, 'stop-giver');
     writeFileSync(stop, 'owner pause');
@@ -688,13 +692,15 @@ test('trade admission rereads pauses, assignments and producer ownership after t
 
 test('trade admission passes a swarm run whose pid a later process holds', () => {
     const base = makeTempDir('fleet-trade-pid-');
-    const practice = join(base, '.practice'), planFile = join(practice, 'cloud.json'), receipts = join(base, 'receipts');
+    const practice = join(base, '.practice'), planFile = join(practice, 'cloud.json'), receipts = join(base, 'receipts'), orders = join(base, 'orders');
     const live = 'rs-sdk-demo.fly.dev', trade = order({ server: live }), started = 1_000_000;
     mkdirSync(practice, { recursive: true });
+    mkdirSync(orders);
+    writeFileSync(join(orders, 'o1.json'), JSON.stringify(trade));
     writeFileSync(planFile, '{"jobs":[]}');
     writeFileSync(join(practice, 'swarm-runs.json'), JSON.stringify([{ accounts: ['Other'], pid: process.pid, started: 5 }, { accounts: ['Giver'], pid: process.pid, started }]));
     const reads: number[][] = [];
-    const admit = (table: Map<number, number> | null) => assertTradeAdmission(trade, 'Giver', live, { base, planFile, receipts, now: 2000, starts: pids => { reads.push([...pids]); return table; } });
+    const admit = (table: Map<number, number> | null) => assertTradeAdmission(trade, 'Giver', live, { base, planFile, receipts, orders, now: 2000, starts: pids => { reads.push([...pids]); return table; } });
     expect(() => admit(new Map([[process.pid, started - 40]]))).toThrow('unsettled swarm worker');
     expect(() => admit(null)).toThrow('unsettled swarm worker');
     expect(() => admit(new Map())).toThrow('unsettled swarm worker');

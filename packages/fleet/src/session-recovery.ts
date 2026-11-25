@@ -678,11 +678,21 @@ export type ControlledDispatchOneOptions = {
     ownerPid?: number;
 };
 
+// Setup refusals that issue no lease, leave the account untouched and clear by themselves: the controller's capacity,
+// its runtime source owner, or its own release pin (missing until it restarts on the fix, or behind a newer source until
+// it reloads). They defer the recovery and spend none of its attempts.
 const DISPATCH_WAIT_CAUSES = new Set([
     'recovery admission waiting: memory',
     'recovery admission waiting: maxBots',
     'recovery waits for runtime source owner',
+    'no worker progress: release pin missing; live starts paused',
+    'no worker progress: release source changed; live starts paused',
 ]);
+
+export function dispatchRefusalWaits(reason: string, cause: string): boolean {
+    return (reason === 'recovery setup refused; no lease issued; no retry' && DISPATCH_WAIT_CAUSES.has(cause))
+        || reason.startsWith('existing recovery lease held;');
+}
 
 export type ControlledDispatchResult = { ok: boolean; detail: string; deferred?: boolean };
 
@@ -823,9 +833,7 @@ export async function runControlledDispatchOne(
         if (matchedResult.sessionRecovered !== true) {
             const reason = String(matchedResult.reason ?? 'controlled recovery did not confirm sessionRecovered');
             const cause = typeof matchedResult.setup?.cause === 'string' ? matchedResult.setup.cause : '';
-            const isWait = (reason === 'recovery setup refused; no lease issued; no retry' && DISPATCH_WAIT_CAUSES.has(cause))
-                || reason.startsWith('existing recovery lease held;');
-            if (isWait) {
+            if (dispatchRefusalWaits(reason, cause)) {
                 return { ok: false, deferred: true, detail: cause ? `${reason}: ${cause}` : reason };
             }
             return { ok: false, detail: reason };

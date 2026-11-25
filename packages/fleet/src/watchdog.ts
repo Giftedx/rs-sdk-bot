@@ -174,6 +174,18 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
     return { stoppedByOwner: false, pruned: prunedCount };
 }
 
+export const WATCHDOG_USAGE = 'usage: bun packages/fleet/src/watchdog.ts (no arguments: one pass of status pruning, controller restarts and standalone session recovery)';
+
+// A pass starts each controller that it finds down as a child of the caller. So an argument never runs a pass:
+// --help or -h shows the usage, and any other argument is refused.
+export function watchdogArgs(argv: readonly string[]): 'run' | 'help' | 'refuse' {
+    if (argv.length === 0) return 'run';
+    return argv.every(a => a === '--help' || a === '-h') ? 'help' : 'refuse';
+}
+
 if (import.meta.main) {
-    await runWatchdogPass(root);
+    const mode = watchdogArgs(process.argv.slice(2));
+    if (mode === 'run') await runWatchdogPass(root);
+    else if (mode === 'help') console.log(WATCHDOG_USAGE);
+    else { console.error(WATCHDOG_USAGE); process.exit(2); }
 }

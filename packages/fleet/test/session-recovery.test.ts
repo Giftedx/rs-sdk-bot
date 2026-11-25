@@ -12,6 +12,7 @@ import {
     archiveStaleLease,
     assessRecoveryEligibility,
     clearSwarmStops,
+    dispatchRefusalWaits,
     executeControlledLiveRecovery,
     findAccountStatus,
     findCurrentNativeRecoveryQualification,
@@ -38,6 +39,17 @@ afterEach(() => {
 });
 
 describe('fleet standalone session recovery', () => {
+    test('a setup refusal for the controller state waits and spends no attempt; an account-side refusal spends one', () => {
+        const refused = 'recovery setup refused; no lease issued; no retry';
+        for (const cause of ['recovery admission waiting: memory', 'recovery admission waiting: maxBots', 'recovery waits for runtime source owner',
+            'no worker progress: release pin missing; live starts paused', 'no worker progress: release source changed; live starts paused']) {
+            expect(dispatchRefusalWaits(refused, cause)).toBe(true);
+        }
+        expect(dispatchRefusalWaits('existing recovery lease held; request preserved', '')).toBe(true);
+        for (const cause of ['recovery account still active', 'recovery owner stopped', 'recovery task owner changed']) expect(dispatchRefusalWaits(refused, cause)).toBe(false);
+        expect(dispatchRefusalWaits('recovery setup failed after issuance; account lease held; no retry', 'recovery admission waiting: memory')).toBe(false);
+    });
+
     test('distinguishes swarm-authored stops from owner/specialist pauses and assesses eligibility cleanly', () => {
         expect(swarmWroteStopText('swarm stopped')).toBe(true);
         expect(swarmWroteStopText('swarm plan removed or stopped')).toBe(true);
