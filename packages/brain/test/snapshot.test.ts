@@ -430,6 +430,27 @@ describe('WorldSnapshot loader & AccountLifecycle', () => {
         expect(snap.accounts.traderd!.lifecycle).toBe('idle');
     });
 
+    test('orders/receipts cache expires when a future order starts (>100 files, no file change)', () => {
+        const fleetDir = join(tempRoot, '.practice', 'live', 'fleet-data', 'fleet');
+        writeJson(join(fleetDir, 'owners.json'), {
+            accounts: {
+                TraderA: { side: 'local', server: DEFAULT_LIVE_SERVER },
+                TraderB: { side: 'local', server: DEFAULT_LIVE_SERVER },
+            },
+        });
+        const base = { server: DEFAULT_LIVE_SERVER, item: 'Shark', itemId: 385, count: 10, from: 'TraderA', to: 'TraderB' };
+        for (let i = 0; i < 101; i++) {
+            writeJson(join(fleetDir, 'orders', `old-${i}.json`), { ...base, id: `old-${i}`, start: NOW - 40 * 3_600_000, end: NOW - 39 * 3_600_000 });
+        }
+        writeJson(join(fleetDir, 'orders', 'later-1.json'), { ...base, id: 'later-1', start: NOW + 60_000, end: NOW + 960_000 });
+
+        const before = loadWorldSnapshot({ root: tempRoot, now: NOW });
+        expect(before.accounts.tradera!.lifecycle).toBe('idle');
+        const started = loadWorldSnapshot({ root: tempRoot, now: NOW + 61_000 });
+        expect(started.accounts.tradera!.lifecycle).toBe('in_trade');
+        expect(started.accounts.traderb!.lifecycle).toBe('in_trade');
+    });
+
     test('spotOccupancy aggregates remote-side claims without double-counting local running Brain accounts', () => {
         const fleetDir = join(tempRoot, '.practice', 'live', 'fleet-data', 'fleet');
         writeJson(join(fleetDir, 'owners.json'), {

@@ -480,8 +480,9 @@ interface OrdersReceiptsCacheEntry {
     readonly ordersDirMtime: number;
     readonly receiptsCount: number;
     readonly receiptsDirMtime: number;
-    // The first end time of an order still open at the read: a pending order lapses, or an unsettled one fails.
-    readonly earliestOpenEnd: number;
+    // The first time an order not yet ended changes state with no file change: a future order starts (and is
+    // pending), or an open order ends (it lapses, or an unsettled one fails).
+    readonly nextOrderChangeAt: number;
     readonly activeOrders: readonly TransferOrder[];
     readonly settledTransferByAccount: ReadonlyMap<string, number>;
     readonly transferEvents: readonly TransferEvent[];
@@ -538,7 +539,7 @@ function readOrdersAndReceipts(
             && cached.ordersDirMtime === ordSig.mtimeMs
             && cached.receiptsCount === recSig.count
             && cached.receiptsDirMtime === recSig.mtimeMs
-            && (cached.earliestOpenEnd === Number.POSITIVE_INFINITY || now < cached.earliestOpenEnd)
+            && (cached.nextOrderChangeAt === Number.POSITIVE_INFINITY || now < cached.nextOrderChangeAt)
             && cached.activeOrders.length === 0
         ) {
             return {
@@ -571,7 +572,7 @@ function readOrdersAndReceipts(
     const activeOrders: TransferOrder[] = [];
     const inTradeAccounts = new Set<string>();
     const transferEvents: TransferEvent[] = [];
-    let earliestOpenEnd = Number.POSITIVE_INFINITY;
+    let nextOrderChangeAt = Number.POSITIVE_INFINITY;
 
     for (const f of ordSig.files) {
         const order = safeReadJson<Order>(join(ordersDir, f));
@@ -582,7 +583,8 @@ function readOrdersAndReceipts(
             if (event) transferEvents.push(event);
         }
         if (now >= order.end) continue;
-        if (order.end < earliestOpenEnd) earliestOpenEnd = order.end;
+        const changeAt = now < order.start ? order.start : order.end;
+        if (changeAt < nextOrderChangeAt) nextOrderChangeAt = changeAt;
         const settlement = tradeSettlement(order, orderReceipts, now);
         // An open order that no party has claimed yet has no receipt. It is pending all the same: without this, the
         // next cycle plans its parties again, and a recipient gets a second order from another donor.
@@ -623,7 +625,7 @@ function readOrdersAndReceipts(
             ordersDirMtime: ordSig.mtimeMs,
             receiptsCount: recSig.count,
             receiptsDirMtime: recSig.mtimeMs,
-            earliestOpenEnd,
+            nextOrderChangeAt,
             activeOrders,
             settledTransferByAccount,
             transferEvents,
