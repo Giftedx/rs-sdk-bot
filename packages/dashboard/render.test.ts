@@ -315,3 +315,21 @@ test('the first viewer address follows nobody while a shared link is still unrea
   return new URL(frame.src,'http://127.0.0.1:3100').searchParams.get('follow');};
  expect(src(false)).toBe('Worker');expect(src(true)).toBeNull();
 });
+
+// The published file can be 10 minutes old, so a link or a pick can find an account out of the world that the live feed
+// shows a moment later. The free camera stood only for that absence: the page follows the account once the feed has it.
+test('a free camera chosen for an account out of the world becomes a follow when the live feed shows it',()=>{
+ const code=html.slice(html.indexOf('function liveRosterIn(r){'),html.indexOf('window.atlasRosterIn=liveRosterIn;'));
+ const pickLine=html.split('\n').find(l=>l.startsWith('function pick(n){'))!;
+ const run=(deliberate:boolean)=>{
+  const sent:any[]=[],window:any={},frame={contentWindow:{postMessage:(m:any)=>sent.push(m)}};
+  const api=new Function('window','$',`let S={bots:[{name:'Away',inWorld:false}]},SNAPSHOT=null,LIVE_ROSTER=null,sel=null,picked=false,mode='3d',view='world',detailPage=0,rswFor=null,followedLive=null;const VIEWER={state:'ready',origin:'o'},MARK='MAIN',withLiveRoster=j=>j,render=()=>{};${pickLine}\n${code};return {pick,liveRosterIn};`)(window,()=>frame);
+  api.pick('Away');if(deliberate)window.atlasFreeFor=null;
+  api.liveRosterIn({players:[['Other',3200,3200,0,3]]});const before=window.atlasFreeCamera;
+  api.liveRosterIn({players:[['away',3200,3200,0,3]]});
+  return {before,free:window.atlasFreeCamera,sent};
+ };
+ expect(run(false)).toEqual({before:true,free:false,sent:[{atlasFreeCamera:true},{follow:'Away'}]});
+ // A camera the viewer chose to free (a drag, a reset, Free camera) stays free.
+ expect(run(true)).toEqual({before:true,free:true,sent:[{atlasFreeCamera:true}]});
+});
