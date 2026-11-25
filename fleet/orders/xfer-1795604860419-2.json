@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795604860419-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "SporranBulge",
+  "to": "Woodpecker",
+  "item": "Swamp toad",
+  "count": 2,
+  "itemId": 2150,
+  "start": 1795604860419,
+  "end": 1795605760419,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

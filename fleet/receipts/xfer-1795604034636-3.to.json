@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795604034636-3",
  "account": "Fatstack",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 1,
  "claim": "e56ae69c-0144-4d35-b84c-de3e69ba84da",
- "count": 0,
- "ok": false,
- "at": 1795604722109,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795604871554,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795604870784
+ },
+ "logout": {
+  "attemptId": "1795604722117-0000005324-0000000001",
+  "at": 1795604871542,
+  "sha256": "332f6216a41cd789056ec3e1e00aed48983a199e1f115859f94d2983e81516ae"
+ },
+ "screen": true
 }
