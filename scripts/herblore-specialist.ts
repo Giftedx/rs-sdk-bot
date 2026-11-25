@@ -225,8 +225,10 @@ async function createRunSafeWalker(spec: Session): Promise<PathDeps> {
  // Block Witch's House locked front door so pathing stays on the open street.
  base.blockDoor?.(0, { x: 2901, z: 3473 });
  // sessionWalker.runOn blindly toggles interface 153; guard with varp 173 so repeated walks never toggle run off.
+ // Clear live hunter detours/holds in low-risk Burthorpe/Taverley roads (eatIfHurt covers incidental hits).
  return {
   ...base,
+  hunters: () => [],
   runOn: async () => {
    if (!isRunEnabled(spec)) {
     await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
@@ -246,7 +248,7 @@ async function walkLocal(
 ): Promise<void> {
  if (stop?.() || nearTile(spec, x, z, tol, playerPos(spec)?.level ?? 0)) return;
  const walker = walkerArg ?? (await createRunSafeWalker(spec));
- const res = await walkPath(walker, [{ x, z, tol }], { maxTicks: Math.max(10, Math.min(100, deadline - spec.tick())), stop });
+ const res = await walkPath(walker, [{ x, z, tol }], { maxTicks: Math.max(10, Math.min(100, deadline - spec.tick())), reclickAt: 10, stop });
  if (!stop?.() && !res.ok && !nearTile(spec, x, z, tol, playerPos(spec)?.level ?? 0)) {
   if ((playerPos(spec)?.worldZ ?? 0) > 9000) {
    while (spec.tick() < deadline && !nearTile(spec, x, z, Math.max(1, tol), playerPos(spec)?.level ?? 0)) {
@@ -457,56 +459,6 @@ async function rubChainedTeleport(
  throw Error(`rubChainedTeleport(${componentId}) exceeded cap`);
 }
 
-async function walkWaypoints(
- spec: Session,
- waypoints: readonly { x: number; z: number; tol?: number }[],
- deadline: number,
- stop?: () => boolean,
-): Promise<void> {
- for (let i = 0; i < waypoints.length; i++) {
-  if (stop?.()) return;
-  const wp = waypoints[i]!;
-  await walkDirect(spec, wp.x, wp.z, wp.tol ?? 1, deadline, stop);
- }
-}
-
-const BURTHORPE_TO_KAQ_WPS = [
- { x: 2899, z: 3544, tol: 2 },
- { x: 2913, z: 3517, tol: 2 },
- { x: 2920, z: 3498, tol: 2 },
- { x: KAQEMEEX_SPOT.x, z: KAQEMEEX_SPOT.z, tol: 2 },
-] as const;
-
-const KAQ_TO_SANFEW_WPS = [
- { x: 2935, z: 3471, tol: 2 },
- { x: 2936, z: 3456, tol: 2 },
- { x: 2928, z: 3445, tol: 2 },
- { x: 2916, z: 3432, tol: 2 },
- { x: 2900, z: 3428, tol: 2 },
- { x: 2898, z: 3427, tol: 1 },
-] as const;
-
-const SANFEW_TO_DUNG_WPS = [
- { x: 2892, z: 3428, tol: 1 },
- { x: 2890, z: 3410, tol: 2 },
- { x: 2884, z: 3398, tol: 1 },
-] as const;
-
-const DUNG_TO_SANFEW_WPS = [
- { x: 2890, z: 3408, tol: 2 },
- { x: 2892, z: 3428, tol: 1 },
- { x: 2898, z: 3427, tol: 1 },
-] as const;
-
-const SANFEW_TO_KAQ_WPS = [
- { x: 2900, z: 3428, tol: 2 },
- { x: 2921, z: 3439, tol: 2 },
- { x: 2928, z: 3445, tol: 2 },
- { x: 2936, z: 3456, tol: 2 },
- { x: 2935, z: 3471, tol: 2 },
- { x: KAQEMEEX_SPOT.x, z: KAQEMEEX_SPOT.z - 1, tol: 1 },
-] as const;
-
 async function completeDruidicRitual(spec: Session, start: number, deadline: number): Promise<string> {
  const eatGuard = { lastTick: -1 };
  const offEat = spec.onTick(() => {
@@ -542,14 +494,8 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  }
 
  const walker = await createRunSafeWalker(spec);
- if (!isRunEnabled(spec)) {
-  await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
- }
 
- await walkWaypoints(spec, BURTHORPE_TO_KAQ_WPS, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15));
- if (!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15)) {
-  await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15), walker);
- }
+ await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15), walker);
  logPhase(spec, start, 'herb_at_kaqemeex');
 
  await talkQuestNpc(
@@ -564,15 +510,12 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
    ['R', 'R', 2471, 'R'],
   ],
   async () => {
-   await spec.direct({ type: 'walkTo', x: 2935, z: 3471, running: true, reason: 'SDK' });
+   await spec.direct({ type: 'walkTo', x: 2931, z: 3481, running: true, reason: 'SDK' });
   },
  );
  const tKaq1 = spec.tick() - start;
 
- await walkWaypoints(spec, KAQ_TO_SANFEW_WPS, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 4));
- if (!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 4)) {
-  await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
- }
+ await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
  logPhase(spec, start, 'herb_at_sanfew1_stairs');
  await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
  logPhase(spec, start, 'herb_up_sanfew1');
@@ -592,10 +535,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
 
  await climbLoc(spec, 1740, 2898, 3428, /climb-down/i, () => (playerPos(spec)?.level ?? 1) === 0, deadline);
  logPhase(spec, start, 'herb_down_sanfew1');
- await walkWaypoints(spec, SANFEW_TO_DUNG_WPS, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6));
- if (!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6)) {
-  await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6), walker);
- }
+ await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6), walker);
  await climbLoc(spec, 1759, 2884, 3397, /climb-down/i, () => (playerPos(spec)?.worldZ ?? 0) > 9000, deadline);
  const tDung = spec.tick() - start;
  logPhase(spec, start, 'herb_in_dungeon');
@@ -670,10 +610,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  await walkDirect(spec, 2884, 9798, 1, deadline, () => (playerPos(spec)?.worldZ ?? 9999) <= 9808);
  await climbLoc(spec, 1755, 2884, 9797, /climb-up/i, () => (playerPos(spec)?.worldZ ?? 9999) < 9000, deadline);
  logPhase(spec, start, 'herb_out_of_dungeon');
- await walkWaypoints(spec, DUNG_TO_SANFEW_WPS, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 4));
- if (!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 4)) {
-  await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
- }
+ await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
  await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
 
  await talkQuestNpc(
@@ -702,13 +639,17 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   for (const slot of slots) void spec.direct({ type: 'dropItem', slot, reason: 'SDK' });
  });
  try {
-  const readyForKaq = () =>
-   spec.sdk.getInventory().every(i => GLORY_SET.has(i.id)) &&
-   !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15);
-  await walkWaypoints(spec, SANFEW_TO_KAQ_WPS, deadline, readyForKaq);
-  if (!readyForKaq()) {
-   await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z - 1, 1, deadline, readyForKaq, walker);
-  }
+  await walkLocal(
+   spec,
+   KAQEMEEX_SPOT.x,
+   KAQEMEEX_SPOT.z - 1,
+   1,
+   deadline,
+   () =>
+    spec.sdk.getInventory().every(i => GLORY_SET.has(i.id)) &&
+    !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15),
+   walker,
+  );
  } finally {
   offDrop();
  }
