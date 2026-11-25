@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795637928598-1",
+ "account": "Fatstack",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 1,
+ "claim": "c34e9774-5736-4971-9b2d-bc9ad9c2d2d3",
+ "count": 1,
+ "ok": true,
+ "at": 1795638271341,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795638269327
+ },
+ "logout": {
+  "attemptId": "1795638258624-0000024248-0000000001",
+  "at": 1795638271327,
+  "sha256": "8ba936e63ab5a9a16ea7ed8d4c7865aeca5a66f1a3772068e9168153a0c74de8"
+ },
+ "screen": true
+}
