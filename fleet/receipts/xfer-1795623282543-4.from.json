@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795623282543-4",
+ "account": "TheFullMonty",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "7159a7e3-11fc-4475-93cf-4c01b7b29853",
+ "count": 0,
+ "ok": false,
+ "at": 1795623411873,
+ "detail": "trade claimed"
+}

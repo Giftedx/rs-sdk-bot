@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795623397661-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Ballspinner",
+  "to": "Fatstack",
+  "item": "Uncut diamond",
+  "count": 10,
+  "itemId": 1617,
+  "start": 1795623397661,
+  "end": 1795624297661,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795622770698-2",
+ "account": "NabTheKnob",
+ "partner": "MineYourBiz",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "9bcdb7db-c1d1-42eb-8685-c67d596730e3",
+ "count": 0,
+ "ok": false,
+ "at": 1795623448793,
+ "detail": "trade claimed"
+}

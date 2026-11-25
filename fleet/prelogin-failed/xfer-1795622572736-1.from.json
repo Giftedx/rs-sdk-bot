@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795622572736-1",
+ "role": "from",
+ "account": "Magicwanda",
+ "partner": "OreElse",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795623485940,
+ "detail": "Error: fleet trade claim authority unavailable or changed: remote: fatal error in commit_refs_rules To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 3a703c61cd921c8c4d7216a0c67686c10e5e762e -> fleet-trade-claim/magicwanda (fatal error in commit_refs_rules ) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

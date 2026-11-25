@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795623372787-5",
+ "role": "from",
+ "account": "mmthv2350",
+ "partner": "CoinCock",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795623432645,
+ "detail": "Error: fleet trade claim authority unavailable or changed: remote: fatal error in commit_refs_rules To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 4bc406787af3c44c74d17c6f656ba4b93f5a66c4 -> fleet-trade-claim/mmthv2350 (fatal error in commit_refs_rules ) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
