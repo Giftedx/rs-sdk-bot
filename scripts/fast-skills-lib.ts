@@ -407,6 +407,10 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
  let sawConfirm = false;
  let didPreDrop = false;
  let lastOpenReqTick = -10;
+ let lastSpecObsId = startObsId;
+ let lastHelperObsId = startHObsId;
+ let pendingHelperReply = false;
+ let pendingSpecReply = false;
 
  while (spec.tick() < opts.deadlineTick) {
   const st = spec.sdk.getTradeState();
@@ -417,7 +421,26 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    if (sawConfirm) {
     if (!tradeDeclined() && (!opts.giveIds?.length || transferredGive())) return;
     sawConfirm = false;
+    pendingHelperReply = false;
+    pendingSpecReply = false;
    }
+   let gotBusy = false;
+   for (const m of getMsgs()) {
+    const id = m.observationId ?? 0;
+    if (m.observationId !== undefined ? id <= lastSpecObsId : m.tick <= startTick) continue;
+    if (m.observationId !== undefined) lastSpecObsId = Math.max(lastSpecObsId, id);
+    if (/:tradereq:/i.test(m.text)) pendingSpecReply = true;
+    else if (/is busy at the moment/i.test(m.text)) gotBusy = true;
+   }
+   for (const m of getHMsgs()) {
+    const id = m.observationId ?? 0;
+    if (m.observationId !== undefined ? id <= lastHelperObsId : m.tick <= startTick) continue;
+    if (m.observationId !== undefined) lastHelperObsId = Math.max(lastHelperObsId, id);
+    if (/:tradereq:/i.test(m.text)) pendingHelperReply = true;
+    else if (/is busy at the moment/i.test(m.text)) gotBusy = true;
+   }
+   if (gotBusy) lastOpenReqTick = -10;
+
    const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
    const helpDlg = !!helper.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
@@ -430,18 +453,31 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
      openActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     }
    }
+   const oneSidedReply = !specDlg && !helpDlg && ((pendingHelperReply && !pendingSpecReply && !!sTarget) || (pendingSpecReply && !pendingHelperReply && !!hTarget));
    const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
    if (helpDlg) {
     lastOpenReqTick = -10;
     openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
    }
    // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
-   if (specDlg && !(canRequest && sTarget && hTarget)) {
+   if (specDlg && !oneSidedReply && !(canRequest && sTarget && hTarget)) {
     lastOpenReqTick = -10;
     openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
    }
-   // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
-   if (canRequest && sTarget && hTarget) {
+   if (oneSidedReply) {
+    // Only the partner whose earlier OPPLAYER4 bounced needs to reply immediately without a 3-tick wait.
+    lastOpenReqTick = spec.tick();
+    if (pendingHelperReply && sTarget) {
+     pendingHelperReply = false;
+     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+    } else if (pendingSpecReply && hTarget) {
+     pendingSpecReply = false;
+     openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+    }
+   } else if (canRequest && sTarget && hTarget) {
+    // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
+    pendingHelperReply = false;
+    pendingSpecReply = false;
     lastOpenReqTick = spec.tick();
     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
     openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
@@ -450,6 +486,8 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
   }
+  pendingHelperReply = false;
+  pendingSpecReply = false;
 
   lastOpenReqTick = -10;
 
