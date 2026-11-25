@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795644642885,
+ "at": 1795644662854,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -72,21 +72,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- ranged-gather"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
    "role": "army"
   },
   {
@@ -193,28 +178,6 @@
    "role": "helper"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "CAP": "3000",
-    "DEMAND_ID": "goal:pk_army:mmtha0205",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:mmtha0205",
-   "role": "army",
-   "resources": [
-    "khazard-troopers"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -313,8 +276,10 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "mmtha0205",
   "moneyshot",
   "pocketpool",
+  "pocketpython",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
