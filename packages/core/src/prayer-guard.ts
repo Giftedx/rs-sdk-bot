@@ -24,9 +24,9 @@
 // guard's inputs also count toward the 5 inputs that the server reads in a tick, and the loop's last inputs then wait
 // for the next tick.
 
-export type { AttackStyle, GuardSession, Hunter, PrayerGuardOptions, PrayerGuardStats } from './prayer-guard/types';
+export type { AttackStyle, GuardSession, Hunter, PrayerGuardOptions, PrayerGuardStats, PrayerIntent } from './prayer-guard/types';
 export { attackTarget, npcDead, wildernessLevel } from './prayer-guard/threats';
-export { afterToggle, PROTECT, protectByStyle } from './prayer-guard/choice';
+export { afterToggle, believedPrayers, intendToggle, PROTECT, protectByStyle } from './prayer-guard/choice';
 export { IDLE_TICKS, NEUTRAL } from './prayer-guard/interactions';
 export { startPrayerGuard } from './prayer-guard/guard';
 export { holdSessionPrayer } from './prayer-guard/hold';
