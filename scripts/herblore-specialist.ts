@@ -105,13 +105,13 @@ export const HERBLORE_NOTED_SUPPLIES: readonly HerbloreNotedSupply[] = [
 
 // Live-affordable drop-herbs route (Chaos Druids / Sinister keys: Kwuarm + Cadantine + Dwarf weed, zero Torstol/Lantadyme).
 export const HERBLORE_DROP_NOTED_SUPPLIES: readonly HerbloreNotedSupply[] = [
- { id: ITEM_IDS.harralandervial, certId: 98, count: 10 },
- { id: ITEM_IDS.chocolate_dust, certId: 1976, count: 10 },
- { id: ITEM_IDS.iritvial, certId: 102, count: 10 },
- { id: ITEM_IDS.eye_of_newt, certId: 222, count: 10 },
- { id: ITEM_IDS.kwuarmvial, certId: 106, count: 30 },
- { id: ITEM_IDS.limpwurt_root, certId: 226, count: 10 },
- { id: ITEM_IDS.dragon_scale_dust, certId: 242, count: 20 },
+ { id: ITEM_IDS.harralandervial, certId: 98, count: 13 },
+ { id: ITEM_IDS.chocolate_dust, certId: 1976, count: 13 },
+ { id: ITEM_IDS.iritvial, certId: 102, count: 13 },
+ { id: ITEM_IDS.eye_of_newt, certId: 222, count: 13 },
+ { id: ITEM_IDS.kwuarmvial, certId: 106, count: 26 },
+ { id: ITEM_IDS.limpwurt_root, certId: 226, count: 13 },
+ { id: ITEM_IDS.dragon_scale_dust, certId: 242, count: 13 },
  { id: ITEM_IDS.cadantinevial, certId: 108, count: 13 },
  { id: ITEM_IDS.white_berries, certId: 240, count: 13 },
  { id: ITEM_IDS.dwarfweedvial, certId: 110, count: 198 },
@@ -793,12 +793,10 @@ const FAST_HERB_STEPS: readonly BankBrewPlanStep[] = [
 ];
 
 const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
- { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 10, openBankAtEnd: true },
- { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 10, openBankAtEnd: true },
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 10, openBankAtEnd: true },
- // Weapon poison x20 as 10 + 10 (2 brew ticks each, no leftovers).
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
+ { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 13, openBankAtEnd: true },
+ { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 13, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 13, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
  { unf: ITEM_IDS.cadantinevial, sec: ITEM_IDS.white_berries, count: 13, openBankAtEnd: true },
  ...Array.from({ length: 15 }, (): BankBrewPlanStep => ({
   unf: ITEM_IDS.dwarfweedvial,
