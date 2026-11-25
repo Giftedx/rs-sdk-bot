@@ -56,3 +56,29 @@ test('the last RESULT line wins; none is a failure', () => {
     expect(lastResult('RESULT fail a\nlog\nRESULT ok b\n')).toBe('RESULT ok b');
     expect(lastResult('no result here')).toBe('RESULT fail no result');
 });
+
+test('a waiting live update that drains the chain ends it before the next step with a release hold', async () => {
+    const { isWorkerReleaseHold } = await import('../packages/core/src/worker-release');
+    const { supervise } = await import('../packages/practice/src/supervise');
+    const steps = [parseStep('scripts/gather-fish.ts cage'), parseStep('scripts/cook-food.ts 2000 lobster')];
+    const calls: string[] = [];
+    let drain: string[] = [];
+    const deps = { stopped: () => false, log: () => {}, drained: () => drain,
+        run: async (st: { script: string }) => { calls.push(st.script); drain = ['packages/practice/src/supervise.ts', 'a.ts', 'b.ts']; return 'RESULT ok'; } };
+    const result = await runChain(steps, 1, deps);
+    // The first step ran before the drain began; the second would start a new process on the old files.
+    expect(calls).toEqual(['scripts/gather-fish.ts']);
+    expect(result).toBe('RESULT fail no worker progress: release update pending: packages/practice/src/supervise.ts, a.ts and 1 more chain rounds=1 ok=1 failed=0');
+    expect(isWorkerReleaseHold(result)).toBe(true);
+    // The supervisor ends such a chain as release-paused, with no restart.
+    const r = await supervise({ run: async () => ({ stdout: result, exitCode: 1 }), stopped: () => false, pause: async () => { throw Error('must not retry'); }, maxRestarts: 20 });
+    expect(r).toEqual({ reason: 'release-paused', runs: 1 });
+    // The chain's first step is the swarm's own start, which the swarm already checks: it runs even under a drain.
+    calls.length = 0; drain = ['x.ts'];
+    expect(await runChain([steps[0]!], 1, deps)).toBe('RESULT ok chain rounds=1 ok=1 failed=0');
+    expect(calls).toEqual(['scripts/gather-fish.ts']);
+    // With nothing to drain, every step runs.
+    calls.length = 0;
+    expect(await runChain(steps, 1, { ...deps, drained: () => [] })).toBe('RESULT ok chain rounds=1 ok=2 failed=0');
+    expect(calls).toEqual(['scripts/gather-fish.ts', 'scripts/cook-food.ts']);
+});

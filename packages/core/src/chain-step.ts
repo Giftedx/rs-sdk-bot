@@ -58,10 +58,19 @@ export function formatStep(step: Step): string {
     return [step.script, ...env, '--', ...step.args.map(quote)].join(' ');
 }
 
+// Each step is a new process that loads the files on disk, so a step that starts during a live-update drain holds the
+// update as long as a new run would (packages/core/src/live-update-pending.ts). `drained` names the pending files
+// that the chain's steps load. Before every step after the first, a drained chain ends with a release hold
+// (worker-release/peers.ts isWorkerReleaseHold): its supervisor ends the job as release-paused, and the swarm starts
+// the chain again on the new code.
+export const chainUpdatePending = (files: readonly string[]) =>
+    `RESULT fail no worker progress: release update pending: ${files.slice(0, 2).join(', ')}${files.length > 2 ? ` and ${files.length - 2} more` : ''}`;
+
 export async function runChainSteps(steps: readonly Step[], rounds: number, deps: {
     stopped(): boolean;
     run(step: Step, round: number, index: number): Promise<string>;
     log(line: string): void;
+    drained?(): readonly string[];
 }): Promise<string> {
     if (!steps.length || !Number.isSafeInteger(rounds) || rounds < 0) return 'RESULT fail chain needs steps and nonnegative integer ROUNDS';
     let ok = 0, failed = 0, round = 0;
@@ -71,6 +80,8 @@ export async function runChainSteps(steps: readonly Step[], rounds: number, deps
         round++;
         for (const [index, step] of steps.entries()) {
             if (deps.stopped()) return summary('RESULT fail stop file');
+            const pending = round > 1 || index > 0 ? deps.drained?.() ?? [] : [];
+            if (pending.length) return summary(chainUpdatePending(pending));
             let result: string;
             try { result = await deps.run(step, round, index); }
             catch (error) { result = `RESULT fail child threw: ${String(error)}`; }
