@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795638492980-moneyshot-masterbaiter-668192f2ff2cd9e0",
  "account": "Moneyshot",
  "partner": "Masterbaiter",
@@ -12,13 +12,18 @@
  "claim": "b89a12f9-11bf-4b48-85e4-9164e2dc1474",
  "count": 0,
  "ok": false,
- "at": 1795638958906,
- "detail": "trade claimed",
+ "at": 1795639132103,
+ "detail": "session ended: disconnected",
  "lines": [
   {
    "item": "Water rune",
    "requested": 30,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 30,
+    "at": 1795638965302
+   }
   }
- ]
+ ],
+ "screen": false
 }
