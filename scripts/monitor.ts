@@ -9,11 +9,9 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { freemem, totalmem } from 'node:os';
+import { simStatusDir, statusReadDirs } from '../packages/core/src/practice-paths';
 
-const root = resolve(import.meta.dir, '..');
-const prac = join(root, '.practice');
-const statusDir = join(prac, 'status');
-mkdirSync(prac, { recursive: true });
+const defaultRoot = resolve(import.meta.dir, '..');
 
 type Alert = { at: number; level: 'warn' | 'error' | 'fixed'; key: string; text: string; bot?: string };
 const active = new Map<string, Alert>();
@@ -30,19 +28,42 @@ function procs(): { pid: number; name: string; ageSec: number; mb: number; cpuSe
     });
 }
 
-function cycle() {
-    const now = Date.now();
+export function readStatusSnapshots(root = defaultRoot): any[] {
+    const byName = new Map<string, any>();
+    const dirs = [...statusReadDirs(root), simStatusDir(root)];
+    for (const dir of dirs) {
+        if (!existsSync(dir)) continue;
+        for (const f of readdirSync(dir).filter(f => f.endsWith('.json'))) {
+            let s: any;
+            try { s = JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { continue; }
+            const key = String(s?.name || f.slice(0, -5)).toLowerCase();
+            const prev = byName.get(key);
+            const sAt = typeof s?.at === 'number' && Number.isFinite(s.at) ? s.at : 0;
+            const prevAt = typeof prev?.at === 'number' && Number.isFinite(prev.at) ? prev.at : -1;
+            if (!prev || sAt > prevAt) byName.set(key, s);
+        }
+    }
+    return [...byName.values()];
+}
+
+export function cycle(
+    root = defaultRoot,
+    opts: { now?: number; list?: ReturnType<typeof procs>; alertLog?: boolean } = {},
+) {
+    const prac = join(root, '.practice');
+    mkdirSync(prac, { recursive: true });
+    const now = opts.now ?? Date.now();
     const seen = new Set<string>();
     const raise = (a: Omit<Alert, 'at'>) => {
         seen.add(a.key);
         if (active.has(a.key) || retired.has(a.key)) return;
         const full = { ...a, at: now };
         active.set(a.key, full);
-        appendFileSync(join(prac, 'alerts.jsonl'), JSON.stringify(full) + '\n');
+        if (opts.alertLog !== false) appendFileSync(join(prac, 'alerts.jsonl'), JSON.stringify(full) + '\n');
         console.log(`ALERT ${a.level} ${a.text}`);
     };
 
-    const list = procs();
+    const list = opts.list ?? procs();
     const stale = list.filter(p => p.name === 'msedge.exe' && /shot-\d+/.test(p.cmd) && p.ageSec > 120);
     if (stale.length) {
         for (const p of stale) Bun.spawnSync(['taskkill', '/PID', String(p.pid), '/F'], { stdout: 'ignore', stderr: 'ignore' ,windowsHide:true});
@@ -79,11 +100,9 @@ function cycle() {
 
     let practiceBots = 0;
     const bots: Record<string, unknown>[] = [];
-    for (const f of existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')) : []) {
-        let s: any;
-        try { s = JSON.parse(readFileSync(join(statusDir, f), 'utf8')); } catch { continue; }
+    for (const s of readStatusSnapshots(root)) {
         const age = now - s.at;
-        const live = !/^localhost/.test(s.server ?? '');
+        const live = s.practice !== true && !/^localhost|^127\.0\.0\.1/.test(s.server ?? '');
         if (!live) { if (age < 60_000) practiceBots++; continue; }
         if (age > 6 * 3600_000) continue;
         const tail = String(s.timeline ?? '').slice(-40);
@@ -100,12 +119,16 @@ function cycle() {
         if (sticky ? now - a.at > 3600_000 : !seen.has(k)) { active.delete(k); if (sticky) retired.add(k); }
     }
     const bunMB = list.filter(p => p.name === 'bun.exe').reduce((n, p) => n + p.mb, 0);
-    writeFileSync(join(prac, 'monitor.json'), JSON.stringify({
+    const snapshot = {
         at: now, freeGB, totalGB: totalmem() / 2 ** 30, bunProcs: list.filter(p => p.name === 'bun.exe').length, bunMB,
         edgeProcs: list.filter(p => p.name === 'msedge.exe').length, practiceBots, bots, alerts: [...active.values()].sort((a, b) => b.at - a.at),
-    }));
+    };
+    writeFileSync(join(prac, 'monitor.json'), JSON.stringify(snapshot));
+    return snapshot;
 }
 
-console.log('monitor: every 30 s -> .practice/monitor.json, .practice/alerts.jsonl');
-cycle();
-setInterval(cycle, 30_000);
+if (import.meta.main) {
+    console.log('monitor: every 30 s -> .practice/monitor.json, .practice/alerts.jsonl');
+    cycle();
+    setInterval(cycle, 30_000);
+}
