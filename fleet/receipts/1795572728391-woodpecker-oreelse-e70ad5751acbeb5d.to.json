@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795572728391-woodpecker-oreelse-e70ad5751acbeb5d",
  "account": "OreElse",
  "partner": "Woodpecker",
@@ -12,6 +12,12 @@
  "claim": "0a3b0d4c-263f-4f7a-a96d-0c939b23a9db",
  "count": 0,
  "ok": false,
- "at": 1795572906552,
- "detail": "trade claimed"
+ "at": 1795572948997,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795572906561-0000029692-0000000001",
+  "at": 1795572948985,
+  "sha256": "bfc7bccfeffcb4b3ed0a60d3fbb37734a6d6095dba646140adeae1881f505c43"
+ },
+ "screen": false
 }
