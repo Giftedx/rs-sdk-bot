@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795628237838-2",
+ "account": "Stirmypot",
+ "partner": "CoinCock",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "d0929b71-7bcc-4e13-a0b5-c094cd0d8a52",
+ "count": 0,
+ "ok": false,
+ "at": 1795628675880,
+ "detail": "trade claimed"
+}

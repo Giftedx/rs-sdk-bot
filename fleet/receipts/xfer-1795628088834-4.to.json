@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795628088834-4",
+ "account": "BoneToPick",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "35f9db07-569d-4553-8de9-3f21e7457c36",
+ "count": 0,
+ "ok": false,
+ "at": 1795628701210,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
