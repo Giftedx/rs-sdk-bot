@@ -33,13 +33,12 @@ export const OBJ_IRON_ORE = 440;
 export const IRON_ORE_XP_25X = 875;
 
 export const MINING_GLORY_IDS = [OBJ_GLORY_4, 1710, 1708, 1706] as const;
-export const RELLEKKA_IRON_CENTER = { x: 2724, z: 3695, level: 0 } as const;
 
 const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = [
     [2470, 3100, 4], [2505, 3145, 4], [2540, 3185, 4], [2580, 3215, 4], [2603, 3234, 1],
 ];
 
-// 19 supply slots (no Super energy(4) — NODE_INFINITE_RUN=true): Doric's Quest (Mining 1->49) + Rellekka 9-rock 3t knife.
+// 19 supply slots (no Super energy(4) — NODE_INFINITE_RUN=true): Doric's Quest (Mining 1->49) + Ardougne Zoo 3t knife.
 export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_PICKAXE]: 1,
     [OBJ_KNIFE]: 1,
@@ -216,24 +215,14 @@ if (import.meta.main) {
             );
             await walkWaypointsSafe(main, [[2774, 3228, 3]], isStopped);
             await sailBrimhavenToArdougne(main, isStopped);
-            if (isLiveSupplyVariant() && !itemQty(main, OBJ_GAMES_8)) {
-                await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
-            } else {
-                // Ardougne dock -> Seers Village road -> Rellekka East 9-rock (2724,3695 touches 3 cardinal rocks, avoids White Wolf Mountain).
-                await walkWaypointsSafe(
-                    main,
-                    [[2685, 3330, 4], [2705, 3420, 4], [2735, 3490, 4], [2740, 3555, 4], [2730, 3630, 4], [2724, 3695, 1]],
-                    isStopped,
-                );
-            }
+            await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
         }
 
         const mineStart = main.tick() - t0;
         const ironProfile = miningProfiles().find(p => p.name === 'iron_rock_table');
         if (!ironProfile) throw Error('missing iron_rock_table profile');
-        const site = useLiveDueling || (isLiveSupplyVariant() && !itemQty(main, OBJ_GAMES_8))
-            ? MINING_SITES.find(s => s.key === 'ardougne-zoo-iron')!
-            : { key: 'rellekka-east-iron', profile: 'iron_rock_table', center: RELLEKKA_IRON_CENTER, radius: 6, bank: RELLEKKA_IRON_CENTER };
+        const site = MINING_SITES.find(s => s.key === 'ardougne-zoo-iron');
+        if (!site) throw Error('missing ardougne-zoo-iron site');
         const rocks = siteTiles(ironProfile, site);
         const need = remainingIronOresTo99(main.sdk.getSkillXp('Mining') ?? 0);
 
