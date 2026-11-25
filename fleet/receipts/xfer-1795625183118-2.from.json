@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795625183118-2",
  "account": "CoinCock",
  "partner": "UnderMyKilt",
@@ -12,6 +12,12 @@
  "claim": "b5543f74-1cd0-4e23-9bec-289bc055106f",
  "count": 0,
  "ok": false,
- "at": 1795625713060,
- "detail": "trade claimed"
+ "at": 1795626083435,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795625713069-0000011600-0000000001",
+  "at": 1795626083422,
+  "sha256": "53ea64a8dcfa84b8ac4e3b4d96448593de7ab2561e46332d7cac914c6f915940"
+ },
+ "screen": false
 }
