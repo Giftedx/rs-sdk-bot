@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795565761527-knightrider-ballspinner-7cdd4f90095c877e",
+ "account": "KnightRider",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 100000,
+ "claim": "90aba9dc-b817-4c1c-8696-ff052b7b1d20",
+ "count": 0,
+ "ok": false,
+ "at": 1795565957368,
+ "detail": "trade claimed"
+}
