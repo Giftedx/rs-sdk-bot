@@ -2133,6 +2133,12 @@ test('Gertrude\'s Cat without Varrock Teleport climbs the yard fence, and a kitt
 });
 
 import {BARE,bareDeposits,needs as questNeeds,presetFor as questPreset} from '../src/quest/sweep';
+test('the Ice Queen run banks worn armour and needs its Fire Blast and Camelot runes; lobsters stay food', () => {
+    expect(BARE.has('herogloves-owned')).toBe(true);
+    const preset = questPreset('herogloves-owned');
+    expect([...questNeeds(preset, false, 'herogloves-owned')].sort((a, b) => a[0] - b[0])).toEqual([[554, 150], [556, 125], [560, 30], [563, 1], [1265, 1], [2434, 1]]);
+    expect([...questNeeds(preset, true, 'herogloves-owned')]).toEqual([[379, 6]]);
+});
 test('a quest that boards the Entrana ship banks every pack row it does not use', () => {
     expect(BARE.has('zanaris')).toBe(true);
     const preset = questPreset('zanaris'), need = questNeeds(preset, false, 'zanaris'), food = questNeeds(preset, true, 'zanaris');

@@ -2267,6 +2267,11 @@ return [
   // Ice gloves on one account for Heroes' Quest (scripts/generated/quest-herogloves-owned.ts; questCases skips `-owned`
   // scripts): the rockslide, the ladder maze, the Ice Queen by Fire Blast, Camelot Teleport and the gloves banked at Seers.
   {key: 'extra:herogloves-owned', script: 'scripts/aio-quester.ts', preset: 'quest_herogloves-owned', scriptArgs: ['herogloves-owned'], pass: ok, timeoutMs: 900_000},
+  // The live entry: the sweep at the Seers bank stages the kit from the bank, banks the worn rune armour (BARE), walks to
+  // the rockslide and runs the same script.
+  {key: 'extra:herogloves-owned-sweep', script: 'scripts/aio-quester.ts', preset: 'quest_herogloves-owned', scriptArgs: ['sweep', 'herogloves-owned'], pass: ok, timeoutMs: 900_000,
+    presetConfig: {...PRESETS['quest_herogloves-owned']!, position: {x: 2726, z: 3492, level: 0}, inventory: [], bank: PRESETS['quest_herogloves-owned']!.inventory,
+      equipment: [{id: 1163, count: 1, slot: 0}, {id: 1127, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}]}},
   // Runite at the Heroes' Guild, the only runite rocks outside the Wilderness (maps/m45_154.jm2: 2937,9882 and 2941,9884):
   // a mining bank job from the Falador West bank through the guild door (%heroquest 15, knowledge/doors.json) and down
   // the guild cellar ladder (2892,3507 to 2892,9907, knowledge/transports.json). The job mines at the rock by 2940,9884;
