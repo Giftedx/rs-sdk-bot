@@ -46,6 +46,8 @@ import {
     resolveLogisticsStep,
     runFlatBankSort,
     runOwnedLoadout,
+    runOwnedLoadoutCured,
+    LOADOUT_HP_FELL,
     runPreservedWine,
     sortBankRows,
     stagedBoat,
@@ -508,7 +510,7 @@ test('actual offline CLI emits loadout-consumable JSON and rejects an unmapped d
 const kitJob: OwnedKit = { bank: { x: 3185, z: 3436, level: 0 }, pack: [{ id: 995, count: 50 }, { id: 556, count: 25 }], wear: [{ id: 1307, count: 1, slot: 3 }], cap: 600, maximumMoves: 192 };
 function loadoutModel(mode = 'normal') {
     let tick = 0, generation = 1, open = false, withdrawals = 0, deposits = 0, equips = 0, noteMode = false;
-    const control = { stop: false, mode, level: 99, xp: 100, style: 0 }, name = (id: number) => nativeKitItem(id).name;
+    const control = { stop: false, mode, level: 99, xp: 100, style: 0, hp: 99 }, name = (id: number) => nativeKitItem(id).name;
     const row = (id: number, count: number, slot: number) => ({ id, count, slot, name: name(id) }), inv: any[] = Array.from({ length: 28 }, (_, i) => row(526, 1, i)), wear: any[] = [row(1277, 1, 3), row(1171, 1, 5)], bank: any[] = [row(995, 99, 0), row(556, 100, 1), row(1307, 1, 2)];
     const player = { worldX: 3185, worldZ: 3436, level: 0, lifeId: 1, respawnCount: 0, isDead: false }, client: any = { membersAccount: 1, executeBotAction: () => ({ success: true }), objType: (id: number) => ({ stackable: [995, 556, 1512, 806].includes(id), certtemplate: id === 1512 ? 799 : -1, certlink: id === 1512 ? 1511 : -1 }) };
     setEquipmentObserved(client, true);
@@ -517,7 +519,7 @@ function loadoutModel(mode = 'normal') {
         name: 'Owned', client, tick: () => tick, ended: new Promise(() => {}), onTick: (cb: () => void) => { let active = true; const next = () => queueMicrotask(() => { if (active) { tick++; cb(); next(); } }); next(); return () => { active = false; }; },
         bankObservation: () => open ? { generation, items: bank.map(i => ({ ...i })), at: tick } : null,
         sdk: {
-            getStateAge: () => 0, getInventory: () => inv, getEquipment: () => wear, getSkill: () => ({ level: 99 }),
+            getStateAge: () => 0, getInventory: () => inv, getEquipment: () => wear, getSkill: (skill: string) => ({ level: skill === 'Hitpoints' ? control.hp : 99 }),
             getState: () => ({
                 player, inventory: inv, equipment: wear, skills: [{ name: 'Attack', level: control.level, experience: control.xp, baseLevel: 99 }],
                 autoRetaliateEnabled: false, prayers: { activePrayers: Array(15).fill(false) },
@@ -639,6 +641,41 @@ test('current stat regeneration is allowed while actual XP change refuses all as
         expect(r.ok).toBe(mode === 'level');
         if (mode === 'xp') { expect(f.withdrawals()).toBe(0); expect(f.deposits()).toBe(0); }
     }
+});
+
+// Poison costs one Hitpoint about every 30 ticks and closes the bank (poison.rs2), so the failure names the drop: the
+// caller can cure the account and run the kit again instead of retrying a kit that fails the same way.
+test('a Hitpoints drop during the kit names itself instead of the general life/state failure', async () => {
+    const f = loadoutModel(), deposit = f.s.bot.depositItem;
+    f.s.bot.depositItem = async (item: any) => { const r = await deposit(item); f.control.hp = 98; return r; };
+    const r = await runOwnedLoadout(f.s, kitJob);
+    expect(r.ok).toBe(false);
+    expect(r.failure).toContain('owned loadout hitpoints fell 99 to 98');
+    expect(LOADOUT_HP_FELL.test(r.failure)).toBe(true);
+});
+
+test('a loadout that a Hitpoints drop stopped drinks one antipoison and runs the kit once more', async () => {
+    const result = (ok: boolean, failure = '') => ({ ok, failure, moves: 5, ticks: 9 }) as any;
+    const runs: string[] = [], cures: string[] = [];
+    const deps = (outcomes: any[], cure: { ok: boolean; detail: string }) => ({
+        run: async () => { runs.push('run'); return outcomes.shift(); },
+        cure: async () => { cures.push('cure'); return cure; },
+    });
+    const fell = 'Error: owned loadout hitpoints fell 40 to 39';
+    const cured = await runOwnedLoadoutCured({} as any, kitJob, () => false, deps([result(false, fell), result(true)], { ok: true, detail: 'drank Antipoison(3) from the bank' }));
+    expect(cured).toMatchObject({ ok: true, moves: 10, cure: { ok: true } });
+    expect([runs.length, cures.length]).toEqual([2, 1]);
+    runs.length = 0; cures.length = 0;
+    const none = await runOwnedLoadoutCured({} as any, kitJob, () => false, deps([result(false, fell)], { ok: false, detail: 'no antipoison in the pack or in the bank' }));
+    expect(none).toMatchObject({ ok: false, failure: fell, cure: { ok: false, detail: 'no antipoison in the pack or in the bank' } });
+    expect([runs.length, cures.length]).toEqual([1, 1]);
+    // Any other failure, and a stop, get no cure and no second run.
+    runs.length = 0; cures.length = 0;
+    const other = await runOwnedLoadoutCured({} as any, kitJob, () => false, deps([result(false, 'Error: owned loadout stock missing before withdrawals')], { ok: true, detail: '' }));
+    expect(other).toMatchObject({ ok: false, cure: null });
+    const stopped = await runOwnedLoadoutCured({} as any, kitJob, () => true, deps([result(false, fell)], { ok: true, detail: '' }));
+    expect(stopped).toMatchObject({ ok: false, cure: null });
+    expect([runs.length, cures.length]).toEqual([2, 0]);
 });
 
 test('native unarmed style3 clamp is restored only after the final compatible weapon is observed', async () => {

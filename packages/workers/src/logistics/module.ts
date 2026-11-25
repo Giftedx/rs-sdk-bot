@@ -556,12 +556,12 @@ export async function runLogisticsRole(
             case 'loadout': {
                 const kitPath = args[0] ?? mergedEnv.LOADOUT_FILE;
                 if (kitPath) {
-                    const { runOwnedLoadout, validateOwnedKit } = await import('./stage');
+                    const { runOwnedLoadoutCured, validateOwnedKit } = await import('./stage');
                     const kit = validateOwnedKit(readJsonArg(kitPath));
-                    const r = await runOwnedLoadout(s, kit, isStopped(account));
+                    const r = await runOwnedLoadoutCured(s, kit, isStopped(account));
                     console.log('LOADOUT ' + JSON.stringify(r));
                     ok = r.ok;
-                    detail = `loadout ${r.ok ? 'exact' : r.failure} moves=${r.moves} ticks=${r.ticks}`;
+                    detail = `loadout ${r.ok ? 'exact' : r.failure} moves=${r.moves} ticks=${r.ticks}${r.cure ? ` cure: ${r.cure.detail}` : ''}`;
                     break;
                 }
                 if (!mergedEnv.ITEM_ID) throw Error('usage: aio-logistics <account> loadout <kit.json>');
@@ -973,13 +973,17 @@ export async function runLogisticsWorkerSession(sessionCore: SessionCore, cfg: L
                 if (!kitPath) {
                     return { kind: 'worker_defect', activityId, account: sessionCore.name, ticksElapsed: 0, faultSignature: 'missing_loadout_setup_file' };
                 }
-                const { runOwnedLoadout, validateOwnedKit } = await import('./stage');
+                const { runOwnedLoadoutCured, validateOwnedKit } = await import('./stage');
                 const kit = validateOwnedKit(readJsonArg(kitPath));
-                const r = await runOwnedLoadout(s, kit, isStopped);
+                const r = await runOwnedLoadoutCured(s, kit, isStopped);
                 const ticksElapsed = Math.max(0, s.tick() - startTick);
-                return r.ok
-                    ? { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.moves }
-                    : settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason: r.failure }), r.failure);
+                if (r.ok) return { kind: 'target_met', activityId, account: sessionCore.name, ticksElapsed, unitsCompleted: r.moves };
+                // A poisoned account with no antipoison anywhere needs one bought, not another try (as cure-poison above).
+                if (r.cure && !r.cure.ok && /no antipoison/i.test(r.cure.detail)) {
+                    return settleFailure(() => ({ kind: 'missing_supply', activityId, account: sessionCore.name, ticksElapsed, missing: [{ itemId: 175, itemName: 'Antipoison', required: 1, available: 0 }] }), r.cure.detail);
+                }
+                const reason = r.cure ? `${r.failure}; cure: ${r.cure.detail}` : r.failure;
+                return settleFailure(() => ({ kind: 'session_unsettled', activityId, account: sessionCore.name, ticksElapsed, reason }), reason);
             }
             case 'trade': {
                 return {
