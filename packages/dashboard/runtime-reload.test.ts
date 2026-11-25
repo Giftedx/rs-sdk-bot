@@ -33,15 +33,18 @@ test('the collector releases its listener before starting the replacement from i
 test('the publisher releases its lock before restarting and keeps finite runs finite',()=>{
  const source=readFileSync(join(root,'packages/dashboard/publish.ts'),'utf8');
  const code=source.slice(source.indexOf('  if(!once&&reloadDue('),source.indexOf('  try{await cycle();}'));
- const run=(once:boolean,due:boolean)=>{
+ const run=(once:boolean,due:boolean,env:Record<string,string|undefined>={})=>{
   const calls:string[]=[];
   new Function('once','reloadDue','root','startedAt','release','respawnDaemon','join','prac','process','log',code)(
    once,()=>due,'source',10,()=>calls.push('release'),
-   (_dir:string,args:string[])=>{expect(args).toEqual([join('source','packages/dashboard/publish.ts')]);calls.push('spawn');return 100;},join,join('source','.practice'),
-   {argv:['bun','publish.ts'],exit:(code:number)=>calls.push('exit '+code)},()=>{},
+   // respawnDaemon gives the successor process.env as it is at the spawn.
+   (_dir:string,args:string[])=>{expect(args).toEqual([join('source','packages/dashboard/publish.ts')]);calls.push(`spawn PUBLISH_LOG_DIRECT=${env.PUBLISH_LOG_DIRECT}`);return 100;},join,join('source','.practice'),
+   {argv:['bun','publish.ts'],env,exit:(code:number)=>calls.push('exit '+code)},()=>{},
   );
   return calls;
  };
  expect(run(false,false)).toEqual([]);expect(run(true,true)).toEqual([]);
- expect(run(false,true)).toEqual(['release','spawn','exit 0']);
+ // A foreground publisher has no flag. Its successor is detached with the log file as stdout, so it gets the flag.
+ expect(run(false,true)).toEqual(['release','spawn PUBLISH_LOG_DIRECT=1','exit 0']);
+ expect(run(false,true,{PUBLISH_LOG_DIRECT:'1'})).toEqual(['release','spawn PUBLISH_LOG_DIRECT=1','exit 0']);
 });
