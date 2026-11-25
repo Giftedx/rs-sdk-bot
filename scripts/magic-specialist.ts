@@ -552,12 +552,20 @@ async function executeMagicLoop(
  for (let i = 0; i < MAGIC_BATCHES.length; i++) {
   const batch = MAGIC_BATCHES[i]!;
   if (i >= 1) {
-   // Drop finished jewellery and Batch 0 leftovers (mindrune/shark) at 5/tick instead of slow returnIds trades.
-   await dropItemsFast(
-    spec,
-    new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.waterrune, ITEM_IDS.earthrune]),
-    deadline,
-   );
+   // Clear any aggroed Giant spider with Fire Strike before dropping mindrune/trading so hits cannot interrupt trademain.
+   if (countItem(spec.sdk.getInventory(), ITEM_IDS.mindrune) > 0) {
+    const fireStrike = componentId('magic:fire_strike');
+    const attacker = spec.sdk.getNearbyNpcs().find(n => n.inCombat && n.distance <= 3 && n.optionsWithIndex.some(o => /^attack$/i.test(o.text)));
+    if (attacker) {
+     await spec.direct({ type: 'spellOnNpc', npcIndex: attacker.index, spellComponent: fireStrike, reason: 'SDK' });
+     await waitTicks(spec, 3);
+    }
+   }
+   // Drop finished jewellery (and mindrune/shark before Batch 5 which needs 24 slots + 4 elemental/cosmic runes).
+   const keep = i < MAGIC_BATCHES.length - 1
+    ? new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.waterrune, ITEM_IDS.earthrune, ITEM_IDS.mindrune])
+    : new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.waterrune, ITEM_IDS.earthrune]);
+   await dropItemsFast(spec, keep, deadline);
   }
   const tr0 = spec.tick();
   await receiveBatch(batch, i);
