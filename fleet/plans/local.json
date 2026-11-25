@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795619843500,
+ "at": 1795619929272,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -153,6 +153,25 @@
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:tarromin"
+   ],
+   "env": {
+    "MAX_MAKE": "2",
+    "CAP": "1000",
+    "MEMBERS": "1",
+    "TARGET_COUNT": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:95",
+   "role": "army"
   }
  ],
  "army": [
@@ -180,7 +199,6 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
   "swordinhand",
   "thefullmonty",
   "undermykilt",
