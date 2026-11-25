@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795625216257-1",
  "account": "Woodpecker",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "a4dada45-46a1-42a3-8363-0a4c76b9b32a",
- "count": 0,
- "ok": false,
- "at": 1795625853206,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795625868217,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795625857881
+ },
+ "logout": {
+  "attemptId": "1795625853215-0000003704-0000000001",
+  "at": 1795625868208,
+  "sha256": "c2b64b12cb71ebeb5f8780ef81603ca6983c6e9b8929a0cde731414e5f850481"
+ },
+ "screen": true
 }
