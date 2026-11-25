@@ -20,6 +20,7 @@ function importedSite(bundle:string){
     .replace(/items\.png/g,'items.webp')
     .replace(/worldmap\.png/g,'worldmap.webp');
   }
+  if(f==='index.html')text=text.replace('<head>','<head><base href="./"><script src="config.js"></script><script src="shim.js"></script>');
   if(f==='client-shell.js'){
    const controls="  };\n  window.addEventListener('keydown',gameKeys,true);\n  const gameFrame=$('#rsw');\n  function bindViewerControls(){\n    if(!gameFrame.contentDocument)return;\n    gameFrame.contentWindow.addEventListener('keydown',gameKeys,true);\n  }\n  gameFrame.addEventListener('load',bindViewerControls);\n  bindViewerControls();\n  window.atlasClient=";
    text=text.replace("  window.addEventListener('keydown',e=>{",'  const gameKeys=e=>{').replace(/  \},true\);\r?\n  window\.atlasClient=/,controls);
@@ -29,6 +30,7 @@ function importedSite(bundle:string){
  }
  writeFileSync(join(bundle,'items.webp'),'webp');
  writeFileSync(join(bundle,'worldmap.webp'),'webp');
+ writeFileSync(join(bundle,'config.js'),'window.FLEET_CONFIG={};');writeFileSync(join(bundle,'shim.js'),'window.FleetShim={};');
  cpSync(join(dashDir,'client-assets'),join(bundle,'client-assets'),{recursive:true});
  mkdirSync(join(bundle,'viewer','static','js'),{recursive:true});
  writeFileSync(join(bundle,'viewer','index.html'),'<!doctype html><html><head><script src="bridge.js?v=42e9cad153"></script><link rel="stylesheet" href="client-viewer.css?v=e1632fb598"></head><body><script src="static/js/main.1.js?v=fc08ccca44"></script></body></html>');
@@ -177,10 +179,12 @@ test('verifyStaticBundle enforces sibling import-page contracts including relati
      .replace(/items\.png/g,'items.webp')
      .replace(/worldmap\.png/g,'worldmap.webp');
    }
+   if(f==='index.html')text=text.replace('<head>','<head><base href="./"><script src="config.js"></script><script src="shim.js"></script>');
    writeFileSync(join(bundle,f),text);
   }
   writeFileSync(join(bundle,'items.webp'),'webp');
   writeFileSync(join(bundle,'worldmap.webp'),'webp');
+  writeFileSync(join(bundle,'config.js'),'window.FLEET_CONFIG={};');writeFileSync(join(bundle,'shim.js'),'window.FleetShim={};');
   cpSync(join(dashDir,'client-assets'),join(bundle,'client-assets'),{recursive:true});
   writeFileSync(join(bundle,'public.json'),JSON.stringify({bots:[{name:'⟦MAIN⟧',inWorld:true}],roster:[]}));
 
@@ -191,6 +195,21 @@ test('verifyStaticBundle enforces sibling import-page contracts including relati
   const brokenAudit=verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true});
   expect(brokenAudit.ok).toBe(false);
   expect(brokenAudit.missing).toContain('contract:connectViewerControls-keydown-end');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+// A hosted page without the config.js and shim.js tags shows no data. A comment that names those files loads nothing,
+// so the audit looks for the tags themselves.
+test('verifyStaticBundle refuses an imported page that does not load config.js and shim.js',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'dash-noshim-'));
+ try{
+  const bundle=join(dir,'site');
+  importedSite(bundle);
+  expect(verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true}).ok).toBe(true);
+  writeFileSync(join(bundle,'index.html'),readFileSync(join(bundle,'index.html'),'utf8').replace('<script src="config.js"></script><script src="shim.js"></script>',''));
+  const audit=verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true});
+  expect(audit.ok).toBe(false);
+  expect(audit.missing).toEqual(expect.arrayContaining(['import-contract -> index.html loads config.js','import-contract -> index.html loads shim.js']));
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
