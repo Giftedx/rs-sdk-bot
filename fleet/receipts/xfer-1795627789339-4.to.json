@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795627789339-4",
  "account": "Woodenstaff",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 6,
  "claim": "4116af36-e6b4-436d-a4db-a114ff104b59",
- "count": 0,
- "ok": false,
- "at": 1795628385414,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795628405349,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795628404552
+ },
+ "logout": {
+  "attemptId": "1795628385422-0000010264-0000000001",
+  "at": 1795628405332,
+  "sha256": "be4b99aaa21795cec5c097eca42ff93ad35318d8a22be73a6448cf65050ce13e"
+ },
+ "screen": true
 }

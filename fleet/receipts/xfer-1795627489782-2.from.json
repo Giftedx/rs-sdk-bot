@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795627489782-2",
  "account": "Woodpecker",
  "partner": "Quickhandjob",
@@ -12,6 +12,12 @@
  "claim": "03cd69e7-72b8-4aa9-b5cc-b69fa9d6d61c",
  "count": 0,
  "ok": false,
- "at": 1795628389017,
- "detail": "trade claimed"
+ "at": 1795628394928,
+ "detail": "Error: order window ended before work",
+ "logout": {
+  "attemptId": "1795628389027-0000020796-0000000001",
+  "at": 1795628394910,
+  "sha256": "ec9a3dea06a29f911281f0581c86ba5f58ff8ca99f2396a074823c86e83fa99d"
+ },
+ "screen": false
 }

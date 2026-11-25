@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795628133291-masterbaiter-trousersnake-df096c0d8df936bb",
  "account": "TrouserSnake",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Lobster",
  "requested": 25,
  "claim": "8a471cd3-5f45-42a2-8b36-bf156237d083",
- "count": 0,
- "ok": false,
- "at": 1795628381994,
- "detail": "trade claimed"
+ "count": 25,
+ "ok": true,
+ "at": 1795628403295,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 25
+ },
+ "bank": {
+  "count": 25,
+  "at": 1795628402541
+ },
+ "logout": {
+  "attemptId": "1795628382002-0000026196-0000000001",
+  "at": 1795628403284,
+  "sha256": "6478da96b1739f3cd4fc7e75f86a5b073d23588c3d12f77e6d36da07a78414e3"
+ },
+ "screen": true
 }

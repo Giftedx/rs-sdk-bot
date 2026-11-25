@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795628393050,
+ "at": 1795628417852,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,6 +59,21 @@
    "role": "pvp"
   },
   {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:235",
+   "role": "army"
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/generated/quest-priestperil.ts",
    "args": [],
@@ -86,6 +101,19 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
    "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/generated/quest-death.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:death",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:death",
+   "role": "auto"
   },
   {
    "account": "AFKnight",
@@ -148,22 +176,6 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "army"
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -199,9 +211,8 @@
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-564-2-p861 ITEM_ID=564 QUANTITY=2 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
-    "scripts/aio-logistics.ts ITEM_ID=1639 QUANTITY=1 \"ITEM_NAME=Emerald ring\" -- loadout",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=2 -- magic items enchant:emerald_ring - 1 1200"
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p861 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -274,29 +285,18 @@
    "role": "army"
   },
   {
-   "account": "Porksword",
-   "script": "scripts/generated/quest-arena.ts",
-   "args": [],
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftmaker BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "auto"
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/generated/quest-death.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:death",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:death",
+   "goal": "goal:pk_army:Shaftmaker",
    "role": "auto"
   }
  ],

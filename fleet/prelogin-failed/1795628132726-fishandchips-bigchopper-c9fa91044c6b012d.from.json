@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795628132726-fishandchips-bigchopper-c9fa91044c6b012d",
+ "role": "from",
+ "account": "FishAndChips",
+ "partner": "Bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795628399056,
+ "detail": "Error: fleet account claim held by swarm"
+}
