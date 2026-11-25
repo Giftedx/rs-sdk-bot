@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795605625259-2",
  "account": "OreElse",
  "partner": "Bigchopper",
@@ -12,6 +12,12 @@
  "claim": "a9e46491-a679-4a21-9585-1c55a7b7282f",
  "count": 0,
  "ok": false,
- "at": 1795606477596,
- "detail": "trade claimed"
+ "at": 1795606525873,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795606477605-0000001480-0000000001",
+  "at": 1795606525861,
+  "sha256": "0e107d6e09f3f526f3f9f4022dede9b9202cc6fa72a5e2486c960cdaf2110891"
+ },
+ "screen": false
 }
