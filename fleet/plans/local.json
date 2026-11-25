@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795628417852,
+ "at": 1795628460283,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,6 +57,21 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1000 MEMBERS=1 TARGET_COUNT=1 -- crafting inventory identify:marentill",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 -- crafting inventory brew:unf_marrentill_potion"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:93",
+   "role": "army"
   },
   {
    "account": "Ballspinner",
@@ -254,22 +269,6 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-249-1-p27599 ITEM_ID=249 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=27599 -- ge-buy",
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:91 BATCH_UNITS=1 -- crafting inventory brew:unf_guam_potion"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:91",
-   "role": "army"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/chain.ts",
    "args": [
@@ -298,6 +297,35 @@
    "repeat": false,
    "goal": "goal:pk_army:Shaftmaker",
    "role": "auto"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/generated/quest-arena.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "auto"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=56 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto"
   }
  ],
  "army": [
@@ -315,6 +343,7 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
+  "knightrider",
   "mineyourbiz",
   "mmthv2350",
   "oreelse",
@@ -323,7 +352,6 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "undermykilt",
   "woodpecker",
   "yewfirst"
  ],
