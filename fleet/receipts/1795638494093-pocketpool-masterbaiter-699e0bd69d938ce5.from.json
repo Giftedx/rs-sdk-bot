@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795638494093-pocketpool-masterbaiter-699e0bd69d938ce5",
+ "account": "PocketPool",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 20,
+ "claim": "eef169cc-a216-4e14-9953-557d595a9eda",
+ "count": 0,
+ "ok": false,
+ "at": 1795639372055,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Bronze arrow",
+   "requested": 300,
+   "count": 0
+  }
+ ]
+}
