@@ -499,7 +499,10 @@ if(activityFilter==='shots')return page(title('Events / screenshots','Activity j
  async function command(action,payload,definition,account,text){
   if(!meta)await loadMeta();if(!meta)throw Error('Command service is unavailable. Your draft is saved.');
   if(meta.readOnly)throw Error('This dashboard is read-only; commands are disabled. Your draft is saved.');
-  const id=payload?.id?.replace(/^operator-/,'')||crypto.randomUUID(),extra=payload&&typeof payload==='object'&&!payload.id?payload:{...(payload?{task:payload}:{}),...(definition?{definition}:{})},envelope=JSON.stringify({id,action,...extra,...(account?{account}:{}),...(text?{text}:{})});
+  // A queued task travels whole under `task`; every other action's fields sit at the envelope's top level, where the
+  // console reads them (an override's account and activity). The payload's own id names the command.
+  const {id:_payloadId,...fields}=payload&&typeof payload==='object'?payload:{};
+  const id=payload?.id?.replace(/^operator-/,'')||crypto.randomUUID(),extra=payload&&typeof payload==='object'&&action!=='queue'&&!definition?fields:{...(payload?{task:payload}:{}),...(definition?{definition}:{})},envelope=JSON.stringify({id,action,...extra,...(account?{account}:{}),...(text?{text}:{})});
   for(let attempt=0;attempt<2;attempt++){
    const previousNonce=meta.nonce,response=await fetch('/api/control',{method:'POST',headers:{'content-type':'application/json','x-atlas-control':previousNonce},body:envelope});
    let result;try{result=await response.json();}catch{throw Error('Command service returned HTTP '+response.status+'. Your draft is saved.');}
