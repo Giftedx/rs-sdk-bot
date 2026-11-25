@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795640442753-1",
  "account": "Unsheathed",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Ranarr weed",
  "requested": 2,
  "claim": "59e58e0c-8601-4313-943f-0b21102101cb",
- "count": 0,
- "ok": false,
- "at": 1795641050143,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795641128375,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795641127636
+ },
+ "logout": {
+  "attemptId": "1795641050153-0000012356-0000000001",
+  "at": 1795641128355,
+  "sha256": "1b69558d0fdd865c5eb3b8d865fa2bf3b5bb99f92ee248bcfc5477f88cf0788c"
+ },
+ "screen": true
 }
