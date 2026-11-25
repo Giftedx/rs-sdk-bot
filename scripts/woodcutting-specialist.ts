@@ -537,13 +537,15 @@ if (import.meta.main) {
                 const standTile = findReachableTreeStandTile(main, tree, treeSize);
                 const destX = standTile?.x ?? tree.x;
                 const destZ = standTile?.z ?? tree.z;
+                const moveDist = meNow ? Math.max(Math.abs(destX - meNow.worldX), Math.abs(destZ - meNow.worldZ)) : 99;
                 const acts: Promise<unknown>[] = [
                     main.direct({ type: 'walkTo', x: destX, z: destZ, running: true, reason: 'SDK' }),
                 ];
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
                 if (potAct) acts.push(potAct);
                 await Promise.all(acts);
-                clearSentForTick = -99;
+                // MoveClick clears busy2 when arriving in 1 running tick (dist <= 2), preserving an immediate flinch.
+                clearSentForTick = !potAct && moveDist <= 2 && now >= actionDelayApprox ? now + 1 : -99;
                 await waitTicks(main, 1);
                 continue;
             }
@@ -588,10 +590,12 @@ if (import.meta.main) {
                     continue;
                 }
                 const npc = nearbyNpcs.find(n => n.index === npcIdx);
-                if (!npc || npc.hp === 0 || npc.distance > 2 || !targetsPlayer(main, npc.targetIndex)) continue;
+                if (!npc || npc.hp === 0 || npc.distance > 5 || !targetsPlayer(main, npc.targetIndex)) continue;
                 activeHitters++;
                 for (let k = 1; k <= 2; k++) {
-                    const eta = info.tick + k * info.period - now;
+                    const rawEta = info.tick + k * info.period - now;
+                    // Guard hits that slip 1 tick (rawEta === 0) must still hold knife3 for now+1 instead of wrapping to k=2.
+                    const eta = rawEta === 0 && npc.distance <= 2 ? 1 : rawEta;
                     if (eta >= 1 && eta < nextHitEta) {
                         nextHitEta = eta;
                         break;
