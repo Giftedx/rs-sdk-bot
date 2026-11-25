@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795640316733-1",
  "account": "Wandwaver",
  "partner": "Swordswallow",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "816ae25b-f73e-4de9-8f97-178ea895522e",
- "count": 0,
- "ok": false,
- "at": 1795640613536,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795640627590,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795640626485
+ },
+ "logout": {
+  "attemptId": "1795640613545-0000024796-0000000001",
+  "at": 1795640627578,
+  "sha256": "e87db3379f0996766811e01f97391c6408b3c3c489cc34a1f33e4cd913da24e3"
+ },
+ "screen": true
 }

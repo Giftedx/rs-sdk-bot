@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795640413783-3",
+ "account": "Woodpecker",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "76f7007e-3741-4c9f-9fd3-6366063b3d71",
+ "count": 0,
+ "ok": false,
+ "at": 1795640631705,
+ "detail": "trade claimed"
+}
