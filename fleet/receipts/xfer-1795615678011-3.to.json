@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795615678011-3",
+ "account": "Woodenstaff",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 1,
+ "claim": "43e9eefc-e659-4ed3-9157-7bcb20a2d815",
+ "count": 0,
+ "ok": false,
+ "at": 1795616527061,
+ "detail": "Error: transfer requires reconciliation: declined: Trade screen closed before completion",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795616510633-0000009228-0000000001",
+  "at": 1795616527020,
+  "sha256": "96d3b08ce59187214794f3f02787b19b06a292228c01777deadeb55b9d6c749a"
+ },
+ "screen": true
+}

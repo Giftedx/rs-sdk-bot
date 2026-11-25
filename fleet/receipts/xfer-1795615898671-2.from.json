@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795615898671-2",
+ "account": "Moneyshot",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "b8fa212d-3391-4eca-b096-4aaec77455e1",
+ "count": 0,
+ "ok": false,
+ "at": 1795616485053,
+ "detail": "trade claimed"
+}

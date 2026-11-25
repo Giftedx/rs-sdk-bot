@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795615837011-1",
+ "account": "TheFullMonty",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 10,
+ "claim": "ae4eb9cf-db70-4a1e-a702-f821261bfc73",
+ "count": 10,
+ "ok": true,
+ "at": 1795616469034,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795616468304
+ },
+ "logout": {
+  "attemptId": "1795616447677-0000026296-0000000001",
+  "at": 1795616469023,
+  "sha256": "104e5811493edd99ed51e367c55fb9a20b2c910649db3206b715d87595a41310"
+ },
+ "screen": true
+}

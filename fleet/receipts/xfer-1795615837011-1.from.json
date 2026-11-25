@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795615837011-1",
  "account": "Ballspinner",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Uncut diamond",
  "requested": 10,
  "claim": "f1bbd4a9-2239-4c8f-8ec2-f694047c49e0",
- "count": 0,
- "ok": false,
- "at": 1795616150599,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795616467440,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795616155531
+ },
+ "logout": {
+  "attemptId": "1795616150625-0000015560-0000000001",
+  "at": 1795616467421,
+  "sha256": "17f7cf1c3e4ba4461ac6bc8e25d8931a27d491a0e557160dfcc7aedca8a4f704"
+ },
+ "screen": true
 }
