@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572281049-fishandchips-spitroaster-b5a28980c71783c5",
+ "account": "FishAndChips",
+ "partner": "Spitroaster",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 200,
+ "claim": "2bfcf604-9c88-4f93-9fc0-0ecc7609218a",
+ "count": 0,
+ "ok": false,
+ "at": 1795572778782,
+ "detail": "trade claimed"
+}
