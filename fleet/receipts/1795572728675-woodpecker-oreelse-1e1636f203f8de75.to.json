@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572728675-woodpecker-oreelse-1e1636f203f8de75",
+ "account": "OreElse",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring mould",
+ "requested": 1,
+ "claim": "a9733a4a-ac77-4f31-b01d-079ed7ce0283",
+ "count": 0,
+ "ok": false,
+ "at": 1795573046274,
+ "detail": "trade claimed"
+}
