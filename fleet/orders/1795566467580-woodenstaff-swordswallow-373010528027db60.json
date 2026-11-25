@@ -1,0 +1,12 @@
+{
+ "id": "1795566467580-woodenstaff-swordswallow-373010528027db60",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "Swordswallow",
+ "item": "Shark",
+ "count": 15,
+ "itemId": 385,
+ "start": 1795566467580,
+ "end": 1795568267580,
+ "takerWaits": true
+}

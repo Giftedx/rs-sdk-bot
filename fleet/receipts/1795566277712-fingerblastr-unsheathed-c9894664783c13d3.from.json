@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795566277712-fingerblastr-unsheathed-c9894664783c13d3",
+ "account": "Fingerblastr",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10000,
+ "claim": "771b6c08-8344-46d9-ac28-8901362c13cd",
+ "count": 0,
+ "ok": false,
+ "at": 1795566425518,
+ "detail": "trade claimed"
+}

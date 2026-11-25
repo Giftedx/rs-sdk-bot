@@ -1,0 +1,12 @@
+{
+ "id": "1795566433878-trousersnake-spitroaster-0a77b1f11d9b909c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "Spitroaster",
+ "item": "Shark",
+ "count": 20,
+ "itemId": 385,
+ "start": 1795566433878,
+ "end": 1795568233878,
+ "takerWaits": true
+}
