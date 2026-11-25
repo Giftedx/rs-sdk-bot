@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795633067763,
+ "at": 1795633086636,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -216,18 +216,22 @@
   },
   {
    "account": "SporranBulge",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=40 -- crafting inventory",
-    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=25 -- fletching shafts",
-    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
    ],
    "env": {
-    "ROUNDS": "1"
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:viking",
+   "goal": "campaign:haggis:item:2152",
    "role": "helper"
   },
   {
@@ -275,26 +279,27 @@
    "role": "helper"
   },
   {
-   "account": "Billionaire",
+   "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
-    "druid"
+    "cow"
    ],
    "env": {
-    "DEMAND_ID": "goal:supply_chain:207",
-    "BATCH_UNITS": "28",
-    "BANK_PACK": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:207",
+   "goal": "goal:pk_army:Swordswallow",
    "role": "army",
    "resources": [
-    "chaos-druids"
+    "ardougne-cows"
    ]
   },
   {
-   "account": "Kiltlifter",
+   "account": "Pocketrocket",
    "script": "scripts/generated/quest-ikov.ts",
    "args": [],
    "env": {
@@ -304,19 +309,6 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:ikov",
-   "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
    "role": "army"
   }
  ],
@@ -328,11 +320,13 @@
   "Wandwaver",
   "mmsmk1232",
   "bigpackage",
+  "billionaire",
   "dipstick",
   "fatstack",
   "fingerblastr",
   "fingersmith",
   "hocuspokeus",
+  "kiltlifter",
   "knightrider",
   "mmthv2350",
   "oreelse",
