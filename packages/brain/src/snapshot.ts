@@ -42,11 +42,17 @@ import {
     type AccountRole,
     type AccountState,
     type FleetSideStatus,
-    type HubBankId,
     type SystemHold,
     type TransferOrder,
     type WorldSnapshot,
 } from './contracts';
+import {
+    TRANSFER_FAILURE_LOOKBACK_MS,
+    inferHubFromOrder,
+    transferEvent,
+    transferMemory,
+    type TransferEvent,
+} from './transfer-memory';
 
 export const DEFAULT_LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 export const LIVE_STATUS_ACTIVE_MS = 30_000;
@@ -474,12 +480,27 @@ interface OrdersReceiptsCacheEntry {
     readonly ordersDirMtime: number;
     readonly receiptsCount: number;
     readonly receiptsDirMtime: number;
-    readonly earliestPendingEnd: number;
+    // The first end time of an order still open at the read: a pending order lapses, or an unsettled one fails.
+    readonly earliestOpenEnd: number;
     readonly activeOrders: readonly TransferOrder[];
     readonly settledTransferByAccount: ReadonlyMap<string, number>;
+    readonly transferEvents: readonly TransferEvent[];
 }
 
 const ordersReceiptsCache = new Map<string, OrdersReceiptsCacheEntry>();
+
+// The later expiry wins for a key that both maps hold.
+function mergeLatestCooldowns(
+    base: Readonly<Record<string, number>>,
+    extra: Readonly<Record<string, number>> | undefined,
+): Record<string, number> {
+    const out: Record<string, number> = { ...base };
+    if (!extra) return out;
+    for (const [key, until] of Object.entries(extra)) {
+        out[key] = Math.max(out[key] ?? 0, until);
+    }
+    return out;
+}
 
 function dirStatSignature(dir: string): { count: number; mtimeMs: number; files: string[] } {
     if (!existsSync(dir)) return { count: 0, mtimeMs: 0, files: [] };
@@ -500,6 +521,7 @@ function readOrdersAndReceipts(
     activeOrders: TransferOrder[];
     inTradeAccounts: Set<string>;
     settledTransferByAccount: Map<string, number>;
+    transferEvents: readonly TransferEvent[];
 } {
     const ordersDir = join(fleetDir, 'orders');
     const receiptsDir = join(fleetDir, 'receipts');
@@ -516,13 +538,14 @@ function readOrdersAndReceipts(
             && cached.ordersDirMtime === ordSig.mtimeMs
             && cached.receiptsCount === recSig.count
             && cached.receiptsDirMtime === recSig.mtimeMs
-            && (cached.earliestPendingEnd === Number.POSITIVE_INFINITY || now < cached.earliestPendingEnd)
+            && (cached.earliestOpenEnd === Number.POSITIVE_INFINITY || now < cached.earliestOpenEnd)
             && cached.activeOrders.length === 0
         ) {
             return {
                 activeOrders: [],
                 inTradeAccounts: new Set<string>(),
                 settledTransferByAccount: new Map(cached.settledTransferByAccount),
+                transferEvents: cached.transferEvents,
             };
         }
     }
@@ -547,15 +570,21 @@ function readOrdersAndReceipts(
 
     const activeOrders: TransferOrder[] = [];
     const inTradeAccounts = new Set<string>();
-    let earliestPendingEnd = Number.POSITIVE_INFINITY;
+    const transferEvents: TransferEvent[] = [];
+    let earliestOpenEnd = Number.POSITIVE_INFINITY;
 
     for (const f of ordSig.files) {
         const order = safeReadJson<Order>(join(ordersDir, f));
-        if (!validOrder(order) || order.server.toLowerCase() !== server || now >= order.end) continue;
+        if (!validOrder(order) || order.server.toLowerCase() !== server) continue;
         const orderReceipts = receiptsByOrderId.get(order.id) ?? [];
+        if (now - order.end < TRANSFER_FAILURE_LOOKBACK_MS) {
+            const event = transferEvent(order, orderReceipts, now);
+            if (event) transferEvents.push(event);
+        }
+        if (now >= order.end) continue;
+        if (order.end < earliestOpenEnd) earliestOpenEnd = order.end;
         const settlement = tradeSettlement(order, orderReceipts, now);
         if (settlement.state === 'pending') {
-            if (order.end < earliestPendingEnd) earliestPendingEnd = order.end;
             inTradeAccounts.add(order.from.toLowerCase());
             inTradeAccounts.add(order.to.toLowerCase());
             const hub = inferHubFromOrder(order);
@@ -591,23 +620,14 @@ function readOrdersAndReceipts(
             ordersDirMtime: ordSig.mtimeMs,
             receiptsCount: recSig.count,
             receiptsDirMtime: recSig.mtimeMs,
-            earliestPendingEnd,
+            earliestOpenEnd,
             activeOrders,
             settledTransferByAccount,
+            transferEvents,
         });
     }
 
-    return { activeOrders, inTradeAccounts, settledTransferByAccount };
-}
-
-function inferHubFromOrder(order: Order): HubBankId {
-    const meet = order.meet?.[0];
-    if (meet) {
-        const dArdy = Math.hypot(meet.x - HUB_BANKER_LOCATIONS.ardougne.bankTile.x, meet.z - HUB_BANKER_LOCATIONS.ardougne.bankTile.z);
-        const dVarrock = Math.hypot(meet.x - HUB_BANKER_LOCATIONS.varrock_west.bankTile.x, meet.z - HUB_BANKER_LOCATIONS.varrock_west.bankTile.z);
-        if (dArdy < dVarrock) return 'ardougne';
-    }
-    return 'varrock_west';
+    return { activeOrders, inTradeAccounts, settledTransferByAccount, transferEvents };
 }
 
 function normalizeSkills(raw: unknown): Record<string, { level: number; xp: number }> {
@@ -794,7 +814,8 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         })),
         ownerOf,
     );
-    const { activeOrders, inTradeAccounts, settledTransferByAccount } = readOrdersAndReceipts(fleetDir, server, now);
+    const { activeOrders, inTradeAccounts, settledTransferByAccount, transferEvents } = readOrdersAndReceipts(fleetDir, server, now);
+    const tradeMemory = transferMemory(transferEvents, now);
 
     const swarmPlan = readJsonStatCached<any>(join(root, 'swarm.json')) ?? {};
     const swarmRoleIndex = buildSwarmRoleIndex(swarmPlan);
@@ -1024,10 +1045,13 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         const logoutHoldOverride = overlay.lifecycleOverrides[lower] === 'needs_logout_recovery';
 
         const mergedCooldowns = pruneExpiredCooldowns(
-            {
-                ...(overlay.accountCooldowns[lower] ?? {}),
-                ...(opts.cooldownsByAccount?.get(lower) ?? {}),
-            },
+            mergeLatestCooldowns(
+                {
+                    ...(overlay.accountCooldowns[lower] ?? {}),
+                    ...(opts.cooldownsByAccount?.get(lower) ?? {}),
+                },
+                tradeMemory.accountCooldowns[lower],
+            ),
             now,
         );
 
@@ -1139,9 +1163,13 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
     }
 
     const marketCooldowns = pruneExpiredCooldowns(
-        { ...overlay.marketCooldowns, ...(opts.marketCooldowns ?? {}) },
+        mergeLatestCooldowns(
+            { ...overlay.marketCooldowns, ...(opts.marketCooldowns ?? {}) },
+            tradeMemory.marketCooldowns,
+        ),
         now,
     );
+    const recentTransfers = tradeMemory.recentTransfers.filter((t) => isTransferOrder(t));
     const geEscrowCoins = { ...readGeEscrowByAccount(root, server), ...(opts.geEscrowCoins ?? {}) };
 
     const snapshot: WorldSnapshot = {
@@ -1157,6 +1185,7 @@ export function inspectWorldSnapshot(opts: LoadWorldSnapshotOptions = {}): World
         ...(Object.keys(spotOccupancy).length > 0 ? { spotOccupancy } : {}),
         ...(Object.keys(geEscrowCoins).length > 0 ? { geEscrowCoins } : {}),
         ...(activeTransfers.length > 0 ? { activeTransfers } : {}),
+        ...(recentTransfers.length > 0 ? { recentTransfers } : {}),
         ...(opts.world ? { world: opts.world } : {}),
     };
 

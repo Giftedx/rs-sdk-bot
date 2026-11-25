@@ -1,6 +1,7 @@
 // FleetScheduler: allocates global maxBots slots, shared-spot capacity, and safe hub-banker TransferOrders
 // across one unified FleetPlan, enforcing unblock priority order, +15% retention hysteresis,
 // anti-ping-pong rules, protectedClock isolation, and versioned FleetState (schemaVersion: 1) output.
+import { MAX_ORDER_LINES } from '../../core/src/fleet-trade-settlement';
 import type { LogoutProof } from '../../core/src/session-lifecycle';
 import type { TrustTier } from '../../workers/src/contracts';
 import {
@@ -179,7 +180,7 @@ function buildRecentReceivedMap(
     recentTransfers: readonly TransferOrder[] = [],
 ): Map<string, number> {
     const map = new Map<string, number>();
-    const all = [...(world.activeTransfers ?? []), ...recentTransfers];
+    const all = [...(world.activeTransfers ?? []), ...(world.recentTransfers ?? []), ...recentTransfers];
     for (const order of all) {
         if (order.state !== 'settled' && order.state !== 'in_progress') continue;
         const at = Math.max(order.createdAt, order.recipientLogoutConfirmedAt, order.donorLogoutConfirmedAt);
@@ -945,6 +946,25 @@ export function scheduleFleet(input: FleetSchedulerInput): FleetPlan {
                     if (!check.ok) {
                         transfersOk = false;
                         break;
+                    }
+                    // One trade moves every line from one donor: add this line to that donor's staged order.
+                    const sameDonor = stagedOrders.findIndex((ord) => ord.from.toLowerCase() === donorLower);
+                    const merged = sameDonor >= 0 ? stagedOrders[sameDonor]! : undefined;
+                    if (merged && merged.items.length < MAX_ORDER_LINES && !merged.items.some((l) => l.itemId === step.itemId)) {
+                        const recentTimes = [merged.antiPingPong.donorRecentReceivedAt, recentAt]
+                            .filter((t): t is number => t !== undefined);
+                        stagedOrders[sameDonor] = {
+                            ...merged,
+                            items: [...merged.items, ...order.items],
+                            reason: `${merged.reason}; ${order.reason}`,
+                            antiPingPong: {
+                                ...merged.antiPingPong,
+                                ...(recentTimes.length > 0 ? { donorRecentReceivedAt: Math.max(...recentTimes) } : {}),
+                                donorHoldsDemandForItems: merged.antiPingPong.donorHoldsDemandForItems || donorHasDemand,
+                            },
+                        };
+                        updatedSteps[i] = { ...step, transferOrderId: merged.id };
+                        continue;
                     }
                     stagedOrders.push(order);
                     updatedSteps[i] = { ...step, transferOrderId: orderId };
