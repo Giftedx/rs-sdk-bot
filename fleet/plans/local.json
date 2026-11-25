@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601458112,
+ "at": 1795601472551,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -25,65 +25,43 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/generated/woodcutting.ts",
+   "script": "scripts/generated/quest-arena.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "goal:quest_board:arena",
+   "role": "army"
   },
   {
    "account": "Knightstick",
-   "script": "scripts/generated/woodcutting.ts",
+   "script": "scripts/generated/quest-barcrawl.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
+   "goal": "goal:quest_board:barcrawl",
+   "role": "army"
   },
   {
    "account": "InTheSack",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
+    "scripts/generated/quest-tree.ts DEMAND_ID=goal:quest_board:tree BATCH_UNITS=1 --"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
+   "goal": "goal:quest_board:tree",
    "role": "helper"
   },
   {
@@ -169,6 +147,19 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2152",
    "role": "helper"
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/generated/quest-death.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:death",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:death",
+   "role": "auto"
   }
  ],
  "army": [
@@ -194,6 +185,7 @@
   "mmthv2350",
   "moneyshot",
   "oreelse",
+  "pickpockdick",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
