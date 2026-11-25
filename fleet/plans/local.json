@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795615972098,
+ "at": 1795615992764,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -206,6 +206,21 @@
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=27 \"ITEM_NAME=Dragon bones\" -- loadout",
+    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:Spitroaster BATCH_UNITS=49 -- prayer bury"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
   }
  ],
  "army": [
