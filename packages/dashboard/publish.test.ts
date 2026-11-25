@@ -1,11 +1,44 @@
-import {expect,test} from 'bun:test';
+import {describe,expect,test} from 'bun:test';
 import {randomBytes} from 'node:crypto';
 import {mkdirSync,mkdtempSync,rmSync,writeFileSync,cpSync,existsSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {pageHash,pushPublicCommit,pushSingleCommit,run,verifyStaticBundle} from './publish';
+import {checkPages,pageHash,PAGES_CHECK_MS,pushAuditedSite,pushPublicCommit,pushSingleCommit,run,verifyStaticBundle,watchPush} from './publish';
 import {publicView} from './publish-relay';
+
+// A site folder as rs-fleet-command scripts/import-page.ts and export-viewer.ts make it: relative page links, webp
+// sprites, the keyboard handler turned into gameKeys, client-shell.js inside FleetShim.ready, and the 3D viewer in viewer/.
+function importedSite(bundle:string){
+ const dashDir=fileURLToPath(new URL('.',import.meta.url));
+ mkdirSync(bundle,{recursive:true});
+ for(const f of ['index.html','xp-tracker.js','client-shell.js','client-shell.css','client-viewer.css','map-shell.js','map-shell.css','operations.js','operations.css','items.json','RUNELITE-LICENSE.txt']){
+  let text=readFileSync(join(dashDir,f),'utf8');
+  if(/\.(html|css|js)$/i.test(f)){
+   text=text.replace(/\/(client-shell|client-viewer|map-shell|operations|xp-tracker|items|worldmap)\.(css|js|png|json)/g,'$1.$2')
+    .replace(/['"]\/client-assets\//g,m=>m[0]+'client-assets/')
+    .replace(/items\.png/g,'items.webp')
+    .replace(/worldmap\.png/g,'worldmap.webp');
+  }
+  if(f==='client-shell.js'){
+   const controls="  };\n  window.addEventListener('keydown',gameKeys,true);\n  const gameFrame=$('#rsw');\n  function bindViewerControls(){\n    if(!gameFrame.contentDocument)return;\n    gameFrame.contentWindow.addEventListener('keydown',gameKeys,true);\n  }\n  gameFrame.addEventListener('load',bindViewerControls);\n  bindViewerControls();\n  window.atlasClient=";
+   text=text.replace("  window.addEventListener('keydown',e=>{",'  const gameKeys=e=>{').replace(/  \},true\);\r?\n  window\.atlasClient=/,controls);
+   text='FleetShim.ready.then(() => {\n'+text+'\n});\n';
+  }
+  writeFileSync(join(bundle,f),text);
+ }
+ writeFileSync(join(bundle,'items.webp'),'webp');
+ writeFileSync(join(bundle,'worldmap.webp'),'webp');
+ cpSync(join(dashDir,'client-assets'),join(bundle,'client-assets'),{recursive:true});
+ mkdirSync(join(bundle,'viewer','static','js'),{recursive:true});
+ writeFileSync(join(bundle,'viewer','index.html'),'<!doctype html><html><head><script src="bridge.js?v=42e9cad153"></script><link rel="stylesheet" href="client-viewer.css?v=e1632fb598"></head><body><script src="static/js/main.1.js?v=fc08ccca44"></script></body></html>');
+ writeFileSync(join(bundle,'viewer','bridge.js'),'window.bridge=1;');
+ writeFileSync(join(bundle,'viewer','client-viewer.css'),'body{margin:0}');
+ writeFileSync(join(bundle,'viewer','favicon.png'),'png');
+ // A script resolves a link from the page that loads it (viewer/), not from its own folder.
+ writeFileSync(join(bundle,'viewer','static','js','main.1.js'),'el.innerHTML=\'<img src="favicon.png">\';');
+ writeFileSync(join(bundle,'public.json'),JSON.stringify({bots:[{name:'⟦MAIN⟧',inWorld:true}],roster:[]}));
+}
 
 test('the page hash follows the page files and ignores the data files beside them',()=>{
  const dir=mkdtempSync(join(tmpdir(),'page-hash-'));
@@ -152,6 +185,153 @@ test('verifyStaticBundle enforces sibling import-page contracts including relati
   expect(brokenAudit.ok).toBe(false);
   expect(brokenAudit.missing).toContain('contract:connectViewerControls-keydown-end');
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('verifyStaticBundle passes an imported site: links from viewer/ resolve in viewer/, and the gameKeys handler meets the contract',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'dash-imported-'));
+ try{
+  const bundle=join(dir,'site');
+  importedSite(bundle);
+  expect(verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true})).toMatchObject({ok:true,missing:[],leaks:[]});
+
+  // A relative link names a file beside the page, so a file at the site root does not answer a link from viewer/.
+  writeFileSync(join(bundle,'only-at-root.js'),'');
+  writeFileSync(join(bundle,'viewer','index.html'),readFileSync(join(bundle,'viewer','index.html'),'utf8').replace('</head>','<script src="only-at-root.js"></script></head>'));
+  const misplaced=verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true});
+  expect(misplaced.ok).toBe(false);
+  expect(misplaced.missing).toEqual(['viewer/index.html -> viewer/only-at-root.js']);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('verifyStaticBundle refuses an imported site whose gameKeys handler lost its viewer binding',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'dash-imported-keys-'));
+ try{
+  const bundle=join(dir,'site');
+  importedSite(bundle);
+  const shell=join(bundle,'client-shell.js');
+  writeFileSync(shell,readFileSync(shell,'utf8').replace("gameFrame.contentWindow.addEventListener('keydown',gameKeys,true);",''));
+  const audit=verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true});
+  expect(audit.ok).toBe(false);
+  expect(audit.missing).toEqual(['contract:connectViewerControls-imported']);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('a site that fails the audit is not pushed, and a site that passes it is',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'dash-gate-'));
+ try{
+  const pushed:string[]=[];
+  const push=async(d:string)=>{pushed.push(d);return 'pushed';};
+  // The publisher copies main's site/ into the site worktree; with no site/ on main only the data files are there.
+  const bare=join(dir,'bare');mkdirSync(bare);writeFileSync(join(bare,'public.json'),'{"bots":[]}');
+  const refused=await pushAuditedSite(bare,push);
+  expect(pushed).toEqual([]);
+  expect(refused.result).toMatch(/^audit-failed \(import-contract -> index\.html, /);
+  expect(refused.audit.ok).toBe(false);
+
+  const good=join(dir,'good');importedSite(good);
+  const sent=await pushAuditedSite(good,push);
+  expect(pushed).toEqual([good]);
+  expect(sent).toMatchObject({result:'pushed',audit:{ok:true}});
+
+  // A leak names the file, never the account.
+  writeFileSync(join(good,'public.json'),JSON.stringify({bots:[{name:'Haggis'}]}));
+  const leak=await pushAuditedSite(good,push);
+  expect(pushed).toEqual([good]);
+  expect(leak.result).toBe('audit-failed (leak public.json)');
+
+  // An audit that cannot read the folder refuses it too, and the cycle goes on to its log line.
+  writeFileSync(join(good,'public.json'),'{"bots":[]}');
+  writeFileSync(join(good,'client-assets','spellbook.json'),'{');
+  const broken=await pushAuditedSite(good,push);
+  expect(pushed).toEqual([good]);
+  expect(broken.result).toMatch(/^audit-failed \(audit error: /);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+describe('the Pages build check after a site push',()=>{
+ const repo='owner/dash',commit='e'.repeat(40),now=10_000_000;
+ const fake=(answers:Record<string,{ok:boolean;out:string}>)=>{
+  const calls:string[]=[];
+  const api=async(...args:string[])=>{const key=args.join(' ');calls.push(key);return answers[key]??{ok:false,out:`no answer for ${key}`};};
+  return {calls,api};
+ };
+ const GET='api repos/owner/dash/pages/builds/latest',POST='api -X POST repos/owner/dash/pages/builds';
+ const build=(status:string,sha=commit,message:string|null=null)=>({ok:true,out:JSON.stringify({status,commit:sha,error:{message}})});
+
+ // One push, made one check period before now.
+ const one=(rebuilt=false)=>({pushes:[{commit,at:now-PAGES_CHECK_MS}],dueAt:now,rebuilt});
+
+ test('asks nothing before the check is due, or with no push to check',async()=>{
+  const {calls,api}=fake({});
+  const watch={pushes:[{commit,at:now}],dueAt:now+1,rebuilt:false};
+  expect(await checkPages(watch,now,api,repo)).toEqual({watch,note:''});
+  expect(await checkPages(null,now,api,repo)).toEqual({watch:null,note:''});
+  expect(calls).toEqual([]);
+ });
+
+ test('a built page costs one call and ends the check',async()=>{
+  const {calls,api}=fake({[GET]:build('built')});
+  expect(await checkPages(one(),now,api,repo)).toEqual({watch:null,note:' pages=built'});
+  expect(calls).toEqual([GET]);
+ });
+
+ test('a build still running at the check is stuck: one rebuild request, then one more check',async()=>{
+  const {calls,api}=fake({[GET]:build('building'),[POST]:{ok:true,out:'{"status":"queued"}'}});
+  const r=await checkPages(one(),now,api,repo);
+  expect(r).toEqual({watch:{...one(),dueAt:now+PAGES_CHECK_MS,rebuilt:true},note:' pages=stuck rebuild=requested'});
+  expect(calls).toEqual([GET,POST]);
+ });
+
+ test('an errored build gives its reason and gets a rebuild',async()=>{
+  const {api}=fake({[GET]:build('errored',commit,'Deployment failed, try again later.'),[POST]:{ok:true,out:'{}'}});
+  const r=await checkPages(one(),now,api,repo);
+  expect(r.note).toBe(' pages=errored (Deployment failed, try again later.) rebuild=requested');
+  expect(r.watch?.rebuilt).toBe(true);
+ });
+
+ test('a page built from a commit before the pushes is behind and gets a rebuild',async()=>{
+  const {calls,api}=fake({[GET]:build('built','a'.repeat(40)),[POST]:{ok:true,out:'{}'}});
+  expect((await checkPages(one(),now,api,repo)).note).toBe(' pages=behind rebuild=requested');
+  expect(calls).toEqual([GET,POST]);
+ });
+
+ test('after the one rebuild the check reports and stops',async()=>{
+  const built=fake({[GET]:build('built')});
+  expect(await checkPages(one(true),now,built.api,repo)).toEqual({watch:null,note:' pages=built after rebuild'});
+  const stuck=fake({[GET]:build('building')});
+  expect(await checkPages(one(true),now,stuck.api,repo)).toEqual({watch:null,note:' pages=stuck rebuild=spent'});
+  expect(stuck.calls).toEqual([GET]);
+ });
+
+ test('a failed read or a refused rebuild ends the check with the reason',async()=>{
+  const unread=fake({[GET]:{ok:false,out:'HTTP 503: Service Unavailable'}});
+  expect(await checkPages(one(),now,unread.api,repo)).toEqual({watch:null,note:' pages=unread (HTTP 503: Service Unavailable)'});
+  expect(unread.calls).toEqual([GET]);
+  const refused=fake({[GET]:build('errored'),[POST]:{ok:false,out:'HTTP 403: Resource not accessible'}});
+  expect(await checkPages(one(),now,refused.api,repo)).toEqual({watch:null,note:' pages=errored rebuild=refused (HTTP 403: Resource not accessible)'});
+ });
+
+ test('pushes more often than the check period keep the first deadline, so the check still runs',async()=>{
+  // PUBLIC_EVERY_S=60: a push every cycle. Each later push joins the check; none of them moves its deadline.
+  const t0=now-PAGES_CHECK_MS,[a,b,c]=['a','b','c'].map(x=>x.repeat(40));
+  let watch=watchPush(null,a!,t0);
+  expect(watch).toEqual({pushes:[{commit:a,at:t0}],dueAt:now,rebuilt:false});
+  watch=watchPush(watch,b!,t0+60_000);watch=watchPush(watch,c!,t0+120_000);
+  expect(watch.dueAt).toBe(now);
+  // The newest push is 60 s old, so its running build is no fault.
+  const young=fake({[GET]:build('building',c)});
+  expect(await checkPages(watch,now,young.api,repo)).toEqual({watch:null,note:' pages=building'});
+  expect(young.calls).toEqual([GET]);
+  // A page built from an earlier push counts while every later push is still young.
+  const earlier=fake({[GET]:build('built',b)});
+  expect(await checkPages(watch,now,earlier.api,repo)).toEqual({watch:null,note:' pages=built'});
+  // Read later (as after a rebuild): a later push older than the check period with no build leaves the page behind.
+  const late=fake({[GET]:build('built',a),[POST]:{ok:true,out:'{}'}});
+  expect((await checkPages(watch,now+120_000,late.api,repo)).note).toBe(' pages=behind rebuild=requested');
+  // A build of an early push that still runs one check period after that push is stuck.
+  const hung=fake({[GET]:build('building',a),[POST]:{ok:true,out:'{}'}});
+  expect((await checkPages(watch,now,hung.api,repo)).note).toBe(' pages=stuck rebuild=requested');
+ });
 });
 
 test('pushSingleCommit refreshes the author timestamp when amending an older commit',async()=>{
