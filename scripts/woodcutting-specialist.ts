@@ -575,9 +575,7 @@ if (import.meta.main) {
             }
 
             if (now < actionDelayApprox) {
-                // Pending 3-tick knife roll: togglePrayer only calls if_close (not clearPendingAction), so 1t-flicking keeps woodcut intact.
-                const flick = prayerFlickActs(st, now, 3);
-                if (flick.length > 0) await Promise.all(flick);
+                // Pending 3-tick knife roll: never send togglePrayer/dropItem/drink (if_close / clearPendingAction cancels active knife3).
                 await waitTicks(main, 1);
                 continue;
             }
@@ -662,7 +660,6 @@ if (import.meta.main) {
                         }
                     }
                     await Promise.all([
-                        ...prayerFlickActs(st, now, 2),
                         main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
                         main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
                         main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' }),
