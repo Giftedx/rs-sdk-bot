@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795583942850-fingerblastr-undermykilt-11debfcb43cc0772",
+ "account": "Fingerblastr",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cosmic rune",
+ "requested": 10,
+ "claim": "2bb9322d-d92f-4731-a674-d9839058d73e",
+ "count": 0,
+ "ok": false,
+ "at": 1795586331076,
+ "detail": "trade claimed"
+}

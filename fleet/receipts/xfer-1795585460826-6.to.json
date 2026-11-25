@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795585460826-6",
  "account": "Unsheathed",
  "partner": "Ballspinner",
@@ -12,6 +12,16 @@
  "claim": "422f55bb-c1ad-437d-bce6-b4000abedab1",
  "count": 0,
  "ok": false,
- "at": 1795586066467,
- "detail": "trade claimed"
+ "at": 1795586362167,
+ "detail": "Error: no matching trade completed: player_not_found: Player not found nearby: /^Ballspinner$/i",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795586066477-0000012960-0000000001",
+  "at": 1795586362142,
+  "sha256": "22b0e4c0891ad9e755f9554a5d0455667e14e7f16192652352df04e03cd4b8ea"
+ },
+ "screen": false
 }

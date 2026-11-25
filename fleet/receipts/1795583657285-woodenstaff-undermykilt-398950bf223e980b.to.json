@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795583657285-woodenstaff-undermykilt-398950bf223e980b",
+ "account": "UnderMyKilt",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "e58ced9b-1d0c-4c02-8199-a9076f6518d2",
+ "count": 2,
+ "ok": true,
+ "at": 1795586326863,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795586326124
+ },
+ "logout": {
+  "attemptId": "1795586311364-0000022624-0000000001",
+  "at": 1795586326848,
+  "sha256": "609b9fef0a6da7304793feca44528046ede8d52eff5f0f48cf148e9e62c0a0e0"
+ },
+ "screen": true
+}

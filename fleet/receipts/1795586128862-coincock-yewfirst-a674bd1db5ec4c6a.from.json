@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795586128862-coincock-yewfirst-a674bd1db5ec4c6a",
+ "account": "CoinCock",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "3cf519e6-c6e4-4279-967e-2948a94e040b",
+ "count": 0,
+ "ok": false,
+ "at": 1795586421219,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795585447472-3",
  "account": "PickpockDick",
  "partner": "Kiltlifter",
@@ -12,6 +12,12 @@
  "claim": "f34552ff-d059-4b78-a498-f4f9b03a7926",
  "count": 0,
  "ok": false,
- "at": 1795586052702,
- "detail": "trade claimed"
+ "at": 1795586348076,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795586052712-0000024128-0000000001",
+  "at": 1795586348056,
+  "sha256": "73c68ec63d68afb32ff534a53a3c7abc3b2330558f06d147f0c39ce11599f2a1"
+ },
+ "screen": false
 }

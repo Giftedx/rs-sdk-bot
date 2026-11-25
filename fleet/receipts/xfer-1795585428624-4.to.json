@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795585428624-4",
  "account": "TrouserSnake",
  "partner": "Ballspinner",
@@ -12,6 +12,12 @@
  "claim": "492328c3-ee48-442c-9f8f-9ef01fdd4c5d",
  "count": 0,
  "ok": false,
- "at": 1795586033206,
- "detail": "trade claimed"
+ "at": 1795586328888,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795586033215-0000022040-0000000001",
+  "at": 1795586328873,
+  "sha256": "ec1720ac472ba35f81f5f5189a6c69ea2d6bf76cc86903d3d77b6efa0c358702"
+ },
+ "screen": false
 }

@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795586327252-5",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "NabTheKnob",
+  "to": "Woodenstaff",
+  "item": "Dragon bones",
+  "count": 23,
+  "itemId": 536,
+  "start": 1795586327252,
+  "end": 1795587227252,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

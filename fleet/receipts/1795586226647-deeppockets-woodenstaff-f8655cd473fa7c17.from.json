@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795586226647-deeppockets-woodenstaff-f8655cd473fa7c17",
+ "account": "Deeppockets",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "38803796-c3cf-4745-93ca-9053124bbfae",
+ "count": 0,
+ "ok": false,
+ "at": 1795586338374,
+ "detail": "trade claimed"
+}
