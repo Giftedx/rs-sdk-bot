@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795632915083-2",
+ "account": "Woodpecker",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire necklace",
+ "requested": 1,
+ "claim": "729f8a08-2095-400c-8319-aa8a46947249",
+ "count": 0,
+ "ok": false,
+ "at": 1795633063291,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795632915083-1",
  "account": "TheFullMonty",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Cosmic rune",
  "requested": 1,
  "claim": "b76abb84-cd5d-4974-912c-1490a33175f2",
- "count": 0,
- "ok": false,
- "at": 1795633018839,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795633063119,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795633023160
+ },
+ "logout": {
+  "attemptId": "1795633018848-0000000520-0000000001",
+  "at": 1795633063107,
+  "sha256": "a798abcb29aac63ccddad9da83ccd51f16a8122f30c4f90b49dbb07898a317e3"
+ },
+ "screen": true
 }
