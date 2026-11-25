@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { isLocalServer } from '../localserver';
 import { lifecycleRootForRead, liveRoot, statusReadDirs } from '../practice-paths';
 import { commandLine } from '../proc';
-import { listAttempts, readLogoutProof, type LogoutProof } from '../session-lifecycle';
+import { listAttempts, readLogoutProof, resolveLifecycleRoot, type LogoutProof } from '../session-lifecycle';
 import { root, type ReleaseMemo } from './paths';
 import { cachedReleaseFor, releaseEntries } from './revision';
 
@@ -80,7 +80,7 @@ export function assertLiveWorkerRelease(server: string, env: Record<string, stri
         if (!releases.has(key)) { let value = ''; try { value = cachedReleaseFor(releaseEntries(key), base); } catch { /* stale */ } releases.set(key, value); }
         return releases.get(key)!;
     };
-    assertCompatibleWorkers(pin, server, statuses, Date.now(), row => closedSessionRow(row, server, { root: lifecycleRootForRead(server, base) }), row => standingPeer(row, owners), current);
+    assertCompatibleWorkers(pin, server, statuses, Date.now(), row => closedSessionRow(row, server, { root: typeof row?.name === 'string' ? resolveLifecycleRoot(row.name, server, base) : lifecycleRootForRead(server, base) }), row => standingPeer(row, owners), current);
 }
 
 // The server drops a session whose client is gone after 200 s.

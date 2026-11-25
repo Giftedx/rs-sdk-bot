@@ -92,9 +92,9 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         });
         expect(SPECIALIST_TARGETS.defence).toEqual({
             board: 'defence',
-            liveChampion: 'nickbicep',
-            liveTicks: 4323,
-            targetTicks: 4236,
+            liveChampion: 'bennetttank',
+            liveTicks: 4018,
+            targetTicks: 3937,
         });
         for (const t of Object.values(SPECIALIST_TARGETS)) {
             expect(t.targetTicks).toBeLessThanOrEqual(Math.floor(t.liveTicks * 0.98));
@@ -143,7 +143,7 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         for (const kit of [STRENGTH_SPECIALIST_KIT, DEFENCE_SPECIALIST_KIT]) {
             expect(kit.find(k => k.id === 1319)?.count).toBe(1);
             expect(kit.find(k => k.id === 2434)?.count).toBeGreaterThanOrEqual(2);
-            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(7);
+            expect(kit.some(k => k.id === 3016)).toBe(false);
         }
         expect(typeof runSpecialistWaterfall).toBe('function');
         expect(kitRequirements(STRENGTH_SPECIALIST_KIT).length).toBe(STRENGTH_SPECIALIST_KIT.length);

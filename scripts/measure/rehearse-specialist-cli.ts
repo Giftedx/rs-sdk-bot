@@ -69,6 +69,7 @@ function getStackableSaveIds(): Set<number> {
         ITEM_IDS.bloodrune,
         ITEM_IDS.bodyrune,
         ...HERBLORE_NOTED_SUPPLIES.map(s => s.certId),
+        ...loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_CW_NOTED_SUPPLIES.map(s => s.certId),
     ]);
     return stackableSaveIdsCache;
 }
@@ -290,18 +291,21 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         account: 'CutMyJewels',
         id: 'cutmyjewels-crafting',
         script: 'scripts/crafting-specialist.ts',
-        env: { CAP: '2500' },
-        suppliers: () => loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_BATCHES.map((batch, i): SpecialistSupplierDef => ({
-            script: 'scripts/aio-logistics.ts',
-            args: ['specialist-supplier', '{ACTOR}', '--kit=crafting', `--batch=${i}`, '3000'],
-            save: () => ({
-                position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(batch.give),
-            }),
-        })),
-        planTicks: 174,
-        planSource: '400ms rehearsals 172-175t; hosted-bench skiller:crafting:specialist 181t (<=182t vs #1 186t)',
-        targetCap: 182,
+        env: { CAP: '2500', CRAFTING_MODE: 'cw' },
+        suppliers: () => {
+            const batch = loadMod<typeof import('../crafting-specialist')>('../crafting-specialist').CRAFTING_CW_BATCH;
+            return [{
+                script: 'scripts/aio-logistics.ts',
+                args: ['specialist-supplier', '{ACTOR}', '--kit=crafting-cw', '3000'],
+                save: () => ({
+                    position: { x: 3223, z: 3222, level: 0 },
+                    inventory: expandKitToSave(batch.give),
+                }),
+            }];
+        },
+        planTicks: 96,
+        planSource: '400ms Castle Wars Bank Chest single-trade CW route (~96t vs #1 137t)',
+        targetCap: 134,
     },
     {
         account: 'GrindMyHerb',
@@ -479,7 +483,10 @@ export function resolveSpecialistTargetCap(account: string): number {
     return def.targetCap;
 }
 
-export function resolveSpecialistSegment(account: string, opts?: { planTicks?: number }): SpecialistSegmentSpec {
+export function resolveSpecialistSegment(
+    account: string,
+    opts?: { planTicks?: number; env?: Record<string, string> },
+): SpecialistSegmentSpec {
     const key = account.trim().toLowerCase();
     const def = BY_ACCOUNT.get(key);
     const board = SPECIALIST_BOARDS[key]?.name;
@@ -502,7 +509,7 @@ export function resolveSpecialistSegment(account: string, opts?: { planTicks?: n
         start: { fresh: true },
         script: def.script,
         ...(def.args?.length ? { args: [...def.args] } : {}),
-        env: { ...def.env },
+        env: { ...def.env, ...(opts?.env ?? {}) },
         ...(def.suppliers
             ? { suppliers: def.suppliers().map(buildSupplier) }
             : { supplier: buildSupplier(def.supplier!) }),
@@ -525,6 +532,7 @@ export interface ParsedCliArgs {
     readonly out?: string;
     readonly planTicks?: number;
     readonly seeds?: readonly number[];
+    readonly env?: Readonly<Record<string, string>>;
 }
 
 function parseSeedList(raw: string): number[] {
@@ -535,19 +543,26 @@ function parseSeedList(raw: string): number[] {
     return nums;
 }
 
+function parseEnvEntry(raw: string, out: Record<string, string>): void {
+    const m = /^([A-Z][A-Z0-9_]*)=([\w.,:+@\/-]*)$/.exec(raw);
+    if (!m) throw Error(`usage: --env needs KEY=VALUE (got "${raw}")`);
+    out[m[1]!] = m[2]!;
+}
+
 export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
     let account = '';
     let dryRun = false;
     let out: string | undefined;
     let planTicks: number | undefined;
     let seeds: number[] | undefined;
+    const env: Record<string, string> = {};
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]!;
         if (arg === '--dry-run' || arg === '--print') {
             dryRun = true;
         } else if (arg === '--out') {
             out = argv[++i];
-            if (!out) throw Error('usage: rehearse-specialist-cli.ts <specialistAccount> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--dry-run]');
+            if (!out) throw Error('usage: rehearse-specialist-cli.ts <specialistAccount> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--env KEY=VALUE] [--dry-run]');
         } else if (arg.startsWith('--out=')) {
             out = arg.slice(6);
             if (!out) throw Error('usage: --out=<dir> requires a path');
@@ -565,6 +580,10 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
             seeds = parseSeedList(argv[++i] ?? '');
         } else if (arg.startsWith('--seeds=')) {
             seeds = parseSeedList(arg.slice(8));
+        } else if (arg === '--env') {
+            parseEnvEntry(argv[++i] ?? '', env);
+        } else if (arg.startsWith('--env=')) {
+            parseEnvEntry(arg.slice(6), env);
         } else if (arg.startsWith('--')) {
             throw Error(`rehearse-specialist-cli: unknown flag ${arg}`);
         } else if (!account) {
@@ -574,9 +593,16 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
         }
     }
     if (!account) {
-        throw Error(`usage: rehearse-specialist-cli.ts <${READY_SPECIALIST_ACCOUNTS.join('|')}> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--dry-run]`);
+        throw Error(`usage: rehearse-specialist-cli.ts <${READY_SPECIALIST_ACCOUNTS.join('|')}> [--out <dir>] [--plan-ticks <n>] [--seeds <7,8,9>] [--env KEY=VALUE] [--dry-run]`);
     }
-    return { account, dryRun, out, planTicks, ...(seeds ? { seeds } : {}) };
+    return {
+        account,
+        dryRun,
+        out,
+        planTicks,
+        ...(seeds ? { seeds } : {}),
+        ...(Object.keys(env).length ? { env } : {}),
+    };
 }
 
 export interface RehearsalSummary {
@@ -706,7 +732,7 @@ export async function runHostedRehearsal(
     const root = opts.root ?? ROOT;
     const log = opts.log ?? console.log;
     const parsed = parseCliArgs(argv);
-    const seg = resolveSpecialistSegment(parsed.account, { planTicks: parsed.planTicks });
+    const seg = resolveSpecialistSegment(parsed.account, { planTicks: parsed.planTicks, env: parsed.env });
     if (parsed.dryRun) {
         log(JSON.stringify(seg, null, 2));
         return { exitCode: 0, seg };

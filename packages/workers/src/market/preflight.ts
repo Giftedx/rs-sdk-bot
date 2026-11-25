@@ -369,6 +369,12 @@ export const PROFILES: Record<string, ShopProfile> = {
         npcSpot: { x: 2673, z: 3434 },
         bankSpot: { x: 2727, z: 3492 },
         items: [
+            { re: /rune arrowtips/i, buyPerTick: 10 },
+            { re: /adamant arrowtips/i, buyPerTick: 10 },
+            { re: /mithril arrowtips/i, buyPerTick: 10 },
+            { re: /steel arrowtips/i, buyPerTick: 10 },
+            { re: /iron arrowtips/i, buyPerTick: 10 },
+            { re: /bronze arrowtips/i, buyPerTick: 10 },
             { re: /^rune arrow$/i, buyPerTick: 100 },
             { re: /^adamant arrow$/i, buyPerTick: 100 },
             { re: /^mithril arrow$/i, buyPerTick: 100 },
