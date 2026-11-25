@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795565112985-masterbaiter-unsheathed-ae6701482eb4af4a",
+ "role": "from",
+ "account": "Masterbaiter",
+ "partner": "Unsheathed",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795566115219,
+ "detail": "Error: fleet trade claim held for order 1795565112729-masterbaiter-shaftsinker-6f8a52657be4cb01"
+}

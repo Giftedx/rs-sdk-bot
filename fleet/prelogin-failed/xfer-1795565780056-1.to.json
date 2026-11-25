@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795565780056-1",
+ "role": "to",
+ "account": "Shaftsinker",
+ "partner": "UnderMyKilt",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795566116030,
+ "detail": "Error: fleet trade claim held for order 1795565112729-masterbaiter-shaftsinker-6f8a52657be4cb01"
+}

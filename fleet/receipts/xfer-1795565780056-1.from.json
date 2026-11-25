@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795565780056-1",
+ "account": "UnderMyKilt",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon vambraces",
+ "requested": 1,
+ "claim": "99931c2c-1dea-4357-90f0-82cdb29434ad",
+ "count": 0,
+ "ok": false,
+ "at": 1795566128903,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795566112985
+ },
+ "logout": {
+  "attemptId": "1795566104718-0000028724-0000000001",
+  "at": 1795566128890,
+  "sha256": "d95a8b7ffc1696a1bc3923797862f72d5548637bae18f23449a1e8870b389d41"
+ },
+ "screen": false
+}

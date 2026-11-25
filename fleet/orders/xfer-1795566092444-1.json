@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795566092444-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Bigchopper",
+  "to": "Woodenstaff",
+  "item": "Water rune",
+  "count": 29,
+  "itemId": 555,
+  "start": 1795566092444,
+  "end": 1795566992444,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
