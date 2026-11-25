@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795632183697,
+ "at": 1795632196158,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -79,21 +79,6 @@
    "role": "helper"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2300 TARGET_COUNT=230 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -170,12 +155,44 @@
    ]
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=2400 TARGET_COUNT=240 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=240 -- cooking food"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:379",
+   "role": "auto"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-1436-38-p61 ITEM_ID=1436 QUANTITY=38 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=38 -- runecraft air"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:556",
+   "role": "army"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=30 -- thieving knights",
+    "scripts/generated/dwarfcannon.ts DEMAND_ID=goal:quest_board:dwarfcannon BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -276,56 +293,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:235",
    "role": "auto"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/dwarfcannon.ts --",
-    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=250 -- cannon"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Shaftsinker",
-   "role": "auto"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Abracadickra",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Abracadickra",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
   }
  ],
  "army": [
@@ -352,8 +319,8 @@
   "quickhandjob",
   "sausagefest",
   "swordinhand",
-  "thefullmonty",
   "undermykilt",
+  "woodpecker",
   "yewfirst"
  ],
  "builds": {
