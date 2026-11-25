@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795632537647-1",
+ "account": "PackageDeal",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "9baa7a22-de6f-477b-8d07-e5d40f05bde0",
+ "count": 0,
+ "ok": false,
+ "at": 1795632734471,
+ "detail": "trade claimed"
+}

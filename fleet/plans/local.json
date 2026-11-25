@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795632601699,
+ "at": 1795632743002,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -60,13 +60,13 @@
   },
   {
    "account": "Pocketpython",
-   "script": "scripts/ranged-train.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/ranged-train.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 --"
+   ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
