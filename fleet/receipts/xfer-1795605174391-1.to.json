@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795605174391-1",
+ "account": "Bigchopper",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 2,
+ "claim": "21b89556-2d5e-4879-9787-f89eb56fb36b",
+ "count": 2,
+ "ok": true,
+ "at": 1795605367204,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795605366405
+ },
+ "logout": {
+  "attemptId": "1795605353852-0000018724-0000000001",
+  "at": 1795605367117,
+  "sha256": "cbe999997d22a4e57b23a909ce547f9c97204c612f5ce5ec3931c2ebc4771ae0"
+ },
+ "screen": true
+}

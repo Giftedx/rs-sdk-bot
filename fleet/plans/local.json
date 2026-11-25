@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795605324141,
+ "at": 1795605370177,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,7 +24,27 @@
    "role": "rehearsal"
   },
   {
-   "account": "YewFirst",
+   "account": "Bigchopper",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2152",
+   "role": "army"
+  },
+  {
+   "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
@@ -40,7 +60,7 @@
    "role": "army"
   },
   {
-   "account": "Bigpackage",
+   "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
@@ -72,7 +92,7 @@
    "role": "army"
   },
   {
-   "account": "NabTheKnob",
+   "account": "BoneToPick",
    "script": "scripts/generated/quest-priestperil.ts",
    "args": [],
    "env": {
@@ -82,7 +102,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:priestperil",
-   "role": "army"
+   "role": "auto"
   },
   {
    "account": "Wandwaver",
@@ -133,19 +153,20 @@
    "role": "helper"
   },
   {
-   "account": "TheFullMonty",
+   "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=48 -- crafting inventory identify:irit_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:261 BATCH_UNITS=6 -- crafting inventory identify:avantoe"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-87-p94 ITEM_ID=440 QUANTITY=87 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=94 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-174-p517 ITEM_ID=453 QUANTITY=174 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=87 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:261",
-   "role": "army"
+   "goal": "campaign:haggis:item:2353",
+   "role": "auto"
   }
  ],
  "army": [
@@ -179,6 +200,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker"
