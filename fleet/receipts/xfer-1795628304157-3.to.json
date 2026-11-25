@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795628304157-3",
  "account": "MeatNTwoVeg",
  "partner": "Fingerblastr",
@@ -12,6 +12,12 @@
  "claim": "61099666-38eb-4264-9f4b-edd5e3befc0f",
  "count": 0,
  "ok": false,
- "at": 1795629004078,
- "detail": "trade claimed"
+ "at": 1795629054589,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795629004090-0000009776-0000000001",
+  "at": 1795629054490,
+  "sha256": "f7ddbffd6c6ab958cc3e641c7d5eb91730fea04033959a487a83902e33e5735b"
+ },
+ "screen": false
 }
