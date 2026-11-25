@@ -123,7 +123,7 @@ export async function runHaggisStage3(
 ): Promise<{ phases: Stage3Phases }> {
     const cleanMain = assertSafeStage3Account(mainName);
     const plan = buildStage3Plan(opts.pizzaCount);
-    const cap = opts.cap ?? 2800;
+    const cap = opts.cap ?? 3500;
 
     let stopFlag = false;
     let activeToken = 1;
@@ -184,12 +184,12 @@ export async function runHaggisStage3(
         const ok = await settle(
             [main],
             thieveRes.ok && thievingLevel >= 99 && thievingXp >= xpForLevel(99),
-            `thieving=${thievingLevel} xp=${thievingXp} relogs=${thieveRes.relogs} stuns=${thieveRes.stuns} total=${totalElapsedTicks}`,
+            `thieving=${thievingLevel} xp=${thievingXp} bank=${bankTicks} walk=${toMarketTicks} thieve=${thieveTicks} relogs=${thieveRes.relogs} stuns=${thieveRes.stuns} total=${totalElapsedTicks}`,
         );
         await Bun.sleep(150);
         const endPlaytime = readPlaytimeTicks(cleanMain);
         if (!ok) {
-            throw Error(`haggis-stage3 failed end checks: thieving=${thievingLevel} xp=${thievingXp} total=${totalElapsedTicks}`);
+            throw Error(`haggis-stage3 failed end checks: thieving=${thievingLevel} xp=${thievingXp} bank=${bankTicks} walk=${toMarketTicks} thieve=${thieveTicks} total=${totalElapsedTicks}`);
         }
 
         return {

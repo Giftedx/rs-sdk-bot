@@ -6,6 +6,7 @@ import { closeWithin, finish, logoutSession, openBot } from '../packages/core/sr
 import { connectInProcess, type Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
+import { simBotsDir } from '../packages/core/src/practice-paths';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import {
     ARDY_NORTH_BANK,
@@ -168,7 +169,9 @@ export function rankTanksForSwing<T extends { index: number; name?: string; x?: 
 }
 
 function readBotEnvCredentials(root: string, name: string): { password: string; server: string } {
-    const raw = readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
+    const envPath = [join(simBotsDir(root), name, 'bot.env'), join(root, 'vendor', 'rs-sdk', 'bots', name, 'bot.env')].find(p => existsSync(p));
+    if (!envPath) throw Error(`missing bot.env for ${name} in simBotsDir or vendor/rs-sdk/bots`);
+    const raw = readFileSync(envPath, 'utf8');
     const password = raw.match(/^PASSWORD=(.*)$/m)?.[1]?.trim() ?? '';
     const server = raw.match(/^SERVER=(.*)$/m)?.[1]?.trim() ?? '127.0.0.1:8888';
     if (!password) throw Error(`missing PASSWORD in bots/${name}/bot.env`);
