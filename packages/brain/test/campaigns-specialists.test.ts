@@ -154,22 +154,54 @@ describe('Declarative specialist Campaign specs & manifest loading', () => {
         expect(polevaulter.requiredSupplies.find((s) => s.itemId === 3032)?.count).toBe(6);
 
         const lochnessrod = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('lochnessrod')!;
-        expect(lochnessrod.planTicks).toBe(2915);
+        expect(lochnessrod.planTicks).toBe(2778);
+        expect(lochnessrod.defaultEnv).toEqual({ CAP: '3600' });
         expect(lochnessrod.defaultStagingHolder).toBe('Moneyshot');
-        expect(lochnessrod.requiredSupplies.find((s) => s.itemId === 314)?.count).toBe(1500);
+        expect(lochnessrod.requiredSupplies.find((s) => s.itemId === 314)?.count).toBe(1200);
+        expect(lochnessrod.requiredSupplies.find((s) => s.itemId === 1941)?.count).toBe(1);
+        expect(lochnessrod.requiredSupplies.find((s) => s.itemId === 303)).toBeUndefined();
 
         const mineshafted = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('mineshafted')!;
-        expect(mineshafted.planTicks).toBe(3830);
+        expect(mineshafted.planTicks).toBe(3800);
+        expect(mineshafted.defaultEnv).toEqual({ CAP: '4200', LIVE: '1' });
         expect(mineshafted.defaultStagingHolder).toBe('Moneyshot');
         expect(mineshafted.requiredSupplies.find((s) => s.itemId === 1275)?.count).toBe(1);
 
+        const cutmyjewels = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('cutmyjewels')!;
+        expect(cutmyjewels.planTicks).toBe(96);
+        expect(cutmyjewels.defaultEnv).toEqual({ CAP: '2500', CRAFTING_MODE: 'cw' });
+        expect(cutmyjewels.requiredSupplies.find((s) => s.itemId === 2552)?.count).toBe(1);
+
+        const stickyfinger = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('stickyfinger')!;
+        expect(stickyfinger.planTicks).toBe(2142);
+        expect(stickyfinger.defaultEnv).toEqual({ CAP: '3200', LIVE: '1' });
+        expect(stickyfinger.requiredSupplies.find((s) => s.itemId === 1897)?.count).toBe(27);
+
+        const saltysausage = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('saltysausage')!;
+        expect(saltysausage.planTicks).toBe(20);
+        expect(saltysausage.defaultEnv).toEqual({ CAP: '100' });
+
+        const morningwood = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('morningwood')!;
+        expect(morningwood.planTicks).toBe(3240);
+        expect(morningwood.defaultEnv).toEqual({ CAP: '3500' });
+
         const bigboner = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('bigboner')!;
+        expect(bigboner.defaultEnv).toEqual({ CAP: '1500' });
         expect(bigboner.requiredSupplies).toEqual([{ itemId: 536, itemName: 'Dragon bones', count: 555, stage: 'Prayer' }]);
 
+        const castmyload = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('castmyload')!;
+        expect(castmyload.defaultEnv).toEqual({ CAP: '2500' });
+
+        const steelrod = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('steelrod')!;
+        expect(steelrod.defaultEnv).toEqual({ CAP: '1500' });
+
         const pouchstuffed = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('pouchstuffed')!;
+        expect(pouchstuffed.defaultEnv).toEqual({ CAP: '2300' });
         expect(pouchstuffed.requiredSupplies.find((s) => s.itemId === 1436)?.count).toBe(5355);
 
         const lightmylog = SPECIALIST_CAMPAIGN_BY_ACCOUNT.get('lightmylog')!;
+        expect(lightmylog.planTicks).toBe(749);
+        expect(lightmylog.defaultEnv).toEqual({ CAP: '900' });
         const fmCounts = new Map(lightmylog.requiredSupplies.map((r) => [r.itemId, r.count]));
         expect(fmCounts.get(1511)).toBe(2);
         expect(fmCounts.get(1521)).toBe(4);
