@@ -1761,7 +1761,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     let enteredWilderness = false;
     let curInterlopers = new Set<string>();
     let inFight = false, inRescue = false;
-    const rescueOpts: RescueOptions = {
+    const rescueOpts = {
         protect: () => (o.threats?.act ? protectOf(o.threats.step(s.tick()).actions, s.name) : null),
         protectItem: () => o.options.protectItem !== false && ownSkull(s.client) === true,
         // On a multi-way tile each enemy in reach can hit, on a single-way tile one.
@@ -1771,7 +1771,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const { enemyCount } = fallbackAction();
             return isMulti(pos.worldX, pos.worldZ) ? enemyCount : Math.min(1, enemyCount);
         },
-    };
+    } satisfies RescueOptions;
     const wildSurvival = createWildSurvival(s, {
         protect: rescueOpts.protect,
         protectItem: rescueOpts.protectItem,
