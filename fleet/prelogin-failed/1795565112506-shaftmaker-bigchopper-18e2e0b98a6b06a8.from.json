@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795565112506-shaftmaker-bigchopper-18e2e0b98a6b06a8",
+ "role": "from",
+ "account": "Shaftmaker",
+ "partner": "Bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795565337486,
+ "detail": "Error: account logout is not confirmed: Shaftmaker ended stopped"
+}

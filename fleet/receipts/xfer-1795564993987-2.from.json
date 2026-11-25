@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795564993987-2",
+ "account": "Woodenstaff",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 21,
+ "claim": "3a70ad16-d066-4e7d-9864-288f25f44e95",
+ "count": 0,
+ "ok": false,
+ "at": 1795565438920,
+ "detail": "trade claimed"
+}
