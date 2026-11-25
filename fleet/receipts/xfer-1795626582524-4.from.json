@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795626582524-4",
+ "account": "Swordswallow",
+ "partner": "YewGotWood",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "a6a63b73-c9e2-445a-948b-6478a937f172",
+ "count": 0,
+ "ok": false,
+ "at": 1795627129242,
+ "detail": "trade claimed"
+}

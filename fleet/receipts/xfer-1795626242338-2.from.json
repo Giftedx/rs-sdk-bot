@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795626242338-2",
  "account": "Fingerblastr",
  "partner": "Abracadickra",
@@ -12,6 +12,16 @@
  "claim": "c416afd7-d73f-48c7-9735-3c91958abe1d",
  "count": 0,
  "ok": false,
- "at": 1795626369829,
- "detail": "trade claimed"
+ "at": 1795627142990,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795626427924
+ },
+ "logout": {
+  "attemptId": "1795626369842-0000025772-0000000001",
+  "at": 1795627142961,
+  "sha256": "f7eebcbba6942468d495b3ee327d2440680843ac75be5c2671e063d70a0dd7a1"
+ },
+ "screen": false
 }
