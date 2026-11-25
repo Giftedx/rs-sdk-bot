@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795609107561-afknight-masterbaiter-316a9006e3ddc1ba",
  "account": "AFKnight",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Shortbow",
  "requested": 1,
  "claim": "c124fcdf-eab4-4ede-a9bb-acbda56586bb",
- "count": 0,
- "ok": false,
- "at": 1795609124664,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795609701750,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795609138614
+ },
+ "logout": {
+  "attemptId": "1795609124673-0000017708-0000000001",
+  "at": 1795609701739,
+  "sha256": "baca40e8b138d6db9ad46a71818c6ae1dc6d5f28540df610710fb00fb79c586c"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795609107561-afknight-masterbaiter-316a9006e3ddc1ba",
+ "account": "Masterbaiter",
+ "partner": "AFKnight",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shortbow",
+ "requested": 1,
+ "claim": "f485d5b3-1138-4f1f-881b-d1c1d15087ce",
+ "count": 1,
+ "ok": true,
+ "at": 1795609703349,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795609702605
+ },
+ "logout": {
+  "attemptId": "1795609683754-0000003896-0000000001",
+  "at": 1795609703324,
+  "sha256": "d81e6f898330723a9a9798d73f383d957b7f641bd7ab167e745d8961110fe4da"
+ },
+ "screen": true
+}

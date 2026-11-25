@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795609542272-1",
+ "account": "Ballspinner",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "f35cac71-4e70-4b73-ba69-fec3aaa9f99d",
+ "count": 0,
+ "ok": false,
+ "at": 1795609693758,
+ "detail": "trade claimed"
+}
