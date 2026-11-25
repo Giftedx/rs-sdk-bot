@@ -4,8 +4,7 @@ import { workspaceRoot } from '../../../core/src/build-workspace-root';
 import { writeLiveUpdate, type LiveUpdateMark } from '../../../core/src/live-reload';
 import { hasStopFile } from '../../../core/src/practice-paths';
 import { spawnSyncTimed } from '../../../core/src/proc';
-import { releaseFiles } from '../../../core/src/worker-release/closure';
-import { launchEntries } from '../../../core/src/worker-release/paths';
+import { cachedReleaseFiles } from '../../../core/src/worker-release';
 import { applyUpdate } from './adopt';
 import { gitHash, gitIn, importClosure, LIVE_UPDATE_GIT_TIMEOUT_MS, mergedDeliveryCopies, mergeText, readCheckout, readRebased, rebasableDeliveryEdits, REBASED_FILE } from './inspect';
 import { coordinatorHolds, LIVE_SERVER, liveRuns, planUpdate, releaseClosure, type LiveRunsOptions } from './plan';
@@ -26,7 +25,7 @@ export const DAEMONS: Record<string, string[]> = {
 // import (the recovery runner, the files that its sources name), so the swarm also reloads when one of them changes.
 export function daemonFiles(name: string, starts: readonly string[], root: string,
     imports: (starts: readonly string[], root: string) => readonly string[] = importClosure,
-    launch: (root: string) => readonly string[] = r => releaseFiles(launchEntries, r)): string[] {
+    launch: (root: string) => readonly string[] = r => cachedReleaseFiles([], r)): string[] {
     return name === 'swarm' ? [...imports(starts, root), ...launch(root)] : [...imports(starts, root)];
 }
 
