@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795606657814-2",
  "account": "Fatstack",
  "partner": "Woodenstaff",
@@ -12,6 +12,12 @@
  "claim": "e705f7a0-cb55-4440-b064-72c9d8338b1d",
  "count": 0,
  "ok": false,
- "at": 1795607430169,
- "detail": "trade claimed"
+ "at": 1795607558222,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795607430178-0000001264-0000000001",
+  "at": 1795607558212,
+  "sha256": "fab69062d8ea2fa099c58eb7f545c949d794958314f0adeddeaab4cf2d3d84c7"
+ },
+ "screen": false
 }

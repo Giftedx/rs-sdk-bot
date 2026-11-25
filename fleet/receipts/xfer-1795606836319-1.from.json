@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795606836319-1",
+ "account": "Bigpackage",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring mould",
+ "requested": 1,
+ "claim": "5011c177-bd58-4d60-94c9-7e2c087ffd86",
+ "count": 0,
+ "ok": false,
+ "at": 1795607608680,
+ "detail": "trade claimed"
+}

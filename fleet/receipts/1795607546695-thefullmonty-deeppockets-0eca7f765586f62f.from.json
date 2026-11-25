@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795607546695-thefullmonty-deeppockets-0eca7f765586f62f",
+ "account": "TheFullMonty",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "8b7a71f2-28a7-4304-be7c-c13f69334d06",
+ "count": 0,
+ "ok": false,
+ "at": 1795607601001,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795607585051
+ },
+ "logout": {
+  "attemptId": "1795607551438-0000025572-0000000001",
+  "at": 1795607600993,
+  "sha256": "6d5ae63fe99acff2c215fa11615c0409f3e831ad0f273f1c3653cef189bf4ed5"
+ },
+ "screen": false
+}

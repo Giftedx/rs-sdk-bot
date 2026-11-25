@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795607463349-2",
+ "account": "mmsmk1232",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "6058ac14-18d8-498f-9f2a-fb839212045e",
+ "count": 0,
+ "ok": false,
+ "at": 1795607599267,
+ "detail": "trade claimed"
+}

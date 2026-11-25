@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795607546695-thefullmonty-deeppockets-0eca7f765586f62f",
+ "role": "to",
+ "account": "Deeppockets",
+ "partner": "TheFullMonty",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795607587641,
+ "detail": "Error: fleet trade: reserved account"
+}
