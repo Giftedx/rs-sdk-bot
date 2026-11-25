@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795615898671-2",
  "account": "Moneyshot",
  "partner": "Shaftsinker",
@@ -12,6 +12,16 @@
  "claim": "b8fa212d-3391-4eca-b096-4aaec77455e1",
  "count": 0,
  "ok": false,
- "at": 1795616485053,
- "detail": "trade claimed"
+ "at": 1795616799020,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795616490713
+ },
+ "logout": {
+  "attemptId": "1795616485063-0000030208-0000000001",
+  "at": 1795616799003,
+  "sha256": "2d7452f775f95b5025560dc128c6950e856e2da0b2a923202753a103ede12cfd"
+ },
+ "screen": false
 }
