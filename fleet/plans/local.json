@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795582341024,
+ "at": 1795582460453,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -24,7 +24,7 @@
    "role": "rehearsal"
   },
   {
-   "account": "TrouserSnake",
+   "account": "Fatstack",
    "script": "scripts/aio-pvp.ts",
    "args": [
     "escort-ore",
@@ -32,7 +32,7 @@
    ],
    "env": {
     "COORDINATOR_RUN_ID": "oreelse-runite-1",
-    "COORDINATOR_PARTICIPANTS": "[\"TrouserSnake\",\"OreElse\"]",
+    "COORDINATOR_PARTICIPANTS": "[\"Fatstack\",\"OreElse\"]",
     "WALK_TO_EDGEVILLE": "1",
     "ESCORT_COMBAT": "any",
     "MINER_COMBAT": "any",
@@ -107,7 +107,6 @@
   "bowbeforeme",
   "deeppockets",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "kiltlifter",
@@ -126,6 +125,7 @@
   "sporrandip",
   "swordinhand",
   "thefullmonty",
+  "trousersnake",
   "undermykilt",
   "woodpecker",
   "yewfirst"
