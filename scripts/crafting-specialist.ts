@@ -729,7 +729,7 @@ async function craftAtCastleWarsBank(
    if (deferSurplusOpals) {
     const opalsInInv = inv.filter(i => i.id === ITEM_IDS.uncut_opal);
     const needOpalsTo20 = Math.ceil(Math.max(0, 3105 - curXpVal) / 375);
-    const cutOpalsCount = Math.min(opalsInInv.length, Math.max(opalsInInv.length - 7, curLvl >= 20 ? 0 : needOpalsTo20));
+    const cutOpalsCount = Math.min(opalsInInv.length, curLvl >= 20 ? 0 : needOpalsTo20);
     if (cutOpalsCount < opalsInInv.length) {
      const skipSlots = new Set(opalsInInv.slice(cutOpalsCount).map(i => i.slot));
      cutInv = inv.filter(i => !skipSlots.has(i.slot));
@@ -861,7 +861,11 @@ async function craftAtCastleWarsBank(
  for (const cyc of packCwCycles(lowQueues, 27)) {
   const used = cyc.reduce((s, g) => s + g.count, 0);
   if (used < 27 && highLeft > 0 && emerRem === 0) {
-   const fill = Math.min(27 - used, highLeft);
+   const maxFill = 27 - used;
+   const fill =
+    hasDragonstone && hasUnnotedEarly && highLeft >= 5 && maxFill >= 9 && highLeft - 5 <= 11 * 25
+     ? 5
+     : Math.min(maxFill, highLeft);
    highLeft -= fill;
    cycles.push([...cyc, { id: highId, count: fill }]);
   } else {
@@ -893,12 +897,17 @@ async function craftAtCastleWarsBank(
   }
  }
  if (hasUnnotedEarly && opalCount > 0) {
-  const lastCyc = cycles[cycles.length - 1];
-  const lastUsed = lastCyc ? lastCyc.reduce((s, g) => s + g.count, 0) : 27;
-  if (lastCyc && lastUsed + opalCount <= 27) {
-   lastCyc.push({ id: ITEM_IDS.uncut_opal, count: opalCount });
-  } else {
-   cycles.push([{ id: ITEM_IDS.uncut_opal, count: opalCount }]);
+  const plannedGemXp = curCraftXp + emerCount * 1687.5 + rubyCount * 2125 + diaCount * 2687.5 + dstoneCount * 3437.5;
+  const extraOpalsNeeded = Math.min(opalCount, Math.ceil(Math.max(0, goalXp() - plannedGemXp) / 375));
+  const withdrawOpals = extraOpalsNeeded > 0 ? Math.min(opalCount, extraOpalsNeeded + 1) : 0;
+  if (withdrawOpals > 0) {
+   const lastCyc = cycles[cycles.length - 1];
+   const lastUsed = lastCyc ? lastCyc.reduce((s, g) => s + g.count, 0) : 27;
+   if (lastCyc && lastUsed + withdrawOpals <= 27) {
+    lastCyc.push({ id: ITEM_IDS.uncut_opal, count: withdrawOpals });
+   } else {
+    cycles.push([{ id: ITEM_IDS.uncut_opal, count: withdrawOpals }]);
+   }
   }
  }
 
