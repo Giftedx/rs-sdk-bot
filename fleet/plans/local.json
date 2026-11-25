@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795603185052,
+ "at": 1795603207351,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -25,35 +25,51 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "Wandwaver",
@@ -102,19 +118,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/generated/quest-arena.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
   }
  ],
  "army": [
@@ -151,7 +154,6 @@
   "thefullmonty",
   "trousersnake",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {

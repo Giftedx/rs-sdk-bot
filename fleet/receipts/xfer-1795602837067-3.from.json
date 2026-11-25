@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795602837067-3",
+ "account": "Ballbag",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 2,
+ "claim": "5974979b-0f67-433a-b39b-535dbf51286b",
+ "count": 0,
+ "ok": false,
+ "at": 1795603194337,
+ "detail": "trade claimed"
+}
