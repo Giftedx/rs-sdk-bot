@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795601476986-2",
+ "account": "Pocketpython",
+ "partner": "Stirmypot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "3ecf5faf-0c5d-4f76-85ac-3d3ee72bce3e",
+ "count": 1,
+ "ok": true,
+ "at": 1795601822521,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795601786566
+ },
+ "logout": {
+  "attemptId": "1795601779144-0000016236-0000000001",
+  "at": 1795601822443,
+  "sha256": "af08346b8239dbc286a759919ca6366e7452572e9b8a5fbcaffdd9e55a606436"
+ },
+ "screen": true
+}

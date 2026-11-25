@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795601690110-1",
+ "account": "Swordswallow",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "478f8fed-db41-4a89-a2e8-249d878f7adb",
+ "count": 0,
+ "ok": false,
+ "at": 1795601762616,
+ "detail": "trade claimed"
+}
