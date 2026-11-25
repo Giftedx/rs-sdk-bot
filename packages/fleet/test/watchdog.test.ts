@@ -2,14 +2,11 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { QUALIFY_SCRIPT, qualifyStateFile } from '../src/recovery-qualify';
 import { QUALIFICATION_MISSING } from '../src/session-recovery';
 import {
-    QUALIFY_RETRY_MS,
-    QUALIFY_SCRIPT,
     STALL_MS,
     publisherRepo,
-    qualificationWait,
-    qualifyStateFile,
     recoveryLog,
     restartCommand,
     runWatchdogPass,
@@ -151,49 +148,27 @@ describe('fleet watchdog', () => {
         expect(logs.some(l => l.includes('session recovery failed: Error: transient recovery boom'))).toBe(true);
     });
 
-    test('a qualification waits while one runs and for the retry time of its source; a new source starts at once', () => {
-        const t = 10_000_000, dead = () => false;
-        expect(qualificationWait(null, 'a'.repeat(64), t, dead)).toBeNull();
-        expect(qualificationWait({ pid: 7, source: 'b'.repeat(64), at: t - 1 }, 'a'.repeat(64), t, () => true)).toBe('qualification running pid=7');
-        expect(qualificationWait({ pid: 7, source: 'a'.repeat(64), at: t - QUALIFY_RETRY_MS + 1 }, 'a'.repeat(64), t, dead)).toContain('next start after 30 min');
-        expect(qualificationWait({ pid: 7, source: 'a'.repeat(64), at: t - QUALIFY_RETRY_MS }, 'a'.repeat(64), t, dead)).toBeNull();
-        expect(qualificationWait({ pid: 7, source: 'b'.repeat(64), at: t - 1 }, 'a'.repeat(64), t, dead)).toBeNull();
-    });
-
-    test('a recovery deferred for a missing qualification starts the qualify script once for its source', async () => {
+    test('only a recovery deferred for a missing qualification asks for the hosted qualification, and nothing runs on the PC', async () => {
         const root = scratch();
         mkdirSync(join(root, '.practice', 'fleet'), { recursive: true });
-        let clock = 20_000_000, source = 'c'.repeat(64), running = false, reason = `${QUALIFICATION_MISSING} for source cccccccccccc; run ${QUALIFY_SCRIPT}`;
-        const spawned: { args: string[]; cwd: string; at: number }[] = [];
-        const logs: string[] = [];
+        let reason = `${QUALIFICATION_MISSING} for source cccccccccccc`;
+        const calls: string[] = [];
         const pass = () => runWatchdogPass(root, {
-            now: () => clock,
+            now: () => 30_000_000,
             hasStop: () => false,
             prune: () => ({ moved: [], kept: 0, failed: 0 }),
             restartController: () => {},
-            recover: async () => { clock += 9_000; return { skipped: [{ account: 'magicwanda', reason }] }; },
-            log: line => logs.push(line),
-            source: () => source,
-            running: () => running,
-            spawnQualification: (args, cwd) => { spawned.push({ args, cwd, at: clock }); clock += 1_000; return 4242; },
+            recover: async () => ({ skipped: [{ account: 'magicwanda', reason }] }),
+            log: () => {},
+            qualify: { source: () => 'c'.repeat(64), exec: cmd => { calls.push(cmd.join(' ')); return { ok: true, out: cmd[0] === 'git' ? 'x\n' : 'https://github.com/o/r/actions/runs/9\n' }; } },
         });
         await pass();
-        expect(spawned).toEqual([{ args: [process.execPath, QUALIFY_SCRIPT], cwd: root, at: 20_009_000 }]);
-        // The saved time follows the spawn, not the start of the pass, so the start-time check accepts the child.
-        expect(JSON.parse(readFileSync(qualifyStateFile(root), 'utf8'))).toEqual({ pid: 4242, source, at: 20_010_000 });
-        expect(logs.some(l => l.startsWith('recovery qualification started pid=4242 source=cccccccccccc'))).toBe(true);
-        running = true;
+        expect(calls).toContain(`gh workflow run CI --ref master -f measure_script=${QUALIFY_SCRIPT}`);
+        expect(calls.every(c => c.startsWith('git ') || c.startsWith('gh '))).toBe(true);
+        calls.length = 0;
+        reason = 'attempt budget reached (2/2)';
+        rmSync(qualifyStateFile(root));
         await pass();
-        expect(logs).toContain('recovery qualification not started: qualification running pid=4242');
-        running = false;
-        await pass();
-        expect(logs.at(-1)).toContain('next start after 30 min');
-        source = 'd'.repeat(64);
-        await pass();
-        expect(spawned).toHaveLength(2);
-        // A pass that defers nothing for the qualification starts none.
-        source = 'e'.repeat(64); reason = 'attempt budget reached (2/2)';
-        await pass();
-        expect(spawned).toHaveLength(2);
+        expect(calls).toEqual([]);
     });
 });
