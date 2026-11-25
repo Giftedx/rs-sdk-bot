@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795628143029,
+ "at": 1795628157299,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -106,6 +106,22 @@
   },
   {
    "account": "Bigpackage",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Dipstick",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -295,7 +311,6 @@
   "mmsmk1232",
   "billionaire",
   "bowbeforeme",
-  "dipstick",
   "fatstack",
   "fingerblastr",
   "fingersmith",
