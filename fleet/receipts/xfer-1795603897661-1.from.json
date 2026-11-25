@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795603897661-1",
  "account": "OreElse",
  "partner": "TheFullMonty",
@@ -10,8 +10,18 @@
  "item": "Chisel",
  "requested": 1,
  "claim": "56b21ef5-7b7c-455f-84d9-1d1f88b7c599",
- "count": 0,
- "ok": false,
- "at": 1795604144808,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795604167860,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795604144817-0000008052-0000000001",
+  "at": 1795604167555,
+  "sha256": "404207e82e58d6534f8195d65a23b629a9cf96e107f92c3c425cbcff92b59f81"
+ },
+ "screen": true
 }
