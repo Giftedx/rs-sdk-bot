@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795610695404,
+ "at": 1795610732930,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -66,21 +66,6 @@
    "role": "pvp"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2170 TARGET_COUNT=217 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=217 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
@@ -100,7 +85,8 @@
    "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=9 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=27 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=314 QUANTITY=10 ITEM_NAME=Feather -- loadout",
     "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
@@ -190,6 +176,22 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "2619",
+    "3332",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "ardougne"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "helper"
   }
  ],
  "army": [
@@ -219,6 +221,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "woodpecker"
  ],
