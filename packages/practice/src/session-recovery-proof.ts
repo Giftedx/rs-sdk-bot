@@ -21,6 +21,7 @@ import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {canBind} from './ports';
 import {killTree,safeKill,sleeperCommand} from '../../core/src/proc';
 import {createBot} from './bots';
+import {practiceBotsRoot} from './paths';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
@@ -69,7 +70,7 @@ async function run(directory:string){
  // Isolated proof owns only the practice mutex. Runtime revision and runner hash bind its source.
  mkdirSync(directory,{recursive:true});
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:capability,mode:'native-session-recovery'}));
- const source=launchRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/session-lifecycle');
+ const source=launchRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/sim/session-lifecycle');
  const children:ReturnType<typeof Bun.spawn>[]=[],recoveryChildren:{pid:number;nonce:string}[]=[],cases:any[]=[],tasks=new Map<string,any>(),ends:Record<string,any>={},jobs:any[]=[];
  const ownedStops:OwnedStop[]=[],junctions:string[]=[];
  const saved={rsan:process.env.LOGIN_RSAN,rsae:process.env.LOGIN_RSAE,release:process.env.WORKER_RELEASE,plan:process.env.SWARM_PLAN};
@@ -119,9 +120,10 @@ async function run(directory:string){
   let fixtureIndex=0;
   const fixture=async(server:string,preset:Parameters<typeof applyPreset>[1],completed=false)=>{
    let name=runBotName('flrcv',++fixtureIndex);
-   for(let tries=0;tries<40&&existsSync(join(root,'vendor/rs-sdk/bots',name));tries++)name=runBotName('flrcv',++fixtureIndex);
-   if(existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('fixture identity exists');
-   await createBot(name);const envPath=join(root,'vendor/rs-sdk/bots',name,'bot.env');
+   const botExists=(n:string)=>existsSync(join(practiceBotsRoot(),n))||existsSync(join(root,'vendor/rs-sdk/bots',n));
+   for(let tries=0;tries<40&&botExists(name);tries++)name=runBotName('flrcv',++fixtureIndex);
+   if(botExists(name))throw Error('fixture identity exists');
+   const {envPath}=await createBot(name);
    writeFileSync(envPath,readFileSync(envPath,'utf8').replace(/^SERVER=.*$/m,'SERVER='+server));
    const original=await applyPreset(name,preset),save=join(workspace,'data/players/main',name.toLowerCase()+'.sav');copyFileSync(original,save);
    const endedAt=Date.now();ends[name]={at:endedAt,reason:completed?'done after 1 runs':'blocked after 1 runs',...(completed?{revision:missionSignature({account:name,script:'scripts/retired-fixture.ts'})}:{})};jobs.push({account:name,script:'scripts/retired-fixture.ts',enabled:false});writeState();

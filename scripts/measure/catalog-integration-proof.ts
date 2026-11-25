@@ -5,6 +5,7 @@ import {basename,dirname,join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {serverFromEnv} from '../../packages/core/src/bot';
 import {isLocalServer} from '../../packages/core/src/localserver';
+import {resolveBotEnvPath} from '../../packages/core/src/practice-paths';
 import {readLogoutProof} from '../../packages/core/src/session-lifecycle';
 import {killTree} from '../../packages/core/src/proc';
 import {resolveSkillerStep} from '../aio-skiller';
@@ -129,7 +130,7 @@ async function prove(name:string,mode:string,savePath:string){
  assert.match(name,/^aiob[a-z0-9]+$/i,'bench fixture account required');
  assert.equal(basename(savePath).toLowerCase(),name.toLowerCase()+'.sav');
  assert.equal(dirname(realpathSync(savePath)),realpathSync(resolve(root,'vendor/rs-sdk/server/engine/data/players/main')),'generated practice save required');
- const server=serverFromEnv(readFileSync(resolve(root,'vendor/rs-sdk/bots',name,'bot.env'),'utf8'));
+ const server=serverFromEnv(readFileSync(resolveBotEnvPath(name,root),'utf8'));
  assert.equal(isLocalServer(server),true,'native proof is local only');
  const beforeBytes=readFileSync(savePath),before=parsePracticeSave(beforeBytes),beforeMtimeMs=statSync(savePath).mtimeMs,
   artifact=mode==='producer'||mode==='cut'||mode==='tools'||mode==='observer'?startArtifact(name,mode,server,beforeBytes):undefined;
@@ -167,7 +168,7 @@ async function prove(name:string,mode:string,savePath:string){
   assert.deepEqual(totals(after),totals(before));assert.deepEqual(after.inventories[94]??[],before.inventories[94]??[]);
   assert.deepEqual(after.skills,before.skills);
  }
- const logout=readLogoutProof(name,server,{root:resolve(root,'.practice/session-lifecycle')});assert.equal(logout.state,'confirmed');
+ const logout=readLogoutProof(name,server,{base:root});assert.equal(logout.state,'confirmed');
  if(artifact){
   const afterBytes=readFileSync(savePath);artisanTransition(artifact.record.mode,beforeBytes,afterBytes,stdout);
   writeFileSync(join(artifact.directory,'after.sav'),afterBytes);writeFileSync(join(artifact.directory,'logout.json'),JSON.stringify(logout,null,2));

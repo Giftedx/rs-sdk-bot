@@ -33,8 +33,8 @@ export function rehearsalChildEnv(
             ? {...baseEnv, ...segEnv, DEMO_OK: '', TICK_RECORD: '0', COORDINATOR_RUN_ID: ''}
             : {...baseEnv, RANDOM_EVENTS: '0', ...segEnv, DEMO_OK: ''})
         : (opts.scored
-            ? {...baseEnv, ...segEnv, ...(opts.supplier ? {PRACTICE_SUPPLIER: opts.supplier} : {}), DEMO_OK: '', TICK_RECORD: '1', COORDINATOR_RUN_ID: ''}
-            : {...baseEnv, RANDOM_EVENTS: '0', ...segEnv, ...(opts.supplier ? {PRACTICE_SUPPLIER: opts.supplier} : {}), DEMO_OK: ''});
+            ? {...baseEnv, ...segEnv, ...(opts.supplier ? {PRACTICE_SUPPLIER: opts.supplier, PRACTICE_TANKS: opts.supplier} : {}), DEMO_OK: '', TICK_RECORD: '1', COORDINATOR_RUN_ID: ''}
+            : {...baseEnv, RANDOM_EVENTS: '0', ...segEnv, ...(opts.supplier ? {PRACTICE_SUPPLIER: opts.supplier, PRACTICE_TANKS: opts.supplier} : {}), DEMO_OK: ''});
     if (lockstep) out.SIM_LOCKSTEP = '1';
     else delete out.SIM_LOCKSTEP;
     return out;
