@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795634178019-3",
+ "account": "Woodpecker",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald ring",
+ "requested": 1,
+ "claim": "5d6bbaf0-5a26-459f-b49a-f071ee43d203",
+ "count": 1,
+ "ok": true,
+ "at": 1795634433850,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795634433098
+ },
+ "logout": {
+  "attemptId": "1795634422940-0000008480-0000000001",
+  "at": 1795634433828,
+  "sha256": "ee2861c17487ded9ace9672c736dda1d57937faaceae6acd579d08789189ac3b"
+ },
+ "screen": true
+}

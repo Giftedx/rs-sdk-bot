@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795634178019-4",
+ "account": "BoneToPick",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 247,
+ "claim": "209c4de8-971b-4c4b-9dc0-00de6502182e",
+ "count": 0,
+ "ok": false,
+ "at": 1795634432471,
+ "detail": "trade claimed"
+}

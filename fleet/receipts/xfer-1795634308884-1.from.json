@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795634308884-1",
+ "account": "TossTheCaber",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 1,
+ "claim": "e347734d-d140-4053-9c46-d8a8f557d31e",
+ "count": 0,
+ "ok": false,
+ "at": 1795634401354,
+ "detail": "trade claimed"
+}
