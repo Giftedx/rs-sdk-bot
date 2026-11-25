@@ -2,7 +2,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fightPlayer, packGain, recordKillLoot } from '../src/pvp/fight';
+import { fightPlayer, noteGround, noteHeads, packGain, recordKillGround, recordKillLoot } from '../src/pvp/fight';
 import { checkKillFeed, feedDeath, killFeed, KillFeed, settleKillFeed } from '../src/pvp/pk-kill-feed';
 
 const roots: string[] = [];
@@ -94,11 +94,43 @@ test('the fight loop writes one receipt at the kill and the pickup adds its loot
         wilderness: 5, multi: false, message: "It's all over for Dummy.", victimCombat: 110, victimTile: { x: 3095, z: 3555 }, loot: null, feed: null,
         kit: { worn: [{ slot: 3, id: 1401, name: 'Mystic fire staff' }], switches: { magic: [1401], ranged: [], melee: [1231] } },
     });
-    expect(logs.some(l => /^PK kill receipt practice \d{13}-\d+-\d+ wilderness 5 single$/.test(l))).toBe(true);
+    expect(logs.some(l => /^PK kill receipt practice \d{13}-\d+-\d+ wilderness 5 single victim not seen$/.test(l))).toBe(true);
     recordKillLoot(res, packGain([{ id: 385, count: 1 }], [{ id: 385, count: 1 }, { id: 1215, count: 1 }, { id: 995, count: 250 }]), new Map([[1215, 'dragon_dagger']]));
     expect(JSON.parse(readFileSync(res.receipt!, 'utf8')).loot).toEqual([{ id: 995, count: 250 }, { id: 1215, name: 'dragon_dagger', count: 1 }]);
     // A fight with no receipt changes no file.
     recordKillLoot({}, { 995: 1 });
+});
+
+test('the receipt takes the victim view from before the kill message, and the ground read after it', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pk-kill-')); roots.push(root);
+    // Slot 1: skull (bit 0) and Protect from Melee (bit 3). Slot 2: no icons.
+    const client = { var: {}, players: [null, { headicons: 0b1001 }, { headicons: 0 }] };
+    const heads = new Map();
+    noteHeads(client, [{ index: 1, name: 'Dummy' }, { index: 2, name: 'Other' }, { index: 5, name: 'Gone' }], 9, heads);
+    expect(Object.fromEntries(heads)).toEqual({ dummy: { skulled: true, protect: ['melee'], tick: 9 }, other: { skulled: false, protect: [], tick: 9 } });
+    let tick = 10;
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, level: 0, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }], prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [], equipment: [], nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 110, x: 3095, z: 3555, distance: 1 }],
+        combatEvents: [], gameMessages: [{ observationId: 9, tick: 11, type: 0, text: "It's all over for Dummy." }],
+    };
+    // The client clears the icons in the tick of the kill message: the receipt keeps the view of tick 9.
+    const session: any = {
+        name: 'Killer', client: { var: {}, players: [null, { headicons: 0 }] }, tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => { setTimeout(() => { tick++; cb(); }, 0); return () => {}; }, sdk: { getState: () => state, sendWalk: () => {} },
+    };
+    const logs: string[] = [];
+    const res = await fightPlayer(session, 'dummy', { kit: { magic: [1401] }, killReceiptRoot: root, heads, log: l => logs.push(l) });
+    expect(JSON.parse(readFileSync(res.receipt!, 'utf8')).victimHead).toEqual({ skulled: true, protect: ['melee'], tick: 9 });
+    expect(logs.some(l => / victim skull=1 protect=melee seen 2 ticks before$/.test(l))).toBe(true);
+    // Two reads of the same stack count once; a stack 4 tiles away is not the kill's.
+    const stacks = new Map();
+    const ground = [{ id: 1231, name: 'dragon_dagger_p', count: 1, x: 3095, z: 3555, distance: 1 }, { id: 882, count: 3, x: 3094, z: 3555, distance: 0 }, { id: 882, count: 2, x: 3096, z: 3556, distance: 2 }, { id: 526, count: 1, x: 3098, z: 3555, distance: 4 }];
+    noteGround(ground, stacks); noteGround(ground, stacks);
+    recordKillGround(res.receipt, 14, stacks, 'skipped: escape');
+    expect(JSON.parse(readFileSync(res.receipt!, 'utf8')).ground).toEqual({ tick: 14, items: [{ id: 882, count: 5 }, { id: 1231, name: 'dragon_dagger_p', count: 1 }], pickup: 'skipped: escape' });
+    recordKillGround(undefined, 14, stacks, 'ran: 1 reads');
 });
 
 test('the pack gain counts only what the pack got', () => {

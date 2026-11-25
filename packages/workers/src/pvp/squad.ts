@@ -29,11 +29,11 @@ import { FREE_FLOOR_GB, HOST_DEFERRED_EXIT } from '../../../core/src/memory';
 import { isLocalServer } from '../../../core/src/localserver';
 import type { Session } from '../../../core/src/inprocess';
 import { closeWithin } from '../../../core/src/bot';
-import { killReceiptProof } from '../../../core/src/kill-receipt';
+import { killReceiptProof, type KillHead, type KillItem } from '../../../core/src/kill-receipt';
 import { RETALIATE_OFF } from '../../../core/src/combat-end';
 import { bindActionScope } from '../../../core/src/action-scope';
 import { sessionWalker, walkPath } from '../../../core/src/walk';
-import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, emitKillReceipt, escapeCastable, extractKillVictim, fightPlayer, getObjNames, ITEMS, isMulti, newVolley, nextTick, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions, type VolleyState } from './fight';
+import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, emitKillReceipt, escapeCastable, extractKillVictim, fightPlayer, getObjNames, ITEMS, isMulti, newVolley, nextTick, noteGround, noteHeads, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillGround, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions, type VolleyState } from './fight';
 import { bankTrip, MIN_TRIP_ARROWS, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { killFeed, settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './hunt-kits';
@@ -1496,6 +1496,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1, holdPrayAt = -10;
     const holdStartTick = s.tick();
     const seenKillKeys = new Set<string>();
+    const heads = new Map<string, KillHead>();
+    // Kills whose message came outside this account's own fight with the victim: no pickup runs for them, and the
+    // receipt takes the ground 2 ticks after the message.
+    const groundDue: { file: string; tick: number }[] = [];
     const targetFirstBegan = new Map<string, number>();
     const singleFoodFloor = Number(process.env.SQUAD_SINGLE_FOOD_FLOOR ?? '0');
     const singleHpFloor = Number(process.env.SQUAD_SINGLE_HP_FLOOR ?? '0');
@@ -1531,10 +1535,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 victimTile: victimPlayer ? { x: victimPlayer.x, z: victimPlayer.z } : null,
                 equipment: stNow?.equipment ?? [], kit: o.options.kit,
                 fight: { ticks, dealt: 0, taken: 0, eaten: 0, specs: 0 },
-                killReceiptRoot: o.options.killReceiptRoot, feedWatch: squadFeedWatch,
+                killReceiptRoot: o.options.killReceiptRoot, feedWatch: squadFeedWatch, victimHead: heads.get(victimLower) ?? null,
                 log: l => o.log(`[${s.name}] ${l}`),
             });
-            if (receipt) stats.receipts.push(receipt);
+            if (receipt) { stats.receipts.push(receipt); groundDue.push({ file: receipt, tick }); }
         }
     };
     const scanKillMessages = (tick: number) => {
@@ -1706,6 +1710,16 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             for (const m of msgs) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = tickNow; }
         }
         if (!inFight && activeGoing) scanKillMessages(tickNow);
+        // In a fight, fightPlayer notes the heads after its own message read.
+        if (!inFight && stTick) noteHeads(s.client, stTick.nearbyPlayers ?? [], tickNow, heads);
+        for (let i = groundDue.length - 1; i >= 0; i--) {
+            const due = groundDue[i]!;
+            if (tickNow - due.tick < 2) continue;
+            const stacks = new Map<string, KillItem>();
+            noteGround(stTick?.groundItems ?? [], stacks);
+            recordKillGround(due.file, tickNow, stacks, 'none: kill message outside its fight');
+            groundDue.splice(i, 1);
+        }
     });
     try {
         await disableAutoRetaliate(s);
@@ -1954,7 +1968,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
                 ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
                 ...(o.volley ? { volley: o.volley } : {}),
-                seenKillKeys,
+                seenKillKeys, heads,
                 onOtherKill: (victim, info) => creditSquadKill(victim, info.text, info.tick),
                 allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began || radarMove() || fallbackDue() || focusYield(),
                 log: l => {
@@ -1976,11 +1990,16 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (r.outcome === 'kill') { stats.kills++; killTicks += r.ticks ?? 0; if (interlopers.has(targetKey)) stats.interlopers = (stats.interlopers ?? 0) + 1; }
             if (r.receipt) stats.receipts.push(r.receipt);
             const activeInterlopers = o.threats?.act ? o.threats.step(s.tick()).interlopers.length : 0;
-            if (o.pickup && !urgentEscape && s.tick() >= singleUntil && activeInterlopers === 0 && (r.outcome === 'kill' || gone)) {
-                const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, stop: () => o.stopped() || fallbackDue() || radarMove() || (me()?.hp ?? 99) <= 65 });
+            const pickupSkip = !o.pickup ? 'off' : urgentEscape ? 'escape' : s.tick() < singleUntil ? 'single-way' : activeInterlopers > 0 ? `${activeInterlopers} interlopers` : null;
+            const stacks = new Map<string, KillItem>();
+            let reads = 0;
+            if (r.outcome === 'kill') noteGround(s.sdk.getState()?.groundItems ?? [], stacks);
+            if (!pickupSkip && (r.outcome === 'kill' || gone)) {
+                const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, onScan: g => { reads++; noteGround(g, stacks); }, stop: () => o.stopped() || fallbackDue() || radarMove() || (me()?.hp ?? 99) <= 65 });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
             }
+            if (r.outcome === 'kill') recordKillGround(r.receipt, s.tick(), stacks, pickupSkip ? `skipped: ${pickupSkip}` : reads ? `ran: ${reads} reads` : 'ran: stopped before its first read');
             if (r.outcome === 'died') { if (await recover()) continue; stats.died = true; break; }
             const qAfter = me();
             if (qAfter && diedNow(qAfter)) { if (await recover()) continue; stats.died = true; break; }

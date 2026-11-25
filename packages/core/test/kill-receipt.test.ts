@@ -86,6 +86,18 @@ test('the reader refuses each receipt that is not a live kill of a stranger by a
     expect(read(root).map(v => v.reason).sort()).toEqual(['account does not match the folder', 'id does not match the file', 'other server', 'unreadable']);
 });
 
+test('the victim view and the ground after the kill go in the receipt', () => {
+    const root = fresh();
+    const plain = writeKillReceipt(kill(), { root, ...at(NOW - 5000) });
+    expect(plain.receipt).toMatchObject({ victimHead: null, ground: null });
+    const { file, receipt } = writeKillReceipt(kill({ victimHead: { skulled: true, protect: ['melee'], tick: 729 } }), { root, ...at(NOW - 4000) });
+    expect(receipt.victimHead).toEqual({ skulled: true, protect: ['melee'], tick: 729 });
+    const ground = { tick: 733, items: [{ id: 1231, name: 'dragon_dagger_p', count: 1 }], pickup: 'skipped: 1 interlopers' };
+    expect(amendKillReceipt(file, { ground }).ground).toEqual(ground);
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({ victimHead: { skulled: true }, ground, loot: null });
+    expect(read(root)).toMatchObject([{ credited: true }, { credited: true }]);
+});
+
 test('loot and the feed match are added to the same file', () => {
     const root = fresh(), { file } = writeKillReceipt(kill(), { root, ...at(NOW - 5000) });
     amendKillReceipt(file, { loot: [{ id: 385, name: 'shark', count: 3 }, { id: 995, count: 100 }] }, () => NOW - 4000);

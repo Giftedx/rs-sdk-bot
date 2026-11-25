@@ -421,6 +421,7 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
 // no Protect Item: death.rs2 pvp_death_lose_items keeps none on a skulled account) and sharks.
 // Dearest first: a pickup takes them in this order.
 export const PICKUP_ITEMS = [1215, 1231, ITEMS.shark as number];
+export type PickupGround = { id: number; count: number; x: number; z: number; distance: number; name: string };
 // The stacks of `ids` within `radius` tiles, in the order of `ids` (dearest first), nearest first within an id; 4
 // arrows in 5 land on the tile of the player they hit (pvp_ranged.rs2 ranged_dropammo_pvp, ^dropammo_chance 5).
 export function plannedPickups<G extends { id: number; count: number; x: number; z: number; distance: number }>(ground: readonly G[], ids: ReadonlySet<number>, radius: number): G[] {
@@ -429,7 +430,8 @@ export function plannedPickups<G extends { id: number; count: number; x: number;
 }
 // `wait`: ticks to wait for a first stack to show (a death drops its items 4 ticks after the kill message: death.rs2
 // player_death p_delay 1 and 3).
-export async function pickUp(a: Session, ids: ReadonlySet<number>, o: { radius?: number; maxTicks?: number; wait?: number; stop?: () => boolean } = {}): Promise<Record<string, number>> {
+// `onScan` gets the ground of each read, before the pickup chooses a stack.
+export async function pickUp(a: Session, ids: ReadonlySet<number>, o: { radius?: number; maxTicks?: number; wait?: number; stop?: () => boolean; onScan?: (ground: readonly PickupGround[]) => void } = {}): Promise<Record<string, number>> {
     const got: Record<string, number> = {}, start = a.tick(), tried = new Set<string>();
     if (process.env.PICKUP_TRACE === '1') { const g = a.sdk.getState()?.groundItems ?? [], me = a.sdk.getState()?.player; console.log(`PICKUP at ${me?.worldX},${me?.worldZ} ground ${g.length}: ${g.slice(0, 12).map(i => `${i.id}x${i.count}@${i.x},${i.z}d${i.distance}`).join(' ')}`); }
     while (a.tick() - start < (o.maxTicks ?? 200) && !o.stop?.()) {
@@ -437,7 +439,9 @@ export async function pickUp(a: Session, ids: ReadonlySet<number>, o: { radius?:
         const edible = inv.find(i => i.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
         const definition=(id:number)=>(a.client as {objType?:(id:number)=>{stackable:boolean}|undefined}|undefined)?.objType?.(id);
         // The worker owns its combat-food choice. Native metadata decides if it needs room.
-        const next = plannedPickups((a.sdk.getState()?.groundItems ?? []) as { id: number; count: number; x: number; z: number; distance: number; name: string }[], ids, o.radius ?? 12)
+        const ground = (a.sdk.getState()?.groundItems ?? []) as PickupGround[];
+        o.onScan?.(ground);
+        const next = plannedPickups(ground, ids, o.radius ?? 12)
             .find(g => !tried.has(`${g.id}@${g.x},${g.z}`) && typeof definition(g.id)?.stackable==='boolean' && (lootCapacity({inventory:inv},g,definition(g.id)) || (!!edible && edible.id !== g.id && lootCapacity({inventory:inv.filter(i=>i.slot!==edible.slot)},g,definition(g.id)))));
         if (!next) { if (a.tick() - start < (o.wait ?? 0) && await nextTick(a)) continue; break; }
         tried.add(`${next.id}@${next.x},${next.z}`);
