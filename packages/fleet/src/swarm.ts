@@ -38,6 +38,7 @@ import { RESERVED_ACCOUNTS, SPECIALIST_BOARDS } from '../../core/src/specialist-
 import { renameRetry } from '../../core/src/status';
 import { ownedAccounts } from '../../core/src/tradeguard';
 import { assertWorkerRelease, cachedLaunchRevision, cachedReleaseFor, workerEntries } from '../../core/src/worker-release';
+import { drainedFiles, pendingUpdateReader, type PendingUpdate } from './live-update/pending';
 import {
     captureRunBaseline,
     extractWorkerOutcomeInput,
@@ -1519,6 +1520,11 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
         follow(p.key, run, child);
     });
 
+    const readPendingUpdateMark = pendingUpdateReader(root);
+    const updateDrainOf = (pending: PendingUpdate | null, job: Job): string[] => {
+        if (!pending) return [];
+        try { return drainedFiles(pending, workerEntries(job.script, job.args ?? [], root), root); } catch { return []; }
+    };
     let cachedPlan: { mtimeMs: number; size: number; data: Plan } | null = null;
     let cachedOwners: { file: string; mtimeMs: number; size: number; owners: Map<string, Owner> } | null = null;
 
@@ -1860,6 +1866,7 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
 
         let endedByLower = endedMapByLower(ended);
         const buildLocked = existsSync(join(liveDir, 'build-lock.json'));
+        const pendingUpdate = readPendingUpdateMark();
         for (let rowIdx = 0; rowIdx < combinedJobs.length; rowIdx++) {
             const raw = combinedJobs[rowIdx]!;
             if (isReservation(raw)) {
@@ -1949,7 +1956,10 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
                           ? 'waiting offline: no nearby owned cargo or payout'
                           : null));
                 Object.assign(st, blocked);
-                if (go.length > 0) {
+                const drained = go.length > 0 && !job.standing ? updateDrainOf(pendingUpdate, job) : [];
+                if (drained.length > 0) {
+                    for (const a of go) st[a] = `waiting: live update to ${pendingUpdate!.target.slice(0, 10)} drains ${drained.slice(0, 2).join(', ')}${drained.length > 2 ? ` and ${drained.length - 2} more` : ''}`;
+                } else if (go.length > 0) {
                     const infraCheck = infraBreaker.canProceed();
                     if (!infraCheck.allowed) {
                         for (const a of go) st[a] = `waiting: infra circuit backoff (${infraCheck.kind})`;

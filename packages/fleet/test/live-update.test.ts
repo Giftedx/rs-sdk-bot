@@ -13,10 +13,17 @@ import {
     patchChangedFiles,
     patchCollisions,
     patchSections,
+    PENDING_MAX_AGE_MS,
+    clearPendingUpdate,
+    drainedFiles,
+    pendingUpdateFile,
+    pendingUpdateReader,
     planUpdate,
     preloadOnlyChange,
     readCheckout,
+    readPendingUpdate,
     reloadsFor,
+    writePendingUpdate,
     type UpdateInput,
 } from '../src/live-update';
 import { runLiveUpdateCli } from '../src/live-update/reload';
@@ -46,6 +53,56 @@ const baseInput: UpdateInput = {
 };
 
 describe('fleet live-update facade', () => {
+    test('a wait on live runs that load incoming files asks for a drain; other waits do not', () => {
+        const smithing = 'packages/workers/src/bank-artisan/smithing.ts';
+        const loads = planUpdate({ ...baseInput, incoming: [smithing, 'docs/x.md'], liveRuns: [{ name: 'Ballspinner', files: [smithing, 'scripts/aio-skiller.ts'] }] });
+        expect(loads).toMatchObject({ action: 'wait', drain: [smithing, 'docs/x.md'] });
+        expect((loads as { reason: string }).reason).toContain('the live run of Ballspinner loads');
+        // A run that loads none of the incoming files does not hold the update.
+        expect(planUpdate({ ...baseInput, liveRuns: [{ name: 'Ballspinner', files: [smithing] }] }).action).toBe('update');
+        for (const other of [
+            planUpdate({ ...baseInput, holds: ['qualification q1 runs'] }),
+            planUpdate({ ...baseInput, ahead: 1 }),
+            planUpdate({ ...baseInput, liveRuns: [{ name: 'X', files: [], unknown: true }] }),
+            planUpdate({ ...baseInput, incoming: ['package.json'] }),
+        ]) {
+            expect(other.action).toBe('wait');
+            expect((other as { drain?: string[] }).drain).toBeUndefined();
+        }
+    });
+
+    test('the pending-update mark holds only the jobs that load a pending file, and only while it is fresh', () => {
+        const root = scratch();
+        const smithing = 'packages/workers/src/bank-artisan/smithing.ts';
+        const now = Date.now();
+        expect(readPendingUpdate(root, now)).toBeNull();
+        writePendingUpdate(root, { at: now, target: 'e5d45c5918abc', files: [smithing] });
+        expect(existsSync(pendingUpdateFile(root))).toBe(true);
+        const mark = readPendingUpdate(root, now);
+        expect(mark).toEqual({ at: now, target: 'e5d45c5918abc', files: [smithing] });
+        expect(readPendingUpdate(root, now + PENDING_MAX_AGE_MS)).toBeNull();
+        const read = pendingUpdateReader(root);
+        expect(read(now)?.target).toBe('e5d45c5918abc');
+        expect(read(now + PENDING_MAX_AGE_MS)).toBeNull();
+        clearPendingUpdate(root);
+        expect(read(now)).toBeNull();
+        clearPendingUpdate(root);
+        writeFileSync(pendingUpdateFile(root), '{"at":"soon","files":7}');
+        expect(readPendingUpdate(root, now)).toBeNull();
+        const closure = (entries: readonly string[]) => entries.includes('scripts/aio-skiller.ts') ? [smithing, 'scripts/aio-skiller.ts'] : ['scripts/walk-to.ts'];
+        expect(drainedFiles(mark, ['scripts/aio-skiller.ts'], root, closure)).toEqual([smithing]);
+        expect(drainedFiles(mark, ['scripts/walk-to.ts'], root, closure)).toEqual([]);
+        expect(drainedFiles({ ...mark!, files: ['docs/not-code.md'] }, ['scripts/aio-skiller.ts'], root, closure)).toEqual([]);
+        expect(drainedFiles(null, ['scripts/aio-skiller.ts'], root, closure)).toEqual([]);
+        expect(drainedFiles(mark, [], root, closure)).toEqual([]);
+    });
+
+    test('the real release closure names files the way live-update names incoming files', () => {
+        // One parse of the artisan skiller's closure (then cached), the same record each swarm start keeps.
+        const repo = resolve(import.meta.dir, '../../..'), smithing = 'packages/workers/src/bank-artisan/smithing.ts';
+        expect(drainedFiles({ at: Date.now(), target: 't', files: [smithing, 'docs/not-code.md'] }, ['scripts/aio-skiller.ts'], repo)).toEqual([smithing]);
+    }, 120_000);
+
     test('detects preloads, patch sections, collisions, reloads, and fast-forward update plans', () => {
         expect(SDK).toBe('vendor/rs-sdk');
         expect(SDK_PATCH).toBe('patches/rs-sdk-working.patch');

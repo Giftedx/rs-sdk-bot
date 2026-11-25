@@ -63,8 +63,18 @@ const releaseByEntries = new Map<string, { files: string[]; stamp: string; value
 // parse, while no release file or folder changed. The stamp check is the in-memory one.
 export const forgetReleaseMemory = () => releaseByEntries.clear();
 const releaseCacheFile = (base: string, key: string) => join(base, '.practice', 'cache', 'release', createHash('sha256').update(key).digest('hex').slice(0, 32) + '.json');
+const releaseKey = (entries: readonly string[], base: string) => {
+    const fullEntries = entries.length ? [...entries, ...workerLaunchers] : launchEntries;
+    return { fullEntries, key: JSON.stringify([resolve(base), fullEntries, RELEASE_DIGEST_VERSION]) };
+};
+// The files and folders of a worker's release, from the same record as cachedReleaseFor: no parse while they keep
+// their stamps.
+export function cachedReleaseFiles(entries: readonly string[], base = root): readonly string[] {
+    cachedReleaseFor(entries, base);
+    return releaseByEntries.get(releaseKey(entries, base).key)?.files ?? [];
+}
 export function cachedReleaseFor(entries: readonly string[], base = root): string {
-    const fullEntries = entries.length ? [...entries, ...workerLaunchers] : launchEntries, key = JSON.stringify([resolve(base), fullEntries, RELEASE_DIGEST_VERSION]);
+    const { fullEntries, key } = releaseKey(entries, base);
     const hit = releaseByEntries.get(key);
     if (hit) try { if (releaseStamp(base, hit.files) === hit.stamp) return hit.value; } catch { /* a missing file recomputes */ }
     const file = releaseCacheFile(base, key);

@@ -44,6 +44,9 @@ export {
     releaseClosure,
 } from './live-update/plan';
 
+export type { PendingUpdate } from './live-update/pending';
+export { PENDING_MAX_AGE_MS, clearPendingUpdate, drainedFiles, pendingUpdateFile, pendingUpdateReader, readPendingUpdate, writePendingUpdate } from './live-update/pending';
+
 export { applyUpdate } from './live-update/adopt';
 export { DAEMONS, reloadsFor } from './live-update/reload';
 

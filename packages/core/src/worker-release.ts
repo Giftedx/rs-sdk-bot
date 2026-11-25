@@ -6,6 +6,7 @@ export { forgetSourceScans, sourceScans, workerSourceRevision } from './worker-r
 export { releaseFiles } from './worker-release/closure';
 export {
     cachedLaunchRevision,
+    cachedReleaseFiles,
     cachedReleaseFor,
     capabilityRevision,
     forgetReleaseMemory,
