@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795566433878-trousersnake-spitroaster-0a77b1f11d9b909c",
  "account": "Spitroaster",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 20,
  "claim": "cac604a5-d5fd-4a0e-a2d1-f359178256f3",
- "count": 0,
- "ok": false,
- "at": 1795567182131,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1795567232837,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795567232106
+ },
+ "logout": {
+  "attemptId": "1795567182141-0000029512-0000000001",
+  "at": 1795567232825,
+  "sha256": "f54b36d639719e05c037f716fb8ce44bc8cbfe5da563078276a4263883a60345"
+ },
+ "screen": true
 }
