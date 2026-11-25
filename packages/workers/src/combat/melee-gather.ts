@@ -104,7 +104,38 @@ export function cowStopControl(target: string, stopFile: () => boolean, ownedRec
     return { options, stop: () => reason !== undefined || stopFile(), reason: () => reason };
 }
 
+// The session stop reasons that end a generic combat run without its owned bank return. After a death the potion
+// session refuses every input of the new life. After a flee-guard stop the guard holds every walk ("random event in
+// progress"). A bank walk in either case cannot arrive.
+export function combatStopEnd(reason: string | undefined): 'died' | 'fled' | undefined {
+    if (reason === 'died') return 'died';
+    if (reason?.startsWith('fled')) return 'fled';
+    return undefined;
+}
+
+// The walk to the bank of a generic combat run. When the tick cap stops it (`capped`), the loot stays in the pack and
+// the run ends as capped. Any other failed walk is a fault. A travel that throws on its stop (createEdgevilleTravel)
+// counts as capped too when the cap is the cause.
+export async function combatBankWalk(walk: () => Promise<boolean>, capped: () => boolean): Promise<boolean> {
+    const arrived = await walk().catch(error => {
+        if (capped()) return false;
+        throw error;
+    });
+    if (arrived) return true;
+    if (capped()) return false;
+    throw Error('combat bank return unavailable');
+}
+
 export async function bankCombatLoot(s: CombatSession, drops: RegExp, extraIds: readonly number[] = []) {
+    // openBank on an open interface answers "Bank already open" with no new observation
+    // (vendor/rs-sdk/sdk/actions.ts _openBankOnce), so the generation never advances. Close a bank that an earlier
+    // step left open, then open it again (the same step as trip-kit.ts open()).
+    const open = () => !!s.sdk.getState()?.bank.isOpen || !!s.sdk.getState()?.interface?.isOpen;
+    if (open()) {
+        console.log('COMBAT_BANK stale-close');
+        await s.sdk.sendCloseModal();
+        if (!(await waitUntil(s, () => !open(), { timeoutTicks: 8 }))) throw Error('combat stale bank close unobserved');
+    }
     const generation = s.bankObservation?.()?.generation ?? -1;
     if (
         !(await s.bot.openBank()).success
@@ -1889,6 +1920,10 @@ export async function runGenericCombatSession(
         untilItemName?: string;
         env?: Record<string, string | undefined>;
         stop?: () => boolean;
+        // The reason of the session stop (openBot onStop): `died`, or `fled at low hitpoints: ...` from the flee guard.
+        stopReason?: () => string | undefined;
+        // Replaces the travel to a tile (tests).
+        walk?: (x: number, z: number, tol: number, stop: () => boolean) => Promise<boolean>;
     },
 ): Promise<{ ok: boolean; kills: number; itemsLooted: number; bankTrips: number; walkTicks: number; detail: string; untilHeld?: boolean }> {
     const TARGET_KEY = opts.target.toLowerCase();
@@ -1923,11 +1958,14 @@ export async function runGenericCombatSession(
                 : undefined;
     const cleanupScope = potionPolicy || maximum !== undefined ? combatPotionSession(ownedSession, stopCheck, CAP) : undefined;
     const s = cleanupScope ?? ownedSession;
-    let combatRecovery: (() => Promise<void>) | undefined;
+    const stopEnd = () => combatStopEnd(opts.stopReason?.());
+    const runEnd = () => (cleanupScope?.lifeEnded() ? 'died' : undefined) ?? stopEnd();
+    let combatRecovery: (() => Promise<string | undefined>) | undefined;
     let kills = 0;
     let itemsLooted = 0;
     let bankTrips = 0;
     let walkTicks = 0;
+    let capped = false;
     try {
         const pos = () => s.sdk.getState()?.player;
         const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
@@ -1964,7 +2002,11 @@ export async function runGenericCombatSession(
             return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
         };
         const walk = async (x: number, z: number, tol = 2) =>
-            dungeonTravel ? dungeonTravel.walk(s, TARGET_KEY as 'druid' | 'giant', { x, z, level: 0 }, ground, travelStop, tol) : ground(x, z, tol);
+            opts.walk
+                ? opts.walk(x, z, tol, travelStop)
+                : dungeonTravel
+                  ? dungeonTravel.walk(s, TARGET_KEY as 'druid' | 'giant', { x, z, level: 0 }, ground, travelStop, tol)
+                  : ground(x, z, tol);
         const needsBankPrep = () => {
             const inv = s.sdk.getInventory();
             const worn = s.sdk.getState()?.equipment ?? [];
@@ -1977,8 +2019,12 @@ export async function runGenericCombatSession(
             }
             return false;
         };
-        const bank = async () => {
-            if (!(await walk(conf.bankSpot.x, conf.bankSpot.z, 4))) throw Error('combat bank return unavailable');
+        // False when the tick cap stopped the walk to the bank (combatBankWalk): the loot stays in the pack.
+        const bank = async (): Promise<boolean> => {
+            if (!(await combatBankWalk(() => walk(conf.bankSpot.x, conf.bankSpot.z, 4), () => !recoveringPotions && over()))) {
+                capped = true;
+                return false;
+            }
             await bankCombatLoot(s, conf.drops, [...(alch ? [995] : []), ...(potions?.depositIds ?? [])]);
             if (targetConf.dragonShield && !(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
                 if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
@@ -2015,11 +2061,18 @@ export async function runGenericCombatSession(
             await s.bot.closeInterface();
             await waitTicks(s, 1);
             if (recoveringPotions && !(await walk(conf.bankSpot.x, conf.bankSpot.z, 2))) throw Error('combat final bank position unavailable');
+            return true;
         };
         if (cleanupScope) {
-            combatRecovery = combatPotionRecovery(cleanupScope, () => !!potions?.blocked || loot.blocked, bank, active => {
-                recoveringPotions = active;
-            });
+            combatRecovery = combatPotionRecovery(
+                cleanupScope,
+                () => !!potions?.blocked || loot.blocked,
+                bank,
+                active => {
+                    recoveringPotions = active;
+                },
+                stopEnd,
+            );
         }
         if (needsBankPrep()) await bank();
         const untilInPack = () => untilId !== undefined && s.sdk.getInventory().some(i => i.id === untilId);
@@ -2027,8 +2080,7 @@ export async function runGenericCombatSession(
         let untilDeposited = false;
         const bankUntil = async () => {
             const had = untilInPack();
-            await bank();
-            if (had) untilDeposited = true;
+            if ((await bank()) && had) untilDeposited = true;
         };
         let stuckWalks = 0;
         while (!over() && (!cleanupScope || !stopCheck())) {
@@ -2128,6 +2180,10 @@ export async function runGenericCombatSession(
         }
         if (untilInPack()) untilDeposited = true;
         if (combatRecovery && (!targetConf.gatherOnly || potions || alch || s.sdk.getInventory().some(i => conf.drops.test(i.name)))) await combatRecovery();
+        const end = runEnd();
+        if (end) {
+            return { ok: false, kills, itemsLooted, bankTrips, walkTicks, detail: `ticks=${used()} ${counters()} maximum=${maximum ?? '-'} ${end}=true` };
+        }
         let untilHeld: boolean | undefined;
         if (untilItem) {
             if (untilInPack()) await bankUntil();
@@ -2144,7 +2200,7 @@ export async function runGenericCombatSession(
             bankTrips,
             walkTicks,
             untilHeld,
-            detail: `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${opts.untilItemName} held=${untilHeld}` : ''}`,
+            detail: `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${opts.untilItemName} held=${untilHeld}` : ''}${capped ? ' capped=true' : ''}`,
         };
     } catch (e) {
         let detail = String(e);
@@ -2155,7 +2211,8 @@ export async function runGenericCombatSession(
                 detail += '; cleanup ' + String(recovery);
             }
         }
-        return { ok: false, kills, itemsLooted, bankTrips, walkTicks, detail };
+        const end = runEnd();
+        return { ok: false, kills, itemsLooted, bankTrips, walkTicks, detail: end ? `${detail} ${end}=true` : detail };
     }
 }
 
@@ -2339,7 +2396,9 @@ export async function runMeleeGatherCli(
         }
     }
 
-    let combatRecovery: (() => Promise<void>) | undefined;
+    const stopEnd = () => combatStopEnd(cowStop.reason());
+    const runEnd = () => (cleanupScope?.lifeEnded() ? 'died' : undefined) ?? stopEnd();
+    let combatRecovery: (() => Promise<string | undefined>) | undefined;
     try {
         const pos = () => s.sdk.getState()?.player;
         const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
@@ -2358,6 +2417,7 @@ export async function runMeleeGatherCli(
         let itemsLooted = 0;
         let bankTrips = 0;
         let walkTicks = 0;
+        let capped = false;
 
         const counters = () => `kills=${kills} looted=${itemsLooted} bankTrips=${bankTrips} walkTicks=${walkTicks} hp=${hp()}`;
         const travelStop = () => over() || (!recoveringPotions && cowStop.stop());
@@ -2401,8 +2461,12 @@ export async function runMeleeGatherCli(
             return false;
         };
 
-        const bank = async () => {
-            if (!(await walk(conf.bankSpot.x, conf.bankSpot.z, 4))) throw Error('combat bank return unavailable');
+        // False when the tick cap stopped the walk to the bank (combatBankWalk): the loot stays in the pack.
+        const bank = async (): Promise<boolean> => {
+            if (!(await combatBankWalk(() => walk(conf.bankSpot.x, conf.bankSpot.z, 4), () => !recoveringPotions && over()))) {
+                capped = true;
+                return false;
+            }
             await bankCombatLoot(s, conf.drops, [...(alch ? [995] : []), ...(potions?.depositIds ?? [])]);
 
             if (targetConf.dragonShield && !(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
@@ -2442,12 +2506,19 @@ export async function runMeleeGatherCli(
             await s.bot.closeInterface();
             await waitTicks(s, 1);
             if (recoveringPotions && !(await walk(conf.bankSpot.x, conf.bankSpot.z, 2))) throw Error('combat final bank position unavailable');
+            return true;
         };
 
         if (cleanupScope) {
-            combatRecovery = combatPotionRecovery(cleanupScope, () => !!potions?.blocked || loot.blocked, bank, active => {
-                recoveringPotions = active;
-            });
+            combatRecovery = combatPotionRecovery(
+                cleanupScope,
+                () => !!potions?.blocked || loot.blocked,
+                bank,
+                active => {
+                    recoveringPotions = active;
+                },
+                stopEnd,
+            );
         }
 
         console.log(`START combat gatherer ${botName} target=${TARGET_KEY} at=${pos()?.worldX},${pos()?.worldZ}`);
@@ -2457,8 +2528,7 @@ export async function runMeleeGatherCli(
         let untilDeposited = false;
         const bankUntil = async () => {
             const had = untilInPack();
-            await bank();
-            if (had) untilDeposited = true;
+            if ((await bank()) && had) untilDeposited = true;
         };
 
         let stuckWalks = 0;
@@ -2565,6 +2635,11 @@ export async function runMeleeGatherCli(
         if (potions) {
             console.log('COMBAT_POTIONS_RESULT ' + JSON.stringify({ doses: potions.doses, delta: potions.delta, receipts: potions.receipts, blocked: potions.blocked, resumes: potions.resumes }));
         }
+        const end = runEnd();
+        if (end) {
+            await finishCombat(ownedSession, false, `ticks=${used()} ${counters()} maximum=${maximum ?? '-'} ${end}=true`);
+            return;
+        }
         if (alch) {
             if (!cleanupScope) await bank();
             if (s.sdk.getInventory().some(i => i.id === 995 || conf.drops.test(i.name))) throw Error('owned alchemy bank return unconfirmed');
@@ -2597,7 +2672,7 @@ export async function runMeleeGatherCli(
         await finishCombat(
             ownedSession,
             total > 0 && targetMet,
-            `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${env.UNTIL_ITEM} held=${untilHeld}` : ''}`,
+            `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum ?? '-'}${untilItem ? ` until=${env.UNTIL_ITEM} held=${untilHeld}` : ''}${capped ? ' capped=true' : ''}`,
         );
     } catch (e) {
         let detail = String(e);
@@ -2608,6 +2683,7 @@ export async function runMeleeGatherCli(
                 detail += '; cleanup ' + String(recovery);
             }
         }
-        await finishCombat(ownedSession, false, detail);
+        const end = runEnd();
+        await finishCombat(ownedSession, false, end ? `${detail} ${end}=true` : detail);
     }
 }

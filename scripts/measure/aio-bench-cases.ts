@@ -1079,6 +1079,34 @@ return [
   // Chaos druids cast and hit in melee: the guard changes the protection prayer with the distance.
   {key: 'extra:guard-druid', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['druid', '600', 'druid'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {...PRESETS.gather_combat_druid!, skills: {...PRESETS.gather_combat_druid!.skills, Prayer: 60}}},
+  // The ends of a generic combat job (melee-gather.ts runMeleeGatherCli) where the bank return cannot happen or must
+  // not happen. Each case starts as a live job that failed. The job ends RESULT fail by design, so the case runs it
+  // through scripts/measure/combat-end-probe.ts, which passes when the RESULT line names the expected end.
+  // Hill giants in the Edgeville dungeon at combat level 3 with no food, as a live job with death recovery on: a giant
+  // kills the account. The new life refuses each input, so the job makes no bank walk and ends died=true.
+  {key: 'extra:combat-death-end', script: 'scripts/measure/combat-end-probe.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['died=true', 'giant', '1500', 'giant', 'MAX_KILLS=5', 'DEATH_RECOVERY=1'],
+    pass: s => ok(s) && !/bank return unavailable/.test(s) && loggedOutOnce(s),
+    presetConfig: {position: {x: 3117, z: 9850, level: 0}, skills: {Attack: 1, Strength: 1, Defence: 1, Hitpoints: 20}}},
+  // The same fight with the flee guard on: at 30% Hitpoints the guard runs the account clear and stops the job. The
+  // guard holds each later walk, so the job makes no bank walk and ends fled=true.
+  {key: 'extra:combat-flee-end', script: 'scripts/measure/combat-end-probe.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['fled=true', 'giant', '1500', 'giant', 'MAX_KILLS=5', 'FLEE_GUARD=1'],
+    pass: s => ok(s) && /^FLEE_GUARD safe /m.test(s) && !/arrival missing|random event in progress/.test(s) && loggedOutOnce(s),
+    presetConfig: {position: {x: 3117, z: 9850, level: 0}, skills: {Attack: 1, Strength: 1, Defence: 1, Hitpoints: 40}}},
+  // Taverley chaos druids with a full pack and a 30 tick cap: the cap stops the walk to the Falador bank. The job keeps
+  // the loot in the pack and ends capped=true, not with an error.
+  {key: 'extra:combat-cap-bank-walk', script: 'scripts/measure/combat-end-probe.ts', preset: 'gather_combat_druid',
+    scriptArgs: ['capped=true', 'druid', '30', 'taverley_druid'],
+    pass: s => ok(s) && !/bank return unavailable/.test(s) && loggedOutOnce(s),
+    presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 2933, z: 9849, level: 0}, inventory: Array.from({length: 28}, () => ({id: 227, count: 1}))}},
+  // Taverley blue dragons from the Falador bank with no Dusty key (1590) in the bank: the bank step stops on the missing
+  // key while the bank is open. The bank return then closes that open bank and opens it again for a fresh observation
+  // (COMBAT_BANK stale-close), and its own error is the missing key.
+  {key: 'extra:combat-stale-bank', script: 'scripts/measure/combat-end-probe.ts', preset: 'gather_combat_druid',
+    scriptArgs: ['-', 'druid', '1300', 'taverley_blue_dragon', 'MAX_KILLS=5'],
+    pass: s => ok(s) && s.includes('COMBAT_BANK stale-close') && /cleanup Error: Dusty key \(1590\) required/.test(s) && !/fresh bank unavailable/.test(s) && loggedOutOnce(s),
+    presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 2946, z: 3368, level: 0}, equipment: [...PRESETS.gather_combat_druid!.equipment!, {id: 1540, count: 1, slot: 5}]}},
   // Iron at the Al Kharid mine at combat level 13, on the open tile west of two iron rocks (maps/m51_51.jm2): the
   // scorpions (level 14, hunt range 2) attack while the pick swings. A scorpion cannot reach the tile between the
   // three iron rocks at 3295,3310, so that tile tests no attack. With `--set PRAYER_GUARD=0` the worker dies here.

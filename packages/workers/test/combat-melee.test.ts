@@ -37,6 +37,8 @@ import {
     cowProfile,
     cowReleased,
     cowRoutePoints,
+    combatBankWalk,
+    combatStopEnd,
     cowStopControl,
     cowTraining,
     createTaverleyTravel,
@@ -54,6 +56,7 @@ import {
     retreatWaypoints,
     roamTarget,
     runCows,
+    runGenericCombatSession,
     runGiants,
     selectGiantArmour,
     selectGiantArrows,
@@ -552,6 +555,64 @@ test('combat bank return requires fresh bank and paired loot debit/credit before
   const s:any={name:'combat-bank',tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bankObservation:()=>open||mode==='stale-bank'?{generation,items:bank}:null,sdk:{getState:()=>({inventory:pack,bank:{isOpen:open}}),getInventory:()=>pack},bot:{openBank:async()=>{if(mode==='bank-refused')return{success:false};open=true;if(mode!=='stale-bank')generation++;return{success:true};},depositItem:async()=>{inputs++;if(mode==='refused')return{success:false};pack.shift();generation++;if(mode!=='missing-credit')bank.push({id:532,name:'Big bones',count:2});return{success:true};}}};
   try{if(mode==='landed'){await bankCombatLoot(s,/big bones/i);expect(pack.map(i=>i.id)).toEqual([379]);expect(bank[0].count).toBe(2);}else await expect(bankCombatLoot(s,/big bones/i)).rejects.toThrow();expect(inputs).toBe(['bank-refused','stale-bank'].includes(mode)?0:1);}finally{clearInterval(timer);}
  }
+});
+
+test('combat bank return closes a bank that an earlier step left open, then banks on a fresh observation',async()=>{
+ // The SDK answers openBank on an open interface with "Bank already open" and no new observation
+ // (vendor/rs-sdk/sdk/actions.ts _openBankOnce), so the old generation never advances.
+ for(const mode of['closes','stays-open']){
+  let tick=0,generation=4,open=true,closes=0,inputs=0;const listeners=new Set<()=>void>(),pack=[{id:532,name:'Big bones',count:2,slot:0}],bank:any[]=[];
+  const timer=setInterval(()=>{tick++;for(const f of listeners)f();},1);
+  const s:any={name:'combat-bank',tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bankObservation:()=>({generation,items:bank}),
+   sdk:{getState:()=>({inventory:pack,bank:{isOpen:open},interface:{isOpen:open}}),getInventory:()=>pack,sendCloseModal:async()=>{closes++;if(mode==='closes')open=false;}},
+   bot:{openBank:async()=>{if(open)return{success:true,message:'Bank already open'};open=true;generation++;return{success:true};},depositItem:async()=>{inputs++;pack.shift();generation++;bank.push({id:532,name:'Big bones',count:2});return{success:true};}}};
+  try{
+   if(mode==='closes'){await bankCombatLoot(s,/big bones/i);expect(closes).toBe(1);expect(pack).toEqual([]);expect(bank[0].count).toBe(2);}
+   else{await expect(bankCombatLoot(s,/big bones/i)).rejects.toThrow('combat stale bank close unobserved');expect(inputs).toBe(0);}
+  }finally{clearInterval(timer);}
+ }
+});
+
+// A generic combat session at the Wizards' Tower. The walk hook stands in for the travel; no test here gets as far as a bank.
+function genericCombat(pack=0){
+ let tick=0;const player:any={worldX:3110,worldZ:3162,level:0,lifeId:1,respawnCount:0,isDead:false,combat:{inCombat:false,targetType:'none',targetIndex:-1}};
+ const inventory=Array.from({length:pack},(_,slot)=>({id:1511,name:'Logs',count:1,slot}));
+ const s:any={name:'generic-combat',client:{selfSlot:1,executeBotAction:()=>({success:true}),npc:{}},tick:()=>tick,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  sdk:{getState:()=>({player,inventory,equipment:[],nearbyNpcs:[],nearbyLocs:[],groundItems:[],bank:{isOpen:false}}),getInventory:()=>inventory,
+   getSkill:(name:string)=>name==='Hitpoints'?{name,level:50,baseLevel:50,experience:0}:undefined,getStateAge:()=>0},
+  bot:{},bankObservation:()=>null,direct:async()=>({success:true})};
+ return{s,player,setTick:(n:number)=>{tick=n;}};
+}
+
+test('a death skips the bank return that every input of the new life refuses, and the result says died=true',async()=>{
+ const g=genericCombat();let walks=0;
+ const r=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,maximum:5,env:{},walk:async()=>{walks++;return false;},
+  stop:()=>{if(g.player.lifeId===1){g.player.lifeId=2;g.player.respawnCount=1;}return true;}});
+ expect(walks).toBe(0);expect(r.ok).toBe(false);expect(r.detail).toContain('died=true');expect(r.detail).not.toContain('bank return unavailable');
+});
+
+test('a flee-guard stop skips the bank return that the guard holds, and the result says fled=true',async()=>{
+ const g=genericCombat();let walks=0;
+ const r=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,maximum:5,env:{},walk:async()=>{walks++;return false;},stop:()=>true,
+  stopReason:()=>'fled at low hitpoints: flee_guard id=117 at=3121,9843 ticks=5'});
+ expect(walks).toBe(0);expect(r.ok).toBe(false);expect(r.detail).toContain('fled=true');expect(r.detail).not.toContain('travel ground arrival missing');
+ expect(combatStopEnd('fled at low hitpoints: flee_guard id=117')).toBe('fled');expect(combatStopEnd('died')).toBe('died');
+ for(const other of [undefined,'stop file','lease lost','no progress: 900 ticks'])expect(combatStopEnd(other)).toBeUndefined();
+});
+
+test('the tick cap that stops a full-pack bank walk ends the run as capped, not as a throw',async()=>{
+ const g=genericCombat(28);let walks=0;
+ const r=await runGenericCombatSession(g.s,{target:'wizard',cap:1000,env:{},walk:async()=>{walks++;g.setTick(1001);return false;},stop:()=>false});
+ expect(walks).toBe(1);expect(r.detail).toContain('capped=true');expect(r.detail).not.toContain('bank return unavailable');expect(r.bankTrips).toBe(0);
+});
+
+test('a bank walk that the cap stops is capped, also when the travel throws on its stop; other failures still throw',async()=>{
+ const stopped=async()=>{throw Error('combat travel original owner/life/stop');};
+ expect(await combatBankWalk(async()=>true,()=>true)).toBe(true);
+ expect(await combatBankWalk(async()=>false,()=>true)).toBe(false);
+ expect(await combatBankWalk(stopped,()=>true)).toBe(false);
+ await expect(combatBankWalk(async()=>false,()=>false)).rejects.toThrow('combat bank return unavailable');
+ await expect(combatBankWalk(stopped,()=>false)).rejects.toThrow('combat travel original owner/life/stop');
 });
 
 test('generic combat prefers a native attacker targeting this player over a free NPC', () => {
