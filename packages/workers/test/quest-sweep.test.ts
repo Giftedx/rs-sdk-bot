@@ -1165,7 +1165,7 @@ test('Dragon Slayer from Varrock West: the planks come from a spawn outside the 
  const {spawnsByDistance}=await import('../../core/src/spawn-index');
  const {wildernessLevel}=await import('../../core/src/prayer-guard');
  const varrock={x:3185,z:3437,level:0};
- // The nearest plank spawns to Varrock West lie at 3148,3671 (Wilderness 19), where a player killed UnderMyKilt.
+ // The nearest plank spawns to Varrock West lie at 3148,3671 (Wilderness 19).
  expect(wildernessLevel(spawnsByDistance(960,varrock)[0]!.x,spawnsByDistance(960,varrock)[0]!.z)).toBeGreaterThan(0);
  const plan=gatherPlan([{id:960,count:3}],varrock,spawnsByDistance,()=>Infinity,()=>[],99,1,()=>[]);
  expect(plan.gathers).toEqual([{id:960,count:3,how:'spawn'}]);
