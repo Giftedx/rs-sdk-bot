@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795586349547-5",
  "account": "Kiltlifter",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "7b3ba446-9e3e-48bd-925a-e38d04b5e31a",
- "count": 0,
- "ok": false,
- "at": 1795586795344,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795586966843,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795586950160
+ },
+ "logout": {
+  "attemptId": "1795586795354-0000012680-0000000001",
+  "at": 1795586966828,
+  "sha256": "c455d2fa376ac8ebf57d680b3759bf2f018cd931950ad8d5b86fa383bd8bf7f4"
+ },
+ "screen": true
 }
