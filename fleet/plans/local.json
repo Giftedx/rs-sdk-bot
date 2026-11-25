@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795603004975,
+ "at": 1795603057773,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -25,22 +25,6 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
-  },
-  {
-   "account": "Fingerblastr",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "foraging",
@@ -118,6 +102,19 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/generated/quest-arena.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:arena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:arena",
+   "role": "army"
   }
  ],
  "army": [
@@ -133,6 +130,7 @@
   "deeppockets",
   "dipstick",
   "fatstack",
+  "fingerblastr",
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
