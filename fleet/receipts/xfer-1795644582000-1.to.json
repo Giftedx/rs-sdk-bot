@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795644582000-1",
  "account": "Wandwaver",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "4637f729-9a47-4451-9005-33f955ce5776",
- "count": 0,
- "ok": false,
- "at": 1795644930761,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795644943001,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795644942259
+ },
+ "logout": {
+  "attemptId": "1795644930770-0000006872-0000000001",
+  "at": 1795644942990,
+  "sha256": "6b6c46a3122e8cd9461060f9d353e6ee327a6d48385a23a05c32d177e263b29c"
+ },
+ "screen": true
 }
