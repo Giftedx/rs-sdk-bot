@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795602169017,
+ "at": 1795602264917,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -38,39 +38,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1987",
    "role": "helper"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "foraging",
-    "grapes"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1987",
-    "BATCH_UNITS": "20"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1987",
-   "role": "army"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "chompy"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pocketpython",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
   },
   {
    "account": "Wandwaver",
@@ -250,15 +217,37 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/generated/quest-death.ts",
-   "args": [],
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:ranarr_weed"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:death",
-    "BATCH_UNITS": "1"
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "40"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:death",
+   "goal": "goal:supply_chain:259",
+   "role": "army"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/generated/quest-tree.ts DEMAND_ID=goal:quest_board:tree BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:tree",
    "role": "army"
   }
  ],
@@ -281,8 +270,8 @@
   "kiltlifter",
   "knightrider",
   "mineyourbiz",
-  "mmthv2350",
   "moneyshot",
+  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
