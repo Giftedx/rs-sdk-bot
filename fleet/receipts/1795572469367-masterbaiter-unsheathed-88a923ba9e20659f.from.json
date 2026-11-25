@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795572469367-masterbaiter-unsheathed-88a923ba9e20659f",
  "account": "Masterbaiter",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 150,
  "claim": "d1baea58-2236-48f7-9082-e662588f5ffd",
- "count": 0,
- "ok": false,
- "at": 1795572566695,
- "detail": "trade claimed"
+ "count": 150,
+ "ok": true,
+ "at": 1795572585489,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 150,
+  "after": 0
+ },
+ "bank": {
+  "count": 150,
+  "at": 1795572577456
+ },
+ "logout": {
+  "attemptId": "1795572566705-0000026240-0000000001",
+  "at": 1795572585390,
+  "sha256": "ed9b6b541df61fc9676d0553aa99b6574e0d0fe9ed096614eb5ac308910c9bbf"
+ },
+ "screen": true
 }
