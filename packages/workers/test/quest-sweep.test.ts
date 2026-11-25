@@ -1160,6 +1160,23 @@ test('Fishing Contest trains Fishing 10 with a small net; other quests and Fishi
  expect(questSkillTraining('imp',()=>1)).toBeNull();
 });
 
+test('Dragon Slayer from Varrock West: the planks come from a spawn outside the Wilderness',async()=>{
+ const {outsideWilderness}=await import('../../core/src/gather');
+ const {spawnsByDistance}=await import('../../core/src/spawn-index');
+ const {wildernessLevel}=await import('../../core/src/prayer-guard');
+ const varrock={x:3185,z:3437,level:0};
+ // The nearest plank spawns to Varrock West lie at 3148,3671 (Wilderness 19).
+ expect(wildernessLevel(spawnsByDistance(960,varrock)[0]!.x,spawnsByDistance(960,varrock)[0]!.z)).toBeGreaterThan(0);
+ const plan=gatherPlan([{id:960,count:3}],varrock,spawnsByDistance,()=>Infinity,()=>[],99,1,()=>[]);
+ expect(plan.gathers).toEqual([{id:960,count:3,how:'spawn'}]);
+ const safe=outsideWilderness(spawnsByDistance(960,varrock));
+ expect(safe.length).toBeGreaterThan(0);expect(safe.every(t=>wildernessLevel(t.x,t.z)===0)).toBe(true);
+ // A Wilderness-only spawn is not a gather: the plan hands it to the shop plan.
+ const wildOnly=gatherPlan([{id:960,count:1}],varrock,()=>[{x:3148,z:3671,level:0}],()=>Infinity,()=>[],99,1,()=>[]);
+ expect(wildOnly.gathers).toEqual([]);expect(wildOnly.still).toEqual([{id:960,count:1}]);
+ expect(outsideWilderness([{x:3239,z:3608,level:0},{x:3185,z:3437,level:0},{x:3046,z:10265,level:0}])).toEqual([{x:3185,z:3437,level:0}]);
+});
+
 test("Dragon Slayer: the unfired bowl is soft clay on a potter's wheel, made after the clay and its water",async()=>{
  const {USE_SOURCES,COMBINE_SOURCES,BRONZE_PICKAXE,useMenuChoice}=await import('../../core/src/gather');
  expect(USE_SOURCES[1791]).toMatchObject({uses:[1761],choice:'bowl'});

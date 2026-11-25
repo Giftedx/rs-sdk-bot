@@ -1,6 +1,7 @@
 // Static item, loc, NPC, mining, firemaking, use, combine and kill source tables for gathering.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { wildernessLevel } from '../prayer-guard';
 
 export type Item = { id: number; count: number };
 export type Tile = { x: number; z: number; level: number };
@@ -179,6 +180,10 @@ export const killSpawns = (id: number): Tile[] => {
 
 let cowTiles: Tile[] | undefined;
 export const cows = () => cowTiles ??= npcSpawns([COW]);
+
+// Gathering never picks a Wilderness tile: players can attack the gatherer there. The nearest plank spawns to Varrock
+// West, for example, lie at 3148,3671 (Wilderness 19).
+export const outsideWilderness = (tiles: readonly Tile[]): Tile[] => tiles.filter(t => wildernessLevel(t.x, t.z) === 0);
 
 export const nearest = (tiles: readonly Tile[], at: Tile) => {
     const scored: { t: Tile; d: number }[] = [];
