@@ -75,7 +75,6 @@ const MELEE_PVP_SPECIALIST_SUPPLIES = (stage: string): readonly CampaignSupplyRe
     supply(1725, 'Amulet of strength', 1, stage),
     supply(2434, 'Prayer potion(4)', 2, stage),
     supply(2552, 'Ring of dueling(8)', 1, stage),
-    supply(3016, 'Super energy(4)', 7, stage),
 ];
 
 /**
@@ -235,7 +234,6 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
             supply(1643, 'Diamond ring', 36, 'Magic'),
             supply(1727, 'Amulet of magic', 1, 'Magic'),
             supply(2434, 'Prayer potion(4)', 2, 'Magic'),
-            supply(3016, 'Super energy(4)', 1, 'Magic'),
         ],
     },
     {
@@ -436,7 +434,6 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
             supply(1712, 'Amulet of glory(4)', 1, 'Agility'),
             supply(1897, 'Chocolate cake', 4, 'Agility'),
             supply(2434, 'Prayer potion(4)', 3, 'Agility'),
-            supply(3016, 'Super energy(4)', 2, 'Agility'),
             supply(3032, 'Agility potion(4)', 6, 'Agility'),
         ],
     },
@@ -454,7 +451,6 @@ export const SPECIALIST_CAMPAIGN_SPECS: readonly SpecialistCampaignSpec[] = [
         requiredSupplies: [
             supply(1897, 'Chocolate cake', 26, 'Thieving'),
             supply(2552, 'Ring of dueling(8)', 1, 'Thieving'),
-            supply(3016, 'Super energy(4)', 1, 'Thieving'),
         ],
     },
     {

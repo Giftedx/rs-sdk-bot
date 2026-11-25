@@ -4,6 +4,8 @@ import { CRAFTING_CW_BATCH, CRAFTING_CW_NOTED_SUPPLIES } from '../crafting-speci
 import { ITEM_IDS } from '../fast-skills-lib';
 import {
  HERBLORE_BANK_HELPER_SPOT,
+ HERBLORE_DROP_NOTED_BATCH,
+ HERBLORE_DROP_NOTED_SUPPLIES,
  HERBLORE_NOTED_BATCH,
  HERBLORE_NOTED_SUPPLIES,
  HERBLORE_STARTER_BATCH,
@@ -27,6 +29,7 @@ const STACKABLE_IDS = new Set<number>([
  ITEM_IDS.bodyrune,
  995,
  ...HERBLORE_NOTED_SUPPLIES.map(s => s.certId),
+ ...HERBLORE_DROP_NOTED_SUPPLIES.map(s => s.certId),
  ...CRAFTING_CW_NOTED_SUPPLIES.map(s => s.certId),
 ]);
 
@@ -259,6 +262,24 @@ export const SPECIALIST_FAST_SKILLS_EXTERNAL_CASES: readonly BenchCase[] = [
      bank: [{ id: ITEM_IDS.blankrune, count: 500 }],
     },
    })),
+  ],
+ },
+ {
+  key: 'extra:herblore-drop',
+  script: 'scripts/aio-skiller.ts',
+  preset: 'fresh_lumbridge',
+  presetConfig: freshTutorialStart(),
+  scriptArgs: ['herblore', 'specialist', 'CAP=600', 'HERBLORE_ROUTE=drop', helperArg(2)],
+  pass: stdout => {
+   const result = stdout.match(/^RESULT ok\b.*$/m)?.[0] ?? '';
+   const ticks = Number(/\bticks=(\d+)/.exec(result)?.[1] ?? NaN);
+   return !!result && /\blevel=99\b/.test(result) && !/\bRESULT fail\b/.test(stdout) && ticks <= 415;
+  },
+  output: /ticks=(\d+)/,
+  timeoutMs: 600_000,
+  companions: [
+   staticCompanion(0, { x: 3222, z: 3223, level: 0 }, HERBLORE_STARTER_BATCH.give),
+   staticCompanion(1, HERBLORE_BANK_HELPER_SPOT, HERBLORE_DROP_NOTED_BATCH.give),
   ],
  },
 ];
