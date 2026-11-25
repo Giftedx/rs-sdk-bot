@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795602503502-1",
+ "account": "YewFirst",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 1,
+ "claim": "93a2be70-968a-40d3-942f-be3dd7b8fdff",
+ "count": 0,
+ "ok": false,
+ "at": 1795602735598,
+ "detail": "trade claimed"
+}
