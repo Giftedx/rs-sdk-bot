@@ -94,7 +94,7 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
     const attackerEquipment = skill === 'Ranged'
         ? [
             { id: 841, count: 1, slot: 3 },   // Shortbow
-            { id: 884, count: 500, slot: 13 }, // Iron arrow
+            { id: 884, count: 5000, slot: 13 }, // Iron arrow
             { id: 1704, count: 1, slot: 2 },   // Glory
             { id: 1167, count: 1, slot: 0 },   // Leather cowl
             { id: 1061, count: 1, slot: 10 },  // Leather boots
@@ -111,7 +111,7 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
         ? [
             { id: 843, count: 1 }, { id: 849, count: 1 }, { id: 853, count: 1 },
             { id: 857, count: 1 }, { id: 861, count: 1 }, { id: 859, count: 1 },
-            { id: 886, count: 500 }, { id: 888, count: 500 }, { id: 890, count: 500 }, { id: 892, count: 5000 },
+            { id: 886, count: 5000 }, { id: 888, count: 5000 }, { id: 890, count: 5000 }, { id: 892, count: 5000 },
             { id: 1169, count: 1 }, { id: 1065, count: 1 }, { id: 2487, count: 1 },
             { id: 2491, count: 1 }, { id: 1099, count: 1 }, { id: 2497, count: 1 },
             { id: 2499, count: 1 }, { id: 2503, count: 1 },
@@ -166,22 +166,23 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
         await tick(att, 1);
         const startXp = xp(att, skill);
         let swings = 0;
-        let lastTierLvl = level(att, skill);
         const styleCom = skill === 'Ranged' ? null : styleComponentFor(skill, 1319);
 
         try {
             for (let iter = 0; iter < 2200 && (level(att, skill) < 99 || xp(att, skill) < targetXp); iter++) {
                 const curLvl = level(att, skill);
-                if (skill === 'Ranged' && curLvl !== lastTierLvl && [5, 20, 30, 40, 50, 70].some(t => curLvl >= t && lastTierLvl < t)) {
-                    lastTierLvl = curLvl;
-                    const held = new Set(att.sdk.getInventory().map(i => i.id));
+                if (skill === 'Ranged') {
+                    const invIds = new Set(att.sdk.getInventory().map(i => i.id));
+                    const eqIds = new Set((att.sdk.getState()?.equipment ?? []).map((i: any) => i.id));
+                    const held = new Set([...invIds, ...eqIds]);
                     const { bow, arrow } = selectRangedKit(curLvl, held);
-                    if (bow) await equipId(att, bow.id);
-                    if (arrow) await equipId(att, arrow.id);
-                    if (curLvl >= 20) await equipId(att, 1169);
-                    if (curLvl >= 40) { await equipId(att, 1065); await equipId(att, 1099); }
-                    if (curLvl >= 50) { await equipId(att, 2487); await equipId(att, 2499); }
-                    if (curLvl >= 70) { await equipId(att, 2491); await equipId(att, 2497); await equipId(att, 2503); }
+                    let upgraded = false;
+                    if (bow && !eqIds.has(bow.id) && invIds.has(bow.id)) { await equipId(att, bow.id); upgraded = true; }
+                    if (arrow && !eqIds.has(arrow.id) && invIds.has(arrow.id)) { await equipId(att, arrow.id); upgraded = true; }
+                    for (const [req, id] of [[20, 1169], [40, 1065], [40, 1099], [50, 2487], [50, 2499], [70, 2491], [70, 2497], [70, 2503]] as const) {
+                        if (curLvl >= req && !eqIds.has(id) && invIds.has(id)) { await equipId(att, id); upgraded = true; }
+                    }
+                    if (upgraded) await waitTicks(att, 1);
                 }
 
                 for (let w = 0; w < 4 && !(att.sdk.getState()?.nearbyPlayers ?? []).length; w++) {

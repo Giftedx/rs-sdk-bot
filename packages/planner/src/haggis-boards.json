@@ -1886,25 +1886,30 @@
       "supplies": [
        {
         "item": "rune essence",
-        "count": 4671
+        "count": 4401
        },
        {
         "item": "air talisman",
         "count": 1
        },
        {
-        "item": "nature talisman",
+        "item": "body talisman",
+        "count": 1
+       },
+       {
+        "item": "law talisman",
         "count": 1
        }
       ],
       "ticks": {
-       "floor": 1384,
-       "realistic": 1384,
+       "floor": 1304,
+       "realistic": 1304,
        "evidence": "MEASURED",
-       "source": "Nature altar 44 -> 99 needs 156 packs of 27 essence (947,700 XP at MEASURED 6,075 XP/pack, hosted CI 45513853041 scripts/measure/haggis-stage-rc.ts nature=36,450/6), plus Air altar 1 -> 44 (17 packs, 57,375 XP) = 173 packs x MEASURED 8 ticks/pack (44485487430 tickTransfer)"
+       "source": "Air 1->20 (2 packs, 6,750 XP) + Body 20->54 (29 packs, 146,812.5 XP) + Law 54->99 (132 packs, 846,450 XP at MEASURED 6,412.5 XP/pack, hosted CI 45516957643 scripts/measure/haggis-stage-rc.ts law=38,475/6) = 163 packs x MEASURED 8 ticks/pack (44485487430 tickTransfer)"
       },
       "via": [
-       "nature-ruins"
+       "body-ruins",
+       "law-ruins"
       ]
      }
     }
@@ -3068,9 +3073,9 @@
     "toLevel": 99,
     "xpPerTick": {
      "floor": 1049.9,
-     "realistic": 883.3,
+     "realistic": 1043.7,
      "evidence": "MEASURED",
-     "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-strength seeds 7/8/9: 999,535/952=1049.9, 999,427/1024=976.0, 999,857/1132=883.3 XP/tick (Attack 40+, Rune 2h, Ultimate Strength, 5 Combat-75 tanks)"
+     "source": "floor 1049.9 hosted-bench 44864025475; realistic 1043.7 hosted CI 45516948511 scripts/measure/haggis-stage-pvp-combat.ts strength=957t (799 swings, 998,782 XP, 1,043.7 XP/t, Vampire Slayer Attack 68 + Rune 2h + Ultimate Strength across CB-80 tanks)"
     },
     "side": {
      "hitpoints": 0.333
@@ -3188,9 +3193,9 @@
        "toLevel": 99,
        "xpPerTick": {
         "floor": 1049.9,
-        "realistic": 883.3,
+        "realistic": 1043.7,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-strength seeds 7/8/9: 999,535/952=1049.9, 999,427/1024=976.0, 999,857/1132=883.3 XP/tick (Attack 40, Rune 2h, Ultimate Strength, 5 Combat-75 tanks)"
+        "source": "floor 1049.9 hosted-bench 44864025475; realistic 1043.7 hosted CI 45516948511 scripts/measure/haggis-stage-pvp-combat.ts strength=957t (799 swings, 998,782 XP, 1,043.7 XP/t)"
        },
        "side": {
         "hitpoints": 0.333
@@ -4350,10 +4355,10 @@
        "skill": "defence",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 1313.8,
-        "realistic": 1114.5,
+        "floor": 1328.2,
+        "realistic": 1328.2,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-defence seeds 7/8/9: 998,460/760=1313.8, 999,212/785=1272.9, 998,567/896=1114.5 XP/tick (1->99 full run with Attack/Strength 99, Rune 2h, 5 Combat-75 tanks)"
+        "source": "hosted CI 45516948511 scripts/measure/haggis-stage-pvp-combat.ts defence=752t (Defence 1->99, 670 swings, 998,800 XP, 1,328.2 XP/t, Rune 2h + Ultimate Strength across 5 Combat-101 1-Def tanks at Deserted Keep)"
        },
        "side": {
         "hitpoints": 0.333

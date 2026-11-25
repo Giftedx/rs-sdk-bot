@@ -35,14 +35,15 @@ test.each([
 test('selected runecraft route supplies enough full essence packs for 99', () => {
     const activeSupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });
     const legacySupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(), disable: new Set(['spiders-combat', 'rival-altar-room-rc']) });
-    let natureXp = 0, natureUsed = 0;
-    while (natureXp < xpForLevel(99)) {
-        natureXp += 27 * (natureXp < xpForLevel(44) ? 125 : 225);
-        natureUsed += 27;
+    let lawXp = 0, lawUsed = 0;
+    while (lawXp < xpForLevel(99)) {
+        lawXp += 27 * (lawXp < xpForLevel(20) ? 125 : lawXp < xpForLevel(54) ? 187.5 : 237.5);
+        lawUsed += 27;
     }
-    expect(activeSupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(natureUsed);
+    expect(activeSupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(lawUsed);
     expect(activeSupplies).toContainEqual({ item: 'air talisman', count: 1 });
-    expect(activeSupplies).toContainEqual({ item: 'nature talisman', count: 1 });
+    expect(activeSupplies).toContainEqual({ item: 'body talisman', count: 1 });
+    expect(activeSupplies).toContainEqual({ item: 'law talisman', count: 1 });
     expect(legacySupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThan(0);
 });
 
