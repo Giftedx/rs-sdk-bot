@@ -30,8 +30,8 @@ const DASH=`http://127.0.0.1:${Number(process.env.DASH_PORT??3100)}`;
 // The local console accepts these from its own page; actions in ACTIONS go through applyCommand directly.
 const CONSOLE_ACTIONS=new Set(['pause','resume','account-release','set-campaign-state','set-mission-state']);
 
-// The daemon writes each line to its log file itself. Output inherited through a detached child's stdout stopped
-// reaching the file after the first cycle when a watchdog pass started it (two 5-hour runs left one line each).
+// The daemon writes each line to its log file itself: output inherited through a detached child's stdout can stop
+// reaching the file when a watchdog pass started the daemon.
 const LOG=join(prac,'dashboard-publish.log'),LOG_DIRECT=process.env.PUBLISH_LOG_DIRECT==='1';
 const log=(line:string)=>{if(LOG_DIRECT){try{appendFileSync(LOG,line+'\n');return;}catch{/* stdout below */}}console.log(line);};
 const alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
