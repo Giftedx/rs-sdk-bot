@@ -493,6 +493,9 @@ export async function runArdougneStunRelogThieving(opts: {
                         continue;
                     }
                 }
+                // Stay on Ardougne Market stalls through Lv 54 (0 stun, 0 food) instead of burning food on Guards/Warriors.
+                await waitTicks(main, 1);
+                continue;
             }
         }
 

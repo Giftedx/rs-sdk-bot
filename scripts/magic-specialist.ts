@@ -539,6 +539,7 @@ async function executeMagicLoop(
  start: number,
  deadline: number,
  receiveBatch: (batch: MagicBatchPlan, index: number) => Promise<void>,
+ useSafeFoyer = false,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
@@ -568,8 +569,18 @@ async function executeMagicLoop(
    const w0 = spec.tick();
    await castWindStrikeToLevel7(spec, deadline);
    windTicks = spec.tick() - w0;
-   if (!nearTile(spec, LUMBRIDGE_SAFE_SPOT.x, LUMBRIDGE_SAFE_SPOT.z, 2, LUMBRIDGE_SAFE_SPOT.level)) {
-    const courtyardWalker = await sessionWalker(spec);
+   const courtyardWalker = await sessionWalker(spec);
+   if (useSafeFoyer) {
+    // Move inside Lumbridge Castle foyer (3210,3218) so wandering Giant spiders cannot interrupt Batch 1..5 trades.
+    await walkPath(
+     courtyardWalker,
+     [
+      { x: 3215, z: 3219, tol: 1 },
+      { x: 3210, z: 3218, tol: 0 },
+     ],
+     { maxTicks: Math.max(10, Math.min(25, deadline - spec.tick())) },
+    );
+   } else if (!nearTile(spec, LUMBRIDGE_SAFE_SPOT.x, LUMBRIDGE_SAFE_SPOT.z, 2, LUMBRIDGE_SAFE_SPOT.level)) {
     await walkPath(courtyardWalker, [{ x: LUMBRIDGE_SAFE_SPOT.x, z: LUMBRIDGE_SAFE_SPOT.z, tol: 1 }], {
      maxTicks: Math.max(10, Math.min(25, deadline - spec.tick())),
     });
@@ -641,20 +652,30 @@ export async function runMagicSpecialist(
  const start = spec.tick();
  const deadline = start + opts.cap;
  let done = false;
- const keepers = helpers.map(h =>
+ const keepers = helpers.map((h, idx) =>
   (async () => {
+   if (idx >= 1) {
+    const hw = await sessionWalker(h);
+    await walkPath(hw, [{ x: 3215, z: 3219, tol: 1 }, { x: 3211, z: 3218, tol: 1 }], { maxTicks: 25 }).catch(() => {});
+   }
    while (!done && h.tick() < deadline) await waitTicks(h, 1);
   })(),
  );
 
  try {
-  return await executeMagicLoop(spec, target, start, deadline, (batch, i) =>
-   burstTradeHost(spec, helpers[i]!, {
-    giveIds: batch.give.map(g => g.id),
-    returnIds: batch.returnIds,
-    deadlineTick: deadline,
-    allowHelperOnSingleModal: true,
-   }),
+  return await executeMagicLoop(
+   spec,
+   target,
+   start,
+   deadline,
+   (batch, i) =>
+    burstTradeHost(spec, helpers[i]!, {
+     giveIds: batch.give.map(g => g.id),
+     returnIds: batch.returnIds,
+     deadlineTick: deadline,
+     allowHelperOnSingleModal: true,
+    }),
+   true,
   );
  } finally {
   done = true;
