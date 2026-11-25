@@ -3,7 +3,7 @@ import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import * as pkGang from '../packages/workers/src/pvp/pk-gang';
 import { maxDeathsOf } from '../packages/workers/src/pvp/hunt-kits';
-import { activeCentroid, bankNear, configureBenchSession, createSquadCohesion, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldBreakSingleWayChase, shouldFollowReplan, shouldSwitchFocus, SINGLE_WAY_CHASE_LEASH, squadEscapeSpell, squadFallbackPlan, squadMetrics, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { activeCentroid, bankNear, configureBenchSession, createSquadCohesion, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldBreakSingleWayChase, shouldFollowReplan, shouldSwitchFocus, SINGLE_WAY_CHASE_LEASH, squadDied, squadEscapeSpell, squadFallbackPlan, squadMetrics, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks, WINDUP_EAT_TICKS, windupFloor, windupStep } from './pk-squad';
 import { escapeCastable, isMulti, nextTick } from './pk';
 import { benchCases } from './measure/aio-bench-cases';
 import { hold, SQUAD_OPTS, squadEnd, squadFightOverrides } from './pk-squad';
@@ -722,6 +722,104 @@ test('rescue casts an available escape teleport on tick 0 before eating so multi
         const res = await rescue(mockSess, () => {}, () => false, false);
         expect(res).toBe(mockSess);
         expect(actions).toEqual(['useInventoryItem:2', 'clickComponent:1174']);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+describe('the teleport windup floor', () => {
+    test('10 HP for each attacker, at most half the maximum, and 1 attacker when the count is unknown', () => {
+        expect(windupFloor(5, 99)).toBe(49);
+        expect(windupFloor(4, 99)).toBe(40);
+        expect(windupFloor(2, 99)).toBe(20);
+        expect(windupFloor(0, 99)).toBe(10);
+        expect(windupFloor(9, 99)).toBe(49);
+    });
+    test('under the floor the rescue eats alone until it sees the heal or waited WINDUP_EAT_TICKS', () => {
+        const at = (o: Partial<Parameters<typeof windupStep>[0]>) => windupStep({ hp: 27, floor: 49, food: true, healed: false, waited: 0, ...o });
+        expect(at({})).toBe('eat');
+        expect(at({ waited: WINDUP_EAT_TICKS - 1 })).toBe('eat');
+        expect(at({ waited: WINDUP_EAT_TICKS })).toBe('cast');
+        expect(at({ healed: true })).toBe('cast');
+        expect(at({ food: false })).toBe('cast');
+        expect(at({ hp: 49 })).toBe('cast');
+    });
+});
+
+test('squadDied sees a death at zero hitpoints before the respawn changes the life', () => {
+    expect(squadDied({ isDead: true, lifeId: 1, worldX: 2758, worldZ: 3476 }, 1)).toBe(true);
+    expect(squadDied({ isDead: false, lifeId: 1, worldX: 2758, worldZ: 3476 }, 1)).toBe(false);
+    expect(squadDied({ isDead: false, lifeId: 2, worldX: 3094, worldZ: 3491 }, 1)).toBe(true);
+    expect(squadDied({ worldX: 3222, worldZ: 3218 }, undefined)).toBe(true);
+});
+
+test('a rescue under the windup floor eats before it casts, so the hits that the windup keeps land on a healed account', async () => {
+    // extra:attack-team5-pile-six-x1 seed 3: the escape starts at 27 HP with 5 attackers. A shark that the member ate just before
+    // refuses the first eat (consume.rs2 %eat_delay), and the windup keeps 30 HP of hits that land on the arrival tile.
+    const actions: string[] = [], lines: string[] = [];
+    let z = 3600, ticks = 0, hp = 27, eats = 0;
+    const inv: any[] = [
+        { id: 563, count: 2, slot: 0, optionsWithIndex: [] },
+        { id: 556, count: 10, slot: 1, optionsWithIndex: [] },
+        { id: 385, count: 1, slot: 2, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { id: 385, count: 1, slot: 3, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const s: any = {
+        name: 'Piled', tick: () => ticks, ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({ player: { worldX: 3071, worldZ: z, hp, maxHp: 99, isDead: hp <= 0 }, inventory: inv, skills: [{ name: 'Magic', level: 45 }] }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+        },
+        direct: async (a: any) => {
+            actions.push(`${a.type}:${a.componentId ?? a.slot}@${hp}`);
+            if (a.type === 'useInventoryItem' && eats++ > 0) { hp += 20; inv.splice(inv.findIndex(i => i.slot === a.slot), 1); }
+            if (a.type === 'clickComponent' && a.componentId === 1174) { z = 3476; hp -= 30; }
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(s, l => lines.push(l), () => false, false, { attackers: () => 5 });
+        expect(res).toBe(s);
+        expect(actions.slice(0, 3)).toEqual(['useInventoryItem:2@27', 'useInventoryItem:2@27', 'clickComponent:1174@47']);
+        expect(hp).toBeGreaterThan(0);
+        expect(lines).toContain('[Piled] SQUAD rescue eats before the cast: hp 27 is below the windup floor 49');
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('an escaped account eats on the arrival tile before it turns auto-retaliate off, because a hit in flight still lands', async () => {
+    // extra:attack-team5-pile-six-x1 seed 6: the account arrived at Camelot with 9 HP, and a hit in flight killed it there.
+    const actions: string[] = [];
+    let z = 3600, ticks = 0, hp = 60, retaliate = true;
+    const inv: any[] = [
+        { id: 563, count: 2, slot: 0, optionsWithIndex: [] },
+        { id: 556, count: 10, slot: 1, optionsWithIndex: [] },
+        { id: 385, count: 1, slot: 2, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { id: 385, count: 1, slot: 3, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const s: any = {
+        name: 'Landed', tick: () => ticks, ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({ player: { worldX: 3071, worldZ: z, hp, maxHp: 99, isDead: false }, inventory: inv, skills: [{ name: 'Magic', level: 45 }], autoRetaliateEnabled: retaliate }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            sendWalk: async () => {},
+        },
+        direct: async (a: any) => {
+            actions.push(`${a.type}:${a.componentId ?? a.slot}@${hp}`);
+            if (a.type === 'useInventoryItem') { hp = Math.min(99, hp + 20); inv.splice(inv.findIndex(i => i.slot === a.slot), 1); }
+            else if (a.type === 'clickComponent' && a.componentId === 1174) { z = 3476; hp = 9; }
+            else if (a.type === 'clickComponent') retaliate = false;
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        expect(await rescue(s, () => {}, () => false, false, { attackers: () => 5 })).toBe(s);
+        const cast = actions.findIndex(a => a.startsWith('clickComponent:1174')), off = actions.findIndex((a, i) => i > cast && a.startsWith('clickComponent:'));
+        expect(actions[cast + 1]).toBe('useInventoryItem:3@9');
+        expect(off).toBeGreaterThan(cast + 1);
     } finally {
         spyTick.mockRestore();
     }

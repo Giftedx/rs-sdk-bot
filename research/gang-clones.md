@@ -904,6 +904,45 @@ kills=10 killReceipts=10 receiptDomain=live feedMatched=10 died=0 taken=987 trip
 Gap: the escort state file keeps only its last write, so no record shows whether the gate was clear during the hold, and
 no route went through the gate in a live run. The bench clones do not come back after a death.
 
+## The windup keeps its hits
+
+Claim: a teleport does not stop the hits that land during its windup. It keeps them, and they all land on the arrival tile.
+A member that a pile of 4 or 5 hits down to under about 37 HP before its escape dies at Camelot, with the escape logged as a
+success.
+
+The engine:
+
+- Each PvP hit is a normal queue on its target: `.queue(pvp_damage, $delay, $damage)`
+  (`content/scripts/skill_combat/scripts/pvp/pvp_combat.rs2`, `[proc,.pvp_damage]`).
+- A queued script runs only when `canAccess()` is true and its delay is spent (`engine/entity/Player.ts`, `processQueue`).
+  `canAccess()` is false while the player is `delayed`. The delay of each request still counts down.
+- The teleport spells run `p_delay(1)`, then `p_delay(0)`, then the jump (`skill_magic/scripts/spells/teleport.rs2`,
+  `player_teleport_normal`).
+- On the tick that the delay ends, `processPlayers` (`engine/World.ts`) resumes the script first, which jumps, and then
+  runs the queues. A hit with a longer projectile delay lands 1 or 2 ticks after the arrival.
+- An eat that arrives after the cast is dropped: `OpHeldHandler` returns while the player is `delayed`. A shark refuses a
+  second eat for 2 ticks (`consume.rs2`, `%eat_delay`), with no message.
+
+The evidence, `extra:attack-team5-pile-six-x1`, hosted runs 45696459800 and 45696461017, seeds 1 to 16 each, 107
+escapes. All 4 deaths of ours were member 1 (the member the attackers pile on), after `SQUAD coordinated fallback
+(teleport)` at hp 27, 29, 34 and 36 with 4 or 5 enemies. In 3 of the 4, the `DEATH` line shows the last tile alive in the
+Wilderness at the fallback HP. The HP did not change during the windup, and the account died on the arrival tick. In the
+fourth (seed 6), the account was alive at Camelot with 9 HP, then died there. The squad saw each death only after the
+respawn, so it logged `SQUAD died on a bank trip`.
+
+| Escapes with 4 or 5 enemies | Escapes | Deaths |
+|---|---|---|
+| start at 27 to 36 HP | 6 | 4 |
+| start at 40 to 61 HP | about 30 | 0 |
+
+The fix (`packages/workers/src/pvp/squad.ts`): `windupFloor` is 10 HP for each attacker that can hit the member, at most
+half of the maximum. Under it, the rescue eats alone and casts on the tick that the heal shows, or after
+`WINDUP_EAT_TICKS` tries. After the escape, the account eats on arrival when it is under the floor, before it turns
+auto-retaliate off. `squadDied` reads `isDead`, so a death in the windup shows at once.
+
+Gap: no trace shows which earlier eat refused the eat on the cast tick. The case logs show 4 sharks eaten by member 1
+before its death and no heal in the windup.
+
 ## Dagger mode
 
 A gang account drops its dragon dagger(p) only from a death that is skulled and has Protect Item off: death.rs2
