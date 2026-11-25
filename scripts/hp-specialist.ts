@@ -10,6 +10,7 @@ import {
     BURY_KEEP_IDS_HP,
     HP_ANTIPOISON_ACCEPT_IDS,
     HP_SPECIALIST_KIT,
+    HITPOINTS_PVP_SPECIALIST_KIT,
     PROTECT_MELEE_INDEX,
     SPECIALIST_TARGETS,
     activeContinueDialog,
@@ -30,6 +31,7 @@ import {
     receiveSupplyKit,
     readServerHost,
     rubRingOfDueling,
+    runMeleePvpSpecialist,
     setPrayerState,
     skillInfo,
     startAndExitTutorial,
@@ -40,6 +42,8 @@ import {
     type Point,
     type StopFn,
 } from './combat-quest-specialists';
+
+export { HITPOINTS_PVP_SPECIALIST_KIT };
 import { runQuestBall } from './generated/quest-ball';
 import { runQuestGrandTree } from './generated/quest-grandtree';
 import { runQuestMM } from './generated/quest-mm';
@@ -241,11 +245,67 @@ async function main(): Promise<void> {
     if (!bot) throw Error('usage: hp-specialist.ts <bot> [cap]');
     if (!Number.isSafeInteger(CAP) || CAP < 500 || CAP > 25000) throw Error(`invalid CAP: ${CAP}`);
     const supplierRaw = (process.env.PRACTICE_SUPPLIER ?? process.env.SUPPLIER ?? '').trim();
-    const supplierName = supplierRaw.split(',').map(x => x.trim()).filter(Boolean)[0] ?? '';
+    const suppliers = supplierRaw.split(',').map(x => x.trim()).filter(Boolean);
+    const supplierName = suppliers[0] ?? '';
     if (!supplierName) throw Error('missing SUPPLIER (or PRACTICE_SUPPLIER) environment variable');
+    const tanksRaw = (process.env.PRACTICE_TANKS ?? process.env.TANKS ?? (suppliers.length > 1 ? supplierRaw : '')).trim();
+    const tankNames = [...new Set(tanksRaw.split(',').map(x => x.trim()).filter(Boolean))];
+    const usePvpMode = process.env.HP_MODE === 'pvp' || process.env.VARIANT === 'pvp' || tankNames.length > 0;
 
     const root = resolve(import.meta.dir, '..');
     configureSpecialistGuardEnv();
+    if (usePvpMode) {
+        const effectiveTanks = tankNames.length > 0 ? tankNames : suppliers;
+        const retired = new WeakSet<Session>();
+        let pvpEnded = false;
+        let pvpStopRequested = false;
+        const pvpSess = await openBot(bot, {
+            onStop: async (sess, detail) => {
+                if (retired.has(sess)) return;
+                pvpStopRequested = true;
+                await finish([sess], false, detail);
+            },
+            onSessionEnd: async (sess, detail) => {
+                if (retired.has(sess)) return;
+                pvpEnded = true;
+                await finish([sess], false, detail);
+            },
+        });
+        const host = readServerHost(root, bot);
+        if (!host) {
+            await finish([pvpSess], false, `missing SERVER in bot.env for ${bot}`);
+            return;
+        }
+        const pvpT0 = pvpSess.tick();
+        const pvpStop: StopFn = () =>
+            pvpStopRequested ||
+            pvpEnded ||
+            (!retired.has(pvpSess) && pvpSess.tick() - pvpT0 >= CAP) ||
+            existsSync(join(root, '.practice', `stop-${bot}`)) ||
+            (!isLocalServer(host) && existsSync(join(root, '.practice', 'stop-swarm')));
+        try {
+            const res = await runMeleePvpSpecialist(pvpSess, {
+                botName: bot,
+                board: 'hitpoints',
+                supplierName,
+                tankNames: effectiveTanks,
+                cap: CAP,
+                t0: pvpT0,
+                stop: pvpStop,
+                onRetireSession: sess => retired.add(sess),
+            });
+            await finish([res.session], true, res.message);
+        } catch (e) {
+            if (!retired.has(pvpSess)) {
+                await finish([pvpSess], false, String(e));
+            } else {
+                const errSess = await openBot(bot, { log: () => {} }).catch(() => null);
+                await finish(errSess ? [errSess] : [], false, String(e));
+            }
+        }
+        return;
+    }
+
     const s = await openBot(bot);
     const serverHost = readServerHost(root, bot);
     if (!serverHost) {
