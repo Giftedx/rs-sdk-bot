@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795616627831-spitroaster-trousersnake-d73d22fe8719dfda",
  "account": "Spitroaster",
  "partner": "TrouserSnake",
@@ -12,6 +12,16 @@
  "claim": "e2b1ab1f-56c1-4c82-b7e3-02a61fa01ff0",
  "count": 0,
  "ok": false,
- "at": 1795617986825,
- "detail": "trade claimed"
+ "at": 1795618066581,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795618050638
+ },
+ "logout": {
+  "attemptId": "1795617986836-0000019328-0000000001",
+  "at": 1795618066562,
+  "sha256": "b9347ea92d7c4567a7728c37fa8c1b1c9601da2653ffeeec25bb00f07b286027"
+ },
+ "screen": false
 }
