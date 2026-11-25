@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795632537647-1",
  "account": "KnightRider",
  "partner": "PackageDeal",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "c853e1a4-da65-4fc4-b8a5-2a78ca69f2b0",
- "count": 0,
- "ok": false,
- "at": 1795632676110,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795632746327,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795632721200
+ },
+ "logout": {
+  "attemptId": "1795632676128-0000009800-0000000001",
+  "at": 1795632746315,
+  "sha256": "a3cb6ea469c428562be16bb4328d2bfaf3cfc66106c3c4c8d88a8b9a4447d480"
+ },
+ "screen": true
 }

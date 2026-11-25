@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795632743002,
+ "at": 1795632758852,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,21 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/ranged-train.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
   },
   {
    "account": "TossTheCaber",
@@ -240,6 +225,22 @@
    "role": "army"
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-market.ts ORDER_KEY=brain-385-10-p1021 ITEM_ID=385 QUANTITY=10 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=1021 -- ge-buy",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
+  },
+  {
    "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
@@ -256,18 +257,23 @@
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "scripts/generated/dwarfcannon.ts --",
-    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Swordswallow BATCH_UNITS=250 -- cannon"
+    "cow"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Swordswallow",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Swordswallow",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "ardougne-cows"
+   ]
   },
   {
    "account": "Stirmypot",
@@ -370,6 +376,26 @@
    "role": "auto",
    "resources": [
     "chickens"
+   ]
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:BoneToPick",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
    ]
   }
  ],

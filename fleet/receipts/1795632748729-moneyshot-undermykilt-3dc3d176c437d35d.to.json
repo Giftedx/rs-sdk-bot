@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795632748729-moneyshot-undermykilt-3dc3d176c437d35d",
+ "account": "UnderMyKilt",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune pickaxe",
+ "requested": 1,
+ "claim": "1e5c21f8-887d-4b1f-b198-85cd2177c839",
+ "count": 0,
+ "ok": false,
+ "at": 1795632753994,
+ "detail": "trade claimed"
+}
