@@ -417,9 +417,15 @@ if(activityFilter==='shots')return page(title('Events / screenshots','Activity j
  function reconcileFleet(container){
   const list=container?.querySelector?.('#op-fleet-list'),search=container?.querySelector?.('#op-fleet-search');
   if(!list||!search)return false;
-  const fresh=document.createElement('div');fresh.innerHTML=fleet();
+  // The page renders every few seconds and the rows change far less often: the same markup as the last reconcile
+  // needs no parse (91 rows and their icons) and no compare. A full render makes a new list element, so the mark is
+  // kept on the list it describes.
+  const html=fleet();
+  if(list._fleetHtml===html)return true;
+  const fresh=document.createElement('div');fresh.innerHTML=html;
   const nextList=fresh.querySelector('#op-fleet-list');
   if(!nextList)return false;
+  list._fleetHtml=html;
   const deck=container.querySelector('#op-fleet-deck'),nextDeck=fresh.querySelector('#op-fleet-deck');
   if(deck&&nextDeck){
    const curTiles=new Map([...deck.querySelectorAll('[data-op][data-value]')].map(b=>[b.dataset.op+'|'+b.dataset.value,b]));
