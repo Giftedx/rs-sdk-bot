@@ -605,10 +605,14 @@ export async function rubRingOfDueling(
     stop: StopFn,
     radius = 8,
 ): Promise<void> {
-    const deadline = s.tick() + 40;
+    const startTick = s.tick();
+    const deadline = startTick + 40;
     while (!stop() && s.tick() < deadline) {
         const p = posOf(s);
-        if (p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, destTile) <= radius) return;
+        if (p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, destTile) <= radius) {
+            console.log(`RUB_RING ticks=${s.tick() - startTick} to=${destTile.x},${destTile.z}`);
+            return;
+        }
         const d: any = s.sdk.getDialog();
         if (d?.isOpen && !d.isWaiting) {
             const pick = (d.options ?? []).find((o: any) => optionRe.test(o.text ?? ''));
@@ -1369,7 +1373,10 @@ export async function runSpecialistWaterfall(
 
     const onIsland = () => inBox(2510, 3476, 2514, 3481);
     const crossToLedge = async (withHudon: boolean) => {
-        await walkFast([{ x: 2511, z: 3494, tol: 1 }], withHudon ? 40 : 120, 'to raft');
+        const raftPts = withHudon
+            ? [{ x: 2511, z: 3494, tol: 1 }]
+            : [{ x: 2534, z: 3498, tol: 2 }, { x: 2511, z: 3496, tol: 1 }, { x: 2511, z: 3494, tol: 1 }];
+        await walkFast(raftPts, withHudon ? 40 : 120, 'to raft');
         await stepAct('board raft', () => opLoc(LOC.raft), onIsland, 10, 8);
         if (withHudon) {
             const hudonProof = /fine alone|so you're still here|find that treasure soon/i;
