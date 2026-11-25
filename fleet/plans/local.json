@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795604930577,
+ "at": 1795604956099,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,7 +59,7 @@
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy herbloreshop2 3000",
     "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=2 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:1975 BATCH_UNITS=2 -- crafting inventory grind:chocolate_bar"
    ],
@@ -72,7 +72,7 @@
    "role": "army"
   },
   {
-   "account": "MeatNTwoVeg",
+   "account": "NabTheKnob",
    "script": "scripts/generated/quest-barcrawl.ts",
    "args": [],
    "env": {
@@ -82,20 +82,30 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
+   "role": "army"
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/generated/quest-priestperil.ts",
-   "args": [],
+   "account": "MeatNTwoVeg",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "splash",
+    "90",
+    "3000"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:priestperil",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Magic",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:MeatNTwoVeg",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:priestperil",
-   "role": "army"
+   "goal": "goal:pk_army:MeatNTwoVeg",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   },
   {
    "account": "Wandwaver",
@@ -147,15 +157,15 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/generated/quest-tree.ts",
+   "script": "scripts/generated/quest-priestperil.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
+    "DEMAND_ID": "goal:quest_board:priestperil",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:tree",
+   "goal": "goal:quest_board:priestperil",
    "role": "army"
   }
  ],
