@@ -7,12 +7,13 @@
 // Each cycle: make sure the local dashboard server (packages/dashboard/server.ts) runs, read its /api/state,
 // /api/control and, once, /api/map; write <dir>/out/control.json and public.json (packages/dashboard/publish-relay.ts).
 // With a repository: force-push control.json to its `data` branch (one commit, no history); copy site/ from its main
-// branch plus public.json and map.bin to its `site` branch (GitHub Pages) at most every PUBLIC_EVERY_S; apply the
+// branch plus public.json and map.bin to its `site` branch (GitHub Pages) at most every PUBLIC_EVERY_S, when that folder
+// passes verifyStaticBundle, and read the Pages build of each push PAGES_CHECK_MS later (checkPages); apply the
 // commands the owner committed under commands/ on main (packages/dashboard/publish-commands.ts): the local
 // console's own actions replay into the dashboard's /api/control, the fleet actions go through the stop files.
 import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,rmSync,cpSync,openSync,closeSync,appendFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {join,resolve} from 'node:path';
+import {join,posix,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {expandQuests} from './quest-pack';
 import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT,pushDue,withoutClocksValue} from './publish-relay';
@@ -205,6 +206,7 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
 }
 
 let lastSitePush=0,lastPublic:{stable:string;at:number}|null=null,lastControl:{stable:string;at:number}|null=null,coldSince=0;
+let pagesWatch:PagesWatch|null=null;
 export type BundleAudit={ok:boolean;checkedFiles:number;checkedAssets:number;missing:string[];leaks:string[]};
 const STATIC_TEXT_EXT=/\.(html|css|js)$/i;
 const ASSET_PREFIX_PLACEHOLDERS=new Set(['rl-','skill-','spell-','prayer-']);
@@ -224,9 +226,13 @@ export function verifyStaticBundle(
   return ok;
  };
  let checkedFiles=0;
- const checkFile=(rel:string,source:string)=>{
-  const clean=rel.split(/[?#]/)[0]!.replace(/^\/+/,'');
-  if(!clean||clean.startsWith('http://')||clean.startsWith('https://'))return;
+ // A link that starts with / names a file from the site root (the local server serves the page there). Any other link
+ // is relative to `base`: the folder of an HTML or CSS file, or for a script the folder of the page that loads it.
+ const checkFile=(rel:string,source:string,base='')=>{
+  const link=rel.split(/[?#]/)[0]!;
+  if(!link||link.startsWith('http://')||link.startsWith('https://'))return;
+  const clean=link.startsWith('/')?link.replace(/^\/+/,''):posix.normalize(base?`${base}/${link}`:link);
+  if(clean.startsWith('../')){missing.push(`${source} -> ${link} (outside the site)`);return;}
   const tail=clean.split('/').pop()||'';
   if(ASSET_PREFIX_PLACEHOLDERS.has(tail)||clean.endsWith('item-sources.json.'))return;
   const webpClean=options.allowWebpImages&&/\.png$/i.test(clean)?clean.replace(/\.png$/i,'.webp'):null;
@@ -251,18 +257,20 @@ export function verifyStaticBundle(
    checkedFiles++;
    const text=readFileSync(join(dir,rel),'utf8');
    if(secretRe&&secretRe.test(text))leaks.push(rel);
-   for(const m of text.matchAll(/['"(](?:\/?client-assets\/([a-zA-Z0-9_.-]+))/g)){
-    const tail=m[1]!;
-    if(!ASSET_PREFIX_PLACEHOLDERS.has(tail)&&!tail.endsWith('.'))checkFile(`client-assets/${tail}`,rel);
+   let base=sub;
+   if(/\.js$/i.test(ent.name))while(base&&!hasFile(`${base}/index.html`))base=posix.dirname(base)==='.'?'':posix.dirname(base);
+   for(const m of text.matchAll(/['"(](\/?)client-assets\/([a-zA-Z0-9_.-]+)/g)){
+    const tail=m[2]!;
+    if(!ASSET_PREFIX_PLACEHOLDERS.has(tail)&&!tail.endsWith('.'))checkFile(`${m[1]}client-assets/${tail}`,rel,base);
    }
    const linkRe=options.allowWebpImages||options.verifyImportContract
     ?/(?:href|src)=["'](\/?[a-zA-Z0-9_.-]+\.(?:css|js|png|webp|json))(?:\?[^"']*)?["']/g
     :/(?:href|src)=["'](\/[a-zA-Z0-9_.-]+\.(?:css|js|png|json))(?:\?[^"']*)?["']/g;
-   for(const m of text.matchAll(linkRe))checkFile(m[1]!,rel);
+   for(const m of text.matchAll(linkRe))checkFile(m[1]!,rel,base);
    const urlRe=options.allowWebpImages||options.verifyImportContract
     ?/url\(["']?(\/?[a-zA-Z0-9_.-]+\.(?:png|webp|ttf|css))(?:\?[^"']*)?["']?\)/g
     :/url\(["']?(\/[a-zA-Z0-9_.-]+\.(?:png|ttf|css))(?:\?[^"']*)?["']?\)/g;
-   for(const m of text.matchAll(urlRe))checkFile(m[1]!,rel);
+   for(const m of text.matchAll(urlRe))checkFile(m[1]!,rel,base);
   }
  };
  walk('');
@@ -275,8 +283,17 @@ export function verifyStaticBundle(
  if(existsSync(join(dir,'client-shell.js'))){
   const shell=readFileSync(join(dir,'client-shell.js'),'utf8');
   if(options.verifyImportContract){
-   if(shell.split("  window.addEventListener('keydown',e=>{").length!==2)missing.push('contract:connectViewerControls-keydown-start');
-   if((shell.match(/  \},true\);\r?\n  window\.atlasClient=/g)||[]).length!==1)missing.push('contract:connectViewerControls-keydown-end');
+   // The import (rs-fleet-command scripts/import-page.ts connectViewerControls) needs the source handler once, and
+   // turns it into gameKeys, which it binds to the page and to the 3D viewer frame. A site folder holds that result.
+   const count=(s:string)=>shell.split(s).length-1;
+   if(count("  window.addEventListener('keydown',e=>{")===0&&count('  const gameKeys=e=>{')>0){
+    const bound=count('  const gameKeys=e=>{')===1&&count("  window.addEventListener('keydown',gameKeys,true);")===1
+     &&count("gameFrame.contentWindow.addEventListener('keydown',gameKeys,true);")===1&&(shell.match(/\n  window\.atlasClient=/g)||[]).length===1;
+    if(!bound)missing.push('contract:connectViewerControls-imported');
+   }else{
+    if(count("  window.addEventListener('keydown',e=>{")!==1)missing.push('contract:connectViewerControls-keydown-start');
+    if((shell.match(/  \},true\);\r?\n  window\.atlasClient=/g)||[]).length!==1)missing.push('contract:connectViewerControls-keydown-end');
+   }
   }
   if(existsSync(join(dir,'client-assets/spellbook.json'))){
    const sb=JSON.parse(readFileSync(join(dir,'client-assets/spellbook.json'),'utf8'));
@@ -302,6 +319,38 @@ export function pageHash(dir:string):string|null{
  const h=createHash('sha1');let any=false;
  for(const f of PAGE_HASH_FILES){try{h.update(f+'\0');h.update(readFileSync(join(dir,f)));any=true;}catch{/* not in this site */}}
  return any?h.digest('hex').slice(0,16):null;
+}
+
+// The site folder goes out only when its page links resolve, the import contract holds and no file names the main
+// account. A refused folder stays unpushed: the live page keeps the last good push.
+export async function pushAuditedSite(site:string,push:(dir:string)=>Promise<string>=pushPublicCommit):Promise<{result:string;audit:BundleAudit}>{
+ let audit:BundleAudit;
+ try{audit=verifyStaticBundle(site,MAIN_ACCOUNT,{verifyImportContract:true,allowWebpImages:true});}
+ catch(e){audit={ok:false,checkedFiles:0,checkedAssets:0,missing:[`audit error: ${String(e instanceof Error?e.message:e).slice(0,120)}`],leaks:[]};}
+ if(!audit.ok)return {result:`audit-failed (${[...audit.missing,...audit.leaks.map(f=>`leak ${f}`)].slice(0,3).join(', ')})`,audit};
+ return {result:await push(site),audit};
+}
+
+// GitHub Pages deploys the site branch with a build that takes 20 to 50 s, and a build can fail or hang at `building`
+// (the live page then stays one push behind). One read of the latest build, PAGES_CHECK_MS after a push, tells. An
+// errored, hung or missing build gets one rebuild request and one more read. The publisher and the signed-in page share
+// one API rate limit, so a push whose page builds costs one call.
+export const PAGES_CHECK_MS=180_000;
+export type PagesWatch={commit:string;dueAt:number;rebuilt:boolean};
+type Api=(...args:string[])=>Promise<{ok:boolean;out:string}>;
+export async function checkPages(watch:PagesWatch|null,now:number,api:Api,repo:string):Promise<{watch:PagesWatch|null;note:string}>{
+ if(!watch||now<watch.dueAt)return {watch,note:''};
+ const read=await api('api',`repos/${repo}/pages/builds/latest`);
+ let build:{status?:string;commit?:string;error?:{message?:string|null}|null}|null=null;
+ if(read.ok)try{build=JSON.parse(read.out);}catch{/* reported below */}
+ if(!build)return {watch:null,note:` pages=unread (${read.out.slice(0,120)})`};
+ const state=build.status==='errored'?'errored':build.status!=='built'?'stuck':build.commit!==watch.commit?'behind':'built';
+ if(state==='built')return {watch:null,note:` pages=built${watch.rebuilt?' after rebuild':''}`};
+ const reason=build.error?.message?` (${String(build.error.message).slice(0,120)})`:'';
+ if(watch.rebuilt)return {watch:null,note:` pages=${state}${reason} rebuild=spent`};
+ const rebuild=await api('api','-X','POST',`repos/${repo}/pages/builds`);
+ if(!rebuild.ok)return {watch:null,note:` pages=${state}${reason} rebuild=refused (${rebuild.out.slice(0,120)})`};
+ return {watch:{commit:watch.commit,dueAt:now+PAGES_CHECK_MS,rebuilt:true},note:` pages=${state}${reason} rebuild=requested`};
 }
 
 // True when the hosted page's index.html holds the expandQuests function of the packed quest state (quest-pack.ts).
@@ -334,6 +383,7 @@ async function cycle(){
   const main=join(DIR,'repo');
   const controlStable=withoutClocksValue(controlObj);
   if(pushDue(control,lastControl,now,controlStable)){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${await pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl={stable:controlStable,at:now};}else note+=' data=unchanged';
+  const pages=await checkPages(pagesWatch,now,gh,REPO);pagesWatch=pages.watch;note+=pages.note;
   // A server that has just started has no market prices or board tops yet; that thin file would stay live for a
   // whole push period, so the push waits for a warm state, at most three periods from the first cold cycle.
   const warm=stateWarm(state);if(warm)coldSince=0;else if(!coldSince)coldSince=now;
@@ -346,7 +396,10 @@ async function cycle(){
    const page=pageHash(site);if(page!==pubObj.pageVersion){pubObj.pageVersion=page;pub=JSON.stringify(pubObj);}
    writeFileSync(join(site,'public.json'),pub);writeFileSync(join(site,'.nojekyll'),'');
    if(existsSync(join(DIR,'out','map.bin')))cpSync(join(DIR,'out','map.bin'),join(site,'map.bin'));
-   note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic={stable:withoutClocksValue(pubObj),at:now};deployedPage=page;
+   // A refused folder waits a whole push period too: the next try copies main's site/ again.
+   const {result}=await pushAuditedSite(site);note+=` site=${result}`;lastSitePush=now;
+   if(result==='pushed'||result==='unchanged'){lastPublic={stable:withoutClocksValue(pubObj),at:now};deployedPage=page;}
+   if(result==='pushed'){const head=await git(site,'rev-parse','HEAD');if(head.ok)pagesWatch={commit:head.out,dueAt:now+PAGES_CHECK_MS,rebuilt:false};}
   }
  }
  if(pub===null)throw pubError;
