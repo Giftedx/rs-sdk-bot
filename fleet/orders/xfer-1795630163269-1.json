@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795630163269-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "UnderMyKilt",
+  "to": "Unsheathed",
+  "item": "Gold bar",
+  "count": 1,
+  "itemId": 2357,
+  "start": 1795630163269,
+  "end": 1795631063269,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

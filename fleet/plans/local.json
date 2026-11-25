@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795630150196,
+ "at": 1795630168590,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,23 +62,8 @@
    "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2080 TARGET_COUNT=208 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=208 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2080 TARGET_COUNT=208 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=208 -- cooking food"
+    "scripts/aio-skiller.ts CAP=2060 TARGET_COUNT=206 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=206 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"
@@ -245,9 +230,9 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-86-p97 ITEM_ID=440 QUANTITY=86 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-172-p517 ITEM_ID=453 QUANTITY=172 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=86 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-80-p97 ITEM_ID=440 QUANTITY=80 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-160-p517 ITEM_ID=453 QUANTITY=160 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=80 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -259,29 +244,9 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "strip:swamp-toad"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "600",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:2152",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2152",
-   "role": "army"
-  },
-  {
-   "account": "SporranBulge",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
+    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy taverley 3000",
     "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
     "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
    ],
@@ -291,7 +256,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:235",
-   "role": "helper"
+   "role": "army"
   },
   {
    "account": "mmtha0205",
@@ -322,17 +287,50 @@
    "role": "auto"
   },
   {
-   "account": "Packhorse",
-   "script": "scripts/generated/quest-elena.ts",
-   "args": [],
+   "account": "Swordswallow",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=21 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Swordswallow BATCH_UNITS=250 -- magic alch-train 90 3000"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "helper"
+   "goal": "goal:pk_army:Swordswallow",
+   "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- ranged-camp"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=56 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
+    "scripts/aio-skiller.ts ORB_TRIP=1 TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- magic orbs water 27 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto"
   }
  ],
  "army": [
@@ -354,12 +352,12 @@
   "mineyourbiz",
   "mmthv2350",
   "moneyshot",
-  "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "woodpecker",
   "yewfirst"
  ],
