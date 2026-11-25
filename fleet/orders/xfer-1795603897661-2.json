@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795603897661-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "OreElse",
+  "to": "TheFullMonty",
+  "item": "Uncut diamond",
+  "count": 11,
+  "itemId": 1617,
+  "start": 1795603897661,
+  "end": 1795604797661,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

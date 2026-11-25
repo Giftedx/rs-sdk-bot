@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795602994091-1",
  "account": "OreElse",
  "partner": "TheFullMonty",
@@ -12,6 +12,20 @@
  "claim": "38b0aa05-aa8b-488a-bfe4-f1a69f81ac1b",
  "count": 0,
  "ok": false,
- "at": 1795603350330,
- "detail": "trade claimed"
+ "at": 1795603894398,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795603356075
+ },
+ "logout": {
+  "attemptId": "1795603350686-0000029452-0000000001",
+  "at": 1795603894388,
+  "sha256": "ab7eda978cf8e7c45feccbf44f6fc6052beaeb358c9dac734c13715c0727ef06"
+ },
+ "screen": false
 }
