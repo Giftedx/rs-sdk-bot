@@ -7,15 +7,18 @@ import { killTree } from '../../packages/core/src/proc';
 import type { RehearsalReport } from '../../packages/practice/src/rehearse';
 import { playerSavePath } from '../../packages/practice/src/save-library';
 import { scoredClock } from '../../packages/practice/src/specialist-rehearsal';
+import { ATTACK_PVP_SPECIALIST_KIT } from '../attack-specialist';
 import {
     DEFENCE_SPECIALIST_KIT,
     HP_SPECIALIST_KIT,
-    KIT_BY_BOARD,
+    MELEE_PVP_BOOST_KIT,
     SPECIALIST_TARGETS,
     STRENGTH_SPECIALIST_KIT,
     runCompanionRole,
     type KitSpecItem,
 } from '../combat-quest-specialists';
+import { HITPOINTS_PVP_SPECIALIST_KIT } from '../hp-specialist';
+import { RANGED_PVP_BOOST_KIT, RANGED_PVP_SPECIALIST_KIT } from '../ranged-specialist';
 import type { BenchCase } from './bench-case-types';
 
 const ROOT = resolve(import.meta.dir, '..', '..');
@@ -84,17 +87,54 @@ export function tankPostPresetConfig(offsetX = 0): SaveConfig {
     };
 }
 
-const SPECIALIST_SCRIPT: Readonly<Record<'hp' | 'strength' | 'defence', string>> = {
-    hp: 'scripts/hp-specialist.ts',
-    strength: 'scripts/strength-specialist.ts',
-    defence: 'scripts/defence-specialist.ts',
+export type CombatBenchMode =
+    | 'hp'
+    | 'hp-pvp'
+    | 'hp-pvp-boost'
+    | 'attack-pvp'
+    | 'attack-pvp-boost'
+    | 'strength'
+    | 'strength-boost'
+    | 'defence'
+    | 'defence-boost'
+    | 'ranged-pvp'
+    | 'ranged-pvp-boost';
+
+interface CombatModeSpec {
+    readonly script: string;
+    readonly board: 'attack' | 'hitpoints' | 'strength' | 'defence' | 'ranged';
+    readonly kit: readonly KitSpecItem[];
+    readonly env: Readonly<Record<string, string>>;
+}
+
+export const COMBAT_BENCH_MODES: Readonly<Record<CombatBenchMode, CombatModeSpec>> = {
+    hp: { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: HP_SPECIALIST_KIT, env: {} },
+    'hp-pvp': { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: HITPOINTS_PVP_SPECIALIST_KIT, env: { HP_MODE: 'pvp' } },
+    'hp-pvp-boost': { script: 'scripts/hp-specialist.ts', board: 'hitpoints', kit: MELEE_PVP_BOOST_KIT, env: { HP_MODE: 'pvp', BOOST_POTS: '1' } },
+    'attack-pvp': { script: 'scripts/attack-specialist.ts', board: 'attack', kit: ATTACK_PVP_SPECIALIST_KIT, env: { VARIANT: 'pvp' } },
+    'attack-pvp-boost': { script: 'scripts/attack-specialist.ts', board: 'attack', kit: MELEE_PVP_BOOST_KIT, env: { VARIANT: 'pvp', BOOST_POTS: '1' } },
+    strength: { script: 'scripts/strength-specialist.ts', board: 'strength', kit: STRENGTH_SPECIALIST_KIT, env: {} },
+    'strength-boost': { script: 'scripts/strength-specialist.ts', board: 'strength', kit: MELEE_PVP_BOOST_KIT, env: { BOOST_POTS: '1' } },
+    defence: { script: 'scripts/defence-specialist.ts', board: 'defence', kit: DEFENCE_SPECIALIST_KIT, env: {} },
+    'defence-boost': { script: 'scripts/defence-specialist.ts', board: 'defence', kit: MELEE_PVP_BOOST_KIT, env: { BOOST_POTS: '1' } },
+    'ranged-pvp': { script: 'scripts/ranged-specialist.ts', board: 'ranged', kit: RANGED_PVP_SPECIALIST_KIT, env: { VARIANT: 'pvp' } },
+    'ranged-pvp-boost': { script: 'scripts/ranged-specialist.ts', board: 'ranged', kit: RANGED_PVP_BOOST_KIT, env: { VARIANT: 'pvp-boost', BOOST_POTS: '1' } },
 };
 
-const SPECIALIST_BOARD: Readonly<Record<'hp' | 'strength' | 'defence', 'hitpoints' | 'strength' | 'defence'>> = {
-    hp: 'hitpoints',
-    strength: 'strength',
-    defence: 'defence',
-};
+const keepPvpCase = (key: string, mode: CombatBenchMode, statRe: RegExp, targetTicks: number): BenchCase => ({
+    key,
+    script: 'scripts/measure/specialist-combat-quests-cases.ts',
+    preset: 'fresh_lumbridge',
+    presetConfig: {},
+    scriptArgs: [mode, '{bot:s}', '{bot:t}', '{bot:u}'],
+    companions: [
+        { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(COMBAT_BENCH_MODES[mode].kit) },
+        { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0) },
+        { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2) },
+    ],
+    timeoutMs: 900_000,
+    pass: s => ok(s) && statRe.test(s) && observedTicks(s) <= targetTicks && loggedOutOnce(s),
+});
 
 export const SPECIALIST_COMBAT_QUESTS_CASES: BenchCase[] = [
     {
@@ -107,34 +147,14 @@ export const SPECIALIST_COMBAT_QUESTS_CASES: BenchCase[] = [
         timeoutMs: 900_000,
         pass: s => ok(s) && /hitpoints=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.hitpoints.targetTicks && loggedOutOnce(s),
     },
-    {
-        key: 'fighter:specialist-strength',
-        script: 'scripts/measure/specialist-combat-quests-cases.ts',
-        preset: 'fresh_lumbridge',
-        presetConfig: {},
-        scriptArgs: ['strength', '{bot:s}', '{bot:t}', '{bot:u}'],
-        companions: [
-            { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(STRENGTH_SPECIALIST_KIT) },
-            { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0) },
-            { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2) },
-        ],
-        timeoutMs: 900_000,
-        pass: s => ok(s) && /strength=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.strength.targetTicks && loggedOutOnce(s),
-    },
-    {
-        key: 'fighter:specialist-defence',
-        script: 'scripts/measure/specialist-combat-quests-cases.ts',
-        preset: 'fresh_lumbridge',
-        presetConfig: {},
-        scriptArgs: ['defence', '{bot:s}', '{bot:t}', '{bot:u}'],
-        companions: [
-            { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(DEFENCE_SPECIALIST_KIT) },
-            { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0) },
-            { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2) },
-        ],
-        timeoutMs: 900_000,
-        pass: s => ok(s) && /defence=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.defence.targetTicks && loggedOutOnce(s),
-    },
+    keepPvpCase('fighter:specialist-strength', 'strength', /strength=99\b/, SPECIALIST_TARGETS.strength.targetTicks),
+    keepPvpCase('fighter:specialist-defence', 'defence', /defence=99\b/, SPECIALIST_TARGETS.defence.targetTicks),
+    keepPvpCase('extra:specialist-attack-pvp', 'attack-pvp', /attack=99\b/, 2554),
+    keepPvpCase('extra:specialist-attack-pvp-boost', 'attack-pvp-boost', /attack=99\b/, 2554),
+    keepPvpCase('extra:specialist-strength-boost', 'strength-boost', /strength=99\b/, SPECIALIST_TARGETS.strength.targetTicks),
+    keepPvpCase('extra:specialist-defence-boost', 'defence-boost', /defence=99\b/, SPECIALIST_TARGETS.defence.targetTicks),
+    keepPvpCase('extra:specialist-hp-pvp', 'hp-pvp', /hitpoints=99\b/, 5263),
+    keepPvpCase('extra:specialist-hp-pvp-boost', 'hp-pvp-boost', /hitpoints=99\b/, 5263),
 ];
 
 async function pumpPrefixed(
@@ -163,19 +183,19 @@ async function pumpPrefixed(
 }
 
 async function runCompanionMain(args: string[]): Promise<void> {
-    const [account, specialist, roleRaw, boardRaw, offsetRaw, stopFile] = args;
-    if (!account || !specialist || !roleRaw || !boardRaw) {
-        throw Error('usage: --companion <account> <specialist> <supplier|supplier-tank|tank> <hitpoints|strength|defence> <offsetX> <stopFile>');
+    const [account, specialist, roleRaw, modeRaw, offsetRaw, stopFile] = args;
+    if (!account || !specialist || !roleRaw || !modeRaw || !(modeRaw in COMBAT_BENCH_MODES)) {
+        throw Error(`usage: --companion <account> <specialist> <supplier|supplier-tank|tank> <mode> <offsetX> <stopFile>`);
     }
     const role = roleRaw as 'supplier' | 'supplier-tank' | 'tank';
-    const board = boardRaw as 'hitpoints' | 'strength' | 'defence';
+    const spec = COMBAT_BENCH_MODES[modeRaw as CombatBenchMode];
     const s = await openBot(account);
     try {
         const res = await runCompanionRole(s, {
             role,
             specialistName: specialist,
-            board,
-            kit: role === 'tank' ? undefined : KIT_BY_BOARD[board],
+            board: spec.board,
+            kit: role === 'tank' ? undefined : spec.kit,
             postTileOffsetX: Number(offsetRaw ?? 0),
             stopFile,
             cap: 20000,
@@ -188,12 +208,12 @@ async function runCompanionMain(args: string[]): Promise<void> {
 
 async function runCoordinatorMain(args: string[]): Promise<void> {
     const [bot, modeRaw, supplier, ...tanks] = args;
-    if (!bot || !modeRaw || !supplier || !(modeRaw in SPECIALIST_SCRIPT)) {
-        throw Error('usage: specialist-combat-quests-cases.ts <bot> <hp|strength|defence> <supplier> [tank...]');
+    if (!bot || !modeRaw || !supplier || !(modeRaw in COMBAT_BENCH_MODES)) {
+        throw Error(`usage: specialist-combat-quests-cases.ts <bot> <${Object.keys(COMBAT_BENCH_MODES).join('|')}> <supplier> [tank...]`);
     }
-    const mode = modeRaw as 'hp' | 'strength' | 'defence';
-    const board = SPECIALIST_BOARD[mode];
-    const specialistScript = SPECIALIST_SCRIPT[mode];
+    const mode = modeRaw as CombatBenchMode;
+    const modeSpec = COMBAT_BENCH_MODES[mode];
+    const specialistScript = modeSpec.script;
 
     // Remove the bench starter save so the specialist logs into Tutorial Island at playtime=0.
     rmSync(playerSavePath(bot), { force: true });
@@ -241,7 +261,7 @@ async function runCoordinatorMain(args: string[]): Promise<void> {
                 c.account,
                 bot,
                 c.role,
-                board,
+                mode,
                 String(c.offsetX),
                 stopRel,
             ],
@@ -288,6 +308,7 @@ async function runCoordinatorMain(args: string[]): Promise<void> {
             env: {
                 ...process.env,
                 ...guardDisabledEnv,
+                ...modeSpec.env,
                 PRACTICE_SUPPLIER: supplier,
                 PRACTICE_TANKS: tankEnv,
                 DEMO_OK: '',

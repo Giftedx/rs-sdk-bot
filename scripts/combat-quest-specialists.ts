@@ -118,6 +118,12 @@ export const MELEE_PVP_CORE_KIT: readonly KitSpecItem[] = [
 
 export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_CORE_KIT;
 
+export const MELEE_PVP_BOOST_KIT: readonly KitSpecItem[] = [
+    ...MELEE_PVP_CORE_KIT,
+    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
+    { id: 2440, name: 'Super strength(4)', count: 1, stackable: false },
+] as const;
+
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const HITPOINTS_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_CORE_KIT;
@@ -808,6 +814,7 @@ export async function runWildyPvpRelogLoop(
         requiredWeaponId?: number;
         styleForState?: (s: Session) => number | null;
         onPrepareSwing?: (s: Session) => Promise<void>;
+        reboostStrength?: boolean;
     },
 ): Promise<{
     session: Session;
@@ -929,14 +936,22 @@ export async function runWildyPvpRelogLoop(
                 useMeleePrayers && prayPts <= 2
                     ? sess.sdk.getInventory().find(i => (PRAYER_POT_IDS as readonly number[]).includes(i.id))
                     : undefined;
-            if (lowPrayerPot) {
-                const drinkOp = (lowPrayerPot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
-                void sess.direct({ type: 'useInventoryItem', slot: lowPrayerPot.slot, optionIndex: drinkOp, reason: 'SDK' });
+            const reboostStrPot =
+                !lowPrayerPot &&
+                opts.reboostStrength &&
+                skillInfo(sess, 'Strength').baseLevel >= 91 &&
+                skillInfo(sess, 'Strength').level <= 104
+                    ? sess.sdk.getInventory().find(i => i.id === 2440 || i.id === 157 || i.id === 159 || i.id === 161)
+                    : undefined;
+            const sipPot = lowPrayerPot ?? reboostStrPot;
+            if (sipPot) {
+                const drinkOp = (sipPot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+                void sess.direct({ type: 'useInventoryItem', slot: sipPot.slot, optionIndex: drinkOp, reason: 'SDK' });
             }
             if (useMeleePrayers && (prayPts > 0 || lowPrayerPot) && prayBase >= 31) {
                 void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
             }
-            if (!lowPrayerPot && useMeleePrayers && prayPts > 0 && prayBase >= 34) {
+            if (!sipPot && useMeleePrayers && prayPts > 0 && prayBase >= 34) {
                 void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
             }
             if (styleCom !== null) void sess.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });
@@ -1097,7 +1112,7 @@ export async function runCompanionRole(
     opts: {
         role: 'supplier' | 'supplier-tank' | 'tank';
         specialistName: string;
-        board?: 'attack' | 'hitpoints' | 'strength' | 'defence';
+        board?: 'attack' | 'hitpoints' | 'strength' | 'defence' | 'ranged';
         kit?: readonly KitSpecItem[];
         postTileOffsetX?: number;
         stopFile?: string;
@@ -1628,11 +1643,13 @@ export async function runMeleePvpSpecialist(
         t0: number;
         stop: StopFn;
         onRetireSession?: (sess: Session) => void;
+        boostPots?: boolean;
         runWaterfallFn?: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
 ): Promise<{ session: Session; message: string }> {
     const skill = opts.board === 'attack' ? 'Attack' : opts.board === 'strength' ? 'Strength' : opts.board === 'defence' ? 'Defence' : 'Hitpoints';
-    const kit = MELEE_PVP_CORE_KIT;
+    const boostPots = opts.boostPots ?? (process.env.BOOST_POTS === '1' || process.env.VARIANT === 'pvp-boost');
+    const kit = boostPots ? MELEE_PVP_BOOST_KIT : MELEE_PVP_CORE_KIT;
     const targetTicks = opts.board === 'attack' ? 2554 : SPECIALIST_TARGETS[opts.board].targetTicks;
     const elapsed = () => s.tick() - opts.t0;
     const milestone = (step: string, extra = '') => {
@@ -1711,8 +1728,7 @@ export async function runMeleePvpSpecialist(
     // Drop Waterfall rewards and equip Keep melee gear while running from barrel (2527,3413) to Ardougne lever.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
-    let drankSuperAtk = false;
-    let drankSuperStr = false;
+    let lastPotTick = -10;
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
         ignoreLiveHunters: true,
         onTickExtra: () => {
@@ -1725,18 +1741,17 @@ export async function runMeleePvpSpecialist(
                     void s.direct({ type: 'useInventoryItem', slot: gear.slot, optionIndex: wieldOp, reason: 'SDK' });
                 }
             }
-            if (!drankSuperAtk) {
-                const pot = s.sdk.getInventory().find(i => i.id === 2436 || i.id === 145 || i.id === 147 || i.id === 149);
+            if (s.tick() - lastPotTick >= 3) {
+                const atk = skillInfo(s, 'Attack');
+                const str = skillInfo(s, 'Strength');
+                const pot =
+                    atk.level <= atk.baseLevel
+                        ? s.sdk.getInventory().find(i => i.id === 2436 || i.id === 145 || i.id === 147 || i.id === 149)
+                        : str.level <= str.baseLevel
+                          ? s.sdk.getInventory().find(i => i.id === 2440 || i.id === 157 || i.id === 159 || i.id === 161)
+                          : undefined;
                 if (pot) {
-                    drankSuperAtk = true;
-                    const op = (pot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
-                    void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: op, reason: 'SDK' });
-                }
-            }
-            if (!drankSuperStr) {
-                const pot = s.sdk.getInventory().find(i => i.id === 2440 || i.id === 157 || i.id === 159 || i.id === 161);
-                if (pot) {
-                    drankSuperStr = true;
+                    lastPotTick = s.tick();
                     const op = (pot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
                     void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: op, reason: 'SDK' });
                 }
@@ -1774,6 +1789,7 @@ export async function runMeleePvpSpecialist(
         cap: opts.cap,
         shouldStop: opts.stop,
         onRetireSession: opts.onRetireSession,
+        reboostStrength: boostPots && (opts.board === 'strength' || opts.board === 'hitpoints'),
     });
 
     try {

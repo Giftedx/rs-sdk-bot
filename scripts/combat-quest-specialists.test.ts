@@ -221,7 +221,17 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
             expect(bench).toBeDefined();
             expect(bench?.presetConfig).toEqual({});
         }
-        expect(SPECIALIST_COMBAT_QUESTS_CASES.length).toBe(3);
+        expect(SPECIALIST_COMBAT_QUESTS_CASES.map(c => c.key)).toEqual([
+            'fighter:specialist-hp',
+            'fighter:specialist-strength',
+            'fighter:specialist-defence',
+            'extra:specialist-attack-pvp',
+            'extra:specialist-attack-pvp-boost',
+            'extra:specialist-strength-boost',
+            'extra:specialist-defence-boost',
+            'extra:specialist-hp-pvp',
+            'extra:specialist-hp-pvp-boost',
+        ]);
 
         for (const [acc, board, minSup] of [
             ['FullBlooded', 'Hitpoints', 1],
@@ -379,10 +389,13 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
 
     test('HP PvP kit constant matches MELEE_PVP_CORE_KIT 21-slot no-energy contract', async () => {
         const { HITPOINTS_PVP_SPECIALIST_KIT } = await import('./hp-specialist');
-        const { MELEE_PVP_CORE_KIT, planTankFoodWithdrawals } = await import('./combat-quest-specialists');
+        const { MELEE_PVP_BOOST_KIT, MELEE_PVP_CORE_KIT, planTankFoodWithdrawals } = await import('./combat-quest-specialists');
         expect(HITPOINTS_PVP_SPECIALIST_KIT).toEqual(MELEE_PVP_CORE_KIT);
         expect(kitSlotTotal(HITPOINTS_PVP_SPECIALIST_KIT)).toBe(21);
+        expect(kitSlotTotal(MELEE_PVP_BOOST_KIT)).toBe(23);
         expect(HITPOINTS_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
+        expect(MELEE_PVP_BOOST_KIT.some(k => k.id === 2436)).toBe(true);
+        expect(MELEE_PVP_BOOST_KIT.some(k => k.id === 2440)).toBe(true);
 
         expect(planTankFoodWithdrawals([{ id: 391, count: 50 }], 27)).toEqual([
             { id: 391, name: 'Manta ray', count: 27 },

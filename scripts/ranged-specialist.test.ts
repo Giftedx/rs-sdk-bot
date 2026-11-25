@@ -220,6 +220,8 @@ test('parseSpecialistArgs and bench cases validate cleanly', () => {
         'fighter:ranged-specialist',
         'extra:ranged-specialist-msb',
         'extra:ranged-specialist-live',
+        'extra:ranged-specialist-pvp',
+        'extra:ranged-specialist-pvp-boost',
     ]);
 });
 
@@ -420,21 +422,34 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
     expect(() => parseRangedLivePrepArgs(['Moneyshot', '--mode=bogus'])).toThrow('unknown --mode');
 });
 
-test('RANGED_PVP_SPECIALIST_KIT fits 25 tradeable cataloged slots without Super energy and parseSpecialistArgs supports VARIANT=pvp', () => {
+test('RANGED_PVP_SPECIALIST_KIT and RANGED_PVP_BOOST_KIT fit <=28 tradeable cataloged slots and parseSpecialistArgs supports pvp modes', async () => {
+    const { RANGED_PVP_BOOST_KIT, shouldDrinkRangedPvpBoost } = await import('./ranged-specialist');
     expect(kitSlotTotal(RANGED_PVP_SPECIALIST_KIT)).toBe(25);
+    expect(kitSlotTotal(RANGED_PVP_BOOST_KIT)).toBe(26);
     expect(RANGED_PVP_SPECIALIST_KIT.some(k => k.id === 3016)).toBe(false);
+    expect(RANGED_PVP_BOOST_KIT.some(k => k.id === 3016)).toBe(false);
     const byId = new Map(ITEMS.map(item => [item.id, item]));
-    for (const spec of RANGED_PVP_SPECIALIST_KIT) {
+    for (const spec of [...RANGED_PVP_SPECIALIST_KIT, ...RANGED_PVP_BOOST_KIT]) {
         const entry = byId.get(spec.id);
         expect(entry).toBeDefined();
         expect(entry!.tradeable).toBe(true);
         expect(entry!.name).toBe(spec.name);
     }
+    expect(shouldDrinkRangedPvpBoost(1, 1, 4)).toBe(true);
+    expect(shouldDrinkRangedPvpBoost(1, 5, 3)).toBe(false);
+    expect(shouldDrinkRangedPvpBoost(25, 25, 3)).toBe(true);
+    expect(shouldDrinkRangedPvpBoost(50, 50, 2)).toBe(true);
+    expect(shouldDrinkRangedPvpBoost(75, 75, 1)).toBe(true);
     expect(parseSpecialistArgs(['Moneyshot', '3000', 'VARIANT=pvp', 'TANKS=tank1,tank2'])).toMatchObject({
         bot: 'Moneyshot',
         cap: 3000,
         variant: 'pvp',
         tanks: ['tank1', 'tank2'],
+    });
+    expect(parseSpecialistArgs(['Moneyshot', '3000', 'VARIANT=pvp-boost'])).toMatchObject({
+        bot: 'Moneyshot',
+        cap: 3000,
+        variant: 'pvp-boost',
     });
 });
 
