@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795605156308-2",
+ "account": "Hocuspokeus",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Vial of water",
+ "requested": 1,
+ "claim": "a11db417-b48e-4041-acfb-5ee70d464042",
+ "count": 0,
+ "ok": false,
+ "at": 1795605321008,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795604860419-2",
  "account": "Woodpecker",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Swamp toad",
  "requested": 2,
  "claim": "1e8582b2-a10d-48fd-80f9-ea05262db500",
- "count": 0,
- "ok": false,
- "at": 1795605218680,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795605272374,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795605271581
+ },
+ "logout": {
+  "attemptId": "1795605218911-0000014156-0000000001",
+  "at": 1795605272365,
+  "sha256": "d8369717f8b797e610915534b56fb096b54a84647987c8e877eebbe0a6d37147"
+ },
+ "screen": true
 }

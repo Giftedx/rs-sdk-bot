@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795604720410-3",
+ "account": "Moneyshot",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 1,
+ "claim": "f318f209-b6cc-4324-a56a-c8cddc2990ee",
+ "count": 0,
+ "ok": false,
+ "at": 1795605318417,
+ "detail": "Error: stock short: Swamp toad 0 banked + 0 held < 1",
+ "logout": {
+  "attemptId": "1795605311992-0000021752-0000000001",
+  "at": 1795605318315,
+  "sha256": "3e3373c263c737875bd75363c124c3dbf2d61bc46700a765aeec1064d4d7a021"
+ },
+ "screen": false
+}

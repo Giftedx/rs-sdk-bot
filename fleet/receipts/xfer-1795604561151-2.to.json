@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795604561151-2",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 11,
+ "claim": "92d2460a-5658-4503-be6e-cf148a4b170c",
+ "count": 11,
+ "ok": true,
+ "at": 1795605308841,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 11
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795605307961
+ },
+ "logout": {
+  "attemptId": "1795605297983-0000016488-0000000001",
+  "at": 1795605308704,
+  "sha256": "4fc224acef9db4c7a5395739ba073ad653b1afed2243fe68cb6b750ae3ad3b04"
+ },
+ "screen": true
+}
