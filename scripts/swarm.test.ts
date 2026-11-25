@@ -687,21 +687,39 @@ test('a held session whose owner pid a later process holds gets an end record, f
     expect(orphanedSessionEnds(['Dead'], new Map(), [], held, producer, answers, starts).length).toBe(1);
     expect(reads.length).toBe(1);
 });
-test('the orphan scan replaces only a successful end, and only for an attempt that started after it', async () => {
+test('the orphan scan replaces successful or prior non-death ends only for an attempt that started after the prior end', async () => {
     const { orphanedSessionEnds } = await import('./swarm');
     const ended = new Map([
         ['Retired', { at: 100, reason: 'done after 1 runs' }],
         ['SameSession', { at: 100, reason: 'done after 1 runs' }],
+        ['SameStopped', { at: 100, reason: 'stopped after 1 runs' }],
         ['Died', { at: 100, reason: 'died during cows' }],
+        ['OwnerPause', { at: 100, reason: 'stopped by owner' }],
         ['Stopped', { at: 100, reason: 'stopped after 1 runs' }],
+        ['Blocked', { at: 100, reason: 'blocked: unfinished order' }],
+        ['GaveUp', { at: 100, reason: 'gave-up after 21 runs' }],
+        ['ReleasePaused', { at: 100, reason: 'release-paused: pin missing' }],
     ]);
     const held = (account: string) => ({
         state: 'held' as const, account, server: 's', domain: 'live' as const,
         attemptId: 'new-' + account, reason: 'session active or outcome unknown',
     });
-    const producer = (account: string) => ({ pid: 11, createdAt: account === 'SameSession' ? 90 : 150, updatedAt: 200 });
-    const out = orphanedSessionEnds(['Retired', 'SameSession', 'Died', 'Stopped'], ended, [], held, producer, () => false);
-    expect(out).toEqual([['Retired', 'exit orphaned: attempt new-Retired owner 11 gone']]);
+    const producer = (account: string) => ({
+        pid: 11,
+        createdAt: account === 'SameSession' || account === 'SameStopped' ? 90 : 150,
+        updatedAt: 200,
+    });
+    const out = orphanedSessionEnds(
+        ['Retired', 'SameSession', 'SameStopped', 'Died', 'OwnerPause', 'Stopped', 'Blocked', 'GaveUp', 'ReleasePaused'],
+        ended, [], held, producer, () => false,
+    );
+    expect(out).toEqual([
+        ['Retired', 'exit orphaned: attempt new-Retired owner 11 gone'],
+        ['Stopped', 'exit orphaned: attempt new-Stopped owner 11 gone'],
+        ['Blocked', 'exit orphaned: attempt new-Blocked owner 11 gone'],
+        ['GaveUp', 'exit orphaned: attempt new-GaveUp owner 11 gone'],
+        ['ReleasePaused', 'exit orphaned: attempt new-ReleasePaused owner 11 gone'],
+    ]);
 });
 
 test('the orphan scan replaces an exit unknown end (a lost process, as after a reboot) for the held attempt', async () => {
