@@ -704,6 +704,7 @@ async function craftAtCastleWarsBank(
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  const initialInv = spec.sdk.getInventory();
  const hasUnnotedEarly = countItem(initialInv, ITEM_IDS.uncut_opal) > 0 && countItem(initialInv, 1626) === 0;
+ const deferSurplusOpals = hasUnnotedEarly && countItem(initialInv, 1632) >= 200;
  const cycle0Notes = new Set<number>(hasUnnotedEarly ? [1622, 1620, 1618, 1632] : [1626, 1624, 1622]);
  let walkingSent = false;
  let lastRubTick = -10;
@@ -722,7 +723,19 @@ async function craftAtCastleWarsBank(
     !!p &&
     Math.max(Math.abs(p.worldX - CRAFTING_CW_BANK_CHEST.x), Math.abs(p.worldZ - CRAFTING_CW_BANK_CHEST.z)) <= 1;
    const needWalk = !nearChest && !walkingSent;
-   const { gems, batch } = selectCutGemBatch(inv, skillLevel(spec, 'Crafting'), skillXp(spec, 'Crafting'), needWalk ? 4 : 5);
+   const curLvl = skillLevel(spec, 'Crafting');
+   const curXpVal = skillXp(spec, 'Crafting');
+   let cutInv = inv;
+   if (deferSurplusOpals) {
+    const opalsInInv = inv.filter(i => i.id === ITEM_IDS.uncut_opal);
+    const needOpalsTo20 = Math.ceil(Math.max(0, 3105 - curXpVal) / 375);
+    const cutOpalsCount = Math.min(opalsInInv.length, Math.max(opalsInInv.length - 7, curLvl >= 20 ? 0 : needOpalsTo20));
+    if (cutOpalsCount < opalsInInv.length) {
+     const skipSlots = new Set(opalsInInv.slice(cutOpalsCount).map(i => i.slot));
+     cutInv = inv.filter(i => !skipSlots.has(i.slot));
+    }
+   }
+   const { gems, batch } = selectCutGemBatch(cutInv, curLvl, curXpVal, needWalk ? 4 : 5);
    if (batch.length > 0) {
     const acts: Promise<unknown>[] = [];
     if (needWalk) {
@@ -879,6 +892,15 @@ async function craftAtCastleWarsBank(
    cycles.push([...cyc]);
   }
  }
+ if (hasUnnotedEarly && opalCount > 0) {
+  const lastCyc = cycles[cycles.length - 1];
+  const lastUsed = lastCyc ? lastCyc.reduce((s, g) => s + g.count, 0) : 27;
+  if (lastCyc && lastUsed + opalCount <= 27) {
+   lastCyc.push({ id: ITEM_IDS.uncut_opal, count: opalCount });
+  } else {
+   cycles.push([{ id: ITEM_IDS.uncut_opal, count: opalCount }]);
+  }
+ }
 
  for (let idx = 0; idx < cycles.length && skillLevel(spec, 'Crafting') < target; idx++) {
   const isFinal = idx === cycles.length - 1;
@@ -900,8 +922,6 @@ async function craftAtCastleWarsBank(
       })
     : rawCycle;
    if (cycle.every(g => countItem(inv, g.id) >= g.count)) {
-    await spec.direct({ type: 'closeModal', reason: 'SDK' });
-    await waitTicks(spec, 1);
     break;
    }
    if (!cycle.every(g => {
@@ -988,8 +1008,8 @@ async function craftAtCastleWarsBank(
    if (tickActs.length) await Promise.all(tickActs.map(a => spec.direct(a)));
    await waitTicks(spec, 1);
   }
-  const nextSingleId = idx + 1 < cycles.length && cycles[idx + 1]!.length === 1 ? cycles[idx + 1]![0]!.id : undefined;
-  const leaveGems = nextSingleId !== undefined && rawCycle.some(g => g.id === nextSingleId) ? 2 : 0;
+  const nextHighId = idx + 1 < cycles.length ? cycles[idx + 1]!.find(g => g.id === highId && g.count > 2)?.id : undefined;
+  const leaveGems = nextHighId !== undefined && rawCycle.some(g => g.id === nextHighId) ? 2 : 0;
   await cutUnlockedGems(spec, target, deadline, undefined, idx < cycles.length - 1, leaveGems);
  }
 
@@ -1166,7 +1186,7 @@ export async function runCraftingExternal(
      deadlineTick: deadline,
     });
    },
-   false,
+   true,
   );
  }
  await skipTutorial2Ticks(spec, deadline);
