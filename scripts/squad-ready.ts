@@ -17,7 +17,7 @@
 //   No account named: every account of this fleet side with 99 in the seven combat skills.
 //   --ignore-prayer  leaves the prayer points out of the check, to write the kit files (a blocked account gets none) before
 //               the altar step. It cannot be combined with --receipt: a receipt always checks the prayer points.
-//   --root      the checkout whose .practice/status, .practice/market-all.json and fleet owners the tool reads
+//   --root      the checkout whose status files (.practice/live/status, then .practice/status), .practice/market-all.json and fleet owners the tool reads
 //               (default: the main checkout of this repository).
 //   --loadouts  writes <account>.json for each account that holds its kit: the input of the kit step,
 //               `bun scripts/aio-logistics.ts <account> loadout <file>` at the bank the file names.
@@ -30,6 +30,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { statusReadDirs } from '../packages/core/src/practice-paths';
 import { wildernessLevel } from '../packages/core/src/prayer-guard';
 import { SQUAD_WAVE_BC } from '../packages/planner/src/squad';
 import { BANK_MEETS } from '../packages/workers/src/logistics/location';
@@ -823,6 +824,23 @@ export function report(plan: Plan, accounts: readonly Account[], rule: Rule, now
     return out;
 }
 
+// The status file of each account, keyed by the lower-case account name, in the order of the swarm's readAccountStatus
+// (packages/fleet/src/swarm.ts): the first folder of statusReadDirs that holds the account wins. Live runs write
+// .practice/live/status, so a read of .practice/status alone sees an old bank, and a receipt hash of that file does not
+// match the snapshot that the swarm's kit-restored repair hashes.
+export function statusFiles(dirs: readonly string[]): Map<string, string> {
+    const files = new Map<string, string>();
+    for (const dir of dirs) {
+        if (!existsSync(dir)) continue;
+        for (const f of readdirSync(dir)) {
+            if (!f.toLowerCase().endsWith('.json')) continue;
+            const key = f.slice(0, -'.json'.length).toLowerCase();
+            if (!files.has(key)) files.set(key, join(dir, f));
+        }
+    }
+    return files;
+}
+
 if (import.meta.main) {
     const args = process.argv.slice(2), flag = (name: string) => { const i = args.indexOf(name); return i < 0 ? undefined : args[i + 1]; };
     const valued = new Set(['--root', '--max-age', '--loadouts', '--orders', '--rule', '--receipt']);
@@ -842,15 +860,16 @@ if (import.meta.main) {
     const ownersFile = [join(root, '.practice', 'fleet-data', 'fleet', 'owners.json'), join(root, 'fleet', 'owners.json')].find(existsSync);
     const owners = new Map(Object.entries((ownersFile ? read(ownersFile).accounts : {}) as Record<string, { side: string; server: string; reservation?: string }>).map(([n, o]) => [n.toLowerCase(), o]));
     const side = process.env.FLEET_SIDE || 'local', server = 'rs-sdk-demo.fly.dev';
-    const statusDir = join(root, '.practice', 'status');
-    const fleet = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => {
+    const statusDirs = statusReadDirs(root), statusDir = statusDirs.join(' + ');
+    const statusFileOf = statusFiles(statusDirs);
+    const fleet = [...statusFileOf.values()].flatMap(file => {
         try {
-            const status = read(join(statusDir, f)), owner = owners.get(String(status?.name).toLowerCase());
+            const status = read(file), owner = owners.get(String(status?.name).toLowerCase());
             if (status?.server !== server || !owner || owner.side !== side || String(status.name).toLowerCase() === 'haggis') return [];
             const a = accountOf(status, owner);
             return a ? [a] : [];
         } catch { return []; }
-    }) : [];
+    });
     // No account named: the maxed accounts, the one with the fewest blocking faults first.
     const itemById = new Map(items.map(i => [i.id, i]));
     const nameOf = (id: number) => itemById.get(id)?.name;
@@ -896,7 +915,7 @@ if (import.meta.main) {
         mkdirSync(receipts, { recursive: true });
         for (const p of plan.picks) {
             const a = fleet.find(x => x.name === p.account)!;
-            const body = receiptOf(p, a, rule.name, now, readFileSync(join(statusDir, `${p.account}.json`)));
+            const body = receiptOf(p, a, rule.name, now, readFileSync(statusFileOf.get(p.account.toLowerCase())!));
             writeFileSync(join(receipts, `${p.account}.json`), JSON.stringify(body, null, 1) + '\n');
             console.log(`RECEIPT ${join(receipts, `${p.account}.json`)} ok=${body.ok}`);
         }

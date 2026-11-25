@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { validateOwnedKit } from '../packages/workers/src/logistics';
-import { accountOf, enduranceHours, loadoutOf, questBlockers, receiptOf, meetNear, orderCommands, pickKit, prayerFloor, report, RULES, shopSource, stagingPlan, TRIBRID_BIS_ITEMS, WILDERNESS_SHOPS, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
+import { accountOf, enduranceHours, loadoutOf, questBlockers, receiptOf, meetNear, orderCommands, pickKit, prayerFloor, report, RULES, shopSource, stagingPlan, statusFiles, TRIBRID_BIS_ITEMS, WILDERNESS_SHOPS, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
 
 const root = join(import.meta.dir, '..');
 const gear = new Map((JSON.parse(readFileSync(join(root, 'knowledge', 'gear.json'), 'utf8')) as Gear[]).map(g => [g.id, g]));
@@ -543,4 +544,22 @@ test('gang-tribrid-wave-d enforces Wave D 12 sharks + 2 cooked karambwans + 3 la
     expect(noKaram.needs.filter(n => n.id === TRIBRID_BIS_ITEMS.cookedKarambwan)).toHaveLength(1);
     expect(noKaram.needs.find(n => n.id === TRIBRID_BIS_ITEMS.cookedKarambwan)?.count).toBe(20);
     expect(noKaram.reasons).toEqual(expect.arrayContaining(['no Cooked karambwan (20 short)', 'trip endurance 0.0 h under 4.0 h floor (limiting: cooked karambwan)']));
+});
+
+describe('statusFiles', () => {
+    test('the first status folder that holds an account wins, as in the swarm reader', () => {
+        const base = mkdtempSync(join(tmpdir(), 'squad-ready-status-'));
+        try {
+            const live = join(base, 'live'), old = join(base, 'old');
+            mkdirSync(live); mkdirSync(old);
+            writeFileSync(join(live, 'Bigchopper.json'), '{"bankAt":2}');
+            writeFileSync(join(old, 'bigchopper.json'), '{"bankAt":1}');
+            writeFileSync(join(old, 'Knightstick.json'), '{"bankAt":1}');
+            writeFileSync(join(old, 'notes.txt'), 'x');
+            const files = statusFiles([join(base, 'missing'), live, old]);
+            expect([...files.keys()].sort()).toEqual(['bigchopper', 'knightstick']);
+            expect(files.get('bigchopper')).toBe(join(live, 'Bigchopper.json'));
+            expect(files.get('knightstick')).toBe(join(old, 'Knightstick.json'));
+        } finally { rmSync(base, { recursive: true, force: true }); }
+    });
 });
