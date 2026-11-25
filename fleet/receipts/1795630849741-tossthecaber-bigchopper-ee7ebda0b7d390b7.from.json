@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795630849741-tossthecaber-bigchopper-ee7ebda0b7d390b7",
  "account": "TossTheCaber",
  "partner": "Bigchopper",
@@ -10,8 +10,18 @@
  "item": "Antipoison(3)",
  "requested": 1,
  "claim": "02759fdc-3018-40df-bab6-41f146f8985b",
- "count": 0,
- "ok": false,
- "at": 1795630854120,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795630890825,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 2
+ },
+ "logout": {
+  "attemptId": "1795630854130-0000014740-0000000001",
+  "at": 1795630890814,
+  "sha256": "7a60716f5c7cbeab19e313d783cad9d57ac92bf6f1cd41afa27c0571228cbf6c"
+ },
+ "screen": true
 }
