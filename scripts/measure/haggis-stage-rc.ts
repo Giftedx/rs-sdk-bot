@@ -1,5 +1,5 @@
 // Haggis Overall Nature Altar Runecraft tick-transfer benchmark:
-// Measures 6x27 pure essence packs crafted at Nature Altar (2399,4840, loc 2486) via burstTradeHost + 4-tick bind delay.
+// Measures 6x27 rune essence packs crafted at Nature Altar (2399,4840, loc 2486) via burstTradeHost + 4-tick bind delay.
 import { existsSync, rmSync } from 'node:fs';
 import { freemem } from 'node:os';
 import { join } from 'node:path';

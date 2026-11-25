@@ -118,45 +118,45 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
             },
         });
 
-        let mage = await openMage();
-        await tick(mage, 1);
-        const startXp = xp(mage, 'Magic');
+        let caster = await openMage();
+        await tick(caster, 1);
+        const startXp = xp(caster, 'Magic');
         const targetXp = xpForLevel(80);
         const logoutCom = componentId('logout:try_logout');
         let casts = 0;
         let relogs = 0;
 
         try {
-            for (let iter = 0; iter < 350 && (level(mage, 'Magic') < 80 || xp(mage, 'Magic') < targetXp); iter++) {
-                for (let w = 0; w < 4 && !(mage.sdk.getState()?.nearbyPlayers ?? []).length; w++) {
-                    await waitTicks(mage, 1);
+            for (let iter = 0; iter < 350 && (level(caster, 'Magic') < 80 || xp(caster, 'Magic') < targetXp); iter++) {
+                for (let w = 0; w < 4 && !(caster.sdk.getState()?.nearbyPlayers ?? []).length; w++) {
+                    await waitTicks(caster, 1);
                 }
-                const nearby = mage.sdk.getState()?.nearbyPlayers ?? [];
+                const nearby = caster.sdk.getState()?.nearbyPlayers ?? [];
                 const wantName = tankNames[iter % tankNames.length]!;
                 const target = nearby.find((p: any) => (p.name ?? '').toLowerCase() === wantName.toLowerCase())
                     ?? nearby.find((p: any) => tankNames.some(tn => tn.toLowerCase() === (p.name ?? '').toLowerCase()))
                     ?? nearby[0];
                 if (!target) break;
-                const spell = spellForMagicLevel(level(mage, 'Magic'), mode);
-                const preXp = xp(mage, 'Magic');
+                const spell = spellForMagicLevel(level(caster, 'Magic'), mode);
+                const preXp = xp(caster, 'Magic');
                 intentionalRelog = true;
-                void mage.direct({ type: 'spellOnPlayer', playerIndex: target.index, spellComponent: spell, reason: 'SDK' });
-                void mage.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' });
+                void caster.direct({ type: 'spellOnPlayer', playerIndex: target.index, spellComponent: spell, reason: 'SDK' });
+                void caster.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' });
                 casts++;
                 const endReason = await Promise.race([
-                    mage.ended.then(e => e.reason),
-                    waitTicks(mage, 3).then(() => 'timeout'),
+                    caster.ended.then(e => e.reason),
+                    waitTicks(caster, 3).then(() => 'timeout'),
                 ]);
                 if (endReason === 'timeout') {
-                    await logoutSession(mage).catch(() => {});
+                    await logoutSession(caster).catch(() => {});
                 } else if (endReason !== 'logged-out' && endReason !== 'disconnected') {
                     throw Error(`unexpected mage relog end: ${endReason}`);
                 }
-                const postXp = xp(mage, 'Magic');
+                const postXp = xp(caster, 'Magic');
                 if (iter < 5) {
                     console.log(`DBG_PVP_MAGIC mode=${mode} iter=${iter} end=${endReason} xp=${preXp}->${postXp} casts=${casts}`);
                 }
-                await closeWithin([mage], 5000).catch(() => {});
+                await closeWithin([caster], 5000).catch(() => {});
                 intentionalRelog = false;
                 relogs++;
                 // Refresh tank HP and drained stats between relogs
@@ -172,19 +172,19 @@ async function runIsolatedMagicRelog(mode: 'combat' | 'curse'): Promise<{ playti
                         if (sr) void tk.direct({ type: 'useInventoryItem', slot: sr.slot, optionIndex: 1, reason: 'SDK' });
                     }
                 }
-                mage = await openMage();
+                caster = await openMage();
             }
-            const xpGained = xp(mage, 'Magic') - startXp;
-            const endLvl = level(mage, 'Magic');
+            const xpGained = xp(caster, 'Magic') - startXp;
+            const endLvl = level(caster, 'Magic');
             intentionalRelog = true;
-            await Promise.all([mage, ...tanks].map(s => logoutSession(s).catch(() => {})));
-            await closeWithin([mage, ...tanks], 3000).catch(() => {});
+            await Promise.all([caster, ...tanks].map(s => logoutSession(s).catch(() => {})));
+            await closeWithin([caster, ...tanks], 3000).catch(() => {});
             const playtimeTicks = Math.max(1, readPlaytimeTicks(mageName) - pt0);
             const xpPerTick = xpGained / playtimeTicks;
             return { playtimeTicks, casts, relogs, xpGained, xpPerTick, endLvl };
         } finally {
             intentionalRelog = true;
-            await closeWithin([mage, ...tanks], 3000).catch(() => {});
+            await closeWithin([caster, ...tanks], 3000).catch(() => {});
         }
     } finally {
         cleanup();
