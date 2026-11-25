@@ -1210,12 +1210,18 @@ export function shouldBreakSingleWayChase(o: {
     return targetDist > leash || (!o.self.inMulti && selfDist > leash);
 }
 
-/** SQUAD_HELD_FOCUS=<pile>,<heavy>: the focus HP fractions while the squad holds its numbers (squadFallbackPlan heldFocus). */
+// The focus HP fractions while the squad holds its numbers. With the plain fractions a gang that piles all its accounts on one
+// member drives each member out at 68 to 84 HP, so the squad leaves one member after another (research/gang-clones.md,
+// "The fallback cascade": on the pile replay 19 kills of 24 at 0.60/0.50 against 7 with the plain fractions, no death).
+export const HELD_FOCUS = { pile: 0.60, heavy: 0.50 } as const;
+
+/** SQUAD_HELD_FOCUS=<pile>,<heavy> (default HELD_FOCUS), or `off` for the plain fractions at all times (squadFallbackPlan heldFocus). */
 export function heldFocusOf(raw: string | undefined): { pile: number; heavy: number } | undefined {
-    if (raw === undefined || raw === '') return undefined;
+    if (raw === undefined || raw === '') return { ...HELD_FOCUS };
+    if (raw === 'off') return undefined;
     const [pile, heavy, ...rest] = raw.split(',').map(Number);
     if (rest.length || ![pile, heavy].every(f => f !== undefined && Number.isFinite(f) && f > 0 && f <= 1)) {
-        throw new Error(`SQUAD_HELD_FOCUS must be <pile>,<heavy> with each in (0, 1], got ${raw}`);
+        throw new Error(`SQUAD_HELD_FOCUS must be off or <pile>,<heavy> with each in (0, 1], got ${raw}`);
     }
     return { pile: pile!, heavy: heavy! };
 }
