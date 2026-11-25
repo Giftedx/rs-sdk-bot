@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795576764775-1",
+ "role": "from",
+ "account": "TheFullMonty",
+ "partner": "Shaftsinker",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795576930087,
+ "detail": "Error: refusing to connect to rs-sdk-demo.fly.dev: not the local practice server; set DEMO_OK=1 to allow it on purpose"
+}
