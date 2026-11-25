@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795607546478-woodenstaff-masterbaiter-1b7b14049f0f52a4",
  "account": "Woodenstaff",
  "partner": "Masterbaiter",
@@ -10,15 +10,37 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "f4eb314f-ba18-419c-b622-c3e108bf80f4",
- "count": 0,
- "ok": false,
- "at": 1795608778233,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795608991773,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Law rune",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 2,
+    "after": 0
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795608788219
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795608787403
+ },
+ "logout": {
+  "attemptId": "1795608778325-0000016904-0000000001",
+  "at": 1795608991760,
+  "sha256": "3b3aa300d7bbc1150904ef21de486433a075db193e1e2478547b913825490882"
+ },
+ "screen": true
 }

@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795607546478-woodenstaff-masterbaiter-1b7b14049f0f52a4",
+ "account": "Masterbaiter",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "5f3df8ce-f23b-4316-8d64-e47fd1c915a6",
+ "count": 1,
+ "ok": true,
+ "at": 1795608993769,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795608993013
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795608992624
+ },
+ "logout": {
+  "attemptId": "1795608982137-0000025224-0000000001",
+  "at": 1795608993759,
+  "sha256": "e05bb7bc18880df37996d6c9eb0a77c610f115b6bfafae3e5d25d883bae15c5f"
+ },
+ "screen": true
+}

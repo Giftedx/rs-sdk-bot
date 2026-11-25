@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795607892307-nabtheknob-trousersnake-95ad46f1449a4b7a",
+ "account": "NabTheKnob",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant platelegs",
+ "requested": 1,
+ "claim": "7fc47119-9bc4-4b2d-899f-faf2f1a05d41",
+ "count": 0,
+ "ok": false,
+ "at": 1795608992069,
+ "detail": "trade claimed"
+}
