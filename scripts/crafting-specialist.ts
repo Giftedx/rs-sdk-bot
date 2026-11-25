@@ -963,6 +963,23 @@ async function craftAtCastleWarsBank(
      break;
     }
    }
+   if (tickActs.length <= 3 && pNow && acts.length === tickActs.length && cycle.length > 1) {
+    const chiselItem = inv.find(i => i.id === ITEM_IDS.chisel);
+    const curLvl = skillLevel(spec, 'Crafting');
+    const firstUnlocked = cycle.find(g => curLvl >= (GEM_LEVEL_BY_ID.get(g.id) ?? 99));
+    const existingSlot = firstUnlocked ? inv.find(i => i.id === firstUnlocked.id)?.slot : undefined;
+    const openSlot = inv.find(i => i.id !== ITEM_IDS.chisel && !wantSet.has(i.id))?.slot ?? [1, 2, 3].find(s => s !== chiselItem?.slot);
+    const cutSlot = existingSlot ?? openSlot;
+    if (chiselItem && cutSlot !== undefined) {
+     await Promise.all([
+      ...tickActs.map(a => spec.direct(a)),
+      spec.direct({ type: 'walkTo', x: pNow.worldX, z: pNow.worldZ, running: true, reason: 'SDK' }),
+      spec.direct({ type: 'useItemOnItem', sourceSlot: chiselItem.slot, targetSlot: cutSlot, reason: 'SDK' }),
+     ]);
+     await waitTicks(spec, 1);
+     break;
+    }
+   }
    if (tickActs.length <= 4) {
     tickActs.push({ type: 'closeModal', reason: 'SDK' });
    }
@@ -1026,9 +1043,9 @@ function resolveCraftingMode(opts?: { mode?: CraftingMode; cw?: boolean; cwDiamo
 }
 
 function resolveCwPlan(mode: CraftingMode | undefined): { batch: CraftingBatchPlan; bill: readonly SupplyEntry[] } {
- if (mode === 'cw-diamond') return { batch: CRAFTING_CW_DIAMOND_NOTED_BATCH, bill: CRAFTING_CW_DIAMOND_SUPPLY_BILL };
- if (mode === 'cw-hybrid') return { batch: CRAFTING_CW_HYBRID_NOTED_BATCH, bill: CRAFTING_CW_HYBRID_SUPPLY_BILL };
- return { batch: CRAFTING_CW_NOTED_BATCH, bill: CRAFTING_CW_SUPPLY_BILL };
+ if (mode === 'cw-diamond') return { batch: CRAFTING_CW_DIAMOND_BATCH, bill: CRAFTING_CW_DIAMOND_SUPPLY_BILL };
+ if (mode === 'cw-hybrid') return { batch: CRAFTING_CW_HYBRID_BATCH, bill: CRAFTING_CW_HYBRID_SUPPLY_BILL };
+ return { batch: CRAFTING_CW_BATCH, bill: CRAFTING_CW_SUPPLY_BILL };
 }
 
 function resolveMultiPlan(
@@ -1075,7 +1092,7 @@ export async function runCraftingSpecialist(
      fastInProcessBatchTrade(spec, helpers[0]!, {
       giveIds: cwPlan.batch.give.map(g => g.id),
       returnIds: [],
-      dropUnwanted: cwPlan.batch.give.length > 10 ? new Set<number>() : undefined,
+      dropUnwanted: new Set<number>(),
       deadlineTick: deadline,
      }),
     false,
