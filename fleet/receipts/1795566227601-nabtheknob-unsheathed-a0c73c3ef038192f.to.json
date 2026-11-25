@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795566227601-nabtheknob-unsheathed-a0c73c3ef038192f",
+ "account": "Unsheathed",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 12000,
+ "claim": "67b65fc6-9523-4bff-ba98-98560be04878",
+ "count": 0,
+ "ok": false,
+ "at": 1795567761541,
+ "detail": "trade claimed"
+}
