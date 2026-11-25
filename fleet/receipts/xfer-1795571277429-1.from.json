@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795571277429-1",
+ "account": "Deeppockets",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 38,
+ "claim": "2bed6453-6f45-4216-a849-d3f996070656",
+ "count": 0,
+ "ok": false,
+ "at": 1795571361641,
+ "detail": "trade claimed"
+}
