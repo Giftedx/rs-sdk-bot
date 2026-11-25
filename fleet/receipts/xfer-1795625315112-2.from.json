@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795625315112-2",
  "account": "YewGotWood",
  "partner": "UnderMyKilt",
@@ -12,6 +12,16 @@
  "claim": "ada6a182-cfdd-4842-afe1-66a845c63b9d",
  "count": 0,
  "ok": false,
- "at": 1795625471658,
- "detail": "trade claimed"
+ "at": 1795626215422,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 60,
+  "at": 1795625479894
+ },
+ "logout": {
+  "attemptId": "1795625471666-0000017732-0000000001",
+  "at": 1795626215404,
+  "sha256": "70232b98a1486f095ae3ce828b14803740e2608f60cb558b4bd64808a2d6831e"
+ },
+ "screen": false
 }

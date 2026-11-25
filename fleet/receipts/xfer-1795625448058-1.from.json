@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795625448058-1",
+ "account": "Fatstack",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Marrentill",
+ "requested": 1,
+ "claim": "29cb5648-94d8-49be-8240-1088fb384181",
+ "count": 0,
+ "ok": false,
+ "at": 1795626240135,
+ "detail": "trade claimed"
+}

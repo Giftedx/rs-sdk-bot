@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795625300307-1",
  "account": "TheFullMonty",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Emerald ring",
  "requested": 1,
  "claim": "6dda0988-9fb6-4326-9706-c7b22ad589f0",
- "count": 0,
- "ok": false,
- "at": 1795625913184,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795626174648,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795626173957
+ },
+ "logout": {
+  "attemptId": "1795625913192-0000012460-0000000001",
+  "at": 1795626174607,
+  "sha256": "96f7c946c34d51e30d3092017f77c0829a039ce1386b9ecddfa2ac9d4b4187bb"
+ },
+ "screen": true
 }
