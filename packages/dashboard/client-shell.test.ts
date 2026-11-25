@@ -2505,3 +2505,16 @@ test('XP Tracker offers the Most idle sort only when a playing bot has a tick ti
  const timed=run([...bots,{name:'Lazy',fresh:true,xpPerHour:50,timeline:'iiiiiiiiii'}],'waste');
  expect(timed.sort).toContain('data-xp-sort="waste">Most idle');expect(timed.order[0]).toBe('Lazy');
 });
+
+// A session that began before the page opened has no login the page saw. Its published uptime stops at the file's time
+// (up to 10 minutes old): the length runs from the worker's start to the logout.
+test('logout line: an unseen login counts from the worker start, not the frozen published uptime',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map(),rankSeen=new Map();'),shell.indexOf('  function levelUps(){'));
+ let clock=10_000_000;
+ const chat:any[]=[],b:any={name:'Gamma',inWorld:true,uptime:3_000,started:10_000_000-720_000,skills:[],flow:{loot:[]}};
+ const env:any={S:{bots:[b],boards:[],economy:{itemValues:{}},clockOffset:0},chat,renderChat:()=>{},safeName:String,nf:String,gp:String,dur:(ms:number)=>Math.round(ms/1000)+'s',Date:{now:()=>clock}};
+ const moments=new Function(...Object.keys(env),'price','toBrowserAt',`${code};return moments;`)(...Object.values(env),pricing(env.S).price,(at:number)=>at);
+ moments();
+ clock+=60_000;b.inWorld=false;moments();
+ expect(chat.map(c=>c.text)).toEqual(['Gamma has logged out after 780s.']);
+});
