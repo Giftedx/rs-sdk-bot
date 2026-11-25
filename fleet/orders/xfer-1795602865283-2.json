@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795602865283-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "PickpockDick",
+  "to": "Fatstack",
+  "item": "Ranarr weed",
+  "count": 3,
+  "itemId": 257,
+  "start": 1795602865283,
+  "end": 1795603765283,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

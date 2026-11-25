@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795602865283-2",
+ "account": "PickpockDick",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 3,
+ "claim": "0e2ea439-20b6-40e3-90c2-b0fb0d3150f4",
+ "count": 0,
+ "ok": false,
+ "at": 1795602911305,
+ "detail": "trade claimed"
+}
