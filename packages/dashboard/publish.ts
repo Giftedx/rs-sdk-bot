@@ -279,6 +279,12 @@ export function verifyStaticBundle(
   const hasItemsSprite=existsSync(join(dir,'items.png'))||(options.allowWebpImages&&existsSync(join(dir,'items.webp')));
   if(!hasItemsSprite)missing.push('import-contract -> items.png');
   if(!existsSync(join(dir,'client-assets')))missing.push('import-contract -> client-assets');
+  // A hosted site (it holds shim.js) reads its data through shim.js, with config.js before it (import-page.ts puts both
+  // first). A page without either tag shows no data, so the folder does not go out. The source page has no shim.
+  if(existsSync(join(dir,'shim.js'))){
+   const page=existsSync(join(dir,'index.html'))?readFileSync(join(dir,'index.html'),'utf8'):'';
+   for(const f of ['config.js','shim.js'])if(!page.includes('<script src="'+f))missing.push(`import-contract -> index.html loads ${f}`);
+  }
  }
  if(existsSync(join(dir,'client-shell.js'))){
   const shell=readFileSync(join(dir,'client-shell.js'),'utf8');
