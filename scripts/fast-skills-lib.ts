@@ -294,18 +294,24 @@ export async function clearBlockingModal(s: Session): Promise<void> {
 }
 
 // Drops up to 5 unwanted items per tick (drop.rs2 has no p_delay and USER_EVENT.limit is 5).
-export async function dropItemsFast(s: Session, keepIds: ReadonlySet<number>, deadlineTick: number): Promise<void> {
+export async function dropItemsFast(
+ s: Session,
+ keepIds: ReadonlySet<number>,
+ deadlineTick: number,
+ leaveCount = 0,
+): Promise<number[]> {
  while (s.tick() < deadlineTick) {
   const st = s.sdk.getState();
   const dropSlots = s.sdk.getInventory().filter(i => !keepIds.has(i.id)).map(i => i.slot);
-  if (!dropSlots.length) return;
+  if (dropSlots.length <= leaveCount) return dropSlots;
   const actions: Promise<unknown>[] = [];
   let budget = 5;
   if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
    actions.push(s.direct({ type: 'closeModal', reason: 'SDK' }));
    budget = 4;
   }
-  for (const slot of dropSlots.slice(0, budget)) {
+  const toDrop = Math.min(budget, dropSlots.length - leaveCount);
+  for (const slot of dropSlots.slice(0, toDrop)) {
    actions.push(s.direct({ type: 'dropItem', slot, reason: 'SDK' }));
   }
   await Promise.all(actions);
