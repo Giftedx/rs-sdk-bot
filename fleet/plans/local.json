@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795644229394,
+ "at": 1795644244525,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,6 +75,21 @@
    "role": "army"
   },
   {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
+    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:225",
+   "role": "army"
+  },
+  {
    "account": "BowBeforeMe",
    "script": "scripts/generated/quest-viking.ts",
    "args": [],
@@ -122,22 +137,6 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=10 -- thieving stalls stealing_bakery_stall 28 600",
-    "scripts/aio-fighter.ts DEMAND_ID=campaign:haggis:item:225 BATCH_UNITS=30 BANK_PACK=1 -- giant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army"
-  },
-  {
-   "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
@@ -310,6 +309,26 @@
    "repeat": false,
    "goal": "goal:quest_board:chompybird",
    "role": "auto"
+  },
+  {
+   "account": "Wandwanker",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Wandwanker",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Wandwanker",
+   "role": "auto",
+   "resources": [
+    "ardougne-cows"
+   ]
   }
  ],
  "army": [

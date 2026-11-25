@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795643331423-1",
  "account": "mmthv2350",
  "partner": "Stirmypot",
@@ -12,6 +12,16 @@
  "claim": "f3e723e1-582a-4ba6-a419-dc6e853ae284",
  "count": 0,
  "ok": false,
- "at": 1795644168974,
- "detail": "trade claimed"
+ "at": 1795644232246,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 10,
+  "at": 1795644175899
+ },
+ "logout": {
+  "attemptId": "1795644168987-0000005024-0000000001",
+  "at": 1795644232233,
+  "sha256": "5134588e4518b5806cb310ffd10e390112a26488ec0a9d62c28f43d67a86cd9f"
+ },
+ "screen": false
 }
