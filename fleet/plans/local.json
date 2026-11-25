@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795631421505,
+ "at": 1795631768164,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -205,7 +205,7 @@
    "role": "army"
   },
   {
-   "account": "TheFullMonty",
+   "account": "MineYourBiz",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts CAP=1660 TARGET_COUNT=166 -- fishing cage cage",
@@ -218,25 +218,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:379",
    "role": "army"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "giant"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:225",
-    "BATCH_UNITS": "30",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:225",
-   "role": "army",
-   "resources": [
-    "hill-giants"
-   ]
   },
   {
    "account": "mmtha0205",
@@ -327,19 +308,6 @@
    "repeat": false,
    "goal": "goal:pk_army:CoinCock",
    "role": "auto"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
-   "role": "helper"
   }
  ],
  "army": [
@@ -365,6 +333,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "undermykilt",
   "woodpecker",
   "yewfirst"
