@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795566433878-trousersnake-spitroaster-0a77b1f11d9b909c",
+ "role": "from",
+ "account": "TrouserSnake",
+ "partner": "Spitroaster",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795566950952,
+ "detail": "Error: fleet trade claim authority unavailable or changed: remote: fatal: --stdin requires a git repository ... bd517294d4c9a595d79e96dbf443572731bb76 -> fleet-trade-claim/trousersnake (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

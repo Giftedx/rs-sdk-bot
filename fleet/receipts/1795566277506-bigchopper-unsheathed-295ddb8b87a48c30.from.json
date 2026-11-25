@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795566277506-bigchopper-unsheathed-295ddb8b87a48c30",
+ "account": "Bigchopper",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10000,
+ "claim": "3a726095-0415-493f-95f9-76e5b84bfa2b",
+ "count": 0,
+ "ok": false,
+ "at": 1795566976859,
+ "detail": "trade claimed"
+}
