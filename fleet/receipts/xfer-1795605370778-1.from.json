@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795605370778-1",
  "account": "Bigchopper",
  "partner": "Ballspinner",
@@ -12,6 +12,16 @@
  "claim": "d1541b1c-71f0-44fe-b1c7-85c24c23e050",
  "count": 0,
  "ok": false,
- "at": 1795605648888,
- "detail": "trade claimed"
+ "at": 1795605875485,
+ "detail": "stop file",
+ "bank": {
+  "count": 1,
+  "at": 1795605707170
+ },
+ "logout": {
+  "attemptId": "1795605648898-0000029152-0000000001",
+  "at": 1795605875473,
+  "sha256": "ea28478911bc88530e4a64d450a11e7288c228056e57aca28326767f9f644320"
+ },
+ "screen": false
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795605308458-3",
  "account": "BoneToPick",
  "partner": "Woodenstaff",
@@ -12,6 +12,16 @@
  "claim": "7ec33796-735f-4dd7-a391-6d01ec91e5cb",
  "count": 0,
  "ok": false,
- "at": 1795605682279,
- "detail": "trade claimed"
+ "at": 1795605875898,
+ "detail": "stop file",
+ "bank": {
+  "count": 2,
+  "at": 1795605688411
+ },
+ "logout": {
+  "attemptId": "1795605682289-0000015264-0000000001",
+  "at": 1795605875888,
+  "sha256": "71066d473275f66eb2dada4939ab27f86d5517e7f9d85acdbf26051ce7128312"
+ },
+ "screen": false
 }

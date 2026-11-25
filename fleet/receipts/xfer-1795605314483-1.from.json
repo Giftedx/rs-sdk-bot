@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795605314483-1",
  "account": "Fatstack",
  "partner": "Ballspinner",
@@ -12,6 +12,12 @@
  "claim": "cc3390d0-84c4-4708-834d-a58b981e306a",
  "count": 0,
  "ok": false,
- "at": 1795605827521,
- "detail": "trade claimed"
+ "at": 1795605873995,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795605827530-0000020552-0000000001",
+  "at": 1795605873881,
+  "sha256": "c0808cce339b0ffc7d0f51e4ec7285ed3fbd5a27d08d564f5e6be4cfd4a9c822"
+ },
+ "screen": false
 }
