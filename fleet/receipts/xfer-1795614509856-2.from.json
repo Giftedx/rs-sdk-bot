@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795614509856-2",
  "account": "FishAndChips",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Fly fishing rod",
  "requested": 1,
  "claim": "217a828b-50d6-4c20-bf0a-e13d2c3940e8",
- "count": 0,
- "ok": false,
- "at": 1795614638483,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795614663097,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795614647161
+ },
+ "logout": {
+  "attemptId": "1795614638824-0000028368-0000000001",
+  "at": 1795614663085,
+  "sha256": "10b1c68238608e1313f95ca2308ea7aa9b6764064ef57c2977d04effcd69cff6"
+ },
+ "screen": true
 }
