@@ -2,7 +2,7 @@
 // clears stale swarm stops when accounts are offline, and launches due cross-side trades.
 // Usage: bun packages/fleet/src/fleet-agent.ts [--daemon] [--once]
 import { spawn } from 'node:child_process';
-import { closeSync, existsSync, openSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, openSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../../core/src/controllers';
 import { FLEET_DIR, loadOwners, mySide, sideOf } from '../../core/src/fleet';
@@ -183,17 +183,41 @@ export function agentAlive(pid: number, cmdline: (pid: number) => string | undef
     return c === undefined || c.includes('fleet-agent');
 }
 
+// A daemon child has this set to 1. Its stdout and stderr are the log file, but output inherited through a detached
+// child's stdout can stop reaching the file when a watchdog pass started the daemon.
+export const AGENT_LOG_DIRECT = 'FLEET_AGENT_LOG_DIRECT';
+
+export type AgentLog = (line: string, stream?: 'out' | 'err') => void;
+
+// With direct set, each line goes to the log file through appendFileSync and not also to stdout, which is the same
+// file. A foreground run, or a line the file refuses, goes to the console stream.
+export function agentLog(
+    file: string,
+    direct: boolean,
+    io: { append?: (file: string, text: string) => void; out?: (line: string) => void; err?: (text: string) => void } = {},
+): AgentLog {
+    const append = io.append ?? appendFileSync, out = io.out ?? console.log, err = io.err ?? (text => { process.stderr.write(text); });
+    return (line, stream = 'out') => {
+        if (direct) { try { append(file, `${line}\n`); return; } catch { /* the console stream below */ } }
+        if (stream === 'err') err(`${line}\n`); else out(line);
+    };
+}
+
+// The environment of a detached agent: the daemon child and each reload successor write their own log lines.
+export const agentDaemonEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => ({ ...env, [AGENT_LOG_DIRECT]: '1' });
+
 export async function runFleetAgentCli(argv: readonly string[] = process.argv.slice(2), base = root): Promise<void> {
-    const lock = join(base, '.practice', 'fleet-agent.lock');
+    const lock = join(base, '.practice', 'fleet-agent.lock'), logFile = join(base, '.practice', 'fleet-agent.log');
     if (argv.includes('--daemon')) {
-        const out = openSync(join(base, '.practice', 'fleet-agent.log'), 'a');
-        const child = spawn(process.execPath, [join(base, 'scripts', 'fleet-agent.ts')], { cwd: base, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: process.env });
+        const out = openSync(logFile, 'a');
+        const child = spawn(process.execPath, [join(base, 'scripts', 'fleet-agent.ts')], { cwd: base, detached: true, windowsHide: true, stdio: ['ignore', out, out], env: agentDaemonEnv(process.env) });
         closeSync(out); child.unref();
         console.log(`FLEET_AGENT started pid ${child.pid} (log .practice/fleet-agent.log)`);
         process.exit(0);
     }
+    const log = agentLog(logFile, process.env[AGENT_LOG_DIRECT] === '1');
     const held = { alive: (pid: number) => agentAlive(pid), ...(procCmdline(process.pid) === undefined ? {} : { staleMs: Infinity }) };
-    if (!takeLease(lock, process.pid, held)) { console.log(`FLEET_AGENT already running pid ${leaseHolder(lock, held)}`); process.exit(0); }
+    if (!takeLease(lock, process.pid, held)) { log(`FLEET_AGENT already running pid ${leaseHolder(lock, held)}`); process.exit(0); }
     const release = () => releaseLease(lock);
     // Running trades by lower-case account, with the account name as the order spells it.
     const running = new Map<string, string>(), once = argv.includes('--once');
@@ -201,13 +225,13 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
     const onSignal = (why: string) => {
         if (stopping) process.exit(0); // a second signal does not wait
         stopping = true;
-        void stopTradesThenExit(base, running, why);
+        void stopTradesThenExit(base, running, why, { log });
     };
     process.on('exit', release); process.on('SIGINT', () => onSignal('SIGINT')); process.on('SIGTERM', () => onSignal('SIGTERM'));
     setInterval(() => { renewLease(lock); }, 60_000).unref();
     const askedToStop = new Set<string>();
     setInterval(() => {
-        for (const a of askTradesToStop(base, running, askedToStop)) console.log(`FLEET_AGENT owner stop: asked ${a} to log out`);
+        for (const a of askTradesToStop(base, running, askedToStop)) log(`FLEET_AGENT owner stop: asked ${a} to log out`);
     }, 2_000).unref();
     if (!once) saveLaunch(join(base, controllerNamed('fleet-agent').launch), []);
     const infraBreaker = new InfraCircuitBreaker({ stateFile: join(liveRoot(base), 'infra-circuit-breaker.json') });
@@ -222,7 +246,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         });
         const combined = `${p.stdout.toString()}${p.stderr.toString()}`;
         recordAgentInfraResult(infraBreaker, combined, p.exitCode);
-        console.log(`FLEET_AGENT sync ${syncResult(combined, p.exitCode)} at ${new Date().toISOString()}`);
+        log(`FLEET_AGENT sync ${syncResult(combined, p.exitCode)} at ${new Date().toISOString()}`);
     };
     const startedAt = Date.now();
     let marketRefresh: ReturnType<typeof spawn> | null = null;
@@ -230,14 +254,14 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         // While a signal stop waits for the trades, the agent starts nothing, and it does not update or respawn itself.
         if (stopping) { await Bun.sleep(1_000); continue; }
         if (!renewLease(lock)) {
-            console.log(`FLEET_AGENT lost its lease to another agent${running.size ? ': it ends when its trade ends' : ''} at ${new Date().toISOString()}`);
+            log(`FLEET_AGENT lost its lease to another agent${running.size ? ': it ends when its trade ends' : ''} at ${new Date().toISOString()}`);
             if (!running.size) process.exit(0);
             await Bun.sleep(60_000);
             continue;
         }
         const infraGate = infraBreaker.canProceed();
         if (!infraGate.allowed) {
-            console.log(`FLEET_AGENT infra circuit open (${infraGate.reason}); backing off at ${new Date().toISOString()}`);
+            log(`FLEET_AGENT infra circuit open (${infraGate.reason}); backing off at ${new Date().toISOString()}`);
             if (once && !running.size) break;
             await Bun.sleep(Math.min(CYCLE, Math.max(5_000, infraGate.waitMs)));
             continue;
@@ -253,7 +277,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         const updateOut = `${update.stdout.toString()}${update.stderr.toString()}`;
         const updateLine = lastResult(updateOut);
         if (update.exitCode !== 0) recordAgentInfraResult(infraBreaker, updateOut, update.exitCode);
-        if (!/ live-update (?:none|off|paused)/.test(updateLine)) console.log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
+        if (!/ live-update (?:none|off|paused)/.test(updateLine)) log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
         if (!renewLease(lock)) continue;
         if (!once && !marketRefresh && marketStale(base)) {
             marketRefresh = spawn(process.execPath, [join(base, 'scripts', 'market-cache.ts')], { cwd: base, windowsHide: true, stdio: 'ignore' });
@@ -262,8 +286,10 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         }
         if (!once && !running.size && reloadDue(base, 'fleet-agent', startedAt)) {
             release();
-            const pid = respawnDaemon(base, [join(base, 'scripts', 'fleet-agent.ts')], join(base, '.practice', 'fleet-agent.log'));
-            console.log(`FLEET_AGENT reload after a live update: successor pid ${pid}`);
+            // respawnDaemon passes process.env on, so a successor of a foreground run writes its own lines too.
+            process.env[AGENT_LOG_DIRECT] = '1';
+            const pid = respawnDaemon(base, [join(base, 'scripts', 'fleet-agent.ts')], logFile);
+            log(`FLEET_AGENT reload after a live update: successor pid ${pid}`);
             process.exit(0);
         }
         sync();
@@ -274,15 +300,15 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
         const busy = swarmBusy([...handJobs, ...brainPlannedJobs(base, handJobs, now)]);
         const ownerStop = fleetOwnerStop(base);
         for (const t of dueTrades(orders, receipts, side, owners, busy, new Set(running.keys()), now)) {
-            if (ownerStop || stopping) { console.log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${ownerStop ?? 'agent stopping'})`); continue; }
-            if (t.busy) { console.log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
+            if (ownerStop || stopping) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${ownerStop ?? 'agent stopping'})`); continue; }
+            if (t.busy) { log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
             const stop = tradeStop(base, t.account, now);
-            if (stop.cleared) console.log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
-            if (stop.held) { console.log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
+            if (stop.cleared) log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
+            if (stop.held) { log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
             const accountKey = t.account.toLowerCase();
             running.set(accountKey, t.account);
             askedToStop.delete(accountKey);
-            console.log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
+            log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
             try {
                 const p = Bun.spawn([process.execPath, TRADE_SCRIPT, t.account, 'fleet-trade', t.order.id], {
                     cwd: base, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: tradeEnvironment(dir),
@@ -294,12 +320,12 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
                             new Response(p.stderr).text(),
                             p.exited,
                         ]);
-                        if (errOut) process.stderr.write(errOut);
+                        if (errOut.trim()) log(errOut.trimEnd(), 'err');
                         const combined = `${out}\n${errOut}`;
                         if (exitCode !== 0) recordAgentInfraResult(infraBreaker, combined, exitCode);
-                        console.log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);
+                        log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);
                     } catch (err) {
-                        console.log(`FLEET_AGENT error ${t.account} ${String(err).slice(0, 160)}`);
+                        log(`FLEET_AGENT error ${t.account} ${String(err).slice(0, 160)}`);
                     } finally {
                         running.delete(accountKey);
                         if (renewLease(lock)) sync();
@@ -307,7 +333,7 @@ export async function runFleetAgentCli(argv: readonly string[] = process.argv.sl
                 })();
             } catch (err) {
                 running.delete(accountKey);
-                console.log(`FLEET_AGENT spawn failed ${t.account}: ${String(err).slice(0, 160)}`);
+                log(`FLEET_AGENT spawn failed ${t.account}: ${String(err).slice(0, 160)}`);
             }
         }
         if (once && !running.size) break;
