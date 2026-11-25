@@ -1,0 +1,22 @@
+{
+ "id": "1795586522328-dipstick-yewfirst-5af1f4e80e9a8ce9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 138,
+ "start": 1795586522328,
+ "end": 1795588922328,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

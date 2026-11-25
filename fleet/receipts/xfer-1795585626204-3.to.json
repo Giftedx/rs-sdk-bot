@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795585626204-3",
  "account": "Fatstack",
  "partner": "Pocketrocket",
@@ -12,6 +12,12 @@
  "claim": "c56f3cb5-1e9b-4dc2-8a36-aa77f812fe69",
  "count": 0,
  "ok": false,
- "at": 1795586234992,
- "detail": "trade claimed"
+ "at": 1795586526476,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795586235001-0000017600-0000000001",
+  "at": 1795586526459,
+  "sha256": "7c72ffe366713f3318e0986cd5ffd6b7237956c99bb52ece6dd4a360644042d4"
+ },
+ "screen": false
 }
