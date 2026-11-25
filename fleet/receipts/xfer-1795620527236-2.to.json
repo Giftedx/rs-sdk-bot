@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795620527236-2",
+ "account": "Unsheathed",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "18ab4d82-53e3-47b6-9fb2-f6201cf82227",
+ "count": 0,
+ "ok": false,
+ "at": 1795621138518,
+ "detail": "trade claimed"
+}
