@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795571277429-1",
+ "account": "Shaftsinker",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 38,
+ "claim": "de0cd427-36c9-47f7-896d-8723f0c74ee5",
+ "count": 38,
+ "ok": true,
+ "at": 1795571483056,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 38
+ },
+ "bank": {
+  "count": 38,
+  "at": 1795571482308
+ },
+ "logout": {
+  "attemptId": "1795571470898-0000024536-0000000001",
+  "at": 1795571483042,
+  "sha256": "e3fde3b852b523a171db9bc97f86c227e40d5121c3970532f1e0bd7f70b51d93"
+ },
+ "screen": true
+}
