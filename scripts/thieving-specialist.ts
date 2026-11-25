@@ -148,7 +148,7 @@ export interface PickpocketTier {
 
 export const ARDOUGNE_PICKPOCKET_TIERS: readonly PickpocketTier[] = [
     { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2661, z: 3306 } },
-    { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2655, z: 3306 } },
+    { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2629, z: 3295 } },
     { name: 'guard', minLevel: 40, stunDamage: 2, pattern: /^guard$/i, anchor: { x: 2661, z: 3306 } },
     { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2661, z: 3306 } },
 ];
