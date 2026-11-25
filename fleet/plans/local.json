@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795630586730,
+ "at": 1795630630039,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -151,13 +151,11 @@
   },
   {
    "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/generated/quest-barcrawl.ts DEMAND_ID=goal:quest_board:barcrawl BATCH_UNITS=1 --"
-   ],
+   "script": "scripts/generated/quest-barcrawl.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
