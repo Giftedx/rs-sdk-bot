@@ -1556,12 +1556,12 @@ return [
   // and pray Protect Item. Each case keeps the squad on 30 ticks after the gang is out (SQUAD_GANG_OUT_GRACE=30), so the pickup of the
   // last kill runs. `drained`: each clone holds its prayers on before its first fight until it has 20 points or less
   // (SQUAD_GANG_PRAYER=20). Each clone death prints `SQUAD gang <name> died: skull= protectItem= prayer=`, the varps of its last tick
-  // before the respawn. `hold<F>-<T>` is SQUAD_DAGGER_HOLD=0.<F>,<T>.
+  // before the respawn. `on` is SQUAD_DAGGER=1 with its defaults, `hold<F>-<T>` is SQUAD_DAGGER_HOLD=0.<F>,<T>.
   ...([
-    ['off', []], ['nohold', ['SQUAD_DAGGER=1', 'SQUAD_DAGGER_HOLD=off']],
+    ['off', []], ['on', ['SQUAD_DAGGER=1']], ['nohold', ['SQUAD_DAGGER=1', 'SQUAD_DAGGER_HOLD=off']],
     ...([[30, 300], [50, 300], [70, 300], [50, 200], [50, 400]] as const).map(([f, t]) => [`hold${f}-${t}`, ['SQUAD_DAGGER=1', `SQUAD_DAGGER_HOLD=${f / 100},${t}`]] as const),
   ] as const).map(([name, args]) => run1Squad(`extra:clone-run1-dagger-${name}-x1`, {prayer: true, prey: '0,1,0', unskulled: true, args: ['SQUAD_GANG_OUT_GRACE=30', ...args]})),
-  ...([['off', []], ['nohold', ['SQUAD_DAGGER=1', 'SQUAD_DAGGER_HOLD=off']], ['hold50-300', ['SQUAD_DAGGER=1', 'SQUAD_DAGGER_HOLD=0.5,300']]] as const)
+  ...([['off', []], ['on', ['SQUAD_DAGGER=1']], ['nohold', ['SQUAD_DAGGER=1', 'SQUAD_DAGGER_HOLD=off']], ['hold50-300', ['SQUAD_DAGGER=1', 'SQUAD_DAGGER_HOLD=0.5,300']]] as const)
     .map(([name, args]) => run1Squad(`extra:clone-run1-drained-${name}-x1`, {prayer: true, prey: '0,1,0', unskulled: true, args: ['SQUAD_GANG_OUT_GRACE=30', 'SQUAD_GANG_PRAYER=20', ...args]})),
   // The prayer of the gang (research/gang-clones.md, "The prayer of the gang"): a gang account prays against the weapon of the member it
   // faces and no other (facedPrayer), and the tank lock (SQUAD_TANK): the faced members 0 and 1 hold melee, members 2 and 3 hold ranged.

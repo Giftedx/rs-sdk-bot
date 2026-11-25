@@ -1774,7 +1774,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         const first = live.find(d => d.file);
         if (first) recordKillLoot({ receipt: first.file }, got);
         for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
-        if (Object.keys(got).length) o.log(`[${s.name}] SQUAD dagger pickup after its fight: ${JSON.stringify(got)}`);
+        o.log(`[${s.name}] SQUAD dagger pickup after its fight: ${live.length} kill${live.length === 1 ? '' : 's'}, ${reads} reads, ${JSON.stringify(got)}`);
     };
     const unwatch = s.onTick(() => {
         const stTick = s.sdk.getState();

@@ -9,16 +9,16 @@
 // - prayer.rs2 prayer_drain: at 0 prayer points every prayer goes off, Protect Item too. Protect Item has no head icon, so
 //   an overhead that stays off while the account fights is the visible sign of 0 points.
 // Off by default: with SQUAD_DAGGER unset the squad takes none of these rules.
-//   SQUAD_DAGGER=1  SQUAD_DAGGER_OFF_READS=<reads> (default DAGGER_DEFAULTS.offReads)
-//   SQUAD_DAGGER_HOLD=<fraction>,<ticks> or off (default DAGGER_DEFAULTS: off)
+//   SQUAD_DAGGER=1  SQUAD_DAGGER_OFF_READS=<reads> (default 6)  SQUAD_DAGGER_HOLD=<fraction>,<ticks> or off (default 0.7,300)
 
 export const DAGGER_IDS: ReadonlySet<number> = new Set([1215, 1231]);
 
 // `offReads`: the reads (one each tick) of an overhead that is off while the target is in combat, before the squad
 // takes it for an account with 0 prayer points. `holdBelow` and `holdTicks`: the hold (0 is no hold).
 export type DaggerOptions = { offReads: number; holdBelow: number; holdTicks: number };
-// The bench chose these (research/gang-clones.md, "Dagger mode").
-export const DAGGER_DEFAULTS: DaggerOptions = { offReads: 5, holdBelow: 0, holdTicks: 0 };
+// From the bench (research/gang-clones.md, "Dagger mode"): a bench clone with prayer points showed no overhead for at most
+// 5 ticks in a row in combat, and the hold at 0.7 for 300 ticks took all 24 clones of 8 seeds to 0 points before their death.
+export const DAGGER_DEFAULTS: DaggerOptions = { offReads: 6, holdBelow: 0.7, holdTicks: 300 };
 
 /** SQUAD_DAGGER=1 turns dagger mode on (undefined: off); the options come from SQUAD_DAGGER_OFF_READS and SQUAD_DAGGER_HOLD. */
 export function daggerOptionsOf(get: (name: string, fallback: string) => string): DaggerOptions | undefined {
