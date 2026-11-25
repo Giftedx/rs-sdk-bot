@@ -4,10 +4,13 @@
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { CONTROLLERS, controllerState, readLaunch, type Controller, type Launch } from '../../core/src/controllers';
-import { hasStopFile } from '../../core/src/practice-paths';
-import { runStandaloneRecoveryPass } from './session-recovery';
+import { atomicJson } from '../../core/src/plan-lock';
+import { hasStopFile, liveRoot } from '../../core/src/practice-paths';
+import { savedProcessAlive } from '../../core/src/session-takeover';
+import { cachedLaunchRevision } from '../../core/src/worker-release';
+import { QUALIFICATION_MISSING, runStandaloneRecoveryPass, type StandaloneRecoveryPassResult } from './session-recovery';
 import { pruneStatus } from './status-prune';
 
 export const STALL_MS = 6 * 3600_000;
@@ -80,14 +83,61 @@ export function publisherRepo(remote: string): string | null {
     return m ? m[1]! : null;
 }
 
+// Live recovery needs a native qualification for the current launch source (session-recovery.ts
+// findCurrentNativeRecoveryQualification), and a merge that changes a launch file makes it stale. When the recovery pass
+// defers an account for that reason, the watchdog starts the qualification itself: one run at a time, and at most one
+// start for one source in QUALIFY_RETRY_MS. The script admits itself (bench start check, recovery memory gate).
+export const QUALIFY_SCRIPT = 'scripts/measure/session-recovery-qualify.ts';
+export const QUALIFY_RETRY_MS = 30 * 60_000;
+export type QualifyStart = { pid: number; source: string; at: number };
+export const qualifyStateFile = (base: string): string => join(liveRoot(base), 'session-recovery', 'qualify.json');
+
+// Why no qualification starts now, or null to start one.
+export function qualificationWait(last: QualifyStart | null, source: string, now: number, running: (pid: number, at: number) => boolean): string | null {
+    if (last && running(last.pid, last.at)) return `qualification running pid=${last.pid}`;
+    if (last && last.source === source && now - last.at < QUALIFY_RETRY_MS) {
+        return `the qualification for source ${source.slice(0, 12)} started ${Math.floor((now - last.at) / 60_000)} min ago; next start after ${QUALIFY_RETRY_MS / 60_000} min`;
+    }
+    return null;
+}
+
+function readQualifyStart(file: string): QualifyStart | null {
+    try {
+        const v = JSON.parse(readFileSync(file, 'utf8'));
+        return Number.isSafeInteger(v?.pid) && v.pid > 0 && typeof v.source === 'string' && Number.isSafeInteger(v.at) ? v : null;
+    } catch { return null; }
+}
+
 export type WatchdogDeps = {
     hasStop?: (flag: string) => boolean;
     prune?: (base: string, opts: { now: number }) => { moved: string[]; kept: number; failed: number };
-    recover?: () => Promise<void>;
+    recover?: () => Promise<Pick<StandaloneRecoveryPassResult, 'skipped'> | void>;
     restartController?: (c: Controller, start: string[], env: NodeJS.ProcessEnv) => void;
     log?: (line: string) => void;
     now?: () => number;
+    source?: () => string;
+    running?: (pid: number, at: number) => boolean;
+    spawnQualification?: (args: string[], cwd: string, stdout: string, stderr: string) => number;
 };
+
+// `clock` is read again after the spawn: the saved time must follow the child's start, or the start-time check
+// (savedProcessAlive) takes the running child for a later process that reuses its pid.
+export function startRecoveryQualification(base: string, clock: () => number, log: (line: string) => void, deps: WatchdogDeps = {}): number | null {
+    const now = clock();
+    let source: string;
+    try { source = (deps.source ?? (() => cachedLaunchRevision(base)))(); }
+    catch (e) { log(`recovery qualification not started: source unreadable: ${String(e).slice(0, 160)}`); return null; }
+    const file = qualifyStateFile(base);
+    const wait = qualificationWait(readQualifyStart(file), source, now, deps.running ?? ((pid, at) => savedProcessAlive(pid, at)));
+    if (wait) { log(`recovery qualification not started: ${wait}`); return null; }
+    const logDir = join(base, '.practice', 'fleet');
+    mkdirSync(logDir, { recursive: true });
+    const out = join(logDir, `qualify-${now}.out.log`), err = join(logDir, `qualify-${now}.err.log`);
+    const pid = (deps.spawnQualification ?? spawnDetached)([process.execPath, QUALIFY_SCRIPT], base, out, err);
+    atomicJson(file, { pid, source, at: clock() } satisfies QualifyStart);
+    log(`recovery qualification started pid=${pid} source=${source.slice(0, 12)} log=${relative(base, out).replaceAll('\\', '/')}`);
+    return pid;
+}
 
 export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Promise<{ stoppedByOwner: boolean; pruned: number }> {
     const now = (deps.now ?? Date.now)();
@@ -150,14 +200,13 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
 
     if ((process.env.FLEET_SIDE || 'local') === 'local' && !stopped('session-recovery')) {
         try {
-            if (deps.recover) {
-                await deps.recover();
-            } else {
-                await runStandaloneRecoveryPass({
+            const pass = deps.recover
+                ? await deps.recover()
+                : await runStandaloneRecoveryPass({
                     root: base,
                     log: msg => log(`session recovery: ${msg.slice(0, 400)}`),
                 });
-            }
+            if (pass && pass.skipped.some(s => s.reason.startsWith(QUALIFICATION_MISSING))) startRecoveryQualification(base, deps.now ?? Date.now, log, deps);
         } catch (e) {
             log(`session recovery failed: ${String(e).slice(0, 200)}`);
         }

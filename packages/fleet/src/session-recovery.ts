@@ -56,6 +56,9 @@ export const NEVER_RECOVERED: readonly string[] = [...RESERVED_ACCOUNTS, 'afknig
 const NEVER_RECOVERED_SET = new Set<string>(NEVER_RECOVERED);
 export const RECOVERABLE_END = /^(?:blocked|gave-up|exit|no-progress|stopped)(?:\b| )/;
 export const END_SETTLE_MS = BOOTSTRAP_STATUS_AGE_MS + 5 * 60_000;
+// The start of the reason a live recovery is deferred with when no native qualification matches the current source.
+// The watchdog reads it to start scripts/measure/session-recovery-qualify.ts (watchdog.ts startRecoveryQualification).
+export const QUALIFICATION_MISSING = 'current native recovery qualification missing';
 
 export type EndRecord = { at: number; reason: string; revision?: string };
 export type ClaimView = { phase: 'held' | 'released'; kind?: string; orderId?: string; pid?: number; host?: string; at?: number } | null;
@@ -883,7 +886,7 @@ export async function executeControlledLiveRecovery(
         return {
             ok: false,
             deferred: true,
-            detail: `current native recovery qualification missing for source ${source.slice(0, 12)}; run packages/practice/src/session-recovery-proof.ts`,
+            detail: `${QUALIFICATION_MISSING} for source ${source.slice(0, 12)}; run scripts/measure/session-recovery-qualify.ts`,
         };
     }
 
