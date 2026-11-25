@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795618550468-4",
  "account": "mmthv2350",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "0d594dc8-7f57-41c9-9ebf-e2ba904dab2b",
- "count": 0,
- "ok": false,
- "at": 1795619175690,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795619317719,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795619316985
+ },
+ "logout": {
+  "attemptId": "1795619175698-0000030740-0000000001",
+  "at": 1795619317710,
+  "sha256": "02e1d449a04d972ccaedb387ea9ce0536953f109bd4a54d14f2378252ad12d31"
+ },
+ "screen": true
 }
