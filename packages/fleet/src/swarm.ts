@@ -1516,6 +1516,8 @@ export async function runSwarmCli(argv: readonly string[] = process.argv.slice(2
             catch (error) { landed = false; observeSwarmInfraFault(infraBreaker, error); console.log('SWARM ' + String(error)); }
             renewAt = performance.now() + (landed || !lease.allows() ? FLEET_LEASE_RENEW_MS : FLEET_LEASE_RETRY_MS);
         }
+        // While a signal waits for the recovery logout, the swarm keeps its leases and starts nothing.
+        if (signalled) return;
         if (!lease.allows()) {
             const accounts = new Set([...runs.values()].flatMap(r => r.accounts));
             if (recoveryDispatch.active) accounts.add(recoveryDispatch.active.account);
