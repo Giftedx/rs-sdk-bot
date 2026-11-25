@@ -904,6 +904,79 @@ kills=10 killReceipts=10 receiptDomain=live feedMatched=10 died=0 taken=987 trip
 Gap: the escort state file keeps only its last write, so no record shows whether the gate was clear during the hold, and
 no route went through the gate in a live run. The bench clones do not come back after a death.
 
+## The windup keeps its hits
+
+Claim: a teleport does not stop the hits that land during its windup. It keeps them, and they all land on the arrival tile.
+A member that a pile of 4 or 5 hits down to under about 37 HP before its escape dies at Camelot, with the escape logged as a
+success.
+
+The engine:
+
+- Each PvP hit is a normal queue on its target: `.queue(pvp_damage, $delay, $damage)`
+  (`content/scripts/skill_combat/scripts/pvp/pvp_combat.rs2`, `[proc,.pvp_damage]`).
+- A queued script runs only when `canAccess()` is true and its delay is spent (`engine/entity/Player.ts`, `processQueue`).
+  `canAccess()` is false while the player is `delayed`. The delay of each request still counts down.
+- The teleport spells run `p_delay(1)`, then `p_delay(0)`, then the jump (`skill_magic/scripts/spells/teleport.rs2`,
+  `player_teleport_normal`).
+- On the tick that the delay ends, `processPlayers` (`engine/World.ts`) resumes the script first, which jumps, and then
+  runs the queues. A hit with a longer projectile delay lands 1 or 2 ticks after the arrival.
+- An eat that arrives after the cast is dropped: `OpHeldHandler` returns while the player is `delayed`. A shark refuses a
+  second eat for 2 ticks (`consume.rs2`, `%eat_delay`), with no message.
+
+The evidence, `extra:attack-team5-pile-six-x1`, hosted runs 45696459800 and 45696461017, seeds 1 to 16 each, 107
+escapes. All 4 deaths of ours were member 1 (the member the attackers pile on), after `SQUAD coordinated fallback
+(teleport)` at hp 27, 29, 34 and 36 with 4 or 5 enemies. In 3 of the 4, the `DEATH` line shows the last tile alive in the
+Wilderness at the fallback HP. The HP did not change during the windup, and the account died on the arrival tick. In the
+fourth (seed 6), the account was alive at Camelot with 9 HP, then died there. The squad saw each death only after the
+respawn, so it logged `SQUAD died on a bank trip`.
+
+On master at 648fda7b97 (runs 45701534679 and 45701552905, seeds 1 to 16 each), 3 more deaths of member 1 had the same
+form. They began the escape at 34, 40 and 54 HP. In one, the eat on the cast tick landed (the last HP alive was 54), and
+the windup still killed the account. All 4 runs, escapes with 4 or 5 enemies by the HP at the fallback:
+
+| Escape starts at | Escapes | Deaths |
+|---|---|---|
+| under 40 HP | 8 | 5 |
+| 40 to 54 HP | 27 | 2 |
+| 55 to 69 HP | 63 | 0 |
+| 70 HP or more | 69 | 0 |
+
+The fight loop reads the fallback rule each tick (`fight.ts`, `o.stop` after each `nextTick`), and `emergencyMulti` sends a
+member out at 61 HP with 4 or more enemies. The members under 55 HP fell past 61 in one tick: a volley of the pile.
+
+An eat before the cast loses. The rescue ate alone under a floor of 10 HP for each attacker and cast when the heal showed
+(run 45701974509, master plus that rule, seeds 1 to 16). The eats landed, and 3 of the 7 accounts that took the rule still
+died in the windup with 40 to 48 HP. The wait moved the cast into the next volley.
+
+| Arm | Deaths of ours | Kills | HP taken |
+|---|---|---|---|
+| master, run 45701534679 | 1 | 23 | 11,681 |
+| master, run 45701552905 | 2 | 24 | 11,204 |
+| eat before the cast, run 45701974509 | 4 | 19 | 11,614 |
+
+The rule (`packages/workers/src/pvp/squad.ts`): with 4 or more enemies on a multi-way tile, `squadFallbackPlan` sends the
+member out while one more volley of the size it just took leaves it at `WINDUP_SAFE` (0.55) of its maximum or more. The
+volley is the largest loss of HP from one tick to the next in the last `VOLLEY_TICKS` (8) ticks (`volleyOf`). After the
+escape, the account eats on arrival under `windupFloor`, before it turns auto-retaliate off. `squadDied` reads `isDead`,
+so a death in the windup shows at once.
+
+The rule against master, seeds 1 to 16, two runs each, master at 648fda7b97 and the rule at db8755d5ca (master plus
+the rule):
+
+| Arm | Deaths of ours | Deaths in the windup | Kills | HP taken | Fallbacks | Bank trips |
+|---|---|---|---|---|---|---|
+| master, runs 45701534679 and 45701552905 | 3 | 3 | 47 | 22,885 | 153 | 352 |
+| the rule, runs 45703509395 and 45703527610 | 2 | 1 | 59 | 22,694 | 140 | 342 |
+
+The windup death of the rule (run 45703509395, seed 10): one volley of 33 took the member from about 78 to 45 HP before
+the rule had seen a large volley, and the windup killed it with 65 HP after the eat on the cast tick. The other death
+(seed 8) came on the walk back to the post after an escape at 70 HP: the bank trip led the member into the pile at
+Wilderness level 15. The two runs of each arm give kills of 23 and 24 (master) and 35 and 24 (the rule), so the gain
+in kills and the drop in deaths are inside the spread of the runs.
+
+Gap: the rule is measured only against the attackers of this bench case. Against a pile with smaller volleys, the rule
+sends a member out later. No live run shows the size of a live pile's volley.
+
 ## Dagger mode
 
 A gang account drops its dragon dagger(p) only from a death that is skulled and has Protect Item off: death.rs2

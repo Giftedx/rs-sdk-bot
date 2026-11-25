@@ -407,6 +407,34 @@ export function createWildSurvival(
     };
 }
 
+// A teleport windup keeps every hit that lands in it. The engine runs no queued script of a delayed player (Player.ts
+// processQueue, canAccess), and on the arrival tick the script jumps before the queues run (World.ts processPlayers). So the
+// hits of the windup all land together on the arrival tile, and a hit still in flight lands on the next ticks
+// (research/gang-clones.md, "The windup keeps its hits").
+//
+// A pile of 4 or more can put a full volley in the windup. In 64 seeds of extra:attack-team5-pile-six-x1, no escape with 4 or
+// more enemies that began at 55 HP or more died, and 7 of the 35 that began under 55 HP died. An eat before the cast moved
+// the cast into the next volley and lost (4 deaths of ours against 1 and 2 on master). So the member leaves while one
+// more volley of the size it just took leaves it at WINDUP_SAFE of its maximum or more.
+export const WINDUP_SAFE = 0.55;
+// The ticks of HP history for the size of a volley: the largest loss of HP from one tick to the next in them.
+export const VOLLEY_TICKS = 8;
+export function volleyOf(drops: readonly { tick: number; hp: number }[], now: number): number {
+    return drops.reduce((n, d) => (now - d.tick <= VOLLEY_TICKS ? Math.max(n, d.hp) : n), 0);
+}
+// Under this floor an escaped account eats as it arrives, before anything else: 10 HP for each attacker in reach when the
+// escape began, at most half the maximum.
+export const WINDUP_HP_PER_ATTACKER = 10;
+export function windupFloor(attackers: number, maxHp: number): number {
+    return Math.min(Math.floor(maxHp / 2), WINDUP_HP_PER_ATTACKER * Math.max(1, attackers));
+}
+
+// A death of a squad member: hitpoints at zero (`isDead`, before the respawn), a new life, or the tile of the Lumbridge respawn.
+// Without `isDead` a death in a teleport windup shows only after the respawn, and the member starts a bank trip while it is dead.
+export function squadDied(q: { isDead?: boolean; lifeId?: number; worldX: number; worldZ: number }, life0: number | undefined): boolean {
+    return q.isDead === true || (life0 !== undefined && q.lifeId !== life0) || Math.max(Math.abs(q.worldX - 3222), Math.abs(q.worldZ - 3218)) <= 40;
+}
+
 // Cures lingering poison and eats above fatal poison ticks once safe out of the Wilderness.
 export async function curePoisonAndEat(s: Session, stop: () => boolean = () => false, always = false): Promise<void> {
     const me = () => s.sdk.getState()?.player;
@@ -601,6 +629,9 @@ export async function settleBenchLogout(sessions: readonly Session[]): Promise<v
     }));
 }
 
+// `attackers` is the number of players that can hit the account now, for the windup floor (windupFloor). Unset: 1.
+export type RescueOptions = { protect?: () => CombatStyle | null; protectItem?: () => boolean; attackers?: () => number };
+
 // A dropped account logged in again: settle on fresh login, cast an available escape teleport or rub a glory (wild <= 30)
 // immediately, else eat and walk to the nearer bank (bankNear) while protecting prayer and healing every tick.
 export async function rescue(
@@ -608,7 +639,7 @@ export async function rescue(
     log: (l: string) => void,
     stopped: () => boolean = () => false,
     settleStart = true,
-    opts: { protect?: () => CombatStyle | null; protectItem?: () => boolean } = {},
+    opts: RescueOptions = {},
 ): Promise<Session | null> {
     // The survival helper's hold of the prayer guard ends with the rescue, on each of its returns.
     const helpers: { release(): void }[] = [];
@@ -621,7 +652,7 @@ async function rescueRun(
     log: (l: string) => void,
     stopped: () => boolean,
     settleStart: boolean,
-    opts: { protect?: () => CombatStyle | null; protectItem?: () => boolean },
+    opts: RescueOptions,
     helpers: { release(): void }[],
 ): Promise<Session | null> {
     const me = () => s.sdk.getState()?.player;
@@ -630,7 +661,10 @@ async function rescueRun(
     const start = me();
     if (!start) return null;
     log(`[${s.name}] SQUAD rescue at ${start.worldX},${start.worldZ} wild ${wildernessLevel(start.worldZ)} hp ${start.hp}`);
+    // The largest windup floor of the escape: under it the account eats as it arrives, before anything else.
+    let arrivalFloor = 0;
     if (wildernessLevel(start.worldZ) > 0) {
+        arrivalFloor = windupFloor(opts.attackers?.() ?? 1, start.maxHp);
         let suppressEat = false;
         const survival = createWildSurvival(s, {
             protect: opts.protect,
@@ -860,6 +894,13 @@ async function rescueRun(
     }
     const end = me();
     if (!stopped() && end && wildernessLevel(end.worldZ) === 0) {
+        // A hit that was still in flight at the jump lands on the next ticks, so under the floor the food goes in first.
+        const arrivalFood = bestFood((s.sdk.getInventory?.() ?? []).filter(f => f.id !== ITEMS.karambwan));
+        const arrivalOp = arrivalFood?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
+        if (arrivalFood && arrivalOp && !end.isDead && end.hp > 0 && end.hp < arrivalFloor) {
+            if (typeof s.direct === 'function') await s.direct({ type: 'useInventoryItem', slot: arrivalFood.slot, optionIndex: arrivalOp.opIndex, reason: 'SDK' });
+            else if (typeof s.sdk.sendUseItem === 'function') await s.sdk.sendUseItem(arrivalFood.slot, arrivalOp.opIndex);
+        }
         const retaliating = (s.sdk.getState?.() as { autoRetaliateEnabled?: boolean } | undefined)?.autoRetaliateEnabled === true;
         if (retaliating) {
             await disableAutoRetaliate(s);
@@ -867,7 +908,7 @@ async function rescueRun(
         }
         await curePoisonAndEat(s, stopped, false);
     }
-    log(`[${s.name}] SQUAD rescue ends at ${end?.worldX},${end?.worldZ} wild ${wildernessLevel(end?.worldZ ?? 0)}`);
+    log(`[${s.name}] SQUAD rescue ends at ${end?.worldX},${end?.worldZ} wild ${wildernessLevel(end?.worldZ ?? 0)} hp ${end?.hp}${end?.isDead ? ' dead' : ''}`);
     return !stopped() && end && wildernessLevel(end.worldZ) === 0 ? s : null;
 }
 
@@ -1286,6 +1327,8 @@ export function squadFallbackPlan(opts: {
     // The HP fractions of the focus pile (3 or more on this member) and the heavy focus (2 or more) while the squad holds its
     // numbers: this member and its allies in view at least as many as the enemies in view. Unset: the fractions below.
     heldFocus?: { pile: number; heavy: number };
+    // The largest loss of HP of this member from one tick to the next in the last VOLLEY_TICKS ticks (volleyOf). Unset: 0.
+    volley?: number;
 }): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
     const wild = wildernessLevel(opts.z);
     if (wild === 0) return 'out';
@@ -1304,7 +1347,8 @@ export function squadFallbackPlan(opts: {
         || ((opts.singleHpFloor ?? 0) > 0 && opts.hp <= opts.maxHp * opts.singleHpFloor!)
     );
     const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.75);
-    if (!isolatedPile && !outnumbered && !focusPile && !heavyFocus && !emergencyMulti && !lowSupplyPile && !lowSingleSupply && !dry) return 'hold';
+    const volleyPile = opts.inMulti && opts.enemyCount >= 4 && (opts.volley ?? 0) > 0 && opts.hp - opts.volley! < opts.maxHp * WINDUP_SAFE;
+    if (!isolatedPile && !outnumbered && !focusPile && !heavyFocus && !emergencyMulti && !lowSupplyPile && !lowSingleSupply && !dry && !volleyPile) return 'hold';
     return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
 }
 
@@ -1476,8 +1520,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             return origDirect.call(s, action);
         };
     }
-    // A death: a new life, or the tile of the Lumbridge respawn.
-    const diedNow = (q: { lifeId?: number; worldX: number; worldZ: number }) => (life0 !== undefined && q.lifeId !== life0) || Math.max(Math.abs(q.worldX - 3222), Math.abs(q.worldZ - 3218)) <= 40;
+    const diedNow = (q: { isDead?: boolean; lifeId?: number; worldX: number; worldZ: number }) => squadDied(q, life0);
     // A retreat that ends with no session is a death only when the account died: a stop or a walk that did not get out leaves it alive.
     const retreatEnded = () => { const q = me(); if (q && diedNow(q)) stats.died = true; else o.log(`[${s.name}] SQUAD retreat ended with the account alive${q ? ` at ${q.worldX},${q.worldZ}` : ''}`); };
     const wornAtStart = (st?.equipment ?? []).map(e => ({ id: e.id, count: e.count ?? 1 }));
@@ -1652,11 +1695,14 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const swapper = new KitSwapper(), tickOf = () => nextTick(s);
     const alliesSet = new Set(o.allies.map(a => a.toLowerCase()));
     const recentHitters = new Map<number, number>();
+    // Each loss of HP from one tick to the next in the last VOLLEY_TICKS ticks (volleyOf).
+    const hpDrops: { tick: number; hp: number }[] = [];
     let seenCombatEv = 0;
     const fallbackAction = () => {
         const pos = me();
-        if (!pos) return { plan: 'out' as const, enemyCount: 0, allyCount: 0, foodCount: 0 };
+        if (!pos) return { plan: 'out' as const, enemyCount: 0, allyCount: 0, foodCount: 0, volley: 0 };
         const nowTick = s.tick();
+        const volley = volleyOf(hpDrops, nowTick);
         for (const [idx, t] of recentHitters) if (nowTick - t > 8) recentHitters.delete(idx);
         const curView = s.sdk.getState()?.nearbyPlayers ?? [];
         const curSelf = { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel };
@@ -1679,8 +1725,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             hasTeleport: !!squadEscapeSpell(pos.worldZ, invNow, s.sdk.getEquipment().map(e => e.id), s.sdk.getSkill('Magic')?.level ?? 1),
             singleFoodFloor, singleHpFloor,
             ...(heldFocus ? { heldFocus } : {}),
+            volley,
         });
-        return { plan, enemyCount, allyCount, foodCount };
+        return { plan, enemyCount, allyCount, foodCount, volley };
     };
     const fallbackDue = () => {
         const { plan } = fallbackAction();
@@ -1719,7 +1766,14 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const rescueOpts = {
         protect: () => (o.threats?.act ? protectOf(o.threats.step(s.tick()).actions, s.name) : null),
         protectItem: () => o.options.protectItem !== false && ownSkull(s.client) === true,
-    };
+        // On a multi-way tile each enemy in reach can hit, on a single-way tile one.
+        attackers: () => {
+            const pos = me();
+            if (!pos) return 1;
+            const { enemyCount } = fallbackAction();
+            return isMulti(pos.worldX, pos.worldZ) ? enemyCount : Math.min(1, enemyCount);
+        },
+    } satisfies RescueOptions;
     const wildSurvival = createWildSurvival(s, {
         protect: rescueOpts.protect,
         protectItem: rescueOpts.protectItem,
@@ -1817,7 +1871,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         const stTick = s.sdk.getState();
         const pos = stTick?.player;
         const tickNow = s.tick();
-        const hp = pos?.hp; if (hp !== undefined) { if (hp < lastHp) { stats.taken += lastHp - hp; damagedAt = tickNow; } lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
+        const hp = pos?.hp; if (hp !== undefined) { if (hp < lastHp) { stats.taken += lastHp - hp; damagedAt = tickNow; hpDrops.push({ tick: tickNow, hp: lastHp - hp }); } lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
+        while (hpDrops.length && tickNow - hpDrops[0]!.tick > VOLLEY_TICKS) hpDrops.shift();
         const combatEvents = stTick?.combatEvents;
         if (combatEvents?.length) {
             for (const e of combatEvents) {
@@ -1905,7 +1960,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 await clearSafeZonePrayers(s);
                 const fault = await trip(s, first);
                 const after = me();
-                if (after && ((life0 !== undefined && after.lifeId !== life0) || Math.max(Math.abs(after.worldX - 3222), Math.abs(after.worldZ - 3218)) <= 40)) { o.log(`[${s.name}] SQUAD died on a bank trip`); if (await recover()) continue; stats.died = true; break; }
+                if (after && diedNow(after)) { o.log(`[${s.name}] SQUAD died on a bank trip`); if (await recover()) continue; stats.died = true; break; }
                 if (fault) { o.log(`[${s.name}] SQUAD bank trip: ${fault}`); break; }
                 if (first) {
                     // A member one meal short starts with what it holds; one under the floor stays out of the Wilderness.
@@ -1966,9 +2021,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 }
                 // The armour that defends better against the threat's style, from the pack: worn before the next fight, and put back after the threat has been gone for 60 ticks.
             }
-            const { plan: fallback, enemyCount, allyCount } = fallbackAction();
+            const { plan: fallback, enemyCount, allyCount, volley } = fallbackAction();
             if (fallback !== 'hold' && fallback !== 'out') {
-                o.log(`[${s.name}] SQUAD coordinated fallback (${fallback}) hp=${p.hp} enemies=${enemyCount} allies=${allyCount}`);
+                o.log(`[${s.name}] SQUAD coordinated fallback (${fallback}) hp=${p.hp} enemies=${enemyCount} allies=${allyCount} volley=${volley}`);
                 const retreated = await runRescue();
                 if (!retreated) { retreatEnded(); break; }
                 escapes++;
