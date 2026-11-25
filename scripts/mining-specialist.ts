@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { waitTicks } from '../packages/core/src/ticks';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { finish } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
@@ -14,7 +14,6 @@ import {
     rubTeleport,
     walkWaypointsSafe,
     slotOfId,
-    itemQty,
     chebDist,
     SKILL_MULTI3_MAKE1_A,
     OBJ_KNIFE,
@@ -22,17 +21,21 @@ import {
     OBJ_GLORY_4,
 } from './gathering-specialist-lib';
 
+export const OBJ_BRONZE_PICKAXE = 1265;
 export const OBJ_RUNE_PICKAXE = 1275;
 export const OBJ_SHORTBOW = 841;
+export const OBJ_MONK_ROBE_BOTTOM = 542;
+export const OBJ_MONK_ROBE_TOP = 544;
+export const OBJ_HOLY_SYMBOL = 1718;
+export const OBJ_PRAYER_POTION_4 = 2434;
+export const PRAYER_POTION_IDS = [2434, 139, 141, 143] as const;
 export const OBJ_DRAGON_BONES = 536;
-export const OBJ_CLAY = 434;
-export const OBJ_COPPER_ORE = 436;
+export const OBJ_TIN_ORE = 438;
 export const OBJ_IRON_ORE = 440;
 export const IRON_ORE_XP_25X = 875;
 
 const PROTECT_FROM_MELEE_PRAYER = 14;
 const AUTO_RETALIATE_ON_COMP = 150;
-const AUTO_RETALIATE_OFF_COMP = 151;
 
 export const MINING_GLORY_IDS = [OBJ_GLORY_4, 1710, 1708, 1706] as const;
 
@@ -45,6 +48,15 @@ const EDGEVILLE_TO_HOBGOBLIN_WAYPOINTS: readonly [number, number, number][] = [
     [3083, 3729, 4],
     [3100, 3767, 1],
 ];
+
+const BARBARIAN_TIN_ROCKS: readonly { x: number; z: number }[] = [
+    { x: 3086, z: 3417 },
+    { x: 3087, z: 3418 },
+    { x: 3088, z: 3417 },
+    { x: 3086, z: 3416 },
+];
+
+const BARBARIAN_TIN_SET = new Set(BARBARIAN_TIN_ROCKS.map(r => `${r.x},${r.z}`));
 
 const HOBGOBLIN_IRON_ROCKS: readonly { x: number; z: number }[] = [
     { x: 3099, z: 3765 },
@@ -59,16 +71,19 @@ const HOBGOBLIN_IRON_ROCKS: readonly { x: number; z: number }[] = [
 
 const HOBGOBLIN_ROCK_SET = new Set(HOBGOBLIN_IRON_ROCKS.map(r => `${r.x},${r.z}`));
 
-// 28 supply slots (no Super energy(4) — NODE_INFINITE_RUN=true): Doric's Quest (Mining 1->49) + Prayer 43 + Hobgoblin 8-rock hybrid 2.67t flinch/knife.
+// 25 supply slots (no Super energy(4) — NODE_INFINITE_RUN=true):
+// 11 Dragon bones (Prayer 43) + Monk robes & Holy symbol (+19 Prayer) + 5 Prayer pots + Barbarian Tin (1->15) + Hobgoblin 8-rock 2.67t (15->99).
 export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
+    [OBJ_BRONZE_PICKAXE]: 1,
     [OBJ_RUNE_PICKAXE]: 1,
     [OBJ_KNIFE]: 1,
     [OBJ_LOGS]: 1,
     [OBJ_SHORTBOW]: 1,
-    [OBJ_CLAY]: 6,
-    [OBJ_COPPER_ORE]: 4,
-    [OBJ_IRON_ORE]: 2,
     [OBJ_GLORY_4]: 1,
+    [OBJ_MONK_ROBE_BOTTOM]: 1,
+    [OBJ_MONK_ROBE_TOP]: 1,
+    [OBJ_HOLY_SYMBOL]: 1,
+    [OBJ_PRAYER_POTION_4]: 5,
     [OBJ_DRAGON_BONES]: 11,
 };
 
@@ -82,13 +97,32 @@ function isOrthogonalAdjacent(px: number, pz: number, rx: number, rz: number): b
     return Math.abs(px - rx) + Math.abs(pz - rz) === 1;
 }
 
-function findLiveHobgoblinRocks(s: Session): Map<string, NearbyLoc> {
+function findPrayerPotionSlot(s: Session): number | undefined {
+    const inv = s.sdk.getInventory();
+    for (const id of PRAYER_POTION_IDS) {
+        const hit = inv.find(i => i.id === id);
+        if (hit) return hit.slot;
+    }
+    return undefined;
+}
+
+function tryDrinkPrayerPotion(s: Session, minPts = 15): Promise<unknown> | null {
+    const pts = s.sdk.getSkill('Prayer')?.level ?? 0;
+    if (pts > minPts) return null;
+    const slot = findPrayerPotionSlot(s);
+    if (slot === undefined) return null;
+    const item = s.sdk.getInventory().find(i => i.slot === slot);
+    const op = item?.optionsWithIndex?.find(o => /^drink$/i.test(o.text))?.opIndex ?? 1;
+    return s.direct({ type: 'useInventoryItem', slot, optionIndex: op, reason: 'SDK' });
+}
+
+function findLiveRocks(s: Session, allowedSet: ReadonlySet<string>): Map<string, NearbyLoc> {
     const out = new Map<string, NearbyLoc>();
     const locs = s.sdk.getState()?.nearbyLocs ?? [];
     for (const l of locs) {
         if (l.level !== 0) continue;
         const k = `${l.x},${l.z}`;
-        if (!HOBGOBLIN_ROCK_SET.has(k) || out.has(k)) continue;
+        if (!allowedSet.has(k) || out.has(k)) continue;
         if (l.optionsWithIndex?.some(o => o.opIndex === 1 && /^mine$/i.test(o.text))) {
             out.set(k, l);
         }
@@ -108,7 +142,6 @@ function pickHobgoblinRock(
         if (!loc || loc.reachable === false) continue;
         const adj = isOrthogonalAdjacent(px, pz, r.x, r.z);
         if (requireAdjacent && !adj) continue;
-        // Pick an adjacent tile for this rock that touches the most other live rocks so the next flinch needs 0 walk.
         let bestTileDist = adj ? 0 : 99;
         let maxTouchOther = 0;
         if (adj) {
@@ -162,8 +195,22 @@ async function buryPrayerBones(s: Session, stop: () => boolean, targetLevel = 43
     }
 }
 
+async function equipItems(s: Session, ids: readonly number[]): Promise<void> {
+    const acts: Promise<unknown>[] = [];
+    for (const id of ids) {
+        const item = s.sdk.getInventory().find(i => i.id === id);
+        if (!item) continue;
+        const op = item.optionsWithIndex?.find(o => /^(wield|wear|equip)$/i.test(o.text))?.opIndex ?? 2;
+        acts.push(s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' }));
+    }
+    if (acts.length > 0) {
+        await Promise.all(acts);
+        await waitTicks(s, 1);
+    }
+}
+
 async function clearPendingMiningAction(s: Session): Promise<void> {
-    const pickSlot = slotOfId(s, OBJ_RUNE_PICKAXE);
+    const pickSlot = slotOfId(s, OBJ_RUNE_PICKAXE) ?? slotOfId(s, OBJ_BRONZE_PICKAXE);
     const glorySlot = MINING_GLORY_IDS.map(id => slotOfId(s, id)).find((v): v is number => v !== undefined);
     if (pickSlot !== undefined && glorySlot !== undefined) {
         await s.direct({ type: 'useItemOnItem', sourceSlot: pickSlot, targetSlot: glorySlot, reason: 'SDK' });
@@ -179,59 +226,48 @@ export function remainingIronOresTo99(currentXp: number): number {
     return Math.max(0, Math.ceil((xpForLevel(99) - currentXp) / IRON_ORE_XP_25X));
 }
 
-async function completeDoricQuest(main: Awaited<ReturnType<typeof openHelperAndMain>>['main'], stop: () => boolean): Promise<void> {
-    const converse = async (pats: readonly RegExp[], done: () => boolean, maxTicks = 25): Promise<void> => {
-        for (let i = 0; i < maxTicks && !stop(); i++) {
-            if (done()) return;
-            const d = main.sdk.getDialog();
-            if (d?.isOpen && !d.isWaiting) {
-                const opt = d.options.find(o => pats.some(re => re.test(o.text)));
-                await main.direct({ type: 'clickDialogOption', optionIndex: opt ? opt.index : 0, reason: 'SDK' });
-            }
-            await waitTicks(main, 1);
+async function mineTo15AtBarbarian(main: Session, stop: () => boolean): Promise<void> {
+    await walkWaypointsSafe(main, [[3087, 3452, 4], [3087, 3417, 1]], stop);
+    let actionDelayApprox = 0;
+    const target15 = xpForLevel(15);
+    while (!stop()) {
+        if ((main.sdk.getSkill('Mining')?.baseLevel ?? 1) >= 15 || (main.sdk.getSkillXp('Mining') ?? 0) >= target15) {
+            break;
         }
-    };
-
-    const talkDoric = async () => {
-        for (let t = 0; t < 4 && !stop(); t++) {
-            const npc = main.sdk.findNearbyNpc(/^doric$/i);
-            if (npc && chebDist({ x: npc.x, z: npc.z }, { x: main.sdk.getState()!.player!.worldX, z: main.sdk.getState()!.player!.worldZ }) <= 5) {
-                const r = await main.bot.talkTo(/^doric$/i);
-                if (r.success || main.sdk.getDialog()?.isOpen) return;
-            }
-            await main.bot.walkTo(2952, 3451, 1);
+        const now = main.tick();
+        if (now < actionDelayApprox) {
             await waitTicks(main, 1);
+            continue;
         }
-        throw Error('could not talk to Doric');
-    };
-
-    await talkDoric();
-    let part1Open = false;
-    await converse(
-        [/wanted to use your anvils/i, /yes, i will get you materials/i],
-        () => {
-            const open = !!main.sdk.getDialog()?.isOpen;
-            if (open) part1Open = true;
-            return part1Open && !open;
-        },
-        25,
-    );
-
-    await talkDoric();
-    await converse(
-        [/have my materials/i, /yes/i],
-        () => (main.sdk.getSkill('Mining')?.baseLevel ?? 1) >= 49,
-        35,
-    );
-    if ((main.sdk.getSkill('Mining')?.baseLevel ?? 1) < 49) {
-        throw Error(`Doric's Quest did not grant Mining 49 (level=${main.sdk.getSkill('Mining')?.baseLevel})`);
+        const st = main.sdk.getState();
+        const modalOpen = Boolean(st?.dialog?.isOpen || st?.modalOpen);
+        const live = findLiveRocks(main, BARBARIAN_TIN_SET);
+        const rock = BARBARIAN_TIN_ROCKS.map(r => live.get(`${r.x},${r.z}`)).find((l): l is NearbyLoc => !!l);
+        const knifeSlot = slotOfId(main, OBJ_KNIFE);
+        const logSlot = slotOfId(main, OBJ_LOGS);
+        if (!rock || knifeSlot === undefined || logSlot === undefined) {
+            if (modalOpen) await main.direct({ type: 'closeModal', reason: 'SDK' });
+            await waitTicks(main, 1);
+            continue;
+        }
+        await Promise.all([
+            ...(modalOpen ? [main.direct({ type: 'closeModal', reason: 'SDK' })] : []),
+            main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
+            main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
+            main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: 1, reason: 'SDK' }),
+        ]);
+        actionDelayApprox = now + 3;
+        await waitTicks(main, 1);
+    }
+    if ((main.sdk.getSkill('Mining')?.baseLevel ?? 1) < 15) {
+        throw Error(`mineTo15AtBarbarian did not reach Mining 15 (level=${main.sdk.getSkill('Mining')?.baseLevel})`);
     }
 }
 
 if (import.meta.main) {
     const account = process.argv[2];
     const helperName = process.argv.slice(3).find(a => !a.includes('=') && !a.startsWith('-')) ?? process.env.HELPER ?? `${account}b`;
-    const cap = Number(process.env.CAP ?? 4400);
+    const cap = Number(process.env.CAP ?? 4200);
     if (!account) throw Error('usage: bun scripts/mining-specialist.ts <account> [helperAccount]');
 
     const { main, helper, stopped } = await openHelperAndMain(account, helperName);
@@ -254,6 +290,8 @@ if (import.meta.main) {
         });
 
         await buryPrayerBones(main, isStopped, 43);
+        // Keep Shortbow in inventory until after bare-handed Hobgoblin punch-tag, equipping Monk's robes + Holy symbol now.
+        await equipItems(main, [OBJ_MONK_ROBE_TOP, OBJ_MONK_ROBE_BOTTOM, OBJ_HOLY_SYMBOL]);
 
         await rubTeleport(
             main,
@@ -262,10 +300,8 @@ if (import.meta.main) {
             p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
             isStopped,
         );
-        await walkWaypointsSafe(main, [[3020, 3425, 4], [2952, 3451, 2]], isStopped);
-
-        await completeDoricQuest(main, isStopped);
-        const doricTicks = main.tick() - t0;
+        await mineTo15AtBarbarian(main, isStopped);
+        const lv15Ticks = main.tick() - t0;
 
         await rubTeleport(
             main,
@@ -275,7 +311,14 @@ if (import.meta.main) {
             isStopped,
         );
 
-        // Yield PrayerGuard via double-toggle once Prayer 43 is unlocked, keeping Protect from Melee ON via manual flicks.
+        // Drop Tin ores in <= 2 batches so Hobgoblin inventory stays clean, and yield PrayerGuard while keeping Protect from Melee ON.
+        for (let b = 0; b < 2 && !isStopped(); b++) {
+            const tins = main.sdk.getInventory().filter(i => i.id === OBJ_TIN_ORE).slice(0, 5);
+            if (tins.length === 0) break;
+            await Promise.all(tins.map(it => main.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' })));
+            await waitTicks(main, 1);
+        }
+
         let lastFlickTick = -99;
         if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
             const wasOn = isProtectMeleeOn(main.sdk.getState());
@@ -302,14 +345,17 @@ if (import.meta.main) {
             return [];
         };
 
-        // Keep Shortbow unequipped on the walk north so we can punch-tag one Hobgoblin immediately upon arrival.
         for (const [wx, wz, tol] of EDGEVILLE_TO_HOBGOBLIN_WAYPOINTS) {
             while (!isStopped()) {
                 const stW = main.sdk.getState();
                 const pw = stW?.player;
                 if (pw && chebDist({ x: pw.worldX, z: pw.worldZ }, { x: wx, z: wz }) <= tol) break;
-                const acts: Promise<unknown>[] = [...prayerFlickActs(stW, main.tick(), 3)];
-                acts.push(main.direct({ type: 'walkTo', x: wx, z: wz, running: true, reason: 'SDK' }));
+                const potAct = tryDrinkPrayerPotion(main, 15);
+                const acts: Promise<unknown>[] = [
+                    ...prayerFlickActs(stW, main.tick(), 3),
+                    ...(potAct ? [potAct] : []),
+                    main.direct({ type: 'walkTo', x: wx, z: wz, running: true, reason: 'SDK' }),
+                ];
                 await Promise.all(acts);
                 await waitTicks(main, 1);
             }
@@ -341,7 +387,9 @@ if (import.meta.main) {
                             const diff = e.tick - prev.tick;
                             if (diff >= 4 && diff <= 5) period = diff;
                         }
-                        npcLastHit.set(e.sourceIndex, { tick: e.tick, period });
+                        if (!prev || e.tick > prev.tick) {
+                            npcLastHit.set(e.sourceIndex, { tick: e.tick, period });
+                        }
                     }
                     if (e.tick > maxHitTick) maxHitTick = e.tick;
                 }
@@ -349,7 +397,7 @@ if (import.meta.main) {
             return maxHitTick;
         };
 
-        // Tag one Hobgoblin bare-handed on arrival so it chases/hits every 4t, then equip Shortbow on Rapid (1t flinch delay).
+        // Bare-handed tag so one Hobgoblin aggroes permanently, then equip Shortbow on Rapid (1t flinch delay) with autoRetaliate ON.
         let tagged = false;
         for (let t = 0; t < 18 && !isStopped() && !tagged; t++) {
             const st = main.sdk.getState();
@@ -357,8 +405,7 @@ if (import.meta.main) {
             const hobs = (st?.nearbyNpcs ?? [])
                 .filter(n => /^hobgoblin$/i.test(n.name) && (n.hp ?? 1) > 0 && n.reachable !== false)
                 .sort((a, b) => a.distance - b.distance);
-            const alreadyTargeting = hobs.some(n => n.targetIndex >= 32768);
-            if (alreadyTargeting || ht >= 0) {
+            if (hobs.some(n => n.targetIndex >= 32768) || ht >= 0) {
                 tagged = true;
                 break;
             }
@@ -398,6 +445,8 @@ if (import.meta.main) {
         let lastXp = main.sdk.getSkillXp('Mining') ?? 0;
         let traceCount = 0;
 
+        // 8t cycle (2.67t/ore): keep autoRetaliate ON (busy2 blocks retaliate on T=4 during active knife,
+        // and retaliate on T=8 sets %action_delay=T+1 for T=9 instant flinch).
         while (!isStopped()) {
             const lvl = main.sdk.getSkill('Mining')?.baseLevel ?? 1;
             const xp = main.sdk.getSkillXp('Mining') ?? 0;
@@ -415,27 +464,36 @@ if (import.meta.main) {
             const px = me?.worldX ?? 3100;
             const pz = me?.worldZ ?? 3767;
             const modalOpen = Boolean(st?.dialog?.isOpen || st?.modalOpen);
-            const liveRocks = findLiveHobgoblinRocks(main);
+            const liveRocks = findLiveRocks(main, HOBGOBLIN_ROCK_SET);
+
             if (traceCount < 28) {
                 traceCount++;
-                console.log(`MINING_TRACE t=${now - t0} srv=${now} pos=${px},${pz} xp=${xp}(+${xpDelta}) hit=${hitTick === now ? 1 : 0} clr=${clearSentForTick === now ? 1 : 0} dly=${actionDelayApprox - now} autoRet=${st?.autoRetaliateEnabled} pray=${main.sdk.getSkill('Prayer')?.level} inv=${main.sdk.getInventory().length}`);
+                console.log(`MINING_TRACE t=${now - t0} srv=${now} pos=${px},${pz} xp=${xp}(+${xpDelta}) hit=${hitTick === now ? 1 : 0} clr=${clearSentForTick === now ? 1 : 0} dly=${actionDelayApprox - now} pray=${main.sdk.getSkill('Prayer')?.level} inv=${main.sdk.getInventory().length}`);
+            }
+
+            if ((main.sdk.getSkill('Prayer')?.level ?? 0) === 0) {
+                const urgentPot = tryDrinkPrayerPotion(main, 99);
+                if (urgentPot) {
+                    await urgentPot;
+                    clearSentForTick = -99;
+                    await waitTicks(main, 1);
+                    continue;
+                }
             }
 
             const validFlinchHit = hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
             if (validFlinchHit) {
                 const rock = pickHobgoblinRock(px, pz, liveRocks, true);
                 if (rock) {
-                    // Turn auto_retaliate OFF here (<= 5 USER_EVENT packets/tick) so subsequent knife ticks stay <= 5 events.
-                    const flicks = prayerFlickActs(st, now, 3);
-                    const offActs = st?.autoRetaliateEnabled !== false
-                        ? [main.direct({ type: 'clickComponent', componentId: AUTO_RETALIATE_OFF_COMP, reason: 'SDK' })]
-                        : [];
-                    const acts: Promise<unknown>[] = [
-                        ...flicks,
-                        ...offActs,
-                        ...(modalOpen && offActs.length === 0 && flicks.length === 0 ? [main.direct({ type: 'closeModal', reason: 'SDK' })] : []),
-                        main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: 1, reason: 'SDK' }),
-                    ];
+                    const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
+                    const potAct = tryDrinkPrayerPotion(main, 15);
+                    if (potAct && acts.length < 4) acts.push(potAct);
+                    if (acts.length < 4 && main.sdk.getInventory().length >= 25) {
+                        const dropSlot = main.sdk.getInventory().find(i => i.id === OBJ_IRON_ORE || (i.id >= 1617 && i.id <= 1623))?.slot;
+                        if (dropSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: dropSlot, reason: 'SDK' }));
+                    }
+                    if (modalOpen && acts.length === 0) acts.push(main.direct({ type: 'closeModal', reason: 'SDK' }));
+                    acts.push(main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: 1, reason: 'SDK' }));
                     await Promise.all(acts);
                     flinchRolls++;
                     actionDelayApprox = now + 1;
@@ -473,13 +531,9 @@ if (import.meta.main) {
             const oreSlots = inv.filter(i => i.id === OBJ_IRON_ORE || (i.id >= 1617 && i.id <= 1623)).map(i => i.slot);
 
             if (nextHitEta === 1) {
-                const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 3)];
-                const toggled = st?.autoRetaliateEnabled === false;
-                if (toggled) {
-                    acts.push(main.direct({ type: 'clickComponent', componentId: AUTO_RETALIATE_ON_COMP, reason: 'SDK' }));
-                } else if (modalOpen && acts.length === 0) {
-                    acts.push(main.direct({ type: 'closeModal', reason: 'SDK' }));
-                }
+                const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
+                const potAct = tryDrinkPrayerPotion(main, 15);
+                if (potAct && acts.length < 5) acts.push(potAct);
                 const adjRock = pickHobgoblinRock(px, pz, liveRocks, true);
                 if (!adjRock) {
                     const nearRock = pickHobgoblinRock(px, pz, liveRocks, false);
@@ -488,27 +542,31 @@ if (import.meta.main) {
                             .map(([dx, dz]) => ({ x: nearRock.x + dx!, z: nearRock.z + dz! }))
                             .filter(t => !HOBGOBLIN_ROCK_SET.has(`${t.x},${t.z}`))
                             .sort((a, b) => chebDist(a, { x: px, z: pz }) - chebDist(b, { x: px, z: pz }))[0];
-                        if (dest) acts.push(main.direct({ type: 'walkTo', x: dest.x, z: dest.z, running: true, reason: 'SDK' }));
+                        if (dest && acts.length < 5) acts.push(main.direct({ type: 'walkTo', x: dest.x, z: dest.z, running: true, reason: 'SDK' }));
                     }
-                } else if (oreSlots.length > 0) {
-                    const maxDrop = Math.max(1, 5 - acts.length);
-                    for (const slot of oreSlots.slice(0, maxDrop)) {
+                } else if (oreSlots.length > 0 && acts.length < 5) {
+                    for (const slot of oreSlots.slice(0, 5 - acts.length)) {
                         acts.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
                     }
-                } else if (acts.length === 0) {
-                    await clearPendingMiningAction(main);
                 }
-                if (acts.length > 0) await Promise.all(acts);
+                if (acts.length === 0) {
+                    if (modalOpen) await main.direct({ type: 'closeModal', reason: 'SDK' });
+                    else await clearPendingMiningAction(main);
+                } else {
+                    await Promise.all(acts);
+                }
                 clearSentForTick = now + 1;
                 await waitTicks(main, 1);
                 continue;
             }
 
             if (inv.length >= 27 && oreSlots.length > 0) {
-                const acts: Promise<unknown>[] = [
-                    ...prayerFlickActs(st, now, 3),
-                    ...oreSlots.slice(0, 4).map(slot => main.direct({ type: 'dropItem', slot, reason: 'SDK' })),
-                ];
+                const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
+                const potAct = tryDrinkPrayerPotion(main, 15);
+                if (potAct && acts.length < 5) acts.push(potAct);
+                for (const slot of oreSlots.slice(0, Math.max(1, 5 - acts.length))) {
+                    acts.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+                }
                 await Promise.all(acts);
                 clearSentForTick = -99;
                 await waitTicks(main, 1);
@@ -524,14 +582,13 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Keep knife ticks strictly 3 pure actions (useItemOnItem + clickComponent + interactLoc) with NO togglePrayer/if_close.
-            const acts: Promise<unknown>[] = [
+            // Pure 3-action knife tick (NO togglePrayer / if_close / p_clearpendingaction).
+            await Promise.all([
                 ...(modalOpen ? [main.direct({ type: 'closeModal', reason: 'SDK' })] : []),
                 main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
                 main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
                 main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: 1, reason: 'SDK' }),
-            ];
-            await Promise.all(acts);
+            ]);
             knifeRolls++;
             actionDelayApprox = now + 3;
             clearSentForTick = -99;
@@ -541,11 +598,19 @@ if (import.meta.main) {
         if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
             await main.direct({ type: 'closeModal', reason: 'SDK' });
         }
+        // Step east out of tagged Hobgoblin range and let combat_preventlogout expire before finish() logs out.
+        const endPos = main.sdk.getState()?.player;
+        if (endPos && endPos.worldZ >= 3750) {
+            const safePot = tryDrinkPrayerPotion(main, 15);
+            if (safePot) await safePot;
+            await main.bot.walkTo(3116, 3762, 2);
+            await waitTicks(main, 17);
+        }
         const totalTicks = main.tick() - t0;
         const lvl = main.sdk.getSkill('Mining')?.baseLevel ?? 0;
         const xp = main.sdk.getSkillXp('Mining') ?? 0;
         ok = lvl >= 99;
-        detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} doric=${doricTicks} mineStart=${mineStart} ores=${ores} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal}`;
+        detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} lv15=${lv15Ticks} mineStart=${mineStart} ores=${ores} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal}`;
     } catch (error) {
         detail = String(error);
     } finally {

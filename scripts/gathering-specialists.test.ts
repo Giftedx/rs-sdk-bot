@@ -90,14 +90,14 @@ describe('gathering specialists supply & progression plans', () => {
 
         expect(fletchSlots).toBe(7);
         expect(fishSlots).toBeLessThanOrEqual(16);
-        expect(mineSlots).toBe(28);
+        expect(mineSlots).toBe(25);
         expect(thieveSlots).toBe(28);
         expect(THIEVING_PIZZAS).toBe(25);
         expect(THIEVING_SPECIALIST_SUPPLIES[OBJ_PINEAPPLE_PIZZA]).toBe(25);
         // 18 tutorial slots -> main drops 0 (fletch), 15 (fish, keeps tinderbox), 18 (mine), 18 (thieve).
         expect(28 - 18).toBeGreaterThanOrEqual(fletchSlots);
         expect(28 - (18 - 15) - fishSlots).toBeGreaterThanOrEqual(1);
-        expect(28 - (18 - 18) - mineSlots).toBeGreaterThanOrEqual(0);
+        expect(28 - (18 - 18) - mineSlots).toBeGreaterThanOrEqual(3);
         expect(28 - (18 - 18) - thieveSlots).toBeGreaterThanOrEqual(0);
     });
 
@@ -187,7 +187,7 @@ describe('bench registration and catalog integration', () => {
             'woodcutting-live': WOODCUTTING_SPECIALIST_SUPPLIES,
             firemaking: FIREMAKING_SPECIALIST_SUPPLIES,
         } as const;
-        expect(expandSupplyInventory(MINING_SPECIALIST_SUPPLIES).length).toBe(28);
+        expect(expandSupplyInventory(MINING_SPECIALIST_SUPPLIES).length).toBe(25);
         expect(MINING_SPECIALIST_LIVE_SUPPLIES).toEqual(MINING_SPECIALIST_SUPPLIES);
         expect(parseKitArg(['--kit=fletching-live'])).toBe('fletching-live');
         expect(resolveSupplierKitPlan('fletching-live').combined).toBe(FLETCHING_SPECIALIST_LIVE_KIT);

@@ -76,10 +76,12 @@ export const WC_OAK_XP_25X = 937.5;
 // Draynor Jail West multiway hub (multiway.csv 0_48_50): 3 twin Oaks on x=3117 corridor beside Jail guard nw(3121,3249).
 export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3244 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
-    [3114, 3239],
     [3115, 3243],
     [3115, 3250],
     [3118, 3245],
+    [3119, 3256],
+    [3124, 3254],
+    [3129, 3255],
 ];
 
 export const BARB_VILLAGE_SPOT = { x: 3126, z: 3434 } as const;
@@ -154,29 +156,36 @@ function findBestTree(
                 // Only chop normal tree2@(3115,3247) right beside (3117,3246..3247) so all courtyard guards stay locked on.
                 return l.x === 3115 && l.z === 3247 && l.reachable !== false;
             }
-            // 3 Draynor Jail multiway courtyard oaks beside (3117,3246); keep all rolls inside the safe guard courtyard.
+            // Safe Draynor Jail multiway courtyard oaks (3 hub oaks around 3117,3246 + 3 north oaks when hub depletes).
             return (
                 (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
                 || (l.x === 3115 && l.z === 3250)
+                || (l.x === 3119 && l.z === 3256)
+                || (l.x === 3124 && l.z === 3254)
+                || (l.x === 3129 && l.z === 3255)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
+    const oakTier = (l: NearbyLoc): number => {
+        if ((l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245)) return 0;
+        if (l.x === 3115 && l.z === 3250) return 1;
+        return 2;
+    };
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
         const adjDiff = (isBesideTree(px, pz, a.x, a.z, sizeA) ? 0 : 1) - (isBesideTree(px, pz, b.x, b.z, sizeB) ? 0 : 1);
         if (adjDiff !== 0) return adjDiff;
+        if (wantOak) {
+            const tierDiff = oakTier(a) - oakTier(b);
+            if (tierDiff !== 0) return tierDiff;
+        }
         const distDiff = treeFootprintDist(px, pz, a.x, a.z, sizeA) - treeFootprintDist(px, pz, b.x, b.z, sizeB);
         if (distDiff !== 0) return distDiff;
-        if (wantOak) {
-            const hubDiff = (isHubOak(a) ? 0 : 1) - (isHubOak(b) ? 0 : 1);
-            if (hubDiff !== 0) return hubDiff;
-        }
         return a.distance - b.distance;
     })[0];
 }
@@ -240,7 +249,7 @@ function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, n
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
         if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 8) return false;
-        if (n.x < 3112 || n.x > 3123 || n.z < 3238 || n.z > 3251) return false;
+        if (n.x < 3112 || n.x > 3130 || n.z < 3238 || n.z > 3258) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
         if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
