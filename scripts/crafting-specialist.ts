@@ -677,14 +677,13 @@ async function craftAtCastleWarsBank(
   : hasUnnotedEarly
    ? CRAFTING_CW_DIAMOND_OPTB_CYCLES
    : CRAFTING_CW_DIAMOND_CYCLES;
- // Deposit Cycle 0 notes first (within the first 5 items) unless <=4 non-chisel items remain (Cycle 0 deposits them in tick 1).
+ // Deposit any non-chisel items (including Cycle 0 notes) in 5/tick batches so bankItems is populated for Cycle 0.
  while (spec.tick() < deadline) {
   const toDep = spec.sdk
    .getInventory()
    .filter(i => i.id !== ITEM_IDS.chisel)
    .sort((a, b) => Number(cycle0Notes.has(b.id)) - Number(cycle0Notes.has(a.id)));
-  const uniqueDepIds = new Set(toDep.map(i => i.id));
-  if (uniqueDepIds.size <= 4) break;
+  if (toDep.length === 0) break;
   const acts: Promise<unknown>[] = [];
   const seenDep = new Set<number>();
   for (const item of toDep) {
