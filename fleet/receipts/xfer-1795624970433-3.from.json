@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795624970433-3",
+ "account": "CoinCock",
+ "partner": "Abracadickra",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "0807f0ae-11c8-4a6d-ace1-cbb9ee0761c5",
+ "count": 0,
+ "ok": false,
+ "at": 1795625261145,
+ "detail": "trade claimed"
+}
