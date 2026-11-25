@@ -340,8 +340,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 }),
             }];
         },
-        planTicks: 96,
-        planSource: '400ms Castle Wars Bank Chest single-trade CW route (~96t vs #1 137t)',
+        planTicks: 132,
+        planSource: 'hosted rehearsal CutMyJewels 131-134t whole-clock / 130-133t board across seeds 7,8,9 (<=134t vs #1 137t)',
         targetCap: 134,
     },
     {
