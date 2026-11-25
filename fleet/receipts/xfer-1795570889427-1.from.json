@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795570889427-1",
  "account": "Fatstack",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Rune arrow",
  "requested": 56,
  "claim": "8b170808-ac50-49fb-bad7-64dbf300283c",
- "count": 0,
- "ok": false,
- "at": 1795570993565,
- "detail": "trade claimed"
+ "count": 56,
+ "ok": true,
+ "at": 1795571020671,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 56,
+  "after": 0
+ },
+ "bank": {
+  "count": 56,
+  "at": 1795571002341
+ },
+ "logout": {
+  "attemptId": "1795570993574-0000025624-0000000001",
+  "at": 1795571020657,
+  "sha256": "d76e060d773a8f5efcbe7e1dc13f04eda672835f7afd8c73b81a8d5b6cc5e32f"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795570889427-1",
+ "account": "Shaftsinker",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 56,
+ "claim": "75198198-0d29-4c70-a46c-efb975616837",
+ "count": 56,
+ "ok": true,
+ "at": 1795571021882,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 56
+ },
+ "bank": {
+  "count": 56,
+  "at": 1795571021145
+ },
+ "logout": {
+  "attemptId": "1795571009062-0000022848-0000000001",
+  "at": 1795571021867,
+  "sha256": "a7d7791ac602eb090db4bf5c4fb7069921b1312dd7d4d132f8affd27dca80cf1"
+ },
+ "screen": true
+}
