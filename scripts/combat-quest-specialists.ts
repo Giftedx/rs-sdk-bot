@@ -607,27 +607,36 @@ export async function rubRingOfDueling(
 ): Promise<void> {
     const startTick = s.tick();
     const deadline = startTick + 40;
-    while (!stop() && s.tick() < deadline) {
+    const arrived = () => {
         const p = posOf(s);
-        if (p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, destTile) <= radius) {
+        return !!p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, destTile) <= radius;
+    };
+    while (!stop() && s.tick() < deadline) {
+        if (arrived()) {
             console.log(`RUB_RING ticks=${s.tick() - startTick} to=${destTile.x},${destTile.z}`);
             return;
         }
         const d: any = s.sdk.getDialog();
-        if (d?.isOpen && !d.isWaiting) {
-            const pick = (d.options ?? []).find((o: any) => optionRe.test(o.text ?? ''));
-            await s.sdk.sendClickDialog(pick ? pick.index : 0);
-            await waitUntil(s, () => {
-                const cur = posOf(s);
-                return (!!cur && d8({ x: cur.worldX, z: cur.worldZ }, destTile) <= radius) || stop();
-            }, { timeoutTicks: 8 });
+        const pick = d?.isOpen && !d.isWaiting
+            ? (d.options ?? []).find((o: any) => optionRe.test(o.text ?? ''))
+            : undefined;
+        if (pick) {
+            await s.sdk.sendClickDialog(pick.index);
+            await waitUntil(s, () => arrived() || stop(), { timeoutTicks: 8 });
             continue;
+        }
+        if (d?.isOpen && !d.isWaiting) {
+            void s.direct({ type: 'closeModal', reason: 'SDK' });
         }
         const ring = s.sdk.getInventory().find(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
         if (!ring) throw Error('missing Ring of dueling in inventory');
         const rubOp = (ring.optionsWithIndex ?? []).find((o: any) => /rub/i.test(o.text ?? ''))?.opIndex ?? 4;
         await s.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: rubOp, reason: 'SDK' });
-        await waitUntil(s, () => !!s.sdk.getDialog()?.isOpen || stop(), { timeoutTicks: 5 });
+        await waitUntil(s, () => {
+            if (arrived() || stop()) return true;
+            const curD: any = s.sdk.getDialog();
+            return !!curD?.isOpen && !curD.isWaiting;
+        }, { timeoutTicks: 4 });
     }
     const p = posOf(s);
     if (!p || d8({ x: p.worldX, z: p.worldZ }, destTile) > radius) {
@@ -1373,10 +1382,7 @@ export async function runSpecialistWaterfall(
 
     const onIsland = () => inBox(2510, 3476, 2514, 3481);
     const crossToLedge = async (withHudon: boolean) => {
-        const raftPts = withHudon
-            ? [{ x: 2511, z: 3494, tol: 1 }]
-            : [{ x: 2534, z: 3498, tol: 2 }, { x: 2511, z: 3496, tol: 1 }, { x: 2511, z: 3494, tol: 1 }];
-        await walkFast(raftPts, withHudon ? 40 : 120, 'to raft');
+        await walkFast([{ x: 2511, z: 3494, tol: 1 }], withHudon ? 40 : 120, 'to raft');
         await stepAct('board raft', () => opLoc(LOC.raft), onIsland, 10, 8);
         if (withHudon) {
             const hudonProof = /fine alone|so you're still here|find that treasure soon/i;
