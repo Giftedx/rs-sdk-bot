@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795634237223-moneyshot-trousersnake-d7640bb6c14abb2b",
  "account": "Moneyshot",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "00809b82-513d-46d8-95e9-54dd05b70092",
- "count": 0,
- "ok": false,
- "at": 1795634606443,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795634652643,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795634631097
+ },
+ "logout": {
+  "attemptId": "1795634606581-0000026488-0000000001",
+  "at": 1795634652630,
+  "sha256": "2fa7f7eb54879fd890ef79169de8ce11e98df7503ac146eb7fc56f9bc5b2eed5"
+ },
+ "screen": true
 }
