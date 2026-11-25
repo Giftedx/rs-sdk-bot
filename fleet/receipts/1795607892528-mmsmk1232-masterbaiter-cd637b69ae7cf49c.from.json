@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795607892528-mmsmk1232-masterbaiter-cd637b69ae7cf49c",
  "account": "mmsmk1232",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Dragonhide chaps",
  "requested": 1,
  "claim": "aba023bd-a648-4da3-a0f3-223e546c37c3",
- "count": 0,
- "ok": false,
- "at": 1795608431373,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795609127346,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795608578233
+ },
+ "logout": {
+  "attemptId": "1795608431723-0000001600-0000000001",
+  "at": 1795609127334,
+  "sha256": "38c463641b72b8f9150b37d7a79d1fe16c06d3685efbcec35c7c5f08eb1c1b8c"
+ },
+ "screen": true
 }

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795609107561-afknight-masterbaiter-316a9006e3ddc1ba",
+ "account": "AFKnight",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shortbow",
+ "requested": 1,
+ "claim": "c124fcdf-eab4-4ede-a9bb-acbda56586bb",
+ "count": 0,
+ "ok": false,
+ "at": 1795609124664,
+ "detail": "trade claimed"
+}

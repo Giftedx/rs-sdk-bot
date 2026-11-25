@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795607892528-mmsmk1232-masterbaiter-cd637b69ae7cf49c",
+ "account": "Masterbaiter",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragonhide chaps",
+ "requested": 1,
+ "claim": "a0603d15-afd6-4f67-b4f9-96641f57faba",
+ "count": 1,
+ "ok": true,
+ "at": 1795609128951,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795609128294
+ },
+ "logout": {
+  "attemptId": "1795609109920-0000007364-0000000001",
+  "at": 1795609128938,
+  "sha256": "02409c0b357f3c9915ff3c426f4add145170d61acc1b5d5a1b8f0c7fce439570"
+ },
+ "screen": true
+}

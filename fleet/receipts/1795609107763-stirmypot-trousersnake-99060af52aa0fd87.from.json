@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795609107763-stirmypot-trousersnake-99060af52aa0fd87",
+ "account": "Stirmypot",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 20,
+ "claim": "7903f2eb-2465-479b-8730-cc1383f6da55",
+ "count": 0,
+ "ok": false,
+ "at": 1795609113534,
+ "detail": "trade claimed"
+}
