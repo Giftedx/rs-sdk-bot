@@ -2537,6 +2537,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Pixels between views, the colour there (the title bar's), the localStorage key, and the longest time between the
   // two clicks of a double click.
   const WALL_GAP=4,WALL_GAP_COLOUR='#1e1e1e',WALL_STORE='atlas-wall',WALL_DOUBLE_MS=450;
+  // A wall that the 3D view lost by itself (a failure, then the page's automatic retry) opens again when the view is
+  // ready, if the page still follows what the wall gave back. A choice of follow, or the 2D button, forgets it.
+  let wallResume=null;
   window.atlasWallOn=()=>!!wall;
   const wallPost=message=>$('#rsw')?.contentWindow?.postMessage(message,VIEWER.origin);
   const wallIsName=n=>typeof n==='string'&&(n===MARK||WALL_NAME.test(n));
@@ -2637,6 +2640,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // The viewer returns to its single view before any follow message: a follow sent to the wall moves its first view.
   // With restore, the page follows what it followed when the wall opened. Without, the caller chooses the next follow.
   function wallEnd(restore=true){
+    if(!restore)wallResume=null;
     if(!wall)return false;
     const w=wall,ready=mode==='3d'&&VIEWER.state==='ready';wallDragEnd(null,false);wallSizeEnd(null);wallEdgeEnd(null);wall=null;
     wallPaint();
@@ -2655,9 +2659,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // account enters or leaves the world. The same accounts are not asked for twice. The views that stay keep their
   // order, and a new view goes last. When the main or the focused view leaves, the next view in the order takes its place.
   function wallSync(){
+    if(wallResume&&VIEWER.state==='idle')wallResume=null;
+    if(wallResume&&mode==='3d'&&VIEWER.state==='ready'){const r=wallResume;wallResume=null;if(r.sel===sel&&r.free===window.atlasFreeCamera&&r.other===window.atlasFollowOther&&wallNames().length)wallStart();}
     if(wallLinked&&mode==='3d'&&VIEWER.state==='ready'&&(window.atlasLiveRoster?.()||wallNames().length)){wallLinked=false;wallStart();}
     if(!wall)return;
-    if(mode!=='3d'||VIEWER.state!=='ready'){wallEnd();return;}
+    if(mode!=='3d'||VIEWER.state!=='ready'){const lost=['unavailable','checking','loading'].includes(VIEWER.state);wallEnd();if(lost)wallResume={sel,free:window.atlasFreeCamera,other:window.atlasFollowOther};return;}
     const now=wallNames();
     if(!now.length){wallEnd();focusSay('None of our accounts is in the world now. The wall is closed.',3200);return;}
     const key=wallKey(now);if(key===wall.sent){wallPaint();return;}

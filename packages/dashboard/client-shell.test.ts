@@ -464,6 +464,37 @@ test('closing the wall returns to what the page followed, and the tour runs on',
  expect(lost.on()).toBe(false);expect(lost.log).toEqual(opening(['Ann']));
 });
 
+test('a wall that the 3D view lost by itself opens again when the view is back; a new follow or the 2D button forgets it',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')],{sel:'Ann'});w.start();
+ // The view fails: the page shows the 2D map and tries again (checking, loading, ready).
+ w.VIEWER.state='unavailable';w.setMode('2d');
+ expect(w.on()).toBe(false);
+ w.VIEWER.state='loading';w.setMode('3d');
+ expect(w.on()).toBe(false);
+ let mark=w.log.length;
+ w.VIEWER.state='ready';w.sync();
+ expect(w.on()).toBe(true);expect(w.since(mark)).toEqual(opening(['Ann','Bob']));
+ // A follow chosen while the view is away keeps the wall closed.
+ w.VIEWER.state='unavailable';w.setMode('2d');w.end(false);
+ w.VIEWER.state='ready';w.setMode('3d');
+ expect(w.on()).toBe(false);
+ // So does the 2D button.
+ w.start();w.VIEWER.state='unavailable';w.setMode('2d');
+ w.VIEWER.state='idle';w.sync();
+ mark=w.log.length;
+ w.VIEWER.state='ready';w.setMode('3d');
+ expect(w.on()).toBe(false);expect(w.multis().length).toBeGreaterThan(0);expect(w.since(mark)).toEqual([]);
+});
+
+test('a lost wall opens again only for the follow it gave back',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')],{sel:'Ann'});w.start();
+ w.VIEWER.state='unavailable';w.setMode('2d');
+ // The page now follows someone else (a link, a watch): the wall does not come back over it.
+ w.window.atlasFollowOther='Stranger';
+ w.VIEWER.state='ready';w.setMode('3d');
+ expect(w.on()).toBe(false);
+});
+
 test('a link with wall=1 opens the wall when the viewer is ready and an account is in the world',()=>{
  const w=fleetWall([inWorld('Ann')],{state:'loading'});w.link();w.sync();expect(w.on()).toBe(false);
  w.VIEWER.state='ready';w.sync();expect(w.on()).toBe(true);expect(w.multis()).toEqual([{multi:['Ann']}]);

@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='1DCFEB4DF2CF1960814FA9D099B5445E73C2BE80189E1EF640648A6E54C57A3A';
+export const VIEWER_MANIFEST_SHA256='CF4A3E62FC61115CA772F48E6D4FAC2718F3BD213DB9611EE39BE04C576979EA';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -47,6 +47,9 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['address while following', 'searchParamsWrittenAt'],                   // the URL (camera, follow) is written every 500 ms while the camera moves
     ['own labels for each wall view', 'farLabelCopies'],                    // a wall view draws its own far-player names
     ['silent feed check', 'isSilent('],                                     // a feed socket with no data for 15 s is opened again
+    ['still names drawn once', 'drawnKey'],                                 // a view whose names did not change keeps its canvas
+    ['far players by square', 'addFarSquare('],                             // a wall view walks only the far players near it
+    ['stale square loads dropped', 'finishLoad('],                          // a square load from before clearMaps() adds nothing
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
