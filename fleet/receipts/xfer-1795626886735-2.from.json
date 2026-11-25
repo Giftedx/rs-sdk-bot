@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795626886735-2",
  "account": "SporranBulge",
  "partner": "Pocketpython",
@@ -12,6 +12,16 @@
  "claim": "515b0f48-41ed-4f09-9d80-ae912bff5676",
  "count": 0,
  "ok": false,
- "at": 1795627151606,
- "detail": "trade claimed"
+ "at": 1795627378963,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 60,
+  "at": 1795627363020
+ },
+ "logout": {
+  "attemptId": "1795627151616-0000016684-0000000001",
+  "at": 1795627378952,
+  "sha256": "e3c21a170de28446e93557deeaa15bd905e025dc740d37c7b31d1ed664d68ea2"
+ },
+ "screen": false
 }

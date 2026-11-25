@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795627384137-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Shaftsinker",
+  "to": "Woodenstaff",
+  "item": "Shark",
+  "count": 1,
+  "itemId": 385,
+  "start": 1795627384137,
+  "end": 1795628284137,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
