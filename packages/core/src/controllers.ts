@@ -29,7 +29,11 @@ export const GATE_STALE_MS = 60_000;
 const pidAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
 const errno = (e: unknown) => (e as NodeJS.ErrnoException).code;
 const pidOf = (text: string) => { const pid = Number(text.trim()); return Number.isSafeInteger(pid) && pid > 0 ? pid : null; };
-type LeaseDeps = { now?: number; alive?: (pid: number) => boolean; staleMs?: number };
+// reused: true when the process that has `pid` now started after `savedAt`, the last heartbeat. Such a process got
+// the id of the ended holder and does not hold the lease. Without it, a live id holds a fresh lease for up to
+// LEASE_STALE_MS after its holder ended. Pass it from a caller that runs at a slow interval: one read of the process
+// table costs a PowerShell start on Windows (pidStartedAfter in proc.ts).
+type LeaseDeps = { now?: number; alive?: (pid: number) => boolean; staleMs?: number; reused?: (pid: number, savedAt: number) => boolean };
 type Seen = { text: string; at: number };
 
 // The content and the time of a file: together they name one exact file, also when a later file has the same content.
@@ -65,7 +69,8 @@ export function readLease(file: string): { pid: number; at: number } | null {
 export function leaseHolder(file: string, deps: LeaseDeps = {}): number | null {
     const lease = readLease(file), now = deps.now ?? Date.now();
     if (!lease || now - lease.at >= (deps.staleMs ?? LEASE_STALE_MS)) return null;
-    return (deps.alive ?? pidAlive)(lease.pid) ? lease.pid : null;
+    if (!(deps.alive ?? pidAlive)(lease.pid)) return null;
+    return deps.reused?.(lease.pid, lease.at) ? null : lease.pid;
 }
 
 // Runs `body` while this process is the only one at the gate of `file`, or returns null when a different live
@@ -118,7 +123,7 @@ export function takeLease(file: string, pid = process.pid, deps: LeaseDeps = {})
         if (lease) {
             const holder = pidOf(lease.text);
             if (holder === pid) return touch(file, pid, now);           // this process, or an ended one that had its id
-            if (holder !== null && now - lease.at < (deps.staleMs ?? LEASE_STALE_MS) && alive(holder)) return false;
+            if (holder !== null && now - lease.at < (deps.staleMs ?? LEASE_STALE_MS) && alive(holder) && !deps.reused?.(holder, lease.at)) return false;
             if (!removeExact(file, lease)) return false;                 // its holder changed it in this instant
         }
         return createExclusive(file, String(pid));

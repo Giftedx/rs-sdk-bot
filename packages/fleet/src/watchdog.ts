@@ -7,6 +7,7 @@ import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSyn
 import { join, resolve } from 'node:path';
 import { CONTROLLERS, controllerState, readLaunch, type Controller, type Launch } from '../../core/src/controllers';
 import { hasStopFile } from '../../core/src/practice-paths';
+import { pidStartedAfter } from '../../core/src/proc';
 import { ensureHostedQualification, type QualifyDeps } from './recovery-qualify';
 import { QUALIFICATION_MISSING, runStandaloneRecoveryPass, type StandaloneRecoveryPassResult } from './session-recovery';
 import { pruneStatus } from './status-prune';
@@ -89,6 +90,8 @@ export type WatchdogDeps = {
     log?: (line: string) => void;
     now?: () => number;
     qualify?: QualifyDeps;
+    // True when the live process with a lease's id started after the lease's last heartbeat (pidStartedAfter).
+    reused?: (pid: number, savedAt: number) => boolean;
 };
 
 export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Promise<{ stoppedByOwner: boolean; pruned: number }> {
@@ -129,7 +132,11 @@ export async function runWatchdogPass(base = root, deps: WatchdogDeps = {}): Pro
     }
 
     for (const c of CONTROLLERS) {
-        if (controllerState(base, c, { now }).state !== 'down') continue;
+        // A process that got the id of an ended fleet agent does not keep the fleet agent down for the lease lifetime.
+        // Only a controller whose own takeLease makes the same check gets it: a restarted swarm would still find the
+        // reused id live in its takeLease and exit, and the watchdog would start it again on each pass.
+        const reused = c.name === 'fleet-agent' ? deps.reused ?? pidStartedAfter : undefined;
+        if (controllerState(base, c, { now, reused }).state !== 'down') continue;
         const launch = readLaunch(join(base, c.launch));
         if (!launch) continue;
         const start = restartCommand(c.name, launch, p => existsSync(resolve(base, p)));
