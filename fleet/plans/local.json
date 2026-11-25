@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795632758852,
+ "at": 1795632793720,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -210,6 +210,21 @@
    "role": "army"
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p861 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2552",
+   "role": "army"
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
@@ -359,6 +374,19 @@
    ]
   },
   {
+   "account": "TheFullMonty",
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dwarfcannon",
+   "role": "army"
+  },
+  {
    "account": "Shaftsinker",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -376,26 +404,6 @@
    "role": "auto",
    "resources": [
     "chickens"
-   ]
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
    ]
   }
  ],
@@ -416,14 +424,12 @@
   "kiltlifter",
   "knightrider",
   "mmthv2350",
-  "moneyshot",
   "oreelse",
   "pocketpool",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
-  "thefullmonty",
   "undermykilt",
   "woodpecker",
   "yewfirst"

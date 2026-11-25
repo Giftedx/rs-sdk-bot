@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795632748729-moneyshot-undermykilt-3dc3d176c437d35d",
  "account": "UnderMyKilt",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Rune pickaxe",
  "requested": 1,
  "claim": "1e5c21f8-887d-4b1f-b198-85cd2177c839",
- "count": 0,
- "ok": false,
- "at": 1795632753994,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795632773539,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795632772796
+ },
+ "logout": {
+  "attemptId": "1795632754029-0000031092-0000000001",
+  "at": 1795632773527,
+  "sha256": "8dd56b6ae18680e82b22ece6551c3e5a2fcf1169c4b192c94561c5f83b4a34aa"
+ },
+ "screen": true
 }
