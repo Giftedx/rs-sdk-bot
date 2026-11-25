@@ -26,7 +26,7 @@ const WALLS: Array<[number, number]> = [[3504, 3314], [3504, 3315], [3504, 3316]
     [3507, 3314], [3507, 3318], [3508, 3314], [3508, 3315], [3508, 3316], [3508, 3317], [3508, 3318]];
 const wallLevel = (id: number): number => (id >= 4068 && id <= 4078 ? id - 4068 : id >= 4079 && id <= 4089 ? id - 4079 : -1);
 
-const q = await openQuest({ cap: 5000 });
+const q = await openQuest({ cap: 5000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/completed a quest|quest complete/i) > 0) questDone = true; });
@@ -42,6 +42,7 @@ try {
     let lastPage = '';
     const DLG = process.env.MT_DLG !== '0';
     const chat = async (pats: RegExp[], ok: () => boolean, maxTicks: number, pick?: (opts: string[]) => RegExp | undefined): Promise<boolean> => {
+        if (!pick) return q.converse([...pats].reverse(), ok, maxTicks);
         for (let i = 0; i < maxTicks && !q.stats.died; i++) {
             if (ok()) return true;
             const d: any = q.s.sdk.getDialog();

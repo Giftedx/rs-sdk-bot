@@ -769,15 +769,15 @@
   },
   {
    "id": "craft",
-   "label": "Cut gems, trade or bank loop",
+   "label": "Cut gems, Castle Wars bank chest loop",
    "serves": [
     "crafting"
    ],
    "ticks": {
-    "floor": 183,
-    "realistic": 189,
+    "floor": 140,
+    "realistic": 140,
     "evidence": "MEASURED",
-    "source": "hosted-bench 45510600695 skiller:crafting:specialist seeds 7/8/9: 183, 187, 197 ticks from tutorial (incl. starter drops and 12 companion gem trades anywhere; floor=183, mean=189)"
+    "source": "hosted-bench 45531959651 skiller:crafting:specialist (CRAFTING_MODE=cw) seeds 7/8/9: 141, 140, 140 ticks from tutorial (incl. starter drops, Ring of dueling(8) to Castle Wars bank chest, 27 gems/trip; floor=140, mean=140)"
    },
    "xp": {
     "crafting": "to99"
@@ -786,10 +786,14 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "hosted-bench 45510600695 skiller:crafting:specialist seeds 7/8/9: 183, 187, 197 ticks (companion gem trades anywhere)",
+   "source": "hosted-bench 45531959651 skiller:crafting:specialist (CRAFTING_MODE=cw) seeds 7/8/9: 141, 140, 140 ticks (Castle Wars bank chest 27 gems/trip)",
    "supplies": [
     {
      "item": "chisel",
+     "count": 1
+    },
+    {
+     "item": "ring of dueling(8)",
      "count": 1
     }
    ],

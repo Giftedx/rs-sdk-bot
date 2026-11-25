@@ -143,7 +143,10 @@ try {
                             if (pick) await q.s.sdk.sendClickDialog(pick.index); else await q.s.direct({ type: 'closeModal', reason: 'SDK' });
                             sig = s; click = tick();
                         }
-                    } else await q.s.sdk.sendClickDialog(0);
+                    } else {
+                        await q.converse([], () => ok() || !open() || (q.s.sdk.getDialog()?.options ?? []).some((o: any) => !/click here to continue/i.test(o.text)), Math.max(2, Math.min(8, end - tick())));
+                        continue;
+                    }
                 }
             } else if (start && tick() - last >= every) { last = tick(); await start(); }
             await q.waitTicks(1);
