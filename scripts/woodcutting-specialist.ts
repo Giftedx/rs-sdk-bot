@@ -399,6 +399,13 @@ if (import.meta.main) {
         let rolls = 0;
         let flinchRolls = 0;
         let knifeRolls = 0;
+        let missNoTree = 0;
+        let missMove = 0;
+        let missDelayWait = 0;
+        let missEtaWait = 0;
+        let missKeepClear = 0;
+        let hitNoClear = 0;
+        let hitDelayBlock = 0;
         let lastHitTick = -99;
         let lastTagTick = -99;
         let lastFlickTick = -99;
@@ -510,6 +517,10 @@ if (import.meta.main) {
 
             // playerhit_n_retaliate sets %action_delay = map_clock + 1 when busy2 = false and %action_delay < map_clock.
             const validFlinchHit = !outOfPrayer && hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
+            if (!outOfPrayer && hitTick === now && !validFlinchHit) {
+                if (now < actionDelayApprox) hitDelayBlock++;
+                else if (clearSentForTick !== now) hitNoClear++;
+            }
             const gobs = !outOfPrayer && wantOak ? countAttackingGoblins(main) : 0;
             const needNormalLog = wantOak && slotOfId(main, OBJ_LOGS) === undefined;
             const tree: NearbyLoc | undefined = (needNormalLog ? findBestTree(main, false, null) : undefined)
@@ -517,6 +528,7 @@ if (import.meta.main) {
             activeTree = tree ? { x: tree.x, z: tree.z } : null;
 
             if (!tree) {
+                missNoTree++;
                 const acts: Promise<unknown>[] = [];
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
                 if (potAct) acts.push(potAct);
@@ -534,6 +546,7 @@ if (import.meta.main) {
             const besideTree = !!meNow && isBesideTree(meNow.worldX, meNow.worldZ, tree.x, tree.z, treeSize);
 
             if (!besideTree) {
+                missMove++;
                 const standTile = findReachableTreeStandTile(main, tree, treeSize);
                 const destX = standTile?.x ?? tree.x;
                 const destZ = standTile?.z ?? tree.z;
@@ -574,6 +587,7 @@ if (import.meta.main) {
             }
 
             if (now < actionDelayApprox) {
+                missDelayWait++;
                 // Pending 3-tick knife roll: never send togglePrayer/dropItem/drink (if_close / clearPendingAction cancels active knife3).
                 await waitTicks(main, 1);
                 continue;
@@ -640,6 +654,7 @@ if (import.meta.main) {
             const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && activeHitIn1t;
             if (!keepFlinchWindow) {
                 if (!outOfPrayer && wantOak && !needNormalLog && nextHitEta <= 3) {
+                    missEtaWait++;
                     const acts: Promise<unknown>[] = [...prayerFlickActs(st, now, 2)];
                     if (main.sdk.getInventory().length >= 25) {
                         const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, 3);
@@ -690,6 +705,7 @@ if (import.meta.main) {
                 continue;
             }
 
+            missKeepClear++;
             const oakDropSlot = main.sdk.getInventory().length >= 10 ? slotOfId(main, OBJ_OAK_LOGS) : undefined;
             const potAct = tryDrinkPrayerPotion(main, 15);
             if (oakDropSlot !== undefined) {
@@ -727,7 +743,7 @@ if (import.meta.main) {
         const finalLvl = main.sdk.getSkill('Woodcutting')?.baseLevel ?? 0;
         const finalXp = main.sdk.getSkillXp('Woodcutting') ?? 0;
         ok = ok && finalLvl >= 99;
-        detail = `level=${finalLvl} xp=${finalXp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} arrive=${arriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal} tags=${tagCount} hp=${main.sdk.getState()?.player?.hp ?? '?'}`;
+        detail = `level=${finalLvl} xp=${finalXp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} arrive=${arriveTick} rolls=${rolls} flinch=${flinchRolls} knife=${knifeRolls} hits=${hitEventsTotal} tags=${tagCount} hp=${main.sdk.getState()?.player?.hp ?? '?'} miss=[tree:${missNoTree},move:${missMove},delay:${missDelayWait},eta:${missEtaWait},clear:${missKeepClear},hNoClr:${hitNoClear},hDly:${hitDelayBlock}]`;
     } catch (error) {
         detail = String(error);
     } finally {
