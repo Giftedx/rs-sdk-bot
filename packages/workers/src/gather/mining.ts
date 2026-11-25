@@ -2117,9 +2117,10 @@ export async function runEscortedOre(
     requireEscort(servers[0] === servers[1], 'Participant servers differ');
     const local = /^127\.0\.0\.1:\d+$/.test(servers[0]!);
     if (!local) {
+        const controllerRunId = process.env.FLEET_RUN_ID || process.env.COORDINATOR_RUN_ID;
         const participants = JSON.parse(process.env.COORDINATOR_PARTICIPANTS ?? 'null');
         requireEscort(
-            process.env.COORDINATOR_RUN_ID &&
+            controllerRunId &&
                 Array.isArray(participants) &&
                 participants.length === 2 &&
                 names.every(n => participants.some((p: string) => p.toLowerCase() === n.toLowerCase())),
@@ -2366,6 +2367,19 @@ export async function runEscortedOre(
                     if (holding) checkOutbound();
                 }),
             );
+            requireEscort(await waitUntil(s, () => alive(s), { timeoutTicks: 20 }), 'Alive session required ' + name);
+            if (process.env.WALK_TO_EDGEVILLE === '1' && !atEdgeville(s)) {
+                const world = await getWorld();
+                const ac = new AbortController();
+                const timer = setInterval(() => { if (limits()) ac.abort('limits'); }, 500);
+                let moved;
+                try {
+                    moved = await goTo(s, world, { x: BANK[0], z: BANK[1], level: 0 }, accountOf(s), { signal: ac.signal });
+                } finally {
+                    clearInterval(timer);
+                }
+                requireEscort(moved.ok, 'Edgeville walk failed ' + name + (moved.ok ? '' : ': ' + moved.detail));
+            }
             requireEscort(await waitUntil(s, () => atEdgeville(s) && alive(s), { timeoutTicks: 20 }), 'Observed Edgeville entry required ' + name);
             if (s.sdk.getState()?.autoRetaliateEnabled === true) await s.sdk.sendClickComponent(151);
             requireEscort(await waitUntil(s, () => s.sdk.getState()?.autoRetaliateEnabled === false, { timeoutTicks: 8 }), 'Auto retaliation remains active ' + name);
