@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795623493043,
+ "at": 1795623507564,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -140,22 +140,6 @@
    ]
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
-  },
-  {
    "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
@@ -260,20 +244,45 @@
    "role": "auto"
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "clotheshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "1061",
+    "ITEMS": "Leather boots",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:1061",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1061",
+   "role": "army"
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1513-107-p2507",
+    "ORDER_KEY": "brain-1513-102-p2507",
     "ITEM_ID": "1513",
-    "QUANTITY": "107",
+    "QUANTITY": "102",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
     "LIMIT_PRICE": "2507",
     "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "107"
+    "BATCH_UNITS": "102"
    },
    "enabled": true,
    "repeat": false,
