@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795610754991,
+ "at": 1795610773797,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -85,8 +85,8 @@
    "account": "Woodenstaff",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=39 \"ITEM_NAME=Nature rune\" -- loadout",
-    "scripts/aio-logistics.ts ITEM_ID=314 QUANTITY=22 ITEM_NAME=Feather -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=48 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-logistics.ts ITEM_ID=314 QUANTITY=31 ITEM_NAME=Feather -- loadout",
     "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
@@ -208,6 +208,26 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2152",
+   "role": "helper"
   }
  ],
  "army": [
