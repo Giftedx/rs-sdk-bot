@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795583813972,
+ "at": 1795583934818,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -45,6 +45,22 @@
    "role": "supply"
   },
   {
+   "account": "Hocuspokeus",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
    "account": "PocketPool",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -61,20 +77,20 @@
    "role": "army"
   },
   {
-   "account": "Hocuspokeus",
+   "account": "DropMyLoad",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
-    "3185",
-    "3436",
+    "2619",
+    "3332",
     "0"
    ],
    "env": {
-    "RECOVERY_TARGET_HUB": "varrock_west"
+    "RECOVERY_TARGET_HUB": "ardougne"
    },
    "enabled": true,
    "repeat": false,
-   "role": "army"
+   "role": "helper"
   }
  ],
  "army": [
