@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795618353188-woodenstaff-trousersnake-5f9ea75fcdb7e2fa",
+ "account": "Woodenstaff",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "8edbb653-93be-4e87-8928-f34ec228a59d",
+ "count": 0,
+ "ok": false,
+ "at": 1795619237214,
+ "detail": "trade claimed"
+}

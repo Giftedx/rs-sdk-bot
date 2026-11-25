@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795618550468-4",
+ "account": "mmthv2350",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "0d594dc8-7f57-41c9-9ebf-e2ba904dab2b",
+ "count": 0,
+ "ok": false,
+ "at": 1795619175690,
+ "detail": "trade claimed"
+}

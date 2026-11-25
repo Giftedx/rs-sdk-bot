@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795618287138-2",
+ "account": "Shaftsinker",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 4,
+ "claim": "6177a847-da80-4b23-b73a-4cd4036f6f08",
+ "count": 0,
+ "ok": false,
+ "at": 1795619187916,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795619162778-0000015668-0000000001",
+  "at": 1795619187698,
+  "sha256": "ad70b55371576055eb723e4c8a269e1bb8f298f26486c9b67d2fc2cd6875184d"
+ },
+ "screen": false
+}
