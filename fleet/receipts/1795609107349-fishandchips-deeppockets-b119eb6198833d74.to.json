@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795609107349-fishandchips-deeppockets-b119eb6198833d74",
+ "account": "Deeppockets",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 21,
+ "claim": "47ea978b-d743-49e7-84c4-2d683ffe7263",
+ "count": 0,
+ "ok": false,
+ "at": 1795609135186,
+ "detail": "trade claimed"
+}

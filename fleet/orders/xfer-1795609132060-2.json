@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795609132060-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodpecker",
+  "to": "Fatstack",
+  "item": "Gold bar",
+  "count": 1,
+  "itemId": 2357,
+  "start": 1795609132060,
+  "end": 1795610032060,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
