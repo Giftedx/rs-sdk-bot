@@ -130,19 +130,21 @@ export const tripPrayerDue = (points: number, base: number, floor = TRIP_PRAYER_
 // `food` slots of sharks and boosts and the `items` again (scripts/pk-hunt.ts restock), wield the arrows, walk back.
 // `fill: false` takes sharks up to the food slots of the pack only, not a full pack, and `rest` is the ticks that the account waits at the bank.
 export function bankTrip(at: { x: number; z: number }, back: { x: number; z: number }, pack: { food: number; items: readonly TripItem[] }, kit: Kit, halt: () => boolean = () => false,
-    bank: { eaten: number } = { eaten: 0 }, more: { fill?: boolean; rest?: number; altar?: boolean; prayerFloor?: number; minFood?: number; requireEscape?: boolean; log?: (line: string) => void; route?: (from: { x: number; z: number }) => { x: number; z: number }[]; beforeReturn?: (fresh: boolean) => Promise<void>; skipReturn?: (fresh: boolean) => boolean } = {}) {
+    bank: { eaten: number } = { eaten: 0 }, more: { fill?: boolean; rest?: number; altar?: boolean; prayerFloor?: number; minFood?: number; requireEscape?: boolean; log?: (line: string) => void; route?: (from: { x: number; z: number }) => { x: number; z: number }[]; beforeReturn?: (fresh: boolean) => Promise<void>; skipReturn?: (fresh: boolean) => boolean; returnStop?: () => boolean } = {}) {
     // `fresh`: the pack is the full pack of the kit already (the trip before the first meeting), so nothing is banked
     // but the boosts.
+    // `returnStop`: a stop of the walk back only (an escape of the caller is due). The trip then ends with no fault where the
+    // account stands, and the caller does the escape. Without it the walk back went on through a pile of enemies to the post.
     return async (a: Session, fresh = false): Promise<string | null> => {
         const deps = await sessionWalker(a);
         // The walk budget grows with the distance: an account that left a fight by teleport (Camelot, about 430 tiles
         // from Varrock West) starts its trip far from both the bank and the post.
-        const go = (...to: { x: number; z: number }[]) => { const p = a.sdk.getState()?.player;
+        const go = (to: { x: number; z: number }[], stop: () => boolean = halt) => { const p = a.sdk.getState()?.player;
             // The length of the walk through the points, from where the account stands.
             let d = 0, at = p ? { x: p.worldX, z: p.worldZ } : null;
             for (const t of to) { if (at) d += Math.max(Math.abs(at.x - t.x), Math.abs(at.z - t.z)); at = t; }
-            return walkPath(deps, to.map(t => ({ ...t, tol: 2 })), { maxTicks: Math.max(400, 3 * d + 100), idleMs: 9000, stop: halt }); };
-        const out = await go(at);
+            return walkPath(deps, to.map(t => ({ ...t, tol: 2 })), { maxTicks: Math.max(400, 3 * d + 100), idleMs: 9000, stop }); };
+        const out = await go([at]);
         if (!out.ok) return `no walk to the bank: ${out.detail ?? 'stopped'}`;
         const fault = fresh ? null : await restock(a, pack.food, pack.items, kit);
         if (fault) return fault;
@@ -160,7 +162,7 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
         for (const potion of boosts()) { const op = potion.optionsWithIndex.find(o => /^drink$/i.test(o.text)); if (op) { await a.sdk.sendUseItem(potion.slot, op.opIndex); await pause(3); } }
         if (!(await a.bot.openBank()).success) {
             if (halt()) return 'stopped';
-            await go(at);
+            await go([at]);
             if (!(await a.bot.openBank()).success) return 'bank did not open for the second visit';
         }
         for (const potion of boosts()) await a.bot.depositItem(potion, -1);
@@ -201,8 +203,16 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
         if (halt()) return 'no walk back: stopped';
         if (more.skipReturn?.(fresh)) return null;
         const here = a.sdk.getState()?.player;
-        const home = await go(...(more.route && here ? more.route({ x: here.worldX, z: here.worldZ }) : [back]));
-        return home.ok ? null : `no walk back: ${home.detail ?? 'stopped'}`;
+        let escapeDue = false;
+        const home = await go(more.route && here ? more.route({ x: here.worldX, z: here.worldZ }) : [back],
+            () => halt() || (!!more.returnStop?.() && (escapeDue = true)));
+        if (home.ok) return null;
+        if (escapeDue && !halt()) {
+            const p = a.sdk.getState()?.player;
+            more.log?.(`walk back stopped for an escape${p ? ` at ${p.worldX},${p.worldZ} hp ${p.hp}` : ''}`);
+            return null;
+        }
+        return `no walk back: ${home.detail ?? 'stopped'}`;
     };
 }
 // The boosts that an account drinks at the bank: the three of scripts/pk-hunt.ts and the super defence.

@@ -977,6 +977,66 @@ in kills and the drop in deaths are inside the spread of the runs.
 Gap: the rule is measured only against the attackers of this bench case. Against a pile with smaller volleys, the rule
 sends a member out later. No live run shows the size of a live pile's volley.
 
+## The walk back
+
+Claim: a member that escaped and banked walks back alone into the pile that holds the post. Without a stop of its own, the
+walk back goes on in the pile until the member dies. A stop on the fight rule comes too late. The member must leave the
+pile when it meets it, at the HP it walked in with.
+
+The code: `bankTrip` (`packages/workers/src/pvp/pk-gang.ts`) walks back with the stop that the caller gives as `halt`.
+The squad's `halt` is the end of the run. The squad's tick hook keeps eating and praying on the walk
+(`createWildSurvival`), but nothing in the walk reads the fallback rule. The walk to the post between fights stops on
+`fallbackDue() || radarMove()`.
+
+The evidence, `extra:attack-team5-pile-six-x1`, 4 deaths on the walk back, all at the post (3065 to 3067, 3617 to 3637,
+Wilderness 13 to 15):
+
+| Run, seed | Code | `DEATH` hits | `PK kill ... after` |
+|---|---|---|---|
+| 45703509395, 8 | the windup rule | 14 | 40 ticks |
+| 45701974509, 16 | eat before the cast | 10 | 130 ticks |
+| 45707415255, 4 | master at cf25dd43c7 | 8 | 132 ticks |
+| 45707395415, 8 | the fight-rule stop | 6 | 24 ticks |
+
+In the first three, the attackers' lines before the death show a target at 75 to 97 HP for most of that time (`PK
+special ... on true target 90/99`; the lines do not name the target), and the squad logs `SQUAD died on a bank trip`.
+
+The fight-rule stop (`returnStop: () => fallbackDue() || radarMove()`) ended the walk and handed the escape to the hold
+loop. In run 45707395415 seed 8 the member met 5 enemies with 1 ally in reach. With 1 ally the fight rule holds until 77
+HP. One volley took the member from 80 to 64, the walk stopped at 64 (`SQUAD walk back stopped for an escape at
+3065,3637 hp 64`), and the member died in the windup.
+
+The rule (`packages/workers/src/pvp/squad.ts`): the walk back stops on the fight rule, or where it meets a pile
+(`walkBackPile`): on a multi-way tile, 3 or more enemies in reach (10 tiles) and at least `WALK_BACK_PILE` (2) times as
+many as the member and its allies in reach. On a pile, the hold loop escapes before anything else (`SQUAD walk back met
+a pile: escape`).
+
+Seeds 1 to 16, two runs each arm, all on cf25dd43c7 (master) or its children:
+
+| Arm | Deaths of ours | On the walk back | In the windup | Kills | HP taken | Fallbacks | Pile escapes | Bank trips | Cases passed |
+|---|---|---|---|---|---|---|---|---|---|
+| master, runs 45707411623 and 45707415255 | 2 | 1 | 0 | 41 | 23,361 | 183 | 0 | 389 | 30 of 32 |
+| fight-rule stop (3d15e07e20), runs 45707395415 and 45707407199 | 3 | 0 | 3 | 43 | 24,680 | 174 | 0 | 385 | 28 of 32 |
+| pile rule (803db26cb4), runs 45708466778 and 45708473628 | 1 | 0 | 1 | 44 | 21,374 | 151 | 26 | 383 | 28 of 32 |
+
+The 26 pile escapes began at 85 to 99 HP, with 3 to 5 enemies and 0 or 1 ally in reach, and none died. The death of the
+pile rule (run 45708466778 seed 13) was a fight escape at 58 HP with 5 enemies, before any bank trip. The other death
+of master was in a fight. One windup death of the fight-rule stop came from the walk back (seed 8 above). The other two
+were fight escapes before any bank trip.
+
+The cases that failed with no death of ours are bench ends, not losses: an attacker's session ended with `no progress:
+900 ticks without xp` (fight-rule stop seed 5, pile rule run 45708473628 seeds 1 and 3), or the logout of one account
+timed out (pile rule run 45708466778 seed 6). Master had none in its 32 seeds. In each of those seeds at least one member
+ended its part on `bank lacks trip requirements`: the bench bank ran out of sharks.
+
+The deaths, kills and HP taken of the two runs of an arm differ by as much as the arms differ (master 0 and 2 deaths,
+the pile rule 9,407 and 11,967 HP taken), so the gains are inside the spread of the runs. The class of the walk-back
+death is gone from the 32 seeds of each rule arm.
+
+Gap: the pile rule is measured only against the 5 attackers of this bench case, which hold the post. A pile that leaves
+the post after the squad has gone is not measured. A member that meets the pile again on each trip spends a trip and its
+food each time.
+
 ## Dagger mode
 
 A gang account drops its dragon dagger(p) only from a death that is skulled and has Protect Item off: death.rs2
