@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795621255025-3",
  "account": "Billionaire",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 1500,
  "claim": "a4d148ea-cc58-4135-afa7-381281ecf7ba",
- "count": 0,
- "ok": false,
- "at": 1795621590081,
- "detail": "trade claimed"
+ "count": 1500,
+ "ok": true,
+ "at": 1795621616800,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1500,
+  "after": 0
+ },
+ "bank": {
+  "count": 1500,
+  "at": 1795621595675
+ },
+ "logout": {
+  "attemptId": "1795621590091-0000029156-0000000001",
+  "at": 1795621616790,
+  "sha256": "ad78ed3e1c55901ff7d64c5d7d49fc42b10427abe77685cca21ab467ff97f006"
+ },
+ "screen": true
 }
