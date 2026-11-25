@@ -226,18 +226,18 @@ export async function walkWaypoints(
     maxTicks: number,
     stop: StopFn,
     label: string,
-    opts: { ignoreMeleeHunters?: boolean; onTickExtra?: () => void; look?: number } = {},
+    opts: { ignoreMeleeHunters?: boolean; ignoreLiveHunters?: boolean; skipGuardWalk?: boolean; onTickExtra?: () => void; look?: number } = {},
 ): Promise<void> {
     const walker = await sessionWalker(s);
-    if (opts.ignoreMeleeHunters) {
+    if (opts.ignoreMeleeHunters || opts.ignoreLiveHunters || opts.skipGuardWalk) {
         const pf: any = await import('../vendor/rs-sdk/sdk/pathfinding');
         const grid = await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
         const { withDanger } = await import('../packages/core/src/danger');
         const basePlan = walker.plan;
         const baseHunters = walker.hunters;
-        walker.hunters = () => (protectedFromMelee(s.sdk.getState()) ? [] : (baseHunters?.() ?? []));
+        walker.hunters = () => (opts.ignoreLiveHunters || protectedFromMelee(s.sdk.getState()) ? [] : (baseHunters?.() ?? []));
         walker.plan = (level, from, to, avoid) => {
-            const pfm = protectedFromMelee(s.sdk.getState());
+            const pfm = opts.skipGuardWalk || protectedFromMelee(s.sdk.getState());
             if (!pfm) return basePlan(level, from, to, avoid);
             pf.initPathfinding();
             const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map(b =>
@@ -603,24 +603,38 @@ export async function rubRingOfDueling(
     radius = 8,
 ): Promise<void> {
     const deadline = s.tick() + 40;
-    while (!stop() && s.tick() < deadline) {
+    const arrived = () => {
         const p = posOf(s);
-        if (p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, destTile) <= radius) return;
+        return !!p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, destTile) <= radius;
+    };
+    while (!stop() && s.tick() < deadline) {
+        if (arrived()) return;
+        const loopTick = s.tick();
         const d: any = s.sdk.getDialog();
-        if (d?.isOpen && !d.isWaiting) {
-            const pick = (d.options ?? []).find((o: any) => optionRe.test(o.text ?? ''));
-            await s.sdk.sendClickDialog(pick ? pick.index : 0);
+        const pick = d?.isOpen && !d.isWaiting
+            ? (d.options ?? []).find((o: any) => optionRe.test(o.text ?? ''))
+            : undefined;
+        if (pick) {
+            await s.sdk.sendClickDialog(pick.index);
+            await waitUntil(s, () => arrived() || stop(), { timeoutTicks: 8 });
+        } else {
+            if (d?.isOpen && !d.isWaiting) {
+                void s.direct({ type: 'closeModal', reason: 'SDK' });
+            }
+            const ring = s.sdk.getInventory().find(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
+            if (!ring) throw Error('missing Ring of dueling in inventory');
+            const rubOp = (ring.optionsWithIndex ?? []).find((o: any) => /rub/i.test(o.text ?? ''))?.opIndex ?? 4;
+            await s.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: rubOp, reason: 'SDK' });
             await waitUntil(s, () => {
-                const cur = posOf(s);
-                return (!!cur && d8({ x: cur.worldX, z: cur.worldZ }, destTile) <= radius) || stop();
-            }, { timeoutTicks: 8 });
-            continue;
+                if (arrived() || stop()) return true;
+                if (s.tick() <= loopTick) return false;
+                const curD: any = s.sdk.getDialog();
+                return !!curD?.isOpen && !curD.isWaiting && (curD.options ?? []).some((o: any) => optionRe.test(o.text ?? ''));
+            }, { timeoutTicks: 4 });
         }
-        const ring = s.sdk.getInventory().find(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
-        if (!ring) throw Error('missing Ring of dueling in inventory');
-        const rubOp = (ring.optionsWithIndex ?? []).find((o: any) => /rub/i.test(o.text ?? ''))?.opIndex ?? 4;
-        await s.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: rubOp, reason: 'SDK' });
-        await waitUntil(s, () => !!s.sdk.getDialog()?.isOpen || stop(), { timeoutTicks: 5 });
+        if (!arrived() && !stop() && s.tick() === loopTick) {
+            await waitTicks(s, 1);
+        }
     }
     const p = posOf(s);
     if (!p || d8({ x: p.worldX, z: p.worldZ }, destTile) > radius) {
@@ -683,7 +697,7 @@ export async function pullArdougneLeverToWildy(s: Session, stop: StopFn): Promis
     if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, ARDY_LEVER) > 140) {
         await walkWaypoints(s, [{ x: 2660, z: 3405, tol: 3 }], 160, stop, 'walk camelot mid');
         await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 160, stop, 'walk mid to ardougne lever');
-    } else {
+    } else if (d8({ x: p0.worldX, z: p0.worldZ }, ARDY_LEVER) > 1) {
         await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 200, stop, 'walk to ardougne lever');
     }
     const deadline = s.tick() + 50;
@@ -800,6 +814,9 @@ export async function runWildyPvpRelogLoop(
     totalTicks: number;
     swings: number;
     nonZeroDtSwings: number;
+    nzLvlCount: number;
+    nzWaitCount: number;
+    nzSamples: string[];
     timeoutSwings: number;
     recenterSwings: number;
 }> {
@@ -818,6 +835,9 @@ export async function runWildyPvpRelogLoop(
     let totalTicks = opts.setupTicks;
     let swings = 0;
     let nonZeroDtSwings = 0;
+    let nzLvlCount = 0;
+    let nzWaitCount = 0;
+    const nzSamples: string[] = [];
     let timeoutSwings = 0;
     let recenterSwings = 0;
     const lastHitSeq = new Map<string, number>();
@@ -845,6 +865,7 @@ export async function runWildyPvpRelogLoop(
 
             const tick0 = sess.tick();
             const curStat = skillInfo(sess, opts.skill);
+            const curHp = skillInfo(sess, 'Hitpoints');
             if (curStat.baseLevel >= opts.targetLevel) {
                 await logoutSession(sess);
                 const doneTick = sess.tick();
@@ -854,7 +875,7 @@ export async function runWildyPvpRelogLoop(
 
                 const finalSess = await openBot(opts.botName, { log: () => {} });
                 await dismissContinueDialogs(finalSess, () => true, 4);
-                return { session: finalSess, totalTicks, swings, nonZeroDtSwings, timeoutSwings, recenterSwings };
+                return { session: finalSess, totalTicks, swings, nonZeroDtSwings, nzLvlCount, nzWaitCount, nzSamples, timeoutSwings, recenterSwings };
             }
 
             if (!p0 || p0.worldZ < 3900) {
@@ -891,6 +912,7 @@ export async function runWildyPvpRelogLoop(
                 continue;
             }
 
+            const tWait = sess.tick() - tick0;
             const prayPts = sess.sdk.getState()?.prayers?.prayerPoints ?? 0;
             const prayBase = skillInfo(sess, 'Prayer').baseLevel;
             const styleCom = opts.styleForState
@@ -903,8 +925,20 @@ export async function runWildyPvpRelogLoop(
                       ? (skillInfo(sess, 'Strength').baseLevel < 99 ? aggressiveStyleCom : null)
                       : null;
             lastHitSeq.set((target.name ?? '').toLowerCase(), swings + 1);
-            if (useMeleePrayers && prayPts > 0 && prayBase >= 31) void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
-            if (useMeleePrayers && prayPts > 0 && prayBase >= 34) void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+            const lowPrayerPot =
+                useMeleePrayers && prayPts <= 2
+                    ? sess.sdk.getInventory().find(i => (PRAYER_POT_IDS as readonly number[]).includes(i.id))
+                    : undefined;
+            if (lowPrayerPot) {
+                const drinkOp = (lowPrayerPot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+                void sess.direct({ type: 'useInventoryItem', slot: lowPrayerPot.slot, optionIndex: drinkOp, reason: 'SDK' });
+            }
+            if (useMeleePrayers && (prayPts > 0 || lowPrayerPot) && prayBase >= 31) {
+                void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
+            }
+            if (!lowPrayerPot && useMeleePrayers && prayPts > 0 && prayBase >= 34) {
+                void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+            }
             if (styleCom !== null) void sess.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });
             void sess.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 2, reason: 'SDK' });
             void sess.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' });
@@ -918,6 +952,9 @@ export async function runWildyPvpRelogLoop(
                 await logoutSession(sess);
             }
             const endTick = sess.tick();
+            const postStat = skillInfo(sess, opts.skill);
+            const postHp = skillInfo(sess, 'Hitpoints');
+            const endDlg = sess.sdk.getDialog()?.isOpen ? 1 : 0;
             const deadAfter = posOf(sess)?.isDead === true;
             await closeWithin([sess], 5000);
             if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
@@ -927,7 +964,16 @@ export async function runWildyPvpRelogLoop(
             }
             swings++;
             const dt = Math.max(0, endTick - tick0);
-            if (dt > 0) nonZeroDtSwings++;
+            if (dt > 0) {
+                nonZeroDtSwings++;
+                if (postStat.baseLevel > curStat.baseLevel || postHp.baseLevel > curHp.baseLevel) nzLvlCount++;
+                if (tWait > 0) nzWaitCount++;
+                if (nzSamples.length < 8) {
+                    const tx = target.x ?? target.worldX ?? 0;
+                    const tz = target.z ?? target.worldZ ?? 0;
+                    nzSamples.push(`${swings}:dt=${dt}:w=${tWait}:r=${endReason[0]}:dl=${endDlg}:lvl=${curStat.baseLevel}-${postStat.baseLevel}:hp=${curHp.baseLevel}-${postHp.baseLevel}:xp=${postStat.experience - curStat.experience}:t=${target.name}@${tx},${tz}`);
+                }
+            }
             const swingTicks = dt + 1;
             totalTicks += swingTicks;
             if (swings <= 3) {
@@ -1181,11 +1227,22 @@ export interface SpecialistWaterfallOptions {
     extraTombDropIds?: readonly number[];
 }
 
+export interface WaterfallPhases {
+    alm: number;
+    had: number;
+    gol: number;
+    cw: number;
+    tomb: number;
+    pick: number;
+    falls: number;
+    exit: number;
+}
+
 export async function runSpecialistWaterfall(
     s: Session,
     stop: StopFn,
     opts: SpecialistWaterfallOptions = {},
-): Promise<{ attackXp: number; strengthXp: number }> {
+): Promise<{ attackXp: number; strengthXp: number; phases: WaterfallPhases }> {
     const LOC = {
         raft: { id: 1987, x: 2509, z: 3493 },
         bookcase: { id: 1989, x: 2520, z: 3426 },
@@ -1276,6 +1333,8 @@ export async function runSpecialistWaterfall(
     const walkFast = (pts: Point[], maxTicks: number, label: string, extra?: () => void) =>
         walkWaypoints(s, pts, maxTicks, stop, label, {
             ignoreMeleeHunters: true,
+            ignoreLiveHunters: true,
+            skipGuardWalk: true,
             onTickExtra: () => {
                 opts.onEnergy?.();
                 extra?.();
@@ -1289,6 +1348,13 @@ export async function runSpecialistWaterfall(
 
     const atk0 = skillInfo(s, 'Attack').experience;
     const str0 = skillInfo(s, 'Strength').experience;
+    let phaseTick = s.tick();
+    const markPhase = () => {
+        const now = s.tick();
+        const dt = now - phaseTick;
+        phaseTick = now;
+        return dt;
+    };
 
     // 1. Almera -> Raft -> Hudon -> Rock -> Tree -> Barrel -> Hadley bookcase.
     let almeraErr = 'Dialog did not open';
@@ -1310,6 +1376,7 @@ export async function runSpecialistWaterfall(
     if (!s.sdk.getDialog()?.isOpen) throw Error(`talk Almera failed: ${almeraErr}`);
     const almeraDone = await converse([/how can i help/i], () => sawDialog(/small raft out back|you are kind/i) && !s.sdk.getDialog()?.isOpen, 40);
     if (!almeraDone) throw Error('Almera dialogue incomplete');
+    const phAlm = markPhase();
 
     const onIsland = () => inBox(2510, 3476, 2514, 3481);
     const crossToLedge = async (withHudon: boolean) => {
@@ -1331,24 +1398,24 @@ export async function runSpecialistWaterfall(
         await stepAct('rope rock', async () => {
             const roped = findLoc(l => l.id === 1997 && l.x === LOC.rock.x && l.z === LOC.rock.z);
             if (!roped) await useOnLoc(ITEM.rope, LOC.rock);
-        }, () => near(LOC.rock.x + 1, LOC.rock.z, 0), 12, 4);
-        await waitTicks(s, 1);
-        await stepAct('rope tree', () => useOnLoc(ITEM.rope, LOC.tree), () => inBox(2510, 3462, 2513, 3464), 10, 4);
+        }, () => near(LOC.rock.x + 1, LOC.rock.z, 0), 12, 3);
+        await stepAct('rope tree', () => useOnLoc(ITEM.rope, LOC.tree), () => inBox(2510, 3462, 2513, 3464), 10, 3);
     };
 
     await crossToLedge(true);
-    await stepAct('barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
+    await stepAct('barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 3);
 
     await walkFast([{ x: 2517, z: 3427, tol: 2 }], 40, 'to hadley');
     await climb('hadley up', 2517, 3428, /climb-up/i, () => posOf(s)?.level === 1);
-    await stepAct('bookcase', () => opLoc(LOC.bookcase), () => has(ITEM.book), 10, 4);
+    await stepAct('bookcase', () => opLoc(LOC.bookcase), () => has(ITEM.book), 10, 3);
     const readDone = await stepAct('read book', async () => {
         const b = inv().find(x => x.id === ITEM.book);
         if (b) await s.direct({ type: 'useInventoryItem', slot: b.slot, optionIndex: 1, reason: 'SDK' });
     }, () => sawMsg(/book is old/i), 4, 3).then(() => true).catch(() => false);
     if (!readDone) throw Error('failed reading Book on Baxtorian');
-    await s.direct({ type: 'closeModal', reason: 'SDK' });
+    void s.direct({ type: 'closeModal', reason: 'SDK' });
     await climb('hadley down', 2518, 3429, /climb-down/i, () => posOf(s)?.level === 0);
+    const phHad = markPhase();
 
     // 2. Hadley -> Golrie cellar -> Pebble -> Ring of dueling directly to CW -> Tomb.
     const syncWaterfallPfm = createPfmSustainer(s);
@@ -1356,9 +1423,7 @@ export async function runSpecialistWaterfall(
         const p = posOf(s);
         syncWaterfallPfm(!!p && p.worldZ <= maxZ);
     };
-    await walkFast([{ x: 2561, z: 3280, tol: 4 }], 140, 'hadley to khazard border');
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
-    await walkFast([{ x: 2533, z: 3156, tol: 2 }], 220, 'khazard to golrie cellar', () => syncWaterfallPfm(true));
+    await walkFast([{ x: 2533, z: 3156, tol: 2 }], 260, 'hadley to golrie cellar', khazardPfm(3285));
 
     const inCellar = () => (posOf(s)?.worldZ ?? 0) > 9500 && (posOf(s)?.worldZ ?? 0) < 9600;
     await climb('cellar down', 2533, 3155, /climb-down/i, inCellar);
@@ -1370,13 +1435,18 @@ export async function runSpecialistWaterfall(
     let golrieShut = 0;
     const gotPebble = () => {
         golrieShut = s.sdk.getDialog()?.isOpen ? 0 : golrieShut + 1;
-        return has(ITEM.pebble) && !has(ITEM.golrieKey) && ((sawDialog(/take care golrie/i) && !s.sdk.getDialog()?.isOpen) || golrieShut >= 5);
+        if (!has(ITEM.pebble) || has(ITEM.golrieKey)) return false;
+        if (!opts.afterGolrie) return true;
+        return (sawDialog(/take care golrie/i) && !s.sdk.getDialog()?.isOpen) || golrieShut >= 5;
     };
     await stepAct('talk golrie', async () => {
         const g = s.sdk.findNearbyNpc(/^golrie$/i);
         if (g) await s.direct({ type: 'interactNpc', npcIndex: g.index, optionIndex: 1, reason: 'SDK' });
         await converse([], gotPebble, 30);
     }, gotPebble, 3, 2);
+    if (!opts.afterGolrie && s.sdk.getDialog()?.isOpen) {
+        await s.direct({ type: 'closeModal', reason: 'SDK' });
+    }
 
     if (opts.afterGolrie) {
         await stepAct('golrie gate exit', () => opLoc(LOC.golrieGate), () => !inBox(2502, 9576, 2523, 9593), 10, 6);
@@ -1386,18 +1456,18 @@ export async function runSpecialistWaterfall(
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
         await opts.afterGolrie();
     }
+    const phGol = markPhase();
 
     if (opts.skipCwTeleportToTomb) {
-        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
         await walkFast([{ x: 2557, z: 3444, tol: 2 }], 300, 'to glarial tomb', khazardPfm(3270));
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     } else {
-        // Teleport out of Golrie's room straight to Castle Wars, pre-arming PFM so guardWalk skips the Observatory detour.
+        // Teleport out of Golrie's room straight to Castle Wars, toggling PFM during walk via skipGuardWalk.
         await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
-        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
         await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     }
+    const phCw = markPhase();
 
     // 3. Tomb: drop only banned weapons/runes (keep Ring, Amulet, and all potions).
     const tombDropIds = Array.from(new Set([...RUNES, ITEM.scim, ...(opts.extraTombDropIds ?? [])]));
@@ -1439,13 +1509,21 @@ export async function runSpecialistWaterfall(
     await walkFast([{ x: 2555, z: 9844, tol: 1 }], 45, 'to tomb ladder', () => syncWaterfallPfm(true));
     await climb('tomb up', 2556, 9844, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    const phTomb = markPhase();
 
+    let lastPickupSentAt = -10;
+    let lastPickupId = -1;
     for (let i = 0; i < 24 && activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
         opts.onEnergy?.();
-        const id = activeDropIds.find(r => cnt(r) < (targetDropCount.get(r) ?? 1))!;
-        const g = (s.sdk.getState()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
-        if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
-        await waitUntil(s, () => cnt(id) >= (targetDropCount.get(id) ?? 1) || stop(), { timeoutTicks: 3 });
+        const missing = activeDropIds.filter(r => cnt(r) < (targetDropCount.get(r) ?? 1));
+        const nextId = missing.find(r => r !== lastPickupId || s.tick() - lastPickupSentAt >= 2) ?? missing[0]!;
+        const g = (s.sdk.getState()?.groundItems ?? []).filter((x: any) => x.id === nextId).sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+        if (g) {
+            lastPickupSentAt = s.tick();
+            lastPickupId = nextId;
+            await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: nextId, reason: 'SDK' });
+        }
+        await waitTicks(s, 1);
     }
     if (activeDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1))) {
         throw Error(`failed recovering Tomb drops: ${activeDropIds.map(id => `${id}:${cnt(id)}/${targetDropCount.get(id)}`).join(' ')}`);
@@ -1456,6 +1534,7 @@ export async function runSpecialistWaterfall(
     const inFalls = () => inBox(2555, 9860, 2615, 9925);
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
     await stepAct('ledge door', () => opLoc(LOC.ledgeDoor), inFalls, 10, 4);
+    const phPick = markPhase();
 
     await walkFast([{ x: 2574, z: 9873, tol: 2 }, { x: 2584, z: 9876, tol: 2 }, { x: 2589, z: 9887, tol: 1 }], 60, 'falls crate', () => syncWaterfallPfm(true));
     await stepAct('falls crate', () => { syncWaterfallPfm(true); return opLoc(LOC.baxCrate); }, () => has(ITEM.baxKey), 10, 4);
@@ -1470,16 +1549,15 @@ export async function runSpecialistWaterfall(
 
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
     const pastGiantDoor = () => inBox(2562, 9894, 2572, 9901);
-    let lastWalk = -99, keySent = -99;
+    let keySent = -99;
     for (let i = 0; i < 45 && !pastGiantDoor() && !stop(); i++) {
         opts.onEnergy?.();
         syncWaterfallPfm(true);
-        if (near(2568, 9893, 0)) {
-            if (s.tick() - keySent >= 3) { keySent = s.tick(); await useOnLoc(ITEM.baxKey, LOC.giantDoor); }
-        } else if (lastWalk < 0 || s.tick() - lastWalk >= 3) {
-            lastWalk = s.tick();
-            const w: any = await s.direct({ type: 'walkTo', x: 2568, z: 9893, running: true, reason: 'SDK' });
-            if (w && w.success === false) await openDoubleDoor();
+        if (doorShut()) {
+            await openDoubleDoor();
+        } else if (s.tick() - keySent >= 3) {
+            keySent = s.tick();
+            await useOnLoc(ITEM.baxKey, LOC.giantDoor);
         }
         await waitTicks(s, 1);
     }
@@ -1517,6 +1595,7 @@ export async function runSpecialistWaterfall(
 
     const atkBeforeChalice = skillInfo(s, 'Attack').experience;
     await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atkBeforeChalice >= 300_000, 10, 4);
+    const phFalls = markPhase();
 
     // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
@@ -1524,15 +1603,17 @@ export async function runSpecialistWaterfall(
     await stepAct('raised door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }); }, () => inBox(2562, 9894, 2572, 9901), 10, 4);
     await stepAct('south giant door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, LOC.giantDoor); }, () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 10, 4);
     await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 45, 'return giant room', () => syncWaterfallPfm(true));
-    await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 4);
+    await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 3);
     await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 60, 'return ledge exit', () => syncWaterfallPfm(true));
     await stepAct('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511, 3463, 3), 10, 4);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
-    await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
+    await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 3);
+    const phExit = markPhase();
 
     return {
         attackXp: skillInfo(s, 'Attack').experience - atk0,
         strengthXp: skillInfo(s, 'Strength').experience - str0,
+        phases: { alm: phAlm, had: phHad, gol: phGol, cw: phCw, tomb: phTomb, pick: phPick, falls: phFalls, exit: phExit },
     };
 }
 
@@ -1566,19 +1647,21 @@ export async function runMeleePvpSpecialist(
 
     milestone('start');
     await startAndExitTutorial(s, new Set(), opts.stop);
+    const tTut = elapsed();
     milestone('tutorial');
 
     await receiveSupplyKit(s, opts.supplierName, kit, opts.stop, {
         altSlots: new Map([[3016, { allowedIds: SUPER_ENERGY_IDS, satisfied: () => true }]]),
     });
+    const tKit = elapsed();
     milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
     await buryBonesTo43(s, opts.stop);
+    const tPray = elapsed();
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
     await walkWaypoints(
         s,
         [
@@ -1590,6 +1673,8 @@ export async function runMeleePvpSpecialist(
         'castle wars to almera',
         {
             ignoreMeleeHunters: true,
+            ignoreLiveHunters: true,
+            skipGuardWalk: true,
             onTickExtra: () => {
                 ensureRunAndEnergy();
                 const p = posOf(s);
@@ -1601,6 +1686,7 @@ export async function runMeleePvpSpecialist(
     const tAlmera = elapsed();
     milestone('almera');
 
+    let wfPhases: WaterfallPhases | undefined;
     if (opts.runWaterfallFn) {
         await opts.runWaterfallFn({
             session: s,
@@ -1616,7 +1702,7 @@ export async function runMeleePvpSpecialist(
             superEnergy: true,
         });
     } else {
-        await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy });
+        wfPhases = (await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy })).phases;
     }
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     const tWaterfall = elapsed();
@@ -1625,7 +1711,10 @@ export async function runMeleePvpSpecialist(
     // Drop Waterfall rewards and equip Keep melee gear while running from barrel (2527,3413) to Ardougne lever.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
+    let drankSuperAtk = false;
+    let drankSuperStr = false;
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
+        ignoreLiveHunters: true,
         onTickExtra: () => {
             ensureRunAndEnergy();
             if (s.tick() - preEquippedWait >= 2) {
@@ -1634,6 +1723,22 @@ export async function runMeleePvpSpecialist(
                     const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
                     preEquippedWait = s.tick();
                     void s.direct({ type: 'useInventoryItem', slot: gear.slot, optionIndex: wieldOp, reason: 'SDK' });
+                }
+            }
+            if (!drankSuperAtk) {
+                const pot = s.sdk.getInventory().find(i => i.id === 2436 || i.id === 145 || i.id === 147 || i.id === 149);
+                if (pot) {
+                    drankSuperAtk = true;
+                    const op = (pot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+                    void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: op, reason: 'SDK' });
+                }
+            }
+            if (!drankSuperStr) {
+                const pot = s.sdk.getInventory().find(i => i.id === 2440 || i.id === 157 || i.id === 159 || i.id === 161);
+                if (pot) {
+                    drankSuperStr = true;
+                    const op = (pot.optionsWithIndex ?? []).find((o: any) => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+                    void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: op, reason: 'SDK' });
                 }
             }
             const junk = s.sdk.getInventory().find(i => postWaterfallJunk.has(i.id));
@@ -1654,6 +1759,9 @@ export async function runMeleePvpSpecialist(
         totalTicks,
         swings,
         nonZeroDtSwings,
+        nzLvlCount,
+        nzWaitCount,
+        nzSamples,
         timeoutSwings,
         recenterSwings,
     } = await runWildyPvpRelogLoop(s, {
@@ -1673,9 +1781,13 @@ export async function runMeleePvpSpecialist(
         const sk = skillInfo(finalSess, skill);
         console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${targetTicks}`);
         if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
+        const almStep = `tut${tTut}/kit${tKit - tTut}/pry${tPray - tKit}/cwa${tAlmera - tPray}`;
+        const wfStep = wfPhases
+            ? ` wfStep=a${wfPhases.alm}/h${wfPhases.had}/g${wfPhases.gol}/c${wfPhases.cw}/t${wfPhases.tomb}/p${wfPhases.pick}/f${wfPhases.falls}/e${wfPhases.exit}`
+            : '';
         return {
             session: finalSess,
-            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} alm=${tAlmera} wf=${tWaterfall - tAlmera} lev=${setupTicks - tWaterfall} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings} to=${timeoutSwings} rec=${recenterSwings}`,
+            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${targetTicks} setup=${setupTicks} alm=${tAlmera} almStep=${almStep} wf=${tWaterfall - tAlmera}${wfStep} lev=${setupTicks - tWaterfall} pvp=${totalTicks - setupTicks} swings=${swings} nzDt=${nonZeroDtSwings}(lvl=${nzLvlCount},w=${nzWaitCount}) nz=[${nzSamples.join(';')}] to=${timeoutSwings} rec=${recenterSwings}`,
         };
     } catch (err) {
         await logoutSession(finalSess).catch(() => {});
