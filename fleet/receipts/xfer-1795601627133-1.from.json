@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795601627133-1",
  "account": "YewFirst",
  "partner": "Stirmypot",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "12e507df-f0f7-4e34-8985-43dd10c92597",
- "count": 0,
- "ok": false,
- "at": 1795601675265,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795602003263,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795601723334
+ },
+ "logout": {
+  "attemptId": "1795601675274-0000010428-0000000001",
+  "at": 1795602003253,
+  "sha256": "0b96053be432b486efeaede213c4da075c7e4eac422cf93f172a2ee627cd4fda"
+ },
+ "screen": true
 }
