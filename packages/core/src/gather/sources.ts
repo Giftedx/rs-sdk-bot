@@ -71,8 +71,15 @@ export const BURN_SOURCES: Record<number, { name: string; logs: number; uses?: n
 // A bucket of water is an empty bucket on a sink, fountain or well (general_use/scripts/water_sources.rs2 oplocu
 // _watersource/_well); the sinks and fountains of East Ardougne stand by its banks. Any option text names the loc.
 const WATER_SOURCES: Tile[] = [{ x: 2658, z: 3273, level: 0 }, { x: 2675, z: 3310, level: 0 }, { x: 2629, z: 3311, level: 0 }, { x: 2640, z: 3311, level: 0 }, { x: 2639, z: 3369, level: 0 }];
-export const USE_SOURCES: Record<number, { name: string; tiles: Tile[]; uses: number[]; option: RegExp }> = {
+// An unfired bowl is soft clay used on a potter's wheel, then the "Bowl" button of the pot / pie dish / bowl menu
+// (skill_crafting/scripts/pottery/pottery.rs2 craft_pottery_interface; Crafting 8, configs/pottery/pottery.struct). The
+// wheels are loc potterywheel (2642) on maps m40_51, m48_53 (Barbarian Village) and m52_52. The four Crafting Guild
+// wheels (m45_51) need Crafting 40 and a brown apron at the door, so they are left out.
+const POTTERS_WHEELS: Tile[] = [{ x: 3087, z: 3409, level: 0 }, { x: 3087, z: 3410, level: 0 }, { x: 2586, z: 3327, level: 0 }, { x: 2588, z: 3327, level: 0 }, { x: 2595, z: 3321, level: 0 }, { x: 2595, z: 3324, level: 0 }, { x: 3358, z: 3332, level: 0 }];
+// `choice`: the product button to press when the use opens a skill menu, in place of the first option.
+export const USE_SOURCES: Record<number, { name: string; tiles: Tile[]; uses: number[]; option: RegExp; choice?: string }> = {
     1929: { name: 'water source', option: /.*/, uses: [1925], tiles: WATER_SOURCES },
+    1791: { name: "potter's wheel", option: /.*/, uses: [1761], tiles: POTTERS_WHEELS, choice: 'bowl' },
     30: { name: 'beehive', option: /take-from/i, uses: [28, 1925], tiles: [{ x: 2755, z: 3440, level: 0 }, { x: 2755, z: 3443, level: 0 }, { x: 2755, z: 3447, level: 0 }, { x: 2758, z: 3440, level: 0 }, { x: 2758, z: 3447, level: 0 }, { x: 2759, z: 3444, level: 0 }, { x: 2762, z: 3440, level: 0 }, { x: 2762, z: 3443, level: 0 }] },
 };
 
