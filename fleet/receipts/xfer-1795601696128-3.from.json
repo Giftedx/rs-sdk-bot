@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795601696128-3",
  "account": "Hocuspokeus",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 2,
  "claim": "ff5c5c44-23d4-4184-b29c-e6736e27db80",
- "count": 0,
- "ok": false,
- "at": 1795601804607,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795601827276,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795601812937
+ },
+ "logout": {
+  "attemptId": "1795601804615-0000008696-0000000001",
+  "at": 1795601827265,
+  "sha256": "5444e8d87efbb1447f96de9788d91e85516dfddb6ab2bf2c854e94a0e4a788f8"
+ },
+ "screen": true
 }
