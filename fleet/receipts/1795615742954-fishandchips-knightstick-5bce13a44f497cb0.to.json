@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795615742954-fishandchips-knightstick-5bce13a44f497cb0",
+ "account": "Knightstick",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 11,
+ "claim": "e9388a05-c411-457b-a94a-de347bd493bb",
+ "count": 11,
+ "ok": true,
+ "at": 1795615944656,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 11
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795615943905
+ },
+ "logout": {
+  "attemptId": "1795615930656-0000007780-0000000001",
+  "at": 1795615944645,
+  "sha256": "4c29184bf0ecb8d08c50265058f2b4458e164d945cd8c28d385f97494c5704a4"
+ },
+ "screen": true
+}

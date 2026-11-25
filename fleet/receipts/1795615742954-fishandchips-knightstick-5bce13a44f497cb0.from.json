@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795615742954-fishandchips-knightstick-5bce13a44f497cb0",
  "account": "FishAndChips",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 11,
  "claim": "c6847b66-fbca-48f0-8a58-18ae6fc98a2f",
- "count": 0,
- "ok": false,
- "at": 1795615873987,
- "detail": "trade claimed"
+ "count": 11,
+ "ok": true,
+ "at": 1795615943048,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 11,
+  "after": 0
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795615917914
+ },
+ "logout": {
+  "attemptId": "1795615873996-0000030216-0000000001",
+  "at": 1795615943036,
+  "sha256": "7eeb7a103bb57cd176113d9c5258eefb0abf28b8b0087b5288cc6bd5b9bd1e3a"
+ },
+ "screen": true
 }
