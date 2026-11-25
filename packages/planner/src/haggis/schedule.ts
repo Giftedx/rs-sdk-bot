@@ -341,15 +341,10 @@ function scheduleRoute(
         }
         const reqs: number[] = [];
         if (a.requires) {
-            const seenReq = prerequisiteFirst ? new Set<number>() : undefined;
             for (let j = 0; j < a.requires.length; j++) {
                 const idx = idToIdx.get(a.requires[j]!);
                 if (idx === undefined) continue;
                 reqs.push(idx);
-                if (seenReq && !seenReq.has(idx)) {
-                    seenReq.add(idx);
-                    dependants[idx]!++;
-                }
             }
         }
         reqIdx[i] = reqs;
@@ -439,9 +434,12 @@ function scheduleRoute(
         }
     }
     if (clusterWildy && Number.isFinite(overallDeadline)) {
-        // Keep non-Wilderness pre-Overall work slightly ahead of Deep Wilderness so all Wildy work shares one entry.
+        // Keep non-Wilderness pre-Overall work slightly ahead of Deep Wilderness so all Wildy work shares one entry,
+        // leaving hp-top (after combat side XP) and the post-Wilderness exit skill (barbarian-fly-spot) at overallDeadline.
         for (let i = 0; i < n; i++) {
-            if (eff[i]! === overallDeadline && !DEEP_WILDY_PLACES.has(activities[i]!.at ?? '')) {
+            const act = activities[i]!;
+            const at = act.at ?? '';
+            if (eff[i]! === overallDeadline && act.id !== 'hp-top' && !DEEP_WILDY_PLACES.has(at) && at !== 'barbarian-fly-spot') {
                 eff[i] = overallDeadline - 1;
             }
         }
@@ -458,6 +456,18 @@ function scheduleRoute(
         }
     }
 
+    if (prerequisiteFirst) {
+        // Count only pre-Overall / active-clock dependants so post-Overall NO-CLOCK boards (e.g. runite) don't pull skills early.
+        for (let i = 0; i < n; i++) {
+            if (eff[i]! > overallDeadline) continue;
+            const seenReq = new Set<number>();
+            const reqs = reqIdx[i]!;
+            for (let j = 0; j < reqs.length; j++) {
+                const r = reqs[j]!;
+                if (!seenReq.has(r)) { seenReq.add(r); dependants[r]!++; }
+            }
+        }
+    }
     const hp10 = xpForLevel(10);
     const startXpArr = new Float64Array(SKILLS.length);
     for (let s = 0; s < SKILLS.length; s++) {
@@ -735,29 +745,116 @@ function scheduleRoute(
             const tieWalkHit = tieOverallWalk ? eb >= tieCutoff : eb > overallDeadline;
             if (tieWalkHit || prerequisiteFirst) {
                 if (magicLvlCache < 0) magicLvlCache = levelAtClock(magicIdx, clock);
-                let bestScore = Infinity;
-                let bestFirst = Infinity;
-                for (let aIdx = 0; aIdx < ties.length; aIdx++) {
-                    const i = ties[aIdx]!;
-                    const wi = getWalkCost(i);
-                    let score = wi;
-                    if (wi > 0) {
-                        const fromEnd = walkEndPlace[i]!;
-                        let minNext = Infinity;
-                        for (let bIdx = 0; bIdx < ties.length; bIdx++) {
-                            if (aIdx === bIdx) continue;
-                            const b = activities[ties[bIdx]!]!;
-                            const nextW = (b.at === undefined || b.at === ANYWHERE)
-                                ? 0
-                                : bestTargetLeg(travelM!, fromEnd, b.at, magicLvlCache).leg.ticks;
-                            if (nextW < minNext) minNext = nextW;
-                        }
-                        if (minNext < Infinity) score += minNext;
+                const k = ties.length;
+                if (tieOverallWalk && k >= 3 && k <= 8) {
+                    // Exact Held-Karp TSP over same-deadline ready places, terminating at the nearest next-deadline place.
+                    for (let aIdx = 0; aIdx < k; aIdx++) getWalkCost(ties[aIdx]!);
+                    let nextMinEff = Infinity;
+                    for (let j = 0; j < n; j++) {
+                        if (!placed[j] && eff[j]! > eb && eff[j]! < nextMinEff) nextMinEff = eff[j]!;
                     }
-                    if (score < bestScore || (score === bestScore && wi < bestFirst)) {
-                        bestScore = score;
-                        bestFirst = wi;
-                        bestI = i;
+                    const exitPlaces: string[] = [];
+                    if (Number.isFinite(nextMinEff) && nextMinEff <= overallDeadline) {
+                        const seenExit = new Set<string>();
+                        for (let j = 0; j < n; j++) {
+                            if (placed[j] || eff[j]! !== nextMinEff) continue;
+                            const at = activities[j]!.at;
+                            if (at && at !== ANYWHERE && at !== BANK && !seenExit.has(at)) {
+                                seenExit.add(at);
+                                exitPlaces.push(at);
+                            }
+                        }
+                    }
+                    const endAt = new Array<string>(k);
+                    const startCost = new Float64Array(k);
+                    const exitCost = new Float64Array(k);
+                    const pairCost = new Float64Array(k * k);
+                    for (let i = 0; i < k; i++) {
+                        const ti = ties[i]!;
+                        startCost[i] = walkCostVal[ti]!;
+                        const ep = walkEndPlace[ti]!;
+                        endAt[i] = ep;
+                        let bestEx = exitPlaces.length > 0 ? Infinity : 0;
+                        for (let ei = 0; ei < exitPlaces.length; ei++) {
+                            const c = bestTargetLeg(travelM!, ep, exitPlaces[ei]!, magicLvlCache).leg.ticks;
+                            if (c < bestEx) bestEx = c;
+                        }
+                        exitCost[i] = bestEx;
+                    }
+                    for (let i = 0; i < k; i++) {
+                        const ep = endAt[i]!;
+                        for (let j = 0; j < k; j++) {
+                            if (i === j) continue;
+                            const aj = activities[ties[j]!]!;
+                            pairCost[i * k + j] = (aj.at === undefined || aj.at === ANYWHERE)
+                                ? 0
+                                : bestTargetLeg(travelM!, ep, aj.at, magicLvlCache).leg.ticks;
+                        }
+                    }
+                    const states = 1 << k;
+                    const fullMask = states - 1;
+                    // Single backward Held-Karp DP pass: min remaining travel ticks from (visitedMask, cur) through fullMask + exitCost.
+                    const backDp = new Float64Array(states * k).fill(Infinity);
+                    for (let cur = 0; cur < k; cur++) backDp[fullMask * k + cur] = exitCost[cur]!;
+                    for (let mask = fullMask - 1; mask >= 1; mask--) {
+                        for (let cur = 0; cur < k; cur++) {
+                            if (!(mask & (1 << cur))) continue;
+                            let best = Infinity;
+                            for (let nxt = 0; nxt < k; nxt++) {
+                                if (mask & (1 << nxt)) continue;
+                                const cand = pairCost[cur * k + nxt]! + backDp[(mask | (1 << nxt)) * k + nxt]!;
+                                if (cand < best) best = cand;
+                            }
+                            backDp[mask * k + cur] = best;
+                        }
+                    }
+                    let bestFirstCost = Infinity;
+                    let bestFirstWalk = Infinity;
+                    for (let first = 0; first < k; first++) {
+                        const minTotal = startCost[first]! + backDp[(1 << first) * k + first]!;
+                        const fi = ties[first]!;
+                        const wi = startCost[first]!;
+                        if (minTotal < bestFirstCost
+                            || (minTotal === bestFirstCost && wi < bestFirstWalk)
+                            || (minTotal === bestFirstCost && wi === bestFirstWalk && wi === 0 && (
+                                (activities[fi]!.id === 'ranged' && activities[bestI]!.id === 'pvp-magic')
+                                || (dependants[fi]! < dependants[bestI]! && !(activities[fi]!.id === 'pvp-magic' && activities[bestI]!.id === 'ranged'))
+                            ))) {
+                            bestFirstCost = minTotal;
+                            bestFirstWalk = wi;
+                            bestI = fi;
+                        }
+                    }
+                } else {
+                    let bestScore = Infinity;
+                    let bestFirst = Infinity;
+                    for (let aIdx = 0; aIdx < k; aIdx++) {
+                        const i = ties[aIdx]!;
+                        const wi = getWalkCost(i);
+                        let score = wi;
+                        if (wi > 0) {
+                            const fromEnd = walkEndPlace[i]!;
+                            let minNext = Infinity;
+                            for (let bIdx = 0; bIdx < k; bIdx++) {
+                                if (aIdx === bIdx) continue;
+                                const b = activities[ties[bIdx]!]!;
+                                const nextW = (b.at === undefined || b.at === ANYWHERE)
+                                    ? 0
+                                    : bestTargetLeg(travelM!, fromEnd, b.at, magicLvlCache).leg.ticks;
+                                if (nextW < minNext) minNext = nextW;
+                            }
+                            if (minNext < Infinity) score += minNext;
+                        }
+                        if (score < bestScore
+                            || (score === bestScore && wi < bestFirst)
+                            || (score === bestScore && wi === bestFirst && wi === 0 && (
+                                (activities[i]!.id === 'ranged' && activities[bestI]!.id === 'pvp-magic')
+                                || (dependants[i]! < dependants[bestI]! && !(activities[i]!.id === 'pvp-magic' && activities[bestI]!.id === 'ranged'))
+                            ))) {
+                            bestScore = score;
+                            bestFirst = wi;
+                            bestI = i;
+                        }
                     }
                 }
             }

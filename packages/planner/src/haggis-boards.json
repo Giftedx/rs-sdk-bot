@@ -1401,6 +1401,10 @@
      "lever": "pvp-relog-combat",
      "set": {
       "label": "Enchant jewellery ladder to Magic 44 before 1-tick PvP relog Magic",
+      "inside": null,
+      "requires": [
+       "imp-catcher"
+      ],
       "train": {
        "skill": "magic",
        "toLevel": 44,
@@ -1441,8 +1445,7 @@
     }
    },
    "requires": [
-    "prayer-43",
-    "magic"
+    "prayer-43"
    ],
    "minLevel": {
     "magic": 44
@@ -1578,6 +1581,12 @@
      "lever": "stun-guests",
      "set": {
       "inside": "thieve"
+     }
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "inside": null
      }
     }
    ],
@@ -3587,28 +3596,24 @@
        "toLevel": 99,
        "xpPerTick": {
         "floor": 814.8,
-        "realistic": 667.7,
+        "realistic": 768.2,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-ranged seeds 7/8/9: 998,997/1226=814.8, 998,460/1343=743.5, 998,890/1496=667.7 XP/tick (1->99 progressive non-clue bows/arrows/coif/leather boots/dhide, 5 Combat-75 tanks)"
+        "source": "floor 814.8 hosted-bench 44864025475; realistic 768.2 hosted CI 45526460695 scripts/measure/haggis-stage-pvp-combat.ts ranged=1300t (1,199 swings, 998,690 XP, 768.2 XP/t, Crossbow+Barbed bolts 1->39, Yew shortbow+Rune arrows 40->49, MSB+Rune arrows 50->99, Robin hood hat, Ranger boots, 5 Combat-101 1-Def tanks)"
        },
        "side": {
         "hitpoints": 0.333
        }
       },
       "supplies": [
-       { "item": "shortbow", "itemId": 841, "count": 1 },
-       { "item": "oak shortbow", "itemId": 843, "count": 1 },
-       { "item": "willow shortbow", "itemId": 849, "count": 1 },
-       { "item": "maple shortbow", "itemId": 853, "count": 1 },
+       { "item": "crossbow", "itemId": 837, "count": 1 },
+       { "item": "barbed bolts", "itemId": 881, "count": 600 },
        { "item": "yew shortbow", "itemId": 857, "count": 1 },
        { "item": "magic shortbow", "itemId": 861, "count": 1 },
-       { "item": "iron arrow", "itemId": 884, "count": 100 },
-       { "item": "steel arrow", "itemId": 886, "count": 150 },
-       { "item": "mithril arrow", "itemId": 888, "count": 150 },
-       { "item": "adamant arrow", "itemId": 890, "count": 200 },
-       { "item": "rune arrow", "itemId": 892, "count": 2500 },
+       { "item": "rune arrow", "itemId": 892, "count": 1500 },
        { "item": "coif", "itemId": 1169, "count": 1 },
+       { "item": "robin hood hat", "itemId": 2581, "count": 1 },
        { "item": "leather boots", "itemId": 1061, "count": 1 },
+       { "item": "ranger boots", "itemId": 2577, "count": 1 },
        { "item": "amulet of glory", "itemId": 1704, "count": 1 },
        { "item": "black dragonhide body", "itemId": 2503, "count": 1 },
        { "item": "black dragonhide chaps", "itemId": 2497, "count": 1 },
@@ -4355,10 +4360,10 @@
        "skill": "defence",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 1328.2,
-        "realistic": 1328.2,
+        "floor": 1364.5,
+        "realistic": 1364.5,
         "evidence": "MEASURED",
-        "source": "hosted CI 45516948511 scripts/measure/haggis-stage-pvp-combat.ts defence=752t (Defence 1->99, 670 swings, 998,800 XP, 1,328.2 XP/t, Rune 2h + Ultimate Strength across 5 Combat-101 1-Def tanks at Deserted Keep)"
+        "source": "hosted CI 45526460695 scripts/measure/haggis-stage-pvp-combat.ts defence=732t (Defence 1->99, 648 swings, 998,800 XP, 1,364.5 XP/t, Rune 2h + Ultimate Strength across 5 Combat-101 1-Def tanks at Deserted Keep)"
        },
        "side": {
         "hitpoints": 0.333
@@ -4479,10 +4484,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 234,
-       "realistic": 237,
+       "floor": 170,
+       "realistic": 174,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"Shield of Arrav as a pair\": scripts/generated/quest-arrav.ts, presets quest_arrav (main, beside the tramp) and quest_arrav_helper (helper, beside Reldo), 3/3 PASS on practice: main 234/235/237 ticks from the tramp to the quest complete message (the trade of 2 Phoenix crossbows and the Phoenix half, the tramp, Katrine twice, the Black Arm cupboard, a Varrock teleport, the curator, King Roald); the helper's Phoenix part (371-400 ticks) is on another account before the main arrives, and the second certificate goes to the helper after the main's quest; floor = best run, realistic = worst run; the walk to the tramp is not counted; the rival burst run is not measured by us"
+       "source": "hosted-bench CI 45526463360 quester:quest:arrav (Q_BURST=1, seeds 7/8/9, 3/3 PASS, 0 capped): ledgerTicks 170 / 174 / 173 (mainTicks 151 / 153 / 152, helper prep 289 / 321 / 293 before arrival); floor = best seed, realistic = worst seed"
       }
      }
     }
@@ -4560,7 +4565,7 @@
    ],
    "ticks": {
     "floor": 10891,
-    "realistic": 11873,
+    "realistic": 11462,
     "evidence": "MEASURED",
     "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs (seeds 7/8/9 lockstep): Pirate's Treasure 372/364/363 (quest-hunt.ts burst: true, 2 QP); The Knight's Sword 599/597/631 (quest-squire.ts burst: true, 1 QP); Plague City 437/430/429 (quest-elena.ts burst: true, 1 QP); Priest in Peril 929/915/963 (quest-priestperil.ts burst: true, 1 QP); Biohazard 1226/1214/1224 (quest-biohazard.ts burst: true, 3 QP); Nature Spirit 631/629/599 (quest-druidspirit.ts burst: true, 2 QP); In Search of the Myreque 662/686/676 (quest-routequest.ts burst: true, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 662/661/663 (quest-demon.ts burst: true, 3 QP); Jungle Potion 575/577/572 (quest-junglepotion.ts burst: true, 1 QP); Tribal Totem 314/306/309 (quest-totem.ts burst: true, 1 QP); Elemental Workshop 191/204/186 (quest-elemental.ts, 1 QP); Clock Tower 426/426/422 (quest-cog.ts burst: true, 1 QP); Hazeel Cult 264/267/272 (quest-hazeelcult.ts burst: true, 1 QP); Murder Mystery 251/190/307 (quest-murder.ts burst: true, 3 QP); Observatory Quest 451/454/449 (quest-itgronigen.ts burst: true, 2 QP); Death Plateau 847/847/842 (quest-death.ts burst: true, 1 QP); Shades of Mort'ton 880/874/873 (quest-mortton.ts, 3 QP; temple 0 -> 10 on single-wall build); Big Chompy Bird Hunting 407/409/336 (quest-chompybird.ts burst: true, 2 QP)"
    },
@@ -4584,9 +4589,9 @@
       "qp": 32,
       "ticks": {
        "floor": 10462,
-       "realistic": 11436,
+       "realistic": 11025,
        "evidence": "MEASURED",
-       "source": "quests-medium without Plague City (429/437, 1 QP on row plague-city)"
+       "source": "quests-medium without Plague City (429/437, 1 QP on row plague-city), with Haunted Mine burst: true worst seed 1163 (1574->1163)"
       }
      }
     }

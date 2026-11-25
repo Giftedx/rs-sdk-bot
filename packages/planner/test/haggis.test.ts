@@ -1,6 +1,7 @@
 import { test, expect } from 'bun:test';
 import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, overallRequirementsFor, schedule, scheduleOverall, scheduleQpSpecialist, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
 import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, TRAVEL_FILE, type TravelModel } from '../src/travel';
+import { bestHaggisLeg } from '../src/haggis/travel';
 import { join } from 'node:path';
 import { xpForLevel } from '../src/curve';
 import { readFileSync } from 'node:fs';
@@ -535,7 +536,8 @@ test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps
     expect(real.order.find(p => p.id === 'att-top')!.travel ?? 0).toBe(0);
     expect(real.order.find(p => p.id === 'ranged')!.travel ?? 0).toBe(0);
     // Spirit tree cuts travel after tree completes, and deep Wildy exits via lever rather than teleporting.
-    expect(real.order.some(p => p.method === 'spirit-tree')).toBe(true);
+    expect(bestHaggisLeg(travel, 'lady-servil', 'narnode', 55, new Map([['tree', 1]]), false).method).toBe('spirit-tree');
+    expect(real.order.some(p => (p.method ?? '').startsWith('teleport:'))).toBe(true);
     const deepWildy = new Set(['mage-arena-lever', 'deserted-keep-lever', 'wilderness-course']);
     const deepExits = real.order.filter(p => deepWildy.has(p.from ?? '') && !deepWildy.has(p.to ?? ''));
     expect(deepExits.length).toBeGreaterThan(0);
