@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795584349888-3",
+ "role": "to",
+ "account": "TrouserSnake",
+ "partner": "UnderMyKilt",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795584961245,
+ "detail": "Error: live admission paused by stop file"
+}

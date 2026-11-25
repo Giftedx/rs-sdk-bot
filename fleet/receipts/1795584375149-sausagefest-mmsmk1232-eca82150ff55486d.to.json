@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795584375149-sausagefest-mmsmk1232-eca82150ff55486d",
  "account": "mmsmk1232",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 350000,
  "claim": "7cb254f7-3b19-4262-b05e-baca79490751",
- "count": 0,
- "ok": false,
- "at": 1795584791693,
- "detail": "trade claimed"
+ "count": 350000,
+ "ok": true,
+ "at": 1795584966131,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 350000
+ },
+ "bank": {
+  "count": 350000,
+  "at": 1795584965374
+ },
+ "logout": {
+  "attemptId": "1795584791900-0000021080-0000000001",
+  "at": 1795584966118,
+  "sha256": "1c8d548a8896393fd6bc7855a20702d91798f2fea71f79dadc3900b249080c2e"
+ },
+ "screen": true
 }

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795584349888-1",
+ "account": "Woodpecker",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "3959d358-6fdb-4c04-b920-25fb5290ca80",
+ "count": 0,
+ "ok": false,
+ "at": 1795584961195,
+ "detail": "trade claimed"
+}
