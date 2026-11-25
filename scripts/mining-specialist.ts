@@ -206,7 +206,7 @@ if (import.meta.main) {
                 isStopped,
             );
             await walkWaypointsSafe(main, CWARS_TO_ARDY_ZOO_WAYPOINTS, isStopped);
-        } else if (MINING_GLORY_IDS.some(id => itemQty(main, id) > 0) && isLiveSupplyVariant()) {
+        } else {
             await rubTeleport(
                 main,
                 MINING_GLORY_IDS,
@@ -216,10 +216,16 @@ if (import.meta.main) {
             );
             await walkWaypointsSafe(main, [[2774, 3228, 3]], isStopped);
             await sailBrimhavenToArdougne(main, isStopped);
-            await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
-        } else {
-            // Rellekka East 9-rock iron cluster (2724,3695 touches 3 cardinal iron rocks): zero 20t respawn wait.
-            await walkWaypointsSafe(main, [[2890, 3530, 4], [2820, 3600, 4], [2755, 3665, 4], [2724, 3695, 1]], isStopped);
+            if (isLiveSupplyVariant() && !itemQty(main, OBJ_GAMES_8)) {
+                await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
+            } else {
+                // Ardougne dock -> Seers Village road -> Rellekka East 9-rock (2724,3695 touches 3 cardinal rocks, avoids White Wolf Mountain).
+                await walkWaypointsSafe(
+                    main,
+                    [[2685, 3330, 4], [2705, 3420, 4], [2735, 3490, 4], [2740, 3555, 4], [2730, 3630, 4], [2724, 3695, 1]],
+                    isStopped,
+                );
+            }
         }
 
         const mineStart = main.tick() - t0;
