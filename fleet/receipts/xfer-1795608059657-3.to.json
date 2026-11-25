@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795608059657-3",
+ "account": "TheFullMonty",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Swamp toad",
+ "requested": 5,
+ "claim": "5f22383d-5563-4e39-982c-d56f1f032166",
+ "count": 5,
+ "ok": true,
+ "at": 1795608495368,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795608494636
+ },
+ "logout": {
+  "attemptId": "1795608482473-0000028812-0000000001",
+  "at": 1795608495359,
+  "sha256": "4ac5a71a7bb2e1ad8c064a03e8f99716e36e3a77f6c9a70dab356ec229a6da21"
+ },
+ "screen": true
+}
