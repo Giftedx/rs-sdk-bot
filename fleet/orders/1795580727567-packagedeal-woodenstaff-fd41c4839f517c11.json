@@ -1,0 +1,11 @@
+{
+ "id": "1795580727567-packagedeal-woodenstaff-fd41c4839f517c11",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PackageDeal",
+ "to": "Woodenstaff",
+ "item": "Chocolate bar",
+ "count": 1,
+ "start": 1795580727567,
+ "end": 1795584327567,
+ "takerWaits": true
+}

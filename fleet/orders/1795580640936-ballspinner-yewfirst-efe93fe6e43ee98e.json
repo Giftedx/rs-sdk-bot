@@ -1,0 +1,17 @@
+{
+ "id": "1795580640936-ballspinner-yewfirst-efe93fe6e43ee98e",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 439,
+ "start": 1795580640936,
+ "end": 1795583040936,
+ "extra": [
+  {
+   "item": "Adamant arrowtips",
+   "count": 500
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,11 @@
+{
+ "id": "1795580727233-swordswallow-woodenstaff-290cf53cc3d80a4b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordswallow",
+ "to": "Woodenstaff",
+ "item": "Chocolate bar",
+ "count": 1,
+ "start": 1795580727233,
+ "end": 1795584327233,
+ "takerWaits": true
+}

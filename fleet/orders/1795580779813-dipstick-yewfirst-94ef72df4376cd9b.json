@@ -1,0 +1,33 @@
+{
+ "id": "1795580779813-dipstick-yewfirst-94ef72df4376cd9b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 241,
+ "start": 1795580779813,
+ "end": 1795584379813,
+ "extra": [
+  {
+   "item": "Adamant arrowtips",
+   "count": 128
+  },
+  {
+   "item": "Mithril arrowtips",
+   "count": 225
+  },
+  {
+   "item": "Steel arrowtips",
+   "count": 135
+  },
+  {
+   "item": "Iron arrowtips",
+   "count": 90
+  },
+  {
+   "item": "Bronze arrowtips",
+   "count": 60
+  }
+ ],
+ "takerWaits": true
+}
