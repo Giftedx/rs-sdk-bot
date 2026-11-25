@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795614819139,
+ "at": 1795614957391,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -174,9 +174,9 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-92-p94 ITEM_ID=440 QUANTITY=92 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=94 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-184-p517 ITEM_ID=453 QUANTITY=184 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=92 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-87-p94 ITEM_ID=440 QUANTITY=87 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=94 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-174-p517 ITEM_ID=453 QUANTITY=174 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=87 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -185,22 +185,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2353",
    "role": "auto"
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=440 QUANTITY=2 \"ITEM_NAME=Iron ore\" -- loadout",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-194-p517 ITEM_ID=453 QUANTITY=194 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:steelrod:item:2353 BATCH_UNITS=97 ORE_RESERVE=0 -- smithing smelt"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:steelrod:item:2353",
-   "role": "army"
   },
   {
    "account": "Spitroaster",
@@ -215,6 +199,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:pk_army:Spitroaster",
+   "role": "auto"
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-logistics.ts ITEM_ID=561 QUANTITY=20 \"ITEM_NAME=Nature rune\" -- loadout",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Stirmypot BATCH_UNITS=250 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Stirmypot",
    "role": "auto"
   }
  ],
