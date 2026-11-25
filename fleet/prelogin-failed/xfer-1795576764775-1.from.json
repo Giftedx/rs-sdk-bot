@@ -5,6 +5,6 @@
  "account": "TheFullMonty",
  "partner": "Shaftsinker",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795576930087,
- "detail": "Error: refusing to connect to rs-sdk-demo.fly.dev: not the local practice server; set DEMO_OK=1 to allow it on purpose"
+ "at": 1795577053304,
+ "detail": "Error: fleet trade claim held for order 1795245641350-thefullmonty-quickhandjob-34c31b29152f4d9f"
 }
