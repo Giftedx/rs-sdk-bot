@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795624356609-4",
+ "account": "Unsheathed",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 7,
+ "claim": "874e64d3-908d-41bf-ae7c-532dac50199a",
+ "count": 0,
+ "ok": false,
+ "at": 1795625257052,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795625212404-0000005324-0000000001",
+  "at": 1795625257041,
+  "sha256": "5a9e6d954565c0267f3f8b9356a42a1bde99822340075b924df46ba98b255b76"
+ },
+ "screen": false
+}

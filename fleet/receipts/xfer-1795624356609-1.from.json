@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795624356609-1",
+ "account": "Magicwanda",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chisel",
+ "requested": 1,
+ "claim": "651c7a37-c00e-4f59-acee-114104aa82e7",
+ "count": 0,
+ "ok": false,
+ "at": 1795625257084,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795625250698
+ },
+ "logout": {
+  "attemptId": "1795625243944-0000014140-0000000001",
+  "at": 1795625257072,
+  "sha256": "ecce60844d0b34c9126f1195285ac49d3a8e21323c1d614d3ebbee1f2c5a0112"
+ },
+ "screen": false
+}
