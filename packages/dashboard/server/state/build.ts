@@ -175,7 +175,7 @@ function buildState() {
             if (!curAll || r.rank < curAll.rank) bestOverallByBoard.set(r.board, { rank: r.rank, name: bot.name });
             if (notMain) {
                 const cur = bestNonMainByBoard.get(r.board);
-                if (!cur || r.rank < cur.rank) bestNonMainByBoard.set(r.board, { ...r, name: bot.name });
+                if (!cur || r.rank < cur.rank) bestNonMainByBoard.set(r.board, { ...r, name: bot.name, at: (r as any).at ?? (bot as any).ranksAt ?? null });
             }
         }
     }

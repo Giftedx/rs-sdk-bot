@@ -255,8 +255,12 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
   return res;
  };
  // Practice bots play on this PC's local test server, not the public world: their runs are the owner's testing.
- const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{
+ // A reserved account (a specialist or a fresh account whose route owner controls launches) plays on the public world,
+ // the boards name it and the 3D view marks it as ours, so it stays in the list. The page reads `reserved` as the
+ // private main account, which the public file never holds, so the flag goes.
+ const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.practice).map((b:any)=>{
   const copy:any=compactBotCommon(pick(b,PUBLIC_BOT));
+  delete copy.reserved;
   if(Object.hasOwn(b,'hpAt')){const at=observedAt(copy.hpAt,s.now),accountAt=observedAt(copy.at,s.now);copy.hpAt=at!==null&&accountAt!==null&&at<=accountAt?at:null;}else delete copy.hpAt;
   if(Object.hasOwn(b,'questPoints'))copy.questPoints=publicQuestPoints(copy.questPoints,s.now);else delete copy.questPoints;
   for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);

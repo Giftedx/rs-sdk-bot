@@ -161,11 +161,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // prayer is the server's percent (100 none, 115 for +15%): floor(level × prayer / 100) before the +8. The active prayer
   // is not reported, so the range shown is without one, and the melee top with +15% follows it.
   const maxHit=(level,bonus,style,prayer=100)=>Math.floor(((Math.floor(level*Math.max(100,prayer)/100)+8+style)*(bonus+64)+320)/640);
+  // Accurate stance to aggressive stance; one number when both stances hit the same.
+  const hitSpan=(level,bonus)=>{const lo=maxHit(level,bonus,0),hi=maxHit(level,bonus,3);return lo===hi?String(lo):lo+'–'+hi;};
   function equipStats(b){
     const t=wornBonuses(b);if(!t)return '';
     const sg=v=>(v>0?'+':'')+v,cells=(from,names)=>names.map((n,i)=>'<i title="'+n+'">'+sg(t[from+i])+'</i>').join('');
     const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),weapon=b.equipment.find(e=>e.slot===3),ranged=(equipmentValue(itemBonusData,weapon)?.[4]||0)>0;
-    const hits=[Number.isFinite(str)&&!ranged?'Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3)+' · prayer '+maxHit(str,t[10],3,115):'',ranged&&Number.isFinite(rng)?'Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3):''].filter(Boolean);
+    const hits=[Number.isFinite(str)&&!ranged?'Melee '+hitSpan(str,t[10])+' · prayer '+maxHit(str,t[10],3,115):'',ranged&&Number.isFinite(rng)?'Ranged '+hitSpan(rng,t[11]):''].filter(Boolean);
     {const sp=bestSpell(b);if(sp)hits.push('Magic '+sp.name+' '+sp.max+(sp.charge?' (30 charged)':'')+' ×'+sp.casts);}
     const names=['Stab','Slash','Crush','Magic','Range'];
     const speed=typeof weaponSpeedData!=='undefined'&&weapon?equipmentValue(weaponSpeedData,weapon):null;
@@ -1843,8 +1845,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),ranged=(equipmentValue(itemBonusData,weapon)?.[4]||0)>0;
     const hits=[];
     if(t){
-      if(Number.isFinite(str)&&!ranged)hits.push('Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3));
-      if(ranged&&Number.isFinite(rng))hits.push('Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3));
+      if(Number.isFinite(str)&&!ranged)hits.push('Melee '+hitSpan(str,t[10]));
+      if(ranged&&Number.isFinite(rng))hits.push('Ranged '+hitSpan(rng,t[11]));
       const sp=bestSpell(b);if(sp)hits.push(sp.name+' '+sp.max+(sp.charge?' (30)':''));
     }
     const specCost=weapon?(/\bdragon dagger\b/i.test(weapon.name)?25:/\bmagic (shortbow|longbow)\b/i.test(weapon.name)?35:/\bdragon (longsword|mace|spear)\b/i.test(weapon.name)?25:/\bdragon halberd\b/i.test(weapon.name)?30:/\brune claws\b/i.test(weapon.name)?25:/\brune thrownaxe\b/i.test(weapon.name)?10:/\b(dragon battleaxe|excalibur)\b/i.test(weapon.name)?100:null):null;

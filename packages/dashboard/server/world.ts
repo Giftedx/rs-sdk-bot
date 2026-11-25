@@ -58,7 +58,7 @@ function connectFeed() {
     } catch { setTimeout(connectFeed, 5000); }
 }
 const serverTick = () => world.tickAt ? world.tick + Math.floor((Date.now() - world.tickAt) / world.tickMs) : null;
-const fmtTicks = (ticks: number) => { const s = Math.round(ticks * world.tickMs / 1000); return s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m` : `${Math.floor(s / 60)}m ${s % 60}s`; };
+const fmtTicks = (ticks: number) => { const s = Math.round(ticks * world.tickMs / 1000); return s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`; };
 const parseTime = (t: string) => { let s = 0; for (const [, n, u] of t.matchAll(/(\d+)([hms])/g)) s += Number(n) * (u === 'h' ? 3600 : u === 'm' ? 60 : 1); return Math.round(s * 1000 / world.tickMs); };
 
 // ---------- hiscores: our ranks (and their history), the 24 boards ----------

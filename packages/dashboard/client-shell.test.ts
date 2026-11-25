@@ -1919,7 +1919,7 @@ test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from
  expect([t.maxHit(99,54,0),t.maxHit(99,54,3),t.maxHit(99,0,3)]).toEqual([20,20,11]);
  // With the +15% prayer: floor(99 × 115 / 100) = 113, so floor(((113 + 8 + 3) × 118 + 320) / 640) = 23.
  expect(t.maxHit(99,54,3,115)).toBe(23);
- const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20–20 · prayer 23');
+ const html=t.equipStats(b);expect(html).toContain('<i title="Slash">+45</i>');expect(html).toContain('Str +54');expect(html).toContain('Melee 20 · prayer 23');expect(html).not.toContain('20–20');
  // Varrock: min(2 fire, 30/3 air, 4 law) = 2; Falador: 4 law, Magic 30 is below 37.
  expect(t.teleCasts(b)).toEqual([{name:'Varrock teleport',lv:25,casts:2,can:true},{name:'Falador teleport',lv:37,casts:4,can:false}]);
  // A wielded Staff of fire gives fire runes without limit.
@@ -1958,10 +1958,10 @@ test('equipment identity reaches max hits and training estimates without choosin
  const env:any={asset:(n:string)=>n,fetch:(n:string)=>sync({ok:true,json:()=>data[n]??{}}),E:String,account:()=>b,price:()=>null,nf:String,S:{world:{tickMs:400}},window:{}};
  const t=new Function(...Object.keys(env),`${equipment}${combat};return {equipmentValue,wornBonuses,equipStats,hourRates};`)(...Object.values(env));
  const quest=t.hourRates('Moss giant');
- expect(t.wornBonuses(b)[10]).toBe(0);expect(t.equipStats(b)).toContain('Melee 11–11');expect(quest.max).toBe(11);
+ expect(t.wornBonuses(b)[10]).toBe(0);expect(t.equipStats(b)).toContain('Melee 11 · prayer');expect(quest.max).toBe(11);
  b.equipment=[{id:1217,name:'Black dagger',slot:3}];
  const ordinary=t.hourRates('Moss giant');
- expect(t.wornBonuses(b)[10]).toBe(7);expect(t.equipStats(b)).toContain('Melee 12–12');expect(ordinary.max).toBe(12);expect(ordinary.lo).toBeGreaterThan(quest.lo);
+ expect(t.wornBonuses(b)[10]).toBe(7);expect(t.equipStats(b)).toContain('Melee 12 · prayer');expect(ordinary.max).toBe(12);expect(ordinary.lo).toBeGreaterThan(quest.lo);
  // A projected item's base ID is authoritative over the raw ID and the display name.
  b.equipment=[{id:746,baseId:1217,name:'Black dagger',slot:3}];expect(t.wornBonuses(b)[10]).toBe(7);
  for(const [id,range,defence] of [[1135,15,40],[2499,20,45],[2501,25,50],[2503,30,55]]){

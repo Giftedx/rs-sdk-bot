@@ -152,14 +152,20 @@ test('public exact prices follow visible base IDs and route supplies while alias
   {name:'Testworker',practice:true,ground:[[3200,3201,0,12,1]]},
   {name:'Heldworker',reserved:true,ground:[{id:13,name:'Reserved only'}]},
  ],economy:{supplies:[{id:561,name:'Nature rune'}],itemPricesById:prices.byId,itemPricesByName:prices.byName}});
- expect(Object.keys(p.economy.itemPricesById).sort()).toEqual(['1135','1277','526','561','6']);
+ expect(Object.keys(p.economy.itemPricesById).sort()).toEqual(['1135','1277','13','526','561','6']);
  expect(p.economy.itemPricesById[1135]).toEqual({name:'Dragonhide body',value:7800,ask:null,bid:null});
  expect(p.economy.itemPricesById[1136]).toBeUndefined();
- expect(Object.keys(p.economy.itemPricesByName).sort()).toEqual(['bones','bronze sword','nature rune','ring']);
+ expect(Object.keys(p.economy.itemPricesByName).sort()).toEqual(['bones','bronze sword','nature rune','reserved only','ring']);
  expect(p.economy.itemPricesByName.ring).toEqual({name:'Ring',value:1000,ask:null,bid:90});
  expect(p.economy.itemPricesByName['dragonhide body']).toBeUndefined();
- for(const word of ['Bank only','Main only','Practice only','Reserved only'])expect(JSON.stringify(p)).not.toContain(word);
- expect(p.bots).toHaveLength(1);expect('bank'in p.bots[0]).toBe(false);
+ for(const word of ['Bank only','Main only','Practice only'])expect(JSON.stringify(p)).not.toContain(word);
+ expect(p.bots.map((b:any)=>b.name)).toEqual(['Worker','Heldworker']);expect('bank'in p.bots[0]).toBe(false);
+});
+
+test('a reserved account that is not the main account stays public without the reserved flag',()=>{
+ const p=publicView({bots:[{name:'Worker'},{name:'Specialist',reserved:true,skills:[{name:'Ranged',level:99}]},{name:MAIN_MARK,reserved:true}]});
+ expect(p.bots.map((b:any)=>b.name)).toEqual(['Worker','Specialist']);
+ expect('reserved' in p.bots[1]).toBe(false);expect(p.bots[1].skills).toEqual([{name:'Ranged',level:99}]);
 });
 
 test('public ground tuples require valid observations and never infer note base IDs',()=>{
