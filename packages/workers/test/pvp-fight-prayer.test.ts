@@ -10,11 +10,13 @@ import { fightPlayer, PRAYER } from '../src/pvp/fight';
 // - `lag` holds each input that many ticks more before the server can read it, as a late network write does;
 // - the button of a prayer in `refuse` changes nothing, as for a Prayer level under the prayer's level.
 // `guard` starts the prayer guard of the session (packages/core/src/bot/open.ts starts one in every session).
-// `dieAt`: the fighter dies that many ticks into the fight, skulled (head icon 1).
-async function arena(o: { guard: boolean; lag?: number; ticks?: number; refuse?: number[]; dieAt?: number }) {
+// `dieAt`: the fighter dies that many ticks into the fight, skulled (head icon 1). `prayers`: the prayers on at the
+// start. `fight`: more fight options.
+async function arena(o: { guard: boolean; lag?: number; ticks?: number; refuse?: number[]; dieAt?: number; prayers?: number[]; fight?: Record<string, unknown> }) {
     const lag = o.lag ?? 0, ticks = o.ticks ?? 60;
     let tick = 10, dead = false;
     const active: boolean[] = new Array(15).fill(false);
+    for (const p of o.prayers ?? []) active[p] = true;
     const inbox: { a: any; at: number }[] = [];
     const listeners = new Set<() => void>();
     const appearance = new Uint16Array(12);
@@ -53,10 +55,10 @@ async function arena(o: { guard: boolean; lag?: number; ticks?: number; refuse?:
             sendSetCombatStyle: (style: number) => send({ type: 'setCombatStyle', style }),
         },
     };
-    if (o.guard) startPrayerGuard(session, { protect: false });
+    const guard = o.guard ? startPrayerGuard(session, { protect: false }) : null;
     const logs: string[] = [];
     let done = false, itemOff = 0, counted = 0;
-    const fight = fightPlayer(session, 'Dummy', { kit: { melee: [1231] }, rotation: ['melee'], prayerFlick: false, freeze: false, cap: ticks, log: l => logs.push(l) })
+    const fight = fightPlayer(session, 'Dummy', { kit: { melee: [1231] }, rotation: ['melee'], prayerFlick: false, freeze: false, cap: ticks, log: l => logs.push(l), ...o.fight })
         .finally(() => { done = true; });
     const start = tick;
     while (!done) {
@@ -78,7 +80,7 @@ async function arena(o: { guard: boolean; lag?: number; ticks?: number; refuse?:
         for (const cb of [...listeners]) cb();
         await new Promise(r => setTimeout(r, 0));
     }
-    return { res: await fight, itemOff, counted, logs };
+    return { res: await fight, itemOff, counted, logs, guard: guard?.stats() };
 }
 
 test('with one sender and no late input, Protect Item stays on', async () => {
@@ -91,6 +93,14 @@ test('the prayer guard of the session sends no prayer input during a fight, so P
     const r = await arena({ guard: true });
     expect(r.counted).toBeGreaterThan(40);
     expect(r.itemOff).toBe(0);
+});
+
+test('a run that only escapes sets no prayer, so the prayer guard keeps the prayers', async () => {
+    // `flee`: the loop walks out from its first tick and never reaches its prayer code (fight.ts escape branches).
+    const r = await arena({ guard: true, prayers: [PRAYER.item, PRAYER.steelSkin, PRAYER.melee], ticks: 30, fight: { flee: true } });
+    expect(r.logs.some(l => /walks out of the Wilderness/.test(l))).toBe(true);
+    expect(r.guard!.flicks).toBeGreaterThan(3);
+    expect(r.itemOff).toBeLessThanOrEqual(Math.ceil(r.counted / 4));
 });
 
 test('a prayer input that the server reads a tick late is not sent again, so Protect Item stays on', async () => {

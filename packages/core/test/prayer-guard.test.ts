@@ -113,6 +113,22 @@ test('two, three and four prayers cost no points; five are held', () => {
     expect(guard.stats().holds).toBeGreaterThan(0);
 });
 
+test('a script input in the first tick of a three-prayer flick: 5 inputs at most, and no prayer gets two toggles', () => {
+    // Protect Item, Steel Skin and Protect from Melee, and a script that walks each 3 ticks (fight.ts walks out so).
+    const { w, s, client, advance } = world({ prayers: [8, 9, PROTECT.melee] });
+    startPrayerGuard(s, { protect: false });
+    let itemOff = 0;
+    for (let i = 0; i < 120; i++) {
+        advance();
+        if (i % 3 === 0) client.executeBotAction({ type: 'walkTo', x: 3200, z: 3190, reason: 'SDK' });
+        if (!w.active[8]) itemOff++;
+    }
+    expect(w.most).toBeLessThanOrEqual(5);
+    expect(w.drains).toBe(0);
+    // A flick of three prayers has one tick in four with Protect Item off (backFirst: it comes back in the second tick).
+    expect(itemOff).toBeLessThanOrEqual(30);
+});
+
 test('a held guard sends no input, and flicks again once the hold ends', () => {
     const { w, s, client, advance } = world({ prayers: [9, 10, PROTECT.melee] });
     w.npcs = [cow(-1)];

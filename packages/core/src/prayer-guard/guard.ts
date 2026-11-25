@@ -144,7 +144,11 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const st = s.sdk.getState(), prayers = st?.prayers;
         if (stats.yielded || !st?.player || st.player.isDead || !prayers || prayers.prayerPoints < 1 || windowOpen(st)) return;
         const now = s.tick();
-        if (resume.length) { finish(now); return; }
+        // The second tick of a flick comes before the script's input. In the flick's first tick the guard keeps one input
+        // for the script: the prayers that are still off come back in the next tick. With them in the first tick too,
+        // the tick had more than 5 inputs, one of them went to the next tick, and the repair then toggled that prayer
+        // a second time.
+        if (resume.length) { if (flickAt !== now) finish(now); return; }
         // The script's input takes one of the tick's inputs; the guard has the rest, less what it sent in this tick.
         const room = TICK_INPUTS - 1 - (sentAt === now ? sent : 0);
         if (inputs > 0 || flickAt === now || room <= 0) return;

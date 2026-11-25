@@ -1028,13 +1028,15 @@ export function evaluateSpecPlan(i: SpecPlanInput) {
 const KILL_SCRIPT = process.argv[1] ? relative(REPO_ROOT, process.argv[1]).split(sep).join('/') : null;
 export async function fightPlayer(s: Session, targetName: string, o: FightOptions): Promise<FightResult> {
     const eater = holdSessionEater(s.sdk);
-    // The loop sends every prayer input of the fight: the session's prayer guard sends none until the fight ends
-    // (packages/core/src/prayer-guard/hold.ts).
-    const prayer = holdSessionPrayer(s.sdk);
-    try { return await fightLoop(s, targetName, o, eater.ateAt + 3); } finally { prayer.release(); eater.release(); }
+    // From the first tick in which the loop sets its prayers, it sends every prayer input of the fight: the session's
+    // prayer guard sends none until the fight ends (packages/core/src/prayer-guard/hold.ts). A run that only escapes
+    // (`flee`, or an escape from its first tick) never sets them, and the guard keeps its prayers.
+    const prayer: { held?: { release(): void } } = {};
+    const holdPrayers = () => { prayer.held ??= holdSessionPrayer(s.sdk); };
+    try { return await fightLoop(s, targetName, o, eater.ateAt + 3, holdPrayers); } finally { prayer.held?.release(); eater.release(); }
 }
 
-async function fightLoop(s: Session, targetName: string, o: FightOptions, guardFoodReady: number): Promise<FightResult> {
+async function fightLoop(s: Session, targetName: string, o: FightOptions, guardFoodReady: number, holdPrayers: () => void): Promise<FightResult> {
     const log = o.log ?? ((line: string) => console.log(line));
     const rotation = kitRotation(o.rotation, o.kit);
     const eatAt = o.eatAt ?? 50, restoreAt = o.restorePrayerAt ?? 20, cap = o.cap ?? 600;
@@ -1409,6 +1411,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             continue;
         }
         const prayers = state.prayers;
+        // From here on the loop sets the prayers in each tick. A later escape keeps the prayers it set: neither the
+        // loop nor the guard sends a prayer input then, and the guard's flick would leave Protect Item off for a tick.
+        holdPrayers();
         // The prayers to plan from, and the one way that the loop sends a prayer input (see `intents`).
         let believed = believedPrayers(state, intents, now);
         const prayerOn = (p: number) => believed.includes(p);
