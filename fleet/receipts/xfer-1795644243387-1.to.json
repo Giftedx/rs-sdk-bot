@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795644243387-1",
  "account": "Woodenstaff",
  "partner": "OreElse",
@@ -12,6 +12,12 @@
  "claim": "0895470c-d3f2-466f-8891-653809ebb415",
  "count": 0,
  "ok": false,
- "at": 1795644559950,
- "detail": "trade claimed"
+ "at": 1795644599021,
+ "detail": "Error: route to 3182, 3440: precondition bank stop at 2947,3368: withdraw short {\"554\":1}",
+ "logout": {
+  "attemptId": "1795644559959-0000011856-0000000001",
+  "at": 1795644599008,
+  "sha256": "4ae3b1f5e95b375e8a216ef81e5d836cb125f02568b083c191143e3c5ef0b365"
+ },
+ "screen": false
 }

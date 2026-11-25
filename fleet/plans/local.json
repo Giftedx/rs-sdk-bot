@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795644561421,
+ "at": 1795644602199,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -63,7 +63,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-skiller.ts TRAIN_SKILL=Cooking TARGET_LEVEL=40 -- cooking batch",
-    "scripts/aio-skiller.ts CAP=2320 TARGET_COUNT=232 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2340 TARGET_COUNT=234 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=234 -- cooking food"
    ],
    "env": {
@@ -73,48 +73,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:379",
    "role": "army"
-  },
-  {
-   "account": "Quiverfull",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "wizard"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Quiverfull",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Quiverfull",
-   "role": "auto",
-   "resources": [
-    "wizards-tower"
-   ]
-  },
-  {
-   "account": "Porksword",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "wizard"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Porksword",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Porksword",
-   "role": "auto",
-   "resources": [
-    "wizards-tower"
-   ]
   },
   {
    "account": "Shaftsinker",
@@ -137,6 +95,19 @@
    ]
   },
   {
+   "account": "OreElse",
+   "script": "scripts/generated/quest-crest.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:crest",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:crest",
+   "role": "army"
+  },
+  {
    "account": "Ballspinner",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -153,6 +124,26 @@
    "role": "army",
    "resources": [
     "chaos-druids"
+   ]
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "chicken"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Woodenstaff",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto",
+   "resources": [
+    "chickens"
    ]
   },
   {
@@ -220,6 +211,45 @@
    "role": "helper"
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-gather"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Pocketpython",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:pk_army:mmtha0205",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:mmtha0205",
+   "role": "army",
+   "resources": [
+    "khazard-troopers"
+   ]
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/aio-fighter.ts",
    "args": [
@@ -261,22 +291,16 @@
   },
   {
    "account": "Pocketrocket",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "druid"
-   ],
+   "script": "scripts/generated/quest-ikov.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:castmyload:item:563",
-    "BATCH_UNITS": "20",
-    "BANK_PACK": "1"
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:castmyload:item:563",
-   "role": "army",
-   "resources": [
-    "chaos-druids"
-   ]
+   "goal": "goal:quest_board:ikov",
+   "role": "army"
   },
   {
    "account": "Woodpecker",
@@ -291,6 +315,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:viking",
+   "role": "army"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
+    "scripts/generated/quest-grandtree.ts DEMAND_ID=goal:quest_board:grandtree BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
   }
  ],
@@ -307,15 +346,11 @@
   "dipstick",
   "fatstack",
   "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
-  "mmtha0205",
   "moneyshot",
-  "oreelse",
   "pocketpool",
-  "pocketpython",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
