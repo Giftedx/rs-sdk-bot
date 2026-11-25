@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795602752344-1",
  "account": "mmsmk1232",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Uncut diamond",
  "requested": 11,
  "claim": "c51b8f23-fba8-4bf9-b0f3-7682da3f9ef4",
- "count": 0,
- "ok": false,
- "at": 1795602962779,
- "detail": "trade claimed"
+ "count": 11,
+ "ok": true,
+ "at": 1795602991213,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 11,
+  "after": 0
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795602972861
+ },
+ "logout": {
+  "attemptId": "1795602962787-0000027300-0000000001",
+  "at": 1795602991203,
+  "sha256": "08dd5d94485b4e93b4a15f9fe6f439d25d0ac5ea4f6d7acbb2b0dff4bd401279"
+ },
+ "screen": true
 }
