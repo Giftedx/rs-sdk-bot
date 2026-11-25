@@ -14,7 +14,7 @@ import {
     RANGED_SPECIALIST_TRADE2,
     type KitSpecItem,
 } from '../ranged-specialist';
-import { RANGED_TANK_SKILLS, tankPostPresetConfig, tankSupplierPresetConfig } from './specialist-combat-quests-cases';
+import { RANGED_MID_TANK_SKILLS, RANGED_TANK_SKILLS, TANK_SKILLS, tankPostPresetConfig, tankSupplierPresetConfig } from './specialist-combat-quests-cases';
 
 const FRESH_NATIVE_LUMBRIDGE = {
     ...PRESETS.fresh_lumbridge!,
@@ -56,8 +56,8 @@ const rangedPvpCase = (key: string, mode: 'ranged-pvp' | 'ranged-pvp-glory', kit
     output: /\brangedXp=(\d+)/,
     companions: [
         { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(kit, RANGED_TANK_SKILLS) },
-        { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0, RANGED_TANK_SKILLS) },
-        { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2, RANGED_TANK_SKILLS) },
+        { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0, RANGED_MID_TANK_SKILLS) },
+        { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2, TANK_SKILLS) },
     ],
 });
 
