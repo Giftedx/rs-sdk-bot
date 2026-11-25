@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795563217362-dipstick-knightrider-90a1412aa5c2a175",
  "account": "Dipstick",
  "partner": "KnightRider",
@@ -12,6 +12,16 @@
  "claim": "5f309556-fb46-4f11-9109-96eaf4aaf95d",
  "count": 0,
  "ok": false,
- "at": 1795564591189,
- "detail": "trade claimed"
+ "at": 1795565017755,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 97,
+  "at": 1795564599879
+ },
+ "logout": {
+  "attemptId": "1795564591199-0000022600-0000000001",
+  "at": 1795565017743,
+  "sha256": "59392513c1ce48ac269a53950c91afdba821dec95d2b885236fbdbb84fe67231"
+ },
+ "screen": false
 }

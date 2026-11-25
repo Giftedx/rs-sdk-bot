@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795563217832-yewfirst-knightstick-a638f95013c7c005",
  "account": "Knightstick",
  "partner": "YewFirst",
@@ -12,6 +12,12 @@
  "claim": "59ba7b7b-8185-4a61-9da3-f6c7a0d3f628",
  "count": 0,
  "ok": false,
- "at": 1795564620183,
- "detail": "trade claimed"
+ "at": 1795565018140,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795564620193-0000025632-0000000001",
+  "at": 1795565018126,
+  "sha256": "96cdaf2119e69e93515806bf67b0e92b968d88b48d71ad7f6f9cab176f3d7561"
+ },
+ "screen": false
 }
