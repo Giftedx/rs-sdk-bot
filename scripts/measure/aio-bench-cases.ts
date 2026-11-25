@@ -2016,6 +2016,11 @@ return [
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
   {key: 'extra:smith-rune-platelegs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1079', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
+  // A bronze order that starts where the Grand Exchange buy steps leave the account (Varrock West bank), not at the
+  // Al Kharid bank: the smelt batch walks there, smelts and banks the bars.
+  {key: 'extra:smelt-bronze-from-varrock', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'smelt', '900', 'bronze', 'MAX_MAKE=5', 'ORE_RESERVE=0'],
+    pass: s => ok(s) && /"made":5\b/.test(s) && /"banked":5\b/.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 1}, inventory: [{id: 995, count: 100}], bank: [{id: 436, count: 5}, {id: 438, count: 5}]}},
   {key: 'extra:smith-rune-full-helm', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1163', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 2}]}},
   // Iron arrows from bars and headless arrows: two iron bars into 30 iron arrowtips at the Varrock West anvils, and 90 tips
