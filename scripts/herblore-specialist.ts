@@ -1133,14 +1133,15 @@ if (import.meta.main) {
   target: 99,
   defaultHelpers: HERBLORE_ALL_BATCHES.length,
  });
+ const dropRoute = cfg.env.HERBLORE_ROUTE === 'drop' || process.argv.includes('--drop');
  const externalSuppliers = parseExternalSuppliers(cfg.env);
  if (externalSuppliers.length > 0) {
   await withSingleSpecialist(cfg.account, spec =>
-   runHerbloreExternal(spec, externalSuppliers, { cap: cfg.cap, target: cfg.target }),
+   runHerbloreExternal(spec, externalSuppliers, { cap: cfg.cap, target: cfg.target, dropRoute }),
   );
  } else {
   await withSpecialistFleet(cfg.account, cfg.helpers, (spec, helpers) =>
-   runHerbloreSpecialist(spec, helpers, { cap: cfg.cap, target: cfg.target }),
+   runHerbloreSpecialist(spec, helpers, { cap: cfg.cap, target: cfg.target, dropRoute }),
   );
  }
 }
