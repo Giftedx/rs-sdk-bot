@@ -366,18 +366,21 @@ export async function setPrayerState(s: Session, prayerIndex: number, on: boolea
     }
 }
 
-export async function startAndExitTutorial(s: Session, keepIds: ReadonlySet<number>, stop: StopFn): Promise<void> {
+export async function startAndExitTutorial(s: Session, keepIds: ReadonlySet<number>, stop: StopFn, maxRemain = 0): Promise<void> {
     await leaveRuneStarter(s, stop);
     if (onStarterIsland(posOf(s)) || posOf(s)?.level !== 0) {
         throw Error('still on Tutorial Island after leaveRuneStarter');
     }
     const deadline = s.tick() + 45;
     while (!stop()) {
-        const junk = s.sdk.getInventory().filter(i => !keepIds.has(i.id));
-        if (junk.length === 0) return;
+        const inv = s.sdk.getInventory();
+        const junk = inv.filter(i => !keepIds.has(i.id));
+        if (junk.length === 0 || (maxRemain > 0 && inv.length <= maxRemain)) return;
         if (s.tick() >= deadline) throw Error(`failed to drop starter items: ${junk.map(i => i.id).join(',')}`);
         await dismissContinueDialogs(s, stop, 2);
-        const batch = junk.slice(0, 5);
+        const batch = maxRemain > 0
+            ? junk.slice(-Math.min(5, Math.max(1, inv.length - maxRemain)))
+            : junk.slice(0, 5);
         await Promise.all(batch.map(i => s.direct({ type: 'dropItem', slot: i.slot, reason: 'SDK' })));
         await waitTicks(s, 1);
     }
@@ -1659,7 +1662,7 @@ export async function runSpecialistWaterfall(
         throw Error(`pillar runes not consumed as expected: ${RUNES.map(id => `${id}:${cnt(id)}/${runesBeforePillars.get(id)}`).join(' ')}`);
     }
 
-    await stepAct('statue', () => useOnLoc(ITEM.amulet, LOC.statue), () => inBox(2598, 9895, 2610, 9920), 10, 4);
+    await stepAct('statue', () => useOnLoc(ITEM.amulet, LOC.statue), () => inBox(2598, 9895, 2610, 9920), 10, 9);
 
     // Ensure 5 free slots before claiming reward from chalice.
     const freeDropIds = [229, ITEM.book, ITEM.pebble];
@@ -1672,13 +1675,13 @@ export async function runSpecialistWaterfall(
     if (inv().length > 23) throw Error(`needs 5 free slots for Chalice reward, has ${28 - inv().length}`);
 
     const atkBeforeChalice = skillInfo(s, 'Attack').experience;
-    await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atkBeforeChalice >= 300_000, 10, 4);
+    await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atkBeforeChalice >= 300_000, 10, 6);
     const phFalls = markPhase();
 
     // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
     await walkFast([{ x: 2604, z: 9901, tol: 1 }], 25, 'raised room exit', () => syncWaterfallPfm(true));
-    await stepAct('raised door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }); }, () => inBox(2562, 9894, 2572, 9901), 10, 4);
+    await stepAct('raised door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }); }, () => inBox(2562, 9894, 2572, 9901), 10, 6);
     await stepAct('south giant door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, LOC.giantDoor); }, () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 10, 4);
     await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 45, 'return giant room', () => syncWaterfallPfm(true));
     await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 3);
@@ -1720,13 +1723,15 @@ export async function runMeleePvpSpecialist(
     };
 
     const syncCwPfm = createPfmSustainer(s);
+    const starterJunkIds = new Set<number>([1351, 590, 303, 315, 1925, 1931, 2309, 1265, 1205, 1277, 1171, 841, 882, 558, 559]);
     const ensureRunAndEnergy = () => {
-        const vial = s.sdk.getInventory().find(i => i.id === 229);
-        if (vial) void s.direct({ type: 'dropItem', slot: vial.slot, reason: 'SDK' });
+        const drops = s.sdk.getInventory().filter(i => i.id === 229 || starterJunkIds.has(i.id)).slice(0, 4);
+        for (const drop of drops) void s.direct({ type: 'dropItem', slot: drop.slot, reason: 'SDK' });
     };
 
     milestone('start');
-    await startAndExitTutorial(s, new Set(), opts.stop);
+    // Drop tutorial runes & tail items first, leaving 7 unstackable tools dropped mid-walk.
+    await startAndExitTutorial(s, new Set(), opts.stop, 28 - kitSlotTotal(kit));
     const tTut = elapsed();
     milestone('tutorial');
 
@@ -1737,11 +1742,8 @@ export async function runMeleePvpSpecialist(
     milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
-    await buryBonesTo43(s, opts.stop);
-    const tPray = elapsed();
-    milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
-
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
+    let lastBoneBuryTick = -10;
     await walkWaypoints(
         s,
         [{ x: 2522, z: 3494, tol: 1 }],
@@ -1755,10 +1757,25 @@ export async function runMeleePvpSpecialist(
             onTickExtra: () => {
                 ensureRunAndEnergy();
                 const p = posOf(s);
-                syncCwPfm(!!p && p.worldZ <= 3265);
+                if (p && p.worldZ <= 3265) {
+                    if (s.tick() - lastBoneBuryTick >= 2) {
+                        const bone = s.sdk.getInventory().find(i => i.id === 536);
+                        if (bone) {
+                            lastBoneBuryTick = s.tick();
+                            void s.sdk.sendUseItem(bone.slot, 1);
+                        }
+                    }
+                } else {
+                    syncCwPfm(true);
+                }
             },
         },
     );
+    if (countById(s.sdk.getInventory(), 536) > 0 || skillInfo(s, 'Prayer').baseLevel < 43) {
+        await buryBonesTo43(s, opts.stop);
+    }
+    const tPray = elapsed();
+    milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     const tAlmera = elapsed();
     milestone('almera');
@@ -1790,7 +1807,6 @@ export async function runMeleePvpSpecialist(
     // Drop Waterfall rewards and equip Keep melee gear while running straight from barrel (2527,3413) to Ardougne lever under Protect from Melee.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
         ignoreMeleeHunters: true,
         ignoreLiveHunters: true,
