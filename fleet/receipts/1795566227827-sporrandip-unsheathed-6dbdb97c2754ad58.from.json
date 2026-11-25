@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795566227827-sporrandip-unsheathed-6dbdb97c2754ad58",
  "account": "SporranDip",
  "partner": "Unsheathed",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 12000,
  "claim": "a88b6794-332b-473d-85a8-ff2b1ef565f9",
- "count": 0,
- "ok": false,
- "at": 1795566453309,
- "detail": "trade claimed"
+ "count": 12000,
+ "ok": true,
+ "at": 1795567899187,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 12295,
+  "after": 295
+ },
+ "logout": {
+  "attemptId": "1795566453323-0000029080-0000000001",
+  "at": 1795567899173,
+  "sha256": "094147945f4656a81a5004aa678c6f5ce3512b3f819dc442b9a88bb16c069e36"
+ },
+ "screen": true
 }

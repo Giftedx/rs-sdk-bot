@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795566227827-sporrandip-unsheathed-6dbdb97c2754ad58",
+ "account": "Unsheathed",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 12000,
+ "claim": "3f2c7318-5da5-4fdb-9e06-31ac7ba1d83f",
+ "count": 12000,
+ "ok": true,
+ "at": 1795567902159,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 12000
+ },
+ "bank": {
+  "count": 12000,
+  "at": 1795567900922
+ },
+ "logout": {
+  "attemptId": "1795567879706-0000004380-0000000001",
+  "at": 1795567902037,
+  "sha256": "06ad3686cba814a38c77b31561b079d20d6b20c130287d5e678d339f2d2d2f39"
+ },
+ "screen": true
+}
