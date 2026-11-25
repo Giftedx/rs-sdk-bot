@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795630850307-tossthecaber-deeppockets-3cc9faf5fc93c401",
+ "account": "TossTheCaber",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "37dd027e-e067-49fe-b767-ad60769ea2db",
+ "count": 1,
+ "ok": true,
+ "at": 1795631883985,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795631835867-0000020960-0000000001",
+  "at": 1795631883972,
+  "sha256": "f41a8a95cf89657bad05860224974d5af8bfeff8d410225303641460cc0fbfa7"
+ },
+ "screen": true
+}
