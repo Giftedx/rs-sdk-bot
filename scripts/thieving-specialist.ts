@@ -47,6 +47,13 @@ export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>>
 };
 
 export const THIEVING_DIRECT_CWARS_WAYPOINTS: readonly [number, number, number][] = [
+    [2445, 3120, 3],
+    [2455, 3156, 3],
+    [2476, 3194, 3],
+    [2486, 3214, 3],
+    [2506, 3233, 3],
+    [2541, 3244, 3],
+    [2592, 3293, 3],
     [2621, 3293, 2],
 ];
 
@@ -56,7 +63,7 @@ const BAKERS_STALL_SIDE_OFFSETS: readonly [number, number][] = [
 ];
 
 /** Steal an emergency food buffer from an Ardougne Baker's stall using native sight + walkability checks. */
-async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 12, maxSteals = 8): Promise<boolean> {
+async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 6, maxSteals = 4): Promise<boolean> {
     const startBites = foodBitesCount(main);
     const curPos = main.sdk.getState()?.player;
     if (curPos && chebDist({ x: curPos.worldX, z: curPos.worldZ }, BAKERS_STALL_SAFE_CENTER) > 8) {
@@ -79,6 +86,10 @@ async function stealEmergencyStallFood(main: Session, stop: () => boolean, targe
         if (!st || !me) {
             await waitTicks(main, 1);
             continue;
+        }
+        if (me.hp <= 5) {
+            await eatAnyFood(main);
+            if ((main.sdk.getState()?.player?.hp ?? 0) <= 4 && !hasAnyFood(main)) break;
         }
         const stalls = st.nearbyLocs
             .filter(l => /^baker'?s stall$/i.test(l.name) && l.x >= 2664 && l.optionsWithIndex.some(o => /steal/i.test(o.text)));
@@ -299,7 +310,7 @@ export async function runArdougneStunRelogThieving(opts: {
         const bites = foodBitesCount(main);
         const needRestock = bites === 0 || (bites <= 1 && (lvl < 98 || st.player.hp <= tier.stunDamage + 3));
         if (needRestock && elapsedNow() >= stallCooldownUntil) {
-            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 12, 8);
+            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 6, 4);
             if (!restocked) {
                 stallCooldownUntil = elapsedNow() + 6;
             }
