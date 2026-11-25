@@ -77,8 +77,7 @@ type SmithRunnerState = {
 
 function selectProductForInventory(lvl: number, inv: readonly { id: number; count: number }[]): number | null {
  const bronze = countItem(inv, ITEM_IDS.bronze_bar);
- if (bronze >= 3 && lvl >= 9) return SMITH_PRODUCTS.bronze_warhammer;
- if (bronze >= 1) return SMITH_PRODUCTS.bronze_dagger;
+ if (bronze >= 1 && lvl < 15) return SMITH_PRODUCTS.bronze_dagger;
  const iron = countItem(inv, ITEM_IDS.iron_bar);
  if (iron >= 5 && lvl >= 33) return SMITH_PRODUCTS.iron_platebody;
  if (iron >= 3 && lvl >= 24 && lvl < 33) return SMITH_PRODUCTS.iron_warhammer;
@@ -363,21 +362,24 @@ export async function runSmithingSpecialist(
    };
    let next = pickRunner();
    while ((!next || spec.tick() < delayUntil) && spec.tick() < deadline) {
+    if (spec.sdk.getState()?.dialog?.isOpen && !spec.sdk.getState()?.trade?.isOpen) {
+     await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    }
     await waitTicks(spec, 1);
     if (!next) next = pickRunner();
    }
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
-   // Drop up to 4 finished products (keeping <= 2 slots so 25 bars fit) + send OPPLAYER4 on the exact tick p_delay(2) clears.
-   const dropSlots = spec.sdk.getInventory().filter(i => !keepSet.has(i.id)).map(i => i.slot);
-   if (dropSlots.length > 4) {
-    // Batch 0 leftover daggers/warhammers (>4 slots) need normal dropItemsFast before trading.
-    await dropItemsFast(spec, keepSet, deadline);
+   // Drop up to 4 finished products (leaving <= 1 platebody + hammer so 25 bars fit) + send OPPLAYER4 on the exact tick p_delay(2) clears.
+   const dropSlots = spec.sdk.getInventory().filter(i => !keepSet.has(i.id) || (i.id === ITEM_IDS.bronze_bar && skillLevel(spec, 'Smithing') >= 15)).map(i => i.slot);
+   if (dropSlots.length > 5) {
+    // Batch 0 leftover daggers/warhammers/excess bronze bars (>5 slots) need dropItemsFast before trading.
+    await dropItemsFast(spec, new Set([ITEM_IDS.hammer]), deadline);
    } else if (dropSlots.length > 0) {
     const helperName = next.session.name.toLowerCase();
     const specName = spec.name.toLowerCase();
     const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
     const sTarget = next.session.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
-    const preActs: Promise<unknown>[] = dropSlots.map(slot => spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+    const preActs: Promise<unknown>[] = dropSlots.slice(0, 4).map(slot => spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     if (hTarget && sTarget) {
      preActs.push(next.session.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
      preActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
@@ -402,6 +404,7 @@ export async function runSmithingSpecialist(
      giveIds: [wantBar],
      deadlineTick: deadline,
      allowHelperOnSingleModal: true,
+     confirmOverlapOnHelper: true,
      canStand: anvilRoomOk,
      onConfirmSend: barSlot >= 0
       ? () => {

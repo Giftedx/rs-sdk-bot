@@ -460,8 +460,8 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
  logPhase(spec, start, 'magic_pool_done');
 
  // Path inside Chamber from Sparkling Pool (2509,4689) to Zamorak statue (2516,4720), then pray & pick up cape (2414).
- const chamberWalker = await sessionWalker(spec);
- await walkPath(chamberWalker, [{ x: 2516, z: 4718, tol: 2 }], { maxTicks: Math.max(10, Math.min(30, deadline - spec.tick())) });
+ await spec.direct({ type: 'walkTo', x: 2516, z: 4718, running: true, reason: 'SDK' });
+ await waitUntil(spec, () => nearTile(spec, 2516, 4718, 2, 0), { timeoutTicks: 25 });
 
  // Pray at Zamorak statue (2874 at 2516,4721) -> click mesbox continues -> pick up cape (2414) off ground
  while (spec.tick() < deadline && countItem(spec.sdk.getInventory(), 2414) === 0) {
@@ -471,7 +471,6 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
    await waitTicks(spec, 1);
    continue;
   }
-  await spec.sdk.scanGroundItems(5);
   const groundCape = spec.sdk.getState()?.groundItems?.find((g: any) => g.id === 2414);
   if (groundCape) {
    await spec.direct({ type: 'pickupItem', x: groundCape.x, z: groundCape.z, itemId: 2414, reason: 'SDK' });
@@ -484,7 +483,8 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
  }
 
  // Path back to Chamber Guardian (904 at 2508,4696) -> receive staff (2417, sets %magearena = 8)
- await walkPath(chamberWalker, [{ x: 2508, z: 4695, tol: 2 }], { maxTicks: Math.max(10, Math.min(30, deadline - spec.tick())) });
+ await spec.direct({ type: 'walkTo', x: 2508, z: 4695, running: true, reason: 'SDK' });
+ await waitUntil(spec, () => nearTile(spec, 2508, 4695, 2, 0), { timeoutTicks: 25 });
  logPhase(spec, start, 'magic_guardian_start');
  while (spec.tick() < deadline && countItem(spec.sdk.getInventory(), 2417) === 0) {
   const st = spec.sdk.getState();
@@ -505,7 +505,6 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
     }
    }
   } else {
-   await spec.sdk.scanGroundItems(5);
    const groundStaff = spec.sdk.getState()?.groundItems?.find((g: any) => g.id === 2417);
    if (groundStaff) {
     await spec.direct({ type: 'pickupItem', x: groundStaff.x, z: groundStaff.z, itemId: 2417, reason: 'SDK' });

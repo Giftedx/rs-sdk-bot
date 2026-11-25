@@ -357,6 +357,7 @@ export interface BurstTradeSpec {
  deadlineTick: number;
  canStand?: (pos: NonNullable<ReturnType<typeof playerPos>>) => boolean;
  allowHelperOnSingleModal?: boolean;
+ confirmOverlapOnHelper?: boolean;
  onConfirmSend?: () => Promise<unknown>;
 }
 
@@ -438,19 +439,25 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
 
   if (st.screen === 'confirm' || ht.screen === 'confirm') {
    sawConfirm = true;
-   const confirmActs: Promise<unknown>[] = [];
    const helperConfirmingNow = ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted;
-   if (helperConfirmingNow) {
-    confirmActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
-   }
    const specNeedsConfirm = st.isOpen && st.screen === 'confirm' && !st.myAccepted;
-   if (specNeedsConfirm) {
-    confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   if (opts.confirmOverlapOnHelper && !specNeedsConfirm && st.myAccepted && helperConfirmingNow && opts.onConfirmSend) {
+    // Helper entered World.playerLoop first: send helper's confirm synchronously before spec's post-trade op.
+    await helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+    await opts.onConfirmSend();
+   } else {
+    const confirmActs: Promise<unknown>[] = [];
+    if (helperConfirmingNow) {
+     confirmActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+    if (specNeedsConfirm) {
+     confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+    }
+    if (opts.onConfirmSend && (ht.myAccepted || !ht.isOpen) && specNeedsConfirm) {
+     confirmActs.push(opts.onConfirmSend());
+    }
+    if (confirmActs.length) await Promise.all(confirmActs);
    }
-   if (opts.onConfirmSend && (ht.myAccepted || !ht.isOpen) && specNeedsConfirm) {
-    confirmActs.push(opts.onConfirmSend());
-   }
-   if (confirmActs.length) await Promise.all(confirmActs);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
   }

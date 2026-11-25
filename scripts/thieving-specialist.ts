@@ -368,12 +368,12 @@ export async function runArdougneStunRelogThieving(opts: {
         const stallAlert = lvl >= 5 && lvl < 55 && (stallHit || newMsgs.some(m => /hands off there|you're the one who stole|guards guards|during combat/i.test(m.text)));
         if (stallAlert) {
             // Guards in Ardougne Market put the player in combat (blocking logout for 16t); eat and step out of guard range instead of logout.
-            if (foodBitesCount(main) >= 2 && st.player.hp <= 7) {
+            if (foodBitesCount(main) >= 1 && st.player.hp <= 5) {
                 await eatAnyFood(main);
             }
             await walkWaypointsSafe(main, [[2653, 3284, 1]], () => opts.isStopped() || elapsedNow() >= opts.cap);
-            for (let w = 0; w < 10 && !opts.isStopped() && elapsedNow() < opts.cap; w++) {
-                if ((main.sdk.getState()?.player?.hp ?? 10) <= 6 && foodBitesCount(main) >= 2) await eatAnyFood(main);
+            for (let w = 0; w < 6 && !opts.isStopped() && elapsedNow() < opts.cap; w++) {
+                if ((main.sdk.getState()?.player?.hp ?? 10) <= 4 && foodBitesCount(main) >= 1) await eatAnyFood(main);
                 await waitTicks(main, 1);
             }
             lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
@@ -384,14 +384,12 @@ export async function runArdougneStunRelogThieving(opts: {
         if (newMsgs.some(m => /you fail to pick|you've been stunned/i.test(m.text))) {
             stuns++;
             const bites = foodBitesCount(main);
-            if (st.player.hp <= Math.max(4, tier.stunDamage) && bites === 0) {
-                // Never call logoutSession at <= FLEE_HP with no food: flee_guard holds clickComponent until timeout.
+            if (st.player.hp <= tier.stunDamage && bites === 0) {
                 await waitTicks(main, 2);
                 lastPickTick = -99;
                 continue;
             }
-            // Eat when HP drops to guard/stun danger threshold so we never die at Lv 5..54 stalls or Knight stuns.
-            if (bites >= 2 && st.player.hp <= Math.max(lvl < 55 ? 6 : 4, tier.stunDamage)) {
+            if (bites >= 1 && st.player.hp <= tier.stunDamage) {
                 await eatAnyFood(main);
             }
             totalTicks += Math.max(1, main.tick() - sessStart) + 1;
@@ -414,21 +412,15 @@ export async function runArdougneStunRelogThieving(opts: {
             if (!restocked) {
                 stallCooldownUntil = elapsedNow() + 6;
             }
-            if (foodBitesCount(main) >= 2 && st.player.hp <= tier.stunDamage) {
+            if (foodBitesCount(main) >= 1 && st.player.hp <= tier.stunDamage) {
                 await eatAnyFood(main);
             }
             lastPickTick = -99;
             if (restocked) continue;
         }
 
-        // Never pickpocket into <= 3 HP without at least 2 bites left (reserve 1 bite keeps flee_guard disarmed).
-        if (foodBitesCount(main) <= 1 && st.player.hp <= tier.stunDamage + 3) {
-            await waitTicks(main, 1);
-            continue;
-        }
-
-        // Safety guard: never attempt a pickpocket/stall steal while HP <= danger threshold.
-        const minSafeHp = lvl < 55 ? 6 : Math.max(4, tier.stunDamage);
+        // Eat only when HP <= stunDamage so 11-HP Pineapple pizza halves heal efficiently without wasting food.
+        const minSafeHp = tier.stunDamage;
         if (st.player.hp <= minSafeHp) {
             await eatAnyFood(main);
             if ((main.sdk.getState()?.player?.hp ?? 0) <= minSafeHp) {
@@ -548,6 +540,10 @@ export async function runArdougneStunRelogThieving(opts: {
 }
 
 if (import.meta.main) {
+    // Explicit food and stunned-relog management replaces ambient EAT_GUARD/FLEE_GUARD/PRAYER_GUARD overhead.
+    process.env.EAT_GUARD ??= '0';
+    process.env.FLEE_GUARD ??= '0';
+    process.env.PRAYER_GUARD ??= '0';
     const { account, helperName, cap, resume } = parseThievingCliArgs(process.argv.slice(2), process.env);
 
     let stopFlag = false;

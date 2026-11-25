@@ -149,8 +149,8 @@ async function craftAtAltar(spec: Session, altarId: number, deadline: number, pr
  };
 
  if (preSentCraft && countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
-  // Trade-confirm tick already executed runecraft.rs2 (p_delay(3) -> delayedUntil = T+4); drain delay + queued modals.
-  await drainDelayAndDialogs(4);
+  // Trade-confirm tick T already executed runecraft.rs2 (p_delay(3) -> delayedUntil = T+4); burstTradeHost returns at T+1, so drain 3 ticks.
+  await drainDelayAndDialogs(3);
   return;
  }
  while (spec.tick() < deadline) {
