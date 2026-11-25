@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795611443474-1",
  "account": "SporranBulge",
  "partner": "NabTheKnob",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "3a2956f4-20cf-4594-b3e4-31e2f18282b5",
- "count": 0,
- "ok": false,
- "at": 1795611564269,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795611575252,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795611574517
+ },
+ "logout": {
+  "attemptId": "1795611564278-0000019216-0000000001",
+  "at": 1795611575243,
+  "sha256": "0e71cf7423cbce73cc22eff89d6a6399970f28109498859ec92ebb22504ab888"
+ },
+ "screen": true
 }

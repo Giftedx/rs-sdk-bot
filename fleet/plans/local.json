@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795611567120,
+ "at": 1795611583752,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,22 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ITEM_ID=556 \"ITEMS=Air rune\" MAX_ITEMS=3 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy runeshop 3000",
-    "scripts/aio-market.ts ORDER_KEY=brain-564-1-p861 ITEM_ID=564 QUANTITY=1 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=861 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2552 BATCH_UNITS=1 -- magic items enchant:emerald_ring - 1 1200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2552",
-   "role": "army"
   },
   {
    "account": "Bigpackage",
@@ -187,20 +171,23 @@
    "role": "helper"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
+   "account": "TheFullMonty",
+   "script": "scripts/aio-market.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-87-p94 ITEM_ID=440 QUANTITY=87 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=94 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-174-p517 ITEM_ID=453 QUANTITY=174 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=87 ORE_RESERVE=0 -- smithing smelt"
+    "ge-buy"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ORDER_KEY": "brain-564-1-p861",
+    "ITEM_ID": "564",
+    "QUANTITY": "1",
+    "CASH_RESERVE": "1000",
+    "COIN_RESERVE": "1000",
+    "LIMIT_PRICE": "861"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "auto"
+   "goal": "campaign:haggis:item:2552",
+   "role": "army"
   }
  ],
  "army": [
@@ -223,13 +210,13 @@
   "mmtha0205",
   "mmthv2350",
   "moneyshot",
+  "oreelse",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "undermykilt",
   "woodpecker"
  ],
