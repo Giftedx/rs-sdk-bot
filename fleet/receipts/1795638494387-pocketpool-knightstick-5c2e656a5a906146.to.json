@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795638494387-pocketpool-knightstick-5c2e656a5a906146",
  "account": "Knightstick",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 10,
  "claim": "cdad3fcb-3037-444c-b65e-006aef267006",
- "count": 0,
- "ok": false,
- "at": 1795643370081,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795643440273,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795643439528
+ },
+ "logout": {
+  "attemptId": "1795643370089-0000013128-0000000001",
+  "at": 1795643440260,
+  "sha256": "af4cbe865e304bc4aadddbf9e5e720360c6238fed6aa88e1972cd0b0b4b914b2"
+ },
+ "screen": true
 }
