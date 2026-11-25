@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { waitOutStaleHeartbeat } from '../src/session-recovery';
+import { waitOutStaleHeartbeat } from '../src/session-recovery-permit';
 
 test('the login guard waits out a stale swarm heartbeat for a bounded time and passes every other refusal at once', () => {
     let t = 0, calls = 0;

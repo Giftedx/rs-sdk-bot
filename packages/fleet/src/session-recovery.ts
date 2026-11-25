@@ -203,6 +203,14 @@ export function spentAttemptsByEnd(history: readonly StandaloneRecoveryRecord[])
     return spent;
 }
 
+// The `account|endedAt` keys that a recovery was tried for, with any outcome. A recovery can leave a producer attempt
+// newer than the end (assessRecoveryEligibility `retried`), and a refund gives back attempts, not the fact of a try.
+export function triedEnds(history: readonly StandaloneRecoveryRecord[]): Set<string> {
+    const tried = new Set<string>();
+    for (const r of history) if (!r.ok || r.refund === true) tried.add(`${r.account.toLowerCase()}|${r.endedAt}`);
+    return tried;
+}
+
 export function spentStandaloneAttempts(history: readonly StandaloneRecoveryRecord[], account: string, endedAt: number): number {
     return spentAttemptsByEnd(history).get(`${account.toLowerCase()}|${endedAt}`) ?? 0;
 }
@@ -353,7 +361,7 @@ async function runOneRecoveryPass(opts: StandaloneRecoveryPassOptions): Promise<
 
     const accountFilter = opts.account?.trim().toLowerCase();
     const serverLower = server.toLowerCase();
-    const spentAttemptCounts = spentAttemptsByEnd(history);
+    const spentAttemptCounts = spentAttemptsByEnd(history), tried = triedEnds(history);
     let heldRecoverySet: Set<string> | null = null;
     const isRecoveryLeaseHeld = (account: string): boolean => {
         if (!existsSync(leaseFile(root, account))) return false;
@@ -399,7 +407,7 @@ async function runOneRecoveryPass(opts: StandaloneRecoveryPassOptions): Promise<
             stopText,
             pidAlive: alive,
             host,
-            retried: attempts > 0,
+            retried: end !== undefined && tried.has(`${lower}|${end.at}`),
         });
         if (!e.eligible) {
             if (e.log) {

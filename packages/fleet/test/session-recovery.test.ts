@@ -27,6 +27,7 @@ import {
     spentAttemptsByEnd,
     spentStandaloneAttempts,
     swarmWroteStopText,
+    triedEnds,
     type StandaloneRecoveryRecord,
 } from '../src/session-recovery';
 import { liveRoot } from '../../core/src/practice-paths';
@@ -60,6 +61,14 @@ describe('fleet standalone session recovery', () => {
         // A refund of another end gives nothing back for this one.
         h.push({ at: 7, account: 'worker1', endedAt: 11, ok: true, refund: true, reason: 'other end' });
         expect(spentStandaloneAttempts(h, 'worker1', 10)).toBe(1);
+        // A refund keeps the fact of a try: an end whose recovery left a newer producer attempt stays retryable.
+        const refunded: StandaloneRecoveryRecord[] = [
+            { at: 1, account: 'worker3', endedAt: 20, ok: false, reason: 'recovery child held' },
+            { at: 2, account: 'worker3', endedAt: 20, ok: true, refund: true, reason: 'refund of 1' },
+        ];
+        expect(spentStandaloneAttempts(refunded, 'worker3', 20)).toBe(0);
+        expect(triedEnds(refunded).has('worker3|20')).toBe(true);
+        expect(triedEnds([{ at: 1, account: 'worker4', endedAt: 30, ok: true, reason: 'controlled recovery confirmed' }]).size).toBe(0);
     });
 
     test('the owner refund writes one record for a held account with spent attempts, and refuses any other', () => {
