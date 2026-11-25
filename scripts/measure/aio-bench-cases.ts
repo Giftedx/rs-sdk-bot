@@ -1115,6 +1115,14 @@ return [
     scriptArgs: ['-', 'druid', '1300', 'taverley_black_knight', 'MAX_KILLS=40'],
     pass: s => ok(s) && /Error: no combat progress: pack full of non-loot items after a bank trip: 26 Rune essence, 1 Air talisman/.test(s) && !/COMBAT_STOP_OWNER no progress/.test(s) && loggedOutOnce(s),
     presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 2946, z: 3368, level: 0}, inventory: [{id: 1438, count: 1}, ...Array.from({length: 26}, () => ({id: 1436, count: 1}))]}},
+  // The same pack with BANK_PACK=1, as the planner sets it for a generic combat job (worker-routing.ts): the first
+  // bank trip banks the Air talisman and the 26 Rune essence (DEPOSIT_RECEIPT), and the job kills its black knights.
+  {key: 'extra:combat-full-pack-bank', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid',
+    scriptArgs: ['druid', '1300', 'taverley_black_knight', 'MAX_KILLS=3', 'BANK_PACK=1'], output: /kills=(\d+)/,
+    pass: s => ok(s) && /DEPOSIT_RECEIPT \{[^}]*"itemId":1438,"name":"Air talisman","amount":1\b/.test(s)
+      && /DEPOSIT_RECEIPT \{[^}]*"itemId":1436,"name":"Rune essence","amount":26\b/.test(s) && /^RESULT ok .*\bkills=3\b/m.test(s)
+      && !/no combat progress/.test(s) && loggedOutOnce(s),
+    presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 2946, z: 3368, level: 0}, inventory: [{id: 1438, count: 1}, ...Array.from({length: 26}, () => ({id: 1436, count: 1}))]}},
   // Iron at the Al Kharid mine at combat level 13, on the open tile west of two iron rocks (maps/m51_51.jm2): the
   // scorpions (level 14, hunt range 2) attack while the pick swings. A scorpion cannot reach the tile between the
   // three iron rocks at 3295,3310, so that tile tests no attack. With `--set PRAYER_GUARD=0` the worker dies here.

@@ -4,7 +4,8 @@ import { BOARD_PLANK_IDS, DISEMBARK_PLANK_IDS, disembark, type BoatSession } fro
 import { accountOf, countItems, finish, getWorld, openBot, sessionDied } from '../../../core/src/bot';
 import { finishCombat, RETALIATE_OFF, RETALIATE_ON } from '../../../core/src/combat-end';
 import { npcId, objId } from '../../../core/src/content-facts';
-import { depositObserved } from '../../../core/src/deposit';
+import { depositObserved, depositPack } from '../../../core/src/deposit';
+import { PLAIN_FOOD } from '../../../core/src/eat-guard';
 import type { Session } from '../../../core/src/inprocess';
 import { questFlags } from '../../../core/src/quest-status';
 import { startQuestSustain } from '../../../core/src/sustain';
@@ -12,6 +13,7 @@ import { waitTicks, waitUntil } from '../../../core/src/ticks';
 import { goTo, sessionWalker, walkPath, type PathDeps, type PathPoint, type PathTile } from '../../../core/src/walk';
 import { COW_BEAR_BOXES, guardCowWalker } from '../logistics/walk-helpers';
 import {
+    ELEMENTAL_STAFF_RUNES,
     gearLevelWatch,
     GIANT_AMMO_RUN,
     GIANT_ARROWS,
@@ -137,6 +139,25 @@ export function combatPackFull(inventory: readonly { name: string; count: number
     const items = [...counts].sort((a, b) => b[1] - a[1]).map(([name, n]) => `${n} ${name}`);
     return `no combat progress: pack full of non-loot items after a bank trip: ${items.join(', ')}`;
 }
+
+// The pack items that a generic combat run keeps on a BANK_PACK=1 bank trip: what the loop, its guards and its
+// walker read. Food the loop and the eat guard eat (PLAIN_FOOD), coins for the walker's fares and tolls
+// (door-policy.ts accountFromState), the Dusty key of the Taverley gate, the Anti-dragon shield before the loop wears
+// it, the law and air runes of Telekinetic Grab, the nature and fire runes of high alchemy, and the air and fire
+// staves that pay those runes (ELEMENTAL_STAFF_RUNES).
+const COMBAT_KIT_IDS: ReadonlySet<number> = new Set([
+    ...PLAIN_FOOD,
+    995,
+    1590, // TAVERLEY_ROUTE.DUSTY_KEY_ID
+    1540, // TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID
+    563,
+    556,
+    561,
+    554,
+    ...Object.entries(ELEMENTAL_STAFF_RUNES).filter(([, runes]) => runes.some(r => r === 556 || r === 554)).map(([id]) => Number(id)),
+]);
+
+export const combatKit = (item: { id: number }): boolean => COMBAT_KIT_IDS.has(item.id);
 
 export async function bankCombatLoot(s: CombatSession, drops: RegExp, extraIds: readonly number[] = []) {
     // openBank on an open interface answers "Bank already open" with no new observation
@@ -1951,6 +1972,7 @@ export async function runGenericCombatSession(
     if ((potionPolicy || maximum !== undefined) && CAP <= 200) throw Error('finite combat job reserves200ticks for owned bank return');
     const alch = combatAlchPolicy(env);
     const telegrab = telegrabPolicy(env);
+    const bankPack = env.BANK_PACK === '1';
     const dungeonGiant = TARGET_KEY === 'giant' && (maximum !== undefined || !!potionPolicy || !!alch || !!telegrab);
     const targetConf = CONFIGS[TARGET_KEY] ?? CONFIGS.druid!;
     const effectiveTelegrab = telegrab ?? (targetConf.requireTelegrab ? { maximum: maximum ?? 50, cap: CAP } : undefined);
@@ -2038,6 +2060,8 @@ export async function runGenericCombatSession(
                 return false;
             }
             await bankCombatLoot(s, conf.drops, [...(alch ? [995] : []), ...(potions?.depositIds ?? [])]);
+            // An earlier job's items (a runecrafter's essence) otherwise fill the pack: combatPackFull.
+            if (bankPack) await depositPack(s as Session, combatKit);
             if (targetConf.dragonShield && !(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
                 if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
                     await s.bot.withdrawItem(TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID, 1);
@@ -2273,6 +2297,7 @@ export async function runMeleeGatherCli(
     if (alch && TARGET_KEY === 'cow') throw Error('owned alchemy hook requires generic combat loot path');
     const telegrab = telegrabPolicy(env);
     if (telegrab && TARGET_KEY === 'cow') throw Error('Telegrab loot option applies to generic druid/giant or Ranged; cow ownership receipt remains unchanged');
+    const bankPack = env.BANK_PACK === '1';
     const dungeonGiant = TARGET_KEY === 'giant' && (maximum !== undefined || !!potionPolicy || !!alch || !!telegrab);
     const targetConf = CONFIGS[TARGET_KEY] ?? CONFIGS.druid!;
     const effectiveTelegrab = telegrab ?? (TARGET_KEY !== 'cow' && targetConf.requireTelegrab ? { maximum: maximum ?? 50, cap: CAP } : undefined);
@@ -2482,6 +2507,8 @@ export async function runMeleeGatherCli(
                 return false;
             }
             await bankCombatLoot(s, conf.drops, [...(alch ? [995] : []), ...(potions?.depositIds ?? [])]);
+            // An earlier job's items (a runecrafter's essence) otherwise fill the pack: combatPackFull.
+            if (bankPack) await depositPack(s as Session, combatKit);
 
             if (targetConf.dragonShield && !(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
                 if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {

@@ -1,4 +1,5 @@
 // Pure worker-family route compilation from Brain AccountPlans onto the 9 unified worker families.
+import { GENERIC_COMBAT_MODES } from '../../workers/src/combat/types';
 import { WORKER_FAMILIES, type WorkerFamily } from '../../workers/src/contracts';
 import {
     DEFAULT_OPERATING_COIN_FLOAT,
@@ -375,7 +376,8 @@ export function resolveActivityWorkerRoute(
                 activityId: activity.id,
                 routeKey: target,
                 args: standaloneScript ? explicitArgs : [target, ...explicitArgs],
-                env,
+                // The bank trips of a generic combat job bank the items that an earlier job left in the pack.
+                env: GENERIC_COMBAT_MODES.has(target) && env.BANK_PACK === undefined ? { ...env, BANK_PACK: '1' } : env,
                 config: {
                     ...cfg,
                     target,

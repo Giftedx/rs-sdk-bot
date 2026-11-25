@@ -28,6 +28,7 @@ import {
     chickenTrainingStyle,
     chickenTrainingTarget,
     chickenTrainingThreat,
+    combatKit,
     combatTargetFinished,
     cowCredit,
     cowFoodBites,
@@ -643,6 +644,25 @@ test('a bank trip that frees the pack goes on with the job',async()=>{
   expect(r.bankTrips).toBe(1);expect(r.detail).not.toContain('no combat progress');
   expect(g.inventory).toEqual([]);expect(g.bank).toEqual([{id:1444,name:'Water talisman',count:27}]);
  }finally{g.stop();}
+});
+
+test('with BANK_PACK=1 a bank trip banks the items of an earlier job, keeps the combat kit and goes on with the job',async()=>{
+ // Magicwanda's leftovers beside kit that the loop, the eat guard and the walker read: a Shark, Coins and a Law rune.
+ const g=bankingCombat([{id:1438,name:'Air talisman'},...Array.from({length:24},()=>({id:1436,name:'Rune essence'})),
+  {id:385,name:'Shark'},{id:995,name:'Coins'},{id:563,name:'Law rune'}]);
+ try{
+  const r=await runGenericCombatSession(g.s,{target:'wizard',cap:120,env:{BANK_PACK:'1'},walk:g.walk,stop:()=>false});
+  expect(r.bankTrips).toBe(1);expect(r.detail).not.toContain('no combat progress');
+  expect(g.bank).toEqual([{id:1438,name:'Air talisman',count:1},{id:1436,name:'Rune essence',count:24}]);
+  expect(g.inventory.map(i=>i.name)).toEqual(['Shark','Coins','Law rune']);
+ }finally{g.stop();}
+});
+
+test('the combat kit is the food, coins, keys, shield, runes and staves that a generic combat run reads',()=>{
+ // PLAIN_FOOD (eat guard), coins (walker fares), Dusty key, Anti-dragon shield, law, air, nature and fire runes, staves.
+ for(const id of [315,333,379,385,995,1590,1540,563,556,561,554,1381,1397,1405,1387,1393,1401,3053,3054])expect(combatKit({id})).toBe(true);
+ // Runecraft leftovers, a Meat pie that the eat guard never eats, and runes and staves of no use to the loop.
+ for(const id of [1436,1438,2327,1444,555,557,560,1383,1385,1403,1407])expect(combatKit({id})).toBe(false);
 });
 
 test('a bank walk that the cap stops is capped, also when the travel throws on its stop; other failures still throw',async()=>{
