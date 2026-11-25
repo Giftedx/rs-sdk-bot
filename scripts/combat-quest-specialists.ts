@@ -257,6 +257,9 @@ export async function walkWaypoints(
     try {
         const r = await walkPath(walker, pts, { maxTicks, stop, look: opts.look ?? 20 });
         if (!r.ok) throw Error(`walk failed (${label}): ${r.detail ?? JSON.stringify(r)}`);
+        if (r.ticks >= 30) {
+            console.log(`WALK_STATS ${label} ticks=${r.ticks} still=${r.still} doors=${r.doors} repaths=${r.repaths} clicks=${r.clicks}`);
+        }
     } finally {
         offDialog();
     }
@@ -1448,9 +1451,9 @@ export async function runSpecialistWaterfall(
         await walkFast([{ x: 2557, z: 3444, tol: 2 }], 300, 'to glarial tomb', khazardPfm(3270));
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     } else {
-        // Teleport out of Golrie's room straight to Castle Wars, toggling PFM during walk and routing east of Ardougne doors.
+        // Teleport out of Golrie's room straight to Castle Wars, toggling PFM during walk via skipGuardWalk.
         await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
-        await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2582, z: 3325, tol: 6 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
+        await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
         await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     }
     const phCw = markPhase();
@@ -1585,9 +1588,10 @@ export async function runSpecialistWaterfall(
 
     // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+    await walkFast([{ x: 2604, z: 9901, tol: 1 }], 25, 'raised room exit', () => syncWaterfallPfm(true));
     await stepAct('raised door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }); }, () => inBox(2562, 9894, 2572, 9901), 10, 4);
     await stepAct('south giant door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, LOC.giantDoor); }, () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 10, 4);
-    await walkFast([{ x: 2565, z: 9882, tol: 1 }], 45, 'return giant room', () => syncWaterfallPfm(true));
+    await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 45, 'return giant room', () => syncWaterfallPfm(true));
     await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 3);
     await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 60, 'return ledge exit', () => syncWaterfallPfm(true));
     await stepAct('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511, 3463, 3), 10, 4);
@@ -1651,7 +1655,6 @@ export async function runMeleePvpSpecialist(
         s,
         [
             { x: 2470, z: 3170, tol: 4 },
-            { x: 2582, z: 3325, tol: 6 },
             { x: 2522, z: 3494, tol: 1 },
         ],
         340,
