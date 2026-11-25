@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795599979075-4",
+ "account": "Moneyshot",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "b78064d7-b389-4d7e-a899-9483863cb27f",
+ "count": 0,
+ "ok": false,
+ "at": 1795600676937,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795600659048-0000021016-0000000001",
+  "at": 1795600676925,
+  "sha256": "87b5fa9d8403bd1f3cab0b38ad1d716950baf4101f82df7c3c8334271dbfdc27"
+ },
+ "screen": false
+}

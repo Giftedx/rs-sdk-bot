@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795599979075-4",
+ "role": "from",
+ "account": "Woodenstaff",
+ "partner": "Moneyshot",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795600676072,
+ "detail": "Error: fleet trade claim held for order xfer-1795587227524-3"
+}
