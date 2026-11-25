@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795581453202-knightrider-yewfirst-b9ff5d8a1a3139bf",
  "account": "YewFirst",
  "partner": "KnightRider",
@@ -12,8 +12,8 @@
  "claim": "8c4c7433-c065-4e80-bf59-56262b6f1a6f",
  "count": 0,
  "ok": false,
- "at": 1795584845239,
- "detail": "trade claimed",
+ "at": 1795585053740,
+ "detail": "Error: order window ended during work",
  "lines": [
   {
    "item": "Adamant arrowtips",
@@ -25,5 +25,11 @@
    "requested": 100000,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795584845248-0000018904-0000000001",
+  "at": 1795585053725,
+  "sha256": "9c4c0d63f5865d8bd853c73c83915c07c9c0c1f7c0e2bdc821e510fd4c573550"
+ },
+ "screen": false
 }
