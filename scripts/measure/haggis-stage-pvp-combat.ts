@@ -17,8 +17,8 @@ import { applyPreset } from '../../packages/practice/src/presets';
 import { runBotName } from '../../packages/practice/src/prove';
 import { ISOLATED, pointBotAt, startIsolatedStack } from '../../packages/practice/src/rehearse';
 import { playerSavePath } from '../../packages/practice/src/save-library';
-import { configureSpecialistGuardEnv } from '../combat-quest-specialists';
-import { selectRangedKit, styleComponentFor, type PvpCombatSkill } from '../pvp-relog-combat';
+import { configureSpecialistGuardEnv, setAutoRetaliate } from '../combat-quest-specialists';
+import { RANGED_ARMOUR_TIERS, styleComponentFor, type PvpCombatSkill } from '../pvp-relog-combat';
 
 const KEEP_SPOT = { x: 3153, z: 3923, level: 0 } as const;
 const TANK_COUNT = 5;
@@ -38,12 +38,6 @@ function readPlaytimeTicks(account: string): number {
     } catch {
         return 0;
     }
-}
-
-async function equipId(s: Session, itemId: number): Promise<void> {
-    const it = s.sdk.getInventory().find(i => i.id === itemId);
-    if (!it) return;
-    await s.direct({ type: 'equipItem', slot: it.slot, reason: 'SDK' });
 }
 
 async function runCombatPhase(skill: PvpCombatSkill): Promise<{
@@ -93,10 +87,11 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
 
     const attackerEquipment = skill === 'Ranged'
         ? [
-            { id: 841, count: 1, slot: 3 },   // Shortbow
-            { id: 884, count: 5000, slot: 13 }, // Iron arrow
-            { id: 1704, count: 1, slot: 2 },   // Glory
+            { id: 837, count: 1, slot: 3 },   // Crossbow (no Ranged lvl req; fires Barbed bolts +46 rangeStr from lvl 1)
+            { id: 881, count: 5000, slot: 13 }, // Barbed bolts (+46 rangeStr)
+            { id: 1704, count: 1, slot: 2 },   // Glory (+10 rangeAttack)
             { id: 1167, count: 1, slot: 0 },   // Leather cowl
+            { id: 1129, count: 1, slot: 4 },   // Leather body
             { id: 1061, count: 1, slot: 10 },  // Leather boots
             { id: 1063, count: 1, slot: 9 },   // Leather vambs
             { id: 1095, count: 1, slot: 7 },   // Leather chaps
@@ -109,12 +104,16 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
 
     const attackerInventory = skill === 'Ranged'
         ? [
-            { id: 843, count: 1 }, { id: 849, count: 1 }, { id: 853, count: 1 },
-            { id: 857, count: 1 }, { id: 861, count: 1 }, { id: 859, count: 1 },
-            { id: 886, count: 5000 }, { id: 888, count: 5000 }, { id: 890, count: 5000 }, { id: 892, count: 5000 },
-            { id: 1169, count: 1 }, { id: 1065, count: 1 }, { id: 2487, count: 1 },
-            { id: 2491, count: 1 }, { id: 1099, count: 1 }, { id: 2497, count: 1 },
-            { id: 2499, count: 1 }, { id: 2503, count: 1 },
+            { id: 857, count: 1 }, // Yew shortbow (lvl 40)
+            { id: 861, count: 1 }, // Magic shortbow (lvl 50)
+            { id: 892, count: 5000 }, // Rune arrow (lvl 40, +49 rangeStr)
+            { id: 1169, count: 1 }, // Coif (lvl 20)
+            { id: 1133, count: 1 }, // Studded body (lvl 20)
+            { id: 2581, count: 1 }, // Robin hood hat (lvl 40, +8 rangeAttack)
+            { id: 2577, count: 1 }, // Ranger boots (lvl 40, +8 rangeAttack)
+            { id: 1065, count: 1 }, { id: 2487, count: 1 }, { id: 2489, count: 1 }, { id: 2491, count: 1 },
+            { id: 1099, count: 1 }, { id: 2493, count: 1 }, { id: 2495, count: 1 }, { id: 2497, count: 1 },
+            { id: 2499, count: 1 }, { id: 2501, count: 1 }, { id: 2503, count: 1 },
         ]
         : [];
 
@@ -141,6 +140,7 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
             for (const tn of waveTankNames[w]!) {
                 const t = await openBot(tn, { onStop: async () => {}, onSessionEnd: async () => {} });
                 await tick(t, 2);
+                await setAutoRetaliate(t, false);
                 opened.push(t);
             }
             return opened;
@@ -164,25 +164,52 @@ async function runCombatPhase(skill: PvpCombatSkill): Promise<{
 
         let att = await openAttacker();
         await tick(att, 1);
+        await setAutoRetaliate(att, false);
         const startXp = xp(att, skill);
         let swings = 0;
         const styleCom = skill === 'Ranged' ? null : styleComponentFor(skill, 1319);
+        let lastCheckedGearLevel = 0;
 
         try {
             for (let iter = 0; iter < 2200 && (level(att, skill) < 99 || xp(att, skill) < targetXp); iter++) {
                 const curLvl = level(att, skill);
-                if (skill === 'Ranged') {
-                    const invIds = new Set(att.sdk.getInventory().map(i => i.id));
-                    const eqIds = new Set((att.sdk.getState()?.equipment ?? []).map((i: any) => i.id));
-                    const held = new Set([...invIds, ...eqIds]);
-                    const { bow, arrow } = selectRangedKit(curLvl, held);
-                    let upgraded = false;
-                    if (bow && !eqIds.has(bow.id) && invIds.has(bow.id)) { await equipId(att, bow.id); upgraded = true; }
-                    if (arrow && !eqIds.has(arrow.id) && invIds.has(arrow.id)) { await equipId(att, arrow.id); upgraded = true; }
-                    for (const [req, id] of [[20, 1169], [40, 1065], [40, 1099], [50, 2487], [50, 2499], [70, 2491], [70, 2497], [70, 2503]] as const) {
-                        if (curLvl >= req && !eqIds.has(id) && invIds.has(id)) { await equipId(att, id); upgraded = true; }
+                if (skill === 'Ranged' && curLvl !== lastCheckedGearLevel) {
+                    const crossed = [20, 40, 50, 60, 70].some(req => curLvl >= req && lastCheckedGearLevel < req);
+                    lastCheckedGearLevel = curLvl;
+                    if (crossed) {
+                        const invItems = att.sdk.getInventory();
+                        const invIds = new Set(invItems.map(i => i.id));
+                        const eqIds = new Set(att.sdk.getEquipment().map(i => i.id));
+                        const held = new Set([...invIds, ...eqIds]);
+                        const wantIds: number[] = [];
+                        // 1->39: Crossbow (837) + Barbed bolts (881); 40->49: Yew shortbow (857) + Rune arrow (892); 50->99: MSB (861).
+                        if (curLvl >= 50) {
+                            if (!eqIds.has(861) && invIds.has(861)) wantIds.push(861);
+                            if (!eqIds.has(892) && invIds.has(892)) wantIds.push(892);
+                        } else if (curLvl >= 40) {
+                            if (!eqIds.has(857) && invIds.has(857)) wantIds.push(857);
+                            if (!eqIds.has(892) && invIds.has(892)) wantIds.push(892);
+                        }
+                        if (curLvl >= 40) {
+                            if (!eqIds.has(2581) && invIds.has(2581)) wantIds.push(2581);
+                            if (!eqIds.has(2577) && invIds.has(2577)) wantIds.push(2577);
+                        } else if (curLvl >= 20 && !eqIds.has(1169) && invIds.has(1169)) {
+                            wantIds.push(1169);
+                        }
+                        for (const group of RANGED_ARMOUR_TIERS) {
+                            if (group.slot === 'hat' || group.slot === 'feet' || group.slot === 'front') continue;
+                            const best = group.items.find(item => curLvl >= item.ranged && 99 >= (item.defence ?? 1) && held.has(item.id));
+                            if (best && !eqIds.has(best.id) && invIds.has(best.id)) wantIds.push(best.id);
+                        }
+                        if (wantIds.length > 0) {
+                            for (let k = 0; k < wantIds.length; k++) {
+                                const it = invItems.find(i => i.id === wantIds[k]);
+                                if (it) void att.direct({ type: 'equipItem', slot: it.slot, reason: 'SDK' });
+                                if ((k + 1) % 4 === 0 && k + 1 < wantIds.length) await waitTicks(att, 1);
+                            }
+                            await waitTicks(att, 1);
+                        }
                     }
-                    if (upgraded) await waitTicks(att, 1);
                 }
 
                 for (let w = 0; w < 4 && !(att.sdk.getState()?.nearbyPlayers ?? []).length; w++) {

@@ -22,6 +22,7 @@ import {
     kitSlotTotal,
     pickCourtyardMagicTarget,
     rankKeepRelogTanks,
+    rubRingOfDueling,
     runSpecialistWaterfall,
 } from './combat-quest-specialists';
 import { runQuestBall } from './generated/quest-ball';
@@ -394,5 +395,55 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
             { id: 385, name: 'Shark', count: 17 },
         ]);
         expect(() => planTankFoodWithdrawals([{ id: 385, count: 10 }], 27)).toThrow(/missing bank tank food stock/);
+    });
+
+    test('rubRingOfDueling clears stale non-ring dialogs cleanly without hanging on the same tick', async () => {
+        let t = 53;
+        let dialogOpen: any = { isOpen: true, isWaiting: false, options: [{ index: 0, text: 'Click here to continue' }] };
+        let pos = { worldX: 3222, worldZ: 3222, level: 0 };
+        const listeners = new Set<() => void>();
+        const advance = () => {
+            t++;
+            for (const cb of [...listeners]) cb();
+        };
+        const fakeSess: any = {
+            tick: () => t,
+            onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+            direct: async (a: { type: string }) => {
+                if (a.type === 'closeModal') dialogOpen = { isOpen: false, options: [] };
+                if (a.type === 'useInventoryItem') {
+                    setTimeout(() => {
+                        dialogOpen = { isOpen: true, isWaiting: false, options: [{ index: 2, text: 'Castle Wars Arena.' }] };
+                        advance();
+                    }, 1);
+                }
+            },
+            sdk: {
+                getState: () => ({ player: pos, dialog: dialogOpen }),
+                getDialog: () => dialogOpen,
+                getInventory: () => [{ id: 2552, slot: 0, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] }],
+                sendClickDialog: async () => {
+                    setTimeout(() => {
+                        pos = { worldX: 2440, worldZ: 3090, level: 0 };
+                        advance();
+                    }, 1);
+                },
+            },
+        };
+        await rubRingOfDueling(fakeSess, /castle wars/i, { x: 2440, z: 3090 }, () => false);
+        expect(pos).toEqual({ worldX: 2440, worldZ: 3090, level: 0 });
+        expect(t).toBeLessThan(60);
+    });
+
+    test('pickBankDuelingRingId prefers lowest remaining charge before fresh rings', async () => {
+        const { canUseFastKeepRebank, pickBankDuelingRingId } = await import('./combat-quest-specialists');
+        expect(pickBankDuelingRingId([])).toBeNull();
+        expect(pickBankDuelingRingId([{ id: 2552, count: 3 }])).toBe(2552);
+        expect(pickBankDuelingRingId([{ id: 2552, count: 3 }, { id: 2564, count: 1 }, { id: 2558, count: 2 }])).toBe(2564);
+        expect(pickBankDuelingRingId([{ id: 2566, count: 0 }, { id: 2554, count: 1 }])).toBe(2554);
+
+        expect(canUseFastKeepRebank(45, true)).toBe(true);
+        expect(canUseFastKeepRebank(44, true)).toBe(false);
+        expect(canUseFastKeepRebank(99, false)).toBe(false);
     });
 });

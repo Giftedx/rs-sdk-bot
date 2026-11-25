@@ -16,7 +16,7 @@ import {
     pickEligibleExternalSupplier,
     type SupplyEntry,
 } from './fast-skills-lib';
-import { HERBLORE_BANK_HELPER_SPOT, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
+import { HERBLORE_BANK_HELPER_SPOT, HERBLORE_DROP_SUPPLY_BILL, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
 import { MAGIC_SUPPLY_BILL } from './magic-specialist';
 import { SPECIALIST_FAST_SKILLS_CASES, SPECIALIST_FAST_SKILLS_EXTERNAL_CASES } from './measure/specialist-fast-skills-cases';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
@@ -74,6 +74,7 @@ test('all 6 fast-skill specialist supply bills use tradeable cataloged base IDs 
         RUNECRAFT_SUPPLY_BILL,
         CRAFTING_SUPPLY_BILL,
         HERBLORE_SUPPLY_BILL,
+        HERBLORE_DROP_SUPPLY_BILL,
         MAGIC_SUPPLY_BILL,
     ];
     const now = 1_000_000;
@@ -136,6 +137,18 @@ test('supply bill quantities cover 1-to-99 XP and Smithing runner queue totals m
 
     const rcEss = RUNECRAFT_SUPPLY_BILL.find(b => b.itemId === ITEM_IDS.blankrune);
     expect(rcEss?.count).toBe(25 + 22 * 26 + 177 * 27);
+
+    const dropCounts = new Map(HERBLORE_DROP_SUPPLY_BILL.map(b => [b.itemId, b.count]));
+    const dropXp =
+        6250 +
+        (dropCounts.get(ITEM_IDS.harralandervial) ?? 0) * 1687.5 +
+        (dropCounts.get(ITEM_IDS.iritvial) ?? 0) * 2500 +
+        (dropCounts.get(ITEM_IDS.limpwurt_root) ?? 0) * 3125 +
+        (dropCounts.get(ITEM_IDS.dragon_scale_dust) ?? 0) * 3437.5 +
+        (dropCounts.get(ITEM_IDS.cadantinevial) ?? 0) * 3750 +
+        (dropCounts.get(ITEM_IDS.dwarfweedvial) ?? 0) * 4062.5;
+    expect(dropXp).toBeGreaterThanOrEqual(goalXp());
+    expect(SPECIALIST_FAST_SKILLS_EXTERNAL_CASES.find(c => c.key === 'extra:herblore-drop')?.companions?.length).toBe(2);
 });
 
 test('parseSpecialistArgs and parseExternalSuppliers handle positional settings and external supplier env', () => {
@@ -258,7 +271,10 @@ test('multi-supplier runecraft role parsing, cooldown partner selection, and ext
     );
     expect(lruPicked?.name).toBe('Runner2');
 
-    expect(SPECIALIST_FAST_SKILLS_EXTERNAL_CASES.map(c => c.key)).toEqual(['extra:specialist-runecraft']);
+    expect(SPECIALIST_FAST_SKILLS_EXTERNAL_CASES.map(c => c.key)).toEqual([
+        'extra:specialist-runecraft',
+        'extra:herblore-drop',
+    ]);
     const rcExt = SPECIALIST_FAST_SKILLS_EXTERNAL_CASES[0]!;
     expect(rcExt.companions).toHaveLength(23);
     expect(rcExt.scriptArgs[0]!.split(',')).toHaveLength(23);

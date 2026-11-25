@@ -245,6 +245,8 @@ export function qpSpecialistActivities(activities: Activity[]): Activity[] {
         if (a.id === 'login-wine') {
             a.xp = { cooking: xpForLevel(53) };
             a.serves = ['questpoints'];
+        } else if (a.id === 'bank-wine') {
+            a.requires = [...(a.requires ?? []), 'fm-burn', 'cooks-assistant'];
         } else if (a.id === 'fletch') {
             delete a.ticks;
             delete a.xp;
@@ -279,7 +281,8 @@ export function qpSpecialistActivities(activities: Activity[]): Activity[] {
             a.at = 'ardougne-market';
             a.train = { skill: 'thieving', toLevel: 50, xpPerTick: { floor: 160, realistic: 130, evidence: 'MEASURED', source: '1->50 Ardougne stun-relog tiers from thieving-specialist.ts' } };
         } else if (a.id === 'thieving-25') {
-            a.requires = [...new Set([...(a.requires ?? []), 'thieve'])];
+            delete a.patches;
+            a.requires = ['rival-fight-arena'];
         } else if (a.id === 'ranged') {
             delete a.patches;
             a.serves = ['questpoints'];

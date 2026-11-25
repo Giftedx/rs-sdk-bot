@@ -191,6 +191,9 @@ export function applyLevers(activities: Activity[], opts: Pick<ScheduleOptions, 
         for (const p of a.patches ?? []) {
             if (!isOn(p.lever, p.owner, opts)) continue;
             out = { ...out, ...(p.set ?? {}) };
+            if (p.set && 'inside' in p.set && (p.set.inside === null || p.set.inside === '')) {
+                delete out.inside;
+            }
             if (p.addRequires) out = { ...out, requires: [...(out.requires ?? []), ...p.addRequires] };
             if (p.addSide && out.train) out = { ...out, train: { ...out.train, side: { ...(out.train.side ?? {}), ...p.addSide } } };
         }

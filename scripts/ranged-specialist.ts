@@ -1185,20 +1185,26 @@ export function selectRangedPvpUpgradeIds(
 }
 
 async function ensureRangedPvpGear(sess: Session): Promise<void> {
-    const ranged = skillInfo(sess, 'Ranged').baseLevel;
+    const sk = skillInfo(sess, 'Ranged');
+    const ranged = sk.baseLevel;
     const inv = sess.sdk.getInventory() as InvItem[];
     const worn = sess.sdk.getEquipment() as WornItem[];
-    // Cap at 3 equips per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
-    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, 3);
-    if (batch.length === 0) return;
-    await Promise.all(
-        batch.map(id => {
-            const item = inv.find(i => i.id === id);
-            if (!item || item.slot === undefined) return Promise.resolve();
-            const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
-            return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
-        }),
-    );
+    const rangePot = (inv as InvItem[]).find(i => i.id === 2444 || i.id === 169 || i.id === 171 || i.id === 173);
+    const needBoost = rangePot && sk.level <= ranged + (ranged >= 60 ? 3 : 1);
+    const maxEquips = needBoost ? 2 : 3;
+    // Cap actions per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
+    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, maxEquips);
+    const ops: Promise<unknown>[] = batch.map(id => {
+        const item = inv.find(i => i.id === id);
+        if (!item || item.slot === undefined) return Promise.resolve();
+        const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+        return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+    });
+    if (needBoost && rangePot && rangePot.slot !== undefined) {
+        const op = (rangePot.optionsWithIndex ?? []).find(o => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+        ops.push(sess.direct({ type: 'useInventoryItem', slot: rangePot.slot, optionIndex: op, reason: 'SDK' }));
+    }
+    if (ops.length > 0) await Promise.all(ops);
 }
 
 async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: string, CAP: number): Promise<void> {
@@ -1257,8 +1263,22 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
         await receiveSupplyKit(s, supplierName, RANGED_PVP_SPECIALIST_KIT, stop, LUMBRIDGE_HANDOFF);
         milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
-        for (const [id, label] of [[837, 'Crossbow'], [881, 'Barbed bolts'], [1478, 'Amulet of accuracy'], [ITEM_IDS.leatherBody, 'Leather body']] as const) {
-            await equipItemById(s, id, stop, label);
+        const startGearIds = [837, 881, 1478, ITEM_IDS.leatherBody] as const;
+        const startGearItems = startGearIds
+            .map(id => (s.sdk.getInventory() as InvItem[]).find(i => i.id === id))
+            .filter((x): x is InvItem => !!x && x.slot !== undefined);
+        if (startGearItems.length > 0) {
+            await Promise.all(
+                startGearItems.map(item => {
+                    const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+                    return s.direct({ type: 'useInventoryItem', slot: item.slot!, optionIndex: op, reason: 'SDK' });
+                }),
+            );
+            await waitUntil(
+                s,
+                () => startGearIds.every(id => (s.sdk.getEquipment() as WornItem[]).some(e => e.id === id)) || stop(),
+                { timeoutTicks: 5 },
+            );
         }
         const boneDeadline = s.tick() + 60;
         while (!stop() && (s.sdk.getInventory() as InvItem[]).some(i => i.id === ITEM_IDS.bones)) {
@@ -1275,6 +1295,7 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
         await setProtectMelee(s, true, stop);
         await walkKeepWaypoints(s, [{ x: 2470, z: 3170, tol: 4 }, { x: 2561, z: 3311, tol: 1 }], 220, stop, 'cw to ardougne lever', {
             ignoreMeleeHunters: true,
+            ignoreLiveHunters: true,
         });
         await setProtectMelee(s, false, stop);
         await pullArdougneLeverToWildy(s, stop);
