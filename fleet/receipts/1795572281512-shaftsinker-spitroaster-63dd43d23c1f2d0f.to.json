@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572281512-shaftsinker-spitroaster-63dd43d23c1f2d0f",
+ "account": "Spitroaster",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 2000,
+ "claim": "8ccffd7b-60e2-4232-8c15-38102647f95b",
+ "count": 0,
+ "ok": false,
+ "at": 1795573236262,
+ "detail": "trade claimed"
+}
