@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795638985016,
+ "at": 1795639005928,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -71,6 +71,19 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:itwatchtower",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dwarfcannon",
    "role": "army"
   },
   {
@@ -188,7 +201,7 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
+   "account": "Dipstick",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "druid"
@@ -207,7 +220,7 @@
    ]
   },
   {
-   "account": "Dipstick",
+   "account": "Ballspinner",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "giant"
@@ -226,20 +239,27 @@
    ]
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/dwarfcannon.ts",
-   "args": [],
+   "account": "PocketPool",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "magic",
+    "items",
+    "enchant:sapphire_necklace",
+    "-",
+    "1",
+    "1200"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "DEMAND_ID": "campaign:grindmyherb:item:3853",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:dwarfcannon",
+   "goal": "campaign:grindmyherb:item:3853",
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
+   "account": "Pocketrocket",
    "script": "scripts/generated/quest-ikov.ts",
    "args": [],
    "env": {
@@ -249,6 +269,19 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/generated/quest-grandtree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
@@ -282,15 +315,18 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/quest-junglepotion.ts --",
+    "scripts/aio-skiller.ts TARGET_LEVEL=32 TRAIN_SKILL=Agility -- agility order gnome 32",
+    "scripts/generated/quest-zombiequeen.ts DEMAND_ID=goal:quest_board:zombiequeen BATCH_UNITS=1 --"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:grandtree",
+   "goal": "goal:quest_board:zombiequeen",
    "role": "army"
   },
   {
@@ -343,16 +379,31 @@
    "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts TARGET_LEVEL=32 TRAIN_SKILL=Agility -- agility order gnome 32",
-    "scripts/generated/quest-zombiequeen.ts DEMAND_ID=goal:quest_board:zombiequeen BATCH_UNITS=1 --"
+    "scripts/generated/quest-merlin.ts --",
+    "scripts/generated/quest-grail.ts DEMAND_ID=goal:quest_board:grail BATCH_UNITS=1 --"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:zombiequeen",
+   "goal": "goal:quest_board:grail",
    "role": "army"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts TRAIN_SKILL=Crafting TARGET_LEVEL=40 -- crafting inventory",
+    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
+   "role": "auto"
   },
   {
    "account": "Swordinhand",
@@ -368,26 +419,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:101",
    "role": "army"
-  },
-  {
-   "account": "Stirmypot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "magic",
-    "alch-train",
-    "90",
-    "3000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Stirmypot",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Stirmypot",
-   "role": "auto"
   }
  ],
  "army": [
@@ -404,8 +435,6 @@
   "hocuspokeus",
   "mineyourbiz",
   "mmthv2350",
-  "moneyshot",
-  "pocketpool",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
