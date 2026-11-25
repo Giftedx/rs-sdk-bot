@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795575950739-trousersnake-yewfirst-6304da1d710416fd",
  "account": "YewFirst",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 3000,
  "claim": "54ec6078-ffd4-4a35-9ca5-9919f65b8364",
- "count": 0,
- "ok": false,
- "at": 1795576495410,
- "detail": "trade claimed"
+ "count": 3000,
+ "ok": true,
+ "at": 1795576542827,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3000
+ },
+ "bank": {
+  "count": 3000,
+  "at": 1795576542088
+ },
+ "logout": {
+  "attemptId": "1795576495419-0000005988-0000000001",
+  "at": 1795576542817,
+  "sha256": "3ddfb43f372ccb7600c8d737ef304247421f0fd8850c1c497b04fc0e720bac7e"
+ },
+ "screen": true
 }
