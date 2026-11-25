@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795625530028-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "CoinCock",
+  "item": "Staff of air",
+  "count": 1,
+  "itemId": 1381,
+  "start": 1795625530028,
+  "end": 1795626430028,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
