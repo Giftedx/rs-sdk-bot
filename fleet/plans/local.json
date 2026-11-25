@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795622653475,
+ "at": 1795622698783,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -69,14 +69,14 @@
    "env": {
     "ITEM_ID": "44",
     "ITEMS": "Rune arrowtips",
-    "MAX_ITEMS": "187",
+    "MAX_ITEMS": "134",
     "COIN_RESERVE": "1000",
-    "FLOAT": "39400",
+    "FLOAT": "28800",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "DEMAND_ID": "campaign:haggis:item:44",
-    "BATCH_UNITS": "187"
+    "BATCH_UNITS": "134"
    },
    "enabled": true,
    "repeat": false,
@@ -186,43 +186,18 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1617-11-p28750",
-    "ITEM_ID": "1617",
-    "QUANTITY": "11",
+    "ORDER_KEY": "brain-1513-107-p2507",
+    "ITEM_ID": "1513",
+    "QUANTITY": "107",
     "CASH_RESERVE": "1000",
     "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "28750",
-    "DEMAND_ID": "campaign:haggis:item:1617",
-    "BATCH_UNITS": "11"
+    "LIMIT_PRICE": "2507",
+    "DEMAND_ID": "campaign:haggis:item:1513",
+    "BATCH_UNITS": "107"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1617",
-   "role": "army"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "ranging_guild_bowshop",
-    "3000"
-   ],
-   "env": {
-    "ITEM_ID": "892",
-    "ITEMS": "Rune arrow",
-    "MAX_ITEMS": "247",
-    "COIN_RESERVE": "1000",
-    "FLOAT": "100800",
-    "NO_BUY_TICKS": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:892",
-    "BATCH_UNITS": "247"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:892",
+   "goal": "campaign:haggis:item:1513",
    "role": "army"
   },
   {
@@ -248,6 +223,31 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:44",
+   "role": "army"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "ranging_guild_bowshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "247",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "100800",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "247"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:892",
    "role": "army"
   },
   {
@@ -282,27 +282,6 @@
     "ge-buy"
    ],
    "env": {
-    "ORDER_KEY": "brain-1513-98-p2507",
-    "ITEM_ID": "1513",
-    "QUANTITY": "98",
-    "CASH_RESERVE": "1000",
-    "COIN_RESERVE": "1000",
-    "LIMIT_PRICE": "2507",
-    "DEMAND_ID": "campaign:haggis:item:1513",
-    "BATCH_UNITS": "98"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1513",
-   "role": "auto"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy"
-   ],
-   "env": {
     "ORDER_KEY": "brain-2353-78-p748",
     "ITEM_ID": "2353",
     "QUANTITY": "78",
@@ -318,7 +297,7 @@
    "role": "auto"
   },
   {
-   "account": "Earlyshooter",
+   "account": "Shaftsinker",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy"
@@ -336,6 +315,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:2351",
+   "role": "auto"
+  },
+  {
+   "account": "Earlyshooter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=25 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-market.ts ITEM_ID=1381 \"ITEMS=Staff of air\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy zaff 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Earlyshooter BATCH_UNITS=250 -- magic teleport varrock 50 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Earlyshooter",
    "role": "auto"
   },
   {
