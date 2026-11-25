@@ -84,9 +84,19 @@ export const BLOCKED_AIO_KEYS: ReadonlySet<string> = new Set([
     'market:shop-to-bid',
 ]);
 
-// Known non-passing AIO route keys marked experimental until fixed.
+// Known non-passing AIO route keys marked experimental until fixed. A route that passes its bench case only with an order
+// the catalog cannot give (its bench case names the product, the spell and NPC, a job file or a staged kit) is one: from
+// the catalog the worker refuses at once (packages/fleet/test/catalog-launch-contract.test.ts).
 export const EXPERIMENTAL_AIO_KEYS: ReadonlySet<string> = new Set([
     'skiller:foraging:crystal-chest',
+    // The native spell and the NPC ID name the target.
+    'skiller:magic:npc',
+    // A job.json names the trip.
+    'skiller:magic:trip',
+    // The tick cap and the kit that the bench case stages at the tower.
+    'skiller:thieving:blood-chest',
+    // The worker starts only at the Edgeville bank with an axe banked and does not travel there itself.
+    'skiller:woodcutting:edgeville',
 ]);
 
 export const HUB_TILES = {
@@ -380,7 +390,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'cooking', method: 'ge-cook', script: 'scripts/aio-skiller.ts', label: 'GE-restocked cooking batch', location: HUB_TILES.varrock_west, xpPerTick: 300, unitsPerTick: 0.22, gpPerTick: -1, minBatchUnits: 28, requiredLevel: 1 },
     { skill: 'cooking', method: 'specialist', script: 'scripts/cooking-specialist.ts', label: 'Cooking 1-99 specialist route', location: HUB_TILES.draynor, xpPerTick: 2400, unitsPerTick: 0.45, gpPerTick: 0, minBatchUnits: 14, requiredLevel: 1 },
     // Woodcutting
-    { skill: 'woodcutting', method: 'edgeville', script: 'scripts/aio-skiller.ts', label: 'Edgeville tree/oak/yew woodcutting', location: HUB_TILES.edgeville, spotId: 'edgeville-yews', maxConcurrentAccounts: 4, xpPerTick: 95, unitsPerTick: 0.14, gpPerTick: 2, minBatchUnits: 28, requiredLevel: 1, outputs: [{ itemId: 1521, countPerUnit: 1 }] },
+    { skill: 'woodcutting', method: 'edgeville', script: 'scripts/aio-skiller.ts', label: 'Edgeville tree/oak/yew woodcutting', location: HUB_TILES.edgeville, spotId: 'edgeville-yews', maxConcurrentAccounts: 4, xpPerTick: 95, unitsPerTick: 0.14, gpPerTick: 2, minBatchUnits: 28, requiredLevel: 15, outputs: [{ itemId: 1521, countPerUnit: 1 }] },
     { skill: 'woodcutting', method: 'yews', script: 'scripts/aio-skiller.ts', label: 'Chop and bank yew logs', location: HUB_TILES.edgeville, spotId: 'edgeville-yews', maxConcurrentAccounts: 4, xpPerTick: 110, unitsPerTick: 0.04, gpPerTick: 6, minBatchUnits: 28, requiredLevel: 60, outputs: [{ itemId: 1515, countPerUnit: 1 }] },
     { skill: 'woodcutting', method: 'fresh45', script: 'scripts/generated/woodcutting.ts', label: 'Fresh woodcutting 1-45 at Draynor', location: HUB_TILES.draynor, spotId: 'draynor-willows', maxConcurrentAccounts: 6, xpPerTick: 140, unitsPerTick: 0.22, gpPerTick: 0.5, minBatchUnits: 28, requiredLevel: 1, outputs: [{ itemId: 1519, countPerUnit: 1 }] },
     { skill: 'woodcutting', method: 'loop', script: 'scripts/aio-skiller.ts', label: 'Continuous woodcutting loop', location: HUB_TILES.draynor, xpPerTick: 100, unitsPerTick: 0.16, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1 },
@@ -406,7 +416,6 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'mining', method: 'specialist', script: 'scripts/mining-specialist.ts', label: 'Mining 1-99 specialist route', location: HUB_TILES.ardougne_south, xpPerTick: 240, unitsPerTick: 0.3, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1 },
     // Smithing
     { skill: 'smithing', method: 'smelt', script: 'scripts/aio-skiller.ts', label: 'Smelt bars at Al Kharid furnace', location: HUB_TILES.alkharid, xpPerTick: 120, unitsPerTick: 0.16, gpPerTick: 2, minBatchUnits: 14, requiredLevel: 1, outputs: [{ itemId: 2353, countPerUnit: 1 }], inputs: [{ itemId: 440, countPerUnit: 1 }, { itemId: 453, countPerUnit: 2 }] },
-    { skill: 'smithing', method: 'anvil', script: 'scripts/aio-skiller.ts', label: 'Smith bars on Varrock West anvil', location: HUB_TILES.varrock_west, xpPerTick: 350, unitsPerTick: 0.2, gpPerTick: 1, minBatchUnits: 25, requiredLevel: 1, inputs: [{ itemId: 2351, countPerUnit: 1 }], defaultEnv: { ORDER_ACTION: 'smith' } },
     { skill: 'smithing', method: 'cannonballs', script: 'scripts/aio-skiller.ts', label: 'Smelt steel bars into cannonballs', location: HUB_TILES.alkharid, xpPerTick: 75, unitsPerTick: 0.4, gpPerTick: 4, minBatchUnits: 27, requiredLevel: 35, requiredQuests: ['dwarfcannon'], outputs: [{ itemId: 2, countPerUnit: 4 }], inputs: [{ itemId: 2353, countPerUnit: 1 }] },
     { skill: 'smithing', method: 'specialist', script: 'scripts/smithing-specialist.ts', label: 'Smithing 1-99 specialist route', location: HUB_TILES.varrock_west, xpPerTick: 950, unitsPerTick: 0.28, gpPerTick: 0, minBatchUnits: 27, requiredLevel: 1 },
     // Crafting
@@ -499,7 +508,7 @@ interface FighterSeed {
 }
 
 const FIGHTER_SPECS: readonly FighterSeed[] = [
-    { target: 'chicken', script: 'scripts/aio-fighter.ts', label: 'Train melee on Lumbridge/Ardougne chickens', location: HUB_TILES.draynor, spotId: 'chickens', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 38, unitsPerTick: 0.14, gpPerTick: 0.5, minBatchUnits: 20, outputs: [{ itemId: 314, countPerUnit: 10 }, { itemId: 526, countPerUnit: 1 }] },
+    { target: 'chicken', script: 'scripts/aio-fighter.ts', label: 'Train melee on Lumbridge/Ardougne chickens', location: HUB_TILES.draynor, spotId: 'chickens', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Strength'], xpPerTick: 38, unitsPerTick: 0.14, gpPerTick: 0.5, minBatchUnits: 20, outputs: [{ itemId: 314, countPerUnit: 10 }, { itemId: 526, countPerUnit: 1 }] },
     { target: 'cow', script: 'scripts/aio-fighter.ts', label: 'Fight Ardougne cows for melee XP and cowhides', location: HUB_TILES.ardougne_south, spotId: 'ardougne-cows', maxConcurrentAccounts: 6, skill: 'Strength', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 52, unitsPerTick: 0.12, gpPerTick: 2.5, minBatchUnits: 25, outputs: [{ itemId: 1739, countPerUnit: 1 }, { itemId: 2132, countPerUnit: 1 }, { itemId: 526, countPerUnit: 1 }] },
     { target: 'druid', script: 'scripts/aio-fighter.ts', label: 'Fight Chaos Druids for herbs, runes, and vials', location: HUB_TILES.edgeville, spotId: 'chaos-druids', maxConcurrentAccounts: 4, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 68, unitsPerTick: 0.08, gpPerTick: 7, minBatchUnits: 20, riskPerHour: 0.05, combatSurvivability: { minHitpoints: 20, minFoodCount: 5 }, outputs: [{ itemId: 207, countPerUnit: 1 }, { itemId: 563, countPerUnit: 2 }, { itemId: 561, countPerUnit: 1 }] },
     { target: 'unicorn', script: 'scripts/aio-fighter.ts', label: 'Kill Edgeville unicorns for unicorn horns', location: HUB_TILES.edgeville, spotId: 'edgeville-unicorns', maxConcurrentAccounts: 2, skill: 'Attack', skills: ['Attack', 'Strength', 'Defence', 'Hitpoints'], xpPerTick: 45, unitsPerTick: 0.06, gpPerTick: 3, minBatchUnits: 10, outputs: [{ itemId: 237, countPerUnit: 1 }] },
