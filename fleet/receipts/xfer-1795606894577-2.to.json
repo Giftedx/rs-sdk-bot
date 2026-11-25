@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795606894577-2",
  "account": "Billionaire",
  "partner": "Shaftmaker",
@@ -10,8 +10,22 @@
  "item": "Arrow shaft",
  "requested": 925,
  "claim": "bad999ec-8aa7-4891-ab98-16674e104cd5",
- "count": 0,
- "ok": false,
- "at": 1795607015519,
- "detail": "trade claimed"
+ "count": 925,
+ "ok": true,
+ "at": 1795607025811,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 925
+ },
+ "bank": {
+  "count": 925,
+  "at": 1795607025093
+ },
+ "logout": {
+  "attemptId": "1795607015530-0000025152-0000000001",
+  "at": 1795607025804,
+  "sha256": "fc03e785665e78d40a1759bb5f3e40bfc454e2a90d7944643f7da1937c4a8bd4"
+ },
+ "screen": true
 }
