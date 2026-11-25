@@ -26,6 +26,7 @@ const STANDARD_TELEPORTS: readonly TeleportSite[] = [
     { id: 'glory-al-kharid', place: 'glory-al-kharid', magicLevel: 1, castTicks: 5, requiresDone: 'trade-start' },
     { id: 'dueling-arena', place: 'dueling-arena', magicLevel: 1, castTicks: 6, requiresDone: 'trade-start' },
     { id: 'dueling-castle-wars', place: 'dueling-castle-wars', magicLevel: 1, castTicks: 6, requiresDone: 'trade-start' },
+    { id: 'games-burthorpe', place: 'kaqemeex', magicLevel: 1, castTicks: 58, requiresDone: 'trade-start' },
 ];
 const WILDY_LEVER_IN = 'ardougne-lever';
 const WILDY_LEVER_OUT = 'deserted-keep-lever';
