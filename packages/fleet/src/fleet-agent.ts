@@ -184,7 +184,7 @@ export type TradeEnd = { account: string; order: string; why: string };
 // One pass of the agent over the due orders: the trades to start, the trades that wait and why, and the running trades
 // to end early. `halt` is a fleet owner stop or the agent's own stop. `stopHeld` checks an account's stop file and
 // removes nothing. `wrote` says whether a receipt of that order and role exists; the agent reads the receipt file at
-// the time of the check, since a partner that ended in this pass wrote its receipt before its process exited.
+// the time of the check, since a partner run writes its receipt before its process exits.
 // While a live update waits on trades alone, a running trade whose partner on this side cannot join it (the partner is
 // held, busy, or on another order) ends early: it logs out through its stop file instead of waiting out the order
 // window, and its receipt follows the usual rules.

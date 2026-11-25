@@ -7,9 +7,9 @@ import type { Order, Receipt } from '../../core/src/fleet-trade-settlement';
 import { planTradePass, tradeStop } from '../src/fleet-agent';
 import { SWARM_STOP } from '../src/swarm';
 
-// The orders of a live drain stall in .practice/fleet-agent.log, with their real ids and start times. Each window is
-// 90 minutes. PocketPool started its Knightstick order while Knightstick ran the Moneyshot order, waited out its window,
-// and held a live update for that time.
+// Five orders that share accounts, with order ids and start times from .practice/fleet-agent.log. Each window is
+// 90 minutes. The earliest start comes first: Moneyshot and Knightstick take the Moneyshot-Knightstick order first,
+// PocketPool takes its Knightstick order first, and Deeppockets takes its PocketPool order first.
 const WINDOW = 5_400_000;
 const order = (id: string, from: string, to: string, start: number): Order => ({ id, server: 's', from, to, item: 'Air rune', count: 10, start, end: start + WINDOW });
 const MK = order('1795638493244-moneyshot-knightstick-f4deffc660752722', 'Moneyshot', 'Knightstick', 1795638493244);
@@ -38,7 +38,8 @@ const waits = (p: ReturnType<typeof planTradePass>) => Object.fromEntries(p.wait
 describe('fleet agent: both parties of an order start in the same pass', () => {
     test('PocketPool does not start its Knightstick order while Knightstick takes the Moneyshot order first', () => {
         const p = pass();
-        // Moneyshot and Knightstick both take the Moneyshot order first: they start together, and from then on they run it.
+        // Moneyshot and Knightstick both take the Moneyshot order first: they start together in this pass, so each later
+        // check in the pass sees them run it.
         expect(starts(p)).toEqual([`Moneyshot ${MK.id}`, `Knightstick ${MK.id}`]);
         expect(waits(p)).toEqual({
             Bigchopper: `held: partner Moneyshot runs order ${MK.id}`,
@@ -50,11 +51,11 @@ describe('fleet agent: both parties of an order start in the same pass', () => {
     });
 
     test('a partner that runs another order keeps this side waiting; a partner that runs this order lets it start', () => {
-        // Moneyshot failed at login and ended; Knightstick still runs the Moneyshot order.
+        // Knightstick runs the Moneyshot order without Moneyshot.
         const p = pass(runs([['Knightstick', MK]]));
         expect(starts(p)).toEqual([`Moneyshot ${MK.id}`]);
         expect(waits(p).PocketPool).toBe(`held: partner Knightstick runs order ${MK.id}`);
-        // PocketPool runs its Knightstick order (an old agent started it alone): Deeppockets does not join it.
+        // PocketPool runs its Knightstick order without Knightstick: Deeppockets does not join PocketPool.
         const q = pass(runs([['PocketPool', PK]]));
         expect(waits(q).Deeppockets).toBe(`held: partner PocketPool runs order ${PK.id}`);
         expect(starts(q)).toContain(`Knightstick ${MK.id}`);
@@ -97,7 +98,7 @@ describe('fleet agent: both parties of an order start in the same pass', () => {
 
 describe('fleet agent: a started side ends early when its partner is held by a live-update drain', () => {
     test('PocketPool and Deeppockets end early while Knightstick waits on the drain', () => {
-        // The 21:16 pass: PocketPool runs its Knightstick order and Deeppockets its PocketPool order, both started alone.
+        // PocketPool runs its Knightstick order and Deeppockets its PocketPool order, each without its partner.
         const p = pass({ ...runs([['PocketPool', PK], ['Deeppockets', PD]]), drain: { ...DRAIN, others: [] } });
         expect(waits(p).Knightstick).toBe(`held: ${DRAIN_TEXT}`);
         expect(starts(p)).toEqual([]);
@@ -111,7 +112,7 @@ describe('fleet agent: a started side ends early when its partner is held by a l
         const drain = { ...DRAIN, others: [] };
         expect(pass({ ...runs([['Moneyshot', MK], ['Knightstick', MK]]), drain }).ends).toEqual([]);
         expect(pass({ ...runs([['PocketPool', PK]]), drain, wrote: (id, role) => id === PK.id && role === 'to' }).ends).toEqual([]);
-        // Knightstick ended; Moneyshot runs on. The drain does not hold Knightstick, whose partner runs the order: it joins.
+        // Moneyshot runs the order without Knightstick. The drain does not hold Knightstick, whose partner runs the order: it joins.
         const rejoin = pass({ ...runs([['Moneyshot', MK]]), drain });
         expect(starts(rejoin)).toEqual([`Knightstick ${MK.id}`]);
         expect(rejoin.ends).toEqual([]);
