@@ -877,7 +877,7 @@ async function craftAtCastleWarsBank(
  const minOpalsSafe20 = Math.ceil(Math.max(0, 3105 - curCraftXp) / 95);
  const idx0Opals =
   hasUnnotedEarly && curCraftLevel < 20 && opalCount > 0
-   ? Math.min(opalCount, Math.max(2, minOpalsSafe20 <= 6 ? minOpalsSafe20 : opalCount))
+   ? Math.min(opalCount, 6, Math.max(2, minOpalsSafe20))
    : 0;
  const needFor43 = Math.ceil(Math.max(0, 19684 - curCraftXp - rubyCount * 2125) / 1687.5);
  const needFor55 = hasDragonstone
@@ -911,7 +911,7 @@ async function craftAtCastleWarsBank(
  const cycles: { id: number; count: number }[][] = [];
  for (const cyc of packCwCycles(lowQueues, 27)) {
   const used = cyc.reduce((s, g) => s + g.count, 0);
-  if (used < 27 && highLeft > 0 && emerRem === 0) {
+  if (used < 27 && highLeft > 0 && emerRem === 0 && cyc.length < 4) {
    const maxFill = 27 - used;
    const fill =
     hasDragonstone && hasUnnotedEarly && highLeft >= 5 && maxFill >= 9 && highLeft - 5 <= 11 * 25
