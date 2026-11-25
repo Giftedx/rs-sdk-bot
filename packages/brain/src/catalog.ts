@@ -14,6 +14,7 @@ import {
     type WorkerKind,
     type WorkerTile,
 } from '../../workers/src/contracts';
+import { DEFAULT_FOOD_TYPE, foodRule } from '../../workers/src/bank-artisan/cooking';
 import { jewelleryRecipes } from '../../workers/src/bank-artisan/crafting';
 import { inventoryRecipes, type InventoryRecipe } from '../../workers/src/bank-artisan/crafting-production';
 import { itemMagicRecipe } from '../../workers/src/bank-artisan/magic';
@@ -369,7 +370,20 @@ interface SkillerSeed {
     readonly coinsRequired?: number;
     readonly defaultArgs?: readonly string[];
     readonly defaultEnv?: Readonly<Record<string, string>>;
+    // Fields that come from server data, read when the catalog is built and not when this module loads.
+    readonly resolve?: () => Partial<SkillerSeed>;
 }
+
+// The food step names no food, so the cooker cooks DEFAULT_FOOD_TYPE. The step takes its level and items from the
+// same server cook row, so an account below that level gets no food step.
+const cookFoodSeed = (): Partial<SkillerSeed> => {
+    const rule = foodRule(DEFAULT_FOOD_TYPE);
+    return {
+        requiredLevel: rule.level,
+        inputs: [{ itemId: rule.rawId, countPerUnit: 1 }],
+        ...(rule.cookedId !== undefined ? { outputs: [{ itemId: rule.cookedId, countPerUnit: 1 }] } : {}),
+    };
+};
 
 const SKILLER_SPECS: readonly SkillerSeed[] = [
     // Fishing
@@ -382,7 +396,7 @@ const SKILLER_SPECS: readonly SkillerSeed[] = [
     { skill: 'fishing', method: 'fly30', script: 'scripts/generated/fishing30.ts', label: 'Fresh account fly fishing to 30', location: HUB_TILES.lumbridge, xpPerTick: 45, unitsPerTick: 0.2, gpPerTick: 0, minBatchUnits: 25, requiredLevel: 1 },
     { skill: 'fishing', method: 'specialist', script: 'scripts/fishing-specialist.ts', label: 'Fishing 1-99 specialist route', location: HUB_TILES.lumbridge, xpPerTick: 165, unitsPerTick: 0.35, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1 },
     // Cooking
-    { skill: 'cooking', method: 'food', script: 'scripts/aio-skiller.ts', label: 'Cook raw fish at Catherby range', location: HUB_TILES.catherby, xpPerTick: 320, unitsPerTick: 0.22, gpPerTick: 0.5, minBatchUnits: 28, requiredLevel: 1, outputs: [{ itemId: 379, countPerUnit: 1 }], inputs: [{ itemId: 377, countPerUnit: 1 }] },
+    { skill: 'cooking', method: 'food', script: 'scripts/aio-skiller.ts', label: 'Cook raw fish at Catherby range', location: HUB_TILES.catherby, xpPerTick: 320, unitsPerTick: 0.22, gpPerTick: 0.5, minBatchUnits: 28, resolve: cookFoodSeed },
     { skill: 'cooking', method: 'stock', script: 'scripts/aio-skiller.ts', label: 'Cook banked raw stock with burn reconciliation', location: HUB_TILES.draynor, xpPerTick: 280, unitsPerTick: 0.2, gpPerTick: 0, minBatchUnits: 28, requiredLevel: 1 },
     { skill: 'cooking', method: 'wine', script: 'scripts/aio-skiller.ts', label: 'Ferment jugs of wine', location: HUB_TILES.draynor, xpPerTick: 1800, unitsPerTick: 0.4, gpPerTick: -2, minBatchUnits: 14, requiredLevel: 35, outputs: [{ itemId: 1993, countPerUnit: 1 }], inputs: [{ itemId: 1987, countPerUnit: 1 }, { itemId: 1937, countPerUnit: 1 }] },
     { skill: 'cooking', method: 'mixed-wine', script: 'scripts/aio-skiller.ts', label: 'Bank-staged wine fermentation', location: HUB_TILES.draynor, xpPerTick: 1800, unitsPerTick: 0.4, gpPerTick: -2, minBatchUnits: 14, requiredLevel: 35, outputs: [{ itemId: 1993, countPerUnit: 1 }], inputs: [{ itemId: 1987, countPerUnit: 1 }, { itemId: 1937, countPerUnit: 1 }] },
@@ -751,7 +765,8 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
     };
 
     // 1. Skiller routes (gather, bank-artisan, agility, runecraft, combat-magic).
-    for (const spec of SKILLER_SPECS) {
+    for (const seed of SKILLER_SPECS) {
+        const spec: SkillerSeed = seed.resolve ? { ...seed, ...seed.resolve() } : seed;
         const { family, kind } = skillerFamily(spec.skill, spec.method);
         const aioKey = `skiller:${spec.skill}:${spec.method}`;
         const id = `${family}:${spec.skill}-${spec.method}`;

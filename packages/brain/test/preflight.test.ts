@@ -278,6 +278,20 @@ test('combat survivability floors, maxLevels, cooldowns, capacity, and protected
     expect(actPre.blockers[0]).toMatchObject({ kind: 'skill_level', skill: 'Fishing', required: 80, current: 76 });
 });
 
+test('the food cook step takes the server lobster level, so Cooking 30 gets no lobster step', async () => {
+    const { defaultActivityCatalog } = await import('../src/catalog');
+    const food = defaultActivityCatalog().get('bank-artisan:cooking-food')!;
+    expect(food.config?.requiredLevel).toBe(40);
+    expect(food.inputs).toEqual([{ itemId: 377, countPerUnit: 1 }]);
+    expect(food.outputs).toEqual([{ itemId: 379, countPerUnit: 1 }]);
+    const cook30 = makeAcct({ skills: { ...makeAcct().skills, Cooking: { level: 30, xp: 13_000 } } });
+    const low = activityPreflightFromConfig(cook30, food, makeWorld(cook30));
+    expect(low.ok).toBe(false);
+    expect(low.blockers).toContainEqual(expect.objectContaining({ kind: 'skill_level', skill: 'Cooking', required: 40, current: 30 }));
+    const cook40 = makeAcct({ skills: { ...makeAcct().skills, Cooking: { level: 40, xp: 37_000 } } });
+    expect(activityPreflightFromConfig(cook40, food, makeWorld(cook40)).blockers.some(b => b.kind === 'skill_level')).toBe(false);
+});
+
 test('quest state checks reflect in-place quest map mutations and alias variants', async () => {
     const { accountQuestState, hasCompletedQuest } = await import('../src/preflight');
     const quests: Record<string, 'not_started' | 'started' | 'complete'> = {};
