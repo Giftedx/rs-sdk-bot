@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795635502086-2",
  "account": "mmtha0205",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "926e8d93-4e2c-44bc-9974-b6805a848f18",
- "count": 0,
- "ok": false,
- "at": 1795635758886,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795635787830,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795635767844
+ },
+ "logout": {
+  "attemptId": "1795635758897-0000029268-0000000001",
+  "at": 1795635787817,
+  "sha256": "3ac915f97b462642d56b5f52c90f02a9dc332c2b5d7ae35e4f34fa9da68a6321"
+ },
+ "screen": true
 }
