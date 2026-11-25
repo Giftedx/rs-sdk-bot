@@ -1,0 +1,24 @@
+{
+ "id": "1795608355305-mmsmk1232-masterbaiter-0399a056ce55d415",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "Masterbaiter",
+ "item": "Rune scimitar",
+ "count": 1,
+ "itemId": 1333,
+ "start": 1795608355305,
+ "end": 1795611955305,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
