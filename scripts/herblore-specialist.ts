@@ -1,6 +1,6 @@
 // Fresh-account 1-to-99 Herblore specialist via Games necklace Druidic Ritual (+6,250 XP) and Edgeville 4-tick 13-potion bank cycles.
 import type { Session } from '../packages/core/src/inprocess';
-import { sessionWalker, walkPath } from '../packages/core/src/walk';
+import { sessionWalker, walkPath, type PathDeps } from '../packages/core/src/walk';
 import { ClientProt } from '../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import {
  assertCatalogItems,
@@ -216,9 +216,36 @@ function dialogSawText(spec: Session, re: RegExp): boolean {
  return (st?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
 }
 
-async function walkLocal(spec: Session, x: number, z: number, tol: number, deadline: number, stop?: () => boolean): Promise<void> {
+function isRunEnabled(spec: Session): boolean {
+ return ((spec.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) === 1;
+}
+
+async function createRunSafeWalker(spec: Session): Promise<PathDeps> {
+ const base = await sessionWalker(spec);
+ // Block Witch's House locked front door so pathing stays on the open street.
+ base.blockDoor?.(0, { x: 2901, z: 3473 });
+ // sessionWalker.runOn blindly toggles interface 153; guard with varp 173 so repeated walks never toggle run off.
+ return {
+  ...base,
+  runOn: async () => {
+   if (!isRunEnabled(spec)) {
+    await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+   }
+  },
+ };
+}
+
+async function walkLocal(
+ spec: Session,
+ x: number,
+ z: number,
+ tol: number,
+ deadline: number,
+ stop?: () => boolean,
+ walkerArg?: PathDeps,
+): Promise<void> {
  if (stop?.() || nearTile(spec, x, z, tol, playerPos(spec)?.level ?? 0)) return;
- const walker = await sessionWalker(spec);
+ const walker = walkerArg ?? (await createRunSafeWalker(spec));
  const res = await walkPath(walker, [{ x, z, tol }], { maxTicks: Math.max(10, Math.min(100, deadline - spec.tick())), stop });
  if (!stop?.() && !res.ok && !nearTile(spec, x, z, tol, playerPos(spec)?.level ?? 0)) {
   if ((playerPos(spec)?.worldZ ?? 0) > 9000) {
@@ -399,8 +426,9 @@ async function rubChainedTeleport(
  componentId: number,
  arrived: () => boolean,
  deadline: number,
+ immediateChoice = false,
 ): Promise<void> {
- let chained = false;
+ let lastRubTick = -10;
  while (spec.tick() < deadline) {
   if (arrived()) return;
   const st = spec.sdk.getState();
@@ -410,12 +438,16 @@ async function rubChainedTeleport(
    await spec.direct({ type: 'clickDialogOption', optionIndex: opt.index, reason: 'SDK' });
   } else {
    const item = spec.sdk.getInventory().find(i => itemIds.includes(i.id));
-   if (item && !chained) {
-    chained = true;
+   const age = spec.tick() - lastRubTick;
+   if (item && age >= 4) {
+    lastRubTick = spec.tick();
     await spec.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
+    if (immediateChoice) {
+     await spec.direct({ type: 'clickComponent', componentId, reason: 'SDK' });
+    }
+   } else if (!immediateChoice && age === 2) {
+    // Games necklace has p_delay(1) before opening p_choice2_header; avoid re-rubbing while delay resolves.
     await spec.direct({ type: 'clickComponent', componentId, reason: 'SDK' });
-   } else if (item) {
-    await spec.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
    } else if (d?.isOpen || st?.interface?.isOpen) {
     await spec.direct({ type: 'closeModal', reason: 'SDK' });
    }
@@ -459,11 +491,9 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   await waitTicks(spec, 1);
  }
 
- const walker = await sessionWalker(spec);
- // Block Witch's House locked front door so pathing stays on the open street.
- walker.blockDoor?.(0, { x: 2901, z: 3473 });
+ const walker = await createRunSafeWalker(spec);
 
- await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15));
+ await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline, () => !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15), walker);
  logPhase(spec, start, 'herb_at_kaqemeex');
 
  await talkQuestNpc(
@@ -478,12 +508,12 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
    ['R', 'R', 2471, 'R'],
   ],
   async () => {
-   await spec.direct({ type: 'walkTo', x: 2905, z: 3466, running: true, reason: 'SDK' });
+   await spec.direct({ type: 'walkTo', x: 2931, z: 3480, running: true, reason: 'SDK' });
   },
  );
  const tKaq1 = spec.tick() - start;
 
- await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3));
+ await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
  logPhase(spec, start, 'herb_at_sanfew1_stairs');
  await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
  logPhase(spec, start, 'herb_up_sanfew1');
@@ -503,7 +533,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
 
  await climbLoc(spec, 1740, 2898, 3428, /climb-down/i, () => (playerPos(spec)?.level ?? 1) === 0, deadline);
  logPhase(spec, start, 'herb_down_sanfew1');
- await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.distance <= 12));
+ await walkLocal(spec, 2884, 3398, 2, deadline, () => !!findLocBy(spec, l => l.id === 1759 && l.reachable !== false && l.distance <= 6), walker);
  await climbLoc(spec, 1759, 2884, 3397, /climb-down/i, () => (playerPos(spec)?.worldZ ?? 0) > 9000, deadline);
  const tDung = spec.tick() - start;
  logPhase(spec, start, 'herb_in_dungeon');
@@ -512,18 +542,21 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   const p = playerPos(spec);
   return !!p && p.worldZ > 9000 && p.worldX >= 2889;
  };
- const doorClosed = () => !!findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889)?.optionsWithIndex?.some(o => /open/i.test(o.text));
+ const findOpenableCaulDoor = () =>
+  findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889 && !!l.optionsWithIndex?.some(o => /open/i.test(o.text)));
  await walkDirect(spec, 2888, 9831, 1, deadline, () => (playerPos(spec)?.worldZ ?? 0) >= 9830);
  logPhase(spec, start, 'herb_at_caul_door');
 
- while (spec.tick() < deadline && !insideRoom() && doorClosed()) {
+ while (spec.tick() < deadline && !insideRoom()) {
   await eatIfHurt(spec, eatGuard);
-  const door = findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889);
+  const door = findOpenableCaulDoor();
   if (door) {
    const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
    await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
   } else {
-   await spec.direct({ type: 'walkTo', x: 2889, z: 9831, running: true, reason: 'SDK' });
+   await spec.direct({ type: 'walkTo', x: 2892, z: 9831, running: true, reason: 'SDK' });
+   await waitTicks(spec, 1);
+   break;
   }
   await waitTicks(spec, 1);
  }
@@ -556,14 +589,16 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  }
 
  logPhase(spec, start, 'herb_meats_dipped');
- while (spec.tick() < deadline && insideRoom() && doorClosed()) {
+ while (spec.tick() < deadline && insideRoom()) {
   await eatIfHurt(spec, eatGuard);
-  const door = findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889);
-  if (door && door.optionsWithIndex?.some(o => /open/i.test(o.text))) {
-   const op = door.optionsWithIndex.find(o => /open/i.test(o.text))!.opIndex;
+  const door = findOpenableCaulDoor();
+  if (door) {
+   const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
    await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
   } else {
-   await spec.direct({ type: 'walkTo', x: 2888, z: 9831, running: true, reason: 'SDK' });
+   await spec.direct({ type: 'walkTo', x: 2884, z: 9828, running: true, reason: 'SDK' });
+   await waitTicks(spec, 1);
+   break;
   }
   await waitTicks(spec, 1);
  }
@@ -573,7 +608,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  await walkDirect(spec, 2884, 9798, 1, deadline, () => (playerPos(spec)?.worldZ ?? 9999) <= 9808);
  await climbLoc(spec, 1755, 2884, 9797, /climb-up/i, () => (playerPos(spec)?.worldZ ?? 9999) < 9000, deadline);
  logPhase(spec, start, 'herb_out_of_dungeon');
- await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 14));
+ await walkLocal(spec, 2898, 3427, 2, deadline, () => !!findLocBy(spec, l => l.id === 1738 && l.reachable !== false && l.distance <= 3), walker);
  await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
 
  await talkQuestNpc(
@@ -611,6 +646,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
    () =>
     spec.sdk.getInventory().every(i => GLORY_SET.has(i.id)) &&
     !!findNpcBy(spec, n => /^kaqemeex$/i.test(n.name) && n.distance <= 15),
+   walker,
   );
  } finally {
   offDrop();
@@ -632,7 +668,11 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  }
 }
 
-async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): Promise<void> {
+async function teleportEdgevilleAndDropGlory(
+ spec: Session,
+ deadline: number,
+ preRequestHelper?: () => Promise<void>,
+): Promise<boolean> {
  // Amulet of glory has no p_delay before p_choice5_header; send rub + Edgeville (2494) in one tick.
  await rubChainedTeleport(
   spec,
@@ -644,14 +684,31 @@ async function teleportEdgevilleAndDropGlory(spec: Session, deadline: number): P
    return !!p && p.worldX > 3060 && p.worldZ > 3460 && p.worldZ < 4000;
   },
   deadline,
+  true,
  );
- // Walk to Edgeville bank; the spent Glory stays in inventory and is deposited into bank cleanly.
+ let gloryDropped = false;
+ let preRequested = false;
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
-  if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) break;
-  await spec.direct({ type: 'walkTo', x: HERBLORE_BANK_SPOT.x, z: HERBLORE_BANK_SPOT.z, running: true, reason: 'SDK' });
+  if (p && nearTile(spec, HERBLORE_BANK_SPOT.x, HERBLORE_BANK_SPOT.z, 0, 0)) return preRequested;
+  const acts: Promise<unknown>[] = [
+   spec.direct({ type: 'walkTo', x: HERBLORE_BANK_SPOT.x, z: HERBLORE_BANK_SPOT.z, running: true, reason: 'SDK' }),
+  ];
+  if (!gloryDropped) {
+   const glory = spec.sdk.getInventory().find(i => GLORY_SET.has(i.id));
+   if (glory) {
+    gloryDropped = true;
+    acts.push(spec.direct({ type: 'dropItem', slot: glory.slot, reason: 'SDK' }));
+   }
+  }
+  if (!preRequested && preRequestHelper && p && Math.max(Math.abs(p.worldX - HERBLORE_BANK_SPOT.x), Math.abs(p.worldZ - HERBLORE_BANK_SPOT.z)) <= 4) {
+   preRequested = true;
+   acts.push(preRequestHelper());
+  }
+  await Promise.all(acts);
   await waitTicks(spec, 1);
  }
+ return preRequested;
 }
 
 async function openEdgevilleBank(spec: Session, deadline: number): Promise<void> {
@@ -673,11 +730,31 @@ async function openEdgevilleBank(spec: Session, deadline: number): Promise<void>
 async function brewCyclePotions(spec: Session, unfId: number, secId: number, target: number, deadline: number, openBankAtEnd = false): Promise<void> {
  while (spec.tick() < deadline) {
   if (skillLevel(spec, 'Herblore') >= target) return;
+  const stNow = spec.sdk.getState();
   const inv = spec.sdk.getInventory();
   const unfs = inv.filter(i => i.id === unfId);
   const secs = inv.filter(i => i.id === secId);
   const pairCount = Math.min(5, unfs.length, secs.length);
   if (pairCount <= 0) return;
+  if (stNow?.bank?.isOpen) {
+   // MoveClickHandler closes any open modal immediately in processClientsIn, avoiding a separate closeModal tick.
+   const pNow = playerPos(spec);
+   const maxCloseBatch = Math.min(4, unfs.length, secs.length);
+   if (pNow && maxCloseBatch > 0 && (!openBankAtEnd || (unfs.length > maxCloseBatch && secs.length > maxCloseBatch))) {
+    const acts: Promise<unknown>[] = [
+     spec.direct({ type: 'walkTo', x: pNow.worldX, z: pNow.worldZ, running: true, reason: 'SDK' }),
+    ];
+    for (let k = 0; k < maxCloseBatch; k++) {
+     acts.push(spec.direct({ type: 'useItemOnItem', sourceSlot: unfs[k]!.slot, targetSlot: secs[k]!.slot, reason: 'SDK' }));
+    }
+    await Promise.all(acts);
+    await waitTicks(spec, 1);
+    continue;
+   }
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   await waitTicks(spec, 1);
+   continue;
+  }
   const acts: Promise<unknown>[] = [];
   for (let k = 0; k < pairCount; k++) {
    acts.push(spec.direct({ type: 'useItemOnItem', sourceSlot: unfs[k]!.slot, targetSlot: secs[k]!.slot, reason: 'SDK' }));
@@ -707,10 +784,10 @@ const FAST_HERB_STEPS: readonly BankBrewPlanStep[] = [
  { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 10, openBankAtEnd: true },
- // Weapon poison x20 as 10 + 10 (no leftover slots).
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
- // Antifire x30 as 13 + 13 + 4 (10 ticks total, 0 leftovers).
+ // Weapon poison x20 as 13 + 7 (saves 1 cycle/bank tick vs 10 + 10).
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 7, openBankAtEnd: true },
+ // Antifire x30 as 13 + 13 + 4 (0 leftovers).
  { unf: ITEM_IDS.lantadymevial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
  { unf: ITEM_IDS.lantadymevial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
  { unf: ITEM_IDS.lantadymevial, sec: ITEM_IDS.dragon_scale_dust, count: 4, openBankAtEnd: true },
@@ -727,8 +804,9 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
  { unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.iritvial, sec: ITEM_IDS.eye_of_newt, count: 10, openBankAtEnd: true },
  { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.limpwurt_root, count: 10, openBankAtEnd: true },
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
- { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 10, openBankAtEnd: true },
+ // Weapon poison x20 as 13 + 7 (saves 1 cycle/bank tick vs 10 + 10).
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 13, openBankAtEnd: true },
+ { unf: ITEM_IDS.kwuarmvial, sec: ITEM_IDS.dragon_scale_dust, count: 7, openBankAtEnd: true },
  { unf: ITEM_IDS.cadantinevial, sec: ITEM_IDS.white_berries, count: 13, openBankAtEnd: true },
  ...Array.from({ length: 15 }, (): BankBrewPlanStep => ({
   unf: ITEM_IDS.dwarfweedvial,
@@ -765,13 +843,14 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
   helper: Session,
   giveIds: readonly number[],
   deadlineTick: number,
+  alreadyPreRequested = false,
  ): Promise<void> {
   const begin = spec.tick();
   const helperLower = helper.name.toLowerCase();
   const specLower = spec.name.toLowerCase();
   const giveSet = new Set(giveIds);
   let sawConfirm = false;
-  let lastReqTick = -10;
+  let lastReqTick = alreadyPreRequested ? begin : -10;
 
   while (spec.tick() < deadlineTick) {
    const st = spec.sdk.getTradeState();
@@ -787,7 +866,7 @@ const DROP_HERB_STEPS: readonly BankBrewPlanStep[] = [
     const acts: Promise<unknown>[] = [];
     if (sTarget && hTarget && spec.tick() - lastReqTick >= 2) {
      lastReqTick = spec.tick();
-     acts.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+     // Send only one request per cycle when not pre-requested to avoid same-tick OPPLAYER4 collision.
      acts.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
     } else if (!sTarget || !hTarget) {
      const tp = playerPos(spec);
@@ -859,7 +938,8 @@ async function executeHerbloreLoop(
  start: number,
  deadline: number,
  receiveStarter: () => Promise<void>,
- receiveNoted: () => Promise<void>,
+ receiveNoted: (preRequested: boolean) => Promise<void>,
+ preRequestNoted?: () => Promise<void>,
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  await skipTutorial2Ticks(spec, deadline);
  if (spec.sdk.getInventory().length > 19) {
@@ -870,9 +950,9 @@ async function executeHerbloreLoop(
  const druidTrace = await completeDruidicRitual(spec, start, deadline);
  const druidTicks = spec.tick() - start;
 
- await teleportEdgevilleAndDropGlory(spec, deadline);
+ const preRequested = await teleportEdgevilleAndDropGlory(spec, deadline, preRequestNoted);
  const tTrade0 = spec.tick();
- await receiveNoted();
+ await receiveNoted(preRequested);
  const tradeTicks = spec.tick() - tTrade0;
 
  const invAfterTrade = spec.sdk.getInventory();
@@ -895,8 +975,12 @@ async function executeHerbloreLoop(
   }
   if (!depositedNotes) {
    while (spec.tick() < deadline) {
-    const inv = spec.sdk.getInventory().filter(i => !GLORY_SET.has(i.id));
-    if (!inv.length) break;
+    // Deposit step 0 mats (harralander/chocolate) in the first batch so partial note-deposit can overlap with step 0 withdrawal.
+    const inv = spec.sdk
+     .getInventory()
+     .filter(i => !GLORY_SET.has(i.id))
+     .sort((a, b) => Number(b.id === 98 || b.id === 1976) - Number(a.id === 98 || a.id === 1976));
+    if (inv.length <= 1) break;
     const acts: Promise<unknown>[] = [];
     for (const item of inv.slice(0, 5)) {
      acts.push(spec.direct({ type: 'bankDeposit', slot: item.slot, amount: -1, reason: 'SDK' }));
@@ -913,7 +997,7 @@ async function executeHerbloreLoop(
    const inv = spec.sdk.getInventory();
    const haveUnf = countItem(inv, step.unf);
    const haveSec = countItem(inv, step.sec);
-   if (!st?.bank?.isOpen && haveUnf >= step.count && haveSec >= step.count) break;
+   if (haveUnf >= step.count && haveSec >= step.count) break;
    if (!st?.bank?.isOpen) {
     const o1 = spec.tick();
     await openEdgevilleBank(spec, deadline);
@@ -954,10 +1038,11 @@ async function executeHerbloreLoop(
     pushExactWithdraw(acts, spec, secBank.slot, step.count - haveSec, secBank.count);
    }
 
-   const results = acts.length ? ((await Promise.all(acts)) as Array<{ success?: boolean } | undefined>) : [];
+   const tickActs = acts.slice(0, 5);
+   const results = tickActs.length ? ((await Promise.all(tickActs)) as Array<{ success?: boolean } | undefined>) : [];
    const okActs = results.every(r => r?.success !== false);
    if (!okActs) bankRefused++;
-   if (okActs && acts.length <= 4) {
+   if (okActs && tickActs.length <= 4) {
     await spec.direct({ type: 'closeModal', reason: 'SDK' });
    }
    await waitTicks(spec, 1);
@@ -1005,13 +1090,20 @@ export async function runHerbloreSpecialist(
  );
  try {
   const notedBatch = useDrop ? HERBLORE_DROP_NOTED_BATCH : HERBLORE_NOTED_BATCH;
+  const notedHelper = helpers[1]!;
   return await executeHerbloreLoop(
    spec,
    target,
    start,
    deadline,
    () => fastInProcessHerbloreTrade(spec, helpers[0]!, HERBLORE_STARTER_BATCH.give.map(g => g.id), deadline),
-   () => fastInProcessHerbloreTrade(spec, helpers[1]!, notedBatch.give.map(g => g.id), deadline),
+   preRequested => fastInProcessHerbloreTrade(spec, notedHelper, notedBatch.give.map(g => g.id), deadline, preRequested),
+   async () => {
+    const sTarget = notedHelper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === spec.name.toLowerCase());
+    if (sTarget) {
+     await notedHelper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' });
+    }
+   },
   );
  } finally {
   done = true;
