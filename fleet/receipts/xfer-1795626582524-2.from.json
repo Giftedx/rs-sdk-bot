@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795626582524-2",
+ "account": "Ballspinner",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "2a9b48a9-7501-490b-9d1c-dd947735df5e",
+ "count": 0,
+ "ok": false,
+ "at": 1795626782910,
+ "detail": "trade claimed"
+}
