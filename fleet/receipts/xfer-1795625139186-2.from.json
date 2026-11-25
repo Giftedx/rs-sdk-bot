@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795625139186-2",
+ "account": "Magicwanda",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold ore",
+ "requested": 35,
+ "claim": "ec3dd5ec-767c-4b6c-828a-bc69d038ce22",
+ "count": 0,
+ "ok": false,
+ "at": 1795625453052,
+ "detail": "Error: sender pack full: need 35 slots for Gold ore, 28 free",
+ "logout": {
+  "attemptId": "1795625445168-0000032660-0000000001",
+  "at": 1795625453040,
+  "sha256": "268637fd4b403b91c5f0f3919fd940776a5ccff64673fe2b37def03a209cb1c6"
+ },
+ "screen": false
+}

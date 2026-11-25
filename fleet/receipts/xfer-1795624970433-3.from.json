@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795624970433-3",
  "account": "CoinCock",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Staff of air",
  "requested": 1,
  "claim": "0807f0ae-11c8-4a6d-ace1-cbb9ee0761c5",
- "count": 0,
- "ok": false,
- "at": 1795625261145,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795625415043,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795625269558
+ },
+ "logout": {
+  "attemptId": "1795625261154-0000025588-0000000001",
+  "at": 1795625415026,
+  "sha256": "19b1c7417078517d52d8e0e754b7fd1044976d95009ca0787d617f165f13687e"
+ },
+ "screen": true
 }
