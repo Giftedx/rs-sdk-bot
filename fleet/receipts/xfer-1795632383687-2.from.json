@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795632383687-2",
  "account": "Fingerblastr",
  "partner": "RearEntry",
@@ -12,6 +12,16 @@
  "claim": "118da558-89dd-4a35-a755-1ac011b4aeea",
  "count": 0,
  "ok": false,
- "at": 1795632478998,
- "detail": "trade claimed"
+ "at": 1795632912712,
+ "detail": "Error: transfer requires reconciliation: declined: Other player declined trade.",
+ "inventory": {
+  "before": 29791,
+  "after": 29791
+ },
+ "logout": {
+  "attemptId": "1795632479007-0000022848-0000000001",
+  "at": 1795632912701,
+  "sha256": "0fd5176ae826178a9cbe5806cccb9360bb32aadc44911dffaca4eb668e104b26"
+ },
+ "screen": true
 }
