@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795576764775-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TheFullMonty",
+  "to": "Shaftsinker",
+  "item": "Antipoison(3)",
+  "count": 3,
+  "itemId": 175,
+  "start": 1795576764775,
+  "end": 1795577664775,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
