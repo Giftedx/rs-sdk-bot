@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795614087804-2",
  "account": "Shaftmaker",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 5,
  "claim": "3aee09bc-80a1-4e6a-9d71-555fa2b52ad3",
- "count": 0,
- "ok": false,
- "at": 1795614164470,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795614186759,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795614170768
+ },
+ "logout": {
+  "attemptId": "1795614164481-0000017652-0000000001",
+  "at": 1795614186738,
+  "sha256": "4d2c25b7c2cafcbf9b01d37c9f0638f548d96471be91cd7b842b5ded7579f392"
+ },
+ "screen": true
 }
