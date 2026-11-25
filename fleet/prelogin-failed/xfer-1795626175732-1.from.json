@@ -5,6 +5,6 @@
  "account": "OreElse",
  "partner": "Abracadickra",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795626386860,
- "detail": "Error: fleet trade: account has an unsettled swarm worker"
+ "at": 1795626998562,
+ "detail": "Error: fleet trade order role already claimed"
 }
