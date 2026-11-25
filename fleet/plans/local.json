@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601414264,
+ "at": 1795601458112,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -40,7 +40,7 @@
    ]
   },
   {
-   "account": "PickpockDick",
+   "account": "Knightstick",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -56,7 +56,7 @@
    ]
   },
   {
-   "account": "TheFullMonty",
+   "account": "PickpockDick",
    "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
@@ -151,25 +151,24 @@
    "role": "auto"
   },
   {
-   "account": "Knightstick",
+   "account": "SporranBulge",
    "script": "scripts/aio-skiller.ts",
    "args": [
-    "smithing",
-    "smelt",
-    "1500",
-    "bronze"
+    "crafting",
+    "inventory",
+    "strip:swamp-toad"
    ],
    "env": {
-    "BAR_TYPE": "bronze",
-    "MAX_MAKE": "28",
-    "ORE_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:2349",
-    "BATCH_UNITS": "34"
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "DEMAND_ID": "campaign:haggis:item:2152",
+    "BATCH_UNITS": "2"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:2349",
-   "role": "army"
+   "goal": "campaign:haggis:item:2152",
+   "role": "helper"
   }
  ],
  "army": [
@@ -201,6 +200,7 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
+  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker",
