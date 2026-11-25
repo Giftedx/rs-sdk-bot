@@ -10,7 +10,7 @@
 // of Varrock West: MEET=2619,3332 is the Ardougne north bank, where the PK army's accounts already stand; MEET=draynor.
 // Withdraw: bun scripts/fleet-order.ts --withdraw <order id>... deletes each order file, and the next fleet sync
 // publishes the deletion. It refuses an order that a held trade claim names (withdrawFleetOrder).
-import { closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
@@ -79,18 +79,26 @@ export function writeFleetOrder(directory: string, order: Order): string {
 // Withdraw one order: delete its file from `directory`. The next fleet sync publishes the deletion to every side.
 // A held trade claim that names the order refuses it. Such a claim does not expire, and it keeps its account out of
 // every login until the trade ends or the README hand procedure releases it. Fleet sync also puts the file back.
-// `held` is the list of held trade claims (readHeldFleetTradeClaims). The id may end in .json.
+// The file moves aside before `readHeld` reads the held trade claims (readHeldFleetTradeClaims), and a trade worker
+// checks for the file after it takes its claim (assertTradeAdmission). So a claim taken before the read refuses the
+// withdrawal, and a claim taken after it finds no order. On a refusal the file goes back unchanged, with its own name
+// whatever the case of the id typed. The id may end in .json.
 const ORDER_ID = /^[A-Za-z0-9_-]{1,64}$/;
-export function withdrawFleetOrder(directory: string, id: string, held: readonly FleetTradeClaim[]): string {
+export function withdrawFleetOrder(directory: string, id: string, readHeld: () => readonly FleetTradeClaim[]): string {
     const name = id.replace(/\.json$/i, '');
     if (!ORDER_ID.test(name)) throw Error(`not an order id: ${id}`);
-    const file = join(directory, `${name}.json`);
-    if (!existsSync(file)) throw Error(`no order ${name} in ${directory}`);
-    const holders = held.filter(c => c.orderId.toLowerCase() === name.toLowerCase());
+    const own = existsSync(directory) ? readdirSync(directory).find(f => f.toLowerCase() === `${name.toLowerCase()}.json`) : undefined;
+    if (!own) throw Error(`no order ${name} in ${directory}`);
+    const file = join(directory, own), aside = join(directory, `.${name}-withdraw-${randomUUID()}.tmp`);
+    renameSync(file, aside);
+    let holders: FleetTradeClaim[];
+    try { holders = readHeld().filter(c => c.orderId.toLowerCase() === name.toLowerCase()); }
+    catch (e) { renameSync(aside, file); throw Error(`the held trade claims are unreadable: ${String(e)}`); }
     if (holders.length) {
+        renameSync(aside, file);
         throw Error(`a held trade claim names order ${name} (${holders.map(c => `${c.account} ${c.role}`).join(', ')}): the trade must end, or the README hand procedure must release the claim, before the order can go`);
     }
-    rmSync(file);
+    rmSync(aside);
     return file;
 }
 
@@ -155,12 +163,9 @@ if (import.meta.main && process.argv[2] === '--withdraw') {
     const { withFleetDataWrite } = await import('../packages/core/src/fleet-owner-claim');
     // Under the fleet-data write lock, so a sync that is pulling cannot put a deleted file back.
     const refused = await withFleetDataWrite(root, () => {
-        let held: FleetTradeClaim[];
-        try { held = readHeldFleetTradeClaims(root); }
-        catch (e) { console.error(`FLEET_ORDER_WITHDRAW_REFUSED all: the held trade claims are unreadable: ${String(e)}`); return ids.length; }
         let count = 0;
         for (const id of ids) {
-            try { withdrawFleetOrder(directory, id, held); console.log(`FLEET_ORDER_WITHDRAWN ${id}`); }
+            try { withdrawFleetOrder(directory, id, () => readHeldFleetTradeClaims(root)); console.log(`FLEET_ORDER_WITHDRAWN ${id}`); }
             catch (e) { count++; console.error(`FLEET_ORDER_WITHDRAW_REFUSED ${id}: ${(e as Error).message}`); }
         }
         return count;
