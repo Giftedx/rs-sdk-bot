@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795580986789-billionaire-woodenstaff-3925a2f8c4686de1",
+ "account": "Billionaire",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 24,
+ "claim": "14cc6d23-b39b-4fee-8ab5-fc9accb1702a",
+ "count": 0,
+ "ok": false,
+ "at": 1795581069976,
+ "detail": "trade claimed"
+}
