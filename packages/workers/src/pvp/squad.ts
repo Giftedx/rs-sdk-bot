@@ -19,7 +19,10 @@
 //   RESCUE=1 (a dropped account logs in again at once and leaves the Wilderness while the others fight on)
 //   ESCORT_HOLD=1 ESCORT_STATE=<file> (the escort hold, escort.ts: hold the post to MAX_MINUTES or the release file ESCORT_RELEASE,
 //   default <file>.release, and write the escort state each ESCORT_EVERY=5 ticks; ESCORT_MIN_SQUAD=4 members hold for a clear signal)
+//   SQUAD_DAGGER=1 (dagger mode, squad-dagger.ts: no first strike on an unskulled gang account, the hold until 0 prayer points,
+//   the dagger pickups; off by default)
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
+//   SQUAD_GANG_PRAYER=<points> drains each gang account to that many prayer points first; SQUAD_GANG_OUT_GRACE=<ticks>.
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
 // First: it sets STALL_TICKS before packages/core/src/bot.ts loads (see the file).
