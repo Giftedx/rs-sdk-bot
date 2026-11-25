@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795615121981-2",
  "account": "Bigpackage",
  "partner": "MeatNTwoVeg",
@@ -12,6 +12,16 @@
  "claim": "1678c006-4c88-4d58-9d82-1d1ce1c614a4",
  "count": 0,
  "ok": false,
- "at": 1795615453268,
- "detail": "trade claimed"
+ "at": 1795615475500,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 250,
+  "at": 1795615459507
+ },
+ "logout": {
+  "attemptId": "1795615453278-0000029748-0000000001",
+  "at": 1795615475483,
+  "sha256": "5f7259ab86d1f552afd1406a50b764c917c0011ccf6a86028f5b93e395c80e67"
+ },
+ "screen": false
 }
