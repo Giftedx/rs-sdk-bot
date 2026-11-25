@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572727921-bigchopper-shaftsinker-951d2a678615d221",
+ "account": "Bigchopper",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of air",
+ "requested": 1,
+ "claim": "d3b116b0-0cc0-405f-ac54-99f93d27d699",
+ "count": 0,
+ "ok": false,
+ "at": 1795572919288,
+ "detail": "trade claimed"
+}

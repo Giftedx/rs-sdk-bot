@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572729178-trousersnake-oreelse-c07644d233c841a8",
+ "account": "TrouserSnake",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Emerald",
+ "requested": 1,
+ "claim": "eab936c3-440d-4e51-b226-1f3c5deb6925",
+ "count": 0,
+ "ok": false,
+ "at": 1795572879102,
+ "detail": "trade claimed"
+}

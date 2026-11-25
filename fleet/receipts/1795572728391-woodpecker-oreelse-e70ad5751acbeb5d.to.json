@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795572728391-woodpecker-oreelse-e70ad5751acbeb5d",
+ "account": "OreElse",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut emerald",
+ "requested": 2,
+ "claim": "0a3b0d4c-263f-4f7a-a96d-0c939b23a9db",
+ "count": 0,
+ "ok": false,
+ "at": 1795572906552,
+ "detail": "trade claimed"
+}

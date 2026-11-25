@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795572281049-fishandchips-spitroaster-b5a28980c71783c5",
  "account": "FishAndChips",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 200,
  "claim": "2bfcf604-9c88-4f93-9fc0-0ecc7609218a",
- "count": 0,
- "ok": false,
- "at": 1795572778782,
- "detail": "trade claimed"
+ "count": 200,
+ "ok": true,
+ "at": 1795572884998,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 200,
+  "after": 0
+ },
+ "bank": {
+  "count": 200,
+  "at": 1795572865853
+ },
+ "logout": {
+  "attemptId": "1795572779007-0000003372-0000000001",
+  "at": 1795572884985,
+  "sha256": "5098f48708d4f2b59e8cdfd29b72ae08adb449d4e2588cff515c35274c5ea827"
+ },
+ "screen": true
 }
