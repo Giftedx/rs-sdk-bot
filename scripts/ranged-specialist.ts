@@ -393,14 +393,16 @@ async function walkWaypoints(s: Session, pts: Point[], maxTicks: number, stop: S
     }
 }
 
-async function dropItemsMatching(s: Session, pred: (i: InvItem) => boolean, stop: StopFn, label: string): Promise<void> {
+async function dropItemsMatching(s: Session, pred: (i: InvItem) => boolean, stop: StopFn, label: string, maxRemain = 0): Promise<void> {
     const deadline = s.tick() + 45;
     while (!stop()) {
-        const drop = (s.sdk.getInventory() as InvItem[]).filter(pred);
-        if (drop.length === 0) return;
+        const inv = s.sdk.getInventory() as InvItem[];
+        const drop = inv.filter(pred);
+        if (drop.length === 0 || (maxRemain > 0 && inv.length <= maxRemain)) return;
         if (s.tick() >= deadline) throw Error(`failed to drop ${label}: ${drop.map(i => i.id).join(',')}`);
         await dismissContinueDialogs(s, stop, 2);
-        await Promise.all(drop.slice(0, 4).map(i => s.direct({ type: 'dropItem', slot: i.slot, reason: 'SDK' })));
+        const batch = maxRemain > 0 ? drop.slice(0, Math.min(5, Math.max(1, inv.length - maxRemain))) : drop.slice(0, 5);
+        await Promise.all(batch.map(i => s.direct({ type: 'dropItem', slot: i.slot, reason: 'SDK' })));
         await waitTicks(s, 1);
     }
 }
@@ -1199,20 +1201,26 @@ export function selectRangedPvpUpgradeIds(
 }
 
 async function ensureRangedPvpGear(sess: Session): Promise<void> {
-    const ranged = skillInfo(sess, 'Ranged').baseLevel;
+    const rStat = skillInfo(sess, 'Ranged');
     const inv = sess.sdk.getInventory() as InvItem[];
     const worn = sess.sdk.getEquipment() as WornItem[];
-    // Cap at 3 equips per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
-    const batch = selectRangedPvpUpgradeIds(ranged, inv, worn).slice(0, 3);
-    if (batch.length === 0) return;
-    await Promise.all(
-        batch.map(id => {
-            const item = inv.find(i => i.id === id);
-            if (!item || item.slot === undefined) return Promise.resolve();
-            const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
-            return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
-        }),
-    );
+    const potItem = rStat.level <= rStat.baseLevel + Math.max(1, Math.floor((4 + Math.floor(rStat.baseLevel * 0.1)) / 2))
+        ? ITEM_IDS.rangingPot.map(id => inv.find(i => i.id === id)).find((x): x is InvItem => !!x && x.slot !== undefined)
+        : undefined;
+    // Cap total pre-swing actions at 3 per login tick so USER_EVENT.limit=5 still fits interactPlayer + logoutCom.
+    const batch = selectRangedPvpUpgradeIds(rStat.baseLevel, inv, worn).slice(0, potItem ? 2 : 3);
+    if (batch.length === 0 && !potItem) return;
+    const ops: Promise<unknown>[] = batch.map(id => {
+        const item = inv.find(i => i.id === id);
+        if (!item || item.slot === undefined) return Promise.resolve();
+        const op = (item.optionsWithIndex ?? []).find(o => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+        return sess.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+    });
+    if (potItem) {
+        const op = potItem.optionsWithIndex?.find(o => /drink/i.test(o.text ?? ''))?.opIndex ?? 1;
+        ops.push(sess.direct({ type: 'useInventoryItem', slot: potItem.slot!, optionIndex: op, reason: 'SDK' }));
+    }
+    await Promise.all(ops);
 }
 
 async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: string, CAP: number): Promise<void> {
@@ -1268,8 +1276,8 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
         if (onStarterIsland(posOf(s)) || posOf(s)?.level !== 0) {
             throw Error('still on Tutorial Island after leaveRuneStarter');
         }
-        const allowed = new Set(kit.map(k => k.id));
-        await dropItemsMatching(s, i => !allowed.has(i.id), stop, 'tutorial junk');
+        const allowed = new Set<number>([...kit.map(k => k.id), ...ITEM_IDS.duelRings, ...ITEM_IDS.gloriesAll, ...ITEM_IDS.rangingPot]);
+        await dropItemsMatching(s, i => !allowed.has(i.id), stop, 'tutorial junk', 28 - kitSlotTotal(kit));
         milestone('tutorial');
 
         await receiveSupplyKit(s, supplierName, kit, stop, LUMBRIDGE_HANDOFF);
@@ -1316,18 +1324,23 @@ async function runRangedPvpSpecialist(opts: RangedSpecialistOptions, root: strin
             ignoreMeleeHunters: true,
             ignoreLiveHunters: true,
             skipGuardWalk: true,
-            onTickExtra: useProtect
-                ? undefined
-                : () => {
+            onTickExtra: () => {
+                if (!useProtect) {
                     const hp = skillInfo(s, 'Hitpoints').level;
                     if (hp > 0 && hp <= 7 && s.tick() - lastWalkEat >= 3) {
                         const shark = (s.sdk.getInventory() as InvItem[]).find(i => i.id === 385);
                         if (shark?.slot !== undefined) {
                             lastWalkEat = s.tick();
                             void s.direct({ type: 'useInventoryItem', slot: shark.slot, optionIndex: 1, reason: 'SDK' });
+                            return;
                         }
                     }
-                },
+                }
+                const junk = (s.sdk.getInventory() as InvItem[]).filter(i => !allowed.has(i.id)).slice(0, 4);
+                for (const item of junk) {
+                    if (item.slot !== undefined) void s.direct({ type: 'dropItem', slot: item.slot, reason: 'SDK' });
+                }
+            },
         });
         if (useProtect) await setProtectMelee(s, false, stop);
         await pullArdougneLeverToWildy(s, stop);
@@ -1440,8 +1453,8 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         if (onStarterIsland(posOf(s)) || posOf(s)?.level !== 0) {
             throw Error('still on Tutorial Island after leaveRuneStarter');
         }
-        const allowed = new Set(kit.map(k => k.id));
-        await dropItemsMatching(s, i => !allowed.has(i.id), stop, 'tutorial junk');
+        const allowed = new Set<number>([...kit.map(k => k.id), ...ITEM_IDS.duelRings, ...ITEM_IDS.gloriesAll, ...ITEM_IDS.rangingPot]);
+        await dropItemsMatching(s, i => !allowed.has(i.id), stop, 'tutorial junk', 28 - kitSlotTotal(kit));
         milestone('tutorial');
 
         await receiveSupplyKit(s, supplierName, trade1, stop, LUMBRIDGE_HANDOFF);
