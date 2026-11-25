@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795583799242,
+ "at": 1795583813972,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -45,39 +45,6 @@
    "role": "supply"
   },
   {
-   "account": "Dipstick",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "shop-buy",
-    "dargaud",
-    "2500"
-   ],
-   "env": {
-    "ITEM_ID": "44",
-    "ITEMS": "^Rune arrowtips$",
-    "STOCK_TARGET": "2600",
-    "MAX_ITEMS": "1400",
-    "COIN_RESERVE": "0",
-    "NO_BUY_TICKS": "180"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "Buy Rune arrowtips at Dargaud for TipMyShaft",
-   "role": "supply"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/aio-market.ts",
-   "args": [
-    "ge-buy-list",
-    ".practice/live-ops/fingerblastr-ge.json"
-   ],
-   "enabled": true,
-   "repeat": false,
-   "goal": "Buy Cosmic rune, Coal, Eye of newt, Dragon bones on GE for Wave 1-2",
-   "role": "supply"
-  },
-  {
    "account": "PocketPool",
    "script": "scripts/aio-logistics.ts",
    "args": [
@@ -108,22 +75,6 @@
    "enabled": true,
    "repeat": false,
    "role": "army"
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/aio-logistics.ts",
-   "args": [
-    "walk-to",
-    "2619",
-    "3332",
-    "0"
-   ],
-   "env": {
-    "RECOVERY_TARGET_HUB": "ardougne"
-   },
-   "enabled": true,
-   "repeat": false,
-   "role": "helper"
   }
  ],
  "army": [
@@ -138,7 +89,9 @@
   "billionaire",
   "bowbeforeme",
   "deeppockets",
+  "dipstick",
   "fatstack",
+  "fingerblastr",
   "fingersmith",
   "kiltlifter",
   "knightrider",
