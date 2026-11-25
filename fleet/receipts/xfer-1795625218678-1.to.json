@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795625218678-1",
  "account": "Abracadickra",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "477dde00-93d9-4289-a7e8-b32a4521b115",
- "count": 0,
- "ok": false,
- "at": 1795626093419,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795626113057,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795626112290
+ },
+ "logout": {
+  "attemptId": "1795626093428-0000017552-0000000001",
+  "at": 1795626113048,
+  "sha256": "89eacb9b6b26652d3fd969ccbb1a19ee457beb49775366fb0be620fd87b680e9"
+ },
+ "screen": true
 }
