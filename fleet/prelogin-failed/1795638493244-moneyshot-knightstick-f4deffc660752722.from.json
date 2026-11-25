@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795638493244-moneyshot-knightstick-f4deffc660752722",
+ "role": "from",
+ "account": "Moneyshot",
+ "partner": "Knightstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795639348264,
+ "detail": "Error: account logout is not confirmed: Moneyshot ended disconnected"
+}
