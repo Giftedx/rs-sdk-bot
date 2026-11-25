@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795632121192-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Quickhandjob",
+  "to": "Packhorse",
+  "item": "Unicorn horn",
+  "count": 3,
+  "itemId": 237,
+  "start": 1795632121192,
+  "end": 1795633021192,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
