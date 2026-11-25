@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795632915083-2",
+ "account": "PocketPool",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire necklace",
+ "requested": 1,
+ "claim": "7b7ad448-c916-46d9-8b1c-8aa3416aaf81",
+ "count": 1,
+ "ok": true,
+ "at": 1795633235164,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795633234361
+ },
+ "logout": {
+  "attemptId": "1795633223055-0000009252-0000000001",
+  "at": 1795633235081,
+  "sha256": "0d53ada4a4f1d0c999cc21cfd4666b439d08aeb4232e97f6d6b7d66760d9da77"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795632915083-2",
  "account": "Woodpecker",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Sapphire necklace",
  "requested": 1,
  "claim": "729f8a08-2095-400c-8319-aa8a46947249",
- "count": 0,
- "ok": false,
- "at": 1795633063291,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795633233507,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795633209576
+ },
+ "logout": {
+  "attemptId": "1795633063502-0000030548-0000000001",
+  "at": 1795633233495,
+  "sha256": "9bd9992a864e4e673edf6f75230b256ceb8e9976ecf3b7136cb1cd1d5d755053"
+ },
+ "screen": true
 }
