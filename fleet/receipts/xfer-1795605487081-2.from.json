@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "xfer-1795605487081-2",
+ "account": "Bigchopper",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 1,
+ "claim": "0e63f69c-3fd5-481f-ad4a-0e7d63107d39",
+ "count": 0,
+ "ok": false,
+ "at": 1795606387467,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795606380449-0000022592-0000000001",
+  "at": 1795606387458,
+  "sha256": "6dc7129a7973a3cd0c440f94ad6149b5aaade523089ca9ad052615e6288d9854"
+ },
+ "screen": false
+}
