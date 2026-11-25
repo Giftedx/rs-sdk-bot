@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795615945858,
+ "at": 1795615972098,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,21 +57,6 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=2400 TARGET_COUNT=240 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=240 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
   },
   {
    "account": "Wandwaver",
@@ -221,36 +206,6 @@
    "repeat": false,
    "goal": "campaign:grindmyherb:item:1975",
    "role": "army"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=28 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:shaftshooter:item:379 BATCH_UNITS=28 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:shaftshooter:item:379",
-   "role": "army"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=28 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:hiltsdeep:item:379 BATCH_UNITS=28 -- cooking food"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:hiltsdeep:item:379",
-   "role": "auto"
   }
  ],
  "army": [
@@ -270,6 +225,7 @@
   "hocuspokeus",
   "kiltlifter",
   "knightrider",
+  "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
   "moneyshot",

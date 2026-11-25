@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795615949383-4",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Stirmypot",
+  "to": "Quickhandjob",
+  "item": "Coins",
+  "count": 200,
+  "itemId": 995,
+  "start": 1795615949383,
+  "end": 1795616849383,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

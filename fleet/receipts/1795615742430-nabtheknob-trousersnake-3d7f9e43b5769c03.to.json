@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795615742430-nabtheknob-trousersnake-3d7f9e43b5769c03",
  "account": "TrouserSnake",
  "partner": "NabTheKnob",
@@ -10,8 +10,22 @@
  "item": "Iron arrow",
  "requested": 300,
  "claim": "42535235-40ca-4be4-9300-3fe05cbfcae7",
- "count": 0,
- "ok": false,
- "at": 1795615943660,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795615954272,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 300
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795615953522
+ },
+ "logout": {
+  "attemptId": "1795615943671-0000011892-0000000001",
+  "at": 1795615954262,
+  "sha256": "2ee20905eca04d1b88b7351a5d6b0ab6017fe5579f6fea84e4b60ebe27e88971"
+ },
+ "screen": true
 }
