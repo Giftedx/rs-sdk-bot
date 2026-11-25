@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795609132060-1",
  "account": "Woodpecker",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Ring mould",
  "requested": 1,
  "claim": "bb59800f-c983-4c7d-99e2-4bad1e748d2c",
- "count": 0,
- "ok": false,
- "at": 1795609294174,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795609324905,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795609300257
+ },
+ "logout": {
+  "attemptId": "1795609294184-0000005744-0000000001",
+  "at": 1795609324554,
+  "sha256": "7011fabd73e76704c557b8efb453bf7e949b9c547ba2b810e604ef61db40484a"
+ },
+ "screen": true
 }
