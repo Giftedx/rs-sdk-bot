@@ -35,7 +35,7 @@ export const IRON_ORE_XP_25X = 875;
 export const MINING_GLORY_IDS = [OBJ_GLORY_4, 1710, 1708, 1706] as const;
 
 const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = [
-    [2603, 3234, 1],
+    [2540, 3185, 4], [2603, 3234, 1],
 ];
 
 // 18 supply slots (no Super energy(4) — NODE_INFINITE_RUN=true): Doric's Quest (Mining 1->49) + Castle Wars -> Ardougne Zoo 3t knife.

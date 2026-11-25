@@ -155,6 +155,8 @@ function findBestTree(
                     (l.x === 2606 && l.z === 3059)
                     || (l.x === 2607 && l.z === 3057)
                     || (l.x === 2604 && l.z === 3054)
+                    || (l.x === 2612 && l.z === 3064)
+                    || (l.x === 2615 && l.z === 3067)
                 ) && l.reachable !== false;
             }
             if (!wantOak) {
@@ -172,7 +174,11 @@ function findBestTree(
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
     const oakTier = (l: NearbyLoc): number => {
-        if (inKhazard) return ((l.x === 2606 && l.z === 3059) || (l.x === 2607 && l.z === 3057)) ? 0 : 1;
+        if (inKhazard) {
+            if ((l.x === 2606 && l.z === 3059) || (l.x === 2607 && l.z === 3057)) return 0;
+            if (l.x === 2604 && l.z === 3054) return 1;
+            return 2;
+        }
         if ((l.x === 3203 && l.z === 3240) || (l.x === 3203 && l.z === 3246)) return 0;
         return 1;
     };
@@ -524,25 +530,41 @@ if (import.meta.main) {
                     p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
                     isStopped,
                 );
-                await walkWaypointsSafe(main, [[2585, 3082, 3]], isStopped);
-                const prePts = main.sdk.getSkill('Prayer')?.level ?? 0;
-                if (prePts <= 20) {
-                    const potAct = tryDrinkPrayerPotion(main, 99);
-                    if (potAct) await potAct;
+                let guardYielded = false;
+                let potDrunk = false;
+                const offPrayWatch = main.onTick(() => {
+                    const stWalk = main.sdk.getState();
+                    const p = stWalk?.player;
+                    if (!p || p.worldX < 2565) return;
+                    if (!potDrunk && (main.sdk.getSkill('Prayer')?.level ?? 0) <= 20) {
+                        potDrunk = true;
+                        const potAct = tryDrinkPrayerPotion(main, 99);
+                        if (potAct) void potAct;
+                    }
+                    if (!guardYielded && (main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
+                        guardYielded = true;
+                        const wasOn = isProtectMeleeOn(stWalk);
+                        void Promise.all([
+                            main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                            main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                            ...(!wasOn ? [main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' })] : []),
+                        ]);
+                    }
+                });
+                try {
+                    await walkWaypointsSafe(main, [[2606, 3058, 1]], isStopped);
+                } finally {
+                    offPrayWatch();
                 }
-                if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43) {
-                    // Double-toggle yields PrayerGuard; wait 1 tick so isProtectMeleeOn(st) reflects ON before flicking.
+                if (!isProtectMeleeOn(main.sdk.getState()) && (main.sdk.getSkill('Prayer')?.level ?? 0) >= 1) {
                     const wasOn = isProtectMeleeOn(main.sdk.getState());
                     await Promise.all([
-                        main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
-                        main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                        ...(!guardYielded ? [
+                            main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                            main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' }),
+                        ] : []),
                         ...(!wasOn ? [main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' })] : []),
                     ]);
-                    await waitTicks(main, 1);
-                }
-                await walkWaypointsSafe(main, [[2606, 3058, 1]], isStopped);
-                if (!isProtectMeleeOn(main.sdk.getState()) && (main.sdk.getSkill('Prayer')?.level ?? 0) >= 1) {
-                    await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
                     await waitTicks(main, 1);
                 }
                 lastFlickTick = main.tick();
@@ -810,8 +832,9 @@ if (import.meta.main) {
         } else if (endPos && inKhazard) {
             const safePot = tryDrinkPrayerPotion(main, 15);
             if (safePot) await safePot;
-            await main.bot.walkTo(2626, 3060, 2);
-            await waitTicks(main, 16);
+            await main.bot.walkTo(2592, 3058, 2);
+            const waitLogout = Math.max(1, 10 - (main.tick() - lastHitTick));
+            await waitTicks(main, waitLogout);
         }
         if (!helperSettled) await Promise.race([helperDone, waitTicks(main, 4)]);
         const totalTicks = main.tick() - t0;
