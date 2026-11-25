@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795642174725,
+ "at": 1795642369955,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -123,48 +123,109 @@
    "role": "helper"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
+   "account": "Fatstack",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1590 TARGET_COUNT=159 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=207 -- cooking food"
+    "crafting",
+    "jewellery-trip"
    ],
    "env": {
-    "ROUNDS": "1"
+    "RECIPE": "sapphire_ring",
+    "TARGET": "1",
+    "BATCH": "13",
+    "CAP": "1500",
+    "RETURN_TICKS": "100",
+    "RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:1637",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "auto"
+   "goal": "campaign:haggis:item:1637",
+   "role": "army"
   },
   {
-   "account": "Pocketpython",
+   "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/generated/waterfall.ts --",
-    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- fire-combat"
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 -- crafting inventory brew:unf_marrentill_potion"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
+   "goal": "campaign:haggis:item:93",
+   "role": "army"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=40 -- crafting inventory identify:marentill",
+    "scripts/aio-logistics.ts ITEM_ID=209 QUANTITY=2 ITEM_NAME=Herb -- loadout",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:259 BATCH_UNITS=5 -- crafting inventory identify:irit_leaf"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:259",
    "role": "army"
   },
   {
    "account": "Ballspinner",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "giant"
+   ],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:225",
+    "BATCH_UNITS": "20",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:225",
+   "role": "army",
+   "resources": [
+    "hill-giants"
+   ]
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "druid"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:supply_chain:207",
+    "BATCH_UNITS": "34",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:207",
+   "role": "army",
+   "resources": [
+    "chaos-druids"
+   ]
+  },
+  {
+   "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-fighter.ts CAP=1000 TARGET_COUNT=3 BANK_PACK=1 -- unicorn",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:haggis:item:235 BATCH_UNITS=3 -- crafting inventory grind:unicorn_horn"
+    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
+    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:95 BATCH_UNITS=1 -- crafting inventory brew:unf_tarromin_potion"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:235",
+   "goal": "campaign:haggis:item:95",
    "role": "army"
   },
   {
@@ -190,20 +251,95 @@
    ]
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/generated/woodcutting.ts",
+   "account": "mmthv2350",
+   "script": "scripts/generated/quest-ikov.ts",
    "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
+    "DEMAND_ID": "goal:quest_board:ikov",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "helper",
+   "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/waterfall.ts --",
+    "scripts/aio-fighter.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 -- fire-combat"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Pocketpython",
+   "role": "army"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=25 -- fletching shafts",
+    "scripts/generated/quest-viking.ts DEMAND_ID=goal:quest_board:viking BATCH_UNITS=1 --"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:viking",
+   "role": "army"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/generated/quest-chompybird.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:chompybird",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:chompybird",
+   "role": "army"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:FishAndChips",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:FishAndChips",
+   "role": "auto",
    "resources": [
-    "draynor-willows"
+    "ardougne-cows"
    ]
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=561 \"ITEMS=Nature rune\" MAX_ITEMS=233 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftmaker BATCH_UNITS=250 -- magic alch-train 90 3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftmaker",
+   "role": "auto"
   }
  ],
  "army": [
@@ -215,16 +351,11 @@
   "mmsmk1232",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
-  "fatstack",
   "fingerblastr",
-  "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "knightrider",
   "mineyourbiz",
-  "mmthv2350",
   "moneyshot",
   "oreelse",
   "pocketpool",
@@ -235,7 +366,6 @@
   "swordinhand",
   "thefullmonty",
   "undermykilt",
-  "woodpecker",
   "yewfirst"
  ],
  "builds": {
