@@ -3,9 +3,57 @@
 import {readFileSync,readdirSync,existsSync,writeFileSync,renameSync,mkdirSync} from 'node:fs';
 import {join,resolve,relative} from 'node:path';
 import {applyLevers,haggisActivities,haggisTravel,loadSnapshot,scheduleOverall,overallRequirementsFor,TRICKS,type Activity,type ScheduleResult} from '../packages/planner/src/haggis';
+import {idsFor} from '../packages/planner/src/supply-bill';
 import {FLEET} from './fleet';
-import {launchContext,readBound,sha,fresh,validateSupplies,validateRehearsals,type Binding} from '../packages/core/src/launch-evidence';
+import {loadOwners} from '../packages/core/src/fleet';
+import {launchContext,readBound,sha,fresh,validateSupplies,validateRehearsals,type Binding,type SupplyRequirement} from '../packages/core/src/launch-evidence';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
+import {liveFleetDataDir,resolveFleetDataDir} from '../packages/core/src/practice-paths';
+import {RESERVED_ACCOUNTS} from '../packages/core/src/specialist-boards';
+
+const LIVE_SERVER='rs-sdk-demo.fly.dev';
+const RESERVED_SET=new Set(RESERVED_ACCOUNTS.map(n=>n.toLowerCase()));
+const UNFERMENTED_WINE_ID=1995;
+const VARROCK_TELEPORT_RUNES:[number,string,number][]=[[563,'law rune',1],[554,'fire rune',1],[556,'air rune',3]];
+
+export function ownedFleetAccounts(root:string):string[]{
+ const byLower=new Map<string,string>();
+ const add=(name:string,server:string)=>{
+  const key=name.toLowerCase();
+  if(server.toLowerCase()===LIVE_SERVER&&!RESERVED_SET.has(key)&&!byLower.has(key))byLower.set(key,name);
+ };
+ for(const a of FLEET)if(a.role!=='main')add(a.name,a.server);
+ for(const file of [join(liveFleetDataDir(root),'fleet','owners.json'),join(resolveFleetDataDir(root),'fleet','owners.json'),join(root,'fleet','owners.json')]){
+  if(!existsSync(file))continue;
+  for(const [name,owner] of loadOwners(file))add(name,owner.server);
+ }
+ return [...byLower.values()];
+}
+
+export function gateRequirements(rawRequirements:readonly SupplyRequirement[],catalog:readonly {id:number;name:string;debugname?:string}[]):SupplyRequirement[]{
+ const out:SupplyRequirement[]=[];
+ let maxWine=0;
+ let wineItem='unfermented wine';
+ for(const r of rawRequirements){
+  const norm=r.item.trim().toLowerCase().replace(/\s*\(noted\)$/,'');
+  if(r.itemId===undefined&&norm==='varrock teleport'){
+   for(const [itemId,item,perCast] of VARROCK_TELEPORT_RUNES)out.push({item,itemId,count:r.count*perCast});
+   continue;
+  }
+  let itemId=r.itemId;
+  if(itemId===undefined){
+   const ids=idsFor(r.item,catalog);
+   if(ids.length===1)itemId=ids[0];
+  }
+  if(itemId===UNFERMENTED_WINE_ID||norm==='unfermented wine'){
+   if(r.count>maxWine)maxWine=r.count;
+   continue;
+  }
+  out.push({item:r.item,count:r.count,...(itemId===undefined?{}:{itemId})});
+ }
+ if(maxWine>0)out.push({item:wineItem,itemId:UNFERMENTED_WINE_ID,count:maxWine});
+ return out;
+}
 
 // The main goal is Overall rank 1 under the record (AGENTS.md), not all 24 boards. Overall must win by a 2% margin,
 // and every activity that starts before the Overall finish must have MEASURED inputs: one still running then sets
@@ -43,8 +91,8 @@ export function evaluateLaunch(root:string,snapshot:string,now=Date.now(),author
   expiresAt=Math.min(expiresAt,validateRehearsals(runs,context,expected,now,bound));return 'Three distinct full-clock rehearsals match current context and raw logs';
  });
  check('supplies staged',()=>{
-  const s=read('.practice/haggis-supplies.json');
-  const suppliesExpiry=validateSupplies(s,context,requirements,read('knowledge/items.json'),FLEET.filter(a=>a.role!=='main'&&a.server==='rs-sdk-demo.fly.dev').map(a=>a.name),now,bound);
+  const s=read('.practice/haggis-supplies.json'),catalog=read('knowledge/items.json');
+  const suppliesExpiry=validateSupplies(s,context,gateRequirements(requirements,catalog),catalog,ownedFleetAccounts(root),now,bound);
   expiresAt=Math.min(expiresAt,suppliesExpiry);return 'Exact item reservations covered by owned delivery and bank receipts';
  });
  check('fresh targets',()=>{
