@@ -26,6 +26,7 @@ export interface OpenBotOptions {
     onSessionEnd?: (s: Session, detail: string) => Promise<unknown>;
     record?: BotRecord;
     trade?: Parameters<typeof connectInProcess>[0]['trade'];
+    allowTradePartners?: readonly string[];
 }
 
 export type FinishDetail = string | ((ok: boolean) => string);

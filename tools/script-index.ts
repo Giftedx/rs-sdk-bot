@@ -15,6 +15,7 @@ const repo = resolve(import.meta.dir, '..');
 // Scripts that are not game work a route can start. Each entry gives the cause. A new game script gets a route in
 // its aio-<category>.ts file and not an entry here.
 export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
+ 'scripts/bramble-claim.ts': 'fleet control: sequential one-time 1 gp trade claim with an authorized Varrock West Bank partner',
  'scripts/gear-wants.ts': 'fleet control helper: computes the gear upgrade wants of an owned account from its observed stock and skills',
  'scripts/claim-account.ts': 'fleet control: registers a new account name',
  'scripts/cloud-recover.ts': 'fleet control: recovers held live sessions',
