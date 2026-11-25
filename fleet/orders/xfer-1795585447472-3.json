@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795585447472-3",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Kiltlifter",
+  "to": "PickpockDick",
+  "item": "Herb",
+  "count": 1,
+  "itemId": 205,
+  "start": 1795585447472,
+  "end": 1795586347472,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
