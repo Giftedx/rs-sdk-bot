@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795566277712-fingerblastr-unsheathed-c9894664783c13d3",
  "account": "Fingerblastr",
  "partner": "Unsheathed",
@@ -12,6 +12,16 @@
  "claim": "771b6c08-8344-46d9-ac28-8901362c13cd",
  "count": 0,
  "ok": false,
- "at": 1795566425518,
- "detail": "trade claimed"
+ "at": 1795568078385,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 10000,
+  "at": 1795566579738
+ },
+ "logout": {
+  "attemptId": "1795566425752-0000027420-0000000001",
+  "at": 1795568078371,
+  "sha256": "6e61726ae2d5490719a7c880592bdbc0229a1059c60a78f831a8bdbcec7d6530"
+ },
+ "screen": false
 }
