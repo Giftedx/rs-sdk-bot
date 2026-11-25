@@ -2292,19 +2292,20 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Session summary on a logout line: while an account is in the world, its XP when this page first saw it in the world
   // (sessionXp) and its last uptime and loot (sessionLast). A logout line adds the session length, the skill with the
   // most XP gained and the top loot item with its GE value. A session that began before the page opened counts from
-  // the page's first sight of it. A login the page saw (sessionIn) gives the session length; the published uptime runs
-  // from the worker's start, which can come long before its login, and it is as old as the published file.
+  // the page's first sight of it. A login the page saw (sessionIn) gives the session length. Otherwise the length runs
+  // from the worker's start to the logout: the published uptime stops at the file's time, up to 10 minutes old.
   const sessionXp=new Map(),sessionLast=new Map(),sessionIn=new Map();
   function trackSession(b){
     if(!b.inWorld)return;
     const xp=Object.fromEntries((b.skills||[]).filter(k=>k&&k.name!=='Overall'&&Number.isFinite(k.xp)).map(k=>[k.name,k.xp]));
     if(!sessionXp.has(b.name))sessionXp.set(b.name,xp);
-    sessionLast.set(b.name,{xp,uptime:b.uptime,loot:b.flow?.loot||[]});
+    sessionLast.set(b.name,{xp,uptime:b.uptime,started:b.started,loot:b.flow?.loot||[]});
   }
   function sessionText(name){
     const start=sessionXp.get(name),last=sessionLast.get(name),inAt=sessionIn.get(name);sessionXp.delete(name);sessionLast.delete(name);sessionIn.delete(name);
     if(!start||!last)return '';
-    const length=Number.isFinite(inAt)?Date.now()-inAt:last.uptime;
+    const run=Number.isFinite(last.started)&&last.started>0?Date.now()-toBrowserAt(last.started):null;
+    const length=Number.isFinite(inAt)?Date.now()-inAt:run!=null&&run>=(last.uptime||0)?run:last.uptime;
     const gains=Object.entries(last.xp).map(([k,v])=>[k,v-(start[k]??v)]).filter(([,d])=>d>0).sort((a,b)=>b[1]-a[1]);
     const top=[...last.loot].sort((a,b)=>(b.count||0)-(a.count||0))[0],unpriced=last.loot.filter(i=>!price(i)).length;
     const value=last.loot.reduce((t,i)=>t+(price(i)?.value??0)*(i.count||0),0);
