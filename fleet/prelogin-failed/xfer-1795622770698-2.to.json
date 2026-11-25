@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795622770698-2",
+ "role": "to",
+ "account": "MineYourBiz",
+ "partner": "NabTheKnob",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795623630226,
+ "detail": "Error: fleet trade claim authority unavailable or changed: remote: Internal Server Error ... b550606dd916957b7f6dcef4 -> fleet-trade-claim/mineyourbiz (Internal Server Error) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795623113964-2",
+ "account": "Magicwanda",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "5679ae14-1eee-432b-9f44-8141d01e3cb4",
+ "count": 0,
+ "ok": false,
+ "at": 1795623638691,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795622770698-2",
  "account": "NabTheKnob",
  "partner": "MineYourBiz",
@@ -12,6 +12,12 @@
  "claim": "9bcdb7db-c1d1-42eb-8685-c67d596730e3",
  "count": 0,
  "ok": false,
- "at": 1795623448793,
- "detail": "trade claimed"
+ "at": 1795623633598,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795623448803-0000029168-0000000001",
+  "at": 1795623633533,
+  "sha256": "e405cfe1769135f261fb861da154d9d5c9e80977c22691fab773d6ab93044d8d"
+ },
+ "screen": false
 }
