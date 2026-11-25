@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795586120359-2",
  "account": "KnightRider",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "b2179983-9249-453d-8cf9-7901d73e766a",
- "count": 0,
- "ok": false,
- "at": 1795586730263,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795586853687,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795586852916
+ },
+ "logout": {
+  "attemptId": "1795586730273-0000005828-0000000001",
+  "at": 1795586853673,
+  "sha256": "4102f1824c0553d57561752ff1785f1fec49ed6dbf426da8b4713cfed2262fe3"
+ },
+ "screen": true
 }

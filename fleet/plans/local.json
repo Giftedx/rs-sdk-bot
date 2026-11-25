@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795586850737,
+ "at": 1795586893746,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,6 +22,27 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "catherby",
+    "2500"
+   ],
+   "env": {
+    "ITEM_ID": "44",
+    "ITEMS": "^Rune arrowtips$",
+    "STOCK_TARGET": "2600",
+    "MAX_ITEMS": "300",
+    "COIN_RESERVE": "0",
+    "NO_BUY_TICKS": "120"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Buy Rune arrowtips at Catherby for TipMyShaft",
+   "role": "supply"
   },
   {
    "account": "PocketPool",
@@ -54,6 +75,26 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "crafting",
+    "inventory",
+    "identify:irit_leaf"
+   ],
+   "env": {
+    "MAX_MAKE": "1",
+    "CAP": "600",
+    "MEMBERS": "1",
+    "TRAIN_SKILL": "Herblore",
+    "TARGET_LEVEL": "48"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:supply_chain:261",
+   "role": "army"
   }
  ],
  "army": [
@@ -88,7 +129,6 @@
   "sausagefest",
   "sporrandip",
   "swordinhand",
-  "thefullmonty",
   "trousersnake",
   "undermykilt",
   "woodpecker",

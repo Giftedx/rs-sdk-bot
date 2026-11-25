@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795585954035-2",
  "account": "OreElse",
  "partner": "Ballspinner",
@@ -12,6 +12,12 @@
  "claim": "c0b99d43-b84c-4ba5-9ca7-6cd9674e4794",
  "count": 0,
  "ok": false,
- "at": 1795586560811,
- "detail": "trade claimed"
+ "at": 1795586854834,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795586560821-0000005424-0000000001",
+  "at": 1795586854820,
+  "sha256": "ff7cf74f5f0fe5042af908e496452759c2313dc2e7cdfaee9ad6e8b30017caf1"
+ },
+ "screen": false
 }

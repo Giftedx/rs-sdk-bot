@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795586114152-3",
  "account": "Hocuspokeus",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 7,
  "claim": "ea13c4b7-5566-40a0-921d-abf9d28b0d10",
- "count": 0,
- "ok": false,
- "at": 1795586847059,
- "detail": "trade claimed"
+ "count": 7,
+ "ok": true,
+ "at": 1795586862849,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7,
+  "after": 0
+ },
+ "bank": {
+  "count": 7,
+  "at": 1795586854574
+ },
+ "logout": {
+  "attemptId": "1795586847070-0000024704-0000000001",
+  "at": 1795586862836,
+  "sha256": "4f45a46fdabbe61725dc288353cec11e191730481a1e0387b6a3730ebeceddad"
+ },
+ "screen": true
 }

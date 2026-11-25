@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795585954035-3",
  "account": "Bigpackage",
  "partner": "OreElse",
@@ -12,6 +12,16 @@
  "claim": "6f075547-182e-4380-9b2d-e63b4e12ed94",
  "count": 0,
  "ok": false,
- "at": 1795586434244,
- "detail": "trade claimed"
+ "at": 1795586854459,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795586442974
+ },
+ "logout": {
+  "attemptId": "1795586434254-0000024076-0000000001",
+  "at": 1795586854446,
+  "sha256": "dee577ddfbda76712631cc4a3fdee56a07f0792f42e26a5f46941ce84bcd6ac2"
+ },
+ "screen": false
 }
