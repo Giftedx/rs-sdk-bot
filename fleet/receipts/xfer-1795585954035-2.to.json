@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795585954035-2",
+ "account": "OreElse",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Hammer",
+ "requested": 1,
+ "claim": "c0b99d43-b84c-4ba5-9ca7-6cd9674e4794",
+ "count": 0,
+ "ok": false,
+ "at": 1795586560811,
+ "detail": "trade claimed"
+}
