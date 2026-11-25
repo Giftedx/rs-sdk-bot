@@ -434,4 +434,12 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         expect(pos).toEqual({ worldX: 2440, worldZ: 3090, level: 0 });
         expect(t).toBeLessThan(60);
     });
+
+    test('pickBankDuelingRingId prefers lowest remaining charge before fresh rings', async () => {
+        const { pickBankDuelingRingId } = await import('./combat-quest-specialists');
+        expect(pickBankDuelingRingId([])).toBeNull();
+        expect(pickBankDuelingRingId([{ id: 2552, count: 3 }])).toBe(2552);
+        expect(pickBankDuelingRingId([{ id: 2552, count: 3 }, { id: 2564, count: 1 }, { id: 2558, count: 2 }])).toBe(2564);
+        expect(pickBankDuelingRingId([{ id: 2566, count: 0 }, { id: 2554, count: 1 }])).toBe(2554);
+    });
 });

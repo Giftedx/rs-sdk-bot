@@ -35,6 +35,15 @@ export interface KitSpecItem {
 }
 
 export const DUELING_RING_IDS = [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566] as const;
+
+/** Prefer lowest remaining charges first so partially-used dueling rings are consumed before fresh ones. */
+export function pickBankDuelingRingId(bankItems: readonly { id: number; count: number }[]): number | null {
+    for (let i = DUELING_RING_IDS.length - 1; i >= 0; i--) {
+        const ringId = DUELING_RING_IDS[i]!;
+        if (bankItems.some(item => item.id === ringId && item.count > 0)) return ringId;
+    }
+    return null;
+}
 export const PRAYER_POT_IDS = [2434, 139, 141, 143] as const;
 export const SUPER_ENERGY_IDS = [3016, 3018, 3020, 3022] as const;
 
@@ -1045,8 +1054,11 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
     await walkWaypoints(s, [{ x: CASTLE_WARS_BANK.x, z: CASTLE_WARS_BANK.z, tol: 1 }], 40, stop, 'castle wars bank');
     await openFreshBank(s, stop);
     await depositIds(s, [...DUELING_RING_IDS], stop);
+    let withdrawnRingId: number | null = null;
     if (!s.sdk.getEquipment().some(e => (DUELING_RING_IDS as readonly number[]).includes(e.id))) {
-        await withdrawExactCount(s, 2552, 1, stop, 'Ring of dueling(8)');
+        withdrawnRingId = pickBankDuelingRingId(s.sdk.getState()?.bank?.items ?? []);
+        if (!withdrawnRingId) throw Error('missing banked Ring of dueling');
+        await withdrawExactCount(s, withdrawnRingId, 1, stop, 'Ring of dueling');
     }
     if (countById(s.sdk.getInventory(), 563) < 1) {
         await withdrawExactCount(s, 563, 1, stop, 'Law rune');
@@ -1054,8 +1066,8 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
     await withdrawTankFood(s, freeSlots, stop);
     await closeBankClean(s, stop);
-    if (s.sdk.getInventory().some(i => i.id === 2552)) {
-        await equipItemById(s, 2552, stop, 'Ring of dueling(8)');
+    if (withdrawnRingId && s.sdk.getInventory().some(i => i.id === withdrawnRingId)) {
+        await equipItemById(s, withdrawnRingId, stop, 'Ring of dueling');
     }
 
     for (let attempt = 0; attempt < 5 && !stop(); attempt++) {
