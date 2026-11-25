@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795583528926,
+ "at": 1795583655585,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -66,15 +66,15 @@
    "role": "supply"
   },
   {
-   "account": "Shaftmaker",
+   "account": "Fingerblastr",
    "script": "scripts/aio-market.ts",
    "args": [
     "ge-buy-list",
-    ".practice/live-ops/shaftmaker-ge.json"
+    ".practice/live-ops/fingerblastr-ge.json"
    ],
    "enabled": true,
    "repeat": false,
-   "goal": "Buy Cosmic rune, Coal, Dragon bones, Eye of newt on GE for Wave 1-2",
+   "goal": "Buy Cosmic rune, Coal, Eye of newt, Dragon bones on GE for Wave 1-2",
    "role": "supply"
   },
   {
@@ -139,7 +139,6 @@
   "bowbeforeme",
   "deeppockets",
   "fatstack",
-  "fingerblastr",
   "fingersmith",
   "kiltlifter",
   "knightrider",
