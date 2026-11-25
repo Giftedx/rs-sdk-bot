@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795607559338-3",
+ "account": "SporranBulge",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "e8b47a4e-7985-49c5-9708-98038f10487c",
+ "count": 60,
+ "ok": true,
+ "at": 1795608400705,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795608375441
+ },
+ "logout": {
+  "attemptId": "1795608369482-0000018704-0000000001",
+  "at": 1795608400587,
+  "sha256": "fc0ae8c55c59ea73ea3bb28c6a35701cc0ce29a2f6b86b972a38f452bb27395f"
+ },
+ "screen": true
+}

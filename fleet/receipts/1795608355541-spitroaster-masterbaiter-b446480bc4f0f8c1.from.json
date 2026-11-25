@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795608355541-spitroaster-masterbaiter-b446480bc4f0f8c1",
+ "account": "Spitroaster",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "be275028-ccee-4282-a571-b442fbd4824f",
+ "count": 0,
+ "ok": false,
+ "at": 1795608458812,
+ "detail": "trade claimed"
+}

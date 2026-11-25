@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795607933726-1",
+ "account": "Woodpecker",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Gold bar",
+ "requested": 1,
+ "claim": "e93353c8-7b59-4955-ad26-868d3e6d27f0",
+ "count": 1,
+ "ok": true,
+ "at": 1795608461470,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795608460653
+ },
+ "logout": {
+  "attemptId": "1795608449762-0000027464-0000000001",
+  "at": 1795608461383,
+  "sha256": "233935301d701aeb0aa5f7d01ff71940bc25423d249fbf3e3bce50a2b21606f1"
+ },
+ "screen": true
+}

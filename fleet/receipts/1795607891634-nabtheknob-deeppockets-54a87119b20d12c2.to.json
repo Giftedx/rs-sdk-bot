@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795607891634-nabtheknob-deeppockets-54a87119b20d12c2",
+ "account": "Deeppockets",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Adamant platelegs",
+ "requested": 1,
+ "claim": "cd4b82ca-89c7-4569-af95-ac718efd46c4",
+ "count": 1,
+ "ok": true,
+ "at": 1795608418419,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795608417449
+ },
+ "logout": {
+  "attemptId": "1795608400710-0000018668-0000000001",
+  "at": 1795608418197,
+  "sha256": "d78a9c275d909d0f9b3c6fd81a0998c85ced76df6eb8d968dea811764485df7e"
+ },
+ "screen": true
+}

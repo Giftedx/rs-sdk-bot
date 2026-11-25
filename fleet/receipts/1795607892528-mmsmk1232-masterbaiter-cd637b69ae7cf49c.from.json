@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795607892528-mmsmk1232-masterbaiter-cd637b69ae7cf49c",
+ "account": "mmsmk1232",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragonhide chaps",
+ "requested": 1,
+ "claim": "aba023bd-a648-4da3-a0f3-223e546c37c3",
+ "count": 0,
+ "ok": false,
+ "at": 1795608431373,
+ "detail": "trade claimed"
+}
