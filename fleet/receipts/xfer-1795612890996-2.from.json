@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795612890996-2",
  "account": "Woodenstaff",
  "partner": "Unsheathed",
@@ -12,6 +12,16 @@
  "claim": "66df7808-0fca-42f7-bb2a-4b141047f9b6",
  "count": 0,
  "ok": false,
- "at": 1795612987512,
- "detail": "trade claimed"
+ "at": 1795613011189,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795612995230
+ },
+ "logout": {
+  "attemptId": "1795612987523-0000020692-0000000001",
+  "at": 1795613011178,
+  "sha256": "07bd09892dea403f1c1a1f98c570c7841b537657208ee26976d4063579637a98"
+ },
+ "screen": false
 }
