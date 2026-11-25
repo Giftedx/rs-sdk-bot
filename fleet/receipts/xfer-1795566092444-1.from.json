@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795566092444-1",
  "account": "Bigchopper",
  "partner": "Woodenstaff",
@@ -10,8 +10,18 @@
  "item": "Water rune",
  "requested": 29,
  "claim": "4200bd88-9a6a-4f42-98b8-1598c1dab1dc",
- "count": 0,
- "ok": false,
- "at": 1795566802138,
- "detail": "trade claimed"
+ "count": 29,
+ "ok": true,
+ "at": 1795566819633,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1795566802147-0000028968-0000000001",
+  "at": 1795566819620,
+  "sha256": "aacbf31acb6de0e1f0c45362004d181e7ba3938a9977296edfdb0c51df1410e4"
+ },
+ "screen": true
 }
