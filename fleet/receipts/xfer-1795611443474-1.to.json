@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795611443474-1",
+ "account": "SporranBulge",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "3a2956f4-20cf-4594-b3e4-31e2f18282b5",
+ "count": 0,
+ "ok": false,
+ "at": 1795611564269,
+ "detail": "trade claimed"
+}
