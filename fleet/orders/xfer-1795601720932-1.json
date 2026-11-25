@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795601720932-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Hocuspokeus",
+  "to": "UnderMyKilt",
+  "item": "Herb",
+  "count": 6,
+  "itemId": 211,
+  "start": 1795601720932,
+  "end": 1795602620932,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
