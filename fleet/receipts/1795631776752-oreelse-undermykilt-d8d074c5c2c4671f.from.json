@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795631776752-oreelse-undermykilt-d8d074c5c2c4671f",
  "account": "OreElse",
  "partner": "UnderMyKilt",
@@ -12,6 +12,12 @@
  "claim": "6fe015d1-75d7-49d5-9841-ce2605085dea",
  "count": 0,
  "ok": false,
- "at": 1795632114049,
- "detail": "trade claimed"
+ "at": 1795632167159,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795632114058-0000027944-0000000001",
+  "at": 1795632167147,
+  "sha256": "b0696685e7cd90cf56c074a4837bcc38e2924c6ddcd51c5f7eb146ce5bccd62e"
+ },
+ "screen": false
 }

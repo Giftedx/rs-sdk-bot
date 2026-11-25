@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795632137325,
+ "at": 1795632168867,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -79,22 +79,6 @@
    "role": "helper"
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-84-p97 ITEM_ID=440 QUANTITY=84 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-168-p517 ITEM_ID=453 QUANTITY=168 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=84 ORE_RESERVE=0 -- smithing smelt"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:2353",
-   "role": "army"
-  },
-  {
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
@@ -129,7 +113,7 @@
    ]
   },
   {
-   "account": "Dipstick",
+   "account": "KnightRider",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -167,7 +151,7 @@
    ]
   },
   {
-   "account": "SporranDip",
+   "account": "Pocketpython",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -184,6 +168,19 @@
    "resources": [
     "varrock-se-mine"
    ]
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/generated/dwarfcannon.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dwarfcannon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dwarfcannon",
+   "role": "army"
   },
   {
    "account": "TheFullMonty",
@@ -280,21 +277,6 @@
    "role": "army"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights",
-    "scripts/ranged-train.ts TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Pocketpython BATCH_UNITS=250 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Pocketpython",
-   "role": "army"
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/chain.ts",
    "args": [
@@ -324,6 +306,21 @@
    "repeat": false,
    "goal": "campaign:haggis:item:1975",
    "role": "army"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Shaftsinker",
+   "role": "auto"
   }
  ],
  "army": [
@@ -336,6 +333,7 @@
   "bigpackage",
   "billionaire",
   "bowbeforeme",
+  "dipstick",
   "fatstack",
   "fingerblastr",
   "fingersmith",
