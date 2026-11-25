@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795614190871-2",
+ "account": "FishAndChips",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fishing bait",
+ "requested": 2,
+ "claim": "45a6edaf-a68b-4ede-9d75-7023504f2e00",
+ "count": 0,
+ "ok": false,
+ "at": 1795614309658,
+ "detail": "trade claimed"
+}
