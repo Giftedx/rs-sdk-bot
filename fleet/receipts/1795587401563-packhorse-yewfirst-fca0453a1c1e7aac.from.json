@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795587401563-packhorse-yewfirst-fca0453a1c1e7aac",
+ "account": "Packhorse",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 150,
+ "claim": "ad9dc96b-663c-42ce-b5a7-7e86eb8fe274",
+ "count": 0,
+ "ok": false,
+ "at": 1795588110162,
+ "detail": "trade claimed"
+}

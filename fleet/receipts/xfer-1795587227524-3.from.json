@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "xfer-1795587227524-3",
  "account": "Woodenstaff",
  "partner": "Moneyshot",
@@ -12,6 +12,16 @@
  "claim": "031e494c-b42e-4ce8-908c-36b32c7e0ac8",
  "count": 0,
  "ok": false,
- "at": 1795587742962,
- "detail": "trade claimed"
+ "at": 1795588128004,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 1,
+  "at": 1795587749653
+ },
+ "logout": {
+  "attemptId": "1795587743317-0000026384-0000000001",
+  "at": 1795588127992,
+  "sha256": "cbe7b2eeabf8d4f8cce7b46d8a7fac5671d1b12edb4149d39464754002550b0d"
+ },
+ "screen": false
 }
