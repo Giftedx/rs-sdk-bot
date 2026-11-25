@@ -73,8 +73,8 @@ const WC_KEEP_IDS = new Set<number>([
 export const WC_NORMAL_XP_25X = 625;
 export const WC_OAK_XP_25X = 937.5;
 
-// Draynor Jail West multiway hub (multiway.csv 0_48_50): 3 twin Oaks on x=3117 corridor beside Jail guard nw(3121,3249).
-export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3244 } as const;
+// Draynor Jail southern courtyard: (3115,3242) and (3118,3244) keep se(3120,3238) and nw(3121,3249) inside maxrange=7.
+export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3242 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
     [3114, 3239],
     [3115, 3243],
@@ -151,21 +151,21 @@ function findBestTree(
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (!wantOak) {
-                // Inner normal trees beside (3117,3246) keep arrival transition to Oak 15 near zero-walk.
-                return l.x >= 3113 && l.x <= 3119 && l.z >= 3244 && l.z <= 3251 && l.reachable !== false;
+                // Inner normal trees beside (3115,3242) keep arrival transition to Oak 15 near zero-walk.
+                return l.x >= 3111 && l.x <= 3118 && l.z >= 3238 && l.z <= 3249 && l.reachable !== false;
             }
-            // 3 Draynor Jail multiway courtyard oaks beside (3117,3246); keep all rolls inside the guard courtyard.
+            // 3 southern Draynor Jail oaks keeping se(3120,3238) and nw(3121,3249) within maxrange=7.
             return (
-                (l.x === 3115 && l.z === 3243)
+                (l.x === 3114 && l.z === 3239)
+                || (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
-                || (l.x === 3115 && l.z === 3250)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
+    const isHubOak = (l: NearbyLoc) => (l.x === 3114 && l.z === 3239) || (l.x === 3115 && l.z === 3243);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
@@ -198,16 +198,18 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
+    const filtered = perimeter.filter(t => t.x >= 3114 && t.x <= 3118 && t.z >= 3242 && t.z <= 3245);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3117,3246) inside the courtyard to stay adjacent to both southern hub oaks and guard nw(3121,3249).
-        const hub = (t.x === 3117 && t.z === 3246)
+        // Prefer (3115,3242) touching oakSW+oakMid, or (3118,3244) touching oakMid+oakHub; both keep se & nw in maxrange=7.
+        const hub = (t.x === 3115 && t.z === 3242)
             ? 0
-            : 1 + Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3246));
+            : (t.x === 3118 && t.z === 3244)
+                ? 1
+                : 2 + Math.max(Math.abs(t.x - 3115), Math.abs(t.z - 3242));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -239,8 +241,9 @@ function countAttackingGoblins(s: Session): number {
 function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
-        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 8) return false;
-        if (n.x < 3112 || n.x > 3123 || n.z < 3238 || n.z > 3251) return false;
+        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 10) return false;
+        // Strictly target se(3120,3238) and nw(3121,3249), excluding sw(3109,3237) and walled ee(3127,3248).
+        if (n.x < 3114 || n.x > 3122 || n.z < 3236 || n.z > 3251) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
         if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
@@ -393,7 +396,7 @@ if (import.meta.main) {
                 ...(!wasOn ? [main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' })] : []),
             ]);
         }
-        await walkWaypointsSafe(main, [[3117, 3246, 1]], isStopped);
+        await walkWaypointsSafe(main, [[3115, 3242, 0]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
@@ -458,7 +461,7 @@ if (import.meta.main) {
                         let period = prev?.period ?? defaultPeriod;
                         if (prev) {
                             const diff = e.tick - prev.tick;
-                            if (diff >= 4 && diff <= 6) period = diff;
+                            if (diff >= defaultPeriod && diff <= 6) period = diff;
                         }
                         if (!prev || e.tick > prev.tick) {
                             npcLastHit.set(e.sourceIndex, { tick: e.tick, period });
@@ -605,9 +608,9 @@ if (import.meta.main) {
                 && !needNormalLog
                 && !activeHitIn1t
                 && tagCount < 24
-                && activeHitters === 0
-                && gobs < 1
-                && nextHitEta === Infinity
+                && activeHitters < 2
+                && gobs < 2
+                && (nextHitEta === Infinity || nextHitEta >= 4)
                 && now - lastTagTick >= 15
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
