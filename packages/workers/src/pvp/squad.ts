@@ -2285,7 +2285,18 @@ export async function runPkSquadCli(
     let squadDone = false, released = false;
     // A stale release file of an earlier hold would end this one at once.
     if (holdMode) clearEscortRelease(releasePath);
-    const stopped = () => squadDone || halted !== undefined || existsSync('.practice/stop-pk-squad') || (holdMode ? released : gangOut());
+    // Bench: SQUAD_GANG_OUT_GRACE=<ticks> keeps the squad on for that many ticks after the last gang account is out, so the
+    // pickup of the last kill runs (default 0: the squad stops in the tick that the gang is out).
+    const outGrace = Number(get('SQUAD_GANG_OUT_GRACE', '0'));
+    let gangOutAt = -1;
+    const gangGone = () => {
+        if (!gangOut()) { gangOutAt = -1; return false; }
+        if (!(outGrace > 0)) return true;
+        const t = squad[0]!.tick();
+        if (gangOutAt < 0) gangOutAt = t;
+        return t - gangOutAt >= outGrace;
+    };
+    const stopped = () => squadDone || halted !== undefined || existsSync('.practice/stop-pk-squad') || (holdMode ? released : gangGone());
     const deadline = squad[0]!.tick() + Math.round(Number(get('MAX_MINUTES', '30')) * 100);
     const maxKills = Number(get('MAX_KILLS', '0'));
     let kills = 0;

@@ -18,7 +18,7 @@ export const DAGGER_IDS: ReadonlySet<number> = new Set([1215, 1231]);
 // takes it for an account with 0 prayer points. `holdBelow` and `holdTicks`: the hold (0 is no hold).
 export type DaggerOptions = { offReads: number; holdBelow: number; holdTicks: number };
 // The bench chose these (research/gang-clones.md, "Dagger mode").
-export const DAGGER_DEFAULTS: DaggerOptions = { offReads: 3, holdBelow: 0, holdTicks: 0 };
+export const DAGGER_DEFAULTS: DaggerOptions = { offReads: 5, holdBelow: 0, holdTicks: 0 };
 
 /** SQUAD_DAGGER=1 turns dagger mode on (undefined: off); the options come from SQUAD_DAGGER_OFF_READS and SQUAD_DAGGER_HOLD. */
 export function daggerOptionsOf(get: (name: string, fallback: string) => string): DaggerOptions | undefined {
