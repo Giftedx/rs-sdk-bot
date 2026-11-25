@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795619929272,
+ "at": 1795620023053,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -92,6 +92,22 @@
   },
   {
    "account": "PocketPool",
+   "script": "scripts/aio-logistics.ts",
+   "args": [
+    "walk-to",
+    "3185",
+    "3436",
+    "0"
+   ],
+   "env": {
+    "RECOVERY_TARGET_HUB": "varrock_west"
+   },
+   "enabled": true,
+   "repeat": false,
+   "role": "army"
+  },
+  {
+   "account": "UnderMyKilt",
    "script": "scripts/aio-logistics.ts",
    "args": [
     "walk-to",
@@ -201,7 +217,6 @@
   "sausagefest",
   "swordinhand",
   "thefullmonty",
-  "undermykilt",
   "woodpecker",
   "yewfirst"
  ],
