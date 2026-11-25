@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795586333268-3",
+ "account": "TrouserSnake",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 7,
+ "claim": "f16784d2-de62-4f2e-96d2-fc632fb2d51f",
+ "count": 0,
+ "ok": false,
+ "at": 1795586938819,
+ "detail": "trade claimed"
+}
