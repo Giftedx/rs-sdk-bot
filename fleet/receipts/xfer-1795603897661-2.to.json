@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795603897661-2",
+ "account": "TheFullMonty",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Uncut diamond",
+ "requested": 11,
+ "claim": "b3c02778-7d8a-4a03-8a4b-5694a0d5826c",
+ "count": 0,
+ "ok": false,
+ "at": 1795604540641,
+ "detail": "trade claimed"
+}
