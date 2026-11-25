@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795600654927-1",
  "account": "Moneyshot",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Ring of dueling(8)",
  "requested": 1,
  "claim": "be15615f-7cdc-4455-89df-29d480cb9ecd",
- "count": 0,
- "ok": false,
- "at": 1795600825875,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795600840515,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795600839371
+ },
+ "logout": {
+  "attemptId": "1795600825885-0000002328-0000000001",
+  "at": 1795600840504,
+  "sha256": "4dbb56429b13e973c8dbf33ebd5acd4575765f0234cf1116c802f10a3274390b"
+ },
+ "screen": true
 }
