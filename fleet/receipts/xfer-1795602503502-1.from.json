@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795602503502-1",
  "account": "YewFirst",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "93a2be70-968a-40d3-942f-be3dd7b8fdff",
- "count": 0,
- "ok": false,
- "at": 1795602735598,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795602778398,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795602741691
+ },
+ "logout": {
+  "attemptId": "1795602735607-0000003772-0000000001",
+  "at": 1795602778092,
+  "sha256": "ab59a94208330f73618f1d59a774ca07957a369961898f95e06232b5f545b979"
+ },
+ "screen": true
 }

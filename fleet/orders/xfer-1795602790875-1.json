@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795602790875-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Woodpecker",
+  "item": "Uncut diamond",
+  "count": 11,
+  "itemId": 1617,
+  "start": 1795602790875,
+  "end": 1795603690875,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
