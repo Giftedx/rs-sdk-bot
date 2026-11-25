@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795613705181-2",
+ "account": "Bigpackage",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Sapphire necklace",
+ "requested": 1,
+ "claim": "b6d5943e-eb18-468c-a820-4cc577eeb671",
+ "count": 0,
+ "ok": false,
+ "at": 1795613826608,
+ "detail": "trade claimed"
+}
