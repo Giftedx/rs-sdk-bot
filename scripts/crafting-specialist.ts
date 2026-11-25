@@ -409,6 +409,7 @@ async function fastInProcessBatchTrade(
  const keepSet = opts.dropUnwanted;
  let sawConfirm = false;
  let lastReqTick = -10;
+ let lastHelperPreReqTick = -10;
 
  while (spec.tick() < opts.deadlineTick) {
   const st = spec.sdk.getTradeState();
@@ -430,13 +431,20 @@ async function fastInProcessBatchTrade(
     for (const slot of dropSlots.slice(0, 5)) {
      sActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     }
+    // Pre-send helper's trade request on the tick before drops finish to avoid same-tick OPPLAYER4 collision.
+    if (dropSlots.length <= 9 && sTarget && spec.tick() - lastHelperPreReqTick >= 3) {
+     lastHelperPreReqTick = spec.tick();
+     hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+    }
    } else {
     for (const slot of dropSlots) {
      sActs.push(spec.direct({ type: 'dropItem', slot, reason: 'SDK' }));
     }
     if (hTarget && sTarget && spec.tick() - lastReqTick >= 2) {
      lastReqTick = spec.tick();
-     hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+     if (spec.tick() - lastHelperPreReqTick > 2) {
+      hActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+     }
      sActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
     } else if (dlgOpen) {
      sActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
@@ -673,8 +681,11 @@ async function craftAtCastleWarsBank(
  const hasDragonstone =
   countItem(preBankInv, 1632) > 0 ||
   preBankItems.some((b: any) => b.id === ITEM_IDS.uncut_dragonstone && b.count > 0);
- // Defer surplus emeralds beyond Lv 34 unlock from Cycle 0 to the final Lv 97-99 cycle so they skip early level-up modals.
- const emerInC0 = Math.min(6, Math.max(1, Math.ceil((10047 - skillXp(spec, 'Crafting')) / 1687.5)));
+ // Defer only the emerald beyond Lv 43 (diamond) and Lv 55 (dragonstone) unlocks so Cycle 0 never stalls below 55.
+ const curCraftXp = skillXp(spec, 'Crafting');
+ const needFor43 = Math.ceil(Math.max(0, 19684 - curCraftXp - 3 * 2125) / 1687.5);
+ const needFor55 = Math.ceil(Math.max(0, 46534 - curCraftXp - 3 * 2125 - 9 * 2687.5) / 1687.5);
+ const emerInC0 = Math.min(6, Math.max(1, needFor43, needFor55));
  const emerRem = 6 - emerInC0;
  const dstoneInC0 = 15 - emerInC0;
  const optBCycles: readonly (readonly { id: number; count: number }[])[] = [
