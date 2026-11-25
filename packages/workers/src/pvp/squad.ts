@@ -1786,10 +1786,34 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
         o.log(`[${s.name}] SQUAD dagger pickup after its fight: ${live.length} kill${live.length === 1 ? '' : 's'}, ${reads} reads, ${JSON.stringify(got)}`);
     };
+    // DEBUG (scratch branch, not for merge): each prayer input between fights in the Wilderness, with its sender (caller
+    // lines) and the Protect Item view, and the ticks with Protect Item off while the helper wants it, by the sender of
+    // the last input that turned it off.
+    const tr = { out: 0, want: 0, off: 0, lines: 0, offBy: new Map<string, number>(), itemOffBy: new Map<string, number>(), itemOnBy: new Map<string, number>(), allBy: new Map<string, number>() };
+    let lastItemOffFrom = 'start';
+    const bump = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) ?? 0) + 1);
+    const callerOf = (stack: string | undefined) => (stack ?? '').split('\n').slice(2, 5).map(l => { const m = /([\w.-]+\.ts):(\d+)/.exec(l); return m ? `${m[1]}:${m[2]}` : '?'; }).join('<');
+    const betweenNow = () => { const p0 = s.sdk.getState()?.player; return !inFight && !inRescue && !!p0 && !p0.isDead && p0.hp > 0 && wildernessLevel(p0.worldZ) > 0; };
+    const noteToggle = (idx: number, from: string) => {
+        if (!betweenNow()) return;
+        const st0 = s.sdk.getState(), itemOn = !!st0?.prayers?.activePrayers?.[PRAYER.item], skull = ownSkull(s.client) === true;
+        bump(tr.allBy, `${idx}:${from}`);
+        if (idx === PRAYER.item) { bump(itemOn ? tr.itemOffBy : tr.itemOnBy, from); if (itemOn) lastItemOffFrom = from; }
+        if (skull && tr.lines < 40) { tr.lines++; console.log(`PTRACE3 ${s.name} t=${s.tick()} idx=${idx} itemOn=${itemOn ? 1 : 0} pts=${st0?.prayers?.prayerPoints ?? -1} from=${from}`); }
+    };
+    const origToggle = typeof s.sdk.sendTogglePrayer === 'function' ? s.sdk.sendTogglePrayer : null;
+    if (origToggle) s.sdk.sendTogglePrayer = ((idx: number, ...rest: unknown[]) => { noteToggle(idx, callerOf(new Error().stack)); return (origToggle as (...a: unknown[]) => Promise<unknown>).call(s.sdk, idx, ...rest); }) as typeof s.sdk.sendTogglePrayer;
+    const origDirectTr = typeof s.direct === 'function' ? s.direct : null;
+    if (origDirectTr) s.direct = ((a: { type: string; prayerIndex?: number }, ...rest: unknown[]) => { if (a?.type === 'togglePrayer' && typeof a.prayerIndex === 'number') noteToggle(a.prayerIndex, `direct<${callerOf(new Error().stack)}`); return (origDirectTr as (...x: unknown[]) => Promise<unknown>).call(s, a, ...rest); }) as typeof s.direct;
     const unwatch = s.onTick(() => {
         const stTick = s.sdk.getState();
         const pos = stTick?.player;
         const tickNow = s.tick();
+        if (inFight || inRescue) lastItemOffFrom = inFight ? 'fight' : 'rescue';
+        else if (going() && pos && !pos.isDead && pos.hp > 0 && wildernessLevel(pos.worldZ) > 0 && (stTick?.prayers?.prayerPoints ?? 0) > 0) {
+            tr.out++;
+            if (o.options.protectItem !== false && ownSkull(s.client) === true) { tr.want++; if (!stTick!.prayers!.activePrayers[PRAYER.item]) { tr.off++; bump(tr.offBy, lastItemOffFrom); } }
+        }
         const hp = pos?.hp; if (hp !== undefined) { if (hp < lastHp) { stats.taken += lastHp - hp; damagedAt = tickNow; } lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
         const combatEvents = stTick?.combatEvents;
         if (combatEvents?.length) {
@@ -2167,6 +2191,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         const qEnd = me();
         if (!stats.died && qEnd && diedNow(qEnd)) stats.died = true;
         unwatch();
+        const fmt = (m: Map<string, number>) => [...m].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}=${v}`).join(',');
+        console.log(`PTRACE3SUM ${s.name} out=${tr.out} itemWant=${tr.want} itemOff=${tr.off} offBy={${fmt(tr.offBy)}} itemOffBy={${fmt(tr.itemOffBy)}} itemOnBy={${fmt(tr.itemOnBy)}} allBy={${fmt(tr.allBy)}}`);
+        if (origToggle) s.sdk.sendTogglePrayer = origToggle;
+        if (origDirectTr) s.direct = origDirectTr;
         flushGround(s.tick(), true);
         o.cohesion?.remove(s.name);
         if (origSendUseItem) s.sdk.sendUseItem = origSendUseItem;
