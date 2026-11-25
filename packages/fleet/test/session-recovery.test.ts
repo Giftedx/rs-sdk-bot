@@ -507,5 +507,63 @@ describe('fleet standalone session recovery', () => {
         expect(waitRes.ok).toBe(false);
         expect(waitRes.deferred).toBe(true);
         expect(waitRes.detail).toContain('recovery admission waiting: maxBots');
+
+        const ownerWritten = JSON.parse(readFileSync(join(liveRoot(root), 'fleet-runs', runId, 'owner.json'), 'utf8'));
+        expect(ownerWritten.runId).toBe(runId);
+        expect(Number.isSafeInteger(ownerWritten.pid) && ownerWritten.pid > 0 && ownerWritten.pid !== process.pid).toBe(true);
+    });
+
+    test('assessRecoveryEligibility accepts released fleet-trade claims with dead PID and stopped/disconnected proof', () => {
+        const stoppedProof = {
+            state: 'held' as const,
+            account: 'oreelse',
+            server: 'rs-sdk-demo.fly.dev',
+            domain: 'live' as const,
+            attemptId: '1795573046627-0000012580-0000000001',
+            reason: 'ended stopped',
+        };
+        const priorEnd = { at: 1795562523246, reason: 'gave-up after 21 runs' };
+        const releasedTrade = {
+            phase: 'released' as const,
+            orderId: '1795572728675-woodpecker-oreelse-1e1636f203f8de75',
+            host: 'box-a',
+            pid: 12580,
+        };
+
+        expect(assessRecoveryEligibility({
+            proof: stoppedProof,
+            claim: releasedTrade,
+            end: priorEnd,
+            stopText: undefined,
+            pidAlive: () => false,
+            host: 'box-a',
+        })).toEqual({ eligible: true, endedAt: priorEnd.at });
+
+        expect(assessRecoveryEligibility({
+            proof: stoppedProof,
+            claim: releasedTrade,
+            end: priorEnd,
+            stopText: undefined,
+            pidAlive: () => true,
+            host: 'box-a',
+        })).toEqual({ eligible: false, reason: 'worker still alive', log: false });
+
+        expect(assessRecoveryEligibility({
+            proof: { ...stoppedProof, reason: 'session active or outcome unknown' },
+            claim: releasedTrade,
+            end: priorEnd,
+            stopText: undefined,
+            pidAlive: () => false,
+            host: 'box-a',
+        })).toEqual({ eligible: false, reason: 'no held fleet account claim', log: false });
+
+        expect(assessRecoveryEligibility({
+            proof: stoppedProof,
+            claim: releasedTrade,
+            end: { at: priorEnd.at, reason: 'died in pvp' },
+            stopText: undefined,
+            pidAlive: () => false,
+            host: 'box-a',
+        })).toEqual({ eligible: false, reason: 'death requires diagnosis before recovery', log: true });
     });
 });

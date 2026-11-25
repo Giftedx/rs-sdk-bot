@@ -58,7 +58,7 @@ export const RECOVERABLE_END = /^(?:blocked|gave-up|exit|no-progress|stopped)(?:
 export const END_SETTLE_MS = BOOTSTRAP_STATUS_AGE_MS + 5 * 60_000;
 
 export type EndRecord = { at: number; reason: string; revision?: string };
-export type ClaimView = { phase: 'held' | 'released'; kind?: string; pid?: number; host?: string } | null;
+export type ClaimView = { phase: 'held' | 'released'; kind?: string; orderId?: string; pid?: number; host?: string; at?: number } | null;
 export type Eligibility = { eligible: true; endedAt: number } | { eligible: false; reason: string; log: boolean };
 export type LeaseState = 'none' | 'held' | 'stale';
 
@@ -114,9 +114,16 @@ export function assessRecoveryEligibility(v: {
     if (v.stopText !== undefined && !swarmWroteStopText(v.stopText)) {
         return { eligible: false, reason: 'owner stop file holds the account', log: true };
     }
+    const isReleasedTrade = v.claim?.phase === 'released'
+        && (typeof v.claim.orderId === 'string' || (typeof v.claim.kind === 'string' && v.claim.kind !== 'swarm'))
+        && v.proof.reason !== 'session active or outcome unknown';
     if (!v.claim || v.claim.phase !== 'held') {
         if (!v.end) return { eligible: false, reason: 'end record gone; manual diagnosis required', log: true };
-        if (!v.end.reason.startsWith(`exit orphaned: attempt ${v.proof.attemptId} `)) {
+        if (isReleasedTrade) {
+            if (v.claim!.host === v.host && typeof v.claim!.pid === 'number' && v.pidAlive(v.claim!.pid)) {
+                return { eligible: false, reason: 'worker still alive', log: false };
+            }
+        } else if (!v.end.reason.startsWith(`exit orphaned: attempt ${v.proof.attemptId} `)) {
             return { eligible: false, reason: 'no held fleet account claim', log: false };
         }
     } else {
@@ -127,7 +134,7 @@ export function assessRecoveryEligibility(v: {
     }
     if (!v.end) return { eligible: false, reason: 'end record gone; manual diagnosis required', log: true };
     const started = /^\d{13}-/.test(v.proof.attemptId) ? Number(v.proof.attemptId.slice(0, 13)) : NaN;
-    if (v.end.at < started && !v.retried) return { eligible: false, reason: 'waiting: supervisor has not ended the held attempt', log: false };
+    if (!isReleasedTrade && v.end.at < started && !v.retried) return { eligible: false, reason: 'waiting: supervisor has not ended the held attempt', log: false };
     if (/^died\b/.test(v.end.reason)) return { eligible: false, reason: 'death requires diagnosis before recovery', log: true };
     if (!RECOVERABLE_END.test(v.end.reason)) return { eligible: false, reason: `end reason not recoverable: ${v.end.reason}`, log: true };
     return { eligible: true, endedAt: v.end.at };
@@ -665,6 +672,7 @@ export type ControlledDispatchOneOptions = {
     now?: () => number;
     pidAlive?: (pid: number) => boolean;
     processStarts?: ProcessStarts;
+    ownerPid?: number;
 };
 
 const DISPATCH_WAIT_CAUSES = new Set([
@@ -686,10 +694,21 @@ export async function runControlledDispatchOne(
     const runDir = join(liveDir, 'fleet-runs', opts.runId);
     mkdirSync(runDir, { recursive: true });
 
+    const holderProc = typeof opts.ownerPid === 'number'
+        ? null
+        : Bun.spawn([process.execPath, '-e', 'setInterval(() => {}, 60_000)', opts.runId], {
+            cwd: resolvedRoot,
+            windowsHide: true,
+            stdin: 'ignore',
+            stdout: 'ignore',
+            stderr: 'ignore',
+        });
+    const ownerPid = opts.ownerPid ?? holderProc?.pid ?? process.pid;
+
     const recoveryRecord = {
         status: 'running',
         runId: opts.runId,
-        pid: process.pid,
+        pid: ownerPid,
         spec: {
             kind: 'run',
             capability: 'session-recovery-only',
@@ -700,7 +719,7 @@ export async function runControlledDispatchOne(
         },
     };
     atomicJson(join(runDir, 'recovery.json'), recoveryRecord);
-    atomicJson(join(runDir, 'owner.json'), { runId: opts.runId, pid: process.pid });
+    atomicJson(join(runDir, 'owner.json'), { runId: opts.runId, pid: ownerPid });
 
     const request: ControlledRecoveryRequest = {
         schema: RECOVERY_SCHEMA,
@@ -722,7 +741,7 @@ export async function runControlledDispatchOne(
     try {
         acquireRepairLease(
             leaseFile,
-            { pid: process.pid, runId: opts.runId, nonce: opts.nonce, at: nowFn() },
+            { pid: ownerPid, runId: opts.runId, nonce: opts.nonce, at: nowFn() },
             {
                 now: nowFn(),
                 pidAlive: opts.pidAlive,
@@ -730,6 +749,7 @@ export async function runControlledDispatchOne(
             },
         );
     } catch (err) {
+        try { holderProc?.kill(); } catch { /* ignore */ }
         atomicJson(join(runDir, 'recovery.json'), { ...recoveryRecord, status: 'failed' });
         return { ok: false, detail: `repair lease busy: ${String(err).slice(0, 120)}` };
     }
@@ -816,10 +836,11 @@ export async function runControlledDispatchOne(
     } finally {
         try {
             const cur = readJson(leaseFile, null);
-            if (cur?.pid === process.pid && cur?.runId === opts.runId && cur?.nonce === opts.nonce) {
+            if (cur?.pid === ownerPid && cur?.runId === opts.runId && cur?.nonce === opts.nonce) {
                 rmSync(leaseFile, { force: true });
             }
         } catch { /* ignore */ }
+        try { holderProc?.kill(); } catch { /* ignore */ }
         atomicJson(join(runDir, 'recovery.json'), { ...recoveryRecord, status: finalStatus });
     }
 }
