@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795580182518-1",
+ "account": "Shaftsinker",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "9c4cd215-5693-42af-8db2-1b146b2f72fd",
+ "count": 0,
+ "ok": false,
+ "at": 1795580844356,
+ "detail": "trade claimed"
+}

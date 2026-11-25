@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795580726901-bonetopick-woodenstaff-4e945c3a8cbd2c22",
+ "account": "BoneToPick",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 2,
+ "claim": "c48fda48-e005-42a6-a8d1-f71a08ec94e7",
+ "count": 0,
+ "ok": false,
+ "at": 1795580941291,
+ "detail": "trade claimed"
+}

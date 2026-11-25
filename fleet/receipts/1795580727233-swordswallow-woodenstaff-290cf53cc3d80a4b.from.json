@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795580727233-swordswallow-woodenstaff-290cf53cc3d80a4b",
+ "account": "Swordswallow",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 1,
+ "claim": "924246b7-625d-4b39-b04b-fb1e93b3bd4f",
+ "count": 0,
+ "ok": false,
+ "at": 1795580863250,
+ "detail": "trade claimed"
+}

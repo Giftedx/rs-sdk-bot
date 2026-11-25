@@ -1,0 +1,50 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795580779813-dipstick-yewfirst-94ef72df4376cd9b",
+ "account": "Dipstick",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 241,
+ "claim": "a68f6384-cb5b-48d4-9429-4d4daeb07f13",
+ "count": 0,
+ "ok": false,
+ "at": 1795580920712,
+ "detail": "Error: route to 3183, 3440: precondition ferry needs 60 coins and the bank holds 0",
+ "lines": [
+  {
+   "item": "Adamant arrowtips",
+   "requested": 128,
+   "count": 0
+  },
+  {
+   "item": "Mithril arrowtips",
+   "requested": 225,
+   "count": 0
+  },
+  {
+   "item": "Steel arrowtips",
+   "requested": 135,
+   "count": 0
+  },
+  {
+   "item": "Iron arrowtips",
+   "requested": 90,
+   "count": 0
+  },
+  {
+   "item": "Bronze arrowtips",
+   "requested": 60,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1795580873590-0000024208-0000000001",
+  "at": 1795580920697,
+  "sha256": "78761ab01e6f5d6bdf3b9b7aea1fbee60f7746d521dbc8a93f58f9f2bf4f7f06"
+ },
+ "screen": false
+}

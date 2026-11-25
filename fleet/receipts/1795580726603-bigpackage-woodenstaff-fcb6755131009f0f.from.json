@@ -1,0 +1,49 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "1795580726603-bigpackage-woodenstaff-fcb6755131009f0f",
+ "account": "Bigpackage",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rope",
+ "requested": 4,
+ "claim": "7c4be5ef-b8b9-4f85-b73c-161aeb14a12a",
+ "count": 0,
+ "ok": false,
+ "at": 1795580907495,
+ "detail": "Error: stock short: Water rune 0 banked + 0 held < 24",
+ "lines": [
+  {
+   "item": "Water rune",
+   "requested": 24,
+   "count": 0
+  },
+  {
+   "item": "Air rune",
+   "requested": 24,
+   "count": 0
+  },
+  {
+   "item": "Earth rune",
+   "requested": 24,
+   "count": 0
+  },
+  {
+   "item": "Dragon bones",
+   "requested": 6,
+   "count": 0
+  }
+ ],
+ "bank": {
+  "count": 4,
+  "at": 1795580907176
+ },
+ "logout": {
+  "attemptId": "1795580900797-0000016140-0000000001",
+  "at": 1795580907481,
+  "sha256": "565270abe50c0443989292112d6e84c4dd08cfdadc4df9534714a881fcf16db4"
+ },
+ "screen": false
+}
