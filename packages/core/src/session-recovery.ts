@@ -251,6 +251,20 @@ export async function recoverSession(request:RecoveryRequest,deps:RecoveryDeps){
  log('RECOVERY_RESULT '+JSON.stringify({state:receipt.state,account:request.account,attemptId:receipt.attemptId,gameplay:false,repairsFailure:false}));
  return receipt;
 }
+// A swarm that waits on a slow Git push (a lease renewal) writes no heartbeat, and after FLEET_HEARTBEAT_MAX_MS the
+// guard reads its state as stale. Before the login, and only there, the guard waits out a stale heartbeat for a bounded
+// time; any other refusal, and a stale heartbeat past the wait, stands. No session is open, so a blocked loop costs nothing.
+export const STALE_HEARTBEAT_WAIT_MS=30_000;
+export function waitOutStaleHeartbeat(guard:()=>void,{waitMs=STALE_HEARTBEAT_WAIT_MS,stepMs=1000,now=Date.now,sleep=(ms:number)=>Bun.sleepSync(ms)}:{waitMs?:number;stepMs?:number;now?:()=>number;sleep?:(ms:number)=>void}={}):void{
+ const until=now()+waitMs;
+ for(;;){
+  try{guard();return;}
+  catch(error){
+   if(!(error instanceof Error)||error.message!=='recovery fleet ownership unresolved: stale'||now()>=until)throw error;
+   sleep(stepMs);
+  }
+ }
+}
 export function startRecoverySessionTimer(expiresAt?:number){
  const budget=expiresAt===undefined?120000:Math.min(120000,Math.max(0,expiresAt-Date.now()));
  const timer=setTimeout(()=>{console.error('RECOVERY_HELD '+JSON.stringify(recoveryHeldDiagnostic(new RecoveryBoundaryError('deadline','outer-deadline'))));process.exit(1);},budget);timer.unref();
@@ -304,7 +318,7 @@ async function cli(){
  const lifecycleRoot=resolvedLifecycle.root;
  const receipt=await recoveryBoundary('session',()=>recoverSession(request,{root:lifecycleRoot,guard,...(admission?{admission}:{}),
   connect:async()=>{
-   const s=await connectInProcess({name:request.account,password,server:request.server,beforeConnect:guard,recoverSwarm:admission,...(resolvedLifecycle.overrideForConnect?{lifecycleRoot}:{})});
+   const s=await connectInProcess({name:request.account,password,server:request.server,beforeConnect:()=>waitOutStaleHeartbeat(guard),recoverSwarm:admission,...(resolvedLifecycle.overrideForConnect?{lifecycleRoot}:{})});
    // Through cleanup and logout: client write times and lengths, never payloads.
    observeClientTransport(s.client,row=>console.log('RECOVERY_TRANSPORT '+JSON.stringify(row)),{tick:()=>s.tick()});
    return s;
