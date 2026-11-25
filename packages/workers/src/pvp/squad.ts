@@ -429,6 +429,15 @@ export function windupFloor(attackers: number, maxHp: number): number {
     return Math.min(Math.floor(maxHp / 2), WINDUP_HP_PER_ATTACKER * Math.max(1, attackers));
 }
 
+// The walk back of a bank trip meets a pile: on a multi-way tile, 3 or more enemies in reach and at least WALK_BACK_PILE times
+// as many as this member and its allies in reach. The member then leaves at once, at the HP it walked in with. With the fight
+// rule alone (squadFallbackPlan) a member with 1 ally in reach stays until 77 HP, and one volley of the pile took it from 80 to
+// 64, under the safe HP for the windup (research/gang-clones.md, "The walk back").
+export const WALK_BACK_PILE = 2;
+export function walkBackPile(o: { inMulti: boolean; enemyCount: number; allyCount: number }): boolean {
+    return o.inMulti && o.enemyCount >= 3 && o.enemyCount >= WALK_BACK_PILE * (o.allyCount + 1);
+}
+
 // A death of a squad member: hitpoints at zero (`isDead`, before the respawn), a new life, or the tile of the Lumbridge respawn.
 // Without `isDead` a death in a teleport windup shows only after the respawn, and the member starts a bank trip while it is dead.
 export function squadDied(q: { isDead?: boolean; lifeId?: number; worldX: number; worldZ: number }, life0: number | undefined): boolean {
@@ -1534,8 +1543,11 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const wanted = new Set([...PICKUP_ITEMS, ...(ammo ? [ammo] : [])]);
     const going = () => !o.stopped() && s.tick() < o.deadline && o.killsLeft();
     const bankEaten = { eaten: 0 };
+    // The pile that stopped the last walk back (walkBackPile): the hold loop escapes before anything else.
+    const walkBack: { pile: { hp: number; enemies: number; allies: number } | null } = { pile: null };
     // Resolve bank and march-back legs from current aim on each trip, and synchronize initial mainland bank prep at the rally barrier.
     const trip = async (a: Session, fresh = false) => {
+        walkBack.pile = null;
         if (!fresh) o.tripping?.add(s.name);
         try {
             return await locs.withLocs(async () => {
@@ -1579,9 +1591,17 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     },
                     skipReturn: isFresh => isFresh && !!o.useRally,
                     // The walk back stops where the escape rule of the hold loop fires (the walk to the post between fights stops on
-                    // the same rule), and the hold loop does the escape. The trip ends there with no fault. A member that walked back
-                    // alone into the pile took 10 to 14 hits in 40 to 130 ticks and died on the walk (research/gang-clones.md, "The walk back").
-                    returnStop: () => fallbackDue() || radarMove(),
+                    // the same rule), or where it meets a pile (walkBackPile), and the hold loop does the escape. The trip ends there
+                    // with no fault. A member that walked back alone into the pile took 8 to 14 hits in 40 to 132 ticks and died on
+                    // the walk (research/gang-clones.md, "The walk back").
+                    returnStop: () => {
+                        const f = fallbackAction();
+                        if ((f.plan !== 'hold' && f.plan !== 'out') || radarMove()) return true;
+                        const pos = me();
+                        if (!pos || !walkBackPile({ inMulti: isMulti(pos.worldX, pos.worldZ), enemyCount: f.enemyCount, allyCount: f.allyCount })) return false;
+                        walkBack.pile = { hp: pos.hp, enemies: f.enemyCount, allies: f.allyCount };
+                        return true;
+                    },
                 });
                 return await bankRun(a, fresh);
             });
@@ -1971,6 +1991,15 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     const held = s.sdk.getInventory().filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length, start = squadStartFood(held, pack.food);
                     if (!start.ok) { o.log(`[${s.name}] SQUAD start: ${held} food held, under the floor of ${start.floor} of ${pack.food}`); break; }
                 }
+                continue;
+            }
+            if (walkBack.pile) {
+                const pile = walkBack.pile;
+                walkBack.pile = null;
+                o.log(`[${s.name}] SQUAD walk back met a pile: escape hp=${pile.hp} enemies=${pile.enemies} allies=${pile.allies}`);
+                const retreated = await runRescue();
+                if (!retreated) { retreatEnded(); break; }
+                escapes++;
                 continue;
             }
             const now = s.tick();

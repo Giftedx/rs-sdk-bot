@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { HELD_FOCUS, heldFocusOf, squadFallbackPlan } from '../src/pvp/squad';
+import { HELD_FOCUS, heldFocusOf, squadFallbackPlan, walkBackPile } from '../src/pvp/squad';
 
 // A member on a multi-way tile at the gang post (Wilderness 16) with a teleport in the pack.
 const at = (o: { hp: number; enemyCount: number; allyCount: number; targetingMe: number; held?: boolean }) => squadFallbackPlan({
@@ -38,6 +38,19 @@ describe('squadFallbackPlan with the held focus', () => {
         expect(at({ hp: 75, enemyCount: 5, allyCount: 0, targetingMe: 2, held: true })).toBe('teleport');
         expect(at({ hp: 87, enemyCount: 5, allyCount: 0, targetingMe: 0, held: true })).toBe('teleport');
         expect(at({ hp: 95, enemyCount: 5, allyCount: 0, targetingMe: 2, held: true })).toBe('hold');
+    });
+    test('the walk back leaves a pile of twice its numbers at once, at full HP', () => {
+        // Run 45707395415 seed 8: 5 enemies and 1 ally. The fight rule holds at 80 HP, and one volley took the member to 64.
+        expect(at({ hp: 80, enemyCount: 5, allyCount: 1, targetingMe: 2, held: true })).toBe('hold');
+        expect(walkBackPile({ inMulti: true, enemyCount: 5, allyCount: 1 })).toBe(true);
+        expect(walkBackPile({ inMulti: true, enemyCount: 3, allyCount: 0 })).toBe(true);
+        expect(walkBackPile({ inMulti: true, enemyCount: 6, allyCount: 2 })).toBe(true);
+        // Allies in reach that hold the numbers: the member joins them.
+        expect(walkBackPile({ inMulti: true, enemyCount: 5, allyCount: 2 })).toBe(false);
+        expect(walkBackPile({ inMulti: true, enemyCount: 4, allyCount: 2 })).toBe(false);
+        // Two enemies, or a single-way tile (one attacker at a time): the walk goes on.
+        expect(walkBackPile({ inMulti: true, enemyCount: 2, allyCount: 0 })).toBe(false);
+        expect(walkBackPile({ inMulti: false, enemyCount: 5, allyCount: 0 })).toBe(false);
     });
     test('an outnumbered squad keeps the plain fractions', () => {
         // 2 of ours against 3: no held fractions.
