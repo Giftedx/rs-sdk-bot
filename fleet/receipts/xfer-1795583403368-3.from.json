@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795583403368-3",
+ "account": "Masterbaiter",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 5,
+ "claim": "a685bb1b-d5ec-47a1-b95c-a8e5d921ece4",
+ "count": 0,
+ "ok": false,
+ "at": 1795583615814,
+ "detail": "trade claimed"
+}
