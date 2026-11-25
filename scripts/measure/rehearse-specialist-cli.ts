@@ -532,8 +532,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         targetCap: 2554,
         scimVariant: {
             mode: 'attack-pvp-scim',
-            planTicks: 2193,
-            planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2193t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
+            planTicks: 2138,
+            planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2084t..2193t (<=2554t vs #1 2607t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
         },
     },
     {
@@ -548,8 +548,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         targetCap: 3937,
         scimVariant: {
             mode: 'defence-scim',
-            planTicks: 2624,
-            planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2624t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
+            planTicks: 2623,
+            planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2622t..2624t (<=3937t vs #1 4018t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
         },
     },
     {
@@ -564,8 +564,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         targetCap: 3222,
         scimVariant: {
             mode: 'strength-scim',
-            planTicks: 2112,
-            planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2112t (<=3222t vs #1 3288t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
+            planTicks: 2063,
+            planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 2015t..2112t (<=3222t vs #1 3288t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
         },
     },
     {
@@ -580,8 +580,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         targetCap: 5263,
         scimVariant: {
             mode: 'hp-pvp-scim',
-            planTicks: 4035,
-            planSource: '400ms rehearsal SIM_SEED=7 SIM_SEED_ANCHOR=^$ 4035t (<=5263t vs #1 5371t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
+            planTicks: 4168,
+            planSource: '400ms rehearsals SIM_SEED=7 SIM_SEED_ANCHOR=^$ 4035t..4302t (<=5263t vs #1 5371t, Waterfall + 1-tick Rune scimitar 1333 relog Keep PvP)',
         },
     },
 ];
