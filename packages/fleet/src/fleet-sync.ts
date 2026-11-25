@@ -458,12 +458,14 @@ export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: str
             && (!own.inventory || own.inventory.before === own.inventory.after);
         if (!ownIdle) return false;
         if (own.state === 'reconcile' && own.screen === false && now >= order.end) return true;
+        // The account's own worker is gone: it wrote `reconcile`, or it died while `prepared` (a PC restart) and the
+        // claim and the window both ended an hour ago.
+        const ownGone = own.state === 'reconcile' || now - claim.at >= DROPPED_CLAIM_MS && now - order.end >= DROPPED_CLAIM_MS;
         if (!partner) {
             const partnerSide = sideOf(order[other]);
-            return now >= order.end && own.state === 'reconcile' && (partnerSide === side ? now : publishedAt(partnerSide)) >= order.end + UNANSWERED_GRACE_MS;
+            return now >= order.end && ownGone && (partnerSide === side ? now : publishedAt(partnerSide)) >= order.end + UNANSWERED_GRACE_MS;
         }
-        const ended = own.state === 'reconcile' || now - claim.at >= DROPPED_CLAIM_MS && now - order.end >= DROPPED_CLAIM_MS;
-        return ended && terminalTradeReceipt(order, other, partner, now) && partner.state === 'failed';
+        return ownGone && terminalTradeReceipt(order, other, partner, now) && partner.state === 'failed';
     });
 }
 

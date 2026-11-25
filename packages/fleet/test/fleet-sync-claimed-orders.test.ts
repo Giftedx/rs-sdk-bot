@@ -67,6 +67,38 @@ test('a sync puts back a deleted order file that a held claim names, also when g
     } finally { rmSync(dir, { recursive: true, force: true }); }
 }, 30_000);
 
+test('a giver whose worker died while prepared, with a partner that never came, is freed an hour after the window', () => {
+    // The order and receipt of a giver whose worker died in a PC restart before it could write `reconcile`.
+    const dead = {
+        id: '1795585630736-abracadickra-yewfirst-5d60afd40f4184f9', server: 'rs-sdk-demo.fly.dev', from: 'Abracadickra', to: 'YewFirst',
+        item: 'Rune arrowtips', count: 64, start: 1795585630736, end: 1795589230736,
+        meet: [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }],
+    };
+    const own = {
+        version: 2, state: 'prepared', id: dead.id, account: 'Abracadickra', partner: 'YewFirst', role: 'from', side: 'local',
+        server: 'rs-sdk-demo.fly.dev', item: 'Rune arrowtips', requested: 64, claim: nonce, count: 0, ok: false, at: 1795585966940, detail: 'trade claimed',
+    };
+    const held: FleetTradeClaim = { account: 'abracadickra', server: 'rs-sdk-demo.fly.dev', side: 'local', orderId: dead.id, role: 'from', nonce, phase: 'held', at: 1795585963756 };
+    const HOUR = 60 * 60_000;
+    const files = (extra: Record<string, unknown> = {}) => (p: string) => ({
+        'owners.json': { accounts: { Abracadickra: { side: 'local' }, YewFirst: { side: 'local' } } },
+        [`orders/${dead.id}.json`]: dead,
+        [`receipts/${dead.id}.from.json`]: own,
+        ...extra,
+    } as Record<string, unknown>)[p] ?? null;
+    expect(droppedTradeClaims([held], 'local', files(), dead.end + HOUR)).toEqual([held]);
+    // The worker can still be alive: the window ended less than an hour ago.
+    expect(droppedTradeClaims([held], 'local', files(), dead.end + HOUR - 1)).toEqual([]);
+    // The partner came: it wrote its own receipt when it took its claim.
+    expect(droppedTradeClaims([held], 'local', files({ [`receipts/${dead.id}.to.json`]: { ...own, role: 'to', account: 'YewFirst', partner: 'Abracadickra' } }), dead.end + HOUR)).toEqual([]);
+    // A partner of another side whose fleet data is not published after the window can still have a receipt on its way.
+    const crossSide = files({ 'owners.json': { accounts: { Abracadickra: { side: 'local' }, YewFirst: { side: 'cloud' } } }, 'snapshots/cloud.json': { at: dead.end } });
+    expect(droppedTradeClaims([held], 'local', crossSide, dead.end + HOUR)).toEqual([]);
+    // The receipt shows a count or a changed stack: something can have moved.
+    expect(droppedTradeClaims([held], 'local', files({ [`receipts/${dead.id}.from.json`]: { ...own, count: 1 } }), dead.end + HOUR)).toEqual([]);
+    expect(droppedTradeClaims([held], 'local', files({ [`receipts/${dead.id}.from.json`]: { ...own, inventory: { before: 64, after: 0 } } }), dead.end + HOUR)).toEqual([]);
+});
+
 test('the release rules read a deleted order from the commit before its deletion, and free the claim of a trade that never opened a screen', () => {
     const dir = fleetRepo();
     try {
