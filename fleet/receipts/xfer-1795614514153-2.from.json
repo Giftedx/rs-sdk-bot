@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795614514153-2",
+ "account": "Unsheathed",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron ore",
+ "requested": 2,
+ "claim": "7de85252-8274-4b67-a524-86194a8b2966",
+ "count": 0,
+ "ok": false,
+ "at": 1795614598088,
+ "detail": "trade claimed"
+}

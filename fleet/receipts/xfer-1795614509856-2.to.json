@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795614509856-2",
+ "account": "Moneyshot",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fly fishing rod",
+ "requested": 1,
+ "claim": "4f106a71-e94d-4c9c-aa2f-e0012bea319b",
+ "count": 0,
+ "ok": false,
+ "at": 1795614653296,
+ "detail": "trade claimed"
+}
