@@ -25,7 +25,6 @@ import {
     OBJ_GLORY_4,
     OBJ_DUELING_8,
     RING_OF_DUELING_IDS,
-    OBJ_SUPER_ENERGY_4,
     OBJ_PINEAPPLE_PIZZA,
 } from './gathering-specialist-lib';
 import type { Session } from '../packages/core/src/inprocess';
@@ -33,30 +32,29 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
-export const THIEVING_PIZZAS = 25;
-export const THIEVING_CAKES = 26;
+export const THIEVING_PIZZAS = 26;
+export const THIEVING_CAKES = 27;
 
 export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
     [OBJ_COINS]: 200,
-    [OBJ_SUPER_ENERGY_4]: 1,
     [OBJ_PINEAPPLE_PIZZA]: THIEVING_PIZZAS,
 };
 
-// Live-stockable variant: Ring of dueling(8) + Super energy(4) + 26 Chocolate cakes (local stockable, 0 Glory / 0 Pineapple pizza).
+// Live-stockable variant: Ring of dueling(8) + 27 Chocolate cakes (local stockable, 0 Glory / 0 Pineapple pizza / no 3016 under infinite run).
 export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_DUELING_8]: 1,
-    [OBJ_SUPER_ENERGY_4]: 1,
     [OBJ_CHOCOLATE_CAKE]: THIEVING_CAKES,
 };
 
 export const THIEVING_DIRECT_CWARS_WAYPOINTS: readonly [number, number, number][] = [
-    [2455, 3168, 4],
-    [2476, 3197, 3],
+    [2445, 3120, 3],
+    [2455, 3156, 3],
+    [2476, 3194, 3],
     [2486, 3214, 3],
-    [2506, 3233, 4],
-    [2555, 3236, 4],
-    [2602, 3276, 4],
+    [2506, 3233, 3],
+    [2541, 3244, 3],
+    [2592, 3293, 3],
     [2621, 3293, 2],
 ];
 
@@ -66,7 +64,7 @@ const BAKERS_STALL_SIDE_OFFSETS: readonly [number, number][] = [
 ];
 
 /** Steal an emergency food buffer from an Ardougne Baker's stall using native sight + walkability checks. */
-async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 4, maxSteals = 4): Promise<boolean> {
+async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 6, maxSteals = 4): Promise<boolean> {
     const startBites = foodBitesCount(main);
     const curPos = main.sdk.getState()?.player;
     if (curPos && chebDist({ x: curPos.worldX, z: curPos.worldZ }, BAKERS_STALL_SAFE_CENTER) > 8) {
@@ -89,6 +87,10 @@ async function stealEmergencyStallFood(main: Session, stop: () => boolean, targe
         if (!st || !me) {
             await waitTicks(main, 1);
             continue;
+        }
+        if (me.hp <= 5) {
+            await eatAnyFood(main);
+            if ((main.sdk.getState()?.player?.hp ?? 0) <= 4 && !hasAnyFood(main)) break;
         }
         const stalls = st.nearbyLocs
             .filter(l => /^baker'?s stall$/i.test(l.name) && l.x >= 2664 && l.optionsWithIndex.some(o => /steal/i.test(o.text)));
@@ -417,7 +419,7 @@ export async function runArdougneStunRelogThieving(opts: {
         const bites = foodBitesCount(main);
         const needRestock = bites === 0 && st.player.hp <= tier.stunDamage;
         if (needRestock && elapsedNow() >= stallCooldownUntil) {
-            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 4, 4);
+            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 6, 4);
             if (!restocked) {
                 stallCooldownUntil = elapsedNow() + 6;
             }
@@ -598,11 +600,7 @@ if (import.meta.main) {
                     p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
                     isStopped,
                 );
-                // NODE_INFINITE_RUN=true on live & practice: drop Super energy(4) and spent Glory to free slots for coins & stall loot.
-                const energySlot = main.sdk.getInventory().find(i => i.id === OBJ_SUPER_ENERGY_4)?.slot;
-                if (energySlot !== undefined) {
-                    void main.direct({ type: 'dropItem', slot: energySlot, reason: 'SDK' });
-                }
+                // Drop spent Glory after Karamja teleport to free a slot for coins & loot.
                 const glorySlot = main.sdk.getInventory().find(i => (THIEVING_GLORY_IDS as readonly number[]).includes(i.id))?.slot;
                 if (glorySlot !== undefined) {
                     void main.direct({ type: 'dropItem', slot: glorySlot, reason: 'SDK' });
@@ -651,10 +649,6 @@ if (import.meta.main) {
                     await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
                 }
                 await walkWaypointsSafe(main, THIEVING_DIRECT_CWARS_WAYPOINTS, isStopped);
-                const energyJunk = main.sdk.getInventory().find(i => i.id === 229 || i.id === 3016 || i.id === 3018 || i.id === 3020 || i.id === 3022)?.slot;
-                if (energyJunk !== undefined) {
-                    await main.direct({ type: 'dropItem', slot: energyJunk, reason: 'SDK' });
-                }
             }
             travelTicks = elapsedNow();
         }
