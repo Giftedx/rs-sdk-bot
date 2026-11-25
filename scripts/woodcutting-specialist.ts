@@ -151,13 +151,8 @@ function findBestTree(
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (!wantOak) {
-                // Inner courtyard normal trees reachable from safe (3115..3117,3246..3249) tiles (never stray near Dark Wizards).
-                return (
-                    (l.x === 3115 && l.z === 3247)
-                    || (l.x === 3113 && l.z === 3249)
-                    || (l.x === 3119 && l.z === 3249)
-                    || (l.x === 3113 && l.z === 3252)
-                ) && l.reachable !== false;
+                // Only chop normal tree2@(3115,3247) right beside (3117,3246..3247) so all courtyard guards stay locked on.
+                return l.x === 3115 && l.z === 3247 && l.reachable !== false;
             }
             // 3 Draynor Jail multiway courtyard oaks beside (3117,3246); keep all rolls inside the safe guard courtyard.
             return (

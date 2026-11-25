@@ -396,12 +396,14 @@ if (import.meta.main) {
         let flinchRolls = 0;
         let knifeRolls = 0;
         let lastXp = main.sdk.getSkillXp('Mining') ?? 0;
+        let traceCount = 0;
 
         while (!isStopped()) {
             const lvl = main.sdk.getSkill('Mining')?.baseLevel ?? 1;
             const xp = main.sdk.getSkillXp('Mining') ?? 0;
-            if (xp > lastXp) {
-                ores += Math.max(1, Math.round((xp - lastXp) / IRON_ORE_XP_25X));
+            const xpDelta = xp - lastXp;
+            if (xpDelta > 0) {
+                ores += Math.max(1, Math.round(xpDelta / IRON_ORE_XP_25X));
                 lastXp = xp;
             }
             if (lvl >= 99 || xp >= targetXp) break;
@@ -414,6 +416,10 @@ if (import.meta.main) {
             const pz = me?.worldZ ?? 3767;
             const modalOpen = Boolean(st?.dialog?.isOpen || st?.modalOpen);
             const liveRocks = findLiveHobgoblinRocks(main);
+            if (traceCount < 28) {
+                traceCount++;
+                console.log(`MINING_TRACE t=${now - t0} srv=${now} pos=${px},${pz} xp=${xp}(+${xpDelta}) hit=${hitTick === now ? 1 : 0} clr=${clearSentForTick === now ? 1 : 0} dly=${actionDelayApprox - now} autoRet=${st?.autoRetaliateEnabled} pray=${main.sdk.getSkill('Prayer')?.level} inv=${main.sdk.getInventory().length}`);
+            }
 
             const validFlinchHit = hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
             if (validFlinchHit) {
@@ -518,16 +524,13 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Keep knife ticks strictly <= 5 USER_EVENT packets (2 flicks + 3 knife/mine = 5, or 1 toggle + 3 = 4).
-            // Only flip auto_retaliate ON via nextHitEta===1 (so knife ticks stay free of extra clickComponent packets).
-            const flicks = prayerFlickActs(st, now, 3);
-            const acts: Promise<unknown>[] = flicks.length <= 2 ? [...flicks] : [];
-            if (modalOpen && acts.length === 0) acts.push(main.direct({ type: 'closeModal', reason: 'SDK' }));
-            acts.push(
+            // Keep knife ticks strictly 3 pure actions (useItemOnItem + clickComponent + interactLoc) with NO togglePrayer/if_close.
+            const acts: Promise<unknown>[] = [
+                ...(modalOpen ? [main.direct({ type: 'closeModal', reason: 'SDK' })] : []),
                 main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' }),
                 main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' }),
                 main.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: 1, reason: 'SDK' }),
-            );
+            ];
             await Promise.all(acts);
             knifeRolls++;
             actionDelayApprox = now + 3;
