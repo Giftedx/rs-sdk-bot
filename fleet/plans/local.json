@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795582460453,
+ "at": 1795582794778,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -22,28 +22,6 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-pvp.ts",
-   "args": [
-    "escort-ore",
-    "OreElse"
-   ],
-   "env": {
-    "COORDINATOR_RUN_ID": "oreelse-runite-1",
-    "COORDINATOR_PARTICIPANTS": "[\"Fatstack\",\"OreElse\"]",
-    "WALK_TO_EDGEVILLE": "1",
-    "ESCORT_COMBAT": "any",
-    "MINER_COMBAT": "any",
-    "EXPECTED_BANK_ORE": "0",
-    "MAX_ORE": "1",
-    "CAP": "1800"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "Escort OreElse to mine Runite ore for 2x Rune 2h sword",
-   "role": "supply"
   },
   {
    "account": "Hocuspokeus",
@@ -107,6 +85,7 @@
   "bowbeforeme",
   "deeppockets",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "kiltlifter",
