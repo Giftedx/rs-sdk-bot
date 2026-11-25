@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795607547129-afknight-knightstick-544e7d4654b8c5ae",
  "account": "AFKnight",
  "partner": "Knightstick",
@@ -12,6 +12,16 @@
  "claim": "e5e98aa2-ce1d-4286-bf0b-dc78faf8bac5",
  "count": 0,
  "ok": false,
- "at": 1795607657774,
- "detail": "trade claimed"
+ "at": 1795607684200,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 10,
+  "at": 1795607668329
+ },
+ "logout": {
+  "attemptId": "1795607657782-0000000416-0000000001",
+  "at": 1795607684190,
+  "sha256": "5b30ef80f551e0e23bcf10e3287155e332c7bdb372059c0d6a752c60433f2302"
+ },
+ "screen": false
 }

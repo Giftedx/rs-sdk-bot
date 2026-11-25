@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795607546253-fishandchips-bigchopper-a02413f2ebb89311",
  "account": "FishAndChips",
  "partner": "Bigchopper",
@@ -12,6 +12,16 @@
  "claim": "cbe5ba97-68fb-43a7-8e20-e563c75dbdfc",
  "count": 0,
  "ok": false,
- "at": 1795607650307,
- "detail": "trade claimed"
+ "at": 1795607676618,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 20,
+  "at": 1795607660658
+ },
+ "logout": {
+  "attemptId": "1795607650317-0000026756-0000000001",
+  "at": 1795607676607,
+  "sha256": "977b7e3ca35ed159adac82394b26a965b9fea1b2e29c40d28622191af9f234dc"
+ },
+ "screen": false
 }

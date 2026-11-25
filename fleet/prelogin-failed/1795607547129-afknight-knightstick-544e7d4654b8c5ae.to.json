@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795607547129-afknight-knightstick-544e7d4654b8c5ae",
+ "role": "to",
+ "account": "Knightstick",
+ "partner": "AFKnight",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795607670533,
+ "detail": "Error: fleet trade: reserved account"
+}
