@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795635821708,
+ "at": 1795636021987,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -197,32 +197,21 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/generated/quest-prince.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-skiller.ts MODE=shafts TRAIN_SKILL=Fletching TARGET_LEVEL=5 -- fletching shafts",
+    "scripts/generated/quest-chompybird.ts DEMAND_ID=goal:quest_board:chompybird BATCH_UNITS=1 --"
+   ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:prince",
-    "BATCH_UNITS": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:prince",
+   "goal": "goal:quest_board:chompybird",
    "role": "army"
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/generated/quest-merlin.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:merlin",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:merlin",
-   "role": "army"
-  },
-  {
-   "account": "Billionaire",
    "script": "scripts/generated/dwarfcannon.ts",
    "args": [],
    "env": {
@@ -235,7 +224,7 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
+   "account": "Billionaire",
    "script": "scripts/generated/quest-ikov.ts",
    "args": [],
    "env": {
@@ -245,6 +234,19 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:ikov",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/generated/quest-grandtree.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:grandtree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:grandtree",
    "role": "army"
   },
   {
@@ -276,19 +278,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Pocketpython",
    "role": "army"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/generated/quest-grandtree.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:grandtree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:grandtree",
-   "role": "army"
   }
  ],
  "army": [
@@ -307,6 +296,7 @@
   "mmthv2350",
   "oreelse",
   "pocketpool",
+  "pocketrocket",
   "quickhandjob",
   "sausagefest",
   "sporrandip",
