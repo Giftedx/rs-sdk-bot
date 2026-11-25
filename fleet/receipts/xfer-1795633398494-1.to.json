@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795633398494-1",
  "account": "Dipstick",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Emerald ring",
  "requested": 1,
  "claim": "47d7ff3b-eb22-4853-9690-4f5ad014b198",
- "count": 0,
- "ok": false,
- "at": 1795633683858,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795633698366,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795633697538
+ },
+ "logout": {
+  "attemptId": "1795633684002-0000020384-0000000001",
+  "at": 1795633698295,
+  "sha256": "8103baaf0236bbb2c40edd8a4d293e41c3df7e7e247c402fc20c1096c3302ca9"
+ },
+ "screen": true
 }
