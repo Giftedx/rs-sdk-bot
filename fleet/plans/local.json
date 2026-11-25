@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795601039656,
+ "at": 1795601058273,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -38,22 +38,6 @@
    "repeat": false,
    "goal": "goal:pk_army:Unsheathed",
    "role": "army"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:1519",
-    "BATCH_UNITS": "28"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1519",
-   "role": "army",
-   "resources": [
-    "draynor-willows"
-   ]
   },
   {
    "account": "YewFirst",
@@ -168,9 +152,7 @@
    ],
    "env": {
     "TRAIN_SKILL": "Magic",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Porksword",
-    "BATCH_UNITS": "250"
+    "TARGET_LEVEL": "25"
    },
    "enabled": true,
    "repeat": false,
@@ -185,6 +167,7 @@
   "NabTheKnob",
   "Wandwaver",
   "mmsmk1232",
+  "ballspinner",
   "bigpackage",
   "billionaire",
   "bowbeforeme",
