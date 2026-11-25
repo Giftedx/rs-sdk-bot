@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795630802651,
+ "at": 1795630890171,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,22 +59,26 @@
    "role": "pvp"
   },
   {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
+   "account": "OreElse",
+   "script": "scripts/aio-skiller.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2270 TARGET_COUNT=227 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
+    "mining",
+    "ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:440",
+    "BATCH_UNITS": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:379",
-   "role": "army"
+   "goal": "campaign:haggis:item:440",
+   "role": "army",
+   "resources": [
+    "varrock-se-mine"
+   ]
   },
   {
-   "account": "OreElse",
+   "account": "TheFullMonty",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "mining",
@@ -253,6 +257,21 @@
    "role": "helper"
   },
   {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:FishAndChips BATCH_UNITS=250 -- cannon"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:FishAndChips",
+   "role": "auto"
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
@@ -303,8 +322,9 @@
    "account": "Shaftsinker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/generated/dwarfcannon.ts --",
-    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=250 -- cannon"
+    "scripts/magic-order.ts TARGET_LEVEL=21 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-market.ts ORDER_KEY=brain-561-250-p206 ITEM_ID=561 QUANTITY=250 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=206 -- ge-buy",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Shaftsinker BATCH_UNITS=250 -- magic alch-train 90 3000"
    ],
    "env": {
     "ROUNDS": "1"

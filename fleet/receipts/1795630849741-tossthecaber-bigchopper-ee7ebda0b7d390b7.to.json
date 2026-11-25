@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795630849741-tossthecaber-bigchopper-ee7ebda0b7d390b7",
+ "account": "Bigchopper",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "f67b0f06-4d79-41cc-a193-d062569f1031",
+ "count": 0,
+ "ok": false,
+ "at": 1795630872102,
+ "detail": "trade claimed"
+}
