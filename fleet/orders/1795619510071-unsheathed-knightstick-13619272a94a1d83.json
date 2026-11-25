@@ -1,0 +1,29 @@
+{
+ "id": "1795619510071-unsheathed-knightstick-13619272a94a1d83",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Unsheathed",
+ "to": "Knightstick",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795619510071,
+ "end": 1795621910071,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Air rune",
+   "count": 8
+  }
+ ],
+ "takerWaits": true
+}
