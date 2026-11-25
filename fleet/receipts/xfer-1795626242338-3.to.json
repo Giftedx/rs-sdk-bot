@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795626242338-3",
+ "account": "KnightRider",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 6,
+ "claim": "7c668ac4-fd03-4f8a-9e98-9070cc87ed8e",
+ "count": 6,
+ "ok": true,
+ "at": 1795626580997,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795626580253
+ },
+ "logout": {
+  "attemptId": "1795626571387-0000020844-0000000001",
+  "at": 1795626580988,
+  "sha256": "264dbcff447f2d6614401172fdba466d78c46170c5e8db0c5fb0026345c83cc7"
+ },
+ "screen": true
+}

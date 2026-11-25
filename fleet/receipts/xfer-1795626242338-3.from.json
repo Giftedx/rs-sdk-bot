@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795626242338-3",
  "account": "TheFullMonty",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 6,
  "claim": "420e7520-c028-46a3-b714-c3e8f78685db",
- "count": 0,
- "ok": false,
- "at": 1795626348249,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795626579401,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795626354663
+ },
+ "logout": {
+  "attemptId": "1795626348274-0000028340-0000000001",
+  "at": 1795626579391,
+  "sha256": "e9d58e3a93e770b153970249f5a94c766b0067450f3747332ccb045577635251"
+ },
+ "screen": true
 }
