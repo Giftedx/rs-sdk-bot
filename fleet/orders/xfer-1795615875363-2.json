@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795615875363-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Pocketrocket",
+  "to": "Shaftsinker",
+  "item": "Cannonball",
+  "count": 688,
+  "itemId": 2,
+  "start": 1795615875363,
+  "end": 1795616775363,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

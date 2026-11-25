@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795615553394-1",
  "account": "Billionaire",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Knife",
  "requested": 1,
  "claim": "09b9d165-2ffd-4312-8e64-1be145d0e31d",
- "count": 0,
- "ok": false,
- "at": 1795615850768,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795615877872,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795615857919
+ },
+ "logout": {
+  "attemptId": "1795615850777-0000025828-0000000001",
+  "at": 1795615877849,
+  "sha256": "4bf8067477ef6d6d0cc2b8582a873b316b95671cc2e16e561caca3a59885260c"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795615553394-1",
+ "account": "Moneyshot",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Knife",
+ "requested": 1,
+ "claim": "be3d3b2f-e81f-4874-94ba-81717abc135d",
+ "count": 1,
+ "ok": true,
+ "at": 1795615879468,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795615878704
+ },
+ "logout": {
+  "attemptId": "1795615866676-0000019196-0000000001",
+  "at": 1795615879457,
+  "sha256": "30b84e87a1496a17db61f15c109ee7d6c9ce23a6af4516a68bd9597147ef42c8"
+ },
+ "screen": true
+}
