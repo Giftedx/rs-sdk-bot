@@ -619,3 +619,23 @@ test('a planned shop step fills its order, waits for a restock and stops at the 
     expect(staff.env.MAX_ITEMS).toBe('1');
     expect(staff.env.FILL_ORDER).toBe('1');
 });
+
+test('a market work step keeps a partial purchase: no fill order, no stock target, the short stock wait', () => {
+    const work = resolvePlannedStepWorkerRoute('Packhorse', {
+        stepKind: 'work',
+        activityId: 'market:shop-buy',
+        demandId: 'campaign:haggis:item:44',
+        workerId: 'market',
+        batchUnits: 197,
+        estimatedTicks: 600,
+        expectedValuePerHour: 100,
+        config: { mode: 'shop-buy', itemId: 44, itemName: 'Rune arrowtips', quantity: 197, shopId: 'archeryshop2', estimatedCoinCost: 1000, coinFloatPreserved: 1000 },
+    });
+    expect(work.routeKey).toBe('shop-buy');
+    expect(work.env.MAX_ITEMS).toBe('197');
+    expect(work.env.FILL_ORDER).toBeUndefined();
+    expect(work.env.STOCK_TARGET).toBeUndefined();
+    expect(work.env.NO_BUY_TICKS).toBe('25');
+    expect(work.env.FLOAT).toBeDefined();
+    expect(work.env.STOP_AT_TARGET).toBe('1');
+});
