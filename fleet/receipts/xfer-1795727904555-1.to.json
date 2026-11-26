@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795727904555-1",
+ "account": "SporranBulge",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "3b69efae-97c4-4d08-bfa0-83ad70c76ed9",
+ "count": 0,
+ "ok": false,
+ "at": 1795728066954,
+ "detail": "trade claimed"
+}

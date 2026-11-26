@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795727918844-1",
+ "account": "Fingersmith",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "480a4dc6-eadd-4863-a01c-e40fc2efd606",
+ "count": 0,
+ "ok": false,
+ "at": 1795728026700,
+ "detail": "trade claimed"
+}
