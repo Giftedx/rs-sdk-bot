@@ -468,6 +468,11 @@ export function resolveActivityWorkerRoute(
     }
 }
 
+// A planned shop step waits this long between purchases for the shelf to restock. The engine
+// adds one unit each stockrate ticks (World.ts: tick % stockrate), and Vial of water at the
+// Ardougne Adventurers' Store restocks each 30 ticks, so a 25-tick wait never saw one unit.
+export const PLANNED_SHOP_NO_BUY_TICKS = 100;
+
 function resolveAcquireOrGearSource(
     account: string,
     stepKind: 'acquire' | 'gear_upgrade',
@@ -476,6 +481,7 @@ function resolveAcquireOrGearSource(
         itemId: number;
         itemName?: string;
         quantity: number;
+        stockTarget?: number;
         shopId?: string;
         transferOrderId?: string;
         activityId?: string;
@@ -511,6 +517,8 @@ function resolveAcquireOrGearSource(
             const profile = params.shopId ?? 'ardy';
             const escapedItemName = resolvedItemName ? escapeRegExp(resolvedItemName) : undefined;
             const items = escapedItemName ?? String(params.itemId);
+            // A gear upgrade wants one owned copy; an acquire names the owned total its consumer needs.
+            const stockTarget = stepKind === 'gear_upgrade' ? 1 : params.stockTarget;
             return {
                 account,
                 stepKind,
@@ -523,10 +531,12 @@ function resolveAcquireOrGearSource(
                     ITEM_ID: String(params.itemId),
                     ...(escapedItemName ? { ITEMS: escapedItemName } : {}),
                     MAX_ITEMS: String(params.quantity),
+                    ...(stockTarget !== undefined ? { STOCK_TARGET: String(stockTarget) } : {}),
                     COIN_RESERVE: reserve,
                     FLOAT: String(floatAmount),
-                    NO_BUY_TICKS: '25',
+                    NO_BUY_TICKS: String(PLANNED_SHOP_NO_BUY_TICKS),
                     STOP_AT_TARGET: '1',
+                    FILL_ORDER: '1',
                     BANK_PACK: '1',
                 },
                 config: {
@@ -535,10 +545,12 @@ function resolveAcquireOrGearSource(
                     cap: 3000,
                     items,
                     maxItems: params.quantity,
+                    ...(stockTarget !== undefined ? { stockTarget } : {}),
                     coinReserve: reserveNum,
                     float: floatAmount,
-                    noBuyTicks: 25,
+                    noBuyTicks: PLANNED_SHOP_NO_BUY_TICKS,
                     stopAtTarget: true,
+                    fillOrder: true,
                     bankPack: true,
                     shopId: profile,
                     itemId: params.itemId,

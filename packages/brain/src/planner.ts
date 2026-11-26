@@ -1857,7 +1857,8 @@ function planAccountCore(
                             chainFeasible = false;
                             break;
                         }
-                        prepSteps.push(acq.step);
+                        // The owned total after the purchase: a rerun of the chain that finds it buys nothing.
+                        prepSteps.push({ ...acq.step, stockTarget: Math.max(1, blocker.required + blocker.reserved) });
                         committedCoins += stepCommittedCoinCost(acq.step);
                     } else if (blocker.kind === 'missing_coins') {
                         const shortfall = Math.max(1, blocker.required - blocker.available);

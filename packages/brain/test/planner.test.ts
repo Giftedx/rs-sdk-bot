@@ -1568,3 +1568,34 @@ test('a first worker defect holds the activity only for the account that failed;
     const fleetIndex = buildPlannerSharedIndex({ world, activities: ACTIVITIES, defects: [druidDefect('Ballspinner', 2)] });
     expect(fleetIndex.eligibleActivities.some((a) => a.id === 'quest:sweep-druid')).toBe(false);
 });
+
+test('a supply purchase names the owned total its consumer needs, so a chain rerun buys nothing more', () => {
+    const cookAcct = makeAcct({
+        skills: { Cooking: { level: 80, xp: xpForLevel(80) } },
+        bank: { items: { 995: 100_000, 383: 10 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const world: WorldSnapshot = { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: cookAcct } };
+    const plan = planAccount(cookAcct, {
+        world,
+        activities: ACTIVITIES,
+        marketQuotes: { 383: { ask: 400, sell: 380, trades: 20 } },
+        demands: [{
+            id: 'd:sharks',
+            goalKind: 'main_supply',
+            valueScore: 15,
+            valuePerHour: 15,
+            target: { kind: 'item', itemId: 385, count: 50 },
+            fulfilled: 0,
+            remaining: 50,
+            priorityWeight: 1,
+            active: true,
+        }],
+    });
+    expect(plan.steps.map((s) => s.stepKind)).toEqual(['acquire', 'work']);
+    const acquire = plan.steps[0];
+    const work = plan.steps[1];
+    if (acquire?.stepKind !== 'acquire' || work?.stepKind !== 'work') throw Error('unexpected plan shape');
+    expect(acquire.stockTarget).toBe(acquire.quantity + 10);
+    expect(acquire.stockTarget).toBe(work.batchUnits);
+    expect(isAccountPlan(plan)).toBe(true);
+});
