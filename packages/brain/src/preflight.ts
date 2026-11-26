@@ -26,8 +26,14 @@ import {
     type WorkerTile,
     type WorkerWorldView,
 } from '../../workers/src/contracts';
-import { isCooldownActive } from './contracts';
+import { loadTravel } from '../../core/src/travel';
+import { isCooldownActive, type NoRouteFact } from './contracts';
 import { ferryFallbackFare } from './ferry-fare';
+import { noRouteForActivity, noRouteMessage, noRouteTo } from './no-route';
+
+// The no-route facts of a brain AccountState (outcome-classifier.ts). A bare WorkerAccountView has none.
+const accountNoRoutes = (acct: WorkerAccountView): readonly NoRouteFact[] | undefined =>
+    (acct as { readonly noRoutes?: readonly NoRouteFact[] }).noRoutes;
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 export const COINS_ITEM_ID = 995;
@@ -753,6 +759,19 @@ function evaluateTileReachabilityUncached(
     }
 
     // Pure offline reachability & ferry fare evaluation when World graph is omitted.
+    // The account's own route search found no route to a tile near the target from where it stands (no-route.ts).
+    const noRoutes = accountNoRoutes(acct);
+    const searched = noRouteTo(noRoutes, acct.pos, target, world.at);
+    if (searched) {
+        return {
+            reachable: false,
+            travelCoins: 0,
+            travelTicks: 0,
+            reason: 'no_route',
+            message: `${noRouteMessage(acct.name, searched)}; target ${target.x},${target.z},${target.level} is near it`,
+        };
+    }
+
     if (opts.requireSamePlaneWithoutWorld && acct.pos.level !== target.level) {
         return {
             reachable: false,
@@ -817,7 +836,9 @@ function evaluateTileReachabilityUncached(
         fare = Math.max(fare, 10);
     }
     // Between the east mainland and Ardougne the worker's walk needs both boat fares before it moves (./ferry-fare.ts).
-    fare = Math.max(fare, ferryFallbackFare(acct.pos, target));
+    // From Kandarin it walks to Ardougne North first. With no route there, it walks its own route and takes no boat.
+    const pos = acct.pos;
+    fare = Math.max(fare, ferryFallbackFare(pos, target, loadTravel, t => !noRouteTo(noRoutes, pos, t, world.at)));
 
     const sameBand = (acct.pos.z >= 6400) === (target.z >= 6400);
     const normZ = (z: number) => (z >= 6400 ? z - 6400 : z);
@@ -1008,6 +1029,8 @@ export interface PreflightSpec {
     readonly includeBankCoins?: boolean;
     readonly requireTrustedBankCoins?: boolean;
     readonly routeBudgetMs?: number;
+    // The activity this preflight is for: refused while the account's search for it found no route (no-route.ts).
+    readonly activityId?: string;
 }
 
 export function evaluatePreflight(
@@ -1229,6 +1252,16 @@ export function evaluatePreflight(
             });
         }
     }
+    const searched = spec.activityId ? noRouteForActivity(accountNoRoutes(acct), acct.pos, spec.activityId, world.at) : undefined;
+    if (searched && !blockers.some(b => b.kind === 'unreachable_tile')) {
+        blockers.push({
+            kind: 'unreachable_tile',
+            target: searched.to,
+            from: acct.pos,
+            reason: 'no_route',
+            message: noRouteMessage(acct.name, searched),
+        });
+    }
 
     const totalCoinNeed = coinsRequired + travelCoins;
     // Purchases must preserve operating float; ferry fares may use the operating float itself.
@@ -1423,6 +1456,7 @@ export function activityPreflightFromConfig(
             combatSurvivability: base.combatSurvivability,
             spotId: base.spotId,
             maxConcurrentAccounts: base.maxConcurrentAccounts,
+            ...(activity.id ? { activityId: activity.id } : {}),
         },
         world,
         opts?._acctCache,

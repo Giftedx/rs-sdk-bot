@@ -21,11 +21,18 @@ const ARDOUGNE_NORTH: Tile = { x: 2619, z: 3332, level: 0 };
 const ZANARIS_SHED: Tile = { x: 3201, z: 3169, level: 0 };
 
 // Coins the fallback needs (pack and bank together) before it walks from `from` to `to`. 0 when it takes no boat.
-export function ferryFallbackFare(from: Tile, to: Tile, travel: () => readonly Travel[] = loadTravel): number {
+// `reachable` says whether the account has a route to a tile. With no route to Ardougne North, the fallback walks its
+// own route from where the account stands.
+export function ferryFallbackFare(
+    from: Tile,
+    to: Tile,
+    travel: () => readonly Travel[] = loadTravel,
+    reachable: (t: Tile) => boolean = () => true,
+): number {
     // The fallback first leaves Zanaris by the shed, then goes to Ardougne north bank from an Ardougne upper floor or
     // from Kandarin when the target is east.
     if (inZanaris(from) && !inZanaris(to) && !(to.x === ZANARIS_SHED.x && to.z === ZANARIS_SHED.z)) from = ZANARIS_SHED;
-    if (((from.level > 0 && inArdougne({ ...from, level: 0 })) || (!inArdougne(from) && inKandarin(from))) && inEast(to)) from = ARDOUGNE_NORTH;
+    if (((from.level > 0 && inArdougne({ ...from, level: 0 })) || (!inArdougne(from) && inKandarin(from))) && inEast(to) && reachable(ARDOUGNE_NORTH)) from = ARDOUGNE_NORTH;
     const west = inEast(from) && to.level === 0 && to.x >= 2600 && to.x <= 2690 && to.z >= 3260 && to.z <= 3360;
     const east = !west && inArdougne(from) && inEast(to);
     if (!west && !east) return 0;
