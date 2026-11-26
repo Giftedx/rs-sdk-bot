@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795724760514-1",
+ "role": "to",
+ "account": "SporranBulge",
+ "partner": "Swordinhand",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795724899119,
+ "detail": "Error: fleet trade claim authority unavailable or changed: warning: unable to access '.git/config': Permission denied fatal: unknown error occurred while reading the configuration files fatal: remote helper 'https' aborted session"
+}

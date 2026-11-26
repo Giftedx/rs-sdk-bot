@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724438500-1",
  "account": "Unsheathed",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 7,
  "claim": "2f8a9135-ca7d-4757-bad0-13f2885891d7",
- "count": 0,
- "ok": false,
- "at": 1795724889798,
- "detail": "trade claimed"
+ "count": 7,
+ "ok": true,
+ "at": 1795724900234,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 7
+ },
+ "bank": {
+  "count": 7,
+  "at": 1795724899491
+ },
+ "logout": {
+  "attemptId": "1795724889808-0000025652-0000000001",
+  "at": 1795724900223,
+  "sha256": "07d61f7d7cc9d5db5e09b921109d58be6c48c97ddfe5e56a4f7d3f8be83fa8b8"
+ },
+ "screen": true
 }

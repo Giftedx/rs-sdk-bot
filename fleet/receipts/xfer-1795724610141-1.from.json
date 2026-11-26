@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724610141-1",
  "account": "Spitroaster",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 30,
  "claim": "6861cb45-bdbd-49c4-aecd-a456a09ac55b",
- "count": 0,
- "ok": false,
- "at": 1795724877875,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795724906240,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 0
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795724885101
+ },
+ "logout": {
+  "attemptId": "1795724877885-0000007040-0000000001",
+  "at": 1795724906227,
+  "sha256": "2e1ce84040cec53e2484360afaa9f845e1f0e8c4daf0154578b5847d0861a3f0"
+ },
+ "screen": true
 }
