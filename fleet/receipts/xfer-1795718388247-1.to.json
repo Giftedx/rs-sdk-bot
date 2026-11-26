@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795718388247-1",
  "account": "Pullmybow",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "a45cbbde-cd15-4593-885f-be6128dd06e1",
- "count": 0,
- "ok": false,
- "at": 1795718692591,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795718771317,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795718770190
+ },
+ "logout": {
+  "attemptId": "1795718692608-0000022720-0000000001",
+  "at": 1795718771230,
+  "sha256": "3d3c8cd3c5f0dc7671b2d0440e2577d0c72053e7fdac229748cb919f766d2899"
+ },
+ "screen": true
 }
