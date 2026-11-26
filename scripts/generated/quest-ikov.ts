@@ -33,6 +33,7 @@ const FW_DOOR = { id: 93, x: 2646, z: 9870 };
 const WINELDA = { x: 2656, z: 9875 };
 const SECRET = { id: 1586, x: 2643, z: 9892 };
 const LUCIEN2 = { x: 3176, z: 3476 };
+const LUCIEN_DOOR = { id: 102, x: 3176, z: 3481 };       // ikov_luciendoor, the north wall of Lucien's house
 const PROTECT_MAGIC = 12;
 const LIGHTS = [32, 33, 594];                             // lit_black_candle, lit_candle, torch_lit: light_source_lit
 const STAGES = ['start', 'low', 'arrows', 'warrior', 'winelda', 'teleport', 'lucien'] as const;
@@ -318,6 +319,15 @@ try {
     // The ice arrows are spent on the Fire Warrior; Lucien (level 14) dies to fists (trial 6: "no ammo left").
     await remove(ITEM.bow);
     await q.walk('to lucien', [{ x: LUCIEN2.x, z: LUCIEN2.z - 2, tol: 3 }]);
+    // His house has walls round x 3171-3182, z 3473-3481 and one door, ikov_luciendoor (102) in the north wall at
+    // 3176,3481 (maps/m49_54.jm2 0 40 25), which opens from %ikov 10 (quest_ikov.rs2:1-5). The walk above can end
+    // outside the south wall, where he has no route (hosted bench extra:sweep-ikov-resume-s10 seed 8: "I can't reach
+    // that!" for 30 tries; seed 7 idled 124 ticks there).
+    const inHouse = () => x() >= 3172 && x() <= 3181 && z() >= 3474 && z() <= 3480;
+    if (!inHouse() && q.npc(/^lucien$/i)?.reachable !== true) {
+        await q.walk('to lucien door', [{ x: LUCIEN_DOOR.x, z: LUCIEN_DOOR.z + 1, tol: 0 }]);
+        await q.step('lucien door', () => q.opLoc(q.findLoc((l: any) => l.id === LUCIEN_DOOR.id && l.x === LUCIEN_DOOR.x && l.z === LUCIEN_DOOR.z) ?? LUCIEN_DOOR, 1), () => inHouse(), 8, 4);
+    }
     for (let k = 0; k < 30 && !questDone; k++) {
         await q.guard('lucien');
         await closeDlg();
