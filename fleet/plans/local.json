@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717519837,
+ "at": 1795717534440,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -83,7 +83,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1469"
+    "BATCH_UNITS": "1496"
    },
    "enabled": true,
    "repeat": false,
@@ -110,8 +110,8 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-1436-1469-p61 ITEM_ID=1436 QUANTITY=1469 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=1469 -- runecraft air"
+    "scripts/aio-market.ts ORDER_KEY=brain-1436-1496-p61 ITEM_ID=1436 QUANTITY=1496 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=1496 -- runecraft air"
    ],
    "env": {
     "ROUNDS": "1"
@@ -151,6 +151,22 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:magearena",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "crest"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:crest",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:crest",
    "role": "army"
   },
   {
@@ -220,27 +236,6 @@
    "repeat": false,
    "goal": "campaign:grindmyherb:item:3853",
    "role": "helper"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "40",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:40",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:40",
-   "role": "army"
   }
  ],
  "army": [
