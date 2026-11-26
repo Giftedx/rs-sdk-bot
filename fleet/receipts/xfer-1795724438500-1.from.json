@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795724438500-1",
+ "account": "Fatstack",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 7,
+ "claim": "95511fd9-42cd-4157-8887-8603a31159bc",
+ "count": 0,
+ "ok": false,
+ "at": 1795724729514,
+ "detail": "trade claimed"
+}
