@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795725068797-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Woodenstaff",
+  "to": "SporranDip",
+  "item": "Coins",
+  "count": 8200,
+  "itemId": 995,
+  "start": 1795725068797,
+  "end": 1795725968797,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795724777445-1",
  "account": "MineYourBiz",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "Copper ore",
  "requested": 9,
  "claim": "84066243-bddd-44f5-bb27-4d8ed688fe65",
- "count": 0,
- "ok": false,
- "at": 1795725014925,
- "detail": "trade claimed"
+ "count": 9,
+ "ok": true,
+ "at": 1795725065439,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 9
+ },
+ "bank": {
+  "count": 9,
+  "at": 1795725064686
+ },
+ "logout": {
+  "attemptId": "1795725014934-0000017012-0000000001",
+  "at": 1795725065427,
+  "sha256": "015f24136f49b011f0731439e3857f49591623300b6f684cf7a99586ea97c52f"
+ },
+ "screen": true
 }
