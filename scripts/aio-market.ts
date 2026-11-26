@@ -711,7 +711,10 @@ export async function runAioMarket(account: string, args: readonly string[], env
                     if (pre.units) quotes.push(q);
                 }
                 if (!quotes.length) {
-                    return 'RESULT fail shop-to-bid refused before login: no item clears MIN_NET';
+                    // No login, so no settle(): print the RESULT line here for the supervisor to read.
+                    const refused = 'RESULT fail shop-to-bid refused before login: no item clears MIN_NET';
+                    console.log(refused);
+                    return refused;
                 }
                 const server = await serverForActor(account);
                 let stopped = false;

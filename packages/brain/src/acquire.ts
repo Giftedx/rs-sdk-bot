@@ -686,7 +686,7 @@ export function resolveAcquireItem(
                 let reachRecip = reachRecipByHub.get(hub);
                 if (!reachRecip) {
                     reachRecip = evaluateTileReachability(acct, hubTile, world, {
-                        spendableCoins: coinBalance.totalUnreserved,
+                        spendableCoins: effectiveTotalUnreserved,
                         allowUnknownPos: true,
                         _acctCache: acctCache,
                     });
@@ -719,8 +719,9 @@ export function resolveAcquireItem(
                     return ferryFallbackFare(pos, hubTile, undefined, (t) => !noRouteTo(facts, pos, t, world.at));
                 };
                 const recipFare = hubFare(acct);
-                if (recipFare > coinBalance.totalUnreserved) {
-                    if (!skipDiag) rejectReason = `recipient owns ${coinBalance.totalUnreserved} coins and the ferry to ${hub} needs ${recipFare}`;
+                // Earlier steps of the same chain spend their coins first (committedCoinSpend).
+                if (recipFare > effectiveTotalUnreserved) {
+                    if (!skipDiag) rejectReason = `recipient owns ${effectiveTotalUnreserved} coins and the ferry to ${hub} needs ${recipFare}`;
                     continue;
                 }
                 const donorFare = hubFare(donor);

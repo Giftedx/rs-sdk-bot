@@ -192,6 +192,32 @@ test('hub_banker never picks a party that cannot pay the two boat fares to the h
     expect(resolve(recipient(0), stranded(true)).step?.source).toBe('hub_banker');
 });
 
+test('hub_banker counts the coins that earlier chain steps spend against the recipient fare', () => {
+    const RAW_SHARK = 383;
+    // Taverley: the nearest hub is Ardougne North and the walk there takes 60 coins of boat fares.
+    const recipient = makeAcct({
+        pos: { x: 2900, z: 3500, level: 0 },
+        inventory: { 995: 100 },
+        bank: { items: {}, observedAt: NOW - 10_000, trusted: true },
+    });
+    const donor = makeAcct({
+        name: 'Bigpackage',
+        pos: { x: 2619, z: 3332, level: 0 },
+        inventory: {},
+        bank: { items: { [RAW_SHARK]: 300 }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const world: WorldSnapshot = {
+        schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { Packhorse: recipient, Bigpackage: donor },
+    };
+    const resolve = (committedCoinSpend: number) => resolveAcquireItem(
+        recipient,
+        { itemId: RAW_SHARK, quantity: 50, allowedSources: ['hub_banker'], committedCoinSpend },
+        { world, activities: [], marketQuotes: {} },
+    );
+    expect(resolve(0).step?.source).toBe('hub_banker');
+    expect(resolve(60).step?.source).not.toBe('hub_banker');
+});
+
 test('hub_banker never picks a donor whose only copy is worn', () => {
     // The trade worker gives from the bank and the pack only (`stock short: <item> 0 banked + 0 held`).
     const RUNE_SCIMITAR = 1333;

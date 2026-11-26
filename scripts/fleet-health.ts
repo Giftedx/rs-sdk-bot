@@ -460,7 +460,8 @@ export function auditFleetHealth(opts: {
         const endedAt = endedEntry?.at ?? 0;
         const endedCurrent = !!job && !isActive && (!row?.at || endedAt >= row.at) && (!lastOkByAccount.get(lower) || endedAt >= lastOkByAccount.get(lower)!);
         const loop = loopByAccount.get(lower);
-        const proof = readLogoutProof(account, meta.server, { root });
+        // `base` is the checkout: receipts live under its lifecycle root (.practice/live/session-lifecycle).
+        const proof = readLogoutProof(account, meta.server, { base: root });
         const confirmedOffline = !isActive && proof.state === 'confirmed';
 
         const pRaw = row?.pos;
