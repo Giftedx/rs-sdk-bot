@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795728129322-1",
  "account": "Swordinhand",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Hammer",
  "requested": 1,
  "claim": "04d7cf40-5860-4c74-a074-34c5f801c7f6",
- "count": 0,
- "ok": false,
- "at": 1795728398655,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795728453925,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795728406379
+ },
+ "logout": {
+  "attemptId": "1795728399004-0000025416-0000000001",
+  "at": 1795728453912,
+  "sha256": "4132c9c6919d23781a957aad9aa63d6a2eafe77bc0106d6805eca214459ba451"
+ },
+ "screen": true
 }
