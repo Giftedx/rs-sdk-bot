@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722090276-2",
  "account": "Magicwanda",
  "partner": "BoneToPick",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 300,
  "claim": "4f656958-b3fd-4f97-b4f7-bb600781b212",
- "count": 0,
- "ok": false,
- "at": 1795722367578,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1795722383882,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 300
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795722382405
+ },
+ "logout": {
+  "attemptId": "1795722367928-0000025912-0000000001",
+  "at": 1795722383656,
+  "sha256": "f1d06e5b09f09bed711395ec477271f58a2c737f733a9ccbe1359c7a5fadc6df"
+ },
+ "screen": true
 }
