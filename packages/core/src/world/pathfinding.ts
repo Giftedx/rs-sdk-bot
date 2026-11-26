@@ -2,9 +2,10 @@ import { join } from 'node:path';
 import type { InteractionTarget } from '../../../knowledge/src/transports';
 import { accountForSdk, directionalMasks, registerRouteActor, withDoorPolicy } from '../door-policy';
 import { eitherWay, labelAreas, mapAreas, separated, type Labels } from '../components';
-import { activeDanger, guardRoute, guardWalk, pack } from '../danger';
+import { activeDanger, guardRoute, guardWalk, pack, type DangerScope } from '../danger';
 import { legCache, routeDangerHash, type LegCache } from '../leg-cache';
 import { blockedDoorsNear, doorBlock, doorBlocks, getKnownDoorFacts } from './filters';
+import { NO_CHANGES, WAYPOINT_LIMIT, changeBuilder, hintLengths, legKey, tileTable, windowKey, withHint, type ChangeTable } from './leg-key';
 import { cheb, tileKey, worldRepoRoot, type DoorBlock, type PathLength, type Tile } from './model';
 import { unwrapGuarded } from '../worker-execution';
 
@@ -47,18 +48,20 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
     const pf = await loadPathfinding();
     const grid = await import('../../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
     const owner = {};
+    const resolved = (blocked: DoorBlock[]): DoorBlock[] => blocked.map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
     const scoped = <T>(blocked: DoorBlock[], query: () => T): T => {
         if (activePathPolicy?.owner === owner && activePathPolicy.blocked === blocked) return query();
         if (activePathPolicy) throw Error('A different route policy cannot nest inside an active query');
         (pf as any).initPathfinding();
-        const policy = blocked.map(b => b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b);
+        const policy = resolved(blocked);
         return withDoorPolicy(grid, policy, () => {
             activePathPolicy = { owner, blocked };
             try { return query(); } finally { activePathPolicy = null; }
         });
     };
-    // Searched legs are kept on disk (leg-cache.ts) under hashes of the doors kept shut and the danger key. A leg
-    // the cheap checks refuse is not stored: refusing it again costs less than reading it back.
+    // Searched legs are kept on disk (leg-cache.ts) under the changes of the scope that the leg's search could read
+    // (leg-key.ts), so accounts and quest steps with other doors or danger far from a leg share its length. A leg the
+    // cheap checks refuse is not stored: refusing it again costs less than reading it back.
     const cache = opts.legs ?? legCache(), policyKeys = new WeakMap<DoorBlock[], string>(), dangerKeys = new WeakMap<object, string>(), interactionKeys = new WeakMap<object, string>();
     const areas = mapAreas(pf, grid, worldRepoRoot);
     // The map labels (`areas`) join tiles with every door open and no danger ground closed. A scope (the doors an
@@ -119,6 +122,50 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
         }
         return interactionAreasScope || (interactionAreasScope = `kept:${lastShut}${lastDk}`);
     };
+    // The changes of a scope as tables (leg-key.ts): the walls of its shut doors and the tiles its danger rule closed.
+    const doorTables = new WeakMap<DoorBlock[], ChangeTable>(), dangerTables = new WeakMap<DangerScope, ChangeTable>();
+    let tablesBlocked: DoorBlock[] | undefined, tablesDanger: DangerScope | null | undefined, tables: ChangeTable[] = [NO_CHANGES, NO_CHANGES];
+    const doorChanges = (blocked: DoorBlock[]): ChangeTable => {
+        (pf as any).initPathfinding();
+        const policy = resolved(blocked), changes = changeBuilder();
+        // The two kinds of change withDoorPolicy makes.
+        for (const b of policy) if (b.whenAxis === undefined && Number.isInteger(b.angle) && Number.isInteger(b.shape)) changes.add(b.level, b.x, b.z, 0, b.angle!, b.shape!, b.blockrange ? 1 : 0);
+        for (const m of directionalMasks(policy)) changes.add(m.level, m.x, m.z, 1, m.mask);
+        return changes.build();
+    };
+    // A danger scope is new for each search, but the tiles it closed are the same for each search of an account whose
+    // ends stand outside closed ground: the newest tables are kept with the tile lists they were built from (a weak
+    // account's 389,378 tiles: 28 to 41 ms to build, 1 to 3 ms to compare).
+    const recentDanger: { lists: Int32Array[]; table: ChangeTable }[] = [];
+    const sameTiles = (a: Int32Array[], b: Int32Array[]): boolean => {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            const x = a[i]!, y = b[i]!;
+            if (x.length !== y.length) return false;
+            for (let k = 0; k < x.length; k++) if (x[k] !== y[k]) return false;
+        }
+        return true;
+    };
+    const dangerChanges = (d: DangerScope): ChangeTable => {
+        const lists: Int32Array[] = [];
+        for (let s: DangerScope | null = d; s; s = s.outer) lists.push(s.closed);
+        const seen = recentDanger.find(r => sameTiles(r.lists, lists));
+        if (seen) return seen.table;
+        const table = tileTable(lists, 2);
+        if (recentDanger.length >= 4) recentDanger.shift();
+        recentDanger.push({ lists, table });
+        return table;
+    };
+    const scopeTables = (blocked: DoorBlock[]): ChangeTable[] => {
+        const d = activeDanger();
+        if (blocked === tablesBlocked && d === tablesDanger) return tables;
+        let doors = doorTables.get(blocked);
+        if (!doors) { doors = blocked.length ? doorChanges(blocked) : NO_CHANGES; doorTables.set(blocked, doors); }
+        let danger = NO_CHANGES;
+        if (d) { danger = dangerTables.get(d) ?? dangerChanges(d); dangerTables.set(d, danger); }
+        tablesBlocked = blocked; tablesDanger = d; tables = [doors, danger];
+        return tables;
+    };
     const interactionKey = (q: InteractionTarget): string => {
         let cachedIk = interactionKeys.get(q);
         if (cachedIk === undefined) { cachedIk = cache.hash(q); interactionKeys.set(q, cachedIk); }
@@ -161,16 +208,23 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
         for (let i = 0; i < starts!.length; i++) if (targetAreas.includes(starts![i]!)) return false;
         return true;
     };
+    // measureNow sets `reachedGoal` when the flood took the goal from its queue: the length then depends only on the
+    // tiles near the walk (leg-key.ts legKey), and any other result on the whole findLongPath grid (windowKey).
+    let reachedGoal = false;
     const measureNow = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
+        reachedGoal = false;
+        const same = from.x === to.x && from.z === to.z;
         if (!interaction) {
             // A leg that must end on its goal asks for no closest approach (moveNear false): a goal the flood does not
             // reach then returns no path at once, where moveNear scans the 2048x2048 grid for the nearest tile first
             // (8.3 ms against 6.8 ms a null leg, the same lengths on 3,776 legs of a weak account's search).
             if (tol === 0) return scoped(blocked, () => {
-                const raw: Uint32Array = grid.findLongPath(from.level, from.x, from.z, to.x, to.z, 1, 1, 1, 0, -1, false, 0, 500, grid.CollisionType.NORMAL);
-                if (!raw.length) return from.x === to.x && from.z === to.z ? 0 : null;
+                const raw: Uint32Array = grid.findLongPath(from.level, from.x, from.z, to.x, to.z, 1, 1, 1, 0, -1, false, 0, WAYPOINT_LIMIT, grid.CollisionType.NORMAL);
+                if (!raw.length) { reachedGoal = same; return same ? 0 : null; }
                 const lastPacked = raw[raw.length - 1]!;
                 if (((lastPacked >>> 14) & 0x3fff) !== to.x || (lastPacked & 0x3fff) !== to.z) return null;
+                // A cut path drops the goal end first (pathfinder.rs pop_back), so a path that ends on the goal is whole.
+                reachedGoal = true;
                 let len = 0, px = from.x, pz = from.z;
                 for (let i = 0; i < raw.length; i++) {
                     const p = raw[i]!, nx = (p >>> 14) & 0x3fff, nz = p & 0x3fff;
@@ -181,23 +235,26 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
                 }
                 return len;
             });
-            const pts: Tile[] | null = scoped(blocked, () => pf.findLongPath(from.level, from.x, from.z, to.x, to.z, 500));
+            const pts: Tile[] | null = scoped(blocked, () => pf.findLongPath(from.level, from.x, from.z, to.x, to.z, WAYPOINT_LIMIT));
             if (pts === null) return null;
-            if (pts.length === 0) return cheb(from, to) <= tol ? 0 : null;
+            if (pts.length === 0) { reachedGoal = same; return cheb(from, to) <= tol ? 0 : null; }
             const last = pts[pts.length - 1]!;
             if (cheb(last, to) > tol) return null;
+            reachedGoal = last.x === to.x && last.z === to.z;
             let len = 0, prev = from;
             for (let i = 0; i < pts.length; i++) { const p = pts[i]!; len += cheb(prev, p); prev = p; }
             return len;
         }
         const q = interaction;
         return scoped(blocked, () => {
-            if (grid.reached(from.level, from.x, from.z, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags)) return 0;
-            const raw: Uint32Array = grid.findLongPath(from.level, from.x, from.z, to.x, to.z, 1, q.width, q.height, q.angle, q.shape, false, q.blockAccessFlags, 500, grid.CollisionType.NORMAL);
+            if (grid.reached(from.level, from.x, from.z, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags)) { reachedGoal = true; return 0; }
+            const raw: Uint32Array = grid.findLongPath(from.level, from.x, from.z, to.x, to.z, 1, q.width, q.height, q.angle, q.shape, false, q.blockAccessFlags, WAYPOINT_LIMIT, grid.CollisionType.NORMAL);
             if (!raw.length) return null;
             const lastPacked = raw[raw.length - 1]!;
             const endX = (lastPacked >>> 14) & 0x3fff, endZ = lastPacked & 0x3fff;
             if (!grid.reached(from.level, endX, endZ, to.x, to.z, q.width, q.height, 1, q.angle, q.shape, q.blockAccessFlags)) return null;
+            // A path at the waypoint limit may be cut short of the tile the flood reached the loc from.
+            reachedGoal = raw.length < WAYPOINT_LIMIT;
             let len = 0, px = from.x, pz = from.z;
             for (let i = 0; i < raw.length; i++) {
                 const p = raw[i]!, nx = (p >>> 14) & 0x3fff, nz = p & 0x3fff;
@@ -209,14 +266,32 @@ export async function rsPathLength(opts: { legs?: LegCache } = {}): Promise<Path
             return len;
         });
     };
+    // Rows of one leg (leg-key.ts): `<leg>|h` the newest exact lengths; `<leg>|<len>|<changes near the walk>` an exact
+    // length; `<leg>|w|<changes in the grid>` any other result. A row of the prior store (leg-cache.ts) is read with
+    // the whole-scope key it was written with and copied into the rows of the current scope.
     const lookupOrMeasure = (from: Tile, to: Tile, blocked: DoorBlock[], tol: number, interaction?: InteractionTarget): number | null => {
         const prefix = scopePrefix(blocked);
         const ik = interaction ? `:${interactionKey(interaction)}` : '';
-        const k = `${prefix}${from.x},${from.z},${from.level}>${to.x},${to.z},${to.level}:${tol}${ik}`;
-        const cached = cache.get(k);
-        if (cached !== undefined) return cached;
-        const v = measureNow(from, to, blocked, tol, interaction);
-        cache.set(k, v);
+        const leg = `${from.x},${from.z},${from.level}>${to.x},${to.z},${to.level}:${tol}${ik}`;
+        const changes = scopeTables(blocked), span = interaction ? Math.max(interaction.width, interaction.height) : 1;
+        const hint = cache.get(`${leg}|h`);
+        if (typeof hint === 'number') for (const len of hintLengths(hint)) {
+            const v = cache.get(`${leg}|${len}|${legKey(changes, from, to, len, span)}`);
+            if (v !== undefined) return v;
+        }
+        const gridKey = `${leg}|w|${windowKey(changes, from)}`;
+        const flooded = cache.get(gridKey);
+        if (flooded !== undefined) return flooded;
+        let v = cache.prior?.(`${prefix}${leg}`), exact: boolean;
+        // A prior length that ends on its goal: a non-null length of a leg with no tolerance or of a loc approach
+        // under the waypoint limit (measureNow).
+        if (v !== undefined) exact = v !== null && (tol === 0 && !interaction || !!interaction && v < WAYPOINT_LIMIT);
+        else { v = measureNow(from, to, blocked, tol, interaction); exact = reachedGoal; }
+        if (exact && v !== null) {
+            cache.set(`${leg}|${v}|${legKey(changes, from, to, v, span)}`, v);
+            const next = withHint(hint, v);
+            if (next !== hint) cache.set(`${leg}|h`, next);
+        } else cache.set(gridKey, v);
         if (v === null) labelScope(prefix, blocked);
         return v;
     };

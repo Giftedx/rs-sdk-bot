@@ -4,8 +4,9 @@
 //   - alone: one process for each trip, with no saved length (ROUTE_LEG_CACHE=0), so each leg is measured for that
 //     trip, as it was when the key held the start and end tile of the trip;
 //   - shared: one process for all trips, so a later trip reads the lengths of the earlier trips under the key.
-// The set has trips of a strong and of a weak account (two sets of closed danger ground), a trip that ends inside
-// closed ground and a trip that starts there (the keep tiles that stay in the key).
+// The set has trips of a strong and of a weak account (two sets of closed danger ground), of the strong account with
+// a quest door and a key door open (two sets of shut doors that differ near Varrock), a trip that ends inside closed
+// ground and a trip that starts there (the keep tiles, which change the closed ground near the ends).
 // Usage: bun scripts/measure/route-key-parity.ts      exit 0 when every plan is equal, 1 when one differs.
 import {availableParallelism} from 'node:os';
 import {resolve} from 'node:path';
@@ -15,6 +16,9 @@ export const DEFAULT_PARITY_CONCURRENCY = 4;
 
 const strong = {skills: {Attack: 70, Strength: 70, Defence: 70, Hitpoints: 70, Ranged: 80, Magic: 50, Prayer: 43}, varps: {}, items: [], coins: 5000} as unknown as Account;
 const weak = {skills: {Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10, Ranged: 1, Magic: 1, Prayer: 1}, varps: {}, items: [], coins: 5000} as unknown as Account;
+// The doors of knowledge/doors.json at 3191,3363 (32 quest points), 3185,3388 (Black Arm Gang) and 3115,3450 (the
+// Edgeville dungeon key) are open for this account and shut for `strong`.
+const keyed = {...strong, varps: {qp: 32, blackarmgang: 3}, items: ['edgevilledungeonkey']} as unknown as Account;
 const tile = (x: number, z: number): Tile => ({x, z, level: 0});
 const VARROCK = tile(3253, 3421), LUMBRIDGE = tile(3222, 3218), FALADOR = tile(2965, 3379), DRAYNOR = tile(3093, 3244), ARDOUGNE = tile(2619, 3332);
 type Trip = {name: string; from: Tile; to: Tile; acct: Account};
@@ -33,6 +37,7 @@ async function trips(): Promise<Trip[]> {
         {name: 'strong lumbridge-falador', from: LUMBRIDGE, to: FALADOR, acct: strong},
         {name: 'strong falador-varrock, start 2 tiles off', from: tile(FALADOR.x + 2, FALADOR.z), to: VARROCK, acct: strong},
         {name: 'strong varrock-ardougne', from: tile(VARROCK.x - 2, VARROCK.z), to: ARDOUGNE, acct: strong},
+        {name: 'keyed falador-varrock, start 2 tiles off', from: tile(FALADOR.x + 2, FALADOR.z), to: VARROCK, acct: keyed},
         {name: 'weak varrock-lumbridge', from: VARROCK, to: LUMBRIDGE, acct: weak},
         {name: 'weak draynor-varrock', from: DRAYNOR, to: tile(VARROCK.x - 1, VARROCK.z), acct: weak},
     ];

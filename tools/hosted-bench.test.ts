@@ -151,7 +151,7 @@ test('ci.yml caches Bun/route/pack across route-key-parity, measure, and rebalan
     const paritySection = /\n  route-key-parity:[\s\S]*?(?=\n  \w[\w-]*:)/.exec(yml)?.[0] ?? '';
     expect(paritySection).toContain('~/.bun/install/cache');
     expect(paritySection).toContain('actions/cache/restore@v4');
-    expect(paritySection).toContain('route-caches-v2');
+    expect(paritySection).toContain('route-caches-v3');
 });
 
 test('run id and bounded flag validation reject malformed inputs and evaluatePollState detects bench-plan failure', () => {
