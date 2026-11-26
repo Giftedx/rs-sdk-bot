@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795718846572,
+ "at": 1795719048464,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,137 +59,20 @@
    "role": "pvp"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "diamond_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1643",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
-   "account": "Unsheathed",
+   "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory brew:3doseprayerrestore",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=3 -- crafting inventory identify:kwuarm"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-73-p97 ITEM_ID=440 QUANTITY=73 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-146-p517 ITEM_ID=453 QUANTITY=146 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=73 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:supply_chain:263",
+   "goal": "campaign:haggis:item:2353",
    "role": "army"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=1 -- crafting inventory identify:kwuarm"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
-   "account": "Nockitoff",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "barcrawl"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:barcrawl",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:barcrawl",
-   "role": "auto"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "elena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:elena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:elena",
-   "role": "auto"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "tree"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:tree",
-   "role": "auto"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "arena"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:arena",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:arena",
-   "role": "army"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:CoinCock",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto"
   },
   {
    "account": "Earlyshooter",
@@ -209,101 +92,101 @@
    "role": "auto"
   },
   {
-   "account": "Packhorse",
+   "account": "TheFullMonty",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
-    "ball"
+    "arena"
    ],
    "env": {
-    "DEMAND_ID": "goal:quest_board:ball",
+    "DEMAND_ID": "goal:quest_board:arena",
     "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:ball",
-   "role": "helper"
+   "goal": "goal:quest_board:arena",
+   "role": "army"
+  },
+  {
+   "account": "Nockitoff",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "barcrawl"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:barcrawl",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "ranged-camp"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army"
   },
   {
    "account": "SporranBulge",
-   "script": "scripts/chain.ts",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/magic-order.ts TARGET_LEVEL=60 CAP=3000 TRAIN_SKILL=Magic --",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:magearena BATCH_UNITS=1 -- sweep magearena"
+    "sweep",
+    "tree"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:tree",
+   "role": "helper"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "elena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:elena",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:elena",
+   "role": "army"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "magearena"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:magearena",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:magearena",
-   "role": "helper"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:TossTheCaber",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:TossTheCaber",
-   "role": "auto"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-quester.ts -- sweep elena",
-    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:biohazard BATCH_UNITS=1 -- sweep biohazard"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:biohazard",
-   "role": "auto"
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:YewGotWood",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:YewGotWood",
-   "role": "auto"
-  },
-  {
-   "account": "AFKnight",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "ranged-camp"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:AFKnight",
-    "BATCH_UNITS": "250"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:AFKnight",
-   "role": "auto"
+   "role": "army"
   }
  ],
  "army": [
@@ -316,7 +199,6 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
-  "bowbeforeme",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -327,14 +209,14 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
-  "moneyshot",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
-  "sporrandip",
+  "swordinhand",
   "undermykilt",
   "woodpecker",
   "yewfirst"

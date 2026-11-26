@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795718432280-1",
+ "account": "Fatstack",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Harralander",
+ "requested": 1,
+ "claim": "b1833b4b-01f1-4256-9b69-d1c305d4ab69",
+ "count": 0,
+ "ok": false,
+ "at": 1795719034624,
+ "detail": "trade claimed"
+}
