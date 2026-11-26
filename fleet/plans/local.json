@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795731659134,
+ "at": 1795731679606,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,7 +62,7 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=2110 TARGET_COUNT=211 PRODUCT_TARGET=230 -- fishing cage cage",
+    "scripts/aio-skiller.ts CAP=2100 TARGET_COUNT=210 PRODUCT_TARGET=230 -- fishing cage cage",
     "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=230 -- cooking food"
    ],
    "env": {
@@ -116,7 +116,7 @@
    ]
   },
   {
-   "account": "Pullmybow",
+   "account": "Magicwanda",
    "script": "scripts/aio-fighter.ts",
    "args": [
     "wizard"
@@ -124,13 +124,13 @@
    "env": {
     "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Pullmybow",
+    "DEMAND_ID": "goal:pk_army:Magicwanda",
     "BATCH_UNITS": "250",
     "BANK_PACK": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:Pullmybow",
+   "goal": "goal:pk_army:Magicwanda",
    "role": "auto",
    "resources": [
     "wizards-tower"
@@ -178,6 +178,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "goal:quest_board:barcrawl",
+   "role": "auto"
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "team"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
    "role": "auto"
   },
   {
@@ -268,27 +283,6 @@
    "repeat": false,
    "goal": "campaign:haggis:item:97",
    "role": "army"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "wizard"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:Magicwanda",
-    "BATCH_UNITS": "250",
-    "BANK_PACK": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:Magicwanda",
-   "role": "auto",
-   "resources": [
-    "wizards-tower"
-   ]
   }
  ],
  "army": [
