@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795723981334-1",
+ "account": "KnightRider",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 6840,
+ "claim": "4bf3829b-5aeb-412a-bdb9-53c2d772114b",
+ "count": 6840,
+ "ok": true,
+ "at": 1795724341869,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1420,
+  "after": 8260
+ },
+ "bank": {
+  "count": 6840,
+  "at": 1795724341105
+ },
+ "logout": {
+  "attemptId": "1795724309538-0000029700-0000000001",
+  "at": 1795724341858,
+  "sha256": "1abf36132e9dab8b23b257b864617dc8e6d3eeb81a7c07834dbed97f94984902"
+ },
+ "screen": true
+}

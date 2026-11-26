@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795723981334-1",
  "account": "Billionaire",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 6840,
  "claim": "95b3761d-bdaa-46ec-b957-bd2ab9d5e806",
- "count": 0,
- "ok": false,
- "at": 1795724152115,
- "detail": "trade claimed"
+ "count": 6840,
+ "ok": true,
+ "at": 1795724340261,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6840,
+  "after": 0
+ },
+ "bank": {
+  "count": 6840,
+  "at": 1795724304331
+ },
+ "logout": {
+  "attemptId": "1795724152125-0000019808-0000000001",
+  "at": 1795724340249,
+  "sha256": "95cb51b90cbff87475b53a65b9ba7d66d8a841d0220f4dedc00aa4575490a107"
+ },
+ "screen": true
 }
