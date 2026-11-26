@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "xfer-1795724939911-1",
+ "account": "Hocuspokeus",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 6,
+ "claim": "21c5f98e-c1b0-45e8-8289-4a2dd5c000f0",
+ "count": 0,
+ "ok": false,
+ "at": 1795725041426,
+ "detail": "Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 0",
+ "logout": {
+  "attemptId": "1795725034571-0000022780-0000000001",
+  "at": 1795725041414,
+  "sha256": "72965725dc65afd8878c640d8f9b04580bc1111feeda8d723d02c976259b9a26"
+ },
+ "screen": false
+}
