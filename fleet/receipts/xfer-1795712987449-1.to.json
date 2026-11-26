@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795712987449-1",
  "account": "KnightRider",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "08157842-d307-48ab-9de3-338568f016ac",
- "count": 0,
- "ok": false,
- "at": 1795713137690,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795713148413,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795713147669
+ },
+ "logout": {
+  "attemptId": "1795713137698-0000023528-0000000001",
+  "at": 1795713148400,
+  "sha256": "dd94031a7485792ab0a6401eaf99d6d1f5874552c612bda67033ba9e4b0ec7bc"
+ },
+ "screen": true
 }
