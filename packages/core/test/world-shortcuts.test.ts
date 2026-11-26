@@ -55,3 +55,18 @@ test('a sided passage starts on the far side of its loc from each landing, so th
  // The click still targets the loc tile.
  expect(edges.map(e=>(e.run as any).at)).toEqual([{x:2464,z:3492,level:0},{x:2464,z:3492,level:0}]);
 });
+
+test('a row with starts gives one edge from each start, and a bridged loc is sent by id and tile',async()=>{
+ const {shortcutTravel}=await import('../src/travel');
+ // mine_log_balance1 2296 (shortcuts.rs2:26-45) at 2602,3477 under the bridge flag: the client scene keeps it on level 1.
+ const at={x:2602,z:3477,level:0},to={x:2598,z:3477,level:0};
+ const edges=shortcutTravel([{kind:'shortcut',locName:'mine_log_balance1',id:2296,option:'op1',from:at,starts:[{x:2602,z:3476,level:0},{x:2603,z:3477,level:0}],to,exact:true,bridged:true,requires:{skills:[{name:'agility',level:20}]}}] as any);
+ expect(edges.map(e=>[e.id,e.from,e.cost])).toEqual([
+  ['loc:mine_log_balance1@2602,3477,0>2598,3477<2602,3476',{x:2602,z:3476,level:0},7],
+  ['loc:mine_log_balance1@2602,3477,0>2598,3477<2603,3477',{x:2603,z:3477,level:0},8],
+ ]);
+ for (const e of edges) {
+  expect(e.run).toEqual({how:'loc',loc:'mine_log_balance1',op:1,option:null,id:2296,at,unlisted:true});
+  expect(e.needs).toEqual([{skill:'agility',level:20}]);
+ }
+});

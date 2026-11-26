@@ -142,7 +142,7 @@
           "kind": "walk",
           "to": {
             "x": 3267,
-            "z": 3226,
+            "z": 3229,
             "level": 0
           },
           "tolerance": 0
@@ -150,12 +150,12 @@
         {
           "kind": "travel",
           "travel": {
-            "id": "npc:borderguard1:al-kharid-east-of-the-toll-gate@3267,3226",
+            "id": "npc:borderguard1:al-kharid-east-of-the-toll-gate@3267,3229",
             "kind": "toll",
             "name": "Border Guard to Al Kharid (east of the toll gate)",
             "from": {
               "x": 3267,
-              "z": 3226,
+              "z": 3229,
               "level": 0
             },
             "to": {
@@ -178,7 +178,7 @@
           },
           "at": {
             "x": 3267,
-            "z": 3226,
+            "z": 3229,
             "level": 0
           },
           "to": {
