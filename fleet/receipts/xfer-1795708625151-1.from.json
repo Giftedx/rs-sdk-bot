@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795708625151-1",
+ "account": "Billionaire",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff",
+ "requested": 1,
+ "claim": "ac31a699-a867-4ce1-8da5-5f184ed60083",
+ "count": 0,
+ "ok": false,
+ "at": 1795708734406,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "xfer-1795708724948-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Abracadickra",
+  "to": "Wandwanker",
+  "item": "Coins",
+  "count": 60,
+  "itemId": 995,
+  "extra": [
+    {
+      "item": "Staff of air",
+      "count": 1,
+      "itemId": 1381
+    }
+  ],
+  "start": 1795708724948,
+  "end": 1795709624948,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
