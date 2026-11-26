@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795713961669-1",
  "account": "Fingerblastr",
  "partner": "Woodpecker",
@@ -12,6 +12,12 @@
  "claim": "6b094e39-c442-41f1-a4fa-e780293ca6be",
  "count": 0,
  "ok": false,
- "at": 1795714797061,
- "detail": "trade claimed"
+ "at": 1795714825225,
+ "detail": "Error: sender pack full: need 40 slots for Coal, 28 free",
+ "logout": {
+  "attemptId": "1795714797137-0000011028-0000000001",
+  "at": 1795714825202,
+  "sha256": "e703ec39c12517c780dc1bd9618b8c11e504787d179b0efe46d1850019abbe29"
+ },
+ "screen": false
 }

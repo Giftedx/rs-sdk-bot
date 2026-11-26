@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795713961669-2",
  "account": "Swordinhand",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Herb",
  "requested": 1,
  "claim": "3ec14e2d-2f25-4259-b76b-3b53f757a267",
- "count": 0,
- "ok": false,
- "at": 1795714808341,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795714821959,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795714821182
+ },
+ "logout": {
+  "attemptId": "1795714808348-0000027792-0000000001",
+  "at": 1795714821924,
+  "sha256": "45d6ec9c5737f274430e0b5d8cde4b627bc468dcb8baf5d814c0b137f0fdf90e"
+ },
+ "screen": true
 }

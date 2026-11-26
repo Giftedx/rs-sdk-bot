@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795714768071,
+ "at": 1795714825272,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -57,6 +57,22 @@
    "enabled": false,
    "goal": "owner hold: squad kitting only, no fights (session squad-kit); restore with .practice/squad-kit/hold.ts restore",
    "role": "pvp"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/aio-quester.ts",
+   "args": [
+    "sweep",
+    "dragon"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:quest_board:dragon",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:dragon",
+   "role": "army"
   },
   {
    "account": "PickpockDick",
@@ -320,28 +336,53 @@
    "role": "army"
   },
   {
-   "account": "Ballspinner",
+   "account": "Billionaire",
    "script": "scripts/aio-market.ts",
    "args": [
     "shop-buy",
-    "runeshop",
+    "ranging_guild_bowshop",
     "3000"
    ],
    "env": {
-    "ITEM_ID": "554",
-    "ITEMS": "Fire rune",
-    "MAX_ITEMS": "46",
+    "ITEM_ID": "892",
+    "ITEMS": "Rune arrow",
+    "MAX_ITEMS": "1",
     "COIN_RESERVE": "1000",
     "FLOAT": "20000",
     "NO_BUY_TICKS": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
-    "DEMAND_ID": "campaign:haggis:item:554",
-    "BATCH_UNITS": "46"
+    "DEMAND_ID": "campaign:haggis:item:892",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:554",
+   "goal": "campaign:haggis:item:892",
+   "role": "army"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/aio-market.ts",
+   "args": [
+    "shop-buy",
+    "archeryshop",
+    "3000"
+   ],
+   "env": {
+    "ITEM_ID": "837",
+    "ITEMS": "Crossbow",
+    "MAX_ITEMS": "1",
+    "COIN_RESERVE": "1000",
+    "FLOAT": "20000",
+    "NO_BUY_TICKS": "25",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "DEMAND_ID": "campaign:haggis:item:837",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:837",
    "role": "army"
   }
  ],
@@ -353,7 +394,6 @@
   "Wandwaver",
   "mmsmk1232",
   "bigpackage",
-  "billionaire",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -369,7 +409,6 @@
   "pocketrocket",
   "sausagefest",
   "sporrandip",
-  "swordinhand",
   "thefullmonty",
   "undermykilt",
   "woodpecker",
