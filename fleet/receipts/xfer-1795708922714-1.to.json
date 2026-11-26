@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795708922714-1",
+ "account": "Unsheathed",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 3,
+ "claim": "6b8a6fb6-95f2-4795-b5f9-f1b9f05743dc",
+ "count": 3,
+ "ok": true,
+ "at": 1795709220996,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795709220232
+ },
+ "logout": {
+  "attemptId": "1795709210448-0000009432-0000000001",
+  "at": 1795709220985,
+  "sha256": "083286c2be45a450a75c49b788ebe1dd60507a3abe135b85844e3b4b41070757"
+ },
+ "screen": true
+}
