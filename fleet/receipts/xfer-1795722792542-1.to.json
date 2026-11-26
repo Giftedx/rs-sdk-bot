@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722792542-1",
  "account": "Unsheathed",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 360,
  "claim": "7a072645-a733-4828-a879-0eec59e20075",
- "count": 0,
- "ok": false,
- "at": 1795722997483,
- "detail": "trade claimed"
+ "count": 360,
+ "ok": true,
+ "at": 1795723011133,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 360
+ },
+ "bank": {
+  "count": 360,
+  "at": 1795723010367
+ },
+ "logout": {
+  "attemptId": "1795722997496-0000014896-0000000001",
+  "at": 1795723011124,
+  "sha256": "92cdefcd1f38f801e1eca9ec5286acb966eab3f0b658a019381d7e6b9aea5f78"
+ },
+ "screen": true
 }

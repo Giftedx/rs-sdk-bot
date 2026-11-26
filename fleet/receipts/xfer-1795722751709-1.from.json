@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722751709-1",
  "account": "YewFirst",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 8200,
  "claim": "1957195f-55ee-469a-9921-8e509ccddfc5",
- "count": 0,
- "ok": false,
- "at": 1795722957228,
- "detail": "trade claimed"
+ "count": 8200,
+ "ok": true,
+ "at": 1795723011921,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8200,
+  "after": 0
+ },
+ "bank": {
+  "count": 8200,
+  "at": 1795722966387
+ },
+ "logout": {
+  "attemptId": "1795722957236-0000007904-0000000001",
+  "at": 1795723011912,
+  "sha256": "9bd84384537819b8e453f2c63ee6b490a29c9f0eaba5db4dd7fcebacce91a3c5"
+ },
+ "screen": true
 }
