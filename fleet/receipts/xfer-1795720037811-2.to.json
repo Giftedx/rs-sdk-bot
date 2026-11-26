@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795720037811-2",
  "account": "WellHung",
  "partner": "Packhorse",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 60,
  "claim": "c1085a70-7bc5-46af-a7b3-3194d8a065af",
- "count": 0,
- "ok": false,
- "at": 1795720853967,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795720869627,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795720868876
+ },
+ "logout": {
+  "attemptId": "1795720853975-0000002268-0000000001",
+  "at": 1795720869615,
+  "sha256": "f07eaf2e01815ceedd0846cc614341a907fd4cfc9421108c2ab1aca76f830394"
+ },
+ "screen": true
 }
