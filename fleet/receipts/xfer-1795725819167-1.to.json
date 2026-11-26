@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795725819167-1",
  "account": "Moneyshot",
  "partner": "CoinCock",
@@ -10,8 +10,22 @@
  "item": "Fishing bait",
  "requested": 2,
  "claim": "03f5dfca-167c-474d-a6b3-88ce6c36411f",
- "count": 0,
- "ok": false,
- "at": 1795726205688,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795726260039,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795726259300
+ },
+ "logout": {
+  "attemptId": "1795726205697-0000023500-0000000001",
+  "at": 1795726260026,
+  "sha256": "57b82ce411bfb042630f0b9bdabd91fd98f69c3999691063febc4d19cc345c80"
+ },
+ "screen": true
 }

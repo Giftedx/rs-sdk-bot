@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795726265704-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmsmk1232",
+  "to": "Moneyshot",
+  "item": "Fishing bait",
+  "count": 2,
+  "itemId": 313,
+  "start": 1795726265704,
+  "end": 1795727165704,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
