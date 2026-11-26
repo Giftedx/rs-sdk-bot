@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795722291448,
+ "at": 1795722381946,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,8 +62,8 @@
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1580 TARGET_COUNT=158 PRODUCT_TARGET=171 -- fishing cage cage",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=171 -- cooking food"
+    "scripts/aio-skiller.ts CAP=1560 TARGET_COUNT=156 PRODUCT_TARGET=162 -- fishing cage cage",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:379 BATCH_UNITS=162 -- cooking food"
    ],
    "env": {
     "ROUNDS": "1"

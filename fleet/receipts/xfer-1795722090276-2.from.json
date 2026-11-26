@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795722090276-2",
+ "account": "BoneToPick",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "cf615859-d212-44e3-8711-c8fc5206dde7",
+ "count": 300,
+ "ok": true,
+ "at": 1795722381865,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 300,
+  "after": 0
+ },
+ "bank": {
+  "count": 300,
+  "at": 1795722360421
+ },
+ "logout": {
+  "attemptId": "1795722353749-0000020996-0000000001",
+  "at": 1795722381808,
+  "sha256": "345afed1e5a2e721a3d7c22c7e544cff3af1ad88c7fa898b0b8cd2f1b902bb86"
+ },
+ "screen": true
+}

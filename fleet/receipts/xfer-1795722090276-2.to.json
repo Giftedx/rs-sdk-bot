@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795722090276-2",
+ "account": "Magicwanda",
+ "partner": "BoneToPick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300,
+ "claim": "4f656958-b3fd-4f97-b4f7-bb600781b212",
+ "count": 0,
+ "ok": false,
+ "at": 1795722367578,
+ "detail": "trade claimed"
+}
