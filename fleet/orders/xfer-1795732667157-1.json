@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795732667157-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "Moneyshot",
+  "item": "Steel bar",
+  "count": 3,
+  "itemId": 2353,
+  "start": 1795732667157,
+  "end": 1795733567157,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
