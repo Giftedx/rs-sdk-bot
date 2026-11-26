@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795733057606-1",
  "account": "YewFirst",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Logs",
  "requested": 5,
  "claim": "81244b4c-c6a9-458a-bc36-ee7e0fbadd13",
- "count": 0,
- "ok": false,
- "at": 1795733286144,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795733330897,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795733307726
+ },
+ "logout": {
+  "attemptId": "1795733286153-0000028556-0000000001",
+  "at": 1795733330886,
+  "sha256": "f4230e8b4641c190d804cf4b767ba78e885d3cc4f4751bca36c8e7d1dc7e1723"
+ },
+ "screen": true
 }
