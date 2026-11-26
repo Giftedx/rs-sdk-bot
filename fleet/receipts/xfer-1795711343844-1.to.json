@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795711343844-1",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Herb",
+ "requested": 7,
+ "claim": "565d44b2-205b-4b36-8af0-a6ea40b60031",
+ "count": 0,
+ "ok": false,
+ "at": 1795711920792,
+ "detail": "trade claimed"
+}

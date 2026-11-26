@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795711890513,
+ "at": 1795711945769,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -59,50 +59,64 @@
    "role": "pvp"
   },
   {
-   "account": "BoneToPick",
+   "account": "Earlyshooter",
    "script": "scripts/aio-skiller.ts",
    "args": [
     "magic",
-    "splash",
-    "90",
-    "3000"
+    "bones"
    ],
    "env": {
     "TRAIN_SKILL": "Magic",
     "TARGET_LEVEL": "90",
-    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "DEMAND_ID": "goal:pk_army:Earlyshooter",
     "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:pk_army:BoneToPick",
-   "role": "auto",
-   "resources": [
-    "ardougne-cows"
-   ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/generated/quest-dragon.ts",
-   "args": [],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:dragon",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:dragon",
-   "role": "army"
+   "goal": "goal:pk_army:Earlyshooter",
+   "role": "auto"
   },
   {
    "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-436-32-p23 ITEM_ID=436 QUANTITY=32 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-32-p23 ITEM_ID=438 QUANTITY=32 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=32 -- smithing smelt 1500 bronze"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
+   "role": "army"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ORDER_KEY=brain-436-32-p23 ITEM_ID=436 QUANTITY=32 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-438-32-p23 ITEM_ID=438 QUANTITY=32 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
+    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2349 BATCH_UNITS=32 -- smithing smelt 1500 bronze"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:2349",
+   "role": "army"
+  },
+  {
+   "account": "Billionaire",
    "script": "scripts/aio-pvp.ts",
    "args": [
     "__escort-ore"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "11"
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
@@ -110,35 +124,18 @@
    "role": "army"
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
+   "account": "OreElse",
+   "script": "scripts/aio-pvp.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=233 \"ITEMS=Pestle and mortar\" MAX_ITEMS=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy jiminua 3000",
-    "scripts/aio-market.ts ITEM_ID=1973 \"ITEMS=Chocolate bar\" MAX_ITEMS=8 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1 -- shop-buy wydinstore 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=campaign:grindmyherb:item:1975 BATCH_UNITS=8 -- crafting inventory grind:chocolate_bar"
+    "__escort-ore"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:grindmyherb:item:1975",
-   "role": "army"
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/quest-druid.ts --",
-    "scripts/aio-skiller.ts TRAIN_SKILL=Mining TARGET_LEVEL=40 -- mining ore",
-    "scripts/generated/quest-itwatchtower.ts DEMAND_ID=goal:quest_board:itwatchtower BATCH_UNITS=1 --"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:itwatchtower",
+   "goal": "goal:coin_fund:fleet",
    "role": "army"
   },
   {
@@ -204,42 +201,6 @@
    "enabled": true,
    "repeat": false,
    "role": "helper"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "smithing",
-    "anvil",
-    "1500"
-   ],
-   "env": {
-    "ORDER_ACTION": "smith",
-    "PRODUCT_ID": "40",
-    "MAX_MAKE": "1",
-    "BAR_RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:40",
-    "BATCH_UNITS": "5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:40",
-   "role": "army"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-logistics.ts ITEM_ID=536 QUANTITY=103 \"ITEM_NAME=Dragon bones\" -- loadout",
-    "scripts/aio-skiller.ts BONE_ID=536 TRAIN_SKILL=Prayer TARGET_LEVEL=70 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- prayer bury"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:pk_army:CoinCock",
-   "role": "auto"
   }
  ],
  "army": [
@@ -260,6 +221,7 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "moneyshot",
   "pocketpool",
   "pocketpython",
   "pocketrocket",
