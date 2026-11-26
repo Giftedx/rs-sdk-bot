@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795716875373-2",
+ "account": "TheFullMonty",
+ "partner": "Packhorse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel bar",
+ "requested": 6,
+ "claim": "bfd0ef40-85af-4c52-921f-dcb17aa4f79d",
+ "count": 0,
+ "ok": false,
+ "at": 1795717501107,
+ "detail": "trade claimed"
+}

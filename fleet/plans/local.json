@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795717470107,
+ "at": 1795717505377,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -75,6 +75,27 @@
    "role": "army"
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/aio-skiller.ts",
+   "args": [
+    "smithing",
+    "anvil",
+    "1500"
+   ],
+   "env": {
+    "ORDER_ACTION": "smith",
+    "PRODUCT_ID": "40",
+    "MAX_MAKE": "1",
+    "BAR_RESERVE": "0",
+    "DEMAND_ID": "campaign:haggis:item:40",
+    "BATCH_UNITS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:40",
+   "role": "army"
+  },
+  {
    "account": "Pocketrocket",
    "script": "scripts/aio-skiller.ts",
    "args": [
@@ -83,7 +104,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "1429"
+    "BATCH_UNITS": "1496"
    },
    "enabled": true,
    "repeat": false,
@@ -126,16 +147,15 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=52 \"ITEMS=Arrow shaft\" MAX_ITEMS=2000 STOCK_TARGET=2000 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy ranging_guild_bowshop 3000",
-    "scripts/aio-market.ts ITEM_ID=314 ITEMS=Feather MAX_ITEMS=2000 STOCK_TARGET=2000 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy fishingguild 3000",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:53 BATCH_UNITS=2000 -- fletching arrows"
+    "scripts/aio-market.ts ORDER_KEY=brain-1436-1496-p61 ITEM_ID=1436 QUANTITY=1496 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=61 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:556 BATCH_UNITS=1496 -- runecraft air"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:53",
+   "goal": "campaign:haggis:item:556",
    "role": "army"
   },
   {
@@ -171,22 +191,6 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "crest"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:crest",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:crest",
-   "role": "army"
-  },
-  {
    "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
@@ -200,79 +204,6 @@
    "repeat": false,
    "goal": "goal:quest_board:biohazard",
    "role": "army"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "chompybird"
-   ],
-   "env": {
-    "DEMAND_ID": "goal:quest_board:chompybird",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:quest_board:chompybird",
-   "role": "army"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "jewellery-trip"
-   ],
-   "env": {
-    "RECIPE": "diamond_ring",
-    "TARGET": "1",
-    "BATCH": "13",
-    "CAP": "1500",
-    "RETURN_TICKS": "100",
-    "RESERVE": "0",
-    "DEMAND_ID": "campaign:haggis:item:1643",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:1643",
-   "role": "army"
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 TRAIN_SKILL=Herblore TARGET_LEVEL=54 -- crafting inventory identify:guam_leaf",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=600 MEMBERS=1 DEMAND_ID=goal:supply_chain:263 BATCH_UNITS=1 -- crafting inventory identify:kwuarm"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "goal:supply_chain:263",
-   "role": "army"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "crafting",
-    "inventory",
-    "brew:unf_ranarr_potion"
-   ],
-   "env": {
-    "MAX_MAKE": "1",
-    "CAP": "1200",
-    "MEMBERS": "1",
-    "DEMAND_ID": "campaign:haggis:item:99",
-    "BATCH_UNITS": "1"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:99",
-   "role": "army"
   }
  ],
  "army": [
@@ -285,6 +216,7 @@
   "ballspinner",
   "bigpackage",
   "billionaire",
+  "bowbeforeme",
   "dipstick",
   "fingerblastr",
   "hocuspokeus",
@@ -293,10 +225,12 @@
   "mineyourbiz",
   "mmtha0205",
   "mmthv2350",
+  "oreelse",
   "pickpockdick",
   "pocketpool",
   "pocketpython",
   "sausagefest",
+  "swordinhand",
   "thefullmonty",
   "undermykilt",
   "woodpecker",
