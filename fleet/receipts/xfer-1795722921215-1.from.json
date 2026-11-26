@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795722921215-1",
  "account": "Shaftsinker",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Copper ore",
  "requested": 6,
  "claim": "c8d7dfd9-7ae8-4c95-b8da-4b948252a5ba",
- "count": 0,
- "ok": false,
- "at": 1795723193271,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795723234712,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795723201192
+ },
+ "logout": {
+  "attemptId": "1795723193279-0000025916-0000000001",
+  "at": 1795723234702,
+  "sha256": "c63eb14b8b3976f04b5fb17b1bfafd47229d8dd61e01cd52f8d50a3fe002b714"
+ },
+ "screen": true
 }
