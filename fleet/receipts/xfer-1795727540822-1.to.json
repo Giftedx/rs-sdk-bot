@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "xfer-1795727540822-1",
+ "account": "Moneyshot",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fishing bait",
+ "requested": 52,
+ "claim": "8d9365de-614c-45c2-9b7b-cce59429b209",
+ "count": 52,
+ "ok": true,
+ "at": 1795727900399,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 52
+ },
+ "bank": {
+  "count": 52,
+  "at": 1795727899591
+ },
+ "logout": {
+  "attemptId": "1795727889394-0000027184-0000000001",
+  "at": 1795727900387,
+  "sha256": "a7bb9efd9346ec779d427cd5295cdda4f956c3aca550622e8a7e6d904352e0b1"
+ },
+ "screen": true
+}

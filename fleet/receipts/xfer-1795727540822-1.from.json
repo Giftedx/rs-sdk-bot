@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795727540822-1",
  "account": "BowBeforeMe",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Fishing bait",
  "requested": 52,
  "claim": "c77a38ae-354e-4348-be91-da6a3d498adf",
- "count": 0,
- "ok": false,
- "at": 1795727684843,
- "detail": "trade claimed"
+ "count": 52,
+ "ok": true,
+ "at": 1795727898776,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 52,
+  "after": 0
+ },
+ "bank": {
+  "count": 52,
+  "at": 1795727878001
+ },
+ "logout": {
+  "attemptId": "1795727684948-0000005576-0000000001",
+  "at": 1795727898754,
+  "sha256": "6f86ad77edfb71e0e78fb039fc7849aace48d74b2d9158b03ab3afbed159c0c7"
+ },
+ "screen": true
 }
