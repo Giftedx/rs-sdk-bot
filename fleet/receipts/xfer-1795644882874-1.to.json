@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795644882874-1",
+ "account": "Swordswallow",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 60,
+ "claim": "5a4538f1-9c06-4cf5-bb6b-54d6b1063cbd",
+ "count": 0,
+ "ok": false,
+ "at": 1795645263537,
+ "detail": "trade claimed"
+}
