@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "xfer-1795724760514-1",
  "account": "Swordinhand",
  "partner": "SporranBulge",
@@ -12,6 +12,16 @@
  "claim": "44271679-f1a4-4fd8-81ae-a156b52f16b7",
  "count": 0,
  "ok": false,
- "at": 1795724866938,
- "detail": "trade claimed"
+ "at": 1795724908231,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 185,
+  "at": 1795724892313
+ },
+ "logout": {
+  "attemptId": "1795724867227-0000030272-0000000001",
+  "at": 1795724908220,
+  "sha256": "2c062e9e43737aff9558ffdadea1f911952ee41244b5bf26f7495c984e4db1ca"
+ },
+ "screen": false
 }
