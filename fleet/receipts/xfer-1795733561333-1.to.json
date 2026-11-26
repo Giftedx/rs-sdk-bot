@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795733561333-1",
  "account": "Swordinhand",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn dust",
  "requested": 1,
  "claim": "0523b3f3-b8a6-45c3-9247-d63780885cc6",
- "count": 0,
- "ok": false,
- "at": 1795733816206,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795733905302,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795733904533
+ },
+ "logout": {
+  "attemptId": "1795733816444-0000016992-0000000001",
+  "at": 1795733905285,
+  "sha256": "f4c9fe25f28ed810307a7a011a815b197717e1be6be9303653476021a9458032"
+ },
+ "screen": true
 }
