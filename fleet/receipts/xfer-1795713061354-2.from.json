@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795713061354-2",
+ "account": "BoneToPick",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Chocolate bar",
+ "requested": 2,
+ "claim": "3619e83e-c9d4-428a-bf7b-f58c9dbb859b",
+ "count": 0,
+ "ok": false,
+ "at": 1795713484917,
+ "detail": "trade claimed"
+}

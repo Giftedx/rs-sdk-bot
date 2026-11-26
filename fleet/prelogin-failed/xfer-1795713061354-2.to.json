@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "xfer-1795713061354-2",
+ "role": "to",
+ "account": "Hocuspokeus",
+ "partner": "BoneToPick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795713516752,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 024467ebfd7bc2c1c371efefb8853e418782361c -> fleet-trade-claim/hocuspokeus (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

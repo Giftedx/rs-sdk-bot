@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795713475353-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "Fatstack",
+  "item": "Herb",
+  "count": 2,
+  "itemId": 213,
+  "start": 1795713475353,
+  "end": 1795714375353,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
