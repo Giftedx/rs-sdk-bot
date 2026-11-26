@@ -808,7 +808,10 @@ export async function sweepPreset(account: string, quest: string, fresh?: string
                 };
                 const first = await bankRows();
                 if (first) return fail(first);
-                const worn = [...s.sdk.getEquipment()];
+                // A required worn-kit item stays on: banked, it came back into the pack to be worn again, and a resumed
+                // Temple of Ikov with the pendant of Lucien needed one slot more than the pack has.
+                const keepOn = new Set((WORN_KIT[quest] ?? []).filter((k) => k.required).map((k) => k.id));
+                const worn = [...s.sdk.getEquipment()].filter((item) => !keepOn.has(item.id));
                 for (const item of worn) {
                     await s.bot.unequipItem(item);
                     if (!(await waitUntil(s, () => !s.sdk.getEquipment().some((e) => e.slot === item.slot), { timeoutTicks: 8 }))) {

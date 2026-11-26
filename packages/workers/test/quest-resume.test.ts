@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { QUEST_NAMES } from '../src/quest/chain';
-import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, grailFrom, grailJournalStage, merlinJournalStage, resumeFrom, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
+import { arenaFrom, arenaJournalStage, ballJournalStage, crestHeld, crestJournalStage, crestSpent, dragonFrom, dragonHeld, dragonJournalStage, dragonSpent, grailFrom, grailJournalStage, ikovJournalStage, merlinJournalStage, resumeFrom, questEntry, questResumable, QUEST_RESUME, resumeStart, SELF_RESUME, squireJournalStage } from '../src/quest/resume';
 import { REPO_ROOT } from '../src/quest/types';
 
 const QUESTS = 'vendor/rs-sdk/server/content/scripts/quests';
@@ -297,5 +297,191 @@ describe('merlin journal stage', () => {
         expect(resumeStart(merlin, "Merlin's Crystal", 4)).toEqual({ kind: 'resume', from: 4, spent: [], held: [32, 38, 35], extra: [] });
         expect(resumeStart(merlin, "Merlin's Crystal", 5)).toEqual({ kind: 'resume', from: 8, spent: [30], held: [35], extra: [] });
         expect(resumeStart(merlin, "Merlin's Crystal", 6)).toEqual({ kind: 'resume', from: 9, spent: [30, 2309], held: [], extra: [] });
+    });
+});
+
+// The string literals of ikov_journal.rs2 in the order they appear, as the client receives them.
+function ikovJournalLines(): string[] {
+    const src = readFileSync(join(REPO_ROOT, `${QUESTS}/quest_ikov/scripts/ikov_journal.rs2`), 'utf8');
+    return [...src.matchAll(/append\(\$x, "([^"]*)"\)/g)].map((m) => m[1]!);
+}
+
+describe('ikov journal stage', () => {
+    const lines = ikovJournalLines();
+    // The nth literal that matches: the 20/30 block and the 40+ block both open with the same struck line.
+    const pick = (re: RegExp, nth = 0): string => {
+        const hit = lines.filter((l) => re.test(l))[nth];
+        if (hit === undefined) throw Error(`no journal literal ${re} #${nth}`);
+        return hit;
+    };
+    // The journal of each stage, as the branches of ikov_journal.rs2 build it.
+    const start = pick(/I can start this quest/) + pick(/I must have/) + pick(/Level 42 thieving/) + pick(/Level 40 ranged/);
+    const started = pick(/^@dre@Lucien@dbl@ has asked me/);
+    const struck = pick(/^@str@Lucien has asked me/) + pick(/^@str@the Temple of Ikov/) + pick(/^@str@given me a pendant/);
+    const trap = struck + pick(/chamber of fear\. I found a trap on a\|/, 0) + pick(/I pulled the lever\.\|/) + pick(/boots of lightness/) + pick(/Ice Cavern/);
+    const fought = struck + pick(/chamber of fear\. I found a trap on a\|/, 1) + pick(/I pulled the lever; I went into/) + pick(/attacked by a Fire Warrior/) + pick(/my trusty bow/);
+    const spoken = fought + pick(/My path is blocked by lava/);
+    const paid = fought + pick(/My path was blocked by lava/) + pick(/after I got her twenty limpwurt roots/);
+    const helping = fought + pick(/I will kill/);
+    const armadyl = struck + pick(/I killed\|$/) + pick(/banished him/) + pick(/QUEST COMPLETE/);
+    const lucienSide = struck + pick(/I recovered the Staff/) + pick(/staying at his house/) + pick(/made him more powerful/) + pick(/QUEST COMPLETE/);
+
+    test('each branch of the server journal names its %ikov stage', () => {
+        expect(lines.length).toBe(27);
+        const want: [string, number][] = [[start, 0], [started, 10], [trap, 20], [fought, 40], [spoken, 50], [paid, 60], [helping, 70], [armadyl, 80], [lucienSide, 90]];
+        for (const [j, stage] of want) {
+            expect(ikovJournalStage(j)).toBe(stage);
+            // The client's components, one line each, joined by spaces.
+            expect(ikovJournalStage(j.split('|').join(' '))).toBe(stage);
+        }
+        expect(ikovJournalStage('Temple of Ikov')).toBeUndefined();
+    });
+
+    test('each started stage maps to a stage name of quest-ikov.ts; the lit candle is spent after the boots', () => {
+        const ikov = QUEST_RESUME.ikov!;
+        expect([10, 20, 30, 40, 50, 60, 70].map((s) => resumeFrom(ikov, s))).toEqual([1, 2, 2, 4, 5, 5, 6]);
+        expect(resumeStart(ikov, 'Temple of Ikov', 10)).toEqual({ kind: 'resume', from: 1, spent: [], held: [86], extra: [] });
+        expect(resumeStart(ikov, 'Temple of Ikov', 20)).toEqual({ kind: 'resume', from: 2, spent: [33, 946], held: [86, 78], extra: [] });
+        expect(resumeStart(ikov, 'Temple of Ikov', 90)).toEqual({ kind: 'refuse', reason: 'refused: Temple of Ikov journal stage 90 is complete' });
+        // quest-ikov.ts names its stages in this order.
+        expect(readFileSync(join(REPO_ROOT, 'scripts/generated/quest-ikov.ts'), 'utf8')).toContain("const STAGES = ['start', 'low', 'arrows', 'warrior', 'winelda', 'teleport', 'lucien'] as const;");
+    });
+});
+
+describe('dragon', () => {
+    const DS_JOURNAL = `${QUESTS}/quest_dragon/scripts/dragon_journal.rs2`;
+
+    // The string literals of dragon_journal.rs2 in file order, as the client receives them: colour tags and | line breaks
+    // included. The journal is a chain of `if` blocks and procs, so each test below joins the literals that the blocks of
+    // its varp values append, in the order the script appends them.
+    const LITS = [...readFileSync(join(REPO_ROOT, DS_JOURNAL), 'utf8').matchAll(/(?:\$text = |append\(\$text, )"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]!);
+    const one = (re: RegExp): string => {
+        const l = LITS.find((x) => re.test(x));
+        if (l === undefined) throw Error(`no journal literal ${re}`);
+        return l;
+    };
+    const span = (from: RegExp, to: RegExp): string => {
+        const a = LITS.findIndex((x) => from.test(x));
+        const b = LITS.findIndex((x, i) => i >= a && to.test(x));
+        if (a < 0 || b < a) throw Error(`no journal span ${from} ${to}`);
+        return LITS.slice(a, b + 1).join('');
+    };
+
+    const GUILD = one(/^@str@The Guildmaster of the Champions' Guild said his friend/);
+    const OZIACH = one(/^@dre@Oziach@dbl@ will sell me/);
+    const NEED = one(/^@dbl@To defeat the dragon I will need/) + one(/^@dbl@of @dre@protection@dbl@ against/);
+    const PIECE = {
+        melzar: { found: one(/I found the piece of the map that was hidden in Melzar's/), not: one(/One-third of the map is in @dre@Melzar's Maze/) },
+        ice: { found: one(/hidden in beneath Ice/), rhyme: span(/I asked the @dre@Oracle/, /^Last, a bowl that's not seen heat/), not: one(/only the @dre@Oracle@dbl@ on @dre@Ice/) },
+        goblin: { found: one(/the goblin, Wormbrain,/), not: one(/stolen by a @dre@goblin/) },
+    };
+    const SHIELD = { given: one(/The Duke of Lumbridge gave me/), ask: one(/I should ask the @dre@Duke of Lumbridge/) };
+    const REPAIR = { need: one(/My ship will need some repairs/), done: one(/I have repaired my ship using/) };
+    const BOUGHT = one(/^@str@I bought a ship in Port Sarim/);
+    const CAPTAIN = one(/I still need to find a @dre@captain/);
+    const NED = one(/^@str@Captain Ned from Draynor Village has agreed/);
+    const ALL_FOUND = PIECE.melzar.found + PIECE.ice.found + PIECE.goblin.found;
+
+    type Pieces = { melzar: 'found' | 'not'; ice: 'found' | 'rhyme' | 'not'; goblin: 'found' | 'not'; shield: 'given' | 'ask' };
+    const pieces = (p: Pieces) => PIECE.melzar[p.melzar] + PIECE.ice[p.ice] + PIECE.goblin[p.goblin] + SHIELD[p.shield];
+
+    // The journal of each varp state, as dragon_journal.rs2 builds it.
+    const J = {
+        start: (qp32: boolean) => span(/I can start this quest/, /level 83 dragon/) + one(qp32 ? /^@str@To enter the Champions' Guild/ : /^@dbl@To enter the Champions' Guild/),
+        s1: () => GUILD + one(/I should speak to @dre@Oziach/),
+        // %dragonquest 2 or 3 with a side varp unset (:26-27, :38-39).
+        oziachAgain: () => GUILD + OZIACH + one(/I should return to @dre@Oziach/),
+        s2: (p: Pieces) => GUILD + OZIACH + NEED + pieces(p) + one(/ship@dbl@ for sale in @dre@Port Sarim/),
+        s3: (p: Pieces) => GUILD + OZIACH + NEED + pieces(p) + BOUGHT + REPAIR.need + CAPTAIN,
+        s7: (p: Pieces) => GUILD + OZIACH + NEED + pieces(p) + BOUGHT + REPAIR.done + CAPTAIN,
+        s8: (shield: 'given' | 'ask') => GUILD + OZIACH + ALL_FOUND + SHIELD[shield] + BOUGHT + REPAIR.done + NED + one(/Now I should go to my ship/),
+        // After the crash %dragonquestvar is 0 (dragonslayer_ned.rs2:24), so the repairs line is the unrepaired one.
+        s9: (wall: boolean, repaired = false) => GUILD + OZIACH + ALL_FOUND + SHIELD.given
+            + (wall ? one(/secret passage leading from\|/) : NED + (repaired ? REPAIR.done : REPAIR.need)) + one(/Now all I need to do is kill/),
+        complete: () => GUILD + span(/^@str@Oziach would sell me Rune Plate Mail/, /QUEST COMPLETE!/),
+    };
+
+    const P = (melzar: Pieces['melzar'], ice: Pieces['ice'], goblin: Pieces['goblin'], shield: Pieces['shield']): Pieces => ({ melzar, ice, goblin, shield });
+
+    describe('dragon journal stage', () => {
+        test('each varp state of the server journal names its stage', () => {
+            expect(dragonJournalStage(J.start(false))).toBe(0);
+            expect(dragonJournalStage(J.start(true))).toBe(0);
+            expect(dragonJournalStage(J.s1())).toBe(10);
+            expect(dragonJournalStage(J.oziachAgain())).toBe(20);
+            // %dragonquest 2, side varps set: Oracle not asked (or piece 3 banked), the rhyme, piece 3 in the pack.
+            expect(dragonJournalStage(J.s2(P('not', 'not', 'not', 'ask')))).toBe(21);
+            expect(dragonJournalStage(J.s2(P('found', 'not', 'not', 'given')))).toBe(21);
+            expect(dragonJournalStage(J.s2(P('not', 'rhyme', 'not', 'ask')))).toBe(22);
+            expect(dragonJournalStage(J.s2(P('not', 'found', 'not', 'ask')))).toBe(23);
+            expect(dragonJournalStage(J.s2(P('found', 'found', 'not', 'given')))).toBe(23);
+            expect(dragonJournalStage(J.s3(P('found', 'found', 'not', 'given')))).toBe(30);
+            expect(dragonJournalStage(J.s3(P('not', 'not', 'not', 'given')))).toBe(30);
+            expect(dragonJournalStage(J.s7(P('found', 'found', 'not', 'given')))).toBe(70);
+            expect(dragonJournalStage(J.s7(P('found', 'found', 'found', 'given')))).toBe(70);
+            expect(dragonJournalStage(J.s8('given'))).toBe(80);
+            expect(dragonJournalStage(J.s8('ask'))).toBe(80);
+            expect(dragonJournalStage(J.s9(false))).toBe(90);
+            expect(dragonJournalStage(J.s9(false, true))).toBe(90);
+            expect(dragonJournalStage(J.s9(true))).toBe(90);
+            expect(dragonJournalStage(J.complete())).toBe(100);
+            expect(dragonJournalStage('Dragon Slayer')).toBeUndefined();
+        });
+
+        test('a journal split into components with the colour carried over still reads', () => {
+            // The client joins up to 50 components (packages/core/src/quest-journal.ts): one line each, | removed.
+            const lines = J.s2(P('not', 'rhyme', 'not', 'ask')).split('|');
+            expect(dragonJournalStage(lines.map((l) => `@dbl@${l}`).join(' '))).toBe(22);
+            expect(dragonJournalStage(J.s9(false).split('|').join('   '))).toBe(90);
+        });
+
+        // split_init(400, 49, q8_full) shows 49 lines (player/scripts/quest_journal.rs2:3). The engine's own split
+        // (FontType.split, run in dragon-lines.ts) breaks no line of this journal at 400 px, so a journal has one line for
+        // each | piece, less a trailing empty one: at most 27 (the rhyme with the ship bought, which quest-dragon.ts never
+        // leaves), 24 at stage 22.
+        test('every journal fits in the 49 lines of split_init, so no stage loses its last lines', () => {
+            const lines = (t: string) => t.split('|').filter((l, i, a) => i < a.length - 1 || l !== '').length;
+            const all = [J.start(false), J.s1(), J.oziachAgain(), J.s2(P('not', 'rhyme', 'not', 'ask')), J.s2(P('found', 'found', 'found', 'given')),
+                J.s3(P('not', 'rhyme', 'not', 'ask')), J.s7(P('not', 'rhyme', 'not', 'ask')), J.s7(P('found', 'found', 'found', 'given')),
+                J.s8('given'), J.s9(false), J.s9(true), J.complete()];
+            expect(lines(J.s2(P('not', 'rhyme', 'not', 'ask')))).toBe(24);
+            expect(Math.max(...all.map(lines))).toBe(27);
+        });
+    });
+
+    describe('dragon resume', () => {
+        test('each stage maps to a DS_FROM milestone, or none past the quest', () => {
+            expect([0, 10, 20, 21, 22, 23, 30, 70, 80, 90].map(dragonFrom)).toEqual([0, 1, 1, 2, 3, 4, 11, 12, 14, 15]);
+            expect([100, 2, 3, 7, 24].map(dragonFrom)).toEqual([undefined, undefined, undefined, undefined, undefined]);
+        });
+
+        test('held quest items and spent preset items follow the server scripts', () => {
+            expect(dragonHeld(10)).toEqual([]);
+            expect(dragonHeld(22)).toEqual([1542]);
+            expect(dragonHeld(21)).toEqual([1542, 1537, 1535, 1540]);
+            expect(dragonHeld(70)).toEqual([1535, 1536, 1537, 1538, 1540]);
+            expect(dragonHeld(90)).toEqual([1540]);
+            expect(dragonSpent(22)).toEqual([]);
+            expect(dragonSpent(23)).toEqual([1907, 1791, 301, 950]);
+            expect(dragonSpent(80)).toEqual([1907, 1791, 301, 950, 960, 1539, 995]);
+            // The second sail after the crash needs the planks and nails again.
+            expect(dragonSpent(90)).not.toContain(960);
+            expect(dragonSpent(90)).not.toContain(1539);
+        });
+
+        test('the sweep resumes at the stage that live runs left, and refuses a complete journal', () => {
+            expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 22)).toEqual({ kind: 'resume', from: 3, spent: [], held: [1542], extra: [] });
+            expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 90)).toEqual({ kind: 'resume', from: 15, spent: [1907, 1791, 301, 950, 995], held: [1540], extra: [] });
+            expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 100)).toEqual({ kind: 'refuse', reason: 'refused: Dragon Slayer journal stage 100 is complete' });
+            expect(resumeStart(QUEST_RESUME.dragon!, 'Dragon Slayer', 24)).toEqual({ kind: 'refuse', reason: 'refused: Dragon Slayer journal stage 24 has no resume from the start tile' });
+            expect(QUEST_RESUME.dragon!.key).toBe('dragon');
+            expect(QUEST_RESUME.dragon!.title.test('@dre@Dragon Slayer')).toBe(true);
+        });
+
+        test('the journal button and title are the server ones', () => {
+            const src = readFileSync(join(REPO_ROOT, DS_JOURNAL), 'utf8');
+            expect(src).toContain('[if_button,questlist:dragon]');
+            expect(src).toContain('~quest_journal("Dragon Slayer", $text);');
+        });
     });
 });

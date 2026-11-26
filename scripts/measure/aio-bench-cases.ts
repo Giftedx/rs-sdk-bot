@@ -1878,6 +1878,28 @@ return [
       bank: [...(PRESETS.quest_merlin!.inventory ?? []), {id: 995, count: PRESETS.quest_merlin!.coins ?? 0}]},
     pass: (s: string) => ok(s) && /^QUEST_SWEEP_KEEP_LE_FAYE_EXIT .*"ok":true/m.test(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^MC_FROM 3$/m.test(s)
       && /^QUEST_SWEEP_RESUME .*"stage":3/m.test(s) && /^MILESTONE 4 /m.test(s) && /^MILESTONE 9 /m.test(s) && !/^MILESTONE [1-3] /m.test(s)},
+  // Dragon Slayer through the quest sweep from the Varrock west bank with the quest pack banked, at %dragonquest (varp
+  // 176) = 2 after the Oracle (%dragon_oracle 184 = 2, shield 186 and goblin 187 known): the state that TheFullMonty's
+  // live run left at "fail step magic door" (its pack held none of the door's four items). Melzar's key is banked, as
+  // later jobs leave it. The sweep reads stage 22, withdraws the key (QuestResume.held) with the preset pack, and the
+  // script starts at the magic door: no Guildmaster, Oziach or Oracle.
+  {key: 'extra:sweep-dragon-resume-s22', script: 'scripts/aio-quester.ts', preset: 'quest_dragon', scriptArgs: ['sweep', 'dragon'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_dragon!, position: {x: 3185, z: 3436, level: 0}, inventory: [], coins: 0,
+      varps: {...PRESETS.quest_dragon!.varps, 176: 2, 184: 2, 186: 1, 187: 1},
+      bank: [...(PRESETS.quest_dragon!.inventory ?? []), {id: 995, count: PRESETS.quest_dragon!.coins ?? 0}, {id: 1542, count: 1}]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^DS_FROM 3$/m.test(s) && /^QUEST_SWEEP_RESUME .*"stage":22,/m.test(s)
+      && /^QUEST_SWEEP_HELD .*"banked":\[1542\]/m.test(s) && /^MILESTONE 4 /m.test(s) && /^MILESTONE 16 /m.test(s)
+      && /^RESULT ok\b.*\bquestMsg=true\b/m.test(s) && !/^MILESTONE [123] /m.test(s)},
+  // Temple of Ikov through the quest sweep from the Ardougne north bank with the quest pack banked, at %ikov (varp 26)
+  // = 10 with the pendant of Lucien worn: the state that 3 live runs left after "fail walk to web" (the dark stairs
+  // with no light). The sweep keeps the worn bow on (one slot), stages the lit candle, and the script starts at the
+  // cellar ladder with no Lucien talk.
+  {key: 'extra:sweep-ikov-resume-s10', script: 'scripts/aio-quester.ts', preset: 'quest_ikov', scriptArgs: ['sweep', 'ikov'], timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_ikov!, position: {x: 2618, z: 3332, level: 0}, inventory: [], varps: {...PRESETS.quest_ikov!.varps, 26: 10},
+      equipment: [...(PRESETS.quest_ikov!.equipment ?? []), {id: 86, count: 1, slot: 2}],
+      bank: [...(PRESETS.quest_ikov!.inventory ?? [])]},
+    pass: (s: string) => ok(s) && /^QUEST_SWEEP_BANK_DONE /m.test(s) && /^IK_FROM low$/m.test(s)
+      && /^QUEST_SWEEP_RESUME .*"stage":10,"spent":\[\],"from":1,/m.test(s) && /^MILESTONE 100 /m.test(s) && !/^MILESTONE 10 /m.test(s)},
   // Holy Grail through the quest sweep from the Seers' Village bank with the quest pack banked, at %grail (varp 5) = 4:
   // the crone spoken to, no napkin or whistle (live TrouserSnake and UnderMyKilt hold neither). The sweep reads the
   // stage from the journal, and the script starts at Galahad: no King Arthur, Merlin or Entrana. `resume-s4` has

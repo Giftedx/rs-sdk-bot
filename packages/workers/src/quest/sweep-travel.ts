@@ -278,9 +278,30 @@ export async function leaveKeepLeFaye(s: Session): Promise<{ ok: boolean; detail
         return !!p && p.level === 0 && Math.abs(p.worldX - x) <= tol && Math.abs(p.worldZ - z) <= tol;
     };
     const landed = () => near(2802, 3441, 3);
+    const onJetty = () => (pos()?.worldX ?? 0) >= 2777;
+    // The double doors 1516/1519 at 2776,3400-3401 (maps/m43_53.jm2 0 24 8-9) between the keep and the jetty start
+    // shut, and a walk click does not open them (hosted bench extra:sweep-merlin-resume-s3-keep: no move from 2768,3409).
+    const openDoor = async () => {
+        const door = (s.sdk.getState()?.nearbyLocs ?? []).find(
+            (l: any) => l.x === 2776 && (l.z === 3400 || l.z === 3401) && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text)),
+        ) as any;
+        if (!door) return;
+        const op = (door.optionsWithIndex as { text: string; opIndex: number }[]).find((o) => /^open$/i.test(o.text))!.opIndex;
+        await s.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
+        await waitUntil(s, () => !(s.sdk.getState()?.nearbyLocs ?? []).some(
+            (l: any) => l.x === 2776 && l.z === door.z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text)),
+        ), { timeoutTicks: 12 });
+    };
+    // The session walker opens doors on its way (live Dipstick walked from the jetty to 2768,3409 with it).
+    if (!onJetty()) await walkPath(await sessionWalker(s), [{ x: 2778, z: 3401, tol: 0 }], { maxTicks: 60 });
     for (let i = 0; i < 3 && !landed(); i++) {
+        if (!onJetty()) {
+            await s.direct({ type: 'walkTo', x: 2775, z: 3401, running: true, reason: 'SDK' });
+            await waitUntil(s, () => near(2775, 3401, 0), { timeoutTicks: 30 });
+            await openDoor();
+        }
         await s.direct({ type: 'walkTo', x: 2778, z: 3401, running: true, reason: 'SDK' });
-        await waitUntil(s, () => near(2778, 3401, 1), { timeoutTicks: 30 });
+        await waitUntil(s, () => near(2778, 3401, 1), { timeoutTicks: 15 });
         await s.direct({ type: 'interactLoc', x: 2779, z: 3401, locId: 64, optionIndex: 2, reason: 'SDK' });
         for (let k = 0; k < 120 && !landed(); k++) {
             const dlg: any = s.sdk.getDialog();

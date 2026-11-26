@@ -226,6 +226,130 @@ export function merlinJournalStage(body: string): number | undefined {
 const MERLIN_FROM: readonly number[] = [0, 1, 2, 3, 4, 8, 9];
 const MERLIN_WAX = 30, MERLIN_LIT_CANDLE = 32, MERLIN_EXCALIBUR = 35, MERLIN_UNLIT_CANDLE = 38, MERLIN_BREAD = 2309;
 
+// Temple of Ikov: %ikov (varp 26), quests/quest_ikov/configs/quest_ikov.constant:1-8 and quest.constant:35-36
+// (complete 80 on the Armadyl side, 90 on the Lucien side). Each stage's own text of ikov_journal.rs2, from the highest
+// stage down. Stages 20 and 30 show one text (ikov_journal.rs2:29-36), so the parser names 20. The journal is at most
+// 13 lines.
+export function ikovJournalStage(body: string): number | undefined {
+    const text = journalText(body);
+    if (/QUEST COMPLETE!/i.test(text)) return /the staff had made him more powerful/i.test(text) ? 90 : 80;
+    if (/I will kill Lucien\. The guardians gave me a pendant/i.test(text)) return 70;
+    if (/Winelda teleported me across after I got her twenty limpwurt roots/i.test(text)) return 60;
+    if (/Winelda will teleport me across if I first get her twenty limpwurt roots/i.test(text)) return 50;
+    if (/I went into another chamber and was attacked by a Fire Warrior/i.test(text)) return 40;
+    if (/I have found some boots of lightness/i.test(text)) return 20;
+    if (/Lucien has asked me to retrieve the Staff of Armadyl/i.test(text)) return 10;
+    if (/I can start this quest at the Flying Horse Inn/i.test(text)) return 0;
+    return undefined;
+}
+
+// The index in quest-ikov.ts STAGES (['start', 'low', 'arrows', 'warrior', 'winelda', 'teleport', 'lucien'],
+// q.stageName). 'warrior' (a debug preset at %ikov 30 by the trap-lever door) has no journal text of its own.
+export function ikovFrom(stage: number): number | undefined {
+    switch (stage) {
+        case 0: return 0;               // start
+        case 10: return 1;              // low: the cellar ladder, the boots, the lever
+        case 20: case 30: return 2;     // arrows: the chests if fewer than 10 arrows, the trap lever, its door
+        case 40: return 4;              // winelda: through the door of fear and the two doors, "Yes I do!"
+        case 50: case 60: return 5;     // teleport: the roots (50) or a free teleport (60), the guardian
+        case 70: return 6;              // lucien: Varrock Teleport, the pendant of Armadyl, the kill
+    }
+    return undefined;
+}
+
+const IKOV_LIT_CANDLE = 33, IKOV_KNIFE = 946, IKOV_LIMPWURT = 225, IKOV_ICE_ARROW = 78, PENDANT_LUCIEN = 86, PENDANT_ARMADYL = 87;
+
+// Quest items that the script needs from a stage on: the pendant of Lucien for the door of fear north
+// (ikov_dungeon.rs2:15-23) at 10-60, the ice arrows for the Fire Warrior at 20-30, the pendant of Armadyl to attack
+// Lucien at 70 (quest_ikov.rs2:26).
+export function ikovHeld(stage: number): readonly number[] {
+    if (stage >= 70) return [PENDANT_ARMADYL];
+    if (stage === 20 || stage === 30) return [PENDANT_LUCIEN, IKOV_ICE_ARROW];
+    if (stage >= 10) return [PENDANT_LUCIEN];
+    return [];
+}
+
+// The script drops the knife and the lit candle after the boots (stage 10), and Winelda takes the 20 roots at 50 -> 60
+// (winelda.rs2:9).
+export function ikovSpent(stage: number): readonly number[] {
+    if (stage >= 60) return [IKOV_LIT_CANDLE, IKOV_KNIFE, IKOV_LIMPWURT];
+    if (stage >= 20) return [IKOV_LIT_CANDLE, IKOV_KNIFE];
+    return [];
+}
+
+// Dragon Slayer: %dragonquest (varp 176; quests/quest_dragon/configs/quest_dragon.constant, complete 10 at
+// quest.constant:18). The journal also shows the side varps %dragon_oracle, %dragon_shield and %dragon_goblin (184, 186,
+// 187), the map pieces in the pack (inv only: dragon_journal.rs2:103, 110, 121) and the shield (:151-153). The stage is
+// %dragonquest * 10, plus at %dragonquest 2 the part that the text shows:
+//   20  a side varp unset: "return to Oziach" (dragon_journal.rs2:26-27; %dragonquest 3 shows the same text, :38-39)
+//   21  all side varps set; no Oracle rhyme and no map piece 3 in the pack
+//   22  the Oracle's rhyme: %dragon_oracle 2 and no piece 3 in the pack (:113-114, 135-146)
+//   23  map piece 3 or the joined map in the pack (:110-111)
+// The longest journal has 27 lines, under the 49 that split_init shows.
+export function dragonJournalStage(body: string): number | undefined {
+    const text = journalText(body);
+    if (/QUEST COMPLETE!/i.test(text)) return 100;
+    if (/Now all I need to do is kill the dragon!/i.test(text)) return 90;
+    if (/Now I should go to my ship in Port Sarim and set sail for Crandor!/i.test(text)) return 80;
+    // %dragonquestvar reaches 3 only with %dragonquest 3 -> 7 (lady_lumbridge.rs2:79-87).
+    if (/I still need to find a captain for my ship/i.test(text)) return /I have repaired my ship using wooden planks/i.test(text) ? 70 : 30;
+    if (/I should see if there is a ship for sale in Port Sarim/i.test(text)) {
+        if (/I found the piece of the map that was hidden in beneath Ice Mountain/i.test(text)) return 23;
+        if (/Last, a bowl that's not seen heat/i.test(text)) return 22;
+        return 21;
+    }
+    if (/I should return to Oziach for more detailed instructions/i.test(text)) return 20;
+    if (/I should speak to Oziach, who lives by the cliffs to the west of Edgeville/i.test(text)) return 10;
+    if (/I can start this quest by speaking to the Guildmaster/i.test(text)) return 0;
+    return undefined;
+}
+
+// quest-dragon.ts DS_FROM (a milestone) for each stage: 20 goes back to Oziach, 21 asks the Oracle, 22 goes to the magic
+// door, 23 starts at the maze; at 21-23 the script skips the mine, the maze and the Duke when it holds their piece or
+// the shield. 30 repairs the ship, 70 goes to Wormbrain, 80 sails, 90 kills Elvarg (off Crandor it sails again first:
+// dragonslayer_ned.rs2:22-24 reset the ship).
+export function dragonFrom(stage: number): number | undefined {
+    switch (stage) {
+        case 0: return 0;
+        case 10: case 20: return 1;
+        case 21: return 2;
+        case 22: return 3;
+        case 23: return 4;
+        case 30: return 11;
+        case 70: return 12;
+        case 80: return 14;
+        case 90: return 15;
+        default: return undefined;
+    }
+}
+
+const MELZAR_KEY = 1542, DS_PART1 = 1535, DS_PART2 = 1536, DS_PART3 = 1537, DS_MAP = 1538, ANTIDRAGON_SHIELD = 1540;
+const DS_DOOR_ITEMS = [1907, 1791, 301, 950]; // wizard's mind bomb, unfired bowl, lobster pot, silk
+const DS_PLANK = 960, DS_NAILS = 1539;
+
+// Quest items (quest_dragon.obj tradeable=no) that the account got before a stage and still needs. Oziach does not give
+// a second Melzar's key while one is in the bank (oziach.rs2:122). Pieces 1 and 3 and the shield come before the ship,
+// piece 2 and the map at 70 (Wormbrain, then the join, crandor_map.rs2:34-45); the map goes to Ned at 80.
+export function dragonHeld(stage: number): readonly number[] {
+    if (stage === 20 || stage === 22) return [MELZAR_KEY];
+    if (stage === 21 || stage === 23) return [MELZAR_KEY, DS_PART3, DS_PART1, ANTIDRAGON_SHIELD];
+    if (stage === 30) return [DS_PART1, DS_PART3, ANTIDRAGON_SHIELD];
+    if (stage === 70) return [DS_PART1, DS_PART2, DS_PART3, DS_MAP, ANTIDRAGON_SHIELD];
+    if (stage === 80 || stage === 90) return [ANTIDRAGON_SHIELD];
+    return [];
+}
+
+// The magic door takes its four items (magic_door.rs2:10-16) and opens freely after (:24-26). Each plank takes 4 nails
+// (lady_lumbridge.rs2:77-78); at 90 the crash reset the hull and the second sail needs them again. Klarense takes 2,000
+// coins (klarense.rs2:91-96) and Wormbrain 10,000 (wormbrain.rs2:63-71).
+export function dragonSpent(stage: number): readonly number[] {
+    if (stage === 23 || stage === 30) return DS_DOOR_ITEMS;
+    if (stage === 70) return [...DS_DOOR_ITEMS, DS_PLANK, DS_NAILS];
+    if (stage === 80) return [...DS_DOOR_ITEMS, DS_PLANK, DS_NAILS, 995];
+    if (stage === 90) return [...DS_DOOR_ITEMS, 995];
+    return [];
+}
+
 const SQUIRE_PIE = 2325;
 
 export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
@@ -249,6 +373,8 @@ export const QUEST_RESUME: Readonly<Record<string, QuestResume>> = {
         held: (stage) => (stage === 4 ? [MERLIN_LIT_CANDLE, MERLIN_UNLIT_CANDLE, MERLIN_EXCALIBUR] : stage === 5 ? [MERLIN_EXCALIBUR] : []),
         spent: (stage) => (stage >= 6 ? [MERLIN_WAX, MERLIN_BREAD] : stage === 5 ? [MERLIN_WAX] : []),
     },
+    dragon: { key: 'dragon', title: /Dragon Slayer/i, stage: dragonJournalStage, complete: 100, from: dragonFrom, held: dragonHeld, spent: dragonSpent },
+    ikov: { key: 'ikov', title: /Temple of Ikov/i, stage: ikovJournalStage, complete: 80, from: ikovFrom, held: ikovHeld, spent: ikovSpent },
     grail: { key: 'grail', title: /Holy Grail/i, stage: grailJournalStage, complete: 10, from: grailFrom, held: grailHeld, spent: grailSpent, extra: grailExtra },
     ball: {
         key: 'ball', title: /Witch's House/i, stage: ballJournalStage, complete: 7,
