@@ -498,9 +498,18 @@ test('off plane 0 refuses before any action',async()=>{
  const f=fakeSession({x:3253,z:3420,level:1});
  try{const r=await runMagicOrder(f.s,options);expect(r.stop).toBe('off plane 0');expect(f.calls).toEqual([]);}finally{f.stop();}
 });
-test('an unsupported region refuses with its position',async()=>{
+test('an alch order outside the named regions refuses with its position',async()=>{
  const f=fakeSession({x:3222,z:3218});
- try{const r=await runMagicOrder(f.s,options);expect(r.stop).toBe('unsupported start region');expect(r.failure).toContain('3222');expect(f.calls).toEqual([]);}finally{f.stop();}
+ try{const r=await runMagicOrder(f.s,{...options,alchItemId:1});expect(r.stop).toBe('unsupported start region');expect(r.failure).toContain('3222');expect(f.calls).toEqual([]);}finally{f.stop();}
+});
+test('a training order outside the named regions takes the world route to Varrock East bank first',async()=>{
+ // Live: "magic-order unsupported start region ... no checked route from {x:2618,z:3332,level:0}" (Ardougne north bank).
+ const f=fakeSession({x:2618,z:3332});const asked:{x:number;z:number;level:number}[]=[];
+ try{
+  const r=await runMagicOrder(f.s,options,()=>false,{travel:async to=>{asked.push(to);return{ok:false,detail:'test route end'};}});
+  expect(asked).toEqual([{x:3253,z:3420,level:0}]);
+  expect(r.ok).toBe(false);expect(r.stop).not.toBe('unsupported start region');expect(r.failure).toContain('no route from the far start to Varrock East bank');
+ }finally{f.stop();}
 });
 test('short runes with budget zero refuse after observing the bank and move nothing',async()=>{
  const f=fakeSession({x:BANKS.draynor.x,z:BANKS.draynor.z,pack:[{id:333,count:4}],bank:[{id:AIR,count:40},{id:COINS,count:300}]});
