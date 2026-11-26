@@ -15,9 +15,10 @@ beforeAll(async () => {
     await loadPathfinding();
     dir = mkdtempSync(join(tmpdir(), 'scope-labels-'));
     // An empty store: every leg is measured, so the nulls that label the scope happen in this run. Each measured leg
-    // is stored once; a leg the labels refuse is not measured and not stored.
+    // is stored once (and a length that ends on its goal names itself in the leg's `|h` row); a leg the labels refuse
+    // is not measured and not stored.
     legs = legCache(join(dir, 'legs.sqlite'), 'scope-label-test');
-    const counted: LegCache = { ...legs, set: (k, v) => { measured++; legs.set(k, v); } };
+    const counted: LegCache = { ...legs, set: (k, v) => { if (!k.endsWith('|h')) measured++; legs.set(k, v); } };
     pl = await rsPathLength({ legs: counted });
     w = createWorld({ pathLength: pl });
 }, 120_000);

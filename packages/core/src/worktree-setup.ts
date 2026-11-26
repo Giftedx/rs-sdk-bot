@@ -44,7 +44,7 @@ export function hookSwitchText(mainLocal:string|null,worktreeLocal:string|null):
 // Copies the route caches that `to` does not hold from `from`. The walk lengths are an SQLite file that other
 // processes write: VACUUM INTO gives a whole copy of it. A failed copy leaves no file and is not a setup failure,
 // because every cache is optional. Returns one line for each cache.
-export const ROUTE_CACHES=['rsmod-pathfinding.snap','route-areas.bin','route-legs-v2.sqlite'] as const;
+export const ROUTE_CACHES=['rsmod-pathfinding.snap','route-areas.bin','route-legs-v3.sqlite'] as const;
 // `live`: a swarm runs from the main checkout. Its bots write the walk lengths, and a whole copy of that file reads
 // every page of it, so the copy waits for a run with no fleet. The two other files are written once and are copied.
 export function seedRouteCaches(from:string,to:string,dry=false,live=false):[string,string][]{

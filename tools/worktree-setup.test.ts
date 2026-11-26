@@ -78,14 +78,14 @@ test('seedRouteCaches copies the caches a worktree lacks, keeps the ones it hold
     try{
         mkdirSync(from);
         writeFileSync(join(from,'rsmod-pathfinding.snap'),'snapshot');
-        const db=new Database(join(from,'route-legs-v2.sqlite'));
+        const db=new Database(join(from,'route-legs-v3.sqlite'));
         db.exec("PRAGMA journal_mode=WAL; CREATE TABLE legs (source TEXT, key TEXT, value INTEGER, PRIMARY KEY (source, key)) WITHOUT ROWID; INSERT INTO legs VALUES ('s','a>b',12)");
         // The source stays open with a write in its WAL file: the copy must still hold the row.
         expect(seedRouteCaches(from,to,true).map(r=>r[1])).toEqual(['would copy from the main checkout','not in the main checkout','would copy from the main checkout']);
         expect(existsSync(to)).toBe(false);
-        expect(seedRouteCaches(from,to)).toEqual([['rsmod-pathfinding.snap','copied from the main checkout'],['route-areas.bin','not in the main checkout'],['route-legs-v2.sqlite','copied from the main checkout']]);
+        expect(seedRouteCaches(from,to)).toEqual([['rsmod-pathfinding.snap','copied from the main checkout'],['route-areas.bin','not in the main checkout'],['route-legs-v3.sqlite','copied from the main checkout']]);
         db.close();
-        const copy=new Database(join(to,'route-legs-v2.sqlite'),{readonly:true});
+        const copy=new Database(join(to,'route-legs-v3.sqlite'),{readonly:true});
         expect(copy.query('SELECT value FROM legs WHERE key = ?').get('a>b')).toEqual({value:12});
         copy.close();
         writeFileSync(join(to,'rsmod-pathfinding.snap'),'mine');
@@ -100,12 +100,12 @@ test('seedRouteCaches does not read the walk lengths of a main checkout whose fl
     try{
         mkdirSync(from);
         writeFileSync(join(from,'rsmod-pathfinding.snap'),'snapshot');
-        writeFileSync(join(from,'route-legs-v2.sqlite'),'not opened');
+        writeFileSync(join(from,'route-legs-v3.sqlite'),'not opened');
         expect(seedRouteCaches(from,to,false,true)).toEqual([['rsmod-pathfinding.snap','copied from the main checkout'],['route-areas.bin','not in the main checkout'],
-            ['route-legs-v2.sqlite','not copied: the live fleet writes it; run the setup again when no swarm runs']]);
-        expect(existsSync(join(to,'route-legs-v2.sqlite'))).toBe(false);
+            ['route-legs-v3.sqlite','not copied: the live fleet writes it; run the setup again when no swarm runs']]);
+        expect(existsSync(join(to,'route-legs-v3.sqlite'))).toBe(false);
         // A worktree that holds the file keeps it, with or without a fleet.
-        writeFileSync(join(to,'route-legs-v2.sqlite'),'mine');
+        writeFileSync(join(to,'route-legs-v3.sqlite'),'mine');
         expect(seedRouteCaches(from,to,false,true).map(r=>r[1])).toEqual(['present','not in the main checkout','present']);
     }finally{rmSync(dir,{recursive:true,force:true});}
 });

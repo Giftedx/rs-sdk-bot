@@ -69,28 +69,30 @@ test('ROUTE_LEG_CACHE=0 reads and writes no saved length; a length measured in t
   try{expect(again.get('a>b')).toBe(12);expect(again.get('c>d')).toBeUndefined();}finally{again.close();}
  }finally{if(prior===undefined)delete process.env.ROUTE_LEG_CACHE;else process.env.ROUTE_LEG_CACHE=prior;rmSync(dir,{recursive:true,force:true});}
 });
-test('the first store is read only and feeds the v2 store; it goes when nothing wrote it for 7 days, its unread forms at once',()=>{
- const dir=mkdtempSync(join(tmpdir(),'route-leg-old-')),file=join(dir,'route-legs-v2.sqlite');
+test('the v2 store is read only and read by its own key; it and the first store go when nothing wrote them for 7 days, their unread forms at once',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'route-leg-old-')),file=join(dir,'route-legs-v3.sqlite');
  try{
-  const first=new Database(join(dir,'route-legs.sqlite'));
-  first.exec("CREATE TABLE legs (source TEXT, key TEXT, value INTEGER, PRIMARY KEY (source, key)) WITHOUT ROWID");
   const ns=(source:string)=>require('node:crypto').createHash('sha256').update(source).digest('base64url');
-  first.query('INSERT INTO legs VALUES (?, ?, ?)').run(ns('source'),'a>b',12);first.query('INSERT INTO legs VALUES (?, ?, ?)').run(ns('other'),'c>d',5);first.close();
+  for(const name of ['route-legs.sqlite','route-legs-v2.sqlite']){
+   const old=new Database(join(dir,name));
+   old.exec("CREATE TABLE legs (source TEXT, key TEXT, value INTEGER, PRIMARY KEY (source, key)) WITHOUT ROWID");
+   old.query('INSERT INTO legs VALUES (?, ?, ?)').run(ns('source'),'kept:a>b',12);old.query('INSERT INTO legs VALUES (?, ?, ?)').run(ns('other'),'kept:c>d',5);old.close();
+  }
   for(const name of ['route-legs.json','route-legs.json.4752.1.zro24n.tmp','route-areas.bin'])writeFileSync(join(dir,name),'x');
   const cache=legCache(file,'source');
-  // The unread forms went at the open; the first store stays, because it was written now.
-  expect(fs.readdirSync(dir).filter(n=>!n.startsWith('route-legs-v2')).sort()).toEqual(['route-areas.bin','route-legs.sqlite']);
-  expect(cache.get('a>b')).toBe(12);expect(cache.get('c>d')).toBeUndefined();expect(cache.get('x>y')).toBeUndefined();
-  cache.set('x>y',3);cache.save();cache.close();
-  // The length that was found is in the v2 store now, and the first store has no new row.
-  const v2=new Database(file,{readonly:true}),again=new Database(join(dir,'route-legs.sqlite'),{readonly:true});
-  expect(v2.query('SELECT key FROM legs ORDER BY key').all()).toEqual([{key:'a>b'},{key:'x>y'}]);
-  expect(again.query('SELECT COUNT(*) AS n FROM legs').get()).toEqual({n:2});
-  v2.close();again.close();
+  // The unread forms went at the open; the old stores stay, because they were written now.
+  expect(fs.readdirSync(dir).filter(n=>!n.startsWith('route-legs-v3')).sort()).toEqual(['route-areas.bin','route-legs-v2.sqlite','route-legs.sqlite']);
+  // A v2 row is read only by `prior`, of this source; `get` reads the v3 store alone.
+  expect(cache.prior!('kept:a>b')).toBe(12);expect(cache.prior!('kept:c>d')).toBeUndefined();expect(cache.get('kept:a>b')).toBeUndefined();
+  cache.set('a>b|12|0.0',12);cache.save();cache.close();
+  const v3=new Database(file,{readonly:true}),v2=new Database(join(dir,'route-legs-v2.sqlite'),{readonly:true});
+  expect(v3.query('SELECT key FROM legs ORDER BY key').all()).toEqual([{key:'a>b|12|0.0'}]);
+  expect(v2.query('SELECT COUNT(*) AS n FROM legs').get()).toEqual({n:2});
+  v3.close();v2.close();
   expect(removeSupersededLegFiles(file,Date.now()+PRIOR_KEEP_MS-60_000)).toEqual([]);
-  expect(removeSupersededLegFiles(file,Date.now()+PRIOR_KEEP_MS+60_000)).toEqual(['route-legs.sqlite']);
-  expect(fs.readdirSync(dir).filter(n=>!n.startsWith('route-legs-v2')).sort()).toEqual(['route-areas.bin']);
-  expect(removeSupersededLegFiles(join(dir,'missing','route-legs-v2.sqlite'))).toEqual([]);
+  expect(removeSupersededLegFiles(file,Date.now()+PRIOR_KEEP_MS+60_000).sort()).toEqual(['route-legs-v2.sqlite','route-legs.sqlite']);
+  expect(fs.readdirSync(dir).filter(n=>!n.startsWith('route-legs-v3')).sort()).toEqual(['route-areas.bin']);
+  expect(removeSupersededLegFiles(join(dir,'missing','route-legs-v3.sqlite'))).toEqual([]);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
