@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795710037312,
+ "at": 1795710047418,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -157,79 +157,39 @@
    "role": "army"
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "auto",
-   "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
    "account": "Bigpackage",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "mining",
-    "ore"
+    "imp"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "campaign:haggis:item:1470",
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
+   "goal": "campaign:haggis:item:1470",
    "role": "army",
    "resources": [
-    "varrock-se-mine"
+    "ardougne-imps"
    ]
   },
   {
    "account": "Billionaire",
-   "script": "scripts/aio-skiller.ts",
+   "script": "scripts/aio-fighter.ts",
    "args": [
-    "mining",
-    "ore"
+    "imp"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
+    "DEMAND_ID": "campaign:haggis:item:1470",
+    "BATCH_UNITS": "13"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:440",
+   "goal": "campaign:haggis:item:1470",
    "role": "army",
    "resources": [
-    "varrock-se-mine"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio-skiller.ts",
-   "args": [
-    "mining",
-    "ore"
-   ],
-   "env": {
-    "DEMAND_ID": "campaign:haggis:item:440",
-    "BATCH_UNITS": "27"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "campaign:haggis:item:440",
-   "role": "army",
-   "resources": [
-    "varrock-se-mine"
+    "ardougne-imps"
    ]
   },
   {
@@ -252,38 +212,33 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/aio-fighter.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "imp"
+    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
+    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
    ],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1470",
-    "BATCH_UNITS": "13"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1470",
-   "role": "army",
-   "resources": [
-    "ardougne-imps"
-   ]
+   "goal": "campaign:haggis:item:1519",
+   "role": "army"
   },
   {
    "account": "Pocketpython",
-   "script": "scripts/aio-fighter.ts",
-   "args": [
-    "imp"
-   ],
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "campaign:haggis:item:1470",
-    "BATCH_UNITS": "13"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1470",
+   "goal": "campaign:haggis:item:1519",
    "role": "army",
    "resources": [
-    "ardougne-imps"
+    "draynor-willows"
    ]
   },
   {
@@ -318,19 +273,36 @@
    "role": "army"
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=60 -- thieving knights-stable",
-    "scripts/generated/woodcutting.ts DEMAND_ID=campaign:haggis:item:1519 BATCH_UNITS=28 --"
-   ],
+   "account": "Fatstack",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
    },
    "enabled": true,
    "repeat": false,
    "goal": "campaign:haggis:item:1519",
-   "role": "army"
+   "role": "army",
+   "resources": [
+    "draynor-willows"
+   ]
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/generated/woodcutting.ts",
+   "args": [],
+   "env": {
+    "DEMAND_ID": "campaign:haggis:item:1519",
+    "BATCH_UNITS": "28"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "campaign:haggis:item:1519",
+   "role": "auto",
+   "resources": [
+    "draynor-willows"
+   ]
   },
   {
    "account": "PickpockDick",
@@ -427,6 +399,28 @@
    "repeat": false,
    "goal": "campaign:haggis:item:2349",
    "role": "auto"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/aio-fighter.ts",
+   "args": [
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "DEMAND_ID": "goal:pk_army:Unsheathed",
+    "BATCH_UNITS": "250",
+    "BANK_PACK": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Unsheathed",
+   "role": "army",
+   "resources": [
+    "khazard-troopers"
+   ]
   }
  ],
  "army": [
