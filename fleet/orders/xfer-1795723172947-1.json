@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795723172947-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "Wandwaver",
+  "to": "FishAndChips",
+  "item": "Copper ore",
+  "count": 6,
+  "itemId": 436,
+  "start": 1795723172947,
+  "end": 1795724072947,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}

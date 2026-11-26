@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795722921215-1",
+ "account": "Shaftsinker",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Copper ore",
+ "requested": 6,
+ "claim": "c8d7dfd9-7ae8-4c95-b8da-4b948252a5ba",
+ "count": 0,
+ "ok": false,
+ "at": 1795723193271,
+ "detail": "trade claimed"
+}
