@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795732906853-1",
+ "account": "BackdoorMan",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 510,
+ "claim": "6f8b2b5f-5cea-4d0e-9093-29800a476ad2",
+ "count": 0,
+ "ok": false,
+ "at": 1795733306414,
+ "detail": "trade claimed"
+}

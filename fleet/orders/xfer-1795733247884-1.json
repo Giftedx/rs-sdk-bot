@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795733247884-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "mmtha0205",
+  "to": "Fingersmith",
+  "item": "Coins",
+  "count": 70,
+  "itemId": 995,
+  "start": 1795733247884,
+  "end": 1795734147884,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
