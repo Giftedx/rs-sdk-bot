@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795715742026-1",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MineYourBiz",
+  "to": "SporranBulge",
+  "item": "Raw lobster",
+  "count": 62,
+  "itemId": 377,
+  "start": 1795715742026,
+  "end": 1795716642026,
+  "meet": [
+    {
+      "x": 3183,
+      "z": 3440,
+      "level": 0
+    },
+    {
+      "x": 3182,
+      "z": 3440,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
