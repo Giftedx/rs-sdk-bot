@@ -877,6 +877,29 @@ export function comparativeAdvantageMultiplier(
     return mult;
 }
 
+// The largest batch whose need for one input fits the stock: the preflight asks for
+// ceil(countPerUnit * batch) + reserve of each input row.
+export function batchUnitsForStock(
+    activity: Pick<ActivityDefinition, 'inputs'>,
+    itemId: number,
+    stock: number,
+    batchUnits: number,
+    required: number,
+): number {
+    let perUnit = 0;
+    let fixed = 0;
+    for (const io of activity.inputs ?? []) {
+        if (io.itemId !== itemId) continue;
+        perUnit += io.countPerUnit;
+        fixed += Math.max(0, io.reserve ?? 0);
+    }
+    if (!(perUnit > 0)) {
+        perUnit = required / Math.max(1, batchUnits);
+        fixed = 0;
+    }
+    return Math.max(0, Math.floor(Math.max(0, stock - fixed) / Math.max(1e-6, perUnit)));
+}
+
 const QUEST_FOLDER_ALIASES: Readonly<Record<string, string>> = {
     dwarfcannon: 'quest_mcannon',
     dig: 'quest_itexam',
@@ -1825,11 +1848,14 @@ function planAccountCore(
                         };
                         prepSteps.push(unlockStep);
                     } else if (blocker.kind === 'missing_supply') {
+                        // The preflight count already holds the pack and the own bank, so the own bank cannot
+                        // supply the shortfall: a loadout of it only moves the same stock into a 28-slot pack.
                         const shortfall = Math.max(1, blocker.required - blocker.available);
                         const acq = resolveAcquireCached({
                             itemId: blocker.itemId,
                             itemName: blocker.itemName,
                             quantity: shortfall,
+                            allowOwnBank: false,
                             operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
                             committedCoinSpend: committedCoins,
                         });
@@ -1839,18 +1865,17 @@ function planAccountCore(
                                     itemId: blocker.itemId,
                                     itemName: blocker.itemName,
                                     quantity: shortfall,
+                                    allowOwnBank: false,
                                     allowPartial: true,
                                     operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
                                     committedCoinSpend: committedCoins,
                                 });
-                                if (partialAcq.ok && partialAcq.step && partialAcq.step.quantity < shortfall) {
-                                    const perUnit = blocker.required / Math.max(1, batchUnits);
-                                    const capped = Math.floor((blocker.available + partialAcq.step.quantity) / Math.max(1e-6, perUnit));
-                                    if (capped >= rate.minBatchUnits && capped < batchUnits) {
-                                        shrinkBatchTo = capped;
-                                        chainFeasible = false;
-                                        break;
-                                    }
+                                const bought = partialAcq.ok && partialAcq.step && partialAcq.step.quantity < shortfall ? partialAcq.step.quantity : 0;
+                                const capped = batchUnitsForStock(activity, blocker.itemId, blocker.available + bought, batchUnits, blocker.required);
+                                if (capped >= rate.minBatchUnits && capped < batchUnits) {
+                                    shrinkBatchTo = capped;
+                                    chainFeasible = false;
+                                    break;
                                 }
                             }
                             lastBlockerReason = `unresolvable_supply:${blocker.itemId}`;
