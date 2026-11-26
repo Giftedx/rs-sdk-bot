@@ -81,7 +81,8 @@ class Run {
     line = 0;
     files: string[] = [];
     constructor(private ctx: Ctx, private p: Placement, private assume: Map<string, string>, public used: Assumption[]) {
-        this.st = { pos: { c: { x: p.x, z: p.z, level: p.level }, exact: false }, moved: false, fee: 0, consumes: [], damage: [], changes: [], queued: [], steps: 0 };
+        // The player stands on p.start, a tile that reaches the loc; without one, near the loc tile.
+        this.st = { pos: p.start ? { c: { ...p.start }, exact: true } : { c: { x: p.x, z: p.z, level: p.level }, exact: false }, moved: false, fee: 0, consumes: [], damage: [], changes: [], queued: [], steps: 0 };
     }
     get file() { return this.files[this.files.length - 1]!; }
     src(line: number) { return `${this.file}:${line}`; }

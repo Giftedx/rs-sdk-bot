@@ -2,7 +2,8 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { listConfigFilesByExt, parseConfigs } from '../config';
 import { buildDbTables } from '../dbtables';
-import { parseJm2, type LocSpawn } from '../jm2';
+import { engineLocLevel, mapTiles, parseJm2 } from '../jm2';
+import { approachTiles, forceApproachFlags, loadCollision, smallRegion } from '../loc-reach';
 import { parsePack } from '../pack';
 import { contentRoot, knowledgeDir } from '../paths';
 import { kindOf, mapAssumptions, minimize, rollFailed } from './assumptions';
@@ -94,8 +95,20 @@ export function buildShortcuts(inp: BuildInput): BuildOutput {
         if (!n || relevantTriggers(n).length === 0) continue;
         let a = placements.get(n);
         if (!a) placements.set(n, a = []);
-        a.push({ locName: n, id: l.id, x: l.x, z: l.z, level: l.level, shape: l.shape, angle: l.angle, src: l.src });
+        a.push({ locName: n, id: l.id, x: l.x, z: l.z, level: l.level, shape: l.shape, angle: l.angle, src: l.src, ...(l.bridged ? { bridged: true as const } : {}) });
     }
+
+    // The tiles the player can stand on to operate the loc. Each run starts on one of them, so a landing that
+    // moves the player from `coord` is exact. A tile in a small closed pocket (the open middle of a log) is not one:
+    // no walk ends there. Without collision, or with no such tile, the run starts on the loc tile.
+    const sameTile = (a: Coord, b: Coord) => a.x === b.x && a.z === b.z && a.level === b.level;
+    const startsOf = (p: Placement): Coord[] => {
+        if (!inp.collision) return [];
+        const props = inp.locConfigs.get(p.locName)?.props;
+        const size = (k: string) => { const v = Number(props?.[k]?.[0]); return Number.isInteger(v) && v > 0 ? v : 1; };
+        return approachTiles(inp.collision, { x: p.x, z: p.z, level: p.level, shape: p.shape, angle: p.angle, width: size('width'), length: size('length'), forceapproach: forceApproachFlags(props?.forceapproach?.[0]) })
+            .filter(t => !smallRegion(inp.collision!, t));
+    };
 
     const edges: ShortcutEdge[] = [], gaps: ShortcutGap[] = [];
     const handlers = new Set<string>();
@@ -110,68 +123,81 @@ export function buildShortcuts(inp: BuildInput): BuildOutput {
         if (seen.has(pk)) continue; seen.add(pk);
         const triggers = relevantTriggers(p.locName);
         if (!triggers.length) continue;
+        const starts = startsOf(p);
+        const runs: Placement[] = starts.length ? starts.map(start => ({ ...p, start })) : [p];
+        const locTile = { x: p.x, z: p.z, level: p.level };
         for (const { trig, handler, option, optionText, moving } of triggers) {
-            let out: ReturnType<typeof runAll>;
-            const t0 = performance.now(); if (process.env.SHORTCUTS_TRACE) console.error(`run ${handler} ${pk}`);
             if ((capped.get(handler) ?? 0) >= MAX_CAPPED) { if (moving) gaps.push({ locName: p.locName, option, handler, src: p.src, gap: `not run: this handler passed ${MAX_RUNS} condition branches on ${MAX_CAPPED} other placements` }); continue; }
-            try { out = runAll(ctx, trig, p); }
-            catch (err) { if (err instanceof Unsupported) { if (moving) gaps.push({ locName: p.locName, option, handler, src: p.src, gap: err.message }); continue; } throw err; }
-            if (out.gap?.startsWith('more than')) capped.set(handler, (capped.get(handler) ?? 0) + 1);
-            // A loc_change in a run that does not move adds the new loc at this tile; its own triggers run later.
-            for (const r of out.results) if (!r.st.moved) for (const c of r.st.changes) {
-                const id = ids.get(c.locName);
-                if (id !== undefined && !inp.excludeLocNames.has(c.locName)) queue.push({ ...p, locName: c.locName, id, via: { locName: p.via?.locName ?? p.locName, option, src: c.line } });
-            }
-            const ms = performance.now() - t0;
-            if (process.env.SHORTCUTS_DEBUG && ms > 200) console.error(`slow ${Math.round(ms)}ms ${handler} ${pk} runs=${out.results.length}`);
-            if (!moving) continue;
-            handlers.add(handler);
-            const movedRuns = out.results.filter(r => r.st.moved);
             // One gap record per placement and handler; it lists each distinct reason once.
             const why = new Set<string>();
-            if (out.gap) why.add(out.gap);
-            for (const r of movedRuns) if (!r.st.pos) why.add(r.st.posWhy ?? 'destination not resolved');
-            if (why.size) gaps.push({ locName: p.locName, option, handler, src: p.src, gap: [...why].slice(0, 4).join(' | ') + (why.size > 4 ? ` | +${why.size - 4} more` : '') });
-            // A run that assumes an obstacle timer is still running (`%x_used >= map_clock`) is the "being used" refusal.
-            const busy = (r: RunResult) => r.assumptions.some(a => a.value === 'T' && /^[^@]*(>=?) map_clock/.test(a.key));
-            const done = movedRuns.filter(r => !busy(r) && r.st.pos && !(r.st.pos.c.x === p.x && r.st.pos.c.z === p.z && r.st.pos.c.level === p.level));
             const merged = new Map<string, ShortcutEdge>();
-            const outcome = (r: RunResult) => JSON.stringify([r.st.pos, r.st.fee, r.st.consumes]);
-            const isFail = (r: RunResult) => r.assumptions.some(rollFailed);
-            const success = minimize(done.filter(r => !isFail(r)), outcome);
-            const fails = done.filter(isFail);
-            for (const r of success) {
-                const b = mapAssumptions(r.assumptions);
-                // The failure run that matches this run on every other assumption.
-                const keys = new Map(r.assumptions.map(a => [a.key, a.value]));
-                const fail = fails.find(f => f.assumptions.every(a => rollFailed(a) || !keys.has(a.key) || keys.get(a.key) === a.value));
-                const fa = fail?.assumptions.find(rollFailed);
-                const req = b.requires;
-                const pos = r.st.pos!;
-                const e: ShortcutEdge = {
-                    kind: kindOf(trig.file, req, fa?.sym.meta?.stat),
-                    locName: p.locName, id: p.id, option, optionText,
-                    from: { x: p.x, z: p.z, level: p.level }, to: pos.c, exact: pos.exact,
-                    ...(Object.keys(req).length ? { requires: req } : {}),
-                    ...(r.st.fee ? { fee: r.st.fee } : {}),
-                    ...(r.st.consumes.length ? { consumes: r.st.consumes } : {}),
-                    ...(b.side.length ? { side: b.side } : {}),
-                    ...(b.choices.length ? { choices: b.choices } : {}),
-                    ...(b.conditions.length ? { conditions: b.conditions } : {}),
-                    ...(fa && fail ? { failure: { stat: fa.sym.meta!.stat!, low: fa.sym.meta!.low!, high: fa.sym.meta!.high!, src: `${fa.file}:${fa.line}`, to: fail.st.pos?.c ?? null, exact: !!fail.st.pos?.exact, damage: fail.st.damage } } : {}),
-                    ...(p.via ? { via: p.via } : {}),
-                    twoWay: false,
-                    src: p.src, toSrc: r.st.moveSrc!, handler,
-                    ...(b.requireSrc.length ? { requireSrc: b.requireSrc } : {}),
-                };
-                // Runs with the same arrival and needs merge; a world condition is kept only when every merged run assumes it.
-                const k = JSON.stringify([e.to, e.exact, e.requires, e.side, e.choices, e.fee, e.consumes]);
-                const old = merged.get(k);
-                if (!old) { merged.set(k, e); continue; }
-                const common = (old.conditions ?? []).filter(c => e.conditions?.includes(c));
-                if (common.length) old.conditions = common; else delete old.conditions;
-                if (!old.failure && e.failure) old.failure = e.failure;
+            let ran = false, hitCap = false;
+            for (const q of runs) {
+                let out: ReturnType<typeof runAll>;
+                const t0 = performance.now(); if (process.env.SHORTCUTS_TRACE) console.error(`run ${handler} ${pk}${q.start ? ` from ${q.start.x},${q.start.z}` : ''}`);
+                try { out = runAll(ctx, trig, q); }
+                catch (err) { if (err instanceof Unsupported) { why.add(err.message); continue; } throw err; }
+                ran = true;
+                if (out.gap?.startsWith('more than')) hitCap = true;
+                // A loc_change in a run that does not move adds the new loc at this tile; its own triggers run later.
+                for (const r of out.results) if (!r.st.moved) for (const c of r.st.changes) {
+                    const id = ids.get(c.locName);
+                    if (id !== undefined && !inp.excludeLocNames.has(c.locName)) queue.push({ ...p, locName: c.locName, id, via: { locName: p.via?.locName ?? p.locName, option, src: c.line } });
+                }
+                const ms = performance.now() - t0;
+                if (process.env.SHORTCUTS_DEBUG && ms > 200) console.error(`slow ${Math.round(ms)}ms ${handler} ${pk} runs=${out.results.length}`);
+                if (!moving) continue;
+                const movedRuns = out.results.filter(r => r.st.moved);
+                if (out.gap) why.add(out.gap);
+                for (const r of movedRuns) if (!r.st.pos) why.add(r.st.posWhy ?? 'destination not resolved');
+                // A run that assumes an obstacle timer is still running (`%x_used >= map_clock`) is the "being used" refusal.
+                const busy = (r: RunResult) => r.assumptions.some(a => a.value === 'T' && /^[^@]*(>=?) map_clock/.test(a.key));
+                // A run that ends where it started did not move the player. From a start, the loc tile can be a landing (a wall's own tile).
+                const done = movedRuns.filter(r => !busy(r) && r.st.pos && !sameTile(r.st.pos.c, q.start ?? locTile));
+                const outcome = (r: RunResult) => JSON.stringify([r.st.pos, r.st.fee, r.st.consumes]);
+                const isFail = (r: RunResult) => r.assumptions.some(rollFailed);
+                const success = minimize(done.filter(r => !isFail(r)), outcome);
+                const fails = done.filter(isFail);
+                for (const r of success) {
+                    const b = mapAssumptions(r.assumptions);
+                    // The failure run that matches this run on every other assumption.
+                    const keys = new Map(r.assumptions.map(a => [a.key, a.value]));
+                    const fail = fails.find(f => f.assumptions.every(a => rollFailed(a) || !keys.has(a.key) || keys.get(a.key) === a.value));
+                    const fa = fail?.assumptions.find(rollFailed);
+                    const req = b.requires;
+                    const pos = r.st.pos!;
+                    const e: ShortcutEdge = {
+                        kind: kindOf(trig.file, req, fa?.sym.meta?.stat),
+                        locName: p.locName, id: p.id, option, optionText,
+                        from: { ...locTile }, ...(q.start ? { starts: [{ ...q.start }] } : {}), to: pos.c, exact: pos.exact,
+                        ...(p.bridged ? { bridged: true as const } : {}),
+                        ...(Object.keys(req).length ? { requires: req } : {}),
+                        ...(r.st.fee ? { fee: r.st.fee } : {}),
+                        ...(r.st.consumes.length ? { consumes: r.st.consumes } : {}),
+                        ...(b.side.length ? { side: b.side } : {}),
+                        ...(b.choices.length ? { choices: b.choices } : {}),
+                        ...(b.conditions.length ? { conditions: b.conditions } : {}),
+                        ...(fa && fail ? { failure: { stat: fa.sym.meta!.stat!, low: fa.sym.meta!.low!, high: fa.sym.meta!.high!, src: `${fa.file}:${fa.line}`, to: fail.st.pos?.c ?? null, exact: !!fail.st.pos?.exact, damage: fail.st.damage } } : {}),
+                        ...(p.via ? { via: p.via } : {}),
+                        twoWay: false,
+                        src: p.src, toSrc: r.st.moveSrc!, handler,
+                        ...(b.requireSrc.length ? { requireSrc: b.requireSrc } : {}),
+                    };
+                    // Runs with the same arrival and needs merge, from every start; a world condition is kept only
+                    // when every merged run assumes it.
+                    const k = JSON.stringify([e.to, e.exact, e.requires, e.side, e.choices, e.fee, e.consumes]);
+                    const old = merged.get(k);
+                    if (!old) { merged.set(k, e); continue; }
+                    const common = (old.conditions ?? []).filter(c => e.conditions?.includes(c));
+                    if (common.length) old.conditions = common; else delete old.conditions;
+                    if (!old.failure && e.failure) old.failure = e.failure;
+                    if (q.start && old.starts && !old.starts.some(t => sameTile(t, q.start!))) old.starts.push({ ...q.start });
+                }
             }
+            if (hitCap) capped.set(handler, (capped.get(handler) ?? 0) + 1);
+            if (!moving) continue;
+            if (ran) handlers.add(handler);
+            if (why.size) gaps.push({ locName: p.locName, option, handler, src: p.src, gap: [...why].slice(0, 4).join(' | ') + (why.size > 4 ? ` | +${why.size - 4} more` : '') });
             edges.push(...merged.values());
         }
     }
@@ -209,12 +235,20 @@ export function buildShortcuts(inp: BuildInput): BuildOutput {
 export function loadInput(): BuildInput {
     const root = contentRoot();
     const read = (rel: string) => readFileSync(join(root, rel), 'utf8');
-    const locs: LocSpawn[] = [];
+    const locs: BuildInput['locs'] = [];
+    const floors = new Set<number>();
     const emptyObjIds = new Set<number>();
     for (const f of readdirSync(join(root, 'maps'))) {
         if (!f.endsWith('.jm2')) continue;
-        const parsed = parseJm2(f, read(`maps/${f}`), { npcs: false, objIds: emptyObjIds });
-        for (const l of parsed.locs) locs.push(l);
+        const text = read(`maps/${f}`);
+        const parsed = parseJm2(f, text, { npcs: false, objIds: emptyObjIds });
+        const { bridges, floors: fileFloors } = mapTiles(f, text);
+        for (const k of fileFloors) floors.add(k);
+        for (const l of parsed.locs) {
+            const level = engineLocLevel(l, bridges);
+            if (level === l.level) locs.push(l);
+            else if (level >= 0) locs.push({ ...l, level, bridged: true });
+        }
     }
     const kd = knowledgeDir();
     const json = <T>(f: string): T => JSON.parse(readFileSync(join(kd, f), 'utf8')) as T;
@@ -237,6 +271,7 @@ export function loadInput(): BuildInput {
             filesByExt.get('.dbtable')!.flatMap(f => parseConfigs(read(f), f)),
             filesByExt.get('.dbrow')!.flatMap(f => parseConfigs(read(f), f)),
         ),
+        collision: loadCollision(floors),
     };
 }
 
@@ -246,7 +281,7 @@ export function runShortcutsCli(): void {
     for (const e of out.edges) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
     const file = join(knowledgeDir(), 'shortcuts.json');
     writeFileSync(file, JSON.stringify({
-        note: 'Generated by packages/knowledge/src/shortcuts.ts. Player start is the loc tile until a script line sets it; exact=false marks player-relative arrival. map_members is taken as true. requires.varps/items/worn/useItem/coins are not checked by transportAllowed.',
+        note: 'Generated by packages/knowledge/src/shortcuts.ts. Locs are on their engine level (bridged: the map level is one up). Each run starts on a tile in starts, the tiles that reach the loc by the engine reach rules; with no starts the player start is the loc tile and exact=false marks player-relative arrival. map_members is taken as true. requires.varps/items/worn/useItem/coins are not checked by transportAllowed.',
         counts: { edges: out.edges.length, gaps: out.gaps.length, handlers: out.handlers, byKind: counts },
         edges: out.edges, gaps: out.gaps,
     }, null, 1) + '\n');

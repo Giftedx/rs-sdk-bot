@@ -190,3 +190,40 @@ export function parseJm2(fileName: string, text: string, filter?: Jm2Filter): { 
     }
     return out;
 }
+
+export const tileKey = (x: number, z: number, level: number): number => (level * 16384 + z) * 16384 + x;
+
+// Tile facts from a map file's MAP section (`level x z: h<height> o<overlay> u<underlay> f<flags>`), as tileKey:
+// - bridges: level-1 tiles with the bridge flag (LINK_BELOW, 0x2). The engine moves every loc and the floor of such
+//   a tile one level down, and drops a level-0 loc there (server/engine/src/engine/GameMap.ts). The client scene
+//   keeps the map level.
+// - floors: tiles above level 0, on their engine level, with an overlay or underlay. An upper-level tile without one
+//   is open air: its collision is open, but no walk reaches it.
+export function mapTiles(fileName: string, text: string): { bridges: Set<number>; floors: Set<number> } {
+    const out = { bridges: new Set<number>(), floors: new Set<number>() };
+    const m = fileName.match(/m(\d+)_(\d+)\.jm2$/);
+    if (!m) return out;
+    const baseX = Number(m[1]) * 64, baseZ = Number(m[2]) * 64;
+    const start = text.indexOf('==== MAP ====');
+    if (start < 0) return out;
+    const next = text.indexOf('====', start + 13);
+    const end = next < 0 ? text.length : next;
+    const floored: [number, number, number][] = [];
+    const re = /^([123]) (\d+) (\d+):([^\n]*)/gm;
+    re.lastIndex = start;
+    for (let r = re.exec(text); r && r.index < end; r = re.exec(text)) {
+        const level = Number(r[1]), x = baseX + Number(r[2]), z = baseZ + Number(r[3]), rest = r[4]!;
+        if (level === 1) { const f = / f(\d+)/.exec(rest); if (f && Number(f[1]) & 2) out.bridges.add(tileKey(x, z, 1)); }
+        if (/ [ou]\d/.test(rest)) floored.push([x, z, level]);
+    }
+    for (const [x, z, level] of floored) {
+        const engine = engineLocLevel({ x, z, level }, out.bridges);
+        if (engine >= 1) out.floors.add(tileKey(x, z, engine));
+    }
+    return out;
+}
+
+// The engine level of a loc or floor from the map file, or -1 when the engine drops it.
+export function engineLocLevel(loc: { x: number; z: number; level: number }, bridges: ReadonlySet<number>): number {
+    return bridges.has(tileKey(loc.x, loc.z, 1)) ? loc.level - 1 : loc.level;
+}

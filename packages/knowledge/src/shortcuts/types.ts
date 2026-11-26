@@ -1,6 +1,7 @@
 import type { ConfigBlock } from '../config';
 import type { DbRow, DbTable } from '../dbtables';
 import type { LocSpawn } from '../jm2';
+import type { Collision } from '../loc-reach';
 
 export type Coord = { x: number; z: number; level: number };
 export type ShortcutKind = 'shortcut' | 'course' | 'passage' | 'quest' | 'minigame' | 'tutorial';
@@ -23,9 +24,13 @@ export interface ShortcutEdge {
     id: number;
     option: string; // op1..op5 or opu
     optionText: string | null;
-    from: Coord; // placed loc tile
+    from: Coord; // placed loc tile, on the engine level
+    // Standable tiles that reach the loc by the engine's reach rules and give this result. Absent: no such tile is
+    // known, the run starts on the loc tile, and `exact` is false where `to` depends on the player tile.
+    starts?: Coord[];
     to: Coord;
-    exact: boolean; // false: `to` uses the approximate player start (loc tile) plus a player-relative offset
+    exact: boolean; // false: `to` uses an approximate player tile (the loc tile, or map_findsquare)
+    bridged?: true; // the map puts the loc one level up on a bridge-flag tile; the state's loc list does not show it
     requires?: Requirements;
     fee?: number; // coins removed by inv_del
     consumes?: string[];
@@ -73,7 +78,7 @@ export type V =
     | { t: 'unk'; why: string }
     | { t: 'tuple'; vs: V[] };
 
-export interface Placement { locName: string; id: number; x: number; z: number; level: number; shape: number; angle: number; src: string; via?: { locName: string; option: string; src: string } }
+export interface Placement { locName: string; id: number; x: number; z: number; level: number; shape: number; angle: number; src: string; via?: { locName: string; option: string; src: string }; start?: Coord; bridged?: true }
 export interface Assumption { key: string; value: string; sym: Sym; detail: string; line: number; file: string }
 export interface RunState {
     pos: { c: Coord; exact: boolean } | null; posWhy?: string;
@@ -100,9 +105,10 @@ export interface BuildInput {
     constantFiles: { text: string; file: string }[];
     locConfigs: Map<string, ConfigBlock>;
     locPack: Map<number, string>;
-    locs: LocSpawn[];
+    locs: (LocSpawn & { bridged?: true })[]; // levels are engine levels (jm2.ts engineLocLevel)
     questVarps: Set<string>;
     excludeLocNames: Set<string>; // covered by transports.json or doors.json
     dbTables: DbTable[];
+    collision?: Collision; // without it each run starts on the loc tile
 }
 export interface BuildOutput { edges: ShortcutEdge[]; gaps: ShortcutGap[]; handlers: number }

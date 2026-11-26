@@ -40,12 +40,12 @@ export interface Travel {
 }
 
 // The river log east of Tai Bwo Wannai (zq_logbalance 2332, skill_agility/scripts/shortcuts.rs2:49-95) joins the
-// jungle east of the river (the Karamja shipyard side) to the land west of it. Its shortcuts.json rows are not
-// usable: the interpreter takes the player tile to be the loc tile, so they land 2903 and 2911 on level 1, where the
-// log lies under the bridge flag. From the tile next to the log the player moves 2 + 2 tiles across on level 0. A
-// failed roll washes the player to $fail_end_coord on the far bank, never back, for floor(hitpoints * 6 / 100) + 1
-// damage (stat(hitpoints) is the current level): 1 hitpoint dies. The client scene keeps the log on level 1, so the
-// state's loc list never shows it (quest-tbwt-owned.ts trioLogLoc).
+// jungle east of the river (the Karamja shipyard side) to the land west of it. From the tile next to the log the
+// player moves 2 + 2 tiles across on level 0; the shortcuts.json rows say the same, but shortcutTravel skips them for
+// their failure roll. A failed roll washes the player to $fail_end_coord on the far bank, never back, for
+// floor(hitpoints * 6 / 100) + 1 damage (stat(hitpoints) is the current level): 1 hitpoint dies. The client scene
+// keeps the log on level 1 under the bridge flag, so the state's loc list never shows it (quest-tbwt-owned.ts
+// trioLogLoc).
 const riverLog = (from: Tile, at: Tile, to: Tile, slip: Tile): Travel => ({
     id: `loc:zq_logbalance@${at.x},${at.z},${at.level}>${to.x},${to.z}`, kind: 'shortcut', name: 'zq_logbalance op1',
     from, to, slips: [slip], slipDamage: { percent: 6, plus: 1 }, coins: 0, needs: [], runes: [],
@@ -131,12 +131,11 @@ export function teleportTravel(records: TeleRecord[]): Travel[] {
     return out;
 }
 
-type ShortcutRecord = { kind: string; locName: string; id: number; option: string; from: Tile; to: Tile; exact: boolean; via?: unknown; failure?: unknown; side?: string[];
+type ShortcutRecord = { kind: string; locName: string; id: number; option: string; from: Tile; starts?: Tile[]; to: Tile; exact: boolean; bridged?: true; via?: unknown; failure?: unknown; side?: string[];
     requires?: { skills?: { name: string; level: number }[]; varps?: { varp: string; op: string; value: number }[]; items?: unknown[]; useItem?: unknown; coins?: number | null } };
-// A sided passage (the Grand Tree door, gnome_gate.rs2: the player ends two tiles beyond the door from the side they stand
-// on) is recorded from the loc tile with one landing per side. Each landing's edge starts at the mirror of the landing
-// through the loc tile, on the other side; the world snaps that start to the nearest floor. One start for both landings
-// snapped to one side, so the door had no edge from inside the tree, and the route out found no route.
+// A row without starts (no standable tile reaches the loc in the collision export) is recorded from the loc tile. A
+// sided passage of that kind has one landing per side. Each landing's edge starts at the mirror of the landing through
+// the loc tile, on the other side; the world snaps that start to the nearest floor.
 export function passageStart(e: { from: Tile; to: Tile; side?: string[] }): Tile {
     return e.side?.length && e.from.level === e.to.level ? { x: 2 * e.from.x - e.to.x, z: 2 * e.from.z - e.to.z, level: e.from.level } : e.from;
 }
@@ -147,12 +146,14 @@ export function shortcutTravel(edges: ShortcutRecord[]): Travel[] {
         if (e.from.level !== e.to.level && Math.abs(e.from.level - e.to.level) > 3) continue;
         const op = Number(e.option.match(/^op(\d)$/)?.[1]);
         if (!op) continue;
-        out.push({
-            id: `loc:${e.locName}@${e.from.x},${e.from.z},${e.from.level}>${e.to.x},${e.to.z}`, kind: e.kind, name: `${e.locName} ${e.option}`,
-            from: passageStart(e), to: e.to, coins: e.requires?.coins ?? 0,
+        const id = `loc:${e.locName}@${e.from.x},${e.from.z},${e.from.level}>${e.to.x},${e.to.z}`;
+        // One edge for each tile the player can operate the loc from (shortcuts.json starts).
+        for (const from of e.starts ?? [passageStart(e)]) out.push({
+            id: e.starts ? `${id}<${from.x},${from.z}` : id, kind: e.kind, name: `${e.locName} ${e.option}`,
+            from, to: e.to, coins: e.requires?.coins ?? 0,
             needs: [...(e.requires?.skills ?? []).map(k => ({ skill: k.name, level: k.level })), ...(e.requires?.varps ?? []).map(v => ({ varp: v.varp, op: v.op, value: v.value }))],
-            runes: [], run: { how: 'loc', loc: e.locName, op, option: null, id: e.id, at: e.from },
-            cost: Math.max(Math.abs(e.from.x - e.to.x), Math.abs(e.from.z - e.to.z)) + 3,
+            runes: [], run: { how: 'loc', loc: e.locName, op, option: null, id: e.id, at: e.from, ...(e.bridged ? { unlisted: true as const } : {}) },
+            cost: Math.max(Math.abs(from.x - e.to.x), Math.abs(from.z - e.to.z)) + 3,
         });
     }
     return out;
