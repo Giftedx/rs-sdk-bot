@@ -5,6 +5,6 @@
  "account": "TheFullMonty",
  "partner": "Quickhandjob",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795714052492,
+ "at": 1795714291772,
  "detail": "Error: no worker progress: active legacy/different release; wait offline for coordinated rollout"
 }

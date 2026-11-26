@@ -5,6 +5,6 @@
  "account": "Fingerblastr",
  "partner": "Woodpecker",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795714075747,
+ "at": 1795714322612,
  "detail": "Error: no worker progress: active legacy/different release; wait offline for coordinated rollout"
 }
