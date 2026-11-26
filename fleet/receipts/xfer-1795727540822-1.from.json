@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "xfer-1795727540822-1",
+ "account": "BowBeforeMe",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fishing bait",
+ "requested": 52,
+ "claim": "c77a38ae-354e-4348-be91-da6a3d498adf",
+ "count": 0,
+ "ok": false,
+ "at": 1795727684843,
+ "detail": "trade claimed"
+}
