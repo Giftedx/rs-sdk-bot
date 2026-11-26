@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "xfer-1795726809337-1",
  "account": "YewFirst",
  "partner": "Magicwanda",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 725,
  "claim": "03b8bd49-875e-47e1-b1e9-7def5efb0795",
- "count": 0,
- "ok": false,
- "at": 1795727032672,
- "detail": "trade claimed"
+ "count": 725,
+ "ok": true,
+ "at": 1795727120020,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 725
+ },
+ "bank": {
+  "count": 725,
+  "at": 1795727119239
+ },
+ "logout": {
+  "attemptId": "1795727033024-0000022932-0000000001",
+  "at": 1795727120002,
+  "sha256": "bc07fbea950e697c016985c7972ffe4ad36270a149f530be2830004b9e813e9e"
+ },
+ "screen": true
 }

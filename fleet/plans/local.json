@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795727100891,
+ "at": 1795727120651,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -126,7 +126,7 @@
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-skiller.ts CAP=1000 TARGET_COUNT=35 PRODUCT_TARGET=35 -- mining ore",
+    "scripts/aio-market.ts ORDER_KEY=brain-440-8-p97 ITEM_ID=440 QUANTITY=8 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
     "scripts/aio-skiller.ts BAR_TYPE=iron MAX_MAKE=28 ORE_RESERVE=0 DEMAND_ID=campaign:haggis:item:2351 BATCH_UNITS=35 -- smithing smelt 1500 iron"
    ],
    "env": {
@@ -138,7 +138,7 @@
    "role": "army"
   },
   {
-   "account": "Billionaire",
+   "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/aio-market.ts ORDER_KEY=brain-436-34-p23 ITEM_ID=436 QUANTITY=34 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=23 -- ge-buy",
@@ -218,14 +218,12 @@
    "role": "auto"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio-pvp.ts",
-   "args": [
-    "__escort-ore"
-   ],
+   "account": "Billionaire",
+   "script": "scripts/pk.ts",
+   "args": [],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "13"
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
@@ -233,14 +231,29 @@
    "role": "army"
   },
   {
-   "account": "SporranDip",
+   "account": "Fatstack",
    "script": "scripts/aio-pvp.ts",
    "args": [
     "__escort-ore"
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "13"
+    "BATCH_UNITS": "11"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:coin_fund:fleet",
+   "role": "army"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/aio-pvp.ts",
+   "args": [
+    "__escort-ore"
+   ],
+   "env": {
+    "DEMAND_ID": "goal:coin_fund:fleet",
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
@@ -255,7 +268,7 @@
    ],
    "env": {
     "DEMAND_ID": "goal:coin_fund:fleet",
-    "BATCH_UNITS": "13"
+    "BATCH_UNITS": "11"
    },
    "enabled": true,
    "repeat": false,
@@ -316,19 +329,35 @@
    "role": "army"
   },
   {
-   "account": "KnightRider",
+   "account": "CoinCock",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ITEM_ID=227 \"ITEMS=Vial of water\" MAX_ITEMS=1 STOCK_TARGET=1 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy adventurershop 3000",
-    "scripts/aio-skiller.ts MAX_MAKE=1 CAP=1200 MEMBERS=1 DEMAND_ID=campaign:haggis:item:93 BATCH_UNITS=1 -- crafting inventory brew:unf_marrentill_potion"
+    "scripts/generated/dwarfcannon.ts --",
+    "scripts/aio-fighter.ts SPOT=spiders TRAIN_SKILL=Ranged TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:CoinCock BATCH_UNITS=250 -- cannon"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:93",
-   "role": "army"
+   "goal": "goal:pk_army:CoinCock",
+   "role": "auto"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio-market.ts ITEM_ID=554 \"ITEMS=Fire rune\" MAX_ITEMS=250 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
+    "scripts/aio-market.ts ITEM_ID=563 \"ITEMS=Law rune\" MAX_ITEMS=198 STOCK_TARGET=250 COIN_RESERVE=1000 FLOAT=20000 NO_BUY_TICKS=100 STOP_AT_TARGET=1 FILL_ORDER=1 BANK_PACK=1 -- shop-buy magic_guild 3000",
+    "scripts/aio-skiller.ts TRAIN_SKILL=Magic TARGET_LEVEL=90 DEMAND_ID=goal:pk_army:Woodenstaff BATCH_UNITS=250 -- magic teleport varrock 50 1200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:pk_army:Woodenstaff",
+   "role": "auto"
   }
  ],
  "army": [
@@ -344,7 +373,6 @@
   "fingersmith",
   "hocuspokeus",
   "kiltlifter",
-  "mineyourbiz",
   "mmtha0205",
   "oreelse",
   "pickpockdick",
@@ -353,6 +381,7 @@
   "pocketrocket",
   "quickhandjob",
   "sausagefest",
+  "sporrandip",
   "undermykilt",
   "yewfirst"
  ],
