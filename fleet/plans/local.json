@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795721084229,
+ "at": 1795721269116,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -202,19 +202,20 @@
    "role": "auto"
   },
   {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
+   "account": "Quickhandjob",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts BAR_TYPE=bronze MAX_MAKE=28 ORE_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=20 -- smithing smelt 1500 bronze",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=40 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:40 BATCH_UNITS=2 -- smithing anvil 1500"
+    "sweep",
+    "tree"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:tree",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:40",
-   "role": "helper"
+   "goal": "goal:quest_board:tree",
+   "role": "army"
   },
   {
    "account": "Pocketpython",
@@ -233,34 +234,33 @@
   },
   {
    "account": "BoneToPick",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "tree"
-   ],
+   "script": "scripts/magic-order.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
+    "TARGET_LEVEL": "90",
+    "CAP": "3000",
+    "TRAIN_SKILL": "Magic",
+    "DEMAND_ID": "goal:pk_army:BoneToPick",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:tree",
+   "goal": "goal:pk_army:BoneToPick",
    "role": "auto"
   },
   {
    "account": "CoinCock",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "sweep",
-    "tree"
-   ],
+   "script": "scripts/ranged-train.ts",
+   "args": [],
    "env": {
-    "DEMAND_ID": "goal:quest_board:tree",
-    "BATCH_UNITS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "90",
+    "DEMAND_ID": "goal:pk_army:CoinCock",
+    "BATCH_UNITS": "250"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "goal:quest_board:tree",
+   "goal": "goal:pk_army:CoinCock",
    "role": "auto"
   },
   {
@@ -323,6 +323,21 @@
    "repeat": false,
    "goal": "goal:pk_army:Spitroaster",
    "role": "auto"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/magic-order.ts TARGET_LEVEL=60 CAP=3000 TRAIN_SKILL=Magic --",
+    "scripts/aio-quester.ts DEMAND_ID=goal:quest_board:magearena BATCH_UNITS=1 -- sweep magearena"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "goal:quest_board:magearena",
+   "role": "helper"
   },
   {
    "account": "YewGotWood",
@@ -409,7 +424,6 @@
   "pickpockdick",
   "pocketpool",
   "pocketrocket",
-  "quickhandjob",
   "sausagefest",
   "undermykilt",
   "woodpecker",
