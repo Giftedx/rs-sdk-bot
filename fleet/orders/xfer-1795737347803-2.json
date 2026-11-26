@@ -1,0 +1,24 @@
+{
+  "id": "xfer-1795737347803-2",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "MeatNTwoVeg",
+  "to": "Moneyshot",
+  "item": "Copper ore",
+  "count": 4,
+  "itemId": 436,
+  "start": 1795737347803,
+  "end": 1795738247803,
+  "meet": [
+    {
+      "x": 2618,
+      "z": 3333,
+      "level": 0
+    },
+    {
+      "x": 2617,
+      "z": 3333,
+      "level": 0
+    }
+  ],
+  "takerWaits": true
+}
