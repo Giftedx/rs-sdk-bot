@@ -2171,6 +2171,14 @@ return [
   {key: 'extra:inventory-stock-target', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['crafting', 'inventory', 'cut-diamond', 'MAX_MAKE=7', 'CAP=600', 'PRODUCT_TARGET=7'],
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Crafting: 43}, inventory: [{id: 1755, count: 1}], bank: [{id: 1617, count: 10}, {id: 1601, count: 4}]},
     pass: s => ok(s) && /"made":3,"banked":3\b/.test(s)},
+  // A planner skill unlock (ORDER_MODE=level): Herblore 25 to 30 is 2482 XP, so 14 of the 20 grimy ranarr
+  // (187.5 XP each) and the run ends at the level. The rerun case starts at the level and makes nothing.
+  {key: 'extra:inventory-unlock-level', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['crafting', 'inventory', 'identify:ranarr_weed', 'MAX_MAKE=20', 'CAP=400', 'MEMBERS=1', 'ORDER_MODE=level', 'TARGET_LEVEL=30', 'TRAIN_SKILL=Herblore'],
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Herblore: 25}, inventory: [], bank: [{id: 207, count: 20}]},
+    pass: s => ok(s) && /"made":14,"banked":14\b/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'extra:inventory-unlock-level-met', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['crafting', 'inventory', 'identify:ranarr_weed', 'MAX_MAKE=20', 'CAP=400', 'MEMBERS=1', 'ORDER_MODE=level', 'TARGET_LEVEL=30', 'TRAIN_SKILL=Herblore'],
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Herblore: 30}, inventory: [], bank: [{id: 207, count: 20}]},
+    pass: s => ok(s) && /"made":0,"banked":0\b/.test(s) && s.includes('"targetLevel":30,"level":30') && !s.includes('DEPOSIT_RECEIPT')},
   {key: 'extra:jewellery-trip-env-order', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['crafting', 'jewellery-trip', 'RECIPE=gold_ring', 'TARGET=1', 'BATCH=1', 'CAP=800'],
     presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 10}, bank: [{id: 2357, count: 1}, {id: 1592, count: 1}]},
     pass: s => ok(s) && s.includes('LOGOUT logged-out')},

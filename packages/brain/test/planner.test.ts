@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
     isAccountPlan,
     type AccountState,
@@ -1644,4 +1644,85 @@ test('a supply purchase names the owned total its consumer needs, so a chain rer
     expect(acquire.stockTarget).toBe(acquire.quantity + 10);
     expect(acquire.stockTarget).toBe(work.batchUnits);
     expect(isAccountPlan(plan)).toBe(true);
+});
+
+// A skill unlock holds the inputs for the XP to its level (in the bank, or bought by an earlier plan step),
+// or the planner skips that train activity. The work step after the unlock needs the level.
+describe('a skill unlock by inventory production is sized for the XP that it needs', () => {
+    const identify = createActivityCatalog().list().filter((a) => a.id.startsWith('bank-artisan:identify-'));
+    const act = (herb: string) => identify.find((a) => a.id === `bank-artisan:identify-${herb}`)!;
+    const grimy = (herb: string) => act(herb).inputs![0]!.itemId;
+    const herbAcct = (bank: Record<number, number>) => makeAcct({
+        name: 'HerbRider',
+        skills: { Herblore: { level: 28, xp: 6250 }, Hitpoints: { level: 60, xp: xpForLevel(60) } },
+        quests: { druid: 'complete' },
+        bank: { items: { 995: 98_843, [grimy('kwuarm')]: 20, ...bank }, observedAt: NOW - 10_000, trusted: true },
+    });
+    const kwuarmDemand: GoalDemand = {
+        id: 'goal:supply_chain:263',
+        goalKind: 'main_supply',
+        valueScore: 50,
+        target: { kind: 'item', itemId: act('kwuarm').outputs![0]!.itemId, count: 20 },
+        fulfilled: 0,
+        remaining: 20,
+        priorityWeight: 1,
+        active: true,
+    };
+    // An empty quote map is a market cache with no valid GE ask for a grimy herb.
+    const plan = (acct: AccountState, marketQuotes: Record<number, { ask: number; sell: number; trades: number }> = {}) => planAccount(acct, {
+        world: { schemaVersion: 1, at: NOW, side: 'local', server: 'rs-sdk-demo.fly.dev', accounts: { HerbRider: acct } },
+        activities: identify,
+        demands: [kwuarmDemand],
+        marketQuotes,
+    });
+    // Herblore 28 (6250 XP) to 54 (43354 XP) is 37104 XP.
+    const needXp = xpForLevel(54) - 6250;
+
+    test('the catalog carries the server XP of one identified herb', () => {
+        expect(act('marentill').config.xpPerUnit).toBe(95);
+        expect(act('ranarr_weed').config.xpPerUnit).toBe(187.5);
+        expect(act('kwuarm').config.xpPerUnit).toBe(282.5);
+    });
+
+    test('one grimy herb in the bank is no unlock for 37104 XP', () => {
+        const p = plan(herbAcct({ [grimy('marentill')]: 1 }));
+        expect(p.steps.some((s) => s.stepKind === 'unlock')).toBe(false);
+    });
+
+    test('a stocked herb unlocks with the units for the XP', () => {
+        const p = plan(herbAcct({ [grimy('ranarr_weed')]: 250, [grimy('marentill')]: 1 }));
+        expect(p.steps.map((s) => s.stepKind)).toEqual(['unlock', 'work']);
+        expect(p.steps[0]).toMatchObject({
+            stepKind: 'unlock',
+            unlockKind: 'skill',
+            activityId: 'bank-artisan:identify-ranarr_weed',
+            skill: 'Herblore',
+            targetLevel: 54,
+            batchUnits: Math.ceil(needXp / 187.5),
+        });
+        expect(isAccountPlan(p)).toBe(true);
+    });
+
+    test('a herb with too few units is skipped for a herb with enough', () => {
+        const p = plan(herbAcct({ [grimy('ranarr_weed')]: 100, [grimy('guam_leaf')]: 600 }));
+        expect(p.steps[0]).toMatchObject({
+            stepKind: 'unlock',
+            activityId: 'bank-artisan:identify-guam_leaf',
+            batchUnits: Math.ceil(needXp / 62.5),
+        });
+    });
+
+    test('a shortfall that the market supplies is bought before the unlock', () => {
+        // sell is the units on sale.
+        const p = plan(herbAcct({ [grimy('ranarr_weed')]: 100 }), { [grimy('ranarr_weed')]: { ask: 60, sell: 400, trades: 50 } });
+        expect(p.steps.map((s) => s.stepKind)).toEqual(['acquire', 'unlock', 'work']);
+        const [acquire, unlock] = p.steps;
+        if (acquire?.stepKind !== 'acquire' || unlock?.stepKind !== 'unlock') throw Error('unexpected plan shape');
+        expect(acquire.itemId).toBe(grimy('ranarr_weed'));
+        expect(acquire.quantity).toBe(Math.ceil(needXp / 187.5) - 100);
+        // A chain rerun that finds the herbs bought buys none.
+        expect(acquire.stockTarget).toBe(Math.ceil(needXp / 187.5));
+        expect(unlock.batchUnits).toBe(Math.ceil(needXp / 187.5));
+        expect(isAccountPlan(p)).toBe(true);
+    });
 });

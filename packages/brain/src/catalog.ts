@@ -17,7 +17,7 @@ import {
 } from '../../workers/src/contracts';
 import { DEFAULT_FOOD_TYPE, foodRule } from '../../workers/src/bank-artisan/cooking';
 import { jewelleryRecipes } from '../../workers/src/bank-artisan/crafting';
-import { inventoryRecipes, type InventoryRecipe } from '../../workers/src/bank-artisan/crafting-production';
+import { inventoryRecipeExp, inventoryRecipes, type InventoryRecipe } from '../../workers/src/bank-artisan/crafting-production';
 import { BONES_PER_CAST, BONES_TO_BANANAS_RUNES, itemMagicRecipe, nativeTeleport } from '../../workers/src/bank-artisan/magic';
 import { nativeNpcSpell } from '../../core/src/magic-data';
 import { smeltRecipe, smithRecipe } from '../../workers/src/bank-artisan/smithing';
@@ -915,6 +915,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 outputsMap = { [invRecipe.product]: prodUnits };
                 location = HUB_TILES.draynor;
                 aioKey = 'skiller:crafting:inventory';
+                const exp = inventoryRecipeExp(invRecipe.name);
                 routeConfig = {
                     aioCategory: 'skiller',
                     aioRoute: 'crafting:inventory',
@@ -925,6 +926,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                     row: row.row,
                     requiredLevel: Math.max(1, invRecipe.level),
                     requiredQuests: ['druid'],
+                    ...(exp !== undefined ? { xpPerUnit: (exp * XP_MULTIPLIER) / 10 } : {}),
                     defaultArgs: [invRecipe.name],
                     defaultEnv: {
                         MAX_MAKE: '1',
@@ -1082,6 +1084,11 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
         const outUnits = r.productUnits ?? 1;
         const outputs = [{ itemId: r.product, countPerUnit: outUnits }];
         const reqQuests = r.skill === 'Herblore' && r.name.startsWith('identify:') && r.level >= 3 ? ['druid'] : undefined;
+        // Server XP of one unit (the data holds tenths of base XP). An unlock sizes its inputs from it.
+        const exp = inventoryRecipeExp(r.name);
+        const xpPerUnit = exp !== undefined ? (exp * XP_MULTIPLIER) / 10 : undefined;
+        const unitsPerTick = 0.4;
+        const xpPerTick = xpPerUnit !== undefined ? Math.round(xpPerUnit * unitsPerTick * 100) / 100 : r.xp ? 150 : 0;
         register({
             id,
             workerId: 'bank-artisan',
@@ -1099,6 +1106,7 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 requiredLevel: r.level,
                 ...(reqQuests ? { requiredQuests: reqQuests } : {}),
                 ...(r.tools.length > 0 ? { requiredTools: r.tools } : {}),
+                ...(xpPerUnit !== undefined ? { xpPerUnit } : {}),
                 defaultArgs: [r.name],
                 defaultEnv: {
                     MAX_MAKE: '1',
@@ -1107,9 +1115,9 @@ export function createActivityCatalog(opts: ActivityCatalogOptions = {}): Activi
                 },
             },
             baselineRate: {
-                xpPerTick: r.xp ? 150 : 0,
-                ...(r.xp ? { skillXpPerTick: { [r.skill]: 150 } } : {}),
-                unitsPerTick: 0.4,
+                xpPerTick,
+                ...(xpPerTick > 0 ? { skillXpPerTick: { [r.skill]: xpPerTick } } : {}),
+                unitsPerTick,
                 gpPerTick: 0,
                 setupTicks: 8,
                 minBatchUnits: 1,

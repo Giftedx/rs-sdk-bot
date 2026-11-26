@@ -415,6 +415,9 @@ export interface UnlockPlannedStep {
     readonly questSlug?: string;
     readonly skill?: string;
     readonly targetLevel?: number;
+    // The units of a skill unlock train activity with inputs: enough for the XP to targetLevel.
+    // The plan holds the inputs for them, in the bank or bought by an earlier step.
+    readonly batchUnits?: number;
     readonly estimatedTicks: number;
 }
 
@@ -1535,6 +1538,7 @@ function pushPlannedStepErrors(v: unknown, errors: string[], prefix = ''): void 
             if (v.questSlug !== undefined && !isNonEmptyStr(v.questSlug)) errors.push(`${prefix}unlock.questSlug invalid`);
             if (v.skill !== undefined && !isNonEmptyStr(v.skill)) errors.push(`${prefix}unlock.skill invalid`);
             if (v.targetLevel !== undefined && (!isPosInt(v.targetLevel) || (v.targetLevel as number) > 99)) errors.push(`${prefix}unlock.targetLevel invalid`);
+            if (v.batchUnits !== undefined && !isPosInt(v.batchUnits)) errors.push(`${prefix}unlock.batchUnits invalid`);
             if (!isFiniteNonNeg(v.estimatedTicks)) errors.push(`${prefix}unlock.estimatedTicks invalid`);
             return;
         case 'work':

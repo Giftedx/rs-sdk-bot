@@ -49,6 +49,14 @@ export interface ProductionIO {
 }
 
 let cachedInventoryRecipes: InventoryRecipe[] | undefined;
+const recipeExp = new Map<string, number>();
+
+// Tenths of base XP for one unit of a recipe, from the server data (herb identification and brewing).
+// The recipe descriptors stay unchanged: qualified runs pin them.
+export function inventoryRecipeExp(name: string): number | undefined {
+    inventoryRecipes();
+    return recipeExp.get(name);
+}
 
 export function inventoryRecipes(): InventoryRecipe[] {
     if (cachedInventoryRecipes) return cachedInventoryRecipes;
@@ -200,13 +208,16 @@ export function inventoryRecipes(): InventoryRecipe[] {
         const xp = Number(param(herb?.body ?? '', 'identified_herb_exp') ?? 0);
         add('identify:' + m[2], [m[1]!], m[2]!, 'Herblore', level, xp > 0, identify, [], true);
         recipes.at(-1)!.itemOption = 1;
+        if (xp > 0) recipeExp.set('identify:' + m[2], xp);
     }
     for (const row of blocks('scripts/skill_herblore/configs/brewing/brew_potion.struct').filter(r => /^(unf_|3dose)/.test(r.name))) {
         const ingredient = param(row.body, 'brew_potion_ingredient');
         const solvent = param(row.body, 'brew_potion_solvent');
         const product = param(row.body, 'brew_potion_mixture');
         if (!ingredient || !solvent || !product) continue;
-        add('brew:' + row.name, [ingredient, solvent], product, 'Herblore', Number(param(row.body, 'brew_potion_level') ?? 3), Number(param(row.body, 'brew_potion_exp') ?? 0) > 0, 'scripts/skill_herblore/scripts/brewing/brew_potion.rs2', [], true);
+        const exp = Number(param(row.body, 'brew_potion_exp') ?? 0);
+        add('brew:' + row.name, [ingredient, solvent], product, 'Herblore', Number(param(row.body, 'brew_potion_level') ?? 3), exp > 0, 'scripts/skill_herblore/scripts/brewing/brew_potion.rs2', [], true);
+        if (exp > 0) recipeExp.set('brew:' + row.name, exp);
     }
     for (const row of blocks('scripts/skill_herblore/configs/grinding/grindables.obj').filter(r => ['unicorn_horn', 'blue_dragon_scale', 'bat_bones'].includes(r.name))) {
         add('grind:' + row.name, [row.name], param(row.body, 'grindable_ingredient_refined')!, 'Herblore', 1, false, 'scripts/skill_herblore/scripts/grinding/grind_ingredient.rs2', ['pestle_and_mortar'], true);
@@ -322,17 +333,37 @@ export function productionEffect(r: InventoryRecipe, b: ProductionSnapshot, a: P
     return 'invalid';
 }
 
+export function validTargetLevel(level: number | undefined): boolean {
+    return level === undefined || (Number.isSafeInteger(level) && level >= 2 && level <= 99);
+}
+
 export async function runInventoryProduction(
     io: ProductionIO,
     r: InventoryRecipe,
-    o: { maximum: number; cap: number; maxAttempts: number; partial?: boolean },
+    o: {
+        maximum: number;
+        cap: number;
+        maxAttempts: number;
+        partial?: boolean;
+        // The run ends when the recipe skill reaches this level.
+        targetLevel?: number;
+        // The order is the level: the run passes only at the target level, and ends when the inputs end.
+        levelOrder?: boolean;
+    },
 ) {
     const units = r.productUnits ?? 1;
-    if (![o.maximum, o.cap, o.maxAttempts].every(n => Number.isSafeInteger(n) && n > 0) || o.maximum % units || o.maxAttempts < o.maximum / units) {
+    if (
+        ![o.maximum, o.cap, o.maxAttempts].every(n => Number.isSafeInteger(n) && n > 0) ||
+        o.maximum % units ||
+        o.maxAttempts < o.maximum / units ||
+        !validTargetLevel(o.targetLevel) ||
+        (o.levelOrder && o.targetLevel === undefined)
+    ) {
         throw Error('invalid production limits or output batch multiple');
     }
     const start = io.tick();
     const over = () => io.stopped() || io.tick() - start >= o.cap;
+    const reached = () => o.targetLevel !== undefined && io.level() >= o.targetLevel;
     let made = 0;
     let banked = 0;
     let losses = 0;
@@ -341,10 +372,10 @@ export async function runInventoryProduction(
     let spent = false;
     try {
         if (io.level() < r.level) throw Error('production level missing');
-        while (made < o.maximum && attempts < o.maxAttempts && !over()) {
+        while (made < o.maximum && attempts < o.maxAttempts && !over() && !reached()) {
             const ready = await io.prepare();
             if (ready !== true) {
-                if (ready === 'spent' && o.partial && made > 0) {
+                if (ready === 'spent' && (o.levelOrder || (o.partial && made > 0))) {
                     spent = true;
                     break;
                 }
@@ -374,7 +405,12 @@ export async function runInventoryProduction(
                 throw Error('production action receipt ' + effect);
             }
         }
-        if ((made !== o.maximum && !spent) || banked !== made || over()) throw Error('production target incomplete');
+        if (banked !== made) throw Error('production target incomplete');
+        if (o.levelOrder) {
+            if (!reached()) throw Error(spent ? 'production inputs ended below target level' : 'production target level unreached');
+        } else if (!reached() && ((made !== o.maximum && !spent) || over())) {
+            throw Error('production target incomplete');
+        }
     } catch (e) {
         failure = String(e);
     } finally {
@@ -415,14 +451,25 @@ export async function runInventoryBank(
         // The bank total of the product that the order's consumer needs. The run makes only the
         // units the bank lacks, so a chain rerun after a later step failed does not repeat it.
         productTarget?: number;
+        // The recipe skill level that ends the run. A planner unlock sets levelOrder: the next chain step
+        // needs the level, so the unlock passes only at it, and a chain rerun at the level makes nothing.
+        targetLevel?: number;
+        levelOrder?: boolean;
         stop?: () => boolean;
     },
 ) {
     const reserves = productionInputReserves(r, o.reserve, o.inputReserves);
     if (o.productTarget !== undefined && (!Number.isSafeInteger(o.productTarget) || o.productTarget < 1)) throw Error('invalid production stock target');
+    if (!validTargetLevel(o.targetLevel) || (o.levelOrder && o.targetLevel === undefined)) throw Error('invalid production target level');
     if (r.members && !o.members) throw Error('production recipe requires confirmed members world');
     if (!await waitUntil(s, () => !!s.sdk.getState()?.player && !!s.sdk.getSkill(r.skill) && (s.sdk.getSkill('Hitpoints')?.level ?? 0) > 0, { timeoutTicks: 10 })) {
         throw Error('production state unavailable');
+    }
+    const startLevel = s.sdk.getSkill(r.skill)?.level ?? 0;
+    if (o.targetLevel !== undefined && startLevel >= o.targetLevel) {
+        const met = { ok: true, recipe: r.name, made: 0, banked: 0, losses: 0, attempts: 0, ticks: 0, failure: '-' };
+        console.log('MICROBOT_PRODUCTION ' + JSON.stringify({ ...met, targetLevel: o.targetLevel, level: startLevel }));
+        return met;
     }
     const inv = () => s.sdk.getInventory();
     const count = (id: number) => inv().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
@@ -555,7 +602,21 @@ export async function runInventoryBank(
 
 registerDefaultInventoryBankRunner(runInventoryBank);
 
-const PRODUCTION_CLI_KEYS = new Set(['MAX_MAKE', 'CAP', 'MAX_ATTEMPTS', 'ORDER_MODE', 'RAW_RESERVE', 'MEMBERS', 'INPUT_RESERVES', 'PRODUCT_TARGET']);
+const PRODUCTION_CLI_KEYS = new Set(['MAX_MAKE', 'CAP', 'MAX_ATTEMPTS', 'ORDER_MODE', 'RAW_RESERVE', 'MEMBERS', 'INPUT_RESERVES', 'PRODUCT_TARGET', 'TARGET_LEVEL', 'TRAIN_SKILL']);
+
+// TARGET_LEVEL ends the run only for the recipe skill: a recipe gives XP to that skill alone.
+// ORDER_MODE=level (a planner unlock) passes only at the level.
+export function productionLevelOrder(
+    r: Pick<InventoryRecipe, 'skill'>,
+    setting: (key: string) => string | undefined,
+): { targetLevel?: number; levelOrder: boolean } {
+    const levelOrder = setting('ORDER_MODE') === 'level';
+    const raw = setting('TARGET_LEVEL');
+    const skill = setting('TRAIN_SKILL');
+    const targetLevel = raw === undefined || (skill !== undefined && skill.toLowerCase() !== r.skill.toLowerCase()) ? undefined : Number(raw);
+    if (!validTargetLevel(targetLevel) || (levelOrder && targetLevel === undefined)) throw Error('invalid production limits');
+    return { ...(targetLevel !== undefined ? { targetLevel } : {}), levelOrder };
+}
 
 export function parseProductionCli(argv: readonly string[], env: Readonly<Record<string, string | undefined>> = {}) {
     const overrides: Record<string, string> = {};
@@ -576,6 +637,7 @@ export function parseProductionCli(argv: readonly string[], env: Readonly<Record
     const reserve = Number(effective.RAW_RESERVE ?? 0);
     const inputReserves = effective.INPUT_RESERVES ? JSON.parse(effective.INPUT_RESERVES) : undefined;
     productionInputReserves(r, reserve, inputReserves);
+    const level = productionLevelOrder(r, key => effective[key]);
     return {
         account: argv[2],
         recipe: r,
@@ -587,6 +649,7 @@ export function parseProductionCli(argv: readonly string[], env: Readonly<Record
         inputReserves,
         members: effective.MEMBERS === '1',
         ...(effective.PRODUCT_TARGET ? { productTarget: Number(effective.PRODUCT_TARGET) } : {}),
+        ...level,
     };
 }
 
@@ -604,6 +667,8 @@ export async function runProductionCli(botName: string, restArgs: readonly strin
             inputReserves: cli.inputReserves,
             members: cli.members,
             productTarget: cli.productTarget,
+            targetLevel: cli.targetLevel,
+            levelOrder: cli.levelOrder,
             stop: () => stop,
         });
         await finish([s], result.ok, JSON.stringify(result));

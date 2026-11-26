@@ -927,6 +927,16 @@ function activityXpForSkill(activity: ActivityDefinition, rate: RateEstimate, sk
     return 0;
 }
 
+// The skill XP of one unit. A catalog row that reads the server data gives it exactly (config.xpPerUnit);
+// other rows give it as XP per tick over units per tick.
+function activityXpPerUnit(activity: ActivityDefinition, rate: RateEstimate, skill: string): number {
+    const exact = activity.config?.xpPerUnit;
+    if (typeof exact === 'number' && Number.isFinite(exact) && exact > 0 && activity.skill?.toLowerCase() === skill.toLowerCase()) {
+        return exact;
+    }
+    return rate.unitsPerTick > 0 ? activityXpForSkill(activity, rate, skill) / rate.unitsPerTick : 0;
+}
+
 function activityMatchesDemand(
     acct: AccountState,
     demand: GoalDemand,
@@ -1437,7 +1447,101 @@ function planAccountCore(
         };
     const upgradeCache = new Map<string, GearUpgradeCandidateResult | null>();
     const upgradeCandidatesCache = new Map<string, readonly ResolvedGearUpgradeCandidate[]>();
-    const skillUnlockCache = new Map<string, { activity: ActivityDefinition; rate: RateEstimate } | null>();
+    // Train activities for a skill unlock, most XP per tick first. An activity whose only blocker for one
+    // unit is a missing input stays a candidate: the unlock can buy its inputs.
+    const skillUnlockCache = new Map<string, readonly { activity: ActivityDefinition; rate: RateEstimate }[]>();
+    const skillUnlockCandidates = (skill: string): readonly { activity: ActivityDefinition; rate: RateEstimate }[] => {
+        const skLower = skill.toLowerCase();
+        let candidates = skillUnlockCache.get(skLower);
+        if (candidates === undefined) {
+            candidates = [...new Set(bySkill.get(skLower) ?? [])]
+                .filter((a) => {
+                    if ((shared && hasActExclusions && !isActAllowed(a)) || a.family === 'quest') return false;
+                    if (activityXpForSkill(a, getRate(a), skill) <= 0) return false;
+                    const one = getPreflight(a, 1);
+                    return one.ok || ((a.inputs?.length ?? 0) > 0 && one.blockers.every((b) => b.kind === 'missing_supply'));
+                })
+                .sort((a, b) => {
+                    const xpDiff = activityXpForSkill(b, getRate(b), skill) - activityXpForSkill(a, getRate(a), skill);
+                    if (xpDiff !== 0) return xpDiff;
+                    return getRate(a).setupTicks - getRate(b).setupTicks || a.id.localeCompare(b.id);
+                })
+                .map((a) => ({ activity: a, rate: getRate(a) }));
+            skillUnlockCache.set(skLower, candidates);
+        }
+        return candidates;
+    };
+    type SkillUnlockChoice = {
+        readonly activity: ActivityDefinition;
+        readonly rate: RateEstimate;
+        readonly batchUnits?: number;
+        readonly prep: readonly PlannedStep[];
+        readonly prepCoins: number;
+    };
+    const skillUnlockChoiceCache = new Map<string, SkillUnlockChoice | null>();
+    // An unlock that trains on inputs makes the units for the XP that it needs, so the plan must hold
+    // those inputs. The first pass takes a candidate that the bank (or no input) covers; the second buys
+    // the shortfall, in at most acquireRoom steps. A candidate that it cannot supply is skipped, and so is
+    // one that uses an input of the work activity.
+    const chooseSkillUnlock = (
+        skill: string,
+        needXp: number,
+        work: ActivityDefinition,
+        acquireRoom: number,
+        committed: number,
+    ): SkillUnlockChoice | null => {
+        const workInputs = new Set((work.inputs ?? []).map((io) => io.itemId));
+        const key = `${skill.toLowerCase()}:${Math.ceil(needXp)}:${acquireRoom}:${committed}:${[...workInputs].sort((a, b) => a - b).join(',')}`;
+        const hit = skillUnlockChoiceCache.get(key);
+        if (hit !== undefined) return hit;
+        let choice: SkillUnlockChoice | null = null;
+        const candidates = skillUnlockCandidates(skill);
+        for (const pass of ['stock', 'buy'] as const) {
+            for (const { activity: a, rate: r } of candidates) {
+                const inputs = (a.inputs ?? []).filter((io) => io.countPerUnit > 0);
+                if (inputs.length === 0) {
+                    if (pass === 'stock' && getPreflight(a, 1).ok) choice = { activity: a, rate: r, prep: [], prepCoins: 0 };
+                    if (choice) break;
+                    continue;
+                }
+                if (inputs.some((io) => workInputs.has(io.itemId))) continue;
+                const xpPerUnit = activityXpPerUnit(a, r, skill) * xpRate;
+                if (!(xpPerUnit > 0)) continue;
+                const units = Math.max(1, r.minBatchUnits, Math.ceil(needXp / xpPerUnit));
+                const pre = getPreflight(a, units);
+                if (pass === 'stock') {
+                    if (pre.ok) choice = { activity: a, rate: r, batchUnits: units, prep: [], prepCoins: 0 };
+                    if (choice) break;
+                    continue;
+                }
+                if (pre.ok || pre.blockers.length > acquireRoom) continue;
+                const prep: PlannedStep[] = [];
+                let coins = 0;
+                for (const b of pre.blockers) {
+                    if (b.kind !== 'missing_supply') break;
+                    const acq = resolveAcquireCached({
+                        itemId: b.itemId,
+                        itemName: b.itemName,
+                        quantity: Math.max(1, b.required - b.available),
+                        allowOwnBank: false,
+                        operatingCoinFloat: DEFAULT_OPERATING_COIN_FLOAT,
+                        committedCoinSpend: committed + coins,
+                    });
+                    if (!acq.ok || !acq.step) break;
+                    // The owned total after the purchase: a chain rerun that finds it buys nothing.
+                    prep.push({ ...acq.step, stockTarget: Math.max(1, b.required + b.reserved) });
+                    coins += stepCommittedCoinCost(acq.step);
+                }
+                if (prep.length === pre.blockers.length) {
+                    choice = { activity: a, rate: r, batchUnits: units, prep, prepCoins: coins };
+                    break;
+                }
+            }
+            if (choice) break;
+        }
+        skillUnlockChoiceCache.set(key, choice);
+        return choice;
+    };
 
     const hasLiveMarketQuotes = Boolean(input.marketQuotes && Object.keys(input.marketQuotes).length > 0);
     const directGeBuyActivity = hasLiveMarketQuotes ? geBuyActivity : undefined;
@@ -1808,44 +1912,38 @@ function planAccountCore(
                             }
                         }
 
-                        let unlockEntry = skillUnlockCache.get(skLower);
-                        if (unlockEntry === undefined) {
-                            const candidates = (bySkill.get(skLower) ?? [])
-                                .filter((a) =>
-                                    (!shared || !hasActExclusions || isActAllowed(a))
-                                    && a.family !== 'quest'
-                                    && activityXpForSkill(a, getRate(a), blocker.skill) > 0
-                                    && getPreflight(a, 1).ok,
-                                )
-                                .sort((a, b) => {
-                                    const xpDiff = activityXpForSkill(b, getRate(b), blocker.skill) - activityXpForSkill(a, getRate(a), blocker.skill);
-                                    if (xpDiff !== 0) return xpDiff;
-                                    return getRate(a).setupTicks - getRate(b).setupTicks || a.id.localeCompare(b.id);
-                                });
-                            const found = candidates[0];
-                            unlockEntry = found ? { activity: found, rate: getRate(found) } : null;
-                            skillUnlockCache.set(skLower, unlockEntry);
-                        }
-                        if (!unlockEntry) {
-                            lastBlockerReason = `missing_skill_unlock:${blocker.skill}`;
-                            chainFeasible = false;
-                            break;
-                        }
-                        const trainAct = unlockEntry.activity;
-                        const trainRate = unlockEntry.rate;
                         const curXp = cachedAccountSkillXp(acct, blocker.skill, acctCache);
                         const bonusXp = grantedQuestXp[skLower] ?? 0;
                         const needXp = Math.max(1, xpForLevel(blocker.required) - (curXp + bonusXp));
+                        // One step stays for the unlock and one for the work.
+                        const acquireRoom = MAX_ACCOUNT_PLAN_STEPS - 2 - prepSteps.length;
+                        const choice = chooseSkillUnlock(blocker.skill, needXp, activity, acquireRoom, committedCoins);
+                        if (!choice) {
+                            lastBlockerReason = skillUnlockCandidates(blocker.skill).length > 0
+                                ? `unlock_inputs_unavailable:${blocker.skill}`
+                                : `missing_skill_unlock:${blocker.skill}`;
+                            chainFeasible = false;
+                            break;
+                        }
+                        const trainAct = choice.activity;
+                        const trainRate = choice.rate;
                         const trainTicks = Math.max(
                             10,
-                            Math.ceil(trainRate.setupTicks + needXp / Math.max(1e-3, activityXpForSkill(trainAct, trainRate, blocker.skill) * xpRate)),
+                            Math.ceil(
+                                choice.batchUnits !== undefined
+                                    ? trainRate.setupTicks + choice.batchUnits / Math.max(1e-4, trainRate.unitsPerTick)
+                                    : trainRate.setupTicks + needXp / Math.max(1e-3, activityXpForSkill(trainAct, trainRate, blocker.skill) * xpRate),
+                            ),
                         );
+                        for (const st of choice.prep) prepSteps.push(st);
+                        committedCoins += choice.prepCoins;
                         const unlockStep: UnlockPlannedStep = {
                             stepKind: 'unlock',
                             unlockKind: 'skill',
                             activityId: trainAct.id,
                             skill: blocker.skill,
                             targetLevel: blocker.required,
+                            ...(choice.batchUnits !== undefined ? { batchUnits: choice.batchUnits } : {}),
                             estimatedTicks: trainTicks,
                         };
                         prepSteps.push(unlockStep);
