@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795719256965,
+ "at": 1795719289713,
  "jobs": [
   {
    "account": "Mightyrod",
@@ -62,9 +62,9 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/aio-market.ts ORDER_KEY=brain-440-83-p97 ITEM_ID=440 QUANTITY=83 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
-    "scripts/aio-market.ts ORDER_KEY=brain-453-166-p517 ITEM_ID=453 QUANTITY=166 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
-    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=83 ORE_RESERVE=0 -- smithing smelt"
+    "scripts/aio-market.ts ORDER_KEY=brain-440-86-p97 ITEM_ID=440 QUANTITY=86 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=97 -- ge-buy",
+    "scripts/aio-market.ts ORDER_KEY=brain-453-172-p517 ITEM_ID=453 QUANTITY=172 CASH_RESERVE=1000 COIN_RESERVE=1000 LIMIT_PRICE=517 -- ge-buy",
+    "scripts/aio-skiller.ts DEMAND_ID=campaign:haggis:item:2353 BATCH_UNITS=86 ORE_RESERVE=0 -- smithing smelt"
    ],
    "env": {
     "ROUNDS": "1"
@@ -98,7 +98,7 @@
    ],
    "env": {
     "DEMAND_ID": "campaign:haggis:item:556",
-    "BATCH_UNITS": "267"
+    "BATCH_UNITS": "289"
    },
    "enabled": true,
    "repeat": false,
@@ -138,7 +138,7 @@
    "role": "auto"
   },
   {
-   "account": "PickpockDick",
+   "account": "Moneyshot",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -154,7 +154,7 @@
    "role": "army"
   },
   {
-   "account": "Wandwaver",
+   "account": "PickpockDick",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -170,7 +170,7 @@
    "role": "army"
   },
   {
-   "account": "Woodpecker",
+   "account": "Wandwaver",
    "script": "scripts/aio-quester.ts",
    "args": [
     "sweep",
@@ -186,18 +186,19 @@
    "role": "army"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
+   "account": "Woodpecker",
+   "script": "scripts/aio-quester.ts",
    "args": [
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1105 MAX_MAKE=1 BAR_RESERVE=0 TRAIN_SKILL=Smithing TARGET_LEVEL=44 -- smithing anvil 1500",
-    "scripts/aio-skiller.ts ORDER_ACTION=smith PRODUCT_ID=1311 MAX_MAKE=1 BAR_RESERVE=0 DEMAND_ID=campaign:haggis:item:1311 BATCH_UNITS=1 -- smithing anvil 1500"
+    "sweep",
+    "ball"
    ],
    "env": {
-    "ROUNDS": "1"
+    "DEMAND_ID": "goal:quest_board:ball",
+    "BATCH_UNITS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "campaign:haggis:item:1311",
+   "goal": "goal:quest_board:ball",
    "role": "army"
   }
  ],
